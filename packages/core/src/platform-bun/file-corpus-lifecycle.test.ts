@@ -1,8 +1,8 @@
 import { BunFileSystem } from '@effect/platform-bun';
 import { Database } from 'bun:sqlite';
-import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex } from '@noble/hashes/utils.js';
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { Context, Effect, FileSystem, Layer, Option } from 'effect';
+import { Digest } from 'effect/crypto';
 import { describe, expect, it } from 'effect-bun-test';
 
 import {
@@ -128,7 +128,11 @@ const releaseSource = (input: {
   size: input.size,
 });
 
-const fixtureDigest = `sha256:${bytesToHex(sha256(new TextEncoder().encode(FIXTURE_BYTES)))}`;
+const fixtureDigest = `sha256:${Effect.runSync(
+  Digest.Digest.use((digest) =>
+    digest.digestHex(Digest.sha256, new TextEncoder().encode(FIXTURE_BYTES)),
+  ).pipe(Effect.provide(BunCrypto.layerDigest)),
+)}`;
 
 const attemptWebsterInstall = (destination: string, source: string) =>
   CorpusSupply.use((supply) =>

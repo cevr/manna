@@ -26,9 +26,9 @@
  */
 
 import { BunFileSystem } from '@effect/platform-bun';
-import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex } from '@noble/hashes/utils.js';
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { Effect, FileSystem, Layer, Option } from 'effect';
+import { Digest } from 'effect/crypto';
 import { describe, expect, it } from 'effect-bun-test';
 
 import { VectorsArtifact } from '../search/vector-artifact.js';
@@ -37,7 +37,11 @@ import { CorpusSupply } from '../corpus-supply/service.js';
 import { layerNativeFileArtifacts, type NativeFileArtifactSource } from './file-artifact.js';
 
 const digestOf = (bytes: string): string =>
-  `sha256:${bytesToHex(sha256(new TextEncoder().encode(bytes)))}`;
+  `sha256:${Effect.runSync(
+    Digest.Digest.use((digest) =>
+      digest.digestHex(Digest.sha256, new TextEncoder().encode(bytes)),
+    ).pipe(Effect.provide(BunCrypto.layerDigest)),
+  )}`;
 
 /** The versioned filename an activation lands on, derived exactly as the
  *  installer derives it — from the digest of the bytes. Restated here rather

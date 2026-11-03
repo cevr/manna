@@ -1,6 +1,5 @@
-import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
-import { Schema } from 'effect';
+import { type Effect, Schema } from 'effect';
+import { Digest } from 'effect/crypto';
 
 import { SELECTORS } from './items.ts';
 
@@ -62,10 +61,13 @@ export type Settings = typeof Settings.Type;
  * label, message and characters a token are no part of it: the model reads
  * none of them.
  */
-export const ruleKey = (rule: Pick<RuleOptions, 'subject' | 'instructions' | 'criteria'>) =>
-  bytesToHex(
-    sha256(
-      utf8ToBytes(
+export const ruleKey = (
+  rule: Pick<RuleOptions, 'subject' | 'instructions' | 'criteria'>,
+): Effect.Effect<string, never, Digest.Digest> =>
+  Digest.Digest.use((digest) =>
+    digest.digestHex(
+      Digest.sha256,
+      new TextEncoder().encode(
         [
           rule.subject,
           rule.instructions,

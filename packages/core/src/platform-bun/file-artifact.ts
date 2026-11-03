@@ -11,8 +11,6 @@
 import * as BunHttpClient from '@effect/platform-bun/BunHttpClient';
 import { Database } from 'bun:sqlite';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex } from '@noble/hashes/utils.js';
 
 import {
   CorpusInstallationError,
@@ -29,8 +27,11 @@ import {
   registeredCorpusName,
   type CorpusGeneration,
 } from '../corpus-supply/model.js';
+import { StreamDigest } from '../stream-digest/index.js';
 import { Effect, FileSystem, Layer, Option, Path, Predicate, Schema, Stream } from 'effect';
 import { HttpClient } from 'effect/http';
+
+import { StreamDigestBun } from './stream-digest-bun.js';
 
 interface LocalFileArtifactSource {
   readonly kind: Exclude<FileArtifactSourceKind, 'release'>;
@@ -545,12 +546,9 @@ const writeSidecarPointer = (input: {
 const fileDigest = (filename: string): Effect.Effect<string, unknown> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const hasher = sha256.create();
-    yield* fs
-      .stream(filename)
-      .pipe(Stream.runForEach((chunk) => Effect.sync(() => hasher.update(chunk))));
-    return `sha256:${bytesToHex(hasher.digest())}`;
-  }).pipe(Effect.provide(BunServices.layer));
+    const streamDigest = yield* StreamDigest;
+    return yield* streamDigest.digest(fs.stream(filename));
+  }).pipe(Effect.provide([BunServices.layer, StreamDigestBun]));
 
 /** Removes one retired generation's file, never the one that is live.
  *
@@ -739,27 +737,31 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
             { discard: true },
           );
         });
-        const hasher = sha256.create();
+        const streamDigest = yield* StreamDigest;
         let written = 0;
         let staged = Option.none<string>();
         const install = Effect.gen(function* () {
           yield* fs.remove(building, { force: true });
           yield* clearSqliteSideFiles;
-          yield* artifact.bytes.pipe(
-            Stream.tap((chunk) =>
-              Effect.sync(() => {
-                hasher.update(chunk);
-                written += chunk.byteLength;
-              }),
-            ),
-            Stream.run(fs.sink(building, { flag: 'wx' })),
+          const streamed = yield* Effect.scoped(
+            Effect.gen(function* () {
+              const file = yield* fs.open(building, { flag: 'wx' });
+              return yield* streamDigest.digest(
+                artifact.bytes.pipe(
+                  Stream.tap((chunk) => {
+                    written += chunk.byteLength;
+                    return file.writeAll(chunk);
+                  }),
+                ),
+              );
+            }),
           );
           if (Option.exists(artifact.expectedSize, (expected) => expected !== written)) {
             return yield* Effect.fail(
               `${input.artifact.label} Artifact size does not match its release manifest`,
             );
           }
-          const digest = corpusDigest(`sha256:${bytesToHex(hasher.digest())}`);
+          const digest = corpusDigest(streamed);
           if (Option.exists(artifact.provenance.digest, (expected) => expected !== digest)) {
             return yield* Effect.fail(
               `${input.artifact.label} Artifact digest does not match its release manifest`,
@@ -817,7 +819,7 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
           if (Schema.is(SqliteRefreshRefused)(cause)) return cause;
           return CorpusInstallationError.make({ corpus: reportedCorpus, cause });
         }),
-        Effect.provide(BunServices.layer),
+        Effect.provide([BunServices.layer, StreamDigestBun]),
       ),
   });
   return Layer.merge(recipe, installer);

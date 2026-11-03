@@ -1,3 +1,4 @@
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import {
   Clock,
   ConfigProvider,
@@ -12,7 +13,11 @@ import {
 import { Headers, HttpClient, HttpClientResponse } from 'effect/http';
 import { ChildProcessSpawner } from 'effect/process';
 
-import type { JudgedRule } from './rule.js';
+import { type JudgedRule, type RuleOptions, ruleKey } from './rule.js';
+
+/** `rule`'s `ruleKey`, hashed on `node:crypto`, for a test that builds keys outside an Effect. */
+export const ruleKeyOf = (rule: Pick<RuleOptions, 'subject' | 'instructions' | 'criteria'>) =>
+  Effect.runSync(ruleKey(rule).pipe(Effect.provide(BunCrypto.layerDigest)));
 
 /** historyComment as the repo's `.oxlintrc.json` defines it (config.test.ts holds the two equal). */
 export const historyComment: JudgedRule = {

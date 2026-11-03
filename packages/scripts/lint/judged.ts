@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { Clock, Effect, Option, Schema } from 'effect';
 import { Diagnostic, Plugin, Rule, RuleContext, Visitor } from 'oxlint-plugin-effect/rule-bindings';
 
@@ -23,6 +24,14 @@ import {
 
 /** A file parsed, as the selectors read it. */
 type Source = ReturnType<typeof parse>;
+
+/**
+ * A rule's `ruleKey`, hashed on `node:crypto` through `BunCrypto.layerDigest`:
+ * it is synchronous, as the plugin's visitors are, and it runs in oxlint's
+ * Node host as well as under Bun.
+ */
+const keyOf = (options: RuleOptions) =>
+  Effect.runSync(ruleKey(options).pipe(Effect.provide(BunCrypto.layerDigest)));
 
 /** The judged rules this plugin defines, by id: each needs its entry in `.oxlintrc.json`. */
 export const RULE_IDS = [
@@ -157,7 +166,8 @@ const lastRunOf = (
         dayOf(Effect.runSync(Clock.currentTimeMillis)) - findings.day <= MAX_AGE_DAYS,
     ),
     Option.filter(
-      (findings) => findings.rules[id] === ruleSignature(cacheModel(settings.model), options),
+      (findings) =>
+        findings.rules[id] === ruleSignature(cacheModel(settings.model), keyOf(options), options),
     ),
     Option.flatMap((findings) => Option.fromUndefinedOr(findings.files[file])),
     Option.filter((entry) => entry.hash === hashOf(file, text)),
@@ -176,7 +186,7 @@ const keptOf = (
     onNone: () => [],
     onSome: (kept) => {
       const model = cacheModel(settings.model);
-      const rule = ruleKey(options);
+      const rule = keyOf(options);
       return itemsOf(options.selector, sourceOf(file, text)).flatMap((item) =>
         Option.toArray(
           Option.filter(

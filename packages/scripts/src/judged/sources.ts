@@ -72,13 +72,19 @@ const itemsIn = (
   );
 };
 
+/** A rule with its `ruleKey`. */
+interface KeyedRule {
+  readonly rule: JudgedRule;
+  readonly key: string;
+}
+
 /** The form of a memo made for `rules` on `model` by this code (`makersHash`): a hash of them all. */
-const formOf = (rules: ReadonlyArray<JudgedRule>, model: string) =>
+const formOf = (rules: ReadonlyArray<KeyedRule>, model: string) =>
   Effect.sync(() =>
     textHash(
       [
         model,
-        ...rules.flatMap((rule) => [rule.id, rule.selector, ruleKey(rule)]),
+        ...rules.flatMap(({ rule, key }) => [rule.id, rule.selector, key]),
         makersHash(),
       ].join('\0'),
     ),
@@ -137,13 +143,15 @@ export const repoItems = Effect.fn('judged.repoItems')(function* (
   const files = (yield* gateFiles(root)).filter(
     (file) => linted(file, ignored) && selectors.some((selector) => selects(selector, file)),
   );
-  const form = yield* formOf(rules, memo.model);
+  const keyedRules = yield* Effect.forEach(rules, (rule) =>
+    Effect.map(ruleKey(rule), (key): KeyedRule => ({ rule, key })),
+  );
+  const form = yield* formOf(keyedRules, memo.model);
   const kept = yield* readMemo(memo.file, form);
   const byId = new Map(rules.map((rule) => [rule.id, rule]));
-  const ruleKeys = new Map(rules.map((rule) => [rule.id, ruleKey(rule)]));
   /** Each rule's items of a file's source items, keyed for it. */
   const keyed = (found: ReadonlyArray<SourceItem>) =>
-    rules.flatMap((rule) =>
+    keyedRules.flatMap(({ rule, key }) =>
       found
         .filter((item) => item.selector === rule.selector)
         .map((item) => ({
@@ -152,7 +160,7 @@ export const repoItems = Effect.fn('judged.repoItems')(function* (
             file: item.file,
             line: item.line,
             start: item.start,
-            key: cacheKey(ruleKeys.get(rule.id) ?? ruleKey(rule), memo.model, item.key),
+            key: cacheKey(key, memo.model, item.key),
           },
           text: item.text,
         })),

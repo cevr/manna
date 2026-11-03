@@ -1,4 +1,5 @@
 import { BunHttpServer } from '@effect/platform-bun';
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   Clock,
@@ -229,11 +230,16 @@ const inProcess = <E extends { readonly _tag: string }, R>(
 const FINDING =
   "src/a.ts:1 warning judged(historyComment): the comment tells the code's history: say what it does today and why; how it got here lives in git log p=0.97";
 
-/** `effect` scoped, over Bun's services and the repo's own judged lint. */
+/** `effect` scoped, over Bun's services, its digest and the repo's own judged lint. */
 const withFs = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(
     Effect.scoped,
-    Effect.provide(Layer.provideMerge(judgedLintLayer(import.meta.dir), BunServices.layer)),
+    Effect.provide(
+      Layer.provideMerge(
+        judgedLintLayer(import.meta.dir),
+        Layer.merge(BunServices.layer, BunCrypto.layerDigest),
+      ),
+    ),
   );
 
 describe('the judged lint fails open', () => {

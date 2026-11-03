@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, Layer, Stdio } from 'effect';
@@ -12,4 +13,4 @@ Stdio.Stdio.use(({ args }) =>
   Effect.flatMap(args, (argv) =>
     lintJudged(argv, '.', (model) => judgedModel(model).pipe(Layer.provide(FetchHttpClient.layer))),
   ),
-).pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);
+).pipe(Effect.provide([BunServices.layer, BunCrypto.layerDigest]), BunRuntime.runMain);

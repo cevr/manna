@@ -7,7 +7,7 @@ import { TestClock } from 'effect/testing';
 
 import { changes, keepAnswers, readCache } from './cache.js';
 import { judgedModel } from './model.js';
-import { type JudgedRule, ruleKey } from './rule.js';
+import type { JudgedRule } from './rule.js';
 import { findingLine, judge, partsOf, runLine } from './run.js';
 
 /** An item a judged rule reads. */
@@ -16,7 +16,7 @@ type RuleItem = Parameters<typeof judge>[1][number];
 /** A run's options but how it reads the texts it asks about: `judgeBy` reads them from its cases. */
 type Options = Omit<Parameters<typeof judge>[2], 'textsOf'>;
 import { type Answer, type Verdict, MAX_AGE_DAYS, cacheKey, dayOf } from './store.js';
-import { env, historyComment, missing, typesafeHttp } from './testing.js';
+import { env, historyComment, missing, ruleKeyOf, typesafeHttp } from './testing.js';
 
 const labelOf = (p: number) => {
   if (p >= 0.5) return 'history';
@@ -133,7 +133,7 @@ const judgeAll = (
     item: {
       ...item,
       start: start ?? 0,
-      key: cacheKey(ruleKey(item.rule), options.model, key ?? text),
+      key: cacheKey(ruleKeyOf(item.rule), options.model, key ?? text),
     },
     text,
   }));
@@ -367,7 +367,7 @@ describe('a judged rule', () => {
         const options = yield* judging;
         const services = yield* Effect.context<FileSystem.FileSystem | Path.Path>();
         const item = ITEMS[0]!;
-        const key = cacheKey(ruleKey(historyComment), options.model, item.text);
+        const key = cacheKey(ruleKeyOf(historyComment), options.model, item.text);
         const other = { label: 'history', probabilities: { history: 0.99, today: 0.01 } };
         const outcomes = yield* judge(
           [historyComment],
@@ -400,7 +400,7 @@ describe('a judged rule', () => {
         const options = yield* judging;
         const services = yield* Effect.context<FileSystem.FileSystem | Path.Path>();
         const [cachedItem, freshItem] = [ITEMS[0]!, ITEMS[1]!];
-        const keyOf = (text: string) => cacheKey(ruleKey(historyComment), options.model, text);
+        const keyOf = (text: string) => cacheKey(ruleKeyOf(historyComment), options.model, text);
         const at = (p: number) => ({
           label: 'history',
           probabilities: { history: p, today: 1 - p },
@@ -449,7 +449,7 @@ describe('a judged rule', () => {
       return Effect.gen(function* () {
         const options = yield* judging;
         const item = ITEMS[0]!;
-        const key = cacheKey(ruleKey(historyComment), options.model, item.text);
+        const key = cacheKey(ruleKeyOf(historyComment), options.model, item.text);
         const begun = 20_000 * 86_400_000 - 60_000;
         yield* TestClock.setTime(begun);
         const judged = yield* judge(
@@ -493,7 +493,7 @@ describe('a judged rule', () => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const options = yield* judging;
-        const keyOf = (text: string) => cacheKey(ruleKey(historyComment), options.model, text);
+        const keyOf = (text: string) => cacheKey(ruleKeyOf(historyComment), options.model, text);
         const today = dayOf(yield* Clock.currentTimeMillis);
         yield* keepAnswers(options.storeFile, {
           fresh: new Map(
@@ -1098,7 +1098,7 @@ describe('a judged rule never fails on its model', () => {
           options.storeFile,
           new Map([
             [
-              cacheKey(ruleKey(historyComment), options.model, kept),
+              cacheKey(ruleKeyOf(historyComment), options.model, kept),
               { label: 'history', probabilities: { today: 0.03, history: 0.97 } },
             ],
           ]),

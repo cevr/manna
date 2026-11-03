@@ -15,9 +15,9 @@
  */
 
 import { BunFileSystem } from '@effect/platform-bun';
-import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex } from '@noble/hashes/utils.js';
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { Effect, FileSystem, Layer, Option } from 'effect';
+import { Digest } from 'effect/crypto';
 import { describe, expect, it } from 'effect-bun-test';
 
 import { corpusGeneration, corpusRevision } from '../corpus-supply/model.js';
@@ -52,7 +52,11 @@ import {
  *  and these bytes are not a database (the same substitution
  *  `file-corpus-lifecycle.test.ts` makes). */
 const RELEASE_BYTES = 'the newer topics artifact';
-const RELEASE_DIGEST = `sha256:${bytesToHex(sha256(new TextEncoder().encode(RELEASE_BYTES)))}`;
+const RELEASE_DIGEST = `sha256:${Effect.runSync(
+  Digest.Digest.use((digest) =>
+    digest.digestHex(Digest.sha256, new TextEncoder().encode(RELEASE_BYTES)),
+  ).pipe(Effect.provide(BunCrypto.layerDigest)),
+)}`;
 const ACTIVE_BYTES = 'the installed topics artifact';
 
 const manifestEntry = (input: {

@@ -5,9 +5,8 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { Findings, makersHash, ruleSignature, textHash } from '../src/judged/findings.ts';
 import { itemsOf, parse } from '../src/judged/items.ts';
-import { ruleKey } from '../src/judged/rule.ts';
 import { MAX_AGE_DAYS, Store, cacheKey, dayOf } from '../src/judged/store.ts';
-import { historyComment } from '../src/judged/testing.ts';
+import { historyComment, ruleKeyOf } from '../src/judged/testing.ts';
 
 /** The timeout of a test here that spawns (oxlint): a cold start's time is the machine's. */
 const SPAWNS_MS = 30_000;
@@ -86,7 +85,7 @@ const scratch = (severity: 'warn' | 'error', selector: string = historyComment.s
 
 /** The store answering each of `SOURCE`'s comments history at the given probability. */
 const storeOf = (ps: ReadonlyArray<number>) => {
-  const keyOf = (text: string) => cacheKey(ruleKey(historyComment), 'typesafe/jev-1.13.0', text);
+  const keyOf = (text: string) => cacheKey(ruleKeyOf(historyComment), 'typesafe/jev-1.13.0', text);
   const comments = itemsOf('comments', parse('src/x.ts', SOURCE));
   return Schema.encodeEffect(Store)({
     answers: Object.fromEntries(
@@ -186,7 +185,8 @@ describe('the judged plugin', () => {
             (text) => fs.writeFileString(path.join(dir, 'tmp/judged/findings.json'), text),
           );
         yield* fs.makeDirectory(path.join(dir, 'tmp/judged'), { recursive: true });
-        yield* findings(ruleSignature('typesafe/jev-1.13.0', historyComment));
+        const key = ruleKeyOf(historyComment);
+        yield* findings(ruleSignature('typesafe/jev-1.13.0', key, historyComment));
         expect((yield* oxlint(dir)).lines).toEqual([
           `src/w.ts:1:1: ${REPORT} p=0.95 [Warning/judged(historyComment)]`,
           `src/x.ts:4:1: ${REPORT} p=0.97 [Warning/judged(historyComment)]`,
@@ -195,13 +195,13 @@ describe('the judged plugin', () => {
           `src/w.ts:1:1: ${REPORT} p=0.95 [Warning/judged(historyComment)]`,
           `src/x.ts:1:1: ${REPORT} p=0.95 [Warning/judged(historyComment)]`,
         ];
-        const signature = ruleSignature('typesafe/jev-1.13.0', historyComment);
+        const signature = ruleSignature('typesafe/jev-1.13.0', key, historyComment);
         yield* findings(
-          ruleSignature('typesafe/jev-1.13.0', { ...historyComment, threshold: 0.5 }),
+          ruleSignature('typesafe/jev-1.13.0', key, { ...historyComment, threshold: 0.5 }),
         );
         expect((yield* oxlint(dir)).lines).toEqual(fromStore);
         yield* findings(
-          ruleSignature('typesafe/jev-1.13.0', { ...historyComment, selector: 'functions' }),
+          ruleSignature('typesafe/jev-1.13.0', key, { ...historyComment, selector: 'functions' }),
         );
         expect((yield* oxlint(dir)).lines).toEqual(fromStore);
         yield* findings(signature, {

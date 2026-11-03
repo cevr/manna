@@ -1,3 +1,4 @@
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Path, Stream } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -98,7 +99,7 @@ const repo = (
   });
 
 const withFs = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  effect.pipe(Effect.scoped, Effect.provide(BunServices.layer));
+  effect.pipe(Effect.scoped, Effect.provide([BunServices.layer, BunCrypto.layerDigest]));
 
 const A = [
   '// One run of line comments,',

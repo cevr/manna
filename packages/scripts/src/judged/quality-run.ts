@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Duration, Effect, Layer, Option, Path } from 'effect';
@@ -165,6 +166,6 @@ const command = Command.make(
 );
 
 Command.run(command, { version: '1.0.0' }).pipe(
-  Effect.provide(Layer.mergeAll(FetchHttpClient.layer, BunServices.layer)),
+  Effect.provide(Layer.mergeAll(FetchHttpClient.layer, BunServices.layer, BunCrypto.layerDigest)),
   BunRuntime.runMain,
 );

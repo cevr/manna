@@ -16,7 +16,7 @@ import { Command, Flag } from 'effect/cli';
 import { Findings, findingsFileOf, makersHash, ruleSignature } from './findings.js';
 import { readByOxlint } from './items.js';
 import { JudgedLint, judgedLintLayer } from './config.js';
-import { cacheModel } from './rule.js';
+import { cacheModel, ruleKey } from './rule.js';
 import { LIMITS, detailOf, findingLine, judge, runLine } from './run.js';
 import { repoItems } from './sources.js';
 import { storeFileOf } from './store.js';
@@ -46,34 +46,41 @@ const findingsOf = (
   model: string,
   outcomes: Effect.Success<ReturnType<typeof judge>>['outcomes'],
   files: ReadonlyArray<{ readonly file: string; readonly hash: string }>,
-): Findings => ({
-  day,
-  store,
-  makers: makersHash(),
-  rules: Object.fromEntries(
-    outcomes.map((outcome) => [outcome.rule.id, ruleSignature(model, outcome.rule)]),
-  ),
-  files: Object.fromEntries(
-    files
-      .filter(({ file }) => readByOxlint(file))
-      .map(({ file, hash }) => [
-        file,
-        {
-          hash,
-          rules: Object.fromEntries(
-            outcomes
-              .filter((outcome) => !outcome.unkept.has(file))
-              .map((outcome) => [
-                outcome.rule.id,
-                outcome.findings
-                  .filter((finding) => finding.kept && finding.file === file)
-                  .map(({ start, p }) => ({ start, p })),
-              ]),
-          ),
-        },
+) =>
+  Effect.map(
+    Effect.forEach(outcomes, (outcome) =>
+      Effect.map(ruleKey(outcome.rule), (key) => [
+        outcome.rule.id,
+        ruleSignature(model, key, outcome.rule),
       ]),
-  ),
-});
+    ),
+    (signatures): Findings => ({
+      day,
+      store,
+      makers: makersHash(),
+      rules: Object.fromEntries(signatures),
+      files: Object.fromEntries(
+        files
+          .filter(({ file }) => readByOxlint(file))
+          .map(({ file, hash }) => [
+            file,
+            {
+              hash,
+              rules: Object.fromEntries(
+                outcomes
+                  .filter((outcome) => !outcome.unkept.has(file))
+                  .map((outcome) => [
+                    outcome.rule.id,
+                    outcome.findings
+                      .filter((finding) => finding.kept && finding.file === file)
+                      .map(({ start, p }) => ({ start, p })),
+                  ]),
+              ),
+            },
+          ]),
+      ),
+    }),
+  );
 
 /** Writes `findings` to `file` whole, through a temporary file renamed over it; one that cannot be written is said on one line. */
 const writeFindings = (file: string, findings: Findings) =>
@@ -109,7 +116,7 @@ const lint = Effect.fn('lintJudged')(function* (strict: boolean, read: Ref.Ref<n
     yield* Console.error(`[judged] tokens input=${usage.inputTokens} output=${usage.outputTokens}`);
   yield* writeFindings(
     findingsFileOf(root, config.settings.checkout),
-    findingsOf(day, config.settings.store, model, outcomes, tree.files),
+    yield* findingsOf(day, config.settings.store, model, outcomes, tree.files),
   );
   const own = outcomes.map((outcome) => ({
     rule: outcome.rule,

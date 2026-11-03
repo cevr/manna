@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Schema } from 'effect';
 
-import { type RuleOptions, ruleKey } from './rule.ts';
+import type { RuleOptions } from './rule.ts';
 
 const Finding = Schema.Struct({
   /** The item's offset in its file, where the plugin reports it. */
@@ -42,19 +42,18 @@ export type Findings = typeof Findings.Type;
 export const textHash = (text: string) => createHash('sha256').update(text).digest('hex');
 
 /**
- * What a rule's findings depend on: the model, the rule's words (`ruleKey`),
- * its selector, its reporting label and its threshold. The plugin reads a
- * rule's findings only under the signature it computes from its own options.
+ * What a rule's findings depend on: the model, the rule's words (`key`, its
+ * `ruleKey`), its selector, its reporting label and its threshold. The plugin
+ * reads a rule's findings only under the signature it computes from its own
+ * options.
  */
 export const ruleSignature = (
   model: string,
-  rule: Pick<
-    RuleOptions,
-    'subject' | 'instructions' | 'criteria' | 'selector' | 'reports' | 'threshold'
-  >,
+  key: string,
+  rule: Pick<RuleOptions, 'selector' | 'reports' | 'threshold'>,
 ) =>
   createHash('sha256')
-    .update([model, ruleKey(rule), rule.selector, rule.reports, String(rule.threshold)].join('\0'))
+    .update([model, key, rule.selector, rule.reports, String(rule.threshold)].join('\0'))
     .digest('hex');
 
 /** The code that makes the items and their keys, by its files beside this one, and the parser it reads them with. */
