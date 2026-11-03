@@ -12,6 +12,7 @@ import {
   doubledInk,
   faceMarks,
   faceOffset,
+  enclosedGround,
   figureMask,
   flatness,
   idAt,
@@ -332,18 +333,19 @@ export const sleeveAcross = (
 /** A frame whose sleeve is not read: the turn's. */
 const NO_SLEEVE: SleeveWidths = { upper: Option.none(), fore: Option.none() };
 
-/** One motion frame's measures: ink, doubled px and tears from its colour and ids, and the sleeve as read elsewhere. */
+/** One motion frame's measures: ink, doubled px and tears from its colour and ids (against `held`, frame 0's enclosed ground), and the sleeve as read elsewhere. */
 export const measureFrame = (
   frame: number,
   colour: Raster,
   ids: Raster,
   box: Box,
   sleeve: SleeveWidths,
+  held: Uint8Array,
 ): FrameMeasured => ({
   frame,
   ink: strokeWidth(colour, box),
   doubled: doubledInk(colour, box),
-  tears: tears(ids, colour, isGround),
+  tears: tears(ids, colour, isGround, held),
   ...sleeve,
 });
 
@@ -437,15 +439,18 @@ export const measureRun = Effect.fn('Toon3dVerify.measureRun')(function* (
     boxFor: (ids: Raster, colour: Raster) => Box,
     sleeveOf: (k: number) => Effect.Effect<SleeveWidths, VerifyFailed>,
   ) =>
-    Effect.forEach(
-      Array.from({ length: count }, (_, k) => k),
-      (k) =>
-        Effect.gen(function* () {
-          const colour = yield* raster(`${dir}/${frameName(k)}`);
-          const ids = yield* raster(`${dir}-ids/${frameName(k)}`);
-          return measureFrame(k, colour, ids, boxFor(ids, colour), yield* sleeveOf(k));
-        }),
-    );
+    Effect.gen(function* () {
+      const held = enclosedGround(yield* raster(`${dir}-ids/${frameName(0)}`), isGround);
+      return yield* Effect.forEach(
+        Array.from({ length: count }, (_, k) => k),
+        (k) =>
+          Effect.gen(function* () {
+            const colour = yield* raster(`${dir}/${frameName(k)}`);
+            const ids = yield* raster(`${dir}-ids/${frameName(k)}`);
+            return measureFrame(k, colour, ids, boxFor(ids, colour), yield* sleeveOf(k), held);
+          }),
+      );
+    });
   const bend = yield* frames(
     'bend',
     bendAngles(plan.bendFrames).length,

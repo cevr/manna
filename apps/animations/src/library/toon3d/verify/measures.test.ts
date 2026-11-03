@@ -5,6 +5,7 @@ import {
   deltaLab,
   depthCode,
   doubledInk,
+  enclosedGround,
   faceMarks,
   faceOffset,
   figureMask,
@@ -121,15 +122,37 @@ describe('ink', () => {
 });
 
 describe('tears', () => {
-  test('counts an enclosed 3 × 3 hole, never paper at the edge or a hole of 64 px or more', () => {
-    const ids = idsOf(40, 40, (x, y) => {
-      if (inRect(x, y, 5, 5, 7, 7)) return 0;
-      if (inRect(x, y, 20, 20, 27, 27)) return 0;
-      if (inRect(x, y, 2, 2, 37, 37)) return 5;
+  const ground = (id: number) => id === 0;
+  const none = new Uint8Array(60 * 60);
+  const clear = paint(60, 60, () => PAPER);
+  const holed = (side: number) =>
+    idsOf(60, 60, (x, y) => {
+      if (inRect(x, y, 20, 20, 19 + side, 19 + side)) return 0;
+      if (inRect(x, y, 2, 2, 57, 57)) return 5;
       return 0;
     });
-    const clear = paint(40, 40, () => PAPER);
-    expect(tears(ids, clear, (id) => id === 0)).toBe(9);
+
+  test('an enclosed hole reads every pixel whatever its size (49, 64 and 81 px), and paper at the edge reads none', () => {
+    expect([7, 8, 9].map((side) => tears(holed(side), clear, ground, none))).toEqual([49, 64, 81]);
+    expect(
+      tears(
+        idsOf(60, 60, () => 0),
+        clear,
+        ground,
+        none,
+      ),
+    ).toBe(0);
+  });
+
+  test('a hole the reference holds at that place is drawn so and reads 0; one it holds elsewhere reads', () => {
+    const ids = holed(9);
+    expect(tears(ids, clear, ground, enclosedGround(ids, ground))).toBe(0);
+    const moved = idsOf(60, 60, (x, y) => {
+      if (inRect(x, y, 40, 40, 48, 48)) return 0;
+      if (inRect(x, y, 2, 2, 57, 57)) return 5;
+      return 0;
+    });
+    expect(tears(ids, clear, ground, enclosedGround(moved, ground))).toBe(81);
   });
 
   test('ground the ink covers is no tear: only enclosed ground that shows in the frame counts', () => {
@@ -143,7 +166,7 @@ describe('tears', () => {
       if (inRect(x, y, 17, 17, 21, 21)) return INK;
       return BASE;
     });
-    expect(tears(ids, colour, (id) => id === 0)).toBe(9);
+    expect(tears(ids, colour, (id) => id === 0, new Uint8Array(40 * 40))).toBe(9);
   });
 });
 

@@ -311,22 +311,39 @@ export const doubledInk = (r: Raster, box: Box): number => {
   return n;
 };
 
-/**
- * Background pixels (ids `background` holds) the figure encloses, in
- * components under 64 px, that show in the finished `colour` frame: tears
- * and pin holes. Ground the ink covers (the sliver between a hem and two
- * rounded feet) is not seen, so it is no tear.
- */
-export const tears = (ids: Raster, colour: Raster, background: (id: number) => boolean): number => {
+/** The background pixels (ids `background` holds) the figure encloses: components of background that touch no edge of the picture. */
+export const enclosedGround = (ids: Raster, background: (id: number) => boolean): Uint8Array => {
   const { width: w, height: h } = ids;
-  const ink = inkMask(colour);
   const onEdge = (i: number): boolean => {
     const x = i % w;
     const y = Math.floor(i / w);
     return x === 0 || y === 0 || x === w - 1 || y === h - 1;
   };
-  return components(w, h, (i) => background(idAt(ids, i)))
-    .filter((c) => c.length < 64 && !c.some(onEdge))
+  const out = new Uint8Array(w * h);
+  for (const c of components(w, h, (i) => background(idAt(ids, i))))
+    if (!c.some(onEdge)) for (const i of c) out[i] = 1;
+  return out;
+};
+
+/**
+ * Background pixels the figure encloses that show in the finished `colour`
+ * frame: tears and holes, of any size. An enclosed component at least half of
+ * whose pixels the reference's enclosed ground `held` also holds is drawn so
+ * (the space between an arm and the body the reference frame has too), and
+ * is no tear. Ground the ink covers (the sliver between a hem and two rounded
+ * feet) is not seen, so it is no tear.
+ */
+export const tears = (
+  ids: Raster,
+  colour: Raster,
+  background: (id: number) => boolean,
+  held: Uint8Array,
+): number => {
+  const { width: w, height: h } = ids;
+  const ink = inkMask(colour);
+  const enclosed = enclosedGround(ids, background);
+  return components(w, h, (i) => enclosed[i] === 1)
+    .filter((c) => 2 * c.filter((i) => held[i] === 1).length < c.length)
     .reduce((sum, c) => sum + c.filter((i) => ink[i] === 0).length, 0);
 };
 
