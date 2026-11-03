@@ -1058,15 +1058,20 @@ export const revealedShown = <T>(
  * mesh's order, so where a fold turns two triangles of one part over one pixel
  * the later lies over the earlier, as the GL path's blend lays them; a pixel
  * centre on an edge two triangles share goes to one of them (`edgeHolds`).
+ * `movingPart` additionally reports that limb's forearm/hand contribution
+ * within the completed part as a byte alpha plane, before foreground parts
+ * occlude it. The normal raster path does not allocate that plane.
  */
 export const rasterOf = (
   puppet: Puppet,
   pose: PuppetPose,
   size: readonly [number, number] = [puppet.width, puppet.height],
-): Raster => {
+  movingPart?: string,
+): Raster & { readonly moving?: Uint8Array } => {
   const [W, H] = size;
   // Premultiplied, colour in 0..255 and alpha in 0..1.
   const acc = new Float64Array(W * H * 4);
+  const tracked = Option.map(Option.fromUndefinedOr(movingPart), () => new Uint8Array(W * H));
   const posed = posedVertices(puppet, pose);
   const m = boneTransforms(puppet.bones, pose.numbers);
   const moving = (n: number) => partTurned(puppet, n, m);
@@ -1084,11 +1089,27 @@ export const rasterOf = (
       ),
       {
         onNone: () => layPart(acc, part, layers, posed[k]!, [0, 0], [W, H]),
-        onSome: (limb) => layLimb(acc, puppet, pose, m, part, limb, layers, posed[k]!, [W, H]),
+        onSome: (limb) =>
+          layLimb(
+            acc,
+            puppet,
+            pose,
+            m,
+            part,
+            limb,
+            layers,
+            posed[k]!,
+            [W, H],
+            Option.filter(tracked, () => part.name === movingPart),
+          ),
       },
     );
   }
-  return unpremultiplied(acc, W, H);
+  const raster = unpremultiplied(acc, W, H);
+  return Option.match(tracked, {
+    onNone: () => raster,
+    onSome: (moving) => ({ ...raster, moving }),
+  });
 };
 
 /** Each of `layers` (a part's texture, then its seals and revealed paint) laid over `acc` (`W` × `H`, its origin at `origin` of the frame) on `part`'s posed vertices `q`, triangle by triangle in mesh order. */
@@ -1183,6 +1204,7 @@ const layLimb = (
   layers: ReadonlyArray<Raster>,
   q: Float64Array,
   [W, H]: readonly [number, number],
+  moving: Option.Option<Uint8Array>,
 ) => {
   const frames = {
     upper: restMap(puppet, pose, m, limb.bones[0]),
@@ -1236,6 +1258,10 @@ const layLimb = (
     paintedInk = new Float64Array(stub.length);
     layPart(paintedInk, part, [inkMask(limb, part.pixels)], q, [x0, y0], [bw, bh]);
   }
+  const coverage = Option.getOrElse(
+    Option.map(moving, () => new Float64Array(bw * bh)),
+    () => new Float64Array(0),
+  );
   const stroke = limbStroke(
     // The fixed cloth join uses the painted ink on this same posed mesh.
     limb,
@@ -1248,12 +1274,23 @@ const layLimb = (
     painted,
     (x, y) => acc[(Math.floor(y) * W + Math.floor(x)) * 4 + 3]!,
     paintedInk,
+    coverage,
   );
   for (let y = 0; y < bh; y++)
     for (let x = 0; x < bw; x++) {
       const o = (y * bw + x) * 4;
       if (stroke[o + 3]! > 0) over(acc, ((y0 + y) * W + x0 + x) * 4, stroke.subarray(o, o + 4));
     }
+  Option.match(moving, {
+    onNone: () => {},
+    onSome: (mask) => {
+      for (let y = 0; y < bh; y++)
+        for (let x = 0; x < bw; x++) {
+          const i = y * bw + x;
+          mask[(y0 + y) * W + x0 + x] = Math.round(255 * coverage[i]! * stroke[i * 4 + 3]!);
+        }
+    },
+  });
 };
 
 /** The premultiplied bilinear sample of `tex` (a `W` × `H` RGBA texture) at `(sx, sy)` into `into`: colour in 0..255, alpha in 0..1. */

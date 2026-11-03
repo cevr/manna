@@ -2752,9 +2752,11 @@ the widths, ink and cuff from the part. `core/limb-stroke.ts` builds each
 segment from the common tangent envelope of its measured disks, with round
 ends of half their full width. The capsule union joins the shoulder stub
 and cuff with tangent arcs at the measured ink's pen radius. The hand
-overlaps the sleeve, preserving its painted outer outline; a cloth lip
-covers its artificial wrist cut by that pen radius and the opening receives
-ink even inside the silhouette. The lining stays on the forearm. Cloth
+overlaps the sleeve, preserving its painted outer outline. Its artificial
+cut takes a shallow ink lip: at most 1.5% of the square root of its measured
+skin area, followed by opening ink bounded by that hand size. Held objects
+do not enlarge the lip. Hand-owned paint stays above the lining, including
+where a turned hand meets the generated sleeve beyond the source cut. Cloth
 donors must be twice as close in chroma to measured cloth as to skin, so
 ambiguous cuff paint cannot leave skin-coloured flecks on the sleeve.
 Prepared cloth is reused across poses by limb and source texture identity;
@@ -2762,6 +2764,14 @@ a dyed texture prepares its own cloth.
 One completed silhouette boundary, the cuff opening and the outer fold (60–90°)
 receive ink. A part without a limb, or below its transition midpoint,
 follows the painted path exactly.
+
+`rasterOf(puppet, pose, size, partName)` also returns a `moving` byte plane
+for that limb's forearm and hand contribution within the part, before any
+foreground part occludes it. The optional plane follows the same round
+joins, hand ownership and silhouette interpolation as paint. Normal renders
+do not compute it. The per-limb shoulder guard reads these actual pixels,
+with one diagonal pixel of reconstruction fringe. Its fixed reference
+keeps unchanged cap ink from disappearing into a moving exclusion.
 
 A puppet (`core/puppet.ts`) is a part sheet on a skeleton
 (`<member>/cutout/skeleton.ts`: bones named by the shared controls (`lean`,

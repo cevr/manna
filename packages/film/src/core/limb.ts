@@ -179,6 +179,8 @@ interface LimbRegions {
   readonly cloth: DataView;
   /** Ink on the original paint, independent of dye, for the fixed upper arm's edge treatment. */
   readonly ink: DataView;
+  /** Undyed hand skin area in source pixels; held objects do not enlarge its lip. */
+  readonly handArea: number;
 }
 
 /** A stroke limb as `puppetOf` measured it from its part's pixels: its rule, its rest chain, its knots `step` px apart along the sleeve, knot k at u = (k + ½) step (none on the shoulder's or the cuff's line, where a side's reach would read the paint's end), its two sides (`outer` the side a positive elbow turn opens), its ink's colour (the median of each channel) and width (the median depth where a side shows ink), and its regions. */
@@ -557,6 +559,10 @@ const cuffEdgeOf = (t: Texels, chain: LimbChain, cuff: LimbStation, inkWidth: nu
       // unambiguous cloth instead of leaving a skin-coloured fleck behind.
       return lab[0] >= INK_L && 2 * chroma(lab, cloth) <= chroma(lab, skin);
     },
+    skin: (x: number, y: number) => {
+      const lab = labOf(t.rgb(x, y));
+      return lab[0] >= INK_L && chroma(lab, skin) < chroma(lab, cloth);
+    },
   });
 };
 
@@ -565,12 +571,17 @@ const regionsOf = (
   pixels: Raster,
   t: Texels,
   chain: LimbChain,
-  cuff: { readonly edge: (v: number) => number; readonly cloth: (x: number, y: number) => boolean },
+  cuff: {
+    readonly edge: (v: number) => number;
+    readonly cloth: (x: number, y: number) => boolean;
+    readonly skin: (x: number, y: number) => boolean;
+  },
 ): LimbRegions => {
   const box = paintBox(pixels, t);
   const [bx, by, bw, bh] = box;
   const shares = new Uint8Array(bw * bh * 2);
   const cloth = new Uint8Array(bw * bh);
+  let handArea = 0;
   for (let y = 0; y < bh; y++)
     for (let x = 0; x < bw; x++) {
       const [u, v] = unroll(chain, [bx + x + 0.5, by + y + 0.5]);
@@ -579,12 +590,15 @@ const regionsOf = (
       const hand = Number(!body && u >= cuff.edge(v)) * 255;
       shares.set([stub, hand], 2 * (y * bw + x));
       cloth[y * bw + x] = Number(hand === 0 && cuff.cloth(bx + x, by + y));
+      if (hand > 0 && t.byte(bx + x, by + y, 3) > 0 && cuff.skin(bx + x, by + y))
+        handArea += t.byte(bx + x, by + y, 3) / 255;
     }
   let sourceInk = Option.none<DataView>();
   return {
     box,
     shares: bytes(shares),
     cloth: bytes(cloth),
+    handArea,
     // Only a rendered cloth join needs this original-ink reference. The
     // measurement and single-part raster paths need no additional scan.
     get ink() {

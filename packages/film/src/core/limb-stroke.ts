@@ -343,12 +343,14 @@ const closedField = (pixels: Float64Array, width: number, height: number, radius
   return Float64Array.from(outside.distances, (d) => Math.sqrt(d) - radius - 0.5);
 };
 
-/** Change coverage without blending displaced pictures; newly filled ground takes sampled cloth. */
+/** Change coverage without blending displaced pictures. Newly filled ground
+ * takes sampled cloth; the sampler also names its actual moving owner. */
 const coverField = (
   pixels: Float64Array,
   field: Float64Array,
   width: number,
-  fill: (x: number, y: number, into: Float64Array) => void,
+  fill: (x: number, y: number, into: Float64Array) => number,
+  moving: Float64Array,
 ) => {
   const donor = new Float64Array(4);
   for (let i = 0; i < field.length; i++) {
@@ -360,13 +362,26 @@ const coverField = (
       pixels.fill(0, o, o + 4);
       continue;
     }
-    if (before === 0) fill((i % width) + 0.5, Math.floor(i / width) + 0.5, donor);
+    if (before === 0) {
+      const owner = fill((i % width) + 0.5, Math.floor(i / width) + 0.5, donor);
+      if (moving.length > 0) moving[i] = owner;
+    }
     for (let c = 0; c < 3; c++) {
       let colour = donor[c]!;
       if (before > 0) colour = pixels[o + c]! / before;
       pixels[o + c] = colour * alpha;
     }
     pixels[o + 3] = alpha;
+  }
+};
+
+/** Carry the optional moving contribution through the hand's over operation. */
+const handContributions = (moving: Float64Array, pixels: Float64Array, hands: Float64Array) => {
+  if (moving.length === 0) return;
+  for (let i = 0; i < moving.length; i++) {
+    const alpha = hands[i * 4 + 3]!;
+    const total = alpha + pixels[i * 4 + 3]! * (1 - alpha);
+    if (total > 0) moving[i] = (alpha + moving[i]! * pixels[i * 4 + 3]! * (1 - alpha)) / total;
   }
 };
 
@@ -384,24 +399,38 @@ const outline = (
   height: number,
   ink: Rgb,
   inkWidth: number,
+  handArea: number,
   blend: number,
-  fill: (x: number, y: number, into: Float64Array) => void,
+  fill: (x: number, y: number, into: Float64Array) => number,
+  moving: Float64Array,
 ) => {
   const radius = inkWidth / 2;
   const garment = closedField(pixels, width, height, radius);
   const eroded = nearest(width, height, (i) => garment[i]! >= radius);
   const opened = Float64Array.from(eroded.distances, (d) => radius + 0.5 - Math.sqrt(d));
-  coverField(pixels, opened, width, fill);
+  coverField(pixels, opened, width, fill, moving);
+  // The generated sleeve can meet the hand beyond the source cut too.
+  // Include that actual garment contact, while free hand edges keep their
+  // own painted outline and never acquire a sleeve-coloured backing.
+  for (let i = 0; i < width * height; i++)
+    handGround[i] = Math.max(handGround[i]!, pixels[i * 4 + 3]! * (1 - hands[i * 4 + 3]!));
   const handCuts = nearest(width, height, (i) => handGround[i]! >= 0.5);
-  // The sleeve lip covers the hand's artificial cut by one measured pen
-  // radius. Its round offset hides source cut teeth inside the opening.
+  // The cut's ink lip is sized by the hand, not the sleeve's pen. Its
+  // depth is at most 1.5% of sqrt(hand area); opening ink adds at most
+  // max(2px, 4.5% of sqrt(hand area)). Hand-owned paint stays above lining.
+  const handSize = Math.sqrt(handArea);
+  const lipDepth = Math.min(radius, 0.015 * handSize);
+  const openingWidth = Math.min(inkWidth, Math.max(2, 0.045 * handSize));
+  handContributions(moving, pixels, hands);
   for (let i = 0; i < width * height; i++) {
     const o = i * 4;
-    const keep = clamp01(Math.sqrt(handCuts.distances[i]!) - radius + 0.5);
-    const alpha = hands[o + 3]! * keep;
-    for (let c = 0; c < 3; c++) pixels[o + c] = hands[o + c]! * keep + pixels[o + c]! * (1 - alpha);
+    const keep = clamp01(Math.sqrt(handCuts.distances[i]!) - lipDepth + 0.5);
+    const alpha = hands[o + 3]!;
+    for (let c = 0; c < 3; c++) {
+      hands[o + c] = hands[o + c]! * keep + ink[c]! * alpha * (1 - keep);
+      pixels[o + c] = hands[o + c]! + pixels[o + c]! * (1 - alpha);
+    }
     pixels[o + 3] = alpha + pixels[o + 3]! * (1 - alpha);
-    hands[o + 3] = alpha;
   }
   // A round ink join has the pen's radius: half its measured width.
   const field = closedField(pixels, width, height, inkWidth / 2);
@@ -414,20 +443,20 @@ const outline = (
     if (blend < 1) distance = reference[i]! * (1 - blend) + d * blend;
     mixed[i] = distance;
   }
-  coverField(pixels, mixed, width, fill);
+  coverField(pixels, mixed, width, fill, moving);
   const boundary = nearest(width, height, (i) => pixels[i * 4 + 3]! < 0.5);
   let allowedInk = (_i: number) => 1;
   if (ground.some((alpha) => alpha >= 0.5)) {
-    const referenceInk = nearest(width, height, (i) => paintedInk[i * 4]! / 255 >= 0.999);
-    // Keep the two bilinear footprints (the source ink mask and the final
-    // band) inside the painted line's half-pen neighbourhood.
-    allowedInk = (i) => clamp01(inkWidth / 2 - 0.5 - Math.sqrt(referenceInk.distances[i]!));
+    const sourceInk = nearest(width, height, (i) => paintedInk[i * 4]! / 255 >= 0.999);
+    allowedInk = (i) => clamp01(inkWidth / 2 - 0.5 - Math.sqrt(sourceInk.distances[i]!));
   }
   for (let i = 0; i < width * height; i++) {
     const into = pixels.subarray(i * 4, i * 4 + 4);
     const band = clamp01(inkWidth + 0.5 - Math.sqrt(boundary.distances[i]!));
-    const handCut = clamp01(inkWidth + 0.5 - Math.sqrt(handCuts.distances[i]!));
-    const handAlpha = hands[i * 4 + 3]!;
+    const handBorder = clamp01(openingWidth + 0.5 - Math.sqrt(boundary.distances[i]!));
+    const handCut = clamp01(lipDepth + openingWidth + 0.5 - Math.sqrt(handCuts.distances[i]!));
+    let handAlpha = 0;
+    if (into[3]! > 0) handAlpha = clamp01(hands[i * 4 + 3]! / into[3]!);
     let keep = 1;
     const outside = boundary.ids[i]!;
     if (edgeInk[i] === 2 || (edgeInk[i]! > 0 && outside >= 0 && ground[outside]! >= 0.5))
@@ -438,6 +467,7 @@ const outline = (
       Math.max(
         band * keep * (1 - handAlpha + handAlpha * handCut),
         handAlpha * handCut,
+        handAlpha * handBorder,
         folds[i]! * (1 - handAlpha),
       ),
     );
@@ -463,6 +493,7 @@ export const limbStroke = (
   paintedPixels: Float64Array,
   behind: (x: number, y: number) => number,
   paintedInk: Float64Array,
+  moving: Float64Array = new Float64Array(0),
 ) => {
   const { fold } = limbBlend(limb, numbers);
   const { chain, ink, inkWidth } = limb;
@@ -480,6 +511,14 @@ export const limbStroke = (
     return [u0 + dot(r, d), dot(r, opens(d))];
   };
   const scale = 1 / Math.hypot(frames.upper[0]!, frames.upper[1]!);
+  const edgeAt = (stub: number, foreDistance: number, upperDistance: number, q: Pt) => {
+    if (
+      stub > 0 ||
+      (foreDistance <= upperDistance && along(0, q)[0] <= limb.stations.shoulder.u + inkWidth)
+    )
+      return 2;
+    return Number(foreDistance <= upperDistance);
+  };
   const capsules = [capsuleOf(limb, 0, scale), capsuleOf(limb, 1, scale)];
   /** The two measured round-ended support envelopes, sampled on their own rigid frames. */
   const tube = (k: number, q: Pt, into: Float64Array) => {
@@ -528,12 +567,7 @@ export const limbStroke = (
       onFore[i] = Number(foreDistance > upperDistance);
       // Cloth behind the fixed upper arm continues the figure. Only its
       // painted ink can mark that contact; a free silhouette still gets ink.
-      edgeInk[i] = Number(foreDistance <= upperDistance);
-      if (
-        stub[3]! > 0 ||
-        (foreDistance <= upperDistance && along(0, qu)[0] <= limb.stations.shoulder.u + inkWidth)
-      )
-        edgeInk[i] = 2;
+      edgeInk[i] = edgeAt(stub[3]!, foreDistance, upperDistance, qu);
       ground[i] = behind(px, py);
       sample(qh[0], qh[1], hand);
       const handAlpha = hand[3]!;
@@ -541,6 +575,7 @@ export const limbStroke = (
       handGround[i] = Math.max(0, handAlpha - hand[3]!);
       into.set(upper);
       overInto(into, fore);
+      if (moving.length > 0) moving[i] = fore[3]! / Math.max(Number.EPSILON, into[3]!);
       hands.set(hand, o);
       const [u, v] = along(1, qf);
       const [w] = widthAt(limb, 'outer', 1, u);
@@ -568,6 +603,7 @@ export const limbStroke = (
     height,
     ink,
     inkWidth * scale,
+    limb.regions.handArea * scale * scale,
     limbBlend(
       {
         bones: limb.bones,
@@ -582,6 +618,8 @@ export const limbStroke = (
       if (onFore[k]) inv = frames.fore;
       const q = mapped(inv, x + x0, y + y0);
       sampleCloth(q[0], q[1], into);
+      return onFore[k]!;
     },
+    moving,
   );
 };

@@ -248,13 +248,24 @@ const nearBoundary = (r: Raster, x: number, y: number, width: number, alpha = 12
   return false;
 };
 
-// Only the measured hand/sleeve contact receives opening ink. A bar deep
-// inside the hand or across the sleeve has no exemption here.
+// The measured cut and the hand's own narrow alpha boundary receive ink.
+// A bar deep inside the hand or across the sleeve has no exemption here.
 const cuffCut: Array<Pt> = [];
+const handEdge: Array<Pt> = [];
 for (let y = Math.floor(B_HAND[1] - 18); y <= Math.ceil(B_HAND[1] + 18); y++)
   for (let x = Math.floor(B_HAND[0] - 18); x <= Math.ceil(B_HAND[0] + 18); x++) {
     if (BENT.rgba[(y * BW + x) * 4 + 3]! < 128) continue;
     const hand = limbShares(BENT_LIMB, x, y)[2];
+    if (
+      hand >= 0.5 &&
+      [
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1],
+      ].some(([dx, dy]) => BENT.rgba[((y + dy!) * BW + x + dx!) * 4 + 3]! < 128)
+    )
+      handEdge.push([x + 0.5, y + 0.5]);
     for (const [dx, dy] of [
       [1, 0],
       [0, 1],
@@ -286,12 +297,22 @@ const strayInk = (r: Raster, elbow: number, width: number) => {
       const cuff = cuffCut.some(
         (p) => (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2 <= (width + Math.SQRT2) ** 2,
       );
+      // The hand's own narrow circle outline can lie over the generated
+      // sleeve. Its source alpha boundary is distinct from the cuff cut;
+      // neither permits ink deep in the hand or across the sleeve.
+      const handOutline = handEdge.some(
+        (p) =>
+          (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2 <=
+          (Math.min(width, Math.max(2, 0.045 * Math.sqrt(BENT_LIMB.regions.handArea))) +
+            Math.SQRT2) **
+            2,
+      );
       const fold =
         elbow > 60 &&
         u >= B_UPPER &&
         u <= B_UPPER + B_FORE &&
         Math.abs(v - bentOuter(u)) <= width + 1;
-      if (!fold && !cuff) stray++;
+      if (!fold && !cuff && !handOutline) stray++;
     }
   return stray;
 };
@@ -783,10 +804,11 @@ describe('rasterOf stroke silhouette', () => {
       })),
     };
     for (const elbowRight of [25, 90]) {
-      const pose = { numbers: { elbowRight, wristRight: -38 }, root: BENT_PUPPET.root, scale: 1 };
+      const wristRight = -0.85 * elbowRight;
+      const pose = { numbers: { elbowRight, wristRight }, root: BENT_PUPPET.root, scale: 1 };
       expect(
         Buffer.compare(
-          Buffer.from(rasterOf(BENT_PUPPET, pose).rgba),
+          Buffer.from(bentAt(elbowRight, wristRight).rgba),
           Buffer.from(rasterOf(forced, pose).rgba),
         ),
       ).toBe(0);
