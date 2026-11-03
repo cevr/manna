@@ -53,6 +53,10 @@ describe('the bars table', () => {
     expect(new Set(BARS.map((b) => b.id)).size).toBe(BARS.length);
   });
 
+  test('every bar is the owner’s, approved 2026-11-03', () => {
+    expect(BARS.filter((b) => b.source !== 'owner').map((b) => b.id)).toEqual([]);
+  });
+
   test('every measure is read by some bar', () => {
     expect(new Set(BARS.map((b) => b.measure))).toEqual(new Set(MEASURES));
   });

@@ -48,119 +48,121 @@ export interface BarRow {
   readonly source: BarSource;
 }
 
-const proposed = (
+/** A bar the owner approved (2026-11-03: "I think the bars are okay"). */
+const approved = (
   id: string,
   stage: Stage,
   check: string,
   measure: MeasureName,
   bar: Bar,
-): BarRow => ({ id, stage, check, measure, bar, source: 'orchestrator-proposed' });
+): BarRow => ({ id, stage, check, measure, bar, source: 'owner' });
 
 /**
- * The bars a figure must meet, fixed in one table (verify-spec, 2026-11-03).
+ * The bars a figure must meet, fixed in one table (verify-spec, 2026-11-03),
+ * each set by the owner.
  * Drifts are fractions of frame 0; `turn` is two lines, its tears and its
  * outline, so each line has one measure and one bar.
  */
 export const BARS: ReadonlyArray<BarRow> = [
-  proposed(
+  approved(
     'determinism',
     'render',
     'each view and motion frame, colour and ids, rendered in two page launches: renders whose sha256 differ',
     'differingRenders',
     Bar.AtMost({ max: 0 }),
   ),
-  proposed(
+  approved(
     'silhouette',
     'geometry',
     'IoU vs the kept view, worst of the six views',
     'iou',
     Bar.AtLeast({ min: 0.95 }),
   ),
-  proposed(
+  approved(
     'proportions',
     'geometry',
     'flagged proportion rows, front',
     'frontFlaggedRows',
     Bar.AtMost({ max: 4 }),
   ),
-  proposed(
+  approved(
     'colour',
     'palette',
     'median flat ΔE per part, worst part of any view',
     'partDeltaE',
     Bar.AtMost({ max: 3 }),
   ),
-  proposed(
+  approved(
     'flat-share',
     'shader',
     "share of a part's interior px within ΔE 3 of its base or shade, worst part of any view",
     'flatShare',
     Bar.AtLeast({ min: 0.98 }),
   ),
-  proposed(
+  approved(
     'flat-blobs',
     'shader',
     'shade blobs per part, most of any part in any view',
     'shadeBlobs',
     Bar.AtMost({ max: 2 }),
   ),
-  proposed(
+  approved(
     'ink-width',
     'ink',
     'median ink width, the view farthest from 8 px',
     'inkWidth',
     Bar.Near({ target: 8, share: 0.15 }),
   ),
-  proposed(
+  approved(
     'ink-colour',
     'ink',
     "ΔE of the ink's colour to the kept ink's, worst view",
     'inkDeltaE',
     Bar.AtMost({ max: 6 }),
   ),
-  proposed(
+  approved(
     'face',
     'face',
     "front: the farthest brow, eye or mouth mark centre from the kept's, px",
     'faceOffset',
     Bar.AtMost({ max: 4 }),
   ),
-  proposed(
+  approved(
     'bend-tears',
     'rig',
     'elbow 0 -> 110 -> 0, wrist -0.85 x elbow: tear px, worst frame',
     'bendTears',
     Bar.AtMost({ max: 0 }),
   ),
-  proposed(
+  approved(
     'bend-outline',
     'rig',
     'outline width over the bend, drift from frame 0',
     'bendOutlineDrift',
     Bar.AtMost({ max: 0.15 }),
   ),
-  proposed(
+  approved(
     'bend-sleeve',
     'rig',
     'sleeve width across the bone axis, drift from frame 0, worse bone',
     'bendSleeveDrift',
     Bar.AtMost({ max: 0.1 }),
   ),
-  proposed(
+  approved(
     'bend-doubled',
     'ink',
     'doubled-outline px, worst frame of the bend',
     'bendDoubled',
     Bar.AtMost({ max: 20 }),
   ),
-  proposed(
+  approved(
     'turn-tears',
     'rig',
     'yaw 0 -> -pi/2: tear px, worst frame',
     'turnTears',
     Bar.AtMost({ max: 0 }),
   ),
-  proposed(
+  approved(
     'turn-outline',
     'rig',
     'outline width over the turn, drift from frame 0',
