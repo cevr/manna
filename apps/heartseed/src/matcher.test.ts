@@ -310,6 +310,10 @@ describe('numbers match by value', () => {
       ['sixscore thousand', '120000'],
       ['an hundred and forty and four thousand', '144000'],
       ['one thousand and one', '1001'],
+      ['one thousand and a hundred', '1100'],
+      ['one million a thousand', '1001000'],
+      ['one million and an hundred', '1000100'],
+      ['a thousand a hundred and one', '1101'],
       ['two million five', '2000005'],
       [
         'nine quadrillion seven trillion one hundred ninety nine billion two hundred fifty four million seven hundred forty thousand nine hundred ninety one',
@@ -336,6 +340,11 @@ describe('numbers match by value', () => {
       ['1st', 'one'],
       ['one twenty', '21'],
       ['one hundred hundred', '10000'],
+      ['one thousand and a', '1001'],
+      ['one thousand a twenty', '1020'],
+      ['a one thousand', '1000'],
+      ['one thousand and and one', '1001'],
+      ['a hundred a', '101'],
     ] as const) {
       expect(same(verse, spoken), `${verse} / ${spoken}`).toBe(false);
     }

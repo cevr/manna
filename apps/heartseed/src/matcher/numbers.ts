@@ -4,13 +4,15 @@
  * is a canonical decimal numeral alone, `zero` alone, `eleven`–`nineteen
  * hundred` with an optional remainder, or descending groups of one to
  * nine hundred and ninety-nine under thousand to quadrillion. A group is
- * an optional hundreds term (`one`–`nine` or a phrase-initial `a`/`an`,
- * then `hundred`), then a tail: one to nineteen, a tens word with an
- * optional unit (`forty two`, `forty and two`, `fortytwo` from
- * `forty-two`), the inverted `two and forty`, or a score (`threescore`)
- * with an optional `and` and a remainder of one to nineteen. An optional
- * `and` may join any two additive terms. Everything else, adjacent units
- * included, is not a number, so `one two` is never twelve.
+ * an optional hundreds term (`one`–`nine` or `a`/`an`, then `hundred`),
+ * then a tail: one to nineteen, a tens word with an optional unit (`forty
+ * two`, `forty and two`, `fortytwo` from `forty-two`), the inverted `two
+ * and forty`, or a score (`threescore`) with an optional `and` and a
+ * remainder of one to nineteen. A group before a scale may also be a bare
+ * `a`/`an`, in any place (`one thousand and a hundred`, `one million a
+ * thousand`). An optional `and` may join any two additive terms, but never
+ * opens the phrase. Everything else, adjacent units included, is not a
+ * number, so `one two` is never twelve.
  */
 
 import { Option } from 'effect';
@@ -159,18 +161,18 @@ const below100 = (words: readonly string[]): Option.Option<number> => {
   return Option.filter(tail(rest), (value) => value < 100);
 };
 
-/** A hundreds coefficient: one to nine, or `a`/`an` when `article`. */
-const coefficient = (word: string, article: boolean): Option.Option<number> => {
-  if (article && isArticle(word)) return Option.some(1);
+/** A coefficient of a hundred or a scale: one to nine, or `a`/`an` as one. */
+const coefficient = (word: string): Option.Option<number> => {
+  if (isArticle(word)) return Option.some(1);
   return unit(word);
 };
 
-/** A group's value, 1 to 999, with `a`/`an` as its hundreds coefficient when `article`. */
-const group = (words: readonly string[], article: boolean): Option.Option<number> => {
+/** A group's value, 1 to 999, with `a`/`an` allowed as its hundreds coefficient. */
+const group = (words: readonly string[]): Option.Option<number> => {
   const [first = '', second = ''] = words;
   if (second !== 'hundred') return tail(words);
   return Option.zipWith(
-    coefficient(first, article),
+    coefficient(first),
     below100(words.slice(2)),
     (count, rest) => count * 100 + rest,
   );
@@ -210,15 +212,15 @@ const termWords = (words: readonly string[], initial: boolean) => {
   return afterAnd(words);
 };
 
-/** A segment's group value; only the first may stand as a bare `a`/`an` before its scale. */
+/** A segment's group value; any segment may stand as a bare `a`/`an` before its scale. */
 const segmentValue = (segment: Segment, initial: boolean): Option.Option<number> => {
   const part = termWords(segment.words, initial);
   if (part.length === 0) return Option.none();
   const [only = ''] = part;
-  if (initial && Option.isSome(segment.scale) && part.length === 1 && isArticle(only)) {
+  if (Option.isSome(segment.scale) && part.length === 1 && isArticle(only)) {
     return Option.some(1);
   }
-  return group(part, initial);
+  return group(part);
 };
 
 /** Descending scaled groups, then an optional unscaled group. */
