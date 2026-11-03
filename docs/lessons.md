@@ -4912,4 +4912,4 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/hsvoice/spec.md Done line and Risks
 - **Wrong:** A voice service could light words from a stale event of an earlier utterance, light backward, keep reading after the switch went off, speak while off, let a late failed speak end a newer reading, or hold a command on a pending speak.
 - **Cause:** Events reach JS asynchronously from the native side, and a speak's answer can come after newer commands.
-- **Guard:** code: `apps/heartseed/src/voice.property.test.ts` `agrees on 300 seeded histories of 40 steps`; `apps/heartseed/src/voice.property.test.ts` `waits on no pending speak, and a late failure ends only its own reading`
+- **Guard:** code: `apps/heartseed/src/voice.property.test.ts` `agrees on 300 seeded histories of 40 steps`; `apps/heartseed/src/voice.property.test.ts` `waits on no pending speak, and a late failure ends only its own reading`; `apps/heartseed/src/voice/guard.test.ts` `emits only for the utterance it holds, and lets go of it before it stops the synthesizer`

@@ -90,6 +90,26 @@ describe('the voice on the simulator', () => {
     expect(where(/\.delegate\s*=/).filter((b) => b !== 'device')).toEqual([]);
   });
 
+  it('emits only for the utterance it holds, and lets go of it before it stops the synthesizer', () => {
+    const swift = readFileSync(SWIFT, 'utf8');
+    const body = (name: string) => {
+      const start = swift.indexOf(`func ${name}(`);
+      const end = swift.indexOf('\n  }\n', start);
+      if (start < 0 || end < 0) return '';
+      return swift.slice(start, end);
+    };
+    const emit = body('emit');
+    expect(emit.split('\n')[1]?.trim()).toBe(
+      'guard let utterance = held, ObjectIdentifier(utterance) == id else { return }',
+    );
+    const halt = body('halt');
+    expect(halt.split('\n')[1]?.trim()).toBe('held = nil');
+    expect(halt).toContain('stopSpeaking(at: .immediate)');
+    const speak = body('speak');
+    expect(speak.split('\n')[1]?.trim()).toBe('halt()');
+    expect(speak.indexOf('held = next')).toBeGreaterThan(speak.indexOf('halt()'));
+  });
+
   it('reads branches as Swift does', () => {
     const sample = [
       '#if targetEnvironment(simulator)',
