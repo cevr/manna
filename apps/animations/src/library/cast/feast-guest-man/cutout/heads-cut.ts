@@ -15,11 +15,11 @@ const KEYS = {
 
 const INK = 110;
 
-const BAND_TOP = 135;
+const DRAPE_TOP_ROW_AT_HIS_EAR_TOP = 135;
 
 const FIT = 12;
 
-const FADE = 20;
+const DRAPE_FADE_ROWS = 20;
 
 const cropOf = (
   sheet: Raster,
@@ -122,11 +122,11 @@ const warped = (
 ): Result.Result<Raster, string> => {
   const { width: w } = view;
   const rgba = Uint8Array.from(view.rgba);
-  for (let y = BAND_TOP; y <= chin; y++) {
+  for (let y = DRAPE_TOP_ROW_AT_HIS_EAR_TOP; y <= chin; y++) {
     const edges = edgesOf(view, y);
     if (Result.isFailure(edges)) return Result.fail(edges.failure);
     const { outlineL, faceL, faceR, outlineR } = edges.success;
-    const t = (y - BAND_TOP) / (chin - BAND_TOP);
+    const t = (y - DRAPE_TOP_ROW_AT_HIS_EAR_TOP) / (chin - DRAPE_TOP_ROW_AT_HIS_EAR_TOP);
     const ease = t * t * (3 - 2 * t);
     const [sL, sR] = [shiftL * ease, shiftR * ease];
     const aL = outlineL[1] + 1;
@@ -191,8 +191,8 @@ const neutralColumn = (
 const faded = (drape: Raster, neutral: Raster, chin: number): Result.Result<Raster, string> => {
   const { width: w } = drape;
   const rgba = Uint8Array.from(drape.rgba);
-  for (let y = chin - FADE + 1; y <= chin; y++) {
-    const t = (y - chin + FADE) / FADE;
+  for (let y = chin - DRAPE_FADE_ROWS + 1; y <= chin; y++) {
+    const t = (y - chin + DRAPE_FADE_ROWS) / DRAPE_FADE_ROWS;
     const share = t * t * (3 - 2 * t);
     const cloths = Result.all([clothOf(drape, y), clothOf(neutral, y)] as const);
     if (Result.isFailure(cloths)) return Result.fail(cloths.failure);

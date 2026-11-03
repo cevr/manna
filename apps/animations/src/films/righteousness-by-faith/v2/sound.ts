@@ -119,7 +119,7 @@ const option = (styles: ReadonlyArray<string>, extra: ReadonlyArray<string> = []
   movements,
 });
 
-const PAPER = -25;
+const PAPER_ROOM_DB = -25;
 
 export const sound: Sound = {
   score: {
@@ -158,37 +158,37 @@ export const sound: Sound = {
   beds: [
     {
       sound: 'room.paper',
-      level: PAPER,
+      level: PAPER_ROOM_DB,
       from: { scene: 'cold', at: 'start' },
       to: { scene: 'mirror', at: 'speech' },
     },
     {
       sound: 'room.paper',
-      level: PAPER,
+      level: PAPER_ROOM_DB,
       from: { scene: 'message', mark: 'three' },
       to: { scene: 'roof', at: 'speech' },
     },
     {
       sound: 'room.paper',
-      level: PAPER,
+      level: PAPER_ROOM_DB,
       from: { scene: 'woman', cue: 'toIdea' },
       to: { scene: 'spoke', cue: 'plunge' },
     },
     {
       sound: 'room.paper',
-      level: PAPER,
+      level: PAPER_ROOM_DB,
       from: { scene: 'centurion', cue: 'toIcons' },
       to: { scene: 'look', cue: 'toDesert' },
     },
     {
       sound: 'room.paper',
-      level: PAPER,
+      level: PAPER_ROOM_DB,
       from: { scene: 'look', cue: 'toIcons' },
       to: { scene: 'exchange', at: 'speech' },
     },
     {
       sound: 'room.paper',
-      level: PAPER,
+      level: PAPER_ROOM_DB,
       from: { scene: 'robe', cue: 'toIcons' },
       to: { scene: 'daily', mark: 'will' },
     },

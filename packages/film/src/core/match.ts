@@ -188,9 +188,9 @@ const INNER_RIM_MORE = 0.1;
 
 const SILHOUETTE_TOLERANCE = { head: 0.03, body: 0.05 } as const;
 
-const TURN_TOLERANCE = 0.1;
+const TURN_TOLERANCE_SKIN_SHARE = 0.1;
 
-const ROLL_TOLERANCE = 6;
+const ROLL_TOLERANCE_DEG = 6;
 
 const rollGrain = (eyes: number) => (Math.atan2(2, Math.max(1, eyes)) * 180) / Math.PI;
 
@@ -526,7 +526,7 @@ const facingRows = (concept: FigureMeasure, scene: FigureMeasure): ReadonlyArray
     Option.some(c.turn),
     Option.some(s.turn),
     none,
-    TURN_TOLERANCE,
+    TURN_TOLERANCE_SKIN_SHARE,
   );
   const roll = rowOf(
     'head: roll (the eye line)',
@@ -534,7 +534,7 @@ const facingRows = (concept: FigureMeasure, scene: FigureMeasure): ReadonlyArray
     Option.some(c.roll),
     Option.some(s.roll),
     none,
-    ROLL_TOLERANCE + rollGrain(c.eyes) + rollGrain(s.eyes),
+    ROLL_TOLERANCE_DEG + rollGrain(c.eyes) + rollGrain(s.eyes),
   );
   return [turn, roll].map((row) =>
     Match.value(row.flagged).pipe(

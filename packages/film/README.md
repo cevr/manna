@@ -547,9 +547,9 @@ the −1 dBFS ceiling: min(target − speech level, ceiling − peak), with no
 limiter, so the voice keeps its dynamics and a longer pause never changes
 its level. `TAKE_PAD` is 0.07 s lead and no tail; a recording that starts on
 its first word gets the lead in silence. Speech is sound over the gate that
-lasts 0.1 s (`TAKE_MIN_SPEECH`) counting gaps under 0.25 s (`TAKE_HOLD`), so
+lasts 0.1 s (`TAKE_MIN_SPEECH_S`) counting gaps under 0.25 s (`TAKE_HOLD_S`), so
 a click or tap after the line is trimmed with its silence, and the take fades
-over 5 ms (`TAKE_FADE`) at both ends so neither trim clicks.
+over 5 ms (`TAKE_FADE_S`) at both ends so neither trim clicks.
 
 `film script <film>` prints the reading sheet (`core/sheet.ts`), and
 `--sheet` writes it to `out/<film>/script-sheet.md` and a page to print,

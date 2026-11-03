@@ -203,14 +203,14 @@ export const { CUTS, cutOptionsFor, HIDDEN, paperOf } = cutTable({
   ink: INK,
 });
 
-const RIM_BAND = 12;
+const RIM_BAND_PX_PAST_HIS_8_ON_HEADS_2 = 12;
 
-const RIM_NEAR = 12;
+const RIM_NEAR_DE76_PAST_HIS_RIM_5 = 12;
 
 export const PAPER_RIMS = Records.map(PAPERS, (paper): PaperRim => ({
   paper,
-  band: RIM_BAND,
-  near: RIM_NEAR,
+  band: RIM_BAND_PX_PAST_HIS_8_ON_HEADS_2,
+  near: RIM_NEAR_DE76_PAST_HIS_RIM_5,
 }));
 
 export const CLEAN = Records.map(PAPER_RIMS, clearPaperRim) satisfies Partial<

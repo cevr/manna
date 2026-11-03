@@ -15,20 +15,20 @@ export const TAKE_LEVEL = { speech: -17.1, ceiling: -1 } as const;
 
 export const TAKE_PAD = { lead: 0.07, tail: 0 } as const;
 
-const TAKE_WINDOW = 0.01;
+const TAKE_WINDOW_S = 0.01;
 
-const TAKE_GATE = 40;
+const TAKE_GATE_DB_UNDER_LOUDEST = 40;
 
-const TAKE_FLOOR = -60;
+const TAKE_FLOOR_DBFS = -60;
 
-const TAKE_MIN_SPEECH = 0.1;
+const TAKE_MIN_SPEECH_S = 0.1;
 
-const TAKE_HOLD = 0.25;
+const TAKE_HOLD_S = 0.25;
 
-const TAKE_FADE = 0.005;
+const TAKE_FADE_S = 0.005;
 
 export const speechLevel = (pcm: Pcm): number => {
-  const window = Math.max(1, Math.round(TAKE_WINDOW * pcm.rate));
+  const window = Math.max(1, Math.round(TAKE_WINDOW_S * pcm.rate));
   const powers = [...windowPowers(toMono(pcm), window)].map((db) => 10 ** (db / 10));
   const db = (p: number) => 10 * Math.log10(p);
   const meanOf = (ps: ReadonlyArray<number>) =>
@@ -64,15 +64,15 @@ const speechRuns = (
 const speechBounds = (
   mono: Pcm,
 ): Option.Option<{ readonly onset: number; readonly end: number }> => {
-  const window = Math.max(1, Math.round(TAKE_WINDOW * mono.rate));
+  const window = Math.max(1, Math.round(TAKE_WINDOW_S * mono.rate));
   const level = [...windowPowers(mono, window)];
-  const hold = Math.round(TAKE_HOLD / TAKE_WINDOW);
-  const min = Math.round(TAKE_MIN_SPEECH / TAKE_WINDOW);
+  const hold = Math.round(TAKE_HOLD_S / TAKE_WINDOW_S);
+  const min = Math.round(TAKE_MIN_SPEECH_S / TAKE_WINDOW_S);
   const loudest = Math.max(
-    ...speechRuns(level, TAKE_FLOOR, hold, min).flatMap((r) => level.slice(r.from, r.to)),
+    ...speechRuns(level, TAKE_FLOOR_DBFS, hold, min).flatMap((r) => level.slice(r.from, r.to)),
   );
-  if (!(loudest >= TAKE_FLOOR)) return Option.none();
-  const runs = speechRuns(level, loudest - TAKE_GATE, hold, min);
+  if (!(loudest >= TAKE_FLOOR_DBFS)) return Option.none();
+  const runs = speechRuns(level, loudest - TAKE_GATE_DB_UNDER_LOUDEST, hold, min);
   return Option.zipWith(Arr.head(runs), Arr.last(runs), (first, last) => ({
     onset: first.from * window,
     end: Math.min(mono.frames, last.to * window),
@@ -85,7 +85,7 @@ export const trimTail = (take: Pcm): Option.Option<Pcm> =>
   Option.flatMap(speechBounds(toMono(take)), ({ end }) => {
     const to = Math.min(take.frames, end + Math.round(TAKE_PAD.tail * take.rate));
     if (take.frames - to <= TAKE_TAIL_SLACK * take.rate) return Option.none();
-    return Option.some(fadeEdges(slice(take, 0, to), TAKE_FADE));
+    return Option.some(fadeEdges(slice(take, 0, to), TAKE_FADE_S));
   });
 
 export const withGaps = (
@@ -98,9 +98,9 @@ export const withGaps = (
 
 const spliced = (pcm: Pcm, from: number, to: number, put: number): Pcm =>
   concat(pcm.rate, pcm.channels.length, [
-    fadeEdges(slice(pcm, 0, from), TAKE_FADE),
+    fadeEdges(slice(pcm, 0, from), TAKE_FADE_S),
     silence(pcm.rate, put, pcm.channels.length),
-    fadeEdges(slice(pcm, to, pcm.frames - to), TAKE_FADE),
+    fadeEdges(slice(pcm, to, pcm.frames - to), TAKE_FADE_S),
   ]);
 
 const withGap = (pcm: Pcm, edit: { readonly at: number; readonly by: number }): Pcm => {
@@ -126,7 +126,7 @@ export const prepareTake = (recording: Pcm): Option.Option<Pcm> => {
       slice(mono, from, to - from),
       silence(mono.rate, end + tail - to, 1),
     ]),
-    TAKE_FADE,
+    TAKE_FADE_S,
   );
   return Option.some(gain(trimmed, takeLift(trimmed)));
 };

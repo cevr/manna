@@ -32,7 +32,7 @@ interface HeadPixels {
 
 const OFF_BLEND = 30;
 
-const RIM_MOST = 45;
+const RIM_MOST_LUMA = 45;
 
 const ONE_FILL = 20;
 
@@ -106,7 +106,7 @@ const across = (px: HeadPixels, i: number, i1: number, i2: number): Across => {
   const off = offBlend(p, a, b);
   if (inks === 1) {
     const fill = ink[i1] === 1 ? b : a;
-    return Math.abs(lumaOf(p) - lumaOf(fill)) > RIM_MOST
+    return Math.abs(lumaOf(p) - lumaOf(fill)) > RIM_MOST_LUMA
       ? { off, code: KIND_CODE.sliver }
       : NOTHING;
   }

@@ -2,7 +2,7 @@ import type { Cast } from './schema.ts';
 
 export const STAGING_VOICE_ID = 'uklw0mSGyyFcEsdp2z45';
 
-export const STAGING_VOICE_PACE = 156;
+export const STAGING_VOICE_WORDS_PER_MINUTE = 156;
 
 export const stagingVoice = {
   model: 'eleven_v4',

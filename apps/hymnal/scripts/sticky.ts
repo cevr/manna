@@ -80,9 +80,13 @@ const FIELD: Column = { edge: 'right', x: 40, width: 8, band: 140 };
 
 const WITNESS: Column = { edge: 'right', x: 12, width: 8, band: 600 };
 
-const PUSH_SHOWN = 0.2;
+const PUSH_SHOWN_SHARE_UNDER_THE_MEASURED_THIRD = 0.2;
 
-const LEAST: Record<Pass, number> = { slow: 1, fast: 1, push: PUSH_SHOWN };
+const LEAST: Record<Pass, number> = {
+  slow: 1,
+  fast: 1,
+  push: PUSH_SHOWN_SHARE_UNDER_THE_MEASURED_THIRD,
+};
 
 const shownIn = Effect.fn('Sticky.shownIn')(function* (
   video: string,

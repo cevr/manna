@@ -99,7 +99,7 @@ export interface SheetConcept {
   readonly view: number;
 }
 
-const TOLERANCE = 5;
+const TOLERANCE_PERCENT = 5;
 const SQUASH_MAX = 10;
 const FRONT_TURN = 0.06;
 const SIDE_TURN = 0.04;
@@ -1138,8 +1138,8 @@ const percentOff =
   (value: number, against: number) => {
     const d = pct(value, against);
     return Option.liftPredicate(
-      { value: d, limit: TOLERANCE, note: `${what} ${d.toFixed(1)} % off ${whose}` },
-      () => Math.abs(d) > TOLERANCE,
+      { value: d, limit: TOLERANCE_PERCENT, note: `${what} ${d.toFixed(1)} % off ${whose}` },
+      () => Math.abs(d) > TOLERANCE_PERCENT,
     );
   };
 
@@ -1430,8 +1430,8 @@ const pairFlags = (pairs: ReadonlyArray<typeof SheetPair.Type>): ReadonlyArray<S
         ),
       ]) ||
       []),
-    ...((Math.abs(p.widths) > TOLERANCE && [
-      flag('width', p.views, p.widths, TOLERANCE, "the partners' widths differ"),
+    ...((Math.abs(p.widths) > TOLERANCE_PERCENT && [
+      flag('width', p.views, p.widths, TOLERANCE_PERCENT, "the partners' widths differ"),
     ]) ||
       []),
   ]);
@@ -1623,7 +1623,7 @@ export const sheetTable = (name: string, m: SheetMeasure): string => {
       '',
     ]) ||
       []),
-    `${m.kind}, ${m.views.length} views. ${canon} Held within ${TOLERANCE} %; papers within ΔE ${PAPER_DE}; a mirror under ${MIRROR_FLOOR}; a pair under ${SAME_WAY} of its flipped difference faces one way; every hand at the end of a sleeve or an arm, never free.`,
+    `${m.kind}, ${m.views.length} views. ${canon} Held within ${TOLERANCE_PERCENT} %; papers within ΔE ${PAPER_DE}; a mirror under ${MIRROR_FLOOR}; a pair under ${SAME_WAY} of its flipped difference faces one way; every hand at the end of a sleeve or an arm, never free.`,
     '',
     '| View | Slot | Turn | Roll | Height | Head | Heads tall | W/H | Hand | Hair fall | Hair/beard | Chin | Lit | Reach | Free | Bare | Papers |',
     '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',

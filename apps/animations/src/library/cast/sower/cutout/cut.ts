@@ -1533,13 +1533,17 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   ink: INK,
 });
 
-const RIM_BAND = 64;
+const RIM_BAND_PX_PAST_HIS_54_AT_THE_SHADOW_EDGE = 64;
 
-const RIM_NEAR = 12;
+const RIM_NEAR_DE76_PAST_HIS_RIM_8 = 12;
 
 export const PAPER_RIMS = Records.map(
   { ...TURNAROUND_PAPERS, ...POSES_PAPERS },
-  (paper): PaperRim => ({ paper, band: RIM_BAND, near: RIM_NEAR }),
+  (paper): PaperRim => ({
+    paper,
+    band: RIM_BAND_PX_PAST_HIS_54_AT_THE_SHADOW_EDGE,
+    near: RIM_NEAR_DE76_PAST_HIS_RIM_8,
+  }),
 );
 
 export const CLEAN = Records.map(PAPER_RIMS, clearPaperRim) satisfies Partial<

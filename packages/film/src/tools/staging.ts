@@ -19,7 +19,7 @@ import { type Compiled, compileDelivery, sentText } from '../core/delivery.ts';
 import type { Line } from '../core/narration.ts';
 import { StagingCapReached } from '../core/refusals.ts';
 import { type Cast, type Reader, type Voice, Seconds, TakeWord, isCast } from '../core/schema.ts';
-import { STAGING_VOICE_ID, STAGING_VOICE_PACE } from '../core/staging-voice.ts';
+import { STAGING_VOICE_ID, STAGING_VOICE_WORDS_PER_MINUTE } from '../core/staging-voice.ts';
 import type { ReadBeat } from '../core/studio.ts';
 import { ContentStore, type Manifest, type StoreError } from './content-store.ts';
 import { sha256Hex } from './digest.ts';
@@ -32,7 +32,9 @@ export const audioName = (audio: Uint8Array, ext: '.mp3' | '.flac'): string =>
 
 const STAGING_DAILY_CAP = 100_000;
 
-const VOICE_PACE: ReadonlyMap<string, number> = new Map([[STAGING_VOICE_ID, STAGING_VOICE_PACE]]);
+const VOICE_PACE: ReadonlyMap<string, number> = new Map([
+  [STAGING_VOICE_ID, STAGING_VOICE_WORDS_PER_MINUTE],
+]);
 
 export interface StagingAsk {
   readonly beat: ReadBeat;

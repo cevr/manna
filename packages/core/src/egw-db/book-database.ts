@@ -550,7 +550,9 @@ const encodeIncomingBibleRefs = Schema.encodeSync(
   Schema.fromJsonString(Schema.Array(IncomingBibleRef)),
 );
 
-const INCOMING_CHUNK_BYTES = 1_000_000;
+const D1_BOUND_VALUE_CAP_BYTES = 2_000_000;
+
+const INCOMING_CHUNK_BYTES = D1_BOUND_VALUE_CAP_BYTES / 2;
 
 const utf8 = new TextEncoder();
 
