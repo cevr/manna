@@ -7,10 +7,11 @@ type Pt = readonly [number, number];
 type Puppet = Parameters<typeof rasterOf>[0];
 type Raster = ReturnType<typeof rasterOf>;
 
-const CLOTH = [90.2, 4.2, 20.5] as const;
-const SKIN = [63.4, 38.9, 46.9] as const;
+const SLEEVE_LAB_MEASURED_ON_SINGLE_9 = [90.2, 4.2, 20.5] as const;
+const SKIN_LAB_MEASURED_ON_SINGLE_9 = [63.4, 38.9, 46.9] as const;
 const INK_L = 20;
-const FILTER_FRINGE = 8;
+const MIXED_CONTACT_PX_OF_TWO_BILINEAR_FOOTPRINTS_AT_1X = 8;
+const INK_MIX_ROUNDING_BYTES = 2;
 
 const inverse = (limb: ReturnType<typeof measuredHand>['limb'], elbow: number, wrist: number) => {
   const e = (elbow * Math.PI) / 180,
@@ -85,8 +86,14 @@ const measuredHand = (puppet: Puppet) => {
     const lab = labOf(paintAt(sx, sy));
     return (
       lab[0] >= INK_L &&
-      Math.hypot(lab[1] - CLOTH[1], lab[2] - CLOTH[2]) <=
-        Math.hypot(lab[1] - SKIN[1], lab[2] - SKIN[2])
+      Math.hypot(
+        lab[1] - SLEEVE_LAB_MEASURED_ON_SINGLE_9[1],
+        lab[2] - SLEEVE_LAB_MEASURED_ON_SINGLE_9[2],
+      ) <=
+        Math.hypot(
+          lab[1] - SKIN_LAB_MEASURED_ON_SINGLE_9[1],
+          lab[2] - SKIN_LAB_MEASURED_ON_SINGLE_9[2],
+        )
     );
   };
   const inkAt = (sx: number, sy: number, rgb: readonly [number, number, number]) => {
@@ -96,7 +103,9 @@ const measuredHand = (puppet: Puppet) => {
     if (square === 0) return false;
     const weight = d.reduce((sum, c, k) => sum + c * (source[k]! - rgb[k]!), 0) / square;
     if (weight < 1 / 255 || weight > 1) return false;
-    return source.every((c, k) => Math.abs(rgb[k]! - (c - weight * d[k]!)) <= 2);
+    return source.every(
+      (c, k) => Math.abs(rgb[k]! - (c - weight * d[k]!)) <= INK_MIX_ROUNDING_BYTES,
+    );
   };
   return { arm, limb, alpha, sample, clothAt, inkAt };
 };
@@ -111,8 +120,14 @@ const kindsOf = (r: Raster) => {
     if (lab[0] < INK_L) continue;
     kinds[i] = 2;
     if (
-      Math.hypot(lab[1] - SKIN[1], lab[2] - SKIN[2]) <
-      Math.hypot(lab[1] - CLOTH[1], lab[2] - CLOTH[2])
+      Math.hypot(
+        lab[1] - SKIN_LAB_MEASURED_ON_SINGLE_9[1],
+        lab[2] - SKIN_LAB_MEASURED_ON_SINGLE_9[2],
+      ) <
+      Math.hypot(
+        lab[1] - SLEEVE_LAB_MEASURED_ON_SINGLE_9[1],
+        lab[2] - SLEEVE_LAB_MEASURED_ON_SINGLE_9[2],
+      )
     )
       kinds[i] = 3;
   }
@@ -198,10 +213,10 @@ for (const [elbow, wrist] of poses)
       Effect.gen(function* () {
         const row = yield* at(elbow, wrist);
         yield* Console.log(
-          `cuff ${elbow}/${wrist}: exposed=${row.exposed} ghost=${row.ghost} unprotected=${row.unprotected} bounds=${FILTER_FRINGE}/0/0`,
+          `cuff ${elbow}/${wrist}: exposed=${row.exposed} ghost=${row.ghost} unprotected=${row.unprotected} bounds=${MIXED_CONTACT_PX_OF_TWO_BILINEAR_FOOTPRINTS_AT_1X}/0/0`,
         );
         if (row.exposed > 0) yield* Console.log('uninked edge coordinates', row.raw.slice(0, 12));
-        expect(row.exposed).toBeLessThanOrEqual(FILTER_FRINGE);
+        expect(row.exposed).toBeLessThanOrEqual(MIXED_CONTACT_PX_OF_TWO_BILINEAR_FOOTPRINTS_AT_1X);
         expect(row.unprotected).toBe(0);
       }),
     );

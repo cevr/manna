@@ -2763,6 +2763,19 @@ One completed silhouette boundary, the cuff opening and the outer fold (60–90�
 receive ink. A part without a limb, or below its transition midpoint,
 follows the painted path exactly.
 
+The limb's measured constants, and why each holds its value: the default
+window (`LIMB_FADE`) ends at 25° because the stroke probe's cut-out arm tore
+open past about 25°. A texel at a sleeve's edge is ink under CIE L* 20
+(`INK_L`): the lead's ink (rgb 33 15 3) reads L* 0 to 15 on both arms of
+single-9, and his blue sleeve's darkest shade reaches L* 20; at 30, that
+shade read as ink at two knots of its cut edge. A flap's body texel may lie
+at most half way down the upper arm (`FLAP_REACH`), past which the body's
+pixels would ride the stroke's sleeve; the lead's right shoulder band
+reaches 20.4 px of a 154 px upper arm (0.13), his left 4.0 px of 176. The
+fold's ink line weighs 0.6 of the measured silhouette ink (`FOLD_WEIGHT`)
+and spans the whole forearm (`FOLD_LENGTH` 1, `FOLD_INSET` 0, fractions of
+its length).
+
 A puppet (`core/puppet.ts`) is a part sheet on a skeleton
 (`<member>/cutout/skeleton.ts`: bones named by the shared controls (`lean`,
 `neck`, `head`, `shoulder`, `elbow` and `wrist` by side), each turning about its pivot after its parent; each
