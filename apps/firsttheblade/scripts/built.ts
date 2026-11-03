@@ -11,8 +11,9 @@
  * The stamp sits beside the server build, not in `dist/`, so it is not
  * served, and turbo caches and restores it with the build's outputs.
  */
-import { BunRuntime, BunServices } from '@effect/platform-bun';
-import { Effect, FileSystem, Option, Path, Schema } from 'effect';
+import { BunCrypto, BunRuntime, BunServices } from '@effect/platform-bun';
+import { Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
+import { Digest } from 'effect/crypto';
 
 /** The app's turbo tasks, as far as the stamp reads them: the build's inputs. */
 const Turbo = Schema.Struct({
@@ -57,15 +58,25 @@ const filesOf = Effect.fn('Built.files')(function* (app: string, entry: string) 
 const hashOf = Effect.fn('Built.hash')(function* (app: string, files: ReadonlyArray<string>) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const hash = new Bun.CryptoHasher('sha256');
-  yield* Effect.forEach(files, (file) =>
-    Effect.map(fs.readFile(path.join(app, file)), (bytes) => {
-      hash.update(`${file}\0`);
-      hash.update(bytes);
-    }),
+  const digest = yield* Digest.Digest;
+  const parts = yield* Effect.forEach(files, (file) =>
+    Effect.map(fs.readFile(path.join(app, file)), (bytes) => [
+      new TextEncoder().encode(`${file}\0`),
+      bytes,
+    ]),
   );
-  return hash.digest('hex');
+  return yield* digest.digestHex(Digest.sha256, joined(parts.flat()));
 });
+
+/** The chunks one after another in one buffer. */
+const joined = (chunks: ReadonlyArray<Uint8Array>) => {
+  const all = new Uint8Array(chunks.reduce((size, chunk) => size + chunk.byteLength, 0));
+  chunks.reduce((at, chunk) => {
+    all.set(chunk, at);
+    return at + chunk.byteLength;
+  }, 0);
+  return all;
+};
 
 /** The hash of the build's sources as they stand. */
 export const sourcesHash = Effect.fn('Built.sources')(function* (app: string) {
@@ -106,5 +117,8 @@ const write = Effect.gen(function* () {
 });
 
 if (import.meta.main) {
-  write.pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);
+  write.pipe(
+    Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerDigest)),
+    BunRuntime.runMain,
+  );
 }

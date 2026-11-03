@@ -34,8 +34,8 @@
  *
  *   bun scripts/promise.ts    # the check alone, on the dist/ there; prints `promise <problem>` per problem, exits 1 on any
  */
-import { BunRuntime, BunServices } from '@effect/platform-bun';
-import { Console, Data, Effect, FileSystem, Match, Option, Path, Schema } from 'effect';
+import { BunCrypto, BunRuntime, BunServices } from '@effect/platform-bun';
+import { Console, Data, Effect, FileSystem, Layer, Match, Option, Path, Schema } from 'effect';
 import { parse, type DefaultTreeAdapterTypes } from 'parse5';
 
 import { kitPictures } from '../kit/draw.ts';
@@ -1323,4 +1323,7 @@ const check = Effect.gen(function* () {
   if (problems.length > 0) return yield* new PromiseBroken({ problems: problems.length });
 });
 
-check.pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);
+check.pipe(
+  Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerDigest)),
+  BunRuntime.runMain,
+);
