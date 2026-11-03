@@ -161,18 +161,26 @@ const pageDrift = (markdown: Markdown) =>
   });
 
 /**
- * Each rule a doc names, in the form the plugin registers (`film/no-read-once`,
- * a name of lowercase words joined by hyphens): a `film/<entry>` of the film
- * package or its src (`film/lint`, `film/lab`) names a directory, not a rule.
+ * Each rule a text names, in the form the plugin registers: a code span of
+ * `film/` and lowercase words joined by hyphens (`film/no-read-once`), by its
+ * name (`no-read-once`). `ruleDrift` checks these, and a whole doc's path check
+ * leaves them to it (`findAnchors`), so the two read the same names.
  */
-const ruleDrift = (markdown: Markdown, code: Code) =>
-  matches(proseOf(markdown), /`film\/([a-z]+(?:-[a-z]+)*)`/g)
-    .map(firstGroup)
+const rulesIn = (text: string): ReadonlyArray<string> =>
+  matches(text, /`film\/([a-z]+(?:-[a-z]+)*)`/g).map(firstGroup);
+
+/**
+ * Each rule a text names (`rulesIn`) that the plugin does not register: a
+ * `film/<entry>` of the film package or its src (`film/lint`, `film/lab`)
+ * names a directory, not a rule.
+ */
+const ruleDrift = (text: string, code: Code) =>
+  rulesIn(text)
     .filter((rule) => !code.registered.has(rule) && !code.entries.has(rule))
     .map((rule) => `rule film/${rule} is not registered`);
 
-/** A rule's name as `ruleDrift` reads it (`film/no-read-once`): a path only where a base holds a `film` directory. */
-const RULE_NAME = /^film\/[a-z]+(?:-[a-z]+)*$/;
+/** A doc's every line, its prose and its code blocks' alike: what a whole doc's anchors are read from. */
+const linesOf = (markdown: Markdown) => markdown.lines.map((line) => line.text).join('\n');
 
 /** `bun run`'s options that take a value (`--cwd apps/animations`); any other is a switch. */
 const VALUED = '--cwd|--filter|-F|--env-file|--config|-c|--preload|-r';
@@ -222,7 +230,7 @@ const scriptsFor = (run: Run, code: Code): ReadonlySet<string> =>
  * file (`cli.ts`, `src/x.ts`; a name with a dot or a slash that no script has).
  */
 const scriptDrift = (markdown: Markdown, code: Code) =>
-  runsIn(markdown.lines.map((line) => line.text).join('\n'))
+  runsIn(linesOf(markdown))
     .filter(
       (run) =>
         !scriptsFor(run, code).has(run.script) &&
@@ -440,7 +448,8 @@ const anchorDrift = (
  * first directory (and it is not ignored output) reads it. Under none, it is another tree's path, unless the
  * doc is whole and it is neither a package's (`@manna/url-state`, an
  * installed `effect/Schema`), ignored output (`tmp/logs`) nor a rule
- * (`film/no-read-once`, which `ruleDrift` reads). A path that is, from one
+ * (`film/no-read-once`, by `rulesIn` over every line, as a whole doc's
+ * `ruleDrift` reads it). A path that is, from one
  * of its bases, one a `.gitignore` of the root or of that base names whole
  * (`ignoredPaths`) is output: never the tree's. A path under that one is the
  * tree's still, so a typo inside ignored output (`ios/Podz`) fails.
@@ -463,14 +472,12 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
   );
   const isOutput = (anchor: Anchor) =>
     doc.bases.some((base) => outputs.has(path.join(base, anchor.path).replace(/\/$/, '')));
+  const rules = new Set(rulesIn(linesOf(markdownOf(doc.text))).map((rule) => `film/${rule}`));
   const elsewhere = (anchor: Anchor, first: string) =>
     Effect.map(
       isDirectory(path.join('node_modules', first)),
       (installed) =>
-        installed ||
-        PACKAGE_NAME.test(anchor.path) ||
-        ignored.has(first) ||
-        RULE_NAME.test(anchor.path),
+        installed || PACKAGE_NAME.test(anchor.path) || ignored.has(first) || rules.has(anchor.path),
     );
   return yield* Effect.forEach(anchorsIn(doc), (anchor) =>
     Effect.gen(function* () {
@@ -654,7 +661,7 @@ const drift = (doc: Doc, code: Code): ReadonlyArray<string> => {
     ...routeDrift(markdown, code),
     ...spanDrift(markdown, code),
     ...pageDrift(markdown),
-    ...ruleDrift(markdown, code),
+    ...ruleDrift(proseOf(markdown), code),
     ...scriptDrift(markdown, code),
     ...markdown.lines.flatMap((line) => [
       ...flagDrift(line, code),
@@ -1355,7 +1362,13 @@ describe('the docs', () => {
           path: 'whole.md',
           bases: ['', 'apps/hymnal'],
           whole: true,
-          text: 'A shared fixture builds as the file loads (`film/no-lazy-test-fixture`), never `film/no-such-rule`.',
+          text: [
+            'A shared fixture builds as the file loads (`film/no-lazy-test-fixture`), never `film/no-such-rule`.',
+            '',
+            '```md',
+            '- A fixture is built lazily (`film/no-such-fenced-rule`).',
+            '```',
+          ].join('\n'),
         };
         expect([
           ...NAMES_DRIFT.verify(doc, code),
@@ -1363,7 +1376,9 @@ describe('the docs', () => {
           ...(yield* anchorsDrift(root, [doc])),
         ]).toEqual([
           'whole.md: rule film/no-such-rule is not registered',
+          'whole.md: rule film/no-such-fenced-rule is not registered',
           'whole.md: rule film/no-such-rule is not registered',
+          'whole.md: rule film/no-such-fenced-rule is not registered',
         ]);
       }),
   );
@@ -1734,8 +1749,9 @@ describe('the docs', () => {
  * What a doc names that the code lacks, beyond its anchors, by its role: a
  * framework doc's every name (`drift`), a passing doc's routes and spans
  * (the owner's runbook, the prior arts and the app's README name routes
- * too), an anchored doc's rules (`film/<rule>`, never read as a path), and
- * a verify skill's doc its rules and each `bun run`
+ * too), an anchored doc's rules (`film/<rule>`, on every line its anchors
+ * are read from, and never read as a path), and a verify skill's doc its
+ * rules likewise and each `bun run`
  * (`bun run --cwd apps/firsttheblade verify:drive`: a script of that package).
  */
 const NAMES_DRIFT: Record<DocPlace['role'], (doc: Doc, code: Code) => ReadonlyArray<string>> = {
@@ -1743,10 +1759,10 @@ const NAMES_DRIFT: Record<DocPlace['role'], (doc: Doc, code: Code) => ReadonlyAr
   spanned: (doc, code) =>
     spanDrift(markdownOf(doc.text), code).map((what) => `${doc.path}: ${what}`),
   anchored: (doc, code) =>
-    ruleDrift(markdownOf(doc.text), code).map((what) => `${doc.path}: ${what}`),
+    ruleDrift(linesOf(markdownOf(doc.text)), code).map((what) => `${doc.path}: ${what}`),
   verify: (doc, code) => {
     const markdown = markdownOf(doc.text);
-    return [...ruleDrift(markdown, code), ...scriptDrift(markdown, code)].map(
+    return [...ruleDrift(linesOf(markdown), code), ...scriptDrift(markdown, code)].map(
       (what) => `${doc.path}: ${what}`,
     );
   },
