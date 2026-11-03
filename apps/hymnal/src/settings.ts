@@ -67,9 +67,20 @@ export const settingsOn = (store: Layer.Layer<KeyValueStore.KeyValueStore>) => {
       (): Placement => 'beat',
     ),
   );
+  const chords = setting('chords', Schema.Boolean, false);
+  const move = Atom.family((number: number) => setting(`move.${number}`, Move, still));
+  const heardMove = Atom.family((number: number) =>
+    Atom.withServerValue(
+      Atom.make((get): Move => {
+        if (!get(chords)) return still;
+        return get(move(number));
+      }),
+      (): Move => still,
+    ),
+  );
   return {
     /** A hymn shows its words alone until the reader turns chords on. */
-    chords: setting('chords', Schema.Boolean, false),
+    chords,
     /**
      * How chords are shown (`src/hymns/simple.ts`): Simple, a plain chord
      * per syllable at most, until the reader picks Advanced in Settings.
@@ -97,7 +108,15 @@ export const settingsOn = (store: Layer.Layer<KeyValueStore.KeyValueStore>) => {
      * Each hymn's transpose and capo, by its number: a move fits one hymn's
      * key and the singers' range for it, so it never reaches another hymn.
      */
-    move: Atom.family((number: number) => setting(`move.${number}`, Move, still)),
+    move,
+    /**
+     * The move each hymn's recording is played in, by its number: the
+     * hymn's own `move` while chords are on, and the hymn as printed
+     * (`still`) while they are off, since nothing on the simple view shows
+     * or resets a key. Derived, never written: the stored move is kept and
+     * heard again once chords come back on. Capo never reaches the sound.
+     */
+    heardMove,
     /**
      * Each hymn's tempo in percent (`src/player/tempo.ts`), by its number:
      * a congregation's pace fits one hymn. 100 until turned; with Sound off

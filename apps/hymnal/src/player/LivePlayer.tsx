@@ -91,7 +91,7 @@ const keptFor = (hymn: number, stanzas: ReadonlyArray<number>): ReadonlyArray<bo
 const player = playerOn(
   counted(cachedPlayback(playbackLive, book.of, sound, offlineLive, keptFor)),
   statusEvery,
-  settings.move,
+  settings.heardMove,
   settings.tempo,
   settings.stanzas,
   settings.intro,
