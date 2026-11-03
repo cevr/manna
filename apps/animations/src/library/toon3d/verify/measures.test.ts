@@ -15,6 +15,7 @@ import {
   iou,
   keptBlobs,
   lab,
+  MIN_FLAT_PX,
   partDeltas,
   rgbOf,
   strokeWidth,
@@ -655,6 +656,221 @@ describe('partDeltas', () => {
     });
     const deltas = partDeltas(kept, scene, ids, new Map([[5, [BASE, SHADE]]]));
     expect(read(deltaOf(deltas, 5))).toBeLessThan(0.5);
+  });
+
+  test('a base part repainted its shade on any width from 5 to 55 of 60 columns reads the shade’s ΔE, though the base columns left match', () => {
+    const body = (fill: (x: number) => Rgb) =>
+      paint(80, 80, (x, y) => {
+        if (inRect(x, y, 10, 10, 69, 69)) return fill(x);
+        if (inRect(x, y, 8, 8, 71, 71)) return INK;
+        return PAPER;
+      });
+    const ids = idsOf(80, 80, (x, y) => 5 * Number(inRect(x, y, 10, 10, 69, 69)));
+    const kept = body(() => BASE);
+    const missed = [5, 6, 10, 15, 20, 25, 30, 35, 40, 45, 50, 54, 55].filter((width) => {
+      const scene = body((x) => {
+        if (x < 10 + width) return SHADE;
+        return BASE;
+      });
+      const reading = deltaOf(partDeltas(kept, scene, ids, new Map([[5, [BASE, SHADE]]])), 5);
+      return Option.getOrElse(reading, () => 0) < deltaE(BASE, SHADE) - 0.01;
+    });
+    expect(missed).toEqual([]);
+  });
+
+  test("a paint shown where the kept holds another part's paint is the silhouette's: it reads nothing, and the part reads its matched paint", () => {
+    const ROBE: Rgb = [90, 60, 120];
+    const body = (left: Rgb) =>
+      paint(80, 40, (x, y) => {
+        if (inRect(x, y, 10, 8, 69, 31)) {
+          if (x < 40) return left;
+          return BASE;
+        }
+        if (inRect(x, y, 8, 6, 71, 33)) return INK;
+        return PAPER;
+      });
+    const ids = idsOf(80, 40, (x, y) => 5 * Number(inRect(x, y, 10, 8, 69, 31)));
+    const deltas = partDeltas(
+      body(ROBE),
+      body(SHADE),
+      ids,
+      new Map([
+        [5, [BASE, SHADE]],
+        [7, [ROBE]],
+      ]),
+    );
+    expect(deltas.map((d) => d.part)).toEqual([5]);
+    expect(read(deltaOf(deltas, 5))).toBe(0);
+  });
+
+  test('generated stripes of two or four paints with one region repainted, shifted or not: the part reads every paint each picture shows, its worst one, whatever another paint reads', () => {
+    const S = 50;
+    const SAND: Rgb = [96, 128, 200];
+    const SAND_SHADE: Rgb = [52, 72, 130];
+    const r = seeded(7);
+    const keyOf = (c: Rgb) => (c[0] << 16) | (c[1] << 8) | c[2];
+    const keysOf = (img: Raster) =>
+      Uint32Array.from({ length: S * S }, (_, i) =>
+        keyOf([img.rgba[i * 4] ?? 0, img.rgba[i * 4 + 1] ?? 0, img.rgba[i * 4 + 2] ?? 0]),
+      );
+    const rgbOfKey = (k: number): Rgb => [(k >> 16) & 255, (k >> 8) & 255, k & 255];
+    const same5 = (keys: Uint32Array, i: number): boolean => {
+      const x = i % S;
+      const y = Math.floor(i / S);
+      if (x < 2 || y < 2 || x >= S - 2 || y >= S - 2) return false;
+      const c = keys[i];
+      if (c === keyOf(INK) || c === keyOf(PAPER)) return false;
+      for (let dy = -2; dy <= 2; dy++)
+        for (let dx = -2; dx <= 2; dx++) if (keys[i + dy * S + dx] !== c) return false;
+      return true;
+    };
+    const kinds = { asserted: 0, skipped: 0, masked: 0, belowFloor: 0, shifted: 0, offPalette: 0 };
+    for (let n = 0; n < 90; n++) {
+      const paints: ReadonlyArray<Rgb> = oneOf(r, [
+        [BASE, SHADE],
+        [BASE, SHADE, SAND, SAND_SHADE],
+      ]);
+      const labs = paints.map(lab);
+      const nearestByKey = new Map<number, number>();
+      const nearest = (key: number) => {
+        const c = lab(rgbOfKey(key));
+        const k = labs.reduce((best, p, j) => {
+          if (deltaLab(c, p) < deltaLab(c, labs[best] ?? p)) return j;
+          return best;
+        }, 0);
+        nearestByKey.set(key, k);
+        return k;
+      };
+      const paintOf = (key: number) => nearestByKey.get(key) ?? nearest(key);
+      const drawn = paints.filter(() => r() < 0.5);
+      const keptPaints = Option.getOrElse(
+        Option.liftPredicate(drawn, (d) => d.length > 0),
+        () => [oneOf(r, paints)],
+      );
+      const stripes: Array<{ x0: number; x1: number; c: Rgb }> = [];
+      for (let x = 6; x <= 43;) {
+        const w = between(r, 2, 24);
+        const prev = stripes.at(-1)?.c;
+        const fresh = keptPaints.filter((p) => p !== prev);
+        stripes.push({
+          x0: x,
+          x1: Math.min(43, x + w - 1),
+          c: oneOf(
+            r,
+            Option.getOrElse(
+              Option.liftPredicate(fresh, (f) => f.length > 0),
+              () => keptPaints,
+            ),
+          ),
+        });
+        x += w;
+      }
+      const stripe = oneOf(r, stripes);
+      const wide = Number(r() < 0.6);
+      const rx0 = between(r, stripe.x0, stripe.x1 - wide * (stripe.x1 - stripe.x0));
+      const rx1 = between(r, rx0 + wide * (stripe.x1 - rx0), stripe.x1);
+      const ry0 = between(r, 6, 43 - wide * 25);
+      const ry1 = between(r, ry0 + wide * 12, 43);
+      const offPalette = r() < 0.35;
+      const offColour = (): Rgb => {
+        for (;;) {
+          const c: Rgb = [between(r, 0, 255), between(r, 0, 255), between(r, 0, 255)];
+          if (lab(c)[0] >= 30 && [...paints, INK, PAPER].every((p) => deltaE(c, p) > 8)) return c;
+        }
+      };
+      const repaintOf = (): Rgb => {
+        if (offPalette) return offColour();
+        return oneOf(
+          r,
+          paints.filter((p) => p !== stripe.c),
+        );
+      };
+      const repaint = repaintOf();
+      const shift = between(r, 0, 3) * Number(r() < 0.3);
+      const keptFill = (x: number) =>
+        Option.getOrThrow(Option.fromUndefinedOr(stripes.find((s) => x >= s.x0 && x <= s.x1))).c;
+      const kept = paint(S, S, (x, y) => {
+        if (inRect(x, y, 6, 6, 43, 43)) return keptFill(x);
+        if (inRect(x, y, 4, 4, 45, 45)) return INK;
+        return PAPER;
+      });
+      const scene = paint(S, S, (x, y) => {
+        if (inRect(x - shift, y, rx0, ry0, rx1, ry1)) return repaint;
+        if (inRect(x - shift, y, 6, 6, 43, 43)) return keptFill(x - shift);
+        if (inRect(x - shift, y, 4, 4, 45, 45)) return INK;
+        return PAPER;
+      });
+      const ids = idsOf(S, S, (x, y) => 5 * Number(inRect(x - shift, y, 6, 6, 43, 43)));
+      const keptKeys = keysOf(kept);
+      const sceneKeys = keysOf(scene);
+      const all = Array.from({ length: S * S }, (_, i) => i);
+      const sceneFlat = all.filter(
+        (i) => same5(sceneKeys, i) && inRect((i % S) - shift, Math.floor(i / S), 6, 6, 43, 43),
+      );
+      const keptFlat = all.filter((i) => same5(keptKeys, i));
+      const keptFlatSet = new Set(keptFlat);
+      const sceneFlatSet = new Set(sceneFlat);
+      const single = (keys: Uint32Array, px: ReadonlyArray<number>): Option.Option<Rgb> => {
+        const distinct = new Set(px.map((i) => keys[i]));
+        if (distinct.size !== 1) return Option.none();
+        return Option.some(rgbOfKey(keys[px[0] ?? 0] ?? 0));
+      };
+      let skip = false;
+      const readings = paints.flatMap((_, k): ReadonlyArray<number> => {
+        const s = sceneFlat.filter((i) => paintOf(sceneKeys[i] ?? 0) === k);
+        const kp = keptFlat.filter((i) => paintOf(keptKeys[i] ?? 0) === k);
+        const pair = (
+          a: Uint32Array,
+          ap: ReadonlyArray<number>,
+          b: Uint32Array,
+          bp: ReadonlyArray<number>,
+        ) => {
+          if (ap.length < MIN_FLAT_PX || bp.length < MIN_FLAT_PX) return [];
+          const both = Option.all([single(a, ap), single(b, bp)]);
+          if (Option.isNone(both)) skip = true;
+          return Option.toArray(Option.map(both, ([p, q]) => deltaE(p, q)));
+        };
+        if (s.length >= MIN_FLAT_PX && kp.length >= MIN_FLAT_PX)
+          return pair(keptKeys, kp, sceneKeys, s);
+        if (s.length >= MIN_FLAT_PX)
+          return pair(
+            keptKeys,
+            s.filter((i) => keptFlatSet.has(i)),
+            sceneKeys,
+            s,
+          );
+        return pair(
+          keptKeys,
+          kp,
+          sceneKeys,
+          kp.filter((i) => sceneFlatSet.has(i)),
+        );
+      });
+      const repaintFlat = sceneFlat.filter((i) => sceneKeys[i] === keyOf(repaint)).length;
+      if (skip) {
+        kinds.skipped++;
+        continue;
+      }
+      kinds.asserted++;
+      if (readings.some((d) => d < 0.01) && readings.some((d) => d > 3)) kinds.masked++;
+      if (repaintFlat < MIN_FLAT_PX) kinds.belowFloor++;
+      if (shift > 0) kinds.shifted++;
+      if (offPalette) kinds.offPalette++;
+      const reading = deltaOf(partDeltas(kept, scene, ids, new Map([[5, paints]])), 5);
+      const expected = Option.map(
+        Option.liftPredicate(readings, (d) => d.length > 0),
+        (d) => Math.max(...d),
+      );
+      expect({
+        n,
+        reading: Option.map(reading, (d) => Math.round(d * 100) / 100),
+      }).toEqual({ n, reading: Option.map(expected, (d) => Math.round(d * 100) / 100) });
+    }
+    expect({
+      kinds,
+      covered: Math.min(kinds.masked, kinds.belowFloor, kinds.shifted, kinds.offPalette) >= 10,
+    }).toMatchObject({ covered: true });
+    expect(kinds.asserted).toBeGreaterThanOrEqual(80);
   });
 });
 

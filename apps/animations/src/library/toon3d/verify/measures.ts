@@ -614,17 +614,18 @@ const medianLab = (plane: Float32Array, pixels: ReadonlyArray<number>): Option.O
  * within `PART_REACH` of its own pixels in the render's ids pass, so another
  * part's near colour far away is not its. The render's flat pixels of a part
  * (by the ids pass) are each given the nearest of that part's own paints.
- * For each paint, the ΔE76 between the two pictures' per-channel median Lab.
- * A paint the render shows that the kept does not near the part is read by
- * place: the kept's flat pixels where the render shows it that lie farther
- * than `PAINT_RADIUS` from every paint, a colour the palette lacks. A kept
- * pixel there holding some paint is a part drawn elsewhere, which the
- * silhouette judges, not the palette. A part no paint
- * reads that way is read by place the other way too: the render's flat
- * pixels of the part where the kept shows each paint. A part's value is its
- * worst paint. A medianed set needs `MIN_FLAT_PX` pixels. A part with fewer
- * flat pixels in the render is not shown and is left out; a part shown but
- * read by no paint is unread (none).
+ * Each paint is read on its own, so one paint that matches never hides
+ * another's error. A paint both pictures show near the part reads the ΔE76
+ * between their per-channel median Lab. A paint only the render shows is read
+ * by place: against the kept's flat pixels where the render shows it that
+ * hold one of the part's own paints or lie farther than `PAINT_RADIUS` from
+ * every paint, a colour the palette lacks. A kept pixel there holding another
+ * part's paint is a part drawn elsewhere, which the silhouette judges, not
+ * the palette. A paint only the kept shows is read by place the other way:
+ * against the render's flat pixels of the part where the kept shows it. A
+ * part's value is its worst paint. A medianed set needs `MIN_FLAT_PX` pixels.
+ * A part with fewer flat pixels in the render is not shown and is left out;
+ * a part shown but read by no paint is unread (none).
  */
 export const partDeltas = (
   kept: Raster,
@@ -639,11 +640,13 @@ export const partDeltas = (
   const keptByPaint = palette.map((): Array<number> => []);
   const figure = figureMask(kept);
   const offPalette = new Uint8Array(w * h);
+  const keptPaint = new Int16Array(w * h).fill(-1);
   for (let i = 0; i < w * h; i++) {
     if (figure[i] !== 1 || !flatAt(kl, w, h, i)) continue;
     const c = labAt(kl, i);
     const k = nearestOf(paletteLabs, c);
     keptByPaint[k]?.push(i);
+    keptPaint[i] = k;
     offPalette[i] = Number(deltaLab(c, paletteLabs[k] ?? c) > PAINT_RADIUS);
   }
   const sceneFlat = new Uint8Array(w * h);
@@ -668,30 +671,22 @@ export const partDeltas = (
     const keptOf = rgbs.map((c) =>
       (keptByPaint[palette.indexOf(c.join(','))] ?? []).filter((i) => reach[i] === 1),
     );
-    const byPaint = rgbs.flatMap((_, k) => {
+    const own = new Set(rgbs.map((c) => palette.indexOf(c.join(','))));
+    const paintDelta = (k: number): Option.Option<number> => {
       const s = sceneOf[k] ?? [];
-      return Option.toArray(
-        Option.orElse(delta(keptOf[k] ?? [], s), () =>
-          delta(
-            s.filter((i) => offPalette[i] === 1),
-            s,
-          ),
-        ),
+      const kp = keptOf[k] ?? [];
+      if (s.length >= MIN_FLAT_PX && kp.length >= MIN_FLAT_PX) return delta(kp, s);
+      if (s.length >= MIN_FLAT_PX)
+        return delta(
+          s.filter((i) => offPalette[i] === 1 || own.has(keptPaint[i] ?? -1)),
+          s,
+        );
+      return delta(
+        kp,
+        kp.filter((i) => sceneFlat[i] === 1 && idAt(ids, i) === part),
       );
-    });
-    const byKeptPlace = () =>
-      keptOf.flatMap((kp) =>
-        Option.toArray(
-          delta(
-            kp,
-            kp.filter((i) => sceneFlat[i] === 1 && idAt(ids, i) === part),
-          ),
-        ),
-      );
-    const deltas = Option.getOrElse(
-      Option.liftPredicate(byPaint, (d) => d.length > 0),
-      byKeptPlace,
-    );
+    };
+    const deltas = rgbs.flatMap((_, k) => Option.toArray(paintDelta(k)));
     return [
       {
         part,
