@@ -5,8 +5,10 @@
 // Pure: the same sheet in gives the same bytes out. A rule refuses a sheet
 // that lacks a part it names (`SheetCleanRefused`).
 
-import { labOf } from '@manna/film/core';
-import { type PartSheet, type Raster, type SheetClean, SheetCleanRefused } from '@manna/film/tools';
+// values from the core barrel only: a member's cut table and puppets import this file, and the
+// tools barrel would put its film-module loader in their build closures
+import { SheetCleanRefused, labOf } from '@manna/film/core';
+import type { PartSheet, Raster, SheetClean } from '@manna/film/tools';
 import { Array as Arr, Option, Result } from 'effect';
 
 /** A colour, RGB or Lab. */
