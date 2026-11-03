@@ -62,17 +62,17 @@ const SINGLE_LINE = { width: 18.5, ink: [1, 0, 0] } as const;
  * its paper) runs darker than its paper is 2.516 (poses-3), 2.484 (poses-4),
  * 2.744 (poses-6) and 2.456 (single-15); the largest, 2.75, is the one
  * calibration all four share. A rim pixel of theirs darker than the paper by more than this is no
- * paper, so the un-matte keeps it whole: at rest it keeps 5606 (poses-3),
- * 1480 (poses-4) and 4303 (poses-6) rim px whole and fills no px of a real
- * paper pocket (the kept crop's holes, which the figure closes round).
+ * paper, so the un-matte keeps it whole: at rest it keeps 2740 (poses-3),
+ * 1535 (poses-4), 2598 (poses-6) and 7186 (single-15) rim px whole that it
+ * would otherwise solve toward the paper.
  *
  * They name no `keep` colour. Their light linen sits nearer their paper than
  * the pockets' own ground does: each linen colour tried (the headcloth's
- * 252,247,225 and 253,247,231, the sleeve's 251,245,224, and lighter steps up
- * to 255,254,246) fills 2 to 78 px of a real paper pocket in at least one
- * view, so the film's paper would show a cut-out patch there; the wrap's
- * 252,226,188 fills none but keeps 1 px whole. The linen nearer their paper
- * than the grain's line stays un-matted.
+ * 252,247,225 and 253,247,231, the sleeve's 251,245,224, and the lighter
+ * 255,254,246) keeps whole 20 (poses-3), 3 (poses-6) and 15 (single-15) px the
+ * un-matte otherwise clears to paper, so the film's paper would show a
+ * cut-out patch there; the wrap's 252,226,188 changes no px. The linen nearer
+ * their paper than the grain's line stays un-matted.
  */
 const GRAIN = 2.75;
 
