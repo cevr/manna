@@ -1,76 +1,38 @@
 /* oxlint-disable effect/noGlobals, effect/noNodeBuiltinImport -- the test reads the app's own source files from disk, synchronously, outside any Effect. */
 
 /**
- * The app reads `@manna/core` through `@manna/core/bible` only: the Bible
- * canon and its reference parser, which import `effect` alone. Any other
- * core module would bring Bun-only code into the phone's bundle, and the
- * corpus (`@manna/core/assets/*`, the 7.8 MB KJV) is read only when the app
- * is bundled, by `vite/passage.ts`.
+ * The app reads `@manna/core` through `@manna/core/bible` only, and names
+ * no core asset (`src/test/core-reads.ts` says why, and how a source is
+ * read). `core-import.property.test.ts` holds the reader over generated
+ * spellings of every module name.
  */
 
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 
-/**
- * A module name `@manna/core` or below it, whole in a static string
- * literal: single-quoted, double-quoted, or a backtick template with no
- * `${}` in it. Matched wherever the literal stands, so an import, an
- * `export … from`, an `import()`, a `require()` and a resolve all count.
- */
-const CORE_LITERAL = /(['"`])(@manna\/core(?:\/[^'"`$\s\\]*)?)\1/gu;
-
-/** A core asset's name, in a literal or out of one. */
-const CORE_ASSET = /@manna\/core\/assets\/[^'"`\s]*/gu;
-
-const ALLOWED = '@manna/core/bible';
-
-/** Each `@manna/core` module `source` names other than `@manna/core/bible`, and each naming of a core asset, once a place, by its line. */
-const coreReads = (source: string) => {
-  const named = [
-    ...[...source.matchAll(CORE_LITERAL)]
-      .filter((match) => match[2] !== ALLOWED)
-      .map((match) => ({ index: match.index + 1, name: match[2] ?? '' })),
-    ...[...source.matchAll(CORE_ASSET)].map((match) => ({ index: match.index, name: match[0] })),
-  ];
-  return [...new Map(named.map((at) => [`${at.index} ${at.name}`, at])).values()]
-    .toSorted((a, b) => a.index - b.index)
-    .map(({ index, name }) => ({ line: source.slice(0, index).split('\n').length, name }));
-};
-
-/** The statements that name a module, each around a module name already in its delimiters. */
-const STATEMENTS: ReadonlyArray<(literal: string) => string> = [
-  (literal) => `import { a } from ${literal};`,
-  (literal) => `import ${literal};`,
-  (literal) => `export * from ${literal};`,
-  (literal) => `export { a } from ${literal};`,
-  (literal) => `const a = await import(${literal});`,
-  (literal) => `const a = require(${literal});`,
-];
-
-const DELIMITERS = ["'", '"', '`'];
-
-/** Each module name, and what the guard finds in a statement naming it: nothing for the one module the app may name. */
-const MODULES: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
-  ['@manna/core/bible', []],
-  ['@manna/core', ['@manna/core']],
-  ['@manna/core/hymnal', ['@manna/core/hymnal']],
-  ['@manna/core/assets/kjv.json', ['@manna/core/assets/kjv.json']],
-];
+import { coreReads } from './test/core-reads';
 
 /** The source files the app may hold, TypeScript and JavaScript both. */
 const SOURCES = new Bun.Glob('{src,app}/**/*.{ts,tsx,js,jsx,mjs}');
 
 const ROOT = `${import.meta.dir}/..`;
-const SELF = `src/${import.meta.file}`;
+/** The guard's own files, which name core modules and assets as data. */
+const GUARD = new Set([
+  `src/${import.meta.file}`,
+  'src/core-import.property.test.ts',
+  'src/test/core-reads.ts',
+]);
 /** The route types One writes (git-ignored) from the routes under `app`: no task hashes them, so the scan leaves them out. */
 const GENERATED = 'app/routes.d.ts';
 
 describe('the app’s reads of @manna/core', () => {
   it('imports @manna/core/bible only, and names no core asset, in src and app', () => {
-    const files = [...SOURCES.scanSync(ROOT)].filter((file) => file !== SELF && file !== GENERATED);
+    const files = [...SOURCES.scanSync(ROOT)].filter(
+      (file) => !GUARD.has(file) && file !== GENERATED,
+    );
     expect(files).toEqual(expect.arrayContaining(['app/index.tsx', 'src/display.ts']));
     const found = files.flatMap((file) =>
-      coreReads(readFileSync(`${ROOT}/${file}`, 'utf8')).map(
+      coreReads(file, readFileSync(`${ROOT}/${file}`, 'utf8')).map(
         (at) => `${file}:${at.line} ${at.name}`,
       ),
     );
@@ -86,30 +48,32 @@ describe('the app’s reads of @manna/core', () => {
       "import kjv from '@manna/core/assets/kjv.json';",
       "const file = Bun.resolveSync('@manna/core/assets/kjv.json', dir);",
       "const store = require('@manna/core/hymnal/store');",
+      "const note = '@manna/core/hymnal'; // '@manna/core'",
+      "type Hymnal = typeof import('@manna/core/\\x68ymnal');",
     ].join('\n');
-    expect(coreReads(source)).toEqual([
+    expect(coreReads('src/a.ts', source)).toEqual([
       { line: 2, name: '@manna/core/hymnal' },
       { line: 3, name: '@manna/core' },
       { line: 4, name: '@manna/core/bible/service' },
       { line: 5, name: '@manna/core/assets/kjv.json' },
       { line: 6, name: '@manna/core/assets/kjv.json' },
       { line: 7, name: '@manna/core/hymnal/store' },
+      { line: 9, name: '@manna/core/hymnal' },
     ]);
   });
 
-  it('finds a banned module in every statement and every delimiter, and passes @manna/core/bible in each', () => {
-    const table = MODULES.flatMap(([name, banned]) =>
-      DELIMITERS.flatMap((delimiter) =>
-        STATEMENTS.map((statement) => ({
-          source: statement(`${delimiter}${name}${delimiter}`),
-          banned,
-        })),
-      ),
-    );
-    expect(table).toHaveLength(MODULES.length * DELIMITERS.length * STATEMENTS.length);
+  it('reads JSX in a .tsx file, and names a source that does not parse rather than passing it', () => {
     expect(
-      table.map(({ source }) => ({ source, found: coreReads(source).map((at) => at.name) })),
-    ).toEqual(table.map(({ source, banned }) => ({ source, found: [...banned] })));
+      coreReads(
+        'app/a.tsx',
+        "import { A } from '@manna/core/hymnal';\nexport const B = () => <A />;",
+      ),
+    ).toEqual([{ line: 1, name: '@manna/core/hymnal' }]);
+    expect(
+      coreReads('src/a.ts', 'import a from `@manna/core/hymnal`;').map(({ name }) =>
+        name.startsWith('does not parse: '),
+      ),
+    ).toEqual([true]);
   });
 
   it('scans JavaScript files as well as TypeScript, in src and app', () => {
