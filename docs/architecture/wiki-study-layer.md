@@ -841,7 +841,8 @@ run locally with `bun run test:perf` (they read `packages/core/data/bible.db`).
 
 Every milestone runs the six acceptance rules from the compatibility contract:
 
-1. Oxlint proves portable core has no host imports (`.oxlintrc.json:58-90`).
+1. Oxlint proves portable core has no host imports (the `no-restricted-imports`
+   override for `packages/core/src/**` in `.oxlintrc.json`).
 2. Core contract tests with test services.
 3. Adapter tests: web worker, Electron main, Bun CLI.
 4. The same fixtures in all three clients.
@@ -1181,7 +1182,8 @@ Implementation-level only. Nothing here belongs on the map.
   portable runtime core". The root has no `build:*` script today, so the name is
   a new root-level alias either way.
 - **Compiler filesystem access.** The compiler reads `content/topics/*.md`, which
-  the oxlint boundary forbids in portable core (`.oxlintrc.json:56-90`). Whether
+  the oxlint boundary forbids in portable core (the `no-restricted-imports`
+  override for `packages/core/src/**` in `.oxlintrc.json`). Whether
   it uses Effect's `FileSystem` interface or lives in a `*-bun.ts` /
   `platform-bun/` file is open; both are permitted.
 - **Retrofitting the CLI `--json` convention.** Whether the existing commands
