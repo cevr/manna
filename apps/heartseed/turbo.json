@@ -2,7 +2,18 @@
   "$schema": "https://turborepo.dev/schema.json",
   "extends": ["//"],
   "tasks": {
-    "test": {
+    "test:matcher": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{core-import.property,core-import,display,matcher,today}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:rest": {
       "dependsOn": ["^transit"],
       "outputs": [],
       "inputs": [
@@ -10,6 +21,18 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json"
       ]
+    },
+    "test:infra": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+      ]
+    },
+    "test": {
+      "dependsOn": ["$TURBO_EXTENDS$", "test:matcher", "test:rest", "test:infra"]
     }
   }
 }

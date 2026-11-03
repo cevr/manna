@@ -4883,3 +4883,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** A refused journey results file and a refused `serve` output folder failed the command with no failure line on stdout: the journey printed its step and stopped, and `serve` failed with a raw host error.
 - **Cause:** The journey reported only its loading, and wrote each line to the results file with nothing to report the write's own failure; `serve` reported nothing. Each output-folder write in a journey now prints its failure line, and `serve` prints its result as every other command does.
 - **Guard:** code: `packages/sim/src/refusals.slow.test.ts` `each refused call fails typed and prints its failure line once`; `packages/sim/src/host.scenarios.test.ts` `prints the refusal when the journey results file leads out`, `prints the refusal when the server output folder leads out`
+
+### heartseed-tests-run-as-parts
+
+- **Date:** 2026-10-22
+- **Kind:** owner
+- **Said:** "And our unit test should be under a second for sure"
+- **Source:** memory feedback_gate_under_10s.md; hymnapp/hsvoice/spec.md Gate step 1, which measured `matcher.property.test.ts` at 1.13 s alone at load 18.4
+- **Wrong:** Heartseed ran every unit test in one task, which the matcher's property file alone took past the 1 s budget on a loaded host, and the voice's model-based test was to join it.
+- **Cause:** The app began with one `test` script; the hymnal's parts were not carried over.
+- **Guard:** code: `apps/heartseed/scripts/parts.test.ts` `take every unit-test file, each in exactly one part`; `apps/heartseed/scripts/parts.test.ts` `run every src file under the test preload, and every scripts and vite file under none`
