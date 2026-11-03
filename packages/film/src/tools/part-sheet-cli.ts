@@ -603,24 +603,25 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
     ['okra/prompt.txt', new TextEncoder().encode(`${job.hidden.prompt}\n`)],
     ['record.json', new TextEncoder().encode(`${recordText}\n`)],
   ];
+  // the record is held as its formatter leaves it, so it is read and written again before it is compared
+  const held = (file: string): Effect.Effect<Uint8Array, unknown> =>
+    Bool.match(file === 'record.json', {
+      onTrue: () =>
+        fs.readFileString(path.join(dir, file)).pipe(
+          Effect.flatMap(Schema.decodeEffect(PartSheetRecordJson)),
+          Effect.flatMap(Schema.encodeEffect(PartSheetRecordJson)),
+          Effect.map((text) => new TextEncoder().encode(`${text}\n`)),
+        ),
+      onFalse: () => fs.readFile(path.join(dir, file)),
+    });
+  // each file whose bytes on disk differ from what it lays, or that is not on disk yet
+  const differs = yield* Effect.filter(files, ([file, bytes]) =>
+    held(file).pipe(
+      Effect.map((h) => h.length !== bytes.length || h.some((b, i) => b !== bytes[i])),
+      Effect.orElseSucceed(() => true),
+    ),
+  );
   if (job.mode === 'check') {
-    // the record is held as its formatter leaves it, so it is read and written again before it is compared
-    const held = (file: string): Effect.Effect<Uint8Array, unknown> =>
-      Bool.match(file === 'record.json', {
-        onTrue: () =>
-          fs.readFileString(path.join(dir, file)).pipe(
-            Effect.flatMap(Schema.decodeEffect(PartSheetRecordJson)),
-            Effect.flatMap(Schema.encodeEffect(PartSheetRecordJson)),
-            Effect.map((text) => new TextEncoder().encode(`${text}\n`)),
-          ),
-        onFalse: () => fs.readFile(path.join(dir, file)),
-      });
-    const differs = yield* Effect.filter(files, ([file, bytes]) =>
-      held(file).pipe(
-        Effect.map((h) => h.length !== bytes.length || h.some((b, i) => b !== bytes[i])),
-        Effect.orElseSucceed(() => true),
-      ),
-    );
     if (differs.length > 0)
       return yield* refuse(`${differs.map(([f]) => f).join(', ')} differ from what it lays`);
     yield* Console.log(
@@ -630,8 +631,9 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
   }
   yield* fs.makeDirectory(path.join(dir, 'okra'), { recursive: true });
   for (const [file, bytes] of files) yield* fs.writeFile(path.join(dir, file), bytes);
+  // a lay again (`--reuse`) names each file it changed, so a committed hand fix it lays over shows in the log
   yield* Console.log(
-    `parts ${label} kept answer ${best.call.n} missed=${record.missed.join(',') || 'none'} parts=${best.made.parts.length} dir=${dir} okra=${used - prior.used}`,
+    `parts ${label} kept answer ${best.call.n} missed=${record.missed.join(',') || 'none'} parts=${best.made.parts.length} dir=${dir} okra=${used - prior.used} rewrote=${differs.map(([f]) => f).join(',') || 'none'}`,
   );
   return record;
 });
