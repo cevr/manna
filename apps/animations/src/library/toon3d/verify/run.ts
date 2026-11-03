@@ -311,6 +311,7 @@ const verify = Command.make(
       ),
     ),
     quick: Flag.Boolean('quick').pipe(
+      Flag.withDefault(false),
       Flag.withDescription(
         'iterate, not judge: the front, an 8-frame bend and a 2-frame turn, written to out/toon3d/<member>/quick/; the full run stays the verdict',
       ),
