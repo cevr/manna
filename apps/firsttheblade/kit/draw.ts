@@ -19,9 +19,9 @@
  * approves by name, so each run ends by naming those that differ from his
  * approval (`./approval.ts`); it never writes the record.
  */
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import { BunCrypto, BunRuntime, BunServices } from '@effect/platform-bun';
 import { chromium, type Browser } from '@playwright/test';
-import { Data, Effect, FileSystem, Path } from 'effect';
+import { Data, Effect, FileSystem, Layer, Path } from 'effect';
 
 import { SERIES, type Series, type SeriesId } from '../src/content.ts';
 import { PALETTE } from '../src/palette.ts';
@@ -374,5 +374,8 @@ const kit = Effect.gen(function* () {
 }).pipe(Effect.scoped);
 
 if (import.meta.main) {
-  kit.pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);
+  kit.pipe(
+    Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerDigest)),
+    BunRuntime.runMain,
+  );
 }

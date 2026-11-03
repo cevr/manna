@@ -18,6 +18,7 @@
  * wrote are what the site serves.
  */
 import { Effect, FileSystem, Option, Path, Schema, Stream } from 'effect';
+import { Digest } from 'effect/crypto';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
@@ -135,9 +136,11 @@ export const formatOf = (bytes: Uint8Array): Option.Option<Format> => {
   );
 };
 
-/** The SHA-256 of bytes, in hex. */
-export const sha256 = (bytes: Uint8Array) =>
-  new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
+/** The SHA-256 of bytes, in lowercase hex, computed by the `Digest` the context provides. */
+export const sha256Hex = Effect.fn('BuildWalk.sha256Hex')(function* (bytes: Uint8Array) {
+  const digest = yield* Digest.Digest;
+  return yield* digest.digestHex(Digest.sha256, bytes);
+});
 
 /** An image of the built site: its path from `dist/`, its format, and the SHA-256 of its bytes. */
 export interface BuiltImage {
@@ -164,7 +167,8 @@ export const builtImages = Effect.fn('BuildWalk.images')(function* (dist: string
             Option.some<Format>('unknown').pipe(Option.filter(() => IMAGE.test(file))),
           ),
         );
-        return Option.map(format, (format) => ({ file, format, hash: sha256(bytes) }));
+        if (Option.isNone(format)) return Option.none<BuiltImage>();
+        return Option.some({ file, format: format.value, hash: yield* sha256Hex(bytes) });
       }),
     { concurrency: 16 },
   );

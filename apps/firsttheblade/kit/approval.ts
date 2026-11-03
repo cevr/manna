@@ -55,7 +55,7 @@
  */
 import { Effect, FileSystem, Option, Path, Predicate, Schema } from 'effect';
 
-import { type BuiltImage, buildSite, builtImages, Format, sha256 } from './build-walk.ts';
+import { type BuiltImage, buildSite, builtImages, Format, sha256Hex } from './build-walk.ts';
 import { AskAnswers, type AskRead, LabAsk, LabAsks } from './lab-asks.ts';
 import { OUTSIDE, servedImages } from './served.ts';
 
@@ -157,7 +157,10 @@ export const hashedStills = Effect.fn('Approval.hashed')(function* (app: string)
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   return yield* Effect.forEach(yield* servedStills(app), (still) =>
-    Effect.map(fs.readFile(path.join(app, still)), (bytes) => [still, sha256(bytes)] as const),
+    fs.readFile(path.join(app, still)).pipe(
+      Effect.flatMap(sha256Hex),
+      Effect.map((hash) => [still, hash] as const),
+    ),
   );
 });
 
@@ -536,7 +539,7 @@ export const unapprovedBuilt = Effect.fn('Approval.unapprovedBuilt')(function* (
   const path = yield* Path.Path;
   const { stills } = yield* readRecord(app);
   const outside = yield* Effect.forEach(OUTSIDE, ({ image }) =>
-    Effect.map(fs.readFile(path.join(app, image)), sha256),
+    Effect.flatMap(fs.readFile(path.join(app, image)), sha256Hex),
   );
   const held = new Set([...Object.values(stills), ...outside]);
   return (yield* builtImages(dist))

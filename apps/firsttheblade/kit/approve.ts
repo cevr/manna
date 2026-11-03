@@ -18,7 +18,7 @@
  * Only the coordinator runs it, once the owner has answered. The kit never
  * writes the record.
  */
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import { BunCrypto, BunRuntime, BunServices } from '@effect/platform-bun';
 import { Console, Effect, Layer, Path } from 'effect';
 import { Command, Flag } from 'effect/cli';
 
@@ -51,7 +51,7 @@ const command = Command.make(
 
 if (import.meta.main) {
   Command.run(command, { version: '1.0.0' }).pipe(
-    Effect.provide(Layer.mergeAll(BunServices.layer, layerLab)),
+    Effect.provide(Layer.mergeAll(BunServices.layer, BunCrypto.layerDigest, layerLab)),
     BunRuntime.runMain,
   );
 }

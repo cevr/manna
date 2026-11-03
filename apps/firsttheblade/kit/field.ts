@@ -15,9 +15,9 @@
  * as a lab ask that shows it byte for byte as an image block before
  * `bun run kit:approve` records it.
  */
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import { BunCrypto, BunRuntime, BunServices } from '@effect/platform-bun';
 import { chromium, type Page } from '@playwright/test';
-import { Data, Effect, FileSystem } from 'effect';
+import { Data, Effect, FileSystem, Layer } from 'effect';
 
 import { reportAgainstRecord } from './approval.ts';
 import {
@@ -167,5 +167,8 @@ const field = Effect.gen(function* () {
 }).pipe(Effect.scoped);
 
 if (import.meta.main) {
-  field.pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);
+  field.pipe(
+    Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerDigest)),
+    BunRuntime.runMain,
+  );
 }

@@ -14,8 +14,8 @@
  * still goes to him as a lab ask that shows it byte for byte as an image
  * block before `bun run kit:approve` records it.
  */
-import { BunRuntime, BunServices } from '@effect/platform-bun';
-import { Data, Effect, FileSystem } from 'effect';
+import { BunCrypto, BunRuntime, BunServices } from '@effect/platform-bun';
+import { Data, Effect, FileSystem, Layer } from 'effect';
 import sharp from 'sharp';
 
 import { reportAgainstRecord } from './approval.ts';
@@ -76,5 +76,8 @@ const night = Effect.gen(function* () {
 });
 
 if (import.meta.main) {
-  night.pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);
+  night.pipe(
+    Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerDigest)),
+    BunRuntime.runMain,
+  );
 }

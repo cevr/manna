@@ -11,9 +11,9 @@
  * prod state check, so every prod deploy and plan runs it, whatever command
  * starts it; any other stage skips it.
  */
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import { BunCrypto, BunRuntime, BunServices } from '@effect/platform-bun';
 import { Stage } from 'alchemy/Stage';
-import { Console, Effect, Option, Path } from 'effect';
+import { Console, Effect, Layer, Option, Path } from 'effect';
 
 import { RECORD, shippable } from './approval.ts';
 
@@ -26,14 +26,21 @@ export const checked = Effect.fn('KitShippable.run')(function* (app: string) {
   return approval;
 });
 
-/** The prod deploy's gate: `checked` on stage `prod`, nothing on any other stage. */
+/**
+ * The prod deploy's gate: `checked` on stage `prod`, nothing on any other
+ * stage. It is the kit's entry in `alchemy.run.ts`, so it provides the
+ * `Digest` its hashes read.
+ */
 export const prodGate = Effect.fn('KitShippable.prodGate')(function* (app: string) {
   if ((yield* Stage) !== 'prod') return Option.none();
   return Option.some(yield* checked(app));
-});
+}, Effect.provide(BunCrypto.layerDigest));
 
 if (import.meta.main)
   Effect.gen(function* () {
     const path = yield* Path.Path;
     yield* checked(path.dirname(import.meta.dir));
-  }).pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);
+  }).pipe(
+    Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerDigest)),
+    BunRuntime.runMain,
+  );
