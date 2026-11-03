@@ -127,7 +127,6 @@ export const SKELETONS = {
       crown: [221, 0],
       painted: {
         right: [
-          { measure: 'exposed', elbow: 70, wrist: 120, bound: 8 },
           { measure: 'unprotected', elbow: 70, wrist: 120, bound: 0 },
           { measure: 'ghost', elbow: 25, wrist: 30, bound: 0 },
         ],

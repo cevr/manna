@@ -38,7 +38,7 @@ export const SKELETONS = {
       chin: [122, 185],
       crown: [120, 20],
       painted: {
-        left: [{ measure: 'exposed', elbow: 55, wrist: 120, bound: 8 }],
+        left: [{ measure: 'shoulder', elbow: 25, wrist: 30, bound: 0 }],
       },
       ...JOINTS.front,
       wristRight: [31, 405],
@@ -59,9 +59,6 @@ export const SKELETONS = {
       neck: [107, 215],
       chin: [106, 195],
       crown: [100, 20],
-      painted: {
-        left: [{ measure: 'exposed', elbow: 120, wrist: 0, bound: 8 }],
-      },
       ...JOINTS.threeQuarterLeft,
       wristRight: [22, 405],
       handRight: [20, 430],
@@ -81,9 +78,6 @@ export const SKELETONS = {
       neck: [310, 380],
       chin: [310, 360],
       crown: [300, 10],
-      painted: {
-        left: [{ measure: 'exposed', elbow: 70, wrist: -30, bound: 8 }],
-      },
       ...JOINTS['single-1'],
       wristRight: [72, 432],
       handRight: [75, 385],
@@ -96,7 +90,7 @@ export const SKELETONS = {
     }),
   ),
   // seated on his stool, the bottle raised: his lap, stool and sandals stand
-  // with the root; his right arm is a stroke limb, his left stays painted
+  // with the root; both arms follow their measured stroke limbs
   'single-9': framed(
     keptAt('single-9'),
     standing(BODY, {
@@ -105,12 +99,6 @@ export const SKELETONS = {
       neck: [308, 385],
       chin: [308, 365],
       crown: [300, 5],
-      painted: {
-        left: [
-          { measure: 'exposed', elbow: 120, wrist: 30, bound: 8 },
-          { measure: 'unprotected', elbow: 70, wrist: 90, bound: 0 },
-        ],
-      },
       ...JOINTS['single-9'],
       wristRight: [77, 406],
       handRight: [73, 338],

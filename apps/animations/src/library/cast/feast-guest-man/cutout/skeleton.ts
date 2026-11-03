@@ -34,11 +34,7 @@ export const SKELETONS = {
       chin: [206, 267],
       crown: [204, 0],
       painted: {
-        right: [
-          { measure: 'exposed', elbow: 120, wrist: -120, bound: 8 },
-          { measure: 'unprotected', elbow: 100, wrist: -120, bound: 0 },
-          { measure: 'ghost', elbow: 40, wrist: -60, bound: 0 },
-        ],
+        right: [{ measure: 'ghost', elbow: 40, wrist: -60, bound: 0 }],
       },
       ...JOINTS['poses-1'],
       wristRight: [70, 505],

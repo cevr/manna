@@ -59,6 +59,32 @@ const rowsOf = (spec: PuppetSpec) =>
 
 const ROWS: Array<Row> = [];
 
+// Changing a limb into a refusal or opt-out requires an explicit census
+// change beside the declaration, so a missing measured arm cannot go quiet.
+const EXPECTED_LIMBS = [
+  'idea-villagers/poses-3/Left',
+  'idea-villagers/poses-6/Left',
+  'idea-villagers/poses-6/Right',
+  'idea-villagers/single-15/Left',
+  'lead-feast/front/Right',
+  'lead-feast/single-1/Left',
+  'lead-feast/single-1/Right',
+  'lead-feast/single-9/Left',
+  'lead-feast/single-9/Right',
+  'lead-feast/threeQuarterLeft/Left',
+  'lead-feast/threeQuarterLeft/Right',
+  'sower/back/Left',
+  'sower/back/Right',
+  'sower/front/Right',
+  'sower/poses-1/Left',
+  'sower/poses-1/Right',
+  'sower/poses-4/Left',
+  'sower/profileRight/Right',
+  'sower/threeQuarterLeft/Right',
+  'sower/threeQuarterRight/Left',
+  'villager-child/poses-5/Right',
+];
+
 /** An arm's line in the table: member, view, side, and what it is. */
 const line = (r: Row) => `| ${r.member} | ${r.view} | ${r.side} | ${whatOf(r.shown)} |`;
 
@@ -101,6 +127,11 @@ describe('every cut-out arm is a stroke limb, or says why not', () => {
         ].join('\n'),
       );
       expect(count('neither')).toBe(0);
+      expect(
+        ROWS.filter((r) => r.shown._tag === 'limb')
+          .map((r) => `${r.member}/${r.view}/${r.side}`)
+          .toSorted(),
+      ).toEqual(EXPECTED_LIMBS);
     }),
   );
 });
