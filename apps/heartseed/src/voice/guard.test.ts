@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noDynamicImports, effect/noGlobals -- the guard reads the voice's own source files from disk, synchronously, and asks One's native-source contract (resolved from the app, as One's bundler does) for the Swift module's declaration. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noDynamicImports --the guard reads the voice's own source files from disk, synchronously, and asks One's native-source contract (resolved from the app, as One's bundler does) for the Swift module's declaration. */
 
 /**
  * The voice makes no sound where no one asked to hear it: on the simulator
