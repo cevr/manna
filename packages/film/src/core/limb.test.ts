@@ -281,6 +281,20 @@ describe('limbOf', () => {
 });
 
 describe('limbOf on a bent chain', () => {
+  test('reads its stations from the drawing: the shoulder, the elbow on each segment, the cuff', () => {
+    const s = BENT_LIMB.stations;
+    const near = (got: number, want: number) => expect(Math.abs(got - want)).toBeLessThanOrEqual(1);
+    near(s.shoulder.outer, bentOuter(s.shoulder.u));
+    near(s.shoulder.inner, B_INNER);
+    near(s.elbowUpper.outer, 3);
+    near(s.elbowUpper.inner, B_INNER);
+    near(s.elbowFore.inner, B_INNER);
+    near(s.cuff.outer, bentOuter(s.cuff.u));
+    near(s.cuff.inner, B_INNER);
+    const crease = Math.hypot(...sub(s.crease, BE));
+    near(crease, B_INNER / Math.sin(Math.PI / 8));
+  });
+
   test("each side follows the drawing: the outer edge on both segments, the inner side stopping on the fold's bisector", () => {
     expect(BENT_LIMB.chain.upper).toBeCloseTo(B_UPPER, 9);
     expect(BENT_LIMB.chain.fore).toBeCloseTo(B_FORE, 9);

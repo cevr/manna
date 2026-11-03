@@ -64,6 +64,9 @@ const SHORTEST = 2 * FEATHER;
 /** How far along the upper arm a flap's body texel may lie, of the upper arm's length: past it, or on the forearm, the body's pixels would ride the stroke's sleeve. The lead's right shoulder band reaches 20.4 px of a 154 px upper arm (0.13), his left 4.0 px of 176. */
 const FLAP_REACH = 0.5;
 
+/** The length under which the sum of the two segments' outer normals reads as none: the forearm folded straight back over the upper arm. */
+const FOLDED_BACK = 2 ** -20;
+
 /** How finely a width is marched along ±v, px. */
 const MARCH = 0.25;
 
@@ -128,6 +131,35 @@ interface LimbSide {
   readonly ends: ReadonlyArray<LimbEnd>;
 }
 
+/** A cross-section of the sleeve on one segment's frame: at `u`, its half-width on each side, px. */
+interface LimbStation {
+  readonly u: number;
+  readonly outer: number;
+  readonly inner: number;
+}
+
+/**
+ * The sleeve's three cross-sections, each read on the part's own pixels, that
+ * give the stroke its width wherever a side's edge is hidden (a knot that
+ * ends on `fold`):
+ * - `shoulder`: across the upper arm at its first knot past a flap's body
+ *   texels, each side to the paint's edge or the crease line, on the upper
+ *   arm's frame.
+ * - the elbow, from the outer elbow (the paint's edge along the outer
+ *   bisector, the join's radius on that side) to the inner crease point
+ *   (`crease`, the paint's edge texel nearest the elbow inside the bend):
+ *   `elbowUpper` on the upper arm's frame, `elbowFore` on the forearm's.
+ * - `cuff`: across the cuff opening, one feather inside the sleeve, on the
+ *   forearm's frame.
+ */
+interface LimbStations {
+  readonly shoulder: LimbStation;
+  readonly elbowUpper: LimbStation;
+  readonly elbowFore: LimbStation;
+  readonly cuff: LimbStation;
+  readonly crease: Pt;
+}
+
 /** A limb's regions over the box `[x, y, width, height]` that holds the part's paint: two bytes a texel, row by row, the stub's share and the hand's, of 255; the sleeve's is the rest. */
 interface LimbRegions {
   readonly box: readonly [number, number, number, number];
@@ -143,6 +175,7 @@ export interface PuppetPartLimb extends LimbRule {
   readonly ink: Rgb;
   readonly inkWidth: number;
   readonly regions: LimbRegions;
+  readonly stations: LimbStations;
 }
 
 /** The rest joints a limb is measured on, sheet px: the shoulder's, elbow's and wrist's pivots. */
@@ -158,7 +191,8 @@ interface LimbJoints {
  * running off the sheet, a flap's body texel on its forearm or past
  * `FLAP_REACH` of its upper arm, no ink at any of its edges, or more of its
  * edges' dark runs reaching the chain than ending on cloth (cloth as dark as
- * ink).
+ * ink), or a station it cannot read (no crease inside the bend, a forearm
+ * folded straight back, a station off its paint or running off the sheet).
  */
 const LimbRefusalKind = Schema.Literals([
   'non-finite',
@@ -168,6 +202,7 @@ const LimbRefusalKind = Schema.Literals([
   'open-edge',
   'no-ink',
   'ink-unbounded',
+  'no-station',
 ]);
 type LimbRefusalKind = typeof LimbRefusalKind.Type;
 
@@ -440,6 +475,113 @@ const regionsOf = (pixels: Raster, t: Texels, chain: LimbChain): LimbRegions => 
   return { box, shares: bytes(shares) };
 };
 
+/**
+ * How far from `p` along `n` the paint's alpha stays at or over one half, px,
+ * stopping where the march crosses the crease ray from `e` through `c` (past
+ * it lies the other segment's paint, folded over this one; a ray, since a
+ * station a knot past the crease point would miss a segment ending there);
+ * none when `p` is off the paint or the march runs off the sheet.
+ */
+const crossTo = (t: Texels, p: Pt, n: Pt, [e, c]: readonly [Pt, Pt]): Option.Option<number> => {
+  if (t.alpha(p[0], p[1]) < 0.5) return Option.none();
+  const ec = sub(c, e);
+  const side = (q: Pt) => ec[0] * (q[1] - e[1]) - ec[1] * (q[0] - e[0]);
+  const onCrease = (q: Pt) => dot(ec, ec) > 0 && dot(sub(q, e), ec) >= 0;
+  let [s, before, was] = [0, t.alpha(p[0], p[1]), side(p)];
+  for (;;) {
+    const next = s + MARCH;
+    const q: Pt = [p[0] + next * n[0], p[1] + next * n[1]];
+    if (!t.holds(Math.floor(q[0]), Math.floor(q[1]))) return Option.none();
+    const now = side(q);
+    if (was * now < 0 && onCrease(q)) return Option.some(s + (MARCH * was) / (was - now));
+    const a = t.alpha(q[0], q[1]);
+    if (a < 0.5) return Option.some(s + (MARCH * (before - 0.5)) / (before - a));
+    [s, before, was] = [next, a, now || was];
+  }
+};
+
+/**
+ * The elbow's inner crease: the centre of the paint's edge texel (opaque, a
+ * 4-neighbour clear, off the sheet or a flap's body texel) nearest the elbow
+ * pivot among those on the sleeve and inside the bend (on the inner side of
+ * both segments' lines); none when no edge lies there.
+ */
+const creaseOf = (pixels: Raster, t: Texels, chain: LimbChain): Option.Option<Pt> => {
+  const nu = opens(unit(sub(chain.elbow, chain.shoulder)));
+  const nf = opens(unit(sub(chain.cuff, chain.elbow)));
+  const length = chain.upper + chain.fore;
+  const solid = (x: number, y: number) =>
+    t.holds(x, y) && !t.isBody(x, y) && t.byte(x, y, 3) >= 128;
+  const [bx, by, bw, bh] = paintBox(pixels, t);
+  let [best, at] = [Infinity, Option.none<Pt>()];
+  for (let y = by; y < by + bh; y++)
+    for (let x = bx; x < bx + bw; x++) {
+      if (!solid(x, y)) continue;
+      if (solid(x - 1, y) && solid(x + 1, y) && solid(x, y - 1) && solid(x, y + 1)) continue;
+      const p: Pt = [x + 0.5, y + 0.5];
+      const r = sub(p, chain.elbow);
+      if (dot(r, nu) >= 0 || dot(r, nf) >= 0) continue;
+      const [u] = unroll(chain, p);
+      const d = Math.hypot(r[0], r[1]);
+      if (u < 0 || u > length || d >= best) continue;
+      [best, at] = [d, Option.some(p)];
+    }
+  return at;
+};
+
+/**
+ * The limb's stations (`LimbStations`) on `chain`, the shoulder's at the
+ * first knot (`step` apart) past `reach`, the farthest u a flap's body texel
+ * lies at; refused when no crease lies inside the bend, the forearm folds
+ * straight back (no outer side to the elbow), or a station's march starts off
+ * the paint or runs off the sheet.
+ */
+const stationsOf = (
+  pixels: Raster,
+  t: Texels,
+  chain: LimbChain,
+  step: number,
+  reach: number,
+): Result.Result<LimbStations, readonly [LimbRefusalKind, string]> => {
+  const refuse = (detail: string) => Result.fail(['no-station', detail] as const);
+  const found = creaseOf(pixels, t, chain);
+  if (Option.isNone(found))
+    return refuse('no edge of its paint lies inside the bend for the elbow to crease at');
+  const crease = found.value;
+  const nu = opens(unit(sub(chain.elbow, chain.shoulder)));
+  const nf = opens(unit(sub(chain.cuff, chain.elbow)));
+  const out: Pt = [nu[0] + nf[0], nu[1] + nf[1]];
+  if (Math.hypot(out[0], out[1]) < FOLDED_BACK)
+    return refuse(
+      'its forearm folds straight back over its upper arm, so its elbow has no outer side',
+    );
+  const neg = (n: Pt): Pt => [-n[0], -n[1]];
+  const length = chain.upper + chain.fore;
+  const us = (Math.floor(Math.max(0, reach) / step - 0.5) + 1.5) * step;
+  const [ps, os] = pointAt(chain, us);
+  const [pc, oc] = pointAt(chain, length - FEATHER);
+  const marches = {
+    'shoulder outer': [ps, os],
+    'shoulder inner': [ps, neg(os)],
+    'outer elbow': [chain.elbow, unit(out)],
+    'cuff outer': [pc, oc],
+    'cuff inner': [pc, neg(oc)],
+  } satisfies Record<string, readonly [Pt, Pt]>;
+  const read = Rec.map(marches, ([p, n]) => crossTo(t, p, n, [chain.elbow, crease]));
+  const missing = Object.keys(Rec.filter(read, Option.isNone));
+  if (missing.length > 0)
+    return refuse(`its ${missing.join(', ')} march starts off its paint or runs off the sheet`);
+  const w = (k: keyof typeof marches) => Option.getOrElse(read[k], () => 0);
+  const r = sub(crease, chain.elbow);
+  return Result.succeed({
+    shoulder: { u: us, outer: w('shoulder outer'), inner: w('shoulder inner') },
+    elbowUpper: { u: chain.upper, outer: w('outer elbow'), inner: -dot(r, nu) },
+    elbowFore: { u: chain.upper, outer: w('outer elbow'), inner: -dot(r, nf) },
+    cuff: { u: length - FEATHER, outer: w('cuff outer'), inner: w('cuff inner') },
+    crease,
+  });
+};
+
 /** How far a flap's body texels reach along `chain`: the greatest u of their centres (−∞ with none), and how many lie nearer the forearm. */
 const flapReach = (pixels: Raster, t: Texels, chain: LimbChain) => {
   let [u, fore] = [-Infinity, 0];
@@ -523,6 +665,8 @@ export const limbOf = (
     return refuse('no-ink', `no knot's edge shows a texel under L* ${INK_L}`);
   const depths = [...sides.outer.inks, ...sides.inner.inks].filter((d) => d > 0);
   const channel = (c: 0 | 1 | 2) => median(found.map((x) => x[c]));
+  const stations = stationsOf(pixels, t, chain, step, reach.u);
+  if (Result.isFailure(stations)) return refuse(...stations.failure);
   return Option.match(
     Option.fromUndefinedOr(
       (['outer', 'inner'] as const).find((side) => count(side, 'ink') < count(side, 'unbounded')),
@@ -545,6 +689,7 @@ export const limbOf = (
           ink: [channel(0), channel(1), channel(2)] as const,
           inkWidth: median(depths),
           regions: regionsOf(pixels, t, chain),
+          stations: stations.success,
         }),
     },
   );
