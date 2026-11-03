@@ -216,6 +216,29 @@ export const ANCHORED: ReadonlyArray<readonly [string, ReadonlyArray<string>]> =
   [DESIGN_LANGUAGE, ['', FILM_SRC]],
 ];
 
+/**
+ * The architecture docs: each current one is read for its anchors from the
+ * root, core's src, the CLI's src or its commands (`corpus-supply/model.ts`,
+ * `commands/notes.ts`, `egw/search.ts`). None is whole: they name a user's
+ * data (`userData/topics.db`) and the repos they read beside this one.
+ */
+export const ARCHITECTURE = 'docs/architecture';
+export const ARCHITECTURE_BASES = [
+  '',
+  'packages/core/src',
+  'packages/cli/src',
+  'packages/cli/src/commands',
+];
+
+/**
+ * An architecture doc that records a past state: one whose name carries a
+ * date (`audit-2026-08-14.md`), a checkpoint (`checkpoints/initial.md`; its
+ * `TEMPLATE.md` records none) or an inventory. It names the tree as it was,
+ * as a receipt does, so its paths and lines are not read against today's.
+ */
+export const isRecord = (file: string) =>
+  /\d{4}-\d{2}-\d{2}/.test(file) || /^(?:checkpoints|inventories)\/(?!TEMPLATE\.md$)/.test(file);
+
 /** The skills that teach the framework: every `.md` under them is read in full against the code. */
 export const SKILL_DIRS = ['.claude/skills/film', '.claude/skills/film-architecture-loop'];
 
@@ -263,6 +286,15 @@ export const docPlaces = (root: string): ReadonlyArray<DocPlace> => [
   ),
   ...SPANNED.map(([path, bases]): DocPlace => ({ path, bases, whole: false, role: 'spanned' })),
   ...ANCHORED.map(([path, bases]): DocPlace => ({ path, bases, whole: true, role: 'anchored' })),
+  ...Array.from(new Glob('**/*.md').scanSync({ cwd: `${root}/${ARCHITECTURE}` }))
+    .filter((file) => !isRecord(file))
+    .sort()
+    .map((file): DocPlace => ({
+      path: `${ARCHITECTURE}/${file}`,
+      bases: ARCHITECTURE_BASES,
+      whole: false,
+      role: 'anchored',
+    })),
   ...VERIFY_SKILLS.flatMap(([dir, app]) =>
     Array.from(new Glob('**/*.md').scanSync({ cwd: `${root}/${dir}` }))
       .sort()

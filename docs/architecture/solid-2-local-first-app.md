@@ -98,7 +98,7 @@ apps/desktop ----> packages/app --------> packages/core
 packages/cli ---------------------------> packages/core
 ```
 
-`packages/app` must not import from either app. `packages/core` must not import Solid, Electron, or browser-worker modules.
+`packages/app` at `feb578243` (the last tree that holds it) must not import from either app. `packages/core` must not import Solid, Electron, or browser-worker modules.
 
 ## Platform and runtime boundary
 

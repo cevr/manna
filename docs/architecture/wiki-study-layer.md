@@ -15,6 +15,11 @@ Every milestone inherits the
 [three-client compatibility contract](../wayfinder/wiki-study-layer/client-compatibility.md)
 and the parity rules in [feature-parity.md](feature-parity.md).
 
+A path followed by "at `3744b22d1`" names the tree this specification was
+written against. The shared app and the web host it names were removed in
+`a639e74d1`, the procedure group in `29f7aee73`, and the native artifact
+layer in `637f4d0f8`.
+
 ---
 
 ## 1. Vocabulary
@@ -150,9 +155,9 @@ export interface WikiServiceApi {
 pages) plus the assembled section lineup. `dictionary` returns the compiled alias
 table so a client can build its matcher once.
 
-New procedures in `packages/core/src/procedure/group.ts`, declared with the
-existing `procedure(tag, { payload, success })` helper (`:50-72`) and registered
-in `BibleProcedureGroup` (`:211`):
+New procedures in `packages/core/src/procedure/group.ts` at `3744b22d1`, declared with the
+existing `procedure(tag, { payload, success })` helper and registered
+in `BibleProcedureGroup`:
 
 - `v1.wiki.topic.get` — payload `{ slug }`, success `WikiPage`
 - `v1.wiki.topics.list` — payload `{ query?, letter? }`, success `readonly WikiPageSummary[]`
@@ -172,12 +177,13 @@ it; `bible.ts` (`jsonFlag`), `hymns.ts` (`jsonFlag`) and `egw/search.ts`
 whether to retrofit the existing commands as an implementation choice.
 
 **Relationship to the existing topics surface.** `v1.topics.list` /
-`v1.topics.get` (`group.ts:198,206`) and `TopicService`
+`v1.topics.get` (`TopicsList` and `TopicGet` in `group.ts`) and `TopicService`
 (`packages/core/src/topics/service.ts`) already read the catalog tables and back
-the `/topics/:topicId?` route (`packages/app/src/application/routes.tsx:231`,
-route union `packages/app/src/route/model.ts:20`, codec `route/codec.ts:65-67,149-150`,
-component `packages/app/src/library/topics.tsx`, hooks `useTopics` /
-`useTopicDetail` in `packages/app/src/runtime/reading-data.ts`). `WikiService`
+the `/topics/:topicId?` route (`packages/app/src/application/routes.tsx` `TopicsRoute` at `3744b22d1`,
+route union `packages/app/src/route/model.ts` `AppRoute` at `3744b22d1`,
+codec `packages/app/src/route/codec.ts` `encodeRoute`, `decodeRoute` at `3744b22d1`,
+component `packages/app/src/library/topics.tsx` at `3744b22d1`, hooks `useTopics` /
+`useTopicDetail` in `packages/app/src/runtime/reading-data.ts` at `3744b22d1`). `WikiService`
 **composes over** `TopicService` for catalog data; it does not replace it. The
 `v1.topics.*` procedures stay as the catalog-data seam. §11 records the
 recommended fate of the `/topics` route.
@@ -273,10 +279,10 @@ New work in `packages/core/src/corpus-supply/`:
   within range.
 
 Adapters: native reuses `layerNativeBibleArtifacts`
-(`packages/core/src/platform-node/bible-artifact.ts`) with a topics destination
+(`packages/core/src/platform-node/bible-artifact.ts` at `3744b22d1`) with a topics destination
 and source list; web adds a second generation store instance plus a
 `/api/assets/topics` proxy route mirroring `/api/assets/bible`
-(`apps/web/server/main.ts`). Wiring lands in all three composition roots.
+(`apps/web/server/main.ts` at `3744b22d1`). Wiring lands in all three composition roots.
 
 **Degradation posture: writings-style, not Bible-style.** Bible is fail-closed
 at startup; topics wraps its `ensure` in a catch, logs, and lets the app start.
@@ -430,7 +436,7 @@ construction.
 **The segment pipeline is not wired up yet.** `segmentVerseText`,
 `applyItalicSegments`, `applyRedLetterSegments`, and `applySearchHighlights` are
 implemented, exported from `@manna/core/bible-rendering`, and have **zero
-consumers** outside their own directory. `packages/app/src/reading/bible-reader.tsx`
+consumers** outside their own directory. `packages/app/src/reading/bible-reader.tsx` at `3744b22d1`
 renders `{verse.text}` as a raw string — no italics, no red letter, no margin
 anchors. Milestone 6 therefore carries the cost of wiring the segment renderer
 into the reader before phrase spans have anywhere to land. This is pre-existing
@@ -460,7 +466,7 @@ the dictionary, and `phrase-matcher.test.ts`'s case "a noise-flagged alias is
 absent from the dictionary and therefore never matches" pins that: bare
 `judgment` is not matched while `investigative judgment` is. The **restrictions** are not.
 `the daily` must not fire inside `the daily paper`, the author wrote the rule
-down where §4.8 says to (`content/topics/the-daily.md:16`: _"the daily" needs
+down where §4.8 says to (`content/topics/the-daily.md`, its alias note: _"the daily" needs
 context-restricted matching ("the daily paper")_), and every layer between that
 comment and the reader drops it.
 
@@ -571,8 +577,8 @@ at all — these entries arrive from citations in authored cores and commentary
 indexes, not from search.
 
 Tap fires the existing `v1.reading.writingsPublication.download`
-(`group.ts:130`). The `WRITINGS_LIBRARY_KEY` reactivity key
-(`packages/app/src/cache/reactivity-keys.ts:74`) already invalidates the writings
+(`WritingsPublicationDownload` in `group.ts`). The `WRITINGS_LIBRARY_KEY` reactivity key
+(in `packages/app/src/cache/reactivity-keys.ts` at `3744b22d1`) already invalidates the writings
 library on download, so the section refreshes itself with no bespoke wiring.
 
 CLI parity: `manna wiki topic <slug>` prints the same sections with the same caps
@@ -614,7 +620,7 @@ page with two fewer sections, or a lookup panel with an empty group, and
 _nothing on screen or in the JSON says so_. The three-client contract states the
 requirement the other way round: "Every portable service must expose typed
 failures"
-(`docs/wayfinder/wiki-study-layer/client-compatibility.md:20`), and a fault that
+(`docs/wayfinder/wiki-study-layer/client-compatibility.md`), and a fault that
 is never expressed is one no client can surface.
 
 The current posture is pinned rather than assumed, so a change to it is visible:
@@ -681,15 +687,15 @@ The AI-assisted-linking fog item owns that trail when it graduates (§11).
 ## 8. Study-pane seam
 
 `packages/core/src/bible-db/bible-database.ts` already implements every data
-operation this seam needs. Nothing in `packages/core/src/procedure/group.ts`
-exposes any of it and `packages/app` has no UI for it.
+operation this seam needs. Nothing in `packages/core/src/procedure/group.ts` at `3744b22d1`
+exposes any of it and `packages/app` at `3744b22d1` has no UI for it.
 [feature-parity.md](feature-parity.md) already lists "Verse and paragraph study"
 as Required for both visual hosts.
 
 ### 8.1 One portable service
 
 `StudyService` in `packages/core/src/study/service.ts` composes existing methods
-on `BibleDatabase` (`:98-157`), `EGWCommentaryService.getCommentary`, and
+on `BibleDatabase` (`BibleDatabaseService` in `packages/core/src/bible-db/bible-database.ts`), `EGWCommentaryService.getCommentary`, and
 `WritingsService`:
 
 | Bundle field     | Backing call                                |
@@ -859,9 +865,9 @@ Milestones below name the milestone-specific content of rules 2, 3, 5, and 6.
 
 Collapse the bible-branded file-artifact machinery into one `FileCorpusArtifact`
 abstraction parameterized by corpus id, manifest, semantic verifier, and
-destination/generation prefix. Touches `corpus-supply/bible-artifact.ts`,
-`platform-node/bible-artifact.ts`, `apps/web/src/workers/bible-database.ts`, and
-`apps/web/src/workers/bible-generation-store.ts`. Widen `CorpusName`,
+destination/generation prefix. Touches `corpus-supply/bible-artifact.ts` at `3744b22d1`,
+`platform-node/bible-artifact.ts` at `3744b22d1`, `apps/web/src/workers/bible-database.ts` at `3744b22d1`, and
+`apps/web/src/workers/bible-generation-store.ts` at `3744b22d1`. Widen `CorpusName`,
 `CorpusTarget`, `CorpusIdentity`, and the `Target` constructor to admit a third
 corpus without adding one yet.
 
@@ -987,7 +993,7 @@ margin notes, commentary, parallel EGW. Closes a Required row in
 [feature-parity.md](feature-parity.md).
 
 Add `StudyService`, `v1.study.verse.get`, `v1.study.strongs.get`, the CLI
-commands, and the contextual pane in `packages/app`.
+commands, and the contextual pane in `packages/app` at `3744b22d1`.
 
 Study pane ships **before** wiki rendering deliberately: it is already-Required
 parity work, it establishes the pane surface that select-to-lookup (§7) renders
@@ -1013,7 +1019,7 @@ exists first.
 **Ships:** hot phrases, peek cards, breadcrumb trail, full topic pages.
 
 First wire the existing segment pipeline into
-`packages/app/src/reading/bible-reader.tsx`, which today renders `{verse.text}`
+`packages/app/src/reading/bible-reader.tsx` at `3744b22d1`, which today renders `{verse.text}`
 raw (§4.6). Then add the phrase-link `TextSegment` variant and the EGW AST
 overlay, and build the peek card, the bottom-sheet variant, the breadcrumb
 trail, and the topic page with key verses default-open.
@@ -1028,7 +1034,7 @@ trail, and the topic page with key verses default-open.
 - **CLI JSON workflow:** `manna wiki topic 2300-days --json` matches, section for
   section and identity for identity, what the UI renders.
 - **UI parity:** web and desktop share one route in
-  `packages/app/src/application/routes.tsx`, one peek component, one breadcrumb;
+  `packages/app/src/application/routes.tsx` at `3744b22d1`, one peek component, one breadcrumb;
   narrow viewport uses the bottom sheet on both; reduced motion honored; the
   §8.5 gesture rule verified on both — a tap inside a phrase span never opens the
   study pane, a tap outside one never opens a peek card. Italics and red letter
@@ -1130,8 +1136,8 @@ entry on visual hosts, and `manna topics status` / `manna topics update`.
 **Spec stance: merge into the wiki landing page. User-overridable.**
 
 One route already serves topics: `/topics/:topicId?`
-(`packages/app/src/application/routes.tsx:231` → `TopicsRoute` →
-`packages/app/src/library/topics.tsx`, eyebrow "Nave's Topical Bible", A-Z letter
+(`packages/app/src/application/routes.tsx` `TopicsRoute` at `3744b22d1` →
+`packages/app/src/library/topics.tsx` at `3744b22d1`, eyebrow "Nave's Topical Bible", A-Z letter
 index plus search, `useTopics` / `useTopicDetail`). Because `WikiService`
 composes over `TopicService` and every catalog topic already gets a landing page
 for free (§2.1), keeping a second topic-browsing surface means two routes

@@ -12,6 +12,7 @@ import { fieldsOf } from './tools/lab-fields.ts';
 import { allCommands } from './tools/lab-commands.ts';
 import {
   ANOTHER_REPO,
+  ARCHITECTURE,
   type Anchor,
   DESIGN_LANGUAGE,
   type Doc,
@@ -23,6 +24,7 @@ import {
   docPlaces,
   firstGroup,
   group,
+  isRecord,
   markdownOf,
   matches,
   readDoc,
@@ -1333,9 +1335,37 @@ describe('the docs', () => {
       expect(PLACES.filter((place) => place.role === 'framework').length).toBeGreaterThan(10);
       expect(
         PLACES.filter((place) => place.role === 'spanned' || place.role === 'anchored').length,
-      ).toBe(9);
+      ).toBe(14);
       expect(PLACES.filter((place) => place.role === 'verify').length).toBeGreaterThan(5);
     }),
+  );
+
+  it.effect.layer(BunServices.layer)(
+    'read each current architecture doc, and no record of a past state',
+    () =>
+      Effect.gen(function* () {
+        const root = yield* ROOT;
+        const fs = yield* FileSystem.FileSystem;
+        const files = (yield* fs.readDirectory(`${root}/${ARCHITECTURE}`, { recursive: true }))
+          .filter((file) => file.endsWith('.md'))
+          .sort();
+        const read = new Set(PLACES.map((place) => place.path));
+        expect(files.filter((file) => read.has(`${ARCHITECTURE}/${file}`))).toEqual(
+          files.filter((file) => !isRecord(file)),
+        );
+        expect(files.filter((file) => !isRecord(file)).length).toBeGreaterThan(3);
+        expect(
+          [
+            'audit-2026-08-14.md',
+            'reviews/2026-08-14/notes.md',
+            'checkpoints/initial.md',
+            'inventories/persisted-stores.md',
+            'checkpoints/TEMPLATE.md',
+            'wiki-study-layer.md',
+            'notes/checkpoints/x.md',
+          ].map(isRecord),
+        ).toEqual([true, true, true, true, false, false, false]);
+      }),
   );
 
   it.effect.layer(BunServices.layer)(
