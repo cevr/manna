@@ -20,7 +20,6 @@ import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { JSONC } from 'bun';
 import { Clock, Console, Effect, FileSystem, Path, Schema } from 'effect';
-import { createHash } from 'node:crypto';
 import { availableParallelism } from 'node:os';
 
 import { gateFiles, lintIgnored } from './guard/files.js';
@@ -48,7 +47,8 @@ const PER_PART = 64;
 const ConfigJson = Schema.fromJsonString(LintConfig);
 const KeptJson = Schema.fromJsonString(Kept);
 
-const hashOf = (bytes: Uint8Array | string) => createHash('sha1').update(bytes).digest('hex');
+const hashOf = (bytes: Uint8Array | string) =>
+  new Bun.CryptoHasher('sha1').update(bytes).digest('hex');
 
 Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;

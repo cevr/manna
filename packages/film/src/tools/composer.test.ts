@@ -3,7 +3,6 @@
 // option can be composed alone, and the cap refuses a run before it spends.
 // Effects are the library's: `score` never makes one.
 
-import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Path, Result, Schema } from 'effect';
 import { layout } from '../core/layout.ts';
@@ -86,9 +85,7 @@ describe('Composer', () => {
         `/films/test/sound/pads-${q}.mp3`,
       ]);
       const sha = (file: string) =>
-        createHash('sha256')
-          .update(files.get(file) ?? new Uint8Array())
-          .digest('hex');
+        new Bun.CryptoHasher('sha256').update(files.get(file) ?? new Uint8Array()).digest('hex');
       const made = yield* manifest();
       expect(made).toEqual({
         scores: {

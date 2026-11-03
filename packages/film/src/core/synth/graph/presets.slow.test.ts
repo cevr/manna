@@ -18,7 +18,6 @@
 // each seed.
 
 import { describe, expect, test } from 'bun:test';
-import { createHash } from 'node:crypto';
 import { Array as Arr, Result, Schema } from 'effect';
 import type { Pcm } from '../../audio.ts';
 import { describeSound } from '../analyse.ts';
@@ -149,7 +148,7 @@ const rendersOf = (preset: Preset): Arr.NonEmptyReadonlyArray<Pcm> => {
 };
 
 const digest = (pcm: Pcm): string => {
-  const hash = createHash('sha256');
+  const hash = new Bun.CryptoHasher('sha256');
   for (const plane of pcm.channels)
     hash.update(new Uint8Array(plane.buffer, plane.byteOffset, plane.byteLength));
   return hash.digest('hex');

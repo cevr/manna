@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { createHash } from 'node:crypto';
 import { Result, Schema } from 'effect';
 import { GOLDEN, PROBES, type Probe } from './fixtures/golden.ts';
 import { ALLPASSES, COMBS } from './kernels.ts';
@@ -26,7 +25,7 @@ const resolvedOf = (
 });
 
 const sha256Hex = (data: string | Uint8Array): string =>
-  createHash('sha256').update(data).digest('hex');
+  new Bun.CryptoHasher('sha256').update(data).digest('hex');
 
 const digest = (plane: Float32Array): string =>
   sha256Hex(new Uint8Array(plane.buffer, plane.byteOffset, plane.byteLength));

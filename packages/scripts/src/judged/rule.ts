@@ -7,9 +7,10 @@
 // (`packages/scripts/lint/judged.ts`) reports the kept answers. A rule carries no code of its own.
 //
 // This module is read in Node (oxlint's plugin host) as well as in Bun, so it
-// imports nothing of either but node's crypto, which Bun provides.
+// imports nothing of either: its sha256 is @noble/hashes', the same in both.
 
-import { createHash } from 'node:crypto';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 import { Schema } from 'effect';
 
 import { SELECTORS } from './items.ts';
@@ -73,17 +74,19 @@ export type Settings = typeof Settings.Type;
  * none of them.
  */
 export const ruleKey = (rule: Pick<RuleOptions, 'subject' | 'instructions' | 'criteria'>) =>
-  createHash('sha256')
-    .update(
-      [
-        rule.subject,
-        rule.instructions,
-        ...Object.entries(rule.criteria)
-          .toSorted(([a], [b]) => a.localeCompare(b))
-          .flatMap(([label, words]) => [label, words]),
-      ].join('\0'),
-    )
-    .digest('hex');
+  bytesToHex(
+    sha256(
+      utf8ToBytes(
+        [
+          rule.subject,
+          rule.instructions,
+          ...Object.entries(rule.criteria)
+            .toSorted(([a], [b]) => a.localeCompare(b))
+            .flatMap(([label, words]) => [label, words]),
+        ].join('\0'),
+      ),
+    ),
+  );
 
 /** A model's name in the cache's keys. */
 export const cacheModel = (model: string) => `typesafe/${model}`;

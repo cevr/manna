@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { createHash } from 'node:crypto';
 import { Boolean as Bool, Option, Result, Schema } from 'effect';
 import { type PartCut, cutParts } from '../core/part-sheet.ts';
 import type { Raster } from '../core/raster.ts';
@@ -148,7 +147,7 @@ const measuresOf = (view: Raster, cut: PartCut, figure: Uint8Array, answer: Rast
 const digestOf = (measures: HiddenMeasures) => {
   const lay = lays.get(measures);
   const fit = lay?.fit ?? { s: 0, dx: 0, dy: 0, score: 0 };
-  const hash = createHash('sha256')
+  const hash = new Bun.CryptoHasher('sha256')
     .update(new Uint8Array(Float64Array.of(fit.s, fit.dx, fit.dy, fit.score).buffer))
     .update(Schema.encodeSync(Schema.fromJsonString(HiddenMeasures))(measures));
   hash.update(lay?.made.owner ?? new Uint8Array());

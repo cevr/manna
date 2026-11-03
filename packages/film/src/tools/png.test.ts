@@ -5,7 +5,6 @@
 // the encoder's back, and a PNG built here by hand in another colour type.
 
 import { describe, expect, test } from 'bun:test';
-import { createHash } from 'node:crypto';
 import { deflateSync, inflateSync } from 'node:zlib';
 import { drawFigure, PLAIN } from '../core/fixtures/figure.ts';
 import type { Raster } from '../core/raster.ts';
@@ -150,7 +149,7 @@ const pngOf = (
 describe("encodePng's rows", () => {
   // The filter bytes and filtered rows as the encoder chose them when it was pinned: a faster encoder chooses the same.
   const rowsOf = (raster: Raster) =>
-    createHash('sha256')
+    new Bun.CryptoHasher('sha256')
       .update(inflateSync(chunksOf(encodePng(raster)).find((c) => c.type === 'IDAT')!.data))
       .digest('hex');
 

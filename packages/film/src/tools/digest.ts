@@ -5,24 +5,21 @@
 // lowercase hex, so the lock, the manifests and the store agree byte for byte.
 // A file is hashed as it streams, never read whole.
 
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { Effect, type FileSystem, Stream } from 'effect';
+import { Mac } from 'effect/crypto';
 import type { PlatformError } from 'effect/PlatformError';
 
 /** The sha256 of `bytes`, as lowercase hex. */
 export const sha256Hex = (bytes: Uint8Array | string): string =>
-  createHash('sha256').update(bytes).digest('hex');
+  new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
 
 /** The HMAC-SHA256 of `text` under `key`. */
 export const hmacSha256 = (key: Uint8Array, text: string): Uint8Array =>
-  new Uint8Array(createHmac('sha256', key).update(text).digest());
+  new Uint8Array(new Bun.CryptoHasher('sha256', key).update(text).digest());
 
 /** Whether `a` and `b` are the same text, compared in time that does not depend on where they differ. */
-export const sameText = (a: string, b: string): boolean => {
-  const left = new TextEncoder().encode(a);
-  const right = new TextEncoder().encode(b);
-  return left.length === right.length && timingSafeEqual(left, right);
-};
+export const sameText = (a: string, b: string): boolean =>
+  Mac.timingSafeEqual(new TextEncoder().encode(a), new TextEncoder().encode(b));
 
 /** An incremental sha256: fed chunk by chunk as bytes stream past, read once at the end. */
 interface Hashing {
@@ -32,7 +29,7 @@ interface Hashing {
 
 /** A new incremental sha256. */
 export const hashing = (): Hashing => {
-  const hash = createHash('sha256');
+  const hash = new Bun.CryptoHasher('sha256');
   return { update: (chunk) => void hash.update(chunk), hex: () => hash.digest('hex') };
 };
 
@@ -55,4 +52,4 @@ export const sha256OfFile = (
 
 /** A cache file's name for what it is made from: 20 hex digits of the SHA-1 of `parts`. */
 export const cacheKey = (parts: ReadonlyArray<string | number>): string =>
-  createHash('sha1').update(parts.join('|')).digest('hex').slice(0, 20);
+  new Bun.CryptoHasher('sha1').update(parts.join('|')).digest('hex').slice(0, 20);

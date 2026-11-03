@@ -8,7 +8,6 @@ import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 // the cases to read (media.test.ts writes real ones). Never a real call:
 // every paid path is counted by the fake.
 
-import { createHash } from 'node:crypto';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -660,7 +659,7 @@ describe('SoundLibrary', () => {
               {
                 key: 'scores/f/piano-1.mp3',
                 file: score,
-                sha256: createHash('sha256').update('a score').digest('hex'),
+                sha256: new Bun.CryptoHasher('sha256').update('a score').digest('hex'),
               },
             ],
           };

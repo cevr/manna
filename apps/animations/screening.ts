@@ -30,7 +30,6 @@
  * (`SCREENING_*`), written there by `bun run --cwd ../screening keys
  * [--stage <stage>]`; the stage they name is the site written to.
  */
-import { createHash } from 'node:crypto';
 
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Media } from '@manna/film/tools';
@@ -144,7 +143,7 @@ const materialFile = Effect.fn('screening.file')(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const info = yield* fs.stat(file);
-  const hash = createHash('sha256');
+  const hash = new Bun.CryptoHasher('sha256');
   yield* Stream.runForEach(fs.stream(file), (chunk) => Effect.sync(() => hash.update(chunk)));
   return { file, sha256: hash.digest('hex'), bytes: Number(info.size), ext } satisfies MaterialFile;
 });

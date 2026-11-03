@@ -12,7 +12,6 @@
 
 import { FilmName } from './film-repo.ts';
 import { NotesStore } from './notes-store.ts';
-import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Boolean as Bool,
@@ -94,7 +93,7 @@ const callback = Effect.gen(function* () {
 /** Whether `heard` is signed with `secret` as Standard Webhooks signs: `v1,` base64 HMAC-SHA256 of `<id>.<timestamp>.<body>`, keyed by the secret's base64 after `whsec_`. */
 const signedWith = (secret: string, heard: Heard) => {
   const key = Result.getOrThrow(Base64.decode(secret.slice('whsec_'.length)));
-  const expected = createHmac('sha256', key)
+  const expected = new Bun.CryptoHasher('sha256', key)
     .update(`${heard.headers['webhook-id']}.${heard.headers['webhook-timestamp']}.${heard.body}`)
     .digest('base64');
   return (heard.headers['webhook-signature'] ?? '').split(' ').includes(`v1,${expected}`);

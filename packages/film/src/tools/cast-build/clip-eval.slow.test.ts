@@ -2,7 +2,6 @@
 // (`clip-eval.ts`): the 124 canvases are read.py's own, pixel for pixel.
 // Slow: it decodes a real mp4 through the media stack and maps every frame.
 
-import { createHash } from 'node:crypto';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Result } from 'effect';
@@ -37,7 +36,7 @@ describe('clip B on the canvas', () => {
         const names = (yield* fs.readDirectory(`${dir}/canvas`)).toSorted();
         expect(names.length).toBe(output.frames);
         expect(figure.heightRatio.length).toBe(output.frames);
-        const hash = createHash('sha256');
+        const hash = new Bun.CryptoHasher('sha256');
         for (const name of names)
           hash.update(
             Result.getOrThrow(decodePng(yield* fs.readFile(`${dir}/canvas/${name}`))).rgba,
