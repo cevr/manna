@@ -116,17 +116,29 @@ describe('a standing skeleton', () => {
     expect(xs(made.flaps?.[0]?.region ?? [])).toEqual([70, 110]);
   });
 
-  test("declares a stroke limb only for each arm its view names, on that arm's three bones, its cuff moved with the frame", () => {
-    expect(standing(BODY, at('front')).limbs).toEqual([]);
-    const made = standing(BODY, { ...at('front'), limbs: ['left'], cuffLeft: [83, 140] });
-    expect(made.limbs).toEqual([
-      { part: 'sleeveLeft', bones: ['shoulderLeft', 'elbowLeft', 'wristLeft'], cuff: [83, 140] },
-    ]);
-    const both = framed([5, 7], standing(BODY, { ...at('front'), limbs: ['right', 'left'] }));
+  test("declares a stroke limb for every arm it draws, on that arm's three bones, its cuff moved with the frame", () => {
+    const both = framed([5, 7], standing(BODY, { ...at('front'), cuffLeft: [83, 140] }));
     expect(both.limbs).toEqual([
       { part: 'sleeveRight', bones: ['shoulderRight', 'elbowRight', 'wristRight'] },
+      { part: 'sleeveLeft', bones: ['shoulderLeft', 'elbowLeft', 'wristLeft'], cuff: [88, 147] },
+    ]);
+    expect(both.painted).toEqual([]);
+  });
+
+  test('keeps an arm painted only where its view names it with why, and declares no limb for it', () => {
+    const made = framed(
+      [5, 7],
+      standing(BODY, {
+        ...at('front'),
+        cuffRight: [17, 140],
+        painted: { right: 'its cuff is hidden in the robe' },
+      }),
+    );
+    expect(made.limbs).toEqual([
       { part: 'sleeveLeft', bones: ['shoulderLeft', 'elbowLeft', 'wristLeft'] },
     ]);
-    expect(framed([5, 7], made).limbs?.[0]?.cuff).toEqual([88, 147]);
+    expect(made.painted).toEqual([
+      { part: 'sleeveRight', reason: 'its cuff is hidden in the robe' },
+    ]);
   });
 });

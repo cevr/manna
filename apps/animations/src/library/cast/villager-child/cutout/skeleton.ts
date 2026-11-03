@@ -9,7 +9,7 @@
 // his raised left arm's flap covers the sleeve and hand. Pure data.
 
 import type { Skeleton } from '@manna/film/core';
-import { type Body, framed } from '../../../cutout/skeleton.ts';
+import { type Body, armLimbs, framed } from '../../../cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';
 import { JOINTS } from './joints.ts';
 
@@ -82,6 +82,7 @@ export const SKELETONS = {
         ],
       },
     ],
+    limbs: armLimbs({ right: 'armRight', left: 'armLeft' }),
     root: [105, 330],
   }),
 } as const satisfies Readonly<Record<FramedView, Skeleton>>;

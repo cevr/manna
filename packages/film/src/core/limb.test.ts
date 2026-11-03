@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Option, Result, Schema } from 'effect';
+import { Option, Predicate, Result, Schema } from 'effect';
 import { labOf } from './cast-sheet-pixels.ts';
 import {
   LimbRefused,
@@ -1045,16 +1045,16 @@ const flapSheet = (band: number): PuppetSheet => ({
   ],
 });
 const flapRefusals = (band: number) =>
-  Result.match(puppetOf(flapSheet(band), flapSkeleton(band)), {
-    onSuccess: () => [],
-    onFailure: (e) => (e.limbs ?? []).map((l) => [l.kind, l.detail] as const),
-  });
+  Result.getOrThrow(puppetOf(flapSheet(band), flapSkeleton(band))).refused.map(
+    (l) => [l.kind, l.detail] as const,
+  );
 
 describe('puppetOf with a stroke limb', () => {
-  const refusedFor = (skeleton: Skeleton) =>
-    Result.match(puppetOf(SHEET, skeleton), {
-      onSuccess: () => 'built',
-      onFailure: (e) => e.reason,
+  /** Why `puppetOf` refused the first limb `skeleton` declares on `sheet`, the puppet built: its message, else 'built'. */
+  const refusedFor = (skeleton: Skeleton, sheet: PuppetSheet = SHEET) =>
+    Option.match(Option.fromUndefinedOr(Result.getOrThrow(puppetOf(sheet, skeleton)).refused[0]), {
+      onNone: () => 'built',
+      onSome: (r) => r.detail,
     });
 
   test('attaches the measured limb to its part, and rasterOf draws the part as without it at the painted turns', () => {
@@ -1068,7 +1068,7 @@ describe('puppetOf with a stroke limb', () => {
     }
   });
 
-  test('refuses each declaration that does not fit, naming it', () => {
+  test('refuses each declaration that does not fit, naming it, and still builds the puppet', () => {
     const limbs = (...l: ReadonlyArray<PuppetLimb>): Skeleton => ({ ...SKELETON, limbs: l });
     expect(refusedFor(limbs({ ...DECLARED, part: 'leg' }))).toBe(
       'a limb names no part leg of the sheet',
@@ -1091,28 +1091,38 @@ describe('puppetOf with a stroke limb', () => {
     );
   });
 
-  test("refuses a declared limb its part's pixels cannot measure, with limbOf's reason", () => {
+  test("refuses a declared limb its part's pixels cannot measure, with limbOf's reason, the part left painted", () => {
     const bare = { ...SHEET, parts: [{ name: 'arm', pixels: armPixels(NONE) }] };
-    const reason = Result.match(puppetOf(bare, SKELETON), {
-      onSuccess: () => 'built',
-      onFailure: (e) => e.reason,
-    });
-    expect(reason).toBe(
+    const made = Result.getOrThrow(puppetOf(bare, SKELETON));
+    expect(made.refused.map((r) => r.message)).toEqual([
       "arm cannot be measured as a stroke limb (no-ink): no knot's edge shows a texel under L* 20",
-    );
+    ]);
+    expect(made.parts[0]!.limb).toBeUndefined();
+    const painted = Result.getOrThrow(puppetOf(bare, { ...SKELETON, limbs: [] }));
+    for (const elbowRight of [0, 45, 90]) {
+      const pose = { numbers: { elbowRight, wristRight: -38 }, root: S, scale: 1 };
+      expect(rasterOf(made, pose).rgba).toEqual(rasterOf(painted, pose).rgba);
+    }
   });
 
-  test('refuses every limb it cannot measure, each typed, not the first as a string', () => {
-    const left = ['shoulderLeft', 'elbowLeft', 'wristLeft'] as const;
+  test('refuses every limb it cannot measure, each typed, and keeps the one it can', () => {
+    const chainOf = (side: string) => [`shoulder${side}`, `elbow${side}`, `wrist${side}`] as const;
+    const bonesOf = (side: string) => {
+      const [shoulder, elbow, wrist] = chainOf(side);
+      return [
+        { name: shoulder, pivot: S, tip: E },
+        { name: elbow, parent: shoulder, pivot: E, tip: C },
+        { name: wrist, parent: elbow, pivot: C, tip: along(C, D, 20) },
+      ];
+    };
     const skeleton: Skeleton = {
-      bones: [
-        ...BONES,
-        { name: 'shoulderLeft', pivot: S, tip: E },
-        { name: 'elbowLeft', parent: 'shoulderLeft', pivot: E, tip: C },
-        { name: 'wristLeft', parent: 'elbowLeft', pivot: C, tip: along(C, D, 20) },
+      bones: [...BONES, ...bonesOf('Left'), ...bonesOf('Third')],
+      skin: { arm: [...CHAIN], arm2: [...chainOf('Left')], arm3: [...chainOf('Third')] },
+      limbs: [
+        DECLARED,
+        { part: 'arm2', bones: chainOf('Left') },
+        { part: 'arm3', bones: chainOf('Third') },
       ],
-      skin: { arm: [...CHAIN], arm2: [...left] },
-      limbs: [DECLARED, { part: 'arm2', bones: left }],
     };
     const sheet: PuppetSheet = {
       width: W,
@@ -1120,29 +1130,25 @@ describe('puppetOf with a stroke limb', () => {
       parts: [
         { name: 'arm', pixels: armPixels(NONE) },
         { name: 'arm2', pixels: DARK_SLEEVE },
+        { name: 'arm3', pixels: ARM },
       ],
     };
-    const limbs = Result.match(puppetOf(sheet, skeleton), {
-      onSuccess: () => [],
-      onFailure: (e) => e.limbs ?? [],
-    });
-    expect(limbs.every(Schema.is(LimbRefused))).toBe(true);
-    expect(limbs.map((l) => [l.part, l.kind])).toEqual([
+    const made = Result.getOrThrow(puppetOf(sheet, skeleton));
+    expect(made.refused.every(Schema.is(LimbRefused))).toBe(true);
+    expect(made.refused.map((l) => [l.part, l.kind])).toEqual([
       ['arm', 'no-ink'],
       ['arm2', 'ink-unbounded'],
     ]);
+    expect(made.parts.map((p) => Predicate.isNotUndefined(p.limb))).toEqual([false, false, true]);
   });
 
-  test('a cuff that is not finite refuses the puppet with the typed limb, never throwing', () => {
+  test('a cuff that is not finite refuses the limb, typed, never throwing', () => {
     const skeleton = {
       ...SKELETON,
       limbs: [{ ...DECLARED, cuff: [Number.POSITIVE_INFINITY, 1] as Pt }],
     };
-    const kinds = Result.match(puppetOf(SHEET, skeleton), {
-      onSuccess: () => [],
-      onFailure: (e) => (e.limbs ?? []).map((l) => l.kind),
-    });
-    expect(kinds).toEqual(['non-finite']);
+    const made = Result.getOrThrow(puppetOf(SHEET, skeleton));
+    expect(made.refused.map((l) => l.kind)).toEqual(['non-finite']);
   });
 
   test("a flap's body texels past the shoulder stay out of the sleeve: not in its widths, wholly in the stub", () => {

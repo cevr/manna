@@ -97,7 +97,6 @@ export const SKELETONS = {
       chin: [308, 365],
       crown: [300, 5],
       ...JOINTS['single-9'],
-      limbs: ['right', 'left'],
       wristRight: [77, 406],
       handRight: [73, 338],
       wristLeft: [462, 688],

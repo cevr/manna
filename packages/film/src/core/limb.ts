@@ -189,7 +189,8 @@ interface LimbJoints {
 }
 
 /**
- * Why a part cannot be measured as a limb: a point of its chain that is not
+ * Why a part cannot be measured as a limb: its declaration does not fit the
+ * skeleton or sheet (`puppetOf`'s `limbRefusal`), a point of its chain that is not
  * finite, a bone of its chain too short, its chain off its paint, its paint
  * running off the sheet, a flap's body texel on its forearm or past
  * `FLAP_REACH` of its upper arm, no ink at any of its edges, or more of its
@@ -198,6 +199,7 @@ interface LimbJoints {
  * folded straight back, a station off its paint or running off the sheet).
  */
 const LimbRefusalKind = Schema.Literals([
+  'declaration',
   'non-finite',
   'short-chain',
   'flap-reach',

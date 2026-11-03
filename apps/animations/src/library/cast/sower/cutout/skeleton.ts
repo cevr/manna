@@ -12,7 +12,7 @@
 // standing from the front (poses-4) as `front` does. Pure data.
 
 import type { Skeleton } from '@manna/film/core';
-import { type Body, framed, standing } from '../../../cutout/skeleton.ts';
+import { type Body, armLimbs, framed, standing } from '../../../cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';
 import { JOINTS } from './joints.ts';
 
@@ -228,6 +228,7 @@ export const SKELETONS = {
         ],
       },
     ],
+    limbs: armLimbs(BODY.arms),
     root: [262, 330],
   }),
   // standing from behind, as `back`: his right arm on the viewer's right, so its flap runs out from its inner crease, and his left arm's to the sheet's left edge
@@ -318,6 +319,7 @@ export const SKELETONS = {
         ],
       },
     ],
+    limbs: armLimbs(BODY.arms),
     root: [160, 335],
   }),
   // standing from the front, as `front`: his right arm on the viewer's left, its flap out from its inner crease to the sheet's left edge

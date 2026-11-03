@@ -14,7 +14,7 @@
 // seat. Pure data.
 
 import type { Skeleton } from '@manna/film/core';
-import { type Body, framed, standing } from '../../../cutout/skeleton.ts';
+import { type Body, armLimbs, framed, standing } from '../../../cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';
 import { JOINTS } from './joints.ts';
 
@@ -72,6 +72,7 @@ export const SKELETONS = {
         ],
       },
     ],
+    limbs: armLimbs({ left: BODY.arms.left }),
     root: [115, 220],
   }),
   // sitting, facing the viewer, as `front`: their right arm on the viewer's left, its flap out from the sleeve's guessed inner edge to the sheet's left edge

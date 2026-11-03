@@ -9,16 +9,27 @@
 // names his parts, which bones each lies on, the flaps' part and the band
 // (`Body`). A view that does not draw an arm (a profile) names no part for
 // it: that arm has no bones and no flap, and its view gives no joints for it.
-// A view names the arms it draws as stroke limbs (`core/limb.ts`), by his own
-// side: each such sleeve is declared on its arm's shoulder, elbow and wrist,
-// its sleeve ending at the wrist pivot unless the view gives its cuff.
+// Every arm a view draws is a stroke limb (`core/limb.ts`), declared on its
+// shoulder, elbow and wrist, its sleeve ending at the wrist pivot unless the
+// view gives its cuff; a view keeps an arm painted only by naming it, by his
+// own side, with why (`painted`). An arm the measure refuses stays painted
+// too, and its puppet says why (`Puppet.refused`).
 
 import type { Skeleton } from '@manna/film/core';
 import { Match, Option } from 'effect';
 import type { Pt } from './rules.ts';
 
-/** A skeleton with its root: where the puppet stands. */
-export type Rooted = Skeleton & { readonly root: Pt };
+/** An arm a view keeps painted rather than drawn as a stroke limb: its part, and why. */
+export interface PaintedArm {
+  readonly part: string;
+  readonly reason: string;
+}
+
+/** A skeleton with its root (where the puppet stands), and the arms its view keeps painted. */
+export type Rooted = Skeleton & {
+  readonly root: Pt;
+  readonly painted?: ReadonlyArray<PaintedArm>;
+};
 
 /** A stroke limb as a skeleton declares it (`core/limb.ts`'s `PuppetLimb`). */
 type StrokeLimb = NonNullable<Skeleton['limbs']>[number];
@@ -65,9 +76,9 @@ interface Trunk {
   readonly crown: Pt;
 }
 
-/** The arms a view draws as stroke limbs, by his own side, of those its body names; none unless the view names them. */
+/** The arms a view keeps painted, by his own side, of those its body names, each with why its stroke limb is not drawn; every other arm it draws is a stroke limb. */
 interface Limbed<A extends Arms> {
-  readonly limbs?: ReadonlyArray<Extract<keyof A, Side>>;
+  readonly painted?: Partial<Readonly<Record<Extract<keyof A, Side>, string>>>;
 }
 
 /** His right arm's joints, its flap's inner edge (x: the arm on the viewer's left takes the body left of it, on the viewer's right the body right of it), its cap radius (the member's cut), and, where its sleeve does not end at the wrist pivot, where it ends on the forearm (its stroke limb's cuff). */
@@ -111,9 +122,9 @@ interface Arm {
   readonly cap: number;
 }
 
-/** Whether a view draws an arm as a stroke limb, and the cuff it gives that arm, if any. */
+/** Why a view keeps an arm painted, if it does, and the cuff it gives that arm, if any. */
 interface Stroke {
-  readonly drawn: boolean;
+  readonly painted: Option.Option<string>;
   readonly cuff: Option.Option<Pt>;
 }
 
@@ -137,7 +148,29 @@ const flapRegion = (
   ];
 };
 
-/** An arm's three bones on the lean, its sleeve's flap of `body.from`, and its stroke limb where its view draws one, when its body names its part and its view gives its joints. */
+/** Arm `part`'s stroke limb on its side's shoulder, elbow and wrist, its sleeve ending at `cuff` where given. */
+const strokeLimb = (side: 'Right' | 'Left', part: string, cuff: Option.Option<Pt>): StrokeLimb => ({
+  part,
+  bones: [`shoulder${side}`, `elbow${side}`, `wrist${side}`],
+  ...Option.match(cuff, { onNone: () => ({}), onSome: (at) => ({ cuff: at }) }),
+});
+
+/**
+ * The stroke limbs of a skeleton written out by hand (a pose outside a
+ * standing band), one for each arm `arms` names, each on its side's shoulder,
+ * elbow and wrist bones, its sleeve ending at the wrist pivot: every arm a
+ * view draws is a stroke limb, as `standing` declares them.
+ */
+export const armLimbs = (arms: Arms): ReadonlyArray<StrokeLimb> => [
+  ...Option.toArray(Option.fromUndefinedOr(arms.right)).map((p) =>
+    strokeLimb('Right', p, Option.none()),
+  ),
+  ...Option.toArray(Option.fromUndefinedOr(arms.left)).map((p) =>
+    strokeLimb('Left', p, Option.none()),
+  ),
+];
+
+/** An arm's three bones on the lean, its sleeve's flap of `body.from`, and its stroke limb unless its view keeps it painted (then why), when its body names its part and its view gives its joints. */
 const limb = (
   side: 'Right' | 'Left',
   body: Body<Arms>,
@@ -161,20 +194,20 @@ const limb = (
         cap: a.cap,
         region: flapRegion(body.band, a.shoulder, a.flap, onViewersLeft),
       },
-      stroke: Option.some(stroke).pipe(
-        Option.filter((s) => s.drawn),
-        Option.map((s): StrokeLimb => ({
-          part: name,
-          bones: [`shoulder${side}`, `elbow${side}`, `wrist${side}`],
-          ...Option.match(s.cuff, { onNone: () => ({}), onSome: (cuff) => ({ cuff }) }),
-        })),
-      ),
+      stroke: Option.match(stroke.painted, {
+        onNone: (): Option.Option<StrokeLimb> => Option.some(strokeLimb(side, name, stroke.cuff)),
+        onSome: () => Option.none(),
+      }),
+      painted: Option.map(stroke.painted, (reason): PaintedArm => ({ part: name, reason })),
     })),
   );
 
-/** A standing view's skeleton, view pixels: lean, neck and head, each drawn arm's three bones and its sleeve's flap of `body.from`, the band mirrored for a view from the back, and the stroke limbs the view names. */
+/** A standing view's skeleton, view pixels: lean, neck and head, each drawn arm's three bones and its sleeve's flap of `body.from`, the band mirrored for a view from the back, each drawn arm's stroke limb, and the arms the view keeps painted with why. */
 const standingOf = (body: Body<Arms>, s: Read): Rooted => {
-  const stroked = Option.getOrElse(Option.fromUndefinedOr(s.limbs), (): ReadonlyArray<Side> => []);
+  const painted: Partial<Readonly<Record<Side, string>>> = Option.getOrElse(
+    Option.fromUndefinedOr(s.painted),
+    () => ({}),
+  );
   const limbs = [
     limb(
       'Right',
@@ -189,7 +222,10 @@ const standingOf = (body: Body<Arms>, s: Read): Rooted => {
         cap: Option.fromUndefinedOr(s.capRight),
       }),
       s.facing === 'front',
-      { drawn: stroked.includes('right'), cuff: Option.fromUndefinedOr(s.cuffRight) },
+      {
+        painted: Option.fromUndefinedOr(painted.right),
+        cuff: Option.fromUndefinedOr(s.cuffRight),
+      },
     ),
     limb(
       'Left',
@@ -204,7 +240,10 @@ const standingOf = (body: Body<Arms>, s: Read): Rooted => {
         cap: Option.fromUndefinedOr(s.capLeft),
       }),
       s.facing === 'back',
-      { drawn: stroked.includes('left'), cuff: Option.fromUndefinedOr(s.cuffLeft) },
+      {
+        painted: Option.fromUndefinedOr(painted.left),
+        cuff: Option.fromUndefinedOr(s.cuffLeft),
+      },
     ),
   ].flatMap((l) => Option.toArray(l));
   return {
@@ -217,6 +256,7 @@ const standingOf = (body: Body<Arms>, s: Read): Rooted => {
     skin: body.skin,
     flaps: limbs.map((l) => l.flap),
     limbs: limbs.flatMap((l) => Option.toArray(l.stroke)),
+    painted: limbs.flatMap((l) => Option.toArray(l.painted)),
     root: s.hip,
   };
 };
@@ -242,6 +282,7 @@ export const framed = ([dx, dy]: Pt, s: Rooted): Rooted => {
         onSome: (cuff) => ({ cuff: at(cuff) }),
       }),
     })),
+    painted: Option.getOrElse(Option.fromUndefinedOr(s.painted), () => []),
     root: at(s.root),
   };
 };

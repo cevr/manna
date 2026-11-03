@@ -154,6 +154,8 @@ export interface Puppet {
   readonly parts: ReadonlyArray<PuppetPart>;
   readonly bones: ReadonlyArray<PuppetBone>;
   readonly root: Pt;
+  /** The stroke limbs its skeleton declares that `puppetOf` refused, each typed with why; each one's part stays painted. */
+  readonly refused: ReadonlyArray<LimbRefused>;
 }
 
 /** What a puppet is made from: a part sheet's size and parts, front to back, and the paper they were cut from, if their edges are to be un-matted from it (`core/unmatte.ts`). */
@@ -354,21 +356,19 @@ const meshOf = (
 
 /**
  * Why a skeleton cannot skin a sheet: a bone named twice or before its
- * parent, a skin, flap or stroke limb naming what is not there, a flap on an
- * arm too long for a vertex's weights, a stroke limb that does not fit, or
- * stroke limbs their parts' pixels cannot measure. In that last case `limbs`
- * holds every refused limb, typed, and `reason` their messages.
+ * parent, a skin or flap naming what is not there, or a flap on an arm too
+ * long for a vertex's weights. A stroke limb never refuses the puppet: its
+ * part stays painted and `Puppet.refused` says why.
  */
 class PuppetRefused extends Schema.TaggedError<PuppetRefused>()('PuppetRefused', {
   reason: Schema.String,
-  limbs: Schema.optionalKey(Schema.Array(LimbRefused)),
 }) {
   override get message() {
     return `the skeleton cannot skin the sheet: ${this.reason}`;
   }
 }
 
-/** Why `skeleton` cannot skin `sheet`, if it cannot: a bone named twice or before its parent, a skin or flap naming a part or bone that is not there, two flaps on one part, a flap resting on a bone its arm's skin does not name, a flap on an arm of more bones than a vertex holds beside the body, or a stroke limb that does not fit (`limbRefusal`). */
+/** Why `skeleton` cannot skin `sheet`, if it cannot: a bone named twice or before its parent, a skin or flap naming a part or bone that is not there, two flaps on one part, a flap resting on a bone its arm's skin does not name, or a flap on an arm of more bones than a vertex holds beside the body. */
 const refusal = (sheet: PuppetSheet, skeleton: Skeleton): string | undefined => {
   const seen = new Set<string>();
   for (const b of skeleton.bones) {
@@ -388,41 +388,43 @@ const refusal = (sheet: PuppetSheet, skeleton: Skeleton): string | undefined => 
     if (!Number.isInteger(n) || n < 0)
       return `${part}'s underlap is ${n} px, not a whole number of 0 or more`;
   }
-  return flapRefusal(skeleton, names, seen) ?? limbRefusal(skeleton, names);
+  return flapRefusal(skeleton, names, seen);
 };
 
 /**
- * Why `skeleton`'s stroke limbs cannot skin a sheet of the parts `names`, if
- * they cannot: a limb naming a part or bone that is not there, two limbs on
- * one part, bones that are not a parent chain (shoulder, its child the elbow,
- * its child the wrist), a chain bone the part's skin does not name, or a fade
- * or fold whose ends do not increase. A flap on a limb's part is allowed:
- * `limbsOf` masks the body texels it adds out of the sleeve and into the
- * stub, and `limbOf` refuses the limb (`flap-reach`) when one lies on the
- * forearm or past `FLAP_REACH` of the upper arm.
+ * Why stroke limb `l` of `skeleton` cannot stand on a sheet of the parts
+ * `names`, the parts `limbed` already holding a limb, if it cannot: it names a
+ * part or bone that is not there, a part another limb holds, bones that are
+ * not a parent chain (shoulder, its child the elbow, its child the wrist), a
+ * chain bone the part's skin does not name, or a fade or fold whose ends do
+ * not increase. A flap on a limb's part is allowed: `limbsOf` masks the body
+ * texels it adds out of the sleeve and into the stub, and `limbOf` refuses
+ * the limb (`flap-reach`) when one lies on the forearm or past `FLAP_REACH`
+ * of the upper arm.
  */
-const limbRefusal = (skeleton: Skeleton, names: ReadonlySet<string>): string | undefined => {
+const limbRefusal = (
+  skeleton: Skeleton,
+  names: ReadonlySet<string>,
+  limbed: ReadonlySet<string>,
+  l: PuppetLimb,
+): string | undefined => {
   const byName = new Map(skeleton.bones.map((b) => [b.name, b]));
-  const limbed = new Set<string>();
-  for (const l of skeleton.limbs ?? []) {
-    if (!names.has(l.part)) return `a limb names no part ${l.part} of the sheet`;
-    if (limbed.has(l.part)) return `two limbs name part ${l.part}`;
-    limbed.add(l.part);
-    const missing = l.bones.find((b) => !byName.has(b));
-    if (missing !== undefined) return `${l.part}'s limb names no bone ${missing}`;
-    const [shoulder, elbow, wrist] = l.bones;
-    if (byName.get(elbow)!.parent !== shoulder || byName.get(wrist)!.parent !== elbow)
-      return `${l.part}'s limb bones ${l.bones.join(', ')} are not a parent chain`;
-    const skin = skeleton.skin[l.part] ?? [];
-    const off = l.bones.find((b) => !skin.includes(b));
-    if (off !== undefined) return `${l.part}'s limb lies on ${off}, which its skin does not name`;
-    for (const [what, r] of [
-      ['fade', l.fade],
-      ['fold', l.fold],
-    ] as const)
-      if (r !== undefined && !(Number.isFinite(r[0]) && Number.isFinite(r[1]) && r[0] < r[1]))
-        return `${l.part}'s limb's ${what} ${r[0]}–${r[1]} does not increase`;
-  }
+  if (!names.has(l.part)) return `a limb names no part ${l.part} of the sheet`;
+  if (limbed.has(l.part)) return `two limbs name part ${l.part}`;
+  const missing = l.bones.find((b) => !byName.has(b));
+  if (missing !== undefined) return `${l.part}'s limb names no bone ${missing}`;
+  const [shoulder, elbow, wrist] = l.bones;
+  if (byName.get(elbow)!.parent !== shoulder || byName.get(wrist)!.parent !== elbow)
+    return `${l.part}'s limb bones ${l.bones.join(', ')} are not a parent chain`;
+  const skin = skeleton.skin[l.part] ?? [];
+  const off = l.bones.find((b) => !skin.includes(b));
+  if (off !== undefined) return `${l.part}'s limb lies on ${off}, which its skin does not name`;
+  for (const [what, r] of [
+    ['fade', l.fade],
+    ['fold', l.fold],
+  ] as const)
+    if (r !== undefined && !(Number.isFinite(r[0]) && Number.isFinite(r[1]) && r[0] < r[1]))
+      return `${l.part}'s limb's ${what} ${r[0]}–${r[1]} does not increase`;
   return undefined;
 };
 
@@ -462,39 +464,60 @@ const flappedParts = (sheet: PuppetSheet, skeleton: Skeleton): ReadonlyArray<Uin
   });
 };
 
+/** A skeleton's stroke limbs as `puppetOf` made them: each measured limb by its part, and each refused one, typed, whose part stays painted. */
+interface LimbsMade {
+  readonly limbs: ReadonlyMap<string, PuppetPartLimb>;
+  readonly refused: ReadonlyArray<LimbRefused>;
+}
+
 /**
  * Each declared limb measured from its part's texture on its rest joints, by
- * part (at most one a part, `refusal`); else every limb refused. The body
- * pixels a flap took into the part are marked for `limbOf`, which keeps them
- * out of the sleeve's widths and wholly in the stub: the lead's right
- * shoulder band reaches 20.4 px down his upper arm, past the shoulder's line,
- * and the stroke must never redraw it with the arm. A body texel past
- * `FLAP_REACH` of the upper arm, or on the forearm, refuses the limb.
+ * part, or refused: a declaration that does not fit (`limbRefusal`, kind
+ * `declaration`) or a part its measure cannot read (`limbOf`). A refused limb
+ * leaves its part painted, so one arm the measure cannot read never breaks
+ * the puppet; the refusal says why. The body pixels a flap took into the
+ * part are marked for `limbOf`, which keeps them out of the sleeve's widths
+ * and wholly in the stub: the lead's right shoulder band reaches 20.4 px
+ * down his upper arm, past the shoulder's line, and the stroke must never
+ * redraw it with the arm. A body texel past `FLAP_REACH` of the upper arm, or
+ * on the forearm, refuses the limb.
  */
 const limbsOf = (
   sheet: PuppetSheet,
   skeleton: Skeleton,
   textures: ReadonlyArray<Uint8Array>,
   withFlaps: ReadonlyArray<Uint8Array>,
-): Result.Result<ReadonlyMap<string, PuppetPartLimb>, ReadonlyArray<LimbRefused>> => {
+): LimbsMade => {
   const { width: W, height: H } = sheet;
+  const names = new Set(sheet.parts.map((p) => p.name));
   const pivotOf = new Map(skeleton.bones.map((b) => [b.name, b.pivot]));
   const limbs = new Map<string, PuppetPartLimb>();
+  const limbed = new Set<string>();
   const refused: Array<LimbRefused> = [];
   for (const l of skeleton.limbs ?? []) {
+    const why = limbRefusal(skeleton, names, limbed, l);
+    limbed.add(l.part);
+    if (why !== undefined) {
+      refused.push(LimbRefused.make({ part: l.part, kind: 'declaration', detail: why }));
+      continue;
+    }
     const k = sheet.parts.findIndex((p) => p.name === l.part);
     const [shoulder, elbow, wrist] = l.bones.map((b) => pivotOf.get(b)!);
-    const measured = limbOf(
-      l.part,
-      { width: W, height: H, rgba: textures[k]! },
-      { shoulder: shoulder!, elbow: elbow!, wrist: wrist! },
-      l,
-      flapBody(sheet.parts[k]!.pixels.rgba, withFlaps[k]!),
+    Result.match(
+      limbOf(
+        l.part,
+        { width: W, height: H, rgba: textures[k]! },
+        { shoulder: shoulder!, elbow: elbow!, wrist: wrist! },
+        l,
+        flapBody(sheet.parts[k]!.pixels.rgba, withFlaps[k]!),
+      ),
+      {
+        onFailure: (r) => refused.push(r),
+        onSuccess: (made) => limbs.set(l.part, made),
+      },
     );
-    if (Result.isFailure(measured)) refused.push(measured.failure);
-    else limbs.set(l.part, measured.success);
   }
-  return refused.length > 0 ? Result.fail(refused) : Result.succeed(limbs);
+  return { limbs, refused };
 };
 
 /** The texels `flapped` holds that `own` does not (a byte a texel, 1 for each): its flap's body pixels; none when the part has no flap. */
@@ -549,8 +572,8 @@ export const unmattedKey = (
  * The puppet of `sheet` on `skeleton`: each part's mesh, weighted on its
  * skin, its texture its pixels (with its flap's body pixels, where it has
  * one), and each stroke limb it declares measured from its part's texture
- * (`limbOf`); refused for a skeleton that does not fit the sheet, or a limb
- * whose part cannot be measured (the refusal's reason is `LimbRefused`'s).
+ * (`limbOf`), a limb that does not fit or cannot be measured left painted
+ * and listed in `refused`; refused for a skeleton that does not fit the sheet.
  */
 export const puppetOf = (
   sheet: PuppetSheet,
@@ -579,14 +602,7 @@ export const puppetOf = (
     without.set(j, made);
     return made;
   };
-  const measured = limbsOf(sheet, skeleton, textures, withFlaps);
-  if (Result.isFailure(measured)) {
-    const refused = measured.failure;
-    return Result.fail(
-      PuppetRefused.make({ reason: refused.map((r) => r.message).join('; '), limbs: refused }),
-    );
-  }
-  const limbs = measured.success;
+  const { limbs, refused } = limbsOf(sheet, skeleton, textures, withFlaps);
   const parts = sheet.parts.map((part, k): PuppetPart => {
     const skin = (skeleton.skin[part.name] ?? []).map((b) => at.get(b)!);
     const flap = flapOf.get(part.name);
@@ -629,6 +645,7 @@ export const puppetOf = (
     parts,
     bones,
     root: skeleton.root ?? bones[0]?.pivot ?? [0, 0],
+    refused,
   });
 };
 
