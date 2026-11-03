@@ -35,7 +35,7 @@ import { Console, Duration, Effect, FileSystem, Option, Path, Schema } from 'eff
 import { Command, Flag } from 'effect/cli';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
-import { attempt, succeed } from './sim/tools.ts';
+import { attempt, succeed } from '@manna/sim/tools';
 import {
   coverIn,
   coversOf,

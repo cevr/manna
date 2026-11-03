@@ -49,7 +49,7 @@ import { Choice, cutOf, keptOf } from '../src/player/stanzas.ts';
 import { readTiming } from '../vite/timing.ts';
 import { readWords } from '../vite/words.ts';
 import { judge, type Sample, sampleOf, soundOff } from './follow/samples.ts';
-import { succeed } from './sim/tools.ts';
+import { succeed } from '@manna/sim/tools';
 
 const RectSchema = Schema.Struct({
   x: Schema.Finite,

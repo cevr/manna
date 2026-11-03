@@ -1,6 +1,6 @@
 /**
  * The verify-hymnal journey files: every `features/<feature>.journey.json`
- * decodes with the journey Schema and names its own feature, so a bad file
+ * loads as `sim journey` loads it and names its own feature, so a bad file
  * fails the gate rather than the verifier's first `sim journey`; no hold
  * checks that something is gone before the hold has landed; and each open
  * that expects the no-chords notice opens a hymn the compiled data gives no
@@ -9,10 +9,11 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Hymn } from '@manna/hymnal/hymn';
+import { Drive, type DriveMembers, type Place } from '@manna/sim/drive';
+import { HOLD_SETTLE, loadJourney } from '@manna/sim/journey';
 import { Effect, Exit, FileSystem, Option, Path, Schema } from 'effect';
 
-import { BadJourney } from './errors.ts';
-import { decodeJourney, HOLD_SETTLE, type Journey } from './journey.ts';
+import { app } from '../sim-app.ts';
 
 const SUFFIX = '.journey.json';
 
@@ -22,22 +23,76 @@ const SUFFIX = '.journey.json';
  */
 const HOLD_LANDS = 9;
 
-/** Decode each journey file in `dir`, by feature, or fail on the first file refused. */
+type Journey = Effect.Success<ReturnType<typeof loadJourney>>['journey'];
+
+const PROBE = '/nonexistent/loop-probe-x';
+
+const noStep = () => Effect.die('a journey file is only loaded here, never driven');
+
+/** The drive `sim journey` loads a journey on: a booted iOS session, and no step taken. */
+const booted: DriveMembers = {
+  readSession: () =>
+    Effect.succeed({
+      platform: 'ios',
+      out: `${PROBE}/out`,
+      port: app.ports.default,
+      serverPid: 1,
+      udid: 'STAND-IN',
+      bootedAt: '2026-10-30T00:00:00.000Z',
+    }),
+  boot: noStep,
+  install: noStep,
+  open: noStep,
+  tap: noStep,
+  fill: noStep,
+  back: noStep,
+  scroll: noStep,
+  shot: noStep,
+  snapshot: noStep,
+  record: noStep,
+  log: noStep,
+  doctor: noStep,
+  down: noStep,
+  sees: noStep,
+  gesture: noStep,
+  pinch: noStep,
+  hold: noStep,
+  relaunch: noStep,
+  clean: noStep,
+};
+
+/** The journey file of `feature` in `dir`, loaded as `sim journey <feature>` loads it. */
+const load = (dir: string, feature: string) => {
+  const place: Place = {
+    app: `${PROBE}/app`,
+    state: `${PROBE}/state`,
+    script: `${PROBE}/app/scripts/sim.ts`,
+    features: dir,
+    warm: [],
+    config: app,
+  };
+  return loadJourney(place, feature).pipe(
+    Effect.map(({ journey }) => journey),
+    Effect.provideService(Drive, booted),
+  );
+};
+
+/** Load each journey file in `dir`, by feature, or fail on the first file refused. */
 const decodeAll = Effect.fn('decodeAll')(function* (dir: string) {
   const fs = yield* FileSystem.FileSystem;
-  const path = yield* Path.Path;
   const files = (yield* fs.readDirectory(dir)).filter((name) => name.endsWith(SUFFIX)).sort();
-  const journeys: Array<Journey> = [];
-  for (const name of files) {
-    const file = path.join(dir, name);
-    const journey = yield* decodeJourney(file, yield* fs.readFileString(file));
-    if (journey.feature !== name.slice(0, -SUFFIX.length)) {
-      return yield* BadJourney.make({ file, issue: `its feature is ${journey.feature}` });
-    }
-    journeys.push(journey);
-  }
-  return journeys;
+  return yield* Effect.forEach(files, (name) => load(dir, name.slice(0, -SUFFIX.length)));
 });
+
+/** `text` as the journey file of `feature`, loaded as `sim journey` loads it. */
+const loadText = (feature: string, text: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const dir = yield* fs.makeTempDirectoryScoped();
+    yield* fs.writeFileString(path.join(dir, `${feature}${SUFFIX}`), text);
+    return yield* load(dir, feature);
+  });
 
 /**
  * The holds that check for a target gone before the press can have landed:
@@ -188,9 +243,9 @@ describe('verify-hymnal journey files', () => {
             { name: 'home', action: 'open', link: 'hymns', expect: [{ shows: NO_CHORDS }] },
           ],
         });
-        const journey = yield* decodeJourney('chords-and-capo.journey.json', text);
+        const journey = yield* loadText('chords-and-capo', text);
         expect(noticeOpens(journey)).toEqual([{ step: 'chords-and-capo/notice', number: 181 }]);
-      }),
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
   it.effect('a role=tab selector in an iOS journey is named; role=other is not', () =>
@@ -204,9 +259,9 @@ describe('verify-hymnal journey files', () => {
           { name: 'other', action: 'tap', target: 'role=other label=Lists' },
         ],
       });
-      const journey = yield* decodeJourney('hymn-list.journey.json', text);
+      const journey = yield* loadText('hymn-list', text);
       expect(tabRolesOnIos(journey)).toEqual(['hymn-list/target', 'hymn-list/expect']);
-    }),
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
   it.effect('a hold with a short settle before a hides is named; the default settle is not', () =>
@@ -223,9 +278,9 @@ describe('verify-hymnal journey files', () => {
           { ...hold, name: 'default', expect: [{ hides: 'id=chord-1-1-1' }] },
         ],
       });
-      const journey = yield* decodeJourney('chords-and-capo.journey.json', text);
+      const journey = yield* loadText('chords-and-capo', text);
       expect(hidesBeforeLanding(journey)).toEqual(['chords-and-capo/own', 'chords-and-capo/next']);
-    }),
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
   it.effect('a bad journey file is refused, naming the file', () =>

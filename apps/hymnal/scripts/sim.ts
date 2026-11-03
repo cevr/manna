@@ -1,39 +1,37 @@
 /**
  * `bun run sim <command>`: drive the hymnal on the `verify-hymnal` simulator
  * or in a headless browser, one JSON result per command on stdout. The
- * commands: `scripts/sim/command.ts`; the drive: `scripts/sim/drive.ts`. The
- * verify-hymnal skill (`.claude/skills/verify-hymnal`) drives through it.
+ * driver is `@manna/sim` (`packages/sim`); the hymnal's values are
+ * `scripts/sim-app.ts`. The verify-hymnal skill (`.claude/skills/verify-hymnal`)
+ * drives through it.
  */
-import * as BunRuntime from '@effect/platform-bun/BunRuntime';
-import * as BunServices from '@effect/platform-bun/BunServices';
-import { Console, Effect, Layer, Path, Stdio } from 'effect';
-import { FetchHttpClient } from 'effect/http';
+import { launch } from '@manna/sim';
+import { Effect, Path } from 'effect';
 
-import { runSim, WARM_CHECKOUTS } from './sim/command.ts';
-import { DriveLive } from './sim/drive.ts';
+import { app as config } from './sim-app.ts';
 
-const main = Effect.gen(function* () {
-  const path = yield* Path.Path;
-  const script = yield* path.fromFileUrl(new URL(import.meta.url));
-  const app = path.dirname(path.dirname(script));
-  const root = path.join(app, '..', '..');
-  const args = yield* Stdio.Stdio.pipe(Effect.flatMap((stdio) => stdio.args));
-  return yield* runSim(
-    {
+/**
+ * The warm checkouts: the clean sources worktrees are made from, on the
+ * laptop and on the workbox. No command builds, installs or writes in one.
+ */
+const WARM_CHECKOUTS: ReadonlyArray<string> = [
+  '/Users/cvr/Developer/personal/manna',
+  '/workspaces/bible-tools',
+];
+
+launch(
+  Effect.gen(function* () {
+    const path = yield* Path.Path;
+    const script = yield* path.fromFileUrl(new URL(import.meta.url));
+    const app = path.dirname(path.dirname(script));
+    const root = path.join(app, '..', '..');
+    return {
       app,
-      state: path.join(root, 'tmp', 'verify-hymnal'),
+      state: path.join(root, 'tmp', config.simulator),
       script,
       features: path.join(root, '.claude', 'skills', 'verify-hymnal', 'features'),
       warm: WARM_CHECKOUTS,
-    },
-    args,
-  );
-});
-
-const Host = Layer.merge(BunServices.layer, FetchHttpClient.layer);
-
-main.pipe(
-  Effect.tapDefect((defect) => Console.error(defect)),
-  Effect.provide(Layer.provideMerge(DriveLive, Host)),
-  (program) => BunRuntime.runMain(program, { disableErrorReporting: true }),
+      config,
+    };
+  }),
 );
