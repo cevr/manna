@@ -1,4 +1,4 @@
-import { BunRuntime, BunServices, BunHttpClient } from '@effect/platform-bun';
+import { BunCrypto, BunRuntime, BunServices, BunHttpClient } from '@effect/platform-bun';
 import { WEBSTER_SOURCE } from '@manna/core/webster';
 import { Console, Effect, FileSystem, Layer, Option } from 'effect';
 import { Command, Flag } from 'effect/cli';
@@ -48,6 +48,6 @@ const command = Command.make(
 );
 
 Command.run(command, { version: '1' }).pipe(
-  Effect.provide(Layer.merge(BunHttpClient.layer, BunServices.layer)),
+  Effect.provide(Layer.mergeAll(BunHttpClient.layer, BunServices.layer, BunCrypto.layerDigest)),
   BunRuntime.runMain,
 );

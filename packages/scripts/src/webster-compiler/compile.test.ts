@@ -1,9 +1,11 @@
-import { BunServices } from '@effect/platform-bun';
+import { BunCrypto, BunServices } from '@effect/platform-bun';
 import { Database } from 'bun:sqlite';
-import { Effect, FileSystem, Result } from 'effect';
+import { Effect, FileSystem, Layer, Result } from 'effect';
 import { expect, it } from 'effect-bun-test';
 
 import { compileWebster } from './compile.js';
+
+const services = Layer.merge(BunServices.layer, BunCrypto.layerDigest);
 
 it.scoped('applies scan-backed citation corrections and retains the unmodified source HTML', () =>
   Effect.gen(function* () {
@@ -22,7 +24,7 @@ it.scoped('applies scan-backed citation corrections and retains the unmodified s
       { source_html: '<p>God is love 1 John 4:7.</p>', definition: 'God is love. 1 John 4.' },
       { source_html: '<p>Psalms 119:148.</p>', definition: 'Psalms 119.' },
     ]);
-  }).pipe(Effect.provide(BunServices.layer)),
+  }).pipe(Effect.provide(services)),
 );
 
 it.scoped(
@@ -67,7 +69,7 @@ it.scoped(
       expect(
         db.query("SELECT rowid FROM entries_fts WHERE entries_fts MATCH 'duplicate'").all(),
       ).toEqual([{ rowid: 2 }]);
-    }).pipe(Effect.provide(BunServices.layer)),
+    }).pipe(Effect.provide(services)),
 );
 
 it.scoped(
@@ -113,5 +115,5 @@ it.scoped(
       if (Result.isFailure(failedVerification))
         expect(failedVerification.failure.message).toContain('census mismatch');
       expect(yield* fs.readFile(destination)).toEqual(original);
-    }).pipe(Effect.provide(BunServices.layer)),
+    }).pipe(Effect.provide(services)),
 );

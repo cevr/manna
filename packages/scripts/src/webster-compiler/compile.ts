@@ -1,5 +1,6 @@
 import { Database } from 'bun:sqlite';
 import { Config, Effect, FileSystem, Option, Path, Predicate, Schema } from 'effect';
+import { Digest } from 'effect/crypto';
 import {
   sourceDefinition,
   normalizeHeadword,
@@ -37,7 +38,8 @@ export const compileWebster = Effect.fn('WebsterCompiler.compile')(function* (in
     return yield* WebsterCompileError.make({
       message: 'Build output must not be inside the owner runtime .bible directory',
     });
-  const digest = new Bun.CryptoHasher('sha256').update(input.csv).digest('hex');
+  const hasher = yield* Digest.Digest;
+  const digest = yield* hasher.digestHex(Digest.sha256, input.csv);
   if (
     Option.exists(Option.fromUndefinedOr(input.expectedDigest), (expected) => digest !== expected)
   )
@@ -146,7 +148,7 @@ export const compileWebster = Effect.fn('WebsterCompiler.compile')(function* (in
   const manifest = {
     path: input.destination,
     size: bytes.length,
-    sha256: new Bun.CryptoHasher('sha256').update(bytes).digest('hex'),
+    sha256: yield* hasher.digestHex(Digest.sha256, bytes),
     records: entries.length,
     keys: new Set(entries.map((entry) => entry.key)).size,
     sourceSha256: digest,

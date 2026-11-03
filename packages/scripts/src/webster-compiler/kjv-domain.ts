@@ -1,5 +1,6 @@
-import { BunRuntime, BunServices } from '@effect/platform-bun';
-import { Console, Effect, FileSystem, Schema } from 'effect';
+import { BunCrypto, BunRuntime, BunServices } from '@effect/platform-bun';
+import { Console, Effect, FileSystem, Layer, Schema } from 'effect';
+import { Digest } from 'effect/crypto';
 
 const Kjv = Schema.Struct({ verses: Schema.Array(Schema.Struct({ text: Schema.String })) });
 const Census = Schema.fromJsonString(
@@ -13,6 +14,7 @@ const Census = Schema.fromJsonString(
 /** Reproduce the raw census; resolved lemmas are reviewed data, not a stemmer's output. */
 Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
+  const digest = yield* Digest.Digest;
   const bytes = yield* fs.readFile(
     new URL('../../../core/assets/kjv.json', import.meta.url).pathname,
   );
@@ -32,9 +34,9 @@ Effect.gen(function* () {
     .map(([form, frequency]) => ({ form, frequency }));
   yield* Console.log(
     yield* Schema.encodeEffect(Census)({
-      sourceSha256: new Bun.CryptoHasher('sha256').update(bytes).digest('hex'),
+      sourceSha256: yield* digest.digestHex(Digest.sha256, bytes),
       verses: source.verses.length,
       forms,
     }),
   );
-}).pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);
+}).pipe(Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerDigest)), BunRuntime.runMain);

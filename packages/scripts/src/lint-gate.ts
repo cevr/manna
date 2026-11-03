@@ -1,9 +1,11 @@
 #!/usr/bin/env bun
 
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { JSONC } from 'bun';
-import { Clock, Console, Effect, FileSystem, Path, Schema } from 'effect';
+import { Clock, Console, Effect, FileSystem, Layer, Path, Schema } from 'effect';
+import { Digest } from 'effect/crypto';
 import { availableParallelism } from 'node:os';
 
 import { gateFiles, lintIgnored } from './guard/files.js';
@@ -31,8 +33,8 @@ const PER_PART = 64;
 const ConfigJson = Schema.fromJsonString(LintConfig);
 const KeptJson = Schema.fromJsonString(Kept);
 
-const hashOf = (bytes: Uint8Array | string) =>
-  new Bun.CryptoHasher('sha1').update(bytes).digest('hex');
+const hashOf = (bytes: Uint8Array) =>
+  Digest.Digest.use((digest) => digest.digestHex(Digest.sha1, bytes));
 
 Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
@@ -61,15 +63,21 @@ Effect.gen(function* () {
   const keyParts = yield* Effect.forEach(
     [...pluginFiles, 'bun.lock'],
     (file) =>
-      Effect.map(fs.readFile(path.join(root, file)), (bytes) => `${file}\0${hashOf(bytes)}`),
+      fs.readFile(path.join(root, file)).pipe(
+        Effect.flatMap(hashOf),
+        Effect.map((hash) => `${file}\0${hash}`),
+      ),
     { concurrency: 16 },
   );
-  const key = hashOf([plugins, ...keyParts].join('\n'));
+  const key = yield* hashOf(new TextEncoder().encode([plugins, ...keyParts].join('\n')));
   const hashes = new Map(
     yield* Effect.forEach(
       files,
       (file) =>
-        Effect.map(fs.readFile(path.join(root, file)), (bytes) => [file, hashOf(bytes)] as const),
+        fs.readFile(path.join(root, file)).pipe(
+          Effect.flatMap(hashOf),
+          Effect.map((hash) => [file, hash] as const),
+        ),
       { concurrency: 32 },
     ),
   );
@@ -127,4 +135,4 @@ Effect.gen(function* () {
   yield* Effect.sync(() => {
     process.exitCode = code;
   });
-}).pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);
+}).pipe(Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerDigest)), BunRuntime.runMain);

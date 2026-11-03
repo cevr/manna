@@ -1,10 +1,11 @@
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import { BunCrypto, BunRuntime, BunServices } from '@effect/platform-bun';
 import {
   Cause,
   Config,
   Console,
   Effect,
   FileSystem,
+  Layer,
   Option,
   Path,
   Schema,
@@ -165,7 +166,7 @@ cli.pipe(
   Effect.tapCause((cause) =>
     Console.error(`build:topics failed\n${Cause.pretty(cause)}`).pipe(Effect.ignore),
   ),
-  Effect.provide(BunServices.layer),
+  Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerDigest)),
   Effect.scoped,
   BunRuntime.runMain,
 );

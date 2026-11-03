@@ -1,3 +1,4 @@
+import { BunCrypto } from '@effect/platform-bun';
 import { normalizeAlias, type Block, type Inline } from '@manna/core/wiki';
 import { Cause, Effect, Exit, Option, Schema, SchemaGetter } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -68,7 +69,7 @@ const compile = (input: {
       paragraphs: Option.getOrElse(Option.fromNullishOr(input.paragraphs), () => noParagraphs),
       catalog: Option.getOrElse(Option.fromNullishOr(input.catalog), () => emptyCatalog),
     });
-  });
+  }).pipe(Effect.provide(BunCrypto.layerDigest));
 
 const page = (input: {
   readonly slug: string;

@@ -1,6 +1,7 @@
 import { BlocksJson } from '@manna/core/wiki';
 import { Database } from 'bun:sqlite';
 import { Clock, DateTime, Effect, FileSystem, Schema } from 'effect';
+import { Digest } from 'effect/crypto';
 
 import type { CompiledTopics } from './compile.js';
 
@@ -131,12 +132,11 @@ export const emitArtifact = Effect.fn('TopicsCompiler.emit')(function* (input: {
   ).pipe(Effect.orDie);
 
   const bytes = yield* fs.readFile(input.destination).pipe(Effect.orDie);
-  const hasher = new Bun.CryptoHasher('sha256');
-  hasher.update(bytes);
+  const digest = yield* Digest.Digest;
   return {
     path: input.destination,
     size: bytes.byteLength,
-    digest: `sha256:${hasher.digest('hex')}`,
+    digest: `sha256:${yield* digest.digestHex(Digest.sha256, bytes)}`,
     revision,
   } satisfies EmittedArtifact;
 });

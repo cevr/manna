@@ -1,6 +1,7 @@
 import { TOPICS_SCHEMA_MAJOR, TOPICS_SCHEMA_MINOR } from '@manna/core/corpus-supply';
 import { isBoundaryAt, normalizeAlias, type Block, type CitationInline } from '@manna/core/wiki';
 import { Effect, Option, Schema } from 'effect';
+import { Digest } from 'effect/crypto';
 
 import { blocksToText, collectCitations, parseBody, type ParsedBody } from './markdown.js';
 import type { TopicSource } from './source.js';
@@ -154,34 +155,39 @@ const digestFields = (source: TopicSource): DigestFields => {
  *    digest even when every remaining value is unchanged.
  *  - Each value is *length-prefixed*, so `['ab']` and `['a', 'b']` differ:
  *    without it there is no delimiter that cannot also occur inside a value. */
-const hashScalar = (hasher: Bun.CryptoHasher, name: string, value: string): void => {
-  hasher.update(`${name}:${String(value.length)}:${value}`);
-};
+const scalarFrame = (name: string, value: string): string =>
+  `${name}:${String(value.length)}:${value}`;
 
-const hashList = (hasher: Bun.CryptoHasher, name: string, values: readonly string[]): void => {
-  hasher.update(`${name}[${String(values.length)}]:`);
-  for (const value of values) hasher.update(`${String(value.length)}:${value}`);
-};
+const listFrame = (name: string, values: readonly string[]): string =>
+  `${name}[${String(values.length)}]:${values.map((value) => `${String(value.length)}:${value}`).join('')}`;
 
 /** Stable listing order, independent of directory iteration order. */
 const sortBySlug = (sources: readonly TopicSource[]): readonly TopicSource[] =>
   [...sources].sort((a, b) => a.frontmatter.slug.localeCompare(b.frontmatter.slug));
 
-const sourceDigest = (sources: readonly TopicSource[]): Effect.Effect<string> =>
-  Effect.sync(() => {
-    const hasher = new Bun.CryptoHasher('sha256');
-    for (const source of sortBySlug(sources)) {
-      const fields = digestFields(source);
-      hashScalar(hasher, 'slug', fields.slug);
-      hashScalar(hasher, 'title', fields.title);
-      hashScalar(hasher, 'status', fields.status);
-      hashList(hasher, 'aliases', fields.aliases);
-      hashList(hasher, 'related', fields.related);
-      hashScalar(hasher, 'catalog', fields.catalog);
-      hashScalar(hasher, 'body', fields.body);
-    }
-    return hasher.digest('hex');
-  });
+/** SHA-256, lowercase hex, of every source's framed fields in slug order. */
+const sourceDigest = (sources: readonly TopicSource[]) =>
+  Digest.Digest.use((digest) =>
+    digest.digestHex(
+      Digest.sha256,
+      new TextEncoder().encode(
+        sortBySlug(sources)
+          .map((source) => {
+            const fields = digestFields(source);
+            return [
+              scalarFrame('slug', fields.slug),
+              scalarFrame('title', fields.title),
+              scalarFrame('status', fields.status),
+              listFrame('aliases', fields.aliases),
+              listFrame('related', fields.related),
+              scalarFrame('catalog', fields.catalog),
+              scalarFrame('body', fields.body),
+            ].join('');
+          })
+          .join(''),
+      ),
+    ),
+  );
 
 /** Appends `value` to the list `key` owns, creating the list on first use. */
 const appendTo = <V>(map: Map<string, V[]>, key: string, value: V): void => {
