@@ -248,7 +248,9 @@
     "**/.alchemy/**",
     "**/.prerender/**",
     "apps/hymnal/dist/**",
-    "apps/hymnal/react-native.config.cjs"
+    "apps/hymnal/react-native.config.cjs",
+    "apps/heartseed/dist/**",
+    "apps/heartseed/react-native.config.cjs"
   ],
   "overrides": [
     {
