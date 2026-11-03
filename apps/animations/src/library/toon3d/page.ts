@@ -17,7 +17,7 @@ import {
   WebGLRenderTarget,
 } from 'three';
 import { buildFigure, inkClass, type InkClass } from './figure.ts';
-import { leadFeast } from './lead-feast.ts';
+import { LOOK_PAINTS, leadFeast } from './lead-feast.ts';
 import type { MemberSpec, Pose } from './spec.ts';
 
 /** One render: the image's size, where the soles' centre sits in it (px), px per head unit, the turn and the pose. */
@@ -31,6 +31,8 @@ export interface RenderRequest {
   readonly pose: Pose;
   /** `colour` the finished frame; `ids` the part ids as grey levels (id × 12), for the measures. */
   readonly output: 'colour' | 'ids';
+  /** `kept` the kept views' measured paints (the member's own), `look` look.md's hex pairs. */
+  readonly palette: 'kept' | 'look';
 }
 
 const SUPERSAMPLE = 3;
@@ -145,9 +147,13 @@ const renderer = (spec: MemberSpec) => {
   gl.outputColorSpace = LinearSRGBColorSpace;
   gl.setPixelRatio(1);
   document.body.appendChild(gl.domElement);
-  const figure = buildFigure(spec);
-  const scene = new Scene();
-  scene.add(figure.root);
+  const figures = {
+    kept: buildFigure(spec),
+    look: buildFigure({ ...spec, paints: LOOK_PAINTS }),
+  };
+  const scenes = { kept: new Scene(), look: new Scene() };
+  scenes.kept.add(figures.kept.root);
+  scenes.look.add(figures.look.root);
   const camera = new OrthographicCamera(-1, 1, 1, -1, -20, 20);
   camera.position.set(0, 0, 10);
   camera.lookAt(new Vector3(0, 0, 0));
@@ -219,6 +225,8 @@ const renderer = (spec: MemberSpec) => {
     camera.top = req.oy / req.scale;
     camera.bottom = -(req.height - req.oy) / req.scale;
     camera.updateProjectionMatrix();
+    const figure = figures[req.palette];
+    const scene = scenes[req.palette];
     figure.pose(req.pose);
     figure.turn(req.yaw);
 

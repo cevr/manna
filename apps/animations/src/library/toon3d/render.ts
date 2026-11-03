@@ -118,4 +118,5 @@ export const viewRequest = (
   yaw: YAWS[view],
   pose,
   output: 'colour',
+  palette: 'kept',
 });
