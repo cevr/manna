@@ -424,5 +424,13 @@
       { "part": "foot", "paint": "base", "probes": ["foot.base.0", "foot.base.1", "foot.base.2"] },
       { "part": "foot", "paint": "shade", "probes": ["foot.shade.0", "foot.shade.1"] }
     ]
+  },
+  "exempt": {
+    "front": [],
+    "threeQuarterLeft": [],
+    "profileLeft": [],
+    "back": [],
+    "profileRight": [],
+    "threeQuarterRight": []
   }
 }

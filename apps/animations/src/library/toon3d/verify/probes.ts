@@ -72,7 +72,17 @@ export const CoverageEntry = Schema.Union([ProbedPaint, UnavailablePaint]);
 /** One (part, paint) of a kept view, decided: probed, or unavailable with its reason. */
 export type CoverageEntry = Schema.Schema.Type<typeof CoverageEntry>;
 
-/** A member's reviewed colour coverage, `cast/<member>/cast-sheet/colour-coverage.json`: every (part, paint) of each kept view, read off the view at 1:1 and decided, so a shown paint left without a probe is seen. */
+/** A kept view's flat colour no probe reads, accepted with its reason: the region holding the pixel `at` ([x, y]), and the colour (Lab) within the colour bar of which its flat boxes are let go. */
+export const CoverageExemption = Schema.Struct({
+  at: Schema.Tuple([Schema.Int, Schema.Int]),
+  lab: Schema.Tuple([Schema.Finite, Schema.Finite, Schema.Finite]),
+  reason: Schema.NonEmptyString,
+});
+
+/** A kept view's flat colour no probe reads, accepted with its reason. */
+export interface CoverageExemption extends Schema.Schema.Type<typeof CoverageExemption> {}
+
+/** A member's reviewed colour coverage, `cast/<member>/cast-sheet/colour-coverage.json`: every (part, paint) of each kept view, read off the view at 1:1 and decided, so a shown paint left without a probe is seen; and each view's flat colours accepted with no probe, each with its reason. */
 export const ColourCoverage = Schema.Struct({
   member: Schema.String,
   views: Schema.Struct({
@@ -82,6 +92,14 @@ export const ColourCoverage = Schema.Struct({
     back: Schema.Array(CoverageEntry),
     profileRight: Schema.Array(CoverageEntry),
     threeQuarterRight: Schema.Array(CoverageEntry),
+  } satisfies Record<ViewName, Schema.Top>),
+  exempt: Schema.Struct({
+    front: Schema.Array(CoverageExemption),
+    threeQuarterLeft: Schema.Array(CoverageExemption),
+    profileLeft: Schema.Array(CoverageExemption),
+    back: Schema.Array(CoverageExemption),
+    profileRight: Schema.Array(CoverageExemption),
+    threeQuarterRight: Schema.Array(CoverageExemption),
   } satisfies Record<ViewName, Schema.Top>),
 });
 
