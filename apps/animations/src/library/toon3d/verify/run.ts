@@ -23,6 +23,7 @@ import {
   type Plan,
   type RenderJob,
 } from './pipeline.ts';
+import { ColourProbesJson } from './probes.ts';
 import { verdictOf, verdictText, type Verdict } from './verdict.ts';
 
 /** The members the verify command knows, by the name their cast folder has. */
@@ -85,6 +86,10 @@ const here = import.meta.dir;
 /** Where a member's kept views live. */
 const keptDir = (member: string): string => `${here}/../../cast/${member}/cast-sheet/views`;
 
+/** Where a member's authored colour probes live. */
+export const probesFile = (member: string): string =>
+  `${here}/../../cast/${member}/cast-sheet/colour-probes.json`;
+
 /** Where a run writes: `apps/animations/out/toon3d/<member>/`. */
 const outDir = (member: string): string => `${here}/../../../../out/toon3d/${member}`;
 
@@ -116,6 +121,19 @@ const readKept = Effect.fn('Toon3dVerify.readKept')(function* (member: string, p
     kept.set(view, yield* decode(png));
   }
   return { kept, bytes };
+});
+
+/** The member's authored colour probes, `cast/<member>/cast-sheet/colour-probes.json`, and the file's text for the manifest. */
+const readColourProbes = Effect.fn('Toon3dVerify.readColourProbes')(function* (member: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const file = probesFile(member);
+  const text = yield* fs
+    .readFileString(file)
+    .pipe(Effect.mapError(() => VerifyFailed.make({ reason: `no colour probes at ${file}` })));
+  const probes = yield* Schema.decodeEffect(ColourProbesJson)(text).pipe(
+    Effect.mapError((e) => VerifyFailed.make({ reason: `${file}: ${e.message}` })),
+  );
+  return { probes, text };
 });
 
 /** The toon3d source files a run's renders and measures come from, by name under `toon3d/`. */
@@ -255,10 +273,19 @@ export const verifyMember = Effect.fn('Toon3dVerify.verifyMember')(function* (
   const path = yield* Path.Path;
   const spec = yield* specOf(source);
   const { kept, bytes: keptBytes } = yield* readKept(member, plan);
+  const probes = yield* readColourProbes(member);
   const first = yield* firstLaunch(spec, plan, kept);
   const second = yield* secondLaunch(spec, first.jobs);
   const { renders, hashes, differing } = rendersOf(first.jobs, first.pngs, second);
-  const measured = yield* measureRun(spec, plan, kept, first.jobs, renders, differing);
+  const measured = yield* measureRun(
+    spec,
+    plan,
+    kept,
+    probes.probes,
+    first.jobs,
+    renders,
+    differing,
+  );
   const verdict: Verdict = verdictOf(BARS, measured);
 
   const rendersDir = path.join(out, 'renders');
@@ -270,6 +297,7 @@ export const verifyMember = Effect.fn('Toon3dVerify.verifyMember')(function* (
   }
   const inputs = Object.fromEntries([
     ...[...keptBytes].map(([name, png]) => [name, sha256(png)] as const),
+    ['colour-probes.json', sha256(probes.text)] as const,
     ['spec.json', sha256(yield* Schema.encodeEffect(SpecJson)(spec))] as const,
   ]);
   const manifest = yield* Schema.encodeEffect(ManifestJson)({

@@ -1,4 +1,4 @@
-import { Option } from 'effect';
+import { Option, Result } from 'effect';
 import { PART } from '../figure.ts';
 import type { ViewName } from '../render.ts';
 import {
@@ -10,13 +10,19 @@ import {
   type MeasureName,
   type Stage,
 } from './bars.ts';
-import { worstDrift, type Flatness, type PartDelta } from './measures.ts';
+import { worstDrift, type Flatness, type ProbeRead } from './measures.ts';
+
+/** One authored colour probe read in a view: where it sits (view, part, paint, index) and its reading. */
+export interface ProbeMeasured {
+  readonly at: string;
+  readonly read: ProbeRead;
+}
 
 /** One view at rest against its kept view. */
 export interface ViewMeasured {
   readonly view: ViewName;
   readonly iou: number;
-  readonly parts: ReadonlyArray<PartDelta>;
+  readonly probes: ReadonlyArray<ProbeMeasured>;
   readonly flatness: ReadonlyArray<Flatness>;
   readonly keptHairBlobs: number;
   readonly inkWidth: number;
@@ -103,9 +109,14 @@ export const READERS: Record<MeasureName, (m: Measured) => Samples> = {
       value: Option.map(m.frontRows, (r) => r.flagged),
     },
   ],
-  partDeltaE: (m) =>
+  probeDeltaE: (m) =>
     m.views.flatMap((v) =>
-      v.parts.map((p) => ({ at: `${v.view} ${partName(p.part)}`, value: p.deltaE })),
+      v.probes.map((p) =>
+        Result.match(p.read, {
+          onSuccess: (value) => one(p.at, value),
+          onFailure: (why) => ({ at: `${p.at} (${why})`, value: Option.none() }),
+        }),
+      ),
     ),
   flatShare: (m) =>
     m.views.flatMap((v) => v.flatness.map((f) => one(`${v.view} ${partName(f.part)}`, f.share))),

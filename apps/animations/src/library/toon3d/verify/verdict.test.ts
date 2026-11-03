@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Option } from 'effect';
+import { Option, Result } from 'effect';
 import { PART } from '../figure.ts';
 import { BARS, MEASURES, STAGES } from './bars.ts';
 import { bendAngles, FULL_PLAN, proportionRows, turnYaws } from './pipeline.ts';
@@ -21,7 +21,7 @@ const clean: Measured = {
   views: FULL_PLAN.views.map((view) => ({
     view,
     iou: 0.97,
-    parts: [{ part: PART.body, px: 500, deltaE: Option.some(1.5) }],
+    probes: [{ at: `${view} body base #0`, read: Result.succeed(1.5) }],
     flatness: [
       { part: PART.body, px: 500, share: 0.99, blobs: 1, raggedness: 3 },
       { part: PART.hair, px: 400, share: 0.99, blobs: 6, raggedness: 3 },

@@ -21,7 +21,7 @@ import {
   strokeWidth,
   iou,
   keptBlobs,
-  partDeltas,
+  probeDelta,
   rgbOf,
   tears,
   wholeBox,
@@ -31,7 +31,14 @@ import {
   type Point,
   type Raster,
 } from './measures.ts';
-import type { FrameMeasured, Measured, RowsMeasured, ViewMeasured } from './verdict.ts';
+import { probeAt, probeBox, type ColourProbe, type ColourProbes } from './probes.ts';
+import type {
+  FrameMeasured,
+  Measured,
+  ProbeMeasured,
+  RowsMeasured,
+  ViewMeasured,
+} from './verdict.ts';
 
 /** A verify step failed outside the figure's page: decoding a picture or reading a kept view. */
 export class VerifyFailed extends Schema.TaggedError<VerifyFailed>()('VerifyFailed', {
@@ -349,17 +356,31 @@ export const measureFrame = (
   ...sleeve,
 });
 
-/** One view's measures against its kept picture. */
+/** Each of a view's authored colour probes read against its render. */
+export const readProbes = (
+  view: ViewName,
+  probes: ReadonlyArray<ColourProbe>,
+  kept: Raster,
+  colour: Raster,
+  ids: Raster,
+): ReadonlyArray<ProbeMeasured> =>
+  probes.map((probe, k) => ({
+    at: probeAt(view, probe, k),
+    read: probeDelta(kept, colour, ids, PART[probe.part], probeBox(probe)),
+  }));
+
+/** One view's measures against its kept picture and its authored colour probes. */
 export const measureView = (
   spec: MemberSpec,
   view: ViewName,
+  probes: ReadonlyArray<ColourProbe>,
   kept: Raster,
   colour: Raster,
   ids: Raster,
 ): ViewMeasured => ({
   view,
   iou: iou(figureMask(kept), figureMask(colour)),
-  parts: partDeltas(kept, colour, ids, partPaints(spec)),
+  probes: readProbes(view, probes, kept, colour, ids),
   flatness: flatness(colour, ids, partPaints(spec)),
   keptHairBlobs: keptBlobs(kept, ids, partPaints(spec), PART.hair),
   inkWidth: inkWidth(colour, wholeBox(colour)),
@@ -407,6 +428,7 @@ export const measureRun = Effect.fn('Toon3dVerify.measureRun')(function* (
   spec: MemberSpec,
   plan: Plan,
   kept: ReadonlyMap<ViewName, Raster>,
+  probes: ColourProbes,
   jobs: ReadonlyArray<RenderJob>,
   renders: Renders,
   differing: ReadonlyArray<string>,
@@ -425,7 +447,10 @@ export const measureRun = Effect.fn('Toon3dVerify.measureRun')(function* (
     if (!keptView) return yield* VerifyFailed.make({ reason: `no kept picture for ${view}` });
     const colour = yield* raster(`views/${view}.png`);
     const ids = yield* raster(`views-ids/${view}.png`);
-    views.push(measureView(spec, view, keptView, colour, ids));
+    const viewProbes = probes.views[view];
+    if (viewProbes.length === 0)
+      return yield* VerifyFailed.make({ reason: `no colour probes for ${view}` });
+    views.push(measureView(spec, view, viewProbes, keptView, colour, ids));
     if (view === 'front') {
       rows = frontRows(keptView, colour);
       face = frontFace(keptView, colour, ids);
