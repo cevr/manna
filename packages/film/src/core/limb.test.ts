@@ -242,11 +242,28 @@ const nearBoundary = (r: Raster, x: number, y: number, width: number, alpha = 12
   const radius = Math.ceil(width);
   for (let dy = -radius; dy <= radius; dy++)
     for (let dx = -radius; dx <= radius; dx++) {
-      if (Math.hypot(dx, dy) > width) continue;
+      if (dx * dx + dy * dy > width * width) continue;
       if (r.rgba[((y + dy) * r.width + x + dx) * 4 + 3]! < alpha) return true;
     }
   return false;
 };
+
+// Only the measured hand/sleeve contact receives opening ink. A bar deep
+// inside the hand or across the sleeve has no exemption here.
+const cuffCut: Array<Pt> = [];
+for (let y = Math.floor(B_HAND[1] - 18); y <= Math.ceil(B_HAND[1] + 18); y++)
+  for (let x = Math.floor(B_HAND[0] - 18); x <= Math.ceil(B_HAND[0] + 18); x++) {
+    if (BENT.rgba[(y * BW + x) * 4 + 3]! < 128) continue;
+    const hand = limbShares(BENT_LIMB, x, y)[2];
+    for (const [dx, dy] of [
+      [1, 0],
+      [0, 1],
+    ] as const) {
+      if (BENT.rgba[((y + dy) * BW + x + dx) * 4 + 3]! < 128) continue;
+      if (Math.abs(hand - limbShares(BENT_LIMB, x + dx, y + dy)[2]) < 0.5) continue;
+      cuffCut.push([x + 0.5 + dx / 2, y + 0.5 + dy / 2]);
+    }
+  }
 
 const strayInk = (r: Raster, elbow: number, width: number) => {
   const radius = Math.ceil(width + 1);
@@ -264,12 +281,11 @@ const strayInk = (r: Raster, elbow: number, width: number) => {
         BE[1] - Math.sin(turn) * dx + Math.cos(turn) * dy,
       ];
       const [u, v] = frame(q, BE, BD2, B_UPPER);
-      // The cuff opening is an inked contact, separate from the silhouette.
-      const cuff =
-        u >= B_UPPER + B_FORE - width &&
-        u <= B_UPPER + B_FORE + 2 * width &&
-        Math.abs(v) <=
-          Math.max(BENT_LIMB.stations.cuff.inner, BENT_LIMB.stations.cuff.outer) + width;
+      // Only the opening's measured cut gets a pen band, plus the diagonal
+      // footprint of one bilinear texel in the hand frame.
+      const cuff = cuffCut.some(
+        (p) => (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2 <= (width + Math.SQRT2) ** 2,
+      );
       const fold =
         elbow > 60 &&
         u >= B_UPPER &&
@@ -479,6 +495,25 @@ const ghostSkin = (
 };
 
 describe('rasterOf stroke silhouette', () => {
+  test('the painted arm is byte-identical through 15 to 19.5 degrees before the fade midpoint', () => {
+    const painted = {
+      ...HALF,
+      parts: HALF.parts.map(({ limb: _limb, ...part }) => part),
+    };
+    for (const elbowRight of [15, 16, 17, 18, 19, 19.5]) {
+      const pose = {
+        numbers: { elbowRight, wristRight: -0.85 * elbowRight },
+        root: painted.root,
+        scale: 1,
+      };
+      expect(
+        Buffer.compare(
+          Buffer.from(rasterOf(HALF, pose).rgba),
+          Buffer.from(rasterOf(painted, pose).rgba),
+        ),
+      ).toBe(0);
+    }
+  });
   test('the stub keeps painted coverage but its interior source ink becomes cloth in the single silhouette', () => {
     const pixels = paint(W / 2, H / 2, (x, y) => {
       const [u] = frame([2 * x + 0.5, 2 * y + 0.5], S, D, 0);
@@ -731,7 +766,12 @@ describe('rasterOf stroke silhouette', () => {
     };
     for (const elbowRight of [25, 90]) {
       const pose = { numbers: { elbowRight, wristRight: -38 }, root: BENT_PUPPET.root, scale: 1 };
-      expect(rasterOf(BENT_PUPPET, pose).rgba).toEqual(rasterOf(forced, pose).rgba);
+      expect(
+        Buffer.compare(
+          Buffer.from(rasterOf(BENT_PUPPET, pose).rgba),
+          Buffer.from(rasterOf(forced, pose).rgba),
+        ),
+      ).toBe(0);
     }
   });
 });
@@ -867,11 +907,26 @@ describe('limbOf', () => {
     expect(Result.isFailure(r) && r.failure.detail).toMatch(/^on its outer side /);
   });
 
-  test('refuses an elbow it finds no station for: a forearm folded straight back has no inside to crease', () => {
-    const back = along(E, D, -60);
-    const r = limbOf('arm', ARM, { ...JOINTS, wrist: back }, DECLARED);
+  test('refuses a nearly straight-back forearm even when its paint has an inner crease', () => {
+    const pixels = paint(200, 200, (x, y) => {
+      if (x < 85 || x > 115 || y < 20 || y > 170 || (x === 101 && y === 100)) return [];
+      if (x < 89 || x > 111 || y < 24 || y > 166) return [INK];
+      return [LIGHT];
+    });
+    const r = limbOf(
+      'arm',
+      pixels,
+      {
+        shoulder: [100.5, 40.5],
+        elbow: [100.500001, 150.5],
+        wrist: [100.49998, 80.5],
+      },
+      DECLARED,
+    );
     expect(kindOf(r)).toBe('no-station');
-    expect(Result.isFailure(r) && r.failure.detail).toMatch(/inside the bend/);
+    expect(Result.isFailure(r) && r.failure.detail).toBe(
+      'its forearm folds straight back over its upper arm, so its elbow has no outer side',
+    );
   });
 
   test('refuses a cuff that is not a finite point under its own kind, never throwing', () => {
@@ -889,6 +944,37 @@ describe('limbOf', () => {
 });
 
 describe('limbOf on a bent chain', () => {
+  test('cloth-coloured paint owned by the hand never becomes sleeve donor cloth', () => {
+    const hx = Math.floor(B_HAND[0] / 2),
+      hy = Math.floor(B_HAND[1] / 2);
+    const half = (p: Pt): Pt => [p[0] / 2, p[1] / 2];
+    const pixels = paint(BW / 2, BH / 2, (x, y) => {
+      if (x >= hx + 2 && x <= hx + 3 && y >= hy && y <= hy + 1) return [LIGHT];
+      return bentTexel(2 * x, 2 * y);
+    });
+    const limb = Result.getOrThrow(
+      limbOf('arm', pixels, { shoulder: half(BS), elbow: half(BE), wrist: half(BC) }, DECLARED),
+    );
+    const x = hx + 2,
+      y = hy + 1;
+    expect(limbShares(limb, x, y)[2]).toBe(1);
+    const [bx, by, width] = limb.regions.box;
+    expect(limb.regions.cloth.getUint8((y - by) * width + x - bx)).toBe(0);
+  });
+  test('an asymmetric painted crease gives distinct upper and forearm inner stations', () => {
+    const half = (p: Pt): Pt => [p[0] / 2, p[1] / 2];
+    const notch = along(along(BE, BD1, -25), opens(BD1), -6);
+    const pixels = paint(BW / 2, BH / 2, (x, y) => {
+      if (Math.hypot(2 * x + 0.5 - notch[0], 2 * y + 0.5 - notch[1]) < 3) return [];
+      return bentTexel(2 * x, 2 * y);
+    });
+    const limb = Result.getOrThrow(
+      limbOf('arm', pixels, { shoulder: half(BS), elbow: half(BE), wrist: half(BC) }, DECLARED),
+    );
+    expect(2 * limb.stations.elbowUpper.inner).toBeLessThan(8);
+    expect(2 * limb.stations.elbowFore.inner).toBeGreaterThan(9);
+    expect(limb.stations.elbowFore.inner - limb.stations.elbowUpper.inner).toBeGreaterThan(1.5);
+  });
   test('reads its stations from the drawing: the shoulder, the elbow on each segment, the cuff', () => {
     const s = BENT_LIMB.stations;
     const near = (got: number, want: number) => expect(Math.abs(got - want)).toBeLessThanOrEqual(1);
@@ -1064,7 +1150,12 @@ describe('puppetOf with a stroke limb', () => {
     expect(without.parts[0]!.limb).toBeUndefined();
     for (const elbowRight of [0, 10, 15]) {
       const pose = { numbers: { elbowRight, wristRight: -38 }, root: S, scale: 1 };
-      expect(rasterOf(withLimb, pose).rgba).toEqual(rasterOf(without, pose).rgba);
+      expect(
+        Buffer.compare(
+          Buffer.from(rasterOf(withLimb, pose).rgba),
+          Buffer.from(rasterOf(without, pose).rgba),
+        ),
+      ).toBe(0);
     }
   });
 
@@ -1101,7 +1192,12 @@ describe('puppetOf with a stroke limb', () => {
     const painted = Result.getOrThrow(puppetOf(bare, { ...SKELETON, limbs: [] }));
     for (const elbowRight of [0, 45, 90]) {
       const pose = { numbers: { elbowRight, wristRight: -38 }, root: S, scale: 1 };
-      expect(rasterOf(made, pose).rgba).toEqual(rasterOf(painted, pose).rgba);
+      expect(
+        Buffer.compare(
+          Buffer.from(rasterOf(made, pose).rgba),
+          Buffer.from(rasterOf(painted, pose).rgba),
+        ),
+      ).toBe(0);
     }
   });
 
