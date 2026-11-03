@@ -1067,7 +1067,7 @@ export const rasterOf = (
       ),
       {
         onNone: () => layPart(acc, part, layers, posed[k]!, [0, 0], [W, H]),
-        onSome: (limb) => layLimb(acc, puppet, pose, m, part, limb, posed[k]!, [W, H]),
+        onSome: (limb) => layLimb(acc, puppet, pose, m, part, limb, layers, posed[k]!, [W, H]),
       },
     );
   }
@@ -1121,8 +1121,8 @@ const restMap = (puppet: Puppet, pose: PuppetPose, m: Float64Array, name: string
 /**
  * A part with a stroke limb past the midpoint of its transition window
  * laid over `acc`: over the box its posed mesh and its limb's rigid pieces
- * reach. The midpoint selects one silhouette, so the transition never
- * overlays displaced outlines or hands at partial opacity.
+ * reach. The transition interpolates one silhouette's distance field;
+ * displaced outlines and hands are never overlaid at partial opacity.
  */
 const layLimb = (
   acc: Float64Array,
@@ -1131,6 +1131,7 @@ const layLimb = (
   m: Float64Array,
   part: PuppetPart,
   limb: PuppetPartLimb,
+  layers: ReadonlyArray<Raster>,
   q: Float64Array,
   [W, H]: readonly [number, number],
 ) => {
@@ -1157,13 +1158,30 @@ const layLimb = (
       ys.push(fwd[1]! * dx + fwd[3]! * dy);
     }
   }
-  const x0 = Math.max(0, Math.floor(Math.min(...xs)) - 2);
-  const y0 = Math.max(0, Math.floor(Math.min(...ys)) - 2);
-  const bw = Math.min(W, Math.ceil(Math.max(...xs)) + 2) - x0;
-  const bh = Math.min(H, Math.ceil(Math.max(...ys)) + 2) - y0;
+  const capRadius =
+    Math.abs(pose.scale) *
+    Math.max(
+      ...limb.outer.widths,
+      ...limb.inner.widths,
+      ...[
+        limb.stations.shoulder,
+        limb.stations.elbowUpper,
+        limb.stations.elbowFore,
+        limb.stations.cuff,
+      ].flatMap((s) => [s.inner, s.outer]),
+    );
+  const x0 = Math.max(0, Math.floor(Math.min(...xs) - capRadius) - 2);
+  const y0 = Math.max(0, Math.floor(Math.min(...ys) - capRadius) - 2);
+  const bw = Math.min(W, Math.ceil(Math.max(...xs) + capRadius) + 2) - x0;
+  const bh = Math.min(H, Math.ceil(Math.max(...ys) + capRadius) + 2) - y0;
   if (bw <= 0 || bh <= 0) return;
   const stub = new Float64Array(bw * bh * 4);
   layPart(stub, part, [stubOf(limb, part.pixels)], q, [x0, y0], [bw, bh]);
+  let painted = stub;
+  if (limbBlend(limb, pose.numbers).sleeve < 1) {
+    painted = new Float64Array(stub.length);
+    layPart(painted, part, layers, q, [x0, y0], [bw, bh]);
+  }
   const stroke = limbStroke(
     limb,
     frames,
@@ -1171,6 +1189,7 @@ const layLimb = (
     (sx, sy, into) => sampleAt(part.pixels, sx, sy, into),
     [x0, y0, bw, bh],
     stub,
+    painted,
   );
   for (let y = 0; y < bh; y++)
     for (let x = 0; x < bw; x++) {

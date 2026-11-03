@@ -2745,15 +2745,17 @@ table's `paperOf`); none of the three calls okra.
 
 The CPU reference `rasterOf` reads a part's measured `limb` from
 `Skeleton.limbs`: painted below the transition window's midpoint (20° for
-the default 15–25° window), then a stroke alone. Selecting one silhouette
-prevents translucent displaced outlines inside that window. `core/limb.ts` measures
-its widths, ink and cuff from the part. `core/limb-stroke.ts` fills the union
-of its upper arm, forearm, elbow and cuff with that paint's cloth, then inks
-one silhouette boundary and the outer fold (60–90°). Its hand begins at the
-first measured skin pixel, turns over the sleeve, and keeps its own painted
-outline; the lining stays with the forearm. The wrist boundary rounds with
-a disk of the measured ink width before it is inked. A part without a limb,
-or below its transition midpoint, follows the painted path exactly.
+the default 15–25° window), then one generated silhouette. Its distance
+field moves continuously from the painted coverage to the capsule union
+over 20–25°; pictures and outlines never crossfade. `core/limb.ts` measures
+the widths, ink and cuff from the part. `core/limb-stroke.ts` builds each
+segment from the common tangent envelope of its measured disks, with round
+ends of half their full width. The capsule union joins the shoulder stub
+and cuff with tangent arcs at the measured ink's pen radius. The hand
+overlaps the sleeve, preserving its painted outline; the lining stays on
+the forearm. One completed silhouette boundary and the outer fold (60–90°)
+receive ink. A part without a limb, or below its transition midpoint,
+follows the painted path exactly.
 
 A puppet (`core/puppet.ts`) is a part sheet on a skeleton
 (`<member>/cutout/skeleton.ts`: bones named by the shared controls (`lean`,

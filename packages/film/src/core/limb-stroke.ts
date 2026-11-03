@@ -3,10 +3,8 @@
  * path is held to. `limb.ts` measures the limb from its part's paint; this
  * module draws it posed, from that measure and the part's own paint.
  */
-import { Option, Record as Rec } from 'effect';
 import { labOf, type Rgb } from './cast-sheet-pixels.ts';
 import {
-  FEATHER,
   INK_L,
   type LimbSideName,
   type LimbStations,
@@ -38,8 +36,6 @@ export interface LimbFrames {
 
 /** The premultiplied bilinear sample of a limb's part at the rest point `(sx, sy)` into `into` (rewritten whole): colour 0..255, alpha 0..1. */
 export type LimbSample = (sx: number, sy: number, into: Float64Array) => void;
-
-const SIDES = ['inner', 'outer'] as const;
 
 const mapped = (m: Affine, x: number, y: number): Pt => [
   m[0]! * x + m[2]! * y + m[4]!,
@@ -80,17 +76,110 @@ const widthAt = (
   return [w0 + (f - k0) * (at(Math.min(n - 1, k0 + 1)) - w0), s.ends[Math.round(f)] !== 'fold'];
 };
 
+/** Convex support envelope of the measured station disks. Their common tangents meet the round ends without a square tube cutting across a cap. */
+const hullOf = (points: Array<Pt>): Array<Pt> => {
+  points.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (a: Pt, b: Pt, c: Pt) =>
+    (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  const half = (ordered: Array<Pt>) => {
+    const out: Array<Pt> = [];
+    for (const p of ordered) {
+      while (out.length >= 2 && cross(out[out.length - 2]!, out[out.length - 1]!, p) <= 0)
+        out.pop();
+      out.push(p);
+    }
+    out.pop();
+    return out;
+  };
+  return [...half(points), ...half(points.toReversed())];
+};
+
+/** Horizontal spans of a rounded segment in its own pixels. The polygon's sagitta and row spacing are each at most a quarter output pixel. */
+const capsuleOf = (limb: PuppetPartLimb, k: number, scale: number) => {
+  const { chain } = limb;
+  const a = [chain.shoulder, chain.elbow][k]!;
+  const b = [chain.elbow, chain.cuff][k]!;
+  const d = unit(sub(b, a)),
+    n = opens(d);
+  const [first, last] = [
+    [limb.stations.shoulder, limb.stations.elbowUpper],
+    [limb.stations.elbowFore, limb.stations.cuff],
+  ][k]!;
+  const u0 = [0, chain.upper][k]!;
+  const stations = [first!, last!];
+  for (let j = 0; j < limb.outer.widths.length; j++) {
+    const u = (j + 0.5) * limb.step;
+    if (u <= first!.u || u >= last!.u) continue;
+    stations.push({
+      u,
+      inner: widthAt(limb, 'inner', k, u)[0],
+      outer: widthAt(limb, 'outer', k, u)[0],
+    });
+  }
+  const points: Array<Pt> = [];
+  const step = 0.25 / scale;
+  for (const s of stations) {
+    const r = (s.inner + s.outer) / 2,
+      v = (s.outer - s.inner) / 2;
+    const cx = a[0] + (s.u - u0) * d[0] + v * n[0],
+      cy = a[1] + (s.u - u0) * d[1] + v * n[1];
+    const count = Math.max(
+      8,
+      Math.ceil(Math.PI / Math.acos(Math.max(-1, 1 - step / Math.max(step, r)))),
+    );
+    for (let j = 0; j < count; j++)
+      points.push([
+        cx + r * Math.cos((2 * Math.PI * j) / count),
+        cy + r * Math.sin((2 * Math.PI * j) / count),
+      ]);
+  }
+  const hull = hullOf(points);
+  const lo = Math.min(...hull.map((p) => p[1])),
+    hi = Math.max(...hull.map((p) => p[1]));
+  const count = Math.ceil((hi - lo) / step) + 1;
+  const left = new Float64Array(count).fill(Infinity),
+    right = new Float64Array(count).fill(-Infinity);
+  for (let i = 0; i < hull.length; i++) {
+    let p = hull[i]!,
+      q = hull[(i + 1) % hull.length]!;
+    if (p[1] > q[1]) [p, q] = [q, p];
+    if (p[1] === q[1]) continue;
+    const from = Math.max(0, Math.ceil((p[1] - lo) / step)),
+      to = Math.min(count - 1, Math.ceil((q[1] - lo) / step));
+    for (let j = from; j <= to; j++) {
+      const y = Math.min(hi, lo + j * step);
+      if (y > q[1]) continue;
+      const x = p[0] + ((y - p[1]) / (q[1] - p[1])) * (q[0] - p[0]);
+      left[j] = Math.min(left[j]!, x);
+      right[j] = Math.max(right[j]!, x);
+    }
+  }
+  return (q: Pt) => {
+    if (q[1] < lo - limb.inkWidth || q[1] > hi + limb.inkWidth)
+      return -2 * (limb.inkWidth * scale + 1);
+    const y = Math.max(lo, Math.min(hi, q[1]));
+    const i = Math.min(count - 2, Math.floor((y - lo) / step));
+    const span = Math.min(step, hi - (lo + i * step));
+    const t = clamp01((y - lo - i * step) / span);
+    const l = left[i]! + t * (left[i + 1]! - left[i]!);
+    const r = right[i]! + t * (right[i + 1]! - right[i]!);
+    const dl = (left[i + 1]! - left[i]!) / span,
+      dr = (right[i + 1]! - right[i]!) / span;
+    return (
+      Math.min(
+        (q[0] - l) / Math.hypot(1, dl),
+        (r - q[0]) / Math.hypot(1, dr),
+        q[1] - lo,
+        hi - q[1],
+      ) * scale
+    );
+  };
+};
+
 /** `top` (premultiplied) laid over `under`, into `under`. */
 const overInto = (under: Float64Array, top: Float64Array) => {
   const keep = 1 - top[3]!;
   for (let c = 0; c < 4; c++) under[c] = top[c]! + under[c]! * keep;
-};
-
-/** `top` (premultiplied) at weight `w` added to `into`, held to alpha 1: two regions' shares of one texel, which sum to one. */
-const added = (into: Float64Array, top: Float64Array, w: number) => {
-  for (let c = 0; c < 4; c++) into[c] = into[c]! + top[c]! * w;
-  const a = into[3]!;
-  if (a > 1) for (let c = 0; c < 4; c++) into[c] = into[c]! / a;
 };
 
 /** Premultiplied `colour` at alpha `a` laid over `into`, keeping `into`'s alpha: ink painted on cloth. */
@@ -193,13 +282,6 @@ const clothSampler = (limb: PuppetPartLimb, sample: LimbSample): LimbSample => {
   };
 };
 
-interface WristCurve {
-  readonly centre: Pt;
-  readonly radius: number;
-  readonly reach: number;
-  readonly fill: (x: number, y: number, into: Float64Array) => void;
-}
-
 /** Filter the hand's whole-texel ownership together with its paint, so a transformed cuff edge never samples lining into the hand or steps between texels. */
 const sampleHand = (
   limb: PuppetPartLimb,
@@ -231,70 +313,73 @@ const sampleHand = (
   }
 };
 
-/** Set one pixel's coverage, keeping its colour or filling newly covered ground with cloth. */
-const coverWith = (pixels: Float64Array, o: number, alpha: number, donor: Float64Array) => {
-  const before = pixels[o + 3]!;
-  if (before > 0) {
-    for (let c = 0; c < 3; c++) pixels[o + c] = (pixels[o + c]! / before) * alpha;
-  } else {
-    for (let c = 0; c < 3; c++) pixels[o + c] = donor[c]! * alpha;
-  }
-  pixels[o + 3] = alpha;
+/** Close the union with a measured pen-radius disk. Eroding its dilation joins concave boundaries by tangent arcs without removing a narrow connection. */
+const closedField = (pixels: Float64Array, width: number, height: number, radius: number) => {
+  const inside = nearest(width, height, (i) => pixels[i * 4 + 3]! >= 0.5);
+  const outside = nearest(width, height, (i) => inside.distances[i]! > radius * radius);
+  return Float64Array.from(outside.distances, (d) => Math.sqrt(d) - radius - 0.5);
 };
 
-/** Close notches and round corners with a disk of the measured line width. The extra margin keeps the local operation independent of its crop border. */
-const roundWrist = (pixels: Float64Array, width: number, height: number, curve: WristCurve) => {
-  const { centre, radius, reach } = curve;
-  if (radius < 0.5) return;
-  const margin = reach + 3 * radius;
-  const x0 = Math.max(0, Math.floor(centre[0] - margin)),
-    y0 = Math.max(0, Math.floor(centre[1] - margin));
-  const w = Math.min(width, Math.ceil(centre[0] + margin)) - x0;
-  const h = Math.min(height, Math.ceil(centre[1] + margin)) - y0;
-  if (w <= 0 || h <= 0) return;
-  let mask = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++)
-      mask[y * w + x] = Number(pixels[((y0 + y) * width + x0 + x) * 4 + 3]! >= 0.5);
-  const disk = (inside: number, dilate: boolean) => {
-    const field = nearest(w, h, (i) => mask[i] === inside);
-    for (let i = 0; i < mask.length; i++) {
-      let on = field.distances[i]! > radius * radius;
-      if (dilate) on = !on;
-      mask[i] = Number(on);
-    }
-    return field.distances;
-  };
-  disk(1, true);
-  disk(0, false);
-  disk(0, false);
-  const distance = disk(1, true);
+/** Change coverage without blending displaced pictures; newly filled ground takes sampled cloth. */
+const coverField = (
+  pixels: Float64Array,
+  field: Float64Array,
+  width: number,
+  fill: (x: number, y: number, into: Float64Array) => void,
+) => {
   const donor = new Float64Array(4);
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++) {
-      if (Math.hypot(x0 + x + 0.5 - centre[0], y0 + y + 0.5 - centre[1]) > reach + radius) continue;
-      const o = ((y0 + y) * width + x0 + x) * 4;
-      const alpha = clamp01(radius + 0.5 - Math.sqrt(distance[y * w + x]!));
-      if (pixels[o + 3] === 0) curve.fill(x0 + x + 0.5, y0 + y + 0.5, donor);
-      coverWith(pixels, o, alpha, donor);
+  for (let i = 0; i < field.length; i++) {
+    const o = i * 4,
+      alpha = clamp01(field[i]! + 0.5),
+      before = pixels[o + 3]!;
+    if (alpha === before) continue;
+    if (alpha === 0) {
+      pixels.fill(0, o, o + 4);
+      continue;
     }
+    if (before === 0) fill((i % width) + 0.5, Math.floor(i / width) + 0.5, donor);
+    for (let c = 0; c < 3; c++) {
+      let colour = donor[c]!;
+      if (before > 0) colour = pixels[o + c]! / before;
+      pixels[o + c] = colour * alpha;
+    }
+    pixels[o + 3] = alpha;
+  }
 };
 
-/** Ink the rounded union once. The hand's existing outline stays painted; only a cut exposed by its turn needs the union's ink. */
+/** One completed silhouette receives ink once; transition geometry interpolates distance, never two images or their outlines. */
 const outline = (
   pixels: Float64Array,
   hands: Float64Array,
+  painted: Float64Array,
   folds: Float64Array,
   handGround: Float64Array,
   width: number,
   height: number,
   ink: Rgb,
   inkWidth: number,
-  curve: WristCurve,
+  blend: number,
+  fill: (x: number, y: number, into: Float64Array) => void,
 ) => {
+  const radius = inkWidth / 2;
+  const garment = closedField(pixels, width, height, radius);
+  const eroded = nearest(width, height, (i) => garment[i]! >= radius);
+  const opened = Float64Array.from(eroded.distances, (d) => radius + 0.5 - Math.sqrt(d));
+  coverField(pixels, opened, width, fill);
   for (let i = 0; i < width * height; i++)
     overInto(pixels.subarray(i * 4, i * 4 + 4), hands.subarray(i * 4, i * 4 + 4));
-  roundWrist(pixels, width, height, curve);
+  // A round ink join has the pen's radius: half its measured width.
+  const field = closedField(pixels, width, height, inkWidth / 2);
+  let reference = field;
+  if (blend < 1) reference = closedField(painted, width, height, inkWidth / 2);
+  const mixed = new Float64Array(field.length);
+  for (let i = 0; i < width * height; i++) {
+    const d = field[i]!;
+    let distance = d;
+    if (blend < 1) distance = reference[i]! * (1 - blend) + d * blend;
+    mixed[i] = distance;
+  }
+  coverField(pixels, mixed, width, fill);
   const boundary = nearest(width, height, (i) => pixels[i * 4 + 3]! < 0.5);
   const handCuts = nearest(width, height, (i) => handGround[i]! >= 0.5);
   for (let i = 0; i < width * height; i++) {
@@ -313,9 +398,10 @@ const outline = (
 
 /**
  * Premultiplied raster of a posed limb over its painted stub in `box`.
- * The upper arm, forearm, elbow fan and cuff fill one mask with the part's
- * cloth. Its painted hand lies over the sleeve. Only the union's boundary
- * band and the forearm's fold receive stroke ink, at the measured width.
+ * Measured round-ended capsules and the painted stub fill one cloth mask;
+ * the hand lies over it. From the transition midpoint to its end, one
+ * distance field moves from the painted silhouette to this capsule union.
+ * Only the completed boundary and the forearm fold receive stroke ink.
  */
 export const limbStroke = (
   limb: PuppetPartLimb,
@@ -324,6 +410,7 @@ export const limbStroke = (
   sample: LimbSample,
   box: readonly [number, number, number, number],
   stubPixels: Float64Array,
+  paintedPixels: Float64Array,
 ) => {
   const { fold } = limbBlend(limb, numbers);
   const { chain, ink, inkWidth } = limb;
@@ -333,7 +420,7 @@ export const limbStroke = (
     [chain.shoulder, unit(sub(chain.elbow, chain.shoulder)), 0],
     [chain.elbow, unit(sub(chain.cuff, chain.elbow)), chain.upper],
   ] as const;
-  const [upper, joint, cuff] = [new Float64Array(4), new Float64Array(4), new Float64Array(4)];
+  const upper = new Float64Array(4);
   const [fore, hand, past] = [new Float64Array(4), new Float64Array(4), new Float64Array(4)];
   /** Segment `k`'s `(u, v)` at rest point `q`. */
   const along = (k: number, q: Pt): Pt => {
@@ -341,103 +428,25 @@ export const limbStroke = (
     const r = sub(q, from);
     return [u0 + dot(r, d), dot(r, opens(d))];
   };
-  /** Segment `k`'s rest point at `(u, v)`. */
-  const restAt = (k: number, u: number, v: number): Pt => {
-    const [from, d, u0] = segs[k]!;
-    const n = opens(d);
-    return [from[0] + (u - u0) * d[0] + v * n[0], from[1] + (u - u0) * d[1] + v * n[1]];
-  };
-  /** Tube `k`'s cloth at rest point `q`, clipped to its measured widths and sleeve region. */
+  const scale = 1 / Math.hypot(frames.upper[0]!, frames.upper[1]!);
+  const capsules = [capsuleOf(limb, 0, scale), capsuleOf(limb, 1, scale)];
+  /** The two measured round-ended support envelopes, sampled on their own rigid frames. */
   const tube = (k: number, q: Pt, into: Float64Array) => {
+    let distance = capsules[k]!(q);
+    if (k === 0) distance = Math.min(distance, along(0, q)[0] * scale);
+    const coverage = clamp01(distance + 0.5);
     into.fill(0);
-    const [u, v] = along(k, q);
-    const within = [u <= chain.upper, u >= chain.upper && u <= length + 2 * inkWidth + FEATHER][k]!;
-    if (!within) return;
-    const side = SIDES[Number(v >= 0)]!;
-    const [w, edge] = widthAt(limb, side, k, u);
-    const a = Math.abs(v);
-    const cov = clamp01(w + [0.5, 1.5][Number(edge)]! - a);
-    if (cov === 0) return;
+    if (coverage === 0) return distance;
     sampleCloth(q[0], q[1], into);
-    const share = cov * limbShares(limb, Math.floor(q[0]), Math.floor(q[1]))[1];
-    const alpha = into[3]!;
-    if (alpha > 0) for (let c = 0; c < 3; c++) into[c] = (into[c]! / alpha) * share;
-    into[3] = share;
-  };
-  const [dU, dF] = [segs[0][1], segs[1][1]];
-  const turn = (Option.getOrElse(Rec.get(numbers, limb.bones[1]), () => 0) * Math.PI) / 180;
-  const wrap = (a: number) => a - 2 * Math.PI * Math.floor((a + Math.PI) / (2 * Math.PI));
-  /** The forearm's turn from the upper arm in the pose, (−π, π]: positive opens the outer side. */
-  const bend = wrap(Math.atan2(dU[0] * dF[1] - dU[1] * dF[0], dot(dU, dF)) + turn);
-  /** The convex side of the bend (the one whose normals sweep with it): the outer while the bend is positive, else the inner. */
-  const convex = Number(bend >= 0);
-  const sign = 2 * convex - 1;
-  const from = Math.atan2(sign * opens(dU)[1], sign * opens(dU)[0]);
-  const cutUpper: Pt = [sign * opens(dU)[0], sign * opens(dU)[1]];
-  const cutFore: Pt = [sign * opens(dF)[0], sign * opens(dF)[1]];
-  /**
-   * The join at the upper arm's rest point `qu` into `joint`: on the bend's
-   * convex side, the fan the cut swept from the upper arm's end to the
-   * forearm's start, its radius running from the upper arm's elbow station
-   * to the forearm's across the fan, its fill the two cuts' paint at that
-   * distance. Clear source points receive their nearest painted cloth.
-   */
-  const join = (qu: Pt) => {
-    joint.fill(0);
-    const r = sub(qu, chain.elbow);
-    const d = Math.hypot(r[0], r[1]);
-    const swept = wrap(sign * (Math.atan2(r[1], r[0]) - from) - Math.PI) + Math.PI;
-    if (!(swept <= Math.abs(bend)) || bend === 0) return;
-    const t = swept / Math.abs(bend);
-    const side = SIDES[convex]!;
-    const { elbowUpper, elbowFore } = limb.stations;
-    const radius = elbowUpper[side] + t * (elbowFore[side] - elbowUpper[side]);
-    const cov = clamp01(radius + 0.5 - d);
-    if (cov === 0) return;
-    const e = chain.elbow;
-    sampleCloth(e[0] + d * cutUpper[0], e[1] + d * cutUpper[1], joint);
-    sampleCloth(e[0] + d * cutFore[0], e[1] + d * cutFore[1], past);
-    for (let c = 0; c < 4; c++) joint[c] = (1 - t) * joint[c]! + t * past[c]!;
-    if (joint[3]! <= 0) joint.set([0, 0, 0, 1]);
-    const a = joint[3]!;
-    for (let c = 0; c < 4; c++) joint[c] = (joint[c]! / a) * cov;
-  };
-  /** Cloth across the cuff's opening, to one measured ink width past its end, as opaque as the paint a feather inside it. Its exposed edge belongs to the union's outline. */
-  const cuffFill = (qf: Pt) => {
-    cuff.fill(0);
-    const [u, v] = along(1, qf);
-    if (!(u > length && u <= length + inkWidth)) return;
-    if (Math.abs(v) > limb.stations.cuff[SIDES[Number(v >= 0)]!]) return;
-    const inside = restAt(1, length - FEATHER, v);
-    sample(inside[0], inside[1], past);
-    const a = past[3]!;
-    sampleCloth(inside[0], inside[1], cuff);
-    for (let c = 0; c < 4; c++) cuff[c] = cuff[c]! * a;
-  };
-  const wristTurn = wrap(
-    (Option.getOrElse(Rec.get(numbers, limb.bones[2]), () => 0) * Math.PI) / 180,
-  );
-  const wristSign = 2 * Number(wristTurn >= 0) - 1;
-  const wristFrom = Math.atan2(wristSign * opens(dF)[1], wristSign * opens(dF)[0]);
-  /** The swept cuff opening fills a wrist turn with lining, under the hand, before the one outline is drawn. */
-  const wristJoin = (qf: Pt) => {
-    past.fill(0);
-    const r = sub(qf, chain.cuff);
-    const distance = Math.hypot(...r);
-    const swept = wrap(wristSign * (Math.atan2(r[1], r[0]) - wristFrom) - Math.PI) + Math.PI;
-    if (wristTurn === 0 || swept > Math.abs(wristTurn)) return;
-    const radius = limb.stations.cuff[SIDES[Number(wristTurn >= 0)]!];
-    const coverage = clamp01(radius + 0.5 - distance);
-    if (coverage === 0) return;
-    const q = restAt(1, length - 2 * inkWidth, wristSign * distance);
-    sampleCloth(q[0], q[1], past);
-    for (let c = 0; c < 4; c++) past[c] = past[c]! * coverage;
+    for (let c = 0; c < 4; c++) into[c] = into[c]! * coverage;
+    return distance;
   };
   const [x0, y0, width, height] = box;
   const pixels = new Float64Array(width * height * 4);
   const folds = new Float64Array(width * height);
   const hands = new Float64Array(pixels.length);
   const handGround = new Float64Array(width * height);
+  const onFore = new Uint8Array(width * height);
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++) {
       const i = y * width + x;
@@ -449,45 +458,54 @@ export const limbStroke = (
       const qu = mapped(frames.upper, px, py);
       const qf = mapped(frames.fore, px, py);
       const qh = mapped(frames.hand, px, py);
-      tube(0, qu, upper);
-      added(upper, stub, 1);
-      join(qu);
-      cuffFill(qf);
-      tube(1, qf, fore);
+      const upperDistance = tube(0, qu, upper);
+      past.set(stub);
+      if (
+        stub[3]! > 0 &&
+        labOf([stub[0]! / stub[3]!, stub[1]! / stub[3]!, stub[2]! / stub[3]!])[0] < INK_L
+      ) {
+        sampleCloth(qu[0], qu[1], past);
+        for (let c = 0; c < 4; c++) past[c] = past[c]! * stub[3]!;
+      }
+      overInto(upper, past);
+      const foreDistance = tube(1, qf, fore);
+      onFore[i] = Number(foreDistance > upperDistance);
       sample(qh[0], qh[1], hand);
       const handAlpha = hand[3]!;
       sampleHand(limb, sample, qh, hand, past);
       handGround[i] = Math.max(0, handAlpha - hand[3]!);
-      into.set(joint);
-      overInto(into, upper);
-      overInto(into, cuff);
+      into.set(upper);
       overInto(into, fore);
-      wristJoin(qf);
-      overInto(into, past);
       hands.set(hand, o);
       const [u, v] = along(1, qf);
       const [w] = widthAt(limb, 'outer', 1, u);
       if (u >= chain.upper && u <= length && v >= 0)
         folds[i] = clamp01(v - (w - inkWidth) + 0.5) * fore[3]! * upper[3]! * fold;
     }
-  const scale = 1 / Math.hypot(frames.upper[0]!, frames.upper[1]!);
-  const inv = frames.fore;
-  const det = inv[0]! * inv[3]! - inv[1]! * inv[2]!;
-  const dx = chain.cuff[0] - inv[4]!,
-    dy = chain.cuff[1] - inv[5]!;
-  const centre: Pt = [
-    (inv[3]! * dx - inv[2]! * dy) / det - x0,
-    (-inv[1]! * dx + inv[0]! * dy) / det - y0,
-  ];
-  return outline(pixels, hands, folds, handGround, width, height, ink, inkWidth * scale, {
-    centre,
-    radius: inkWidth * scale,
-    reach: Math.max(limb.stations.cuff.inner, limb.stations.cuff.outer) * scale,
-    fill: (x, y, into) => {
-      const q = mapped(frames.fore, x + x0, y + y0);
-      const [, v] = along(1, q);
-      const cloth = restAt(1, length - 2 * inkWidth, v);
-      sampleCloth(cloth[0], cloth[1], into);
+  return outline(
+    pixels,
+    hands,
+    paintedPixels,
+    folds,
+    handGround,
+    width,
+    height,
+    ink,
+    inkWidth * scale,
+    limbBlend(
+      {
+        bones: limb.bones,
+        fade: [(limb.fade[0] + limb.fade[1]) / 2, limb.fade[1]],
+        fold: limb.fold,
+      },
+      numbers,
+    ).sleeve,
+    (x, y, into) => {
+      const k = Math.min(onFore.length - 1, Math.floor(y) * width + Math.floor(x));
+      let inv = frames.upper;
+      if (onFore[k]) inv = frames.fore;
+      const q = mapped(inv, x + x0, y + y0);
+      sampleCloth(q[0], q[1], into);
     },
-  });
+  );
 };

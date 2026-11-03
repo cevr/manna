@@ -184,6 +184,20 @@ const BENT_PUPPET = Result.getOrThrow(
   ),
 );
 
+// Frame results are pure. Reuse identical fixture poses across the ink,
+// connectivity and curvature assertions without rerasterizing each one.
+const bentFrames = new Map<string, Raster>();
+const bentAt = (elbowRight: number, wristRight = 0) =>
+  Option.getOrElse(Option.fromUndefinedOr(bentFrames.get(`${elbowRight}/${wristRight}`)), () => {
+    const r = rasterOf(BENT_PUPPET, {
+      numbers: { elbowRight, wristRight },
+      root: BENT_PUPPET.root,
+      scale: 1,
+    });
+    bentFrames.set(`${elbowRight}/${wristRight}`, r);
+    return r;
+  });
+
 /** Brute-force distance to the raster's alpha boundary: independent of the stroke's distance transform. */
 const nearBoundary = (r: Raster, x: number, y: number, width: number, alpha = 128) => {
   const radius = Math.ceil(width);
@@ -300,12 +314,19 @@ const contours = (r: Raster): Array<Array<Pt>> => {
   }
   return loops;
 };
-const wristTurnBound = (r: Raster, centre: Pt, reach: number, ink: number) => {
+const wristTurnBound = (
+  r: Raster,
+  centre: Pt,
+  reach: number,
+  ink: number,
+  kind: 'both' | 'convex' | 'concave' = 'both',
+) => {
   const step = Math.ceil(ink);
   let worst = 0;
   let checked = 0;
   for (const points of contours(r)) {
     const n = points.length;
+    if (n <= 2 * step) continue;
     for (let i = 0; i < n; i++) {
       const p = points[i]!;
       if (Math.hypot(...sub(p, centre)) > reach) continue;
@@ -314,6 +335,8 @@ const wristTurnBound = (r: Raster, centre: Pt, reach: number, ink: number) => {
         b = sub(points[(i + step) % n]!, p);
       const length = Math.hypot(...a) * Math.hypot(...b);
       if (length === 0) continue;
+      const cross = a[0] * b[1] - a[1] * b[0];
+      if ((kind === 'convex' && cross < 0) || (kind === 'concave' && cross >= 0)) continue;
       worst = Math.max(worst, Math.acos(Math.max(-1, Math.min(1, dot(a, b) / length))));
     }
   }
@@ -342,7 +365,98 @@ const bareWristCloth = (r: Raster, centre: Pt, reach: number) => {
   return bare;
 };
 
+const silhouetteIoU = (before: Raster, after: Raster) => {
+  let inter = 0,
+    union = 0;
+  for (let i = 3; i < before.rgba.length; i += 4) {
+    const a = before.rgba[i]! >= 128,
+      b = after.rgba[i]! >= 128;
+    if (a || b) union++;
+    if (a && b) inter++;
+  }
+  return inter / union;
+};
+
 describe('rasterOf stroke silhouette', () => {
+  test('the measured ink width doubles with the figure, rather than staying in output pixels', () => {
+    const small = Result.getOrThrow(
+      puppetOf(
+        {
+          width: W / 2,
+          height: H / 2,
+          parts: [
+            { name: 'arm', pixels: paint(W / 2, H / 2, (x, y) => texelAt(2 * x, 2 * y, BOTH)) },
+          ],
+        },
+        {
+          bones: BONES.map((b) => ({
+            ...b,
+            pivot: [b.pivot[0] / 2, b.pivot[1] / 2] as const,
+            tip: [b.tip[0] / 2, b.tip[1] / 2] as const,
+          })),
+          skin: { arm: [...CHAIN] },
+          limbs: [{ ...DECLARED, fade: [-2, -1] }],
+        },
+      ),
+    );
+    const widths = [1, 2].map((scale) => {
+      const r = rasterOf(
+        small,
+        { numbers: {}, root: [small.root[0] * scale, small.root[1] * scale], scale },
+        [small.width * scale, small.height * scale],
+      );
+      const p = along(S, D, UPPER / 2);
+      let depth = 0;
+      for (let v = 0; v < 20 * scale; v += 0.25) {
+        const x = Math.floor((p[0] / 2) * scale + OUTER[0] * v),
+          y = Math.floor((p[1] / 2) * scale + OUTER[1] * v);
+        const i = (y * r.width + x) * 4;
+        if (r.rgba[i + 3]! >= 128 && r.rgba[i]! < 50) depth += 0.25;
+      }
+      return depth;
+    });
+    expect(widths[1]!).toBeGreaterThan(1.5 * widths[0]!);
+    expect(Math.abs(widths[1]! - 2 * widths[0]!)).toBeLessThanOrEqual(1);
+  });
+  test('the whole limb turns no more sharply than its painted outline at rest', () => {
+    const without = {
+      ...BENT_PUPPET,
+      parts: BENT_PUPPET.parts.map(({ limb: _limb, ...part }) => part),
+    };
+    const painted = rasterOf(without, { numbers: {}, root: BENT_PUPPET.root, scale: 1 });
+    const bound = {
+      convex: wristTurnBound(painted, [0, 0], BW + BH, BENT_LIMB.inkWidth, 'convex'),
+      concave: wristTurnBound(painted, [0, 0], BW + BH, BENT_LIMB.inkWidth, 'concave'),
+    };
+    const turns = [20, 23, 35, 45, 60, 90].map((elbowRight) => {
+      const r = bentAt(elbowRight, -0.85 * elbowRight);
+      return {
+        convex: wristTurnBound(r, [0, 0], BW + BH, BENT_LIMB.inkWidth, 'convex'),
+        concave: wristTurnBound(r, [0, 0], BW + BH, BENT_LIMB.inkWidth, 'concave'),
+      };
+    });
+    expect(Math.max(...turns.map((t) => t.convex))).toBeLessThanOrEqual(bound.convex);
+    expect(Math.max(...turns.map((t) => t.concave))).toBeLessThanOrEqual(bound.concave);
+  });
+
+  test('painted 19.9 degrees and stroke 20 degrees share at least 97 percent of the arm silhouette', () => {
+    const without = {
+      ...BENT_PUPPET,
+      parts: BENT_PUPPET.parts.map(({ limb: _limb, ...part }) => part),
+    };
+    const before = rasterOf(without, {
+      numbers: { elbowRight: 19.9, wristRight: -0.85 * 19.9 },
+      root: BENT_PUPPET.root,
+      scale: 1,
+    });
+    const after = bentAt(20, -17);
+    expect(silhouetteIoU(before, after)).toBeGreaterThanOrEqual(0.97);
+  });
+  test('the single-silhouette transition also ends without a pop at 25 degrees', () => {
+    expect(
+      silhouetteIoU(bentAt(24.9, -0.85 * 24.9), bentAt(25, -0.85 * 25)),
+    ).toBeGreaterThanOrEqual(0.97);
+  });
   test('the turned wrist has no bare cloth edge and no corner sharper than a quarter turn over one ink width', () => {
     for (const elbowRight of [45, 60, 90]) {
       const angle = (elbowRight * Math.PI) / 180,
@@ -353,41 +467,25 @@ describe('rasterOf stroke silhouette', () => {
       ];
       const reach =
         Math.max(BENT_LIMB.stations.cuff.inner, BENT_LIMB.stations.cuff.outer) + BENT_LIMB.inkWidth;
-      const r = rasterOf(BENT_PUPPET, {
-        numbers: { elbowRight, wristRight: -0.85 * elbowRight },
-        root: BENT_PUPPET.root,
-        scale: 1,
-      });
+      const r = bentAt(elbowRight, -0.85 * elbowRight);
       expect(bareWristCloth(r, centre, reach)).toBe(0);
       expect(wristTurnBound(r, centre, reach, BENT_LIMB.inkWidth)).toBeLessThanOrEqual(Math.PI / 2);
     }
   });
   test('17, 20 and 23 degrees have one connected silhouette and no translucent interior ink', () => {
     for (const elbowRight of [17, 20, 23]) {
-      const r = rasterOf(BENT_PUPPET, {
-        numbers: { elbowRight, wristRight: -0.85 * elbowRight },
-        root: BENT_PUPPET.root,
-        scale: 1,
-      });
+      const r = bentAt(elbowRight, -0.85 * elbowRight);
       expect(ghostInk(r, BENT_LIMB.inkWidth)).toBe(0);
       expect(components(r)).toBe(1);
     }
   });
   test('at 45 degrees the sleeve has no ink strictly inside its single outline', () => {
-    const r = rasterOf(BENT_PUPPET, {
-      numbers: { elbowRight: 45 },
-      root: BENT_PUPPET.root,
-      scale: 1,
-    });
+    const r = bentAt(45);
     expect(strayInk(r, 45, BENT_LIMB.inkWidth)).toBe(0);
   });
 
   test('at 90 degrees ink stays on the union boundary or the measured outer fold', () => {
-    const r = rasterOf(BENT_PUPPET, {
-      numbers: { elbowRight: 90 },
-      root: BENT_PUPPET.root,
-      scale: 1,
-    });
+    const r = bentAt(90);
     expect(strayInk(r, 90, BENT_LIMB.inkWidth)).toBe(0);
   });
 
