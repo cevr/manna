@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
-import { Clock, Effect, Option, Schema } from 'effect';
+import { Clock, Config, Effect, Option, Schema } from 'effect';
 import { Diagnostic, Plugin, Rule, RuleContext, Visitor } from 'oxlint-plugin-effect/rule-bindings';
 
 import {
   Findings,
+  REVIEW_ENV,
   findingsFileOf,
   makersHash,
   ruleSignature,
@@ -204,10 +205,37 @@ const keptOf = (
     },
   });
 
+/** Whether this oxlint run is a review's (`REVIEW_ENV`), read once a process. */
+const reviewing = Effect.runSync(
+  Config.Boolean(REVIEW_ENV).pipe(
+    Config.withDefault(false),
+    Effect.orElseSucceed(() => false),
+  ),
+);
+
+/**
+ * The findings of rule `id` (its options `options`) in `file`, whose text is
+ * `text`: the checkout's last run's when it read the file as it stands, else
+ * the store's; in a review, which writes no findings file, the store's
+ * always, so a findings file left from an earlier run hides none.
+ */
+const reportedOf = (
+  cwd: string,
+  settings: Settings,
+  id: string,
+  options: RuleOptions,
+  file: string,
+  text: string,
+): ReadonlyArray<Reported> => {
+  if (reviewing) return keptOf(cwd, settings, options, file, text);
+  return Option.getOrElse(lastRunOf(cwd, settings, id, options, file, text), () =>
+    keptOf(cwd, settings, options, file, text),
+  );
+};
+
 /**
  * The rule `judged/<id>`: each item of a file it reads whose kept answer is
- * at or over its threshold, from the checkout's last run when it read the
- * file as it stands, else from the file's items and the store.
+ * at or over its threshold (`reportedOf`).
  */
 const judgedRule = (id: string) =>
   Rule.define({
@@ -226,14 +254,9 @@ const judgedRule = (id: string) =>
       if (Option.isNone(settings) || !selects(options.selector, file))
         return Visitor.on('Program', () => Effect.void);
       const { judged } = settings.value;
-      return Visitor.on('Program', () => {
-        const text = context.sourceCode.text;
-        const reported = Option.getOrElse(
-          lastRunOf(context.cwd, judged, id, options, file, text),
-          () => keptOf(context.cwd, judged, options, file, text),
-        );
-        return Effect.forEach(
-          reported,
+      return Visitor.on('Program', () =>
+        Effect.forEach(
+          reportedOf(context.cwd, judged, id, options, file, context.sourceCode.text),
           ({ start, p }) =>
             context.report(
               Diagnostic.make({
@@ -242,8 +265,8 @@ const judgedRule = (id: string) =>
               }),
             ),
           { discard: true },
-        );
-      });
+        ),
+      );
     },
   });
 

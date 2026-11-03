@@ -22,7 +22,7 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { lintJudged, lintReview } from './cli.js';
 import { JudgedLint, judgedLintLayer } from './config.js';
 import { judgedModel } from './model.js';
-import { Findings, makersHash, textHash } from './findings.js';
+import { Findings, REVIEW_ENV, makersHash, textHash } from './findings.js';
 import { Store, dayOf } from './store.js';
 import { env, missing, missingBeside, typesafeHttp } from './testing.js';
 import { TEST_GIT } from '../testing.js';
@@ -616,14 +616,13 @@ const reviewed = Effect.gen(function* () {
   return dir;
 });
 
-/** The store folder of `dir`'s repo: each file's name, text and modified time, and whether the checkout's judged folder exists. */
-const storeState = (dir: string) =>
+/** Each file of `folder`: its name, text and modified time. */
+const filesOf = (folder: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const folder = path.join(dir, '.git', 'judged');
     const names = (yield* fs.readDirectory(folder)).toSorted();
-    const files = yield* Effect.forEach(names, (name) =>
+    return yield* Effect.forEach(names, (name) =>
       Effect.gen(function* () {
         const file = path.join(folder, name);
         const info = yield* fs.stat(file);
@@ -634,8 +633,92 @@ const storeState = (dir: string) =>
         };
       }),
     );
-    return { files, checkout: yield* fs.exists(path.join(dir, 'tmp', 'judged')) };
   });
+
+/** The store folder of `dir`'s repo: each file's name, text and modified time, and whether the checkout's judged folder exists. */
+const storeState = (dir: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    return {
+      files: yield* filesOf(path.join(dir, '.git', 'judged')),
+      checkout: yield* fs.exists(path.join(dir, 'tmp', 'judged')),
+    };
+  });
+
+/** The script file the stale-snapshot repos below hold. */
+const SCRIPT = 'apps/animations/src/films/x/script.ts';
+
+/**
+ * A repo whose `SCRIPT` is `script`, which the lint judged clean, keeping
+ * that answer and writing its findings file (no scriptSpeech finding); then
+ * its store's answer turned to a breach at 0.97, as a store another checkout
+ * replaced would hold, so the findings file still matches the file but no
+ * longer the store.
+ */
+const staleSnapshot = (script: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const dir = yield* repoOf('scriptSpeech', SCRIPT, script, script);
+    const lint = yield* inProcess(dir, [], answering('clean', 'breach').layer);
+    expect(lint.out).toEqual(['[judged] rule=scriptSpeech items=1 cached=0 asked=1 findings=0']);
+    const store = path.join(dir, '.git', 'judged', 'store.json');
+    const kept = yield* Effect.flatMap(fs.readFileString(store), Schema.decodeEffect(Store));
+    const answers = Object.fromEntries(
+      Object.entries(kept.answers).map(([key, answer]) => [
+        key,
+        { ...answer, label: 'breach', probabilities: { breach: 0.97, clean: 0.03 } },
+      ]),
+    );
+    expect(Object.keys(answers)).toHaveLength(1);
+    yield* fs.writeFileString(store, yield* Schema.encodeEffect(Store)({ answers }));
+    const snapshot = yield* Effect.flatMap(
+      fs.readFileString(path.join(dir, 'tmp/judged/findings.json')),
+      Schema.decodeEffect(Findings),
+    );
+    expect(snapshot.files[SCRIPT]?.rules).toEqual({ scriptSpeech: [] });
+    return dir;
+  });
+
+/** The store folder's files and the checkout's judged folder's files of `dir`'s repo. */
+const judgedState = (dir: string) =>
+  Effect.gen(function* () {
+    const path = yield* Path.Path;
+    return {
+      store: yield* filesOf(path.join(dir, '.git', 'judged')),
+      checkout: yield* filesOf(path.join(dir, 'tmp', 'judged')),
+    };
+  });
+
+/**
+ * oxlint run in `dir` over its config as the root lint scripts run it, with
+ * `extra` in its environment beside PATH and HOME: its exit code and output.
+ */
+const oxlintIn = (dir: string, extra: Record<string, string>) =>
+  Effect.gen(function* () {
+    const env = { PATH: yield* Config.String('PATH'), HOME: yield* Config.String('HOME') };
+    return yield* run(
+      dir,
+      OXLINT,
+      [
+        '--format',
+        'unix',
+        '--report-unused-disable-directives-severity=error',
+        '-c',
+        '.oxlintrc.json',
+        'apps',
+      ],
+      { ...env, ...extra },
+    );
+  });
+
+/** The environment `lint:review` gives its oxlint: the plugin in review mode. */
+const REVIEWING = { [REVIEW_ENV]: '1' };
+
+/** A script whose one beat names a source. */
+const BREACH_SCRIPT =
+  "export const script = {\n  beats: [{ id: 'a', say: 'Ellen White said, rest.' }],\n};\n";
 
 describe('the judged review (lint:review) reads the store alone', () => {
   it.live('with a key in the environment, calls no model client and runs no keychain', () =>
@@ -760,6 +843,52 @@ describe('the judged review (lint:review) reads the store alone', () => {
           expect(oxlint.code).not.toBe(0);
           expect(oxlint.stdout).toContain(`${file}:2:`);
           expect(oxlint.stdout).toContain('[Error/judged(scriptSpeech)]');
+        }),
+      ),
+    SPAWNS_MS,
+  );
+
+  it.live(
+    "fails on the store's kept error though the checkout's findings file, matching the file, holds none, and changes no file",
+    () =>
+      withFs(
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem;
+          const root = yield* Schema.decodeEffect(Scripts)(yield* fs.readFileString(ROOT_PACKAGE));
+          expect(root.scripts['lint:review']).toContain(
+            `&& ${REVIEW_ENV}=1 bun --no-env-file packages/scripts/src/lint.ts`,
+          );
+          const dir = yield* staleSnapshot(BREACH_SCRIPT);
+          const before = yield* judgedState(dir);
+          const review = yield* inReview(dir);
+          expect(Exit.isSuccess(review.exit)).toBe(true);
+          expect(review.out).toEqual([
+            '[judged] rule=scriptSpeech items=1 judged=1 unjudged=0 findings=1',
+          ]);
+          const lint = yield* oxlintIn(dir, {});
+          expect(lint.code).toBe(0);
+          const reviewed = yield* oxlintIn(dir, REVIEWING);
+          expect(reviewed.code).not.toBe(0);
+          expect(reviewed.stdout).toContain(`${SCRIPT}:2:`);
+          expect(reviewed.stdout).toContain('[Error/judged(scriptSpeech)]');
+          expect(yield* judgedState(dir)).toEqual(before);
+        }),
+      ),
+    SPAWNS_MS,
+  );
+
+  it.live(
+    "keeps oxlint's suppressions: a disable comment above the store's kept error passes, and is used",
+    () =>
+      withFs(
+        Effect.gen(function* () {
+          const dir = yield* staleSnapshot(
+            "export const script = {\n  // oxlint-disable-next-line judged/scriptSpeech\n  beats: [{ id: 'a', say: 'Ellen White said, rest.' }],\n};\n",
+          );
+          const reviewed = yield* oxlintIn(dir, REVIEWING);
+          expect(reviewed.stdout).not.toContain('judged(scriptSpeech)');
+          expect(reviewed.stdout).not.toContain('Unused');
+          expect(reviewed.code).toBe(0);
         }),
       ),
     SPAWNS_MS,

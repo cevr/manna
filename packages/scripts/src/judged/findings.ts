@@ -79,6 +79,13 @@ export const makersHash = () => {
   return makers;
 };
 
+/**
+ * The environment variable that, at `1`, runs the plugin as
+ * `bun run lint:review` needs it: reporting from the store as it stands,
+ * never from a findings file, which a review does not write.
+ */
+export const REVIEW_ENV = 'JUDGED_REVIEW';
+
 /** The findings file of the checkout at `root`: `checkout` (`settings.judged.checkout`) from its root. */
 export const findingsFileOf = (root: string, checkout: string) =>
   join(root, checkout, 'findings.json');
