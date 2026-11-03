@@ -70,10 +70,9 @@ export const memberOf = Effect.fn('film.cast.member')(function* (film: FilmName,
   if (Option.isNone(manifest)) return Option.none();
   const { file, coverage } = manifest.value;
   const facts = yield* coverageFacts(memberDir, coverage, {});
-  const libraryPuppets = yield* libraryPuppetsOf(film);
   return Option.some({
     file,
-    stages: { film, member, memberDir, libraryPuppets, coverage, facts } satisfies MemberStages,
+    stages: { film, member, memberDir, coverage, facts } satisfies MemberStages,
   });
 });
 

@@ -45,14 +45,14 @@ type SourcedStage = keyof typeof STAGE_ENTRIES;
 /**
  * The files (from this folder) whose variable imports each kind's code meets,
  * and what the stage loads through them. Each stage adds what it loads to its
- * inputs: parts its member's `cutout/cut.ts`, cut his `cutout/*.ts` and the
- * library's puppets, fit the film's `rigs/cast.ts` and its closure
+ * inputs: parts its member's `cutout/cut.ts`, cut his `cutout/puppets.ts`,
+ * each with its closure, fit the film's `rigs/cast.ts` and its closure
  * (`filmCastSources`).
  */
 const STAGE_LOADS = {
   /** `importFilmModule`: the member's `cutout/cut.ts`. */
   parts: ['../film-repo.ts'],
-  /** `importFilmModule`: the member's `cutout/puppets.ts` (`specSources`). */
+  /** `importFilmModule`: the member's `cutout/puppets.ts` (`puppetSources`). */
   cut: ['../film-repo.ts'],
   /** `importFilmModule`: the film's `rigs/cast.ts` (`filmCastSources`). */
   fit: ['../film-repo.ts'],
@@ -96,6 +96,23 @@ export const cutTableSources = (memberDir: string) =>
     if (!(yield* fs.exists(cut))) return [fileInput(cut)];
     const files = yield* declaredClosure([yield* fs.realPath(cut)], STAGE_LOADS.parts.map(here));
     return [...new Set([cut, ...files])].map(fileInput);
+  });
+
+/**
+ * A member's `cutout/puppets.ts` and every file it runs (his cut table, the
+ * library's puppets and the modules they import, his ramps, the part PNGs it
+ * names), which the cut stage loads by its path to read his puppet specs, so a
+ * change to any of them stales his cut stages. Read from the file's real
+ * path, as Bun runs a linked one. A member with no puppets module yet has the
+ * path alone, which the cut stage reads as a missing file.
+ */
+export const puppetSources = (memberDir: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const puppets = `${memberDir}/cutout/puppets.ts`;
+    if (!(yield* fs.exists(puppets))) return [fileInput(puppets)];
+    const files = yield* declaredClosure([yield* fs.realPath(puppets)], STAGE_LOADS.cut.map(here));
+    return [...new Set([puppets, ...files])].map(fileInput);
   });
 
 /**

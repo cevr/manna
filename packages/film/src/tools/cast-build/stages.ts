@@ -82,6 +82,7 @@ import { SAMPLES, shardOf, trainsetOf } from './renders.ts';
 import {
   cutTableSources,
   cutterSources,
+  puppetSources,
   filmCastSources,
   pageSources,
   stageSources,
@@ -186,22 +187,6 @@ const RENDERS_CONFIG = Schema.encodeSync(ConfigJson)(SAMPLES);
 const TRAIN_CONFIG = Schema.encodeSync(ConfigJson)(TRAIN);
 const PuppetsModule = Schema.Struct({ PUPPETS: Schema.Record(Schema.String, Schema.Unknown) });
 
-/** The member's cutout sources a puppet spec is built from: every `cutout/*.ts` of his, and the library's `cutout/puppets.ts`. */
-const specSources = (memberDir: string, libraryPuppets: string) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    const cutout = path.join(memberDir, 'cutout');
-    const names = yield* fs.readDirectory(cutout).pipe(Effect.orElseSucceed(() => []));
-    return [
-      ...names
-        .filter((n) => n.endsWith('.ts') && !n.endsWith('.test.ts'))
-        .toSorted()
-        .map((n) => path.join(cutout, n)),
-      libraryPuppets,
-    ];
-  });
-
 /**
  * The files the member's fitted poses are made from: every file his
  * `cutout/poses.ts` imports other than a module (the fitted pose JSON, a held
@@ -268,8 +253,6 @@ export interface MemberStages {
   readonly film: FilmName;
   readonly member: string;
   readonly memberDir: string;
-  /** The library's `cutout/puppets.ts`, which every member's puppets are built through. */
-  readonly libraryPuppets: string;
   readonly coverage: Coverage;
   readonly facts: Readonly<Record<string, EntryFacts>>;
 }
@@ -303,7 +286,8 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
   built: BuildSources,
 ) {
   const path = yield* Path.Path;
-  const sources = yield* specSources(m.memberDir, m.libraryPuppets);
+  // the cut stage loads his puppets module by its path: it is keyed by every file that module runs
+  const puppets = yield* puppetSources(m.memberDir);
   const src = built.stage;
   /** An entry named in a stage id: `<entry>@<member>`, so `cut:<entry>` leads it and two members never share one. */
   const at = (id: string) => `${id}@${m.member}`;
@@ -381,11 +365,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
     stages.push({
       id: `cut:${at(entry.id)}`,
       view: entry.id,
-      inputs: [
-        stageInput(`parts:${at(entry.id)}`),
-        ...sources.map((s): Input => fileInput(s)),
-        ...src.cut,
-      ],
+      inputs: [stageInput(`parts:${at(entry.id)}`), ...puppets, ...src.cut],
       version: VERSION.cut,
       run: (ctx) =>
         Effect.gen(function* () {

@@ -93,7 +93,6 @@ const stagesOf = (dir: string, facts: Record<string, EntryFacts> = {}) =>
         film: 'in-its-order' as never,
         member: 'fake',
         memberDir: dir,
-        libraryPuppets: `${dir}/library-puppets.ts`,
         coverage: COVERAGE,
         facts,
       },
@@ -210,11 +209,16 @@ const PARTS_MS = 20_000;
 /** A time no build writes a part at: 2000-01-01, in seconds as `utimes` reads a number. */
 const LONG_AGO = 946_684_800;
 
+const CUT = 'cut:turnaround-front@lead-feast';
+
+/** The stages a case builds past the drawing, each named in its answer by its kind. */
+const BUILT = { parts: [PARTS], cut: [PARTS, CUT] } as const;
+
 /**
  * `body` over the lead in a scratch films folder: `run` builds his front's
- * drawing and parts under a spend setting and answers the parts stage's
- * state and the okra calls the build counted; `spawned` holds every process
- * asked for.
+ * drawing and parts (and his cut, `upTo` 'cut') under a spend setting and
+ * answers each built stage's state by its kind and the okra calls the build
+ * counted; `spawned` holds every process asked for.
  */
 const partsOver = <E>(
   body: (over: {
@@ -222,9 +226,10 @@ const partsOver = <E>(
     readonly run: (
       spend: ReadonlySet<'okra'>,
       touch?: ReadonlyArray<string>,
-    ) => Effect.Effect<{ parts?: string; okra: number }>;
+    ) => Effect.Effect<Readonly<Record<string, string | number>>>;
     readonly spawned: ReadonlyArray<ReadonlyArray<string>>;
   }) => Effect.Effect<void, E, FileSystem.FileSystem>,
+  upTo: keyof typeof BUILT = 'parts',
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -242,12 +247,13 @@ const partsOver = <E>(
             film: 'in-its-order' as never,
             member: 'lead-feast',
             memberDir: at.member,
-            libraryPuppets: `${at.member}/library-puppets.ts`,
             coverage: { member: 'lead-feast', entries: [FRONT] },
             facts: { [FRONT.id]: complete },
           },
           yield* buildSources('in-its-order' as never, RENDER_PAGE),
-        )).filter((s) => [`drawing:${FRONT.id}@lead-feast`, PARTS].includes(s.id));
+        )).filter((s) =>
+          [`drawing:${FRONT.id}@lead-feast`, ...BUILT[upTo]].some((id) => id === s.id),
+        );
         const report = yield* buildGraph(stages, {
           // the member lies in a scratch folder and the stage sources in the repo
           root: '/',
@@ -257,7 +263,12 @@ const partsOver = <E>(
           spend,
         });
         return {
-          parts: report.stages.find((s) => s.id === PARTS)?.state,
+          ...Object.fromEntries(
+            BUILT[upTo].map((id) => [
+              id.split(':')[0],
+              report.stages.find((s) => s.id === id)?.state ?? 'not built',
+            ]),
+          ),
           okra: report.okraCalls,
         };
       }).pipe(Effect.provide(services), Effect.provide(context), Effect.orDie);
@@ -361,7 +372,6 @@ describe('memberStages', () => {
                 film: 'in-its-order' as never,
                 member: 'fake',
                 memberDir: dir,
-                libraryPuppets: `${dir}/library-puppets.ts`,
                 coverage: { member: 'fake', entries: [entry], cutters: ['cutout/cutter.ts'] },
                 facts: { [entry.id]: complete },
               },
@@ -385,6 +395,39 @@ describe('memberStages', () => {
         expect(spawned).toEqual([['bun', cutter]]);
         expect(yield* fs.readFileString(`${dir}/cutout/sheets/front/head.png`)).toBe('kept');
       }).pipe(Effect.scoped, Effect.provide(partsLayer)),
+  );
+
+  it.effect(
+    'the cut stage of a member with ramps reads them, and the library modules his puppets import',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const member = yield* fs.realPath(`${LEAD_FEAST}/../filler-bases`);
+        const library = yield* fs.realPath(`${LEAD_FEAST}/../../cutout`);
+        const stages = yield* memberStages(
+          {
+            film: 'in-its-order' as never,
+            member: 'filler-bases',
+            memberDir: member,
+            coverage: { member: 'filler-bases', entries: [FRONT] },
+            facts: { [FRONT.id]: complete },
+          },
+          yield* buildSources('in-its-order' as never, RENDER_PAGE),
+        );
+        expect(filesOf(stages, `cut:${FRONT.id}@filler-bases`)).toEqual(
+          expect.arrayContaining([
+            `${member}/cutout/sheets/ramps.ts`,
+            `${library}/puppets.ts`,
+            `${library}/frames.ts`,
+          ]),
+        );
+      }).pipe(
+        Effect.provide(
+          FilmFolder.layer(`${LEAD_FEAST}/../../../films`).pipe(
+            Layer.provideMerge(BunServices.layer),
+          ),
+        ),
+      ),
   );
 
   describe('the parts stage, on the lead with okra answering from his kept answer', () => {
@@ -430,6 +473,33 @@ describe('memberStages', () => {
             });
             expect(spawned).toEqual([]);
           }),
+        ),
+      // oxlint-disable-next-line film/tests-keep-their-strength -- the parts stage lays a real part sheet in this process (image decode and composite): 5.6 s at a load of 43, past bun's 5 s; a slow test may wait.
+      PARTS_MS,
+    );
+
+    it.effect(
+      'a change to a library module his puppets module imports runs his cut again, his parts cached; a module neither imports leaves both cached',
+      () =>
+        partsOver(
+          ({ run, spawned }) =>
+            Effect.gen(function* () {
+              const library = `${LEAD_FEAST}/../../cutout`;
+              expect(yield* run(new Set())).toEqual({ parts: 'ran', cut: 'ran', okra: 0 });
+              expect(yield* run(new Set())).toEqual({ parts: 'cached', cut: 'cached', okra: 0 });
+              expect(yield* run(new Set(), [`${library}/bust.ts`])).toEqual({
+                parts: 'cached',
+                cut: 'cached',
+                okra: 0,
+              });
+              expect(yield* run(new Set(), [`${library}/puppets.ts`])).toEqual({
+                parts: 'cached',
+                cut: 'ran',
+                okra: 0,
+              });
+              expect(spawned).toEqual([]);
+            }),
+          'cut',
         ),
       // oxlint-disable-next-line film/tests-keep-their-strength -- the parts stage lays a real part sheet in this process (image decode and composite): 5.6 s at a load of 43, past bun's 5 s; a slow test may wait.
       PARTS_MS,
@@ -482,7 +552,6 @@ describe('memberStages', () => {
             film: 'in-its-order' as never,
             member: 'fake',
             memberDir: dir,
-            libraryPuppets: `${dir}/library-puppets.ts`,
             coverage: {
               ...COVERAGE,
               clips: [
