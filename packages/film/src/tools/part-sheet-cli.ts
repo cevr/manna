@@ -312,7 +312,7 @@ const inputOf = (
 };
 
 /** One run of a view's part sheet: what it is called, the view cut, its hidden entry, its folder, and whether it calls okra, lays again or checks. */
-interface PartsJob {
+export interface PartsJob {
   readonly label: string;
   readonly command: string;
   readonly kind: string;
@@ -660,67 +660,12 @@ export const parts = Command.make(
   Effect.fn('film.concept.parts')(function* (input) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const { kind, name } = yield* Effect.fromResult(viewOf(input.view));
-    const refuse = (reason: string) => PartsUnmade.make({ view: input.view, reason });
     const film = yield* filmNamed(input.film);
     const folder = yield* castFolder(film, input.member);
-    const memberDir = path.dirname(folder);
-    const table = yield* cutTableOf(path.join(memberDir, 'cutout', 'cut.ts'), name, refuse);
-    // a framed view is its kept sheet cut at the kept box padded; else the kept view
-    const frame = Option.map(table.frame, (f) => {
-      const box = [
-        f.kept[0] - f.pad[0],
-        f.kept[1] - f.pad[1],
-        f.kept[2] + f.pad[2],
-        f.kept[3] + f.pad[3],
-      ] as const;
-      return {
-        sheet: f.sheet,
-        box,
-        at: [f.pad[0], f.pad[1]] as const,
-        size: [f.kept[2] - f.kept[0], f.kept[3] - f.kept[1]] as const,
-      };
-    });
-    const view = yield* Option.match(frame, {
-      onNone: () => pngAt(path.join(folder, 'views', `${name}.png`)),
-      onSome: (f) =>
-        pngAt(
-          path.join(
-            folder,
-            Option.match(Schema.decodeUnknownOption(SheetKind)(f.sheet), {
-              onNone: () => `kept/${f.sheet}.png`,
-              onSome: (k) => keptFile(k, name),
-            }),
-          ),
-        ).pipe(Effect.map((sheet) => cropRaster(sheet, f.box))),
-    }).pipe(Effect.mapError(refuse));
-    // a named gap the sheet or the paper read moved from would hold the ground it names open
-    const paper = table.paperOf(name, view);
-    const stale = paper.stale.map(
-      (g) =>
-        `the gap at [${g.at.join(',')}] names the box [${g.box.join(',')}] but opens ${Option.match(
-          Arr.head(g.opened),
-          {
-            onNone: () => 'no piece of enclosed paper',
-            onSome: () => g.opened.map((b) => `[${b.join(',')}]`).join(' and '),
-          },
-        )}`,
-    );
-    if (stale.length > 0)
-      return yield* refuse(
-        `${input.member}.${input.view}: ${stale.join('; ')}; name its box again in the view's gaps, or drop it`,
-      );
-    const started = yield* Clock.currentTimeMillis;
-    const sheet = yield* Effect.fromResult(
-      Result.mapError(cutParts(view, table.cut, table.optionsFor(name, view)), (e) =>
-        refuse(e.message),
-      ),
-    );
-    const cutMs = (yield* Clock.currentTimeMillis) - started;
-    const label = `${input.member}.${input.view}`;
-    const framed = Option.map(frame, (f) => ({ at: f.at, size: f.size, box: f.box }));
+    const cut = yield* viewCutOf(folder, input.member, input.view);
+    const { name, table, view, sheet, paper, label } = cut;
     if (input.dryRun) {
-      const asked = askedOf(view, sheet, framed);
+      const asked = askedOf(view, sheet, cut.frame);
       const made = inputOf(asked.view, asked.sheet, table.hidden.moving, PORTRAIT);
       const out = path.join(
         (yield* FilmFolder).paths(film).out,
@@ -740,7 +685,7 @@ export const parts = Command.make(
       ])
         yield* Console.log(line);
       return yield* Console.log(
-        `parts ${label} dry-run parts=${sheet.parts.length} moving=${table.hidden.moving.join(',')} hidden=${made.hidden.reduce((a, b) => a + b, 0)}px cut=${cutMs}ms mask=${mask} okra=0`,
+        `parts ${label} dry-run parts=${sheet.parts.length} moving=${table.hidden.moving.join(',')} hidden=${made.hidden.reduce((a, b) => a + b, 0)}px cut=${cut.cutMs}ms mask=${mask} okra=0`,
       );
     }
     const modes = [
@@ -748,20 +693,7 @@ export const parts = Command.make(
       ['reuse', input.reuse && !input.check],
       ['check', input.check],
     ] as const;
-    yield* runParts({
-      label,
-      command: `film concept parts ${input.film} ${input.member} --view ${input.view}`,
-      kind,
-      name,
-      view,
-      sheet,
-      hidden: table.hidden,
-      dir: path.join(memberDir, 'cutout', 'sheets', name),
-      mode: modes.find(([, on]) => on)?.[0] ?? 'check',
-      portrait: PORTRAIT,
-      frame: framed,
-      clean: table.clean,
-    });
+    yield* runParts(jobOf(cut, input.film, modes.find(([, on]) => on)?.[0] ?? 'check'));
   }),
 ).pipe(
   Command.withDescription(
@@ -769,3 +701,106 @@ export const parts = Command.make(
   ),
   Command.provide(ImageRoute.layer),
 );
+
+/**
+ * A kept view of the member whose sheet folder is `folder`, cut by his cut
+ * table as `concept parts` cuts it: `asked` is `<kind>-<view>`; a framed view
+ * is its kept sheet cut at the kept box padded, else the kept view; a named
+ * gap the sheet or the paper read moved from refuses the view.
+ */
+export const viewCutOf = Effect.fn('film.concept.parts.viewCut')(function* (
+  folder: string,
+  member: string,
+  asked: string,
+) {
+  const path = yield* Path.Path;
+  const { kind, name } = yield* Effect.fromResult(viewOf(asked));
+  const refuse = (reason: string) => PartsUnmade.make({ view: asked, reason });
+  const memberDir = path.dirname(folder);
+  const table = yield* cutTableOf(path.join(memberDir, 'cutout', 'cut.ts'), name, refuse);
+  // a framed view is its kept sheet cut at the kept box padded; else the kept view
+  const frame = Option.map(table.frame, (f) => {
+    const box = [
+      f.kept[0] - f.pad[0],
+      f.kept[1] - f.pad[1],
+      f.kept[2] + f.pad[2],
+      f.kept[3] + f.pad[3],
+    ] as const;
+    return {
+      sheet: f.sheet,
+      box,
+      at: [f.pad[0], f.pad[1]] as const,
+      size: [f.kept[2] - f.kept[0], f.kept[3] - f.kept[1]] as const,
+    };
+  });
+  const view = yield* Option.match(frame, {
+    onNone: () => pngAt(path.join(folder, 'views', `${name}.png`)),
+    onSome: (f) =>
+      pngAt(
+        path.join(
+          folder,
+          Option.match(Schema.decodeUnknownOption(SheetKind)(f.sheet), {
+            onNone: () => `kept/${f.sheet}.png`,
+            onSome: (k) => keptFile(k, name),
+          }),
+        ),
+      ).pipe(Effect.map((sheet) => cropRaster(sheet, f.box))),
+  }).pipe(Effect.mapError(refuse));
+  // a named gap the sheet or the paper read moved from would hold the ground it names open
+  const paper = table.paperOf(name, view);
+  const stale = paper.stale.map(
+    (g) =>
+      `the gap at [${g.at.join(',')}] names the box [${g.box.join(',')}] but opens ${Option.match(
+        Arr.head(g.opened),
+        {
+          onNone: () => 'no piece of enclosed paper',
+          onSome: () => g.opened.map((b) => `[${b.join(',')}]`).join(' and '),
+        },
+      )}`,
+  );
+  if (stale.length > 0)
+    return yield* refuse(
+      `${member}.${asked}: ${stale.join('; ')}; name its box again in the view's gaps, or drop it`,
+    );
+  const started = yield* Clock.currentTimeMillis;
+  const sheet = yield* Effect.fromResult(
+    Result.mapError(cutParts(view, table.cut, table.optionsFor(name, view)), (e) =>
+      refuse(e.message),
+    ),
+  );
+  const cutMs = (yield* Clock.currentTimeMillis) - started;
+  return {
+    member,
+    asked,
+    kind,
+    name,
+    table,
+    view,
+    sheet,
+    paper,
+    cutMs,
+    label: `${member}.${asked}`,
+    dir: path.join(memberDir, 'cutout', 'sheets', name),
+    frame: Option.map(frame, (f) => ({ at: f.at, size: f.size, box: f.box })),
+  };
+});
+
+/** A view's cut (`viewCutOf`) as the job `concept parts` runs on it in `mode`, its rule the cut table's. */
+export const jobOf = (
+  cut: Effect.Success<ReturnType<typeof viewCutOf>>,
+  film: string,
+  mode: PartsJob['mode'],
+): PartsJob => ({
+  label: cut.label,
+  command: `film concept parts ${film} ${cut.member} --view ${cut.asked}`,
+  kind: cut.kind,
+  name: cut.name,
+  view: cut.view,
+  sheet: cut.sheet,
+  hidden: cut.table.hidden,
+  dir: cut.dir,
+  mode,
+  portrait: PORTRAIT,
+  frame: cut.frame,
+  clean: cut.table.clean,
+});

@@ -12,7 +12,7 @@
 import type { HiddenEntry, PartCut } from '@manna/film/tools';
 import { CUT_AWAY, shade, sides } from '../../../cutout/prompts.ts';
 import { FAR, box } from '../../../cutout/rules.ts';
-import { cuffsToArms } from '../../../cutout/clean.ts';
+import { CUFF, type CuffInk, cuffsToArms } from '../../../cutout/clean.ts';
 import { cutTable } from '../../../cutout/table.ts';
 import { FRAMES, type FramedView, keptAt } from './frames.ts';
 import { JOINTS } from './joints.ts';
@@ -187,14 +187,17 @@ const onSheet = (hand: typeof HAND_RIGHT | typeof HAND_LEFT) => {
   return { c: [hand.c[0] + dx, hand.c[1] + dy] as const, r: hand.r };
 };
 
-/** What each view's laid part sheet runs before it is written (`film concept parts`): her arms take the cuff ink her hand discs leave on her torso and robe, and the two pieces of her torso stranded off her outer cuffs, so no specks stay behind when an arm turns. */
-export const CLEAN = {
-  'poses-1': cuffsToArms({
+/** Her poses-1 rule under a reading of cuff ink: the library's `CUFF`, or one near it her sheet holds against (`reproduce.slow.test.ts`). */
+export const cleanPoses1With = (cuff: CuffInk) =>
+  cuffsToArms({
     arms: [
       { name: 'armRight', hand: onSheet(HAND_RIGHT) },
       { name: 'armLeft', hand: onSheet(HAND_LEFT) },
     ],
     body: ['torso', 'robe'],
     loose: 'torso',
-  }),
-};
+    cuff,
+  });
+
+/** What each view's laid part sheet runs before it is written (`film concept parts`): her arms take the cuff ink her hand discs leave on her torso and robe, and the two pieces of her torso stranded off her outer cuffs, so no specks stay behind when an arm turns. */
+export const CLEAN = { 'poses-1': cleanPoses1With(CUFF) };

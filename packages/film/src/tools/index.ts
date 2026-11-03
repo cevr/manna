@@ -62,7 +62,8 @@ export {
   inkTo,
   recompose,
 } from '../core/part-sheet.ts';
-export type { HiddenEntry } from './part-sheet-cli.ts';
+export { type HiddenEntry, type PartsJob, jobOf, runParts, viewCutOf } from './part-sheet-cli.ts';
+export { ImageRoute } from './image-route.ts';
 export {
   type KeyFit,
   type Limb,

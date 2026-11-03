@@ -141,16 +141,23 @@ export interface CuffsToArms {
   readonly arms: ReadonlyArray<HandArm>;
   readonly body: ReadonlyArray<string>;
   readonly loose: string;
+  /** What reads a rim pixel as cuff ink; `CUFF` when left out. */
+  readonly cuff?: CuffInk;
 }
 
-/** How far past a hand disc's edge, in pixels, its cuff's ink can lie on the body. */
-const CUFF_RIM = 2;
+/** What reads a body pixel by a hand disc as cuff ink (`cuffsToArms`). */
+export interface CuffInk {
+  /** How far past a hand disc's edge, in pixels, its cuff's ink can lie on the body. */
+  readonly rim: number;
+  /** How much darker than the body around it, in mean channel value, a rim pixel is cuff ink. */
+  readonly darker: number;
+}
+
+/** The cuff ink every member's rule reads unless it names its own. */
+export const CUFF: CuffInk = { rim: 2, darker: 10 };
 
 /** How far past a hand disc's edge the body a rim pixel is measured against begins. */
 const BODY_PAST = 1;
-
-/** How much darker than the body around it, in mean channel value, a rim pixel is cuff ink. */
-const CUFF_DARKER = 10;
 
 /** A pixel's mean channel value in `rgba`. */
 const lightOf = (rgba: Uint8Array, i: number): number =>
@@ -168,10 +175,16 @@ const handDistance = (size: Size, arm: HandArm, i: number): number => {
 };
 
 /** Whether body pixel `i`, owned by part `own`, is `arm`'s cuff ink (`cuffsToArms`). */
-const isCuffInk = (sheet: PartSheet, arm: SheetArm, own: number, i: number): boolean => {
+const isCuffInk = (
+  sheet: PartSheet,
+  ink: CuffInk,
+  arm: SheetArm,
+  own: number,
+  i: number,
+): boolean => {
   const d = handDistance(sheet, arm, i);
   const row = Math.floor(i / sheet.width);
-  if (d <= arm.hand.r || d > arm.hand.r + CUFF_RIM || row + 0.5 > arm.hand.c[1]) return false;
+  if (d <= arm.hand.r || d > arm.hand.r + ink.rim || row + 0.5 > arm.hand.c[1]) return false;
   const near = aroundOf(sheet, i);
   if (!near.some((j) => sheet.owner[j] === arm.k + 1)) return false;
   const body = near.filter(
@@ -179,12 +192,13 @@ const isCuffInk = (sheet: PartSheet, arm: SheetArm, own: number, i: number): boo
   );
   const rgba = sheet.parts[own]?.pixels.rgba ?? NO_PIXELS.rgba;
   const bodyLight = body.reduce((s, j) => s + lightOf(rgba, j), 0) / body.length;
-  return body.length > 0 && bodyLight - lightOf(rgba, i) >= CUFF_DARKER;
+  return body.length > 0 && bodyLight - lightOf(rgba, i) >= ink.darker;
 };
 
 /** Each body pixel that is an arm's cuff ink, and that arm's part index. */
 const cuffInkOf = (
   sheet: PartSheet,
+  cuffInk: CuffInk,
   arms: ReadonlyArray<SheetArm>,
   bodies: ReadonlySet<number>,
 ): ReadonlyMap<number, number> => {
@@ -192,7 +206,7 @@ const cuffInkOf = (
   for (let i = 0; i < sheet.owner.length; i++) {
     const own = (sheet.owner[i] ?? 0) - 1;
     if (!bodies.has(own)) continue;
-    for (const arm of arms) if (isCuffInk(sheet, arm, own, i)) ink.set(i, arm.k);
+    for (const arm of arms) if (isCuffInk(sheet, cuffInk, arm, own, i)) ink.set(i, arm.k);
   }
   return ink;
 };
@@ -239,8 +253,8 @@ const refilled = (
  * cuff's ink between the arm's polygon and its hand disc, and the loose
  * pieces of the `loose` part (its 8-connected regions but its largest) the
  * cut strands beside the cuffs. A body pixel is cuff ink when it lies at or
- * above its hand disc's centre, within `CUFF_RIM` pixels past the disc's
- * edge, touches the arm, and is at least `CUFF_DARKER` darker than its own
+ * above its hand disc's centre, within `cuff.rim` pixels past the disc's
+ * edge, touches the arm, and is at least `cuff.darker` darker than its own
  * part's neighbours lying past the disc's first ring. Each such pixel moves
  * with its bytes to the arm (a loose piece to the arm whose hand lies
  * nearest); its owner becomes that arm. The body part keeps a cuff pixel
@@ -248,11 +262,12 @@ const refilled = (
  * moved and the clear ones, and a loose piece cleared.
  */
 export const cuffsToArms =
-  ({ arms, body, loose }: CuffsToArms): SheetClean =>
+  ({ arms, body, loose, cuff: cuffInk }: CuffsToArms): SheetClean =>
   (sheet) => {
     const at = (name: string) => sheet.parts.findIndex((p) => p.name === name);
     const sheetArms = arms.map((arm) => ({ ...arm, k: at(arm.name) }));
-    const cuff = cuffInkOf(sheet, sheetArms, new Set(body.map(at)));
+    const ink = Option.getOrElse(Option.fromUndefinedOr(cuffInk), () => CUFF);
+    const cuff = cuffInkOf(sheet, ink, sheetArms, new Set(body.map(at)));
     const moved = new Map([...cuff, ...loosePiecesOf(sheet, sheetArms, at(loose))]);
     const owner = new Uint8Array(sheet.owner);
     const out = sheet.parts.map((p) => new Uint8Array(p.pixels.rgba));
