@@ -324,8 +324,8 @@ export const sleeveAcross = (
 ): SleeveWidths => {
   const bones = rightArmOnScreen(spec, request);
   return {
-    upper: widthAcross(ids, PART.sleeveR, bones.upper, ALONG),
-    fore: widthAcross(ids, PART.sleeveR, bones.fore, ALONG),
+    upper: widthAcross(ids, PART.sleeveR, bones.upper, ALONG, [bones.fore]),
+    fore: widthAcross(ids, PART.sleeveR, bones.fore, ALONG, [bones.upper]),
   };
 };
 

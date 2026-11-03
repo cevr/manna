@@ -21,6 +21,7 @@ import {
   wholeBox,
   widthAcross,
   worstDrift,
+  type Point,
   type Raster,
   type Rgb,
 } from './measures.ts';
@@ -213,6 +214,25 @@ describe('widthAcross', () => {
       ),
     );
     expect(width).toBeCloseTo(30, 0);
+  });
+
+  test('a sample whose run reaches another bone’s share of the part is skipped: near a bent elbow the sleeve reads its own width, not both sleeves', () => {
+    const ids = idsOf(120, 120, (x, y) => {
+      const lower = inRect(x, y, 20, 50, 99, 69);
+      const upper = inRect(x, y, 80, 10, 99, 69);
+      return Number(lower || upper) * 8;
+    });
+    const lower: readonly [Point, Point] = [
+      [20, 60],
+      [90, 60],
+    ];
+    const upper: readonly [Point, Point] = [
+      [90, 60],
+      [90, 10],
+    ];
+    expect(read(widthAcross(ids, 8, lower, [0.85, 0.9, 0.95], [upper]))).toBeCloseTo(20, 0);
+    expect(read(widthAcross(ids, 8, upper, [0.3, 0.5, 0.7], [lower]))).toBeCloseTo(20, 0);
+    expect(Option.isNone(widthAcross(ids, 8, lower, [0.9, 0.95], [upper]))).toBe(true);
   });
 
   test('a bone under 4 px on screen has no width', () => {

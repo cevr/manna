@@ -330,6 +330,20 @@ export const tears = (ids: Raster, colour: Raster, background: (id: number) => b
     .reduce((sum, c) => sum + c.filter((i) => ink[i] === 0).length, 0);
 };
 
+/** The distance from `p` to the segment `from` → `to`. */
+const toSegment = (p: Point, [from, to]: readonly [from: Point, to: Point]): number => {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  const t = Math.min(
+    1,
+    Math.max(
+      0,
+      ((p[0] - from[0]) * dx + (p[1] - from[1]) * dy) / Math.max(1e-9, dx * dx + dy * dy),
+    ),
+  );
+  return Math.hypot(p[0] - from[0] - t * dx, p[1] - from[1] - t * dy);
+};
+
 /**
  * A part's width across its bone: at each of `fractions` along the segment
  * `from` → `to` (pixel centres), the run of pixels of id `part` along the
@@ -337,14 +351,17 @@ export const tears = (ids: Raster, colour: Raster, background: (id: number) => b
  * the bone's projected axis, a tube keeps its width however far it turns
  * toward the camera. A run ends where the depth steps by more than
  * `FOLD_GAP`, so a forearm folded over its own upper arm reads its own
- * width, not both. None when the segment is under 4 px long or no sample
- * lands in the part.
+ * width, not both. A sample whose run reaches part of the part nearer one of
+ * `others` (the arm's other bones) than this one is skipped: near a bent
+ * elbow the two sleeves merge and neither width is there to read. None when
+ * the segment is under 4 px long or no sample is read.
  */
 export const widthAcross = (
   ids: Raster,
   part: number,
   segment: readonly [from: Point, to: Point],
   fractions: ReadonlyArray<number>,
+  others: ReadonlyArray<readonly [from: Point, to: Point]> = [],
 ): Option.Option<number> => {
   const [from, to] = segment;
   const dx = to[0] - from[0];
@@ -361,15 +378,24 @@ export const widthAcross = (
     if (idAt(ids, i) !== part) return Option.none();
     return Option.some(i);
   };
+  const nearerOther = (x: number, y: number): boolean => {
+    const p: Point = [Math.floor(x) + 0.5, Math.floor(y) + 0.5];
+    const own = toSegment(p, segment);
+    return others.some((o) => toSegment(p, o) < own);
+  };
   const step = 0.25;
-  /** Steps from the centre along (sx, sy) while the part goes on, with no fold between neighbours. */
-  const reach = (cx: number, cy: number, sx: number, sy: number, start: number): number => {
+  /** Steps from the centre along (sx, sy) while the part goes on, with no fold between neighbours; `shared` when it runs into another bone's share of the part. */
+  const reach = (cx: number, cy: number, sx: number, sy: number, start: number) => {
     let at = start;
     let k = 1;
     for (;;) {
-      const next = pixel(cx + sx * k * step, cy + sy * k * step);
-      if (Option.isNone(next)) return k;
-      if (Math.abs(depthAt(ids, next.value) - depthAt(ids, at)) > FOLD_GAP) return k;
+      const x = cx + sx * k * step;
+      const y = cy + sy * k * step;
+      const next = pixel(x, y);
+      if (Option.isNone(next)) return { k, shared: false };
+      if (Math.abs(depthAt(ids, next.value) - depthAt(ids, at)) > FOLD_GAP)
+        return { k, shared: false };
+      if (nearerOther(x, y)) return { k, shared: true };
       at = next.value;
       k++;
     }
@@ -380,9 +406,10 @@ export const widthAcross = (
     const cy = from[1] + dy * f;
     const centre = pixel(cx, cy);
     if (Option.isNone(centre)) continue;
-    const k = reach(cx, cy, nx, ny, centre.value);
-    const j = reach(cx, cy, -nx, -ny, centre.value);
-    runs.push((k + j - 1) * step);
+    const a = reach(cx, cy, nx, ny, centre.value);
+    const b = reach(cx, cy, -nx, -ny, centre.value);
+    if (a.shared || b.shared) continue;
+    runs.push((a.k + b.k - 1) * step);
   }
   return median(runs);
 };
