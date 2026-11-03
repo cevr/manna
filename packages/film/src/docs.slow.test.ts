@@ -258,6 +258,8 @@ interface Found {
   readonly ours: boolean;
   readonly file: Option.Option<string>;
   readonly text: Option.Option<string>;
+  /** The ignored top folder (`tmp`) it lies under when no `.gitignore` and no script names it: a mistyped output. */
+  readonly stray: Option.Option<string>;
 }
 
 /** A file's code without its comments, which may still name what the code dropped. */
@@ -434,27 +436,42 @@ const anchorDrift = (
 ) =>
   found
     .filter(({ anchor, ours }) => ours && !anchor.receipt)
-    .flatMap(({ anchor, file, text }) => [
+    .flatMap(({ anchor, file, text, stray }) => [
       ...[`${anchor.written}: name a symbol, not a line`].filter(() => anchor.line),
-      ...Option.match(file, {
-        onNone: () => [`path ${anchor.path} does not exist`],
-        onSome: (at) =>
-          anchor.symbols
-            .filter((symbol) => !Option.exists(text, (t) => declaresIn(sourceAt(at, t), symbol)))
-            .map((symbol) => `${at} has no ${symbol}`),
+      ...Option.match(stray, {
+        onSome: (top) => [
+          `path ${anchor.path} lies under the ignored ${top}/, and no .gitignore or script names it`,
+        ],
+        onNone: () =>
+          Option.match(file, {
+            onNone: () => [`path ${anchor.path} does not exist`],
+            onSome: (at) =>
+              anchor.symbols
+                .filter(
+                  (symbol) => !Option.exists(text, (t) => declaresIn(sourceAt(at, t), symbol)),
+                )
+                .map((symbol) => `${at} has no ${symbol}`),
+          }),
       }),
     ]);
 
 /**
  * Each anchor looked up under the doc's bases: the first base that has its
- * first directory (and it is not ignored output) reads it. Under none, it is another tree's path, unless the
+ * first directory reads it. Under none, it is another tree's path, unless the
  * doc is whole and it is neither a package's (`@manna/url-state`, an
- * installed `effect/Schema`), ignored output (`tmp/logs`) nor a rule
- * (`film/no-read-once`, by `rulesIn` over every line, as a whole doc's
- * `ruleDrift` reads it). A path that is, from one
- * of its bases, one a `.gitignore` of the root or of that base names whole
- * (`ignoredPaths`) is output: never the tree's. A path under that one is the
- * tree's still, so a typo inside ignored output (`ios/Podz`) fails.
+ * installed `effect/Schema`) nor a rule (`film/no-read-once`, by `rulesIn`
+ * over every line, as a whole doc's `ruleDrift` reads it). A path that is,
+ * from one of its bases, one a `.gitignore` of the root or of that base
+ * names whole (`ignoredPaths`) is output: never the tree's. A path under
+ * that one is the tree's still, so a typo inside ignored output (`ios/Podz`)
+ * fails.
+ *
+ * A path whose first directory the root's `.gitignore` ignores (`tmp/logs`)
+ * is read in every doc, whole or not: it is output only when a `.gitignore`
+ * names it whole, or a script or the lint config names it or a folder it
+ * lies in (`tmp/logs` in `agent-tail run --log-dir tmp/logs`, `tmp/judged`).
+ * Named by none, it is a mistyped output (`tmp/<typo>`). An installed
+ * package's path (`node_modules/effect`) is looked up like the tree's.
  */
 const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, doc: Doc) {
   const fs = yield* FileSystem.FileSystem;
@@ -474,12 +491,12 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
   );
   const isOutput = (anchor: Anchor) =>
     doc.bases.some((base) => outputs.has(path.join(base, anchor.path).replace(/\/$/, '')));
+  const namers = yield* outputNamers(root);
   const rules = new Set(rulesIn(linesOf(markdownOf(doc.text))).map((rule) => `film/${rule}`));
   const elsewhere = (anchor: Anchor, first: string) =>
     Effect.map(
       isDirectory(path.join('node_modules', first)),
-      (installed) =>
-        installed || PACKAGE_NAME.test(anchor.path) || ignored.has(first) || rules.has(anchor.path),
+      (installed) => installed || PACKAGE_NAME.test(anchor.path) || rules.has(anchor.path),
     );
   return yield* Effect.forEach(anchorsIn(doc), (anchor) =>
     Effect.gen(function* () {
@@ -491,12 +508,28 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
           ours: true,
           file: Option.liftPredicate(at, () => there),
           text: Option.none(),
+          stray: Option.none(),
         } satisfies Found;
       }
-      const first = anchor.path.split('/')[0] ?? '';
-      const bases = yield* Effect.filter(doc.bases, (base) =>
-        Effect.map(isDirectory(path.join(base, first)), (there) => there && !ignored.has(first)),
-      );
+      const parts = anchor.path.split('/');
+      const first = parts[0] ?? '';
+      if (ignored.has(first) && first !== 'node_modules') {
+        const named =
+          parts.length === 1 ||
+          isOutput(anchor) ||
+          parts
+            .slice(1)
+            .map((_, i) => parts.slice(0, i + 2).join('/'))
+            .some((output) => namers.some((text) => namesWhole(text, output)));
+        return {
+          anchor,
+          ours: !named,
+          file: Option.none(),
+          text: Option.none(),
+          stray: Option.liftPredicate(first, () => !named),
+        } satisfies Found;
+      }
+      const bases = yield* Effect.filter(doc.bases, (base) => isDirectory(path.join(base, first)));
       const under = yield* Effect.filter(bases, (base) =>
         fs.exists(path.join(root, base, anchor.path)),
       );
@@ -514,6 +547,7 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
           onNone: () => Effect.succeed(Option.none<string>()),
           onSome: (at) => Effect.option(fs.readFileString(path.join(root, at))),
         }),
+        stray: Option.none(),
       } satisfies Found;
     }),
   );
@@ -706,6 +740,37 @@ const workspacesIn = (root: string, parent: string) =>
       ),
     );
   });
+
+/**
+ * What names the tree's ignored output (`tmp/logs`, `tmp/judged`): each
+ * script of the root and of each workspace, and the root's `.oxlintrc.json`.
+ * A file or a folder not there (a scratch tree's) names nothing.
+ */
+const outputNamers = (root: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const workspaces = yield* Effect.forEach(['apps', 'packages'], (parent) =>
+      Effect.orElseSucceed(workspacesIn(root, parent), (): ReadonlyArray<string> => []),
+    );
+    const scripts = yield* Effect.forEach(['', ...workspaces.flat()], (dir) =>
+      Effect.map(
+        Effect.option(
+          Effect.flatMap(
+            fs.readFileString(path.join(root, dir, 'package.json')),
+            Schema.decodeUnknownEffect(Scripts),
+          ),
+        ),
+        (read) => Option.match(read, { onNone: () => [], onSome: (p) => Object.values(p.scripts) }),
+      ),
+    );
+    const oxlintrc = yield* Effect.option(fs.readFileString(path.join(root, '.oxlintrc.json')));
+    return [...scripts.flat(), ...Option.toArray(oxlintrc)];
+  });
+
+/** Whether `text` names `written` whole: not inside a longer name (`tmp/logs` is not `tmp/logs2`). */
+const namesWhole = (text: string, written: string) =>
+  new RegExp(`(?<![\\w.-])${written.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w.-])`).test(text);
 
 /** A file of code `Code.written` reads, at any depth. */
 const CODE_FILE = /\.tsx?$/;
@@ -1400,7 +1465,7 @@ describe('the docs', () => {
   );
 
   it.effect.layer(BunServices.layer)(
-    "read a path a .gitignore names, the root's or a base's own, as output, and a path under it as the tree's",
+    "read a path a .gitignore names, the root's or a base's own, as output, and a path under it as the tree's; under an ignored top folder, output only what a .gitignore or a script names",
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
@@ -1410,20 +1475,34 @@ describe('the docs', () => {
         yield* fs.writeFileString(`${root}/.gitignore`, 'tmp/\ndata/built.db\n');
         yield* fs.writeFileString(`${root}/app/.gitignore`, '/ios\n');
         yield* fs.writeFileString(`${root}/app/src/kept.ts`, 'export const kept = 1;\n');
+        yield* fs.writeFileString(
+          `${root}/package.json`,
+          '{ "scripts": { "logs": "agent-tail tail --log-dir tmp/logs -n 200" } }',
+        );
+        const lines = [
+          'Built to `data/built.db`, the app to `app/ios`, logged in `tmp/logs/latest`, under `tmp/`.',
+          'It reads `src/kept.ts`; mistyped, `src/gone.ts` and `data/gone.db`;',
+          'under the ignored `app/ios`, a folder no code makes: `ios/Podz`.',
+          'Logged, mistyped, in `tmp/lgos/latest` and `tmp/logs2`.',
+        ];
         const doc: Doc = {
           path: 'whole.md',
           bases: ['', 'app'],
           whole: true,
-          text: [
-            'Built to `data/built.db`, the app to `app/ios`, logged in `tmp/logs/latest`.',
-            'It reads `src/kept.ts`; mistyped, `src/gone.ts` and `data/gone.db`;',
-            'under the ignored `app/ios`, a folder no code makes: `ios/Podz`.',
-          ].join('\n'),
+          text: lines.join('\n'),
         };
         expect(yield* anchorsDrift(root, [doc])).toEqual([
           'whole.md: path src/gone.ts does not exist',
           'whole.md: path data/gone.db does not exist',
           'whole.md: path ios/Podz does not exist',
+          'whole.md: path tmp/lgos/latest lies under the ignored tmp/, and no .gitignore or script names it',
+          'whole.md: path tmp/logs2 lies under the ignored tmp/, and no .gitignore or script names it',
+        ]);
+        expect(
+          yield* anchorsDrift(root, [{ ...doc, whole: false, text: lines.at(-1) ?? '' }]),
+        ).toEqual([
+          'whole.md: path tmp/lgos/latest lies under the ignored tmp/, and no .gitignore or script names it',
+          'whole.md: path tmp/logs2 lies under the ignored tmp/, and no .gitignore or script names it',
         ]);
       }).pipe(Effect.scoped),
   );

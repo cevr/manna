@@ -156,6 +156,8 @@ const linksIn = (markdown: Markdown): ReadonlyArray<Anchor> =>
  * Each path a doc writes in backticks, with the symbols after it: `path`
  * `A`, `B`; in its prose's code spans and in its code blocks' lines alike (a
  * fenced template an agent pastes names the tree as surely as a sentence).
+ * A pattern (`<film>`, a glob, a `printf` slot like `f%05d.png`) names no
+ * one path, so it is not read.
  */
 const spannedIn = (markdown: Markdown): ReadonlyArray<Anchor> =>
   markdown.lines
@@ -167,7 +169,7 @@ const spannedIn = (markdown: Markdown): ReadonlyArray<Anchor> =>
         /`([\w@-][\w.@-]*\/[^`\s]*)`((?:\s+`[^`\n]+`(?:,\s+`[^`\n]+`)*)?)(\s+(?:at\s+`[0-9a-f]{7,40}`|deleted\b))?/g,
       ).flatMap((m) => {
         const written = firstGroup(m);
-        if (/[<*{…]/.test(written)) return [];
+        if (/[<*{…%]/.test(written)) return [];
         const path = written.replace(/:[\d,-]+$/, '').replace(/\/$/, '');
         return [
           {

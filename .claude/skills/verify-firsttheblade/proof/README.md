@@ -11,9 +11,9 @@ red on the commit before them.
 Run from the repo root as the skill writes it, on port 8590, with the
 checkout's own build (no file under the app's `src/` or `public/` changed
 after it; the doctor's `head` check held each time). Steps 1 to 4 ran at
-8a5b9e159 in `tmp/verify/ftb-proof`; step 5 ran at b336b497d, where the
-drive reads the skeleton's hold on the page's own clock, in
-`tmp/verify/ftb-proof4`. The
+8a5b9e159 with `RUN=ftb-proof`; step 5 ran at b336b497d, where the
+drive reads the skeleton's hold on the page's own clock, with
+`RUN=ftb-proof4`. The
 `files` in each `steps.json` name the scratch root the run wrote to; the
 copies kept here sit beside it.
 
