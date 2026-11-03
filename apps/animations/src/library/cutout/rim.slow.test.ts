@@ -8,25 +8,21 @@
 // paint is not rim (`RimLeft.shadow`). A view whose paint keeps a pale
 // band outside its ink fails here, naming it and its count, until its cut
 // table clears the band (`clearPaperRim` in its `CLEAN`). The views are read
-// from the tree, so a new member's are held with no edit here. Each case
-// decodes a view's sheets, so they run in the slow suite.
+// from the tree (`views.ts`), so a new member's are held with no edit here.
+// Each case decodes a view's sheets, so they run in the slow suite.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import type { PuppetSpec } from '@manna/film/canvas';
 import { PuppetImagesBun, decodePng, puppetFrom } from '@manna/film/tools';
-import { Effect, FileSystem, Layer, Option, Predicate } from 'effect';
+import { Effect, FileSystem, Layer, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { RIM_LEFT, paperRimLeftOf } from './clean.ts';
-
-const SOURCES = `${import.meta.dir}/../..`;
+import { LEAST_VIEWS, cutViews } from './views.ts';
 
 const layer = Layer.mergeAll(
   BunServices.layer,
   PuppetImagesBun.pipe(Layer.provide(BunServices.layer)),
 );
-
-/** The puppet views the tree holds today: a glob that finds fewer has lost its way. */
-const LEAST_VIEWS = 50;
 
 /**
  * The most rim px a view may keep. Every view keeps 11 or fewer, none of
@@ -39,36 +35,10 @@ const LEAST_VIEWS = 50;
  */
 const MOST_RIM = 12;
 
-/** Whether `u` is a puppet's spec, as far as this check reads one: its key, size and parts. */
-const isSpec = (u: unknown): u is PuppetSpec =>
-  Predicate.hasProperty(u, 'key') &&
-  Predicate.hasProperty(u, 'size') &&
-  Predicate.hasProperty(u, 'parts');
-
 /** Every puppet view a member's `cutout/puppets.ts` exports under the app's sources, by its key, sorted. */
 const VIEWS: ReadonlyArray<PuppetSpec> =
   // oxlint-disable-next-line effect/noAsyncFunction -- read once as the file loads, so each view is a case of its own
-  await Effect.runPromise(
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const names = yield* fs.readDirectory(SOURCES, { recursive: true });
-      const modules = names.filter((n) => /\/cast\/[^/]+\/cutout\/puppets\.ts$/.test(n)).toSorted();
-      const specs = yield* Effect.forEach(modules, (name) =>
-        Effect.map(
-          Effect.promise((): Promise<unknown> => import(`${SOURCES}/${name}`)),
-          (module) =>
-            Option.match(
-              Option.liftPredicate(module, (m) => Predicate.hasProperty(m, 'PUPPETS')),
-              {
-                onNone: () => [],
-                onSome: (m) => Object.values(Object(m.PUPPETS)).filter(isSpec),
-              },
-            ),
-        ),
-      );
-      return specs.flat().toSorted((a, b) => a.key.localeCompare(b.key));
-    }).pipe(Effect.provide(BunServices.layer)),
-  );
+  await Effect.runPromise(cutViews);
 
 /** A part PNG's pixels, decoded. */
 const rasterOf = (png: string) =>
