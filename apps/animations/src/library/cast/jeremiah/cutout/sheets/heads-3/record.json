@@ -7,17 +7,17 @@
   "parts": [
     {
       "name": "neighbour",
-      "kept": 41,
+      "kept": 0,
       "painted": 0
     },
     {
       "name": "head",
-      "kept": 43616,
+      "kept": 42077,
       "painted": 0
     },
     {
       "name": "torso",
-      "kept": 12960,
+      "kept": 12940,
       "painted": 3013
     }
   ],

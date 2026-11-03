@@ -7,18 +7,18 @@
   "parts": [
     {
       "name": "neighbour",
-      "kept": 8,
+      "kept": 0,
       "painted": 0
     },
     {
       "name": "head",
-      "kept": 45314,
+      "kept": 43803,
       "painted": 0
     },
     {
       "name": "torso",
-      "kept": 13264,
-      "painted": 5366
+      "kept": 13257,
+      "painted": 5301
     }
   ],
   "moving": ["head"],

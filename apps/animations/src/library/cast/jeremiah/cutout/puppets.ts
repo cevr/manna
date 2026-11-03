@@ -21,6 +21,7 @@ import heads6Torso from './sheets/heads-6/torso.png' with { type: 'file' };
 import { puppetsOf } from '../../../cutout/puppets.ts';
 import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';
+import { PAPERS } from './papers.ts';
 import { SKELETONS } from './skeleton.ts';
 
 /**
@@ -45,22 +46,13 @@ const GRAIN = 2.25;
 
 /**
  * His linen's lightest fold, kept as his where it lies nearer it than the
- * paper (`core/unmatte.ts`, `keep`): with his grain it fills none of his
- * sheet's paper pockets in any view and keeps 47, 0, 10, 1, 0 and 13 rim px
- * whole (heads-1 to heads-6). A lighter fold (252,240,213 or 250,237,210)
- * fills up to 13 pocket px a view, and a darker one keeps none.
+ * paper (`core/unmatte.ts`, `keep`): the un-matte asks it only of a px no
+ * ink reaches, and on his part sheets, their paper rim cleared (`cut.ts`,
+ * `CLEAN`), it changes no px in any view (heads-1 to heads-6), nor does a
+ * lighter fold (252,240,213, 250,237,210 or 255,250,240). His grain keeps
+ * 1186 to 1228 rim px whole a view.
  */
 const LINEN = [[248, 234, 206]] as const satisfies ReadonlyArray<readonly [number, number, number]>;
-
-/** Each cut view's paper, the median of its kept view's border ground (its rim is un-matted from it, `core/unmatte.ts`). */
-export const PAPERS = {
-  'heads-1': [252, 243, 226],
-  'heads-2': [252, 243, 226],
-  'heads-3': [252, 243, 226],
-  'heads-4': [252, 243, 226],
-  'heads-5': [252, 243, 226],
-  'heads-6': [252, 243, 226],
-} as const satisfies Readonly<Record<keyof typeof SKELETONS, readonly [number, number, number]>>;
 
 /**
  * Each cut view's puppet, by the view's name in his sheet's views: its parts
