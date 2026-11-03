@@ -42,7 +42,7 @@ describe('toon3d verify', () => {
           expect(STAGES).toContain(row.stage);
         }
         const text = yield* fs.readFileString(`${out}/verdict.md`);
-        expect(text.split('\n')[0]).toMatch(/^(PASS|FAIL) \d+\/16$/);
+        expect(text.split('\n')[0]).toMatch(/^(PASS|FAIL) \d+\/16 pass$/);
         for (const name of ['contact.png', 'bend.mp4', 'turn.mp4'])
           expect(yield* fs.exists(`${out}/${name}`)).toBe(true);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),

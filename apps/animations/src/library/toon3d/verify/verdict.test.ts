@@ -70,7 +70,7 @@ describe('verdictOf', () => {
   test('a run meeting every bar passes n/n', () => {
     const v = verdictOf(BARS, clean);
     expect(v.checks.filter((c) => !c.pass)).toEqual([]);
-    expect(verdictText(v).split('\n')[0]).toBe(`PASS ${BARS.length}/${BARS.length}`);
+    expect(verdictText(v).split('\n')[0]).toBe(`PASS ${BARS.length}/${BARS.length} pass`);
   });
 
   test('a measure with no reading fails its check as unread', () => {
@@ -90,7 +90,7 @@ describe('verdictOf', () => {
     const v = verdictOf(BARS, { ...clean, views });
     const silhouette = v.checks.find((c) => c.id === 'silhouette');
     expect(silhouette).toMatchObject({ pass: false, value: '0.9', at: 'back' });
-    expect(verdictText(v).split('\n')[0]).toBe(`FAIL ${BARS.length - 1}/${BARS.length}`);
+    expect(verdictText(v).split('\n')[0]).toBe(`FAIL ${BARS.length - 1}/${BARS.length} pass`);
     expect(verdictText(v)).toContain('FAIL silhouette geometry 0.9 >= 0.95 (back;');
   });
 

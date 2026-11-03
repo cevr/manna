@@ -175,13 +175,13 @@ export const verdictOf = (bars: ReadonlyArray<BarRow>, measured: Measured): Verd
   return { passed: checks.filter((c) => c.pass).length, total: checks.length, checks };
 };
 
-/** verdict.md: `PASS n/n` or `FAIL k/n` (k the checks that pass), then `PASS|FAIL id stage value bar` per check, with where the value was read. */
+/** verdict.md: `PASS n/n pass` or `FAIL k/n pass` (k the checks that pass), then `PASS|FAIL id stage value bar` per check, with where the value was read. */
 export const verdictText = (v: Verdict): string => {
   const word = (pass: boolean): string => {
     if (pass) return 'PASS';
     return 'FAIL';
   };
-  const head = `${word(v.passed === v.total)} ${v.passed}/${v.total}`;
+  const head = `${word(v.passed === v.total)} ${v.passed}/${v.total} pass`;
   const lines = v.checks.map(
     (c) => `${word(c.pass)} ${c.id} ${c.stage} ${c.value} ${c.bar} (${c.at}; ${c.source})`,
   );
