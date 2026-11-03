@@ -9,6 +9,7 @@ import {
   Exit,
   FileSystem,
   Layer,
+  Option,
   Path,
   Schema,
   Stream,
@@ -18,12 +19,12 @@ import { describe, expect, it } from 'effect-bun-test';
 import { HttpServer, HttpServerResponse } from 'effect/http';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
-import { lintJudged } from './cli.js';
+import { lintJudged, lintReview } from './cli.js';
 import { JudgedLint, judgedLintLayer } from './config.js';
 import { judgedModel } from './model.js';
 import { Findings, makersHash, textHash } from './findings.js';
 import { Store, dayOf } from './store.js';
-import { env, missing, typesafeHttp } from './testing.js';
+import { env, missing, missingBeside, typesafeHttp } from './testing.js';
 import { TEST_GIT } from '../testing.js';
 
 const PACKAGES = new URL('../../../', import.meta.url).pathname;
@@ -202,12 +203,8 @@ const dyingModel = () =>
     DecisionModel.make({ decide: () => Effect.die('a defect in the model') }),
   );
 
-/** The command run in-process in `dir` over `model`: its exit, stdout lines and stderr lines. */
-const inProcess = <E extends { readonly _tag: string }, R>(
-  dir: string,
-  args: ReadonlyArray<string>,
-  model: (name: string) => Layer.Layer<DecisionModel.DecisionModel, E, R>,
-) =>
+/** `program` run in-process: its exit, stdout lines and stderr lines. */
+const recorded = <A, E, R>(program: Effect.Effect<A, E, R>) =>
   Effect.gen(function* () {
     const out: Array<string> = [];
     const err: Array<string> = [];
@@ -220,12 +217,29 @@ const inProcess = <E extends { readonly _tag: string }, R>(
         err.push(parts.map(String).join(' '));
       },
     };
-    const exit = yield* lintJudged(args, dir, model).pipe(
+    const exit = yield* program.pipe(
       Effect.provideService(Console.Console, recording),
       Effect.exit,
     );
     return { exit, out, err };
   });
+
+/** The command run in-process in `dir` over `model`: its exit, stdout lines and stderr lines. */
+const inProcess = <E extends { readonly _tag: string }, R>(
+  dir: string,
+  args: ReadonlyArray<string>,
+  model: (name: string) => Layer.Layer<DecisionModel.DecisionModel, E, R>,
+) => recorded(lintJudged(args, dir, model));
+
+/** The review run in-process in `dir`: its exit, stdout lines and stderr lines. */
+const inReview = (dir: string) => recorded(lintReview([], dir));
+
+/**
+ * The review run in-process in `dir` over `services` (a model host, a
+ * spawner, an environment): its exit, stdout lines and stderr lines.
+ */
+const inReviewOver = <ROut, RIn>(dir: string, services: Layer.Layer<ROut, never, RIn>) =>
+  recorded(lintReview([], dir).pipe(Effect.provide(services)));
 
 const FINDING =
   "src/a.ts:1 warning judged(historyComment): the comment tells the code's history: say what it does today and why; how it got here lives in git log p=0.97";
@@ -564,5 +578,188 @@ describe('the judged lint reads the whole repo, by content', () => {
         ]);
       }),
     ),
+  );
+});
+
+/**
+ * The review's output for `repo` once `reviewed` made it: a.ts judged
+ * history (its kept finding printed, as no findings file is written for
+ * oxlint), b.ts unjudged.
+ */
+const REVIEW_OUT = [FINDING, '[judged] rule=historyComment items=2 judged=1 unjudged=1 findings=1'];
+
+/**
+ * `repo` once the lint judged `src/a.ts` history and kept it, its answer
+ * last seen the day before (so a run that keeps answers marks it seen
+ * again), with no store lock and no checkout files left, and a new
+ * `src/b.ts` whose history comment the store holds no answer for.
+ */
+const reviewed = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const dir = yield* repo;
+  yield* inProcess(dir, [], historyModel().layer);
+  const store = path.join(dir, '.git', 'judged', 'store.json');
+  const kept = yield* Effect.flatMap(fs.readFileString(store), Schema.decodeEffect(Store));
+  const answers = Object.fromEntries(
+    Object.entries(kept.answers).map(([key, answer]) => [
+      key,
+      { ...answer, seen: answer.seen - 1 },
+    ]),
+  );
+  yield* fs.writeFileString(store, yield* Schema.encodeEffect(Store)({ answers }));
+  yield* fs.remove(path.join(dir, '.git', 'judged', '.store.json.lock'));
+  yield* fs.remove(path.join(dir, 'tmp'), { recursive: true });
+  yield* fs.writeFileString(
+    path.join(dir, 'src', 'b.ts'),
+    '// We switched to Rive in the spring.\nconst b = 2;\n',
+  );
+  return dir;
+});
+
+/** The store folder of `dir`'s repo: each file's name, text and modified time, and whether the checkout's judged folder exists. */
+const storeState = (dir: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const folder = path.join(dir, '.git', 'judged');
+    const names = (yield* fs.readDirectory(folder)).toSorted();
+    const files = yield* Effect.forEach(names, (name) =>
+      Effect.gen(function* () {
+        const file = path.join(folder, name);
+        const info = yield* fs.stat(file);
+        return {
+          name,
+          text: yield* fs.readFileString(file),
+          modified: Option.map(info.mtime, (time) => time.getTime()),
+        };
+      }),
+    );
+    return { files, checkout: yield* fs.exists(path.join(dir, 'tmp', 'judged')) };
+  });
+
+describe('the judged review (lint:review) reads the store alone', () => {
+  it.live('with a key in the environment, calls no model client and runs no keychain', () =>
+    withFs(
+      Effect.gen(function* () {
+        const dir = yield* reviewed;
+        const http = typesafeHttp(200, () => ({}));
+        const keychain = missingBeside();
+        const review = yield* inReviewOver(
+          dir,
+          Layer.mergeAll(http.layer, keychain.layer, env({ TYPESAFE_API_KEY: 'test-key' })),
+        );
+        expect(Exit.isSuccess(review.exit)).toBe(true);
+        expect(review.out).toEqual(REVIEW_OUT);
+        expect(http.requests).toEqual([]);
+        expect(keychain.runs.count).toBe(0);
+      }),
+    ),
+  );
+
+  it.live('with no key in the environment, runs no keychain and calls no model client', () =>
+    withFs(
+      Effect.gen(function* () {
+        const dir = yield* reviewed;
+        const http = typesafeHttp(200, () => ({}));
+        const keychain = missingBeside();
+        const review = yield* inReviewOver(
+          dir,
+          Layer.mergeAll(http.layer, keychain.layer, env({})),
+        );
+        expect(Exit.isSuccess(review.exit)).toBe(true);
+        expect(review.out).toEqual(REVIEW_OUT);
+        expect(keychain.runs.count).toBe(0);
+        expect(http.requests).toEqual([]);
+      }),
+    ),
+  );
+
+  it.live(
+    "leaves the store's files their bytes and modified times, takes no lock, and writes no checkout file",
+    () =>
+      withFs(
+        Effect.gen(function* () {
+          const dir = yield* reviewed;
+          const before = yield* storeState(dir);
+          expect(before.files.map((file) => file.name)).toEqual(['store.json']);
+          expect(before.checkout).toBe(false);
+          const review = yield* inReview(dir);
+          expect(Exit.isSuccess(review.exit)).toBe(true);
+          expect(review.err).toEqual([]);
+          expect(yield* storeState(dir)).toEqual(before);
+        }),
+      ),
+  );
+
+  it.live('counts an item the store holds no answer for as unjudged, with no error', () =>
+    withFs(
+      Effect.gen(function* () {
+        const dir = yield* reviewed;
+        const review = yield* inReview(dir);
+        expect(Exit.isSuccess(review.exit)).toBe(true);
+        expect(review.out).toEqual(REVIEW_OUT);
+        expect(review.err).toEqual([]);
+      }),
+    ),
+  );
+
+  it.live(
+    'fails, as the lint does, on a kept finding of a rule at error in Markdown oxlint never reads',
+    () =>
+      withFs(
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem;
+          const path = yield* Path.Path;
+          const dir = yield* repoOf(
+            'scriptSpeech',
+            'apps/animations/series/s/scripts/01-a.md',
+            '| # | Say | Picture |\n| - | - | - |\n| 1 | Rest. |  |\n',
+            '| # | Say | Picture |\n| - | - | - |\n| 1 | Ellen White said, "Rest." |  |\n',
+          );
+          const lint = yield* inProcess(dir, [], answering('breach', 'clean').layer);
+          expect(Exit.isFailure(lint.exit)).toBe(true);
+          yield* fs.remove(path.join(dir, 'tmp'), { recursive: true });
+          const review = yield* inReview(dir);
+          expect(Exit.isFailure(review.exit)).toBe(true);
+          expect(review.out).toEqual([
+            'apps/animations/series/s/scripts/01-a.md:3 error judged(scriptSpeech): the beat names its sources or church history: teach it from Scripture, the idea unnamed p=0.97',
+            '[judged] rule=scriptSpeech items=1 judged=1 unjudged=0 findings=1',
+          ]);
+          expect(review.err).toEqual([]);
+        }),
+      ),
+  );
+
+  it.live(
+    'prints and fails on a kept finding of a rule at error in a file oxlint lints, as no findings file is written for oxlint to fail on',
+    () =>
+      withFs(
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem;
+          const path = yield* Path.Path;
+          const script =
+            "export const script = {\n  beats: [{ id: 'a', say: 'Ellen White said, rest.' }],\n};\n";
+          const dir = yield* repoOf(
+            'scriptSpeech',
+            'apps/animations/src/films/x/script.ts',
+            script,
+            script,
+          );
+          const lint = yield* inProcess(dir, [], answering('breach', 'clean').layer);
+          expect(Exit.isSuccess(lint.exit)).toBe(true);
+          yield* fs.remove(path.join(dir, 'tmp'), { recursive: true });
+          const review = yield* inReview(dir);
+          expect(Exit.isFailure(review.exit)).toBe(true);
+          expect(review.out).toHaveLength(2);
+          expect(review.out[0]).toStartWith(
+            'apps/animations/src/films/x/script.ts:2 error judged(scriptSpeech):',
+          );
+          expect(review.out[1]).toBe(
+            '[judged] rule=scriptSpeech items=1 judged=1 unjudged=0 findings=1',
+          );
+          expect(yield* fs.exists(path.join(dir, 'tmp'))).toBe(false);
+        }),
+      ),
   );
 });

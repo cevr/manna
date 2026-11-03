@@ -38,29 +38,53 @@ export const historyComment: JudgedRule = {
   charsPerToken: 3.79,
 };
 
+/** The handle of a `security` run that prints `printed` and exits with `exitCode`. */
+const securityRun = (printed: Stream.Stream<string>, exitCode: Effect.Effect<number>) => {
+  const stdout = Stream.encodeText(printed);
+  return ChildProcessSpawner.makeHandle({
+    pid: ChildProcessSpawner.ProcessId(0),
+    exitCode: Effect.map(exitCode, ChildProcessSpawner.ExitCode),
+    isRunning: Effect.succeed(false),
+    kill: () => Effect.void,
+    stdin: Sink.drain,
+    stdout,
+    stderr: Stream.empty,
+    all: stdout,
+    getInputFd: () => Sink.drain,
+    getOutputFd: () => Stream.empty,
+    unref: Effect.succeed(Effect.void),
+  });
+};
+
 /** A keychain whose `security` prints `printed` and exits with `exitCode`; it counts the runs. */
 const keychain = (printed: Stream.Stream<string>, exitCode: Effect.Effect<number>) => {
   const runs = { count: 0 };
-  const stdout = Stream.encodeText(printed);
   const layer = Layer.succeed(
     ChildProcessSpawner.ChildProcessSpawner,
     ChildProcessSpawner.make(() => {
       runs.count++;
-      return Effect.succeed(
-        ChildProcessSpawner.makeHandle({
-          pid: ChildProcessSpawner.ProcessId(0),
-          exitCode: Effect.map(exitCode, ChildProcessSpawner.ExitCode),
-          isRunning: Effect.succeed(false),
-          kill: () => Effect.void,
-          stdin: Sink.drain,
-          stdout,
-          stderr: Stream.empty,
-          all: stdout,
-          getInputFd: () => Sink.drain,
-          getOutputFd: () => Stream.empty,
-          unref: Effect.succeed(Effect.void),
-        }),
-      );
+      return Effect.succeed(securityRun(printed, exitCode));
+    }),
+  );
+  return { layer, runs };
+};
+
+/**
+ * The spawner the layer is built over, with its keychain missing: each
+ * `security` run is counted and answered as a keychain with no such item
+ * (the machine's own keychain is never read), and every other command runs.
+ */
+export const missingBeside = () => {
+  const runs = { count: 0 };
+  const layer = Layer.effect(ChildProcessSpawner.ChildProcessSpawner)(
+    Effect.gen(function* () {
+      const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+      return ChildProcessSpawner.make((command) => {
+        if (command._tag !== 'StandardCommand' || command.command !== 'security')
+          return spawner.spawn(command);
+        runs.count++;
+        return Effect.succeed(securityRun(Stream.empty, Effect.succeed(44)));
+      });
     }),
   );
   return { layer, runs };
