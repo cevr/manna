@@ -29,7 +29,8 @@ import s15Robe from './sheets/single-15/robe.png' with { type: 'file' };
 import s15Torso from './sheets/single-15/torso.png' with { type: 'file' };
 import { puppetsOf } from '../../../../../library/cutout/puppets.ts';
 import { CUTS } from './cut.ts';
-import { FRAMES, type FramedView } from './frames.ts';
+import { FRAMES } from './frames.ts';
+import { PAPERS } from './papers.ts';
 import { SKELETONS } from './skeleton.ts';
 
 /**
@@ -74,14 +75,6 @@ const SINGLE_LINE = { width: 18.5, ink: [1, 0, 0] } as const;
  * than the grain's line stays un-matted.
  */
 const GRAIN = 2.75;
-
-/** Each view's paper, the median of its kept view's border ground (its rim is un-matted from it, `core/unmatte.ts`). */
-const PAPERS = {
-  'poses-3': [253, 237, 212],
-  'poses-4': [253, 236, 213],
-  'poses-6': [253, 237, 213],
-  'single-15': [253, 239, 216],
-} as const satisfies Readonly<Record<FramedView, readonly [number, number, number]>>;
 
 const SHARED = {
   cast: 'idea-villagers',
