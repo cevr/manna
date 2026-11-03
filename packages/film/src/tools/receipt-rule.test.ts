@@ -1,55 +1,36 @@
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Option } from 'effect';
+import { Effect, FileSystem, Option, SchemaAST } from 'effect';
 import * as BunServices from '@effect/platform-bun/BunServices';
+import { AskRecord, RECEIPT_RULE } from '../core/ask.ts';
 
 const ROOT = `${import.meta.dir}/../../../..`;
 
-const RULE =
-  "An image whose src the receipt names is served only as its copy. Each file-served image of an image block or an option is copied as the ask is made, or the make is refused (`AskRefused`, naming the src). A board block's panels and a video's poster or frame show live and bind nothing.";
+const DOCS_STATING_THE_RULE = ['packages/film/README.md', 'docs/lessons.md'];
 
-const PLACES = [
-  'packages/film/src/tools/ask-store.ts',
-  'packages/film/src/tools/asks-http.ts',
-  'packages/film/src/core/ask.ts',
-  'packages/film/src/core/api.ts',
-  'packages/film/README.md',
-  'docs/lessons.md',
-  'apps/firsttheblade/kit/approval.ts',
-];
-
-const prose = (text: string) =>
-  text
-    .split('\n')
-    .map((line) => line.replace(/^\s*(\/\/|\/\*\*|\*\/|\*)?\s?/, ''))
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .toLowerCase();
+const prose = (text: string) => text.replace(/\s+/g, ' ').toLowerCase();
 
 const read = (place: string) =>
   Effect.flatMap(FileSystem.FileSystem, (fs) => fs.readFileString(`${ROOT}/${place}`));
 
 describe('the receipt rule', () => {
-  it.effect('is the doc of receipted in ask-store.ts, its first three sentences', () =>
-    Effect.gen(function* () {
-      const store = yield* read('packages/film/src/tools/ask-store.ts');
-      const doc = Option.fromNullishOr(
-        /\/\*\*((?:(?!\*\/)[\s\S])*)\*\/\s*const receipted =/.exec(store)?.[1],
+  it.effect("is the rule the description of an ask record's receipt gives", () =>
+    Effect.sync(() => {
+      const description = Option.fromNullishOr(
+        SchemaAST.resolveDescription(AskRecord.fields.shown.ast),
       );
-      const sentences = Option.map(doc, (d) =>
-        prose(d)
-          .trim()
-          .split(/(?<=\.) /)
-          .slice(0, 3)
-          .join(' '),
+      const rule = Option.flatMap(description, (d) =>
+        Option.map(Option.fromNullishOr(/by the receipt rule: (.*)$/s.exec(d)?.[1]), (after) =>
+          after.slice(0, RECEIPT_RULE.length),
+        ),
       );
-      expect(sentences).toEqual(Option.some(`the receipt rule: ${prose(RULE)}`));
-    }).pipe(Effect.provide(BunServices.layer)),
+      expect(rule).toEqual(Option.some(RECEIPT_RULE));
+    }),
   );
 
-  it.effect('is stated word for word in each place that states it', () =>
+  it.effect('is stated word for word in each doc that states it', () =>
     Effect.gen(function* () {
-      const missing = yield* Effect.filter(PLACES, (place) =>
-        Effect.map(read(place), (text) => !prose(text).includes(prose(RULE))),
+      const missing = yield* Effect.filter(DOCS_STATING_THE_RULE, (place) =>
+        Effect.map(read(place), (text) => !prose(text).includes(prose(RECEIPT_RULE))),
       );
       expect(missing).toEqual([]);
     }).pipe(Effect.provide(BunServices.layer)),

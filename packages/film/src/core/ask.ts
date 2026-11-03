@@ -932,6 +932,9 @@ const AskStepAnswer = Schema.Struct({
   at: Schema.String,
 });
 
+export const RECEIPT_RULE =
+  "An image whose src the receipt names is served only as its copy. Each file-served image of an image block or an option is copied as the ask is made, or the make is refused (`AskRefused`, naming the src). A board block's panels and a video's poster or frame show live and bind nothing.";
+
 export const AskRecord = Schema.Struct({
   id: AskName,
   title: Text(200),
@@ -946,7 +949,11 @@ export const AskRecord = Schema.Struct({
   created: Schema.String,
   deadline: Schema.optionalKey(Schema.String),
   ask: Ask,
-  shown: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+  shown: Schema.optionalKey(
+    Schema.Record(Schema.String, Schema.String).annotate({
+      description: `The receipt of what its images show, by the receipt rule: ${RECEIPT_RULE} Each copy is kept in the asks' folder, named by its SHA-256 (\`asks/shown/<sha256><.ext>\`), and the image's \`src\` is its route (\`askShownUrl\`): this holds each such \`src\` with its copy's SHA-256. An answer is refused while a copy no longer holds its hash (\`AskStore.answerPage\`), so the hash is of the bytes the owner was shown when he answered. An ask kept before receipts has no \`shown\`.`,
+    }),
+  ),
   state: AskState,
   answered: Schema.Array(AskStepAnswer),
 });
