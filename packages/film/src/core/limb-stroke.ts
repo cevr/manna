@@ -377,6 +377,9 @@ const outline = (
   painted: Float64Array,
   folds: Float64Array,
   handGround: Float64Array,
+  edgeInk: Float64Array,
+  paintedInk: Float64Array,
+  ground: Float64Array,
   width: number,
   height: number,
   ink: Rgb,
@@ -413,16 +416,27 @@ const outline = (
   }
   coverField(pixels, mixed, width, fill);
   const boundary = nearest(width, height, (i) => pixels[i * 4 + 3]! < 0.5);
+  let allowedInk = (_i: number) => 1;
+  if (ground.some((alpha) => alpha >= 0.5)) {
+    const referenceInk = nearest(width, height, (i) => paintedInk[i * 4]! / 255 >= 0.999);
+    // Keep the two bilinear footprints (the source ink mask and the final
+    // band) inside the painted line's half-pen neighbourhood.
+    allowedInk = (i) => clamp01(inkWidth / 2 - 0.5 - Math.sqrt(referenceInk.distances[i]!));
+  }
   for (let i = 0; i < width * height; i++) {
     const into = pixels.subarray(i * 4, i * 4 + 4);
     const band = clamp01(inkWidth + 0.5 - Math.sqrt(boundary.distances[i]!));
     const handCut = clamp01(inkWidth + 0.5 - Math.sqrt(handCuts.distances[i]!));
     const handAlpha = hands[i * 4 + 3]!;
+    let keep = 1;
+    const outside = boundary.ids[i]!;
+    if (edgeInk[i] === 2 || (edgeInk[i]! > 0 && outside >= 0 && ground[outside]! >= 0.5))
+      keep = allowedInk(i);
     inked(
       into,
       ink,
       Math.max(
-        band * (1 - handAlpha + handAlpha * handCut),
+        band * keep * (1 - handAlpha + handAlpha * handCut),
         handAlpha * handCut,
         folds[i]! * (1 - handAlpha),
       ),
@@ -447,6 +461,8 @@ export const limbStroke = (
   box: readonly [number, number, number, number],
   stubPixels: Float64Array,
   paintedPixels: Float64Array,
+  behind: (x: number, y: number) => number,
+  paintedInk: Float64Array,
 ) => {
   const { fold } = limbBlend(limb, numbers);
   const { chain, ink, inkWidth } = limb;
@@ -481,6 +497,8 @@ export const limbStroke = (
   const folds = new Float64Array(width * height);
   const hands = new Float64Array(pixels.length);
   const handGround = new Float64Array(width * height);
+  const edgeInk = new Float64Array(width * height);
+  const ground = new Float64Array(width * height);
   const onFore = new Uint8Array(width * height);
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++) {
@@ -508,6 +526,15 @@ export const limbStroke = (
       overInto(upper, past);
       const foreDistance = tube(1, qf, fore);
       onFore[i] = Number(foreDistance > upperDistance);
+      // Cloth behind the fixed upper arm continues the figure. Only its
+      // painted ink can mark that contact; a free silhouette still gets ink.
+      edgeInk[i] = Number(foreDistance <= upperDistance);
+      if (
+        stub[3]! > 0 ||
+        (foreDistance <= upperDistance && along(0, qu)[0] <= limb.stations.shoulder.u + inkWidth)
+      )
+        edgeInk[i] = 2;
+      ground[i] = behind(px, py);
       sample(qh[0], qh[1], hand);
       const handAlpha = hand[3]!;
       sampleHand(limb, sample, qh, hand, past);
@@ -534,6 +561,9 @@ export const limbStroke = (
     paintedPixels,
     folds,
     handGround,
+    edgeInk,
+    paintedInk,
+    ground,
     width,
     height,
     ink,

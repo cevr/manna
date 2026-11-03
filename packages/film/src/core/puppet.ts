@@ -1109,6 +1109,33 @@ const layPart = (
 
 /** Each limb's part's pixels kept only on its stub (alpha times the stub's share): what the stroke leaves painted. */
 const STUBS = new WeakMap<PuppetPartLimb, WeakMap<Raster, Raster>>();
+const INK_MASKS = new WeakMap<PuppetPartLimb, WeakMap<Raster, Raster>>();
+
+/** Original ink ownership, carried by the same painted mesh as the part.
+ * Colour and dye do not change which source texels belong to that ink. */
+const inkMask = (limb: PuppetPartLimb, pixels: Raster) => {
+  const textures = Option.getOrElse(
+    Option.fromUndefinedOr(INK_MASKS.get(limb)),
+    () => new WeakMap<Raster, Raster>(),
+  );
+  return Option.getOrElse(Option.fromUndefinedOr(textures.get(pixels)), () => {
+    const rgba = new Uint8Array(pixels.rgba.length);
+    // Opaque cloth in this ownership raster covers earlier triangles' ink
+    // exactly as the same mesh order covers it in the painted part.
+    for (let i = 3; i < rgba.length; i += 4) rgba[i] = pixels.rgba[i]!;
+    const [bx, by, width, height] = limb.regions.box;
+    for (let y = 0; y < height; y++)
+      for (let x = 0; x < width; x++)
+        if (limb.regions.ink.getUint8(y * width + x) > 0) {
+          const o = ((by + y) * pixels.width + bx + x) * 4;
+          rgba.set([255, 255, 255], o);
+        }
+    const mask = { width: pixels.width, height: pixels.height, rgba };
+    textures.set(pixels, mask);
+    INK_MASKS.set(limb, textures);
+    return mask;
+  });
+};
 
 const stubOf = (limb: PuppetPartLimb, pixels: Raster): Raster => {
   const textures = Option.getOrElse(
@@ -1204,7 +1231,13 @@ const layLimb = (
     painted = new Float64Array(stub.length);
     layPart(painted, part, layers, q, [x0, y0], [bw, bh]);
   }
+  let paintedInk = new Float64Array(0);
+  if (puppet.parts.length > 1) {
+    paintedInk = new Float64Array(stub.length);
+    layPart(paintedInk, part, [inkMask(limb, part.pixels)], q, [x0, y0], [bw, bh]);
+  }
   const stroke = limbStroke(
+    // The fixed cloth join uses the painted ink on this same posed mesh.
     limb,
     frames,
     pose.numbers,
@@ -1213,6 +1246,8 @@ const layLimb = (
     [x0, y0, bw, bh],
     stub,
     painted,
+    (x, y) => acc[(Math.floor(y) * W + Math.floor(x)) * 4 + 3]!,
+    paintedInk,
   );
   for (let y = 0; y < bh; y++)
     for (let x = 0; x < bw; x++) {

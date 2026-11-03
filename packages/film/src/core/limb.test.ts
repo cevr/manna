@@ -27,11 +27,13 @@ const frame = (p: Pt, a: Pt, d: Pt, from: number): Pt => [
   from + dot(sub(p, a), d),
   dot(sub(p, a), opens(d)),
 ];
-const toSegment = (p: Pt, a: Pt, d: Pt, l: number) => {
-  const q = sub(p, a);
-  const t = Math.max(0, Math.min(l, dot(q, d)));
-  return Math.hypot(q[0] - t * d[0], q[1] - t * d[1]);
+const toSegmentSquared = (p: Pt, a: Pt, d: Pt, l: number) => {
+  const x = p[0] - a[0],
+    y = p[1] - a[1];
+  const t = Math.max(0, Math.min(l, x * d[0] + y * d[1]));
+  return (x - t * d[0]) ** 2 + (y - t * d[1]) ** 2;
 };
+const squareDistance = (a: Pt, b: Pt) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
 
 /** Which sides a fixture inks: `[inner, outer]`. */
 type Inked = readonly [boolean, boolean];
@@ -75,7 +77,7 @@ const sleeveAt = (u: number, v: number, inked: Inked): ReadonlyArray<Rgb> => {
 
 const texelAt = (x: number, y: number, inked: Inked): ReadonlyArray<Rgb> => {
   const [u, v] = frame([x + 0.5, y + 0.5], S, D, 0);
-  if (Math.hypot(...sub([x + 0.5, y + 0.5], HAND)) <= 14 && u > CUFF) return [SKIN];
+  if (squareDistance([x + 0.5, y + 0.5], HAND) <= 14 ** 2 && u > CUFF) return [SKIN];
   return sleeveAt(u, v, inked);
 };
 
@@ -152,7 +154,7 @@ const bentSleeve = (p: Pt): ReadonlyArray<Rgb> => {
     [...frame(p, BS, BD1, 0), -STUB, B_UPPER],
     [...frame(p, BE, BD2, B_UPPER), B_UPPER, B_UPPER + B_FORE],
   ] as const;
-  const fore = toSegment(p, BE, BD2, B_FORE) < toSegment(p, BS, BD1, B_UPPER);
+  const fore = toSegmentSquared(p, BE, BD2, B_FORE) < toSegmentSquared(p, BS, BD1, B_UPPER);
   const [u, v, lo, hi] = cells[Number(fore)]!;
   const side = Number(v >= 0);
   const half = [B_INNER, bentOuter(u)][side]!;
@@ -162,15 +164,12 @@ const bentSleeve = (p: Pt): ReadonlyArray<Rgb> => {
 
 const bentTexel = (x: number, y: number): ReadonlyArray<Rgb> => {
   const p: Pt = [x + 0.5, y + 0.5];
-  if (Math.hypot(...sub(p, B_HAND)) <= 14 && frame(p, BE, BD2, 0)[0] > B_FORE) return [SKIN];
-  if (Math.hypot(...sub(p, BE)) <= 3) return [INK];
+  if (squareDistance(p, B_HAND) <= 14 ** 2 && frame(p, BE, BD2, 0)[0] > B_FORE) return [SKIN];
+  if (squareDistance(p, BE) <= 3 ** 2) return [INK];
   return bentSleeve(p);
 };
 
 const BENT = paint(BW, BH, bentTexel);
-const BENT_LIMB = Result.getOrThrow(
-  limbOf('arm', BENT, { shoulder: BS, elbow: BE, wrist: BC }, DECLARED),
-);
 const FOLD_SLOPE = Math.tan(Math.PI / 8);
 
 const BENT_BONES: Skeleton['bones'] = [
@@ -184,6 +183,7 @@ const BENT_PUPPET = Result.getOrThrow(
     { bones: BENT_BONES, skin: { arm: [...CHAIN] }, limbs: [DECLARED] },
   ),
 );
+const BENT_LIMB = Option.getOrThrow(Option.fromUndefinedOr(BENT_PUPPET.parts[0]!.limb));
 
 const HALF = Result.getOrThrow(
   puppetOf(
@@ -495,6 +495,37 @@ const ghostSkin = (
 };
 
 describe('rasterOf stroke silhouette', () => {
+  test('a shoulder cut stays cloth where the body continues behind it', () => {
+    const background = Result.getOrThrow(
+      puppetOf(
+        {
+          width: W / 2,
+          height: H / 2,
+          parts: [
+            {
+              name: 'body',
+              pixels: paint(W / 2, H / 2, (x, y) => {
+                if (x >= 5 && x <= 85 && y >= 4 && y <= 70) return [LIGHT];
+                return [];
+              }),
+            },
+          ],
+        },
+        { bones: HALF.bones, skin: { body: [] } },
+      ),
+    );
+    const puppet = { ...HALF, parts: [...HALF.parts, ...background.parts] };
+    const p = along(S, D, -12);
+    const i = (Math.floor(p[1] / 2) * (W / 2) + Math.floor(p[0] / 2)) * 4;
+    for (const elbowRight of [25]) {
+      const r = rasterOf(puppet, { numbers: { elbowRight }, root: puppet.root, scale: 1 }, [
+        W / 2,
+        40,
+      ]);
+      expect(r.rgba[i + 3]).toBe(255);
+      expect(r.rgba[i]!).toBeGreaterThan(150);
+    }
+  });
   test('the painted arm is byte-identical through 15 to 19.5 degrees before the fade midpoint', () => {
     const painted = {
       ...HALF,
@@ -548,8 +579,8 @@ describe('rasterOf stroke silhouette', () => {
       for (let y = 1; y < r.height - 1; y++)
         for (let x = 1; x < r.width - 1; x++) {
           if (
-            Math.hypot(x - BE[0], y - BE[1]) > 0.6 * B_FORE &&
-            Math.hypot(x - wrist[0], y - wrist[1]) > 0.35 * B_FORE
+            (x - BE[0]) ** 2 + (y - BE[1]) ** 2 > (0.6 * B_FORE) ** 2 &&
+            (x - wrist[0]) ** 2 + (y - wrist[1]) ** 2 > (0.35 * B_FORE) ** 2
           )
             continue;
           const i = (y * r.width + x) * 4;
@@ -631,26 +662,13 @@ describe('rasterOf stroke silhouette', () => {
     expect(failures).toEqual([]);
   });
   test('the measured ink width doubles with the figure, rather than staying in output pixels', () => {
-    const small = Result.getOrThrow(
-      puppetOf(
-        {
-          width: W / 2,
-          height: H / 2,
-          parts: [
-            { name: 'arm', pixels: paint(W / 2, H / 2, (x, y) => texelAt(2 * x, 2 * y, BOTH)) },
-          ],
-        },
-        {
-          bones: BONES.map((b) => ({
-            ...b,
-            pivot: [b.pivot[0] / 2, b.pivot[1] / 2] as const,
-            tip: [b.tip[0] / 2, b.tip[1] / 2] as const,
-          })),
-          skin: { arm: [...CHAIN] },
-          limbs: [{ ...DECLARED, fade: [-2, -1] }],
-        },
-      ),
-    );
+    const small = {
+      ...HALF,
+      parts: HALF.parts.map((part) => ({
+        ...part,
+        limb: { ...HALF_LIMB, fade: [-2, -1] as const },
+      })),
+    };
     const widths = [1, 2].map((scale) => {
       const r = rasterOf(
         small,

@@ -52,6 +52,16 @@ const LIMB_FOLD: Ramp = [60, 90];
 
 /** The CIE L* under which a texel at a sleeve's edge is its ink. The lead's ink (rgb 33 15 3) reads L* 0 to 15 on both arms of single-9, and his blue sleeve's darkest shade reaches L* 20; at 30, that shade reads as ink at two knots of its cut edge. */
 export const INK_L = 20;
+// L* below INK_L is the same D65 luminance comparison as labOf. Byte
+// sRGB transfer values are shared by all texels; no chroma is needed here.
+const LINEAR_RGB = new DataView(new ArrayBuffer(256 * 8));
+for (let i = 0; i < 256; i++) {
+  const v = i / 255;
+  let linear = ((v + 0.055) / 1.055) ** 2.4;
+  if (v <= 0.04045) linear = v / 12.92;
+  LINEAR_RGB.setFloat64(i * 8, linear);
+}
+const INK_Y = ((INK_L + 16) / 116) ** 3;
 
 /** The length of sleeve between two width knots, at most, px. */
 const KNOT = 2;
@@ -167,6 +177,8 @@ interface LimbRegions {
   readonly shares: DataView;
   /** Cloth donors measured before dye: neither ink, hand nor skin-coloured cuff flecks. */
   readonly cloth: DataView;
+  /** Ink on the original paint, independent of dye, for the fixed upper arm's edge treatment. */
+  readonly ink: DataView;
 }
 
 /** A stroke limb as `puppetOf` measured it from its part's pixels: its rule, its rest chain, its knots `step` px apart along the sleeve, knot k at u = (k + ½) step (none on the shoulder's or the cuff's line, where a side's reach would read the paint's end), its two sides (`outer` the side a positive elbow turn opens), its ink's colour (the median of each channel) and width (the median depth where a side shows ink), and its regions. */
@@ -568,7 +580,32 @@ const regionsOf = (
       shares.set([stub, hand], 2 * (y * bw + x));
       cloth[y * bw + x] = Number(hand === 0 && cuff.cloth(bx + x, by + y));
     }
-  return { box, shares: bytes(shares), cloth: bytes(cloth) };
+  let sourceInk = Option.none<DataView>();
+  return {
+    box,
+    shares: bytes(shares),
+    cloth: bytes(cloth),
+    // Only a rendered cloth join needs this original-ink reference. The
+    // measurement and single-part raster paths need no additional scan.
+    get ink() {
+      return Option.getOrElse(sourceInk, () => {
+        const ink = new Uint8Array(bw * bh);
+        for (let y = 0; y < bh; y++)
+          for (let x = 0; x < bw; x++) {
+            const alpha = t.byte(bx + x, by + y, 3);
+            if (alpha === 0) continue;
+            const light =
+              0.2126 * LINEAR_RGB.getFloat64(8 * t.byte(bx + x, by + y, 0)) +
+              0.7152 * LINEAR_RGB.getFloat64(8 * t.byte(bx + x, by + y, 1)) +
+              0.0722 * LINEAR_RGB.getFloat64(8 * t.byte(bx + x, by + y, 2));
+            if (light < INK_Y) ink[y * bw + x] = alpha;
+          }
+        const made = bytes(ink);
+        sourceInk = Option.some(made);
+        return made;
+      });
+    },
+  };
 };
 
 /**
