@@ -104,7 +104,9 @@ export const READERS: Record<MeasureName, (m: Measured) => Samples> = {
     },
   ],
   partDeltaE: (m) =>
-    m.views.flatMap((v) => v.parts.map((p) => one(`${v.view} ${partName(p.part)}`, p.deltaE))),
+    m.views.flatMap((v) =>
+      v.parts.map((p) => ({ at: `${v.view} ${partName(p.part)}`, value: p.deltaE })),
+    ),
   flatShare: (m) =>
     m.views.flatMap((v) => v.flatness.map((f) => one(`${v.view} ${partName(f.part)}`, f.share))),
   shadeBlobs: (m) =>

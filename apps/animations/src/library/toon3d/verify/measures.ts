@@ -547,13 +547,13 @@ export const flatness = (
 export interface PartDelta {
   readonly part: number;
   readonly px: number;
-  readonly deltaE: number;
+  readonly deltaE: Option.Option<number>;
 }
 
 /** A paint is read only when this many flat pixels hold it in each picture. */
 export const MIN_FLAT_PX = 40;
 
-/** A kept pixel farther than this ΔE from every paint belongs to no paint. */
+/** A kept pixel farther than this ΔE from every paint holds a colour the palette lacks: the kept blob count leaves it out, and the colour measure reads it by place. */
 export const PAINT_RADIUS = 12;
 
 /** Whether pixel `i`'s 5 × 5 neighbourhood lies within ΔE 6 of it, it is not ink, and it lies 2 px clear of the edge. */
@@ -588,14 +588,21 @@ const medianLab = (plane: Float32Array, pixels: ReadonlyArray<number>): Option.O
  * Each part's colour against the kept view, read by paint and not by place,
  * so a part drawn a few pixels off its kept place reads no colour error. The
  * kept view has no ids pass: its flat figure pixels are each given the
- * nearest of every part's paints (within `PAINT_RADIUS`), and a part reads
- * only those within `PART_REACH` of its own pixels in the render's ids
- * pass, so another part's near colour far away is not its. The render's flat
- * pixels of a part (by the ids pass) are each given the nearer of that
- * part's own paints. For each paint, the ΔE76 between the two pictures'
- * per-channel median Lab; a part's value is its worst paint. A paint with
- * fewer than `MIN_FLAT_PX` pixels in either picture is not read, and a part
- * with no paint read is left out.
+ * nearest of every part's paints, however far, and a part reads only those
+ * within `PART_REACH` of its own pixels in the render's ids pass, so another
+ * part's near colour far away is not its. The render's flat pixels of a part
+ * (by the ids pass) are each given the nearest of that part's own paints.
+ * For each paint, the ΔE76 between the two pictures' per-channel median Lab.
+ * A paint the render shows that the kept does not near the part is read by
+ * place: the kept's flat pixels where the render shows it that lie farther
+ * than `PAINT_RADIUS` from every paint, a colour the palette lacks. A kept
+ * pixel there holding some paint is a part drawn elsewhere, which the
+ * silhouette judges, not the palette. A part no paint
+ * reads that way is read by place the other way too: the render's flat
+ * pixels of the part where the kept shows each paint. A part's value is its
+ * worst paint. A medianed set needs `MIN_FLAT_PX` pixels. A part with fewer
+ * flat pixels in the render is not shown and is left out; a part shown but
+ * read by no paint is unread (none).
  */
 export const partDeltas = (
   kept: Raster,
@@ -609,37 +616,70 @@ export const partDeltas = (
   const { palette, paletteLabs } = paletteOf(paints);
   const keptByPaint = palette.map((): Array<number> => []);
   const figure = figureMask(kept);
+  const offPalette = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) {
     if (figure[i] !== 1 || !flatAt(kl, w, h, i)) continue;
     const c = labAt(kl, i);
     const k = nearestOf(paletteLabs, c);
-    if (deltaLab(c, paletteLabs[k] ?? c) <= PAINT_RADIUS) keptByPaint[k]?.push(i);
+    keptByPaint[k]?.push(i);
+    offPalette[i] = Number(deltaLab(c, paletteLabs[k] ?? c) > PAINT_RADIUS);
   }
+  const sceneFlat = new Uint8Array(w * h);
   const sceneByPart = new Map<number, Array<number>>([...paints.keys()].map((p) => [p, []]));
   for (let i = 0; i < w * h; i++) {
     const list = sceneByPart.get(idAt(ids, i));
-    if (list && flatAt(sl, w, h, i)) list.push(i);
+    if (!list || !flatAt(sl, w, h, i)) continue;
+    sceneFlat[i] = 1;
+    list.push(i);
   }
-  return [...paints.entries()].flatMap(([part, rgbs]) => {
+  const delta = (keptPx: ReadonlyArray<number>, scenePx: ReadonlyArray<number>) =>
+    Option.map(Option.all([medianLab(kl, keptPx), medianLab(sl, scenePx)]), ([a, b]) =>
+      deltaLab(a, b),
+    );
+  return [...paints.entries()].flatMap(([part, rgbs]): ReadonlyArray<PartDelta> => {
     const labs = rgbs.map(lab);
     const pixels = sceneByPart.get(part) ?? [];
-    const byPaint = labs.map((): Array<number> => []);
-    for (const i of pixels) byPaint[nearestOf(labs, labAt(sl, i))]?.push(i);
+    if (pixels.length < MIN_FLAT_PX) return [];
+    const sceneOf = labs.map((): Array<number> => []);
+    for (const i of pixels) sceneOf[nearestOf(labs, labAt(sl, i))]?.push(i);
     const reach = partReach(ids, part);
-    const deltas = rgbs.flatMap((c, k) => {
-      const keptPixels = (keptByPaint[palette.indexOf(c.join(','))] ?? []).filter(
-        (i) => reach[i] === 1,
-      );
-      return Option.match(
-        Option.all([medianLab(kl, keptPixels), medianLab(sl, byPaint[k] ?? [])]),
-        {
-          onNone: () => [],
-          onSome: ([a, b]) => [deltaLab(a, b)],
-        },
+    const keptOf = rgbs.map((c) =>
+      (keptByPaint[palette.indexOf(c.join(','))] ?? []).filter((i) => reach[i] === 1),
+    );
+    const byPaint = rgbs.flatMap((_, k) => {
+      const s = sceneOf[k] ?? [];
+      return Option.toArray(
+        Option.orElse(delta(keptOf[k] ?? [], s), () =>
+          delta(
+            s.filter((i) => offPalette[i] === 1),
+            s,
+          ),
+        ),
       );
     });
-    if (deltas.length === 0) return [];
-    return [{ part, px: pixels.length, deltaE: Math.max(...deltas) }];
+    const byKeptPlace = () =>
+      keptOf.flatMap((kp) =>
+        Option.toArray(
+          delta(
+            kp,
+            kp.filter((i) => sceneFlat[i] === 1 && idAt(ids, i) === part),
+          ),
+        ),
+      );
+    const deltas = Option.getOrElse(
+      Option.liftPredicate(byPaint, (d) => d.length > 0),
+      byKeptPlace,
+    );
+    return [
+      {
+        part,
+        px: pixels.length,
+        deltaE: Option.map(
+          Option.liftPredicate(deltas, (d) => d.length > 0),
+          (d) => Math.max(...d),
+        ),
+      },
+    ];
   });
 };
 

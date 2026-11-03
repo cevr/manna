@@ -21,6 +21,7 @@ import {
   wholeBox,
   widthAcross,
   worstDrift,
+  type PartDelta,
   type Point,
   type Raster,
   type Rgb,
@@ -308,13 +309,83 @@ describe('partDeltas', () => {
     return PAPER;
   };
 
-  test('a part painted a known colour off the kept reads that ΔE, and an unread part is left out', () => {
-    const off: Rgb = [BASE[0] - 10, BASE[1], BASE[2]];
-    const ids = idsOf(
+  const halves = idsOf(
+    60,
+    40,
+    (x, y) => Number(inRect(x, y, 10, 8, 39, 31)) * (5 + Number(x >= 25)),
+  );
+  const deltaOf = (deltas: ReadonlyArray<PartDelta>, part: number): Option.Option<number> =>
+    Option.flatMap(Option.fromUndefinedOr(deltas.find((d) => d.part === part)), (d) => d.deltaE);
+
+  test('a part painted its shade where the kept paints its base reads that ΔE, though neither paint shows in both pictures', () => {
+    const kept = paint(
       60,
       40,
-      (x, y) => Number(inRect(x, y, 10, 8, 39, 31)) * (5 + Number(x >= 25)),
+      figure(0, () => BASE),
     );
+    const scene = paint(
+      60,
+      40,
+      figure(0, (x) => {
+        if (x < 25) return SHADE;
+        return BASE;
+      }),
+    );
+    const deltas = partDeltas(kept, scene, halves, PAINTS);
+    expect(read(deltaOf(deltas, 5))).toBeCloseTo(deltaE(BASE, SHADE), 3);
+    expect(read(deltaOf(deltas, 6))).toBe(0);
+  });
+
+  test('a kept part tinted by any ΔE reads that ΔE, a gross error as surely as a slight one', () => {
+    const tints: ReadonlyArray<Rgb> = [
+      [BASE[0] - 4, BASE[1], BASE[2]],
+      [BASE[0], BASE[1] - 12, BASE[2] - 12],
+      [BASE[0] - 40, BASE[1] - 40, BASE[2]],
+      [120, 150, 230],
+      [40, 160, 60],
+    ];
+    for (const tint of tints) {
+      const kept = paint(
+        60,
+        40,
+        figure(0, () => tint),
+      );
+      const scene = paint(
+        60,
+        40,
+        figure(0, () => BASE),
+      );
+      const ids = idsOf(60, 40, (x, y) => Number(inRect(x, y, 10, 8, 39, 31)) * 5);
+      expect(read(deltaOf(partDeltas(kept, scene, ids, PAINTS), 5))).toBeCloseTo(
+        deltaE(BASE, tint),
+        3,
+      );
+    }
+  });
+
+  test('a visible part whose kept place holds no flat colour is unread, not left out', () => {
+    const kept = paint(
+      60,
+      40,
+      figure(0, (x) => {
+        if (x % 2 === 0) return SHADE;
+        return BASE;
+      }),
+    );
+    const scene = paint(
+      60,
+      40,
+      figure(0, () => BASE),
+    );
+    const ids = idsOf(60, 40, (x, y) => Number(inRect(x, y, 10, 8, 39, 31)) * 5);
+    const deltas = partDeltas(kept, scene, ids, PAINTS);
+    expect(deltas.map((d) => d.part)).toEqual([5]);
+    expect(Option.isNone(deltaOf(deltas, 5))).toBe(true);
+  });
+
+  test('a part painted a known colour off the kept reads that ΔE, and a part the render does not show is left out', () => {
+    const off: Rgb = [BASE[0] - 10, BASE[1], BASE[2]];
+    const ids = halves;
     const kept = paint(
       60,
       40,
@@ -330,8 +401,8 @@ describe('partDeltas', () => {
     );
     const deltas = partDeltas(kept, scene, ids, PAINTS);
     expect(deltas.map((d) => d.part)).toEqual([5, 6]);
-    expect(deltas[0]?.deltaE ?? 0).toBeCloseTo(deltaE(BASE, off), 3);
-    expect(deltas[1]?.deltaE ?? 1).toBe(0);
+    expect(read(deltaOf(deltas, 5))).toBeCloseTo(deltaE(BASE, off), 3);
+    expect(read(deltaOf(deltas, 6))).toBe(0);
   });
 
   test('a part drawn 10 px off its kept place, in the kept paints, reads ΔE about 0', () => {
@@ -344,7 +415,7 @@ describe('partDeltas', () => {
     const ids = idsOf(60, 40, (x, y) => 1 + 4 * Number(inRect(x, y, 20, 8, 49, 31)));
     const deltas = partDeltas(kept, scene, ids, new Map([[5, [BASE, SHADE]]]));
     expect(deltas.map((d) => d.part)).toEqual([5]);
-    expect(deltas[0]?.deltaE ?? 99).toBeLessThan(0.5);
+    expect(read(deltaOf(deltas, 5))).toBeLessThan(0.5);
   });
 
   test("another part's pixels near one of this part's paints, far from this part, are not its kept colour", () => {
@@ -369,7 +440,7 @@ describe('partDeltas', () => {
       })(x, y);
     });
     const deltas = partDeltas(kept, scene, ids, new Map([[5, [BASE, SHADE]]]));
-    expect(deltas[0]?.deltaE ?? 99).toBeLessThan(0.5);
+    expect(read(deltaOf(deltas, 5))).toBeLessThan(0.5);
   });
 });
 
