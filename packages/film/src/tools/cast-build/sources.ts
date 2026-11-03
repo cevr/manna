@@ -15,7 +15,7 @@
 // what it loads; a kind whose closure meets an undeclared one fails, so the
 // next one cannot hide.
 
-import { Effect, type FileSystem, type Path } from 'effect';
+import { Effect, FileSystem, type Path } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 import { fileInput, type Input } from './graph.ts';
 import {
@@ -81,6 +81,22 @@ const sourceFiles = (
 /** The film's `rigs/cast.ts` and every file it runs, which the fit render loads by its path. */
 export const filmCastSources = (filmDir: string) =>
   Effect.map(declaredClosure([`${filmDir}/rigs/cast.ts`], []), (files) => files.map(fileInput));
+
+/**
+ * A member's `cutout/cut.ts` and every file it runs (its view rules, its
+ * clean rules, its data), which `concept parts` loads by its path, so a
+ * change to a rule it imports stales his parts stages. Read from the file's
+ * real path, as Bun runs a linked one. A member with no cut table yet has the
+ * path alone, which the parts stage reads as a missing file.
+ */
+export const cutTableSources = (memberDir: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const cut = `${memberDir}/cutout/cut.ts`;
+    if (!(yield* fs.exists(cut))) return [fileInput(cut)];
+    const files = yield* declaredClosure([yield* fs.realPath(cut)], STAGE_LOADS.parts.map(here));
+    return [...new Set([cut, ...files])].map(fileInput);
+  });
 
 /** A browser page's HTML and every file its scripts and stylesheets run (`pageClosure`). */
 export const pageSources = (page: string) =>

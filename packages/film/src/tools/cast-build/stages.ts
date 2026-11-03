@@ -79,7 +79,7 @@ import {
 } from './graph.ts';
 import { CastReader, type ReaderError } from './reader.ts';
 import { SAMPLES, shardOf, trainsetOf } from './renders.ts';
-import { filmCastSources, pageSources, stageSources } from './sources.ts';
+import { cutTableSources, filmCastSources, pageSources, stageSources } from './sources.ts';
 
 /** Bumped when a stage's code makes other bytes from the same inputs. */
 const VERSION = {
@@ -317,12 +317,13 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
     // every file of the sheet folder: its record and part PNGs (which `--check` holds to its
     // answers), and its okra ledger and answers
     const sheetFiles = yield* filesUnder(sheet);
+    const cutTable = yield* cutTableSources(m.memberDir);
     stages.push({
       id: `parts:${at(entry.id)}`,
       view: entry.id,
       inputs: [
         stageInput(`drawing:${at(entry.id)}`),
-        fileInput(path.join(m.memberDir, 'cutout', 'cut.ts')),
+        ...cutTable,
         ...sheetFiles.map((f) => fileInput(path.join(sheet, f))),
         ...src.parts,
       ],

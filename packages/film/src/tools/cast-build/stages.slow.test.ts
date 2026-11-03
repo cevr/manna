@@ -219,7 +219,10 @@ const LONG_AGO = 946_684_800;
 const partsOver = <E>(
   body: (over: {
     readonly at: Scratch;
-    readonly run: (spend: ReadonlySet<'okra'>) => Effect.Effect<{ parts?: string; okra: number }>;
+    readonly run: (
+      spend: ReadonlySet<'okra'>,
+      touch?: ReadonlyArray<string>,
+    ) => Effect.Effect<{ parts?: string; okra: number }>;
     readonly spawned: ReadonlyArray<ReadonlyArray<string>>;
   }) => Effect.Effect<void, E, FileSystem.FileSystem>,
 ) =>
@@ -232,7 +235,7 @@ const partsOver = <E>(
       Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, okraAnswering(fs, spawned)),
     );
     const context = yield* Effect.context<Layer.Success<typeof partsLayer>>();
-    const run = (spend: ReadonlySet<'okra'>) =>
+    const run = (spend: ReadonlySet<'okra'>, touch: ReadonlyArray<string> = []) =>
       Effect.gen(function* () {
         const stages = (yield* memberStages(
           {
@@ -250,7 +253,7 @@ const partsOver = <E>(
           root: '/',
           cache: at.cache,
           plan: false,
-          touch: [],
+          touch,
           spend,
         });
         return {
@@ -336,6 +339,29 @@ describe('memberStages', () => {
               ),
             );
             expect(times).toEqual(parts.map(() => Option.some(LONG_AGO * 1000)));
+            expect(spawned).toEqual([]);
+          }),
+        ),
+      // oxlint-disable-next-line film/tests-keep-their-strength -- the parts stage lays a real part sheet in this process (image decode and composite): 5.6 s at a load of 43, past bun's 5 s; a slow test may wait.
+      PARTS_MS,
+    );
+
+    it.effect(
+      'a change to a clean rule his cut table imports runs it again; a library module it does not import leaves it cached',
+      () =>
+        partsOver(({ run, spawned }) =>
+          Effect.gen(function* () {
+            const library = `${LEAD_FEAST}/../../cutout`;
+            expect(yield* run(new Set())).toEqual({ parts: 'ran', okra: 0 });
+            expect(yield* run(new Set())).toEqual({ parts: 'cached', okra: 0 });
+            expect(yield* run(new Set(), [`${library}/bust.ts`])).toEqual({
+              parts: 'cached',
+              okra: 0,
+            });
+            expect(yield* run(new Set(), [`${library}/clean.ts`])).toEqual({
+              parts: 'ran',
+              okra: 0,
+            });
             expect(spawned).toEqual([]);
           }),
         ),
