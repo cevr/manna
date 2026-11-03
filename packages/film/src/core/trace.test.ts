@@ -148,13 +148,9 @@ describe('traceView', () => {
       expect(Math.min(...anchors.map(([ax, ay]) => Math.hypot(ax - x, ay - y)))).toBeLessThan(3);
   });
 
-  test('writes a table that names what it was traced from, with no colour in it', () => {
-    const source = tracedModule(
-      ['Traced from a test sheet by `film concept trace`.'],
-      VIEW,
-      housed,
-    );
-    expect(source).toContain('// Traced from a test sheet by `film concept trace`.');
+  test('writes a table of points with no comment and no colour in it', () => {
+    const source = tracedModule(VIEW, housed);
+    expect(source).not.toMatch(/\/\/|\/\*/);
     expect(source).toContain('export const HEAD: Pt[] = [');
     expect(source).toContain('export const BODY: Pt[] = [');
     expect(source).not.toMatch(/#[0-9a-f]{6}/i);

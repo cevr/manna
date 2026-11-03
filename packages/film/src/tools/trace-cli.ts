@@ -108,14 +108,7 @@ export const trace = Command.make(
         Effect.mapError((e) => TraceUnread.make({ spec: file, reason: `${name}: ${e.reason}` })),
       );
       const out = path.resolve(dir, view.out);
-      const header = [
-        `${spec.member}, ${view.about}, traced from the kept ${spec.kind} sheet`,
-        `(${path.relative(dir, sheetFile)}, box ${view.box.join(', ')}) in the sheet's own pixels.`,
-        `Written by \`bun run concept trace ${path.relative(path.resolve('.'), file)} --view ${name}\``,
-        `(from apps/animations); trace it again rather than edit it. Points only: the`,
-        `film's papers paint each part. Pure.`,
-      ];
-      const table = tracedModule(header, view, traced);
+      const table = tracedModule(view, traced);
       const picks = labelledLine(traced);
       if (input.check) {
         const kept = yield* fs.readFileString(out).pipe(Effect.orElseSucceed(() => ''));

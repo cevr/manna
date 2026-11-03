@@ -727,11 +727,7 @@ const cutView = (sheet: Raster, view: FramedView, sheets: string) =>
   });
 
 const rampsModule = (ramps: Readonly<Record<string, Readonly<Record<string, DrawnRamp>>>>) =>
-  `// Each filler base view's dyed house parts' drawn ramps (shade, base, light),
-// measured from their pixels on the kept dressed sheet by \`parts-cut.ts\`,
-// which writes this file. Data.
-
-import type { Ramp } from '@manna/film/canvas';
+  `import type { Ramp } from '@manna/film/canvas';
 
 export const RAMPS = {
 ${Object.entries(ramps)

@@ -1015,46 +1015,33 @@ const constName = (name: string) => name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').
 const pts = (p: ReadonlyArray<TracePt>, indent: string) =>
   `[\n${p.map(([x, y]) => `${indent}  [${x}, ${y}],`).join('\n')}\n${indent}]`;
 
-export const tracedModule = (header: ReadonlyArray<string>, view: TraceView, t: Traced): string => {
-  const doc = (name: string, fallback: string) => `/** ${view.parts[name]?.doc ?? fallback} */`;
+export const tracedModule = (view: TraceView, t: Traced): string => {
   const lines = [
-    ...header.map((l) => `// ${l}`.trimEnd()),
-    '',
     "import type { Pt } from '@manna/film/style';",
     '',
-    `/** The view's box in the sheet, as its record keeps it. */`,
     `export const BOX = [${view.box.join(', ')}] as const;`,
   ];
   if (t.head !== undefined)
     lines.push(
       '',
-      "/** The head's centre (its box's), its top row and its height, sheet pixels. */",
       `export const HEAD_AT = { at: [${t.head.at.join(', ')}], top: ${t.head.top}, height: ${t.head.height} } as const satisfies { readonly at: Pt; readonly top: number; readonly height: number };`,
     );
-  if (t.feet !== undefined)
-    lines.push(
-      '',
-      "/** The feet's middle at the soles' lowest row, sheet pixels. */",
-      `export const FEET: Pt = [${t.feet.join(', ')}];`,
-    );
+  if (t.feet !== undefined) lines.push('', `export const FEET: Pt = [${t.feet.join(', ')}];`);
   for (const [name, outline] of Object.entries(t.outlines))
-    lines.push('', doc(name, name), `export const ${constName(name)}: Pt[] = ${pts(outline, '')};`);
+    lines.push('', `export const ${constName(name)}: Pt[] = ${pts(outline, '')};`);
   for (const [name, list] of Object.entries(t.tones))
     lines.push(
       '',
-      doc(name, name),
       `export const ${constName(name)}: Pt[][] = [\n${list.map((p) => `  ${pts(p, '  ')},`).join('\n')}\n];`,
     );
   for (const [name, list] of Object.entries(t.curls))
     lines.push(
       '',
-      doc(name, name),
       `export const ${constName(name)}: ReadonlyArray<{ readonly at: Pt; readonly r: number }> = [\n${list.map((c) => `  { at: [${c.at.join(', ')}], r: ${c.r} },`).join('\n')}\n];`,
     );
   for (const [name, c] of Object.entries(t.circles))
     lines.push(
       '',
-      doc(name, name),
       `export const ${constName(name)} = { at: [${c.at.join(', ')}], r: ${c.r} } as const satisfies { readonly at: Pt; readonly r: number };`,
     );
   if (t.marks !== undefined) {
@@ -1062,7 +1049,6 @@ export const tracedModule = (header: ReadonlyArray<string>, view: TraceView, t: 
     const pair = (p: readonly [TracePt, TracePt]) => `[[${p[0].join(', ')}], [${p[1].join(', ')}]]`;
     lines.push(
       '',
-      "/** The face's marks as the sheet draws them: the eyes' centres and their size, the brows' ends and their stroke, the mouth's corners and its line. */",
       'export const MARKS = {',
       `  eyes: ${pair(m.eyes)},`,
       `  eye: [${m.eye.join(', ')}],`,
