@@ -48,6 +48,19 @@ describe('the judged keys', () => {
         expect(
           keys('comments', 'src/b.ts', ['  /**', '   * One line, then', '   * another.', '   */']),
         ).toEqual(doc);
+        const stacked = keys('comments', 'src/b.ts', [
+          '// oxlint-disable-next-line a',
+          '// @ts-expect-error b',
+          'const c = 1;',
+        ]);
+        expect(stacked).toEqual(['oxlint-disable-next-line a @ts-expect-error b']);
+        expect(
+          keys('comments', 'src/b.ts', [
+            '    // oxlint-disable-next-line a',
+            '    // @ts-expect-error b',
+            '    const c = 1;',
+          ]),
+        ).toEqual(stacked);
       }),
   );
 
