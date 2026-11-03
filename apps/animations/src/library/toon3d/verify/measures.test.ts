@@ -703,6 +703,43 @@ describe('partDeltas', () => {
     expect(read(deltaOf(deltas, 5))).toBe(0);
   });
 
+  test("a paint only the kept shows is read on the part's own render pixels where the kept shows it, not on another part's beside it", () => {
+    const twoTone = (x: number, y: number): Rgb => {
+      if (inRect(x, y, 10, 20, 21, 31)) return BASE;
+      if (y < 20) return BASE;
+      return SHADE;
+    };
+    const kept = paint(80, 40, (x, y) => {
+      if (inRect(x, y, 10, 8, 69, 31)) {
+        if (y < 20) return BASE;
+        return SHADE;
+      }
+      if (inRect(x, y, 8, 6, 71, 33)) return INK;
+      return PAPER;
+    });
+    const scene = paint(80, 40, (x, y) => {
+      if (inRect(x, y, 10, 8, 69, 31)) return twoTone(x, y);
+      if (inRect(x, y, 8, 6, 71, 33)) return INK;
+      return PAPER;
+    });
+    const ids = idsOf(80, 40, (x, y) => {
+      if (inRect(x, y, 10, 8, 21, 31)) return 5;
+      if (inRect(x, y, 22, 8, 69, 31)) return 6;
+      return 0;
+    });
+    const deltas = partDeltas(
+      kept,
+      scene,
+      ids,
+      new Map([
+        [5, [BASE, SHADE]],
+        [6, [BASE, SHADE]],
+      ]),
+    );
+    expect(read(deltaOf(deltas, 5))).toBeCloseTo(deltaE(BASE, SHADE), 3);
+    expect(read(deltaOf(deltas, 6))).toBe(0);
+  });
+
   test('generated stripes of two or four paints with one region repainted, shifted or not: the part reads every paint each picture shows, its worst one, whatever another paint reads', () => {
     const S = 50;
     const SAND: Rgb = [96, 128, 200];
