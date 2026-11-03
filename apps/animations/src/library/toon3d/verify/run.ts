@@ -17,6 +17,7 @@ import {
   firstLaunch,
   FULL_PLAN,
   measureRun,
+  QUICK_PLAN,
   secondLaunch,
   VerifyFailed,
   type Plan,
@@ -164,7 +165,7 @@ const rendersOf = (
 /** Paper behind the contact sheet. */
 const PAPER = { r: 253, g: 241, b: 217, alpha: 1 };
 
-/** contact.png: each kept view beside its render, then the bend's frames 0, 24 and 48. */
+/** contact.png: each kept view beside its render, then the bend's first frame, its quarter and its half (0, 24 and 48 of 96). */
 const contactSheet = Effect.fn('Toon3dVerify.contactSheet')(function* (
   plan: Plan,
   keptBytes: ReadonlyMap<string, Uint8Array>,
@@ -174,7 +175,7 @@ const contactSheet = Effect.fn('Toon3dVerify.contactSheet')(function* (
   for (const view of plan.views)
     for (const png of [keptBytes.get(`kept/${view}.png`), renders.get(`views/${view}.png`)])
       Option.map(Option.fromUndefinedOr(png), (p) => tiles.push({ png: p, row: 0 }));
-  for (const k of [0, 24, 48])
+  for (const k of [0, Math.floor(plan.bendFrames / 4), Math.floor(plan.bendFrames / 2)])
     Option.map(
       Option.fromUndefinedOr(renders.get(`bend/f${String(k).padStart(4, '0')}.png`)),
       (p) => tiles.push({ png: p, row: 1 }),
@@ -291,6 +292,12 @@ export const verifyMember = Effect.fn('Toon3dVerify.verifyMember')(function* (
   return verdict;
 });
 
+/** The plan a run renders and where it writes: the full run at `out/toon3d/<member>/`, a quick one under its `quick/`. */
+const runOf = (member: string, quick: boolean) => {
+  if (quick) return { plan: QUICK_PLAN, out: `${outDir(member)}/quick` };
+  return { plan: FULL_PLAN, out: outDir(member) };
+};
+
 const verify = Command.make(
   'toon3d-verify',
   {
@@ -303,16 +310,21 @@ const verify = Command.make(
         'where the figure comes from: the code-built spec, or the generated mesh',
       ),
     ),
+    quick: Flag.Boolean('quick').pipe(
+      Flag.withDescription(
+        'iterate, not judge: the front, an 8-frame bend and a 2-frame turn, written to out/toon3d/<member>/quick/; the full run stays the verdict',
+      ),
+    ),
   },
-  ({ member, source }) =>
+  ({ member, source, quick }) =>
     Effect.gen(function* () {
       const started = yield* Clock.currentTimeMillis;
       const figure = {
         parametric: () => FigureSource.Parametric({ spec: MEMBERS[member] }),
         mesh: () => meshOf(member),
       }[source]();
-      const out = outDir(member);
-      const verdict = yield* verifyMember(member, figure, FULL_PLAN, out);
+      const { plan, out } = runOf(member, quick);
+      const verdict = yield* verifyMember(member, figure, plan, out);
       yield* Console.log(verdictText(verdict));
       const took = ((yield* Clock.currentTimeMillis) - started) / 1000;
       yield* Console.log(`wrote ${out} in ${took.toFixed(1)} s`);

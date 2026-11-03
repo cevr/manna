@@ -22,6 +22,7 @@ export const MEASURES = [
   'partDeltaE',
   'flatShare',
   'shadeBlobs',
+  'hairBlobsOverKept',
   'inkWidth',
   'inkDeltaE',
   'faceOffset',
@@ -38,7 +39,7 @@ export type MeasureName = (typeof MEASURES)[number];
 /** Who set a bar: the owner, or the orchestrator's proposal the owner may change. */
 export type BarSource = 'owner' | 'orchestrator-proposed';
 
-/** One line of the table: the check, the stage that owns it, its measure, its bar and who set the bar. */
+/** One line of the table: the check, the stage that owns it, its measure, its bar, who set the bar and on what day. */
 export interface BarRow {
   readonly id: string;
   readonly stage: Stage;
@@ -46,16 +47,17 @@ export interface BarRow {
   readonly measure: MeasureName;
   readonly bar: Bar;
   readonly source: BarSource;
+  readonly set: string;
 }
 
-/** A bar the owner approved (2026-11-03: "I think the bars are okay"). */
+/** A bar the owner approved (2026-11-03: "I think the bars are okay"; the hair's blobs by ruling the same day). */
 const approved = (
   id: string,
   stage: Stage,
   check: string,
   measure: MeasureName,
   bar: Bar,
-): BarRow => ({ id, stage, check, measure, bar, source: 'owner' });
+): BarRow => ({ id, stage, check, measure, bar, source: 'owner', set: '2026-11-03' });
 
 /**
  * The bars a figure must meet, fixed in one table (verify-spec, 2026-11-03),
@@ -88,7 +90,7 @@ export const BARS: ReadonlyArray<BarRow> = [
   approved(
     'colour',
     'palette',
-    'median flat ΔE per part, worst part of any view',
+    "ΔE between the kept's and the render's median flat colour of each paint, worst part of any view",
     'partDeltaE',
     Bar.AtMost({ max: 3 }),
   ),
@@ -102,9 +104,16 @@ export const BARS: ReadonlyArray<BarRow> = [
   approved(
     'flat-blobs',
     'shader',
-    'shade blobs per part, most of any part in any view',
+    'shade blobs per part but the hair, most of any part in any view',
     'shadeBlobs',
     Bar.AtMost({ max: 2 }),
+  ),
+  approved(
+    'flat-blobs-hair',
+    'shader',
+    "the hair's shade blobs relative to kept: the render's less the kept view's hair by the same blob measure, most of any view (owner ruling 2026-11-03, option a)",
+    'hairBlobsOverKept',
+    Bar.AtMost({ max: 0 }),
   ),
   approved(
     'ink-width',
@@ -137,21 +146,21 @@ export const BARS: ReadonlyArray<BarRow> = [
   approved(
     'bend-outline',
     'rig',
-    'outline width over the bend, drift from frame 0',
+    'outline width over the bend (sub-pixel stroke width), drift from frame 0',
     'bendOutlineDrift',
     Bar.AtMost({ max: 0.15 }),
   ),
   approved(
     'bend-sleeve',
     'rig',
-    'sleeve width across the bone axis, drift from frame 0, worse bone',
+    'sleeve width across the bone axis in the profileRight view (the right forearm across the camera), drift from frame 0, worse bone',
     'bendSleeveDrift',
     Bar.AtMost({ max: 0.1 }),
   ),
   approved(
     'bend-doubled',
     'ink',
-    'doubled-outline px, worst frame of the bend',
+    'doubled-outline px the bend adds over frame 0, worst frame',
     'bendDoubled',
     Bar.AtMost({ max: 20 }),
   ),
@@ -165,7 +174,7 @@ export const BARS: ReadonlyArray<BarRow> = [
   approved(
     'turn-outline',
     'rig',
-    'outline width over the turn, drift from frame 0',
+    'outline width over the turn (sub-pixel stroke width), drift from frame 0',
     'turnOutlineDrift',
     Bar.AtMost({ max: 0.15 }),
   ),

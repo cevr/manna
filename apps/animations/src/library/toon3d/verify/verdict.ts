@@ -18,6 +18,7 @@ export interface ViewMeasured {
   readonly iou: number;
   readonly parts: ReadonlyArray<PartDelta>;
   readonly flatness: ReadonlyArray<Flatness>;
+  readonly keptHairBlobs: number;
   readonly inkWidth: number;
   readonly keptInkWidth: number;
   readonly inkDeltaE: Option.Option<number>;
@@ -89,7 +90,7 @@ export const READERS: Record<MeasureName, (m: Measured) => Samples> = {
     ),
   partDeltaE: (m) =>
     m.views.flatMap((v) =>
-      v.parts.map((p) => ({ at: `${v.view} ${partName(p.part)}`, value: p.median })),
+      v.parts.map((p) => ({ at: `${v.view} ${partName(p.part)}`, value: p.deltaE })),
     ),
   flatShare: (m) =>
     m.views.flatMap((v) =>
@@ -97,7 +98,18 @@ export const READERS: Record<MeasureName, (m: Measured) => Samples> = {
     ),
   shadeBlobs: (m) =>
     m.views.flatMap((v) =>
-      v.flatness.map((f) => ({ at: `${v.view} ${partName(f.part)}`, value: f.blobs })),
+      v.flatness
+        .filter((f) => f.part !== PART.hair)
+        .map((f) => ({ at: `${v.view} ${partName(f.part)}`, value: f.blobs })),
+    ),
+  hairBlobsOverKept: (m) =>
+    m.views.flatMap((v) =>
+      v.flatness
+        .filter((f) => f.part === PART.hair)
+        .map((f) => ({
+          at: `${v.view} hair ${f.blobs} (kept ${v.keptHairBlobs})`,
+          value: f.blobs - v.keptHairBlobs,
+        })),
     ),
   inkWidth: (m) =>
     m.views.map((v) => ({ at: `${v.view} (kept ${v.keptInkWidth})`, value: v.inkWidth })),
@@ -115,7 +127,7 @@ export const READERS: Record<MeasureName, (m: Measured) => Samples> = {
       drift(m.bend, (f) => f.fore),
     ),
   ],
-  bendDoubled: (m) => series(m.bend, (f) => f.doubled),
+  bendDoubled: (m) => series(m.bend, (f) => f.doubled - (m.bend[0]?.doubled ?? 0)),
   turnTears: (m) => series(m.turn, (f) => f.tears),
   turnOutlineDrift: (m) => one('turn', worstDrift(m.turn.map((f) => f.ink))),
 };

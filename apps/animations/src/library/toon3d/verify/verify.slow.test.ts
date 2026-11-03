@@ -31,7 +31,7 @@ describe('toon3d verify', () => {
         const manifest = yield* Schema.decodeEffect(RendersJson)(
           yield* fs.readFileString(`${out}/manifest.json`),
         );
-        expect(Object.keys(manifest.renders)).toHaveLength(2 * (1 + 4 + 2));
+        expect(Object.keys(manifest.renders)).toHaveLength(2 * (1 + 4 + 2) + 4);
         expect(verdict.checks.find((c) => c.id === 'determinism')).toMatchObject({
           pass: true,
           value: '0',
@@ -42,7 +42,7 @@ describe('toon3d verify', () => {
           expect(STAGES).toContain(row.stage);
         }
         const text = yield* fs.readFileString(`${out}/verdict.md`);
-        expect(text.split('\n')[0]).toMatch(/^(PASS|FAIL) \d+\/15$/);
+        expect(text.split('\n')[0]).toMatch(/^(PASS|FAIL) \d+\/16$/);
         for (const name of ['contact.png', 'bend.mp4', 'turn.mp4'])
           expect(yield* fs.exists(`${out}/${name}`)).toBe(true);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),

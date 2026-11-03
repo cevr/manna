@@ -228,12 +228,8 @@ export const inkMask = (r: Raster): Uint8Array => {
   return out;
 };
 
-/**
- * The ink's width: over every second ink pixel in `box` (both axes), the
- * shortest ink run through it along a row, a column or a diagonal (a
- * diagonal step counts √2), and the median of those.
- */
-export const inkWidth = (r: Raster, box: Box): number => {
+/** Over every `step`-th ink pixel in `box` (both axes), the shortest ink run through it along a row, a column or a diagonal (a diagonal step counts √2). */
+const shortRuns = (r: Raster, box: Box, step: number): ReadonlyArray<number> => {
   const ink = inkMask(r);
   const { width: w, height: h } = r;
   const isInk = (x: number, y: number): boolean =>
@@ -248,12 +244,29 @@ export const inkWidth = (r: Raster, box: Box): number => {
     return n * Math.hypot(dx, dy);
   };
   const runs: Array<number> = [];
-  for (let y = box.y0; y <= box.y1; y += 2)
-    for (let x = box.x0; x <= box.x1; x += 2) {
+  for (let y = box.y0; y <= box.y1; y += step)
+    for (let x = box.x0; x <= box.x1; x += step) {
       if (!isInk(x, y)) continue;
       runs.push(Math.min(run(x, y, 1, 0), run(x, y, 0, 1), run(x, y, 1, 1), run(x, y, 1, -1)));
     }
-  return Option.getOrElse(median(runs), () => 0);
+  return runs;
+};
+
+/** The ink's width: the median of the shortest runs through every second ink pixel in `box`, in whole pixels. */
+export const inkWidth = (r: Raster, box: Box): number =>
+  Option.getOrElse(median(shortRuns(r, box, 2)), () => 0);
+
+/**
+ * The ink's stroke width to a fraction of a pixel: the shortest runs through
+ * every ink pixel in `box`, averaged over their middle half. A line whose
+ * edges fall between pixels runs some rows a pixel wider than others, so the
+ * mean sees the fraction a median rounds away, and a drift of 15 % is not a
+ * whole-pixel step; 0 when the box holds no ink.
+ */
+export const strokeWidth = (r: Raster, box: Box): number => {
+  const sorted = [...shortRuns(r, box, 1)].sort((a, b) => a - b);
+  const mid = sorted.slice(Math.floor(sorted.length / 4), Math.ceil((sorted.length * 3) / 4));
+  return mid.reduce((s, x) => s + x, 0) / Math.max(1, mid.length);
 };
 
 /** The ink's colour: the per-channel median Lab over core ink pixels (ink with all eight neighbours ink); none when there are none. */
@@ -412,6 +425,63 @@ export interface Flatness {
 export const MIN_BLOB = 4;
 
 /**
+ * The shade blobs among `inner`: each pixel is lit (kind 1) or shade (kind
+ * 2) by whichever of `labs`' first two (base, shade) it lies nearer, and the
+ * blobs are the 4-connected shade pixels of `MIN_BLOB` px or more.
+ */
+const shadeBlobsOf = (
+  plane: Float32Array,
+  w: number,
+  h: number,
+  inner: ReadonlyArray<number>,
+  labs: ReadonlyArray<Rgb>,
+) => {
+  const base = labs[0] ?? [0, 0, 0];
+  const shade = labs[1] ?? base;
+  const kind = new Uint8Array(w * h);
+  for (const i of inner) {
+    const c = labAt(plane, i);
+    kind[i] = 1 + Number(deltaLab(c, shade) < deltaLab(c, base));
+  }
+  const blobs = components(w, h, (i) => kind[i] === 2).filter((c) => c.length >= MIN_BLOB);
+  return { kind, blobs };
+};
+
+/** How far (px, either axis) a kept pixel may lie from a part's pixels in the render's ids pass and still be read as that part: past a 10 px misplacement, short of the next part over. */
+export const PART_REACH = 16;
+
+/** Where a kept pixel may be read as `part`: the part's pixels in the ids pass grown by `PART_REACH`. */
+const partReach = (ids: Raster, part: number): Uint8Array =>
+  dilate(
+    new Uint8Array(ids.width * ids.height).map((_, i) => Number(idAt(ids, i) === part)),
+    ids.width,
+    ids.height,
+    PART_REACH,
+  );
+
+/** `mask` grown by `r` px along both axes (a square of side 2r + 1 round each pixel). */
+export const dilate = (mask: Uint8Array, w: number, h: number, r: number): Uint8Array => {
+  const line = (src: Uint8Array, out: Uint8Array, start: number, stride: number, n: number) => {
+    const next = new Float64Array(n);
+    let seen = Infinity;
+    for (let k = n - 1; k >= 0; k--) {
+      if (src[start + k * stride] === 1) seen = k;
+      next[k] = seen;
+    }
+    let last = -Infinity;
+    for (let k = 0; k < n; k++) {
+      if (src[start + k * stride] === 1) last = k;
+      if (k - last <= r || (next[k] ?? Infinity) - k <= r) out[start + k * stride] = 1;
+    }
+  };
+  const across = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) line(mask, across, y * w, 1, w);
+  const out = new Uint8Array(w * h);
+  for (let x = 0; x < w; x++) line(across, out, x, w, h);
+  return out;
+};
+
+/**
  * Each part's flatness in a colour frame against its ids pass: the share of
  * interior pixels within ΔE 3 of one of the part's paints; the shade blobs
  * (4-connected interior pixels nearer the shade than the base, `MIN_BLOB`
@@ -431,14 +501,7 @@ export const flatness = (
     if (inner.length === 0) return [];
     const labs = rgbs.map(lab);
     const flat = inner.filter((i) => labs.some((p) => deltaLab(labAt(plane, i), p) <= 3)).length;
-    const base = labs[0] ?? [0, 0, 0];
-    const shade = labs[1] ?? base;
-    const kind = new Uint8Array(w * h);
-    for (const i of inner) {
-      const c = labAt(plane, i);
-      kind[i] = 1 + Number(deltaLab(c, shade) < deltaLab(c, base));
-    }
-    const blobs = components(w, h, (i) => kind[i] === 2).filter((c) => c.length >= MIN_BLOB);
+    const { kind, blobs } = shadeBlobsOf(plane, w, h, inner, labs);
     const shadeArea = blobs.reduce((s, c) => s + c.length, 0);
     const edge = blobs.flat().filter((i) => around(i, w, h).some((j) => kind[j] === 1)).length;
     return [
@@ -453,51 +516,144 @@ export const flatness = (
   });
 };
 
-/** One part's colour against the kept view: the flat pixels both share and the median ΔE over them. */
+/** One part's colour against the kept view: the flat render pixels read and the worst ΔE between the two pictures' median colours of one paint. */
 export interface PartDelta {
   readonly part: number;
   readonly px: number;
-  readonly median: number;
+  readonly deltaE: number;
 }
 
-/** A part needs this many flat pixels shared with the kept view before its colour is read. */
+/** A paint is read only when this many flat pixels hold it in each picture. */
 export const MIN_FLAT_PX = 40;
 
+/** A kept pixel farther than this ΔE from every paint belongs to no paint. */
+export const PAINT_RADIUS = 12;
+
+/** Whether pixel `i`'s 5 × 5 neighbourhood lies within ΔE 6 of it, it is not ink, and it lies 2 px clear of the edge. */
+const flatAt = (plane: Float32Array, w: number, h: number, i: number): boolean => {
+  const c = labAt(plane, i);
+  if (c[0] < INK_LIGHTNESS) return false;
+  const x = i % w;
+  const y = Math.floor(i / w);
+  if (x < 2 || y < 2 || x >= w - 2 || y >= h - 2) return false;
+  for (let dy = -2; dy <= 2; dy++)
+    for (let dx = -2; dx <= 2; dx++)
+      if (deltaLab(c, labAt(plane, (y + dy) * w + x + dx)) > 6) return false;
+  return true;
+};
+
+/** The index in `labs` nearest `c`. */
+const nearestOf = (labs: ReadonlyArray<Rgb>, c: Rgb): number =>
+  labs.reduce((best, p, k) => {
+    if (deltaLab(c, p) < deltaLab(c, labs[best] ?? p)) return k;
+    return best;
+  }, 0);
+
+/** The per-channel median of the Lab triples at `pixels`; none when there are fewer than `MIN_FLAT_PX`. */
+const medianLab = (plane: Float32Array, pixels: ReadonlyArray<number>): Option.Option<Rgb> => {
+  if (pixels.length < MIN_FLAT_PX) return Option.none();
+  const at = (k: 0 | 1 | 2) =>
+    Option.getOrElse(median(pixels.map((i) => plane[i * 3 + k] ?? 0)), () => 0);
+  return Option.some([at(0), at(1), at(2)]);
+};
+
 /**
- * Each part's colour against the kept view: over pixels that are the part's
- * in the ids pass, not ink in either picture, and flat in both (their 5 × 5
- * neighbourhood within ΔE 6 of them), the median ΔE76 between the two. A
- * part with fewer than `MIN_FLAT_PX` such pixels is left out.
+ * Each part's colour against the kept view, read by paint and not by place,
+ * so a part drawn a few pixels off its kept place reads no colour error. The
+ * kept view has no ids pass: its flat figure pixels are each given the
+ * nearest of every part's paints (within `PAINT_RADIUS`), and a part reads
+ * only those within `PART_REACH` of its own pixels in the render's ids
+ * pass, so another part's near colour far away is not its. The render's flat
+ * pixels of a part (by the ids pass) are each given the nearer of that
+ * part's own paints. For each paint, the ΔE76 between the two pictures'
+ * per-channel median Lab; a part's value is its worst paint. A paint with
+ * fewer than `MIN_FLAT_PX` pixels in either picture is not read, and a part
+ * with no paint read is left out.
  */
 export const partDeltas = (
   kept: Raster,
   scene: Raster,
   ids: Raster,
-  parts: ReadonlyArray<number>,
+  paints: PartPaints,
 ): ReadonlyArray<PartDelta> => {
   const { width: w, height: h } = kept;
   const kl = labPlane(kept);
   const sl = labPlane(scene);
-  const flatIn = (plane: Float32Array, i: number): boolean => {
-    const c = labAt(plane, i);
-    if (c[0] < INK_LIGHTNESS) return false;
-    const x = i % w;
-    const y = Math.floor(i / w);
-    if (x < 2 || y < 2 || x >= w - 2 || y >= h - 2) return false;
-    for (let dy = -2; dy <= 2; dy++)
-      for (let dx = -2; dx <= 2; dx++)
-        if (deltaLab(c, labAt(plane, (y + dy) * w + x + dx)) > 6) return false;
-    return true;
-  };
-  const byPart = new Map<number, Array<number>>(parts.map((p) => [p, []]));
+  const { palette, paletteLabs } = paletteOf(paints);
+  const keptByPaint = palette.map((): Array<number> => []);
+  const figure = figureMask(kept);
   for (let i = 0; i < w * h; i++) {
-    const list = byPart.get(idAt(ids, i));
-    if (!list || !flatIn(kl, i) || !flatIn(sl, i)) continue;
-    list.push(deltaLab(labAt(kl, i), labAt(sl, i)));
+    if (figure[i] !== 1 || !flatAt(kl, w, h, i)) continue;
+    const c = labAt(kl, i);
+    const k = nearestOf(paletteLabs, c);
+    if (deltaLab(c, paletteLabs[k] ?? c) <= PAINT_RADIUS) keptByPaint[k]?.push(i);
   }
-  return [...byPart.entries()]
-    .filter(([, ds]) => ds.length >= MIN_FLAT_PX)
-    .map(([part, ds]) => ({ part, px: ds.length, median: Option.getOrElse(median(ds), () => 0) }));
+  const sceneByPart = new Map<number, Array<number>>([...paints.keys()].map((p) => [p, []]));
+  for (let i = 0; i < w * h; i++) {
+    const list = sceneByPart.get(idAt(ids, i));
+    if (list && flatAt(sl, w, h, i)) list.push(i);
+  }
+  return [...paints.entries()].flatMap(([part, rgbs]) => {
+    const labs = rgbs.map(lab);
+    const pixels = sceneByPart.get(part) ?? [];
+    const byPaint = labs.map((): Array<number> => []);
+    for (const i of pixels) byPaint[nearestOf(labs, labAt(sl, i))]?.push(i);
+    const reach = partReach(ids, part);
+    const deltas = rgbs.flatMap((c, k) => {
+      const keptPixels = (keptByPaint[palette.indexOf(c.join(','))] ?? []).filter(
+        (i) => reach[i] === 1,
+      );
+      return Option.match(
+        Option.all([medianLab(kl, keptPixels), medianLab(sl, byPaint[k] ?? [])]),
+        {
+          onNone: () => [],
+          onSome: ([a, b]) => [deltaLab(a, b)],
+        },
+      );
+    });
+    if (deltas.length === 0) return [];
+    return [{ part, px: pixels.length, deltaE: Math.max(...deltas) }];
+  });
+};
+
+/** Every distinct paint of every part, by its `r,g,b` key and in Lab. */
+const paletteOf = (paints: PartPaints) => {
+  const distinct = new Map([...paints.values()].flat().map((c) => [c.join(','), c]));
+  return { palette: [...distinct.keys()], paletteLabs: [...distinct.values()].map(lab) };
+};
+
+/**
+ * A part's shade blobs in the kept view, by the blob measure `flatness`
+ * uses: the kept's part is its figure pixels, not ink, within `PART_REACH`
+ * of the part in the render's ids pass, whose nearest paint of every part's
+ * (within `PAINT_RADIUS`) is one of this part's; its interior is the pixels
+ * whose 3 × 3 neighbourhood is all the part; each interior pixel is lit or
+ * shade by the nearer of the part's base and shade.
+ */
+export const keptBlobs = (kept: Raster, ids: Raster, paints: PartPaints, part: number): number => {
+  const { width: w, height: h } = kept;
+  const plane = labPlane(kept);
+  const figure = figureMask(kept);
+  const ink = inkMask(kept);
+  const reach = partReach(ids, part);
+  const { palette, paletteLabs } = paletteOf(paints);
+  const rgbs = paints.get(part) ?? [];
+  const own = new Set(rgbs.map((c) => palette.indexOf(c.join(','))));
+  const region = new Uint8Array(w * h).map((_, i) => {
+    if (figure[i] !== 1 || ink[i] === 1 || reach[i] !== 1) return 0;
+    const c = labAt(plane, i);
+    const k = nearestOf(paletteLabs, c);
+    return Number(own.has(k) && deltaLab(c, paletteLabs[k] ?? c) <= PAINT_RADIUS);
+  });
+  const inner: Array<number> = [];
+  for (let y = 1; y < h - 1; y++)
+    for (let x = 1; x < w - 1; x++) {
+      let inside = true;
+      for (let dy = -1; dy <= 1 && inside; dy++)
+        for (let dx = -1; dx <= 1; dx++) inside = inside && region[(y + dy) * w + x + dx] === 1;
+      if (inside) inner.push(y * w + x);
+    }
+  return shadeBlobsOf(plane, w, h, inner, rgbs.map(lab)).blobs.length;
 };
 
 /** The face's five marks' centres: left and right brow, left and right eye (by x), and the mouth. */

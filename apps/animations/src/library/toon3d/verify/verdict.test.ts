@@ -21,8 +21,12 @@ const clean: Measured = {
   views: FULL_PLAN.views.map((view) => ({
     view,
     iou: 0.97,
-    parts: [{ part: PART.body, px: 500, median: 1.5 }],
-    flatness: [{ part: PART.body, px: 500, share: 0.99, blobs: 1, raggedness: 3 }],
+    parts: [{ part: PART.body, px: 500, deltaE: 1.5 }],
+    flatness: [
+      { part: PART.body, px: 500, share: 0.99, blobs: 1, raggedness: 3 },
+      { part: PART.hair, px: 400, share: 0.99, blobs: 6, raggedness: 3 },
+    ],
+    keptHairBlobs: 6,
     inkWidth: 8,
     keptInkWidth: 8,
     inkDeltaE: Option.some(2),
@@ -94,6 +98,38 @@ describe('verdictOf', () => {
     const bend = [frame(0), frame(1, { fore: Option.some(30) }), frame(2)];
     const sleeve = verdictOf(BARS, { ...clean, bend }).checks.find((c) => c.id === 'bend-sleeve');
     expect(sleeve).toMatchObject({ pass: false, at: 'forearm', value: '0.167' });
+  });
+
+  test("the hair may have as many shade blobs as the kept view's hair, and one more fails; other parts keep <= 2", () => {
+    const withHair = (blobs: number): Measured => ({
+      ...clean,
+      views: clean.views.map((v) => ({
+        ...v,
+        flatness: v.flatness.map((f) => {
+          if (f.part === PART.hair) return { ...f, blobs };
+          return f;
+        }),
+      })),
+    });
+    const hair = (blobs: number) =>
+      verdictOf(BARS, withHair(blobs)).checks.find((c) => c.id === 'flat-blobs-hair');
+    expect(hair(6)).toMatchObject({ pass: true, value: '0' });
+    expect(hair(7)).toMatchObject({ pass: false, value: '1' });
+    expect(verdictOf(BARS, withHair(7)).checks.find((c) => c.id === 'flat-blobs')).toMatchObject({
+      pass: true,
+      value: '1',
+    });
+  });
+
+  test('bend-doubled reads the doubled px the motion adds over frame 0, not the parallel lines the rest frame already draws', () => {
+    const bend = [frame(0, { doubled: 90 }), frame(1, { doubled: 105 }), frame(2, { doubled: 60 })];
+    const ok = verdictOf(BARS, { ...clean, bend }).checks.find((c) => c.id === 'bend-doubled');
+    expect(ok).toMatchObject({ pass: true, at: 'frame 1', value: '15' });
+    const more = [...bend, frame(3, { doubled: 111 })];
+    const worse = verdictOf(BARS, { ...clean, bend: more }).checks.find(
+      (c) => c.id === 'bend-doubled',
+    );
+    expect(worse).toMatchObject({ pass: false, at: 'frame 3', value: '21' });
   });
 
   test('a render that differs between launches fails determinism', () => {

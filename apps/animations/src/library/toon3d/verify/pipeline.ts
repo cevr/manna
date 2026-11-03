@@ -17,7 +17,9 @@ import {
   idAt,
   inkColour,
   inkWidth,
+  strokeWidth,
   iou,
+  keptBlobs,
   partDeltas,
   rgbOf,
   tears,
@@ -57,6 +59,9 @@ export const VIEWS: ReadonlyArray<ViewName> = [
 /** The full run the bars are set for: six views, a 96-frame bend and a 72-frame turn. */
 export const FULL_PLAN: Plan = { views: VIEWS, bendFrames: 96, turnFrames: 72 };
 
+/** A run to iterate with, not a verdict: the front, an 8-frame bend and a 2-frame turn. */
+export const QUICK_PLAN: Plan = { views: ['front'], bendFrames: 8, turnFrames: 2 };
+
 /** `n + 1` values easing from 0 to `to` along half a cosine. */
 const eased = (n: number, to: number): ReadonlyArray<number> =>
   Array.from({ length: n + 1 }, (_, k) => (to * (1 - Math.cos((Math.PI * k) / n))) / 2);
@@ -87,6 +92,12 @@ export const bendPose = (degrees: number): Pose => {
 
 /** The bend's frame: the right arm close up, 300 px a head. */
 const BEND_FRAME = { width: 340, height: 640, ox: 335, oy: 1035, scale: 300 };
+
+/** The view the sleeve's width is read in: profileRight, where the bent right forearm lies across the camera, not pointing at it as in the front. */
+export const SLEEVE_VIEW: ViewName = 'profileRight';
+
+/** The bend's ids from `SLEEVE_VIEW`: the same close-up, the arm's bones 0 to 182 px right of `ox`. */
+const BEND_SIDE_FRAME = { ...BEND_FRAME, ox: 90, yaw: YAWS[SLEEVE_VIEW] };
 
 /** The turn's frame: the whole figure at the kept views' scale. */
 const TURN_FRAME = { width: 260, height: 680, ox: 130, oy: 668, scale: HEAD_PX };
@@ -192,6 +203,15 @@ export const jobsOf = (
   ...bendAngles(plan.bendFrames).flatMap((deg, k) =>
     pair('bend', k, { ...BEND_FRAME, yaw: 0, pose: bendPose(deg), palette: 'kept' }),
   ),
+  ...bendAngles(plan.bendFrames).map((deg, k) => ({
+    name: `bend-side-ids/${frameName(k)}`,
+    request: {
+      ...BEND_SIDE_FRAME,
+      pose: bendPose(deg),
+      palette: 'kept' as const,
+      output: 'ids' as const,
+    },
+  })),
   ...turnYaws(plan.turnFrames).flatMap((yaw, k) =>
     pair('turn', k, { ...TURN_FRAME, yaw, pose: REST, palette: 'kept' }),
   ),
@@ -227,7 +247,7 @@ export const secondLaunch = Effect.fn('Toon3dVerify.secondLaunch')(function* (
   return yield* Effect.forEach(jobs, (job) => render(job.request));
 }, Effect.scoped);
 
-/** Each part's paints for the flatness measure: base, shade, and the sandal's on a foot. */
+/** Each figure part's paints, for the flatness and colour measures: base, shade, and the sandal's on a foot. */
 export const partPaints = (spec: MemberSpec): PartPaints => {
   const paint = (name: PaintName) => [
     rgbOf(spec.paints[name].base),
@@ -251,9 +271,6 @@ export const partPaints = (spec: MemberSpec): PartPaints => {
     [PART.foot, [...paint('skin'), ...paint('sandal')]],
   ]);
 };
-
-/** The figure's parts: every id but the paper and the ground shadow. */
-const FIGURE_PARTS = Object.values(PART).filter((id) => id !== PART.paper && id !== PART.shadow);
 
 const isGround = (id: number): boolean => id === PART.paper || id === PART.shadow;
 
@@ -296,25 +313,39 @@ const armBox = (ids: Raster): Box => {
   };
 };
 
-/** One motion frame's measures. */
-export const measureFrame = (
+/** The right sleeve's width across each bone, read from one ids render of the posed arm. */
+export type SleeveWidths = Pick<FrameMeasured, 'upper' | 'fore'>;
+
+/** The right sleeve's width across its upper arm and its forearm in an ids render made by `request`. */
+export const sleeveAcross = (
   spec: MemberSpec,
-  frame: number,
   request: RenderRequest,
-  colour: Raster,
   ids: Raster,
-  box: Box,
-): FrameMeasured => {
+): SleeveWidths => {
   const bones = rightArmOnScreen(spec, request);
   return {
-    frame,
-    ink: inkWidth(colour, box),
-    doubled: doubledInk(colour, box),
-    tears: tears(ids, colour, isGround),
     upper: widthAcross(ids, PART.sleeveR, bones.upper, ALONG),
     fore: widthAcross(ids, PART.sleeveR, bones.fore, ALONG),
   };
 };
+
+/** A frame whose sleeve is not read: the turn's. */
+const NO_SLEEVE: SleeveWidths = { upper: Option.none(), fore: Option.none() };
+
+/** One motion frame's measures: ink, doubled px and tears from its colour and ids, and the sleeve as read elsewhere. */
+export const measureFrame = (
+  frame: number,
+  colour: Raster,
+  ids: Raster,
+  box: Box,
+  sleeve: SleeveWidths,
+): FrameMeasured => ({
+  frame,
+  ink: strokeWidth(colour, box),
+  doubled: doubledInk(colour, box),
+  tears: tears(ids, colour, isGround),
+  ...sleeve,
+});
 
 /** One view's measures against its kept picture. */
 export const measureView = (
@@ -326,8 +357,9 @@ export const measureView = (
 ): ViewMeasured => ({
   view,
   iou: iou(figureMask(kept), figureMask(colour)),
-  parts: partDeltas(kept, colour, ids, FIGURE_PARTS),
+  parts: partDeltas(kept, colour, ids, partPaints(spec)),
   flatness: flatness(colour, ids, partPaints(spec)),
+  keptHairBlobs: keptBlobs(kept, ids, partPaints(spec), PART.hair),
   inkWidth: inkWidth(colour, wholeBox(colour)),
   keptInkWidth: inkWidth(kept, wholeBox(kept)),
   inkDeltaE: Option.map(Option.all([inkColour(colour), inkColour(kept)]), ([a, b]) =>
@@ -392,23 +424,39 @@ export const measureRun = Effect.fn('Toon3dVerify.measureRun')(function* (
       face = frontFace(keptView, colour, ids);
     }
   }
-  const frames = (dir: string, count: number, boxFor: (ids: Raster, colour: Raster) => Box) =>
+  const sideSleeve = (k: number) =>
+    Effect.gen(function* () {
+      const name = `bend-side-ids/${frameName(k)}`;
+      const request = requests.get(name);
+      if (!request) return yield* VerifyFailed.make({ reason: `no request for ${name}` });
+      return sleeveAcross(spec, request, yield* raster(name));
+    });
+  const frames = (
+    dir: string,
+    count: number,
+    boxFor: (ids: Raster, colour: Raster) => Box,
+    sleeveOf: (k: number) => Effect.Effect<SleeveWidths, VerifyFailed>,
+  ) =>
     Effect.forEach(
       Array.from({ length: count }, (_, k) => k),
       (k) =>
         Effect.gen(function* () {
-          const name = `${dir}/${frameName(k)}`;
-          const colour = yield* raster(name);
+          const colour = yield* raster(`${dir}/${frameName(k)}`);
           const ids = yield* raster(`${dir}-ids/${frameName(k)}`);
-          const request = Option.getOrElse(Option.fromUndefinedOr(requests.get(name)), () =>
-            viewRequest('front', { width: 0, height: 0, ox: 0, oy: 0 }, 'colour'),
-          );
-          return measureFrame(spec, k, request, colour, ids, boxFor(ids, colour));
+          return measureFrame(k, colour, ids, boxFor(ids, colour), yield* sleeveOf(k));
         }),
     );
-  const bend = yield* frames('bend', bendAngles(plan.bendFrames).length, (ids) => armBox(ids));
-  const turn = yield* frames('turn', turnYaws(plan.turnFrames).length, (_, colour) =>
-    wholeBox(colour),
+  const bend = yield* frames(
+    'bend',
+    bendAngles(plan.bendFrames).length,
+    (ids) => armBox(ids),
+    sideSleeve,
+  );
+  const turn = yield* frames(
+    'turn',
+    turnYaws(plan.turnFrames).length,
+    (_, colour) => wholeBox(colour),
+    () => Effect.succeed(NO_SLEEVE),
   );
   const measured: Measured = {
     renders: { compared: renders.size, differing },

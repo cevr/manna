@@ -12,9 +12,11 @@ import {
   inkColour,
   inkWidth,
   iou,
+  keptBlobs,
   lab,
   partDeltas,
   rgbOf,
+  strokeWidth,
   tears,
   wholeBox,
   widthAcross,
@@ -84,6 +86,26 @@ describe('ink', () => {
   test('an 8 px upright bar reads 8 px wide, and its colour is the ink', () => {
     expect(inkWidth(bar, wholeBox(bar))).toBe(8);
     expect(deltaLab(read(inkColour(bar)), lab(INK))).toBeLessThan(0.5);
+  });
+
+  const ring = (width: number, radius: number): Raster => {
+    const n = 2 * Math.ceil(radius + width + 4);
+    return paint(n, n, (x, y) => {
+      const r = Math.hypot(x - n / 2 + 0.5, y - n / 2 + 0.5);
+      if (r >= radius && r < radius + width) return INK;
+      return PAPER;
+    });
+  };
+  const stroke = (r: Raster): number => strokeWidth(r, wholeBox(r));
+
+  test('a ring outline reads its width to a fraction of a pixel: each quarter pixel wider reads wider, so a 15 % change is not a whole-pixel step', () => {
+    const widths = Array.from({ length: 13 }, (_, k) => 5 + k * 0.25);
+    const read = widths.map((width) => stroke(ring(width, 60)));
+    widths.forEach((width, k) => {
+      expect(Math.abs((read[k] ?? 0) / width - 1)).toBeLessThan(0.07);
+      expect(Math.abs(stroke(ring(width, 30)) / stroke(ring(width, 120)) - 1)).toBeLessThan(0.02);
+      if (k > 0) expect(read[k] ?? 0).toBeGreaterThan(read[k - 1] ?? 0);
+    });
   });
 
   test('two lines 2 px apart double every gap pixel, and one line doubles none', () => {
@@ -254,18 +276,96 @@ describe('flatness', () => {
 });
 
 describe('partDeltas', () => {
+  const PAINTS = new Map([
+    [5, [BASE, SHADE]],
+    [6, [BASE, SHADE]],
+    [9, [SHADE]],
+  ]);
+  /** A 30 × 24 block inked round on paper, `dx` px right of x 10, filled by `fill`. */
+  const figure = (dx: number, fill: (x: number, y: number) => Rgb) => (x: number, y: number) => {
+    if (inRect(x, y, 10 + dx, 8, 39 + dx, 31)) return fill(x, y);
+    if (inRect(x, y, 9 + dx, 7, 40 + dx, 32)) return INK;
+    return PAPER;
+  };
+
   test('a part painted a known colour off the kept reads that ΔE, and an unread part is left out', () => {
     const off: Rgb = [BASE[0] - 10, BASE[1], BASE[2]];
-    const ids = idsOf(40, 40, (x) => 5 + Number(x >= 20));
-    const kept = paint(40, 40, () => BASE);
-    const scene = paint(40, 40, (x) => {
-      if (x < 20) return off;
-      return BASE;
-    });
-    const deltas = partDeltas(kept, scene, ids, [5, 6, 9]);
+    const ids = idsOf(
+      60,
+      40,
+      (x, y) => Number(inRect(x, y, 10, 8, 39, 31)) * (5 + Number(x >= 25)),
+    );
+    const kept = paint(
+      60,
+      40,
+      figure(0, () => BASE),
+    );
+    const scene = paint(
+      60,
+      40,
+      figure(0, (x) => {
+        if (x < 25) return off;
+        return BASE;
+      }),
+    );
+    const deltas = partDeltas(kept, scene, ids, PAINTS);
     expect(deltas.map((d) => d.part)).toEqual([5, 6]);
-    expect(deltas[0]?.median ?? 0).toBeCloseTo(deltaE(BASE, off), 3);
-    expect(deltas[1]?.median ?? 1).toBe(0);
+    expect(deltas[0]?.deltaE ?? 0).toBeCloseTo(deltaE(BASE, off), 3);
+    expect(deltas[1]?.deltaE ?? 1).toBe(0);
+  });
+
+  test('a part drawn 10 px off its kept place, in the kept paints, reads ΔE about 0', () => {
+    const twoTone = (_x: number, y: number): Rgb => {
+      if (y < 20) return BASE;
+      return SHADE;
+    };
+    const kept = paint(60, 40, figure(0, twoTone));
+    const scene = paint(60, 40, figure(10, twoTone));
+    const ids = idsOf(60, 40, (x, y) => 1 + 4 * Number(inRect(x, y, 20, 8, 49, 31)));
+    const deltas = partDeltas(kept, scene, ids, new Map([[5, [BASE, SHADE]]]));
+    expect(deltas.map((d) => d.part)).toEqual([5]);
+    expect(deltas[0]?.deltaE ?? 99).toBeLessThan(0.5);
+  });
+
+  test("another part's pixels near one of this part's paints, far from this part, are not its kept colour", () => {
+    const near: Rgb = [SHADE[0] + 14, SHADE[1], SHADE[2]];
+    const kept = paint(110, 40, (x, y) => {
+      if (x >= 60) return figure(60, () => near)(x, y);
+      return figure(0, (_x, yy) => {
+        if (yy < 20) return BASE;
+        return SHADE;
+      })(x, y);
+    });
+    const ids = idsOf(110, 40, (x, y) => {
+      if (inRect(x, y, 10, 8, 39, 31)) return 5;
+      if (inRect(x, y, 70, 8, 99, 31)) return 6;
+      return 0;
+    });
+    const scene = paint(110, 40, (x, y) => {
+      if (x >= 60) return figure(60, () => PAPER)(x, y);
+      return figure(0, (_x, yy) => {
+        if (yy < 20) return BASE;
+        return SHADE;
+      })(x, y);
+    });
+    const deltas = partDeltas(kept, scene, ids, new Map([[5, [BASE, SHADE]]]));
+    expect(deltas[0]?.deltaE ?? 99).toBeLessThan(0.5);
+  });
+});
+
+describe('keptBlobs', () => {
+  test("a kept part's shade patches count as its blobs, by its paints, with no ids pass of the kept", () => {
+    const patches = [12, 22, 32];
+    const kept = paint(60, 40, (x, y) => {
+      if (inRect(x, y, 10, 8, 49, 31)) {
+        if (patches.some((px) => inRect(x, y, px, 14, px + 4, 20))) return SHADE;
+        return BASE;
+      }
+      if (inRect(x, y, 9, 7, 50, 32)) return INK;
+      return PAPER;
+    });
+    const ids = idsOf(60, 40, (x, y) => Number(inRect(x, y, 14, 8, 53, 31)));
+    expect(keptBlobs(kept, ids, new Map([[1, [BASE, SHADE]]]), 1)).toBe(3);
   });
 });
 
