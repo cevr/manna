@@ -6,7 +6,9 @@ import { Redacted, Effect, FileSystem, Layer, Option, Path, Sink, Stream } from 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { ChildProcessSpawner } from 'effect/process';
+import { crc32 } from 'node:zlib';
 import { PuppetImagesBun } from '../../puppet/images-bun.ts';
+import { encodePng } from '../png.ts';
 import { ContentStore } from '../content-store.ts';
 import { Critic } from '../critique.ts';
 import { FilmFolder } from '../film-repo.ts';
@@ -50,6 +52,26 @@ const COVERAGE: Coverage = {
       for: [],
     },
   ],
+};
+
+/** A 2×1 picture of one colour. */
+const pixels = (rgba: readonly [number, number, number, number]) => ({
+  width: 2,
+  height: 1,
+  rgba: Uint8Array.from([...rgba, ...rgba]),
+});
+
+/** `png` with a text chunk after its header: other bytes, the same pixels. */
+const withText = (png: Uint8Array) => {
+  const data = new TextEncoder().encode('Comment\0held');
+  const typed = Uint8Array.from([...new TextEncoder().encode('tEXt'), ...data]);
+  const chunk = new Uint8Array(12 + data.length);
+  const view = new DataView(chunk.buffer);
+  view.setUint32(0, data.length);
+  chunk.set(typed, 4);
+  view.setUint32(8 + data.length, crc32(typed));
+  // the signature (8 bytes) and the header chunk (25) lead every PNG
+  return Uint8Array.from([...png.subarray(0, 33), ...chunk, ...png.subarray(33)]);
 };
 
 const complete: EntryFacts = { drawn: true, kept: true, cut: true, bars: true, fit: true };
@@ -333,7 +355,7 @@ describe('memberStages', () => {
   );
 
   it.effect(
-    'a member cut by his own cutters runs them for his parts, keyed by what they import, and never asks okra or waits on spend',
+    'a member cut by his own cutters runs them for his parts, keyed by what they import, never asks okra, and fails on a committed part whose pixels they change',
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
@@ -341,7 +363,8 @@ describe('memberStages', () => {
         const dir = yield* fs.realPath(yield* memberIn([]));
         yield* fs.makeDirectory(`${dir}/cast-sheet/views`, { recursive: true });
         yield* fs.writeFileString(`${dir}/cast-sheet/views/front.png`, 'png');
-        yield* fs.writeFileString(`${dir}/cast-sheet/kept.png`, 'kept');
+        const kept = encodePng(pixels([200, 40, 40, 255]));
+        yield* fs.writeFile(`${dir}/cast-sheet/kept.png`, kept);
         const cutter = `${dir}/cutout/cutter.ts`;
         yield* fs.writeFileString(
           cutter,
@@ -365,7 +388,7 @@ describe('memberStages', () => {
           FilmFolder.layer(`${dir}/films`),
           Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, recording),
         );
-        const built = () =>
+        const built = (touch: ReadonlyArray<string> = []) =>
           Effect.gen(function* () {
             const stages = (yield* memberStages(
               {
@@ -381,19 +404,37 @@ describe('memberStages', () => {
               root: '/',
               cache: `${dir}/cache`,
               plan: false,
-              touch: [],
+              touch,
               spend: new Set(),
             });
-            return { stages, report };
+            const parts = report.stages.find((s) => s.id === `parts:${entry.id}@fake`);
+            return { stages, report, parts };
           }).pipe(Effect.provide(services));
-        const { stages, report } = yield* built();
+        const head = `${dir}/cutout/sheets/front/head.png`;
+        const { stages, report, parts } = yield* built();
         expect(filesOf(stages, `parts:${entry.id}@fake`)).toEqual(
           expect.arrayContaining([cutter, `${dir}/cast-sheet/kept.png`]),
         );
-        expect(report.stages.find((s) => s.id === `parts:${entry.id}@fake`)?.state).toBe('ran');
+        // no head was committed: the one the cutter writes is new
+        expect(parts?.state).toBe('ran');
         expect(report.okraCalls).toBe(0);
         expect(spawned).toEqual([['bun', cutter]]);
-        expect(yield* fs.readFileString(`${dir}/cutout/sheets/front/head.png`)).toBe('kept');
+        expect(yield* fs.readFile(head)).toEqual(kept);
+        // a committed head of the same pixels in other bytes holds
+        yield* fs.writeFile(head, withText(kept));
+        expect((yield* built([cutter])).parts?.state).toBe('ran');
+        // a committed head of other pixels fails the stage, and is put back
+        const committed = encodePng(pixels([40, 40, 200, 255]));
+        yield* fs.writeFile(head, committed);
+        const changed = (yield* built([cutter])).parts;
+        expect(changed?.state).toBe('failed');
+        expect(
+          Option.getOrElse(
+            Option.flatMap(Option.fromUndefinedOr(changed), (p) => p.reason),
+            () => '',
+          ),
+        ).toContain('head.png');
+        expect(yield* fs.readFile(head)).toEqual(committed);
       }).pipe(Effect.scoped, Effect.provide(partsLayer)),
   );
 

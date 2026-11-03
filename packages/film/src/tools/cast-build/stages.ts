@@ -40,6 +40,7 @@ import {
   Option,
   Path,
   Predicate,
+  Result,
   Schema,
   type Scope,
   Struct,
@@ -53,6 +54,7 @@ import { sha256Hex } from '../digest.ts';
 import { FilmFolder, type FilmName, importFilmModule } from '../film-repo.ts';
 import type { Media } from '../media.ts';
 import { parts } from '../part-sheet-cli.ts';
+import { decodePng } from '../png.ts';
 import { ChainFailed, chainOf } from './chain.ts';
 import { type Band, CHAIN, ClipReadJson } from './chain-steps.ts';
 import {
@@ -219,6 +221,51 @@ const runCutter = (script: string) =>
     if (code !== 0) return yield* StageFailed.make({ reason: `${script} exited ${code}` });
   });
 
+/** A file's content as the cutters' check compares it: a PNG's size and decoded RGBA, any other file's bytes. */
+const contentOf = (name: string, bytes: Uint8Array) => {
+  const asBytes = `bytes:${sha256Hex(bytes)}`;
+  if (!name.endsWith('.png')) return asBytes;
+  return Result.match(decodePng(bytes), {
+    onSuccess: (r) => `${r.width}x${r.height}:${sha256Hex(r.rgba)}`,
+    onFailure: () => asBytes,
+  });
+};
+
+/**
+ * A member's own cutters run and checked: each runs (`runCutter`), and every
+ * file his `cutout/sheets` folder held before they ran must hold the same
+ * content after (`contentOf`), as `concept parts --check` holds a sheet to
+ * what it lays. A cutter that changes one fails the stage and the committed
+ * bytes are put back, so the build never rewrites a kept part; a file no
+ * cutter had written yet is new, not a change. A change meant is made by
+ * running the cutter by hand and committing what it writes.
+ */
+const checkedCutters = (memberDir: string, scripts: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const sheets = path.join(memberDir, 'cutout', 'sheets');
+    const held = yield* Effect.forEach(yield* filesUnder(sheets), (name) =>
+      Effect.map(fs.readFile(path.join(sheets, name)), (bytes) => ({ name, bytes })),
+    );
+    yield* Effect.forEach(scripts, runCutter, { discard: true });
+    const changed = yield* Effect.filter(held, ({ name, bytes }) =>
+      fs.readFile(path.join(sheets, name)).pipe(
+        Effect.map((now) => contentOf(name, now) !== contentOf(name, bytes)),
+        Effect.orElseSucceed(() => true),
+      ),
+    );
+    if (changed.length === 0) return;
+    for (const { name, bytes } of changed) yield* fs.writeFile(path.join(sheets, name), bytes);
+    return yield* StageFailed.make({
+      reason: `his cutters change ${changed.map((c) => c.name).join(', ')} from the committed files (put back); run them by hand and commit to keep a change`,
+    });
+  }).pipe(
+    Effect.catchTag('PlatformError', (e) =>
+      StageFailed.make({ reason: `his cutters' sheets: ${e.message}` }),
+    ),
+  );
+
 /** `entry`'s puppet spec, as the member's `cutout/puppets.ts` declares it (`PUPPETS[<sheet>]`). */
 const puppetSpecIn = (memberDir: string, entry: Coverage['entries'][number]) =>
   Effect.gen(function* () {
@@ -357,7 +404,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
         Effect.gen(function* () {
           yield* Option.match(cutters, {
             onNone: () => byParts(ctx),
-            onSome: (scripts) => Effect.forEach(scripts, runCutter, { discard: true }),
+            onSome: (scripts) => checkedCutters(m.memberDir, scripts),
           });
           return yield* partsOutput(sheet);
         }),
