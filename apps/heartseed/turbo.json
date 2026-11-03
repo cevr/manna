@@ -9,7 +9,19 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
-        "!src/{core-import.property,core-import,display,matcher,today}.test.*",
+        "!src/{core-import.property,core-import,display,matcher,today,voice.property}.test.*",
+        "!src/voice/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:voice": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{core-import.property,core-import,display,matcher.property,matcher,today}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -32,7 +44,7 @@
       ]
     },
     "test": {
-      "dependsOn": ["$TURBO_EXTENDS$", "test:matcher", "test:rest", "test:infra"]
+      "dependsOn": ["$TURBO_EXTENDS$", "test:matcher", "test:voice", "test:rest", "test:infra"]
     }
   }
 }
