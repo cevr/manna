@@ -109,7 +109,12 @@ interface Block {
   readonly alone: boolean;
 }
 
-/** Each comment block of `source`, in order. */
+/**
+ * Each comment block of `source`, in order, a run of line comments on lines
+ * of their own as one. The tree holds what `effect/noComments` leaves: each
+ * `/**` doc comment directly above a declaration or member, and each tool
+ * directive (`oxlint-disable-next-line`, `@ts-expect-error`).
+ */
 const commentBlocks = (source: Source): ReadonlyArray<Block> => {
   const { lineOf, startOf } = lineReader(source.text);
   const blocks: Array<{

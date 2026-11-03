@@ -2332,7 +2332,7 @@ The form of an entry, each field on its own line:
 - **Source:** in-its-order/review-1.md F4
 - **Wrong:** The film's `script.ts` header said how the draft drew the thesis and how the film now differs, which is the text's history; it now says what the card holds and why.
 - **Cause:** The comment was written while the draft and the film were being compared, and kept that comparison.
-- **Guard:** skill: the judged history rule only warns (now 4 positives in its corpus, `packages/scripts/src/judged/fixtures/history-comment.json`), so a reader holds it. Carried by `CLAUDE.md`: "A `/** */` doc comment directly above a declaration or member says what it does now and why"
+- **Guard:** skill: the judged history rule, which reads each doc comment and tool directive, only warns (now 4 positives in its corpus, `packages/scripts/src/judged/fixtures/history-comment.json`), so a reader holds it. Carried by `CLAUDE.md`: "A `/** */` doc comment directly above a declaration or member says what it does now and why"
 
 ### confirm-without-reload
 
@@ -3422,7 +3422,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-motion/rewrite-round-2-findings.md F5
 - **Wrong:** `src/motion/shaders.ts` and `shaders.test.ts` named the sway's earlier value beside the owner's choice.
 - **Cause:** The comment was written as the change's story, not as what the code does and why.
-- **Guard:** skill: the judged rule `judged/historyComment` warns and fails open, so it gates nothing; the repo's comment rule is read by every review. Carried by `CLAUDE.md`: "says what it does now and why; any other fact a reader needs lives in a name, a test or a doc. History told in words (what it used to do, which pass changed it) is a finding."
+- **Guard:** skill: the judged rule `judged/historyComment`, which reads each doc comment and tool directive, warns and fails open, so it gates nothing; the repo's comment rule is read by every review. Carried by `CLAUDE.md`: "says what it does now and why; any other fact a reader needs lives in a name, a test or a doc. History told in words (what it used to do, which pass changed it) is a finding."
 
 ### styles-test-reads-scope-roots
 

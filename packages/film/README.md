@@ -3796,8 +3796,8 @@ criteria, the label that reports, a threshold and a message;
 `settings.judged` names the model by its exact id (`jev-1.13.0`), whose
 measurements set the thresholds, and where the answers are kept. Its
 severity is its gate: `warn` reports, `error` fails the lint, `off` judges
-nothing. The rules are `historyComment` (a comment's history), `testOracle`
-(a test whose oracle is its code), `silentDrop` (a function that drops what
+nothing. The rules are `historyComment` (the history a doc comment or a
+tool directive tells), `testOracle` (a test whose oracle is its code), `silentDrop` (a function that drops what
 it cannot handle unsaid), all at `warn`, `scriptSpeech` (a film beat that
 names its sources or church history), at `error`, and `commentClaimsCode` (a
 comment that claims more than its code), `off`: reviewers found none of its

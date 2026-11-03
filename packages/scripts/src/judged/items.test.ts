@@ -43,9 +43,11 @@ describe('the judged keys', () => {
         expect(keys('functions', 'src/a.ts', ["const f = () => 'a b' + 0x10;"])).toEqual(
           keys('functions', 'src/a.ts', ['const f = () => "a b" + 16;']),
         );
-        expect(keys('comments', 'src/b.ts', ['// One line,', '// then another.'])).toEqual(
-          keys('comments', 'src/b.ts', ['    // One line, then', '    // another.']),
-        );
+        const doc = keys('comments', 'src/b.ts', ['/** One line,', ' * then another. */']);
+        expect(doc).toEqual(['One line, then another.']);
+        expect(
+          keys('comments', 'src/b.ts', ['  /**', '   * One line, then', '   * another.', '   */']),
+        ).toEqual(doc);
       }),
   );
 
@@ -81,8 +83,8 @@ describe('the judged keys', () => {
         ];
         for (const [file, one, other] of pairs)
           expect(keys('functions', file, [one])).not.toEqual(keys('functions', file, [other]));
-        expect(keys('comments', 'src/b.ts', ['// a - b'])).not.toEqual(
-          keys('comments', 'src/b.ts', ['// a-b']),
+        expect(keys('comments', 'src/b.ts', ['/** a - b */'])).not.toEqual(
+          keys('comments', 'src/b.ts', ['/** a-b */']),
         );
       }),
   );
