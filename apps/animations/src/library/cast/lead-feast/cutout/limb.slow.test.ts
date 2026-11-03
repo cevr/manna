@@ -7,17 +7,11 @@ type Pt = readonly [number, number];
 type Puppet = Parameters<typeof rasterOf>[0];
 type Raster = ReturnType<typeof rasterOf>;
 
-// Measured CIE Lab references on single-9: cream sleeve and orange skin.
-// Chroma distinguishes the wrist from the sleeve even in coloured shadow.
 const CLOTH = [90.2, 4.2, 20.5] as const;
 const SKIN = [63.4, 38.9, 46.9] as const;
 const INK_L = 20;
-// At 1×, two bilinear footprints (the paint cut and the sleeve lip) may
-// leave up to eight mixed contact pixels. Each must touch established ink;
-// an unprotected raw cut has no allowance, regardless of its pixel count.
 const FILTER_FRINGE = 8;
 
-/** Independent rigid-chain oracle: rotate cuff about elbow, then hand about the posed cuff. */
 const inverse = (limb: ReturnType<typeof measuredHand>['limb'], elbow: number, wrist: number) => {
   const e = (elbow * Math.PI) / 180,
     angle = ((elbow + wrist) * Math.PI) / 180;
@@ -102,14 +96,11 @@ const measuredHand = (puppet: Puppet) => {
     if (square === 0) return false;
     const weight = d.reduce((sum, c, k) => sum + c * (source[k]! - rgb[k]!), 0) / square;
     if (weight < 1 / 255 || weight > 1) return false;
-    // A filtered ink edge need not be L* <20. Recognise its measured ink
-    // mixed with the source colour, within two bytes of rounding error.
     return source.every((c, k) => Math.abs(rgb[k]! - (c - weight * d[k]!)) <= 2);
   };
   return { arm, limb, alpha, sample, clothAt, inkAt };
 };
 
-/** Paper, ink, cloth and skin in the rendered result, independent of source ownership. */
 const kindsOf = (r: Raster) => {
   const kinds = new Uint8Array(r.width * r.height);
   for (let i = 0; i < kinds.length; i++) {
@@ -150,9 +141,6 @@ const countEdges = (
         ghostAt.push([x, y]);
         continue;
       }
-      // A native skin/bottle paint contact stays native. Every other skin
-      // contact with cloth or paper needs ink, including a cut moved inward
-      // by the sleeve lip where the original source is still hand-owned.
       const cut = [
         [-1, 0],
         [1, 0],
@@ -176,8 +164,6 @@ const countEdges = (
   return { exposed, ghost, raw, ghostAt, unprotected };
 };
 
-// Heavy real-art sweeps stay in the slow suite. Each pose is a separate case
-// under the standard timeout; its two guards share one raster and load.
 const lead = Effect.runPromise(puppetFor('single-9'));
 const counts = new Map<string, ReturnType<typeof countEdges>>();
 const at = (elbowRight: number, wristRight: number) =>

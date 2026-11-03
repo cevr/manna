@@ -20,9 +20,7 @@ const sub = (a: Pt, b: Pt): Pt => [a[0] - b[0], a[1] - b[1]];
 const dot = (a: Pt, b: Pt) => a[0] * b[0] + a[1] * b[1];
 const along = (p: Pt, d: Pt, l: number): Pt => [p[0] + l * d[0], p[1] + l * d[1]];
 const unit = (a: Pt): Pt => [a[0] / Math.hypot(...a), a[1] / Math.hypot(...a)];
-/** The side a positive elbow turn opens of a segment running along `d`, as the fixtures draw it. */
 const opens = (d: Pt): Pt => [d[1], -d[0]];
-/** `p`'s `(u, v)` on the line from `a` along `d`, u counted on from `from`. */
 const frame = (p: Pt, a: Pt, d: Pt, from: number): Pt => [
   from + dot(sub(p, a), d),
   dot(sub(p, a), opens(d)),
@@ -33,15 +31,10 @@ const toSegment = (p: Pt, a: Pt, d: Pt, l: number) => {
   return Math.hypot(q[0] - t * d[0], q[1] - t * d[1]);
 };
 
-/** Which sides a fixture inks: `[inner, outer]`. */
 type Inked = readonly [boolean, boolean];
 const BOTH: Inked = [true, true];
 const NONE: Inked = [false, false];
 
-// A synthetic arm, 200 × 300 px: a straight chain tilted off the axes, its
-// sleeve two flat shade planes of different half-widths each side, inked 4 px
-// along the edges `Inked` names, a stub above the shoulder and a hand (a disc)
-// past the cuff.
 const [W, H] = [200, 300];
 const S: Pt = [60, 40];
 const E: Pt = [90, 150];
@@ -59,7 +52,6 @@ const SKIN = [240, 170, 120] as const;
 const STUB = 14;
 const HAND = along(C, D, 14);
 
-/** The sleeve's colour at (u, v), or none off the sleeve. */
 const sleeveAt = (u: number, v: number, inked: Inked): ReadonlyArray<Rgb> => {
   const w = Math.max(0, u);
   const sides: ReadonlyArray<readonly [number, Rgb]> = [
@@ -93,7 +85,6 @@ const paint = (
 
 const armPixels = (inked: Inked) => paint(W, H, (x, y) => texelAt(x, y, inked));
 
-/** `r` with each texel of a colour `pairs` names in its colour there. */
 const recoloured = (r: Raster, pairs: ReadonlyArray<readonly [Rgb, Rgb]>): Raster => {
   const rgba = r.rgba.slice();
   for (let i = 0; i < rgba.length; i += 4)
@@ -116,7 +107,6 @@ const SKELETON: Skeleton = {
 const ARM = armPixels(BOTH);
 const SHEET: PuppetSheet = { width: W, height: H, parts: [{ name: 'arm', pixels: ARM }] };
 const JOINTS = { shoulder: S, elbow: E, wrist: C };
-/** Cloth as dark as ink (L* about 13) under a darker ink: no edge shows where its ink ends. */
 const DARK_SLEEVE = recoloured(ARM, [
   [LIGHT, [40, 30, 30]],
   [DARK, [40, 30, 30]],
@@ -128,13 +118,6 @@ const LIMB: PuppetPartLimb = Result.getOrThrow(limbOf('arm', ARM, JOINTS, DECLAR
 const kindOf = (r: ReturnType<typeof limbOf>) =>
   Result.match(r, { onSuccess: () => 'measured', onFailure: (e) => e.kind });
 
-// A bent arm, 220 × 200 px, folded like the lead's right arm: the forearm
-// turned 135° toward the inner side, a 45° angle inside the elbow. Each texel
-// belongs to the segment it lies nearer (the elbow's own texels to the upper
-// arm), within that segment's half-widths: inner 18 px on both, so the inner
-// edges meet at a crease on the fold's bisector; outer tapering to 3 px at the
-// elbow, where a 3 px disc of ink rounds the corner. The ink is 4 px deep, so
-// the elbow's pivot lies in the outline's ink.
 const [BW, BH] = [220, 200];
 const BD1 = unit([20, 110]);
 const BD2: Pt = [Math.SQRT1_2 * (-BD1[1] - BD1[0]), Math.SQRT1_2 * (BD1[0] - BD1[1])];
@@ -205,7 +188,6 @@ const HALF = Result.getOrThrow(
 );
 const HALF_LIMB = Option.getOrThrow(Option.fromUndefinedOr(HALF.parts[0]!.limb));
 
-/** Acceptance E's OKLab distance, distinct from the measurement's CIE Lab. */
 const oklab = (rgb: Rgb): Rgb => {
   const linear = rgb.map((c) => {
     const v = c / 255;
@@ -223,8 +205,6 @@ const oklab = (rgb: Rgb): Rgb => {
   ];
 };
 
-// Frame results are pure. Reuse identical fixture poses across the ink,
-// connectivity and curvature assertions without rerasterizing each one.
 const bentFrames = new Map<string, Raster>();
 const bentAt = (elbowRight: number, wristRight = 0) =>
   Option.getOrElse(Option.fromUndefinedOr(bentFrames.get(`${elbowRight}/${wristRight}`)), () => {
@@ -237,7 +217,6 @@ const bentAt = (elbowRight: number, wristRight = 0) =>
     return r;
   });
 
-/** Brute-force distance to the raster's alpha boundary: independent of the stroke's distance transform. */
 const nearBoundary = (r: Raster, x: number, y: number, width: number, alpha = 128) => {
   const radius = Math.ceil(width);
   for (let dy = -radius; dy <= radius; dy++)
@@ -264,7 +243,6 @@ const strayInk = (r: Raster, elbow: number, width: number) => {
         BE[1] - Math.sin(turn) * dx + Math.cos(turn) * dy,
       ];
       const [u, v] = frame(q, BE, BD2, B_UPPER);
-      // The cuff opening is an inked contact, separate from the silhouette.
       const cuff =
         u >= B_UPPER + B_FORE - width &&
         u <= B_UPPER + B_FORE + 2 * width &&
@@ -280,8 +258,6 @@ const strayInk = (r: Raster, elbow: number, width: number) => {
   return stray;
 };
 
-// The public raster catches ink left by overlapping segments; it cannot
-// establish the measured shape, which the acceptance compares to the paint.
 const components = (r: Raster) => {
   const seen = new Uint8Array(r.width * r.height);
   const queue: Array<number> = [];
@@ -311,14 +287,11 @@ const ghostInk = (r: Raster, width: number) => {
       const i = (y * r.width + x) * 4;
       const a = r.rgba[i + 3]!;
       if (a <= 0 || a >= 250 || r.rgba[i]! > 45) continue;
-      // Use the whole nonzero union, not its half-alpha threshold: a ghost
-      // must not count itself as clear ground and excuse its own outline.
       if (!nearBoundary(r, x, y, width, 1)) ghost++;
     }
   return ghost;
 };
 
-/** Directed pixel-cell boundaries, traced independently of the renderer's mask operations. */
 const boundaryEdges = (r: Raster) => {
   const stride = r.width + 1;
   const edges = new Map<number, Array<number>>();
@@ -422,7 +395,6 @@ const silhouetteIoU = (before: Raster, after: Raster) => {
   return inter / union;
 };
 
-/** Skin outside the posed hand, restricted to forearm-frame hand texels (the ghost-wrist oracle). */
 const ghostSkin = (
   half: Parameters<typeof rasterOf>[0],
   numbers: Readonly<Record<string, number>>,
@@ -736,7 +708,6 @@ describe('rasterOf stroke silhouette', () => {
   });
 });
 
-/** Where the bent limb's widths stray more than 1 px from the drawing, or a side ends on what the drawing does not. */
 const bentFaults = (limb: PuppetPartLimb) => {
   const faults: Array<string> = [];
   for (let k = 0; k < limb.outer.widths.length; k++) {
@@ -937,7 +908,6 @@ const lcg = (start: number) => {
   };
 };
 
-/** What a blend at turn `t` (wrapped to `w`) gets wrong: a weight outside [0, 1] or a ramp end not exact. */
 const endFaults = (t: number, w: number, a: { sleeve: number; fold: number }) => {
   const [f0, f1] = LIMB.fade;
   const [g0, g1] = LIMB.fold;
@@ -950,7 +920,6 @@ const endFaults = (t: number, w: number, a: { sleeve: number; fold: number }) =>
   return faults.filter(([fault]) => fault).map(([, what]) => what);
 };
 
-/** Where the weights, sorted by wrapped turn, fall back or jump across a quarter degree. */
 const stepFaults = (samples: Array<readonly [number, number, number]>) => {
   const sorted = samples.toSorted((x, y) => x[0] - y[0]);
   const faults: Array<string> = [];
@@ -982,7 +951,6 @@ describe('limbBlend', () => {
     expect(limbBlend({ ...LIMB, fade: [-2, -1] }, {}).sleeve).toBe(1);
   });
 
-  // The acceptance's property (spec, check B) over the rule's whole domain.
   test('exact ends, monotone, no jump, in [0, 1], the elbow alone, from -540° to 540°', () => {
     const bad: Array<string> = [];
     const samples: Array<readonly [number, number, number]> = [];
@@ -1005,8 +973,6 @@ describe('limbBlend', () => {
   });
 });
 
-// The straight arm with a body part beside its outer edge near the shoulder,
-// reaching `band` px past the shoulder's line, which a flap takes into the arm.
 const BAND = 12;
 const BODY_COLOUR = [120, 90, 200] as const;
 const flapSkeleton = (band: number): Skeleton => ({

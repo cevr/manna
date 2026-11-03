@@ -1,26 +1,3 @@
-/**
- * Chords as a mode (unit chordmode): the hymn route as a singer and a player
- * meet it, held to the inventory of its controls. With chords off (the
- * default) the page, the bar and the player sheet show only what is sung and
- * heard, and the switch; with chords on, every control for playing comes in.
- * The switch is one setting (`chords`) with three doors here: a tap on the
- * bar's guitar head, the sheet's `Chords` switch, and a hold. While chords
- * are off the recording plays in the printed key, and a hymn's stored key is
- * heard again once they are on.
- *
- * The route is mounted as `thumb.slow.test.tsx` mounts it, in a browser's
- * document (`src/test/setup.ts`), over a player whose device the test holds
- * (`src/test/device.ts`): the hymn page with its own bar, the docked bar, and
- * the player sheet. The reader and the player share one set of settings over
- * a map the test holds, as `LivePlayer` builds its player over the app's:
- * the player hears `heardMove`.
- *
- * `rows` is the inventory this route reaches, each row by its handle (a test
- * id or an accessible label) and its sort; `check` reads every row in a state
- * and names each one out of place, so a row added to the table is checked
- * with no new code. No failure prints a hymn's words.
- */
-
 import { RegistryContext } from '@effect/atom-react';
 import { describe, expect, it } from 'effect-bun-test';
 import { Duration, Effect, Layer, Option, Schedule } from 'effect';
@@ -52,7 +29,6 @@ import { PageBar, PlayerBar } from './PlayerBar';
 
 const bundled = readChords();
 
-/** A store over `map`: what the device keeps between two launches. */
 const storeOver = (map: Map<string, string>) =>
   Layer.succeed(KeyValueStore.KeyValueStore)(
     KeyValueStore.makeStringOnly({
@@ -65,10 +41,8 @@ const storeOver = (map: Map<string, string>) =>
     }),
   );
 
-/** Hymn 100 moved: two semitones up, capo 1, so every reset chip has a move to reset. */
 const MOVED = '{"transpose":2,"capo":1}';
 
-/** Where a row lies: the hymn page, the bar, the bar's overlay (its dials), the player sheet. */
 const scopes = {
   page: '[data-testid="page"]',
   bar: '[role="region"][aria-label="Player"]',
@@ -79,24 +53,13 @@ const scopes = {
 type Sort = 'simple' | 'switch' | 'with chords';
 
 interface Row {
-  /** The inventory's row, as the spec numbers it, and what of it this handle is. */
   readonly row: string;
   readonly where: keyof typeof scopes;
-  /** A selector inside `where`. */
   readonly handle: string;
   readonly sort: Sort;
-  /** When set, the handle is present only while its text matches. */
   readonly text?: RegExp;
 }
 
-/**
- * The inventory rows the hymn route reaches over hymn 100, moved, with its
- * sheet open on its own page and the bar's dials open (a tap of the key
- * button while chords are on). Rows it cannot reach here: H1-H4 (home), A1
- * (the about sheet), T1-T4 (Settings: `settings.chordmode.test.tsx`), U1-U2
- * (routes); the bar's Tuner (`dials-tuner`) is drawn only on a device with
- * the ear, which the web lacks.
- */
 const rows: ReadonlyArray<Row> = [
   { row: 'R1 about', where: 'page', handle: '[data-testid="hymn-about"]', sort: 'simple' },
   { row: 'R1 number', where: 'page', handle: '[data-testid="hymn-number"]', sort: 'simple' },
@@ -209,16 +172,10 @@ const rows: ReadonlyArray<Row> = [
   },
 ];
 
-/**
- * The hymn route at `/hymns/<n>`: its header, its page with the page's own
- * bar, as the screen draws them; the docked bar; and the player sheet on the
- * hymn when `sheet`.
- */
 const route =
   (n: number, sheet = false) =>
   (reader: ChordReader) => {
     params['number'] = String(n);
-    // The sheet's route names its hymn, as the bar opens it.
     if (sheet) params['hymn'] = String(n);
     const hymn = Option.getOrThrow(hymnAt(String(n)));
     return (
@@ -239,7 +196,6 @@ const route =
     );
   };
 
-/** The player sheet on hymn `n` off any page, as the docked bar opens it over home. */
 const sheetAlone = (n: number) => () => {
   params['hymn'] = String(n);
   return (
@@ -249,10 +205,6 @@ const sheetAlone = (n: number) => () => {
   );
 };
 
-/**
- * The player sheet on hymn `held` at `/player?hymn=<held>&page=<page>`, over
- * hymn `page`'s page: the bar opened its hymn while the reader was on another.
- */
 const sheetOver = (held: number, page: number) => (reader: ChordReader) => {
   params['hymn'] = String(held);
   params['page'] = String(page);
@@ -274,12 +226,6 @@ const clearParams = () => {
   for (const key of Object.keys(params)) delete params[key];
 };
 
-/**
- * `screen` over a fresh player and the settings `device` keeps, mounted; it
- * unmounts when the `using` ends. The reader and the player read one set of
- * settings, and the player hears each hymn's `heardMove`, as `LivePlayer`
- * builds it.
- */
 const mount = (screen: (reader: ChordReader) => ReactNode, device: Map<string, string>) => {
   routed.splice(0);
   const played = fakeDevice();
@@ -297,7 +243,6 @@ const mount = (screen: (reader: ChordReader) => ReactNode, device: Map<string, s
   };
   const player = playerOn(played.layer, Duration.millis(1), settings.heardMove);
   const registry = AtomRegistry.make();
-  // The player follows a key change while it plays, as `LivePlayer` keeps it mounted.
   const unmountKeys = registry.mount(player.keys);
   const clock = Effect.runSync(Effect.scoped(TestClock.make()));
   const host = document.createElement('div');
@@ -317,7 +262,6 @@ const mount = (screen: (reader: ChordReader) => ReactNode, device: Map<string, s
   const all = (selector: string) => [...host.querySelectorAll(selector)];
   const get = (selector: string) =>
     Option.getOrThrow(Option.fromNullishOr(host.querySelector(selector)));
-  /** Wait until `holds` of what the device was asked to play, or fail naming `what`. */
   const untilPlayed = (holds: (played: ReadonlyArray<string>) => boolean, what: string) =>
     Effect.promise(() =>
       act(() =>
@@ -363,7 +307,6 @@ const mount = (screen: (reader: ChordReader) => ReactNode, device: Map<string, s
 
 type Page = ReturnType<typeof mount>;
 
-/** Whether `row` is drawn: its handle in its place, its text matching when it names one. */
 const present = (page: Page, row: Row) =>
   page.all(`${scopes[row.where]} ${row.handle}`).some((found) =>
     Option.match(Option.fromUndefinedOr(row.text), {
@@ -372,10 +315,6 @@ const present = (page: Page, row: Row) =>
     }),
   );
 
-/**
- * Every row of `table` out of place with chords `on`: a with-chords row shown
- * while off, or any row missing. Each names its row, its sort and its handle.
- */
 const check = (page: Page, on: boolean, table: ReadonlyArray<Row> = rows) =>
   table.flatMap((row) => {
     const wanted = row.sort !== 'with chords' || on;
@@ -385,25 +324,21 @@ const check = (page: Page, on: boolean, table: ReadonlyArray<Row> = rows) =>
     ];
   });
 
-/** The rows drawn without the bar's dials open. */
 const atRest = rows.filter((row) => row.where !== 'dials');
 
 const KEY_BUTTON = '[data-testid="key-button"][aria-label="Key"]';
 const BAR_DIALS = '[data-testid="bar-overlay"] [data-testid="dials"]';
-/** The sheet's `Chords` switch: the input React Native's Switch draws on the web. */
 const SWITCH = '[data-testid="sheet"] input[aria-label="Chords"]';
 
 const keyButton = (page: Page) => page.get(KEY_BUTTON);
 const tapKey = (page: Page) => page.click(KEY_BUTTON);
 const switchOn = (page: Page) => (page.get(SWITCH) as HTMLInputElement).checked;
 const flipSwitch = (page: Page) => act(() => (page.get(SWITCH) as HTMLInputElement).click());
-/** The key button's hint (`accessibilityHint`, which react-native-web keeps off the DOM), if any. */
 const hintOf = (page: Page) =>
   Option.liftThrowable(
     () => propsWith(keyButton(page), 'accessibilityHint')['accessibilityHint'],
   )();
 
-/** A hymn the book has no chords for, the first by number. */
 const chordless = (() => {
   const book = chordBook(bundled);
   const found = Array.from({ length: 695 }, (_, k) => k + 1).find(
@@ -412,7 +347,6 @@ const chordless = (() => {
   return Option.getOrThrow(Option.fromUndefinedOr(found));
 })();
 
-/** A hymn the book has chords for other than 100, the first by number. */
 const chordedOther = (() => {
   const book = chordBook(bundled);
   const found = Array.from({ length: 695 }, (_, k) => k + 1).find(
@@ -432,7 +366,6 @@ describe('chords off: the simple view', () => {
         expect(switchOn(page)).toBe(false);
         expect(keyButton(page).getAttribute('aria-valuetext')).toBe('Chords off');
         expect(page.has('[data-testid="chord-1-1-1"]')).toBe(false);
-        // Nothing was written for the hymn by showing it.
         expect(device.get('chords') ?? 'false').toBe('false');
       }
     }),
@@ -459,7 +392,6 @@ describe('chords off: the simple view', () => {
       expect(page.has('[data-testid="dials-backdrop"]')).toBe(false);
       expect(keyButton(page).getAttribute('aria-expanded')).toBe('false');
       expect(keyButton(page).getAttribute('aria-valuetext')).toBe('Db');
-      // With chords on, the next tap opens the key and capo dials, as before.
       tapKey(page);
       expect(page.has(`${BAR_DIALS} [data-testid="dial-capo"]`)).toBe(true);
     }),
@@ -480,7 +412,6 @@ describe('chords off: the simple view', () => {
       });
       expect(notice()).toBe(true);
       expect(keyButton(page).getAttribute('aria-valuetext')).toBe('No chords');
-      // With chords on, a hymn with no chords still opens no dials: no backdrop waits for a tap, and the button reads closed.
       tapKey(page);
       expect(page.has(BAR_DIALS)).toBe(false);
       expect(page.has('[data-testid="dials-backdrop"]')).toBe(false);
@@ -503,7 +434,6 @@ describe('chords on: every control', () => {
       expect(check(page, true)).toEqual([]);
       expect(page.all(SWITCH)).toHaveLength(1);
       expect(switchOn(page)).toBe(true);
-      // One chord group in the sheet, after Start and before the reading: the switch, the key and capo (in either order), the placement. Each pair out of order is listed.
       const sheet = (id: string) => `[data-testid="sheet"] [data-testid="${id}"]`;
       const pairs = [
         [sheet('start'), SWITCH],
@@ -551,7 +481,6 @@ describe('chords on: every control', () => {
         expect(page.has(BAR_DIALS)).toBe(false);
         expect(page.has('[data-testid="dials-backdrop"]')).toBe(false);
         expect(keyButton(page).getAttribute('aria-expanded')).toBe('false');
-        // The hymn's move was kept through it all.
         expect(device.get('move.100')).toBe(MOVED);
       }),
   );
@@ -566,11 +495,9 @@ describe('chords on: every control', () => {
       expect(device.get('chords')).toBe('true');
       using page = mount(route(100, true), device);
       expect(check(page, true, atRest)).toEqual([
-        // Hymn 100 is not moved on this device: it has nothing to reset.
         'S6 dials-reset (with chords, sheet [data-testid="dials-reset"]): missing',
       ]);
       expect(switchOn(page)).toBe(true);
-      // Chords are on, so a tap opens the dials.
       tapKey(page);
       expect(page.has(`${BAR_DIALS} [data-testid="dial-capo"]`)).toBe(true);
     }),
@@ -588,7 +515,6 @@ describe('chords on: every control', () => {
       expect(page.all(SWITCH)).toHaveLength(1);
       expect(switchOn(page)).toBe(true);
       expect(page.has('[data-testid="sheet"] [data-testid="dial-placement"]')).toBe(true);
-      // The key and capo dials belong to the hymn's own page.
       expect(page.has('[data-testid="sheet"] [data-testid="dial-key"]')).toBe(false);
       expect(page.has('[data-testid="sheet"] [data-testid="dial-capo"]')).toBe(false);
     }),
@@ -665,13 +591,11 @@ describe('the key heard', () => {
             ),
           ),
         );
-        // Chords on, by the sheet's switch: the player switches to the stored key at its place.
         flipSwitch(page);
         yield* page.untilPlayed(
           (played) => played.at(-1) === audioUrl(100, 2),
           'offset 2 with chords on',
         );
-        // Chords off again: back to the printed key; the stored move is kept.
         flipSwitch(page);
         yield* page.untilPlayed(
           (played) => played.at(-1) === audioUrl(100, 0),

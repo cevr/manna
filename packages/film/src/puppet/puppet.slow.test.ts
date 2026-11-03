@@ -1,17 +1,3 @@
-// A puppet drawn by the page's draw path (`drawPuppet`, WebGL 2) against its
-// CPU reference (`rasterOf`): a fixture puppet (a two-bone sleeve over a
-// body, each pixel its own colour) at rest byte for byte, at 20 seeded poses
-// within ΔE 1 and IoU 0.99; the fold pose (the forearm turned 150° back
-// over the upper arm, one part's triangles over one pixel) within ΔE 1 on
-// average and 2 at any pixel; 60 frames drawn in a shuffled order equal to the
-// same frames in order; a dress's dye (the shader's, `DYE_GLSL`) against the
-// sleeve's pixels dyed on the CPU (`dyedRaster`) and drawn undressed, over a
-// sleeve whose pixels reach each of the dye's five branches, at rest within
-// ΔE 1 at any pixel and posed within the bounds above; and a part
-// PNG's bytes in the key of a beat whose scene imports the puppet
-// (`tools/stamp.ts`). Each case opens Chrome or writes a film, so they run in
-// the slow suite.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -29,7 +15,6 @@ import { PuppetImagesBun } from './images-bun.ts';
 
 const [W, H] = [96, 64];
 
-/** A half-scale inked sleeve with two flat shade planes and its own skin hand. */
 const strokeDyeFixture = () => {
   const width = 100,
     height = 150;
@@ -84,8 +69,6 @@ const strokeDyeFixture = () => {
   return { puppet: fixture, palette: [INK, LIGHT, DARK, SKIN] };
 };
 
-// This CPU colour check lives above core so it can use the canvas dye without
-// reversing the dependency. It opens no browser and listens on no socket.
 describe('stroke dye reference', () => {
   test('dyed flat paint equals dyedRaster within one byte, with unchanged coverage even when cloth dyes below INK_L', () => {
     const dye = Result.getOrThrow(
@@ -126,7 +109,6 @@ describe('stroke dye reference', () => {
   });
 });
 
-/** The fixture's two parts: a sleeve (a band from (10, 26) to (86, 38)) over a body (a box below it). */
 const partsOf = (tint = 0) => {
   const arm = new Uint8Array(W * H * 4);
   const body = new Uint8Array(W * H * 4);
@@ -159,7 +141,6 @@ export const SPEC = {
 };
 `;
 
-/** The fixture puppet's module and part PNGs written into `dir`, the sleeve tinted by `tint`. */
 const lay = (dir: string, tint = 0) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -170,11 +151,9 @@ const lay = (dir: string, tint = 0) =>
     yield* fs.writeFileString(path.join(dir, 'spec.ts'), SPEC_MODULE);
   });
 
-/** The ramp the sleeve declares it is drawn in, and the cloth a dress dyes it to. */
 const DRAWN: Ramp = { shade: '#8a7f70', base: '#b8ab98', light: '#ddd2c0' };
 const CLOTH: Ramp = { shade: '#394357', base: '#4b566b', light: '#6a7590' };
 
-/** The fixture puppet with its sleeve's ramp declared (`SPEC`), and with the sleeve's pixels dyed to `CLOTH` on the CPU (`DYED`). */
 const DYE_MODULE = `import arm from './arm.png' with { type: 'file' };
 import armDyed from './arm-dyed.png' with { type: 'file' };
 import body from './body.png' with { type: 'file' };
@@ -187,11 +166,6 @@ export const SPEC = {
 export const DYED = { ...PLAIN, key: 'fixture/dyed-on-cpu', parts: [{ name: 'arm', png: armDyed }, { name: 'body', png: body }] };
 `;
 
-/**
- * The dyed fixture's sleeve: the sleeve's band painted as a ramp from near
- * black at its left end to near white at its right, a little warmer down the
- * band, so its pixels fall in every one of the dye's segments (`segmentsOf`).
- */
 const rampSleeve = (): Raster => {
   const arm = new Uint8Array(W * H * 4);
   for (let y = 26; y < 38; y++)
@@ -206,7 +180,6 @@ const rampSleeve = (): Raster => {
   return { width: W, height: H, rgba: arm };
 };
 
-/** How many of `raster`'s opaque pixels lie in each of `dye`'s segments by lightness: ink kept, cut to shade, shade to base, base to light, light to white. */
 const segmentsOf = (dye: Dye, raster: Raster) => {
   const counts = [0, 0, 0, 0, 0];
   for (let i = 0; i < raster.width * raster.height; i++) {
@@ -218,7 +191,6 @@ const segmentsOf = (dye: Dye, raster: Raster) => {
   return counts;
 };
 
-/** The fixture puppet written into `dir` as `lay` writes it (its module as `plain.ts`), its sleeve the ramp (`rampSleeve`), with the sleeve's CPU-dyed PNG and the dyed module (`DYE_MODULE`) as `spec.ts`. */
 const layDyed = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -233,7 +205,6 @@ const layDyed = (dir: string) =>
 
 const [LW, LH] = [200, 140];
 
-/** A larger fixture for the line: a sleeve band from (24, 40) to (104, 54) over a body box, each with a 3 px ink edge, once with the sheet's line declared and once bare. */
 const LINED_MODULE = `import arm from './arm.png' with { type: 'file' };
 import body from './body.png' with { type: 'file' };
 const base = {
@@ -253,7 +224,6 @@ export const LINED = { ...base, key: 'fixture/lined', line: { width: 3, ink: [30
 export const BARE = { ...base, key: 'fixture/bare' };
 `;
 
-/** Each part's paint (sleeve, body), then the ink of its edge. */
 const INK_OR = [
   [
     [236, 226, 200, 255],
@@ -291,7 +261,6 @@ const layLined = (dir: string) =>
     yield* fs.writeFileString(path.join(dir, 'spec.ts'), LINED_MODULE);
   });
 
-/** `m` (`LW` × `LH`) grown by `k` px (Euclidean, brute force over the disc). */
 const grown = (m: Uint8Array, k: number) => {
   const out = new Uint8Array(m.length);
   for (let y = 0; y < LH; y++)
@@ -324,7 +293,6 @@ const poseOf = (seed: number): PuppetPose => {
   };
 };
 
-/** Mean ΔE76 over the union of the two figures (alpha over half), each laid over one paper, and their IoU. */
 const against = (a: Raster, b: Raster) => {
   const P = [242, 234, 218];
   const over = (r: Raster, i: number) => {
@@ -399,12 +367,10 @@ describe('a puppet in the page', () => {
         const { SPEC } = yield* Effect.promise(() => import(module));
         const puppet = yield* puppetFrom(SPEC);
         const page = yield* puppetPage({ module, name: 'SPEC' });
-        // the forearm turned back over the upper arm: two triangles of one part over one pixel, laid in turn on both paths
         const pose: PuppetPose = { numbers: { elbowRight: 150 }, root: [45, 60], scale: 1 };
         const m = against(yield* page.draw(pose), rasterOf(puppet, pose));
         expect(m.deltaE).toBeLessThanOrEqual(1);
         expect(m.iou).toBeGreaterThanOrEqual(0.99);
-        // every pixel, the fold's among them: measured 1.04 at most (2026-10-28)
         expect(m.worst).toBeLessThanOrEqual(2);
       }),
     ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
@@ -423,7 +389,6 @@ describe('a puppet in the page', () => {
           const { SPEC } = yield* Effect.promise(() => import(module));
           const puppet = yield* puppetFrom(SPEC);
           const page = yield* puppetPage({ module, name: 'SPEC' });
-          // no part turned, at a fractional scale: each seal drawn under the line it closes, on both paths
           const pose: PuppetPose = { numbers: {}, root: [45, 60], scale: 0.9 };
           const m = against(yield* page.draw(pose), rasterOf(puppet, pose));
           expect(m.deltaE).toBeLessThanOrEqual(1);
@@ -444,22 +409,17 @@ describe('a puppet in the page', () => {
           yield* layDyed(dir);
           const module = path.join(dir, 'spec.ts');
           const { DYED } = yield* Effect.promise(() => import(module));
-          // the sleeve's pixels reach every branch of the shader's dye, ink kept to light to white
           const segments = segmentsOf(Result.getOrThrow(dyeKnots(DRAWN, CLOTH)), rampSleeve());
           for (const n of segments) expect(n).toBeGreaterThan(0);
-          // the sleeve's pixels dyed on the CPU (`dyedRaster`), drawn undressed: the shader's dye's reference
           const reference = yield* puppetFrom(DYED);
           const page = yield* puppetPage({ module, name: 'SPEC' });
           const dress = { dye: { arm: CLOTH } };
           const rest: PuppetPose = { numbers: {}, root: [45, 60], scale: 1 };
           const plain = against(yield* page.draw(rest), rasterOf(reference, rest));
-          // undressed, the sleeve stands far from its dyed reference, so the bounds below hold the dye, not the paint
           expect(plain.deltaE).toBeGreaterThan(5);
-          // at rest every pixel: measured 0 over the ramp sleeve (2026-11-02); the bound leaves the GLSL's float math room against the CPU's rounded bytes
           const still = against(yield* page.dressed(rest, dress), rasterOf(reference, rest));
           expect(still.deltaE).toBeLessThanOrEqual(0.05);
           expect(still.worst).toBeLessThanOrEqual(1);
-          // posed, the bounds the undressed draw keeps (a part's edge pixel may land in or out of the figure on either path)
           for (const pose of [1, 2, 3, 4, 5].map(poseOf)) {
             const m = against(yield* page.dressed(pose, dress), rasterOf(reference, pose));
             expect(m.deltaE).toBeLessThanOrEqual(1);
@@ -488,7 +448,6 @@ describe('a puppet in the page', () => {
             scale: 1,
           });
           const sleeve = { ...puppet, parts: puppet.parts.filter((p) => p.name === 'arm') };
-          // the CPU's figure without the sleeve: its mesh emptied, in its place, so the body shows what the sleeve hid as when it turns away, as a hidden part does
           const bare = {
             ...puppet,
             parts: puppet.parts.map((p) =>
@@ -501,7 +460,6 @@ describe('a puppet in the page', () => {
               ),
             ),
           };
-          // the sleeve shown, laid turned one way over the body; then hidden turned the other, where its buffer still holds the first turn
           yield* page.draw(at(35));
           const hidden = yield* page.dressed(at(-30), { hide: ['arm'] });
           const [before, want] = [rasterOf(sleeve, at(35)), rasterOf(bare, at(-30))];
@@ -512,10 +470,8 @@ describe('a puppet in the page', () => {
             stale += Number(left && hidden.rgba[i * 4 + 3]! > 0);
           }
           const m = against(hidden, want);
-          // the turned sleeve stood where the bare figure draws nothing, and nothing is drawn there now
           expect(laid).toBeGreaterThan(200);
           expect(stale).toBe(0);
-          // over the body, where it stood too, the body as the CPU draws it bare: measured 0 at every pixel (2026-11-02)
           expect(m.deltaE).toBeLessThanOrEqual(1);
           expect(m.worst).toBeLessThanOrEqual(1);
           expect(m.iou).toBeGreaterThanOrEqual(0.99);
@@ -537,13 +493,11 @@ describe('a puppet in the page', () => {
         const pose: PuppetPose = { numbers: { shoulderRight: -35 }, root: [80, 120], scale: 1 };
         const look = { boil: 5 };
         const [a, b] = [yield* lined.draw(pose, look), yield* bare.draw(pose, look)];
-        // what moved, now and at rest: the sleeve's own coverage on the CPU
         const puppet = yield* puppetFrom(BARE);
         const sleeve = { ...puppet, parts: puppet.parts.filter((p) => p.name === 'arm') };
         const [now, rest] = [rasterOf(sleeve, pose), rasterOf(sleeve, { ...pose, numbers: {} })];
         const moved = (i: number) => now.rgba[i * 4 + 3]! > 0 || rest.rgba[i * 4 + 3]! > 0;
         const near = Uint8Array.from({ length: LW * LH }, (_, i) => Number(moved(i)));
-        // the boil moves a pixel's sample by under 1 px: 16 and the sample's reach
         const within = grown(near, 17);
         let [changed, far] = [0, 0];
         for (let i = 0; i < LW * LH; i++) {
@@ -553,7 +507,6 @@ describe('a puppet in the page', () => {
         }
         expect(changed).toBeGreaterThan(50);
         expect(far).toBe(0);
-        // the page draws the far figure, not nothing
         let farFigure = 0;
         for (let i = 0; i < LW * LH; i++)
           farFigure += Number(within[i] === 0 && a.rgba[i * 4 + 3]! > 0);
