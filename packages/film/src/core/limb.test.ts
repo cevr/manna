@@ -266,6 +266,13 @@ describe('limbOf', () => {
     expect(Result.isFailure(r) && r.failure.detail).toMatch(/^on its outer side /);
   });
 
+  test('refuses an elbow it finds no station for: a forearm folded straight back has no inside to crease', () => {
+    const back = along(E, D, -60);
+    const r = limbOf('arm', ARM, { ...JOINTS, wrist: back }, DECLARED);
+    expect(kindOf(r)).toBe('no-station');
+    expect(Result.isFailure(r) && r.failure.detail).toMatch(/inside the bend/);
+  });
+
   test('refuses a cuff that is not a finite point under its own kind, never throwing', () => {
     for (const cuff of [
       [Number.POSITIVE_INFINITY, 1],
