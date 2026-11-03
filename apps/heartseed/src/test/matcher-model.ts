@@ -281,6 +281,85 @@ const underThousand = (n: number, style: Spelling) => {
   return head || tail;
 };
 
+/** Which optional choices a varied spelling took: articles by place, and `and` by junction. */
+export type NumberForm =
+  | 'article first hundred'
+  | 'article first scale'
+  | 'article later hundred'
+  | 'article later scale'
+  | 'and between groups'
+  | 'and after hundred'
+  | 'and in tens'
+  | 'inverted'
+  | 'hyphen';
+
+/** A spelling of a value that took some optional choices, and the choices it took. */
+export type VariedNumber = Readonly<{
+  numeral: string;
+  text: string;
+  forms: ReadonlySet<NumberForm>;
+}>;
+
+/**
+ * A value given as its groups of three digits, highest first, spelled with
+ * the choices the number grammar leaves open, each taken by `pick`: `one`,
+ * `a` or `an` for every coefficient one (a hundreds digit of one, or a whole
+ * group of one before its scale), an `and` or none at every additive
+ * junction, and a tens word with its unit plain, hyphenated, joined by `and`
+ * or inverted (`two and forty`). The numeral is the digits written out, so
+ * nothing is parsed back.
+ */
+export const spellVaried = (
+  groups: readonly number[],
+  pick: (n: number) => number,
+): VariedNumber => {
+  const forms = new Set<NumberForm>();
+  const one = (later: boolean, place: 'hundred' | 'scale') => {
+    const word = ['one', 'a', 'an'][pick(3)] ?? 'one';
+    if (word !== 'one') forms.add(`article ${later ? 'later' : 'first'} ${place}`);
+    return word;
+  };
+  const underHundredVaried = (n: number) => {
+    if (n < 10) return ONES[n] ?? '';
+    if (n < 20) return TEENS[n - 10] ?? '';
+    const tens = DECADES[Math.floor(n / 10)] ?? '';
+    const unit = ONES[n % 10] ?? '';
+    if (!unit) return tens;
+    const style = pick(4);
+    if (style === 1) forms.add('hyphen');
+    if (style === 2) forms.add('and in tens');
+    if (style === 3) forms.add('inverted');
+    return [`${tens} ${unit}`, `${tens}-${unit}`, `${tens} and ${unit}`, `${unit} and ${tens}`][
+      style
+    ];
+  };
+  const parts: string[] = [];
+  groups.forEach((group, i) => {
+    if (group === 0) return;
+    const later = parts.length > 0;
+    const power = POWERS[groups.length - 1 - i] ?? '';
+    if (later && pick(2) === 0) {
+      parts.push('and');
+      forms.add('and between groups');
+    }
+    const hundreds = Math.floor(group / 100);
+    const rest = group % 100;
+    if (hundreds === 1) parts.push(one(later, 'hundred'), 'hundred');
+    else if (hundreds > 1) parts.push(ONES[hundreds] ?? '', 'hundred');
+    if (hundreds > 0 && rest > 0 && pick(2) === 0) {
+      parts.push('and');
+      forms.add('and after hundred');
+    }
+    if (group === 1 && power) parts.push(one(later, 'scale'));
+    else if (rest > 0) parts.push(underHundredVaried(rest) ?? '');
+    if (power) parts.push(power);
+  });
+  const numeral = groups
+    .map((group, i) => (i === 0 ? String(group) : String(group).padStart(3, '0')))
+    .join('');
+  return { numeral, text: parts.join(' '), forms };
+};
+
 /** A value's English words, from its decimal digits in groups of three; never parsed back. */
 export const spell = (value: number, style: Spelling = 'plain'): string => {
   if (value === 0) return 'zero';
