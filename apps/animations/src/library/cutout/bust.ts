@@ -1,11 +1,3 @@
-// A heads-only member's bust: each view cut into his head over the rest of
-// him, the head turning at the foot of his beard while the rest leans from
-// the view's foot. The member gives each view's line, pivot and foot in the
-// kept view's pixels, any still `neighbour` take, and the words for what lies
-// behind his head; this module gives the bone names, the parts and their
-// order, which parts a pose moves, and the prompt's frame. A view's skeleton
-// goes into its part sheet's frame through `framed` (`skeleton.ts`).
-
 import type { HiddenEntry, PartCut } from '@manna/film/tools';
 import { Option, Record as Records } from 'effect';
 import { CUT_AWAY, KEEP_REST } from './prompts.ts';

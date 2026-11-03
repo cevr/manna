@@ -1,26 +1,3 @@
-// The clip chain (`film concept reader chain`, the `eval:clip:<clip>`
-// stage): a clip read by the cast reader, posed frame by frame with the
-// member's puppets, and scored against the clip's own figure.
-//
-// - **Cut.** Each frame names the member's drawing the classifier finds most
-//   likely; a run is a stretch of frames naming one drawing.
-// - **World.** Each run's bone angles, read against its drawing's rest, are
-//   gated (while a bone's end joint has confidence under 0.1, its last good
-//   angle holds), then smoothed by a causal One Euro filter (0.1 Hz, beta
-//   0.3) on unwrapped degrees.
-// - **Seed.** A frame's pose: each bone's number from the world angles, top
-//   down; the root and scale by least squares of the puppet's joints on the
-//   read's (confidence over 0.5).
-// - **Route A.** On every 16th frame of a run and its last, `fitPose`
-//   (`core/pose-fit.ts`) fits every bone, the root and the scale to the
-//   frame, from the seed of the run's raw read; each fit runs in its own
-//   process (`chain-fit.ts`) and is cached by the hash of what it reads.
-//   The correction (fit less seed) is carried linearly between a run's keys.
-// - **Score.** The IoU of the posed puppet's alpha (over 127) with the
-//   clip's figure: on the mapped canvas frame, the paper is the mean of the
-//   four corners, and a pixel is figure where its RGB distance (L1) to the
-//   paper is over 24.
-
 import { availableParallelism } from 'node:os';
 import { serialize } from 'node:v8';
 import { Clock, Duration, Effect, FileSystem, Path, Result, Schema } from 'effect';
@@ -119,8 +96,6 @@ const corrected = (seed: PuppetPose, c: Correction): PuppetPose => ({
   root: [seed.root[0] + c.root[0], seed.root[1] + c.root[1]],
   scale: seed.scale + c.scale,
 });
-
-// ---------- the run: fits in parallel processes, cached; then every frame posed and scored
 
 /** One route A fit, as `chain-fit.ts` reads it: the puppet, the frame, the start, the bones and the paper. */
 export interface FitJob {

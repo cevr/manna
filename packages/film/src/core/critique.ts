@@ -1,14 +1,3 @@
-// The critique's words (`film lab critique`, the lab's `critique` tool): a fresh
-// model's eye on a figure as drawn against the concept it was painted from,
-// at 1:1, beside the match's numbers. The match measures what can be
-// measured (proportions, outlines, shading, facing, the render's thin lines);
-// the critique names what a measure misses or reads wrong: a head's angle
-// and turn, the face's shape and features, the pose, the palette, an
-// artifact (owner, 2026-10-17, his local day, on the RBF v3 cast: "theres some artifacts in
-// the render, and the farmer looks nothing like the concept, face
-// proportions and angles are off"). Pure: the packet it sends, the answer it
-// reads, the file it writes.
-
 import { Array as Arr, Boolean as Bool, Option, Result, Schema } from 'effect';
 
 /** A section of the app's rule files the critique quotes: the file and its heading line. */

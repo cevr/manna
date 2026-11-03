@@ -34,7 +34,6 @@ export const StartSwitches = memo(function StartSwitches() {
             The recording’s introduction, or a count-in with Sound off.
           </Text>
         </View>
-        {/* React Native's Switch reads `accessibilityLabel` on every platform. */}
         <Switch accessibilityLabel="Intro" value={intro} onValueChange={setIntro} />
       </View>
       <View style={styles.row}>
@@ -46,8 +45,6 @@ export const StartSwitches = memo(function StartSwitches() {
             A click on each beat of the count-in.
           </Text>
         </View>
-        {/* iOS's Switch keeps `disabled` out of VoiceOver's reading, so the
-            state says it; the web's root reads `aria-disabled`. */}
         <Switch
           accessibilityLabel="Click"
           accessibilityState={{ disabled: !intro }}

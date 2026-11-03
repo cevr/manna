@@ -8,7 +8,6 @@ import {
 } from 'ai';
 import { Effect, Layer, Option, Schema, Context } from 'effect';
 
-// Tagged error for AI operations
 export class AIError extends Schema.TaggedError<AIError>()('AIError', {
   operation: Schema.String,
   cause: Schema.Unknown,
@@ -133,7 +132,6 @@ export class AI extends Context.Service<AI, AIService>()('@manna/cli/services/ai
             }),
         }).pipe(
           Effect.map((result) => {
-            // result.text is empty when the final step is a tool call, not a text response
             const text = result.text || [...result.steps].reverse().find((s) => s.text)?.text || '';
             return { text };
           }),

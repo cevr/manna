@@ -1,9 +1,3 @@
-// A member's coverage (`coverageOf`): an entry is complete when it is drawn
-// and kept, and a puppet also cut, its bars passed and its fit rows passed;
-// the report names exactly the unmet requirements, in that order. A puppet
-// entry cut from its own sheet is trainable when it misses neither drawn,
-// kept, cut nor fit; its bars do not count.
-
 import { describe, expect, test as it } from 'bun:test';
 import { Schema } from 'effect';
 import { Coverage, coverageOf } from './coverage.ts';

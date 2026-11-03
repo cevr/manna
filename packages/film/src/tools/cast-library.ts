@@ -1,10 +1,3 @@
-// Where a cast member's record is found for a film, and the library reference
-// a picture of the member takes from it. A film's own role
-// (`src/films/<film>/cast/<member>/cast-sheet/`) wins over the library's
-// (`src/library/cast/<member>/cast-sheet/`); the reference is the record's
-// `castLock`, each file checked on disk, since a reference sent short would
-// shift the numbers the prompt names the images by.
-
 import { Effect, FileSystem, Path, Result, Schema } from 'effect';
 import { CastSheetJson } from '../core/cast-record.ts';
 import { type CastLock, castLock } from '../core/cast-lock.ts';

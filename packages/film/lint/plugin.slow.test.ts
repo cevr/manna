@@ -1,11 +1,3 @@
-// The `film` oxlint plugin, run for real: oxlint lints each fixture in
-// `fixtures/` with only this plugin on, and what it reports must be exactly the
-// lines a fixture marks `// RED film/<rule>`, with corrective advice pinned
-// for every rule the plugin defines. Every rule resolves names
-// through scope, which only a real oxlint run provides, so its fixture is its
-// test. drawing-literal has its fixture here too, and the lab locator it runs
-// (`unlocatable`) is tested on source in src/tools/scene-source.test.ts.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Stream } from 'effect';
@@ -190,7 +182,6 @@ describe('film oxlint plugin', () => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const dir = path.join(import.meta.dir, 'fixtures');
-        // A fixture may sit in a folder its module tests read (`core/`); oxlint reports it by its name.
         const files = (yield* fs.readDirectory(dir, { recursive: true })).filter((f) =>
           /\.tsx?$/.test(f),
         );

@@ -112,7 +112,6 @@ export const fakeDevice = () => {
           return at({ state: 'loading', positionMs: fromMs });
         }),
       pause: Effect.suspend(() => at({ ...device.now, state: 'paused' })),
-      // A recording played to its end plays again from its start.
       resume: Effect.suspend(() =>
         at({
           ...device.now,

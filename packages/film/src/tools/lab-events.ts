@@ -1,23 +1,3 @@
-// The lab's change feed: what changed in the files the lab keeps (each
-// film's notes and board, each project folder's catalogue, each set's
-// `review.json`, each agent's ask, each production's ledger), read off the
-// files themselves every few seconds, numbered in the order the lab saw it,
-// and kept (the newest `KEPT`) for a reader to ask past a cursor or to wait
-// on, by the catalogue's names (`LAB_EVENTS`) and a film. The files are the
-// record, so a change the page makes, one a terminal's `film lab` makes, and
-// one an agent makes through the lab's MCP are all seen alike, and nothing
-// writes twice: the feed only reads. A change to a film's source is read off
-// the lab's writer, which tells each one that landed in order (the newest
-// 200: a read every few seconds finds them all). A set or a render it sees
-// drops the review's index (`Review.written`) before its event is told, so
-// the page and an ask read what another process wrote. What a change is, said from
-// two reads of a file, is `core/lab-events.ts`.
-//
-// The first read is the baseline: the feed tells only what changed after
-// the lab started. A cursor is `<epoch>.<seq>`; the epoch is this run's, so
-// a cursor from an earlier run is answered from the start of this one, said
-// as a `reset`.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -178,7 +158,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
     const films = yield* Effect.context<FilmFolder>();
     const platform = yield* Effect.context<FileSystem.FileSystem | Path.Path>();
     const epoch = (yield* Random.nextIntBetween(0, 2 ** 31)).toString(36);
-    // A wait wakes on each change of it (`wait`), never on a timer.
     const journal = yield* SubscriptionRef.make<Journal>({ seq: 0, kept: [] });
     const seen: Seen = {
       notes: new Map(),
@@ -223,7 +202,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
         if (Option.exists(was, (w) => same(w.stamp, stamp))) return [];
         const log = yield* notes.read(film);
         seen.notes.set(name, { stamp, seq: log.seq, notes: log.notes });
-        // A film first seen after the baseline (made since) tells its whole log; the baseline tells nothing.
         return Option.match(was, {
           onNone: () =>
             noteChanges(
@@ -243,7 +221,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
         if (Option.exists(was, (w) => same(w.stamp, stamp))) return [];
         const board = yield* boards.read(film);
         seen.boards.set(name, { stamp, board });
-        // The read's name, the same in every lab that reads this file: its stamp, else its bytes' digest.
         const read = Option.getOrElse(stamp, () => sha256Hex(boardText(board)));
         return Option.match(was, {
           onNone: () =>
@@ -352,7 +329,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
           ),
         { concurrency: 4 },
       );
-      // The folders the review walks, every level: a project's catalogue, a montage's manifest.
       const listed = yield* recordsUnder(review.roots).pipe(Effect.provideContext(platform));
       const catalogued = yield* Effect.forEach(
         listed.filter((f) => f.kind === 'project'),
@@ -392,9 +368,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
       Effect.gen(function* () {
         const drafts = yield* read;
         if (drafts.length === 0) return;
-        // A set or a render another process wrote: the review's index drops
-        // what it read before, so a reader that hears the event and reads
-        // the review (an ask about the set, the page) finds it.
         if (drafts.some((d) => d.kind.startsWith('set.') || d.kind.startsWith('render.')))
           yield* review.written;
         const at = DateTime.formatIso(yield* DateTime.now);
@@ -433,7 +406,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
     const since = (cursor: Option.Option<string>, of?: Of) =>
       Effect.map(SubscriptionRef.get(journal), answerOf(cursor, of));
 
-    // The journal as it stands, then each change to it: the first answer with news ends the wait.
     const wait = (cursor: Option.Option<string>, timeout: Duration.Input, of?: Of) =>
       SubscriptionRef.changes(journal).pipe(
         Stream.map(answerOf(cursor, of)),

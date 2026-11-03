@@ -1,14 +1,3 @@
-// `film/media-in-process`: the film's media runs in-process (mediabunny, and
-// FFmpeg's libraries through NodeAV), never FFmpeg's command-line tools. A
-// string or a template whose text names either tool as a lower-case word
-// (the bare name, a command line, a path) is the only way to start one as a
-// process, so the rule refuses each one in the film package. A comment, a
-// regular expression and a name such as `FFmpegError` are not such strings.
-//
-// The rule is lint, not a unit test, so that oxlint reads every file of the
-// package on every gate: a unit test that swept the package would read the
-// files of the other test parts, whose edits do not rerun its cached part.
-
 import { Effect, Option, Predicate } from 'effect';
 import {
   Diagnostic,

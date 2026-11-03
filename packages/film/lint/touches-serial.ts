@@ -1,29 +1,3 @@
-// `film/touches-serial`: a browser test that sends touches runs alone, as
-// `test.serial`. While one tab's touches are under way, Chrome drops, or
-// lands as a bare click, the touches a file's other cases send their own
-// tabs at the same time, one finger or two; and a `.dom.test.ts` file's
-// cases run at once (`concurrentTestGlob`, `bunfig.toml`), so the sibling's
-// press never lands as a touch and one of the two fails by turns.
-//
-// A touch is a tab's finger (`page.finger`, its `second` among them,
-// `lab/fixtures/tab.ts`), read off the tab or taken apart from it
-// (`const { finger } = page`): the tab is a value handed in, so its finger is
-// read by its member's name. Or it is the touch gesture (`touch`,
-// `lab/fixtures/gestures.ts`), by its binding (`nodes.ts`): imported, under
-// an alias, or read off the module imported whole. A name the file declares
-// whose value touches only inside a function (a helper, a table of steps), or
-// that a finger is taken apart into, touches too, however deep, at each read
-// of that binding (a parameter or a local of the same spelling is another
-// name). An initializer that touches outside any function of its own runs
-// where it is declared, so its touch stands where the declaration does.
-// Every touch, and every use of a name that touches, is inside the body of a
-// `test.serial(…)`, or inside a declaration that is itself used only there;
-// one inside any other test, or outside every test and declaration (a loop
-// over a table that touches), is reported where it is. A test is a call of
-// the runner's `it` or `test` (`bun:test`'s, `effect-bun-test`'s or bun's
-// global, by its binding); `test.serial` is the runner's `test`'s, and a
-// runner's `.serial` form (`it.live.serial`) registers its case with it.
-
 import { Effect, Option } from 'effect';
 import { Diagnostic, type ESTree, Rule, RuleContext } from 'oxlint-plugin-effect/rule-bindings';
 import { ancestors, type Bindings, bindings, collect, memberName, type Module } from './nodes.ts';
@@ -105,7 +79,6 @@ const isUse = (n: ESTree.Node) =>
 /** Whether `n` stands as a use in `p`, its parent. */
 const usedIn = (n: ESTree.Node, p: ESTree.Node) => {
   if (p.type === 'MemberExpression') return p.object === n || p.computed;
-  // In a pattern a property's value is a name bound; only a computed key is read.
   if (p.type === 'Property' && p.parent.type === 'ObjectPattern') return p.computed && p.key === n;
   if (p.type === 'Property') return p.value === n || p.computed;
   if (p.type === 'VariableDeclarator') return p.init === n;
@@ -163,7 +136,6 @@ const seen =
   (n: ESTree.Node): Option.Option<Seen> => {
     if (n.type !== 'Identifier') return Option.none();
     const takenApart = fingerTakenApart(n);
-    // A finger taken apart into one name declares that name, which touches wherever it is used.
     const declares = Option.flatten(takenApart);
     const touch = isFinger(n) || isGesture(b, n) || Option.isSome(takenApart);
     const used = Option.map(

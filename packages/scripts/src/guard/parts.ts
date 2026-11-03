@@ -1,13 +1,3 @@
-// A tool run over the gate's files in parts, side by side. oxlint runs its JS
-// plugins (the effect, film and judged rules) on one thread of its process,
-// so one process over the whole repo is bound by that thread: split into
-// parts, one process each, the plugins run on as many cores. A part is a
-// share of the files dealt by size, largest first, each to the part holding
-// the fewest bytes so far, so the parts end near one another. Each part's
-// output is kept whole and printed in the parts' order once all have ended,
-// so no two parts' lines interleave; the run's exit code is the highest any
-// part answered.
-
 import { Array as Arr, Console, Effect, FileSystem, Option, Path, Stream } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 import * as ChildProcess from 'effect/process/ChildProcess';

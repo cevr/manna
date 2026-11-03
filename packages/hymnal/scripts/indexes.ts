@@ -161,8 +161,6 @@ export const decodeRulings = (text: string) => {
     : { rulings: [], problems: [decodeProblem('rulings', result.failure)] };
 };
 
-// ---------------------------------------------------------------- entries
-
 /** One numbered entry of an index: the number it gives, whether a hymn or a reading, its page and place. */
 export interface Item {
   readonly index: IndexName;
@@ -247,8 +245,6 @@ const ROWS = {
 export const itemsOf = (indexes: Indexes, name: IndexName): Array<Item> =>
   numbered(name, ROWS[name](indexes));
 
-// ---------------------------------------------------------------- Scripture
-
 /** The pieces of a passage, written out: `Psalms 98:4, 6`, `Genesis 1:1-2:3`, `Psalms 23` for a whole chapter. */
 export const passageText = (p: Passage, bookName: (book: number) => string): string => {
   if (p._tag === 'Chapter') {
@@ -294,7 +290,6 @@ export const passageFaults = (p: Passage, ctx: Context): ReadonlyArray<string> =
     else
       for (const v of p.verses) {
         verse(p.chapter, v.from, 'from');
-        // A single verse is one fault, not a `from` and a `to` fault of the same misprint.
         if (v.to !== v.from) verse(p.chapter, v.to, 'to');
         if (v.from > v.to) faults.push(`range ${v.from}-${v.to} runs backwards`);
       }
@@ -379,13 +374,10 @@ export const parseReference = (book: number, text: string): ReadonlyArray<Passag
   const printed = text
     .replace(/\s+/g, '')
     .replace(/[–—]/g, '-')
-    // the pages end a reference with a stop (`2:7, 13.`) and mark a part verse (`1-7a`)
     .replace(/\.$/, '')
     .replace(/(\d)[a-d](?=$|[,;-])/g, '$1');
-  // a book of one chapter prints its verses alone (`JUDE 24, 25`)
   if (ONE_CHAPTER.has(book) && !printed.includes(':')) return parseReference(book, `1:${printed}`);
   const pieces = printed.split(/[,;]/).map(pieceOf);
-  // numbers with no colon are whole chapters (`23`, `24, 25`)
   if (!printed.includes(':') && pieces.every((p) => p?._tag === 'verses' && p.from === p.to))
     return pieces.flatMap((p): Array<Passage> =>
       p?._tag === 'verses' ? [{ _tag: 'Chapter', book, chapter: p.from, verses: [] }] : [],
@@ -411,8 +403,6 @@ export const parseReference = (book: number, text: string): ReadonlyArray<Passag
   }
   return out.length > 0 ? out : undefined;
 };
-
-// ---------------------------------------------------------------- order
 
 /** Letters only, lower case: the key of alphabetical order (a leading article kept). */
 export const fold = (s: string): string =>
@@ -727,8 +717,6 @@ export const measureOrder = (indexes: Indexes, ctx: Context) =>
     return { rule, pairs: of.length, broken: of.filter((p) => p.broken).length };
   });
 
-// ---------------------------------------------------------------- the checks
-
 const rangeProblems = (indexes: Indexes): Array<Problem> =>
   NAMES.flatMap((name) =>
     itemsOf(indexes, name).flatMap((it) => {
@@ -893,7 +881,6 @@ const sectionProblems = (topical: Topical, ctx: Context): Array<Problem> => {
           return target ? find(target.parent, target.name) : [];
         })
       : find(undefined, section.name);
-    // a topic that only points elsewhere is held through what it points to
     topics = topics.flatMap((t) =>
       t.hymns.length === 0 && t.readings.length === 0
         ? t.see.flatMap((s) => seeTargets(s).flatMap((x) => find(x.parent, x.name)))
@@ -1318,8 +1305,6 @@ export const summaryLine = (
   return `indexes ${name} pages=${first}-${last} entries=${itemsOf(indexes, name).length} ruled=${ruled} problems=${problems}`;
 };
 
-// ---------------------------------------------------------------- look-alike reach
-
 const LOOK_ALIKES = new Map<string, ReadonlyArray<string>>([
   ['0', ['8']],
   ['1', ['7']],
@@ -1391,8 +1376,6 @@ export const reach = (indexes: Indexes, ctx: Context, rulings: Rulings['rulings'
     return { index: name, caught, total };
   });
 };
-
-// ---------------------------------------------------------------- the CLI
 
 const DATA = join(import.meta.dir, '../data');
 

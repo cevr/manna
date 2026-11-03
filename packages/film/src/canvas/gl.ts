@@ -1,31 +1,3 @@
-// A WebGL 2 canvas for a look drawn in 3D: a film's kit drives it (three.js,
-// in apps/animations; the engine names no 3D library) and composites it into
-// the 2D frame with `drawImage`. It is made once for each key and kept, as the
-// paper's sheets are; every frame sets the whole of its 3D scene from the
-// frame's own time before it renders, so the frame stays a pure function of T.
-//
-// Where no WebGL 2 context can be made (the stand-in context `check --draw`
-// and the framework's tests draw into, a browser without it) there is none,
-// and the look draws its fallback instead of throwing. A failure is not kept:
-// the next frame asks again. A context the browser has lost is dropped and
-// made anew, so a look keys whatever it builds on a context (a three.js
-// renderer, its scene) by the context `glCanvas` gives, never by the key.
-//
-// Keys are one namespace for the whole page, which the lab and a render share
-// across films: a look names its key for its film and look (`cold-studies/ps1`),
-// so two films never draw into one canvas. A key holds one canvas, at the size
-// last asked for; a few contexts are kept live at once (`KEPT`, 8), the
-// longest unused one let go past that, so a long lab session stays under the
-// browser's cap on live contexts. The budget is the page's, not the keys':
-// the canvases a Rive rig draws on (`canvas/rive.ts`) are held in it too
-// (`holdGl`), and let go when their rig is (`dropGl`).
-//
-// So a frame asks for at most 8 contexts, its look's keys and its webgl2
-// rigs' targets together, and a look composites a canvas into the frame
-// (`drawImage`) before it asks for another key, or for the same key at
-// another size: the ninth context lets the first go, and a new size clears
-// the canvas, so a canvas held across either may be blank when it is drawn.
-
 /** A canvas off the page and its WebGL 2 context. */
 interface Gl {
   readonly canvas: HTMLCanvasElement;

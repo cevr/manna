@@ -1,9 +1,3 @@
-// A page's part PNG decoded into a bitmap holds memory outside the heap until
-// it is closed: the page's reader closes it whether the read goes on to
-// succeed or fails after the decode. Bun has no decoder and no DOM, so the
-// page's `createImageBitmap` and `document` are stood in for the test's scope
-// and put back after.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Exit, Layer, Option } from 'effect';
 import { HttpClient, HttpClientResponse } from 'effect/http';
@@ -23,7 +17,6 @@ const pageWithNo2d = Effect.acquireRelease(
     Reflect.set(globalThis, 'createImageBitmap', () =>
       Effect.runPromise(Effect.succeed({ width: 2, height: 2, close: () => void counts.closed++ })),
     );
-    // A canvas whose `getContext` answers nothing, as a page with no 2D context does.
     Reflect.set(globalThis, 'document', {
       createElement: () => ({
         width: 0,

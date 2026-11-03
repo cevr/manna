@@ -1,16 +1,3 @@
-// Upstream: packages/react/src/utils/popups/store.ts,
-// packages/react/src/utils/popups/popupStoreUtils.ts,
-// packages/react/src/utils/popups/useTriggerFocusGuards.ts
-//
-// The state every popup (menu, dialog) keeps: whether it is open
-// (a dialog owner's `open` prop wins over its own), whether it is still mounted
-// for an exit transition, which trigger opened it, its popup and positioner
-// elements, and the floating root context its interactions read. A part
-// family builds its own store over this one and runs its own open-change
-// pipeline, ending in `applyOpenState`.
-//
-// Upstream's stores are external stores React subscribes to; here each field
-// is a signal and the selectors are plain functions over them.
 import { type Accessor, createSignal, flush, untrack } from 'solid-js';
 
 import {
@@ -119,7 +106,6 @@ export function createPopupStore(options: PopupStoreOptions): PopupStore {
     floatingId: options.floatingId,
     popupId,
     applyOpenState(nextOpen, trigger) {
-      // A close without a trigger keeps the old one, so focus returns to it and exits animate from it.
       if (trigger || nextOpen) {
         setActiveTrigger(() => trigger ?? null);
       }
@@ -150,10 +136,7 @@ export function useTriggerFocusGuards(
     const guard = event.currentTarget as HTMLElement;
     const positionerElement = untrack(store.positionerElement);
     store.setOpen(false, createChangeEventDetails(REASONS.focusOut, event, guard));
-    // Upstream's flushSync: the close must reach the DOM (the portal's outside
-    // guards unmount) before the next tabbable element is looked up.
     flush();
-    // Resolved after the close, which may change the tab order; from the trigger if the guard left.
     getTabbableNearElement(
       guard.isConnected ? guard : triggerElement(),
       direction,

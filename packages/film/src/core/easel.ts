@@ -1,9 +1,3 @@
-// The easel's words, shared by the page, the lab and the CLI: where a look is
-// taken in a scene (seconds into it, `mark:<name>`, `cue:<name>[@<share>]`),
-// how it is shown (a crop at 1:1, a long side, the value or squint view), and
-// what the lab answers. A look is one still of the scene as its sources stand,
-// drawn by a page the lab holds warm (`tools/easel.ts`): no render. Pure.
-
 import { Array as Arr, Match, Option, Order, Result, Schema } from 'effect';
 import { MAIN_VARIANT, RenderVariantName } from './catalogue.ts';
 import type { Placed } from './layout.ts';
@@ -30,11 +24,6 @@ export const sceneTimesOf = (p: Placed): SceneTimes => ({
   marks: Object.fromEntries([...p.voice.marks].map(([name, at]) => [name, p.speechStart + at])),
   cues: Object.fromEntries([...p.cues].map(([name, c]) => [name, { start: c.start, end: c.end }])),
 });
-
-// ---------------------------------------------------------------------------
-// What a look refuses, each its own class (a tool reads the tag): the request
-// unreadable, a mark or cue the scene lacks, seconds past its end, the pages
-// not built, the page failing, and a lab that serves another checkout.
 
 /** A look asked in words the lab cannot read: a place, a crop. */
 export class LookInvalid extends Schema.TaggedError<LookInvalid>()('LookInvalid', {

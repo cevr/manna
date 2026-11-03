@@ -1,16 +1,3 @@
-// A synthetic film over every lab page, for the tests that
-// walk them all (the touch-target guard): one film, `toy`, of an act (open,
-// close) and two loose scenes (coda, end), open rendered so its row links
-// its Stack; its choices are a score of three options, a look of two, a
-// sound's kept take and two candidates in open and a layer across the act;
-// and the review's index holds the film's project folder with
-// open's render set and two loose videos (one with its phone proxy ready). What the disclosed states need is there too: two
-// pictures under the Choices transport, a comment on the film, the act, scene open and
-// the score's strings and the set's main version (their counts), and the check's two findings, one at a
-// time. The app's series hold one draft of three beats, its first take
-// ready and its second voicing, and its marks written are read back as
-// written (`draftWrites`). Each route answers as the lab's server encodes it.
-
 import { Boolean as Bool, Option, Schema } from 'effect';
 import { sceneAddress } from '../../core/address.ts';
 import { Render, RenderVariantName } from '../../core/catalogue.ts';
@@ -212,7 +199,6 @@ const renderSetOf = (versions: ReadonlyArray<string>): Json => ({
     picked: false,
     verbs: [],
     media: { _tag: 'Seen', video: videoOf('open') },
-    // Each drawn from the sources the project has now (open's `k`), with no mix: current.
     key: 'k',
     approval: 'none',
     comments: [id]

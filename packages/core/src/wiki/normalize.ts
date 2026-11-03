@@ -1,25 +1,3 @@
-/** §4.3 normalization, in core because two things depend on agreeing about it.
- *
- *  The compiler keys `topic_aliases` on the normalized form (`topics-compiler/
- *  compile.ts`), and the render-time matcher (`phrase-matcher.ts`) has to
- *  produce the *same* key from running text or the dictionary it was handed is
- *  unreachable. Two copies of one rule is the classic drift: widen the
- *  compiler's punctuation set and every host silently stops matching phrases
- *  the artifact still lists. One module, imported by both, makes that
- *  impossible.
- *
- *  There is exactly one normalizing scan here — `normalizeScan` — and both
- *  sides call it. `normalizeAlias` is that scan with the offset table thrown
- *  away; the matcher is that scan with the offset table kept. A dictionary key
- *  and a run of text therefore cannot normalize differently, because there is
- *  no second definition of "normalized" for them to disagree about.
- *
- *  This module is deliberately dependency-free — no Effect, no schemas, no
- *  services. It is pure string arithmetic that the matcher's inner loop calls
- *  once per code point, and it is what a Bun build script imports without
- *  dragging a runtime with it.
- */
-
 /** "Soft punctuation" is exactly the §4.3 set — commas and semicolons — and is
  *  transparent to matching: "faith, hope" and "faith hope" normalize alike.
  *
@@ -121,8 +99,6 @@ export const normalizeScan = (source: string): NormalizedText => {
     const from = index;
     index += codePoint.length;
     if (isSeparator(codePoint)) {
-      // Leading separators never emit: `pendingFrom` only becomes visible once
-      // a real character follows, which is `trim` and `collapse` in one pass.
       if (text.length > 0 && pendingFrom < 0) pendingFrom = from;
       continue;
     }

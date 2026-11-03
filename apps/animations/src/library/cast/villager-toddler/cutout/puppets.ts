@@ -1,12 +1,3 @@
-// The villager toddler's puppets, one a cut view (`canvas/puppet.ts`): each
-// view's part sheet (`sheets/<view>/`, made by `film concept parts`), its
-// parts front to back as the sheet's record lists them, each PNG imported by
-// its module so a scene that draws them is keyed by its bytes
-// (`tools/stamp.ts`), on the view's skeleton (`skeleton.ts`), with their
-// origin at the kept box's top-left corner in the padded part sheet
-// (`frames.ts`): their pixels are the sheet's, drawn at its one scale. Pure
-// data.
-
 import { puppetsOf } from '../../../cutout/puppets.ts';
 import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';

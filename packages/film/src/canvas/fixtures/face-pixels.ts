@@ -1,8 +1,3 @@
-// Browser side of cutout.pixel.test.ts: draws one round face both ways, the
-// pre-blended fill (`blendedFace`, falling back to `layeredFace` when it
-// declines) against the two-pass look (`layeredFace`), under a canvas
-// transform, and reports how far apart the pixels land.
-
 import type { Pt } from '../ink.ts';
 import { blendedFace, layeredFace, stretchOf } from '../cutout.ts';
 import { offscreen } from '../paper.ts';
@@ -42,7 +37,6 @@ const draw = (face: FaceCase, blended: boolean) => {
   ctx.fillRect(0, 0, W, H);
   const [a, b, c, d, e, f] = face.m;
   ctx.setTransform(a, b, c, d, e, f);
-  // About 540 px across on the canvas, whatever the transform.
   const pts = circle(270 / stretchOf({ a, b, c, d }));
   const style = { color: face.color };
   const took = blended && blendedFace(ctx, pts, style, 0.6, hand);

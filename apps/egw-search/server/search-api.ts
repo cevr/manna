@@ -21,8 +21,6 @@ const DEFAULT_CONTEXT = 1;
  *  optional. `runSearch` in `./search.ts` takes the full request. */
 export const SearchGroupLive = HttpApiBuilder.group(SearchApi, 'search', (handlers) =>
   Effect.gen(function* () {
-    // Resolved once, when the group is built, so a request carries no
-    // requirement of its own out through the router.
     const services = yield* Effect.context<SearchService | SqlClient.SqlClient>();
     const load = yield* VectorIndexLoad;
     return handlers

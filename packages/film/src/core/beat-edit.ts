@@ -1,18 +1,3 @@
-// The two edits the studio writes into a version's script itself, as the
-// page, the lab's routes and the MCP tools all judge them: a beat moved
-// before another (or to the end), and a beat's hold (`lead`, the time before
-// its words; `tail`, the time after them) set. A move keeps every act and
-// score movement on the beat it begins on (`membersOf`), so one that would
-// put a part before the part declared ahead of it is refused in words. A
-// hold snaps to a tenth of a second and stays inside the layout's floors
-// (`MIN_LEAD`, `DEFAULT_TAIL`) unless the beat already holds less; a tail
-// on the floor is the default and is written as none. A hold lays its beat
-// by the layout's own rule (`heldTo`, over `beatLength`), so the studio's
-// preview, its readout and the lab agree; one that would change nothing (a
-// beat with no words, a tail its `min` absorbs) is refused in words
-// (`holdUnchanged`). What each edit says to the owner is said in his words
-// (`movedWords`, `heldWords`), never a file. Pure.
-
 import { Array as Arr, Boolean as Bool, Option, Result } from 'effect';
 import { membersOf } from './acts.ts';
 import { DEFAULT_TAIL, MIN_LEAD, beatLength } from './layout.ts';

@@ -1,8 +1,3 @@
-// The stills are drawn one at a time, the page given a turn between them, in
-// the order the page last wanted them: what is on screen first, the rest
-// after; a time is drawn once (a time in the same frame is the same still),
-// and a sheet waits for every still it asked for.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option } from 'effect';
 import type { RenderOptions } from '../canvas/film.ts';
@@ -82,7 +77,6 @@ describe('makeStills', () => {
           footage: NO_FOOTAGE,
         });
         stills.want([0, 5, 10, 15]);
-        // The page scrolled: the stills now on screen go next.
         stills.want([40, 45]);
         for (let k = 0; k < 6; k += 1) yield* page.next();
         expect(times).toEqual([0, 40, 45, 5, 10, 15]);
@@ -140,7 +134,6 @@ describe('makeStills', () => {
     () =>
       withDom(
         Effect.gen(function* () {
-          // The page's fonts hold one picture face whose load fails.
           const broken = Promise.reject(new Error('face refused'));
           broken.catch(() => undefined);
           Reflect.set(Reflect.get(globalThis, 'document'), 'fonts', [
@@ -176,7 +169,6 @@ describe('makeStills', () => {
     () =>
       withDom(
         Effect.gen(function* () {
-          // The host's frame for each read: a canvas per second it is read at.
           const decoded = new Map<number, HTMLCanvasElement>();
           const frameAt = (at: number) =>
             Option.getOrElse(Option.fromUndefinedOr(decoded.get(at)), () => {
@@ -202,7 +194,6 @@ describe('makeStills', () => {
             now: () => 0,
             footage,
           });
-          // Asked for, not yet decoded: nothing is drawn in the asking turn.
           const sheet = stills.all([2, 1]);
           expect(shown).toEqual([]);
           const drawn = yield* Effect.promise(() => sheet);
@@ -257,7 +248,6 @@ describe('makeStills', () => {
         stills.want([1, 2, 3]);
         expect(times).toEqual([1]);
         stills.stop();
-        // The turn the first still was waiting on comes: the queue is gone, nothing is drawn.
         yield* page.next();
         stills.want([4, 5]);
         yield* page.next();

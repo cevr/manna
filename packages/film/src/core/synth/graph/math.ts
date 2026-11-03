@@ -1,18 +1,3 @@
-// The sound graph's own transcendentals: sine and cosine of a phase in turns,
-// e^x, 2^x, ln x, tanh x and the decibel's gain. ECMA-262 leaves a host's
-// Math.sin, exp, log, pow and tanh implementation-approximated, and hosts do
-// round their last bits apart, so a code sound rendered with them could be
-// other samples on another host. These are built from + − × ÷, floor and round
-// alone, which IEEE 754 fixes exactly, so a render is the same samples on every
-// host (packages/film/lint/synth-own-math.ts holds the graph to them).
-//
-// The polynomials and the reductions are fdlibm's (k_sin.c, k_cos.c, e_exp.c,
-// e_log.c, s_tanh.c): "Copyright (C) 1993 by Sun Microsystems, Inc. All rights
-// reserved. Developed at SunPro, a Sun Microsystems, Inc. business. Permission
-// to use, copy, modify, and distribute this software is freely granted,
-// provided that this notice is preserved." Each stays within a few units in the
-// last place of the host's (math.test.ts measures the bounds).
-
 /** 2^k for k in −1022..1023: each the last doubled or halved, so every one is exact. */
 const POW2 = ((): Float64Array => {
   const out = new Float64Array(2046);
@@ -40,17 +25,12 @@ const exponentOf = (x: number): number => {
   let lo = -1022;
   let hi = 1023;
   while (lo < hi) {
-    // A shift, not Math.ceil: the middle of −1 and 0 is +0, so ln 1 is +0.
     const mid = (lo + hi + 1) >> 1;
     if (pow2(mid) <= x) lo = mid;
     else hi = mid - 1;
   }
   return lo;
 };
-
-// Sine and cosine. A phase in turns reduces exactly (its fraction, times 4, less
-// its nearest quadrant), so only the last step, the quadrant's turns as
-// radians, rounds: a phase of 10^6 turns keeps the accuracy of a phase of 1.
 
 const PIO2 = Math.PI / 2;
 
@@ -82,8 +62,6 @@ const kernelCos = (r: number): number => {
   const w = 1 - half;
   return w + (1 - w - half + tail);
 };
-
-// A negative quadrant is `0 - kernel`, never `-kernel`: sin π is +0, not −0.
 
 /** sin 2πt, `t` in turns. */
 export const sinTurn = (t: number): number => {
@@ -119,9 +97,6 @@ export const cosTurn = (t: number): number => {
   }
 };
 
-// e^x. x = k ln 2 + r with |r| ≤ ln 2 / 2, ln 2 split in two so k ln 2 is
-// exact; e^r by fdlibm's rational form; then 2^k from the table.
-
 const LN2_HI = 6.931471803691238e-1;
 const LN2_LO = 1.9082149292705877e-10;
 const INV_LN2 = 1.4426950408889634;
@@ -154,9 +129,6 @@ export const exp2 = (x: number): number => {
   const k = Math.round(x);
   return scaled(exp((x - k) * Math.LN2), k);
 };
-
-// ln x. x = m 2^k with √2/2 < m ≤ √2 (exact: a power of two divides out), then
-// fdlibm's series in s = f / (2 + f), f = m − 1.
 
 const LG1 = 6.666666666666735e-1;
 const LG2 = 3.999999999940942e-1;
@@ -195,9 +167,6 @@ export const log = (x: number): number => {
   if (x < MIN_NORMAL) return logNormal(x * 18014398509481984) - 54 * Math.LN2;
   return logNormal(x);
 };
-
-// tanh x = −t / (t + 2) with t = e^(−2|x|) − 1, its sign put back. Near 0,
-// e^(−2|x|) − 1 cancels, so there t is the series of e^r − 1.
 
 /** 1/n! for n = 1..15: the series of e^r − 1, r^1 to r^15. */
 const FACTORIAL_INVERSES: ReadonlyArray<number> = Array.from({ length: 15 }, (_, i) => {

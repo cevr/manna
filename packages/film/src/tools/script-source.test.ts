@@ -58,7 +58,6 @@ describe('a mark write of script.ts', () => {
   });
 
   test('refuses marks made on words the line no longer says: a mark would land on another word', () => {
-    // The page read the line before "freely" went in: its stress on word 5 meant "faith".
     const reworded = SCRIPT.replace("It's {@ask}by faith.", "It's {@ask}freely by faith.");
     const stale = editMarks(reworded, 'cold', marks, READ);
     expect(Result.isFailure(stale) && stale.failure.reason).toBe(
@@ -67,7 +66,6 @@ describe('a mark write of script.ts', () => {
   });
 
   test('refuses marks made on a line marked since: they would write over the marks made elsewhere', () => {
-    // The laptop stressed "faith"; the phone, still showing the line unmarked, stresses "works".
     const laptop = Result.getOrThrow(
       editMarks(SCRIPT, 'cold', [{ _tag: 'Stress', word: 5 }], READ),
     );
@@ -75,7 +73,6 @@ describe('a mark write of script.ts', () => {
     expect(Result.isFailure(phone) && phone.failure.reason).toBe(
       'its marks changed since the page read them (marked elsewhere): read it again and mark it there',
     );
-    // Read again, the phone's write keeps the laptop's stress and adds its own.
     const reread = Option.some<LineRead>({ spoken: WORDS, marks: [{ _tag: 'Stress', word: 5 }] });
     const both: ReadonlyArray<Mark> = [
       { _tag: 'Stress', word: 2 },
@@ -145,7 +142,6 @@ describe('a move of script.ts', () => {
   });
 
   test('judges the move on the order the script holds as it is written, its parts kept', () => {
-    // The acts as declared: the close begins on end, after the open on cold.
     const acts = [
       [
         { from: 'cold', name: 'open' },

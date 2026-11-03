@@ -111,15 +111,12 @@ describe('the player', () => {
       app.device.now = { state: 'playing', positionMs: 60_000, durationMs: 151_000 };
       yield* app.until(Player.$is('Playing'));
 
-      // A stall, or a seek past what the device holds: One says `loading`, its length unread.
-      // The page shows Buffering once silence is proved for 2 s (the world property's P3).
       app.device.now = { state: 'loading', positionMs: 61_000 };
       app.send(Command.Pause());
       expect(yield* app.until(Player.$is('Paused'))).toEqual(
         Player.Paused({ track: morning, at: 61, length: Option.some(151) }),
       );
 
-      // A seek while paused that the device must load for stays paused, at its new place.
       app.device.lagging = true;
       app.send(Command.Seek({ seconds: 120 }));
       app.device.now = { state: 'loading', positionMs: 120_000 };
@@ -142,7 +139,6 @@ describe('the player', () => {
         Player.Ended({ track: morning, length: Option.some(151) }),
       );
 
-      // A Resume from Ended plays the recording again from 0:00.
       app.send(Command.Resume());
       yield* app.until(Player.$is('Loading'));
       expect(app.device.played).toEqual([audioUrl(100), audioUrl(100)]);
@@ -228,7 +224,6 @@ describe('the player', () => {
       app.send(Command.Pause());
       yield* app.until(Player.$is('Paused'));
 
-      // iOS: AVPlayer says it waits to play for its first few ms after a resume.
       app.device.waiting = 3;
       const shown = app.since();
       app.send(Command.Resume());
@@ -266,20 +261,17 @@ describe('the player', () => {
         app.send(Command.Start({ track: morning }));
         yield* app.until(Player.$is('Loading'));
 
-        // The lock screen's pause while the recording loads: nothing has sounded yet.
         app.device.press('pause', { state: 'loading', positionMs: 0 });
         expect(yield* app.until(Player.$is('Stopped'))).toEqual(
           Player.Stopped({ track: morning, at: Option.none() }),
         );
         expect(app.device.stopped).toBe(1);
 
-        // The lock screen's play, or the page's: the recording from its start.
         app.device.press('play', { state: 'idle', positionMs: 0 });
         expect(yield* app.until(Player.$is('Loading'))).toEqual(Player.Loading({ track: morning }));
         expect(app.device.played).toEqual([audioUrl(100), audioUrl(100)]);
         app.device.now = { state: 'playing', positionMs: 1000, durationMs: 151_000 };
         yield* app.until(Player.$is('Playing'));
-        // Once per recording the device held: the one let go, and this one.
         expect(app.device.announced).toHaveLength(2);
       }),
   );
@@ -291,7 +283,6 @@ describe('the player', () => {
       app.device.now = { state: 'failed', positionMs: 0 };
       yield* app.until(Player.$is('Failed'));
 
-      // A seek or a pause has nothing to act on.
       app.send(Command.Seek({ seconds: 30 }));
       app.send(Command.Pause());
       expect(app.device.sought).toEqual([]);
@@ -308,12 +299,10 @@ describe('the player', () => {
       app.device.now = { state: 'playing', positionMs: 60_000, durationMs: 151_000 };
       yield* app.until(Player.$is('Playing'));
 
-      // The web: a paused element that holds too little to play says `loading`.
       app.device.waiting = 3;
       const shown = app.since();
       app.send(Command.Pause());
       yield* app.until(Player.$is('Paused'));
-      // The reads go on while the device says `loading`, and the page stays on Paused.
       yield* Effect.sync(() => app.device.waiting).pipe(
         Effect.repeat({
           until: (left) => left === 0,

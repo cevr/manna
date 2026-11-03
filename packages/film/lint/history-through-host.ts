@@ -1,37 +1,3 @@
-// `film/history-through-host`: a page never chooses a history move. Each
-// field of a place declares its own policy (`Place.history`, @manna/url-state),
-// and the address bar is written in one module, `browser/host.ts`
-// (`addressOn`, `reloadAtAddress`), which reads that policy and owns the one
-// traversal a page makes, a dismissal's Back (`addressOn(host).dismiss`): a
-// call site that picks push or replace itself is how a drag came to push an
-// entry per step, and one that picks Back how a dismissal went Back over
-// another page's entry.
-//
-// Refused, each read off what holds it, called or not, or taken by
-// destructuring under any static key (`const { replace } = yield* Location`,
-// `{ 'back': b }`, `{ ['go']: g }`):
-// - `navigate`, read from `UrlState.UrlState` (it takes its own `history`);
-// - a move read from `Location`: `push`, `replace`, `back`, `forward` or `go`;
-// - a traversal (`back`, `forward`) read from the bar `addressOn` gives: the
-//   bar's dismissal chooses Back, never its caller.
-// A value holds a service (`Location`, `UrlState.UrlState`) when it is bound
-// to `yield* <service>` (or is `(yield* <service>)` itself), is
-// `Context.get(…, <service>)` or `Context.getUnsafe(…, <service>)`, is the
-// parameter of a callback handed to `<service>.use`, to
-// `Effect.flatMap(<service>.asEffect(), …)` or to a `pipe` on the service,
-// or is an alias of one, under any type wrapper (`as`, `satisfies`, `!`).
-// Each name is read by its binding where it is written (`nodes.ts`):
-// `Location` is a name bound to `@manna/url-state`'s `Location` import, or
-// `<ns>.Location` where `<ns>` is bound to a namespace import of
-// `@manna/url-state`; `UrlState.UrlState` is the `UrlState` namespace
-// `@manna/url-state` exports (imported, or `<ns>.UrlState`); `Context` is
-// bound to `effect`'s; and the bar is a call of a name bound to
-// `browser/host.ts`'s `addressOn`, or an alias of one. A parameter or a local
-// of the same name is its own binding, and none of these; a `navigate` read
-// off anything else (a WebView's) is no history move. A service handed in as
-// a parameter typed by its interface is not traced. The config turns the rule
-// off in `browser/host.ts`, the tests and the fixtures.
-
 import { Effect, Option } from 'effect';
 import {
   Diagnostic,

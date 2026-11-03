@@ -1,7 +1,3 @@
-// Captions from the word timings: when each line shows, in one place. The
-// burned-in captions (canvas) and the WebVTT sidecar (the renderer) both read
-// `captionCues`, so the file and the picture cannot disagree. Pure.
-
 import { Array as Arr, Option } from 'effect';
 import type { Placed } from './layout.ts';
 import { type Turn, endsClause, endsSentence } from './narration.ts';
@@ -70,7 +66,6 @@ export const captionCues = (
       onNone: () => last.value.end + CAPTION_HOLD,
       onSome: (next) => next.start,
     });
-    // Only the first line leads: a later one starts where the line before it ends.
     const lead = Arr.match(lines.slice(0, i), { onEmpty: () => CAPTION_LEAD, onNonEmpty: () => 0 });
     const start = first.value.start - lead;
     const said = line.map((w) => w.text).join(' ');

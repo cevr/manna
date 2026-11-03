@@ -1,8 +1,3 @@
-// A file on the box answered as a request asks for it: whole, or the byte
-// range it names (206, so a video seeks on a phone), with its cache policy.
-// The review's files, the options' mixes and takes, the studio's attempts
-// and the notes' stills are served this way.
-
 import { Effect } from 'effect';
 import { HttpServerRequest, HttpStaticServer } from 'effect/http';
 import { ReviewFileUnknown } from '../core/refusals.ts';

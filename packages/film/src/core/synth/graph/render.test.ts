@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { createHash } from 'node:crypto';
 import { Result, Schema } from 'effect';
 import { GOLDEN, PROBES, type Probe } from './fixtures/golden.ts';
 import { ALLPASSES, COMBS } from './kernels.ts';
@@ -26,7 +25,7 @@ const resolvedOf = (
 });
 
 const sha256Hex = (data: string | Uint8Array): string =>
-  createHash('sha256').update(data).digest('hex');
+  new Bun.CryptoHasher('sha256').update(data).digest('hex');
 
 const digest = (plane: Float32Array): string =>
   sha256Hex(new Uint8Array(plane.buffer, plane.byteOffset, plane.byteLength));
@@ -154,7 +153,6 @@ describe('the draws', () => {
   });
 
   test('a thousand repetitions each land on their own time, rounded once', () => {
-    // One frame at the top of a sine: a 1 at each onset.
     const impulse: Node = {
       _tag: 'Osc',
       wave: 'sine',
@@ -171,7 +169,6 @@ describe('the draws', () => {
     const onsets = Array.from(out).flatMap((x, i) => (x === 1 ? [i] : []));
     const times = Array.from({ length: 1000 }, (_, k) => Math.round(k * every * SYNTH_RATE));
     expect(onsets).toEqual(times);
-    // A frame step rounded once and added up would end 430 frames early.
     expect(out.length - 1).toBe(Math.round(999 * every * SYNTH_RATE));
     expect(out.length - 1 - 999 * Math.round(every * SYNTH_RATE)).toBe(430);
   });
@@ -214,7 +211,6 @@ describe('struck modes', () => {
 });
 
 describe('the kernels, by what they make of a click', () => {
-  // One frame at the top of a sine: what a node makes of it is its impulse response.
   const impulse: Node = {
     _tag: 'Osc',
     wave: 'sine',
@@ -243,7 +239,6 @@ describe('the kernels, by what they make of a click', () => {
         planned({ _tag: 'Filter', type, hz: 1000, q: 0.707, db, of: click(0.25) });
       const low = shelf('lowshelf');
       const high = shelf('highshelf');
-      // Five octaves under the corner and four over it, the shelves have reached their plateaus.
       const near = (measured: number, want: number) =>
         expect(Math.abs(measured - want)).toBeLessThan(0.05);
       near(gainDb(low, 31.25), db);
@@ -264,7 +259,6 @@ describe('the kernels, by what they make of a click', () => {
       tail: 0.45,
       of: impulse,
     });
-    // All wet: the click itself is not heard, its echoes are, each a frame of its own.
     const heard = Array.from(out).flatMap((x, frame) => (x === 0 ? [] : [{ frame, x }]));
     expect(heard).toEqual(
       [1, 2, 3, 4].map((k) => ({ frame: k * framesOf(0.1), x: 0.5 ** (k - 1) })),
@@ -273,9 +267,6 @@ describe('the kernels, by what they make of a click', () => {
 
   test("a room's allpasses ring on at half: each echo of its first reflection half the one before", () => {
     const out = planned({ _tag: 'Reverb', size: 0.5, damp: 8000, wet: 1, tail: 0.1, of: impulse });
-    // The shortest comb's first pass is the first reflection, and the shortest allpass
-    // echoes it at its own length, inverted by the three it passes straight through,
-    // then again, feedback times. No other path of combs and allpasses lands on these frames.
     const first = Math.min(...COMBS);
     const ring = Math.min(...ALLPASSES);
     expect(out.findIndex((x) => x !== 0)).toBe(first);

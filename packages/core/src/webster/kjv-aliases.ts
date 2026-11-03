@@ -32,7 +32,6 @@ const aliases: ReadonlyMap<string, Alias> = new Map<string, Alias>([
   ['carrieth', Lemma({ key: 'carry' })],
   ['cheth', NoEntry()],
   ['chinnereth', NoEntry()],
-  // Jeremiah 22:15 uses the verb CLOSE; the exact CLOSEST row is an adjective.
   ['closest', Override({ key: 'close' })],
   ['couldest', Lemma({ key: 'can' })],
   ['criest', Lemma({ key: 'cry' })],

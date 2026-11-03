@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/toast/content/ToastContent.tsx
-//
-// A container for the contents of a toast. Upstream's re-measuring of the
-// toast's height when the content changes is left out with the height.
-// Renders a `<div>` element, `data-behind` when the toast is behind the
-// frontmost one.
 import type { JSX } from '@solidjs/web';
 import { omit } from 'solid-js';
 

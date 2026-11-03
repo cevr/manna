@@ -1,13 +1,3 @@
-/**
- * The resume: a hymn's key is the sha256 of its MIDI file and the config
- * (`configHash`: the style, the instrument lock, the sampler's sha256,
- * NodeAV's version, the credits and the modules that shape the sound,
- * `AUDIO_SOURCES` in `run.ts`). A hymn whose record holds its key, or a key
- * of a config that sounds the same (`SAME_SOUND`), and whose MP3 still has
- * the recorded sha256, stands: it is checked again from its record and kept
- * when it passes. Any other is rendered. Pure.
- */
-
 /** The sha256 of each named part, in order: one hash of a list (a file goes in as its own sha256). */
 export const hashOf = (parts: ReadonlyArray<readonly [string, string]>) => {
   const hasher = new Bun.CryptoHasher('sha256');

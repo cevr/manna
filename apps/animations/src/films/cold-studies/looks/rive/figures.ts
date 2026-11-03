@@ -1,10 +1,3 @@
-// What `figures.riv` holds: the court's figure rigs (the accused, the judge
-// and his hand), each an artboard with its view model, built in K1 (the
-// owner's pick, 2026-10-13). The style trials are closed (2026-10-14), so the
-// file is frozen: committed, never rebuilt. The runtime reads these numbers
-// beside it (`rigs.ts`, `accused.ts`, `judge.ts`), so they are the file's own
-// and change only with it.
-
 /** The artboards, by name: what a prop asks the file for. */
 export const ARTBOARDS = { accused: 'Accused', judge: 'Judge', hand: 'Hand' } as const;
 

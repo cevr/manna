@@ -1,15 +1,3 @@
-// How a merge resolved each file it did not take from git's own merge: the
-// lines one side added that the resolution dropped, and the lines one side
-// removed that it brought back. A conflict resolved by taking one side's file
-// whole drops every edit the other side made to it (pass 7's p7-films merge
-// undid three batches' edits to the film skill that way); each such line is
-// named here, so the resolution is read, not assumed.
-//
-// Statements are compared as a multiset, trimmed, so a moved one is neither
-// added nor removed; a statement is a line, or a sentence of a prose line (a
-// skill's paragraph is one line of many claims). One under 8 characters (a
-// brace, a fence, a rule) is too common to say anything and is left out.
-
 import { Option } from 'effect';
 
 /** One file's text in the merge base, in each parent, and in the merge. */

@@ -1,11 +1,3 @@
-// What a vertical film draws over its picture, whichever kind it is: a short
-// cut from a film (`short.ts`) or a talk (`talk.ts`). The hook is one line of
-// text (`ShortLook.hook`) set once in its font on the first frame that draws
-// it, wrapped to the layout's width and centred as a block on its height,
-// shown at once, held and faded out (`hookAlpha`), and recorded as the
-// caption's when probed. Positions are in 1080 × 1920 px; a page made at
-// another density draws them at `k` page px per px.
-
 import { hookAlpha } from '../core/shorts.ts';
 import type { ShortLook } from './film.ts';
 import { type Probe, recordText } from './probe.ts';

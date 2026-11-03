@@ -1,16 +1,3 @@
-// A film's narration as its page loads it. The framework names the files by
-// the film's id, the folder the tools read and write (`FilmPaths`: the
-// timings under `narration/`, the mixed master beside them), so a film never
-// builds its own URLs and the page and the tools lay out the same takes. A
-// film with no timings file yet is laid out on estimates, as the tools lay it
-// out; a file that is there but cannot be fetched or read is an error naming
-// it, never a silent fall back to estimates. A film is given with the faces
-// it draws in asked for (`narratedFilms`): what draws it waits for them. Its
-// Rive rigs (the ones its drawings declare) are loaded before it is given, into
-// the scope its load runs in, so its first frame finds them and whoever runs
-// the load frees them; a rig that cannot load fails the film's load, and what
-// the load had acquired is released with it, as it is when the load is stopped.
-
 import { Effect, Layer, ManagedRuntime, Record as Rec, Schema, type Scope } from 'effect';
 import { FetchHttpClient, HttpClient } from 'effect/http';
 import { NarrationUnreadable, type RigNameMissing, type RigUnloadable } from '../core/errors.ts';

@@ -1,24 +1,3 @@
-// The footage library as the tools see it (`core/footage.ts`): an app's
-// `footage/` folder, shared by its talks. `import` keeps an original whole,
-// by the hash of its bytes, under the name it is given, once it is probed
-// and found one the render can conform; importing the same bytes again
-// answers the name they already have and does nothing (an original is never
-// overwritten: a second recording is a second name). `make` derives each
-// original's copies, rebuilt only when their recipe changes, under
-// `<FILMS_OUT>/footage/<name>/<sha12>/` (never committed, never pushed, made
-// again whenever it is wanted): the mezzanine and the proxy (`FootageMedia`),
-// and a take's voice, levelled by one gain and never trimmed, so its every
-// moment stays where the picture has it. A take is heard once
-// (`ElevenLabs.stt`, the one paid call): its words, each voiced, and its
-// loudness every 10 ms are its transcript, a file of its own under
-// `transcripts/`, pinned to its original. A second hearing is a second file,
-// and the lock names which one is current: a transcript is never rewritten.
-// A hearing's file is numbered, written whole and named in the lock while
-// the lock is held, so two hearings at once keep two files. A name is a
-// footage name (`FootageName`), checked before anything is written.
-// `push` and `pull` keep the originals in the private store
-// (`footage/<name>/<sha12><ext>`), each read back by its hash.
-
 import {
   Console,
   Context,
@@ -219,7 +198,6 @@ export class FootageLibrary extends Context.Service<FootageLibrary, FootageLibra
         const manifest = footageLockManifest(dir);
         const lock = store.read(manifest);
 
-        // A name the lock lists itself: `constructor`, which every object answers to, is no entry.
         const entry = (name: string) =>
           Effect.flatMap(lock, (current) =>
             Effect.fromOption(Rec.get(current.footage, name), () =>
@@ -242,20 +220,17 @@ export class FootageLibrary extends Context.Service<FootageLibrary, FootageLibra
           file: string,
           options: FootageImport,
         ) {
-          // The name first, before anything is read or written: a footage name, or nothing is kept.
           yield* Schema.decodeEffect(FootageName)(options.name).pipe(
             Effect.mapError((error) =>
               FootageNameInvalid.make({ name: options.name, file, reason: error.message }),
             ),
           );
-          // Its extension, as the library keeps it (lower case): one its paths can end in, or nothing is kept.
           const ext = path.extname(file).toLowerCase();
           yield* Schema.decodeEffect(FootageExt)(ext).pipe(
             Effect.mapError(() => FootageExtInvalid.make({ file, ext, rule: FOOTAGE_EXT_RULE })),
           );
           const sha256 = yield* sha256OfFile(fs, file);
           const before = yield* lock;
-          // The same bytes again: the name they have, and nothing done.
           const had = nameOf(before, sha256);
           if (Option.isSome(had)) {
             const kept = yield* entry(had.value).pipe(Effect.orDie);
@@ -286,7 +261,6 @@ export class FootageLibrary extends Context.Service<FootageLibrary, FootageLibra
           const kept = yield* files(options.name, made);
           yield* fs.makeDirectory(path.dirname(kept.original), { recursive: true });
           yield* writeWhole(fs, kept.original, (partial) => fs.copyFile(file, partial));
-          // Named under the lock: a name taken meanwhile is refused, the original kept by its hash.
           yield* store.transact(manifest, (current) => {
             if (Object.hasOwn(current.footage, options.name))
               return Effect.fail(FootageNameTaken.make({ name: options.name, file }));
@@ -346,7 +320,6 @@ export class FootageLibrary extends Context.Service<FootageLibrary, FootageLibra
             yield* Effect.log(`footage.make.copy name=${name} copy=${copy}`);
           }
           if (of.kind === 'clip') return { name, made, transcript: Option.none() };
-          // The voice: levelled by one gain, never trimmed, on the picture's clock.
           const current = stamp.voice === VOICE_RECIPE && (yield* fs.exists(at.voice));
           let voice = yield* media
             .load(at.voice, MIX_RATE)
@@ -363,15 +336,12 @@ export class FootageLibrary extends Context.Service<FootageLibrary, FootageLibra
             );
             voice = Option.some(levelled);
           }
-          // The lock as it is now, not as it was before the copies were made: a
-          // transcript another run named meanwhile is not heard again.
           const transcript = Option.filter(
             Option.fromUndefinedOr((yield* entry(name)).transcript),
             () => !options.hearAgain,
           );
           if (Option.isSome(transcript)) return { name, made, transcript };
           const levelled = Option.getOrThrow(voice);
-          // Heard once (the one paid call), into a file of its own.
           const reply = yield* elevenLabs.stt(at.voice);
           const words = yield* Effect.fromResult(heardWords(reply, at.voice));
           const text = new TextEncoder().encode(
@@ -382,10 +352,6 @@ export class FootageLibrary extends Context.Service<FootageLibrary, FootageLibra
               envelope: envelopeOf(levelled),
             }),
           );
-          // Named, written whole and put in the lock under the lock: two
-          // hearings at once take two numbers, and neither lands on the other.
-          // A hearing that lands after another run named a transcript keeps its
-          // file, and the lock keeps the one it names, unless asked to hear again.
           const [file, named] = yield* store.transact(manifest, (locked) =>
             Effect.gen(function* () {
               const kept = transcriptFile(name, of.sha256, yield* nextHearing(name, of.sha256));

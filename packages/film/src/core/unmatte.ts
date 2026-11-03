@@ -1,31 +1,3 @@
-// A cut-out's parts un-matted against the paper they were cut from. A part
-// sheet's pixels are the kept view's, so the pixels at the figure's rim (the
-// anti-aliased ones, and the sheet's paper the cut kept outside the ink)
-// hold the sheet's paper; laid on another paper they show a light ring.
-// Each rim pixel is solved once for a colour and an alpha that give it back
-// over the sheet's paper: colour·α + paper·(1−α) = the pixel. Its alpha is
-// its distance from the paper along the line to the colour of its
-// neighbourhood that lies farthest from the paper (the ink beside it), and
-// its colour the one that closes the sum, held to 0..255. A pixel the line
-// does not reach (the sheet's paper, lighter or bluer than its flat colour
-// at the rim) is paper: it keeps no alpha, so another paper shows there,
-// and over the sheet's flat paper it differs from the kept pixel by its own
-// distance from that paper. A px so cleared, or left near-clear, that the
-// figure encloses (walled off from the ground and the frame by his inked
-// parts) is his light cloth, not paper: it takes the sheet's px back, unless
-// its clear region holds a pocket of the sheet's paper or a px of the paper
-// the sheet shows open to the ground; a px within the paper's core (ΔE 2)
-// stays cleared. A member's cut-out may ask five things more of it
-// (`UnmatteOptions`): his cloth colours, so a light cloth the line does
-// not reach is his and not paper; his thin parts, whose alpha is raised
-// until the colour that closes the sum is in range, so a speck keeps its
-// hue on another paper; his shadow parts, his shadow on the ground, which
-// wall nothing in; the box's open edges, so paper the box cuts off
-// anywhere on its other edges is cleared, not only at its corners; and his
-// paper's grain, so a rim pixel darker than the paper by more than the
-// sheet's own ground varies is his cloth, kept whole. Asked none, it is as
-// above, every part a wall. Pure.
-
 import { type Rgb, deltaE, labOf } from './cast-sheet-pixels.ts';
 
 /** An edge of the view's box. */
@@ -99,7 +71,6 @@ export const unmatte = (
   const holders = holdersOf(parts, width, height);
   const paperLab = labOf(paper);
   const keep = (options.keep ?? []).map(labOf);
-  // a px the line does not reach: his cloth when it lies nearer a kept cloth colour than the paper
   const isCloth = (c: Rgb) => {
     if (keep.length === 0) return false;
     const lab = labOf(c);
@@ -118,7 +89,6 @@ export const unmatte = (
   const rim = rimOf(holders, (i) => solve(i)[3] === 0, options.open);
   const { grain } = options;
   const paperLuma = lumaOf(paper);
-  // a solved px darker than the paper by more than its grain: his cloth, kept whole
   const floored = (i: number, s: ReturnType<typeof solve>) => {
     if (grain === undefined || s[3] === 255) return s;
     const c = holders.colourAt(i);
@@ -129,7 +99,6 @@ export const unmatte = (
   for (const i of rim) {
     const k = holders.front[i]!;
     if (parts[k]![i * 4 + 3] !== 255) continue;
-    // the view shows this px, the sheet's paper mixed in: paint behind it, hidden at rest, goes too
     for (let b = k + 1; b < parts.length; b++) out[b]!.fill(0, i * 4, i * 4 + 4);
     out[k]!.set(floored(i, solve(i)), i * 4);
     changed[i] = 1;
@@ -398,7 +367,6 @@ const rimOf = (
   let from = [...front.keys()].filter((i) => front[i] === -1);
   for (let step = 1; step <= UNMATTE_BAND && from.length > 0; step++) {
     const next: number[] = [];
-    // `from` grows as paper is reached: paper walks on within this step
     for (let f = 0; f < from.length; f++)
       for (const j of neighbours(from[f]!, width, height)) {
         if (seen[j] === 1) continue;

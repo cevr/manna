@@ -1,24 +1,4 @@
 #!/usr/bin/env bun
-// The judged runner's quality guard, run by hand before a change of the
-// request's form, its packing or its model lands (`quality.ts` says what it
-// measures). It reads the repo's items as the lint does, draws a seeded
-// sample of those the store answers, asks the model about them again
-// through the runner's own `ask` (its form, its limits unless the flags name
-// others, the config's model unless `--model` names another), and prints a
-// line a rule beside the kept answers. It keeps nothing: the store is read,
-// never written. Not a gate check: it costs a request (the default sample,
-// 400 items a rule, about 0.7M input tokens) and the model is not
-// deterministic.
-//
-//   bun run --cwd packages/scripts judged:quality
-//   bun run --cwd packages/scripts judged:quality --rule testOracle --random 150 --findings 20
-//   bun run --cwd packages/scripts judged:quality --bound 50          # another packing
-//   bun run --cwd packages/scripts judged:quality --model jev-1.14.0  # another model
-//
-// Each rule's line: `<rule> random=<n> label-kept=<share> finding-kept=<share>
-// new-findings=<n> findings-still=<n>/<n> moved-random=<p> moved-findings=<p>
-// unanswered=<n>`, then the run's `requests=<n> in=<tokens> out=<tokens>`.
-// The key is the lint's (`model.ts`), never printed.
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';

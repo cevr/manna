@@ -1,12 +1,3 @@
-// A button that opens a menu of commands (`RowsMenu`): its rows are the
-// commands available now that the button lists, each with its keys, and a
-// row runs once the menu has closed and focus is back on the page
-// (`deferredRun`), as the context menu's do, so a sheet it opens keeps its
-// focus. Its rows are keyed by their command (`rowKey`): made again each
-// frame a film plays, a row keeps its element under the pointer. Built on
-// @manna/ui's Menu, styled as the context menu (`.lab-context-menu`,
-// `style.ts`). The header's `⋯` opens one (`view-menu.tsx`).
-
 import { For, type JSX } from '@solidjs/web';
 import { Menu } from '@manna/ui/menu';
 import { createMemo } from 'solid-js';

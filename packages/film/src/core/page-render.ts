@@ -1,13 +1,3 @@
-// What a page's server entry is to the lab: the lab builds each page it
-// renders on the server from a `*.server.tsx` entry beside its HTML entry
-// (`LabPage`'s server bundle), whose default export is a `PageRender`. The
-// lab runs it in a worker of the build (`PageRenderer`), hands it the URL the
-// page was asked at and the page's reads of the lab's own API, and splices
-// what it writes into the page's HTML: the head before `</head>`, the body's
-// class on `<body>`, and the markup first in the body, where the browser's
-// copy of the same components hydrates it. The server entry and the lab's
-// worker both read this module, and neither imports the other.
-
 import { Predicate } from 'effect';
 
 /** What a page is asked at, and by which browser. */

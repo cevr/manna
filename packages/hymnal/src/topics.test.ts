@@ -105,7 +105,6 @@ describe('topics: evidence', () => {
         }
         for (const p of fixes.printed)
           expect([p.hymn, fold(p.heading)]).toEqual([p.hymn, fold(nameOf(p.hymn))]);
-        // A contiguity witness stands only between two printed witnesses of its heading.
         for (const p of fixes.printed.filter((w) => w.from === 'contiguity')) {
           expect([
             p.hymn,
@@ -113,7 +112,6 @@ describe('topics: evidence', () => {
             printedAs(p.hymn + 1, p.heading),
           ]).toEqual([p.hymn, true, true]);
         }
-        // A name is the db's trimmed, or the print's with a photo witness under that section.
         for (const { id, name } of fixes.names) {
           const db = rows.categories.find((c) => c.id === id)?.name;
           const topic = committed.topics.find((t) => t.id === id);

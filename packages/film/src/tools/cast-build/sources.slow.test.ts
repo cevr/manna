@@ -1,8 +1,3 @@
-// Each stage kind's sources are the closure of the local files its entry
-// modules run, so a code change anywhere a stage runs reaches its key: a
-// change to `core/unmatte.ts`, which the puppet a shard renders runs, stales
-// a warm renders stage with no VERSION bump.
-
 import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Path } from 'effect';
@@ -110,8 +105,6 @@ describe('stage sources', () => {
         Effect.flatMap((response) => response.text),
         Effect.orDie,
       );
-      // the server answers the page bundled: its scripts and stylesheets linked as
-      // chunks, the rest of its HTML as written
       const bare = (html: string) =>
         html
           .replace(/<script\b[^>]*>\s*<\/script>|<link\b[^>]*>/g, '')
@@ -119,7 +112,6 @@ describe('stage sources', () => {
           .trim();
       expect(bare(served)).toBe(bare(yield* fs.readFileString(RENDER_PAGE)));
       expect(served).toMatch(/<script\b[^>]*\bsrc="\/chunk-/);
-      // the page's closure reaches the export half of the page, which no import of the render does
       expect(ends(yield* Effect.map(pageSources(RENDER_PAGE), pathsOf))).toEqual(
         expect.arrayContaining([
           'main.ts',

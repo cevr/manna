@@ -140,7 +140,6 @@ describe('stackBottom', () => {
     for (const state of Object.values(holding(three))) {
       expect(stackBottom(barFor(state, Option.none()), 34)).toBe(0);
     }
-    // A hymn page's own bar lies in the page: the stack reaches the window's edge.
     expect(stackBottom(dockedBar(Player.Idle(), Option.some(four)), 34)).toBe(34);
   });
 });
@@ -250,7 +249,6 @@ describe('where the `#` stands', () => {
     expect(findAt(Bar.Hidden(), { home: false, raised: false })).toEqual(FindAt.Nowhere());
   });
 
-  // The key, capo and placement dials stand on one popover over the bar: one open state.
   it.each([
     ['the page’s own bar, at rest', pageBar(Player.Idle(), four)],
     ['the docked bar, paused', dockedBar(holding(four).Paused, Option.some(four))],

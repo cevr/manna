@@ -1,11 +1,3 @@
-// A member's part labels: each part named once by its colour classes and,
-// where one class holds more than one part, by where its region lies against
-// another labelled part's (above, below, left or right of it, or touching
-// it), never by a point in a sheet's pixels. A label picks the largest region
-// its classes and its rules leave, so one table reads every view it is
-// written for, whatever the view's place on its sheet (`core/trace.ts`
-// traces a sheet's parts from it). Pure.
-
 import { Array as Arr, Boolean as Bool, Option, Order } from 'effect';
 
 /** A region of one colour class, as a label reads it: its id, its class, its centre, its box (left, top, right, bottom) and its size in pixels. */
@@ -189,7 +181,6 @@ export const labelRegions = <R extends LabelRegion>(
     );
     const against = Option.all(rules.map((rule) => pick(rule.of)));
     making.delete(name);
-    // A rule against a label that picked nothing is that label's refusal, not this one's.
     return Option.flatMap(against, (held) => largest(name, label, rules, held));
   };
   const made = (name: string): Option.Option<R> =>

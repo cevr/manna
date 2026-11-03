@@ -179,9 +179,7 @@ const exportSplit = Effect.fn('exportSplit')(function* (
   const { frontmatter, content } = parseFrontmatter<SplitFrontmatter>(rawContent);
   const { folderTitle, blocks } = splitMarkdownIntoSections(content);
 
-  // The document title is the folder, unless --folder overrides it.
   const noteFolder = Option.getOrElse(folderOverride, () => folderTitle);
-  // Existing slug -> note id map (for update-in-place on re-export).
   let existingIds: Readonly<Record<string, string>> = {};
   const decodedIds = decodeSplitIdMap(frontmatter.apple_note_split);
   if (!forceCreate && Option.isSome(decodedIds)) {

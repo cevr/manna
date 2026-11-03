@@ -1,18 +1,3 @@
-// The ps1 courtroom: a level built from boxes. Cut stone walls with tall pale
-// windows and a round one over the bench, a plank floor, a teal runner up
-// the aisle, pews behind the bar with a few onlookers, the judge's tall
-// bench on its dais and, in the well, the accused in a stained tunic beside
-// a table the evidence piles onto. Five game-camera shots, each one drifting
-// slowly, cut on the take's marks: the crane in ("Imagine standing in a
-// courtroom"), the evidence falling (`evidence`), the face going down (`did`),
-// the judge leaning in with the gavel (`judge`), and the verdict from over
-// the accused's shoulder (`righteous`), the plate stamped gold on the bench
-// and the head coming up.
-//
-// Screen direction holds through every shot (DIRECTION's staging grammar):
-// the accused screen-left, the bench centre-high; every camera stays on one
-// side of the line between them.
-
 import type { Hex } from '@manna/film/canvas';
 import { type Key, clamp, ease, lerp, rng } from '@manna/film/core';
 import { CanvasTexture, Group, NearestFilter, PerspectiveCamera, Scene, Vector3 } from 'three';
@@ -46,7 +31,6 @@ const ON_TABLE = 24;
 
 const ITEMS: ReadonlyArray<Item> = (() => {
   const r = rng(1889);
-  // Six stacks on the table, two deep and three across, piled in turn; the overflow on the floor.
   const stacks = [-0.55, 0, 0.55].flatMap((x) => [-0.2, 0.2].map((z) => [x, z] as const));
   const heights: number[] = stacks.map(() => TABLE.top);
   return Array.from({ length: ON_TABLE + 3 }, (_, i): Item => {
@@ -108,16 +92,13 @@ const shell = (r: Rig, at: Placer) => {
   const glass = ps1(w, { tint: '#e4ecef', emissive: 0.85 });
   const trim = ps1(w, { tint: '#3a3e48' });
 
-  // The floor and the runner up the aisle.
   at(slab(20, 22, 0.5), floor, 0, 0, 1).rotation.x = -Math.PI / 2;
   at(slab(1.8, 12, 1), carpet, 0, 0.01, 7).rotation.x = -Math.PI / 2;
-  // The walls: the back behind the bench, the two sides, pilasters along them.
   at(slab(20, 9, 0.4), wall, 0, 4.5, -7.6);
   for (const s of [-1, 1]) {
     const side = at(slab(22, 9, 0.4), wall, s * 9, 4.5, 1);
     side.rotation.y = -s * (Math.PI / 2);
     for (let z = -6; z <= 10; z += 4) at(box(0.6, 9, 0.6, 0.4), wall, s * 8.7, 4.5, z);
-    // A tall window between each pair of pilasters on the side walls.
     for (let z = -4; z <= 8; z += 4) {
       const win = at(slab(1.4, 3.4, 1), glass, s * 8.95, 3.9, z);
       win.rotation.y = -s * (Math.PI / 2);
@@ -125,7 +106,6 @@ const shell = (r: Rig, at: Placer) => {
       for (const y of [3.0, 4.6]) at(box(0.1, 0.1, 1.4), trim, s * 8.9, y, z);
     }
   }
-  // Two tall windows and a round one on the back wall, a cornice over all.
   for (const x of [-5, 5]) {
     at(slab(1.6, 4, 1), glass, x, 3.8, -7.55);
     at(box(0.1, 4, 0.1), trim, x, 3.8, -7.5);
@@ -133,7 +113,6 @@ const shell = (r: Rig, at: Placer) => {
   }
   at(post(1.1, 1.1, 0.05, 12), glass, 0, 5.6, -7.55).rotation.x = Math.PI / 2;
   at(box(20, 0.35, 0.5), trim, 0, 7.2, -7.4);
-  // The entrance wall behind the gallery, its double doors shut.
   at(slab(20, 9, 0.4), wall, 0, 4.5, 12).rotation.y = Math.PI;
   at(box(2.4, 3.2, 0.2, 0.8), pew, 0, 1.6, 11.9);
   at(box(0.06, 3.2, 0.24), trim, 0, 1.6, 11.88);
@@ -150,22 +129,18 @@ const build = (r: Rig): Set => {
   const trim = ps1(w, { tint: '#3a3e48' });
   const leather = ps1(w, { tint: '#2f4a3e' });
 
-  // The dais, the judge's high chair and the bench in front of it.
   at(box(8, 0.5, 3.4, 0.6), bench, 0, 0.25, -5.7);
   at(box(1.5, 3.6, 0.3, 0.8), leather, 0, 2.3, -6.75);
   at(box(1.7, 0.3, 0.4, 0.8), bench, 0, 4.15, -6.75);
   at(box(6.4, 2.3, 1.2, 0.8), bench, 0, 1.15, -4.8);
   at(box(6.8, 0.14, 1.5, 0.8), bench, 0, 2.37, -4.8);
   for (const x of [-2.1, 2.1]) at(box(1.6, 1.3, 0.06, 1.2), trim, x, 1.2, -4.18);
-  // The gavel's block, under the judge's gavel hand.
   at(post(0.16, 0.18, 0.07, 6), bench, 0.36, 2.48, -4.4);
 
-  // The bar: a rail on posts between the well and the gallery.
   for (const s of [-1, 1]) {
     at(box(6.5, 0.08, 0.1), bench, s * 4.6, 1.0, 3.0);
     for (let x = 1.6; x <= 7.6; x += 0.75) at(box(0.06, 1.0, 0.06), bench, s * x, 0.5, 3.0);
   }
-  // The pews.
   for (let row = 0; row < 4; row++)
     for (const s of [-1, 1]) {
       const z = 4.4 + row * 1.5;
@@ -173,7 +148,6 @@ const build = (r: Rig): Set => {
       at(box(5.2, 0.9, 0.12, 0.8), pew, s * 4.0, 0.9, z + 0.32);
     }
 
-  // The evidence table.
   at(box(1.8, 0.08, 0.9, 1.2), bench, TABLE.x, TABLE.top - 0.04, TABLE.z);
   for (const [dx, dz] of [
     [-0.8, -0.38],
@@ -189,7 +163,6 @@ const build = (r: Rig): Set => {
       TABLE.z + dz,
     );
 
-  // The evidence, each piece in its own group so it can fall.
   const paper = ps1(w, { map: t.paper });
   const card = ps1(w, { map: t.box });
   const items = ITEMS.map((item) => {
@@ -200,7 +173,6 @@ const build = (r: Rig): Set => {
     return g;
   });
 
-  // The verdict plate, stamped on the bench front.
   const plate = new Group();
   const word = new CanvasTexture(verdictPlate());
   word.magFilter = NearestFilter;
@@ -210,7 +182,6 @@ const build = (r: Rig): Set => {
   plate.position.copy(PLATE);
   scene.add(plate);
 
-  // The people.
   const accused = person(w, t, {
     skin: '#d9a682',
     hair: '#2a1d16',
@@ -237,14 +208,11 @@ const build = (r: Rig): Set => {
   });
   judge.root.position.copy(JUDGE);
   scene.add(judge.root);
-  // The gavel in his hand: a turned head on a handle, set at the angle that
-  // lays it flat on the block when the arm comes down.
   judge.grip.rotation.x = 1.5;
   const wood = ps1(w, { map: t.desk });
   put(judge.grip, post(0.025, 0.025, 0.42, 5), wood, 0, 0, 0.18).rotation.x = Math.PI / 2;
   put(judge.grip, post(0.075, 0.075, 0.26, 7), wood, 0, 0, 0.38).rotation.z = Math.PI / 2;
 
-  // Onlookers in the pews, no two alike.
   const crowd: ReadonlyArray<readonly [number, number, string, string, number, number]> = [
     [-2.4, 4.4, '#8d5a3b', '#16110e', 0.95, 3],
     [-5.1, 5.9, '#efc8a4', '#a8642e', 1.05, 4],
@@ -292,9 +260,7 @@ const CRANE: Shot = {
 
 /** The five shots, in order, each cut in on its mark (the first on the scene's start). */
 const SHOTS: ReadonlyArray<Shot> = [
-  // A slow crane down from over the gallery to the accused alone in the well.
   CRANE,
-  // The evidence piling on the table beside them, the camera trucking left.
   {
     from: [1.3, 1.6, -2.3],
     to: [0.9, 1.55, -2.6],
@@ -302,7 +268,6 @@ const SHOTS: ReadonlyArray<Shot> = [
     lookTo: [-0.65, 1.1, 0.4],
     fov: 52,
   },
-  // The face, from the bench side and a little above: the judge's view.
   {
     from: [-1.0, 1.36, -0.62],
     to: [-1.08, 1.38, -0.45],
@@ -310,7 +275,6 @@ const SHOTS: ReadonlyArray<Shot> = [
     lookTo: [-1.3, 1.5, 0.5],
     fov: 50,
   },
-  // At the judge across the bench top, the block in view, pushing in.
   {
     from: [-0.6, 2.75, 0.0],
     to: [-0.45, 2.85, -0.8],
@@ -318,7 +282,6 @@ const SHOTS: ReadonlyArray<Shot> = [
     lookTo: [0.1, 2.8, -5.2],
     fov: 32,
   },
-  // The verdict, over the accused's shoulder, easing in.
   {
     from: [-0.75, 2.05, 3.9],
     to: [-0.8, 1.95, 3.3],
@@ -374,7 +337,6 @@ const stage = (f: CourtFrame, r: Rig, s: Set) => {
   const bow = f.at('bow') * (1 - lift);
   const lean = f.at('lean');
 
-  // The room's light: cool and even, from the windows; the verdict's gold comes up on the stamp.
   w.ambient.value.copy(rgb('#8e98a4'));
   w.sunDir.value.set(0.35, 0.8, -0.5).normalize();
   w.sunColor.value.copy(rgb('#7a7874'));
@@ -385,7 +347,6 @@ const stage = (f: CourtFrame, r: Rig, s: Set) => {
   w.fogNear.value = 7;
   w.fogFar.value = 30;
 
-  // The evidence falls, piece after piece, across `drop`.
   s.items.forEach((g, i) => {
     const item = ITEMS[i];
     const k = f.stagger('drop', i, s.items.length);
@@ -395,7 +356,6 @@ const stage = (f: CourtFrame, r: Rig, s: Set) => {
     g.rotation.set(0.6 * (1 - k), item.turn + 0.8 * (1 - k), 0.3 * (1 - k));
   });
 
-  // The accused: head down on "you did it", up at the verdict, the face opening.
   pose(s.accused, {
     ...REST,
     nod: 0.42 * bow - 0.12 * lift,
@@ -412,7 +372,6 @@ const stage = (f: CourtFrame, r: Rig, s: Set) => {
     spread: 0.06,
   });
 
-  // The judge leans in, the gavel comes up and down hard across `gavel`.
   const swing = f.keys('gavel', SWING);
   pose(s.judge, {
     ...REST,
@@ -430,7 +389,6 @@ const stage = (f: CourtFrame, r: Rig, s: Set) => {
     spread: 0.1,
   });
 
-  // The plate: hidden until the stamp, then slammed onto the bench front.
   s.plate.visible = stamp > 0;
   s.plate.scale.setScalar(f.keys('stamp', STAMP_POP));
 

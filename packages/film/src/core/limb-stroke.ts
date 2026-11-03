@@ -27,6 +27,11 @@ const FOLD_WEIGHT = 0.6;
 const FOLD_LENGTH = 1;
 const FOLD_INSET = 0;
 
+/** The cut's ink lip is sized by the hand, not the sleeve's pen, so a small hand stays a round circle: its depth is at most this share of the square root of the hand's skin area, and the opening's ink at most `OPENING_HAND_SHARE` of it, never under `OPENING_MIN_PX`. */
+const LIP_HAND_SHARE = 0.015;
+const OPENING_HAND_SHARE = 0.045;
+const OPENING_MIN_PX = 2;
+
 /** An affine map `[a, b, c, d, e, f]`: x' = a x + c y + e, y' = b x + d y + f. */
 type Affine = Float64Array;
 
@@ -259,8 +264,6 @@ const clothSampler = (limb: PuppetPartLimb, sample: LimbSample): LimbSample => {
       if (limb.regions.cloth.getUint8(i) === 0) excluded[i] = 1;
     }
   const fromExcluded = nearest(width, height, (i) => excluded[i] === 1);
-  // The four neighbours of a bilinear sample reach a diagonal texel: keep
-  // that one-texel antialias fringe out of the excluded paint's donor cloth.
   const cloth = nearest(
     width,
     height,
@@ -289,8 +292,6 @@ const clothSampler = (limb: PuppetPartLimb, sample: LimbSample): LimbSample => {
   };
 };
 
-// Prepared cloth depends on immutable source paint and measurement, never
-// the pose. Include texture identity so a dyed part cannot reuse plain cloth.
 const CLOTH = new WeakMap<PuppetPartLimb, WeakMap<Raster, LimbSample>>();
 const preparedCloth = (limb: PuppetPartLimb, texture: Raster, sample: LimbSample) => {
   const textures = Option.getOrElse(
@@ -409,18 +410,13 @@ const outline = (
   const eroded = nearest(width, height, (i) => garment[i]! >= radius);
   const opened = Float64Array.from(eroded.distances, (d) => radius + 0.5 - Math.sqrt(d));
   coverField(pixels, opened, width, fill, moving);
-  // The generated sleeve can meet the hand beyond the source cut too.
-  // Include that actual garment contact, while free hand edges keep their
-  // own painted outline and never acquire a sleeve-coloured backing.
   for (let i = 0; i < width * height; i++)
     handGround[i] = Math.max(handGround[i]!, pixels[i * 4 + 3]! * (1 - hands[i * 4 + 3]!));
+  /** The hand's cuts: its source cut and wherever the generated sleeve meets it beyond that cut; free hand edges keep their own painted outline and never take a sleeve-coloured backing. */
   const handCuts = nearest(width, height, (i) => handGround[i]! >= 0.5);
-  // The cut's ink lip is sized by the hand, not the sleeve's pen. Its
-  // depth is at most 1.5% of sqrt(hand area); opening ink adds at most
-  // max(2px, 4.5% of sqrt(hand area)). Hand-owned paint stays above lining.
   const handSize = Math.sqrt(handArea);
-  const lipDepth = Math.min(radius, 0.015 * handSize);
-  const openingWidth = Math.min(inkWidth, Math.max(2, 0.045 * handSize));
+  const lipDepth = Math.min(radius, LIP_HAND_SHARE * handSize);
+  const openingWidth = Math.min(inkWidth, Math.max(OPENING_MIN_PX, OPENING_HAND_SHARE * handSize));
   handContributions(moving, pixels, hands);
   for (let i = 0; i < width * height; i++) {
     const o = i * 4;
@@ -432,7 +428,6 @@ const outline = (
     }
     pixels[o + 3] = alpha + pixels[o + 3]! * (1 - alpha);
   }
-  // A round ink join has the pen's radius: half its measured width.
   const field = closedField(pixels, width, height, inkWidth / 2);
   let reference = field;
   if (blend < 1) reference = closedField(painted, width, height, inkWidth / 2);
@@ -511,6 +506,7 @@ export const limbStroke = (
     return [u0 + dot(r, d), dot(r, opens(d))];
   };
   const scale = 1 / Math.hypot(frames.upper[0]!, frames.upper[1]!);
+  /** The ink a texel takes at the silhouette's edge: cloth behind the fixed upper arm continues the figure, so only its painted ink marks that contact, while a free silhouette still gets ink. */
   const edgeAt = (stub: number, foreDistance: number, upperDistance: number, q: Pt) => {
     if (
       stub > 0 ||
@@ -552,9 +548,6 @@ export const limbStroke = (
       const qh = mapped(frames.hand, px, py);
       const upperDistance = tube(0, qu, upper);
       past.set(stub);
-      // The stub contributes its painted coverage and cloth to one garment.
-      // Its source ink is replaced so an interior shoulder seam cannot become
-      // a second outline; the completed union receives the measured ink once.
       if (
         stub[3]! > 0 &&
         labOf([stub[0]! / stub[3]!, stub[1]! / stub[3]!, stub[2]! / stub[3]!])[0] < INK_L
@@ -565,8 +558,6 @@ export const limbStroke = (
       overInto(upper, past);
       const foreDistance = tube(1, qf, fore);
       onFore[i] = Number(foreDistance > upperDistance);
-      // Cloth behind the fixed upper arm continues the figure. Only its
-      // painted ink can mark that contact; a free silhouette still gets ink.
       edgeInk[i] = edgeAt(stub[3]!, foreDistance, upperDistance, qu);
       ground[i] = behind(px, py);
       sample(qh[0], qh[1], hand);

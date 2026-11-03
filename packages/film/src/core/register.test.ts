@@ -31,7 +31,6 @@ const apart = (a: Similarity, b: Similarity) =>
       [0, 24],
       [24, 24],
     ].map(([x = 0, y = 0]) =>
-      // the view corner's picture point under `a`, laid back by `b`
       Math.hypot(((x - a.dx) / a.s) * b.s + b.dx - x, ((y - a.dy) / a.s) * b.s + b.dy - y),
     ),
   );
@@ -57,7 +56,6 @@ describe('register', () => {
   });
 
   test('a point draw gives each view pixel the one picture pixel under its centre, unaveraged', () => {
-    // the picture's every other pixel, each its own colour: the point draw at half scale picks them alone
     const back = drawPoint(PICTURE, 32, 32, { s: 0.5, dx: 0, dy: 0 });
     const at = (r: Raster, x: number, y: number, w: number) =>
       r.rgba.subarray((y * w + x) * 4, (y * w + x) * 4 + 4);

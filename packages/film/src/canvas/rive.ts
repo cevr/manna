@@ -1,48 +1,3 @@
-// A Rive rig drawn in our frame: a figure built in Rive (bones, skinned
-// paths, constraints, a view model) that a drawing declares (`drawing({ rigs
-// })`) and poses by name each frame (`f.rive(name, pose)`), drawn under the
-// frame's own transform, as `glCanvas` lets a look draw in 3D. This is the
-// draw path: plain synchronous code, no Effect and no Promise. The film loads
-// its rigs before its first frame (`src/rive`, `loadRigs`): each rig's file,
-// parsed once, belongs to that load's scope.
-//
-// Rive never owns the clock, and a frame is a function of its pose alone,
-// whatever was drawn before it, by construction: every frame poses an
-// artboard instance of its own, made from the loaded file and deleted when
-// the frame is drawn, bound to a view-model instance of its own (the model's
-// defaults, then the pose's numbers), with the pose's timelines applied in
-// order and the artboard advanced by no time. A rig that follows the shot
-// (`ink`) has its ink set from the frame's scale before the pose's numbers,
-// read before the pose's `size` scales it. Nothing a frame does to an
-// instance outlives it: no path a shape keeps from an earlier frame's
-// rounding (`PathComposer` remakes a shape's paths only when their geometry
-// or their transform moves past a tolerance), no constraint solved from the
-// last frame's bones, no value a bind wrote back. The file's timelines are
-// the file's own (every instance shares them), so a frame makes only the
-// instances it poses: the artboard, the view model's instance, one instance
-// of each timeline it names.
-//
-// Two engines draw it:
-//
-// - `canvas` (`@rive-app/canvas-advanced`): Rive's Canvas 2D renderer, on our
-//   own context, so our camera, alpha and plane haze reach it as they reach
-//   any piece; its draws are queued and flushed (`resolveAnimationFrame`)
-//   while our transform is still on the context.
-// - `webgl2` (`@rive-app/webgl2-advanced`): the Rive Renderer (feathers drawn
-//   analytically) on a WebGL 2 canvas off the page, its box on screen
-//   composited with `drawImage`. Its canvas is a 512 px tile where the rig's
-//   box fits, else the frame's size: a size the frame chooses, never one grown
-//   from the frames before, and each is first drawn once with the rig at rest
-//   before any real frame (the Rive Renderer sizes its buffers from the first
-//   frame it draws). Where WebGL has no pixel local storage (SwiftShader, so
-//   every render on Linux) it falls back to 4× MSAA and draws a feather only
-//   on a `clockwise` fill.
-//
-// Where nothing is drawn (Bun, which has no canvas: `check --draw`) the rig is
-// still posed and its face still declared. Probes cannot see inside an
-// artboard: `face` names a node whose place is declared (`probeFace`), and the
-// artboard's bounds are declared as the figure's box (`probeFigure`).
-
 import type {
   Artboard,
   File,
@@ -257,11 +212,9 @@ export const rigSurfaces = (
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
-    // The Rive Renderer makes the canvas's context (its own attributes); this is that context.
     const renderer = runtime.makeRenderer(canvas, false);
     const gl: unknown = canvas.getContext('webgl2');
     if (!isGl2(gl)) return undefined;
-    // Kept from the start, so the rig frees it even if its first drawing throws.
     const made: GlTarget = { canvas, gl, renderer, primed: false };
     targets.set(at, made);
     holdGl(canvas, gl);
@@ -361,7 +314,6 @@ const paintCanvas = (
   artboard: Artboard,
 ) => {
   const [ox, oy] = spec.origin;
-  // Made on the frame's own canvas: its 2D context is `ctx`, the one Rive draws into.
   const renderer = rig.surfaces.renderer(ctx.canvas);
   ctx.save();
   ctx.translate(-ox, -oy);
@@ -369,8 +321,6 @@ const paintCanvas = (
   renderer.save();
   artboard.draw(renderer);
   renderer.restore();
-  // The canvas renderer queues its draws; flush them under our transform (and before the
-  // frame's artboard is deleted, which a queued draw would skip).
   rig.runtime.resolveAnimationFrame();
   ctx.restore();
 };
@@ -390,7 +340,6 @@ const paintGl = (
 ): string | undefined => {
   const [ox, oy] = spec.origin;
   const m = ctx.getTransform();
-  // The context's transform with the origin moved to (ox, oy), folded in by hand.
   const e = m.e - (m.a * ox + m.c * oy);
   const f = m.f - (m.b * ox + m.d * oy);
   const b = artboard.bounds;
@@ -424,8 +373,6 @@ const paintGl = (
   if (target === undefined)
     return `rig ${spec.key}: no WebGL 2 context could be made to draw it on`;
   const { renderer } = target;
-  // The WebGL 2 runtime (2.43.1) has no `beginFrame`, though the types it shares say so: its
-  // `clear` is the frame's start (resize to the canvas, clear, register for the flush).
   renderer.clear();
   renderer.save();
   rig.scratch.xx = m.a;
@@ -455,7 +402,6 @@ const declareFace = (
 ) => {
   if (spec.face === undefined || !probesFaces(ctx)) return;
   const [ox, oy] = spec.origin;
-  // Its place: the node's own offset through its parent's world transform (checked at load).
   const face = artboard.node(spec.face.node);
   face.parentWorldTransform(rig.scratch);
   const p = rig.scratch;
@@ -508,7 +454,6 @@ export const drawRig = (
 ): string | undefined => {
   const why = unposable(spec, rig, pose);
   if (why !== undefined) return why;
-  // What a frame that threw left behind.
   rig.frame.free();
   const artboard = rig.frame.hold(rig.file.artboardByName(spec.source.artboard));
   const vm = rig.model === undefined ? undefined : rig.frame.hold(rig.model.defaultInstance());

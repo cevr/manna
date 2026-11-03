@@ -1,16 +1,3 @@
-// `film concept fit <film> <member> --view <kind>-<view> --from <view> ...
-// [--bone <name> ...]`: a kept view's pose fitted from the member's cut-out
-// puppets (`core/pose-fit.ts`). The view is the kept sheet cropped at its
-// box (the film's `rigs/cast.ts`, its `CUTOUT` view else its `CAST` view);
-// each `--from` puppet (a view his `CUTOUT` table draws) is started where
-// its rest figure fills the view's figure box (`boxStart`) and searched over
-// its root, its one scale and the bones named (none unless named: a turned
-// lean, neck or head moves the parts on it apart at the collar, and the L3
-// line then rings every part it moves), in the view's crop's frame, no bone
-// turned past 15° (a bigger move is a drawn key). The puppet with the lower
-// loss is the fit; every puppet's loss is kept beside it. The record is written to the
-// member's `cutout/poses/<kind>-<view>.json`, which his poses module reads.
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';

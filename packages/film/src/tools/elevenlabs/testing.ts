@@ -1,6 +1,3 @@
-// ElevenLabs in memory for the tool tests: speech and dialogue answered from
-// what was sent, every call counted. No network, no credits.
-
 import { Array as Arr, Effect, Layer, Option, Redacted } from 'effect';
 import { Base64 } from 'effect/encoding';
 import { type DialogueRequest, ElevenLabs, type TtsRequest } from '../elevenlabs.ts';
@@ -93,7 +90,6 @@ export const fakeElevenLabs = (
         Effect.sync(() => {
           calls.stt.push(file);
           const bytes = new TextDecoder().decode(files.get(file)).trim();
-          // A person's take is fake MP3 bytes: what was said is the recording's, by beat.
           const person = Option.filter(
             Option.fromNullishOr(options.recorded?.get(beatOfTake(file))),
             () => bytes.startsWith('flac '),
@@ -106,7 +102,6 @@ export const fakeElevenLabs = (
           if (options.untimed === true) return { text: heard };
           return { text: heard, words: heardAt(heard) };
         }),
-      // The score's bytes name the plan's styles, so each option hashes apart.
       composeMusic: (plan, _model, out) =>
         Effect.sync(() => {
           calls.music.push(out);

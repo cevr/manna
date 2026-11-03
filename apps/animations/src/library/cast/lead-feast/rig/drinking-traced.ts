@@ -1,9 +1,3 @@
-// lead-feast, in profile to screen left, his head tipped back, drinking from the wooden plate at his lips: one eye, his ear behind his cheek, his curls behind; his teal left sleeve raised before him, its upper arm across his chest, its forearm up to his hand under the plate; his cream right sleeve raised beyond it to his hand at the plate; the sash knotted at his front, its end hanging; his sandals, traced from the kept poses sheet
-// (../cast-sheet/kept/poses.png, box 324, 226, 601, 831) in the sheet's own pixels.
-// Written by `bun run concept trace src/library/cast/lead-feast/rig/trace-poses.ts --view drinking`
-// (from apps/animations); trace it again rather than edit it. Points only: the
-// film's papers paint each part. Pure.
-
 import type { Pt } from '@manna/film/style';
 
 /** The view's box in the sheet, as its record keeps it. */

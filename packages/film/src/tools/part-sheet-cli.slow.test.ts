@@ -1,10 +1,3 @@
-// `film concept parts`, run over memory on a small figure (a torso over a
-// robe, an arm in front of both): its budget of calls holds across a moved
-// cut, a call counts once it is in the ledger whatever follows it, an
-// all-paper answer misses its drift and grain on the domain the sheet
-// fixes and is never kept over one that paints, and each painted part's
-// grain is read on its own.
-
 import { Effect, Layer, Option, Path, Result, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { type SheetClean, SheetCleanRefused, cutParts } from '../core/part-sheet.ts';
@@ -16,11 +9,6 @@ import { decodePng, encodePng } from './png.ts';
 
 type Rgba = readonly [number, number, number, number];
 
-// 64 × 96, so each part's grain reads: a part's grain is read on the 3 × 3
-// windows wholly inside its cloth off the cloth's edge ring, 90 of them or
-// more painted and kept each (LEAST_GRAIN_WINDOWS), and the kept cloth
-// beside the arm is a strip; at 32 × 48 those strips hold too few windows
-// and every part reads `unverified`.
 const [W, H] = [64, 96];
 const PAPER: Rgba = [244, 232, 212, 255];
 const INK: Rgba = [30, 24, 20, 255];
@@ -218,7 +206,6 @@ describe('film concept parts', () => {
     'misses an all-paper answer whose paper the ground reaches: its arm hides no paint, its seam is unread',
     () =>
       Effect.gen(function* () {
-        // the arm reaches onto the paper, so the ground's flood takes the whole paper answer: no pixel is painted
         const record = Result.getOrThrow(
           yield* run(new Map(), [answerOf(rasterOf(W, H, () => PAPER))], {
             view: REACH.view,
@@ -284,7 +271,6 @@ describe('film concept parts', () => {
         const files = new Map<string, Uint8Array>();
         const first = Result.getOrThrow(yield* run(files, [UNDER([])]));
         for (let k = 0; k < 2; k++) Result.getOrThrow(yield* run(files, [UNDER([])]));
-        // one robe pixel the magenta leaves showing, repainted: another input, another hash
         const moved = { ...VIEW, rgba: Uint8Array.from(VIEW.rgba) };
         moved.rgba.set([121, 158, 201, 255], (60 * W + 14) * 4);
         const elsewhere = Result.getOrThrow(yield* run(new Map(), [UNDER([])], { view: moved }));
@@ -315,7 +301,6 @@ describe('film concept parts', () => {
           [`${DIR}/okra/answer-1.png`, UNDER([])],
           [`${DIR}/okra/answer-2.png`, UNDER([])],
         ]);
-        // a prompt naming an address: the route refuses it, after the call is in the ledger
         const failed = yield* run(files, [UNDER([])], {
           hidden: { ...HIDDEN, prompt: 'Repaint the magenta for a@b.co.' },
         });
@@ -347,7 +332,6 @@ describe('film concept parts', () => {
     () =>
       Effect.gen(function* () {
         const at = 40 * W + 30;
-        // the rule clears one pixel the arm owns: the ground's now
         const clean: SheetClean = (sheet) =>
           Result.succeed({
             ...sheet,

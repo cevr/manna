@@ -118,7 +118,6 @@ const s3Bytes = Effect.fn('audio.s3Bytes')(function* (
   if (Option.isSome(item.md5) && md5 !== item.md5.value) {
     return yield* Refused.make({ reason: `s3 body md5 ${md5}, etag ${item.md5.value}` });
   }
-  // R2's answer is held to S3's ETag when there is one, not to these bytes.
   return { bytes, md5: Option.getOrElse(item.md5, () => md5) };
 });
 

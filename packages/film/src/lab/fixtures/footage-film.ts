@@ -1,11 +1,3 @@
-// A film that reads footage, for the footage tests: one scene of a
-// numbered clip (`numbered-frames.ts`) drawn whole, with one seam: the film
-// plays the clip from its start until `SEAM` seconds, then jumps `JUMP`
-// seconds on in the clip, as a talk's cut does. Each frame reads the clip
-// at the middle of the source frame its edit names, and draws exactly that
-// frame; one drawn without its footage is all white (every bar a one,
-// 1023), which no frame it reads shows.
-
 import { Option } from 'effect';
 import { type Film, createFilm } from '../../canvas/film.ts';
 import { CLIP_H, CLIP_W } from './numbered-frames.ts';

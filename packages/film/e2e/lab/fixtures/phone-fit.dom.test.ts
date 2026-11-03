@@ -1,16 +1,3 @@
-// The phone-fit measure (`fixtures/phone-fit.ts`) over synthetic pages,
-// each one way a page can fail a phone, which it must refuse, beside one
-// that fits: a block wider than the window scrolls sideways, a control the
-// page fixes past the window's side is outside, and a sticky header taller
-// than a quarter of the window is too much chrome; a section's sticky head
-// is chrome only where it sticks, not while it is in the page's flow further
-// down. An open sheet is chrome
-// (the sheet, not the see-through frame it stands in; lowered, its peek)
-// unless named the page's layer, whose controls are still kept inside the
-// width. `fitsPhone`, the wait the
-// page tests run, passes the page that fits and fails one that does not,
-// naming each way it fails.
-
 import { Cause, Effect, Exit } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { openTab, respond, servePaths } from '../../../src/lab/fixtures/browsers.ts';
@@ -94,7 +81,6 @@ describe('the phone-fit measure', () => {
         yield* measured(row('clip'), false, 'outside', ['away cut off']);
         yield* measured(row('auto'), true, 'outside', []);
         yield* measured(row('scroll'), true, 'outside', []);
-        // Scrolling on one axis is no way to the other: x clips, only y scrolls.
         yield* measured(row('hidden auto'), false, 'outside', ['away cut off']);
         yield* measured(row('auto hidden'), true, 'outside', []);
       }),
@@ -151,7 +137,6 @@ describe('fitsPhone', () => {
         expect(said).toContain('the page does not fit the window (chrome at most 0.25)');
         expect(said).toContain('"sideways":210');
         expect(said).toContain('far 370..414');
-        // Where it sticks: under the wide block's 10 px row it is still in the page's flow.
         expect(said).toContain('HEADER 0..300');
       }).pipe(Effect.scoped),
     30_000,

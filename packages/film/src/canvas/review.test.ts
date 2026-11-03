@@ -1,7 +1,3 @@
-// A scenes render's review copy draws the film's own frame, then burns in
-// where it is (the time, the beat, the last mark said or the card), and
-// every frame of it reads the film's seconds.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result, Schema } from 'effect';
 import type { Film } from './film.ts';

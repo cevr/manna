@@ -203,7 +203,6 @@ export const theme = {
   light: withGlass({
     ground: lightGround,
     ink: PALETTE.night,
-    // The night 27% toward white: the brand's quiet text a shade bluer, for the sky.
     muted: mix(PALETTE.night, white, 0.268),
     line: skyTint(0.529),
     accent: PALETTE.night,
@@ -230,7 +229,6 @@ export const theme = {
     onPressed: onColor(darkPressed),
     panel: PALETTE.nightPanel,
     edge: mix(PALETTE.night, PALETTE.sky, 0.6),
-    // The night 15% toward black: the docked bar sits a shade under the page.
     bar: mix(PALETTE.night, '#000000', 0.147),
     ...onPillRoles(PALETTE.duskGold, PALETTE.sky),
   }),

@@ -1,9 +1,3 @@
-// What `film check` reports: every finding it can make, how bad each is
-// (`levelOf`), where in the film it is (`addressOf`), and the one `Report`
-// every leg's findings come back as. Each finding is a value the check
-// collects, never the first failure only; the run fails with `CheckFailed`
-// once every one is reported. The legs that find them are in `film-check.ts`.
-
 import { Array as Arr, Match, Option, Schema } from 'effect';
 import type {
   CueCycle,
@@ -42,9 +36,6 @@ import type {
   SoundStale,
   SoundUnmade,
 } from './errors.ts';
-
-// ---------------------------------------------------------------------------
-// The mix: what the check hears in the mix the film makes now.
 
 /**
  * An effect whose loudest moment (`BALANCE.hotWindow`, as the mix plays it)
@@ -89,9 +80,6 @@ export class DeadAir extends Schema.TaggedError<DeadAir>()('DeadAir', {
     return `${this.from.toFixed(2)}–${this.to.toFixed(2)}s: ${(this.to - this.from).toFixed(2)}s of the master under ${this.floor} dBFS, over ${this.max.toFixed(1)}s, and no cue declares the silence (score it in sound.ts, or mark the cue silence: true where the script means one)`;
   }
 }
-
-// ---------------------------------------------------------------------------
-// The script, the frames, the look and the shorts.
 
 /**
  * A word pin that lands more than one sentence past its mark: the line says
@@ -734,9 +722,6 @@ export class PlateOffFrame extends Schema.TaggedError<PlateOffFrame>()('PlateOff
   }
 }
 
-// ---------------------------------------------------------------------------
-// The report
-
 /**
  * Why the film does not lay out, or the part a check names does not resolve
  * on it: the one finding a check reports when it cannot place the film.
@@ -955,12 +940,10 @@ export const addressOf = (finding: Finding): FindingAddress => {
       ScorePartial: none,
       AudioMissing: none,
       AudioStale: none,
-      // The scene it names is one the film does not have.
       UnknownScene: none,
       UnknownCue: scene,
       UnknownMark: scene,
       CueInvalid: scene,
-      // A movement or an act declared out of film order: the declaration is the film's.
       PartOutOfOrder: none,
       DuplicateScene: scene,
       DuplicateMark: scene,
@@ -968,9 +951,7 @@ export const addressOf = (finding: Finding): FindingAddress => {
       DeliveryInvalid: scene,
       CueCycle: scene,
       UntilBeforeStart: scene,
-      // The scenes it names are no one stretch: no one scene is the place.
       ScenesApart: none,
-      // The act or short it names is one the film does not have.
       UnknownAct: none,
       UnknownShort: none,
       ShortSpanEmpty: short,
@@ -991,7 +972,6 @@ export const addressOf = (finding: Finding): FindingAddress => {
       Storyboard: scene,
       KnobRepeated: scene,
       EndShort: none,
-      // Several beats may name the member: no one scene is the place.
       CastUnreadable: none,
       DeadAir: (f): FindingAddress => ({ part: film, time: f.from }),
       MasterLoudness: none,
@@ -1013,7 +993,6 @@ export const addressOf = (finding: Finding): FindingAddress => {
       HandFar: span,
       HandHidden: span,
       ShortUnsafeText: (f) => verticalAt(f, f.at),
-      // A late first word is at its start; a still open or a title card at the first frame.
       ShortHook: (f) => {
         let time = 0;
         if (f.reason === 'late word') time = f.at;

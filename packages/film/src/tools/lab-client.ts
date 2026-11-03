@@ -1,19 +1,3 @@
-// The lab's MCP as a command calls it: one small client of the running lab
-// at `FILM_LAB_URL` (the always-on lab, http://127.0.0.1:8229/, unless set),
-// for each command that works through the lab's tools (`film lab`, `film channel`'s
-// change feed, `film ask wait`). A session lasts as long as its scope:
-// started (`initialize`, then `notifications/initialized`; the lab says the
-// session's id in `Mcp-Session-Id`), and ended (`DELETE`) when the scope
-// closes, so the lab keeps no session a command has left. Each `tools/call`
-// is JSON in and out (`callJson`, what `film lab` sends a command's checked
-// input by), or typed by the lab's own tool (`call`): its arguments encoded
-// by the tool's parameters, its structured answer decoded by the tool's
-// success (`read`: by another schema the caller reads it with). The lab
-// answers loopback with no token. No lab answering is `LabUnanswered` (a
-// stream asks it again: `isLostLab`); an answer in a shape this checkout
-// does not read is `LabAnswerUnread` (the two run different code); a tool's
-// refusal is `LabToolRefused`, in the lab's words.
-
 import {
   Array as Arr,
   Boolean as Bool,

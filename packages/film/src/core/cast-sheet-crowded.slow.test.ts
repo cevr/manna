@@ -1,9 +1,3 @@
-// The cast sheet's measure on turnarounds whose views crowd one another, and
-// on sheets that do not read as drawn (`fixtures/figure.ts`): each view's
-// width is read on its own body, and what a sheet cannot show is said, never
-// flagged. The clean and faulted turnarounds are read in `cast-sheet.slow.test.ts`,
-// so the two files run side by side.
-
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import {
@@ -30,7 +24,6 @@ const read = (sheet: ReturnType<typeof drawSheet>, options: SheetOptions): Sheet
 const flagsOf = (m: SheetMeasure) => m.flags.map((f) => `${f.check}:${f.views.join(',')}`);
 
 describe('a turnaround painted close together', () => {
-  // Each view's robe straight down its sides, cut to its own ink with 3 px of paper each side and drawn with no hands, so a neighbour's ink stands 6 px off its side, inside the 12 px a view's crop is padded by; view 4 is the back.
   const straight = { robeTop: 240, handless: true };
   const tight = (r: ReturnType<typeof at>) => cropRaster(r, [70, 0, 330, 640]);
   const close = drawSheet(
@@ -52,7 +45,6 @@ describe('a turnaround painted close together', () => {
 });
 
 describe("a turnaround whose view's box overlaps its neighbour's", () => {
-  // As the close turnaround, with a lock of view 6's hair drawn out level from its head over view 5's shoulder (a band of ink from x 1244 to its head, never touching view 5): view 6's box now spans view 5's robe on the rows its width is read on.
   const straight = { robeTop: 240, handless: true };
   const tight = (r: ReturnType<typeof at>) => cropRaster(r, [70, 0, 330, 640]);
   const sheet = drawSheet(
@@ -76,7 +68,6 @@ describe("a turnaround whose view's box overlaps its neighbour's", () => {
 });
 
 describe('a turnaround whose hands float low, in the band its width is read on', () => {
-  // The hands float free beside the robe at 480 px, inside the band (from 0.76 of the height); the back and the profiles read no face, so no hand's disc is cut out of them.
   const limb = { hand: [372, 480] as const, kind: 'free' as const };
   const low = (eyeShift: number, extra: Partial<FigureSpec> = {}) =>
     at(eyeShift, { limb, ...extra });
@@ -97,7 +88,6 @@ describe('a turnaround whose hands float low, in the band its width is read on',
 });
 
 describe('a turnaround whose profiles are swapped', () => {
-  // Each profile shows one eye, so neither reads a face; the hair falls behind it, away from the eye.
   const profile = (eyeShift: number) => at(eyeShift, { oneEye: true });
   const profileRight = flipRaster(at(-26, { oneEye: true, lit: 'right' }));
   const views = (three: ReturnType<typeof at>, five: ReturnType<typeof at>) =>
@@ -115,7 +105,6 @@ describe('a turnaround whose profiles are swapped', () => {
 });
 
 describe('a sheet painted on no paper', () => {
-  // The route can answer with the paper left out: every pixel round the figures transparent, its colour a dark grey no eye sees.
   const opaque = drawSheet([at(0), at(-14)]);
   const rgba = Uint8Array.from(opaque.rgba);
   for (let i = 0; i < rgba.length; i += 4)
@@ -166,7 +155,6 @@ describe('a sheet whose anchor reads a head over half its figure', () => {
 });
 
 describe("a sheet whose view reads a head over half its figure, the anchor's whole", () => {
-  // A head drawn as tall as the body under it, on a figure as tall as the anchor's.
   const sheet = drawSheet([at(0), at(0, { ry: 150, cy: 234, robeDepth: 162 }), at(0)]);
   const m = read(sheet, {
     kind: 'poses',
@@ -188,7 +176,6 @@ describe("a sheet whose view reads a head over half its figure, the anchor's who
 });
 
 describe('a sheet whose low pose, which it does not stand, draws its head a quarter too big', () => {
-  // A crouching view: a short body under a head 25 % taller than the anchor's, so under two heads tall.
   const sheet = drawSheet([at(0), at(0, { ry: PLAIN.ry * 1.25, robeDepth: 110, handless: true })]);
   const m = read(sheet, {
     kind: 'poses',

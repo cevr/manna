@@ -1,13 +1,3 @@
-// The figure measure pinned whole: `measureFigure`'s full answer on every
-// real crop under `core/fixtures/figure/` (the scene and concept crops the
-// match tests read, and the concept crop of each RBF rig, cut by the box its
-// `RivePropSpec.concept` names) and on figures drawn with each fault the
-// fixtures can draw, kept in `core/fixtures/figure/golden.json`. A change
-// that speeds the measure must leave every number of it as it was; a change
-// that means to move a number writes the file again
-// (`bun src/tools/figure-golden-fixture.ts`, then `bun run fmt`) and its diff shows
-// each number moved.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Effect, Equal, FileSystem, Option, Result, Schema } from 'effect';

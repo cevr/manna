@@ -1,9 +1,3 @@
-// The sower's papers, by view. His puppets un-matte each part's rim from its
-// view's paper (`puppets.ts`, `core/unmatte.ts`), and his cut table's clean
-// rule clears the paper-coloured rim his part sheets keep outside his ink
-// (`cut.ts`, `CLEAN`). Data only: both read it, so neither imports the
-// other's pixels.
-
 /** A paper colour, RGB. */
 type Paper = readonly [number, number, number];
 

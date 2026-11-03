@@ -163,7 +163,6 @@ describe('rerunning a failure alone', () => {
         'e2e/player/player.dom.test.ts',
       ],
     ]);
-    // A file rerun whole runs its cases no more at once than the suite did: bun's own default is 20.
     expect(
       aloneArgs('bun r.ts --parallel=4 --max-concurrency 3 --timeout 20000 e2e', back).slice(0, 7),
     ).toEqual([
@@ -200,7 +199,6 @@ describe('rerunning a failure alone', () => {
   });
 
   test("a rerun bun passed is a pass, though the runner's exit after it is not 0", () => {
-    // The case passed; then the runner's cleanup failed (run-suite's folder, `run-folder.ts`).
     const cleanupFailed = [
       ' 1 pass',
       ' 26 filtered out',
@@ -223,7 +221,6 @@ describe('the verdict on a failure', () => {
   test("red alone is the base's only when the base's own check saw it red alone too", () => {
     const redAtBase = baseWith([back], [judged('base', 'fail', 'pass', 'fail')]);
     expect(verdictOf(back, ['fail', 'fail', 'fail'], redAtBase)).toBe('base');
-    // A loaded base that only timed out on it proves nothing.
     expect(verdictOf(back, ['fail', 'fail', 'fail'], baseWith([back]))).toBe('unresolved');
   });
 
@@ -267,11 +264,9 @@ describe('what blocks', () => {
 
   test('a check inside an outer lock on the same file runs in its hold', () => {
     const lock = '/tmp/manna-e2e.lock';
-    // macOS: /tmp is a link to /private/tmp, as `realpath` resolves it.
     const real = (path: string) => path.replace(/^\/tmp\//, '/private/tmp/');
     const held = (commands: ReadonlyArray<string>) => heldByAncestor(commands, lock, real);
     const outer = 'lockf -k /tmp/manna-e2e.lock bun run test:e2e:check';
-    // `ps -A -o pid= -o ppid= -o command=`: the check (40) under bun run (30) under the lock (20).
     const ps = [
       '    1     0 /sbin/launchd',
       `   20     1 ${outer}`,
@@ -281,7 +276,6 @@ describe('what blocks', () => {
     ].join('\n');
     expect(ancestorsIn(ps, 40)).toEqual(['bun run test:e2e:check', outer, '/sbin/launchd']);
     expect(held(ancestorsIn(ps, 40))).toBe(true);
-    // Another workspace's lock is a wait, not this run's hold.
     expect(held(ancestorsIn(`${ps}\n   60     1 bun e2e-check.ts`, 60))).toBe(false);
     expect(held(['bun e2e-check.ts', outer])).toBe(true);
     expect(held(['/usr/bin/lockf -k /private/tmp/manna-e2e.lock bun x'])).toBe(true);
@@ -293,12 +287,10 @@ describe('what blocks', () => {
     const lock = '/tmp/manna-e2e.lock';
     const real = (path: string) => path.replace(/^\/tmp\//, '/private/tmp/');
     const held = (commands: ReadonlyArray<string>) => heldByAncestor(commands, lock, real);
-    // A shell whose script names the lock is not the lock: the lockf it starts would be an ancestor of its own.
     expect(
       held(["zsh -c 'cd packages/film && lockf -k /tmp/manna-e2e.lock bun run test:e2e:check'"]),
     ).toBe(false);
     expect(held(['bun run notes lockf /tmp/manna-e2e.lock'])).toBe(false);
-    // A lock of the same name elsewhere is another lock.
     expect(held(['lockf -k /Users/cvr/tmp/manna-e2e.lock bun run test:e2e:check'])).toBe(false);
     expect(held(['lockf -k /tmp/manna-e2e.lock.old bun x'])).toBe(false);
     expect(lockedBy('/usr/bin/lockf -k -t 5 /tmp/x.lock bun x')).toEqual(

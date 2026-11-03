@@ -1,14 +1,3 @@
-// What `film check` looks for, as pure functions over a laid-out film: the
-// static findings (cues past their scene, sound cues naming nothing, acts out
-// of order, stale takes and sounds, an audio master missing, not as long as
-// the film or mixed for another plan, a line handed to a voice the cast lacks);
-// what the mix the film makes now fails (dead air, the balance); the layout
-// findings in what a probed frame reports: text over text, text off the
-// frame, brush strokes across text, and a plate carrying text cut off by the
-// frame; and static holds, where the voice speaks over a picture that does not
-// move. Every finding is collected; none stops the others. The findings, their
-// levels and addresses are in findings.ts; the legs that run these in film-check.ts.
-
 import { Array as Arr, Match, Option, Order, Predicate, Record as Rec, Result } from 'effect';
 import { BOIL_FPS, STROKE_JITTER } from '../canvas/ink.ts';
 import { type Pcm, windowPowers } from '../core/audio.ts';
@@ -125,9 +114,6 @@ import {
 } from './findings.ts';
 import type { LoadedFilm, MeasuredFilm } from './film-repo.ts';
 import { type Master, masterFinding } from './mixer.ts';
-
-// ---------------------------------------------------------------------------
-// Static
 
 /**
  * How many sentence ends a word pin may cross past its mark: its own
@@ -484,7 +470,6 @@ export const staleTakes = (
   film: LoadedFilm,
   placed: ReadonlyArray<Placed>,
 ): ReadonlyArray<TakeStale> => {
-  // A talk's takes are all recorded: no staging voice's key decides them.
   const voice = Option.match(film.voice, { onNone: () => '', onSome: voiceKey });
   return placed.flatMap((p) => {
     if (p.voice.spoken.length === 0) return [];
@@ -499,7 +484,6 @@ export const unknownVoices = (
   film: LoadedFilm,
   placed: ReadonlyArray<Placed>,
 ): ReadonlyArray<UnknownVoice> =>
-  // A talk has no cast to hand a line to.
   Option.match(film.voice, {
     onNone: () => [],
     onSome: (voice) =>
@@ -752,9 +736,6 @@ const masterFindings = (
   );
 };
 
-// ---------------------------------------------------------------------------
-// The ending and the air
-
 /** After the last word, credits and music alone need at least this long (research #6, #44). */
 const TAIL_MIN = 20;
 /** YouTube's end screens need at least this long at the end. */
@@ -899,9 +880,6 @@ export const mixFindings = (
     ...balanceFindings(placed, plan, mixed),
   ];
 };
-
-// ---------------------------------------------------------------------------
-// Layout
 
 /** A frame the layout leg probes, and why: a mark, a cue edge, the scene's 60% point. */
 export type Sample = SceneMoment;
@@ -1063,7 +1041,6 @@ const clipSegment = (
   let leave = 1;
   for (const [i, a] of poly.entries()) {
     const edge = sub(Arr.getUnsafe(poly, (i + 1) % poly.length), a);
-    // Inside where winding · cross(edge, x − a) ≥ 0, with x = p + t·d.
     const at = winding * cross(edge, sub(p, a));
     const rate = winding * cross(edge, d);
     if (rate === 0) {
@@ -1112,7 +1089,6 @@ const crossing = (stroke: InkMark, text: TextBox, covers: ReadonlyArray<InkMark>
   const box = inset(text.corners, OVERLAP_TOLERANCE / 2 - stroke.width / 2);
   if (Option.isNone(box)) return 0;
   const over = covers.filter((c) => c.order > stroke.order);
-  // The letters less the tolerance: where an edge that crosses by more than it lands.
   const letters = Option.getOrElse(inset(text.corners, OVERLAP_TOLERANCE / 2), () => text.corners);
   const hidden = (at: Point) => {
     const meets = nearestIn(letters, at);
@@ -1553,9 +1529,6 @@ export const mergeFindings = (
   return [...merged.values()];
 };
 
-// ---------------------------------------------------------------------------
-// Holds
-
 /**
  * The longest a drawn scene may hold still while its voice speaks: past it
  * the viewer waits on the picture (the `exchange` opening held about 6 s).
@@ -1586,7 +1559,6 @@ export interface HoldCandidate {
 /** Scene-local spans in which the scene declares motion: each cue, and its entering transition. */
 const busySpans = (p: Placed): ReadonlyArray<Interval> => {
   const cues = [...p.cues.values()].map((c): Interval => ({ from: c.start, to: c.end }));
-  // The first scene has nothing to arrive from.
   const arriving = Math.min(p.index, 1) * transitionDur(p.spec.enter);
   if (arriving <= 0) return cues;
   return [{ from: 0, to: arriving }, ...cues];

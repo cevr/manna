@@ -1,10 +1,3 @@
-// The card, as the title page of an old Bible would set it: the same period
-// serif, black on the cream rag paper inside a ruled border, the words
-// centred and landing as they are said, the payoff "just" set large in the
-// gold of the Word with a glory of engraved rays behind it. Over the flood
-// the ground is the verse's gold wash spreading over the sheet and drying
-// back to the cream, so the card grows out of the highlight.
-
 import type { Box, CardStyle, CardWord } from '@manna/film/canvas';
 import { fullCard } from '@manna/film/canvas';
 import type { JobFrame } from '../../scenes/job.ts';

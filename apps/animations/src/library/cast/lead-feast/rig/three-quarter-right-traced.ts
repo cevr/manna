@@ -1,9 +1,3 @@
-// lead-feast, his three-quarter view turned to screen right: his face to our right of his head's middle; the mantle over his left shoulder (screen right) and down across him; his cream right sleeve on screen left, his teal left sleeve on screen right; his sandals, traced from the kept turnaround sheet
-// (../cast-sheet/kept/turnaround.png, box 1268, 194, 1510, 856) in the sheet's own pixels.
-// Written by `bun run concept trace src/library/cast/lead-feast/rig/trace.ts --view threeQuarterRight`
-// (from apps/animations); trace it again rather than edit it. Points only: the
-// film's papers paint each part. Pure.
-
 import type { Pt } from '@manna/film/style';
 
 /** The view's box in the sheet, as its record keeps it. */

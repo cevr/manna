@@ -76,10 +76,6 @@ interface LookupServiceApi {
   readonly resolve: (input: LookupInput) => Effect.Effect<LookupResult>;
 }
 
-// ---------------------------------------------------------------------------
-// The selection, normalized once (§4.3)
-// ---------------------------------------------------------------------------
-
 /** One selection, in the two forms every group below reads it in.
  *
  *  Carried as a value rather than recomputed per group, because §4.3 is the
@@ -112,10 +108,6 @@ const emptyResult = (text: string): LookupResult =>
     catalog: [],
     lonePeek: false,
   });
-
-// ---------------------------------------------------------------------------
-// Group 1 — topic matches (§7: "phrase dictionary exact hit, then fuzzy")
-// ---------------------------------------------------------------------------
 
 /** §4.3's words, as the units both halves of the fuzzy rule and the Strong's
  *  group compare.
@@ -309,10 +301,6 @@ const topicMatches = (
   return [...best.values()].slice(0, LOOKUP_TOPIC_LIMIT);
 };
 
-// ---------------------------------------------------------------------------
-// Group 2 — Strong's (§7: "when `context` locates the selection inside a verse")
-// ---------------------------------------------------------------------------
-
 /** Whether a verse word is part of the selection.
  *
  *  §7's condition is that the context "locates the selection inside a verse",
@@ -390,10 +378,6 @@ const strongsHits = (
       ),
   });
 
-// ---------------------------------------------------------------------------
-// Group 3 — Bible FTS
-// ---------------------------------------------------------------------------
-
 /** How a reference reads, from the canon. The same derivation `StudyService`
  *  uses, because a label that differs between the study pane and the lookup
  *  panel is two names for one verse. */
@@ -449,17 +433,8 @@ const verseHits = (
         ),
       ),
     ),
-    // A row whose address does not decode is dropped with the group rather than
-    // failing the lookup. Unlike §8's bundle — where a malformed row hides a
-    // corpus defect behind sparseness and must be reported — this group is a
-    // search result list with no total beside it, so a short list is not a
-    // claim about anything. The panel is a glance, not an audit surface.
     Effect.orElseSucceed((): readonly LookupVerseHit[] => []),
   );
-
-// ---------------------------------------------------------------------------
-// Group 4 — EGW FTS
-// ---------------------------------------------------------------------------
 
 /** The paragraph text an FTS hit carries, as the snippet.
  *
@@ -481,14 +456,8 @@ const writingsHits = (
         }),
       ),
     ),
-    // An unavailable writings library is an empty group, not a failed lookup —
-    // §6.3's posture, and the reader still has four other groups.
     Effect.orElseSucceed((): readonly LookupWritingsHit[] => []),
   );
-
-// ---------------------------------------------------------------------------
-// Group 5 — catalog topical index
-// ---------------------------------------------------------------------------
 
 /** Group 5: the `bible.db` topical index, filtered by the selection.
  *
@@ -515,10 +484,6 @@ const catalogMatches = (
   catalog.list({ query: selection }).pipe(
     Effect.map((topics) =>
       topics.slice(0, LOOKUP_TOPIC_LIMIT).flatMap((topic) =>
-        // A catalog topic's id *is* its page's slug — `catalogSummaries` in
-        // `service.ts` explains why — but the two are separately branded, so the
-        // crossing is a decode rather than an assertion. A row whose id is not a
-        // usable slug is dropped: it names a page no route could reach.
         Option.match(readSlug(topic.id), {
           onNone: (): readonly LookupCatalogMatch[] => [],
           onSome: (slug) => [
@@ -533,10 +498,6 @@ const catalogMatches = (
     ),
     Effect.orElseSucceed((): readonly LookupCatalogMatch[] => []),
   );
-
-// ---------------------------------------------------------------------------
-// The lone-topic-hit rule (§7)
-// ---------------------------------------------------------------------------
 
 /** §7: "A lone topic hit gets the peek-card treatment from §5 instead of the
  *  full panel."
@@ -564,10 +525,6 @@ const isLonePeek = (result: {
   result.writings.length === 0 &&
   result.catalog.length === 0;
 
-// ---------------------------------------------------------------------------
-// The resolver
-// ---------------------------------------------------------------------------
-
 /** What the five groups are read from.
  *
  *  The wiki's own dictionary plus the four §6 section sources — which is not a
@@ -584,27 +541,12 @@ const makeResolve =
   (sources: LookupSources) =>
   (input: LookupInput): Effect.Effect<LookupResult> =>
     Effect.gen(function* () {
-      // §4.3 once, at the top. Every group below compares against this same
-      // normalized form, so the dictionary, the verse words and the two FTS
-      // queries all mean the same thing by "the selection" — the FTS pair
-      // included, which is the difference between five groups answering one
-      // question and four answering one while the fifth answers another.
       const selection = selectionOf(input.text);
       const query = ftsPhrase(selection.text);
 
-      // Text that normalizes to nothing names nothing. §4.3 makes commas and
-      // semicolons transparent, so " , ; " is not a short selection but an
-      // absent one, and every group answers it wrongly if asked: the empty
-      // string prefixes every alias, an empty `LIKE` matches the whole catalog,
-      // and an FTS phrase of pure punctuation matches whatever the tokenizer
-      // decides. Five empty groups is the honest answer, and it is still five
-      // groups — §7's shape does not change for it.
       if (selection.text.length === 0) return emptyResult(input.text);
 
       const dictionary = yield* sources.wiki.dictionary.pipe(
-        // An unreadable artifact is an empty topic group. §3.5's degradation
-        // posture: the other four groups still answer, and the reader gets a
-        // smaller panel rather than a failure.
         Effect.asSome,
         Effect.orElseSucceed(() => Option.none<PhraseDictionary>()),
       );
@@ -620,10 +562,6 @@ const makeResolve =
         }),
       );
 
-      // The four corpus-backed groups run together. They are independent reads
-      // over three databases and the panel wants all of them, so this is one
-      // batch rather than four sequential awaits — the same argument §6.1's
-      // composer makes.
       const [strongs, verses, writings, catalog] = yield* resolveCorpusGroups(
         sources.sections,
         input,

@@ -1,11 +1,3 @@
-// Sound: a film's music, beds and effects, declared as data and placed on the
-// same clock as the pictures. A score movement starts at a scene; an effect
-// fires at a point in a scene (one of its named cues, the same cue its
-// picture reads, a mark, or a landmark such as where its voice starts), and a
-// bed runs from one point to another, so re-recording a line moves its sounds
-// with it. Effects and beds name sounds from the app's library (`sfx.ts`).
-// Pure — the score and mix scripts read it without a DOM.
-
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import {
   type MovementLength,

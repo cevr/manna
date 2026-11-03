@@ -1,16 +1,3 @@
-// `papercut` and `papercutgl`: the control's courtroom (`cutpaper`) with both
-// its people drawn as Rive rigs in the paper-cut figure language (the film
-// skill's director vision, "Storybook figures (Rive)"): circle hands, a face
-// of brow, eye and mouth line, each piece of paper creased once by the light
-// and shaded with colour. The accused and the judge act on the court's cues
-// (`looks/rive/`). `papercut` draws them with Rive's Canvas 2D renderer on
-// our context; `papercutgl` with the Rive Renderer on WebGL 2, composited in
-// (where each piece's small cast shadow is soft).
-//
-// The figures are K1, the owner's pick (2026-10-13), frozen in `figures.riv`:
-// a thick outline with a light core, warm ink, a hue per garment, the head
-// about ⅓. The props match them (`PROPS`).
-
 import type { RiveEngine } from '@manna/film/rive';
 import { LIGHT } from '../../../righteousness-by-faith/light.ts';
 import type { Look } from '../../look.ts';

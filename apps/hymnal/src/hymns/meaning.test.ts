@@ -10,7 +10,7 @@ import { Effect, Fiber, Option } from 'effect';
 import { it as itEffect } from 'effect-bun-test';
 import { TestClock } from 'effect/testing';
 
-import { meaning } from '../../assets/meaning/meaning.js';
+import { meaning, notice } from '../../assets/meaning/meaning.js';
 import { hymns } from './hymns';
 import { ABOUT, about, aboutQuery, aboutShown, afterPause, moreLike, PAUSE } from './meaning';
 
@@ -23,8 +23,17 @@ describe('the shipped table', () => {
     expect(meaning().hymns.split(' ').map(Number)).toEqual(hymns.map((hymn) => hymn.number));
   });
 
+  it('carries the notice that it is modified from EmbeddingGemma, under the Gemma Terms (section 3.1)', () => {
+    for (const words of [
+      'Modified from EmbeddingGemma',
+      'Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms',
+      'not the repository',
+      'section 3.2 use restrictions',
+    ])
+      expect(notice).toContain(words);
+  });
+
   it('holds its words as search folds them, so a query folded by search finds them', () => {
-    // The build folds with search's fold (`@manna/hymnal/fold`): a table built before a change to it holds words the fold now changes.
     const { words } = meaning();
     expect(fold(words) === words).toBe(true);
   });
@@ -75,7 +84,6 @@ describe('search mode’s hymns about a query', () => {
         const typed = yield* Effect.forkChild(afterPause('pea'));
         yield* TestClock.adjust(PAUSE - 1);
         const early = Option.isSome(Option.fromUndefinedOr(typed.pollUnsafe()));
-        // The next keystroke interrupts the pause before it ends; its own pause runs from there.
         yield* Fiber.interrupt(typed);
         const next = yield* Effect.forkChild(afterPause('peace'));
         yield* TestClock.adjust(PAUSE - 1);
@@ -110,7 +118,6 @@ describe('the ranking', () => {
   const D = file.dims;
   /** Each value of word `w`'s row, times its weight. */
   const rowOf = (w: number) => {
-    // A row is its own run of base64, `D * 2 / 3` characters.
     const row = bytes(file.table.slice((w * D * 2) / 3, ((w + 1) * D * 2) / 3));
     return Array.from({ length: D }, (_, c) => {
       const byte = row[c >> 1] ?? 0;

@@ -24,32 +24,24 @@ const hymn = (number: number, title: string, stanza: ReadonlyArray<string>): Hym
 });
 
 const hymnal: ReadonlyArray<HymnText> = [
-  // Numbers.
   ...[1, 42, 69, 100, 690, 691, 695].map((n) => hymn(n, 'Hollin Mesk', ['Hollin mesk varo tuin'])),
-  // A word in two titles and in one stanza, a longer word it starts, and a title a typo of it is.
   hymn(300, 'Zorvan Telimor', ['Abbet ollo nimrey suvast']),
   hymn(305, 'Pemmet Rusko', ['Dalo zorvan pemmet rusko', 'Quarn elbo fistrel']),
   hymn(310, 'Kesh Zorvan', ['Ombral kesh ditto marrow']),
   hymn(320, 'Zorvat Quembly', ['Tolvey annic brume selket']),
   hymn(330, 'Loresh Tumbel', ['Zorvanic tumbel loresh', 'Ivver casto plene']),
-  // A line, and a hymn holding the same words in lines of the same weight, in other lines and order.
   hymn(350, 'Mirav Dessel', ['Mirav dessel onquo', 'Palvoro sirendo kalimbor olumtra teliquor']),
   hymn(351, 'Wend Ostal', [
     'Anwe ressel dorn',
     'Teliquor olumtra kalimbor',
     'Sirendo palvoro anwe',
   ]),
-  // A title to type.
   hymn(360, 'Mendrake Olumtra Quillet', ['Hask ivren dolmo pake']),
-  // Old words and modern ones.
   hymn(370, 'Brasmo Hall', ['Thee brasmo quillet dravesh', 'Pell orrin vasty']),
   hymn(371, 'Merrow Tanvil', ['You merrow tanvil ostre']),
-  // Accents, an apostrophe, capitals.
   hymn(380, 'O’ervalen Dúmbra', ['Fenno gristal hape']),
-  // Two words in a later line, and a title holding the one and a typo of the other.
   hymn(400, 'Ostrel Vane', ['Ostrel vane pibbo', 'Gurn bravick lummond sefto']),
   hymn(401, 'Bravick Lummend', ['Tarro hesk quindle']),
-  // A word in a later line, and a word one edit from it in the same hymn's title.
   hymn(410, 'Grindal Pesh', ['Wosk umbry tolp', 'Hent grindel moaf']),
 ];
 const index = indexOf(hymnal);
@@ -108,14 +100,12 @@ describe('search by words', () => {
   });
 
   it('ranks the hymns that hold a word, or a word it starts, above the hymn a typo of it finds', () => {
-    // 320's title holds a word one letter from it: rarer, and in a title, but a typo.
     const found = numbers('zorvan');
     expect(found.slice(2, 4).toSorted((a, b) => a - b)).toEqual([305, 330]);
     expect(found.slice(4)).toEqual([320]);
   });
 
   it('ranks a hymn holding every word of a longer query above one holding a word only by a typo', () => {
-    // 401's title holds both, one by a typo: a heavier field, a tighter start, but a typo.
     expect(numbers('bravick lummond').slice(0, 2)).toEqual([400, 401]);
   });
 
@@ -137,7 +127,6 @@ describe('search by words', () => {
   it('finds a line with a typo in one of its long words', () => {
     expect(numbers('palvoro sirndo kalimbor olumtra teliquor')[0]).toBe(350);
     expect(numbers('palvoro sirendo kalimbro olumtra teliquor')[0]).toBe(350);
-    // Two words, both needed: each found only through its typo.
     expect(numbers('sirndo kalimbro').toSorted((a, b) => a - b)).toEqual([350, 351]);
   });
 
@@ -151,7 +140,6 @@ describe('search by words', () => {
     expect(numbers('you brasmo quillet dravesh')[0]).toBe(370);
     expect(numbers('thou merrow tanvil ostre')[0]).toBe(371);
     expect(numbers('ye merrow tanvil')[0]).toBe(371);
-    // Two words, both needed: one found only through its kin.
     expect(numbers('you brasmo')).toEqual([370]);
     expect(numbers('thou merrow')).toEqual([371]);
   });
@@ -159,7 +147,6 @@ describe('search by words', () => {
   it('finds the words a word being typed starts', () => {
     expect(numbers('kal').toSorted((a, b) => a - b)).toEqual([350, 351]);
     expect(numbers('palvoro sirendo kal')[0]).toBe(350);
-    // A title as its last word is typed: first, with no line.
     const found = find(index, 'mendrake olumtra qui');
     expect(found[0]?.hymn.number).toBe(360);
     expect(Option.isNone(found[0]?.line ?? Option.some(''))).toBe(true);

@@ -1,9 +1,3 @@
-// A lab page's wait and a save: a change to a file the page was built from
-// (its source, its HTML entry, another package's source, a file only its
-// server entry reads) wakes a waiting page and the next ask is the new code;
-// a change to a file no build read wakes nothing. The app is in a temp
-// folder, where the box's watch is the question (`fixtures/lab-app.ts`).
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option } from 'effect';
 import { Platform, html, app, buildOf } from './fixtures/lab-app.ts';
@@ -71,7 +65,6 @@ describe('a save to a file a build read', () => {
     Effect.gen(function* () {
       const { ask, page, waitWriting } = yield* app;
       yield* ask('/asks/a1');
-      // The first build may count once a save it read in the last second: the build once that is heard.
       const settled = (yield* page.wait(
         { since: 0, server: Option.none(), film: Option.none() },
         '1 second',

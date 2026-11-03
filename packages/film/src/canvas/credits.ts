@@ -1,11 +1,3 @@
-// A film's credits from its sources: each beat's `cite`, by author, each work
-// once with every place the film cites in it merged into one locator ("Steps
-// to Christ, 17, 18, 47, 70"; "Letter 57, 1895 (TM 91–92)"; one periodical's
-// issues on one entry), set in lines of at most `CREDIT_MEASURE` characters that
-// never leave a locator on a line of its own. A cite that names none of the
-// film's authors is scripture. After the sources, a "Sound" head gives each
-// CC BY recording the film places its line (core/sfx.ts `soundCredits`).
-
 import { Schema } from 'effect';
 import { type SoundCredit, creditLine } from '../core/sfx.ts';
 

@@ -1,11 +1,3 @@
-// The page's hub as Solid reads and writes it: a count that moves each time
-// a command comes or goes, so a list of commands or keys reads it and
-// follows; the keys a command is bound to, as the viewer's
-// keyboard writes them; commands that follow a value (a page's Go to
-// entries over what it shows), registered again as it changes; and a menu's
-// run, deferred until it has closed (`deferredRun`). Each ends with the
-// owner.
-
 import { isServer } from '@solidjs/web';
 import { Context as Services, Effect, Option, Scheduler } from 'effect';
 import type { Accessor } from 'solid-js';
@@ -112,8 +104,6 @@ export const deferredRun = (hub: Hub, via: Invocation['via']): DeferredRun => {
       const picked = chosen;
       const ctx = opened();
       chosen = Option.none();
-      // The popup gives the focus back in a microtask it queues as it unmounts, before it says it
-      // has closed: the row runs in the next one, so what it focuses is kept.
       Option.map(picked, ({ row, input }) =>
         Effect.runForkWith(NEXT_MICROTASK)(
           Effect.andThen(

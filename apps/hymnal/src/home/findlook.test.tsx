@@ -404,7 +404,6 @@ describe('the theme’s find bar roles', () => {
     '%s: the capsule is soft glass, the chosen disk the accent with its ink on it (4.5:1), and the placeholder quieter than the words',
     (scheme) => {
       const roles = themes.theme[scheme];
-      // Each role laid over the page under the glass is held in `findglass.test.tsx`.
       expect({
         glass: roles.glass,
         words: roles.onGlass,

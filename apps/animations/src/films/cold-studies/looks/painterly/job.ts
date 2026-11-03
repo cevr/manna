@@ -1,13 +1,3 @@
-// Job's question, painted in the same hand as the courtroom. The verse: an
-// old printed Bible open on a dark desk under a lamp, its right-hand page
-// worn and foxed, Job 9:1-3 set in a book face; as "Job asked it" is said,
-// a stroke of deep teal paint runs along "how should man be just with God?",
-// and the teal floods the frame. The card: that teal, brushed, with the words
-// lettered on it in cream as they are spoken, "just" large in gold leaf
-// (the oil pass lays the leaf where the gold paint is). Both go through the
-// oil pass, the page and the letters with a finer brush than the room's so
-// the type stays sharp enough to read.
-
 import {
   type Box,
   type CardStyle,
@@ -82,7 +72,6 @@ const page = (e: Easel, t: number) => {
     ratio: 0.25,
     tone: (x, y) => 0.1 + 0.6 * pool(x, y, 1650, 80, 1300),
   });
-  // The pages beneath, their edges stacked at the right and the foot.
   for (let k = 5; k >= 1; k--)
     shade(
       ctx,
@@ -121,14 +110,12 @@ const page = (e: Easel, t: number) => {
       return 0.3 + 0.5 * gutter * (0.6 + 0.4 * edge) + 0.22 * pool(x, y, 1500, 200, 1100);
     },
   });
-  // Foxing: the brown spots of an old page.
   for (let i = 0; i < 26; i++) {
     const x = PAGE.x + 60 + hash2(i, 620) * (PAGE.w - 120);
     const y = PAGE.y + 40 + hash2(i, 621) * (PAGE.h - 80);
     const r = 3 + 12 * hash2(i, 622) ** 2;
     shade(ctx, oval(x, y, r, r * 0.8), '#7a5a32', 0.18);
   }
-  // The gutter's shadow, where the page curves down into the binding.
   ctx.save();
   const g = ctx.createLinearGradient(PAGE.x - 20, 0, PAGE.x + 200, 0);
   g.addColorStop(0, 'rgba(20,16,12,0.75)');
@@ -185,15 +172,12 @@ const fringe = (ctx: CanvasRenderingContext2D, from: Box, flood: number) => {
   const reach = 46 * unit * clamp(flood * 8);
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  // The four edges: [start x, start y, along x, along y].
   const edges: ReadonlyArray<readonly [number, number, number, number]> = [
     [b.x, b.y, b.w, 0],
     [b.x + b.w, b.y, 0, b.h],
     [b.x, b.y + b.h, b.w, 0],
     [b.x, b.y, 0, b.h],
   ];
-  // Broad dabs laid along each edge, overlapping, each pushed its own way out:
-  // a ragged, scalloped front in the ground's own dark teals.
   for (const [n, color] of [R.card[0], R.card[1]].entries()) {
     ctx.fillStyle = color;
     ctx.beginPath();
@@ -206,7 +190,6 @@ const fringe = (ctx: CanvasRenderingContext2D, from: Box, flood: number) => {
         const l = 40 * unit * (0.8 + 0.6 * hash2(i, side * 7 + 902));
         const x = x0 + ax * u;
         const y = y0 + ay * u;
-        // Along the edge, a little askew, reaching `out` past it.
         const rot = Math.atan2(ay, ax) + (hash2(i, side * 7 + 903) - 0.5) * 0.5;
         ctx.moveTo(x + Math.cos(rot) * l * 0.5, y + Math.sin(rot) * l * 0.5);
         ctx.ellipse(x, y, l * 0.5, out, rot, 0, Math.PI * 2);
@@ -261,7 +244,6 @@ const CARD_STYLE: CardStyle = {
   align: 'center',
   treatment: {
     under: true,
-    // The leaf's warmth on the teal round it as it is laid.
     draw: (ctx, b, since) => {
       const cx = b.x + b.w / 2;
       const cy = b.y + b.h / 2;

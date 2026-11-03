@@ -75,7 +75,6 @@ describe('the Swift module’s declaration', () => {
         source: string,
       ) => { readonly declaration: string };
     };
-    // Pre-commit's oxfmt ends each member with a semicolon that One's typegen leaves out.
     const unformatted = (text: string) => text.replaceAll(/;$/gm, '');
     const written = readFileSync(join(app, 'native', 'feel', 'Voice.d.swift.ts'), 'utf8');
     expect(unformatted(written)).toContain(

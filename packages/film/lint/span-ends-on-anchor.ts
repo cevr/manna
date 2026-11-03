@@ -1,22 +1,3 @@
-// `film/span-ends-on-anchor`: a span that lands on its anchor says so with
-// `ends: true`. Written as `{ mark: 'true', offset: -0.5, dur: 0.5 }` it
-// states its length twice, so a lab `dur` drag (or a hand edit of one number)
-// moves the end off the moment it must land on. `{ mark: 'true', dur: 0.5,
-// ends: true }` resolves to the same cue and keeps the landing when `dur`
-// changes.
-//
-// A part of another cue that ends where that cue does says so too. Written
-// as `{ with: 'speck', offset: 0.49, dur: 0.68 }` beside a `speck` of `dur:
-// 1.17`, it ends on speck's end only because the numbers add up, so a lab
-// drag of speck leaves it behind. `{ after: 'speck', dur: 0.68, ends: true }`
-// (it keeps its length) or `{ with: 'speck', until: { cue: 'speck' } }` (it
-// keeps its start) ends with speck however speck is dragged.
-//
-// The rule reads an object literal with an `offset` that is minus its `dur`;
-// and a `{ with: P, offset?: a, dur: b }` in a timeline literal whose sibling
-// `P` has a `dur` d with a + b = d. Each number is written out or a top-level
-// const holding one, by the name's binding where it is read. A span that already says `ends` or `until` is left alone.
-
 import { Effect, Option, Predicate } from 'effect';
 import {
   Diagnostic,

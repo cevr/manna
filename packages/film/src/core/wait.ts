@@ -1,7 +1,3 @@
-// How long a wait holds a request open: the one limit the lab's wait routes
-// (`core/api.ts`) decode a `timeout` query against, and the one the pages that
-// wait read to stay inside it.
-
 import { Effect, Schema, SchemaTransformation } from 'effect';
 
 /** The longest a wait holds a request open, in seconds. */

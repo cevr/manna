@@ -1,28 +1,3 @@
-// The ring follows the input that asked: a property over every path the
-// pages offer that may move the focus, each run by the keyboard and by the
-// pointer. A path's every focus move, and the focus it leaves, shows the
-// studio's ring (`:focus-visible`) if and only if the keyboard asked for it,
-// a text field excepted, which rings on a click too (the browser's rule).
-//
-// The paths are generated, not listed by hand:
-// - every command each page's registry holds, read from ⌘K with a query
-//   every id matches (`.`), so a command found only by typing is
-//   in it too, on each page as it
-//   opens and with the thing selected that a command is about (a scene, a
-//   point). Each runs from ⌘K by its keys (Control+k, then the row chosen
-//   with the arrows and Enter) and by the pointer (the header's Go to…
-//   clicked, then the row clicked); a command a page names in its `moves`
-//   must also have moved the focus where it goes, by both;
-// - every place in the lab's sources that moves the focus from script
-//   (`FOCUS_SITES` in `src/lab/focus-sites.test.ts`, by file and call, the
-//   lab's wrappers' callers and the kit popups' `initialFocus` too): that
-//   unit test's source scan fails on a place not named there, and each site's
-//   paths that no command reaches (an ask's index entry and its Send with a
-//   question open), run below, by the keyboard and by the
-//   pointer, and a key pressed in the middle of a click.
-// `:focus-visible` matches only in the window that has the focus, so every
-// case runs alone, and a page without it answers so instead of passing.
-
 import { Effect, type Scope } from 'effect';
 import { expect, it } from 'effect-bun-test';
 import type { Input } from '../../src/browser/keys.ts';
@@ -191,7 +166,6 @@ const everyCommand = (opened: Opened) =>
       for (const input of INPUTS) {
         const page = walk.page();
         const [offered, seen] = yield* watchedThen(page, runFromMenu(page, id, input));
-        // A command that would open another part moves nothing on this page.
         if (offered && seen.watching && !seen.leaving) {
           ran.push(`${id} by ${input}`);
           failures.push(...wrong(`${opened.name}: ${id}`, input, seen));

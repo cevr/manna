@@ -50,7 +50,6 @@ describe('the follow clock at a tempo', () => {
     for (const tempo of TEMPI) {
       const rate = tempo / 100;
       const clock = clockAt(10_000, true, 0, rate);
-      // The player's next poll, 250 ms on, reports the place the score clock holds at this rate.
       const next = observe(
         clock,
         { at: 10_000 + rate * 250, playing: true, seek: false, rate },

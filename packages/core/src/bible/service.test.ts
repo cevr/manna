@@ -74,8 +74,6 @@ describe('BibleService', () => {
       const bible = yield* BibleService;
       const anchors = yield* bible.chapterMarginAnchors(Reference.chapter(1, 1));
 
-      // Only what the *reader* draws: which anchor, and the phrase it follows.
-      // The note's own text belongs to the study pane's per-verse read.
       expect(anchors.verses).toEqual([
         {
           verse: verseNumber(1),

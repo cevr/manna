@@ -73,8 +73,6 @@ describe('voices', () => {
 
   it.effect('drops a harmony note that doubles the tune of a unison setting', () =>
     Effect.gen(function* () {
-      // The tune on its own track first (no keyboard program), then a keyboard
-      // track that doubles it and carries the alto, and one with tenor and bass.
       const midi = yield* read({
         tracks: [
           { program: 0, voices: [soprano ?? []] },

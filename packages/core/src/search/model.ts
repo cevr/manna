@@ -24,10 +24,6 @@ import { CorpusScope } from '../writings/corpus-scope.js';
 import { CorpusFilterSchema, NO_FILTER, type CorpusFilter } from '../writings/corpus-class.js';
 import { TopicSlug, TopicStatus } from '../wiki/model.js';
 
-// ---------------------------------------------------------------------------
-// The query and its route (§9.3)
-// ---------------------------------------------------------------------------
-
 /** How the router read the query (§9.3's table, as a value on the result).
  *
  *  On the result rather than inferred by each client from the query text: the
@@ -104,10 +100,6 @@ export type VectorLegStatus = typeof VectorLegStatus.Type;
  *  same way and a grep for the reason finds one site per reason. */
 export const vectorUnavailable = (reason: VectorAbsenceReason): VectorIndexUnavailable =>
   VectorIndexUnavailable.make({ reason });
-
-// ---------------------------------------------------------------------------
-// Results
-// ---------------------------------------------------------------------------
 
 /** One paragraph the search found, with the provenance of *how* it was found.
  *

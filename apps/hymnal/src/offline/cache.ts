@@ -174,7 +174,6 @@ export const offlineLayer = Layer.effect(Offline)(
       });
     });
     const owns = (job: Job) => job.epoch === epoch && jobs.get(identityKey(job.id)) === job;
-    // Cancellation cannot cut a platform write in half and race a later delete.
     const locked = <A, E>(work: Effect.Effect<A, E>) =>
       mutex.withPermit(work).pipe(Effect.uninterruptible);
     const cancelOwned = Effect.gen(function* () {
@@ -190,8 +189,6 @@ export const offlineLayer = Layer.effect(Offline)(
     });
     const cancel = locked(cancelOwned);
     const indexed = yield* Deferred.make<boolean>();
-    // Index discovery never holds playback or the mutation lock. A key touched
-    // since startup belongs to the current session, not this older disk view.
     yield* Effect.gen(function* () {
       const rows = yield* media.list;
       for (const row of rows) {
@@ -258,10 +255,7 @@ export const offlineLayer = Layer.effect(Offline)(
         complete = yield* locked(
           Effect.gen(function* () {
             if (!owns(job)) return true;
-            // Invalidation may remove a partial while this range is in flight.
-            // Restart instead of appending past a now-missing prefix.
             if (entries.get(key) !== previous) return false;
-            // A changed entity never receives bytes from its former version.
             if (
               previous &&
               (response.etag !== previous.etag ||
@@ -428,7 +422,6 @@ export const offlineLayer = Layer.effect(Offline)(
         Effect.andThen(
           locked(
             Effect.gen(function* () {
-              // Include failed writes and orphaned bytes discovered by platform listing.
               const disk = yield* media.list;
               for (const row of new Map(
                 [...entries.values(), ...disk].map((row) => [identityKey(row), row]),

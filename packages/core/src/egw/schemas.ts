@@ -36,19 +36,12 @@ const OptionFromOptionalNullishOrEmpty: Schema.decodeTo<
 > = Schema.optional(Schema.NullOr(Schema.String)).pipe(
   Schema.decodeTo(Schema.Option(Schema.String), {
     decode: SchemaGetter.transformOptional((oe) =>
-      // oe: Option<string | null>  (None = missing key OR undefined)
-      // Flatten null/'' into None, lift the rest into Some(Some(s)).
       oe.pipe(
         Option.filter((v): v is string => Predicate.isNotNull(v) && v !== ''),
         Option.some,
       ),
     ),
-    encode: SchemaGetter.transformOptional((ot) =>
-      // ot: Option<Option<string>>  — always `Some(inner)` because encode
-      // sees the canonical field as present. `Option.flatten` drops the
-      // outer wrapper so a canonical `None` becomes a missing key.
-      Option.flatten(ot),
-    ),
+    encode: SchemaGetter.transformOptional((ot) => Option.flatten(ot)),
   }),
 );
 
@@ -328,7 +321,7 @@ export type SearchParams = Schema.Schema.Type<typeof SearchParams>;
  */
 export const BooksQueryParams = Schema.Struct({
   pubnr: Schema.optional(Schema.Array(Schema.Finite)),
-  since: Schema.optional(Schema.String), // date-time format
+  since: Schema.optional(Schema.String),
   type: Schema.optional(Schema.Array(BookType)),
   lang: Schema.optional(Schema.String),
   can_read: Schema.optional(Schema.String),

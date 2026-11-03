@@ -1,35 +1,3 @@
-// `film/tests-keep-their-strength`: a test runs every time, at its full
-// strength, and passes as written. Nothing makes one pass or fit the ten
-// second budget (`bun run test:budget`) by running it less or giving it more
-// time; a slow test is made fast (shared setup, TestClock, its work run
-// concurrently), and a failing one is fixed.
-//
-// Refused, on a test runner's `it`, `test` or `describe` (`bun:test`'s,
-// `effect-bun-test`'s or bun's global, by its binding, `nodes.ts`):
-//
-// - a member that runs a test less: `.skip`, `.only`, `.todo`, `.failing`,
-//   `.skipIf`, `.todoIf`, `.if` and `.runIf`, anywhere on the chain
-//   (`it.effect.skip`, `test.skipIf(c)(…)`), and the runner's `xit`, `xtest`,
-//   `xdescribe`, `fit` and `fdescribe`;
-// - a `retry` in a test's or a suite's options, which passes a test that
-//   fails;
-// - a timeout of its own (a number after the body, or `{ timeout }` in the
-//   options, before the body or after it) over bun's 5 s default, of 0 or
-//   under (which sets no deadline at all), or one the rule cannot read (a name imported from another file), unless the test
-//   starts a process: a spawn's time is the machine's, and such a test names
-//   its spawn budget (`effect/requireSpawnBudget`). A suite's timeout passes
-//   when a test inside it starts one;
-// - the runner's `setDefaultTimeout` over bun's 5 s, or of 0 or under, which
-//   raises every test after it.
-//
-// A test starts a process when its body calls a process starter (Bun's
-// `spawn` or `spawnSync`, off the global `Bun`, imported from `bun` or taken
-// apart from `Bun`, a `node:child_process` starter, or effect's
-// `ChildProcess.make`), or calls a function of the same file that does,
-// however deep. A spawn inside a service the test provides, or a helper
-// imported from another file, is not seen. With `{ "timeouts": false }` the
-// rule reads no timeouts: a browser suite outside the budget sizes its own.
-
 import { Effect, Option, Schema } from 'effect';
 import {
   Diagnostic,
@@ -353,8 +321,6 @@ export const testsKeepTheirStrength = Rule.define({
         if (timeouts && setsDefault(b, n)) defaults.push(n);
       }),
     );
-    // Every name is kept as met, and read for spawns only when a case raises
-    // its timeout: most files raise none, and the read is the rule's cost.
     const names = collect('Identifier', Option.some, (identifiers) => {
       const raising = cases.flatMap((call) => {
         const timeout = timeoutOf(b, call);

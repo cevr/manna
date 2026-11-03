@@ -30,7 +30,6 @@ describe('the picture under its canvas', () => {
       { width: 300, height: 200 },
       { x: 0.38, y: 0.6 },
     );
-    // The picture is drawn 300 wide; 200 of it is cut, 38% of that on the left.
     const [left = 0, top = 0] = land(map, 0, 0);
     const [right = 0, bottom = 0] = land(map, 1, 1);
     expect(left).toBeCloseTo(76 / 300);

@@ -1,18 +1,3 @@
-// The shell is one look on every page: at each place (`STATES`' first case,
-// the place as it opens), on each device, every part of its header draws
-// with the computed style an ask's draws it with: each match of a part, its
-// first child (the crumb's words), and each control with the pointer over
-// it and with the keyboard's focus on it. A page's own element rule that
-// outweighs a shell part (a link's `color`, a `font`, a margin) shows here as
-// the part and the property it moved. An ask (`STATES.ask`'s first case) is
-// the reference; every page draws every part, so no part goes unmatched by
-// being missing from either.
-// Each state is checked to hold before it is read: a state the reference
-// never took, or a control its pointer cannot reach, is a failure, and so is
-// a control the page draws (and does not leave out by its own state) that a
-// layer keeps from the pointer. A kit button in a state's colour reads at AA on
-// the ground it draws, at rest, hovered, pressed and focused.
-
 import { Array as Arr, Effect, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { evaluates } from '../../src/lab/fixtures/settled.ts';
@@ -326,8 +311,6 @@ for (const device of DEVICES) {
         () =>
           Effect.gen(function* () {
             const refPage = yield* reference(device.viewport);
-            // The Set draws every part, the reference each is matched against, and each match
-            // of a part draws as its first does.
             yield* evaluates(refPage, MISSING(LOOKS), []);
             const ref = yield* refPage.evaluate<unknown>(LOOKS);
             yield* evaluates(refPage, DIFFERENCES(jsonOf(ref), REQUIRED), []);
@@ -366,15 +349,12 @@ describe("the shell guard's own probe", () => {
       Effect.gen(function* () {
         const page = yield* reference(LAPTOP.viewport);
         const ref = yield* page.evaluate<unknown>(LOOKS);
-        // A second Go to after the first: a later match of a part.
         yield* page.evaluate(
           `(() => { const a = document.querySelector(${jsonOf(PARTS.goto)}); a.after(a.cloneNode(true)); return true; })()`,
         );
         yield* page.evaluate(
           plant(
             [
-              // Each a property no child inherits and no colour follows (`currentColor`), but
-              // the italic, which the crumb's words take: so each sentence is the plant's own.
               `${PARTS.goto} ~ ${PARTS.goto} { background-color: rgb(255, 0, 0) !important; }`,
               '.sh-header { opacity: 0.4 !important; margin-left: 12px !important; column-gap: 30px !important; }',
               '.sh-crumb > :first-child { background-color: rgb(255, 0, 0) !important; }',
@@ -415,8 +395,6 @@ describe("the shell guard's own probe", () => {
           'goto focus boxShadow',
           'goto hover backgroundColor',
         ]);
-        // A control the keyboard cannot focus takes no focus state: its read says so, and a
-        // state the page never takes, the reference's taken, is a difference.
         const disable = `document.querySelector('.sh-goto').setAttribute('disabled', '')`;
         yield* page.evaluate(disable);
         yield* evaluates(page, `${FOCUSED(['goto'])}.goto.held`, 'not :focus-visible');
@@ -425,18 +403,14 @@ describe("the shell guard's own probe", () => {
         expect(
           (yield* heldDifferences(ref, page)).filter((d) => d.startsWith('goto focus held')),
         ).toEqual(["goto focus held is not :focus-visible, the reference's yes"]);
-        // Neither taking it is no match: the reference never took it.
         yield* ref.evaluate(disable);
         expect(unheld(yield* heldDifferences(ref, page))).toEqual([
           "goto focus: the reference's never took it (not :focus-visible)",
         ]);
-        // Nor is a control the reference's pointer cannot reach.
         yield* ref.evaluate(plant('.sh-header .sh-goto { pointer-events: none !important; }'));
         expect((yield* heldDifferences(ref, page)).filter((d) => d.startsWith('goto'))).toEqual([
           "goto: the reference's cannot be held",
         ]);
-        // Nor is a control of the page's a stray layer covers: the planted hover rule goes
-        // unread under it, so each covered control is the sentence, never one skipped.
         yield* page.evaluate(
           `(() => { const layer = document.createElement('div'); layer.style.cssText = 'position: fixed; inset: 0; z-index: 2147483647; background: transparent'; document.body.append(layer); return true; })()`,
         );
@@ -501,7 +475,6 @@ describe("the kit's state colours", () => {
         yield* page.evaluate(KIT_BUTTONS);
         const at = (state: string) => `document.querySelector('[data-kit="${state}"]')`;
         for (const state of KIT_STATES) {
-          // Each state driven as the viewer would, and read while it holds.
           yield* page.mouse.move(1, 1);
           yield* page.evaluate(`window.kitRead('${state}', 'rest'); true`);
           const box = yield* page.box(`[data-kit="${state}"]`);
@@ -515,7 +488,6 @@ describe("the kit's state colours", () => {
             `${at(state)}.focus({ focusVisible: true }); window.kitRead('${state}', 'focus'); ${at(state)}.blur(); true`,
           );
         }
-        // Each ratio short of its bar, and each state the button was not in when read.
         yield* evaluates(page, 'window.kitShort', []);
       }).pipe(Effect.scoped),
     SLOW,

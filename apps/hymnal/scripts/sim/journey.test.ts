@@ -193,7 +193,6 @@ describe('sim journey', () => {
 
   it.scoped('runs each step with its expects and receipts, one line per step and a summary', () =>
     Effect.gen(function* () {
-      // The panel is gone, so the hides expect passes.
       const run = yield* runJourney(toJson(journey), ['journey', 'chords'], ['id=key-panel']);
       expect(Exit.isSuccess(run.exit)).toBe(true);
       expect(ops(run.calls)).toEqual([
@@ -280,7 +279,6 @@ describe('sim journey', () => {
           ['id=spinner'],
         );
         expect(Exit.isSuccess(run.exit)).toBe(true);
-        // The open waits for the stanza itself; only the hides is checked after it.
         expect(ops(run.calls)).toEqual(['open', 'sees']);
         expect(run.calls[0]?.args.slice(0, 3)).toEqual([
           'hymnal://hymns/100',
@@ -297,7 +295,6 @@ describe('sim journey', () => {
       Effect.gen(function* () {
         const run = yield* runJourney(toJson(journey), ['journey', 'chords'], ['label=Stanza 1']);
         expect(Exit.isFailure(run.exit)).toBe(true);
-        // The open's own expect fails, so the open is tried once more after a terminate.
         expect(ops(run.calls)).toEqual(['record', 'open', 'open', 'snapshot', 'shot', 'record']);
         expect(run.calls[5]?.args).toEqual(['stop', Option.none()]);
         expect(run.lines).toHaveLength(2);

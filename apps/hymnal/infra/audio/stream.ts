@@ -45,7 +45,6 @@ export class StreamIncomplete extends Schema.TaggedError<StreamIncomplete>()('St
   }
 }
 
-/** `render.ts`, run with Bun from the hymnal package, its output's last 3000 characters kept. */
 /** The render cache, as `render.ts` reads it. */
 const renderCache = Effect.gen(function* () {
   const path = yield* Path.Path;

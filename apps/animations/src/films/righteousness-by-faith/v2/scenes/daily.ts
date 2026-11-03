@@ -1,24 +1,3 @@
-// Daily: sanctification is the daily choice to keep receiving the gifts, and
-// the Sabbath is rest in His works, not ours. First the parchment: the robed
-// figure from `robe`, heart glowing, asks "am I done?"; on "joy" the
-// camera pans to a gold city gate with light and small music notes drifting
-// out; on "joy" a small grey figure stands beside it in the cold open's
-// scarlet stains, the film's picture of sin, hands over ears, the notes
-// jangling for them (a light moment; never robed: a robe over the stains
-// would be a cloak for sin). On "keep" back to
-// the robed figure asking again. On "will" the camera pushes through their
-// glowing heart into STORY: a cardboard room at dawn, the same figure at the
-// window, face at a third of the frame. On "choose" the open hand from `look`
-// rises palm up and the three small icons are laid in it. From "matter" six
-// suns arc over the window, the six working days: each dusk the hand's fingers curl, each
-// dawn it opens again, and a flower springs up on the path outside each day
-// (the path from `within`). On "sab" the sixth sun sets gold, and as it sets
-// the Sabbath begins: the shot dissolves on that sunset to the Sabbath field
-// (garden.ts `restingField`), the seventh day the rest itself: tools set down,
-// the robed figure resting against the tree, heart still glowing, face calm
-// on "rest", held through "rest in his", the scene's last words. Nothing
-// here is earned: the hand only receives.
-
 import {
   type Frame,
   type Pt,
@@ -47,8 +26,6 @@ import {
   pushedHand,
   piece,
 } from '../../kit.ts';
-
-// ─── A: the parchment ────────────────────────────────────────────────────────
 
 /** The robed figure's scale on the page (where they stand is the `fig` knob). */
 const FIG_SCALE = 2.3;
@@ -98,8 +75,6 @@ const PAPER_SKY = [
   [0, C.paper],
   [1, C.paper],
 ] as const;
-
-// ─── B: the room at the window ───────────────────────────────────────────────
 
 /** The window's opening, half its width and height. */
 const WIN_HW = 320;
@@ -175,12 +150,8 @@ const timeline = {
   toFig: { mark: 'keep', offset: -0.4, dur: 0.9, ease: 'inOutCubic' },
   askAgain: { mark: 'keep', dur: 0.4 },
   through: { mark: 'will', offset: -0.35, dur: 0.6, ease: 'inCubic' },
-  // The room comes through the glow over the push's last stretch.
   roomIn: { after: 'through', dur: 0.16, ends: true, ease: 'linear' },
   dawn: { mark: 'will', until: 'matter', ease: 'outQuad' },
-  // At the window they open their hand and turn it palm up, and on "choose"
-  // it comes forward to us, close up; on "sab" it goes back to them, the
-  // gifts in it.
   reach: { mark: 'choose', offset: -0.7, dur: 0.6 },
   palmUp: { mark: 'choose', offset: -0.4, dur: 0.3, ease: 'inOutSine' },
   handUp: { mark: 'choose', dur: 0.7, ease: 'inOutCubic' },
@@ -208,7 +179,6 @@ export const daily = drawing({
   },
 });
 
-// Scratch the draw reuses every frame, so no pose or tuple is made per frame.
 const LOOK: [number, number] = [0, 0];
 const AT: [number, number] = [0, 0];
 const OTHER_LOOK: [number, number] = [0, 0];
@@ -299,7 +269,6 @@ const gate = (f: DailyFrame) => {
   }
   piece(ctx, ARCH, C.gold, hand('arch'), { role: 'scenery', kind: 'cut', line: 4 });
   const notes = f.at('notes');
-  // The notes going right, toward the one at the gate, jangle when their ears are covered.
   const jangle = f.at('ears') * (1 - f.at('toFig'));
   if (notes > 0)
     for (let i = 0; i < NOTES; i++) {
@@ -337,7 +306,6 @@ const other = (f: DailyFrame) => {
   ctx.save();
   ctx.translate(x, gy);
   ctx.scale(OTHER_SCALE * pop, OTHER_SCALE * pop);
-  // Their hands go up from their sides to the ears.
   OVER_EAR_L.reach = ears;
   OVER_EAR_R.reach = ears;
   OTHER_LOOK[0] = lerp(-3, 0, ears);
@@ -401,12 +369,10 @@ const room = (f: DailyFrame, alpha: number) => {
   const gold = f.at('sixth');
   ctx.save();
   ctx.globalAlpha *= alpha;
-  // The chipboard wall, lit from the window.
   ctx.fillStyle = C.board;
   ctx.fillRect(0, 0, w, h);
   glow(ctx, wx + 200, wy + 200, 900, mix(C.peachLow, C.glow, day), 0.55);
 
-  // The view: sky, the sun on its arc, the hill and the path with a flower a day.
   ctx.save();
   ctx.beginPath();
   ctx.rect(wx - WIN_HW, wy - WIN_HH, WIN_HW * 2, WIN_HH * 2);
@@ -419,7 +385,6 @@ const room = (f: DailyFrame, alpha: number) => {
   const sx = wx + lerp(-WIN_HW + 60, WIN_HW - 60, arc);
   const sy = wy + HORIZON - SUN_ARC * day;
   glow(ctx, sx, sy, 200, C.glow, 0.9);
-  // Built where it stands: the ink reads a shape's own points, so a moved copy draws other pixels.
   piece(ctx, ellipseShape(sx, sy, 44, 44, 24), C.gold, hand('sun'), { role: 'scenery', line: 0 });
   ctx.save();
   ctx.translate(wx, wy + VIEW_DROP);
@@ -435,7 +400,6 @@ const room = (f: DailyFrame, alpha: number) => {
   ctx.restore();
   ctx.restore();
 
-  // The frame, its bars and sill.
   ctx.save();
   ctx.translate(wx, wy);
   for (let i = 0; i < WIN_FRAME.length; i++)
@@ -485,8 +449,6 @@ const flowers = (f: DailyFrame) => {
 /** The robed figure at the window, face to the light, heart glowing. */
 const robedAtWindow = (f: DailyFrame, day: number) => {
   const { ctx } = f;
-  // Their hand opens toward the window and stays there, palm up; it gives
-  // way to the close-up as that comes forward, and takes it back as it returns.
   OPENED.reach = f.at('reach');
   OPENED.turn = f.at('palmUp');
   OPENED.lent = f.at('handUp') * (1 - f.at('handBack'));
@@ -505,7 +467,6 @@ const robedAtWindow = (f: DailyFrame, day: number) => {
  */
 const inHand = (f: DailyFrame, arc: number) => {
   const { ctx } = f;
-  // 0 their hand at the window, 1 come forward to us.
   const up = f.at('handUp') * (1 - f.at('handBack'));
   if (up <= 0) return;
   const working = f.at('days') > 0;
@@ -517,8 +478,6 @@ const inHand = (f: DailyFrame, arc: number) => {
   LIT[0] = LAID[0] * open;
   LIT[1] = LAID[1] * open;
   LIT[2] = LAID[2] * open;
-  // Their palm-up hand at the window comes forward as the close-up, the same
-  // shape growing, and goes back into their hand the same way.
   pushedHand(ctx, f.hand, FORWARD, up, open, 'far', {
     under: () => glow(ctx, 0, 0, 260, C.glow, 0.5 * open),
     over: () => {

@@ -1,16 +1,3 @@
-// Upstream: packages/react/src/menu/item/MenuItem.tsx,
-// packages/react/src/menu/item/MenuItemDataAttributes.ts,
-// packages/react/src/menu/item/useMenuItem.ts,
-// packages/react/src/menu/item/useMenuItemCommonProps.ts
-//
-// An item that runs an action: pressing it (or Enter/Space while it is
-// highlighted) fires `onClick` and closes the menu. It is a `menuitem` in
-// the roving tab order (the highlighted one is tabbable), and releasing the
-// mouse on it after pressing the trigger (press, drag, release) activates
-// it. In a context menu, the release of the right-click that opened the menu
-// does not activate the item under the pointer. `useMenuItem` is that
-// behaviour, which the radio item (`Menu.RadioItem`) shares. As upstream,
-// an item guesses its index from render order until its element registers.
 import type { JSX } from '@solidjs/web';
 import { createUniqueId, omit, untrack } from 'solid-js';
 
@@ -55,8 +42,6 @@ interface MenuItemBehaviour {
 /** What makes an element one of a menu's items: its place in the roving focus, its presses, its release after a drag. */
 export function useMenuItem(params: MenuItemParams): MenuItemBehaviour {
   const { store, parent, itemProps } = useMenuRootContext();
-  // The root decides whether this menu is a context menu's; a menu inside a
-  // context menu's trigger is a plain one.
   const contextMenu = parent.type === 'context-menu' ? parent.context : null;
   const listItem = useCompositeListItem({
     guess: true,
@@ -72,7 +57,6 @@ export function useMenuItem(params: MenuItemParams): MenuItemBehaviour {
 
   const ownProps: HTMLProps = {
     id,
-    // `-1` rather than none, which would leave links and buttons in the tab order.
     get tabindex() {
       return store.open() && highlighted() ? 0 : -1;
     },
@@ -97,7 +81,6 @@ export function useMenuItem(params: MenuItemParams): MenuItemBehaviour {
         ) {
           return;
         }
-        // Off macOS, this mouseup ends the right-click that opened the menu.
         if (!platform.os.mac && event.button === 2) {
           return;
         }
@@ -107,8 +90,6 @@ export function useMenuItem(params: MenuItemParams): MenuItemBehaviour {
         store.allowMouseUpTriggerRef.current &&
         (contextMenu === null || event.button === 2)
       ) {
-        // Pressed on the trigger, dragged here and released: a pick.
-        // `detail: 1` and a mouse pointer mark it a mouse click, not a keyboard one.
         dispatchClickWithModifiers(itemElement, event, { detail: 1, pointerType: 'mouse' });
       }
     },

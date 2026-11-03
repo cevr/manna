@@ -1,9 +1,3 @@
-// A contact shadow (DIRECTION, "Contact shadow"): where a figure stands on the
-// ground, a soft warm ellipse darkens the sheet under its feet, so it stands
-// on the world rather than floating over it. The shadow touches the ground,
-// so no plane's height stretches it. Its gradient is one unit gradient per
-// context (`unitGradient`), placed by the transform.
-
 import { unitGradient } from './glow.ts';
 
 /** A warm dark, the same as a cutout's cast shadow, as r, g, b. */

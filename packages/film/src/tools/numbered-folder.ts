@@ -1,9 +1,3 @@
-// A numbered folder of one's own under a root (`1`, `2`, …): the next number
-// past every one there, made by this call alone. A folder is made only where
-// none is (`makeDirectory`, not recursive), so two runs that read the root at
-// once never share one: the one that finds its number made takes the next.
-// A root that cannot be read fails; a root not there yet is made.
-
 import { Effect, FileSystem, Path } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 

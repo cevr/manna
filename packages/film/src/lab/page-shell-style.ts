@@ -1,21 +1,3 @@
-// The shell's styles (`page-shell.tsx`, design language §4), read only
-// through the tokens (`player/tokens.css`): the header on `--surface-1`,
-// the page's name (`--shell-floor` is what the chrome
-// holds under the page: the safe area), and the dock a page's transport
-// takes above it (`.sh-dock`); and
-// the kit (§5), each control styled once: the quiet and primary buttons
-// (`.sh-btn`), the icon button (`.sh-tool`), the segmented control
-// (`.sh-seg`), the field (`.sh-field`, a `select`), the slider, the badge
-// (`.sh-badge`), and words said, not shown (`.sh-sr`); and the one focus
-// ring, `--focus-ring`, on whatever the keyboard focuses: a control, a link,
-// a scroll box the browser makes focusable, a dialog the focus falls back
-// to. It is one rule of no weight, so a part that draws its ring inside a
-// clipping edge (`--focus-ring-inset`) says so in a rule of its own; and a
-// floating root (role dialog, alertdialog or menu: a dialog, a sheet, a
-// menu, a receipt, each drawn over `--shadow-pop`) keeps that shadow under
-// the ring, in a rule that outweighs the part's own resting shadow. Every
-// page injects it with the commands' styles.
-
 import { PHONE, WIDE } from './viewport.ts';
 
 export const SHELL_CSS = `

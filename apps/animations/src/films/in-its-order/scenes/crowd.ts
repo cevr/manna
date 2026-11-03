@@ -1,12 +1,3 @@
-// The feast's crowd: the filler bases' busts (`crowdOf`, the story crowd kit)
-// seated in two rows behind the long table, as `cold.letter.4` has them
-// between the guests' heads: a back row, smaller, higher and hazier, at a
-// table of its own, and a front row, larger and lower, at the far table in
-// front of it, each row on its own plane. Placements are in the kept panel's
-// px on a row's plane (`PANEL`); `cold` draws the back row's plane, then the
-// front row's, between the near plate and the guests, each bust under its
-// row's table.
-
 import {
   type CrowdFrame,
   type Figure,
@@ -193,7 +184,6 @@ export const seatsAt = (g: Gathering): ReadonlyArray<Seat> => {
   const { size, rise } = g;
   const { lean } = FEAST_CROWD;
   const draw = rng(g.seed * 7919 + 1);
-  // How far the seat `j` lies from `at`, panel px; past either end, never nearer.
   const apart = (at: number, j: number) =>
     Option.match(Arr.get(g.necks, j), { onNone: () => Infinity, onSome: (o) => Math.abs(o - at) });
   return Arr.zip(crowdOf(g.seed, g.necks.length), g.necks).map(([figure, x], i) => {
@@ -229,7 +219,6 @@ export const FEAST_SEATS: ReadonlyArray<RowSeat> = (() => {
     x += ((to - from) * g) / total;
     xs.push(x);
   }
-  // How far the seat `j` lies from `at`, panel px; past either end, never nearer.
   const apart = (at: number, j: number) =>
     Option.match(Arr.get(xs, j), { onNone: () => Infinity, onSome: (o) => Math.abs(o - at) });
   return Arr.zip(crowdOf(seed, count), xs).map(([figure, at], i) => {
@@ -237,7 +226,6 @@ export const FEAST_SEATS: ReadonlyArray<RowSeat> = (() => {
     const top = CROWD_ROWS[row].top + rise * (2 * draw() - 1);
     const scale = CROWD_ROWS[row].scale * (1 + size * (2 * draw() - 1));
     const tilt = lean[0] + (lean[1] - lean[0]) * draw();
-    // Toward the nearer neighbour in its row, two seats over: right is a positive turn.
     const toward = Math.sign(apart(at, i - 2) - apart(at, i + 2));
     return { figure, row, x: at, top, scale, lean: (toward * tilt * Math.PI) / 180 };
   });

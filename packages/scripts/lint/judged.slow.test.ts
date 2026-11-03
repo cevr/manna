@@ -1,8 +1,3 @@
-// The `judged` oxlint plugin, run for real: oxlint lints a scratch repo with
-// only this plugin on, over a store of kept answers and a run's findings
-// file, and reports exactly the items whose answer is at or over the rule's
-// threshold, wherever their text lives.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Clock, Effect, FileSystem, Path, Schema, Stream } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -127,7 +122,6 @@ describe('the judged plugin', () => {
           `src/x.ts:1:1: ${REPORT} p=0.95 [Warning/judged(historyComment)]`,
           `src/x.ts:7:1: ${REPORT} p=0.90 [Warning/judged(historyComment)]`,
         ]);
-        // No store: the rule says nothing.
         yield* fs.remove(path.join(dir, '.git', 'kept.json'));
         expect((yield* oxlint(dir)).lines).toEqual([]);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
@@ -145,7 +139,6 @@ describe('the judged plugin', () => {
           path.join(dir, '.git', 'kept.json'),
           yield* storeOf([0.95, 0.02, 0.02]),
         );
-        // The store was written for src/x.ts; the text is now in src/y/z.ts alone.
         yield* fs.makeDirectory(path.join(dir, 'src/y'));
         yield* fs.writeFileString(path.join(dir, 'src/y/z.ts'), MOVED);
         const moved = yield* oxlint(dir);
@@ -171,7 +164,6 @@ describe('the judged plugin', () => {
           path.join(dir, '.git', 'kept.json'),
           yield* storeOf([0.95, 0.02, 0.02]),
         );
-        // The run found the second comment alone: the store, read, would say the first.
         const run = [{ start: SOURCE.indexOf('// The key'), p: 0.97 }];
         const today = dayOf(yield* Clock.currentTimeMillis);
         const findings = (
@@ -218,7 +210,6 @@ describe('the judged plugin', () => {
           makers: textHash('other item code'),
         });
         expect((yield* oxlint(dir)).lines).toEqual(fromStore);
-        // A run of another store found what that store kept, not what this one does.
         yield* findings(signature, { day: today, store: 'old.json', makers: makersHash() });
         expect((yield* oxlint(dir)).lines).toEqual(fromStore);
         yield* findings(signature, {

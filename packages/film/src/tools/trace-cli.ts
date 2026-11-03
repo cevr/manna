@@ -1,14 +1,3 @@
-// `film concept trace <spec.ts> [--view <name> ...] [--check]`: a kept sheet's
-// views traced into the tables a rig is composed from (`core/trace.ts`). The
-// spec (a module exporting `TRACE`, a `TraceSheet`) names the member, its
-// kept sheet, its colour classes and, per view, its parts by their labels
-// (`core/label.ts`) or their seeds; each view's table is written beside the
-// spec, its header naming the sheet, the view's box and this command, so a
-// critique's fix is traced again by running it once more. With `--check` it
-// writes nothing: each view's table on disk is held to what it traces, the
-// formatter's spacing aside, and any that differs fails it. A spec that names
-// no view of that name, or a view the sheet cannot be read by, is refused.
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -127,14 +116,7 @@ export const trace = Command.make(
         Effect.mapError((e) => TraceUnread.make({ spec: file, reason: `${name}: ${e.reason}` })),
       );
       const out = path.resolve(dir, view.out);
-      const header = [
-        `${spec.member}, ${view.about}, traced from the kept ${spec.kind} sheet`,
-        `(${path.relative(dir, sheetFile)}, box ${view.box.join(', ')}) in the sheet's own pixels.`,
-        `Written by \`bun run concept trace ${path.relative(path.resolve('.'), file)} --view ${name}\``,
-        `(from apps/animations); trace it again rather than edit it. Points only: the`,
-        `film's papers paint each part. Pure.`,
-      ];
-      const table = tracedModule(header, view, traced);
+      const table = tracedModule(view, traced);
       const picks = labelledLine(traced);
       if (input.check) {
         const kept = yield* fs.readFileString(out).pipe(Effect.orElseSucceed(() => ''));

@@ -1,11 +1,3 @@
-// The presets (core/synth/graph/presets.ts) render a second of sound in under
-// 20 ms: each tone at the app's settings, rain and the breeze as long as a
-// bed, and each one-shot family as a one-second one-shot. Local only
-// (`bun run test:perf`), never the gate: a stopwatch reads the machine as
-// much as the code, and a CI runner ran the film's CPU tests 17–35× slower
-// than a laptop. Each preset is timed in seven warm runs on seven seeds after
-// one to warm up; the medians are logged for the report.
-
 import { Clock, Effect, Result } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { defineLibrary } from '../../src/core/sfx.ts';

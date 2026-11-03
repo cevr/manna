@@ -1,15 +1,3 @@
-// A paper, as a figure's piece takes it: its lit colour, its shade past the
-// crease (a hue of its own, CRAFT rule 12, never the colour dimmed), and the
-// light that rims the edge facing the light; where it turns (`crease`) and
-// how wide its rim is (`rim`). Each figure's papers are its own, sampled
-// from its concept; the house gives what a paper is, checks it as it is made
-// (`paper`: a shade greyed or blackened is refused, GreyShade), ramps one
-// under the key light, and lays it on a piece. A part takes only a checked
-// paper (`Paper` is branded), and checks it again as it is made; a part laid
-// within another's outline takes one with no rim (`unrimmed`, InnerRim).
-// Colour laid inside a paper and clipped to it is a tone (`Tones`); on a
-// garment or a sleeve a tone may be the figure's skin (`GarmentTones`). Pure.
-
 import { type Brand, Schema } from 'effect';
 import { type Hex, channelsOf } from '../canvas/colour.ts';
 import { hsvOf, shadeKind } from '../core/figure.ts';

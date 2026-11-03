@@ -1,23 +1,3 @@
-// `film board`: a film's storyboard, made and kept from the terminal (`bun
-// run board …` in the app). The board starts the film's flow: script, then
-// board, then voice and scenes built to it. Each line it prints is one line,
-// so an agent reads them; `board <film>` prints one line per try as it lands.
-//
-//   film board <film> [--beat id,id] [--tries 2] [--lanes 3] [--dry-run]
-//       draw every panel the board lacks (the marks each beat's picture
-//       names, at most three a beat; one at its start when it names none),
-//       two tries each, on `okra image`'s Codex route; --dry-run prints the
-//       prompts and draws nothing
-//   film board style <film> --id 9005 --name "…" --block-file f --ref img [--world-file f]
-//   film board import <film> --panel <beat>.<at> <file…> [--keep n --why "…"] [--from "…"] [--prompt-file f]
-//   film board card <film> --panel <beat>.<at> --payoff word [--to mark]
-//   film board verse <film> --panel <beat>.<at> --ref "Job 9:2" --text "…" --phrase "…"
-//   film board tweak <film> <note> [--tries 2]
-//
-// A try kept, a beat approved or withdrawn, and the board read are the
-// lab's commands (`film lab keep_try|approve_beat|withdraw_beat|board`, the
-// same as the lab's MCP tools: `lab-commands.ts`).
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -130,7 +110,6 @@ const panelIn = (name: FilmName, beats: ReadonlyArray<BoardBeat>, id: string) =>
         film: name,
         reason: `beat ${beat} has no mark {${at}} (it has start, ${marks.join(', ')})`,
       });
-    // Both name the panel's files and link: decoded, never written as they came.
     const names = Option.all({ beatId: boardNamed(found.value.id), mark: boardNamed(at) });
     if (Option.isNone(names))
       return yield* BoardRefused.make({
@@ -246,7 +225,6 @@ const importTries = Command.make(
         at: stamp,
       })),
     );
-    // `--keep` names one of the images given, checked before the board is touched.
     const keep = yield* Option.match(input.keep, {
       onNone: () => Effect.succeedNone,
       onSome: (k) =>

@@ -1,31 +1,3 @@
-// Chrome, through Bun.WebView: the one way the film tools and their browser
-// tests open a page. Bun spawns one Chrome per process, over a DevTools pipe,
-// with the flags of the first view it opens; every later view is a tab of
-// that Chrome. So a process names its flags once: a view asked for with other
-// flags than the running Chrome's fails (`BrowserFailed`) rather than run
-// without them.
-//
-// The executable: `BUN_CHROME_PATH` when set, else the Chrome or Chromium
-// Bun finds where it looks, else the newest Chromium a Playwright install
-// left in its cache. None of them: `BrowserMissing`, which names
-// `BUN_CHROME_PATH`.
-//
-// On macOS a Chrome whose flags ask for the GPU (`GPU_FLAG`) is spawned
-// through the GPU launcher (`chrome-gpu.ts`), written into its profile, which
-// drops the `--disable-gpu` Bun spawns every Chrome with and execs the Chrome
-// found as above: Bun's own search is run here for it (`bunSearch`), since
-// Bun is told the launcher's path instead.
-//
-// Every view names the first view's executable and profile, so a Chrome Bun
-// spawns again (the first one died) is spawned as the first one was.
-//
-// Every Chrome is silent (`chromeArgs`): no page a tool or test opens is
-// listened to (a render mixes and encodes its sound offline), and a headless
-// Chrome otherwise plays its pages' sound out of the host's speakers.
-//
-// Every Chrome keeps its profile in a folder of its own, removed when its
-// process exits (`chrome-profile.ts`).
-
 import {
   Config,
   Effect,
@@ -221,7 +193,6 @@ const spawnView = (
           dataStore: { directory: profile },
           backend: {
             type: 'chrome',
-            // Never a Chrome someone left running with remote debugging: always one of ours.
             url: false,
             ...Option.match(path, { onNone: () => ({}), onSome: (p) => ({ path: p }) }),
             argv: [...argv],

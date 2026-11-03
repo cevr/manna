@@ -93,15 +93,6 @@ interface LoadedModel {
 const unavailable = (adapter: string, reason: string): QueryEmbedderUnavailable =>
   QueryEmbedderUnavailable.make({ adapter, reason });
 
-/** The lazy loader for the transformers.js runtime.
- *
- *  Dynamic so the runtime is paid for by the first search rather than by
- *  process start. The `noDynamicImports` rule guards against import graphs that
- *  hide dependencies; here the dependency is declared in `package.json`, the
- *  specifier is a literal, and the laziness is the point — which is why the
- *  loader is bound to this name rather than written inline.
- */
-// Lazy by design: a declared dependency, imported by a literal specifier.
 const loadTransformers = () => import('@huggingface/transformers');
 
 /** Loads the tokenizer and model once, on the given device.
@@ -117,11 +108,6 @@ const loadModel = (
   fallbackCacheDir: Config.Config<Option.Option<string>>,
 ): Effect.Effect<LoadedModel, QueryEmbedderUnavailable> =>
   Effect.gen(function* () {
-    // A malformed or absent config reads as "no override" rather than as a
-    // failure: the variable is an optional pointer at a model cache, and
-    // refusing to search because it was unreadable would be a worse answer than
-    // searching against the library's default cache. `BIBLE_MODEL_CACHE` wins
-    // over the adapter's fallback, so one variable still overrides every host.
     const override = yield* Effect.orElseSucceed(modelCacheDir, () => Option.none<string>());
     const fallback = yield* Effect.orElseSucceed(fallbackCacheDir, () => Option.none<string>());
     const cache = Option.orElse(override, () => fallback);
@@ -130,10 +116,6 @@ const loadModel = (
       catch: (cause) => unavailable(adapter, `transformers.js did not load: ${String(cause)}`),
     });
     const loaded = yield* Effect.tryPromise({
-      // `Effect.tryPromise` takes a promise-returning thunk, so this async
-      // function is the boundary the rule points at rather than a bypass of it:
-      // transformers.js exposes only promise APIs, and the two `from_pretrained`
-      // calls have to be sequenced before the pair can be returned.
       /* oxlint-disable effect/noAsyncFunction -- the promise thunk `Effect.tryPromise` requires */
       try: async () => {
         if (Option.isSome(cache)) module.env.cacheDir = cache.value;
@@ -148,25 +130,14 @@ const loadModel = (
       catch: (cause) => unavailable(adapter, `${MODEL_ID} on ${device}: ${String(cause)}`),
     });
     return {
-      // Same boundary: `LoadedModel.encode` is declared as a promise because the
-      // tokenizer and the model are, and its one caller wraps it in
-      // `Effect.tryPromise`.
       /* oxlint-disable effect/noAsyncFunction -- transformers.js is promise-only */
       encode: async (texts) => {
-        // Truncation at the model's context limit, because the corpus breaks
-        // §9.2's "well under 900 tokens" assumption: a handful of EGW
-        // paragraphs tokenize past 2048, and onnxruntime cannot grow the
-        // rotary cos/sin cache mid-session — the full-corpus compile died on
-        // exactly that node. A truncated document embedding is the standard
-        // retrieval answer for over-long input; queries never come close.
         const inputs = await loaded.tokenizer([...texts], {
           padding: true,
           truncation: true,
           max_length: MODEL_CONTEXT_TOKENS,
         });
         const output = await loaded.model(inputs);
-        // The trained retrieval head, not a mean pool over `last_hidden_state`.
-        // The two agree at cosine 0.0081 on this corpus's text.
         const embedding = output.sentence_embedding;
         return { dims: embedding.dims, data: embedding.data };
       },
@@ -185,19 +156,6 @@ const rowOf = (
   return out;
 };
 
-/** One embedder over one device.
- *
- *  The model is loaded lazily and memoized **on success only**: a host builds
- *  this layer at startup, and a reader who never searches should never pay for a
- *  300M-parameter model.
- *
- *  `Effect.cached` was wrong here. It caches the *result*, failures included and
- *  indefinitely, so a reader who searched once while the model was still
- *  downloading would get `EmbedderUnavailable` for the rest of the process's
- *  life — including after the download finished. A synchronized reference
- *  holding only successful loads gives the memoization without the trap: a typed
- *  load failure leaves the cell empty and the next query tries again.
- */
 /** Memoizes a load **on success only**, under the cell's own lock.
  *
  *  Split out from the layer so the property can be tested without a
@@ -254,10 +212,6 @@ export const layerTransformersEmbedder = (input: {
               try: () => ready.encode([prefix + text]),
               catch: (cause) => unavailable(input.adapter, `embed failed: ${String(cause)}`),
             });
-            // A row this build cannot use — too short, or carrying a non-finite
-            // component — is an unavailable embedder rather than a padded
-            // vector. `truncateToMrl` documents why silently repairing it is
-            // the one outcome this path must never produce.
             const row = truncateToMrl(rowOf(encoded, 0));
             if (Option.isNone(row)) {
               return yield* unavailable(
@@ -269,11 +223,6 @@ export const layerTransformersEmbedder = (input: {
           });
 
       return QueryEmbedder.of({
-        // The adapter reports the fingerprint it *loaded*, which is what makes
-        // §10's mismatch detectable rather than assumed. It is the pinned
-        // constant here because `MODEL_ID`, the dtype, the output name, the
-        // prefixes and the quantization above are exactly what that constant
-        // describes; an adapter differing in any of them would report another.
         fingerprint: MODEL_FINGERPRINT,
         embedQuery: embedWith(QUERY_PREFIX),
         embedDocument: embedWith(DOCUMENT_PREFIX),

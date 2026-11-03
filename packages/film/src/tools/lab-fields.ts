@@ -1,11 +1,3 @@
-// A lab command's fields, read from the JSON Schema its tool is listed by
-// (what an MCP client reads in `tools/list`): each property's name, its kind,
-// whether it is required and its description. A command's transports take
-// their fields from here (`lab-command.ts` answers them as `fields`), so the
-// terminal's flags are the MCP tool's arguments by construction. The JSON
-// Schema of an object is made here too (`objectSchema`), for a tool's listing
-// and an MCP event's (`mcp-events.ts`) alike.
-
 import { Array as Arr, Option, Predicate, Schema } from 'effect';
 import type { JsonSchema } from 'effect';
 import type * as Tool from 'effect/ai/Tool';
@@ -165,9 +157,6 @@ export const fieldsOf = (tool: Tool.Any): ReadonlyArray<LabField> => {
     ),
   );
 };
-
-// ---------------------------------------------------------------------------
-// A schema as MCP lists it
 
 const RefRoot = Schema.Struct({ $ref: Schema.String });
 const isRefRoot = Schema.is(RefRoot);

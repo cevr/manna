@@ -1,52 +1,3 @@
-// Every write the lab and the review make to a film's source, and their undo:
-// a scene's cue or knob (SceneWriter), a score's pick in `sound.ts`, and a
-// library sound's takes kept or rejected in `library.lock.json` (Choices).
-//
-// A write re-reads the file (the modules this process imported are as they
-// were at start), makes the new text (`edit`), formats it with oxfmt through
-// its stdin, and reads what it meant to change back from the formatted text
-// (`verify`); `check` may still refuse a text the film cannot play. Only then
-// does it touch the file, and only if the file is still the text the edit was
-// made from (an editor may have saved it since): then it writes the file whole
-// (a partial file renamed into place), else it fails as `SourceChanged` and
-// writes nothing. So a failed write never changes the file, and there is
-// nothing to put back. A change a service makes its own way (the library's
-// lock, rewritten by its store) is recorded `around` it: the file's text
-// before and after, the same way.
-//
-// Every write (a write, the formatting `around` leaves, an undo) is
-// a compare and swap under the file's store lock (`swap`): the comparison and
-// the write hold the lock other processes' store writes take (`sfx make` on
-// the library's lock, say), so none lands between them and is lost.
-//
-// Writes and undos run one at a time. Each film keeps its own bounded
-// stack (UNDO_DEPTH): Undo puts back the newest change still on it, byte for
-// byte, only while the file is exactly as that change left it. A change
-// whose text other files follow (the timings name each beat's take, which
-// lives beside them in `narration/`, and the track is mixed from them)
-// carries them (`Follows`): Undo brings back what the text it lands names
-// before it lands, and refuses when one cannot be, then puts away what only
-// the text it replaced named (nothing is deleted)
-// and make again what is made from it (the track remixed). The check, the
-// bringing back, the write and the putting away all hold the file's store
-// lock (`land`), so a narrate's sweep in another process, which takes it too,
-// never puts away a take an Undo is naming, and a refused one touches nothing.
-//
-// A change may file work for others where it lands (`Files`: the agents'
-// "re-time, re-check seams, re-render" on the production's ledger, for a
-// beat moved): filed once the write lands and withdrawn once its undo lands,
-// so the work standing is always the work its text asks for. A filing that fails is logged and leaves the text landed.
-//
-// Each change that lands (a write or an undo) is told in order, a
-// number each (`landings`, the newest `TOLD_KEPT`), for the lab's change feed
-// to hand on as an event.
-//
-// Each change has an id no other has (`Change.id`), kept by its undo. An
-// Undo asked for one change (a receipt's, by the id its write answered)
-// undoes only that change: when another stands before it on the stack, or
-// it is gone from the history, it is refused (`StepNotNewest`) and nothing
-// is written. One asked for no change undoes the newest.
-
 import {
   Array as Arr,
   Context,
@@ -442,7 +393,6 @@ export class SourceWriter extends Context.Service<SourceWriter, SourceWriterServ
                 reason: missed.join(', '),
               });
             const checked = yield* rewrite.check(after);
-            // Already so (a pick of the option playing): nothing to write, nothing to undo.
             if (after === before) {
               if ((yield* fs.readFileString(file)) !== before)
                 return yield* SourceChanged.make({ file: shownIn(rewrite.film, file), target });
@@ -459,15 +409,11 @@ export class SourceWriter extends Context.Service<SourceWriter, SourceWriterServ
               follows: Option.fromUndefinedOr(rewrite.follows),
               files: Option.fromUndefinedOr(rewrite.files),
             };
-            // Uninterruptible: the write may reload the page, which drops its
-            // request; the file and the history must still agree once it lands.
             return yield* Effect.uninterruptible(
               Effect.gen(function* () {
-                // Only over the very text the edit was made from.
                 yield* swap(rewrite.film, file, before, after, target);
                 yield* record(change, 'lab.write');
                 yield* filed(change, 'file');
-                // Made again from the text that landed, once the history names it.
                 const remade = yield* remake(change);
                 return [Option.some(change), checked, remade] as const;
               }),
@@ -502,8 +448,6 @@ export class SourceWriter extends Context.Service<SourceWriter, SourceWriterServ
             Effect.gen(function* () {
               const before = yield* fs.readFileString(file);
               const done = yield* act;
-              // Left as the formatter leaves it, as every lab write is: the act's own
-              // writer (the library's lock) need not format as the repository does.
               const acted = yield* fs.readFileString(file);
               const after = yield* formattedOver(film, file, acted, target);
               if (after === before) return [done, Option.none<Change>()] as const;
@@ -633,7 +577,6 @@ export class SourceWriter extends Context.Service<SourceWriter, SourceWriterServ
                   `${shown(c)} has changed since the lab wrote ${c.target}`,
                   (reason) => UndoUnavailable.make({ reason }),
                 );
-                // `undo <target>`: its file from `c.after` back to `c.before`.
                 const made: Change = {
                   ...c,
                   target: `undo ${c.target}`,

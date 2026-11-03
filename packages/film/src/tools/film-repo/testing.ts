@@ -1,6 +1,3 @@
-// A film for the tool tests (`film-repo.ts`): its voice, a film placed in
-// memory, a spoken take, and the scenes and timings a hold check reads.
-
 import { Option, Result } from 'effect';
 import { NO_SOUNDS } from '../../core/sfx.ts';
 import { hashText, parse, takeScript, voiceKey } from '../../core/narration.ts';

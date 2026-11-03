@@ -87,27 +87,22 @@ const normalizeBookName = (name: string): string =>
 function resolveBook(bookPart: string, options?: ParseBibleQueryOptions): Option.Option<number> {
   const normalized = normalizeBookName(bookPart);
 
-  // Direct alias lookup
   let bookNum = BIBLE_BOOK_ALIASES.get(normalized);
   if (bookNum) return Option.some(bookNum);
 
-  // Try removing spaces
   const noSpaces = normalized.replace(/\s+/g, '');
   bookNum = BIBLE_BOOK_ALIASES.get(noSpaces);
   if (bookNum) return Option.some(bookNum);
 
-  // Try adding space after number (e.g., "1cor" -> "1 cor")
   const withSpace = normalized.replace(/^(\d)([a-z])/, '$1 $2');
   bookNum = BIBLE_BOOK_ALIASES.get(withSpace);
   if (bookNum) return Option.some(bookNum);
 
-  // Use fuzzy matcher if provided
   if (options?.fuzzyMatcher) {
     const matched = options.fuzzyMatcher(BIBLE_BOOKS, normalized);
     if (Option.isSome(matched)) return Option.some(matched.value.number);
   }
 
-  // Fallback: Partial match on book names (prefix match)
   for (const book of BIBLE_BOOKS) {
     if (book.name.toLowerCase().startsWith(normalized)) {
       return Option.some(book.number);
@@ -246,6 +241,5 @@ export function parseBibleQuery(query: string, options?: ParseBibleQueryOptions)
     if (Option.isSome(parsed)) return parsed.value;
   }
 
-  // Fallback: search
   return ParsedBibleQuery.search(query);
 }

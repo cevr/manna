@@ -1,11 +1,3 @@
-// The private store as an app declares it (`sounds/library.ts`'s `store`):
-// where the media the public repo may not hold is kept, the library's
-// generated files (`files/…`), the films' scores (`scores/<film>/…`) and
-// review renders (`renders/…`). `sfx pull`/`push` and `media pull`/`push`
-// sync with it (the tools' `media-store.ts`). Generated sounds cannot be made
-// again (the model has no seed), so a lost disk without a store loses them.
-// Pure: the declaration's schema only.
-
 import { Schema } from 'effect';
 
 /** A store that is a folder (`~/` is the home folder): each key a file at that path under it. */

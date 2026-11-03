@@ -94,7 +94,6 @@ describe.each(dials)('%s', (_, dial) => {
       expect(tagged(rest, 'detent')).toEqual(
         rest.crossed.map((at) => ({ _tag: 'detent', dial: dial.name, at })),
       );
-      // A glide keeps its way: it never comes back over a detent it passed.
       if (!dial.wrap) expect(new Set(path).size).toBe(path.length);
     }
   });
@@ -123,7 +122,6 @@ describe.each(dials)('%s', (_, dial) => {
     }
     if (!dial.wrap) {
       const middle = Math.floor(dial.count / 2) * DETENT;
-      // At the fling cap a glide runs about 24 detents: past either end of a stopping dial.
       expect(glide(dial, middle, FLING_CAP)).toMatchObject({ index: dial.count - 1 });
       expect(glide(dial, middle, FLING_CAP).cues.at(-1)).toEqual({ _tag: 'wall' });
       expect(glide(dial, middle, -FLING_CAP)).toMatchObject({ index: 0 });
@@ -169,7 +167,6 @@ describe('the detents passed between two detents', () => {
           if (!holds) wrong.push(`${dial.count}/${dial.wrap} ${before}→${now}: ${way.join(',')}`);
         }
     expect(wrong).toEqual([]);
-    // Every dial's every pair was tried: Σ (6·count + 1)² over 1 to 12, both kinds.
     expect(pairs).toBe(
       2 * Array.from({ length: 12 }, (_, k) => (6 * (k + 1) + 1) ** 2).reduce((a, b) => a + b),
     );
@@ -178,7 +175,6 @@ describe('the detents passed between two detents', () => {
 
 it('spaces its detents 52 points apart, card J’s 44 a little bigger (owner, 2026-10-25)', () => {
   expect(DETENT).toBe(52);
-  // A fling at the cap still carries the capo from its first fret past its last, to the wall.
   const capo: Detents = { name: 'capo', count: 12, wrap: false };
   expect(glide(capo, 0, FLING_CAP).index).toBe(11);
   expect(tagged(glide(capo, 0, FLING_CAP), 'wall')).toHaveLength(1);

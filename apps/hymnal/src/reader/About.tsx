@@ -149,7 +149,6 @@ function Group({ name, children }: { readonly name: string; readonly children: A
   if (children.length === 0) return <></>;
   return (
     <>
-      {/* The heading is drawn in capitals; its label, which VoiceOver reads and the drive matches, is not. */}
       <Text
         role="heading"
         aria-level={2}

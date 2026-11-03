@@ -1,12 +1,3 @@
-// The ask page's root: its one runtime over the lab's client, the place its
-// URL names (`place.ts`), and the reads its sections share, each made once
-// for the page's life: the page of asks shown, the review's index (the
-// videos and documents a section shows), a film's script and Board, a series
-// draft, a video's length and phone copy, a document's text. The page reads
-// them through `useAskRoot`; the reads the server's render makes are sent
-// with the page and adopted by the browser (`served`). Its page commands, in
-// the header's View menu and ⌘K, are Refresh and the copy videos play.
-
 import { RegistryProvider, useAtomSet, useAtomValue, useRegistry } from '@manna/atom-solid';
 import * as UrlAtom from '@manna/url-state/atom';
 import { Array as Arr, Effect, Equal, Exit, Function, Layer, Match, Option, Schema } from 'effect';
@@ -201,7 +192,6 @@ export const AskRoot = (
   const runtime = Atom.runtime(
     Layer.mergeAll(askApiLayer, hostLayer(props.host)).pipe(Layer.provide(props.client)),
   );
-  // A page of asks is the page's alone: the server's render never waits on it.
   const askPageOf = Atom.family((id: string) =>
     runtime
       .atom(AskApi.use((api) => api.askPage(id)))
@@ -213,7 +203,6 @@ export const AskRoot = (
       .atom(copyAwaited(AskApi.use((api) => api.phoneCopy(ref))))
       .pipe(Atom.withServerValue(() => AsyncResult.initial<PhoneCopy, never>())),
   );
-  // A first read takes the server's cache; a read again asks it to walk its roots again.
   const firstIndexAtom = runtime
     .atom(AskApi.use((api) => api.index(false)))
     .pipe(served('ask.index', ReviewIndex));
@@ -268,7 +257,6 @@ export const AskRoot = (
       }),
     );
     const ask = (): Option.Option<AskShown> => Option.map(AsyncResult.value(askRead()), askShown);
-    // The index as the newest read answered it: until a read again has, the first read's.
     const firstIndex = useAtomValue(() => firstIndexAtom);
     const registry = useRegistry();
     const [again, setAgain] = createSignal(Option.none<ReviewIndex>());
@@ -292,12 +280,10 @@ export const AskRoot = (
     const kept = useAtomValue(() => keptQuality);
     const keep = useAtomSet(() => keptQuality);
     const narrow = () => Effect.runSyncWith(props.host)(Viewport.use((v) => v.matches(PHONE)));
-    // The viewer's copy once the page is the client's; the phone's until then.
     const quality = createMemo(() => qualityOf(kept(), narrow), {
       ssrSource: 'client',
       loadingValue: SERVED_QUALITY,
     });
-    // Every Board, script and series draft (`series/draft`) the page has read, read again on a refresh.
     const boardsRead = new Set<string>();
     const scriptsRead = new Set<string>();
     const draftsRead = new Set<string>();
@@ -341,8 +327,6 @@ export const AskRoot = (
     return <AskRootContext value={value}>{inner.children}</AskRootContext>;
   };
 
-  // The registry's URL atoms read and write through the host's own `UrlState`
-  // (its layer carries it), so they and the page's effects share one address bar.
   return (
     <RegistryProvider initialValues={[[UrlAtom.layer, hostLayer(props.host)]]}>
       <Inner>{props.children}</Inner>

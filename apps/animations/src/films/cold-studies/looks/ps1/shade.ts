@@ -1,21 +1,3 @@
-// The console's rasteriser, as one three.js material. Every surface in the
-// ps1 world draws through it, so the whole frame has the same faults the
-// hardware had:
-//
-// - each vertex snapped to the low-res pixel grid after projection (the
-//   wobble as the camera drifts);
-// - textures mapped affinely: the UVs are interpolated in screen space, not
-//   corrected for depth, so a near polygon's texture swims and bends;
-// - light computed at the vertices only (Gouraud): an ambient, one sun and
-//   one gold point light, the verdict's;
-// - fog per vertex, to the background's colour;
-// - every pixel dithered with a 4 × 4 ordered (Bayer) matrix and cut to
-//   15-bit colour (5 bits a channel).
-//
-// Colours stay in the console's own space: sRGB numbers in, sRGB numbers out,
-// no linear light and no tone mapping (a `Vec3` from `rgb`, never a three.js
-// `Color`, which would convert them).
-
 import { DoubleSide, FrontSide, ShaderMaterial, type Texture, Vector2, Vector3 } from 'three';
 
 /** `#rrggbb` as the shader's 0–1 channels, unconverted. */
@@ -56,7 +38,7 @@ export const world = (w: number, h: number): World => ({
   fogFar: { value: 40 },
 });
 
-const VERTEX = /* glsl */ `
+const VERTEX = `
 uniform vec2 res;
 uniform vec3 ambient;
 uniform vec3 sunDir;
@@ -94,7 +76,7 @@ void main() {
 }
 `;
 
-const FRAGMENT = /* glsl */ `
+const FRAGMENT = `
 uniform sampler2D map;
 uniform float hasMap;
 uniform vec3 tint;

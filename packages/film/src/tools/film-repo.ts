@@ -1,11 +1,3 @@
-// Where films live and how a tool reads one: the film's modules (scenes,
-// voice, sound) through one named loader, each decoded with Schema, and its
-// generated data (timings, sound manifest) through the content store. The
-// films directory is the one the app passes in, the folder its player page
-// imports, so the tools and the page never read two different films; stems
-// and other outputs go under `FILMS_OUT`: the app's `out/` under `runFilmCli`
-// (`FilmApp.folders`), `<cwd>/out` where nothing sets it.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -453,7 +445,6 @@ export class FilmFolder extends Context.Service<FilmFolder, FilmFolderService>()
 
         const names = fs.readDirectory(films).pipe(
           Effect.flatMap((entries) =>
-            // A file beside the films (the registry's `index.ts`) is no film: its lookup fails, not errs.
             Effect.filter(entries, (name) =>
               Effect.map(
                 Effect.forEach(filmMarks(films, name), (mark) =>
@@ -471,12 +462,10 @@ export class FilmFolder extends Context.Service<FilmFolder, FilmFolderService>()
           const dir = paths(film).dir;
           const files = yield* fs.readDirectory(dir, { recursive: true });
           const made = files.filter((f) => !NOT_SOURCE.includes(f.split('/')[0] ?? ''));
-          // The library's module and its lock: its levels, prompts and kept takes enter the mix.
           const library = Option.match(sounds, {
             onNone: () => [],
             onSome: (at) => [path.join(at, 'library.ts'), lockManifest(at).file],
           });
-          // The footage library's lock and transcripts: a talk is cut on them.
           const heard = yield* Option.match(footage, {
             onNone: () => Effect.succeed<ReadonlyArray<string>>([]),
             onSome: (at) =>

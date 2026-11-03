@@ -1,27 +1,3 @@
-// A person's takes: recordings of the script made into takes the film uses as
-// it uses a staging take. Each recording is loaded (WAV, FLAC, AIFF, M4A, MP3: `Media.load`),
-// trimmed and levelled as the staging takes are (`prepareTake`), encoded to a
-// 24-bit FLAC master (the owner's voice is the final voiceover, so nothing
-// after the recorder is lossy), transcribed through the same speech-to-text
-// narrate uses, and timed by what was heard, lined up with the script's words.
-// A take that says something else fails as TakeMismatch unless accepted, as
-// narrate's do.
-//
-// Every recording lands first as an attempt, under `narration/attempts/<beat>/`
-// (git-ignored): the recording itself, untouched (`<beat>.<hash>.orig.<ext>`),
-// its prepared FLAC, and in `attempts.json` what was heard and when. Keeping
-// one copies its FLAC beside the other takes and rewrites `timings.json` whole
-// to name it, source `recorded`. The take it replaces is put away into
-// `narration/attempts/<beat>/` (`putAwayTake`: a recorded take's attempt is
-// already there; a staging take, or a take with no attempt on this machine, is
-// copied there first, and kept beside an attempt of its name that holds other
-// bytes), so a take is never lost and git drops it from `narration/` as
-// before. Placing a take and naming it hold the timings' lock, and a take is
-// put away only while the timings, read under it, do not name it. An earlier attempt can be kept again at any time, and
-// an Undo of a keep brings the replaced take back (`named`): the copy whose
-// audio hashes to what its name carries, never a guess between copies.
-// Staging never replaces a recorded take (see narrator.ts).
-
 import {
   Array as Arr,
   Clock,
@@ -165,7 +141,6 @@ const allowed = (only: Option.Option<ReadonlySet<string>>, id: string): boolean 
 const withRecorded =
   (film: VoicedFilm, id: string, take: VoiceTiming) =>
   (timings: Timings): Timings => {
-    // A film with no takes yet records under its staging voice, as narrate would.
     const scenes = { ...timings.scenes, [id]: take };
     if (timings.voice.length === 0) return { voice: voiceKey(film.voice), scenes };
     return { voice: timings.voice, scenes };
@@ -327,7 +302,6 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
             hash: hashText(beat.script),
             file,
             duration,
-            // Where each word is heard, read from the take as it was kept.
             words: voicedWords(timeScript(beat.text, heard, duration), prepared),
             source: 'recorded',
           },
@@ -438,8 +412,6 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
         made: Attempt,
         options: BeatOptions,
       ) {
-        // Checked now, as the take check reads today: an attempt heard before
-        // a `heardAs` name or a better reading of numbers is judged by them.
         const wer = lineError(beat.text, made.heard, film.heardAs);
         if (wer > MAX_WORD_ERROR) {
           const mismatch = TakeMismatch.make({
@@ -452,9 +424,6 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
           yield* Effect.logWarning(`takes.mismatch accepted=true ${mismatch.message}`);
         }
         const bytes = yield* fs.readFile(path.join(attemptsDir(film.paths, beat.id), made.file));
-        // The commit: the take placed beside the others and timings.json
-        // naming it, under the timings' lock, so no sweep in another process
-        // takes it for a leftover between the two.
         const [before, after] = yield* store.transact(film.paths.timings, (before) =>
           Effect.gen(function* () {
             yield* store.writeFile(path.join(film.paths.narration, made.file), bytes);
@@ -462,7 +431,6 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
             return [[before, after], after] as const;
           }),
         );
-        // The take it replaced, put away unless the timings name it again by then.
         yield* putAwayReplaced(film.paths, before, after);
         yield* Effect.log(`takes.kept id=${beat.id} file=${made.file} source=recorded`);
         return {
@@ -591,7 +559,6 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
             keep(film, beat, m, forBeat(options, beat.id)),
           );
         }
-        // A path named as a recording is one; anything else is a folder of them.
         const recordings = yield* Effect.suspend(() => {
           if (isRecording(at)) return single(film, at, options);
           return folder(film, at, options);
@@ -623,7 +590,6 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
             file,
             reason: `no attempt of beat "${id}" by that name`,
           });
-        // An attempt recorded for other words is not this line's take.
         if (made.value.take.hash !== hashText(beat.script))
           return yield* RecordingInvalid.make({
             file,
@@ -637,7 +603,6 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
         beat: string,
         file: string,
       ) {
-        // Only a name the ledger holds: a request's path never reaches the disk as given.
         const known = Arr.findFirst(yield* attempts(film, beat), (a) => a.file === file);
         return Option.map(known, (a) => path.join(attemptsDir(film, beat), a.file));
       });

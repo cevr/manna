@@ -1,11 +1,3 @@
-// Which TypeScript files of a package its tsconfig's program leaves out, so
-// `tsc --noEmit` never checks them, and which program files are declaration
-// files, whose own errors `skipLibCheck` hides. A file is known by its disk
-// spelling, its real path: tsc may spell a program file otherwise (a relative
-// import on a disk that folds case, a path through a symlink), and so may the
-// package's listing (a symlinked source). TypeScript's rule reads tsc's
-// spelling.
-
 /** A TypeScript source, by its extension (a declaration file included). */
 const isTypeScript = (file: string) => /\.(?:[cm]?ts|tsx)$/.test(file);
 

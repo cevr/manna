@@ -1,9 +1,3 @@
-// The stale panels of a film's Board as the lab reads them: the script read
-// fresh (`FreshFilm.script`, the lab keeps no film module), judged by the
-// board store (`stalenessOf`), so the MCP's board read and the studio's Board
-// name what a run would draw again. A script that cannot be read now names
-// no panel stale, logged, so the board read and the studio stay whole.
-
 import { Array as Arr, Effect, Option } from 'effect';
 import { boardBeatOf } from './board-prompt.ts';
 import { BoardStore } from './board-store.ts';

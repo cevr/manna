@@ -1,13 +1,3 @@
-// A cast member's cut table, built from his data: the `concept parts`
-// contract @manna/film reads from `<member>/cutout/cut.ts` (`CUTS`,
-// `cutOptionsFor`, `HIDDEN`, `FRAMES`, `paperOf`; `tools/part-sheet-cli.ts`). The member
-// gives each view's cut in the kept view's pixels (parts front to back, laid
-// by the rules in `rules.ts`), the figure it is read with, its part labels if
-// he has a traced rig, and his hidden entries; the table moves each cut into
-// its part sheet frame (the kept box padded) and reads each view's figure.
-// A member with no traced rig gives no labels: his parts are polygons, discs
-// and boxes on his figure. The table names no member. Pure.
-
 import { cutFigureOf, enclosedPaperOf } from '@manna/film/core';
 import type { cutParts, HiddenEntry, PartCut, PartCutOptions, PartRule } from '@manna/film/tools';
 import type { PuppetSpec } from '@manna/film/canvas';
@@ -246,9 +236,6 @@ export const cutTable = <V extends string>(member: CutMember<V>) => {
     member.views,
     (view) => view.gaps ?? [],
   );
-  // the pieces of the reads its figure is made of, each in the kept view's pixels with the gap
-  // points in it, and the part of it the figure's read holds: a pad read's piece holds only its
-  // pixels in the pad (the kept box is the kept read's), a bust's only its pixels above the closing row
   const piecesOf = (name: V, view: View) => {
     const { kept, pad } = member.frames[name];
     const by: Pt = [pad[0], pad[1]];

@@ -175,8 +175,6 @@ const recorded = (presses: Queue.Queue<Remote>) => {
     }
     since = now;
     if (state === 'playing' && at >= LENGTH) state = 'ended';
-    // Whole ms, as a device tells: at a rate off 1, an exact place could stand a hair short of a
-    // span's start forever under the TestClock (a zero-length sleep that never moves the clock).
     return { state, positionMs: Math.floor(at), durationMs: LENGTH };
   });
   const then = (change: () => void) =>
@@ -189,7 +187,6 @@ const recorded = (presses: Queue.Queue<Remote>) => {
       Effect.gen(function* () {
         const gate = control.gate;
         if (Option.isSome(gate)) {
-          // A device loading a recording tells `loading` (One's getPlaybackStatus), not `idle`.
           yield* then(() => {
             state = 'loading';
             at = fromMs;
@@ -462,8 +459,6 @@ describe('the skipper at a tempo', () => {
 });
 
 describe('a choice made while paused', () => {
-  // 100 ms: the device tells `loading` at the player's first poll after the resume and plays
-  // before the next, so only a seek made before the resume keeps the span silent.
   for (const loads of [0, 100])
     it.effect(`sounds none of a span it skips at the resume (the device loads ${loads} ms)`, () =>
       Effect.gen(function* () {

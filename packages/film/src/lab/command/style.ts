@@ -1,20 +1,3 @@
-// The look of the pages' command surfaces (⌘K, the `?` sheet, the context
-// menu, the receipts' toasts, and every primitive after them). The rules
-// read the studio's tokens (`player/tokens.css`, design language §3 and §5:
-// menus and toasts on `--surface-2` with `--line-strong` and `--shadow-pop`,
-// rows `--row-h`, keys in the Kbd part's look, the accent only for a
-// selection or the one verb): no colour, face, size, radius or spacing is
-// written in a rule or a component, so restyling the surfaces is changing
-// the tokens. Only what no studio token holds is named here
-// (`COMMAND_TOKENS`): the paddings and heights the surfaces compose, and
-// their own geometry (widths, heights, the layer). Put in the page by its
-// page (`ASK_PAGE`). Each surface fits a phone: no wider than the screen
-// less its gutters, scrolling inside itself. A field is the kit's
-// (`.sh-field`), styled where the kit is, never here. A phone's width is the
-// studio's one breakpoint (`PHONE`), asked through its owner. On a phone the
-// receipts stand on what `--cmd-sheet-floor` says (the shell's floor,
-// `--shell-floor`: the safe area; and the shell's dock docked on it).
-
 import { PHONE } from '../viewport.ts';
 
 /**

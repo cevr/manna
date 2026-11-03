@@ -85,8 +85,6 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
   /** The rate One's session was told last: ms of the recording for each ms. */
   let rate = 1;
   const paused = () => wants === 'pause';
-  // Intent may pause/resume a moving hand-over. It cannot promote a
-  // fixed landing into musical time before that recording has landed.
   let retained: Option.Option<{ readonly clock: Run; readonly continuous: boolean }> =
     Option.none();
   const retainedStatus = (status: Status) =>
@@ -184,10 +182,6 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
               Effect.filterOrFail(holdsRecording, () => refused),
             );
             if (owner !== turn) return yield* stale();
-            // Seek immediately when ready. If it is refused, hold the
-            // hand-over before the retry wait; a separate Pause cannot
-            // prevent opening samples before it takes effect. Ordinary
-            // loads keep their device-driven preparation contract.
             if (holdDuringLoad && (!heldForLanding || status.state === 'playing')) {
               yield* call('pause', () => audio().pause()).pipe(
                 Effect.filterOrFail(holdsRecording, () => refused),
@@ -211,7 +205,6 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
     Effect.try({
       try: () => {
         const rated = audio().setPlaybackRate(to);
-        // One drops the Media Session's handlers before this returns.
         const playing = audio().play(uri);
         own();
         return { rated, playing };
@@ -233,7 +226,6 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
         wants = options?.intent ?? 'play';
         rate = rateOf(options);
         const began = yield* Clock.currentTimeMillis;
-        // A hand-over's place runs on at the play's rate until One lands it.
         retained = Option.liftPredicate(
           {
             clock: clockAt(fromMs, options?.continuous === true && !paused(), began, rate),
@@ -256,7 +248,6 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
         heldForLanding = false;
         landed = yield* retainedStatus(landed);
         retained = Option.none();
-        // Pause may arrive while play/seek waits for the native session.
         if ((options?.ready || options?.continuous) && paused())
           return yield* call('pause', () => audio().pause());
         return landed;
@@ -293,17 +284,12 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
     seek: (positionMs) =>
       Effect.gen(function* () {
         const now = yield* Clock.currentTimeMillis;
-        // A seek chooses a fixed landing. Music has not moved there while
-        // its recording is still preparing, even if Play remains the intent.
         retained = Option.map(retained, () => ({
           clock: clockAt(positionMs, false, now, rate),
           continuous: false,
         }));
         return yield* call('seek', () => audio().seek(positionMs));
       }),
-    // One's session plays at the new rate at once, playing or paused. A turn One refuses
-    // leaves the session and the retained place at the rate it had, and is logged: the
-    // player's tempo is a dial stop, inside One's 0 to 2.
     setRate: (to) =>
       Effect.gen(function* () {
         const owner = turn;
@@ -321,8 +307,6 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
         ),
       ),
     status: call('status', () => audio().getPlaybackStatus()).pipe(Effect.flatMap(retainedStatus)),
-    // One drops the Media Session's handlers with the recording; the page's
-    // Play starts it again, so its handlers stay.
     stop: Effect.suspend(() => {
       turn += 1;
       heldForLanding = false;

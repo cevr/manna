@@ -1,15 +1,3 @@
-// The filler bases' skeletons, one a cut view (`core/puppet.ts`), read in view
-// pixels and moved into its part sheet's frame (`frames.ts`) by the shared
-// skeleton (`library/cutout/skeleton.ts`). Each view is a bust
-// (`library/cutout/bust.ts`): a lean from the view's foot, the waist row, up
-// to the head's pivot at the neck's centre on the cut line (`cut.ts`), and the
-// head above it. The head turns on the head bone; the robe, neck and collar
-// lean. Each view's house parts (`parts-cut.ts`) lie on those two bones as
-// they hang: a beard and a band on the head; a headcloth and a veil, which
-// drape from the head to the shoulders, on both, so the skin's blend at the
-// neck bends them softly; an open mantle, worn on the shoulders, on the lean.
-// Pure data: each view's pivot, foot and house skins.
-
 import type { Skeleton } from '@manna/film/core';
 import { bustSkeleton } from '../../../cutout/bust.ts';
 import { framed, type Rooted } from '../../../cutout/skeleton.ts';

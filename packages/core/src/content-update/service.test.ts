@@ -155,9 +155,6 @@ const hostFor = (input: {
         input.log?.record(url);
         return new Response(input.bytes);
       }),
-    // The semantic verifier stands in for the SQLite one: a candidate that got
-    // this far is bytes the digest and size already accepted, and the count it
-    // reports is what the Activation carries.
     verify: () => Effect.succeed(3),
   });
   return ContentUpdate.Live.pipe(
@@ -210,11 +207,8 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
       );
 
       expect(Option.getOrUndefined(Option.map(outcome.activated, String))).toBe('content-v4');
-      // The bytes actually reached the destination through the atomic swap.
       expect(yield* fs.readFileString(destination)).toBe(RELEASE_BYTES);
       expect(yield* fs.exists(`${destination}.building`)).toBe(false);
-      // And the post-run status says so, so a caller reads one value rather
-      // than re-asking.
       expect(outcome.status.decision._tag).toBe('up-to-date');
       expect(Option.getOrUndefined(Option.map(outcome.status.installed, String))).toBe(
         'content-v4',
@@ -246,8 +240,6 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
       );
 
       expect(Option.isSome(outcome.activated)).toBe(true);
-      // Named, not merely counted: a host reopens the readers of the corpus
-      // that changed and leaves the others alone.
       expect(activation.reopened()).toEqual(['topics']);
     }));
 
@@ -277,7 +269,6 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
 
       expect(Option.isNone(outcome.activated)).toBe(true);
       expect(activation.reopened()).toEqual([]);
-      // The refused candidate did not reach the destination either.
       expect(yield* fs.readFileString(destination)).toBe(ACTIVE_BYTES);
     }));
 
@@ -291,7 +282,6 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
       const outcome = yield* runUpdate(
         hostFor({
           destination,
-          // The manifest promises a digest the served bytes do not have.
           entry: manifestEntry({
             digest: `sha256:${'a'.repeat(64)}`,
             size: RELEASE_BYTES.length,
@@ -300,10 +290,7 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
         }),
       );
 
-      // Nothing was activated, and the caller learned that from a value rather
-      // than from a failure it had to catch.
       expect(Option.isNone(outcome.activated)).toBe(true);
-      // The installed generation is untouched — the whole point of the clause.
       expect(yield* fs.readFileString(destination)).toBe(ACTIVE_BYTES);
       expect(yield* fs.exists(`${destination}.building`)).toBe(false);
     }));
@@ -318,8 +305,6 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
       const outcome = yield* runUpdate(
         hostFor({
           destination,
-          // Digest matches the bytes exactly; only the declared size is
-          // wrong, so nothing but the size check can reject this candidate.
           entry: manifestEntry({
             digest: RELEASE_DIGEST,
             size: RELEASE_BYTES.length + 1,
@@ -375,8 +360,6 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
       );
 
       expect(status.decision._tag).toBe('offer');
-      // `manna topics status` promises "no mutation". The install the offer
-      // describes has not run, and this is the observable that says so.
       expect(yield* fs.exists(destination)).toBe(false);
     }));
 
@@ -408,8 +391,6 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
         }),
       );
 
-      // The host went to the address the *manifest* named, not to any address
-      // it had compiled in — because it had none compiled in.
       expect(log.urls()).toEqual(['https://example.test/topics.db']);
       expect(Option.getOrUndefined(Option.map(outcome.activated, String))).toBe('content-v4');
       expect(yield* fs.readFileString(destination)).toBe(RELEASE_BYTES);
@@ -440,7 +421,6 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
       );
 
       expect(Option.getOrUndefined(Option.map(outcome.activated, String))).toBe('content-v4');
-      // The release bytes, not the packaged ones.
       expect(yield* fs.readFileString(destination)).toBe(RELEASE_BYTES);
     }));
 
@@ -469,23 +449,17 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
         generation: 4,
       });
 
-      // Launch one: the offer is accepted and generation 4 is activated.
       const first = yield* runUpdate(
         hostFor({ destination, entry, bytes: RELEASE_BYTES, provenanceStore: store }),
       );
       expect(Option.getOrUndefined(Option.map(first.activated, String))).toBe('content-v4');
 
-      // Launch two: a new service graph over the same on-disk provenance, the
-      // same compiled floor, the same manifest.
       const second = yield* runStatus(
         hostFor({ destination, entry, bytes: RELEASE_BYTES, provenanceStore: store }),
       );
 
-      // The generation the install recorded is read back — this is the fact
-      // that was not being persisted.
       expect(Option.getOrUndefined(Option.map(second.installedGeneration, Number))).toBe(4);
       expect(second.decision._tag).toBe('up-to-date');
-      // And the artifact on disk is still the one launch one installed.
       expect(yield* fs.readFileString(destination)).toBe(RELEASE_BYTES);
     }));
 
@@ -530,7 +504,6 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
 
       expect(rolledBack.status.decision._tag).toBe('up-to-date');
       expect(Option.isNone(rolledBack.activated)).toBe(true);
-      // Nothing was even fetched: a downgrade is refused before any bytes move.
       expect(log.urls()).toEqual([]);
       expect(yield* fs.readFileString(destination)).toBe(RELEASE_BYTES);
     }));
@@ -565,13 +538,8 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
       expect(status.decision._tag).toBe('offline');
       expect(Option.isNone(status.installed)).toBe(true);
       expect(Option.isNone(status.installedGeneration)).toBe(true);
-      // The floor is this build's compiled pin, reported rather than invented.
       expect(status.floor.schemaMajor).toBe(TOPICS_SCHEMA_MAJOR);
-      // Today's build publishes no topics release, so its pin is `None` — and
-      // saying so here is what makes the `Option.some` case below a *different*
-      // shape rather than the same one twice.
       expect(Option.isNone(status.floor.pinned)).toBe(true);
-      // And reporting installed nothing: the destination is still absent.
       expect(yield* fs.exists(destination)).toBe(false);
     }));
 
@@ -603,14 +571,10 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
         schemaMajor: TOPICS_SCHEMA_MAJOR,
       });
 
-      // The two halves a fresh offline machine reports, and the two the
-      // decision compares a manifest entry against.
       expect(Option.getOrUndefined(Option.map(floor.pinned, String))).toBe('content-v3');
       expect(Option.getOrUndefined(Option.map(floor.pinnedGeneration, Number))).toBe(3);
       expect(floor.schemaMajor).toBe(TOPICS_SCHEMA_MAJOR);
 
-      // And it behaves as a floor: offline stands on it with no error, and a
-      // manifest at or below it is already satisfied rather than an offer.
       expect(
         decideUpdate({
           corpus: 'topics',
@@ -705,7 +669,6 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
       );
 
       expect(status.decision._tag).toBe('offline');
-      // The active generation is untouched, and no error reached this caller.
       expect(yield* fs.readFileString(destination)).toBe(ACTIVE_BYTES);
     }));
 });

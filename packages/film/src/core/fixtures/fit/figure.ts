@@ -1,11 +1,3 @@
-// A figure drawn in pixels for the fit rows' tests (`fit-rows.test.ts`,
-// `fit-rows.slow.test.ts`): a head (a disc) over a body (a box) inside a
-// 3 px line, its body teal on the left of a seam and cream on the right, on
-// a sheet's ground or a render's, and what a test adds to it: a move, a
-// strip of cream, a hole of the ground, strokes of ink, a hand of skin.
-// Every number a row reads is known from the numbers it is drawn with.
-// Tests only.
-
 import type { Raster } from '../../raster.ts';
 
 type Rgb = readonly [number, number, number];

@@ -1,9 +1,3 @@
-// The judged rules as the repo's lint config writes them: each
-// `judged/<id>` entry of `.oxlintrc.json`'s `rules` that is not `off`, its
-// options decoded as a rule (`rule.ts`), with `settings.judged` and the
-// config's ignore patterns. The config is the rules' one source: the oxlint
-// plugin reads the same entries as its options.
-
 import { JSONC } from 'bun';
 import { Context, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 

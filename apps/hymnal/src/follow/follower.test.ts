@@ -100,7 +100,6 @@ describe('followerOf', () => {
   });
 
   it('marks the sung syllable, not its word, and a line with no syllable times whole (F1b)', () => {
-    // Line 0: syllables at 1000 and 1500 in one word, 2000 in the next; line 1 even, marked whole.
     const small = Option.getOrThrow(timelineOf('666666,3,4|1,1000,2000,0.500,500;3,2000,1000'));
     const h = harness(small);
     const at = (ms: number) => {
@@ -148,7 +147,6 @@ describe('followerOf', () => {
     h.report({ _tag: 'Here', at: 2000, state: 'paused' });
     h.follower.show();
     expect(h.scrolled).toEqual([1, 1]);
-    // The host's clock reads 0 here: it runs on to 1 ms before line 2's lead.
     h.report(playing(2000));
     h.advance(3000 - LEAD - 1 - 2000);
     expect(h.scrolled).toEqual([1, 1]);
@@ -180,7 +178,6 @@ describe('followerOf', () => {
     expect(h.follower.held.get()).toBe(true);
     expect(h.logged.at(-1)).toBe('pause reason=drag');
     const before = h.scrolled.length;
-    // The player reported 1000 ms at host time 0, so host time 2500 is 3500 ms into the hymn.
     h.advance(2500);
     expect(h.marks()).toEqual([OFF, OFF, 1]);
     expect(h.scrolled.length).toBe(before);
@@ -204,12 +201,10 @@ describe('followerOf', () => {
   it('ends a hand pause on a seek however small, and scrolls back to the line sung there', () => {
     const h = harness();
     h.report(playing(1000));
-    // Host time 1000 is 2000 ms into the hymn: line 1 is sung and shown.
     h.advance(1000);
     expect(h.scrolled.at(-1)).toBe(1);
     h.follower.drag();
     const before = h.scrolled.length;
-    // A seek 100 ms on lies inside the clock's slack: only the seek itself tells the follow.
     h.follower.seek();
     h.report(playing(2100));
     expect(h.follower.held.get()).toBe(false);
@@ -250,8 +245,6 @@ describe('followerOf at a tempo, Sound off (unit tempo, A3)', () => {
   const POLL = 250;
   const hymn = Option.getOrThrow(timingBook(bundled).of(100));
 
-  // 0.8 is the spec's case; 1.2 holds the wake: a follower that waits the hymn's ms as the
-  // host's lights each line late above 100 %.
   it.each([0.8, 1.2])(
     'lights the line sung at first + %p t over the whole of hymn 100, and never steps back',
     (rate) => {
@@ -286,7 +279,6 @@ describe('followerOf at a tempo, Sound off (unit tempo, A3)', () => {
 });
 
 describe('the bundled timing of a hand-made hymn 11, through the follower', () => {
-  // Hymn 11's stanzas are line level; its line 1 (stanza 1, line index 1) has note times.
   const hymn = Option.getOrThrow(Arr.findFirst(readPlaybackHymns(), (one) => one.number === 11));
   const timing = Option.getOrThrow(Option.fromUndefinedOr(hymn.timing));
   const line1 = Option.getOrThrow(Arr.get(timing.lines, 1));
@@ -330,7 +322,6 @@ describe('the bundled timing of a hand-made hymn 11, through the follower', () =
     const start = base.lines[1]?.start ?? 0;
     for (const [name, syllables] of Object.entries(broken)) {
       const timeline = timelineFor(withLine1(syllables));
-      // Only that line changes, to whole: its span and flags and every other line stay as bundled.
       expect({ name, lines: timeline.lines }).toEqual({ name, lines });
       expect({ name, mark: markAt(timeline, start) }).toEqual({ name, mark: WHOLE });
     }
@@ -348,9 +339,6 @@ describe('the bundled timing of a hand-made hymn 11, through the follower', () =
     expect(markAt(timeline, s0)).toBe(1);
   });
 
-  // Hymn 11's three verses play the same notes. Line 18 (stanza 3, line index 2, `syllable`
-  // level) sings line index 2 on the notes lines 2 and 10 (stanzas 1 and 2, `line` level) sing
-  // it on: notes 12 to 19 of its verse.
   const verse3 = Option.getOrThrow(Arr.get(versesOf(hymn), 2));
   const line18 = Option.getOrThrow(Arr.get(timing.lines, 18));
   /** Hymn 11 with line 18 sung from `syllables`, its start at the first of them. */
@@ -373,7 +361,6 @@ describe('the bundled timing of a hand-made hymn 11, through the follower', () =
     expect(earlier(0)).toEqual([...line18.syllables]);
     expect(litOf(base)).toEqual([true, true, true]);
     expect(litOf(timelineFor(withLine18(earlier(1))))).toEqual([true, true, true]);
-    // Line 18 is `syllable` level, so it keeps its times; the two `line`-level singings go whole.
     expect(litOf(timelineFor(withLine18(earlier(2))))).toEqual([false, false, true]);
   });
 
@@ -416,7 +403,6 @@ describe('the bundled timing of line-level parts, against the sung file', () => 
       const verses = versesOf(hymn).map((verse) =>
         verse.map((note) => ({ ms: Math.round(seconds(note.at) * 1000), key: note.key })),
       );
-      // Each lit line: its place in the music, its level, its verse's tune and its syllables' notes.
       const shown = timelineOfHymn(hymn.number).lines.flatMap((line, i) =>
         Arr.get(lines, i).pipe(
           Option.filter(() => line.syllables.length > 0),
@@ -455,7 +441,6 @@ describe('the bundled timing of line-level parts, against the sung file', () => 
       }
     }
     expect(faults).toEqual([]);
-    // 935 line-level lines light (measured): the property is not met by lighting none.
     expect(lit).toBeGreaterThanOrEqual(900);
   });
 });

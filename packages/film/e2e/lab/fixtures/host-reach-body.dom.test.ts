@@ -1,10 +1,3 @@
-// The document's body and root element are the host for navigation and key
-// events: the body hears the window's `popstate`, `hashchange` and (through
-// bubbling) every key, so a film file that sets `document.body.onpopstate` or
-// listens for keys on `document.body` or `document.documentElement` reaches
-// the host as `window.onpopstate` does, and fails its case the same way
-// (`host-reach.dom.test.ts` holds the window's and the document's).
-
 import { Effect } from 'effect';
 import { Base64 } from 'effect/encoding';
 import { describe, expect, it } from 'effect-bun-test';
@@ -47,7 +40,6 @@ const outcome = (js: string) =>
           });
           yield* tab.goto('/');
           yield* evaluates(tab, 'window.ran === true', true);
-          // The page's report is an event: one more round trip, and it has been heard.
           yield* tab.evaluate('true');
         }),
       ),

@@ -1,13 +1,3 @@
-// The lab's easel as a terminal asks it: a thin client of the lab's look
-// and match routes (`POST /api/films/<film>/looks` and `…/matches`,
-// `LooksGroup` and `MatchesGroup` in core/api.ts), for the commands that
-// draw through the running lab's warm page (`film judge`, `film review`):
-// the lab draws and writes each still under `out/<film>/look/<scene>/`, and
-// each match's table and side-by-side under `out/<film>/match/<scene>/`. No
-// lab answering is `LabDown`: nothing starts a browser of its own. The look,
-// the match and the critique themselves are lab commands (`film lab look`,
-// `easel-mcp.ts`), asked of the lab through its MCP.
-
 import { Effect, Option, Schema } from 'effect';
 import * as HttpApiClient from 'effect/http-api/HttpApiClient';
 import { LabHttpApi, ToolFailure } from '../core/api.ts';

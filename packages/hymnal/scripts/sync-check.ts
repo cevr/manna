@@ -70,8 +70,6 @@ const isHymnFile = (name: string) => /^\d{3}\.json$/.test(name);
 
 const decodeHymn = Schema.decodeEffect(Schema.fromJsonString(Hymn));
 
-// --- --same-as: nothing but `timing` moved ---
-
 /** Each `<rev>:<path>` blob's text, read through one `git cat-file --batch`. */
 const blobsAt = async (rev: string, files: ReadonlyArray<string>) => {
   const git = Bun.spawn(['git', '-C', ROOT, 'cat-file', '--batch'], {
@@ -132,8 +130,6 @@ const sameAs = (rev: string) =>
     console.log(`same-as ${rev}: files=${files.length} differ=${differ} missing=${missing.length}`);
     if (differ > 0 || missing.length > 0) process.exitCode = 1;
   });
-
-// --- --set: the timing against the recordings ---
 
 const RATE = 22050;
 const WIN = 1024;

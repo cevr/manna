@@ -1,13 +1,3 @@
-// The export graph the dead-export check reads: each module's exports and
-// what it takes from other modules, as the parser (oxc) reads them, so a
-// comment or a string that looks like code names nothing. A namespace import
-// and an `import()` take a module whole; a named re-export (`export { x } from`,
-// `export * as ns from`) and an `export * from` pass a take through, so they
-// take only what their own users take, and so does an import the module only
-// exports again (`import { x } from …; export { x }`); a default is the name
-// `default`, taken by a default import. A take counts only from a module a
-// root reaches.
-
 import { Array as Arr, Equivalence, Option, Order } from 'effect';
 import {
   type ExportExportName,
@@ -84,7 +74,6 @@ const mentionsOf = (program: Program): ReadonlySet<string> => {
 const passesBinding = (i: StaticImport, entry: ImportEntry, exported: ExportEntry): boolean =>
   Option.match(Option.fromNullishOr(exported.moduleRequest), {
     onNone: () => exported.localName.name === entry.localName.value,
-    // The parser reads `import { x } …; export { x }` as `export { x } from …`.
     onSome: (request) =>
       request.value === i.moduleRequest.value &&
       entry.importName.kind !== 'NamespaceObject' &&
@@ -142,7 +131,6 @@ const forwardsOf = (
             Option.toArray(
               Option.map(nameOf(e.exportName), (name): Reexport => ({
                 from: i.moduleRequest.value,
-                // None for `import * as`: the export passes the module whole.
                 imported: nameOf(entry.importName),
                 name,
               })),
@@ -316,8 +304,6 @@ const takenNames = (workspace: Workspace): ReadonlySet<string> => {
     used.add(key);
     for (const [behind, taken] of passedOn(workspace, module, name)) mark(behind, taken);
   };
-  // What runs a root outside the checked source loads its exports whole: an
-  // app's `lab.server.tsx` is read for its default, a re-export of a framework page.
   for (const root of roots) if (consumes(root) && !checked(root)) mark(root, WHOLE);
   for (const [module, name] of importsOf(workspace, reachable(workspace))) mark(module, name);
   return used;

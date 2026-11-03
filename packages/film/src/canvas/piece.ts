@@ -1,10 +1,3 @@
-// Paper by meaning (DIRECTION, "Edges" and "Ink"): a piece of a film's world
-// is a cutout whose edge says what it is. People and made things are cut
-// clean with a thin light core; earth, cloud and the paper of the world are
-// torn with a fibrous white rim; the letters of a prop are ink. Figures keep a
-// thin ink outline; scenery keeps none. A piece names its role, so the look
-// follows from what the piece is, never from a copied number.
-
 import { cutout } from './cutout.ts';
 import { type Boil, type Hand, type Pt, stroke, sub } from './ink.ts';
 

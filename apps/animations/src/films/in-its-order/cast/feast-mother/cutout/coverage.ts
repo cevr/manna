@@ -1,6 +1,3 @@
-// Every drawing the cast pipeline needs of the feast mother (`film concept
-// coverage`): her six turnaround views and her three poses, each cut. Pure data.
-
 import type { CoverageManifest } from '@manna/film/tools';
 
 const FOR = [{ script: 'in-its-order', beats: ['cold'] }];
@@ -42,7 +39,6 @@ export const COVERAGE: CoverageManifest = {
     { id: 'poses-poses-2', cut: 'puppet', file: 'cast-sheet/views/poses-2.png', for: FOR },
     { id: 'poses-poses-3', cut: 'puppet', file: 'cast-sheet/views/poses-3.png', for: FOR },
   ],
-  // fal motion references from her kept poses; each band is the clip's still start, then its still end
   clips: [
     {
       id: 'wave/clip-a',
@@ -59,7 +55,6 @@ export const COVERAGE: CoverageManifest = {
     {
       id: 'cup/clip-a',
       file: 'cutout/cup/clip/clip-a.mp4',
-      // every frame's figure holds against both the first and the last frame, so each band is the whole clip
       bands: [
         [0, 123],
         [0, 123],

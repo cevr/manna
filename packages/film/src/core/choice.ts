@@ -1,24 +1,3 @@
-// The choice point: at an address of a film, a set of variants to compare,
-// one of them picked (a sound's takes: the kept ones), each commented on and
-// approved. One shape for every kind, so the review shows one card with the
-// same controls at every level of the film (the film, an act, a scene, a
-// layer); the kind says only where a pick lands and how a variant is heard
-// or seen:
-//
-// - render: an address's renders, a variant each (the catalogue's); seen
-//   side by side; reviewed and approved, never picked;
-// - score: the score's options (`play` in `sound.ts`); each heard as the
-//   film's mix with it playing;
-// - take: a library sound's takes (`library.lock.json`); heard alone and in
-//   place; kept (picked), unkept or rejected;
-// - voice: a beat's recorded attempts; heard alone; one kept as the take;
-// - look: a look's named levels (`looks` in `palette.ts`); one picked.
-//
-// The owner's approvals and comments are the catalogue's records
-// (`catalogue.ts`), each on one variant as it was when given (its `key`).
-// Pure: the tools' adapters (`tools/choices.ts`, `tools/review.ts`) build
-// the points, and an ask shows them.
-
 import { Array as Arr, Effect, Option, Schema, SchemaTransformation } from 'effect';
 import { Address } from './address.ts';
 import {
@@ -283,9 +262,6 @@ export const seenVariants = (point: ChoicePoint): ReadonlyArray<SeenVariant> =>
       Unseen: () => [],
     }),
   );
-
-// ---------------------------------------------------------------------------
-// What `film options` reads and writes.
 
 /** The film's choice points, and the renders they are heard against. */
 export const FilmChoices = Schema.Struct({

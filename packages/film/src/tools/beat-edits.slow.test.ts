@@ -1,15 +1,3 @@
-// The agents' edits of a script, over a film in
-// memory whose clock is laid from its script as it stands (the fresh read the
-// lab makes, here in the test's process): a beat moved through `beat_move`
-// lands in the script's order and the timeline follows it (the later beats
-// move up, the movement on it moves with it) and its work is filed on the
-// production's ledger; `undo` puts the script back byte for byte and
-// withdraws the work; a hold set through `beat_hold` is snapped and held to
-// its floor; two edits undo one at a time, and an older one asked by id is
-// refused while a newer stands; a move that would break the acts or the
-// movements is refused and writes nothing; the tools of two agents step one
-// history.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Result } from 'effect';
 import { filmClock } from '../core/film-timeline.ts';
@@ -88,7 +76,6 @@ const clockOf = (files: Map<string, Uint8Array>) =>
   Effect.sync(() => {
     const beats = beatsOf(new TextDecoder().decode(files.get(SCRIPT)));
     const placed = Result.getOrThrow(layout(beats, { voice: '', scenes: {} }, 30));
-    // The parts on beats this script holds.
     const on = (parts: ReadonlyArray<{ readonly from: string; readonly name: string }>) =>
       parts.filter((p) => beats.some((b) => b.id === p.from));
     return Result.getOrThrow(
@@ -166,7 +153,6 @@ describe('beat_move and undo', () => {
           expect(moved.target).toBe('move title before look');
           expect(beatsOf(scriptNow(files)).map((b) => b.id)).toEqual(['cold', 'title', 'look']);
           expect(scriptNow(files)).toContain('// The open.');
-          // The rest follows: look plays later, its movement starts with it.
           const after = yield* tool('timeline', { film: 'f' });
           const lane = scriptLane(after);
           expect(lane.map(([beat]: [string]) => beat)).toEqual(['cold', 'title', 'look']);
@@ -224,8 +210,6 @@ describe('beat_hold', () => {
           by: 'painter',
         });
         expect(held.said).toBe('Held look +2.9 s after its words. Agents re-time and re-check.');
-        // The seams it moved, as the version reads after it: into look, and out of it, each
-        // as heard, its beats on whole frames (`layout`), so within a frame of 0.6 s and 3.5 s.
         const seams: ReadonlyArray<{ from: string; to: string; seconds: number }> = held.seams;
         expect(seams.map(({ from, to }) => [from, to])).toEqual([
           ['cold', 'look'],
@@ -235,10 +219,8 @@ describe('beat_hold', () => {
           expect(Math.abs(seam.seconds - [0.6, 3.5][i]!)).toBeLessThanOrEqual(1 / 30),
         );
         expect(beatsOf(scriptNow(files)).find((b) => b.id === 'look')).toMatchObject({ tail: 3 });
-        // Below its floor: the default, written as none.
         yield* tool('beat_hold', { film: 'f', beat: 'look', edge: 'tail', seconds: 0, by: 'p' });
         expect(beatsOf(scriptNow(files)).find((b) => b.id === 'look')).not.toHaveProperty('tail');
-        // A lead asked under its floor, where the layout already holds it: nothing to write.
         const floor = yield* tool('beat_hold', {
           film: 'f',
           beat: 'cold',
@@ -308,7 +290,6 @@ describe('beat_hold on a beat a hold cannot change', () => {
             });
             expect(absorbed.refused).toContain('thesis is held at 28.0 s by its min');
             expect(scriptNow(files)).toBe(LIKE_RBF);
-            // A lead still moves its words inside the 28 s.
             const lead = yield* tool('beat_hold', {
               film: 'f',
               beat: 'thesis',
@@ -320,7 +301,6 @@ describe('beat_hold on a beat a hold cannot change', () => {
             const led = yield* thesis();
             expect(led.dur).toBe(28);
             expect(led.speech.start - led.start).toBe(2);
-            // A tail past what the min holds lengthens it, as the layout lays it.
             expect(led.hold.tail).toBeLessThan(27);
             const tail = yield* tool('beat_hold', {
               film: 'f',
@@ -331,9 +311,7 @@ describe('beat_hold on a beat a hold cannot change', () => {
             });
             expect(tail.target).toBe('hold thesis tail');
             const words = led.speech.end - led.speech.start;
-            // Its lead, words and tail, laid on whole frames (`layout`).
             expect(Math.abs((yield* thesis()).dur - (2 + words + 27))).toBeLessThanOrEqual(1 / 30);
-            // Back to 1 s, its min takes some of the change: the receipt says what plays.
             const back = yield* tool('beat_hold', {
               film: 'f',
               beat: 'thesis',
@@ -361,7 +339,6 @@ describe('one history', () => {
           yield* produced;
           const { lab } = yield* labWithMcp;
           const { tool } = yield* mcpSession(lab);
-          // One agent moves a beat, another holds one: one history.
           const moved = yield* tool('beat_move', { film: 'f', beat: 'look', by: 'editor' });
           expect(moved.said).toBe('Moved look to the end. Agents re-time and re-check.');
           expect(moved.target).toBe('move look to the end');
@@ -377,7 +354,6 @@ describe('one history', () => {
             ['Moved look to the end. Re-time, re-check seams, re-render.', 'editor'],
             ['Held cold +1.9 s after its words. Re-time, re-check seams, re-render.', 'painter'],
           ]);
-          // The older change asked by id is refused while the newer stands.
           const older = yield* tool('undo', { film: 'f', change: moved.change });
           expect(older.refused).toContain('hold cold tail came after it');
           const first = yield* tool('undo', { film: 'f', change: held.change });
@@ -387,7 +363,6 @@ describe('one history', () => {
           expect(yield* ledgerNotes).toEqual([
             ['Moved look to the end. Re-time, re-check seams, re-render.', 'editor'],
           ]);
-          // Asked for no change, an undo takes the newest.
           const second = yield* tool('undo', { film: 'f' });
           expect(second.said).toBe('Undone: Moved look to the end.');
           expect(scriptNow(files)).toBe(WRITTEN);

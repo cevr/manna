@@ -70,9 +70,6 @@ const json = Flag.Boolean('json').pipe(
  *  positive number". One exported schema is what makes the two seams agree by
  *  construction instead of by inspection. */
 const limit = Flag.Int('limit').pipe(
-  // Before `Flag.optional`, deliberately: the combinators compose in order, so
-  // a schema applied after it would be handed the `Option` wrapper rather than
-  // the number and would reject every invocation, absent flag included.
   Flag.withSchema(StudyLimit),
   Flag.optional,
   Flag.withDescription('How many concordance occurrences to list'),
@@ -144,10 +141,6 @@ const reportCorpusRow = <A, E>(effect: Effect.Effect<A, E>): Effect.Effect<A, E>
       `malformed ${cause.source} row in ${cause.operation}: ${cause.row} — ${cause.message}`,
     );
   });
-
-// ---------------------------------------------------------------------------
-// manna study verse
-// ---------------------------------------------------------------------------
 
 /** The `--json` payload for one bundle: the core schema's own encoding rather
  *  than a parallel projection of it. */
@@ -234,10 +227,6 @@ const studyVerse = Command.make('verse', { reference, json }, (args) =>
   }).pipe(reportCorpusRow, Effect.provide(BunServices.layer)),
 );
 
-// ---------------------------------------------------------------------------
-// manna study strongs
-// ---------------------------------------------------------------------------
-
 export const strongsStudyJson = (
   result: StrongsStudy,
 ): Effect.Effect<StrongsStudyJson, Schema.SchemaError> => encodeStrongs(result);
@@ -248,10 +237,6 @@ const number = Argument.String('number').pipe(
 
 const studyStrongs = Command.make('strongs', { number, limit, json }, (args) =>
   Effect.gen(function* () {
-    // Decoded through the branded schema the RPC payload declares, and through
-    // *only* it: the schema normalizes case itself, so uppercasing here would
-    // widen what the CLI accepts past what the wire does — `h8548` would work
-    // at one seam and fail at the other for the same reason nothing states.
     const target = yield* Schema.decodeEffect(StrongsNumber)(args.number);
     const result = yield* studyService(
       Effect.flatMap(StudyService, (service) =>

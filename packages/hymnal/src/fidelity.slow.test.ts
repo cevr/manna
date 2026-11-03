@@ -35,10 +35,6 @@ const layer = Layer.merge(
   BunServices.layer,
 );
 
-// ----------------------------------------------------------------------------
-// The oracle: the printed text, in the order the hymnal sings it
-// ----------------------------------------------------------------------------
-
 /** Where a refrain is sung, as its page prints it. */
 const Order = Schema.Literals([
   'after-each',
@@ -173,10 +169,6 @@ const fromRow = (
   const lines = linesOf(chorus.text);
   return Result.succeed({ stanzas, refrain: { order, after: () => lines } });
 };
-
-// ----------------------------------------------------------------------------
-// Every hymn, compiled fresh once for this file
-// ----------------------------------------------------------------------------
 
 interface Compiled {
   readonly number: number;
@@ -365,7 +357,6 @@ const textOf = (part: Part): string[] =>
 const listed = Effect.map(orders, ({ printed }) => [...printed.keys()].toSorted((a, b) => a - b));
 
 describe('compile: text fidelity', () => {
-  // The property, a hundred hymns to a case: each case well inside the test timeout under load.
   for (const chunk of Arr.chunksOf(ALL, 100)) {
     const [first = 0] = chunk;
     const last = chunk.at(-1) ?? first;
@@ -418,7 +409,6 @@ describe('compile: text fidelity', () => {
             stanzas: [{ ...first, lines: [...first.lines, ...refrain.lines] }, ...rest],
           };
         }
-        // A sung stanza and a plain refrain (or the other way): stanza 1 becomes their words.
         const [line, ...lines] = [...textOf(first), ...textOf(refrain)];
         const plain: Part = { _tag: 'Plain', lines: [line ?? '', ...lines], why: ['notes'] };
         return { ...bare, stanzas: [plain, ...rest] };

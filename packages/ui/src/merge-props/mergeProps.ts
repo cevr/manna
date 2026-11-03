@@ -1,22 +1,3 @@
-// Upstream: packages/react/src/merge-props/mergeProps.ts
-//
-// Merges sets of props the way Base UI does, kept reactive for Solid: the
-// result is a view over its sources, read key by key, so a source that is a
-// Solid props object or a bag of getters stays live through the merge.
-//
-// The rightmost source wins, except for:
-// - event handlers (`on` + an uppercase letter): all run, rightmost first; a
-//   handler may call `event.preventBaseUIHandler()` to stop the handlers merged
-//   to its left;
-// - `class`: every source's class is kept, rightmost first (Solid's array form);
-// - `style`: objects merge, rightmost properties winning;
-// - `ref`: every source's ref is called (Base UI leaves refs to its caller;
-//   Solid refs are callbacks, so merging them is the useful default).
-//
-// A source may be a function: it is called once, receives the props merged so
-// far and returns the props that replace them (Base UI's props getter).
-// Handlers it calls by hand are not stopped by prevention, so they read
-// `event.baseUIHandlerPrevented` themselves.
 import { $PROXY, createMemo, untrack } from 'solid-js';
 
 import type { BaseUIEvent, HTMLProps } from '../internals/types.ts';
@@ -73,7 +54,6 @@ function callHandler(handler: unknown, args: Array<unknown>): unknown {
   if (typeof handler === 'function') {
     return (handler as Handler)(...args);
   }
-  // Solid's bound handler: `[fn, data]` calls `fn(data, event)`.
   if (Array.isArray(handler) && typeof handler[0] === 'function') {
     return (handler[0] as Handler)(handler[1], ...args);
   }
@@ -151,10 +131,6 @@ function hasKey(source: HTMLProps, key: string): boolean {
 /** A merged, reactive view over the sources `read` returns. */
 function createView(read: () => ReadonlyArray<HTMLProps>): HTMLProps {
   const handlers = new Map<string, Handler>();
-  // The index of the source a key is read from (-1: none). The search runs from the
-  // right and stops at the first source that has the key, so a reader asking for a key
-  // does not track the sources it shadows (a state attributes view reruns on every
-  // state change).
   const ownerOf = (key: string): number => {
     const sources = read();
     for (let i = sources.length - 1; i >= 0; i -= 1) {
@@ -235,9 +211,6 @@ function createView(read: () => ReadonlyArray<HTMLProps>): HTMLProps {
     return [...seen];
   };
 
-  // The view carries Solid's $PROXY marker (and no record), as a store does: Solid's spread
-  // then treats its key set as dynamic, so a key that appears later (a store's `children`)
-  // still renders.
   const view: HTMLProps = new Proxy<HTMLProps>(
     {},
     {
@@ -249,8 +222,6 @@ function createView(read: () => ReadonlyArray<HTMLProps>): HTMLProps {
       },
       has: (_, key) => key === $PROXY || (typeof key === 'string' && ownerOf(key) !== -1),
       ownKeys: () => keys(),
-      // A descriptor answers presence without tracking it; the key set is tracked
-      // through `ownKeys`.
       getOwnPropertyDescriptor: (_, key) => {
         if (typeof key !== 'string' || untrack(() => ownerOf(key)) === -1) {
           return undefined;

@@ -91,7 +91,6 @@ describe('the first tempo the timing bundle carries', () => {
 
   it.each([
     { number: 100, microsPerQuarter: 666666, meter: '3/4', beat: 'quarter note', bpm: 90 },
-    // Its file opens on a 250 bpm lead-in (`tempos[0]`), which is not the hymn's tempo.
     { number: 101, microsPerQuarter: 833333, meter: '3/4', beat: 'quarter note', bpm: 72 },
     { number: 33, microsPerQuarter: 740740, meter: '6/8', beat: 'dotted quarter note', bpm: 54 },
     { number: 46, microsPerQuarter: 375000, meter: '3/2', beat: 'half note', bpm: 80 },
@@ -267,7 +266,6 @@ describe('four taps on Tap', () => {
       const overPercent = asked(100, hymnBpm);
       if (nearTie(onPercent / 5) || nearTie(overPercent / 5)) continue;
       const on = tapsAt(timesFrom(start, pause(3000)), hymnBpm);
-      // After 3001 ms the run is the taps from the pause on; three more taps 600 ms apart make it four.
       const over = tapsAt(timesFrom(start, [...pause(3001), 600, 600, 600]), hymnBpm);
       const fresh = at + 1;
       const overExpected = over.map((_, n) => (n === fresh + 3 ? stopNear(overPercent) : null));

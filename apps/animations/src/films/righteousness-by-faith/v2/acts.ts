@@ -1,13 +1,3 @@
-// Version 2's acts (the version folder `v2/`), as `../acts.ts` declares the film's.
-//
-// The film's acts, declared once: each from its first scene, the narrator's
-// question that names its chapter, and the light it should measure (CRAFT
-// rule 11). Which scenes an act holds is `membersOf` in the film core: an act
-// runs from its scene until the next act's. The colour script (`look`, which
-// `film check` warns against and `film lookbook` measures), the chapters
-// (`film chapters`) and the lights (`light.ts`) all read these acts. Imports
-// nothing that touches the DOM, so the scenes can light themselves from it.
-
 import type { Look } from '@manna/film/core';
 import { GROUND, type Ground } from '../palette.ts';
 
@@ -22,7 +12,6 @@ const range = (by: Readonly<Record<Ground, readonly [number, number]>>) => by[GR
 export const look = {
   acts: [
     {
-      // The question and the problem: the cool page to the peach garden.
       from: 'cold',
       name: 'cold open',
       chapter: 'How should man be just with God?',
@@ -30,7 +19,6 @@ export const look = {
       saturation: [0.15, 0.25],
     },
     {
-      // The answer's shape, and the two stories that count it.
       from: 'message',
       name: 'message',
       chapter: 'So how does anyone become righteous?',
@@ -38,7 +26,6 @@ export const look = {
       saturation: range({ now: [0.2, 0.3], light: [0.2, 0.3], lighter: [0.15, 0.25] }),
     },
     {
-      // The first gift: down to black on the dark world, and back up to dawn.
       from: 'spoke',
       name: 'faith',
       chapter: 'Where does faith come from?',
@@ -46,7 +33,6 @@ export const look = {
       saturation: [0.2, 0.3],
     },
     {
-      // The second gift: the valley, and its one black moment at the cross.
       from: 'declared',
       name: 'forgiveness',
       chapter: "Isn't that a cover-up?",
@@ -54,7 +40,6 @@ export const look = {
       dark: 0.05,
     },
     {
-      // The third gift: early gold.
       from: 'within',
       name: 'power',
       chapter: 'So is the law out of the picture?',

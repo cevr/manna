@@ -1,8 +1,3 @@
-// One log line per MCP tool call, the lab's and the easel's, as each ends:
-// `[mcp] tool=<name> <ids> outcome=<ok|failed|interrupted> ms=<n>`. A call
-// is told by the ids it names (a film, a note, a set, a cursor), never by
-// its words: a note's text, a reply, an ask's question or a quote stay out.
-
 import { Boolean as Bool, Cause, Clock, Effect, Exit, Option, Schema } from 'effect';
 
 /** The arguments a call is logged by: names and ids, never words. */

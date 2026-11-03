@@ -1,19 +1,3 @@
-// The clip-make stage (`clip:<clip>@<member>`): each of a member's clips
-// (`coverage.ts` `clips`) as its fal request asks for it. The request is the
-// clip's prompt and seed at the house settings, with its given frames (the
-// PNGs beside the clip, `<stem>.first.png` and `<stem>.last.png`) by path
-// from the checkout's root and hash (`clips.ts` `clipRequestOf`). The stage
-// is keyed by the request's content only (its endpoint, its input and its
-// frames' hashes, no path), so a clip is asked for once in every checkout.
-//
-// This stage makes no fal call: it adopts the committed clip (`<stem>.mp4`,
-// with its provenance `<stem>.json`) when `adoptClip` takes it, and its
-// output is the mp4's bytes. Else it fails as `ClipMissing`, its reason
-// carrying the request as JSON, the call that would make the clip. A cached
-// output holds (`holds`) only while the committed clip is still adopted and
-// is the same bytes, so the files stay out of the key and a changed clip is
-// judged again.
-
 import { Effect, FileSystem, Option, Path, Result, Schema } from 'effect';
 import { sha256Hex } from '../digest.ts';
 import { type ClipRequest, adoptClip, clipRequestOf } from './clips.ts';
@@ -100,9 +84,6 @@ const clipMakeStage = (o: {
         if (Result.isFailure(got)) return yield* StageFailed.make({ reason: got.failure });
         return got.success;
       }),
-    // the key reads the request only, so a cached mp4 answers it only while the
-    // committed clip is still adopted and is those same bytes; else the stage runs
-    // again, and adopts the new clip or fails as ClipMissing
     holds: (output) =>
       committed.pipe(
         Effect.map((got) =>

@@ -190,8 +190,6 @@ describe('§3.6 the update policy', () => {
     Effect.sync(() => {
       const decision = decideTopics({ manifest: OFFLINE });
       expect(decision._tag).toBe('offline');
-      // The floor the host would install from is intact and reportable: the
-      // caller reads a pin, not an empty state.
       expect(Option.getOrUndefined(Option.map(pinnedFloor.pinned, String))).toBe('content-v3');
       expect(Option.getOrUndefined(Option.map(pinnedFloor.pinnedGeneration, Number))).toBe(3);
     }),
@@ -212,8 +210,6 @@ describe('§3.6 the update policy', () => {
       expect(decision._tag).toBe('refused');
       if (decision._tag !== 'refused') return;
       expect(decision.reason).toBe('schema-major');
-      // The refused version is carried, so a settings entry can say *which*
-      // version needs a newer app rather than only that something was refused.
       expect(String(decision.available.revision)).toBe('content-v9');
     }),
   );
@@ -270,9 +266,6 @@ describe('§3.6 the update policy', () => {
   it.effect('yields the pinned floor with no error when the manifest did not arrive', () =>
     Effect.sync(() => {
       const decision = decideTopics({ installed: 3, manifest: OFFLINE });
-      // Not `up-to-date`: a client that could not check must not claim it is
-      // current. And not a failure — `decideUpdate` returns a value, and there
-      // is no error channel for a caller to catch.
       expect(decision._tag).toBe('offline');
       if (decision._tag !== 'offline') return;
       expect(decision.detail).toBe('no network');
@@ -421,8 +414,6 @@ describe('§3.6 the manifest wire model', () => {
       if (Option.isNone(vectors)) return;
       expect(String(vectors.value.revision)).toBe('vectors-v2');
       expect(Number(vectors.value.generation)).toBe(2);
-      // And the topics entry beside it is untouched, so adding a key is
-      // additive rather than a re-shape.
       expect(Option.isSome(Option.fromUndefinedOr(manifest.artifacts.topics))).toBe(true);
     }),
   );

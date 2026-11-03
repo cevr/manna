@@ -119,7 +119,6 @@ class TrackReader {
   name = '';
   program: number | undefined;
   readonly notes: Note[] = [];
-  // Sounding notes by channel and key, oldest first, so a re-struck key closes in order.
   private readonly sounding = new Map<number, number[]>();
 
   constructor(

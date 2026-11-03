@@ -1,10 +1,3 @@
-// What a page has selected: one thing of the film's or the review's, as a
-// tagged union every primitive reads (the context menu shows its commands,
-// the inspector its fields, ⌘K and the keys act on it). The ask page keeps
-// no selection in its URL: a link to a selection is the page's own, or a
-// file's (`citeOf`). A multi-select is a list of the same union; only its
-// first item is citable (a batch is an action, not a place). Pure.
-
 import { Schema } from 'effect';
 import { ActName } from '../core/address-schema.ts';
 import { reviewFileUrl } from '../core/api.ts';

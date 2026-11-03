@@ -117,8 +117,8 @@ phone reads compiled JSON; this feature has no app route.
 
 - Name corpus entries by number in proof. Capture CLI output in memory and reduce
   it to booleans/counts before logging. Assertions compare booleans with safe coordinates.
-- Compile and census sources are `data/source-text.json`, never generated SQLite.
-  `scripts/census.ts` also reads historical Git database blobs as an independent oracle.
+- Compile and census sources are `packages/hymnal/data/source-text.json`, never generated SQLite.
+  `packages/hymnal/scripts/census.ts` also reads historical Git database blobs as an independent oracle.
 - Source writers share `serializeSourceText`; `topics.test.ts` checks canonical bytes.
   The source capture is excluded from oxfmt.
 - Readings 696–920 belong to SDAH-1985. They are not a separate hymnal edition.

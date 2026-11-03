@@ -1,8 +1,3 @@
-// A score option's state, the one answer every reader of it shares: composed
-// for the plan as the film is timed now, composed for another timing, composed
-// but with acts that no longer fit the API (stale, still playable, never a
-// failure), or not composed.
-
 import { describe, expect, test } from 'bun:test';
 import { layout } from './layout.ts';
 import type { Music, SoundManifest, Timings } from './schema.ts';
@@ -52,7 +47,6 @@ describe('scoreOptionState', () => {
   });
 
   test('stale, not a failure, when a movement no longer fits the API', () => {
-    // Scene b re-timed to 130 s: movement Close runs longer than a chunk may.
     const state = scoreOptionState(option, timed(5, 130), composedFor(5));
     expect(state).toMatchObject({
       _tag: 'Stale',
@@ -62,7 +56,6 @@ describe('scoreOptionState', () => {
   });
 
   test('a score composed through a scene is current for its range, whatever comes after it', () => {
-    // Composed through a: the Open movement alone, to a's end and the tail.
     const bounded = (secs: number): SoundManifest => {
       const plan = Result.getOrThrow(musicPlan(music, timed(secs), Option.some('a')));
       return {
@@ -72,9 +65,7 @@ describe('scoreOptionState', () => {
       };
     };
     expect(scoreOptionState(option, timed(5), bounded(5))._tag).toBe('Current');
-    // b re-timed, even past what one chunk may last: after the range, so still current.
     expect(scoreOptionState(option, timed(5, 130), bounded(5))._tag).toBe('Current');
-    // a re-timed: inside the range, so stale.
     expect(scoreOptionState(option, timed(7), bounded(5))).toMatchObject({
       _tag: 'Stale',
       why: { _tag: 'Retimed' },

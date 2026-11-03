@@ -1,7 +1,3 @@
-// Upstream: packages/react/src/dialog/backdrop/DialogBackdrop.tsx
-//
-// An overlay under the dialog's popup. A press on it is an outside press of
-// its own dialog only.
 import type { JSX } from '@solidjs/web';
 import { omit, onCleanup } from 'solid-js';
 

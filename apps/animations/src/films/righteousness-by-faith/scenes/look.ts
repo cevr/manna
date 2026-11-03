@@ -1,41 +1,3 @@
-// Faith, drawn to its Board (`look.where`, `look.pole`, `look.climb`,
-// `look.lifted`). It opens on spoke's last frame, the page and the row of
-// three icons beside the accused, all lit (`woman`, which closes on that
-// row, has no drawing yet). On `faith` his eyes go to the open hand, which
-// pulses, its light swelling, while the cloth and the blade dim. On `where`
-// the camera pushes in to him and the open hand comes home to his own hand,
-// raised beside him, the gold seed on it; his face near the frame's upper
-// half, his eyes on it, wondering (`look.where`). On `expects` the seed puts
-// out its first root, curling down over his palm, and he watches it. On
-// `hand` his other hand holds a stack of certificates, a medal and coins up
-// toward the light; on "just" it slides off, out of the frame, and the hand
-// comes down empty; on "takes" the seed's light swells in his open palm and
-// he is glad.
-//
-// On `desert` the camera pushes on into the seed, and the camp opens out of
-// it, a porthole growing from the seed to the whole frame: paper tents under
-// a peach sky, the scarlet snakes slithering in the sand, the camp's people
-// standing where `look.pole` stands them, the bitten stooped over their
-// bites. The people are held as blocked masses (`look-props.ts`
-// `campMass`), no faces and no cloth, until the crowd kit is sheeted and
-// its people are rendered. On "Imagine" the camera closes on one of them,
-// the climber; on "bitten" a snake strikes at his foot, he starts, and he
-// bends to it. On `pole` the camera eases back, and on "set" the pole rises
-// out of the sand with the bronze serpent on it, its bronze lit; on "looks"
-// the people turn to it and look up, one after another out from the pole,
-// and on "lives" the bitten straighten. On `harder` the climber goes to the
-// pole and climbs it in heaves, straining, comic, the camera on the pole's
-// lower half and following him up it (`look.climb`); on `climb` he stops,
-// slides down, turns from the pole and simply looks up, and the camera
-// closes on his head as he lifts his hands, glad. On "look" the word's card
-// cuts in, "look" in gold, until `lifted`, where the camp is seen from low
-// on the ground, the people's heads along the frame's foot, and the camera
-// tilts up the pole against the sky to the serpent, its light swelling on
-// "Son" (`look.lifted`). After the last word the camp closes into the open
-// hand on the page, back in its row, glowing, the serpent shrinking into
-// it. Nothing in the picture is lettered (CRAFT rule 1); the card is the
-// narration's one word (CRAFT rule 1's full-screen card).
-
 import {
   type Camera,
   type CardWord,
@@ -108,8 +70,6 @@ import {
 import { spoke } from './spoke.ts';
 import { LAST_FRAME, onHim, word } from './word.ts';
 
-// ─── the page as spoke leaves it ─────────────────────────────────────────────
-
 const L = LAST_FRAME;
 
 /** His breath's period and its offset, as word, seed and spoke breathe him (`living`). */
@@ -144,8 +104,6 @@ const ICON_SHADE = { cast: 0.5, foot: 0.8 } as const;
  * reaches against the icon's size.
  */
 const DIM = { alpha: 0.55, reach: 0.95 } as const;
-
-// ─── his hand and the seed in it ─────────────────────────────────────────────
 
 /** His shoulders, from his feet, that his hands swing from (his rig's). */
 const SHOULDER = {
@@ -189,8 +147,6 @@ const IRIS_GLOW = { reach: 1.7, alpha: 0.55 } as const;
 /** The camp's point the porthole opens on, Board pixels: the tents' line under the dunes, where the pole will rise. */
 const IRIS_AIM: Pt = [768, 420];
 
-// ─── the lead ────────────────────────────────────────────────────────────────
-
 /** Where he looks at us, from his feet. */
 const US: Pt = [LEAD_KNOBS.gazeX, LEAD_KNOBS.gazeY];
 
@@ -218,8 +174,6 @@ const HOPING: Expression = { ...EASE, browY: -1.6, browTilt: 0.3, eyes: 1.08, mo
 /** "takes": glad of the seed in his open hand. */
 const TAKEN: Expression = { ...EASE, browY: -1.4, browTilt: 0.1, eyes: 1.1, mouth: 0.5 };
 
-// ─── scratch ─────────────────────────────────────────────────────────────────
-
 /** His numbers (scratch: every one he moves is rewritten each frame). */
 const LN: Record<keyof typeof LEAD_KNOBS, number> = { ...LEAD_KNOBS };
 /** The seed (scratch: its pose rewritten each frame). */
@@ -236,27 +190,18 @@ const SEED: OpenSeedPose = {
 };
 
 const timeline = {
-  // `faith`: his eyes go to the open hand; it pulses, its light swelling, as the cloth and the
-  // blade dim; the row's framing creeps on.
   toFaith: { mark: 'faith', dur: 0.5, track: 'lead' },
   pulse: { mark: 'faith', word: 'faith', dur: 1.4, track: 'icons' },
   dim: { mark: 'faith', word: 'faith', dur: 0.9, ease: 'inOutSine', track: 'icons' },
   onRow: { mark: 'faith', until: 'where', ease: 'linear', track: 'camera' },
-  // `where`: the camera pushes in to him; his near hand comes up beside him, and the open hand
-  // comes home into it, the seed on it, his eyes after it; on "word" the seed's light swells and
-  // settles.
   push: { mark: 'where', dur: 1.8, ease: 'inOutSine', track: 'camera' },
   raise: { mark: 'where', dur: 0.7, ease: 'inOutSine', track: 'hand' },
   home: { mark: 'where', dur: 1.5, ease: 'inOutSine', track: 'hand' },
   wonder: { mark: 'where', dur: 0.6, track: 'lead' },
   heard: { mark: 'where', word: 'word', dur: 1.2, track: 'seed' },
   onHand: { after: 'push', until: 'desert', ease: 'linear', track: 'camera' },
-  // `expects`: the seed puts out its first root, curling down over his palm; he watches it.
   watch: { mark: 'expects', dur: 0.5, track: 'lead' },
   root: { mark: 'expects', word: 'expects', dur: 2.2, ease: 'outCubic', track: 'seed' },
-  // `hand`: his other hand holds the merits up toward the light, and he looks up at them,
-  // hoping; on "just" they slide off it and fall out of the frame, his hand comes down empty and
-  // he looks back at the seed; on "takes" its light swells in his open hand, and he is glad.
   offer: { mark: 'hand', dur: 0.9, ease: 'inOutSine', track: 'hand' },
   hope: { mark: 'hand', dur: 0.5, track: 'lead' },
   slide: { mark: 'hand', word: 'just', dur: 0.9, stagger: 0.12, ease: 'inQuad', track: 'merits' },
@@ -264,9 +209,6 @@ const timeline = {
   back: { mark: 'hand', word: 'just', dur: 0.5, track: 'lead' },
   takes: { mark: 'hand', word: 'takes', dur: 1.4, track: 'seed' },
   glad: { mark: 'hand', word: 'takes', dur: 0.5, track: 'lead' },
-  // `desert`: the page stops breathing as the camera pushes on into the seed, its light swelling;
-  // the camp opens out of it, a porthole growing from the seed to the whole frame, and the
-  // camera creeps over the camp.
   still: { mark: 'desert', dur: 0.5, track: 'camera' },
   through: { mark: 'desert', dur: 1.4, ease: 'inCubic', track: 'camera' },
   iris: { mark: 'desert', offset: 0.55, dur: 1.2, ease: 'inOutSine', track: 'iris' },
@@ -276,8 +218,6 @@ const timeline = {
     ease: 'linear',
     track: 'camera',
   },
-  // "Imagine you've been bitten": the camera closes on the climber; on "bitten" the near snake
-  // strikes at his foot, he starts, and he bends to it.
   toClimber: { mark: 'desert', word: 'imagine', until: 'pole', ease: 'inOutSine', track: 'camera' },
   strike: { mark: 'desert', word: 'bitten', dur: 0.6, track: 'snakes' },
   start: { mark: 'desert', word: 'bitten', offset: 0.15, dur: 0.7, track: 'climber' },
@@ -289,9 +229,6 @@ const timeline = {
     ease: 'inOutSine',
     track: 'climber',
   },
-  // `pole`: the camera eases back over the camp; on "set" the pole rises out of the sand with the
-  // bronze serpent on it, and on "serpent" its bronze is lit; on "looks" the people turn and
-  // look up to it, one after another out from the pole; on "lives" the bitten straighten.
   wide: { mark: 'pole', dur: 1.3, ease: 'inOutSine', track: 'camera' },
   rise: { mark: 'pole', word: 'set', dur: 1.4, ease: 'outBack', track: 'pole' },
   lit: { mark: 'pole', word: 'serpent', dur: 1.2, track: 'pole' },
@@ -305,18 +242,11 @@ const timeline = {
     track: 'crowd',
   },
   onPole: { after: 'wide', until: 'harder', ease: 'linear', track: 'camera' },
-  // `harder`: the climber goes to the pole, and on "make" climbs it in heaves, straining, comic,
-  // slipping back a little each time; the camera frames the pole's lower half and follows him
-  // slowly up it, the serpent lit above him; the camp watches him.
   toPole: { mark: 'harder', dur: 0.9, ease: 'inOutSine', track: 'climber' },
   onClimb: { mark: 'harder', dur: 1, ease: 'inOutSine', track: 'camera' },
   climbing: { mark: 'harder', word: 'make', until: 'climb', ease: 'linear', track: 'climber' },
-  // `grip`: his hands take the pole in the first eighth of the climb.
   grip: { with: 'climbing', dur: 0.19, ease: 'linear', track: 'climber' },
   up: { after: 'onClimb', until: 'climb', ease: 'inOutSine', track: 'camera' },
-  // `climb`: he stops; on "one" he slides down the pole, the camera coming down with him; on
-  // "has" he turns from it, and on "climb" he simply looks up; on "pole" the camera closes on his
-  // head as he lifts his hands, glad.
   stop: { mark: 'climb', dur: 0.3, track: 'climber' },
   slip: { mark: 'climb', word: 'one', dur: 0.55, ease: 'inQuad', track: 'climber' },
   down: { mark: 'climb', word: 'one', dur: 0.8, ease: 'inOutSine', track: 'camera' },
@@ -324,42 +254,29 @@ const timeline = {
   gaze: { mark: 'climb', word: 'climb', dur: 0.7, ease: 'inOutSine', track: 'climber' },
   close: { mark: 'climb', word: 'pole', until: 'look', ease: 'inOutSine', track: 'camera' },
   heal: { mark: 'climb', word: 'pole', until: 'look', ease: 'outCubic', track: 'climber' },
-  // `look`: on "look" the word's card, "look" in gold, until `lifted`.
   card: { mark: 'look', word: 'look', until: 'lifted', track: 'card' },
-  // `lifted`: the camp from low on the ground, the people's heads along the frame's foot; the
-  // camera tilts up the pole against the sky to the serpent, its light swelling on "Son".
   low: { mark: 'lifted', dur: 0, track: 'camera' },
   tilt: { mark: 'lifted', until: { at: 'speechEnd' }, ease: 'inOutSine', track: 'camera' },
   son: { mark: 'lifted', word: 'son', dur: 1.6, track: 'pole' },
-  // After the last word the camp closes into the open hand on the page, back in its row, glowing.
   pull: { at: 'speechEnd', dur: 1.3, ease: 'inOutSine', track: 'camera' },
 } as const;
 
 const knobs = {
-  // Him and the open hand in his own, his face near the frame's upper half (`look.where`).
   where: [585, 562],
   whereZoom: 3.3,
-  // The camp as `look.pole` lays it out, the serpent's head and the near snakes in the frame, and
-  // how far the camera creeps in over it.
   camp: [768, 522],
   campZoom: 1.17,
   campCreep: 1.04,
-  // The climber with the snake at his foot, his neighbours beside him.
   bitten: [590, 665],
   bittenZoom: 1.9,
-  // The camp with the pole risen in it, the serpent's head clear of the frame's top.
   pole: [768, 470],
   poleZoom: 1.12,
-  // The pole's lower half, him at its foot; and the pole higher up, where he climbs to.
   climb: [705, 640],
   climbZoom: 1.95,
   climbUp: [715, 420],
   climbUpZoom: 1.95,
-  // His head at a third of the frame and more, looking up, the pole beside him.
   face: [660, 500],
   faceZoom: 3.6,
-  // The low view (`look.lifted`): the heads along the foot and the pole going up; then the whole
-  // panel, the serpent high against the sky.
   low: [768, 772],
   lowZoom: 1.5,
   lifted: [768, 512],
@@ -367,8 +284,6 @@ const knobs = {
 } as const;
 
 type LookFrame = Frame<keyof typeof timeline & string, typeof knobs, typeof COURT_RIGS>;
-
-// ─── him on the page ─────────────────────────────────────────────────────────
 
 /** `p` on the page, from his feet. */
 const fromFeet = (p: Pt): Pt => [p[0] - L.lead[0], p[1] - L.lead[1]];
@@ -409,7 +324,6 @@ const handsOf = (f: LookFrame, closing: number) => {
   const lifted = reachAbout(farShoulder, rest(L.hands.far), onHim(RAISED, 0), f.at('offer'));
   const raised: Pt = lifted;
   const far = reachAbout(farShoulder, raised, rest(L.hands.far), f.at('lower'));
-  // His arms reach for them, each hand at its sleeve's end.
   const arms = reachHands(LN, fromFeet(far), fromFeet(near));
   return { near: onHim(arms.right, 0), far: onHim(arms.left, 0) };
 };
@@ -431,8 +345,6 @@ const pose = (f: LookFrame, gaze: Pt, closing: number) => {
   LN.tilt = lerp(LIFT, 0, f.at('wonder') * (1 - closing)) + SWAY * Math.sin(f.t * 0.7);
   LN.nod = 0;
 };
-
-// ─── the row, and the open hand coming home ──────────────────────────────────
 
 /** The point `k` of the way along the curve from `a` through `via` to `b`. */
 const curve = (a: Pt, via: Pt, b: Pt, k: number): Pt => {
@@ -603,7 +515,6 @@ const page = (f: LookFrame, closing: number): Camera => {
   const rowCam = pushOn(knobCamera(row('row'), row('rowZoom')), row('creep'), 1);
   const near = knobCamera(f.knob('where'), f.knob('whereZoom'));
   const hands = handsOf(f, closing);
-  // The open hand and the seed placed first, so his eyes and the camera can follow them.
   placeOpenHand(f, hands.near, closing);
   pose(f, gazeOf(f, onHim(RAISED, 0), closing), closing);
   const intoSeed: Camera = { x: SEED.x, y: SEED.y, zoom: f.knob('whereZoom') * INTO_SEED };
@@ -645,7 +556,6 @@ const page = (f: LookFrame, closing: number): Camera => {
         merits(ctx, holding[0], holding[1], slid, SMALL_LINE);
       }
       handAt(f, hands.near);
-      // Over his near hand, so it lands on it.
       openHand(f);
       seedInHand(f, closing);
     },
@@ -681,8 +591,6 @@ const porthole = (f: LookFrame, [x, y]: Pt, r: number, alpha: number, draw: () =
   inset(ctx, draw);
   ctx.restore();
 };
-
-// ─── the camp ────────────────────────────────────────────────────────────────
 
 /** The Board's panel, Board pixels: where the sun's shafts fan from and how far. */
 const PANEL = { w: 1536, h: 1024 } as const;
@@ -814,8 +722,6 @@ const climberPose = (f: LookFrame): CamperPose => {
   const y =
     lerp(home.y, CLIMB.at[1], go) - height - 5 * Math.abs(Math.sin(Math.PI * CLIMB.steps * go));
 
-  // His hands: at his sides; thrown up as he starts; on the pole's near face, one high and one at
-  // his chest, changing over each heave; up before his chest, glad, once he lives.
   const poleX = (POLE.x - x) / s - 6;
   const hi: Pt = [poleX, -b.tall - 0.12 * b.head];
   const lo: Pt = [poleX + 2, -b.tall + 1.05 * b.head];
@@ -933,8 +839,6 @@ const campShot = (f: LookFrame, push = 1) => {
   );
 };
 
-// ─── the camp from low on the ground ─────────────────────────────────────────
-
 /** How much more the serpent's light swells on "Son" in the low view. */
 const SON_GLOW = 0.6;
 
@@ -1008,23 +912,16 @@ const lowShot = (f: LookFrame) => {
   );
 };
 
-// ─── the card ────────────────────────────────────────────────────────────────
-
 /** The card's one word, the payoff, its full stop dropped: "look". */
 const lookOnly = (words: ReadonlyArray<CardWord>): ReadonlyArray<CardWord> =>
   words.filter((w) => w.payoff).map((w) => ({ ...w, text: w.text.replace(/[.,!?]+$/, '') }));
 
-// ─── the scene ───────────────────────────────────────────────────────────────
-
 export const look = drawing({
   timeline,
   knobs,
-  // The court's rigs: him and his hands.
   rigs: COURT_RIGS,
-  // The page's own light, as word, seed and spoke leave it.
   light: L.light,
   draw: (f) => {
-    // The low view, until the camp closes into the open hand in the row after the last word.
     if (f.at('low') >= 1) {
       const pull = f.at('pull');
       if (pull <= 0) {
@@ -1035,8 +932,6 @@ export const look = drawing({
       const middle = onScreen(f, cam, FAITH_MIDDLE);
       const from = covering(f, middle);
       const r = from * ((ICON_R * (cam.zoom ?? 1)) / from) ** pull;
-      // The serpent slides to the porthole's middle and the camp shrinks after it, slower than the
-      // porthole so it fills it to the last, into the open hand.
       const pivot = toward(middle, onScreen(f, lowCamera(f), LOW_AIM), pull);
       const shrink = Math.sqrt(r / from);
       porthole(f, middle, r, 1 - smooth(0.7, 1, pull), () => {
@@ -1049,7 +944,6 @@ export const look = drawing({
       });
       return;
     }
-    // The camp, once it has opened out of the seed.
     const iris = f.at('iris');
     if (iris >= 1) {
       campShot(f);
@@ -1061,8 +955,6 @@ export const look = drawing({
     const from = Math.max(2, (SEED.size / 2) * (cam.zoom ?? 1));
     const r = from * (covering(f, seed) / from) ** iris;
     shine(f.ctx, seed[0], seed[1], IRIS_GLOW.reach * r, GOLD_GLOW, IRIS_GLOW.alpha * (1 - iris));
-    // The camp opens from the seed: the tents' line in the porthole's middle at first, the camp
-    // sliding home to its framing as the porthole fills the frame.
     const push = lerp(IRIS_PUSH, 1, iris);
     const aim = onScreen(f, pushOn(campCamera(f), push, 1), IRIS_AIM);
     porthole(f, seed, r, 1, () => {

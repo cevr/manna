@@ -1,9 +1,3 @@
-// A name from outside that the film writes into a path or keys a record by:
-// a film, a footage source, a mark, a beat, a set's folder, an act.
-// One owner, so the next name schema starts from what every earlier one had
-// to learn (a `..` footage name, a take keyed `__proto__`, a `.` film).
-// A leaf: `schema.ts` and `address-schema.ts` both build on it.
-
 import { Option, Schema } from 'effect';
 
 /** The folder itself and its parent: a path names them, a name never does. */

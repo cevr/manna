@@ -109,8 +109,6 @@ export const useScrollMemory = (): void => {
     traversals += 1;
     const traversal = traversals;
     const target = Option.getOrElse(Option.fromUndefinedOr(positions.get(key)), () => 0);
-    // One frame for the URL to flush and each pane to start its read, then
-    // the reads themselves, then one frame for the rows to be laid out.
     void nextFrame()
       .then(settled)
       .then(nextFrame)
@@ -121,7 +119,6 @@ export const useScrollMemory = (): void => {
   };
 
   const onScroll = (): void => keep(onScreen, window.scrollY);
-  // A reload or a close leaves the entry without a navigation to save it.
   const onPageHide = (): void => {
     keep(onScreen, window.scrollY);
     persist();
@@ -129,17 +126,8 @@ export const useScrollMemory = (): void => {
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('pagehide', onPageHide);
 
-  // The page's own write (a search, a filter) changes the href at once,
-  // inside the reader's act and before the page redraws, so `scrollY` is
-  // where the reader leaves the entry on screen. The push it makes lands a
-  // tick later, after that redraw, so the position is read here and not
-  // there; and not from the scroll events alone, which the browser fires at
-  // its next frame, on a slow machine after the push has landed.
   const unsubscribeWrites = registry.subscribe(UrlAtom.href, () => keep(onScreen, window.scrollY));
 
-  // Back and Forward land here synchronously, inside `popstate`, so the page
-  // has not been redrawn yet and `scrollY` is still where the reader left the
-  // entry.
   const unsubscribe = registry.subscribe(UrlAtom.entry, (entry) => {
     if (entry.key === onScreen) return;
     if (entry.navigation === 'traverse') keep(onScreen, window.scrollY);
@@ -148,7 +136,6 @@ export const useScrollMemory = (): void => {
     if (entry.navigation === 'traverse') restore(entry.key);
   });
 
-  // A reload lands on the entry's saved position, once its reads have settled.
   if (positions.has(onScreen)) restore(onScreen);
 
   onCleanup(() => {

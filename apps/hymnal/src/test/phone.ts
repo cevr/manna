@@ -60,8 +60,6 @@ export const phone = ({ nativeList = false }: { readonly nativeList?: boolean } 
     disconnect() {}
   }
   Object.assign(window, { ResizeObserver: Observer });
-  // react-native-web measures a view for its `onLayout` by its offset box,
-  // which LegendList's phone build waits on before it draws an item.
   if (nativeList)
     Object.defineProperties(HTMLElement.prototype, {
       offsetWidth: { get: () => 390, configurable: true },

@@ -1,6 +1,3 @@
-// A file the review serves where it lies, named by its ref: what a variant
-// is seen or heard as, and what a folder lists. Pure.
-
 import { Schema } from 'effect';
 
 /**

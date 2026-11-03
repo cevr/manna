@@ -1,16 +1,3 @@
-// The touch-target measure (`fixtures/touch-targets.ts`) over synthetic
-// pages, each one shape it must read right: the usable area is what a tap
-// reaches (a target half under a neighbour fails; a target whose middle is
-// covered passes on the free part beside it), spacing looks at neighbours'
-// hit-slops, a hit-slop over a neighbour's box fails (its last pixel row
-// too) and one the measure cannot place exactly fails as unanchored, a
-// backing input is left out only when nothing of it can be seen or
-// pressed, only a link on a line of text is inline (a reader's focusable
-// box's words are text; a button's label is not), a link inside a label
-// is the link's area and never the label's field's, a target scrolling
-// cannot bring into the window fails, and a layer is measured within itself,
-// its menu items as targets.
-
 import { Effect } from 'effect';
 import { describe, it } from 'effect-bun-test';
 import { openTab, respond, servePaths } from '../../../src/lab/fixtures/browsers.ts';
@@ -86,7 +73,6 @@ describe('the touch-target measure', () => {
 
   it.live("fails a hit-slop that takes only the neighbour's last pixel row", () =>
     offenders(
-      // The slop spans y 390–434; the field ends at 391: its bottom row is the slop's.
       `${CENTRED}
        <button class="at" style="left:16px;top:331px;width:358px;height:60px">field</button>
        <button class="slop" style="left:200px;top:401px;width:18px;height:22px">x</button>`,
@@ -107,8 +93,6 @@ describe('the touch-target measure', () => {
     'keeps a hit-slop over a control scrolled out of its pane: no tap lands on it there',
     () =>
       offenders(
-        // The pane's last button, scrolled to its middle, leaves the field 300 px up, above the
-        // pane's top (31–75), under the slop (29–73) the pane's edge clips it from.
         `${CENTRED}
        <div style="position:absolute;left:16px;top:331px;width:358px;height:200px;overflow:auto">
          <button style="display:block;width:300px;height:44px">field</button>

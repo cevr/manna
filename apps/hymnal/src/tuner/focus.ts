@@ -93,7 +93,6 @@ const follow = (held: number, misses: number, reading: Option.Option<number>): H
     return { focus: focusOf(State.Holding({ held: reading.value, misses: 0 })), hz: reading };
   if (misses < MISSES)
     return { focus: focusOf(State.Holding({ held, misses: misses + 1 })), hz: Option.some(held) };
-  // Letting go: this frame shows none and is heard as from `unfocused`, so it may start the next run.
   return seek([], reading);
 };
 

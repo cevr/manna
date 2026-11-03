@@ -1,25 +1,3 @@
-// `film concept reader import|read|eval`: the cast reader's checkpoints in
-// the cast cache, and what they read.
-//
-//   import <pt> --name <n>   copy a checkpoint into the cache as
-//                            `objects/<its sha256>` and name it in
-//                            `readers.json` (the file is read, never moved)
-//   read --reader <r> (--clip <mp4> | --pngs <dir>)
-//                            read.py's JSON: per frame the joints, the nearest
-//                            drawing and every class's probability
-//   eval --reader <r> --shard <tar>
-//                            a drawing's held renders read and scored (eval.py)
-//   chain --reader <r> --clip <mp4>
-//                            a member's clip laid on the canvas at the map
-//                            of the provenance beside it (`clip-eval.ts`),
-//                            read and chained (`chain.ts`): runs, fitted
-//                            keys, each band's IoU and the drawings named;
-//                            the canvases, the read and the fits are cached
-//
-// `--reader` is a name `import` gave, a checkpoint's sha256, or `current`:
-// the reader `--lock` (the committed `reader.lock.json`) names. Reads and
-// evals run on this machine's CPU and spend nothing.
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';

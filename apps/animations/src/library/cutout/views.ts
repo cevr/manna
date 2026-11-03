@@ -1,9 +1,3 @@
-// Every cast member's cut views, read from the tree: each puppet view a
-// member's `cutout/puppets.ts` exports (`PUPPETS`) under the app's sources,
-// by its key, sorted. The checks that walk every view (the paper rim, the
-// stroke limbs' census) read this one list, so a new member's views are held
-// by each with no edit there.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import type { PuppetSpec } from '@manna/film/canvas';
 import { Effect, FileSystem, Option, Predicate } from 'effect';
@@ -19,7 +13,7 @@ const isSpec = (u: unknown): u is PuppetSpec =>
   Predicate.hasProperty(u, 'size') &&
   Predicate.hasProperty(u, 'parts');
 
-/** Every puppet view a member's `cutout/puppets.ts` exports under the app's sources, by its key, sorted. */
+/** Every puppet view a member's `cutout/puppets.ts` exports (`PUPPETS`) under the app's sources, by its key, sorted: the one list the checks that walk every view (the paper rim, the stroke limbs' census) read, so a new member's views are held by each with no edit there. */
 export const cutViews: Effect.Effect<ReadonlyArray<PuppetSpec>> = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const names = yield* fs.readDirectory(SOURCES, { recursive: true });

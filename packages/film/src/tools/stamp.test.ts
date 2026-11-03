@@ -1,7 +1,3 @@
-// A scene's key follows what its frames are drawn from: its own module and
-// what that imports, the film's frame, and the scene it enters from; an edit
-// to another scene's module leaves it alone.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { expect as expectPlain, test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -67,7 +63,6 @@ const fixture = fixtureOver(outsideACheckout);
 /** The fixture's Stamps over the real `git`, run in the fixture's folder. */
 const gitFixture = fixtureOver(Layer.empty);
 
-// The registry's scenes in order; `plain` enters on a transition from `built`, `beta` on a cut.
 const placed = Result.getOrThrow(
   layout(
     [
@@ -114,7 +109,6 @@ describe.concurrent('scene keys', () => {
       expect(Object.keys(before)).toEqual(['hand', 'beta', 'built', 'plain']);
       yield* touch('hand.ts');
       expect(changed(before, yield* keysNow)).toEqual(['hand']);
-      // Unchanged sources, the same keys.
       const again = yield* keysNow;
       expect(changed(again, yield* keysNow)).toEqual([]);
     }).pipe(Effect.provide(fixture)),
@@ -138,7 +132,6 @@ describe.concurrent('scene keys', () => {
 
   it.effect("a scene entering on a transition draws the previous scene's modules", () =>
     Effect.gen(function* () {
-      // `built` has no module of its own; `beta` (declared in a.ts) enters on a cut from `hand`.
       const before = yield* keysNow;
       yield* touch('a.ts');
       expect(changed(before, yield* keysNow)).toEqual(['beta']);
@@ -176,13 +169,10 @@ describe.concurrent('scene keys', () => {
       );
       const stamp = stampOf(keys, scope);
       expect(stamp.key).toMatch(/^[0-9a-f]{64}$/);
-      // Another address over the same scene is another stamp.
       const whole = Result.getOrThrow(
         resolveAddress({ name: 'f', placed, look: Option.none(), shorts: [] }, { _tag: 'Film' }),
       );
       expect(stampOf(keys, whole).key).not.toEqual(stamp.key);
-      // A wedge (`render --level`) is another stamp, its levels in any order the same;
-      // no levels is the stamp as written.
       expect(stampOf(keys, scope, {}).key).toEqual(stamp.key);
       const wedged = stampOf(keys, scope, { style: 'ps1', ground: 'light' }).key;
       expect(wedged).not.toEqual(stamp.key);
@@ -294,7 +284,6 @@ describe.concurrent('beat keys in memory', () => {
 
   it.effect('stamp keys two byte-distinct files apart', () => {
     const { files, layer } = inMemory(0);
-    // two bytes that are not UTF-8, which a decode reads alike (U+FFFD)
     const withByte = (b: number) => Uint8Array.from([...scriptOf(0), ...text('// '), b, 10]);
     return Effect.gen(function* () {
       const stamps = yield* Stamps;
@@ -357,7 +346,6 @@ describe.concurrent('beat keys in memory', () => {
           expect([was.frames, now.frames]).toEqual([at.was, at.now]);
           expect(now.key).toEqual(was.key);
           expect(now.clock).toEqual(was.clock);
-          // The frame at its half second reads half a second in, the one before it less.
           expect(was.clock[1]).toBeLessThan(0.5);
           expect(was.clock[2]).toBeGreaterThanOrEqual(0.5);
         }

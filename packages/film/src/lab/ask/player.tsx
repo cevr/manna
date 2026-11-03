@@ -1,7 +1,3 @@
-// The lab's players: the one video that plays on a clock of its own (an
-// ask's video), the synced player's transport row, the ref that joins a
-// media element to a player's driver, and the frame rate its clock counts.
-
 import { useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { Effect, Match, Option } from 'effect';
 import { Machine } from 'effect-machine';
@@ -63,19 +59,11 @@ const TransportRow = (
     readonly quiet?: boolean;
   }>,
 ) => {
-  // The clock as the server opened it: at its start, as a page whose link
-  // says where (`#t=`) opens there only in the browser, the server never
-  // seeing the hash. The server's render and the client's hydration show it,
-  // so both write the same markup; the page's own clock follows once
-  // hydrated (a hydration adopts the server's text and writes it again only
-  // when the value next changes, so a clock read live as it hydrates would
-  // keep the server's time).
   const opened = untrack(() => syncAt(props.sync().audible, props.sync().start));
   const sync = createMemo(() => props.sync(), { ssrSource: 'client', loadingValue: opened });
   const send = { sync: props.send };
   const playing = () => runningOf(sync()) || sync()._tag === 'Buffering';
   const failure = () => failureOf(sync());
-  // A lone video says its time as its length says it at rest; a review's clock, by the frame.
   const say = Match.value(props.alone === true).pipe(
     Match.when(true, () => clock),
     Match.orElse(() => timecode),
@@ -97,7 +85,6 @@ const TransportRow = (
         disabled={Option.isSome(failure())}
         onClick={() => send.sync(SyncEvent.Toggled)}
       >
-        {/* Named by its word; the glyph is drawn, not read. */}
         <span aria-hidden="true">
           {Match.value(playing()).pipe(
             Match.when(true, () => '❚❚'),
@@ -106,9 +93,7 @@ const TransportRow = (
         </span>
       </button>
       <span class="rv-time" data-state={sync()._tag}>
-        {/* The time where the video is. */}
         <span class="rv-time-at">{time().at}</span>
-        {/* The end, and a wait: a phone's row leaves them out (the scrub shows the end). */}
         <span class="rv-time-rest">{time().rest}</span>
       </span>
       <Show
@@ -200,23 +185,16 @@ export const PlayedAlone = (
 ) => {
   const { meta } = useAskRoot();
   const [retried, setRetried] = createSignal<Option.Option<Try>>(Option.none());
-  // The length at rest is the browser's measure, which the server's render has not: a video
-  // whose metadata came before the page's script would draw it during hydration, over markup
-  // that has none. It shows once the page has settled.
   const [settled, setSettled] = createSignal(false, { ownedWrite: true });
   onSettled(() => {
     setSettled(true);
   });
-  // The play a press on a failed picture asked for: the retry's element's alone, taken once
-  // as that element starts (a source switched away and back is a new try, which plays only
-  // if the clock plays).
   let asked = Option.none<Try>();
   const takeAsked = (at: Try) => {
     const mine = Option.exists(asked, (a) => a.src === at.src && a.n === at.n);
     if (mine) asked = Option.none();
     return mine;
   };
-  // A new source is its first try; the same source keeps its retries.
   const current = createMemo((): Try => ({
     src: props.src,
     n: Option.getOrElse(
@@ -269,7 +247,6 @@ export const PlayedAlone = (
               <Show when={current()} keyed>
                 {(at: Try) => {
                   const ref = useClockMedia(driver, ALONE);
-                  // A retry plays as it starts: the press asked for it, once.
                   if (takeAsked(at)) onSettled(() => send(SyncEvent.Toggled));
                   return (
                     <video
@@ -294,7 +271,6 @@ export const PlayedAlone = (
                   {CANNOT_PLAY}
                 </span>
               </Show>
-              {/* At rest the picture says it plays: ▶ on a disc, and its length once measured. */}
               <Show when={atRest(sync()) && !failed()}>
                 <span class="rv-rest" data-role="at-rest" aria-hidden="true">
                   <span class="rv-rest-play">
@@ -308,11 +284,6 @@ export const PlayedAlone = (
                 </span>
               </Show>
             </button>
-            {/*
-             * Its row only once it has moved: none at rest or failed, and no room kept for it, so
-             * what follows the picture (its caption) is right under it. The first play pushes that
-             * down; the picture pressed stays where it is.
-             */}
             <Show when={!atRest(sync()) && !failed()}>
               <TransportRow
                 sync={sync}

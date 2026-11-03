@@ -1,26 +1,3 @@
-// The easel: a still of a scene as its sources stand, in about a second, with
-// no render (`film lab look`). The lab holds one export page per film warm in
-// this process's Chrome (`Browser`) on its own server (the app's render page,
-// at the film's export place, `pageHref.export`), and a look seeks it
-// to the frame and takes the canvas as the view asks (`still`, the export
-// handle's call). Never a stale image: every look first asks the pages'
-// build as it stands (`LabPage.built`, which hears a save the watch missed
-// and waits out a build under way), refuses a failed build with its words,
-// and opens the export page of that very build (`?build=<kept>`), reopening
-// it when the build moved, so the page always runs the code on disk. Each still is written once, under the film's
-// `out/<film>/look/<scene>/`, named by its time, view and build.
-//
-// A match (`film lab match`) draws one frame twice on the same page: once with
-// the figure probe on, for each rig's box on screen and its concept, and once
-// as a plain PNG, which it crops each figure from; it measures the crop and
-// the concept's (`core/figure.ts`), writes the table and the side-by-side
-// under `out/<film>/match/<scene>/`, and answers both.
-//
-// A wedge (`tools/wedge.ts`) draws a look at another level than the one it
-// plays: the film's `palette.ts` is read as a pick of that level would write
-// it, only in the build (`LabPage.wedge`), and never written. Its page is
-// held beside the film's own, a few at most.
-
 import {
   Array as Arr,
   Clock,
@@ -215,7 +192,6 @@ export const elsewhereOf = (
     });
     if (Option.isSome(served) && Option.isSome(asked) && served.value === asked.value)
       return Option.none();
-    // Named as it resolves, or (not there) as it was given.
     const here = Option.match(asked, {
       onNone: () => `${from.replace(/\/+$/u, '')}/${film}`,
       onSome: (folder) => path.join(folder, film),
@@ -240,7 +216,6 @@ export class Easel extends Context.Service<Easel, EaselService>()('@manna/film/t
       const scope = yield* Effect.scope;
       const origin = yield* Deferred.make<string>();
       const one = yield* Semaphore.make(1);
-      // Each page held, by its film and wedge (`film`, `film?ground-light`), oldest first.
       const held = new Map<string, Held>();
 
       const drop = (key: string) =>
@@ -258,11 +233,8 @@ export class Easel extends Context.Service<Easel, EaselService>()('@manna/film/t
         const kept = Option.filter(Option.fromUndefinedOr(held.get(key)), (h) => h.build === build);
         if (Option.isSome(kept)) return kept.value;
         yield* drop(key);
-        // The oldest page goes first when the easel holds its most.
         for (const old of [...held.keys()].slice(0, Math.max(0, held.size - HELD_MAX + 1)))
           yield* drop(old);
-        // The page's own scope closes on every exit but a page held: a failure, and a look
-        // cancelled while the page opens, close it, so no page lives on unheld.
         const opened = yield* Effect.uninterruptibleMask((restore) =>
           Effect.gen(function* () {
             const own = yield* Scope.fork(scope);
@@ -312,7 +284,6 @@ export class Easel extends Context.Service<Easel, EaselService>()('@manna/film/t
         const wedge = wedgeName(levels);
         const now = yield* buildFor(film, levels);
         if (Option.isSome(now.failed)) return yield* PagesBroken.make({ reason: now.failed.value });
-        // The build's own number, not its stamp: a build answered again (a mix since) is the same code.
         const build = [now.build.server, now.kept, ...[now.wedge].filter(Boolean)].join('.');
         const builtAt = yield* Clock.currentTimeMillis;
         const key = [film, ...[wedge].filter(Boolean)].join('?');
@@ -338,7 +309,6 @@ export class Easel extends Context.Service<Easel, EaselService>()('@manna/film/t
         yield* fs.makeDirectory(dir, { recursive: true }).pipe(Effect.mapError(failedLook));
         const looks = yield* Effect.forEach(moments, (moment) =>
           Effect.gen(function* () {
-            // A page that failed a frame is not trusted with the next: the next look opens a fresh one.
             const bytes = yield* page.page
               .call('still', moment.frame, post.view)
               .pipe(Effect.tapError(() => drop(key)));
@@ -356,7 +326,6 @@ export class Easel extends Context.Service<Easel, EaselService>()('@manna/film/t
           }).pipe(Effect.mapError(failedLook)),
         );
         const doneAt = yield* Clock.currentTimeMillis;
-        // Where the time went: asking the build, opening a page (0 when held), drawing and writing.
         yield* Effect.log(
           `easel.look film=${film} scene=${scene.id} stills=${looks.length} mode=${post.view.mode} wedge=${wedge || 'none'} build=${build} ms=${doneAt - started} built_ms=${builtAt - started} page_ms=${pageAt - builtAt} draw_ms=${doneAt - pageAt}`,
         );
@@ -398,7 +367,6 @@ export class Easel extends Context.Service<Easel, EaselService>()('@manna/film/t
         );
         const { info } = page.page;
         const moment = yield* Effect.fromResult(momentOf(scene, info.fps, post.at));
-        // A page that failed a frame is not trusted with the next: the next look opens a fresh one.
         const drawn = <A, E>(call: Effect.Effect<A, E>) =>
           call.pipe(Effect.tapError(() => drop(film)));
         const marks = (yield* drawn(page.page.call('figures', moment.frame)).pipe(

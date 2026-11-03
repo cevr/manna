@@ -1,14 +1,3 @@
-// A film's painted plates loaded before its first frame (`loadPaintings`), as
-// its puppets are (`puppet/load.ts`): every painting its drawings declare
-// (`film.paintings.declared`), each PNG read once through the
-// `PaintingImages` the host gives (a page decodes it here, never in a frame),
-// held to its spec, and stood on the film for its draws. What a read holds (a
-// page's bitmap) is the load scope's, handed to the caller's and freed when
-// it closes; the paintings stand on the film until then. One rule holds for
-// every host: a PNG of another size than its spec declares fails the load,
-// and where the host gives the bytes, so does paint (alpha above 0) on the
-// outermost row or column of an edge the spec declares open.
-
 import { Effect, Exit, Option, Scope } from 'effect';
 import type { Film } from '../canvas/film.ts';
 import type { Edge, LoadedPainting, PaintingSpec } from '../canvas/painting.ts';

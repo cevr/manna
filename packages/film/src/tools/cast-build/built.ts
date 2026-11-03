@@ -1,12 +1,3 @@
-// What the cast build's cache holds of a member, as `concept coverage` and
-// `concept build` both read it: the cache's folder, a member's build inputs
-// (his manifest and the facts read off his folder), and each puppet entry's
-// cut and fit results at the current inputs. The results are the build's own:
-// the member's free stages (drawing, parts, cut, fit) planned through
-// `buildGraph`, so each key is the one the build computes; a stage whose key
-// the cache holds answers, and one it does not is unmeasured. Measuring runs
-// those stages with no spend, so what it makes is kept for the build.
-
 import { Config, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { castFolder } from '../cast-library.ts';
 import { FilmFolder, type FilmName, importFilmModule } from '../film-repo.ts';

@@ -1,11 +1,3 @@
-// The one place a derived sound's audio is made and measured: a code sound's
-// seed rendered (core/sfx.ts `renderSource`, pure), kept by its source, so a
-// sound measured for a check and then mixed, or placed many times, renders
-// once while it stays among the newest kept. A sound made here
-// is shared by everything that asks for it: its readers never write into it.
-// The film loader resolves a film's sounds and measures none; what reads how
-// they play measures the ones the film places here (`measuredFilm`).
-
 import { Cache, Context, Effect, Layer, Option } from 'effect';
 import type { Pcm } from '../core/audio.ts';
 import {

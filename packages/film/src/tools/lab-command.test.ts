@@ -1,10 +1,3 @@
-// The lab's command set, defined once and served twice: a command reads its
-// input by its parameters (refused in the words a toolkit says), answers its
-// success as JSON and as plain lines, and refuses in its own words; and the
-// set is the same on each transport, by name and by field: every MCP tool the
-// lab lists is a `film lab` subcommand taking the fields the tool's input
-// schema lists, and no command is served on one transport alone.
-
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -86,7 +79,6 @@ describe('a lab command', () => {
         'seen[1] scene=b at=1',
       ]);
       expect(Option.isNone(answered.pictured)).toBe(true);
-      // The answer the lab sent, read back as the command's own: the same lines.
       expect((yield* sample.answered(answered.json)).lines).toEqual(answered.lines);
     }),
   );
@@ -98,7 +90,6 @@ describe('a lab command', () => {
         const unread = yield* Effect.flip(sample.call({ count: 'two' }));
         expect(unread._tag).toBe('LabInputInvalid');
         expect(unread.message).toContain("Invalid parameters for tool 'sample': ");
-        // Every problem said, not the first.
         expect(unread.message).toContain('["film"]');
         expect(unread.message).toContain('["count"]');
         expect(yield* Effect.flip(sample.call({ film: 'nope' }))).toMatchObject({
@@ -107,7 +98,6 @@ describe('a lab command', () => {
           tag: 'LabRefused',
           reason: 'no film nope',
         });
-        // A field it does not take is left out, as the MCP leaves it out.
         expect(yield* sample.input({ film: 'f', stray: 1 })).toEqual({ film: 'f' });
         expect((yield* Effect.flip(sample.answered({ film: 'f' })))._tag).toBe('SchemaError');
       }),
@@ -217,7 +207,6 @@ describe('the command set on each transport', () => {
       const { call } = yield* mcpSession(lab);
       const { tools } = yield* call('tools/list', {});
       const listed = (tools as ReadonlyArray<{ name: string }>).map((tool) => tool.name);
-      // What the CLI offers, read off its own help: each tool a subcommand beside `events`.
       const offered = yield* helpOf([]);
 
       expect(offered.subcommands.toSorted()).toEqual([...listed, 'events'].toSorted());
@@ -238,7 +227,6 @@ describe('the command set on each transport', () => {
             .map((f) => f.name)
             .toSorted(),
         ]).toEqual([tool.name, [...(tool.inputSchema.required ?? [])].toSorted()]);
-        // Each field a flag the terminal is offered, beside `--input` and `--json`.
         expect([tool.name, (yield* helpOf([tool.name])).flags.toSorted()]).toEqual([
           tool.name,
           [...Object.keys(tool.inputSchema.properties ?? {}), 'input', 'json'].toSorted(),

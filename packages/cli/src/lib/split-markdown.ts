@@ -43,9 +43,7 @@ function slugify(input: string): string {
   return (
     input
       .toLowerCase()
-      // strip markdown emphasis / heading markers
       .replace(/[*_`#>]/g, '')
-      // anything not a-z0-9 becomes a dash
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, SLUG_MAX)
@@ -180,9 +178,6 @@ export function splitMarkdownIntoSections(content: string): SplitMarkdown {
     }
 
     if (isPartHeading(line)) {
-      // A divider: remember it for the next numbered section; don't emit a block.
-      // If a section is open, the Part header belongs to the NEXT section, so
-      // we simply don't append it to the current block.
       state.currentPart = Option.some(headingText(line));
       continue;
     }
@@ -193,7 +188,6 @@ export function splitMarkdownIntoSections(content: string): SplitMarkdown {
   closeSection(state);
 
   const { folderTitle, blocks } = state;
-  // Edge case: a document with no "## " headings at all — emit the preface.
   if (blocks.length === 0) {
     const preface = state.prefaceLines.join('\n').trim();
     let markdown = content.trim();

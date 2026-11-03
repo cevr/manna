@@ -1,15 +1,3 @@
-// The lab's writes to scene source: a cue's `offset`, `dur`, `until`,
-// `untilOffset`, `ease` or `stagger`, or a knob's value, in the `drawing({...})` literal
-// SceneSources locates. A cue write the scene's timeline cannot resolve with
-// is refused (`TimelineUnresolved`): judged in a fresh `film read cue
-// --spans --patch` (`FreshFilm`), on the clock the film's files give now, never this
-// process's first import of them; its answer is the cue where it lands.
-//
-// Each write splices the one value (`scene-source.ts`) and reads it back from
-// the formatted text, through SourceWriter: oxfmt, the compare-and-swap over
-// the text the edit was made from (`SourceChanged`), and the film's undo stack
-// are its.
-
 import { Array as Arr, Context, Effect, Layer, Option, Predicate, Result } from 'effect';
 import { CUE_PATCH_KEYS, type CuePatch, type Knob } from '../core/schema.ts';
 import {
@@ -106,7 +94,6 @@ export class SceneWriter extends Context.Service<SceneWriter, SceneWriterService
             target,
             edit: (source) => edit(at, source),
             verify: (after, before) => verify(at, after, before),
-            // The text judged is the text the file holds after, written or already so.
             check: (after) => Effect.map(check(at, after), (a) => [a, after] as const),
           });
           const written: Written = {

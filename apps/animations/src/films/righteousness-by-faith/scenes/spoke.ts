@@ -1,28 +1,3 @@
-// The word spoken, drawn to its Board (`spoke.dark` try 1, `spoke.light` try
-// 1, `spoke.brings` try 2). It opens on seed's last frame: the accused on the
-// page in the peach light, the opened seed lit beside his face. On "How can a
-// word do that?" he looks up at us, asking, and the camera pushes into the
-// seed's heart until its gold fills the frame; the dip to black opens the
-// Bible's first page, a world of dark paper with no sky, each torn plane's
-// edge a faint cool rim (`spoke.dark`). On `light` a spark of gold wakes at
-// its left edge; on "Let there be light" it flies its arc over the dark, a
-// ribbon of gold behind it, and on "is" it bursts into the sun: a ring of
-// light goes out from it, the dawn flooding the sky behind the ring and then
-// turning to day, while the dark planes hold the foreground (`spoke.light`).
-// On `itself` the dark bands
-// sink, and the hills, the water and the land tear in and rise in their
-// place. On `calleth` the camera lifts to the heavens, the word's trail runs
-// into the sun and gold stars come out one by one. On `verdict` a white
-// flash, and the page again: the accused, the seed floating before him, his
-// face near the frame's upper third. On "cover-up" the seal's old outline traces
-// itself round the seed and holds a breath; on "No." it falls away. The card,
-// "It's a seed.", "seed" large in gold, and a hard cut back on "His". On
-// `brings` the camera widens and three icons rise in a row beside him, left
-// to right (`spoke.brings`): his own hand circle, the seed settling onto it;
-// the white cloth; the green blade; each lit as it is named, his eyes going
-// to each. The narration's words are on the one card alone (CRAFT rule 1):
-// nothing else in the picture is lettered.
-
 import {
   type Camera,
   type CardWord,
@@ -72,8 +47,6 @@ import {
 import { seed } from './seed.ts';
 import { LAST_FRAME, onHim, word } from './word.ts';
 
-// ─── the page as seed leaves it ──────────────────────────────────────────────
-
 const L = LAST_FRAME;
 
 /** His breath's period and its offset, as word and seed breathe him (`living`). */
@@ -102,8 +75,6 @@ const INTO = { glow: 1.6, reach: 520 } as const;
 /** The colours the frame passes through between its worlds: the seed's gold filling it, the dark the first page opens out of, the flash back to the page. */
 const VEIL = { gold: '#ffe8a8', dark: '#120f27', flash: '#fffaf0' } as const;
 
-// ─── the first page ──────────────────────────────────────────────────────────
-
 /**
  * How far each plane of the first page stands from the camera, the front
  * band's 1: the sky farthest, then the hills, the water, the far dark band,
@@ -117,8 +88,6 @@ const RISE = { from: 420, pieces: 4 } as const;
 
 /** How strongly the paper's fibre lies over the sky: half the house's, so the sky holds the panels' even indigo and its mottle does not blot it. */
 const SKY_FIBRE = 0.5;
-
-// ─── the seed before him, the seal's outline, the row ────────────────────────
 
 /** The seed floating before him after the flash (`verdict`): out from his face and a little lower, so the seal's outline round it clears his face. */
 const BEFORE = { x: 750, y: 560, size: 210 } as const;
@@ -152,8 +121,6 @@ const ICON_LIGHT = { reach: 0.65, alpha: 0.85, pop: 0.08 } as const;
 /** The shadows the icons lay on the page: their cast's darkness, and their foot's. */
 const ICON_SHADE = { cast: 0.5, foot: 0.8 } as const;
 
-// ─── the lead ────────────────────────────────────────────────────────────────
-
 /** Where he looks at us, from his feet. */
 const US: Pt = [LEAD_KNOBS.gazeX, LEAD_KNOBS.gazeY];
 
@@ -171,8 +138,6 @@ const DRAWN: Expression = { ...EASE, browY: -1.2, browTilt: 0.18, eyes: 1.1, mou
 const READING: Expression = { ...EASE, browY: -1, browTilt: 0.1, eyes: 1.06, mouth: 0.3 };
 /** "It brings power.": glad. */
 const GLAD: Expression = { ...EASE, browY: -1.5, browTilt: 0.06, eyes: 1.12, mouth: 0.6 };
-
-// ─── scratch ─────────────────────────────────────────────────────────────────
 
 /** His numbers (scratch: every one he moves is rewritten each frame). */
 const LN: Record<keyof typeof LEAD_KNOBS, number> = { ...LEAD_KNOBS };
@@ -200,20 +165,13 @@ interface Placed {
 const PLACED: Placed = { x: 0, y: 0, scale: 1, shown: 0 };
 
 const timeline = {
-  // "How can a word do that?": he looks up at us, asking, and the camera pushes into the seed's
-  // heart, its light swelling until its gold fills the frame.
   ask: { mark: 'first', dur: 0.6, track: 'lead' },
   push: { mark: 'first', until: 'dark', ease: 'inCubic', track: 'camera' },
   fill: { mark: 'first', word: 'that', until: 'dark', ease: 'inQuad', track: 'light' },
   blaze: { with: 'fill', until: { cue: 'fill' }, ease: 'inCubic', track: 'light' },
-  // `dark`: the dip to black, and the Bible's first page fades up out of it, up by "world", dark
-  // paper with no sky (spoke.dark); the camera creeps in while the world is made.
   dip: { mark: 'dark', dur: 0.45, ease: 'inQuad', track: 'light' },
   night: { mark: 'dark', word: 'world', dur: 1.2, ends: true, ease: 'inOutSine', track: 'world' },
   dusk: { mark: 'dark', until: 'calleth', ease: 'linear', track: 'camera' },
-  // `light`: a spark of gold wakes at the dark's edge; on "Let there be light" it flies its arc
-  // over the dark, and on "is" it bursts into the sun, a ring of light going out as the sky
-  // floods to dawn and then to day (spoke.light).
   kindle: { mark: 'light', dur: 0.8, ease: 'outCubic', track: 'word' },
   fly: {
     mark: 'light',
@@ -225,12 +183,8 @@ const timeline = {
   burst: { mark: 'light', word: 'is', dur: 0.8, ease: 'outBack', track: 'sun' },
   flood: { with: 'burst', until: 'itself', ease: 'outCubic', track: 'sky' },
   day: { after: 'flood', dur: 1.8, ease: 'inOutSine', track: 'sky' },
-  // `itself`, "No tools, just His word.": the dark bands sink, and the hills, the water and the
-  // land tear in and rise in their place, one after another.
   sink: { mark: 'itself', dur: 1, ease: 'inQuad', track: 'land' },
   rise: { mark: 'itself', dur: 2.4, stagger: 0.5, ease: 'outBack', track: 'land' },
-  // `calleth`: the camera lifts to the heavens, the word's trail runs into the sun, and the
-  // stars come out one by one as He calls them.
   lift: { mark: 'calleth', until: 'verdict', ease: 'inOutSine', track: 'camera' },
   trail: { mark: 'calleth', dur: 1.6, ease: 'inOutSine', track: 'word' },
   stars: {
@@ -241,8 +195,6 @@ const timeline = {
     ease: 'outBack',
     track: 'stars',
   },
-  // `verdict`: a white flash, and the page again, the accused with the seed floating before
-  // him; on "verdict" he asks us.
   flashIn: { mark: 'verdict', dur: 0.2, ends: true, ease: 'inQuad', track: 'light' },
   flashOut: { mark: 'verdict', dur: 0.7, ease: 'outQuad', track: 'light' },
   onIdea: {
@@ -252,21 +204,15 @@ const timeline = {
     track: 'camera',
   },
   wonder: { mark: 'verdict', word: 'verdict', dur: 0.6, track: 'lead' },
-  // "cover-up?": the seal's old outline traces itself round the seed, its round and then its
-  // tails, and holds a breath while he eyes it, wary; on "No." it falls away, and he is relieved.
   trace: { mark: 'cover', word: 'cover', dur: 0.7, ease: 'inOutSine', track: 'seal' },
   tails: { after: 'trace', dur: 0.3, ease: 'outQuad', track: 'seal' },
   wary: { mark: 'cover', word: 'cover', dur: 0.5, track: 'lead' },
   fall: { mark: 'seed', dur: 0.8, ease: 'inQuad', track: 'seal' },
   relief: { mark: 'seed', dur: 0.5, track: 'lead' },
-  // "It's a seed,": the card, "seed" large in gold, cut back on "His".
   card: { mark: 'seed', word: 'its', until: { cue: 'back', edge: 'start' }, track: 'card' },
   back: { mark: 'seed', word: 'His', dur: 0, track: 'card' },
-  // "and His word makes it true": drawn to it again, its light swelling.
   drawn: { mark: 'seed', word: 'His', dur: 0.6, track: 'lead' },
   swell: { mark: 'seed', word: 'makes', dur: 1.2, ease: 'inOutSine', track: 'seed' },
-  // `brings`: the camera widens to the row; on "three" the icons rise in left to right, and the
-  // seed settles onto the hand.
   widen: { mark: 'brings', word: 'word', dur: 1.4, ease: 'inOutSine', track: 'camera' },
   lineUp: {
     mark: 'brings',
@@ -278,7 +224,6 @@ const timeline = {
   },
   settle: { mark: 'brings', word: 'three', dur: 1.2, ease: 'inOutSine', track: 'seed' },
   onRow: { after: 'widen', until: { at: 'end' }, ease: 'linear', track: 'camera' },
-  // Each icon lit as it is named, his eyes going to it; glad on "power".
   toFaith: { mark: 'faith', dur: 0.5, track: 'lead' },
   litFaith: { mark: 'faith', word: 'faith', dur: 0.7, ease: 'outCubic', track: 'icons' },
   toCloth: { mark: 'forgiveness', dur: 0.5, track: 'lead' },
@@ -295,31 +240,21 @@ const timeline = {
 } as const;
 
 const knobs = {
-  // Into the seed's heart as its light fills the frame.
   heart: [709, 558],
   heartZoom: 7,
-  // The first page as its panels frame it (spoke.dark, spoke.light).
   world: [768, 520],
   worldZoom: 1.25,
-  // How much closer it creeps while the world is made.
   worldCreep: 1.04,
-  // Up to the heavens as the stars come out.
   heavens: [768, 440],
   heavensZoom: 1.32,
-  // The page again after the flash: him and the seed before him, his face near the frame's upper
-  // third, the seal's outline and its tails' forked ends inside the frame.
   idea: [610, 588],
   ideaZoom: 2.5,
-  // The row beside him (spoke.brings).
   row: [918, 600],
   rowZoom: 1.47,
-  // How much closer the camera creeps while a framing on the page holds.
   creep: 1.05,
 } as const;
 
 type SpokeFrame = Frame<keyof typeof timeline & string, typeof knobs, typeof COURT_RIGS>;
-
-// ─── him on the page ─────────────────────────────────────────────────────────
 
 /** `p` on the page, from his feet. */
 const fromFeet = (p: Pt): Pt => [p[0] - L.lead[0], p[1] - L.lead[1]];
@@ -404,8 +339,6 @@ const onPage = (f: SpokeFrame, cam: Camera, lean: number, under: () => void, ove
   });
 };
 
-// ─── the opening: into the seed's light ──────────────────────────────────────
-
 /** The seed beside him as seed leaves it, its light swelling as the camera pushes into it. */
 const beside = (f: SpokeFrame) => {
   SEED.x = BESIDE.x;
@@ -438,11 +371,8 @@ const opening = (f: SpokeFrame) => {
       shine(ctx, hx, hy, INTO.reach * fill, GOLD_GLOW, fill);
     },
   );
-  // Its gold over the whole frame, held there as the dark comes over it.
   veil(f, VEIL.gold, f.at('blaze'));
 };
-
-// ─── the first page ──────────────────────────────────────────────────────────
 
 /** Piece `i` of the made world (0 the hills, 1 the water, 2 the land, 3 the shore), torn in from below and risen into its place. */
 const risen = (f: SpokeFrame, i: number, draw: () => void) => {
@@ -502,8 +432,6 @@ const genesis = (f: SpokeFrame) => {
   ]);
   multiplane(ctx, cam, w, h, planes(f), { rest: f.knob('world'), fibre: SKY_FIBRE });
 };
-
-// ─── the page again: the seed before him, the row ────────────────────────────
 
 /** Where `icon`, the `i`th of the row, stands now and how big: risen in on "three", popping as it is lit. */
 const placeOf = (f: SpokeFrame, icon: Icon, i: number): Placed => {
@@ -636,8 +564,6 @@ const idea = (f: SpokeFrame) => {
   );
 };
 
-// ─── between the worlds ──────────────────────────────────────────────────────
-
 /** `color` over the whole frame at `alpha`. */
 const veil = (f: SpokeFrame, color: string, alpha: number) => {
   if (alpha <= 0) return;
@@ -670,9 +596,7 @@ const itsASeed = (words: ReadonlyArray<CardWord>): ReadonlyArray<CardWord> => {
 export const spoke = drawing({
   timeline,
   knobs,
-  // The court's rigs: him and his hands.
   rigs: COURT_RIGS,
-  // The page's own light, as word and seed leave it.
   light: L.light,
   draw: (f) => {
     if (f.at('flashOut') > 0) idea(f);

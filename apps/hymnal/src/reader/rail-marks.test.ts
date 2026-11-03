@@ -17,7 +17,6 @@ import { rowsOf } from './rows';
 
 const hymn = (number: number, topic: string) => ({ number, topic });
 
-// Recent holds hymn 4 above two topics of two hymns and one of one: topic and shelf rows 36 tall, hymn rows 44, under a 100 pt header.
 const { rows } = rowsOf(
   [hymn(1, 'a'), hymn(2, 'a'), hymn(3, 'b'), hymn(4, 'b'), hymn(5, 'c')],
   [{ name: 'Recent', hymns: [hymn(4, 'b')], href: '/recent' }],
@@ -37,7 +36,6 @@ describe('the rail’s hymns', () => {
   });
 
   it('shows a topic’s first hymn at its topic row, and each other hymn just under the pinned row', () => {
-    // Recent's header and hymn take 80 pt, so the first topic row starts at 180.
     expect(marks.map((mark) => mark.offset)).toEqual([180, 180 + 44, 304, 304 + 44, 428]);
   });
 });
@@ -134,7 +132,6 @@ describe('a label’s box', () => {
   });
 
   it('fits three digits in the gutter at the cap', () => {
-    // A tabular digit of the system face is under 0.62 em wide.
     expect(3 * 0.62 * LABEL_SIZE * LABEL_SCALE).toBeLessThanOrEqual(GUTTER);
   });
 });

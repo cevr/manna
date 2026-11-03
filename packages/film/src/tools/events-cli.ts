@@ -1,31 +1,3 @@
-// `film lab events`: the lab's events (the catalogue, `core/lab-events.ts`)
-// on a terminal, read from the running lab at `FILM_LAB_URL` through its
-// change feed (`changes`, `lab-client.ts`). With `--follow` it keeps
-// running and prints one line per event as the lab sees it, so a Claude Code
-// Monitor wakes on each without polling; without it, it prints the events
-// past `--since` and the cursor to read on from.
-//
-//   film lab events [--follow] [--name <glob>…] [--film <f>] [--since <cursor>] [--json] [--gone-after <dur>]
-//
-// A line is the event's name first, then its cursor (the one to read on from
-// after it), when the lab saw it, its id (made from its record: the same
-// from every lab that tells it, so a reader told it twice knows it), what it
-// is about, its summary, the command that reads its whole record, and its
-// lab link:
-//
-//   ask.answered cursor=k3x.12 at=… id=3f0c… film=f ask=a1 summary="…" read="bun cli.ts lab ask_read --ask a1" link=http://…
-//
-// `--json` prints `{"cursor":…,"event":…}` a line instead, the event as the
-// catalogue's payload schema encodes it. An event of a kind this checkout
-// does not know (a newer lab's) is printed from the fields every event has,
-// and said once on stderr. What is not an event goes to stderr: the stream
-// following, the lab lost and asked again, the stream reconnected and
-// reading on from its cursor (`lab-stream.ts`), a cursor the lab no longer
-// knows. A lab silent past `--gone-after`, a refusal of the lab's (a
-// `--name` no event matches, a film it does not have), or an answer this
-// checkout cannot read ends it with a non-zero exit, said as `{"_tag",
-// "message"}` on stdout too with `--json`.
-
 import {
   Boolean as Bool,
   Console,

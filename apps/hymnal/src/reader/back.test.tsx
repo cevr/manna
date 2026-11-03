@@ -105,7 +105,6 @@ describe('moving between screens on the web', () => {
     const left = rows(host);
     expect(left[0]).toBe('55, Jesus Tender Shepherd Hear Me');
 
-    // The hymn shows in the search's place, then Back shows the search again.
     act(() =>
       root.render(inApp(<HymnPage hymn={Option.getOrThrow(hymnAt('545'))} reader={readerOn()} />)),
     );

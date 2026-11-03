@@ -37,24 +37,26 @@ The data has no app route yet; this feature is CLI only.
    → 0 fail. Each mutation (a number out of range, a verse past its chapter, a stanza
    past its hymn, a swapped pair, a hymn dropped from a section or a tune index, an
    entry dropped from a page) prints its problem at every entry it applies to.
-   Then `bun run --cwd packages/hymnal indexes --reach` → exit 0, a `caught/variants`
-   count per index (counts only; no pass line).
-3. **Readings (`indexes-readings`).** `cd "$UNIT/p6" && bun tools/audit.ts | tail -n 6`.
-   → exit 0. The last line is `audit pages=49 readings=98 differences=<d> ruled=<d> unreadable=0`
-   (every difference ruled), and the line before it says `printed rulings=<n> = data/indexes/rulings.json`
+   Then `bun run --cwd packages/hymnal indexes --reach` → exit 0, one
+   `reach <index>: caught=<c> variants=<v>` line per index (counts only; no pass line).
+3. **Readings (`indexes-readings`).** The audit's tool and its records are gone with
+   `$UNIT/p6`, so the step reads the audit's last run:
+   `tail -n 2 "$UNIT/p6-round-1-verify-evidence/audit.log"`.
+   → The last line is `audit pages=49 readings=98 differences=2064 ruled=2064 unreadable=0`
+   (every difference ruled), and the line before it says `printed rulings=367 = data/indexes/rulings.json`
    and `checks: indexes files=11 entries=9221 problems=0`.
 
 ## Gotchas
 
 - Name an entry by its index, page and place (`#3`), never by hymn words.
 - The index photos are gone: a fact the checks cannot hold rests on the
-  readers and judges, and their records under `$UNIT/p6`. Never re-read a
-  page from a guess.
-- The audit runs the checks in the findbulk worktree
-  (`~/Developer/personal/.rifts/manna/findbulk/packages/hymnal`, fixed in
-  `tools/audit.ts`), not in the checkout under test. Once that worktree is
-  gone, steps 1-2 stand alone and the audit is read from its last log.
+  readers' and judges' rulings in `packages/hymnal/data/indexes/rulings.json`,
+  each with its `why`, and on the receipts left in `$UNIT/p6-round-1-receipts`.
+  Never re-read a page from a guess.
+- The audit ran its checks in the findbulk worktree, not in the checkout
+  under test; that worktree and the audit's tool are gone, so steps 1-2
+  stand alone and step 3 reads the audit's last log.
 - `--reach` counts change when the look-alike set or a check changes; compare
   them with the run that changed it, not with an older log.
-- The slow data test reads the KJV, the 695 compiled hymns and `data/shapes.json`;
+- The slow data test reads the KJV, the 695 compiled hymns and `packages/hymnal/data/shapes.json`;
   it takes about 0.5 s alone and stays out of the fast tests.

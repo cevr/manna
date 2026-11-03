@@ -1,76 +1,3 @@
-// Every test file of a workspace runs, and runs once: one of its unit-test
-// tasks (`units.ts`: the scripts the gate runs, through turbo; `test`, or
-// each part of a workspace whose tests are cut into parts) takes it, or a
-// script of its own run by hand (`test:e2e`, `test:browser`) names it. A test
-// file no script reaches passes the gate without ever running, and lets its
-// workspace fit the budget by running less; one that two unit-test tasks take
-// runs twice in the gate, and is a part list that drifted. `test:budget`
-// measures no workspace that leaves one out or runs one twice, and
-// `reach.slow.test.ts` holds every workspace of the repo to both.
-//
-// What the check reads is which files a runner takes and loads as tests:
-// the scripts, their flags, a bunfig, a playwright config, the walk. What
-// the code a run loads does (a test file's own, a preload's, a reporter's,
-// a global setup's, the modules they import, as the toolchain resolves
-// them) is the repo's, as a test is: the reader does not read it, so a
-// file that registers no case, or a preload that ends the run, is not its.
-//
-// The reader reproduces a narrow grammar of scripts and refuses the rest: a
-// script it cannot read reaches nothing, so the check can call a file
-// unreached that runs, never call one reached that its runner does not
-// take. A script reaches files only when its commands are joined by `&&`
-// alone (`andChained`), none sets a variable or changes the shell
-// (`changesShell`: `BUN_OPTIONS`, `export`, `exit`, `! cmd`, a `$`, a glob
-// the shell expands, a redirection), none runs in another folder (`movesFolder`: `cd`, a subshell, `--cwd`), and each holds only
-// flags that leave what runs, and how bun reads it, as it is (`BUN_FLAGS`,
-// `PLAYWRIGHT_FLAGS`; an unknown one, a narrowing one such as `--changed`,
-// `-t`, `--grep`, `--shard`, `--list`, one such as `--loader` that changes
-// how a file is read, or an attached short value is refused).
-// `bun run <script>` runs that script of the workspace, read on its own,
-// and refuses words after the script's name (bun hands them on). A bun
-// command in a workspace whose `bunfig.toml` does not parse, or sets a
-// `[test]` key outside `BUNFIG_TEST_KEYS` (`root`, `pathIgnorePatterns`),
-// or a table outside `BUNFIG_TABLES` (`[loader]`, `define`), reaches nothing.
-//
-// A `bun test` command takes a file as bun 1.4 does, measured (`runsFile`):
-// with no filter, every file its scan finds named as a test (`*.test.ts`,
-// `*_test.ts`, `*.spec.ts`, `*_spec.ts`, in one of `BUN_EXTENSION`), the
-// scan entering no `node_modules` and no folder whose name starts with `.`;
-// a filter that starts with `./` names a file or a folder by its path from
-// the workspace; any other filter takes each file the scan finds whose path
-// holds it; `--path-ignore-patterns` takes no file it names, nor any under
-// a folder it names; of the globs, only `**/*<name>*` is read (it takes no file
-// whose name holds `<name>`), and any other reaches nothing (bun's match of a
-// folder by a glob is not reproduced).
-// `playwright test` takes a file as its config sets it (`playwrightRun`):
-// under the config's `testDir`, its absolute path matched by its
-// `testMatch` and not by its `testIgnore`, each read as playwright's file
-// matcher reads it (a regex as written, a glob by `globMatcher`), and by one
-// of the command's filters when it names any (a filter that ends in a line,
-// `a.spec.ts:12`, takes none: it runs only the cases there). The reader parses the config
-// and reads the object it exports (`settingsOf`); a config it cannot read
-// (none, one that does not parse or exports anything else, one whose
-// loading may do more than build that object (`buildsOnlyItsExport`: a
-// `module.exports`, a function, a name it does not bind), a spread or a
-// computed key in it, a `testDir`, `testMatch`, `testIgnore` or
-// `respectGitIgnore` set as anything but a literal, a setting outside
-// `PLAYWRIGHT_SETTINGS` such as `projects`, `grep` or `shard`) takes none.
-// A file is one playwright's walk of `testDir` finds (`walked`): it enters
-// no `node_modules`, and where it respects git's ignore rules
-// (`respectGitIgnore: true`, or neither it nor a `testDir` that is not
-// empty set) it reads each `.gitignore` from `testDir` down by minimatch, as
-// `collectFiles` does, each as it stands on disk, tracked or not
-// (`gitignoresUnder`). A test file that is a symbolic link, or under a
-// folder that is one, is unreached: playwright's walk takes no link, and the
-// reader follows none.
-// Only a runner reaches a file: `bun test`, a wrapper of it the repo names
-// (`BUN_TEST_WRAPPERS`), `playwright test`; any other command (`echo
-// ./src`, a build) reaches none. A file named
-// as a test needs a script unless it is data (`isData`): it parses and
-// exports by default only an object or array of literals, which runs
-// nothing when loaded and so registers no test. A test file no workspace
-// holds is unreached.
-
 import { Glob, TOML } from 'bun';
 import { Effect, FileSystem, Option, Path, Predicate, Schema } from 'effect';
 import type * as PlatformError from 'effect/PlatformError';
@@ -431,7 +358,6 @@ const runsFile = (run: Run, file: string, text: string) => {
     const asPath = Option.liftPredicate(filter, (f) => f.startsWith('./'));
     return Option.match(Option.flatMap(asPath, pathOf), {
       onNone: () => scanned && file.includes(filter),
-      // `./` is the workspace itself: every file its scan takes.
       onSome: (at) =>
         (at === '' && scanned) || file === at || (scanned && file.startsWith(`${at}/`)),
     });
@@ -908,12 +834,7 @@ const playwrightRun = (
   const { configs, absolute, gitignores } = workspace;
   const read = argumentsOf(words, PLAYWRIGHT_FLAGS);
   const filters = Option.match(read, { onNone: () => [], onSome: (a) => a.positionals });
-  // A filter that ends in a line (`a.spec.ts:12`, `.*:3:5`) runs only the
-  // cases there: playwright's `parseLocationArg`. The reader does not read cases.
   const located = filters.some((filter) => /^(.*?):(\d+):?(\d+)?$/.test(filter));
-  // The last `--config` or `-c` names the config; one given by a path this
-  // does not read (absolute, or out of the workspace) takes none, never the
-  // default config.
   const file = Option.flatMap(read, ({ given }) =>
     Option.match(Option.fromUndefinedOr(valuesOf(given, ['--config', '-c']).at(-1)), {
       onNone: () => Option.fromUndefinedOr(PLAYWRIGHT_CONFIGS.find((name) => name in configs)),
@@ -928,8 +849,6 @@ const playwrightRun = (
           if ([...settings.keys()].some((key) => !PLAYWRIGHT_SETTINGS.has(key)))
             return Option.none();
           const folder = at.split('/').slice(0, -1);
-          // An empty `testDir` is playwright's none (`pathResolve`): the
-          // config's folder. An absolute one is outside the workspace's paths.
           const dir = Option.filter(
             Option.match(Option.fromUndefinedOr(settings.get('testDir')), {
               onNone: () => Option.some(''),
@@ -937,9 +856,6 @@ const playwrightRun = (
             }),
             (testDir) => !testDir.startsWith('/'),
           );
-          // Playwright skips what git ignores when the config says so, and by
-          // default when it sets neither `respectGitIgnore` nor a `testDir`
-          // that is not empty.
           const gitPolicy = Option.match(Option.fromUndefinedOr(settings.get('respectGitIgnore')), {
             onNone: () => Option.map(dir, (testDir) => testDir === ''),
             onSome: booleanOf,
@@ -957,8 +873,6 @@ const playwrightRun = (
                     (path: string, text: string) => {
                       const under = root === '' || path.startsWith(`${root}/`);
                       const file = `${absolute}/${path}`;
-                      // Playwright filters a `.js` file by the sources its source map names
-                      // (`sourceMapSources`), which the reader does not read.
                       const mapped = path.endsWith('.js') && text.includes('sourceMappingURL');
                       const named =
                         filters.length === 0 ||
@@ -1054,10 +968,8 @@ const runsOf = (
     const at = subcommandAt(words);
     const sub = words[at] ?? '';
     const next = words[at + 1] ?? '';
-    // Bun reads the workspace's bunfig, and its own flags before its subcommand, for any file it runs.
     if (Option.isNone(argumentsOf(words.slice(1, at), BUN_FLAGS))) return [];
     if (sub === 'run' && Option.isSome(Option.fromUndefinedOr(scripts[next]))) {
-      // Bun hands the words after the script's name to its last command, which this does not read.
       if (words.length > at + 2) return [];
       return runsOf(workspace, next, within);
     }
@@ -1266,7 +1178,6 @@ export const repoTests = Effect.fn('reach.repoTests')(function* (
         const configs = yield* playwrightConfigs(dir, scripts, (file) =>
           Effect.option(read(path.join(dir, file))),
         );
-        // Only playwright reads a `.gitignore`: a workspace with no config reads none.
         let gitignores: Readonly<Record<string, string>> = {};
         if (Object.keys(configs).length > 0)
           gitignores = yield* gitignoresUnder(path.join(root, dir));
@@ -1291,7 +1202,6 @@ export const repoTests = Effect.fn('reach.repoTests')(function* (
     { concurrency: 16 },
   );
   const testFiles = files.filter(isTestFile);
-  // Each path from the root a test file is at or under: the file and each folder above it.
   const ancestry = (file: string) => {
     const parts = file.split('/');
     return parts.map((_, at) => parts.slice(0, at + 1).join('/'));

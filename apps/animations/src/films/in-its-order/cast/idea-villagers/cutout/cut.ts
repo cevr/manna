@@ -1,16 +1,3 @@
-// The IDEA villagers' kept views cut into parts (`cutParts`, @manna/film's part
-// sheet): each part the figure's own pixels, front to back, so that a part can
-// move while every pixel at rest stays the sheet's. Parts are named from the
-// figure's own side: `armRight` is his right arm, on the viewer's left from in
-// front. Each arm is its sleeve's own outline and its round hand (a disc), taken
-// first; the head is the rows above the chin, the robe every row from the hip
-// down that the arms leave, and the torso the rest, the headcloth that hangs
-// over the shoulders with it. Each view names the parts a pose moves, and the
-// words okra repaints what they hide by (`HIDDEN`, read by `film concept
-// parts`, which writes `sheets/<view>/`). The lines are read in the kept view's
-// pixels; the shared cut table (`library/cutout/table.ts`) lays them in each
-// view's part sheet frame. Data: the rules and the table are the library's.
-
 import type { HiddenEntry, PartCut, SheetClean } from '@manna/film/tools';
 import { Record as Records } from 'effect';
 import { type PaperRim, clearPaperRim } from '../../../../../library/cutout/clean.ts';
@@ -26,16 +13,9 @@ export { FRAMES, JOINTS };
 /** A view of theirs, by its name in their sheet's views. */
 type CutView = keyof typeof FRAMES;
 
-// The poses-3 box reaches into the poses-4 baby's own box: his head lies at the
-// box's bottom right, below the man's reaching arm and right of his tunic's
-// edge. The cutter refuses a figure pixel no part takes, so a first, still part
-// takes those pixels; the puppet leaves it out of its parts, so the render draws
-// no figure but the man.
 const POSES_3: PartCut = {
   parts: [
-    // the poses-4 baby's head inside this box: not the man's, and never drawn
     { name: 'neighbour', take: [box(270, 300, FAR, FAR)] },
-    // his left arm reaching out to the viewer's right, its hand open at the end
     {
       name: 'armLeft',
       take: [
@@ -54,7 +34,6 @@ const POSES_3: PartCut = {
       ],
       pivot: JOINTS['poses-3'].shoulderLeft,
     },
-    // his right arm hanging on the viewer's left, below his headcloth
     {
       name: 'armRight',
       take: [
@@ -72,15 +51,12 @@ const POSES_3: PartCut = {
       ],
       pivot: JOINTS['poses-3'].shoulderRight,
     },
-    // above his chin: the headcloth's top, his face and beard
     { name: 'head', take: [box(-1, -1, FAR, 168)] },
     { name: 'robe', take: [box(-1, 290, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-// The baby sits with his knees up and his hands between them: each arm runs
-// from its shoulder under his chin down to its hand, inside the knee.
 const POSES_4: PartCut = {
   parts: [
     {
@@ -115,14 +91,11 @@ const POSES_4: PartCut = {
       ],
       pivot: JOINTS['poses-4'].shoulderLeft,
     },
-    // above his chin: his round head and its tuft
     { name: 'head', take: [box(-1, -1, FAR, 128)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-// Standing facing the viewer: each sleeve runs from under the headcloth to its
-// round hand, its inner edge the soft crease the sheet paints without ink.
 const POSES_6: PartCut = {
   parts: [
     {
@@ -155,20 +128,12 @@ const POSES_6: PartCut = {
       ],
       pivot: JOINTS['poses-6'].shoulderLeft,
     },
-    // above his chin: the headcloth's top, his face and beard
     { name: 'head', take: [box(-1, -1, FAR, 150)] },
     { name: 'robe', take: [box(-1, 300, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-// His cup raised (single-15), read off gridded crops of the view: his right arm
-// raised, the clay cup in its round hand before his chest, one polygon under
-// the headcloth's diagonal edge, round the cup's rim and right side and the
-// hand's ring, and under the forearm's lower outline to his side. No crease
-// parts his raised sleeve from his chest, so its edge there is a cut through
-// one paper, and okra paints his chest behind it. His left arm hangs at his
-// side, its sleeve on its soft crease (shade, no ink) and its round hand whole.
 const SINGLE_15: PartCut = {
   parts: [
     {
@@ -228,9 +193,7 @@ const SINGLE_15: PartCut = {
     {
       name: 'armLeft',
       take: [
-        // his round hand by his hip, its ring whole
         { disc: { c: [392, 710], r: 55 } },
-        // his sleeve from under the headcloth to the cuff, its inner edge on the crease's left side
         {
           polygon: [
             [328, 402],
@@ -248,7 +211,6 @@ const SINGLE_15: PartCut = {
       ],
       pivot: JOINTS['single-15'].shoulderLeft,
     },
-    // above his chin: the headcloth's top, his face and beard
     { name: 'head', take: [box(-1, -1, FAR, 341)] },
     { name: 'robe', take: [box(-1, 672, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
@@ -317,16 +279,16 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
 });
 
 /** How far the clear ground's flood reaches through paper-coloured pixels, 8-steps: their band runs 1 to 4 px wide outside their ink, and its thin tail on their own figures reaches 14 at most (single-15), so one pass clears it all there; on poses-3 the flood would run on into the baby's cream cloth, which the sheet's edge leaves open in the `neighbour` part no puppet draws, and this depth stops it there. */
-const RIM_BAND = 16;
+const RIM_BAND_PX_PAST_THEIR_14_SHORT_OF_THE_BABYS_CLOTH = 16;
 
 /** A pixel is paper-coloured within this ΔE76 of the view's paper: their band lies 5 to 6 from it at the median, their ink's blend farther. */
-const RIM_NEAR = 12;
+const RIM_NEAR_DE76_PAST_THEIR_RIM_6 = 12;
 
 /** Each view's paper rim, as their part sheets clear it. */
 export const PAPER_RIMS = Records.map(PAPERS, (paper): PaperRim => ({
   paper,
-  band: RIM_BAND,
-  near: RIM_NEAR,
+  band: RIM_BAND_PX_PAST_THEIR_14_SHORT_OF_THE_BABYS_CLOTH,
+  near: RIM_NEAR_DE76_PAST_THEIR_RIM_6,
 }));
 
 /** What each view's laid part sheet runs before it is written (`film concept parts`): every view clears the pale paper band their paint keeps just outside their ink (250,241,225 at the median on single-15, against its paper 253,239,216), which their un-matte would read as their cream linen and draw as white specks round them. */

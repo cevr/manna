@@ -99,7 +99,6 @@ describe('native Topics artifact', () => {
 
       expect(receipt.installed).toBe(3);
       expect(yield* fs.exists(destination)).toBe(true);
-      // The staging file is gone: the swap is a rename, not a copy left behind.
       expect(yield* fs.exists(`${destination}.building`)).toBe(false);
     }));
 
@@ -108,7 +107,6 @@ describe('native Topics artifact', () => {
       const fs = yield* FileSystem.FileSystem;
       const dir = yield* scratch();
       const destination = `${dir}/topics.db`;
-      // An artifact already active, and a candidate from an unreadable future.
       writeArtifact(destination, { schemaMajor: '1', topics: 2, aliases: 2 });
       const before = yield* fs.readFile(destination);
       const bad = `${dir}/bad.db`;
@@ -176,9 +174,6 @@ const TOPICS_VERIFIER_CASES: readonly TopicsVerifierCase[] = [
     outcome: accepted(2),
   },
   {
-    // A compile where every authored core is still `status: draft` produces this
-    // file honestly, but it can never answer a lookup — so it is refused rather
-    // than swapped over a generation that can.
     name: 'rejects an empty artifact',
     fixture: { schemaMajor: '1', topics: 0, aliases: 0 },
     outcome: refused('Topics Artifact has no pages'),

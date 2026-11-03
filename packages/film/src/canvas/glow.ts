@@ -1,17 +1,3 @@
-// Soft light a scene lays on its page: a sky, a vertical gradient over the
-// whole frame; a wash, the same over any rect; and a glow, a round light
-// strongest at its heart. Each gradient, and the contact shadow's
-// (`ground.ts`), is a unit gradient: made once per context at unit size by
-// what it holds (a glow's colour, a sky's stops) and placed by the
-// transform, so a frame builds none once its lights are known. The fewest
-// kept (`GRADIENTS_KEPT`) of each kind, so a light whose colour moves every
-// frame makes a gradient a frame but never holds more than a few.
-//
-// Counted over righteousness-by-faith's frames on one context (each unit
-// gradient filled and made, logged per frame): `message` fills 16.4 unit gradients a
-// frame, 21,336 over its 1,304 frames, and makes 6; `within` 8,899 and makes
-// 6; `daily`, whose glow changes colour every frame, 4,794 and makes 258.
-
 import { type Clear, type Hex, clearOf } from './colour.ts';
 import { keepAtMost } from './paper.ts';
 

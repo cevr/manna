@@ -1,8 +1,3 @@
-// The cloth dye's promises, held over generated cloths and pixels: alpha is
-// kept, a pixel at or under the ink cut is kept, the drawn shade, base and
-// light land on the cloth's ramp within 1/255, and lightness keeps its
-// order. Each draw is seeded, so a failure names the seed that gave it.
-
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import { type Hex, type Ramp, type Shading, channelsOf, ramp } from './colour.ts';
@@ -110,7 +105,6 @@ describe('a cloth dye', () => {
   });
 
   test('keeps lightness in order: a lighter pixel never dyes darker', () => {
-    // the 8-bit rounding and the gamut's clamp moved a dyed pixel's L* by at most 0.3 over 2000 pairs of 200 pixels each, measured once (2026-11-02); this case runs the 48 pixels of each pair here, held to 0.5
     for (const { seed, dye } of DYES) {
       const rng = seeded(seed + 3000);
       const pixels = Array.from({ length: 48 }, (): Rgb => [byte(rng), byte(rng), byte(rng)]);

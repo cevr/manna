@@ -1,18 +1,5 @@
-// MCP Events on the lab's MCP, end to end against a local HTTP callback:
-// `server/discover` says `events`, `events/list` lists the catalogue; a
-// subscribe verifies its callback (a signed challenge it echoes) before it
-// is kept, then each event is posted once, signed as Standard Webhooks
-// signs (checked here by that algorithm, not the lab's code), tried again
-// with the same event id when the callback fails; the same subscribe again
-// is the same subscription, and with a cursor it replays what is past it;
-// an unsubscribe stops it. A bad secret, an unknown event and a callback
-// that does not echo are refused in the profile's codes. The subscriptions
-// are kept in the lab's folder: a lab started again delivers on from the
-// cursor it kept, and a subscription past its `refreshBefore` is dropped.
-
 import { FilmName } from './film-repo.ts';
 import { NotesStore } from './notes-store.ts';
-import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Boolean as Bool,
@@ -94,7 +81,7 @@ const callback = Effect.gen(function* () {
 /** Whether `heard` is signed with `secret` as Standard Webhooks signs: `v1,` base64 HMAC-SHA256 of `<id>.<timestamp>.<body>`, keyed by the secret's base64 after `whsec_`. */
 const signedWith = (secret: string, heard: Heard) => {
   const key = Result.getOrThrow(Base64.decode(secret.slice('whsec_'.length)));
-  const expected = createHmac('sha256', key)
+  const expected = new Bun.CryptoHasher('sha256', key)
     .update(`${heard.headers['webhook-id']}.${heard.headers['webhook-timestamp']}.${heard.body}`)
     .digest('base64');
   return (heard.headers['webhook-signature'] ?? '').split(' ').includes(`v1,${expected}`);
@@ -216,7 +203,6 @@ describe('MCP Events on the lab', () => {
           );
           expect(definitions[0]).toMatchObject({
             delivery: ['webhook'],
-            // A subscribe takes no argument the schema does not name.
             inputSchema: {
               type: 'object',
               properties: { film: { type: 'string' } },
@@ -225,7 +211,6 @@ describe('MCP Events on the lab', () => {
             payloadSchema: { type: 'object' },
           });
 
-          // Subscribed once the callback echoes its challenge, signed.
           const made = yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/a`));
           expect(made).toMatchObject({
             result: {
@@ -242,7 +227,6 @@ describe('MCP Events on the lab', () => {
           expect(verification.headers['x-mcp-subscription-id']).toBe(id);
           expect(signedWith(SECRET, verification)).toBe(true);
 
-          // One POST per event, signed, its id the webhook's.
           yield* ownerNote('the judge looks away too soon');
           yield* events.look;
           const first = yield* Queue.take(hook.heard);
@@ -256,10 +240,8 @@ describe('MCP Events on the lab', () => {
           expect(first.headers['x-mcp-subscription-id']).toBe(id);
           expect(first.headers['content-type']).toBe('application/json');
           expect(signedWith(SECRET, first)).toBe(true);
-          // A signature over other bytes does not check.
           expect(signedWith(SECRET, { ...first, body: `${first.body} ` })).toBe(false);
 
-          // A callback that fails is tried again: the same event id, the same body.
           yield* Ref.set(hook.statuses, [500]);
           yield* ownerNote('and the hand is late');
           yield* events.look;
@@ -270,7 +252,6 @@ describe('MCP Events on the lab', () => {
           expect(signedWith(SECRET, retried)).toBe(true);
           expect(readDelivered(retried.body).data.note).toBe('n2');
 
-          // The same subscribe again is the same subscription; from a cursor it replays what is past it.
           const again = yield* rpc(
             lab,
             'events/subscribe',
@@ -281,7 +262,6 @@ describe('MCP Events on the lab', () => {
           expect(replayed.headers['webhook-id']).toBe(failed.headers['webhook-id']);
           expect(readDelivered(replayed.body).data.note).toBe('n2');
 
-          // Unsubscribed, it hears nothing more; a second subscription hears the next note alone.
           expect(
             yield* rpc(lab, 'events/unsubscribe', {
               name: 'tweak.requested',
@@ -310,9 +290,6 @@ describe('MCP Events on the lab', () => {
           expect([third.path, readDelivered(third.body).data.note]).toEqual(['/b', 'n3']);
           expect(yield* Queue.size(hook.heard)).toBe(0);
 
-          // The lab keeps the subscriptions in its folder, each with the cursor
-          // after the last event it was sent: written once the callback has
-          // answered, so read until it is.
           const fs = yield* FileSystem.FileSystem;
           const delivered = readDelivered(third.body).cursor;
           const kept = yield* Effect.repeat(
@@ -360,7 +337,6 @@ describe('MCP Events on the lab', () => {
           expect(
             yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/a`, {}, 'note.nope')),
           ).toMatchObject({ error: { code: -32602 } });
-          // A ttlMs past the lab's longest is invalid params, not a failure of the lab's.
           expect(
             yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/a`, { ttlMs: 1e20 })),
           ).toMatchObject({
@@ -369,10 +345,8 @@ describe('MCP Events on the lab', () => {
               message: expect.stringContaining('ttlMs 100000000000000000000'),
             },
           });
-          // Nothing was posted for a refused subscribe.
           expect(yield* Queue.size(hook.heard)).toBe(0);
           yield* Ref.set(hook.echo, false);
-          // Said by its category alone: nothing of what the callback answered.
           expect(yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/a`))).toEqual({
             jsonrpc: '2.0',
             id: 1,
@@ -398,7 +372,6 @@ describe('MCP Events on the lab', () => {
           yield* Effect.scoped(
             Effect.gen(function* () {
               const { lab, events } = yield* labWithMcp;
-              // A subscription that never expires is the profile's own null, asked and answered.
               // oxlint-disable-next-line effect/noNullish -- the profile's ttlMs null: no expiry
               const forever = subscribeAt(`${hook.url}/a`, { ttlMs: null });
               const made = yield* rpc(lab, 'events/subscribe', forever);
@@ -409,13 +382,11 @@ describe('MCP Events on the lab', () => {
               expect(readDelivered((yield* Queue.take(hook.heard)).body).data.note).toBe('n1');
             }),
           );
-          // The lab again, over the same folder: its subscription delivers on.
           const { lab, events } = yield* labWithMcp;
           yield* ownerNote('two');
           yield* events.look;
           expect(readDelivered((yield* Queue.take(hook.heard)).body).data.note).toBe('n2');
 
-          // A subscription asked for a second lasts the lab's least, a minute, and goes when it passes.
           const brief = yield* rpc(
             lab,
             'events/subscribe',
@@ -466,7 +437,6 @@ describe('MCP Events on the lab', () => {
           // oxlint-disable-next-line effect/noNullish -- the profile's ttlMs null: no expiry
           yield* rpc(first.lab, 'events/subscribe', subscribeAt(`${hook.url}/a`, { ttlMs: null }));
           yield* Queue.take(hook.heard);
-          // The lab started again before the first has stopped: both deliver from the folder's subscription.
           const second = yield* labWithMcp;
           yield* ownerNote('one');
           yield* first.events.look;
@@ -498,7 +468,6 @@ describe('MCP Events on the lab', () => {
         yield* Ref.set(hook.echo, false);
         yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/other/T1SECRET`));
         yield* Queue.take(hook.heard);
-        // A callback where nothing listens: the client's failure names the whole URL, the log its kind.
         const closed = 'http://127.0.0.1:1';
         yield* rpc(lab, 'events/subscribe', subscribeAt(`${closed}/hooks/T2SECRET?token=Q5SECRET`));
         const said = lines.filter((line) => line.startsWith('mcp.events.'));
@@ -529,7 +498,6 @@ describe('MCP Events on the lab', () => {
         const hook = yield* callback;
         yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/a`));
         yield* Queue.take(hook.heard);
-        // The subscriptions file made unwritable: a folder where it was.
         const fs = yield* FileSystem.FileSystem;
         yield* fs.remove(SUBSCRIPTIONS);
         yield* fs.makeDirectory(SUBSCRIPTIONS);

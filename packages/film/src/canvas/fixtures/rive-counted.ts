@@ -1,14 +1,3 @@
-// Bun's Rive layer (`RiveRuntimeBun`) with the wasm objects a rig's load and
-// its frames make counted: each file loaded and each unref'd (and every call
-// on a file after its unref), each artboard, view-model and timeline instance
-// made and each deleted. What the lifetime tests read, so a load whose scope
-// was never closed, a failed load that kept what it had acquired, a file
-// freed before its load was done with it, or a frame that threw and kept its
-// instances, shows in the counts. Two knobs let a test arrange the timing:
-// `parsed`, awaited before each file is parsed (a load held mid-way), and
-// `throws`, the number of frames whose artboard's advance the runtime itself
-// refuses (asked of something not an artboard, Rive's bindings throw).
-
 import type { Artboard, File, RiveCanvas, ViewModel } from '@rive-app/webgl2-advanced';
 import { Effect, Layer, Predicate } from 'effect';
 import { RiveRuntime } from '../../rive/runtime.ts';
@@ -52,7 +41,6 @@ const countedArtboard = (artboard: Artboard, counts: RiveCounts, faults: Faults)
   artboard.advance = (seconds) => {
     if (faults.throws > 0) {
       faults.throws -= 1;
-      // Asked of something not an artboard, Rive's bindings throw: the runtime's own throw, mid-frame.
       return Reflect.apply(advance, {}, [seconds]);
     }
     return Reflect.apply(advance, artboard, [seconds]);

@@ -29,7 +29,6 @@ describe('where a note shows', () => {
         30,
       ),
     );
-  // Made 1.5 s into b while a lasted 5 s.
   const made: NoteDraft = { scene: 'b', T: 6.5, local: 1.5, frame: 195, text: 'too early' };
 
   test('a note follows its scene when an earlier beat is re-taken longer', () => {
@@ -47,13 +46,11 @@ describe('where a note shows', () => {
   });
 
   test('a note on a scene’s last frame stays there when its exact length ends between frames', () => {
-    // Scene a holds 3.04 s, laid to the nearest frame, 91 (`layout`): frame 90 (3 s) is its last.
     const onLast: NoteDraft = { scene: 'a', T: 90 / FPS, local: 90 / FPS, frame: 90, text: 'x' };
     expect(noteT(film(3.04), FPS, onLast)).toBe(90 / FPS);
   });
 
   test('a note past a scene whose exact length ends between frames holds on that scene’s last frame', () => {
-    // b holds 6.04 s from 3 s, laid to frame 271 (9.0333 s): its last frame is 270 (9 s).
     const T = noteT(film(3, 'b', 6.04), FPS, { ...made, local: 9 });
     expect(T).toBeCloseTo(270 / FPS, 9);
   });
@@ -112,7 +109,6 @@ describe('eventsSince', () => {
     let file = addNote(emptyNotes('f'), draft('first'), at);
     const first = eventsSince(file, 0);
     expect(first.events.map((e) => [e._tag, e.seq])).toEqual([['NoteAdded', 1]]);
-    // Nothing new: nothing again.
     expect(eventsSince(file, first.cursor)).toEqual({ cursor: 1, events: [] });
 
     file = addNote(file, draft('second'), at);

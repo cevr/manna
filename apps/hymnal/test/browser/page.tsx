@@ -1,14 +1,5 @@
 /* oxlint-disable effect/noNullish, effect/noThrowStatement, effect/noNewError, effect/noTernary, effect/noGlobals, effect/noNewPromise -- the browser test's page, a host boundary: plain DOM code that finds the list's scroller and rows, which the DOM gives as nullable elements, and answers the test's waits as promises. */
 
-/**
- * The browser test's page script: it hydrates the server's HTML of the app
- * (`app.tsx`, rendered by `server.tsx`) with `hydrateRoot`, at once or, with
- * `?hold` in the address, when the test says (so it can scroll the server's
- * list first). `window.hymnal` lets the test read what hydration said, the
- * list's place and its drawn rows, scroll the list as a reader does, and
- * read each time the list moved by itself after the reader scrolled it.
- */
-
 // oxlint-disable-next-line import/no-unassigned-import -- it changes the page's console and Error before React reads them.
 import './traces';
 
@@ -150,7 +141,6 @@ const middleOf = (node: HTMLElement) => {
 const blankOf = (node: HTMLElement) => {
   const view = node.getBoundingClientRect();
   const top = view.top;
-  // The rows end where the content ends: past the last row the list is rightly empty.
   const bottom = Math.min(view.bottom, view.top + node.scrollHeight - node.scrollTop);
   const covered = rows(node)
     .map((row) => row.getBoundingClientRect())
@@ -206,9 +196,6 @@ let hydrating = false;
 /** What `heard()` does when the event comes, while it waits. */
 let onHeard: (() => void) | undefined;
 
-// A listener of its own, so the jump listener above sees every scroll as the
-// reader makes it. The browser's own event alone counts: the list's `told()`
-// dispatches an untrusted one after hydration.
 document.addEventListener(
   'scroll',
   (event) => {
@@ -337,15 +324,11 @@ window.hymnal = {
   away: (top) => {
     const node = scroller();
     if (node === undefined) throw new Error('the list is not shown');
-    // Three rows: more than the one row a return may miss by, so a list that
-    // kept the offset of its last scroll event, not the one it is at, misses.
     const nudge = 3 * 44;
     const max = node.scrollHeight - node.clientHeight;
     node.scrollTop = top > max / 2 ? top - nudge : top + nudge;
     left = { node, top: node.scrollTop };
     const at = node.scrollTop;
-    // Past the list's scroll end, which it tells 100 ms after the scroll's
-    // event; a scroll with no event within a second fails, as a wait does.
     return new Promise<number>((done, fail) => {
       const late = setTimeout(() => fail(new Error(`no scroll event at ${at}`)), 1000);
       node.addEventListener(
@@ -361,8 +344,6 @@ window.hymnal = {
   leave: (top, tab) => {
     const node = scroller();
     if (node === undefined) throw new Error('the list is not shown');
-    // Listening from before the scroll, so its event is heard whenever it comes; one that comes
-    // once the scroller is out of the page reaches no list.
     const heard = { node, heard: false };
     departure = heard;
     node.addEventListener('scroll', () => {

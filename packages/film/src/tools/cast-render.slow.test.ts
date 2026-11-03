@@ -1,9 +1,3 @@
-// `film concept render` over a member of two kept views drawn by a page
-// double: a view whose fit rows fail is never shown to the critic, and its
-// critique is recorded skipped with the rows that failed; a view whose rows
-// pass is shown. Over a real folder, since the film's `rigs/cast.ts` is
-// imported as a module.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';

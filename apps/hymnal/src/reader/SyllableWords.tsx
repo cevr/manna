@@ -105,7 +105,6 @@ export function SyllableLine({
         style={[textStyle, syllableStyle(first.s)]}
         dynamicTypeRamp="body"
         pointerEvents="none"
-        // iOS includes hidden inline spans in a paragraph's fallback label.
         {...(boxed && { 'aria-label': syllables.map(({ box }) => box.text).join('') })}
       >
         {first.box.text}
@@ -140,7 +139,6 @@ export function SyllableLine({
           if (!Arr.isReadonlyArrayNonEmpty(placed)) return <Fragment key={w} />;
           const pulled = w === 0 && { marginLeft: -text.indent };
           return Option.match(over, {
-            // A word alone is one text, the space after it a no-break space, so no row drops it at its end.
             onNone: () => (
               <View key={w} style={[styles.word, pulled]}>
                 {run(placed, (w < words.length - 1 && '\u00A0') || '')}
@@ -151,7 +149,6 @@ export function SyllableLine({
                 {boxesOf(placed).map((joined, b, all) => {
                   const head = Arr.headNonEmpty(joined);
                   const more = b < all.length - 1;
-                  // A box that can hold no chord is never wider than its text, so its hyphen never stretches: a span.
                   const bare = head.s > 0 && head.box.chords.length === 0;
                   return (
                     <View key={head.s} style={styles.box}>
@@ -217,13 +214,11 @@ const wordStarts = (words: ReadonlyArray<Word>): ReadonlyArray<number> =>
 
 const styles = StyleSheet.create({
   line: { flexDirection: 'row', flexWrap: 'wrap' },
-  // A boxed line's words, and each word's boxes, stand on their syllables' foot: one baseline in a row.
   boxed: { rowGap: 6, marginBottom: 8, alignItems: 'flex-end' },
   onFoot: { alignItems: 'flex-end' },
   word: { flexDirection: 'row' },
   box: { flexDirection: 'column' },
   syllable: { flexDirection: 'row' },
-  // The hyphen keeps its own width and takes what a long chord adds to its box.
   hyphen: { flexGrow: 1, textAlign: 'center' },
   muted: { color: color.muted },
 });

@@ -1,24 +1,4 @@
 #!/usr/bin/env bun
-// `bun run test:reads`: each file, module and native library a unit-test
-// task's bun processes open is a file that cached task hashes. A unit-test
-// task (`test-budget/units.ts`) is a workspace's `test`, or each part of a
-// workspace whose tests are cut into parts (`@manna/film#test:lab`). turbo
-// replays a cached pass while the files a task hashes are unchanged, so a test
-// that reads a file its task does not hash (a skill page, a root file, another
-// workspace's data, a library built on the host) passes from the cache after
-// that file changes in a way that would fail it.
-//
-// This runs each unit-test task's script, the ones `bun run test` runs, one
-// after another, under a preload that records what their bun processes open
-// (`test-reads/preload.ts`, which names what it does not see), then holds the
-// reads to the files turbo's dry run says the task hashes, its dependencies'
-// `transit` tasks included (`test-reads/unhashed.ts`). It prints each task's
-// count and each file read and not hashed, and fails on any such file, or on
-// a task whose tests do not pass (its reads would be partial). The fix is the
-// file in the task's inputs in its workspace's `turbo.json`
-// (`$TURBO_ROOT$/<path>`), and in its `transit` inputs when other workspaces'
-// tests read it through this one. Run by `bun run test:slow`; it runs every
-// unit test, so it is not in the gate.
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -36,7 +16,6 @@ Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const spawner = yield* ChildProcessSpawner;
-  // packages/scripts/src → the repo root, as the preload resolves paths.
   const root = yield* fs.realPath(path.resolve(import.meta.dir, '..', '..', '..'));
   const preload = path.join(import.meta.dir, 'test-reads', 'preload.ts');
   const dry = yield* testDryRun(root, path.join(root, 'node_modules', '.bin', 'turbo'));

@@ -1,12 +1,3 @@
-// The figure measure's render artifacts, facing, and hair against beard, on crops of RBF's frames
-// as the owner saw them on 2026-10-18 (the lab's look at 1:1):
-// Christ at court 16.51 s, the farmer at rain's mark (14.19 s) and at 16.49 s,
-// against the figures he locked (cold's lead at 24 s, its judge and
-// prosecutor at 3.87 s, court's lead at 4 s). The owner, on the cast: "theres some
-// artifacts in the render, and the farmer looks nothing like the concept,
-// face proportions and angles are off". The crops are PNGs, so they are
-// decoded here, past core.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Result } from 'effect';
@@ -73,7 +64,6 @@ describe('render artifacts on RBF frames', () => {
     () =>
       Effect.gen(function* () {
         const m = yield* measured('rbf-rain-farmer-1419.png');
-        // By hand on the crop: the cream line runs down the face's right edge, x 362 to 384.
         expect(m.artifacts.some((a) => a.kind === 'sliver' && a.box[0] >= 350)).toBe(true);
       }),
   );
@@ -109,7 +99,6 @@ describe("a head's facing against its concept", () => {
     () =>
       Effect.gen(function* () {
         const rows = yield* facingRows('rain-rain-farmer-concept.png', 'rbf-rain-farmer-1419.png');
-        // His skin alone: the headcloth beside his cheek, with no ink between, is no face.
         expect(rows).toEqual({
           turn: { concept: 0.094, scene: 0.141, flagged: false },
           roll: { concept: -11.7, scene: 0.4, flagged: true },

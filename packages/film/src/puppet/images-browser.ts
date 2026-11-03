@@ -1,11 +1,3 @@
-// A puppet's part PNGs in a page (`PuppetImagesBrowser`): each fetched
-// through the page's `HttpClient`, decoded (`createImageBitmap`, no colour
-// conversion, no premultiplying) and awaited inside the load, then read back
-// as RGBA bytes from a 2D canvas. The bitmap is held in the read's own scope,
-// so it is closed once the read ends, whether it succeeded, failed or was
-// interrupted. A part's pixels are opaque or clear (its
-// sheet's own bytes, or none), so the 2D canvas gives them back as they are.
-
 import { Effect, Layer, Option } from 'effect';
 import { HttpClient } from 'effect/http';
 import { PuppetImages, PuppetUnloadable } from './images.ts';

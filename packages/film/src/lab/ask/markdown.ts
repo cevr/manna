@@ -1,9 +1,3 @@
-// A variant's notes and a folder's blurb and docs, markdown read as the
-// review shows it: headings, paragraphs, nested and numbered lists, tables,
-// fenced and indented code, quotes, **bold**, *italic* and `code`. Every
-// character of the text is escaped before any tag is added, so a doc can
-// never put its own HTML (or a script) into the page; links stay text.
-
 import { Option } from 'effect';
 
 /** `text` safe to put in HTML, attributes included. */
@@ -79,7 +73,6 @@ const writer = () => {
   let table = false;
   let tag: 'p' | 'li' | 'none' = 'none';
   let words: Array<string> = [];
-  // A rest inside a list: the next line says whether the list goes on.
   let rested = false;
   const flush = () => {
     if (tag === 'p') out.push(`<p>${inline(words.join(' '))}</p>`);
@@ -119,7 +112,6 @@ const writer = () => {
       flush();
       rested = false;
       const list = listOf(marker);
-      // An item nests one list deeper at most than the one open.
       const want = Math.min(Math.floor(indent.length / 2) + 1, lists.length + 1);
       closeLists(want);
       if (lists.length === want && lists[want - 1] !== list) closeLists(want - 1);

@@ -1,11 +1,3 @@
-// Rive in Bun (`RiveRuntimeBun`), for `check --draw` and the tests: the WebGL
-// 2 runtime for both engines (the Canvas 2D one poses alike), its wasm and a
-// rig's `.riv` read from Bun's filesystem, the path its module imported. The
-// runtime asks for a `document` as it starts (a canvas it never draws on), so
-// the framework's stand-in document is put up for that start alone and taken
-// down with it: no global is left behind. Bun has no canvas, so a rig is posed
-// and its face declared, and nothing is drawn (`paints: false`).
-
 import glWasm from '@rive-app/webgl2-advanced/rive.wasm' with { type: 'file' };
 import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import { Effect, FileSystem, Layer } from 'effect';

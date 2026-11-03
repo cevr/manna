@@ -1,9 +1,3 @@
-// The gestures the browser tests make on a page as the browser fires them:
-// a right-click (the press, then the menu's event) and a finger held or
-// moved (the browser's own touch input), each on the middle of an element's box; the commands an open
-// context menu lists; and the command menu (⌘K) opened on what is typed,
-// and closed. Shared by every page's tests.
-
 import { Effect } from 'effect';
 import { countIs, evaluates, waitFor } from './settled.ts';
 import type { Tab } from './tab.ts';

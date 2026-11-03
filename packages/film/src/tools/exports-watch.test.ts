@@ -1,12 +1,3 @@
-// The lab's watch on the workspace's exports, over a workspace in memory on
-// the test clock: it reads the root's package.json and each its workspaces
-// name; a change to a package's other fields goes unseen; an `exports` map
-// changed (a subpath added by a merge) ends the watch with `ExportsChanged`,
-// naming the package, on the next read, held to the maps read before the
-// watch began; a package.json caught mid-write (empty, cut off, gone) is read
-// again once and otherwise keeps what it said; the root is found above a workspace's folder; and the lab the
-// watch ends closes its scope and what it holds before it is started again.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, Exit, Fiber, Layer, Option, Path } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -62,19 +53,16 @@ describe('the exports watch', () => {
     return Effect.gen(function* () {
       const watch = yield* Effect.forkChild(watchExports(yield* exportsNow('/w'), EVERY));
       yield* TestClock.adjust(EVERY);
-      // An app's package.json, read under the workspaces' `apps/*`, that does not read.
       files.set('/w/apps/animations/package.json', text('{ not json'));
       yield* TestClock.adjust(EVERY);
       expect(watch.pollUnsafe()).toBeUndefined();
       files.set('/w/apps/animations/package.json', text('{ "name": "animations" }\n'));
-      // A version bumped: no exports changed.
       files.set(
         '/w/packages/film/package.json',
         text(FILM('{ ".": "./src/index.ts" }').replace('1.0.0', '1.0.1')),
       );
       yield* TestClock.adjust(EVERY);
       expect(watch.pollUnsafe()).toBeUndefined();
-      // A merge adds a subpath.
       files.set(
         '/w/packages/film/package.json',
         text(FILM('{ ".": "./src/index.ts", "./style": "./src/style/index.ts" }')),
@@ -89,7 +77,6 @@ describe('the exports watch', () => {
     const files = workspace();
     return Effect.gen(function* () {
       const watch = yield* Effect.forkChild(watchExports(yield* exportsNow('/w'), EVERY));
-      // A checkout between its unlink and its write: empty, then cut off, then gone.
       for (const caught of ['', '{ "name": "@w/film", "exp']) {
         files.set('/w/packages/film/package.json', text(caught));
         yield* TestClock.adjust(EVERY);
@@ -98,7 +85,6 @@ describe('the exports watch', () => {
       files.delete('/w/packages/film/package.json');
       yield* TestClock.adjust(EVERY);
       expect(watch.pollUnsafe()).toBeUndefined();
-      // Written again with its exports as they were (a dependency bumped).
       files.set('/w/packages/film/package.json', text(FILM('{ ".": "./src/index.ts" }')));
       yield* TestClock.adjust(EVERY);
       expect(watch.pollUnsafe()).toBeUndefined();
@@ -111,7 +97,6 @@ describe('the exports watch', () => {
       const files = workspace();
       return Effect.gen(function* () {
         const read = yield* exportsNow('/w');
-        // The watch's first pass catches the merge mid-write; the merge has written it by its second read.
         files.set('/w/packages/film/package.json', text(''));
         const watch = yield* Effect.forkChild(watchExports(read, EVERY));
         yield* Effect.yieldNow;
@@ -130,7 +115,6 @@ describe('the exports watch', () => {
     const files = workspace();
     return Effect.gen(function* () {
       const read = yield* exportsNow('/w');
-      // A merge lands while the lab starts, before the watch's first pass.
       files.set(
         '/w/packages/film/package.json',
         text(FILM('{ ".": "./src/index.ts", "./style": "./src/style/index.ts" }')),
@@ -153,7 +137,6 @@ describe('the exports watch', () => {
         () => Effect.sync(() => seen.push('pages closed')),
       ),
     );
-    // The lab as `film lab` runs it: its exports read, its servers up, then its watch.
     const lab = Effect.gen(function* () {
       const read = yield* exportsNow('/w');
       const pages = yield* Pages;

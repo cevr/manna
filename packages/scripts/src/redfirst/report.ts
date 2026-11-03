@@ -1,7 +1,3 @@
-// What `bun run redfirst` reads and prints: the cases of a JUnit report, the
-// lines a diff added to a file, and which new or changed cases passed against
-// the base's product sources (a test a defect cannot fail).
-
 import { Option } from 'effect';
 import { type Node, Visitor, parseSync } from 'oxc-parser';
 
@@ -43,11 +39,6 @@ export const casesOf = (junit: string, prefix: string): ReadonlyArray<Case> =>
     };
   });
 
-/**
- * What a unified diff of one file changed, numbered in the new file: the
- * lines it added, and the gaps it removed lines from (`g` is the gap between
- * new lines `g` and `g + 1`; a hunk that adds none starts at the line before).
- */
 /** The lines a diff added and the gaps it removed lines from, numbered in the new file. */
 interface DiffLines {
   readonly added: ReadonlySet<number>;
@@ -61,7 +52,6 @@ export const diffLines = (diff: string): DiffLines => {
   for (const line of diff.split('\n')) {
     const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
     if (hunk) {
-      // A hunk that adds no line names the line before its gap.
       at = Number(hunk[1]);
       if (hunk[2] === '0') at += 1;
       continue;
@@ -151,7 +141,6 @@ export const caseSpans = (file: string, text: string): ReadonlyArray<Span> => {
   const spans: Array<Span> = [];
   new Visitor({
     CallExpression: (node) => {
-      // `test.each(table)` (one argument) is the callee of the case's own call, not a case.
       if (!TEST_RUNNERS.has(calleeRoot(node.callee)) || node.arguments.length < 2) return;
       for (const title of node.arguments.slice(0, 1))
         spans.push({ from: lineOf(title.start), to: lineOf(node.end) });

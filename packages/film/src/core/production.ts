@@ -1,29 +1,3 @@
-// A production: something the studio moves forward version by version (a
-// film, or a development track such as the look), and its history as the
-// lab's front door shows it. Kitsu calls the same thing a production; its
-// numbered versions are what the owner moves forward ("once we move forward
-// we increment versions").
-//
-// Most of a production's history is derived, never kept twice:
-//
-// - its sets: a review set names its production in its own `review.json`
-//   (`production`, and `published`, the time `film publish` wrote it; an
-//   older set is filed by the ledger instead, `filed`), and lands in the
-//   version open when it was published (or the one it names, `version`);
-// - its choices: each set's comparison sets, and whether the owner approved
-//   a variant (the folder's catalogue, as the review index reads it);
-// - what waits on the owner: each question an agent asked of them about a
-//   set (`Asked`) that no pick in its choice and no later decision on it
-//   has answered; it waits on the current version, whenever it was asked.
-//
-// The ledger (`ProductionFile`, kept by `tools/production-store.ts`) holds
-// only what nothing else records: the versions (each opened at a time,
-// with what it is for and the decision that moved the production into it),
-// the owner's decisions and notes given outside the lab (in words, to an
-// agent) and the questions asked of them, and the filing of sets published before sets named their
-// production. A version's number is its place in the ledger, so a gap or a
-// repeat cannot be written. Pure: the lab's page and its tools share it.
-
 import { Array as Arr, Data, Effect, Option, Order, Result, Schema } from 'effect';
 import { DecisionUnknown, Undecided, VersionMoved, WordUnaimed } from './refusals.ts';
 import type { ReviewFolder } from './review.ts';
@@ -258,9 +232,6 @@ export const withFiled = (file: ProductionFile, filed: Filed): ProductionFile =>
   ...file,
   filed: [...file.filed.filter((f) => f.set !== filed.set), filed],
 });
-
-// ---------------------------------------------------------------------------
-// The history, derived
 
 /** A folder's path under its root: its ref without the root's label. */
 export const setPathOf = (ref: string): string => ref.split('/').slice(1).join('/');

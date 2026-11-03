@@ -1,33 +1,3 @@
-// A figure's render artifacts, read from its head's pixels (`film lab match`):
-// the marks a drawn figure shows that no part of it draws, each a thin line
-// of a third colour, at 1:1 only (owner, 2026-10-17, his local day, on the RBF v3 cast:
-// "theres some artifacts in the render"). Pure: RGBA and the head's masks
-// in, marks out.
-//
-// A thin line of a third colour is a pixel whose colour lies off the blend
-// of the two pixels two or three pixels either side of it, across it: an
-// antialiased edge between two fills is their blend and reads as nothing,
-// and the paper's grain steps too little. The house rim, a band of the fill
-// lifted inside the outline, is no sliver (`RIM_MOST`). Each such pixel is classed
-// by what lies either side of it:
-//
-// - `seam`: two fills of the head either side (the light line where two
-//   pieces meet with skin or paper showing between);
-// - `sliver`: the head's ink on one side and a fill on the other (a fill
-//   cut short of the outline, the colour under it showing in the gap);
-// - `weather`: one fill both sides, over the face (rain or a stroke laid
-//   across it).
-//
-// Only the head's own pixels, inside its outline, are read: past the outline
-// lies the set (a wall, a dado, a chair) and its edges, which no figure
-// draws. A light point at a crown reads where it lies, inside the outline,
-// as a sliver.
-//
-// The pixels of one class join into marks (8-connected); a mark shorter than
-// `MARK_SHORTEST` lines is grain or an antialiasing step and is dropped. A
-// mark's length is its long axis (from its pixels' second moments), so a
-// diagonal streak counts its own length, not its box's.
-
 import { Schema } from 'effect';
 import type { Raster } from './raster.ts';
 
@@ -80,7 +50,7 @@ const OFF_BLEND = 30;
  * lies over a shade. A film whose rim lifts more than 45 over its paper
  * reads its own rim as a sliver: measure its papers against this first.
  */
-const RIM_MOST = 45;
+const RIM_MOST_LUMA = 45;
 
 /** Two neighbours nearer than this (RGB distance) are one fill. */
 const ONE_FILL = 20;
@@ -169,7 +139,7 @@ const across = (px: HeadPixels, i: number, i1: number, i2: number): Across => {
   const off = offBlend(p, a, b);
   if (inks === 1) {
     const fill = ink[i1] === 1 ? b : a;
-    return Math.abs(lumaOf(p) - lumaOf(fill)) > RIM_MOST
+    return Math.abs(lumaOf(p) - lumaOf(fill)) > RIM_MOST_LUMA
       ? { off, code: KIND_CODE.sliver }
       : NOTHING;
   }

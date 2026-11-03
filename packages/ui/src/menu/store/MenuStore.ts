@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/menu/store/MenuStore.ts
-//
-// A menu's state: the popup's (open, mounted, active trigger, elements) plus
-// the highlighted item and how the menu opened. A context menu
-// shares its root id and mouse-up gesture flag with the context menu around it.
 import { type Accessor, createSignal, untrack } from 'solid-js';
 
 import type { ContextMenuRootContext } from '../../context-menu/root/ContextMenuRootContext.ts';
@@ -79,7 +74,6 @@ export function createMenuStore(options: MenuStoreOptions): MenuStore {
 
   const owned = { ownedWrite: true } as const;
   const [activeIndex, setActiveIndex] = createSignal<number | null>(null, owned);
-  // The highlighted item's element, so the highlight follows it when the items move.
   let activeItem: Element | null = null;
   const [instantType, setInstantType] = createSignal<MenuInstantType>(undefined, owned);
   const [lastOpenChangeReason, setLastOpenChangeReason] =

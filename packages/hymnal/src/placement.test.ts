@@ -213,7 +213,6 @@ describe('R2 melody chord tone', () => {
 
   check('keeps a change whose own note is a chord tone, in the key of the hymn', () => {
     const inD = grid([{ tick: 0, numerator: 4, denominator: 4 }], 2);
-    // In D, degree 7 is A: A C# E. The note at syllable 1 is E (64).
     const tune = syllables([0, 4, 62], [4, 4, 64], [8, 4, 66]);
     expect(
       where(
@@ -243,7 +242,6 @@ describe('R3 minimum length', () => {
           FOUR,
         ),
       ).toEqual([{ syllable: 0, at: 0, chord: C }]);
-      // A short opening gives its place to G; a later G adds no change.
       const opening = syllables([0, 2, 60], [2, 6, 62], [8, 2, 64], [10, 4, 65]);
       expect(
         Placement.apply(
@@ -343,7 +341,6 @@ describe('R4 long note', () => {
 
 describe('the combinations', () => {
   check('R1 then R3 folds a change the strong beat leaves too short', () => {
-    // G moves from beat 2 to beat 3 (tick 8); F at tick 10 leaves it half a beat.
     const tune = syllables([0, 4, 60], [4, 4, 62], [8, 2, 64], [10, 6, 65]);
     expect(
       where(
@@ -378,7 +375,6 @@ describe('the combinations', () => {
       [16, 4, 67],
       [20, 4, 69],
     );
-    // G: beat 3 (tick 8) sings E, the next bar (tick 16) sings G.
     expect(
       where(
         'tone-on-strong',
@@ -389,7 +385,6 @@ describe('the combinations', () => {
         FOUR,
       ),
     ).toEqual([0, 4]);
-    // F: no strong beat sings a tone of F before G at tick 16, so R1's beat 3.
     expect(
       where(
         'tone-on-strong',
@@ -419,8 +414,6 @@ describe('the combinations', () => {
 });
 
 describe('hymn 373, refrain line 0 (measured from its file: 12/8 in Ab, 384 ticks a quarter)', () => {
-  // Each syllable's start, length in ticks and melody key, read from the compiled
-  // timing and the MIDI file; today the guitar shows IV at syllable 0 and I at 4.
   const refrain: Placement.Line = {
     syllables: syllables(
       [25920, 180, 65],

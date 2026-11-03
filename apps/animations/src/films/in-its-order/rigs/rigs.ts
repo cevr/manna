@@ -1,12 +1,3 @@
-// In Its Order's figure rigs as a drawing declares them (`drawing({ rigs })`
-// and the cast render's table, `cast.ts`): each artboard of `figures.riv`
-// (`figures.ts`) with the timelines a pose may name, the view model's numbers
-// it may set, where on it our origin stands (a standing figure's feet, a
-// hand's centre), how it follows the shot (`FIGURES.shot`: its line thins in
-// a close shot), and the kept view of its member's sheet it is traced from
-// (`concept`, which `film match` and the cast render hold it to). Canvas 2D
-// is the engine, and every scene draws them the same way. Pure.
-
 import type { RivePropSpec } from '@manna/film/rive';
 import {
   FIGURE_TIMELINES,

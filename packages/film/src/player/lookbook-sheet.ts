@@ -1,17 +1,3 @@
-// The look-book's sheet: one canvas that shows a whole film's look before (or
-// while) its scenes are built. Each scene is a row of stills at every named
-// cue's start and end and at its 60% point (`sceneMoments`, the moments
-// `film check` probes, less the marks), each labelled with its timecode, under
-// the film's palette as swatches. Its stills come from the one source of
-// stills (`stills.ts`, the Scenes tape's too), and `film lookbook` asks an
-// export page for the sheet (`ExportHandle.lookbook`) and writes it to
-// `out/<film>/film/<variant>/lookbook.jpg`.
-// It is a picture of the film, not the studio's chrome: drawn on its own
-// dark page in the film's own type, its shorts' hook face for the title and
-// their caption face for the rest (`film.look.short`), so the engine names no
-// family and the sheet keeps its own colours (the token guard leaves this
-// file alone).
-
 import { Effect } from 'effect';
 import type { Context } from 'effect';
 import type { Film } from '../canvas/film.ts';
@@ -105,7 +91,6 @@ export const composeLookbook = async (
   const swatchRows = Math.ceil(swatches.length / perRow);
   const top = PAD + HEADER_H + swatchRows * SWATCH_H + (swatchRows > 0 ? GAP : 0);
 
-  // Where each scene's row starts, and each still in it.
   const tiles: Tile[] = [];
   const heads: Array<{ readonly y: number; readonly text: string }> = [];
   let y = top;
@@ -140,7 +125,6 @@ export const composeLookbook = async (
   const display = fontFamilyOf(film.look.short.hook.font);
   const body = fontFamilyOf(film.look.short.caption.font);
 
-  // The title, and what the sheet shows.
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = INK;
   ctx.font = `700 34px ${display}`;
@@ -153,7 +137,6 @@ export const composeLookbook = async (
     PAD + 58,
   );
 
-  // The palette.
   swatches.forEach(([name, color], k) => {
     const sx = PAD + (k % perRow) * SWATCH_W;
     const sy = PAD + HEADER_H + Math.floor(k / perRow) * SWATCH_H;
@@ -175,12 +158,10 @@ export const composeLookbook = async (
     ctx.fillText(head.text, PAD, head.y + 26);
   }
 
-  // The stills, from the one source, each set on its tile under its label.
   const stills = makeStills(film, {
     width: TILE_W,
     captions: options.captions,
     turn: () => Effect.runPromise(Effect.yieldNow),
-    // The sheet is not timed: its stills' cost is the page's to read.
     now: () => 0,
     footage: options.footage,
   });

@@ -1,13 +1,3 @@
-// The critique over a match's files on disk, its counsel a stub
-// (`Counsel.layerTest`): one run answers every figure at a place, the
-// packet quotes the house rules and lists each figure's crops and flagged
-// rows, the findings land beside the match's table, the same inputs are
-// answered from the kept answer without asking again, each finding is read
-// on its own (a figure named in another case kept, one that does not read
-// rejected and said), and a counsel that fails, dies or answers no json
-// block is a skip, said in the file, never a failure. A rule section its
-// file lacks fails the critic's build.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -533,7 +523,6 @@ describe.concurrent("the critique's jobs", () => {
           ),
         );
         expect(yield* critic.start(LEAD, pictured('the held beat'))).toBe(held);
-        // Time for a second run of its packet, were one started, to reach the counsel.
         yield* Effect.repeat(Effect.yieldNow, { times: 50 });
         expect(runs.n).toBe(34);
         expect(Option.isNone((yield* critic.job(held, Duration.zero)).critique)).toBe(true);
@@ -561,7 +550,6 @@ describe.concurrent("the critique's jobs", () => {
           critic.start(LEAD, pictured(`beat ${n}`)),
         );
         yield* Deferred.await(reached);
-        // Time for the starts past 4, were they not held back, to reach the counsel.
         yield* Effect.repeat(Effect.yieldNow, { times: 50 });
         expect(runs.n).toBe(4);
         const last = yield* critic.job(handles[5] ?? '', Duration.zero);

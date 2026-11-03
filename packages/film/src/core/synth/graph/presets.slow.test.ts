@@ -1,24 +1,4 @@
-// The presets (presets.ts), each pinned and each heard to do what its doc
-// says, read as `film sfx compare` reads a sound: on seeds 1–3, a code
-// trial's three variants. Each is pinned by its first seed's samples at the
-// settings below, by digest, the same on every render.
-//
-// The tones: a chime rings the degree its seed names, a drone's voices stand
-// at their levels, a drain glides from its note to the next and fades, a
-// bloom's chord enters note by note and stands over the notes off it, notes
-// keep to their scale, room tone's body is low and rain's hiss high, and room
-// tone, the drone and rain loop with no seam heard. The families the
-// library's other code sounds are built from: a burst's power in its band, a
-// thump and a knock with next to no rumble, a scatter's landings falling by
-// its step, a whoosh's and a sizzle's hit where they say, a hiss held, a
-// breeze looping unheard and a roof's taps in their band.
-//
-// A CI runner runs tests like these 17–50 times as slow as a laptop, so a
-// bed's seam, read on four seconds of it, is read in a test of its own for
-// each seed.
-
 import { describe, expect, test } from 'bun:test';
-import { createHash } from 'node:crypto';
 import { Array as Arr, Result, Schema } from 'effect';
 import type { Pcm } from '../../audio.ts';
 import { describeSound } from '../analyse.ts';
@@ -149,7 +129,7 @@ const rendersOf = (preset: Preset): Arr.NonEmptyReadonlyArray<Pcm> => {
 };
 
 const digest = (pcm: Pcm): string => {
-  const hash = createHash('sha256');
+  const hash = new Bun.CryptoHasher('sha256');
   for (const plane of pcm.channels)
     hash.update(new Uint8Array(plane.buffer, plane.byteOffset, plane.byteLength));
   return hash.digest('hex');
@@ -318,8 +298,6 @@ describe('each preset does what its doc says, on seeds 1–3', () => {
   });
 
   test('drone: past its loop’s crossfade, its octave, twelfth and fifth at 0.35, 0.12 and 0.18 of its root, within 1 dB', () => {
-    // Inside the crossfade each voice meets its own tail at the phase its
-    // frequency sets, so its level there is the crossfade's, not the drone's.
     for (const pcm of rendersOf('drone')) {
       const held = span(pcm, 1, 2);
       const root = levelAt(held, midiHz(38));
@@ -336,7 +314,6 @@ describe('each preset does what its doc says, on seeds 1–3', () => {
 
   test('drain: on its glide from A4 to D3 at each fifth of it, 10 dB over a third either side, and 20 dB quieter by its end', () => {
     for (const pcm of rendersOf('drain')) {
-      // Its pitch t seconds in, on the glide: A4 · (D3 / A4)^t.
       for (const t of [0.1, 0.3, 0.5, 0.7, 0.9]) {
         const on = midiHz(69) * (midiHz(50) / midiHz(69)) ** t;
         const near = span(pcm, t - 0.04, t + 0.04);
@@ -348,8 +325,6 @@ describe('each preset does what its doc says, on seeds 1–3', () => {
   });
 
   test('bloom: its root, third and fifth 40 dB over every note off the chord, entering in turn', () => {
-    // D4, F#4 and A4. The octave shares its frequency with the root's second
-    // partial, so it is read by neither.
     const chord = [62, 66, 69];
     const off = [61, 63, 64, 65, 67, 68, 70, 71];
     for (const pcm of rendersOf('bloom')) {
@@ -357,7 +332,6 @@ describe('each preset does what its doc says, on seeds 1–3', () => {
       expect(
         Math.min(...on) - Math.max(...off.map((midi) => levelAt(pcm, midiHz(midi)))),
       ).toBeGreaterThanOrEqual(40);
-      // Each note 90 ms after the last, and up to 40 ms more: 50 ms at least.
       const entries = chord.map((midi) => entersAt(pcm, midiHz(midi)));
       for (const [before, after] of Arr.zip(entries, entries.slice(1)))
         expect(after - before).toBeGreaterThanOrEqual(0.04);
@@ -440,9 +414,6 @@ describe('each preset does what its doc says, on seeds 1–3', () => {
         powerDb(pcm, HISS.rise + k * 0.05, HISS.rise + 0.05 + k * 0.05),
       );
       expect(Math.max(...held) - Math.min(...held)).toBeLessThanOrEqual(1.5);
-      // Up evenly: a quarter of its level a quarter of the way up its rise
-      // (12 dB under it), half halfway (6 dB under). An eased rise is half its
-      // level halfway too, but 17 dB under it a quarter of the way up.
       for (const [share, under] of [
         [0.25, 12],
         [0.5, 6],
@@ -450,7 +421,6 @@ describe('each preset does what its doc says, on seeds 1–3', () => {
         const rising = powerDb(pcm, HISS.rise * share - 0.025, HISS.rise * share + 0.025);
         expect(Math.abs(median(held) - rising - under)).toBeLessThanOrEqual(1.5);
       }
-      // 60 dB over the 0.7 s after its hold: 60/7 dB each tenth of a second.
       const tenths = Array.from({ length: 6 }, (_, k) =>
         powerDb(pcm, HISS.hold + 0.05 + k * 0.1, HISS.hold + 0.1 + k * 0.1),
       );
@@ -468,7 +438,6 @@ describe('each preset does what its doc says, on seeds 1–3', () => {
         [HISS.breath + 12, renderCode(louder, seed)],
         [HISS.breath + 5, renderCode(narrow, seed)],
       ] as const) {
-        // A render is peaked as a whole, so the breath is read against the band, not alone.
         const profile = profileOf(render, 'one-shot');
         const under =
           10 *
@@ -482,7 +451,6 @@ describe('each preset does what its doc says, on seeds 1–3', () => {
   test('sizzle: its hit at its flash, then falling evenly, about 4.5 dB a tenth of a second', () => {
     for (const pcm of rendersOf('sizzle')) {
       expect(Math.abs(describeSound(pcm).hit - 0.05)).toBeLessThanOrEqual(HIT_MOVE);
-      // The flash is gone by 0.17 s: the tenths from 0.2 s are the body's alone.
       const tenths = Array.from({ length: 8 }, (_, k) =>
         powerDb(pcm, 0.2 + k * 0.1, 0.3 + k * 0.1),
       );
@@ -509,8 +477,6 @@ describe('each preset does what its doc says, on seeds 1–3', () => {
     for (const [seed, roofed] of Arr.zip(TRIAL_SEEDS, rendersOf('rain on a roof'))) {
       const without = renderCode(bare, seed);
       expect(roofed.frames).toBe(without.frames);
-      // The rain under the taps draws the same numbers either way, so what
-      // the roof adds is the taps alone.
       const taps: Pcm = {
         ...roofed,
         channels: roofed.channels.map((plane, c) => {

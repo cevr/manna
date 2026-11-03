@@ -1,9 +1,3 @@
-// A review copy's burn-in, painted over a frame: the line `core/board-render.ts`
-// writes (a Board's `burnIn`, a scenes render's `scenesBurnIn`), small, on a
-// dark plate, in the bottom-left corner. A Board render paints it over its
-// shots (`boardFilm`); a scenes render's review copy (`scenesReview`) over the
-// film's own frame, so a frame of a screen capture names where it is.
-
 import type { Film, RenderOptions } from './film.ts';
 import { scenesBurnIn } from '../core/board-render.ts';
 

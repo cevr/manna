@@ -1,11 +1,3 @@
-// A look's still, composed in the page (`film lab look`): the frame just drawn on
-// `canvas`, cropped and scaled as the view asks (`viewBox`, core/easel.ts),
-// in greys for `value`, and in greys blurred for `squint`. The blur reads
-// past the still's edges, so the region is first laid on a sheet padded by
-// its own edge pixels, stretched outward (clamp to edge): the edges blur
-// into themselves, never into the transparent margin, and the still keeps
-// no halo or seam.
-
 import { Array as Arr, Option, Result } from 'effect';
 import { type StillView, viewBox } from '../core/easel.ts';
 
@@ -29,12 +21,10 @@ export const composeStill = (canvas: HTMLCanvasElement, view: StillView): HTMLCa
   const whole = box.sw === canvas.width && box.sh === canvas.height;
   if (whole && box.dw === box.sw && !box.grey) return canvas;
   const pad = Math.ceil(box.blur * PAD_RADII);
-  // The region at its size, its edges stretched outward over the padding.
   const laid = sheet(box.dw + 2 * pad, box.dh + 2 * pad);
   laid.ctx.drawImage(canvas, box.sx, box.sy, box.sw, box.sh, pad, pad, box.dw, box.dh);
   if (pad > 0) {
     const w = box.dw + 2 * pad;
-    // Left and right columns first, then the top and bottom rows across them (the corners too).
     laid.ctx.drawImage(laid.canvas, pad, pad, 1, box.dh, 0, pad, pad, box.dh);
     laid.ctx.drawImage(
       laid.canvas,

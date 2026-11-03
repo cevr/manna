@@ -1,12 +1,3 @@
-// The series lead's papers, as his kept sheets paint them, sampled there
-// (`turnaround.png`): each a lit colour, its shade a hue of its own past the
-// crease where the sheet turns it (CRAFT rule 12, never the colour dimmed),
-// and the light on its edge. His face, hair and ears are flat, as the sheet
-// lays them; his tunic turns on its far side toward a warm lavender, his
-// mantle toward a deeper blue-violet, his hands at their far edge toward
-// rose (look.md). What a paper is and how it is checked are the house's
-// (`@manna/film/style`). Pure.
-
 import { type Crease, papers } from '@manna/film/style';
 
 /** Where his papers turn: his garment sharply on its far side, his sleeves softly (each cut at its elbow, so a sharp turn would step there), his hands only at their far edge. */

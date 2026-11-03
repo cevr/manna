@@ -1,8 +1,3 @@
-// `film read` over the films folder its first argument names: the fresh
-// process a test's `FreshFilm` runs (`['bun', <this file>, <films>]`), so a
-// test reads a film the way the lab does, in a process that imports the
-// film's files as they stand.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, Layer, Stdio } from 'effect';

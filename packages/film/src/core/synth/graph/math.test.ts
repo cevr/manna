@@ -30,7 +30,6 @@ describe('the graph’s own math, against the host’s', () => {
   test('sin and cos of turns: within 4 ULP of 1 absolute, near and far from 0', () => {
     for (const span of [1, 2000]) {
       const turns = (u: number) => (u - 0.5) * span;
-      // The host's argument is reduced first, so its 2π × t keeps its bits.
       const host = (f: (r: number) => number) => (t: number) =>
         f(2 * Math.PI * (t - Math.floor(t)));
       expect(worst(N, turns, sinTurn, host(Math.sin)).absolute).toBeLessThan(4 * ULP);

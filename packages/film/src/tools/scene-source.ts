@@ -1,21 +1,3 @@
-// A scene file as the lab reads and edits it: the `drawing({...})` calls a
-// module exports, the `timeline` and `knobs` object literals inside them (or
-// the module-level `const` literal they name), and the splices that change one
-// value there. Parsed with oxc-parser, so every position is the parser's,
-// never a regex's guess. Pure: text in, text out.
-//
-// An edit rewrites only a value the parser proves is a literal: a number
-// (`0.4`, `-0.2`), a string (`'inQuad'`), a literal cue/landmark end
-// (`{ cue: 'roll' }`) or a two-number array (`[960, 800]`).
-// A computed value, a spread, a shorthand or a duplicate key is refused, since
-// the lab could not say what it would be changing. A missing `offset`, `dur`,
-// `until`, `untilOffset`, `ease` or `stagger` is added after the span's anchor, in
-// that order; a span ends one way, so a `dur` written replaces its `until`, and an
-// `until` its `dur`. A key the span `patchSpan` makes lacks is taken away: an
-// `untilOffset` once a `dur` or a new `until` ends the span (or 0 puts the end
-// back on its point), an `ends` once it runs `until` a point. A write is
-// judged by the span its text holds (`cueLanded`), decoded, never rebuilt.
-
 import { Array as Arr, Equal, Match, Option, Predicate, Result, Schema } from 'effect';
 import {
   type ArrayExpression,
@@ -566,7 +548,6 @@ const valueText = (key: TimingKey, patch: CuePatch): Option.Option<string> => {
     case 'until':
       return Option.map(Option.fromUndefinedOr(patch.until), stringText);
     case 'untilOffset':
-      // 0 is the point itself: the key is taken away (`droppedBy`), never written.
       return Option.map(
         Option.filter(Option.fromUndefinedOr(patch.untilOffset), (v) => toMs(v) !== 0),
         numberText,
@@ -662,7 +643,6 @@ export const commaBetween = (source: string, from: number, to: number): Option.O
   let i = from;
   while (i < to) {
     if (source.charAt(i) === ',') return Option.some(i);
-    // A comment runs to its line's end, or its close; one that never ends holds no comma.
     const close = Match.value(source.slice(i, i + 2)).pipe(
       Match.when('//', () => Option.some([source.indexOf('\n', i), 0] as const)),
       Match.when('/*', () => Option.some([source.indexOf('*/', i + 2), 2] as const)),

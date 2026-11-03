@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/context-menu/root/ContextMenuRoot.tsx
-//
-// A menu opened by a right click or a long press on its trigger area, placed
-// at the pointer. It is a `Menu.Root` under a context-menu context that holds
-// the anchor point and the gesture bookkeeping; a context menu inside another
-// menu starts a menu of its own.
 import type { JSX } from '@solidjs/web';
 import { createSignal, createUniqueId } from 'solid-js';
 

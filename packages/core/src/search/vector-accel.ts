@@ -143,7 +143,6 @@ const nativeFilenames = (): readonly string[] => {
   });
   if (platform === 'darwin') return ['vector-scan.dylib'];
   if (platform === 'win32') return ['vector-scan.dll'];
-  // The triples `build-native.sh` cross-compiles to, named as zig names them.
   const triple = Match.value(arch).pipe(
     Match.when('arm64', () => 'aarch64-linux-gnu'),
     Match.orElse(() => 'x86_64-linux-gnu'),
@@ -166,7 +165,7 @@ const loadNative = (target: AccelTarget): Effect.Effect<Option.Option<VectorAcce
   Effect.gen(function* () {
     const moduleName = 'bun:ffi';
     const ffi = yield* Effect.tryPromise({
-      try: () => import(/* @vite-ignore */ moduleName) as Promise<FfiModule>,
+      try: () => import(moduleName) as Promise<FfiModule>,
       catch: () => new AccelUnavailable({ tier: 'ffi' }),
     });
     const type = (name: string): unknown => ffi.FFIType[name];
@@ -177,10 +176,6 @@ const loadNative = (target: AccelTarget): Effect.Effect<Option.Option<VectorAcce
       },
       vector_scan_isa: { args: [], returns: type('i32') },
     };
-    // `dlopen` throws for a name that is not there, and an absent candidate is
-    // the ordinary case rather than a failure: a developer has the host build
-    // and not the cross-compile, the deployment has the reverse. Trying each in
-    // turn is what lets both exist without one hiding the other.
     const lib = yield* Effect.firstSuccessOf(
       nativeFilenames().map((file) =>
         Effect.try({
@@ -195,8 +190,6 @@ const loadNative = (target: AccelTarget): Effect.Effect<Option.Option<VectorAcce
     if (Option.isNone(isaSymbol) || Option.isNone(rangeSymbol)) return Option.none<VectorAccel>();
 
     const kind = kindForIsa(isaSymbol.value());
-    // A `wasm` isa from a native library means the wrong artifact was built
-    // into the wrong file; refuse it rather than mislabel the log line.
     if (Option.isNone(kind) || kind.value === 'wasm') return Option.none<VectorAccel>();
 
     const scoreRange = rangeSymbol.value;
@@ -248,16 +241,10 @@ const loadWasm = (target: AccelTarget): Effect.Effect<Option.Option<VectorAccel>
     const bytes = yield* readArtifact(artifactUrl('vector-scan.wasm'));
     if (Option.isNone(bytes)) return Option.none<VectorAccel>();
 
-    // Layout: one guard page, the corpus, the query, then the scores.
     const vectorsAt = WASM_PAGE_BYTES;
     const queryAt = vectorsAt + target.vectors.byteLength;
     const scoresAt = queryAt + target.dimensions;
     const needed = scoresAt + target.count * 4;
-    // The module declares its own minimum (16 pages of stack and statics from
-    // the toolchain), and a host that supplies less fails to instantiate with
-    // a LinkError. Taking the larger of the two means a small index — a test
-    // fixture, a single-book scope — gets a module that links rather than one
-    // that silently falls through to the pure loop.
     const pages = Math.max(WASM_MINIMUM_PAGES, Math.ceil(needed / WASM_PAGE_BYTES));
     const memory = new WebAssembly.Memory({ initial: pages });
 
@@ -279,8 +266,6 @@ const loadWasm = (target: AccelTarget): Effect.Effect<Option.Option<VectorAccel>
       scoreRange: (query, offset, count, out) => {
         heap.set(query, queryAt);
         const wrote = call(vectorsAt, queryAt, target.dimensions, offset, count, scoresAt);
-        // The scores come back inside linear memory; copy out the run that was
-        // asked for. `out` is the scanner's reusable buffer.
         out.set(new Int32Array(memory.buffer, scoresAt, wrote), 0);
         return wrote;
       },
@@ -335,8 +320,6 @@ export const readyVectorAccel = (target: AccelTarget): Option.Option<VectorAccel
 export const primeVectorAccel = (target: AccelTarget): void => {
   if (Option.isSome(resolvedFor(target)) || priming) return;
   priming = true;
-  // `vectorAccel` never fails — every load fault is already an `Option.none`
-  // — so this only has to release the flag, never handle an error.
   Effect.runPromise(
     vectorAccel(target).pipe(
       Effect.tap(() =>
@@ -358,7 +341,6 @@ export const vectorAccel = (target: AccelTarget): Effect.Effect<Option.Option<Ve
   Effect.gen(function* () {
     const held = resolvedFor(target);
     if (Option.isSome(held)) return held.value;
-    // Native first, WebAssembly second, and the pure loop when neither loads.
     const native = yield* loadNative(target);
     const chosen = yield* Option.match(native, {
       onNone: () => loadWasm(target),

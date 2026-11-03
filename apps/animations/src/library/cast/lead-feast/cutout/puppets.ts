@@ -1,13 +1,3 @@
-// The series lead's puppets, one a cut view (`canvas/puppet.ts`): each
-// view's part sheet (`sheets/<view>/`, made by `film concept parts`), its
-// parts front to back as the sheet's record lists them, each PNG imported
-// by its module so a scene that draws him is keyed by its bytes
-// (`tools/stamp.ts`), on the view's skeleton (`skeleton.ts`), with his origin
-// at the kept box's top-left corner in the padded part sheet (`frames.ts`):
-// his pixels are the sheet's, drawn at its
-// one scale. Each declares the kept view it is held to (`concept`); a view's
-// drawn keys, each in place of one of its parts, are its `DRAWINGS`. Pure.
-
 import type { PuppetSpec } from '@manna/film/canvas';
 import raiseSeatedK2 from './raise-seated/keys/k2.png' with { type: 'file' };
 import raiseSeatedK3 from './raise-seated/keys/k3.png' with { type: 'file' };

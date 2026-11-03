@@ -49,8 +49,6 @@ export const deliver = Effect.fn('Mail.deliver')(function* (deliveries: Readonly
       yield* warnMail('film.unaddressed', { film: ref, subscriber: delivery.subscriber });
       continue;
     }
-    // The letter is made before the claim, so nothing but the send itself
-    // stands between a claim and the letter going.
     const token = yield* tokens.sign({ _tag: 'Unsubscribe', subscriber: delivery.subscriber });
     const letter = filmLetter(to.value, delivery.origin, film.value, token);
     const claim = yield* subscribers.send(delivery.subscriber, ClaimFilmLetter.make({ film: ref }));

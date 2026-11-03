@@ -83,12 +83,7 @@ export const searchDaemonClientLayer = (socketPath: string): Layer.Layer<SearchS
         query: (query: SearchQuery) => client['search.query'](query).pipe(Effect.orDie),
       });
     }),
-  ).pipe(
-    Layer.provide(clientProtocol(socketPath)),
-    // The probe just answered on this socket; a connection that fails in the
-    // instant between probe and use is a broken invariant, not a state.
-    Layer.orDie,
-  );
+  ).pipe(Layer.provide(clientProtocol(socketPath)), Layer.orDie);
 
 class SearchDaemonSpawnError extends Schema.TaggedError<SearchDaemonSpawnError>()(
   'SearchDaemonSpawnError',

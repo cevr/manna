@@ -45,10 +45,6 @@ function paragraphToEntry(
   };
 }
 
-// ============================================================================
-// Service Interface
-// ============================================================================
-
 /**
  * EGW Commentary service interface.
  * Provides commentary lookup from EGW Bible Commentary volumes.
@@ -58,10 +54,6 @@ export interface EGWCommentaryServiceApi {
     verse: VerseReference,
   ) => Effect.Effect<CommentaryResult, CommentaryServiceError>;
 }
-
-// ============================================================================
-// Service Definition
-// ============================================================================
 
 /**
  * EGW Commentary Service

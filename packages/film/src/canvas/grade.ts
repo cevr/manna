@@ -1,9 +1,3 @@
-// The painted finish over a whole frame, after the scene and its light:
-// bloom (the brightest light spilling soft into the air about it) and a
-// grade (contrast, saturation and a split tone: one colour into the
-// shadows, another into the highlights). Both read the frame's own pixels
-// and nothing else, so a frame is graded alike however it was reached.
-
 import { Schema } from 'effect';
 import { offscreen, type Offscreen } from './paper.ts';
 
@@ -122,7 +116,6 @@ export const gradeTables = (style: GradeStyle): GradeTables => {
   const curve = new Uint8ClampedArray(256);
   for (let v = 0; v < 256; v++) {
     const x = v / 255;
-    // Smoothstep blended in by the contrast: an S that holds black and white.
     const s = x * x * (3 - 2 * x);
     curve[v] = Math.round(255 * (x + (s - x) * style.contrast));
   }

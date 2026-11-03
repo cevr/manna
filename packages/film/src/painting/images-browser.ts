@@ -1,10 +1,3 @@
-// A scene's plate PNGs in a page (`PaintingImagesBrowser`): each fetched
-// through the page's `HttpClient` and decoded (`createImageBitmap`, no colour
-// conversion, alpha premultiplied as the canvas composites it) inside the
-// load, so no frame waits on a decode. The bitmap is the caller's scope's (the
-// load's, handed to the film's host) and closed when that scope closes, never
-// before the last frame draws it.
-
 import { Effect, Layer, Option } from 'effect';
 import { HttpClient } from 'effect/http';
 import { PaintingImages, PaintingUnloadable } from './images.ts';

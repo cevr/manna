@@ -76,7 +76,6 @@ export function Home() {
   const { fontScale } = useWindowDimensions();
   const title = Math.ceil(titleLine * fontScale) + titleSpace;
   const scroll = useSharedValue(0);
-  // The pinned tab row rests where the list's own row meets the list's top: one title's height down.
   const reveal = useTabReveal(scroll, title, tabRowHeight(fontScale));
   const shown = useAtomValue(tiles);
   const { zoomOut, zoomIn } = useZoom(scroll, reveal.cover);
@@ -97,7 +96,6 @@ export function Home() {
           <Title height={title} scroll={scroll} onAllAtOnce={zoomOut} />
         </TabList>
       </View>
-      {/* The status bar's ground: rows and the title pass under it unseen. */}
       <View style={[styles.scrim, { height: insets.top }]} />
     </GestureHandlerRootView>
   );
@@ -188,9 +186,7 @@ function TabList({
     setChosen(name);
   };
   const choose = (name: TabName) => show(name, openingOffset(kept.current, name, scroll.value));
-  // The list's own row, and the pinned copy of it over the list's top.
   const tabRow = <TabRow names={tabs.map((t) => t.name)} selected={tab.name} onSelect={choose} />;
-  // The list's head: the title's spacer and the tab row.
   const head = title + tabRowHeight(fontScale);
   const setTopic = useAtomSet(openAtTopic);
   useAtomSubscribe(

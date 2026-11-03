@@ -1,17 +1,3 @@
-// A figure composed from a traced sheet (`film concept trace`'s tables, in
-// the sheet's own pixels): each part taken to the cast's canon by one scale
-// a sheet (`scale`, units a pixel), the head's parts about the head's centre
-// and the body's about the feet, and composed of the house's parts
-// (`figure`). Each arm, traced whole as it hangs, is cut at its elbow into
-// its upper sleeve and its forearm, the elbow on the line from its shoulder
-// to its hand (so it hangs straight at rest and `armReach` bends it from
-// there), the two overlapping round the elbow so the joint stays covered;
-// the upper sleeve ends at its shoulder in a ball about its pivot, its half
-// width across, so it turns onto itself as the arm swings (RIVE.md, "Cut a
-// traced mass by what lies in front of it"). Every traced figure takes the
-// same numbers (its face's, its stance's, both arms' and their elbows', and
-// an open mouth's when it has one), so a pose names them on any view. Pure.
-
 import { SHEET_FIT, chainThrough, fitClosed, flattened } from '../core/fit.ts';
 import type { ConceptRef } from '../core/match.ts';
 import { figure } from './figure.ts';
@@ -247,7 +233,6 @@ const BALL_POINTS = 9;
  */
 const cutArm = (arm: TracedArmSpec, outline: ReadonlyArray<Pt>) => {
   if (arm.pivot === undefined) return cutHanging(arm.hand.at, arm.elbow, outline, arm.root);
-  // Turned about its pivot till its hand hangs straight below it, cut as a hanging arm, and turned back.
   const [px, py] = arm.pivot;
   const by = Math.PI / 2 - Math.atan2(arm.hand.at[1] - py, arm.hand.at[0] - px);
   const turn =
@@ -257,14 +242,12 @@ const cutArm = (arm: TracedArmSpec, outline: ReadonlyArray<Pt>) => {
       py + (x - px) * Math.sin(a) + (y - py) * Math.cos(a),
     ];
   const [to, back] = [turn(by), turn(-by)];
-  // Begun at its new top, as a traced outline is begun at its top: its cut sleeve's ends are then the corners at its pivot's row.
   const turned = outline.map(to);
   const first = turned.reduce(
     (best, p, i) => (p[1] < (turned[best]?.[1] ?? Infinity) ? i : best),
     0,
   );
   const begun = [...turned.slice(first), ...turned.slice(0, first)];
-  // Its pivot is the one given: the turn leaves it where it is, and the arm is cut about it.
   const cut = cutHanging(to(arm.hand.at), arm.elbow, begun, arm.root, arm.pivot);
   return {
     pivot: arm.pivot,
@@ -295,7 +278,6 @@ const cutHanging = (
     const a = Math.PI + (i / (BALL_POINTS - 1)) * Math.PI;
     return [pivot[0] + r * Math.cos(a), pivot[1] + r * Math.sin(a)];
   });
-  // A ball: the cut sleeve runs clockwise on screen, its top's two corners at the pivot's row its ends. Traced: the sleeve down from its own end.
   const upper =
     root === 'traced'
       ? cutAt(outline, elbowY + ELBOW_OVERLAP, 'above')
@@ -337,11 +319,8 @@ export const tracedHands = (
 export const tracedFigure = (spec: TracedFigureSpec) => {
   const s = spec.scale;
   const cubic = spec.path === 'cubic';
-  // A chain's points are its anchors and handles: what is read off its line is read off the line laid as points.
   const line = (pts: ReadonlyArray<Pt>) => (cubic ? flattened(pts, FLAT_STEP * s) : pts);
-  // A polygon the house would draw smooth through its points, as a chain when the figure's outlines are chains.
   const asPath = (pts: ReadonlyArray<Pt>) => (cubic ? chainThrough(pts) : [...pts]);
-  // A cut sheet outline fitted again as a chain, when the figure's outlines are chains.
   const refit = (pts: ReadonlyArray<Pt>) => (cubic ? fitClosed(pts, SHEET_FIT) : [...pts]);
   const fromHead = ([x, y]: Pt): Pt => [
     hundredth((x - spec.headAt[0]) * s),
@@ -390,13 +369,10 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
   const far = armOf(spec.arms.far);
   const bodyOutline = body(spec.body.outline);
   const hem = Math.max(...line(bodyOutline).map(([, y]) => y));
-  // The house reads a head's width off its outline's points (`figure`, its hands' size): so is it read here.
   const headWidth =
     Math.max(...headOutline.map(([x]) => x)) - Math.min(...headOutline.map(([x]) => x));
-  // The sheet draws both hands one size; the larger traced circle is that size, so each touches its cuff.
   const handR = Math.max(spec.arms.near.hand.r, spec.arms.far.hand.r);
   const handShare = hundredth((2 * handR * s) / headWidth);
-  // Room round him for his head's tilt, his arms' reach and his outline; his feet are the rig's origin.
   const all = [...line(bodyOutline), ...line(headOutline).map(([x, y]): Pt => [x, y + headY])];
   const reach = Math.max(...all.map(([x]) => Math.abs(x))) + 120;
   const top = Math.min(...all.map(([, y]) => y)) - 60;
@@ -425,7 +401,6 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
           crescent: hair.curls.crescent,
         });
   };
-  // Both ears where both show, else the one; the light on them as tones where the sheet gives it.
   const earOf = (e: NonNullable<TracedFigureSpec['ears']>) => {
     const tones = e.tones === undefined ? undefined : toned(head, e.tones);
     if (e.near !== undefined && e.far !== undefined) {
@@ -485,7 +460,6 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
     hands: Hands({ paper: spec.hands, share: handShare }),
     path: spec.path,
   });
-  // Every traced figure's numbers, and the extra marks' where its face opts into them.
   const knobs: Readonly<Record<Exclude<TracedKnob, ExtraFaceKnob>, number>> &
     Readonly<Partial<Record<ExtraFaceKnob, number>>> = f.knobs;
   return {

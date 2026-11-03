@@ -1,8 +1,3 @@
-// A beat's line as the Board sets it, and the words a panel holds over: one
-// reading of a `say` for the Board's column (over the staged film's beats)
-// and an ask's Board (over the lab's read of the film's script), so a panel
-// says the same words in both. Pure: no view, no read.
-
 import { Option, Result } from 'effect';
 import { parse } from '../../core/narration.ts';
 

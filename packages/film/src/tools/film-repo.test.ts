@@ -1,6 +1,3 @@
-// FilmRepo reads films from the one root the app hands it, the same folder its
-// player page imports; no environment variable can point the tools elsewhere.
-
 import { describe, expect, it } from 'effect-bun-test';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { ConfigProvider, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
@@ -34,8 +31,6 @@ describe('FilmRepo', () => {
     }).pipe(Effect.provide(repo));
   });
 
-  // A synthetic film on disk (`fixtures/films/sample`): its modules are
-  // imported as a real film's are, and no real film's script pins the test.
   const sample = FilmRepo.layer(`${import.meta.dir}/fixtures/films`).pipe(
     Layer.provide(ContentStore.layer),
     Layer.provideMerge(BunServices.layer),
@@ -61,27 +56,20 @@ describe('FilmRepo', () => {
       expect(open?.say).toContain('and its answer');
       expect(script.find((beat) => beat.id === 'title')?.say).toBeUndefined();
       expect(script.find((beat) => beat.id === 'title')?.cite).toEqual([]);
-      // It lists no heardAs names, so the take check has none.
       const loaded = yield* (yield* FilmRepo).load('sample');
       expect(loaded.heardAs).toEqual({});
-      // Its film.ts declares the look: two acts, the first from the opening.
       const look = Option.getOrThrow(loaded.look);
       expect(look.acts.map((act) => act.from)).toEqual(['open', 'title']);
-      // And its rate, the one its page is made at.
       expect(loaded.fps).toBe(24);
     }),
   );
 
-  // A version folder (`sample/v3/`) is read from its own files with the same
-  // loader: its scenes, takes, acts, score and credits, and the film's voice
-  // where it keeps none of its own.
   it.effect.layer(sample)(
     "reads a version folder's own scenes, takes, acts, score and credits",
     () =>
       Effect.gen(function* () {
         const loaded = yield* (yield* FilmRepo).load('sample', Segment.make('v3'));
         expect(loaded.scenes.map((s) => s.id)).toEqual(['seed', 'end']);
-        // It keeps no film.ts: it is laid at the rate the film declares.
         expect(loaded.fps).toBe(24);
         expect(Object.keys(loaded.timings.scenes)).toEqual(['seed']);
         expect(Option.getOrThrow(loaded.look).acts.map((act) => String(act.name))).toEqual([
@@ -90,7 +78,6 @@ describe('FilmRepo', () => {
         const score = Option.getOrThrow(loaded.sound).score;
         expect(score?.options['piano']?.movements.map((m) => m.from)).toEqual(['seed']);
         expect(Option.getOrThrow(loaded.voice)).toMatchObject({ voiceId: 'sample-voice' });
-        // Its own credit roll: the film's root keeps none.
         expect(loaded.credits).toEqual(
           Option.some([
             { text: 'A Seed', kind: 'name', gap: 0 },
@@ -101,8 +88,6 @@ describe('FilmRepo', () => {
       }),
   );
 
-  // The app's library, written beside the sample film for the test: the knock
-  // its sound.ts places is a code sound.
   const KNOCK = `export const library = {
   'wood.knock': {
     kind: 'code',
@@ -114,8 +99,6 @@ describe('FilmRepo', () => {
 export const store = { kind: 'folder', folder: 'files' };
 `;
 
-  // The repo is built with no sound renderer: a load that rendered or
-  // measured a sound would not build, so what reads no sound pays for none.
   const withLibrary = Layer.unwrap(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -176,9 +159,6 @@ describe('BoardStore', () => {
 });
 
 describe('FilmFolder.stamp', () => {
-  // A film and the app's sound library on disk, each file dated by hand, so
-  // the stamp is read from the dates alone: the film's newest is 1000 s, the
-  // lock's 2000 s, the library module's 3000 s.
   const dated = Layer.unwrap(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;

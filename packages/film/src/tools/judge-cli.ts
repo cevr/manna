@@ -1,14 +1,3 @@
-// `film judge`: a blind second opinion on one picture choice at one scene
-// (`tools/judge.ts`). It draws each version's stills (a look's levels through
-// the lab's easel at FILM_LAB_URL, a render set's variants from their
-// videos), sends the packet to a fresh Opus (`Counsel`, headless Claude in
-// macOS's sandbox), and prints a few short
-// lines: the verdict's path, the ranking in real names beside the owner's
-// pick, and the counsel's answer's path; or one JSON line (`--json`). The
-// packet never comes back in what it prints. It writes no choice.
-//
-//   film judge <film> --scene <id> [--point <choice point>] [--captions] [--json]
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';

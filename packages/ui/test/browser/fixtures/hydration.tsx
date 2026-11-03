@@ -1,13 +1,3 @@
-// Fixtures the hydration cases serve (`hydration.test.ts`): each is rendered
-// by Solid's server build into the page, and the browser hydrates it. A
-// toggle group owned as the lab owns it (the owner takes every offer, logged
-// as `value [<values>]`), with `two` pressed (`pressed`) or none
-// (`unpressed`). Each toggle logs the `tabindex` the browser computes for it
-// at hydration, and each change of it, as `tabindex <value> <tabindex>`. Before the group,
-// an element with a spread whose ref factory is made in the body (as the
-// server never evaluates such an element's `ref`, solidjs/solid#4081): its
-// `onElement` setup logs `setup spread`. Nothing here reads a browser global
-// while rendering, so the server can render it.
 import type { JSX } from '@solidjs/web';
 import { createRenderEffect, createSignal } from 'solid-js';
 
@@ -25,7 +15,6 @@ function Probed(props: { value: string }): JSX.Element {
       id={props.value}
       value={props.value}
       render={(merged: HTMLProps) => {
-        // The effect also runs when what the value is read from changes and the value does not.
         let logged: unknown = null;
         createRenderEffect(
           () => merged['tabindex'] as unknown,
@@ -54,7 +43,6 @@ const group = (initial: ReadonlyArray<string>) =>
       },
       'aria-label': 'spread',
     });
-    // Made in the body: the server never evaluates the `ref` of an element with a spread.
     const refs = [onElement<HTMLDivElement>((el) => log(`setup ${el.id}`))];
     return (
       <main>

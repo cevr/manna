@@ -48,7 +48,6 @@ export const voiceOver = (native: VoiceNative, now: () => number): Voice => {
     );
     if (id !== 0) ids.set(name, id);
   });
-  // The pass runs once for the voice's life, however often it is asked for.
   const pass = { started: false };
   const load = Effect.gen(function* () {
     if (pass.started) return;

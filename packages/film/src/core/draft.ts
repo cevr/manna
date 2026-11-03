@@ -1,33 +1,3 @@
-// A series draft (`series/<series>/scripts/<draft>.md` in the app) as the
-// Script reader reads it: its beats, each with its line, what its picture
-// does and its sources, out of the Markdown the owner and the agents write.
-// The Markdown stays the one source: `DraftMarkdown` decodes it and encodes
-// it back byte for byte, so a mark the reader writes is one beat's line
-// changed (`draftMarked`) and every other character of the file as it was.
-//
-// A draft is written in one of two layouts:
-//
-// - a talk's table: a row a beat, its `#` cell the beat's number (and a label
-//   after `·`), its Say or Spoken cell the line, its Picture or On screen
-//   cell the brief, its Source cell the sources;
-//
-//       | #        | Spoken (owner, to lens)        | On screen / B-roll | Source note |
-//       | 1 · Hook | The first thing God {*}gave.   | A figure of clay.  | Gen 2:7     |
-//
-// - a film's beat list: a `### \`id\` · label` heading a beat, its line on
-//   `**say:**`, its brief on `**picture:**`, its sources on `**cite:**`.
-//
-//       ### `cold` · STORY · ~30 s
-//
-//       **say:** {baby}A baby drinks {*}milk. {/} Nobody minds.
-//
-// A line is read as a film's `say` is (`parse` in `narration.ts`): its cues,
-// its turns and its delivery marks in braces, never spoken. A line that does
-// not parse, or that stresses a word the Markdown way (`_if_`) or writes a
-// pause as a direction (`(0.6 s)`) where a mark (`{*}`, `{//}`) belongs,
-// fails the draft, naming the beat: nothing a reader cannot voice is read
-// aloud. Pure.
-
 import {
   Array as Arr,
   Effect,
@@ -88,9 +58,6 @@ const unread = (reason: string, beat: Option.Option<string> = Option.none()): Un
 export const unreadText = (u: Unread): string =>
   Option.match(u.beat, { onNone: () => u.reason, onSome: (beat) => `beat ${beat}: ${u.reason}` });
 
-// ---------------------------------------------------------------------------
-// Lines of the Markdown, each with where it starts
-
 interface Row {
   readonly text: string;
   readonly at: number;
@@ -98,7 +65,6 @@ interface Row {
 
 const rowsOf = (markdown: string): ReadonlyArray<Row> =>
   markdown.split('\n').reduce<{ readonly rows: ReadonlyArray<Row>; readonly at: number }>(
-    // A CRLF line is read without its carriage return; the offsets stay the file's.
     (acc, line) => ({
       rows: [...acc.rows, { text: line.replace(/\r$/, ''), at: acc.at }],
       at: acc.at + line.length + 1,
@@ -192,7 +158,6 @@ const tableBeats = (
         brief: columnOf(header, COLUMNS.brief),
         cite: columnOf(header, COLUMNS.cite),
       };
-      // The rows under the header and its rule, to the table's end.
       const body = Arr.takeWhile(rows.slice(head + 2), isTableRow);
       return Result.all(body.map((row) => tableBeat(cellsOf(row), column)));
     },
@@ -244,7 +209,6 @@ const listBeats = (rows: ReadonlyArray<Row>): Result.Result<ReadonlyArray<DraftB
   );
   return Result.all(
     heads.map((head) => {
-      // The beat's lines: to the next heading of any level.
       const lines = Arr.takeWhile(rows.slice(head.i + 1), (r) => !r.text.startsWith('#'));
       const field = (name: string) =>
         Option.map(
@@ -255,7 +219,6 @@ const listBeats = (rows: ReadonlyArray<Row>): Result.Result<ReadonlyArray<DraftB
             return { text, start: r.at + lead, end: r.at + lead + text.length };
           },
         );
-      // A line is one line: words carried onto the next are refused, never dropped.
       const sayAt = Arr.findFirstIndex(lines, (r) => r.text.startsWith('**say:** '));
       const carried = Option.flatMap(sayAt, (i) =>
         Option.filter(
@@ -397,7 +360,6 @@ export const draftMissed = (
   const now = readDraft(after);
   if (Result.isFailure(now)) return [`the draft no longer reads: ${unreadText(now.failure)}`];
   if (Result.isFailure(was)) return [`the draft did not read: ${unreadText(was.failure)}`];
-  // A beat's line as marked, '' for one that says nothing.
   const line = (draft: Draft, id: string) =>
     Option.getOrElse(
       Option.map(lineIn(draft, id), (l) => withDelivery(l.spoken, l.delivery)),

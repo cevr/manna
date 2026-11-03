@@ -1,12 +1,3 @@
-// The probe: `film check` asks a render to report every line of text it
-// draws, as a box in canvas pixels, and every mark of ink (a brush stroke's
-// centre line, a cutout's outline, a text's plate), so collisions are
-// measured instead of spotted. A probe is attached to one context for one
-// draw; with none attached, drawing costs a single WeakMap lookup and records
-// nothing. It only reads the context (its transform, its opacity,
-// `measureText`), so a probed frame is pixel for pixel the frame it would have
-// been.
-
 import { insidePolygon } from '../core/polygon.ts';
 import type { Point } from '../core/schema.ts';
 import type {

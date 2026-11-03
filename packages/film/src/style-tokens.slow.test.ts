@@ -1,38 +1,3 @@
-// The studio's look is read only through its tokens (`player/tokens.css`,
-// design language §3): no stylesheet, `*_CSS` string, Solid `style={{…}}`,
-// `.style.x =`, `.style['x'] =` or `setProperty`, SVG `fill=`/`stroke=` attribute or canvas
-// paint (`ctx.fillStyle =`) outside that file names a colour, a font family
-// or a font size of its own. A colour is a hex (`#e0ad45`), a colour function
-// of numbers (`rgb(255 255 255 / 0.2)`; one built from tokens or from data,
-// `hsl(${hue} var(--scene-sat) …)`, is not) or a named colour on a colour
-// property; a canvas in the chrome paints with a colour read from a token,
-// never a literal. A font family or size is any value but `var(…)` or
-// `inherit` (quoted or not, the value read whole from where it begins), a
-// `font` shorthand with a size in it, and any string named a
-// family (`FACE_FAMILY = '…'`). Canvas code draws film pixels, not the
-// studio's chrome, and keeps its own colours: `canvas/`, the house look's
-// figures (`style/`), the look-book's sheet and the contact sheet drawn on a
-// canvas, and the fixture films (the look-book's page around its sheet is
-// chrome and is read). So does paper:
-// the reading sheet is printed for the narrator at the microphone, light and
-// in a book face, never shown in the studio. Sound code (`core/synth/`) is no
-// look at all: a noise's colour (`color: 'pink'`) names how its spectrum
-// falls, never a pixel. One family is written outside the tokens, the UI
-// faces' own registration (`player/face.ts`: their faces, and the
-// `@font-face` rule a page's head declares), and each is held to its token:
-// the words face is the family `--font` names first, the mono face the one
-// `--font-mono` does.
-//
-// What a page draws is read back as well (`lab/fixtures/drawn-tokens.ts`, run
-// over every page and disclosed state of `e2e/lab/touch-tokens.dom.test.ts` at 390
-// and 1440): a value no rule here spells (a user agent's default, a
-// `calc`, a style set from data, a weight) is caught by computing it, never
-// by widening these patterns. This guard stays for what only it sees: a
-// canvas painting the chrome (its pixels are no computed style), the `@font-face`
-// registration held to `--font` and `--font-mono`, and every state no page test opens (a
-// toast, the lab's failed page, a drag under way, a look-book's page,
-// an error a fixture never answers), whose literals it reads from source.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
@@ -139,7 +104,6 @@ const RULES: ReadonlyArray<{
     spares: [FACE],
   },
   { why: 'a font family', pattern: /new FontFace\(\s*['"`]/ },
-  // A state colour is the tokens' (§3's one meaning per colour), even one written as another token.
   { why: 'a state colour of its own', pattern: /(?<![\w-])--state-[\w-]+\s*:/ },
   { why: 'a font size', pattern: new RegExp(`${cssSetting('font-size')}${NOT_TOKEN}`) },
   { why: 'a font size', pattern: new RegExp(`${setting('fontSize')}\\s*['"\`]${NOT_TOKEN}`) },
@@ -234,39 +198,32 @@ describe('the studio reads its look only through its tokens', () => {
         "style={{ fontSize: '12px' }}",
         'font-size: 13px;',
         'font: 14px/1.5 monospace;',
-        // A Solid style object.
         "style={{ color: 'white' }}",
         "style={{ 'background-color': 'black', left: pct(t) }}",
         "style={{ 'font-family': 'Inter' }}",
-        // An SVG attribute.
         '<path fill="white" d="M0 0" />',
         "<line stroke='black' x1={0} />",
         "el.setAttribute('stroke', 'grey');",
-        // A canvas in the chrome painting a literal.
         "ctx.fillStyle = 'black';",
         'ctx.strokeStyle = `gold`;',
         "ctx.shadowColor = 'transparent';",
         "ctx.font = '12px Inter';",
         'ctx.font = `500 15px ${body}`;',
-        // A `.style` assignment.
         "tip.style.color = 'white';",
         "tip.style.backgroundColor = 'black';",
         "tip.style.fontFamily = 'Inter';",
         "tip.style.fontSize = '11px';",
         "tip.style.setProperty('color', 'white');",
         "tip.style.setProperty('font-size', '12px');",
-        // A `.style` assignment by its key in brackets.
         "el.style['fontSize'] = '12px';",
         "el.style['fontFamily'] = 'Inter';",
         'el.style["font-size"] = "12px";',
         "el.style['font'] = '12px Inter';",
         "el.style['color'] = 'white';",
         'el.style[`backgroundColor`] = `black`;',
-        // A family named in a string.
         "const WORDS_FAMILY = 'Geist';",
         "new FontFace('Inter', url);",
         "{ family: 'Inter' }",
-        // A state colour defined outside the tokens.
         '  --state-live: var(--text-1);',
       ];
       const allowedLines = [
@@ -279,13 +236,11 @@ describe('the studio reads its look only through its tokens', () => {
         'href="#t=2"',
         "style={{ left: pct(props.placed, at), width: '40%' }}",
         "style={{ color: 'var(--ink)' }}",
-        // A token quoted as a style object's value.
         "style={{ 'font-size': 'var(--fs-2)' }}",
         "style={{ 'font-family': 'var(--font)' }}",
         "style={{ 'font-family': 'inherit', fontSize: 'var(--fs-1)' }}",
         "style={{ fontFamily: 'var(--font)' }}",
         'font-family: "var(--font)";',
-        // A token set by its key in brackets.
         "el.style['fontSize'] = 'var(--fs-1)';",
         "el.style['fontFamily'] = 'var(--font)';",
         "el.style['color'] = 'var(--ink)';",
@@ -298,13 +253,10 @@ describe('the studio reads its look only through its tokens', () => {
         'new FontFace(WORDS_FAMILY, url);',
         '.lab-cue[data-live] { background: var(--state-live); }',
       ];
-      // Every line it names is refused, and every token (and all else a line may hold) let
-      // through: the lines each list gets wrong, both at once.
       expect({
         letThrough: refusedLines.filter((line) => !refused(line)),
         refused: allowedLines.filter(refused),
       }).toEqual({ letThrough: [], refused: [] });
-      // The faces' own families are spared only in their registration.
       expect(broken(FACE, "const WORDS_FAMILY = 'Geist';")).toEqual([]);
       expect(broken(FACE, "const MONO_FAMILY = 'Geist Mono';")).toEqual([]);
     }),

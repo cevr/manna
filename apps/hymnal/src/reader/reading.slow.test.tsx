@@ -130,7 +130,6 @@ const pageStyle = (reading: ReadonlyArray<readonly [string, string]>) => {
   );
   return {
     words: drawn(words.get('[data-testid="line"] [data-testid^="syllable-"]')),
-    // A chord with a chord to show is a button over its text; the text is what is drawn.
     chords: drawn(chords.get('[data-testid^="chord-"][role="button"] > *')),
   };
 };
@@ -213,7 +212,6 @@ describe('a printed line', () => {
     const lines = [...app.host.querySelectorAll<HTMLElement>('[data-testid="line"]')];
     const sung = hymn(3).sections.flatMap((section) => section.lines);
     expect(lines.map((line) => line.getAttribute('aria-label'))).toEqual(sung);
-    // The drawn text adds a hyphen between a word's syllables: without hyphens it is the line.
     const bare = (text: string) => text.replaceAll('-', '');
     expect(lines.map((line) => bare(line.textContent ?? '').replaceAll(' ', ' '))).toEqual(
       sung.map(bare),

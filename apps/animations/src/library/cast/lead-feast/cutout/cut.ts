@@ -1,27 +1,3 @@
-// The series lead's kept views cut into parts (`cutParts`, @manna/film's
-// part sheet): each part his own pixels, front to back, so that a part can move
-// while every pixel at rest stays the sheet's. Parts are named from his own
-// side: `armRight` is his right arm, on the viewer's left from in front. His
-// face, ears and hands are taken by his part labels (`rig/labels.ts`, read by
-// the tracer's colour classes, `rig/trace.ts`); the cuts the sheet does not ink
-// (each sleeve's inner edge, a soft crease; the sash's band, knot and ends; the
-// hem; each sandal) are polygons and discs read off 2-4x crops of the view. The
-// front's lines are the world-proto round 2 cut's (`src/r2/parts.ts`), the
-// three-quarter view's are read new. A sleeve takes its cap (a disc round its
-// shoulder) above its shoulder, the rest of the shoulder the torso's; below the
-// hem the sandals, and the ground shadow behind them is a part of its own,
-// with its lavender under each sole (a sandal ends at its sole's ink). The
-// paper between his sandals is the view's ground, owned by no part. A hand
-// takes its whole ink ring, so no piece of it stays behind when the arm moves.
-// His bust (heads-4) is two parts, his head over the rest; its figure is read
-// with the foot of the view closed. Each view names the parts a pose moves,
-// and the words okra repaints what they hide by (`HIDDEN`, read by
-// `film concept parts`, which writes `sheets/<view>/`). The lines are read
-// in the kept view's pixels; the shared cut table (`library/cutout/table.ts`)
-// lays them in each view's part sheet frame, its kept box padded
-// (`frames.ts`), and reads a standing view's figure in the kept box as the
-// kept view's own. Data: the rules and the table are the shared module's.
-
 import type { HiddenEntry, PartCut, SheetClean } from '@manna/film/tools';
 import { CUT_AWAY, KEEP_REST, grain, shade, sides } from '../../../cutout/prompts.ts';
 import {
@@ -50,7 +26,6 @@ type CutView = keyof typeof FRAMES;
 /** From in front: the world-proto round 2 cut's lines. */
 const FRONT_HEM: Hem = [618, 123, 4, 90];
 const FRONT_RIGHT: Sleeve = {
-  // his right sleeve (the viewer's left): its inner edge, a soft crease the sheet paints without ink
   inner: [
     [50, 226],
     [50, 228],
@@ -67,7 +42,6 @@ const FRONT_RIGHT: Sleeve = {
   side: 'left',
 };
 const FRONT_LEFT: Sleeve = {
-  // his left sleeve (the viewer's right, under the mantle): its inner edge, a dark teal crease
   inner: [
     [200, 226],
     [199, 240],
@@ -134,7 +108,6 @@ const FRONT: PartCut = {
         ...frontRight.take,
         { label: 'handNear' },
         { disc: { c: [29.5, 429], r: 29 } },
-        // the cuff's end beside the hand
         box(-1, 395, 36, 463),
       ],
       unless: frontRight.unless,
@@ -152,12 +125,10 @@ const FRONT: PartCut = {
       pivot: JOINTS.front.shoulderLeft,
     },
     {
-      // above the chin, and his face's skin down his neck to the collar
       name: 'head',
       take: [box(-1, -1, FAR, 192), { label: 'face' }, { label: 'earNear' }, { label: 'earFar' }],
     },
     {
-      // the band's rows, the knot and the two hanging ends
       name: 'sash',
       take: [
         box(-1, 346, FAR, 369),
@@ -223,7 +194,6 @@ const FRONT: PartCut = {
 /** Turned three-quarters to the viewer's left: read off 3-4x crops of the view. */
 const TURNED_HEM: Hem = [618, 112, 4, 90];
 const TURNED_RIGHT: Sleeve = {
-  // his near sleeve (the viewer's left): its inner edge, a soft shaded crease
   inner: [
     [47, 226],
     [46, 260],
@@ -238,7 +208,6 @@ const TURNED_RIGHT: Sleeve = {
   side: 'left',
 };
 const TURNED_LEFT: Sleeve = {
-  // his far sleeve (the viewer's right, of his mantle's teal): its inner edge, a dark teal crease
   inner: [
     [153, 226],
     [151, 240],
@@ -302,7 +271,6 @@ const THREE_QUARTER_LEFT: PartCut = {
       take: [
         ...turnedRight.take,
         { label: 'handNear' },
-        // his near hand's ink ring, taller than wide, read off an 8x crop: out to its outer edge, short of his robe's teal beside it
         {
           polygon: [
             [-1, 410],
@@ -326,7 +294,6 @@ const THREE_QUARTER_LEFT: PartCut = {
     },
     {
       name: 'armLeft',
-      // his far hand's ink ring, read off 7x and 9x crops, out to its outer edge; the cuff's end each side of it, and the ring's far edge
       take: [
         ...turnedLeft.take,
         { label: 'handFar' },
@@ -338,7 +305,6 @@ const THREE_QUARTER_LEFT: PartCut = {
       pivot: JOINTS.threeQuarterLeft.shoulderLeft,
     },
     {
-      // above the chin, and his face's skin (his ear's with it) down his neck to the collar
       name: 'head',
       take: [box(-1, -1, FAR, 190), { label: 'face' }],
     },
@@ -494,7 +460,6 @@ const SINGLE_1: PartCut = {
       pivot: JOINTS['single-1'].shoulderLeft,
     },
     {
-      // above his chin, and his neck's skin down to the collar's V
       name: 'head',
       take: [
         box(-1, -1, FAR, 362),
@@ -513,7 +478,6 @@ const SINGLE_1: PartCut = {
       ],
     },
     {
-      // the band's rows across his body, the knot and the two hanging ends
       name: 'sash',
       take: [
         box(183, 651, 428, 697),
@@ -599,9 +563,7 @@ const SINGLE_9: PartCut = {
       name: 'armLeft',
       take: [
         ...single9Left.take,
-        // his round hand on his knee, its ring and thumb whole
         { disc: { c: [442, 718], r: 50 } },
-        // the cuff's end beside the hand, to where the arm's lower outline meets the mantle on his thigh
         {
           polygon: [
             [470, 680],
@@ -617,7 +579,6 @@ const SINGLE_9: PartCut = {
       pivot: JOINTS['single-9'].shoulderLeft,
     },
     {
-      // above his chin, and his neck's skin down to the collar's V
       name: 'head',
       take: [
         box(-1, -1, FAR, 362),
@@ -644,7 +605,6 @@ const SINGLE_9: PartCut = {
       ],
     },
     {
-      // the band's rows across his body, the knot and the two ends hanging over his lap
       name: 'sash',
       take: [
         box(186, 637, 412, 692),
@@ -762,7 +722,6 @@ const HIDDEN_ENTRIES = {
       why: 'its three calls were drawn before the held bottle was part of the right arm; holding it changes the magenta input, so no kept answer lays on the present input',
     },
   },
-  // seated: no grain sentence, as okra reads it as speckle on his lap
   'single-9': {
     moving: ['armRight', 'armLeft'],
     prompt: `${CUT_AWAY} his two arms were cut away to make a cut-out puppet. He sits on a wooden stool. His right arm (on the viewer's left) was raised with its hand holding a baby bottle beside his cheek; his left arm (on the viewer's right) was bent under the teal-blue mantle with its round hand resting on his knee. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each shoulder and armpit down to the sash, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle over his left shoulder on the viewer's right side), and his lap under his left hand, the cream tunic and the teal mantle over his thigh as they run on beside it. ${SEATED_SIDES} ${shade('his')} There are no arms now: no sleeves, no hands, no bottle, nothing magenta left. Where the magenta lay outside his body, beside his head and shoulders, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, neck, sash, lap, stool, sandals, size, position and framing.`,

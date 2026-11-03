@@ -1,12 +1,3 @@
-// The court's people and what they handle, drawn into the v3 set
-// (`court-set.ts`) in the Board's pixels: the judge behind his bench with
-// the gavel, the prosecutor behind his table with the evidence, the plain
-// lead behind the dock with the stain and the seal. Each figure is a Rive
-// rig (`rigs/`), posed by the host from a `CourtPose` a scene writes each
-// frame; the circle hands are the hand rig, drawn over what they work on.
-// Back to front: the bench and the judge, the table and the prosecutor, the
-// dock and the lead, so each group stands in front of the one behind it.
-
 import { at, unprobed } from '@manna/film/canvas';
 import { type Pt, boilTime } from '@manna/film/style';
 import {
@@ -257,7 +248,6 @@ export const seal = (ctx: CanvasRenderingContext2D, s: SealPose) => {
   ctx.scale(s.scale, s.scale);
   ctx.lineJoin = 'round';
   ctx.strokeStyle = C.outline;
-  // The ribbon's two tails, forked at their ends, hanging under the wax.
   ctx.save();
   ctx.scale(SEAL.ribbon, SEAL.ribbon);
   for (const side of [-1, 1]) {
@@ -274,7 +264,6 @@ export const seal = (ctx: CanvasRenderingContext2D, s: SealPose) => {
     unprobed(ctx, () => ctx.stroke());
   }
   ctx.restore();
-  // The wax: a pressed round with a soft, bumpy edge, creased like every piece.
   const wax = () => {
     ctx.beginPath();
     const n = 18;
@@ -296,7 +285,6 @@ export const seal = (ctx: CanvasRenderingContext2D, s: SealPose) => {
   ctx.fillStyle = g;
   wax();
   ctx.fill();
-  // The glint: a narrow band of light crossing the wax, inside its outline.
   if (s.glint > 0 && s.glint < 1) {
     ctx.save();
     ctx.beginPath();
@@ -314,7 +302,6 @@ export const seal = (ctx: CanvasRenderingContext2D, s: SealPose) => {
   ctx.lineWidth = 3;
   wax();
   unprobed(ctx, () => ctx.stroke());
-  // The ring pressed round the R, and the R.
   ctx.beginPath();
   ctx.arc(0, 0, SEAL.ring, 0, 2 * Math.PI);
   ctx.lineWidth = 1.8;
@@ -401,7 +388,6 @@ const prosecutorGroup = (f: CourtFrame, p: CourtPose) => {
   const whole = Math.floor(p.stack);
   for (const [i, s] of STACK_SHEETS.entries()) {
     if (i >= Math.ceil(p.stack)) break;
-    // The last sheet, partway down, settles from a little above.
     const fall = i === whole ? 1 - (p.stack - whole) : 0;
     sheet(
       ctx,
@@ -431,7 +417,6 @@ const leadGroup = (f: CourtFrame, p: CourtPose) => {
   const behind = p.lead.back > 0;
   const lx = PLACE.lead[0] + p.lead.dx;
   const ly = PLACE.lead[1];
-  // Set back, he stands a pace behind Christ: smaller, about a point up the floor from his feet.
   const s = 1 - BACK.scale * p.lead.back;
   const asLead = (draw: () => void) => {
     ctx.save();
@@ -441,7 +426,6 @@ const leadGroup = (f: CourtFrame, p: CourtPose) => {
     draw();
     ctx.restore();
   };
-  // His arms reach for where the pose puts his hands, and his hands lie at the ends of his sleeves.
   const [left, right] = p.lead.hands;
   const reached = reachHands(
     p.lead.numbers,
@@ -467,7 +451,6 @@ const leadGroup = (f: CourtFrame, p: CourtPose) => {
       }),
     );
   };
-  // Beside Him the lead stands in front of Christ; set back, behind Him.
   if (behind) {
     leadFigure();
     christFigure();

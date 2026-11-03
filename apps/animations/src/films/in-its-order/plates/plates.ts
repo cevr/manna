@@ -1,17 +1,3 @@
-// The feast's courtyard as painted plates (`PaintingSpec`,
-// `packages/film/README.md`, "Plates at depth"), painted to the kept panel
-// `board/title.start.2.png` at the concept art's fidelity: one PNG a plane,
-// each imported beside its spec so a beat that draws it is keyed by its
-// bytes. A full plate is 1920 x 1280 and the frame shows its rows 100..1180
-// (`at: [0, -100]`), so it covers the frame under every plane's pull and the
-// drift. `distance.png` is the painter's distance plate with the gold path
-// painted out, and `path.png` is that painted path cut from it, clear around
-// the path, so a scene reveals the path along its length (`PATH_BRUSH`) and
-// the frame at the reveal's end is the painter's plate to within 62 px on the
-// hill's edge (at most 64 of 255 in one channel). `title` draws them, and
-// `cold` draws them and its two close plates (`BABY_BACK`, `WHAT`), painted
-// to their own panels on the same grid. Pure data.
-
 import type { PaintingSpec } from '@manna/film/canvas';
 import babyBackPng from './cold-baby-back.png' with { type: 'file' };
 import whatPng from './cold-what.png' with { type: 'file' };

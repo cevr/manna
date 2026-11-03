@@ -1,23 +1,3 @@
-// The committed `figures.riv` is the build of these rigs: the project the
-// house prints from RBF's figures file (`FIGURES`) is the one its stamp
-// (`figures.stamp.json`) says it was built from, and the file is the one
-// that build wrote (`unbuilt`). A rig edited without a rebuild
-// (`bun src/films/righteousness-by-faith/rigs/build.ts`) fails here, on a
-// host with no Rive CLI too. And the figures the owner locked are drawn as
-// he kept them: each one's print alone is the one its lock holds, and each
-// lock names his decision on RBF's ledger (`unlocked`); a part of him moved
-// breaks his lock, so the print the film holds is his parts as drawn. Every
-// override on them cites his word on that figure: a decision on the ledger
-// filed at the point `item:<item>`, after the lock it frees, in its quote's
-// words or with the pick its answer cites (`unsaid`). So one in words he
-// never said, in his words on another matter, or citing an ask he never
-// answered that way, is broken and frees nothing. What a lock answers a
-// print and its way out are the house's
-// (`packages/film/src/style/lock.test.ts`), and so are how an override is
-// held to his word, the case it is backed in among them
-// (`packages/film/src/style/override.test.ts`), and how a figures file is
-// laid and printed (`packages/film/src/style/figures-file.slow.test.ts`).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { describe, expect, it } from 'effect-bun-test';
@@ -67,10 +47,7 @@ describe("RBF's figures", () => {
           );
         const binds = (rml: string) => blocks(rml).filter((b) => b.includes('propertyKey="47"'));
         expect(FIGURES.baked).toBe(false);
-        // Each rig sets its ink from the shot it is drawn in (`inkAt`): as cut far off, 0.75 close.
         expect([0, 1].map((scale) => FIGURES.shot.ink?.(scale))).toEqual([1, 0.75]);
-        // The lead (a traced head) and the judge (a cut silhouette) with their hands, laid as the
-        // file lays them: the whole file's print is two 37 MB texts, too slow for this test.
         const rml = figuresRml(
           figuresFile({
             weight: FIGURES.weight,
@@ -94,7 +71,6 @@ describe("RBF's figures", () => {
       Effect.gen(function* () {
         const locked = lockedPrints(FIGURES);
         expect(locked.map((l) => l.item)).toEqual(['lead', 'judge', 'prosecutor']);
-        // Each print is his bound line, which the override on his lock frees (`figures.ts` `BAKED`).
         const held = yield* unlocked(LEDGER, locked);
         expect(held.broken).toEqual([]);
         expect(held.overridden.map((o) => [o.item, o.override.frees])).toEqual([
@@ -102,7 +78,6 @@ describe("RBF's figures", () => {
           ['judge', 'aa08efaef4ab8786975f2daaa68e7897a00dc9ea4be4162709356f6cba689c98'],
           ['prosecutor', '55449cb8729ff73d146a092fd13abf9b9add389ac3b1db60653b072527a760ee'],
         ]);
-        // One artboard (SkinHand) draws both their hands, so they are of one paper.
         expect(prosecutor.hands.paper).toEqual(judge.hands.paper);
       }),
   );
@@ -112,12 +87,9 @@ describe("RBF's figures", () => {
     () =>
       Effect.gen(function* () {
         const changed = yield* unlocked(LEDGER, lockedPrints(laid(figure(MOVED))));
-        // His moved print is not the one the override on his lock frees, so it frees nothing.
         expect(changed.broken.map((b) => b.item)).toEqual(['prosecutor']);
         expect(changed.overridden.map((o) => o.item)).toEqual(['lead', 'judge']);
-        // His moved print, as the broken lock names it for an override to free.
         const frees = Option.getOrThrow(Arr.head(changed.broken)).hash;
-        // A decision of the owner's on RBF's ledger after the lock (2026-10-17), on Christ, at no figure's point.
         const quote = 'ensure Christ has a consistent body, frame, face';
         const quoted = laid(
           figure({
@@ -142,9 +114,7 @@ describe("RBF's figures", () => {
         expect(views).toEqual(['threeQuarter', 'front']);
         for (const part of ['art', 'stature', 'stance', 'feet', 'hands'] as const)
           expect(christFront[part]).toEqual(christ[part]);
-        // The host poses Him in both by one set of numbers (`court-cast.ts`): the same knobs, in one order.
         expect(Object.keys(christFront.knobs)).toEqual(Object.keys(christ.knobs));
-        // Turned to us His robe is cut to court.you's shoulders, of the same paper and breathing from the same hem.
         const robe = (f: typeof christ) => [f.body._tag, f.body.paper, f.body.hem];
         expect(robe(christFront)).toEqual(robe(christ));
       }),
@@ -164,11 +134,8 @@ describe("RBF's figures", () => {
       Effect.gen(function* () {
         const quotes = [
           'move his ear back, as the owner asked',
-          // A decision of his (2026-10-15), before the lock and at no figure's point.
           'lets lock in that style',
-          // A decision of his after the lock (2026-10-17), on Christ, at no figure's point.
           'ensure Christ has a consistent body, frame, face',
-          // A note of his (2026-10-16): a note decides nothing.
           'the ears have an inner border that act as a lighting that the concept doesnt have',
         ];
         for (const quote of quotes)
@@ -184,9 +151,7 @@ describe("RBF's figures", () => {
       Effect.gen(function* () {
         const ask = (id: string, value: string) =>
           unsaid(LEDGER, freed({ answer: { ask: id, question: 'keep', value } }));
-        // No decision on RBF's ledger answers this ask.
         expect((yield* ask('a0000000000', 'lock')).map((u) => u.item)).toEqual(['prosecutor']);
-        // The ask he kept and locked the court figures in (2026-10-17): its decision is the lock's own, at no figure's point and no later than it, so the pick it files (keep=lock) backs nothing.
         for (const value of ['lock', 'revise'])
           expect((yield* ask(PROSECUTOR_LOCK.ask, value)).map((u) => u.item)).toEqual([
             'prosecutor',

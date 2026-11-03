@@ -97,14 +97,14 @@ that is not booted fails as `SimulatorDown`.
 The feature files write `bun run --cwd apps/hymnal sim` as `sim`. Run a feature as its journey, in one call:
 `sim journey <feature> [--skip-video]`. It decodes `features/<feature>.journey.json`, records
 `video/<feature>.mp4` (none with `--skip-video`), and runs each step: its action, its expects, then its
-receipts (`snapshots/` and `shots/`, named `<feature>-<nn>-<step>`). It prints one JSON line per step and a
+receipts (`$EVIDENCE/snapshots/` and `$EVIDENCE/shots/`, named `<feature>-<nn>-<step>`). It prints one JSON line per step and a
 summary, appends every line to `$EVIDENCE/results.jsonl`, and stops at the first failed step, which the
 summary names in `failedStep` and `failedName`. The journeys:
 
-- `features/about.journey.json`, `features/browse.journey.json`, `features/chords-and-capo.journey.json`,
-  `features/feel.journey.json`, `features/follow.journey.json`, `features/hymn-list.journey.json`,
-  `features/hymn-reader.journey.json`, `features/player.journey.json`, `features/search.journey.json`,
-  `features/settings.journey.json`.
+- [features/about.journey.json](features/about.journey.json), [features/browse.journey.json](features/browse.journey.json), [features/chords-and-capo.journey.json](features/chords-and-capo.journey.json),
+  [features/feel.journey.json](features/feel.journey.json), [features/follow.journey.json](features/follow.journey.json), [features/hymn-list.journey.json](features/hymn-list.journey.json),
+  [features/hymn-reader.journey.json](features/hymn-reader.journey.json), [features/player.journey.json](features/player.journey.json), [features/search.journey.json](features/search.journey.json),
+  [features/settings.journey.json](features/settings.journey.json).
 
 The recipe beside each says what to read in its receipts and which steps stay by hand
 ([features/README.md](features/README.md)). A by-hand step is one `sim` command:
@@ -205,7 +205,8 @@ bun run --cwd apps/hymnal sim down --clean
 `sim down` closes the driver session, shuts down `verify-hymnal` (iOS),
 stops the dev server by its recorded PID (never by name), and moves the
 session file into `$EVIDENCE`. `--clean` then deletes the app's build
-output (`ios/build`, `ios/Pods`, `dist` under `apps/hymnal`, each checked
+output (`apps/hymnal/scripts/sim/drive.ts` `CLEAN_PATHS`: the `build` and
+`Pods` folders of `apps/hymnal/ios`, and `apps/hymnal/dist`, each checked
 to lie inside the app first) and fails `Unhealthy` (`port-free`) while
 something still listens on the port. Plain `sim down` keeps the build for
 the next incremental one. Evidence stays.

@@ -1,14 +1,3 @@
-// A tool's answer within a budget, for the lab's easel tools on its MCP
-// (`tools/easel-mcp.ts`). An agent's client cuts a long result (Claude Code
-// warns past 10,000 tokens and cuts past 25,000; others sooner), and a result
-// cut in its middle loses what came after it unseen. So each answer encodes to
-// at most `RESULT_BUDGET` characters of JSON and says how to read on: a
-// check's findings a page at a time, from a cursor that names its report (a
-// page asked of a report whose findings have changed since starts again from
-// the first, and says so); a film's cue lines whole (a line longer than an
-// answer goes on by its column); a journal's newest entries, the older ones
-// counted, with the file that holds them all. Pure.
-
 import { Hash, Option, Schema } from 'effect';
 import { addressKey } from './address.ts';
 import type { CheckLine } from './schema.ts';
@@ -64,9 +53,6 @@ const fitsUnder = <T, E>(schema: Schema.Codec<T, E>) => {
   const encode = Schema.encodeSync(Schema.fromJsonString(schema));
   return (value: T): boolean => encode(value).length <= RESULT_BUDGET;
 };
-
-// ---------------------------------------------------------------------------
-// A check's findings
 
 /** One finding as a check answer lists it: errors first, each with its part of the film. */
 const CheckFinding = Schema.Struct({
@@ -153,8 +139,6 @@ export const checkPage = (lines: ReadonlyArray<CheckLine>, at: CheckAt): CheckPa
     where: clip(finding.where, FINDING_CHARS),
     message: clip(finding.message, FINDING_CHARS),
   }));
-  // A later page is read only in the report it was given for: a `from` of
-  // another report, or of none, would skip findings that moved up.
   const changed = Option.liftPredicate(
     at,
     (asked) => (asked.from ?? 0) > 0 && asked.report !== report,
@@ -187,9 +171,6 @@ export const checkPage = (lines: ReadonlyArray<CheckLine>, at: CheckAt): CheckPa
   if (start + count >= findings.length) return page(count);
   return { ...page(count), next: { from: start + count, report, ...scope } };
 };
-
-// ---------------------------------------------------------------------------
-// A film's cue lines
 
 /**
  * Where a cues answer goes on: a line, and a character in it (both from 1),
@@ -275,7 +256,6 @@ export const cuesPage = (
       rest: restOf(lines.length - count),
       next: { from: from + count, column: 1, ...scope },
     };
-  // The first line alone is longer than an answer: as much of it as fits.
   const first = lines[0] ?? '';
   const rest = `line ${from} goes on past this answer: call cues again with next as it is`;
   let size = largestFitting(first.length, (chars) =>
@@ -286,7 +266,6 @@ export const cuesPage = (
       next: { from: FAR, column: FAR, ...scope },
     }),
   );
-  // Never between the two halves of one character.
   if (size > 1 && isHighSurrogate(first.charCodeAt(size - 1))) size -= 1;
   size = Math.max(1, size);
   return {
@@ -296,9 +275,6 @@ export const cuesPage = (
     next: { from, column: column + size, ...scope },
   };
 };
-
-// ---------------------------------------------------------------------------
-// A journal's newest entries
 
 export const JournalPage = Schema.Struct({
   /** The journal's file, which holds every entry whole. */

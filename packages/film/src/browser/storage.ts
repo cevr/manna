@@ -1,14 +1,3 @@
-// Per-viewer settings kept in the browser, through Effect's `KeyValueStore`:
-// a store is an atom runtime over one (`TabStore` over the tab's session,
-// `ViewerStore` over the browser's local storage, `storage-browser.ts`; a
-// test's over a `Storage` of its own). A value kept as JSON is a `keptJson`
-// (an `Atom.kvs` over its Schema, read once and written through); a value kept as plain text (the microphone, the review's
-// quality and filter, stored so before this module) is a `keptText`, written
-// and read as it is. A storage the page may not use (its getter throws, as a
-// sandboxed or private window's does) is a store in memory instead; one that
-// throws on a read or a write keeps nothing past the page: the read is none,
-// the write is dropped, and the page keeps what it was told while it lives.
-
 import { Effect, Layer, Option, type Schema } from 'effect';
 import { KeyValueStore } from 'effect/persistence';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';

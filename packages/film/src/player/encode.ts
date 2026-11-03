@@ -1,10 +1,3 @@
-// The film encoded in the page: a chunk of frames drawn one by one onto the
-// canvas and handed to the browser's H.264 encoder through mediabunny, into
-// an MP4 of its own. Bun joins the chunks without re-encoding them
-// (tools/media.ts, `join`), so every chunk is encoded alike: the page picks
-// its encoder once (`encoderChoice`), from the encoders the renderer allows,
-// and the renderer hands that one to every chunk.
-
 import {
   BufferTarget,
   CanvasSource,
@@ -318,7 +311,6 @@ export const encodeChunk = async (
   if (made.length === 0) throw new Error(`${encoder._tag} makes none of ${copies} in the page`);
   const all = made.map((m) => m.rendition);
   const bytesOf = (copy: Copy['copy']) => made.find((m) => m.copy === copy)?.rendition.bytes();
-  // One frame at a time: the canvas is drawn again only once every encoder has taken it.
   const frames = async () => {
     await Promise.all(all.map((r) => r.start()));
     await Array.from({ length: to - from }, (_, k) => from + k).reduce(async (before, i) => {

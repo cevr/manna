@@ -1,50 +1,3 @@
-// The draw leg of `film check` (`--draw`): every scene of a film drawn in this
-// process, as its page builds it (the film's own `film()` from its committed
-// timings, drawn by the compositor), at its first frame, each cue's edges and
-// midpoint, its 60% point and its last frame. A scene that reads a mark, a
-// cue or a knob its film no longer has (a card reading a mark a revised
-// script removed) throws at draw time: `DrawThrew`.
-//
-// Bun has no canvas, so each frame is drawn into the framework's stand-in
-// context (`canvas/fixtures/stand-in.ts`), which holds a canvas's drawing
-// state (the transform, alpha and every property a draw sets, saved and
-// restored) and answers a pixel read with the colour of the last hex fill over
-// it, so a draw that reads its canvas back takes the branch it takes on a
-// canvas; a call it does not model answers a value that reads as nothing,
-// and an argument a real canvas refuses (a negative arc, ellipse or gradient
-// radius, a colour stop off 0..1) throws as the real one does. Nothing is
-// rasterised, which is the point: this is the draw path's logic, the part a
-// script edit can break. A throw only between samples (say, a branch at 30%
-// of a cue) still needs a render to find.
-//
-// Every sampled frame is also pure: a function of its time, not of what the
-// film drew before (a scene easing from a value it kept from the last
-// frame). Where a cue starts and at each
-// scene's 60% point, the frame is drawn after the frame after it, and again
-// after the frame before it, into a context that logs every call; the two
-// logs must be the same, else `FrameImpure`. Those draws are that moment's
-// draw check too, so each moment is drawn by one pass over the film. Only what
-// a frame asks the canvas to do is logged: a factory or a query (a gradient, a
-// pattern, a measure) is left out, so a cache that hands back the same
-// gradient or tile is not a difference; a canvas passed to a call reads as
-// which canvas it is (the stand-in numbers each as it is made), any other
-// object as its kind. The compositor may draw a scene twice (its framing
-// guess, `sheet` in canvas/film.ts, draws again from the paper when it guessed
-// wrong), so what is compared is what is left on the frame: the calls from the
-// last time the paper is drawn.
-//
-// Each moment is drawn with the probe collecting faces, strokes and text, so
-// ink or text drawn over a face the viewer sees (`seenFace`: its scene's own,
-// mostly opaque, centred on the frame) is found (`InkOverFace`). The stand-in sets
-// text a width from its font's size and a fixed height, so a line of text is
-// found over a face where its baseline strip crosses the face's core.
-//
-// The probe also collects each painted plate a frame paints (`f.painting`)
-// as its rectangle's four corners on screen, mapped by the transform the
-// draw uses, so a plate edge its spec does not declare open that lies inside
-// the frame is found (`PaintingEdge`). A scene that paints a plate is also
-// drawn at its breath peak, its midpoint, where the camera drifts furthest.
-
 import { Array as Arr, Effect, Option, Order, Predicate, type Scope } from 'effect';
 import type { Film } from '../canvas/film.ts';
 import type { ProbeSink } from '../canvas/probe.ts';
@@ -289,7 +242,6 @@ const drawMoments = (film: Film): ReadonlyArray<DrawMoment> => {
       time: secondsAt(frame, fps),
       pure: false,
     });
-    // Mid-span, where a branch on `0 < f.at(cue) < 1` draws and neither edge does.
     const mids = [...p.cues]
       .filter(([, c]) => c.end > c.start)
       .map(([cue, c]) =>
@@ -298,9 +250,6 @@ const drawMoments = (film: Film): ReadonlyArray<DrawMoment> => {
           Math.min(last, Math.max(first, Math.round((p.start + (c.start + c.end) / 2) * fps))),
         ),
       );
-    // The breath peak (through 0.5, the scene's midpoint), where the camera's
-    // drift reaches furthest and a painted plate's margin is thinnest; only a
-    // scene that paints a plate is drawn there.
     const moments = [at('start', first), at('end', last), ...mids];
     if (Object.keys(p.spec.paintings ?? {}).length > 0)
       moments.push(

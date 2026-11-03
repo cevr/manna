@@ -46,13 +46,11 @@ const linkMessages = Command.make('link', { dryRun }, (args) =>
 
       const { frontmatter, content } = parseFrontmatter<{ apple_note_id?: string }>(rawContent);
 
-      // Skip if already has apple_note_id
       if (Option.isSome(Option.fromNullishOr(frontmatter.apple_note_id))) {
         skipped++;
         continue;
       }
 
-      // Extract title from markdown content
       const titleOption = extractTitleFromMarkdown(content);
       if (Option.isNone(titleOption)) {
         yield* Effect.log(`No title found in ${filePath.split('/').pop()}`);
@@ -62,7 +60,6 @@ const linkMessages = Command.make('link', { dryRun }, (args) =>
 
       const title = titleOption.value;
 
-      // Search for matching note in Apple Notes
       const noteIdOption = yield* findNoteByTitle(title, 'messages');
 
       if (Option.isNone(noteIdOption)) {
@@ -79,7 +76,6 @@ const linkMessages = Command.make('link', { dryRun }, (args) =>
         continue;
       }
 
-      // Update frontmatter with the found note ID
       const updatedContent = updateFrontmatter(rawContent, {
         apple_note_id: foundNoteId,
       });

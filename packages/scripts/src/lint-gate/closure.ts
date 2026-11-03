@@ -1,17 +1,3 @@
-// The repository files a lint config's JS plugins run: each plugin entry and
-// every file it imports, followed import by import. A plugin rule's answer on a
-// file is a function of that file and of this code, so the gate keys the files
-// it keeps on these files' contents (`lint-gate.ts`): an edit to a module a
-// rule imports (a constant, a parser) lints every file again.
-//
-// An import is followed as Bun resolves it from the importing file: a relative
-// path, a `.js` name for a `.ts` file, a workspace package through its link in
-// `node_modules`. A file that resolves outside the root or inside a
-// `node_modules` folder is a dependency's, and `bun.lock` keys those; an import
-// that does not resolve is left to oxlint to report. A file that is not a
-// script (a `.riv` or `.json` loaded `with { type }`) is in the closure and
-// imports nothing.
-
 import { Effect, FileSystem, Option, Path } from 'effect';
 import * as Bool from 'effect/Boolean';
 
@@ -47,7 +33,6 @@ export const importClosure = Effect.fn('importClosure')(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  // Bun resolves through links, so the root is compared as its real path.
   const real = yield* fs.realPath(root);
   const inRepo = (file: string) =>
     file.startsWith(`${real}${path.sep}`) && !file.split(path.sep).includes('node_modules');

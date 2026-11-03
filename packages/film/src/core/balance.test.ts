@@ -8,7 +8,6 @@ const RATE = 44100;
 /** `secs` of a 220 Hz tone at `db` dBFS RMS, on both sides (a voice bus plays mono at −3 dB a side). */
 const tone = (secs: number, db: number, sides = 2): Pcm => {
   const frames = Math.round(secs * RATE);
-  // The tone's power splits evenly over its sides.
   const amp = 10 ** (db / 20) * Math.SQRT2 * Math.sqrt(1 / sides);
   const plane = new Float32Array(frames);
   for (let i = 0; i < frames; i++) plane[i] = amp * Math.sin((2 * Math.PI * 220 * i) / RATE);

@@ -64,10 +64,6 @@ import {
   Workspace as WorkspacePlace,
 } from './url-state.js';
 
-// ---------------------------------------------------------------------------
-// The workspace, as the URL holds it
-// ---------------------------------------------------------------------------
-
 const workspace = UrlAtom.place(WorkspacePlace);
 
 type Panes = Arr.NonEmptyReadonlyArray<SearchParams>;
@@ -106,10 +102,6 @@ const useWorkspace = (): WorkspaceState => {
  *  fetches `PAGE_CONTEXT`. */
 const CONTEXT_SHOWN = 1;
 
-// ---------------------------------------------------------------------------
-// The filter vocabulary, as the UI labels it
-// ---------------------------------------------------------------------------
-
 const SECTIONS: readonly { readonly value: CorpusSection; readonly label: string }[] = [
   { value: 'egw-writings', label: 'EGW Writings' },
   { value: 'pioneer-library', label: 'Pioneers' },
@@ -139,10 +131,6 @@ const SUBTYPE_LABELS = {
   LtMs: 'Letters & MSS',
   ModernEnglish: 'Modern English',
 } satisfies Record<BookSubtype, string>;
-
-// ---------------------------------------------------------------------------
-// One pane's state
-// ---------------------------------------------------------------------------
 
 /** What a pane's request has come to. `Idle` is the client's own case — no
  *  query yet — rather than anything the server returns. */
@@ -215,8 +203,6 @@ const SearchProvider = (props: { readonly pane: number; readonly children: Eleme
    *  navigation too, and it must not discard this pane's unsent text. */
   const [typed, setTyped] = createSignal(Option.none<string>());
   const committed = createMemo(() => params().q);
-  // Solid 2's `createEffect` takes *two* functions: `compute` is the tracked
-  // read, `effect` the untracked reaction to its result.
   createEffect(committed, () => {
     setTyped(Option.none());
   });
@@ -290,8 +276,6 @@ const SearchProvider = (props: { readonly pane: number; readonly children: Eleme
     },
     params,
     settled: () => latest(outcome),
-    // `!mounted()` covers the frame before the query is released; `isPending`
-    // covers it once in flight. Either way the reader is waiting.
     pending: () => (!mounted() && requestKey() !== '') || isPending(() => outcome()),
     search: (value) => {
       put((current) => ({ ...current, q: value.trim() }));
@@ -300,13 +284,8 @@ const SearchProvider = (props: { readonly pane: number; readonly children: Eleme
     retry: () => setAttempt((count) => count + 1),
   };
 
-  // Solid 2: the context object *is* its own provider component.
   return <SearchContext value={store}>{props.children}</SearchContext>;
 };
-
-// ---------------------------------------------------------------------------
-// View
-// ---------------------------------------------------------------------------
 
 /** The page: the workspace on `/`, the not-found view anywhere else. */
 export const App = () => {
@@ -364,16 +343,12 @@ const Workspace = () => {
   const addPane = (): void => {
     workspace.update((current) => {
       if (current.length >= MAX_PANES) return current;
-      // The new pane inherits the previous pane's filters but none of its
-      // query: a second pane is almost always the same corpus asked a
-      // different question.
       claim = current.length;
       return Arr.append(current, { ...Arr.lastNonEmpty(current), q: '' });
     });
   };
 
   const closePane = (index: number): void => {
-    // The last pane stays: a workspace is never empty.
     workspace.update((current) =>
       Arr.match(Arr.remove(current, index), {
         onEmpty: () => current,
@@ -656,8 +631,6 @@ const Results = () => {
                 class={search.pending() ? 'results stale' : 'results'}
                 aria-busy={search.pending() ? 'true' : 'false'}
               >
-                {/* Keyed by position: a new answer updates the rows in place
-                    rather than rebuilding the list. */}
                 <For each={rows()} keyed={false}>
                   {(hit) => <HitRow hit={hit()} />}
                 </For>
@@ -724,10 +697,6 @@ const Empty = () => {
 
   return (
     <div class="empty">
-      {/* Three states, not two. A query the corpus does not contain and a
-          query the corpus contains half a million times both arrive here with
-          no hits, and telling a reader who searched "the" that there are "no
-          matches" would be a plain falsehood. */}
       <Show when={!nonSelective()} fallback={<div>too common to rank</div>}>
         <div>{search.params().q === '' ? 'no query yet' : 'no matches'}</div>
       </Show>
@@ -737,9 +706,6 @@ const Empty = () => {
           surface anything in particular. Add a word or two to narrow it.
         </div>
       </Show>
-      {/* A filtered empty result is the one case where the fix is not a
-          different query: say so, and offer the undo rather than the
-          examples. */}
       <Show
         when={narrowed()}
         fallback={
@@ -810,8 +776,6 @@ const HitRow = (props: { readonly hit: Hit }) => {
   const expand = (): void => {
     setExpandedHit(props.hit);
   };
-  // `before` is in reading order and the nearest neighbour is the *last* entry,
-  // so it is reversed to walk outward, trimmed, then reversed back for display.
   const before = () => {
     const outward = [...props.hit.before].reverse();
     const side = contextSide(outward, expanded(), CONTEXT_SHOWN);
@@ -823,13 +787,9 @@ const HitRow = (props: { readonly hit: Hit }) => {
       <div class="meta">
         <Reference class="refcode" refcode={props.hit.refcode} url={props.hit.url} />
         <span class="book">{props.hit.bookTitle}</span>
-        {/* Says what the row *is*, next to where it came from. A chapter title
-            and a sentence are otherwise the same shape — a refcode and a line
-            of text. */}
         <Show when={props.hit.isHeading}>
           <span class="kind">Chapter</span>
         </Show>
-        {/* The server orders back matter last; this says why it is there. */}
         <Show when={props.hit.backMatter}>
           <span class="kind">Back matter</span>
         </Show>
@@ -841,9 +801,6 @@ const HitRow = (props: { readonly hit: Hit }) => {
           </button>
         </Show>
         <For each={before().shown}>{(para) => <Context para={para} />}</For>
-        {/* The match carries the accent bar; the neighbours carry nothing. The
-            decoration marks *what you searched for*, so the eye lands on it
-            before it reads anything around it. */}
         <div class={props.hit.isHeading ? 'match heading' : 'match'}>
           <p class="text">{props.hit.text}</p>
         </div>
@@ -885,8 +842,6 @@ const Reference = (props: {
  *  match's does. The reference trails the text rather than leading it, so the
  *  three paragraphs of a hit all begin on prose. */
 const Context = (props: { readonly para: ContextParagraph }) => (
-  // A neighbouring heading is the chapter the hit opens under, so it reads as a
-  // label rather than as another sentence of prose.
   <p class={props.para.isHeading ? 'context heading' : 'context'}>
     {props.para.text}
     <Reference class="cref" refcode={props.para.refcode} url={props.para.url} />

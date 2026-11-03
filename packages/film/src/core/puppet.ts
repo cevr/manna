@@ -1,61 +1,3 @@
-// A puppet: a part sheet (`core/part-sheet.ts`) on a skeleton, each part a
-// mesh of its own pixels skinned on the bones its skin names, posed by bone
-// numbers (`puppetOf`, `rasterOf`). It is the CPU reference
-// the page's draw (`canvas/puppet.ts`) is held to, and what a fitter searches
-// with in Bun. Pure.
-//
-// - **Skeleton.** Each bone turns about its pivot, after its parent: its
-//   number (degrees, positive from +x toward +y, as a canvas turns) is
-//   relative to its parent. A bone a pose does not name stays at 0, so the
-//   rest pose is the bind pose. The shared control names are the bones'
-//   names: `lean`, `neck`, `head`, and `shoulder`, `elbow`, `wrist` by side
-//   (`shoulderRight`, `shoulderLeft`), named from the character's own side.
-// - **Mesh.** A part's mesh is a 3 px grid (`MESH_STEP`) over the cells that
-//   hold any pixel of it, two triangles a cell; a vertex is a grid point.
-// - **Weights.** A vertex lies only on bones its part's skin names. Each
-//   joint of the skin has a k: a smoothstep of how much nearer the child's
-//   segments (its own and its descendants' on the skin) the vertex lies
-//   than the parent's: 0 at `blend` px nearer the parent (narrowed by how
-//   tightly the joint is folded at rest, `spread`), 1 at `blend` px nearer
-//   the child. The weights compose the k from the skin's root down (on an
-//   arm: upper 1 - k1, forearm k1 (1 - k2), hand k1 k2), so they are
-//   continuous everywhere, also where two joints' blends overlap on a short
-//   bone, and are the nearest bone's alone outside every blend. A part
-//   whose skin names no bone moves with the root alone.
-//   Continuous weights still shear where a limb folds its far end back
-//   beside its near one: weights that hold the near paint and turn the far
-//   cross 0 to 1 over the joint's ramp, blend × (1 + spread), so a turn t
-//   stretches an edge there by about 2 sin(t/2) of its length times its
-//   distance from the joint over the ramp. Sower's poses-3 right hand lies
-//   beside his upper arm 75 px from the elbow, over a 28.4 px ramp: a 60°
-//   elbow turn stretches an edge there by 21 px. A wider blend lowers it
-//   only by carrying the upper arm's own paint with the forearm, on every
-//   view, so that shear is a named gap: closing it needs a drawn key, or the
-//   hand cut as its own part.
-// - **Shoulder flap.** A flap gives an arm the body's pixels round its cap
-//   (`PuppetFlap.region`): they join the arm's texture. Each vertex of the
-//   arm lies on its arm weights, of which the flap's bone (the shoulder)
-//   gives the body's bone a share w of its own amount: w is 0 at the cap and
-//   1 at `reach` px (34) from the shoulder's pivot, above the pivot along the
-//   arm. Every other arm bone keeps its amount, so a hand that rests by the
-//   shoulder turns whole with its forearm, and each weight stays continuous
-//   (a product of continuous terms). At rest those pixels are the body's
-//   own, where no part in front shows paint, so the rest pose shows the
-//   sheet.
-// - **Skinning.** Linear blend: a vertex is its bones' world transforms of
-//   it, by its weights; then the root moves it (`root` less the rest root)
-//   and the pose's one scale sizes it about the root.
-// - **Raster.** `rasterOf` lays the parts back to front over transparent
-//   ground, each pixel inverse-mapped through the posed triangle that holds
-//   its centre to the part's texture, sampled bilinear on premultiplied
-//   texels, every triangle laid in turn under a top-left fill rule, as the
-//   GL path draws them (`canvas/puppet-gl.ts`). At rest every pixel maps to its own
-//   texel's centre, so the raster is the sheet's recompose byte for byte.
-// - **Paper.** A sheet that names the paper its parts were cut from has its
-//   edge pixels un-matted from it once, here (`core/unmatte.ts`): the rest
-//   raster laid over that paper is then the sheet's recompose within 1 a
-//   channel, and on another paper the figure carries no ring of the sheet's.
-
 import { Option, Result, Schema } from 'effect';
 import { IDENTITY } from './affine.ts';
 import type { Rgb } from './cast-sheet-pixels.ts';
@@ -229,7 +171,6 @@ const weightsAt = (
   const parentOf = (k: number) => skin.find((j) => bones[j]!.name === bones[k]!.parent);
   const childrenOf = (k: number) => skin.filter((j) => bones[j]!.parent === bones[k]!.name);
   const distance = (k: number) => segmentDistance(p, bones[k]!.pivot, bones[k]!.tip);
-  // the distance to the nearest segment of `k` and its descendants on the skin
   const reach = (k: number): number => Math.min(distance(k), ...childrenOf(k).map(reach));
   let root = nearestBone(p, skin, bones);
   for (let up = parentOf(root); up !== undefined; up = parentOf(root)) root = up;
@@ -444,7 +385,6 @@ const flapRefusal = (
     const skin = skeleton.skin[f.part] ?? [];
     if (!skin.includes(f.body))
       return `${f.part}'s flap rests on ${f.body}, which its skin does not name`;
-    // a flap vertex holds its arm weights and the body's: past `WEIGHTS` the mesh's cut drops the body's small share near the flap's edge, a step
     const arm = skin.filter((b) => b !== f.body).length;
     if (arm > WEIGHTS - 1)
       return `${f.part}'s flap is on an arm of ${arm} bones, more than the ${WEIGHTS - 1} a vertex holds beside ${f.body}`;
@@ -584,7 +524,6 @@ export const puppetOf = (
   const { bones } = skeleton;
   const at = new Map(bones.map((b, k) => [b.name, k]));
   const { width: W, height: H } = sheet;
-  // at most one flap a part (`refusal`)
   const flapOf = new Map((skeleton.flaps ?? []).map((f) => [f.part, f]));
   const withFlaps = flappedParts(sheet, skeleton);
   const { paper } = sheet;
@@ -592,7 +531,6 @@ export const puppetOf = (
   const unmatted = paper === undefined ? withFlaps : unmatte(withFlaps, W, H, paper, options);
   const skins = sheet.parts.map((p) => [...(skeleton.skin[p.name] ?? [])].sort().join(' '));
   const textures = underlapped(sealed(unmatted, skins, W, H), unmatted, sheet, skins);
-  // the parts un-matted with part j gone: what each part behind j shows once j moves away
   const without = new Map<number, ReadonlyArray<Uint8Array>>();
   const unmattedWithout = (j: number) => {
     const known = without.get(j);
@@ -609,7 +547,6 @@ export const puppetOf = (
     const rgba = textures[k]!;
     const revealed = revealedOf(withFlaps, textures, k, unmattedWithout, W, H);
     const seals = sealsOf(unmatted, textures, skins, k, W, H);
-    // its mesh holds what it shows at rest, all it can reveal and its seals
     const holds = (layers: ReadonlyArray<Uint8Array | undefined>, i: number) =>
       layers.some((r) => r !== undefined && r[i * 4 + 3]! > 0);
     const covers = (i: number) => rgba[i * 4 + 3]! > 0 || holds(revealed, i) || holds(seals, i);
@@ -1069,7 +1006,6 @@ export const rasterOf = (
   movingPart?: string,
 ): Raster & { readonly moving?: Uint8Array } => {
   const [W, H] = size;
-  // Premultiplied, colour in 0..255 and alpha in 0..1.
   const acc = new Float64Array(W * H * 4);
   const tracked = Option.map(Option.fromUndefinedOr(movingPart), () => new Uint8Array(W * H));
   const posed = posedVertices(puppet, pose);
@@ -1140,9 +1076,8 @@ const inkMask = (limb: PuppetPartLimb, pixels: Raster) => {
     () => new WeakMap<Raster, Raster>(),
   );
   return Option.getOrElse(Option.fromUndefinedOr(textures.get(pixels)), () => {
+    /** Opaque cloth in this ownership raster covers earlier triangles' ink exactly as the same mesh order covers it in the painted part. */
     const rgba = new Uint8Array(pixels.rgba.length);
-    // Opaque cloth in this ownership raster covers earlier triangles' ink
-    // exactly as the same mesh order covers it in the painted part.
     for (let i = 3; i < rgba.length; i += 4) rgba[i] = pixels.rgba[i]!;
     const [bx, by, width, height] = limb.regions.box;
     for (let y = 0; y < height; y++)
@@ -1263,7 +1198,6 @@ const layLimb = (
     () => new Float64Array(0),
   );
   const stroke = limbStroke(
-    // The fixed cloth join uses the painted ink on this same posed mesh.
     limb,
     frames,
     pose.numbers,
@@ -1385,7 +1319,6 @@ const layTriangle = (
       const wa = edgeHolds(ea, px, py);
       const wb = edgeHolds(eb, px, py);
       const wc = edgeHolds(ec, px, py);
-      // NaN is outside: every comparison with it is false
       if (!(wa >= 0 && wb >= 0 && wc >= 0)) continue;
       const l0 = wa / size;
       const l1 = wb / size;

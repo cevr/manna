@@ -161,7 +161,6 @@ const valueOf = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'val
 const fitted = (bar: HTMLInputElement, written: string) => {
   const max = Number(bar.max) || 0;
   const near = Math.round(Math.min(Math.max(Number(written), 0), max));
-  // A step past the top falls back a step.
   return String(Math.min(near, Math.floor(max)));
 };
 
@@ -235,7 +234,6 @@ const mounted = (model: Model) => {
           length={Option.some(length)}
           onSeek={(seconds) => {
             sent.push(seconds);
-            // The device lands the seek; the bar hears of it at the next tick.
             model.at = seconds;
           }}
         />,
@@ -341,9 +339,6 @@ const play = (run: Run): Option.Option<string> => {
   /** A step the reader asked for at once (a key, a screen reader) is owed: sent before the event is over. */
   const owe = (to: number) => {
     model.seeks.push(to);
-    // Inside a drag, Chrome's `change` after the press now compares with this
-    // value. Before the press's first move, the page's own writes (playback)
-    // set the value it compares with, as at a press with no key.
     if (Option.isSome(model.before)) model.before = Option.some(to);
   };
   /** A step the browser makes: `input`, then `change`. */
@@ -468,7 +463,6 @@ const play = (run: Run): Option.Option<string> => {
         const to = stepOf(name, value());
         const moves = to !== value();
         if (moves) owe(to);
-        // Chrome steps in the keydown's default action, after the page's handlers.
         if (key('keydown', name) && moves) {
           input(to);
           fire(new Event('change', { bubbles: true }));
@@ -554,7 +548,6 @@ const weighted = <A,>(
       if (left < weight) return choice;
       left -= weight;
     }
-    // Only a rounding past the last weight comes here.
     return choices[0][1];
   });
 
@@ -733,7 +726,6 @@ const press = (keys: Keys) =>
     }
     if (Option.isSome(chord)) run.push({ _tag: 'Chord', button: chord.value, phase: 'up' });
     if (moved && (yield* chance(0.35))) run.push({ _tag: 'Move', to: 'back' }, ...(yield* ticks));
-    // A second pointer still down lifts before the first one, or after it.
     const lastLifts = Option.isSome(second) && (yield* chance(0.5));
     const lifts = Option.map(second, (id): Step => ({ _tag: 'Second', phase: 'up', id }));
     if (!lastLifts) run.push(...Option.toArray(lifts));
@@ -745,7 +737,6 @@ const press = (keys: Keys) =>
     run.push(ending);
     if (ending._tag === 'Lost' && (yield* chance(0.5))) run.push({ _tag: 'Late' });
     if (lastLifts) run.push(...Option.toArray(lifts));
-    // The modifiers held stay down past the press: the run lets them up when it will.
     run.push(...(yield* ticks));
     run.push({ _tag: 'Change', dropped: yield* chance(0.2) });
     return run;
@@ -775,7 +766,6 @@ const otherPress = (keys: Keys) =>
         ...(yield* ticks),
       );
     }
-    // A right button's menu can take the release.
     if (button === 1 || (yield* chance(0.5))) run.push({ _tag: 'Other', button, phase: 'up' });
     return run;
   });
@@ -812,7 +802,6 @@ const gesture = (keys: Keys) =>
 const runOf = (seed: number): Run =>
   Effect.runSync(
     Effect.gen(function* () {
-      // At either end of the bar a key may move nothing.
       const at = yield* Effect.flatten(
         weighted([
           [0.5, Random.nextBetween(0, length)],
@@ -827,7 +816,6 @@ const runOf = (seed: number): Run =>
       for (const _ of Array.from({ length: count })) {
         run.push(...(yield* gesture(keys)), ...(yield* ticks));
       }
-      // A key still held comes up, or its `keyup` lands elsewhere, or never comes.
       if (Option.isSome(keys.held) && (yield* chance(0.5))) run.push(yield* keyUp(keys.held.value));
       return { at, playing, steps: [...run, ...closing] };
     }).pipe(Random.withSeed(seed)),
@@ -838,8 +826,6 @@ const runs = 400;
 const slice = 10;
 
 describe('the web position bar under any run of input', () => {
-  // Each case its own slice of the seeds: every seed runs, and each case
-  // stays a small share of its timeout while the browser test runs beside it.
   for (const from of Array.from({ length: runs / slice }, (_, i) => i * slice)) {
     test(`keeps its rules over seeded runs ${from} to ${from + slice - 1} of presses, keys, pointers and ticks`, () => {
       const broken = Array.from({ length: slice }, (_, i) => from + i)
@@ -849,7 +835,6 @@ describe('the web position bar under any run of input', () => {
     });
   }
 
-  // Each defect found before, as a fixed run of steps that shows it.
   const drag = (to: ReadonlyArray<number>): Array<Step> =>
     to.map((second): Step => ({ _tag: 'Move', to: second }));
   const playFor = (seconds: number): Array<Step> =>
@@ -1148,7 +1133,6 @@ describe('the web position bar under any run of input', () => {
     expect(play({ at: 30, playing: false, steps: [...steps, ...closing] })).toEqual(Option.none());
   });
 
-  // Each step key inside a drag seeks at once, by its own step.
   for (const key of ['PageUp', 'PageDown', 'Home', 'End'] as const) {
     test(`playerfix r1 M3: ${key} inside a mouse drag at 1:40 seeks at once`, () => {
       expect(

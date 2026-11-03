@@ -1,10 +1,3 @@
-// The lead's fitted poses against the fitter: poses-1's record (`poses/`,
-// written by `film concept fit`) is what the fitter reaches again from the
-// same start on the kept poses-1 crop, from the puppet the record names,
-// with the same loss; the other puppet's loss is the one recorded, and no
-// lower. It decodes his sheets and draws his puppets on the CPU, so it runs
-// in the slow suite.
-
 import { boxStart, fitPose } from '@manna/film/core';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -53,7 +46,6 @@ describe("the lead's fitted poses", () => {
         for (const b of FIT.bones)
           expect(made.numbers[b] ?? 0).toBeCloseTo(fitted.pose.numbers[b] ?? 0, 4);
       }
-      // the record's puppet is the one with the lower loss
       expect(scores[fitted.from]).toBe(Math.min(scores['front']!, scores['threeQuarterLeft']!));
     }),
   );

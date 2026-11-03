@@ -1,8 +1,3 @@
-// The repo's `film` oxlint plugin: guardrails for the films and the film
-// tools that are true of their syntax, read as `film/<rule>`. The root
-// `.oxlintrc.json` loads it as a local `.ts` (`jsPlugins`) and turns each rule
-// on for the paths it governs with an `overrides` entry.
-
 import { Plugin } from 'oxlint-plugin-effect/rule-bindings';
 import { booleansThroughPressed } from './booleans-through-pressed.ts';
 import { drawingLiteral } from './drawing-literal.ts';

@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/toast/provider/ToastProviderContext.ts
-//
-// The provider's store, and a reactive view of its state: the store is
-// plain, so the provider mirrors each change into a signal the parts read
-// through `select`.
 import { type Accessor, createContext, createMemo, useContext } from 'solid-js';
 
 import type { State, ToastStore } from './store.ts';

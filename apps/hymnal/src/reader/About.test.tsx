@@ -88,7 +88,6 @@ describe('About this hymn', () => {
   it('lists under More like this the hymns nearest the hymn, nearest first', () => {
     using _route = routeTo('100');
     const html = renderToStaticMarkup(<AboutRoute />);
-    // The heading is drawn in capitals; its label, which VoiceOver reads and the drive matches, is not.
     expect(html).toMatch(
       /role="heading"[^>]*aria-label="More like this"|aria-label="More like this"[^>]*role="heading"/,
     );
@@ -126,7 +125,6 @@ describe('About this hymn', () => {
     const html = renderToStaticMarkup(<AboutRoute />);
     const topics = topicsOf(100);
     const passages = referencesOf(100);
-    // Hymn 100 has each: the drive's row reads these three headings on it.
     expect([topics.length, passages.length, sameMetre(100).length].every((n) => n > 0)).toBe(true);
     expect(
       ['Topics', 'Scripture', 'Sing to another tune'].map((name) => hasHeading(html, name)),

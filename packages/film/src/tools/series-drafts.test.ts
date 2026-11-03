@@ -1,7 +1,3 @@
-// The series drafts over memory: listed by series and title, read with the
-// reader's codec, a beat's marks written into its Markdown and no other
-// byte, and no path outside the folder's own drafts.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Boolean as Bool, Effect, FileSystem, Layer, Option, Path } from 'effect';
 import * as PlatformError from 'effect/PlatformError';

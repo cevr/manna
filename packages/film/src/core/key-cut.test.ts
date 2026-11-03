@@ -18,7 +18,6 @@ const fill = (r: Raster, box: readonly [number, number, number, number], c: read
   for (let y = box[1]; y < box[3]; y++)
     for (let x = box[0]; x < box[2]; x++) r.rgba.set([...c, 255], (y * r.width + x) * 4);
 };
-// a body block, and an arm out to its right: a sleeve inked round, on a bone from (20, 20) to (44, 20)
 const figure = (r: Raster, at: readonly [number, number]) => {
   const [ox, oy] = at;
   fill(r, [ox + 4, oy + 8, ox + 18, oy + 40], BODY);
@@ -35,12 +34,10 @@ describe('a drawn key cut into the sheet frame', () => {
     expect([fit.s, fit.dx, fit.dy]).toEqual([1, 9, 6]);
     expect(fit.error).toBe(0);
     expect(fit.ground).toEqual(PAPER);
-    // a view with no figure, or one a single row tall, has no scale to start from: no fit, never a perfect one
     expect(fitKey(drawn, paper(56, 48), () => true).error).toBeNaN();
     const row = paper(56, 48);
     fill(row, [4, 20, 40, 21], INK);
     expect(fitKey(drawn, row, () => true).error).toBeNaN();
-    // a frame padded 3 left and 2 above: its pixel (x, y) is the view's (x - 3, y - 2), flat paint read back whole
     const framed = keyInFrame(drawn, fit, [60, 52], [3, 2]);
     const px = (x: number, y: number) => [
       ...framed.rgba.subarray((y * 60 + x) * 4, (y * 60 + x) * 4 + 4),
@@ -61,7 +58,6 @@ describe('a drawn key cut into the sheet frame', () => {
       rUpper: 7,
       rFore: 7,
     });
-    // from the ink left of the sleeve to the wrist and one pixel past it: the ink beyond, and the body, stay
     expect(cut.at).toEqual([18, 15]);
     expect([cut.raster.width, cut.raster.height]).toEqual([27, 11]);
     const at = (x: number, y: number) => [
@@ -72,9 +68,7 @@ describe('a drawn key cut into the sheet frame', () => {
   });
 
   test('the hand stands the same reach past the wrist along the forearm, whichever way it points', () => {
-    // hanging down, as at rest
     expect(handPast([40, 300], [40, 370], 24)).toEqual([40, 394]);
-    // raised, the forearm up and out: 24 px on from the wrist, not back at the cuff or off the line
     const [x, y] = handPast([30, 320], [60, 280], 25);
     expect([x, y]).toEqual([75, 260]);
     expect(Math.hypot(x - 60, y - 280)).toBeCloseTo(25, 9);
@@ -82,8 +76,6 @@ describe('a drawn key cut into the sheet frame', () => {
 });
 
 describe("a drawn key's silhouette inked at the house width", () => {
-  // an arm across the frame, its sleeve rows 30-70 inked `drawn` px deep at top and bottom; its
-  // bones from (40, 50.5) to (130, 50.5), so the capsules cut it through at both ends
   const arm = (drawn: number) => {
     const r = paper(160, 100);
     fill(r, [4, 30, 156, 71], INK);
@@ -99,7 +91,6 @@ describe("a drawn key's silhouette inked at the house width", () => {
     const i = (y * r.width + x) * 4;
     return labOf([r.rgba[i] ?? 0, r.rgba[i + 1] ?? 0, r.rgba[i + 2] ?? 0])[0];
   };
-  // L* bilinear at a point, px centres at +0.5, the clear px read as their bytes (black)
   const lAt = (r: Raster, x: number, y: number) => {
     const [u, v] = [Math.max(0, Math.min(r.width - 1.001, x - 0.5)), y - 0.5];
     const [x0, y0] = [Math.floor(u), Math.max(0, Math.min(r.height - 2, Math.floor(v)))];
@@ -107,7 +98,6 @@ describe("a drawn key's silhouette inked at the house width", () => {
     const row = (yy: number) => lPx(r, x0, yy) * (1 - tx) + lPx(r, x0 + 1, yy) * tx;
     return row(y0) * (1 - ty) + row(y0 + 1) * ty;
   };
-  // the run of ink (L* < 40) from the alpha edge inward on 0.25 px steps, from (x, y) out along dy
   const inkAcross = (r: Raster, x: number, y: number, dy: 1 | -1) => {
     const isFig = (yy: number) =>
       yy >= 0 &&
@@ -142,13 +132,11 @@ describe("a drawn key's silhouette inked at the house width", () => {
   test("the drawing inside the line is untouched, and the capsules' cut ends take no line", () => {
     const { raster, at } = arm(2);
     const row = 50 - at[1];
-    // deeper than the line from the top and bottom edges: the sleeve as drawn
     for (let y = 40 - at[1]; y <= 60 - at[1]; y++)
       for (let x = 30; x <= 80; x += 5)
         expect([
           ...raster.rgba.subarray((y * raster.width + x) * 4, (y * raster.width + x) * 4 + 4),
         ]).toEqual([...SLEEVE, 255]);
-    // the shoulder's end and the wrist's, at the bone: sleeve to the cut
     const opaque = (x: number) => raster.rgba[(row * raster.width + x) * 4 + 3] === 255;
     const ends = [0, raster.width - 1].map((x) => [
       ...raster.rgba.subarray((row * raster.width + x) * 4, (row * raster.width + x) * 4 + 3),
@@ -161,7 +149,6 @@ describe("a drawn key's silhouette inked at the house width", () => {
     const { raster } = arm(11);
     for (const x of [30.4, 60.5, 88.2]) {
       expect(Math.abs(inkAcross(raster, x, 20, -1) - INK_WIDTH)).toBeLessThanOrEqual(0.25);
-      // the second line it would leave: none, sleeve from past the line to the middle
       for (let y = 10; y <= 20; y++) expect(lPx(raster, Math.floor(x), y)).toBeGreaterThan(40);
     }
   });

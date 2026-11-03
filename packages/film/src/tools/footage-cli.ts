@@ -1,16 +1,3 @@
-// `film footage`: the app's footage library from the command line
-// (`footage.ts`), shared by its talks. Every command but a first hearing is
-// free: `import` keeps an original by its hash under a name, `make` derives
-// its copies and a take's voice where they are stale, `push` and `pull` sync
-// the originals with the private store, and `list` reads the lock. `make`
-// hears a take (`ElevenLabs.stt`, the one paid call) only when it has no
-// transcript yet, or when `--hear-again` asks for a second one.
-//
-//   film footage import <file> --as <name> [--take] [--licence l] [--credit c] [--source url] [--tags a,b]
-//   film footage make [name…] [--hear-again]
-//   film footage push             film footage pull
-//   film footage list
-
 import { Console, Effect, Option } from 'effect';
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
@@ -92,7 +79,6 @@ const make = Command.make(
     const entries = yield* Effect.forEach(names ?? [], (name) =>
       Effect.map(library.entry(name), (entry) => ({ name, entry })),
     );
-    // A take to hear is a paid call: the CLI must be logged in before any copy is made.
     const hearing = entries.some(
       ({ entry }) =>
         entry.kind === 'take' &&

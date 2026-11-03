@@ -1,15 +1,3 @@
-// The files the gate reads: the repo's work, as git and the workspaces name
-// it. A file is the repo's when git tracks it (committed or staged), or when
-// it is new, not ignored by git, and inside a workspace the root's
-// `package.json` declares (`packages/*`, `apps/*`): an agent's new module
-// is read before it is staged. A new folder outside every workspace, such as
-// the owner's `prototypes/` in the main checkout, is no one's work yet, so
-// no guard reads it. A tracked file deleted from the tree is none.
-//
-// The lint (`lint.ts`), the format check (`fmt.ts`) and the judged rules'
-// items (`judged/sources.ts`) read this one list, so the three never
-// disagree on what the repo holds.
-
 import { Glob, JSONC } from 'bun';
 import { Effect, FileSystem, Path, Schema, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';

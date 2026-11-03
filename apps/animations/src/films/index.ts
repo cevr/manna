@@ -1,10 +1,3 @@
-// Every film the player and the renderer know about, loaded on demand, and
-// the pages the player mounts: each film, each of its shorts (`shorts.ts`)
-// under `<film>/shorts/<id>`, and each talk (`talkFilms`: the speaker's own
-// take, cut on his words), a film of its own under its folder's name; and
-// each cast member's render under `<film>/cast/<member>` (`castPages`: his
-// rigs in every kept view of his sheets, for `film concept render`).
-
 import { shortPages } from '@manna/film/canvas';
 import { type Films, castPages, narratedFilms, talkFilms } from '@manna/film/player';
 import { faces } from './faces.ts';

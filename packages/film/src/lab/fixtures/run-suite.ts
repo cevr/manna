@@ -1,10 +1,3 @@
-// One invocation owns the fixture bundles and the child test process. Its
-// temporary files, the workers' Chrome profiles among them (`bun test` runs
-// no exit handler to remove its own), are released only after the workers
-// have exited and every process that names the folder has ended
-// (`run-folder.ts`). A `--parallel` run takes as many workers as
-// `workersFor` gives the host.
-
 import { availableParallelism, loadavg } from 'node:os';
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';

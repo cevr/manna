@@ -1,9 +1,3 @@
-// The court's rigs as a look declares them (`Look.rigs`): each artboard of
-// `figures.riv` (`figures.ts`) with the timelines a pose may name, the view
-// model's numbers it may set, and where on it our origin stands. A look names
-// the engine; the film loads the rigs the look in play declares before its
-// first frame, and the look's drawing poses each by name (`f.rive`).
-
 import type { RiveEngine, RivePropSpec } from '@manna/film/rive';
 import { Record as Rec } from 'effect';
 import {

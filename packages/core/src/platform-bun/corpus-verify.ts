@@ -160,8 +160,6 @@ export const verifyWebsterDatabase = (filename: string): Effect.Effect<number, u
           return Effect.succeed(WEBSTER_SOURCE.records);
         }),
       );
-      // FTS cross-content verification needs a writable connection. Its
-      // isolated memory copy leaves candidate and active files read-only.
       yield* Effect.acquireUseRelease(
         Effect.try({
           try: () => Database.deserialize(db.serialize()),

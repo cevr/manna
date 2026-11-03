@@ -1,12 +1,3 @@
-// Animation frames: the player's play loop and the review's synced loop
-// both run on `Frames`. Each
-// is built on one primitive, a callback asked for on the next frame (`Ask`):
-// live it is the browser's `requestAnimationFrame` (`frames-browser.ts`), so a
-// step or a paint runs inside the frame's own callback, and a whole loop is
-// one wait of its fiber, not one per frame; in a test it is 16 ms of the
-// `Clock` the layer is built with (`Frames.layerClock`), so `TestClock.adjust`
-// moves the frames on.
-
 import { Clock, Context, Effect, Layer, Option } from 'effect';
 import type { Scope } from 'effect';
 
@@ -37,7 +28,6 @@ const framesOver = (ask: Ask): FramesOps => ({
   }),
   loop: (step) =>
     Effect.callback<void>((resume) => {
-      // Interrupted during a step (the step stopped its own loop), no next frame is asked for.
       let stopped = false;
       let cancel = ask(function frame(at) {
         const more = step(at);

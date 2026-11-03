@@ -1,23 +1,3 @@
-// Footage, as the page and the tools both name it. The footage library is
-// an app's `footage/` folder, shared by its talks, as `sounds/` is by its
-// films: each original (a take recorded on the owner's phone, or a licensed
-// clip) is kept whole by the hash of its bytes, and named. `library.lock.json`
-// (committed) records each name's original, what it was probed as and its
-// current transcript; `files/<name>/<sha12>.<ext>` holds the originals
-// (git-ignored, kept in the private store by `push` and brought back by
-// `pull`); `transcripts/<name>.<sha12>.json` holds each take's words and
-// loudness (committed: text and numbers, no media).
-//
-// A source is a name and the head of its original's hash (`<name>/<sha12>`):
-// what a talk reads (`FootageRead.source`), the same in every copy. Each
-// source has two copies the pages read, made from the original and rebuilt
-// only when their recipe changes (`FOOTAGE_RECIPES`): the mezzanine the
-// render conforms from (full size, a key frame a second) and the proxy the
-// lab and the phone play (1280 px on its long side, a key frame every half
-// second). One URL per copy, `/footage/<name>/<sha12>/<copy>.mp4`, answered by
-// range. A take's voice is a third: its sound, one channel of lossless FLAC
-// at the mix's rate, on the picture's clock.
-
 import { Option, Schema } from 'effect';
 import { type Pcm, toMono } from './audio.ts';
 import { Seconds, TakeWord, repoJson } from './schema.ts';
@@ -287,7 +267,6 @@ export const envelopeOf = (pcm: Pcm): ReadonlyArray<number> => {
     const to = Math.min(mono.frames, from + step);
     let power = 0;
     for (let i = from; i < to; i += 1) power += (samples[i] ?? 0) ** 2;
-    // A silent step's log is -Infinity: the floor stands for it.
     return Math.round(Math.max(ENVELOPE_FLOOR, 10 * Math.log10(power / Math.max(1, to - from))));
   });
 };

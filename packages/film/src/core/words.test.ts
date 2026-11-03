@@ -1,5 +1,3 @@
-// A count is said one way everywhere: plural but for one.
-
 import { expect, test } from 'bun:test';
 import { counted } from './words.ts';
 

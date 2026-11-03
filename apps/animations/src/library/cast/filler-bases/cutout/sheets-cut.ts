@@ -1,24 +1,3 @@
-// Cuts the filler bases' four kept views into their part sheets: each view's
-// kept box, padded (`frames.ts`), cropped from the kept poses sheet and cut by
-// its bust cut (`cut.ts`) into its head and its torso, each written to
-// `sheets/<view>/<part>.png`, the view's bytes where the part owns a px and
-// alpha 0 elsewhere, as the parts CLI writes a part. The bases' arms hang
-// inside the torso, so a turned head uncovers nothing a part hides and no
-// repaint is asked. Each part's cloth is dyed here, once, as the crowd's base
-// wears it (`docs/casting.md` §2.6): every torso's robe and sash to undyed
-// linen, and the older pair's grey-white hair to the pale cool paper. The dye
-// scales each channel of a pale, unsaturated px by target / base, the base
-// being the median of the part's own pale px, so the painted shading keeps
-// its steps; saturated px (skin and its shadows, brows, eyes) and the ink are
-// left as drawn. Only px inside the outline's ink are dyed: the rim the load
-// un-mattes against the paper (`core/unmatte.ts`) stays as painted. Each
-// view's enclosed paper (`paperOf`) is printed: the grown pair's cream robe
-// is painted in nearly the paper's colour, so their cloth reads as enclosed
-// paper the figure holds, and each held piece is a place to look for a gap
-// the cut should name. The run fails before it writes a view whose named gap
-// is stale. Run it from the repo root with
-// `bun apps/animations/src/library/cast/filler-bases/cutout/sheets-cut.ts [<sheets folder>]`.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { type Raster, cutParts, decodePng, encodePng } from '@manna/film/tools';
@@ -32,7 +11,6 @@ import {
   Stdio,
 } from 'effect';
 import { CUTS, cutOptionsFor, paperOf } from './cut.ts';
-// the kept sheet, imported as a file so the cast build keys the parts stage by it (`COVERAGE.cutters`)
 import KEPT from '../cast-sheet/kept/poses.png' with { type: 'file' };
 import { FRAMES, type FramedView, boxOf } from './frames.ts';
 

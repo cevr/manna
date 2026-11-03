@@ -20,10 +20,6 @@ import { Array as Arr, Effect, Option, Schema } from 'effect';
 
 import type { HymnText, Section } from './text';
 
-// ----------------------------------------------------------------------------
-// The chords of a hymn
-// ----------------------------------------------------------------------------
-
 /** One sung syllable: its text as printed under the note, and the chords that change on it, in order. */
 export interface Box {
   readonly text: string;
@@ -96,10 +92,6 @@ export const hasChords = (chords: HymnChords): boolean =>
       part.lines.some((line) => line.some((word) => word.some((box) => box.chords.length > 0))),
   );
 
-// ----------------------------------------------------------------------------
-// Transpose and capo
-// ----------------------------------------------------------------------------
-
 const mod12 = (n: number) => ((n % 12) + 12) % 12;
 
 /**
@@ -151,22 +143,6 @@ export const keyName = (key: Chord.Key): string => `${key.tonic}${mark(key.minor
 /** `text` where `when` holds, else nothing. */
 const mark = (when: boolean, text: string): string => (when && text) || '';
 
-// ----------------------------------------------------------------------------
-// The bundled encoding
-// ----------------------------------------------------------------------------
-
-/*
- * A hymn's string is JSON: `[number, tonic, minor, stanzas, refrain]`, with
- * an optional sixth string carrying encoded numeric placement alternatives; the
- * refrain 0 when there is none. A part is 0 when `Plain`, else
- * `[level, lines]`, each line one string: its syllables joined by `|`, each
- * `+` first when it is in the word before it, then its text, then, when it
- * carries chords, `~` and its guitar chords in `at` order, space-separated.
- * A chord is its root as a hex degree, its quality, and `/` and the bass's
- * hex degree when it has one ("0", "5m7", "7/b"). A syllable's text holds
- * none of `|`, `~` and `+`: the build fails on one that does (`encodeHymn`).
- */
-
 const EncodedSung = Schema.Tuple([
   Schema.Literals(['syllable', 'line']),
   Schema.NonEmptyArray(Schema.String),
@@ -178,8 +154,6 @@ const EncodedHymn = Schema.Tuple([
   Schema.Boolean,
   Schema.Array(EncodedPart),
   EncodedPart,
-  // Keep alternatives encoded until selected: the default reading allocates
-  // neither their patch arrays nor their chord objects.
   Schema.optionalKey(Schema.String),
 ]);
 type EncodedPart = typeof EncodedPart.Type;

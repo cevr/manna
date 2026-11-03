@@ -1,6 +1,3 @@
-// Sound as numbers: planar PCM, one Float32Array per channel. The mixer makes
-// it and the Media service reads and writes it. Pure and DOM-free.
-
 /** Planar audio: `channels` arrays of `frames` samples each, at `rate` Hz. */
 export interface Pcm {
   readonly rate: number;

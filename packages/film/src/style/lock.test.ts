@@ -1,10 +1,3 @@
-// What a locked figure's print answers its lock (`heldTo`), read against the
-// owner's decisions on his production's ledger, and the hold a film's build
-// and test run over its locked figures (`unlocked`): each print hashed with
-// sha256, held to its lock, the lock held to the decision it names, and each
-// broken one named with the rule's words and the hash an override would name
-// to free it.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { describe, expect, it } from 'effect-bun-test';
@@ -103,7 +96,6 @@ describe("a locked figure's print against its lock", () => {
       _tag: 'Broken',
       why: `its override frees ${CHANGED}, not its print ${other}`,
     });
-    // The print is the lock's, so the override would free a later change unasked.
     expect(heldTo('lead', freeing(CHANGED), KEPT, DECISIONS)).toEqual({
       _tag: 'Broken',
       why: "its print is its lock's, so its override frees nothing: drop it, or it frees a later change unasked",
@@ -119,10 +111,8 @@ describe("a locked figure's print against its lock", () => {
 
   test('is broken, its print the lock holds or not, while the lock names a decision the ledger does not hold', () => {
     const lost = `its lock names a decision his production's ledger does not hold: none filed at ${FILED} answers ask ${ASK}`;
-    // A ledger with no decision: the question the lock was kept in is no answer to it.
     for (const decisions of [[], DECISIONS.filter((d) => d.at !== AT)])
       expect(heldTo('lead', LOCK, KEPT, decisions)).toEqual({ _tag: 'Broken', why: lost });
-    // A lock filed at another time, or naming another ask.
     expect(heldTo('lead', { ...LOCK, at: AT + 1 }, KEPT, DECISIONS)._tag).toEqual('Broken');
     expect(heldTo('lead', { ...LOCK, ask: 'a0000000000' }, KEPT, DECISIONS)._tag).toEqual('Broken');
   });

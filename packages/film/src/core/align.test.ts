@@ -103,7 +103,6 @@ describe('placeBeats', () => {
   });
 
   test('a line flubbed and read again belongs to the reading that finished it, not the beat before', () => {
-    // "In the beginning was the Word. And the Word was— And the Word was with God. …"
     const flub = read('and the word was', 3);
     const again = read('and the word was with god', 5);
     const placed = Result.getOrThrow(
@@ -157,7 +156,6 @@ describe('cutting one reading into beats', () => {
       pcm,
     );
     expect(cuts.map((c) => c.id)).toEqual(['one', 'two']);
-    // The middle of the silence is 3 s; its quietest point is the hush at 3.5–3.6 s.
     expect(cuts[0]?.to).toBeGreaterThanOrEqual(3.5);
     expect(cuts[0]?.to).toBeLessThan(3.6);
     expect(cuts[1]?.from).toBe(cuts[0]?.to ?? -1);
@@ -191,7 +189,6 @@ describe('cutting one reading into beats', () => {
     expect(plane[0]).toBe(0);
     expect(plane[cut.frames - 1]).toBe(0);
     const fade = Math.round(CUT_FADE * rate);
-    // Past the fade the samples are the reading's own.
     expect(plane[fade + 10]).toBe(pcm.channels[0]?.[1000 + fade + 10]);
     expect(Math.abs(plane[Math.floor(fade / 2)] ?? 1)).toBeLessThan(0.5);
   });

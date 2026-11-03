@@ -16,12 +16,6 @@ import { INK_NUMBER } from '../canvas/rive.ts';
 import { figure as rigOf } from './rig/parts.ts';
 import { type Element, ids } from './rig/rml.ts';
 
-// A film's figures file, laid as the film lays it and printed by the house:
-// only figures `figure` returned, its artboards in its keys' order with one
-// id counter, each locked figure's print alone the same wherever the file
-// lays it, and every override its figures carry by the artboard it is laid
-// on.
-
 const SKIN = paper({ color: '#ece7fa', shade: '#c9bcf2', light: '#fffffb' }, 'skin');
 const WHITE = paper({ color: '#fcfbfc', shade: '#dcd9ec', light: '#ffffff' }, 'white');
 
@@ -161,10 +155,8 @@ describe("a film's figures file", () => {
   test('a copy of a composed figure is refused, a part changed in it or not: its parts were never checked', () => {
     const ear = { _tag: 'RoundEar', at: [40, 0], r: [8, 12] } as const;
     const copies = {
-      // An ear on a round head, its paper greyed (GreyShade) or rimmed (InnerRim): each `figure` refuses.
       grey: { ...lead, ear: { ...ear, paper: { ...SKIN, shade: '#808080' as const } } },
       rimmed: { ...lead, ear: { ...ear, paper: { ...SKIN, rim: 3 } } },
-      // Hair on a round head, which the house cannot draw.
       haired: {
         ...lead,
         hair: Hair.Traced({
@@ -185,7 +177,6 @@ describe("a film's figures file", () => {
           boards: { ...FILE.boards, lead: { ...FILE.boards.lead, figure: copy } },
         }),
       ).toThrow(/figuresFile refused: .*a figure `figure` returned, not a copy of one/);
-    // Nor does the house draw one in a file `figuresFile` did not lay.
     expect(() =>
       figuresRml({
         weight: 1,
@@ -209,7 +200,6 @@ describe("a film's figures file", () => {
       },
     });
     expect(lockedPrints(moved)).toEqual([{ item: 'lead', lock: LOCK, print }]);
-    // His boil's seed is his print's: a change to it is a change to him.
     const reseeded = figuresFile({
       weight: 1,
       boards: { ...FILE.boards, lead: { ...FILE.boards.lead, seed: 9 } },
@@ -290,8 +280,6 @@ describe("a figure's ink, bound to its view model's ink", () => {
         .find((c) => attr(c, 'viewModelPropertyId') === attr(ink ?? c, 'id'));
       expect(attr(rest ?? vm, 'propertyValue')).toBe(1);
     }
-    // The face's brows and mouth, the head's, the tunic's and each leg's line, and the hand's on
-    // its own artboard.
     expect(strokes.map(({ shape }) => nameOf(shape))).toEqual([
       'browL',
       'browR',
@@ -302,7 +290,6 @@ describe("a figure's ink, bound to its view model's ink", () => {
       'legR',
       'palm',
     ]);
-    // Each binds to the number `ink` of its own artboard's view model.
     const inkOf = new Map(
       models.map((vm) => {
         const ink = vm.children.find((c) => nameOf(c) === INK_NUMBER) ?? vm;
@@ -322,7 +309,6 @@ describe("a figure's ink, bound to its view model's ink", () => {
       const bind = stroke.children.find((c) => c.name === 'DataBindContext') ?? stroke;
       const via = converters.get(String(attr(bind, 'converterId'))) ?? stroke;
       const full = Number(attr(stroke, 'thickness'));
-      // The light core straddles the cut over the ink: what shows of the ink is past it.
       const core = shape.children.find((c) => c.name === 'Stroke' && nameOf(c) === 'Core');
       const covered = core === undefined ? 0 : Number(attr(core, 'thickness'));
       const shows = (v: number) => (mapped(via, v) - covered) / 2;

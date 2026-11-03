@@ -1,35 +1,3 @@
-// A film's render cache as a whole, `out/<film>/cache`: the segments its
-// renders keep (`segments/<key>/`, `segments.ts`), the lock over them, the
-// record of what each render used, and the prune.
-//
-// - The lock (`.segments.lock` in `cache/`, a `ManifestLock`: the operating
-//   system's, dropped when its process ends) is held by a render that keeps
-//   segments from before it picks them until it is done, its prune included
-//   (`holdCache`, waiting its turn), and by `film cache --prune`
-//   (`pruneIdle`, refused while a render holds it). So no prune deletes a
-//   segment a render reads or draws, and two renders of one film take turns.
-// - Each video render records the keys it used for its lead file (its
-//   master, else its share copy), none when it keeps no segments
-//   (`renders/<id>.json`). Before it replaces its files it widens that
-//   record to name its keys beside the keys the records of both its files
-//   name (`widenRecord`); once done it writes its own keys alone
-//   (`recordRender`) and removes the other file's record (`forgetRender`).
-//   So a record names what the newest render of its file used, or, when
-//   that render stopped short, what it and the renders before it used.
-// - A segment goes when no render used it for the days given and no record
-//   names it, so a segment the newest render of an output used is kept at
-//   every `--days`, past the age prune too, while that render's record names
-//   it. `--days 0` keeps exactly what the records name. It is refused on a
-//   cache no render has recorded (`CacheUnrecorded`), and while a video the
-//   film's catalogue holds has no record (`CacheOutputUnrecorded`): which
-//   segments its newest render used is then unknown.
-// - The cache folder, the segments folder, each segment, each file in a
-//   segment, each segment's record, the renders' records and the catalogue
-//   are proven to be themselves, not links, before any is opened, read or
-//   deleted, the cache folder before its lock is taken: a link is refused
-//   (`CacheEscapes`), never followed. The lock refuses a lock file that is a
-//   link itself (`manifest-lock-bun.ts`).
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -207,7 +175,6 @@ const scan = (
       Effect.gen(function* () {
         const dir = yield* ownPath(fs, path.join(root, key), path.join(root, key));
         if ((yield* fs.stat(dir)).type !== 'Directory') return [];
-        // Counted first: each file in the folder, its record too, is proven not a link before one is read.
         const bytes = yield* bytesUnder(fs, path, dir);
         if (!(yield* isKept(fs, path, root, key)))
           return [{ key, bytes, used: Option.none<number>() }];
@@ -462,7 +429,6 @@ export const pruneHeld = (
         return yield* CacheOutputUnrecorded.make({ outputs: unrecorded });
     }
     const before = rule.now - rule.days * DAY_MS;
-    // With 0 days a segment's age does not count: the records alone keep.
     const unused = (s: CachedSegment) => rule.days === 0 || s.used < before;
     const stale = cache.segments.filter(
       (s) => unused(s) && !rule.keep.has(s.key) && !named.keys.has(s.key),

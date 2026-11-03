@@ -1,87 +1,3 @@
-// Righteousness by Faith, version 2 (the production's "Rive, in the new look"),
-// kept as the version folder `v2/` beside the film's script: its scenes,
-// lights, credits, board, takes, score and shorts, registered as no film.
-//
-// The screenplay: ordered beats, each with what is said, its sources and what
-// the picture does. One narrator reads it (voice.ts); `{mark}` cues sit before
-// the word a picture must hit.
-//
-// The film speaks to every Christian (CRAFT rule 2): it quotes only
-// Scripture, verbatim KJV checked with `manna verse` (supplied-word brackets
-// dropped for speech). Ellen White and the pioneers are never quoted nor named
-// in speech: their thought is said in the narrator's own words, inside their
-// words (sources.md, quotes.jsonl), and the credits name them.
-//
-// The order: the question (`cold`), the title, the problem (`word`,
-// `mirror`), then the answer's shape. `message` names it once: God does not
-// just call us righteous; He makes us righteous with three gifts, faith,
-// forgiveness and power, and every day we choose to keep receiving them.
-// Scripture then shows the three gifts given, in that order, twice: the
-// paralytic in `roof` (Mark 2), told and then counted, "One… two… three…",
-// and the woman taken in adultery in `woman` (John 8), counted again. On each
-// spoken count the icon band lights its icon, left to right.
-//
-// The count, then, runs the film. Each gift's section opens on the icon row
-// with the gift's number, "The first gift: faith" (`spoke`), "The second
-// gift: forgiveness" (`declared`), "The third gift: power" (`within`), and
-// closes, or turns, on one callback to the two stories in the story's own
-// layout (CRAFT rule 8):
-// - faith, `spoke` → `centurion` → `look`: God's word creates, faith expects
-//   the word to do it, faith is the hand that looks and lives; `look` pulls
-//   back to the row and calls back `roof`'s four faces at the hole, lit gold.
-// - forgiveness, `declared` → `exchange` → `accuser` → `robe`: the hinge is
-//   `declared`, justified means made righteous, not merely counted so;
-//   `robe` (the deepest turn) answers the cold open, "A cover-up, just a
-//   nicer one? No.", and calls back `woman`'s court, the woman in white.
-// - power, `within` → `daily`: the law moves in, written on the heart;
-//   `within` calls back `roof`'s man walking out with his bed; `daily` keeps
-//   receiving them by choice, and rests in the Sabbath.
-// The count is an order, never a timetable: both stories give all three in
-// one moment, and nothing pictures a delay between pardon and power.
-//
-// Motifs (CRAFT rule 4):
-// - The verdict. `cold` opens on a judge calling a guilty person righteous
-//   ("That is a cover-up."), and the gold stamp drains hollow; `declared` fills
-//   it ("by the obedience of one shall many be made righteous"); `robe`
-//   pays it off (not a cloak, not merely a judicial act: reclaiming from sin);
-//   `name` returns to the same courtroom, where the stamp lands solid and the
-//   glow answers from inside: He makes it true.
-// - The garment. Fig leaves in `mirror` (our own sewing), the woman's stained
-//   garment washed in `woman`, the filthy clothes in `accuser`, the robe from
-//   heaven's loom in `robe`; `name`: "Not by sewing a better garment. By
-//   taking God at his word, receiving his robe, and a new heart with it."
-// - The spoken word. God speaks light in `spoke`, the soldier asks only for a
-//   word in `centurion`, the word makes righteous in `declared`; `thesis` is a name.
-// - The law. The word card in `word` (matched from the title's first word)
-//   and its circle, the mirror in `mirror`, the banner in `message`, the
-//   accuser's tablet in `woman`; written inside the heart in `within`, kept
-//   by daily choice and Sabbath rest in `daily`.
-// - The count. The three icons, set in the open hand in `message`, lit one,
-//   two, three in `roof` and `woman`, and pulled back to at each gift.
-//
-// Tent poles (CRAFT rule 11), with their act's light and the question that
-// opens the act (the chapters in `film.ts`):
-// - `cold`: the hollow stamp over the bench, a cool even page. "How should
-//   man be just with God?"
-// - `roof`: the four faces at the hole in the roof, peach afternoon. "So how
-//   does anyone become righteous?"
-// - `spoke`: the gold word of light arcing into the dark, peach to dawn.
-//   "Where does faith come from?"
-// - `exchange`: the cross in silhouette, the valley's one black moment.
-//   "Isn't that a cover-up?"
-// - `within`: the heart lit from inside, early gold. "So is the law out of the
-//   picture?"
-// - `name`: the stamp landing solid under the teal landing sky. "Where was all
-//   this heading?"
-//
-// Art direction (reference/bibleproject-tone-art.md): STORY is a cardboard
-// diorama under 2–3-stop gradient skies, with grey paper figures whose faces
-// are a brow line and eye strokes; IDEA is a light parchment page with ink
-// figures and one gold prop. Scarlet marks sin (Isa 1:18), white the robe,
-// gold the word. The colour script stays bright (mean luma 140–150): teal day
-// at the open and the landing, peach to explain, one black moment at the cross,
-// dawn at the answer.
-
 import { defineScript } from '@manna/film/core';
 
 /** The film's name: the film, its title card and its credits all read it here. */
@@ -113,8 +29,6 @@ export const script = defineScript([
   },
   {
     id: 'mirror',
-    // The v4 takes open on about 0.15 s of breath: a lead of 0.4 keeps the
-    // seams between unbroken lines near 0.55 s, as a reader would.
     lead: 0.4,
     say: "{short}How do we measure up? Every one of us comes up short. {fig}So we do what Adam and Eve did. We sew fig leaves. {harder}We try harder. {promise}We make promises. {going}How is that going? {rags}Isaiah's verdict: “All our righteousnesses are as filthy rags.” {mirror}And the law? It is a mirror. {stain}It shows every stain, {wash}but you cannot wash your face with a mirror.",
     cite: [
@@ -145,10 +59,6 @@ export const script = defineScript([
       "STORY: on `how` the scene opens outside a cardboard meeting hall at dusk, one tall window lit warm; the fig-leaf figure from `mirror`, small and screen-left, looks up at it. On `year` the camera pushes through the lit window into a hall of no time or place in warm peach light: a pulpit with an open Bible at the front and no one in it, a crowd of grey figures in rows. On `two` the camera pushes in on the left half of the crowd as they lift small stone tablets high; on `rep` they look about, puzzled, for something missing: there is no cross among them. On `ew` the right half lift small wooden crosses; on `precious` they set their own tablets down on the floor. On `what` faces turn, curious. On `answer` every grey face turns toward a warm gold light rising behind the pulpit; the tablets and the crosses stay up. On `angel` the roof lifts away and an angel flies across a teal sky trailing a banner; on `banner` it reads: the commandments of God, and the faith of Jesus. On `hand` a stone tablet from the left and a cross from the right come together into one gold emblem. On `three` push through into IDEA, the parchment page, on the same row. On `makes` the grey figure stands centre, and a warm light rises in their chest. On `gifts` three icons come in left to right, each set into an open hand held palm up (the figure's own hand, pushed into): the gold word-bubble, faith (`faith`); the white robe, forgiveness (`forgiveness`); the heart with two small tablets inside, power (`power`). On `daily` a small sun arcs over the row, rising and setting two or three times, and each time the hand opens again.",
   },
   {
-    // Mark 2:1–12 told, then counted: faith, forgiveness and power, each lit
-    // on the icon band as the narrator counts it, while its moment replays in
-    // its own framing. The owner's handbook study reads the gifts as the
-    // court's gate, altar and laver.
     id: 'roof',
     lead: 0.4,
     say: '{see}What do these gifts look like? {roof}In Capernaum, four friends open a roof and lower a paralysed man on his bed to Jesus. {saw}Jesus saw their faith, {son}and said, “Son, thy sins be forgiven thee.” {scribes}Only God forgives sins, the scribes think. {easy}Easy to say, right? No one can see a sin forgiven. {arise}So Jesus says, arise, take up your bed, and go home. {went}And he walks out in front of them all. {count}Count what he received. {one}One: faith. They believed, and he took Jesus at his word. {two}Two: forgiveness, before a word about his legs. {three}Three: power, to get up and walk, {proof}the proof that two was real.',
@@ -157,7 +67,6 @@ export const script = defineScript([
       "STORY: the question on `see` pushes through the faith icon of `message`'s row into the scene. A cardboard house in Capernaum, packed with grey figures (varied heights and headcloths, never cloned), under a peach sky; 3–5 planes, the crowd near, the house wall far. Screen direction holds the film's: the one receiving is screen-left, Jesus screen-right. On `roof` four friends on the flat roof lift tiles away and lower the man on his bed on ropes into the room. On `saw` Jesus (white robe, gold sash) looks up at the four faces in the hole, a face at a third of the frame. On `son` close on the man's face as the scarlet specks lift off him. On `scribes` a plane slide racks to two scribes on a bench at the far wall, in profile, brows down; on `easy` back to the man, still lying on his bed: nothing anyone can see has changed yet. On `arise` he stands and rolls up his bed; on `went` he carries it out through the parting crowd, faces amazed. On `count` the three-icon band from `message` slides up along the bottom, small, with no numerals. Each number replays its moment in the same framing, held for a breath while its icon lights: on `one` the four faces at the hole, and the gold word-bubble lights; on `two` the man's face as the specks lift, and the robe lights; on `three` the man walking out with his bed, and the heart lights. On `proof` a thread of light runs back along the band from the heart to the robe: the walk vouching for the pardon.",
   },
   {
-    // John 8:2–11 told, then counted again, quicker: the viewer counts along.
     id: 'woman',
     lead: 0.4,
     say: '{court}Then a woman is brought into the temple court, caught in adultery. {law}Moses said to stone her, they say. {dust}Jesus stoops and writes in the dust. {first}Let the one without sin throw the first stone. {leave}One by one, they go. {alone}Only the two of them are left. {none}Has no man condemned you? {lord}No man, Lord. {told}And Jesus said: “Neither do I condemn thee: go, and sin no more.” {again}Count again. {one}One: faith. She calls him Lord. {two}Two: forgiveness. No condemnation. {three}Three: power, to go and sin no more. {order}The same three, in the same order.',
@@ -176,8 +85,6 @@ export const script = defineScript([
   {
     id: 'centurion',
     lead: 0.4,
-    // The icons light while the voice still speaks, and `look` carries on in
-    // the same act: a short hold after the gift is named.
     tail: 0.6,
     say: "{same}You see it again in a Roman soldier, {servant}whose servant was dying. {offer}Jesus offered to come. {only}You need not come, said the soldier. Just speak the word. {healed}The servant was healed, {room}with Jesus nowhere in the room. {def}That is what faith is. {faith}It expects God's word to do what it says, and leans on that word alone to do it. {gift}And even that faith is God's gift.",
     cite: [
@@ -191,8 +98,6 @@ export const script = defineScript([
   },
   {
     id: 'look',
-    // A pause after the key quotation (CRAFT rule 9): the pull back to the
-    // icons and the callback to `roof`'s four faces at the hole.
     tail: 2.8,
     say: '{faith}So what does faith do? {saviour}Faith is not our Saviour. It earns nothing. {hand}It is only the hand that takes hold of Christ. {desert}Remember Israel, bitten by snakes? {pole}Whoever looked at the serpent on the pole lived. {harder}We still make it harder. {climb}But no one has to climb the pole. Just look to Christ: “Look unto me, and be ye saved.”',
     cite: [
@@ -245,9 +150,6 @@ export const script = defineScript([
   {
     id: 'robe',
     lead: 0.4,
-    // The pull back to the three icons, forgiveness lit, comes after the
-    // quotation's last word; the tail holds it and the callback to `woman`
-    // under the robe for a breath, and `within` opens on the same icons.
     tail: 1.4,
     say: "{take}He says, take the filthy clothes off him. {pass}I have taken your sin away, {clothe}and I will clothe you anew. {loom}A robe woven on heaven's loom, {woven}not one thread of it ours. {nicer}A cover-up, {just}just a nicer one? {no}No. {cloak}Christ gives no cloak for sin. {away}He takes it away. {judicial}It is more than a ruling: {reclaim}“he is faithful and just to forgive us our sins, {reclaiming}and to cleanse us from all unrighteousness.”",
     cite: [
@@ -291,8 +193,6 @@ export const script = defineScript([
   {
     id: 'rain',
     lead: 0.4,
-    // The angel's flight (`fly`, 3 s from `loud`) outlasts the short last
-    // line: a held breath lets the banner cross before `name` cuts in.
     tail: 0.5,
     say: 'Where was all this heading? {big}Somewhere big. {spirit}To the latter rain, the Spirit poured out. {blot}To the blotting out of sins, as the sanctuary is cleansed. {loud}A message cried “with a loud voice.”',
     cite: [
@@ -309,8 +209,6 @@ export const script = defineScript([
   {
     id: 'name',
     lead: 0.4,
-    // The held pause before the landing's last words (CRAFT 7: about 3 s
-    // with `thesis`'s lead), declared in the scene as a designed silence.
     tail: 2,
     say: "So, back to Job's question. {how}How should man be just with God? {not}Not by sewing a better garment. {taking}By taking God at his word, {receive}receiving his robe, {heart}and a new heart with it, {every}every day. {verdict}When God says righteous, it is not a cover-up. {real}God never deals in make-believe. {true}He makes it true. {jer}And Jeremiah gave the coming King his name.",
     cite: [
@@ -324,7 +222,6 @@ export const script = defineScript([
   },
   {
     id: 'thesis',
-    // The landing: the music rises alone for about 28 s (CRAFT rule 10).
     min: 30,
     say: 'The Lord our righteousness.',
     cite: ['Jeremiah 23:6'],
@@ -333,9 +230,6 @@ export const script = defineScript([
   },
   {
     id: 'end',
-    // The credits roll over the landing's pull back (20–30 s), and the last
-    // seconds hold clear for the end screens; its length holds `name` at 84 %
-    // of the film or under.
     min: 30,
     picture:
       "STORY: the credits over the landing's last shot. The camera keeps easing back from where `thesis` leaves the city, the two still sitting together on the rooftop, while the film's name and its sources (each beat's cite, by author) roll up a torn paper strip at the left for about 22 s; then the strip goes and the city holds clear for the end screens. Nothing breathes.",

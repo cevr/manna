@@ -1,8 +1,3 @@
-// The page the adoption proof renders: one read of the page's data (`answer`,
-// an `AsyncResult` atom marked `Atom.serializable`) shown as the reader sees
-// it. The server reads it and renders the answer; the client adopts the
-// answer the server sent, so its hydration reads nothing again, and the
-// page shows the same answer before and after.
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import type * as Atom from 'effect/reactivity/Atom';
 import { Schema } from 'effect';

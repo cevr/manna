@@ -1,11 +1,3 @@
-// Every drawn scene breathes, exactly once (DIRECTION, "Always breathing,
-// never busy"): a scene with no camera breathes as a whole, a scene with a
-// camera or a multiplane shot breathes through it, and none breathes twice.
-// Where one frame lands never depends on what the film drew before it. Drawn
-// through `createFilm` into a stand-in context that keeps the transform, so
-// where the scene's square lands is read from the transform it was filled
-// under; bun has no canvas.
-
 import { describe, expect, test } from 'bun:test';
 import { Predicate } from 'effect';
 import type { Affine } from '../core/affine.ts';
@@ -105,10 +97,8 @@ const near = (got: { x: number; y: number; w: number }, want: typeof got) => {
 
 describe('every scene breathes, once', () => {
   test('a scene with no camera, a camera or a multiplane shot all breathe one breath', () => {
-    // At its start a scene is as framed; at 60 % a scene with no camera has moved.
     near(landed(frame(film(), 'still', 0).r), FRAMED);
     near(landed(frame(film(), 'still', 0.6).r), ONCE);
-    // A camera or a multiplane shot breathes once, as far as the scene with none: never twice.
     near(landed(frame(film(), 'shot', 0.6).r), ONCE);
     near(landed(frame(film(), 'plane', 0.6).r), ONCE);
   });
@@ -118,16 +108,12 @@ describe('every scene breathes, once', () => {
       const { knobs } = frame(film(), scene, 0.6);
       expect(knobs.map((k) => k.name)).toEqual(['at']);
     }
-    // First drawn whole, then again through its camera: the read kept is the second draw's.
     expect(frame(film(), 'still', 0.6).knobs[0]?.transform?.[0]).toBeCloseTo(
       1 + DRIFT.zoom * BREATH,
     );
   });
 
   test('a frame never depends on the one the film drew before it', () => {
-    // A scene that frames with a camera in one half and without in the other
-    // draws each frame the same whether the film drew the other half first or
-    // nothing at all.
     const late = film();
     frame(late, 'mixed', 0.2);
     expect(shown(frame(late, 'mixed', 0.8).r)).toEqual(shown(frame(film(), 'mixed', 0.8).r));

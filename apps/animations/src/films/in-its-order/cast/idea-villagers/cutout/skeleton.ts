@@ -1,11 +1,3 @@
-// The IDEA villagers' skeletons, one per cut view, read in the kept view's
-// pixels and moved into its part sheet's frame (`framed`). Each view stands in
-// the library's sense: lean from the hip, neck, head, and each arm's shoulder,
-// elbow and wrist, built by `standing`. The grown villager's headcloth and
-// tunic ride the lean (the torso) and the root (the robe); each sleeve's flap of
-// the torso bends round its shoulder. The baby's flap band is smaller, as his
-// shoulders are. Data.
-
 import type { Skeleton } from '@manna/film/core';
 import { type Body, framed, standing } from '../../../../../library/cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';
@@ -33,7 +25,6 @@ const BABY: Body = {
 
 /** Each cut view's skeleton in its part sheet's frame, by the view's name in their sheet's views. */
 export const SKELETONS = {
-  // hopping, his left arm reaching out to the viewer's right
   'poses-3': framed(
     keptAt('poses-3'),
     standing(BODY, {
@@ -60,7 +51,6 @@ export const SKELETONS = {
       capLeft: 8,
     }),
   ),
-  // the baby sitting, his hands between his knees
   'poses-4': framed(
     keptAt('poses-4'),
     standing(BABY, {
@@ -92,7 +82,6 @@ export const SKELETONS = {
       capLeft: 4,
     }),
   ),
-  // standing facing the viewer, the arms at his sides
   'poses-6': framed(
     keptAt('poses-6'),
     standing(BODY, {
@@ -112,11 +101,6 @@ export const SKELETONS = {
       capLeft: 8,
     }),
   ),
-  // his right arm raised, the clay cup in his hand before his chest; his left
-  // arm hanging at his side. Each flap's band takes the corner of his headcloth
-  // over that shoulder: the right flap's edge lies 30 px past the shoulder, past
-  // where the headcloth's diagonal edge leaves the band (x 82), and the left
-  // flap's edge is the sleeve's inner edge at its top.
   'single-15': framed(
     keptAt('single-15'),
     standing(BODY, {

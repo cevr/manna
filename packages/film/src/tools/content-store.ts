@@ -1,40 +1,3 @@
-// Generated assets are content-addressed: each manifest entry carries the hash
-// of the request that made it, so a rerun does only stale work. The store
-// reads and rewrites those manifests (timings.json, sound/manifest.json,
-// sounds/library.lock.json, a film's render catalogue, the lab's notes)
-// through their Schema codecs, one writer at a time across processes: the
-// review, a `film project` child per request, `sfx make` and a terminal's
-// `project render` all write the same files, and every write lands.
-//
-// One writer at a time: a change holds the manifest's lock (`ManifestLock`)
-// for its read, its change and its write; fibers of one process queue on a
-// semaphore per file first. What the lock holds to:
-//
-// 1. One holder. The lock is the operating system's, held for its holder's
-//    process: no two writers, of one process or of two, hold it at once.
-// 2. A holder that is gone holds nothing. The kernel lets the lock go when
-//    its process ends, a crash too, so the next writer takes it at once;
-//    nothing judges a holder stale, and a running holder's lock is never
-//    taken from it, however long it holds it. A writer that waits its whole
-//    wait for one fails as StoreLocked.
-// 3. A decision about a manifest is made while holding its lock: `transact`
-//    and `holding` hand their change the manifest as read under the lock, and
-//    neither takes a path and a bare effect. A change that takes the same
-//    lock again dies naming it, rather than waiting on itself. A value read
-//    before the lock and carried in stays the reviewer's to catch.
-//
-// Every writer holds this lock, whether it is the lab, a child or a terminal
-// command, so no two decide on one manifest at once.
-//
-// A file is written whole (`writeWhole`): beside it under a name of the
-// writer's own (`<file>.<pid>-<n>.<host tag>.partial`), then renamed over it
-// (by the caller, under a lock, with `writeWholeWith`: the mix's track and
-// its stamp), and the partial removed if the write fails. A reader never
-// sees half a file, and two writers never share a partial. The name says
-// whose a partial is, so a sweep of what a crash left (narrate's) removes
-// only a partial whose writer is known to be gone, a pid on this host that
-// no longer runs, and keeps every other (`partialAbandoned`).
-
 import {
   Array as Arr,
   Context,
@@ -159,7 +122,6 @@ const isAlive = (pid: number) =>
     Result.try(() => process.kill(pid, 0)),
     {
       onSuccess: () => true,
-      // EPERM: it runs, as another user. ESRCH: no such process.
       onFailure: (error) => Predicate.hasProperty(error, 'code') && error.code === 'EPERM',
     },
   );

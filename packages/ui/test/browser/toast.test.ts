@@ -1,17 +1,3 @@
-// Upstream: packages/react/src/toast/useToastManager.test.tsx,
-// packages/react/src/toast/createToastManager.test.tsx,
-// packages/react/src/toast/root/ToastRoot.test.tsx,
-// packages/react/src/toast/viewport/ToastViewport.test.tsx,
-// packages/react/src/toast/action/ToastAction.test.tsx,
-// packages/react/src/toast/close/ToastClose.test.tsx,
-// packages/react/src/toast/title/ToastTitle.test.tsx,
-// packages/react/src/toast/content/ToastContent.test.tsx
-//
-// The behaviour cases, against a receipt toast (a title, a tone, an Undo
-// action) raised through a manager created outside the tree; its title
-// carries the receipt's count. Timers run on
-// Playwright's clock. Upstream's cases for React-only machinery (strict
-// mode, abandoned renders, layout-effect ordering) are left out.
 import { describe, expect, it } from 'bun:test';
 
 import { expect as see, type Page } from '@playwright/test';
@@ -178,7 +164,6 @@ describe('keyboard', () => {
   it('closes with the close button, which is named and exposed at rest', async () => {
     const page = await openReceipt();
     await page.click('#raise');
-    // Found by role and name: assistive technology reaches it with the stack collapsed.
     const close = roots(page).first().getByRole('button', { name: 'Close' });
     await see(close).toBeVisible();
     await see(close).not.toHaveAttribute('aria-hidden', 'true');
@@ -194,7 +179,6 @@ describe('keyboard', () => {
     await page.focus('#raise');
     await page.keyboard.press('F6');
     await see.poll(() => focused(page)).toBe('viewport');
-    // Focused: timers stay paused.
     await page.clock.runFor(10_000);
     await see(roots(page)).toHaveCount(1);
     await page.keyboard.press('Tab');
@@ -260,7 +244,6 @@ describe('swipe', () => {
     await see(root).toHaveCSS('--toast-swipe-movement-x', /^2\d(\.\d+)?px$/);
     await page.mouse.up();
     await see(root).not.toHaveAttribute('data-swiping', '');
-    // Below the threshold: the toast stays.
     await see(roots(page)).toHaveCount(1);
     await see(root).not.toHaveAttribute('data-swipe-direction', 'right');
   });
@@ -294,7 +277,6 @@ describe('swipe', () => {
     await page.clock.install();
     await page.click('#raise');
     await see(roots(page)).toHaveCount(1);
-    // The browser's own touches (CDP), so the pointer events are its own: pointerType touch.
     const cdp = await page.context().newCDPSession(page);
     const at = (type: 'touchStart' | 'touchMove' | 'touchEnd', x: number, y: number) =>
       cdp.send('Input.dispatchTouchEvent', {
@@ -308,7 +290,6 @@ describe('swipe', () => {
     const x = box.x + box.width / 2;
     const y = box.y + box.height / 2;
     await at('touchStart', x, y);
-    // Ten moves of 10px, one after another.
     await Array.from({ length: 10 }, (_, i) => y + (i + 1) * 10).reduce<Promise<unknown>>(
       (previous, moveY) => previous.then(() => at('touchMove', x, moveY)),
       Promise.resolve(),

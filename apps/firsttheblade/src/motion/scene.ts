@@ -160,7 +160,6 @@ const scene = Effect.fn('Motion.scene')(function* (
   const uMap = gl.getUniformLocation(made, 'u_map');
   const uTime = gl.getUniformLocation(made, 'u_time');
   const uRamp = gl.getUniformLocation(made, 'u_ramp');
-  // Set once, so the rays never jump from a swing back to rest mid-scene; a shader without the uniform ignores it.
   gl.uniform1f(gl.getUniformLocation(made, 'u_turning'), Number(turning));
 
   const fit = () => {
@@ -222,12 +221,10 @@ const scene = Effect.fn('Motion.scene')(function* (
     (observers) => Effect.sync(() => observers.forEach((observer) => observer.disconnect())),
   );
   yield* listening(document, 'visibilitychange', update);
-  // A wider box can have the picture fetch a larger file: the canvas reads it too, into the same texture.
   yield* listening(picture, 'load', () => {
     still.upload(picture);
     draw();
   });
-  // A lost context ends the scene: the canvas is taken away and the still shows.
   yield* Effect.callback<void>((resume) => {
     canvas.addEventListener('webglcontextlost', () => resume(Effect.void), { once: true });
   });

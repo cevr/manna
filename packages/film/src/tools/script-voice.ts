@@ -1,23 +1,3 @@
-// A staging take kept ready for every spoken beat of every film the lab
-// lists, so the Script reader plays a beat without asking for it. Each beat's
-// take is the staging cache's (`staging.ts`), asked for by what the beat says
-// now: its words, its marks, the film's voice and model (`stagingRequest`);
-// a beat whose words, marks or voice changed has a new key, and is voiced
-// again. Nothing here writes a film: its timings and its recorded takes are
-// never touched (`film narrate` makes a cached take a film's own, at no
-// cost). A series draft (`series-drafts.ts`) is voiced the same way, in the
-// staging voice, its takes kept by the same keys.
-//
-// With the fill on (`FILM_STAGING_FILL=true`, which only the owner's lab
-// sets: a fill spends), a beat the cache keeps no take for is queued: the
-// films a reader has open first, every other film's and every draft's in the
-// background as the sweep finds them, a few at a time. Each is charged
-// against the day's cap before it is sent; past the cap it is refused, said
-// in the reader, and asked again the next day. A beat is asked for once a
-// session: a refusal stands until the day turns. A take that misread its
-// line is kept but never ready, and read again only once the local day it
-// was made (its record's `at`) has passed: at most once a day, by any lab.
-
 import {
   Array as Arr,
   Clock,
@@ -216,7 +196,6 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
       const folder = yield* FilmFolder;
       const drafts = yield* SeriesDrafts;
       const state = yield* Ref.make(NO_FILL);
-      // One signal per job queued: a voicer waits on it, then takes the readers' first.
       const signals = yield* Queue.unbounded<void>();
 
       /** Each spoken beat of `reading`, its job, and its take as the cache keeps it. */
@@ -343,14 +322,12 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
                   false,
                 ),
               ),
-              // A film with no script or voice (a talk) has nothing to voice.
               Effect.catch((error) =>
                 Effect.logDebug(`staging.fill.skip film=${film} reason=${error._tag}`),
               ),
             ),
           { discard: true },
         );
-        // A series folder the box cannot read is said in the log; the films are voiced all the same.
         const keys = yield* drafts.keys.pipe(
           Effect.catch((error) =>
             Effect.as(Effect.logWarning(`staging.fill.series.unread reason=${error.message}`), []),
@@ -366,7 +343,6 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
                   false,
                 ),
               ),
-              // A draft the reader cannot read is said where it is opened, not voiced.
               Effect.catch((error) =>
                 Effect.logDebug(
                   `staging.fill.skip draft=${draftKey(series, name)} reason=${error._tag}`,
@@ -405,9 +381,6 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
           () => Effect.forever(voiceNext),
           { concurrency: VOICING_AT_ONCE },
         );
-        // The sweep and the voicers end together: a sweep that dies ends the
-        // whole fill, readers' voicing included (`fillBeside` logs it), so a
-        // beat a reader asks for stays Unvoiced until the lab restarts.
         return yield* Effect.all([Effect.repeat(sweep, Schedule.spaced(SWEEP_EVERY)), voicers], {
           concurrency: 'unbounded',
           discard: true,

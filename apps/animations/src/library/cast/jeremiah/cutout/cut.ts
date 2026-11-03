@@ -1,29 +1,3 @@
-// Jeremiah's kept heads views cut into parts (`cutParts`, @manna/film's part
-// sheet): each part his own pixels, front to back, so that his head can turn
-// while every pixel at rest stays the sheet's. Each view is a bust of two
-// parts, his head over the rest. His head is his linen headcloth with its
-// olive band and the two sides of it that hang beside his face and neck down
-// onto his shoulders, his face and his short dark beard; the cloth is his
-// head's, so it turns with him. Below it is the rest of him: the skin of his
-// neck, his linen tunic and olive mantle. Each line runs along the top of his
-// shoulders under the hanging cloth, up the sides of his neck and along the
-// foot of his beard; it never rises above his chin, so the neck below the
-// chin is the torso's. The lines are read off each view's pixels: the top of
-// what can be reached from the view's foot without crossing ink, simplified
-// to within 1.5 px. Each view names the parts a pose moves, and the words okra
-// repaints what they hide by (`HIDDEN`, read by `film concept parts`, which
-// writes `sheets/<view>/`). The lines are read in the kept view's pixels; the
-// shared cut table (`library/cutout/table.ts`) lays them in each view's part
-// sheet frame, its kept box padded (`frames.ts`), and reads each bust's
-// figure with the foot of the view closed. His kept boxes stand 4 px apart on
-// his sheet (`frames.ts`), but heads-2's right pad and heads-3's left pad
-// share two sheet columns (x 534-535), and each view's figure reading holds
-// the cream paper there next to its own outline. A first, still `neighbour`
-// part takes the pad beside the other view's outline: the two shared columns,
-// and in heads-3 one more column of its own pad's paper (x 536). The puppet
-// leaves it out of its parts, so no sheet pixel is drawn by two views. Data:
-// the rules and the table are the shared module's.
-
 import type { SheetClean } from '@manna/film/tools';
 import { Record as Records } from 'effect';
 import { bustCut, bustHidden } from '../../../cutout/bust.ts';
@@ -66,7 +40,6 @@ const HEADS_1 = bustCut({
 
 /** His bust with his head bowed down to the viewer's left (heads-2). */
 const HEADS_2 = bustCut({
-  // the paper beside heads-3's left outline at the foot, in this box's right pad (sheet x 534-535, y 607-614): never drawn
   neighbour: [box(247, 286, FAR, FAR)],
   line: [
     [FAR, 293],
@@ -99,7 +72,6 @@ const HEADS_2 = bustCut({
 
 /** His bust three-quarters to the viewer's left (heads-3). */
 const HEADS_3 = bustCut({
-  // the paper beside heads-2's right outline, in this box's left pad (sheet x 534-536, y 527-551): never drawn here; heads-2 draws x 534-535, and x 536 is paper neither view draws
   neighbour: [box(-1, 210, 0, 235)],
   line: [
     [FAR, 297],
@@ -246,16 +218,16 @@ export const { CUTS, cutOptionsFor, HIDDEN, paperOf } = cutTable({
 });
 
 /** How far the clear ground's flood reaches through paper-coloured pixels, 8-steps: his band runs 1 to 4 px wide outside his ink, and its thin tail reaches 5 to 8 (heads-2 the farthest), so one pass clears it all. */
-const RIM_BAND = 12;
+const RIM_BAND_PX_PAST_HIS_8_ON_HEADS_2 = 12;
 
 /** A pixel is paper-coloured within this ΔE76 of the view's paper: his band lies 4 to 5 from it at the median, his ink's blend farther. */
-const RIM_NEAR = 12;
+const RIM_NEAR_DE76_PAST_HIS_RIM_5 = 12;
 
 /** Each view's paper rim, as his part sheets clear it. */
 export const PAPER_RIMS = Records.map(PAPERS, (paper): PaperRim => ({
   paper,
-  band: RIM_BAND,
-  near: RIM_NEAR,
+  band: RIM_BAND_PX_PAST_HIS_8_ON_HEADS_2,
+  near: RIM_NEAR_DE76_PAST_HIS_RIM_5,
 }));
 
 /** What each view's laid part sheet runs before it is written (`film concept parts`): every view clears the pale paper band his paint keeps just outside his ink (249,244,235 at the median, against his paper 252,243,226), which his un-matte would read as his linen and draw as faint white specks round him. */

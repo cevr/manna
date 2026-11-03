@@ -1,50 +1,3 @@
-// Fit rows: a cast render's view held to the view the owner kept by
-// numbers, each with its bar, before a model is shown it (`film concept
-// render`, `tools/cast-render.ts`). Both crops are cut by the kept box at
-// one scale. Each crop's ground is its own (a render's paper is not the
-// sheet's): the colour of its border, and the ground is what its border
-// reaches through pixels near that colour, four ways. The figure is the
-// rest: what the ink bounds, its line too. A crop whose figure is not read
-// gives no row, and no rows never pass (`fitPasses`).
-//
-// The rows, each a number and its bar (`FIT_BARS`, a view's own in its
-// spec):
-// - `silhouette.edge`, per band: the mean distance of the outer edge, left
-//   and right, row by row, where both crops have the figure.
-// - `silhouette.iou`: the figures' overlap.
-// - `ink.edge`: the mean distance from the render's ink to the sheet's.
-// - `outline.turns`, per band: the render's sharpest turn of its outer edge
-//   (its second difference over 3 rows) less the sheet's sharpest within 3
-//   rows of it: a kink the sheet does not draw.
-// - `slivers`: paper 2 px thin or less in thin strips 6 px long or more
-//   (a seam between a line and the hair, a hairpin's tip, a strip cut loose
-//   of the figure) the render has beyond the sheet's, pixels.
-// - `holes`: the ground the figure closes round, beyond the sheet's, pixels.
-// - With the member's colour classes (`FitSpec.classes`), per class:
-//   `class.iou`, the class's overlap (the sheet's pixels by its samples, the
-//   render's by the film's papers), and `class.colour`, the mean ΔE76
-//   between the two crops where both read it.
-// - With his part labels too (`FitSpec.labels`), per label the view
-//   compares: `part.iou`, the overlap of the region it picks on each crop,
-//   and `part.edge`, the mean distance between their edges, both ways. Each
-//   crop is labelled by its own classes, the render by the film's papers, so
-//   a part is the same part on both. A label that picks no region on a crop,
-//   itself or through a label its rules name (one of a class the rows read
-//   none of), fails both rows and says which label and why.
-// - With a view's probes (`FitSpec.probes`), `probe.<name>`: a row or a
-//   column read as a string of classes (ink, ground, each class), each
-//   change of class on one crop matched in order to the same change on the
-//   other (an ear's band, a chin's line, a seam between two papers); the
-//   largest distance between a matched pair, pixels, or the probe's length
-//   where a change on either crop has no match (a line the render adds or
-//   leaves out).
-// The bands: `head`, the top 30% of the sheet's figure rows (the cast
-// canon's head share rounded up), `body` the rest, `figure` the whole. A
-// row passes exactly when its value, rounded to hundredths, lies inside its
-// bar. A cut-out view's neighbour (`FitSpec.neighbour`) is another
-// figure's art: its pixels are ground on both crops, so no row reads them.
-// Pure: RGBA in, rows out, the same rows for the same crops.
-
 import { Option } from 'effect';
 import {
   type Rgb,
@@ -317,15 +270,12 @@ const thinStrips = (mask: Uint8Array, w: number, h: number): Uint8Array => {
 const groundOf = (r: Raster) => {
   const { width: w, height: h } = r;
   const n = w * h;
-  // a crop holds few colours against its pixels: each colour's Lab is worked out once
   const labAt = labsOf(r);
   const labs: Rgb[] = [];
   for (let i = 0; i < n; i++) labs.push(labAt(i));
   const { lab, near } = groundColour(r, labs);
   const like = maskWhere(n, (i) => deltaE(labs[i] ?? lab, lab) <= near);
   const ground = fromBorder(like, w, h);
-  // A speck the flood stepped round (the paper's grain) is ground; a speck
-  // that is a thin strip, cut loose of the figure, stays a sliver of it.
   const figure = maskWhere(n, (i) => ground[i] === 0);
   const pieces = componentsOf(figure, w, h, true);
   const specks = maskWhere(
@@ -336,8 +286,6 @@ const groundOf = (r: Raster) => {
   const kept = new Set(pieces.labels.filter((l, i) => strips[i] === 1));
   for (let i = 0; i < n; i++)
     if (specks[i] === 1 && !kept.has(pieces.labels[i] ?? -1)) ground[i] = 1;
-  // How far its own ground lies from its colour, grain and all: a farther
-  // speck in it (dust, a stray mark) is not the ground's colour.
   let reach = near;
   for (let i = 0; i < n; i++) {
     const d = ground[i] === 1 ? deltaE(labs[i] ?? lab, lab) : 0;
@@ -768,7 +716,6 @@ const classRows = (
         sum += deltaE(labOf(rgbAt(c.r, i)), labOf(rgbAt(r.r, i)));
         n++;
       }
-    // Where both crops hold a class but never in one place, its colours are not compared: ΔE 100, past any bar.
     return [
       rowOf('class.iou', 'figure', name, iouOf(a, b), bar('class.iou', 'figure', name), {
         concept: ca,
@@ -922,11 +869,6 @@ const partRows = (
   });
 };
 
-/**
- * A probe's pixels read as classes, in runs: `G` the ground, `H` a hole, `K`
- * darker than its line's luma (`FitProbe.dark`), each other pixel by its
- * class's name, `P` with no classes.
- */
 /** A run of one class along a probe, from and to, crop pixels. */
 interface ProbeRun {
   cls: string;
@@ -1184,10 +1126,6 @@ export const fitRows = (
     rowOf('silhouette.iou', 'figure', 'figure', iouOf(figure(c), figure(r)), bar('silhouette.iou')),
   );
   rows.push(rowOf('ink.edge', 'figure', 'figure', inkEdgeOf(c, r), bar('ink.edge')));
-  // A cut-out render (some pixel see-through) has its partly see-through
-  // edge left out of its paper for the sliver and class rows: an
-  // antialiased cut edge mixed with the ground is neither a sliver nor a
-  // class's paper. The silhouette, holes, part and probe rows read it whole.
   const cut = render.rgba.some((v, k) => k % 4 === 3 && v < 255);
   const edge = (i: number) => {
     const a = render.rgba[i * 4 + 3] ?? 0;
@@ -1196,12 +1134,6 @@ export const fitRows = (
   const rc: Read = cut
     ? { ...r, paper: maskWhere(r.paper.length, (i) => r.paper[i] === 1 && !edge(i)) }
     : r;
-  // A cut keeps a pixel or so of the sheet past the line: the sheet's own
-  // ground, opaque. The kept crop reads it as ground; over the measuring
-  // ground it reads as paper. So a cut-out render's strips, found on its
-  // whole paper, leave uncounted the pixels as near the kept crop's ground
-  // as its ground-like ones. Taking them out before the strips are found
-  // would cut a light cloth near that colour into new strips.
   const sheetGround = groundNear(c, render, c.near);
   const rs = count(
     thinStrips(rc.paper, rc.w, rc.h).map((s, i) => (s === 1 && !(cut && sheetGround(i)) ? 1 : 0)),
@@ -1213,9 +1145,6 @@ export const fitRows = (
       render: rs,
     }),
   );
-  // A cut-out's holes are counted where they lie (`cutHolesOf`), so the
-  // kept crop's own holes elsewhere do not absorb them; a drawn render's
-  // holes are the ground its figure closes round beyond the sheet's.
   const [ch, rh] = [count(c.holes), cut ? cutHolesOf(c, render) : count(r.holes)];
   rows.push(
     rowOf('holes', 'figure', 'figure', cut ? rh : Math.max(0, rh - ch), bar('holes'), {

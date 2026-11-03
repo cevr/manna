@@ -1,19 +1,3 @@
-// `film/keys-named-as-bound`: a control's title names its command's key as
-// bound now, never a key written into it or read once. A command's keys are
-// the ones it declares, registered while its tool is mounted
-// (`command/keymap.ts`): a title that wrote `(n)` names a key the command
-// may no longer declare, as a PC's keyboard and a Mac's write it alike, and
-// one that read the keymap once as the control was made names none for a
-// command registered after it. A control reads `hubKeys`
-// (`lab/command/changes.ts`: `titled`, `text`, `first`), which follows each
-// command as it comes and goes, as the viewer's keyboard writes its keys.
-//
-// Refused: a call of `.keysOf(…)` (the keymap read directly), and a `title`
-// (a JSX attribute, or an assignment to `.title`) written with a key in
-// brackets in its text: `(n)`, `(⌘Z)`, `(⇧L)`, `(Esc)`, `(←)`, `(Ctrl+K)`.
-// The config turns it off where the keymap and its followers are made:
-// `src/command/` and `lab/command/changes.ts`.
-
 import { Effect, Option, Predicate } from 'effect';
 import { Diagnostic, type ESTree, Rule, RuleContext } from 'oxlint-plugin-effect/rule-bindings';
 import { memberName } from './nodes.ts';

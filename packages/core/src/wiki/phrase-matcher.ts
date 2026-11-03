@@ -64,34 +64,6 @@ export class PhraseSpan extends Schema.Class<PhraseSpan>('Wiki/PhraseSpan')({
  *  index into. */
 type SectionSpans = readonly (readonly PhraseSpan[])[];
 
-// ---------------------------------------------------------------------------
-// Normalized projection of a run
-//
-// §4.3 folds case, collapses whitespace, and makes commas and semicolons
-// transparent — so the string the automaton walks is not the string the span
-// has to point into. `normalizeScan` (`normalize.ts`) is the *only* definition
-// of that projection: the trie is built from its output and the text is matched
-// over its output, so a dictionary key and a run cannot fold differently. It
-// also hands back the offset table every normalized unit needs to name the
-// source characters that produced it, which is what a span maps back through.
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Aho-Corasick
-//
-// Hand-rolled because no platform primitive does this: regex alternation is the
-// only built-in alternative and §4.1 measured it degrading superlinearly in
-// dictionary size (13 µs at 100 phrases, 603 µs at 2,000) where the automaton
-// stays flat (11.9 µs → 16.3 µs). The build cost is paid once per dictionary
-// and the match cost is linear in the text, which is the whole reason the
-// matcher can run inside a frame budget.
-//
-// Nodes are addressed by index into one flat array rather than by object
-// references, so the trie is a compact contiguous structure and a failure link
-// is a number rather than a pointer chase. The inner loop is one `Map.get` per
-// character plus, on the rare position that ends a pattern, one array read.
-// ---------------------------------------------------------------------------
-
 const ROOT = 0;
 
 /** A dictionary entry with its normalized alias length resolved at build time.
@@ -190,8 +162,6 @@ export class PhraseAutomaton {
   candidates(run: NormalizedText): readonly Candidate[] {
     const found: Candidate[] = [];
     this.walk(run, (outputs, end) => {
-      // One end position is a boundary or it is not, so the test that does not
-      // depend on the pattern is hoisted out of the pattern loop.
       if (isBoundaryAt(run.text, end)) pushHits(run, end, outputs, found);
     });
     return found;
@@ -239,20 +209,9 @@ const nodeAt = (nodes: readonly AutomatonNode[], index: number): AutomatonNode =
 
 /** Adds one dictionary entry's alias to the trie. */
 const insertPattern = (nodes: AutomatonNode[], entry: PhraseDictionaryEntry): void => {
-  // The alias is already normalized in the artifact; normalizing again is
-  // idempotent and makes the automaton correct for any dictionary, not only
-  // one this repo's compiler produced. It is the *same* scan the match loop
-  // runs over the text, so the two consume one unit stream.
   const alias = normalizeScan(entry.alias).text;
   if (alias.length === 0) return;
   let node = ROOT;
-  // By UTF-16 unit, not by code point. `for…of` over a string yields code
-  // points, and an astral character would then be one trie edge while the
-  // match loop below — which walks units, because that is what an offset
-  // table indexes — would look for two. The alphabet is the unit, on both
-  // sides, and a surrogate pair is simply two edges. `length` at the
-  // terminal node counts the same units, so an end position minus a length
-  // is a real start position.
   for (let unit = 0; unit < alias.length; unit += 1) {
     const character = alias.charAt(unit);
     const next = nodeAt(nodes, node).next.get(character) ?? NO_NODE;
@@ -286,8 +245,6 @@ const failureTarget = (
 
 /** Resolves every failure link and flattens output links into each node. */
 const linkFailures = (nodes: readonly AutomatonNode[]): void => {
-  // BFS over the trie: a node's failure link is resolved before any of its
-  // children need it, which is what makes the construction linear.
   const queue: number[] = [];
   for (const child of nodeAt(nodes, ROOT).next.values()) queue.push(child);
 
@@ -298,14 +255,7 @@ const linkFailures = (nodes: readonly AutomatonNode[]): void => {
       nodeAt(nodes, child).failure = failureTarget(nodes, node.failure, character);
       queue.push(child);
     }
-    // Output links, flattened into the node itself: a node's outputs are its
-    // own patterns plus everything reachable through failure links, merged
-    // here so the per-position chain walk becomes one array read.
     node.outputs.push(...nodeAt(nodes, node.failure).outputs);
-    // Longest first, so §4.4's tie-break at one end position needs no sort in
-    // the match loop. Length is the comparison because it is what the span
-    // covers; ties between equal-length aliases cannot happen — the compiler
-    // rejects one alias claimed by two topics (§4.3).
     node.outputs.sort((left, right) => right.length - left.length);
   }
 };
@@ -390,19 +340,9 @@ const resolve = (
   let reach = 0;
   for (const candidate of ordered) {
     if (candidate.normalizedStart < reach) continue;
-    // Re-checked, and not redundantly: step 1 filtered against the state as it
-    // stood *before* this run, and a run can carry the same phrase twice. The
-    // first occurrence claims the slot inside this loop, and the second has to
-    // see that. Claiming here rather than at filter time is also what makes
-    // suppression occurrence-local — only a candidate that actually became a
-    // span burns the phrase's section slot.
     if (!state.eligible(candidate.entry.alias)) continue;
     state.claim(candidate.entry.alias);
     reach = candidate.normalizedEnd;
-    // Both indices are in range by construction: a candidate's normalized
-    // bounds came from walking this same run, and every normalized position has
-    // a recorded source extent. The `??` discharges an index signature the type
-    // system cannot narrow, not a case that can occur.
     spans.push(
       PhraseSpan.make({
         start: run.starts[candidate.normalizedStart] ?? 0,
@@ -442,14 +382,6 @@ export const matchSection = (
   }
   return result;
 };
-
-// ---------------------------------------------------------------------------
-// §4.6 projections
-//
-// The two structures the app renders phrase links into, each reduced to the
-// runs the matcher is allowed to see. Both live here rather than at the call
-// site so the boundary rule is one decision instead of one per host.
-// ---------------------------------------------------------------------------
 
 /** Spans per `TextSegment` of one verse, sharing the section's phrase state.
  *

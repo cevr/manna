@@ -1,11 +1,3 @@
-// The live footage host (`footage-browser.ts`) on a stand-in mediabunny that
-// counts what it makes and what it is asked to let go: a run's decoders are
-// let go when its scope closes, however far it got (read partway, or failed
-// on a source that will not open), with every frame it handed out; a read
-// still opening its source when the scope closes makes no decoder and holds
-// no frame; and a frame's reads, once handed over, stay held, whatever is
-// decoded after.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Deferred, Effect, Exit, Fiber, Layer, Option, Scope } from 'effect';
 import { standInDom } from '../canvas/fixtures/stand-in.ts';
@@ -106,7 +98,6 @@ const standIn = (count: Counted, closed: ReadonlySet<string>, gated: ReadonlyMap
       };
     }
   }
-  // Only what the host calls: the stand-in is no whole mediabunny.
   const module = { Input, UrlSource, ALL_FORMATS: [], VideoSampleSink };
   return module as unknown as Awaited<ReturnType<Decoders['load']>>;
 };
@@ -138,7 +129,6 @@ describe('the live footage host', () => {
       const count = counted();
       return Effect.gen(function* () {
         const footage = yield* Footage;
-        // Read two frames of three.
         yield* Effect.scoped(
           Effect.gen(function* () {
             const run = yield* footage.run([[at('a', 0)], [at('a', 1)], [at('a', 2)]]);
@@ -147,7 +137,6 @@ describe('the live footage host', () => {
           }),
         );
         expect(count).toEqual({ made: 1, returned: 1, decoded: 2, frames: 2 });
-        // Failed on its second source, which will not open, its first already decoding.
         const failed = yield* Effect.scoped(
           Effect.gen(function* () {
             const run = yield* footage.run([[at('a', 0), at('b', 0)]]);
@@ -169,10 +158,8 @@ describe('the live footage host', () => {
         const footage = yield* Footage;
         const scope = yield* Scope.make();
         const run = yield* footage.run([[at('a', 0), at('b', 0)]]).pipe(Scope.provide(scope));
-        // Its read on a fiber of its own, as the render runs each frame's, not the run's scope's.
         const reading = yield* Effect.forkDetach(run.next);
         yield* Deferred.await(gate.asked);
-        // The run ends (the export stopped) while its second source still opens.
         yield* Scope.close(scope, Exit.void);
         yield* Deferred.done(gate.open, Exit.void);
         const read = yield* Fiber.await(reading);
@@ -187,7 +174,6 @@ describe('the live footage host', () => {
       yield* standInDom();
       const footage = yield* Footage;
       const first = yield* footage.ready([at('a', 0)]);
-      // More frames than the host keeps, decoded before the first frame is drawn.
       yield* footage.ready(Arr.makeBy(9, (i) => at('a', i + 1)));
       expect(first.frame(at('a', 0))).toBeDefined();
     }).pipe(Effect.scoped, Effect.provide(hostOver(counted()))),

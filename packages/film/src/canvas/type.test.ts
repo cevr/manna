@@ -1,7 +1,3 @@
-// `measure` answers in one measurement how wide `write` sets a line glyph by
-// glyph, so a plate or a wrap sized by it fits the lettering exactly: kerned,
-// tracked, and with combining marks kept on their letter.
-
 import { describe, expect, test } from 'bun:test';
 import { recorder } from './fixtures/stand-in.ts';
 import { type Probe, probing } from './probe.ts';

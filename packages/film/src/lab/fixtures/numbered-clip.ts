@@ -1,9 +1,3 @@
-// A synthetic camera clip for the footage tests, made in the test with
-// mediabunny and x264 (`tools/x264.ts`): each frame carries its own number
-// as bars (`numbered-frames.ts`), so a frame read back anywhere (a luma
-// readout of the page, a decoded export) says which source frame it shows.
-// No real footage is ever used.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, Layer, Option } from 'effect';
 import {

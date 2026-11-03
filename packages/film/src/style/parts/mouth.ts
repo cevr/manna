@@ -1,8 +1,3 @@
-// A mouth thrown open where the face kit's mouth sits, wider than the kit's
-// own "oh" (a gasp): the prosecutor's shout. It adds `shout`, 0..1, the open
-// mouth's opacity and its height. One flat colour inside the head's outline,
-// no ink and no rim. Pure.
-
 import { Schema } from 'effect';
 import { decoder } from '../decode.ts';
 import { HexColour } from '../paper.ts';

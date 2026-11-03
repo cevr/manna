@@ -1,9 +1,3 @@
-// The markdown an ask shows: escaped first, so a doc can put no
-// HTML of its own in the page. The fences, quotes, numbered lists and items'
-// paragraphs are the owner's own docs' (the sets' docs he reads:
-// lab-timeline.md, rbf-concepts.md, brand.md, bible-cast.md, illustration.md,
-// seedanim.md), the long lines cut short.
-
 import { describe, expect, test } from 'bun:test';
 import { escapeHtml, markdownHtml } from './markdown.ts';
 
@@ -109,7 +103,6 @@ describe('markdown', () => {
     expect(markdownHtml(['~~~~', 'a ``` inside', '~~~~', 'after'].join('\n'))).toBe(
       '<pre><code>a ``` inside</code></pre><p>after</p>',
     );
-    // One never closed runs to the doc's end.
     expect(markdownHtml(['```', 'open', '', 'still code'].join('\n'))).toBe(
       '<pre><code>open\n\nstill code</code></pre>',
     );
@@ -178,7 +171,6 @@ describe('markdown', () => {
         '<p>Wrapped deeper: still the inner item.</p></li></ul></li></ul>' +
         '<p>One space in: after the list.</p>',
     );
-    // Items a rest apart are one list, its numbers its own.
     expect(markdownHtml(['1. one', '', '2. two'].join('\n'))).toBe(
       '<ol><li>one</li><li>two</li></ol>',
     );
@@ -225,7 +217,6 @@ describe('markdown', () => {
         'walking in the garden in the cool of the day.&quot; Genesis 3:8</p></blockquote>' +
         '<p><b>The idea.</b> The evening hour in Eden</p>',
     );
-    // A quote right under a paragraph ends it; a line right under a quote goes on in it.
     expect(markdownHtml(['words before', '> quoted', 'lazily on', '- after'].join('\n'))).toBe(
       '<p>words before</p><blockquote><p>quoted lazily on</p></blockquote><ul><li>after</li></ul>',
     );

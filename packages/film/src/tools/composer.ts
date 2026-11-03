@@ -1,14 +1,3 @@
-// Compose a film's score: each of its options (`sound.ts`'s `score.options`),
-// a whole score in its own musical language. An option is current while the
-// hash of its request matches, like a voice take: its plan is timed from the
-// film's layout, so re-timing a scene makes every option stale, while its
-// levels never do. Composed through a scene (`through`), an option is a
-// partial score: the movements up to that scene's end, recorded with the
-// scene's name, current while that range's timing holds. Each lands as `sound/<option>-<hash>.mp3`, recorded with
-// the sha256 of its bytes; generated music may not sit in the public repo, so
-// the file is git-ignored and kept in the private store (`sfx push`). Effects and beds are the app's sound library's
-// (`sfx make`), not the film's.
-
 import { Console, Context, Duration, Effect, FileSystem, Layer, Option, Path } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 import type { Plan, Score, SoundManifest } from '../core/schema.ts';
@@ -137,7 +126,6 @@ export class Composer extends Context.Service<Composer, ComposerService>()(
         const declared = Option.fromNullishOr(sound.score);
         if (Option.isNone(declared)) {
           yield* Effect.log(`score.plan film=${name} to_compose=none reason="no score declared"`);
-          // Options the film no longer declares are dropped; their files stay until pruned by hand.
           if (!options.dryRun) yield* store.update(manifest, (m) => keepScores(m, new Set()));
           return;
         }
@@ -160,7 +148,6 @@ export class Composer extends Context.Service<Composer, ComposerService>()(
           const hash = musicKey(option.music, plan);
           const ms = plan.chunks.reduce((sum, c) => sum + c.duration_ms, 0);
           const credits = musicCredits(plan);
-          // Current only when composed for this very request: a partial score is not the whole one.
           const stored = Option.fromUndefinedOr(film.manifest.scores?.[option.name]);
           const stale = options.force || !Option.exists(stored, (a) => a.hash === hash);
           let state = 'current';
@@ -198,7 +185,6 @@ export class Composer extends Context.Service<Composer, ComposerService>()(
                 Effect.flatMap(() => fs.readFile(at)),
                 Effect.map(sha256Hex),
               ),
-              // The whole record is replaced: a whole score after a partial one names no range.
               record: (m, digest) => ({
                 ...m,
                 scores: {

@@ -1,20 +1,3 @@
-// `film review`: the evidence a keep is asked on (`core/review-record.ts`).
-// It reads the scene's source key as `film project` reads it, then at each
-// place named, all at once, takes the scene's figures through the lab's
-// match (`takeMatch`, as `film lab match` does), critiques them (`Critic`, as
-// `film lab critique` does) and copies each figure's crops and side-by-side into
-// the set's folder (`<set>/review/crops/<review>/`), then reads the key again:
-// a scene changed between the two reads is refused, so no record stamps old
-// crops with a new key. The run is appended to the record
-// (`review/evidence.json`) as one review, never over another, and the page
-// (`review/evidence.md`) is written from them all; both are listed in the
-// set's manifest, so the owner sees them and the ask gate finds them.
-// `--done <id> --did "<what>"` answers one finding by its id: the fix made,
-// or why it stands.
-//
-//   film review <film> --set <name> --scene <id> --at <place> --at <place> [--figure <name>]
-//   film review <film> --set <name> --done <id> --did "<what was done>"
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -123,7 +106,6 @@ export const review = (films: string, rules: ReadonlyArray<CritiqueRule>) =>
           reason: `no set ${input.set} (${manifest}): publish it first (publish_set, or film publish)`,
         });
       const recordFile = path.join(dir, EVIDENCE_FILE);
-      // The record there: none yet is an empty one; one that does not read is refused, never taken as none.
       const before: ReviewRecord = yield* Bool.match(yield* fs.exists(recordFile), {
         onFalse: () => Effect.succeed<ReviewRecord>({ reviews: [] }),
         onTrue: () =>
@@ -169,7 +151,6 @@ export const review = (films: string, rules: ReadonlyArray<CritiqueRule>) =>
             );
         });
 
-      // Answer one finding of the record there.
       if (Option.isSome(input.done)) {
         const did = Option.getOrElse(input.did, () => '');
         const next = yield* Effect.fromResult(answered(before, input.done.value, did)).pipe(

@@ -1,13 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/components/FloatingRootStore.ts,
-// packages/react/src/floating-ui-react/hooks/useFloatingRootContext.ts,
-// packages/react/src/floating-ui-react/hooks/useSyncedFloatingRootContext.ts,
-// packages/react/src/floating-ui-react/types.ts
-//
-// What the interactions (dismiss, list navigation, focus management)
-// read of one popup: whether it is open, its trigger and popup elements,
-// and how to ask it to open or close. Upstream keeps a second store synced
-// from the popup's; here the context reads the popup's own signals, so
-// there is nothing to sync (decided by derive-dont-sync).
 import type { VirtualElement } from '@floating-ui/dom';
 import { isElement } from '@floating-ui/utils/dom';
 import { type Accessor, createSignal, untrack } from 'solid-js';

@@ -1,17 +1,3 @@
-// What the owner sees while the UI faces load, on both devices: nothing
-// he can see moves when they land. Each page is served as the lab renders
-// it, every UI face file held until the case lets it go. While they are
-// held the page's root paints nothing (`faceHold`, `face.ts`): its
-// visibility is hidden, and the pixels of a label's box are the page's
-// background. Once they land, the first frame the root paints is set in
-// Geist and Geist Mono, and every target stands where that frame put it.
-// Layout is read at the moment the root is shown and again once the fonts
-// have settled and two frames have painted, not while the files are held:
-// under `block` the browser lays held text out in a fallback and only skips
-// drawing it, so a held layout is one no one sees, and what must not move is
-// what the first painted frame drew. Held past the cap (`faceHold`'s `capMs`), the
-// root shows in the fallbacks, and the page says so once (`[lab] fonts.late`).
-
 import { Deferred, Effect, Exit } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { pageHref } from '../../src/core/api.ts';
@@ -169,7 +155,6 @@ for (const device of DEVICES) {
         () =>
           Effect.gen(function* () {
             const faceHeld = yield* Deferred.make<void>();
-            // The page's clock stopped from its load: the cap cannot fire while the held page is read.
             const { page } = yield* openServed(served, routes, {
               href,
               viewport: device.viewport,
@@ -179,7 +164,6 @@ for (const device of DEVICES) {
             });
             yield* until(page, ARM);
             yield* evaluates(page, HELD, ['hidden', 'none', true, 0]);
-            // The label's pixels are the background, and the root was still unshown after the look.
             expect(yield* page.ink(LABEL)).toBe(0);
             yield* evaluates(page, SHOWN, 'none');
             yield* Deferred.done(faceHeld, Exit.void);
@@ -215,7 +199,6 @@ for (const device of DEVICES) {
             for (const selector of ready) yield* page.waitFor(selector);
             yield* Deferred.done(faceHeld, Exit.void);
             yield* until(page, EACH_LOADED);
-            // Shown once, in the fallbacks: the faces' landing does not show it again.
             yield* until(page, settled(SHOWN));
             yield* evaluates(page, 'window.__settled', 'late');
             expect(page.logged.filter((line) => line.text.includes('[lab] fonts.late'))).toEqual([

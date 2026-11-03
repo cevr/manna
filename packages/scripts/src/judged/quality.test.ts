@@ -35,7 +35,6 @@ describe('the quality sample', () => {
         expect(new Set(keys).size).toBe(keys.length);
         const random = sample.filter((entry) => entry.stratum === 'random');
         expect(random).toHaveLength(4);
-        // Three findings in all: those drawn at random, then kept ones past them.
         expect(sample.filter((entry) => entry.kept.label === 'history').length).toBe(3);
         expect(sampleOf(KEPT, [historyComment], plan)).toEqual(sample);
         expect(sampleOf(KEPT, [historyComment], { ...plan, seed: 8 })).not.toEqual(sample);

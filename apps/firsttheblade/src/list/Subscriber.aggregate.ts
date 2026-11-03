@@ -152,7 +152,6 @@ export class Subscriber extends Domain.Aggregate('Subscriber', {
         onSome: (leftAt) => leftAt < cmd.issued,
       });
       if (s._tag !== 'Pending' || !fresh || !newest || !afterLeaving) {
-        // decide takes the rejection's class instance; `.make` answers its schema's base type.
         // @effect-diagnostics-next-line newSchemaClass:off
         return new StaleLink();
       }

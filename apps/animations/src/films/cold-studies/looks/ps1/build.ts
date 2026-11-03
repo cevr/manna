@@ -1,9 +1,3 @@
-// Building blocks for the ps1 world: boxes, slabs and posts whose texture
-// repeats by their size (the same texel on screen for a long bench and a
-// small box, as a level designer tiled them), and a mesh placed in one call.
-// A slab is cut into a grid so its affine texture bends a little, not wildly:
-// the console's games tessellated their floors for the same reason.
-
 import {
   BoxGeometry,
   type BufferGeometry,

@@ -1,8 +1,3 @@
-// A package script as the shell reads it: its commands, each its words with
-// their quotes and escapes gone, from its program on. The test budget's
-// strength check (`strength.ts`) reads the flags of each `bun test` command
-// in it, and the reach check (`reach.ts`) the files each one runs.
-
 import { Predicate } from 'effect';
 
 /** A word that sets a variable for the command after it: `CI=1`. */

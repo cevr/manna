@@ -65,13 +65,11 @@ describe('unmatte', () => {
       const [out, back] = unmatte([front, behind], W, H, PAPER);
       expect(Math.abs(at(out!, 3)[3]! - 0.4 * 255)).toBeLessThanOrEqual(2);
       expect(at(back!, 3)[3]).toBe(0);
-      // the ink past the rim's first ink px, held by both, is kept in both
       expect(at(back!, 6)).toEqual(at(behind, 6));
     }
   });
 
   test('clears a pocket of paper the box cuts off from the ground at its corners, to its ink', () => {
-    // columns 0..2 the sheet's paper on the frame's left border, 3 ink, then fill: no ground anywhere
     const cols: ReadonlyArray<Rgb> = [
       ...Array.from({ length: 3 }, (): Rgb => [250, 244, 236]),
       INK,
@@ -86,7 +84,6 @@ describe('unmatte', () => {
   });
 
   test('un-matte keeps paper on a non-corner box edge', () => {
-    // a fill to every edge of the box, and on its bottom edge (x 6..9) a highlight of the sheet's paper inked round above and beside it: no ground, and no corner the paper joins
     const src = new Uint8Array(W * H * 4);
     for (let y = 0; y < H; y++)
       for (let x = 0; x < W; x++) {
@@ -103,7 +100,6 @@ describe('unmatte', () => {
   });
 
   test('un-matte clears paper that touches a frame edge between the corners', () => {
-    // ink to every edge and corner of the box, and a pocket of the paper itself (x 0..1, y 3..4) on its left edge: no ground, and no corner the paper joins
     const src = new Uint8Array(W * H * 4);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) src.set([...INK, 255], (y * W + x) * 4);
     for (const y of [3, 4]) for (const x of [0, 1]) src.set([...PAPER, 255], (y * W + x) * 4);
@@ -127,7 +123,6 @@ describe('unmatte', () => {
   });
 
   test('clears paper a part holds 6 px deep outside its ink, and still un-mattes the ink edge past it', () => {
-    // columns 0..2 ground, 3..8 the sheet's paper (bluer than its flat colour), then the 40 % mix, ink and fill
     const [w, h] = [32, 8];
     const cols: ReadonlyArray<Rgb> = [
       ...Array.from({ length: 6 }, (): Rgb => [250, 244, 236]),
@@ -169,7 +164,6 @@ describe('unmatte', () => {
     const [thin] = unmatte([src], W, H, PAPER, { thin: [0] });
     const [plain] = unmatte([src], W, H, PAPER, { thin: [1] });
     over(at(thin!, 3)).forEach((v, c) => expect(Math.abs(v - OCHRE[c]!)).toBeLessThanOrEqual(1));
-    // the least alpha that solves every channel in 0..255, in closed form: a channel darker than the paper needs (paper − c) / paper of it, a lighter one (c − paper) / (255 − paper); the other form is negative
     const least = Math.ceil(
       255 *
         Math.max(
@@ -181,15 +175,12 @@ describe('unmatte', () => {
     );
     expect(least).toBe(126);
     expect(at(thin!, 3)[3]).toBe(least);
-    // one step less, the blue channel solves below 0
     const solved = (a: number) => OCHRE.map((v, c) => (v * 255 - PAPER[c]! * (255 - a)) / a);
     expect(Math.min(...solved(least - 1))).toBeLessThan(0);
     expect(Math.min(...solved(least))).toBeGreaterThanOrEqual(0);
-    // a part not named thin keeps the line's alpha, its blue clamped: over the paper it goes grey
     expect(over(at(plain!, 3))[2]! - OCHRE[2]).toBeGreaterThan(10);
   });
 
-  // a cool grey cloth px 3.46 luma darker than the paper, which the line to the ink barely reaches
   const GREY: Rgb = [244, 236, 226];
 
   test('keeps a rim px darker than the paper by more than its grain whole, colour and alpha', () => {
@@ -214,11 +205,8 @@ describe('unmatte', () => {
 
 describe('unmatte, a light px the figure encloses', () => {
   const S = 20;
-  // light cloth, ΔE 5.4 from the paper, which the line to the ink does not reach
   const CLOTH: Rgb = [248, 242, 232];
-  // a tan cloth the walk solves to a partial alpha: a wall round what it encloses
   const TAN: Rgb = [200, 180, 150];
-  // paper's own grain, ΔE 1.2 from the paper
   const NEAR: Rgb = [252, 243, 224];
   const MIX = COLUMNS[0]!;
 
@@ -274,7 +262,6 @@ describe('unmatte, a light px the figure encloses', () => {
     const src = figure([...pocket, [9, 9, CLOTH], ...inkColumn(10)]);
     const [out] = unmatte([src], S, S, PAPER);
     for (const [x, y] of [...pocket, [9, 9] as const]) expect(px(out!, x, y)[3]).toBe(0);
-    // the outline solves as it does with no pocket: partly clear, toward the ink
     const [plain] = unmatte([figure(inkColumn(10))], S, S, PAPER);
     expect(px(out!, 3, 9)).toEqual(px(plain!, 3, 9));
     expect(px(out!, 3, 9)[3]).toBeGreaterThan(0);
@@ -302,7 +289,6 @@ describe('unmatte, a light px the figure encloses', () => {
   });
 
   test("clears a light px beside a pocket of the sheet's paper (9 px within ΔE 2) though the rim clears only part of the pocket", () => {
-    // a paper a shade darker than the flat one (ΔE 1.05): the rim solves it near-clear but walks no further through it
     const DIM: Rgb = [247, 237, 217];
     const pocket = [6, 7, 8].flatMap((x) => [8, 9, 10].map((y) => [x, y, DIM] as const));
     const cloth = [8, 9, 10].map((y) => [5, y, CLOTH] as const);
@@ -312,7 +298,6 @@ describe('unmatte, a light px the figure encloses', () => {
 
   test("clears a light px beside a pocket whose paper a band of the sheet's coarser grain (ΔE 3.7) splits in two", () => {
     const DIM: Rgb = [247, 237, 217];
-    // the sheet's grain at its coarsest, ΔE 3.67 from the paper: still its ground
     const GRAIN: Rgb = [239, 230, 212];
     const pocket = [6, 7, 8].flatMap((x) => [
       [x, 8, DIM] as const,
@@ -325,7 +310,6 @@ describe('unmatte, a light px the figure encloses', () => {
     for (const [x, y] of cloth) expect(px(out!, x, y)[3]).toBe(0);
   });
 
-  // lighter than the paper, ΔE 2.35 from it: the sheet's paper past PAPER_CORE, which the line does not reach
   const LIGHT: Rgb = [252, 243, 227];
   const paint = (
     rgba: Uint8Array,
@@ -370,7 +354,6 @@ describe('unmatte, a light px the figure encloses', () => {
   });
 
   test("clears a light slit that runs diagonally from a mouth of the sheet's grain in his outline, its px joined only at corners", () => {
-    // darker than the paper by ΔE 3.67: the sheet's ground, which a 2.25 grain keeps whole
     const GRAIN: Rgb = [239, 230, 212];
     const slit = [
       [8, 4],
@@ -388,7 +371,6 @@ describe('unmatte, a light px the figure encloses', () => {
 
   test("clears light cloth that a hard 1-px diagonal ink stroke parts from a mouth of the sheet's grain, since the open paper steps across the stroke's corners", () => {
     const GRAIN: Rgb = [239, 230, 212];
-    // the stroke (9,4)-(8,5) parts the open px (8,4) from the patch, whose corner (9,5) meets it across the stroke
     const patch = [9, 10, 11].flatMap((x) => [5, 6, 7].map((y) => [x, y, LIGHT] as const));
     const src = figure([
       [8, 3, GRAIN],
@@ -403,7 +385,6 @@ describe('unmatte, a light px the figure encloses', () => {
   });
 
   test("keeps a light gap between his legs whole when a seam past the sheet's ground closes its mouth", () => {
-    // ΔE 6.3 from the paper, darker by more than a 2.25 grain: kept whole, and no ground of the sheet's
     const SEAM: Rgb = [233, 222, 202];
     const src = paint(legs(16), [8, 9], [16, 16], SEAM);
     const [out] = unmatte([src], S, S, PAPER, { grain: 2.25 });
@@ -446,7 +427,6 @@ describe('unmatte, a light px the figure encloses', () => {
   });
 
   test("clears a light gap between his legs whose mouth row is the sheet's grain, which a grain keeps whole", () => {
-    // the sheet's grain at its coarsest (ΔE 3.67): darker than the paper by more than a 2.25 grain, so kept whole
     const GRAIN: Rgb = [239, 230, 212];
     const src = paint(legs(16), [8, 9], [16, 16], GRAIN);
     const [out] = unmatte([src], S, S, PAPER, { grain: 2.25 });
@@ -485,7 +465,6 @@ describe('unmatte, a light px the figure encloses', () => {
   });
 
   test('keeps light cloth whole inside a faint outline (a 15 % ink mix, alpha about 38), which still walls it in', () => {
-    // 15 % of the ink over the paper
     const FAINT: Rgb = [216, 206, 188];
     const src = paint(new Uint8Array(S * S * 4), [3, 4], [3, 16], INK);
     paint(src, [13, 14], [3, 16], INK);

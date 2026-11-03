@@ -1,21 +1,3 @@
-// Declared. It opens on the row `look` left, faith glowing; on "now" the
-// robe lights beside it and the row lifts off the top. Then the page, close
-// on the viewer's figure in their stained garment,
-// and the act's one word card: JUSTIFY, δικαιόω, made righteous. The
-// figure looks down at the card, doubtful (`still`). On `cover` the card
-// goes and the cold open's hollow verdict drifts in over the figure's head,
-// the same label at the same size on screen; on `would` it goes round the
-// face to lie over the stains on their chest, a cover-up if God only said the
-// words, and on `subst` ("But") it goes back round, the stains still there.
-// It never crosses the face. Through Waggoner's quotation (`w`) its letters
-// fill with gold word by word; once the quotation ends it takes its weight,
-// solid, and goes round the face into the chest, its letters kept until it is
-// inside, and the chest glows as it enters. On `voice` the camera eases back and the dawn from `spoke` opens in a panel
-// behind the figure; the same word of light arcs out of its sun and lands on
-// the chest (`speaks`). On `made` its light spreads through the garment from
-// inside: the stains wash out, the nearest first, and the grey paper of the
-// cloth warms toward cream: made righteous, not covered.
-
 import {
   type Place,
   type Pt,
@@ -304,8 +286,6 @@ const DOUBT_AT: Pt = [-10, -100];
 
 export const declared = drawing({
   timeline: {
-    // It opens on the row `look` left, faith glowing; on "now" the robe lights
-    // beside it, and the row lifts off the top as the parchment comes forward.
     robeLit: { mark: 'now', offset: 0.4, dur: 0.7, ease: 'outBack' },
     lift: { mark: 'paul', offset: -0.5, dur: 0.9, ease: 'inCubic' },
     cardIn: { mark: 'justified', offset: -0.3, dur: 0.4, ease: 'outBack' },
@@ -325,12 +305,9 @@ export const declared = drawing({
     bloom: { mark: 'made', offset: -0.6, dur: 1.6, ease: 'outCubic' },
   },
   knobs: {
-    // Where the hollow verdict hangs over the head, and where it lowers over the stains.
     hang: [540, 360],
     patch: [515, 880],
-    // The figure's feet.
     fig: [520, 1240],
-    // Close on the face, with the word card still whole beside it.
     face: [800, 610],
     faceZoom: 1.22,
   },
@@ -342,7 +319,6 @@ export const declared = drawing({
     const doubt = f.at('doubt') * (1 - back);
     const faceZoom = f.knob('faceZoom');
     const FACE = knobCamera(f.knob('face'), faceZoom);
-    // The verdict's scale here: the size it stamps at on screen in the court, under the FACE framing.
     const stampScale = (COURT.zoom ?? 1) / faceZoom;
     const drift = f.at('drift');
     const cover = f.at('patch') * (1 - f.at('unpatch'));
@@ -374,12 +350,10 @@ export const declared = drawing({
       verdict.squash = f.keys('sink', SINK_SQUASH);
       verdict.fill = f.spoken('w', 'voice');
       verdict.shown = drift * (1 - f.keys('sink', SINK_OUT));
-      // Pressed flat over the stains on the last leg in, lifted on the first leg out.
       verdict.laid = leg(cover, 2);
       return verdict;
     };
 
-    // The figure's eyes follow the verdict: up at it, down at the chest under it, and down as it sinks in.
     const landed = f.at('landed');
     const up = drift * (1 - cover) * (1 - sink);
     const down = Math.max(doubt * (1 - drift), cover, sink * (1 - back), landed);
@@ -399,11 +373,9 @@ export const declared = drawing({
         CHEST[1] = fig[1] - 80 * FS;
         const verdict = placeVerdict(fig);
 
-        // The dawn panel, callback to `spoke`.
         const shown = f.at('panel');
         if (shown > 0) panel(ctx, hand, shown);
 
-        // The figure, their stains washed out from the light inside as it spreads.
         at(ctx, { x: fig[0], y: fig[1], scale: FS }, () => {
           const figure: Person = {
             body: clothAt(bloom),
@@ -414,7 +386,6 @@ export const declared = drawing({
             browR: 1 * doubt + 4 * up + 4 * bloom,
             browTilt: 0.45 * doubt + 0.3 * up + 0.1 * bloom,
             mouth: 0.35 * doubt + 0.5 * bloom,
-            // Doubtful, a hand to the chin, over the chest: up on the doubt and back as they look up.
             far: { to: DOUBT_AT, reach: doubt, grip: 'hold' },
             stains: STAIN_SHAPES,
             washed: washStains(WASH, bloom),
@@ -425,7 +396,6 @@ export const declared = drawing({
 
         verdictAt(ctx, hand, verdict);
 
-        // The word, from the panel's sun to the chest.
         flight(
           ctx,
           arc(PANEL_SUN, CHEST, 160),
@@ -434,7 +404,6 @@ export const declared = drawing({
           0.5,
         );
 
-        // The word card: the act's one card.
         const shownCard = f.at('cardIn') * (1 - f.at('cardOut'));
         if (shownCard > 0.01)
           card(ctx, hand, shownCard, [
@@ -445,7 +414,6 @@ export const declared = drawing({
       },
     );
 
-    // The section head's row, where `look` left it, until it lifts away.
     const lift = f.at('lift');
     if (lift < 1) {
       ctx.save();

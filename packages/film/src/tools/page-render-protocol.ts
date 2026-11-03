@@ -1,11 +1,3 @@
-// What the lab and a build's render worker say to each other
-// (`page-render.ts`, `page-render-worker.ts`): the lab asks for a page at a
-// URL, the worker answers its head, its markup piece by piece and its end;
-// a read the render makes of the lab's API goes to the lab, and its answer
-// comes back. Each message names its render (`id`), so one worker renders
-// any number of pages at once. Plain values, as a worker's messages are
-// copied.
-
 import { Data } from 'effect';
 
 /** What the lab sends a render worker. */

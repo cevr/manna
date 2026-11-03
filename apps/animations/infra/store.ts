@@ -50,7 +50,6 @@ export const FilmStore = Effect.gen(function* () {
     name,
     publicAccess: false,
     domains: [],
-    // A throwaway stage's objects are test data; prod's never go with it.
     forceDestroy: !prod,
   }).pipe(Alchemy.RemovalPolicy.retain(prod));
 

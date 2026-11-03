@@ -1,19 +1,6 @@
-// A code sound as data: a tree of nodes, each field named for its unit, that
-// renders to the same samples for the same seed on every host (render.ts).
-// Sources make sound, shapers and the filter change one child, space adds a
-// tail to one, and time places several. The tree is finite: feedback lives only
-// inside a Delay and a Reverb.
-//
-// A parameter is a `Value`, drawn once per render (a constant, a range, a
-// choice), or a `Signal`, a value at every frame (a Value held, a ramp, points,
-// a wobble, an LFO). A field fixed for a render takes a Value, so a shape in
-// time cannot reach it.
-
 import { Predicate, Schema } from 'effect';
 import { NOTE_NAME } from './pitch.ts';
 import { MAX_CODE_SECS } from './units.ts';
-
-// Units, each a field's own.
 
 /** Seconds: a length, an offset, a time constant. */
 const Secs = Schema.Finite.check(Schema.isBetween({ minimum: 0, maximum: MAX_CODE_SECS }));
@@ -69,8 +56,6 @@ const Key: Schema.Codec<Key> = Schema.Struct({
   tonic: Schema.String.check(Schema.isPattern(/^[A-G](#|b)?$/)),
   scale: Schema.Literals(SCALES),
 });
-
-// Parameters.
 
 /** A value drawn evenly between `min` and `max` (`log`: evenly in their logarithm). */
 interface Vary<U> {
@@ -209,8 +194,6 @@ const signal = <U>(unit: Schema.Codec<U>): Schema.Codec<Signal<U>> => {
     Schema.TaggedStruct('Lfo', { ...moved, wave: Schema.Literals(['sine', 'triangle']) }),
   ]);
 };
-
-// Nodes.
 
 /** A name that keeps a node's draws when nodes are put before it: unique in its sound. */
 const StreamName = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9.-]*$/));

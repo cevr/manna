@@ -1,16 +1,3 @@
-// A reader's one write, a beat's delivery marks (`POST …/script/marks`, or a
-// draft's own route), one at a time. A write asked while another is on its
-// way is not sent (none is sent twice); a landed one says so on its beat, a
-// refused one the lab's words, until the next write.
-//
-//   Idle | Written | Failed ─Mark{write}→ Writing{beat, write}
-//   Writing ─Landed→ Written{beat}
-//   Writing ─Refused{reason}→ Failed{beat, reason}
-//   Writing hears no other Mark.
-//
-// Nothing here touches the DOM or the lab: the send is the reader's effect
-// (what a landed write leaves on the page is its own), faked in tests.
-
 import { Effect, Schema } from 'effect';
 import { Event, Machine, State } from 'effect-machine';
 import { MarksPost } from '../../core/api.ts';

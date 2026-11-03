@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * Process TSKe (Treasury of Scripture Knowledge Enhanced) data into JSON.
  *
@@ -22,10 +23,6 @@ const JsonString = Schema.Unknown.pipe(
 );
 const encodeJson = Schema.encodeUnknownEffect(JsonString);
 
-// ============================================================================
-// Types
-// ============================================================================
-
 interface Reference {
   book: number;
   chapter: number;
@@ -36,10 +33,6 @@ interface Reference {
 interface CrossRefEntry {
   refs: Reference[];
 }
-
-// ============================================================================
-// TSKe Book Abbreviation Map (66 books, Protestant canon)
-// ============================================================================
 
 const TSKE_BOOK_MAP = new Map<string, number>([
   ['Gen', 1],
@@ -110,22 +103,11 @@ const TSKE_BOOK_MAP = new Map<string, number>([
   ['Rev', 66],
 ]);
 
-// ============================================================================
-// Pre-compiled Regexes (hoisted outside loop)
-// ============================================================================
-
-// Matches verse lines: "Gen 1:1\t..." — captures book, chapter, verse
 const LINE_HEADER_RE = /^(\d?[A-Za-z]+)\s+(\d+):(\d+)\t/;
 
-// Extracts <u> tag content
 const U_TAG_RE = /<u>([^<]+)<\/u>/g;
 
-// Parses a TSKe ref: "Book_Ch:Vs" or "Book_Ch:Vs-VsEnd"
 const REF_RE = /^(\d?[A-Za-z]+)_(\d+):(\d+)(?:-(\d+))?$/;
-
-// ============================================================================
-// Parser
-// ============================================================================
 
 function parseTskeRef(raw: string): Option.Option<Reference> {
   const m = Option.fromNullishOr(REF_RE.exec(raw));
@@ -175,7 +157,6 @@ function extractRefs(line: string): Reference[] {
 function addRefs(crossRefs: Record<string, CrossRefEntry>, key: string, refs: Reference[]): void {
   if (refs.length === 0) return;
   if (crossRefs[key]) {
-    // Merge refs for the same verse (shouldn't happen but be safe)
     crossRefs[key].refs.push(...refs);
   } else {
     crossRefs[key] = { refs };
@@ -202,7 +183,6 @@ const processTske = Effect.gen(function* () {
   for (const line of lines) {
     if (!line.trim()) continue;
 
-    // Match verse header — skips book intros and chapter overviews
     const headerMatch = LINE_HEADER_RE.exec(line);
     if (!headerMatch) {
       linesSkipped++;
@@ -238,11 +218,9 @@ const processTske = Effect.gen(function* () {
     versesProcessed++;
   }
 
-  // Write output
   const outputPath = path.join(coreAssets, 'cross-refs-tske.json');
   yield* fs.writeFileString(outputPath, yield* encodeJson(crossRefs));
 
-  // Stats
   const verseKeys = Object.keys(crossRefs).length;
   yield* Effect.log(`  Verses processed: ${versesProcessed}`);
   yield* Effect.log(`  Verse keys with refs: ${verseKeys}`);

@@ -1,10 +1,3 @@
-/**
- * Style C, "Warm band", as data: what plays each part, how loud, where, and
- * the room, the sampler and the master around them. The owner picked it by
- * ear from the listening pilot (2026-10-20), so every number here is the
- * pilot's. Any change to it changes every hymn's resume key and is a new set.
- */
-
 /** A part of the hymn (`voices.ts`): S the melody, A and T the inner voices, B the bass. */
 export type Part = 'S' | 'A' | 'T' | 'B';
 

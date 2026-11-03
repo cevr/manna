@@ -82,8 +82,6 @@ export const useScrub = (
   settle: Duration.Input = settleFor,
 ) => {
   const [hand, setHand] = useState<Hand>(Hand.Free());
-  // The hand as the last event left it: events that come before the bar draws
-  // again (a press, its move and its release in one batch) read this.
   const now = useRef(hand);
   const [sent, setSent] = useState(Option.none<number>());
   useEffect(() => {
@@ -106,7 +104,6 @@ export const useScrub = (
     Pressed: () => resting,
     Free: () => resting,
   });
-  // The resting place as the last event left it: a send moves it before the bar draws again.
   const rest = useRef(resting);
   rest.current = resting;
   /**

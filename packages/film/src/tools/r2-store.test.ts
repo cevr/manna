@@ -1,12 +1,5 @@
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { Mac } from 'effect/crypto';
-// The private store's contract, held by both stores: the folder store on a
-// temporary folder, and the R2 store against a fake S3 bucket in memory (an
-// HttpClient that checks every request's SigV4 signature and payload hash as
-// R2 would, and answers HEAD, GET with a range, PUT and ListObjectsV2). Then
-// the store as an app declares it: an R2 bucket with its key from the
-// environment, and the names of the variables missing when it is not set.
-// Synthetic bytes only; nothing leaves the process.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -50,12 +43,6 @@ const fromAmzDate = (stamp: string) =>
 
 const xml = (text: string) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;');
 
-/**
- * A private bucket in memory, as R2's S3 API answers: a request whose
- * signature is not the bucket's key's (403 SignatureDoesNotMatch), or whose
- * body is not its signed hash (400 XAmzContentSHA256Mismatch), is refused.
- * Lists come two keys a page, so paging is exercised.
- */
 /** What the fake bucket answers: a status, a body (empty for none), headers. */
 interface Answer {
   readonly status: number;
@@ -189,7 +176,6 @@ const fakeR2 = (objects: Map<string, Held>, secret: S3Credentials) =>
     const crypto = yield* Mac.Mac;
     return HttpClient.make((request, url) =>
       Effect.gen(function* () {
-        // A file is sent as a stream of its length, never read whole first.
         let body: Uint8Array = new Uint8Array();
         if (request.body._tag === 'Uint8Array') return yield* Effect.die('a body held whole');
         if (request.body._tag === 'Stream') {
@@ -226,13 +212,11 @@ const contract = (store: MediaStoreService, dir: string) =>
     yield* store.put(key, source);
     expect(yield* store.hashOf(key)).toEqual(Option.some(sha256Hex(bytes)));
 
-    // Whole, into a folder that does not exist yet, and nothing half-written left.
     const back = `${dir}/back/again.mp4`;
     yield* store.get(key, back);
     expect(yield* fs.readFile(back)).toEqual(bytes);
     expect(yield* fs.readDirectory(`${dir}/back`)).toEqual(['again.mp4']);
 
-    // A range, as a player asks for one, and the whole when none is given.
     const ranged = Option.getOrThrow(yield* store.read(key, Option.some({ start: 10, end: 17 })));
     expect({ size: ranged.size, start: ranged.start, end: ranged.end }).toEqual({
       size: bytes.length,
@@ -246,7 +230,6 @@ const contract = (store: MediaStoreService, dir: string) =>
     const past = yield* Effect.flip(store.read(key, Option.some({ start: 999, end: 1000 })));
     expect(past._tag).toBe('StoreFailed');
 
-    // Listed under its prefix, sorted, across pages.
     for (const name of ['a.jpg', 'b.jpg', 'c.jpg']) {
       yield* fs.writeFileString(`${dir}/${name}`, name);
       yield* store.put(`renders/sheets/${name}`, `${dir}/${name}`);
@@ -263,7 +246,6 @@ const contract = (store: MediaStoreService, dir: string) =>
     expect(listed[0]?.size).toBe(bytes.length);
     expect((yield* store.list('scores/')).map((o) => o.key)).toEqual(['scores/f/score.mp3']);
 
-    // A put of other bytes under the same key replaces them whole.
     yield* fs.writeFileString(source, 'the second cut');
     yield* store.put(key, source);
     yield* store.get(key, back);
@@ -326,7 +308,6 @@ describe.concurrent('the private store', () => {
       );
       expect(store.where).toBe(`r2://${BUCKET}`);
       yield* contract(store, dir);
-      // The hash rides with the object, so `hashOf` never downloads it.
       const held = objects.get('scores/f/score.mp3');
       expect(held?.sha256).toBe(sha256Hex(text.encode('score')));
     }).pipe(Effect.scoped, Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerMac))),
@@ -353,7 +334,6 @@ describe.concurrent('the private store', () => {
       expect(refused.message).toContain('R2 answered 403 (SignatureDoesNotMatch)');
       expect(refused.message).not.toContain('not the key');
 
-      // An object whose bytes are not the hash it carries is never written into place.
       objects.set('files/y.flac', {
         bytes: text.encode('half a fi'),
         sha256: sha256Hex(text.encode('half a file')),

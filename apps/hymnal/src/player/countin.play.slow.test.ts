@@ -325,8 +325,6 @@ const composed = (built: Built) =>
     registry.mount(player.remote);
     for (const key of Object.values(player)) if (Atom.isAtom(key)) registry.mount<unknown>(key);
     const state = () => registry.get(player.state);
-    // A player with no `countIn` atom (base) reads as no beat, so its behaviour cases fail on
-    // their places and beats rather than at the build.
     const counting = Option.filter(Option.some(player.countIn), (it) => Atom.isAtom(it));
     const beatNow = () =>
       Option.match(counting, {
@@ -676,7 +674,6 @@ describe('during a count-in (hymn 116, Sound off, Intro on)', () => {
         const changed = t0 + 1.5 * counted.beatMs;
         yield* app.tempo(LONG, 150);
         const from = app.beats.length;
-        // Half of beat 1 is left: at 150 % it takes a third of a beat.
         const at = (k: number) => changed + ((k - 1.5) * counted.beatMs) / 1.5;
         const around = new Array<string>();
         for (let k = 2; k <= counted.beats; k++) {

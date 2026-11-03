@@ -95,8 +95,6 @@ export default class Site extends Cloudflare.Worker<Site>()(
   props,
   Effect.gen(function* () {
     const env = yield* Cloudflare.WorkerEnvironment;
-    // The binding is read per request: the environment fills in when the
-    // Worker runs, not when this module is bundled.
     const assets = Assets.of({
       serve: (request) =>
         Cloudflare.fromCloudflareFetcher(env['ASSETS']).fetch(request).pipe(Effect.orDie),
@@ -104,8 +102,6 @@ export default class Site extends Cloudflare.Worker<Site>()(
     const queue = yield* MailQueue;
     const mail = yield* Effect.context<Exclude<MailServices, Assets> | Mailer>();
 
-    // A batch fails only when a letter could not be sent now; the queue
-    // then tries the whole batch again, and what was sent is passed over.
     yield* Cloudflare.Queues.consumeQueueMessages(queue, DELIVERY, (messages) =>
       Effect.gen(function* () {
         const deliveries = [];

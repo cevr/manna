@@ -84,8 +84,6 @@ describe('the phones’ hymn list, changed while mounted', () => {
       expect(topics.labels.length).toBeGreaterThan(0);
       expect(hymns.live).toEqual(hymns.fresh);
       expect(topics.live).toEqual(topics.fresh);
-      // The change shows: no hymn row on screen still draws as it did before
-      // it (a topic row reads only its height).
       expect(hymns.live.filter((row, i) => Bun.deepEquals(row, hymns.before[i]))).toEqual([]);
     },
   );
@@ -100,7 +98,6 @@ describe('the home list’s pinned row under the field shown over its top', () =
     readonly y: number;
     readonly topic: number;
   }> = JSON.parse(covered.stdout || '{}').cover ?? [];
-  // The script's forty hymns in two topics, under a header 100 pt tall.
   const fixture = Array.from({ length: 40 }, (_, i) => ({
     number: i + 1,
     topic: `Topic ${Math.floor(i / 20) + 1}`,
@@ -121,7 +118,6 @@ describe('the home list’s pinned row under the field shown over its top', () =
   });
 
   it('draws the pin’s line at the cover’s bottom, its topic and push as the pin’s rule gives them there', () => {
-    // At 990 the second topic's row is 26 pt under the bare top: the cover alone moves the pin onto it.
     expect(steps.map((step) => step.line)).toEqual([0, 26, 52]);
     for (const step of steps) {
       const pinned = pinnedAt(starts, step.scroll, 36, step.cover);
@@ -148,9 +144,7 @@ describe('the phones’ hymn list, at its end', () => {
   });
 
   it('puts the space after the rows, which keep their fixed sizes', () => {
-    // Forty hymn rows of 44 pt under two topic rows of 36 pt; three results of 44 pt.
     expect(ends.map((end) => end.frame)).toEqual([[1832], [1832], [132]]);
-    // Every result is drawn, and the last one ends where the rows' frame does.
     expect(ends[2]?.lastDrawn).toBe(132);
   });
 
@@ -173,7 +167,6 @@ describe('a search’s results on a phone', () => {
   });
 
   it('scale both lines of a found row with the reader’s text size', () => {
-    // At 150%: 33 + 22 for a plain row, 33 + 27 + 16 for a found one.
     expect(large.map((row) => row.height)).toEqual(['55px', '76px', '55px']);
   });
 });

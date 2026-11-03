@@ -78,8 +78,6 @@ it.scopedLive('answers queries over the socket exactly as the in-process service
     const inProcess = yield* encodeResult(yield* direct.query(QUERY));
     expect(overSocket).toEqual(inProcess);
 
-    // Retirement: acknowledged over the wire, observed as the fiber's outcome,
-    // and the socket file is gone — no residue for the next preflight.
     expect(yield* shutdownSearchDaemon(socketPath)).toBe(true);
     expect(yield* Fiber.join(daemon)).toBe('retired');
     expect(yield* fs.exists(socketPath)).toBe(false);
@@ -92,8 +90,6 @@ it.scopedLive('retires itself after the idle window and removes crash residue fi
     const dir = yield* fs.makeTempDirectoryScoped();
     const socketPath = `${dir}/daemon.sock`;
 
-    // Crash residue: a file nothing answers on. The preflight must clear it
-    // rather than concluding a daemon lives here.
     yield* fs.writeFileString(socketPath, 'stale');
 
     const daemon = yield* Effect.forkChild(
@@ -118,8 +114,6 @@ it.scopedLive('a second daemon on the same socket stands down', () =>
     );
     yield* awaitDaemon(socketPath);
 
-    // The second sees a live daemon and exits without serving — and without
-    // tearing down the first's socket on its way out.
     expect(yield* runSearchDaemon({ socketPath, idleMillis: 60_000, pid: 2 })).toBe(
       'already-running',
     );

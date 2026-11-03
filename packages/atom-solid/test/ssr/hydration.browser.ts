@@ -1,12 +1,6 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noGlobals, effect/noNodeBuiltinImport, effect/noTestLifecycleHooks, effect/noThrowStatement, effect/noNewError -- Playwright's
  * browser protocol and Bun's server are Promise based, and the browser and
  * server live for the file, as Playwright's own fixtures would. */
-// The SSR proof in a browser: the server renders a place from the request
-// (no hash), Chromium hydrates it with the hash in its URL, and the page
-// must hydrate without a mismatch and then show the hash.
-//
-// Run with `bun run test:ssr`; it needs Playwright's Chromium, so the gate
-// leaves it out (the server half runs in `server.test.ts`).
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -67,10 +61,8 @@ describe('hydrating a place', () => {
     });
 
     const response = await page.goto(`${server.url.origin}/films/f/lab/s?cue=c#t=2`);
-    // What the server sent: the hash at its default.
     expect(await response?.text()).toMatch(/<i [^>]*id="t"[^>]*>0<\/i>/);
 
-    // After hydration: the hash the browser holds.
     await page
       .locator('b#t')
       .waitFor({ timeout: 5000 })
@@ -102,18 +94,12 @@ describe('adopting the data the server read', () => {
     const before = serverReads;
 
     const response = await page.goto(`${server.url.origin}/answer`);
-    // The server read the answer once and sent it rendered.
     expect(await response?.text()).toMatch(/<p [^>]*id="answer"[^>]*>answered 42<\/p>/);
     expect(serverReads - before).toBe(1);
 
-    // Hydrated: the page is live, and still shows the server's answer. A
-    // request the hydration made would be on its way by now: the atom's read
-    // starts as its hook subscribes, in the hydration pass itself.
     await page.waitForFunction(() => Reflect.get(globalThis, '_$HY')?.done === true);
     expect(await page.locator('#answer').textContent()).toBe('answered 42');
-    // No request for what the server already read.
     expect(asked).toEqual([]);
-    // The adopted atom is live: read again, it asks the browser's way.
     await page.locator('#again').click();
     await page.locator('#answer', { hasText: 'answered from the browser' }).waitFor({
       timeout: 5000,

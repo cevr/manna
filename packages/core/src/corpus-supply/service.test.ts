@@ -172,9 +172,6 @@ describe('CorpusSupply', () => {
     }).pipe(Effect.provide(makeLayer({ needsSync: true }))),
   );
 
-  // Declared beside the test rather than inside its generator so the layer that
-  // counts through them is built at the test's own boundary, where the provide
-  // belongs. The assertions still read them.
   let catalogCalls = 0;
   let acquireCalls = 0;
 
@@ -261,10 +258,6 @@ describe('CorpusSupply', () => {
 
   it.effect('keeps a verified active artifact when no source can be acquired', () =>
     Effect.gen(function* () {
-      // The stale-fallback state (§3.5): the installed file passed digest and
-      // semantic verification before activation, so an offline host keeps
-      // serving it. Reporting an error here made hosts warn about a corpus that
-      // was working perfectly.
       const supply = yield* CorpusSupply;
       const receipt = yield* supply.ensure(
         CorpusSupplyInput.make({ target: Target.file('bible') }),
@@ -277,8 +270,6 @@ describe('CorpusSupply', () => {
 
   it.effect('still fails when nothing is installed and no source can be acquired', () =>
     Effect.gen(function* () {
-      // Bible is fail-closed at startup. With no active artifact there is
-      // nothing to fall back to, so the acquisition failure must still surface.
       const supply = yield* CorpusSupply;
       const failure = yield* Effect.flip(
         supply.ensure(CorpusSupplyInput.make({ target: Target.file('bible') })),

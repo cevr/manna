@@ -1,10 +1,3 @@
-// The series lead's committed part sheets (`sheets/<view>/`, made by `film
-// concept parts`): each part holds its view's own bytes where his cut gives
-// it the pixel, the parts recompose the view byte for byte, every other
-// pixel a part holds is paint that an opaque part in front hides at rest,
-// each moving part hides some, and the command lays the same files again
-// from the committed okra answers (`--check`).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { cutParts } from '@manna/film/tools';
 import { Effect, FileSystem, Result, Schema, Stream } from 'effect';

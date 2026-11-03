@@ -1,31 +1,4 @@
 #!/usr/bin/env bun
-// The dead-export check: an export of `packages/*/src` that no other module
-// of the workspace takes (a module's own use does not count, and neither does
-// a test's or a fixture's) is deleted from its module, not kept "in case". A
-// package's entries (what its `exports`, `main` and `bin` name) are swept like
-// any module: every package is private, so an entry's export has no user
-// beyond the workspace. A re-export takes only what its own name's users take,
-// and a take counts only from a module the roots reach: the apps, the files a
-// bin or a `package.json` script runs, and the few named in `workspace.ts`.
-// That leaves a cycle nothing reaches dead. A default export is swept like any
-// other.
-//
-// The exports found before the check existed are the debt
-// (`dead-exports/debt.txt`, one `file name` per line): read only by their
-// own module's tests, or by nobody. The debt only shrinks: a new dead export
-// fails, a debt line whose export has since been used or removed fails, and so
-// does a debt line the base revision lacks, so a dead export cannot come in
-// with its own line. The base is `DEAD_EXPORTS_BASE` when CI names one (the
-// push's pre-push SHA, or the pull request's base SHA), else the merge-base
-// with the newer of main and origin/main. With no base to read, it fails; a
-// base from before this check existed holds nothing (its adoption).
-//
-//   bun run dead-exports    # prints `dead-export <file> <name>` per new one,
-//                           # `stale-debt <file> <name>` per settled one,
-//                           # `grown-debt <line>` per line the base lacks and
-//                           # `base-unavailable <why>`; exits 1 on any
-//
-// Part of `bun run test:slow` (`test-slow.sh`), by hand and before a deploy.
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -42,8 +15,6 @@ const main = Effect.gen(function* () {
   const root = path.resolve(import.meta.dir, '../../..');
   const debtFile = 'packages/scripts/src/dead-exports/debt.txt';
   const debt = debtLines(yield* fs.readFileString(path.join(root, debtFile)));
-  // The debt only shrinks: a line the base revision lacks is debt this change grew.
-  // CI names the base (the push's pre-push SHA, or the pull request's base SHA).
   const named = yield* Config.option(Config.String('DEAD_EXPORTS_BASE'));
   const base = yield* grownOver(
     root,

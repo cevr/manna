@@ -1,8 +1,3 @@
-// `film media push` into a folder store under a temp folder: two renders with
-// one name in two film folders are kept apart, each under its path below
-// FILMS_OUT, and a key the store holds with other bytes is refused, not
-// replaced. Synthetic files only; nothing leaves the machine.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -71,7 +66,6 @@ describe('film media push', () => {
         expect(yield* held('a/contact.jpg')).toBe('the contact sheet of a');
         expect(yield* held('b/contact.jpg')).toBe('the contact sheet of b');
 
-        // Both named into one folder: the second would replace the first, so it is refused.
         yield* run(out, store, ['push', '--under', 'kept', sheet('a')]);
         const taken = yield* run(out, store, ['push', '--under', 'kept', sheet('b')]);
         expect(keyTaken(taken)).toBe(true);

@@ -3,17 +3,6 @@ import { describe, expect, test } from 'bun:test';
 import film from '../../../package.json' with { type: 'json' };
 import turbo from '../../../turbo.json' with { type: 'json' };
 
-// The unit tests run as three parts, each a script and a task of this
-// workspace's `turbo.json`: `test:lab` (`src/lab` and the lab tools of
-// `src/tools`), `test:tools` (the rest of `src/tools`) and `test:engine`
-// (everything else under `src` and `lint`). The lab tools are written in
-// three places: the files `test:lab` names, the files `test:tools` ignores,
-// and the test files `test:tools`'s turbo inputs leave out. A name in the
-// first and not the second runs twice; one in the second and not the first
-// runs in no part; one `test:tools` runs that its inputs leave out is a
-// cached pass that an edit of that file never misses. The reach check
-// (`packages/scripts`, `test-budget/reach.ts`) catches the first two at
-// `test:budget`; this holds all three lists to one another at the gate.
 const scripts: Readonly<Record<string, string>> = film.scripts;
 const words = (script: string) => (scripts[script] ?? '').split(/\s+/);
 

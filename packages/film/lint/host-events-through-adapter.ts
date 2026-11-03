@@ -1,36 +1,3 @@
-// `film/host-events-through-adapter`: a page hears the host's navigation, key
-// and drag events through its adapter, never by its own listener on the
-// window or the document, and a press is held and ended by `Pointer.press`
-// alone, whatever it was pressed on. A listener of its own skips what the
-// adapter holds once: the typing test (a key pressed into a field is the
-// field's), the drag's every ending (`pointercancel` and
-// `lostpointercapture` as well as `pointerup`) and its one owner per press,
-// the URL's batching and history policy.
-//
-// Refused, on the host (`window`, `document`, `globalThis`, `self`, a const
-// bound to one, `document.defaultView`, a hop such as `window.top`, and the
-// global object itself, which a bare `addEventListener(…)` or
-// `onkeydown = …` reaches): a listener for one of those events, added by
-// `addEventListener`, by `EventTarget.prototype.addEventListener.call(…)`
-// (or `.apply`), or set as its handler property (`window.onpopstate = …`);
-// and a listener whose event the rule cannot read (a parameter, a computed
-// string), since it may be any of them. On any receiver: a listener for an
-// event that ends a press (`pointerup`, `pointercancel`,
-// `lostpointercapture`), in any of those forms or as a JSX handler
-// (`onPointerUp`, `on:pointerup`), and a pointer's capture taken or let go
-// (`setPointerCapture`, `releasePointerCapture`, called or `.call`ed). An
-// event is read when it is written as a string, as a template with no
-// values, as a const bound to one, or as the variable of a loop over an
-// array of them. A property ban cannot see the argument, so the config's
-// restricted names cannot; a `resize` or `pagehide` listener stays
-// legitimate, and so do an element's own press (`pointerdown`), hover and
-// moves. The `allow` option names events a file may still hear directly
-// (the key and drag events in `@manna/url-state` and egw-search, which have
-// no film adapters). The adapters (`browser/*-browser.ts`) say at each of
-// their own lines that they are the one. A source pattern is an early
-// warning: the e2e harness checks the same in the browser, whatever the
-// spelling (`lab/fixtures/host-reach.ts`).
-
 import { Effect, Option, Predicate, Schema } from 'effect';
 import {
   Diagnostic,
@@ -298,7 +265,6 @@ const callRefusal = (call: ESTree.CallExpression, allowed: ReadonlySet<string>) 
     if (CAPTURES.has(method) && Option.isSome(receiver))
       return Option.some(`${who(method)} holds a press outside its owner: ${DRAG}.`);
     if (method !== 'addEventListener') return Option.none<string>();
-    // A bare `addEventListener` is the global object's, unless the file declares its own.
     if (Option.isNone(receiver) && !(yield* isGlobal(call.callee, method)))
       return Option.none<string>();
     return yield* listenRefusal(

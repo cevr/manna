@@ -1,6 +1,3 @@
-// The look pass's small frames, drawn through the same `draw` the renderer
-// encodes with, on the same canvas.
-
 import { offscreen } from '../canvas/paper.ts';
 import type { ProbeSink } from '../canvas/probe.ts';
 import type { FaceMark, HandMark } from '../core/export-handle.ts';

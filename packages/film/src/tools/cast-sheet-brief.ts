@@ -1,22 +1,3 @@
-// A cast sheet's brief (`film concept brief`): the prompt one try of a cast
-// member's sheet is painted from on the image route. It is the house block
-// made a sheet's, a note on what each reference image is for, the member's
-// look, the sheet's layout, and the rules of its kind. The house block is the
-// one every concept and Board prompt opens with
-// (`apps/animations/docs/ref/house-look.txt`); four of its phrases are swapped
-// so it asks for a model sheet with no place behind, no beams and no walls. A
-// swap whose phrase the block no longer says is `HouseBlockMoved`, so a
-// changed house text stops the brief before a try is spent rather than
-// painting a scene. A layout or a look whose clause says a hand floats is
-// `HandFloats`: the brief's own rule puts every hand at the end of an arm in
-// its sleeve, and a prompt that asks both ways spends a try on a hand
-// `sleeveReach` then flags. How tall a figure stands, in its own heads, is
-// the member's (`statureOf`: the cast's canon unless its record names its
-// own), and a smaller figure a pose sheet draws (a child) is said with its
-// share of the grown height; the hair's paragraph is said only of a member
-// whose hair shows, and the beard's parting from it only of one who has a beard
-// too.
-
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import type { SheetKind, ViewFigure } from '../core/cast-sheet.ts';
 
@@ -139,21 +120,6 @@ const smallerFigures = (figures: ReadonlyArray<ViewFigure>): ReadonlyArray<strin
   });
 };
 
-// What a sheet says, by its kind. The arm in its sleeve is the owner's
-// (2026-10-18, the look's v5: "I actually like the style when they have
-// sleeves and like arms, kind of like we have with Jesus and a lot of the
-// characters so far in the cast. Let's make that kind of a standing role for
-// the concept"; on the farmer: "He lifts his hand up, but it just looks weird
-// without the sleeves. So let's add the sleeves.");
-// the hair and the beard answer his note on Christ's render ("Jesus's render
-// confuses parts of his hair with his beard"), as the kept concepts part them
-// (court.you and court-12: one brown, a dark band of its deep shade, about
-// 0.13 to 0.18 in value, between the beard and each lock); the skin below the
-// neck answers a try that read "no sleeve" as bare shoulders. A turnaround
-// holds every view to one height on one ground line; a pose sheet holds the
-// head and the hands, never the height (a pose sits, kneels or lies); a heads
-// sheet draws no hands and no soles.
-
 const PAPER_GROUND =
   'This is a model sheet for the animators, not a scene: a plain warm cream paper ground with a soft paper grain and no place behind';
 
@@ -185,7 +151,6 @@ const sheetRules = (
   kind: SheetKind,
   { heads, figures, hair, beard }: SheetFigures,
 ): ReadonlyArray<string> => {
-  // The parting of the beard from the hair is said only of a member who has both.
   const hairBeard = (hair && beard && [HAIR_BEARD]) || [];
   const tall = headsWords(heads);
   const smaller = figures.length > 0;

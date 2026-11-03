@@ -1,20 +1,3 @@
-// A cut view's skeleton (`core/puppet.ts`), read in the kept view's pixels and
-// moved into its part sheet's frame (`frames.ts`). A standing figure's lean
-// runs from the hip to the base of the neck, the neck and head above it, and
-// each arm's shoulder, elbow and wrist on the joints the member's cut records,
-// the wrist at the cuff and its tip at the circle hand's middle. Each sleeve
-// takes its shoulder's flap of the member's body part (that part's own pixels
-// beside its cap, in a band about its pivot and outside its inner edge),
-// resting on the lean. Bone names are the shared control names; the member
-// names his parts, which bones each lies on, the flaps' part and the band
-// (`Body`). A view that does not draw an arm (a profile) names no part for
-// it: that arm has no bones and no flap, and its view gives no joints for it.
-// Every arm a view draws is a stroke limb (`core/limb.ts`), declared on its
-// shoulder, elbow and wrist, its sleeve ending at the wrist pivot unless the
-// view gives its cuff; a view keeps an arm painted only by naming it, by his
-// own side, with why (`painted`). An arm the measure refuses stays painted
-// too, and its puppet says why (`Puppet.refused`).
-
 import type { Skeleton } from '@manna/film/core';
 import { Match, Option } from 'effect';
 import type { Pt } from './rules.ts';

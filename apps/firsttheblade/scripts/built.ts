@@ -11,8 +11,6 @@
  * The stamp sits beside the server build, not in `dist/`, so it is not
  * served, and turbo caches and restores it with the build's outputs.
  */
-import { createHash } from 'node:crypto';
-
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 
@@ -59,7 +57,7 @@ const filesOf = Effect.fn('Built.files')(function* (app: string, entry: string) 
 const hashOf = Effect.fn('Built.hash')(function* (app: string, files: ReadonlyArray<string>) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const hash = createHash('sha256');
+  const hash = new Bun.CryptoHasher('sha256');
   yield* Effect.forEach(files, (file) =>
     Effect.map(fs.readFile(path.join(app, file)), (bytes) => {
       hash.update(`${file}\0`);

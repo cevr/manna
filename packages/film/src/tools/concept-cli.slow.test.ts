@@ -1,10 +1,3 @@
-// `film concept brief` reads the app's own house block wherever it runs,
-// and names a sheet's layout once: a turnaround's by its pronoun, a poses or
-// heads sheet's by its file and its kind, or a member's by its record.
-// `film concept measure` holds a heads sheet's heights on the level heads it
-// is told of. Over a member's record both read its sizes: its own heads, its
-// hair, and a smaller figure at its share of the grown height.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -51,12 +44,10 @@ const over = () =>
   Layer.mergeAll(
     ContentStore.layer,
     FilmFolder.layer('/films'),
-    // `concept build` asks through the asks, its drawings published as a review set; no command run here makes one
     Layer.mock(AskStore)({ dir: '/nonexistent/asks', file: (id) => `/nonexistent/asks/${id}` }),
     Layer.mock(Review)({ roots: [] }),
     Layer.mock(ProductionStore)({}),
     Layer.mock(RenderCatalogue)({}),
-    // a clip's eval decodes through the media service; no command run here reaches a clip
     Layer.mock(Media)({}),
   ).pipe(Layer.provideMerge(files()));
 
@@ -304,7 +295,6 @@ describe('film concept cast', () => {
           ({ exit }) => failureTag(exit),
         ),
       );
-      // The flag's schema refuses the value, and the CLI shows the command's help with why.
       expect(tags).toEqual(['ShowHelp', 'ShowHelp']);
     }).pipe(Effect.provide(over())),
   );

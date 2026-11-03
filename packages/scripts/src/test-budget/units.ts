@@ -1,20 +1,3 @@
-// A workspace's unit-test tasks: its `test`, or the parts its `test` depends
-// on, that `turbo run test` (the gate's) runs with a command, by turbo's own
-// dry run. Most workspaces have
-// one, `<ws>#test`. One whose tests are cut into parts (`@manna/film`,
-// `@manna/animations`) gives its `test` no command and has it depend on its
-// parts (film's `test:lab`, `test:tools`, `test:engine`; animations'
-// `test:app`, `test:films`, `test:library`; each a script and a task of its
-// `turbo.json`); its unit-test tasks are those parts. Each task's name is the
-// package script it runs.
-//
-// The test budget (`test-budget.ts`) times each unit-test task alone, the
-// strength rule (`strength.test.ts`) reads each one's script, the reach check
-// (`reach.ts`) credits a test file to the unit-test task that takes it and
-// fails one that two take, and the read check (`test-reads.ts`) holds each
-// task's reads to its own inputs. All four read this one list, so none of
-// them leaves a part out by looking for `#test`.
-
 import { Effect, Schema } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';

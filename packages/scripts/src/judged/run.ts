@@ -1,17 +1,3 @@
-// The judged rules' runner. Every item of a run the cache does not answer,
-// of every rule, goes to the model in ONE request (a classify per item, each
-// with its own rule's instructions and labels, keys c0…cN), split only past
-// `bound` items, `budget` estimated input tokens or `perQuestion` for the
-// state and its longest question, the parts sent eight at a time. A part refused for a rate limit or an overloaded host is sent again
-// while its deadline allows (`retrying`). A run never fails on the model: no
-// key, no credits, a request past its deadline, a rate limit or an
-// overloaded host past its retries, an HTTP error or an answer that misses
-// items skips the items it could not judge, and says so on one line per rule;
-// a failure that says the same of every part sends none of the parts after
-// it. Nor on its store:
-// answers it cannot keep are asked again next run. A finding is a warning, or
-// an error when its rule's severity is `error`.
-
 import { Clock, Console, Duration, Effect, Option, Predicate, Ref, Result, Schema } from 'effect';
 import { type AiError, Decision, DecisionModel } from 'effect/ai';
 
@@ -473,8 +459,6 @@ export const judge = Effect.fn('judged.judge')(function* <E>(
     return yield* Effect.die(`textsOf read ${texts.length} texts of ${fresh.length} items`);
   const questions = fresh.map((item, at) => ({ item, rule: item.rule, text: texts[at] ?? '' }));
   const asked = yield* ask(questions, judging);
-  // Answers that cannot be kept are asked again next run, and their findings
-  // are the runner's to print: the plugin cannot see them.
   const answered = new Map(
     questions.flatMap((question) =>
       Option.toArray(
@@ -486,9 +470,6 @@ export const judge = Effect.fn('judged.judge')(function* <E>(
     ),
   );
   const keeping = { fresh: answered, read: new Set(items.map((item) => item.key)), day };
-  // The store as kept: an answer another run kept or dropped for a key
-  // meanwhile is what this run reports, as the store does. None when the
-  // write failed: then the store's answers are those it held when read.
   let store: Option.Option<ReadonlyMap<string, Verdict>> = Option.some(cache);
   if (changes(cache, keeping))
     store = yield* keepAnswers(judging.storeFile, keeping).pipe(
@@ -551,8 +532,6 @@ export const judge = Effect.fn('judged.judge')(function* <E>(
       skip: Option.flatMap(asked.reason, (reason) =>
         Option.liftPredicate({ reason, items: left.length }, () => left.length > 0),
       ),
-      // A write that failed renewed no answer's day, so the store may drop one
-      // this run read before a findings file of today's expires: every file is unkept.
       unkept: new Set(
         own
           .filter((item) => !renewed || !Option.exists(answerOf(item), ({ kept }) => kept))

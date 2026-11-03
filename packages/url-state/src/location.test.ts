@@ -41,7 +41,6 @@ describe('memory Location', () => {
       yield* location.back;
       expect(yield* location.current).toEqual({ ...first, navigation: 'traverse' });
       expect(yield* hrefs).toEqual({ hrefs: ['/a', '/b'], index: 0 });
-      // The memory layer's Back at the first entry stays there.
       yield* location.back;
       expect((yield* location.current).href).toBe('/a');
 
@@ -81,7 +80,6 @@ describe('memory Location', () => {
 
   it.effect('keys are the epoch milliseconds and a count, as stored entries hold them', () =>
     Effect.gen(function* () {
-      // The test clock reads 0 when the layer is built.
       const location = yield* Location;
       expect((yield* location.current).key).toBe('0-1');
       yield* TestClock.setTime(1_700_000_000_000);

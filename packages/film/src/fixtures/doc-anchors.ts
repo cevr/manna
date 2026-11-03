@@ -1,10 +1,3 @@
-// The docs' anchor reader: which docs teach the code, each read as GitHub
-// shows it (Bun's CommonMark and GFM parser), and each path a doc writes in
-// backticks (with the symbols after it) or as a link's target. One reader for
-// the docs test (`src/docs.slow.test.ts`: every anchor names what the tree has) and
-// for a review request (`fixtures/doc-lines.ts`: every doc line that names a file the
-// diff changed), so both read a doc's anchors the same way.
-
 import { Boolean as Bool, Effect, FileSystem, Option, Path } from 'effect';
 import { Glob } from 'bun';
 
@@ -75,7 +68,6 @@ const CODE = '\u0000';
 /** A code span as the parser's output writes it: in a run of backticks longer than any it holds (`` `xs[0](y)` ``, ``` `` a`b `` ```). */
 const spanOf = (text: string) => {
   const fence = '`'.repeat(Math.max(0, ...matches(text, /`+/g).map((m) => m[0].length)) + 1);
-  // A span that starts or ends with a backtick is written with a space inside its run.
   const pad = ' '.repeat(Number(text.startsWith('`') || text.endsWith('`')));
   return `${fence}${pad}${text}${pad}${fence}`;
 };
@@ -183,7 +175,6 @@ const spannedIn = (markdown: Markdown): ReadonlyArray<Anchor> =>
             path,
             line: path !== written.replace(/\/$/, ''),
             receipt: group(m, 3) !== '',
-            // A directory's list (`tools/` `lab*.ts`, `api-server.ts`) names files, not symbols.
             symbols: matches(group(m, 2), /`([^`]+)`/g)
               .map(firstGroup)
               .filter(
@@ -319,7 +310,6 @@ export const docLines = (docs: ReadonlyArray<Doc>, changed: ReadonlySet<string>)
     docs.flatMap((doc) => {
       const lines = doc.text.split('\n');
       const named = new Map<number, Set<string>>();
-      // A receipt names the tree as it was: a change since leaves it true.
       for (const anchor of anchorsIn(doc).filter((a) => !a.receipt)) {
         const { froms, written } = Bool.match(anchor.link, {
           onTrue: () => ({
@@ -334,7 +324,6 @@ export const docLines = (docs: ReadonlyArray<Doc>, changed: ReadonlySet<string>)
         const files = froms.filter((file) => changed.has(file));
         if (files.length === 0) continue;
         lines.forEach((text, i) => {
-          // Another repo's row, and the same path written as a receipt, name no file of this tree as it stands.
           if (!text.includes(written) || ANOTHER_REPO.test(text)) return;
           if (RECEIPT.test(text.slice(text.indexOf(written) + written.length))) return;
           const on = named.get(i) ?? new Set<string>();

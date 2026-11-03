@@ -1,13 +1,3 @@
-// What a Board panel paints on a canvas the film's size: a picture panel's
-// try (`paintImage`: the image, covering the frame as the film's 16:9
-// picture crops it), and a card or a verse panel set by the engine's own
-// card code (`fullCard`, `verse`, in the film's card style: the words
-// exactly as spoken, CRAFT rule 1; never lettering an image route drew).
-// The Board's viewer sets its cards with it.
-// A Board render (`boardFilm`) draws the whole film so: each frame the
-// shots `core/board-render.ts` decides, a picture moving across its hold, a
-// card set by the film's own code.
-
 import { Array as Arr, Boolean as Bool, Data, Option, Predicate, Result } from 'effect';
 import { type CardWord, cardWords, fullCard, verse } from './card.ts';
 import type { Film, RenderOptions } from './film.ts';
@@ -55,8 +45,6 @@ const paintText = (
   return Option.match(Option.fromUndefinedOr(film.look.card), {
     onNone: () => Result.fail(`${film.title} sets no card style (FilmSpec.card)`),
     onSome: (look) => {
-      // A panel held from the beat's start sets its card from the line's first word: `start` is the board's, not a mark
-      // the line says (a line that does mark a `{start}` keeps its own).
       const voice = Bool.match(mark === PANEL_START && !p.voice.marks.has(PANEL_START), {
         onTrue: () => ({
           ...p.voice,
@@ -172,8 +160,6 @@ export const boardFilm = (
   /** The film's own frame at `T`, its captions off. */
   const filmFrame = (ctx: CanvasRenderingContext2D, T: number, opts: RenderOptions) =>
     film.render(ctx, T, { ...opts, captions: false });
-  /** Where a dissolve's incoming shot is drawn before it is laid over the outgoing one. */
-  // Scratch only, made once and painted over whole each use: a frame's output depends on T alone.
   let over = Option.none<HTMLCanvasElement>();
   const overlay = (): HTMLCanvasElement =>
     Option.getOrElse(over, () => {
@@ -233,7 +219,6 @@ export const boardFilm = (
                 ),
             },
           );
-          // A card the engine cannot set fails the frame, and the render with it: never a card left blank.
           Result.match(set, {
             onFailure: (why) => {
               throw new Error(`board panel ${id}: ${why}`);

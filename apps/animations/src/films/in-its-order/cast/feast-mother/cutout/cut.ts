@@ -1,21 +1,3 @@
-// The feast mother's kept views cut into parts (`cutParts`, @manna/film's part
-// sheet): each part her own pixels, front to back, so that a part can move while
-// every pixel at rest stays the sheet's. Parts are named from her own side:
-// `armRight` is her right arm, on the viewer's left from in front and on the
-// viewer's right from behind. Her white veil covers her head and both shoulders,
-// so each sleeve is the pixels on its side of its inner edge below the veil's
-// hem (`VEIL`, every row above it the veil's), down to her round hand's lowest
-// ink; the veil itself stays with her torso. A sleeve's inner edge is a soft
-// crease the sheet paints without ink, read off crops of the view. Her head is
-// the rows above her chin, her robe (and the feet and ground line under it)
-// every row from her hip down that the arms leave, and her torso the rest. Each
-// view names the parts a pose moves, and the words okra repaints what they hide
-// by (`HIDDEN`, read by `film concept parts`, which writes `sheets/<view>/`).
-// The lines are read in the kept view's pixels; the shared cut table
-// (`library/cutout/table.ts`) lays them in each view's part sheet frame. Data:
-// the rules and the table are the library's. Her poses, holding the baby, are
-// cut by each arm's own outline instead (see `POSES_1`).
-
 import type { HiddenEntry, PartCut, PartRule, SheetClean } from '@manna/film/tools';
 import { Record as Records } from 'effect';
 import { type PaperRim, clearPaperRim } from '../../../../../library/cutout/clean.ts';
@@ -53,7 +35,6 @@ const VEIL = {
       [-1, 233],
     ],
   },
-  // her veil runs lower on her far side (the viewer's right), round the top of her left sleeve
   threeQuarterLeft: {
     polygon: [
       [-1, -1],
@@ -70,7 +51,6 @@ const VEIL = {
       [-1, 233],
     ],
   },
-  // from behind it hangs lowest at her back's middle
   back: {
     polygon: [
       [-1, -1],
@@ -89,7 +69,6 @@ const VEIL = {
       [-1, 240],
     ],
   },
-  // her veil runs lower on her far side's front (the viewer's left), its hem's corner below her right sleeve's top
   threeQuarterRight: {
     polygon: [
       [-1, -1],
@@ -172,7 +151,6 @@ const SLEEVES = {
     },
   },
   back: {
-    // her right sleeve, on the viewer's right
     right: {
       inner: [
         [166, 235],
@@ -202,7 +180,6 @@ const SLEEVES = {
       side: 'left',
     },
   },
-  // turned to the viewer's right: her near right sleeve's inner edge is the crease's far side, her far left sleeve's the crease before it
   threeQuarterRight: {
     right: {
       inner: [
@@ -359,7 +336,6 @@ const FRONT: PartCut = {
       unless: [...frontLeft.unless, VEIL.front],
       pivot: JOINTS.front.shoulderLeft,
     },
-    // above the chin, the veil's top with it
     { name: 'head', take: [box(-1, -1, FAR, 167)] },
     { name: 'robe', take: [box(-1, HIP, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
@@ -400,7 +376,6 @@ const BACK: PartCut = {
       unless: [...backLeft.unless, VEIL.back],
       pivot: JOINTS.back.shoulderLeft,
     },
-    // the veil's rows above where her chin is from in front
     { name: 'head', take: [box(-1, -1, FAR, 170)] },
     { name: 'robe', take: [box(-1, HIP, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
@@ -421,20 +396,16 @@ const THREE_QUARTER_RIGHT: PartCut = {
       unless: [...farLeft.unless, VEIL.threeQuarterRight],
       pivot: JOINTS.threeQuarterRight.shoulderLeft,
     },
-    // above her chin's underside ink
     { name: 'head', take: [box(-1, -1, FAR, 176)] },
     { name: 'robe', take: [box(-1, HIP, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-// In profile her veil hangs behind her, off the shoulder, so no veil bounds her
-// one sleeve: its back edge does, and her body's front before its front crease.
 const PROFILE_LEFT: PartCut = {
   parts: [
     {
       name: 'armLeft',
-      // her round hand, whose ink crosses the sleeve's back edge
       take: [...plLeft.take, { disc: { c: [87, 375], r: 26 } }],
       unless: [...plLeft.unless, PL_FRONT],
       pivot: JOINTS.profileLeft.shoulderLeft,
@@ -462,17 +433,8 @@ const PROFILE_RIGHT: PartCut = {
 /** Her hip's row in each pose (below her hands' reach, standing or seated): the robe is every row below it that her arms, the baby and the stool leave. */
 const POSE_HIP = 445;
 
-// Her poses hold the baby. Each arm is its sleeve's own outline and its round
-// hand (a disc), the hand in front taken first; the baby (his head and his
-// white swaddle) and his cup are still parts on her lean, cut along the ink
-// they share with her face, so neither face is cut; the poses-2 stool is a
-// still part on the root, its two ends where they leave her robe. No pose sets
-// `open`: with none the un-matte seeds from the corners only, so the stool that
-// leaves the box on the left and the right stays.
-
 const POSES_1: PartCut = {
   parts: [
-    // her right arm round the baby, its hand under his swaddle
     {
       name: 'armRight',
       take: [
@@ -497,7 +459,6 @@ const POSES_1: PartCut = {
       ],
       pivot: JOINTS['poses-1'].shoulderRight,
     },
-    // her left arm, its hand holding the cup at his mouth
     {
       name: 'armLeft',
       take: [
@@ -541,7 +502,6 @@ const POSES_1: PartCut = {
         },
       ],
     },
-    // his head, its right edge the ink it shares with her jaw, and his swaddle
     {
       name: 'baby',
       take: [
@@ -581,7 +541,6 @@ const POSES_1: PartCut = {
         },
       ],
     },
-    // above her chin, the veil's top with it
     { name: 'head', take: [box(-1, -1, FAR, 238)] },
     { name: 'robe', take: [box(-1, POSE_HIP, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
@@ -590,7 +549,6 @@ const POSES_1: PartCut = {
 
 const POSES_2: PartCut = {
   parts: [
-    // her right arm out at her side, its hand under the baby
     {
       name: 'armRight',
       take: [
@@ -641,7 +599,6 @@ const POSES_2: PartCut = {
       ],
       pivot: JOINTS['poses-2'].shoulderLeft,
     },
-    // his head, its left edge the ink it shares with her jaw, and his swaddle
     {
       name: 'baby',
       take: [
@@ -680,7 +637,6 @@ const POSES_2: PartCut = {
       ],
     },
     { name: 'head', take: [box(-1, -1, FAR, 240)] },
-    // the stool's two ends, each from her robe's edge out past the box
     {
       name: 'stool',
       take: [
@@ -722,7 +678,6 @@ const POSES_2: PartCut = {
 
 const POSES_3: PartCut = {
   parts: [
-    // her right hand under the baby, in front of her left
     {
       name: 'armRight',
       take: [
@@ -753,7 +708,6 @@ const POSES_3: PartCut = {
       ],
       pivot: JOINTS['poses-3'].shoulderRight,
     },
-    // her left arm round the baby, its hand on his swaddle
     {
       name: 'armLeft',
       take: [
@@ -777,7 +731,6 @@ const POSES_3: PartCut = {
       ],
       pivot: JOINTS['poses-3'].shoulderLeft,
     },
-    // his head, its left edge the ink it shares with her cheek and jaw, and his swaddle
     {
       name: 'baby',
       take: [
@@ -914,15 +867,19 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
 });
 
 /** How far the clear ground's flood reaches through paper-coloured pixels, 8-steps: her band runs 1 to 5 px wide, and where it meets the fading edge of her ground shadow up to 19, so one pass clears it all; a gap in her ink could let it into her cream cloth no farther. */
-const RIM_BAND = 24;
+const RIM_BAND_PX_PAST_HER_19_AT_THE_SHADOW_EDGE = 24;
 
 /** A pixel is paper-coloured within this ΔE76 of the view's paper: her band lies about 5 from it, her ink's blend 20 or more. */
-const RIM_NEAR = 12;
+const RIM_NEAR_DE76_BETWEEN_HER_RIM_5_AND_INK_20 = 12;
 
 /** Each view's paper rim, as her part sheets and her drawings beside them (`sheets-clean.ts`) clear it. */
 export const PAPER_RIMS = Records.map(
   { ...TURNAROUND_PAPERS, ...POSES_PAPERS },
-  (paper): PaperRim => ({ paper, band: RIM_BAND, near: RIM_NEAR }),
+  (paper): PaperRim => ({
+    paper,
+    band: RIM_BAND_PX_PAST_HER_19_AT_THE_SHADOW_EDGE,
+    near: RIM_NEAR_DE76_BETWEEN_HER_RIM_5_AND_INK_20,
+  }),
 );
 
 /** What each view's laid part sheet runs before it is written (`film concept parts`): every view clears the pale paper band her paint keeps just outside her ink (251,243,226 at the median on poses-1, against its paper 253,240,215), which her un-matte would read as her cream cloth and draw as a white torn rim. */

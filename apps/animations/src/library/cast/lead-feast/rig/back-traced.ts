@@ -1,9 +1,3 @@
-// lead-feast, his back: his curls over the whole of his head, his ears either side; the mantle over his left shoulder (screen left from behind) and down across his back; his teal left sleeve on screen left, his cream right sleeve on screen right; his heels in their sandals, traced from the kept turnaround sheet
-// (../cast-sheet/kept/turnaround.png, box 761, 194, 1018, 857) in the sheet's own pixels.
-// Written by `bun run concept trace src/library/cast/lead-feast/rig/trace.ts --view back`
-// (from apps/animations); trace it again rather than edit it. Points only: the
-// film's papers paint each part. Pure.
-
 import type { Pt } from '@manna/film/style';
 
 /** The view's box in the sheet, as its record keeps it. */

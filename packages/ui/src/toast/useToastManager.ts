@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/toast/useToastManager.ts
-//
-// The toasts of the enclosing `Toast.Provider`. `toasts` is a live getter:
-// read it in JSX or a tracking scope. Upstream's `add` and `close` members
-// are left out: toasts are added and closed through a `createToastManager`.
 import { createMemo } from 'solid-js';
 
 import type { ToastObject } from './types.ts';

@@ -1,27 +1,3 @@
-// Within, drawn to its Board (within.command, within.write, within.bed,
-// within.arose). It opens on the page as `robe` closes: the accused beside the
-// row of three icons, the white cloth glowing. On `power` his eyes go to the
-// green blade, and on "power" it pulses while the open hand and the cloth dim.
-// On `remember`, a breath of the temple court in woman.told's layout: Christ
-// sends the woman out on "go,"; then the accused beside the two tablets,
-// asking on "mocking", shaking his head on "No.". On `command` the tablets
-// part and the seed drops out of their light, opens and swells. On `write` the
-// law settles into his chest, its ten lines lit there, and Hebrews 8:10 turns
-// in over him and floods into the one-word card "hearts". On `bed`, the house
-// in Capernaum in roof's layout: the man on his bed strains up and falls back,
-// twice. On `we` the accused on the page in the same pose, a strip of the page
-// over his feet holding them fast. On `arose` the room again: on "arise," the
-// man sits up, stands with his bed rolled in his arms and walks out through
-// the crowd; then the accused, the strip tearing off his feet on "man", steps
-// on "arose." into the morning's gold, his face on the frame's upper third.
-// The narration's words are on the verse's page and the card alone.
-//
-// Held, each a blocked paper mass at the cast band's height (its place, its
-// gross motion, its pose's outline at most; no face, no cloth, plain circle
-// hands): the woman of John 8, the man of Capernaum and his bed, the four at
-// the hole in the roof, the crowd in the house. The accused and Christ are
-// their rigs as they stand.
-
 import {
   type Box,
   type Camera,
@@ -99,8 +75,6 @@ import {
 import { spoke } from './spoke.ts';
 import { LAST_FRAME, onHim, word } from './word.ts';
 
-// ─── the page as `robe` leaves it ────────────────────────────────────────────
-
 const L = LAST_FRAME;
 
 /** His breath's period and its offset, as word, seed, spoke and look breathe him (`living`). */
@@ -137,8 +111,6 @@ const CLOTH_GLOW = 0.35;
 const ICON_SHADE = { cast: 0.5, foot: 0.8 } as const;
 /** How the open hand and the cloth dim (look's): the page's paper laid over each, how much at its middle, and how far it reaches against the icon's size. */
 const DIM = { alpha: 0.55, reach: 0.95 } as const;
-
-// ─── the lead ────────────────────────────────────────────────────────────────
 
 /** Where he looks at us, from his feet. */
 const US: Pt = [LEAD_KNOBS.gazeX, LEAD_KNOBS.gazeY];
@@ -188,16 +160,11 @@ const SEED: OpenSeedPose = {
 };
 
 const timeline = {
-  // `power`: his eyes go to the blade; on "power" it pulses, its light swelling, as the open hand
-  // and the cloth dim, and he is glad; the row's framing creeps on.
   toBlade: { mark: 'power', dur: 0.5, track: 'lead' },
   pulse: { mark: 'power', word: 'power', dur: 1.4, track: 'icons' },
   dim: { mark: 'power', word: 'power', dur: 0.9, ease: 'inOutSine', track: 'icons' },
   glad: { mark: 'power', word: 'power', dur: 0.5, track: 'lead' },
   onRow: { mark: 'power', until: 'remember', ease: 'linear', track: 'camera' },
-  // `remember`: a breath's callback to `woman` in its layout (woman.told), Christ facing her in the
-  // temple court; on "go," His hand lifts toward the way out and she turns and walks out of frame
-  // screen-left, upright, His eyes going after her.
   toCourt: { mark: 'remember', dur: 0, track: 'shot' },
   onCourt: {
     mark: 'remember',
@@ -208,19 +175,11 @@ const timeline = {
   send: { mark: 'remember', word: 'go', offset: -0.25, dur: 1.5, track: 'christ' },
   turn: { mark: 'remember', word: 'go', dur: 0.5, track: 'woman' },
   walk: { mark: 'remember', word: 'go', offset: 0.25, dur: 1.9, ease: 'inSine', track: 'woman' },
-  // Then him on the page beside the two tablets as `word` stands them: on "mocking" his eyes come
-  // from them to us, asking; on "No." he shakes his head, at ease.
   toLaw: { mark: 'remember', word: 'Is', offset: -0.35, dur: 0, track: 'shot' },
   onLaw: { after: 'toLaw', until: 'command', ease: 'linear', track: 'camera' },
   ask: { mark: 'remember', word: 'mocking', offset: -0.25, dur: 0.5, track: 'lead' },
-  // "No." comes after "her?" (a pin to "No" would land on "sin no more").
   no: { mark: 'remember', word: 'her', offset: 0.96, dur: 0.8, ease: 'linear', track: 'lead' },
   easy: { mark: 'remember', word: 'her', offset: 0.96, dur: 0.6, track: 'lead' },
-  // `command` (within.command): the framing opens to the Board's; the tablets part on "Every
-  // command", light pouring out between them, and his eyes go to them; on "seed," a gold seed
-  // drops out of their light and hangs between them, his eyes following it down; on "inside" it
-  // opens along its seam, the blade folded in it, and on "His own life" the light in its heart
-  // wakes and the blade swells, and he is glad.
   toCommand: { mark: 'command', dur: 1.2, ease: 'inOutSine', track: 'camera' },
   onCommand: { after: 'toCommand', until: 'write', ease: 'linear', track: 'camera' },
   part: { mark: 'command', dur: 1, track: 'law' },
@@ -233,13 +192,7 @@ const timeline = {
   wonder: { mark: 'command', word: 'inside', dur: 0.6, track: 'lead' },
   life: { mark: 'command', word: 'His', dur: 0.9, ease: 'outCubic', track: 'seed' },
   alive: { mark: 'command', word: 'life', offset: -0.2, dur: 0.5, track: 'lead' },
-  // `write`: the tablets close beside each other again and, with the seed, shrink and settle into
-  // his chest, the camera going with them to him (`settle`); a warm light wakes where his heart
-  // is, where the stain was, and the ten gold lines glow through his tunic, brighter on "into";
-  // his eyes go down to it, and on "mind," up to us, warmed.
   settle: { mark: 'write', dur: 1.3, ease: 'inOutSine', track: 'law' },
-  // As they settle: their shadows leave the page, the seed goes into the light, and their stone
-  // goes, leaving their lines.
   unshadow: { mark: 'write', dur: 0.52, ease: 'inOutSine', track: 'law' },
   seedIn: { mark: 'write', offset: 0.61, dur: 0.36, ease: 'inOutSine', track: 'law' },
   bare: { mark: 'write', offset: 0.87, dur: 0.43, ease: 'inOutSine', track: 'law' },
@@ -254,9 +207,6 @@ const timeline = {
   heart: { mark: 'write', offset: 0.8, dur: 0.9, track: 'heart' },
   lines: { mark: 'write', word: 'into', dur: 0.8, track: 'heart' },
   warmed: { mark: 'write', word: 'mind', dur: 0.6, track: 'lead' },
-  // Then Hebrews 8:10 on its page (within.write), turned in over him as `cold` turns Job's in: the
-  // phrase lit as far as it has been said, the highlight sweeping on with "and write them in their
-  // hearts:"; on "hearts" it floods out into the card, "hearts" large in gold, until `bed`.
   page: { mark: 'write', word: 'and', offset: -0.45, dur: 0.4, ease: 'outCubic', track: 'verse' },
   sweep: {
     mark: 'write',
@@ -267,10 +217,6 @@ const timeline = {
   },
   flood: { mark: 'write', word: 'hearts', offset: 0.45, dur: 0.45, ends: true, track: 'verse' },
   card: { mark: 'write', word: 'hearts', offset: 0.45, until: 'bed', track: 'card' },
-  // `bed`: the callback to `roof` in its layout (within.bed, roof.saw): the house in Capernaum, the
-  // four at the hole in its roof, the crowd round, Christ near; the man on his bed strains up
-  // after "bed", his hands pressing at it, and falls back on "walk,"; again on "however", and
-  // back on "wished.". The camera creeps in.
   toRoom: { mark: 'bed', dur: 0, track: 'shot' },
   onRoom: { mark: 'bed', until: { cue: 'toWe', edge: 'start' }, ease: 'linear', track: 'camera' },
   strain: {
@@ -291,10 +237,6 @@ const timeline = {
     track: 'man',
   },
   back: { mark: 'bed', word: 'wished', dur: 0.45, ease: 'inCubic', track: 'man' },
-  // `we`: him on the page in the man's pose, the page over his feet holding them fast, looking
-  // down at them; he strains on "stop", leaning into it, his hands pressing, trembling, and falls
-  // back late in "sinning,"; again on "however", and spent on "wish.", his head bowed. The
-  // camera creeps in.
   toWe: { mark: 'we', dur: 0, track: 'shot' },
   onWe: { mark: 'we', until: 'arose', ease: 'linear', track: 'camera' },
   pull: {
@@ -315,9 +257,6 @@ const timeline = {
     track: 'lead',
   },
   spent: { mark: 'we', word: 'wish', dur: 0.5, ease: 'inCubic', track: 'lead' },
-  // `arose`: the room again (roof.arise, roof.went), the ropes let go; on "said" Christ's hand
-  // lifts toward the man; on "arise," he sits up, then stands with his bed gathered up in his
-  // arms and walks out through the crowd to the left, His hand going down.
   toRise: { mark: 'arose', dur: 0, track: 'shot' },
   onRise: {
     mark: 'arose',
@@ -334,9 +273,6 @@ const timeline = {
     ease: 'linear',
     track: 'man',
   },
-  // Then him on the page as `we` left him: on "man" the page over his feet tears and flies off,
-  // his eyes on them, wondering; on "arose." he steps on, his eyes lifted ahead, warmed, the
-  // morning warming, the camera going with him to within.arose's framing.
   toFree: { mark: 'arose', word: 'man', offset: -0.08, dur: 0, track: 'shot' },
   onFree: { after: 'toFree', dur: 1, ease: 'inOutSine', track: 'camera' },
   tear: { mark: 'arose', word: 'man', offset: 0.05, dur: 0.5, ease: 'outCubic', track: 'cuffs' },
@@ -346,43 +282,29 @@ const timeline = {
 } as const;
 
 const knobs = {
-  // The row's framing crept on toward the blade as it is named, the blade's light clear of the
-  // frame's right edge.
   power: [968, 606],
   powerZoom: 1.58,
-  // The temple court in woman.told's layout, a step wider so the held woman reads whole: Christ
-  // and her full length, the stones between them, a column at each edge; and how far it creeps in.
   court: [768, 560],
   courtZoom: 1.25,
   courtCreep: 1.04,
-  // Him and the parted tablets with the seed between them, as within.command frames them; and where
-  // it creeps in to as the seed opens, toward the seed, him still whole at the frame's left.
   command: [764, 617],
   commandZoom: 1.51,
   seedIn: [810, 640],
   seedInZoom: 1.64,
-  // Him alone with the law in his chest, the page empty beside him; and how far it creeps in.
   heart: [505, 640],
   heartZoom: 1.85,
   heartCreep: 1.04,
-  // The house in Capernaum as within.bed frames it, the four at the hole whole at the top; and
-  // how far it creeps in.
   room: [768, 470],
   roomZoom: 1.25,
   roomCreep: 1.05,
-  // Him held fast on the page, whole, on the frame's left third, his feet and the page over them low
-  // in the frame, the room ahead of him on the right empty; and how far it creeps in.
   we: [680, 660],
   weZoom: 1.7,
   weCreep: 1.05,
-  // Him a step on, as within.arose frames him: his face on the frame's upper third, room ahead.
   free: [672, 616],
   freeZoom: 1.87,
 } as const;
 
 type WithinFrame = Frame<keyof typeof timeline & string, typeof knobs, typeof LANDING_RIGS>;
-
-// ─── him on the page ─────────────────────────────────────────────────────────
 
 /** `p` on the page, from his feet. */
 const fromFeet = (p: Pt): Pt => [p[0] - L.lead[0], p[1] - L.lead[1]];
@@ -477,8 +399,6 @@ const onPage = (f: WithinFrame, cam: Camera, draw: () => void, morning = 0) => {
   camera(ctx, cam, w, h, draw);
 };
 
-// ─── the row ─────────────────────────────────────────────────────────────────
-
 /** The shadows the row lays on the page: each icon's cast down and to the right, and its foot's. */
 const rowShadows = (f: WithinFrame) => {
   const { ctx } = f;
@@ -561,8 +481,6 @@ const rowShot = (f: WithinFrame) => {
   );
 };
 
-// ─── the temple court (`remember`) ───────────────────────────────────────────
-
 /** Where the court's planes line up while the camera sits on it: the panel's middle. */
 const COURT_REST: Pt = [768, 512];
 /** The air the court's far planes fade into, the sky's pale gold low down, and how thick it lies. */
@@ -583,13 +501,6 @@ const KIND: Expression = { ...EASE, browY: -0.8, browTilt: 0.1, mouth: 3 };
 /** Christ's numbers (scratch: every one He moves is rewritten each frame). */
 const CN: Record<keyof typeof CHRIST_KNOBS, number> = { ...CHRIST_KNOBS };
 
-/**
- * The woman of John 8, held (a blocked mass at the band's height, no face,
- * no cloth): where she stands facing Him, her turn to Him and away, her
- * head lifted to Him and level as she goes; where her feet are once she is
- * gone past the frame's left edge, how many steps she takes, how high each
- * lifts her and how far she leans into the walk.
- */
 /** Where in the breath she is against the crowd, radians: she breathes on her own. */
 const WOMAN_BREATH = 1.02;
 const WOMAN = {
@@ -657,7 +568,6 @@ const christInCourt = (f: WithinFrame, her: CamperPose) => {
   const { ctx } = f;
   const { x, y, scale } = CHRIST_AT;
   acted(CN, KIND, []);
-  // His eyes on her face, going after her as she walks out.
   const [fx, fy] = womanFace(her);
   CN.gazeX = (fx - x) / scale;
   CN.gazeY = (fy - y) / scale;
@@ -708,8 +618,6 @@ const courtShot = (f: WithinFrame) => {
     { rest: COURT_REST, haze: TEMPLE_AIR.haze, thickness: TEMPLE_AIR.thickness, drift: 0 },
   );
 };
-
-// ─── the page and the law (`remember`, `command`) ────────────────────────────
 
 /** One tablet as `word` leaves them beside him, its lines lit (scratch: rewritten for each tablet). */
 const ONE: TabletsPose = tabletsAt(L.tablets[0], L.tablets[1]);
@@ -906,7 +814,6 @@ const tablet = (f: WithinFrame, x: number, swell: number, stone: number) => {
   ONE.stone = stone;
   ONE.lit.fill(1);
   ONE.swell = swell;
-  // The pair's near tablet alone: clipped short of where the far one stands beside it.
   ctx.save();
   ctx.beginPath();
   ctx.rect(x - 12, y - TABLET.h - 60, TABLET.w + 12 + TABLET.gap / 2, TABLET.h + 120);
@@ -971,12 +878,10 @@ const heartGlow = (f: WithinFrame) => {
   const r = HEART_LIGHT.r * (1 + wave / 2);
   const [hx, hy] = HEART_AT;
   ctx.save();
-  // Held inside his tunic, clear of its ink and of his head: the light is in him.
   ctx.beginPath();
   TUNIC_INSIDE.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
   ctx.closePath();
   ctx.clip();
-  // Its warmth on the cloth, flattened so it fades out before his chin, then its glow.
   ctx.save();
   ctx.globalAlpha *= clamp(HEART_LIGHT.warmth * amount);
   ctx.translate(hx, hy);
@@ -1063,8 +968,6 @@ const lawShot = (f: WithinFrame) => {
   );
 };
 
-// ─── Hebrews 8:10 and its card (`write`) ─────────────────────────────────────
-
 /** Hebrews 8:10 on its page (within.write), verbatim, and the phrase the card floods from. */
 const VERSE = {
   ref: 'Hebrews 8:10',
@@ -1129,8 +1032,6 @@ const verseShot = (f: WithinFrame): Box | void => {
 const heartsOnly = (words: ReadonlyArray<CardWord>): ReadonlyArray<CardWord> =>
   words.filter((w) => w.payoff).map((w) => ({ ...w, text: w.text.replace(/[.,:;!?”"]+$/, '') }));
 
-// ─── the house in Capernaum (`bed`) ──────────────────────────────────────────
-
 /** Where the room's planes line up while the camera sits on it: the room's framing. */
 const ROOM_REST: Pt = [768, 470];
 /**
@@ -1163,7 +1064,6 @@ const MAN = {
     [652, 792],
   ],
   tremble: { rise: 0.02, rate: 11 },
-  // Sat up on "arise," (roof.arise): his trunk upright from his hip, his hands beside it on the bed.
   sat: 1.42,
   satHands: [
     [668, 786],
@@ -1444,8 +1344,6 @@ const roomShot = (f: WithinFrame) => {
   );
 };
 
-// ─── held fast, and free (`we`, `arose`) ─────────────────────────────────────
-
 /** His strain at its top (`we`): how far he leans into it and tips his head with it, radians; how far and how fast he trembles. */
 const STRAIN = { lean: 0.17, tilt: 0.08, tremble: 0.014, rate: 9 } as const;
 /** His hands pressing down as he strains (the man's on his bed), his arms straight and out from his sides, from his feet. */
@@ -1571,14 +1469,10 @@ const pageLight = (f: WithinFrame): Light => {
   };
 };
 
-// ─── the scene ───────────────────────────────────────────────────────────────
-
 export const within = drawing({
   timeline,
   knobs,
-  // The court's rigs and the landing's: him and his hands, and Christ and His.
   rigs: LANDING_RIGS,
-  // The page's own light, as word, seed, spoke and look leave it, lifted off the verse's page.
   light: pageLight,
   draw: (f): Box | void => {
     if (f.at('toFree') >= 1) return fastShot(f);

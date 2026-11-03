@@ -73,20 +73,14 @@ function Pager({ shown }: { readonly shown: HymnText }) {
   const from = useAtomValue(pagesFrom);
   const [pages] = useState(() => pageSource(from, shown.number, everyHymn));
   const taken = useAtomSet(pagesFrom);
-  // The list a row handed over is this screen's alone: a hymn opened next by
-  // a link pages through every hymn.
   useEffect(() => taken(Option.none()), [taken]);
-  // The About sheet's `More like this` reads the meaning table: read it once
-  // the page has opened, so the sheet's first slide does not.
   useEffect(() => readMeaningSoon(), []);
   const { width } = useWindowDimensions();
   const [height, setHeight] = useState(Option.none<number>());
-  // A layout of the same height keeps the height as it was, so no page draws again for it.
   const onLayout = (event: LayoutChangeEvent) => {
     const measured = event.nativeEvent.layout.height;
     setHeight((was) => (Option.exists(was, (h) => h === measured) && was) || Option.some(measured));
   };
-  // The pages draw again only when the screen's size changes: a settle sets the route, and every page keeps its frame.
   const extraData = useMemo(() => ({ width, height }), [width, height]);
   const router = useRouter();
   const settle = (offset: number) =>
@@ -99,7 +93,6 @@ function Pager({ shown }: { readonly shown: HymnText }) {
     );
   const onMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) =>
     settle(event.nativeEvent.contentOffset.x);
-  // A drag let go on a page's edge glides no further, so no glide's end tells it.
   const onScrollEndDrag = (event: NativeSyntheticEvent<NativeScrollEvent>) =>
     Option.match(
       Option.liftPredicate(event.nativeEvent.contentOffset.x, (x) => onPage(x, width)),
@@ -118,7 +111,6 @@ function Pager({ shown }: { readonly shown: HymnText }) {
           getFixedItemSize={() => width}
           estimatedItemSize={width}
           initialScrollIndex={pages.index}
-          // A page holds its own scroll and follow, so no page's view is reused for another hymn.
           recycleItems={false}
           drawDistance={width}
           extraData={extraData}

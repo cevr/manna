@@ -1,7 +1,3 @@
-// The lab's one shell (design language §4), around an ask page: the header
-// (the page's name, Go to… ⌘K, the view menu ⋯) over the page. The tab's
-// title names the page and its film.
-
 import { type JSX, Show, useHead } from '@solidjs/web';
 import { Option } from 'effect';
 import type { Accessor } from 'solid-js';
@@ -61,15 +57,12 @@ interface PageShellProps {
 
 /** The lab's shell around a page. */
 export const PageShell = (props: PageShellProps) => {
-  // The tab's title is the shell's, printed once for the server's head and the browser's
-  // (`useHead`): the served page is titled before it hydrates.
   useHead(() => ({
     tag: 'title',
     props: {
       children: pageTitle([props.crumb()], props.film()),
     },
   }));
-  // Each names its key as bound now, as the viewer's keyboard writes it.
   const keys = hubKeys(props.hub);
   return (
     <div class="sh" data-film={pressed(Option.isSome(props.film()))}>
@@ -77,7 +70,6 @@ export const PageShell = (props: PageShellProps) => {
         <Show when={Option.getOrUndefined(props.crumb())}>
           {(text) => (
             <span class="sh-crumb" data-role="crumb">
-              {/* Its words in a box of their own: a flex item's text takes the ellipsis, the row does not. */}
               <span class="sh-crumb-text">{text()}</span>
             </span>
           )}

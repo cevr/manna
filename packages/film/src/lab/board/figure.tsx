@@ -1,7 +1,3 @@
-// A Board panel as a page shows it (an ask's Board block): its thumb (its
-// try's image, or what a card or a verse says), the words said while it
-// holds, its mark, and its tries, the one kept and its open notes.
-
 import { type JSX, Show } from '@solidjs/web';
 import { Boolean as Bool, Option, Predicate } from 'effect';
 import type { ParentProps } from 'solid-js';

@@ -1,8 +1,3 @@
-// A decoded video frame as a JPEG `width` pixels wide, in-process through
-// NodeAV (the FFmpeg @mediabunny/server decodes with): libavfilter scales it
-// and moves it to the JPEG's full range, and FFmpeg's MJPEG encoder writes
-// it at quality 3. mediabunny has no image encoder, and Bun no canvas.
-
 import { toAvFrame } from '@mediabunny/server';
 import { Array as Arr, Effect } from 'effect';
 import type { VideoSample } from 'mediabunny';
@@ -34,7 +29,6 @@ export const jpegOf = (file: string, sample: VideoSample, width: number) => {
         (made) => Effect.sync(() => made.close()),
       );
       yield* attempt(() => toAvFrame(sample, frame));
-      // Every frame the scaler gives is freed with the scope; the first is the JPEG's.
       const frames = yield* Effect.acquireRelease(
         attempt(() => filter.processAll(frame)),
         (made) => Effect.sync(() => made.forEach((each) => each.free())),
@@ -44,7 +38,6 @@ export const jpegOf = (file: string, sample: VideoSample, width: number) => {
       );
       const bytes = yield* attempt(() =>
         NodeAv.Encoder.encodeOne(NodeAv.FF_ENCODER_MJPEG, scaled, {
-          // A fixed quantizer scale, which each frame carries (FFmpeg's `-q:v`).
           configure: (context) => {
             context.setFlags(NodeAv.AV_CODEC_FLAG_QSCALE);
             context.globalQuality = JPEG_QUALITY * NodeAv.FF_QP2LAMBDA;

@@ -1,9 +1,3 @@
-// The judged lint at its command boundary, as `bun run lint` runs it: a
-// failure of any kind is one skip line and success. The cases that need a
-// model's answer run the command in-process over a test model layer; the
-// two that run the real program as a process have no key and no `security`
-// on their PATH, so nothing they do can send a request.
-
 import { BunHttpServer } from '@effect/platform-bun';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
@@ -263,9 +257,6 @@ describe('the judged lint fails open', () => {
         const path = yield* Path.Path;
         const host = yield* counting;
         const dir = yield* repo;
-        // The repo's own `lint:judged` line, run by `bun run` as `bun run
-        // lint` runs it, in a repo whose untracked `.env.development` names a key,
-        // a counting host as TypeSafe's, and a proxy that answers nothing.
         const root = yield* Schema.decodeEffect(Scripts)(yield* fs.readFileString(ROOT_PACKAGE));
         yield* fs.writeFileString(
           path.join(dir, 'package.json'),
@@ -311,7 +302,6 @@ describe('the judged lint fails open', () => {
           ]);
           expect(lint.err.join('\n')).toContain('[judged] answers not kept rule=historyComment');
           expect(model.requests).toHaveLength(1);
-          // The plugin reads the store for the file: an answer another checkout keeps there reports.
           const written = yield* Effect.flatMap(
             fs.readFileString(path.join(dir, 'tmp/judged/findings.json')),
             Schema.decodeEffect(Findings),

@@ -1,9 +1,3 @@
-// lead-feast, standing three-quarters to screen left, his head rolled toward the bottle: his face to our left, his ear behind; his cream right sleeve raised, bent at its elbow below his hand, the bottle in his hand at his shoulder's height; his teal left sleeve hanging at his side; the cream sash knotted at his waist, its two ends hanging; his sandals, traced from the kept poses sheet
-// (../cast-sheet/kept/poses.png, box 22, 226, 310, 828) in the sheet's own pixels.
-// Written by `bun run concept trace src/library/cast/lead-feast/rig/trace-poses.ts --view raised`
-// (from apps/animations); trace it again rather than edit it. Points only: the
-// film's papers paint each part. Pure.
-
 import type { Pt } from '@manna/film/style';
 
 /** The view's box in the sheet, as its record keeps it. */

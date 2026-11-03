@@ -15,6 +15,7 @@ export interface Pinned {
 export interface Source {
   readonly repo: string;
   readonly revision: string;
+  readonly licence: 'Gemma Terms of Use' | 'Apache-2.0';
   readonly files: ReadonlyArray<Pinned>;
 }
 
@@ -22,6 +23,7 @@ export interface Source {
 export const MODEL: Source = {
   repo: 'onnx-community/embeddinggemma-300m-ONNX',
   revision: '5090578d9565bb06545b4552f76e6bc2c93e4a66',
+  licence: 'Gemma Terms of Use',
   files: [
     {
       path: 'config.json',
@@ -65,6 +67,7 @@ export const MODEL: Source = {
 export const VOCABULARY: Source = {
   repo: 'google-bert/bert-base-uncased',
   revision: '86b5e0934494bd15c9632b12f734a8a67f723594',
+  licence: 'Apache-2.0',
   files: [
     {
       path: 'vocab.txt',

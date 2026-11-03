@@ -38,10 +38,6 @@ const Rows = Schema.Array(
   Schema.Struct({
     book_code: Schema.String,
     ref_code: Schema.String,
-    // §9.2's join key. Unique across all 3,012,004 corpus rows, where
-    // `(book_code, refcode_short)` is not: the EGW partition alone has 961,750
-    // non-empty rows and only 944,672 distinct book:refcode pairs, so 17,078
-    // paragraphs would be written under another paragraph's id.
     para_id: Schema.NullOr(Schema.String),
     refcode_short: Schema.NullOr(Schema.String),
     content_text: Schema.String,
@@ -96,9 +92,6 @@ export const readVectorSource = (input: {
               .all(...EGW_SCOPE_AUTHORS, limit),
           catch: (cause) => VectorSourceError.make({ message: `query failed: ${String(cause)}` }),
         });
-        // On the error channel, not swallowed into an empty corpus: a schema
-        // the decoder rejects is a build that must stop, not a build that
-        // silently writes a zero-vector index.
         const decoded = yield* decodeRows(rows).pipe(
           Effect.mapError((cause) =>
             VectorSourceError.make({
@@ -106,8 +99,6 @@ export const readVectorSource = (input: {
             }),
           ),
         );
-        // Which rows the index holds is one rule, shared with the Worker's
-        // sync that adds a new book's vectors (`vectorDocument`).
         return decoded.flatMap((row): readonly VectorSourceRow[] =>
           Option.toArray(
             vectorDocument({

@@ -71,11 +71,9 @@ import { holdScenes, holdTimings, spokenTake, testFilm, testVoice } from './film
 
 const frame = { width: 1920, height: 1080 };
 const noTakes: Timings = { voice: '', scenes: {} };
-/** No track on disk, and no plan key: what a check before any mix sees. */
 /** The master's file as the static leg names it. */
 const MASTER = 'narration/full.wav';
 const NO_MASTER: MasterAudio = { master: Option.none(), key: Option.none(), file: MASTER };
-/** The static leg's findings, levelled and addressed as `film check` reports them. */
 /** `film` and its placed scenes, as the static check reads them. */
 const placedFilm = <Film extends LoadedFilm>(film: Film) =>
   [film, Result.getOrThrow(layout(film.scenes, film.timings, 30))] as const;
@@ -108,7 +106,6 @@ describe('overlapArea', () => {
   });
 
   test('two stacked lines of a turned stamp stay apart, though their upright boxes overlap', () => {
-    // "A MOST PRECIOUS" over "MESSAGE", both turned -0.2 rad about the stamp's middle.
     const turn = -0.2;
     const top = textBox('A MOST PRECIOUS', 560, 400, 800, 70, { rot: turn });
     const under = textBox('MESSAGE', 760, 480, 400, 70, { rot: turn });
@@ -185,7 +182,6 @@ describe('frameFindings', () => {
 });
 
 describe('a plate and the lines it carries', () => {
-  // The declared card: one plate, three lines on it, and a line from elsewhere.
   const card = 'Justify / δικαιόω / declared righteous';
   const plate = inkMark('plate', [
     [650, 375],
@@ -212,7 +208,6 @@ describe('a plate and the lines it carries', () => {
 });
 
 describe('ink over a face', () => {
-  // A face 200 px tall centred on (960, 400), declared once its person is drawn (order 4).
   const face: FaceMark = { scene: 'a', x: 960, y: 400, size: 200, alpha: 1, order: 4 };
   const rope = (order: number, options: Parameters<typeof inkMark>[2] = {}) =>
     inkMark(
@@ -286,7 +281,6 @@ describe('ink over a face', () => {
 });
 
 describe('ink over text', () => {
-  // MINNEAPOLIS under a masthead: its box, and a rule drawn through it.
   const city = textBox('MINNEAPOLIS', 700, 190, 520, 28, { order: 5 });
   const rule = (y: number, options: Parameters<typeof inkMark>[2] = {}) =>
     inkMark(
@@ -303,12 +297,10 @@ describe('ink over text', () => {
     const found = frameFindings(sample, { texts: [city], inks: [rule(200), rule(212)] }, frame);
     expect(tags(found)).toEqual(['InkOverText']);
     expect(found[0]).toMatchObject({ text: 'MINNEAPOLIS', strokes: 2 });
-    // Each rule runs the box's full width, 520 px: 2 × ~520.
     expect(found[0]).toMatchObject({ length: expect.closeTo(1040, -2) });
   });
 
   test('the segment test, not the bounds: a stroke whose box overlaps but whose line passes by is fine', () => {
-    // A bend round the box's top-left corner: its bounds reach into the box, its line never does.
     const past = inkMark(
       'stroke',
       [
@@ -347,7 +339,6 @@ describe('ink over text', () => {
   });
 
   test('marks binds to the one line it names, not to every line with the same words', () => {
-    // Two GUILTY stamps; the strike is declared for the first and runs through the second.
     const first = textBox('GUILTY', 300, 400, 300, 60, { order: 5, hand: 21 });
     const second = textBox('GUILTY', 1200, 400, 300, 60, { order: 5, hand: 22 });
     const strike = inkMark(
@@ -365,7 +356,6 @@ describe('ink over text', () => {
 
   test('a wide stroke counts its width: 40 px of ink whose centre passes above 12 px text covers it', () => {
     const small = textBox('small print', 800, 500, 200, 12, { order: 5 });
-    // Centre line 10 px above the text's top: the stroke's lower half covers 10 of its 12 px.
     const band = (width: number) =>
       inkMark(
         'stroke',
@@ -378,17 +368,14 @@ describe('ink over text', () => {
     expect(tags(frameFindings(sample, { texts: [small], inks: [band(40)] }, frame))).toEqual([
       'InkOverText',
     ]);
-    // A thin one on the same line stays clear of it.
     expect(frameFindings(sample, { texts: [small], inks: [band(8)] }, frame)).toEqual([]);
   });
 
   test('page texture is light AND thin: a light bar as wide as the letters under them is found', () => {
-    // 0.5 opacity, drawn before the text, but 70 px wide across 28 px letters.
     const bar = rule(204, { alpha: 0.5, width: 70 });
     expect(tags(frameFindings(sample, { texts: [city], inks: [bar] }, frame))).toEqual([
       'InkOverText',
     ]);
-    // The same light ink as a rule a third of the letters' height or less is texture.
     const greeked = rule(204, { alpha: 0.5, width: 9 });
     expect(frameFindings(sample, { texts: [city], inks: [greeked] }, frame)).toEqual([]);
   });
@@ -422,9 +409,6 @@ describe('ink over text', () => {
   });
 
   test('a plate over the text hides the edge of a wide stroke whose centre runs beside it', () => {
-    // A caption on its plate, and a 60 px arm drawn before it whose centre
-    // line runs 20 px below the plate: only the arm's edge reaches the words,
-    // and the plate covers exactly that edge.
     const caption = textBox('and in the darkened void', 700, 960, 520, 60, { order: 5 });
     const plate = inkMark(
       'plate',
@@ -445,15 +429,12 @@ describe('ink over text', () => {
       { order: 2, width: 60 },
     );
     expect(frameFindings(sample, { texts: [caption], inks: [arm, plate] }, frame)).toEqual([]);
-    // Without the plate, its edge is over the words.
     expect(tags(frameFindings(sample, { texts: [caption], inks: [arm] }, frame))).toEqual([
       'InkOverText',
     ]);
   });
 
   test('fills over a stroke fade it by their opacity: hidden once what shows is 0.3 or less', () => {
-    // A blanket fading out over an arm: at 0.74 the arm shows at 0.26 and
-    // does not read; at 0.5 it shows at 0.5 and does; two 0.5 layers leave 0.25.
     const blanket = (alpha: number, order: number) =>
       inkMark(
         'fill',
@@ -497,7 +478,6 @@ describe('plates off the frame', () => {
   });
 
   test('a banner half the frame high but narrow is not a backdrop: cut by the edge, it is found', () => {
-    // 300 × 600, 100 px past the right edge.
     const banner = inkMark(
       'fill',
       [
@@ -517,7 +497,6 @@ describe('plates off the frame', () => {
   });
 
   test('a plate with no text on it, a backdrop, a panel half the frame wide and high, or text drawn before it, is not', () => {
-    // One half of a split page: 960 wide, the frame's height and more.
     const panel = inkMark(
       'fill',
       [
@@ -575,7 +554,6 @@ describe('plates off the frame', () => {
   });
 
   test('text wholly off the frame shows nothing, so the plate under it is not cut off', () => {
-    // A room slid away left: its sheet still shows 10 px at the edge, its words are gone.
     const sheet = inkMark(
       'fill',
       [
@@ -591,7 +569,6 @@ describe('plates off the frame', () => {
   });
 
   test('a band that runs past both opposite edges spans the frame: it may bleed', () => {
-    // A stripe of sky the frame's width and 60 px more each side, a quote on it.
     const band = (left: number) =>
       inkMark(
         'fill',
@@ -605,7 +582,6 @@ describe('plates off the frame', () => {
       );
     const quote = textBox('must the Son of man be lifted up.', 549, 220, 822, 58, { order: 2 });
     expect(frameFindings(sample, { texts: [quote], inks: [band(-60)] }, frame)).toEqual([]);
-    // Past one edge only, the same band is cut off.
     expect(tags(frameFindings(sample, { texts: [quote], inks: [band(40)] }, frame))).toEqual([
       'PlateOffFrame',
     ]);
@@ -613,7 +589,6 @@ describe('plates off the frame', () => {
 });
 
 describe('text off its plate', () => {
-  // A storyboard card declared as a plate, and its brief's line on it.
   const card = textBox('(the card)', 360, 250, 1200, 520, { order: 1 });
   const brief = (w: number, on = 1) =>
     textBox('a brief too long for its card', 420, 700, w, 40, { order: 2, on });
@@ -659,7 +634,6 @@ describe('mergeFindings', () => {
 
 describe('layoutSamples', () => {
   const scenes: ReadonlyArray<Timed> = [
-    // Its own tail, so the 60% point falls after the cue whatever the default.
     {
       id: 'one',
       say: 'Hello {go}there friend',
@@ -684,13 +658,9 @@ describe('layoutSamples', () => {
   test('a moment inside the entering transition waits for it to settle', () => {
     const [two] = placed.slice(1);
     const late = layoutSamples(placed, 30).find((s) => s.at.includes('mark late'));
-    // {late} falls 0.2 s into a 1 s fade: sampled on the first settled frame.
     expect(late?.frame).toBe(Math.ceil(((two?.start ?? 0) + 1) * 30 - 1e-6));
   });
 });
-
-// ---------------------------------------------------------------------------
-// Static
 
 const take = (text: string) => ({
   hash: hashText(text),
@@ -869,8 +839,6 @@ describe('farPins', () => {
 });
 
 describe('durOnWords', () => {
-  // "One two." then a pause, then "Three four five.": the aligner starts
-  // "Three" at 0.9 s, where the pause starts; its voice is heard from 1.4 s.
   const said = 'One two. {m}Three four five.';
   const spoken = 'One two. Three four five.';
   const timings: Timings = {
@@ -985,7 +953,6 @@ describe('cueTwins', () => {
         pace: { mark: 'two', until: 'four', untilOffset: 0.2 },
         stop: { mark: 'two', until: 'four', untilOffset: -0.2 },
         stay: { mark: 'two', until: 'four' },
-        // Ends where `walk` does, written as a part that ends 0.2 past its parent's end.
         trail: { with: 'stay', until: { cue: 'stay' }, untilOffset: 0.2 },
       }),
     ).toEqual([
@@ -1003,7 +970,6 @@ describe('cueTwins', () => {
         steady: { with: 'roll', dur: 0.8 },
         drop: { mark: 'two', dur: 0.8, ease: 'inOutSine', stagger: 0.5 },
         short: { with: 'roll', dur: 0.6, ease: 'inOutSine' },
-        // "four" is heard 1 s after "two" in this take: the same time, another anchor.
         later: { mark: 'four', offset: -1, dur: 0.8, ease: 'inOutSine' },
       }),
     ).toEqual([]);
@@ -1106,7 +1072,6 @@ describe('longSeams', () => {
 
   test("a seam runs from the last word heard, so a take's silent tail is counted", () => {
     const spoken = spokenTake('One two three four.');
-    // The take trails 2 s of silence after its last word (heard to 1.9 s).
     const trailing = { ...spoken, duration: spoken.duration + 2 };
     const timings: Timings = { voice: voiceKey(testVoice), scenes: { a: trailing, b: spoken } };
     const [a, b] = Result.getOrThrow(layout([said('a'), said('b')], timings, 30));
@@ -1186,7 +1151,6 @@ describe('musicFindings', () => {
     const found = musicFindings(inOrder, placedSound, {
       scores: { piano: { ...asset(through), through: 'middle' } },
     });
-    // To middle's end and the tail; the film runs on through close.
     const [, middle, close] = placedSound;
     expect(found).toMatchObject([
       {
@@ -1332,7 +1296,6 @@ describe('soundFindings', () => {
         fresh: { sound: 'paper.new', at: [{ scene: 'close', at: 'start' }] },
         gone: { sound: 'paper.gone', at: [{ scene: 'close', at: 'start' }] },
         room: { sound: 'room.paper', at: [{ scene: 'close', at: 'start' }] },
-        // A code sound is rendered from its graph: never unmade, never stale.
         tick: { sound: 'tone.tick', at: [{ scene: 'close', at: 'start' }] },
       },
     };
@@ -1374,7 +1337,6 @@ describe('soundFindings', () => {
     expect(found).toMatchObject([
       { _tag: 'LeadIn', effect: 'steps', name: 'paper.hit', variant: 2, onset: 0.12, hit: 0.7 },
     ]);
-    // A tight take is heard on its cue.
     expect(
       soundFindings({ effects: { steps: { sound: 'paper.hit', at } } }, placedSound, {
         ...sounds,
@@ -1555,7 +1517,6 @@ describe('the audio master', () => {
   });
 
   test('a master as long as the film but mixed for another plan, or unstamped, is AudioStale', () => {
-    // Another score option picked, a take re-recorded to the same length, an effect moved.
     expect(found(Option.some(end), false, Option.some('plan-before'))).toEqual([
       ['error', 'AudioStale'],
     ]);
@@ -1592,7 +1553,6 @@ describe('static holds', () => {
   });
 
   test('the stretch is the spoken words, not the whole scene: a long silent end holds nothing', () => {
-    // Words 0.5–3.9 s, then 10 s of scene with no cue and no voice.
     const scenes: ReadonlyArray<Timed> = [{ id: 'a', say: seven, min: 14 }];
     const timings: Timings = { voice: holdTimings.voice, scenes: { a: spokenTake(seven) } };
     expect(holdCandidates(Result.getOrThrow(layout(scenes, timings, 30)))).toEqual([]);
@@ -1613,7 +1573,6 @@ describe('static holds', () => {
       voice: holdTimings.voice,
       scenes: { first: spokenTake(say), a: spokenTake(say) },
     };
-    // `first` speaks 0.5–6.4 s with nothing declared; `a` fades in to 1.5 s and drifts at 4–5 s.
     expect(
       holdCandidates(Result.getOrThrow(layout(scenes, timings, 30))).map((c) => c.scene),
     ).toEqual(['first']);
@@ -1717,13 +1676,11 @@ describe('static holds', () => {
         (b) => !heldStill([drawnAt(zoom, 0), drawnAt(zoom, b)]),
       );
       expect({ zoom, moved }).toEqual({ zoom, moved: [] });
-      // Moved a few of its own px further than boil can, it moves, however far the camera is.
       expect(heldStill([drawnAt(zoom, 0), drawnAt(zoom, 0, 3 * STILL_DRIFT)])).toBe(false);
     }
   });
 
   test('D5: a picture line that reads as a caption line is still the picture', () => {
-    // The card writes the words as they are heard, over the caption line saying the same.
     const caption = textBox('one two three', 760, 960, 400, 60, { order: 5, caption: true });
     const growing = (w: number) => textBox('one two three', 600, 300, w, 80);
     const frames = [

@@ -27,8 +27,6 @@ export const PlacementDial = memo(function PlacementDial({ number }: { readonly 
   const [resets, reset] = useState(0);
   const epoch = generation.current;
   const inherit = () => {
-    // Retire the gesture owner before writing. A queued detent from the old
-    // dial cannot replace the clear, even before React mounts the new dial.
     generation.current += 1;
     reset(generation.current);
     setOwn('inherit');

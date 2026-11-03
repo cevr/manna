@@ -82,8 +82,6 @@ const paragraph = (text: string) => ({
 const fixtureResponse = (request: SearchRequest): SearchResponse => {
   let text = request.q;
   if (request.scope !== 'all') text = `${request.q} [${request.scope}]`;
-  // `labels` answers with a chapter heading in its book's back matter, so the
-  // suite can see both of a row's labels.
   const labelled = request.q === 'labels';
   return {
     hits: [
@@ -115,8 +113,6 @@ const slotFor = (request: SearchRequest): SearchSlot => {
 
 const answerBatch = (requests: ReadonlyArray<SearchRequest>) =>
   Effect.gen(function* () {
-    // Keep the batch attached to the receipts that saw it start. A reset can
-    // replace the current receipts while an old batch still unwinds.
     const batchState = state;
     batchState.batchHttpRequests += 1;
     batchState.lastBatch = requests.map((request) => request.q);

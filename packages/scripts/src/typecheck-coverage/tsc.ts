@@ -1,5 +1,3 @@
-// The repo's tsc, found as the package's `typecheck` finds it.
-
 import { fileURLToPath } from 'node:url';
 
 import { Effect, FileSystem, Path, Schema } from 'effect';

@@ -83,7 +83,6 @@ describe('the chords switch', () => {
     const { settings, registry } = launch(device);
     expect(registry.get(settings.chords)).toBe(false);
     registry.dispose();
-    // `Atom.kvs` writes a setting's default on its first read, so `chords` may hold `false`.
     expect({
       chords: device.get('chords') ?? 'absent',
       others: allBut(device, 'chords'),
@@ -124,9 +123,6 @@ describe('the heard move', () => {
     }> = [];
     let checked = 0;
     const seen = new Set<string>();
-    // Launch `r` stores, for the sampled hymn at `i`, the move at `(r + 37 i) mod 144`: over
-    // the 144 launches each hymn keeps every move once. Chords come from the store (on at an
-    // even launch, unset and so off at an odd one), then the reader flips them in the app.
     for (let r = 0; r < moves.length; r++) {
       const device = new Map<string, string>(
         sample.map((number, i) => [
@@ -168,7 +164,6 @@ describe('the heard move', () => {
     ]);
     const kept = allBut(device, 'chords');
     const { settings, registry } = launch(device);
-    // The player maps a hymn's move to the offset it asks the device for, as `keyFor` does.
     const offset = Atom.map(settings.heardMove(100), (move) => move.transpose);
     const told: Array<number> = [];
     const stop = registry.subscribe(offset, (value) => told.push(value), { immediate: true });
@@ -214,7 +209,6 @@ describe('the heard move', () => {
       { chords: true, read: heardOn },
     ]);
 
-    // A key turned with chords on is heard at once, and kept through chords off.
     registry.set(settings.move(100), { transpose: -1, capo: 0 });
     const turned = read();
     registry.set(settings.chords, false);
@@ -239,7 +233,6 @@ describe('the heard move', () => {
       stored: stored({ transpose: -1, capo: 0 }),
     });
 
-    // Opened again with chords off: the moves are still there and come back with chords on.
     const again = launch(device);
     expect(again.registry.get(again.settings.heardMove(100))).toEqual(still);
     again.registry.set(again.settings.chords, true);

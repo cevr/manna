@@ -1,22 +1,3 @@
-// A puppet drawn in our frame: a kept view cut into parts (a part sheet),
-// each part a mesh of its own pixels skinned on a skeleton
-// (`core/puppet.ts`), that a drawing declares (`drawing({ puppets })`) and
-// poses by bone numbers each frame (`f.puppet(name, pose, look, dress)`), drawn
-// under the frame's own transform. This is the draw path: plain synchronous
-// code, no Effect and no Promise. The film loads its puppets before its first
-// frame (`src/puppet/load.ts`): each part's pixels and each drawing's,
-// decoded once, belong to that load's scope.
-//
-// A frame is a function of its pose and its look: its vertices are posed
-// from the bind vertices by the pose's numbers alone, a drawn key stands in
-// for a part where the look lays one, carried by that part's bones at its
-// pivot as the part's own pixel there is, and each is written whole into the
-// buffers the page draws them from (`canvas/puppet-gl.ts`), which clear the
-// box they draw in first. With a look, the figure's line is drawn again near
-// what moved (L3) and the figure boils on the look's tick. Where nothing is
-// drawn (Bun, `check --draw`) the puppet is still posed and its figure
-// declared (`probeFigure`), as a rig's is.
-
 import { Result } from 'effect';
 import { BOIL_AMP } from '../core/boil.ts';
 import type { ConceptRef } from '../core/match.ts';
@@ -363,7 +344,6 @@ const skinAt = (puppet: Puppet, k: number, m: Float64Array, [x, y]: Pt): Carry =
     if (d < far) [nearest, far] = [i, d];
   }
   if (nearest < 0) return unmoved;
-  // the weights a vertex holds: `core/puppet.ts` keeps its count to itself, and each vertex holds as many
   const stride = bones.length / n;
   if (bones[stride * nearest]! < 0) return unmoved;
   const slots = Array.from({ length: stride }, (_, j) => stride * nearest + j).filter(

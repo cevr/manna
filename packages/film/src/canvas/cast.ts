@@ -1,16 +1,3 @@
-// A film's cast render table (`rigs/cast.ts`, `CAST`): each kept view of
-// each member's sheets, by member, kind and view name, drawn by its rig in
-// its pose, laid in the view's kept box on a canvas the size of the sheet
-// (`film concept render`, `tools/cast-render.ts`), so the render reads as the
-// sheet and each view is held to the one the owner kept. The rig's origin
-// stands at `at` in the sheet's pixels, drawn at the sheet's one scale
-// (`CastSheet.scale`): a standing figure's feet on the sheet's ground line, a
-// bust's head where the sheet draws it, never a figure fitted to its box.
-// What else the view draws lies in the rig's own units about that origin:
-// the rigs drawn with it (its hands at its cuffs, a baby's head) and its
-// props (a bottle, a stool), each a plain canvas piece. Pure: the table is
-// data a test reads in Bun, and only its props' draws touch a canvas.
-
 import { Predicate } from 'effect';
 import { BOIL_AMP } from '../core/boil.ts';
 import type { FitBar, FitBarName, FitClass, FitProbe } from '../core/fit-rows.ts';

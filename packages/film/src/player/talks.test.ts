@@ -1,9 +1,3 @@
-// A talk's page reads its edit and, through the footage route, the footage
-// library's lock and the transcript it names, and cuts on them with the
-// derivation the tools use (`talkTakes`): the same pieces as a talk built on
-// the take directly. A file it cannot fetch or read, or a take not ready,
-// fails, naming it.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, Layer, Option, Result, Schema } from 'effect';
 import { HttpClient, HttpClientRequest, HttpClientResponse } from 'effect/http';

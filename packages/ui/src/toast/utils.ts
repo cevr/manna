@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/toast/utils/isRenderableNode.ts,
-// packages/react/src/toast/utils/focusVisible.ts
-//
-// Small helpers the toast parts share: deciding whether a part has content
-// worth rendering, whether focus is visible, and the toast id generator.
 import { matchesFocusVisible } from '../floating-ui-solid/utils/element.ts';
 
 export { matchesFocusVisible as isFocusVisible };

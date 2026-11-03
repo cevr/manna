@@ -1,9 +1,3 @@
-// Mixer with fakes: the track is replaced only by a mix that finishes; a
-// failed or interrupted mix leaves the previous track and no partial file
-// behind. A sound at another rate fails the mix rather than being resampled.
-// One variant heard in its sound's place (a take by its sha256, a seed by its
-// source's label) plays at every placement of that sound.
-
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Deferred,
@@ -163,7 +157,6 @@ describe('Mixer', () => {
       const { mix, read } = setup('done');
       yield* mix();
       const stamp = yield* Schema.decodeEffect(MasterStampJson)(read(STAMP));
-      // The film has no score or library sound to be missing: its plan is the one `mix` played.
       const now = planOf(film, Result.getOrThrow(layout(scenes, timings, 30)), {
         score: Option.none(),
         inPlace: Option.none(),
@@ -198,7 +191,6 @@ describe('Mixer', () => {
     Effect.gen(function* () {
       const { hung, mix, read, partials } = setup('hang');
       const fiber = yield* Effect.forkChild(mix());
-      // Interrupted while the track is being written, as a Ctrl-C mid-mix is.
       yield* Deferred.await(hung);
       yield* Fiber.interrupt(fiber);
       expect(read(TRACK)).toBe('old');
@@ -213,7 +205,6 @@ describe('Mixer', () => {
       const held = yield* Deferred.make<boolean>();
       const whileHeld = yield* run(
         Effect.gen(function* () {
-          // Another writer (a mix of another plan) holds the stamp's lock.
           const other = yield* Effect.forkChild(
             (yield* ContentStore).transact(stampManifest(film.paths), () =>
               Deferred.succeed(held, true).pipe(
@@ -224,7 +215,6 @@ describe('Mixer', () => {
           );
           yield* Deferred.await(held);
           const fiber = yield* Effect.forkChild(mixing());
-          // The mix has written its track beside the old one, and waits for the lock.
           yield* Effect.sync(() => partials().length).pipe(
             Effect.repeat({ until: (n) => n === 1, schedule: Schedule.spaced('5 millis') }),
             Effect.timeout('10 seconds'),
@@ -236,9 +226,7 @@ describe('Mixer', () => {
           return seen;
         }),
       );
-      // Nothing of the mix landed while the other writer held the lock.
       expect(whileHeld).toEqual({ track: 'old', stamp: '', partials: 1 });
-      // Then its track and its own stamp landed together.
       const stamp = yield* Schema.decodeEffect(MasterStampJson)(read(STAMP));
       expect(stamp.key).toMatch(/./);
       expect(read(TRACK)).toBe(`wav ${frames}`);

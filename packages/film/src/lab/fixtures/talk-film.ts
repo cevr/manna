@@ -1,14 +1,3 @@
-// A talk, for the talk page's browser tests: a synthetic take
-// (`core/fixtures/talk-take.ts`) whose picture is a numbered clip
-// (`numbered-frames.ts`), 9:16 so the page's crop is the whole clip and its
-// bars run across the page; cut into two sections with a seam inside each (a
-// struck word, a long pause tightened), so the page reads the take on, jumps,
-// reads on. No hook, so nothing but the captions is drawn over the take, and
-// they sit below the bars' middle row. The page loads it as the films index
-// loads a talk (`talkFilms`): its edit, then the footage library's lock and
-// the take's transcript, which the render harness serves at the footage
-// route (`TALK_LIBRARY`).
-
 import { Effect, Schema } from 'effect';
 import type { Film } from '../../canvas/film.ts';
 import { syntheticTake } from '../../core/fixtures/talk-take.ts';

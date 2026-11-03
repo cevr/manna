@@ -1,12 +1,3 @@
-// A cast member's library reference: the images a picture of the member is
-// drawn to, and the line a prompt says them with. The library's record is the
-// member's one truth (the owner, 2026-10-20: the library, not a concept, where
-// the concept is wrong), so these images win over any other reference that
-// draws the member otherwise, on the person; the brief dresses the member for
-// its scene. A member with a kept sheet is sent its kept sheets, or its own
-// views of a sheet that draws other members too; one not kept yet is sent the
-// references its record names. Pure.
-
 import { Array as Arr, Boolean as Bool, Option } from 'effect';
 import type { CastSheetRecord } from './cast-record.ts';
 import { type SheetKind, TURNAROUND_SLOTS } from './cast-sheet.ts';

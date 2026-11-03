@@ -31,9 +31,6 @@ const tagOf = (exit: Exit.Exit<string, unknown>) =>
   Exit.match(exit, { onSuccess: (tag) => tag, onFailure: (cause) => Cause.pretty(cause) });
 
 describe('sectionSourcesOver', () => {
-  // Production opens bible.db twice: once for the Bible database, once for the
-  // catalog. When the catalog's open is the one that fails (the file replaced
-  // between the two), the page is degraded like any absent corpus, not killed.
   it.effect(
     'a catalog that will not open leaves the sections NotWired, the Bible database open',
     () =>

@@ -48,21 +48,7 @@ export const sectionSourcesOver = (connections: {
     Layer.provide(BibleDatabase.layer.pipe(Layer.provide(connections.bible))),
     Layer.provide(WritingsService.Live.pipe(Layer.provide(writingsDatabase))),
     Layer.provide(EGWCommentaryService.Live.pipe(Layer.provide(writingsDatabase))),
-    // Degraded rather than fatal, and *stated* rather than absent: corpora that
-    // will not open still leave the CLI printing authored cores, and the page
-    // now says `sections-not-wired` so the empty lineup is legible as a host
-    // state rather than as an empty library.
-    //
-    // Only corpora that will not open. A blanket `catchCause` here also caught
-    // defects and interruption, so a genuine construction fault reached the
-    // reader as a degradation state — the same hiding this milestone's first
-    // review round removed one level down. The shared combinator draws the
-    // line and logs the cause it accepts.
     WikiSectionSources.NotWiredOnCorpusAbsence,
-    // What survives the combinator is a `SqlError` the combinator refused —
-    // one arriving alongside a cause that is not a corpus absence. That is a
-    // fault, not a degradation, so it dies rather than being folded back into
-    // the same `NotWired` the combinator just declined to give it.
     Layer.orDie,
   );
 };

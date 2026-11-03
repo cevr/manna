@@ -1,9 +1,3 @@
-// `bun run redfirst` over a real repository: a base it cannot resolve is a
-// failure, never an empty report that reads as "no new case is green"; a
-// new test of a module the base lacks is red whole, even as its package's
-// one changed test file; a binary fixture, in a package's `fixtures/` or the
-// root's, reaches the base's tree byte for byte.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, test } from 'bun:test';
 import { Effect, FileSystem, Path, Stream } from 'effect';
@@ -73,7 +67,6 @@ const binaryFixture = Effect.gen(function* () {
   yield* fs.writeFileString(path.join(dir, 'one.ts'), 'export const one = 1;\n');
   yield* exec(dir, 'git', [...GIT, 'add', '-A']);
   yield* exec(dir, 'git', [...GIT, 'commit', '-q', '-m', 'base']);
-  // One fixture in a package's folder, one in a `fixtures/` at the root.
   yield* fs.makeDirectory(path.join(dir, 'src', 'fixtures'), { recursive: true });
   yield* fs.makeDirectory(path.join(dir, 'fixtures'));
   yield* fs.writeFile(path.join(dir, 'src', 'fixtures', 'probe.png'), new Uint8Array(BINARY));

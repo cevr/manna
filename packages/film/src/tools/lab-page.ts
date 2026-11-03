@@ -1,39 +1,3 @@
-// The lab's pages, built in the lab's own process and answered behind its
-// gate: the app's HTML entries (its lab, its review and its player), bundled
-// with the framework's Solid plugin as Bun's page server would bundle them,
-// but by `Bun.build` here (`PageBundler`), so every file is answered by a
-// route `admit` has passed (Bun's own routes would answer before the gate,
-// and its development server has no Host check). A build takes about a tenth
-// of a second, so there is no build step: the pages are built when first
-// asked, and again when asked after a file the last build read has changed.
-// The lab runs for days, so the folders of the files the last build read are
-// watched (`FileSystem.watch`; a package's `node_modules` aside), with the
-// entries' folders from the start and, after a failed build, the folders of
-// the files the bundler named; a folder still read keeps its watch, and a
-// file read in a newly watched folder, or new to the read set, that changed
-// from a second before its build began is one more change. Each build prints
-// the files it read (length and hash) before and after it reads them: a save
-// the newest build already holds by content is no change, however late the
-// watch hears it (judged once no build is reading), and a look asks a build
-// whose files print as they stand (`built`). Each change to
-// one of those files is numbered (the build), and an open page that waits on
-// `/api/review/build?since=` hears of it and reloads onto the new code. A
-// film's mixed track
-// (`narration/full.wav`) is no source, but a page plays the one it loaded:
-// once one is asked for, there or not (a film before its first mix), its
-// folder is watched too, or the nearest one there on the way to it until the
-// mix makes it, and a mix landing it (last, and whole, by a rename: the mix
-// finished) is one more change, with no new build, that a page waiting with
-// that film (`&film=`) hears and no other. A take's timings, saved before its mix, are none,
-// so a page reloads once, onto the new track. Each lab process draws its own
-// id (`server`): a page served by an earlier process hears at once that it
-// is old code.
-//
-// A build that fails answers its page as the failure, the bundler's words,
-// is tried again on each request and, while a page waits, by its wait every
-// half second (the failed page asks only its wait), and the page reloads
-// itself once a build is made; the lab itself keeps serving.
-
 import {
   Array as Arr,
   Clock,
@@ -279,7 +243,6 @@ const swapPlugin = (swaps: ReadonlyMap<string, string>, read: Set<string>): BunP
 const bunBuild = (path: Path.Path, config: Bun.BuildConfig) =>
   Effect.gen(function* () {
     const out = yield* Effect.tryPromise({
-      // A failed build throws its messages (an AggregateError), caught here.
       try: () => Bun.build({ ...config, metafile: true, throw: true }),
       catch: (cause): BundleFailed => ({
         reason: bundlerWords(cause),
@@ -296,7 +259,6 @@ const bunBuild = (path: Path.Path, config: Bun.BuildConfig) =>
         }),
       ),
     );
-    // The metafile names inputs relative to this process's directory.
     const inputs = Object.keys(out.metafile?.inputs ?? {}).map((input) => path.resolve(input));
     return { outputs, inputs };
   });
@@ -318,14 +280,9 @@ const bunBundle =
           bunBuild(path, {
             entrypoints: [...entries],
             root,
-            // Every page links its scripts and styles from the root (`/chunk-….js`), so a
-            // page served under a film's path (`/films/<film>/lab/<scene>`) finds them.
             publicPath: how.publicPath,
             plugins: [...swaps, solidPluginFor('dom')],
             target: 'browser',
-            // Solid's development build, whatever NODE_ENV the lab runs under: its
-            // diagnostics (a hydration mismatch, a read outside a tracking scope)
-            // are what the served end-to-end tests read.
             conditions: ['development'],
             splitting: true,
             minify: true,
@@ -834,43 +791,24 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
   const renderer = yield* PageRenderer;
   const scope = yield* Effect.scope;
   const server = yield* serverId;
-  // The tokens the failed page reads; a lab without them answers that page unstyled.
   const tokens = yield* fs.readFileString(TOKENS_FILE).pipe(Effect.orElseSucceed(() => ''));
-  // The changes seen, each one a page waiting past it hears (`heardBy`): a page is stamped with `n`.
   const changes = yield* SubscriptionRef.make<Changes>({ n: 0, all: 0, mixed: new Map() });
-  // The number of changes at the last change to a file a build reads: a build made at or past
-  // it is current. A track mixed since (`masters`) wakes its film's pages and needs no build.
   const sourced = yield* Ref.make(0);
-  // The files the last build read, absolute: only a change to one of them makes a new build.
-  // None before a build has read any, or after one failed: then every change does.
   const read = yield* Ref.make(Option.none<ReadonlySet<string>>());
-  // Each film's mixed track a page asked for, absolute, whether it was there or not (a film
-  // before its first mix), and its mtime as last heard (none: not there). The mix lands it
-  // last and whole (a rename), so a new mtime is the mix finished, and a page loaded then
-  // plays the new track.
   const masters = yield* Ref.make<ReadonlyMap<string, Option.Option<number>>>(new Map());
-  // Each track's mtimes as counted, newest last (COUNTED_KEPT of them), each with the change
-  // it was counted as: the build its film's pages hear that mix by (`heardAt`).
   const counted = yield* Ref.make<ReadonlyMap<string, ReadonlyArray<readonly [number, number]>>>(
     new Map(),
   );
-  // One track's landing counted at a time, so a mtime is never seen before its count is kept.
   const landing = yield* Semaphore.make(1);
   const films = path.resolve(spec.films);
-  // Each folder watched, and the fiber watching it; changed by one at a time (a build, a track served).
   const watchers = yield* Ref.make<ReadonlyMap<string, Fiber.Fiber<void>>>(new Map());
   const watching = yield* Semaphore.make(1);
-  // The folders the last build asked to have watched, the tracks' aside.
   const asked = yield* Ref.make<ReadonlyArray<string>>([]);
   const builds = yield* Ref.make<ReadonlyArray<Built>>([]);
   const building = yield* Semaphore.make(1);
-  // The wedges kept, newest first (`wedge`), built one at a time.
   const wedges = yield* Ref.make<ReadonlyArray<WedgeBuilt>>([]);
   const wedging = yield* Semaphore.make(1);
-  // One wait at a time builds again after a failure (`retryFailed`), however many pages wait.
   const retrying = yield* Semaphore.make(1);
-  // Bun names each output by its entry's path relative to the build's root: the
-  // entries' common folder, given to the build so the names cannot drift.
   const entries = Record.toEntries(spec.pages);
   const htmls = entries.map(([, html]) => path.resolve(html));
   const servers = entries.flatMap(([page]) =>
@@ -884,7 +822,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
   const serverEntries = servers.map(([, entry]) => entry);
   const root = commonDir([...htmls, ...serverEntries].map(path.dirname));
   const pageOf = new Map(entries.map(([page, html]) => [path.relative(root, html), page]));
-  // Each server entry's module, as the bundler names it: its path from the root, as `.js`.
   const serverModules = new Map(
     servers.map(([page, entry]) => [
       page,
@@ -1013,17 +950,10 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       Effect.forkIn(scope),
     );
 
-  // Each change to a file the last build read is one more change, and a new build; a mix
-  // landing a track a page asked for is one more change alone, for its film; a folder made
-  // on the way to such a track (a film's first mix makes `narration/`) moves the watch down
-  // to it; anything else (a take's timings before its mix, a render, a note) is none.
   const heard = (file: string): Effect.Effect<void> =>
     Effect.gen(function* () {
       const inputs = yield* Ref.get(read);
       if (Option.match(inputs, { onNone: () => true, onSome: (set) => set.has(file) })) {
-        // A save the newest build already holds (a look built it before the watch heard) is
-        // none. Judged once no build is reading: a build under way may hold the save or not,
-        // and says which only when it is done.
         return yield* building.withPermit(
           Effect.flatMap(unmoved(file), (held) => {
             if (held) return Effect.void;
@@ -1035,7 +965,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       if (tracks.includes(file)) return yield* landed(file);
       const below = tracks.filter((track) => track.startsWith(`${file}/`));
       if (below.length === 0) return;
-      // Forked: the new watch may let go of the folder this one is heard in.
       yield* Effect.forkIn(
         Effect.andThen(rewatchAfter(Effect.void), landedUnwatched(below)),
         scope,
@@ -1134,16 +1063,13 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       if (suspects.length === 0) return;
       yield* Effect.sleep(ARMING);
       const since = started - Duration.toMillis(MTIME_LAG);
-      // Judged once no build is reading, as a watch's save is (`heard`).
       const changed = yield* building.withPermit(
         Effect.forEach(suspects, (file) =>
           Effect.gen(function* () {
-            // A file the newest build no longer reads is none of its business, as for a watch.
             if (Option.exists(yield* Ref.get(read), (set) => !set.has(file))) return false;
             if (yield* unmoved(file)) return false;
             return yield* fs.stat(file).pipe(
               Effect.map((info) => Option.exists(info.mtime, (at) => at.getTime() >= since)),
-              // Gone since the build read it: changed.
               Effect.orElseSucceed(() => true),
             );
           }),
@@ -1154,7 +1080,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       yield* sourceChanged;
     }).pipe(Effect.forkIn(scope));
 
-  // Before any build: the entries' folders, so a first build that fails still hears its fix.
   yield* watchOnly(foldersOf([...htmls, ...serverEntries]));
 
   /**
@@ -1229,8 +1154,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
 
   const bundle = Effect.fnUntraced(function* (build: number) {
     const started = yield* Clock.currentTimeMillis;
-    // The files the last build read, printed before this one reads them: one whose print
-    // differs once this build is made was saved while it read.
     const printedBefore = yield* Option.match(yield* Ref.get(read), {
       onNone: () => Effect.succeed<ReadonlyMap<string, string>>(new Map()),
       onSome: printsOf,
@@ -1257,7 +1180,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
               (input) =>
                 !input.includes('/node_modules/') &&
                 (added.includes(path.dirname(input)) ||
-                  // With no read set before, the watch counted every save.
                   Option.exists(before, (set) => !set.has(input))),
             ),
             started,
@@ -1279,8 +1201,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       ),
       Effect.catch((failed) =>
         Effect.gen(function* () {
-          // Every change makes a new build now; the folders kept, and those of the files
-          // the bundler named, so a fix to any of them is heard.
           yield* Ref.set(read, Option.none());
           const kept = yield* Ref.get(asked);
           const added = yield* watchOnly(
@@ -1457,7 +1377,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       if (Option.isNone(html)) return NOT_FOUND;
       const text = stamped(new TextDecoder().decode(html.value.bytes), stamp);
       const request = yield* HttpServerRequest.HttpServerRequest;
-      // A page with a server entry is rendered for a GET; a HEAD is answered its headers alone.
       if (request.method !== 'GET' || !built.outcome.server.entries.has(name))
         return HttpServerResponse.text(text, {
           contentType: HTML,
@@ -1577,9 +1496,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       }),
     );
 
-  // A narration file or a footage copy by its exact URL, then a built file, then the page the
-  // path serves (`pageAt`, the places); anything else, a chunk of a build no longer kept among them, is
-  // a 404 and never a page's HTML.
   const answer = Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
     const url = new URL(request.url, 'http://lab');
@@ -1652,8 +1568,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       .map(([file, text]) => `${file}\n${text}`)
       .join('\n\0\n');
 
-  // The wedges, built one at a time from the build as it stands: a wedge of a build
-  // is built once per swap and answered from then on.
   const wedge = (swaps: ReadonlyMap<string, string>) =>
     wedging.withPermit(
       Effect.gen(function* () {
@@ -1670,8 +1584,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
           yield* Effect.log(`lab.page.wedge id=${id} outcome=Failed`);
           return { ...now, failed: Option.some(made.failure.reason), wedge: '' } satisfies Wedged;
         }
-        // A wedge's files are asked for only by the easel's browser on the box, so each
-        // is compressed per request, never squeezed at the best as a build's are.
         const pages = new Map<AppPage, BuiltFile>();
         const files = new Map<string, AssetFile>();
         for (const { path: name, ...file } of made.success.outputs)

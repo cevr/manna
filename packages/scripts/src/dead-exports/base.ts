@@ -1,20 +1,3 @@
-// The approved base the debt is held against: the debt file as the base
-// revision has it. A line the base lacks is debt grown by this change, and
-// the check refuses it, so adding a dead export together with its debt line
-// does not pass.
-//
-// Which revision is the base:
-//   - one named outright (`DEAD_EXPORTS_BASE`): CI names the push's pre-push
-//     SHA, or the pull request's base SHA, so a push of several commits is held
-//     as a whole. A name git cannot read fails; an all-zero one (a new branch)
-//     names nothing and the local rule stands.
-//   - otherwise the merge-base with the newer of `main` and `origin/main` (one
-//     the other's descendant; if they have diverged, `origin/main`); on `main`
-//     itself that is the head, so the head's first parent stands in.
-// Where git or a base cannot be had, the check fails: it never passes unread.
-// A base that lacks the check itself (the first adoption) has no debt to hold
-// the change to; a base that has the check but no debt file fails.
-
 import { Array as Arr, Data, Effect, Option, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
@@ -74,7 +57,6 @@ const newerMain = (root: string) =>
     const remote = yield* commitOf(root, 'origin/main');
     if (Option.isNone(remote)) return Option.map(local, () => 'main');
     if (Option.isNone(local)) return Option.some('origin/main');
-    // The descendant is the newer; refs that have diverged take the remote.
     if (yield* holds(root, ['merge-base', '--is-ancestor', 'origin/main', 'main']))
       return Option.some('main');
     return Option.some('origin/main');
@@ -95,7 +77,6 @@ const localBase = (root: string) =>
     if (Option.isNone(mergeBase) || mergeBase.value === '')
       return yield* new BaseUnavailable({ reason: `no merge-base of HEAD with ${main.value}` });
     if (mergeBase.value !== head.value) return mergeBase.value;
-    // On `main` itself the merge-base is the head: the change is the head's own.
     const parent = yield* git(root, ['rev-parse', '--verify', '--quiet', 'HEAD^']);
     if (Option.isSome(parent) && parent.value !== '') return parent.value;
     return yield* new BaseUnavailable({

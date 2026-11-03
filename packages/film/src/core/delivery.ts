@@ -1,28 +1,3 @@
-// Delivery marks: how a line is said, written inside it as its cues are, so
-// a mark moves with its word whatever is edited around it. Like `{cue}` and
-// `{@turn}`, a mark is in braces and never spoken: the words a card, a
-// caption, a transcript pin or the KJV check reads are the line without them
-// (`parse` in `narration.ts` drops every brace).
-//
-//   "He spoke {*}slowly, {/} and {*}impressively. {//1.2} Faith."
-//
-// - `{*}word`: stress, the word to land on (usually a sentence's last);
-// - `{/}`: a breath, a short pause in the gap it stands in (about 0.3 s);
-// - `{//}`: a hold, a timed pause (0.6 s unless it names its seconds,
-//   `{//3}` for the held beat before a landing's last word).
-//
-// A stress belongs to the word after it; a breath or a hold to the gap before
-// the word after it, which is never the line's first or last gap (silence
-// there is the beat's `lead` and `tail`). A new kind of mark is a case of
-// `Mark`, its token (`markOfToken`, `tokenOf`) and its row in `MODEL_MARKS`.
-//
-// The marks compile to what each ElevenLabs model takes (`compileDelivery`;
-// the table, its sources and the date it was checked are in the film skill's
-// `reference/elevenlabs-delivery.md`): v4 and v3 take audio tags and capitals,
-// the earlier models SSML breaks and a speed. A hold is exact on every model:
-// its gap is set to its seconds in the take itself (`holdsIn`), since no
-// model times a pause to the tenth. Pure.
-
 import { Array as Arr, Match, Option, Schema } from 'effect';
 import { toMs } from './time.ts';
 
@@ -207,9 +182,6 @@ export const paceBand = (wpm: number): 'slow' | 'in' | 'fast' => {
   return 'in';
 };
 
-// ---------------------------------------------------------------------------
-// Compiled for ElevenLabs
-
 /**
  * How a model is told how to say a line: audio tags and capitals (`tags`:
  * eleven_v4 and eleven_v3), or SSML breaks and a speed (`ssml`: the earlier
@@ -392,7 +364,6 @@ export const spokenAlignment = (
     chars: at(chars, ''),
     starts: at(starts, 0),
     ends: at(ends, 0),
-    // A line that starts on a direction starts on the first character kept after it.
     breaks: breaks.flatMap((b) => Option.toArray(Arr.findFirstIndex(kept, (k) => k >= b))),
   };
 };

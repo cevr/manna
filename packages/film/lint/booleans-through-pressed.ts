@@ -1,45 +1,3 @@
-// `film/booleans-through-pressed`: a boolean a control shows is written by
-// `pressed(on)` (`packages/film/src/lab/pressed.ts`), which types it
-// `'true' | 'false'`, never as a string by hand. A template or `String(…)` over
-// a boolean is a second spelling of it, and the one that was fixed by hand twice
-// (Scenes, then the sheet and the page shell) came back at six more controls.
-//
-// A value is written by hand when it is `String(x)`, `x.toString()` (no
-// radix), `JSON.stringify(x)` (`String` and `JSON` the globals, by their
-// binding) or a template that is one value and nothing else (`` `${x}` ``).
-// Refused, as a JSX attribute's value:
-// - on `aria-pressed`, `aria-selected`, `aria-checked`, `aria-expanded` and
-//   `aria-busy`, any such value: their tokens are `true` and `false` (and a
-//   `mixed`, written as itself), so the attribute is the proof the value is a
-//   boolean;
-// - on `aria-current` (whose tokens are also words: `page`, `step`) and on any
-//   `data-*`, such a value whose whole expression the source proves a boolean:
-//   a comparison (`a === b`), a negation (`!a`), a boolean literal,
-//   `Boolean(…)`, a logical or a conditional whose every branch is one, a cast
-//   to `boolean`, or a name whose binding in the file says so (typed
-//   `boolean`, `() => boolean` or solid's `Accessor<boolean>`, a const of a
-//   proven boolean, solid's `createSignal(false)`, a `createMemo` of one, a
-//   function returning `boolean`, or a member of a binding typed in the file:
-//   `props.staged()` for `props: { staged: Accessor<boolean> }`).
-// A name proves nothing by how it is spelled: `isLive()` is a boolean when its
-// binding says so, and a string when its binding says that. Every name is read
-// by its binding where it is written (a type parameter, a parameter or a local
-// of solid's names is its own binding), and a type's members are a literal's,
-// an interface's or an alias's, with the file's own generics given their
-// arguments, and those of solid's `ParentProps`, `VoidProps` and `FlowProps`
-// and of `Readonly`, whose meaning keeps their argument's members. Any other
-// generic proves nothing of its argument (`AsStrings<{ live: boolean }>` may
-// make `live` a string), nor does an optional member (`live?: boolean` may be
-// `undefined`).
-// A number (`String(rate())`), a value beside a flag (`String(on() &&
-// rate())`), text around a value (`` `${on()} item` ``) and a name proven
-// nothing (`loaded()`) pass. The config turns it on over the lab's components
-// and off in the tests and the fixtures.
-// Out of its reach: the player. It may not import the lab, so `pressed` is
-// not its to call, and it writes its one toggle's state as a DOM property
-// (`captionsBtn.ariaPressed = String(captions.on)`, `player/main.ts`), not a
-// JSX attribute.
-
 import { Effect, Option, Predicate } from 'effect';
 import { Diagnostic, type ESTree, Rule, RuleContext } from 'oxlint-plugin-effect/rule-bindings';
 import {
@@ -136,8 +94,6 @@ const writtenByHand = (attr: ESTree.JSXAttribute): Reads<Option.Option<ESTree.No
     return Effect.succeed(Option.fromUndefinedOr(value.expressions[0]));
   return Effect.succeedNone;
 };
-
-// The types the file writes.
 
 /** A type is `boolean`: the keyword, `true` or `false`, a predicate (`x is T`), or a union of them. */
 const isBooleanType = (t: ESTree.Node): boolean => {
@@ -269,8 +225,6 @@ const memberGives = (t: ESTree.Node, name: string, use: Use): Reads =>
     ),
   );
 
-// The bindings the file makes.
-
 /** The type a binding's name is annotated with: `const on: () => boolean`, `(props: { … })`. */
 const annotated = (name: ESTree.Node): Option.Option<ESTree.Node> => {
   if (name.type !== 'Identifier') return Option.none();
@@ -331,7 +285,6 @@ const bindingGives = (id: Named, use: Use, seen: Seen): Reads =>
     }
     if (node.type !== 'VariableDeclarator' || !node.init) return no;
     if (node.parent.type !== 'VariableDeclaration' || node.parent.kind !== 'const') return no;
-    // `const [on] = createSignal(false)`: the pattern's first name reads the signal.
     if (node.id.type === 'ArrayPattern') {
       if (use === 'read' || node.id.elements[0] !== name) return no;
       return readerMade(node.init, next);

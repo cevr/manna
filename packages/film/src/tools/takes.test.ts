@@ -1,8 +1,3 @@
-// Takes with fakes: a person's recordings imported beat by beat, from a
-// folder, one file or one long recording of the whole script. The fake media
-// loads a recording as tone for each word it says; the fake transcriber hears
-// what `recorded` says for the beat. No network, no ffmpeg.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Path, Schema } from 'effect';
 import { hashText, voiceKey } from '../core/narration.ts';
@@ -99,20 +94,15 @@ describe('Takes', () => {
         const take = after.scenes[id];
         expect(take?.source).toBe('recorded');
         expect(take?.hash).toBe(hashText(spoken));
-        // The owner's take is the final voice: a lossless FLAC master, not a staging MP3.
         expect(take?.file).toMatch(new RegExp(`^${id}\\.[0-9a-f]{12}\\.flac$`));
         expect(files.has(`${NARRATION}/${take?.file}`)).toBe(true);
-        // Timed by what was heard, in the script's words.
         expect(take?.words.map((w) => w.text)).toEqual(spoken.split(' '));
         expect(take?.duration).toBeGreaterThan(0);
       }
-      // Every take was transcribed once, as narrate transcribes.
       expect(sttOf(calls)).toHaveLength(2);
-      // The staging take it replaced is put away under its beat's attempts, not deleted.
       expect(files.has(`${NARRATION}/a.mp3`)).toBe(false);
       expect(files.get(`${NARRATION}/attempts/a/a.mp3`)).toEqual(text('Hello world.'));
       expect(after.voice).toBe(staged.voice);
-      // The recording itself is kept untouched beside its attempt, byte for byte.
       const takes = yield* Takes;
       for (const [id, source] of [
         ['a', '/rec/a.wav'],
@@ -162,11 +152,9 @@ describe('Takes', () => {
       const after = (yield* loaded).timings;
       expect(after.scenes['b']).toBeUndefined();
       expect([...files.keys()].filter((f) => f.startsWith(`${NARRATION}/b.`))).toEqual([]);
-      // The attempt is kept in the beat's history, to hear or keep later.
       expect(
         (yield* (yield* Takes).attempts((yield* loaded).paths, 'b')).map((a) => a.wer),
       ).toHaveLength(1);
-      // --accept-mismatch names the beats it accepts: another beat's does not cover b.
       const other = yield* Effect.flip(
         importing('/rec/b.m4a', { ...defaults, acceptMismatch: new Set(['a']) }),
       );
@@ -230,14 +218,12 @@ describe('Takes', () => {
 
   it.effect('the kept take can go back to an earlier attempt', () => {
     const { files, layer } = setup();
-    // A second reading, a little slower: other audio, the same words heard.
     files.set('/again/b.wav', text('The second line, again.'));
     return Effect.gen(function* () {
       const first = yield* importing('/rec/b.m4a');
       const firstFile = first.after.scenes['b']?.file;
       const second = yield* importing('/again/b.wav');
       expect(second.after.scenes['b']?.file).not.toBe(firstFile);
-      // The replaced take is gone from narration, not from the history.
       expect(files.has(`${NARRATION}/${firstFile}`)).toBe(false);
       const takes = yield* Takes;
       const history = yield* takes.attempts((yield* loaded).paths, 'b');
@@ -255,21 +241,17 @@ describe('Takes', () => {
     'a replaced take whose name an attempt already holds, with other bytes, is kept beside it, and an Undo that cannot tell the two apart refuses',
     () => {
       const { files, layer } = setup();
-      // An older file under the staging take's name (a name from before takes were named by their audio).
       files.set(`${NARRATION}/attempts/a/a.mp3`, text('an older take'));
       const staging = files.get(`${NARRATION}/a.mp3`);
       const before = Schema.encodeSync(TimingsJson)(staged);
       return Effect.gen(function* () {
         yield* importing('/rec/a.wav', { ...defaults, only: Option.some(new Set(['a'])) });
         expect(files.has(`${NARRATION}/a.mp3`)).toBe(false);
-        // Neither is lost: the attempt is as it was, and the take sits beside it under its own hash.
         expect(files.get(`${NARRATION}/attempts/a/a.mp3`)).toEqual(text('an older take'));
         const beside = [...files.keys()].filter((f) =>
           /\/attempts\/a\/a\.mp3\.[0-9a-f]{12}\.mp3$/.test(f),
         );
         expect(beside.map((f) => files.get(f))).toEqual([staging]);
-        // An Undo of the keep cannot tell which of the two the timings named
-        // (`a.mp3` carries no hash of its audio): it refuses, and guesses at neither.
         const after = new TextDecoder().decode(files.get(TIMINGS));
         const refused = yield* Effect.flip(
           (yield* Takes).named((yield* loaded).paths).bring(after, before),
@@ -297,10 +279,8 @@ describe('Takes', () => {
       return Effect.gen(function* () {
         yield* importing('/rec/a.wav', { ...defaults, only: Option.some(new Set(['a'])) });
         expect(files.has(`${NARRATION}/a.mp3`)).toBe(false);
-        // Both earlier files are as they were, byte for byte.
         expect(files.get(`${attempts}/a.mp3`)).toEqual(older);
         expect(files.get(secondary)).toEqual(occupant);
-        // And the staging take is kept under a name of its own, byte for byte.
         const kept = [...files.entries()].filter(
           ([f]) => f.startsWith(`${attempts}/a.mp3.`) && f !== secondary,
         );
@@ -357,16 +337,13 @@ describe('Takes', () => {
         });
       files.set(`${attempts}/${file}`, c);
       return Effect.gen(function* () {
-        // A put away beside the attempt holding C (their names clash), then C placed and put away.
         files.set(`${NARRATION}/${file}`, a);
         yield* putAwayTake(paths, 'a', file);
         files.set(`${NARRATION}/${file}`, c);
         yield* putAwayTake(paths, 'a', file);
         expect(files.has(`${NARRATION}/${file}`)).toBe(false);
-        // An Undo back to the timings naming C brings back C's bytes.
         yield* (yield* Takes).named(paths).bring(naming('a.mp3'), naming(file));
         expect(files.get(`${NARRATION}/${file}`)).toEqual(c);
-        // A, put away, is still there.
         const aside = [...files.entries()].filter(([f]) => f.startsWith(`${attempts}/${file}.`));
         expect(aside.map(([, bytes]) => bytes)).toEqual([a]);
       }).pipe(Effect.provide(Layer.mergeAll(layer, memoryFileSystem(files), Path.layer)));
@@ -399,7 +376,6 @@ describe('Takes', () => {
         });
         expect(imported.map((i) => i.id)).toEqual(['b']);
         expect(after.scenes['a']?.source).toBe('elevenlabs');
-        // b's audio starts after a's last word ("world." heard 0.5–0.9 s), not at the reading's start.
         const [made] = yield* (yield* Takes).attempts((yield* loaded).paths, 'b');
         const cut = Option.getOrThrow(Option.fromNullishOr(made?.cut));
         expect(cut.from).toBeGreaterThanOrEqual(0.9);

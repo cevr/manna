@@ -1,13 +1,4 @@
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
-// A talk end to end through the tools on real media, a take made in the
-// test: a synthetic camera file (`fixtures/sync-clip.ts`) with a tone where
-// someone speaks is imported into the footage library and made (its copies,
-// its voice, and one hearing by a faked ElevenLabs), a `talk.ts` cut on its
-// transcript is written into a films folder, and `film mix` mixes the take's
-// own voice in the pieces the cut keeps (a second mix makes nothing new). The
-// take's original is never rewritten. No real footage, nothing paid for, and
-// the private store is a folder here. What needs no media (the words, the
-// cues, the page's cut, the narrator refused) is `src/tools/talk.slow.test.ts`'s.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -119,7 +110,6 @@ describe('a talk through the tools, on real media', () => {
         const library = yield* FootageLibrary;
         const root = path.dirname(library.dir);
         const films = path.join(root, 'films');
-        // Made once the services are up: the clip is encoded with the coders they register.
         const clip = yield* syncClip(CLIP);
         const camera = path.join(root, 'take.mp4');
         yield* fs.writeFile(camera, clip);
@@ -145,10 +135,8 @@ describe('a talk through the tools, on real media', () => {
         );
         const loaded = yield* (yield* FilmRepo).load('why');
         const { cut, takes, copies } = Option.getOrThrow(loaded.talk);
-        // The strike makes a seam in the first; the late "need" a seam in the second.
         expect(cut.sections.map((s) => s.pieces.length)).toEqual([2, 2]);
 
-        // The voice is the take's own file, in the pieces the cut keeps, each where its section plays it.
         const placed = yield* placeFilm(loaded);
         const mixing = Result.getOrThrow(
           planOf(yield* measuredFilm(loaded), placed, {
@@ -182,7 +170,6 @@ describe('a talk through the tools, on real media', () => {
         );
         const mixer = yield* Mixer;
         yield* mixer.mix('why', { stems: false, score: Option.none() });
-        // Everything on disk: the films, the footage library, its derived copies and the mix.
         const first = yield* tree(root);
         expect(Object.keys(first)).toContain(path.relative(root, masterFile(loaded.paths)));
         yield* mixer.mix('why', { stems: false, score: Option.none() });

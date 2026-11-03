@@ -1,9 +1,3 @@
-// The phone-fit measure (`fixtures/phone-fit.ts`) counts the controls the
-// touch-target check counts (`TARGETS`, `fixtures/touch-targets.ts`), not only
-// those that carry a `data-act`: a mode button pushed out of its strip, a tab
-// past the window's side, and a number field cut off are each named, and a
-// backing input a visible control keeps beside it is none.
-
 import { Effect } from 'effect';
 import { describe, it } from 'effect-bun-test';
 import { openTab, respond, servePaths } from '../../../src/lab/fixtures/browsers.ts';

@@ -1,15 +1,3 @@
-// What plays: a `Playable` is anything the pages play and keep in time (a
-// `<video>` or an `<audio>` the page shows, `playableOf`; an `Audio` the
-// page makes, `media-browser.ts`; a fake in a test). The drivers (the ask's synced
-// player, `lab/ask/sync.ts`) reach media only through it: time is read from it,
-// a seek is done once the frame at that time is shown, play and pause are
-// effects. `Media` owns what is the host's rule: what a refused play means
-// (`play`: the browser's refusal of sound nobody asked for is `Blocked`, a
-// play a pause cut short is `Aborted`), the fallback to muted play
-// (`playOrMute`), the one voice a page hears at a time (`hear`, `hush`: a
-// take heard, a reader's Hear, each pausing the one heard before, and the
-// film's Play hushing it), and the audio a page makes (`audio(src)`).
-
 import { type Cause, Context, Data, Effect, Layer, Option, Predicate, Ref } from 'effect';
 
 /** A refused play, as the media said it: its error's name (`NotAllowedError`, `AbortError`, …). */
@@ -97,10 +85,8 @@ export const playableOf = (el: MediaElement): Playable => {
         seeking.abort();
         const mine = new AbortController();
         seeking = mine;
-        // Done once shown, or once a later seek takes its place.
         mine.signal.addEventListener('abort', () => resume(Effect.void));
         el.currentTime = t;
-        // An element with nothing loaded shows the time once it loads: nothing to wait for.
         if (el.readyState === 0) mine.abort();
         else el.addEventListener('seeked', () => mine.abort(), { signal: mine.signal });
         return Effect.sync(() => mine.abort());
@@ -191,7 +177,6 @@ const hearing = Effect.map(Ref.make(Option.none<Heard>()), (slot) => {
         { onNone: () => Effect.void, onSome: silence },
       );
       const played = yield* play(media);
-      // A refused play is heard by no one: the slot is let go unless a later hear took it.
       if (!plays(played)) yield* Ref.update(slot, (now) => Option.filter(now, (h) => h !== mine));
       return played;
     });

@@ -160,7 +160,6 @@ function Awake({ awake }: { readonly awake: Atom.Writable<boolean> }) {
       <Text style={styles.label} dynamicTypeRamp="body" aria-hidden>
         Keep screen on
       </Text>
-      {/* React Native's Switch hands iOS no `aria-label`; it reads `accessibilityLabel` on every platform. */}
       <Switch accessibilityLabel="Keep screen on" value={on} onValueChange={turn} />
     </View>
   );

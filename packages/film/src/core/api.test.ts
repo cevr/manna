@@ -67,7 +67,6 @@ describe('page places', () => {
   });
 
   test.each([
-    // Home is no page: the lab sends it on to the newest ask still asking (`tools/lab.ts`).
     '/',
     '/films',
     '/films/rbf',
@@ -75,7 +74,6 @@ describe('page places', () => {
     '/api/films',
     '/chunk-abc123.js',
     '/films/%2E%2E/export',
-    // The pages that are gone: the studio, the review's sets and folders, a production, a draft.
     '/films/rbf/studio',
     '/sets/f/p',
     '/sets/f',

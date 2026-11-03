@@ -185,7 +185,6 @@ const declaration = 'export declare const broken: NotAType;\n';
 describe('the coverage check over a package', () => {
   it("names a nested file that tsc's wildcard skips", () =>
     Effect.gen(function* () {
-      // tsc's `**` skips dot-directories, so only a walk of every level finds it.
       const error = yield* verdict({
         'src/a.ts': 'export const a = 1;\n',
         'src/.hidden/x.ts': 'export const x = 1;\n',
@@ -244,23 +243,6 @@ describe('the coverage check over a package', () => {
       expect(outcome).toEqual({ tsc: { refused: false, errors: [] }, check: 'pass' });
     }).pipe(Effect.provide(BunServices.layer), Effect.runPromise));
 });
-
-/*
- * The census. A program file is the package's when its real path is under the
- * root and outside `node_modules`: the rule has two edges. tsc can spell a
- * package file across either edge, and fold a part of its name, so the census
- * is generated. A cell is an edge (or none), a way tsc crosses it, and a
- * spelling: the disk's own, or one part of the name (the head, a directory,
- * the base name, the extension) folded by case, the long s or normalization.
- * It runs with each loader its way allows (an import, a reference, a `files`
- * entry), and a folded extension with each form of the rule. A cell loads a
- * declaration file whose own error `skipLibCheck` hides, from a dot-directory
- * (`src/.c`) that tsc's wildcard skips, so the cell's route is the one way the
- * file enters the program; the cells share one program. Where the host's disk
- * makes a cell's fold, the check must name the file by its disk spelling;
- * where it does not, tsc must refuse it. A cell no host can express is named,
- * with why.
- */
 
 /** The package's directory name, and the directory and base name of each cell's file. Each holds a capital, a long s and a composed é, so one name answers every fold. */
 const packageName = 'Pſé';
@@ -607,8 +589,6 @@ describe("the package's typecheck over a file tsc spells its own way", () => {
       const found = (each: Case) => each.folds.every((fold) => folded[fold]);
       const checked = census.cases.filter(found);
       const lost = census.cases.filter((each) => !found(each));
-      // A `files` entry tsc cannot find stops it before it reports any other
-      // error, so the lost cases led by one go in a package apart.
       const lostApart = [
         lost.filter((each) => each.listed.length === 0),
         lost.filter((each) => each.listed.length > 0),

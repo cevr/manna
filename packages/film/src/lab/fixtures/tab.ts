@@ -1,13 +1,3 @@
-// A browser test's tab: a view of the process's Chrome, lent to the case by
-// the pool (`browsers.ts`), driven over the DevTools protocol, as Effects.
-// Every request to the tab's own origin is answered by the test (`serve`),
-// never the network; what the page throws is kept; input is native (trusted)
-// mouse and key events; waits run in the page on its real timers, so a
-// stopped page clock (`clock.ts`) never stops a wait. A wait or an action on
-// an element waits for it to be there and shown, up to `WAIT_MS`, and fails
-// saying what it waited for. Closed, the tab takes its scripts for new pages
-// off the view, which goes on to another case.
-
 import { Clock, Effect, FiberSet, Match, Option, Predicate, Schema, type Scope } from 'effect';
 import { BrowserFailed } from '../../tools/errors.ts';
 import { CLOCK, REAL_TIMERS } from './clock.ts';
@@ -339,7 +329,6 @@ const ranged = (r: Response, range: Option.Option<string>): Response => {
       onNone: () => ({ ...r, headers }),
       onSome: ([, from = '0', to = '']) => {
         const start = Number(from);
-        // An open range (`bytes=<from>-`) runs to the end.
         const asked = Option.map(
           Option.liftPredicate(to, (digits) => digits !== ''),
           Number,
@@ -420,7 +409,6 @@ export const makeTab = (
       Effect.tryPromise(() => view.cdp(method, params));
     const call = (method: string, params: { readonly [key: string]: Wire } = {}) =>
       Effect.asVoid(Effect.orDie(send(method, params)));
-    // The page's requests, answered while the tab is open: closing it drops the rest.
     const answering = yield* FiberSet.makeRuntime();
     const answerListeners = new Set<(a: Answered) => void>();
 
@@ -446,7 +434,6 @@ export const makeTab = (
               ],
               body: Buffer.from(r.body).toString('base64'),
             }).pipe(
-              // A tab closed with requests still waiting.
               Effect.ignore,
               Effect.andThen(
                 Effect.sync(() => {
@@ -465,7 +452,6 @@ export const makeTab = (
       );
     });
 
-    // The view's next case loads its pages without this case's scripts.
     for (const source of init) {
       const added = yield* Effect.flatMap(
         Effect.orDie(send('Page.addScriptToEvaluateOnNewDocument', { source })),
@@ -481,7 +467,6 @@ export const makeTab = (
     /** `expression` run in the page, its answer (awaited, as JSON); a throw is a defect naming it. */
     const run = <A>(expression: string): Effect.Effect<A> =>
       Effect.tryPromise({
-        // Through `eval`, so a script may be statements (`window.x = 1; true`), its last one's value the answer.
         try: () => view.evaluate<A>(`(0, eval)(${jsonOf(expression)})`),
         catch: (cause) =>
           BrowserFailed.make({ reason: `${expression.slice(0, 200)}: ${String(cause)}` }),
@@ -602,7 +587,6 @@ export const makeTab = (
 
     let marks = 0;
     let at = { x: 0, y: 0 };
-    // The button a move drags with: the left one while it is held.
     let button = 'none';
     const mouseEvent = (type: string, x: number, y: number, buttons: number) =>
       call('Input.dispatchMouseEvent', {
@@ -682,7 +666,6 @@ export const makeTab = (
           })),
         }),
       );
-    // The view outlives the case: a finger the case left down is lifted, so the next case's press is its own.
     yield* Effect.addFinalizer(() =>
       Effect.when(
         Effect.exit(
@@ -698,8 +681,6 @@ export const makeTab = (
     const fingerOf = (id: number) => ({
       down: (x: number, y: number) =>
         Effect.suspend(() => {
-          // While one tab's touches are under way Chrome drops, or lands as a bare click, the
-          // touches another tab's case sends at the same time: a case that touches runs alone.
           if (!alone())
             return Effect.die(
               new Error(
@@ -707,7 +688,6 @@ export const makeTab = (
               ),
             );
           fingers.set(id, { x, y });
-          // Two down at once leave the view deaf to touch once they lift: it is not lent again.
           if (fingers.size > 1) view.retire();
           return report('touchStart');
         }),
@@ -767,7 +747,6 @@ export const makeTab = (
           code: k.code,
           windowsVirtualKeyCode: k.keyCode,
         });
-        // A key that types (with no modifier held) goes down with its text; any other goes down raw.
         for (const k of keys)
           if (k.text !== '' && modifiers === 0)
             yield* call('Input.dispatchKeyEvent', {
@@ -822,7 +801,6 @@ export const makeTab = (
       finger,
       goto: (path) => Effect.promise(() => view.navigate(`${origin}${path}`)),
       reload: Effect.promise(() => view.reload()),
-      // Bun's `back` is typed but not there at run time (1.4.2): the page goes back itself.
       back: run('history.back()'),
       forward: run('history.forward()'),
       url: run<string>('location.href'),
@@ -856,7 +834,6 @@ export const makeTab = (
             return off;
           })()`);
         }),
-      // The page as it stands is marked; the next one, loaded, has no mark.
       nextLoad: Effect.suspend(() => {
         marks += 1;
         const mark = marks;
@@ -887,7 +864,6 @@ export const makeTab = (
         runFor: (ms) => clock(`runFor(${ms})`),
         fastForward: (ms) => clock(`fastForward(${ms})`),
         pauseAt: (t) => clock(`pauseAt(${t})`),
-        // The page's own (installed) clock, read in the page: not this process's.
         hold: Effect.flatMap(run<number>('Date.now()'), (now) =>
           clock(`pauseAt(${now + HOLD_LEAD_MS})`),
         ),

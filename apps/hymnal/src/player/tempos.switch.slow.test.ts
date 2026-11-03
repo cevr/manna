@@ -94,7 +94,6 @@ const switching = (asyncRead: boolean) =>
     ).pipe(Layer.provide(fixture.layer));
     const player = playerOn(
       cachedPlayback(
-        // The fake One logs only the calls `playbackOn` makes.
         Layer.succeed(
           Playback,
           playbackOn(() => one as any, Option.none()),
@@ -155,9 +154,7 @@ for (const asyncRead of [false, true])
             toldOnTurn,
             played: log.some((e) => e.startsWith('play 3')),
           }).toEqual({
-            // The play's own rate, once, in the step that plays it.
             toldBeforePlay: ['rate 0.5'],
-            // A turn of the held hymn's tempo still reaches the device.
             toldOnTurn: ['rate 0.7'],
             played: true,
           });

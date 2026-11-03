@@ -1,8 +1,3 @@
-// A Chrome's profile: `<tmp>/bible-film-chrome/<pid>`, one per process, since
-// Bun spawns one Chrome per process. Bun's own default, a temp profile per
-// Chrome, is never removed (Bun 1.4.3): a test run left one per worker, up to
-// 125 MB each, until the disk filled.
-
 // oxlint-disable-next-line effect/noNodeBuiltinImport -- the exit handler's delete: an exiting process runs no effect, only synchronous calls
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';

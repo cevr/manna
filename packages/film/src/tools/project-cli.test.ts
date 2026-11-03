@@ -1,9 +1,3 @@
-// `film project approve --scene a,c`, run as the CLI runs it over a memory
-// catalogue: the scenes named are approved all together or not at all. Each
-// is checked under the catalogue's lock, so a render that lands between the
-// run's start and its write cannot leave some of them approved and the
-// answer saying all were.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Cause, Effect, Exit, Layer, Option, Path, Schema } from 'effect';
@@ -125,7 +119,6 @@ const approveAsLands = (lands: Render) =>
     const placed = yield* placeFilm(FILM);
     const stamps = sceneStamps({ commit: Option.none(), keys: KEYS, beats: KEYS }, placed);
     const mix = yield* planKey(FILM, placed);
-    // Current: its sources' key now, and the film's mix.
     const current = (id: string) =>
       sceneRender(id, stamps.find((s) => s.scene === id)?.stamp.key ?? '', mix);
     yield* catalogues.record(FILM.paths, current('one'));

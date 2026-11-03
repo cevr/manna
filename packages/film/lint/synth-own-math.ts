@@ -1,21 +1,3 @@
-// `film/synth-own-math`: the sound graph (packages/film/src/core/synth/graph)
-// makes the same samples on every host by construction. A host's Math.sin,
-// exp, log, pow and tanh are approximations its engine chooses, so two hosts
-// (Bun on macOS, Bun on Linux) may round them apart; + − × ÷ and sqrt are
-// correctly rounded everywhere (IEEE 754), and so are Math's rounding, sign
-// and comparison members and its constants. The graph's transcendentals are
-// its own (graph/math.ts), built from those alone.
-//
-// Refused in the files the config governs: a read of the global `Math` other
-// than a member it lets through by name (`Math.floor` passes; `Math.sin`,
-// `Math[name]`, `Math` handed on or taken apart, and `globalThis.Math` do
-// not); `**` and `**=`, the host's pow; and a value imported or re-exported
-// from a module of the repo outside the graph's folder but the seeded
-// generator (core/random.ts), from a package but `effect`'s `Predicate`,
-// `Schema` and `Match` by name, or by a dynamic `import(…)` of one, so no
-// helper brings the host's maths in. A type imported from anywhere is no
-// code, and passes.
-
 import { Effect, Option, Predicate } from 'effect';
 import {
   Diagnostic,

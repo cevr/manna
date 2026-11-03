@@ -1,23 +1,3 @@
-// The lab's events as one stream, followed past a cursor for as long as its
-// reader wants them: what `film lab events --follow`, `film ask wait` and
-// `film channel` each read. A session of the lab's MCP is opened, the cursor
-// taken (or the one given kept), and the feed long-polled (`changes`, its
-// `wait`) past it; each answer is heard in turn, and the reader's own reads
-// run on the same session between two polls. Each change is read on its
-// own (`HeardChange`): one of a kind this checkout does not know (a newer
-// lab's) is heard from the fields every change has, never as a lab lost.
-//
-// The cursor is the stream's, not a session's: a lab that stops answering
-// (restarted, the network dropped) is said once (`Lost`), asked again on
-// `pace.retry`, and the new session reads on from the last cursor seen
-// (`Connected`, `resumed`), so nothing that changed while it was away is
-// skipped; a lab that no longer knows that cursor says so in its answer's
-// `reset`. Each loss after a session that answered starts `pace.retry`
-// over. Only a lab silent past `goneAfter`, counted from the first loss
-// since it last answered, ends it (`LabGone`), and a failure that is no
-// lost connection (`isLost` says which: a refusal, an answer this checkout
-// does not read) ends it in its own words.
-
 import { Clock, Duration, Effect, Option, Ref, Schedule, Schema, type Scope } from 'effect';
 import { changeAsked, HeardChange } from '../core/lab-events.ts';
 import type { labClient } from './lab-client.ts';

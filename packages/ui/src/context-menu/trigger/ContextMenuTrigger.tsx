@@ -1,29 +1,3 @@
-// Upstream: packages/react/src/context-menu/trigger/ContextMenuTrigger.tsx
-//
-// The area that opens the context menu: a right click opens it at the
-// pointer, and a touch held still for 500ms opens it at the touch (moving
-// more than 10px first cancels). The browser's own context menu is
-// suppressed over the area and the menu's backdrop. After a right click,
-// releasing the button over nothing in the menu more than 500ms later closes
-// it again, so a press-drag-release gesture works like a native menu.
-// Not in upstream: one owner per press (`claimPress`, `utils/press.ts`). The
-// long press also reads the press's pointer moves, since a browser holds
-// back the touch's own moves within its slop (wider than 10px) while its
-// pointer moves arrive. A consumer's drag that starts claims the press (the
-// film lab's `Pointer.press` does, past `LONG_PRESS_MOVE_THRESHOLD`), and a
-// press another holds is no long press, nor opens on the browser's own long
-// press `contextmenu`; a long press claims the press as it opens the menu,
-// so no drag starts under the open menu. Also not in upstream: the open is
-// decided before the browser's menu is prevented. A right click the root's
-// `onOpenChange` cancels (a field inside the area keeping its own menu)
-// leaves the event alone, so the browser's menu shows; over the area the
-// browser's menu is suppressed only by the open that went ahead, and the
-// document listener covers the backdrop alone. Nor in upstream: the lift of
-// the touch that opened the menu is cancelled, so the browser's click after
-// it does not choose the item the menu opened under the finger. Nor in
-// upstream: one root may serve many triggers (the film lab's page trigger
-// around its targets), so a trigger says the menu is open (`data-popup-open`)
-// only while the menu is open from its own press (the root's `opener`).
 import type { JSX } from '@solidjs/web';
 import { omit, onCleanup, untrack } from 'solid-js';
 
@@ -60,14 +34,11 @@ export function ContextMenuTrigger(componentProps: ContextMenuTriggerProps): JSX
 
   let triggerElement: HTMLElement | null = null;
   let touchPosition: { x: number; y: number } | null = null;
-  // The touch press's pointer, while one is down on the area. `self` is this trigger: who the
-  // long press claims the press as, and the root's `opener` when its press opens the menu.
   let pressPointer: number | null = null;
   const self = Symbol('context-menu trigger');
   const longPressTimeout = useTimeout();
   const allowMouseUpTimeout = useTimeout();
   let allowMouseUp = false;
-  // Whether the touch now down opened the menu: its lift then clicks nothing.
   let pressOpened = false;
   let mouseUpAbortController: AbortController | null = null;
 
@@ -91,9 +62,7 @@ export function ContextMenuTrigger(componentProps: ContextMenuTriggerProps): JSX
     if (details.isCanceled) {
       return false;
     }
-    // The menu is open from this trigger now (an open declined leaves it with the last one).
     contextMenu.setOpener(self);
-    // The open menu holds the touch press, so no drag starts under it.
     if (pressPointer !== null) {
       claimPress(pressPointer, self, ownerDocument(triggerElement));
     }
@@ -105,13 +74,11 @@ export function ContextMenuTrigger(componentProps: ContextMenuTriggerProps): JSX
   }
 
   function handleContextMenu(event: MouseEvent) {
-    // The browser's own long press on a touch a drag has taken: its menu stays shut, as ours does.
     if (pressTaken()) {
       stopEvent(event);
       return;
     }
     contextMenu.allowMouseUpTriggerRef.current = true;
-    // Declined (a field keeps its own menu): the event is left alone, and the browser's menu shows.
     if (!handleLongPress(event.clientX, event.clientY, event)) {
       contextMenu.allowMouseUpTriggerRef.current = false;
       return;
@@ -119,8 +86,6 @@ export function ContextMenuTrigger(componentProps: ContextMenuTriggerProps): JSX
     stopEvent(event);
     const doc = ownerDocument(triggerElement);
 
-    // A listener from an earlier press that never saw its mouseup is dropped; this one is
-    // dropped on unmount if its mouseup never arrives.
     mouseUpAbortController?.abort();
     const controller = new AbortController();
     mouseUpAbortController = controller;
@@ -163,7 +128,6 @@ export function ContextMenuTrigger(componentProps: ContextMenuTriggerProps): JSX
     const position = { x: touch.clientX, y: touch.clientY };
     touchPosition = position;
     longPressTimeout.start(LONG_PRESS_DELAY, () => {
-      // A drag may have taken the press while the finger was down.
       if (!pressTaken()) {
         handleLongPress(position.x, position.y, event);
       }
@@ -207,7 +171,6 @@ export function ContextMenuTrigger(componentProps: ContextMenuTriggerProps): JSX
     pressPointer = event.pointerType === 'touch' ? event.pointerId : null;
   }
 
-  // The press's pointer moves: a drag that claimed it, or a move past the threshold, ends the long press.
   function handlePointerMove(event: PointerEvent) {
     if (pressPointer === null || event.pointerId !== pressPointer) {
       return;
@@ -240,8 +203,6 @@ export function ContextMenuTrigger(componentProps: ContextMenuTriggerProps): JSX
       (el: HTMLElement) => {
         triggerElement = el;
       },
-      // The browser's context menu stays closed over the menu's backdrop (over the area, the open
-      // that went ahead closes it).
       listen('document', 'contextmenu', (event) => {
         const target = getTarget(event) as HTMLElement | null;
         if (contains(contextMenu.internalBackdropRef.current, target)) {

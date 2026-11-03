@@ -116,9 +116,9 @@ catalog-keyed edge.
 ### 2.4 Overlay keying
 
 The catalog lives in `bible.db`:
-`topics(id TEXT PRIMARY KEY, name, alternative_names)` at
-`packages/core/src/bible-db/schema.ts:81-85`, with `topic_sections` (`:86-92`)
-and `topic_references` (`:93-100`). Catalog ids are prefixed
+`topics(id TEXT PRIMARY KEY, name, alternative_names)`, created in
+`packages/core/src/bible-db/schema.ts` beside its `topic_sections` and
+`topic_references` tables. Catalog ids are prefixed
 `naves-topical-bible.` and the catalog is Nave's Topical Bible (5,322 rows,
 76,957 references — [research 011](../wayfinder/wiki-study-layer/research/011-topic-candidates.md)).
 
@@ -166,8 +166,8 @@ CLI commands calling `WikiService` directly, `--json` via `Flag.boolean('json')`
 
 A shared `--json` flag already exists at
 `packages/cli/src/lib/content/options.ts` but only `commands/notes.ts` imports
-it; `bible.ts:22`, `hymns.ts:22`, and `egw/search.ts:51` each redefine it
-locally, and `encodeJson` is re-declared in five places. The `manna wiki *` and
+it; `bible.ts` (`jsonFlag`), `hymns.ts` (`jsonFlag`) and `egw/search.ts`
+(`json`) each redefine it locally, and `encodeJson` is re-declared in five places. The `manna wiki *` and
 `manna study *` commands use the shared flag and one shared encoder; §12 leaves
 whether to retrofit the existing commands as an implementation choice.
 
@@ -261,14 +261,14 @@ generation rollback, stale-fallback — already exists and is tested
 New work in `packages/core/src/corpus-supply/`:
 
 - `TOPICS_ARTIFACT_RELEASE` (url, revision, digest, size) mirroring
-  `BIBLE_ARTIFACT_RELEASE` (`bible-artifact.ts:9-14`), plus a
+  `BIBLE_ARTIFACT_RELEASE` (in `corpus-supply/file-artifact.ts`), plus a
   `TopicsArtifactRecipe` / `TopicsArtifactInstaller` `Context.Service` pair.
-- Widen four closed unions: `CorpusName` (`model.ts:9`), `CorpusTarget`
-  (`model.ts:57`) with a new `TopicsTarget`, the `Target` constructor object
-  (`model.ts:107`), and `CorpusIdentity` (`model.ts:14`) for a topics identity.
-  `CorpusInstallationError.corpus` and `CorpusRecipeUnavailableError.corpus`
-  (`errors.ts:22,31`) widen for free once `CorpusName` does.
-- An `ensureTopics` branch in `CorpusSupply.ensure` (`service.ts:144-155`).
+- Widen four closed unions in `model.ts`: `CorpusName`, `CorpusTarget` with a
+  new `TopicsTarget`, the `Target` constructor object, and `CorpusIdentity` for
+  a topics identity. `CorpusInstallationError.corpus` and
+  `CorpusRecipeUnavailableError.corpus` (in `errors.ts`) widen for free once
+  `CorpusName` does.
+- An `ensureTopics` branch in `CorpusSupply.ensure` (in `service.ts`).
 - A semantic verifier: page count > 0, alias count > 0, `meta.schema_major`
   within range.
 
@@ -415,15 +415,16 @@ other page and on every reading surface.
 ### 4.6 Boundary rules
 
 A phrase span never crosses a `TextSegment` boundary
-(`packages/core/src/bible-rendering/segments.ts:21-28`) and never enters a
-`ScriptureRef` or `BookRef` AST node (`packages/core/src/egw/ast.ts:54-84`) —
+(`packages/core/src/bible-rendering/segments.ts`, `TextSegment`) and never enters a
+`ScriptureRef` or `BookRef` AST node (`packages/core/src/egw/ast.ts`, `ScriptureRef`
+and `BookRef`) —
 those nodes already carry link semantics and a second link layer inside them
 would fight the first.
 
 For Bible text, phrase links become a new `TextSegment` variant applied with the
-same discipline `applySearchHighlights` (`segments.ts:116`) uses: only `text`
+same discipline `applySearchHighlights` (in `segments.ts`) uses: only `text`
 segments split. For EGW, matching runs over per-`Text`-node text produced by
-`parseParagraphContent` (`ast.ts:190`), which respects node boundaries by
+`parseParagraphContent` (in `ast.ts`), which respects node boundaries by
 construction.
 
 **The segment pipeline is not wired up yet.** `segmentVerseText`,
@@ -455,7 +456,9 @@ Counts and the full flag list:
 ### 4.9 Known implementation gap: context-restricted aliases
 
 The exclusions of §4.8 are honored — a noise-flagged alias is simply absent from
-the dictionary, and `phrase-matcher.test.ts:520` pins that. The **restrictions** are not.
+the dictionary, and `phrase-matcher.test.ts`'s case "a noise-flagged alias is
+absent from the dictionary and therefore never matches" pins that: bare
+`judgment` is not matched while `investigative judgment` is. The **restrictions** are not.
 `the daily` must not fire inside `the daily paper`, the author wrote the rule
 down where §4.8 says to (`content/topics/the-daily.md:16`: _"the daily" needs
 context-restricted matching ("the daily paper")_), and every layer between that
@@ -579,14 +582,14 @@ and the same "get this book" marker in its JSON.
 
 Sections 2 and 4 need an author-scope filter that does not exist yet.
 `EGWParagraphDatabase.searchParagraphs(query, limit?, bookCode?)`
-(`packages/core/src/egw-db/book-database.ts:209-220`) filters by a **single book
-code** and applies `LIMIT` **without `ORDER BY rank`**
-(`:895-928`). `WritingsService.search(query, { limit?, publication? })`
-(`packages/core/src/writings/service.ts:137-143`) inherits both limits.
+(in `packages/core/src/egw-db/book-database.ts`) filters by a **single book
+code** and applies `LIMIT` **without `ORDER BY rank`**.
+`WritingsService.search(query, { limit?, publication? })`
+(`WritingsServiceApi.search` in `packages/core/src/writings/service.ts`) inherits both limits.
 
 Milestone 3 extends the portable database service with a corpus-scope parameter
 (`egw` | `pioneer` | `all`) resolved against the indexed `books.book_author`
-column (`book-database.ts:521,526`), and adds `ORDER BY rank` so "FTS rank order"
+column (`book-database.ts`, `idx_books_author`), and adds `ORDER BY rank` so "FTS rank order"
 in the table above is real. Both changes are portable-core work and land behind
 the same service interface all three clients already call.
 
@@ -594,15 +597,15 @@ the same service interface all three clients already call.
 
 §6.3's degradation and §7's are the same posture, spelled twice: `composeSections`
 recovers a source's typed failure into an empty section nine times
-(`packages/core/src/wiki/section-composer.ts:487,518,532,542,693,697,799,858,904`)
+(in `packages/core/src/wiki/section-composer.ts`)
 and `LookupService.resolve` into an empty group five
-(`lookup-service.ts:391,459,488,536,611`), and neither surface has an error
+(in `lookup-service.ts`), and neither surface has an error
 channel for a client to read (`composeSections` and
-`LookupServiceApi.resolve:78` both return an `Effect` that cannot fail).
+`LookupServiceApi.resolve` both return an `Effect` that cannot fail).
 
 **Two different things arrive on those channels and only one of them is
 absence.** `BibleDatabaseError` is `SqlError | BibleDataIntegrityError`
-(`packages/core/src/bible-db/bible-database.ts:21`): the same type reports "this
+(in `packages/core/src/bible-db/bible-database.ts`): the same type reports "this
 corpus is not installed" and "this installed corpus answered with a broken row
 or failed a query". `WikiUnavailableError` carries a `corrupt` category beside
 its absent one. Recovering both is what §6.3 asks for in the first case and a
@@ -838,7 +841,8 @@ run locally with `bun run test:perf` (they read `packages/core/data/bible.db`).
 
 Every milestone runs the six acceptance rules from the compatibility contract:
 
-1. Oxlint proves portable core has no host imports (`.oxlintrc.json:58-90`).
+1. Oxlint proves portable core has no host imports (the `no-restricted-imports`
+   override for `packages/core/src/**` in `.oxlintrc.json`).
 2. Core contract tests with test services.
 3. Adapter tests: web worker, Electron main, Bun CLI.
 4. The same fixtures in all three clients.
@@ -1178,7 +1182,8 @@ Implementation-level only. Nothing here belongs on the map.
   portable runtime core". The root has no `build:*` script today, so the name is
   a new root-level alias either way.
 - **Compiler filesystem access.** The compiler reads `content/topics/*.md`, which
-  the oxlint boundary forbids in portable core (`.oxlintrc.json:56-90`). Whether
+  the oxlint boundary forbids in portable core (the `no-restricted-imports`
+  override for `packages/core/src/**` in `.oxlintrc.json`). Whether
   it uses Effect's `FileSystem` interface or lives in a `*-bun.ts` /
   `platform-bun/` file is open; both are permitted.
 - **Retrofitting the CLI `--json` convention.** Whether the existing commands

@@ -1,8 +1,3 @@
-// The film's clock as text: each scene's placement, its marks, its resolved
-// named cues (an `until` cue's offset off its point beside it) and the seam to
-// the next voice, each sound effect's film time, or a short's spans. Pure;
-// `film cues` prints it.
-
 import { Array as Arr, Option, Result } from 'effect';
 import type { SoundCueError, UnknownScene } from '../core/errors.ts';
 import { type Placed, sceneOf } from '../core/layout.ts';

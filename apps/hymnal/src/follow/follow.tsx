@@ -90,7 +90,6 @@ const useLineMark = (index: number): number => {
     [marks, index],
   );
   const read = () => marks.markOf(index);
-  // A page rendered on the server is not followed: its lines read their mark as the client does.
   return useSyncExternalStore(subscribe, read, read);
 };
 
@@ -320,9 +319,6 @@ export const useFollow = (number: number) => {
     [sung, registry],
   );
 
-  // The rate is read as each state is reported, not reported on its own change: a report at an
-  // old place would set the clock back. The score clock's next read carries the new rate's place.
-  // A count-in that starts on this hymn shows the line it holds, wherever the page was.
   const counting = useCounting();
   const counted = useRef(false);
   useEffect(() => {
@@ -339,8 +335,6 @@ export const useFollow = (number: number) => {
     () => () => Option.match(follower, { onNone: () => {}, onSome: (f) => f.stop() }),
     [follower],
   );
-  // Each seek the player asks, of any size, ends a hand pause (`seeks.ts`). The count is read
-  // first: the read starts the atom on its ref, and a seek is a count past the one read.
   useEffect(
     () =>
       Option.match(follower, {

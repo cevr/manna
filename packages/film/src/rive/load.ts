@@ -1,16 +1,3 @@
-// A film's rigs loaded before its first frame (`loadRigs`): every rig its
-// drawings declare (`film.rigs.declared`), each made from its built file
-// through the `RiveRuntime` the host gives (a page's, Bun's), and stood on the
-// film for its draws. A rig is its file, parsed once: each frame poses an
-// artboard instance of its own made from it (`drawRig`). Each wasm object a
-// rig holds (the file, the artboard its names were checked on, the scratch
-// matrix, the surfaces it draws on, what a frame that threw left in its
-// in-flight slot) is the load scope's and freed when it closes; the rigs
-// stand on the film until then. Each name a declaration
-// gives is checked against the file here, and so is the number `ink` of a
-// rig that follows the shot (`RivePropSpec.ink`), so a missing one fails the
-// load, listing what the file has, and nothing is drawn.
-
 import type { Artboard, File, LinearAnimation, RiveCanvas } from '@rive-app/webgl2-advanced';
 import { Effect, Exit, Option, Scope } from 'effect';
 import type { Film } from '../canvas/film.ts';
@@ -80,7 +67,6 @@ const loadRig = Effect.fn('Rive.loadRig')(function* (spec: RivePropSpec) {
   const runtime = yield* Effect.mapError(rive.runtime(spec.engine), relabel);
   const bytes = yield* Effect.mapError(rive.read(source.riv), relabel);
   const file = yield* fileOf(spec, runtime, bytes);
-  // An instance of the artboard, its names read and checked; the frames make their own.
   const artboard: Artboard = yield* owned(
     Effect.suspend(() =>
       found(file.artboardByName(source.artboard), () =>
@@ -90,7 +76,6 @@ const loadRig = Effect.fn('Rive.loadRig')(function* (spec: RivePropSpec) {
     (a) => a.delete(),
   );
 
-  // The declared timelines: the file's own, which every instance of the artboard shares.
   const animations = namesOf(artboard.animationCount(), (i) => artboard.animationByIndex(i).name);
   const timelines = new Map<string, LinearAnimation>();
   for (const name of source.timelines) {
@@ -99,7 +84,6 @@ const loadRig = Effect.fn('Rive.loadRig')(function* (spec: RivePropSpec) {
     timelines.set(name, artboard.animationByIndex(at));
   }
 
-  // The view model a frame's own instance is made from, and the numbers it has.
   const model = Option.fromNullishOr(file.defaultArtboardViewModel(artboard));
   const vmNumbers = yield* Option.match(model, {
     onNone: () => Effect.succeed<ReadonlyArray<string>>([]),
@@ -119,7 +103,6 @@ const loadRig = Effect.fn('Rive.loadRig')(function* (spec: RivePropSpec) {
   const numbers = numberNames(spec, vmNumbers);
   for (const name of numbers)
     if (!vmNumbers.includes(name)) return yield* missing('view-model number', name, vmNumbers)();
-  // A rig that follows the shot binds its ink to the number the frame sets.
   if (Option.isSome(Option.fromNullishOr(spec.ink)) && !vmNumbers.includes(INK_NUMBER))
     return yield* missing('view-model number', INK_NUMBER, vmNumbers)();
 
@@ -130,7 +113,6 @@ const loadRig = Effect.fn('Rive.loadRig')(function* (spec: RivePropSpec) {
     Effect.sync(() => new runtime.Mat2D()),
     (m) => m.delete(),
   );
-  // The frames' in-flight slot: what a frame that threw left is freed before the file it came from.
   const frame = yield* owned(Effect.sync(inFlight), (f) => f.free());
   const surfaces = yield* owned(
     Effect.sync(() =>

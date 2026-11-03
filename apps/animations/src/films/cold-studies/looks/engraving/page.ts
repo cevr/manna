@@ -1,12 +1,3 @@
-// Job 9 on the page of an old illustrated Bible: two justified columns in
-// a period serif under a running head and its rules, the chapter's heading,
-// each verse its own paragraph with its number set small, the supplied
-// words in italic as the printers set them, the page curving into the
-// gutter at its inner edge, the shade there cut in lines like the plates.
-// As "Job asked it" is said, the phrase is laid over with a gold wash, a
-// brush drawn along it word by word; the wash is the card's colour, so the
-// card floods out of it.
-
 import { type Box, type TextStyle, measure, write } from '@manna/film/canvas';
 import { lerp, rng } from '@manna/film/core';
 import { VERSE } from '../../look.ts';
@@ -153,7 +144,6 @@ const gutter = (ctx: CanvasRenderingContext2D) => {
   ctx.save();
   ctx.fillStyle = INK;
   for (let y = SHEET.y; y < PAGE.h; y += 6.5) {
-    // This page darkening toward its inner edge, then the crease, then the facing page.
     for (const [x0, x1, flip] of [
       [0, 120, 1],
       [-130, -14, -1],
@@ -218,7 +208,6 @@ export const job = (f: JobFrame): Box => {
   ctx.drawImage(paper(SHEET.w, SHEET.h, 23), SHEET.x, SHEET.y, SHEET.w, SHEET.h);
   gutter(ctx);
 
-  // The running head and its rules.
   write(
     ctx,
     'JOB.',
@@ -256,7 +245,6 @@ export const job = (f: JobFrame): Box => {
     set,
   );
 
-  // The gold wash over the phrase, drawn along it in reading order.
   const runs: Box[] = [];
   for (const s of set) {
     if (!s.phrase) continue;

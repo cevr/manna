@@ -1,10 +1,3 @@
-// Paul's skeletons, one a cut view (`core/puppet.ts`), read in view pixels
-// and moved into its part sheet's frame (`frames.ts`) by the shared skeleton
-// (`library/cutout/skeleton.ts`). Each view is a bust (`library/cutout/bust.ts`):
-// a lean from the foot of the view up to his head's pivot at the foot of his
-// beard, and his head above it. His head turns on the head bone; his mantle
-// and tunic lean. Pure data: each view's pivot and foot.
-
 import type { Skeleton } from '@manna/film/core';
 import { bustSkeleton } from '../../../cutout/bust.ts';
 import { framed } from '../../../cutout/skeleton.ts';

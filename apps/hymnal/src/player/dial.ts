@@ -136,7 +136,6 @@ export const glide = (dial: Detents, place: number, speed: number): Rest => {
     v *= DECAY;
     frames += 1;
   }
-  // The snap to the nearest detent takes one frame more.
   const rest = detentAt(at);
   const crossed = passed(dial, from, rest);
   const cues: Array<Cue> = crossed.map((n) => ({ _tag: 'detent', dial: dial.name, at: n }));

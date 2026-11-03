@@ -86,7 +86,6 @@ describe('onceScoped', () => {
             const run = yield* onceScoped(
               Effect.gen(function* () {
                 runs.count += 1;
-                // The run interrupts its first caller as it starts, while that caller yields.
                 if (runs.count === 1)
                   Option.map(caller.fiber, (fiber) => fiber.interruptUnsafe(fiber.id));
                 return yield* Deferred.await(finish);

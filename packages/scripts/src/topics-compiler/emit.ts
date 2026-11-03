@@ -74,8 +74,6 @@ export const emitArtifact = Effect.fn('TopicsCompiler.emit')(function* (input: {
   const revision = `topics-${compiled.sourceDigest.slice(0, 12)}`;
   const fs = yield* FileSystem.FileSystem;
   const compiledAt = yield* Clock.currentTimeMillis;
-  // A fresh file every compile: the emitter owns the whole artifact, so a
-  // leftover from a previous run must not survive into this one.
   yield* fs.remove(input.destination, { force: true }).pipe(Effect.orDie);
   yield* Effect.acquireUseRelease(
     Effect.try({

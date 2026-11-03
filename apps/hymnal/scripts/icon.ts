@@ -88,9 +88,6 @@ export const icons: ReadonlyArray<Icon> = [
     wheat: white,
     ground: clear,
   },
-  // The launch screen's artwork, on the ground `vite/app.ts` names: One's
-  // prebuild trims an opaque ground away and draws what is left `width`
-  // points wide, so the square keeps its size only with a transparent ground.
   { file: 'public/splash.png', size: 1024, layout: 'full', wheat: PALETTE.night, ground: clear },
   {
     file: 'public/splash-dark.png',
@@ -294,7 +291,6 @@ export const manifest = `${Schema.encodeSync(WebManifestJson)({
 const run = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  // scripts/ → the app's root.
   const root = path.resolve(import.meta.dir, '..');
   const at = (file: string) => path.join(root, file);
   const wheat = yield* wheatOf(yield* fs.readFileString(at('assets/icon/wheat.svg')));

@@ -1,13 +1,3 @@
-// A take's picture and its voice stay together through the footage library's
-// copies (`footage-media.ts`): a synthetic clapper's clip (a white frame and
-// a click on one moment, `fixtures/sync-clip.ts`) made into its mezzanine
-// and its voice keeps the flash and the click within one frame, whether the
-// camera's picture starts at zero or after it, and whether its frames run at
-// a constant rate or a variable one, and from either camera a talk is shot
-// on: an iPhone's HEVC MOV, upright, or a Sony ZV-E10's H.264 MP4, landscape
-// and at 24 or 30. Each copy is constant-rate at its recipe's rate, the way up
-// its original is, its key frames no further apart than its recipe allows.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Layer, Option, Path, Stream } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -149,7 +139,6 @@ describe('a take keeps its picture and its voice together', () => {
             expect(made.probe.picture.codec).toBe(CODECS[clip.camera]);
             expect(made.upright).toBe(clip.camera === 'iphone');
             expect(Math.abs(made.click - made.flash)).toBeLessThanOrEqual(1 / 30);
-            // Constant-rate at the recipe's rate.
             expect(new Set(made.mezzanine.map((p) => p.length.toFixed(5)))).toEqual(
               new Set([(1 / FOOTAGE_RECIPES.mezzanine.fps).toFixed(5)]),
             );

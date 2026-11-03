@@ -1,20 +1,3 @@
-// A page's commands, wired: its registry (`command.ts`), its keymap
-// (`keymap.ts`: each command's own keys), the
-// context its commands read (`context.ts`: the page's URL and what is
-// selected there, refined by whatever on the page knows more, such as
-// whether the film plays), the one key listener on the page (`listen`,
-// through `Keys`; every press heard, bound or not, `presses`), and the receipts every command answers with, and those a
-// page's writes announce as they land (`announce`: a drag's, a field's, a
-// say's), handed to whoever shows them, each in its slot (the command's id,
-// or the writer's name: a slot's next receipt replaces its last, so
-// `undoing…` becomes what was undone). Built once at each page's root
-// (`mountFilmStudio`, `mountReview`) and handed to everything on the page, as the
-// host is. A command runs only where its `when` holds, whether its key, a
-// menu, ⌘K or a button asked for it. The hub is the one owner of which input
-// the viewer last used (`input`, heard through `Keys.inputs`): a command runs
-// with the input that asked for it (`Invocation.input`), and a step through
-// the history with the input that asked for it (`traversed`). Framework-free.
-
 import { Effect, Option } from 'effect';
 import type { Clipboard } from '../browser/clipboard.ts';
 import { type Heard, type Input, type KeyPress, Keys } from '../browser/keys.ts';
@@ -98,7 +81,6 @@ export const makeHub = (
     const keys = yield* Keys;
     const clipboard = yield* Effect.context<Clipboard>();
     const hub = hubOf(page, href, keys.mac);
-    // Copy link is every page's, for as long as the page lives.
     hub.commands.register(...linkCommands(clipboard));
     return hub;
   });
@@ -143,7 +125,6 @@ const hubOf = (page: PageName, href: () => string, mac: boolean): Hub => {
   /** One press, heard, then bound and run: whether the keymap took it (its default is then prevented). */
   const press = (pressed: KeyPress): boolean => {
     for (const heard of pressHeard) heard();
-    // A press inside a marked thing (a version's card, a variant's row) is about it too.
     const ctx = withFocused(context(focusOf(pressed.target)), targetAt(pressed.target));
     return Resolved.$match(resolve(pressed, ctx, commands.all(), bindings()), {
       Run: ({ command, how }) => {

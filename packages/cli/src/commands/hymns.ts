@@ -18,7 +18,6 @@ const JsonString = Schema.Unknown.pipe(
   }),
 );
 const encodeJson = Schema.encodeUnknownEffect(JsonString);
-// The printed indexes' JSON shape: a passage carries no `_tag`.
 const encodeIndexes = Schema.encodeEffect(HymnIndexes);
 
 const jsonFlag = Flag.Boolean('json').pipe(
@@ -31,10 +30,6 @@ const limitFlag = Flag.Int('limit').pipe(
   Flag.optional,
 );
 
-// ============================================================================
-// Layers
-// ============================================================================
-
 /** The Bun implementation, not `HymnalService.Live`.
  *
  *  The service split into a platform-free tag (`@manna/core/hymnal`) and a
@@ -45,10 +40,6 @@ const limitFlag = Flag.Int('limit').pipe(
  *  only when its layer was built. */
 const HymnalLive = layerHymnalBun.pipe(Layer.provide(BunServices.layer));
 
-// ============================================================================
-// Formatting
-// ============================================================================
-
 function formatHymnFull(hymn: {
   id: number;
   name: string;
@@ -57,8 +48,6 @@ function formatHymnFull(hymn: {
 }): string {
   const lines = [`#${hymn.id} — ${hymn.name}`, `Category: ${hymn.category}`, ''];
 
-  // Stanzas count up from 0, refrains down from -1 (see VerseId). The store
-  // lists refrains first; print them where the hymnal does, after stanza 1.
   const stanzas = hymn.verses.filter((verse) => !isRefrain(verse));
   const refrains = hymn.verses.filter(isRefrain).toSorted((a, b) => b.id - a.id);
   const [opening, ...rest] = stanzas;
@@ -108,10 +97,6 @@ function formatHymnSummary(hymn: {
   return `#${hymn.id} — ${hymn.name} (${hymn.category})\n  "${hymn.firstLine}"`;
 }
 
-// ============================================================================
-// Subcommands
-// ============================================================================
-
 const hymnNumber = Argument.Int('number');
 
 const getCommand = Command.make('get', { hymnNumber, json: jsonFlag }, (args) =>
@@ -119,9 +104,6 @@ const getCommand = Command.make('get', { hymnNumber, json: jsonFlag }, (args) =>
     const service = yield* HymnalService;
     const hymn = yield* service.getHymn(args.hymnNumber as HymnId).pipe(
       Effect.asSome,
-      // Only a missing hymn is "not found"; a read or decode failure is a
-      // failure. Swallowing every error here reported 192 hymns with refrains
-      // as absent when their verses failed to decode.
       Effect.catchTag('HymnNotFoundError', () => Effect.succeedNone),
     );
 
@@ -137,10 +119,6 @@ const getCommand = Command.make('get', { hymnNumber, json: jsonFlag }, (args) =>
       return;
     }
 
-    // Readings (696-920) stand in no back-matter index: they print as no
-    // indexes. A hymnal.db that lacks the index tables prints the hymn as no
-    // indexes too, with a note on stderr naming the command that replaces it.
-    // An index table that is present but cannot be read fails the command.
     const indexes = yield* service.getHymnIndexes(args.hymnNumber as HymnId).pipe(
       Effect.asSome,
       Effect.catchTags({
@@ -237,7 +215,6 @@ const categoryCommand = Command.make('category', { categoryIdArg }, (args) =>
       return;
     }
 
-    // Get category name from first result
     const categoryName = results[0]?.category ?? `Category ${args.categoryIdArg}`;
     yield* Console.log(`Hymns in "${categoryName}":\n`);
 
@@ -246,10 +223,6 @@ const categoryCommand = Command.make('category', { categoryIdArg }, (args) =>
     }
   }).pipe(Effect.scoped, Effect.provide(HymnalLive)),
 );
-
-// ============================================================================
-// Main Command
-// ============================================================================
 
 export const hymns = Command.make('hymns').pipe(
   Command.withSubcommands([getCommand, searchCommand, categoriesCommand, categoryCommand]),

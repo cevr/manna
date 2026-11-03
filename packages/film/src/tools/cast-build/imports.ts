@@ -1,21 +1,3 @@
-// The local files a module runs: its static imports and re-exports, and
-// literal dynamic imports, followed to files, transitively. A relative
-// specifier resolves as Bun resolves it: the file it names, its `.ts` file for
-// a `.js` name, or with `.ts`, `.tsx`, `.js` or an `index` file; one that names
-// no file fails the closure. A workspace package (`@manna/*`) is followed to the
-// source file its `package.json` exports; another package is not followed, so
-// node_modules stays out. Type-only imports and re-exports run nothing and are not followed.
-// Only script files are read for further imports; a JSON or other file a
-// module imports is in the closure as itself.
-//
-// Each module is parsed (oxc-parser, as the scene files are), so comments and
-// strings that show an import are no import. A dynamic import is static only
-// when its argument is one plain string literal; every other argument (a
-// variable, a concatenation, a cast, a template literal) names no file the
-// scanner can follow. The closure records each one with the file it is in,
-// so a stage that runs such a file declares what it loads
-// (`declaredClosure`), and a new one cannot hide.
-
 import { Effect, FileSystem, Option, Path, Predicate, Schema } from 'effect';
 import { Visitor, parseSync } from 'oxc-parser';
 import { pageSpecifiers } from './page-html.ts';

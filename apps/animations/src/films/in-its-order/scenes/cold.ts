@@ -1,33 +1,3 @@
-// The cold open, drawn to its kept panels (`cold.baby.3`, `cold.letter.4`,
-// `cold.what.3`), one shot to each of the script's marks. `baby`: close on
-// the mother with her baby at the cup, on the close plate painted to
-// `cold.baby.3` (`BABY_BACK`), the feast's crowd soft at a far table between
-// them (`BABY_CROWD`), with the feast's table in front of her (`FRONT`), the
-// camera pushing in on the baby's face.
-// `grown` cuts to the feast's courtyard plates on the mother at the long
-// table, her baby at the cup, behind the guests, and trucks down it to the
-// lead, who sits between two guests (a man picture-left and a woman
-// picture-right; `seatTable`, the table the title ends on), the bottle on his lap, and on
-// `bottle` raises it (`raise`, his seated raise's keys in place of his arm, on
-// twos); at the word "bottle" the guests turn to him and stare (`turn`).
-// `smile` pulls back to the three at the table, and the guests smile at him.
-// On `letter` they stare again (`SWAPS`), a rolled scroll drops onto the
-// table in front of the lead and unrolls over its edge (`SCROLL`). On `ouch`
-// he winces (`WINCE`), his wince's head riding his head's bones. From `grown`
-// on he, the guests and the mother move in their idles (`numbersOf`,
-// `manNumbersOf`, `womanNumbersOf`, `motherNumbers`), and he acts on the cues; the guests nod
-// toward him as they turn and as they stare again (`NODS`). The mother blinks all through and bows to her
-// baby (`motherLook`, `motherNumbers`), and he blinks from `grown` to `ouch`
-// (`eyesOf`). Behind the guests the feast's crowd sits in two rows, each at a
-// table on a plane of its own, each bust in its own idle (`drawCrowdRow`).
-// `what` cuts to the last close plate (`WHAT`), the cup of milk and the
-// bread, and the camera lifts to them.
-//
-// A shot's camera is a centre and a zoom on its plates' frame px, each plane
-// moved by its share (`PLANES`), so a far plane drifts and grows less than a
-// near one. Each courtyard move runs from where the last one left it
-// (`MOVES`).
-
 import { drawing, type PuppetLook } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import { Option } from 'effect';
@@ -256,7 +226,6 @@ export const cold = drawing({
   },
   draw: (f) => {
     const { ctx, w } = f;
-    // One plane of a shot, frame px: its share of the camera's zoom and of its move off the centre.
     const plane = (camera: Camera, z: number, draw: () => void) => {
       const { k, x, y } = onPlane(camera, z);
       ctx.save();
@@ -267,7 +236,6 @@ export const cold = drawing({
       draw();
       ctx.restore();
     };
-    // Inside a courtyard plane, the kept panel's px.
     const panel = (draw: () => void) => {
       ctx.save();
       ctx.scale(PANEL.scale, PANEL.scale);
@@ -275,17 +243,6 @@ export const cold = drawing({
       draw();
       ctx.restore();
     };
-    // The lead on his seat (`seatedLead`): his single-9 cut-out at his bone
-    // numbers (`numbersOf`), blinking (`eyesOf`, his head drawn eyes shut in
-    // place of his own). His joints cannot reach the bottle on his lap: until
-    // his raise lands on k6, his single-9 view, which holds it at his cheek,
-    // his raise's key shows in place of his arm (`raising`: rest, then on
-    // twos from `raise`), his arm's bones at 0 (`ARM_STILL`), his lean, neck,
-    // head and blinks running on. From `ouch` he has the wince's head in
-    // place of his own (`WINCE`), his neck and head at 0, no blink under it.
-    // The raise's key is its linear cue's share of its film frames, rounded:
-    // `bottle` lies on the frame grid, where a floor would drop a frame to
-    // float noise.
     const lead = () => {
       const raise = f.cue('raise').start;
       const cues: Cues = {
@@ -306,17 +263,12 @@ export const cold = drawing({
         onSome: (key) => seatedLead(f, { ...numbers, ...ARM_STILL }, raising(eyes, key)),
       });
     };
-    // The guests' key: the key of the last cue started (`SWAPS`), neutral before the first.
     const key = SWAPS.reduce<GuestKey>(
       (at, [cue, to]) => (f.t >= f.cue(cue).start ? to : at),
       'neutral',
     );
-    // The guests' nods toward the lead: each of `NODS`'s starts.
     const nods = NODS.map((cue) => f.cue(cue).start);
 
-    // The letter on the table's plane: the rolled scroll falling and hopping,
-    // then fading off the open scroll laid under it, which unrolls top down
-    // toward us: its rows above the lower roller, the roller on them.
     const scroll = () => {
       const hop = f.at('hop');
       const foot = lerp(SCROLL.from, SCROLL.land, f.at('drop')) - SCROLL.hop * 4 * hop * (1 - hop);
@@ -353,7 +305,6 @@ export const cold = drawing({
       const camera = holding(BABY.eyes, BABY.eyes, lerp(1, BABY.k, f.at('baby')));
       const scale = BABY.scale / BABY.k;
       plane(camera, BABY.back, () => f.painting('back'));
-      // The feast's crowd at a far table behind her, soft through its blur and haze.
       plane(camera, BABY_CROWD.z, () => {
         ctx.filter = `blur(${(BABY_CROWD.blur * w) / 1920}px) ${BABY_CROWD.haze}`;
         panel(() => {
@@ -396,9 +347,6 @@ export const cold = drawing({
     plane(camera, PLANES.sky, () => f.painting('sky'));
     plane(camera, PLANES.distance, () => f.painting('distance'));
     plane(camera, PLANES.near, () => f.painting('near'));
-    // The feast's crowd, back row then front row, each at its table on its
-    // own plane through its row's blur and haze: a bust is drawn only when
-    // its span meets the frame (`shown`, screen px at 1920).
     for (const name of ['back', 'front'] as const) {
       const row = CROWD_ROWS[name];
       const on = onPlane(camera, row.z);

@@ -234,8 +234,6 @@ export const planEgwSync = Effect.fn('EgwSync.plan')(function* (options: {
   const moved = remote.filter(
     (book) => installed(book) && !Option.contains(recordedOf(book), book.revision),
   );
-  // A content hash that moved is news; a book recorded before revisions were
-  // content hashes is only unverified, so it waits behind them.
   const hashMoved = (book: EgwSyncBook) => Option.exists(recordedOf(book), isContentRevision);
   const limit = Math.max(0, options.recheckLimit);
   const changed = moved.filter(hashMoved).slice(0, limit);
@@ -323,9 +321,6 @@ export const reportEgwSync = Effect.fn('EgwSync.report')(function* (
   const remoteIds = new Set(plan.remote.map((book) => book.id));
   const present = (book: EgwSyncBook) =>
     hasContent(Option.fromNullishOr(localAfterById.get(book.id)));
-  // The known-unavailable books are absent from `missing` for the same reason
-  // they are excluded from `unexpectedFailures`: "missing" should mean "we
-  // expected this and do not have it", and these we do not expect.
   const missing = plan.remote.filter((book) => !present(book) && !isKnownUnavailable(book.id));
 
   const attempted = plan.pending.length + plan.changed.length + plan.verify.length;
@@ -338,9 +333,6 @@ export const reportEgwSync = Effect.fn('EgwSync.report')(function* (
     installed: attempted - failures.length,
     failed: failures.length,
     unexpectedFailures: failures.filter((failure) => !failure.expected).length,
-    // Counted from what the database actually holds, not as
-    // `remote.length - missing.length`: `missing` omits the known-unavailable
-    // books, and deriving `present` from it would report those as present.
     present: plan.remote.filter(present).length,
     missing,
     localOnly: localAfter.filter((book) => !remoteIds.has(book.book_id)).length,

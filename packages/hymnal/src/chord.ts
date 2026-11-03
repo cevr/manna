@@ -174,10 +174,6 @@ export const simplify = (chord: Chord): Chord => {
   }
 };
 
-// ----------------------------------------------------------------------------
-// Spelling
-// ----------------------------------------------------------------------------
-
 const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'] as const;
 const NATURAL = [0, 2, 4, 5, 7, 9, 11] as const;
 
@@ -319,7 +315,6 @@ export const format = (chord: Chord, key: Key): string => {
   const member = intervalsOf(chord.quality).includes(interval)
     ? written(letter + intervalSteps(chord.quality, interval), pc(chord.bass))
     : undefined;
-  // A member that would take three accidentals (a diminished seventh in C-flat) keeps the key's spelling.
   const bass = member !== undefined && member.length <= 3 ? member : spell(key, chord.bass);
   return `${symbol}/${bass}`;
 };

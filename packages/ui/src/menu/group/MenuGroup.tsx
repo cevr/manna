@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/menu/group/MenuGroup.tsx,
-// packages/react/src/menu/group/MenuGroupContext.ts,
-// packages/react/src/menu/group-label/MenuGroupLabel.tsx
-//
-// A `role="group"` of related items, labelled by its `Menu.GroupLabel`
-// (the label registers its id with the group as a dialog's title does).
 import type { JSX } from '@solidjs/web';
 import { createContext, createSignal, omit, untrack, useContext } from 'solid-js';
 
@@ -40,7 +34,6 @@ interface MenuGroupProps extends BaseUIComponentProps<'div', MenuGroupState> {}
 export function MenuGroup(componentProps: MenuGroupProps): JSX.Element {
   const elementProps = omit(componentProps, 'class', 'style', 'render');
   const { labelId, update } = createGroupLabelId();
-  // A thunk, built under the providers below so its children read them.
   const element = () =>
     useRenderElement('div', componentProps, {
       props: [

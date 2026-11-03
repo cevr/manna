@@ -1,15 +1,3 @@
-// The words a take is checked by: a line as it is said, so a correct reading
-// is never a mismatch for how it was written down. Numbers are one token of
-// digits however they were said or written ("144,000", "one hundred and
-// forty-four thousand", "144 thousand"; a year in pairs, "eighteen
-// eighty-eight"); a scripture reference is its numbers ("3:1-4", "chapter
-// three verses one through four"); an abbreviation is the word it stands for
-// ("Mrs." and "Missus"); and a name the transcriber writes another way is the
-// script's, where the script says so (`heardAs`). Both sides are read the
-// same way, so what is left is what was really said differently.
-//
-// Pure: the take check (`lineError`) runs in the tools and the tests alike.
-
 import { Array as Arr, Option } from 'effect';
 import { wordError } from './align.ts';
 import { normalizeWords } from './narration.ts';
@@ -112,7 +100,6 @@ const digitsOf = (run: ReadonlyArray<string>): string => {
     }
     const unit = Option.fromNullishOr(UNITS.get(token));
     if (Option.isSome(unit)) {
-      // After a hundred or a scale, or a units digit after the tens.
       const afterTens = current % 10 === 0 && current % 100 >= 20 && unit.value < 10;
       add(unit.value, current % 100 === 0 || afterTens);
       continue;
@@ -148,7 +135,6 @@ export const spokenWords = (text: string): ReadonlyArray<string> => {
     (t) => Option.getOrElse(Option.fromNullishOr(ABBREVIATIONS.get(t)), () => t),
   );
   const at = (i: number) => Option.getOrElse(Arr.get(tokens, i), () => '');
-  // "chapter" and "verses" before a number, "to" and "through" between two.
   const kept = tokens.filter(
     (t, i) =>
       !(REFERENCE_WORDS.includes(t) && isNumber(at(i + 1))) &&
@@ -158,7 +144,6 @@ export const spokenWords = (text: string): ReadonlyArray<string> => {
   let run: Array<string> = [];
   for (const [i, t] of kept.entries()) {
     const next = Option.getOrElse(Arr.get(kept, i + 1), () => '');
-    // "and" inside a number ("one hundred and four") is part of it.
     if (isNumber(t) || (t === 'and' && run.length > 0 && isNumber(next))) {
       run.push(t);
       continue;

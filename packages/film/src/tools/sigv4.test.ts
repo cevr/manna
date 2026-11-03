@@ -1,9 +1,6 @@
 import * as Layer from 'effect/Layer';
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { Mac } from 'effect/crypto';
-// SigV4 against the signatures AWS publishes for its S3 examples
-// ("Signature Calculations for the Authorization Header: Transferring Payload
-// in a Single Chunk"), and HMAC-SHA256 against RFC 4231.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';

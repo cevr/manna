@@ -1,12 +1,3 @@
-// Kit A, the house's one face (K1, owner 2026-10-13): two eyes, two brows and
-// a mouth line, placed on the head and sized, each moved by the figure's view
-// model (`FACE`). A figure gives where its kit sits and how big, how far it
-// turns on the head where its concept draws the face tipped, the marks its
-// sheet draws otherwise than the kit, how far its eyes lean where the concept
-// leans them, the face it wears at rest and where its eyes look; a face of
-// any other marks is refused (KitA). Marks traced in a concept's pixels give
-// the kit its place, turn and marks (`tracedKit`). Pure.
-
 import { Schema } from 'effect';
 import { decoder } from '../decode.ts';
 import type { Pt } from '../rig/parts.ts';

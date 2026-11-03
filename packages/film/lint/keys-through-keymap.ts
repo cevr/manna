@@ -1,19 +1,3 @@
-// `film/keys-through-keymap`: a page's keys and its context menus are its
-// commands' (packages/film/src/command/), never a listener of its own. A key
-// listener of its own skips the keymap: the focus
-// rule (a field's keys are the field's, the studio owns its own), the `?`
-// sheet and ⌘K that list every key; a `contextmenu` listener of its own
-// skips the long press a phone opens the same menu with.
-//
-// Refused: a JSX `onKeyDown`, `onKeyUp`, `onKeyPress` or `onContextMenu`
-// attribute (and their `on:` and lowercase forms), and an
-// `.addEventListener` naming `keydown`, `keyup`, `keypress` or `contextmenu`
-// on any target but the host's own (the globals `window`, `document`,
-// `globalThis`, `self`, bound nowhere in the file: those key events
-// are `film/host-events-through-adapter`'s; their `contextmenu` is this
-// rule's). The config turns it off where the keymap and the menus are made:
-// the `Keys` adapter and `src/lab/command/`.
-
 import { Effect, Option, Predicate } from 'effect';
 import { Diagnostic, type ESTree, Rule, RuleContext } from 'oxlint-plugin-effect/rule-bindings';
 import { type Bindings, bindings, memberName } from './nodes.ts';

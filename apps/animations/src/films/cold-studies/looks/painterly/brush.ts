@@ -1,15 +1,3 @@
-// The painterly look's brush: every form is painted, not filled. A form is a
-// silhouette (its shape, a path the brush is clipped to, so silhouettes stay
-// strong) and a material (a ramp of five paints, shadow to light). The brush
-// lays a dark underpainting, then covers it with dabs: short, broad strokes
-// on a grid fixed to the world, each turned along the form's stroke direction
-// and loaded with the paint the light at that point asks for (`tone`), give
-// or take a little, so the colour breaks the way oil does. The grid is the
-// world's and its pitch keeps a dab about the same size on the canvas at any
-// zoom (in steps of two, so a push never makes the strokes swim); only the
-// cells the camera sees are painted. Every dab is a hash of its cell: the
-// same frame paints the same strokes, whenever and wherever it is drawn.
-
 import { type Box, type Hex, mix } from '@manna/film/canvas';
 import { clamp, hash2 } from '@manna/film/core';
 import type { Ramp } from './palette.ts';
@@ -110,7 +98,6 @@ const underpaint = (
     if (cells.length === 0) continue;
     ctx.fillStyle = paintAt(s.ramp, (n + 0.5) / UNDER);
     ctx.beginPath();
-    // Each patch an oval laid along the stroke, wide enough (its short radius past the cell's half-diagonal) to leave no gap.
     for (let c = 0; c < cells.length; c += 2) {
       const cx = (cells[c] ?? 0) + cell / 2;
       const cy = (cells[c + 1] ?? 0) + cell / 2;
@@ -139,7 +126,6 @@ const sortDabs = (s: Stroke, a: Area, pitch: number) => {
   const i1 = Math.ceil(a.x1 / pitch) + 1;
   const j0 = Math.floor(a.y0 / pitch) - 1;
   const j1 = Math.ceil(a.y1 / pitch) + 1;
-  // Each grid point keeps its dab by its own seed, so thinning never shows as a pattern.
   const keep = Math.min(LAID, MOST / Math.max(1, (i1 - i0 + 1) * (j1 - j0 + 1) * per));
   for (let j = j0; j <= j1; j++)
     for (let i = i0; i <= i1; i++)
@@ -195,7 +181,6 @@ export const paint = (e: Easel, shape: Shape, s: Stroke) => {
     y1: Math.min(s.box.y + s.box.h, view.y + view.h),
   };
   if (a.x1 <= a.x0 || a.y1 <= a.y0) return;
-  // The grid's pitch, in world units, in steps of two (so a push in changes it seldom, and all at once).
   const pitch = 2 ** Math.round(Math.log2(Math.max(0.05, (s.size ?? 16) * 0.4 * e.px)));
   ctx.save();
   ctx.beginPath();

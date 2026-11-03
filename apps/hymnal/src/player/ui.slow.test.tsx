@@ -393,19 +393,15 @@ describe('the full player', () => {
       act(() => drag(bar, '75'));
       expect(page.device.sought).toEqual([]);
       act(() => void pointer(bar, 'pointerup'));
-      // The seek lands at 75_000; reads see it there before the device plays on.
       yield* page.device.reads(3);
-      // Playing on between the pointer's release and the browser's `change`.
       page.device.now = { ...page.device.now, positionMs: 75_400 };
       yield* page.until((player) => Player.$is('Playing')(player) && player.at === 75.4);
       act(() => release(bar));
-      // One seek across the release and its `change`.
       expect(page.device.sought).toEqual([75_000]);
 
       page.device.now = { ...page.device.now, positionMs: 80_400 };
       yield* page.until((player) => Player.$is('Playing')(player) && player.at === 80.4);
       expect(bar.getAttribute('aria-valuetext')).toBe('1:20 of 2:31');
-      // A key's release with no step (a bare Shift) sends nothing.
       act(
         () => void bar.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Shift' })),
       );
@@ -422,7 +418,6 @@ describe('the full player', () => {
       yield* page.until((player) => Player.$is('Playing')(player) && player.at === 80.4);
       const bar = page.bar();
 
-      // Chrome holds the place on the bar's step, and says `change` with it.
       act(() => {
         setValue(bar, '80');
         bar.dispatchEvent(new Event('change', { bubbles: true }));
@@ -442,7 +437,6 @@ describe('the full player', () => {
       yield* page.until((player) => Player.$is('Playing')(player) && player.at === 40.2);
       const bar = page.bar();
 
-      // What Chrome sends for ArrowRight, with no keydown: the value 41 and `input`, then `change`.
       act(() => drag(bar, '41'));
       expect(page.device.sought).toEqual([41_000]);
       act(() => void bar.dispatchEvent(new Event('change', { bubbles: true })));
@@ -458,7 +452,6 @@ describe('the full player', () => {
       yield* page.until((player) => Player.$is('Playing')(player) && player.at === 40.2);
       const bar = page.bar();
 
-      // A right button's press: its menu takes the release, so no `pointerup` comes.
       act(
         () =>
           void bar.dispatchEvent(
@@ -486,13 +479,10 @@ describe('the full player', () => {
         release(bar);
       });
       expect(page.device.sought).toEqual([75_000]);
-      // The device still plays at the old place while its seek goes: the page
-      // stays Playing, at the seek's place.
       page.device.now = { ...page.device.now, positionMs: 10_500 };
       yield* page.until((player) => Player.$is('Playing')(player) && player.at === 75);
       expect(bar.getAttribute('aria-valuetext')).toBe('1:15 of 2:31');
 
-      // The seek lands, and the bar follows the player again.
       page.device.now = { ...page.device.now, positionMs: 75_000 };
       yield* page.device.reads(3);
       page.device.now = { ...page.device.now, positionMs: 75_200 };
@@ -530,7 +520,6 @@ describe('the full player', () => {
       page.device.now = { state: 'playing', positionMs: 60_000, durationMs: 151_000 };
       yield* page.until(Player.$is('Playing'));
 
-      // The page shows Buffering once silence is proved for 2 s (the world property's P3).
       page.device.now = { state: 'loading', positionMs: 61_000 };
       yield* page.until((player) => Player.$is('Playing')(player) && player.at === 61);
       expect(page.bar().getAttribute('aria-valuetext')).toBe('1:01 of 2:31');
@@ -573,7 +562,6 @@ describe('the full player', () => {
         page.press('Play hymn 1');
         yield* page.until((player) => Player.$is('Loading')(player) && player.track.number === 1);
         expect(page.device.played).toEqual([audioUrl(100), audioUrl(1)]);
-        // The bar now plays the page's own hymn, which the page names: the bar does not.
         expect(Option.getOrThrow(page.find('[aria-label="Open player"]')).textContent).toBe('');
       }),
   );
@@ -604,7 +592,6 @@ describe('the full player', () => {
         }
       };
       each('Play hymn 100');
-      // The full player's buttons keep their text (F2b).
       const textOf = (label: string) =>
         Option.map(page.find(`[aria-label="${label}"]`), (found) => found.textContent);
       expect(textOf('Play hymn 100')).toEqual(Option.some('Play'));
@@ -614,7 +601,6 @@ describe('the full player', () => {
       each('Pause hymn 100');
       expect(textOf('Pause hymn 100')).toEqual(Option.some('Pause'));
 
-      // Held down (Space, until its keyup), the button draws the pressed fill under that fill's own text.
       const held = Option.getOrThrow(page.find('[aria-label="Pause hymn 100"]'));
       act(() => {
         held.dispatchEvent(
@@ -642,7 +628,6 @@ describe('the full player', () => {
         const track = gradientOf(getComputedStyle(page.bar()).backgroundImage);
         const accent = rgbOf(theme[scheme].accent);
         const line = rgbOf(theme[scheme].line);
-        // Left to right, at shares of the bar; the place played is half the length.
         expect(track.angle).toBe(90);
         expect([0, 25, 49, 51, 75, 100].map(track.at)).toEqual([
           accent,
@@ -793,12 +778,10 @@ describe('the bottom bar', () => {
         page.device.now = { state: 'playing', positionMs: 5_000, durationMs: 151_000 };
         yield* page.until(Player.$is('Playing'));
         const bar = Option.getOrThrow(page.find('[aria-label="Player"]'));
-        // Off a hymn page the bar names its hymn, and has no key button.
         expect(bar.querySelector('[aria-label="Open player"]')?.textContent).toBe(
           `100${morning.title}`,
         );
         expect(bar.querySelector('[aria-label="Key"]')).toBeNull();
-        // Sound and Pause are marks with no text, read by their labels (F2b).
         expect(markOf(bar, 'Sound')).toEqual({
           text: '',
           mark: 'sound-on',
@@ -817,7 +800,6 @@ describe('the bottom bar', () => {
 
   it.live('pauses from the bar while another hymn’s page shows, then gives way to the page', () =>
     Effect.gen(function* () {
-      // The page shows hymn 1; the bar holds hymn 100, started on its own page.
       using page = mount(barOver(Option.some(praise)));
       page.send(Command.Start({ track: morning }));
       page.device.now = { state: 'playing', positionMs: 5_000, durationMs: 151_000 };
@@ -830,7 +812,6 @@ describe('the bottom bar', () => {
       page.press('Pause hymn 100');
       yield* page.until(Player.$is('Paused'));
       expect(page.device.now.state).toBe('paused');
-      // A paused hymn is not sounding: the bar acts on the page's hymn again, which the page names.
       expect(opener()).toEqual(Option.some(''));
       expect(Option.isSome(page.find('[aria-label="Play hymn 1"]'))).toBe(true);
     }),
@@ -863,7 +844,6 @@ describe('a list’s end over the bottom bar', () => {
       page.send(Command.Start({ track: morning }));
       page.device.now = { state: 'playing', positionMs: 5_000, durationMs: 151_000 };
       yield* page.until(Player.$is('Playing'));
-      // The bar holds the home indicator; the list keeps its own room over the bar.
       expect(paddingOf(page.find('[aria-label="Player"]'))).toEqual(Option.some(34));
       expect(heightOf(end())).toEqual(Option.some(endSpace(0)));
       expect(endSpace(0)).toBeGreaterThanOrEqual(24);
@@ -879,7 +859,6 @@ describe('the hymn page with the bottom bar', () => {
   it.live('holds no player in the page; the bar holds hymn 3 and plays it', () =>
     Effect.gen(function* () {
       using page = mount(route(3));
-      // The page's scrolling words hold no player; the bar under them does.
       expect(
         Option.isNone(inPage(page, '[data-testid="hymn-scroll"] [aria-label="Play hymn 3"]')),
       ).toBe(true);
@@ -888,7 +867,6 @@ describe('the hymn page with the bottom bar', () => {
       ).toBe(true);
       const bar = Option.getOrThrow(page.find('[aria-label="Player"]'));
       expect(bar.querySelector('[aria-label="Play hymn 3"]')).not.toBeNull();
-      // Bar J: the key button, the opener, Sound and Play; the page names its own hymn, so the bar does not.
       expect(
         [...bar.querySelectorAll('[role="button"]')].map((button) =>
           button.getAttribute('aria-label'),
@@ -911,7 +889,6 @@ describe('the hymn page with the bottom bar', () => {
     'draws the bar in the page while nothing is held, and docks it under the stack once a hymn is',
     () =>
       Effect.gen(function* () {
-        // The owner, 2026-10-22: on a back the bar goes out with the page, not after it.
         using page = mount(route(3));
         const bars = () => page.all('[aria-label="Player"]');
         expect(bars()).toHaveLength(1);
@@ -919,7 +896,6 @@ describe('the hymn page with the bottom bar', () => {
 
         page.press('Play hymn 3');
         yield* page.until(Player.$is('Loading'));
-        // The player plays on across screens, so its bar is the stack's, not the page's.
         expect(bars()).toHaveLength(1);
         expect(Option.isNone(inPage(page, '[aria-label="Player"]'))).toBe(true);
         expect(bars()[0]?.querySelector('[aria-label="Loading hymn 3"]')).not.toBeNull();
@@ -978,7 +954,6 @@ describe('the hymn page with the bottom bar', () => {
       page.press('Play hymn 4');
       yield* page.until((player) => Player.$is('Loading')(player) && player.track.number === 4);
       expect(page.device.played).toEqual([audioUrl(3), audioUrl(4)]);
-      // The bar now plays the page's own hymn, which the page names.
       expect(bar.querySelector('[aria-label="Open player"]')?.textContent).toBe('');
       expect(bar.querySelector('[aria-label="Key"]')).not.toBeNull();
     }),
@@ -1016,10 +991,8 @@ describe('the tempo dial in the full player', () => {
       perform(dial, 'decrement');
       expect(page.get(settings.tempo(100))).toBe(95);
       expect(dialOf(page).getAttribute('aria-valuetext')).toBe('95%');
-      // Kept for hymn 100 alone.
       expect(page.get(settings.tempo(101))).toBe(100);
 
-      // A turn past the fast end stays at the end: the dial stops there.
       page.set(settings.tempo(100), 150);
       perform(dialOf(page), 'increment');
       expect(page.get(settings.tempo(100))).toBe(150);
@@ -1072,7 +1045,6 @@ describe('the tempo dial in the full player', () => {
     Effect.sync(() => {
       using page = mount();
       using _kept = keeping(page, true);
-      // With Sound on the dial moves the recording too, so nothing says the recording sets the pace.
       expect(dialOf(page).getAttribute('aria-valuetext')).toBe('100%');
       expect(page.text()).not.toContain('sets the pace');
       expect(page.text()).not.toContain('With Sound on');
@@ -1391,7 +1363,6 @@ const hooked = (settle: Duration.Input = Duration.seconds(2)) => {
     rest: Effect.promise(() => act(() => Effect.runPromise(Effect.sleep(Duration.millis(60))))),
     /** Wait, as the bar draws, until `holds` is true of its value. */
     until: (holds: (value: number) => boolean) =>
-      // Each look lets a millisecond pass inside `act`, so the bar draws what came in it.
       Effect.promise(() => act(() => Effect.runPromise(Effect.sleep(Duration.millis(1))))).pipe(
         Effect.map(() => scrub().value),
         Effect.repeat({ until: holds }),
@@ -1433,7 +1404,6 @@ describe('a bar that tells no drag’s end (iOS, Android)', () => {
 describe('the place a bar sent', () => {
   it.live('is held while the player is elsewhere, then given up after `settle`', () =>
     Effect.gen(function* () {
-      // The player never reaches 1:15: a seek the device refused, or one that never lands.
       using bar = hooked(Duration.millis(30));
       bar.drag(75);
       expect(bar.sought).toEqual([75]);

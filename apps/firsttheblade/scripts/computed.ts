@@ -217,7 +217,6 @@ const readLeaf = (selector: string): Leaf => {
       },
     ];
   });
-  // The drawing and every element it sits in, nearest first.
   const above = [...document.querySelectorAll('*')]
     .filter((each) => each.contains(svg))
     .toReversed();
@@ -230,7 +229,6 @@ const readLeaf = (selector: string): Leaf => {
       linkOf(at, `${part.tagName} ${p + 1}, its ${at.tagName} ${i + 1}`),
     ),
   );
-  // The card's own turn and each turn above it: a 2D turn adds, whatever its origin.
   let cardTurn = 0;
   for (const at of above.slice(cardAt)) {
     const style = getComputedStyle(at);
@@ -327,7 +325,6 @@ const partProblems = (
     ['animation', part.animation],
   ] as const)
     if (value !== 'none') problems.push(`${at}: ${name} ${value}, not none`);
-  // On the page: what moved the part from where it rests is a turn about the stem's foot alone.
   const moved = times(inverse(rest.page), part.page);
   const [movedX, movedY] = applied(moved, leaf.foot);
   if (!near(movedX, footX) || !near(movedY, footY))
@@ -833,8 +830,6 @@ const probe = Effect.fn('computed.probe')(function* (
   yield* step('inject', () => page.evaluate(injectProbe, { picture, own: '/icon-192.png' }));
   let refusals = 0;
   if (policy) refusals = 3;
-  // A policy that lets the picture in sends fewer refusals than waited on:
-  // the wait ends at its timeout, and the reads below name what was seen.
   yield* step('settle', () => page.waitForFunction(probeSettled, refusals)).pipe(
     Effect.catchTag('BrowserError', (error) =>
       Effect.logWarning('computed.unsettled').pipe(

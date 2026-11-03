@@ -1,6 +1,3 @@
-// The stand-in refuses what a real canvas refuses, so a draw that would throw
-// in a render throws in a test too: a negative radius, a colour stop off 0..1.
-
 import { describe, expect, test } from 'bun:test';
 import { recorder } from './stand-in.ts';
 

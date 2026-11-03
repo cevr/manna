@@ -1,10 +1,3 @@
-// The backdrop's fibre is the paper's own: wherever the camera looks and
-// however close, each point of the plane shows the grain at that point's own
-// place in the tile. The stand-in records the one pattern fill `planeFibre`
-// lays (its tile, so the period, and its whole-pixel offset), and the test
-// reads back which tile point lands under a world point at the frame's edge,
-// where a period rounded to a whole px drifts farthest from the plane.
-
 import { describe, expect, test } from 'bun:test';
 import type { Camera } from './camera.ts';
 import { FIBRE_SIZE, planeFibre } from './fibre.ts';
@@ -42,9 +35,6 @@ const edges = (view: Camera): readonly [number, number] => {
 };
 
 describe('planeFibre', () => {
-  // A period rounded to a whole px is off the plane's own by up to half a px
-  // a tile; laid from a tile corner at the frame's middle, the frame's edge
-  // is about three tiles out at zoom 1, so the grain there sits within 2 px.
   for (const zoom of [1, 1.03, 1.37, 2.46])
     for (const x of [960, 2400, -1700])
       test(`holds the grain at the frame's edge with the plane at zoom ${zoom}, looking at x ${x}`, () => {

@@ -338,9 +338,6 @@ export const wikiPageFixtureRows = (): readonly WikiPageFixtureRow[] => {
       sql: topic,
       params: [WIKI_PAGE_FIXTURE.slug, WIKI_PAGE_FIXTURE.title, wikiPageFixtureThesis(), empty, 0],
     },
-    // The neighbour section 6 renders. A real row rather than a dangling edge:
-    // the composer resolves a related topic's title from the artifact, and an
-    // edge to a page that does not exist composes to nothing.
     {
       sql: topic,
       params: [WIKI_PAGE_FIXTURE.related.slug, WIKI_PAGE_FIXTURE.related.title, empty, empty, 1],
@@ -378,13 +375,6 @@ export const WIKI_ARTIFACT_DDL = `
   INSERT INTO meta (key, value) VALUES ('schema_major', '1');
 `;
 
-/** The wired sources that turn the artifact above into a page with content in
- *  every section.
- *
- *  `WikiSectionSources.Live` over test databases — the production composition,
- *  not a stub of it — so a suite that provides this runs the real composer. The
- *  CLI suite provides it in place of `NotWired`, which is the whole of what made
- *  its assertions vacuous. */
 /** The fixture library, named so the lookup fixture and the page sources
  *  share one `WritingsService.Live` build rather than racing two. */
 export const WIKI_PAGE_FIXTURE_WRITINGS: Layer.Layer<WritingsService> = WritingsService.Live.pipe(
@@ -456,14 +446,10 @@ export const WIKI_PAGE_FIXTURE_PAGE: Effect.Effect<WikiPage> = Effect.gen(functi
     title: WIKI_PAGE_FIXTURE.title,
     core: Option.some(core),
     catalogId: Option.some(CATALOG.id),
-    // The artifact's `topics` table, as the two rows the fixture writes.
     titleOf: (slug) => {
       if (String(slug) !== WIKI_PAGE_FIXTURE.related.slug) return Effect.succeedNone;
       return Effect.succeedSome(WIKI_PAGE_FIXTURE.related.title);
     },
-    // No page points *at* the fixture, so section 6 is the authored edge
-    // alone — the same list the artifact produces, where the reverse edge is
-    // likewise absent.
     backlinksTo: () => Effect.succeed([]),
   });
   return WikiPage.make({

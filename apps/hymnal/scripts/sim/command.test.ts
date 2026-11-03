@@ -45,7 +45,6 @@ const standIn = (
       });
   let opened = 0;
   return {
-    // No drive is booted for the stand-in: a command that reads the session gets none.
     readSession: () =>
       Effect.fail(NoSession.make({ file: '/nonexistent/loop-probe-x/session.json' })),
     boot: step('boot'),

@@ -1,14 +1,3 @@
-// A page's mount in the browser, for its browser entry: hydrated over the
-// markup the lab rendered it with on the server (`page-server.tsx`: its root
-// marked `PAGE_ROOT`, its styles in the head), or, served as built (no
-// server entry, a render that failed or was cut, a kept build), rendered
-// anew with its styles added and its root made. Either way the same
-// components run. A film page whose film does not start, or whose faces do
-// not load, fails (`PageEnd`): its tree disposed and its keys unheard before
-// it says why in its place.
-// Every lab page with a shell mounts in the one sequence `mountStudio` runs
-// (the ask page).
-
 import { Location } from '@manna/url-state';
 import { type JSX, hydrate, render } from '@solidjs/web';
 import { Deferred, Effect, Fiber, Option } from 'effect';

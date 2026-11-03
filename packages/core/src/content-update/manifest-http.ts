@@ -146,8 +146,6 @@ export const readManifestOver = (
           return manifestUnavailable('manifest address is not an allowed release origin');
         }
         const response = yield* HttpClient.get(address);
-        // A redirect is followed by this loop and by nothing else, so the hop
-        // it lands on is checked by the same gate the first address was.
         const next = redirectTarget(
           response.status,
           Headers.get(response.headers, 'location'),
@@ -163,9 +161,6 @@ export const readManifestOver = (
           return manifestUnavailable(`manifest responded HTTP ${String(response.status)}`);
         }
         const declared = Option.flatMap(Headers.get(response.headers, 'content-length'), (raw) =>
-          // `decodeOption` rather than the unknown form: the input is already a
-          // number, and what the schema is being asked is whether it is an
-          // *integer* — a header of `abc` gives `NaN` and is refused here.
           Schema.decodeOption(Schema.Int)(Number(raw)),
         );
         if (Option.exists(declared, (length) => length > CONTENT_MANIFEST_MAX_BYTES)) {
@@ -184,9 +179,6 @@ export const readManifestOver = (
       duration: CONTENT_MANIFEST_TIMEOUT_MILLIS,
       orElse: () => Effect.succeed(manifestUnavailable('manifest read timed out')),
     }),
-    // Declared failures only, by name. A request that did not complete and a
-    // body that is not a manifest are the same outcome to every caller — the
-    // pinned floor stands — and neither is an error channel (§3.6).
     Effect.catchTags({
       HttpClientError: (cause) =>
         Effect.succeed(manifestUnavailable(`manifest unreachable: ${cause.reason._tag}`)),
@@ -230,10 +222,5 @@ export const layerHttpContentManifest: Layer.Layer<
     return ContentManifestSource.of({
       read: readManifestOver(url).pipe(Effect.provideService(HttpClient.HttpClient, client)),
     });
-  }).pipe(
-    // A `Config` that cannot be read is a host misconfiguration, not a content
-    // state. It dies rather than silently reporting "offline" — which would
-    // hide a typo'd environment variable behind a state that looks normal.
-    Effect.orDie,
-  ),
+  }).pipe(Effect.orDie),
 );

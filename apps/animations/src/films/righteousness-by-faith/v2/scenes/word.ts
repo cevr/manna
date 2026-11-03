@@ -1,14 +1,3 @@
-// The word: righteousness, on the parchment page, opened on a match cut from
-// the title: its first word drops from where the title left it and lands as
-// the word card, the rest of the name falling away. The card flips to
-// its plain meaning, right doing; a measuring tape drops and hangs there,
-// asking by whose measure. Then the answer: the two tablets set down and
-// their ten lines light gold as the psalm is read, their glow rising into a
-// warm light with no face in it (the law is a transcript of God's character),
-// and on "circle" their outline widens into a gold circle that keeps growing
-// past the page, planets and stars inside it. The viewer's stand-in watches
-// from the left, shrugging at the start and open-mouthed at the end.
-
 import {
   type Frame,
   type Gesture,
@@ -49,11 +38,8 @@ const SKY: ReadonlyArray<readonly [number, number, number, string]> = [
 ];
 
 const timeline = {
-  // The match cut: the title's first word, where the title left it, drops
-  // onto the page and lands as the card's word; the rest of the name falls away.
   match: { at: 'start', offset: 0.2, dur: 0.9, ease: 'inOutCubic' },
   fall: { at: 'start', dur: 0.6, ease: 'inQuad' },
-  // The card comes up under the word as it lands.
   card: { after: 'match', dur: 0.3, ends: true, ease: 'outCubic' },
   shrug: { mark: 'church', offset: 0.2, dur: 0.4, ease: 'outBack' },
   unshrug: { mark: 'fair', dur: 0.5 },
@@ -73,8 +59,6 @@ const knobs = {
   figure: [460, 1000],
   card: [1230, 330],
   law: [1230, 600],
-  // In on the tablets and the figure as the law drops, then out past the
-  // page as the circle grows.
   lean: [1060, 580],
   leanZoom: 1.18,
   wide: [960, 560],
@@ -100,7 +84,6 @@ const page = (f: WordFrame) => {
   const { ctx } = f;
   const [lx, ly] = f.knob('law');
 
-  // The law's glow, and the circle it opens into.
   const light = f.at('light');
   glow(ctx, lx, ly - 60, lerp(200, 760, light), C.glow, light);
   glow(ctx, lx, ly - 60, lerp(100, 360, light), C.gold, 0.45 * light);
@@ -132,7 +115,6 @@ const viewer = (f: WordFrame) => {
   const shrug = f.at('shrug') * (1 - f.at('unshrug'));
   const wonder = f.at('wonder') * (1 - f.at('drop'));
   const awe = f.at('awe');
-  // Both palms out at the shrug, the hands up on it and back down on "fair".
   SHRUG_FAR.reach = shrug;
   SHRUG_NEAR.reach = shrug;
   at(ctx, { x, y, scale: 2.6 }, () =>
@@ -160,11 +142,9 @@ const card = (f: WordFrame) => {
   const [x, y] = f.knob('card');
   const show = f.at('card') * (1 - f.at('cardOut'));
   if (show <= 0.01) return;
-  // The card turns over on its long axis: past edge on, its other side faces us.
   const face = Math.cos(f.at('flip') * Math.PI);
   const turned = face < 0;
   const text = turned ? MEANING : WORD_CARD;
-  // It comes up under the landing word, fading in at nearly its size (never a speck over the word).
   at(
     ctx,
     {
@@ -184,7 +164,6 @@ const card = (f: WordFrame) => {
         line: 4,
         torn: 2,
       });
-      // The word is the title's, still in flight, until it lands.
       if (f.at('match') >= 1)
         probePlate(ctx, board, () =>
           write(

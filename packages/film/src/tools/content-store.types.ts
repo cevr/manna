@@ -1,10 +1,3 @@
-// Compile-time checks of the store's lock, run by the package typecheck. A
-// decision made while holding a manifest's lock is made from the manifest as
-// read under it: `holding` hands its change that read, as `transact` does,
-// and takes no path and bare effect, a shape in which the holder read for
-// itself and could carry in a read from before the lock. Each line marked
-// below fails the typecheck if that shape comes back.
-
 import { Effect } from 'effect';
 import type { ContentStore, Manifest } from './content-store.ts';
 

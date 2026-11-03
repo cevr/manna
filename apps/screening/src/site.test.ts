@@ -37,7 +37,6 @@ const toWeb = (request: HttpClientRequest.HttpClientRequest, url: URL) => {
 /** A bucket, the desk over it reached in process (its store as `storeOf` makes it), and publishing through it. */
 const world = (partBytes = 1024 * 1024, storeOf: (store: Store) => Store = (store) => store) =>
   Effect.gen(function* () {
-    // A request body may be twice a part, so a page goes whole and a larger video only in parts.
     const bucket = memoryBucket(2 * partBytes);
     const store = storeOf(bucket.store);
     const fs = yield* FileSystem.FileSystem;
@@ -143,7 +142,6 @@ describe('the index', () => {
       const { bucket, material, publish } = yield* world();
       yield* publish(yield* material('older', 'board', '2026-10-20T10:00:00.000Z', 'a'));
       yield* publish(yield* material('newer', 'render', '2026-10-24T10:00:00.000Z', 'a'));
-      // A manifest with nothing published in it lists nothing.
       const empty = yield* Schema.encodeEffect(FilmManifestJson)({
         film: 'empty',
         title: 'Title of empty',
@@ -167,7 +165,6 @@ describe('the index', () => {
       const { bucket, desk, material } = yield* world();
       const one = yield* material('one', 'board', '2026-10-20T10:00:00.000Z', 'a');
       const two = yield* material('two', 'board', '2026-10-21T10:00:00.000Z', 'a');
-      // The other film is published once this publish has read the manifests to plan.
       let reads = 0;
       const overlapped = {
         ...desk,

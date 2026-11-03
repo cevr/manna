@@ -1,21 +1,3 @@
-// Staging takes, kept by what was asked for: a beat's line compiled with its
-// delivery marks for its voice and model (`core/delivery.ts`) is one request,
-// and what it made is kept in a cache outside every film's narration, twice:
-// the reading, as ElevenLabs sent it, under the SHA-256 of what was sent, and
-// the take, that reading with each hold set in it, under the SHA-256 of both.
-// The same words, marks, voice and model never cost a second time, whoever
-// asks (the lab's reader keeping a take ready, or `film narrate` making a
-// film's take current), nor does a hold's seconds changed, and two asking at
-// once make one reading. Audio is kept under the SHA-256 of its bytes, so a
-// name never comes to hold other audio. A person's take is never touched:
-// the cache holds staging takes only.
-//
-// Every request is charged before it is sent, against a cap on the day's
-// characters (`FILM_STAGING_DAILY_CAP`, 100,000 by default): past it a take
-// is refused (`StagingCapReached`) and nothing is sent. The day's spend is
-// kept beside the takes (`spend.json`), one writer at a time across
-// processes. Nothing here logs a credential: the requests carry none.
-
 import {
   Array as Arr,
   Clock,
@@ -37,7 +19,7 @@ import { type Compiled, compileDelivery, sentText } from '../core/delivery.ts';
 import type { Line } from '../core/narration.ts';
 import { StagingCapReached } from '../core/refusals.ts';
 import { type Cast, type Reader, type Voice, Seconds, TakeWord, isCast } from '../core/schema.ts';
-import { STAGING_VOICE_ID, STAGING_VOICE_PACE } from '../core/staging-voice.ts';
+import { STAGING_VOICE_ID, STAGING_VOICE_WORDS_PER_MINUTE } from '../core/staging-voice.ts';
 import type { ReadBeat } from '../core/studio.ts';
 import { ContentStore, type Manifest, type StoreError } from './content-store.ts';
 import { sha256Hex } from './digest.ts';
@@ -58,7 +40,9 @@ export const audioName = (audio: Uint8Array, ext: '.mp3' | '.flac'): string =>
 const STAGING_DAILY_CAP = 100_000;
 
 /** A voice's own pace, in words a minute, where it is measured: what a model that takes a speed is aimed from. */
-const VOICE_PACE: ReadonlyMap<string, number> = new Map([[STAGING_VOICE_ID, STAGING_VOICE_PACE]]);
+const VOICE_PACE: ReadonlyMap<string, number> = new Map([
+  [STAGING_VOICE_ID, STAGING_VOICE_WORDS_PER_MINUTE],
+]);
 
 /** A beat to stage: its line, who reads it, and the lines either side (sent only to models that take them). */
 export interface StagingAsk {
@@ -264,7 +248,6 @@ const charged = (
   const spent = spend.days[day] ?? 0;
   if (spent + characters > cap)
     return Result.fail(StagingCapReached.make({ day, spent, asked: characters, cap }));
-  // Only today is kept with the last few days; older days are dropped.
   const kept = Object.entries(spend.days)
     .filter(([d]) => d !== day)
     .toSorted(([a], [b]) => b.localeCompare(a))
@@ -374,7 +357,6 @@ export class StagingCache extends Context.Service<StagingCache, StagingCacheServ
           store
             .transact(record(sent), (current) =>
               Effect.gen(function* () {
-                // Read under the reading's lock: one made while this one waited is found.
                 const kept = Option.filter(current, reuse);
                 if (Option.isSome(kept) && (yield* fs.exists(audioOf(kept.value)))) {
                   const audio = yield* fs.readFile(audioOf(kept.value));

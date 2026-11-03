@@ -37,7 +37,6 @@ describe('narration', () => {
     for (const w of ['so,', 'so;', 'so:', 'so—', 'so–', 'so…', "so,'", 'so,]'])
       expect([w, endsClause(w), endsSentence(w)]).toEqual([w, true, false]);
     expect(endsSentence('so')).toBe(false);
-    // The estimate pauses on the same ends: longer after a sentence than a clause.
     const gap = (text: string) => {
       const [a, b] = estimate(text);
       return (b?.start ?? 0) - (a?.end ?? 0);
@@ -111,7 +110,6 @@ describe('narration', () => {
     const a = placed[0];
     const b = placed[1];
     expect(a?.start).toBe(0);
-    // a lasts its lead, words and tail to the nearest frame, and b starts on that frame.
     const exact = 0.5 + (a?.voice.duration ?? 0) + 1;
     expect(b?.frame).toBe(Math.round(exact * 30));
     expect(a?.dur).toBe((b?.frame ?? 0) / 30);
@@ -218,7 +216,6 @@ describe('turns', () => {
   });
 
   test('a dialogue alignment splits words where each line starts', () => {
-    // The API joins the lines with nothing between them.
     const chars = [...'Stuck.So where?Yes.'];
     const at = chars.map((_, i) => i * 0.1);
     const words = Result.getOrThrow(
@@ -240,7 +237,6 @@ describe('turns', () => {
     const voice = Result.getOrThrow(voiceFor('s', line, { voice: 'v', scenes: { s: take } }));
     expect(voice.recorded).toBe(true);
     expect(voice.turns).toEqual(parsed.turns);
-    // The same words under the old, turnless hash are another take.
     const old = { ...take, hash: hashText(parsed.spoken) };
     expect(
       Result.getOrThrow(voiceFor('s', line, { voice: 'v', scenes: { s: old } })).recorded,
@@ -249,7 +245,6 @@ describe('turns', () => {
 });
 
 describe('hashText', () => {
-  // Takes and the score are keyed by this hash: a change to it re-records every take.
   test('is FNV-1a as eight hex digits, pinned', () => {
     expect(['', 'sheep', 'Hi there.'].map(hashText)).toEqual(['811c9dc5', '07cc25f4', '5b6d78ca']);
   });

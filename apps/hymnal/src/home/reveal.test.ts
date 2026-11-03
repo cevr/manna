@@ -41,16 +41,13 @@ describe('the tab row pinned over the home list', () => {
   it('goes away on a downward scroll of the travel once shown, and not before', () => {
     const shown = through([3000, 2990]);
     expect(shown.shown).toBe(true);
-    // A glide on up moves the run's start with it.
     const higher = through(frames(2990, 2500, 7), shown);
     expect(through([2500 + travel - 0.5], higher).shown).toBe(true);
     expect(through([2500 + travel], higher).shown).toBe(false);
   });
 
   it('counts the run from where the scroll turned, so a reverse just short of the travel turns nothing', () => {
-    // Up 7, down 7, up 7: no run of 8 either way.
     expect(through([3000, 2993, 3000, 2993]).shown).toBe(false);
-    // Up 7 then up 1 more is a run of 8.
     expect(through([3000, 2993, 2992]).shown).toBe(true);
   });
 
@@ -63,7 +60,6 @@ describe('the tab row pinned over the home list', () => {
     const shown = through([3000, 2900]);
     expect(through([rest], shown)).toEqual({ shown: false, from: rest });
     expect(through([-40], shown)).toEqual({ shown: false, from: -40 });
-    // Back down from the top, the run starts afresh: no row without an upward scroll.
     expect(through(frames(-40, 600, 11), shown).shown).toBe(false);
   });
 });
@@ -77,7 +73,6 @@ describe('a jump the app makes', () => {
 
   it('turns nothing, and holds the row through the list’s reports until the reader touches it', () => {
     const shown = through([3000, 2900]);
-    // The new list reports its top, a place above the rest, one on the way, then its landing.
     expect(through([0, 20, 900, 5000], jumped(shown, 5000))).toEqual({
       shown: true,
       from: 5000,
@@ -116,7 +111,6 @@ describe('how much of the list’s top the pinned row covers', () => {
   });
 
   it('near the resting place, never less than the list’s own row, which it meets as one', () => {
-    // 20 pt past rest the list's own row ends 28 pt down: a row sliding in or away stands there.
     expect([0.1, 0.5, 1].map((p) => shownHeight(p, height, rest + 20, rest))).toEqual([28, 28, 48]);
   });
 

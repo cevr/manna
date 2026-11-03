@@ -1,9 +1,3 @@
-// The build's asks of the owner, over the lab's ask store in memory: the kept
-// needs go on one ask, each keep choice showing its drawing (published as a
-// set, copied as the ask is made); a rerun with the same needs publishes and
-// asks nothing; a changed drawing asks again and closes the earlier ask, so
-// one stays open; and the drawn needs are drawn only under --spend okra.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Boolean as Bool, Effect, Layer, Option } from 'effect';
 import { type AskRecord, askStatus, askedIn } from '../../core/ask.ts';
@@ -210,7 +204,6 @@ describe('the build asks the owner once', () => {
         ['lead-feast/turnaround-side: keep this drawing?', SIDE],
         ['lead-feast/turnaround-back: keep this drawing?', BACK],
       ]);
-      // Each shows its own drawing, copied as the ask was made.
       const shown = yield* Effect.forEach(choices, (c) =>
         shownBytes(ask.id, c.image?.src ?? '/nonexistent/loop-probe-x'),
       );
@@ -244,7 +237,6 @@ describe('the build asks the owner once', () => {
         asks.read(earlier.id),
       );
       expect(closed.state).toMatchObject({ _tag: 'Closed', why: `superseded by ${current.id}` });
-      // The earlier ask still shows the drawing it asked about.
       const before = keepChoices(earlier)[0]?.image?.src ?? '/nonexistent/loop-probe-x';
       expect(yield* shownBytes(earlier.id, before)).toBe('side v1');
     }).pipe(Effect.provide(labOver(files, [])));
@@ -270,7 +262,6 @@ describe('the build asks the owner once', () => {
         expect([first.id, second.id]).not.toContain(current.id);
         const side = keepChoices(current)[0]?.image?.src ?? '/nonexistent/loop-probe-x';
         expect(yield* shownBytes(current.id, side)).toBe('side v1');
-        // A rerun keeps the ask it made.
         expect(statesOf(yield* buildGraph(stages, options()))).toEqual({ ask: 'cached' });
         expect((yield* openAsks).map((r) => r.id)).toEqual([current.id]);
       }).pipe(Effect.provide(labOver(files, [])));
@@ -296,7 +287,6 @@ describe('the build asks the owner once', () => {
         expect(yield* openAbout('lead-feast')).toHaveLength(1);
         expect(yield* openAbout('wife')).toHaveLength(1);
         expect(yield* openAsks).toHaveLength(2);
-        // A build of both asks about both, and closes each one's earlier ask.
         yield* buildGraph(
           [askStage(film, ['lead-feast', 'wife'], ownerNeeds([member, wife]))],
           options(),

@@ -89,7 +89,6 @@ describe('the walk of the code sounds', () => {
       sound: 'tone.a',
       sample: 'tone.none',
     });
-    // A name no record can hold reads nothing off the prototype.
     expect(walked({ 'tone.a': code({ play: sample('constructor') }) })).toMatchObject({
       _tag: 'SampleUnknown',
     });
@@ -189,7 +188,6 @@ describe('the walk of the code sounds', () => {
       measure: 'work',
       limit: 3600,
     });
-    // A sampled sound's own length counts in the sound that samples it.
     expect(
       walked({
         'tone.a': code({ play: noise(70) }),
@@ -230,7 +228,6 @@ describe('the walk of the code trials', () => {
       sound: 'paper.whoosh (trial)',
       stream: 'grain',
     });
-    // A trial is no code sound: a sound that samples its entry samples a take.
     expect(
       walked({
         'paper.whoosh': trialled(noise(0.1)),

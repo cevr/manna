@@ -1,9 +1,3 @@
-// Rive in a page (`RiveRuntimeBrowser`): each engine's package loaded with the
-// first rig that engine draws, its wasm from the package's asset URL (the
-// page's build serves it), and a rig's `.riv` through the page's `HttpClient`.
-// A page that draws a rig with the Rive Renderer and has no WebGL 2 fails its
-// load, naming why, rather than draw nothing.
-
 import canvasWasm from '@rive-app/canvas-advanced/rive.wasm' with { type: 'file' };
 import glWasm from '@rive-app/webgl2-advanced/rive.wasm' with { type: 'file' };
 import type { RiveCanvas } from '@rive-app/webgl2-advanced';

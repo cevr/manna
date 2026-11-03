@@ -254,7 +254,6 @@ describe('the count-in pulse over line 0', () => {
           live: 'off',
           lit: Arr.range(1, n).map((m) => m <= k),
         });
-        // Beside line 0 in the box the two share, drawn absolutely: line 0's box keeps its height.
         const zero = page.lineZero();
         expect(zero.parentElement).toBe(box);
         expect(box.firstElementChild).toBe(zero);
@@ -267,7 +266,6 @@ describe('the count-in pulse over line 0', () => {
           inBox: true,
           absolute: true,
         });
-        // Line 0 is the marked line, and nothing in it runs ahead of the count.
         expect(page.selected()).toEqual([0]);
         expect(page.colours(0)).not.toContain(ACCENT);
       }
@@ -318,12 +316,10 @@ describe('the click as data', () => {
       const n = countInOf(timelineOf(number).tempo).beats;
       using page = mountPage(number, true);
       expect(page.told).toEqual([]);
-      // Two count-ins in a row, as a Play, a Pause and a Play give.
       for (const round of [1, 2]) {
         for (const index of Arr.range(0, n - 1)) {
           const before = page.told.length;
           page.beat(index, n);
-          // The same beat again, and the player's state told again: no new cue.
           page.beat(index, n);
           page.again();
           expect({ number, round, index, told: page.told.slice(before) }).toEqual({
@@ -535,7 +531,6 @@ describe('the sheet’s Start group', () => {
 
   it('gives Click the accessibility state VoiceOver reads on iOS: disabled only while Intro is off', () => {
     using sheet = mountSheet(78);
-    // react-native-web draws no DOM for `accessibilityState`: it is read from the props Click was drawn with.
     const state = () => propsWith(sheet.click(), 'accessibilityState')['accessibilityState'];
     const on = state();
     sheet.tap(sheet.intro());

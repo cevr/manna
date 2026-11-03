@@ -1,9 +1,3 @@
-/**
- * Where a picture drawn `object-fit: cover` lands in its box, so a canvas
- * laid over the box samples the picture at the very place the picture shows
- * it (`./scene.ts`).
- */
-
 /** A width and a height, in any one unit. */
 export interface Size {
   readonly width: number;

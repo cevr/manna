@@ -55,7 +55,6 @@ describe('back-matter placement', () => {
     heading(1, 70, 3, 'Appendix A'),
     heading(1, 80, 3, 'Bibliography'),
     heading(1, 90, 3, 'List of Correspondents'),
-    // A second book: an appendix mid-book, then a chapter after it.
     heading(2, 1, 2, 'Appendix'),
     heading(2, 20, 2, 'The Loud Cry'),
   ];

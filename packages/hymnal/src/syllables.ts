@@ -62,7 +62,6 @@ const known = (word: string): readonly number[] | undefined => {
   const counts = [own];
   for (let i = 2; i <= 4; i++) {
     const variant = DICTIONARY[`${word}(${i})`];
-    // A variant with more syllables is an abbreviation ("us" as U.S.), never sung.
     if (variant !== undefined && vowelsIn(variant) < own) counts.push(vowelsIn(variant));
   }
   const merges = phonemes.match(MERGES)?.length ?? 0;
@@ -105,7 +104,6 @@ export const counts = (token: string): readonly number[] => {
   const word = normal(token);
   if (word === '') return [];
   if (word.includes("'") && DICTIONARY[word] === undefined) {
-    // o'er, e'er, whate'er: the elided e joins the vowel before it.
     const joined = word.replace(/([aeiou])'e([rn])/g, '$1$2').replace(/'s$/, '');
     if (joined.includes("'")) return [nuclei(joined.replace(/'/g, ''))];
     const own = known(joined) ?? stemmed(joined);
@@ -115,15 +113,10 @@ export const counts = (token: string): readonly number[] => {
     known(word.replace(/our$/, 'or')) ??
     (ARCHAIC.has(word) ? [1] : undefined) ??
     stemmed(word) ?? [syllable(word)];
-  // An -ed the hymns may sing as its own syllable (bless-ed, belov-ed).
   const sungEd = /[^aeiouytd]ed$/.test(word) && / [DT]$/.test(DICTIONARY[word] ?? '');
   const first = own[0];
   return sungEd && first !== undefined ? [...new Set([...own, first + 1])] : own;
 };
-
-// ----------------------------------------------------------------------------
-// Stress
-// ----------------------------------------------------------------------------
 
 /** Words of one syllable spoken without stress: articles, prepositions, conjunctions, possessives. */
 const WEAK = new Set([
@@ -182,10 +175,6 @@ export const stresses = (token: string, count: number): readonly boolean[] | und
   const found = stems.map((candidate) => marked(candidate, count - 1)).find((s) => s !== undefined);
   return found === undefined ? undefined : [...found, false];
 };
-
-// ----------------------------------------------------------------------------
-// Cutting a word for print
-// ----------------------------------------------------------------------------
 
 /**
  * Consonant pairs and triples that open a syllable together, as "bl" in
@@ -248,7 +237,6 @@ const SILENT = ["'s", 's', 'ed', 'st'];
 const closes = (vowel: string | undefined, spelled: string, first: boolean) =>
   vowel !== undefined &&
   (/^(?:AE|EH|IH|AH|UH)[12]$/.test(vowel) ||
-    // The dictionary hears an unstressed a before r as R-coloured too (a-round).
     (/^ER\d$/.test(vowel) && spelled !== 'a' && (spelled !== 'o' || first)) ||
     (/^AA[12]$/.test(vowel) && spelled === 'o'));
 
@@ -277,14 +265,11 @@ const isEnding = (word: string, stem: string): boolean => {
 
 const vowelGroups = (letters: string): Nucleus[] => {
   const groups: Nucleus[] = [];
-  // gh after a vowel is silent and belongs to it (might, though).
   for (const match of letters.matchAll(/[aeiouy]+(?:gh)?/g)) {
-    // A word-initial y before a vowel is a consonant (yet, ye).
     const consonantY = match.index === 0 && /^y[aeiou]/.test(match[0]);
     groups.push({ start: match.index + (consonantY ? 1 : 0), end: match.index + match[0].length });
   }
   const last = groups.at(-1);
-  // A final silent e (grace, alone), but not -le (ta-ble) and not the only vowel (the, be).
   const silentE =
     last !== undefined &&
     groups.length > 1 &&
@@ -302,7 +287,6 @@ const splitGroups = (letters: string, groups: readonly Nucleus[], count: number)
     if (group === undefined) continue;
     for (let cut = group.start + 1; cut < group.end; cut++) {
       const pair = letters.slice(cut - 1, cut + 1);
-      // -tion, -sion, -cious: the i belongs to the consonant before it.
       const palatal = /^i/.test(pair) && /[tcsx]/.test(letters[cut - 2] ?? '');
       if (!HIATUS.has(pair) || palatal) continue;
       out.splice(i, 1, { start: group.start, end: cut }, { start: cut, end: group.end });
@@ -340,7 +324,6 @@ const boundary = (
 ) => {
   const between = letters.slice(left.end, right.start);
   if (between.length === 0) return right.start;
-  // th, sh, ch, ph sound as one consonant (moth-er).
   if (between.length === 1 || /^[tscp]h$/.test(between)) {
     const closed = letters.slice(left.end - 2, left.end) === 'gh' || between === 'x';
     const spelled = letters.slice(left.start, left.end);
@@ -387,8 +370,6 @@ const byVowels = (word: string, count: number): string[] => {
 /** A word cut as its stem and an ending: the ending its own piece, or kept on the stem's last. */
 const byEnding = (word: string, count: number): string[] | undefined => {
   const lower = word.toLowerCase();
-  // A plural -es after a consonant cluster and a silent e is its own piece, the cluster kept
-  // whole before it (cours-es, chang-es).
   if (/[^aeiouy]{2}es$/.test(lower)) {
     const stem = lower.slice(0, -1);
     if (isKnown(stem) && counts(stem).includes(count - 1)) {
@@ -409,8 +390,6 @@ const byEnding = (word: string, count: number): string[] | undefined => {
   }
   for (const ending of SYLLABIC) {
     const stem = lower.slice(0, -ending.length);
-    // -er on a short stem, or on one ending in a cluster other than ng, is no
-    // ending: the word divides by its vowels (wa-ter, mas-ter, af-ter).
     const cluster =
       ending === 'er' && (stem.length < 4 || (/[^aeiouy]{2}$/.test(stem) && !stem.endsWith('ng')));
     if (
@@ -443,7 +422,6 @@ const byCompound = (word: string, count: number): string[] | undefined => {
 /** Cuts a word of letters and apostrophes into at most `count` pieces. */
 const cut = (word: string, count: number): string[] => {
   if (count <= 1) return [word];
-  // whate'er, where'er: the elided e'er is its own syllable.
   const elided = word.toLowerCase().search(/e'(?:er|en)$/);
   if (elided > 0) return [...cut(word.slice(0, elided), count - 1), word.slice(elided)];
   if (word.includes("'")) return byVowels(word, count);

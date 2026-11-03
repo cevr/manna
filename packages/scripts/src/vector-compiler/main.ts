@@ -104,8 +104,6 @@ const buildVectors = Command.make('build:vectors', { out, writingsDb, limit, jso
 
     const rows = yield* readVectorSource({
       filename: writingsFile,
-      // `0` is §10's deliberate "whole corpus" act, expressed as the absence
-      // of a cap rather than as a sentinel the reader has to carry.
       limit: Option.liftPredicate(args.limit, (value) => value > 0),
     });
     if (rows.length === 0) {
@@ -114,17 +112,6 @@ const buildVectors = Command.make('build:vectors', { out, writingsDb, limit, jso
       });
     }
 
-    // The same adapter the CLI searches with, so the document side and the
-    // query side are embedded by one implementation. An index built by a
-    // separate embedding path would agree with the query embedder only by
-    // luck, and the fingerprint check cannot detect that — both would report
-    // the same pinned string.
-    //
-    // It embeds through `embedDocument`, not `embedQuery`. EmbeddingGemma is
-    // asymmetric: the two sides carry different task prefixes, and a corpus
-    // embedded under the *query* prefix lands in the query region of the
-    // space — every paragraph then sits equally close to every query, and the
-    // ranking degrades to noise with no error anywhere.
     yield* fs.makeDirectory(path.dirname(args.out), { recursive: true });
     const vectors = yield* embedAllResumable(rows, args.out);
 

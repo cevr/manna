@@ -1,15 +1,3 @@
-// ⌘K, the command menu: every command available where the page is, found by
-// typing, run with Enter or a click, each with the keys bound to it now (`/`
-// opens it too, to go somewhere by name: a Go to entry is found by typing). It
-// reads the page's hub and nothing else (the registry, the keymap), so a
-// command a tool registers is here while the tool is mounted, with its keys.
-// The context is the one the page had when
-// the menu opened (what was selected, whether the film played). A command
-// runs once the menu has closed and focus is back on the page, so what it
-// focuses (a note's composer) keeps focus. Its rows are keyed by their
-// command (`rowKey`): made again each frame a film plays, a row keeps its
-// element under the pointer. Hosted in @manna/ui's Dialog.
-
 import { Dialog } from '@manna/ui/dialog';
 import { For, Show } from '@solidjs/web';
 import { Option } from 'effect';
@@ -49,7 +37,6 @@ export const CommandMenu = (props: { readonly hub: Hub }) => {
     );
   });
 
-  // The row the query names as its active descendant: one that exists, else none (no row matches).
   const active = () =>
     Option.getOrUndefined(
       Option.map(Option.fromUndefinedOr(rows()[at()]), () => `lab-command-${at()}`),
@@ -79,8 +66,6 @@ export const CommandMenu = (props: { readonly hub: Hub }) => {
         }),
       },
       {
-        // `/` opens the same menu to type a name in: its Go to entries
-        // are found by typing. Only from the page: in a field `/` is typed.
         id: GO_TO_COMMAND,
         label: 'Go to…',
         group: 'Help',
@@ -99,7 +84,6 @@ export const CommandMenu = (props: { readonly hub: Hub }) => {
 
   const onKey = (e: KeyboardEvent) => {
     const count = rows().length;
-    // An empty list keeps the first place: no row is active until one exists.
     if (e.key === 'ArrowDown') setAt((i) => Math.max(0, Math.min(count - 1, i + 1)));
     else if (e.key === 'ArrowUp') setAt((i) => Math.max(0, i - 1));
     else if (e.key === 'Enter') Option.map(Option.fromUndefinedOr(rows()[at()]), choose);
@@ -153,7 +137,6 @@ export const CommandMenu = (props: { readonly hub: Hub }) => {
               )}
             </For>
           </div>
-          {/* Beside the list, not in it: a listbox holds options alone. */}
           <Show when={rows().length === 0}>
             <p class="lab-command-none">No command matches.</p>
           </Show>

@@ -73,7 +73,6 @@ const test = it.effect.layer(
 describe('bun run mail:send', () => {
   test('counts on a dry run and queues on a send, through the Worker', () =>
     Effect.gen(function* () {
-      // One subscriber on the roster, as the model's projection writes it.
       const roster = yield* RosterTable;
       yield* roster.record([{ _tag: 'Joined', subscriber: SubscriberId.make('ann') }]);
       yield* send({ film: 'path/01', dryRun: true, origin: ORIGIN });

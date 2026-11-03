@@ -159,7 +159,6 @@ const render = Command.make('render', {
       yield* fs.makeDirectory(out, { recursive: true });
 
       const { text: lockText, lock } = yield* readLock;
-      // The manifest renders nothing, so it reads the instruments' lock but not the instruments.
       const fetched = flags.manifestOnly ? 0 : yield* fetchInstruments(cache, lock);
       const sfizz = yield* sfizzBinary(cache);
       const nodeAv = yield* nodeAvVersion;

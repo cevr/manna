@@ -1,10 +1,3 @@
-// Upstream: packages/react/src/utils/usePositioner.tsx,
-// packages/react/src/internals/getDisabledMountTransitionStyles.ts
-//
-// The positioner element: a presentational wrapper carrying the anchor
-// positioning styles, ignoring the pointer while closing, and with
-// transitions off for the first frame so the popup does not animate from its
-// old position.
 import type { JSX } from '@solidjs/web';
 
 import type { StateAttributesMapping } from '../internals/getStateAttributesProps.ts';

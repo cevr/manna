@@ -1,10 +1,3 @@
-// What a test reads of an HTTP API's declaration: its routes, and whether it
-// declares the one a request reaches; and a library as a film's mix reads it,
-// every derived sound measured. Tests only; the server derives its handlers
-// from the API itself (`core/api.ts`), and what reads how a film's sounds
-// play measures them over the shared renderer (`measuredFilm`,
-// tools/sound-render.ts).
-
 import { Option, Result } from 'effect';
 import * as HttpApi from 'effect/http-api/HttpApi';
 import type * as HttpApiGroup from 'effect/http-api/HttpApiGroup';

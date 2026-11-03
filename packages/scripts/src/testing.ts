@@ -1,5 +1,3 @@
-// Test support for the scripts' own tests.
-
 /**
  * The config every test repository's git runs with, ahead of its own
  * arguments: a name, a mail and no signing, so the machine's own config

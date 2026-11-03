@@ -1,8 +1,3 @@
-// A Board render's frame at a film second: the panel the animatic holds
-// there and how it moves (the same answer on every call), the dissolve's
-// weights across a cut, the review copy's burn-in, and the export page's
-// query read back as the picture it asked for.
-
 import { describe, expect, test } from 'bun:test';
 import { Array as Arr, Match, Option, Result } from 'effect';
 import { type BoardFile, BoardName, type Panel, emptyBoard } from './board.ts';
@@ -125,7 +120,6 @@ describe('the frame at a film second', () => {
     const card: Panel = { ...p, text: { _tag: 'Card', payoff: 'milk' } };
     expect(alone(card, 0, 5).motion).toMatchObject({ _tag: 'Still' });
     expect(frameAt(12).layers[0]!.motion).toMatchObject({ _tag: 'Still' });
-    // Across many ids, each motion is picked: a push in and both pans.
     const picked = new Set(
       ids.map((p) =>
         Match.valueTags(alone(p, 0, 0).motion, {
@@ -169,8 +163,6 @@ describe('the dissolve at a cut', () => {
   });
 
   test('is clamped to half of a short hold on either side', () => {
-    // `name.sets` takes over 0.2 s into its beat, so the cut from the beat's
-    // own start is held only 0.2 s: its dissolve is 0.1 s each side, not 0.25.
     const tight: BoardFile = { ...board, panels: [...board.panels, panel('name', 'start', 1)] };
     const s = shotsOf(beats, tight);
     const layers = (T: number) =>
@@ -178,7 +170,6 @@ describe('the dissolve at a cut', () => {
         named(l.shot),
         Math.round(l.alpha * 1000) / 1000,
       ]);
-    // From 13.9 to 14.1 into `name.start`, from 14.1 to 14.3 into `name.sets`.
     expect(layers(13.89)).toEqual([['title card', 1]]);
     expect(layers(14.05)).toEqual([
       ['title card', 1],
@@ -203,7 +194,6 @@ describe("a Board render's shots", () => {
   test("are the studio Board lane's: the animatic over the film clock's beats, marks and takes", () => {
     const said = 'A baby {room}drinks milk.';
     const spoken = 'A baby drinks milk.';
-    // A take slower than the estimate, so its marks fall where the estimate's do not.
     const take = {
       hash: hashText(spoken),
       file: 'cold.flac',
@@ -229,7 +219,6 @@ describe("a Board render's shots", () => {
     );
     const studio = shotsOf(clock.beats.map(timedBeat), board);
     expect(boardShots(placed, board)).toEqual(studio);
-    // The take's mark, not its beat's start: the shots say where the take says `room`.
     expect(studio.map((s) => s.from)).toContain(
       Option.getOrThrow(Arr.findFirst(clock.beats[0]!.marks, (m) => m.name === 'room')).at,
     );

@@ -1,13 +1,3 @@
-// The engraved courtroom at the frame's time: the hall (`world.ts`) posed
-// from the cues, seen through the shot the cues have reached, rendered with
-// the burin into the engine's WebGL canvas and pulled onto the paper inside
-// the plate's border. Four shots, cut on the cues as a film is cut: the hall
-// from behind the accused while the evidence piles up; his face as he bows
-// ("You did it"); the judge from below as he leans in and the gavel falls;
-// and the accused as the rose window's light breaks over him and he lifts
-// his head ("righteous"). The camera breathes as a dolly in the hall, never
-// as a zoom on the print, so the lines stay on the forms.
-
 import { glCanvas, camera as shot, UNMOVED } from '@manna/film/canvas';
 import { type Key, clamp, lerp } from '@manna/film/core';
 import {
@@ -57,7 +47,6 @@ const rig = (canvas: HTMLCanvasElement, gl: WebGL2RenderingContext): Rig => {
   const scene = new Scene();
   scene.add(w.scene);
   const eye = new PerspectiveCamera(40, PICTURE.w / PICTURE.h, 0.05, 80);
-  // The window's light as a camera: an orthographic view down the shaft.
   const sun = new OrthographicCamera(-14, 14, 14, -14, 0.1, 70);
   const centre = new Vector3(0, 3, -2);
   sun.position.copy(centre).addScaledVector(light.uL.value, -30);
@@ -70,7 +59,6 @@ const rig = (canvas: HTMLCanvasElement, gl: WebGL2RenderingContext): Rig => {
   });
   light.uShadow.value = shadow.depthTexture;
   light.uShadowTexel.value = 1 / SHADOW;
-  // The rose window's light falls on the accused.
   const rose = new Vector3(light.uRose.value.y, light.uRose.value.z, light.uRose.value.x);
   const onHim = new Vector3(ACCUSED_AT[0], 1.3, ACCUSED_AT[2]);
   light.uL2.value.subVectors(onHim, rose).normalize();
@@ -104,22 +92,18 @@ interface View {
 
 /** Each shot: where it starts and where it has drifted to by its cut. */
 const SHOTS: ReadonlyArray<readonly [View, View]> = [
-  // The hall, from behind the accused: "Imagine standing in a courtroom."
   [
     { at: [-4.6, 1.3, 4.0], to: [1.0, 2.3, -6.2], fov: 46 },
     { at: [-4.2, 1.32, 3.3], to: [1.0, 2.3, -6.2], fov: 46 },
   ],
-  // His face, bowing: "You did it."
   [
     { at: [-1.45, 1.3, -1.45], to: [-2.35, 1.6, -0.6], fov: 32 },
     { at: [-1.55, 1.3, -1.4], to: [-2.35, 1.58, -0.6], fov: 32 },
   ],
-  // The judge from below, leaning in, the gavel falling.
   [
     { at: [1.5, 2.0, -4.0], to: [2.6, 2.75, -7.0], fov: 36 },
     { at: [1.6, 2.0, -4.3], to: [2.6, 2.75, -7.0], fov: 36 },
   ],
-  // The verdict: the rose window's light breaks over him.
   [
     { at: [-0.75, 1.15, -2.15], to: [-2.4, 1.45, -0.5], fov: 36 },
     { at: [-0.95, 1.17, -2.0], to: [-2.4, 1.45, -0.5], fov: 36 },
@@ -183,7 +167,6 @@ const render = (r: Rig, f: CourtFrame, s: number) => {
   r.scene.updateMatrixWorld(true);
 
   const { renderer, scene } = r;
-  // The window's shadow: what stands in the hall, seen down the shaft.
   for (const o of r.world.blind) o.visible = false;
   scene.overrideMaterial = r.depth;
   renderer.setRenderTarget(r.shadow);
@@ -201,7 +184,6 @@ const render = (r: Rig, f: CourtFrame, s: number) => {
 
 export const court = (f: CourtFrame) => {
   const { ctx, w, h } = f;
-  // The print holds still on the page; the hall inside it breathes (a dolly), so no zoom on the paper.
   shot(
     ctx,
     UNMOVED,

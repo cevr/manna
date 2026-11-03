@@ -30,7 +30,6 @@ const oneVerse = (tempos: Midi['tempos']): Midi => {
     timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
     keySignatures: [{ tick: 0, fifths: 0, minor: false }],
     tempos,
-    // A beat of silent tail after the last note.
     lastTick: 9 * TPB,
   };
 };
@@ -69,11 +68,9 @@ describe('Sung.of', () => {
         const seconds = secondsAt(sung.midi);
         for (let k = 0; k < 3; k++)
           expect(seconds((k + 1) * PASS) - seconds(k * PASS)).toBeCloseTo(secondsOf(midi), 9);
-        // The bass held to the file's end ends where the next pass's first note starts.
         const bass = sung.midi.tracks[1]?.notes ?? [];
         expect(bass.filter((note) => note.end === PASS || note.start === PASS)).toHaveLength(2);
         expect(sung.midi.tracks[0]?.notes).toHaveLength(24);
-        // The verse starts on the file's first tick, so its meter and key come again with each pass.
         expect(sung.midi.timeSignatures.map((m) => m.tick)).toEqual([0, PASS, 2 * PASS]);
         expect(sung.midi.keySignatures.map((k) => k.tick)).toEqual([0, PASS, 2 * PASS]);
       }),

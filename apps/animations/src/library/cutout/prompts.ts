@@ -1,8 +1,3 @@
-// The words okra repaints a part sheet's hidden paint by: the fragments a
-// member's `HIDDEN` prompts are written from (read by `film concept parts`).
-// A fragment that names a figure's clothes takes them from the member's data.
-// Pure.
-
 /** The okra repaint's opening: the picture and what was cut away. */
 export const CUT_AWAY =
   'Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where';

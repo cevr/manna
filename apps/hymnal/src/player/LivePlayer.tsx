@@ -100,7 +100,6 @@ const player = playerOn(
 const provided = Option.some(player);
 
 export function LivePlayer({ children }: { readonly children: ReactNode }) {
-  // The commands run for as long as the app does, whichever screen shows.
   useAtomMount(player.send);
   useAtomMount(player.remote);
   useAtomMount(player.keys);
@@ -108,7 +107,6 @@ export function LivePlayer({ children }: { readonly children: ReactNode }) {
   useAtomMount(player.stanzas);
   useAtomMount(player.beats);
   const on = useAtomValue(settings.sound);
-  // The setting is the app's; the score clock is outside React, so it is told each change.
   useEffect(() => Effect.runSync(SubscriptionRef.set(sound, on)), [on]);
   return (
     <PlayerContext value={provided}>
@@ -125,17 +123,14 @@ const holds = (segment: string): boolean => Option.isSome(hymnAt(segment));
 function Finding({ children }: { readonly children: ReactNode }) {
   const state = useAtomValue(player.state);
   const shown = useShownPage();
-  // The bar the `#` acts on: the drums open on its hymn.
   const bar = barFor(state, shown);
   const path = usePathname();
   const at = findPlace({ path, holds, shown, state, raised: useAtomValue(raised) > 0 });
   const inset = Math.max(useSafeAreaInsets().bottom, 0);
-  // The drums close on a move to another screen, or where the `#` leaves.
   const setFind = useAtomSet(find);
   const stands = hashStands(at);
   const place: FindPlace = { path, at };
   const was = useRef(place);
-  // Only a new route, or the `#` standing or leaving, moves the drums; not each status the bar shows.
   useEffect(() => {
     const before = was.current;
     was.current = place;
@@ -144,7 +139,6 @@ function Finding({ children }: { readonly children: ReactNode }) {
   return (
     <FindRoom value={findRoom(at, inset)}>
       {children}
-      {/* One `FindNumber` in one place for both of the bar's places, so the bar lives on and glides between them. */}
       {FindAt.$match(at, {
         Nowhere: () => <></>,
         Yielded: () => <></>,
@@ -178,7 +172,6 @@ function FindNumber({
   const router = useRouter();
   const searching = useAtomValue(searchOpen);
   const cancelSearch = useCancelSearch();
-  // A search open on this page closes: its results would wait on the hymn left, or stand over the one shown.
   const closeSearchHere = () => {
     if (Option.exists(searching, (open) => open.path === path)) cancelSearch();
   };
@@ -187,7 +180,6 @@ function FindNumber({
     setFind(next);
     FindAct.$match(act, {
       Stay: () => {},
-      // On a hymn page the hymn dialled takes the page's place, and the page's own hymn stays.
       Open: ({ number }) =>
         Match.value(openingAt(path, number)).pipe(
           Match.when('push', () => router.push(hymnHref(number))),
@@ -230,7 +222,6 @@ function FindNumber({
       </GestureHandlerRootView>
     ),
   });
-  // The drums open over the keyboard's place: an open search's keyboard goes down first.
   const hash = (look: HashLook) => (
     <Pressable
       testID="find-number"
@@ -259,7 +250,6 @@ function FindNumber({
     <>
       {Find.$match(state, {
         Closed: () => <></>,
-        // Over the screens and the bar, under the panel and the `#`: a tap outside closes the drums and goes no further.
         Open: () => (
           <Pressable
             testID="find-outside"

@@ -1,9 +1,4 @@
 import { Mac } from 'effect/crypto';
-// AWS Signature Version 4 for the S3 API, as R2 takes it: the request's
-// canonical form hashed (`digest.ts`), signed with a key derived from the
-// secret, and sent as `Authorization`. Effect's native HMAC-SHA256 signs
-// each request without an SDK. Checked against the
-// signatures AWS publishes for its S3 examples (`sigv4.test.ts`).
 
 import { DateTime, Effect, Order, Redacted } from 'effect';
 import { Hex } from 'effect/encoding';

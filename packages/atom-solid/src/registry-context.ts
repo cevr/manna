@@ -1,13 +1,3 @@
-/**
- * Ported from @effect/atom-solid (MIT), adapted to Solid 2. Delete this package
- * when upstream supports Solid 2.
- *
- * Solid context and provider for the Atom registry used by Effect Atom hooks.
- * The registry stores atom values, schedules update work, and cleans up unused
- * atoms. Sharing one registry through Solid context lets components and
- * computations in the same owner tree read and write the same atom state.
- */
-
 /* oxlint-disable effect/noNewError -- a hook used outside its provider is a programming defect, reported the way Solid reports its own: by throwing from the hook. */
 
 import { Option } from 'effect';

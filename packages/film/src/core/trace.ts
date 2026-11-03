@@ -1,23 +1,3 @@
-// The tracer: a kept cast sheet's view read into the outlines a rig is
-// composed from (`film concept trace`, `trace-cli.ts`). The sheet is flat
-// colour inside ink: its ink is the dark line (`INK_LUMA`), its paper the
-// ground the figure stands on, reached from the view's box's edge without
-// crossing ink. What lies inside the figure and is not ink falls into
-// regions, each a run of paper the sheet inked round; a part of the view is
-// the region its label picks (`core/label.ts`: by its classes and where it
-// lies against another label's) or the regions its seed points lie in (a
-// sleeve, the hair, a face), cut by a
-// polygon where the sheet draws no line between two parts (a sleeve at its
-// shoulder), less or plus other parts, and grown into the ink round it, so
-// two parts the sheet parts by a line meet under it. A part is written as
-// one outline (its largest piece's), as tones (every piece, a shade within
-// a part, read by its colour), as a circle (a hand) or as a face's marks
-// (each mark the ink nearest its seed). An outline takes a point every
-// `STEP` sheet pixels along its edge, smoothed first, so the house's smooth
-// path through them makes no spikes of the sheet's wobble (RIVE.md, "Trace a
-// sheet at a coarse step"). Colours never go into a table: a tone's colour
-// only picks its pixels, and the film's papers paint it. Pure.
-
 import { Result, Schema } from 'effect';
 import { SHEET_FIT, anchorTurns, anchorsOf, fitClosed } from './fit.ts';
 import { type LabelTable, labelRegions, touchingIn } from './label.ts';
@@ -580,7 +560,6 @@ const edgeOf = (g: Grid, mask: Uint8Array): TracePt[] => {
   if (start < 0) return [];
   const [sx, sy] = [start % g.w, Math.floor(start / g.w)];
   const out: TracePt[] = [[sx, sy]];
-  // Entered from the west: the walk looks round from the pixel before it, clockwise.
   let [x, y, back] = [sx, sy, 4];
   for (let guard = 0; guard < mask.length * 4; guard++) {
     let moved = false;
@@ -628,7 +607,6 @@ const resampled = (pts: ReadonlyArray<TracePt>, step: number): TracePt[] => {
     }
     carried = len - (at - step);
   }
-  // The last point too near the first closes the line on it.
   const [fx, fy] = out[0] ?? [0, 0];
   const [lx, ly] = out[out.length - 1] ?? [0, 0];
   if (out.length > 3 && Math.hypot(lx - fx, ly - fy) < step / 2) out.pop();
@@ -808,7 +786,6 @@ const markOf = (g: Grid, pixels: ReadonlyArray<number>) => {
     xs.reduce((a, b) => a + b, 0) / xs.length,
     ys.reduce((a, b) => a + b, 0) / ys.length,
   ];
-  // The ends: the point farthest from the centre, then the one farthest from it.
   const far = (from: TracePt) =>
     pts.reduce((best, p) =>
       Math.hypot(p[0] - from[0], p[1] - from[1]) > Math.hypot(best[0] - from[0], best[1] - from[1])
@@ -819,7 +796,6 @@ const markOf = (g: Grid, pixels: ReadonlyArray<number>) => {
   const b = far(a);
   const length = Math.max(1, Math.hypot(b[0] - a[0], b[1] - a[1]));
   const stroke = pixels.length / length;
-  // A stroke's round cap reaches half its width past each end of its line: the ends a stroke is drawn between lie that far inside its ink.
   const inset = Math.min(stroke / 2, length / 2 - 0.5) / length;
   const toward = (p: TracePt, q: TracePt): TracePt => [
     p[0] + (q[0] - p[0]) * inset,
@@ -1054,7 +1030,6 @@ const marksOf = (
     rd.ink.map((v, k) => (v === 1 && figure(k) ? 1 : 0)),
   );
   const near = inkPieces.filter((p) => p.length < (g.w * g.h) / 50);
-  // Each mark takes the nearest piece no mark before it took: a brow seed beside its eye takes the brow.
   const taken = new Set<ReadonlyArray<number>>();
   const mark = (what: string) => (p: TracePt) => {
     const piece = nearestPiece(g, near, p, taken);
@@ -1116,21 +1091,18 @@ const readOf = (sheet: Raster, view: TraceView) => {
   const n = g.w * g.h;
   const ink = new Uint8Array(n);
   for (let k = 0; k < n; k++) ink[k] = lumaAt(sheet, sheetIndex(g, k)) < INK_LUMA ? 1 : 0;
-  // The ground stops at the line's dark edge, wider than its ink, so no gap in the ink lets it in.
   const ground = flood(g, edgePixels(g), (k) => lumaAt(sheet, sheetIndex(g, k)) >= GROUND_LUMA);
   const figure = (k: number) => ground[k] === 0;
   const kinds = classesOf(g, view.classes, (k) => figure(k) && ink[k] === 0);
   const classIds = Object.keys(view.classes);
   const { label, regions } = regionsOf(g, kinds, classIds);
   const labels = labelRegions(regions, view.labels ?? {}, touchingOf(g, label, regions));
-  // The figure inside its line: the ground grown across the antialiased edge outside the line (darker than the ground, lighter than ink), through the ink it meets, and the antialiased pixel past that.
   const bridged = grown(
     g,
     ground,
     EDGE_AA,
     (k) => ink[k] === 0 && lumaAt(sheet, sheetIndex(g, k)) < GROUND_LUMA,
   );
-  // Through the ink to its inner edge; a view that reads a brown line takes its first `LINE_MIN` pixels where they are as dark as its brown, the rest of the way ink alone.
   const inked = (k: number) => ink[k] === 1;
   const through =
     view.line === 'brown'
@@ -1258,16 +1230,13 @@ const pts = (p: ReadonlyArray<TracePt>, indent: string) =>
   `[\n${p.map(([x, y]) => `${indent}  [${x}, ${y}],`).join('\n')}\n${indent}]`;
 
 /**
- * A traced view as a table's source: a header naming what it was traced
- * from and the command that wrote it, then each part as a constant (in
- * sheet pixels), its face's marks, its head's centre and its feet. `doc`
- * gives each part its line.
+ * A traced view as a table's source: each part as a constant (in sheet
+ * pixels), its face's marks, its head's centre and its feet, each under its
+ * doc comment. `doc` gives each part its line.
  */
-export const tracedModule = (header: ReadonlyArray<string>, view: TraceView, t: Traced): string => {
+export const tracedModule = (view: TraceView, t: Traced): string => {
   const doc = (name: string, fallback: string) => `/** ${view.parts[name]?.doc ?? fallback} */`;
   const lines = [
-    ...header.map((l) => `// ${l}`.trimEnd()),
-    '',
     "import type { Pt } from '@manna/film/style';",
     '',
     `/** The view's box in the sheet, as its record keeps it. */`,

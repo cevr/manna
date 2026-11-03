@@ -118,7 +118,6 @@ const searchLayer = (bindings: Bindings) => {
   const search = SearchService.layer.pipe(
     Layer.provide(Layer.mergeAll(sources, neighbors, embedder)),
   );
-  // Nothing loads into memory: the vector leg can run from the first request.
   const ready = Layer.succeed(
     VectorIndexLoad,
     VectorIndexLoad.of({ readiness: Effect.succeed('ready' as const) }),
@@ -163,11 +162,6 @@ export default class Search extends Cloudflare.Worker<Search>()(
           Effect.orDie,
         ),
     };
-    // The constructor also runs at deploy time, to collect the bindings, and
-    // the handles are empty then. So the search is built on the first request
-    // or warm-up, once per isolate, in a scope that lives as long as the
-    // isolate does; the requests and the warm-ups share it. The handles are
-    // read in that first fiber; the layers are built `isolated` from it.
     const scope = yield* Scope.make();
     const services = yield* Effect.cached(
       Effect.gen(function* () {

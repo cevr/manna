@@ -69,12 +69,6 @@ const weightsDir = Effect.gen(function* () {
   );
 });
 
-/** Whether the model's weights are on this machine. They are not committed
- *  (§10), so a machine that never fetched them skips the real model's checks,
- *  and says so. Where the weights are present the probe below must load them:
- *  a load that fails then is a defect, and the suite fails with it. */
-// Top-level await, deliberately: `it.skipIf` needs the boolean at module
-// evaluation, before any test body runs.
 // oxlint-disable-next-line effect/noAsyncFunction -- it.skipIf needs this at module-evaluation time
 const weights = await Effect.runPromise(
   Effect.gen(function* () {
@@ -87,9 +81,6 @@ const weights = await Effect.runPromise(
 );
 const modelAvailable = Option.isSome(weights);
 
-/** One load of the model and one query through it, where the weights are
- *  present. Every check below then reads the loaded model, so none of them
- *  pays for the load. */
 // oxlint-disable-next-line effect/noAsyncFunction -- the probe runs once at module evaluation, beside the skip it backs
 const probe = await Effect.runPromise(
   Effect.when(embedWith(adapter, 'probe'), Effect.succeed(modelAvailable)),
@@ -105,9 +96,6 @@ const overLongEmbedded = await Effect.runPromise(
 
 describe('§10 the Bun embedding adapter', () => {
   it('reports whether the model was available, so a skip is never silent', () =>
-    // Loud where the weights are absent, so a run that checked nothing cannot
-    // be mistaken for a run that checked everything; red where they are
-    // present and the model does not load.
     Effect.runPromise(
       Effect.gen(function* () {
         if (!modelAvailable) {
@@ -116,18 +104,12 @@ describe('§10 the Bun embedding adapter', () => {
               `[search] set BIBLE_MODEL_CACHE, or fetch the model to ~/.bible/models, to run the real checks.`,
           );
         }
-        // Weights present means the model loads: a failed load is a defect,
-        // never a skip.
         expect(!modelAvailable || Option.exists(probe, Result.isSuccess)).toBe(true);
       }),
     ));
 
   // oxlint-disable-next-line film/tests-keep-their-strength -- needs the model's weights, which are not committed (§10); it skips, and says so above, on a machine that never fetched them
   it.skipIf(!modelAvailable)('the adapter declares the pinned fingerprint', () =>
-    // The precondition the whole vector leg rests on: an adapter whose
-    // fingerprint disagreed with the index's would be refused at query time,
-    // and §10's mismatch test only means something if the shipping adapter
-    // agrees with the constant.
     Effect.runPromise(
       Effect.gen(function* () {
         expect(yield* fingerprintOf(adapter)).toBe(MODEL_FINGERPRINT);
@@ -181,9 +163,6 @@ describe('§9.5 the retrieval embedding, against the real model', () => {
   };
 
   it('pins the model card’s two retrieval prefixes verbatim', () => {
-    // From `onnx-community/embeddinggemma-300m-ONNX`'s README. The trailing
-    // space in each is load bearing — dropping it changes the tokenization and
-    // therefore every vector the build produces.
     expect(QUERY_PREFIX).toBe('task: search result | query: ');
     expect(DOCUMENT_PREFIX).toBe('title: none | text: ');
   });
@@ -216,10 +195,6 @@ describe('§9.5 the retrieval embedding, against the real model', () => {
 
           const near = cosine(query.success, relevant.success);
           const far = cosine(query.success, irrelevant.success);
-          // Measured on this machine against the fp32 weights: 0.697 vs 0.071.
-          // The bounds are loose enough to survive kernel differences between
-          // hosts and tight enough that the mean-pooled path (which scored
-          // cosine 0.008 against the trained head) cannot satisfy them.
           expect(near).toBeGreaterThan(0.5);
           expect(far).toBeLessThan(0.35);
           expect(near - far).toBeGreaterThan(0.3);
@@ -233,9 +208,6 @@ describe('§9.5 the retrieval embedding, against the real model', () => {
     () =>
       Effect.runPromise(
         Effect.gen(function* () {
-          // The same text through the two methods must not produce the same
-          // vector: if it did, the prefixes would not be reaching the model and
-          // the document side would be embedded in the query's region.
           const text = 'the sanctuary in heaven is the center of Christ’s work';
           const asQuery = yield* embedWith(adapter, text);
           const asDocument = yield* embedDocumentWith(adapter, text);
@@ -261,8 +233,6 @@ describe('§9.5 the shared vector post-processing', () => {
    *  defaulting to an empty vector. */
   const accepted = (values: readonly number[]): Float32Array => {
     const truncated = truncateToMrl(values);
-    // `expect` rather than a throw: a rejection here means the *fixture* is
-    // wrong, and this reports which one without a stack through the helper.
     expect(Option.isSome(truncated)).toBe(true);
     return Option.getOrElse(truncated, () => new Float32Array(DIMENSIONS));
   };
@@ -273,9 +243,6 @@ describe('§9.5 the shared vector post-processing', () => {
   });
 
   it('keeps the first 256 components, in order', () => {
-    // Matryoshka truncation is a *prefix*, and the fingerprint's `mrl` component
-    // is the claim that this prefix is meaningful. Taking any other slice would
-    // produce vectors of the right shape and the wrong geometry.
     const full = Array.from({ length: 768 }, (_value, axis) => axis + 1);
     const truncated = accepted(full);
     const ratio = (truncated[0] ?? 0) / (truncated[1] ?? 1);
@@ -283,11 +250,6 @@ describe('§9.5 the shared vector post-processing', () => {
   });
 
   it('re-normalizes after truncating', () => {
-    // A prefix of a unit vector is not a unit vector, and `quantize` maps the
-    // unit range onto [-127, 127] with one fixed scale — so an adapter that
-    // skipped this step would quantize a shorter vector into a smaller corner
-    // of the int8 range, losing precision and failing parity for a reason
-    // unrelated to the model.
     const full = Array.from({ length: 768 }, () => 1);
     const truncated = accepted(full);
     let sum = 0;
@@ -306,7 +268,6 @@ describe('§9.5 the shared vector post-processing', () => {
   it('rejects a row shorter than 256 components rather than padding it', () => {
     expect(Option.isNone(truncateToMrl(Array.from({ length: 128 }, () => 0.1)))).toBe(true);
     expect(Option.isNone(truncateToMrl(Array.from({ length: 255 }, () => 0.1)))).toBe(true);
-    // Exactly 256 is the boundary and is accepted.
     expect(Option.isSome(truncateToMrl(Array.from({ length: DIMENSIONS }, () => 0.1)))).toBe(true);
   });
 
@@ -323,17 +284,12 @@ describe('§9.5 the shared vector post-processing', () => {
     withNegativeInfinity[255] = Number.NEGATIVE_INFINITY;
     expect(Option.isNone(truncateToMrl(withNegativeInfinity))).toBe(true);
 
-    // A non-finite value *past* the 256-d prefix is never read, so it is not a
-    // reason to refuse a row this build can use.
     const beyondPrefix = Array.from({ length: 768 }, () => 0.1);
     beyondPrefix[300] = Number.NaN;
     expect(Option.isSome(truncateToMrl(beyondPrefix))).toBe(true);
   });
 
   it('rejects an all-zero embedding rather than emitting a zero vector', () => {
-    // A zero vector dots to zero against every document, so it ranks the index
-    // arbitrarily. The old code returned it and `quantize` turned it into 256
-    // zero bytes that the scan happily scored.
     expect(Option.isNone(truncateToMrl(Array.from({ length: 768 }, () => 0)))).toBe(true);
   });
 
@@ -341,12 +297,6 @@ describe('§9.5 the shared vector post-processing', () => {
   it.skipIf(!modelAvailable)(
     'embeds a document past the model context by truncating, not failing',
     () =>
-      // The full-corpus compile died on a real EGW paragraph that tokenized
-      // past 2048: onnxruntime cannot grow the rotary cos/sin cache
-      // mid-session ("Updating cos_cache and sin_cache in RotaryEmbedding is
-      // not currently supported"). Without `truncation` at the tokenizer this
-      // input reproduces that failure; with it, the embedding is the
-      // document's first 2048 tokens.
       Effect.runPromise(
         Effect.sync(() => {
           expect(Option.exists(overLongEmbedded, Result.isSuccess)).toBe(true);

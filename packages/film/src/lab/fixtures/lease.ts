@@ -1,10 +1,3 @@
-// A case's hold on a pooled view (`browsers.ts`), apart from Chrome so its
-// own test drives it over a fake view: taken from the pool, sized and given
-// its pointer in one uninterruptible step, so an interrupted case still has
-// its release run on whatever that step set; and given back only once it is
-// as the pool lends it (the mouse's pointer, the idle page, no history),
-// discarded when any of that fails, and never quietly.
-
 import { Effect, Option, type Scope } from 'effect';
 import type { View } from './tab.ts';
 
@@ -72,7 +65,6 @@ export const lease = <S extends Leased>(
   Effect.acquireRelease(
     Effect.gen(function* () {
       const slot = yield* pool.take;
-      // A view that cannot be sized or pointed is no case's: discarded, and the case fails.
       yield* Effect.gen(function* () {
         yield* Effect.tryPromise(() => slot.lent.resize(ask.width, ask.height));
         if (ask.coarse) yield* touch(slot.lent, true);

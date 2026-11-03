@@ -1,6 +1,3 @@
-// The lab in memory for the tool tests (`lab.ts`): its handler over the
-// stores in memory, and the film timelines over them.
-
 import { AskMaterials } from '../ask-materials.ts';
 import { AskStore } from '../ask-store.ts';
 import type { FileSystem } from 'effect';

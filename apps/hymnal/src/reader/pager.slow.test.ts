@@ -179,7 +179,6 @@ describe('a settle', () => {
 
 describe('a page', () => {
   it('is as tall as the pager, not as its words, so the words scroll inside it on every way in', () => {
-    // The phone stand-in measures every view 800 points tall.
     for (const shown of [seen.open3, seen.settle4, seen.open30, seen.open600, seen.settle601]) {
       expect(shown.pageHeights.length).toBeGreaterThan(0);
       for (const height of shown.pageHeights) expect(height).toBe('800px');
@@ -217,7 +216,6 @@ describe('a settle while a hymn sounds', () => {
 
 describe('the bottom bar', () => {
   it('lies in the hymn’s screen while nothing is held, on every way in, so a back takes it out with the screen', () => {
-    // The owner, 2026-10-22: the bar goes away with the page, not after it.
     for (const shown of [seen.open3, seen.settle4, seen.open30, seen.open600, seen.settle601])
       expect(shown.bar).toEqual({ bars: 1, inScreen: 1 });
   });
@@ -238,14 +236,11 @@ describe('the reader’s lists', () => {
   });
 
   it('a favourite’s rows carry a star and are read as a favourite, in Recent and under its topic', () => {
-    // Recent's 30 and 3 come first, then hymn 3 under its topic, in list order;
-    // 30 under its topic lies past the rows drawn at the top.
     expect(seen.starred.slice(0, 3)).toEqual([30, 3, 3]);
     expect(seen.stars).toBe(seen.starred.length);
   });
 
   it('a favourite’s star sits after its title, out of it, at the number’s size, so the title’s ellipsis comes before it', () => {
-    // The owner, 2026-10-22: the star at the row's end, about the number's size.
     for (const places of [seen.starPlaces, seen.recentStarPlaces]) {
       expect(places.length).toBeGreaterThan(0);
       expect(places).not.toContain('missing');
@@ -293,7 +288,6 @@ describe('the reader’s lists', () => {
 describe('a settle of the pager (pagerperf P1)', () => {
   it('draws no page it found mounted again: only a page it brings in draws', () => {
     const { mounted, first, after, draws } = seen.settleDraws;
-    // The counter saw every page's first draw, so a draw again would show.
     for (const page of mounted)
       expect(first.some((d) => d.number === page && d.draws > 0)).toBe(true);
     expect(draws.filter((d) => mounted.includes(d.number))).toEqual([]);

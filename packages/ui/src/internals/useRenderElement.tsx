@@ -1,13 +1,3 @@
-// Upstream: packages/react/src/internals/useRenderElement.tsx
-//
-// Renders a part's element: its state as `data-*` attributes, its internal
-// props merged under the user's, `class` and `style` resolved against the
-// state, and either the default tag or the user's `render` function.
-//
-// `params` may hold getters: `state` and `props` are read inside
-// a reactive scope, so a part passes live values without rebuilding the
-// element. `render` is called once per change of the `render` prop, with the
-// merged props and the state (both live views: spread or read them in a reactive scope).
 import { type JSX, dynamic } from '@solidjs/web';
 import { createMemo, untrack } from 'solid-js';
 

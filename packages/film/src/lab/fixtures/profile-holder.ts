@@ -1,12 +1,3 @@
-// A process that stands in for a worker's Chrome as an e2e run ends: its
-// command line names its profile (`--user-data-dir=<profile>`), it says
-// `ready` on stdout once it holds the profile, and asked to end (SIGTERM,
-// which interrupts it) it writes into the profile as it shuts down (as
-// Chrome writes its `Local State`), making the profile again if it is gone.
-// The other process of a test of the run folder's release
-// (`run-folder.slow.test.ts`). Its stdin is a pipe from the test, so it ends with
-// the test however the test went.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Effect, FileSystem, Stdio, Stream } from 'effect';

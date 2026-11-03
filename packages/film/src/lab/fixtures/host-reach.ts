@@ -1,24 +1,3 @@
-// What the page reaches of the host, and from whose code: the check that does
-// in the browser what `film/host-events-through-adapter` and
-// `film/history-through-host` read in the source, whatever the spelling.
-//
-// A script run before the page's own wraps the host's APIs a film page hears
-// or moves its navigation, keys and drags through an adapter for: a listener
-// for `popstate`, `hashchange`, a key or a drag's move and end on the window or
-// the document, a listener for the end of a press on anything, a pointer
-// capture taken or let go, a history move (`pushState`, `replaceState`, `go`,
-// `back`, `forward`) and the Navigation API's moves. Each call tells the tab,
-// by the console, the API and the page's script frames it was called from.
-//
-// The tab maps the first frame its bundle's inline source map reads back to
-// the file that wrote it. A call from a file of the film's own source outside
-// `src/browser/` (the adapters) fails the case, as `host reach: <api> from
-// <file>`. A call from anywhere else (a library, `@manna/url-state`, `@manna/ui`,
-// the fixtures' pages, or a script with no source map) is told and not
-// refused: those are the owners, or no film code. A `Location` write is not
-// wrapped (the browser makes its methods and `href` unforgeable): the lint
-// reads it.
-
 import { SourceMap } from 'node:module';
 import { Array as Arr, Option, Predicate, Schema } from 'effect';
 

@@ -1,16 +1,3 @@
-// Compile a figure project with the Rive CLI, offline and unsigned
-// (`rive --once`: no account, no scripts): write the generated project, run
-// the CLI on it, and answer the built file with what the build warned of, its
-// problems and its stamp (what it was built from). A film's rig build
-// (`righteousness-by-faith/rigs/build.ts`) copies the file and its stamp
-// beside its rigs, and holds the committed file to its rigs through the stamp
-// (`unbuilt`), as the film's test does on a host with no CLI. Both hold
-// first each override its figures carry to the owner's decisions on his
-// production's ledger, his words or his pick on that figure (`unsaid`,
-// `override.ts`), then each locked figure's print to its lock, and the lock
-// to the decision it names (`unlocked`, `lock.ts`). The CLI is `rive` on the
-// PATH, or the one `RIVE` names.
-
 import { Config, Effect, FileSystem, Schema, Stream } from 'effect';
 import { Digest } from 'effect/crypto';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';

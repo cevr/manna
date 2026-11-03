@@ -1,9 +1,3 @@
-// A signal drawn, then a value at every frame. The plan pass draws a signal's
-// numbers (a ramp's ends, the points, an LFO's phase) into a `Track`; the fill
-// pass writes it out frame by frame into an array the renderer owns. A pitch
-// moves in its logarithm unless its curve is linear, and is moved by
-// semitones; every other unit moves and is moved in itself.
-
 import { Match, Predicate } from 'effect';
 import { rng } from '../../random.ts';
 import { type Draws, drawValue, plain, streamSeed, uniform } from './draw.ts';

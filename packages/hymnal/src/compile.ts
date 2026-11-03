@@ -115,7 +115,6 @@ const place = (
   level: Harmony.Level,
 ): Array<Array<Placed[]>> => {
   const tpb = score.ticksPerBeat;
-  // The files strike a chord's notes up to a few ticks from the tune's.
   const slack = tpb / 16;
   const spans = Harmony.chords(score, span.start, span.end, level);
   const sung = alignment.lines.flatMap((line, l) =>
@@ -133,7 +132,6 @@ const place = (
   sung.forEach(({ syllable, line: l, k, start, end: noteEnd }, i) => {
     if (syllable.notes === 0) return;
     const next = sung.slice(i + 1).find((s) => s.syllable.notes > 0);
-    // A line's last syllable owns no rest after it, unless it ends the verse.
     const end =
       next === undefined ? span.end : next.line !== l ? Math.min(noteEnd, next.start) : next.start;
     const placed: Placed[] = [];
@@ -383,7 +381,6 @@ export const compilePlacements = (
     const { stanzas, refrain } = yield* versesOf(source);
     const sung = Sung.of(yield* Midi.parse(source.midi), stanzas.length);
     const { midi, score } = sung;
-    // The stanza the refrain is laid after and stored from: the last alone when it is sung after the last only.
     const lastOnly = refrain?.order === 'first-and-last' || refrain?.order === 'after-last';
     const from = lastOnly ? stanzas.length - 1 : 0;
     const tail = (n: number) =>
@@ -437,7 +434,6 @@ export const compilePlacements = (
       }
       return timed(hymn, (n) => laid[n]?.starts);
     };
-    // The guitar chords are struck on the file's strong beats only when the melody confirms its bars.
     const asPlayed = built((one) => one.lines);
     const grid: Placement.Grid = {
       ticksPerBeat: PER_BEAT,

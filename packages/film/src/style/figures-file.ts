@@ -1,20 +1,3 @@
-// A film's figures file: every figure rig of the film in one Rive project
-// (its `figures.riv`), as the film lays it (`figuresFile`). Each artboard has
-// a key, and the file draws them in its keys' order. Each has its name, the
-// seed its paper's boil crawls by and its place on the editor's stage, and
-// draws a composed figure (`figure`, with the artboard its hands are drawn
-// on) or a circle hand of a paper at a size. The figures' ink is the house
-// look's line at the film's weight, its widths bound to each artboard's
-// `ink` number unless the film bakes them. A file that names one artboard twice,
-// lays a figure's hands on a hand of another paper, or lays a figure
-// `figure` did not return (a copy of one with a part changed, its parts
-// never checked), is refused as the module that lays it loads, and the
-// house draws no such figure. The house prints the file (`figuresRml`: one
-// id counter for it), each locked figure's print alone, which its lock holds
-// (`lockedPrints`), and every override its figures carry, with the artboard
-// each is laid on (`figureOverrides`). A film lays its file, and writes no
-// RML. Pure.
-
 import { Record as Rec, Schema } from 'effect';
 import { decoder } from './decode.ts';
 import { type ComposedFigure, isComposed } from './figure.ts';

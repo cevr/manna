@@ -214,7 +214,6 @@ const inlineCodeSpans = (body: string, region: Span): readonly Span[] => {
   let index = region.start;
   while (index < region.end) {
     if (body[index] === '\\') {
-      // An escaped backtick opens nothing.
       index += 2;
       continue;
     }
@@ -225,8 +224,6 @@ const inlineCodeSpans = (body: string, region: Span): readonly Span[] => {
     const run = backtickRunEnd(body, index, region.end);
     const closed = findCloser(body, run, region.end, run - index);
     if (Option.isNone(closed)) {
-      // Unclosed: the backticks are literal, and the text after them is still
-      // open to substitution.
       index = run;
       continue;
     }
@@ -259,8 +256,6 @@ const byStart = (a: Span, b: Span): number => a.start - b.start;
  *  treats its backticks as literal text, so the pre-pass does too. */
 const protectedSpans = (body: string): readonly Span[] => {
   const blockSpans = blockCodeSpans(body);
-  // Inline code spans are only meaningful outside the block forms found above,
-  // so the remaining open regions are scanned rather than the whole body.
   const inlineSpans = openSpans(body, [...blockSpans].sort(byStart)).flatMap((region) =>
     inlineCodeSpans(body, region),
   );
@@ -290,20 +285,12 @@ const substitute = (body: string): Substituted => {
         const trimmed = quoted.trim();
         if (!quotesText(trimmed)) {
           blank.push({ refcode: refcode.trim(), quote: quoted });
-          // Left in place as literal text so the authored source stays visible
-          // in the failure the compiler raises.
           return match;
         }
         return placeholder(CitationInline.make({ refcode: refcode.trim(), text: trimmed }));
       })
-      // `String.replace` hands an unmatched optional group over as `undefined`;
-      // it is converted to `Option` here, at the one boundary where the regex
-      // engine is spoken to, so the label is a presence-or-absence value
-      // everywhere after.
       .replace(SCRIPTURE, (...args: readonly unknown[]) => {
         const match = String(args[0]);
-        // `String.replace` puts the offset after the capture groups; this
-        // pattern has two, so it is argument three.
         const position = Number(args[3]);
         if (isEscaped(region, position)) return match;
         const reference = String(args[1]).trim();
@@ -418,8 +405,6 @@ const restore = (text: string, nodes: readonly Inline[], into: Inline[]): void =
     if (start === -1) break;
     const end = rest.indexOf(MARK, start + 1);
     if (end === -1) break;
-    // A mark with anything but digits between the pair is not a placeholder the
-    // pre-pass wrote, so it stays literal text.
     const digits = rest.slice(start + 1, end);
     const index = Option.liftPredicate(
       digits,
@@ -428,7 +413,6 @@ const restore = (text: string, nodes: readonly Inline[], into: Inline[]): void =
     ).pipe(Option.map(Number));
     const node = Option.flatMap(index, (value) => Option.fromNullishOr(nodes[value]));
     if (Option.isNone(node)) {
-      // Keep the mark itself out of the output but preserve everything else.
       const literal = rest.slice(0, start) + digits;
       if (literal.length > 0) into.push(TextInline.make({ text: literal }));
       rest = rest.slice(end + 1);
@@ -457,9 +441,6 @@ const inlines = (rendered: string, nodes: readonly Inline[]): readonly Inline[] 
       case 'strong': {
         const inner = inlines(node.children, nodes);
         const text = inner.map((child) => child.text).join('');
-        // A wrapper holding only text becomes the styled node; one holding a
-        // citation cannot, so its children are emitted in place — losing the
-        // emphasis rather than losing the verified citation.
         if (inner.every((child) => child._tag === 'text')) {
           if (text.length > 0) {
             found.push(
@@ -485,8 +466,6 @@ const inlines = (rendered: string, nodes: readonly Inline[]): readonly Inline[] 
         if (text.length > 0) found.push(TextInline.make({ text }));
         break;
       }
-      // A block nested where an inline was expected (a list inside a list item)
-      // contributes its text; the §2.2 union has no nested-block node.
       case 'paragraph':
       case 'heading':
       case 'blockquote':
@@ -542,8 +521,6 @@ const blocks = (rendered: string, nodes: readonly Inline[]): readonly Block[] =>
         );
         break;
       case 'blockquote': {
-        // §2.2 blockquotes hold inline content, so a multi-paragraph quote
-        // flattens into one run rather than nesting blocks.
         const content = inlines(node.children, nodes);
         if (content.length > 0) found.push(BlockquoteBlock.make({ content }));
         break;
@@ -555,8 +532,6 @@ const blocks = (rendered: string, nodes: readonly Inline[]): readonly Block[] =>
         if (items.length > 0) found.push(ListBlock.make({ ordered: node.ordered, items }));
         break;
       }
-      // A stray inline at block level (text between blocks) is not a block; its
-      // content already belongs to a paragraph the parser emitted.
       case 'text':
       case 'emphasis':
       case 'strong':
@@ -586,8 +561,6 @@ const render = (source: string): string =>
     list: (kids: string, meta: { readonly ordered: boolean }) =>
       encode({ kind: 'list', ordered: meta.ordered, children: kids }),
     listItem: (kids: string) => encode({ kind: 'listItem', children: kids }),
-    // Inline code and images have no §2.2 node; their text is kept, their
-    // markup is not.
     codespan: (kids: string) => kids,
     code: (kids: string) => encode({ kind: 'paragraph', children: kids }),
     image: () => '',
@@ -605,10 +578,6 @@ export interface ParsedBody {
 }
 
 export const parseBody = (body: string): ParsedBody => {
-  // Authoring notes live in HTML comments (every current stub carries one) and
-  // are not content — strip them before the body is read. The delimiters the
-  // encoding relies on are stripped too: they cannot appear in authored prose,
-  // and letting one through would let a source forge a node.
   const cleaned = body
     .replace(HTML_COMMENT, '')
     .replaceAll(OPEN, '')

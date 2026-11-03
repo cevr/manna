@@ -147,7 +147,6 @@ describe("a scene render against the film's sound", () => {
       'stale',
       Option.some('sound'),
     ]);
-    // A scene that changed is stale by its sources, whatever its sound.
     const redrawn = projectOf(catalogue, heard([{ scene: 'a', key: 'k2' }], 'mix-b'), 'main');
     expect(redrawn.scenes[0]?.staleBy).toEqual(Option.some('sources'));
   });
@@ -162,11 +161,9 @@ describe("a scene render against the film's sound", () => {
     expect(renderNeed(catalogue, slot, now('k1', 'mix-a'), SETTINGS)).toBe('current');
     expect(renderNeed(catalogue, slot, now('k1', 'mix-b'), SETTINGS)).toBe('remux');
     expect(renderNeed(catalogue, slot, now('k2', 'mix-b'), SETTINGS)).toBe('draw');
-    // A render that carries no sound has no cut to re-mux: the film's track is drawn with it.
     expect(renderNeed(catalogue, sceneSlot('b', 'main'), now('k1', 'mix-b'), SETTINGS)).toBe(
       'draw',
     );
-    // A film with no track yet (or a plan that does not build) judges no render by its sound.
     expect(renderNeed(catalogue, slot, { key: 'k1', sound: Option.none() }, SETTINGS)).toBe(
       'current',
     );
@@ -178,7 +175,6 @@ describe("a scene render against the film's sound", () => {
     const remuxed = sounding(sceneRender('a', 'k1', 20), 'mix-b');
     const after = recordRender(approved, remuxed);
     expect(approvalState(after, of(remuxed))).toBe('stale');
-    // Approve-all leaves a scene stale by its sound for a re-mux first.
     const { approved: none } = approveCurrent(
       withRenders(first),
       [{ scene: 'a', key: 'k1' }],
@@ -201,7 +197,6 @@ describe('approvals', () => {
     const rerendered = recordRender(approved, second);
     expect(approvalState(rerendered, of(second))).toBe('stale');
     expect(rerendered.approvals).toEqual(approved.approvals);
-    // The slot holds the new render alone.
     expect(rerendered.renders).toEqual([second]);
   });
 
@@ -245,13 +240,10 @@ describe('approvals', () => {
     ];
     const first = approveCurrent(catalogue, now, Option.none(), 'main', 5, OP_1);
     expect([first.approved, first.made]).toEqual([['a', 'b'], ['b']]);
-    // The approval it added carries its run's op; the one there before carries none.
     expect(first.catalogue.approvals.map((x) => x.op)).toEqual([Option.none(), Option.some(OP_1)]);
-    // Approved by another since: the same approve changes nothing, and names nothing it made.
     const again = approveCurrent(first.catalogue, now, Option.none(), 'main', 7, OP_2);
     expect([again.approved, again.made]).toEqual([['a', 'b'], []]);
     expect(again.catalogue).toEqual(first.catalogue);
-    // What the CLI's answer says it gave: its op, the moment and those scenes; nothing, when it made none.
     expect(gaveOf(first.made, 5, OP_1)).toEqual(Option.some({ op: OP_1, at: 5, scenes: ['b'] }));
     expect(gaveOf(again.made, 7, OP_2)).toEqual(Option.none());
   });
@@ -260,7 +252,6 @@ describe('approvals', () => {
     const first = sceneRender('a', 'k1');
     const second = sceneRender('a', 'k2', 20);
     const now = (key: string) => [{ scene: 'a', key }];
-    // Run A approves k1 at 5; a new render; run B, queued with the same moment, approves k2.
     const a = approveCurrent(withRenders(first), now('k1'), Option.none(), 'main', 5, OP_A);
     const b = approveCurrent(
       recordRender(a.catalogue, second),
@@ -274,15 +265,12 @@ describe('approvals', () => {
       ['k1', 5],
       ['k2', 5],
     ]);
-    // B's Undo takes k2's alone: k1's, stamped identically, stays.
     const undoneB = withdraw(b.catalogue, of(second), Option.some(OP_B));
     expect(undoneB.approvals.map((x) => x.key)).toEqual(['k1']);
     expect(approvalState(undoneB, of(second))).toBe('stale');
-    // A's Undo takes k1's alone.
     const undoneA = withdraw(b.catalogue, of(second), Option.some(OP_A));
     expect(undoneA.approvals.map((x) => x.key)).toEqual(['k2']);
     expect(approvalState(undoneA, of(second))).toBe('approved');
-    // An op no approval carries takes nothing; with none given, every approval of the variant goes.
     expect(withdraw(b.catalogue, of(second), Option.some(OP_C))).toEqual(b.catalogue);
     expect(withdraw(b.catalogue, of(second), Option.none()).approvals).toEqual([]);
   });
@@ -293,7 +281,6 @@ describe('approvals', () => {
     const a = approveCurrent(withRenders(render), now, Option.none(), 'main', 5, OP_A);
     const withdrawn = withdraw(a.catalogue, of(render), Option.none());
     const b = approveCurrent(withdrawn, now, Option.none(), 'main', 5, OP_B);
-    // A's Undo, late: the approval now is B's, at A's very moment, and stays.
     expect(withdraw(b.catalogue, of(render), Option.some(OP_A))).toEqual(b.catalogue);
     expect(approvalState(b.catalogue, of(render))).toBe('approved');
   });
@@ -309,7 +296,6 @@ describe('approvals', () => {
   test('a withdraw of scenes says which it took an approval from', () => {
     const a = sceneRender('a', 'k1');
     const b = sceneRender('b', 'k1');
-    // Run op-a approves a; b is approved by another (a say: no op).
     const given = approveCurrent(
       withRenders(a, b),
       [{ scene: 'a', key: 'k1' }],
@@ -319,7 +305,6 @@ describe('approvals', () => {
       OP_A,
     );
     const both = approve(given.catalogue, of(b), 6);
-    // Undoing op-a: a's goes; b's approval was another's (no op), so b is not among those taken.
     const undone = withdrawScenes(both, ['a', 'b'], 'main', Option.some(OP_A));
     expect(undone.took).toEqual(['a']);
     expect([
@@ -329,11 +314,9 @@ describe('approvals', () => {
     expect(tookOf(Option.some(OP_A), undone.took)).toEqual(
       Option.some({ op: OP_A, scenes: ['a'] }),
     );
-    // Undone again: nothing is left to take, and it says so.
     const again = withdrawScenes(undone.catalogue, ['a', 'b'], 'main', Option.some(OP_A));
     expect(again.took).toEqual([]);
     expect(tookOf(Option.some(OP_A), again.took)).toEqual(Option.some({ op: OP_A, scenes: [] }));
-    // A plain withdraw takes every approval, and says nothing of an op.
     expect(withdrawScenes(both, ['a', 'b'], 'main', Option.none()).took).toEqual(['a', 'b']);
     expect(tookOf(Option.none(), ['a'])).toEqual(Option.none());
   });
@@ -383,7 +366,6 @@ describe("the owner's say beside a scene's render", () => {
     expect(now.acts.map((a) => a.comments.map((c) => [c.text, c.onThis]))).toEqual([
       [['too slow', true]],
     ]);
-    // The act's scene never hears it: it was said of the act.
     expect(now.scenes[0]?.comments).toEqual([]);
     const later = projectOf(said, tree('a2'), 'main');
     expect(later.acts[0]?.comments.map((c) => c.onThis)).toEqual([false]);

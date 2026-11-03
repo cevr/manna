@@ -1,14 +1,3 @@
-// Upstream: packages/react/src/toast/store.ts
-//
-// The toasts of one `Toast.Provider`: the list (newest first) and each
-// toast's index and visible index, whether the viewport is
-// hovered or focused, the auto-dismiss timers (paused while the viewport is
-// expanded or the window is blurred, resumed with the time left), the
-// `limit` (the oldest active toasts past it are marked `limited`), and focus
-// hand-off when a focused toast closes.
-//
-// The store is plain state and methods, framework-free; `subscribe` tells a
-// listener the state changed (the provider mirrors it into a signal).
 import { activeElement, contains, getTarget, ownerDocument } from '../utils/dom.ts';
 import { Timeout } from '../utils/timers.ts';
 import type { ToastManagerAddOptions, ToastObject } from './types.ts';
@@ -66,10 +55,6 @@ function createToastMetadata(toasts: StoredToast[]) {
   return metadata;
 }
 
-// Marks the active (non-ending) toasts beyond `limit` as limited. Callers pass
-// toasts in newest-first order, so the newest `limit` toasts stay visible and
-// the rest are flagged. Returns the same toast reference when its `limited`
-// flag is unchanged.
 function applyLimited(toasts: StoredToast[], limit: number): StoredToast[] {
   let activeIndex = 0;
   return toasts.map((toast) => {
@@ -243,8 +228,6 @@ export class ToastStore {
       return;
     }
 
-    // Ignore updates for toasts that are already closing (a late write from
-    // the root), so they cannot block a dismissal from completing.
     if (prevToast.transitionStatus === 'ending') {
       return;
     }
@@ -293,13 +276,8 @@ export class ToastStore {
     }
     this.areTimersPaused = true;
     this.timers.forEach((timer) => {
-      // Timers added while already paused have no running timeout, so their
-      // `remaining` is still the full delay and must be left alone.
       if (timer.timeout) {
         timer.timeout.clear();
-        // `start` is stamped on every resume, so subtracting from `remaining`
-        // (rather than from the original delay) keeps repeated pause/resume
-        // cycles from handing the toast extra time.
         timer.remaining = Math.max(timer.remaining - (Date.now() - timer.start), 0);
       }
     });
@@ -335,8 +313,6 @@ export class ToastStore {
       return;
     }
 
-    // Explicit touch activity outside the viewport ends the paused
-    // interaction state even if the window focus state is unchanged.
     this.resumeTimers();
     this.update({ hovering: false, focused: false });
   };
@@ -375,8 +351,6 @@ export class ToastStore {
 
   private resetPausedStateIfNoTimersRemain() {
     if (this.timers.size === 0) {
-      // No timers remain to keep paused; clear the flag so a fresh toast's
-      // running timer can be paused again on hover or focus.
       this.areTimersPaused = false;
     }
   }
@@ -417,7 +391,6 @@ export class ToastStore {
       return null;
     };
 
-    // The next toast that isn't animating out, else the previous one.
     const nextToast = scan(currentIndex + 1, 1) ?? scan(currentIndex - 1, -1);
 
     if (nextToast) {

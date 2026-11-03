@@ -1,25 +1,3 @@
-// Cuts the woman's head keys (`heads.ts`) from her kept seated sheet: her
-// turn (poses-2) and her smile (poses-3), each laid on her poses-1 part
-// sheet's frame (`frames.ts`) where its neck lies on the neutral's, and cut
-// by her poses-1 cut (`cut.ts`). That cut's head is every row above her chin,
-// the veil's top with it, as the feast mother's poses-1 cut keeps her veil's
-// top with her head: the veil below the chin stays on her neutral torso. The
-// turn and smile paintings draw that veil narrower than the neutral's and
-// further to the picture's left, so before the cut each key's drape band,
-// from her ear's top down to her chin, is warped across, row by row and each
-// side alone (`warped`): the veil's outline moves whole, by a shift that eases
-// from none at the band's top to the one that lays it on the neutral's
-// outline at the chin row, and the cloth between it and her face stretches or
-// narrows to meet the face, which stays as painted. Over the last rows down
-// to the chin, everything between the veil's outline and her face line (her
-// hair, its shadow, the veil's cloth and folds) fades into the neutral's
-// (`faded`): a face line is a drawn line (`LINE`, `LINE_WIDTH`) with her skin
-// on its face side. So each key's veil, outline, cloth and hair, runs on into
-// her torso's. Each key is written to `sheets/poses-1/head-<key>.png`, the
-// view's bytes where the head owns a pixel and alpha 0 elsewhere, as the
-// parts CLI writes her head part. Run it from the repo root with
-// `bun apps/animations/src/library/cast/feast-guest-woman/cutout/heads-cut.ts`.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { type Raster, cutParts, decodePng, encodePng } from '@manna/film/tools';
@@ -40,9 +18,7 @@ const KEPT = `${here}/../cast-sheet/kept/poses.png`;
  * her neutral torso's.
  */
 const KEYS = {
-  // poses-2: turned to the lead, her mouth open
   turn: [473, -1],
-  // poses-3: smiling at the lead, turned as the turn is
   smile: [955, -1],
 } as const;
 
@@ -72,7 +48,7 @@ const SKIN_REACH = 10;
  * here down to the chin each key's veil outlines run beside the neutral's at
  * a steady offset, so the band's shift eases in over the whole free veil.
  */
-const BAND_TOP = 160;
+const DRAPE_TOP_ROW_AT_HER_EAR_TOP = 160;
 
 /** The rows above the chin whose outline centres fit the line that places each drape outline at the chin. */
 const FIT = 12;
@@ -84,7 +60,7 @@ const FIT = 12;
  * RGB across the chin on the picture's left and 7 on its right against 1 in
  * the neutral painting (measured).
  */
-const FADE = 20;
+const DRAPE_FADE_ROWS = 20;
 
 /** The `[x0, y0, x1, y1]` box of `sheet`, its far edges exclusive. */
 const cropOf = (
@@ -255,14 +231,13 @@ const warped = (
 ): Result.Result<Raster, string> => {
   const { width: w } = view;
   const rgba = Uint8Array.from(view.rgba);
-  for (let y = BAND_TOP; y <= chin; y++) {
+  for (let y = DRAPE_TOP_ROW_AT_HER_EAR_TOP; y <= chin; y++) {
     const edges = edgesOf(view, y);
     if (Result.isFailure(edges)) return Result.fail(edges.failure);
     const { outlineL, faceL, faceR, outlineR } = edges.success;
-    const t = (y - BAND_TOP) / (chin - BAND_TOP);
+    const t = (y - DRAPE_TOP_ROW_AT_HER_EAR_TOP) / (chin - DRAPE_TOP_ROW_AT_HER_EAR_TOP);
     const ease = t * t * (3 - 2 * t);
     const [sL, sR] = [shiftL * ease, shiftR * ease];
-    // the cloth each side: from just past the outline's inner edge to just short of the face's ink
     const aL = outlineL[1] + 1;
     const bL = Math.max(faceL[0] - 1, aL + 1);
     const bR = faceR[1] + 1;
@@ -354,8 +329,8 @@ const neutralColumn = (
 const faded = (drape: Raster, neutral: Raster, chin: number): Result.Result<Raster, string> => {
   const { width: w } = drape;
   const rgba = Uint8Array.from(drape.rgba);
-  for (let y = chin - FADE + 1; y <= chin; y++) {
-    const t = (y - chin + FADE) / FADE;
+  for (let y = chin - DRAPE_FADE_ROWS + 1; y <= chin; y++) {
+    const t = (y - chin + DRAPE_FADE_ROWS) / DRAPE_FADE_ROWS;
     const share = t * t * (3 - 2 * t);
     const cloths = Result.all([clothOf(drape, y), clothOf(neutral, y)] as const);
     if (Result.isFailure(cloths)) return Result.fail(cloths.failure);
@@ -407,7 +382,6 @@ const cut = Effect.gen(function* () {
   const sheet = yield* Effect.fromResult(decodePng(yield* fs.readFile(KEPT)));
   const [x0, y0, x1, y1] = boxOf('poses-1');
   const neutral = cropOf(sheet, [x0, y0, x1, y1]);
-  // the chin row: her neutral head part's lowest, the torso's drape starting below it
   const chin = lowestRow((yield* headOf(neutral)).pixels);
   const [nL, nR] = yield* Effect.fromResult(outlinesAt(neutral, chin));
   yield* Effect.forEach(Record.toEntries(KEYS), ([name, [dx, dy]]) =>

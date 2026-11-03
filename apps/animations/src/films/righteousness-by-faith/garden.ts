@@ -1,7 +1,3 @@
-// What grows: the fig leaves we sew (`mirror`), the film's one tree (the
-// garden's in `mirror`, the dawn's in `spoken`, the Sabbath field's), and the
-// field the figure rests in on the Sabbath.
-
 import {
   type Hand,
   type Pt,
@@ -72,7 +68,6 @@ export const apron = (
           shadow: 0.25,
         }),
     );
-    // The seams, stained where they are sewn.
     if (i > 0 && shown >= 1 && stitch > 0)
       stroke(
         ctx,
@@ -145,8 +140,6 @@ export const tree = (ctx: CanvasRenderingContext2D, hand: Hand, t: Tree) => {
   });
 };
 
-// ─── the path ahead ──────────────────────────────────────────────────────────
-
 /**
  * The path ahead, near left to far right, and the hill it climbs, in its
  * view's units: `within`'s `second` panel, and the view from `daily`'s window.
@@ -171,8 +164,6 @@ export const alongPath = (t: number, out: [number, number]): [number, number] =>
   out[1] = lerp(a[1], b[1], k - i);
   return out;
 };
-
-// ─── the Sabbath field ───────────────────────────────────────────────────────
 
 /** The resting figure's default: plain grey paper. */
 const PAPER: Person = {};
@@ -217,7 +208,6 @@ export const restingField = (
         line: 0,
         shadow: 0.4,
       });
-      // Tools set down: a hoe on the ground, a basket beside it.
       at(ctx, { x: 1060, y: 915, rot: -0.12 }, () =>
         piece(ctx, rounded(0, 0, 300, 12, 5), C.boardDeep, hand('hoe'), {
           role: 'scenery',
@@ -244,7 +234,6 @@ export const restingField = (
           leaves: [C.leaf, C.leafPale],
         }),
       );
-      // Leaning back against the trunk, face to the low sun.
       at(ctx, { x: 712, y: 935, scale: 1.9, rot: -0.13 }, () => {
         person(
           ctx,

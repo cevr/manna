@@ -1,12 +1,3 @@
-// How the house draws a composed figure (`figure`, `style/figure.ts`) as a
-// Rive artboard, on the generator's parts: each part kind cut, inked, lit
-// and rimmed one way, a head's papers stacked by one rule (`tracedHeadOf`),
-// and a figure's nodes made in one order for its stance, so one composition
-// prints one project, id for id (the ids are handed out in the order the
-// nodes are made, `Figure.idOf`, and the boil draws its noise in the order
-// the pieces are). And the circle hand's own artboard, in one paper, which
-// the host draws wherever the hand works. Pure.
-
 import {
   type ComposedFigure,
   type Parts,
@@ -367,7 +358,6 @@ const shoutsOf = (rig: Figure, f: Parts) =>
  */
 const tracedHeadOf = (rig: Figure, f: Parts, head: TracedHead) => {
   const face = f.beard === undefined ? undefined : kitOf(rig, f.face);
-  // A curl is a disc of points, whatever the figure writes its traced outlines as.
   const cuts = cutOf(f).map((c) => (c.crawl === 'whole' ? c : cubicCut(c, cubicOf(f))));
   const own = cubicCut(headPaperOf(head), cubicOf(f));
   return el('Node', { y: head.neck, name: 'neck', id: rig.idOf('neck') }, [
@@ -527,7 +517,6 @@ const sleevedOf = (
     arm._tag === 'Arm' ? [sleeveOf(rig, side, arm, at, sleeves.look(arm, 'upper'), cubic)] : [],
   );
   const hem = hemOver(f);
-  // Only a traced robe's outline is fitted: any other garment's is drawn by the house.
   const own = f.body._tag === 'TracedRobe' ? cubic : undefined;
   const paper = cubicLook(look, own);
   return front.length === 0 && behind.length === 0 && under.length === 0 && hem === undefined

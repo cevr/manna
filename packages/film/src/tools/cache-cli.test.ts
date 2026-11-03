@@ -1,10 +1,3 @@
-// `film cache <film>` over a project folder in memory: it prints the cache's
-// size and segment count; `--prune` deletes the segments no render used for
-// `--days` (7), `--dry-run` only names them, `--json` prints one line, and a
-// flag that means something only with `--prune` is refused without it. A
-// prune while a render holds the cache, or with `--days 0` on a cache no
-// render has recorded, is refused and deletes nothing.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {

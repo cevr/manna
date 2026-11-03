@@ -1,12 +1,3 @@
-// The papers of RBF's figures, as the kept concept (`cold-34`) and the lead's
-// sheet paint them, sampled there: each a lit colour, its shade a hue of its
-// own past the crease (CRAFT rule 12, never the colour dimmed), and the
-// light that rims the edge facing the light. Where and how softly each
-// paper turns is the concept's too (`crease`): a face turns gently and late,
-// a robe sharply. The plain lead keeps the shade his sheet names
-// (character-design 2.3). What a paper is, its ramp and the rim's width are
-// the house's (`@manna/film/style`). Pure.
-
 import type { Hex } from '@manna/film/canvas';
 import { type Crease, RIM, papers, rampedPaper } from '@manna/film/style';
 

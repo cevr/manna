@@ -1,43 +1,3 @@
-// A puppet's meshes drawn with WebGL 2 (`canvas/puppet.ts`): each part's
-// triangles, placed where the frame's pose puts them, their pixels the
-// part's texture inverse-mapped through them, sampled bilinear on
-// premultiplied texels in the shader (`texelFetch`, as `core/puppet.ts`'s
-// `rasterOf` samples them), laid back to front with premultiplied `over`.
-// It draws on the page's one puppet canvas (`glCanvas`, held in the page's
-// context budget, `canvas/gl.ts`), the frame's size. A draw's dress leaves
-// the parts it hides undrawn and dyes each texel of the parts it dyes before
-// they are sampled (`canvas/dye.ts`), on whichever pass draws the parts.
-//
-// With a look, the figure is drawn into a target of its own, a drawn key in
-// place of the part it stands for, and passes follow, each a function of
-// that frame alone:
-// - **L3.** A jump flood finds, for each pixel of the box, the nearest
-//   pixel outside the figure, the nearest of what moved (each moving part's
-//   coverage now and at rest), and the nearest pixel of the figure that did
-//   not move. Within 16 px of what moved, the silhouette's line is drawn
-//   again from the union's distance at the sheet's width, and the figure's
-//   rim there takes the ink at its coverage; everywhere else every pixel is
-//   the figure's own. Where a skinned part lies over another, its edge is
-//   inked at 0.8 of the width, but not about its moving bone's pivot (the
-//   shoulder's flap). A drawn key carries its own line, and the body's ink
-//   within the line's width of it takes its nearest pixel's colour, the
-//   line's anti-aliased rim with it, so its
-//   cut end hides the body's outline under it (`core/key-join.ts`, the same
-//   rule on the CPU). Near a held hand the line is left as the drawings draw it.
-// - **The held hand** is laid over the figure.
-// - **The boil.** The figure is resampled bilinearly through the boil's
-//   displacement field at the frame's tick (`core/boil.ts`), its lattice
-//   standing at the puppet's origin.
-//
-// What a context holds for a puppet (its program, each part's and drawing's
-// texture, its texture coordinates and its triangles) is made the first time
-// the puppet is drawn on that context, and made anew on a context the budget
-// let go; the passes' programs and targets are the context's, made at the
-// canvas's size. The positions are the frame's own: each buffer is written
-// whole every draw, every target is cleared or written whole in the box
-// before it is read, and no pass reads outside the box, so no pixel of an
-// earlier frame reaches this one. Synchronous: no Promise.
-
 import { Result } from 'effect';
 import { BOIL_CELL, boilField } from '../core/boil.ts';
 import { KEY_JOIN_INK } from '../core/key-join.ts';
@@ -680,7 +640,6 @@ const passFigure = (
     const r = on.rests[k]!;
     gl.uniform3f(on.mask, 0, 1, 0);
     drawMesh(gl, r.vao, r.pos, state.restPositions[k]!, p.texture, p.count);
-    // a drawn key's coverage now in blue too, the seed of the body's ink it hides
     gl.uniform3f(on.mask, 1, 0, Number(swappedIn(pass, k)));
     drawPart(gl, on, state, pass, dress, k);
   }

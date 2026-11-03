@@ -1,13 +1,3 @@
-// The study's one choice: the art direction the moment is drawn in. Each
-// level is a look of its own (`looks/<name>/`, registered in
-// `looks/index.ts`); the lab's Choices lists them as `look:style`, `bun run
-// look cold-studies --level style=<name>` draws one, and a pick rewrites
-// `play`. The option values are only the levels' order: a look is chosen by
-// its name.
-//
-// The film's own colours are the frame's around the looks (its paper, the
-// caption plate); each look brings its own palette.
-
 import { type Hex, type Ramp, type Shading, ramp } from '@manna/film/canvas';
 import type { Looks } from '@manna/film/core';
 import { palette as court } from '../righteousness-by-faith/palette.ts';

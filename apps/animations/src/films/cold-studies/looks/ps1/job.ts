@@ -1,14 +1,3 @@
-// The ps1 verse and card. Job 9:2 lies open in a low-poly Bible on the
-// court's clerk desk, its page pixel type painted into the page's texture,
-// the camera settling over it on `page` and drifting in. The phrase is
-// highlighted in the card's blue as "Job asked it" is said; the engine floods
-// that blue out over the frame from the highlight's last line, and the card
-// is the reference's: bold sans, lower case but for "God", flush left on the
-// flat blue, every word on its word, "just" three times the size in the
-// colour script's gold with a gold bar wiped under it. The card is crisp,
-// set at the frame's own resolution: the cut from the low-res world to it
-// is the reference's cut from its 3D to its cards.
-
 import {
   type Box,
   type CardStyle,
@@ -67,7 +56,6 @@ const build = (r: Rig): Desk => {
   const w = r.world;
   const t = r.tex;
   const scene = new Scene();
-  // The desk top, its front edge, and the book: a leather cover, two leaves open.
   const desk = ps1(w, { map: t.desk });
   put(scene, box(6, 0.12, 3.4, 0.9), desk, 0, -0.06, 0);
   const book = new Group();
@@ -90,7 +78,6 @@ const build = (r: Rig): Desk => {
   texture.generateMipmaps = false;
   const page = put(book, sheet(LEAF.w, LEAF.h, 0.35), ps1(w, { map: texture }), 0.52, 0.16, 0);
   page.rotation.set(-Math.PI / 2, 0.09, 0);
-  // A ribbon marker across the left leaf.
   put(book, box(0.05, 0.01, 1.5), ps1(w, { tint: '#6a5a8a' }), -0.25, 0.2, 0.02);
   const camera = new PerspectiveCamera(42, 16 / 9, 0.05, 30);
   return { scene, camera, page, texture, canvas };
@@ -136,7 +123,6 @@ const stage = (f: JobFrame, r: Rig, d: Desk): Box => {
   const lit = paintPage(d.canvas, f.at('sweep'), PAGE_STYLE, f.hand('verse'));
   d.texture.needsUpdate = true;
 
-  // The camera settles over the verse on `page`, then pushes slowly in and across it.
   const settle = f.at('page');
   const drift = f.t * 0.018;
   d.camera.position.set(
@@ -193,7 +179,6 @@ const CARD_STYLE: CardStyle = {
   case: 'said',
   align: 'left',
   treatment: {
-    // A gold bar wiped in under the word, quick, in hard steps.
     draw: (ctx, b, since) => {
       const wipe = Math.ceil(clamp(since / 0.1) * 6) / 6;
       ctx.fillStyle = CARD.gold;

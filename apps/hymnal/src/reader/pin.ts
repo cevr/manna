@@ -92,7 +92,6 @@ export const pinnedAt = (
 ): Pinned => {
   'worklet';
   const line = scroll + cover;
-  // The last topic whose top has reached the pin's line.
   let low = 0;
   let high = starts.length;
   while (low < high) {
@@ -101,7 +100,6 @@ export const pinnedAt = (
     else high = middle;
   }
   const index = low - 1;
-  // The last topic has no next to push it.
   const next = starts[index + 1] ?? Infinity;
   if (index < 0) return { index, y: 0 };
   return { index, y: Math.min(0, next - line - height) };

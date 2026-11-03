@@ -137,7 +137,6 @@ describe('the verify instance', () => {
       const fs = yield* FileSystem.FileSystem;
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
       const root = yield* scratchRoot;
-      // A process that is a preview running in the root, as `stop` tells one.
       yield* fs.makeDirectory(`${root}/src/worker`, { recursive: true });
       yield* fs.writeFileString(`${root}/src/worker/preview.ts`, 'setInterval(() => {}, 1000);\n');
       const env = { PATH: yield* Config.String('PATH') };

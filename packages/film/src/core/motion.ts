@@ -1,12 +1,3 @@
-// Acting with no simulation: every number here is a closed-form function of
-// t and a seed, as `canvas/particles.ts`'s particles are, so a figure driven
-// by them draws the same at any t, in any order across render workers, and
-// the lab scrubs to any t. A puppet's bones take these numbers in degrees:
-// `curve` and `act` key a performance (each move with its anticipation and
-// overshoot), `lag` makes a child bone follow its parent through, `idle`
-// keeps a figure alive between moves (breath, sway, a head tilt, the
-// weight's drift), and `blink` times a figure's blinks.
-
 import { Array as Arr, Option } from 'effect';
 import { hash2 } from './random.ts';
 
@@ -179,8 +170,6 @@ interface Wave {
   readonly v: number;
 }
 
-// Each wave's periods lie apart from every other's, so a figure's breath,
-// sway, tilt and drift never move in step.
 const BREATH: Wave = { lo: 3.2, hi: 3.9, u: 0.5, v: 0.5 };
 const TILT: Wave = { lo: 4.2, hi: 4.9, u: 0.13, v: 0.71 };
 const SWAY_SHORT: Wave = { lo: 5.6, hi: 7.0, u: 0.37, v: 0.29 };
@@ -260,12 +249,10 @@ export const blink = (seed: number, on: ReadonlyArray<number> = []): Track => {
   const offset = EVERY * frac(0.5 + seed * SPREAD);
   const startOf = (k: number) =>
     offset + k * EVERY + JITTER * (2 * hash2(Math.imul(seed, BLINK_SALT) + 1, k) - 1);
-  // the seed's own blinks that can reach `t` start in its slot or a neighbour's
   const ownNear = (t: number) => {
     const k = Math.floor((t - offset) / EVERY);
     return [startOf(k - 1), startOf(k), startOf(k + 1)];
   };
-  // in time order, each cue kept only half a second or more from the seed's blinks and from the cue kept before it
   const cued = [...on]
     .sort((a, b) => a - b)
     .filter((c) => ownNear(c).every((s) => Math.abs(c - s) >= APART))

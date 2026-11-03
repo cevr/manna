@@ -58,11 +58,6 @@ import type { WarmRequest, WarmResult } from './warm-corpus.worker.js';
 
 const PORT = Number(process.env['PORT'] ?? 3101);
 
-// ---------------------------------------------------------------------------
-// Layer composition — the CLI's `installedSearchLayer`, rooted at a configured
-// corpus directory instead of `~/.bible`.
-// ---------------------------------------------------------------------------
-
 /** Read the index and gate it on the shipped parser, once per process.
  *
  *  An effect rather than a layer: `lateVectorIndex` runs it after the port
@@ -181,8 +176,6 @@ const CorpusSources = Layer.effect(
   Layer.provide(EGWParagraphDatabase.layerCore),
   Layer.provide(TunedSqlLive),
   Layer.provide(BunServices.layer),
-  // No `paragraphs_fts` means no lexical leg, and §9 has no degraded shape for
-  // that. It is a defect, not an empty result set.
   Layer.orDie,
 );
 
@@ -278,12 +271,10 @@ const EmbedderLive = layerBunEmbedder;
 const WarmCorpusLive: Layer.Layer<never> = Layer.effectDiscard(
   Effect.callback<WarmResult>((resume) => {
     const worker = new Worker(new URL('./warm-corpus.worker.ts', import.meta.url));
-    // One answer, then the thread ends; an interruption ends it too.
     worker.onmessage = (event: MessageEvent<WarmResult>) => {
       worker.terminate();
       resume(Effect.succeed(event.data));
     };
-    // A thread that dies before it answers is a warm-up that failed.
     worker.onerror = (event) => {
       worker.terminate();
       resume(Effect.succeed({ _tag: 'Failed', message: event.message }));
@@ -309,7 +300,6 @@ const WarmCorpusLive: Layer.Layer<never> = Layer.effectDiscard(
 );
 
 const searchLayer = Layer.mergeAll(
-  // Serves from the first request; the index joins when it has been read.
   lateVectorIndex(readVectorIndex).pipe(
     Layer.provide(CorpusSources),
     Layer.provide(layerFileVectorIndexBytes(at('vectors.bvi'))),
@@ -317,18 +307,9 @@ const searchLayer = Layer.mergeAll(
   ),
   WarmEmbedderLive,
   TunedSqlLive,
-  // Its own connection on its own thread: it needs nothing from this merge.
   WarmCorpusLive,
 ).pipe(Layer.provideMerge(EmbedderLive));
 
-// ---------------------------------------------------------------------------
-// Server
-// ---------------------------------------------------------------------------
-
-// `searchLayer` publishes both the service the handler reads and the SQL
-// client the context lookup reads through, so it is provided to the group —
-// not to the API layer — or the client stays an unmet requirement and leaks
-// out of `ApiLive` into the server's own context.
 const GroupLive = SearchGroupLive.pipe(Layer.provide(searchLayer), Layer.provide(TunedSqlLive));
 
 const ApiLive = HttpApiBuilder.layer(SearchApi).pipe(Layer.provide(GroupLive));
@@ -367,12 +348,7 @@ const HttpLive = Layer.unwrap(
 const PlatformLive = Layer.mergeAll(
   Etag.layer,
   HttpPlatform.layer.pipe(Layer.provide(BunServices.layer)),
-  // `BunServices` carries the FileSystem and Path the static server reads
-  // `dist/` through, alongside the platform services the API already needed.
   BunServices.layer,
-  // The router's own effect still carries the context lookup's `SqlClient`
-  // requirement out through `toHttpEffect`, so the launch context supplies the
-  // same client the handlers were built against.
   TunedSqlLive,
 );
 

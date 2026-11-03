@@ -1,15 +1,3 @@
-// What a figure stands on. Stub legs are the plain lead's: each straight down
-// from under the hem, its foot a half circle. Shoes are the prosecutor's:
-// each a dome on a flat sole, set under the hem's corners with the toes out,
-// the near one on screen left, each lit down one edge so its sole stays dark.
-// Sandals are Christ's: each bare foot cut from its corners under the hem,
-// the toes out, the near one on screen left, a strap across a foot as colour
-// on it, and a dark sole under each. Trousers are RBF's lead's: each leg
-// traced from under the hem to its shoe, each shoe traced under it, cut in
-// one outline, so a line runs round the legs and the shoes and down the gap
-// between the legs, and none where a shoe meets its leg. How they are cut is
-// the house's (`rig/draw.ts`, `rig/shapes.ts`). Pure.
-
 import { Match, Schema } from 'effect';
 import { decoder } from '../decode.ts';
 import { HexColour, Paper, Tones } from '../paper.ts';

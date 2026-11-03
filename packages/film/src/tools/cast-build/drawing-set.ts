@@ -1,9 +1,3 @@
-// The drawings a build's ask shows (`DrawingSet`), published as the lab's
-// review set `cast-keep-<film>` by `publish_set`'s own work (`setsReads`):
-// each drawing at `<member>/<id><ext>`, its `src` the review's file route.
-// The ask store copies each as the ask is made, so an ask keeps showing the
-// drawing it asked about when a later publish replaces the file.
-
 import { Effect, Layer, Option, Path } from 'effect';
 import { addressFromConfig } from '../lab-cli.ts';
 import { setsReads } from '../sets-mcp.ts';

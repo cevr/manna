@@ -1,22 +1,3 @@
-// A seeded art-direction generator: a deck of independent axes (a medium, an
-// era, a palette, a light, …), each a list of options, and a draw that picks
-// one option per axis from a seed. The deck is an app's data (the colour
-// script and the series' rules are its); this is the draw.
-//
-// A draw is a pure function of its seed and the deck: on each axis every
-// option is scored from the seed, the attempt, the axis and the option's own
-// id (`rng` seeded by `seedOf` of the four, rendezvous hashing), and the axis
-// takes its best-scored option that agrees with the axes picked before it
-// (`excludes`, `requires`; an existing look's `profile` picks are never
-// drawn). Because each option's score depends on its id, not its place in
-// the list, adding an option to an axis changes only the attempts it wins;
-// every other seed draws as before. A draw keeps its distance
-// from the deck's existing looks (`existing`, `minDistance`, and never one's
-// pick on a `distinct` axis), trying the next attempt until it does. A batch
-// takes seed after seed, keeping a draw only when it also keeps that distance
-// from the batch's earlier draws (and, with `balance`, while its pick on that
-// axis has room), so any brief in a batch is regenerated from its seed alone.
-
 import { Array as Arr, Option } from 'effect';
 import { rng, seedOf } from './random.ts';
 

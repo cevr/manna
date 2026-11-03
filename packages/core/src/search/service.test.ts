@@ -85,78 +85,49 @@ const withIndex = (fingerprint?: string) =>
 
 const absence = (reason: VectorAbsenceReason) => reason;
 
-// ---------------------------------------------------------------------------
-
 describe('§9.3 the strong-BM25 short-circuit', () => {
   test('uses qmd’s two constants, unchanged', () => {
-    // The values from `store.ts` ~415. They are asserted rather than imported
-    // and trusted because substituting them with thresholds over raw BM25 is
-    // exactly the drift this suite exists to catch.
     expect(STRONG_SIGNAL_MIN_SCORE).toBe(0.85);
     expect(STRONG_SIGNAL_MIN_GAP).toBe(0.15);
   });
 
   test('normalizes each FTS rank with qmd’s saturating map', () => {
-    // `|bm25| / (1 + |bm25|)`, and the four scale points qmd's own comment
-    // states: strong(-10) → 0.91, medium(-2) → 0.67, weak(-0.5) → 0.33,
-    // none(0) → 0.
     expect(normalizeScore(10)).toBeCloseTo(0.91, 2);
     expect(normalizeScore(2)).toBeCloseTo(0.67, 2);
     expect(normalizeScore(0.5)).toBeCloseTo(0.33, 2);
     expect(normalizeScore(0)).toBe(0);
-    // Bounded below 1, which is what keeps the 0.85 floor reachable-from-below
-    // and therefore meaningful.
     expect(normalizeScore(1e6)).toBeLessThan(1);
   });
 
   test('is query-independent, unlike a per-query normalization', () => {
-    // The property qmd's comment names, and the reason min-max is wrong here:
-    // a score's normalized value must not depend on what else matched. Under
-    // min-max the top hit is 1 on every query, so the 0.85 floor is vacuous and
-    // the predicate collapses to the gap alone.
     expect(normalizeScore(4)).toBe(normalizeScore(4));
     expect(isStrongLexicalHit([4, 2.8])).toBe(isStrongLexicalHit([4, 2.8, 0.1, 0.05]));
   });
 
   test('fires when the normalized top hit is strong and clearly separated', () => {
-    // top = 14/15 = 0.933, runner-up = 1.429/2.429 = 0.588; gap 0.345.
     expect(isStrongLexicalHit([14, 1.429, 1.286])).toBe(true);
   });
 
   test('does not fire on a strong top hit in a strong field', () => {
-    // §9.3 asks for two conditions. A strong hit among equally strong hits means
-    // the query matched a common formula, and the ranking help embeddings give
-    // is exactly what that reader needs. top = 0.933, runner-up = 0.929; the
-    // gap is 0.005.
     expect(isStrongLexicalHit([14, 13])).toBe(false);
   });
 
   test('does not fire on a top hit below the absolute floor', () => {
-    // 0.85 is exactly |bm25| >= 5.667. A top hit of 4.0 normalizes to 0.800 and
-    // is refused however well separated it is — which is the half of the
-    // predicate a min-max normalization would have thrown away.
     expect(normalizeScore(4)).toBeCloseTo(0.8, 3);
     expect(isStrongLexicalHit([4, 0])).toBe(false);
-    // And 5.667 upward passes.
     expect(isStrongLexicalHit([5.7, 0])).toBe(true);
   });
 
   test('does not fire on the fixture’s weak-regime query', () => {
-    // The scores the golden corpus actually produces for "what happens at the
-    // close of probation": top 4.0 → 0.800, runner-up 2.8 → 0.737. It fails the
-    // floor *and* the gap, which is why that query reaches the vector leg.
     expect(isStrongLexicalHit([4, 2.8, 1.786, 1.714])).toBe(false);
   });
 
   test('fires on a lone hit, which is as separated as a hit can be', () => {
     expect(isStrongLexicalHit([14])).toBe(true);
-    // Still subject to the floor: a lone *weak* hit is not a confident answer.
     expect(isStrongLexicalHit([0.3])).toBe(false);
   });
 
   test('does not fire on an empty lexical list', () => {
-    // Nothing matched, so there is nothing to be confident about — and this is
-    // precisely the query the vector leg exists to rescue.
     expect(isStrongLexicalHit([])).toBe(false);
   });
 
@@ -172,42 +143,24 @@ describe('§9.3 the strong-BM25 short-circuit', () => {
    *  not, and `god` is a legitimate one-word search in this corpus. A change
    *  that gated it would trade a working query for a latency number. */
   test('gates only terms that match too much of the corpus to rank', () => {
-    // Stopwords, measured: the ranking they buy is a term-density artifact.
-    expect(isNonSelective(1_621_088)).toBe(true); // "the", 53.8% of the corpus
-    expect(isNonSelective(940_692)).toBe(true); //   "a", 31.2%
-    expect(isNonSelective(775_189)).toBe(true); //   "is", 25.7%
+    expect(isNonSelective(1_621_088)).toBe(true);
+    expect(isNonSelective(940_692)).toBe(true);
+    expect(isNonSelective(775_189)).toBe(true);
 
-    // Real search terms. The latencies beside them are warm end-to-end
-    // production readings from 2026-09-21, NOT the lexical leg alone, and they
-    // are recorded here because the earlier set went stale without failing
-    // anything: this test and `NON_SELECTIVE_MATCHES` both claimed `god`
-    // answered in 653 ms long after it had reached 1.29 s.
-    //
-    // `god` is now the slowest query on the service — slower than `the`, which
-    // the gate refuses to rank at all. That inversion is a live question about
-    // what an EGW searcher owes someone who types `god`, and it is deliberately
-    // still answered "keep it": gating `god` would delete a legitimate search
-    // to buy a latency number. Make the ranking cheaper instead.
-    expect(isNonSelective(570_900)).toBe(false); // "god", 19.0%, 1.29 s
-    expect(isNonSelective(299_913)).toBe(false); // "lord", 10.0%, 0.78 s
-    expect(isNonSelective(68_411)).toBe(false); //  "sabbath", 2.3%, 0.63 s
-    expect(isNonSelective(1_304)).toBe(false); //   "latter rain", 0.04%, 0.30 s
+    expect(isNonSelective(570_900)).toBe(false);
+    expect(isNonSelective(299_913)).toBe(false);
+    expect(isNonSelective(68_411)).toBe(false);
+    expect(isNonSelective(1_304)).toBe(false);
 
-    // A query matching nothing is selective, not non-selective: the gate must
-    // never stand between a reader and an empty result they can act on.
     expect(isNonSelective(0)).toBe(false);
   });
 
   it.effect('skips the vector leg end to end on a confident lexical hit', () =>
     Effect.gen(function* () {
-      // The fixture gives `GC 425.1` a rank of -14 against a runner-up of -3, so a
-      // query reaching it lands in the strong, separated regime.
       const result = yield* search({ text: 'the sanctuary in heaven is the center' }, withIndex());
       expect(result.vector._tag).toBe('unavailable');
       if (result.vector._tag !== 'unavailable') return;
       expect(result.vector.reason).toBe(absence('short-circuit'));
-      // Lexical-only, but a full answer: the short-circuit is an optimization,
-      // never a degradation of what the reader sees.
       expect(result.paragraphs.length).toBeGreaterThan(0);
       expect(Option.isSome(result.paragraphs[0]?.lexicalRank ?? Option.none())).toBe(true);
     }),
@@ -215,7 +168,6 @@ describe('§9.3 the strong-BM25 short-circuit', () => {
 
   it.effect('runs the vector leg when the lexical top hit is weak', () =>
     Effect.gen(function* () {
-      // The same corpus, a query whose best FTS rank is in the weak regime.
       const result = yield* search({ text: 'what happens at the close of probation' }, withIndex());
       expect(result.vector._tag).toBe('ran');
       if (result.vector._tag !== 'ran') return;
@@ -252,7 +204,6 @@ describe('§9.6 an absent index yields lexical-only results carrying the typed a
       expect(result.vector._tag).toBe('unavailable');
       if (result.vector._tag !== 'unavailable') return;
       expect(result.vector.reason).toBe(absence('absent'));
-      // The point of the whole degradation: search still works.
       expect(result.paragraphs.length).toBeGreaterThan(0);
       for (const hit of result.paragraphs) {
         expect(Option.isSome(hit.lexicalRank)).toBe(true);
@@ -263,8 +214,6 @@ describe('§9.6 an absent index yields lexical-only results carrying the typed a
 
   it.effect('reports `embedder` when the index is present but no adapter is wired', () =>
     Effect.gen(function* () {
-      // A host with no embedder (§9.5). A legal composition, not a broken one —
-      // which is why `QueryEmbedder` is read with `Effect.serviceOption`.
       const result = yield* search(
         { text: 'what happens at the close of probation' },
         goldenSearchLayer({ index: Option.some(goldenVectorIndexBytes()) }),
@@ -278,8 +227,6 @@ describe('§9.6 an absent index yields lexical-only results carrying the typed a
 
   it.effect('reports `embedder` when the adapter declines at embed time', () =>
     Effect.gen(function* () {
-      // The model file gone after the layer was built. The same
-      // reader-visible state as no adapter at all: one reason, one state.
       const declining = Layer.succeed(
         QueryEmbedder,
         QueryEmbedder.of({
@@ -326,9 +273,6 @@ describe('§9.6 an absent index yields lexical-only results carrying the typed a
 describe('§10 a fingerprint mismatch invalidates rather than misleads', () => {
   it.effect('refuses an index built for another model', () =>
     Effect.gen(function* () {
-      // The index says one model, the adapter says another. Scanning anyway would
-      // return neighbors — plausible-looking, meaningless ones — which is the
-      // exact failure §10 singles out.
       const result = yield* search(
         { text: 'what happens at the close of probation' },
         goldenSearchLayer({
@@ -339,7 +283,6 @@ describe('§10 a fingerprint mismatch invalidates rather than misleads', () => {
       expect(result.vector._tag).toBe('unavailable');
       if (result.vector._tag !== 'unavailable') return;
       expect(result.vector.reason).toBe(absence('fingerprint'));
-      // No vector-only rows, and no vector rank on any row.
       for (const hit of result.paragraphs) {
         expect(hit.vectorRank).toEqual(Option.none());
       }
@@ -348,9 +291,6 @@ describe('§10 a fingerprint mismatch invalidates rather than misleads', () => {
 
   it.effect('refuses when the adapter is the one that drifted', () =>
     Effect.gen(function* () {
-      // The other direction: a valid index, an adapter pointed at a different
-      // model. Detected only because the adapter reports what it loaded rather
-      // than being assumed to be the pinned constant.
       const result = yield* search(
         { text: 'what happens at the close of probation' },
         goldenSearchLayer({
@@ -368,23 +308,13 @@ describe('§10 a fingerprint mismatch invalidates rather than misleads', () => {
 describe('§9.4 the result is the writings, and only the writings', () => {
   it.effect('answers a topic-shaped query out of the corpus alone', () =>
     Effect.gen(function* () {
-      // The query the topic catalog is named for, asked of a service that has no
-      // wiki at all. It is still a corpus query and still ranks paragraphs —
-      // which is the whole claim left after the pinned topics group moved out to
-      // the applications that have a wiki to fetch it from.
       const result = yield* search({ text: GOLDEN_TOPIC_QUERY }, withIndex());
       const paragraphIds = result.paragraphs.map((hit) => hit.paragraphId);
       expect(paragraphIds.length).toBeGreaterThan(0);
-      // Every row is a writings row: a topic slug is not a paragraph identity,
-      // so nothing from a catalog can have leaked into the ranking.
       for (const id of paragraphIds) {
         expect(id.includes(GOLDEN_TOPIC_SLUG)).toBe(false);
       }
       for (const hit of result.paragraphs) {
-        // Every golden paragraph is citable, so each refcode is present *and*
-        // non-empty. `refcode` is an Option because ~563 corpus rows have
-        // none; a fixture hit resolving to `None` here would mean the field
-        // stopped being carried, which `getOrElse('')` would hide.
         expect(Option.getOrElse(hit.refcode, () => '').length).toBeGreaterThan(0);
         expect(hit.bookCode.length).toBeGreaterThan(0);
       }
@@ -395,17 +325,10 @@ describe('§9.4 the result is the writings, and only the writings', () => {
 describe('§9.4 vector-only candidates reach the result', () => {
   it.effect('returns rows the lexical leg never matched', () =>
     Effect.gen(function* () {
-      // A query whose words appear in *no* paragraph, so FTS returns nothing.
-      // The vector leg still scans and names ids, and the batch lookup fetches
-      // their rows — which is the entire recall benefit of hybrid search. The
-      // earlier code built its body map from the lexical rows alone and
-      // therefore returned an empty result here, with a `ran` status on it.
       const embedder = Layer.succeed(
         QueryEmbedder,
         QueryEmbedder.of({
           fingerprint: MODEL_FINGERPRINT,
-          // Answers with the vector of a known indexed paragraph, so the scan's
-          // top neighbor is a row the lexical leg cannot have produced.
           embedQuery: () => Effect.succeed(goldenVector(GOLDEN_VECTOR_IDS[2] ?? '')),
           embedDocument: (text: string) => Effect.succeed(goldenVector(text)),
         }),
@@ -416,18 +339,13 @@ describe('§9.4 vector-only candidates reach the result', () => {
       );
 
       expect(result.vector._tag).toBe('ran');
-      // Rows, despite an empty lexical leg.
       expect(result.paragraphs.length).toBeGreaterThan(0);
-      // Every one of them is vector-only: ranked by the vector list and by no
-      // lexical list.
       for (const hit of result.paragraphs) {
         expect(hit.lexicalRank).toEqual(Option.none());
         expect(Option.isSome(hit.vectorRank)).toBe(true);
-        // And rendered whole — the batch lookup fetched a real row, not a stub.
         expect(hit.snippet.length).toBeGreaterThan(0);
         expect(hit.bookTitle.length).toBeGreaterThan(0);
       }
-      // The nearest neighbor of its own vector leads, as the scan ordered it.
       expect(result.paragraphs[0]?.paragraphId).toBe(GOLDEN_VECTOR_IDS[2]);
     }),
   );
@@ -438,8 +356,6 @@ describe('§9.4 vector-only candidates reach the result', () => {
       const both = result.paragraphs.filter(
         (hit) => Option.isSome(hit.lexicalRank) && Option.isSome(hit.vectorRank),
       );
-      // The fixture's weak-regime query reaches both legs, so agreement exists
-      // to observe — otherwise this assertion would be vacuous.
       expect(both.length).toBeGreaterThan(0);
     }),
   );
@@ -448,9 +364,6 @@ describe('§9.4 vector-only candidates reach the result', () => {
 describe('§6.5 the legs degrade on corpus faults and not on defects', () => {
   it.effect('propagates a defect rather than answering with an empty leg', () =>
     Effect.gen(function* () {
-      // `Effect.catchCause` caught defects and interruption too, which turns a
-      // real bug into "search found nothing" for the life of the process. A
-      // defect must reach the caller.
       const broken = Layer.unwrap(
         Effect.gen(function* () {
           const paragraphs = yield* EGWParagraphDatabase;
@@ -479,18 +392,6 @@ describe('§6.5 the legs degrade on corpus faults and not on defects', () => {
 
   it.effect('returns a paragraph the corpus stores with no refcode', () =>
     Effect.gen(function* () {
-      // ~563 of the corpus's 3,012,004 paragraphs have an empty `ref_code` and
-      // no short refcode: signatures, datelines, "This chapter is based on..."
-      // notes — real text the ingest never assigned a page to. `refcode` was
-      // `NonEmptyString`, so one of them reaching a result page *died*, and a
-      // die is a 500 for the whole query rather than a lost row. Every query
-      // matching "controversy" was unanswerable in production because of one
-      // such row in `GC`.
-      //
-      // The row is returned with an absent refcode instead. Dropping it would
-      // be the other tempting repair and is worse: a reader cannot tell a
-      // hidden row from one that does not exist, and the text is the part they
-      // came for — the citation is how they'd quote it, not whether it matched.
       const uncitable = Layer.unwrap(
         Effect.gen(function* () {
           const paragraphs = yield* EGWParagraphDatabase;
@@ -503,10 +404,6 @@ describe('§6.5 the legs degrade on corpus faults and not on defects', () => {
             paragraphs: [
               ...GOLDEN_PARAGRAPHS,
               {
-                // Both spellings of "no citation" at once, which is what the
-                // corpus actually holds: NULL short refcode *and* an empty
-                // `ref_code`. A fixture with only the first would pass against
-                // the null check that this bug slipped through.
                 para_id: Option.some('GC-uncitable'),
                 refcode_short: Option.none(),
                 refcode_long: '',
@@ -527,8 +424,6 @@ describe('§6.5 the legs degrade on corpus faults and not on defects', () => {
       const found = result.paragraphs.find((hit) => hit.paragraphId === 'GC:GC-uncitable');
       expect(found).toBeDefined();
       expect(Option.isNone(found?.refcode ?? Option.some('present'))).toBe(true);
-      // The rest of the page is unaffected: the uncitable row does not take
-      // its neighbours down with it, which is the whole difference from a die.
       expect(result.paragraphs.length).toBeGreaterThan(1);
     }),
   );
@@ -627,8 +522,6 @@ describe('headings and back matter rank after prose', () => {
 describe('§9.2 scope', () => {
   it.effect('a pioneer-scoped query reaches pioneer paragraphs and has no vectors', () =>
     Effect.gen(function* () {
-      // The index covers only the EGW/White-Estate partition, so `pioneer` is the
-      // one scope with nothing to scan — and it must still search.
       const result = yield* search(
         { text: 'the king of the north shall come', scope: 'pioneer' },
         withIndex(),
@@ -662,8 +555,6 @@ describe('§9.3 the locate-jump', () => {
 describe('§9.7 the golden query set', () => {
   it.effect('routes every query the way §9.3 says, with the absence §9.6 says', () =>
     Effect.gen(function* () {
-      // The set every client runs. Here it pins routing and fallback; the CLI
-      // and daemon tests pin that the *identities* agree across seams.
       const layer = withIndex();
       for (const golden of GOLDEN_QUERIES) {
         const result = yield* queryWith(golden.query, layer);

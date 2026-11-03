@@ -1,16 +1,3 @@
-// A film's journal: what was seen, heard or measured while the film was made,
-// kept beside its sources in `src/films/<film>/journal.md` and committed with
-// them. One rule, written at the top of the file: observations, never
-// instructions. A decision lands in the source; a request is a lab note; the
-// journal holds what someone noticed (a mass that reads, a word that lands
-// late, a still that was judged), dated and placed, so a later pass reads the
-// film's history instead of re-discovering it.
-//
-// Two calls: `note` appends one entry (its ISO time, its scene or the whole
-// film, its text on one line) and refuses an empty one; `read` answers the
-// newest entries, of one scene or all, at most `last` and at most `cap`
-// characters as printed, oldest first, saying how many it left out.
-
 import { Array as Arr, DateTime, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { FilmFolder, type FilmName } from './film-repo.ts';
 
@@ -142,10 +129,6 @@ export const note = Effect.fn('journal.note')(function* (
   const file = yield* fileOf(film);
   const at = DateTime.formatIso(yield* DateTime.now).replace(/\.\d+Z$/, 'Z');
   const entry: JournalEntry = { at, scene: Option.getOrElse(scene, () => FILM_WIDE), text };
-  // A first note is published whole: its header and entry written beside the journal, then
-  // linked into place, which fails when a journal is there already, so no note ever finds a
-  // journal without its header, nor has its words written over. Else the entry is appended:
-  // two notes at once both land, under one header.
   const made = yield* Effect.scoped(
     Effect.gen(function* () {
       const draft = yield* fs.makeTempFileScoped({

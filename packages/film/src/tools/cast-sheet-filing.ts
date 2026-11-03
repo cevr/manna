@@ -1,19 +1,3 @@
-// A cast keep filed under the member's record lock: whether the owner's
-// choice may be kept (a kind kept already is refused unless he replaces it
-// on his answer to an ask), the try cut by the caller into its sheet and
-// views, then the files and the record. The cut is the caller's
-// (`cast-sheet-keep.ts` measures the try), so the order of the files and the
-// record is held here apart from any image.
-//
-// A replace copies the old kept sheet and its views into the member's history
-// (`kept/replaced/<date>-<kind>-<try>/`, `-2`, `-3` … when the record's
-// history names it already), then writes the new try's files in place, and
-// the record last. A replace stopped at any write leaves the record naming
-// the old keep with every file it names in place, and its copies whole in a
-// history folder the record does not name yet: a retry finds that folder and
-// finishes. On a member that keeps some views of a sheet it shares, the new
-// keep keeps the same views.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -204,9 +188,6 @@ export const fileCastKeep = Effect.fn('Cast.file')(function* <E, R>(
               })),
             ];
             const copied = yield* Effect.forEach(aside, (f) => fs.exists(f.to));
-            // Every copy there means a replace stopped after setting the old keep
-            // aside: the files in place may be the new try's since, so they are not
-            // copied again. A copy missing means nothing in place was written yet.
             if (!copied.every(Boolean)) {
               const present = yield* Effect.forEach(aside, (f) => fs.exists(f.from));
               const missing = aside.filter((_, k) => !present[k]).map((f) => f.from);

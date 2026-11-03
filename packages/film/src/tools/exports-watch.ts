@@ -1,14 +1,3 @@
-// The lab's watch on the workspace's package exports. The lab rebuilds its
-// pages when a source changes, but the bundler resolves a package's
-// subpaths (`@manna/film/style`) by the `exports` map the process read at
-// start: one a merge adds while the lab runs would fail every page ("Could
-// not resolve"). So the lab reads each workspace `package.json`'s `exports`
-// map as it starts, and again every few seconds, and when one changes it ends
-// (`ExportsChanged`): `relaunchOnExportsChange` closes what the lab holds
-// (its servers, then its pages), then `Relaunch` (made in `relaunch-bun.ts`)
-// ends their Chrome and starts `film lab` again in the same process, which
-// reads the new maps.
-
 import {
   Array as Arr,
   Context,
@@ -91,7 +80,6 @@ const workspacePackages = Effect.fn('exports.packages')(function* (root: string)
     () => [],
   );
   const named = yield* Effect.forEach(patterns, (pattern) => {
-    // A folder of packages (`packages/*`), or one package by its folder.
     const dir = path.join(root, pattern.replace(/\/\*$/, ''));
     if (!pattern.endsWith('/*')) return Effect.succeed([path.join(dir, 'package.json')]);
     return fs.readDirectory(dir).pipe(
@@ -139,7 +127,6 @@ interface ExportsRead {
 /** Read the exports of the workspace under `root` now: what `watchExports` holds each later read to. */
 export const exportsNow = Effect.fn('exports.now')(function* (root: string) {
   const files = yield* workspacePackages(root);
-  // A file that does not read at start holds no exports: what the bundler resolved by.
   const read = yield* readExports(files);
   const first: Exports = new Map(Arr.map([...read], ([file, r]) => [file, Option.flatten(r)]));
   yield* Effect.log(`[lab] exports.watch files=${files.length}`);

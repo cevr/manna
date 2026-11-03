@@ -1,10 +1,3 @@
-// Upstream: packages/utils/src/owner.ts, packages/utils/src/shadowDom.ts,
-// packages/utils/src/addEventListener.ts, packages/utils/src/mergeCleanups.ts,
-// packages/utils/src/empty.ts
-//
-// The DOM helpers every part shares: the element's document and window,
-// shadow-DOM-aware `contains`, `closest` and active element, listeners that
-// return their own removal, and cleanups merged into one.
 import { getWindow, isElement, isShadowRoot } from '@floating-ui/utils/dom';
 
 export { getWindow as ownerWindow };

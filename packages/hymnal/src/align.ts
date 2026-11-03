@@ -109,7 +109,6 @@ const wordsOf = (line: string): string[] =>
 const plan = (lines: readonly string[]): Planned[] =>
   lines.flatMap((line, l) =>
     wordsOf(line).flatMap((word, w) => {
-      // The most syllables the word may take: the walk merges them where the tune has fewer notes.
       const counts = Syllables.counts(word);
       const pieces = Syllables.split(word, Math.max(1, ...counts));
       const shorter = counts.some((count) => count < pieces.length);
@@ -165,7 +164,6 @@ const notesOf = (score: Score, verse: number) => {
   const hold = melody.map((note, j) => {
     const before = melody[j - 1];
     if (before === undefined || rests[j] === true) return Number.POSITIVE_INFINITY;
-    // The files strike a chord's notes up to a few ticks apart.
     const alone = !score.harmony.some(
       (other) =>
         other !== note && Math.abs(other.start - note.start) <= beat / 16 && other.key < note.key,
@@ -235,7 +233,6 @@ const fill = (planned: readonly Planned[], notes: Notes) => {
   const [S, N] = [planned.length, notes.melody.length];
   const table = new Table(S, N);
   table.offer(0, 0, 0, 'start');
-  // From i syllables on j notes: hold the i-th over note j, start the next on it, or put the next on the i-th's note.
   const moves = (i: number, j: number, here: number) => {
     const syllable = planned[i];
     if (i > 0 && j < N)

@@ -1,40 +1,3 @@
-// A stroke limb: a puppet's painted arm part (a sleeve with its hand) that may
-// stand in, once its elbow bends past its fade, as a stroke drawn along its
-// bone chain, shoulder → elbow → wrist. A skeleton declares one
-// (`PuppetLimb`, `Skeleton.limbs` in `core/puppet.ts`); `puppetOf` measures it
-// from the part's own pixels (`limbOf`) and attaches what it measured to the
-// part (`PuppetPart.limb`), so both draw paths read the same numbers; and one
-// rule (`limbBlend`) says, from the elbow's turn alone, how much of the stroke
-// and of its fold line a pose shows. Pure.
-//
-// - **Unroll.** At rest the chain is the polyline shoulder pivot → elbow pivot
-//   → cuff. A texel's `u` is its distance along the chain from the shoulder
-//   (negative above it, past the cuff on the hand), its `v` its distance
-//   across, positive on the side a positive elbow turn opens (the bend's
-//   outer side: a turn runs from +x toward +y, so the forearm swings toward
-//   the other side). A texel belongs to the segment it lies nearer.
-// - **Widths.** At each knot (`step` px apart along the sleeve from the
-//   shoulder to the cuff, each at the middle of its step), the distance
-//   along ±v from the chain to where the part's alpha falls under one half,
-//   each side apart, or, inside a fold the drawn view bends, to where the
-//   other segment's texels begin.
-// - **Ink.** From each alpha edge inward, the run of texels darker than
-//   `INK_L`, counted only when it ends on lighter cloth before the chain: a
-//   run that reaches the chain (a pivot drawn in a corner's ink, or cloth as
-//   dark as ink) has no measured depth. Each knot keeps what its side ends on
-//   (`LimbEnd`) and its ink's depth; the limb keeps the ink's colour (the
-//   median of each channel over the bounded runs' texels) and width (the
-//   median bounded depth).
-// - **Regions.** Each texel lies in the stub (u < 0, the part's join to the
-//   body, which stays painted), the sleeve or the hand. The sleeve keeps
-//   its lining to the first measured skin; the hand turns on the wrist.
-//   Only the stub's border feathers over `FEATHER` px. The hand owns whole
-//   texels so a turned cuff never mixes lining and skin at partial alpha.
-//   The three shares sum to one at every texel.
-// - The shade planes and the brush texture are not reduced to numbers: the
-//   stroke samples the part's own texture through the unroll, so it carries
-//   them as painted.
-
 import { Option, Record as Rec, Result, Schema } from 'effect';
 import { type Rgb, labOf } from './cast-sheet-pixels.ts';
 import type { Raster } from './raster.ts';
@@ -52,8 +15,7 @@ const LIMB_FOLD: Ramp = [60, 90];
 
 /** The CIE L* under which a texel at a sleeve's edge is its ink. The lead's ink (rgb 33 15 3) reads L* 0 to 15 on both arms of single-9, and his blue sleeve's darkest shade reaches L* 20; at 30, that shade reads as ink at two knots of its cut edge. */
 export const INK_L = 20;
-// L* below INK_L is the same D65 luminance comparison as labOf. Byte
-// sRGB transfer values are shared by all texels; no chroma is needed here.
+/** Each byte's linear sRGB value, shared by all texels: L* below INK_L is the same D65 luminance comparison as labOf, with no chroma needed. */
 const LINEAR_RGB = new DataView(new ArrayBuffer(256 * 8));
 for (let i = 0; i < 256; i++) {
   const v = i / 255;
@@ -554,9 +516,6 @@ const cuffEdgeOf = (t: Texels, chain: LimbChain, cuff: LimbStation, inkWidth: nu
     },
     cloth: (x: number, y: number) => {
       const lab = labOf(t.rgb(x, y));
-      // Mixed cuff paint can lie almost on the cloth/skin bisector. A donor
-      // must be twice as close to measured cloth; ambiguous paint borrows
-      // unambiguous cloth instead of leaving a skin-coloured fleck behind.
       return lab[0] >= INK_L && 2 * chroma(lab, cloth) <= chroma(lab, skin);
     },
     skin: (x: number, y: number) => {
@@ -599,8 +558,7 @@ const regionsOf = (
     shares: bytes(shares),
     cloth: bytes(cloth),
     handArea,
-    // Only a rendered cloth join needs this original-ink reference. The
-    // measurement and single-part raster paths need no additional scan.
+    /** The original-ink reference, scanned only when a rendered cloth join first reads it; the measurement and single-part raster paths never do. */
     get ink() {
       return Option.getOrElse(sourceInk, () => {
         const ink = new Uint8Array(bw * bh);

@@ -1,16 +1,3 @@
-// The farmer as rain.rain's kept try draws him (try 2), traced by hand inside
-// its ink in the panel's own pixels (1536 × 1024): his head turned three-
-// quarters to his left (screen right) and tipped up toward the rain, his
-// headcloth with its brown band across his brow and its flap down over his
-// near shoulder, the dark edge of the cloth down his near cheek, his round
-// beard with his mouth in it; his tunic and vest turned with his shoulders;
-// his hands free beside him, the far one raised. Each outline is
-// a closed smooth path's points (the rig runs a Catmull-Rom path through
-// them). Where two papers meet, the one behind runs on under the one in
-// front: the face under the band, the cloth and the beard; the cloth under
-// the band; the rig tucks each a little further (`tucked`). `farmer-rig.ts`
-// takes them to the cast's canon (`PANEL`). Pure.
-
 import type { Pt } from '@manna/film/style';
 
 /**

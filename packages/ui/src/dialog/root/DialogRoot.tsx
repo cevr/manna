@@ -1,16 +1,3 @@
-// Upstream: packages/react/src/dialog/root/DialogRoot.tsx,
-// packages/react/src/dialog/root/useRenderDialogRoot.tsx,
-// packages/react/src/dialog/root/useDialogRoot.ts
-//
-// Groups a dialog's parts and owns its state. The dialog is opened by its
-// owner's `open` (upstream's trigger is left out). It wires what the parts
-// share: Escape and outside presses close the dialog, and page scroll locks
-// while a modal dialog is open. Upstream's
-// nested dialog stacks are left out: no page opens a dialog inside another.
-//
-// An outside press on a modal dialog closes it only on its own backdrop (or
-// the viewport around it), so a press on another dialog's backdrop or a
-// popup's never does.
 import type { JSX } from '@solidjs/web';
 import { createUniqueId, untrack } from 'solid-js';
 
@@ -64,7 +51,6 @@ export function DialogRoot(props: DialogRootProps): JSX.Element {
       return { mouse: 'intentional', touch: 'sloppy' };
     },
     outsidePress(event) {
-      // Only the main button; a touch counts when it is a single finger.
       if ('button' in event && event.button !== 0) {
         return false;
       }
@@ -82,8 +68,6 @@ export function DialogRoot(props: DialogRootProps): JSX.Element {
         return false;
       }
       if (untrack(modal)) {
-        // Only this dialog's own backdrop (or what contains the popup, its viewport) dismisses it,
-        // so dialogs open side by side close one at a time.
         const internalBackdrop = store.internalBackdropRef.current;
         const backdrop = store.backdropRef.current;
         if (!internalBackdrop && !backdrop) {

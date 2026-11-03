@@ -122,7 +122,6 @@ function FeelSwitch() {
   const cue = useCue();
   const turn = (to: boolean) => {
     setOn(to);
-    // Told after the write: the Feel reads the switch as the cue comes.
     if (to) cue(plain('switch-on'));
   };
   return (
@@ -130,7 +129,6 @@ function FeelSwitch() {
       <Text style={styles.label} dynamicTypeRamp="body" aria-hidden>
         Sounds and haptics
       </Text>
-      {/* React Native's Switch hands iOS no `aria-label`; it reads `accessibilityLabel` on every platform. */}
       <Switch accessibilityLabel="Sounds and haptics" value={on} onValueChange={turn} />
     </View>
   );

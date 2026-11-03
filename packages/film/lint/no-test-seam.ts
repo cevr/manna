@@ -1,20 +1,3 @@
-// `film/no-test-seam`: product code never imports a test seam. A package's
-// test-only doubles and fixtures live in its `testing.ts` (`core/testing.ts`,
-// `tools/<area>/testing.ts`, `@manna/url-state/testing`, `@manna/core/<area>/testing`),
-// so a shipped import cannot reach them. The dead-export check counts a seam
-// as test code, so a product import of one is a take it does not see.
-//
-// Refused: a module of the repo's own named `testing`, with no extension or
-// any JS or TS one (`.ts`, `.tsx`, `.js`, `.jsx`, `.mts`, `.cts`, `.mjs`,
-// `.cjs`: `packages/core` writes `.js`, which resolves to the `.ts` file), or
-// a package's `…/testing` export, reached by a relative
-// path or a `@manna/` package, from an import, a re-export (`export … from`,
-// `export * from`), a type import, or a dynamic `import('…')` of a literal.
-// Another package's `testing` (`effect/testing`) is no seam of the repo's.
-// The config turns the rule on over every package's `src` and off where a
-// seam is the point: the tests, the fixtures, the seams themselves and the
-// type tests.
-
 import { Effect, Option, Predicate } from 'effect';
 import {
   Diagnostic,

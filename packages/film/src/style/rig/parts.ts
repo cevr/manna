@@ -1,22 +1,3 @@
-// The storybook figure's parts, as Rive markup: one generator a film's rigs
-// are built from (`righteousness-by-faith/rigs/`), so its people share their
-// paper, their hands and their face rather than each drawing its own. The
-// language they follow is the film skill's director vision → "Storybook
-// figures (Rive)":
-//
-// - paper: a flat piece with an ink edge (`INK`, laid as its figure's
-//   direction's outline says, `house.ts`) and its ramp's light on the
-//   cut, lifted off the sheet by a small cast shadow in the shade of each
-//   surface it falls on, its outline crawling on the boil;
-// - the crease (the look's signature): every piece is split once by a
-//   straight line at the light's one angle, its far side the paper's shade,
-//   a hue of its own from the paper's ramp (`ramps`), never the paper dimmed;
-// - the hand: a plain circle, nothing else;
-// - the face kit: two eyes, two brows and a mouth line, each moved by a
-//   view-model number, so a face acts by brow angle, eye shape and mouth.
-//
-// Pure: the same code writes the same markup.
-
 import { INK_NUMBER } from '../../canvas/rive.ts';
 import { rng } from '../../core/random.ts';
 import { type Direction, LIGHT, inkOf, ramps as R } from '../house.ts';
@@ -24,8 +5,6 @@ import type { Crease } from '../paper.ts';
 import { type Element, argb, el, num } from './rml.ts';
 
 export type Pt = readonly [number, number];
-
-// ─── geometry ────────────────────────────────────────────────────────────────
 
 /** 0 below `e0`, 1 past `e1`, smooth between. */
 export const smooth = (e0: number, e1: number, x: number) => {
@@ -48,8 +27,6 @@ export const boxOf = (pts: ReadonlyArray<Pt>): Box => ({
   y1: Math.max(...pts.map(([, y]) => y)),
 });
 
-// ─── the light and the crease ────────────────────────────────────────────────
-
 /** A box in a piece's own units. */
 interface Box {
   readonly x0: number;
@@ -70,7 +47,6 @@ export const creaseOf = (box: Box, crease: Crease = {}) => {
   const dy = Math.sin(toward);
   const cx = (box.x0 + box.x1) / 2;
   const cy = (box.y0 + box.y1) / 2;
-  // Half the box's reach along the light: its corners' furthest projection.
   const reach = (Math.abs(box.x1 - box.x0) * dx + Math.abs(box.y1 - box.y0) * dy) / 2;
   return {
     start: [cx - dx * reach, cy - dy * reach] as const,
@@ -86,7 +62,6 @@ const solid = (hex: string, alpha = 1) => el('SolidColor', { colorValue: argb(he
 const creased = (color: string, shade: string, box: Box, crease: Crease = {}): Element => {
   const { start, end, at } = creaseOf(box, crease);
   const soft = crease.soft ?? 0;
-  // A cut turns across the least step a gradient keeps apart; a soft turn spans `soft` about the crease.
   const [from, to] = soft > 0 ? [at - soft / 2, at + soft / 2] : [at, at + 0.002];
   return el('LinearGradient', { startX: start[0], startY: start[1], endX: end[0], endY: end[1] }, [
     el('GradientStop', { colorValue: argb(color), position: 0 }),
@@ -332,8 +307,6 @@ const paints = (fig: Figure, look: PieceLook, box: Box, inside = false): Element
   ]);
   if (inside) return [paper];
   const out: Element[] = [];
-  // A piece that lies over others of its figure lays its shadow on each (`casts`), not here; a
-  // piece over the host's scenery leaves its shadow to the host.
   if (castOf(d, look) && look.over === undefined && look.ground !== 'host')
     out.push(shadowFill(look.cast ?? R.paper.shade, liftOf(look)));
   const weight = look.ink ?? 'outer';
@@ -344,8 +317,6 @@ const paints = (fig: Figure, look: PieceLook, box: Box, inside = false): Element
   out.push(...edge.under, paper, ...(look.rim === undefined ? edge.over : []));
   return out;
 };
-
-// ─── a figure in the project ─────────────────────────────────────────────────
 
 /** One timeline's keys: object name → property → keys. */
 type K = readonly [number, number, ('io' | 'out' | 'in' | 'linear' | 'hold')?];
@@ -628,8 +599,6 @@ const paperOf = (fig: Figure, part: Part, inside: boolean): Element => {
   ]);
 };
 
-// ─── light on the paper: rims and tones ──────────────────────────────────────
-
 /** Twice the signed area of `pts` (positive clockwise, y down). */
 const turning = (pts: ReadonlyArray<Pt>) =>
   pts.reduce((sum, p, i) => {
@@ -651,7 +620,6 @@ const inset = (pts: ReadonlyArray<Pt>, by: number): Pt[] => {
     const tx = next[0] - prev[0];
     const ty = next[1] - prev[1];
     const len = Math.hypot(tx, ty) || 1;
-    // Clockwise on screen (y down), the inside lies to the right of the way round: (−ty, tx).
     return [p[0] - (side * ty * by) / len, p[1] + (side * tx * by) / len];
   });
 };
@@ -665,7 +633,6 @@ const insetChain = (chain: ReadonlyArray<Pt>, by: number): Pt[] => {
   const anchors = chain.filter((_, i) => i % 3 === 0);
   const moved = inset(anchors, by);
   return chain.map((p, i) => {
-    // A point's anchor: itself, the anchor its out handle leaves, or the next one, whose in handle it is.
     const j = ((Math.floor((i + 1) / 3) % anchors.length) + anchors.length) % anchors.length;
     const a = anchors[j] ?? p;
     const m = moved[j] ?? a;
@@ -761,8 +728,6 @@ const toneOf = (fig: Figure, key: string, tone: Tone, i: number): Element => {
     el('ClippingShape', { sourceId: fig.idOf(key), name: 'Clip' }),
   ]);
 };
-
-// ─── silhouettes ─────────────────────────────────────────────────────────────
 
 /** One part of a silhouette, or a piece: its key, its outline, its paint and its boil. */
 export interface Part {
@@ -930,8 +895,6 @@ const casts = (
   ];
 };
 
-// ─── the hand ────────────────────────────────────────────────────────────────
-
 /** The outline points of a hand of radius `r`: a circle, twelve points round so it boils like the rest of the paper. */
 const handOutline = (r: number): Pt[] => ellipse(0, 0, r, r, 12);
 
@@ -956,7 +919,6 @@ export const reachAbout = (shoulder: Pt, rest: Pt, to: Pt, reach: number): Pt =>
   const k = Math.max(0, Math.min(1, reach));
   const a0 = Math.atan2(rest[1] - shoulder[1], rest[0] - shoulder[0]);
   let a1 = Math.atan2(to[1] - shoulder[1], to[0] - shoulder[0]);
-  // The short way round.
   if (a1 - a0 > Math.PI) a1 -= 2 * Math.PI;
   if (a0 - a1 > Math.PI) a1 += 2 * Math.PI;
   const r0 = Math.hypot(rest[0] - shoulder[0], rest[1] - shoulder[1]);
@@ -965,8 +927,6 @@ export const reachAbout = (shoulder: Pt, rest: Pt, to: Pt, reach: number): Pt =>
   const r = r0 + (r1 - r0) * k;
   return [shoulder[0] + Math.cos(a) * r, shoulder[1] + Math.sin(a) * r];
 };
-
-// ─── the face kit ────────────────────────────────────────────────────────────
 
 /**
  * The face's view-model numbers and what each moves, at rest. The kit is
@@ -1190,11 +1150,9 @@ const extraMarks = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKno
     ['R', k.eyes[1], -1],
   ] as const;
   const marks: Record<ExtraFaceKnob, () => Element[]> = {
-    // The slides draw no mark of their own (`faceKit` binds them).
     marksY: () => [],
     mouthY: () => [],
     mouthW: () => [],
-    // Each eye a chevron pointing in toward the nose; the mouth a short wave.
     wince: () => [
       ...sides.map(([side, x, toward]) =>
         el('Node', { x, y: k.eyeY, name: `wince${side}Side` }, [
@@ -1229,7 +1187,6 @@ const extraMarks = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKno
         ),
       ]),
     ],
-    // Each eye an arch, shut in a smile; the mouth a smile wider than the kit's line (`GLAD_MOUTH`).
     glad: () => [
       el('Node', { x: k.mouth[0], y: k.mouth[1], name: 'gladMouthAt' }, [
         markShape(
@@ -1291,7 +1248,6 @@ export const faceKit = (
 ) => {
   const scale = at.scale ?? 1;
   const k = kitMarks(shape);
-  // A slide the face opts into: a node round `inner`, moved by its number.
   const slid = (knob: 'marksY' | 'mouthY', name: string, inner: ReadonlyArray<Element>) =>
     extra.includes(knob)
       ? [el('Node', { name, id: fig.idOf(name) }, [fig.bind(knob, KEY.y), ...inner])]
@@ -1324,7 +1280,6 @@ export const faceKit = (
         el('Node', { x: k.eyes[0], y: k.eyeY, name: 'socketL', id: fig.idOf('socketL') }),
         el('Node', { x: k.eyes[1], y: k.eyeY, name: 'socketR', id: fig.idOf('socketR') }),
       ]),
-      // The features' rest slides with them, so the gaze still moves them no farther than `turn`.
       el('Node', { name: 'faceRest', id: fig.idOf('faceRest') }),
     ]),
   );
@@ -1336,8 +1291,6 @@ export const gazeTarget = (fig: Figure, knobs: Numbers) =>
     fig.bind('gazeX', KEY.x),
     fig.bind('gazeY', KEY.y),
   ]);
-
-// ─── timelines ───────────────────────────────────────────────────────────────
 
 const FPS = 60;
 
@@ -1391,8 +1344,6 @@ export const timeline = (
 /** The figure's boil: every outline it registered, crawling tick by tick and held between. */
 export const boilTimeline = (fig: Figure) =>
   timeline(fig, 'boil', BOIL.seconds, fig.boilTracks(), { fps: BOIL.fps, loop: true });
-
-// ─── the artboard ────────────────────────────────────────────────────────────
 
 /**
  * The figure's artboard: `width` × `height`, its content and timelines and

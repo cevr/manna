@@ -1,13 +1,3 @@
-// A cast keep filed, its try cut by a stand-in that reads the try's file:
-// a kept sheet is replaced only on the owner's answer (a keep of a kind kept
-// already that does not ask to replace it, a replace that names no ask and a
-// replace of a kind not kept are each refused before the try is read); a
-// replace whose try is missing or does not cut leaves every file as it was;
-// a replace stopped at any write leaves the record's files in place and a
-// retry finishes it; a member that keeps some views of its sheet keeps the
-// same views; and replaces on one day each set the old keep aside in a
-// folder of its own.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, Exit, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { type CastKept, CastSheetJson, type CastSheetRecord } from '../core/cast-record.ts';

@@ -1,15 +1,3 @@
-// The easel over a fake browser: a look opens the film's export page on the
-// lab's own address once, draws each place's frame through the view and
-// writes it under the film's out folder; the same build keeps the page, a
-// new build reopens it, a failed build draws nothing and says why, a page
-// that failed a frame is not trusted with the next, and a lab serving
-// another checkout's films refuses, the folders compared as the disk
-// resolves them (a link to the lab's folder is it; a link then `..`, a
-// relative folder or one not there never are). A match measures each
-// figure the frame declares against its concept, writes its side-by-side
-// and its table, and names the figures it cannot match and why. Live clock:
-// the fake page sleeps a millisecond a frame.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -120,7 +108,6 @@ describe('the easel', () => {
       expect(files.get('/out/f/look/roof/t0003.00.value.bs.1.png')).toEqual(
         new Uint8Array([150 % 256]),
       );
-      // The render page, whose handle the look draws through, of the build the look was answered.
       expect(ledger.urls.map(servedAt)).toEqual([
         {
           origin: 'http://127.0.0.1:4401',
@@ -201,12 +188,10 @@ describe('the easel', () => {
       return Effect.gen(function* () {
         const easel = yield* Easel;
         yield* easel.serve('http://127.0.0.1:4401/');
-        // More cancels than the pages the easel holds at most.
         for (const n of [1, 2, 3, 4, 5, 6]) {
           const looking = yield* Effect.forkChild(
             easel.look(film, { scene: 'roof', at: ['1'], view }),
           );
-          // The page is open, its scenes not yet answered: the look is cancelled there.
           yield* Effect.sync(() => ledger.pages.opened).pipe(
             Effect.repeat({
               until: (opened) => opened >= n,
@@ -263,7 +248,6 @@ describe('the easel', () => {
         const root = yield* fs.realPath(yield* fs.makeTempDirectoryScoped());
         for (const folder of ['a/films/f', 'b/stub', 'b/films/f'])
           yield* fs.makeDirectory(path.join(root, folder), { recursive: true });
-        // a/link leads to b/stub, so a/link/.. is b on disk; alias leads to a.
         yield* fs.symlink(path.join(root, 'b/stub'), path.join(root, 'a/link'));
         yield* fs.symlink(path.join(root, 'a'), path.join(root, 'alias'));
         const lab = path.join(root, 'a/films/f');
@@ -276,7 +260,6 @@ describe('the easel', () => {
         expect(yield* here(`${root}/a/films/`)).toEqual(Option.none());
         expect(yield* here(`${root}//a/./films`)).toEqual(Option.none());
         expect(yield* here(path.join(root, 'alias/films'))).toEqual(Option.none());
-        // Node's realpath would take this .. first and answer a/films: the lab's own.
         expect(yield* here(`${root}/a/link/../films`)).toEqual(
           Option.some(`${root}/a/link/../films/f`),
         );
@@ -347,7 +330,6 @@ describe('the easel', () => {
             pinned: '?wedge=4-x',
           },
         ]);
-        // The source is as it was: the pick is never written.
         expect(new TextDecoder().decode(files.get('/films/f/palette.ts'))).toBe(palette);
         const level = yield* Effect.flip(
           easel.look(film, { scene: 'roof', at: ['1'], view, levels: { ground: 'dark' } }),
@@ -385,7 +367,6 @@ describe('the easel', () => {
           fakeRenderHost(ledger, {
             scenes: [roof],
             figures: () => [lead, judge, elsewhere],
-            // The scene draws the lead with ink on its hair line, which the concept has not.
             still: () => encodePng(drawFigure({ ...PLAIN, hairInk: true })),
           }),
           pagesAt(Ref.makeUnsafe(built(1))),
@@ -426,7 +407,6 @@ describe('the easel', () => {
           expect(taken.unmatched).toEqual([
             { figure: 'judge', reason: 'its rig declares no concept' },
           ]);
-          // The still drawn plain, with no captions, as a PNG.
           expect(ledger.stills).toEqual([
             { frame: 150, view: { mode: 'plain', captions: false, format: 'image/png' } },
           ]);
@@ -447,7 +427,6 @@ describe('the easel', () => {
         return Effect.gen(function* () {
           const easel = yield* Easel;
           yield* easel.serve('http://0.0.0.0:4401/');
-          // Its concept is not on disk: unmatched, saying where it looked.
           const one = yield* easel.match(film, { scene: 'roof', at: '3', figure: 'lead' });
           expect(one.figures).toEqual([]);
           expect(one.unmatched).toEqual([

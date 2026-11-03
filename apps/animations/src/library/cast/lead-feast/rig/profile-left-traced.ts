@@ -1,9 +1,3 @@
-// lead-feast, his profile facing screen left: one eye, his ear behind his cheek, his curls behind; his teal left arm hanging over his side in front of him, the sash knotted at his front with its end hanging; his sandals, traced from the kept turnaround sheet
-// (../cast-sheet/kept/turnaround.png, box 552, 195, 733, 857) in the sheet's own pixels.
-// Written by `bun run concept trace src/library/cast/lead-feast/rig/trace.ts --view profileLeft`
-// (from apps/animations); trace it again rather than edit it. Points only: the
-// film's papers paint each part. Pure.
-
 import type { Pt } from '@manna/film/style';
 
 /** The view's box in the sheet, as its record keeps it. */

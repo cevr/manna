@@ -1,8 +1,3 @@
-// A film's painted plates loaded before its first frame (`loadPaintings`):
-// each declared PNG read once, held to its size and, where the host gives the
-// bytes, to its clear open edges; stood on the film until the caller's scope
-// closes, and what each read holds released with it.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Exit, Option, Scope } from 'effect';
 import { type SceneSpec, createFilm } from '../canvas/film.ts';
@@ -83,12 +78,10 @@ describe('loadPaintings', () => {
 
   it.effect('fails naming an open edge with paint on it, and only that edge', () =>
     Effect.gen(function* () {
-      // The top row is clear; the left column has paint at its foot.
       const error = yield* Effect.flip(loadPaintings(tinyFilm()));
       expect(error.painting).toBe('fixtures/tiny');
       expect(error.reason).toContain('left');
       expect(error.reason).not.toContain('top');
-      // An edge not declared open may hold paint.
       expect(
         paintedEdges(
           tiny(() => false),

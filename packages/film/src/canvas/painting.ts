@@ -1,17 +1,3 @@
-// A scene's painted plates (`PaintingSpec`): a PNG with alpha in the film's
-// folder, painted at the fidelity of the concept art and drawn as one plane
-// under the scene's current transform (`f.painting`). The scene owns the
-// parallax law: it calls `f.painting` inside a `multiplane` plane (z = the
-// divisor) or a plane function of its own, and the engine adds no camera law.
-// A plate's top-left sits at `at` (scene px) at rest, and each plate pixel
-// covers `scale` scene px. Its `open` edges are clear (alpha 0) and may show;
-// any other edge that shows inside the frame at a drawn moment is a
-// `PaintingEdge` finding of `check --draw` (`tools/draw-check.ts`).
-//
-// The png is imported `with { type: 'file' }` beside the spec, never written
-// as a path string: the stamp (`tools/stamp.ts`) follows the import and keys
-// every beat that draws the plate by the PNG's bytes.
-
 import { Option } from 'effect';
 import type { PaintingMark, Probe } from './probe.ts';
 

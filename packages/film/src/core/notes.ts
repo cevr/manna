@@ -1,10 +1,3 @@
-// Lab notes as pure data: where a note sits on the film (its scene and the
-// nearest cue edge and mark), what a note on words asks of them, the changes
-// a note log makes (add, reply, resolve), and the changes past a cursor,
-// which is what makes a watcher see each one exactly once. The store (tools)
-// does the I/O; the lab page and the tools both read these. Pure and
-// DOM-free.
-
 import { Array as Arr, Option, Order } from 'effect';
 import { type Placed } from './layout.ts';
 import type {

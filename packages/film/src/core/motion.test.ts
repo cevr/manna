@@ -61,8 +61,6 @@ describe('curve', () => {
   });
 
   test('holds between two equal keys and never swings past a key between keys', () => {
-    // A Catmull-Rom curve through these keys (a held elbow, then a lift) sinks
-    // about 1.2 degrees under the held 48 before the lift starts.
     const keys = [
       [0, 48],
       [6.9, 48],
@@ -129,7 +127,6 @@ describe('act', () => {
       { at: 1.5, dur: 1, to: 0 },
     ]);
     expect([2, 3].map(lean)).toEqual([10, 0]);
-    // The second move runs 2 to 3 s, not 1.5 to 2.5 s: halfway it is between its keys.
     expect(lean(2.5)).toBeCloseTo(5, 6);
   });
 });
@@ -297,7 +294,6 @@ describe('blink', () => {
 
   test('blinks once more on each cue half a second or more from its own blinks, and only there', () => {
     const own = blinks(3, 0, 30, 0.001).out.map((b) => b.start);
-    // a cue midway between two of its blinks, one 0.6 s after one of them, and one 0.4 s after another
     const free = (own[2]! + own[3]!) / 2;
     const after = own[4]! + 0.6;
     const close = own[5]! + 0.4;
@@ -315,13 +311,11 @@ describe('blink', () => {
   test('keeps the earlier of two cues under half a second apart, so they never shut as one long blink', () => {
     const own = blinks(3, 0, 30, 0.001).out.map((b) => b.start);
     const free = (own[2]! + own[3]!) / 2;
-    // given out of order: the second cue 0.2 s after the first
     const { out } = blinksOf(blink(3, [free + 0.2, free]), 0, 30, 0.001);
     const starts = out.map((b) => b.start);
     const want = [...own, free].sort((a, b) => a - b);
     expect(starts.length).toBe(want.length);
     starts.forEach((s, k) => expect(Math.abs(s - want[k]!)).toBeLessThan(0.002));
-    // one blink's length (110 ms shut, 190 ms open), not two run together
     const cued = out.find((b) => Math.abs(b.start - free) < 0.002)!;
     expect(cued.open - cued.start).toBeLessThan(0.31);
   });

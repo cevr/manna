@@ -1,7 +1,3 @@
-// Paid jobs run a few at a time and every one finishes: a failure never
-// interrupts a take or a score already being generated. The run then fails
-// with the first failure, after each job has saved what it made.
-
 import { Array as Arr, Effect, Option } from 'effect';
 
 export const settleAll = <A, B, E, R>(

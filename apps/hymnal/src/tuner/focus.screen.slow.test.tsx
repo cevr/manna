@@ -1,4 +1,5 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noGlobals, effect/noFixedWaitInTests, eslint/no-await-in-loop -- a React screen test: the screen's forked Effect work and its renders settle on the host's event loop, so each frame is handed over in `act` and awaited one after another, each turn a `Bun.sleep(0)` yield, until its read lands (the needle's animation is the event waited on). */
+
 /**
  * The tuner screen reads every frame through its focus: a voice in the room
  * moves nothing on it, and a plucked string still reads at once. `Tuner` is

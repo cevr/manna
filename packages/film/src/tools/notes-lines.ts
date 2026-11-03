@@ -1,8 +1,3 @@
-// How `film lab notes` prints a note: one line of `key=value` fields an agent
-// reads without parsing JSON. The still is an absolute path, so the reader
-// can open the frame directly, and `seq=` is the change it was last made at.
-// Pure.
-
 import { Option } from 'effect';
 import type { Note } from '../core/schema.ts';
 import { sketchSummary } from '../core/sketch.ts';
@@ -14,18 +9,14 @@ const quoted = (text: string) =>
 const fields = (note: Note) => {
   const cue = Option.map(Option.fromNullishOr(note.cue), (c) => ` cue=${c.name}:${c.edge}`);
   const mark = Option.map(Option.fromNullishOr(note.mark), (m) => ` mark=${m}`);
-  // The stretch of its scene the note is about, in scene seconds.
   const range = Option.map(
     Option.fromNullishOr(note.range),
     (r) => ` range=${r.from.toFixed(2)}-${r.to.toFixed(2)}`,
   );
-  // The line of the scene's file the note is about, and its text as it stood (the file may have moved since).
   const source = Option.map(
     Option.fromNullishOr(note.source),
     (s) => ` source=${s.file}:${s.line} line=${quoted(s.text)}`,
   );
-  // The words of its scene's line it is about (first and last, from 0, as the line is said) and
-  // as they read then; what it asks of them, and a correction's words to say instead.
   const words = Option.map(
     Option.fromNullishOr(note.words),
     (w) => ` words=${w.beat}:${w.from}-${w.to} said=${quoted(w.text)}`,
@@ -37,7 +28,6 @@ const fields = (note: Note) => {
     (b) => ` box=${Math.round(b.x)},${Math.round(b.y)},${Math.round(b.w)}x${Math.round(b.h)}`,
   );
   const ink = Option.map(Option.fromNullishOr(note.ink), (strokes) => ` ink=${strokes.length}`);
-  // The storyboard panel it is about, the try shown, what it asks (a tweak is `film board tweak`'s), and its sketch.
   const panel = Option.map(
     Option.fromNullishOr(note.panel),
     (p) =>
@@ -47,8 +37,6 @@ const fields = (note: Note) => {
     Option.filter(Option.fromNullishOr(note.sketch), (s) => s.length > 0),
     (s) => ` sketch=${quoted(sketchSummary(s))}`,
   );
-  // Seconds into the scene: the film time now is the scene's start plus
-  // these, where `T` moves when an earlier scene is re-taken.
   const local = Option.match(Option.fromNullishOr(note.local), {
     onNone: () => '',
     onSome: (s) => ` local=${s.toFixed(2)}`,

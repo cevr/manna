@@ -139,8 +139,6 @@ const fromParts = (
       Effect.flatMap(Schema.encodeUnknownEffect(section)(value), Schema.decodeUnknownEffect(Raw)),
       toIssue,
     );
-  // The value side checks every part against its own schema, so a value
-  // is validated on the way out and an Arbitrary can be derived from it.
   const Value = Schema.Struct({
     path: Schema.toType(params),
     query: Schema.toType(query),
@@ -187,9 +185,6 @@ export const make = <
   const erased = UrlPartsFromHref.pipe(Schema.decodeTo(fromParts(pattern, params, query, hash)));
   return {
     pattern: options.path,
-    // The one place the value's type is restored: `fromParts` decodes each
-    // part with the very schemas `Params`, `Q` and `H` name, so its output has
-    // their types; TypeScript cannot follow a generic struct through it.
     // oxlint-disable-next-line effect/noAs -- see above
     schema: erased as Schema.Codec<
       Value<{ readonly [K in keyof Params]: Params[K]['Type'] }, Q['Type'], H['Type']>,
@@ -226,10 +221,6 @@ const changedKeys = (from: Raw, to: Raw): ReadonlyArray<string> =>
 
 /** How moving from one href to another (the second on `place`) enters history. */
 export const history = <A>(place: Place<A>, from: string, to: string): Move => {
-  // Keys are compared as the place writes them, so a key written another way
-  // (`?q=x&q=y`, an empty `?q=`, a default spelled out) is no change; an
-  // indexed copy writes its marker, so a pane's presence still counts. An
-  // href off the place is compared as it is.
   const written = (link: string): string =>
     Option.match(decode(place, link), {
       onNone: () => link,
@@ -250,7 +241,6 @@ export const history = <A>(place: Place<A>, from: string, to: string): Move => {
     Arr.findFirst(policies, (policy) => policy.history === 'push'),
     { onNone: () => 'replace' as const, onSome: () => 'push' as const },
   );
-  // Throttled only when every changed key is: one unthrottled key flushes now.
   const windows = Arr.getSomes(policies.map((policy) => policy.throttle));
   const throttle = Option.map(
     Option.liftPredicate(windows, (all) => all.length > 0 && all.length === policies.length),

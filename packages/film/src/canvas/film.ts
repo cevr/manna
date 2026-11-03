@@ -1,7 +1,3 @@
-// A film is an ordered list of scenes. Each scene owns its narration and its
-// drawing; the film lays them end to end, sizes each to its voice, and draws
-// any instant T — the same function serves the preview player and the export.
-
 import { Predicate, Result, Schema } from 'effect';
 import { type Hand, boilTick } from './ink.ts';
 import type { Hex } from './colour.ts';
@@ -934,7 +930,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     if (Result.isFailure(held)) throw new Error(held.failure.message);
   }
 
-  // Built lazily: the film must lay out where there is no DOM (tools, tests).
   let assets:
     | {
         paper: HTMLCanvasElement;
@@ -1253,14 +1248,12 @@ export const createFilm = (spec: FilmSpec): Film => {
       },
       knobsOf: <K extends Knobs>(of: KnobsOwner<K>) => {
         const q = drawnBy(of.draw, p.spec.id);
-        // The scene is the one `of` draws, so each name holds the kind `of` declares.
         return knobReader<K>(q.knobs, q.spec.id);
       },
       words,
       spoken: (from, to) => {
         const a = frame.mark(from);
         const b = to === undefined ? p.speechStart + p.voice.duration : frame.mark(to);
-        // Progress by words heard, so the text keeps pace with the voice.
         const inside = words.filter((w) => heardAtOrAfter(w, a) && w.start < justBefore(b));
         if (inside.length === 0) return t >= b ? 1 : 0;
         let heard = 0;
@@ -1278,7 +1271,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     boil: number,
     reads: Reads | undefined,
   ) => {
-    // The reads made outside every camera and not yet framed by one: the next camera frames them.
     const unframed: number[] = [];
     const frameReads = (list: KnobRead[], inside: DOMMatrix, aimed: DOMMatrix) => {
       for (const i of unframed) {
@@ -1439,15 +1431,11 @@ export const createFilm = (spec: FilmSpec): Film => {
       throw new Error(
         `scene ${p.spec.id}: its card floods in over "${flood.cue}", but its draw returned no box to flood from`,
       );
-    // The box is in the canvas's own pixels (`verse` gives it so, through the
-    // transform it drew under), so the clip is laid with none, whatever scale
-    // the frame is drawn at, and the card drawn under the frame's.
     const frame = ctx.getTransform();
     const at = cueProgress(cueOf(p, flood.cue), beatTime(p, T));
     const box = floodBox(from, ctx.canvas.width, ctx.canvas.height, at);
     const mask = flood.mask;
     if (mask !== undefined) {
-      // The look's own edge: the card on a layer of its own, kept where the look paints.
       const { b } = getAssets();
       b.ctx.setTransform(1, 0, 0, 1, 0, 0);
       b.ctx.globalAlpha = 1;
@@ -1514,7 +1502,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     probing(ctx, probe, () => {
       shot = drawScene(ctx, p, T, boil, reads);
     });
-    // Guessed whole but it framed a shot, or guessed a shot and it framed none: draw it the other way.
     if (moving && shot === breath.outer) {
       rewindSink(sink);
       if (reads !== undefined) reads.list.length = read;
@@ -1620,27 +1607,22 @@ export const createFilm = (spec: FilmSpec): Film => {
 
     const shown = carded(cur, T);
     if (shown !== undefined) {
-      // A full-screen card: the frame is the card alone, cut to and from.
       cardFrame(ctx, cur, shown, T, boil, probe(cur, 0, 1), reads(true));
     } else if (prev === undefined || enter === undefined || enter.kind === 'cut' || local >= tr) {
       sheet(ctx, cur, T, boil, probe(cur, 0, 1), reads(true));
-      // The scene's light over its page and all on it, with the vignette.
       lightAndVignette(ctx, drawnLight, drawnFixed);
       floodOver(ctx, cur, T, boil, probe(cur, 0, 1), reads(true));
     } else {
       const p = ease.inOutCubic(clamp(local / tr));
-      // The incoming sheet covers the outgoing one as it arrives.
       const dir = enter.kind === 'pan' ? (enter.dir ?? 1) : 1;
       const dx = enter.kind === 'pan' ? -dir * p * width : 0;
       const fading = enter.kind === 'pan' ? 0 : 1;
-      // A card held to its scene's end leaves as the card, not the picture under it.
       const leaving = cardToEnd(prev);
       const outProbe = probe(prev, dx, 1 - fading * p);
       const out =
         leaving === undefined
           ? layer(a, prev, T, boil, outProbe, reads(false))
           : cardLayer(a, prev, leaving, T, boil, outProbe, reads(false));
-      // A card takes no vignette; a scene its light's share of it (read as its layer is drawn).
       const from = leaving === undefined ? vignetteOf(drawnLight) : 0;
       const inn = layer(
         b,
@@ -1656,8 +1638,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     }
 
     finishFrame(ctx, boil);
-    // No caption over a card: the card is the words (CRAFT rule 1), set as they are
-    // said; the caption track (`.vtt`) keeps the line.
     if (opts.captions === true && shown === undefined)
       captionOver(ctx, cur, local, probe(cur, 0, 1));
     ctx.restore();
@@ -1709,7 +1689,6 @@ const inkWipe = (
   ctx.clip();
   ctx.drawImage(layer, 0, 0);
   ctx.restore();
-  // The brush band itself.
   ctx.save();
   ctx.fillStyle = color;
   ctx.globalAlpha = 0.9 * Math.sin(Math.PI * p);
@@ -1750,7 +1729,6 @@ const caption = (
   ctx.globalAlpha = 1;
   ctx.fillStyle = style.color;
   ctx.fillText(text, w / 2, y + 1);
-  // The plate hides whatever is under it, so the check measures the plate.
   const probe = probeOf(ctx);
   if (probe !== undefined) {
     recordPlate(ctx, probe, left, top, pw, style.plateHeight, style.plateOpacity);

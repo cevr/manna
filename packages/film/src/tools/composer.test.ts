@@ -1,9 +1,3 @@
-// Composer with fakes: each score option is composed and recorded under its
-// hash with its bytes' sha256, a current option is never composed again, one
-// option can be composed alone, and the cap refuses a run before it spends.
-// Effects are the library's: `score` never makes one.
-
-import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Path, Result, Schema } from 'effect';
 import { layout } from '../core/layout.ts';
@@ -86,9 +80,7 @@ describe('Composer', () => {
         `/films/test/sound/pads-${q}.mp3`,
       ]);
       const sha = (file: string) =>
-        createHash('sha256')
-          .update(files.get(file) ?? new Uint8Array())
-          .digest('hex');
+        new Bun.CryptoHasher('sha256').update(files.get(file) ?? new Uint8Array()).digest('hex');
       const made = yield* manifest();
       expect(made).toEqual({
         scores: {
@@ -129,18 +121,15 @@ describe('Composer', () => {
       const through = { ...run, only: Option.some('piano'), through: Option.some('open') };
       yield* composer.score(film, { ...through, tally: Option.some(TALLY) });
       expect(calls.music).toEqual([`/films/test/sound/piano-${bounded}.mp3`]);
-      // Open's 8 s and the tail past its end; nothing of close.
       expect(new TextDecoder().decode(files.get(TALLY)).split('\n')[1]).toBe(
         `score.piano\t${bounded}\t${(8 + MUSIC_TAIL).toFixed(3)}\t${Math.ceil(((8 + MUSIC_TAIL) / 60) * 900)}`,
       );
       const made = yield* manifest();
       expect(made.scores?.['piano']).toMatchObject({ hash: bounded, through: 'open' });
 
-      // Current for its range: not composed again.
       yield* composer.score({ ...film, manifest: made }, through);
       expect(calls.music).toHaveLength(1);
 
-      // The whole score is another request: composed, and its record names no range.
       yield* composer.score({ ...film, manifest: made }, { ...run, only: Option.some('piano') });
       expect(calls.music).toEqual([
         `/films/test/sound/piano-${bounded}.mp3`,
@@ -161,14 +150,12 @@ describe('Composer', () => {
       const each = musicCredits(
         Result.getOrThrow(musicPlan(piano, Result.getOrThrow(layout(scenes, timings, 30)))),
       );
-      // Room for one option: the first is composed and tallied, the second refused.
       const over = yield* Effect.flip(
         composer.score(film, { ...run, cap: Option.some(each + 1), tally: Option.some(TALLY) }),
       );
       expect(over._tag).toBe('CreditsOverCap');
       expect(calls.music).toHaveLength(1);
       expect(new TextDecoder().decode(files.get(TALLY)).split('\n').slice(1, 2)).toEqual([
-        // The film's 16 s and the tail composed past its end.
         `score.piano\t${keyOf(piano)}\t${(16 + MUSIC_TAIL).toFixed(3)}\t${each}`,
       ]);
     }).pipe(Effect.provide(layer));

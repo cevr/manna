@@ -1,8 +1,3 @@
-// The sections of the film skill's rule files that the judge and the critique
-// quote to their counsel, each by its file and its heading line. Each heading
-// is read as written: one its file lacks fails the judge's run and the
-// critic's build, and `rules.test.ts` holds every one to its file.
-
 /** The film skill's rule files: the craft rules and the director's vision. */
 const SKILL = `${import.meta.dir}/../../.claude/skills/film`;
 const CRAFT = `${SKILL}/CRAFT.md`;

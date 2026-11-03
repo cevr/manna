@@ -1,7 +1,3 @@
-// What a render does, decided before a browser opens: the job, the frames it
-// covers, how they split into chunks, and where each output lands. Pure, so
-// the scheduling is checked without Chromium; `Renderer` only runs it.
-
 import { Array as Arr, Boolean as Bool, Data, Match, Option, Result } from 'effect';
 import type { Address, Scope } from '../core/address.ts';
 import type { RenderKind, RenderSound, RenderVariantName } from '../core/catalogue.ts';
@@ -361,7 +357,6 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
   ]);
   const workers = Option.map(flags.workers, (n) => Math.max(1, n));
   const software = Option.exists(flags.encoder, (e) => !sharesInPage(e));
-  // The share copy is the hardware encoder's, made in the page.
   const askedShare = Arr.findFirst(
     [
       ['share-only', flags.shareOnly],
@@ -378,8 +373,6 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
         reason: "the share copy is the hardware encoder's, made in the page",
       }),
     );
-  // A review render is watched, not sent: it makes its share copy only when
-  // asked. A software render makes none.
   const share = Option.getOrElse(flags.share, () => !flags.review && !software);
   const copies = Bool.match(flags.shareOnly, {
     onTrue: (): Copies => 'share',
@@ -637,7 +630,6 @@ export const segmentChunks = (
 ): ReadonlyArray<SegmentChunk> => {
   const lengths = segments.map((s) => s.to - s.from);
   const total = lengths.reduce((sum, n) => sum + n, 0);
-  // Where each segment starts among the frames laid end to end.
   const starts = Arr.scan(lengths, 0, (at, n) => at + n);
   const pieces = planChunks(0, total, workers).flatMap((chunk) =>
     segments.flatMap((segment, k) => {

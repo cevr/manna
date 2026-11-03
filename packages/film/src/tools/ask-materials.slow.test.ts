@@ -1,17 +1,3 @@
-// The material an ask shows, found when the ask is made: a document and a
-// video only when the review lists them (one the review does not list is
-// refused; the ref's own shape is `core/ask.test.ts`'s), a film's script and
-// a draft's by the beats their reader reads, a Board by its panels, a take
-// by the studio's own read of the beat's attempts (the one named, else the
-// take the timings name: one kept, or a staging take; a beat the film does
-// not have is refused before a file is read). Each refusal names what is
-// missing. A kept ask shows each file an image route serves as the copy it
-// made of it, by its SHA-256 (its receipt), which a later rewrite of the file
-// does not move: random asks, their set files rewritten at random between
-// the make and the answer, serve at the answer the bytes they were made
-// with. An answer is refused once a copy no longer holds its hash. A frame
-// of a video, and a path no route serves, have none.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Boolean as Bool, Effect, Layer, Match, Option, Path, Result, Schema } from 'effect';
 import {
@@ -616,7 +602,6 @@ describe('the material an ask shows', () => {
         for (const source of sources.filter(() => next() < 0.4)) rewrite(source);
       };
       const frame = labUrls.review.frame({ query: { ref: 'p5/rbf/cut.mp4' } });
-      // The faults in turn, each a random source of its kind: a missing file of each kind, a failing copy of each.
       const faults = [
         ...missingSources.map((source) => [source]),
         setSources,
@@ -680,7 +665,6 @@ describe('the material an ask shows', () => {
               const result = yield* Effect.result(asks.make(asked(ask)));
               files.poisoned.clear();
               if (Option.isSome(drawn.fault)) {
-                // Refused, naming the src, and no ask kept.
                 const message = Result.match(result, {
                   onFailure: (e) => `${e._tag}: ${e.message}`,
                   onSuccess: () => 'kept',
@@ -689,8 +673,6 @@ describe('the material an ask shows', () => {
                   onTrue: () => 'copy failed',
                   onFalse: () => 'missing',
                 });
-                // Each fault is the rule's refusal, naming the src and what went wrong with it:
-                // a file gone is not served or does not copy, by where its route reads it.
                 const why = Bool.match(how === 'missing', {
                   onTrue: () =>
                     /: (the lab serves no file there now|its file did not copy as the ask was made)/,
@@ -704,7 +686,6 @@ describe('the material an ask shows', () => {
                 return Option.none<Made>();
               }
               const record = Result.getOrThrow(result);
-              // The page the oracle expects: each file-served image its copy, by the bytes at the make.
               const copyOf = (source: Source) =>
                 askShownUrl(record.id, `${atMake.get(source.src) ?? ''}.png`);
               const expected = askOver(drawn, (shown) =>

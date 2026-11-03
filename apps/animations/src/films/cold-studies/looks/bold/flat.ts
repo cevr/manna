@@ -1,7 +1,3 @@
-// The bold look's inks and its few shapes. A poster's world: flat fields of
-// four inks, hard edges, no line, no shadow, no grain of its own. Every shape
-// is a filled rectangle, disc or polygon; nothing is stroked.
-
 import type { Hex } from '@manna/film/canvas';
 
 /**

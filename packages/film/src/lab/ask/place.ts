@@ -1,9 +1,3 @@
-// Where the ask page is, read from its URL's path (`Places`, `core/api.ts`),
-// so a link, a reload or Back opens the same place: an ask (`/asks/<ask>`),
-// the page of asks it is on taken to it, or a page of asks by its first ask
-// (`/asks/page/<page>`). Both keep a still open full size (`?still=`:
-// `stillIn`, `withStill`), an ask's Board panel opened by its `Zoom`.
-
 import { Place } from '@manna/url-state';
 import { Data, Option } from 'effect';
 import { Places } from '../../core/api.ts';

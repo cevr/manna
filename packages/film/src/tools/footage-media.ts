@@ -1,9 +1,3 @@
-// The footage library's media work (`footage.ts`): an original probed in
-// place, its copies made, and a take's voice decoded. Its live layer
-// (`footage-media-bun.ts`, which says how) loads with mediabunny only when
-// `FootageMedia.layer` is built, so a module that names the service, or a
-// test that doubles it, loads none of it.
-
 import { Context, Effect, Layer } from 'effect';
 import type { Pcm } from '../core/audio.ts';
 import type { FootageCopy, FootagePicture, FootageProbe } from '../core/footage.ts';

@@ -1,9 +1,3 @@
-// The failures a lab or review route answers with: raised by the tools'
-// services, answered by the routes with the status the contract gives each
-// (`api.ts`), and decoded by the page into the same classes, so a refusal's
-// words are its message on both ends. The tools import them from
-// `tools/errors.ts`, which re-exports them with the rest.
-
 import { Option, Schema } from 'effect';
 
 /** A name that is none of the films in the folder: answered with the films there are, no path. */
@@ -378,7 +372,6 @@ export class VersionChanged extends Schema.TaggedError<VersionChanged>()('Versio
   }
 }
 
-/** An approval or comment on a scene the project holds no render of. */
 /** The command that renders `variant` of `scene`: what a refusal over a missing or stale render names. */
 export const renderCommand = (film: string, scene: string, variant: string) =>
   `film project render ${film} --scene ${scene} --variant ${variant}`;

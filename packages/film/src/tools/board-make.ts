@@ -1,17 +1,3 @@
-// Making a film's storyboard: each beat's panels planned from its picture's
-// marks, each drawn on the image route from one scene prompt (`board-
-// prompt.ts`), two tries a panel, every try recorded as it lands, so a run
-// stopped halfway keeps what it made and the next run makes only the rest.
-// Beats run side by side (`lanes`, three at most: the route's own limit);
-// within a beat the panels go in line order, the first panel's shown try
-// riding along as the later ones' second reference, so a beat keeps its
-// place and its people. A tweak (`tweakPanel`) makes a panel again from a
-// lab note: the try it was written on, the note's words, its sketch. After
-// those references come the library records of the cast the beat names
-// (`cast-library.ts`), read before anything is drawn: they win over every
-// other image and the brief, so a locked member is drawn as the library has
-// it, never as a concept drew it.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -345,15 +331,12 @@ export const makeBoard = Effect.fn('Board.make')(function* (
   const drawBeat = (beat: BoardBeat) =>
     Effect.gen(function* () {
       const cast = beatCast(locks, beat, ctx.folder, path);
-      // The first try this run drew of each panel: the first panel rides along by it, not by a keep it is drawn again over.
       const drawnHere = new Map<string, number>();
       for (const s of stale.values())
         if (panelsOf(board, beat.id).some((p) => p.id === s.panel))
           yield* emit({ _tag: 'Stale', panel: s.panel, why: staleWhy(film, s) });
       for (const { at, count } of toDraw(board, beat, options.tries, stale)) {
         if (yield* down()) return;
-        // The first panel of the beat, once it has a try, rides along as the second reference: the first try this run
-        // drew of it when it drew one, else its shown try.
         const now = yield* store.read(film);
         const first = Arr.findFirst(
           panelsOf(now, beat.id),
@@ -468,7 +451,6 @@ export const tweakPanel = Effect.fn('Board.tweak')(function* (
   const ctx: TryContext = { film, style, folder: store.paths(film).folder, beats };
   const cast = beatCast(yield* castOf(film, [beat]), beat, ctx.folder, yield* Path.Path);
   const sketched = Option.exists(Option.fromUndefinedOr(note.sketch), (s) => s.length > 0);
-  // The sketch is copied into the board folder, as a board file of its own.
   const sketchFile = `${panel.id}.${note.id}.sketch.png`;
   if (sketched) {
     const bytes = yield* fs.readFile(still);

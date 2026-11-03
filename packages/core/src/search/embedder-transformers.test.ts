@@ -20,8 +20,6 @@ describe('§9.5 the model is memoized on success only', () => {
   it.scopedLive('retries after a typed load failure, then caches', () =>
     Effect.gen(function* () {
       const attempts = yield* Ref.make(0);
-      // Fails the first time, succeeds afterwards: a model still downloading
-      // when the reader's first query arrives.
       const load = Effect.flatMap(
         Ref.updateAndGet(attempts, (count) => count + 1),
         (count) => {
@@ -34,8 +32,6 @@ describe('§9.5 the model is memoized on success only', () => {
 
       const first = yield* Effect.result(model);
       expect(first._tag).toBe('Failure');
-      // The retry the trap forbids. Under `Effect.cached` this is still a
-      // failure, and stays one forever.
       expect(yield* model).toBe('model');
       expect(yield* Ref.get(attempts)).toBe(2);
     }),
@@ -51,8 +47,6 @@ describe('§9.5 the model is memoized on success only', () => {
       const model = yield* memoizeOnSuccess(load);
 
       for (let read = 0; read < 5; read += 1) expect(yield* model).toBe('model');
-      // The memoization half: without it this is 5, and every query would
-      // rebuild the graph.
       expect(yield* Ref.get(attempts)).toBe(1);
     }),
   );
@@ -61,9 +55,6 @@ describe('§9.5 the model is memoized on success only', () => {
     Effect.gen(function* () {
       const attempts = yield* Ref.make(0);
       const load = Effect.as(
-        // A load slow enough that a second reader arrives mid-flight, which is
-        // the case the cell's lock exists for: two concurrent 300M-parameter
-        // loads would double the process's memory.
         Effect.delay(
           Ref.update(attempts, (count) => count + 1),
           '10 millis',

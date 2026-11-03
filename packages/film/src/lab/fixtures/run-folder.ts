@@ -1,13 +1,3 @@
-// The folder one e2e run keeps its fixture bundles and its workers' Chrome
-// profiles in (`film-test-bundles-*`, `run-suite.ts`), made for the run and
-// removed once it ends. Another process can still change it as the run ends
-// (a worker's Chrome or its helpers, `--user-data-dir=<folder>/chrome/<pid>`,
-// shutting down). Bun's recursive remove (1.4.3) cannot share the folder: an
-// entry gone under it while it walks fails it, NotFound, naming the folder,
-// and with `force` it returns with the folder still there. So the release
-// first ends every process whose command line names a path in the folder and
-// waits until none runs, and only then removes the folder.
-
 import { Effect, FileSystem, Option, Schedule, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';

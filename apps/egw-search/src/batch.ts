@@ -122,8 +122,6 @@ export const makeBatcher = <I, O, E>(options: {
   };
 
   return {
-    // Joining is synchronous (no wait before it), so the inputs of one run of the
-    // page join one batch; and whole, so a caller is never in a batch it cannot leave.
     submit: (input) =>
       Effect.uninterruptibleMask((restore) =>
         Effect.gen(function* () {

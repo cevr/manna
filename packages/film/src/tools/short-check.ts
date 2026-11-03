@@ -1,13 +1,3 @@
-// What `film check --short` looks for, as pure functions over a vertical
-// film (a resolved short, or a talk), its phrases (`shortPhrases`) and what
-// its probed frames report: text past the safe zone (`SAFE_ZONES`; a talk's
-// is `platforms`, inside every platform's own), an open that does not hook
-// (a late first word, nothing moving, its footage included, the film's title
-// card), a loop that shows its seam (a last frame far from the first, or a
-// long silence round the loop), and a length outside what holds. The
-// numbers are `SHORT_RULES`, and a talk's length its format's
-// (`TALK_FORMATS`). Every finding is collected; none stops the others.
-
 import { Array as Arr, Match, Option, Order } from 'effect';
 import type { Phrase } from '../core/phrases.ts';
 import type { Probed, TextBox } from '../core/export-handle.ts';

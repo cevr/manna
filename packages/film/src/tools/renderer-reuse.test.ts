@@ -1,10 +1,3 @@
-// A film render reuses the segments it drew before: each beat's frames kept
-// under the film's project folder by their key, so a render with every key
-// kept draws nothing, and one with a beat changed draws that beat alone.
-// Each marks what it reuses; renders of the film take turns at its cache,
-// and once done each prunes it; a prune by hand waits for none of them.
-// Fake pages and media; the project folder in memory; a stopped clock.
-
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Array as Arr,
@@ -164,7 +157,6 @@ const project = (files = new Map<string, Uint8Array>(), stage: Stage = { film, i
     const ledger = emptyLedger();
     const lines: Array<string> = [];
     const pruned: Array<string> = [];
-    // The render's reuse and prune lines kept, every other line dropped.
     const logged = Logger.layer([
       Logger.make(({ message }) => {
         const line = [message].flat().join(' ');
@@ -193,7 +185,6 @@ const project = (files = new Map<string, Uint8Array>(), stage: Stage = { film, i
       const share = ledger.joins.filter((j) => isShare(j.out));
       return {
         output,
-        // The file its cache record is of: its master, else its share copy.
         target: Option.getOrThrow(Option.fromUndefinedOr([...master, ...share][0])).out,
         reuse: lines,
         pruned,
@@ -361,11 +352,9 @@ describe.concurrent("a film render's segments", () => {
         expect(again.reuse).toEqual([
           'render.reuse segments=3 unpinned=0 drawn=0 frames_drawn=0 fresh=false',
         ]);
-        // Only the page that chose the encoder: no page opened to draw.
         expect(again.pages).toBe(1);
         expect(again.master).toEqual(first.master);
         expect(again.share).toEqual(first.share);
-        // Each beat's chunks start where they play, in order, the share copy's beside them.
         expect(again.master.at(0)?.at).toBe(0);
         expect(again.master.map((s) => s.at)).toEqual(again.share.map((s) => s.at));
       }).pipe(atDayZero),
@@ -382,7 +371,6 @@ describe.concurrent("a film render's segments", () => {
       ]);
       const beat = (from: number, to: number) => (segments: typeof first.master) =>
         segments.filter((s) => s.at >= from && s.at < to);
-      // a's and c's kept chunks, b's new ones between them.
       expect(beat(0, 5)(changed.master)).toEqual(beat(0, 5)(first.master));
       expect(beat(10, 20)(changed.master)).toEqual(beat(10, 20)(first.master));
       expect(beat(5, 10)(changed.master)).not.toEqual(beat(5, 10)(first.master));
@@ -426,7 +414,6 @@ describe.concurrent("a film render's segments", () => {
         const both = yield* render(video(keyed()));
         expect(both.drawn).toEqual(frames(0, 40));
         expect(both.master.map((s) => s.at)).toEqual(both.share.map((s) => s.at));
-        // Its segments now hold both copies: a render of the master alone draws nothing.
         const master = yield* render(video(keyed(), Picture.Scenes({ review: false }), 'master'));
         expect(master.drawn).toEqual([]);
         expect(master.master).toEqual(both.master);
@@ -446,7 +433,6 @@ describe.concurrent("a film render's segments", () => {
         expect(master.master.map((s) => s.file)).not.toContainAnyValues(
           review.master.map((s) => s.file),
         );
-        // Each keeps its own: drawn again, neither draws a frame.
         expect((yield* render(reviewed)).drawn).toEqual([]);
         expect((yield* render(video(keyed()))).drawn).toEqual([]);
       }).pipe(atDayZero),
@@ -471,11 +457,8 @@ describe.concurrent("a film render's segments", () => {
         const on = (days: number, job: RenderJob) =>
           render(job).pipe(Effect.provideService(Clock.Clock, onDay(days)));
         yield* on(0, video(keyed()));
-        // Six days on, c changes: a's and b's segments are reused, so used now.
         const sixth = yield* on(6, video(keyed(new Map([...keys, ['c', 'key-c2']]))));
         expect(sixth.pruned).toEqual(['render.cache.pruned count=0 freed=0']);
-        // Ten days on, every beat changes: the first c, unused for ten days,
-        // goes; a and b (used four days ago) and c2 stay.
         const tenth = yield* on(
           10,
           video(
@@ -504,7 +487,6 @@ describe.concurrent("a film render's segments", () => {
         const release = yield* Deferred.make<void>();
         const on = (job: RenderJob, draw?: Draw) =>
           render(job, draw).pipe(Effect.provideService(Clock.Clock, onDay(0)));
-        // The first stops in b's frames, its a drawn and its b and c not yet kept.
         const one = yield* Effect.forkChild(
           on(video(keyed()), (i) =>
             Effect.when(
@@ -542,8 +524,6 @@ describe.concurrent("a film render's segments", () => {
         yield* render(video(keyed(new Map([...keys, ['b', 'key-b0']])))).pipe(
           Effect.provideService(Clock.Clock, onDay(0)),
         );
-        // Thirty days on, b changes: a's and c's segments, a month old, are
-        // reused, and the render stops while it draws b.
         const later = yield* Effect.forkChild(
           render(video(keyed()), (i) =>
             Effect.when(
@@ -562,19 +542,14 @@ describe.concurrent("a film render's segments", () => {
         expect(done.drawn).toEqual(frames(10, 20));
         const joined = held(done.master);
         expect(joined.held).toEqual(joined.placed);
-        // Done, it prunes the first b, a month unused and in no record.
         expect(done.pruned).toHaveLength(1);
         expect(done.pruned[0]).toMatch(/^render\.cache\.pruned count=1 /);
-        // What is left is exactly what it used.
         const pruned = yield* pruneByHand(30 * DAY, 0);
         expect(pruned.removed).toEqual([]);
         expect(pruned.found.segments).toHaveLength(3);
       }),
   );
 
-  // Every file a video render writes (a catalogued slot, an `--out` file) ×
-  // every way its record update stops short once its file is replaced: its
-  // record's write refused, or its join failed.
   for (const written of ['catalogued', 'out'] as const)
     for (const stop of ['record', 'join'] as const)
       it.effect(
@@ -593,7 +568,6 @@ describe.concurrent("a film render's segments", () => {
                 Effect.provideService(Clock.Clock, onDay(0)),
               );
             const first = yield* on(job(keys));
-            // Another output, a scene, is rendered and recorded, so the cache has a record whatever this file's says.
             const scene = `${film.paths.out}/scenes/a/main.mp4`;
             yield* onFiles(recordRender(film.paths.out, scene, 0, ['key-a']));
             yield* catalogued([
@@ -621,7 +595,6 @@ describe.concurrent("a film render's segments", () => {
             );
             const pruned = yield* pruneByHand(0, 0);
             expect(pruned.removed).toEqual([]);
-            // a, c and both b's.
             expect(pruned.found.segments).toHaveLength(4);
           }),
       );
@@ -630,7 +603,6 @@ describe.concurrent("a film render's segments", () => {
     Effect.gen(function* () {
       const { render, onFiles } = project();
       yield* render(video(keyed())).pipe(Effect.provideService(Clock.Clock, onDay(10)));
-      // A clock behind the first render's: the fresh render's own mark is earlier.
       yield* render(video(keyed(keys, true))).pipe(Effect.provideService(Clock.Clock, onDay(9)));
       const found = yield* onFiles(readCache(film.paths.out));
       expect(found.segments.map((s) => s.used)).toEqual([10 * DAY, 10 * DAY, 10 * DAY]);
@@ -644,7 +616,6 @@ describe.concurrent("a film render's segments", () => {
       const job = video(keyed(), Picture.Board({ review: true }));
       yield* render(job);
       expect((yield* render(job)).drawn).toEqual([]);
-      // c's image is seen from 9.75 s, its dissolve in over b's last quarter second.
       yield* boarded(board, { 'c.png': 'c, one pixel changed' });
       expect((yield* render(job)).drawn).toEqual(frames(10, 40));
     }).pipe(atDayZero),
@@ -685,12 +656,10 @@ describe.concurrent("a film render's segments", () => {
           () => Effect.void,
           lengthened(panelsOnly),
         );
-        // a is new; b's first quarter second dissolves in from a's shot, which moved with a.
         expect(moved.drawn).toEqual(frames(0, 22));
         expect(moved.reuse).toEqual([
           'render.reuse segments=3 unpinned=3 drawn=2 frames_drawn=22 fresh=false',
         ]);
-        // c's chunks, as the first render drew them, play from 11 s now in place of 10 s.
         const c = (from: number, segments: typeof first.master) =>
           segments.filter((s) => s.at >= from).map((s) => ({ file: s.file, at: s.at - from }));
         expect(c(11, moved.master)).toEqual(c(10, first.master));
@@ -721,10 +690,7 @@ describe.concurrent("a film render's segments", () => {
     Effect.gen(function* () {
       const { render, holding, held } = project(new Map(), longer);
       yield* render(video(keyed(new Map([...longerKeys, ['b', 'key-b0']]))));
-      // b drawn alone and kept: one chunk, 25–35.
       yield* render(video(keyed(longerKeys)));
-      // b drawn whole: its first chunk, 25–30, written (the first render's
-      // b, key-b0, holds one too), then the render cut off.
       const cut = yield* Effect.exit(
         render(video(keyed(longerKeys, true)), (i) =>
           Effect.when(
@@ -749,7 +715,6 @@ describe.concurrent("a film render's segments", () => {
         const on = (job: RenderJob) =>
           render(job).pipe(Effect.provideService(Clock.Clock, onDay(0)));
         yield* on(video(keyed()));
-        // b changes, and the film is rendered again with its share copy alone.
         const changed = new Map([...keys, ['b', 'key-b2']]);
         const shareOnly = yield* on(
           video(keyed(changed), Picture.Scenes({ review: false }), 'share'),
@@ -757,7 +722,6 @@ describe.concurrent("a film render's segments", () => {
         expect(shareOnly.drawn).toEqual(frames(10, 20));
         expect(shareOnly.target).toBe(`${film.paths.out}/film/main.share.mp4`);
         yield* catalogued([], [shareOnly.target]);
-        // The first b, which only the master's record named, goes; a, c and the new b stay.
         const pruned = yield* pruneByHand(0, 0);
         expect(pruned.removed).toHaveLength(1);
         expect(pruned.found.segments).toHaveLength(4);

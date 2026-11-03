@@ -1,7 +1,3 @@
-// The browser player, framework-free. A page with a film on it stages it
-// here (`stageFilm`): the render page (`render.ts`, `mountRender`). So the
-// render page loads no Solid.
-
 import type { Film } from '../canvas/film.ts';
 import type { FilmUnloadable } from './narrated.ts';
 import { Effect, Option, Scope } from 'effect';
@@ -56,16 +52,11 @@ export const stageFilm = async (films: Films, href: string): Promise<Staged> => 
   const load = films[name];
   if (load === undefined)
     throw new Error(`unknown film "${name}"; have ${Object.keys(films).join(', ')}`);
-  // The page's own scope, never closed: the staged film's rigs live as long as the page.
   const film = await Effect.runPromise(Scope.provide(load, Scope.makeUnsafe()));
 
   const canvas = document.createElement('canvas');
   canvas.width = film.width;
   canvas.height = film.height;
-  // Not `willReadFrequently`: Chrome moves a context left unset back to
-  // software after its first read, and the one-pixel read after each frame
-  // (`drawn`) is one, so a page would draw its first frames on the GPU and the
-  // rest in software, and the segments' encodes would not join.
   const ctx = canvas.getContext('2d', { willReadFrequently: false });
   if (ctx === null) throw new Error('2d context unavailable');
   const stage = document.createElement('div');

@@ -1,10 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/utils/composite.ts
-//
-// One-dimensional list stepping over a list of item elements: the next
-// enabled index in a direction, the first and last enabled indexes, and
-// whether an item counts as disabled (hidden, `:disabled`, `disabled`,
-// `aria-disabled`). Grid navigation is not ported: no part here lays items
-// out in a grid.
 import { getComputedStyle } from '@floating-ui/utils/dom';
 
 export function isIndexOutOfListBounds(list: ReadonlyArray<HTMLElement | null>, index: number) {

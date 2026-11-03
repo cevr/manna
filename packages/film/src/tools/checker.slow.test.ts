@@ -1,7 +1,3 @@
-// Checker with fakes: every sampled frame is probed once on the page pool, the
-// boxes it reports become findings, and a broken page fails the check with
-// every page, the browser and the server closed. No Chromium.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, Exit, Layer, Option, Result } from 'effect';
 import { type Address, resolveAddress } from '../core/address.ts';
@@ -111,7 +107,6 @@ describe('Checker', () => {
           [1000, 500],
           [1000, 800],
         ]);
-        // Still, but for `ambient`, where the figure drifts a pixel a frame (snow, a sway).
         const drawn = (i: number) => {
           if (inAmbient(i)) return { ...figure, x: figure.x + i };
           return figure;
@@ -129,7 +124,6 @@ describe('Checker', () => {
         const findings = yield* check();
         expect(findings).toMatchObject([{ _tag: 'StaticHold', scene: 'held', max: 4 }]);
         expect(findings[0]).toMatchObject({ from: expect.closeTo(1.4), to: expect.closeTo(6.4) });
-        // Every tick across `held`, each once; across `ambient` its grid, which moves at every step.
         const probedHeld = holdTicks({ from: 1.4, to: 6.4 }, fps).length;
         const probedAmbient = holdGrid(
           holdTicks({ from: ambient.start + 1.4, to: ambient.start + 6.4 }, fps),
@@ -157,7 +151,6 @@ describe('Checker', () => {
   it.live('D2: an undeclared 0.5 s move, then 8.5 s still, reports the still run', () =>
     Effect.gen(function* () {
       const fps = testExportInfo.fps;
-      // 5 px a frame from 1.4 s to 1.9 s (no cue declares it), then still to the end.
       const findings = yield* checkLong((i) => 5 * Math.min(Math.max(0, i - 1.4 * fps), 0.5 * fps));
       expect(findings).toMatchObject([{ _tag: 'StaticHold', scene: 'long', max: 4 }]);
       expect(findings[0]).toMatchObject({
@@ -170,7 +163,6 @@ describe('Checker', () => {
   it.live('D3: a visible sway whose period divides the probe step is motion', () =>
     Effect.gen(function* () {
       const fps = testExportInfo.fps;
-      // 12 px peak to peak with a 0.5 s period: a walk bob.
       const findings = yield* checkLong((i) => 6 * Math.sin((2 * Math.PI * i) / (0.5 * fps)));
       expect(findings).toEqual([]);
     }),
@@ -219,7 +211,6 @@ describe('Checker.short', () => {
 
   it.live("resolves the short on its film's declared rate, the one its page draws at", () =>
     Effect.gen(function* () {
-      // Scene a whole, of a film declared at 24 fps: 10 s is 240 frames, not 300.
       const whole: Short = {
         id: 'cut',
         title: 'Cut',
@@ -230,7 +221,6 @@ describe('Checker.short', () => {
       const findings = yield* check;
       expect(Math.max(...ledger.frames)).toBe(239);
       expect(findings).toContainEqual(expect.objectContaining({ _tag: 'ShortLength', length: 10 }));
-      // --static probes no frame, and resolves the short on the same rate.
       const words = setupShort({ info: page }, whole, true, { ...film, fps: 24 });
       const only = yield* words.check;
       expect(words.ledger.frames).toEqual([]);
@@ -240,7 +230,6 @@ describe('Checker.short', () => {
 
   it.live("compares the loop on the film's own frame, however tall the film is drawn", () =>
     Effect.gen(function* () {
-      // A 4:3 film: its band on the short's page is 810 px tall, not the 608 of a 16:9 one.
       const filmPage = { width: 1080, height: 810, fps: 30, duration: 20, frames: 600 };
       const areas: Array<LumaArea> = [];
       const { check } = setupShort({
@@ -253,7 +242,6 @@ describe('Checker.short', () => {
         },
       });
       yield* check;
-      // Every cell of the first and last frames reads the one band.
       const band = { x: 0, y: 620, w: 1080, h: 810, cols: 64, rows: 36 };
       expect(areas.length).toBe(2 * 64 * 36);
       for (const area of areas) expect(area).toEqual(band);
@@ -266,7 +254,6 @@ describe('Checker.short', () => {
       Effect.gen(function* () {
         const { ledger, check } = setupShort({
           info,
-          // The film's title, still, and a label under the right-hand buttons.
           probe: () =>
             Effect.succeed({
               texts: [
@@ -278,7 +265,6 @@ describe('Checker.short', () => {
           luma: (i) => Math.min(255, i * 8),
         });
         const findings = yield* check;
-        // The silent two-second fixture's words first (too short, no word heard, no gap), then its frames.
         expect(findings.map((f) => f._tag).sort()).toEqual([
           'ShortHook',
           'ShortHook',
@@ -300,7 +286,6 @@ describe('Checker.short', () => {
         expect(findings).toContainEqual(
           expect.objectContaining({ _tag: 'ShortLoop', reason: 'picture' }),
         );
-        // The short's own page, and the film's for its title.
         expect(ledger.urls.some((u) => u.includes(encodeURIComponent('/shorts/cut')))).toBe(true);
         expect(ledger.urls.some((u) => u.includes(`film=${film.paths.name}&`))).toBe(true);
         expectAllClosed(ledger);
@@ -315,7 +300,6 @@ describe('Checker.talk', () => {
       const ledger = emptyLedger();
       const host: FakeRenderHost = {
         info: { width: 1080, height: 1920, fps: 30, duration: 2, frames: 60 },
-        // A caption reaching x 888 below y 840: inside YouTube's and Reels' zones, under TikTok's buttons.
         probe: () =>
           Effect.succeed({
             texts: [{ ...textBox('the law', 228, 1100, 660, 60), caption: true }],
@@ -334,7 +318,6 @@ describe('Checker.talk', () => {
         );
         expect(findings[0]).toMatchObject({ side: 'right', by: 888 - 780, own: true });
         expect(findings[1]).toMatchObject({ reason: 'still open' });
-        // The talk's own page: every half second of it, and its open.
         expect(ledger.urls.every((u) => u.includes(`film=${film.paths.name}&`))).toBe(true);
         expectAllClosed(ledger);
       });

@@ -1,9 +1,3 @@
-// Jeremiah's cut views' frames on his kept heads sheet: each part sheet is cut
-// from its view's kept box (`cast-sheet.json`) padded, so the outer ink of
-// his headcloth and shoulders, which runs a pixel past the kept box, is
-// whole. His cut (`cut.ts`), part sheets (`sheets/<view>/`) and skeletons
-// (`skeleton.ts`) are in this frame (`library/cutout/frames.ts`). Pure data.
-
 import { framesOf } from '../../../cutout/frames.ts';
 
 type Box = readonly [number, number, number, number];

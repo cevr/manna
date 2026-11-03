@@ -1,15 +1,3 @@
-// Code sounds built from a few musical settings: each preset a function that
-// gives a graph (nodes.ts), the one place its sound's shape is written. A
-// preset computes its data with the graph's own maths (math.ts), so the same
-// settings give the same graph, hash and samples on every host.
-//
-// The tones come first: `room`, `chime`, `drone`, `drain`, `bloom` and
-// `notes`, each made from a root note, a length or both. The families after
-// them (`burst`, `thump`, `knock`, `scatter`, `whoosh`, `hiss`, `sizzle`,
-// `breeze`, and `rain` with its roof) are the shapes the library's other
-// code sounds are built from: a few settings each, and the variation their
-// seeds draw. `@manna/film/core` exports them all to the app.
-
 import { dbToGain, exp, exp2, log } from './math.ts';
 import type { Node, Pitch, Ramp, Value } from './nodes.ts';
 import { noteMidi, pitchHz } from './pitch.ts';
@@ -275,7 +263,6 @@ export const bloom = (settings: { readonly root: string; readonly secs: number }
       secs,
       of: [
         { node: shimmer, db: db(0.25) },
-        // Each note a little after the last: k · 90 ms, and up to 40 ms more.
         ...BLOOM_DEGREES.map((degree, k) => ({
           node: note(degree),
           at: { _tag: 'Vary', min: k * 0.09, max: k * 0.09 + 0.04 } as const,
@@ -293,7 +280,6 @@ export const notes = (settings: {
   readonly secs: number;
 }): Node => {
   const secs = settings.secs;
-  // The plinks spread over the first 70 % of the sound, each up to 60 % of its step late.
   const every = (secs * 0.7) / settings.count;
   const plink: Node = levelBetween(0.5, 1, {
     _tag: 'Partials',
@@ -420,11 +406,6 @@ export const rain = (settings: {
   };
 };
 
-// Families: the shapes the library's code sounds are built from, each with
-// the few settings a sound chooses and the variation its seeds draw. A sound
-// layers them (apps/animations/sounds/library.ts); a family's shape lives
-// here once, so an edit to it changes the key of every sound built from it.
-
 /** A level `gain` dB from full scale. */
 const level = (gain: number): number => dbToGain(gain);
 
@@ -516,9 +497,6 @@ export const thump = (settings: {
  * modes', and when it has fallen by 80 dB.
  */
 const MATERIALS = {
-  // A hardwood block: a low body mode, two strong modes a little over an
-  // octave apart and fainter ones above, damped within a few hundredths of a
-  // second, so it knocks rather than rings; its contact a bright click.
   wood: {
     modes: [
       { ratio: 0.6, level: 0.3, decay: 0.015 },
@@ -531,8 +509,6 @@ const MATERIALS = {
     ],
     contact: { color: 'pink', low: 1.2, high: 6, db: 8, decay: 0.03 },
   },
-  // A stone slab: dense low modes, ringing a little longer; its contact a
-  // dull crack of dark noise, louder than its modes.
   stone: {
     modes: [
       { ratio: 1, level: 0.6, decay: 0.03 },

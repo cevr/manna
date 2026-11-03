@@ -97,8 +97,6 @@ const LINKS: ReadonlyArray<readonly [search: string, written: string]> = [
   ['q=x&limit=', '/?q=x'],
   ['q=x&limit=abc', '/?q=x'],
   ['q=x&limit=Infinity', '/?q=x'],
-  // A limit that truncates to nothing is the default: it once read as 0 and
-  // wrote `limit=0`, which read back as 40.
   ['q=x&limit=0.5', '/?q=x'],
   ['q=x&noref=0', '/?q=x'],
   ['q=x&noref=true', '/?q=x'],
@@ -111,9 +109,6 @@ const LINKS: ReadonlyArray<readonly [search: string, written: string]> = [
   ['q=caf%C3%A9+%26+cr%C3%A8me', '/?q=caf%C3%A9+%26+cr%C3%A8me'],
   ['q=a%2Bb%3Dc', '/?q=a%2Bb%3Dc'],
   ['q=%E1%BC%80%CE%B3%CE%AC%CF%80%CE%B7', '/?q=%E1%BC%80%CE%B3%CE%AC%CF%80%CE%B7'],
-  // The first pane is always there, so a link whose first pane is at its
-  // defaults keeps its later panes. It once read as one pane, so "+ pane" on
-  // an empty first pane wrote `/?q2=` and no second pane appeared.
   ['q2=b', '/?q2=b'],
   ['q2=', '/?q2='],
   ['scope=bible', '/'],

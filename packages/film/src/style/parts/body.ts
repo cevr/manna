@@ -1,13 +1,3 @@
-// What a figure wears: the garment its body is cut as, one piece in its
-// paper, the papers of its states laid inside it (`states.ts`) and what lies
-// on it with no line of its own (`over.ts`). A tunic is cut from its neck
-// down to its hem: narrow at one, wide at the other, its sides bowed out, its
-// corners rounded. A cut robe is its corners, each rounded by its own radius,
-// down to its hem; a traced robe is its concept's outline, as the concept
-// cuts it. On a robe lies the colour laid on it, clipped to it (a sash, a
-// sleeve, a vest, the shade past them, the skin in its neckline). How each is
-// cut and inked is the house's (`rig/draw.ts`). Pure.
-
 import { Match, Schema } from 'effect';
 import { decoder } from '../decode.ts';
 import { GarmentTones, Paper } from '../paper.ts';

@@ -11,14 +11,14 @@ const layer = Layer.mergeAll(
   PuppetImagesBun.pipe(Layer.provide(BunServices.layer)),
 );
 
-// Fixed cap pixels from the review's shoulder crops. The single ink pixel
-// is unchanged while the real forearm and hand move. A moving exclusion
-// cannot hide it, even when that pose's silhouette crosses the fixed cap.
-for (const [key, part, elbow, wrist, x, y] of [
+/** Fixed cap pixels from the review's shoulder crops: each single ink pixel is unchanged while the real forearm and hand move, so a moving exclusion cannot hide it, even when that pose's silhouette crosses the fixed cap. */
+const FIXED_CAPS = [
   ['villager-child/cutout/poses-5', 'armRight', 90, 0, 77, 185],
   ['lead-feast/cutout/single-9', 'armRight', 45, -38, 211, 500],
   ['idea-villagers/cutout/poses-3', 'armLeft', 60, -51, 214, 170],
-] as const)
+] as const;
+
+for (const [key, part, elbow, wrist, x, y] of FIXED_CAPS)
   it.effect.layer(layer)(`${key}: moving alpha cannot exempt unchanged shoulder ink`, () =>
     Effect.gen(function* () {
       const views = yield* cutViews;

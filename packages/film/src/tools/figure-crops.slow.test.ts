@@ -1,10 +1,3 @@
-// The figure measure on real crops: the cold.34 concept's prosecutor
-// against the table measured by hand on the concept, RBF cold's prosecutor
-// at 3.87 s (his hair dark and grained) against his head measured by hand
-// on the frame, RBF court's Christ at 20.01 s (a front light's lit band on
-// his dark hair) against his head's outline, and a round-3 scene still of
-// the judge whose hair carried its own line. The crops are PNGs, so they are decoded here, past core.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Result } from 'effect';
@@ -59,7 +52,6 @@ describe('a real crop', () => {
     () =>
       Effect.gen(function* () {
         const m = yield* measuredFixture('rbf-cold-prosecutor-head.png');
-        // By hand on the frame: the outline's outer edge from x 30 to 216, y 21 (the hair's top) to 241 (the chin's).
         expect(Math.abs(valueOf(m, 'headHeight') / (221 / 187) - 1)).toBeLessThan(0.05);
       }),
   );
@@ -69,10 +61,8 @@ describe('a real crop', () => {
     () =>
       Effect.gen(function* () {
         const m = yield* measuredFixture('rbf-court-christ-front-lit-2001.png');
-        // By hand on the frame: the outline's outer edge from x 42 to 442 over the head's rows.
         expect(Math.abs(m.head[0] - 42)).toBeLessThanOrEqual(2);
         expect(Math.abs(m.head[2] - 442)).toBeLessThanOrEqual(4);
-        // Dark hair round the face, the band on it: the hair's paper, no line of its own.
         expect(valueOf(m, 'interiorInk')).toBeLessThan(0.02);
       }),
   );

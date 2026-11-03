@@ -126,7 +126,6 @@ describe('wordlight: hymn 11 lights its sung word as it is sung', () => {
       expect(line.start).toBeLessThanOrEqual(27_000);
       expect(line.until).toBeGreaterThan(27_000);
       using page = mount(chords);
-      // The owner's place, then each syllable start through the line.
       const steps = [27_000, ...line.times.filter((t) => t >= line.start && t < line.until)];
       const lit = new Set<number>();
       for (const ms of steps) {

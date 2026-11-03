@@ -1,19 +1,3 @@
-// Upstream: packages/react/src/internals/composite/list/CompositeList.tsx,
-// packages/react/src/internals/composite/list/useCompositeListItem.ts,
-// packages/react/src/internals/composite/list/CompositeListContext.ts
-//
-// The registry of a list's items (menu items, a toggle group's toggles): each
-// item registers its element, and gets its index, its position among the
-// connected items in document order. The list
-// keeps `elementsRef` (for list navigation) and `labelsRef` (for typeahead)
-// in index order. Registrations made in one tick are applied together on
-// the next microtask; a move of items in the DOM re-sorts them. An item
-// that asks to `guess` starts at its place in render order (the list counts
-// the items made since its last flush, after the registered ones), so a flat
-// list has its indices before its elements exist: in the server's render,
-// which never registers, and in the browser's first; registration corrects
-// a wrong guess. Upstream guesses to spare a flat list its re-render after
-// mount; here the guess is also the index the server renders with.
 import type { JSX } from '@solidjs/web';
 import { type Accessor, createContext, createSignal, onCleanup, useContext } from 'solid-js';
 
@@ -55,7 +39,6 @@ interface CompositeListProps {
 }
 
 function sortByDocumentPosition(a: Element, b: Element) {
-  // Adjacent siblings first: compareDocumentPosition scans siblings, quadratic over a long flat list.
   if (a.nextElementSibling === b) {
     return -1;
   }
@@ -106,7 +89,6 @@ export function CompositeList(props: CompositeListProps): JSX.Element {
   let disposed = false;
   let previousItems: readonly CompositeListItemEntry[] | null = null;
   let mutationObserver: MutationObserver | null = null;
-  // Items made after a flush come after the ones it registered.
   let nextIndex = 0;
 
   const syncRefs = (items: readonly CompositeListItemEntry[]) => {
@@ -136,7 +118,6 @@ export function CompositeList(props: CompositeListProps): JSX.Element {
       return;
     }
     const observer = new MutationObserver((entries) => {
-      // Only a move (a node removed and re-added in one batch) can reorder the rest.
       if (!hasMovedNode(entries)) {
         return;
       }
@@ -154,7 +135,6 @@ export function CompositeList(props: CompositeListProps): JSX.Element {
       }
     });
     mutationObserver = observer;
-    // A reorder inverts at least one adjacent pair; watching each pair's common parent sees it.
     const roots = new Set<Element>();
     sortedNodes.forEach((node, i) => {
       const previous = sortedNodes[i - 1];

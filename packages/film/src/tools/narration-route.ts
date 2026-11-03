@@ -1,14 +1,3 @@
-// The narration route, `/films/<film>/narration/<file>`, for the player and
-// the lab alike: which file a URL names. The film is one of
-// the films now (one of its `filmMarks` exists, read per request, so a film made
-// while the server runs is served), the file one directly in its
-// `narration/` (never `attempts/`, never a path, never a dotfile) and on
-// disk. Any other URL names none, a 404. The app's server answers the file;
-// the studio rewrites these files in place (a take kept, the track remixed),
-// so it serves them uncached. The Board a render page draws (`film render
-// --board`) is served the same way: `/films/<film>/board.json` and an image
-// directly in its `board/` (`boardFile`, the page's `boardUrls`).
-
 import { Effect, FileSystem, Option, Path } from 'effect';
 import { filmMarks } from './film-repo.ts';
 

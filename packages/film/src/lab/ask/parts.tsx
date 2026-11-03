@@ -1,21 +1,3 @@
-// An ask's page, in parts the page composes: its head (what is asked, why,
-// by when), the index of its sections (each a jump to it, ✓ once its
-// questions are answered), its sections on one page (each a step the
-// owner's answers reach, headed `2 of 3 · The Board` and held at the top
-// while it is read: its blocks, each primitive its own part: a heading,
-// prose, a picture, a choice, a free text, and the material it is about,
-// `material.tsx`), the one send held in reach (how many questions are
-// answered; a Send with one open goes to it, marks it and names it), and
-// the ask once answered (every answer, typed) or closed. On a page of asks
-// each ask is a part of its own: headed under the page's title
-// (`PartHead`), shown while it asks (`WhileAsking`), folded to a line of its
-// answers once settled (`Folded`), and the one the page takes the owner to
-// (`TakeTo`). Every element a part finds is found inside its own ask
-// (`[data-ask]`), so two asks' steps and answers of one name never meet. Each part reads
-// the ask's provider (`context.tsx`) and nothing else, so a page is only
-// which parts it shows and where; no part takes a flag that changes what it
-// is.
-
 import { For, type JSX, Show } from '@solidjs/web';
 import { Toggle } from '@manna/ui/toggle';
 import { ToggleGroup } from '@manna/ui/toggle-group';
@@ -121,7 +103,6 @@ const HEAD_IN = '.ak-section-h';
  * key did).
  */
 const goTo = (el: HTMLElement, focus: string, input: Input) => {
-  // A question sits under its section's held head however many lines the head wraps to.
   if (!el.matches('.ak-step'))
     Option.map(
       Option.fromNullishOr(el.closest('.ak-step')?.querySelector<HTMLElement>(HEAD_IN)),
@@ -184,7 +165,6 @@ const indexTitle = (step: Section['step'], n: number): string =>
 export const Index = () => {
   const { state } = useAsk();
   const { meta } = useAskRoot();
-  // Each entry is drawn once by its section's name, as the sections are: a keystroke redraws none.
   const names = createMemo(() => state.sections().map((s) => s.name));
   const titleOfStep = (name: string, n: number) =>
     Option.match(
@@ -448,7 +428,6 @@ export const Submit = () => {
   const { state, actions } = useAsk();
   const { meta } = useAskRoot();
   const sending = () => state.phase() === 'Sending' || state.phase() === 'Rereading';
-  // Only an open page sends: one send is out at a time, and a gone ask takes none.
   const shut = () => state.phase() !== 'Open';
   createEffect(
     () => state.missing(),

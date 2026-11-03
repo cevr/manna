@@ -1,15 +1,3 @@
-// A build's render worker (`page-render.ts`): one per build, so the build's
-// server bundle is imported fresh and gone with the worker (Bun keeps a
-// module it imported for the life of its thread, so the lab's own thread
-// never imports one). Each `Render` imports the page's server entry (once
-// per worker) and runs its `PageRender` at the URL asked, its writes sent on
-// as they come; the render's fetch sends each GET to the lab as a `Read` and
-// waits for its `Answer` (`page-render-reads.ts`). A render is a fiber from
-// its `Render` on, so a `Cancel` stops it wherever it is: still loading its
-// entry (it then never starts), or rendering (its signal aborts). A render
-// over (ended, failed or cancelled) aborts each read it still waits on and
-// says nothing more.
-
 import * as BunWorkerRunner from '@effect/platform-bun/BunWorkerRunner';
 import { Deferred, Effect, Exit, FiberMap } from 'effect';
 import * as WorkerRunner from 'effect/workers/WorkerRunner';
@@ -36,8 +24,6 @@ const serve = Effect.gen(function* () {
   const render = (message: ToRender & { readonly _tag: 'Render' }) => {
     const { id } = message;
     return Effect.gen(function* () {
-      // The render's own, before anything is loaded: once it is over its
-      // reads are aborted and its sink is shut, and a cancel aborts its signal.
       const live = yield* Effect.acquireRelease(
         Effect.sync(() => ({ controller: new AbortController(), open: true })),
         (owned, exit) =>

@@ -1,14 +1,3 @@
-// Headless Chrome, as a service: a player page in a tab of the process's
-// Chrome (`tools/chrome.ts`, Bun.WebView), and the one typed path every call
-// on an export page takes (`framePage`). Each page lives in the scope that
-// opened it; Chrome lives as long as the process. A call names one of the
-// handle's calls (`ExportCalls`, core/export-handle.ts), its answer is
-// decoded by that call's schema, and its failure is that call's own error
-// (`CALLS`). The tab and the test fake (tools/browser/testing.ts) are the two ways a
-// call reaches a page (`Invoke`). Everything the film does wrong in a page
-// arrives as a typed failure: an uncaught error (`Runtime.exceptionThrown`)
-// is `PageError`, a dead renderer process is `PageCrashed`.
-
 import {
   Context,
   Deferred,
@@ -112,7 +101,6 @@ const CALLS: CallPolicies = {
     timeout: FRAME_TIMEOUT,
     fail: ([frame], reason) => FrameFailed.make({ frame, reason }),
   },
-  // It draws nothing: the page answers from its film's own decision, frame by frame.
   filmTimed: {
     timeout: FRAME_TIMEOUT,
     fail: ([frame], reason) => FrameFailed.make({ frame, reason }),
@@ -250,12 +238,10 @@ const openPage = (view: Bun.WebView, url: string) =>
   Effect.gen(function* () {
     const broken = yield* Deferred.make<never, PageError | PageCrashed>();
     const loadFailed = (cause: unknown) => PageLoadFailed.make({ url, reason: String(cause) });
-    // A view takes one script at a time.
     const one = yield* Semaphore.make(1);
     const evaluate = <A>(script: string) =>
       one.withPermits(1)(Effect.tryPromise(() => view.evaluate<A>(script)));
 
-    // The protocol answers once the view has navigated.
     yield* Effect.tryPromise({ try: () => view.navigate('about:blank'), catch: loadFailed });
     view.addEventListener('Runtime.exceptionThrown', (event: Event) => {
       Option.map(thrownBy(event), (reason) =>
@@ -299,7 +285,6 @@ const openPage = (view: Bun.WebView, url: string) =>
 
     yield* loading(Effect.tryPromise(() => view.navigate(url)));
     yield* loading(evaluate(HANDLE));
-    // The player names the page after the film it mounted.
     const title = yield* loading(evaluate<string>('document.title'));
     const reported = yield* loading(evaluate('window.__film.info'));
     const info = yield* Schema.decodeUnknownEffect(ExportInfo)(reported).pipe(

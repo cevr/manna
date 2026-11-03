@@ -1,21 +1,3 @@
-// A member's cast render (`film concept render`): each kept view of his
-// sheets drawn by its rig, held to the view the owner kept. The film's table
-// (`rigs/cast.ts`, `CastTable`) names a rig and a pose for every kept view;
-// its page (`<film>/cast/<member>`, `player/cast.ts`) draws each kind of his
-// sheets as one still on a canvas the sheet's size, through the export page
-// a render draws with (`Pages`). Each view is cut from that still and from
-// the kept sheet by its kept box, both measured and compared with the
-// match's own code (`measureFigure`, `compareFigures`, `matchTable`), held
-// to its fit rows (`core/fit-rows.ts`: its member's classes and its own
-// probes and bars from the table), laid side by side at 1:1, and shown to a
-// fresh model at 1:1 once every fit row passes (`Critic`, one run a sheet,
-// with the view's clause of the sheet's layout, `askedOf`); a view whose rows
-// fail is never sent, its critique skipped with them (`fitHeld`). It all
-// lands in `out/<film>/cast/<member>/render/<n>/` with its record
-// (`render.json`, `core/cast-render.ts`) and summary (`render.md`). A
-// finding is answered on the render that found it (`answerCast`): it stands,
-// and why; a fix is a new render.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -571,7 +553,6 @@ const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: S
   );
   if (at.write) yield* fs.writeFile(path.join(dir, `${kind}.render.png`), png);
   const drawn = yield* Effect.fromResult(decodePng(png));
-  // The layout the kind was drawn from, a single drawing's too, which has no plan.
   const layout = Option.getOrElse(
     Option.orElse(
       Option.flatMap(Result.getSuccess(castKindPlan(record, kind)), (p) => p.layout),
@@ -587,7 +568,6 @@ const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: S
   const asked = keptViews(record, kind)
     .filter((v) => at.views.length === 0 || at.views.includes(`${kind}-${v.name}`))
     .filter((v) => drawnViews(at.table, member, kind, at.figure).includes(v.name));
-  // Each kept file is read once: a sheet's views share it, a single drawing has its own.
   const byFile = Rec.toEntries(Arr.groupBy(asked, (v) => keptFile(kind, v.name)));
   const cuts = (yield* Effect.forEach(byFile, ([file, views]) =>
     fs.readFile(path.join(at.folder, file)).pipe(
@@ -614,7 +594,6 @@ const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: S
   if (!at.write) return yield* critiqued(at, kind, cuts, place, layout);
   yield* Effect.forEach(cuts, (cut) => writeCut(dir, place, member, kind, cut));
   const views = yield* critiqued(at, kind, cuts, place, layout);
-  // A skipped critique is written as skipped, with its reason, in the view's file.
   yield* Effect.forEach(views, (v) =>
     Option.match(v.skipped, {
       onNone: () => Effect.void,
@@ -667,7 +646,6 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     });
   const kinds = yield* renderedKinds(member, table, record, ask, figure);
   const root = yield* renderRoot(film, member);
-  // A read of the fit rows alone writes nothing: no render folder is taken.
   const { n, dir } = yield* Bool.match(ask.fitOnly, {
     onTrue: () => Effect.succeed({ n: 0, dir: root }),
     onFalse: () => reserveNumbered(root),
@@ -682,8 +660,6 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     return { pool, scenes: yield* pool.call('scenes') };
   });
   const { pool, scenes } = yield* open();
-  // A page is one canvas: a cut-out kind whose sheet is not the size of the
-  // member's first is drawn by a page of its own, at its own size.
   const own = new Map(
     yield* Effect.forEach(
       kinds.filter((kind) => figure === 'cutout' && !scenes.some((s) => s.id === kind)),

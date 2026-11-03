@@ -40,7 +40,6 @@ export const SignUp = () => (
         <span class="button-label">Email me new films</span>
       </button>
     </div>
-    {/* No one sees this field; a bot that fills every field fills it. */}
     <div class="signup-trap" aria-hidden="true">
       <label for="signup-website">Leave this empty</label>
       <input

@@ -1,12 +1,3 @@
-// The props `cold` draws on the feast's table, as small painted plates
-// (`PaintingSpec`): the letter's scroll, keyed out of the kept prop sheet
-// (`prop-sheet/tries/props-3.png`) on its flat paper, rolled and open with
-// its gold seal, and the open scroll's lower roller cut from it so a scene
-// unrolls the scroll from the top down. Each PNG is imported beside its spec
-// and clear on all four sides. Each is placed about its own anchor, so a
-// scene translates and scales it to its place: the rolled scroll's foot, and
-// the open scroll's top. Pure data.
-
 import type { PaintingSpec } from '@manna/film/canvas';
 import openPng from './scroll-open.png' with { type: 'file' };
 import rolledPng from './scroll-rolled.png' with { type: 'file' };

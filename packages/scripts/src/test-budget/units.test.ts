@@ -20,7 +20,6 @@ describe("a workspace's unit-test tasks", () => {
     const dry: DryRun = {
       tasks: [
         task('@manna/ui#test', 'bun test src'),
-        // A workspace cut into parts: its `test` has no script, and depends on each part.
         task('@manna/film#test', '<NONEXISTENT>', [
           '@manna/film#test:tools',
           '@manna/film#test:lab',
@@ -29,7 +28,6 @@ describe("a workspace's unit-test tasks", () => {
         task('@manna/film#test:tools', 'bun test ./src/tools', ['@manna/core#transit']),
         task('@manna/film#test:lab', 'bun test ./src/lab'),
         task('@manna/film#test:engine', 'bun test src lint'),
-        // A dependency's `transit` task has no script: it only carries its workspace's files.
         task('@manna/core#transit', '<NONEXISTENT>'),
         task('@manna/core#test', 'bun test'),
       ],
@@ -55,7 +53,6 @@ describe("a workspace's unit-test tasks", () => {
   test('are not a task the test run reaches for another reason, though it has a command', () => {
     const dry: DryRun = {
       tasks: [
-        // A `transit` and a `build` given scripts, a part no `test` depends on, and another workspace's part.
         task('@manna/core#transit', 'bun scripts/transit.ts'),
         task('@manna/core#build', 'tsc -b', []),
         task('@manna/core#test', 'bun test', ['@manna/core#build']),

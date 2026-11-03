@@ -1,19 +1,3 @@
-// The browser tests' Chrome: Bun's one per test process (`tools/chrome.ts`),
-// launched by the first case that opens a tab. A case's tab is lent from a
-// pool of views and goes back to it when the case ends, so a case pays for a
-// page load, not for a new renderer: a fresh view costs Chrome a renderer
-// process and a cold compile of the page's script, three to four times the
-// CPU of the load itself. Each case still gets an origin of its own
-// (`https://<n>.lab.test`, secure, so the microphone may be asked for; plain
-// `http://` when a case is the phone's link), so
-// cases running at once, or one after another in a view, share no storage
-// and no permissions; and between cases the view waits on an empty page of
-// the tests' site, its history, scripts and listeners dropped (`lend`).
-// Scripts load from one origin for every case (`asset`), so a view's
-// renderer compiles them once. The process's flags are the same for every
-// case: the renderer's software 2D canvas, media that plays without a
-// gesture, and one fake microphone every case shares (`FAKE_MIC`).
-
 import type { SourceMap } from 'node:module';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
@@ -63,24 +47,12 @@ const micFile = Effect.gen(function* () {
 const flags = Effect.runSync(
   Effect.cached(
     Effect.map(micFile, (wav) => [
-      // The renderer's software 2D canvas (`tools/browser.ts`), as every test draws.
       '--disable-accelerated-2d-canvas',
-      // WebGL 2 on SwiftShader, Chrome's software GPU, so a rig the Rive Renderer
-      // draws (`src/rive`) is drawn: the tests ask for no GPU, so their Chrome keeps the
-      // `--disable-gpu` Bun spawns it with, and SwiftShader is the only WebGL it can have.
       '--enable-unsafe-swiftshader',
-      // Plays media without a gesture: the test is the reviewer, and it never clicks first.
       '--autoplay-policy=no-user-gesture-required',
       '--use-fake-device-for-media-stream',
       `--use-file-for-fake-audio-capture=${wav}`,
-      // The fake microphone's file is opened by Chrome's audio service, whose
-      // sandbox on macOS (and Windows) lets it open no file of ours: there it
-      // recorded silence. On Linux the service runs unsandboxed already.
       '--disable-features=AudioServiceSandbox',
-      // A desk's mouse: headless Chrome has no pointer, so `(pointer: none)`
-      // matched and every page took the phone's density. Fine (4) and hover
-      // (2), as Blink numbers them; touch emulation (a phone's lease) stands
-      // over them, and a view's next page has them again once it is off.
       '--blink-settings=primaryPointerType=4,availablePointerTypes=4,primaryHoverType=2,availableHoverTypes=2',
     ]),
   ),
@@ -369,7 +341,6 @@ export const openTab = (options: TabOptions): Effect.Effect<Tab, never, Scope.Sc
     });
     const origin = `${scheme}://t${tabs}.${SITE}`;
     const assets = new Map(options.assets.map((a) => [a.url, a.response]));
-    // The source map each of the case's scripts carries, read once.
     const maps = new Map<string, Option.Option<SourceMap>>();
     const mapFor = (url: string): Option.Option<SourceMap> =>
       Option.getOrElse(Option.fromUndefinedOr(maps.get(url)), () => {
@@ -386,7 +357,6 @@ export const openTab = (options: TabOptions): Effect.Effect<Tab, never, Scope.Sc
         origin,
         events,
         console: (type, args) => {
-          // A primitive as itself, an object as Chrome describes it.
           const text = args
             .map((arg) =>
               Option.match(described(arg), {
@@ -395,8 +365,6 @@ export const openTab = (options: TabOptions): Effect.Effect<Tab, never, Scope.Sc
               }),
             )
             .join(' ');
-          // A host reach is told by the page's own wrapper on the debug channel;
-          // a warning or an error in its spelling is the page's, and fails below.
           const told = Option.filter(Option.some(text), () => type === 'debug').pipe(
             Option.flatMap(toldOf),
           );
@@ -405,25 +373,17 @@ export const openTab = (options: TabOptions): Effect.Effect<Tab, never, Scope.Sc
             return;
           }
           logged.push({ type, text });
-          // A warning or an error at any time is the page doing what it does
-          // not mean: Solid's reactivity diagnostics (`[STRICT_…]`,
-          // `[NO_OWNER_CLEANUP]`) are warnings, and so is a hydration mismatch.
           if (type.startsWith('warn') || type === 'error') errors.push(`console.${type}: ${text}`);
         },
       },
       { width: options.width, height: options.height, coarse: options.coarse === true },
     );
-    // A case fails when its page threw, warned or logged an error at any time,
-    // not only where the case looks: checked as the case's scope closes,
-    // before the view goes back to the pool.
     yield* Effect.addFinalizer(() =>
       Effect.when(
         Effect.die(new Error(`the page reported ${errors.length}: ${errors.join(' | ')}`)),
         Effect.sync(() => errors.length > 0),
       ),
     );
-    // The page's main thread slowed `throttle` times (`Emulation.setCPUThrottlingRate`),
-    // and set back to full speed before the view goes back to the pool.
     if (Option.isSome(throttle)) {
       yield* Effect.promise(() =>
         slot.lent.cdp('Emulation.setCPUThrottlingRate', { rate: throttle.value }),
@@ -432,9 +392,6 @@ export const openTab = (options: TabOptions): Effect.Effect<Tab, never, Scope.Sc
         Effect.promise(() => slot.lent.cdp('Emulation.setCPUThrottlingRate', { rate: 1 })),
       );
     }
-    // Told through the view the case holds: Chrome drops what a protocol
-    // session told it when the session closes, and a pooled view's never
-    // closes while a case holds it.
     if (options.microphone)
       yield* Effect.promise(() =>
         slot.lent.cdp('Browser.setPermission', {

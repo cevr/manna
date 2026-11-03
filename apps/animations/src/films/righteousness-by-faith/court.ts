@@ -1,8 +1,3 @@
-// The two courts. The cold open's (`cold`), whose layout the landing rebuilds
-// in cardboard (`name`, `thesis`); and the heavenly court of Zech 3
-// (`accuser`, `robe`), where `accuser` ends on the exact frame `robe` opens
-// on. Every place is in 1920×1080 frame units.
-
 import {
   type Camera,
   type Gesture,
@@ -48,8 +43,6 @@ import {
 } from './kit.ts';
 import { arc, flight } from './spoken.ts';
 
-// ─── the cold open's court, and the landing's ───────────────────────────────
-
 /** The cold open's framings: where the camera rests, and wide with paper above the bench for the question. */
 export const REST: Camera = { x: 930, y: 560, zoom: 1.35 };
 export const WIDE: Camera = { x: 930, y: 480, zoom: 1.3 };
@@ -76,12 +69,6 @@ export const STAMP_POP: ReadonlyArray<Key> = [
   [0.6, 0.97, 'outCubic'],
   [1, 1, 'inOutCubic'],
 ];
-
-// ─── the verdict stamp ──────────────────────────────────────────────────────
-// One motif across three scenes, the same shape and scale each time: stamped
-// solid across the bench in `cold` and drained there to a hollow outline (a
-// verdict with nothing behind it); filled solid and sunk into the figure's
-// chest in `declared`; hung hollow at the bench's top and landed solid in `name`.
 
 /** Where the verdict stamps across the cold open's bench, and its tilt there (`cold`, `name`). */
 const STAMP_AT: Pt = [1180, 672];
@@ -203,10 +190,6 @@ export const question = (ctx: CanvasRenderingContext2D, hand: Hand, opts: WriteO
     ...opts,
   });
 
-// The cold open's layout rebuilt in cardboard under the landing sky: the
-// figure stands where they stood, now in the white robe, and Christ stands
-// beside them as Advocate.
-
 /** Christ as Advocate at the landing (`name`, `thesis`): his brows; the scene gives his turn, look and any hand at work. */
 export const ADVOCATE_POSE: Person = { browTilt: 0.15 };
 
@@ -276,7 +259,6 @@ export const landingCourt = (
     h,
     [
       {
-        // A sun passing behind the court, then its pillars and floor, in chipboard.
         z: 1.35,
         draw: () => {
           courtSun(ctx, hand, s.sun);
@@ -300,7 +282,6 @@ export const landingCourt = (
         },
       },
       {
-        // The bench and the judge.
         z: 1,
         draw: () => {
           ground(ctx, 1180, 860, 820);
@@ -319,7 +300,6 @@ export const landingCourt = (
               ctx.ellipse(x - 6, -6, 4.5, 5.5, 0, 0, Math.PI * 2);
               ctx.fill();
             }
-            // Brows at ease now, and a small smile.
             for (const side of [-1, 1] as const)
               stroke(
                 ctx,
@@ -370,7 +350,6 @@ export const landingCourt = (
         },
       },
       {
-        // The figure in the robe, and Christ beside them.
         z: 0.9,
         lift: 1.3,
         draw: () => {
@@ -388,7 +367,6 @@ export const landingCourt = (
           );
           giftLight(ctx, s, hand('christ'));
           wordInHand(ctx, s, hand('figure'));
-          // The light inside answers through the robe, not only on it.
           const inner = Math.max(s.heart ?? 0, s.shine);
           if (inner > 0) {
             const [cx, cy] = HEART_IN;
@@ -414,7 +392,6 @@ const giftLight = (ctx: CanvasRenderingContext2D, s: Court, christHand: Hand) =>
   const given = s.given ?? 0;
   const alpha = offer * (1 - given * given);
   if (alpha <= 0.01) return;
-  // The light rides his far hand while it is out, and goes on from where it was given.
   const [hx, hy] = s.advocate.far === undefined ? GIVEN_AT : handOf(s.advocate, 'far', christHand);
   const x = lerp(ADVOCATE[0] + ADVOCATE_S * hx, HEART_IN[0], given);
   const y = lerp(ADVOCATE[1] + ADVOCATE_S * hy, HEART_IN[1], given);
@@ -479,8 +456,6 @@ const courtSun = (ctx: CanvasRenderingContext2D, hand: Hands, day: number | unde
     shadow: 0,
   });
 };
-
-// ─── the heavenly court of Zech 3 ────────────────────────────────────────────
 
 /** The heavenly court's wall: a warm glow falling to board. */
 export const courtWall = (ctx: CanvasRenderingContext2D, w: number, h: number) =>
@@ -694,7 +669,6 @@ export const zechCourt = (ctx: CanvasRenderingContext2D, hand: Hands, s: ZechCou
   zechAccuser(ctx, hand, s.accuser);
   zechAngel(ctx, hand, s.angel);
   zechJoshua(ctx, hand, s);
-  // The helpers over the tunic, so the hands that lift it are seen on it.
   at(ctx, { x: s.tunic.at[0], y: s.tunic.at[1], scale: JS }, () => tunic(ctx, hand, s.tunic.flare));
   for (const helper of HELPERS) zechHelper(ctx, hand, helper, s);
 };
@@ -704,7 +678,6 @@ const zechAccuser = (ctx: CanvasRenderingContext2D, hand: Hands, a: ZechCourt['a
   const [x, y] = ACCUSER_AT;
   at(ctx, { x: lerp(ACCUSER_FROM, x, a.enter), y, scale: lerp(1.05, ACCUSER_S, a.shrink) }, () => {
     accuser(ctx, hand, a.point);
-    // Shrinking back into shadow.
     glow(ctx, 0, -250, 330, C.boardDeep, 0.35 * a.shrink * (1 - a.shrink) * 4);
   });
 };
@@ -762,7 +735,6 @@ const zechHelper = (
   HOLDING.reach = grip;
   HELPER.look[0] = side * 2 * grip - side * 1.5 * (1 - grip);
   HELPER.look[1] = -2 * up;
-  // The helper on Joshua's left holds with its near hand, the one on his right with its far one.
   HELPER.near = side === 1 ? HOLDING : undefined;
   HELPER.far = side === 1 ? undefined : HOLDING;
   at(ctx, { x, y, scale: AS }, () => person(ctx, HELPER, sub(hand('helper'), k)));

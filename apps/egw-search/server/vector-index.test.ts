@@ -62,8 +62,6 @@ const serve = (gate: Latch.Latch, bytes: ArrayBuffer) =>
       HttpApiBuilder.layer(SearchApi).pipe(
         Layer.provide(SearchGroupLive),
         Layer.provide(search),
-        // The context lookup's connection; the golden corpus has no
-        // neighbours to read, so no page asks it for any.
         Layer.provide(SqliteClient.layer({ filename: ':memory:' })),
         Layer.provide([Etag.layer, HttpPlatform.layer]),
         Layer.provide(BunServices.layer),

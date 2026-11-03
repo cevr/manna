@@ -88,7 +88,6 @@ export const layerBrowser = (options: BrowserOptions = {}): Layer.Layer<Location
             navigation: 'replace',
           });
         }),
-        // The entry it lands on arrives as `popstate`, a traversal, as the button's does.
         back: Effect.sync(() => window.history.back()),
       });
     }),

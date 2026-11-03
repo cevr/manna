@@ -1,12 +1,3 @@
-// Christ's head turned to us, as court.you's kept try draws it (try 2),
-// traced by hand inside its ink in the panel's own pixels (1536 × 1024): His
-// hair parted a little right of the middle and falling past both ears to His
-// shoulders, both ears showing, a full beard round His chin with His mouth
-// open in a smile, His eyes and brows a little tipped with His head. Each
-// outline is a closed smooth path's points; the face's paper is the whole
-// head, the hair, ears and beard laid over it, the beard over the hair.
-// `christ-rig.ts` takes them to the cast's canon (`FRONT_PANEL`). Pure.
-
 import type { Pt } from '@manna/film/style';
 
 /**

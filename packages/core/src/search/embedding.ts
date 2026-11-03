@@ -63,9 +63,6 @@ export const truncateToMrl = (
     sum += value * value;
   }
   const norm = Math.sqrt(sum);
-  // A zero vector cannot be normalized, and it is not an embedding: every
-  // component is zero, so it dots to zero against every document and ranks the
-  // index arbitrarily. Refused for the same reason a short row is.
   if (norm === 0 || !Number.isFinite(norm)) return Option.none();
   for (let axis = 0; axis < DIMENSIONS; axis += 1) out[axis] = (out[axis] ?? 0) / norm;
   return Option.some(out);

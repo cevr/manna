@@ -1,10 +1,3 @@
-// Compile-time checks of the file caches' key, run by the package typecheck.
-// What is read or made from a file is kept under the file as it stands, its
-// path and mtime (`AtMtime`): a cache keyed by the path alone hands back what
-// was read before the file was rewritten in place. Each line marked below
-// fails the typecheck if a cache read, a cache, or a cache file's name takes
-// a bare path again.
-
 import { Cache, Effect } from 'effect';
 import { AtMtime, fileCache, madeFromName } from './file-cache.ts';
 

@@ -1,15 +1,3 @@
-// The Rive engine on the fixture rig (`canvas/fixtures/arm.ts`), in Bun with no
-// browser: the Bun layer loads the runtime and the rig and leaves no global
-// behind; a frame is its pose's alone, by construction (each frame poses an
-// instance of its own), so after any history, the IK held full on or let go
-// among it, the paths Rive's Canvas 2D renderer draws are a newly loaded
-// rig's, number for number; and a declaration that names what the rig lacks
-// fails the load, listing what it has, with nothing stood on the film. A
-// rig's ink (`ink/ink.rml`: a stroke bound through a range mapper to the
-// number `ink` above the width its light core covers, and a centred one) is
-// drawn at the width its number maps it to, set from the shot's scale when
-// the rig follows the shot.
-
 import canvasWasm from '@rive-app/canvas-advanced/rive.wasm' with { type: 'file' };
 import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import { describe, expect, it } from 'effect-bun-test';
@@ -302,7 +290,6 @@ describe('the Rive engine', () => {
       expect(rig.paints).toBe(false);
       expect([...rig.timelines.keys()]).toEqual(['idle', 'reach', 'boil']);
       expect([...rig.numbers]).toEqual(['lift', 'reach']);
-      // Posed, its face declared, and nothing drawn.
       expect(
         drawRig(recorder(200, 200, { record: false }).ctx, spec, rig, armPose(0.6)),
       ).toBeUndefined();
@@ -327,7 +314,6 @@ describe('the Rive engine', () => {
         const film = armFilm([armScene('arm', 'webgl2')]);
         const scope = yield* Scope.make();
         const loading = yield* Effect.forkChild(Scope.provide(loadRigs(film), scope));
-        // The caller's scope closes while the rig's file is parsed, and the load is not stopped.
         yield* Deferred.await(parsing);
         yield* Scope.close(scope, Exit.void);
         yield* Deferred.succeed(parse, true);
@@ -349,18 +335,15 @@ describe('the Rive engine', () => {
       return Effect.gen(function* () {
         const { spec, rig, scope } = yield* armLoaded('webgl2');
         const ctx = recorder(200, 200, { record: false }).ctx;
-        // The load keeps one artboard (its names checked on it) until its scope closes.
         const kept = () => ({
           artboards: counts.artboards - counts.deletes,
           viewModels: counts.viewModels - counts.viewModelDeletes,
           timelines: counts.timelines - counts.timelineDeletes,
         });
-        // The runtime itself throws as the artboard advances, three frames running.
         const thrown = /Cannot pass .* as a Artboard/;
         faults.throws = 3;
         for (let i = 0; i < 3; i++)
           expect(() => drawRig(ctx, spec, rig, armPose(0.6 + i))).toThrow(thrown);
-        // Only the last frame's: each frame frees what the one before it left.
         expect(kept()).toMatchObject({ artboards: 2, viewModels: 1 });
         expect(drawRig(ctx, spec, rig, armPose(1))).toBeUndefined();
         expect(kept()).toEqual({ artboards: 1, viewModels: 0, timelines: 0 });
@@ -409,7 +392,6 @@ describe('the Rive engine', () => {
       expect(rigOne).toBeDefined();
       expect(rigOne).not.toBe(rigTwo);
       expect(rigOne?.file).not.toBe(rigTwo?.file);
-      // Drawn while it stands; refused, naming the loader, once its scope has closed.
       film.render(recorder().ctx, 1);
       yield* Scope.close(scope, Exit.void);
       expect(() => film.render(recorder().ctx, 1)).toThrow(/not loaded/);
@@ -439,7 +421,6 @@ describe('the Rive engine', () => {
           drawn.add(want);
         }
         expect(off).toBe(0);
-        // Three paths drawn a frame, and the times are many pictures (a few slack frames repeat), not one.
         for (const frame of drawn) expect(frame.match(/^fill M/gm)?.length).toBe(3);
         expect(drawn.size).toBeGreaterThan(SHUFFLED * 0.8);
         yield* Scope.close(live.scope, Exit.void);
@@ -449,8 +430,6 @@ describe('the Rive engine', () => {
   it.effect('draws each path as cut, and the boil’s width at its time', () =>
     Effect.gen(function* () {
       const { spec, rig, scope } = yield* armLoaded('canvas');
-      // Drawn face, lower piece, upper piece: the disc 24 wide, the lower 60, the upper cut 60
-      // and boiled 60.4 from 0.25 s and 59.8 from 0.5 s, each path centred on its shape.
       const halves = (t: number) => reaches(drawnPaths(spec, rig, armPose(t)));
       for (const [t, upper] of [
         [0.1, 30],
@@ -480,7 +459,6 @@ describe('the Rive engine', () => {
           timelines: [],
           numbers: { ink: 0.75 },
         });
-        // What shows of the disc's ink past its light core, and the sash's whole line.
         expect((disc - core) / (INK_AT_REST[1] - INK_AT_REST[2])).toBeCloseTo(0.75, 5);
         expect(core).toBe(INK_AT_REST[2]);
         expect(sash / INK_AT_REST[0]).toBeCloseTo(0.75, 5);
@@ -493,7 +471,6 @@ describe('the Rive engine', () => {
     () =>
       Effect.gen(function* () {
         const scales: number[] = [];
-        // Half the ink from 0.02 of the frame's height a unit.
         const spec: RivePropSpec = {
           ...INK_RIG,
           ink: (scale) => {
@@ -504,7 +481,6 @@ describe('the Rive engine', () => {
         const { rig, scope } = yield* inkLoaded(spec);
         expect(strokeWidths(spec, rig, { timelines: [] }, 1)).toEqual([...INK_AT_REST]);
         expect(strokeWidths(spec, rig, { timelines: [] }, 4)).toEqual([2.5, 8, 2]);
-        // 1 px a unit of a 100 px frame is 0.01 of its height a unit; 4 px, 0.04.
         expect(scales.map((v) => Math.round(v * 1e6) / 1e6)).toEqual([0.01, 0.04]);
         expect(strokeWidths(spec, rig, { timelines: [], numbers: { ink: 1 } }, 4)).toEqual([
           ...INK_AT_REST,
@@ -518,7 +494,6 @@ describe('the Rive engine', () => {
     () =>
       Effect.gen(function* () {
         const scales: number[] = [];
-        // Half the ink from 0.02 of the frame's height a unit.
         const spec: RivePropSpec = {
           ...INK_RIG,
           ink: (scale) => {
@@ -527,14 +502,11 @@ describe('the Rive engine', () => {
           },
         };
         const { rig, scope } = yield* inkLoaded(spec);
-        // At 1.5 px a unit the shot is 0.015: a figure's ink as cut, and its hand's at 1.23 and 2
-        // times the hand rig too, though sized they stand 0.018 and 0.03 of the frame a unit.
         const shot = [1, 1.23, 2].map((size) =>
           strokeWidths(spec, rig, { timelines: [], size }, 1.5),
         );
         expect(shot).toEqual([[...INK_AT_REST], [...INK_AT_REST], [...INK_AT_REST]]);
         expect(scales.map((v) => Math.round(v * 1e6) / 1e6)).toEqual([0.015, 0.015, 0.015]);
-        // At 4 px a unit the shot is 0.04: the figure and each hand at half the ink past its floor.
         const close = [1, 1.23, 2].map((size) =>
           strokeWidths(spec, rig, { timelines: [], size }, 4),
         );
@@ -543,7 +515,6 @@ describe('the Rive engine', () => {
           [2.5, 8, 2],
           [2.5, 8, 2],
         ]);
-        // Each is drawn at its size: every stroke made at 4 px a unit times it.
         const drawnAt = [1, 1.23, 2].map((size) => {
           const drawn: number[] = [];
           const ctx = strokedContext([], 4, 100, drawn);
@@ -600,7 +571,6 @@ describe('the Rive engine', () => {
         ['lift', 'reach'],
       );
       yield* lacks({ ...arm, face: { node: 'eye', height: 4 } }, 'node', 'eye', []);
-      // A rig that follows the shot has the number its ink binds to.
       yield* lacks({ ...arm, ink: () => 1 }, 'view-model number', INK_NUMBER, ['lift', 'reach']);
       const unreadable = yield* missing({ ...arm, source: { ...arm.source, riv: '/no/such.riv' } });
       expect(unreadable._tag).toBe('RigUnloadable');

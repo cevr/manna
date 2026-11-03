@@ -1,40 +1,3 @@
-// The easel's commands (`lab-command.ts`; MCP and `film lab` serve them):
-// what an agent paints a scene with, in any client that reaches the lab
-// (Claude Code, Codex, gent), or from a terminal:
-//
-// - `look`: stills of a scene as its files stand, drawn on the lab's warm
-//   export page (`Easel`, in the lab alone), each answered on MCP as an
-//   image after its line (`lookLine`), so the model reads the picture
-//   itself; in a terminal, its lines.
-// - `match`: a scene's figures at one place held against their concepts
-//   (`Easel.match`): per figure its table and its side-by-side.
-// - `critique`: the same match, then each figure's two crops shown at 1:1 to
-//   a fresh model (`Critic`): per figure its findings, a skip said and never
-//   a refusal. The counsel takes minutes and an MCP client cuts a call at
-//   60 s, so it runs as the critic's job: a call answers by
-//   `CRITIQUE_DEADLINE` from its start, with the job's handle when it is not
-//   done by then, and a call with the handle waits on it again (`film lab critique wait <handle>` until it is done).
-// - `cues`: each scene's placement, marks and named cues (`film read cues`).
-// - `check`: scenes checked as drawn (`film check --draw`).
-// - `journal`, `journal_note`: the film's journal read, and an observation
-//   noted (`journal.ts`), a named scene first found among the film's
-//   (`film read scenes`, which resolves no timeline: a scene that does not
-//   lay out never keeps a painter from its journal).
-//
-// The lab imports no film module (`lab.slow.test.ts`), so whatever reads a film's
-// modules (its clock, its check, its scene ids) runs the film CLI fresh
-// (`FreshFilm`), as the lab's own after-write check does. Every tool takes
-// `films`, the asker's films folder, absolute and with no `..`: a lab that
-// serves another checkout refuses (`LabElsewhere`, the folders compared as
-// the file system resolves them) rather than answer with that checkout's
-// files, and a relative folder, or one with a `..`, is refused
-// (`plainAbsolute`): the lab would resolve the one in its own checkout, and
-// Node's `realpath` takes the other before the links it follows. Each answer
-// fits a client's result whole (`core/tool-pages.ts`): one that stops early
-// answers `next`, which repeats what was asked of the film (`scenes`,
-// `scene`), so asking again with it reads on in the same answer; a refusal
-// is a tool error in the film's own words, its tag first (`FilmRefused`).
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -156,9 +119,6 @@ const refusedAs = (error: Named): FilmRefused => {
     });
   return FilmRefused.make({ tag: error._tag, text: clip(error.message, REFUSAL_CHARS) });
 };
-
-// ---------------------------------------------------------------------------
-// What the tools take
 
 const Films = Schema.String.check(
   Schema.makeFilter(
@@ -282,9 +242,6 @@ const JournalNoted = Schema.Struct({
   scene: Schema.String,
 });
 
-// ---------------------------------------------------------------------------
-// The tools
-
 const CheckTool = Tool.make('check', {
   description:
     "Check a film's scenes as their files stand (film check --draw): the static leg (cues, sounds) and each scene drawn by its own code in the check's process, no browser (a throw, a frame that is not pure, ink over a face). Stale takes count as warnings: a painter never narrates. `scenes` checks those (adjacent ones play one after another); without it, the whole film, which takes minutes for a long one. The findings come a page at a time, errors first: when the answer has `next`, check again with `next` as it is (its `from`, its `report`, and the `scenes` asked) for the rest; findings that changed in between are listed again from the first (`restarted`). A check that cannot run (an unknown scene, a film that does not lay out) is its one error finding.",
@@ -390,9 +347,6 @@ const CritiqueTool = Tool.make('critique', {
   success: Critiqued,
   failure: FilmRefused,
 }).annotate(Tool.Readonly, true);
-
-// ---------------------------------------------------------------------------
-// The work, over the lab's easel, its fresh runs and its films
 
 /** `film` as one the lab serves from the asker's films folder `from`: another checkout's is `LabElsewhere`. */
 const served = Effect.fn('EaselMcp.served')(function* (from: string, film: string) {
@@ -544,7 +498,6 @@ const critiqued = Effect.fn('EaselMcp.critique')(function* (params: CritiquePara
     onNone: () => started(params),
   });
   const now = yield* Clock.currentTimeMillis;
-  // What is left of the deadline once the job has its handle: none past it.
   const left = Duration.max(
     Duration.subtract(CRITIQUE_DEADLINE, Duration.millis(now - from)),
     Duration.zero,
@@ -617,9 +570,6 @@ const journalNote = Effect.fn('EaselMcp.journalNote')(function* (
   const noted = yield* note(film, params.text, scene);
   return { file: noted.file, at: noted.entry.at, scene: noted.entry.scene };
 });
-
-// ---------------------------------------------------------------------------
-// The commands
 
 /** The film's own tools: they read and write the film's files and run its CLI fresh, so any process runs them. */
 export const easelCommands = [

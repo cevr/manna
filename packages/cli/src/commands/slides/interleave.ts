@@ -63,10 +63,6 @@ export const slidesInterleave = Command.make(
           `\tset theDoc to first document whose name is ${asText(basename(deckPath))}`;
       }
 
-      // Build the AppleScript `verses` list. Each entry carries the match
-      // substring, the verse text, and the reference. The script resolves the
-      // target index for each at run time and inserts bottom-up so earlier
-      // insertions never shift a later target's index.
       const verseList = verses
         .map(
           (v) =>
@@ -74,8 +70,6 @@ export const slidesInterleave = Command.make(
         )
         .join(', ¬\n\t\t');
 
-      // White verse + dimmed-grey reference on the (black) Blank master.
-      // Geometry: verse block in the vertical middle, reference below it.
       const script = `tell application "Keynote"
 \tactivate
 ${findDoc}

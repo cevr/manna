@@ -1,8 +1,3 @@
-// The drawn-token check (`fixtures/drawn-tokens.ts`) reads the pseudo-elements
-// that draw a colour of their own: a field's `::placeholder`, a list item's
-// `::marker` and a modal's `::backdrop`. A field with no rule of its own
-// draws the tokens' placeholder colour; a rule that sets another is named.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem } from 'effect';
 import { describe, it } from 'effect-bun-test';
@@ -16,7 +11,6 @@ const drawn = (head: string, body: string, want: ReadonlyArray<string>) =>
     const tokens = yield* FileSystem.FileSystem.use((fs) =>
       fs.readFileString(`${import.meta.dir}/../../../src/player/tokens.css`),
     ).pipe(Effect.orDie);
-    // The user agent's field, list and dialog draws are the page's to set: these are set on the tokens.
     const parts = `input, textarea { background: var(--surface-2); border: 0; padding: 0; margin: 0; outline: 0; }
       ul { margin: 0; padding: 0; } dialog { background: var(--surface-2); color: var(--text-1); border: 0; padding: 0; outline: 0; }`;
     const html = `<!doctype html><html><head><style>${tokens}${parts}</style>${head}</head><body>${body}</body></html>`;

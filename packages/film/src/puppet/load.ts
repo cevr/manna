@@ -1,16 +1,3 @@
-// A film's puppets loaded before its first frame (`loadPuppets`), as its rigs
-// are (`rive/load.ts`): every puppet its drawings declare
-// (`film.puppets.declared`), each part PNG read and decoded through the
-// `PuppetImages` the host gives (the page awaits each image's decode here,
-// never in a frame), made into a puppet on its skeleton (`puppetOf`), and
-// stood on the film for its draws. What a puppet holds on a WebGL context
-// (its textures and buffers, `canvas/puppet-gl.ts`) is the load scope's and
-// freed when it closes; the puppets stand on the film until then. A part
-// PNG of another size than its puppet declares, a skeleton that does not
-// fit the parts, a drawn key that does not fit the part it names, or a
-// part's declared ramp no dye can map from (`drawnLabs`), fails
-// the load, naming why, and nothing is drawn.
-
 import { Effect, Exit, Option, Result, Scope } from 'effect';
 import type { Film } from '../canvas/film.ts';
 import { drawnLabs } from '../canvas/dye.ts';
@@ -25,7 +12,6 @@ const sheetFrom = Effect.fn('Puppet.sheet')(function* (spec: PuppetSpec) {
   const images = yield* PuppetImages;
   const unloadable = (reason: string) => PuppetUnloadable.make({ puppet: spec.key, reason });
   const [w, h] = spec.size;
-  // a part's declared ramp checked here, so a ramp no dye can map from fails the load, not the first frame that dyes the part
   for (const part of spec.parts) {
     const drawn = Option.fromUndefinedOr(part.ramp).pipe(Option.map(drawnLabs));
     if (Option.isSome(drawn) && Result.isFailure(drawn.value))

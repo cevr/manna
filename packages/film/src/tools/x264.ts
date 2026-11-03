@@ -1,19 +1,3 @@
-// H.264 in Bun: x264, in-process through NodeAV (the FFmpeg
-// @mediabunny/server decodes with), registered as mediabunny's encoder for
-// `avc`, so a mediabunny conversion encodes with it. @mediabunny/server's own
-// libx264 runs the default preset with no tune and loses the paper's grain
-// at any size measured. This one encodes the copies the tools make, told
-// apart by what mediabunny hands a registered encoder, its config: a
-// footage copy by its content hint (`FOOTAGE_HINTS`, `core/footage.ts`),
-// and a film's by the quality a conversion asks for: a quantizer is x264's
-// CRF at that value, a bitrate a review's phone copy (`media.ts`
-// `PHONE_ENCODE`), at level 4.1 (preset slow's reference frames would
-// otherwise raise it to 5.0, which some phones refuse). x264
-// places every key frame by its own interval: NodeAV's encoder clears the
-// picture type a frame carries, so the key frames a conversion asks for
-// never reach it. Packets leave in Annex B, and mediabunny's MP4 muxer
-// writes them as AVC.
-
 import { toAvFrame } from '@mediabunny/server';
 import { Array as Arr, Effect, Match, Option, Stream } from 'effect';
 import { CustomVideoEncoder, EncodedPacket, type VideoCodec, type VideoSample } from 'mediabunny';
@@ -121,7 +105,6 @@ const filmSettingsOf = (
     Match.orElse(() => ({
       context: {
         threadCount: PHONE_ENCODE.threads,
-        // Never a frame past `keyEvery`: at 29.97 frames a second, every 29.
         gopSize: Math.max(1, Math.floor(fps * PHONE_ENCODE.keyEvery)),
         ...Option.match(Option.fromNullishOr(config.bitrate), {
           onNone: () => ({}),
@@ -216,7 +199,6 @@ export class X264Encoder extends CustomVideoEncoder {
         );
         const settings = settingsOf(this.config, options, fps);
         return Effect.promise(() =>
-          // The time base comes with each frame (`encode`), in microseconds.
           NodeAv.Encoder.create(NodeAv.FF_ENCODER_LIBX264, {
             context: {
               ...settings.context,

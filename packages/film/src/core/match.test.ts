@@ -1,10 +1,3 @@
-// The match's hair/beard rule on measures made by hand, each side's edge and
-// value step taken from a measured crop of RBF's (`PARTED` in match.ts): the
-// rule flags a scene that runs together what its concept parts, never the
-// other way, parts by the edge or by the step alone, and says a side with no
-// beard without flagging it. A cast member's concept image names a file its
-// record keeps: a sheet by its kind, a single drawing by its view.
-
 import { describe, expect, test } from 'bun:test';
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import type { SheetKind } from './cast-sheet.ts';

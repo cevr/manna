@@ -1,11 +1,3 @@
-// The lab's notes and board commands (`lab-command.ts`; MCP and `film lab`
-// serve them): a film's notes (`notes`) and its storyboard (`board`) read,
-// and the writes on them, each through the store `film board` reads too
-// (`NotesStore`, `BoardStore`): a note marked done (`resolve`), a tweak
-// asked of a panel (`request_tweak`), a try kept
-// (`keep_try`), and a beat's board approved or its approval withdrawn
-// (`approve_beat`, `withdraw_beat`).
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -48,9 +40,6 @@ import { LabAddress, labCommand } from './lab-command.ts';
 import { FilmParam, LabRefused, refused } from './lab-mcp-parts.ts';
 import { noteLine } from './notes-lines.ts';
 import { NotesStore } from './notes-store.ts';
-
-// ---------------------------------------------------------------------------
-// What the tools answer
 
 /** A note as an agent reads it: the record, its page and its still on disk. */
 export const NoteRead = Schema.Struct({
@@ -113,9 +102,6 @@ export const BoardRead = Schema.Struct({
 });
 
 const NoteWritten = Schema.Struct({ note: NoteRead });
-
-// ---------------------------------------------------------------------------
-// The tools
 
 const Notes = Tool.make('notes', {
   description:
@@ -192,9 +178,6 @@ const WithdrawBeat = Tool.make('withdraw_beat', {
   failure: LabRefused,
 });
 
-// ---------------------------------------------------------------------------
-// The reads and writes, over the notes and the boards
-
 /** A film's notes and board as the tools, the resources and the prompt read and write them. */
 export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
   const fs = yield* FileSystem.FileSystem;
@@ -232,7 +215,6 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
     const film = yield* named(name);
     const board: BoardFile = yield* refused(boards.read(film));
     const images = boards.paths(film).folder;
-    // A script that cannot be read now names no panel stale (`staleInLab`), so the board read stays whole.
     const judged = yield* refused(
       staleInLab(film).pipe(
         Effect.provideService(FreshFilm, fresh),
@@ -317,7 +299,6 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
       return yield* LabRefused.make({
         reason: `panel ${id} is a ${set.value._tag.toLowerCase()} the engine sets: it has no try to tweak`,
       });
-    // The try asked for, else the kept one, else the first.
     const shown = yield* Effect.fromOption(
       Option.match(asked, { onSome: (n) => tryOf(panel, n), onNone: () => shownTry(panel) }),
       () => {
@@ -335,7 +316,6 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
     const image = yield* refused(boards.image(film, shown.file));
     const still = yield* refused(fs.readFile(image));
     const draft: NoteDraft = {
-      // A panel's note sits on its beat; the board names the panel, so it opens there.
       scene: panel.beat,
       T: 0,
       local: 0,
@@ -361,7 +341,6 @@ const lab = notesReads();
 export const notesCommands = [
   labCommand(Notes, {
     run: ({ film, status }) => Effect.flatMap(lab, (l) => l.notesOf(film, status ?? 'unresolved')),
-    // A note a line, every field it has (`noteLine`), then the log's last change.
     lines: ({ notes, seq }) => [...notes.map((note) => noteLine(note, note.changed)), `seq=${seq}`],
   }),
   labCommand(Board, {

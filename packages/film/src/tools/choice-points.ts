@@ -1,24 +1,3 @@
-// A film's choice points (`core/choice.ts`) as its sources declare them: one
-// adapter per kind, each a pure function of the loaded film. `film options
-// list` runs them in a fresh process (`FreshFilm`, `fresh-film.ts`), so every point is
-// the film as it stands on disk:
-//
-// - score: the score's options, `play` picked; heard in the film's mix;
-// - take: each library sound the film's effects place, at the scenes it
-//   plays in: a generated or recorded sound's kept takes (the picks: they
-//   rotate through its placements) and its candidates; a code sound's seeds
-//   (all picked: they all play), with the takes its lock still holds from
-//   before marked "was"; and a code trial's seeds beside either, never
-//   picked. Each is heard alone and in the mix. A seed is tuned by editing
-//   its data, so no verb reaches it (`fixed` says why);
-// - look: each of `palette.ts`'s `looks`, its levels, `play` picked;
-// - voice: each beat's recorded attempts, the one the timings name picked;
-//   heard alone; at the beat's scene.
-//
-// A sound layer's level is the agents' to set in `sound.ts`: no point offers it.
-//
-// Render sets are the catalogue's (`review.ts`, `project-cli.ts`).
-
 import { Array as Arr, DateTime, Option, Result } from 'effect';
 import { type Address, sceneAddress } from '../core/address.ts';
 import { counted } from '../core/words.ts';
@@ -74,9 +53,6 @@ const scenesAddress = (ids: ReadonlyArray<string>): Address =>
 const sceneOfTime = (placed: ReadonlyArray<Placed>, at: number) =>
   Option.match(sceneAt(placed, at), { onNone: () => '', onSome: (p) => p.spec.id });
 
-// ---------------------------------------------------------------------------
-// score
-
 /** What a score option is now: the hash it was composed at (none when never composed). */
 const scoreKey = (state: ScoreOptionState): string => {
   if (state._tag === 'Missing') return '';
@@ -120,9 +96,6 @@ export const scorePoint = (
       }),
     }),
   );
-
-// ---------------------------------------------------------------------------
-// take
 
 /** How a take is listed: its name in the list, whether it plays, and what can become of it, or why nothing can. */
 interface TakeStanding {
@@ -354,9 +327,6 @@ export const takePoints = (
     },
   });
 
-// ---------------------------------------------------------------------------
-// look
-
 /** Each look the film chooses between (`looks` in `palette.ts`), its levels, `play` picked. */
 export const lookPoints = (loaded: LoadedFilm): ReadonlyArray<PointDraft> =>
   Object.entries(loaded.looks).map(([name, look]): PointDraft => ({
@@ -378,9 +348,6 @@ export const lookPoints = (loaded: LoadedFilm): ReadonlyArray<PointDraft> =>
       };
     }),
   }));
-
-// ---------------------------------------------------------------------------
-// voice
 
 /** A beat's recorded attempts, and whether each is for its line as it reads now. */
 export interface BeatAttempts {
@@ -426,8 +393,6 @@ export const voicePoints = (
           }),
       };
     });
-
-// ---------------------------------------------------------------------------
 
 /**
  * What a film's points are read from: the film with the derived sounds it

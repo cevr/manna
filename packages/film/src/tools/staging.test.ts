@@ -1,7 +1,3 @@
-// Staging takes with fakes: what a marked line is sent as, that a take is
-// made once and kept, the day's cap, and that holds are set in the take. No
-// network, no media files.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { test } from 'bun:test';
 import { DateTime, Effect, Exit, Layer, Option, Path } from 'effect';
@@ -78,7 +74,6 @@ describe('stagingRequest', () => {
     expect(key(base)).not.toBe(
       key({ ...base, beat: beat('Not by works. By grace.', marked.delivery) }),
     );
-    // A cast's voice reaches the key through each line's voice (`linesOf`).
     const otherVoice: ReadBeat = {
       ...marked,
       lines: marked.lines.map((l) => ({ ...l, voiceId: 'other' })),

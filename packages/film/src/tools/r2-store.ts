@@ -1,17 +1,4 @@
 import type { Mac } from 'effect/crypto';
-// The private store as a Cloudflare R2 bucket, over R2's S3 API: each request
-// signed with SigV4 (`sigv4.ts`) and sent through Effect's HttpClient, so no
-// SDK. The bucket is private (no r2.dev URL, no public domain): every read is
-// signed with the bucket-scoped key the `film-store` stack mints
-// (`apps/animations/infra/`).
-//
-// A `put` is one PutObject: R2 replaces an object whole, so a reader never
-// sees half of it. Its payload hash is signed, so R2 refuses bytes that are
-// not the ones hashed, and the same sha256 rides along as the object's
-// metadata (`x-amz-meta-sha256`), so `hashOf` is a HEAD, never a download.
-// A `get` checks the bytes it fetched against that hash before it renames
-// them into place. A file is streamed both ways, hashed as it passes: a
-// render of hundreds of megabytes is never held whole.
 
 import {
   DateTime,
@@ -158,8 +145,6 @@ export const r2Store = (
   const { fs, crypto } = platform;
   const host = r2Host(Redacted.value(access.accountId));
   const where = `r2://${config.bucket}`;
-  // Every request is idempotent (a PUT sends the same whole object again), so
-  // transient failures are retried, a few times, backing off.
   const http = platform.http.pipe(
     Client.retryTransient({
       times: 3,
@@ -250,9 +235,6 @@ export const r2Store = (
     const call = object('get', key, 'GET');
     const response = yield* send(call);
     if (response.status !== 200) return yield* refused(call, response);
-    // Written whole (`writeWhole`), hashed as it lands; renamed into place
-    // only when the hash holds. A fetch cut off, or bytes that are not what
-    // was stored, leave nothing behind.
     const into = hashing();
     yield* fs.makeDirectory(platform.path.dirname(to), { recursive: true }).pipe(
       Effect.andThen(
@@ -321,7 +303,6 @@ export const r2Store = (
     if (response.status === 404) return Option.none<StoredRead>();
     if (response.status === 416) return yield* failed('read', key, 'the range starts past its end');
     if (response.status !== 200 && response.status !== 206) return yield* refused(call, response);
-    // A range answers with its span and the whole size; a whole read with its length.
     const length = Number(response.headers['content-length'] ?? '0');
     const span = Option.match(Option.fromUndefinedOr(response.headers['content-range']), {
       onSome: contentRange,

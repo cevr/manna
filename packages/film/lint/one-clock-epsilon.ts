@@ -1,34 +1,3 @@
-// `film/one-clock-epsilon`: a time is put on its grid, and two times are
-// judged one, by one owner, `core/time.ts`: `frameAtOrAfter` and
-// `frameAtOrBefore` (a frame, or a millisecond at 1000), `onTheMs` (an in
-// point up), `heardAtOrAfter` (a word heard at or after a mark), `justBefore`
-// (the last instant before a time), and `CLOCK_EPSILON` (two sums of seconds
-// that are one time). A nudge
-// written out beside a time (`Math.ceil(t * fps - 1e-6)`) is a second owner
-// of that rule, with a tolerance of its own, and a time rounded by two owners
-// creeps a frame.
-//
-// Refused, in the film's clock code:
-// - a number written out above 0 and below `1e-4` (float noise, not a length
-//   any file keeps, the millisecond being the finest);
-// - a millisecond or less, down to any fraction of it, added to or taken from
-//   a value (`w.start >= m - 1e-3`, `near + 0.001`, `1e-3 + near`, `near - 1
-//   / 1000`, `near - 1 / 1_000_000`, `near + -0.001`, or a top-level const
-//   holding one, by the name's own binding: `near + HALF_MS`, but not a
-//   parameter called `HALF_MS`): a step by hand, which `core/time.ts` owns;
-// - `CLOCK_EPSILON` (`core/time.ts`'s: imported, under an alias, or read off
-//   the module imported whole) added or taken anywhere in the arithmetic of
-//   the argument of the global `Math`'s `ceil`, `floor`, `round` or `trunc`
-//   (`Math.ceil(x - EPS)`, `Math.floor((x + CLOCK_EPSILON) * fps)`): it
-//   judges two times one, and is no grid nudge (`frameAtOrAfter` and
-//   `frameAtOrBefore` are). A parameter called `CLOCK_EPSILON` or `Math` is
-//   its own binding.
-// The config turns it on over the code that computes times and off where a
-// tiny number is no time: `core/time.ts` (the owner), the draw path's
-// geometry (`canvas/`), the mix's and the synth's sample arithmetic, the
-// affine maths and the test doubles; a line elsewhere that writes pixel noise
-// says so (`oxlint-disable-next-line`, with why).
-
 import { Effect, Option, Predicate } from 'effect';
 import {
   Diagnostic,

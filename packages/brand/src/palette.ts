@@ -1,18 +1,3 @@
-/**
- * The brand's colours: Moonlit wheat, the wheat `#ffefae` on the night
- * `#12354e`, which the owner chose after brand round 5 (2026-10-24, with
- * lockup D and site direction N2, “The sky turns”). Every role keeps the
- * wheat's hue or the night's, or is a grey between them, but the dusk's
- * stops, which carry the day into the night, and the painted sky.
- *
- * This module is the one source. The First the Blade site re-exports it
- * (`apps/firsttheblade/src/palette.ts`): its stylesheet's `:root` names each
- * role as `--color-<role>` with these same values (the site's tests hold the
- * two together), and its letters, manifest, series marks and YouTube kit read
- * them. The hymnal draws its theme's roles and its icons from them
- * (`apps/hymnal/src/theme.ts`, `apps/hymnal/scripts/icon.ts`).
- */
-
 /** Each role the site and the kit use, and where it comes from. */
 export const PALETTE = {
   /** The page by day: the wheat, tinted 62% toward white. */

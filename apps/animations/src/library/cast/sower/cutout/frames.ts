@@ -1,10 +1,3 @@
-// The sower's cut views' frames on his kept sheets: each part sheet is cut
-// from its view's kept box (`cast-sheet.json`) padded, so his sleeves' outer
-// ink, which runs a pixel or two past the kept box, and the ground shadow,
-// which runs on below his soles and fades past it, are whole. His cut
-// (`cut.ts`), part sheets (`sheets/<view>/`) and skeletons (`skeleton.ts`) are
-// in this frame (`library/cutout/frames.ts`). Pure data.
-
 import { framesOf } from '../../../cutout/frames.ts';
 import type { CutFrame } from '../../../cutout/table.ts';
 

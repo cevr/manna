@@ -1,11 +1,3 @@
-// The reading sheet: the script as the narrator reads it into a microphone.
-// Each beat with words is one take, saved under the name `takes import` reads
-// (`<beat>.wav`); its marks are stripped, a turn names who reads on, a
-// quotation is set apart with the source whose words it is, and each sentence
-// ends in a breath (`/`). Written as Markdown and as a page to print.
-//
-// Pure: the CLI reads the script and the quotes, and writes what this returns.
-
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import type { LineError } from './errors.ts';
 import { type Parsed, normalizeWords, parse } from './narration.ts';
@@ -99,7 +91,6 @@ const partsOf = (
           onNone: () => ({ kind: 'quotation', text: piece }),
           onSome: (by) => ({ kind: 'quotation', text: piece, by }),
         });
-      // Only the first stretch of a voice's words carries its name.
       const named = Option.filter(voice, () => all.findIndex((p) => !QUOTATION.test(p)) === i);
       return Option.match(named, {
         onNone: () => ({ kind: 'line', text: breathe(piece) }),

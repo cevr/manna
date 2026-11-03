@@ -42,7 +42,6 @@ const mount = () => {
 describe('useScrub', () => {
   it('starts a drag from a step sent before the bar draws again', () => {
     using bar = mount();
-    // A key's step, then a tap on the stepped place, in one batch: the tap's drag starts there, so nothing more is sent.
     act(() => {
       const scrub = bar.scrub();
       scrub.step(40);

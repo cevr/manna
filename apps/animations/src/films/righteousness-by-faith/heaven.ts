@@ -1,7 +1,3 @@
-// Heaven: the sanctuary in two apartments where Christ ministers (`exchange`,
-// `rain`), Christ as high priest, and the angel of Rev 14 with the third
-// angel's banner (`message`, `rain`).
-
 import {
   type Pt,
   at,
@@ -42,11 +38,6 @@ const highPriest = (ctx: CanvasRenderingContext2D, pose: Person, hand: Hands, pl
     }
 };
 
-// ─── the heavenly sanctuary ──────────────────────────────────────────────────
-// Two apartments, never one (Heb 8:1–2; 9:2–3): the holy place with the
-// lampstand, the table and the altar of incense, and past the veil the most
-// holy place with the ark. Floor centre at the origin, about 1120 × 560.
-
 /** Where Christ stands in each apartment, in the sanctuary's units. */
 export const HOLY_PLACE: Pt = [-90, 0];
 const MOST_HOLY: Pt = [230, 0];
@@ -69,7 +60,6 @@ export const sanctuary = (
   inside: () => void = () => {},
 ) => {
   glow(ctx, 0, -280, 900, C.glow, 0.55 + 0.45 * light);
-  // The walls and roof, and the rooms' warm insides.
   piece(ctx, rounded(0, -300, 1160, 600, 24), C.gold, hand('walls'), {
     role: 'scenery',
     kind: 'cut',
@@ -93,10 +83,8 @@ export const sanctuary = (
     line: 4,
     shadow: 0,
   });
-  // The glory between the cherubim.
   glow(ctx, 400, -250, 260, C.robe, 0.5 + 0.5 * light);
 
-  // The holy place: the lampstand, the table with its bread.
   at(ctx, { x: -420, y: 0 }, () => {
     piece(ctx, rounded(0, -130, 12, 260, 4), C.gold, hand('stem'), {
       role: 'scenery',
@@ -160,7 +148,6 @@ export const sanctuary = (
 
   inside();
 
-  // The altar of incense, before the veil, and its smoke.
   at(ctx, { x: 40, y: 0 }, () => {
     piece(ctx, rounded(0, -60, 64, 120, 6), C.gold, hand('altar'), {
       role: 'scenery',
@@ -180,7 +167,6 @@ export const sanctuary = (
     );
   });
 
-  // The ark, and the two cherubim over it.
   at(ctx, { x: 420, y: 0 }, () => {
     piece(ctx, rounded(0, -45, 150, 90, 8), C.gold, hand('ark'), {
       role: 'scenery',
@@ -206,7 +192,6 @@ export const sanctuary = (
       );
   });
 
-  // The veil: a hanging of fine linen, drawn up into its folds as it opens.
   const drop = 510 * (1 - 0.88 * veil);
   const top = -520;
   piece(ctx, rounded(VEIL_X, top + drop / 2, 46, drop, 6), C.robe, hand('veil'), {
@@ -283,8 +268,6 @@ export const ministry = (
   plead: number,
 ) => sanctuary(ctx, hand, 1, light, () => priestAt(ctx, hand, MOST_HOLY, plead, 1, 1));
 
-// ─── the angel of Rev 14 ─────────────────────────────────────────────────────
-
 /** Where `herald` hangs the banner's middle, left of the angel. */
 const BANNER_X = -800;
 /**
@@ -326,8 +309,6 @@ export const angel = (ctx: CanvasRenderingContext2D, hand: Hands, flap: number, 
         { role: 'figure', line: 3.5 },
       ),
     );
-  // Both wings behind the body, so the hand that holds the banner reaches
-  // back over them to its pole.
   wing(-1);
   wing(1);
   ON_POLE.reach = hold;
@@ -337,7 +318,6 @@ export const angel = (ctx: CanvasRenderingContext2D, hand: Hands, flap: number, 
       body: C.robe,
       shade: C.robe,
       garment: 'robe',
-      // Flying: no ground under the feet.
       ground: 0,
       tilt: 0.08,
       look: [4, -1],

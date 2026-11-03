@@ -1,17 +1,3 @@
-// The server's render of the lab's pages. A page with a server entry
-// (`LabPageSpec.servers`) is rendered by its build's server bundle, which
-// `LabPage` builds beside the browser's from the same sources. Each build's
-// bundle runs in a worker of its own: written to a temp folder of the
-// build's, imported there and nowhere else, so the lab's own thread never
-// imports a page's code (Bun keeps a module for the life of its thread) and
-// a build's modules go when its worker does. A worker is spawned on its
-// build's first render; once a newer build renders, the older one's worker
-// is retired as soon as its last render ends (a reference count). A render's
-// reads of the lab's API come back to the lab (`PageReads`): answered by the
-// lab's own handler as the page's request would be, so they pass the one
-// gate and the same handlers. Bun is the only host: the live adapter is
-// Effect's `BunWorker` (`page-render-bun.ts`); `layerTest` renders without one.
-
 import {
   Boolean as Bool,
   Cause,
@@ -335,7 +321,6 @@ const spawnWorker = Effect.fnUntraced(function* (build: number, bundle: ServerBu
           Effect.tap(pieceOf(part), () => Ref.set(ended, part._tag !== 'Chunk')),
         ),
         Stream.filter((piece) => piece.length > 0),
-        // Cut, not ended: the render is stopped (`Cancel`) as its scope closes.
         Stream.interruptWhen(
           Effect.andThen(
             Effect.sleep(END_WAIT),

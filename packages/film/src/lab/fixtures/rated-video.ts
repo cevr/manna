@@ -1,10 +1,3 @@
-// A real video at a frame rate of its own, made with mediabunny: the
-// fifteen H.264 frames of `tools/fixtures/segment-a.mp4` (30 fps, encoded in
-// headless Chromium as a render encodes a chunk) laid `fps` a second, over
-// and over for as many frames as asked, re-muxed as they are (no frame is
-// encoded again), as an MP4 that starts fast. A review's clock steps such a
-// video by its own frames.
-
 import { Array as Arr, Effect, Option, Stream } from 'effect';
 import {
   ALL_FORMATS,
@@ -84,7 +77,6 @@ export const ratedVideo = (
         target,
       });
       const source = new EncodedVideoPacketSource('avc');
-      // The track's timestamps snap to whole ticks of `1 / timescale`.
       output.addVideoTrack(source, { frameRate: timescale });
       yield* Effect.promise(() => output.start());
       const moved = new Map(nudge);
@@ -107,7 +99,6 @@ export const ratedVideo = (
         .slice(0, frames)
         .filter(({ frame }) => !drop.includes(frame))
         .map(({ packet }) => packet);
-      // The first packet carries the track's config.
       for (const [i, packet] of laid.entries())
         yield* Effect.promise(() =>
           source.add(

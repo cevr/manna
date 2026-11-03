@@ -1,5 +1,3 @@
-// The synthetic film's reader: data only, never sent anywhere.
-
 export const voice = {
   voiceId: 'sample-voice',
   model: 'eleven_v4',

@@ -3,8 +3,6 @@ import { rasterOf } from '@manna/film/core';
 import { Effect } from 'effect';
 import { puppetFor } from './puppet.ts';
 
-// The real paint belongs to animations. This public-consumer guard keeps the
-// film package independent of the cast while checking the recorded rasters.
 it.effect('the lead without limbs stays byte-identical at four recorded poses', () =>
   Effect.gen(function* () {
     const puppet = yield* puppetFor('single-9');

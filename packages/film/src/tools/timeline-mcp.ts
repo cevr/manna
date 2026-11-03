@@ -1,9 +1,3 @@
-// The lab's timeline commands (`lab-command.ts`; MCP and `film lab` serve
-// them, in the lab alone: both read what the lab holds): a film's timeline
-// read (`timeline`, over `FilmTimelines`), and the edits of a version's
-// script (`beat_move`, `beat_hold`, and `undo` of the film's newest change),
-// made by `BeatEdits`: every agent steps one history.
-
 import { Effect, Match, Option, Schema } from 'effect';
 import * as Tool from 'effect/ai/Tool';
 import { ChangeId } from '../core/schema.ts';
@@ -15,9 +9,6 @@ import { LabLinks } from '../core/lab-events.ts';
 import { FilmTimelines } from './film-timeline.ts';
 import { LabAddress, labCommand } from './lab-command.ts';
 import { FilmParam, LabRefused, refused } from './lab-mcp-parts.ts';
-
-// ---------------------------------------------------------------------------
-// What the tools answer, and the tools
 
 /** A timeline as an agent reads it: the model, and the lab's address its `href`s are paths under. */
 const TimelineRead = Schema.Struct({
@@ -148,7 +139,6 @@ export const timelineCommands = [
         const held = yield* refused(
           edits.hold({ film, version: Option.fromUndefinedOr(version), beat, edge, seconds, by }),
         );
-        // The version read again after the write: the seams the hold moved.
         const after = yield* refused(timelines.timeline(film, Option.fromUndefinedOr(version)));
         return { ...editRead(held), seams: seamsAround(scriptLane(after), beat) };
       }),

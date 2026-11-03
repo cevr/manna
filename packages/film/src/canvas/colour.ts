@@ -1,8 +1,3 @@
-// Colours as a film writes them: hex, `#rrggbb` (or `#rgb`). A colour between
-// two, and a colour's own fully clear shade for a gradient to fade into. Any
-// other colour (a name, `rgb(…)`, hex with alpha) is refused, named: read as
-// hex it would make a NaN fill a canvas ignores, or a stop it refuses.
-
 import { clamp, lerp } from '../core/time.ts';
 
 /**
@@ -52,8 +47,6 @@ export const clearOf = (color: Hex): Clear => {
   rgbOf(A, color);
   return `rgba(${A[0]}, ${A[1]}, ${A[2]}, 0)`;
 };
-
-// ─── ramps: shading with colour (CRAFT rule 12) ──────────────────────────────
 
 /**
  * A colour's ramp under one key light (`ramp`): its shade, a darker hue turned

@@ -1,6 +1,3 @@
-// What the cast build's tests read out of a renders shard (`shardOf`'s
-// ustar archive): each file, and each sample's seed from its truth JSON.
-
 import { Schema } from 'effect';
 
 /** A ustar archive's files, in order: each name and its bytes. */

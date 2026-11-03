@@ -1,11 +1,3 @@
-// The input every command's `when` reads: a typed record of where the page
-// is and what it holds, built from the page's URL (its `Places` place and
-// the selection the URL names, `selection.ts`) and from the page's shell
-// (what is selected that the URL does not hold, where the keyboard's focus
-// is, whether the film plays). VS Code's context keys,
-// reshaped: one record the typecheck sees, read by plain predicates, not a
-// string language. Pure.
-
 import { Match, Option } from 'effect';
 import type { PageName } from '../core/api.ts';
 import type { Selection, SelectionTag } from './selection.ts';

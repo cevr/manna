@@ -66,8 +66,6 @@ export const verifyTopicsArtifact = Effect.fn('TopicsVerifier.verify')(function*
   }
   const topics = yield* reader.count('topics');
   const aliases = yield* reader.count('topic_aliases');
-  // These two counts are discarded; reading them at all is the point, because a
-  // missing table makes the read fail and fails the candidate.
   yield* reader.count('topic_edges');
   yield* reader.count('topic_catalog_keys');
   if (topics === 0) {

@@ -1,7 +1,3 @@
-// The checkouts the lab's review reads renders from, on a folder laid out as
-// the laptop is: a warm source, its Rifts under `.rifts/<repo>/`, and other
-// repositories beside them whose names say nothing.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { BunServices } from '@effect/platform-bun';
 import { Effect, FileSystem, Path } from 'effect';
@@ -29,15 +25,12 @@ describe('the checkouts', () => {
         for (const rift of ['p5', 'rbfscene', 'oneline', 'seedanim', 'rimproto'])
           yield* checkout(path.join(rifts, rift), 'bible');
         yield* checkout(path.join(rifts, 'empty'), 'bible', 'src');
-        // Named like the repository, a different one; named nothing like it, a checkout.
         yield* checkout(path.join(home, 'bible-hymns'), 'hymns');
         yield* checkout(path.join(rifts, 'not-json'), 'bible');
         yield* fs.writeFileString(path.join(rifts, 'not-json', 'package.json'), '{');
         const labels = (repo: string) =>
           Effect.map(checkoutRootsOf(repo), (roots) => roots.map((root) => root.label));
         const rifted = ['oneline', 'p5', 'rbfscene', 'rimproto', 'seedanim'];
-        // A lab in a Rift reads and writes (a say writes a catalogue) the Rifts alone: the
-        // warm source is only ever read, by git, never written.
         expect(yield* labels(path.join(rifts, 'p5'))).toEqual(rifted);
         expect(yield* labels(path.join(home, 'bible-tools'))).toEqual(['bible-tools', ...rifted]);
         const [first] = yield* checkoutRootsOf(path.join(rifts, 'p5'));
@@ -65,25 +58,20 @@ describe('the checkouts', () => {
         const warm = path.join(home, 'bible-tools');
         yield* checkout(warm, 'bible');
         yield* fs.makeDirectory(path.join(warm, '.git'));
-        // A batch of the film-architecture loop, made by `git worktree add ../bible-tools-batch`.
         yield* worktree(warm, path.join(home, 'bible-tools-batch'));
-        // A unit's worktree of the run's main, a Rift, beside it.
         yield* checkout(path.join(rifts, 'p5'), 'bible');
         yield* fs.makeDirectory(path.join(rifts, 'p5', '.git'));
         yield* checkout(path.join(rifts, 'oneline'), 'bible');
         yield* worktree(path.join(rifts, 'p5'), path.join(rifts, 'unit'));
-        // Beside the warm source: a worktree of the Rift p5, and a plain clone.
         yield* worktree(path.join(rifts, 'p5'), path.join(home, 'bible-tools-of-p5'));
         yield* checkout(path.join(home, 'bible-tools-clone'), 'bible');
         yield* fs.makeDirectory(path.join(home, 'bible-tools-clone', '.git'));
         const labels = (repo: string) =>
           Effect.map(checkoutRootsOf(repo), (roots) => roots.map((root) => root.label));
         const beside = ['bible-tools-batch', 'bible-tools-clone', 'bible-tools-of-p5'];
-        // None beside the warm source lists it.
         for (const one of beside)
           expect([one, yield* labels(path.join(home, one))]).toEqual([one, beside]);
         expect(yield* labels(path.join(rifts, 'unit'))).toEqual(['oneline', 'unit']);
-        // The checkouts they were made from still list them.
         expect(yield* labels(warm)).toEqual(['bible-tools', ...beside, 'oneline', 'p5', 'unit']);
         expect(yield* labels(path.join(rifts, 'p5'))).toEqual(['oneline', 'p5', 'unit']);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
@@ -98,11 +86,9 @@ describe('the checkouts', () => {
         const home = yield* fs.makeTempDirectoryScoped();
         const rifts = path.join(home, '.rifts', 'manna');
         yield* checkout(path.join(home, 'manna'), 'manna');
-        // Rifts made before their root package took the name `manna`, and one made since.
         yield* checkout(path.join(rifts, 'rbf-arms-rig'), 'bible');
         yield* checkout(path.join(rifts, 'film-motion-proto'), 'bible');
         yield* checkout(path.join(rifts, 'hymnapp-main'), 'manna');
-        // A repository named nothing like it, and one that is another.
         yield* checkout(path.join(rifts, 'bible-hymns'), 'hymns');
         const roots = yield* checkoutRootsOf(path.join(home, 'manna'));
         expect(roots.map((root) => root.label)).toEqual([
@@ -111,12 +97,9 @@ describe('the checkouts', () => {
           'manna',
           'rbf-arms-rig',
         ]);
-        // A lab in a Rift still on the old name lists the renamed ones too.
         expect(
           (yield* checkoutRootsOf(path.join(rifts, 'rbf-arms-rig'))).map((root) => root.label),
         ).toEqual(['film-motion-proto', 'hymnapp-main', 'rbf-arms-rig']);
-        // `manna` answers to `bible-tools` (a ref under it names its twin: review-refs.test.ts in
-        // the film); its refs are written with its label, and no other root has an alias.
         expect(roots.map((root) => [root.label, root.aliases])).toEqual([
           ['film-motion-proto', []],
           ['hymnapp-main', []],
@@ -134,7 +117,6 @@ describe('the checkouts', () => {
       yield* checkout(path.join(home, 'manna'), 'manna');
       yield* checkout(path.join(home, 'bible-tools'), 'bible');
       const roots = yield* checkoutRootsOf(path.join(home, 'manna'));
-      // The real root wins over `manna`'s alias where a ref is read (`aliasesOf`, review-refs.test.ts).
       expect(roots.map((root) => [root.label, root.path])).toEqual([
         ['bible-tools', path.join(home, 'bible-tools', 'apps', 'animations', 'out')],
         ['manna', path.join(home, 'manna', 'apps', 'animations', 'out')],
@@ -151,7 +133,6 @@ describe('the checkouts', () => {
       yield* checkout(path.join(home, 'bible-tools'), 'bible');
       yield* checkout(path.join(rifts, 'p5'), 'bible');
       yield* checkout(path.join(rifts, 'rbfscene'), 'bible');
-      // `rift create` run from each Rift, so each has a Rifts' folder beside it.
       yield* checkout(path.join(rifts, '.rifts', 'p5', 'n2'), 'bible');
       yield* checkout(path.join(rifts, '.rifts', 'rbfscene', 'n1'), 'bible');
       const labels = (repo: string) =>

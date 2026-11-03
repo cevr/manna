@@ -98,7 +98,6 @@ describe('timeline', () => {
     ] as const;
     const short = { start: 2, end: 2.5, dur: 0.5, ease: DEFAULT_EASE, stagger: 0 } as const;
     const long = { ...short, end: 3, dur: 1 };
-    // The same fraction of each cue reads the same value; the same second does not.
     expect(cueKeys(long, 2.8, swing)).toBe(cueKeys(short, 2.4, swing));
     expect(cueKeys(long, 2.4, swing)).not.toBe(cueKeys(short, 2.4, swing));
     expect(cueKeys(short, 2.5, swing)).toBe(1.45);
@@ -132,27 +131,22 @@ describe('timeline', () => {
 
   test('a staggered cue spreads n items over its stagger share; each lasts the rest', () => {
     const drop = { start: 2, end: 3.4, dur: 1.4, ease: 'linear', stagger: 0.5 } as const;
-    // Three items start at 0, 0.25 and 0.5 of the cue (2, 2.35, 2.7 s), each lasting 0.7 s.
     expect(staggerProgress(drop, 2.35, 0, 3)).toBeCloseTo(0.5);
     expect(staggerProgress(drop, 2.35, 1, 3)).toBe(0);
     expect(staggerProgress(drop, 2.7, 1, 3)).toBeCloseTo(0.5);
     expect(staggerProgress(drop, 3.05, 1, 3)).toBeCloseTo(1);
     expect(staggerProgress(drop, 3.4, 2, 3)).toBeCloseTo(1);
     expect(staggerProgress(drop, 3.5, 2, 3)).toBe(1);
-    // A dur edit scales every item: item 1 now starts at 2.7 and lasts 1.4 s.
     const longer = { ...drop, end: 4.8, dur: 2.8 };
     expect(staggerProgress(longer, 3.4, 1, 3)).toBeCloseTo(0.5);
-    // Each item eases by the cue's ease.
     expect(staggerProgress({ ...drop, ease: 'inQuad' }, 2.35, 0, 3)).toBeCloseTo(0.25);
   });
 
   test('a set spread by place staggers each item by where it stands, not its count', () => {
     const green = { start: 0, end: 1, dur: 1, ease: 'linear', stagger: 0.6 } as const;
-    // A field the rain reaches half way starts at 0.3 of the cue and lasts 0.4.
     expect(staggerAt(green, 0.3, 0.5)).toBe(0);
     expect(staggerAt(green, 0.5, 0.5)).toBeCloseTo(0.5);
     expect(staggerAt(green, 0.7, 0.5)).toBeCloseTo(1);
-    // The item at place i/(n-1) is item i of n.
     expect(staggerAt(green, 0.62, 2 / 3)).toBeCloseTo(staggerProgress(green, 0.62, 2, 4));
   });
 
@@ -174,10 +168,8 @@ describe('timeline', () => {
 
   test('cueProgress eases by the cue’s own ease', () => {
     const cue = { start: 1, end: 3, dur: 2, ease: 'inQuad', stagger: 0 } as const;
-    // Halfway through: inQuad gives 0.25.
     expect(cueProgress(cue, 2)).toBeCloseTo(0.25);
     expect(cueProgress({ ...cue, ease: DEFAULT_EASE }, 2.5)).toBeCloseTo(ease.inOutCubic(0.75));
-    // Before and after the span it is pinned, whatever the ease.
     expect(cueProgress(cue, 0)).toBe(0);
     expect(cueProgress(cue, 9)).toBe(1);
   });
@@ -236,7 +228,6 @@ describe('timeline', () => {
     expect(cues.get('walk')?.end).toBe(0.5 + 5);
     expect(cues.get('walk')?.dur).toBeCloseTo(2.7);
     expect(cues.get('sit')?.start).toBe(0.5 + 5);
-    // A re-take that moves the mark moves the end with it.
     const later = { ...clock, marks: new Map([...clock.marks, ['as', 6]]) };
     expect(
       Result.getOrThrow(resolveTimeline({ walk: { mark: 'fiction', until: 'as' } }, later)).get(
@@ -282,7 +273,6 @@ describe('timeline', () => {
     ).toEqual(
       UntilBeforeStart.make({ scene: 'justified', cue: 'late', until: 'the end of cue "roll"' }),
     );
-    // A cue that runs until itself, or until a cue anchored on it, is a cycle, not a loop.
     expect(
       failure({ a: { mark: 'fiction', until: { cue: 'b' } }, b: { after: 'a', dur: 1 } }),
     ).toEqual(CueCycle.make({ scene: 'justified', cycle: ['a', 'b', 'a'] }));
@@ -322,20 +312,14 @@ describe('timeline', () => {
     const land = { mark: 'fiction', dur: 0.5, ends: true } as const;
     const at = (span: Span) =>
       Result.getOrThrow(resolveTimeline({ land: span }, clock)).get('land');
-    // Lands on {fiction} (0.5 + 2) and starts its length before it.
     expect(at(land)).toMatchObject({ start: 2.5 - 0.5, end: 2.5, dur: 0.5 });
-    // The same cue written as a negative offset: one number twice.
     expect(at(land)).toEqual(at({ mark: 'fiction', offset: -0.5, dur: 0.5 }));
-    // A longer dur starts earlier; the landing holds.
     expect(at(patchSpan(land, { dur: 0.8 }))).toMatchObject({ end: 2.5, dur: 0.8 });
-    // An offset moves the landing off the anchor.
     expect(at({ ...land, offset: 0.1 })?.end).toBeCloseTo(2.6);
-    // An `until` replaces the landing.
     expect(patchSpan(land, { until: 'as' })).toEqual({ mark: 'fiction', until: 'as' });
   });
 
   test('the resolver takes an end on its start by float noise alone as on it', () => {
-    // Starts at 0.1 + 0.2 (0.30000000000000004 in floats); {b} is at 0.5; 0.5 − 0.2 is 0.3.
     const noisy: SceneClock = {
       ...clock,
       marks: new Map([
@@ -354,8 +338,6 @@ describe('timeline', () => {
     const c = resolved(walk);
     expect(c.start).toBe(0.1 + 0.2);
     expect(c.end).toBe(0.5);
-    // Ended 0.2 s before {b}, not a millisecond more to clear the noise: on the start,
-    // with no UntilBeforeStart and no negative dur.
     const onStart = resolved(patchSpan(walk, { untilOffset: -0.2 }));
     expect(onStart.dur).toBe(0);
     expect(onStart.end).toBe(onStart.start);
@@ -379,16 +361,13 @@ describe('timeline', () => {
       );
     expect(resolved(clock, walk)).toMatchObject({ start: 2.8 });
     expect(resolved(clock, walk).end).toBeCloseTo(0.5 + 5 + 0.1, 9);
-    // A re-take that moves {as} 1.25 s later moves the end by the same, and not the start.
     const later = { ...clock, marks: new Map([...clock.marks, ['as', 6.25]]) };
     expect(resolved(later, walk).end).toBeCloseTo(resolved(clock, walk).end + 1.25, 9);
     expect(resolved(later, walk).start).toBe(resolved(clock, walk).start);
-    // Before the point, and off a landmark, too.
     expect(resolved(clock, { ...walk, untilOffset: -0.2 }).end).toBeCloseTo(5.3, 9);
     expect(
       resolved(clock, { at: 'start', until: { at: 'end' }, untilOffset: -0.4 }).end,
     ).toBeCloseTo(9, 9);
-    // An offset that ends it before its start is still an `until` before the start.
     expect(failure({ walk: { mark: 'fiction', until: 'as', untilOffset: -3.5 } })).toEqual(
       UntilBeforeStart.make({ scene: 'justified', cue: 'walk', until: '{as} − 3.50 s' }),
     );
@@ -414,14 +393,12 @@ describe('timeline', () => {
       until: 'as',
       ease: 'linear',
     });
-    // A dur ends it by its length; another point ends it on that point.
     expect(patchSpan(walk, { dur: 2 })).toEqual({ mark: 'fiction', dur: 2, ease: 'linear' });
     expect(patchSpan(walk, { until: 'fiction' })).toEqual({
       mark: 'fiction',
       until: 'fiction',
       ease: 'linear',
     });
-    // A dur span has no point to be off: the offset has nothing to follow.
     expect(patchSpan({ mark: 'fiction', dur: 1 }, { untilOffset: 0.2 })).toEqual({
       mark: 'fiction',
       dur: 1,
@@ -439,12 +416,9 @@ describe('timeline', () => {
         clock,
       ),
     );
-    // Quotes, commas and case are ignored: “Not, reads not.
     expect(cues.get('open')?.start).toBeCloseTo(0.5 + 3 - 0.3, 9);
     expect(cues.get('open')?.dur).toBe(0.6);
-    // The first "not" at or after {as}, not the one before it.
     expect(cues.get('again')?.start).toBe(0.5 + 6);
-    // The mark's own word counts.
     expect(cues.get('self')?.start).toBe(0.5 + 2);
   });
 
@@ -474,20 +448,16 @@ describe('timeline', () => {
     expect(at('Christ')).toBe(0.5 + 3);
     expect(at('café')).toBe(0.5 + 4);
     expect(at('CAFÉ')).toBe(0.5 + 4);
-    // Composed or decomposed, an accent is the same letter.
     expect(at('naïve')).toBe(0.5 + 5);
-    // A part is a whole part: "cove" is not "cover", "caf" not "café".
     expect(at('cove')).toBe('WordMissing');
     expect(at('caf')).toBe('WordMissing');
   });
 
   test('a word pin on a word the line never says after its mark is WordMissing, never the mark', () => {
     const pin = (mark: string, word: string) => failure({ lit: { mark, word, dur: 0.6 } });
-    // Said only before the mark.
     expect(pin('as', 'legal')).toEqual(
       WordMissing.make({ scene: 'justified', by: 'cue "lit"', mark: 'as', word: 'legal' }),
     );
-    // Never said.
     expect(pin('fiction', 'faith')).toBeInstanceOf(WordMissing);
   });
 
@@ -597,7 +567,6 @@ describe('timeline', () => {
     for (const p of placed) {
       const clockOfHand = sceneClock(p);
       expect(Result.getOrThrow(resolveTimeline(p.spec.timeline, clockOfHand))).toEqual(p.cues);
-      // The lab's preview of a drag: +0.3s on topple moves it and what follows it.
       const dragged = Result.getOrThrow(
         resolveTimeline(
           { ...p.spec.timeline, topple: { mark: 'earns', offset: 0.4, dur: 1.8 } },

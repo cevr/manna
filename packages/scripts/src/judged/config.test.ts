@@ -1,6 +1,3 @@
-// The judged rules' one source, the repo's `.oxlintrc.json`: what the runner
-// reads of it, and that the plugin defines exactly the rules it names.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { JSONC } from 'bun';
 import { Effect, FileSystem, Path, Schema } from 'effect';

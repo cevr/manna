@@ -1,6 +1,3 @@
-// The player's DOM helpers: a page's failure in its place, bytes or a canvas
-// as base64, and a canvas's luma.
-
 import type { LumaArea } from '../core/export-handle.ts';
 
 /**

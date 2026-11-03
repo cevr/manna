@@ -1,8 +1,3 @@
-// The series lead's turnaround is traced from his part labels (`labels.ts`),
-// no seed left in any of its six views, and each table it writes is the one
-// kept beside it (`film concept trace --check`, which writes nothing); his
-// poses, still picked by seeds, trace to theirs too.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Stream } from 'effect';

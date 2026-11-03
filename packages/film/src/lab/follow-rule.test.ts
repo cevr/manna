@@ -1,8 +1,3 @@
-// The lab's one Follow rule, with no page: where a box's top goes to keep
-// the playhead's span in sight (`placeTo`), and to reveal what a press
-// opened by the least scroll (`revealTo`). The Script reader, the Source
-// view and the studio's Words follow by these.
-
 import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
 import { placeTo, revealTo } from './follow-rule.ts';
@@ -21,7 +16,6 @@ describe('placeTo: the span followed stays in sight', () => {
   });
 
   test("a tall span's last row is brought into sight, its first never above the clear top", () => {
-    // A third down would leave its bottom (900) out of sight; its top (600) under the head limits it.
     expect(placeTo(box(0), { top: 600, bottom: 900 }, UNDER_HEAD)).toEqual(Option.some(552));
   });
 

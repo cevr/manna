@@ -1,22 +1,3 @@
-// A film read, checked or changed by the film CLI in a fresh process: the one
-// seam "run this CLI again and read what it prints". The review runs for
-// days, and the lab for hours, and Bun keeps every module it imported as it
-// was at the import, so a film's `sound.ts` (its score options, what `play`
-// names), its palette's looks, its script, its voice, its scenes and the
-// app's sound library, read in their own process, stay as they were at
-// start. Each call here runs the film CLI again (`film options …`,
-// `choices-cli.ts`; `film read …`, `read-cli.ts`; `film project … --json`,
-// `project-cli.ts`; `film check … --json`; `film mix`, which an Undo of a
-// kept take asks), which imports the film as it stands on disk. The lab's
-// easel tools (`easel-mcp.ts`) read a scene's clock (`film read cues`) and
-// check scenes drawn (`film check --draw`) the same way.
-//
-// Two answers come back. A command answers with one line of JSON
-// (`FreshLine`): its answer, or the refusal it failed with, raised here again
-// as itself; any other failure it names (a film that does not load) comes back
-// as `ServerFailed`, its tag and its words. `film check --json` answers with one `CheckLine` per finding; a
-// check that cannot run is itself one error finding. Logs go to stderr.
-
 import {
   Array as Arr,
   Console,
@@ -576,7 +557,6 @@ export class FreshFilm extends Context.Service<FreshFilm, FreshFilmService>()(
           spans: Option.Option<Timeline>,
           patch: Option.Option<CuePatch>,
         ) {
-          // Spans and a patch are data the lab read or decoded: they encode as their schema says.
           const given = yield* Option.match(spans, {
             onNone: () => Effect.succeed<ReadonlyArray<string>>([]),
             onSome: (s) => Effect.map(Effect.orDie(encodeTimeline(s)), (json) => ['--spans', json]),

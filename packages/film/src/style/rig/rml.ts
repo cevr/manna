@@ -1,6 +1,3 @@
-// RML, Rive's markup, written from code: an element tree printed the way
-// `rive pull` writes a file, so the rig is generated, not drawn. Pure.
-
 import { Predicate } from 'effect';
 
 /** An attribute's value as written: round a number before it gets here (`num`). */

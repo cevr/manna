@@ -1,9 +1,3 @@
-// A sketch drawn over a storyboard panel, as pure data: the shapes a note
-// carries (a pen stroke, an arrow, a rectangle, an ellipse, a text pinned to
-// a point), each in one of three inks, in the panel's own fractions (0 at its
-// left or top edge, 1 at its right or bottom), so a sketch lands where it was
-// drawn at any size the panel is shown. Pure and DOM-free.
-
 import { Schema } from 'effect';
 
 /** The sketch's inks: ink for a drawing, red for a correction, gold to point at what works. */

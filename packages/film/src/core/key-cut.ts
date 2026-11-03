@@ -1,15 +1,3 @@
-// A drawn key cut into a part sheet's frame. The key is a drawing of a kept
-// view in a new pose of one limb (an image model's output, at its own scale and
-// place). `fitKey` registers it to the kept view by a similarity (scale and
-// shift) fitted over the pixels the pose leaves still; `keyInFrame` resamples
-// it into a frame laid over the kept view (3x3 samples a pixel, bilinear);
-// `cutLimb` cuts the limb out of it: the limb's paint flooded from its two
-// bones inside two capsules round them (ink and skin as walls, the paper
-// reached from the border as ground), then the ink within 10 px of that
-// paint, then the holes closed, cropped to its box. The hand past the wrist is
-// left out. Given the kept view's ink, the cut's silhouette is inked at the
-// house width (`INK_WIDTH`) before the crop. Pure.
-
 import { Option } from 'effect';
 import { type Rgb, labsOf, rgbAt } from './cast-sheet-pixels.ts';
 import { rgbOfLab } from './part-sheet.ts';
@@ -119,8 +107,6 @@ export const fitKey = (
 ): KeyFit => {
   const ground = groundOfKey(drawn);
   const start = startOf(drawn, view, ground);
-  // A view or drawing with no figure, or one a single row tall, gives no scale
-  // to start from: the fit fails (error NaN) rather than scoring the paper.
   if (!(Number.isFinite(start.s) && start.s > 0)) return { ...start, error: NaN, ground };
   const { xs, ys, seen } = scoredOf(view, still);
   const { width: w, height: h, rgba } = drawn;
@@ -449,10 +435,8 @@ export const cutLimb = (
   const { width, height } = r;
   const { ink, skin, fig, cap } = classesOf(r, ground, limb);
   const border = borderOf(width, height);
-  // the figure: all that the paper reached from the border does not take
   const groundFlood = flood(width, height, border, (i) => !fig[i]);
   const isFig = (i: number) => !groundFlood[i];
-  // the limb's paint, flooded from its bones at tenths of their length
   const seeds: number[] = [];
   for (let t = 1; t <= 9; t++)
     for (const [a, b] of [
@@ -464,14 +448,10 @@ export const cutLimb = (
           Math.floor(a[0] + ((b[0] - a[0]) * t) / 10),
       );
   const mask = flood(width, height, seeds, (i) => !!cap[i] && isFig(i) && !ink[i] && !skin[i]);
-  // the ink within 10 px of the paint, inside the capsules
   const near = grown(width, height, mask, 10);
   for (let i = 0; i < mask.length; i++) if (near[i] && ink[i] && cap[i]) mask[i] = 1;
-  // the holes closed: what the outside cannot reach, inside the capsules and not skin
   const outside = flood(width, height, border, (i) => !mask[i]);
   for (let i = 0; i < mask.length; i++) if (!outside[i] && cap[i] && !skin[i]) mask[i] = 1;
-  // the silhouette's edge: where the limb meets the paper, or a drawn edge inside the capsules; not
-  // where a capsule cut the figure through (the shoulder's end, the wrist's)
   const lined = Option.match(line, {
     onNone: () => r,
     onSome: (lab) => outlined(r, mask, (i) => !isFig(i) || cap[i] === 1, lab),

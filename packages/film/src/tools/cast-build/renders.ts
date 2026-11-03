@@ -1,12 +1,3 @@
-// A drawing's synthetic training renders as one shard (`shardOf`): its
-// puppet posed at random (`core/pose-sample.ts`), `train` and `held`
-// samples, each a PNG and its truth as JSON, in a ustar archive with every
-// mtime 0, so the same drawing makes the same bytes on every host. Each
-// sample's seed comes from the SHA-256 of `<member>/<id>` (`seedOf`), never
-// from the drawing's place in a list, so a drawing keeps its samples when
-// the cast grows. The training set is the sorted list of its shards' hashes
-// (`trainsetOf`).
-
 import { Schema } from 'effect';
 import { type PoseSpec, SAMPLE_SIZE, sample } from '../../core/pose-sample.ts';
 import { sha256Hex } from '../digest.ts';

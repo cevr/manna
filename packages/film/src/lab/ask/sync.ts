@@ -1,24 +1,3 @@
-// The synced player's driver: the media of a set (`Playable`s: live its
-// `<video>`s and `<audio>`s), made to do what the machine's state says, and
-// what they do told back to it as events. It reaches them only through the
-// port (`browser/media.ts`), and plays them through `Media.playOrMute`. The
-// leading version's video is the clock, and the clock alone: its time, its
-// end, its ending and its failure are the set's, and while it is not
-// attached the set's time stands. The page says which version leads; when
-// that changes the driver `follow`s the new one (`ClockMoved`). Every other
-// video that drifts more than DRIFT_S from it is put back on it. Only the audible
-// one is unmuted. The machine is told when the clock's media cannot play
-// (`MediaFailed`), and when the clock's media is new (`MediaReplaced`: each
-// source, and each retry, is a fresh element attached), so a failure is its
-// media's alone; another video that fails is left out: of the drift pull,
-// of the seeks and plays, and of what a stalled set waits on, until its media
-// is measured again. A seek moves every video that can play, each onto its
-// own frame at the clock's (`landing`, by its own rate once `timed`); a stall pauses
-// them all until each has enough to play on (`Buffering`). A seek or a play it sets going on a video lasts
-// only while that video is attached: replaced, released or stopped, it
-// ends. The player's transport (space, ←/→) is declared here too, as the
-// page's commands, for every page with a synced player.
-
 import { type Context, Effect, Option } from 'effect';
 import { Frames } from '../../browser/frames.ts';
 import { frameAtOrBefore, frameRead } from '../../core/time.ts';
@@ -207,7 +186,6 @@ export const makeSync = (
 
   const run = () => {
     if (Option.isSome(looping)) return;
-    // A loop that ends forgets its stop only while it is still the loop running.
     const stop = Effect.runCallbackWith(host)(
       Frames.use((frames) => frames.loop(step)),
       {
@@ -226,11 +204,6 @@ export const makeSync = (
   const apply = (state: SyncState) => {
     current = Option.some(state);
     hear(state);
-    // A seek, or the clock's rate read while still (its frames are not the
-    // ones the videos landed on). Read while playing, or while the set waits
-    // on a video to play on, it lands none: a landing at the last tick's time
-    // would put each back (and give the wait more to load); they play on, and
-    // the next seek lands them on the new frames.
     const regrid = state.fps !== grid && !movingOf(state);
     grid = state.fps;
     if (state.seek !== seek || regrid) {
@@ -274,15 +247,12 @@ export const makeSync = (
     const attached: Attached = { video, held: new AbortController() };
     const signal = attached.held.signal;
     videos.set(id, attached);
-    // The clock's new media, while its last failed: the failure was that media's.
     if (id === leading && Option.exists(current, (state) => state._tag === 'Failed'))
       send(Events.MediaReplaced);
-    // Measured before it joined (its `loadedmetadata` came first): no `measured` follows.
     measure(id, video);
     video.on(
       'measured',
       () => {
-        // Measured, it plays: a failure before was another try's.
         broken.delete(attached);
         measure(id, video);
         Option.map(current, (state) => land(id, attached, state));

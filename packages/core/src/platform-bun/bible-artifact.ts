@@ -110,8 +110,6 @@ export const layerNativeWebsterArtifacts = (input: {
               ),
             );
             if (Option.isNone(active)) return artifact;
-            // A verified active file has a content identity already. Its mtime is
-            // not a new content revision. Digest is recomputed if refresh copies it.
             return {
               ...artifact,
               provenance: CorpusProvenance.make({

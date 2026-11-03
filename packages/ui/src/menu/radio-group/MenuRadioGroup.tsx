@@ -1,11 +1,3 @@
-// Upstream: packages/react/src/menu/radio-group/MenuRadioGroup.tsx,
-// packages/react/src/menu/radio-group/MenuRadioGroupContext.ts
-//
-// A `role="group"` of radio items, one of them checked: the owner holds
-// `value`, a press on an item offers its value (`onValueChange`), and the
-// items show what the owner keeps. Labelled by a `Menu.GroupLabel` inside
-// it, as `Menu.Group` is. Upstream's uncontrolled `defaultValue`,
-// `disabled` and the filter's radio group are left out.
 import type { JSX } from '@solidjs/web';
 import { createContext, omit, untrack, useContext } from 'solid-js';
 
@@ -50,7 +42,6 @@ export function MenuRadioGroup<Value>(componentProps: MenuRadioGroupProps<Value>
       untrack(() => componentProps.onValueChange)?.(value as Value, event);
     },
   };
-  // A thunk, built under the providers below so its children read them.
   const element = () =>
     useRenderElement('div', componentProps, {
       props: [

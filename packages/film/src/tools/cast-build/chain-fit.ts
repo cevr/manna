@@ -1,12 +1,3 @@
-// One route A fit of the clip chain (`chain.ts`), in its own process:
-//
-//   bun chain-fit.ts <job.v8> <out.json>
-//
-// The job (a `FitJob`, v8-serialized) names the puppet, the canvas frame,
-// the start pose, the bones and the paper; `fitPose` fits every named
-// bone, the root and the scale, and the fit is written as JSON with its
-// loss, its raster count and its seconds.
-
 import { deserialize } from 'node:v8';
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';

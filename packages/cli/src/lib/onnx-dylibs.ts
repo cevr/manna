@@ -36,7 +36,6 @@ export const ensureOnnxDylibs: Effect.Effect<void, never, FileSystem.FileSystem 
         break;
       }
     }
-    // The workspace case: nothing staged, nothing to repair.
     if (Option.isNone(staged)) return;
 
     const destination = yield* tempDir;

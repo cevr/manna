@@ -1,21 +1,3 @@
-// A part sheet: a kept view cut into named parts made of the view's own
-// pixels, front to back (`cutParts`), so that a part can move while every
-// pixel at rest stays the view's. A cut lists its parts front to back, each
-// by the rules that take a pixel (`take`) and the rules that leave it to a
-// part behind (`unless`): a polygon (a pixel whose centre lies inside it,
-// even-odd), a disc (a pixel whose centre lies within its radius) or a label
-// (a pixel of the region that part label picks on this view, `core/label.ts`
-// over the tracer's colour regions, `core/trace.ts`). Each figure pixel
-// belongs to the first part that takes it; a figure pixel no part takes
-// refuses the cut. The figure is what the fit rows read (`core/fit-rows.ts`):
-// what the view's border does not reach through ground-like pixels, the paper
-// its ink encloses held, less the gaps the view names (a ground-coloured
-// piece between a figure's feet, `enclosedPaperOf`). A part holds the view's
-// bytes where it owns a pixel and nothing elsewhere, until paint is laid
-// under a part in front of it (`paintHidden`), where only motion shows it.
-// `recompose` lays the parts back to front, each held pixel replacing what
-// lies under it, so the sheet gives its view back byte for byte. Pure.
-
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import { type Box, type Rgb, componentsOf, deltaE, labOf, rgbAt } from './cast-sheet-pixels.ts';
 import { figureOf } from './fit-rows.ts';
@@ -391,7 +373,6 @@ export const paintHidden = (
   const n = sheet.width * sheet.height;
   if (paint.width !== sheet.width || paint.height !== sheet.height || where.length !== n)
     return refuse(`the paint or its mask is not the sheet's size, ${sheet.width}×${sheet.height}`);
-  // a part in front of the part at k is one listed before it: owner 1 to k
   const inFront = (i: number) => (sheet.owner[i] ?? 0) >= 1 && (sheet.owner[i] ?? 0) <= k;
   const at = (i: number) => `(${i % sheet.width}, ${Math.floor(i / sheet.width)})`;
   const unowned = where.findIndex((m, i) => m === 1 && !inFront(i));
@@ -399,7 +380,6 @@ export const paintHidden = (
     return refuse(
       `paint at ${at(unowned)} would show at rest: no part in front of ${part} owns it`,
     );
-  // recompose lets a pixel through where its owner is not opaque, so only an opaque owner hides paint
   const seen = where.findIndex(
     (m, i) =>
       m === 1 && (sheet.parts[(sheet.owner[i] ?? 1) - 1]?.pixels.rgba[i * 4 + 3] ?? 0) < 255,

@@ -46,7 +46,6 @@ type ContentExportError =
 type ContentSyncError = PlatformError.PlatformError | MarkdownParseError | Cause.UnknownError;
 type ContentDeleteError = PlatformError.PlatformError | NoteOperationError | Cause.UnknownError;
 
-// Service interface with proper error/context types
 export class ContentService extends Context.Service<
   ContentService,
   {
@@ -181,7 +180,6 @@ export class ContentService extends Context.Service<
     );
 }
 
-// Helper: sort files based on strategy
 const sortFiles = (files: string[], strategy: SortStrategy): string[] =>
   Match.value(strategy).pipe(
     Match.tag('date-desc', () => [...files].sort((a, b) => b.localeCompare(a))),

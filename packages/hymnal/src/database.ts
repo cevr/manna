@@ -432,7 +432,6 @@ const writeTiming = (
   timing.lines.forEach((line, i) => {
     const occurrence = occurrences[i];
     const source = occurrence && parts.get(occurrence.verse)?.[occurrence.line];
-    // validateSources proves this mapping; the FK additionally refuses a missing source line.
     const id = Number(
       lineTime(
         hymn.number,

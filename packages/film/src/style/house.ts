@@ -1,12 +1,3 @@
-// The house look's numbers, as the generator (`rig/parts.ts`) reads them:
-// K1, the owner's pick (2026-10-13,
-// `.claude/skills/film/reference/character-design.md`). The key light and
-// how a paper shades under it (CRAFT 12), the people's papers, the rim, the
-// one light's angle, and the figure's line: the edge of a cut and its ink, from
-// the RimWorld study's questions
-// (`.claude/skills/film/reference/rimworld-study.md` §3), A3 in B1, and how
-// thin the line draws in a close shot (`CLOSE_SHOT`, `inkAt`).
-
 import { type Hex, type Ramp, type Shading, ramp } from '../canvas/colour.ts';
 import { lerp, progress } from '../core/time.ts';
 

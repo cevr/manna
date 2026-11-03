@@ -1,10 +1,3 @@
-// ElevenLabs through its CLI: speech and dialogue with timestamps,
-// speech-to-text, music and sound effects. Every request body is encoded and
-// every response decoded with Schema. Calls authenticate with an API key, from
-// ELEVENLABS_API_KEY or the Keychain entry of that name, when there is one,
-// and fall back to the CLI's OAuth login, which covers everything but sound
-// effects.
-
 import {
   Config,
   Context,
@@ -25,8 +18,6 @@ import { ApiKeyMissing } from './errors.ts';
 import { type Finished, collect, isNotFound } from './process.ts';
 
 const OUTPUT_FORMAT = 'mp3_44100_192';
-
-// Request bodies. Field order is what the CLI has always been sent.
 
 const OutputParams = Schema.fromJsonString(Schema.Struct({ output_format: Schema.String }));
 
@@ -65,8 +56,6 @@ const SoundEffectBody = Schema.fromJsonString(
     model_id: Schema.String,
   }),
 );
-
-// Responses.
 
 /** `auth status`: each credential scheme and whether it is logged in. */
 const AuthStatus = Schema.fromJsonString(

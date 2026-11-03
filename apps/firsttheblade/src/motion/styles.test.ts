@@ -105,7 +105,6 @@ const rules = (css: string): ReadonlyArray<Rule> => {
       if (rule.type === 'media')
         walk(rule.value.rules, [...media, rule.value.query.mediaQueries], chain, parent);
       walk(opened(rule), media, chain, parent);
-      // A rule under `@scope (<root>)` matches only within the root, as one nested under it does.
       if (rule.type === 'scope')
         walk(
           rule.value.rules,
@@ -660,7 +659,6 @@ describe('the motion in the stylesheet', () => {
       const drawing = yield* fs.readFileString(
         path.join(import.meta.dir, '..', 'art', 'emblem-remedies.svg'),
       );
-      // The drawing is the blade's group (its edges, veins and the stem's broader passes), then the stem's path from its foot.
       const foot = /<\/g>\s*<path d="M(\d+) (\d+)[A-Za-z]/.exec(drawing);
       expect(foot).not.toBeNull();
       const sheet = yield* stylesheet;

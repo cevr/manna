@@ -131,9 +131,6 @@ export const fuse = (lists: readonly FusionList[]): readonly FusedHit[] => {
         seen += 1;
         return fresh;
       });
-      // A duplicate id inside one list is scored once, at its best rank: the
-      // leg's first mention is its opinion, and adding the second would let a
-      // buggy leg inflate a document by repeating it.
       if (Option.isSome(placed[listIndex] ?? Option.none())) return;
       placed[listIndex] = Option.some(rank);
       scores.set(id, (scores.get(id) ?? 0) + contribution(rank, list.weight));
@@ -144,7 +141,6 @@ export const fuse = (lists: readonly FusionList[]): readonly FusedHit[] => {
   return [...scores.entries()]
     .map(([id, score]) => ({
       id,
-      // The one bonus, from the best rank anywhere, outside the per-list sum.
       score: score + rankBonus(bestRank.get(id) ?? Number.MAX_SAFE_INTEGER),
       ranks: ranks.get(id) ?? [],
     }))

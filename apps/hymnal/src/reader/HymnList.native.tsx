@@ -296,23 +296,12 @@ export function HymnList({
   const scroll = pullDown?.scroll ?? own;
   const cover = pullDown?.cover ?? uncovered;
   const rest = pullDown?.rest ?? 0;
-  // LegendList's sync of `scroll` keys its effect on this object: each new one subscribes again and
-  // writes the list's JavaScript scroll into `scroll`, over the UI thread's. One object for each
-  // `scroll`, so it does that only when the list or `scroll` changes, not at each render.
   const sharedValues = useMemo(() => ({ scrollOffset: scroll }), [scroll]);
-  // The list's scroll view, for the rail to scroll from the UI thread.
   const scroller = useAnimatedRef<Animated.ScrollView>();
-  // While the rail is held its ticks are the topics felt, so the pin gives no
-  // `section` cue of its own.
   const railing = useSharedValue(false);
-  // The topic last felt, by its place, by the rail or the pin: a topic is felt once.
   const felt = useSharedValue(-1);
-  // The list's own scroll is off while the rail is held: a finger moving down
-  // the gutter drives the rail alone, and only the rail scrolls the list.
   const scrolling = useAnimatedProps(() => ({ scrollEnabled: !railing.value }));
-  // The end the list keeps, clear of the bar or the `#`, as its last row (`ListEnd`) keeps it.
   const end = listEndSpace(useStackBottom(), useFindRoom());
-  // A late topic asked for opens with the list's end at the screen's bottom, not past it.
   const opening = useMemo(
     () =>
       Option.match(Option.fromNullishOr(start), {
@@ -330,8 +319,6 @@ export function HymnList({
       }),
     [start, pullDown?.rest, rows, header, topicHeight, hymnHeight, end, viewport, rest],
   );
-  // Each hymn under a topic, at the offset that shows its row under the pin:
-  // the rail's marks, and the rows a home list follows the find drums to.
   const following = Predicate.isNotUndefined(pullDown);
   const placed = useMemo(() => {
     if (!byTopic && !following) return [];
@@ -341,12 +328,10 @@ export function HymnList({
       (kind) => ({ topic: topicHeight, shelf: topicHeight, hymn: hymnHeight })[kind],
     );
   }, [rows, byTopic, following, header, topicHeight, hymnHeight]);
-  // The Sections list alone has a rail.
   const marks = useMemo(() => {
     if (!byTopic) return [];
     return placed;
   }, [byTopic, placed]);
-  // The rows give the rail its gutter only where a rail is drawn: GUTTER with marks, else 0.
   const gutter = GUTTER * Math.min(1, marks.length);
   const look = useMemo(
     (): Look => ({
@@ -362,7 +347,6 @@ export function HymnList({
     [accent, hymnHeight, foundHeight, topicHeight, gutter, hrefOf, onGroup, rowOpening],
   );
   const dialled = useAtomValue(find);
-  // The offset of the dialled hymn's row while the drums are open on a home list, else -1.
   const wanted = useSharedValue(-1);
   useEffect(() => {
     if (!following) {
@@ -393,9 +377,6 @@ export function HymnList({
       scrollTo(scroller, 0, Math.max(0, mark.offset - cover.value), false);
     },
   });
-  // When the rows change under a reader scrolled into the list (a hymn opened
-  // from it joins Recent above), the rows in view keep their place. At the
-  // list's top nothing holds, so a list that gains a hymn shows it.
   const anchoring = useMemo(
     () => ({ data: true, shouldRestorePosition: () => scroll.value > rest + 1 }),
     [scroll, rest],
@@ -418,11 +399,7 @@ export function HymnList({
           recycleItems
           ListHeaderComponent={pullDown?.node}
           estimatedHeaderSize={pullDown?.height}
-          // The last row ends clear of the home indicator and the docked bar.
           ListFooterComponent={<ListEnd />}
-          // The list opens with the search field tucked under the title, and a
-          // drag let go between there and the top settles at one or the other;
-          // past the field it scrolls freely.
           initialScrollOffset={opening}
           snapToOffsets={pullDown && [0, pullDown.rest]}
           snapToEnd={false}
@@ -509,8 +486,6 @@ function PinnedTopic({
   const line = useAnimatedStyle(() => ({ transform: [{ translateY: cover.value }] }));
   const cue = useCue();
   const section = (place: number) => cue({ _tag: 'section', place });
-  // A topic taking the pin is felt; the first call, as the list mounts, is not, nor one while `quiet`
-  // (the rail held), nor the topic last felt (the rail's, as the list lands after its last scroll).
   useAnimatedReaction(
     () => pinned.value.index,
     (now, before) => {
@@ -552,7 +527,6 @@ function PinnedTopic({
       <Animated.View style={[{ height }, styles.clip, place]}>
         <Animated.View style={strip}>
           {topics.map((name, i) => (
-            // A topic that comes back has the same name: its place is its key.
             <Topic key={i} name={name} height={height} gutter={0} />
           ))}
         </Animated.View>
@@ -703,11 +677,9 @@ function HymnRow({
     onNone: (): Opening => 'push',
     onSome: (asked) => asked.of(hymn.number),
   });
-  // A replacing link is One's `REPLACE`: a new hymn under the same route, never the shown one.
   const link = useLinkTo({ href: Link.resolveHref(href), replace: how === 'replace' });
   const pageFrom = useAtomSet(pagesFrom);
   const onPress: typeof link.onPress = (event) => {
-    // A stay moves nothing and hands the pager nothing; on the web the link's href is not followed.
     if (how === 'stay') event?.preventDefault();
     else {
       pageFrom(Option.some(source));

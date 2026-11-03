@@ -1,16 +1,3 @@
-// No cast member's puppet draws a paper rim. Each puppet view every member's
-// `cutout/puppets.ts` exports (`PUPPETS`) under the app's sources is loaded
-// as the film loads it (`puppetFrom`: its part PNGs un-matted from its paper
-// with its own options, `core/unmatte.ts`), and its rim left is read against
-// its cut part PNGs (`paperRimLeftOf`, `RIM_LEFT`): the pixels outside his
-// outer ink the un-matte keeps whole in the paper's colour, which draw a torn
-// white fringe round him on any other paper; his ground shadow's own pale
-// paint is not rim (`RimLeft.shadow`). A view whose paint keeps a pale
-// band outside its ink fails here, naming it and its count, until its cut
-// table clears the band (`clearPaperRim` in its `CLEAN`). The views are read
-// from the tree (`views.ts`), so a new member's are held with no edit here.
-// Each case decodes a view's sheets, so they run in the slow suite.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import type { PuppetSpec } from '@manna/film/canvas';
 import { PuppetImagesBun, decodePng, puppetFrom } from '@manna/film/tools';

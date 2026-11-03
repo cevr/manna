@@ -1,10 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { burst, cycle, fly, flyV, stream } from './particles.ts';
 
-// What a scene relies on: a particle's place is the closed form of its age,
-// and every emitter calls back with the same numbers at the same t, so a
-// frame draws the same in any order and a loop has no seam.
-
 /** One call an emitter makes: the index, age and life, then two draws of its rng. */
 type Call = readonly [i: number, age: number, life: number, r0: number, r1: number];
 

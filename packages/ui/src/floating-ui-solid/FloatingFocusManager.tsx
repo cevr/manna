@@ -1,13 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/components/FloatingFocusManager.tsx
-//
-// Moves focus into a popup when it opens and back to its trigger (or what
-// had focus before) when it closes. A modal popup traps Tab between focus
-// guards and hides the rest of the page from assistive tech; a non-modal one
-// closes when focus leaves it, its trigger and its portal. Focus lost
-// inside the popup (its focused element removed) can be restored.
-//
-// Upstream also tracks focus moving through React portals that stay inside
-// the React tree; Solid's tree is the DOM's here, so that is not ported.
 import { getNodeName, isHTMLElement } from '@floating-ui/utils/dom';
 import type { JSX } from '@solidjs/web';
 import { createEffect, onCleanup, Show, untrack } from 'solid-js';
@@ -63,11 +53,9 @@ function getEventType(
     return 'keyboard';
   }
   if (event instanceof win.FocusEvent) {
-    // Focus can follow a pointer press (focusout on an outside press); prefer the last pointer type.
     return lastInteractionType || 'keyboard';
   }
   if ('pointerType' in event) {
-    // A trusted click without a pointer type is keyboard or assistive tech.
     return (
       ((event as PointerEvent).pointerType as InteractionType) ||
       (isVirtualClick(event as PointerEvent) ? 'keyboard' : lastInteractionType || 'mouse')
@@ -136,7 +124,6 @@ function handleTabIndex(floatingFocusElement: HTMLElement) {
   if (tabbableContent.length === 0) {
     if (tabIndex !== '0') {
       floatingFocusElement.setAttribute('tabindex', '0');
-      // Marks this write as ours, so the early return above does not freeze it.
       floatingFocusElement.setAttribute('data-tabindex', '0');
     }
   } else if (
@@ -205,7 +192,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
   const shouldRenderGuards = () => !disabled() && (!!portalContext || modal());
 
   const beforeGuardRef: { current: HTMLSpanElement | null } = { current: null };
-  // The after guard stays rendered (see the render): it is the guard only while guarding.
   let afterGuardElement: HTMLSpanElement | null = null;
   const afterGuardRef: { current: HTMLSpanElement | null } = {
     get current() {
@@ -226,11 +212,9 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
   const getResolvedInsideElements = () =>
     props.getInsideElements?.().filter((element): element is Element => element != null) ?? [];
 
-  // Tab cannot leave a modal with nothing tabbable inside.
   createEffect(
     () => [disabled(), modal(), context.floatingElement()] as const,
     ([isDisabled, isModal, floating]) => {
-      // Resolved here, once the popup's content is in the DOM.
       const focusElement = getFloatingFocusElement(floating);
       if (isDisabled || !isModal) {
         return undefined;
@@ -247,7 +231,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
     },
   );
 
-  // Tracks pointer and keyboard interaction, to tell focus moves from outside presses.
   createEffect(
     () =>
       [
@@ -257,7 +240,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
         context.domReferenceElement(),
       ] as const,
     ([isDisabled, open, floating, domReference]) => {
-      // Resolved here, once the popup's content is in the DOM.
       const focusElement = getFloatingFocusElement(floating);
       if (isDisabled || !open) {
         return undefined;
@@ -286,13 +268,11 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
         addEventListener(doc, 'pointerup', clearPointerDownOutside, true),
         addEventListener(doc, 'pointercancel', clearPointerDownOutside, true),
         addEventListener(doc, 'keydown', onKeyDown, true),
-        // A popup dismissed between pointerdown and pointerup must not carry `true` into its next open.
         clearPointerDownOutside,
       );
     },
   );
 
-  // Closes on focus out, and restores focus lost inside.
   createEffect(
     () =>
       [
@@ -304,14 +284,12 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
         restoreFocus(),
       ] as const,
     ([isDisabled, closeOnOut, domReference, floating, isModal, restore]) => {
-      // Resolved here, once the popup's content is in the DOM.
       const focusElement = getFloatingFocusElement(floating);
       if (isDisabled || !closeOnOut) {
         return undefined;
       }
       const doc = ownerDocument(focusElement);
 
-      // In Safari, buttons lose focus when pressed.
       const handlePointerDown = () => {
         isPointerDown = true;
         pointerDownTimeout.start(0, () => {
@@ -331,8 +309,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
         const currentTarget = event.currentTarget;
         const target = getTarget(event) as HTMLElement | null;
 
-        // Focus lost to the body (a backdrop press): remember what had it, so a
-        // confirmation opened meanwhile can return there. Modal only.
         if (isModal && relatedTarget == null && target != null && contains(floating, target)) {
           addPreviouslyFocusedElement(target);
         }
@@ -367,7 +343,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
             handleTabIndex(focusElement);
           }
 
-          // Focus fell to the body because the focused element went away: put it back inside.
           if (
             restore &&
             currentTarget !== domReference &&
@@ -377,8 +352,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
             if (isHTMLElement(focusElement)) {
               focusElement.focus();
               if (restore === 'popup') {
-                // An element removed on pointerdown pulls focus back in the same
-                // tick and loses it; focusing again a frame later wins that race.
                 restoreFocusFrame.request(() => focusElement.focus());
                 return;
               }
@@ -395,7 +368,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
             }
           }
 
-          // In a portal, Tab out of the popup is the portal's guards' to close on.
           if (focusOutHandledByPortal) {
             focusOutHandledByPortal = false;
             return;
@@ -445,7 +417,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
     },
   );
 
-  // Hides everything outside the popup from assistive tech while open.
   createEffect(
     () =>
       [
@@ -454,9 +425,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
         context.open(),
         modal(),
         portalContext?.portalNode() ?? null,
-        // Read here, not tracked: the guards follow the popup's open state. A
-        // prop's getter may create a memo (a compiled condition), which only
-        // the compute half has an owner for.
         untrack(() => props.previousFocusableElement),
         untrack(() => props.nextFocusableElement),
       ] as const,
@@ -464,7 +432,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
       if (isDisabled || !floating || !open) {
         return undefined;
       }
-      // Portals nested in this one stay visible.
       const portalNodes = Array.from(
         portalNode?.querySelectorAll(`[${createAttribute('portal')}]`) || [],
       );
@@ -490,11 +457,9 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
     },
   );
 
-  // Focuses the initial element on open.
   createEffect(
     () => [context.open(), disabled(), context.floatingElement()] as const,
     ([open, isDisabled, floating]) => {
-      // Resolved here, once the popup's content is in the DOM.
       const focusElement = getFloatingFocusElement(floating);
       if (!open || isDisabled || !isHTMLElement(focusElement)) {
         return;
@@ -504,12 +469,10 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
       const doc = ownerDocument(focusElement);
       const previouslyFocusedElement = activeElement(doc);
 
-      // Let the parts set their tabindex first.
       queueMicrotask(() => {
         const initial = untrack(initialFocus);
         const resolvedInitialFocus =
           typeof initial === 'function' ? initial(untrack(openInteractionType) || '') : initial;
-        // `null` falls back to the default (an empty ref).
         if (resolvedInitialFocus === undefined || resolvedInitialFocus === false) {
           return;
         }
@@ -527,8 +490,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
             : resolveRef(resolvedInitialFocus);
         elToFocus = elToFocus || getDefaultFocusElement();
         const hadFocusInside = contains(focusElement, activeElement(doc));
-        // Screen readers re-sync focus right after a synthesized press; a focus a
-        // frame later reads as a stray move, so it is moved at once then.
         const openEvent = dataRef.current.openEvent;
         const openedByVirtualPress =
           openEvent?.type === 'mousedown' && isVirtualClick(openEvent as MouseEvent);
@@ -537,7 +498,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
           sync: openedByVirtualPress,
           preventScroll: target === focusElement,
           shouldFocus() {
-            // Closed meanwhile (Tab out of a popup still mounted for its exit animation): leave focus where it went.
             if (!untrack(context.open)) {
               return false;
             }
@@ -552,24 +512,20 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
     },
   );
 
-  // Records where focus returns to, and returns it when the popup closes or unmounts.
   createEffect(
     () => [disabled(), context.floatingElement(), context.domReferenceElement()] as const,
     ([isDisabled, floating, domReference]) => {
-      // Resolved here, once the popup's content is in the DOM.
       const focusElement = getFloatingFocusElement(floating);
       if (isDisabled || !focusElement) {
         pendingReturnFocus = null;
         return undefined;
       }
-      // Re-armed in the same flush: a dependency changed while open, so the cleanup was no close.
       if (pendingReturnFocus) {
         pendingReturnFocus.cancelled = true;
         pendingReturnFocus = null;
       }
       const doc = ownerDocument(focusElement);
       const elementFocusedBeforeOpen = activeElement(doc);
-      // Only an explicit `null` interaction type is a programmatic open.
       const preferPreviousFocus = untrack(openInteractionType) == null;
       addPreviouslyFocusedElement(elementFocusedBeforeOpen);
 
@@ -577,7 +533,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
         if (!details.open) {
           closeType = getEventType(details.nativeEvent, lastInteractionType);
         }
-        // Focus guards move focus themselves.
         if (
           details.reason === REASONS.focusOut &&
           details.triggerElement?.hasAttribute(createAttribute('focus-guard'))
@@ -593,8 +548,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
         ) {
           preventReturnFocus = false;
         } else {
-          // On an outside press, focus returns only where `focus({ preventScroll })`
-          // is supported; elsewhere it would scroll the page.
           let isPreventScrollSupported = false;
           doc.createElement('div').focus({
             get preventScroll() {
@@ -607,7 +560,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
       };
       events.on('openchange', onOpenChangeLocal);
 
-      // The trigger, or what had focus before the popup opened.
       const getReturnElement = () => {
         const referenceReturnElement = domReference?.isConnected ? domReference : null;
         const previousReturnElement =
@@ -641,13 +593,8 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
             !job.cancelled &&
             !preventReturnFocus &&
             isHTMLElement(tabbableReturnElement) &&
-            // Focus that moved elsewhere after open is respected (floating-ui#2607).
             (tabbableReturnElement !== activeEl && activeEl !== doc.body ? isFocusInside : true)
           ) {
-            // The ring shows iff a key closed it: an owner's own close (its `open` set false, no
-            // event) is closed by the input used last inside. Unknown, the browser decides; a
-            // text field rings whatever focused it. An element that has the focus already with
-            // the other look lets it go first, since a focus it already has changes nothing.
             const type = closeType || lastInteractionType;
             const shows =
               type === '' ? undefined : type === 'keyboard' || isTextField(tabbableReturnElement);
@@ -664,14 +611,12 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
             };
             tabbableReturnElement.focus(focusOptions);
           }
-          // A cancelled return clears suppression before the next close too.
           preventReturnFocus = false;
         });
       };
     },
   );
 
-  // Safari may scroll to the page's end when a focused input inside a popup is removed; blur it first.
   createEffect(
     () => [context.open(), context.floatingElement()] as const,
     ([open, floating]) => {
@@ -685,7 +630,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
     },
   );
 
-  // The portal renders its own guards from this state.
   createEffect(
     () =>
       [
@@ -713,7 +657,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
   createEffect(
     () => [disabled(), context.floatingElement()] as const,
     ([isDisabled, floating]) => {
-      // Resolved here, once the popup's content is in the DOM.
       const focusElement = getFloatingFocusElement(floating);
       if (isDisabled || !focusElement) {
         return undefined;
@@ -762,9 +705,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
         />
       </Show>
       {props.children}
-      {/* Always rendered (hidden while not guarding): were the guards on both sides of the
-          content to appear at once (a focus manager enabled while its popup is open),
-          Solid would move the content, and a move blurs the field focused in it. */}
       <FocusGuard
         data-type="inside"
         hidden={!shouldRenderGuards()}

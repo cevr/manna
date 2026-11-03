@@ -1,10 +1,3 @@
-// The page's window as Solid reads it: whether it matches a CSS media query,
-// followed as the window changes. The window is the browser's: a server
-// render answers as a phone (`Viewport.served`), the client's hydration of
-// that markup shows the same, and the window's own answer follows once the
-// page is hydrated. A page rendered in the browser alone reads the window
-// from the start.
-
 /** A phone's widest window, in CSS px: the studio's one breakpoint. */
 const PHONE_WIDEST = 899;
 

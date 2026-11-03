@@ -97,10 +97,7 @@ describe('phrase matcher performance (§4.1)', () => {
         `perf.phraseAutomaton.build edges=${automaton.edges} aliasChars=${aliasChars}`,
       );
 
-      // A trie shares prefixes: never more edges than the aliases have
-      // characters (2,047 against 18,690 measured).
       expect(automaton.edges).toBeLessThanOrEqual(aliasChars);
-      // The automaton is real, not an empty trie.
       expect(matchSection(automaton, [PARAGRAPH])[0]?.length).toBeGreaterThan(0);
     }),
   );
@@ -114,13 +111,9 @@ describe('phrase matcher performance (§4.1)', () => {
         `perf.phraseMatcher.screenful steps=${steps} chars=${SCREENFUL_CHARS} runs=${String(spans.length)}`,
       );
 
-      // Aho-Corasick steps each character once, plus a failure link now and
-      // then: a walk that backtracks per phrase costs a multiple.
       expect(steps).toBeGreaterThanOrEqual(SCREENFUL_CHARS);
       expect(steps).toBeLessThan(2 * SCREENFUL_CHARS);
       expect(spans.length).toBe(30);
-      // §4.5 across the section: the six distinct phrases are hot in the first
-      // paragraph and cold in the other twenty-nine.
       expect(spans[0]?.length).toBe(6);
       expect(spans.slice(1).every((run) => run.length === 0)).toBe(true);
     }),
@@ -128,10 +121,6 @@ describe('phrase matcher performance (§4.1)', () => {
 
   it.live('stays flat as the dictionary grows', () =>
     Effect.gen(function* () {
-      // §4.1's load-bearing property: Aho-Corasick is flat in dictionary size
-      // where regex alternation degrades superlinearly (13 µs → 603 µs from
-      // 100 to 2,000 phrases). The walk over the same text takes as many
-      // transitions against a dictionary twenty times the size.
       const smallSteps = transitions(PhraseAutomaton.make(dictionary(100)), SCREENFUL);
       const largeSteps = transitions(PhraseAutomaton.make(dictionary(2000)), SCREENFUL);
       yield* Effect.logInfo(

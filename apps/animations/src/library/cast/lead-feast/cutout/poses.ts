@@ -1,11 +1,3 @@
-// The series lead's fitted poses (`film concept fit`, `poses/<kind>-<view>.json`):
-// each kept pose view's body as the better of his front and threeQuarterLeft
-// puppets fits it, and the drawings the raise lays (`raise/`): the pose
-// view's own raised arm in place of his `armRight` and its hand with the
-// bottle held, each laid where the pose view draws it (the shared `fitted`
-// form, `library/cutout/poses.ts`). The rows the fit cannot pass are named
-// with why (`NAMED`). Pure data.
-
 import { fitted } from '../../../cutout/poses.ts';
 import heldPoses1 from './raise/held/poses-1.png' with { type: 'file' };
 import raised from './raise/keys/raised.png' with { type: 'file' };
@@ -50,13 +42,11 @@ export const NAMED: Readonly<
     {
       row: 'silhouette.edge/body/figure',
       why: "the kept poses sheet draws the robe's hem wider than the turnaround the puppet is cut from; the error lies on the hem's left edge",
-      // the widest figure row in the bottom 15 % of H, over H
       measure: { poses: 0.4053, turnaround: 0.3303 },
     },
     {
       row: 'silhouette.iou/figure/figure',
       why: 'the kept poses sheet draws a fuller figure than the turnaround the puppet is cut from, the robe most',
-      // the figure's px over H squared
       measure: { poses: 0.3172, turnaround: 0.2671 },
     },
   ],

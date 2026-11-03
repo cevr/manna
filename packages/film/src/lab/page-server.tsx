@@ -1,13 +1,3 @@
-// A page's render on the server, for its server entry (`*.server.tsx`,
-// `core/page-render.ts`): Solid's `renderToStream` of the page's components,
-// the same ones its browser entry hydrates, inside the page's root
-// (`PAGE_ROOT`). The head holds Solid's hydration script (the values the
-// render serializes are read by it), the page's styles and the UI faces
-// (`FACE_HEAD`, each face's latin preloaded), and the hold that keeps the
-// root out of paint until those have loaded (`faceHold`), so the first paint
-// is styled and set in the studio's faces before any script runs. A failure that fails
-// the render is the sink's; one a boundary shows is the page's own.
-
 import { type JSX, generateHydrationScript, renderToStream } from '@solidjs/web';
 import { Effect, Exit, Layer, Scope } from 'effect';
 import { onCleanup } from 'solid-js';
@@ -57,7 +47,6 @@ export const pageRender = (page: ServedPage): PageRender => ({
   render: (request, sink) => {
     const heads: Array<string> = [];
     let opened = false;
-    // The head and the root's opening tag, once: before the render's first piece.
     const open = () => {
       if (opened) return;
       opened = true;

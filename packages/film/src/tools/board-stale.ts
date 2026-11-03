@@ -1,21 +1,3 @@
-// A picture panel drawn from what has changed since: stale. A try is judged
-// on two things. Its picture's words: a try records the words of the panel's
-// own picture its prompt carried (`BoardTry.words`, `pictureWords`), so words
-// that differ now changed; a try from before that record is judged on its
-// prompt, which changed when it no longer carries every one of them
-// verbatim. Its cast: a try records what each cast reference held
-// (`BoardTry.cast`, its sha256), so a reference whose bytes differ now, or
-// that is gone, changed; a try from before that record is read against the
-// member's record, whose `replaced` history says which kept sheet was
-// replaced when (`replacedSince`); and a file a run would send now that the
-// try did not carry (a member first kept a sheet since) changed its member's
-// references too. Words and the files sent are held only against tries the
-// board drew itself (`drawnByBoard`): an imported keep is never stale on
-// them. A kept panel is stale when its kept try changed; a panel
-// with tries and no keep, when none of its generated tries is fresh. A run
-// draws a stale panel again and its keep stays recorded until the owner
-// keeps a new try; the board read and the lab's Board name it.
-
 import {
   Array as Arr,
   Boolean as Bool,

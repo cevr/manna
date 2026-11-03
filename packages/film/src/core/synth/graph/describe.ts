@@ -1,8 +1,3 @@
-// A code sound in one line: each node by its kind and the fields that say
-// what it is, its child in brackets, its children in square ones
-// (`Envelope(Filter bandpass 400 Hz→2200 Hz(Noise pink 0.8–1 s))`). For a
-// list and a review's line; the graph itself stays in the source.
-
 import { Match, Predicate } from 'effect';
 import {
   type Node,

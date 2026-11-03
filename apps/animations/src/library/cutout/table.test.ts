@@ -119,7 +119,6 @@ describe('padded', () => {
   });
 
   test('lays a far marker past the padded view, so a 398 px kept view padded 3 + 3 keeps its last column', () => {
-    // padded to 404 px, its far edge 405; the kept width alone would end it at 403
     const narrow: CutFrame = { sheet: 'turnaround', kept: [0, 0, 398, 40], pad: [3, 3, 3, 3] };
     const sides: PartCut = {
       parts: [
@@ -146,7 +145,6 @@ const ownerAt = (cut: PartCut, width: number, height: number, x: number, y: numb
   );
 
 describe('rules', () => {
-  // a view wider and taller than 400 px, its kept box unpadded
   const wide: CutFrame = { sheet: 'turnaround', kept: [0, 0, 600, 480], pad: [0, 0, 0, 0] };
   const cut: PartCut = {
     parts: [
@@ -223,23 +221,19 @@ describe('framedFigure', () => {
   test('reads the kept box as the kept view alone and the pad on the padded view', () => {
     const [w, h] = [frame.kept[2] - frame.kept[0], frame.kept[3] - frame.kept[1]];
     const [pw, ph] = [w + frame.pad[0] + frame.pad[2], h + frame.pad[1] + frame.pad[3]];
-    // a ringed gap whose top row lies in the pad: closed on the padded view, open on the kept view
     const paint = ringed(8, 2, 14, 30, false);
     const view = raster(pw, ph, paint);
     const kept = raster(w, h, (x, y) => paint(x + frame.pad[0], y + frame.pad[1]));
     const figure = framedFigure(frame, view);
     const [inner, whole] = [cutFigureOf(kept), cutFigureOf(view)];
     const at = (x: number, y: number) => y * pw + x;
-    // the gap in the kept box: the padded view encloses it, the kept view alone does not
     expect(whole[at(11, 20)]).toBe(1);
     expect(inner[(20 - frame.pad[1]) * w + 11 - frame.pad[0]]).toBe(0);
     expect(figure[at(11, 20)]).toBe(0);
-    // the gap in the pad: the padded view's reading
     expect(whole[at(11, 3)]).toBe(1);
     expect(figure[at(11, 3)]).toBe(1);
   });
 
-  // the padded view is 30 x 37 px; the kept box is x 3 to 26 and y 5 to 34 on it
   const [w, h] = [frame.kept[2] - frame.kept[0], frame.kept[3] - frame.kept[1]];
   const [pw, ph] = [w + frame.pad[0] + frame.pad[2], h + frame.pad[1] + frame.pad[3]];
   const onView = (x: number, y: number) => y * pw + x;
@@ -247,7 +241,6 @@ describe('framedFigure', () => {
   const kept = (x: number, y: number) => [x - frame.pad[0], y - frame.pad[1]] as const;
 
   test('holds every pocket of paper its ink encloses but a named gap; a gap on the open ground opens nothing', () => {
-    // two ink rings, each round a 10 x 9 pocket of paper wide enough for the cut to read as paper
     const [cloth, gap] = [ringed(5, 6, 16, 16, false), ringed(5, 18, 16, 28, false)];
     const view = raster(pw, ph, (x, y) => [cloth, gap][Number(y >= 17)]!(x, y));
     const held = framedFigure(frame, view);
@@ -261,8 +254,6 @@ describe('framedFigure', () => {
   });
 
   test('opens a named gap on the pad’s reading too, its point moved by the pad', () => {
-    // a pocket that runs out of the kept box's foot into the pad: open ground on the kept view
-    // alone, paper the padded view encloses below it; the point, unmoved, lies on the open ground
     const view = raster(pw, ph, ringed(5, 26, 16, 36, false));
     expect(framedFigure(frame, view)[onView(10, 35)]).toBe(1);
     const figure = framedFigure(frame, view, [kept(6, 27)]);
@@ -273,7 +264,6 @@ describe('framedFigure', () => {
 });
 
 describe('paperOf', () => {
-  // the padded view is 30 x 37 px; the kept box is x 3 to 26 and y 5 to 34 on it
   const [w, h] = [frame.kept[2] - frame.kept[0], frame.kept[3] - frame.kept[1]];
   const [pw, ph] = [w + frame.pad[0] + frame.pad[2], h + frame.pad[1] + frame.pad[3]];
   const between = { at: [7, 18] as const, box: [3, 14, 13, 23] as const, why: 'ground between' };
@@ -311,7 +301,6 @@ describe('paperOf', () => {
   });
 
   test('lists a piece only the pad’s reading encloses in the kept view’s pixels, held only where the pad holds it', () => {
-    // the pocket's rows 22 to 29 lie in the kept box, open ground on the kept view alone; its row 30 is the pad's
     const view = raster(pw, ph, ringed(5, 26, 16, 36, false));
     expect(table.paperOf('foot', view)).toEqual({
       held: [],
@@ -326,12 +315,10 @@ describe('paperOf', () => {
   });
 
   test('names each gap that opens no piece, or a piece whose box is not its own, as stale', () => {
-    // the pocket between grown two rows taller than the gap names: the sheet redrawn under it
     const grown = raster(pw, ph, ringed(5, 18, 16, 30, false));
     expect(table.paperOf('standing', grown).stale).toEqual([
       { ...between, opened: [[3, 14, 13, 25]] },
     ]);
-    // no pocket between: the paper read changed under it
     const none = raster(pw, ph, ringed(5, 6, 16, 16, false));
     expect(table.paperOf('standing', none).stale).toEqual([{ ...between, opened: [] }]);
   });

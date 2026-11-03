@@ -1,22 +1,3 @@
-// The fit of a puppet's pose to a kept view (`film concept fit`): the bone
-// numbers, the root's place and the one scale whose CPU raster (`rasterOf`),
-// laid over the view's paper, is nearest the view. Pure and deterministic.
-//
-// - **Loss.** The mean, over the view's pixels, of the squared RGB
-//   difference between the view and the puppet's raster laid over the
-//   view's paper (its top-left pixel, unless given).
-// - **Coordinates.** Each named bone's turn from the start in the world
-//   (its number less its nearest named forebear's), so a bone's pixels
-//   answer its own coordinate, and a child keeps its world angle while its
-//   parent turns; then the root's x and y, and the scale.
-// - **Search.** Coordinate descent from a fixed start (the rest pose, or
-//   `start`): at each step size, sweep the coordinates, each tried a step up
-//   and a step down; take a move only when it lowers the loss, and sweep
-//   again until a sweep moves nothing; then halve every step, from 16° (8
-//   px, 0.04 of scale) down to 1/256 of that (0.0625°). The same input
-//   gives the same pose. A bone turns no further from its start than
-//   `reach`, when given.
-
 import type { Rgb } from './cast-sheet-pixels.ts';
 import { type Puppet, type PuppetPose, rasterOf } from './puppet.ts';
 import type { Raster } from './raster.ts';
@@ -111,14 +92,12 @@ export const fitPose = (puppet: Puppet, target: Raster, options: PoseFitOptions 
   const reach = options.reach ?? Infinity;
   const score = (at: Coords) => {
     const pose = poseOf(bones, up, at, start);
-    // a pose past the reach is no pose: its loss is never lower
     if (bones.some((b) => Math.abs((pose.numbers[b] ?? 0) - (start.numbers[b] ?? 0)) > reach))
       return Infinity;
     rasters++;
     return lossOf(target, rasterOf(puppet, pose, size), paper);
   };
   const turns = bones.map(() => FIRST.turn);
-  // The bones first, the root and scale held at the start; then all together.
   const held = descend(
     { at: [...bones.map(() => 0), start.root[0], start.root[1], start.scale], loss: Infinity },
     [...turns, 0, 0, 0],

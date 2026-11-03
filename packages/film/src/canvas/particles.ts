@@ -1,34 +1,3 @@
-// Particles with no simulation: each particle's place is a closed-form
-// function of its age, and each draws from its own seeded rng, so a drawing
-// that uses them stays a pure function of t. Frames render in any order
-// across render workers, the lab scrubs to any t, and a `cycle` loops with
-// no seam. There is no stateful particle list here on purpose: one that steps
-// from 0 makes a chunk that starts mid-film replay from the start.
-//
-// Ported from pixelfx's `particles.js` (https://github.com/patch-gg/pixelfx),
-// on the film's own seeded `rng` and `hash2`. Its licence:
-//
-//   MIT License. Copyright (c) 2026 Patch. Copyright (c) 2026 Hugo Duprez.
-//
-//   Permission is hereby granted, free of charge, to any person obtaining a
-//   copy of this software and associated documentation files (the
-//   "Software"), to deal in the Software without restriction, including
-//   without limitation the rights to use, copy, modify, merge, publish,
-//   distribute, sublicense, and/or sell copies of the Software, and to permit
-//   persons to whom the Software is furnished to do so, subject to the
-//   following conditions:
-//
-//   The above copyright notice and this permission notice shall be included
-//   in all copies or substantial portions of the Software.
-//
-//   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-//   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-//   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-//   NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-//   DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-//   OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-//   USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 import { hash2, rng } from '../core/random.ts';
 import type { Pt } from './ink.ts';
 

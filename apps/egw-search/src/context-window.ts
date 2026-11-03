@@ -59,17 +59,12 @@ export const contextSide = <A extends ContextLike>(
   expanded: boolean,
   shownWhenCollapsed: number,
 ): ContextSide<A> => {
-  // `findIndex` reports absence as -1; `Option.filter` turns that back into the
-  // absence it is, so the "no heading on this side" case reads as a `None`
-  // rather than as a magic number compared inline.
   const stop = Option.filter(
     Option.some(paragraphs.findIndex((para) => para.isHeading)),
     (index) => index >= 0,
   );
   const upTo = Option.match(stop, {
     onNone: () => paragraphs.length,
-    // Past the heading, not up to it: the heading names the chapter the hit
-    // sits under and is worth showing. What lies beyond it is another subject.
     onSome: (index) => index + 1,
   });
   const available = paragraphs.slice(0, upTo);

@@ -7,6 +7,8 @@ type Puppet = Parameters<typeof rasterOf>[0];
 type Raster = ReturnType<typeof rasterOf>;
 
 const INK_L = 20;
+/** A filtered ink edge need not be under `INK_L`: it is recognised as the measured ink mixed with the source colour, within this many bytes of rounding error per channel. */
+const INK_MIX_ROUNDING = 2;
 
 /** Independent rigid-chain oracle: rotate cuff about elbow, then hand about the posed cuff. */
 export const inverse = (
@@ -122,9 +124,7 @@ export const measuredHand = (puppet: Puppet, name: string) => {
     if (square === 0) return false;
     const weight = d.reduce((sum, c, k) => sum + c * (source[k]! - rgb[k]!), 0) / square;
     if (weight < 1 / 255 || weight > 1) return false;
-    // A filtered ink edge need not be L* <20. Recognise its measured ink
-    // mixed with the source colour, within two bytes of rounding error.
-    return source.every((c, k) => Math.abs(rgb[k]! - (c - weight * d[k]!)) <= 2);
+    return source.every((c, k) => Math.abs(rgb[k]! - (c - weight * d[k]!)) <= INK_MIX_ROUNDING);
   };
   return {
     arm,
@@ -183,9 +183,7 @@ export const countEdges = (
         ghostAt.push([x, y]);
         continue;
       }
-      // A native skin/bottle paint contact stays native. Every other skin
-      // contact with cloth or paper needs ink, including a cut moved inward
-      // by the sleeve lip where the original source is still hand-owned.
+      /** The four neighbours a skin pixel's contact is read at: a native skin/bottle paint contact stays native, and every other skin contact with cloth or paper needs ink, including a cut moved inward by the sleeve lip where the source is still hand-owned. */
       const cut = [
         [-1, 0],
         [1, 0],
@@ -469,8 +467,7 @@ export const shoulderCanvas = (
   elbow: number,
   wrist: number,
 ) => {
-  // Closing, opening, final closing, ink and the oracle's neighbour search
-  // together reach less than six pens from the disc. Keep that entire halo.
+  /** The shoulder crop's radius: the disc plus a six-pen halo, since closing, opening, final closing, ink and the oracle's neighbour search together reach less than six pens from the disc. */
   const radius = Math.ceil(0.6 * measured.limb.chain.upper + 6 * measured.limb.inkWidth + 12);
   const [sx, sy] = measured.limb.chain.shoulder;
   const offset: Pt = [radius - Math.floor(sx), radius - Math.floor(sy)];

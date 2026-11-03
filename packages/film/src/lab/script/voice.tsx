@@ -1,20 +1,3 @@
-// The staging voice over a script, wherever its beats come from (`VoiceOver`):
-// each spoken beat's staging take as the lab has it now (ready, still voicing,
-// not voiced, or refused with why), asked again every few seconds while any
-// is voicing (`polled`), and the day's staging spend; Hear, which plays a
-// beat's take, the words selected in it, or the script from a beat on,
-// as the page's one voice (`Media.hear`: a take heard elsewhere on the page
-// is paused, and the film's Play hushes it; never a film's track, whose
-// timings stay as they are), with the word heard lit; and the one write a reader
-// makes, a beat's delivery marks, one at a time, the takes read again once
-// it lands and the line read again once those takes do: a line put back
-// elsewhere after the lab answered the page's read-back, before the takes
-// past the write land, shows as put back. A film's Words reader
-// (`../words/reader.tsx`) reads its film's (`GET …/script/voice`,
-// `POST …/script/marks`: the lab rebuilds and the page reloads with the
-// marks); a series draft's reader its draft's
-// (`review/draft.tsx`). Either way the fill voices the beat again first.
-
 import { useAtomRefresh, useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { Array as Arr, Data, Effect, Exit, Fiber, Match, Option, Schedule, Stream } from 'effect';
 import { Machine } from 'effect-machine';
@@ -199,11 +182,6 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
         ),
       ),
   );
-  // A line changed under the reader (another hand's marks, its takes keyed anew) is read again.
-  // So is the line once the first takes read past the page's own write land (`pastWrite`, the
-  // takes it had then: a stream's read is always waiting, so a new read is a new value): a line
-  // put back elsewhere before that read keeps the takes it had before the write, and no change
-  // would show to read it again for.
   let seen: ReadonlyMap<string, StagingTake> = new Map();
   let pastWrite = Option.none<Option.Option<ScriptVoice>>();
   createEffect(
@@ -220,7 +198,6 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
   const readyOf = (id: string): Option.Option<Ready> =>
     Option.filter(take(id), (t): t is Ready => t._tag === 'Ready');
 
-  // The takes' audio, through the page's media, one per take file, each made at its first Hear.
   const audios = new Map<string, Playable>();
   const audioOf = (file: string): Playable =>
     Option.getOrElse(Option.fromUndefinedOr(audios.get(file)), () => {
@@ -248,7 +225,6 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
     setHeard(Heard.Quiet());
   };
 
-  // Each play counts: a play the next one took the place of stops nothing when it is hushed or refused.
   let plays = 0;
   /**
    * Play `take` of beat `beat` from `start` to `end`, the beats `next` after
@@ -279,7 +255,6 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
       halt();
       setHeard(Heard.Blocked({ beat }));
     });
-    // The frames run until the stretch ends (on to the next beat) or Play takes over (quiet); then what follows.
     let then = stop;
     const heardThrough = Frames.use((f) =>
       f.loop(() =>
@@ -300,7 +275,6 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
             Played.$match(played, {
               Playing: () => heardThrough,
               Muted: () => heardThrough,
-              // A pause cut it short: whoever paused it says what follows.
               Aborted: () => Effect.void,
               Blocked: () => blocked,
               Failed: () => hushed,
@@ -337,8 +311,6 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
       setHeard(Heard.Hearing({ ...now, index }));
     return Option.none();
   };
-  // Gone, the voice lets go of its take and its loop; its state goes with it, so no write is left to make (a
-  // server's render, which disposes it as its stream ends, writes nothing).
   onCleanup(halt);
 
   const hear: VoiceContextValue['hear'] = (id, words, on) =>
@@ -357,10 +329,6 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
       );
     });
 
-  // The marks this page wrote, by beat: those it had read (`read`) and those its write left
-  // (`now`). Until the page reads the line again (its marks still `read`), the line is `now`.
-  // The first read that is not `read` has the lab past the write (`moved`), and the line is
-  // its read from then on, even one that puts the marks back as they were before it.
   const [wrote, setWrote] = createSignal<ReadonlyMap<string, Wrote>>(new Map(), {
     ownedWrite: true,
   });
@@ -380,8 +348,6 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
       () => read,
     );
 
-  // One write out at a time (`marking.ts`); once it lands the takes are read again, the beat's new key
-  // queued first. The machine runs in the browser alone: the server's render writes nothing.
   const post = useAtomSet(() => source.write, { mode: 'promiseExit' });
   const write = (w: MarkWrite): Effect.Effect<void, string> =>
     Effect.flatMap(

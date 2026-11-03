@@ -32,7 +32,6 @@ describe("the files the gate's lint keys", () => {
         yield* write('src/unused.ts', 'export const unused = 1;\n');
         yield* write('node_modules/dep/package.json', '{"name":"dep","main":"index.js"}');
         yield* write('node_modules/dep/index.js', 'export default 1;\n');
-        // a file loaded that is not a script (a rig's `.riv`) is held, and imports nothing
         yield* write(
           'src/rig.ts',
           "import art from './art.riv' with { type: 'file' };\nexport default art;\n",

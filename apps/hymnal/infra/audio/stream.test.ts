@@ -170,7 +170,6 @@ const layerOf = (fakes: Fakes, behaviour: Behaviour = {}) => {
       });
     }),
   );
-  // The lines are read from the log file; the console stays quiet.
   const quiet = Layer.succeed(Console.Console, { ...globalThis.console, log: () => {} });
   return Layer.mergeAll(target, renderer.pipe(Layer.provide(HashBun)), HashBun, quiet);
 };
@@ -257,7 +256,6 @@ describe('the stream', () => {
         yield* Fiber.interrupt(first);
         expect(yield* Ref.get(fakes.renders)).toEqual([1, 2, 3, 4, 5]);
 
-        // R2 holds hymn 3 with other bytes, as a partial upload would leave it.
         const key3 = setKey('warm-1-down3', 3);
         const partial = { size: 4, etag: '"0123"' };
         yield* Ref.update(fakes.r2, (all) => new Map([...all, [key3, partial]]));

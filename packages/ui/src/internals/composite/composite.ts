@@ -1,14 +1,3 @@
-// Upstream: packages/react/src/internals/composite/composite.ts,
-// packages/react/src/internals/composite/constants.ts,
-// packages/react/src/internals/composite/root/useCompositeRoot.ts (the key logic)
-//
-// The keys a composite widget (a toggle group) moves its roving tab stop
-// with, and the pure step from one highlighted index to the next: the left
-// and right arrows, Home and End, wrapping at the ends, skipping disabled and
-// hidden items. Also the scroll that keeps a newly highlighted item in view,
-// and the tab stop's fallback when its item goes away. Vertical and grid
-// navigation are not ported: the one composite here lays its items out in a
-// row, read left to right.
 import {
   findNonDisabledListIndex,
   getMaxListIndex,
@@ -131,7 +120,6 @@ export function scrollIntoViewIfNeeded(
       container.scrollPaddingRight;
     const alignLeft = offsetLeft - item.scrollMarginLeft - container.scrollPaddingLeft;
 
-    // The edge checked first is the one the reading direction runs toward.
     if (overflowsRight) {
       targetX = alignRight;
     } else if (overflowsLeft) {

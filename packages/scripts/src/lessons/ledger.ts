@@ -1,27 +1,3 @@
-// The lessons ledger (`docs/lessons.md`): one entry per mistake the repo was
-// shown, the owner's correction, a reviewer's folded finding or an agent's
-// retracted claim, each held to the guard that now catches it. A guard is
-// one of five classes, each held to what its file holds:
-//
-// - `lint:<rule>`, its proof `` `file` `name` ``: the rule is on at error in
-//   `.oxlintrc.json` (its rules or an override's), and the proof file (a
-//   test, or a fixture marking `RED <rule>`) holds the name;
-// - `judged:<rule>`, its corpus `` `file` ``: the judged rule gates
-//   (`judged/<rule>` at error, which its measured precision on the corpus
-//   decides: a rule that warns guards nothing, and its lesson is a skill
-//   line), and the corpus is that rule's;
-// - `skill: <why>. Carried by `file`: "<line>"`: the file holds the line
-//   word for word;
-// - `code:` `` `file` `name` `` pairs: each file declares the name (or holds
-//   it in a line that is no comment);
-// - `none: <why>`: no guard, and why (a finding declined).
-//
-// A reviewer's finding is routed by its entry: `merge-audit --review`
-// refuses a unit whose review names a finding (`### F<n> …`) that no entry's
-// Source cites (`<unit>/<review file> F<n>`), or one that leaves out its
-// guard class or its cheapest guard. A finding its review classes `none`
-// needs no entry: it is declined, and the review passes.
-
 import { JSONC } from 'bun';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 

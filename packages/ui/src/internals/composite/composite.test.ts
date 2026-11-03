@@ -1,7 +1,3 @@
-// Upstream: packages/react/src/internals/composite/root/CompositeRoot.test.tsx (the key cases)
-//
-// The pure step of a composite's roving tab stop: which index a key moves to.
-// Items here are placeholders (null elements).
 import { describe, expect, it } from 'bun:test';
 
 import {

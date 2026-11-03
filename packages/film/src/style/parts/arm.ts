@@ -1,18 +1,3 @@
-// A figure's arm in its sleeve to the wrist, traced from its concept in the
-// figure's frame: the sleeve's outline in the pose it is traced in, its paper
-// and the colour laid on it. The host swings it by the figure's number for
-// its side (`nearArm` or `farArm`, radians, 0 the pose it is traced in) about
-// a point inside the garment nearer the sleeve than the garment's edge
-// (`pivot`), so the sleeve's root stays under the garment's paper however it
-// swings. It lies behind the garment's paper, cut in one outline with it, so
-// the sleeve grows out of the garment with no line where it leaves it; an arm
-// that lies on the garment is a tone of it. The host draws the figure's circle
-// hand at its cuff (`armHand`), where the arm says its hand is: past its
-// sleeve's end, the hand's circle touching the sleeve, so a hand ends its
-// sleeve (the owner's sleeves, look ledger, 2026-10-18; a figure refuses a
-// hand anywhere else). How it is cut and drawn is the house's
-// (`rig/draw.ts`). Pure.
-
 import { Schema } from 'effect';
 import { decoder } from '../decode.ts';
 import { GarmentTones, Paper } from '../paper.ts';
@@ -144,17 +129,13 @@ export const armReach = (arm: JointedArm, target: Pt, elbow: 'rest' | 'out' = 'r
   const fore = Math.hypot(h[0] - e[0], h[1] - e[1]);
   const [dx, dy] = [target[0] - s[0], target[1] - s[1]];
   const span = Math.hypot(dx, dy);
-  // Held inside what the arm spans, from folded shut to straight.
   const d = Math.min(upper + fore, Math.max(Math.abs(upper - fore), span));
   const toward = Math.atan2(dy, dx);
-  // The elbow's angle off the line to the target, its cosine held within one
-  // so a straight or a shut arm, which rounding can carry past, opens by none.
   const cosine = d === 0 ? 0 : (upper * upper + d * d - fore * fore) / (2 * upper * d);
   const open = Math.acos(Math.min(1, Math.max(-1, cosine)));
   const out = Math.sign(s[0]) || 1;
   const elbowAt = (a: number): Pt => [s[0] + upper * Math.cos(a), s[1] + upper * Math.sin(a)];
   const [a1, a2] = [toward + open, toward - open];
-  // Which side of the line to the target a point lies on.
   const side = (p: Pt) => dx * (p[1] - s[1]) - dy * (p[0] - s[0]);
   const rest = Math.sign(side(h));
   const [e1, e2] = [elbowAt(a1), elbowAt(a2)];

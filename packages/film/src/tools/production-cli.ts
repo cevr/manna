@@ -1,27 +1,3 @@
-// `film production` and `film publish`: a production's ledger kept from the
-// terminal (`core/production.ts`, `production-store.ts`), and a review set
-// published onto a production's timeline. Each line printed is one line, so
-// an agent reads it. The owner's word is filed, asked and moved forward on
-// by the lab's commands (`film lab decide|note|ask|forward`, the same as the
-// lab's MCP tools: `lab-commands.ts`).
-//
-//   film production list
-//       each ledger: its name, current version and title, words and filings
-//   film production show <production>
-//       its versions newest first, each with the owner's words and the sets filed by hand
-//   film production new <production> --title "<title>" [--film <film>] [--blurb "<line>"]
-//       [--first "<what v1 is for>"] [--at <ISO>]
-//       start a ledger: one version, opened now (or at --at)
-//   film production file <production> <set> --version <n>
-//       file a set published before sets named their production
-//   film publish <folder> --production <production> [--version <n>]
-//       stamp a set's review.json with its production, version and the time
-//       now (`ProductionStore.stamp`: refused for a production that keeps no
-//       ledger, or a version it has not opened, as the lab's `publish_set`
-//       refuses them), so it lands on that production's timeline; then say whether the
-//       running lab (FILM_LAB_URL) lists the set, as that lab answers it: the
-//       lab's own review roots decide, never this checkout's
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -249,9 +225,6 @@ const listedByLab = (url: string, folder: string) =>
     const real = (at: string) => fs.realPath(at).pipe(Effect.orElseSucceed(() => at));
     const at = yield* real(folder);
     const client = yield* labClient(url);
-    // The limit holds the handshake and the call, inside the scope: a listing
-    // the lab gave survives a session end that stalls (the end keeps its own
-    // limit, the lab client's).
     const answered = yield* Effect.scoped(
       Effect.flatMap(client.session, (session) => client.call(session, SetsTool, {})).pipe(
         Effect.map(({ sets }) => Option.some(sets)),

@@ -21,10 +21,6 @@ import { StrongsLexiconEntry } from '../study/model.js';
 import { TopicSlug, TopicStatus } from './model.js';
 import { isWhitespace } from './normalize.js';
 
-// ---------------------------------------------------------------------------
-// The portable lookup input (§7)
-// ---------------------------------------------------------------------------
-
 /** Where a selection came from, when the host knows.
  *
  *  Only a verse address, and deliberately only that. §7 gives `context` exactly
@@ -101,10 +97,6 @@ export const lookupInputOf = (input: {
   return Option.some(LookupInput.make({ text, context: input.context }));
 };
 
-// ---------------------------------------------------------------------------
-// Group 1 — topic matches
-// ---------------------------------------------------------------------------
-
 /** How a topic match was found. §7's "phrase dictionary exact hit, then fuzzy",
  *  as a value on the hit rather than as two lists.
  *
@@ -134,10 +126,6 @@ export class LookupTopicMatch extends Schema.Class<LookupTopicMatch>('Wiki/Looku
   canonical: Schema.Boolean,
 }) {}
 
-// ---------------------------------------------------------------------------
-// Group 2 — Strong's
-// ---------------------------------------------------------------------------
-
 /** One word of the context verse the selection covered, with its lexicon entry.
  *
  *  The entry is `Option` for the same reason `StrongsStudy.entry` is: a number
@@ -149,10 +137,6 @@ export class LookupStrongsHit extends Schema.Class<LookupStrongsHit>('Wiki/Looku
   entry: Schema.Option(StrongsLexiconEntry),
 }) {}
 
-// ---------------------------------------------------------------------------
-// Group 3 — Bible FTS
-// ---------------------------------------------------------------------------
-
 /** One verse the selected text occurs in. */
 export class LookupVerseHit extends Schema.Class<LookupVerseHit>('Wiki/LookupVerseHit')({
   reference: VerseReference,
@@ -160,10 +144,6 @@ export class LookupVerseHit extends Schema.Class<LookupVerseHit>('Wiki/LookupVer
   label: Schema.NonEmptyString,
   text: Schema.String,
 }) {}
-
-// ---------------------------------------------------------------------------
-// Group 4 — EGW FTS
-// ---------------------------------------------------------------------------
 
 /** One writings paragraph the selected text occurs in.
  *
@@ -178,10 +158,6 @@ export class LookupWritingsHit extends Schema.Class<LookupWritingsHit>('Wiki/Loo
   author: Schema.NonEmptyString,
   snippet: Schema.String,
 }) {}
-
-// ---------------------------------------------------------------------------
-// Group 5 — catalog topical index
-// ---------------------------------------------------------------------------
 
 /** One `bible.db` catalog topic whose name or alternative names match.
  *
@@ -200,10 +176,6 @@ export class LookupCatalogMatch extends Schema.Class<LookupCatalogMatch>('Wiki/L
     status: TopicStatus,
   },
 ) {}
-
-// ---------------------------------------------------------------------------
-// The result (§7)
-// ---------------------------------------------------------------------------
 
 /** The five resolver groups, in panel order, every one of them always present.
  *

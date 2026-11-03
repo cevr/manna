@@ -1,8 +1,3 @@
-// A second of tone through each extension encoder Media runs in a worker
-// (AAC for a film's track, FLAC for a take's master), then nothing: the process must end by itself. media.slow.test.ts runs it
-// in its own process, since a worker that never hears its messages, or never
-// closes, holds a process open rather than failing a test.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Effect, Layer } from 'effect';
 import { Media } from '../media.ts';

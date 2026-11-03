@@ -1,20 +1,3 @@
-// The two lint configs the gate derives from `.oxlintrc.json`, and the files
-// its JS plugins passed, kept by content.
-//
-// - `nativeOnly`: oxlint's native rules alone (no JS plugin, none of their
-//   rules). The native rules hold cross-file rules (`import/default`,
-//   `import/namespace`), so a file's result is not a function of the file:
-//   they run over every file, every run (0.4 s over the repo).
-// - `withoutJudged`: every rule but the judged ones (TypeSafe Jev over the
-//   network, reading a store that changes without the file changing). The JS
-//   plugins (`oxlint-plugin-effect`, the `film` plugin) read no file but the
-//   one they lint, so their answer on a file is kept by its content, under a
-//   key of their own code (`closure.ts`).
-//
-// A derived config is written into a cache folder, so each JS plugin given as
-// a path is made absolute; every override glob in the repo's config starts
-// with `**/`, so it matches from there as from the root.
-
 import { Array as Arr, Effect, Option, Schema } from 'effect';
 
 /** The judged plugin's rules, by their prefix. */

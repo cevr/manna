@@ -58,7 +58,6 @@ export function Search({ here }: { readonly here: boolean }) {
       ),
     };
   }, [shown]);
-  // The hymns about the query wait for a pause in the typing, and show only for the query shown.
   const [asked, setAsked] = useState('');
   useEffect(() => {
     const pause = Effect.runFork(
@@ -74,7 +73,6 @@ export function Search({ here }: { readonly here: boolean }) {
   );
   const about = useMemo(() => aboutShown(asked, shown, near), [near, asked, shown]);
   const cancel = useCancelSearch();
-  // Cancel as it stands at the press, so the rows' opening is made again only for a new path.
   const cancelNow = useRef(cancel);
   useEffect(() => {
     cancelNow.current = cancel;
@@ -86,7 +84,6 @@ export function Search({ here }: { readonly here: boolean }) {
   const opening = useMemo(
     (): RowOpening => ({
       of: (n) => openingAt(path, n),
-      // A replace or a stay leaves no search open: its results would wait on the hymn left.
       opened: (how) => {
         if (how !== 'push') cancelNow.current();
       },
@@ -97,7 +94,6 @@ export function Search({ here }: { readonly here: boolean }) {
     hymnIndex();
     return readMeaningSoon();
   }, []);
-  // Android's Back cancels the search only while its own screen shows; under a pushed hymn the stack pops it.
   useEffect(() => {
     if (!here) return;
     const back = BackHandler.addEventListener(
@@ -113,7 +109,6 @@ export function Search({ here }: { readonly here: boolean }) {
       {...(!here && unseen)}
     >
       {shown !== '' && (
-        // A new query's results open at their top.
         <HymnList
           key={shown}
           hymns={results.hymns}
@@ -134,6 +129,5 @@ const unseen = { pointerEvents: 'none', 'aria-hidden': true } as const;
 
 const styles = StyleSheet.create({
   search: { ...StyleSheet.absoluteFill, backgroundColor: color.ground },
-  // Transparent, not `display: none`: the views stay in the window, so the list keeps its scroll offset.
   unseen: { opacity: 0 },
 });

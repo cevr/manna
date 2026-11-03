@@ -1,13 +1,4 @@
 #!/usr/bin/env bun
-// The pre-commit typecheck (`lefthook.yml`): `turbo run typecheck` over the
-// workspaces the staged files ask for (`precommit-typecheck/workspaces.ts`),
-// and nothing when they ask for none. turbo's `typecheck` cache replays a
-// workspace whose inputs did not change, its dependencies' typechecks
-// included. Only the touched workspaces, as the owner chose (ask
-// abe573de390): a break in a workspace that depends on one is the slow
-// suite's to find. The typecheck reads the working tree, so a file changed
-// and left unstaged is checked as it stands, not as it is staged. Prints the
-// workspaces and its time; exits with turbo's code.
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -56,7 +47,6 @@ Effect.gen(function* () {
   const path = yield* Path.Path;
   const spawner = yield* ChildProcessSpawner;
   const started = yield* Clock.currentTimeMillis;
-  // packages/scripts/src → the repo root.
   const root = path.resolve(import.meta.dir, '..', '..', '..');
   const staged = (yield* spawner.string(
     ChildProcess.make('git', STAGED_FILES, {

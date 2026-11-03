@@ -1,8 +1,3 @@
-// The files a page's HTML loads, read by Bun's HTML parser (`HTMLRewriter`):
-// each script's `src` and each stylesheet's `href`, as the HTML spells them.
-// A script with no `src` runs code the HTML itself holds, whose imports no
-// closure follows, so it fails the read.
-
 import { Effect, Option, Schema } from 'effect';
 
 /** A page runs a script its HTML holds inline, so its closure cannot be whole. */

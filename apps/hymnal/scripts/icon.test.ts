@@ -226,8 +226,6 @@ describe('the app icon', () => {
           Effect.map((p) => {
             const ground = rgb(groundHex);
             const drawn = blends(p, ground, rgb(wheatHex));
-            // From 180 px up, 2% of the square is the wheat's exact colour;
-            // the favicon's stem is mostly blended pixels, so it holds one.
             const solid = Math.max(1, Number(p.width >= 180) * 0.02 * p.width * p.height);
             return {
               file,
@@ -332,7 +330,6 @@ describe('the app icon', () => {
           [
             sideOf(file),
             decode(file),
-            // The launch screen as shown: the artwork over its configured ground.
             Effect.promise(() =>
               sharp(`${ROOT}/${file}`)
                 .flatten({ background })
@@ -380,8 +377,6 @@ describe('the app icon', () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const wheat = yield* wheatOf(yield* fs.readFileString(`${ROOT}/assets/icon/wheat.svg`));
-      // The same bytes need no decode; another host's sharp may encode or
-      // antialias apart, so then the pixels are compared, within 8.
       const worstOf = (kept: Buffer, fresh: Buffer) =>
         Effect.all([pixels(kept), pixels(fresh)], { concurrency: 2 }).pipe(
           Effect.map(([a, b]) => {

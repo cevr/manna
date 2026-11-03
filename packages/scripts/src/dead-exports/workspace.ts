@@ -1,10 +1,3 @@
-// The workspace the dead-export check reads: every TypeScript file of the
-// packages and apps, how a specifier (a relative path, `@manna/film/canvas`)
-// points at one of them, which files something outside the module graph runs
-// (the roots: apps, bins, scripts a `package.json` runs), and which are tests
-// or their support (which use an export for real no more than its own file
-// does).
-
 import { Array as Arr, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { type ModuleRecord, type Resolve, type Workspace, recordOf } from './graph.js';
 
@@ -207,8 +200,6 @@ export const readWorkspace = (root: string) =>
         for (const file of found.runs) runs.add(file);
       }
     }
-    // What runs without an importer: all that is not package source (an app, a
-    // package's scripts and tests) and the files a bin or a script runs.
     const roots = new Set(
       [...records.keys()].filter((file) => !/^packages\/[^/]+\/src\//.test(file) || runs.has(file)),
     );

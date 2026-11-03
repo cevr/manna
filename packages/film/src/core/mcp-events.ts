@@ -1,12 +1,3 @@
-// MCP Events, as the lab serves them (protocol 2026-07-28, OpenAI's MCP
-// Events profile): what a subscriber asks (`events/subscribe`,
-// `events/unsubscribe`), what the lab keeps of each subscription on disk,
-// and what each webhook delivery carries. The events are the lab's
-// catalogue (`LAB_EVENTS`) and each delivery's `data` its payload
-// (`LabChange`); a subscription's `arguments` narrow it to one film. Pure:
-// the lab's side (verifying a callback, signing and posting each delivery,
-// the store) is `tools/mcp-events.ts`.
-
 import { Array as Arr, Match, Option, Order, Result, Schema } from 'effect';
 import { Base64 } from 'effect/encoding';
 import { LabChange } from './lab-events.ts';

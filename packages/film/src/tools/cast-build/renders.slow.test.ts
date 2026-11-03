@@ -1,7 +1,3 @@
-// lead-feast's front, his committed part sheet's puppet, rendered as his
-// shard's 40 held samples: every sample shows the figure on the canvas with
-// every joint of his, and a shard is the same bytes twice.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option } from 'effect';
 import { puppetFor } from '../../../../../apps/animations/src/library/cast/lead-feast/cutout/puppet.ts';
@@ -33,8 +29,6 @@ describe('renders of lead-feast front', () => {
       Effect.gen(function* () {
         const spec = yield* front;
         const [W, H] = SAMPLE_SIZE;
-        // each held sample's seed as the shard draws it; its JSON truth
-        // carries the seed, so the sample is drawn again here to read its pixels
         const seeds = seedsIn(
           shardOf(spec, 'lead-feast', 'turnaround-front', { train: 0, held: SAMPLES.held }),
         );
@@ -42,7 +36,6 @@ describe('renders of lead-feast front', () => {
         for (let i = 0; i < SAMPLES.held; i++) {
           const drawn = sample(spec, seeds[`held/${i}`]!);
           expect([drawn.img.width, drawn.img.height]).toEqual([W, H]);
-          // he stands 82-100 % of the canvas's height: a tenth to a half of its pixels
           expect(figureShare(drawn)).toBeGreaterThan(0.1);
           expect(figureShare(drawn)).toBeLessThan(0.5);
           expect(drawn.truth.masked).toEqual([]);

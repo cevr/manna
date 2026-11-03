@@ -133,10 +133,14 @@ const WITNESS: Column = { edge: 'right', x: 12, width: 8, band: 600 };
  * slides outweigh the list's still stretches: the list shows in about a
  * third of the frames (88 of 282 and 85 of 262, measured).
  */
-const PUSH_SHOWN = 0.2;
+const PUSH_SHOWN_SHARE_UNDER_THE_MEASURED_THIRD = 0.2;
 
 /** The least share of each pass's frames that must show the list: every frame where no page covers it. */
-const LEAST: Record<Pass, number> = { slow: 1, fast: 1, push: PUSH_SHOWN };
+const LEAST: Record<Pass, number> = {
+  slow: 1,
+  fast: 1,
+  push: PUSH_SHOWN_SHARE_UNDER_THE_MEASURED_THIRD,
+};
 
 /** Whether the list stands in each frame: read from the witness column in the `push` pass, else every frame. */
 const shownIn = Effect.fn('Sticky.shownIn')(function* (
@@ -188,7 +192,6 @@ const gestures = Effect.fn('Sticky.gestures')(function* (pass: Pass) {
     for (let i = 0; i < 6; i++) yield* pan(200, 200, 0, 560, 250);
   }
   if (pass === 'push') {
-    // The row at y = 520 is mid-list; (30, 80) is the header's back button.
     yield* device(['press', '200', '520']);
     yield* pause(2000);
     yield* device(['press', '30', '80']);

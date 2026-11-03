@@ -1,18 +1,3 @@
-// The first page's world and the word's three gifts, for `spoke` and the
-// beats that call its row back, drawn in the Board's pixels. The world as
-// `spoke.dark` and `spoke.light` paint it: torn paper planes with no ink,
-// each torn edge a rim cut lighter in its own hue (the dark's faint cool
-// edge, the day's cream), so the dark reads as unlit paper; the gold word of
-// light that flies its arc across the dark and bursts into the sun; the sky
-// it floods, dawn and then teal; the land and water that rise into place
-// under it; the gold stars called out over it. The seal's old outline,
-// traced round the seed. And the three icons the word brings
-// (`spoke.brings`), each lined in the cast's ink and drawn about its foot on
-// the page: the lead's own lilac hand circle with the gold seed on it
-// (faith), the white cloth (forgiveness), the green blade (power). Nothing
-// here is lettered. The lines are the props' own, under any card, so they
-// are drawn `unprobed`. Pure: the same pose draws the same thing.
-
 import {
   type Hand,
   type Hex,
@@ -35,8 +20,6 @@ import { C } from './kit.ts';
 import { GOLD_GLOW, type Paper, paper } from './page-set.ts';
 import { type OpenSeedPose, glow as shine, openSeed } from './props.ts';
 import { PAPERS } from './rigs/papers.ts';
-
-// ─── the world's papers ──────────────────────────────────────────────────────
 
 /** A torn plane of the world: its paper, and the rim its torn edge shows, a lighter cut of its own hue. */
 export interface Torn {
@@ -302,8 +285,6 @@ export const water = (ctx: CanvasRenderingContext2D, hand: Hand, lit: number) =>
   ctx.restore();
 };
 
-// ─── the sky ─────────────────────────────────────────────────────────────────
-
 /**
  * The sun as `spoke.light` sets it: its middle, its disc, its six rays (where
  * each starts and where its tip reaches, its half-width at each end), the
@@ -401,8 +382,6 @@ export const sky = (ctx: CanvasRenderingContext2D, flood: number, day: number) =
   }
   night(ctx, flood);
 };
-
-// ─── the word of light and the sun ───────────────────────────────────────────
 
 /** The sun's papers: its disc, the light in its middle, its rays. */
 const SUN_PAPER = { disc: '#f6d15a', core: '#fde68f', ray: '#f7d660' } as const;
@@ -568,8 +547,6 @@ export const spark = (ctx: CanvasRenderingContext2D, t: number, amount: number) 
   shine(ctx, x, y, 34, '#fff8e0', amount);
 };
 
-// ─── the stars ───────────────────────────────────────────────────────────────
-
 /** The stars called out over the new sky, in the order they come: each one's middle and its size, none in the sun's light. */
 export const STARS: ReadonlyArray<readonly [number, number, number]> = [
   [470, 125, 17],
@@ -617,8 +594,6 @@ export const star = (
   );
   cut(ctx, starShape(x, y, r * k), STAR_PAPER, { line: 0, alpha: shown });
 };
-
-// ─── the seal's old outline ──────────────────────────────────────────────────
 
 /** The seal's wax round as court-cast presses it (`seal`, which keeps it to itself): 23 units, its edge bumped six times, traced from its top. */
 const SEAL_ROUND: ReadonlyArray<Pt> = Array.from({ length: 49 }, (_, i): Pt => {
@@ -688,8 +663,6 @@ export const sealTrace = (
   }
   ctx.restore();
 };
-
-// ─── the three icons ─────────────────────────────────────────────────────────
 
 /**
  * The row the word brings, as `spoke.brings` lays it out beside him (his

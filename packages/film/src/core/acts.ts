@@ -1,10 +1,3 @@
-// Parts of a film: stretches that each begin on a scene and run until the
-// next one's. A film's acts (`look.acts`: its colour script, its lights, its
-// chapters) and its score's movements are both declared this way, as lists
-// in film order, and the first always opens the film. The one rule for which
-// scenes an act holds lives here. Pure: it reads only the scenes' order and,
-// for times, the placed scenes.
-
 import { Array as Arr, Option, Result } from 'effect';
 import { PartOutOfOrder, UnknownScene } from './errors.ts';
 import type { Placed } from './layout.ts';
@@ -58,7 +51,6 @@ export const membersOf = <P extends PartOf>(
   ids: ReadonlyArray<string>,
 ): Result.Result<ReadonlyArray<Members<P>>, PartError> =>
   Result.map(indicesOf(parts, ids), (at) => {
-    // The first part reaches back to the film's first scene.
     const bounds = [0, ...at.slice(1), ids.length];
     return parts.map((part, i) => ({
       part,

@@ -1,12 +1,3 @@
-// A clip's given frames (`<stem>.first.png`, `<stem>.last.png`): the kept
-// view at rest, placed on the reader's canvas as a sample is at the middle of
-// every draw (`core/pose-sample.ts` `placed` at 0.5: 0.91 of the largest
-// scale that fits, the sheet centred across, its bottom halfway down the
-// room left under it), over the sheet's paper with no blur, drawn at twice
-// the canvas (1066 x 1356) for the video model. A first and last pair shares
-// one scale, one root x and one feet line (the lowest row the figure covers),
-// so the clip asks for a move, not a jump. Pure.
-
 import { type Puppet, rasterOf } from '../../core/puppet.ts';
 import type { Raster } from '../../core/raster.ts';
 import { SAMPLE_SIZE } from '../../core/pose-sample.ts';

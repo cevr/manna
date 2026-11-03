@@ -1,28 +1,3 @@
-// The lab's command set on the command line: `film lab <command>`, each
-// made from its definition (`lab-command.ts`) and nothing else. A flag for
-// each field of the command's parameters, by the field's own name, read as
-// the JSON Schema MCP lists the tool by says the field is: a word, a number,
-// a switch, a repeated flag for a list of words or numbers (numbers also
-// comma-separated: `--crop 0,0,400,300`), and JSON text
-// for anything else (`--blocks '[…]'`). `--input '<json>'` gives the whole
-// input as one object (a flag given beside it wins), and `--json` prints the
-// answer as its success schema encodes it, one line; without it, the
-// command's plain lines. The input is read by the command's own parameters
-// (`LabCommand.call` or `.input`), so a terminal is refused in the words an
-// MCP client is.
-//
-// Where it runs follows from the set (`lab-commands.ts`): a command over
-// the lab's files runs here, in this process, through the same stores the
-// lab writes through (each write holds its file's lock across processes); a
-// command over what only the running lab holds (its change feed, its easel,
-// its asks' page lock, the agents' "doing now" lines) is called on the lab at
-// `FILM_LAB_URL` through its MCP (`lab-client.ts`). A field the terminal
-// knows (`films`: this checkout's films folder) is filled when not given.
-// A command of the lab's that answers a job's handle before the job is done
-// (`critique`) has `film lab <name> wait <handle>`: it asks again with the
-// handle until the answer is done, then prints it, for an agent to run in
-// the background as it runs `film ask wait`.
-
 import {
   Array as Arr,
   Boolean as Bool,

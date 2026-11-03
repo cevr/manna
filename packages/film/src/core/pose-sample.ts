@@ -1,12 +1,3 @@
-// A puppet posed at random for a pose reader's training set: each bone's
-// number drawn within its own limits (`limitsOf`, from the puppet's drawn
-// rest), the figure drawn by `rasterOf` at a random scale and place on the
-// reader's canvas, over its paper jittered in tone, then a 1 px blur
-// (`sample`). Each comes with its truth: the numbers, each bone's world
-// angle, each joint's canvas px, and the joints its puppet lacks (`masked`).
-// One seed draws one sample (`mulberry32`): the same seed gives the same
-// bytes. Pure.
-
 import { type Puppet, type PuppetPose, boneTransforms, rasterOf } from './puppet.ts';
 import type { Raster } from './raster.ts';
 
@@ -144,7 +135,6 @@ const armLimits = (b: Bone, shoulder: Bone, hip: Pt): Pt => {
   const a0 = deg(shoulder.pivot, shoulder.tip);
   if (b === shoulder) {
     const [lo, hi] = left ? [64, 214] : [-34, 116];
-    // the rest angle unwrapped next to the range's middle
     const c = wrapDeg(a0 - (lo + hi) / 2) + (lo + hi) / 2;
     return aroundRest([lo - c, hi - c]);
   }

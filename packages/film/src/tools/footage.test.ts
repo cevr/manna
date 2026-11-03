@@ -1,11 +1,3 @@
-// The footage library (`footage.ts`) over an in-memory disk, with its media
-// and its speech-to-text faked: no camera file is decoded and nothing is
-// paid for. An original is kept once by its bytes and never overwritten;
-// what the render cannot conform is refused before anything is kept; each
-// copy is made only when its recipe is not the one it was made by; a take is
-// heard once, and a second hearing is a second file; push and pull keep the
-// originals in the private store, read back by their hashes.
-
 import {
   Cause,
   ConfigProvider,
@@ -247,11 +239,9 @@ describe('the footage library', () => {
         expect(heard.words.length).toBeGreaterThan(0);
         expect(heard.envelope.length).toBeGreaterThan(0);
         expect((yield* lockIn(files)).footage['why']?.transcript).toBe(`why.${sha12}.json`);
-        // Nothing stale: nothing made, nothing heard.
         const second = yield* library.make('why', { hearAgain: false });
         expect(second.made).toEqual([]);
         expect(calls.stt.length).toBe(1);
-        // The proxy's recipe changed since it was made: the proxy alone is made again.
         const stamp = `${OUT}/footage/why/${sha12}/stamp.json`;
         files.set(
           stamp,
@@ -374,7 +364,6 @@ describe('the footage library', () => {
           ...['../../evil.json', 'why/x.json', 'why.aaaaaaaaaaaa.txt'].map((transcript) => ({
             why: { ...entry, transcript },
           })),
-          // Every other field a path is made of: the hash (the copies' folder, the original's name) and the extension.
           ...['../../../../../../evil', 'A'.repeat(64), 'a'.repeat(63), `${'a'.repeat(64)}/x`].map(
             (sha256) => ({ why: { ...entry, sha256 } }),
           ),
@@ -399,7 +388,6 @@ describe('the footage library', () => {
           version: 1 as const,
           footage: {
             'why-the-law.2': { ...entry, transcript: 'why-the-law.2.aaaaaaaaaaaa.2.json' },
-            // An original imported with no extension keeps none.
             bare: { ...entry, sha256: '0123456789abcdef'.repeat(4), ext: '' },
           },
         };
@@ -419,7 +407,6 @@ describe('the footage library', () => {
   for (const [what, why] of [
     ['a hash that is a path', { ...handEdited, sha256: '../../../../../../evil' }],
     ['an extension that is a path', { ...handEdited, ext: '/../../../../evil.mov' }],
-    // Pulled there, an original would be written over a committed transcript.
     [
       "an extension that is a transcript's path",
       { ...handEdited, ext: '/../../../transcripts/why.aaaaaaaaaaaa.json' },
@@ -434,7 +421,6 @@ describe('the footage library', () => {
         const files = new Map([
           [`${DIR}/library.lock.json`, lock],
           [`${DIR}/transcripts/why.aaaaaaaaaaaa.json`, text('{"words":[]}')],
-          // The store holds bytes at every key the crafted lock could name.
           [`${STORE}/footage/why/../../../../../../evil.mov`, text('a phone take')],
           [`${STORE}/footage/why/aaaaaaaaaaaa/../../../../evil.mov`, text('a phone take')],
           [
@@ -481,7 +467,6 @@ describe('the footage library', () => {
           ]),
         );
         expect([...files.keys()].toSorted()).toEqual(['/in/take.MOV', '/in/take.m_v']);
-        // A capital is lowered, as the library keeps it.
         const { entry } = yield* library.importFile('/in/take.MOV', asTake('why'));
         expect(entry.ext).toBe('.mov');
       }).pipe(Effect.provide(world(files, emptyCalls(), [])));
@@ -524,7 +509,6 @@ describe('the footage library', () => {
         expect((yield* library.push).map((s) => [s.key, s.did])).toEqual([[key, 'sent']]);
         expect((yield* library.push).map((s) => s.did)).toEqual(['had']);
         expect(files.get(`${STORE}/${key}`)).toEqual(text('a phone take'));
-        // This machine loses the original: make says to pull it, and pull brings it back.
         const original = `${DIR}/files/why/${entry.sha256.slice(0, 12)}.mov`;
         files.delete(original);
         const missing = failureOf(yield* Effect.exit(library.make('why', { hearAgain: false })));

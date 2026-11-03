@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/internals/composite/root/CompositeRoot.tsx
-//
-// The element of a composite widget: it owns the roving tab stop
-// (`useCompositeRoot`), registers its items through a `CompositeList`, and
-// gives them the tab stop through `CompositeRootContext`. A part renders it
-// as a `div` with its own state and props.
 import type { JSX } from '@solidjs/web';
 import { untrack } from 'solid-js';
 
@@ -34,7 +28,6 @@ export function CompositeRoot<State extends object>(props: CompositeRootProps<St
     onHighlightedIndexChange: root.onHighlightedIndexChange,
   };
 
-  // Rendered under the list so the items inside it register with it.
   function Element() {
     return useRenderElement('div', props, {
       get state() {

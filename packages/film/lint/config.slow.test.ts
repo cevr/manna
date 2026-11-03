@@ -1,32 +1,3 @@
-// The repo's lint config (.oxlintrc.json), read against what it guards.
-//
-// - The host bans: `effect/noGlobals`' `members` list in the film's host
-//   block. A page reaches no host name it may not use, and no host object's
-//   banned member (`performance.now`), bare, through any name of the global
-//   object (`window.`, `top.`, `document.defaultView.`) or a chain of them
-//   (`globalThis.window.location`), through an alias or a destructure, and it
-//   holds none where the rule cannot follow it (`{ w: window }`). oxlint
-//   lints a probe of every such form, built from the bans themselves, with
-//   the block's own options: each line is red. The URL's names are among
-//   them, and no page file is let off them: every page reaches the address
-//   bar through `@manna/url-state`'s Location. `Reflect.get(window,
-//   'history')`, a name no ban can see, is `effect/noReflectGet`'s, on in the
-//   same block.
-// - The purity rule: a block that keeps a layer's folder (`**/lab/**`) out
-//   also keeps out every package export that resolves into it
-//   (`@manna/film/review` is the lab's).
-// - The film's rules: `Visitor.accumulate`, which copies its list on every
-//   node it keeps, is refused to them, and `nodes.ts`'s `collect` is not.
-// - The First the Blade site's sources: oxlint lints a probe with the
-//   site's block's own options, and refuses each `?inline` import and data
-//   URL, an image the build walk would not read, and passes a URL import.
-// - The film's sources: the rule each file of the film's folders (a
-//   source, a test, a fixture) and of its films gets under the whole config,
-//   the last block over it that sets the rule and does not exclude it,
-//   refuses `@effect/platform-bun`'s index and effect's `http-api`, `ai` and
-//   `cli` barrels, each of which loads every module of it in each test
-//   worker, and passes a module imported by its own path.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Glob, JSONC } from 'bun';
 import { describe, expect, it } from 'effect-bun-test';
@@ -386,7 +357,6 @@ describe('the lint config', () => {
         expect(bansOf(options).length).toBeGreaterThan(0);
         const probe = [...probeOf(options), ...CHAINS, ...HOLDS, ...CALLS];
         expect(yield* unreported(options, [], probe)).toEqual([]);
-        // The URL's names are banned whole, and no block lets a file off its events.
         expect(bansOf(options).map((b) => b.ban)).toEqual(
           expect.arrayContaining([
             ...URL_NAMES.map((name) => `global ${name}`),
@@ -423,7 +393,6 @@ describe('the lint config', () => {
     () =>
       Effect.gen(function* () {
         const { banned, url } = hostBlocks(yield* readJson('.oxlintrc.json', Config));
-        // The film's, url-state's with egw-search's, and egw-search's scroll adapter's.
         expect(url.length).toBeGreaterThan(2);
         for (const block of url) {
           expect(urlBansMissing(banned, block)).toEqual([]);
@@ -445,7 +414,6 @@ describe('the lint config', () => {
         const listing = config.overrides.filter(
           (o) => overFilmSource(o) && optionsIn(o, 'no-restricted-properties', Property).length > 0,
         );
-        // The brands' own block, and any later one that replaces its list.
         expect(listing.length).toBeGreaterThan(0);
         expect(listing.map((o) => [o.files[0], brandsUnbanned(o)])).toEqual(
           listing.map((o) => [o.files[0], []]),
@@ -635,7 +603,6 @@ describe('the lint config', () => {
         const config = yield* readJson('.oxlintrc.json', Config);
         const matches = (globs: ReadonlyArray<string>, file: string) =>
           globs.some((glob) => new Glob(glob).match(file));
-        // The rule oxlint gives `file`: the last block over it that sets the rule.
         const effective = (file: string) =>
           Option.firstSomeOf(
             config.overrides
@@ -643,7 +610,6 @@ describe('the lint config', () => {
               .map((o) => ruleIn(o, 'no-restricted-imports'))
               .toReversed(),
           );
-        // A new file's path in each folder a block names, tracked or not.
         const SAMPLED = [
           'packages/film/src/a.ts',
           'packages/film/src/fixtures/a.ts',
@@ -670,7 +636,6 @@ describe('the lint config', () => {
           'packages/film/e2e/canvas/a.pixel.test.ts',
           'apps/animations/src/films/a/a.slow.test.ts',
         ];
-        // Every tracked film source oxlint reads: its .ts and .tsx, less the config's ignorePatterns.
         const tracked = yield* (yield* ChildProcessSpawner.ChildProcessSpawner).string(
           ChildProcess.make('git', ['ls-files', '--', 'packages/film', 'apps/animations/src'], {
             cwd: yield* ROOT,
@@ -697,8 +662,6 @@ describe('the lint config', () => {
           "import * as Flag from 'effect/cli/Flag';",
           'export const used = [BunServices, HttpApiBuilder, Tool, Command, BunPath, HttpApi, McpSchema, Flag];',
         ];
-        // Each block's rule is linted once (a block's rule is one value, whichever path
-        // reads it); a path reads the lines its own rule reported.
         const distinct = [...new Set(rules.flatMap(({ rule }) => Option.toArray(rule)))];
         const reported = new Map(
           yield* Effect.forEach(
@@ -724,7 +687,6 @@ describe('the lint config', () => {
           file,
           lines: Option.match(rule, { onNone: () => [], onSome: (r) => reported.get(r) ?? [] }),
         }));
-        // Each path whose rule does not refuse the four barrels (lines 1-4) alone, and pass the modules by their own paths (lines 5-8).
         expect(refused.filter(({ lines }) => lines.join(',') !== '1,2,3,4')).toEqual([]);
       }),
     SPAWNS_MS,

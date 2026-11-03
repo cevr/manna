@@ -1,14 +1,3 @@
-// A page that draws one painted plate, for its slow test: the plate a module
-// declares (`module`'s export `name`, its PNG imported `with { type: 'file' }`)
-// stood on two one-scene films as a film's are (`loadPaintings` over the
-// page's decoder, `PaintingImagesBrowser`), and each film's frame rendered in
-// the render path's own Chrome (`openView(launchArgs)`). Both scenes move the
-// ctx off the identity by `move` before the plate would draw; one paints it
-// with `f.painting`, the other draws nothing more, so the two frames differ
-// only by the plate. The page is built with Bun's bundler into a folder under
-// the package's `node_modules/.cache` (so `effect` resolves from the package)
-// and served on loopback for the scope.
-
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import type { Raster } from '../../core/raster.ts';
 import { launchArgs } from '../../tools/browser.ts';

@@ -7,15 +7,11 @@ type Pt = readonly [number, number];
 type Puppet = Parameters<typeof rasterOf>[0];
 type Raster = ReturnType<typeof rasterOf>;
 
-// Measured CIE Lab references on single-9: cream sleeve and orange skin.
-// Chroma distinguishes the wrist from the sleeve even in coloured shadow.
-const CLOTH = [90.2, 4.2, 20.5] as const;
-const SKIN = [63.4, 38.9, 46.9] as const;
+const SLEEVE_LAB_MEASURED_ON_SINGLE_9 = [90.2, 4.2, 20.5] as const;
+const SKIN_LAB_MEASURED_ON_SINGLE_9 = [63.4, 38.9, 46.9] as const;
 const INK_L = 20;
-// At 1×, two bilinear footprints (the paint cut and the sleeve lip) may
-// leave up to eight mixed contact pixels. Each must touch established ink;
-// an unprotected raw cut has no allowance, regardless of its pixel count.
-const FILTER_FRINGE = 8;
+const MIXED_CONTACT_PX_OF_TWO_BILINEAR_FOOTPRINTS_AT_1X = 8;
+const INK_MIX_ROUNDING_BYTES = 2;
 
 /** Independent rigid-chain oracle: rotate cuff about elbow, then hand about the posed cuff. */
 const inverse = (limb: ReturnType<typeof measuredHand>['limb'], elbow: number, wrist: number) => {
@@ -91,8 +87,14 @@ const measuredHand = (puppet: Puppet) => {
     const lab = labOf(paintAt(sx, sy));
     return (
       lab[0] >= INK_L &&
-      Math.hypot(lab[1] - CLOTH[1], lab[2] - CLOTH[2]) <=
-        Math.hypot(lab[1] - SKIN[1], lab[2] - SKIN[2])
+      Math.hypot(
+        lab[1] - SLEEVE_LAB_MEASURED_ON_SINGLE_9[1],
+        lab[2] - SLEEVE_LAB_MEASURED_ON_SINGLE_9[2],
+      ) <=
+        Math.hypot(
+          lab[1] - SKIN_LAB_MEASURED_ON_SINGLE_9[1],
+          lab[2] - SKIN_LAB_MEASURED_ON_SINGLE_9[2],
+        )
     );
   };
   const inkAt = (sx: number, sy: number, rgb: readonly [number, number, number]) => {
@@ -102,9 +104,9 @@ const measuredHand = (puppet: Puppet) => {
     if (square === 0) return false;
     const weight = d.reduce((sum, c, k) => sum + c * (source[k]! - rgb[k]!), 0) / square;
     if (weight < 1 / 255 || weight > 1) return false;
-    // A filtered ink edge need not be L* <20. Recognise its measured ink
-    // mixed with the source colour, within two bytes of rounding error.
-    return source.every((c, k) => Math.abs(rgb[k]! - (c - weight * d[k]!)) <= 2);
+    return source.every(
+      (c, k) => Math.abs(rgb[k]! - (c - weight * d[k]!)) <= INK_MIX_ROUNDING_BYTES,
+    );
   };
   return { arm, limb, alpha, sample, clothAt, inkAt };
 };
@@ -120,8 +122,14 @@ const kindsOf = (r: Raster) => {
     if (lab[0] < INK_L) continue;
     kinds[i] = 2;
     if (
-      Math.hypot(lab[1] - SKIN[1], lab[2] - SKIN[2]) <
-      Math.hypot(lab[1] - CLOTH[1], lab[2] - CLOTH[2])
+      Math.hypot(
+        lab[1] - SKIN_LAB_MEASURED_ON_SINGLE_9[1],
+        lab[2] - SKIN_LAB_MEASURED_ON_SINGLE_9[2],
+      ) <
+      Math.hypot(
+        lab[1] - SLEEVE_LAB_MEASURED_ON_SINGLE_9[1],
+        lab[2] - SLEEVE_LAB_MEASURED_ON_SINGLE_9[2],
+      )
     )
       kinds[i] = 3;
   }
@@ -150,9 +158,6 @@ const countEdges = (
         ghostAt.push([x, y]);
         continue;
       }
-      // A native skin/bottle paint contact stays native. Every other skin
-      // contact with cloth or paper needs ink, including a cut moved inward
-      // by the sleeve lip where the original source is still hand-owned.
       const cut = [
         [-1, 0],
         [1, 0],
@@ -176,8 +181,6 @@ const countEdges = (
   return { exposed, ghost, raw, ghostAt, unprotected };
 };
 
-// Heavy real-art sweeps stay in the slow suite. Each pose is a separate case
-// under the standard timeout; its two guards share one raster and load.
 const lead = Effect.runPromise(puppetFor('single-9'));
 const counts = new Map<string, ReturnType<typeof countEdges>>();
 const at = (elbowRight: number, wristRight: number) =>
@@ -212,10 +215,10 @@ for (const [elbow, wrist] of poses)
       Effect.gen(function* () {
         const row = yield* at(elbow, wrist);
         yield* Console.log(
-          `cuff ${elbow}/${wrist}: exposed=${row.exposed} ghost=${row.ghost} unprotected=${row.unprotected} bounds=${FILTER_FRINGE}/0/0`,
+          `cuff ${elbow}/${wrist}: exposed=${row.exposed} ghost=${row.ghost} unprotected=${row.unprotected} bounds=${MIXED_CONTACT_PX_OF_TWO_BILINEAR_FOOTPRINTS_AT_1X}/0/0`,
         );
         if (row.exposed > 0) yield* Console.log('uninked edge coordinates', row.raw.slice(0, 12));
-        expect(row.exposed).toBeLessThanOrEqual(FILTER_FRINGE);
+        expect(row.exposed).toBeLessThanOrEqual(MIXED_CONTACT_PX_OF_TWO_BILINEAR_FOOTPRINTS_AT_1X);
         expect(row.unprotected).toBe(0);
       }),
     );

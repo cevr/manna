@@ -1,14 +1,5 @@
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
-// The sound library over a fixture library on disk (a temporary folder, one
-// generated one-shot with a code trial, one generated bed with a code trial
-// that fades, so its seams are heard, a code chime, a code tick, three
-// recordings: a one-shot taken whole, a one-shot and a CC BY bed cut to length)
-// with a fake ElevenLabs that writes a seeded burst as `pcm_44100` bytes and
-// the real Media, but for its sheets and cards, which are kept by file for
-// the cases to read (media.test.ts writes real ones). Never a real call:
-// every paid path is counted by the fake.
 
-import { createHash } from 'node:crypto';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -223,7 +214,6 @@ const fixture = Layer.unwrap(
     const config = ConfigProvider.layer(
       ConfigProvider.fromUnknown({ FILMS_OUT: path.join(root, 'out'), HOME: root }),
     );
-    // The store the fixture's library.ts declares: a folder beside it.
     const store = PrivateStore.layer(dir).pipe(Layer.provide([FetchHttpClient.layer, config]));
     const sheets = new Map<string, Raster>();
     const cards = new Map<string, { readonly image: Raster; readonly pcm: Pcm }>();
@@ -263,13 +253,6 @@ const all = {
   tally: Option.none(),
 };
 
-/**
- * What `make` leaves of the fixture's generated sounds (every candidate's
- * FLAC and the lock), made once, as the file loads, in a fixture of its own:
- * the cases that start from a made library are given a copy, not a make of
- * their own (six FLAC encodes each). Made at load, its cost is in no case's
- * time limit, and no case's paid calls are its.
- */
 // oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
 const madeOnce = await Effect.runPromise(
   Effect.gen(function* () {
@@ -447,7 +430,6 @@ describe('SoundLibrary', () => {
             tally: Option.some(tally),
           });
           expect(made).toHaveLength(6);
-          // Nothing of the downloads is left behind: only the kept FLACs.
           for (const folder of ['paper.slide', 'amb.court'])
             expect(
               (yield* fs.readDirectory(`${dir}/files/${folder}`)).every((f) => f.endsWith('.flac')),
@@ -462,7 +444,6 @@ describe('SoundLibrary', () => {
           for (const v of made) {
             expect(v.file).toMatch(/^files\/(paper\.slide|amb\.court)\/[0-9a-f]{12}\.flac$/);
             expect(yield* fs.exists(`${dir}/${v.file}`)).toBe(true);
-            // Stereo bytes are read as stereo: the sound lasts what was asked, both sides kept.
             const asked = new Map([
               ['amb.court', 1],
               ['paper.slide', 0.5],
@@ -473,7 +454,6 @@ describe('SoundLibrary', () => {
             expect(v.loudness.momentaryMax).toBeGreaterThan(-40);
             expect(v.licence).toBe('elevenlabs-paid-sfx');
           }
-          // Candidates waiting for audition are not made again.
           expect(yield* library.make(all)).toEqual([]);
           expect(calls).toHaveLength(6);
 
@@ -499,7 +479,6 @@ describe('SoundLibrary', () => {
             expect(soundState(entry, Option.fromUndefinedOr(loaded.lock['paper.slide']))._tag).toBe(
               'Current',
             );
-          // A current sound is never generated again.
           expect(yield* library.plan(Option.some(new Set(['paper.slide'])), false)).toEqual([]);
         }),
       ),
@@ -528,7 +507,6 @@ describe('SoundLibrary', () => {
             Array.from({ length: 3 }, () => ['paper slides on a desk', 0.8, 0.9]),
           );
           expect(talliedCredits(yield* fs.readFileString(tally))).toBe(3 * 32);
-          // The declaration still asks for its own settings: the trial's candidates do not wait for it.
           const declared = yield* library.plan(Option.some(new Set(['paper.slide'])), false);
           expect(declared.map((j) => j.count)).toEqual([4]);
           const unkeepable = yield* Effect.flip(library.takesAt('paper.slide', [1], 'candidates'));
@@ -536,8 +514,6 @@ describe('SoundLibrary', () => {
           const tried = made[0]?.sha256 ?? '';
           const notWaiting = yield* Effect.flip(library.keep('paper.slide', [tried]));
           expect(notWaiting._tag).toBe('TakeUnknown');
-          // Declared as the trial was made (the next run imports the edited
-          // library.ts), its candidates are the ones that wait, and keep takes them.
           const loaded = yield* library.load;
           const declaredAsTried = {
             kind: 'generated',
@@ -551,7 +527,6 @@ describe('SoundLibrary', () => {
             declaredAsTried,
             Option.fromUndefinedOr(loaded.lock['paper.slide']),
           );
-          // Candidates land in the lock as each call finishes, so compare as sets.
           expect(waiting.map((v) => v.sha256).toSorted()).toEqual(
             made.map((v) => v.sha256).toSorted(),
           );
@@ -578,7 +553,6 @@ describe('SoundLibrary', () => {
             yield* library.takesAt('paper.slide', [1, 2], 'candidates'),
           );
           const [one = '', two = ''] = first.variants.map((v) => v.sha256);
-          // Unkept: the variant waits again as the last candidate, playable by keep.
           const unkept = yield* library.unkeep('paper.slide', [one]);
           expect(unkept.variants.map((v) => v.sha256)).toEqual([two]);
           expect(unkept.candidates.map((v) => v.sha256)).toContain(one);
@@ -587,13 +561,11 @@ describe('SoundLibrary', () => {
           expect(outOfRange).toMatchObject({ _tag: 'VariantMissing', index: 2, variants: 1 });
           const notKept = yield* Effect.flip(library.unkeep('paper.slide', [one]));
           expect(notKept._tag).toBe('TakeUnknown');
-          // Replace: the picks play alone; what played waits again.
           const waiting = unkept.candidates[0]?.sha256 ?? '';
           const replaced = yield* library.keep('paper.slide', [waiting], true);
           expect(replaced.variants.map((v) => v.sha256)).toEqual([waiting]);
           expect(replaced.candidates.map((v) => v.sha256)).toContain(two);
           expect(replaced.candidates).toHaveLength(3);
-          // Unkeeping the last variant leaves nothing playing: the sound is unmade again.
           const none = yield* library.unkeep('paper.slide', [waiting]);
           expect(none.variants).toEqual([]);
           const loaded = yield* library.load;
@@ -613,7 +585,6 @@ describe('SoundLibrary', () => {
       withLibrary(() =>
         Effect.gen(function* () {
           const library = yield* SoundLibrary;
-          // Both acts are decided while the candidates are [a, b, c, d]; rejecting a lands first.
           const waiting = (yield* library.load).lock['paper.slide']?.candidates ?? [];
           const [a = '', b = ''] = waiting.map((v) => v.sha256);
           yield* library.reject('paper.slide', [a]);
@@ -647,11 +618,9 @@ describe('SoundLibrary', () => {
           const again = yield* library.push(NO_SCORES, Option.none());
           expect([...again.sent].sort()).toEqual([broken, gone].sort());
           expect(again).toMatchObject({ had: 3, missing: [lost], total: 6 });
-          // Pull names the file the store lacks, and brings back the rest.
           yield* fs.remove(`${dir}/${gone}`);
           expect(yield* library.pull(NO_SCORES)).toEqual({ fetched: 1, had: 4, missing: [lost] });
 
-          // A film's score goes to the store beside the library's files, under its own key.
           const score = `${dir}/../films/f/sound/piano-1.mp3`;
           yield* fs.makeDirectory(`${dir}/../films/f/sound`, { recursive: true });
           yield* fs.writeFileString(score, 'a score');
@@ -660,7 +629,7 @@ describe('SoundLibrary', () => {
               {
                 key: 'scores/f/piano-1.mp3',
                 file: score,
-                sha256: createHash('sha256').update('a score').digest('hex'),
+                sha256: new Bun.CryptoHasher('sha256').update('a score').digest('hex'),
               },
             ],
           };
@@ -685,7 +654,6 @@ describe('SoundLibrary', () => {
           const files = Object.values(lock)
             .flatMap((e) => e.candidates.map((v) => v.file))
             .toSorted();
-          // The files live only in an older folder store; one of them nowhere at all.
           const old = `${dir}/../old-store`;
           for (const file of files) {
             yield* fs.makeDirectory(`${old}/${file.split('/').slice(0, -1).join('/')}`, {
@@ -695,7 +663,6 @@ describe('SoundLibrary', () => {
           }
           const lost = files[0] ?? '';
           yield* fs.remove(`${old}/${lost}`);
-          // And one of them there with other bytes: not its hash, so not sent.
           const bent = files[1] ?? '';
           yield* fs.writeFileString(`${old}/${bent}`, 'not these bytes');
 
@@ -753,7 +720,6 @@ describe('SoundLibrary', () => {
         const mended = yield* library.check;
         expect(mended.filter(fileBroken)).toEqual([]);
 
-        // A generated file under public/ may not be published.
         yield* fs.makeDirectory(`${dir}/public/paper.slide`, { recursive: true });
         yield* fs.copyFile(`${dir}/${slide}`, `${dir}/public/paper.slide/copy.flac`);
         const leaked = yield* library.check;
@@ -774,12 +740,10 @@ describe('SoundLibrary', () => {
             yield* library.takesAt('paper.slide', [1], 'candidates'),
           );
           const kept = (yield* library.load).lock['paper.slide']?.variants[0];
-          // The fixture's burst rises within 5 ms and is loudest in its second 10 ms.
           expect(kept).toMatchObject({ onset: 0, hit: 0.01 });
           const timing = Predicate.isTagged('TimingUnrecorded');
           expect((yield* library.check).filter(timing)).toEqual([]);
 
-          // A lock written before takes were described: check says so, describe mends it.
           const file = `${dir}/library.lock.json`;
           yield* fs.writeFileString(
             file,
@@ -809,8 +773,6 @@ describe('SoundLibrary', () => {
             'paper.slide',
             yield* library.takesAt('paper.slide', [1], 'candidates'),
           );
-          // The code chime's record keeps the slide's take, as a sound made
-          // code keeps the takes it played; the take is gone and undescribed.
           const file = `${dir}/library.lock.json`;
           const lock = yield* Schema.decodeEffect(LockJson)(yield* fs.readFileString(file));
           const kept = lock['paper.slide']?.variants ?? [];
@@ -840,7 +802,6 @@ describe('SoundLibrary', () => {
           const { variant } = yield* library.importFile(source, 'wood.knock', Option.none());
           expect((yield* library.load).trials.has('wood.knock')).toBe(false);
           const fit = yield* library.fit('wood.knock', { size: 'small', from: Option.none() });
-          // earshot fitted the kept variant, and its model is kept outside the library.
           expect(fitted).toEqual([`${dir}/${variant.file}`]);
           expect(fit.file).toBe(`${dir}/fits/wood.knock.json`);
           expect(fit.model).toEndWith('/out/sounds/fits/wood.knock.model.json');
@@ -936,7 +897,6 @@ describe('SoundLibrary', () => {
         expect(variant.licence).toBe('CC0-1.0');
         expect(variant.secs).toBeGreaterThan(0.05);
         expect(variant.secs).toBeLessThan(0.1);
-        // No cut asked and no secs declared: taken whole, its peak under the ceiling.
         expect(cut).toEqual(Option.none());
         expect(variant.cut).toBeUndefined();
         expect(gain).toBe(0);
@@ -983,7 +943,6 @@ describe('SoundLibrary', () => {
       withLibrary(({ dir }) =>
         Effect.gen(function* () {
           const fs = yield* FileSystem.FileSystem;
-          // Before the library is first read: its module is read once.
           const module = `${dir}/library.ts`;
           const unchanged = (yield* fs.readFileString(module))
             .replace('changed: true,', 'changed: false,')
@@ -1020,7 +979,6 @@ describe('SoundLibrary', () => {
           Option.some({ from: 1.5, to: 2.5 }),
         );
         expect(variant.cut).toEqual({ from: 1.5, to: 2.5 });
-        // The second knock alone, its quiet ends trimmed.
         expect(variant.secs).toBeLessThan(0.1);
         expect((yield* library.load).lock['wood.knock']?.variants).toMatchObject([
           { cut: { from: 1.5, to: 2.5 } },
@@ -1041,7 +999,6 @@ describe('SoundLibrary', () => {
           ]);
           const { cut } = yield* library.importFile(source, 'wood.tap', Option.none());
           const taken = Option.getOrThrow(cut);
-          // A fifth of its 0.2 s before the loud tap at 2 s, 0.2 s long.
           expect(taken.from).toBeCloseTo(1.96, 1);
           expect(taken.to - taken.from).toBeCloseTo(0.2, 3);
         }),
@@ -1056,11 +1013,6 @@ describe('SoundLibrary', () => {
           const library = yield* SoundLibrary;
           const media = yield* Media;
           const path = yield* Path.Path;
-          // Ten seconds of steady noise, four times louder from 4.5 s to 6.5 s:
-          // a cut at 4 s or 6 s loops across that step. It falls to -80 dBFS,
-          // under the trim floor, for a tenth of a second either side of each
-          // 2 s step and at its end, so a bed trimmed as a one-shot is would
-          // come out shorter than its secs.
           const level = (t: number) => {
             if (t >= 9.9 || [2, 4, 6, 8].some((k) => Math.abs(t - k) < 0.1)) return 1e-4;
             if (t >= 4.5 && t < 6.5) return 0.4;
@@ -1072,7 +1024,6 @@ describe('SoundLibrary', () => {
           expect([2, 8]).toContain(taken.from);
           expect(variant.secs).toBeCloseTo(2, 2);
           expect(variant.licence).toBe('CC-BY-4.0');
-          // The kept file is the source's cut sample for sample: no filter, no fade.
           const kept = yield* media.load(path.join(dir, variant.file), 44100);
           const whole = yield* media.load(source, 44100);
           const at = Math.round(taken.from * 44100);
@@ -1095,7 +1046,6 @@ describe('SoundLibrary', () => {
         Effect.gen(function* () {
           const library = yield* SoundLibrary;
           const path = yield* Path.Path;
-          // Steady for its first 2 s; every later 2 s steps from quiet to four times louder.
           const level = (t: number) => {
             if (t < 2 || t % 2 < 1) return 0.1;
             return 0.4;
@@ -1129,7 +1079,6 @@ describe('SoundLibrary', () => {
           const fs = yield* FileSystem.FileSystem;
           const source = yield* recording(dir, 'knock.wav', 1, [[0.5, 0.05, 0.5]]);
           const first = (yield* library.importFile(source, 'wood.knock', Option.none())).variant;
-          // As a generated sound's kept take stands once the sound is recorded.
           const file = `${dir}/library.lock.json`;
           const lock = yield* Schema.decodeEffect(LockJson)(yield* fs.readFileString(file));
           const older = { ...first, request: 'an older request' };
@@ -1165,7 +1114,6 @@ describe('SoundLibrary', () => {
         expect(renders).toHaveLength(3);
         const heard = yield* library.audition('tone.chime', 'plays');
         expect(yield* fs.exists(heard)).toBe(true);
-        // Three 0.6-second chimes, each followed by the half-second gap.
         expect((yield* media.decode(heard)).frames).toBe(3 * (26460 + 22050));
         expect(calls).toHaveLength(0);
       }),
@@ -1213,7 +1161,6 @@ describe('SoundLibrary', () => {
         const [one, two] = yield* Effect.forEach(renders, (file) => media.decode(file));
         expect(one?.frames).toBe(4410);
         expect(one?.channels[0]).not.toEqual(two?.channels[0]);
-        // Any seed renders, past the variants that play.
         expect(
           named(
             yield* library.render('tone.tick', {
@@ -1223,7 +1170,6 @@ describe('SoundLibrary', () => {
             }),
           ),
         ).toEqual(['tone.tick-7.wav']);
-        // Two 0.1-second ticks, each followed by the half-second gap.
         const heard = yield* library.audition('tone.tick', 'plays');
         expect((yield* media.decode(heard)).frames).toBe(2 * (4410 + 22050));
         const wrong = yield* Effect.flip(
@@ -1250,7 +1196,6 @@ describe('SoundLibrary', () => {
         const [one, two] = yield* Effect.forEach(court, (file) => media.decode(file));
         expect(one?.frames).toBe(22050);
         expect(one?.channels[0]).not.toEqual(two?.channels[0]);
-        // Any seed renders, past the trial's own.
         expect(
           named(
             yield* library.render('amb.court', { seed: Option.some(5), trial: true, sheet: false }),
@@ -1260,7 +1205,6 @@ describe('SoundLibrary', () => {
           library.render('tone.tick', { seed: Option.none(), trial: true, sheet: false }),
         );
         expect(none).toMatchObject({ _tag: 'CodeTrialMissing', name: 'tone.tick', kind: 'code' });
-        // Its seeds heard as the bed plays: two half-second seeds, each followed by the half-second gap.
         const heard = yield* library.audition('amb.court', 'trial');
         expect(named([heard])).toEqual(['audition-amb.court-trial.wav']);
         expect((yield* media.decode(heard)).frames).toBe(2 * (22050 + 22050));
@@ -1283,7 +1227,6 @@ describe('SoundLibrary', () => {
             sheet: true,
           });
           expect(named(bed)).toEqual(['amb.court-trial-1.wav', 'amb.court-trial-1.png']);
-          // The mix crosses a half-second bed's last eighth into its head: 0.375 s in, column 900 of 1200.
           expect(marksOn(sheets.get(bed[1] ?? '') ?? NO_SHEET)).toEqual([[900, 'loop']]);
           const tick = yield* library.render('tone.tick', {
             seed: Option.none(),
@@ -1301,7 +1244,6 @@ describe('SoundLibrary', () => {
             expect(kinds).toContain('hit');
             expect(kinds).not.toContain('loop');
           }
-          // Without --sheet, a WAV alone.
           expect(sheets.size).toBe(3);
           expect(calls).toHaveLength(0);
         }),
@@ -1331,21 +1273,17 @@ describe('SoundLibrary', () => {
           const [now, code, both] = [files[0], files[2], files[4]].map((file) =>
             cards.get(file ?? ''),
           );
-          // The half-second take, then the trial's three 0.6-second seeds, each followed by the
-          // half-second gap, levelled into one channel; both, a second apart.
           expect([now, code].map((card) => card?.pcm.frames)).toEqual([
             22050 + 22050,
             3 * (26460 + 22050),
           ]);
           expect(both?.pcm.frames).toBe(22050 + 22050 + 3 * (26460 + 22050) + 22050);
           expect(both?.pcm.channels).toHaveLength(1);
-          // Each card's picture is its sheet, written beside it, a hit marked on every block.
           for (const [i, card] of [now, code, both].entries()) {
             expect(card?.image).toBe(sheets.get(files[2 * i + 1] ?? ''));
             const hits = marksOn(card?.image ?? NO_SHEET).filter(([, kind]) => kind === 'hit');
             expect(hits).toHaveLength([1, 3, 4][i] ?? 0);
           }
-          // A sound with no code trial has only what plays now.
           expect(named(yield* library.ab('tone.tick', out))).toEqual([
             'tone.tick.now.mp4',
             'tone.tick.now.png',
@@ -1369,13 +1307,11 @@ describe('SoundLibrary', () => {
           const [now, code, both] = [files[0], files[2], files[4]].map((file) =>
             cards.get(file ?? ''),
           );
-          // The one-second take, then its gap; the trial's two half-second seeds, each with its gap.
           expect([now, code].map((card) => card?.pcm.frames)).toEqual([
             44100 + 22050,
             2 * (22050 + 22050),
           ]);
           expect(both?.pcm.frames).toBe(44100 + 44100 + 2 * (22050 + 22050));
-          // A clip cuts a bed where it ends: no loop is marked.
           expect(marksOn(both?.image ?? NO_SHEET)).toEqual([]);
           expect(calls).toHaveLength(0);
         }),
@@ -1386,7 +1322,6 @@ describe('SoundLibrary', () => {
     withLibrary(() =>
       Effect.gen(function* () {
         const seams = (yield* (yield* SoundLibrary).check).filter((f) => f._tag === 'LoopSeam');
-        // It fades to nothing: each seed's tail is far quieter than its head.
         expect(seams.map((f) => [f.name, 'variant' in f && f.variant])).toEqual([
           ['amb.court (trial)', 1],
           ['amb.court (trial)', 2],
@@ -1412,9 +1347,7 @@ describe('SoundLibrary', () => {
         expect(take.profile.secs).toBeCloseTo(1, 2);
         expect(one?.profile.secs).toBe(0.5);
         expect(one?.profile.bands).not.toEqual(two?.profile.bands);
-        // The burst is white noise and the trial pink: the take is the brighter.
         expect(take.profile.centroid).toBeGreaterThan(one?.profile.centroid ?? 0);
-        // A one-shot's trial beside its kept take.
         yield* library.keep(
           'paper.slide',
           yield* library.takesAt('paper.slide', [1], 'candidates'),

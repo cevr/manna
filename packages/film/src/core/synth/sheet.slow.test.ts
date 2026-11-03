@@ -1,9 +1,3 @@
-// The sheet on sounds whose picture is known: a tone's row in the
-// spectrogram, silence's black, a square wave filling the waveform panel,
-// the loudness a tone reads, and the lines at each second and at each mark.
-// The panels' rows are the module's layout: the spectrogram 0–399, the
-// waveform 404–563, the loudness 568–639.
-
 import { describe, expect, test } from 'bun:test';
 import type { Pcm } from '../audio.ts';
 import type { Raster } from '../raster.ts';
@@ -55,9 +49,7 @@ describe('sheetOf', () => {
     const brightest = rows.reduce((best, y) =>
       brightness(tone, 600, y) > brightness(tone, 600, best) ? y : best,
     );
-    // 1 kHz is ln(1000/30)/ln(16000/30) of the way up from 30 Hz: row 399 − ⌊0.558 · 400⌋.
     expect(Math.abs(brightest - 176)).toBeLessThanOrEqual(2);
-    // −6 dB is near the loud end of the heat; 100 Hz, a decade below, reads the floor.
     expect(pixel(tone, 600, brightest)[0]).toBeGreaterThan(240);
     const hundred = 399 - Math.floor((Math.log(100 / 30) / Math.log(16000 / 30)) * 400);
     expect(pixel(tone, 600, hundred)).toEqual(QUIETEST);
@@ -84,7 +76,6 @@ describe('sheetOf', () => {
   });
 
   test("a tone's loudness sits where its LUFS falls on the panel's scale", () => {
-    // A 1 kHz sine at half scale measures about −9.7 LUFS: 9.7/70 of the way down 71 rows.
     const lit = rowsNot(tone, 600, 568, 640, PANEL).filter(
       (y) => pixel(tone, 600, y).join() === [255, 206, 84].join(),
     );
@@ -98,20 +89,17 @@ describe('sheetOf', () => {
     plane.set(click, 0);
     plane.set(click, RATE / 2);
     const clicked = sheetOf(pcmOf(plane), []);
-    // 4 kHz is ln(4000/30)/ln(16000/30) of the way up from 30 Hz: row 399 − ⌊0.780 · 400⌋.
     const row = 399 - Math.floor((Math.log(4000 / 30) / Math.log(16000 / 30)) * 400);
     expect(brightness(clicked, 600, row)).toBeGreaterThan(300);
     expect(Math.abs(brightness(clicked, 0, row) - brightness(clicked, 600, row))).toBeLessThan(40);
   });
 
-  // One sheet a test: a CI runner draws them 17–50 times as slow as a laptop.
   test('a faint line crosses each second, and a hit its own colour through every panel, over a mark given before it', () => {
     const marked = sheetOf(pcmOf(sine(440, 2, 0.25)), [
       { kind: 'onset', at: 0.5 },
       { kind: 'hit', at: 1.5 },
       { kind: 'hit', at: 0.5 },
     ]);
-    // The second falls on column 600 of a two-second sheet: lighter than its neighbour in the gap rows.
     expect(brightness(marked, 600, 402)).toBeGreaterThan(brightness(marked, 599, 402));
     for (const y of [0, 200, 402, 500, 600])
       expect([pixel(marked, 300, y), pixel(marked, 900, y)]).toEqual([

@@ -179,7 +179,6 @@ const CASES: ReadonlyArray<Case> = [
     put: "const PROMISE = 'news from us now and then';",
     said: ['dist/privacy.html: unheld: We use it to send you news from us now and then.'],
   },
-  // rw-r1 F1: a word of time inside a longer word.
   confirmedSays('rw-r1-F1 "biweekly"', 'Expect a new film from us biweekly.'),
   confirmedSays('rw-r1-F1 "on weekends"', 'A new film lands in your box on weekends.'),
   confirmedSays('rw-r1-F1 "quarterly"', 'Look for us quarterly.'),
@@ -193,12 +192,10 @@ const CASES: ReadonlyArray<Case> = [
     'Expect a roundup from us at Easter and Christmas.',
   ),
   confirmedSays('rw-r1-F1 "seasonal"', 'And our seasonal roundup.'),
-  // rw-r1 F4: a sentence held on one page, said on another.
   confirmedSays(
     'rw-r1-F4 "for an hour" said on the confirmed page',
     'We will not send another one for an hour.',
   ),
-  // rw-r1 F2: a word split by an inline element.
   {
     name: 'rw-r1-F2 the sign-up label splits "weekly" with <u>',
     file: 'src/ui/mail.tsx',
@@ -215,7 +212,6 @@ const CASES: ReadonlyArray<Case> = [
   noticePrints('rw-r1-F2 <s></s>every Friday', '<p>Find us here <s></s>every Friday.</p>', [
     'unheld: Find us here every Friday.',
   ]),
-  // The layout check: a word the net takes in one layout and not in the other.
   noticePrints('rw-r1-F2 a word split across two boxes', '<p>Find us here wee</p><p>kly.</p>', [
     'layout: Find us here wee|kly.',
   ]),
@@ -224,7 +220,6 @@ const CASES: ReadonlyArray<Case> = [
     '<p>Our list<span>ening</span> room.</p>',
     ['layout: Our list|ening room.'],
   ),
-  // rw-r1 F3: words a reader sees in attributes and stylesheets.
   {
     name: 'rw-r1-F3 the sign-up button as <input type=submit value>',
     file: 'src/ui/mail.tsx',
@@ -258,7 +253,6 @@ const CASES: ReadonlyArray<Case> = [
     put: `.signup-label::after {\n  content: 'Weekly emails';\n}\n${LABEL_CSS}`,
     said: ['dist/assets/client-*.css: unheld: Weekly emails'],
   },
-  // rw-r2 F1: a character a reader does not see, or sees as a plain letter, inside a word.
   noticePrints('rw-r2-F1 a soft hyphen inside "weekly"', '<p>Expect us wee&shy;kly.</p>', [
     'unheld: Expect us weekly.',
   ]),
@@ -276,7 +270,6 @@ const CASES: ReadonlyArray<Case> = [
   noticePrints('rw-r2-F1 a Cyrillic letter in "weekly"', '<p>Expect us w&#x435;&#x435;kly.</p>', [
     'unread: character U+0435 in "Expect us w\u0435\u0435kly."',
   ]),
-  // rw-r2 F2: generated content drawn beside an element's words.
   {
     name: 'rw-r2-F2 generated content after the sign-up button',
     file: 'src/styles.css',
@@ -294,7 +287,6 @@ const CASES: ReadonlyArray<Case> = [
     "<style>.w::after{content:'wee' 'kly.'}</style>",
     ["unread: content: 'wee' 'kly.'"],
   ),
-  // rw-r2 F3: a box shown inline beside a held sentence.
   {
     name: 'rw-r2-F3 an inline <div> after the sign-up label',
     file: 'src/ui/mail.tsx',
@@ -307,7 +299,6 @@ const CASES: ReadonlyArray<Case> = [
     '<p>Get them by email</p><p> and our garden too.</p>',
     ['layout: Get them by email | and our garden too.'],
   ),
-  // rw-r2 F4: the letters' sender, which every inbox shows.
   {
     name: 'rw-r2-F4 the letters are from "First the Blade Weekly"',
     file: 'src/mail/mailer.ts',
@@ -322,7 +313,6 @@ const CASES: ReadonlyArray<Case> = [
     put: "email: 'weekly@firsttheblade.com'",
     said: ['letter sender: unheld: weekly@firsttheblade.com'],
   },
-  // rw-r2 F5: a meta tag the check does not know.
   {
     name: 'rw-r2-F5 <meta name="application-name">',
     file: 'src/document.tsx',
@@ -330,9 +320,7 @@ const CASES: ReadonlyArray<Case> = [
     put: `${THEME_META}\n        <meta name="application-name" content="First the Blade Weekly" />`,
     said: ['dist/index.html: unread: meta application-name'],
   },
-  // rw-r2 F6: what we send beside the films.
   confirmedSays('rw-r2-F6 "our news and offers"', 'Plus our news and offers.'),
-  // rw-r2 F7: the gate reads turbo's build, so a build older than its sources fails.
   {
     name: 'rw-r2-F7 a source changed after the build',
     file: 'src/ui/mail.tsx',
@@ -349,13 +337,11 @@ const CASES: ReadonlyArray<Case> = [
     after: true,
     said: ['stale: dist/llms.txt changed after its build'],
   },
-  // rw-r2 F8: a file name the browser shows.
   noticePrints(
     'rw-r2-F8 a download file name',
     '<a href="/x.pdf" download="weekly-digest.pdf">Get it</a>',
     ['unheld: weekly-digest.pdf'],
   ),
-  // The letters: their subjects, a hidden preheader and their headers.
   {
     name: 'letters a cadence in a subject',
     file: 'src/mail/letters.ts',
@@ -380,7 +366,6 @@ const CASES: ReadonlyArray<Case> = [
     put: `${ONE_CLICK}\n      'X-Note': 'One film a week',`,
     said: ['letter film path/00 text: unread: letter header X-Note'],
   },
-  // Each source of words the check does not read fails the run.
   noticePrints(
     'fail-closed an element the check does not read',
     '<iframe src="/x.html"></iframe>',

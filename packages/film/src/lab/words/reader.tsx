@@ -1,26 +1,3 @@
-// The one words reader (a series draft's page, a film's or a draft's script
-// in an ask): the beats in order, each under
-// its id and label with its staging take (▶ and its pace once ready), its
-// line at the reading size with its delivery marks (a stressed word heavier,
-// a pause's glyph in its gap), what its picture does and its sources quiet
-// under it. The staging voice is the film reader's own (`script/voice.tsx`
-// over the source's routes; `script/voiced.tsx` draws it), so the fill keeps
-// a take ready for every spoken beat and the reader never asks for one.
-//
-// At rest it is the words, their marks, a ready take and its pace: no
-// control of its own. A tap on a word selects it (shift extends; a text
-// selection across words selects them), where its page keeps a selection
-// (`Selecting`: the ask's own), and
-// opens the box under its line: Hear, Clear and the words' delivery, each a
-// tap written at once through the source (`POST …/marks`); its takes are
-// read again, the beat's new take queued first. A page that notes words
-// (`ReaderPage.noting`: the studio's) adds its note on them under their
-// delivery. What it reads and writes is
-// its source's (`ScriptSource`): a draft's routes, a film's. The page it is
-// on (`ReaderPage`) gives its host, its commands and its runtime; a page
-// with a playhead names the beat it is in (`live`), which the reader marks
-// and keeps in sight by the lab's one Follow rule (`lab/follow.ts`).
-
 import { For, type JSX, Show } from '@solidjs/web';
 import { Array as Arr, Effect, Option, Result } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
@@ -145,10 +122,8 @@ const Line = (props: {
   readonly released: (event: MouseEvent) => void;
 }) => {
   const voice = useVoice();
-  // As the page has them: after its own write, the marks that write left, until the line is read again.
   const marks = () => voice.marksOf(props.line.id, props.marks);
   return (
-    // A word held (or right-clicked) opens its menu: Select to here, a phone's range.
     <Target
       of={Selection.cases.Words.make({
         scene: props.line.id,
@@ -226,7 +201,6 @@ const Selected = (props: {
             .join(' ')}
           selected={props.words}
         />
-        {/* Keyed by the words: other words selected take a note of their own. */}
         <Show
           when={Option.getOrUndefined(
             Option.map(props.noting, (note) => ({
@@ -413,7 +387,6 @@ const Beats = (props: {
       to: w.to,
     })),
   );
-  // A tap selects the word (shift: from the selection's first to it); a text selection across words selects them.
   const released = wordsReleased({
     sections: lines,
     selectRange: (beat, from, to) => props.selecting.select(beat, { from, to }),
@@ -429,7 +402,6 @@ const Beats = (props: {
         ),
       ),
   });
-  // A phone has no Shift: tap the first word, hold the last, Select to here.
   onCleanup(
     meta.hub.commands.register(
       ...scriptCommands({
@@ -460,18 +432,14 @@ const Beats = (props: {
       ),
     }),
   );
-  // The box over a selection is brought into sight as it opens, a link pasted with one
-  // included: its choices are on the screen with its words.
   createEffect(
     () => Option.map(selected(), (w) => `${w.section}:${w.from}-${w.to}`),
     (key) => {
-      // Moved on (another selection, or the page gone) before it lands, the scroll is not made.
       const stop = Option.map(
         Option.flatMap(
           Option.flatMap(key, () => page),
           (el) => Option.fromNullishOr(el.querySelector('.lab-script-ties')),
         ),
-        // Once laid out (its choices drawn, the page's type set): the whole box, not its top.
         (box) =>
           Effect.runCallbackWith(meta.host)(
             Effect.promise(() => document.fonts.ready).pipe(
@@ -495,7 +463,6 @@ const Beats = (props: {
       Option.flatMap(meta.playhead, (p) => p.beat()),
       () => '',
     );
-  // The playhead's beat kept in sight in the box the reader scrolls in, by the lab's one Follow rule.
   Option.map(meta.playhead, (playhead) =>
     useFollow(
       {
@@ -581,7 +548,6 @@ export const ScriptReader = (props: {
   const beats = createMemo(() => laidOut(props.beats()));
   const following = createFollowing();
   const voice: VoiceSource = {
-    // The page's alone: the server's render never waits on the takes, nor queues one.
     reading: meta.runtime
       .atom(polled(props.source.voice))
       .pipe(Atom.withServerValue(() => AsyncResult.initial())),

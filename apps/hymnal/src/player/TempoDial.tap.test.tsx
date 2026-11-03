@@ -40,7 +40,6 @@ import * as Dial from './TempoDial';
 const mount = (number: number, tapping: boolean) => {
   const registry = AtomRegistry.make();
   registry.set(settings.tempo(number), 100);
-  // The taps' times are read from this clock, which the test moves.
   const clock = Effect.runSync(Effect.scoped(TestClock.make()));
   const cues: Array<Cue> = [];
   const host = document.createElement('div');

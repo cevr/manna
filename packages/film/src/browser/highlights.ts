@@ -1,11 +1,3 @@
-// The page's text highlights: ranges of a text painted without touching the
-// markup, so a code view's text stays selectable and copyable, and a lit span
-// costs no element. The browser's CSS Custom
-// Highlight API is the live adapter (`highlights-browser.ts`); a browser
-// without it paints nothing, and the view's gutter still says which lines are
-// lit. A server render paints nothing (`Highlights.none`); a test reads what
-// was painted where it is painted, in the browser (`CSS.highlights`).
-
 import { Context, Effect, Layer } from 'effect';
 import type { CodeRange } from '../core/schema.ts';
 

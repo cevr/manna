@@ -1,22 +1,3 @@
-// Upstream: packages/react/src/internals/useTransitionStatus.ts,
-// packages/react/src/internals/useAnimationsFinished.ts,
-// packages/react/src/internals/useOpenChangeComplete.tsx,
-// packages/react/src/internals/useUnmountAfterClose.ts,
-// packages/react/src/utils/getFiniteAnimations.ts,
-// packages/react/src/internals/stateAttributesMapping.ts,
-// packages/react/src/internals/TransitionStatusDataAttributes.ts
-//
-// A popup's enter and exit transitions. Opening mounts it with
-// `data-starting-style` for one frame (so a CSS transition has a start);
-// closing keeps it mounted with `data-ending-style` until its CSS
-// animations and transitions finish, then unmounts it.
-//
-// A CSS transition runs from the style the browser last computed, so the
-// browser has to compute the starting style before it is removed. Upstream
-// gets that from React: the removal commits after the frame that rendered the
-// starting style (`useTransitionStatus`), or after a measurement that computed
-// it (a toast's height). Solid applies the removal in the same frame, before
-// the browser computes any style, so `computeStartingStyle` asks for it.
 import { type Accessor, createEffect, createMemo, createSignal, untrack } from 'solid-js';
 
 import { NOOP } from '../utils/dom.ts';
@@ -40,7 +21,6 @@ const TransitionStatusDataAttributes = {
  */
 export function computeStartingStyle(element: Element | null | undefined): void {
   if (element?.isConnected) {
-    // Reading a computed value flushes pending style; the value is unused.
     void getComputedStyle(element).transitionProperty;
   }
 }

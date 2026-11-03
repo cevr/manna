@@ -101,10 +101,6 @@ export const bookVectorsPage = Effect.fn('BookVectors.page')(function* (
   const authors = encodeNames(EGW_SCOPE_AUTHORS);
   const apparatusAuthors = encodeNames([...APPARATUS_AUTHORS]);
   const apparatusTypes = encodeNames([...APPARATUS_TYPES]);
-  // Two statements rather than one with the scope as a condition: SQLite
-  // resolves every table a statement names when it prepares it, and a
-  // corpus no recheck has written to has no `paragraph_changes`.
-  // A statement runs only when it is yielded, so building both costs nothing.
   let read = sql`
           SELECT
             p.rowid AS row_id, b.book_code, p.ref_code, p.para_id, p.refcode_short,

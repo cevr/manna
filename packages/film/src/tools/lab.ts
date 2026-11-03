@@ -1,16 +1,3 @@
-// The lab's server: one web handler for the lab's whole API (`LabHttpApi` in
-// `core/api.ts`, where every path, body and answer is declared), for every
-// film the app has, and its pages (`LabPage`). It serves the asks' pages and
-// what they read (a film's script and Board, a series' drafts, a beat's
-// attempts, the renders under the roots) and the easel's looks and matches,
-// and runs for days: `film lab`. The agents' writes (notes, the Board,
-// a version's edits, a scene's cues and knobs) go through the lab's MCP
-// commands (`lab-commands.ts`), not its routes.
-//
-// The API rewrites source (a beat's delivery marks) and is reached from a phone, so every request, the
-// pages included, passes the one gate (`api-server.ts`): each listener's own
-// name (loopback, and the phone's address, `labPhone`) and port, nothing else.
-
 import { AskStore } from './ask-store.ts';
 import { asksGroup } from './asks-http.ts';
 import type { FileSystem } from 'effect';
@@ -287,8 +274,6 @@ export type LabContext =
 export const labHandler = Effect.fn('film.lab.handler')(function* (
   beside: BesideRoutes = Layer.empty,
 ) {
-  // The script's reads are kept for the server's life: its group is built over the services
-  // the server runs with.
   const reads = yield* Effect.context<FreshFilm | FilmFolder>();
   const routes = HttpApiBuilder.layer(LabHttpApi).pipe(
     Layer.provide(
@@ -307,7 +292,6 @@ export const labHandler = Effect.fn('film.lab.handler')(function* (
   );
   const pages = (yield* LabPage).answer;
   const asks = yield* AskStore;
-  // `/` is no page: it sends the owner on to the ask that waits on him (`lab-home.ts`).
   const page = Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
     if (urlPath(request.url) === pageHref.home())

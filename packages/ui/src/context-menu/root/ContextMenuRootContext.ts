@@ -1,10 +1,3 @@
-// Upstream: packages/react/src/context-menu/root/ContextMenuRootContext.ts
-//
-// What a context menu shares with the menu it opens: the point the menu is
-// anchored at (the pointer, or the long-press touch), the trigger that opened
-// it, the backdrop whose own right-click must not reach the browser, and the
-// gesture bookkeeping that keeps the releasing mouseup of the opening press
-// from activating an item.
 import { type Accessor, createContext, useContext } from 'solid-js';
 
 export interface ContextMenuAnchor {

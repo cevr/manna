@@ -136,7 +136,6 @@ describe('the live playback at a tempo', () => {
       yield* TestClock.adjust(AGAIN);
       yield* settle;
       yield* Fiber.join(playing);
-      // Each ask is 100 ms after the one before: the place moved on 0.8 ms each ms, 80 ms a step.
       expect(sought.map(Math.round)).toEqual(Array.from({ length: 12 }, (_, k) => 30_000 + 80 * k));
     }),
   );

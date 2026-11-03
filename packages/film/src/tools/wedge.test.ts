@@ -1,11 +1,3 @@
-// A wedge draws a look at another level than the film plays, its pick never
-// written: the palette is read as the pick would write it, each look and
-// level checked against the ones it declares, and the file on disk stays as
-// it was; `render --level` builds its render page with that palette swapped
-// in and serves it, with the films' narration, on a loopback server of its
-// own. No browser and no bundler: the test bundler answers each page as
-// written (or as swapped).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Option, Path } from 'effect';
@@ -54,7 +46,6 @@ describe('a wedge', () => {
       expect([...swaps.keys()]).toEqual([file]);
       expect(swaps.get(file)).toContain("play: 'ps1'");
       expect(yield* fs.readFileString(file)).toBe(PALETTE);
-      // No levels: nothing swapped, the PreviewServer draws.
       expect((yield* paletteSwaps(fs, file, {})).size).toBe(0);
       expect(yield* wedgeServer('/nowhere/index.html', '/nowhere', new Map())).toEqual(
         Option.none(),
@@ -101,7 +92,6 @@ describe('a wedge', () => {
           return served;
         }),
       );
-      // Closed with its scope: nothing answers there now.
       const after = yield* Effect.exit(HttpClient.get(url));
       expect(after._tag).toBe('Failure');
       expect(yield* fs.readFileString(page)).toBe('<p>as written</p>');
@@ -116,7 +106,6 @@ describe('a wedge', () => {
         const path = yield* Path.Path;
         const palette = yield* paletteFile;
         const dir = path.dirname(palette);
-        // A package only the film's folder resolves, as the app's `@manna/film` is.
         const pkg = path.join(dir, 'node_modules', 'film-engine');
         yield* fs.makeDirectory(pkg, { recursive: true });
         yield* fs.writeFileString(
@@ -124,7 +113,6 @@ describe('a wedge', () => {
           '{ "name": "film-engine", "type": "module", "main": "index.js" }',
         );
         yield* fs.writeFileString(path.join(pkg, 'index.js'), 'export const engine = {};\n');
-        // A file the film imports by its path (a rig's `.riv`): the path is where it is read.
         yield* fs.writeFileString(path.join(dir, 'rig.riv'), 'RIVE');
         const film = path.join(dir, 'film.ts');
         yield* fs.writeFileString(
@@ -146,9 +134,7 @@ describe('a wedge', () => {
         const wedged = yield* Effect.scoped(
           Effect.gen(function* () {
             const module = yield* wedgedModule(film, swaps);
-            // Built and imported while the scope holds, outside the film's folder.
             expect(module).toMatchObject({ play: 'ps1', slash: '/' });
-            // Its file's path reads from any directory, as the module as written gives it.
             const riv = String(Reflect.get(Object(module), 'riv'));
             expect(path.isAbsolute(riv)).toBe(true);
             expect(yield* fs.readFileString(riv)).toBe('RIVE');
@@ -158,12 +144,10 @@ describe('a wedge', () => {
         const direct = yield* Effect.promise(
           (): Promise<unknown> => import(path.join(pkg, 'index.js')),
         );
-        // The very module the film's folder resolves, not a copy of it.
         expect(Reflect.get(Object(wedged), 'same')).toBe(Reflect.get(Object(direct), 'engine'));
         const where = String(Reflect.get(Object(wedged), 'where'));
         expect(where.startsWith(dir)).toBe(false);
         expect(yield* fs.exists(where)).toBe(false);
-        // No swaps: the module as written, its file where it was written.
         expect(yield* Effect.scoped(wedgedModule(film, new Map()))).toMatchObject({
           play: 'cutpaper',
           riv: path.join(yield* fs.realPath(dir), 'rig.riv'),

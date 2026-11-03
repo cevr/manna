@@ -1,18 +1,3 @@
-// Footage, live (`footage.ts`): each source opened with mediabunny (an
-// `Input` over a ranged `UrlSource`) and its frames decoded through a
-// `VideoSampleSink`. A frame asked for alone (`ready`) is decoded from its
-// key frame (`getSample`) and copied onto a canvas of the host's, a few kept
-// by (source, second) so a still and a seek on the same frame decode it
-// once, each answer holding its own frames whatever is decoded after; a
-// run (`run`) feeds each source's times to `samplesAtTimestamps`, which
-// decodes each packet at most once while they rise, holds each frame only
-// until the next, and lets every decoder it made go when its scope closes; a
-// read that outlives its run makes nothing. mediabunny loads with the first
-// read (`FootageDecoders`), so a page whose film reads no footage never
-// downloads it. Which copy a page reads is
-// its own (`urlOf`): the lab the proxy, the render the mezzanine. Every
-// source stays open for the page's life, and is let go with it.
-
 import { Context, Effect, Layer, Option, Scope, Semaphore } from 'effect';
 import type * as MediabunnyModule from 'mediabunny';
 import type { Input, VideoSample, VideoSampleSink } from 'mediabunny';
@@ -206,7 +191,6 @@ export const footageLayer = (
             held.forEach((frame) => frame.close());
             held = [];
           });
-          // Each source's samples made by the time the run ends, read then: the run makes them as it goes.
           yield* Scope.addFinalizer(
             scope,
             Effect.andThen(
@@ -230,7 +214,6 @@ export const footageLayer = (
               const it = yield* iteratorOf(read.source);
               const got = yield* ask(() => it.next());
               const sample = yield* Effect.fromOption(sampleIn(got), () => 'no frame at that time');
-              // A sample decoded after the run ended is let go, not handed out held.
               if (ended) {
                 sample.close();
                 return yield* Effect.fail(RUN_ENDED);
@@ -256,7 +239,6 @@ export const footageLayer = (
         });
 
       return Footage.of({
-        // Its own reads' frames, held: a later `ready` may let them out of the kept ones before this frame draws.
         ready: (reads) =>
           Effect.map(
             Effect.forEach(reads, decodeOne, { concurrency: AT_ONCE }),

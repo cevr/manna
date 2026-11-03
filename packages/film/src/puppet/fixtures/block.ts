@@ -1,7 +1,3 @@
-// The smallest cut-out a film can draw, for tests that load a film's
-// puppets without a file or a decoder: one part on one bone, its PNG read
-// from memory (`PuppetImages`), each PNG asked for recorded.
-
 import { Effect, Layer } from 'effect';
 import type { PuppetSpec } from '../../canvas/puppet.ts';
 import { PuppetImages } from '../images.ts';

@@ -1,23 +1,3 @@
-// Record a film's narration, one take per beat. A take is current while the
-// hash of its script (its words, and who says which) and the voice that read
-// it match, so editing a line re-records only that line. A film read by one
-// voice records through text-to-speech; a cast records each beat as one
-// dialogue, so a question and its answer share a take. Every new take is
-// transcribed back and compared with the script; a take that says something
-// else fails the run unless it is accepted, and is never recorded as current.
-//
-// A crash at any point leaves the takes and their timings in agreement. A new
-// take is made in a temporary folder of its run's own, where no other run
-// sees it, and named for its beat and a hash of its audio, never the name of
-// a file the timings name. It enters `narration/` only under the timings'
-// lock, placed there and named by `timings.json`, rewritten whole, in one
-// step: so another run's sweep, which holds that lock too, never finds a
-// take that is still being made. What a crashed or failed run leaves behind
-// (a take placed but never named, a take replaced, a partial write) the
-// timings name nowhere, and the next run clears it from `narration/`: a
-// partial write whose writer is known to be gone is removed, a take is put away into
-// `narration/attempts/<beat>/`, never deleted.
-
 import {
   Array as Arr,
   Clock,
@@ -394,7 +374,6 @@ export const putAwayTake = Effect.fn('putAwayTake')(function* (
   const bytes = yield* fs.readFile(take);
   const attempts = path.join(paths.narration, 'attempts', beat);
   const names = [file, ...Arr.makeBy(KEPT_ASIDE_NAMES, (n) => keptAside(file, bytes, n))];
-  // A name holds the take once its file reads back as the take: written first when free.
   const holds = (name: string) =>
     Effect.gen(function* () {
       const home = path.join(attempts, name);
@@ -574,7 +553,6 @@ export class Narrator extends Context.Service<Narrator, NarratorService>()(
             aligned.breaks,
           ),
         );
-        // A word is timed by what was sent (a stress in capitals) and named as the line writes it.
         const written = beat.text.split(/\s+/).filter((w) => w.length > 0);
         const words = said.map((w, i) => ({ ...w, text: written[i] ?? w.text }));
         const audio = yield* Effect.fromResult(Base64.decode(reply.audio_base64)).pipe(
@@ -639,7 +617,6 @@ export class Narrator extends Context.Service<Narrator, NarratorService>()(
                 ...reading.take,
                 file: audioName(audio, '.flac'),
                 duration: secs,
-                // Where each word is heard, read from the take as it will be mixed.
                 words: voicedWords(heldInside(shiftedBy(reading.take.words, edits), secs), pcm),
               };
               return { take, audio } satisfies Made;
@@ -703,8 +680,6 @@ export class Narrator extends Context.Service<Narrator, NarratorService>()(
           previous: neighbour(index - 1),
           next: neighbour(index + 1),
         };
-        // A beat asked for by name or by force is read afresh; any other
-        // reuses a take the cache keeps that says its line.
         const fresh = options.force || Option.isSome(options.only);
         const staged = yield* stage(
           ask,
@@ -719,13 +694,10 @@ export class Narrator extends Context.Service<Narrator, NarratorService>()(
             heard: take.heard,
             wer: take.wer,
           });
-          // Never made current, the take never reaches `narration/`.
           if (!options.acceptMismatch.has(beat.id)) return yield* mismatch;
           yield* Effect.logWarning(`narrate.mismatch accepted=true ${mismatch.message}`);
         }
         const file = takeFile(beat.id, staged.audio, takeExtensionOf(take.file));
-        // The commit, under the timings' lock: the take placed beside the
-        // current one, then timings.json replaced whole, naming it.
         yield* store.transact(film.paths.timings, (timings) =>
           Effect.gen(function* () {
             yield* store.writeFile(path.join(film.paths.narration, file), staged.audio);
@@ -770,7 +742,6 @@ export class Narrator extends Context.Service<Narrator, NarratorService>()(
           3,
         ).pipe(
           Effect.andThen(store.update(film.paths.timings, withoutRemoved(plan.voice, plan.beats))),
-          // Also after a failed take: a take never made current does not stay.
           Effect.ensuring(
             sweep(film).pipe(
               Effect.catch((error) => Effect.logWarning(`narrate.sweep failed=${error._tag}`)),

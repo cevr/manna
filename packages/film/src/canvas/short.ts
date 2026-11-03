@@ -1,12 +1,3 @@
-// A short's page: a vertical cut of a film (`shorts.ts`), drawn as a film of
-// its own so the player, the export and the workers serve it unchanged. Each
-// frame is the film's own frame at the film time under it, drawn full size
-// into a band and copied onto the 9:16 page pixel for pixel, so a band crop is
-// the film's still at that time. Round the band the page is the film's paper,
-// vignette and grain made at the page's own size, with the hook line above
-// the band (`SHORT_LAYOUT`). The page is made at the film's density and
-// encoded down to 1080 × 1920 (`shortPage`).
-
 import { Effect, Result, Schema, type Scope } from 'effect';
 import { type Placed, sceneOf } from '../core/layout.ts';
 import { movedFrames, secondsAt } from '../core/time.ts';
@@ -90,7 +81,6 @@ export const createShort = (film: Film, declared: Short): Film => {
   const below = band.top + band.height;
   const strip = Math.max(band.top, page.height - below);
 
-  // Built lazily: the page must be made where there is no DOM (tools, tests).
   let assets:
     | {
         /** Paper under the page's own vignette: nothing on it moves, so it is made once. */
@@ -104,7 +94,6 @@ export const createShort = (film: Film, declared: Short): Film => {
     const base = offscreen(page.width, page.height);
     base.ctx.drawImage(makePaper(page.width, page.height, film.look.paper), 0, 0);
     shadeBy(base.ctx, makeVignette(page.width, page.height, film.look.shade, finish.vignette));
-    // Grain is a tile that repeats: a sheet a strip tall (and a tile more) serves both strips.
     const grain = makeGrain(
       finish.grainSize,
       finish.grainTiles,
@@ -139,10 +128,8 @@ export const createShort = (film: Film, declared: Short): Film => {
     const { sheet, grain, band: frame } = getAssets();
     const index = shortSpanAt(short, T);
     const span = short.spans[index] ?? short.spans[0];
-    // A frame of the short is the frame of the film `shift` frames on, at the time `secondsAt` writes for it.
     const at = movedFrames(T, span.shift, film.fps);
     const sink = opts.probe;
-    // A probed frame (a check, never the export's draw) collects the band's records apart.
     const probed: ProbeSink | undefined = sink === undefined ? undefined : { texts: [], inks: [] };
     bandOptions.knobs = opts.knobs;
     bandOptions.probe = probed;
@@ -152,7 +139,6 @@ export const createShort = (film: Film, declared: Short): Film => {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
-    // The paper above and below the band, then the film's frame between, untouched.
     ctx.drawImage(sheet, 0, 0, page.width, band.top, 0, 0, page.width, band.top);
     ctx.drawImage(
       sheet,
@@ -200,7 +186,6 @@ export const createShort = (film: Film, declared: Short): Film => {
     fps: film.fps,
     duration: short.duration,
     placed,
-    // The renderer cuts the film's track to the spans; the page has no track of its own.
     audio: undefined,
     sound: undefined,
     palette: film.palette,
@@ -208,7 +193,6 @@ export const createShort = (film: Film, declared: Short): Film => {
     look: film.look,
     sceneAt,
     render,
-    // The film's own rigs, puppets and paintings: the page draws the film's frames, so it draws with what the film loaded.
     rigs: film.rigs,
     puppets: film.puppets,
     paintings: film.paintings,

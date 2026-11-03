@@ -1,15 +1,3 @@
-/**
- * The verse-starts pin: every hymn 1-695's verse starts, read as the compile
- * reads them (the MIDI bytes through `Midi.parse`, then the exported
- * `Score.fromMidi(midi, stanzas)`), equal the committed table
- * `data/verse-starts.json`. A start is the melody index of the note that
- * opens a verse; `exact` is the reader's own flag. Any reader change that
- * moves one start, or flips one flag, turns this red and names the hymn.
- *
- * The table is a pin. Regenerate it only on purpose, with
- * `bun run verse-starts`, after a review of the hymns this test names; the
- * compile never writes it.
- */
 /* oxlint-disable effect/noNodeBuiltinImport -- read-only pin test boundary. */
 import { readFileSync } from 'node:fs';
 import { expect, test } from 'bun:test';

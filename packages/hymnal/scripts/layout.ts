@@ -135,10 +135,6 @@ export const applyRecipe = (
   return Result.succeed({ stanzas, refrain: source.refrain });
 };
 
-// ----------------------------------------------------------------------------
-// The generated property: every layout mutation of a printed source's text
-// ----------------------------------------------------------------------------
-
 /** The layout properties a row can get wrong (the README's census section names each). */
 export const PROPERTIES = [
   'stanza count',
@@ -524,7 +520,6 @@ const extraMutants = function* (
   for (const outline of outlines)
     for (const [e, extra] of outline.extra.entries()) {
       const without = isEcho(extra) ? text : withoutRow(text, extra);
-      // A row the source sings nowhere drops nothing: no mutant.
       if (without !== text)
         yield {
           property: 'unnumbered rows',
@@ -579,7 +574,6 @@ const withoutRow = (text: PrintedText, row: Outline['extra'][number]): PrintedTe
             refrain,
           ),
   };
-  // The text itself when the source sings the row nowhere.
   return dropped ? without : text;
 };
 
@@ -675,7 +669,6 @@ const reaches = (
   const lines = layoutLinesIn(n, control.outline, mutated, borrower, book, (i) =>
     !kept ? undefined : touched(i) ? checks.get(i) : control.checks.get(i),
   );
-  // The first line the hymn as committed does not print is enough.
   for (const line of lines) if (!control.lines.has(line)) return true;
   return false;
 };
@@ -762,7 +755,6 @@ export const domainOf = (sources: Sources): Domain => {
     const listed = new Set([...unreachable, ...gaps]);
     lists.unreachable += unreachable.length;
     lists.gaps += gaps.length;
-    // A mutant is on one list once: the page tells it apart or it does not.
     reached.push(
       ...[...unreachable, ...gaps]
         .filter((name, i, all) => all.indexOf(name) !== i)

@@ -1,6 +1,3 @@
-// 2D affine transforms as the canvas reports them (`getTransform()`), as six
-// numbers: what a frame read a knob under (`KnobRead`). Pure and DOM-free.
-
 /**
  * `[a, b, c, d, e, f]`, as `DOMMatrix` and `setTransform` take it: a point
  * `[x, y]` lands at `[a x + c y + e, b x + d y + f]`.

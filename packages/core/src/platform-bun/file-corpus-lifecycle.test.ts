@@ -466,8 +466,6 @@ describe('parameterized File Corpus lifecycle', () => {
       const failure = yield* Effect.flip(
         install({
           destination,
-          // Digest matches the bytes exactly; only the declared size is wrong,
-          // so nothing but the size check can reject this candidate.
           sources: [releaseSource({ digest: fixtureDigest, size: FIXTURE_BYTES.length + 1 })],
           provenanceStore: makeProvenanceStore(),
           verify: () =>
@@ -525,8 +523,6 @@ describe('parameterized File Corpus lifecycle', () => {
         }),
       );
 
-      // An unregistered corpus never decorates a pipeline error with a name the
-      // receipt vocabulary does not admit.
       expect(failure).toMatchObject({ _tag: 'CorpusInstallationError' });
       expect(reportedCorpus(failure)).toEqual(Option.none());
       expect(yield* fs.readFileString(destination)).toBe('active-generation');

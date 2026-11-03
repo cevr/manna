@@ -1,22 +1,3 @@
-// `bun run test:e2e:check [--base <log>] [--log <log>]`: the film e2e, read
-// for what the change under test caused. It takes the host's e2e lock
-// (`lockf -k` on /tmp/manna-e2e.lock) for the whole run, so two
-// workspaces on one machine queue rather than time each other out; run
-// inside an outer `lockf` on that lock, it runs
-// in that hold instead of waiting on itself. Holding the lock, it waits (at
-// most LOAD_WAIT) for the host's load to fall to its core count. It runs the
-// suite (`test:e2e`), printing as it goes and keeping its output in `<log>`
-// (by default `tmp/e2e/<time>.log` at the repo root); reads its failures
-// (`e2e-verdict.ts`: failed cases, crashed workers, errors between tests)
-// and whether it finished; reruns every failure alone, three times, the
-// output kept in `<log>.alone.log`; and writes `<log>.verdict.md`, each
-// failure classed against the base (`--base`: a log of the same suite on the
-// change's base, local or CI's `gh run view --log-failed`, its check's
-// `<base>.verdict.json` read beside it when there is one), plus
-// `<log>.verdict.json`, for a later check to read as its base. It exits 1
-// when the verdict blocks (a unit-caused or unresolved failure, a suite that
-// never finished or failed naming nothing), else 0.
-
 import { availableParallelism, loadavg } from 'node:os';
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -214,7 +195,6 @@ const check = (flags: Effect.Success<ReturnType<typeof flagsOf>>) =>
     const path = yield* Path.Path;
     const spawner = yield* ChildProcessSpawner;
     const stdio = yield* Stdio.Stdio;
-    // src/lab/fixtures → the package, and the repo root.
     const pkg = path.resolve(import.meta.dir, '..', '..', '..');
     const root = path.resolve(pkg, '..', '..');
     const suite = (yield* Effect.flatMap(
@@ -227,7 +207,6 @@ const check = (flags: Effect.Success<ReturnType<typeof flagsOf>>) =>
       Option.getOrElse(flags.log, () => path.join(root, 'tmp', 'e2e', `${stamp}.log`)),
     );
     yield* fs.makeDirectory(path.dirname(log), { recursive: true });
-    // The base, from its check's record when it has one, else from its log alone.
     const base = yield* Option.match(flags.base, {
       onNone: () => Effect.succeedNone,
       onSome: (b) =>
@@ -246,7 +225,6 @@ const check = (flags: Effect.Success<ReturnType<typeof flagsOf>>) =>
     });
     const load = yield* quiet;
 
-    // The suite, as `test:e2e` runs it, its output printed and kept.
     const started = yield* Clock.currentTimeMillis;
     const exit = yield* Effect.scoped(
       Effect.gen(function* () {
@@ -269,7 +247,6 @@ const check = (flags: Effect.Success<ReturnType<typeof flagsOf>>) =>
     const text = yield* fs.readFileString(log);
     const finished = finishedIn(text);
 
-    // Every failure, alone, three times; one the log places in no file cannot be rerun.
     const aloneLog = `${log}.alone.log`;
     yield* fs.writeFileString(aloneLog, '');
     const rerun = (failure: Judged['failure'], k: number) =>
@@ -338,7 +315,6 @@ const check = (flags: Effect.Success<ReturnType<typeof flagsOf>>) =>
 
 const main = Effect.gen(function* () {
   const args = yield* (yield* Stdio.Stdio).args;
-  // A refused flag is said before the lock is waited for.
   const flags = yield* flagsOf(args);
   if (Option.isSome(yield* Config.option(Config.String(HELD)))) return yield* check(flags);
   if (yield* heldOutside) {

@@ -224,17 +224,6 @@ export class ContentUpdate extends Context.Service<ContentUpdate, ContentUpdateS
             return ContentUpdateOutcome.make({ status: before, activated: Option.none() });
           }
           const offered = before.decision.entry;
-          // `installFrom`, not `ensure`. `ensure` consults this host's
-          // *compiled* source list, so the entry the manifest just offered
-          // would never have reached the installer at all — the host would
-          // have re-installed whatever its pinned sources already hold and
-          // reported the version it started with (round-3 F1). `installFrom`
-          // hands the offered release to the recipe's own release-source
-          // builder, so the bytes take the identical leg a pinned release
-          // takes and every guarantee M9 asks for is inherited: the digest
-          // and size are checked against this entry before the semantic
-          // verifier opens the candidate, and any failure removes the
-          // building file and leaves the active generation untouched.
           const activated = yield* supply
             .installFrom({
               corpus,
@@ -243,8 +232,6 @@ export class ContentUpdate extends Context.Service<ContentUpdate, ContentUpdateS
                 revision: offered.revision,
                 digest: offered.sha256,
                 size: offered.size,
-                // Recorded in the installed Provenance, so a later startup can
-                // see that what it holds is above the compiled floor.
                 generation: Option.some(offered.generation),
               },
             })
@@ -257,17 +244,9 @@ export class ContentUpdate extends Context.Service<ContentUpdate, ContentUpdateS
                   (activation) => activation.revision,
                 ),
               ),
-              // A refused candidate leaves the installed generation active,
-              // so the honest report is the post-run status with nothing
-              // activated — not a failure the caller has to catch to learn
-              // that its working content is still working.
               Effect.catch(() => Effect.succeedNone),
             );
-          // The reader reopens *before* the post-run status is read, so a
-          // caller that acts on this outcome is already reading the
-          // generation it names. A host with nothing to reopen does nothing.
           if (Option.isSome(activated)) yield* activation.onActivated(corpus);
-          // The status *after* the run, over the same manifest answer.
           return ContentUpdateOutcome.make({
             status: yield* statusOver(corpus, manifest),
             activated,

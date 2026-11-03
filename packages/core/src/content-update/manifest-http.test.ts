@@ -90,9 +90,6 @@ const chunkedBody = (bytes: number): ReadableStream<Uint8Array> => {
 describe('§10 M9 the manifest adapter', () => {
   it.effect('answers the whole cross-host table', () =>
     Effect.gen(function* () {
-      // The same single assertion the two host suites make, so the three are
-      // comparing against one table rather than three readings of it. The cases
-      // below then say *why* each answer is what it is.
       expect(yield* adapterConformance).toEqual(ADAPTER_EXPECTATIONS);
     }),
   );
@@ -105,16 +102,12 @@ describe('§10 M9 the manifest adapter', () => {
       expect(decision._tag).toBe(ADAPTER_EXPECTATIONS.overrun);
       if (decision._tag !== 'refused') return;
       expect(decision.reason).toBe('schema-major');
-      // The refused version survives the transport, so the settings entry can
-      // name it rather than only saying that something was refused.
       expect(String(decision.available.revision)).toBe(String(OVERRUN_REVISION));
     }),
   );
 
   it.effect('offers a manifest this build may install', () =>
     Effect.gen(function* () {
-      // The other side of the refusal: without this, a host that failed to read
-      // *any* manifest would pass the overrun case for the wrong reason.
       const decision = yield* decisionOverClient({
         client: fixtureManifestClient({ body: OFFERED_MANIFEST_BODY }),
       });
@@ -131,9 +124,6 @@ describe('§10 M9 the manifest adapter', () => {
 
   it.effect('reports offline for a non-2xx rather than failing', () =>
     Effect.gen(function* () {
-      // The state the web proxy answers before any release is published: the
-      // route exists and says 404. §3.6 makes that the pinned floor holding,
-      // not a fault the caller has to catch.
       const decision = yield* decisionOverClient({
         client: fixtureManifestClient({ body: 'no manifest is published', status: 404 }),
       });
@@ -145,9 +135,6 @@ describe('§10 M9 the manifest adapter', () => {
 
   it.effect('reports offline for a body that is not a manifest', () =>
     Effect.gen(function* () {
-      // A proxy that answered 200 with an HTML error page, or a manifest from a
-      // format this build cannot read. Both are "no manifest arrived", and
-      // neither may be allowed to reach `decideUpdate` as data.
       const decision = yield* decisionOverClient({
         client: fixtureManifestClient({ body: '<html>gateway error</html>' }),
       });
@@ -182,8 +169,6 @@ describe('§10 M9 the manifest adapter', () => {
       expect(decision._tag).toBe('offline');
       if (decision._tag !== 'offline') return;
       expect(decision.detail).toContain('allowed release origin');
-      // Not fetched, not merely discarded: a proxy that made the request and
-      // then dropped the answer would still be a request an attacker caused.
       expect(requests).toBe(0);
     }),
   );
@@ -287,12 +272,6 @@ describe('§10 M9 the manifest adapter', () => {
 
   it.effect('reports offline for a manifest whose digest is not a sha256', () =>
     Effect.gen(function* () {
-      // The trust surface, at the transport seam: a manifest that cannot state
-      // a SHA-256 must not decode into an entry the installer would then trust.
-      // Written as bytes rather than encoded through `ContentManifest`: the
-      // whole claim is that a digest the schema would never produce cannot
-      // decode into an entry the installer would trust, and a fixture built by
-      // the encoder could not express it.
       const decision = yield* decisionOverClient({
         client: fixtureManifestClient({
           body: '{"revision":"manifest-bad-digest","artifacts":{"topics":{"revision":"content-v4","url":"http://127.0.0.1:64999/topics.db","sha256":"not-a-digest","size":16384,"schema_major":1}}}',
@@ -348,7 +327,6 @@ describe('§10 M9 the manifest adapter', () => {
       expect(decision._tag).toBe('offline');
       if (decision._tag !== 'offline') return;
       expect(decision.detail).toContain('allowed release origin');
-      // The foreign address was never requested — refused at the hop.
       expect(routed.asked()).toEqual([FIXTURE_MANIFEST_URL]);
     }),
   );
@@ -375,7 +353,6 @@ describe('§10 M9 the manifest adapter', () => {
       expect(decision._tag).toBe('offline');
       if (decision._tag !== 'offline') return;
       expect(decision.detail).toContain('redirected more times');
-      // The first request plus the bound: the hop past it was never made.
       expect(routed.asked().length).toBe(CONTENT_MANIFEST_MAX_REDIRECTS + 1);
     }),
   );
@@ -415,7 +392,6 @@ describe('§10 M9 the manifest adapter', () => {
       expect(CONTENT_MANIFEST_ORIGINS).toEqual([new URL(CONTENT_MANIFEST_URL).origin]);
       expect(isAllowedManifestOrigin('http://127.0.0.1:64999/manifest.json')).toBe(false);
       expect(isAllowedManifestOrigin('http://localhost:64999/manifest.json')).toBe(false);
-      // And the fixture list is exactly as narrow, one origin over.
       expect(FIXTURE_MANIFEST_ORIGINS).toEqual([new URL(FIXTURE_MANIFEST_URL).origin]);
     }),
   );

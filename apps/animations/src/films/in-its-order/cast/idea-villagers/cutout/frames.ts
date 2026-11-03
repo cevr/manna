@@ -1,11 +1,3 @@
-// The IDEA villagers' cut views, each its kept box on its sheet and the pad
-// round it that makes the view's part sheet frame: on their poses sheet the
-// grown villager hopping (poses-3) and standing (poses-6), and the baby sitting
-// (poses-4); on their single sheet the grown villager raising a small clay cup
-// in his right hand (single-15), its pad 17 px below to take in his contact
-// shadow. They are a film-scope member (In Its Order's `cast/idea-villagers`),
-// and the builder is the library's (`library/cutout/frames.ts`). Data.
-
 import { framesOf } from '../../../../../library/cutout/frames.ts';
 import type { CutFrame } from '../../../../../library/cutout/table.ts';
 

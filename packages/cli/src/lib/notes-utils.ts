@@ -2,7 +2,6 @@ import { Data, Effect, Option } from 'effect';
 
 import { AppleScript } from '~/src/services/apple-script';
 
-// --- Helper Function: Execute AppleScript Command ---
 class AppleScriptExecError extends Data.TaggedError(
   '@manna/cli/lib/notes-utils/AppleScriptExecError',
 )<{
@@ -24,11 +23,10 @@ const execCommand = Effect.fn('execCommand')(function* (script: string) {
   );
 });
 
-// --- Types ---
 interface NoteListItem {
   id: string;
   name: string;
-  creationDate: string; // Dates are returned as strings by AppleScript
+  creationDate: string;
   modificationDate: string;
 }
 
@@ -40,8 +38,6 @@ export class NoteOperationError extends Data.TaggedError(
   script?: string;
   scriptOutput?: string;
 }> {}
-
-// --- Utility Functions ---
 
 /**
  * Lists all notes in the default Notes account.
@@ -92,16 +88,15 @@ export const listNotes = Effect.fn('listNotes')(function* () {
   const malformed: string[] = [];
   const notes: NoteListItem[] = [];
   for (const line of rawOutput.split('\n')) {
-    if (line.trim() === '') continue; // Remove empty lines
-    const parts = line.split('|'); // Split by the delimiter
+    if (line.trim() === '') continue;
+    const parts = line.split('|');
     if (parts.length !== 4) {
-      // Handle potential parsing errors or unexpected format
       malformed.push(line);
       continue;
     }
     notes.push({
       id: parts[0] ?? '',
-      name: parts[1] ?? '', // Names might contain special characters, handled by script?
+      name: parts[1] ?? '',
       creationDate: parts[2] ?? '',
       modificationDate: parts[3] ?? '',
     });
@@ -170,7 +165,6 @@ export const findNoteByTitle = Effect.fn('findNoteByTitle')(function* (
 ) {
   yield* Effect.log(`🔍 Searching for note "${title}" in folder "${folder}"...`);
 
-  // Escape quotes in title for AppleScript
   const escapedTitle = title.replace(/"/g, '\\"');
   const escapedFolder = folder.replace(/"/g, '\\"');
 

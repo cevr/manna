@@ -1,19 +1,3 @@
-// The page's clock for the browser tests: timers, animation frames, `Date`
-// and `performance.now` replaced before the page's own scripts run, so a
-// test moves the page's time on (`runFor`, `fastForward`, `pauseAt`) rather
-// than wait it out. Installed, the clock runs on with real time: a timer
-// fires when its time comes, through one real timer for the earliest due.
-// `runFor(ms)` runs every timer and frame due in the next `ms`, in order, at
-// its own time; `fastForward(ms)` jumps there and fires what fell due once;
-// `pauseAt(t)` jumps to the epoch time `t` and stops the clock, which then
-// moves only as the test runs it, until `resume()` runs it on with real time
-// from where it stands. Animation frames are timers on the 16 ms
-// grid. Audio runs on its own, real, clock. The real timers stay reachable
-// under `REAL_TIMERS`, for the tab's own waits (`tab.ts`).
-//
-// The clock is a script the page runs, as the harness's other page scripts
-// are: it reaches only the page's globals.
-
 /** The global the page's real timers are kept under: `globalThis[Symbol.for(REAL_TIMERS)]`. */
 export const REAL_TIMERS = 'film.realTimers';
 

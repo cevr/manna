@@ -84,8 +84,6 @@ const proseLevel = (heading: SectionHeading): number => {
  *  tail, and the `List of Illustrations` before the letters is not. */
 const marksOf = (headings: readonly SectionHeading[]): readonly Mark[] => {
   const ordered = headings.toSorted((a, b) => a.puborder - b.puborder);
-  // From the end, carrying the shallowest level of any heading that is not
-  // back matter: a back-matter heading is tail when nothing that shallow follows.
   const inTail = ordered.reduceRight<{ readonly shallowest: number; readonly tail: boolean[] }>(
     (state, heading) => {
       const backMatter = isBackMatterTitle(heading.title);

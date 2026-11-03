@@ -1,52 +1,3 @@
-/**
- * The hooks this repo uses from @effect/atom-solid (MIT), ported to Solid 2.
- * Delete this package when upstream supports Solid 2.
- *
- * Solid hooks for using Effect Atoms from components and computations. The
- * hooks read and write atoms through the current registry (`useRegistry`),
- * mount atoms for cleanup, refresh them, and expose `AsyncResult` atoms as
- * suspending accessors.
- *
- * Solid 2 removed `createComputed`, so every subscription runs as a
- * compute/effect pair: the compute phase tracks the atom thunk, and the effect
- * phase attaches the subscription and returns the unsubscribe as its cleanup.
- * Value-carrying hooks use `createRenderEffect` so the subscription is attached
- * before the render pass reads the accessor.
- *
- * A value-carrying hook cannot hold its value in a signal alone. Solid 2 queues
- * a signal write until the next flush, so a component that reads its accessor
- * during the same synchronous pass that created it would observe the
- * uninitialised `undefined` rather than the atom's current value — a value the
- * public accessor types exclude. Every such hook therefore keeps two parts: a
- * plain mutable cell holding the current value, written synchronously by the
- * subscription callback (the registry's `immediate` seed calls back before
- * `subscribe` returns), and an owned signal used only as a reactive notifier,
- * bumped on each update. The accessor reads the signal to register the
- * dependency and returns the cell, so the value is always current and reactive
- * readers still re-run.
- *
- * The notifier signals are created with `ownedWrite: true`. The registry's
- * `immediate` subscription calls back synchronously from inside the effect — an
- * owned scope — which Solid 2 development mode rejects
- * (`REACTIVE_WRITE_IN_OWNED_SCOPE`) unless the write is declared intentional.
- *
- * Server rendering. An atom is read on the server in one of three ways, by
- * what it is:
- *
- * - A served atom (`Atom.serializable`): the server reads it, waits for its
- *   first answer, and sends it encoded with the page (`ssrSource: 'server'`);
- *   the client's hydration adopts that value into the registry and requests
- *   nothing (`createServedAccessor`).
- * - An atom with a server value (`Atom.withServerValue`): the viewer's own
- *   (a kept setting, the hash). The server and the client's hydration show the
- *   server value; the live one follows (`serverAware`, `ssrSource: 'client'`).
- * - Any other atom is read live on both sides, as it reads with no window.
- */
-
-// This module is a framework binding, not Effect domain code: its vocabulary is
-// fixed by the two APIs it joins, so several Effect-domain lint rules do not
-// apply here.
-//
 /* oxlint-disable effect/noAs -- the `mode` option selects the setter's return type at the type level; the implementation sees `mode` only as a runtime value and cannot prove which branch it is in. */
 /* oxlint-disable effect/noChainedTypeAssertions -- reaching the registry-private `ensureNode`, exactly as upstream @effect/atom-solid and @effect/atom-react do. */
 /* oxlint-disable effect/noThrowStatement -- Solid 2 signals async failure by throwing from a memo, and a rejected promise is produced by throwing; both are the framework's contract. */
@@ -121,16 +72,7 @@ interface Bridge<A> {
 }
 
 const createBridge = <A>(): Bridge<A> => {
-  // The cell starts empty because no source has published yet. Every consumer
-  // attaches a synchronously-seeding source (the registry's `immediate`
-  // subscription) before returning the accessor, so the empty state is never
-  // observable through the public API.
   let current: A | undefined;
-  // The first publish is the seed, made before the accessor is returned, so
-  // no reader can be stale yet: it fills the cell without a signal write. A
-  // server render writes no signal at all: it is one pass that re-renders
-  // nothing (Solid's server render is pure, and warns `SERVER_WRITE` on a
-  // write), so a later value there only fills the cell, for a later read.
   let seeded = false;
   const [version, setVersion] = createSignal(0, constOwnedWrite);
   return {
@@ -154,9 +96,6 @@ function createLiveAccessor<A>(
   createRenderEffect(atom, (current) =>
     registry.subscribe(current, bridge.publish, constImmediate),
   );
-  // Both phases of a render effect run synchronously when the surrounding
-  // computation is created, and `subscribe` with `immediate` calls back before
-  // it returns, so the cell holds the atom's value by the time this returns.
   return bridge.accessor;
 }
 
@@ -270,8 +209,6 @@ function createServedAccessor<A>(
       { ssrSource: 'server' },
     );
     createRenderEffect(atom, noop);
-    // A value already read renders at once (it is sent all the same); one
-    // still being read holds the render where it is read.
     return () => {
       const now = registry.get(untrack(atom));
       if (isReading(now)) return decoded(carrier());
@@ -292,8 +229,6 @@ function createServedAccessor<A>(
       return stop;
     },
   );
-  // Until the subscription is attached (the server's value is still on its
-  // way), the reader waits on the memo, as the server's render did.
   return () => {
     if (live) return bridge.accessor();
     return decoded(carrier());

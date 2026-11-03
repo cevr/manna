@@ -227,14 +227,10 @@ export const egwSearch = Command.make(
       }
 
       if (args.remote) {
-        // Remote path requires the API client + auth layer.
         yield* remoteSearch(queryStr, args.lang, args.limit, args.json);
         return;
       }
 
-      // Local path — §9's hybrid search. The scope, book and limit narrowings
-      // travel as one `SearchQuery` so the CLI, the daemon and the web surface
-      // ask the same question in the same terms.
       const result = yield* searchService(
         Effect.flatMap(SearchService, (service) =>
           service.query(
@@ -243,8 +239,6 @@ export const egwSearch = Command.make(
               scope: args.scope,
               bookCode: args.book,
               limit: Option.some(args.limit),
-              // Excluded unless asked for, matching the web surface; see
-              // `apparatus` for why the default moved.
               filter: { ...NO_FILTER, excludeApparatus: !args.apparatus },
             }),
           ),
@@ -252,9 +246,6 @@ export const egwSearch = Command.make(
       );
 
       if (args.json) {
-        // `--json` is the wire codec and nothing else: `SearchResultJson` is
-        // the one wire encoding, and adding a group to it here would fork that
-        // contract. A script that wants topics asks `manna wiki topics` for them.
         yield* Console.log(yield* encodeSearchResult(result));
         return;
       }

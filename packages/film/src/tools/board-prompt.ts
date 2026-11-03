@@ -1,10 +1,3 @@
-// The one scene prompt a storyboard panel is drawn from: the film's style
-// block, what each reference image is for (the style's, a shot or a tweak's,
-// then each cast member's library record, which wins), the film's world, the act's light,
-// the beat's picture brief (each `{mark}` it names read as the words said
-// there), the moment the panel holds from, the text rule and the house rules.
-// Pure: the CLI sends it on the image route; the tests read it.
-
 import { Array as Arr, Boolean as Bool, Option, Result } from 'effect';
 import type { Act } from '../core/schema.ts';
 import { type BoardName, type BoardStyle, PANEL_START, boardNamed } from '../core/board.ts';

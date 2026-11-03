@@ -1,7 +1,3 @@
-// Test support for the judged lint: the historyComment rule, a stubbed keychain (the `security` tool
-// the key is read from), the environment as config, and a fake TypeSafe HTTP
-// client, so no test reads the real keychain or reaches the network.
-
 import {
   Clock,
   ConfigProvider,

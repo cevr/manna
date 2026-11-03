@@ -81,18 +81,12 @@ describe('WikiPage schema', () => {
         'cross-references',
         'related-topics',
       ]);
-      // Positional typing, not a runtime search: the tuple means position 0 *is*
-      // the key-verses section, so `.items` here is `WikiPassageRef[]` with no
-      // narrowing.
       expect(decoded.sections[0]._tag).toBe('key-verses');
     }),
   );
 
   it.effect('rejects a lineup with a section missing', () =>
     Effect.gen(function* () {
-      // Five sections. Under `Schema.Array(WikiSection)` this decodes fine, and
-      // every client that indexes position 4 for cross-references silently
-      // renders related-topics there instead.
       expect(yield* rejects(page([KEY_VERSES, EGW, COMMENTARY, PIONEER, CROSS_REFS]))).toBe(true);
     }),
   );
@@ -105,16 +99,12 @@ describe('WikiPage schema', () => {
       expect(
         yield* rejects(page([KEY_VERSES, KEY_VERSES, COMMENTARY, PIONEER, CROSS_REFS, RELATED])),
       ).toBe(true);
-      // Seven sections is as wrong as five.
       expect(yield* rejects(page([...LINEUP, RELATED]))).toBe(true);
     }),
   );
 
   it.effect('rejects a page that arrives with the wrong section open', () =>
     Effect.gen(function* () {
-      // §5: key verses arrive open, the rest collapsed. A boolean lets a host
-      // ship either, and the three of them then disagree about the page's
-      // arrival posture while all passing the schema.
       expect(
         yield* rejects(page([{ ...KEY_VERSES, defaultOpen: false }, ...LINEUP.slice(1)])),
       ).toBe(true);
@@ -149,16 +139,12 @@ describe('WikiPage schema', () => {
     Effect.gen(function* () {
       const decoded = yield* decode(page(LINEUP));
       const encoded = yield* Schema.encodeEffect(WikiPage)(decoded);
-      // The CLI's `--json` and the RPC payload are both this value, which is the
-      // point of naming it `WikiPageJson`: two seams, one codec.
       expect(yield* decode(encoded)).toEqual(decoded);
     }),
   );
 
   it.effect('constructs the same lineup the decoder accepts', () =>
     Effect.gen(function* () {
-      // `make` and `decode` agreeing is what lets the composer build the lineup
-      // in memory and the wire carry it unchanged.
       const built = WikiPage.make({
         slug: topicSlug('sanctuary'),
         title: 'The Sanctuary',

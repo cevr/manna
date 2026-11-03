@@ -1,15 +1,3 @@
-// Upstream: packages/utils/src/useScrollLock.ts,
-// packages/react/src/utils/useAnchoredPopupScrollLock.ts
-//
-// Locks the page's scroll while a modal popup is open. One lock is shared by
-// every popup that asks (counted), taken and released on a timeout so a
-// popup handing over to another does not flicker. With inset scrollbars the
-// gutter is kept stable so the page does not shift; with overlay scrollbars
-// (and on iOS) only `overflow: hidden` is set. A page some other code already
-// locked is left alone until that lock clears.
-//
-// An anchored popup opened by touch locks only when it spans nearly the whole
-// viewport width, so a swipe outside can still scroll and dismiss.
 import { isOverflowElement } from '@floating-ui/utils/dom';
 import { type Accessor, createEffect } from 'solid-js';
 
@@ -62,7 +50,6 @@ function supportsStableScrollbarGutter(referenceElement: Element | null) {
 
 function preventScrollOverlayScrollbars(referenceElement: Element | null) {
   const doc = ownerDocument(referenceElement);
-  // A lock on <body> does nothing when <html> scrolls, and the reverse shifts sticky elements.
   const elementToLock = getViewportScroller(doc.documentElement, doc.body);
   const original = {
     overflowY: elementToLock.style.overflowY,
@@ -85,13 +72,11 @@ function preventScrollInsetScrollbars(referenceElement: Element | null) {
   let updateGutterOnly = false;
   const resizeFrame = new AnimationFrame();
 
-  // Pinch-zoom in Safari shifts the page under a lock, so a zoomed page is left unlocked.
   if (platform.engine.webkit && (win.visualViewport?.scale ?? 1) !== 1) {
     return () => {};
   }
 
   function lockScroll() {
-    // DOM reads first.
     const htmlStyles = win.getComputedStyle(html);
     const bodyStyles = win.getComputedStyle(body);
     const htmlGutter = htmlStyles.scrollbarGutter || '';
@@ -130,7 +115,6 @@ function preventScrollInsetScrollbars(referenceElement: Element | null) {
 
     updateGutterOnly = supportsStableScrollbarGutter(referenceElement);
 
-    // DOM writes only from here.
     if (updateGutterOnly) {
       html.style.scrollbarGutter = scrollbarGutterValue;
       elementToLock.style.overflowY = 'hidden';
@@ -228,7 +212,6 @@ class ScrollLocker {
     const body = doc.body;
     const win = ownerWindow(html);
 
-    // Someone else locked the page: wait for that lock to clear rather than snapshot it.
     if (isPageScrollLocked(win, html, body)) {
       const observer = new win.MutationObserver(() => {
         if (isPageScrollLocked(win, html, body)) {
@@ -269,7 +252,6 @@ export function useScrollLock(
   );
 }
 
-// Up to 20px of total horizontal gutter still counts as full width.
 const VIEWPORT_WIDTH_TOLERANCE_PX = 20;
 
 /**

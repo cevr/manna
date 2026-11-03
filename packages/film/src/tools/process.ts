@@ -1,7 +1,3 @@
-// One child process, run to completion: its exit code and everything it
-// printed. The ElevenLabs layer maps a failure into its own typed errors;
-// this module only runs and collects.
-
 import { Duration, Effect, FileSystem, Stream } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 import type { ChildProcess, ChildProcessSpawner } from 'effect/process';

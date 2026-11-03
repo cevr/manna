@@ -88,7 +88,6 @@ test(
     const outputs = yield* deployed;
     const url = yield* Effect.fromOption(Option.fromNullishOr(outputs.url));
     const client = (yield* HttpClient.HttpClient).pipe(HttpClient.filterStatusOk);
-    // A fresh workers.dev host can answer an error for a few seconds after deploy.
     const get = (path: string) =>
       client
         .get(`${url}${path}`)
@@ -104,8 +103,6 @@ test(
       expect([page, html]).toEqual([page, expect.stringContaining('<title>EGW Search</title>')]);
     }
 
-    // Wordy enough to route hybrid, and broad enough that no lexical hit
-    // short-circuits the vector leg.
     const searched = yield* get(
       `/api/search?q=${encodeURIComponent('what happens at the close of probation')}`,
     ).pipe(Effect.flatMap(HttpClientResponse.schemaBodyJson(Searched)));
@@ -117,12 +114,9 @@ test(
     );
     expect(exact.hits.length).toBeGreaterThan(0);
 
-    // The sync's reports are read from R2 on the Worker, ahead of the assets.
     const reports = yield* get('/sync/').pipe(Effect.flatMap((response) => response.text));
     expect(reports).toContain('<h1>EGW sync reports</h1>');
 
-    // The sync reaches the library with the deployed credentials and reads
-    // the corpus from a Workflow step; on this stage it stops there.
     const syncWorker = yield* Effect.fromOption(Option.fromNullishOr(outputs.syncWorker));
     const run = yield* runSync(syncWorker);
     expect({ status: run.status, error: run.error }).toMatchObject({ status: 'complete' });

@@ -1,16 +1,3 @@
-// Not in upstream: one owner per press. A finger's press may become a long
-// press (a context menu's trigger) or a drag (a consumer's, such as the film
-// lab's `Pointer.press`); whichever claims the press's pointer first has it
-// until that pointer lifts or is cancelled, and every other claim on it is
-// refused. The long press claims as its delay ends, a drag as it starts
-// moving, so a drag that started is no long press, and a long press that
-// opened its menu is no drag. Who held a press is kept through its lift, so
-// a gesture's lift handler asks whether the lift is its own
-// (`liftHeldByOther`), and completes only then. Pure state over the page's
-// pointer ids. The long press's delay and move threshold live here too, so a
-// drag can start where the long press gives way without loading the context
-// menu.
-
 /** How long a touch is held before the menu opens, and the mouseup grace after a right click. */
 export const LONG_PRESS_DELAY = 500;
 /** How far a held touch may move, in px, before the long press is cancelled. */

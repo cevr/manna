@@ -1,8 +1,3 @@
-// A film's writes as the lab's agent tools answer them: each write named one
-// way (the file it changed, what it set, the change it made), with
-// `film check --static` after it (`writeAnswer`, which the `tweak` command's
-// scene writes in `tweak-mcp.ts` answer with).
-
 import { Effect, Option, Path } from 'effect';
 import { type LabWrite } from '../core/schema.ts';
 import { FilmFolder } from './film-repo.ts';

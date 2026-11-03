@@ -1,12 +1,3 @@
-// A panel drawn from what has changed since (its picture's words in the
-// script, a cast sheet, a member who first kept a sheet): a run draws it again
-// (new tries, numbered on) and its keep stays recorded; a panel drawn from
-// what still stands is left alone, and so is a change to the style; a panel
-// that keeps none is drawn again once none of its tries is fresh; the board
-// read names the stale panel and why. A try records the words of its picture
-// and what each cast reference held (the sha256 of the bytes sent); a try from
-// before is judged by its prompt and the member's `replaced` history.
-
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Boolean as Bool,
@@ -110,7 +101,6 @@ const boardOver = (
     NotesStore.layer,
     route,
     Layer.succeed(LabAddress, LabAddress.of({ local: 'http://lab' })),
-    // The lab reads the script fresh: the supper beat as `beat` has it.
     freshFilm({
       script: () =>
         Effect.succeed([
@@ -185,7 +175,6 @@ describe('a kept panel whose cast sheet changed', () => {
             sha256: expect.any(String),
           },
         ]);
-        // The sheet as it was drawn from: the kept panel is left as it stands.
         expect(yield* run(2)).toEqual([]);
         files.set(TURNAROUND, text('the turnaround kept in its place'));
         expect(yield* run(2)).toEqual([
@@ -196,7 +185,6 @@ describe('a kept panel whose cast sheet changed', () => {
         const after = yield* panel;
         expect(after?.tries.map((t) => t.n)).toEqual([1, 2, 3]);
         expect(after?.kept).toBe(1);
-        // Its new tries are drawn from the sheet as it is now: a run again draws none.
         expect(yield* run(2)).toEqual(['Stale supper.start']);
         expect((yield* panel)?.tries).toHaveLength(3);
       }).pipe(Effect.provide(boardOver(files)));
@@ -304,7 +292,6 @@ describe('a kept panel whose cast sheet changed', () => {
           })),
         }),
       );
-      // The beat names no cast now, so only the try's own record of its sheets is judged.
       return (yield* store.stale(film, [{ ...beat, cast: [] }])).map((s) => [s.panel, s.members]);
     }).pipe(Effect.provide(boardOver(files)));
 
@@ -525,7 +512,6 @@ describe('a panel with tries and none kept', () => {
         ]);
         expect((yield* panel)?.tries.map((t) => t.n)).toEqual([1, 2, 3]);
         expect((yield* panel)?.kept).toBeUndefined();
-        // Two of its tries are drawn from the sheet as it is now: it is not stale.
         expect(yield* run(2)).toEqual([]);
       }).pipe(Effect.provide(boardOver(files)));
     },
@@ -620,7 +606,6 @@ describe("a try's record of its cast", () => {
       const files = new Map<string, Uint8Array>();
       christ(files);
       const sent: Array<string> = [];
-      // The route takes each try's last reference as it is sent, then the sheet is replaced before the next try.
       const route = ImageRoute.fake((request) => {
         sent.push(sha256Hex(files.get(request.refs.at(-1) ?? '') ?? new Uint8Array()));
         files.set(TURNAROUND, text(`turnaround ${sent.length + 1}`));

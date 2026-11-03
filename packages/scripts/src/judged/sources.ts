@@ -1,27 +1,3 @@
-// The repo's items: the items of the judged rules' selectors (`items.ts`)
-// in every file of the gate's (`../guard/files.ts`: what git tracks, and new
-// files inside a workspace), so a file never committed is read as a
-// committed one is, and a folder that is no one's work yet is not read. A file is a
-// TypeScript source (no `.d.ts`) that none of the lint's ignore patterns
-// names, or a series script's Markdown, which only `scriptBeats` reads. Each
-// source is read and parsed once for every rule that reads it, and each item
-// is keyed for each rule that reads it by its key in the store
-// (`store.ts`'s `cacheKey`). Which of them a run asks about is the store's
-// to say: an item whose key it answers is not asked again.
-//
-// The checkout keeps a memo of its files' items (`items.json` in
-// `settings.judged.checkout`): each file's text by its hash, and each item
-// of it by its rule, its line, its offset and its key, no text. A file that
-// hashes as the memo has it is not parsed again; the texts of the items a
-// run asks about are read again from their files (`textsOf`). The memo holds
-// the form it was made in: a hash of the model, each rule's id, selector and
-// words, and the code that makes the items and their keys (`findings.ts`'s
-// `makersHash`: this module, `items.ts`, `store.ts` and the parser's
-// version), so a memo made any other way is read as none. A missing or unreadable memo is none; it is written
-// whole, through a temporary file renamed over it, when the run read a file
-// it did not hold or no longer reads one it held, and a memo that cannot be
-// written is said on one line and never fails the run.
-
 import { Glob } from 'bun';
 import { Console, Effect, FileSystem, Option, Path, Schema } from 'effect';
 

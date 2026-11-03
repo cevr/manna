@@ -1,8 +1,3 @@
-// The gate reads a write's body before any route does (to bound it). What a
-// route registers to run on its answer (Effect's pre-response handlers: an
-// MCP session's header) is kept: the read body reaches the route as the
-// request the handler took, never swapped under it.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer } from 'effect';
 import { HttpEffect, HttpRouter, HttpServerRequest, HttpServerResponse } from 'effect/http';

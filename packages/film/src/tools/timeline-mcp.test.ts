@@ -1,11 +1,3 @@
-// The timeline's tools through the lab's MCP, as an agent calls them: a film's
-// timeline at its production's open version (the registered files, read
-// fresh), at a version asked (a version folder's clock, read fresh with its
-// folder, and its own Board on its lane), a version it has not refused by
-// name, and only the lanes asked; the header waits on the open version's
-// Board whichever version is read; a clock is read once per stamp of the
-// film's sources.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Result, Schema } from 'effect';
 import { type BoardFile, BoardFileJson, BoardName } from '../core/board.ts';
@@ -187,7 +179,6 @@ describe('timeline', () => {
             'voice',
             'scenes',
           ]);
-          // Its own Board (`v1/board.json`): the beat's one panel shows from the beat's start.
           expect(v1.lanes[1].clips).toEqual([
             {
               start: 0,
@@ -203,7 +194,6 @@ describe('timeline', () => {
               card: false,
             },
           ]);
-          // The header still waits on the open version's Board, not v1's.
           expect(v1.header.waits).toEqual(SEED_WAITS);
           expect(v1.bands.map((b: { name: string }) => b.name)).toEqual(['open']);
           const only = yield* tool('timeline', { film: 'f', version: 1, tracks: ['voice'] });

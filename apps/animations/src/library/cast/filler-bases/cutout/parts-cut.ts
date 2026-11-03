@@ -1,39 +1,3 @@
-// Cuts the filler bases' house parts (headwear, band, beard, mantle) from the
-// owner's kept dressed sheet (`filler-dressed/cast-sheet/views/<view>.png`)
-// into front parts on their busts' part sheets, `sheets/<view>/<part>.png`,
-// each at the bust part sheets' size and full sheet scale.
-//
-// - **Register.** Each dressed view is laid on its base view (the base's
-//   kept box padded, `frames.ts`) by the eyes: both eyes' centres found in
-//   each (`eyesOf`) give one similarity, scale, turn and shift, from the base
-//   to the dressed view, which each part's pixels are read back through
-//   (bilinear, premultiplied by the part's mask).
-// - **Key.** The dressed view is read as the flat regions its ink encloses
-//   (`regionsOf`): the outside is a flood from the view's edges through the
-//   paper, the ink is its dark core, and every other connected run of px is a
-//   region, its shading included. A region is a part's when its median colour
-//   lies near one of the part's paints and it sits where the part sits
-//   (`Seat`): a headcloth or band reaches above the eyes, a beard lies round
-//   the chin, a mantle anywhere. So the older man's headcloth, painted in his
-//   robe's colour, is keyed from the head alone.
-// - **Line.** A part keeps its own outline: the ink and its anti-aliased rim
-//   reached from its regions through ink alone within `REACH` (a line's width
-//   and its rim), so the line between a veil and the face comes whole with the
-//   veil, while a brow or an eye, which skin parts from it, stays the base's.
-// - **Ramp.** A part a dress dyes (`mantle`, `band`) declares the ramp it is
-//   drawn in: its shade, base and light, its interior's darkest 5 %, middle
-//   and lightest 5 % by lightness (`rampOf`). They are written to
-//   `sheets/ramps.ts`, which `puppets.ts` reads.
-// - **Covered head.** A view with a headwear writes its base head as the
-//   headwear covers it (`head-covered.png`, `coveredOf`): the face kept, the
-//   hair read from the dressed view, so a crowd figure in headwear shows none.
-//
-// Each view's log prints its eyes, its similarity, each part's regions (and
-// the strokes it drops), its ramp and lightness spread, and the hair of the
-// head drawn with the parts that no part covers above the eyes (`showing`).
-// Run it from the repo root with
-// `bun apps/animations/src/library/cast/filler-bases/cutout/parts-cut.ts [<sheets folder>]`.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { type Raster, decodePng, encodePng } from '@manna/film/tools';
@@ -46,7 +10,6 @@ import {
   Record as Records,
   Stdio,
 } from 'effect';
-// the kept sheets, imported as files so the cast build keys the parts stage by them (`COVERAGE.cutters`)
 import dressed1 from '../../filler-dressed/cast-sheet/views/poses-1.png' with { type: 'file' };
 import dressed2 from '../../filler-dressed/cast-sheet/views/poses-2.png' with { type: 'file' };
 import dressed3 from '../../filler-dressed/cast-sheet/views/poses-3.png' with { type: 'file' };
@@ -871,11 +834,7 @@ const cutView = (sheet: Raster, view: FramedView, sheets: string) =>
 
 /** `sheets/ramps.ts`: each view's dyed parts' drawn ramps, as `puppets.ts` reads them. */
 const rampsModule = (ramps: Readonly<Record<string, Readonly<Record<string, DrawnRamp>>>>) =>
-  `// Each filler base view's dyed house parts' drawn ramps (shade, base, light),
-// measured from their pixels on the kept dressed sheet by \`parts-cut.ts\`,
-// which writes this file. Data.
-
-import type { Ramp } from '@manna/film/canvas';
+  `import type { Ramp } from '@manna/film/canvas';
 
 export const RAMPS = {
 ${Object.entries(ramps)

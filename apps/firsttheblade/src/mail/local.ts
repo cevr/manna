@@ -117,9 +117,6 @@ export const layerTest = <E, R>(films: Layer.Layer<Films, E, R>) =>
     Layer.provideMerge(Layer.mergeAll(layerTables, freshTokens, mailerMemory, layerHeld)),
     Layer.provideMerge(layerSqlite),
     Layer.provideMerge(BunCrypto.layer),
-    // The model stamps commands with this clock, and the tests move it: the
-    // test runner's own TestClock is built beside this layer, and this one
-    // takes its place.
     Layer.provideMerge(TestClock.layer()),
   );
 

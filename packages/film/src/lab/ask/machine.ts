@@ -1,37 +1,3 @@
-// An ask's page, as one machine: it reads the ask (its record: the agent's
-// machine and where its run is), keeps the owner's draft of every answer on
-// its one page (each section the draft reaches, `sectionsOf`), and sends
-// them all as the state's task, so one send is out at a time. The draft is
-// checked as the lab will check it before it goes: a question left open is
-// named by its label and marked (`missing`), so the page can take the owner
-// to it. The lab's answer is the ask as it leaves it, its end, and a fresh
-// draft.
-//
-// The page's answers are the owner's draft, and once the ask is read every
-// state holds them as one `Page` (the record and the draft): there is no
-// state past the first read without one, so no outcome can drop it. An
-// answer is set in every such state, a send or a re-read out included, and
-// the field keeps it. A draft gives up only what the lab holds answered (a
-// step answered elsewhere, or by the send itself); an edit made after Send
-// that the send did not carry is named when the send lands. A lab out of
-// reach, a refusal, a re-read that fails and an ask that is gone each keep
-// the page as drafted. Where the run is lives in the lab, not here: a
-// reload or another device opens it where it was left. The tab keeps the
-// draft unsent (the provider, `context.tsx`), and a reload's page takes it
-// back once open (`Restored`), under anything set since, as far as the steps
-// the lab still asks.
-//
-//   Reading ─Read→ Open ─Set→ Open ─Submit→ Sending ─Landed→ Open
-//   Open ─Restored→ Open (the tab's kept draft under the page's)
-//   Reading ─Unread→ Unreadable ─Retry→ Reading     (no draft yet)
-//   Sending ─Unreachable→ Open
-//   Sending ─Refused→ Rereading ─Read→ Open (the draft of open steps)
-//   Rereading ─Unread→ Open (said why), or Gone (the lab has no such ask)
-//   Open | Sending | Rereading | Gone ─Set→ the same state, the draft set
-//
-// Nothing here touches the DOM: the lab's routes are the review's API,
-// faked in tests.
-
 import { Array as Arr, Effect, Option, Record, Schema } from 'effect';
 import { Event, Machine, State } from 'effect-machine';
 import {
@@ -215,7 +181,6 @@ const askPageMachine = (id: string, first: Effect.Effect<AskRecord, LabFailure, 
       AskPageState.Unreadable({ why: event.why }),
     )
     .on(AskPageState.Unreadable, AskPageEvent.Retry, () => AskPageState.Reading({ said: '' }))
-    // An answer is set wherever the page is shown; Open's last word gives way to it.
     .on(AskPageState.Open, AskPageEvent.Set, ({ state, event }) =>
       AskPageState.Open({
         page: drafted(state.page, event.id, event.value),
@@ -271,9 +236,6 @@ const askPageMachine = (id: string, first: Effect.Effect<AskRecord, LabFailure, 
     .on(AskPageState.Rereading, AskPageEvent.Read, ({ state, event }) =>
       AskPageState.Open({ page: reread(state.page, event.record), said: state.said, missing: '' }),
     )
-    // The lab has no such ask: nothing is left to send to, and the draft stays
-    // on the page. Any other failure (out of reach, the store failing) leaves
-    // the page as it was, to send again.
     .on(AskPageState.Rereading, AskPageEvent.Unread, ({ state, event }): AskPageState => {
       if (event.gone) return AskPageState.Gone({ page: state.page, why: event.why });
       return AskPageState.Open({

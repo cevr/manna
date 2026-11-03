@@ -82,14 +82,12 @@ export const chordsCue = (on: boolean): Cue => plain((on && 'chords-on') || 'cho
 /** The state after `event`, for a hymn printed in `printed`, and the cues it makes. */
 export const step = (printed: Chord.Key, state: Thumb, event: ThumbEvent): Step =>
   ThumbEvent.$match(event, {
-    // With chords off the key button is the chords switch: a tap turns chords on and opens nothing.
     Tap: () => {
       if (!state.chords)
         return { state: { ...state, chords: true, open: false }, cues: [chordsCue(true)] };
       return { state: { ...state, open: !state.open }, cues: [plain('press')] };
     },
     TapPage: () => ({ state: { ...state, open: false }, cues: [] }),
-    // A hold that turns chords off closes the dials, so no dials stand with chords off.
     Hold: () => ({
       state: { ...state, chords: !state.chords, open: state.open && !state.chords },
       cues: [chordsCue(!state.chords)],
@@ -109,13 +107,11 @@ export const step = (printed: Chord.Key, state: Thumb, event: ThumbEvent): Step 
         cues: (held !== capo && [plain('wall')]) || [],
       };
     },
-    // A reset of a hymn already at home has nothing to turn home: the dials close at once, with no cue.
     Reset: () => {
       if (isStill(state.move)) return { state: { ...state, open: false }, cues: [] };
       return { state: { ...state, move: still }, cues: [plain('reset')] };
     },
     ResetShown: () => ({ state: { ...state, open: false }, cues: [] }),
-    // The tuner path is silent: opening it closes the dials and cues nothing.
     Tune: () => ({ state: { ...state, open: false }, cues: [] }),
   });
 

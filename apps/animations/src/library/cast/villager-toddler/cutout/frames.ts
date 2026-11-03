@@ -1,10 +1,3 @@
-// The villager toddler's cut views' frames on their kept poses sheet (shared
-// with the villager child): each part sheet is cut from its view's kept box
-// (`cast-sheet.json`) padded, so the hand's outer ink and the ground shadow,
-// which runs on below the soles and fades past the box, are whole. Their cut
-// (`cut.ts`), part sheets (`sheets/<view>/`) and skeletons (`skeleton.ts`) are
-// in this frame (`library/cutout/frames.ts`). Pure data.
-
 import { framesOf } from '../../../cutout/frames.ts';
 import type { CutFrame } from '../../../cutout/table.ts';
 

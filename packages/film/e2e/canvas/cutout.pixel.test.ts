@@ -1,12 +1,3 @@
-// A cutout face's pre-blended pastel must land the pixels the two-pass look
-// lands (flat colour, then the pastel soft-lit over it), to within 8-bit
-// rounding, under every canvas transform a camera or `at` puts it through.
-// Magnifying a pre-blended tile resamples the blend, where the look blends
-// the resampled pastel; soft-light is not linear, so a face pushed in to
-// 1.4x or squashed drifts up to 11/255 from the look. Those faces must keep
-// the two-pass draw. Drawn in headless Chrome with the renderer's software
-// 2D canvas, as the export draws them.
-
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { asset, openTab, respond, scriptOf, servePaths } from '../../src/lab/fixtures/browsers.ts';

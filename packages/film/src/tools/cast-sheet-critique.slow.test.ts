@@ -1,7 +1,3 @@
-// A cast sheet try's critique: each view a kept concept faces is cut from
-// the try and shown beside the concept's crop with the measure's flags on
-// it, in one counsel run; a view no concept faces is said, never critiqued.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Path, Schema } from 'effect';
@@ -58,7 +54,6 @@ const critiqued = (layout: string) =>
     yield* fs.writeFile(path.join(folder, 'concept.png'), encodePng(front));
     yield* fs.writeFile(
       path.join(out, 'poses-1.png'),
-      // Painted with no paper: the critic is still shown each view on white.
       encodePng(bare(drawSheet([front, drawFigure({ ...base, eyeShift: 0, cy: 120 })]))),
     );
     const record: CastSheetRecord = {

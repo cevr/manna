@@ -504,8 +504,6 @@ export const playerOn = (
                   const reading = Effect.gen(function* () {
                     const asked = yield* now;
                     const raw = yield* device.status;
-                    // The global session may briefly report idle/failed or the old paused
-                    // session while a replacement and its one fallback are in flight.
                     let status = raw;
                     if (held.starts === start && held.replacing)
                       status = {
@@ -517,7 +515,6 @@ export const playerOn = (
                       };
                     return { asked, answered: yield* now, status };
                   }).pipe(
-                    // A read is taken while in flight: once answered, the next read is asked anew.
                     Effect.onExit(() =>
                       Effect.sync(() => {
                         if (Option.exists(held.reading, (it) => it.done === done))
@@ -620,8 +617,6 @@ export const playerOn = (
         /** A seek the device refused or answered outside its window, asked again while it holds the recording. */
         const askAgain = (status: Status) =>
           Effect.suspend(() => {
-            // A key load lands the latest retained target itself; retrying a
-            // refused seek must not cancel that load or its one fallback.
             if (held.replacing) return Effect.void;
             return Option.match(
               Option.filter(
@@ -715,19 +710,16 @@ export const playerOn = (
             );
           if (seen === 'sound') return Player.Playing({ track, at, length });
           if (held.wants === 'pause') return Player.Paused({ track, at, length });
-          // A count-in holds the place at the first sung line: the hymn has begun there.
           if (Option.isSome(counting(read.status)))
             return Player.Playing({ track, at: seconds(read.status.positionMs), length });
           if (quiet >= Duration.toMillis(stand))
             return buffering(quiet >= Duration.toMillis(giveUpAfter) && !offline());
           return Player.$match(was, {
-            // A seek while Playing keeps Playing (P1) until `keptAcross` or the stand turns it.
             Playing: () =>
               Match.value(keptAcross(read, seen)).pipe(
                 Match.when(true, () => Player.Playing({ track, at, length })),
                 Match.orElse(() => buffering(false)),
               ),
-            // Under the stand the wait is under 15 s: no Retry.
             Buffering: () => buffering(false),
             Loading: () => Player.Loading({ track }),
             Idle: () => buffering(false),
@@ -775,7 +767,6 @@ export const playerOn = (
             const count = counting(status);
             held.countEnds = Option.map(count, (ms) => read.answered + ms);
             const next = Proof.readOf(held.proof, read, landable());
-            // A count-in's held place is no silence: the stand runs from its end.
             held.proof = Option.match(count, {
               onNone: () => next.proof,
               onSome: () => ({ ...next.proof, quietFrom: Option.none() }),
@@ -788,11 +779,9 @@ export const playerOn = (
             if (next.seen === 'stale') return true;
             if (status.recording?.number === track.number) remember(status.recording);
             yield* askAgain(status);
-            // A give-up lets the recording go: the reads end, whether the ask answered or not.
             let gaveUp = false;
             const done = yield* Match.value(status.state).pipe(
               Match.when('failed', () => Effect.as(show(failed(track)), true)),
-              // An end lands every act.
               Match.when('ended', () =>
                 Effect.as(show(Player.Ended({ track, length: lengthOf(status) })), true),
               ),
@@ -889,8 +878,6 @@ export const playerOn = (
               Effect.catchTag('PlaybackError', refused),
               Effect.flatMap((goOn) => Deferred.succeed(answered, goOn)),
             );
-            // Started at once, so the device has the ask before the first read; its answer
-            // runs in the player's scope, so a command sent meanwhile does not cut it off.
             yield* Match.value(moving).pipe(
               Match.when(true, () => moves(asking)),
               Match.orElse(() => Effect.forkIn(asking, answers, { startImmediately: true })),
@@ -1016,7 +1003,6 @@ export const playerOn = (
             const seeking = { to: fromMs, asking: true };
             held.seeking = Option.liftPredicate(seeking, () => fromMs > 0);
             yield* show(Player.Loading({ track }));
-            // The play's answer lands it: past 0, the adapter answers with its seek's answer.
             const id = held.id;
             const played = playSet(track, offset, fromMs, false).pipe(
               Effect.tap((status) =>
@@ -1088,15 +1074,6 @@ export const playerOn = (
               ),
             Ended: ({ length }) =>
               Effect.gen(function* () {
-                // A phone plays the lock screen's press before One tells the page of it: a
-                // device that holds the recording again already played it from 0:00 to the
-                // place this read saw, an act the page follows, known from the read's ask (the
-                // device moves on from it no faster than time passes); a device still at its
-                // end plays the recording again, from the place of a seek asked since the end
-                // (an end leaves no place, so with none from 0:00). With `Intro` off, a device
-                // that played again from 0:00 is played anew as the in-app Resume plays: from the
-                // first sung line, so the intro sounds no longer than the press took to reach the page.
-                // A command that cuts this Resume off before it acts carries its play (`seek`).
                 held.resuming = true;
                 const read = yield* readFresh.pipe(Effect.option);
                 held.resuming = false;
@@ -1110,7 +1087,6 @@ export const playerOn = (
                     Option.getOrElse(held.proof.place, () => 0),
                   );
                 held.wants = 'play';
-                // The followed place supersedes any seek still asked from before the end.
                 held.seeking = Option.none();
                 yield* cut;
                 held.proof = Proof.followed(
@@ -1159,19 +1135,11 @@ export const playerOn = (
                   return Option.isNone(end);
                 });
               };
-              // The device may have sounded since the last read: one more read before it lets
-              // the recording go keeps the place it reached.
               if (!(yield* shown(yield* lastLook))) return;
-              // From here the page shows Stopped, and every command but a load takes the device
-              // as let go: a press told meanwhile does not cut this Pause off, so the device
-              // is let go (or shown ended) unless a load came since.
               const id = held.id;
               const ours = () => held.id === id;
               yield* Effect.uninterruptible(
                 Effect.gen(function* () {
-                  // A read that saw the device playing with no place proved opens a pair: the
-                  // read that finishes it, before the device is let go, sets the place the
-                  // reader last heard (P7), for Stopped and the next Resume.
                   const opened = Option.exists(
                     held.proof.last,
                     (last) => last.status.state === 'playing' && Option.isNone(held.proof.place),
@@ -1203,11 +1171,8 @@ export const playerOn = (
         /** A Seek: the device asked for the place, which becomes the reader's; a let-go player keeps it for its Play. */
         const seek = (track: Track, to: number) =>
           Effect.gen(function* () {
-            // The device lands a seek past the end at the end.
             const end = Option.getOrElse(lengthIn(current), () => Number.POSITIVE_INFINITY);
             const ms = Math.min(Math.max(0, to), end) * 1000;
-            // A Resume from Ended cut off before it asked the device: told in this order, the
-            // reader plays from the sought place.
             if (held.resuming && Player.$is('Ended')(current)) return yield* load(track, ms);
             yield* act(Option.some(ms));
             if (letGo(current)) {
@@ -1256,11 +1221,7 @@ export const playerOn = (
                 remember(selection);
                 return yield* follow(track);
               }
-              // A paused selection is applied on the next Play; the dial never starts sound.
               if (held.wants === 'pause' || letGo(current) || Player.$is('Ended')(current)) return;
-              // A command may replace this watcher while the native status
-              // round trip waits. Claim the replacement before interruption
-              // resumes; its preparation then belongs to the player scope.
               yield* Effect.uninterruptible(
                 Effect.gen(function* () {
                   const before = held.id;
@@ -1333,7 +1294,6 @@ export const playerOn = (
               ),
             ),
         }).pipe(
-          // A defect is a bug, but the reader still sees the recording fail.
           Effect.catchDefect((defect) =>
             Effect.logError('player.defect').pipe(
               Effect.annotateLogs({ defect: String(defect) }),
@@ -1361,8 +1321,6 @@ export const playerOn = (
     }),
   );
 
-  // Subscribe to the held hymn and its sounding offset, not a page or the
-  // capo. Playback ticks compare as the same primitive hymn number.
   const heldNumber = Atom.map(state, (value) =>
     Option.match(trackOf(value), {
       onNone: () => 0,

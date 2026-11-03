@@ -1,8 +1,3 @@
-// How a numbered clip's frame says its number (`numbered-clip.ts`): `BITS`
-// bars across the picture, white for a one and black for a zero, most
-// significant first. Its own module, so the browser's footage film
-// (`footage-film.ts`) reads it without the Bun-only clip maker.
-
 /** How many bars a frame's number is written in: frames 0 to 1023. */
 export const BITS = 10;
 /** The clip's size: each bar 32 px wide. */

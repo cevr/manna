@@ -382,7 +382,6 @@ describe('sim commands', () => {
         const answers = standIn((line) => {
           if (line.startsWith('/bin/sh')) return ok('4242\n');
           if (line === 'kill -TERM 4242') stopped = true;
-          // `kill -0` fails once the server is gone.
           if (line === 'kill -0 4242' && stopped) return failed();
           return ok();
         });

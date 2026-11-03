@@ -1,7 +1,3 @@
-// Upstream: packages/react/src/internals/reason-parts.ts, packages/react/src/internals/reasons.ts
-//
-// Why a part's state changed: the `reason` of every change event's details.
-// Only the reasons a kept part reports are here.
 export const REASONS = {
   none: 'none',
   triggerPress: 'trigger-press',

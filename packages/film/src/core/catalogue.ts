@@ -1,22 +1,3 @@
-// A film's render catalogue: every render its project folder holds, what each
-// is (its address, variant and kind), what it drew (its stamp) and its files,
-// and the owner's approvals and comments, each on one render as it was
-// stamped. The catalogue is the only thing that says what a file in the
-// project folder shows: nothing reads a file's name back.
-//
-// A render's slot is its address, variant and kind: a new render of a slot
-// replaces the one before it, and an approval of the old render stays,
-// stale, because an approval (and a comment) is keyed by the version it was
-// given on: the stamp's key, and the mix a video carries. A render is current
-// while its key is the key its address's sources have now (`tools/stamp.ts`)
-// and a video carries the mix the film makes now (`mixKey`); a video that
-// drew its sources as they are but carries an older mix is stale by its
-// sound, and its sound is cut again from the master (a re-mux), not drawn.
-// The catalogue never computes a key.
-//
-// Pure: `tools/catalogue.ts` keeps it as `catalogue.json` in the project
-// folder, and computes the stamps.
-
 import { Array as Arr, Match, Option, Schema } from 'effect';
 import { Address, addressKey, sceneAddress } from './address.ts';
 import { ActName } from './address-schema.ts';
@@ -645,15 +626,12 @@ export const projectOf = (catalogue: Catalogue, keyed: Keyed, variant: string): 
       render,
       span: Option.fromUndefinedOr(span),
       drawn: Option.fromUndefinedOr(drawn),
-      // A comment is on this render when it was said of the render shown.
       comments: saidOn(catalogue, {
         ...topicOf(sceneSlot(scene, variant)),
         key: Option.match(render, { onNone: () => key, onSome: renderVersion }),
       }),
     };
   }),
-  // A read gave and took nothing: an approve's answer says what it gave, an
-  // undo's what it took (`film project approve`, `withdraw --given`).
   gave: Option.none(),
   took: Option.none(),
 });

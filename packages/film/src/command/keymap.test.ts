@@ -93,7 +93,6 @@ describe('the keymap', () => {
     expect(does(press('ArrowRight'), [frame])).toBe('play.frame-next normal');
     expect(does(press('ArrowRight', { shift: true }), [frame])).toBe('play.frame-next coarse');
     expect(does(press('ArrowRight', { alt: true }), [frame])).toBe('play.frame-next fine');
-    // Not stepped: Shift makes another chord.
     expect(does(press('z', { meta: true, shift: true }), [undo])).toBe('pass');
   });
 
@@ -139,10 +138,8 @@ describe('the keymap', () => {
     expect(does(press('ArrowRight', { shift: true }), [frame, nudge], slider)).toBe(
       'wipe.right coarse',
     );
-    // Its own key with nothing to do is still not the page's.
     expect(does(press('End'), [idle], slider)).toBe('owned');
     expect(does(press(' '), [play, nudge], slider)).toBe('play.toggle normal');
-    // Off the slider the arrows are the page's again.
     expect(does(press('ArrowRight'), [frame, nudge])).toBe('play.frame-next normal');
   });
 

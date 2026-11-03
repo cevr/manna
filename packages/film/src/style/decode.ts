@@ -1,12 +1,3 @@
-// How the house checks what a film composes as it is made: each part, paper
-// and figure decoded by its schema with no field the schema lacks
-// (`onExcessProperty: 'error'`), so a spread object's stray field is refused
-// as a fresh literal's is. A schema that holds a rule says so (`holding`: a
-// check, or a slot's union of forms), so a refusal names what it refused,
-// the rule it breaks when one names it (`rules.ts`) with its way out, and the
-// decode's words with their place; it is thrown, so a module that composes a
-// figure breaking a rule does not load. Pure.
-
 import { Data, Match, Predicate, Result, Schema, type SchemaIssue } from 'effect';
 import { RULES, type RuleId, type Way } from './rules.ts';
 

@@ -1,8 +1,3 @@
-// A vertical film's hook (`vertical.ts`), which a short and a talk both draw:
-// the line set once in its font, wrapped to the layout's width and centred on
-// it, shown at once, held and faded out (`hookAlpha`), and recorded as the
-// caption's when probed, in page px at `k` page px per px.
-
 import { describe, expect, test } from 'bun:test';
 import { SHORT_LAYOUT, hookAlpha } from '../core/shorts.ts';
 import { recorder } from './fixtures/stand-in.ts';
@@ -57,7 +52,6 @@ describe('verticalHook', () => {
       expect(t.caption).toBe(true);
       expect(t.alpha).toBe(1);
     }
-    // The block is centred on the hook's height.
     const top = Math.min(...sink.texts.map((t) => t.y));
     const bottom = Math.max(...sink.texts.map((t) => t.y + t.h));
     expect((top + bottom) / 2).toBeCloseTo(SHORT_LAYOUT.hook.y, 6);

@@ -59,13 +59,7 @@ import {
 } from '../writings/archive.js';
 import type { CorpusProvenance } from '../corpus-supply/model.js';
 
-// Bump when the on-disk paragraphs schema changes shape (column rename, type
-// change, FTS index source change, …). The init code reads PRAGMA user_version
-// and drops/recreates the paragraphs tables on mismatch so callers don't need
-// to ship migration SQL — a re-sync rebuilds them. Books and sync_status are
-// preserved across version bumps because their shape is stable.
 const SCHEMA_VERSION = 3;
-// Identity for this service's row in the shared `schema_versions` table.
 const SCHEMA_NAME = 'egw_paragraphs';
 
 /**
@@ -79,12 +73,8 @@ const SCHEMA_NAME = 'egw_paragraphs';
  */
 const refcodeKey = (refcode: string): string => refcode.trim().replace(/\s+/g, ' ').toLowerCase();
 
-// Must stay textually identical in the index and in every query, or SQLite
-// will not use the index for the comparison.
 const REFCODE_KEY_SQL = `lower(replace(refcode_short, '  ', ' '))`;
 
-// Sorts after every character a refcode contains, so `key >= p AND key < p ||
-// REFCODE_KEY_END` is "starts with p" as an index range.
 const REFCODE_KEY_END = '\u{10FFFF}';
 
 /** The separators that end a refcode's parent: `PP 351` → `PP 351.1`,
@@ -114,10 +104,6 @@ export const BookRow = Schema.Struct({
   book_author: Schema.String,
   paragraph_count: Schema.Finite,
   created_at: Schema.String,
-  // The library's classification, backfilled from the content API. Nullable
-  // and optional together: nullable because the column exists but is unset for
-  // a book the backfill has not reached, optional because a `SELECT` written
-  // before these columns existed does not project them at all.
   book_type: Schema.optional(Schema.NullOr(Schema.String)),
   book_subtype: Schema.optional(Schema.NullOr(Schema.String)),
   folder_id: Schema.optional(Schema.NullOr(Schema.Finite)),
@@ -128,12 +114,6 @@ export type BookRow = Schema.Schema.Type<typeof BookRow>;
 
 const { refcode_long, puborder, element_type, element_subtype } = EGWSchemas.Paragraph.fields;
 
-// SQL row shape. `nodes_json` is JSON-encoded `readonly Node[]`; `content_text`
-// is the plain-text projection used by the FTS5 virtual table. Both are
-// derived from the AST at write time so reads don't have to parse anything.
-// `para_id` and `refcode_short` stay as `string | null` on the row (SQLite
-// has no Option type); `paragraphToRow` / `rowToParagraph` translate at the
-// storage boundary.
 const ParagraphRow = Schema.Struct({
   para_id: Schema.optional(Schema.NullOr(Schema.String)),
   refcode_short: Schema.optional(Schema.NullOr(Schema.String)),
@@ -174,7 +154,6 @@ const CommentaryVerseRow = Schema.Struct({
 });
 type CommentaryVerseRow = Schema.Schema.Type<typeof CommentaryVerseRow>;
 
-// EGW wire schema fields this database does not persist; the wire type requires `null`.
 const wireNull = Option.getOrNull(Option.none<never>());
 
 const SyncStatus = Schema.Literals(['pending', 'success', 'failed']);
@@ -215,7 +194,6 @@ export const ParagraphChangeRow = Schema.Struct({
 
 export interface ParagraphChangeRow extends Schema.Schema.Type<typeof ParagraphChangeRow> {}
 
-// Parse "PP 351.1" -> { page: 351, paragraph: 1 }; "PP 351" -> { page: 351, paragraph: none }
 interface RefcodeNumbers {
   readonly page: Option.Option<number>;
   readonly paragraph: Option.Option<number>;
@@ -240,10 +218,6 @@ function parseRefcodeNumbers(refcode: Option.Option<string>): RefcodeNumbers {
   return { page: Option.none(), paragraph: Option.none() };
 }
 
-// ============================================================================
-// Service Interface
-// ============================================================================
-
 /** One paragraph in the in-memory double, plus the two things a real corpus
  *  supplies that an array cannot.
  *
@@ -258,12 +232,6 @@ export type TestParagraph = EGWSchemas.Paragraph & {
   readonly ftsRank?: number;
 };
 
-/** The paragraphs the in-memory double's search matches, before any cap.
- *
- *  Module-level so `searchParagraphs` and `countSearchParagraphs` share it the
- *  way the live implementations share `searchFilters`. A double whose count and
- *  rows were filtered by two hand-written copies of the same three conditions
- *  would let a `total` bug pass in tests and appear only against SQLite. */
 /** The terms an FTS5 MATCH string asks for, as the double reads them.
  *
  *  Quoted runs and bare words both reduce to lower-cased words. It is not FTS5
@@ -335,16 +303,7 @@ const testMatchesQuery = (terms: readonly string[], text: string): boolean => {
  *  books a filter admits, and scanning only their ranges, is what keeps it from
  *  scoring 367,726 vectors whose rows the very next step would discard. */
 export const bookMatchesFilter = (book: BookRow, filter?: CorpusFilter): boolean => {
-  // The corpus-level exclusion first, because it applies even when the caller
-  // passed no filter at all — the same unconditional clause `searchFilters`
-  // pushes before it looks at `options.filter`.
-  // The three classification columns as `Option`s of their own union. A column
-  // that is NULL, absent, or holds a value the union does not contain all
-  // collapse to `None` — which is the "unclassified" case every clause below
-  // lets through, and the same thing the SQL's `IS NULL` disjunctions express.
   const classified = <A extends string>(
-    // The storage boundary: a nullable TEXT column arrives as `null`, and a
-    // `SELECT` predating these columns omits the field. Both fold into `None`.
     // oxlint-disable-next-line effect/noNullish -- see above
     value: string | null | undefined,
     is: (input: string) => input is A,
@@ -352,7 +311,6 @@ export const bookMatchesFilter = (book: BookRow, filter?: CorpusFilter): boolean
 
   const subtype = classified(book.book_subtype, isBookSubtype);
 
-  // The corpus-level exclusion, which holds even with no filter at all.
   if (Option.exists(subtype, (value) => EXCLUDED_SUBTYPES.has(value))) return false;
   if (Predicate.isUndefined(filter)) return true;
 
@@ -397,34 +355,24 @@ const testSearchMatches = (
   },
 ) => {
   const terms = testQueryTerms(query);
-  return (
-    (config.paragraphs ?? [])
-      .flatMap((paragraph) => {
-        const book = config.books?.find((candidate) => candidate.book_code === paragraph.bookCode);
-        if (Predicate.isUndefined(book)) return [];
-        return [{ ...paragraph, bookId: book.book_id, bookTitle: book.book_title, book }];
-      })
-      .flatMap((row) => {
-        const bookCode = options?.bookCode;
-        if (Predicate.isNotUndefined(bookCode) && row.bookCode !== bookCode) return [];
-        const isEgw = EGW_SCOPE_AUTHORS.includes(row.book.book_author);
-        if (options?.scope === 'egw' && !isEgw) return [];
-        if (options?.scope === 'pioneer' && isEgw) return [];
-        // The classification filters, matching `searchFilters` clause for
-        // clause — including its permissive treatment of an unclassified book,
-        // because a double that drops rows the live statement keeps is the
-        // divergence `testMatchesQuery` above was written to stop.
-        if (!bookMatchesFilter(row.book, options?.filter)) return [];
-        // The query filter the double lacked. Without it every search returned
-        // every paragraph, so a test could not state "this query's top hit is
-        // weak" — the strongest row in the fixture led every result.
-        const text = nodesToText(row.nodes).toLowerCase();
-        if (!testMatchesQuery(terms, text)) return [];
-        return [{ ...row, rank: testRank(row, terms, text) }];
-      })
-      // Best-first, the way `ORDER BY fts.rank` orders the live statement.
-      .sort((left, right) => left.rank - right.rank)
-  );
+  return (config.paragraphs ?? [])
+    .flatMap((paragraph) => {
+      const book = config.books?.find((candidate) => candidate.book_code === paragraph.bookCode);
+      if (Predicate.isUndefined(book)) return [];
+      return [{ ...paragraph, bookId: book.book_id, bookTitle: book.book_title, book }];
+    })
+    .flatMap((row) => {
+      const bookCode = options?.bookCode;
+      if (Predicate.isNotUndefined(bookCode) && row.bookCode !== bookCode) return [];
+      const isEgw = EGW_SCOPE_AUTHORS.includes(row.book.book_author);
+      if (options?.scope === 'egw' && !isEgw) return [];
+      if (options?.scope === 'pioneer' && isEgw) return [];
+      if (!bookMatchesFilter(row.book, options?.filter)) return [];
+      const text = nodesToText(row.nodes).toLowerCase();
+      if (!testMatchesQuery(terms, text)) return [];
+      return [{ ...row, rank: testRank(row, terms, text) }];
+    })
+    .sort((left, right) => left.rank - right.rank);
 };
 
 /** How a multi-term search combines its terms, written down once (round-2 B4).
@@ -506,15 +454,6 @@ export const paragraphIdentity = (
     },
   );
 
-/** One scored FTS hit: the paragraph's identity, its text, and SQLite's own
- *  relevance value.
- *
- *  Deliberately not an `EGWSchemas.Paragraph`. §9's fusion keys rows by
- *  `(bookCode, refcode)` and renders a snippet, and decoding the full paragraph
- *  AST for thirty candidates — most of which the fusion discards — is the
- *  expensive half of the query for information the ranking never reads. The
- *  columns here are what the ranking and the rendered hit need, and nothing
- *  else. */
 /** One `h1`–`h3` heading of a book's outline, in the order the book prints it.
  *
  *  What `backMatterClassifier` walks to decide whether a paragraph sits under
@@ -611,7 +550,6 @@ export interface EGWParagraphDatabaseService {
     provenance?: CorpusProvenance,
   ) => Effect.Effect<number, E | ParagraphDatabaseError>;
 
-  // Book operations
   readonly storeBook: (book: EGWSchemas.Book) => Effect.Effect<void, ParagraphDatabaseError>;
   /** Set a book's top-level section (see the implementation). */
   readonly setBookSection: (
@@ -631,7 +569,6 @@ export interface EGWParagraphDatabaseService {
   readonly getAllBooks: Stream.Stream<BookRow, ParagraphDatabaseError>;
   readonly updateBookCount: (bookId: number) => Effect.Effect<void, ParagraphDatabaseError>;
 
-  // Paragraph operations
   readonly storeParagraph: (
     paragraph: EGWSchemas.Paragraph,
     book: EGWSchemas.Book,
@@ -820,7 +757,6 @@ export interface EGWParagraphDatabaseService {
     bookId: number,
   ) => Effect.Effect<readonly number[], ParagraphDatabaseError>;
 
-  // Bible reference operations
   readonly storeBibleRef: (
     bookId: number,
     refCode: string,
@@ -902,7 +838,6 @@ export interface EGWParagraphDatabaseService {
     }[],
   ) => Effect.Effect<{ scanned: number; inserted: number }, ParagraphDatabaseError>;
 
-  // Sync status operations
   readonly setSyncStatus: (
     bookId: number,
     bookCode: string,
@@ -937,13 +872,8 @@ export interface EGWParagraphDatabaseService {
     limit: number,
   ) => Effect.Effect<number, ParagraphDatabaseError>;
 
-  // Maintenance
   readonly rebuildFtsIndex: Effect.Effect<void, ParagraphDatabaseError>;
 }
-
-// ============================================================================
-// Internal helpers
-// ============================================================================
 
 type FullParagraphRow = ParagraphRow & {
   book_code: string;
@@ -981,12 +911,14 @@ const encodeIncomingBibleRefs = Schema.encodeSync(
   Schema.fromJsonString(Schema.Array(IncomingBibleRef)),
 );
 
+const D1_BOUND_VALUE_CAP_BYTES = 2_000_000;
+
 /** How many bytes of JSON one staged chunk carries.
  *
  *  D1 caps a bound value at 2 MB, and the chunk is one bound value. Half
  *  of that leaves room for whatever the measure below misses, and a chunk
  *  that size inserts in well under D1's 30 s per query. */
-const INCOMING_CHUNK_BYTES = 1_000_000;
+const INCOMING_CHUNK_BYTES = D1_BOUND_VALUE_CAP_BYTES / 2;
 
 /** `items` in order, cut into runs whose summed `size` stays within `budget`
  *  (a single item larger than the budget is a run of its own). */
@@ -1036,9 +968,6 @@ const ensureIncomingTables = (sql: SqlClient.SqlClient): Effect.Effect<void, Sql
         PRIMARY KEY (para_book_id, para_ref_code, bible_book, bible_chapter, bible_verse)
       )
     `);
-    // The changes each reinstall made. The sync that wrote them reads them
-    // for its report and its vectors; the report it publishes is the lasting
-    // record, so old rows are pruned (`pruneParagraphChanges`).
     yield* sql.unsafe(`
       CREATE TABLE IF NOT EXISTS paragraph_changes (
         book_id INTEGER NOT NULL,
@@ -1079,7 +1008,6 @@ const paragraphToRow = (
     para_id: paraId,
     refcode_short: refcodeShort,
     refcode_long: Option.getOrNull(Option.fromNullishOr(paragraph.refcode_long)),
-    // Canonical AST on disk; FTS index uses content_text projection.
     nodes_json: encodeNodes(paragraph.nodes),
     content_text: nodesToText(paragraph.nodes),
     puborder: paragraph.puborder,
@@ -1196,24 +1124,15 @@ const rowToParagraph = (row: ParagraphRow) =>
  *  with nothing to show for it. */
 const ensureParagraphSchema = (sql: SqlClient.SqlClient): Effect.Effect<void, SqlError> =>
   Effect.gen(function* () {
-    // Schema version check via the per-service `schema_versions` registry
-    // (NOT the shared `PRAGMA user_version` — multiple services share this DB
-    // file and would clobber each other's version, forcing a drop+rebuild on
-    // every launch; see ../db/schema-version.ts). 0 = fresh / never-stamped;
-    // a non-zero mismatch means our tables' shape changed, so drop + recreate.
-    // Books/sync_status are preserved — they're stable across bumps and
-    // tossing them would force callers to re-add books before a re-sync.
     yield* ensureSchemaVersionsTable(sql);
     const currentVersion = yield* readSchemaVersion(sql, SCHEMA_NAME);
     if (currentVersion !== 0 && currentVersion !== SCHEMA_VERSION) {
       yield* sql.unsafe(`DROP TABLE IF EXISTS paragraphs_fts`);
       yield* sql.unsafe(`DROP TABLE IF EXISTS paragraph_bible_refs`);
       yield* sql.unsafe(`DROP TABLE IF EXISTS paragraphs`);
-      // Sync rows now point at non-existent paragraph data — mark all books
-      // as needing re-sync so the next sync repopulates the new schema.
-      yield* sql.unsafe(`UPDATE sync_status SET status = 'pending'`).pipe(
-        Effect.catch(() => Effect.void), // table may not exist yet on first init
-      );
+      yield* sql
+        .unsafe(`UPDATE sync_status SET status = 'pending'`)
+        .pipe(Effect.catch(() => Effect.void));
     }
 
     yield* sql.unsafe(`
@@ -1226,18 +1145,6 @@ const ensureParagraphSchema = (sql: SqlClient.SqlClient): Effect.Effect<void, Sq
         created_at TEXT NOT NULL
       )
     `);
-    // The EGW API's own classification of each book, carried alongside the
-    // fields the reader sees.
-    //
-    // Added by `ALTER TABLE` rather than by a `SCHEMA_VERSION` bump: a bump
-    // drops and rebuilds `paragraphs`, and this corpus holds 3,012,004 rows
-    // whose re-sync is hours of API traffic. These columns are additive and
-    // nullable, so an old file gains them without losing anything and a book
-    // whose metadata has not been backfilled reads as `NULL` — unclassified,
-    // which every query below treats as "do not filter it out".
-    //
-    // The same three-line `PRAGMA table_info` shape `sync_status` uses below,
-    // for the same reason.
     const bookColumns = yield* sql<{ readonly name: string }>`PRAGMA table_info(books)`;
     const bookColumnNames = new Set(bookColumns.map((column) => column.name));
     if (!bookColumnNames.has('book_type'))
@@ -1251,8 +1158,6 @@ const ensureParagraphSchema = (sql: SqlClient.SqlClient): Effect.Effect<void, Sq
 
     yield* sql.unsafe(`CREATE INDEX IF NOT EXISTS idx_books_author ON books(book_author)`);
     yield* sql.unsafe(`CREATE INDEX IF NOT EXISTS idx_books_code ON books(book_code)`);
-    // The search filters below join `books` and narrow on these three, so
-    // they are indexed together rather than scanned per query.
     yield* sql.unsafe(
       `CREATE INDEX IF NOT EXISTS idx_books_classification ON books(section, book_type, book_subtype)`,
     );
@@ -1283,21 +1188,7 @@ const ensureParagraphSchema = (sql: SqlClient.SqlClient): Effect.Effect<void, Sq
     yield* sql.unsafe(
       `CREATE INDEX IF NOT EXISTS idx_paragraphs_puborder ON paragraphs(book_id, puborder)`,
     );
-    // `para_id` is how a search hit is resolved back to its anchor before the
-    // surrounding paragraphs can be walked — `where para_id in (...)`, forty
-    // ids per page of results. Without this index that predicate is a full
-    // table scan: measured at 699.9 ms over 3,012,004 rows on the deployed
-    // corpus, against 0.03 ms with it, and it ran on *every* search. It is
-    // the single largest cost in a query.
-    //
-    // Not covered by `sqlite_autoindex_paragraphs_1`: that serves the primary
-    // key, and `para_id` is the library's own identifier rather than ours.
     yield* sql.unsafe(`CREATE INDEX IF NOT EXISTS idx_paragraphs_para_id ON paragraphs(para_id)`);
-    // A refcode is how a citation is looked up across the whole corpus,
-    // periodicals and letters included — not only `CODE page.para` books.
-    // An expression index rather than a column so an existing 3M-row file
-    // gains it in place (a one-time build on first open) instead of a
-    // SCHEMA_VERSION bump that would drop and re-sync every paragraph.
     yield* sql.unsafe(
       `CREATE INDEX IF NOT EXISTS idx_paragraphs_refcode_key ON paragraphs(${REFCODE_KEY_SQL})`,
     );
@@ -1323,10 +1214,6 @@ const ensureParagraphSchema = (sql: SqlClient.SqlClient): Effect.Effect<void, Sq
       `CREATE INDEX IF NOT EXISTS idx_pbr_bible ON paragraph_bible_refs(bible_book, bible_chapter, bible_verse)`,
     );
 
-    // FTS indexes the plain-text projection (content_text) since AST JSON
-    // would tokenize bracket/quote noise. paragraphs is still the contentless
-    // backing store — we keep external-content semantics so the FTS rowid
-    // stays linked to the paragraphs PK shape.
     yield* sql.unsafe(`
       CREATE VIRTUAL TABLE IF NOT EXISTS paragraphs_fts USING fts5(
         content_text,
@@ -1389,18 +1276,12 @@ const ensureParagraphSchema = (sql: SqlClient.SqlClient): Effect.Effect<void, Sq
       yield* sql.unsafe(`ALTER TABLE sync_status ADD COLUMN digest TEXT`);
     yield* sql.unsafe(`CREATE INDEX IF NOT EXISTS idx_sync_status ON sync_status(status)`);
 
-    // Stamp our schema version; the next open sees the match and skips the
-    // drop/rebuild branch above.
     yield* writeSchemaVersion(sql, SCHEMA_NAME, SCHEMA_VERSION);
   });
 
 const layerParagraphSchema: Layer.Layer<never, SqlError, SqlClient.SqlClient> = Layer.effectDiscard(
   SqlClient.SqlClient.pipe(Effect.flatMap(ensureParagraphSchema)),
 );
-
-// ============================================================================
-// Service Definition
-// ============================================================================
 
 export class EGWParagraphDatabase extends Context.Service<
   EGWParagraphDatabase,
@@ -1421,13 +1302,9 @@ export class EGWParagraphDatabase extends Context.Service<
         const atomic = yield* SqlAtomic;
         const incomingTables = yield* Effect.cached(ensureIncomingTables(sql));
 
-        // ========== Book operations ==========
-
         const storeBook = (book: EGWSchemas.Book) =>
           Effect.gen(function* () {
             const createdAt = DateTime.formatIso(yield* DateTime.now);
-            // The API's `subtype` carries `''` and `' '` as two spellings of
-            // absence; both become NULL here so a filter never has to know that.
             const subtype = Option.getOrNull(
               Option.filter(
                 Option.map(Option.fromNullishOr(book.subtype), (value) => value.trim()),
@@ -1493,8 +1370,6 @@ export class EGWParagraphDatabase extends Context.Service<
             SELECT COUNT(*) FROM paragraphs WHERE book_id = ${bookId}
           ) WHERE book_id = ${bookId}
         `.pipe(Effect.asVoid);
-
-        // ========== Paragraph operations ==========
 
         const insertParagraphRow = (row: ParagraphRow) =>
           sql`
@@ -1569,36 +1444,6 @@ export class EGWParagraphDatabase extends Context.Service<
             `,
           });
 
-        /** Replace one publication with its archive, in two phases.
-         *
-         *  **Stage.** The rows go into `paragraphs_incoming` and
-         *  `paragraph_bible_refs_incoming` in chunks, each one statement with
-         *  its rows as one JSON parameter. Whatever an earlier attempt staged
-         *  for this publication is cleared first, so a retry after a crash
-         *  starts clean. Nothing a reader sees has changed yet.
-         *
-         *  **Swap.** One atomic group (`SqlAtomic`) makes the live rows the
-         *  staged ones, writes the `books` and `sync_status` rows and clears
-         *  the stage. It writes only the difference: a row the stage no
-         *  longer has is deleted, a row whose columns moved is updated in
-         *  place, a new row is inserted, and an unchanged row is left as it
-         *  is, its `created_at`, `updated_at` and rowid with it. The
-         *  full-text triggers fire on those rows alone, so `paragraphs_fts`
-         *  moves with them. A reinstall that changes nothing writes no
-         *  paragraph: rewriting every row of the Topical Index (319,370
-         *  paragraphs) in one group was more than D1 answers in time. A
-         *  reader sees the old publication or the new one, never a mix.
-         *
-         *  The references go first and last because each names its
-         *  paragraph by key (`paragraph_bible_refs` → `paragraphs`): those
-         *  the stage dropped go before the paragraphs, the new ones after. An
-         *  update keeps a paragraph's key, so it leaves its references
-         *  valid.
-         *
-         *  The swap is a fixed list of statements because D1 runs a group as a
-         *  batch, which cannot branch on a result. So the count is checked on
-         *  the stage, before the swap: the copy is `INSERT ... SELECT` from the
-         *  stage under the same key, so it lands exactly the rows counted. */
         /** The statement that records what replacing a book's paragraphs
          *  with its staged ones changes: an edited text, a paragraph removed,
          *  or one added to a book that was already there.
@@ -1786,9 +1631,6 @@ export class EGWParagraphDatabase extends Context.Service<
           yield* sql`DELETE FROM paragraphs_incoming WHERE book_id = ${publicationId}`;
           yield* sql`DELETE FROM paragraph_bible_refs_incoming WHERE para_book_id = ${publicationId}`;
 
-          // Rows wait here until they fill a statement's budget; references
-          // until there are five thousand, each under a hundred bytes of
-          // JSON, far inside it.
           const refcodes = new Set<string>();
           let rows: ParagraphRow[] = [];
           let rowBytes = 0;
@@ -1847,9 +1689,6 @@ export class EGWParagraphDatabase extends Context.Service<
           }
 
           const provenanceOption = Option.fromNullishOr(provenance);
-          // What this install changes, read before the old paragraphs go:
-          // only a revision can name the change, so an install without
-          // provenance records none.
           const changes = Option.match(provenanceOption, {
             onNone: () => [],
             onSome: ({ revision }) => [recordParagraphChanges(publicationId, revision, now)],
@@ -2123,53 +1962,6 @@ export class EGWParagraphDatabase extends Context.Service<
           );
         };
 
-        /** One statement with a composed `WHERE`, rather than one hand-written
-         *  statement per combination of filters — three optional filters would
-         *  otherwise mean eight near-identical copies of the same join, and the
-         *  `ORDER BY rank` §6.4 adds would have to be right in all eight.
-         *
-         *  Both statements order by `bm25(paragraphs_fts)` rather than the bare
-         *  `rank`. The two are the *same ranking* — `rank` is defined as the
-         *  table's configured rank function, which here is default-weight bm25 —
-         *  but they take different code paths inside FTS5, and the difference is
-         *  worth about 14% of the lexical leg:
-         *
-         *  | `ORDER BY`            | plan                                  | `god`, 600 rows |
-         *  |-----------------------|---------------------------------------|-----------------|
-         *  | `fts.rank`            | `VIRTUAL TABLE INDEX 32:M3`           | 899 ms          |
-         *  | `bm25(paragraphs_fts)`| `INDEX 0:M3` + temp b-tree for ORDER  | **774 ms**      |
-         *
-         *  `INDEX 32:` is FTS5's internal rank-ordering path, which runs its own
-         *  sorted merge over the whole posting list. `INDEX 0:` is a plain scan
-         *  that hands ordering to SQLite, whose temp b-tree under a `LIMIT` is a
-         *  bounded top-N heap — cheaper than the merge it replaces. The scoring
-         *  itself (~692 ms of the 899 for `god`) is untouched and irreducible:
-         *  every document in the posting list must be scored before a top-N can
-         *  be known, which is why the `LIMIT` size does not affect cost at all
-         *  (10, 120 and 600 all measure the same).
-         *
-         *  Verified byte-identical, not assumed: ten queries spanning single
-         *  terms, `AND`, `OR`, a quoted phrase and a `sanct*` prefix, each at
-         *  `LIMIT 600` with the production scope and subtype filters and the full
-         *  `nodes_json` payload, compared with `cmp`.
-         *
-         *  **The ranking must stay in the joined statement.** Ranking rowids in a
-         *  subquery and joining after looks much faster (8 ms) and is wrong: the
-         *  `books` predicates cannot be pushed into an FTS-only subquery, so they
-         *  would apply *after* the cap and let scope-excluded rows consume result
-         *  slots. That shape returns 600 different rows.
-         *
-         *  Before §6.4 the `LIMIT` was applied with no ordering at all, which made
-         *  "FTS rank" in the §6.1 table a claim the query did not honor: SQLite
-         *  returned whichever rows the join reached first. Ordering *and* limiting
-         *  in the same statement is what makes the cap select the best N rather
-         *  than an arbitrary N. */
-        /** The `WHERE` both search statements share.
-         *
-         *  Factored out because the count and the rows have to agree exactly: a
-         *  `total` computed under a different predicate than the `items` it
-         *  accompanies is worse than no total at all, and the scope filter in
-         *  particular is two clauses that must stay in lockstep. */
         /** Every predicate over `books` that a search applies, without the
          *  `MATCH` clause.
          *
@@ -2189,9 +1981,6 @@ export class EGWParagraphDatabase extends Context.Service<
           if (Predicate.isNotUndefined(bookCode)) {
             filters.push(sql`b.book_code = ${bookCode} COLLATE NOCASE`);
           }
-          // The author partition is binary, so `pioneer` is expressed as the
-          // negation of the same list `egw` selects — one constant, no second
-          // enumeration that could drift out of agreement with the first.
           if (options?.scope === 'egw') {
             filters.push(sql.in('b.book_author', [...EGW_SCOPE_AUTHORS]));
           }
@@ -2199,33 +1988,12 @@ export class EGWParagraphDatabase extends Context.Service<
             filters.push(sql`NOT ${sql.in('b.book_author', [...EGW_SCOPE_AUTHORS])}`);
           }
 
-          // The corpus-level exclusion, applied to every query regardless of
-          // what the caller asked for. `ModernEnglish` is a paraphrase whose
-          // wording is an editor's, not Ellen White's, and a search hit is a
-          // citation — see `EXCLUDED_SUBTYPES`. NULL passes, as everywhere else
-          // here, because an unclassified book is not known to be a paraphrase.
           filters.push(
             sql`(b.book_subtype IS NULL OR NOT ${sql.in('b.book_subtype', [...EXCLUDED_SUBTYPES])})`,
           );
 
-          // The library's own classification, backfilled onto `books`.
-          //
-          // A *positive* selection keeps only what it names, so an unclassified
-          // book does not satisfy it — `type=dictionary` returning a book nobody
-          // has classified is not an answer to the question asked. The apparatus
-          // *exclusion* below is the mirror image: there NULL passes, because a
-          // book not known to be apparatus is not what the reader excluded.
           const filter = options?.filter;
           if (Predicate.isNotUndefined(filter)) {
-            // One axis, both signs. `include` is a whitelist, so a NULL column
-            // fails it; `exclude` is a blacklist, so a NULL column passes it.
-            // See `Signed` for why that asymmetry is the meaning of the two
-            // words rather than a NULL special case.
-            //
-            // The include side takes the column as a string because `sql.in`
-            // does; the exclude side needs a template, and a template
-            // interpolation *binds* rather than concatenates, so the three
-            // clauses are written out rather than generated from a column name.
             if (filter.section.include.length > 0) {
               filters.push(sql.in('b.section', [...filter.section.include]));
             }
@@ -2253,10 +2021,6 @@ export class EGWParagraphDatabase extends Context.Service<
               );
             }
 
-            // Apparatus is its own toggle rather than entries in
-            // `type.exclude`, but it is the same blacklist rule: a book with no
-            // type is not known to be apparatus by its type, so it stays unless
-            // its author makes it one (`isApparatus`).
             if (filter.excludeApparatus) {
               filters.push(
                 sql`(b.book_type IS NULL OR NOT ${sql.in('b.book_type', [...APPARATUS_TYPES])})`,
@@ -2374,9 +2138,6 @@ export class EGWParagraphDatabase extends Context.Service<
             readonly book_title: string;
             readonly book_author: string;
             readonly ref_code: string;
-            // SQLite has no Option type, so a nullable column arrives as `null`
-            // and is translated at this boundary — the same convention
-            // `ParagraphRow` documents above for `refcode_short` and `para_id`.
             // oxlint-disable-next-line effect/noNullish -- the storage boundary, see above
             readonly refcode_short: string | null;
             // oxlint-disable-next-line effect/noNullish -- the storage boundary, see above
@@ -2447,50 +2208,7 @@ export class EGWParagraphDatabase extends Context.Service<
           if (identities.length === 0) {
             return Effect.succeed<readonly ScoredParagraphRow[]>([]);
           }
-          // The identity lookup carries the same author and classification
-          // predicates the MATCH path does. Without them this is a hole in every
-          // filter: the vector leg proposes ids from the whole index, so a book
-          // the reader excluded is re-admitted here after the lexical leg
-          // correctly dropped it. `identityFilters` is the shared builder, minus
-          // the MATCH clause this path has no query for.
           const predicates = identityFilters(options);
-          // One seek per identity on `idx_paragraphs_para_id`: `wanted` splits
-          // each key at its first `:` and the join reaches `paragraphs` by the
-          // bare `para_id`, a column the index serves. The concatenation below is
-          // the same test it always was and still decides every row, so a key in
-          // the `${bookCode}:#${refCode}` form, or one this build did not produce,
-          // seeks a `para_id` nothing has and matches nothing — without widening
-          // the lookup for the rest of the batch. The keys travel as one JSON
-          // parameter (`encodeKeys`).
-          //
-          // `CROSS JOIN`, which in SQLite is not a different join — it is the one
-          // documented way to pin the join order, and it must stay.
-          //
-          // The seek above only helps if `wanted`, then `paragraphs`, drive the
-          // join and `books` is reached last by its key. Add
-          // a scope (`scope: 'egw'` is the *default* for search, so this is the
-          // common path, not an edge case) and `identityFilters` contributes
-          // `b.book_author IN (...)`. The planner then prefers to drive from
-          // `idx_books_author` and reach paragraphs by `idx_paragraphs_book_id` —
-          // which means visiting every paragraph of every Ellen White book and
-          // filtering afterwards, instead of 120 index seeks.
-          //
-          // Measured on the deployed corpus, one 120-identity batch under the
-          // default scope: 179 ms with a plain `JOIN`, 0.2 ms with this one, the
-          // same 118 rows. The plan goes from
-          //   SEARCH b USING INDEX idx_books_author
-          //   SEARCH p USING INDEX idx_paragraphs_book_id
-          // to
-          //   SEARCH p USING INDEX idx_paragraphs_para_id
-          //   SEARCH b USING INTEGER PRIMARY KEY
-          //
-          // `INDEXED BY idx_paragraphs_para_id` measures the same but names an
-          // index, so dropping or renaming one would turn a slow query into a
-          // failing one. This states the order and lets the planner choose.
-          //
-          // The symptom this fixes: `bodiesMs` was the largest leg of every
-          // semantic search (~180 ms in production, flat across queries, batch
-          // sizes and books) while the statement's own work measured ~1 ms.
           return sql<{
             readonly book_code: string;
             readonly book_title: string;
@@ -2537,7 +2255,6 @@ export class EGWParagraphDatabase extends Context.Service<
                 ref_code: row.ref_code,
                 refcode_short: Option.fromNullishOr(row.refcode_short),
                 nodes: decodeNodes(row.nodes_json),
-                // No FTS match produced this row, so it carries no BM25 evidence.
                 rank: 0,
                 isHeading: row.is_chapter_heading === 1,
                 isFurniture: isFurniture(Option.fromNullishOr(row.element_subtype)),
@@ -2558,13 +2275,6 @@ export class EGWParagraphDatabase extends Context.Service<
           ORDER BY page_number
         `.pipe(Effect.map((rows) => rows.map((row) => row.page_number)));
 
-        // The user types human refcodes ("DAR 62", "PP 351.1", "GC"); the index
-        // stores them in the EGW canonical form ("DAR1909 62", "PP 351.1"). We
-        // split on the first space: the head is matched as a book_code prefix
-        // (LIKE 'DAR%' covers DAR / DAR1909 / DAR-suffix editions) and the tail
-        // is matched against refcode_short as either an exact "<code> <tail>" or
-        // a prefix "<code> <tail>%" (so "DAR 62" sweeps every paragraph on
-        // chapter 62 in addition to the bare chapter heading).
         const findByRefcodeShort = (refcodeShort: string, limit = 5) => {
           const trimmed = refcodeShort.trim();
           const spaceAt = trimmed.indexOf(' ');
@@ -2576,11 +2286,6 @@ export class EGWParagraphDatabase extends Context.Service<
           }
           head = head.trim();
           const codePrefix = `${head}%`;
-          // Tail variants: exact match ("DAR1909 62"), child-paragraph match
-          // ("DAR1909 62.X"), and bare-code fallback for tail === '' (any row
-          // under a matching book). LIKE patterns are case-insensitive in
-          // SQLite by default for ASCII, but COLLATE NOCASE keeps it explicit
-          // alongside the join on books.
           return sql<FullParagraphRow>`
           SELECT p.*, b.book_code, b.book_title
           FROM paragraphs p
@@ -2608,8 +2313,6 @@ export class EGWParagraphDatabase extends Context.Service<
             ),
           );
         };
-
-        // ========== Bible reference operations ==========
 
         const storeBibleRef = (
           bookId: number,
@@ -2710,9 +2413,6 @@ export class EGWParagraphDatabase extends Context.Service<
                     bookId: row.book_id,
                     bookCode: row.book_code,
                     bookTitle: row.book_title,
-                    // `FullParagraphRow` types the column optional because two
-                    // other statements omit it; this one selects it, so the
-                    // empty fallback is unreachable rather than a default.
                     bookAuthor: Option.getOrElse(Option.fromNullishOr(row.book_author), () => ''),
                   })),
                 ),
@@ -2720,8 +2420,6 @@ export class EGWParagraphDatabase extends Context.Service<
             ),
           );
         };
-
-        // ========== Sync status operations ==========
 
         const setSyncStatus = (
           bookId: number,
@@ -2783,8 +2481,6 @@ export class EGWParagraphDatabase extends Context.Service<
           }[],
         ) =>
           Effect.gen(function* () {
-            // Cheap gate: if anything's already in the table, assume incremental
-            // indexing is keeping up and we don't need to scan the whole corpus.
             const existing = yield* sql<{ n: number }>`
             SELECT COUNT(*) AS n FROM paragraph_bible_refs LIMIT 1
           `;
@@ -2968,7 +2664,6 @@ export class EGWParagraphDatabase extends Context.Service<
             }) ?? [],
           );
         },
-        // The same outline rule the live statement applies: `h1`–`h3` only.
         getSectionHeadings: (publicationIds) => {
           const wanted = new Set(publicationIds);
           return Effect.succeed(
@@ -2990,8 +2685,6 @@ export class EGWParagraphDatabase extends Context.Service<
               ),
           );
         },
-        // The live statement's rule over the configured rows: the last
-        // heading row of the same book at or before each position.
         getNearestHeadings: (positions) =>
           Effect.succeed(
             positions.flatMap((position): readonly NearestHeading[] => {
@@ -3036,22 +2729,12 @@ export class EGWParagraphDatabase extends Context.Service<
             ) ?? [],
           );
         },
-        // The test double applies the same three filters the live query applies,
-        // so a caller that scopes its search sees a scoped result here too. The
-        // relevance *order* is the one thing it cannot reproduce — there is no
-        // FTS index behind it — so it preserves the configured paragraph order
-        // and a test that cares about rank must use a real database.
         searchParagraphs: (query, options) =>
           Effect.succeed(
             testSearchMatches(config, query, options)
               .slice(0, options?.limit)
               .map(({ book: _book, ...row }) => row),
           ),
-        // The double has no FTS index, so it cannot compute a real BM25. It
-        // reports the rank a test configured on the paragraph instead, defaulting
-        // to a weak one — which is what lets a §9.3 short-circuit test state its
-        // premise ("the top hit is strong and clearly separated") as data rather
-        // than needing a real SQLite corpus to produce it by luck.
         searchScoredParagraphs: (query, options) =>
           Effect.succeed(
             testSearchMatches(config, query, options)
@@ -3072,16 +2755,10 @@ export class EGWParagraphDatabase extends Context.Service<
                 refcode_short: row.refcode_short,
                 nodes: row.nodes,
                 rank: row.rank,
-                // Through the shared predicate, not a second spelling of it:
-                // the live column is written by `isChapterHeading` at ingest,
-                // so a double that decided headings its own way could disagree
-                // with production about the same fixture.
                 isHeading: isChapterHeading(Option.fromNullishOr(row.element_type)),
                 isFurniture: isFurniture(Option.fromNullishOr(row.element_subtype)),
               })),
           ),
-        // Keyed by the same `paragraphIdentity` the live statement composes in
-        // SQL, so a fixture and a real corpus answer the same key the same way.
         findParagraphsByIdentity: (identities, options) => {
           const wanted = new Set(identities);
           return Effect.succeed(
@@ -3092,16 +2769,11 @@ export class EGWParagraphDatabase extends Context.Service<
               );
               const identity = paragraphIdentity(paragraph.bookCode, paragraph.para_id, refCode);
               if (!wanted.has(identity)) return [];
-              // A paragraph whose book the fixture never declared is not a row:
-              // the live statement joins `books`, so an unjoinable paragraph
-              // cannot appear there either.
               const found = Option.fromNullishOr(
                 config.books?.find((row) => row.book_code === paragraph.bookCode),
               );
               if (Option.isNone(found)) return [];
               const book = found.value;
-              // The same predicates the live statement applies here, so the
-              // double cannot show a row production would have filtered out.
               const isEgw = EGW_SCOPE_AUTHORS.includes(book.book_author);
               if (options?.scope === 'egw' && !isEgw) return [];
               if (options?.scope === 'pioneer' && isEgw) return [];
@@ -3126,9 +2798,6 @@ export class EGWParagraphDatabase extends Context.Service<
             }),
           );
         },
-        // Counted off the same matcher, before the cap — the double has to model
-        // the *relationship* between `items` and `total`, not just the rows, or a
-        // test asserting the pre-cap total would pass here and fail on SQLite.
         countSearchParagraphs: (query, options) =>
           Effect.succeed(testSearchMatches(config, query, options).length),
         /** The double's estimate is the unscoped match count, which is exactly
@@ -3162,9 +2831,6 @@ export class EGWParagraphDatabase extends Context.Service<
               .flatMap((paragraph) => {
                 if (!paragraph.bookCode.toLowerCase().startsWith(head)) return [];
                 const short = Option.getOrElse(paragraph.refcode_short, () => '').toLowerCase();
-                // `LIKE '% <tail>'` and `LIKE '% <tail>.%'` in the live query: the
-                // refcode's book prefix is skipped and the remainder is the
-                // paragraph address, exactly or as that address's parent.
                 const matches =
                   tail === '' || short.endsWith(` ${tail}`) || short.includes(` ${tail}.`);
                 if (!matches) return [];

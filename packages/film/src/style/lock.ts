@@ -1,27 +1,3 @@
-// A locked figure is drawn as the owner kept it. Its lock is a file beside
-// its composition (`<item>.lock.json`), which the composition carries
-// (`figure`'s `lock`): the item, its version (one more each time he keeps a
-// changed one), the sha256 of its print as he kept it (its artboard and its
-// hands', as the house prints them alone from his film's figures file,
-// `lockedPrints`: ids of their own, at the stage's start), the ask he kept
-// it in, the time the production's ledger filed the decision that kept it,
-// and the still he saw it in. The print is what the house draws of him, so
-// a change to a part, to how the house draws one, or to his place in his
-// film's file (his artboard's name, his boil's seed) moves it; a slot the
-// house draws nothing from (his concept, his stature, his hands' share) does
-// not. His film's build and its test hash each locked figure's print and
-// hold it to its lock (`unlocked`, `build.ts`; what a hash answers,
-// `heldTo`): the lock names a decision on his production's ledger, filed at
-// its time and answering its ask, or it is broken; a print that differs from
-// the lock's breaks it (FigureLock), unless its override frees that very
-// print, citing a decision of his on the figure filed after the lock
-// (`override.ts`), and then it is overridden until he keeps it as the lock's
-// next version. An override that frees another print, or one the lock holds
-// already, breaks it too, so no override is left to free a later change
-// unasked. The hash itself is the lock file's alone: his decision does not
-// file it yet, so a lock file rewritten by hand holds whatever print it
-// names, and a review reads every change to one. Pure.
-
 import { DateTime, Option, Schema } from 'effect';
 import { ConceptImage } from '../core/match.ts';
 import type { Decided } from '../core/production.ts';

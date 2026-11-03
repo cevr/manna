@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/toast/close/ToastClose.tsx
-//
-// Closes the toast when clicked. Always exposed to assistive technology: the
-// receipts draw it visible at rest, so upstream's `aria-hidden` while the
-// stack is collapsed is left out. Renders a `<button>` element.
 import type { JSX } from '@solidjs/web';
 import { omit, untrack } from 'solid-js';
 

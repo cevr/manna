@@ -1,12 +1,3 @@
-// Server-render parity of the behaviour mixins (after Remix's
-// `mix-ssr-parity.test.tsx`): the attributes prop mixins give an element are
-// the same in the server's markup as in the browser's DOM, and so are a
-// toggle group's toggles', its tab stop on the pressed one; the ref factories,
-// made in the body, are made on both sides, and the server calls no ref
-// callback and runs no `onElement` setup. The server half is compiled by
-// Solid's compiler for its server build (`fixtures/mix-server.tsx`, built by
-// the harness's `buildServer`); the browser half is the `parity` fixture.
-// Both are read by the same parser: the server's markup is parsed in the page.
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
 import type { Page } from '@playwright/test';
@@ -90,7 +81,6 @@ describe('mix server-render parity', () => {
       'aria-pressed': 'false',
       tabindex: '-1',
     });
-    // The pressed toggle holds the group's tab stop, in the server's markup too.
     expect(client['two']).toEqual({
       id: 'two',
       type: 'button',

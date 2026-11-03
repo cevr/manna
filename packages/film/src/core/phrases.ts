@@ -1,10 +1,3 @@
-// A short's captions: the take's words set two to four at a time, each phrase
-// on screen from its first word until the next phrase (or a moment after its
-// last word), so the eye reads what the ear hears. Words inside a quotation
-// (the script's “…”, which the take's words carry) are flagged, for the page
-// to light them as they are read. The page draws these phrases and the
-// renderer writes them as the sidecar, so the two cannot disagree. Pure.
-
 import { Array as Arr, Option } from 'effect';
 import type { CaptionCue } from './captions.ts';
 import type { Placed } from './layout.ts';
@@ -171,7 +164,6 @@ const spanPhrases = (
 ): ReadonlyArray<Phrase> => {
   const quoted = quotedWords(words);
   const offset = p.start + p.speechStart;
-  // A span's ends sit on frames, within half a frame of the words they name.
   const slack = 0.5 / fps + CLOCK_EPSILON;
   const inside = run(0, words.length).filter((i) =>
     Option.exists(Arr.get(words, i), (w) => {
@@ -200,9 +192,6 @@ const spanPhrases = (
     inside.map((i) => quoted[i] === true),
   ).map((phrase) => ({
     ...phrase,
-    // Shown from the frame nearest its first word, so a span cut on
-    // that word's mark shows it on its first frame; ends move with
-    // starts, so no phrase overlaps the next.
     start: Math.max(phrase.start - slack, span.at),
     end: Math.min(phrase.end - slack, spanEnd),
   }));

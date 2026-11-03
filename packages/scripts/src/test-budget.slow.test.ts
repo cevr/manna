@@ -1,13 +1,3 @@
-// `bun run test:budget` over a stand-in turbo, as a shared machine runs it:
-// the run's own summary whole, missing or truncated, and other writers'
-// summaries (another budget run, a hand-run turbo) landing in the same
-// `.turbo/runs` before, during or after it, at turbo's exit 0 and 1. A run
-// never reports a time from a summary it did not write, never removes one,
-// and measures nothing when its own summary cannot be read, at any exit: it
-// fails, and names the task's exit with no time. A workspace whose tests are
-// cut into parts has each part timed by its own task's span.
-// `TEST_BUDGET_SEED=<n>` replays the generated cases of a failing seed.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, test } from 'bun:test';
 import {
@@ -27,14 +17,7 @@ import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
 /** What the run's own turbo leaves of its summary. */
-type Own =
-  | 'whole' // written, and its `Summary:` line printed
-  | 'no-line' // not written, no `Summary:` line (turbo 2.11.7 when the write fails, exit 0)
-  | 'line-no-file' // the `Summary:` line printed, the file gone (another writer removed it)
-  | 'truncated' // written in part, its line printed
-  | 'no-task' // whole, but without `x#test` (a `test` that never ran)
-  | 'two-lines' // whole, and its `Summary:` line printed twice
-  | 'outside'; // whole, but written outside `.turbo/runs`, and that path printed
+type Own = 'whole' | 'no-line' | 'line-no-file' | 'truncated' | 'no-task' | 'two-lines' | 'outside';
 
 /** Another writer's summary: which workspaces it names, and when it lands beside the run. */
 interface Foreign {
@@ -134,7 +117,6 @@ const standIn = (each: Case) => {
       task('y#test', 'bun test'),
     ],
   });
-  // A measuring run is `turbo run <task> --filter=x …`: a part's run writes its own task's summary.
   const ownWrites = Arr.match(parts, {
     onEmpty: () => own[each.own],
     onNonEmpty: (given) => [
@@ -154,7 +136,6 @@ const standIn = (each: Case) => {
     ...ownWrites,
     ...during('during-after-own'),
     ...line[each.own],
-    // The test writes the "after" summaries once this lands (see `run`).
     'touch turbo.exited',
     `exit ${each.exit}`,
     '',
@@ -179,7 +160,6 @@ const run = (each: Case) =>
     );
     yield* fs.copy(path.join(import.meta.dir, 'test-budget'), path.join(src, 'test-budget'));
     yield* fs.copy(path.join(import.meta.dir, 'guard'), path.join(src, 'guard'));
-    // A repository with no workspace: the reach check (`test-budget/reach.ts`) finds no test file.
     yield* fs.writeFileString(path.join(root, 'package.json'), '{ "workspaces": [] }');
     yield* Effect.scoped(
       Effect.flatMap(
@@ -203,8 +183,6 @@ const run = (each: Case) =>
         path.join(root, '.turbo', 'runs', foreign.file),
         foreignSummary(foreign),
       );
-    // Another writer lands "after" from outside the run's process group (which
-    // ends with turbo): once turbo exits, while the script reads and cleans up.
     const after = each.foreign.filter((foreign) => foreign.when === 'after');
     const writer = yield* Effect.forkScoped(
       Effect.gen(function* () {

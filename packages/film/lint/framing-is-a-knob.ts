@@ -1,33 +1,3 @@
-// `film/framing-is-a-knob`: a scene's framing is knobs, a point and a zoom the
-// lab gives a reticle (`face: [800, 610], faceZoom: 1.22`, made a camera with
-// `knobCamera`), and a camera move between framings is a `shotPath` of them or
-// a `pushOn` with a number knob. A framing written out in a scene, `{ x: 1060,
-// y: 580, zoom: 1.18 }`, or blended by hand, `zoom: lerp(1, 1.12, f.at('hold'))`,
-// is a value a review may ask to move that the lab cannot reach, and no other
-// guard sees it (`KnobRepeated` compares knobs only).
-//
-// The rule reads, in a scene file:
-//
-// 1. a camera-shaped object literal (plain `x`, `y` and `zoom` keys) whose
-//    point is written out, `x` and `y` both numbers (written, or top-level
-//    consts holding one, by the name's binding where it is read), other than
-//    the unmoved frame (960, 540, zoom 1);
-// 2. such a literal, or one spread from another camera that writes any of
-//    `x`, `y` or `zoom` over it (`{ ...cam, zoom: lerp(cam.zoom, 1, roof) }`),
-//    with any of them blended by hand,
-//    `lerp(a, b, …)` (film's, `core/time.ts`: imported, under an alias, or
-//    read off the module imported whole, `Core.lerp`) whose `a` or `b` is a
-//    number (the unmoved frame's
-//    included: a blend from it is a `shotPath` from `REST`) or an element of
-//    a top-level const's number tuple (`JUDGED_ZOOM[0]`, not a parameter of
-//    that name);
-// 3. a scratch camera's zoom blended that way, `AT_ARK.zoom = lerp(…, 2.75, …)`.
-//
-// A framing derived from the scene's geometry (`{ x: HOUSE_X - 20, y: 790,
-// zoom: 2.8 }`, a push sized past the frame's corners) stays code: a point
-// that is not two numbers is read as derived. A framing shared across scenes
-// lives in a set file, which the rule does not read.
-
 import { Effect, Option, Predicate } from 'effect';
 import {
   Diagnostic,

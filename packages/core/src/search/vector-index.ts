@@ -140,16 +140,6 @@ const malformed = (detail: string): VectorIndexFault => ({ _tag: 'malformed', de
 const decodeManifest = Schema.decodeUnknownOption(Schema.fromJsonString(VectorManifest));
 const encodeManifest = Schema.encodeSync(Schema.fromJsonString(VectorManifest));
 
-/** Reads the header and manifest, and refuses anything this build cannot
- *  interpret (§9.6).
- *
- *  Every refusal here is a *typed fault*, never a throw and never a defect: an
- *  optional artifact that is truncated, foreign, or built by a future writer is
- *  a state the reader degrades from, exactly as an absent one is. The one thing
- *  it will not do is proceed on a fingerprint it does not recognize — that is
- *  the case §10 singles out, because the failure mode is silent wrong answers
- *  rather than missing ones.
- */
 /** Quotes a diagnostic string through the JSON codec.
  *
  *  The magic bytes are read from an untrusted buffer, so a fault message that
@@ -159,31 +149,6 @@ const encodeManifest = Schema.encodeSync(Schema.fromJsonString(VectorManifest));
  */
 const quoted = Schema.encodeSync(Schema.fromJsonString(Schema.String));
 
-/** Every structural claim the manifest makes, checked (§9.6).
- *
- *  The scan reads `paragraphIds[row]` for each row a book range covers, and
- *  reads the vector buffer at `row * dimensions`. Four things have to hold for
- *  that to be meaningful, and none of them is implied by the manifest decoding:
- *
- *  1. **One id per vector.** `paragraphIds.length === count`, or the positional
- *     correspondence between ids and buffer rows is off by however many are
- *     missing — and every id from that point on names the wrong vector.
- *  2. **Unique ids.** Two rows sharing an id make the fusion score one
- *     paragraph twice and make the batch lookup ambiguous. A duplicate cannot
- *     be repaired at read time, so it is refused at parse time.
- *  3. **Ranges inside the buffer.** A range reaching past `count` sends the
- *     scan off the end, where `Arr.get` yields `None` and the row is silently
- *     dropped — a scan that quietly returns fewer neighbors than it should.
- *  4. **Non-overlapping, complete ranges.** Sorted, they must tile `[0, count)`
- *     exactly. An overlap scores a vector twice under two book codes; a gap
- *     makes a paragraph unreachable through a book-scoped query while it stays
- *     reachable through an unscoped one, which is a scope filter that changes
- *     the answer rather than narrowing it.
- *
- *  Returned as an `Option` of a fault rather than a boolean: the caller maps the
- *  fault onto §9.6's absence, and a boolean would lose which invariant broke at
- *  exactly the place an operator needs to read it.
- */
 /** Whether a book starting off-cursor leaves vectors unclaimed or double-claimed. */
 const relationAt = (offset: number, cursor: number): string => {
   if (offset > cursor) return 'gap';
@@ -209,8 +174,6 @@ const validateManifest = (
   let cursor = 0;
   for (const book of sorted) {
     if (book.offset !== cursor) {
-      // Which way the tiling broke: a book starting past the cursor leaves
-      // vectors no book claims, one starting before it claims vectors twice.
       const relation = relationAt(book.offset, cursor);
       return Option.some(
         malformed(
@@ -254,17 +217,11 @@ export const parseVectorIndex = (
   const vectorsAt = manifestAt + manifestLen;
   const vectorBytes = count * dimensions;
   const expected = vectorsAt + vectorBytes;
-  // **Exact**, not "at least". A buffer longer than the layout describes is a
-  // buffer this build cannot account for — a truncated download that resumed
-  // into the wrong offset, a concatenation, a writer from another format — and
-  // reading the prefix of it would be reading an index nobody wrote.
   if (buffer.byteLength !== expected) {
     return malformed(`length ${buffer.byteLength} bytes, ${expected} expected`);
   }
 
   const fingerprint = decoder.decode(new Uint8Array(buffer, fingerprintAt, fingerprintLen));
-  // Before the manifest, because §10 requires a mismatch to invalidate rather
-  // than mislead, and a foreign index's manifest is not worth parsing.
   if (fingerprint !== MODEL_FINGERPRINT) return { _tag: 'fingerprint', found: fingerprint };
 
   const manifest = decodeManifest(decoder.decode(new Uint8Array(buffer, manifestAt, manifestLen)));
@@ -378,12 +335,6 @@ export const scanVectorIndex = (
     readonly scoreRange?: ScoreRange;
   },
 ): VectorScan => {
-  // A query of any other length cannot be dotted against this index. The old
-  // code read `query[axis] ?? 0` and treated a short query as one padded with
-  // zeros, which produces a full ranking over a truncated query — the worst
-  // shape of wrong, because nothing downstream can tell. An empty result is the
-  // honest answer, and the caller reports it as a vector leg that found
-  // nothing.
   if (query.length !== index.dimensions) return { neighbors: [], scanned: 0 };
   const ranges = rangesFor(index, Option.fromNullishOr(options.allow));
   const selection: Selection = {
@@ -393,14 +344,6 @@ export const scanVectorIndex = (
     scanned: 0,
   };
 
-  // The accelerated path, when a host built one.
-  //
-  // It replaces the arithmetic and nothing else: the selection is the same
-  // `admit` reading the same scores, so ranking is decided in exactly one
-  // place regardless of which tier computed the dot products. Scores are
-  // integers throughout — int8 inputs, int16 products, int32 sums — so the
-  // tiers agree exactly rather than approximately, which is what lets the
-  // tests assert equality instead of a tolerance.
   const accelerate = Option.fromNullishOr(options.scoreRange);
   if (Option.isSome(accelerate)) {
     scanAccelerated(index, query, ranges, accelerate.value, selection);
@@ -470,15 +413,10 @@ const scanAccelerated = (
   const { best, topK } = selection;
   let floor = selection.floor;
   let scanned = selection.scanned;
-  // One buffer for the largest range, reused across ranges.
   const widest = ranges.reduce((most, range) => Math.max(most, range.count), 0);
   const scores = new Int32Array(widest);
   for (const range of ranges) {
     const wrote = scoreRange(query, range.offset, range.count, scores);
-    // An accelerator that scored a different number of rows than it was
-    // asked for has a bug, and ranking its buffer would silently mis-align
-    // scores against ids. Falling through to the pure loop is the safe
-    // answer, and it is the same answer as having no accelerator at all.
     if (wrote !== range.count) break;
     for (let offset = 0; offset < range.count; offset += 1) {
       scanned += 1;
@@ -519,59 +457,10 @@ const scanPureRange = (
   for (let row = range.offset; row < end; row += 1) {
     scanned += 1;
     const base = row * dimensions;
-    // Four accumulators, unrolled by four.
-    //
-    // This loop is the whole cost of a semantic query: 961,253 vectors ×
-    // 256 dimensions is ~246 million multiply-adds, and it ran at ~170 ms in
-    // production. One serial `sum` makes every iteration wait for the
-    // previous add, so the pipeline stalls on the dependency chain rather
-    // than on the arithmetic; four independent accumulators let four
-    // multiply-adds be in flight at once. Measured over 300,000 vectors and
-    // scaled to the deployed index: 133 ms serial, 83 ms unrolled, a 38%
-    // cut for the same values in the same order.
-    //
-    // Four, not more: 8× measured 83 ms and an Int32 copy of the query
-    // 81 ms, both inside the noise of 4×. The gain is from breaking the
-    // dependency chain, and four accumulators already break it.
-    //
-    // **It does not help the deployment, and it was kept anyway.** On the
-    // Railway container `scanMs` stayed at 121–128 ms across this change,
-    // the same as the serial loop, while `bodiesMs` from the same deploy
-    // dropped to 2 ms — so the build is live and this loop simply does not
-    // get faster there. Both hosts are arm64, so it is not an instruction
-    // set difference, and it is not DRAM bandwidth either: streaming one
-    // byte per cache line over the whole 246 MB costs 2.7 ms, so the memory
-    // system delivers the data easily. What costs is touching every element
-    // — reading all 246 MB and only *adding* the values, no multiply, is
-    // 56 ms of the 85 ms. The dot product is therefore ~2/3 per-element
-    // load-and-widen overhead and ~1/3 arithmetic, which is exactly the
-    // shape that unrolling cannot fix beyond the dependency chain it
-    // already broke, and which a slower or shared core has less headroom to
-    // hide.
-    //
-    // Kept because it is a 40% win on the developer machine, costs nothing
-    // where it does not help, and returns bit-identical scores either way.
-    //
-    // The consequence for anyone optimizing further: the floor is *elements
-    // touched*, not instructions issued. The next real win reads fewer of
-    // them — an ANN index that scores a fraction of the 961,253 vectors, or
-    // fewer dimensions per vector — not faster arithmetic over the same
-    // 246 MB. A SIMD path (WASM or native) would attack the same
-    // load-and-widen cost and is the one arithmetic-side option left, but
-    // it is a portability decision this file's header deliberately made
-    // once already.
-    //
-    // The parser guarantees `count * dimensions` int8 values and ranges
-    // inside `count`, so every read below is in bounds; the `?? 0` is
-    // TypeScript satisfying `noUncheckedIndexedAccess`, not a shape check.
     let sum0 = 0;
     let sum1 = 0;
     let sum2 = 0;
     let sum3 = 0;
-    // `dimensions` is 256 for every index this format describes, so the
-    // unrolled loop consumes all of it; the remainder loop below is for a
-    // future dimension count that is not a multiple of four, and costs one
-    // predictable branch per row when it has nothing to do.
     const unrolled = dimensions - (dimensions % 4);
     for (let axis = 0; axis < unrolled; axis += 4) {
       sum0 += (vectors[base + axis] ?? 0) * (query[axis] ?? 0);

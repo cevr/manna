@@ -1,10 +1,3 @@
-// A full-screen card (CRAFT rule 1) sets the take's own words, each as it is
-// heard, the payoff large on its own line; over its cue it is the whole frame
-// in place of the scene, hard cut in and out, and its flood grows from the
-// highlight over the lit scene. A verse's phrase highlights in reading order
-// and says where on the frame it sits. Laid out on estimates (no take), drawn
-// into the stand-in.
-
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import { type CardStyle, cardWords, floodBox, fullCard, verse } from './card.ts';
@@ -59,7 +52,6 @@ describe('cardWords', () => {
       'God?',
     ]);
     expect(words.filter((w) => w.payoff).map((w) => w.text)).toEqual(['just']);
-    // At the voice's onset, not the aligned start that leads it.
     expect(words[0]?.at).toBeCloseTo(0.5 + (v.words[3]?.start ?? 0) + 0.15, 9);
   });
 
@@ -90,7 +82,6 @@ describe("the card's layout", () => {
     const payoff = set.find((x) => x.text === 'just');
     const lead = set.find((x) => x.text === 'How');
     expect((payoff?.w ?? 0) / (lead?.w ?? 1)).toBeCloseTo((4 / 3) * 2.5, 6);
-    // Alone on its line: no other word shares its height on the frame.
     const across = (x: { y: number; h: number }) =>
       set.filter((o) => o.y < x.y + x.h && x.y < o.y + o.h);
     expect(across(payoff ?? { y: 0, h: 0 }).map((x) => x.text)).toEqual(['just']);
@@ -98,7 +89,6 @@ describe("the card's layout", () => {
       expect(x.x).toBeGreaterThanOrEqual(1920 * 0.09 - 1e-9);
       expect(x.x + x.w).toBeLessThanOrEqual(1920 * 0.91 + 1e-9);
     }
-    // Reading order, three lines: each below the one before.
     const tops = [...new Set(set.map((x) => x.y))];
     expect(tops).toEqual(tops.toSorted((a, b) => a - b));
     expect(tops).toHaveLength(3);
@@ -174,13 +164,11 @@ describe('verse', () => {
     const lit = fills.filter((f) => f.style === '#a7d7e8');
     expect(lit).toHaveLength(7);
     expect(all).toEqual(none);
-    // On the frame: the phrase's own box, through the context's transform.
     const plain = verse(context().ctx, v, style, { x: 0, y: 40, highlight: 1 }, hand());
     expect(all.x).toBeCloseTo(100 + 2 * plain.x, 9);
     expect(all.y).toBeCloseTo(50 + 2 * plain.y, 9);
     expect(all.w).toBeCloseTo(2 * plain.w, 9);
     expect(all.h).toBeCloseTo(2 * plain.h, 9);
-    // The phrase runs over two lines; the box is its last line's alone.
     expect(new Set(lit.map((f) => f.rect[1])).size).toBe(2);
     expect(plain.h).toBeCloseTo(40 * 1.25, 9);
     const lastRow = lit.filter((f) => f.rect[1] === lit.at(-1)?.rect[1]);
@@ -211,7 +199,6 @@ describe('verse', () => {
 
   test("joins a line's highlight into one bar when its pad meets across the spaces, and pads it above and below", () => {
     const { ctx, fills } = context();
-    // A space is 20 px at this size: 10 each side meets the next word's.
     const box = verse(
       ctx,
       v,
@@ -222,7 +209,6 @@ describe('verse', () => {
     const lit = fills.filter((f) => f.style === '#a7d7e8');
     expect(lit).toHaveLength(2);
     for (const f of lit) expect(f.rect[3]).toBeCloseTo(40 * 1.25 + 12, 9);
-    // The flood's box is the joined bar of the last line.
     const last = lit.at(-1)?.rect ?? [0, 0, 0, 0];
     expect([box.x, box.y, box.w, box.h]).toEqual([...last]);
   });
@@ -290,7 +276,6 @@ describe('a scene with a card', () => {
     const at = (t: number) => {
       ran.length = 0;
       withDom(() => film.render(recorder().ctx, (p?.start ?? 0) + t), { record: false });
-      // A scene's first frame may draw twice (its breath guessed, then known): once is what shows.
       return [...new Set(ran)];
     };
     expect(at(0.1)).toEqual(['scene']);
@@ -354,7 +339,6 @@ describe('a scene with a card', () => {
     expect(alone).toBeDefined();
     expect(floodAt(mid, [0.1, 3, 1.2]).clip).toEqual(alone);
     expect(floodAt(early, []).clip).not.toEqual(alone);
-    // At the flood's start the clip is the box this frame's draw returned, exactly.
     const { clip, flood } = floodAt((c) => c.start, [2.5]);
     expect(clip).toEqual([100 + 400 * flood.start, 500, 300, 50]);
   });
@@ -419,13 +403,11 @@ describe('a scene with a card', () => {
         r.ops.length = 0;
         film.render(r.ctx, card.start + 0.2);
       });
-      // Canvases told apart by size, not by the order they were made.
       return r.ops.map((op) =>
         op._tag === 'Image' ? { ...op, image: [op.image.width, op.image.height] } : op,
       );
     };
     const fresh = at(bare(), []);
-    // First the paper, whole and opaque, at the identity: then the look's card.
     expect(fresh[0]).toMatchObject({
       _tag: 'Image',
       image: [1920, 1080],
@@ -585,7 +567,6 @@ describe('a scene with a card', () => {
     withDom(() => film.render(recorder(1920, 1080).ctx, (flood.start + flood.end) / 2), {
       record: false,
     });
-    // The card first, then the look's edge keeping it (destination-in).
     expect(ran).toEqual(['card', 'mask:destination-in']);
     const [box, at] = masks[0] ?? [{ x: 0, y: 0, w: 0, h: 0 }, Number.NaN];
     expect(at).toBeGreaterThan(0);

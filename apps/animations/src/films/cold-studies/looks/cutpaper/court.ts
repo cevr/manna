@@ -1,9 +1,3 @@
-// The control's courtroom: Righteousness by Faith's `cold` open as it is
-// drawn today, to the verdict, from that film's kit and court pieces
-// (read-only). Three sheets of paper: the wall, the bench with the judge
-// behind it, and the accused nearest with the evidence stacking up beside
-// them. The camera rests where the film's does (`REST`).
-
 import {
   type Hex,
   at,
@@ -176,7 +170,6 @@ export const courtWith =
       h,
       [
         {
-          // The wall: tall sheets of toned paper, and the floor's edge.
           z: 1.35,
           draw: () => {
             for (const [x, k] of [
@@ -199,7 +192,6 @@ export const courtWith =
           },
         },
         {
-          // The bench, and the judge behind it.
           z: 1,
           draw: () => {
             ground(ctx, 1180, 860, 820);
@@ -229,16 +221,13 @@ export const courtWith =
               outline: props.blockInk,
             });
             judge.over(f, swing, lean, props);
-            // The verdict, stamped on a torn label across the bench.
             benchStamp(ctx, f.hand, VERDICT, popScale);
           },
         },
         {
-          // The accused and the evidence against them.
           z: 0.9,
           lift: 1.3,
           draw: () => {
-            // The sheets fall one after another across `drop`, each eased by its ease.
             const landed = SHEETS.filter((_, i) => f.stagger('drop', i, SHEETS.length) > 0).length;
             if (landed > 0) ground(ctx, 765, 864, 150 + 10 * landed);
             SHEETS.forEach((s, i) => {

@@ -1,31 +1,3 @@
-// The judge, composed of the house's parts (`figure`) in the kept concept's
-// (`cold-34`) proportions and shading: a large egg-shaped head narrowing to
-// the chin, turned three-quarters toward screen left and canted (his
-// features and chin carried left, his ear behind them), curly grey hair in
-// lumps over an uneven hairline, soft lighter and violet lumps in it, his
-// head and hair traced from the concept (`traced.ts`), one ink line round
-// head, hair and ear together, the concept's peach skin, a dark purple robe
-// broad at the shoulders with white bands; Kit A at his size, its marks
-// large on the head. He sits behind the bench, so the rig is the part of him
-// above it (`Stance.Seated`). His circle hands are drawn by the host over
-// the bench (resting on it, taking up the gavel), each from its own artboard
-// (`drawHand`). How each part is cut, lit and drawn is the house's
-// (`drawFigure`). The cold-studies judge (frozen in its `figures.riv`) is
-// another figure (bald, indigo, the cold-studies court's geometry): this one
-// is drawn to RBF's Board. The owner locked him (ask `a92f276635e`,
-// 2026-10-17): `judge.lock.json` holds his print, and only an override
-// citing the owner's decision on him, filed after the lock, frees a change
-// to it (FigureLock, `@manna/film/style`'s `lock.ts`).
-//
-// Units are the Board's pixels: in `cold.evidence` his head is 150 tall with
-// its hair. The artboard's origin is his robe's middle at his head's height,
-// his head carried `HEAD_X` right of it.
-//
-// The host poses him by the view model `Judge`, every frame: the face kit's
-// numbers (`FACE`); `lean`, radians about his robe's foot (behind the
-// bench), negative toward the dock; `tilt`, radians, his head about his neck;
-// `nod`, units, his head down. The rig keeps its `breath` and `boil`.
-
 import {
   Bands,
   Ear,
@@ -96,9 +68,6 @@ const BANDS_FROM = JUDGE.neck + 10;
  * hands are 0.45 of his head across, as the concept draws them.
  */
 export const judge = figure({
-  // The owner locked him (ask `a92f276635e`): his print is the one this lock holds but for its
-  // line, which the file binds to the shot (`FIGURES.shot`); the owner's OK on the close-shot
-  // line (2026-10-20, filed at the point item:judge) frees that print.
   lock: {
     ...JUDGE_LOCK,
     override: {
@@ -109,12 +78,10 @@ export const judge = figure({
       frees: 'aa08efaef4ab8786975f2daaa68e7897a00dc9ea4be4162709356f6cba689c98',
     },
   },
-  // `film match`'s concept: the judge at his bench in cold.34, the kept concept.
   concept: {
     image: { set: 'rbf-v3-concepts-2026-10-15', file: 'images/1-cold-34.png' },
     box: [1110, 95, 1510, 410],
   },
-  // Room round him for his lean and his robe's breadth; his robe's middle at his head's height is the rig's origin.
   art: { width: 460, height: 520, head: [230, 140] },
   stature: Stature.Canon(),
   stance: Stance.Seated({ breath: BREATH }),

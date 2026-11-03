@@ -1,14 +1,3 @@
-// How the man's seated view is cut into parts (`film concept parts`): which
-// part each pixel of his kept view goes to, and what lies under his arms. He
-// sits on his stool facing the viewer, his round hands on his knees. His
-// headcloth's drape hangs behind his shoulders: the shoulder's outline crosses
-// in front of it, and each wide white sleeve runs from where that outline
-// meets the drape's hem down to the hand. Each arm is its sleeve, the soft
-// brown edge of his mantle beside it (no ink line parts the two, so the
-// sleeve takes the edge and the cut runs through the walnut, where a seam
-// shows least) and its round hand (a disc), which lies in front of the
-// mantle's lower end. Pure data.
-
 import type { HiddenEntry, PartCut } from '@manna/film/tools';
 import { CUT_AWAY, shade, sides } from '../../../cutout/prompts.ts';
 import { FAR, box } from '../../../cutout/rules.ts';
@@ -26,7 +15,6 @@ const HIP = 545;
 
 const POSES_1: PartCut = {
   parts: [
-    // his right arm on the viewer's left: the sleeve below the drape's hem, the mantle's edge beside it, the hand on his knee
     {
       name: 'armRight',
       take: [
@@ -51,7 +39,6 @@ const POSES_1: PartCut = {
       ],
       pivot: JOINTS['poses-1'].shoulderRight,
     },
-    // his left arm on the viewer's right
     {
       name: 'armLeft',
       take: [
@@ -76,7 +63,6 @@ const POSES_1: PartCut = {
       ],
       pivot: JOINTS['poses-1'].shoulderLeft,
     },
-    // above his chin, the headcloth's top and its band with it
     { name: 'head', take: [box(-1, -1, FAR, CHIN)] },
     { name: 'robe', take: [box(-1, HIP, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },

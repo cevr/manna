@@ -65,8 +65,6 @@ const mount = <A>(
         return [];
       },
     });
-    // A provider's children are lazy, made when its view is read; a render
-    // effect reads the view and keeps it, as a renderer would.
     createRenderEffect(
       children(() => view),
       Function.constVoid,
@@ -83,7 +81,6 @@ describe('useAtomValue', () => {
       const owned = mount(() => useAtomValue(() => served));
       yield* Effect.addFinalizer(() => Effect.sync(owned.dispose));
 
-      // No settle between the write and the read: read-after-write.
       expect(owned.result()).toBe(0);
       owned.registry.set(served, 1);
       expect(owned.result()).toBe(1);
@@ -239,10 +236,6 @@ describe('useAtomSuspense', () => {
       yield* settle;
       const exit = yield* Effect.exit(Effect.tryPromise(() => resolve(owned.result)));
 
-      // `Cause.squash` unwraps a single-failure cause to its own error value, so
-      // the accessor rejects with the original error identity, not a `Cause`
-      // wrapper. `Effect.tryPromise` re-wraps that rejection once in an
-      // `UnknownError`, whose `cause` carries it through unchanged.
       expect(Exit.isFailure(exit)).toBe(true);
       if (Exit.isFailure(exit)) {
         const squashed = Cause.squash(exit.cause);
@@ -271,12 +264,9 @@ describe('atom thunk changes', () => {
       select(() => second);
       yield* settle;
       expect(owned.result()).toBe(100);
-      // Exactly one listener moves: the old atom is released, the new one holds
-      // a single subscription rather than accumulating one per re-track.
       expect(owned.registry.getNodes().get(first)?.listeners.size).toBe(0);
       expect(owned.registry.getNodes().get(second)?.listeners.size).toBe(1);
 
-      // A write to the abandoned atom no longer reaches the accessor.
       owned.registry.set(first, 2);
       yield* settle;
       expect(owned.result()).toBe(100);
@@ -353,12 +343,9 @@ describe('first synchronous read', () => {
       yield* settle;
       expect(seen).toEqual([0]);
 
-      // Read immediately after the registry write, with no flush in between.
       owned.registry.set(counter, 1);
       expect(owned.result()).toBe(1);
 
-      // The tracking computation still re-runs on the next flush, proving the
-      // notifier half of the bridge kept its dependency edge.
       yield* settle;
       expect(seen).toEqual([0, 1]);
     }));
@@ -379,10 +366,6 @@ describe('the promiseExit setter mode', () => {
       const owned = mount(() => useAtomSet(() => atom, { mode: 'promiseExit' as const }));
       yield* Effect.addFinalizer(() => Effect.sync(owned.dispose));
 
-      // `asAsyncResultAtom` preserves `AsyncResult.Success<R>` and
-      // `AsyncResult.Failure<R>`, so both channels stay named rather than
-      // widening to `unknown`. The annotated binding is the assertion: a
-      // widened channel fails `tsc`, which the package gate runs.
       const written: Promise<Exit.Exit<number, string>> = owned.result(6);
       const exit = yield* Effect.promise(() => written);
       expect(Exit.isSuccess(exit)).toBe(true);

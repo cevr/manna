@@ -1,12 +1,3 @@
-// A figure's hair, cut inside its traced head's outline: one paper and the
-// light on it, with no ink and no rim of its own, so the head's one line goes
-// round both (`silhouette`, `rig/parts.ts`). Traced from the concept, its
-// outline in the head's frame. Curled hair is that mass with its curls laid
-// on it, each a disc fitted to a lobe of the concept's hair (`film concept
-// trace`, a part written as `curls`): its paper, its shade showing as the
-// crescent on its side away from the light, crawling whole about its
-// centre, so a curl stays round as it boils. Pure.
-
 import { Schema } from 'effect';
 import { decoder, ruleCheck } from '../decode.ts';
 import { HexColour, Paper, Tones, colourOfItsOwn, unrimmed } from '../paper.ts';
@@ -37,7 +28,6 @@ const CurledHairPart = Schema.TaggedStruct('CurledHair', {
   crescent: Share,
 }).check(
   unrimmed,
-  // A curl is laid in its hair's paper with this shade over it: that paper is held to GreyShade as any paper is.
   ruleCheck('GreyShade', (h: { readonly paper: Paper; readonly shade: `#${string}` }) =>
     colourOfItsOwn(h.paper.color, h.shade),
   ),

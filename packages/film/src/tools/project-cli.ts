@@ -1,34 +1,3 @@
-// `film project`: a film's project folder (`out/<film>`), scene by scene. Every
-// scene renders on its own into the folder, a scene whose render is current
-// (its stamp's key is its sources' key now, and it carries the mix the film
-// makes now) is skipped, a scene stale by its sound alone is re-muxed (its
-// sound cut again from the master, nothing drawn), and the owner's approvals
-// and comments are kept in the folder's catalogue (`core/catalogue.ts`,
-// `catalogue.ts`), each on the render as it was when given.
-//
-//   film project <film> [--variant v] [--json]
-//       the film's comments, then each act (its comments) and its scenes: each
-//       scene current, stale (by its sources, or stale:sound) or missing;
-//       approved, stale or not; its comments
-//   film project render <film> [--variant v] [--scene id,id] [--scale k] [--no-captions]
-//                              [--no-share] [--workers n] [--encoder e] [--force]
-//       render every scene (or those named) that is not current, each to
-//       scenes/<id>/<variant>.mp4, all through one probe and one pool of pages
-//       (`Renderer.session`); one stale by its sound alone is re-muxed
-//   film project approve <film> (--scene id,id | --act name | --all) [--variant v] [--json]
-//       approve those scenes' renders, each current (a stale or missing one
-//       named is refused, and nothing approved), an act's current scenes, or
-//       every current scene
-//   film project withdraw <film> (--scene id,id | --act name | --all) [--variant v] [--json]
-//       withdraw every approval of those scenes' renders, whatever version
-//   film project comment <film> <text> [--scene id | --act name] [--variant v] [--json]
-//       say something of one scene's render (of its sources while it has
-//       none), an act or the whole film
-//
-// `--json` prints the project as it leaves it (`ProjectRead`, `fresh-film.ts`)
-// as one line, or the refusal it failed with: what the review's project
-// routes read, each in a fresh process.
-
 import {
   Array as Arr,
   Clock,
@@ -149,7 +118,6 @@ const recordOutput = Effect.fn('film.recordOutput')(function* (
   }
   const path = yield* Path.Path;
   const at = yield* Clock.currentTimeMillis;
-  // A range the command narrowed it to is its span, not the address's whole.
   const drawn = { span: Option.orElse(output.span, () => scope.span) };
   yield* (yield* RenderCatalogue).record(
     loaded.paths,
@@ -416,11 +384,7 @@ const renderScenes = <E, R>(renderLayer: Layer.Layer<Renderer, E, R>) =>
         const catalogues = yield* RenderCatalogue;
         const settings = { scale: input.scale, captions: input.captions };
         const scopes = yield* scenesNamed(loaded, placed, input.scene);
-        // Every scene drawn in this run shares one probe and one pool of pages,
-        // opened only once a scene draws (Chromium launches with the first
-        // page): a run where each is current or re-muxed opens no browser.
         const drawn = yield* (yield* Renderer).session;
-        // What each scene needs, decided from the catalogue before anything is drawn or cut.
         const runs = sceneRuns({
           loaded,
           path: yield* Path.Path,
@@ -432,8 +396,6 @@ const renderScenes = <E, R>(renderLayer: Layer.Layer<Renderer, E, R>) =>
           keys,
           scopes,
         });
-        // A scene stale by its sound alone is re-muxed: when the run re-muxes any, the master
-        // is checked and decoded once, for all of them.
         const remux = yield* Effect.when(
           remuxer(loaded),
           Effect.sync(() => runs.some((run) => Option.isSome(run.recut))),
@@ -470,7 +432,6 @@ const renderScenes = <E, R>(renderLayer: Layer.Layer<Renderer, E, R>) =>
               server: Option.none(),
               board: false,
               review: false,
-              // A scene's segments are kept by its key; `--force` draws them again.
               reuse: Reuse.Keyed({ beats: keys.beats, fresh: input.force }),
             }),
           );
@@ -554,8 +515,6 @@ const approveScenes = Command.make(
     const { loaded, placed, tree } = yield* keyed(input.film);
     const catalogues = yield* RenderCatalogue;
     const at = yield* Clock.currentTimeMillis;
-    // This run's identity, on every approval it adds: its undo takes those and no other,
-    // another run's stamped at the very same moment too.
     const op = yield* uniqueId(OpId);
     /**
      * Every current scene of `scenes` approved, in one update: those it
@@ -627,7 +586,6 @@ const approveScenes = Command.make(
       `project.approve film=${input.film} scenes=${approved.join(',')} made=${made.join(',')} op=${op}`,
     );
     const catalogue = yield* catalogues.read(loaded.paths);
-    // The answer says what this approve gave, so its undo withdraws exactly that (`--given <op>`).
     yield* show(
       { ...projectOf(catalogue, tree, input.variant), gave: gaveOf(made, at, op) },
       input.json,
@@ -675,7 +633,6 @@ const withdrawApprovals = Command.make(
     yield* Effect.log(
       `project.withdraw film=${input.film} scenes=${ids.join(',')} took=${took.join(',')}${Option.match(input.given, { onNone: () => '', onSome: (g) => ` given=${g}` })}`,
     );
-    // An undo's answer says what it took: none, when the approvals it names are gone already.
     yield* show(
       { ...projectOf(catalogue, tree, input.variant), took: tookOf(input.given, took) },
       input.json,
@@ -716,8 +673,6 @@ const commentOn = Command.make(
     const { loaded, placed, tree } = yield* keyed(input.film);
     const at = yield* Clock.currentTimeMillis;
     const catalogues = yield* RenderCatalogue;
-    // A scene's comment is on its render as stamped, or on its sources as they are now
-    // while it has none; an act's or the film's on it as it is now.
     const about = Effect.gen(function* () {
       if (Option.isSome(input.scene)) {
         const scene = input.scene.value;

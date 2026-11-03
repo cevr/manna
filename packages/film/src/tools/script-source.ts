@@ -1,24 +1,3 @@
-// A film's script (`script.ts`, or a version folder's) as the lab rewrites
-// it: the `export const script = defineScript([…])` literal, parsed with
-// oxc-parser and never imported (the lab runs for days and never loads a
-// film's module). Each edit is a splice of the one place it changes, read
-// back from the formatted text before it lands:
-//
-// - a mark edit, of one beat's `say` string literal and nothing else: its
-//   words, cues and turns stay as they read, and only its delivery marks
-//   (`core/delivery.ts`) are written as the reader asked (`withDelivery`);
-//   it reads back only when the beat's line parses from the new text with
-//   the same words and exactly the marks asked for (`sayMissed`), so a mark
-//   never lands on another word;
-// - a move, of the beats array's elements: each beat's text, with the
-//   comments and blank lines above it, put in its new place
-//   (`editOrder`); it reads back only when the beats read in exactly the
-//   order asked, each one's text as it was (`orderMissed`);
-// - a hold, of one beat's `lead` or `tail`: its number replaced, the field
-//   added after the beat's last field, or taken away for a default
-//   (`editHold`); it reads back only when the beat holds exactly that
-//   (`holdMissed`).
-
 import { Array as Arr, Option, Predicate, Result } from 'effect';
 import type {
   ArrayExpression,
@@ -214,7 +193,6 @@ export const sayMissed = (
     );
   return Result.flatMap(lineOf(before), (was) =>
     Result.map(lineOf(after), (now) => {
-      // The marks compared where they stand: each written into the words.
       const asked = withDelivery(was.spoken, marks);
       const read = withDelivery(was.spoken, now.delivery);
       return [
@@ -227,9 +205,6 @@ export const sayMissed = (
     }),
   );
 };
-
-// ---------------------------------------------------------------------------
-// Moves
 
 /** What a move writes, as an answer and the history name it. */
 export const moveTarget = (beat: string, before: MovedBefore) =>
@@ -271,7 +246,6 @@ const elementsOf = (source: string, target: string) =>
         lead: source.slice(from, e.start),
         text: source.slice(e.start, e.end),
       });
-      // The next element is led from just after the comma that ends this one.
       const next = Option.match(Arr.get(array.elements, elements.length), {
         onNone: () => array.end - 1,
         onSome: (n) =>
@@ -383,9 +357,6 @@ export const orderMissed = (
     }),
   );
 };
-
-// ---------------------------------------------------------------------------
-// Holds
 
 /** What a hold writes, as an answer and the history name it. */
 export const holdTarget = (beat: string, edge: HoldEdge) => `hold ${beat} ${edge}`;

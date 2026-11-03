@@ -176,10 +176,8 @@ describe('the tuner string pick', () => {
       misses.push(
         `${nameOf(from)} + ${pressName(each)}: want ${told(want(now))}, saw ${told(seen)}`,
       );
-      // Carry on from what the screen shows, so each miss names one press.
       now = Arr.head(seen.selected);
     };
-    // To `target` first: Auto by the switch, a string by its tap; each of these presses is checked too.
     const reach = (target: Option.Option<StringId>) => {
       if (Option.isNone(target)) {
         if (Option.isSome(now)) step(Press.Switch());

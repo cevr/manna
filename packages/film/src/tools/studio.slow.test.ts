@@ -1,8 +1,3 @@
-// The lab's `studio` routes as an ask's take block calls them, over fakes: a
-// beat's attempts listed, each kept or not and in its line or not, and one
-// played back by its name; a beat or a file the film lacks refused. No
-// network, no ffmpeg.
-
 import { AskMaterials } from './ask-materials.ts';
 import { AskStore } from './ask-store.ts';
 import { describe, expect, it } from 'effect-bun-test';
@@ -105,8 +100,6 @@ const setup = (
       });
     }),
   );
-  // The fresh process, over the film as it is stored now: `film read voice`, `film options
-  // list` (its voices) and `keep-voice`, whose mix is counted, and `keeping` stands around.
   const fresh = Layer.unwrap(
     Effect.map(
       Effect.context<FilmRepo | Takes | ContentStore | FileSystem.FileSystem | Path.Path>(),
@@ -145,7 +138,6 @@ const setup = (
     fakeMedia(files),
     formatAsIs,
   );
-  // The lab's handler serves the studio: its notes, source and review services only have to exist.
   const folder = Layer.succeed(
     FilmFolder,
     FilmFolder.of({
@@ -156,8 +148,6 @@ const setup = (
       stamp: () => Effect.sync(() => stamp.now),
     }),
   );
-  // The lab's handler serves the studio: its notes, scenes and renders only have to exist; its
-  // writes and the choices routes' are real.
   const layer = Layer.mergeAll(
     NotesStore.layer,
     ProductionStore.layer,
@@ -171,7 +161,6 @@ const setup = (
     echoPages,
     Choices.layer,
   ).pipe(
-    // An ask's take is read as the studio reads it: the asks need the readings too.
     Layer.provideMerge(StudioReadings.layer),
     Layer.provideMerge(Layer.mergeAll(SourceWriter.layer, RenderCatalogue.layer, noRenders)),
     Layer.provideMerge(Layer.mergeAll(folder, fresh)),
@@ -202,7 +191,6 @@ const call = (request: Request) =>
     const res = yield* Effect.promise(() => studio(request, bound));
     const type = res.headers.get('content-type');
     const raw = yield* Effect.promise(() => res.text());
-    // Audio answers stay text; JSON answers are parsed to decode against their Schema.
     if (!String(type).includes('json')) return { status: res.status, type, body: raw as unknown };
     const body = yield* Schema.decodeEffect(Json)(raw);
     return { status: res.status, type, body };

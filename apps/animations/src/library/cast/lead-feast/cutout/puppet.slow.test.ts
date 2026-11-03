@@ -1,15 +1,3 @@
-// The lead's puppets against his kept views, each cut at its part sheet's
-// frame (`frames.ts`, the kept box padded): each
-// view's declared paper is its kept ground's; at rest every pixel the cut
-// left opaque is the kept pixel byte for byte, and the rim the un-matte
-// solved (`core/unmatte.ts`) is the kept view within ΔE 1 on the mean over
-// the parts' pixels; laid on the page's paper, his rim shows no ring of the
-// sheet's paper (the rim pixels lighter than that paper by L* 2, at most 5 %
-// of the rim), and outside the kept figure no more than 1 % of the 3 px ring
-// is lighter (front and three-quarter: heads-4's figure reading leaves its
-// open bottom edge to the ground, so its ring holds his tunic). Each case
-// decodes his sheets, so they run in the slow suite.
-
 import { figureOf, labOf, rasterOf, restPose } from '@manna/film/core';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -160,7 +148,6 @@ describe("the lead's puppets", () => {
           const { width: w, height: h } = kept;
           const paper = PAPERS[view];
           const figure = figureOf(kept).figure;
-          // the declared paper is the kept box's border ground (the pad's bottom rows hold the shadow)
           const inner = innerOf(kept, view);
           borderPaper(inner, figureOf(inner).figure).forEach((v, c) =>
             expect(Math.abs(v - paper[c]!)).toBeLessThanOrEqual(1),
@@ -172,11 +159,9 @@ describe("the lead's puppets", () => {
           expect(against.opaqueOff).toBe(0);
           expect(against.meanDeltaE).toBeLessThanOrEqual(1);
           const clear = (j: number) => rest.rgba[j * 4 + 3] === 0;
-          // the rim: px a part holds within 2 px of the parts' ground
           const rim = lighterShare(rest, (x, y, i) => !clear(i) && within(w, h, x, y, 2, clear));
           expect(rim).toBeLessThanOrEqual(0.05);
           if (view === 'heads-4') return;
-          // the 3 px ring outside the kept figure
           const ring = lighterShare(
             rest,
             (x, y, i) => !figure[i] && within(w, h, x, y, 3, (j) => figure[j] === 1),

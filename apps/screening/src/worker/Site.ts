@@ -53,7 +53,6 @@ export default class Site extends Cloudflare.Worker<Site>()(
   props,
   Effect.gen(function* () {
     const bucket = yield* Cloudflare.R2.ReadBucket(yield* Shelf);
-    // A bucket that cannot be read is a failure of the request: it answers an error.
     const shelf: ShelfReader = {
       head: (key) =>
         bucket.head(key).pipe(

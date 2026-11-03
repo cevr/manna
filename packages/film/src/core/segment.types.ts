@@ -1,9 +1,3 @@
-// Compile-time checks of the name brand, run by the package typecheck. A name
-// from outside is decoded (`Segment`, and each name schema built on it) before
-// it names a file or keys a record: each line marked below fails the
-// typecheck if a path builder, an address or a record read takes a bare
-// string again.
-
 import type { Address } from './address-schema.ts';
 import { BoardName, PANEL_START, styleFile, tryFile } from './board.ts';
 import type { Library } from './sfx.ts';

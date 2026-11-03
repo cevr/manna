@@ -49,10 +49,8 @@ export function FeelProvider({
   const [tell] = useState(() =>
     feelOver({ haptics, sound: voice.port, on: () => registry.get(on), now: clock }),
   );
-  // The switch stays mounted, so each cue reads it from the registry's cache.
   useEffect(() => registry.mount(on), [registry, on]);
   useEffect(() => {
-    // After the first screen's frame: the pass runs between the next frames' work.
     const frame = requestAnimationFrame(() => {
       Effect.runFork(voice.load);
     });

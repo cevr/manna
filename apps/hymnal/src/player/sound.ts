@@ -467,8 +467,6 @@ export const scoreClock = (
         }),
       );
       if (Option.isSome(snapshot.clock)) return snapshot.clock.value;
-      // A failed former read is stale too. Neither its status nor its error
-      // may change the replacement's selection, duration or silent tail.
       const reply = yield* Effect.exit(device.status);
       const accepted = yield* lock.withPermit(
         Effect.gen(function* () {
@@ -478,8 +476,6 @@ export const scoreClock = (
         }),
       );
       return yield* Option.match(accepted, {
-        // Retries stop once a device round trip has no intervening command;
-        // continuous mutations can defer this observer until they stop.
         onNone: () => readStatus,
         onSome: Effect.succeed,
       });
@@ -511,7 +507,6 @@ export const scoreClock = (
             })),
           );
         const told = Option.match(Option.fromNullishOr(retained), {
-          // A play that named no options: the device's own defaults, at the tempo.
           onNone: (): PlayOptions => ({ continuous: false, ready: false, rate: held.rate }),
           onSome: (it) => ({ ...it, rate: held.rate }),
         });
@@ -590,7 +585,6 @@ export const scoreClock = (
         held.uri = Option.some(uri);
         held.options = Option.fromNullishOr(options);
         held.intent = options?.intent ?? 'play';
-        // Each play names its hymn's tempo; a play that names none runs at 1000 ms a second.
         held.rate = rateOf(options?.rate);
         yield* tellPace;
         held.selection = Option.map(Option.fromNullishOr(options?.recording), (identity) => ({
@@ -677,7 +671,6 @@ export const scoreClock = (
           recordedAt,
         );
         if (Option.isSome(at)) return Option.some(yield* sounded(uri, at.value, true));
-        // The clock stays (paused, or past the recording's end) and runs on at the tempo.
         return Option.none<Step>();
       });
 
@@ -717,7 +710,6 @@ export const scoreClock = (
         if (Option.isNone(next)) return Option.none();
         const skip = next.value;
         if (at < skip.from) return Option.some((skip.from - at) / held.rate);
-        // A status read begun before the seek tells the place it left.
         revision += 1;
         const after = yield* device.seek(skip.to);
         return yield* skipFrom({ ...after, positionMs: Math.max(after.positionMs, skip.to) });
@@ -778,8 +770,6 @@ export const scoreClock = (
       });
     }).pipe(Effect.forever, Effect.forkScoped);
 
-    // The ticker: tells each beat of a count-in at its deadline, read from the count's end, so a
-    // late wake reads the beat that stands then; each change wakes it to look again.
     yield* Effect.gen(function* () {
       const woken = ticked;
       const now = yield* Clock.currentTimeMillis;
@@ -809,7 +799,6 @@ export const scoreClock = (
           scoreOf(score.hymn, score.timeline, stanzas, keptFor),
         );
         if (Option.isSome(was)) {
-          // A count-in goes on, before the new choice's first sung line.
           if (Option.isSome(countingAt(now))) {
             held.clock = Option.map(held.clock, (clock) => ({ ...clock, at: first() }));
             return;
@@ -848,9 +837,6 @@ export const scoreClock = (
           }),
         ),
       status: readStatus,
-      // A command: a status read begun before it cannot answer with the old rate's place. The
-      // device holding a recording plays on at the new rate from where it stands; the silent
-      // clock, if it runs, starts again from its place.
       setRate: (rate) =>
         changing(
           Effect.gen(function* () {
@@ -898,7 +884,6 @@ export const scoreClock = (
         ),
       connection: device.connection,
       announce: device.announce,
-      // The lock screen tells the recording's place; the player asks for sung time.
       remote: Stream.map(device.remote, (press) =>
         Remote.$match(press, {
           Play: () => press,

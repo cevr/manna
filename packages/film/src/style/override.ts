@@ -1,24 +1,3 @@
-// The way out of a rule that has one (`rules.ts`, its way `override`): an
-// override names the rule it frees and the place it frees it at, says why in
-// a line, and cites the owner's own word that allows it: his words,
-// verbatim (`quote`, owner, 2026-10-17), or his pick on a lab ask (`answer`:
-// the ask, the question and the value of the option he chose), never both.
-// A rule whose way is not `override` has none, so `overrideOf` takes none.
-// Each rule adds the fields it needs: FigureLock the print it frees
-// (`lock.ts`). Whatever holds the rule skips only what an override names, at
-// the place it names, and lists it as overridden. The word is his only when
-// he gave it on that figure: a decision of his on its production's ledger,
-// filed at the point `item:<item>` (the figure's place in its film's file,
-// where his lock on it is filed too), and after the lock when the override
-// frees one; its quote is the decision's words, verbatim, or its answer the
-// pick the decision filed with the ask it answered. Else the override itself
-// is broken, whatever rule it frees (`unbacked`; a film's build and its test
-// read the ledger, `build.ts` `unsaid` and `unlocked`). A question an agent
-// asked him is never his word, a note decides nothing, and a decision on
-// another figure, or on none, allows nothing here. Every override a figure
-// carries is found by the fields every override has, wherever it is laid
-// (`overridesIn`), so none is left out. Pure.
-
 import { DateTime, Option, Predicate, Schema } from 'effect';
 import type { Decided } from '../core/production.ts';
 import { holding } from './decode.ts';

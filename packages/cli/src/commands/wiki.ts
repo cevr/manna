@@ -229,8 +229,6 @@ const wikiTopic = Command.make('topic', { slug, json }, (args) =>
       return;
     }
     yield* Console.log(`${page.title}  [${page.status}]`);
-    // A host that wired no §6 sources says so, rather than printing six empty
-    // sections a reader would take for "the corpora had nothing to say".
     yield* Option.match(page.sectionsUnavailable, {
       onNone: () => Effect.void,
       onSome: (reason) => Console.log(`sections unavailable: ${reason}`),
@@ -245,10 +243,6 @@ const wikiTopic = Command.make('topic', { slug, json }, (args) =>
     }
   }).pipe(Effect.provide(BunServices.layer)),
 );
-
-// ---------------------------------------------------------------------------
-// manna wiki matches
-// ---------------------------------------------------------------------------
 
 /** The `--json` payload for one matched run: `PhraseSpansJson`, the same codec
  *  a renderer would decode. Nothing here names `start`, `end`, `slug`, or
@@ -298,10 +292,6 @@ const wikiMatches = Command.make('matches', { text, json }, (args) =>
     }
   }).pipe(Effect.provide(BunServices.layer)),
 );
-
-// ---------------------------------------------------------------------------
-// manna wiki lookup (§7)
-// ---------------------------------------------------------------------------
 
 /** The three corpora select-to-lookup reads, resolved as one `LookupService`.
  *
@@ -422,14 +412,9 @@ const wikiLookup = Command.make(
       }
 
       yield* Console.log(result.text);
-      // §7's peek-card case, reported rather than rendered differently: the CLI
-      // has no card, and the flag is still a fact about this result that a
-      // caller comparing seams needs to see.
       if (result.lonePeek) yield* Console.log('(lone topic hit — peek card)');
       yield* Console.log(``);
 
-      // The five groups, in §7's order and always all five — the same shape the
-      // panel draws, so an empty group prints its heading rather than vanishing.
       yield* Console.log(`## topics  ${String(result.topics.length)}`);
       for (const match of result.topics) {
         yield* Console.log(`  ${match.slug}  ${match.display}  [${match.kind}]`);

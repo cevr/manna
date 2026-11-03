@@ -1,39 +1,3 @@
-// What a render drew, as a key: each scene's sources as they stand on disk,
-// so a render is known stale once its scene changes, and a scene that did
-// not change is not rendered again.
-//
-// A scene's key hashes the files its frames are drawn from and the data its
-// frames read:
-//
-// - its own module (`SceneSources` locates the drawing by identity) and
-//   every module it imports, followed through relative and workspace
-//   imports (a package from the registry is not followed);
-// - the film's frame: `film.ts`, the scene registry and all they import
-//   (the lights, the script, the kit, the engine), the player
-//   (`@manna/film/player`) and the export page's engine (`@manna/film/render`),
-//   with the registry's imports of the
-//   other scenes' modules cut, so an edit to one scene leaves the others'
-//   keys alone;
-// - its beat as laid out: its declaration (`say`, `enter`, timeline,
-//   knobs), its take's timing, its start and length;
-// - for a scene that enters on a transition, the previous scene's own
-//   modules, which that transition draws.
-//
-// Each beat has a second key, kept beside it (`SceneKeys.beats`), for a
-// kept segment of frames that read only their beats' times: the same but
-// its start, so it holds wherever the beat sits, and with the previous beat
-// as laid out (its declaration, timing and length) where a transition into
-// the beat draws it. It hashes the film's files whole, the script with its
-// beats' lengths included: any module may derive a value a frame draws from
-// a `lead`, `tail` or `min`, so only a re-voiced take moves later beats
-// without re-keying them.
-//
-// Files are hashed by content and named relative to the films folder, so two
-// checkouts of the same sources agree when the films folder sits at the same
-// depth in each (a worktree or a rift of the repo does): a workspace module
-// such as `@manna/film/player` is named by its path from there. Anything else a frame reads at run
-// time (a font or image fetched by URL) is not in the key.
-
 import { createRequire } from 'node:module';
 import {
   Array as Arr,
@@ -133,8 +97,6 @@ const AddressKeyInput = Schema.fromJsonString(
     address: Schema.String,
     short: Schema.OptionFromOptionalKey(Short),
     scenes: Schema.Array(Schema.String),
-    // A wedge's levels (`--level`), by look: absent for the levels the film plays,
-    // so a render of the sources as written keeps the key it always had.
     levels: Schema.OptionFromOptionalKey(
       Schema.Array(Schema.Tuple([Schema.String, Schema.String])),
     ),

@@ -212,7 +212,6 @@ const paired = (proof: Proof, read: Read): Proved =>
           },
           seen: pair,
         };
-      // A place moved on with no act: the device sounded, though it may not play now.
       const moved = read.status.positionMs - last.status.positionMs > slack;
       return {
         proof: {
@@ -240,11 +239,8 @@ const ended = (proof: Proof): Proof => ({
  * sounded, that is the reader's place, as across an act that moved nothing.
  */
 const placed = (after: Proved, read: Read): Proved => {
-  // A failed device still says where it stood, unless it let the recording go (0).
   const letGo =
     read.status.state === 'idle' || (read.status.state === 'failed' && read.status.positionMs <= 0);
-  // A load that sounded and keeps no place has ended: a read at the recording's end then shows
-  // the end, and a play after it is from 0:00 (P8).
   const atEnd =
     Option.isNone(after.proof.place) &&
     Option.exists(
@@ -313,8 +309,6 @@ const near = (read: Read, place: number, since: number) =>
 const proved = (proof: Proof, read: Read, landable: boolean): Proved => {
   if (read.asked < proof.known) return { proof, seen: 'stale' };
   if (read.status.state === 'ended') {
-    // A second `ended` read as soon after the act shows the device before the landing too. With
-    // no ask of the act's place left, nothing lands it after the end: the end wins (P8).
     const short = Option.filter(
       Option.orElse(proof.pending, () => proof.short),
       (it) => landable && beforeLanding(it, read),
@@ -325,11 +319,6 @@ const proved = (proof: Proof, read: Read, landable: boolean): Proved => {
     };
   }
   if (read.asked < proof.endedAt) return { proof, seen: 'stale' };
-  // A read asked before the landing's answer may have seen the device before or after it. Ahead
-  // of the pair's start by what sound since that start explains, it saw the device later, and
-  // the next pair starts from it: the sound between is behind the page. Behind by what sound
-  // before that start explains, the start stands. At any other place the page cannot tell which
-  // of the two came last, so neither opens a pair.
   if (read.asked < proof.landed)
     return {
       proof: {
@@ -348,16 +337,12 @@ const proved = (proof: Proof, read: Read, landable: boolean): Proved => {
     };
   return Option.match(proof.pending, {
     onNone: () => placed(paired(proof, read), read),
-    // Two reads after the act at one place prove silence while it is pending: a landing would
-    // have moved the place. Sound is never proved across it: a forward landing looks like sound.
     onSome: (pending) => {
       const quiet = Option.exists(pending.after, (after) => pairOf(after, read) === 'silence');
       const ahead = Option.exists(
         pending.after,
         (after) => read.status.positionMs - after.status.positionMs > slack,
       );
-      // A move on that no landing explains is sound: a landing puts the device at the act's place,
-      // so only a move from short of it to it or past it may be the landing.
       const heard = Option.filter(
         pending.after,
         (after) =>

@@ -1,10 +1,3 @@
-// The people at the feast's long table, as the title ends on them and the
-// cold open trucks down them: a man guest picture-left, the lead, a woman
-// guest, and the mother with her baby at the cup behind the woman at
-// picture-right, as `cold.letter.4` seats them. Both scenes draw them from
-// here, on the courtyard's guests plane in the kept panel's px, so the cut
-// from the title to the cold open keeps one table.
-
 import { ground, type PuppetLook, type PuppetPose, type PuppetSpec } from '@manna/film/canvas';
 import { act, blink, idle, lag } from '@manna/film/core';
 import { Array as Arr, Option } from 'effect';

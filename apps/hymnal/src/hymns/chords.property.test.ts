@@ -353,10 +353,6 @@ describe('the chords over every compiled hymn', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
-// Simple chords (`simple.ts`) over the same hymns
-// ----------------------------------------------------------------------------
-
 /** Each hymn's Simple chords beside its Advanced ones, from the reads above. */
 const simpleCases = cases.map((c) => {
   const chords = simple(c.chords);

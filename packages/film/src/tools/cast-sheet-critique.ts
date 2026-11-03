@@ -1,15 +1,3 @@
-// A cast sheet try's critique (`film concept critique`): each view the
-// record holds to a kept concept, cut from the try at 1:1 beside the
-// concept's crop, shown to a fresh model with the measure's flags on that
-// view (`Critic.critiqueSheet`). The owner's rule (2026-10-18): a figure is
-// critiqued before it is put to him, and every finding is fixed or answered.
-// A view no concept faces is said, never critiqued against another's. Each
-// view goes with what the layout asks of it (its numbered clause, after the
-// words its group shares), so the critic holds its angle and gesture to the
-// layout, not the concept. The crops and each view's findings land in
-// `out/<film>/cast/<member>/critique/<kind>-<n>/`, its answers kept by their
-// hash in `critique/` beside it.
-
 import { Array as Arr, Effect, FileSystem, Option, Path, Result, Schema } from 'effect';
 import { castKindPlan, CastSheetJson } from '../core/cast-record.ts';
 import { measureSheet, type SheetKind, type SheetMeasure } from '../core/cast-sheet.ts';
@@ -110,7 +98,6 @@ export const critiqueCastTry = Effect.fn('Cast.critique')(function* (
     Result.mapError(measureSheet(sheet, options), (e) => unknown(e.message)),
   );
   const layout = Option.getOrElse(plan.layout, () => turnaroundLayout(record.who));
-  // Each view is cut on white, as the measure reads the sheet: one painted with no paper is transparent round the figures.
   const opaque = opaqueOf(sheet);
   const dir = path.join(place.out, 'critique', `${kind}-${n}`);
   yield* fs.makeDirectory(dir, { recursive: true });

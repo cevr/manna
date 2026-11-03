@@ -1,9 +1,3 @@
-// The journal: a first note makes the file with its rule, each note is
-// appended as one dated, placed line (words run together, a leading `#`
-// kept as text), an empty note is refused, and a read answers the newest
-// entries of a scene or all, oldest first, within its count and its
-// character cap, saying how many it left out.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Fiber, FileSystem, Layer, Option, Path, Ref } from 'effect';
@@ -125,7 +119,6 @@ describe('the journal', () => {
         const first = yield* Effect.forkChild(
           withFileSystem(films, raced, note(film, 'first', Option.none())),
         );
-        // The second note lands whole while the first has made the journal and gone no further.
         yield* Deferred.await(made);
         yield* withFileSystem(films, raced, note(film, 'second', Option.none()));
         yield* Deferred.succeed(release, true);
@@ -134,7 +127,6 @@ describe('the journal', () => {
         expect(entriesOf(text).map((e) => e.text)).toEqual(['first', 'second']);
         expect(text.startsWith(`# Journal: f\n\n${JOURNAL_RULE}\n`)).toBe(true);
         expect(text.split(JOURNAL_RULE)).toHaveLength(2);
-        // No draft is left beside it.
         expect((yield* fs.readDirectory(path.dirname(file))).sort()).toEqual([
           'journal.md',
           'scenes',

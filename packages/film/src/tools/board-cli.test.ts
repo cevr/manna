@@ -1,7 +1,3 @@
-// `film board import` over memory: images made elsewhere come in as tries of
-// a panel, and a `--keep` that names none of them is refused before the board
-// is touched (no panel, no try, no image left behind).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Cause, ConfigProvider, Effect, Exit, Layer, Option, Path, Schema } from 'effect';

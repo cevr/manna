@@ -1,9 +1,3 @@
-// Copy link: the link to what the viewer sees, on every page and in
-// every context menu, so a pasted link opens it (Addressable). With nothing
-// selected it is the page's own URL: its place and its still open. From a
-// context menu opened on a thing, it is that thing's citation (`citeOf`).
-// The link goes on the page's clipboard (`Clipboard`), whole.
-
 import { Effect, Option } from 'effect';
 import type { Context as Services } from 'effect';
 import { Clipboard } from '../browser/clipboard.ts';

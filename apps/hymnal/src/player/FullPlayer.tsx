@@ -95,8 +95,6 @@ const useRoute = () => {
 function Sheet({ player }: { readonly player: HymnPlayer }) {
   const current = useAtomValue(player.state);
   const route = useRoute();
-  // Once the page's Play takes ownership, it remains the sheet's hymn on
-  // Pause too. Before that press the sheet keeps the hymn the bar opened.
   const owner = Option.orElse(
     Option.filter(route.page, (page) =>
       Option.exists(trackOf(current), (held) => held.number === page.number),
@@ -250,7 +248,6 @@ const ChordSection = memo(function ChordSection({ track }: { readonly track: Tra
         <Text style={styles.switchLabel} dynamicTypeRamp="body" aria-hidden>
           Chords
         </Text>
-        {/* The bar's hold, as a switch: no long press needed. React Native's Switch reads `accessibilityLabel` on every platform. */}
         <Switch
           accessibilityLabel="Chords"
           value={thumb.state.chords}

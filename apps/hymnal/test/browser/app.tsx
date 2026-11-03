@@ -79,7 +79,6 @@ export function App({ path: initial }: { readonly path: string }) {
       removeEventListener('popstate', popped);
     };
   }, []);
-  // Strict, as One's root renders the app.
   return (
     <StrictMode>
       <RegistryProvider>

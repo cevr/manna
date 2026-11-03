@@ -1,8 +1,3 @@
-// The lab's `/`: no page of its own. It sends the owner on to the newest ask
-// that still asks (302), and with none says so on one line. A store that
-// cannot be read answers 500 with that failure: a failed read is no proof that
-// nothing waits.
-
 import { Array as Arr, Effect, Option } from 'effect';
 import { HttpServerResponse } from 'effect/http';
 import { pageHref } from '../core/api.ts';

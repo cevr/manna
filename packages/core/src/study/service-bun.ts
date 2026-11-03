@@ -40,12 +40,6 @@ export const layerBunStudy = (input: {
       ),
     ),
     Layer.provide(EGWCommentaryService.Live.pipe(Layer.provide(writings))),
-    // A corpus that will not open is a fault the operator needs surfaced, not a
-    // degradation to smooth over: unlike the wiki — whose §3.5 posture makes an
-    // absent artifact a *typed value* on every page — the study pane has no
-    // catalog fallback. A bundle with no `bible.db` is not a degraded bundle,
-    // it is no bundle at all, and saying so at the driver is more honest than
-    // returning five empty lists that read as "this verse has nothing".
     Layer.orDie,
   );
 };

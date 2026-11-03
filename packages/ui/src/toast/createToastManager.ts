@@ -1,10 +1,3 @@
-// Upstream: packages/react/src/toast/createToastManager.ts
-//
-// A toast manager usable outside the component tree: `add` and `close`
-// emit events, and a `Toast.Provider` given the manager (its `toastManager`
-// prop) applies them to its toasts. Events emitted while no provider
-// listens are dropped. Upstream's `update` and `promise` are left out: an
-// `add` with an existing id updates that toast in place.
 import type { ToastManagerAddOptions, ToastObject } from './types.ts';
 import { generateToastId } from './utils.ts';
 

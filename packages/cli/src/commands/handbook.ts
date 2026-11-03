@@ -31,10 +31,6 @@ import { Console, DateTime, Effect, FileSystem, Option, Schema } from 'effect';
 
 import { CliProcess } from '../services/process.js';
 
-// ============================================================================
-// Manifest shape (parsed from handbook.json)
-// ============================================================================
-
 const ManifestSection = Schema.Struct({
   file: Schema.String,
   part: Schema.String,
@@ -54,10 +50,6 @@ type HandbookManifest = typeof HandbookManifest.Type;
 
 const decodeHandbookManifest = Schema.decodeUnknownEffect(Schema.fromJsonString(HandbookManifest));
 
-// ============================================================================
-// Parsing helpers (pure)
-// ============================================================================
-
 /**
  * A parsed section: its title (from the first "## " line), the body verbatim
  * from that heading onward, and the symbols it defines (from the
@@ -65,8 +57,8 @@ const decodeHandbookManifest = Schema.decodeUnknownEffect(Schema.fromJsonString(
  */
 interface ParsedSection {
   readonly title: string;
-  readonly body: string; // begins at "## Title"
-  readonly definedSymbols: ReadonlyArray<string>; // raw bullet text, "- " stripped
+  readonly body: string;
+  readonly definedSymbols: ReadonlyArray<string>;
 }
 
 /**
@@ -82,7 +74,6 @@ function parseSection(raw: string): Option.Option<ParsedSection> {
   }
 
   const headingLine = lines[headingIdx] ?? '';
-  // Drop an existing numeric prefix ("## 3. Foo" → "Foo") so we can renumber cleanly.
   const title = headingLine
     .replace(/^##\s+/, '')
     .replace(/^\d+\.\s+/, '')
@@ -107,16 +98,13 @@ function extractDefinedSymbols(bodyLines: ReadonlyArray<string>): ReadonlyArray<
     const line = bodyLines[i] ?? '';
     const trimmed = line.trim();
     if (trimmed.length === 0) {
-      // A blank line ends the block only once we've started collecting bullets.
       if (out.length > 0) break;
       continue;
     }
-    // A new bold label ("**Symbols carried:**", "**For discussion:**", …) ends it.
     if (/^\*\*/.test(trimmed) && !/^- /.test(trimmed)) break;
     if (/^- /.test(trimmed)) {
       out.push(trimmed.replace(/^- /, '').trim());
     } else if (out.length > 0) {
-      // A continuation line of the previous bullet (wrapped) — append.
       out[out.length - 1] = `${out[out.length - 1] ?? ''} ${trimmed}`;
     }
   }
@@ -138,7 +126,6 @@ function partHeading(part: string): string {
 
 /** A leading article ("the", "a", "an") ignored for alphabetizing the appendix. */
 function appendixSortKey(symbolBullet: string): string {
-  // Bullet form: "**symbol** = meaning (receipts)." — sort on the bold symbol name.
   const m = symbolBullet.match(/\*\*([^*]+)\*\*/);
   const name = (m?.[1] ?? symbolBullet).toLowerCase().trim();
   return name.replace(/^(the|a|an)\s+/, '');
@@ -161,7 +148,6 @@ function assemble(
   const topic = manifest.topic ?? manifest.title;
   const createdAt = manifest.createdAt ?? defaultCreatedAt;
 
-  // Group sections into parts, preserving first-appearance order of parts.
   const partOrder: string[] = [];
   const byPart = new Map<string, Array<{ n: number; title: string; body: string }>>();
   sections.forEach((s, idx) => {
@@ -177,7 +163,6 @@ function assemble(
     });
   });
 
-  // --- Table of Contents ---
   const tocLines: string[] = ['## Table of Contents', ''];
   for (const part of partOrder) {
     tocLines.push(`**${partHeading(part)}**`, '');
@@ -187,7 +172,6 @@ function assemble(
     tocLines.push('');
   }
 
-  // --- Body: Part dividers + section bodies ---
   const bodyLines: string[] = [];
   for (const part of partOrder) {
     bodyLines.push(`# ${partHeading(part)}`, '');
@@ -196,11 +180,9 @@ function assemble(
     }
   }
 
-  // --- Appendix — Symbol Dictionary ---
   const appendixEntries: Array<{ key: string; line: string }> = [];
   for (const s of sections) {
     for (const sym of s.parsed.definedSymbols) {
-      // Tag each entry with its owning section title.
       let punctuation = '.';
       if (/\.\s*$/.test(sym)) punctuation = '';
       const line = `- ${sym}${punctuation} — defined in "${s.parsed.title}".`;
@@ -240,10 +222,6 @@ function assemble(
     '',
   ].join('\n');
 }
-
-// ============================================================================
-// save — the one-call assembler
-// ============================================================================
 
 const saveDir = Argument.Directory('dir', { mustExist: true }).pipe(
   Argument.withDescription('Directory containing handbook.json and the per-section .md files'),
@@ -302,7 +280,6 @@ const handbookSave = Command.make(
         return yield* cliProcess.exitFailure;
       }
 
-      // Read + parse each section in manifest order.
       const parsed: Array<{ parsed: ParsedSection; part: string }> = [];
       for (const s of manifest.sections) {
         let path = `${args.dir}/${s.file}`;
@@ -324,7 +301,6 @@ const handbookSave = Command.make(
       const now = yield* DateTime.now;
       const document = assemble(manifest, parsed, DateTime.formatIso(now));
 
-      // Count symbols for the summary line.
       const symbolCount = parsed.reduce((acc, p) => acc + p.parsed.definedSymbols.length, 0);
 
       if (args.dryRun) {
@@ -348,10 +324,6 @@ const handbookSave = Command.make(
       yield* Console.log(`  → ${outPath}`);
     }).pipe(Effect.provide(BunServices.layer)),
 );
-
-// ============================================================================
-// Root handbook command
-// ============================================================================
 
 export const handbook = Command.make('handbook', {}, () =>
   Effect.gen(function* () {

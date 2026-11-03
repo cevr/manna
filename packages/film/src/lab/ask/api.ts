@@ -1,12 +1,3 @@
-// The lab's routes as the ask page calls them, through the page's one client
-// of the lab's API (`LabClient`, the groups of `core/api.ts`): the asks, the
-// material their sections show (a film's script and Board, a series draft,
-// a take, a video of the review's index and its length, a document's text)
-// decoded by their Schemas. A doc's text is the file itself, fetched by its
-// URL (the route's path is the ref, which the derived client does not
-// build). A refusal is the server's own failure; a request that never
-// arrived says so (`LabFailure`, as every lab call fails).
-
 import { Context, Effect, Layer, Match } from 'effect';
 import { HttpClient, HttpClientResponse } from 'effect/http';
 import {

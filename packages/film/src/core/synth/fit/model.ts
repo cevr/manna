@@ -1,18 +1,3 @@
-// An earshot fit, as its model JSON holds it (earshot 0.2.0, `auto.save`):
-// only the fields the translation reads, decoded at the boundary, since the
-// model is written by downloaded code. Three kinds:
-//
-// - modal: strikes of damped sines (each mode `[hz, tau, amplitude, phase]`,
-//   a·exp(−t/tau)·cos(2πf·t + phase) from its strike) over band noise, each
-//   band a `[secs, dB]` power envelope;
-// - sines: partial tracks (frequency and level points), transients (damped
-//   sines from their time) and third-octave residual bands;
-// - spectral_noise: a bed, 48 noise bands over keyframes on a warped axis, and
-//   tonal ridges.
-//
-// Each carries its post EQ: 28 gains at the third octaves 1000·2^(k/3), k from
-// −15 to 12.
-
 import { Schema } from 'effect';
 
 const Finite = Schema.Finite;

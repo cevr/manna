@@ -81,20 +81,12 @@ const decodeOAuthToAccessToken = (
     });
   });
 
-// ============================================================================
-// Service Interface
-// ============================================================================
-
 /**
  * EGW Auth service interface.
  */
 interface EGWAuthService {
   readonly getToken: Effect.Effect<AccessToken>;
 }
-
-// ============================================================================
-// Service Definition
-// ============================================================================
 
 /**
  * EGW Authentication Service
@@ -116,11 +108,6 @@ export class EGWAuth extends Context.Service<EGWAuth, EGWAuthService>()(
   > = Layer.effect(
     EGWAuth,
     Effect.gen(function* () {
-      // Defaults pull from baked-in build constants first (renderer bundles
-      // get string-literal substitution via Vite/esbuild `define`), then fall
-      // back to `envVar()` (a process-safe wrapper) so node-side hosts that
-      // load `.env` at runtime (CLI, sync workers, tests) keep working. Bare
-      // `process.env` reads would throw ReferenceError in the renderer.
       const authBaseUrl = yield* Config.String('EGW_AUTH_BASE_URL').pipe(
         Config.withDefault(
           bakedAuthBaseUrl().pipe(
@@ -202,7 +189,6 @@ export class EGWAuth extends Context.Service<EGWAuth, EGWAuthService>()(
                 yield* Effect.log(
                   `<- res ${response.status} ${response.request.method} ${response.request.url}`,
                 );
-                // Log response body for non-2xx status codes
                 if (response.status < 200 || response.status >= 300) {
                   const body = yield* response.text.pipe(Effect.result);
                   if (body._tag === 'Success') {
@@ -223,7 +209,6 @@ export class EGWAuth extends Context.Service<EGWAuth, EGWAuthService>()(
       );
 
       const fetchToken = Effect.fn('EGWAuth.fetchToken')(function* () {
-        // When using Basic Auth, don't include client_id and client_secret in body
         const token = yield* httpClient
           .post('/connect/token', {
             body: HttpBody.urlParams(
@@ -287,16 +272,13 @@ export class EGWAuth extends Context.Service<EGWAuth, EGWAuthService>()(
         token: AccessToken,
       ) {
         const now = yield* Clock.currentTimeMillis;
-        // Refresh if expired or expiring within 5 minutes
         const fiveMinutes = Duration.minutes(5);
         if (!token.isExpired(now - Duration.toMillis(fiveMinutes))) {
           return token;
         }
-        // Token is expired - try to refresh, or fetch new if no refresh token
         if (token.refreshToken) {
           return yield* refreshToken(token);
         }
-        // No refresh token (e.g., client_credentials grant) - fetch new token
         yield* Effect.logDebug('Token expired, fetching new token (no refresh token available)');
         return yield* fetchToken();
       });
@@ -316,7 +298,6 @@ export class EGWAuth extends Context.Service<EGWAuth, EGWAuthService>()(
         Effect.withSpan('EGWAuth.getToken'),
       );
 
-      // Periodically refresh token
       yield* getToken.pipe(
         Effect.interruptible,
         Effect.repeat({ schedule: Schedule.cron('0 0 * * *') }),
@@ -349,11 +330,6 @@ export class EGWAuth extends Context.Service<EGWAuth, EGWAuthService>()(
     | EGWAuthError,
     FileSystem.FileSystem | Path.Path | HttpClient.HttpClient
   > => {
-    // Guard process access: this method is safe to *call* from any context,
-    // but the previous eager `static Default = EGWAuth.layerLiveFs()` ran
-    // this at module load and crashed renderers (no `process` global). The
-    // static field was removed; this guard belts-and-suspenders any future
-    // caller that imports from a browser context.
     const path = Option.fromNullishOr(tokenFile).pipe(
       Option.orElse(() => envVar('EGW_TOKEN_FILE')),
       Option.getOrElse(() => 'data/tokens.json'),

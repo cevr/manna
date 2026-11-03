@@ -218,7 +218,6 @@ const route =
   (n: number, sheet = false) =>
   (reader: ChordReader) => {
     params['number'] = String(n);
-    // The sheet's route names its hymn, as the bar opens it.
     if (sheet) params['hymn'] = String(n);
     const hymn = Option.getOrThrow(hymnAt(String(n)));
     return (
@@ -297,7 +296,6 @@ const mount = (screen: (reader: ChordReader) => ReactNode, device: Map<string, s
   };
   const player = playerOn(played.layer, Duration.millis(1), settings.heardMove);
   const registry = AtomRegistry.make();
-  // The player follows a key change while it plays, as `LivePlayer` keeps it mounted.
   const unmountKeys = registry.mount(player.keys);
   const clock = Effect.runSync(Effect.scoped(TestClock.make()));
   const host = document.createElement('div');
@@ -432,7 +430,6 @@ describe('chords off: the simple view', () => {
         expect(switchOn(page)).toBe(false);
         expect(keyButton(page).getAttribute('aria-valuetext')).toBe('Chords off');
         expect(page.has('[data-testid="chord-1-1-1"]')).toBe(false);
-        // Nothing was written for the hymn by showing it.
         expect(device.get('chords') ?? 'false').toBe('false');
       }
     }),
@@ -459,7 +456,6 @@ describe('chords off: the simple view', () => {
       expect(page.has('[data-testid="dials-backdrop"]')).toBe(false);
       expect(keyButton(page).getAttribute('aria-expanded')).toBe('false');
       expect(keyButton(page).getAttribute('aria-valuetext')).toBe('Db');
-      // With chords on, the next tap opens the key and capo dials, as before.
       tapKey(page);
       expect(page.has(`${BAR_DIALS} [data-testid="dial-capo"]`)).toBe(true);
     }),
@@ -480,7 +476,6 @@ describe('chords off: the simple view', () => {
       });
       expect(notice()).toBe(true);
       expect(keyButton(page).getAttribute('aria-valuetext')).toBe('No chords');
-      // With chords on, a hymn with no chords still opens no dials: no backdrop waits for a tap, and the button reads closed.
       tapKey(page);
       expect(page.has(BAR_DIALS)).toBe(false);
       expect(page.has('[data-testid="dials-backdrop"]')).toBe(false);
@@ -503,7 +498,6 @@ describe('chords on: every control', () => {
       expect(check(page, true)).toEqual([]);
       expect(page.all(SWITCH)).toHaveLength(1);
       expect(switchOn(page)).toBe(true);
-      // One chord group in the sheet, after Start and before the reading: the switch, the key and capo (in either order), the placement. Each pair out of order is listed.
       const sheet = (id: string) => `[data-testid="sheet"] [data-testid="${id}"]`;
       const pairs = [
         [sheet('start'), SWITCH],
@@ -551,7 +545,6 @@ describe('chords on: every control', () => {
         expect(page.has(BAR_DIALS)).toBe(false);
         expect(page.has('[data-testid="dials-backdrop"]')).toBe(false);
         expect(keyButton(page).getAttribute('aria-expanded')).toBe('false');
-        // The hymn's move was kept through it all.
         expect(device.get('move.100')).toBe(MOVED);
       }),
   );
@@ -566,11 +559,9 @@ describe('chords on: every control', () => {
       expect(device.get('chords')).toBe('true');
       using page = mount(route(100, true), device);
       expect(check(page, true, atRest)).toEqual([
-        // Hymn 100 is not moved on this device: it has nothing to reset.
         'S6 dials-reset (with chords, sheet [data-testid="dials-reset"]): missing',
       ]);
       expect(switchOn(page)).toBe(true);
-      // Chords are on, so a tap opens the dials.
       tapKey(page);
       expect(page.has(`${BAR_DIALS} [data-testid="dial-capo"]`)).toBe(true);
     }),
@@ -588,7 +579,6 @@ describe('chords on: every control', () => {
       expect(page.all(SWITCH)).toHaveLength(1);
       expect(switchOn(page)).toBe(true);
       expect(page.has('[data-testid="sheet"] [data-testid="dial-placement"]')).toBe(true);
-      // The key and capo dials belong to the hymn's own page.
       expect(page.has('[data-testid="sheet"] [data-testid="dial-key"]')).toBe(false);
       expect(page.has('[data-testid="sheet"] [data-testid="dial-capo"]')).toBe(false);
     }),
@@ -665,13 +655,11 @@ describe('the key heard', () => {
             ),
           ),
         );
-        // Chords on, by the sheet's switch: the player switches to the stored key at its place.
         flipSwitch(page);
         yield* page.untilPlayed(
           (played) => played.at(-1) === audioUrl(100, 2),
           'offset 2 with chords on',
         );
-        // Chords off again: back to the printed key; the stored move is kept.
         flipSwitch(page);
         yield* page.untilPlayed(
           (played) => played.at(-1) === audioUrl(100, 0),

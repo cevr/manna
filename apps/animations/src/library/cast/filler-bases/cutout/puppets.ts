@@ -1,14 +1,3 @@
-// The filler bases' puppets, one a cut view (`canvas/puppet.ts`): each view's
-// part sheet (`sheets/<view>/`, its head and torso written by their cutter,
-// `sheets-cut.ts`, its house parts and a headwear view's covered head by
-// `parts-cut.ts`), its parts front to
-// back, the house parts before the head, each PNG imported by its module
-// so a scene that draws a base is keyed by its bytes (`tools/stamp.ts`), on
-// the view's skeleton (`skeleton.ts`), with the origin at the kept box's
-// top-left corner in the padded part sheet (`frames.ts`): the pixels are the
-// sheet's, drawn at its one scale, which a crowd's draw scale shrinks. Each
-// declares the kept view it is held to (`concept`). Pure data.
-
 import p1Band from './sheets/poses-1/band.png' with { type: 'file' };
 import p1Beard from './sheets/poses-1/beard.png' with { type: 'file' };
 import p1Head from './sheets/poses-1/head.png' with { type: 'file' };
@@ -69,7 +58,6 @@ const BUSTS = puppetsOf({
   frames: FRAMES,
   skeletons: SKELETONS,
   papers: PAPERS,
-  // each head turns over its still torso at the face's lower edge: the torso's chin shadow and neck reach 12 px under it
   underlap: { head: 12 },
   line: LINE,
   parts: {

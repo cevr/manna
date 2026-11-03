@@ -203,7 +203,6 @@ describe('search swept over the hymnal', () => {
         ]),
         ...[word].filter(() => last).flatMap((w) => [...holdersOf(w)]),
       ]);
-    // A last word of one letter is still being typed and chooses no hymn: runs end in a word of 2 or more.
     const runs = [2, 3]
       .flatMap((size) =>
         Array.from({ length: 1000 }, () => {
@@ -225,7 +224,6 @@ describe('search swept over the hymnal', () => {
     const draw = drawOf(rng(seed), () => true);
     /** The words a query word stands for: itself and its kin. */
     const kinOf = (word: string) => KIN.find((group) => group.includes(word)) ?? [word];
-    // Only a first result that holds the line is judged: a whole line typed ranks a hymn that holds it first 99% of the time.
     const tops = Array.from({ length: 400 }, draw).flatMap((line) =>
       find(index, line.words.join(' '))
         .slice(0, 1)
@@ -235,7 +233,6 @@ describe('search swept over the hymnal', () => {
     const wrong = tops.filter(({ line, top }) => {
       const title = wordsOf(top.hymn.title);
       const last = line.words.at(-1) ?? '';
-      // The last word typed also stands for the words it starts.
       const held = (shown: ReadonlyArray<string>) =>
         spaced(shown).includes(spaced(line.words)) ||
         (spaced(shown).includes(spaced(line.words.slice(0, -1))) &&

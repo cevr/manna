@@ -1,11 +1,3 @@
-// The house's rules for a figure, by id: what each says, where the owner's
-// words for it are written, and its way out (`Way`): none, the owner's word
-// asked first, or an override citing his decision on the figure
-// (`override.ts`). A part, a paper or a figure the house refuses as it is
-// made names the rule it breaks and its way out (`decode.ts`), so the
-// refusal reads as the rule, not as a schema's words; a locked figure whose
-// print is not its lock's names FigureLock (`lock.ts`). Pure.
-
 /**
  * How a rule may be freed. `none`: by nothing (the owner's "never",
  * "ever"). `owner`: by his word alone, since no part carries an override of

@@ -1,12 +1,3 @@
-// Which H.264 encoder a render uses, as data. The page decides once, before
-// it draws a frame (`chooseEncoder`, player/encode.ts), among the encoders
-// a render allows (`encoderCandidates`): films render on the owner's Macs
-// only, on the GPU's encoder and nothing else unless `--encoder software`
-// asks, so a Mac that loses it stops loudly rather than changing the film's
-// look.
-// The renderer hands the one choice to every page, so every chunk of a
-// render is encoded alike: the chunks are joined without re-encoding.
-
 import { Option, Schema } from 'effect';
 
 /** The GPU's encoder: quantizer rate control, at most 14 at once (tools/render-plan.ts). */

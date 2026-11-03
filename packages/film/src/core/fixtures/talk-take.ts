@@ -1,8 +1,3 @@
-// A take made up for the tests, as its transcript reads (`core/footage.ts`):
-// each word voiced for 0.3 s after a pause, and the voice's loudness every
-// 10 ms, loud (-20 dB) where a word is voiced and silent (-80 dB) between.
-// What a talk is cut on (`core/talk.ts`), with no recording behind it.
-
 import type { TalkTake } from '../talk.ts';
 import { voicedAt } from '../voiced.ts';
 

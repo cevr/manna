@@ -1,14 +1,3 @@
-// What the build asks of the owner. Every entry across the members built
-// that is drawn but not kept goes on one ask (`askStage`), made through the
-// ask store, the asker's open page joined, each keep choice showing its
-// drawing (published as a review set, `DrawingSet`); the build's earlier ask
-// about the film is closed as superseded. Its key holds each drawing's
-// bytes, so a rerun with the same needs is cached and posts nothing. Every
-// entry not drawn is drawn as sheet tries (`drawStage`), only when the
-// build's `--spend okra` allows it; its key holds the needs, so a rerun
-// draws nothing again. Neither keeps anything: the owner's answer is kept
-// with `concept keep … --ask <id>`.
-
 import { Array as Arr, Context, Effect, Option } from 'effect';
 import { AskName, type AskRecord, askStatus, askedIn, oneQuestion } from '../../core/ask.ts';
 import { AskStore } from '../ask-store.ts';
@@ -156,7 +145,6 @@ export const askStage = (
         return encoder.encode(made.id);
       });
     },
-    // A need that returns (a drawing changed and changed back) asks again when its ask was closed.
     holds: (output) =>
       Effect.gen(function* () {
         const id = new TextDecoder().decode(output);

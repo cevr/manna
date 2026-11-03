@@ -1,13 +1,3 @@
-// A member's cast render as it is written (`film concept render`,
-// `tools/cast-render.ts`): `render.json` beside its pictures in
-// `out/<film>/cast/<member>/render/<n>/`, one record a render. Each kept
-// view of each kind drawn holds its box, its files, the match's rows against
-// its kept view (or why none could be measured), whether its critique was
-// taken, and each finding with the answer it stands on once answered. A
-// finding is answered on the render that found it (`answerFinding`); a fix is
-// a new render. The summary (`render.md`) is written from the record, so the
-// two never disagree. Pure.
-
 import { Array as Arr, Boolean as Bool, Match, Option, Result, Schema } from 'effect';
 import { CRITIQUE_ASPECTS } from './critique.ts';
 import { FIT_BARS, type FitBar, type FitRow, fitPasses } from './fit-rows.ts';
@@ -276,7 +266,6 @@ export const castViewLines = (v: CastViewRendered): ReadonlyArray<string> => {
   ];
 };
 
-/** A fit row as the summary's table holds it, its view first. */
 /** The house's bar for a row (`FIT_BARS`), its band's before its name's (every probe's is `probe`'s), where the view holds the row to a bar of its own. */
 const houseBarOf = (r: FitRow): Option.Option<FitBar> => {
   const name = r.name.replace(/^probe\..*/, 'probe');
@@ -320,7 +309,6 @@ const fitSection = (render: CastRender): ReadonlyArray<string> => {
   ];
 };
 
-/** The render's summary: its fit rows (failing first), then a section a view, its side-by-side, its flagged rows, each finding and its answer. */
 /** What drew the render's views, as its summary says it: each view's puppet, or its rig at its sheet's one scale. */
 const drawnBy = (render: CastRender): string =>
   Match.value(render.figure).pipe(

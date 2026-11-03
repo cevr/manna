@@ -1,5 +1,3 @@
-// The client half of the SSR proof: the same App hydrated over the server's
-// markup, its `Location` the browser's, seeded as an app's root seeds it.
 import { layerBrowser } from '@manna/url-state';
 import * as UrlAtom from '@manna/url-state/atom';
 import { hydrate } from '@solidjs/web';

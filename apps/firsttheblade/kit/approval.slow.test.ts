@@ -548,7 +548,6 @@ describe('kit:approve', () => {
           fs.writeFile(`${root}/${still}`, bytes),
         ),
       );
-      // The app as the ask found it: it serves no still the ask did not show.
       const since = (yield* servedStills(root)).filter((still) => !kept.includes(still));
       yield* Effect.forEach(since, (still) => fs.remove(`${root}/${still}`));
       yield* holdingReads([real.read]);
@@ -931,9 +930,6 @@ describe('kit:approve', () => {
         ],
         ['unanswered', ({ [STILLS_QUESTION]: _, ...answers }) => ({ _tag: 'Answered', answers })],
       ];
-      // The test's own model of the record: the approval it holds once given,
-      // and the earlier approvals it keeps, each given by an approve the test
-      // saw succeed, kept and dropped by the rule, not by the code under test.
       let given = Option.none<Given>();
       let kept: ReadonlyArray<Given> = [];
       const pinModel = (ask: string, stills: Approved['stills']) => {
@@ -970,7 +966,6 @@ describe('kit:approve', () => {
         const ask = `c${i.toString(16).padStart(10, '0')}`;
         const { stills: before } = yield* readRecord(root);
         const scrambled = Object.keys(before).filter(() => next() < 0.3);
-        // Some become byte copies of another still, so two paths can share one hash.
         for (const still of scrambled) yield* rewritten(root, still, Object.keys(before), next);
         const { stills, earlier } = yield* pinOn(root, ask);
         pinModel(ask, stills);
@@ -983,7 +978,6 @@ describe('kit:approve', () => {
           ),
           [srcOf('decoy.png')]: sha256(Uint8Array.from([i])),
         };
-        // Half the draws approve, so earlier approvals build up across asks.
         const drawn = Option.fromUndefinedOr(
           ANSWERS[Math.max(0, Math.floor(next() * ANSWERS.length * 2) - ANSWERS.length)],
         );

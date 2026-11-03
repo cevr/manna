@@ -1,17 +1,3 @@
-// Compile-time checks for the long-lived server, run by the package
-// typecheck. The lab runs for days, and Bun keeps a module as it first
-// imported it, so neither the lab's handlers (`LabContext`, what
-// `labHandler` runs them with) nor its choices (`ChoicesNeeds`, what
-// `Choices.layer` is built on) hold a service that
-// imports a film module or the app's sound library, or mixes a film in
-// process: a handler or a choice that reached for one would not compile, and
-// reads the film through `FreshFilm` instead. The lab's scene writer, its
-// HEAD reader and its scene locator are held to the same by what their
-// layers are built on (`LayerNeeds`): a cue write is judged fresh, never on
-// this process's first import of the film. Each line below fails the
-// typecheck if a loader joins one of the lists. A loader reached through a
-// function is no service, so `lab.slow.test.ts` follows the lab's imports for it.
-
 import type { Layer } from 'effect';
 import type { ChoicesNeeds } from './choices.ts';
 import type { FilmRepo } from './film-repo.ts';

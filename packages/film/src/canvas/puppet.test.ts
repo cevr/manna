@@ -1,15 +1,3 @@
-// A look's drawn keys as the draw path lays them where nothing paints (Bun,
-// `check --draw`): each key's quad is written into its part's swap buffer,
-// the buffer the page draws it from (`canvas/puppet-gl.ts`), canvas px. The
-// figure stands under an unturned frame with our origin at the sheet's
-// corner and its root where the sheet's is, so canvas px are sheet px. A key
-// rides its part's bones at its pivot, so it is held to the part's own
-// posed vertices, which the same draw writes into the part's buffer.
-//
-// A draw's dress as the same path takes it: what it asks of the page's passes
-// (`dressOf`, which `drawPuppet` hands the plain pass or the look's), each
-// part it hides left out of the buffers, and why a dress cannot be worn.
-
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import { type PuppetPose, type Skeleton, puppetOf } from '../core/puppet.ts';
@@ -311,7 +299,6 @@ describe("a draw's dress", () => {
     expect([...worn.dyes.keys()]).toEqual([0]);
     expect(worn.hidden).toEqual([]);
     expect(dyeUniforms(worn.dyes.get(0)!)).toEqual(dyeUniforms(knots));
-    // the dye leaves where the part is laid as it is
     const pose = poseOf({ head: 12 });
     expect(buffersOf(drawn({ dye: { head: INDIGO } }, pose))).toEqual(
       buffersOf(drawn(undefined, pose)),

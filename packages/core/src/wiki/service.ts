@@ -246,10 +246,6 @@ const catalogPage = (
         title,
         core: Option.none(),
         catalogId,
-        // A catalog page has no core, but its §2.3 backlinks point *at* it from
-        // flagship pages — whose titles only the artifact knows. Resolving them
-        // is the difference between "The Sanctuary" and a raw slug in the
-        // related-topics section.
         titleOf: artifact.titleOf,
         backlinksTo: artifact.backlinksTo,
       }),
@@ -366,10 +362,6 @@ export class WikiService extends Context.Service<WikiService, WikiServiceApi>()(
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
       const catalog = yield* TopicService;
-      // Required, not optional. A host must say which of the two answers it
-      // gives — the four live sources, or `WikiSectionSources.NotWired`. There
-      // is no third answer where the wiring was simply forgotten, because that
-      // one does not compile.
       const sourcing = yield* WikiSectionSources;
 
       /** `None` while the artifact is usable, `Some(reason)` when its schema
@@ -425,8 +417,6 @@ export class WikiService extends Context.Service<WikiService, WikiServiceApi>()(
             SELECT slug, title, thesis_ast, body_ast FROM topics ORDER BY position
           `;
         }).pipe(
-          // Only SQL failures become `corrupt` here; the gate's own typed
-          // failure already carries its category and must not be relabelled.
           Effect.catchIf(
             (cause): cause is SqlError => !Schema.is(WikiUnavailableError)(cause),
             (cause) => Effect.fail(unavailable('list')(cause)),
@@ -488,9 +478,6 @@ export class WikiService extends Context.Service<WikiService, WikiServiceApi>()(
             SELECT slug, title, thesis_ast, body_ast FROM topics WHERE slug = ${slug} LIMIT 1
           `;
           const found = Option.fromNullishOr(rows[0]);
-          // A slug the artifact does not carry is a catalog page, not a miss:
-          // §2.1 gives every topic a page and only flagship pages an authored
-          // core. Both statuses then traverse the same composer.
           if (Option.isNone(found)) {
             return yield* catalogPage(sourcing, slug, Option.none(), { titleOf, backlinksTo });
           }
@@ -501,10 +488,6 @@ export class WikiService extends Context.Service<WikiService, WikiServiceApi>()(
             SELECT to_slug, kind FROM topic_edges WHERE from_slug = ${slug}
             ORDER BY kind, position
           `;
-          // §2.4 resolves the overlay key at compile time. Reading the compiled
-          // row is what makes a flagship page's key verses come from the catalog
-          // topic the author meant, rather than from whichever catalog id
-          // happens to share the slug.
           const keys = yield* sql<CatalogKeyRow>`
             SELECT catalog_id FROM topic_catalog_keys WHERE slug = ${slug} LIMIT 1
           `;
@@ -547,8 +530,6 @@ export class WikiService extends Context.Service<WikiService, WikiServiceApi>()(
             sectionsUnavailable: sectionsUnavailableFor(sourcing),
           });
         }).pipe(
-          // Only SQL failures become `corrupt` here; a decode failure already
-          // carries its own category and must not be relabelled.
           Effect.catchIf(
             (cause): cause is SqlError => !Schema.is(WikiUnavailableError)(cause),
             (cause) => Effect.fail(unavailable('topic')(cause)),
@@ -635,9 +616,6 @@ export class WikiService extends Context.Service<WikiService, WikiServiceApi>()(
       const sourcing = yield* WikiSectionSources;
       return WikiService.of({
         list: (input) => catalogSummaries(catalog, input),
-        // No artifact means no `topic_edges` table to read, so §2.3's live
-        // backlinks are empty here rather than queried — the same value the
-        // query would produce, without pretending there is a connection.
         topic: (slug) =>
           catalogPage(sourcing, slug, Option.some('artifact-not-installed'), noArtifactReads),
         dictionary: Effect.succeed(

@@ -1,24 +1,3 @@
-// The footage library's media work in Bun (`footage.ts`): an original probed
-// in place, its copies made, and a take's voice decoded, all with mediabunny
-// over the coders the media service registers (`Media.layer`: H.264 out
-// through x264, HEVC and AAC in through @mediabunny/server's FFmpeg).
-//
-// One clock for all of it. An original's picture starts when its first frame
-// shows (`picture.start`, often not zero in a phone's file, and its sound
-// may start before it, an AAC encoder's priming, or after it): every copy is
-// made from that frame on, stamped from zero, and the voice is laid on the
-// same zero, each block of its sound at its own time. So a frame of the
-// mezzanine and the voice at that frame's time are one moment of the
-// recording, whatever rate the camera ran at (`av-sync.test.ts`).
-//
-// A copy is made frame by frame (a `VideoSampleSink` into a
-// `VideoSampleSource`), not by a `Conversion`, because its content hint must
-// reach x264 (`FOOTAGE_HINTS`), which a conversion does not pass on; the
-// source's transform makes it constant-rate at its recipe's rate, bakes in
-// the original's rotation and sizes it to its recipe's long side, never
-// larger than the original. A copy is written whole: beside its file, then
-// renamed over it.
-
 import { Effect, FileSystem, Layer, Option, Path, Stream } from 'effect';
 import type { Scope } from 'effect';
 import {
@@ -141,7 +120,6 @@ const laid = (
   const frames = blocks.reduce((end, block) => Math.max(end, block.at + block.pcm.frames), 0);
   const out = new Float32Array(Math.max(0, frames));
   for (const block of blocks) {
-    // A block before the picture's first frame keeps only what plays after it.
     const skip = Math.max(0, -block.at);
     for (const mono of toMono(block.pcm).channels)
       out.set(mono.subarray(skip), Math.max(0, block.at));
@@ -153,7 +131,6 @@ const laid = (
 export const layer = Layer.effect(
   FootageMedia,
   Effect.gen(function* () {
-    // Built for its coders: mediabunny's in Bun, registered as it is built.
     yield* Media;
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -203,7 +180,6 @@ export const layer = Layer.effect(
               ...sizeFor(picture, recipe.longSide),
               fit: 'fill',
               frameRate: recipe.fps,
-              // The original's rotation baked into the pixels, so every reader sees it upright.
               force: true,
             },
           });
@@ -217,7 +193,6 @@ export const layer = Layer.effect(
               Stream.runForEach((sample) =>
                 Effect.ensuring(
                   Effect.suspend(() => {
-                    // On the copy's clock: its first frame at zero.
                     sample.setTimestamp(Math.max(0, sample.timestamp - picture.start));
                     return attempt('encode', file, () => source.add(sample));
                   }),
@@ -279,7 +254,6 @@ export const layer = Layer.effect(
                 sample.copyTo(plane, { planeIndex, format: 'f32-planar' });
                 return plane;
               });
-              // Each block at its own time on the picture's clock: a gap stays a gap, priming falls before zero.
               const at = Math.round((sample.timestamp - picture.start) * own);
               const block = { at, pcm: { rate: own, frames: sample.numberOfFrames, channels } };
               sample.close();

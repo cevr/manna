@@ -1,18 +1,3 @@
-// The rules a reader's clip is judged by, and the fal calls a clip is made
-// with. A clip is a fal motion reference between a member's kept sheet poses
-// (`coverage.ts` `clips`): its request (`ClipRequest`) is the endpoint, the
-// house settings with the clip's prompt and seed, and its given frames by
-// path from the checkout's root and hash. A made clip is committed beside its
-// frames with its provenance (`ClipProvenance`: the request, the call's id,
-// cost and output, and the map from the canvas to the video), and every paid
-// call is a line of the fal ledger (`LedgerEntry`).
-//
-// `clipVerdict` judges a clip's numbers against `CLIP_BARS`, `holdsOf` finds
-// its still start and end, `clipEntryOf` makes a clip's reader-lock entry
-// (`ClipLock`) and its verdict, `falSpendAllowed` holds the spend to `FAL_LIMITS`,
-// and `adoptClip` takes a committed clip only when its provenance is the
-// request and its mp4 is the one the provenance names. Pure.
-
 import { Array as Arr, Option, Schema } from 'effect';
 
 /** The bars a clip is judged by, each inclusive: height ratio and feet shift per frame, named share and mean chain IoU per band, and the hold IoU. */

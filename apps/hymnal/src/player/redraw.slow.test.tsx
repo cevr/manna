@@ -182,7 +182,6 @@ const mount = (sheet = false) => {
 describe('a detent of the key or the capo dial', () => {
   it('draws the page’s chord texts again, each once, and no section, line or syllable', () => {
     using page = mount();
-    // Every section, line and chord text was drawn once as the page mounted.
     expect(drawn.sections).toBe(page.sections());
     expect(drawn.lines).toBeGreaterThan(10);
     expect(drawn.chords).toBe(page.chordTexts());
@@ -241,7 +240,6 @@ describe('a playback tick with the dials open (pagerperf P4)', () => {
             .get('[role="button"][aria-label="Key"]')
             .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })),
         );
-        // The dials drew as they opened, so a draw again would be counted.
         expect(drawn.dials).toBeGreaterThan(0);
         for (const seconds of [2, 3, 4]) {
           drawn.dials = 0;

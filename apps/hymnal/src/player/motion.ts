@@ -14,7 +14,6 @@ export const useReduceMotion = (): boolean => {
   const [reduced, setReduced] = useState(atLaunch);
   useEffect(() => {
     let live = true;
-    // A change made before the listener is added is read once it is.
     void AccessibilityInfo.isReduceMotionEnabled().then((now) => {
       if (live) setReduced(now);
     });

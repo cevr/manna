@@ -1,10 +1,3 @@
-// Version 2's credits, from its own script.
-//
-// The sources the credits roll (the framework's `creditRoll`): each beat's
-// `cite`, grouped under the film's authors in the order given here, after
-// scripture; then the line each CC BY recording its sound places owes
-// (`soundCredits`), which `film check` holds the roll to.
-
 import { type Author, type Credit, creditRoll } from '@manna/film/canvas';
 import { soundCredits } from '@manna/film/core';
 import { library } from '../../../../sounds/library.ts';

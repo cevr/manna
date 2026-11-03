@@ -1,5 +1,3 @@
-// In Its Order: The Path of the Just's opener, read by one narrator.
-
 import { createFilm } from '@manna/film/canvas';
 import type { Narrated } from '@manna/film/player';
 import { CARD_STYLE, VERSE_STYLE } from './card.ts';

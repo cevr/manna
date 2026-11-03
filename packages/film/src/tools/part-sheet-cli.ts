@@ -1,33 +1,3 @@
-// `film concept parts <film> <member> --view <kind>-<view> [--dry-run]
-// [--reuse] [--check]`: a kept view's part sheet, its hidden areas painted.
-// The view is cut by the member's cut table (`<member>/cutout/cut.ts`:
-// `CUTS`, `cutOptionsFor`, `HIDDEN`; `core/part-sheet.ts`). Every moving
-// part's area is painted flat magenta on the whole view, padded to the image
-// route's portrait, and okra repaints the magenta alone on its Codex route
-// (the subscription; never `--model`, the paid API). Each answer is laid
-// and measured (`part-sheet-lay.ts`), and the best is kept: the part PNGs,
-// the sheet laid out and its tint of the painted pixels, and `record.json`,
-// under `<member>/cutout/sheets/<view>/`; each call's input (named by its
-// bytes' hash), the prompt and the answers under its `okra/`.
-//
-// A view takes three calls in all, and more only by an allowance its cut
-// table records (`HIDDEN[view].allowance`: how many, who granted them, when
-// and why). Every call is written to the view's ledger (`okra/calls.json`)
-// before the route is asked, so a call whose answer then fails to arrive,
-// decode or lay still counts; an answer file the ledger lacks counts too.
-// An answer drawn from another input (the cut has moved since) is stale:
-// kept in the record, never laid, and still counted. `--reuse` lays the
-// answers already drawn; `--check` lays them, writes nothing and fails
-// where a file differs; `--dry-run` writes the magenta input under
-// `out/<film>/cast/<member>/parts/<view>/` and lists each piece of enclosed
-// paper the cut holds and each gap the view names (the table's `paperOf`).
-// None of the three calls okra.
-//
-// A view the table names in `CLEAN` (`core/part-sheet.ts` `SheetClean`) has
-// that rule run on its laid sheet before anything is written, so a fix the
-// view's art needs is made by the cut every time, and the part PNGs, the
-// strips and the record's counts all follow the cleaned sheet.
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -422,7 +392,6 @@ const ledgerOf = (dir: string) =>
       onTrue: () => fs.readDirectory(okra),
       onFalse: () => Effect.succeed<ReadonlyArray<string>>([]),
     });
-    // an answer file the ledger does not list is an attempt it lost: it counts on its own
     const listed = new Set(calls.map((c) => path.basename(c.out)));
     const orphans = answers.filter((f) => ANSWER_FILE.test(f) && !listed.has(f));
     return {
@@ -461,7 +430,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
   const { dir, label } = job;
   const { view, sheet } = askedOf(job.view, job.sheet, job.frame);
   const made = inputOf(view, sheet, job.hidden.moving, job.portrait);
-  // the input named by its bytes, so an answer is laid only on the cut it was drawn for
   const inputName = `okra/input-${sha256Hex(made.bytes).slice(0, 12)}.png`;
   const allowance = Option.fromUndefinedOr(job.hidden.allowance);
   const budget = MOST_CALLS + Option.match(allowance, { onNone: () => 0, onSome: (a) => a.calls });
@@ -488,7 +456,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
       out: relative(out),
     });
     used += 1;
-    // the call is in the ledger before the route is asked: it counts whatever follows
     const ledger = yield* Schema.encodeEffect(LedgerJson)({ calls });
     yield* fs.writeFileString(path.join(dir, LEDGER), `${ledger}\n`);
     yield* Console.log(`parts ${label} okra call ${n}: ${calls.at(-1)?.command.join(' ')}`);
@@ -538,7 +505,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
     Result.match(at, { onFailure: () => [], onSuccess: (l) => [{ call, ...l }] }),
   );
   const byRank = Order.mapInput(rankOrder, (t: (typeof tried)[number]) => t.measures);
-  // the best answer by rank, the first drawn on a tie
   const found = Arr.reduce(tried, Option.none<(typeof tried)[number]>(), (best, t) =>
     Option.match(best, {
       onNone: () => Option.some(t),
@@ -550,8 +516,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
       `no okra answer on its present input lays (${calls.length} calls, ${budget - used} left of ${budget}); run it without --reuse`,
     );
   const best = found.value;
-  // the paint laid on the kept box, laid back into the padded sheet, then the view's rule, so
-  // its part PNGs, strips and counts are made again from the answer each time
   const laidWhole = Option.match(job.frame, {
     onNone: () => best.made,
     onSome: (f) => laidInto(job.sheet, best.made, f.at),
@@ -603,7 +567,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
     ['okra/prompt.txt', new TextEncoder().encode(`${job.hidden.prompt}\n`)],
     ['record.json', new TextEncoder().encode(`${recordText}\n`)],
   ];
-  // the record is held as its formatter leaves it, so it is read and written again before it is compared
   const held = (file: string): Effect.Effect<Uint8Array, unknown> =>
     Bool.match(file === 'record.json', {
       onTrue: () =>
@@ -614,7 +577,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
         ),
       onFalse: () => fs.readFile(path.join(dir, file)),
     });
-  // each file whose bytes on disk differ from what it lays, or that is not on disk yet
   const differs = yield* Effect.filter(files, ([file, bytes]) =>
     held(file).pipe(
       Effect.map((h) => h.length !== bytes.length || h.some((b, i) => b !== bytes[i])),
@@ -631,7 +593,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
   }
   yield* fs.makeDirectory(path.join(dir, 'okra'), { recursive: true });
   for (const [file, bytes] of files) yield* fs.writeFile(path.join(dir, file), bytes);
-  // a lay again (`--reuse`) names each file it changed, so a committed hand fix it lays over shows in the log
   yield* Console.log(
     `parts ${label} kept answer ${best.call.n} missed=${record.missed.join(',') || 'none'} parts=${best.made.parts.length} dir=${dir} okra=${used - prior.used} rewrote=${differs.map(([f]) => f).join(',') || 'none'}`,
   );
@@ -724,7 +685,6 @@ export const viewCutOf = Effect.fn('film.concept.parts.viewCut')(function* (
   const refuse = (reason: string) => PartsUnmade.make({ view: asked, reason });
   const memberDir = path.dirname(folder);
   const table = yield* cutTableOf(path.join(memberDir, 'cutout', 'cut.ts'), name, refuse);
-  // a framed view is its kept sheet cut at the kept box padded; else the kept view
   const frame = Option.map(table.frame, (f) => {
     const box = [
       f.kept[0] - f.pad[0],
@@ -752,7 +712,6 @@ export const viewCutOf = Effect.fn('film.concept.parts.viewCut')(function* (
         ),
       ).pipe(Effect.map((sheet) => cropRaster(sheet, f.box))),
   }).pipe(Effect.mapError(refuse));
-  // a named gap the sheet or the paper read moved from would hold the ground it names open
   const paper = table.paperOf(name, view);
   const stale = paper.stale.map(
     (g) =>

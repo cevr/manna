@@ -1,7 +1,3 @@
-// Upstream: packages/utils/src/platform/ (shared.ts, os.ts, engine.ts, env.ts)
-//
-// What the parts branch on: the OS (Apple's modifier keys, Android's virtual
-// clicks), the engine (WebKit's focus quirks) and a fake DOM in tests.
 function readRawData() {
   if (typeof navigator === 'undefined') {
     return { userAgent: '', platform: '', maxTouchPoints: 0 };

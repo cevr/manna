@@ -1,7 +1,3 @@
-// A `Storage` for the store tests (`browser/storage.ts`): one in memory,
-// whose items a test reads as the browser would keep them, and one that
-// throws on every read and write, as a full quota or a denied page does.
-
 import { Effect, Option } from 'effect';
 
 /** A storage in memory, with its items for a test to read. */

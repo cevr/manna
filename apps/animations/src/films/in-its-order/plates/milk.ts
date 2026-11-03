@@ -1,13 +1,3 @@
-// What `milk` draws, as painted plates (`PaintingSpec`): the empty parchment
-// page, painted to the kept panel `board/milk.newborn.5.png` with its figure,
-// book and ribbon painted out, on the courtyard's grid (1920 x 1280, the frame
-// showing its rows 100..1180); the book, the white ribbon and the ink dropper,
-// keyed out of the kept prop sheet (`prop-sheet/tries/props-3.png`) on its
-// flat paper; and the five drinkers of the kept drinking row
-// (`drink-sheet/tries/drink-2.png`), each keyed whole with its soft floor
-// shadow as a see-through tint. Each PNG is imported beside its spec, and
-// every one but the page is clear on all four sides. Pure data.
-
 import type { PaintingSpec } from '@manna/film/canvas';
 import babyPng from './milk-baby.png' with { type: 'file' };
 import bookOpenPng from './milk-book-open.png' with { type: 'file' };

@@ -66,12 +66,6 @@ export const layerBunWithCatalog = (input: {
   layerBunOrAbsent(input.topics).pipe(
     Layer.provide(layerBunSectionSources({ bible: input.bible, writings: input.writings })),
     Layer.provide(layerBunCatalog(input.bible)),
-    // `bible.db` is the verified bootstrap corpus, so it opening is the
-    // expected case — but "expected" is not "guaranteed", and a driver failure
-    // here is the same class of fact as an unreadable topics artifact: the
-    // wiki cannot answer, and the host must be told rather than killed. Both
-    // halves therefore report through the one typed channel, so a caller sees
-    // `open-failed` instead of a dead process.
     Layer.catchCause((cause) =>
       WikiService.Broken({ operation: 'open-catalog', message: Cause.pretty(cause) }),
     ),
@@ -95,10 +89,6 @@ export const layerBunLookup = (input: {
   const wiki = layerBunOrAbsent(input.topics).pipe(
     Layer.provide(sections),
     Layer.provide(catalog),
-    // The same typed-absence posture `layerBunWithCatalog` takes: a wiki that
-    // cannot open reports through `WikiService.Broken`, whose failing
-    // `dictionary` the resolver degrades to an empty topic group rather than a
-    // dead process.
     Layer.catchCause((cause) =>
       WikiService.Broken({ operation: 'open-catalog', message: Cause.pretty(cause) }),
     ),

@@ -33,7 +33,6 @@ import {
 } from '../test/world';
 import { Command, Player, type Status } from './player';
 
-/** The seeds of each seeded case: 24, or `WORLD_SEEDS` for a deep sweep, from `WORLD_FROM`. */
 // oxlint-disable-next-line effect/noGlobals -- the deep sweep's size comes from its shell, outside any Effect.
 const seeds = Number(process.env['WORLD_SEEDS'] ?? 24);
 // oxlint-disable-next-line effect/noGlobals -- as above, the sweep's first seed.
@@ -90,8 +89,6 @@ describe('the player by the world: seeded', () => {
               .join(', ')}; largest read gap: ${readGap} ms (bound ${cadence})`,
           );
           if (broken.length > 0) yield* Console.log(broken.join('\n'));
-          // The bounds B and P assume the page samples the device at least once a cadence
-          // (Decided 11): checked here, never assumed.
           expect({ unreached, broken, readGap: readGap <= cadence }).toEqual({
             unreached: [],
             broken: [],
@@ -189,11 +186,7 @@ const readied = (w: World) =>
     expect(yield* w.until(() => w.ready, 10_000)).toBe(true);
   });
 
-// One's completion order (`rewrite/r3/premise-choice.md`): a phone's seek answers at its
-// completion, never before it lands.
 describe("the world draws One's seek completion order (rw r2 M8)", () => {
-  // iOS resolves a seek only when AVPlayer finished it, on the same player
-  // (HybridOneAudio.swift:198-207).
   fixed(
     'ios: a page seek answers only after it lands',
     'ios',
@@ -214,8 +207,6 @@ describe("the world draws One's seek completion order (rw r2 M8)", () => {
       }),
     { judged: false },
   );
-  // A later AVPlayer seek, the lock screen's included (:713-719), calls the earlier one's
-  // completion with `finished == false`: rejected (:199-203).
   fixed(
     "ios: a page seek a lock-screen seek supersedes is rejected, and the lock screen's answers nothing",
     'ios',
@@ -232,8 +223,6 @@ describe("the world draws One's seek completion order (rw r2 M8)", () => {
       }),
     { judged: false },
   );
-  // Android: a later page seek bumps the generation and replaces the listener, so the earlier
-  // promise never settles (HybridOneAudio.kt:293-300).
   fixed(
     'android: a page seek a later page seek supersedes never answers',
     'android',
@@ -250,8 +239,6 @@ describe("the world draws One's seek completion order (rw r2 M8)", () => {
       }),
     { judged: false },
   );
-  // The lock screen's `seekTo` bumps no generation (:995-1001): its completion resolves the
-  // page's latest seek, with the status there.
   fixed(
     "android: a lock-screen seek's completion answers the page's seek on its way",
     'android',
@@ -269,7 +256,6 @@ describe("the world draws One's seek completion order (rw r2 M8)", () => {
       }),
     { judged: false },
   );
-  // Until MediaPlayer is prepared, One says `loading` at 0 with no length (:1018-1031).
   fixed(
     'android: loading at 0 with no length until prepared, paused or not',
     'android',
@@ -287,8 +273,6 @@ describe("the world draws One's seek completion order (rw r2 M8)", () => {
       }),
     { judged: false },
   );
-  // The web resolves a seek at the element's `seeked` event, never before (One 2.8.1,
-  // `src/platform/audio/index.ts:246-278`).
   fixed(
     'web: a page seek answers only after it lands',
     'web',
@@ -309,8 +293,6 @@ describe("the world draws One's seek completion order (rw r2 M8)", () => {
       }),
     { judged: false },
   );
-  // Each seek adds its own `seeked` listener and none is removed by a later seek (:256-277): a
-  // superseded seek resolves at the next completion, with the status there.
   fixed(
     'web: a page seek a later page seek supersedes answers at the later one’s completion',
     'web',
@@ -332,8 +314,6 @@ describe("the world draws One's seek completion order (rw r2 M8)", () => {
       }),
     { judged: false },
   );
-  // A play or a stop empties the element: the seek on its way is rejected at `emptied`
-  // (:256-277), never resolved.
   fixed(
     'web: a stop rejects a page seek on its way',
     'web',
@@ -351,9 +331,6 @@ describe("the world draws One's seek completion order (rw r2 M8)", () => {
   );
 });
 
-// Android's pause before MediaPlayer is prepared holds nothing (orchestrator, decision (a)): the
-// prepare listener starts the player whatever `playbackPaused` says (HybridOneAudio.kt:199-204),
-// and the status then says `paused` over the sound (:1034-1036).
 describe("the world draws Android's pause before prepare (rw r3 decision (a))", () => {
   /** What One says of the device now, as the adapter would read it. */
   const status = (w: World) =>
@@ -380,24 +357,16 @@ describe("the world draws Android's pause before prepare (rw r3 decision (a))", 
           expect(after.state).toBe('paused');
           expect(after.positionMs).toBeGreaterThan(0);
           expect(sound(w)).toBe(true);
-          // A resume clears the pause, and the device says what it does (:263-272).
           void w.audio.resume();
           yield* w.run(200);
           expect((yield* status(w)).state).toBe('playing');
         }),
       { judged: false },
     );
-  // `pause` sets `playbackPaused` and pauses only a player that plays (:240-251).
   early('a pause', (w) => void w.audio.pause());
-  // An interruption (audio focus lost) does the same (:922-935).
   early('an interruption', (w) => w.interrupt());
-  // The lock screen's pause too (:992-995).
   early("the lock screen's pause", (w) => w.press('pause'));
 
-  // The page cannot see the interruption (the seam carries none, and One says `loading 0` until
-  // prepared), so it learns of it at the first read after prepare that says `paused`. A device
-  // that sounds there while the page shows Paused is one the reader hears and cannot stop: the
-  // page asks the pause again, and the device holds it.
   fixed(
     'android: an interruption before prepare: the page shows Paused, and the device is silent within a cadence of it',
     'android',
@@ -411,7 +380,6 @@ describe("the world draws Android's pause before prepare (rw r3 decision (a))", 
         yield* w.run(cadence);
         expect(sound(w)).toBe(false);
         expect(w.phase).toBe('paused');
-        // The reader's Resume plays on from where the device stood.
         const stood = w.place;
         w.send(Command.Resume());
         expect(yield* w.until(() => tag(w) === 'Playing', 5000)).toBe(true);
@@ -576,7 +544,6 @@ describe('the player by the world: each earlier counterexample', () => {
       Effect.gen(function* () {
         w.send(Command.Start({ track: morning }));
         expect(yield* w.until(() => sound(w), 5000)).toBe(true);
-        // The first sound's step: the read that shows it may answer in that step.
         const firstSound = w.lastSound - step;
         const early = w.history.filter((it) => it.tag === 'Playing' && it.t < firstSound);
         expect(early).toEqual([]);
@@ -666,8 +633,6 @@ describe('the player by the world: each earlier counterexample', () => {
     }),
   );
 
-  // P8 and P7: a Resume from Ended plays from 0:00, unless a seek came after the end; then
-  // from that seek's place, even when no read came between.
   for (const platform of ['ios', 'android', 'web'] as const)
     for (const seekTo of [Option.none<number>(), Option.some(30)])
       fixed(
@@ -689,9 +654,6 @@ describe('the player by the world: each earlier counterexample', () => {
           }),
       );
 
-  // One's seek is refused before the item is ready (HybridOneAudio.swift:194-196), but the lock
-  // screen's runs `player.seek` with no such guard (:713-719), so AVPlayer lands it after the
-  // page's later, refused one.
   for (const remoteLand of [300, 1200])
     fixed(
       `rw r1 M4 (ios 59): a told lock-screen seek far on lands ${remoteLand} ms after its tell, after the page's later seek was refused before ready: the page's place`,
@@ -735,13 +697,6 @@ describe('the player by the world: each earlier counterexample', () => {
 
   /** Each sweep seed traced and cleared: run alone, it breaks no rule. */
   const traced: Record<Platform, ReadonlyArray<number>> = {
-    // The end class (a place past the end the page kept after a read saw it ended), and
-    // ios 289: a Resume from Ended that followed a replaying phone kept a refused seek.
-    // ios 144 and android 90: a refused seek taken as landed at a read that said `loading` at
-    // the place the device stood at before (O7 never landed).
-    // ios 143: sound through a superseded seek's place taken as that seek landing (M4's repair).
-    // ios 2776: a play's place taken as a superseded seek's.
-    // android 42: an interruption before prepare, then 23 s offline with no sound: Failed is right.
     ios: [119, 120, 278, 289, 144, 143, 2776],
     android: [235, 255, 90, 42],
     web: [201, 320],
@@ -847,7 +802,6 @@ describe('the player by the world: each earlier counterexample', () => {
         const sought = w.t;
         w.send(Command.Seek({ seconds: 10 }));
         yield* w.run(400);
-        // The device lands 120 ms past the asked number, and answers the seek there.
         expect(Option.map(w.landing, (it) => it.to)).toEqual(Option.some(10_000));
         w.landing = Option.map(w.landing, (it) => ({ ...it, to: it.to + 120 }));
         yield* w.run(5000);
@@ -945,7 +899,6 @@ describe('the player by the world: each earlier counterexample', () => {
         yield* w.run(600);
         w.press('seek', w.place + 300);
         yield* w.until(() => sounded(w), 5000);
-        // A read across the first sound's step closes a sound pair at that step.
         const first = w.t;
         expect(w.history.filter((it) => it.t < first).map((it) => it.tag)).toEqual(['Loading']);
       }),
@@ -963,7 +916,6 @@ describe('the player by the world: each earlier counterexample', () => {
         yield* w.run(200);
         w.press('seek', w.place + 300);
         yield* w.until(() => sounded(w), 5000);
-        // A read across the first sound's step closes a sound pair at that step.
         const first = w.t;
         expect(w.history.filter((it) => it.t < first).map((it) => it.tag)).toEqual(['Loading']);
       }),
@@ -1052,7 +1004,6 @@ describe('the player by the world: each earlier counterexample', () => {
   );
 });
 
-// The sweep classes of round 3 part 5, each seed's world as the sweep drew it.
 describe('the player by the world: the part 5 sweep (rw r3 part 6)', () => {
   /** One seed of `platform`, 90 s as the seeded case draws it: the rules it broke. */
   const seed = (name: string, platform: Platform, at: number) =>
@@ -1062,7 +1013,6 @@ describe('the player by the world: the part 5 sweep (rw r3 part 6)', () => {
       }),
     );
 
-  // A command sent while a play or a seek still asks the device: the act lands at its answer.
   seed('a lock-screen play while the first load asks', 'ios', 843);
   seed('a lock-screen play while the first load asks', 'android', 414);
   seed('a press of play while the first load asks', 'web', 179);
@@ -1104,25 +1054,16 @@ describe('the player by the world: the part 5 sweep (rw r3 part 6)', () => {
       }),
   );
 
-  // The end (orchestrator, after part 5): a seek the device clamps to the end lands at the end
-  // at its answer, and the next Resume plays from 0:00 (P8).
   seed('a seek past the end, then a failure at the end', 'ios', 304);
   seed('a lock-screen seek past the end, then a play', 'ios', 381);
   seed('a lock-screen seek past the end, a play, then a pause', 'ios', 400);
 
-  // O1: a read asked before a seek's answer lands it, answered after, may show the place before
-  // the landing, so it pairs with nothing: with the next read at the new place it would look
-  // like sound.
   seed('a read in flight across a landing, in the D2 silence after an ended reload', 'ios', 641);
   seed('Playing with no sound, the part 5 O1 class', 'ios', 178);
   seed('Playing with no sound, the part 5 O1 class', 'android', 72);
   seed('Playing with no sound, the part 5 O1 class', 'web', 122);
-  // A read asked before a landing's answer still shows the device's state: here Paused after a
-  // lock-screen seek took an ended recording to a place.
   seed('Ended, a lock-screen seek, a read asked before its answer says paused', 'web', 381);
 
-  // O2 (orchestrator, after part 5): a landing restarts P4's wait, also at the place the device
-  // already stood at.
   seed('offline, a seek refused while loading lands again at the place stood', 'ios', 889);
 
   /** Lags drawn in order, then 50 ms: the answers they time come in the order the test wants. */
@@ -1143,7 +1084,6 @@ describe('the player by the world: the part 5 sweep (rw r3 part 6)', () => {
         yield* playingAt(w, 236);
         expect(yield* w.until(() => tag(w) === 'Ended', 10_000)).toBe(true);
         yield* w.run(1000);
-        // The seek's answer in 20 ms, the read beside it sampled at 600 ms.
         ending.set([20, 600]);
         w.send(Command.Seek({ seconds: 245 }));
         yield* w.run(100);
@@ -1182,13 +1122,9 @@ describe('the player by the world: the part 6 sweep (rw r3 part 7)', () => {
       }),
     );
 
-  // One read in flight: a command takes the read it finds in flight, and none cuts a fresh
-  // read's answer off, so an end the device gave reaches the page.
   seed('a command while a read that says ended is in flight', 'ios', 668);
   seed('a command while a read that says ended is in flight', 'ios', 1359);
-  // A seek past the end while Ended: the play goes from 0:00, not from beyond the end.
   seed('a seek past the end, then Resume', 'ios', 539);
-  // A lock-screen seek told while a Resume from Ended still reads: the play goes to the seek.
   seed('a lock-screen seek while a Resume from Ended reads', 'ios', 222);
   seed('a lock-screen seek while a Resume from Ended reads', 'ios', 1341);
   seed('a Resume with a place the page kept', 'ios', 911);
@@ -1196,12 +1132,8 @@ describe('the player by the world: the part 6 sweep (rw r3 part 7)', () => {
   seed('a Resume with a place the page kept', 'android', 1259);
   seed('a Resume with a place the page kept', 'android', 1454);
   seed('a play from a place past the end', 'web', 711);
-  // A lock-screen pause while Loading takes the read in flight for its last look (26.3 s), and
-  // the world goes on from there: this seed no longer reaches its old O6 line at 43.2 s.
   seed('a lock-screen pause while Loading takes the read in flight', 'android', 496);
 
-  // O6 by what the page could know of an end: a seek after it is the reader's place, and an
-  // answer in the ms the page let the recording go may come after the let-go.
   seed('Ended, a lock-screen seek offline, then Resume', 'web', 322);
   seed('Ended, a lock-screen seek offline, then Resume', 'web', 671);
   seed('Ended, a seek to the end, then Resume', 'android', 62);
@@ -1221,8 +1153,6 @@ describe('the player by the world: the part 6 sweep (rw r3 part 7)', () => {
     1412,
   );
 
-  // An end read while a seek short of the end is pending: the end lands the seek, whose place
-  // stays the reader's (P7), so a Resume after a failure plays from it.
   seed('an end read before a lock-screen seek landed', 'ios', 631);
   seed('an end read before a lock-screen seek landed', 'ios', 733);
   seed('an end read before a lock-screen seek landed', 'web', 688);
@@ -1237,25 +1167,11 @@ describe('the player by the world: the part 7 sweep (rw r3 part 8)', () => {
       }),
     );
 
-  // A seek's own answer that says `ended`, asked since the latest act, is the device saying it
-  // ended: the page shows Ended by it, and a failure after is no act (O8).
   seed('a seek past the end answered ended, then a failure', 'ios', 949);
-  // Two `ended` reads before a lock-screen seek landed: each shows the device before the
-  // landing, and the seek's place stays the reader's (P7).
   seed('two end reads before a lock-screen seek landed', 'ios', 1258);
-  // A read asked before a seek's answer landed, ahead of the answer by the sound since it: it
-  // follows the answer, so a later read pairs with it, and the sound before it is no sound
-  // after a hold (O1).
   seed('a read in flight across a landing, then a hold', 'android', 911);
-  // A press told after unseen sound in a hold: the place the device reached before the press
-  // is one the page may resume from (O6).
   seed('an untold lock-screen seek after unseen sound in a hold', 'android', 1449);
-  // An end read with no length before a seek landed: the device stands at its end then, so the
-  // read is before the landing and the seek's place stays the reader's (P7).
   seed('an end read with no length before a lock-screen seek landed', 'web', 228);
-  // A read asked before a landing's answer, ahead of it by the sound since: the device played
-  // on from the landing, so the next read pairs with it and the place the page keeps follows
-  // the sound (O6).
   seed('a read in flight across a landing, then the place kept', 'ios', 274);
   seed('a read in flight across a landing, then the place kept', 'ios', 409);
   seed('a read in flight across a landing, then the place kept', 'android', 666);
@@ -1275,19 +1191,12 @@ describe('the player by the world: the part 8 sweep (rw r3 part 9)', () => {
       }),
     );
 
-  // A lock-screen press told while a Pause while Loading still reads before it lets go: the
-  // device is still let go, so it never sounds under Stopped (O6), and an end a look reads
-  // shows Ended (O8).
   seed('a lock-screen seek while a Pause while Loading still reads', 'ios', 717);
   seed('a lock-screen seek near the end while a Pause while Loading still reads', 'ios', 1067);
   seed('a lock-screen seek past the end while a Pause while Loading still reads', 'ios', 1276);
-  // A page seek the device refused, then an end an earlier press's landing made: with no ask of
-  // the seek's place left, the end wins, so the Resume from Ended plays from 0:00 (P8).
   seed('a refused page seek overtaken by an end', 'ios', 66);
 });
 
-// A seek on a Playing page is no act that asks for sound (P1): the page stays Playing while the
-// device sounds on at the new place, and shows Loading only by the stand (rw r3 verify D1).
 describe('a seek while Playing keeps the page Playing (rw r3 verify D1)', () => {
   for (const platform of ['ios', 'android', 'web'] as const)
     for (const landAfter of [0, 300])
@@ -1314,8 +1223,6 @@ describe('a seek while Playing keeps the page Playing (rw r3 verify D1)', () => 
       );
 });
 
-// A sound pair the page finishes after it lets go sets the reader's place, for Stopped and the
-// next Resume (orchestrator, round 2 review: web 360; P7).
 describe('a pair finished after the let-go sets the place (rw r3 web 360)', () => {
   /** The lags as drawn: 50 ms, then those `after` gives once the pause is pressed. */
   const lags = (after: number[]) => () => after.shift() ?? 50;
@@ -1348,12 +1255,8 @@ describe('a pair finished after the let-go sets the place (rw r3 web 360)', () =
   );
 });
 
-// O2 judges the page's give-up by what the page was told (orchestrator, after r3 part 6): a
-// phone's press restarts the offline run at its tell, in the order told, never at the press.
 describe('O2 by the acts the page was told (rw r3 part 7)', () => {
   const rules = (w: World) => w.breaches.map((it) => it.rule);
-  // ios 227 and 818: a lock-screen play pressed in the same moment as the page's Pause, told
-  // after it. The page plays at the tell (a Resume), offline, and gives up 15 s on.
   fixed(
     'rw r3 part 7 (ios 227): a lock-screen play told after the page Pause, offline: Failed 15 s on is legal',
     'ios',
@@ -1366,15 +1269,11 @@ describe('O2 by the acts the page was told (rw r3 part 7)', () => {
         w.press('play');
         w.send(Command.Pause());
         yield* w.run(1000);
-        // The page took the play's tell after its Pause: it waits on the load again.
         expect(tag(w)).toBe('Loading');
-        // The world's reader paused after the press: the page cannot know it.
         expect(w.wants).toBe(false);
         expect(yield* w.until(() => tag(w) === 'Failed', 25_000)).toBe(true);
       }),
   );
-  // The attack on the change: a press the page was told of still restarts the run. Here the
-  // page is not handed the tell, so it gives up 15 s after the load, 5 s after the tell.
   fixed(
     'rw r3 part 7: a lock-screen play told 10 s into an offline load, unseen by the page: Failed 5 s on breaks O2',
     'ios',
@@ -1397,11 +1296,8 @@ describe('O2 by the acts the page was told (rw r3 part 7)', () => {
   );
 });
 
-// The oracle's repairs of round 2 (rw r2 M1 to M7): each world breaks the rule only by the
-// oracle's own fault, or the test body asks the device what a wrong page would.
 describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
   const rules = (w: World) => w.breaches.map((it) => it.rule);
-  // A page seek retires a play's place: asked again, it is a place the reader did not ask.
   fixed(
     'rw r2 M5: Resume from 1:00, a seek to 2:00 lands, then 1:00 asked again: O7',
     'ios',
@@ -1424,7 +1320,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
       }),
     { judged: false },
   );
-  // A lock-screen seek after an end is the reader's place: the end's 0:00 no longer holds.
   fixed(
     'rw r2 M6: ended, Failed, a lock-screen seek, Resume: plays from the seek',
     'ios',
@@ -1443,8 +1338,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
         expect(Math.abs((w.plays.at(-1)?.from ?? 0) - 200_000)).toBeLessThan(2);
       }),
   );
-  // A backward seek lands, sound carries the device back to where it stood, and it runs dry
-  // there: the seek landed at its answer (Decided 12), so the page proves sound after the stall.
   for (const landAfter of [200, 300, 400])
     fixed(
       `rw r2 M3: a seek back 0.75 s lands after ${landAfter} ms, sound back to the place a read saw before it, dry there: Playing after`,
@@ -1457,12 +1350,10 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
           const from = w.t;
           const count = w.answered.length;
           w.send(Command.Seek({ seconds: (w.place - 750) / 1000 }));
-          // The first read after the ask sees the device sounding on, outside the window.
           expect(yield* w.until(() => w.answered.length > count, 1000)).toBe(true);
           const seen = Option.getOrThrow(Option.fromNullishOr(w.answered.at(-1)));
           expect(seen.sampleAt).toBeGreaterThanOrEqual(from);
           const stood = w.place - (w.t - seen.sampleAt);
-          // No read sees the landing or the sound back: a host hold covers both.
           w.hold(landAfter + 750 + 300);
           expect(yield* w.until(() => w.place < stood, 2000)).toBe(true);
           expect(yield* w.until(() => w.place >= stood, 2000)).toBe(true);
@@ -1471,11 +1362,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
           expect(yield* w.until(() => tag(w) === 'Playing', 8000)).toBe(true);
         }),
     );
-  // The oracle builds no sound pair (r1 M1, r2 M1): O5's first sound is O3's world bound. Here
-  // the page's one read answers 40 s late, so no sample brackets the sound: the load sounds
-  // 3.5 s with no act, then runs dry online. A page that stops reading cannot empty O5
-  // (Decided 11), so Retry is owed by world time; an oracle that waits for a read pair owes
-  // nothing.
   fixed(
     'rw r2 M1: sound for the proof that no read samples, then a dry spell online: Retry owed',
     'ios',
@@ -1493,9 +1379,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
       }),
     { judged: false },
   );
-  // O10 excuses a turn from Playing by a silence of the stand only when that silence began by
-  // the turning read's sample: a silence in a host hold after it is not what the read saw.
-  // Under mutant `stand-1s` this world breaks O10.
   fixed(
     'rw r2 M2: a 1.1 s dry spell, a read at its end held 3 s, a 2.2 s dry spell inside the hold: no Buffering',
     'ios',
@@ -1520,10 +1403,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
         yield* w.run(3000);
       }),
   );
-  // Chained holds do not put O1 off (r2 m1): once a read sampled in the silence has answered,
-  // it and the first read after each later hold prove the silence across that hold (Decided
-  // 5), so O1 owes the turn a cadence after the hold, not a whole B. Here 100 ms holds come
-  // every 2.5 s through a 30 s dry spell. Under mutant `stand-8s` this world breaks O1.
   fixed(
     'rw r2 m1: a dry spell with a 100 ms hold every 2.5 s after a read saw it: Buffering',
     'ios',
@@ -1544,10 +1423,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
         expect(yield* w.until(() => tag(w) === 'Playing', 15_000)).toBe(true);
       }),
   );
-  // A play answers the latest Resume told before it, by that Resume's places alone (r1 m1):
-  // a Resume from Paused asks no play, so its place does not wait for a later one. Here two
-  // such Resumes, from 1:00 and from the place 10 s on, and then a play from 1:00 as a wrong
-  // page would ask it.
   fixed(
     'rw r1 m1: two Resumes from Paused, then a play from the first one: O6',
     'ios',
@@ -1573,12 +1448,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
       }),
     { judged: false },
   );
-  // Failed or Stopped keeps the reader's place, or the place before the first press the page
-  // has not been told of (r1 m1(b)): the place before a later untold press is no place the page
-  // knew. Here a load with seeks to 0:40 and 1:30, then two lock-screen seeks, to 0:40 and to
-  // 2:30, both told 5 s on, and a Pause whose last look takes a read sampled before them: the
-  // page keeps 1:30. Under mutant `seek-keeps-old-place` it keeps 0:40, the place before the
-  // second press, and breaks O6.
   fixed(
     'rw r1 m1(b): two lock-screen seeks the page is not told of, then a Pause while Loading: Stopped at the place before the first',
     'android',
@@ -1600,11 +1469,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
         expect(rules(w)).toEqual([]);
       }),
   );
-  // A tell of the connection between the turning read's sample and its answer breaks the run
-  // (r1 m2): the page reads the connection at the answer. The first world waits offline until
-  // the page turns Failed, at a read's answer; the second, the same world, has the link back
-  // in that read's window: a page that turns Failed there has no cause. Under mutant
-  // `online-gives-up` the second world breaks O2.
   it.effect(
     'rw r1 m2: offline Buffering, the link back between the turning read sample and its answer: no rule broken',
     () =>
@@ -1643,9 +1507,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
         expect(report(0, second.w)).toEqual([]);
       }),
   );
-  // A Retry is early only once the page could know the silence it waits on (r2 m4, ios 3804):
-  // sound that comes and goes between two reads' samples starts a new silence the page learns
-  // at the answer of the first read sampled in it, and a Retry shown till then is not early.
   fixed(
     'rw r2 m4 (ios 3804): Retry, then sound between two samples and dry again: no Retry early',
     'ios',
@@ -1665,7 +1526,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
         w.stall(120_000);
         expect(yield* w.until(() => !sound(w), 200)).toBe(true);
         const quietFrom = w.t;
-        // No read sampled the sound: the page is told of it by the first read after.
         expect(
           [...w.answered, ...w.reads].every(
             (read) => read.sampleAt <= sampled || read.sampleAt >= quietFrom,
@@ -1675,9 +1535,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
         yield* w.run(3000);
       }),
   );
-  // A read of `ended` lands every act (Terms; ios 3143): a lock-screen seek takes the paused,
-  // loading device to its end, the page's later seek is refused until the item is ready, and
-  // the device, resumed, ends there before any ask of it lands. O7's duty ends at that read.
   fixed(
     'rw O7 (ios 3143): a seek refused while loading, then an end a read sampled: no O7',
     'ios',
@@ -1701,8 +1558,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
         yield* w.run(5000);
       }),
   );
-  // Only an end after the seek ends O7's duty: reads of a device that ended before it say
-  // `ended` until the seek lands, and a page that drops the seek leaves them saying so.
   fixed('rw O7: Ended, then a seek to 30 s and no Resume: the seek lands', 'ios', {}, (w) =>
     Effect.gen(function* () {
       yield* playingAt(w, 238);
@@ -1711,12 +1566,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
       yield* w.run(5000);
     }),
   );
-  // A read asked before an act cannot start P4's wait, even when it samples after the act
-  // (android 351: press 15,550, read asked 15,300, sampled 15,700): the wait starts at the
-  // first read asked after it. The press is told at that read's answer (D8), and one read's
-  // answer 250 ms puts the page's last ask before the give-up just short of 15 s past its
-  // wait's start: the page turns Failed 17 s after the older read's answer, past O4's 16.75 s
-  // from that answer and within it from the answer of the read asked after the press.
   for (const at of [100, 250, 400])
     it.effect(
       `rw r2 M7: offline Buffering, a lock-screen play ${at} ms after a read's ask, before its sample: Failed owed from the read asked after it`,
@@ -1754,9 +1603,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
           expect(report(0, w)).toEqual([]);
         }),
     );
-  // The ios 59 world with the late lock-screen seek landing as the load sounds: the read after
-  // it says a place past 218,900 by sound, not 218,900 itself (Decided 12: a read never lands
-  // an act, and the page's own seek lands at its answer).
   for (const remoteLand of [2900, 3000, 3100, 3200])
     fixed(
       `rw r2 M4 (ios 59): a late lock-screen seek lands ${remoteLand} ms after its tell and sounds before the next read: the page's place`,
@@ -1781,9 +1627,6 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
     );
 });
 
-// Each oracle change of round 3 that narrows a duty leaves a wrong page red (rewrite/r3/
-// attacks.md): the test body asks the seam as a wrong page would, or keeps the page from a tell
-// or a read it needs, in a world the change judges.
 describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)', () => {
   const rules = (w: World) => w.breaches.map((it) => it.rule);
   const resumed = 'O6 a Resume played from another place';
@@ -1813,8 +1656,6 @@ describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)
       yield* wrongPlay(w, from);
     });
 
-  // a982803c9 (r2 M1): the excuse for sound unseen in a hold lasts to its time bound, with no
-  // pair to end it. Past the bound, the place before that sound is no place to play from.
   fixed(
     'a982803c9: sound unseen in a hold, past its time bound: a play from the place before it breaks O6',
     'ios',
@@ -1834,9 +1675,6 @@ describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)
     { judged: false },
   );
 
-  // 4b66e1b55 (r2 m4): O5 judges a Retry early only once a read saw the new silence. A dry spell
-  // every read samples from its start still holds a page that offers Retry before 15 s: under
-  // mutant `retry-early` (Retry at 12 s) this world breaks O5.
   fixed(
     '4b66e1b55: a dry spell online that the reads sample from its start: Retry, and none early',
     'ios',
@@ -1849,9 +1687,6 @@ describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)
       }),
   );
 
-  // 3c2765a9e (r2 M6): a seek after the end keeps the end from resetting the place. A seek before
-  // the end does not: after the end a read heard, the place is 0:00, and a play from the end
-  // breaks O6.
   fixed(
     '3c2765a9e: a seek to 3:50, then the end a read heard: a play from the end breaks O6',
     'ios',
@@ -1867,9 +1702,6 @@ describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)
     { judged: false },
   );
 
-  // 74aaad4de: a seek's answer that says `ended` samples the end, as a read's does. With no read
-  // after the seek, that answer alone tells the end: the seek past the end is no place to play
-  // from after it; the end's 0:00 is.
   fixed(
     '74aaad4de: a page seek past the end answered ended, no read after it: a play from the end breaks O6',
     'ios',
@@ -1887,8 +1719,6 @@ describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)
     { judged: false },
   );
 
-  // 42eddb106: a failed device never ends. A device that failed, played again and ran to its
-  // end still owes Ended: here the page reads nothing after the replay sounds.
   fixed(
     '42eddb106: a failure, a Resume, then the end with no read: Ended owed',
     'ios',
@@ -1908,8 +1738,6 @@ describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)
     { judged: false },
   );
 
-  // 42eddb106: presses order by act counts. A page Seek sent after a press's tell is the
-  // reader's latest word: a play from the press's place breaks O6.
   fixed(
     "42eddb106: a lock-screen seek told, then a page Seek: a play from the press's place breaks O6",
     'android',
@@ -1927,8 +1755,6 @@ describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)
     { judged: false },
   );
 
-  // 42eddb106: a seek after a Resume, before its play, is a place the play may go to. A place
-  // neither the Resume nor the seek asked is not.
   fixed(
     '42eddb106: a Resume, then a page Seek: a play from a third place breaks O6',
     'ios',
@@ -1949,8 +1775,6 @@ describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)
     { judged: false },
   );
 
-  // 42eddb106: an end resets the place only for a seek at or before it. A seek after the end is
-  // the reader's place: a play from 0:00 breaks O6.
   fixed(
     '42eddb106: the end a read heard, then a page Seek to 1:40: a play from 0:00 breaks O6',
     'ios',
@@ -1968,8 +1792,6 @@ describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)
     { judged: false },
   );
 
-  // 42eddb106: a play from 0:00 is the reader's only for a place at the length. Short of it,
-  // a play from 0:00 breaks O6.
   fixed(
     '42eddb106: paused 4 s before the end: a play from 0:00 breaks O6',
     'ios',
@@ -1983,9 +1805,6 @@ describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)
     { judged: false },
   );
 
-  // bafd83ab0: an end counts only when the page asked its answer after its last stop. A stop of
-  // an earlier load keeps nothing: after the end a read heard, the place is 0:00, and a play from
-  // the end breaks O6.
   fixed(
     'bafd83ab0: a stop, a new load, a seek to 3:50 and the end: a play from the end breaks O6',
     'ios',
@@ -2007,9 +1826,6 @@ describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)
     { judged: false },
   );
 
-  // 56566c03d (ios 949): a seek's own answer that says `ended` is the device's word until the
-  // next act. A lock-screen play after it, which the page never hears, ends it: Ended shown on
-  // breaks O8.
   fixed(
     '56566c03d: a seek past the end answered ended, then a lock-screen play the page misses: Ended breaks O8',
     'ios',
@@ -2030,9 +1846,6 @@ describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)
     { judged: false },
   );
 
-  // 56566c03d (android 1449): before a press is told, the place before sound unseen in a hold is
-  // one the page may keep. Once told, the press's place is the reader's: a play from the place
-  // before the unseen sound breaks O6.
   fixed(
     '56566c03d: sound unseen in a hold, a lock-screen seek told after it: a play from the place before the sound breaks O6',
     'android',

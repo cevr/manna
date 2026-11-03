@@ -1,14 +1,3 @@
-// Curves fitted to a traced edge: a closed line of points (an edge a pixel
-// apart, lightly smoothed) as a chain of cubic Béziers within a tolerance,
-// split at its corners (Schneider, "An Algorithm for Automatically Fitting
-// Digitized Curves", Graphics Gems, 1990). A chain is written as points:
-// each anchor, its out handle, the next anchor's in handle, and so on round
-// (`[A0, O0, I1, A1, O1, I2, …, A(n-1), O(n-1), I0]`), so a move, a scale or a
-// turn of its points moves the curve as it moves them. A long smooth run takes
-// a few anchors where a point every few pixels took many, and a corner stays
-// a corner (its two handles point their own ways): the house draws a chain
-// with detached handles (`rig/parts.ts`, `cubicPath`). Pure.
-
 type Pt = readonly [number, number];
 
 const sub = (a: Pt, b: Pt): Pt => [a[0] - b[0], a[1] - b[1]];
@@ -77,7 +66,6 @@ const cubicOf = (pts: ReadonlyArray<Pt>, u: ReadonlyArray<number>, t1: Pt, t2: P
   const chord = len(sub(p3, p0));
   let [alpha1, alpha2] =
     det === 0 ? [0, 0] : [(x0 * c11 - x1 * c01) / det, (c00 * x1 - c01 * x0) / det];
-  // A handle that runs backward or vanishes: a third of the chord each, Schneider's fallback.
   if (!(alpha1 > 0 && alpha2 > 0)) [alpha1, alpha2] = [chord / 3, chord / 3];
   return [p0, add(p0, mul(t1, alpha1)), add(p3, mul(t2, alpha2)), p3];
 };
@@ -170,7 +158,6 @@ const cornersOf = (pts: ReadonlyArray<Pt>, opts: FitOpts): number[] => {
   const turn = pts.map((_, i) => {
     const a = leaving(pts, i, -1, opts.reach, true);
     const b = leaving(pts, i, 1, opts.reach, true);
-    // Straight on, the two sides point opposite ways: no turn.
     return Math.PI - Math.acos(Math.max(-1, Math.min(1, dot(a, b))));
   });
   const out: number[] = [];

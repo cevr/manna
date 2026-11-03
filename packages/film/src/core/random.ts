@@ -1,6 +1,3 @@
-// Deterministic randomness. Every frame must render identically on every run,
-// so nothing in a film may call Math.random — derive from a seed instead.
-
 /** Integer hash → [0, 1). */
 export const hash = (n: number): number => {
   let x = Math.imul((n | 0) ^ 0x9e3779b9, 0x85ebca6b);

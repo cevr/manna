@@ -1,14 +1,3 @@
-// The lab's ask commands and the owner's word (`lab-command.ts`; MCP and
-// `film lab` serve them): a decision page an agent composes from the lab's
-// primitives as a small machine (`ask`), on a page of asks (one made while the same asker's
-// earlier ask still asks joins that one's page, so asks made in sequence
-// share one page and one link), answered by the owner on any device, each step's answers
-// heard as `ask.step` changes; read (`ask_read`, `asks`) and closed
-// (`close_ask`), its words filed on its production's timeline once by its id
-// (by `AskStore`, through `ProductionStore`; `core/ask.ts`). The owner's word
-// from chat filed there (`decide`, `note`), and the production moved forward
-// on his filed decision (`forward`), each through `ProductionStore`.
-
 import { Clock, Effect, Match, Option, Schema, Struct } from 'effect';
 import * as Tool from 'effect/ai/Tool';
 import { pageHref } from '../core/api.ts';
@@ -38,9 +27,6 @@ import { LabAddress, labCommand } from './lab-command.ts';
 import { LabRefused, refused } from './lab-mcp-parts.ts';
 import { ProductionStore } from './production-store.ts';
 import { setsReads } from './sets-mcp.ts';
-
-// ---------------------------------------------------------------------------
-// What the tools answer, and the tools
 
 /** An ask as an agent reads it: where its run is and what the owner answered, typed. */
 export const AskRead = Schema.Struct({
@@ -237,9 +223,6 @@ const ForwardTool = Tool.make('forward', {
   failure: LabRefused,
 });
 
-// ---------------------------------------------------------------------------
-// The reads and writes, over the asks and the productions' ledgers
-
 /** The asks and the timelines as the tools read and write them. */
 const asksReads = Effect.fn('LabMcp.asksReads')(function* () {
   const asks = yield* AskStore;
@@ -292,7 +275,6 @@ const asksReads = Effect.fn('LabMcp.asksReads')(function* () {
       });
     if (Option.isSome(set) && !(yield* sets).some((s) => s.set === set.value))
       return yield* LabRefused.make({ reason: `no set ${set.value}: \`sets\` lists them by ref` });
-    // Its timeline names the set by its folder: one two roots hold is refused.
     if (Option.isSome(set)) yield* folderNamed(set.value);
     const record = yield* asks
       .make({

@@ -1,24 +1,3 @@
-// The material an ask shows, found before the ask is kept: each material
-// block (`core/ask.ts`) looked for through the read its own view makes, so
-// an ask that names a document, a script, a Board, a video or a take the lab
-// cannot show is refused when it is made, naming what is missing. A
-// document or a video is a file the review lists (`Review.index`, the set's
-// page's read), inside its root (`Review.resolve`); a film's script is its
-// beats as the Script reader reads them (`FreshFilm.script`); a draft's, as
-// its Markdown reads now (`SeriesDrafts.read`); a Board's panels are on the
-// film's board (`BoardStore.read`); a take is one of the beat's attempts
-// the studio lists (`beatAttempts`, the studio's route's own read, which
-// refuses a beat the film does not have), the one named or the one kept. A ref
-// is a ref, never a path: the review finds it among the files it lists, or
-// it is not there. An image's `src` is one of the lab's image routes, its
-// file found by the read that route makes (a set's file by `Review.resolve`,
-// a board's by `BoardStore.image`, a note's still by `NotesStore.still`, a
-// video's frame by the review's index). That read gives what each image
-// route serves as the ask is made (`served`), which the ask store holds to
-// the receipt rule (`receipted` in `ask-store.ts`): an image the lab serves
-// no file for, a path no image route takes among them, refuses the make
-// there, named.
-
 import {
   Boolean as Bool,
   Context,
@@ -235,7 +214,6 @@ export class AskMaterials extends Context.Service<AskMaterials, AskMaterialsServ
           case 'audio':
             return Effect.gen(function* () {
               yield* film(where, block.film);
-              // The studio's own read: a beat that is not one of the film's is refused before a file is read.
               const read = yield* beatAttempts({ film: block.film, beat: block.beat }).pipe(
                 Effect.provideContext(studio),
                 Effect.mapError((error) =>
@@ -251,7 +229,6 @@ export class AskMaterials extends Context.Service<AskMaterials, AskMaterialsServ
                     !read.attempts.some((a) => a.file === attempt),
                     `${where}: ${block.film} ${block.beat} has no take ${attempt}`,
                   ),
-                // The take the timings name: an attempt kept, or a staging take.
                 onNone: () =>
                   problemIf(
                     !read.attempts.some((a) => a.kept) && Predicate.isUndefined(read.staged),

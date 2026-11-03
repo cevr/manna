@@ -1,15 +1,3 @@
-// Upstream: packages/react/src/dialog/root/DialogRoot.test.tsx,
-// packages/react/src/dialog/popup/DialogPopup.test.tsx,
-// packages/react/src/dialog/backdrop/DialogBackdrop.test.tsx,
-// packages/react/src/dialog/close/DialogClose.test.tsx
-//
-// The dialog's behaviour cases: closing (Close, Escape, outside presses per
-// modal mode, an owner that keeps it open), focus (trap, the first tabbable
-// element, the return to the button that opened it), scroll lock, the ARIA wiring and
-// dialogs open side by side. Every dialog opens from its owner's `open`, as
-// every page's does; upstream's trigger cases, detached triggers, handles and
-// payloads, nested dialogs, alert dialogs, shadow roots, and React-only machinery (Suspense, act
-// timing, owner stacks) are left out.
 import { describe, expect, it } from 'bun:test';
 
 import { expect as see, type Page } from '@playwright/test';
@@ -129,7 +117,6 @@ describe('outside press', () => {
     const page = await h.open('dialog', { query: { modal: 'false' } });
     await page.click('#open');
     await see.poll(() => focused(page)).toBe('first');
-    // The mousedown focuses the button before the click lands, so focus-out closes it.
     await page.click('#outside');
     await see(page.locator('#popup')).toHaveCount(0);
     expect(await logOf(page)).toContain('open false focus-out');
@@ -159,7 +146,6 @@ describe('outside press', () => {
 describe('Dialog.Portal inline', () => {
   it("keeps its node in place as a non-modal dialog's focus guards appear around it", async () => {
     const page = await h.open('dialog', { query: { modal: 'false', portal: 'inline' } });
-    // Every removal of the portal's node: a move resets the scroll positions inside it.
     await page.evaluate(() => {
       const removed: Array<string> = [];
       (window as unknown as { __removed: typeof removed }).__removed = removed;
@@ -178,12 +164,10 @@ describe('Dialog.Portal inline', () => {
     });
     await page.click('#open');
     await see.poll(() => focused(page)).toBe('first');
-    // The guards are in: Tab from the trigger's place reaches the dialog.
     await see(page.locator('#root [data-type="outside"]:not([hidden])')).toHaveCount(2);
     expect(
       await page.evaluate(() => (window as unknown as { __removed: Array<string> }).__removed),
     ).toEqual([]);
-    // The order they keep: back out of the dialog is the trigger, and on again is the dialog.
     await page.keyboard.press('Shift+Tab');
     await see.poll(() => focused(page)).toBe('open');
     await page.keyboard.press('Tab');
@@ -304,7 +288,6 @@ describe("Dialog.Popup return focus after the owner's own close", () => {
     await see.poll(() => focused(page)).toBe('first');
     expect(await ringed(page)).toBe(true);
     await askedRings(page);
-    // A press on a row that takes no focus leaves the ringed button focused, as ⌘K's query is.
     await page.click('#owner-close-row');
     await see(page.locator('#popup')).toHaveCount(0);
     await see.poll(() => focused(page)).toBe('open');

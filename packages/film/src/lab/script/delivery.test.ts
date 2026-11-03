@@ -64,7 +64,6 @@ describe('the reader’s delivery marks', () => {
 });
 
 describe('a staging take as the reader plays it', () => {
-  // Two words a second: 120 wpm, under the band.
   const words = [word('Not', 0.1, 0.5), word('by', 0.6, 0.8), word('works.', 0.9, 1.6)];
 
   test('its pace, against the band', () => {

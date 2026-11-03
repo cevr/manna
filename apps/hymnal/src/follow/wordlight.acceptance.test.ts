@@ -83,7 +83,6 @@ const laidOf = (number: number): ReadonlyArray<Laid> => {
   const seconds = Timing.secondsAt(timing);
   const ms = (time: number) => Math.round(seconds(time) * 1000);
   const parts = sung(hymn);
-  // Each line with times that fit it, its place in the music and its part's level.
   const fit = timing.lines.map((line, i) =>
     Option.flatMap(Arr.get(parts, i), (at) =>
       Match.value(at.part).pipe(
@@ -284,7 +283,6 @@ describe('wordlight: hymn 11, the owner’s place (stanza 1, line index 1, at 0:
   it.effect('with Sound on, line 1 lights the syllable sung at 27 000 ms, not the whole line', () =>
     Effect.gen(function* () {
       const laid = laidOf(11);
-      // The owner's place is line 1, which the score gives note times.
       expect(lineAt(laid, 27_000)).toBe(1);
       expect(Option.isSome(Option.flatMap(Arr.get(laid, 1), (line) => line.times))).toBe(true);
       const polls = yield* played(11, true, 30_000);
@@ -309,7 +307,6 @@ describe('wordlight: hymn 11, the owner’s place (stanza 1, line index 1, at 0:
             ),
           );
           expect(faults).toEqual([]);
-          // Inside line 1 the light steps through more than one syllable, in order, never back.
           const lit = polls.map(({ got }) => got[1] ?? OFF).filter((mark) => mark >= 0);
           expect(new Set(lit).size).toBeGreaterThan(1);
           expect(lit.every((mark, k) => k === 0 || mark >= (lit[k - 1] ?? 0))).toBe(true);
@@ -342,8 +339,6 @@ describe('wordlight: the rule over every hymn', () => {
             faults.push(`${hymn.number}: ${follow.lines} lines, the score lays ${laid.length}`);
             continue;
           }
-          // The probes of one hymn, in time order: the follow's clock never steps back inside its
-          // slack, so a later report at an earlier place would read the earlier one's.
           const probes: Array<{ readonly i: number; readonly t: number }> = [];
           laid.forEach((line, i) => {
             if (line.until <= line.start) return;
@@ -382,7 +377,6 @@ describe('wordlight: the rule over every hymn', () => {
           }
         }
         expect(faults.slice(0, 20)).toEqual([]);
-        // 14 150 lines lit at syllable level before this unit, 935 line-level lines after it.
         expect(lit).toBeGreaterThanOrEqual(15_085);
         expect(whole).toBeGreaterThan(0);
       }),

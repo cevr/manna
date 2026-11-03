@@ -1,15 +1,5 @@
-// A judged rule is data, written in the repo's `.oxlintrc.json` as the
-// options of `judged/<id>`: which items it reads (its selector), one
-// classify decision a model answers for each item, the label that reports,
-// how sure the model must be, and what the report says. Its severity is its
-// gate: `warn` reports, `error` fails the lint, and `off` judges nothing. The
-// runner (`run.ts`) asks the model and keeps the answers; the oxlint plugin
-// (`packages/scripts/lint/judged.ts`) reports the kept answers. A rule carries no code of its own.
-//
-// This module is read in Node (oxlint's plugin host) as well as in Bun, so it
-// imports nothing of either but node's crypto, which Bun provides.
-
-import { createHash } from 'node:crypto';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 import { Schema } from 'effect';
 
 import { SELECTORS } from './items.ts';
@@ -73,17 +63,19 @@ export type Settings = typeof Settings.Type;
  * none of them.
  */
 export const ruleKey = (rule: Pick<RuleOptions, 'subject' | 'instructions' | 'criteria'>) =>
-  createHash('sha256')
-    .update(
-      [
-        rule.subject,
-        rule.instructions,
-        ...Object.entries(rule.criteria)
-          .toSorted(([a], [b]) => a.localeCompare(b))
-          .flatMap(([label, words]) => [label, words]),
-      ].join('\0'),
-    )
-    .digest('hex');
+  bytesToHex(
+    sha256(
+      utf8ToBytes(
+        [
+          rule.subject,
+          rule.instructions,
+          ...Object.entries(rule.criteria)
+            .toSorted(([a], [b]) => a.localeCompare(b))
+            .flatMap(([label, words]) => [label, words]),
+        ].join('\0'),
+      ),
+    ),
+  );
 
 /** A model's name in the cache's keys. */
 export const cacheModel = (model: string) => `typesafe/${model}`;

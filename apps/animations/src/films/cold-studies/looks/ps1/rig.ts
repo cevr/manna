@@ -1,11 +1,3 @@
-// The ps1 look's one WebGL 2 canvas and what draws into it: a three.js
-// renderer at the console's resolution, the world's shared light and fog
-// (`World`), and its textures, made once per context and kept. A scene's
-// set (the courtroom, the desk) hangs off the rig in its own module's
-// WeakMap; every frame sets everything it shows from `f` before it renders.
-// The picture reaches the film's frame scaled up nearest-neighbour, each
-// low-res pixel a hard block (`present`).
-
 import { glCanvas } from '@manna/film/canvas';
 import { WebGLRenderer } from 'three';
 import { type World, world } from './shade.ts';

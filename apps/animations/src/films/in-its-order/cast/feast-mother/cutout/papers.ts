@@ -1,9 +1,3 @@
-// The feast mother's papers, by view: each the median of its kept view's
-// border ground. Her puppets un-matte each part's rim from its view's paper
-// (`puppets.ts`, `core/unmatte.ts`), and her cut table's clean rule clears the
-// paper-coloured rim her part sheets keep outside her ink (`cut.ts`, `CLEAN`).
-// Data only: both read it, so neither imports the other's pixels.
-
 /** A paper colour, RGB. */
 type Paper = readonly [number, number, number];
 

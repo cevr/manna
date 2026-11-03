@@ -103,7 +103,6 @@ describe('jobOf', () => {
     expect(conflict({ from: Option.some(2) })).toBe('from needs out');
     expect(conflict({ to: Option.some(4) })).toBe('to needs out');
     expect(conflict({ from: Option.some(2), out: Option.some('/tmp/x.mp4') })).toBe('none');
-    // A contact sheet takes a range and records it; it writes no clip to overwrite.
     expect(conflict({ contact: Option.some(5), from: Option.some(2) })).toBe('none');
   });
 
@@ -334,7 +333,6 @@ describe('segmentChunks, one segment', () => {
     oneSegment(from, to, workers).map((c) => c.to - c.from);
 
   test('about four chunks per page, then a tail that halves', () => {
-    // 150 frames a chunk for 4 pages, the last 448 frames as four of 75 and four of 37.
     const all = sizes(0, 2400, 4);
     expect(all.slice(-8)).toEqual([75, 75, 75, 75, 37, 37, 37, 37]);
     const head = all.slice(0, -8);
@@ -343,7 +341,6 @@ describe('segmentChunks, one segment', () => {
   });
 
   test('the last chunks the pages pull are the smallest, so the pages finish together', () => {
-    // A film of 15 776 frames (about nine minutes) on 8 pages: 59 of 238–239, then eight each of 120, 60 and 30.
     const all = sizes(0, 15_776, 8);
     expect(all.slice(-24)).toEqual([
       ...Array.from({ length: 8 }, () => 120),
@@ -367,7 +364,6 @@ describe('segmentChunks, one segment', () => {
       [0, 61, 1],
     ] as const)
       expect(sizes(from, to, workers).every((n) => n >= MIN_CHUNK_FRAMES)).toBe(true);
-    // Too short for two chunks of a second: one chunk.
     expect(sizes(0, 45, 8)).toEqual([45]);
   });
 
@@ -395,7 +391,6 @@ describe('a video’s reuse', () => {
 
 describe('segmentChunks, many segments', () => {
   test("covers every segment's frames in order, each chunk within one segment", () => {
-    // Three segments drawn of a render's five: the beats between them were kept.
     const segments = [
       { from: 0, to: 400 },
       { from: 900, to: 925 },
@@ -433,7 +428,6 @@ describe('ranges', () => {
   });
 
   test('a whole film whose end lies just past a frame keeps that frame', () => {
-    // 30.01 s at 30 fps: frame 900 starts inside the film, so the film has 901 frames.
     const info = { ...testExportInfo, duration: 30.01, frames: 901 };
     expect(frameSpan(info, Option.none(), Option.none())).toEqual({ start: 0, end: 901 });
     expect(frameSpan(info, Option.some(30), Option.some(30.01))).toEqual({ start: 900, end: 901 });
@@ -472,9 +466,7 @@ describe('encoder budget', () => {
     expect(tag(videoEncoders(8, 'master+share', hardware, 64))).toBe('TooManyEncoders');
     expect(tag(videoEncoders(14, 'master', hardware, 64))).toBe('14');
     expect(tag(videoEncoders(15, 'master', hardware, 64))).toBe('TooManyEncoders');
-    // A share-only page runs the share copy's encoder alone.
     expect(tag(videoEncoders(14, 'share', hardware, 64))).toBe('14');
-    // The default render, with its share copy, fits.
     expect(tag(videoEncoders(HARDWARE_WORKERS, 'master+share', hardware, 10))).toBe('8');
   });
 

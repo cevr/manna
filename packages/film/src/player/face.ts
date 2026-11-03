@@ -1,17 +1,3 @@
-// The faces a page draws in, each subset a woff2 file of its own: the
-// studio's two UI faces, Geist for words and labels and Geist Mono for
-// numbers, timecodes, ids and code (`@fontsource-variable/geist` and
-// `@fontsource-variable/geist-mono`, OFL), which the chrome shows under the
-// families `--font` and `--font-mono` name first (`tokens.css`), and the faces
-// a film draws in, which only its canvas shows (an app's own,
-// `pictureFaces`). Every file is imported from a script, never linked from a
-// stylesheet: the bundler inlines a stylesheet's `url()` as a `data:` URI, so
-// every face would hold the page's first paint, but emits a script's import as
-// its own file at an absolute URL named by its content's hash
-// (`/…-<hash>.woff2`), which the lab answers by its asset route behind
-// `admit`, as any script, and a changed file reaches an open page as any
-// changed source does.
-
 import { Effect, Option } from 'effect';
 import wordsLatinExt from '@fontsource-variable/geist/files/geist-latin-ext-wght-normal.woff2';
 import wordsLatin from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2';
@@ -215,7 +201,6 @@ export const pictureFaces = (faces: ReadonlyArray<Face>): Effect.Effect<void> =>
     Effect.cached(
       Effect.sync(() => {
         for (const font of added(document.fonts, faces, PICTURE_DISPLAY))
-          // A face that will not load fails the wait for it (`pictureFacesWait`), not the asking.
           font.load().catch(() => undefined);
       }),
     ),

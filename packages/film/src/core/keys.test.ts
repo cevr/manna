@@ -1,9 +1,3 @@
-// The keys paid assets are kept under: a take is named by its voice's key and
-// its words' hash, a score by its plan's key, and timings.json is read and
-// written byte for byte. A codec or key change that moved one byte would
-// orphan every committed take and score, so each is pinned to the value it
-// was committed with, on a three-beat fixture (`fixtures/tiny-timings.json`).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Path, Result, Schema } from 'effect';
@@ -57,7 +51,6 @@ describe('the keys of paid assets', () => {
     Effect.gen(function* () {
       const timings = yield* Schema.decodeEffect(TimingsJson)(yield* committed);
       expect(voiceKey(yield* Schema.decodeEffect(Voice)(voice))).toBe(timings.voice);
-      // Pinned, not recomputed: a change to the take hash would orphan every take.
       expect(timings.scenes['open']?.hash).toBe('af95d9f8');
       for (const scene of scenes)
         expect(timings.scenes[scene.id]?.hash).toBe(

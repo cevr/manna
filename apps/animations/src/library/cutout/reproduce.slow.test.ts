@@ -1,17 +1,3 @@
-// The cast build makes every committed part sheet again, exactly. Each view
-// with a committed `cutout/sheets/<view>/record.json` under the app's sources
-// is checked by `concept parts --check`'s own job (`viewCutOf`, `jobOf`,
-// `runParts`): its committed okra answers are laid again under its cut
-// table's rule (`CLEAN`), and any byte of a committed file it would change
-// fails the case. A hand fix committed with no rule is a byte the lay does not
-// make, so it fails here before the build's `--reuse` would lay over it. The
-// views are read from the tree, so a new member's are held with no edit here.
-// filler-bases' own cutters, run into a scratch folder, make his committed
-// files again, each PNG the same decoded RGBA, and no committed file is one
-// they no longer make. The mother's kept drawings are fixed points of her
-// paper rim's clear, and the woman's poses-1 holds under readings of cuff ink
-// near the library's, so her sheet does not hang on one threshold.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   ImageRoute,

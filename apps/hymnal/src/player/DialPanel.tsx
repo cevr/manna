@@ -107,8 +107,6 @@ export function DialPopover({
 }) {
   const [shown, setShown] = useState(open);
   if (open && !shown) setShown(true);
-  // While it closes the panel draws what it showed when it was last open: a page turn or a reset
-  // that closes it changes nothing in it as it goes. Each open draw is kept once it is drawn.
   const last = useRef(children);
   useEffect(() => {
     if (open) last.current = children;
@@ -116,7 +114,6 @@ export function DialPopover({
   const reduced = useReduceMotion();
   const { width } = useWindowDimensions();
   const progress = useSharedValue(0);
-  // The panel's size, measured as it lays out; until then, its size with two rows across the screen.
   const size = useSharedValue({
     width: width - 24,
     height: 2 * DETENT + ROW_GAP + 2 * PANEL_PAD + 2,
@@ -151,7 +148,6 @@ export function DialPopover({
   const drawn = useAnimatedStyle(() => {
     const p = progress.value;
     if (reduced) return { opacity: Math.min(Math.max(p, 0), 1) };
-    // The key button's centre from the panel's centre: the scale's origin.
     const ox = keyAt.value - size.value.width / 2;
     const oy = size.value.height / 2 + below;
     return {

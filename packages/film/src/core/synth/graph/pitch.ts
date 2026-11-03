@@ -1,8 +1,3 @@
-// Pitches as Hz: a note name, equal-tempered on A4 = 440 Hz, and a degree of a
-// sound's key. A note name is read whole, its octave every digit after its
-// pitch class, and the names a sound may play are those of octaves 0 to 8
-// (`NOTE_NAME`), which every schema that takes one checks.
-
 import { Predicate } from 'effect';
 import { exp2 } from './math.ts';
 import type { Degree, Key, Pitch } from './nodes.ts';

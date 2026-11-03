@@ -1,9 +1,3 @@
-// The cut rules a member's cut table lays its parts by (`cutParts`,
-// @manna/film's part sheet): a box, a sleeve, the hem, a sole. Each is read in
-// the kept view's pixels; the table (`table.ts`) moves it into the view's part
-// sheet frame. A member's `cutout/cut.ts` calls these with its own points and
-// declares none of its own. Pure.
-
 import type { PartRule } from '@manna/film/tools';
 
 /** A point of a kept view, pixels. */
@@ -69,7 +63,6 @@ const edgeFrom = (inner: ReadonlyArray<Pt>, y: number): Pt[] => [
  * Its `unless` keeps the cap off the far side of the inner edge.
  */
 export const sleeve = (s: Sleeve) => {
-  // the view's edge on the sleeve's own side, and past the inner edge on the other
   const [out, across] = { left: [-1, FAR] as const, right: [FAR, -1] as const }[s.side];
   const bottom = (s.inner[s.inner.length - 1] ?? s.shoulder)[1];
   const top = (s.inner[0] ?? s.shoulder)[1];

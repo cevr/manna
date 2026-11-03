@@ -1,7 +1,3 @@
-// Where a pick lands in a film's source: `play` of the score in `sound.ts`
-// and of a look in `palette.ts`, each the one literal the parser finds, the
-// rest of the file untouched; and a palette's looks and their levels, read.
-
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import { SCORE_PLAY, editPick, lookLevels, lookPlay, readPick } from './choice-source.ts';

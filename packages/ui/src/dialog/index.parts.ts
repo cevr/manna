@@ -1,6 +1,3 @@
-// Upstream: packages/react/src/dialog/index.parts.ts
-//
-// The parts of a dialog, used as `Dialog.Root`, `Dialog.Popup` and so on.
 export { DialogBackdrop as Backdrop } from './backdrop/DialogBackdrop.tsx';
 export { DialogClose as Close } from './close/DialogClose.tsx';
 export { DialogPopup as Popup } from './popup/DialogPopup.tsx';

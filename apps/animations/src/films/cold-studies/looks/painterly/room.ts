@@ -1,13 +1,3 @@
-// The courtroom, painted: a grave old room seen side on, as a stage. Tall
-// leaded windows in the back wall let in a cool, even daylight that falls in
-// shafts across the dim air; dark panelling runs below them. To the right the
-// high bench, a dark carved canopy over it and an oil lamp burning at each
-// end, the only warm light in the room. To the left the dock, where the
-// accused stands, and between them the table the evidence piles up on. The
-// world is 1920 × 1080 units, the wide shot's frame; the camera frames it
-// (`court.ts`). Light is cool from the windows, warm from the lamps, and the
-// shadow between them is teal.
-
 import { type Box, write } from '@manna/film/canvas';
 import { clamp, hash2, lerp } from '@manna/film/core';
 import { type Easel, along, curve, glow, oval, paint, poly, pool, rect, shade } from './brush.ts';
@@ -79,7 +69,6 @@ const walls = (e: Easel) => {
     tone: (x, y) =>
       0.12 + 0.62 * daylight(x, y) * (0.55 + 0.45 * clamp(y / 600)) + 0.12 * lamplight(x, y),
   });
-  // Pilasters either side of each window: plaster that catches the daylight.
   for (const [i, x] of [250, 640, 1110].entries()) {
     const b: Box = { x, y: 40, w: 60, h: 660 };
     paint(e, rect(b), {
@@ -92,7 +81,6 @@ const walls = (e: Easel) => {
       tone: (px, py) => 0.2 + 0.5 * daylight(px, py) + 0.25 * clamp((px - x) / 60),
     });
   }
-  // The cornice under a ceiling lost in the gloom.
   const top: Box = { x: -200, y: -200, w: 2400, h: 250 };
   paint(e, rect(top), {
     ramp: R.panel,
@@ -102,7 +90,6 @@ const walls = (e: Easel) => {
     size: 30,
     tone: (_, y) => 0.05 + 0.25 * clamp((y + 50) / 100),
   });
-  // The panelling: dark wood, its rails catching the light.
   const wain: Box = { x: -200, y: 690, w: 1400, h: FLOOR - 690 };
   paint(e, rect(wain), {
     ramp: R.panel,
@@ -124,7 +111,6 @@ const walls = (e: Easel) => {
     size: 14,
     tone: (x, y) => 0.45 + 0.4 * daylight(x, y),
   });
-  // The floor: boards running away from us, the daylight lying on them.
   const floor: Box = { x: -200, y: FLOOR, w: 2400, h: 400 };
   paint(e, rect(floor), {
     ramp: R.floor,
@@ -186,7 +172,6 @@ const windows = (e: Easel) => {
         0.12 * Math.abs((x - w.x) / w.w - 0.5) +
         0.12 * (hash2(Math.floor(x / 42), Math.floor(y / 56) + k * 99) - 0.5),
     });
-    // The lead and the mullions: dark bars over the glass.
     ctx.save();
     ctx.beginPath();
     poly(glass)(ctx);
@@ -198,7 +183,6 @@ const windows = (e: Easel) => {
     ctx.fillRect(w.x + w.w / 2 - 7, w.y, 14, w.h);
     ctx.fillRect(w.x, w.y + w.h * 0.62 - 7, w.w, 14);
     ctx.restore();
-    // The sill.
     paint(e, rect({ x: w.x - 40, y: w.y + w.h + 6, w: w.w + 80, h: 20 }), {
       ramp: R.wall,
       box: { x: w.x - 40, y: w.y + w.h + 6, w: w.w + 80, h: 20 },
@@ -231,7 +215,6 @@ export const shafts = (e: Easel, t: number) => {
     ctx.fill();
   }
   ctx.restore();
-  // Dust: soft motes drifting slowly down through the light.
   for (let i = 0; i < 36; i++) {
     const w = WINDOWS[i % WINDOWS.length] ?? { x: 0, y: 0, w: 0, h: 0 };
     const u = hash2(i, 7);
@@ -267,14 +250,12 @@ export const canopy = (e: Easel, t: number) => {
     dir: -1.57,
     spread: 0.1,
     size: 18,
-    // The lamps' warmth spread across the carved wood, so the judge's dark robe stands against it.
     tone: (x, y) =>
       0.1 +
       0.42 * lamplight(x, y + 60) * flicker(t, 0) +
       0.38 * pool(x, y, 1600, 470, 560) +
       0.06 * daylight(x, y),
   });
-  // Fluting: the carving's grooves.
   for (let x = 1300; x < 1830; x += 46)
     shade(e.ctx, rect({ x, y: 170, w: 14, h: BENCH.top - 190 }), P.ink, 0.35);
 };
@@ -312,7 +293,6 @@ export const bench = (e: Easel, t: number) => {
       tone: (px, py) => 0.3 + 0.6 * warm(px, py - 60),
     });
   }
-  // The cornice the judge's hands rest on.
   const lip: Box = { x: BENCH.left - 24, y: BENCH.top - 14, w: 2000, h: 34 };
   paint(e, rect(lip), {
     ramp: R.wood,
@@ -354,7 +334,6 @@ export const lamps = (e: Easel, t: number) => {
         tone: (px) => 0.35 + 0.5 * clamp((px - x + 30) / 60),
       },
     );
-    // The chimney: thin glass holding the flame.
     ctx.save();
     ctx.globalAlpha = 0.55;
     ctx.fillStyle = R.glass[3];
@@ -483,7 +462,6 @@ export const evidence = (e: Easel, fall: (i: number) => number) => {
         size: 9,
         tone: (px) => 0.25 + 0.45 * clamp((px + x.w / 2) / x.w),
       });
-      // The leaves' edge between the boards.
       paint(
         { ctx, view, px: e.px },
         rect({ x: -x.w / 2 + 8, y: -x.h / 2 + 5, w: x.w - 12, h: x.h - 10 }),
@@ -509,7 +487,6 @@ export const evidence = (e: Easel, fall: (i: number) => number) => {
         ratio: 0.2,
         tone: (px, py) => 0.16 + 0.34 * clamp((px + x.w / 2) / x.w) - 0.1 * clamp(py / x.h + 0.5),
       });
-      // The sheets' edges, and the tape round the bundle.
       ctx.fillStyle = 'rgba(40,30,22,0.45)';
       for (let k = 1; k < 4; k++) ctx.fillRect(-x.w / 2, -x.h / 2 + (k * x.h) / 4, x.w, 1.5);
       ctx.fillStyle = R.coat[1];
@@ -552,7 +529,6 @@ export const writ = (e: Easel, t: number, stamp: number) => {
     tone: (px, py) =>
       0.14 + 0.34 * lamplight(px, py) * flicker(t, 0) - 0.1 * clamp((py - y - h * 0.6) / (h * 0.4)),
   });
-  // Its script: lines of a clerk's hand, too small to read.
   ctx.fillStyle = 'rgba(40,30,22,0.5)';
   for (let k = 0; k < 13; k++) {
     const ly = y + 14 + k * 13;
@@ -582,7 +558,6 @@ export const verdict = (
   ctx.translate(cx, cy);
   ctx.scale(pop, pop);
   ctx.rotate(-0.05);
-  // The verdict struck in gold leaf, between two gilt rules.
   ctx.globalAlpha = clamp(stamp * 3);
   ctx.fillStyle = P.gold;
   ctx.fillRect(-108, -50, 216, 6);

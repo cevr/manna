@@ -1,12 +1,3 @@
-// Where it was heading. Wide cardboard fields under a teal sky, dry, with the
-// city low on the horizon and scarlet specks hanging over the land. On
-// "spirit" the rain begins, silver-gold, and the fields green where it falls.
-// On "blot" the camera tilts up to the gold sanctuary far above, veil drawn
-// up and Christ pleading before the ark as `exchange` left him: its light
-// brightens, and the specks over the land wink out one by one. On "loud" the
-// camera comes down over the city, the angel with the third angel's banner
-// flies across again, and figures on the rooftops turn to look and wave.
-
 import {
   type Pt,
   at,
@@ -78,28 +69,21 @@ const WATCHERS = CITY_FRONT.filter((_, i) => i % 2 === 1);
 
 export const rain = drawing({
   timeline: {
-    // Christ pleads before the ark from the cut, as `exchange` left him.
     plea: { at: 'start', dur: 0 },
     fall: { mark: 'spirit', offset: -0.3, dur: 0.8 },
-    // The fields green back to front: each starts as the rain reaches it
-    // (over the first 0.6 of the cue) and takes the rest to turn.
     green: { mark: 'spirit', offset: 0.2, dur: 3.6, ease: 'linear', stagger: 0.6 },
     tiltUp: { mark: 'blot', offset: -0.6, dur: 1.3 },
     bright: { mark: 'blot', offset: 0.4, dur: 1 },
-    // The specks wink out one after another, each quickly.
     wink: { mark: 'blot', offset: 0.9, dur: 2, ease: 'linear', stagger: 0.85 },
     down: { mark: 'loud', offset: -0.9, dur: 1.4 },
     stop: { mark: 'loud', offset: -0.9, dur: 0.8 },
     fly: { mark: 'loud', offset: -0.1, dur: 3, ease: 'linear' },
-    // The angel has the banner in hand as it flies in, still off frame.
     grasp: { with: 'fly', dur: 0 },
     turn: { mark: 'loud', offset: 0.6, dur: 0.6 },
   },
   knobs: {
-    // Tilted up to the sanctuary.
     up: [960, -40],
     upZoom: 1,
-    // Down over the city on the horizon.
     city: [1000, 560],
     cityZoom: 1.7,
   },
@@ -127,7 +111,6 @@ export const rain = drawing({
       h,
       [
         {
-          // Heaven: the sanctuary far above the land, Christ pleading before the ark.
           z: 1.3,
           draw: () =>
             at(ctx, { x: SANCTUARY[0], y: SANCTUARY[1], scale: 0.42 }, () => {
@@ -140,7 +123,6 @@ export const rain = drawing({
             }),
         },
         {
-          // The city on the horizon, a little way off.
           z: 1.5,
           draw: () =>
             at(ctx, { x: 960, y: 770, scale: 0.5 }, () =>
@@ -169,7 +151,6 @@ export const rain = drawing({
             ),
         },
         {
-          // The fields, greening back to front as the rain reaches them.
           z: 1,
           draw: () =>
             FIELDS.forEach((p, i) => {
@@ -184,7 +165,6 @@ export const rain = drawing({
             }),
         },
         {
-          // The specks over the land, winking out as the sanctuary brightens.
           z: 1.2,
           draw: () =>
             SPECKS.forEach((s, i) => {
@@ -210,9 +190,6 @@ export const rain = drawing({
       { rest: [UNMOVED.x, UNMOVED.y], haze: C.tealLow, thickness: 0.35 },
     );
 
-    // The rain, silver and gold, over everything near. Texture, not ink the
-    // check measures: it falls before `stop` ends and the herald's banner (the
-    // scene's only text) flies after, and the captions' plate covers it.
     const fall = f.at('fall') * (1 - f.at('stop'));
     if (fall > 0) {
       ctx.save();
@@ -233,7 +210,6 @@ export const rain = drawing({
       ctx.restore();
     }
 
-    // The angel with the banner, across the sky above the city.
     const fly = f.cue('fly');
     if (t >= fly.start && t <= fly.end) {
       const k = f.at('fly');

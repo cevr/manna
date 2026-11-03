@@ -82,8 +82,6 @@ describe('§9.6 the index is read once, not once per query', () => {
     Effect.gen(function* () {
       const service = yield* SearchService;
       const reads = yield* ReadCount;
-      // Every golden query, plus repeats: a per-query read would climb with
-      // each one.
       for (const golden of GOLDEN_QUERIES) {
         yield* service.query(golden.query);
       }
@@ -111,8 +109,6 @@ describe('§6.5 the filesystem reader degrades on faults and not on defects', ()
     }),
   );
 
-  // The supported state, and the baseline the two defect tests below are
-  // read against: absence must still reach the reader as `None`.
   const missing = Layer.succeed(
     FileSystem.FileSystem,
     FileSystem.makeNoop({ exists: () => Effect.succeed(false) }),
@@ -132,9 +128,6 @@ describe('§6.5 the filesystem reader degrades on faults and not on defects', ()
 
   it.scopedLive('lets a defect in the stat propagate', () =>
     Effect.gen(function* () {
-      // `catchCause` swallowed this and answered `None`, which reports a broken
-      // platform layer as "the index was never installed" — an absence the
-      // operator would try to fix by installing an index that is already there.
       const outcome = yield* Effect.exit(Effect.flatMap(VectorIndexBytes, (source) => source.read));
       expect(Exit.isFailure(outcome)).toBe(true);
     }).pipe(

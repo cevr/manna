@@ -28,11 +28,9 @@ import {
 } from '../scripts/indexes.js';
 import type { IndexName } from './indexes.js';
 
-/** A made-up file as plain JSON, mutated in place before it is written out as the text the CLI reads. */
 // oxlint-disable-next-line effect/noUnsafeDictionaryType -- a fixture the cases mutate key by key; the decode under test parses it
 type Json = Record<string, unknown>;
 
-/** The file's text, as the CLI reads it from disk. */
 // oxlint-disable-next-line effect/noGlobals -- the fixture's own encoder: the text is the decode's input under test
 const text = (file: Json) => JSON.stringify(file);
 
@@ -467,7 +465,6 @@ describe('each mutation is caught, at every entry it applies to', () => {
       );
       expect({ label, missed: result.missed }).toEqual({ label, missed: [] });
     }
-    // metrical: a metre's tunes out of order
     const b = book();
     const metre = arr(b.metrical, 'metres')[0] as Json;
     metre['tunes'] = [{ name: 'Zinnia', hymns: refs(21, [1]) }, ...(metre['tunes'] as Array<Json>)];
@@ -488,7 +485,6 @@ describe('each mutation is caught, at every entry it applies to', () => {
       'sections',
     );
     expect(dropTopic.missed).toEqual([]);
-    // an alias's pair is another name of a hymn the main names list: no check reaches its loss
     const mainLists = (b: ReturnType<typeof book>, name: 'tunes' | 'metrical') =>
       name === 'tunes'
         ? arr(b.tunes, 'tunes').filter((t) => t['alias'] === undefined)
@@ -509,7 +505,6 @@ describe('each mutation is caught, at every entry it applies to', () => {
   });
 
   it('a section the index prints under another topic name is held to that topic’s hymns', () => {
-    // `Love of God` is a section of SECTION_TOPICS: the topic `GOD THE FATHER: Love` holds it
     const sectionsOf = (b: ReturnType<typeof book>) => {
       const decoded = decodeOne('topical', text(b.topical));
       const named: Context = {
@@ -539,7 +534,7 @@ describe('each mutation is caught, at every entry it applies to', () => {
         (b) => numberSlots(name, b[name]).length,
         (b, i) => {
           const [obj] = numberSlots(name, b[name])[i] ?? [{} as Json];
-          obj['page'] = 999; // it names no page of the index now: its page's count is short
+          obj['page'] = 999;
         },
         'pages',
       );
@@ -569,7 +564,6 @@ describe('each mutation is caught, at every entry it applies to', () => {
   it('a tune that bears its hymn’s title may stay out of the alphabetical index', () => {
     const b = book();
     const alpha = arr(b.tunes, 'tunes');
-    // the alphabetical index names hymn 3's tune Alder (alias Elm), the metres by its title
     const [first] = arr(b.metrical, 'metres') as Array<Json>;
     (first as Json)['tunes'] = [
       { name: 'Alder', hymns: refs(21, [1, 2, 4, 5, 6]) },
@@ -644,7 +638,6 @@ describe('a Scripture direction and its twin in the other index', () => {
   });
 
   it('differ when the book, the stanza or the verses differ', () => {
-    // each: the mutation, then the reference entry left with no twin
     const cases: ReadonlyArray<[string, (b: ReturnType<typeof book>) => void, string]> = [
       ['another book', (b) => (byHymn(b, 2)['passage'] = at(2, 1, [1, 1])), '2a'],
       ['another stanza', (b) => (byHymn(b, 3)['stanza'] = 'a'), '3r'],

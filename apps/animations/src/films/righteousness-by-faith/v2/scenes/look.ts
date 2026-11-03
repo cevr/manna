@@ -1,14 +1,3 @@
-// Look: what faith does. First the parchment: the grey figure holds up a
-// stack of coins, medals and good deeds as if they could pay, and it slides
-// off; then a plain open hand, palm up, and a gold light laid in it: faith is
-// the hand that takes hold of Christ. Then a warm desert camp under a peach
-// sky, scarlet paper snakes in the sand, a bitten figure. The bronze serpent
-// rises on its pole; the figure tries to climb it, straining, slipping; then
-// stops, slides down, steps back and simply looks up, and the camera closes
-// on their face as the bites fade and the light reaches them. After the last
-// word, faith's icon pulls back to the section head's row, glowing, and for a
-// breath the four faces at the hole in `roof` show under it, lit gold.
-
 import {
   type Camera,
   type Frame,
@@ -112,17 +101,11 @@ const POLE_H = 620;
 const timeline = {
   wonder: { mark: 'faith', dur: 0.5 },
   holdUp: { mark: 'saviour', dur: 0.6, ends: true, ease: 'outBack' },
-  // Their hands go up to where the stack comes down into them, and down once it has slid off.
   handsUp: { mark: 'saviour', offset: -0.9, dur: 0.8, ease: 'inOutSine' },
-  // The stack slides off one piece at a time, each falling over the rest of the cue.
   slide: { mark: 'saviour', word: 'earns', offset: -0.2, dur: 1.3, ease: 'linear', stagger: 0.41 },
   armsDown: { after: 'slide', dur: 0.5 },
   handsDown: { after: 'slide', dur: 0.8, ease: 'inOutSine' },
-  // As the stack goes, their near hand comes down open, and the camera
-  // pushes into it: the close-up. Once the light is laid in it, back out
-  // to them holding it.
   offer: { with: 'handIn', dur: 0.5, ends: true },
-  // Coming down, the hand that held the stack turns palm up: the close-up's shape.
   palmUp: { mark: 'hand', offset: -0.85, dur: 0.25, ease: 'inOutSine' },
   handIn: { mark: 'hand', dur: 0.6, ends: true, ease: 'inOutCubic' },
   light: { mark: 'hand', offset: 0.3, dur: 1, ease: 'outCubic' },
@@ -131,24 +114,16 @@ const timeline = {
   rise: { mark: 'pole', offset: -0.2, dur: 1.2, ease: 'outBack' },
   approach: { mark: 'harder', offset: -0.6, dur: 0.7, ease: 'inOutSine' },
   climb: { mark: 'harder', offset: 0.2, dur: 2.2 },
-  // Their hands take the pole as they start to climb, and let go as they slide down.
   grasp: { with: 'climb', dur: 0.6, ease: 'inOutSine' },
   slideDown: { mark: 'climb', dur: 0.5, ease: 'inCubic' },
   letGo: { with: 'slideDown', until: { cue: 'slideDown' } },
   stepBack: { mark: 'climb', offset: 0.6, dur: 0.7, ease: 'inOutSine' },
-  // Stepped back, he looks up and the camera pushes in.
   lookUp: { after: 'stepBack', offset: 0.1, dur: 0.6 },
   push: { with: 'lookUp', dur: 1.6, ease: 'inOutCubic' },
-  // Healed on "I present Christ".
   heal: { mark: 'climb', word: 'christ', offset: 0.12, dur: 1.5 },
-  // 0.75 s into the healing, the bites are gone.
   bitesGone: { with: 'heal', offset: 0.75, dur: 0 },
-  // After the last word: the face gives way to faith's icon close, pulled back
-  // to the row, faith glowing; for a breath, under it, the four faces at the
-  // hole in the roof, lit gold (the callback to `roof`).
   toIcons: { at: 'speechEnd', offset: 0.1, dur: 0.4 },
   pullBack: { at: 'speechEnd', offset: 0.1, dur: 0.9, ease: 'inOutSine' },
-  // Faith pops forward in gold as the row settles, the other two faded back.
   iconGlow: { at: 'speechEnd', offset: 0.3, dur: 0.6, ease: 'outBack' },
   hole: { at: 'speechEnd', offset: 1, dur: 0.6, ease: 'inOutSine' },
   holeOut: { at: 'end', offset: -0.6, dur: 0.5, ease: 'inOutSine' },
@@ -156,10 +131,8 @@ const timeline = {
 const knobs = {
   pole: [1180, 930],
   figure: [760, 930],
-  // Close on the face looking up at the serpent.
   face: [1060, 600],
   faceZoom: 2,
-  // The four at the hole in the roof, framed for the recall plate under faith.
   hole: [740, 240],
   holeZoom: 2.2,
 } as const;
@@ -174,13 +147,11 @@ export const look = drawing({
     const hand = (k: string) => f.hand(k);
     const toDesert = f.at('toDesert');
 
-    // ── A: the parchment, the stack that cannot pay, then the open hand ─────
     if (toDesert < 1) {
       sky(ctx, w, h, [
         [0, C.paper],
         [1, C.paper],
       ]);
-      // The push into the offered hand and back out: 0 on the figure, 1 on the close-up.
       const into = f.at('handIn') * (1 - f.at('handOut'));
       const light = f.at('light');
       const [hx, hy] = OFFER_AT;
@@ -195,11 +166,8 @@ export const look = drawing({
         const slide = f.at('slide');
         const sheepish = f.at('armsDown');
         const offer = f.at('offer');
-        // The stack's bottom card, where both hands hold it up (over the head, never on it).
         const bottom = STACK_Y - 190 * (1 - f.at('holdUp'));
-        // The hands wait where the stack's bottom card comes to rest.
         const holding = f.at('handsUp') * (1 - f.at('handsDown'));
-        // The far hand keeps its end up as the last of the stack slides off.
         HOLD_FAR.reach = holding;
         OPEN.to[0] = lerp(HOLD_AT[0], OFFER_AT[0], offer);
         OPEN.to[1] = lerp(HOLD_AT[1], OFFER_AT[1], offer);
@@ -219,7 +187,6 @@ export const look = drawing({
             },
             hand('figureA'),
           );
-          // Back out: the light they were given, held in their open hand.
           if (light > 0) {
             glow(ctx, OFFER_AT[0], OFFER_AT[1], 40, C.glow, light);
             piece(ctx, ellipseShape(OFFER_AT[0], OFFER_AT[1], 9, 9), C.gold, hand('lightHeld'), {
@@ -228,7 +195,6 @@ export const look = drawing({
               shadow: 0.2,
             });
           }
-          // The stack: held up, then sliding off one piece at a time.
           if (up > 0 || slide > 0)
             STACK.forEach(([kind, dx], i) => {
               const fall = f.stagger('slide', i, STACK.length);
@@ -265,8 +231,6 @@ export const look = drawing({
         ctx.restore();
       }
 
-      // Their own palm-up hand close up, and the gold light laid in it: the
-      // light comes down to rest on the palm's middle, clear of the lines.
       pushedHand(ctx, f.hand, PUSH, into, 1, 'near', {
         over: () => {
           if (light <= 0) return;
@@ -282,8 +246,6 @@ export const look = drawing({
       });
     }
 
-    // ── B: the camp in the desert, the serpent on the pole ───────────────────
-    // Once the row covers it, the camp is no longer drawn.
     if (toDesert > 0 && f.at('toIcons') < 1) {
       const [px, py] = f.knob('pole');
       const [fx, fy] = f.knob('figure');
@@ -311,7 +273,6 @@ export const look = drawing({
       ON_POLE_HIGH.reach = strain;
       ON_POLE_LOW.reach = strain;
       const jiggle = strain * Math.sin(t * 18) * 3;
-      // Looking up, their hands come together at the chest: in the close-up, never cut by its frame.
       AT_CHEST_NEAR.reach = lookUp;
       AT_CHEST_FAR.reach = lookUp;
 
@@ -329,7 +290,6 @@ export const look = drawing({
         h,
         [
           {
-            // The dunes and the camp's tents.
             z: 1.5,
             draw: () => {
               piece(ctx, blob(500, 900, 1500, 260, 51), C.boardLight, hand('dune1'), {
@@ -367,7 +327,6 @@ export const look = drawing({
             },
           },
           {
-            // The sand, the snakes, the pole and the figure.
             z: 1,
             lift: 1.2,
             draw: () => {
@@ -401,7 +360,6 @@ export const look = drawing({
                 });
               }
 
-              // The pole, and the serpent on it.
               if (rise > 0) {
                 const top = py - POLE_H * rise;
                 glow(ctx, px, top + 40, 320, C.glow, 0.5 * rise + 0.5 * heal);
@@ -445,14 +403,11 @@ export const look = drawing({
                 });
               }
 
-              // The bitten one: slumped, then climbing, then looking up.
               at(ctx, { x: x + jiggle, y: fy - height, scale: 1.8, rot: 0.12 * strain }, () => {
-                // The light reaches them from behind as the bites fade.
                 glow(ctx, 0, -150, 190, C.glow, 0.8 * heal);
                 person(
                   ctx,
                   {
-                    // Off the sand once they climb.
                     ground: Math.max(0, 1 - height / 40),
                     tilt: 0.15 * (1 - onPole) * (1 - lookUp) - 0.22 * lookUp,
                     nod: 5 * (1 - rise) * (1 - lookUp),
@@ -478,7 +433,6 @@ export const look = drawing({
       ctx.restore();
     }
 
-    // ── C: back to the row, and the four faces at the hole ─────────────────
     const toIcons = f.at('toIcons');
     if (toIcons > 0) row(f, toIcons);
   },

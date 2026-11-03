@@ -353,8 +353,6 @@ const measure = Effect.fn('Contrast.measure')(function* (
   path: string,
   width: number,
 ) {
-  // The measure lays its own style and image over the page, which the site's
-  // content policy refuses; the page is drawn as served either way.
   const context = yield* Effect.acquireRelease(
     step('context', () =>
       browser.newContext({ viewport: { width, height: 900 }, bypassCSP: true }),
@@ -377,8 +375,6 @@ const measure = Effect.fn('Contrast.measure')(function* (
   const hover: Array<Measured> = [];
   let drawn = 0;
   for (const [index, name] of targets.names.entries()) {
-    // The pointer must land on the link itself: one under another element
-    // fails here, named, rather than measuring as at rest.
     const point = yield* step(`aim "${name}"`, () =>
       page.evaluate(pointAt, `[${TARGET}="${index}"]`),
     );

@@ -1,14 +1,3 @@
-// The plan pass: every value drawn and every length found before a sample is
-// made. A node plans to its length in frames and a fill that writes those
-// frames into a zeroed array at least that long; a parent's fill runs its
-// children's. Onsets and lengths are whole frames, rounded once each, so they
-// add as integers and a thousand repetitions do not drift.
-//
-// A node's seed is the render's seed and its place: its path of child indexes
-// from the root (a repetition's index too), or its `stream` name, which its
-// children's paths then start from. So a named node and everything under it
-// keep their draws wherever the node moves in its sound.
-
 import { Match, Predicate } from 'effect';
 import { rng } from '../../random.ts';
 import { type Draws, drawInt, drawValue, plain, streamSeed, uniform } from './draw.ts';
@@ -181,7 +170,6 @@ const mixOf = (kit: Kit, parts: ReadonlyArray<Part>, frames?: number): Planned =
     frames: length,
     fill: (out) => {
       for (const part of parts) {
-        // A part that starts at the end or past it is never heard: it is not made.
         if (part.at >= length) continue;
         const x = kit.take(part.child.frames);
         part.child.fill(x);
@@ -191,8 +179,6 @@ const mixOf = (kit: Kit, parts: ReadonlyArray<Part>, frames?: number): Planned =
     },
   };
 };
-
-// Sources.
 
 const planOsc = (node: Osc, at: At): Planned => {
   const frames = framesAt(node.secs, at, 'secs');
@@ -243,8 +229,6 @@ const planSample = (node: Sample, at: At): Planned => {
   const made = at.render.kit.sample(sound, node.seed ?? streamSeed(at.seed, 'seed'));
   return { frames: made.length, fill: (out) => out.set(made) };
 };
-
-// Shapers and the filter.
 
 const planGain = (node: Gain, at: At): Planned => {
   const child = planNode(node.of, childOf(at, 0), at.render);
@@ -329,7 +313,6 @@ const planFilter = (node: Filter, at: At): Planned => {
   const held = [hz, q, db].every((track) => heldOf(track) !== undefined);
   const kit = at.render.kit;
   return changed(child, (out, n) => {
-    // Held, the filter reads its first frame alone.
     const span = held ? 1 : n;
     const tracks: FilterTracks = {
       hz: written(kit, hz, span),
@@ -343,8 +326,6 @@ const planFilter = (node: Filter, at: At): Planned => {
     kit.giveWide(tracks.db);
   });
 };
-
-// Space.
 
 /** The largest of a track's first `n` frames. */
 const largest = (x: Float64Array, n: number): number => {
@@ -413,14 +394,11 @@ const planLoop = (node: Loop, at: At): Planned => {
   };
 };
 
-// Time.
-
 const planLayer = (node: Layer, at: At): Planned =>
   mixOf(
     at.render.kit,
     node.of.map((layered, j) => {
       const slot = childOf(at, j);
-      // Where a child sits and its gain are its own draws, so they follow it as it moves.
       const own = placed(layered.node, slot, at.render);
       return {
         at: framesAt(layered.at ?? 0, own, 'placed.at'),

@@ -1,5 +1,3 @@
-// The behaviour mixins in the browser: a ref factory's two phases, a mixin's
-// state across reactive updates, and a listener's lifetime.
 import { describe, expect, it } from 'bun:test';
 
 import { expect as see } from '@playwright/test';
@@ -45,7 +43,6 @@ describe('listen', () => {
     await see.poll(() => logOf(page)).toEqual(['wheel prevented=true', 'key a']);
     await page.click('#toggle');
     await see(page.locator('#scroller')).toHaveCount(0);
-    // A key press resolves once its events are dispatched: a listener left behind would have logged.
     await page.keyboard.press('b');
     expect(await logOf(page)).toEqual(['wheel prevented=true', 'key a']);
   });

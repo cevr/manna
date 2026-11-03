@@ -31,7 +31,6 @@ interface Sampled extends Span {
  * chord sounding.
  */
 const sample = (score: Score, from: number, to: number): Sampled[] => {
-  // The notes sounding at some point in [from, to), in the score's order.
   const near = score.harmony.filter((note) => note.start < to && note.end > from);
   const onsets = [
     ...new Set([from, ...near.map((n) => n.start).filter((t) => t > from && t < to)]),

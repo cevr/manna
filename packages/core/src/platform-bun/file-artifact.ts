@@ -226,9 +226,6 @@ const releaseSource = (
       source: assetSourceId(`${corpus}-release`),
       revision: corpusRevision(source.revision),
       digest: Option.some(corpusDigest(source.digest)),
-      // The ordinal this release states, carried onto the candidate so the
-      // install decision can compare it with what is already installed
-      // (round-4 F2) and so a successful install persists it.
       generation: source.generation ?? Option.none(),
     }),
     expectedSize: Option.some(source.size),
@@ -261,9 +258,6 @@ export const storeError = (operation: string) => (cause: unknown) =>
 
 const openDatabase = (filename: string, readonly: boolean) =>
   Effect.try({
-    // `create: false` is bun:sqlite's `fileMustExist`: a candidate that is not
-    // there is a verification failure, never an empty database sprung into
-    // being by the check itself.
     try: () => new Database(filename, { readonly, create: false }),
     catch: storeError('open-database'),
   });
@@ -291,8 +285,6 @@ const localFileBytes = (source: string, layout: FileArtifactLayout) =>
   Stream.unwrap(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      // A live SQLite source may hold committed rows only in its WAL. Fold
-      // those into a private copy before streaming a single-file artifact.
       let filename = source;
       if (layout === 'sqlite' && (yield* fs.exists(`${source}-wal`))) {
         filename = yield* copySqlite(source);
@@ -560,12 +552,6 @@ const fileDigest = (filename: string): Effect.Effect<string, unknown> =>
     return `sha256:${bytesToHex(hasher.digest())}`;
   }).pipe(Effect.provide(BunServices.layer));
 
-/** The versioned filename one generation's bytes live at.
- *
- *  Derived from the digest the pointer records, so the name and the check are
- *  one fact: a pointer naming `vectors.bvi.g-abc123def456` is claiming the file
- *  at that path hashes to `sha256:abc123def456…`, and `readCurrent` verifies
- *  exactly that. Twelve hex characters. */
 /** Removes one retired generation's file, never the one that is live.
  *
  *  Best-effort: a file that cannot be removed is disk to reclaim, never a
@@ -630,15 +616,11 @@ const readActive = (input: {
       };
     }
     const pointer = yield* readSidecar(input.destination);
-    // A sidecar written before versioned filenames named the destination
-    // itself, which is still the file it described.
     const file = Option.getOrElse(pointer.artifact, () => input.destination);
     const stated = yield* Effect.fromOption(
       pointer.provenance.digest,
       () => 'Artifact provenance states no digest',
     );
-    // The check the pointer exists to make possible. A file that is not the one
-    // the pointer describes is not an activation, whatever the sidecar says.
     if ((yield* fileDigest(file)) !== stated) {
       return yield* Effect.fail('Artifact does not match the generation its pointer names');
     }
@@ -694,12 +676,6 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
         return { status: response.status, bytes: response.stream };
       }).pipe(Effect.provide(BunHttpClient.layer));
   }
-  // A flat artifact cannot hold `meta` rows, so it gets the sidecar store; a
-  // SQLite artifact keeps writing provenance into itself, which is what
-  // shipped. `layout` is declared by the
-  // caller rather than sniffed from the bytes: what an artifact *is* is a
-  // property of the corpus, and probing a file to decide how to write its
-  // provenance would be exactly the guess this milestone's audit found.
   const layout = input.layout ?? 'sqlite';
   const defaultProvenanceStore = (): NativeFileArtifactProvenanceStore => {
     if (layout === 'flat') return sidecarProvenanceStore;
@@ -712,12 +688,6 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
   };
   const recipe = input.artifact.layerRecipe({
     sources: input.sources.map(makeSource),
-    // §3.6's runtime leg: a manifest entry is exactly a `ReleaseFileArtifactSource`
-    // — url, revision, digest, size — so a release this host was *handed* is
-    // acquired through the identical source the pinned one is. One builder, so
-    // a runtime install cannot take a different path to the installer than the
-    // pin does, and the digest, size and atomic-swap guarantees are the same
-    // guarantees rather than parallel ones.
     releaseSource: (release) =>
       releaseSource(
         corpus,
@@ -727,10 +697,6 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
           revision: release.revision,
           digest: release.digest,
           size: release.size,
-          // §3.6's ordinal, stated by whoever handed this host the release. It
-          // reaches the persisted Provenance through the source rather than
-          // being re-attached afterwards, so the runtime leg and the pinned leg
-          // record it the same way.
           generation: release.generation,
         },
         fetchArtifact,
@@ -767,8 +733,6 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
         const building = `${input.destination}.building`;
         const clearSqliteSideFiles = Effect.gen(function* () {
           if (layout !== 'sqlite') return;
-          // These exact paths belong to the discarded or completed staging
-          // candidate, never to the active database at input.destination.
           yield* Effect.forEach(
             ['-journal', '-wal', '-shm'],
             (suffix) => fs.remove(`${building}${suffix}`, { force: true }),
@@ -777,12 +741,8 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
         });
         const hasher = sha256.create();
         let written = 0;
-        // Set once the candidate has a name of its own, so a failure removes
-        // exactly what this run created and never a live generation.
         let staged = Option.none<string>();
         const install = Effect.gen(function* () {
-          // Unlink stale staging names before exclusive creation: never follow
-          // a symlink or overwrite bytes through a hard-linked staging file.
           yield* fs.remove(building, { force: true });
           yield* clearSqliteSideFiles;
           yield* artifact.bytes.pipe(
@@ -794,8 +754,6 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
             ),
             Stream.run(fs.sink(building, { flag: 'wx' })),
           );
-          // Size and digest are the whole trust surface, so both close before
-          // the semantic verifier is allowed to open the candidate file.
           if (Option.exists(artifact.expectedSize, (expected) => expected !== written)) {
             return yield* Effect.fail(
               `${input.artifact.label} Artifact size does not match its release manifest`,
@@ -811,25 +769,9 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
             source: artifact.provenance.source,
             revision: artifact.provenance.revision,
             digest: Option.some(digest),
-            // The candidate's own generation, carried through to what is
-            // persisted. Recomputing the digest here and *dropping* the ordinal
-            // would have made every runtime install read back as ungenerationed
-            // on the next startup — the exact re-flooring §3.6 forbids.
             generation: artifact.provenance.generation,
           });
           if (layout === 'flat') {
-            // **Versioned file, then one atomic pointer** (round-4 B2).
-            //
-            // The bytes go to a name derived from their own digest, so they
-            // never overwrite a live generation and the destination path is
-            // never half-written. Only then is the pointer renamed over the
-            // live sidecar — one atomic step, and the step that *is* the
-            // activation. A crash before it leaves the previous pointer naming
-            // the previous file, which is the state a host was already in.
-            //
-            // The old order — sidecar first, artifact second — had a window in
-            // which the *old* bytes wore the *new* provenance, and nothing
-            // could tell, because the sidecar was believed rather than checked.
             const versioned = generationPath(input.destination, digest);
             staged = Option.some(versioned);
             const stagedPointer = `${input.destination}.building`;
@@ -841,10 +783,6 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
               provenance,
             });
             yield* fs.rename(sidecarPath(stagedPointer), sidecarPath(input.destination));
-            // The generation this one replaced, retired only after the pointer
-            // that named it is gone. Best-effort: a file that cannot be removed
-            // is disk to reclaim, never a reason to fail an activation that has
-            // already happened.
             yield* retire(fs, previouslyActive, versioned);
             return { installed, provenance };
           }
@@ -853,17 +791,9 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
           yield* clearSqliteSideFiles;
           yield* checkSqliteRefresh(input.destination);
           yield* fs.rename(building, input.destination);
-          // A SQLite artifact carries its own provenance, so a sidecar left
-          // by an earlier flat install of the same destination would be a
-          // second, stale answer to the same question.
           yield* fs.remove(sidecarPath(input.destination), { force: true });
           return { installed, provenance };
         });
-        // Read *before* the install so the retirement above knows what it is
-        // replacing. Only for a flat artifact: a SQLite one renames over one
-        // canonical path and has nothing to retire, and reading `active` would
-        // run this corpus's semantic verifier against the *outgoing* file — an
-        // extra open every install would pay for nothing.
         const previouslyActive = yield* activeFileForRetirement;
         return yield* install.pipe(
           Effect.onError(() =>
@@ -871,13 +801,7 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
               [
                 fs.remove(building, { force: true }),
                 clearSqliteSideFiles,
-                // The candidate's staging sidecar goes with the candidate: a
-                // failed install must leave nothing behind that a later read
-                // could mistake for a generation.
                 fs.remove(sidecarPath(building), { force: true }),
-                // And the versioned file, when this run got as far as naming
-                // one — unless it is the generation already active, which a
-                // re-install of identical bytes reaches.
                 retire(
                   fs,
                   staged,

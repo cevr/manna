@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/menu/utils/isKeyboardOpen.ts,
-// packages/react/src/menu/utils/findRootOwnerId.ts
-//
-// Whether a press came from the keyboard (Enter and Space dispatch a click
-// with `detail` 0, a mouse click carries 1 or more), and the menu an element
-// belongs to.
 import { getParentNode, isHTMLElement, isLastTraversableNode } from '@floating-ui/utils/dom';
 
 import { REASONS } from '../../internals/reasons.ts';

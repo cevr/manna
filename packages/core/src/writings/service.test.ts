@@ -12,7 +12,6 @@ import {
 import { Reference } from './model.js';
 import { WritingsService } from './service.js';
 
-// Wire-shape fields the schema encodes as `null` when absent.
 const wireNull = Option.getOrNull(Option.none<never>());
 
 const books: readonly BookRow[] = [
@@ -222,17 +221,8 @@ describe('WritingsService', () => {
     Effect.gen(function* () {
       const writings = yield* WritingsService;
 
-      // Succeeding is the whole assertion, and recall is deliberately not:
-      // against the unsanitized method each of these died as `fts5: syntax
-      // error`, and the terms a reader's punctuation reduces to may legitimately
-      // match nothing in a four-paragraph fixture. A hit count here would be a
-      // claim about the fixture's text rather than about the defect.
       for (const query of [
-        // The exact shape that crashed: a refcode's dot inside a search query.
         'content PP 45.3',
-        // The rest are operators a reader produces without meaning to — a quote
-        // from a pasted quotation, `NEAR` as an ordinary English word, a dash,
-        // a colon.
         '"content"',
         'content NEAR/3',
         'content — PP 45.3',
@@ -242,9 +232,6 @@ describe('WritingsService', () => {
         expect({ query, tag: result._tag }).toEqual({ query, tag: 'Success' });
       }
 
-      // And the sanitizing did not cost the ordinary query its results: a plain
-      // word still matches, so the tokenizer is not silently emptying every
-      // query on its way to FTS5.
       const plain = yield* writings.search('content');
       expect(plain.length).toBeGreaterThan(0);
     }).pipe(Effect.provide(TestLayer)));
@@ -259,12 +246,8 @@ describe('WritingsService', () => {
 
       expect(result._tag).toBe('Failure');
       if (result._tag === 'Failure') {
-        // Not merely "some failure": a crash from SQLite would also be a
-        // failure, and the point is that the query never reached FTS5.
         expect(result.failure._tag).toBe('WritingsInvalidSearchError');
         if (result.failure._tag === 'WritingsInvalidSearchError') {
-          // The same reason `""` gets: after tokenizing, this query names no
-          // term either.
           expect(result.failure.reason).toBe('empty-query');
         }
       }

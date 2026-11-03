@@ -1,11 +1,3 @@
-// The drawn-token check (`fixtures/drawn-tokens.ts`) over a synthetic
-// page under the studio's tokens: a literal colour, a user agent's heading
-// size and bold, a padding off the scale, a radius of its own, a value a
-// page declares in a variable of its own, and a colour in a gradient or a
-// shadow are each named; a token, a token negated, a named composition, a
-// scene's hue, a native range's colour, a named geometry, and a shadow and a
-// gradient in tokens pass.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem } from 'effect';
 import { describe, it } from 'effect-bun-test';
@@ -57,7 +49,6 @@ describe('the drawn-token check', () => {
     drawn(`<div style="display:flex;width:300px"><i style="margin-left:auto">pushed</i></div>`, []),
   );
 
-  // The engine resolves the mix to one colour (`color(srgb …)`), which no token holds.
   it.live('names a colour mixed from the current colour and a literal', () =>
     drawn(
       `<div style="color:var(--text-1);background:linear-gradient(color-mix(in srgb, currentcolor, crimson), transparent)">g</div>
@@ -91,7 +82,6 @@ describe('the drawn-token check', () => {
     ),
   );
 
-  // The heading is the user agent's 2em of 13 px: 26 px, no type step at a phone's width.
   it.live('names a literal colour, a heading, a padding off the scale and a radius', () =>
     drawn(
       `<p style="margin:0;color:#123456">ink</p>
@@ -112,9 +102,6 @@ describe('the drawn-token check', () => {
   );
 });
 
-// Each case plants one value the older check passed: a size from another
-// scale, a property it never read, a pseudo-element, a swatch's hue on
-// chrome, a part far below the fold or past the window's side.
 describe('the drawn-token check reads each scale, every property and the whole page', () => {
   const planted: ReadonlyArray<readonly [string, string, ReadonlyArray<string>]> = [
     [
@@ -195,7 +182,6 @@ describe('the drawn-token check reads each scale, every property and the whole p
 
   for (const [name, body, want] of planted) it.live(`names ${name}`, () => drawn(body, want));
 
-  // An allowed site (the review's pending row) is no cover for another part with the same value.
   it.live('names a rogue site that draws what an allowed site draws', () =>
     drawn(
       `<div class="rv-pending"><p class="rv-row" style="margin:15px 0 0">allowed</p><p class="rogue" style="margin:15px 0 0">rogue</p></div>`,
@@ -219,11 +205,6 @@ describe('the drawn-token check reads each scale, every property and the whole p
       ),
   );
 
-  // The user agent's focus ring is its own colour, one per platform and
-  // scheme (Linux's Chrome draws it rgb(238, 238, 238) in the dark, a Mac's
-  // rgb(153, 200, 255)), and one that matched a token would still be the
-  // browser's ring, not the lab's (`--focus-ring`): the check names it by its
-  // `auto` style, the same on every host, and allows it nowhere.
   it.live("names the user agent's focus ring by its style, whatever colour it draws here", () =>
     drawn(
       `<button type="button" style="font: inherit; font-size: var(--fs-2); line-height: var(--body-lh); color: var(--text-1); background: none; border: 0; padding: 0; margin: 0">ring</button>

@@ -1,7 +1,3 @@
-// The looks, by name: one line each. The study plays the one `palette.ts`
-// names (`looks.style.play`, which `look --level style=<name>` and a pick
-// rewrite); a name the palette lists and this does not is a compile error.
-
 import type { Look } from '../look.ts';
 import { STYLE, type Style } from '../palette.ts';
 import { bold } from './bold/index.ts';

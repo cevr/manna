@@ -238,8 +238,6 @@ export const refusingContentUpdate: Layer.Layer<ContentUpdate> = ContentUpdate.L
     ),
   ),
   Layer.provide(CorpusSupply.layer),
-  // A round trip is about the encoder, and this fixture refuses rather than
-  // activating — so there is nothing to reopen and nothing to stub.
   Layer.provide(ContentActivation.Inert),
 );
 
@@ -282,11 +280,6 @@ export const adapterConformance: Effect.Effect<Record<string, ContentDecision['_
 export const ADAPTER_RESPONSES = {
   overrun: { body: OVERRUN_MANIFEST_BODY, status: 200 },
   offered: { body: OFFERED_MANIFEST_BODY, status: 200 },
-  // A **readable manifest body** under a 404, deliberately: a fixture whose
-  //  404 body was also unparseable would read `offline` whether the host
-  //  honoured the status or not, so it could not tell a host that checks the
-  //  status from one that ignores it. This one can — ignoring the status turns
-  //  it into `offer`.
   notFound: { body: OFFERED_MANIFEST_BODY, status: 404 },
   malformed: { body: '{"revision":"m","artifacts":{"topics":{}}}', status: 200 },
 } satisfies Record<
@@ -337,9 +330,6 @@ export const liveAdapterConformance = (input: {
       decisionOverClient({
         client: input.client,
         url: probe.url,
-        // The origins this suite actually bound. Derived from the two addresses
-        // it was given rather than from a constant, so a live fixture on an
-        // ephemeral port is admitted without production admitting loopback.
         origins: liveAdapterOrigins(input.baseUrl, input.closedUrl),
       }).pipe(
         Effect.map((decision): readonly [string, ContentDecision['_tag']] => [

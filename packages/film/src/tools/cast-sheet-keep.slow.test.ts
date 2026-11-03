@@ -1,10 +1,3 @@
-// A cast sheet kept on the owner's answer: the try copied into the member's
-// folder, each view cut from it and filed by its name (a turnaround's by the
-// house's names), the keep recorded
-// with his why; a kind kept already, or a try the record does not hold, is
-// refused and writes nothing, and a kept kind replaced on his answer moves
-// its old files into the member's history and records both keeps.
-
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, Exit, Layer, Option, Path, Schema } from 'effect';

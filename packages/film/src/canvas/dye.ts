@@ -1,19 +1,3 @@
-// A cloth dye: a part drawn in one cloth's ramp (its shade, base and light,
-// which the part declares) worn in another cloth's, by a map of each pixel's
-// colour. The map is a gradient map in CIE Lab (D65), keyed by lightness
-// L*: the drawn shade, base and light land on the cloth's ramp (the look
-// gives it, its `shaded()` of the cloth's colour, `style/house.ts`; the
-// engine never imports the look), the lightness between them is carried
-// piecewise linearly, hue and chroma come from the cloth's ramp, and white
-// stays white. A pixel at or under the ink cut keeps its colour, so the line
-// and its ink stay as drawn; alpha is never touched. Lightness rises with
-// lightness, so the drawn folds keep their order.
-//
-// The same map runs in two places: `dyePixel` here (the CPU, tests and
-// `rasterOf`'s reference) and `DYE_GLSL` below it (the puppet's fragment
-// shader, `canvas/puppet-gl.ts`), step for step, from the same knots
-// (`dyeKnots`).
-
 import { Result } from 'effect';
 import type { Raster } from '../core/raster.ts';
 import { type Hex, type Ramp, channelsOf } from './colour.ts';
@@ -137,7 +121,6 @@ const clothKnots = (
     return Result.fail(
       `the cloth's ramp ${cloth.shade} ${cloth.base} ${cloth.light} does not rise in lightness from above the ink cut (L* ${INK_CUT})`,
     );
-  // the cut takes the cloth's shade darkened to the cut along its own line to black, so the line's rim runs into the cloth's hue
   const k = INK_CUT / s[0];
   return Result.succeed({
     from: [INK_CUT, ds[0], db[0], dl[0]],

@@ -1,16 +1,3 @@
-/**
- * The field's light, and where it comes from: the sun low on the right
- * horizon. The field's still bakes this light in (`kit/field.ts`), and the
- * hero's shader turns the same rays slowly about the sun (`TURN`) and plays
- * its shimmer along them (`./shaders.ts`), so the moving light and the still
- * one fan out from one place. The stills that ship are
- * the ones the owner approved by name (`kit/approved-stills.json`).
- *
- * Positions are the painting's, `u` across its width and `v` down its height
- * (both 0 to 1); distances are in widths, so a circle is round on the 3:2
- * painting.
- */
-
 /** The painting's width over its height. */
 export const ASPECT = 1.5;
 

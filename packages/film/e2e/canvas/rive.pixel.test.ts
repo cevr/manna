@@ -1,15 +1,3 @@
-// A Rive rig drawn in the page is a function of its frame's time alone: the
-// fixture rig (`src/canvas/fixtures/arm.ts`), loaded as a page loads a film's
-// rigs and drawn by the `webgl2` engine (the Rive Renderer on WebGL 2,
-// composited in) through a fixture film, gives the same bytes at each of five
-// times after two different histories in one page and on a page of its own,
-// fresh, for each time. And what is compared is the rig: its box differs from
-// the frame drawn without it. A rig whose WebGL context is lost (the
-// browser's cap on live contexts, or the page's budget that `glCanvas`
-// shares) draws the same bytes again, never a blank. Drawn in the browser
-// tests' Chrome (SwiftShader's WebGL 2, `lab/fixtures/browsers.ts`); every
-// frame compared is drawn on this machine.
-
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { asset, openTab, respond, scriptOf, servePaths } from '../../src/lab/fixtures/browsers.ts';
@@ -59,7 +47,6 @@ const fixturePage = () =>
     const entry = files.find((f) => f.kind === 'entry-point');
     expect(entry).toBeDefined();
     const script = asset('rive.js', respond(entry?.bytes ?? new Uint8Array(), 'text/javascript'));
-    // The wasm and the rig, from the tab's own origin at the paths the bundle names.
     const served = Object.fromEntries(
       files
         .filter((f) => f.kind === 'asset')
@@ -109,12 +96,10 @@ describe('a Rive rig in the page', () => {
     () =>
       Effect.gen(function* () {
         const [afterA = [], afterB = []] = yield* framesOn([HISTORY_A, HISTORY_B]);
-        // Each time the first a page draws: no frame before it on that page.
         const fresh = (yield* Effect.forEach(TARGETS, (at) => framesOn([[]], [at]))).flat(2);
         expect(fresh.map((f) => f.at)).toEqual(TARGETS);
         expect(afterA.map((f) => f.hash)).toEqual(fresh.map((f) => f.hash));
         expect(afterB.map((f) => f.hash)).toEqual(fresh.map((f) => f.hash));
-        // Five pictures, not one, and each is the rig: its box is not the bare frame's.
         expect(new Set(fresh.map((f) => f.hash)).size).toBe(TARGETS.length);
         for (const f of fresh) expect(f.rigPixels).toBeGreaterThan(1000);
       }),

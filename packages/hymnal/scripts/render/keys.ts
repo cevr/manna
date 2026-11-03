@@ -52,7 +52,6 @@ const keyedStem = (stem: Stem, parts: Voices, transpose: number) => {
       ? []
       : parts[part].map((n) => n.key + stem.transpose + transpose),
   );
-  // The first octave that puts every note in range; else the one that leaves the fewest out.
   const octave = OCTAVES.reduce((best, shift) =>
     outside(keys, shift, range) < outside(keys, best, range) ? shift : best,
   );

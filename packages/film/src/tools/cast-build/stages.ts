@@ -1,36 +1,3 @@
-// The cast build's stages for one member, from his coverage manifest:
-//
-//   drawing:<id>  every entry: the drawing's bytes; waits on the owner while
-//                 it is not drawn or not kept (the kept fact is its config).
-//   parts:<id>    a puppet entry not fitted from another: `concept parts
-//                 --check`, else `--reuse`, else (spending okra) a call; its
-//                 output lists every file of its sheet folder by hash.
-//   cut:<id>      the puppet spec its sheet folder's parts are posed by
-//                 (`PUPPETS[<sheet>]` of the member's `cutout/puppets.ts`),
-//                 its PNG paths relative to his folder, with the parts'
-//                 output hash; it reads every `cutout/*.ts` of the member
-//                 and the library's `cutout/puppets.ts`.
-//   fit:<id>      every puppet entry: `concept render --figure cutout
-//                 --fit-only` of that view, its fit rows; it reads the cut
-//                 it is posed with (its `fitted` entry's, else its own) and
-//                 its drawing; a fitted entry also reads every file the
-//                 member's `cutout/poses.ts` imports (its pose JSON, held
-//                 drawings).
-//
-// Each stage also reads the source files of its kind (`sources.ts`).
-//   renders:<id>  a puppet entry cut from its own sheet: its synthetic
-//                 training renders, one shard (`renders.ts`); it reads its
-//                 cut. An entry fitted with another view's cut has none.
-//
-// A stage id reads `<stage>:<entry>@<member>` (`cut:turnaround-front@lead-feast`).
-// After every member's stages: `trainsetStage`, the sorted hashes of every
-// trainable drawing's shard after this build's stages; `trainStage`, the one reader trained on that set (spending
-// Modal), keyed by the set, its shards and the reader's source files;
-// `evalStage` per shard, that drawing's held samples read and scored by the
-// reader (`reader.ts`, on this machine); then `lock.ts`'s lock stage writes
-// the reader lock from those outputs. The owner's ask and draws are
-// `owner-ask.ts`'s.
-
 import * as Command from 'effect/cli/Command';
 import {
   DateTime,
@@ -340,7 +307,6 @@ export const buildSources = Effect.fn('cast.build.sources')(function* (
   page: string,
 ) {
   const stage = yield* stageSources;
-  // the fit render loads the film's cast module by its path (`STAGE_LOADS`)
   const filmCast = yield* filmCastSources((yield* FilmFolder).paths(film).dir);
   return { stage, filmCast, page: yield* pageSources(page) } satisfies BuildSources;
 });
@@ -351,7 +317,6 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
   built: BuildSources,
 ) {
   const path = yield* Path.Path;
-  // the cut stage loads his puppets module by its path: it is keyed by every file that module runs
   const puppets = yield* puppetSources(m.memberDir);
   const src = built.stage;
   /** An entry named in a stage id: `<entry>@<member>`, so `cut:<entry>` leads it and two members never share one. */
@@ -377,12 +342,9 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
       },
     });
   }
-  // his part sheets are made by his own cutters, with no repaint, or by `concept parts` from his
-  // cut table, which asks okra only for a view with no answer drawn
   const cutters = Option.map(Option.fromUndefinedOr(m.coverage.cutters), (scripts) =>
     scripts.map((s) => path.join(m.memberDir, s)),
   );
-  // the parts stage is keyed by its own code and by what makes his sheets
   const maker = yield* Option.match(cutters, {
     onNone: () => cutTableSources(m.memberDir),
     onSome: cutterSources,
@@ -390,8 +352,6 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
   for (const entry of m.coverage.entries) {
     if (entry.cut !== 'puppet' || Option.isSome(Option.fromUndefinedOr(entry.fitted))) continue;
     const sheet = path.join(m.memberDir, 'cutout', 'sheets', sheetOf(entry));
-    // every file of the sheet folder: its record and part PNGs (which `--check` holds to its
-    // answers), and its okra ledger and answers
     const sheetFiles = yield* filesUnder(sheet);
     /** `concept parts` on the view: free when its answers are drawn, else okra under `--spend okra`. */
     const byParts = (ctx: StageContext) =>
@@ -437,13 +397,10 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
       run: (ctx) =>
         Effect.gen(function* () {
           const spec = yield* puppetSpecIn(m.memberDir, entry);
-          // its PNG paths named from the member's folder, so the spec reads the same in any checkout
           const text = yield* Schema.encodeEffect(SpecJson)(spec);
           return text.replaceAll(`${m.memberDir}/`, '');
         }).pipe(
           Effect.mapError((e) => StageFailed.make({ reason: `cut ${at(entry.id)}: ${String(e)}` })),
-          // the puppet is its spec and its part PNGs' bytes: a repainted part changes the cut,
-          // so its fits rerun
           Effect.flatMap((spec) =>
             Effect.map(ctx.output(`parts:${at(entry.id)}`), (parts) =>
               encoder.encode(`${spec}\n${new TextDecoder().decode(parts)}`),
@@ -466,7 +423,6 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
         ...src.fit,
         ...page,
         ...filmCast,
-        // a fitted pose is its pose JSON and held drawings too, which its cut does not hash
         ...Option.match(Option.fromUndefinedOr(entry.fitted), {
           onNone: () => [],
           onSome: () => fitted.map(fileInput),
@@ -497,8 +453,6 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
     });
   }
   for (const entry of m.coverage.entries) {
-    // a drawing cut from its own sheet, once its cut is made (in this build or before); the
-    // training set takes it only when its entry is trainable (`trainsetStage`)
     if (entry.cut !== 'puppet' || Option.isSome(Option.fromUndefinedOr(entry.fitted))) continue;
     stages.push({
       id: `renders:${at(entry.id)}`,
@@ -967,11 +921,7 @@ export const trainStage = (
   };
   return {
     id: 'train',
-    inputs: [
-      // the set names each shard by its hash, so its shards are in its key
-      stageInput('trainset'),
-      ...trainFiles.map(fileInput),
-    ],
+    inputs: [stageInput('trainset'), ...trainFiles.map(fileInput)],
     version: VERSION.train,
     config: TRAIN_CONFIG,
     run: (ctx) =>
@@ -1022,7 +972,6 @@ const trainOnModal =
         yield* Effect.log(`cast.build.train result=${made.result}`);
         yield* fitNote(made.result, made.app).pipe(
           Effect.flatMap(ctx.note),
-          // a paid train is kept without its summary rather than thrown away
           Effect.catch((e) =>
             Effect.logWarning(`cast.build.train fit-unread reason="${String(e)}"`),
           ),
@@ -1186,7 +1135,6 @@ export const clipStages = (
         fileInput(provenance),
         ...chainSources,
         ...readFiles.map(fileInput),
-        // the set's shards stand for the cuts of the drawings the reader was trained on
         stageInput('trainset'),
       ],
       version: VERSION.chain,

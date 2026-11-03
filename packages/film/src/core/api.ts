@@ -1,30 +1,3 @@
-// The lab's HTTP routes, declared once: every path, its params, query, body
-// and answer, and every failure with its status. The server derives its
-// handlers from it (`tools/lab.ts`, `tools/studio.ts`, `tools/review-http.ts`,
-// `tools/asks-http.ts`, composed in `tools/api-server.ts`), and the pages
-// their clients and URLs (`lab/api.ts` and its siblings), so a route cannot
-// be written two ways.
-//
-// One API, `LabHttpApi`, served by `film lab` for every film: what the ask
-// pages read and answer (a film's script and Board, a series' drafts, a
-// beat's attempts, the renders, the asks) and the easel's looks and matches.
-// Every route is under `/api/` (`API`), where no page path is: a film's
-// under `/api/films/<film>/`, and the routes of no one film (the renders'
-// index and files, a frame, a length, the pages' build) under
-// `/api/review/`. A film the app does not have is a 404 FilmUnknown.
-//
-// A failure crosses as its own class, JSON with its `_tag`, at the status
-// `Refusals` gives it: the one status table. Anything a handler fails with
-// that is not a Refusal answers 500 as ServerFailed, with its tag and words;
-// a request whose params, query or body does not decode answers 400 as
-// RequestInvalid, naming the part and why; a path under the API's own
-// prefixes that no route declares answers 404 as RouteUnknown.
-//
-// To add an endpoint: declare it in its group below with `error: Refusals`
-// (a new failure class goes into `Refusals` with its status), implement it
-// in the group's `HttpApiBuilder.group` in tools, and call it on the page
-// through the derived client. packages/film/README.md has the steps.
-
 import { Codec, Field, Place } from '@manna/url-state';
 import { Array as Arr, Option, Schema, SchemaAST } from 'effect';
 import * as HttpApi from 'effect/http-api/HttpApi';
@@ -110,9 +83,6 @@ import { Segment } from './segment.ts';
 import { StudioAttempts } from './studio.ts';
 import { LineRead, Mark } from './delivery.ts';
 
-// ---------------------------------------------------------------------------
-// The failures only the transport has.
-
 /**
  * A request the server does not answer at all: a Host it is not bound to or
  * told, another site's page, or a write from an Origin not its own.
@@ -168,9 +138,6 @@ export class ServerFailed extends Schema.TaggedError<ServerFailed>()('ServerFail
     return this.reason;
   }
 }
-
-// ---------------------------------------------------------------------------
-// The one status table.
 
 const status = HttpApiSchema.status;
 
@@ -281,9 +248,6 @@ export const statusOf = (refusal: Refusal): number => {
       return annotatedStatus(schema.ast) ?? schema.ast.context?.annotations?.httpApiStatus ?? 500;
   return 500;
 };
-
-// ---------------------------------------------------------------------------
-// The groups.
 
 /**
  * A beat of a film's script as the words reader reads it beside the staged
@@ -716,14 +680,6 @@ export const prefixesOf = <Id extends string, Groups extends HttpApiGroup.Constr
   return [...prefixes];
 };
 
-// ---------------------------------------------------------------------------
-// The pages: every place a page is at, declared once as `@manna/url-state`
-// Places. The path says what a view is about (an ask, a page of asks, a
-// film's export), the query how it is shown (a still open full size). The
-// server serves a page at each place's path (`pageAt`), every link is
-// printed by `Place.href` over these (`pageHref`), and each page reads and
-// writes its own through `UrlState`.
-
 /** The lab's pages with a shell, each one HTML entry: its asks. */
 export type PageName = 'ask';
 
@@ -825,9 +781,6 @@ export const pageHref = {
   export: (film: string): string =>
     Place.href(Places.export, { path: { film }, query: {}, hash: {} }),
 };
-
-// ---------------------------------------------------------------------------
-// The URLs a page puts in an <img>, <audio> or <video>, derived from the routes.
 
 /** Every route's URL, built from its declaration: the one way server, page and tests write a path. */
 export const labUrls = HttpApiClient.urlBuilder(LabHttpApi);

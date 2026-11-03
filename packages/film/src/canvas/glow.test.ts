@@ -1,7 +1,3 @@
-// A glow, a sky and a wash build their gradient once per context and what they hold,
-// and lay it by the transform: the frame after builds none. Drawn into the
-// stand-in, which records each fill's gradient, its alpha and its transform.
-
 import { describe, expect, test } from 'bun:test';
 import { mix } from './colour.ts';
 import { recorder } from './fixtures/stand-in.ts';
@@ -43,7 +39,6 @@ describe('glow', () => {
     }
     const styles = new Set(r.fills.map((f) => f.style));
     expect(styles.size).toBe(2);
-    // Another context builds its own.
     const other = recorder();
     glow(other.ctx, 0, 0, 10, '#e6b347', 1);
     expect(styles.has(other.fills[0]?.style ?? '')).toBe(false);
@@ -56,7 +51,6 @@ describe('glow', () => {
     glow(r.ctx, 0, 0, 10, at(0), 1);
     glow(r.ctx, 0, 0, 10, at(GRADIENTS_KEPT), 1);
     const last = r.fills.length - 1;
-    // The first colour was let go and made again; the newest was kept.
     expect(r.fills[last - 1]?.style).not.toBe(r.fills[0]?.style);
     expect(r.fills[last]?.style).toBe(r.fills[GRADIENTS_KEPT]?.style);
   });
@@ -83,7 +77,6 @@ describe('sky', () => {
         [1, '#e7fab0'],
       ],
     });
-    // Down the whole frame.
     expect(a?.m).toEqual([1, 0, 0, 1080, 0, 0]);
     expect(a?.rect).toEqual([0, 0, 1920, 1]);
   });

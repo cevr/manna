@@ -351,19 +351,6 @@ export class BibleDatabase extends Context.Service<BibleDatabase, BibleDatabaseS
 
       const getCrossRefs = Effect.fn('BibleDatabase.getCrossRefs')(
         (book: number, chapter: number, verse: number) =>
-          // `ORDER BY rowid` is what makes "source order" a contract rather than
-          // an accident. SQLite guarantees no row order without an ORDER BY, so
-          // the same query could legitimately return a different sequence after
-          // a VACUUM or a plan change — and §6.1 row 5 says section 5 is in
-          // source order.
-          //
-          // `rowid` is the key rather than a new `position` column: the Bible
-          // artifact is shipped and pinned by digest, `cross_refs` is an
-          // ordinary rowid table (its PRIMARY KEY is not INTEGER, so no rowid
-          // aliasing), and the sync pipeline inserts the rows in the order the
-          // OpenBible and TSKe sources list them. Insertion order *is* source
-          // order, so the column already exists — adding one would rev the
-          // artifact for a fact the file already carries.
           sql<CrossRefSqlRow>`
           SELECT ref_book, ref_chapter, ref_verse, ref_verse_end, source, preview_text
           FROM cross_refs
@@ -450,10 +437,6 @@ export class BibleDatabase extends Context.Service<BibleDatabase, BibleDatabaseS
           `.pipe(Effect.map((rows) => rows[0]?.count ?? 0)),
       );
 
-      // Published Bible databases predate the italic column. Detect it lazily
-      // at the first word query so readonly clients remain compatible with an
-      // older snapshot while newly imported databases preserve the richer
-      // corpus shape immediately.
       let hasItalicColumn = Option.none<boolean>();
       const supportsWordItalics = Effect.fn('BibleDatabase.supportsWordItalics')(() => {
         if (Option.isSome(hasItalicColumn)) return Effect.succeed(hasItalicColumn.value);
@@ -757,13 +740,6 @@ export class BibleDatabase extends Context.Service<BibleDatabase, BibleDatabaseS
             Option.fromNullishOr(config.strongsEntries?.find((entry) => entry.number === number)),
           ),
         searchStrongs: () => Effect.succeed([]),
-        // The limit is honored and the count is the *uncapped* total, matching
-        // the live implementation: `getVersesWithStrongs` slices and
-        // `getStrongsCount` counts distinct verses independently of any cap. A
-        // double that ignored the limit would let a caller that drops it pass,
-        // and a double that returned 0 would make "there are more than shown"
-        // untestable — which is exactly the pair the study pane's `total`
-        // renders.
         getVersesWithStrongs: (number, limit) => {
           const hits = config.concordanceHits?.[number] ?? [];
           return Effect.succeed(hits.slice(0, limit ?? hits.length));

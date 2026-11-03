@@ -154,8 +154,6 @@ export const vectorizeNeighbors = (
     }).pipe(
       Effect.map((answer) => ({
         ids: answer.matches.map((match) => match.id),
-        // An approximate index cannot say how many vectors it considered;
-        // what it returned is the honest count.
         scanned: answer.matches.length,
         engine: 'vectorize',
       })),

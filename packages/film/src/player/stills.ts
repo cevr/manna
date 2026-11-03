@@ -1,19 +1,3 @@
-// A film's stills: small frames drawn from the code as it stands, the one
-// source of stills the studio's pages and the look-book's sheet draw from
-// (`lookbook-sheet.ts`; the Scenes tape, `lab/scenes/`). Each still is the
-// frame `film.render` draws full size, scaled onto a canvas `width` wide, and
-// kept by its frame (a time is drawn once, at the frame it falls in). They are
-// drawn one at a time, the page given a turn between them (`turn`), in the
-// order they are wanted: the last `want` goes first, so the stills on screen
-// are drawn before the rest. A full-size frame costs the page about a
-// seventh of a second, so a film's tape fills progressively, never all at
-// once. The first waits for the faces the film draws in
-// (`pictureFacesWait`), so no still is drawn in a fallback face; a face that
-// will not load leaves the stills undrawn and says so: `ready` and every
-// `all` waiting reject with why. A film that reads footage (a talk) has each
-// still's footage decoded first (`footageAt`); a frame the host cannot
-// decode stops the stills the same way, never drawn black. Framework-free.
-
 import { Effect, Option } from 'effect';
 import type { Context } from 'effect';
 import type { Film, RenderOptions } from '../canvas/film.ts';
@@ -168,7 +152,6 @@ export const makeStills = (film: StillSource, options: StillsOptions): Stills =>
     running = true;
     Option.match(facesLoad(), {
       onNone: () => void step(),
-      // A face that will not load draws nothing; `ready` and `all` say why.
       onSome: (load) =>
         void load.then(step, () => {
           running = false;
@@ -214,7 +197,6 @@ export const makeStills = (film: StillSource, options: StillsOptions): Stills =>
         const heard = () => {
           settle();
         };
-        // A frame whose footage will not decode ends the wait with why.
         const fail = (why: unknown) => {
           stop();
           reject(why);
@@ -224,7 +206,6 @@ export const makeStills = (film: StillSource, options: StillsOptions): Stills =>
         if (Option.isSome(failed)) return fail(failed.value);
         failures.add(fail);
         want(times);
-        // A face that will not load draws none of them: the wait ends with why.
         ready().catch((why: unknown) => {
           stop();
           reject(why);

@@ -1,7 +1,3 @@
-// The law and its measure: the two tables of stone (which become the mirror
-// in `mirror` and the heart's tablets in `within`), the gold ring as big as
-// the universe, and the cross that meets the tablets in `message`.
-
 import {
   type Hand,
   type Pt,

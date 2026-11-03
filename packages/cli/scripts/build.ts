@@ -116,10 +116,6 @@ const stageOnnxDylibs = Effect.fn('stageOnnxDylibs')(function* (input: {
   readonly rootDir: string;
   readonly binDir: string;
 }) {
-  // Resolved through the dependency chain the bundle actually follows:
-  // transformers is core's dependency and onnxruntime-node is transformers',
-  // so under Bun's isolated linker neither is visible from the CLI package
-  // directly.
   const transformers = Bun.resolveSync(
     '@huggingface/transformers/package.json',
     input.path.resolve(input.rootDir, '..', 'core'),
@@ -186,8 +182,6 @@ const program = Effect.gen(function* () {
           autoloadBunfig: false,
         },
         plugins: [
-          // See scripts/sharp-stub.ts: transformers' image dependency cannot
-          // load inside a compiled binary, and the text pipeline never uses it.
           {
             name: 'stub-sharp',
             setup(builder) {

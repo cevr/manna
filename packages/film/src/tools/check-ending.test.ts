@@ -1,6 +1,3 @@
-// The ending and the air (CRAFT rules 7 and 10): an ending too short for
-// YouTube's end screens, and silence in the master that no cue declares.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
 import { layout } from '../core/layout.ts';

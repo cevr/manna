@@ -1,11 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/utils/markOthers.ts
-//
-// While a modal popup is open, everything outside it is hidden from
-// assistive tech (`aria-hidden`, or `inert`, which also keeps a script's
-// focus and find in page out) and marked
-// `data-base-ui-inert` so outside presses can be told apart. Counted per
-// element and per attribute, so stacked popups undo in any order and an
-// element hidden by the page stays hidden.
 import { getNodeName, isShadowRoot } from '@floating-ui/utils/dom';
 
 import { ownerDocument } from '../../utils/dom.ts';
@@ -156,7 +148,6 @@ function applyAttributeToOthers(
 
   return () => {
     if (controlAttribute) {
-      // Read again: the last undo of all may have started the counts afresh.
       const liveCounters = controlCounters[controlAttribute];
       const liveUncontrolled = uncontrolledElements[controlAttribute];
       for (const element of hiddenElements) {

@@ -1,12 +1,3 @@
-// The rules a member's cut table runs on a view's laid part sheet (`CLEAN`,
-// @manna/film's `SheetClean`): fixes its art needs that neither the cut nor the
-// paint makes, kept as rules so laying the answer again makes the same part
-// PNGs. A member's `cutout/cut.ts` names each view's rule with its own numbers.
-// Pure: the same sheet in gives the same bytes out. A rule refuses a sheet
-// that lacks a part it names (`SheetCleanRefused`).
-
-// values from the core barrel only: a member's cut table and puppets import this file, and the
-// tools barrel would put its film-module loader in their build closures
 import { SheetCleanRefused, labOf } from '@manna/film/core';
 import type { PartSheet, Raster, SheetClean } from '@manna/film/tools';
 import { Array as Arr, Option, Result } from 'effect';

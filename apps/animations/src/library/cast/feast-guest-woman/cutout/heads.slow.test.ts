@@ -1,11 +1,3 @@
-// The woman's head keys (`heads.ts`) against her poses-1 part sheet: each names
-// a part her sheet holds and is the sheet's size, as the loader asks before it
-// un-mattes a key in place of its part, and each holds her head down to her
-// head part's lowest row and no lower, so the veil below her chin stays on
-// her torso, as the feast mother's does, with the drape's two outlines
-// ending where her head part's end, so they run on into her torso's. Each case
-// decodes her sheets, so they run in the slow suite.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { type Raster, decodePng } from '@manna/film/tools';
 import { Array as Arr, Effect, FileSystem, Option } from 'effect';

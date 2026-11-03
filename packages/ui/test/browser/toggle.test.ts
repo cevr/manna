@@ -1,10 +1,3 @@
-// Upstream: packages/react/src/toggle/Toggle.test.tsx,
-// packages/react/src/toggle-group/ToggleGroup.test.tsx
-//
-// ToggleGroup's one-at-a-time value, held by its owner, and its roving focus.
-// Upstream's lone toggle, uncontrolled groups, `multiple`, `disabled`, the
-// orientations, `loopFocus` and the console spy for a missing `value` are
-// left out with the options they test.
 import { describe, expect, it } from 'bun:test';
 
 import { expect as see } from '@playwright/test';
@@ -54,7 +47,6 @@ describe('ToggleGroup', () => {
   });
 
   it('keeps the pressed toggle pressed when the owner ignores the empty value', async () => {
-    // The mode tray's shape: one value always pressed, pressing it again offers [].
     const page = await h.open('group', { query: { owner: 'keep-one', value: 'three' } });
     await page.click('#three');
     expect(await logOf(page)).toEqual(['value []']);
@@ -116,7 +108,6 @@ describe('ToggleGroup', () => {
   });
 
   it('leaves focus on the page after a pointer press, and gives the pressed toggle the tab stop', async () => {
-    // A click on chrome: the page keeps its keys after it.
     const page = await h.open('group');
     await page.click('#two');
     await see(page.locator('#two')).toHaveAttribute('aria-pressed', 'true');
@@ -125,7 +116,6 @@ describe('ToggleGroup', () => {
     await page.click('#three');
     await see(page.locator('#three')).toHaveAttribute('aria-pressed', 'true');
     expect(await focused(page)).toBe('body');
-    // The press moved the tab stop: Tab lands on the pressed toggle, its arrows and Space work.
     await see(page.locator('#three')).toHaveAttribute('tabindex', '0');
     await see(page.locator('#one')).toHaveAttribute('tabindex', '-1');
     await page.focus('#before');
@@ -138,7 +128,6 @@ describe('ToggleGroup', () => {
   });
 
   it('blurs a field that has focus before a pointer press changes the value', async () => {
-    // The field's own blur (where a lab field commits) runs before the press's effect.
     const page = await h.open('group');
     await page.focus('#field');
     await page.keyboard.type('5');
@@ -149,7 +138,6 @@ describe('ToggleGroup', () => {
   });
 
   it('blurs a focused SVG control on a pointer press, so the page keeps its keys', async () => {
-    // The Lab's wipe grip is an SVG slider: a press on a toggle takes the arrows back from it.
     const page = await h.open('group');
     await page.focus('#grip');
     expect(await focused(page)).toBe('grip');
@@ -159,7 +147,6 @@ describe('ToggleGroup', () => {
   });
 
   it('moves focus to the popup around the group after a pointer press, so Tab stays in it', async () => {
-    // A press on content that takes no focus focuses its nearest focusable ancestor: a dialog keeps the keyboard.
     const page = await h.open('in-dialog');
     await page.focus('#before');
     await page.click('#two');

@@ -1,10 +1,3 @@
-// The fit rows (`core/fit-rows.ts`) on lead-feast's real renders
-// (`core/fixtures/fit/`: his kept turnaround's front and three-quarter left,
-// and renders 40, 95 and 155 of them, copied from in-its-order's cast
-// renders): each defect an art review measured fails its row, and the render
-// it was fixed in passes it. The crops are PNGs, so they are decoded here,
-// past core.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Result } from 'effect';

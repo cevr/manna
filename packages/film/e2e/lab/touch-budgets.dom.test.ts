@@ -1,9 +1,3 @@
-// The most things each view shows at rest, on the first screen and (for a
-// long view) over its whole length, on each device: its controls, pictures
-// and text leaves, as the UI-reduction sweep counts them (`firstScreenItems`).
-// The count is the settled page's, and a thing that lands after the view is
-// ready, or a long view's rows below the fold, is counted.
-
 import { Effect, Exit, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { type Tab, WAIT_MS } from '../../src/lab/fixtures/tab.ts';
@@ -92,7 +86,6 @@ for (const device of DEVICES) {
         SLOW,
       );
     }
-    // A long view's whole length: what comes back on the rows below the fold is counted too.
     for (const [state, page] of byPlace(STATES).flatMap(([, s]) =>
       Option.toArray(Option.map(Option.fromUndefinedOr(s.page), (b) => [s, b] as const)),
     )) {
@@ -156,8 +149,6 @@ describe('the at-rest budget (UR2-17)', () => {
       Effect.gen(function* () {
         const page = yield* ask(PHONE.viewport);
         yield* withinBudget(page, ASK_AT_REST.phone, 'an ask');
-        // More lines than any ask shows (`CEILING`), far below the fold: the first screen counts
-        // none of them, the page counts each.
         const ceiling = CEILING;
         yield* page.evaluate(
           `(() => { const box = document.createElement('div'); box.style.marginTop = '5000px'; for (let i = 0; i <= ${ceiling}; i++) { const el = document.createElement('p'); el.textContent = 'planted ' + i; box.append(el); } document.body.append(box); return true; })()`,

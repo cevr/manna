@@ -1,7 +1,3 @@
-// Coverage's cut and fit read from the build cache: a cut and a passing fit
-// the cache holds at the current keys are measured true; a cache without them
-// leaves them unmeasured; failing fit rows are measured false.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Path } from 'effect';
 import { ContentStore } from '../content-store.ts';
@@ -59,7 +55,6 @@ describe('coverage reads the build cache', () => {
     'a cut and a passing fit in the cache at the current keys are measured, not unmeasured',
     () =>
       Effect.gen(function* () {
-        // the build made the cut and the fits (not the renders, which coverage never reads)
         yield* buildGraph(
           stagesOf(false).filter((s) => !s.id.startsWith('renders:')),
           options,
@@ -92,7 +87,6 @@ describe('coverage reads the build cache', () => {
       expect(empty['turnaround-front']).toEqual({ cut: Option.none(), fit: Option.none() });
       const facts = yield* coverageFacts('/m', COVERAGE, empty);
       expect(facts['turnaround-front']?.unmeasured).toEqual(['cut', 'fit']);
-      // measuring runs the free stages with no spend and keeps them, so a plan then reads them
       yield* measuredOf(stagesOf(true), COVERAGE, 'm', { root: '/', cache: '/cache', run: true });
       const failing = yield* measuredOf(stagesOf(true), COVERAGE, 'm', {
         root: '/',

@@ -60,7 +60,6 @@ export const TempoDial = memo(function TempoDial({ number }: { readonly number: 
   const [tempo, setTempo] = useAtom(settings.tempo(number));
   const first = useMemo(() => Option.map(book.of(number), (timeline) => timeline.tempo), [number]);
   const cue = useCue();
-  // How many resets were pressed here: the dial turns home on the reset's curve when the count moves.
   const [resets, setResets] = useState(0);
   const away = tempo !== DEFAULT_TEMPO;
   const reset = () => {
@@ -230,7 +229,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  // Trailing in the row even with no read-out before it.
   chips: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 'auto' },
   readOut: { flexDirection: 'row', alignItems: 'center' },
   bpm: {

@@ -1,20 +1,3 @@
-// The props and the set `look` draws, in the Board's pixels. On the page, at
-// the lead's size (`look.where`): the seed's first root, curling down over
-// his palm from the seed's foot; and the stack of merits his other hand
-// holds up toward the light, two certificates, a medal on its ribbon and
-// three coins, none of it lettered. In the desert (`look.pole`): the camp
-// under its peach sky, in planes a scene sets at their depths, the far
-// dunes, the tents on their bands of sand, the ground with its rocks and
-// shrubs; the wooden pole with the bronze serpent coiled on it; the scarlet
-// snakes slithering in the sand; and where the camp's people stand, each
-// held as a blocked mass at its kit body's size until the story crowd kit
-// (`apps/animations/docs/casting.md` §2.6) is sheeted and its people are
-// rendered to their sheets. The scenery is torn or cut paper with no ink;
-// the pole, the serpent, the snakes and the props are lined in the ink,
-// their lines drawn `unprobed` as every prop's are; each mass takes one ink
-// round its silhouette, as the house's figures do. Pure: the same pose
-// draws the same thing.
-
 import {
   type Hand,
   type Hex,
@@ -42,8 +25,6 @@ import { type Torn, plane } from './spoke-props.ts';
 
 /** The ink of a prop as small as a hand: the court's small gold seed's (`props.ts` `seed`). */
 export const SMALL_LINE = 2.4;
-
-// ─── the first root ──────────────────────────────────────────────────────────
 
 /**
  * The first root's spine from the seed's foot, Board pixels: out of the
@@ -151,8 +132,6 @@ export const firstRoot = (
   });
   ctx.restore();
 };
-
-// ─── the stack of merits ─────────────────────────────────────────────────────
 
 /** The merits' papers: the certificates' cream, the far one a shade warmer, the medal's pewter, its ribbon's teal and the rosette's, the coins' dull brass, so none of it reads as the word's gold. */
 const MERIT_PAPER = {
@@ -271,8 +250,6 @@ export const merits = (
   });
   ctx.restore();
 };
-
-// ─── the camp's ground ───────────────────────────────────────────────────────
 
 /** How far every plane of the camp runs past the panel's edges, Board pixels, so the camera can travel and push over it. */
 const CAMP = { left: -900, right: 2500, top: -900, bottom: 1900 } as const;
@@ -416,8 +393,6 @@ export const sand = (ctx: CanvasRenderingContext2D, band: keyof typeof SAND, han
   plane(ctx, pts, p, hand);
 };
 
-// ─── the tents ───────────────────────────────────────────────────────────────
-
 /** A cone tent: its middle on the sand, its foot, how tall to its peak, half its width at its foot, its cloth, and whether its door shows. */
 interface Tent {
   readonly x: number;
@@ -515,8 +490,6 @@ const tent = (ctx: CanvasRenderingContext2D, t: Tent, hand: Hand) => {
 export const tents = (ctx: CanvasRenderingContext2D, band: 'far' | 'near', hand: Hand) =>
   (band === 'far' ? FAR_TENTS : NEAR_TENTS).forEach((t, i) => tent(ctx, t, sub(hand, i * 3)));
 
-// ─── the rocks and the shrubs ────────────────────────────────────────────────
-
 /** The rocks' grey-violet paper and the shrubs' sage, creased at the light. */
 const STONE = paper('#b9a69a', 0.6);
 const SHRUB = paper('#93a271', 0.6);
@@ -610,8 +583,6 @@ export const nearLitter = (ctx: CanvasRenderingContext2D) => {
   NEAR_SHRUBS.forEach(([x, y, s]) => shrub(ctx, x, y, s));
   NEAR_ROCKS.forEach(([x, y, rx, ry]) => rock(ctx, x, y, rx, ry));
 };
-
-// ─── the pole and the bronze serpent ─────────────────────────────────────────
 
 /**
  * The pole (`look.pole`): its middle, its foot in the mound and its top
@@ -914,8 +885,6 @@ export const poleAndSerpent = (
   ctx.restore();
 };
 
-// ─── the camp seen from low on the ground ────────────────────────────────────
-
 /**
  * How `look.lifted` lifts the serpent and its pole above the camp, seen
  * from low on the ground: the pole's middle on the panel and how much
@@ -1057,8 +1026,6 @@ export const liftedSerpent = (ctx: CanvasRenderingContext2D, lit: number) => {
   ctx.restore();
 };
 
-// ─── the scarlet snakes ──────────────────────────────────────────────────────
-
 /**
  * A scarlet snake in the sand (`look.pole`): where its head lies in the
  * panel, the way it faces (radians), how long it is, how far its body waves
@@ -1116,7 +1083,6 @@ export const snake = (
       hy - dy * u + dx * lat + dy * STRIKE.lunge * rear - STRIKE.lift * rear,
     ];
   });
-  // Its soft shadow on the sand under it, where it lies and under its head as it rears.
   ctx.save();
   ctx.globalAlpha *= 0.5;
   for (let i = 0; i < SNAKE_POINTS; i += 8) {
@@ -1139,7 +1105,6 @@ export const snake = (
   cut(ctx, headShape(x0 + 0.25 * s.w * c, y0 + 0.25 * s.w * n, 0.95 * s.w, 0.62 * s.w, a), SNAKE, {
     line: SNAKE_LINE,
   });
-  // Its eye on the head's upper side, toward its snout.
   const side = c >= 0 ? 1 : -1;
   eye(
     ctx,
@@ -1148,8 +1113,6 @@ export const snake = (
     1.8,
   );
 };
-
-// ─── the camp's people, held ─────────────────────────────────────────────────
 
 /**
  * A body of the story crowd kit (casting.md §2.1's five) as a mass: its

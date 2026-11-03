@@ -1,7 +1,3 @@
-// A page waiting on a video's phone copy asks after it every few seconds
-// until the copy is made or has failed: a lost ask is asked again, and a
-// copy that failed is asked after no more (the index then says so).
-
 import { Duration, Effect, Schedule, Stream } from 'effect';
 import type { PhoneCopy } from '../../core/served.ts';
 

@@ -26,7 +26,6 @@ import { readWords } from '../../vite/words';
 
 GlobalRegistrator.register({
   url: 'http://localhost/',
-  // A link the app does not handle must stay unfollowed, as a test reads it.
   settings: { navigation: { disableMainFrameNavigation: true } },
 });
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

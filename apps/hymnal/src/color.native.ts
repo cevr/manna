@@ -20,9 +20,6 @@ import { type Roles, theme } from './theme';
 const dynamic = (role: keyof Roles) =>
   DynamicColorIOS({ light: theme.light[role], dark: theme.dark[role] });
 
-// Each platform's colours are a function, and only the chosen one runs:
-// `DynamicColorIOS` throws on Android, and an object literal for iOS would be
-// built there too.
 export const color = Platform.select({
   ios: () => ({
     ground: dynamic('ground'),
@@ -44,11 +41,6 @@ export const color = Platform.select({
     glassChosen: dynamic('glassChosen'),
     onGlassChosen: dynamic('onGlassChosen'),
   }),
-  // Each a theme attribute that resolves to one colour: React Native reads a
-  // resolved attribute's value as the colour, so an attribute that resolves
-  // to a colour state list (`textColorPrimary`, `textColorSecondary`) or a
-  // drawable (`listDivider`) draws a wrong colour. The theme has no plain
-  // colour for secondary text, so it takes the label's.
   default: () => ({
     ground: PlatformColor('?android:attr/colorBackground'),
     ink: PlatformColor('?android:attr/colorForeground'),

@@ -1,9 +1,4 @@
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
-// The film's composition root: the services every `film` command and the lab
-// run with, the lab's pages, and the lab's start, built in one place. Its
-// one consumer is the CLI (`runFilmCli`, `cli.ts`). A consumer that built
-// these layers itself would drift from the lab it means to be
-// (`film-services.slow.test.ts` names the CLI and sweeps for another).
 
 import { AskMaterials } from './ask-materials.ts';
 import { AskStore } from './ask-store.ts';
@@ -133,7 +128,6 @@ interface FilmServicesSpec {
  */
 export const filmServices = (spec: FilmServicesSpec) => {
   const Platform = Layer.merge(BunServices.layer, BunCrypto.layerMac);
-  // The app's folders under the environment's: FILMS_OUT, FILMS_LAB and FILMS_PRODUCTIONS, when set, win.
   const Folders = ConfigProvider.layerAdd(
     ConfigProvider.fromUnknown({
       FILMS_OUT: spec.folders.out,
@@ -142,8 +136,6 @@ export const filmServices = (spec: FilmServicesSpec) => {
     }),
   );
   const Store = ContentStore.layer.pipe(Layer.provide(Platform));
-  // Every derived sound's audio and measures, made once a process and shared: the mix, the
-  // check and the options measure what a film places, the library and the mixer render it.
   const Render = SoundRender.layer;
   const Repo = FilmRepo.layer(spec.films, Option.some(spec.sounds), Option.some(spec.footage)).pipe(
     Layer.provide([Store, Platform]),
@@ -152,32 +144,23 @@ export const filmServices = (spec: FilmServicesSpec) => {
     Layer.provideMerge(Media.layer),
     Layer.provide([Repo, Platform]),
   );
-  // Staging takes by what was asked for, and the day's characters against the cap.
   const Staging = Option.match(spec.staging, {
     onNone: () => StagingCache.fromConfig,
     onSome: (dir) => StagingCache.layer(dir),
   }).pipe(Layer.provide([Store, Platform]));
   const Notes = NotesStore.layer.pipe(Layer.provide([Store, Platform]));
-  // Each production's ledger, a small committed JSON file in the app's `productions/`.
   const Productions = ProductionStore.layer.pipe(Layer.provide([Store, Platform]));
-  // Each film's storyboard: its record beside the film, its images in the film's board folder.
   const Board = BoardStore.layer.pipe(Layer.provide([Store, Repo, Platform]));
-  // The lab checks each write, and the review reads a film's options, keeps its takes and
-  // makes its mixes, through the app's CLI in a fresh process.
   const Fresh = FreshFilm.layer(spec.self).pipe(Layer.provide(Platform));
-  // The lab locates a scene's drawing fresh (`film read sites`); a command's
-  // stamps locate it in the command's own process, which imports the film as it stands.
   const Source = Layer.mergeAll(
     SceneWriter.layer.pipe(Layer.provideMerge(SceneSources.layer)),
     Stamps.layer.pipe(Layer.provide(scenesLocatedHere)),
   ).pipe(Layer.provideMerge(SourceWriter.layer), Layer.provide([Repo, Store, Fresh, Platform]));
-  // Each film's project folder: its renders, and the owner's approvals and comments on them.
   const Catalogue = RenderCatalogue.layer.pipe(Layer.provide([Store, Platform]));
   const Private = Option.match(spec.privateStore, {
     onNone: () => PrivateStore.layer(spec.sounds).pipe(Layer.provide(FetchHttpClient.layer)),
     onSome: (given) => given,
   }).pipe(Layer.provide(Platform));
-  // The library fits a recording with earshot, pinned outside the repo and run in its sandbox.
   const Library = SoundLibrary.layer(spec.sounds).pipe(
     Layer.provide([
       Store,
@@ -188,35 +171,20 @@ export const filmServices = (spec: FilmServicesSpec) => {
       Platform,
     ]),
   );
-  // The footage library's originals sync with the same private store; its copies are made
-  // over the media service's coders.
   const Footage = FootageLibrary.layer(spec.footage).pipe(
     Layer.provide(FootageMedia.layer.pipe(Layer.provide([Tools, Platform]))),
     Layer.provide([Store, Tools, Private, Platform]),
   );
   const Reviewed = Review.layerConfig(spec.roots).pipe(
     Layer.provideMerge(BunHttpPlatform.layer),
-    // Its lengths, frames and phone copies are the Media service's; a say on a
-    // set is written to its folder's catalogue.
     Layer.provide([Tools, Catalogue, Platform]),
   );
-  // The series drafts the lab reads beside the films, a mark written into the draft's Markdown.
   const Drafts = SeriesDrafts.layer(spec.series).pipe(Layer.provide([Store, Platform]));
-  // The agents' asks: a decision page each, kept under the lab's folder; a board try one shows
-  // is found on its board, and the material it shows through the reads its views make.
   const Asks = AskStore.layer.pipe(Layer.provide(AskMaterials.layer));
-  // Each film's timeline as the `timeline` tool reads it: its clock read fresh, its Board,
-  // catalogue, notes, the asks and the production's ledger.
   const Timelines = FilmTimelines.layer.pipe(Layer.provide(Asks));
-  // The agents' edits of a version's script (`beat_move`, `beat_hold`, `undo`), judged on its
-  // timeline, written through the source writer the lab's other writes share, their work filed
-  // on the production's ledger.
   const Edits = BeatEdits.layer.pipe(Layer.provideMerge(Timelines));
-  // The Script reader's staging takes, over the studio's readings, the drafts and the narrator.
   return Layer.mergeAll(ScriptVoices.layer, Asks, Edits).pipe(
     Layer.provideMerge(Layer.mergeAll(Choices.layer, StudioReadings.layer, Drafts)),
-    // The review hears each option in the mix, and writes a pick through the source writer;
-    // the lab's studio reads the film's script and voice fresh.
     Layer.provideMerge(
       Layer.mergeAll(Narrator.layer, Takes.layer, Composer.layer, Mixer.layer).pipe(
         Layer.provideMerge(
@@ -267,7 +235,6 @@ const FEED_EVERY = Duration.seconds(2);
 const mcpRoutes = Effect.fn('film.lab.mcp')(function* (links: LabLinks, beside: BesideRoutes) {
   const events = yield* Layer.build(LabEvents.layer({ links, every: FEED_EVERY }));
   const services = yield* Effect.context<LabMcpNeeds>();
-  // The subscriptions deliver over the same feed, kept in the lab's folder by its store.
   const subscriptions = yield* Layer.build(
     McpEvents.layer.pipe(Layer.provide(Layer.succeedContext(Context.merge(services, events)))),
   );

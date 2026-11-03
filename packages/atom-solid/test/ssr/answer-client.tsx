@@ -1,6 +1,3 @@
-// The client half of the adoption proof: the same page hydrated over the
-// server's markup, its answer read by a request of the browser's own, which
-// it never needs to make: the server's answer is adopted.
 import { hydrate } from '@solidjs/web';
 import { Effect, Option } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';

@@ -86,10 +86,6 @@ export const surroundingParagraphs = (
 
     const sql = yield* SqlClient.SqlClient;
 
-    // `anchors` resolves each hit to its (book_id, puborder); the join then
-    // walks the ±radius window off `idx_paragraphs_puborder`. `offset` carries
-    // which side of the anchor each row fell on, which is what lets one flat
-    // result set be grouped without a second pass over the corpus.
     const rows = yield* sql<WindowRow>`
       with anchors as (
         select para_id as anchor_para_id, book_id, puborder
@@ -127,8 +123,6 @@ export const surroundingParagraphs = (
     const result: Map<string, Surrounding> = grouped;
     return result;
   }).pipe(
-    // Enrichment, not a result: a context lookup that fails leaves the hits
-    // intact and unadorned rather than failing the search around them.
     Effect.catchCause((cause) =>
       Effect.logWarning('search.context.failed').pipe(
         Effect.annotateLogs({ cause: String(cause) }),

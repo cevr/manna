@@ -47,7 +47,6 @@ describe('the words', () => {
   });
 
   it('weighs a word at 0 when it is so common its weight falls under the floor', () => {
-    // 1 word in 50 of the hymnal: SIF / (SIF + 0.02) is about 0.048, under 0.1.
     const [common, rare] = weightsOf(
       ['common', 'rare'],
       new Map([
@@ -64,7 +63,6 @@ describe('the words', () => {
 describe('the rows', () => {
   it('cuts a word row to 4 bits, two values a byte, the first in the high half', () => {
     const { bytes, scale } = int4Row(Float32Array.from([0.7, -0.7, 0.1, 0, -0.3, 0.3]));
-    // Six values of root mean square 0.43: the clip (3 × 0.43) lies past the largest, so the scale is 0.7 / 7.
     expect(scale).toBeCloseTo(0.1, 6);
     expect([...bytes]).toEqual([(15 << 4) | 1, (9 << 4) | 8, (5 << 4) | 11]);
   });

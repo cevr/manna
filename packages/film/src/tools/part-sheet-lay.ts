@@ -1,19 +1,3 @@
-// An okra answer laid into a view's part sheet, and measured. The answer is
-// laid back over the view by one similarity fitted on colour where it still
-// shows the view (`core/register.ts`). Its paint, each pixel the one answer
-// pixel under its centre (`drawPoint`, so okra's grain is not averaged),
-// is the answer less the paper the view's own ground reaches; each painted
-// pixel goes under the nearest part that does not move, in that part's
-// tone, and only through `paintHidden`, so paint never shows at rest. The
-// measures are read on domains the sheet fixes before any answer is read:
-// the drift over the pixels kept by the parts the hidden areas lie on, the
-// seam and each such part's grain beside its paint (pooled, and cell by
-// cell), and each painted region's chroma and speck share (inside its edge
-// ring, outlines left out) beside its part's kept cloth. A measure with too
-// few samples to read is a missed bar, not a pass, and every moving part
-// must hide some paint (`film concept parts`, `part-sheet-cli.ts`, keeps
-// the best answer).
-
 import { Array as Arr, Boolean as Bool, Option, Order, Result, Schema } from 'effect';
 import { componentsOf, deltaE, labOf, rgbAt } from '../core/cast-sheet-pixels.ts';
 import { grainOf } from '../core/grain.ts';
@@ -164,8 +148,6 @@ const bytesOf = (src: ArrayLike<number>, f: (v: number, i: number) => number): U
 /** The mean of `v`'s values, 0 for none. */
 const meanOf = (v: ReadonlyArray<number>) => v.reduce((a, b) => a + b, 0) / Math.max(1, v.length);
 
-/** The median of `v`'s values, 0 for none. */
-// a typed array sorts numbers natively, with no comparator to call; the values are colour bytes, with no NaN or -0 to order apart
 const medianOf = (v: ReadonlyArray<number>) => Float64Array.from(v).sort()[v.length >> 1] ?? 0;
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
@@ -229,7 +211,6 @@ const paintedOf = (sheet: Sheet, hidden: Uint8Array, answer: Seen): Uint8Array =
   const { width: w, height: h } = sheet;
   const ground = Arr.range(0, w * h - 1).filter((i) => sheet.owner[i] === 0);
   const lab = labOf(medianOver(answer, ground));
-  // distances are never NaN or -0, so the native numeric sort orders them as a comparator would
   const spread = Float64Array.from(ground.map((i) => deltaE(answer.lab(i), lab))).sort();
   const near = Math.max(PAPER_NEAR, 1.5 * (spread[Math.floor(0.9 * (spread.length - 1))] ?? 0));
   const reached = new Uint8Array(w * h);
@@ -270,7 +251,6 @@ const stepsOf = (view: Seen, sheet: Sheet, laid: Seen, mine: Uint8Array, id: num
   const { components, labels } = componentsOf(mine, w, h, false);
   const sums = components.map(() => [0, 0, 0, 0]);
   for (let i = 0; i < w * h; i++) {
-    // a pixel off `mine` has label -1, and each label of `mine` has its sum
     const l = labels[i] ?? -1;
     if (l < 0 || !lightAt(laid, i)) continue;
     const sum = sums[l] ?? [];
@@ -442,7 +422,6 @@ const grown = (mask: Uint8Array, w: number, h: number, r: number): Uint8Array =>
       let count = 0;
       for (let a = 0; a < Math.min(r, along); a++) count += src[at(a, b)] ?? 0;
       for (let a = 0; a < along; a++) {
-        // a step past either end of the line adds nothing
         count += Number(a + r < along) * (src[at(a + r, b)] ?? 0);
         count -= Number(a - r - 1 >= 0) * (src[at(a - r - 1, b)] ?? 0);
         out[at(a, b)] = Number(count > 0);
@@ -470,7 +449,6 @@ const elongationOf = (count: number, [sx, sy, sxx, syy, sxy]: ReadonlyArray<numb
   const cyy = (syy ?? 0) / count - my * my + 1 / 12;
   const cxy = (sxy ?? 0) / count - mx * my;
   const spread = Math.sqrt((cxx - cyy) ** 2 / 4 + cxy * cxy);
-  // each axis's 1/12 keeps the narrower moment at 1/12 or more, so the ratio is finite
   return Math.sqrt(((cxx + cyy) / 2 + spread) / ((cxx + cyy) / 2 - spread));
 };
 
@@ -488,7 +466,6 @@ const offMedianOf = (r: Seen, set: Uint8Array) => {
   const l = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) if (set[i] === 1) l[i] = r.lightness(i);
   const off = new Float32Array(w * h);
-  // one buffer holds each pixel's 5 × 5 neighbours in turn, sorted in place
   const around = new Float64Array(25);
   for (const i of at) {
     const [x, y] = [i % w, Math.floor(i / w)];
@@ -539,7 +516,6 @@ const specksOf = (r: Seen, set: Uint8Array) => {
   const { at, off, l } = offMedianOf(r, set);
   const speck = bytesOf(off, (d) => Number(d > SPECK_L));
   const { components, labels } = componentsOf(speck, w, h, true);
-  // the sums of x, y, x², y², xy and L* over each component's pixels
   const moments = components.map(() => [0, 0, 0, 0, 0, 0]);
   for (const i of at.filter((i) => speck[i] === 1)) {
     const [x, y] = [i % w, Math.floor(i / w)];
@@ -749,7 +725,6 @@ const partGrain = (view: Seen, sheet: Sheet, at: Uint8Array, composite: Seen, id
     view,
     bytesOf(sheet.owner, (o) => Number(o === id)),
   );
-  // the pooled read's windows lie off each cloth's edge ring, where its outline runs, as the fine read's pixels do
   const inner = (set: Uint8Array) =>
     bytesOf(set, (s, i) => Number(s === 1 && !onRing(set, i, w, h)));
   const reached = latticeReach(at, id, w, h);
@@ -769,7 +744,6 @@ const partGrain = (view: Seen, sheet: Sheet, at: Uint8Array, composite: Seen, id
     onTrue: () => 'outside' as const,
     onFalse: () => verdictOf(pooledRead && fine.cells > 0, true),
   });
-  // the bar is read on the grains as measured; the record keeps them rounded
   return {
     part: sheet.parts[id - 1]?.name ?? '',
     painted: rounded(painted),
@@ -821,7 +795,6 @@ const regionsOf = (view: Seen, sheet: Sheet, at: Uint8Array, composite: Seen) =>
       onSome: (c) => [c.painted, c.kept] as const,
     });
     const region = { part: name(id), under: name(under) };
-    // each bar is read on the measures as taken; the record keeps them rounded
     return {
       speck: {
         ...region,
@@ -864,7 +837,6 @@ const stepsAcross = (sheet: Sheet, at: Uint8Array, composite: Seen, laid: Seen) 
   for (let i = 0; i < w * h; i++) {
     const ki = at[i] ?? 0;
     if (ki === 0) continue;
-    // the neighbours ahead: right (1) and down (3)
     for (let d = 1; d < 4; d += 2) {
       const j = neighbourAt(i, d, w, h);
       const kj = at[j] ?? 0;
@@ -872,7 +844,6 @@ const stepsAcross = (sheet: Sheet, at: Uint8Array, composite: Seen, laid: Seen) 
       if (!lightAt(laid, i) || !lightAt(laid, j)) continue;
       const [p, q] = (ki < kj && [i, j]) || [j, i];
       const [a, b, under] = [Math.min(ki, kj), Math.max(ki, kj), sheet.owner[p] ?? 0];
-      // part ids are bytes, so the three pack into one number
       const key = (a * 256 + b) * 256 + under;
       const line = lines.get(key) ?? { a, b, under, laid: 0, answer: 0, pairs: 0 };
       lines.set(key, line);
@@ -1074,7 +1045,6 @@ export const missesOf = (
     ([, met]) => !met,
   ).map(([bar, , past, unread]) => ({
     bar,
-    // a miss with no read outside it was missed for want of a read
     weight: 1 + Math.max(0, ...past) + Number(unread || past.length === 0),
   }));
 
@@ -1103,7 +1073,6 @@ export const sheetStrip = (sheet: Sheet, ground: Rgb, tint: boolean): Raster => 
     for (let i = 0; i < w * h; i++) {
       const o = (Math.floor(i / w) * width + k * w + (i % w)) * 4;
       const a = (p.pixels.rgba[i * 4 + 3] ?? 0) / 255;
-      // a painted pixel shows half magenta on the tint
       const half = Number(tint && a > 0 && sheet.owner[i] !== k + 1) / 2;
       for (let c = 0; c < 3; c++) {
         const own = (p.pixels.rgba[i * 4 + c] ?? 0) * a + (ground[c] ?? 0) * (1 - a);
@@ -1129,13 +1098,10 @@ interface LayTarget {
 /** One answer laid on the view: fitted from the padding's own move, painted, measured; or why its paint cannot be laid. */
 export const layAnswer = (target: LayTarget, answer: Raster) => {
   const { view, sheet, hidden, domain, pad, portrait } = target;
-  // the answer is registered where it should still show the view: every other pixel of the figure no moving part owns
   const where = bytesOf(sheet.owner, (o, i) => Number(o > 0 && hidden[i] === 0 && i % 2 === 0));
-  // the answer drawn at another size than the portrait it was asked at
   const k = (portrait.width / answer.width + portrait.height / answer.height) / 2;
   const fit = fitSimilarity(view, answer, where, { s: pad.s * k, dx: pad.dx, dy: pad.dy });
   const laid = seenOf(drawSimilar(answer, view.width, view.height, fit));
-  // the paint takes one answer pixel each, so okra's grain is not averaged away; the drift reads the footprint mean
   const point = seenOf(drawPoint(answer, view.width, view.height, fit));
   const painted = paintedOf(sheet, hidden, point);
   const seen = seenOf(view);

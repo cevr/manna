@@ -183,12 +183,10 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
   );
   const thumb = Option.map(drawing.shown, () => model);
   const open = Option.filter(thumb, (bound) => bound.state.open);
-  // The bar's `#` gives way while the dials stand over the bar.
   useRaised(Option.isSome(open));
   const dials = Option.flatMap(thumb, (bound) =>
     Option.map(bound.printed, (printed) => ({ bound, printed })),
   );
-  // The key button's centre from the panel's left edge, as the button lays out: the dials open out of it.
   const keyAt = useSharedValue(KEY_CENTRE);
   const keyLaidOut = (event: LayoutChangeEvent) => {
     const { x, width } = event.nativeEvent.layout;
@@ -209,7 +207,6 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
         ),
       })}
       <View pointerEvents="box-none" style={styles.dock}>
-        {/* The popover stays while it closes, on a turn to a page with no chords or to no page too. */}
         <View pointerEvents="box-none" style={styles.dials}>
           <DialPopover
             open={Option.isSome(Option.filter(dials, ({ bound }) => bound.state.open))}
@@ -243,7 +240,6 @@ function Frame({
   const { track, state, page, shown, send, inset } = drawing;
   const cue = useCue();
   const target = heightOf(state);
-  // The frame comes in at rest, so the first Play springs it up from the page's own bar.
   const height = useSharedValue(REST);
   useEffect(() => {
     height.value = withSpring(target, BAR_SPRING);
@@ -273,7 +269,6 @@ function Frame({
     <View role="region" aria-label="Player" style={[styles.frame, { paddingBottom: inset }]}>
       <Animated.View testID="bar-spring" style={[styles.spring, springing]}>
         <GestureHandlerRootView style={styles.root}>
-          {/* The swipe holds the seeker too: a swipe up from anywhere on the bar opens the sheet. */}
           <GestureDetector gesture={swipe}>
             <View>
               <View style={styles.bar}>
@@ -508,7 +503,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   pressed: { backgroundColor: color.soft },
-  // Over the bar's own left padding, the key button right of it.
   backEdge: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 12 },
   fill: { flex: 1 },
 });

@@ -233,8 +233,6 @@ const splitAtAnchors = (
   const end = start + segment.text.length;
   let local = 0;
   for (const anchor of byEnd) {
-    // Anchors land after the *last* character of the phrase, so an anchor at
-    // exactly this segment's start belongs to the previous segment.
     if (anchor.end <= start || anchor.end > end) continue;
     const offset = anchor.end - start;
     if (offset > local) {
@@ -292,10 +290,6 @@ export const applySearchHighlights = (
 
   return result;
 };
-
-// ---------------------------------------------------------------------------
-// §4.6 — the phrase-link layer
-// ---------------------------------------------------------------------------
 
 /** Exactly what this module needs from a matched phrase.
  *
@@ -381,10 +375,6 @@ export const segmentVerseText = (
   marginNotes: readonly MarginNoteAnchor[] = [],
   searchQuery?: string,
 ): TextSegment[] => composeSegments({ text: raw, marginNotes, searchQuery });
-
-// ---------------------------------------------------------------------------
-// The reader's pipeline (§10, Milestone 6)
-// ---------------------------------------------------------------------------
 
 /** The four layers, named. */
 export type SegmentLayer = 'italic' | 'redLetter' | 'margin' | 'phrase';

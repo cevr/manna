@@ -1,9 +1,3 @@
-// Fixtures for the menu: one menu with plain items, a separator and a group
-// with a label. URL params: `animated=true` for a popup that fades in and out
-// over 300 ms, `place=bottom` for a trigger at the bottom of the page (the
-// popup flips over it). `sorted` is a menu of keyed rows that reverse while it
-// is open.
-// `in-context-menu` is the full menu inside a context menu's page trigger.
 import type { JSX } from '@solidjs/web';
 import { createSignal, For, Show } from 'solid-js';
 

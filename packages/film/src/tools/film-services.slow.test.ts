@@ -1,19 +1,3 @@
-// The film's composition root is built once (`film-services.ts`): the
-// services every `film` command and the lab run with, the lab's pages, and
-// the lab's start. Its deletion test: delete it, and each of its consumers
-// would build the graph again, as two once did, and drifted (one's pages
-// lacked the assets, the other's source had stamps the first's had not). So
-// no module but the root builds these layers, and its one consumer is named:
-// the CLI (`runFilmCli`). A test's own graph (`testing.ts`, `fixtures/`, a
-// `*.test.ts`) is a fake's, not the app's, and is not swept.
-//
-// The guard reads bindings, not spellings (oxc-parser, as `lab.slow.test.ts`'s
-// `loadersReached` does): a name is followed through its import (aliased,
-// a namespace's member, a re-export, a package's entry) or a top-level
-// `const` alias to the module that declares it, so a layer built under
-// another name is a build, and a same-named thing of a module's own is not.
-// A name shadowed in an inner scope is read as the module's own binding.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, FileSystem, Option, Path, Predicate, Schema } from 'effect';
@@ -181,7 +165,6 @@ const bindings = (world: World, path: Path.Path) => {
           at,
         );
       }
-      // `export * from …`: the name is the first such module's that has it.
       for (const star of entries.filter((e) => e.importName.kind === 'AllButDefault')) {
         const target = Option.flatMap(Option.fromNullishOr(star.moduleRequest), (r) =>
           resolve(file, r.value),
@@ -328,12 +311,6 @@ const PackageExports = Schema.fromJsonString(
   Schema.Struct({ exports: Schema.Record(Schema.String, Schema.String) }),
 );
 
-/**
- * The repo's own modules, the film package's entries, and the root, read as
- * the file loads: every swept module's source at once, so a case's time is
- * its own traversal. A module outside the sweep (a file a swept one imports
- * from elsewhere) is read when the guard follows it there.
- */
 // oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
 const disk = await Effect.runPromise(
   Effect.gen(function* () {
@@ -413,7 +390,6 @@ describe("the film's composition root", () => {
     Effect.gen(function* () {
       const { world, files, root } = disk;
       const built = yield* builtIn(world, root, files);
-      // The root's own builds are found: the guard reads it as it reads the rest.
       expect(built.filter((line) => line.startsWith(`${root}:`)).length).toBeGreaterThan(0);
       expect(built.filter((line) => !line.startsWith(`${root}:`))).toEqual([]);
     }).pipe(Effect.provide(BunServices.layer)),

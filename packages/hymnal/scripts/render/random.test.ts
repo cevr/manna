@@ -9,8 +9,6 @@ const draws = (seed: string, n: number, a: number, b: number) => {
   return Array.from({ length: n }, () => randint(a, b));
 };
 
-// Each expected list is CPython 3's own output, read once with
-// `python3 -I -c "import random; r = random.Random(seed); print([r.randint(a, b) for _ in range(n)])"`.
 describe('pythonRandom', () => {
   it.effect('draws the humanise ±5 the listening pilot drew for a stem seed', () =>
     Effect.sync(() => {

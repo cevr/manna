@@ -1,11 +1,3 @@
-// `--accept-mismatch`: which beats may keep a take whose transcript does not
-// match its line. It names them (`--accept-mismatch a,b`), so accepting one
-// beat's known mismatch never waves through another's; bare, it means the
-// `--only` beats, and without `--only` it names nothing and fails.
-//
-// Pure: the CLI resolves the flag before a take is recorded or imported, and
-// prints a TakeMismatch with the flags that re-record or keep it.
-
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import { UnknownScene } from '../core/errors.ts';
 import { TakeMismatch } from '../core/refusals.ts';

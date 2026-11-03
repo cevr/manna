@@ -1,10 +1,3 @@
-// The lock stage over a fake trained graph, with the reader's test layer:
-// the lock's fields come from its inputs' outputs and the train's note; a
-// changed eval output changes the lock; a trained drawing with no held eval
-// fails it; every clip's entry is the lock's, a clip that fails its bars or
-// has no eval is written and counted unpassed; a rerun with nothing changed
-// writes nothing, and a lock edited by hand is written again.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, type FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { sha256Hex } from '../digest.ts';
@@ -173,7 +166,6 @@ describe('cast build: the reader lock', () => {
       const l = lockOf(disk);
       const train = report.stages.find((s) => s.id === 'train');
       expect(l['stageKey']).toBe(Option.getOrUndefined(train?.key ?? Option.none()));
-      // the reader key: the set, the config and each train file by basename, sorted
       const trainer = {
         'model.py': sha256Hex(text('model')),
         'train.py': sha256Hex(text('train')),
@@ -248,7 +240,6 @@ describe('cast build: the reader lock', () => {
         const disk = files();
         yield* build(disk);
         const first = lockOf(disk);
-        // the committed lock as an earlier train left it; every stage key new (`build.json` dropped, objects kept)
         disk.set(
           LOCK,
           text(jsonOf({ ...first, train: { stageSec: 4361 }, spend: { buildCountedUsd: 3.5 } })),

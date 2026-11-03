@@ -200,9 +200,7 @@ describe('Chord.fromPitches', () => {
       expect(named([65, 60, 57, 53], F)).toBe('F');
       expect(named([64, 60, 55, 52], F)).toBe('C/E');
       expect(named([64, 58, 55, 43], F)).toBe('Edim/G');
-      // Alone, these notes are B-flat with an added sixth; harmony.ts reads them on.
       expect(named([67, 62, 53, 46], F)).toBe('Bb6');
-      // G-flat with an added sixth, not E-flat minor seventh over its third.
       expect(named([63, 61, 58, 54], Db)).toBe('Gb6');
       expect(named([70, 64, 61, 55], Db)).toBe('Gdim7');
       expect(named([65, 61, 57, 49], Db)).toBe('Db+');
@@ -226,9 +224,7 @@ describe('Chord.overBass and Chord.withoutOne', () => {
 
   it.effect('names the chord above a bass it leaves out (hymn 100, bar 23)', () =>
     Effect.sync(() => {
-      // Eb3 Ab3 F4 Db5: D-flat over E-flat.
       expect(over([51, 56, 65, 73], Db)).toBe('Db/Eb');
-      // The bass doubled above, or two notes above it: no chord over a foreign bass.
       expect(over([51, 63, 65, 73], Db)).toBeUndefined();
       expect(over([51, 65, 73], Db)).toBeUndefined();
     }),
@@ -236,9 +232,7 @@ describe('Chord.overBass and Chord.withoutOne', () => {
 
   it.effect('names the one chord a set makes with one note left out (hymn 100, bar 10)', () =>
     Effect.sync(() => {
-      // Db3 C4 Gb4 Bb4: G-flat over D-flat with a passing C.
       expect(without([49, 60, 66, 70], Db)).toBe('Gb/Db');
-      // Db3 Bb3 Ab4 C5: only B-flat minor seventh with its fifth left out, which names nothing.
       expect(without([49, 58, 68, 72], Db)).toBeUndefined();
     }),
   );
@@ -246,10 +240,8 @@ describe('Chord.overBass and Chord.withoutOne', () => {
   it.effect('leaves two one-note-out readings unnamed, unless one is already sounding', () =>
     Effect.sync(() => {
       const C = { tonic: 'C', minor: false } as const;
-      // C3 G3 Eb4 E4: C with E-flat out, or C minor with E out.
       expect(without([48, 55, 63, 64], C)).toBeUndefined();
       expect(without([48, 55, 63, 64], C, { root: 0, quality: 'm' })).toBe('Cm');
-      // Gb3 Ab3 Db4 C5 (hymn 100, bar 5): a suspension is no reading, so G-flat keeps sounding.
       expect(without([54, 56, 61, 72], Db)).toBeUndefined();
     }),
   );
@@ -291,7 +283,6 @@ describe('Chord.format', () => {
       expect(Chord.format({ root: 1, quality: 'dim', bass: 4 }, major('F'))).toBe('F#dim/A');
       expect(Chord.format({ root: 8, quality: 'dim7' }, major('Ab'))).toBe('Edim7');
       expect(Chord.format({ root: 1, quality: 'dim', bass: 4 }, major('G'))).toBe('G#dim/B');
-      // A bass outside the chord keeps the key's spelling.
       expect(Chord.format({ root: 0, quality: '', bass: 8 }, major('Ab'))).toBe('Ab/Fb');
     }),
   );
@@ -310,7 +301,6 @@ describe('Chord.format', () => {
           ),
         );
         expect(wrong.slice(0, 10)).toEqual([]);
-        // The 15 major and 15 minor keys a signature writes, and no other.
         expect(KEYS.length).toBe(30);
       }),
   );

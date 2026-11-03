@@ -1,11 +1,3 @@
-// The judged rules' model: TypeSafe's DecisionModel (`@effect/ai-typesafe`),
-// which answers every decision of a definition in one request. The key is
-// `TYPESAFE_API_KEY`, else the macOS login keychain's `typesafe-api-key`
-// item for the account `bible-tools`. With no key the model is one whose
-// every answer fails `AuthenticationError(MissingKey)`, so a run with all its
-// items cached still needs no key, and a run that must ask skips `no-key`.
-// The key is never printed, logged or put in a URL.
-
 import { TypeSafeClient, TypeSafeDecisionModel } from '@effect/ai-typesafe';
 import { Config, Effect, Layer, Option, Redacted } from 'effect';
 import { AiError, DecisionModel } from 'effect/ai';

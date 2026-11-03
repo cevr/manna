@@ -135,7 +135,6 @@ const walk = (): Record<Rule, Tally> => {
     a4: { checked: 0, missed: 0, first: [] },
     a5: { checked: 0, missed: 0, first: [] },
   };
-  // The step's place in the domain is passed apart and made a `Miss` only on a miss: most steps pass.
   const tally = (
     rule: Rule,
     ok: boolean,
@@ -197,7 +196,6 @@ describe('the key button as the chords switch (chordmode A1)', () => {
   });
 
   it('a4: no event leaves the dials open with chords off, from any state whose dials are open only with chords on', () => {
-    // Chords off with the dials open is the one state left out: 144 moves of it.
     expect(verdict('a4')).toEqual({
       checked: keys * (2 * half - 144) * events.length,
       missed: 0,

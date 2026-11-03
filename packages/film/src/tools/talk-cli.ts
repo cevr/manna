@@ -1,12 +1,3 @@
-// `film talk`: a talk read as its edit plays it (`core/talk.ts`). A talk is
-// cut on word indices into its takes' transcripts, which nobody reads bare:
-// `words` prints how long the talk plays against its format's length, then
-// each section's words with their indices, as `[33]law`, a struck word as
-// `[34]~um~`, so the agent and the owner name words by what they say. With
-// `--take`, a take's whole transcript, every word the edit could play.
-//
-//   film talk words <talk> [--take key]
-
 import { Console, Effect, Option, Record as Rec } from 'effect';
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
@@ -92,7 +83,6 @@ const words = Command.make(
         ...talk.cut.sections.flatMap((section) => sectionLines(talk, section)),
       ],
       onSome: (key) =>
-        // A key the talk names itself: `constructor`, which every object answers to, is none.
         Option.match(Rec.get(talk.takes, key), {
           onNone: () => [`no take "${key}" (the takes: ${Object.keys(talk.takes).join(', ')})`],
           onSome: (take) => [

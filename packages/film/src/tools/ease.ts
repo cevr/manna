@@ -1,12 +1,3 @@
-// A member's ease rendered (`film concept ease`): one of his `EASES` (the
-// film's `rigs/cast.ts`), drawn by the real draw path in the export pages
-// (`Pages`, the ease page `<film>/cast/<member>/ease`), each frame a PNG under
-// `out/<film>/cast/<member>/ease/<n>/` with `ease.json` beside them: the
-// frames' keys, turns and held hands, where the part sheet stands on the
-// frame, and how they were drawn (the segments, each in a page of its own,
-// and the order). A frame is a function of its index alone, so any split
-// into segments and any order give the same bytes.
-
 import { Array as Arr, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import {
   CUTOUT_MARGIN,
@@ -125,7 +116,6 @@ export const renderEase = Effect.fn('Cast.ease')(function* (
   const root = path.join(paths.out, 'cast', member, 'ease');
   const { n, dir } = yield* reserveNumbered(root);
   const name = (f: number) => `f${String(f).padStart(3, '0')}.png`;
-  // each segment in a page of its own, its frames in the order asked
   const runs = Option.match(ask.shuffle, {
     onNone: () => segments.map(([a, b]) => Arr.range(a, b)),
     onSome: () => [order],

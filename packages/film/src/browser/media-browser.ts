@@ -1,6 +1,3 @@
-// The page's own media (`media.ts`): the `Audio` it makes for its narration,
-// and its compares on `<video>`.
-
 import { Media, type Playable, playableOf } from './media.ts';
 
 /** The audio at `src`, as the page makes it: an `Audio` element. */

@@ -89,16 +89,8 @@ const makeOfferingHost = (destination: string) => {
   let provenance = Option.none<CorpusProvenance>();
   const artifacts = layerNativeTopicsArtifacts({
     destination,
-    // A provenance store that actually remembers, so a second run over this
-    // host reads the generation the first one installed. The shipped SQLite
-    // store cannot be used here: it writes `meta` rows into the candidate, and
-    // the fixture bytes are not a database.
     provenanceStore: {
-      read: () =>
-        // Absence is the store's failure channel, as it is for the shipped
-        // sidecar and SQLite stores: a file with no provenance is a file this
-        // host has not installed.
-        Effect.fromOption(provenance, () => 'no provenance is recorded'),
+      read: () => Effect.fromOption(provenance, () => 'no provenance is recorded'),
       write: (_file, written) =>
         Effect.sync(() => {
           provenance = Option.some(written);
@@ -115,9 +107,6 @@ const makeOfferingHost = (destination: string) => {
   const entry = ContentManifestEntry.make({
     revision: OFFERED_REVISION,
     url: RELEASE_URL,
-    // Hashed here rather than written down: a literal digest would need
-    // re-deriving by hand every time the fixture bytes change, and a stale one
-    // would turn this into the *mismatch* case without saying so.
     sha256: `sha256:${new Bun.CryptoHasher('sha256').update(RELEASE_BYTES).digest('hex')}`,
     size: RELEASE_BYTES.length,
     schema_major: TOPICS_SCHEMA_MAJOR,
@@ -136,7 +125,6 @@ const makeOfferingHost = (destination: string) => {
           }),
         }),
       ),
-      // The CLI reopens nothing: its next read is a new process.
       Layer.provide(ContentActivation.Inert),
     ),
   };
@@ -156,9 +144,6 @@ describe('manna topics', () => {
       expect(cli.success).toBe(true);
 
       expect(cli.stdout).toBe(yield* serviceStatusJson);
-      // Not vacuous: the fixture manifest names a schema major above this
-      // build's, so both sides are carrying a real refusal rather than two
-      // empty envelopes that happen to match.
       expect(cli.stdout).toContain(ADAPTER_EXPECTATIONS.overrun);
       expect(cli.stdout).toContain(String(OVERRUN_REVISION));
     }),
@@ -201,15 +186,9 @@ describe('manna topics', () => {
       );
       expect(cli.success).toBe(true);
 
-      // Not vacuous: this host *is* being offered something installable, which
-      // is the only state in which the claim has content.
       expect(cli.stdout).toContain('offer');
 
-      // Zero installer invocations. The release URL is the installer's only
-      // way to obtain the bytes, so a fetch count of zero is the whole claim.
       expect(offer.fetches()).toEqual([]);
-      // And nothing reached the filesystem: neither the artifact nor the
-      // staging file the atomic swap writes before renaming.
       expect(yield* fs.exists(destination)).toBe(false);
       expect(yield* fs.exists(`${destination}.building`)).toBe(false);
     }),
@@ -243,9 +222,6 @@ describe('manna topics', () => {
       );
       expect(cli.success).toBe(true);
 
-      // Without `--json` the operator still gets both facts: which version was
-      // refused, and that a newer app is what unblocks it. A refusal printed as
-      // only a tag would leave them with nothing to act on.
       expect(cli.stdout).toContain(String(OVERRUN_REVISION));
       expect(cli.stdout).toContain('newer app');
       expect(cli.stdout).toContain('installed  (none)');
@@ -259,9 +235,6 @@ describe('manna topics', () => {
       );
       expect(cli.success).toBe(true);
 
-      // The run is reported and nothing failed. But this fixture host holds no
-      // artifact — `status.installed` is `None` — so the line must not claim an
-      // installed generation is still serving. There is none (round-4 B3).
       expect(cli.stdout).toContain('activated  (nothing');
       expect(cli.stdout).toContain('no content is installed');
       expect(cli.stdout).not.toContain('the installed generation is still active');

@@ -1,11 +1,3 @@
-// The page's clipboard: where Copy link puts a link. The pages' hrefs are
-// paths (`@manna/url-state` keeps no origin), so the link is written whole,
-// resolved against the page's own origin, and pastes anywhere. A write the
-// browser refuses (no permission, the page not focused, an origin that is
-// not secure) fails with `ClipboardRefused`, in the browser's words, so the
-// receipt says why. The live adapter is `clipboard-browser.ts`; a test
-// reads what was written from `Clipboard.memory`.
-
 import { Context, Data, Effect, Layer } from 'effect';
 
 /** The browser would not take the text. */

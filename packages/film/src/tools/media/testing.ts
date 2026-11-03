@@ -1,7 +1,3 @@
-// The media service in memory for the tool tests (`media.ts`, `footage-media.ts`):
-// a file's length and sound made up from its bytes, every write recorded.
-// None of the media stack loads.
-
 import { Effect, FileSystem, Layer, Option } from 'effect';
 import { type Pcm, silence } from '../../core/audio.ts';
 import { MIX_RATE } from '../../core/mix.ts';

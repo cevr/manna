@@ -1,23 +1,3 @@
-// The browser tests' page: the fixture file a test file names, compiled once
-// per test file by Solid's compiler (the DOM build, Solid's development runtime
-// so its diagnostics show), served by a Bun server on a free port, and opened
-// in Playwright's Chromium. A case opens a fixture by name; the page mounts
-// it into `#root` and records what the fixture logs in `window.__log`.
-//
-// A test file opened with `hydrate` serves each page as its fixture's server
-// render instead (`server.ts`: Solid's server build, run in the test's
-// process per page, with the script hydration needs), and the page
-// hydrates the browser's build over it; both builds are hydratable.
-//
-// Real Chromium, not a fake DOM: focus, pointer and touch events, layout and
-// `:focus-visible` are what the parts are about, and a fake DOM gets them
-// wrong. Run with `bun run test:browser` (it needs Playwright's Chromium:
-// `bunx playwright install chromium`).
-//
-// The whole browser in Chrome's headless mode, not Playwright's default
-// headless shell: the shell is a separate, slimmer build, and on macOS its
-// view never takes the pointer lock (`requestPointerLock` rejects with
-// WrongDocumentError), so a scrub's lock was never tested there.
 import { afterAll, afterEach, beforeAll } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -200,7 +180,6 @@ export const harness = (fixtureFile: string, options: HarnessOptions = {}): Harn
   let server: ReturnType<typeof Bun.serve> | undefined;
   let serverBuild: ServerBuild<typeof ServerEntry> | undefined;
   let browser: Browser | undefined;
-  // Launched for the first page that asks for scrollbars that take room.
   let scrollbarBrowser: Promise<Browser> | undefined;
   let contexts: Array<BrowserContext> = [];
   let problems: Array<string> = [];
@@ -289,8 +268,6 @@ export const harness = (fixtureFile: string, options: HarnessOptions = {}): Harn
       }
       const page = await context.newPage();
       page.setDefaultTimeout(5000);
-      // The page's main thread slowed `UI_BROWSER_CPU_THROTTLE` times: a slow phone or a loaded
-      // runner, on demand, as the film's e2e does (`FILM_E2E_CPU_THROTTLE`).
       if (THROTTLE > 1) {
         const cdp = await context.newCDPSession(page);
         await cdp.send('Emulation.setCPUThrottlingRate', { rate: THROTTLE });

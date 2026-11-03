@@ -12,7 +12,6 @@ import {
   unloaded,
 } from './report.js';
 
-// What `bun test --reporter=junit` writes, trimmed to what the report reads.
 const JUNIT = `<?xml version="1.0" encoding="UTF-8"?>
 <testsuites name="bun test" tests="3">
   <testsuite name="src/core/api.test.ts" file="src/core/api.test.ts" tests="3">
@@ -65,7 +64,6 @@ describe('redfirst', () => {
       { from: 20, to: 25 },
       { from: 30, to: 32 },
     ];
-    // Line 13 sits in the first case's span: it is changed; line 17 in none.
     expect(
       newOrChanged(
         head,
@@ -97,7 +95,6 @@ describe('redfirst', () => {
     ].join('\n');
     const { added, gaps } = diffLines(diff);
     expect([...added]).toEqual([]);
-    // Lines went between new lines 13 and 14, and between 25 and 26.
     expect([...gaps]).toEqual([13, 25]);
     const weakened = { file: FILE, line: 11, name: 'a > weakened', passed: true };
     const before = { file: FILE, line: 20, name: 'a > before the gone case', passed: true };
@@ -169,18 +166,18 @@ describe('redfirst', () => {
 
   test("a test.each's span is its title and body, the table left out", () => {
     const text = [
-      "describe('old links', () => {", // 1
-      '  test.each([', // 2
-      "    '/',", // 3
-      "    '/films/rbf/export',", // 4
-      "  ])('%s is not old', (href) => {", // 5
-      '    expect(legacyPlace(href)).toEqual(Option.none());', // 6
-      '  });', // 7
-      '', // 8
-      "  test('every old link lands on a page', () => {", // 9
-      '    expect(1).toBe(1);', // 10
-      '  });', // 11
-      '});', // 12
+      "describe('old links', () => {",
+      '  test.each([',
+      "    '/',",
+      "    '/films/rbf/export',",
+      "  ])('%s is not old', (href) => {",
+      '    expect(legacyPlace(href)).toEqual(Option.none());',
+      '  });',
+      '',
+      "  test('every old link lands on a page', () => {",
+      '    expect(1).toBe(1);',
+      '  });',
+      '});',
     ].join('\n');
     expect(caseSpans('a.test.ts', text)).toEqual([
       { from: 5, to: 7 },

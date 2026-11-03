@@ -118,8 +118,6 @@ test('playback sidecars stay one line, hymn-local and below 17 MB', () => {
   expect(alternatives).toBe(695);
   const manifest = JSON.parse(readFileSync(new URL('manifest.json', folder), 'utf8'));
   expect(placementNumbers.toSorted((a, b) => a - b)).toEqual(manifest.placements);
-  // Independent changes-only statement over the stored projection: a label
-  // equal to the previous label in its line is never a new chord change.
   const repeats = repeatedChanges(scores, variants);
   expect(repeats.length).toBe(0);
   expect(repeats.filter(([number, p, l]) => number === 388 && p === 0 && l === 1)).toEqual([]);

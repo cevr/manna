@@ -70,19 +70,14 @@ const PROMISE_SENTENCES: ReadonlyArray<string> = [
  */
 const NET = new RegExp(
   String.raw`\b(?:${[
-    // mail
     String.raw`e-?mail\w*|mail\w*|inbox\w*|newsletters?|letters?|notes?|messages?|digest\w*`,
     String.raw`roundups?|recaps?|bulletins?|dispatch\w*|editions?|issues?`,
     String.raw`send\w*|sent|writ(?:e|es|ing|ten)|wrote|hear(?:s|d|ing)?|touch|notif\w*|updates?|reach(?:es)? you`,
-    // what we send, beside the films
     String.raw`news\w*|offers?|promo\w*|announce\w*|deals?|coupons?|discount\w*|sales?|specials?|extras?`,
     String.raw`bonus\w*|freebies?|gifts?|alerts?|reminders?|invit\w*|tips?|surveys?|podcasts?|products?|merch\w*|recipes?`,
-    // the list
     String.raw`lists?|join\w*|subscri\w*|sign(?:ed|s|ing)?[- ]?ups?|members?\w*`,
-    // a word of time, inside any word
     String.raw`\w*(?:week|daily|dailies|day|month|year|night|quarter|fortnight|annual|season|hour|minute)\w*`,
     String.raw`\w*(?:morning|evening|noon|tomorrow|morrow|summer|winter|autumn|time|period|frequen|occasion|regular|schedul|routine|cadence)\w*`,
-    // how often
     String.raw`every\w*|each|per|often\w*|again|once|twice|thrice|whenever|now and then`,
     String.raw`seldom|rarely|always|never|soon\w*|later|christmas|easter`,
   ].join('|')})\b`,
@@ -421,7 +416,6 @@ const STATED = new Map(
     'dist/series/dwell-in-the-land.html': 1,
     'dist/series/taught-of-the-lord.html': 1,
     'dist/series/health-and-cure.html': 1,
-    // The form's fine print, and the "Why" of the privacy page.
     'dist/privacy.html': 2,
     'dist/subscribe/confirm.html': 1,
     'dist/subscribe/confirmed.html': 1,
@@ -554,7 +548,6 @@ const cssWords = (css: string): Words => {
   const strings = tokens.flatMap((m) =>
     Option.toArray(Option.map(Option.fromNullishOr(m[1] ?? m[2]), (s) => fold(cssUnescape(s)))),
   );
-  // Outside a comment, a `url()` and a string, an escape can spell a property or a function the rules here match by name.
   const escaped = /\\/.test(css.replace(CSS_TOKENS, ''));
   const content = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(CSS_CONTENT)].map((m) =>
     (m[1] ?? '').trim(),
@@ -683,10 +676,8 @@ const UNSEEN_ATTRIBUTES = new Set([
   ...['rel', 'required', 'role', 'sizes', 'src', 'srcset', 'tabindex', 'type', 'width', 'xmlns'],
   ...['aria-busy', 'aria-current', 'aria-hidden', 'aria-labelledby', 'aria-describedby'],
   ...['data-count', 'data-logo', 'style'],
-  // SVG drawing
   ...['viewbox', 'd', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'],
   ...['clip-path', 'opacity', 'fill-rule', 'cx', 'cy', 'r'],
-  // the series marks' strokes, each laid in passes along its path
   ...['pathlength', 'stroke-dasharray', 'stroke-dashoffset'],
 ]);
 
@@ -786,7 +777,6 @@ const readingOf = (pieces: ReadonlyArray<Piece>): Reading => {
   let closed = false;
   pieces.forEach((piece) => {
     if ('breaks' in piece) {
-      // Two elements side by side, with no text between (`</a><a>`), are two items: a break.
       const sideBySide = closed && piece.opens;
       closed = !piece.opens;
       const before = Option.getOrElse(edge, () => ({ breaks: false, spaced: false }));
@@ -884,7 +874,6 @@ const markupWords =
           problems.push(`unread: attribute ${lower} on ${tag}`);
         }
         if (lower === 'style') take(cssWords(value));
-        // A mail or text link's query fills in words the reader's app shows (`?subject=`, `?body=`).
         if (lower === 'href' && /^(?:mailto|sms):[^?]*\?/i.test(value)) {
           problems.push(`unread: link words ${value}`);
         }
@@ -972,21 +961,14 @@ const DIST_READERS = new Map<string, Reader>([
  * listed here, and a review reads the reason.
  */
 const WORDLESS = new Set([
-  // The kit draws these from HTML whose words it reads (`kit/draw.ts` `seen`).
   ...['dist/og/home.jpg', 'dist/og/land.jpg', 'dist/og/path.jpg', 'dist/og/remedies.jpg'],
   ...['dist/og/taught.jpg', 'dist/apple-touch-icon.png', 'dist/favicon.ico'],
   ...['dist/icon-192.png', 'dist/icon-512.png'],
-  // Paintings, with no words in them (`email-promise-painted-words`).
   ...['dist/assets/field-768.webp', 'dist/assets/field-1536.webp', 'dist/assets/field-3072.webp'],
   ...['dist/assets/night-768.webp', 'dist/assets/night-1536.webp'],
-  // The field's wind, a map of how far each pixel sways, read by the motion's shader (`kit/field.ts`).
   'dist/assets/field-wind.png',
-  // The font's glyphs.
   ...['dist/assets/Newsreader-normal-latin.woff2', 'dist/assets/Newsreader-normal-latin-ext.woff2'],
   ...['dist/assets/Newsreader-italic-latin.woff2', 'dist/assets/Newsreader-italic-latin-ext.woff2'],
-  // The browser's scripts: the phone menu, whose links the served pages print, the confirm
-  // page's button, the stills' motion, which adds no words (`src/motion/scene.ts`), and the
-  // library and a piece of it two scripts share (`email-promise-browser-script`).
   ...['dist/assets/client.js', 'dist/assets/confirm.js', 'dist/assets/scene.js'],
   ...['dist/assets/Effect.js', 'dist/assets/Data.js'],
 ]);

@@ -1,24 +1,3 @@
-// Floating hands, the canvas kit's look from before 2026-10-18 (DIRECTION,
-// "Hands"), when no arm was drawn: the house hand is now a circle at the end
-// of an arm in its sleeve (CRAFT rule 12), drawn by the Rive rigs. Here a
-// figure's hand is the one mitten, floating free near its body. At rest it floats at its
-// spot beside the body, bobbing a little with the figure's breath. When it
-// has work to do it travels there on a named cue along a soft arc round its
-// shoulder, as a hand on an unseen arm would, swings a little past its reach
-// and settles; when the work is done it travels back the same way. It never
-// goes farther from its shoulder than the figure's reach (`HandStyle.radius`:
-// `film check` flags a target past it, `HandFar`). Its grip forms as it
-// arrives. Where it is and how it is turned are pure functions of its
-// shoulder, its rest, its gesture and the breath, written into buffers this
-// module keeps (no allocation a frame), so a frame draws the same hand
-// however it was reached, and nothing flips.
-//
-// The close-up (`closeHand`) is the same hand, big, palm up, with the ink a
-// hand is allowed at that size: two finger-joint lines and a lifeline. A
-// figure's own hand turns palm up into the close-up's shape
-// (`Gesture.turn`) before a push into it, so the small hand and the big one
-// are one shape at two scales.
-
 import { BOIL_FPS, type Hand, type Pt, spline, stroke, sub } from './ink.ts';
 import { cutout } from './cutout.ts';
 import { PAPER_EDGES, piece } from './piece.ts';
@@ -178,11 +157,6 @@ export const handAt = (root: HandRoot, g: Gesture | undefined, style: HandStyle)
   const p = place(root, g, style.mitten);
   return [p.x, p.y];
 };
-
-// ─── the mitten ──────────────────────────────────────────────────────────────
-// One hand design at every scale: palm and fingers one piece, and a thumb.
-// Each grip is a unit shape pointing +x from its centre, the thumb on the −y
-// side, placed by a point, an angle and a size into its own buffer.
 
 /** A capsule from `a` to `b`, `r` round: a thumb or a forefinger. */
 const capsule = (a: Pt, b: Pt, r: number): Pt[] => {
@@ -575,7 +549,6 @@ export const palmUpFrame = (
   const sy = k * flip;
   const c = Math.cos(facing);
   const s = Math.sin(facing);
-  // Turned a quarter so the fingers run along +x, scaled, then turned to `facing`.
   FRAME[0] = -s * sy;
   FRAME[1] = c * sy;
   FRAME[2] = -c * sx;
@@ -641,22 +614,6 @@ export const floatingHand = (
   if (ctx.globalAlpha <= 0) return;
   handEnd(ctx, g, p.s, AT, p.angle, style.mitten, root.away, style, sub(hand, 3));
 };
-
-// ─── the close-up ────────────────────────────────────────────────────────────
-// The hand close up is an open hand held out palm up to receive, seen from
-// above and a little behind the wrist, as one sees one's own hand held out:
-// the viewer looks into the palm. The palm is the biggest shape, its middle
-// on the origin, where a light or the gifts are laid; the fingers are one
-// mitten block running on from the knuckles away and up the frame to one
-// soft round tip; the thumb lies low along the side, off the palm's heel, at
-// about 40° to the fingers. Palm, fingers and thumb are cut as one piece: one
-// outline round the three, no seam where they join. It closes the way a hand
-// does: the finger block bends up out of the palm about the knuckles, toward
-// the eye, foreshortening, until its round tip comes back over the palm,
-// which stays showing under it as a cup, while the thumb comes in. The block
-// is the hull of a few balls, so every edge it shows, bent or not, is round.
-// It floats in frame with no arm, as every hand does. Every shape is a pure
-// function of `open`, written into buffers this module keeps.
 
 /** How a close-up hand is cut. */
 interface CloseStyle {
@@ -946,8 +903,6 @@ const cupped = (
     grain: 0.5,
     boil: 'crawl',
   } as const;
-  // One piece: each part's outline twice as wide, then every part's paper
-  // over them, so only the outer half of the ink round the whole shows.
   stroke(ctx, s.thumb, ink, sub(hand, 7));
   stroke(ctx, s.palm, ink, sub(hand, 8));
   stroke(ctx, s.fingers, ink, sub(hand, 9));
@@ -961,9 +916,7 @@ const cupped = (
       { color: crease, width: line, jitter: 0.4, taper: 0.5, alpha: detail, boil: 'crawl' },
       sub(hand, 4),
     );
-  // The fingers' paper over the palm's top; as they bend up it casts on the palm.
   cutout(ctx, s.fingers, { ...paper, shadow: 0.35 * s.over }, sub(hand, 5));
-  // Back over the palm, the tip's edge is inked there too; the knuckles' side never is.
   if (s.over > 0) {
     ctx.save();
     ctx.beginPath();

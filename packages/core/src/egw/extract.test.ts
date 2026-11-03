@@ -13,7 +13,6 @@ const scriptureRef = (title: string): Node => ({
 
 const text = (s: string): Node => ({ _tag: 'Text', text: s });
 
-// Wire-shape fields the EGW paragraph schema encodes as `null` when absent.
 const wireNull = Option.getOrNull(Option.none<never>());
 
 const paragraph = (overrides: Partial<Paragraph>): Paragraph => ({

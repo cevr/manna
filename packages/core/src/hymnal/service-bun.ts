@@ -445,7 +445,6 @@ export const layerHymnalBun: Layer.Layer<
       Effect.try({
         try: () => {
           const maximum = boundedLimit(limit);
-          // SQLite text/FTS treats NUL as a terminator; no corpus entry contains it.
           if (query.includes('\0')) return [];
           return reader.searchRows(query, maximum).map(summary);
         },

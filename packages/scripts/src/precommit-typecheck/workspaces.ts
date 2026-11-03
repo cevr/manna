@@ -1,8 +1,3 @@
-// The workspaces a commit's typecheck covers: each workspace a staged file
-// that types read lies in, and every workspace when a staged root file that
-// every workspace reads is one of them. Selah is never among them (its
-// typecheck is a Swift compile; the slow suite runs its native gate).
-
 /** A workspace that has a `typecheck` script: its folder from the root and its package name. */
 export interface Workspace {
   readonly dir: string;

@@ -1,12 +1,3 @@
-// The words of a narration on a page, as the words reader shows them
-// (`words/reader.tsx`): each word an
-// element of its own inside its section's (`data-scene`), holding its index
-// (`data-index`) and its offset in the one text (`data-from`, `lit.ts`), so
-// the page's highlights (`browser/highlights.ts`) paint ranges of the text
-// with no element for a word lit, and the text stays selectable and
-// copyable. A press released on the words selects the words a text
-// selection spans, in one section, or shows the one word tapped.
-
 import { Effect, Option, Record as Rec } from 'effect';
 import { createEffect, onCleanup } from 'solid-js';
 import { Highlights, type HighlightName } from '../../browser/highlights.ts';
@@ -93,7 +84,6 @@ export const usePainted = <N extends HighlightName>(
   page: () => Option.Option<HTMLElement>,
   painted: () => Painted<N>,
 ): void => {
-  // The highlights painted so far, each cleared as the view goes.
   const names = new Set<N>();
   createEffect(painted, (now) => {
     Option.map(page(), (root) =>

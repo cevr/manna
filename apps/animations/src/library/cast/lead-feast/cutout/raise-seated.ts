@@ -1,13 +1,3 @@
-// The lead's seated raise (`raise-seated/frames/record.json`): his bottle
-// arm's keys (`DRAWINGS['single-9']`), `raise-rest` (the bottle on his lap) to
-// `raise-k5` (the bottle near his mouth), each drawn on his single-9 sheet's
-// canvas in place of his armRight, cut from the record's whole painted frames.
-// They show in order for the record's `hold` film frames each (on twos), and
-// then the raise lands on `k6`, the kept single-9 view, his own drawn arm.
-// The frames leave out the drawn floor shadow: a scene draws the engine's
-// contact shadow (`ground`) at `ground`, on his single-9 view's px. Read once
-// from the record.
-
 import { Array as Arr, Option, Schema } from 'effect';
 import { DRAWINGS } from './puppets.ts';
 import RECORD_JSON from './raise-seated/frames/record.json' with { type: 'json' };
@@ -38,7 +28,6 @@ const missing = (what: string): never => Schema.decodeUnknownSync(Schema.Never)(
 /** The record's frames by name: the keys', then k6's. */
 const ORDER = [...KEYS.map((k) => k.name), 'raise-k6'].join(' ');
 
-// The record's frames are these, in this order: any other fails here, at load.
 if (RECORD.frames.map((x) => `raise-${x.id}`).join(' ') !== ORDER)
   missing(`raise-seated frames ${ORDER}`);
 

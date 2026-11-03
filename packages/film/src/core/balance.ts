@@ -1,8 +1,3 @@
-// How a mix measures against the film's sound rules (CRAFT rule 10): each
-// effect against the voice around it, both read by `windowPowers` as a
-// listener hears them. Pure: the check renders the mix and hands its buses
-// here.
-
 import { Array as Arr } from 'effect';
 import { type Pcm, SPEECH_GATE, windowPowers } from './audio.ts';
 import { MASTER, type Placement, repitch } from './mix.ts';

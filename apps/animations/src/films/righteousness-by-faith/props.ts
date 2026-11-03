@@ -1,11 +1,3 @@
-// The small props the landing hands round, drawn in the set's way (`cut`:
-// one paper creased at the light's angle, lined in the ink), in the Board's
-// pixels: the gold seed, the green blade up through the crack, the dry fig
-// leaves, the seal's gold, the seed `seed` opens along its seam with the
-// blade folded inside it (`openSeed`), and the light that marks a gift as it
-// is named (`glow`). Each is drawn about its own place, so a scene puts it in
-// a hand, at a crack, on the floor or in the air.
-
 import { mix, spline, unprobed } from '@manna/film/canvas';
 import { clamp, lerp } from '@manna/film/core';
 import type { Pt } from '@manna/film/style';
@@ -37,7 +29,6 @@ const P = {
 const drop = (rx: number, ry: number): Pt[] =>
   Array.from({ length: 20 }, (_, i): Pt => {
     const t = (i / 20) * 2 * Math.PI;
-    // Narrow at the top (t = 0), full at the bottom.
     const w = 0.45 + 0.55 * ((1 - Math.cos(t)) / 2);
     return [rx * Math.sin(t) * w, -ry * Math.cos(t)];
   });
@@ -118,7 +109,6 @@ export const figLeaf = (ctx: CanvasRenderingContext2D, x: number, y: number, rot
   ctx.scale(1, 0.55);
   const pts = Array.from({ length: 16 }, (_, i): Pt => {
     const t = (i / 16) * 2 * Math.PI;
-    // Pointed at both ends.
     return [20 * Math.cos(t), 11 * Math.sin(t) * Math.abs(Math.sin(t)) ** 0.3];
   });
   cut(ctx, pts, P.leaf, { line: 2.4 });
@@ -159,8 +149,6 @@ export const glow = (
   ctx.fill();
   ctx.restore();
 };
-
-// ─── the seed opened ─────────────────────────────────────────────────────────
 
 /** The opened seed's own units: it stands this tall about its middle, its point up. */
 const SEED_TALL = 100;
@@ -337,7 +325,6 @@ const tube = (spine: ReadonlyArray<Pt>, w: number, tip: number): Pt[] => {
     far.push([x - nx, y - ny]);
     heading = Math.atan2(by - ay, bx - ax);
   }
-  // The round tip: a half circle about the last point, from the near side over the end to the far.
   const [ex, ey] = spine[n - 1] ?? [0, 0];
   const r = (w / 2) * tip;
   const round = Array.from({ length: TIP_POINTS }, (_, j): Pt => {
@@ -459,8 +446,6 @@ export const openSeed = (ctx: CanvasRenderingContext2D, s: OpenSeedPose) => {
   if (open > 0) {
     const { x, y, half, tall, face } = HOLLOW;
     const hollow = lens(x, y, half * open, tall);
-    // Inside the husk, so the cut face runs out to its edge in the cleft and at its foot:
-    // one ring of one tone round a hollow of one tone, so neither adds a crease's band.
     ctx.save();
     trace(ctx, husk);
     ctx.clip();
@@ -469,17 +454,14 @@ export const openSeed = (ctx: CanvasRenderingContext2D, s: OpenSeedPose) => {
       flat: true,
     });
     cut(ctx, hollow, toward(OPEN.hollow, OPEN.lit, lit), { line: 0, flat: true });
-    // The light in its heart, behind the blade, so the blade keeps its green and its ink.
     ctx.save();
     trace(ctx, hollow);
     ctx.clip();
     glow(ctx, HEART.x, HEART.y, HEART.r, OPEN.heart, HEART.share * s.glow);
     embryo(ctx, s.grown, inner);
     ctx.restore();
-    // The hollow's edge, over what lies in it, finer than the lip.
     inked(ctx, hollow, LINES.hollow * ink);
     ctx.restore();
-    // The husk's edge, over the cut face where it runs out to it.
     inked(ctx, husk, ink);
   }
   ctx.restore();

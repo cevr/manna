@@ -1,22 +1,3 @@
-// Drawing a cast member's sheet (`film concept cast`): tries of one kind of
-// sheet on the image route, each measured as it lands and recorded in the
-// member's `cast-sheet.json`, its image and its measure under the film's
-// `out/`. The brief is `castSheetBrief`'s: the house block made a sheet's,
-// the references' note, the member's look (`look.md` beside the record), the
-// kind's layout and the sheet rules. Tries run side by side in lanes (three
-// at most: the route's own limit).
-//
-// The retry gate: a try the measure flags is drawn once more, each drift
-// named in its prompt in words, and a try flagged on facing or on the canon
-// rides with the underlay (`core/cast-underlay.ts`) as its last reference,
-// since words alone turned 3 of 9 prototype sheets the right way. The
-// underlay stands each view's figure at its own size (`statureOf`: the
-// member's heads, and a smaller figure's share of the grown height), so a
-// sheet of a child beside the grown member gets a child in the child's
-// column. A retry
-// that still drifts is recorded with its flags, never dropped: the ask shows
-// it after the clean ones.
-
 import type { PlatformError } from 'effect/PlatformError';
 import {
   Array as Arr,
@@ -539,7 +520,6 @@ const drawTry = Effect.fn('Cast.drawTry')(function* (
         n,
         file: path.relative(ctx.place.out, `${stem}.png`),
         prompt: request.prompt,
-        // Each reference as the sheet's folder reaches it: the record names no machine's paths.
         refs: request.refs.map((ref) => path.relative(ctx.place.folder, ref)),
         underlay,
         ...Option.match(retryOf, { onNone: () => ({}), onSome: (r) => ({ retryOf: r }) }),
@@ -675,7 +655,6 @@ const tryPlan = Effect.fn('Cast.tryPlan')(function* (place: CastPlace, run: Cast
   const { record, look, plan, layout, options } = yield* castPlanOf(place, run.kind);
   const file = path.join(place.out, `underlay-${run.kind}.png`);
   const slots = plan.options.slots ?? [];
-  // The mannequins stand: a heads sheet draws none, and a pose sheet only its standing views.
   const shown =
     (run.kind !== 'heads' &&
       standingOf(
@@ -684,7 +663,6 @@ const tryPlan = Effect.fn('Cast.tryPlan')(function* (place: CastPlace, run: Cast
       )) ||
     [];
   const profiles = (run.kind === 'turnaround' && [3, 5]) || [];
-  // Drawn afresh by each retry that sends it (the slots may have changed since the last run), whole: a lane never reads half of one.
   const statures = slots.map((_, k) => statureOf(plan.options, k + 1));
   const drawn = Effect.sync(() =>
     encodePng(mannequinUnderlay({ slots, profiles, shown, statures })),
@@ -699,7 +677,6 @@ const tryPlan = Effect.fn('Cast.tryPlan')(function* (place: CastPlace, run: Cast
     options,
     underlay: { file, drawn, shown: shown.length > 0 },
   };
-  // The brief is built once before any draw: a house block that moved stops the run, not each try.
   return { ctx, first: yield* requestOf(ctx, [], false) };
 });
 

@@ -1,13 +1,3 @@
-// A figure's head: the skin's piece the face is laid on. A round head is an
-// ellipse a hair off a circle, its face drawn on the flat paper, so the face
-// turns by its marks alone and slides down the round as he bows (`faceY`). A
-// traced head is its concept's outline in one view of it (a three-quarter
-// head is its own trace, never a front head turned), set on the body as the
-// concept sets it (carried off the body's middle, and canted where the
-// concept cants it), with what is cut inside its outline (`beard.ts`,
-// `hair.ts`, `ear.ts`, `mouth.ts`) and one ink line round them all. How each
-// is cut, lit and rimmed is the house's (`rig/draw.ts`). Pure.
-
 import { Schema } from 'effect';
 import { decoder } from '../decode.ts';
 import { Paper, Tones } from '../paper.ts';

@@ -1,7 +1,3 @@
-// The reading sheet written for a film: from its script when it has one
-// (with its sources), from its scenes when not, with the quotations its
-// `quotes.jsonl` verifies. In memory; nothing is spent.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Path } from 'effect';
 import type { Timed } from '../core/schema.ts';

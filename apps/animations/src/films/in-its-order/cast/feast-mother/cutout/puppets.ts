@@ -1,13 +1,3 @@
-// The feast mother's puppets, one a cut view (`canvas/puppet.ts`): each
-// view's part sheet (`sheets/<view>/`, made by `film concept parts`), its
-// parts front to back as the sheet's record lists them, each PNG imported by
-// its module so a scene that draws her is keyed by its bytes
-// (`tools/stamp.ts`), on the view's skeleton (`skeleton.ts`), with her origin
-// at the kept box's top-left corner in the padded part sheet (`frames.ts`):
-// her pixels are the sheet's, drawn at its one scale. She is a film's member,
-// so her folder is In Its Order's (`films/in-its-order/cast/feast-mother/`).
-// Pure data.
-
 import backArmLeft from './sheets/back/armLeft.png' with { type: 'file' };
 import backArmRight from './sheets/back/armRight.png' with { type: 'file' };
 import backHead from './sheets/back/head.png' with { type: 'file' };
@@ -177,7 +167,6 @@ const POSES = puppetsOf<PoseView>({
   papers: POSES_PAPERS,
   line: POSES_LINE,
   keep: CLOTH,
-  // her head turns and bows over her still veil and torso at the chin: the torso reaches 12 px under it
   underlap: { head: 12 },
   grain: GRAIN,
   parts: {

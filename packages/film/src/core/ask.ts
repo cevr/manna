@@ -1,21 +1,3 @@
-// An ask: a guided review an agent composes for the owner, as data. The
-// agent writes a small state machine (`Ask`): each step a page built only of
-// the lab's primitives (a heading, prose, an image, a choice, a free text)
-// and the material it is about, shown in place by reference (a set's
-// document, a film's or a draft's script, the Board, a video, a take), and
-// where the owner's answer takes the ask next, by a guard on a choice; a
-// guided review walks the flow's order, one titled step per piece of
-// material, its questions under it. An end step closes it. The lab checks the machine before it renders
-// (`askProblems`: bounded, every step reached, no loop, every guard on a
-// choice the step asks), then interprets it as an effect-machine machine
-// (`askMachine`): the state is the step the owner is on and the answers so
-// far, the event is a step's answers, and the end hands back every answer,
-// typed by the block that asked it. A choice is always answered; words are
-// optional unless asked for (`required`, on a step with no choice), and an
-// optional field left empty is answered `skipped`. Nothing an agent writes
-// runs: the machine is data, its guards the one form `when: { answer, is }`.
-// Pure and DOM-free.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -177,13 +159,6 @@ const FreeText = Schema.Struct({
     }),
   ),
 });
-
-// ---------------------------------------------------------------------------
-// Material: what a step shows the owner, in place, by reference. Each names
-// its material as the lab names it (a film, a series' draft, a review ref, a
-// panel's id), never a path on the box; the lab finds it through the read its
-// own view makes (`tools/ask-materials.ts` when the ask is made, the view's
-// parts when it is shown).
 
 /**
  * A file the review serves, by its ref: its root's label, then its path
@@ -506,9 +481,6 @@ export const imagesIn = (ask: Ask): ReadonlyArray<AskImage> => {
   return all;
 };
 
-// ---------------------------------------------------------------------------
-// The check before an ask renders
-
 /** The steps `name` goes on to. */
 const onFrom = (ask: Ask, name: AskName): ReadonlyArray<AskName> =>
   Option.match(Option.flatMap(Record.get(ask.steps, name), pageOf), {
@@ -681,7 +653,6 @@ export const askProblems = (ask: Ask): ReadonlyArray<string> => {
   );
   if (!names.some((name) => Option.isNone(Option.flatMap(Record.get(ask.steps, name), pageOf))))
     problems.push('no step ends the ask: add one with end: true');
-  // Each Script reader owns the page's word commands and highlights: two on one page would cross.
   const scripts = materialsIn(ask).filter((m) => m.block.kind === 'script');
   if (scripts.length > 1)
     problems.push(
@@ -710,9 +681,6 @@ export const unrecommended = (ask: Ask): ReadonlyArray<string> =>
         (c) => `step ${name}: ${c.id} recommends none of its options: mark one recommended: true`,
       ),
   );
-
-// ---------------------------------------------------------------------------
-// The machine the lab runs an ask by
 
 /**
  * An answer, typed by the block that asked it: a choice's option, the words,
@@ -879,9 +847,6 @@ const wayOn = (page: PageStep, answers: AskAnswers): Option.Option<AskName> =>
     (n) => n.to,
   );
 
-// ---------------------------------------------------------------------------
-// What an ask keeps, as the keep gate reads it (`tools/ask-materials.ts`)
-
 /** A choice's block. */
 const isChoose = (b: AskBlock): b is typeof Choose.Type => b.kind === 'choose';
 
@@ -986,7 +951,6 @@ const answered = (
   return Option.match(
     Option.filter(to, (t) => Option.isSome(Option.flatMap(stepOf(ask, t), pageOf))),
     {
-      // An end, or (in a machine never checked) no way on: answered where the run stands.
       onNone: () => AskState.Answered({ step: Option.getOrElse(to, () => state.step), answers }),
       onSome: (step) => AskState.Asking({ step, answers }),
     },
@@ -1038,7 +1002,6 @@ export const sectionsOf = (
     Match.tag('Asking', (s) => Option.some({ step: s.step, answers: s.answers })),
     Match.orElse(() => Option.none<{ readonly step: AskName; readonly answers: AskAnswers }>()),
   );
-  // Bounded by the steps: a checked ask has no loop, a stored one is never trusted to.
   while (Option.isSome(at) && sections.length < Record.size(ask.steps)) {
     const { step: name, answers } = at.value;
     const page = Option.flatMap(stepOf(ask, name), pageOf);
@@ -1151,15 +1114,15 @@ export const askStatus = (state: AskState): 'asking' | 'answered' | 'closed' =>
     }),
   );
 
-// ---------------------------------------------------------------------------
-// An ask as the lab keeps it
-
 /** An answered step, as the owner sent it: what the run was moved by, and when. */
 const AskStepAnswer = Schema.Struct({
   step: AskName,
   values: StepValues,
   at: Schema.String,
 });
+
+const RECEIPT_RULE =
+  "An image whose src the receipt names is served only as its copy. Each file-served image of an image block or an option is copied as the ask is made, or the make is refused (`AskRefused`, naming the src). A board block's panels and a video's poster or frame show live and bind nothing.";
 
 /**
  * One ask, as `FILMS_LAB/asks/<id>.json` keeps it: who asked, why, by when;
@@ -1196,30 +1159,17 @@ export const AskRecord = Schema.Struct({
   /** ISO time after which it takes no answer. */
   deadline: Schema.optionalKey(Schema.String),
   ask: Ask,
-  /**
-   * The receipt of what its images show, by the receipt rule
-   * (`AskStore`'s `receipted`): an image whose src the receipt names is
-   * served only as its copy. Each file-served image of an image block or
-   * an option is copied as the ask is made, or the make is refused
-   * (`AskRefused`, naming the src). A board block's panels and a video's
-   * poster or frame show live and bind nothing. Each copy is kept in the
-   * asks' folder, named by its SHA-256 (`asks/shown/<sha256><.ext>`), and
-   * the image's `src` is its route (`askShownUrl`): this holds each such
-   * `src` with its copy's SHA-256. An answer is refused while a copy no
-   * longer holds its hash (`AskStore.answerPage`), so the hash is of the
-   * bytes the owner was shown when he answered. An ask kept before
-   * receipts has no `shown`.
-   */
-  shown: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+  shown: Schema.optionalKey(
+    Schema.Record(Schema.String, Schema.String).annotate({
+      description: `The receipt of what its images show, by the receipt rule: ${RECEIPT_RULE} Each copy is kept in the asks' folder, named by its SHA-256 (\`asks/shown/<sha256><.ext>\`), and the image's \`src\` is its route (\`askShownUrl\`): this holds each such \`src\` with its copy's SHA-256. An answer is refused while a copy no longer holds its hash (\`AskStore.answerPage\`), so the hash is of the bytes the owner was shown when he answered. An ask kept before receipts has no \`shown\`.`,
+    }),
+  ),
   state: AskState,
   answered: Schema.Array(AskStepAnswer),
 });
 export type AskRecord = typeof AskRecord.Type;
 
 export const AskRecordJson = repoJson(AskRecord);
-
-// ---------------------------------------------------------------------------
-// A page of asks
 
 /**
  * The page `record` is on, by the id of the ask that opened it: its own

@@ -87,10 +87,6 @@ const batcher = makeBatcher<SearchRequest, SearchResponse, SearchError>({
     ),
 });
 
-// ---------------------------------------------------------------------------
-// Answers already seen
-// ---------------------------------------------------------------------------
-
 /** How many answers the page keeps. Enough for a reader's recent history
  *  across four panes; each is one page of hits. */
 const REMEMBERED = 64;

@@ -373,10 +373,6 @@ export const decideUpdate = (input: {
     return { _tag: 'offline', detail: input.manifest.detail };
   }
   const entry = Option.fromUndefinedOr(input.manifest.manifest.artifacts[input.corpus]);
-  // A manifest that names no entry for this corpus offers nothing about it.
-  // That is `up-to-date` rather than `offline`: the manifest *did* arrive and
-  // said this corpus has no runtime release, which is the pinned floor holding
-  // as the current answer rather than a check that failed.
   if (Option.isNone(entry)) return { _tag: 'up-to-date' };
   const available = entry.value;
   if (available.schema_major > input.floor.schemaMajor) {

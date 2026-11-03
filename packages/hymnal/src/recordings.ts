@@ -1,15 +1,3 @@
-/**
- * The hymn recordings the app plays: the sets they belong to, the set each
- * hymn plays from, each hymn's key inside a set, and the credit their
- * instruments ask for. It imports nothing, so the app's bundlers and the
- * infra read it unchanged.
- *
- * A set is rendered once (`scripts/render/`) and never replaced: a hymn
- * whose sound changes is rendered into a later set that holds it alone (or
- * with the others that changed), uploaded beside the old one, and the hymn
- * plays from the latest set that holds it.
- */
-
 /** The first set: style C, "Warm band", every hymn 1 to 695. */
 export const RECORDING_SET = 'warm-1';
 

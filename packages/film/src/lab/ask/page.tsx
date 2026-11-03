@@ -1,18 +1,3 @@
-// The ask page (`/asks/<ask>` and `/asks/page/<page>`, served by `film lab`):
-// the asks an agent made in sequence, in the order made, each an
-// agent's guided review for the owner, composed from the lab's primitives
-// and the material it is about, as the agent's machine says: its head, the
-// index of its sections, every section the owner's answers reach on one
-// scrolling page, and its own Send held in reach under them. A page of one
-// ask is that ask's page alone; a page of more is headed by how many it
-// holds and how many are answered, each ask a part under it, folded to a
-// line of its answers once answered, and the page takes the owner to the
-// first still asking. The page is only which parts show and where; its root
-// reads the page (`root.tsx`), each ask's provider holds its ask
-// (`context.tsx`), the parts draw it (`parts.tsx`, `material.tsx`). The
-// browser mounts it (`mount.tsx`) and the lab renders it on the server first
-// (`server.tsx`), over the same components.
-
 import { useAtomRefresh, useAtomValue } from '@manna/atom-solid';
 import { For, type JSX, Show } from '@solidjs/web';
 import { Effect, type Layer, Match, Option } from 'effect';
@@ -213,7 +198,6 @@ const ManyAsks = (props: {
   readonly moved: () => void;
 }) => {
   const { state } = useAskRoot();
-  // Each part is drawn once by its ask's id: a read again of the page keeps every part (its draft, its send) where it is.
   const ids = createMemo(() => props.page().asks.map((a) => a.id));
   const recordOf = (id: string) =>
     Option.fromUndefinedOr(props.page().asks.find((a) => a.id === id));
@@ -292,7 +276,6 @@ const AsksPage = (props: { readonly of: string; readonly at: Option.Option<strin
           <Show
             when={shown().asks.length > 1}
             fallback={
-              // Drawn once by its ask's id: a read again of the page keeps its draft and its last word.
               <Show when={shown().asks[0]?.id} keyed>
                 {(id: string) => (
                   <Show when={shown().asks.find((a) => a.id === id)}>

@@ -1,8 +1,3 @@
-// A member's single drawings: a `single` sheet holds any number of drawings,
-// each kept as its own file (`kept/single-<n>.png`) and its own view
-// (`single-<n>`), and keeping one leaves every other kind, and the lock a
-// prompt sends, as it was.
-
 import { describe, expect, test } from 'bun:test';
 import { Result, Schema } from 'effect';
 import { CastSheetJson, castKindPlan, keptOf, replacedSince, withCastKept } from './cast-record.ts';

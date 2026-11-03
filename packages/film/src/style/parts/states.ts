@@ -1,13 +1,3 @@
-// The story's states a garment takes, each a view-model number the host
-// moves: a stain soaked into it (`stain`, 1 at rest: he comes in stained), and
-// the white robe he is given over it (`robe`, 0 at rest). They lie over the
-// garment in one order by kind, the given robe over the stain over his own
-// garment, whatever order they are written in. A given robe takes a paper and
-// nothing else, and covers his cloth, not him: the skin laid on his garment
-// and his sleeves (a tone marked `skin`, laid after their cloth) shows on it
-// (character-design 2.3: "his tunic turns white and nothing else changes").
-// Pure.
-
 import { Schema } from 'effect';
 import { decoder } from '../decode.ts';
 import { HexColour, Paper } from '../paper.ts';

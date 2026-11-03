@@ -1,11 +1,3 @@
-// A figure's headcloth, cut inside its traced head's outline: the cloth, the
-// band bound round it and the cloth's dark edge where it turns down the
-// cheek, each one paper (the band and the edge with the colour on them as
-// tones), with no ink and no rim of its own, so the head's one line goes
-// round them all (`silhouette`, `rig/parts.ts`). The band lies over the edge,
-// the edge over the cloth. Traced from the concept, in the head's frame.
-// Pure.
-
 import { Schema } from 'effect';
 import { decoder } from '../decode.ts';
 import { Paper, Tones, unrimmed } from '../paper.ts';

@@ -1,15 +1,3 @@
-// The title, painted to its kept panel (`title.start.2`): the feast's
-// courtyard under the teal sky as the painter's plates (`plates/plates.ts`),
-// a small dawn light on the green hill and the gold path drawing on up to it.
-// The cold open's people sit behind the long table (`seatTable`): a man
-// guest in his idle, the lead at rest in his idle (`atRest`), a woman guest in her idle, each guest in its neutral key, and
-// the mother with her baby behind the woman, so the cut to the cold open keeps
-// one table, and the feast's crowd at the table's two ends, three busts each
-// (`TITLE_CROWD`), on the guests' plane under the table. The camera pulls back from a near
-// framing to the panel's own, each plane by its distance (`PLANES`), while
-// the film's name settles on a torn strip of the film's dark paper over the
-// sky: the only text (`CARDS`).
-
 import { drawing, piece, probePlate, rounded, write } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import { fonts, palette as P } from '../palette.ts';
@@ -85,13 +73,11 @@ const clipPath = (ctx: CanvasRenderingContext2D, progress: number) => {
 
 export const title = drawing({
   timeline: {
-    // The camera keeps pulling back over the whole title.
     pull: { at: 'start', until: { at: 'end' }, ease: 'outCubic' },
     settle: { at: 'start', offset: 0.25, dur: 0.8, ease: 'outCubic' },
     path: { at: 'start', offset: 0.6, dur: 1.4, ease: 'inOutCubic' },
   },
   knobs: {
-    // How close the pull starts on the nearest plane; it ends on the panel's own framing.
     near: 1.12,
   },
   puppets: { ...TABLE_PUPPETS, ...CROWD_PUPPETS },
@@ -105,7 +91,6 @@ export const title = drawing({
   draw: (f) => {
     const { ctx, w } = f;
     const zoom = lerp(f.knob('near'), 1, f.at('pull'));
-    // One plane: frame px, pulled about the pivot by its share of the zoom.
     const plane = (z: number, draw: () => void) => {
       const k = 1 + (zoom - 1) / z;
       ctx.save();
@@ -116,7 +101,6 @@ export const title = drawing({
       draw();
       ctx.restore();
     };
-    // Inside a plane, the kept panel's px.
     const panel = (draw: () => void) => {
       ctx.save();
       ctx.scale(PANEL.scale, PANEL.scale);
@@ -127,7 +111,6 @@ export const title = drawing({
     plane(PLANES.sky, () => f.painting('sky'));
     plane(PLANES.distance, () => {
       f.painting('distance');
-      // The painter's gold path, revealed along its length from the foot.
       const path = f.at('path');
       if (path <= 0) return;
       ctx.save();
@@ -143,7 +126,6 @@ export const title = drawing({
       }),
     );
     plane(PLANES.table, () => f.painting('table'));
-    // The name, on a torn strip of the film's dark paper, settling over the sky.
     plane(PLANES.sky, () =>
       panel(() => {
         const settle = f.at('settle');

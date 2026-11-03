@@ -1,19 +1,3 @@
-// A sound beside another, in numbers an agent reads when it cannot listen
-// (`film sfx compare`): each render's profile (its loudness, timing,
-// brightness and band balance), each side's median over its renders, and how
-// far one side's median stands from the other's. The bands are earshot's
-// (tone.py): the 28 one-third octaves from 31.5 Hz to 16 kHz, each as its
-// share of the sound's power, so a quieter render keeps its balance; a
-// one-shot is read with silence past its ends, a bed around its loop, as
-// the mix plays each, so an end nobody hears clicks in no band. The
-// share below 30 Hz stands apart: rumble spends headroom that the loudness
-// the mix levels by never hears (the app's sounds/PROMPTING.md). Numbers, no
-// verdict: a distance is a hint for the ear, never a target to make small.
-// The sync check reads the hit as a placement hears it: one placed from its
-// start hears the hit move as far as the hit moved, one synced to its onset
-// as far as the hit moved from the onset, and one synced to its hit never.
-// Pure.
-
 import { Array as Arr } from 'effect';
 import type { Pcm } from '../audio.ts';
 import type { SoundEffect } from '../schema.ts';

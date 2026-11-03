@@ -1,20 +1,3 @@
-// The third gift: power, and the law moves in. The scene opens on `robe`'s
-// closing icon row (`ICON_ROW`), faith and forgiveness glowing and the woman
-// in white fading from under the robe as the row settles; on "power" the
-// heart lights. On "out" the page: the gold circle from `word`, as big as
-// the universe, comes back around the grey figure; on "never" it shrinks and
-// settles into their chest, and on "write" it is a warm heart with the two
-// tablets inside it, still legible. On "bed" the row again, the heart lit,
-// calling back `roof`'s house on a plate under it, the tablets left whole:
-// the man forgiven, walking out with his bed as on "went". On "not" the
-// figure again, their hands going out, and the glow runs straight from the
-// heart to the open hands. On "become" close on the face, and the grey paper of the
-// figure warms toward cream and gold, the gold of the word in `declared`: they
-// become what they are called. Then two panels, one after
-// the other: a closed book with a gold ribbon (the past, forgiven: "first"),
-// and a path ahead with the figure walking it and flowers springing up in
-// their footprints ("second"). The Sabbath rest is `daily`'s.
-
 import {
   type Frame,
   type Pt,
@@ -74,14 +57,10 @@ const timeline = {
   ask: { mark: 'out', dur: 0.4 },
   shrink: { mark: 'never', dur: 1.5, ease: 'inOutCubic' },
   heart: { mark: 'write', offset: -0.1, dur: 0.5, ease: 'outBack' },
-  // The circle fades as the heart pops in, gone by the time it is well in.
   heartOut: { with: 'heart', dur: 0.08, ease: 'linear' },
-  // `robe`'s row: the woman's plate goes as the row settles, and the heart lights on "power".
   settle: { at: 'start', dur: 0.8, ease: 'inOutCubic' },
   heartLit: { mark: 'power', dur: 0.55, ease: 'outBack' },
   toPage: { mark: 'out', offset: -0.3, dur: 0.4 },
-  // The row again on "bed", the callback to `roof`'s house under the heart:
-  // he walks on until the figure comes back, just after "not".
   toIcons: { mark: 'bed', offset: -0.2, dur: 0.3 },
   wentIn: { mark: 'bed', dur: 0.4 },
   going: { mark: 'bed', until: 'not', ease: 'linear' },
@@ -98,10 +77,8 @@ const timeline = {
 } as const;
 
 const knobs = {
-  // The figure on the page, and where they stand aside for the panel.
   centre: [960, 930],
   aside: [420, 930],
-  // Close on the figure's face (a third of the frame) on "become".
   face: [960, 590],
   faceZoom: 2.1,
 } as const;
@@ -112,7 +89,6 @@ export const within = drawing({
   timeline,
   knobs,
   draw: (f) => {
-    // The icons cover the page until "out", and again from "bed" until the figure comes back.
     const shown = Math.max(1 - f.at('toPage'), f.at('toIcons') * (1 - f.at('backIn')));
     if (shown < 1) page(f);
     if (shown > 0) iconsShot(f, shown);
@@ -160,7 +136,6 @@ const circle = (f: WithinFrame, chest: Pt) => {
     { color: C.gold, width: lerp(16, 8, shrink), jitter: 0.6, taper: 0 },
     hand('circle'),
   );
-  // A few worlds inside it, going as it shrinks.
   WORLDS.forEach(([sx, sy, sr], i) =>
     piece(
       ctx,
@@ -180,7 +155,6 @@ const WORLDS = [
   [0.05, -0.7, 9],
 ] as const;
 
-// Scratch the draw rewrites every frame, so no pose or point is made per frame.
 /** Both hands open out on `arms`, from their rest beside the body, and brought back on `closeOut`. */
 const OPEN_FAR: GestureAt = { to: [-OPEN_HAND[0], OPEN_HAND[1]], reach: 0, grip: 'open' };
 const OPEN_NEAR: GestureAt = { to: [OPEN_HAND[0], OPEN_HAND[1]], reach: 0, grip: 'open' };
@@ -221,7 +195,6 @@ const figure = (f: WithinFrame, aside: number) => {
   if (heart > 0)
     at(ctx, { x: CHEST[0], y: CHEST[1], scale: 0.36 * heart }, () => {
       glow(ctx, 0, 0, 220 + 140 * lit, C.glow, 0.8 + 0.2 * lit);
-      // The icon's heart, warm, its tablets still legible.
       drawHeart(ctx, hand, mix(C.peachTop, C.gold, 0.4 * lit), true);
     });
   running(f, open);
@@ -287,7 +260,6 @@ const panel = (f: WithinFrame, aside: number) => {
           kind: 'cut',
           line: 0,
         });
-        // The ribbon tied across it.
         piece(ctx, RIBBON, C.gold, hand('ribbon'), { role: 'scenery', kind: 'cut', line: 3 });
         piece(ctx, blob(-20, -8, 90, 60, 9), C.gold, hand('bow'), {
           role: 'scenery',
@@ -317,7 +289,6 @@ const path = (f: WithinFrame) => {
     hand('path'),
   );
   const walk = f.at('walk');
-  // Flowers where the figure has already stepped.
   for (let i = 0; i < 9; i++) {
     const k = i / 9;
     const age = (walk - k) * 6;
@@ -342,11 +313,9 @@ const path = (f: WithinFrame) => {
     });
   }
   const [wx, wy] = alongPath(walk, AT);
-  // The film's one walk: the kit's step, from the cue's start.
   const bob = gait(f.t, f.cue('walk'));
   at(ctx, { x: wx, y: wy - bob, scale: 0.9 - 0.4 * walk }, () => {
     glow(ctx, 0, -90, 90, C.glow, 0.6);
-    // The same figure, still warm.
     person(ctx, WALKER, hand('walker'));
   });
 };
@@ -400,7 +369,6 @@ const iconsShot = (f: WithinFrame, alpha: number) => {
   ctx.save();
   ctx.globalAlpha *= alpha;
   sky(ctx, w, h, ICON_SKY);
-  // The row rises as a callback opens under it, its icon left whole.
   const y = ICON_ROW.y - RECALL_RISE * Math.max(court, wentIn);
   at(ctx, { x: ICON_ROW.x, y, scale: ICON_ROW.scale }, () => {
     icons(ctx, hand, LIT, undefined, COUNT);

@@ -1,22 +1,3 @@
-// The critique (`film lab critique`, the lab's `critique` tool): each figure a
-// match held against its concept, shown to a fresh model at 1:1 beside the
-// match's flagged rows and the house rules' figure sections, its findings
-// written beside the match's table (`<stem>.critique.md`). `core/critique.ts`
-// holds its words.
-//
-// One counsel run (`tools/counsel.ts`: headless Opus at max effort, Read its
-// one tool, in a sandbox that shows it the packet's folder alone) answers
-// every figure at a place: batched. The answer is kept by the hash of all it
-// was shown (`out/<film>/critique/<hash>.json`: the packet's words but the
-// place, and each crop's bytes), so the same prompt over the same crops is
-// never asked twice, and a prompt reworded is asked again. The rule
-// sections are read once, when the critic is built: one its file lacks
-// fails the build (`CritiqueRuleMissing`), as the judge's does. Past that it
-// fails open: a counsel that fails, an answer that does not read, crops that
-// cannot be read or a defect is a skip, logged (`critique.skipped`) and said
-// in each file, never a failure of the caller's; a finding that does not
-// read, or names no figure asked about, is rejected and said.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -230,8 +211,6 @@ const jobsIn = Effect.gen(function* () {
       starting,
       1,
     )(
-      // Kept in the running and forked as one step, so an interrupt between
-      // leaves no job without its fiber; the fiber itself stays interruptible.
       Effect.gen(function* () {
         if (MutableHashMap.has(running, handle)) return handle;
         const job: Job = { match, done: yield* Deferred.make<CritiqueTaken>() };
@@ -254,7 +233,6 @@ const jobsIn = Effect.gen(function* () {
                   }),
                 ),
               ),
-              // Kept as finished before it leaves the running, so a read between finds it.
               Effect.andThen(Cache.set(finished, handle, job)),
               Effect.andThen(Effect.sync(() => MutableHashMap.remove(running, handle))),
             ),
@@ -270,7 +248,6 @@ const jobsIn = Effect.gen(function* () {
         onSome: Effect.succeed,
         onNone: () => Cache.get(finished, handle),
       });
-      // No time to wait is the answer only when it is already given.
       const critique = yield* Bool.match(Duration.isZero(within), {
         onTrue: () => Effect.when(Deferred.await(one.done), Deferred.isDone(one.done)),
         onFalse: () => Effect.timeoutOption(Deferred.await(one.done), within),
@@ -410,7 +387,6 @@ export class Critic extends Context.Service<Critic, CriticService>()('@manna/fil
         const counsel = yield* Counsel;
         const counselRuns = yield* Semaphore.make(COUNSEL_RUNS);
 
-        // The rule sections, quoted by file name, read once: a section its file lacks fails the build.
         const sections: ReadonlyArray<QuotedSection> = yield* Effect.forEach(rules, (rule) =>
           Effect.gen(function* () {
             const text = yield* fs
@@ -526,7 +502,6 @@ export class Critic extends Context.Service<Critic, CriticService>()('@manna/fil
                   ),
                 ),
             });
-            // The prompt as sent, but the place (a scene's build and time change with every build).
             const hash = sha256Hex(
               [
                 critiquePacket(ask.drawn, '', figuresOf(staged.ask), sections, staged.ask.staging),
@@ -618,7 +593,6 @@ export class Critic extends Context.Service<Critic, CriticService>()('@manna/fil
             Effect.gen(function* () {
               const ask = askOfMatch(taken, staging, path);
               const ready = yield* Effect.result(prepared(ask));
-              // One job per film, scene, figures and packet: the scene's match folder names the first two.
               const handle = handleOf([
                 Result.match(ready, { onFailure: () => 'unread', onSuccess: (p) => p.hash }),
                 ...ask.figures.map((f) => `${path.dirname(f.file)} ${f.figure}`),

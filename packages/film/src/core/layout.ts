@@ -1,8 +1,3 @@
-// The film clock, without the canvas: scenes laid end to end, each sized to its
-// voice. Pure — the player, the renderer and the Bun scripts all read it, and
-// it names no drawing type, so it runs where there is no DOM. A film that does
-// not lay out fails as a value naming the scene (and cue) at fault.
-
 import { Array as Arr, Option, Result } from 'effect';
 import {
   DuplicateScene,
@@ -126,9 +121,6 @@ export const layout = <S extends Timed>(
     if (Result.isFailure(said)) return Result.fail(said.failure);
     const voice = said.success;
     const lead = spec.lead ?? Math.max(MIN_LEAD, transitionDur(spec.enter) * 0.7);
-    // With the minimum lead, the default seam between two scenes' words is
-    // MIN_LEAD + DEFAULT_TAIL = 0.6 s (the film skill's CRAFT rule 9); a meant
-    // pause sets `tail`.
     const tail = spec.tail ?? DEFAULT_TAIL;
     const min = spec.min ?? 0;
     const length = beatLength({ words: voice.duration, lead, tail, min });

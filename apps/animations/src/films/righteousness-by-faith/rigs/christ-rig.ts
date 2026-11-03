@@ -1,28 +1,3 @@
-// Christ, composed of the house's parts (`figure`): one cast member with one
-// body, frame and face in every beat (character-design 3.2), in two views of
-// Him, each its own trace. His head and face are court-12's, traced there
-// three-quarters (`christ-traced.ts`): long brown hair from a parting down
-// behind His ear to His shoulder, a full beard with His mouth smiling in it
-// and His lower lip under the smile, the face kit where court-12 sets His
-// eyes and brows. Turned to us, they are court.you's (`christ-front-traced.ts`),
-// and so are His robe's shoulders and His sash across His chest.
-// His robe, gold sash and sandals are robe-5's, the kept concept that shows
-// Him whole, drawn to the court's canon: robe-5's body scaled 0.705 across
-// and 0.632 down under the beard, which lays it on court-12's robe within a
-// pixel or two from the shoulders to the hands. How each part is cut, lit
-// and drawn is the house's (`drawFigure`): His face lies over His beard, and
-// each paper of His head tucks under those laid over it.
-//
-// Units are the Board's pixels, court-12 at scale 1: He stands 468 tall from
-// His hair to His soles, 3.4 times His head's height (hair to the beard's
-// foot, 137), at the top of the cast's height band; the lead's head top meets
-// His eyes. His feet are the artboard's origin.
-//
-// The host poses Him by His view model, every frame: the face kit's numbers
-// (`FACE`); `lean`, radians about His feet; `tilt`, radians, His head about
-// His neck; `nod`, units, His head down toward His chest. The rig keeps its
-// `breath` and the paper's `boil`.
-
 import {
   Beard,
   Ear,
@@ -284,7 +259,6 @@ const SANDALS = Sandals({
  * head's 116).
  */
 const HIM = {
-  // Room round Him for His lean and His outline; His feet are the rig's origin.
   art: { width: 300, height: 520, feet: [150, 495] },
   stature: Stature.Canon(),
   stance: Stance.Standing({ breath: BREATH }),
@@ -311,7 +285,6 @@ const lipOf = (outline: ReadonlyArray<Pt>) => ({ outline, paper: PAPERS.christLi
  */
 export const christ = figure({
   ...HIM,
-  // `film match`'s concept: Christ beside the accused in court.12, the kept concept His head and face are traced from.
   concept: {
     image: { set: 'rbf-v3-concepts-2026-10-15', file: 'images/5-court-12.png' },
     box: [370, 270, 575, 760],
@@ -439,7 +412,6 @@ const LOCK = { near: '#4c2e1e', far: '#3a241c' } as const;
  */
 export const christFront = figure({
   ...HIM,
-  // `film match`'s concept: court.you's kept try 2, His head turned to us.
   concept: {
     image: { set: 'rbf-v3-cast-2026-10-18', file: 'aids/court-you-2.png' },
     box: [700, 70, 1080, 760],

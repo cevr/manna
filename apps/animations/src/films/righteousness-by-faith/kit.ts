@@ -1,7 +1,3 @@
-// The film's recurring pieces, so every scene draws one world: BibleProject's
-// grey paper people (a brow line and eye strokes for a face), the skies, the
-// glows, the stains. Scenes place them; nothing here reads the clock.
-
 import {
   type Gesture,
   type Grip,
@@ -50,8 +46,6 @@ const BUBBLE: Pt[] = [
   [-46, 40],
   [-80, 40],
 ];
-
-// ─── paper pieces ────────────────────────────────────────────────────────────
 
 /** How one piece of this film's paper is made: its role, and whatever it names over the role's. */
 type PieceOpts = Omit<PieceStyle, 'color' | 'outline'> & { readonly outline?: string };
@@ -129,8 +123,6 @@ export const heart = (
         });
   }
 };
-
-// ─── people ──────────────────────────────────────────────────────────────────
 
 /**
  * What a person's hand does: the engine's `Gesture`, and how far it has gone
@@ -498,11 +490,6 @@ const HEAD_STILL: Pt = [0, 0];
 const NO_STAINS: ReadonlyArray<ReadonlyArray<Pt>> = [];
 
 /**
- * The garment and its stains: standing as it is; seated, its top dropped
- * onto the seat and its length folded into the lap, the hem at the seat's
- * edge.
- */
-/**
  * The seated garment's fold for `sit` > 0: its top dropped onto the seat,
  * its length folded so the hem rests at the seat's edge under the lap, and
  * its width drawn in, since the cloth falls straight to the lap rather than
@@ -560,7 +547,6 @@ export const clipToGarment = (ctx: CanvasRenderingContext2D, p: Person) => {
   if (bw !== 1 || bh !== 1) ctx.scale(bw, bh);
   ctx.beginPath();
   if (sit > 0) {
-    // The lap's subpath first, in the build's frame, before the fold.
     const lap = ctx.getTransform();
     ctx.scale(robe ? 1 : 0.8, sit);
     tracePath(ctx, LAP);
@@ -597,8 +583,6 @@ const garment = (ctx: CanvasRenderingContext2D, p: Person, sit: number, body: He
   }
   ctx.restore();
   if (sit <= 0) return;
-  // The lap: the thighs come toward us over the seat's edge, the cloth
-  // draped across them and broken by the two knees; it grows in with `sit`.
   ctx.save();
   ctx.scale(robe ? 1 : 0.8, sit);
   piece(ctx, LAP, body, sub(hand, 6), { role: 'figure', shadow: 0.25 });
@@ -756,10 +740,8 @@ export const person = (ctx: CanvasRenderingContext2D, p: Person, hand: Hand) => 
   const build = buildOf(p);
   const [bw, bh] = build;
   const sit = clamp(p.sit ?? 0);
-  // Seated, everything but the legs drops onto the seat.
   const drop = sit > 0 ? SEAT * sit * bh : 0;
 
-  // The contact shadow under the feet, under everything else, as wide as the hem.
   const standing = clamp(p.ground ?? 1) * (1 - sit);
   if (standing > 0) {
     ctx.save();
@@ -768,7 +750,6 @@ export const person = (ctx: CanvasRenderingContext2D, p: Person, hand: Hand) => 
     ctx.restore();
   }
 
-  // The far hand behind the body (or over it, working in front of it), the near one over it.
   HAND_STYLE.skin = colours[1];
   const farFront = farOver(p.far, build);
   if (!farFront) {
@@ -776,7 +757,6 @@ export const person = (ctx: CanvasRenderingContext2D, p: Person, hand: Hand) => 
     personHand(ctx, p, 'far', build, hand, false, sit, drop);
     ctx.restore();
   }
-  // A build stretches the body from the feet; the head rides its neck.
   frameOf(ctx, 0, bw, bh);
   legs(ctx, sit, p.shade ?? C.figureShade, hand);
   ctx.restore();
@@ -787,7 +767,6 @@ export const person = (ctx: CanvasRenderingContext2D, p: Person, hand: Hand) => 
   if (farFront) personHand(ctx, p, 'far', build, hand, true, sit, drop);
   head(ctx, p, colours[1], hand, NECK[1] * (bh - 1));
   personHand(ctx, p, 'near', build, hand, true, sit, drop);
-  // The face, declared once the person is drawn: what is drawn after it lies over it.
   if (probesFaces(ctx)) {
     headFrame(ctx, p, NECK[1] * (bh - 1));
     probeFace(ctx, HEAD[0], HEAD[1], 2 * HEAD_RY);
@@ -881,12 +860,6 @@ const head = (ctx: CanvasRenderingContext2D, p: Person, skin: string, hand: Hand
   ctx.restore();
 };
 
-// ─── recurring figures and the icon row ──────────────────────────────────────
-// Figures and the icon row more than one scene draws, so a callback lands in
-// the same layout (CRAFT rule 8). Each takes a `hand` for its keys, so boil
-// seeds stay the scene's own. Sets live in their own modules: court.ts,
-// heaven.ts, city.ts, law.ts, garden.ts, spoken.ts, gospel.ts.
-
 /** A hand's gesture whose target and reach a scene rewrites in place every frame (scratch, so the draw allocates none). */
 export interface GestureAt extends PersonGesture {
   readonly to: [number, number];
@@ -906,7 +879,6 @@ export type Hands = (k: string) => Hand;
 export const christ = (ctx: CanvasRenderingContext2D, pose: Person, hand: Hands) => {
   const robed: Person = { ...pose, body: C.robe, shade: C.robe, garment: 'robe' };
   person(ctx, robed, hand('christ'));
-  // The sash rides the robe, 90 units up it, through any build or sit.
   const [sx, y] = onGarment(robed, -90);
   ctx.save();
   ctx.translate(0, y);
@@ -1019,7 +991,6 @@ export const icons = (
     });
     ctx.restore();
   };
-  // The leading icons last, over their neighbours as they grow.
   for (const i of ORDER) if (count.lead[i] <= 0) disc(i);
   for (const i of ORDER) if (count.lead[i] > 0) disc(i);
 };
@@ -1138,7 +1109,6 @@ export const pushedHand = (
   const scale = start * (push.scale / start) ** into;
   const px = lerp(PERSON_HAND.line * push.figureScale, CLOSE_LINE * push.scale, into);
   ctx.save();
-  // Over the figure's own hand at once: the two are one shape there.
   ctx.globalAlpha *= clamp(PUSH_TAKES * into);
   at(
     ctx,

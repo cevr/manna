@@ -15,16 +15,6 @@ export const topicSlug = Schema.decodeSync(TopicSlug);
  *  was built for. */
 export { TOPICS_SCHEMA_MAJOR };
 
-// ---------------------------------------------------------------------------
-// Portable AST (§2.2)
-//
-// The wiki's own small block/inline set, deliberately not the EGW HTML AST in
-// `egw/ast.ts` — that union describes EGW markup, this one describes authored
-// markdown. Both `thesis_ast` and `body_ast` hold JSON of `readonly Block[]`,
-// never HTML, so the CLI text-renders exactly what the Solid app renders as
-// elements.
-// ---------------------------------------------------------------------------
-
 export class TextInline extends Schema.TaggedClass<TextInline>('Wiki/TextInline')('text', {
   text: Schema.String,
 }) {}
@@ -101,10 +91,6 @@ export type Block = typeof Block.Type;
 /** The on-disk encoding of `thesis_ast` and `body_ast`. */
 export const BlocksJson = Schema.fromJsonString(Schema.Array(Block));
 
-// ---------------------------------------------------------------------------
-// Page model
-// ---------------------------------------------------------------------------
-
 /** How a topic page got its content. `flagship` has an authored core compiled
  *  into the artifact; `catalog` is a long-tail page assembled live. */
 export const TopicStatus = Schema.Literals(['flagship', 'catalog']);
@@ -153,15 +139,6 @@ export class AuthoredCore extends Schema.Class<AuthoredCore>('Wiki/AuthoredCore'
   aliases: Schema.Array(TopicAlias),
   edges: Schema.Array(TopicEdge),
 }) {}
-
-// ---------------------------------------------------------------------------
-// Auto-mined sections (§6)
-//
-// Everything below is live-queried at view time by the one composer in
-// `section-composer.ts`. Nothing here is stored in the artifact: precomputed
-// section bodies break against partial libraries, and a live query is
-// automatically honest about what is locally installed.
-// ---------------------------------------------------------------------------
 
 /** The six sections of §6.1, in lineup order. The kind is the identity a client
  *  keys its rendering on, so it is a literal rather than a positional index —

@@ -1,9 +1,3 @@
-// The renders' routes, served by `film lab` (`LabHttpApi` in `core/api.ts`):
-// the index of every folder under the roots, each file where it lies (byte
-// ranges answered 206, so a video seeks on a phone), its phone copy, a frame
-// and a length. Every route names a file or
-// a folder by its ref (`Review`), never a path on the box.
-
 import { Effect, Option, Result } from 'effect';
 import type { HttpServerRequest } from 'effect/http';
 import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
@@ -45,7 +39,6 @@ export const reviewGroup = HttpApiBuilder.group(LabHttpApi, 'review', (handlers)
       answered(
         Effect.gen(function* () {
           const ref = yield* refOf(request, REVIEW_FILES);
-          // A render is rewritten in place: asked again each time.
           return yield* serveFile(request, yield* (yield* Review).resolve(ref), CACHE.fresh);
         }),
       ),
@@ -56,7 +49,6 @@ export const reviewGroup = HttpApiBuilder.group(LabHttpApi, 'review', (handlers)
           const ref = yield* refOf(request, REVIEW_PHONE);
           const copy = yield* (yield* Review).phone(ref);
           if (Option.isNone(copy)) return yield* PhoneCopyUnmade.make({ ref });
-          // Named by its render's ref, not the render's version: asked again each time, as the render is.
           return yield* serveFile(request, copy.value, CACHE.fresh);
         }),
       ),
@@ -69,7 +61,6 @@ export const reviewGroup = HttpApiBuilder.group(LabHttpApi, 'review', (handlers)
             Option.fromUndefinedOr(query.t),
             query.w ?? 960,
           );
-          // Named by its render's ref, a time and a width, not the render's version: asked again each time.
           return yield* serveFile(request, frame, CACHE.fresh);
         }),
       ),

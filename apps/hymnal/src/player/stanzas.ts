@@ -22,7 +22,6 @@
 
 import { Array as Arr, Order, Schema } from 'effect';
 
-// Relative, not `~/`: the follow checker (`scripts/follow.ts`) reads this module under the scripts' tsconfig.
 import type { TimedLine, Timeline } from '../follow/timeline';
 import type { Section } from '../hymns/text';
 
@@ -154,7 +153,6 @@ export const cutOf = (timeline: Timeline, kept: ReadonlyArray<boolean>): Cut => 
     if (kept[index] !== true) return start;
     return start + (recording - Arr.getUnsafe(timeline.lines, index).start);
   };
-  // A skipped line lies at the next kept start, whose recording time ends the run it begins.
   const skips = timeline.lines.flatMap((line, index) => {
     if (kept[index] === true || (index > 0 && kept[index - 1] !== true)) return [];
     return [{ from: line.start, to: recordingAt(Arr.getUnsafe(lines, index).start) }];

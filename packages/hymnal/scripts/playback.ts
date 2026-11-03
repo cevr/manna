@@ -89,8 +89,6 @@ export const readPlayback = (hymns: readonly Hymn[]): readonly Hymn[] => {
   const manifest = decodedManifest.success;
   const overrides = new Set(manifest.overrides);
   return hymns.map((hymn) => {
-    // The corpus check proves every other sidecar equals the existing numeric
-    // projection. Its own digest is checked by the fast package storage guard.
     if (!overrides.has(hymn.number)) return hymn;
     const raw = Result.try(() => ({
       sourceHash: corpusHash(hymn.number),
@@ -169,7 +167,6 @@ const countsOf = (hymn: Hymn) => {
 };
 
 export const generatePlayback = async (out = folder) => {
-  // Build reads do not evaluate the compiler or pronunciation dictionary modules.
   const [{ compilePlacements }, { decodeOrders, sourceOf }, { decodeSourceText }] =
     await Promise.all([loadCompiler(), loadSources(), loadSourceText()]);
   const source = textBytes(),

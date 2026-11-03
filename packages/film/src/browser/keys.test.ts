@@ -1,8 +1,3 @@
-// The page's keys: each press reaches `take` with its key, its physical key,
-// its modifiers and its target; a press `take` takes has its default
-// prevented; a press already handled or composing text is not heard; once
-// interrupted, nothing more is heard.
-
 import { describe, expect, test } from 'bun:test';
 import { Effect, Option } from 'effect';
 import { hostOf } from './host.ts';

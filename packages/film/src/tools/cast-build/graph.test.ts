@@ -1,8 +1,3 @@
-// The cast build's stage graph over a fake graph in memory: a rerun with
-// nothing changed runs nothing, a stage that makes the same bytes stops the
-// rerun there, `--touch` plans one input's change, and a stage that would
-// spend, or waits on the owner, holds every stage below it.
-
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Clock,
@@ -420,7 +415,6 @@ describe('the cast build graph', () => {
         const plan = yield* buildGraph(slow.stages, options({ plan: true }));
         expect(statesOf(plan)).toEqual({ train: 'stale' });
         const second = yield* Effect.forkChild(buildGraph(slow.stages, options()));
-        // the second build finds the first's mark and waits on it
         yield* Deferred.await(busy);
         yield* Deferred.succeed(slow.release, true);
         expect(statesOf(yield* Fiber.join(first))).toEqual({ train: 'ran' });
@@ -436,7 +430,6 @@ describe('the cast build graph', () => {
       const slow = yield* slowTrain;
       const first = yield* Effect.forkChild(buildGraph(slow.stages, options()));
       yield* Deferred.await(slow.started);
-      // the first build's process reads as gone, so the second runs the stage itself
       const second = yield* Effect.forkChild(buildGraph(slow.stages, options()));
       yield* Deferred.await(slow.restarted);
       expect(slow.runs()).toBe(2);
@@ -481,8 +474,6 @@ describe('the cast build graph', () => {
         yield* TestClock.adjust('1 minute');
         takes.n = 0;
         yield* TestClock.adjust('10 minutes');
-        // each decision takes the manifest's lock once, as does each of the first build's
-        // heartbeats: 120 decisions five seconds apart and 10 beats a minute apart
         expect(takes.n).toBeGreaterThanOrEqual(128);
         expect(takes.n).toBeLessThanOrEqual(132);
         yield* Deferred.succeed(slow.release, true);
@@ -502,8 +493,6 @@ describe('the cast build graph', () => {
         const slow = yield* slowTrain;
         const first = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('a')));
         yield* Deferred.await(slow.started);
-        // host a's build beats for an hour, then host a goes dark: its build stops (and its
-        // heartbeat with it), its mark left behind with its last beat at 61 minutes
         yield* TestClock.adjust('61 minutes');
         const left = files.get('/cache/build.json') ?? text('');
         yield* Fiber.interrupt(first);
@@ -511,7 +500,6 @@ describe('the cast build graph', () => {
         const second = yield* Effect.forkChild(
           buildGraph(slow.stages, options()).pipe(onHost('b')),
         );
-        // the lease runs from the last beat, not from the mark's start
         yield* TestClock.adjust('4 minutes');
         expect(slow.runs()).toBe(1);
         yield* TestClock.adjust('2 minutes');
@@ -541,7 +529,6 @@ describe('the cast build graph', () => {
         const waiting = yield* Effect.forkChild(
           buildGraph(slow.stages, options()).pipe(onHost('b')),
         );
-        // host b judges the mark by its beat changing, not by host a's clock against its own
         yield* TestClock.adjust('20 minutes');
         expect(slow.runs()).toBe(1);
         yield* Deferred.succeed(slow.release, true);
@@ -567,7 +554,6 @@ describe('the cast build graph', () => {
         );
         yield* Deferred.await(slow.started);
         yield* TestClock.adjust('3 minutes');
-        // host a goes dark, its mark left with a beat two hours in host b's future
         const left = files.get('/cache/build.json') ?? text('');
         yield* Fiber.interrupt(first);
         files.set('/cache/build.json', left);
@@ -591,7 +577,6 @@ describe('the cast build graph', () => {
       const slow = yield* slowTrain;
       const first = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('a')));
       yield* Deferred.await(slow.started);
-      // another build takes the key meanwhile (as host b would past a lost lease)
       const manifest = new TextDecoder().decode(files.get('/cache/build.json'));
       const [key] = Object.keys((yield* Schema.decodeEffect(RunningMarks)(manifest)).running);
       const taken = yield* Schema.encodeEffect(Marks)({

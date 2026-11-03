@@ -1,38 +1,3 @@
-// `film/no-lazy-test-fixture`: a test file makes no fixture its cases share
-// on first use. A memo made where the file loads (`Effect.cached` and its
-// TTL forms, outside every function but a `describe` body) is built by
-// the first case that asks for it, inside that case's time limit, and
-// which case pays moves with the order the cases run in (the package
-// entries' first case reads the whole source graph in its limit: 0.55 s
-// alone and past 5 s on a busy machine, 0.01 s with the graph read as the
-// file loads). Build the fixture as the file loads
-// (`const x = await Effect.runPromise(…)`), where no case's limit holds its
-// cost, or make it in each case that needs it.
-//
-// A memo is made by a memo maker given its effect (`cached(read)`,
-// `cachedWithTTL(read, ttl)`), by a memo maker applied, directly or by a
-// name that holds it (`cachedWithTTL(ttl)(read)`, `withinMinute(read)`), or
-// by one a pipe applies (`read.pipe(Effect.cached)`). A TTL form given its
-// ttl alone, or a `flow(…)` with a memo maker among its steps, is a helper
-// that makes nothing until applied, and only its use where the file loads is
-// reported. `Effect` is
-// effect's, imported from `effect` (or an alias), or
-// `effect/Effect`, imported whole or by name. A memo made inside a case, a helper or a
-// layer's build is that call's own, and is not reported.
-//
-// A runtime made where the file loads and held by a name
-// (`const runtime = ManagedRuntime.make(layer)`, outside every function but
-// a `describe` body) is the same fixture: it builds its layer on its first
-// run, so the case that runs on it first pays the layer's build in its limit
-// (the hymnal's staleness cases: a scratch clone and a baseline child, past
-// 5 s on a busy machine). Build what the cases need as the file loads
-// (`Layer.buildWithScope` into a scope the suite's close closes), or make the
-// runtime in each case. `ManagedRuntime` is effect's, imported by name from
-// `effect`, or `make` off `effect/ManagedRuntime`, imported whole or by name.
-// A runtime made at load and not held by a name (its `contextEffect` handed
-// to a layer the file builds as it loads) is not reported. The config turns
-// it on over every test file.
-
 import { Effect, Option } from 'effect';
 import {
   Diagnostic,

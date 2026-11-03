@@ -1,41 +1,3 @@
-// The asks on disk: one record each, `FILMS_LAB/asks/<id>.json` (a
-// `ContentStore` manifest: written whole, one writer at a time across
-// processes). An agent makes one (`make`: its machine checked and its board
-// tries and its material found first, so nothing that may not render is
-// kept; a choice it makes now recommends one option), the owner answers
-// its page from any device (`answerPage`: each section's step in order, the
-// run moved by its machine, `askMachine`, and every section kept or none),
-// and the agent closes it. Its images keep the receipt rule (`receipted`):
-// an image whose src the receipt names is served only as its copy. Each
-// file-served image of an image block or an option is copied as the ask is
-// made, or the make is refused (`AskRefused`, naming the src). A board
-// block's panels and a video's poster or frame show live and bind nothing.
-// An earlier ask's copy, shown again, is the same copy, its hash checked.
-// Each copy is kept in `FILMS_LAB/asks/shown/`, named by its SHA-256, and
-// the image shows its route (`askShownUrl`); its receipt is
-// `AskRecord.shown`. A copy is shared by every ask that shows the same
-// bytes, and the lab deletes none, so a closed ask's page still shows what
-// it showed. A copy is served, and an answer taken, only while each copy
-// holds its hash. An ask made while an earlier one of the same
-// asker (`by`) still asks joins that one's page (`page`, the opener's id),
-// so asks made in sequence are answered on one page; `page` on the draft
-// names an open page to join, or `new` opens one. A page is only the asks
-// that name it (`pageIdOf`, `asksOnPage`): an ask with no `page` opened its
-// own, as every ask kept before pages did. Makes are taken one at a time,
-// so two made at once see each other. An answer is kept by its step, so the same
-// answer sent again (a retry, a second tab) is answered as it was; a
-// different one to a step already answered is refused, as is one to a step
-// the ask has left, as its machine has it, and one past the deadline. An ask
-// that names a production files its words on that production's timeline,
-// each once by the ask's id (`withAskSaid`, under the ledger's lock): its
-// question (when it names a set) as it is made, and once closed, its
-// answers (answered to its end) or its withdrawal. A filing that failed is
-// filed by the next close of the ask, and two closes at once file one word.
-// A decision an ask filed with no picks of the owner's on it is given those
-// its record files (`fillPicks`, an app's `bun run fill-picks`), so an
-// override may cite them. The page, the MCP and the change feed all read and
-// write through here.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -354,7 +316,6 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
             }),
         });
 
-      // One make at a time: the page an ask joins is read and its record written under it.
       const making = yield* Semaphore.make(1);
 
       /**
@@ -405,7 +366,6 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
             variant: Option.none(),
           }),
         );
-        // A deadline kept as UTC ISO, so it compares with the time an answer comes in.
         const deadline = Option.map(Option.fromUndefinedOr(draft.deadline), (d) =>
           Option.map(DateTime.make(d), DateTime.formatIso),
         );
@@ -424,7 +384,6 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
           }),
         ];
         if (problems.length > 0) return yield* AskInvalid.make({ problems });
-        // What it shows is found as its views find it: nothing kept may fail to render.
         const { ask, missing } = yield* located(draft.ask);
         const absent = [
           ...(yield* materials.problems(draft.ask)),
@@ -436,7 +395,6 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
         ];
         if (absent.length > 0) return yield* AskInvalid.make({ problems: absent });
         const id = yield* newId;
-        // Its images show copies of their files' bytes as it is made: the receipt is of what the page serves.
         const { ask: showing, shown } = yield* receipted(id, ask);
         return yield* making.withPermit(
           Effect.gen(function* () {
@@ -484,7 +442,6 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
        */
       const receipted = (id: AskName, ask: Ask) =>
         Effect.gen(function* () {
-          // Each src resolved first, so a make refused copies nothing.
           const planned = yield* Effect.forEach(yield* materials.served(ask), ([src, at]) =>
             Match.value(at).pipe(
               Match.tag('File', ({ file }) => Effect.succeed(Result.succeed(copyPlan(src, file)))),
@@ -729,7 +686,6 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
         const bytes = yield* fs
           .readFile(path.join(shownDir, copy.value))
           .pipe(Effect.mapError(() => ReviewFileUnknown.make({ ref: src })));
-        // Read once, hashed, and those bytes served: a copy changed under the lab is never served as its hash.
         if (sha256Hex(bytes) !== hash.value)
           return yield* AskRefused.make({
             id: record.id,
@@ -744,10 +700,8 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
       ) {
         const at = yield* known(id);
         const when = yield* now;
-        // A field left empty is kept as not sent, so a retry that sends it blank is the same answer.
         const record = yield* store.transact(at, (current) =>
           Effect.gen(function* () {
-            // Fail closed: an answer binds only bytes the page showed from the ask's own copies.
             const problems = yield* unbacked(current);
             if (problems.length > 0)
               return yield* AskRefused.make({
@@ -822,7 +776,6 @@ const askWords = (record: AskRecord, now: number): ReadonlyArray<Said> => {
     by: Option.some(record.by),
   };
   const named = `${record.title} (ask ${record.id})`;
-  // A time the record keeps (ISO), as the ledger keeps it; `now` when it does not read.
   const timeOf = (iso: Option.Option<string>) =>
     Option.getOrElse(
       Option.map(Option.flatMap(iso, DateTime.make), DateTime.toEpochMillis),
@@ -852,7 +805,6 @@ const askWords = (record: AskRecord, now: number): ReadonlyArray<Said> => {
             ...on,
           },
         ];
-      // The owner's decision: what they gave, an optional field left empty left out.
       const given = givenAnswers(closed.answers);
       const words = Object.values(given).flatMap((a) =>
         Match.value(a).pipe(
@@ -863,7 +815,6 @@ const askWords = (record: AskRecord, now: number): ReadonlyArray<Said> => {
           }),
         ),
       );
-      // His picks: each question he answered by a choice, the value of the option he chose.
       const picks = Record.getSomes(
         Record.map(given, (a) =>
           Match.value(a).pipe(
@@ -875,7 +826,6 @@ const askWords = (record: AskRecord, now: number): ReadonlyArray<Said> => {
           ),
         ),
       );
-      // Every answer skipped still reads as answered: the line then names them all.
       const line = answersLine(
         Option.getOrElse(
           Option.liftPredicate(given, (g) => !Record.isEmptyRecord(g)),
@@ -885,8 +835,6 @@ const askWords = (record: AskRecord, now: number): ReadonlyArray<Said> => {
       return [
         {
           _tag: 'Decided',
-          // When he answered (his last step), not when the ask was closed: a decision he
-          // made in between stays the newer one.
           at: timeOf(Option.map(Arr.last(record.answered), (a) => a.at)),
           text: `${named}: ${line}`,
           quote: Option.liftPredicate(words.join(' / '), (w) => w.length > 0),
@@ -1024,7 +972,6 @@ export const fillPicks = Effect.gen(function* () {
       const records = new Map(
         yield* Effect.forEach(asks, (ask) => Effect.map(recordOf(ask), (r) => [ask, r] as const)),
       );
-      // A decision filed after the list read the ledger finds no record here: the next run fills it.
       const recordIn = (ask: string): Read =>
         records.get(ask) ?? Result.fail('filed after its ledger was read');
       const filed = yield* productions

@@ -1,72 +1,3 @@
-// `film concept`: a cast member's sheet, briefed and measured (the concept
-// stage's cast sheets, the film skill's Concept step).
-//
-//   film concept brief (--member <film>/<member> --kind turnaround|poses|heads
-//       | --look <file> --references <file>
-//         (--turnaround <who> | --layout <file> --kind poses|heads)) [--house <file>]
-//     print the prompt one try of the sheet is painted from: the house block
-//     made a sheet's, the references' note, the member's look, the layout and
-//     its kind's rules (`cast-sheet-brief.ts`). With `--member` it is the
-//     prompt `cast` paints from, read from the member's record (its heads,
-//     hair and smaller figures); the files name a sheet that has no record
-//     yet, a grown member of the canon's heads whose hair shows. The house
-//     block is the app's own (`FilmApp.house`), wherever the command runs,
-//     unless `--house` names another.
-//
-//   film concept measure <sheet.png> --kind turnaround|poses|heads
-//       (--member <film>/<member> | --count <n> --anchor <view> [--slot <slot> ...]
-//         [--standing <view> ...] [--level <view> ...] [--headgear])
-//       [--concept <crop.png>:<view> ...] [--out <dir>]
-//     measure a try (`core/cast-sheet.ts`): print a line for the sheet and one
-//     per flag, and write `<stem>.measure.md`, `<stem>.measure.json` and
-//     `<stem>.overlay.png` beside it (or in `--out`). With `--member` the
-//     record's plan for the kind is the measure's, as `cast` measures a try,
-//     its kept concepts held to their views; the flags name a sheet that has
-//     no record. Facing is read first; a flag guides the retry and the ask,
-//     it keeps or drops nothing.
-//
-//   film concept cast <film> <member> --kind turnaround|poses|heads
-//       [--tries 3] [--lanes 3] [--dry-run] [--house <file>] [--house-image <png>]
-//     draw tries of the member's sheet on the image route (`cast-sheet-make.ts`)
-//     from its `cast-sheet.json` and `look.md`: the film's own role's under
-//     `films/<film>/cast/<member>/cast-sheet/`, else the library's under
-//     `library/cast/<member>/cast-sheet/` beside the films. Each try is
-//     measured as it lands and a flagged one drawn once more, its drifts
-//     named (and the underlay sent on facing or the canon); every try, its
-//     measure, overlay and preview land in `out/<film>/cast/<member>/` and
-//     the record.
-//
-//   film concept critique <film> <member> --kind turnaround|poses|heads --try <n>
-//     each view of try n a kept concept faces (the kind's `concepts` in the
-//     record), at 1:1 beside the concept, shown to a fresh model with the
-//     measure's flags on it (`cast-sheet-critique.ts`); a line per finding.
-//
-//   film concept keep <film> <member> --kind turnaround|poses|heads --try <n>
-//       --why <the owner's words> [--ask <id>] [--replace]
-//     on the owner's answer: the try into the member's folder as
-//     `kept/<kind>.png`, each view cut from it as `views/<name>.png`, the keep
-//     recorded with his why (`cast-sheet-keep.ts`); a kind kept is refused,
-//     unless `--replace` with `--ask` replaces it on his answer to that ask:
-//     the old kept sheet and views move into `kept/replaced/`, the record
-//     names both.
-//
-//   film concept trace <spec.ts> [--view <name> ...]
-//     a kept sheet's views traced into the tables a rig is composed from
-//     (`trace-cli.ts`, `core/trace.ts`), each written beside the spec.
-//
-//   film concept ease <film> <member> --from <pose> --to <pose> --seconds <s> [--segment a-b] [--shuffle seed]
-//     a member's ease drawn frame by frame (`ease.ts`).
-//   film concept fit <film> <member> --view <kind>-<view> --from <view> ... [--bone <name> ...]
-//     a kept view's pose fitted from the member's cut-out puppets (`pose-fit-cli.ts`).
-//   film concept render <film> <member> [--kind turnaround|poses|heads] [--no-critique]
-//   film concept render <film> <member> --render <n> --finding <kind>-<view>/<id> --stands <why>
-//     the member's cast render (`cast-render.ts`): every kept view of his
-//     sheets drawn by its rig in its pose from the film's `rigs/cast.ts`, on
-//     the scenes' own draw path, cut by its kept box, measured against the
-//     kept view, laid beside it at 1:1 and critiqued, into
-//     `out/<film>/cast/<member>/render/<n>/`; or a finding of render n
-//     answered: it stands, and why (a fix is a new render).
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -403,7 +334,6 @@ const brief = (house: HouseLook) =>
           heads: CANON_HEADS,
           figures: [],
           hair: true,
-          // Files, not a record: nothing names a beardless member, so the rule is said.
           beard: true,
         }),
       );
@@ -429,7 +359,6 @@ const cast = (house: HouseLook) =>
         Flag.withDescription('the sheet to draw: turnaround, poses or heads'),
       ),
       tries: Flag.Int('tries').pipe(
-        // A count under one is refused at the flag: the run would draw one try for it.
         Flag.withSchema(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))),
         Flag.withDefault(3),
         Flag.withDescription(

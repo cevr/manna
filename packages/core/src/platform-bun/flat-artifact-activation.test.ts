@@ -63,9 +63,6 @@ const hostFor = (input: {
         sources: input.sources,
         layout: 'flat',
         fetch: (url) => Effect.succeed(new Response(input.bytesFor(url))),
-        // §9.2's parser stands in: these bytes are not an index, and what is
-        // under test is the activation rather than the format gate. The digest
-        // and size checks above it are the shipped ones.
         verify: () => Effect.succeed(1),
       }),
     ),
@@ -184,8 +181,6 @@ describe('§3.6 flat artifact activation', () => {
       const versioned = generationPath(destination, RUNTIME_BYTES);
       expect(Option.getOrUndefined(active)).toBe(versioned);
       expect(yield* fs.readFileString(versioned)).toBe(RUNTIME_BYTES);
-      // The pointer is beside the destination, where a host looks; the bytes
-      // are not *at* the destination, which is what makes the rename atomic.
       expect(yield* fs.exists(sidecarPath(destination))).toBe(true);
       expect(yield* fs.exists(destination)).toBe(false);
     }));
@@ -213,17 +208,13 @@ describe('§3.6 flat artifact activation', () => {
         generation: 3,
       });
 
-      // A host with generation 3 activated, cleanly.
       const host = hostFor({ destination, sources: [pinned], bytesFor: () => PIN_BYTES });
       yield* ensureVectors(host);
 
-      // The crash: the newer generation's bytes are in place under their own
-      // versioned name, and the pointer rename never happened.
       yield* fs.writeFileString(generationPath(destination, RUNTIME_BYTES), RUNTIME_BYTES);
 
       const torn = yield* readPointer(host);
 
-      // The old generation, whole: its revision, its ordinal, and its file.
       expect(Option.getOrUndefined(Option.map(torn.provenance, (p) => String(p.revision)))).toBe(
         'vectors-v3',
       );
@@ -253,8 +244,6 @@ describe('§3.6 flat artifact activation', () => {
 
       yield* ensureVectors(host);
 
-      // The file the live pointer names, overwritten with something else — a
-      // truncated write, a half-copied file, bit rot.
       yield* fs.writeFileString(generationPath(destination, PIN_BYTES), 'not that generation');
 
       const provenance = yield* readInstalled(host);
@@ -277,7 +266,6 @@ describe('§3.6 flat artifact activation', () => {
       const directory = yield* fs.makeTempDirectoryScoped({ prefix: 'flat-activation-' });
       const destination = `${directory}/vectors.bvi`;
 
-      // Launch one: §3.6 installs runtime generation 4.
       yield* installRuntimeRelease(
         hostFor({ destination, sources: [], bytesFor: () => RUNTIME_BYTES }),
         {
@@ -289,7 +277,6 @@ describe('§3.6 flat artifact activation', () => {
         },
       );
 
-      // Launch two: a fresh graph whose compiled pin is generation 3.
       const restarted = hostFor({
         destination,
         sources: [
@@ -304,7 +291,6 @@ describe('§3.6 flat artifact activation', () => {
       });
       const after = yield* ensureThenReadPointer(restarted);
 
-      // Nothing was activated, and generation 4 is still what this host reads.
       expect(after.receipt.activated).toEqual([]);
       expect(
         Option.getOrUndefined(
@@ -315,7 +301,6 @@ describe('§3.6 flat artifact activation', () => {
       expect(yield* fs.readFileString(generationPath(destination, RUNTIME_BYTES))).toBe(
         RUNTIME_BYTES,
       );
-      // And the pin's bytes were never even fetched onto this machine.
       expect(yield* fs.exists(generationPath(destination, PIN_BYTES))).toBe(false);
     }));
 
@@ -392,8 +377,6 @@ describe('§3.6 flat artifact activation', () => {
       expect(Option.getOrUndefined(Option.map(after, (p) => String(p.revision)))).toBe(
         'vectors-v5',
       );
-      // The generation it replaced was retired, only after the pointer that
-      // named it was gone.
       expect(yield* fs.exists(generationPath(destination, PIN_BYTES))).toBe(false);
     }));
 });

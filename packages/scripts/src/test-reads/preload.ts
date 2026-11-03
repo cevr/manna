@@ -1,16 +1,3 @@
-// A Bun preload (`--preload`) for `test-reads.ts`: appends each path a test
-// process reads to the file `MANNA_TEST_READS` names, one absolute path a line.
-// It records:
-// - `node:fs` and `node:fs/promises` reads and stats (which Effect's Bun file
-//   system calls), `Bun.file` and `bun:sqlite` databases;
-// - native libraries loaded through `bun:ffi`'s `dlopen` and `process.dlopen`;
-// - each module the process loaded (`require.cache`, which holds ES modules
-//   and dynamic imports too), after its tests: a relative import that leaves
-//   its workspace is a file its task hashes only when its `turbo.json` lists it.
-// With no `MANNA_TEST_READS` it changes nothing. Child bun processes inherit it
-// through `BUN_OPTIONS`; other children (a shell, node) and folder listings
-// are not recorded.
-
 import * as ffi from 'bun:ffi';
 import * as sqlite from 'bun:sqlite';
 import { afterAll, mock } from 'bun:test';
@@ -96,16 +83,11 @@ if (log !== '') {
     },
   });
 
-  // Each test file's modules, once its tests are done (under `--isolate` this
-  // preload runs again for each file). The preload itself is not the test's.
   const modules = () => {
     for (const loaded of Object.keys(require.cache)) {
       if (isAbsolute(loaded) && loaded !== import.meta.path) record(loaded);
     }
   };
-  // `afterAll` throws outside `bun test` (a script a test task runs, as
-  // animations' `bun cli.ts drafts`), where `exit` fires; under `bun test`
-  // it does not.
   try {
     afterAll(modules);
   } catch {

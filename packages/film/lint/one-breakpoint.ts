@@ -1,19 +1,3 @@
-// `film/one-breakpoint`: the studio has one breakpoint, a phone's widest
-// window, and one owner of it (`packages/film/src/lab/viewport.ts`: `PHONE`,
-// `WIDE`). A style written in TypeScript asks the window through those two,
-// so the width is declared once; refused is a media query width written out
-// in a string or a template (`(max-width: 899px)`, `(min-width: 900px )`,
-// `(width >= 900px)`, in any length unit: `(max-width: 56ch)`), or built from a
-// number in a template (`(max-width: ${LIMIT}px)`), where a change of the
-// breakpoint would leave it behind. A feature query's
-// condition (`@supports (width: 900px)`) asks whether a declaration parses,
-// not how wide the window is, and passes, its clause running on across a
-// template's values (`@supports (width: ${w}px) and (min-width: ${m}px)`) up
-// to its block. The owner itself
-// builds both from one number, so the config lets it be. The stylesheets that
-// cannot import the owner (`player.css`, `tokens.css`) are held to its value
-// by `lab/viewport.test.ts`.
-
 import { Effect, Predicate } from 'effect';
 import {
   Diagnostic,

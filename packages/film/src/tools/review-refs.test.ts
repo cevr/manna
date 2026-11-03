@@ -1,8 +1,3 @@
-// A ref under a root's alias (`ReviewRoot.aliases`): the lab's asks keep refs
-// written while the checkout `manna` was the folder `bible-tools`, and each
-// names the same file and page as its `manna/` twin, on the server
-// (`pathOf`) and on the page (`docAt`, `videoAt`).
-
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -48,7 +43,6 @@ describe('a ref under an alias', () => {
         );
         expect(canonicalOf(roots, 'bible-tools/rbf-v3')).toBe('manna/rbf-v3');
         expect(canonicalOf(roots, 'bible-tools')).toBe('manna');
-        // Only a label: a folder named like the alias under another root is its own.
         expect(canonicalOf(roots, 'rbf-arms-rig/bible-tools/a.md')).toBe(
           'rbf-arms-rig/bible-tools/a.md',
         );
@@ -75,7 +69,6 @@ describe('a ref under an alias', () => {
   test('opens an ask’s document and video of its twin', () => {
     const index: ReviewIndex = {
       folders: [folder('manna/rbf-v3'), folder('rbf-arms-rig/arms')],
-      // As the review's index sends them for `roots` (review.slow.test.ts).
       aliases: { 'bible-tools': 'manna' },
     };
     expect(docAt(index, 'bible-tools/rbf-v3/notes.md')).toEqual(
@@ -86,7 +79,6 @@ describe('a ref under an alias', () => {
       videoAt(index, 'manna/rbf-v3/cut.mp4'),
     );
     expect(Option.isSome(videoAt(index, 'bible-tools/rbf-v3/cut.mp4'))).toBe(true);
-    // An index with no aliases (an older server) reads a ref as it is.
     const plain: ReviewIndex = { folders: index.folders };
     expect(docAt(plain, 'bible-tools/rbf-v3/notes.md')).toEqual(Option.none());
     expect(canonicalRef({}, 'bible-tools/rbf-v3')).toBe('bible-tools/rbf-v3');

@@ -1,13 +1,3 @@
-// Job's question: "Job asked it: “How should man be just with God?”" The
-// verse on its page while "Job asked it" is said, its phrase highlighted in
-// reading order (`sweep`); the highlight floods out to the whole frame
-// landing on {job} (`flood`), and from {job} the full-screen card holds the
-// frame to the end (`card`): its words land as they are spoken, "just" the
-// payoff (CRAFT rule 1). The engine draws the card in place of the scene and
-// the flood over the lit scene (`drawing({ cards })`), grown from the box the
-// draw returns on the same frame; the look in play draws the page and sets
-// the card (`look.ts`).
-
 import { type Box, drawing } from '@manna/film/canvas';
 import { lookOf } from '../looks/index.ts';
 
@@ -17,11 +7,8 @@ export const job = drawing({
     sweep: { at: 'speech', until: { cue: 'flood', edge: 'start' }, track: 'verse' },
     flood: { mark: 'job', dur: 0.45, ends: true, track: 'verse' },
     card: { mark: 'job', until: { at: 'end' }, track: 'card' },
-    // The payoff word said: a look that slams it reads this (it starts where the take's
-    // timing starts "just"; the card sets the word at its voice, a breath later or none).
     payoff: { mark: 'job', word: 'just', dur: 0.35, track: 'card' },
   },
-  // Its type said, not inferred: a look's frame type is read off this draw (`JobFrame`).
   draw: (f): Box => lookOf().job(f),
   light: () => lookOf().light ?? { color: '#ffffff', amount: 0 },
   cards: [
@@ -31,7 +18,6 @@ export const job = drawing({
       payoff: 'just',
       flood: {
         cue: 'flood',
-        // The look's own edge, or the box's straight one.
         mask: (ctx, box, at, f) => {
           const edge = lookOf().floodEdge;
           if (edge === undefined) ctx.fillRect(box.x, box.y, box.w, box.h);

@@ -1,13 +1,3 @@
-// The credits, over the landing's last shot: the camera goes on easing back
-// from where `thesis` leaves the city, the two of them still sitting together
-// on the rooftop, while the film's name, its sources and its sound roll up a
-// torn paper strip at the left at one pace (`PACE`), so a longer roll runs
-// longer. The sources are each beat's `cite`, by author and work, and the
-// Sound head gives the line each CC BY recording the film places owes
-// (`credits.ts`). Then the strip goes and the city holds, clear, for the end
-// screens. It does not breathe: the film has stopped breathing by its last
-// card, and the pull back is its only move.
-
 import {
   type Camera,
   drawing,
@@ -67,15 +57,12 @@ const SETTLE = 2;
 export const end = drawing({
   drift: 0,
   timeline: {
-    // The strip comes in, the credits roll up it, and it goes: the rest is clear for the end screens.
     stripIn: { at: 'start', dur: 0.8 },
     roll: { at: 'start', dur: ROLL, ease: 'linear' },
     stripOut: { after: 'roll', dur: 0.8 },
-    // The pull back, from where `thesis` leaves the city, settling as the strip goes.
     back: { with: 'roll', dur: ROLL + SETTLE, ease: 'inOutSine' },
   },
   knobs: {
-    // The wider city the card ends on.
     wide: [1060, 560],
     wideZoom: 1,
   },
@@ -83,12 +70,10 @@ export const end = drawing({
     const { ctx, w, h } = f;
     landingSky(ctx, w, h);
     glow(ctx, 960, 380, 750, C.glow, 0.55);
-    // It starts where `thesis` leaves the city: that scene's `city` framing, read there.
     const city = f.knobsOf(thesis);
     const cam: Camera = shotPath(knobCamera(city('city'), city('cityZoom')), [
       [f.at('back'), knobCamera(f.knob('wide'), f.knob('wideZoom'))],
     ]);
-    // `thesis`'s rooftop, its paper cut as it was, the two turned to each other.
     rooftop(ctx, w, h, f.handsOf(thesis), cam, 1);
 
     const shown = f.at('stripIn') * (1 - f.at('stripOut'));
@@ -102,9 +87,6 @@ export const end = drawing({
       torn: 3,
       shadow: 0.5,
     });
-    // The roll rises from its first line at the bottom to its last at the
-    // top; a line shows only while it is wholly on the strip, fading at its
-    // top and bottom.
     const top = TOP_FROM + f.at('roll') * (TOP_TO - TOP_FROM);
     const cx = STRIP.x + STRIP.w / 2;
     probePlate(ctx, STRIP_SHAPE, () =>

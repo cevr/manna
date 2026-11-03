@@ -8,10 +8,6 @@ import { Predicate, Schema } from 'effect';
 
 import { CategoryId, HymnId, VerseId } from '../types/ids.js';
 
-// ============================================================================
-// Domain Models
-// ============================================================================
-
 /**
  * A single verse within a hymn: a stanza, or a refrain (negative id)
  */
@@ -59,10 +55,6 @@ export class HymnSummary extends Schema.Class<HymnSummary>('HymnSummary')({
   category: Schema.String,
   firstLine: Schema.String,
 }) {}
-
-// ============================================================================
-// Back-matter indexes
-// ============================================================================
 
 const Positive = Schema.Int.check(Schema.isGreaterThanOrEqualTo(1));
 const VerseSpan = Schema.Struct({ from: Positive, to: Positive });
@@ -142,10 +134,6 @@ export const passageReaches = (passage: IndexPassage, query: PassageQuery): bool
   );
 };
 
-// ============================================================================
-// Database Row Types (internal)
-// ============================================================================
-
 /**
  * Raw hymn row from SQLite
  */
@@ -154,7 +142,7 @@ export const HymnRow = Schema.Struct({
   name: Schema.String,
   category: Schema.String,
   category_id: Schema.Finite,
-  verses: Schema.String, // JSON array
+  verses: Schema.String,
 });
 export type HymnRow = Schema.Schema.Type<typeof HymnRow>;
 

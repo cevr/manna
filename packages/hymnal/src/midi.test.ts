@@ -62,9 +62,7 @@ describe('Midi.parse', () => {
       ];
       const bytes = new Uint8Array([
         ...chunk('MThd', [0, 1, 0, 2, 0, 96]),
-        // Tick 0 at 500 000 µs a quarter, tick 96 at 1 000 000, ending at tick 96.
         ...chunk('MTrk', [0, ...tempo(500_000), 0x60, ...tempo(1_000_000), 0, 0xff, 0x2f, 0]),
-        // A second tempo at tick 96, later in the file, so it wins; 250 000 from 192; the end at 288.
         ...chunk('MTrk', [
           0,
           0x90,
@@ -102,7 +100,6 @@ describe('Midi.parse', () => {
   it.effect('plays a hymnal file as long as mido reads it', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      // mido 1.3.3's MidiFile.length for each file.
       const lengths = [
         [663, 15.945102],
         [1, 130.38190799999998],

@@ -1,12 +1,3 @@
-// A film's storyboard on disk: the record, `src/films/<film>/board.json`
-// (committed, a `ContentStore` manifest: written whole, one writer at a time
-// across processes), and the images beside it in `src/films/<film>/board/`
-// (git-ignored, like the sounds: big, and made again only at a cost), each
-// recorded with its sha256 so a copy brought from another checkout is known
-// to be the same. A version folder (`<film>/v<n>/`) keeps its own board the
-// same way, read with its folder. The CLI (`film board`) and the lab's board
-// routes both go through this store, so either works without the other.
-
 import {
   Array as Arr,
   Boolean as Bool,

@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/dialog/title/DialogTitle.tsx,
-// packages/react/src/dialog/description/DialogDescription.tsx
-//
-// The heading that labels the dialog and the paragraph that describes it:
-// each registers its id with the dialog, which names it in the popup's
-// `aria-labelledby` or `aria-describedby` while it is rendered.
 import type { JSX } from '@solidjs/web';
 import { omit } from 'solid-js';
 

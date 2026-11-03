@@ -26,8 +26,6 @@ export const mediaLayer = Layer.sync(Media, () => {
   let protectedAll = false;
   const made = new Set<string>();
   let base = Option.none<string>();
-  // Resolve the native directory within an operation's typed Promise boundary.
-  // A missing filesystem must not prevent the online player from starting.
   const support = () =>
     Option.match(base, {
       onSome: (uri) => uri,
@@ -51,7 +49,6 @@ export const mediaLayer = Layer.sync(Media, () => {
     }
     made.add(storage);
   };
-  // A stray (a hymn that plays from another set's storage) is never listed.
   const listIn = async (storage: string, found: Map<string, Entry>) => {
     await ready(storage);
     for (const file of await fs.readDirectory(root(storage))) {

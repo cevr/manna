@@ -73,7 +73,6 @@ describe('a cast view', () => {
     });
     const [left, right] = [viewAt([0, 0, 100, 100]), viewAt([100, 0, 200, 100])];
     const views = [left, right];
-    // Whether a view's drawing at `p` is laid on the sheet, as the clips the player lays on its context (`clipCast`) let it through: inside each clip's path by its fill rule.
     const laid = (view: CastView, [x, y]: readonly [number, number]) => {
       const clips = recordedClips(view, views);
       const within = ([x0, y0, w, h]: Rect) => x >= x0 && x < x0 + w && y >= y0 && y < y0 + h;
@@ -87,7 +86,6 @@ describe('a cast view', () => {
         x0 + (i % (x1 - x0)),
         y0 + Math.floor(i / (x1 - x0)),
       ]);
-    // Each draws past its box all round, by 12: the left's ink over the right's box, the right's over the left's.
     const crop = (view: CastView, of: CastView) => {
       const [x0, y0, x1, y1] = view.box;
       return each(x0, x1, y0, y1).filter((p) => laid(of, p)).length;
@@ -96,7 +94,6 @@ describe('a cast view', () => {
     expect(crop(left, right)).toBe(0);
     expect(crop(left, left)).toBe(100 * 100);
     expect(crop(right, right)).toBe(100 * 100);
-    // Above both boxes, the left's crown still shows: no view lies there.
     expect(each(0, 112, -12, 0).every((p) => laid(left, p))).toBe(true);
   });
 });

@@ -1,14 +1,3 @@
-// The judge's words: a second opinion on one choice at one scene, given
-// blind. The versions a choice offers (a look's levels, a render set's
-// variants: what an ask's picture choice picks between) are seen as stills at
-// the same moments (the scene's marks and its cues' middles), labelled A, B,
-// C in an order drawn at random; another model ranks them against the rules
-// that bear on the scene, quoted in the packet; the key (which label is
-// which version) stays out of the packet, and the answer is unblinded with
-// it into the verdict. The judge writes no choice: the verdict stands beside
-// the owner's pick. Pure: `tools/judge.ts` draws the stills and runs the
-// model.
-
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import { type SceneTimes, momentOf } from './easel.ts';
 
@@ -24,9 +13,6 @@ export const LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
 /** A register a beat's picture names (`CRAFT.md` rule 3): the story world, or the page of ideas. */
 const Register = Schema.Literals(['STORY', 'IDEA']);
 type Register = typeof Register.Type;
-
-// ---------------------------------------------------------------------------
-// What a judge refuses, each its own class.
 
 /** A point the judge cannot judge: not a picture choice, or none at this scene. */
 export class JudgePointUnjudged extends Schema.TaggedError<JudgePointUnjudged>()(
@@ -95,9 +81,6 @@ export class CounselUnreadable extends Schema.TaggedError<CounselUnreadable>()(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Moments
-
 /**
  * A moment a judge shows: where in the scene (a look's place) and the
  * scene-local second of the frame a look draws there.
@@ -140,9 +123,6 @@ export const judgeMoments = (
   );
   return picks.flatMap((i) => Option.toArray(Arr.get(once, i)));
 };
-
-// ---------------------------------------------------------------------------
-// The beat and its rules
 
 /**
  * The registers a beat's picture names at its head (`STORY:`, `IDEA:`,
@@ -199,9 +179,6 @@ export const sectionOf = (text: string, heading: string): Option.Option<string> 
   );
   return Option.some([heading.trim(), ...rest.slice(0, end)].join('\n').trim());
 };
-
-// ---------------------------------------------------------------------------
-// The key, the packet, the ranking and the verdict
 
 /** One version as the key holds it: its label, its name in the film, and whether it is the pick. */
 const KeyedVersion = Schema.Struct({

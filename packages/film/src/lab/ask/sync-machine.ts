@@ -1,22 +1,3 @@
-// The player's clock machine: every video it plays on one clock, paused,
-// playing, scrubbed or waiting on a stalled video, at ½× or 1×, with one
-// video's sound heard.
-//
-//   Paused ─Play→ Playing ─Pause→ Paused     Playing ─Stalled→ Buffering ─Resumed→ Playing
-//   any ─ScrubMoved→ Scrubbing ─ScrubReleased→ Playing | Paused (as it was)
-//   Playing | Buffering ─Ended→ Paused (at the end)
-//   any ─Stepped | Landed | Measured | HeardChosen | RateChosen→ the same, changed
-//   any ─MediaFailed→ Failed (where it stood; it hears nothing more of that media)
-//   Failed ─MediaReplaced→ Paused (where it stood: a failure is its media's, and the
-//     clock's new media, another source or a retry of the same, starts there afresh)
-//   any ─ClockMoved→ the same, on the new clock's end (Failed → Paused: the failure was
-//     the old clock's media)
-//
-// Events are facts (a button pressed, the clock moved on, a video stalled);
-// the driver (`sync.ts`) makes the videos do what each state says. A seek (a
-// scrub, a step, Back landing on an entry's time, a play from the end) bumps `seek`, so the driver moves the
-// videos only then, never for the clock's own ticks.
-
 import { Match, Option, Predicate, Schema } from 'effect';
 import { Event, Machine, State } from 'effect-machine';
 import { clock, frameRead, timecode } from '../../core/time.ts';
@@ -221,7 +202,6 @@ export const syncMachine = (audible: string, start: number, at: number = start) 
     })
     .on(ANY, SyncEvent.Stepped, ({ state, event }) => {
       const clock = clockOf(state);
-      // From the frame its timecode reads (`frameRead`), onto the frame grid: no drift.
       const frame = frameRead(clock.t, clock.fps);
       return withClock(state, {
         ...clock,

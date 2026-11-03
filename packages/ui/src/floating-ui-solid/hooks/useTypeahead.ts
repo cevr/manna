@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/hooks/useTypeahead.ts
-//
-// Typing letters highlights the next item whose label starts with them.
-// Keys typed within `resetMs` of each other build one string; repeating
-// a first letter cycles through the items that start with it. Space counts
-// as a letter while a string is being typed (so it does not press the item).
 import { createEffect, untrack } from 'solid-js';
 
 import type { HTMLProps } from '../../internals/types.ts';
@@ -90,7 +84,6 @@ export function useTypeahead(
       prevIndex = activeIndex ?? -1;
     }
 
-    // Bail out if a label repeats its first letter ("Eggs"), else cycle.
     const allowRapidSuccessionOfFirstLetter = listContent.every((text, index) =>
       text && isItemAvailable(index) ? text[0]?.toLowerCase() !== text[1]?.toLowerCase() : true,
     );
@@ -134,7 +127,6 @@ export function useTypeahead(
     props.onTyping?.(false);
   };
 
-  // Opening or closing ends a typing session.
   createEffect(context.open, () => {
     timeout.clear();
     matchIndex = null;

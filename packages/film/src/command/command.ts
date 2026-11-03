@@ -1,20 +1,3 @@
-// The pages' commands: every verb a page offers, declared once as data, so
-// its buttons, its context menus, ⌘K, the `?` sheet and its keys all read
-// one registry. A command has an id, a label, a group (its section in a menu
-// or ⌘K), its default keys, the kinds of selection it acts on (`about`: what
-// puts it in that thing's context menu), a typed `when` over the page's
-// `Context` (VS Code's `when` and Blender's `poll`, as a plain predicate: a
-// command not available is not shown in menus, and is not run by its key),
-// and a `run` that answers with a `Receipt`: what it did, and the command
-// that undoes it, for the toast, bound to the change it made when it made
-// one (`Bound`: that command then acts on that change or says why not,
-// `fits`). A page's registry lives as long as the
-// page; a component registers its commands for as long as it is mounted
-// (`register` answers the unregister). A later registration of an id
-// replaces the earlier one until it is unregistered. Framework-free, outside
-// the lab (`src/command/`), so the player, which never imports the lab,
-// declares its transport here too.
-
 import { Array as Arr, Data, Effect, Option } from 'effect';
 import type { Input } from '../browser/keys.ts';
 import type { Gave } from '../core/catalogue.ts';
@@ -232,7 +215,6 @@ export interface Commands {
 
 /** An empty registry, for one page. */
 export const makeCommands = (): Commands => {
-  // Every live registration in order; an id's last one wins.
   let entries: ReadonlyArray<{ readonly token: symbol; readonly command: Command }> = [];
   const listeners = new Set<() => void>();
   const changed = () => {
@@ -241,7 +223,6 @@ export const makeCommands = (): Commands => {
   const all = (): ReadonlyArray<Command> => {
     const latest = new Map<CommandId, Command>();
     for (const entry of entries) latest.set(entry.command.id, entry.command);
-    // Ordered by each id's first registration, so a replacement keeps its place.
     return Arr.dedupe(entries.map((e) => e.command.id)).flatMap((id) =>
       Option.toArray(Option.fromUndefinedOr(latest.get(id))),
     );

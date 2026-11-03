@@ -1,8 +1,3 @@
-// A section's words as the page lays them out and paints them, pure: each
-// word with its offset in the section's one text (the words in order, a space
-// between), and, for a word the film plays, when it starts on the film's
-// clock; the words lit or selected are painted as their ranges of that text.
-
 import { Array as Arr, Option, Order } from 'effect';
 import type { CodeRange } from '../../core/schema.ts';
 

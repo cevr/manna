@@ -1,31 +1,3 @@
-// `film`: the tools that turn a film's script into sound and pictures, run
-// from the app that holds the films. The app owns its entry (`runFilmCli`): it
-// names its films folder and serves its player page, which imports the same
-// folder, so the tools and the page always read one film.
-//
-//   film narrate | takes import | script | score | mix       the voice and the sound
-//   film sfx …        (sfx-cli.ts)     the app's sound library
-//   film media …      (media-cli.ts)   the app's private media store
-//   film footage …    (footage-cli.ts) the app's camera footage, its copies and a take's transcript
-//   film talk …       (talk-cli.ts)    a talk's edit, read as it plays (its words by index)
-//   film cues | check | doctor                                 read and check a film
-//   film drafts                                                read every series draft as the lab does
-//   film render | lookbook | chapters                          pictures and video
-//   film cache …      (cache-cli.ts)   a film's render cache: its size, its unused segments pruned
-//   film project …    (project-cli.ts) a film's scenes rendered, approved, commented
-//   film options …    (choices-cli.ts) a film's choice points, read fresh for the lab
-//   film read …       (read-cli.ts)    the studio's reading, a cue, the scenes' sites, read fresh for the lab
-//   film lab                                                   the lab's server, every film (Ctrl-C stops it)
-//   film lab <command> … (lab-cli.ts) the lab's command set, the same as its MCP tools (`--help` lists them)
-//   film lab events … (events-cli.ts) the lab's events, a line each (--follow: as they happen)
-//   film ask wait …   (ask-cli.ts)     wait on the owner's answer to an ask, in the background
-//   film concept …    (concept-cli.ts) a cast member's sheet: its brief, a try measured, tries drawn, a try critiqued
-//
-// Each command's flags are its own `--help`.
-//
-// narrate and score finish with a mix, so the track is always rebuilt from the
-// same inputs; mix alone never calls a paid API.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import {
   Array as Arr,
@@ -300,7 +272,6 @@ const narrate = Command.make(
     const repo = yield* FilmRepo;
     const narrator = yield* Narrator;
     const loaded = yield* repo.load(input.film);
-    // A misspelt beat fails here rather than recording nothing.
     yield* Option.match(input.only, {
       onNone: () => Effect.void,
       onSome: (ids) =>
@@ -325,7 +296,6 @@ const narrate = Command.make(
     yield* Effect.log(
       `narrate.plan film=${input.film} beats=${plan.beats.length} to_record=${stale}`,
     );
-    // A person's reading of a beat that was renamed or cut: kept, and said.
     for (const orphan of plan.orphaned)
       yield* Effect.logWarning(
         `narrate.orphaned id=${orphan.id} file=${orphan.file} reason="a recorded take for no beat; move its key in timings.json to the beat it reads"`,
@@ -336,7 +306,6 @@ const narrate = Command.make(
         yield* Console.log(`orphaned  ${orphan.id} (${orphan.file}, recorded take, no beat)`);
       return;
     }
-    // Before the first paid take: the CLI must be logged in.
     yield* paidPreflight;
     yield* narrator.record(loaded, plan, options);
     yield* (yield* Mixer).mix(input.film, { stems: false, score: Option.none() });
@@ -387,7 +356,6 @@ const score = Command.make(
       through: input.through,
     });
     if (input.dryRun) return;
-    // Generated music may not sit in the public repo: into the private store at once.
     yield* (yield* SoundLibrary).push(yield* repo.scores, Option.none());
     yield* (yield* Mixer).mix(input.film, { stems: false, score: Option.none() });
   }),
@@ -444,7 +412,6 @@ const takesImport = Command.make(
   Effect.fn('film.takes.import')(function* (input) {
     const loaded = yield* (yield* FilmRepo).load(input.film);
     const at = (yield* Path.Path).resolve(input.path);
-    // A misspelt or bare-without---only flag fails before a credit is spent.
     const accepted = yield* Effect.fromResult(
       acceptedBeats(
         input.acceptMismatch,
@@ -452,7 +419,6 @@ const takesImport = Command.make(
         loaded.scenes.map((s) => s.id),
       ),
     );
-    // Every take is transcribed back: the CLI must be logged in.
     yield* paidPreflight;
     const voiced = yield* Effect.fromResult(voicedOf(loaded));
     const imported = yield* (yield* Takes).importPath(voiced, at, {
@@ -622,7 +588,6 @@ const check = <E, R>(
   renderPage: string,
   films: string,
 ) => {
-  // A wedge's pages draw on its own server (`--level`), held while the leg runs.
   const layout = Effect.fn('film.check.layout')(
     function* (
       loaded: LoadedFilm,
@@ -720,15 +685,12 @@ const check = <E, R>(
       );
       const options = { allowStale: input.allowStale };
       const loaded = yield* (yield* FilmRepo).load(input.film, Option.getOrUndefined(input.folder));
-      // `--level`: the palette as the picks would write it, for the legs that draw.
       const swaps = yield* paletteSwaps(
         yield* FileSystem.FileSystem,
         (yield* Path.Path).join(loaded.paths.dir, PALETTE_FILE),
         yield* Effect.fromResult(levelsOf(input.level)),
       );
       const address = yield* Effect.fromResult(addressOf(input));
-      // A film that does not lay out, or a misspelt act, scene or short, is the
-      // one finding: reported at its scene, rather than probing nothing.
       const laid = laidOut(loaded, address);
       if (Result.isFailure(laid))
         return yield* printReport(input.film, 'film', report([laid.failure], options), input.json);
@@ -884,16 +846,12 @@ const render = <E, R>(
       function* (input) {
         const loaded = yield* (yield* FilmRepo).load(input.film);
         const placed = yield* placeFilm(loaded);
-        // `--act` and `--scene` set the range from the film's own layout; `--short` cuts to it.
         const scope = yield* scopeOf(loaded, placed, input);
         const stills = yield* Option.match(input.stills, {
           onNone: () => Effect.succeedNone,
           onSome: (list) => Effect.asSome(Schema.decodeEffect(Seconds)(list.split(','))),
         });
-        // `--level`: the palette as the picks would write it, built and served for this render alone.
         const levels = yield* Effect.fromResult(levelsOf(input.level));
-        // `--board` names its render `board` (`board-review` with `--review`), and `--review` alone names
-        // the scenes' review copy `review`, unless `--variant` names it.
         const asked = Option.orElse(input.variant, () => pictureVariant(pictureOf(input)));
         const variant = yield* Effect.fromResult(wedgeVariant(asked, levels));
         const path = yield* Path.Path;
@@ -903,7 +861,6 @@ const render = <E, R>(
           levels,
         );
         const server = yield* wedgeServer(renderPage, films, swaps);
-        // What it draws, stamped before the first frame: the sources as they stand now, at its levels.
         const keys = yield* (yield* Stamps).scenes(loaded, placed);
         const stamp = stampOf(keys, scope, levels);
         const job = yield* Effect.fromResult(
@@ -924,7 +881,6 @@ const render = <E, R>(
             server,
             board: input.board,
             review: input.review,
-            // Its segments are kept by the keys it is stamped with.
             reuse: Reuse.Keyed({ beats: keys.beats, fresh: input.fresh }),
           }),
         );
@@ -1005,17 +961,11 @@ const lab = <E>(
     {},
     Effect.fn('film.lab')(
       function* () {
-        // The workspace's exports read before the lab starts: a merge that changes one while it
-        // starts, or while it runs, ends the lab, and it starts again.
         const exportsRead = yield* Effect.transposeOption(
           Option.map(yield* workspaceRoot('.'), exportsNow),
         );
-        // The lab's whole API, for every film: what tweaks it and what reviews it.
         const roots = (yield* Review).roots.map((root) => `${root.label}=${root.path}`);
         const known = yield* (yield* FilmFolder).names;
-        // The server lives in the command's scope: Ctrl-C stops it. It listens on loopback and,
-        // with FILM_LAB_PHONE_URL, on the owner's phone address too, behind the same gate.
-        // The lab is also an MCP server for agents at `/mcp` (`lab-mcp.ts`).
         const links = yield* startLab(yield* app.at, yield* labPhone, Layer.empty, 'mcp');
         const phone = Option.fromUndefinedOr(links.phone);
         yield* Console.log(links.local);
@@ -1024,8 +974,6 @@ const lab = <E>(
           `lab.ready link=${links.local} phone=${Option.getOrElse(phone, () => 'none')} films=${known.join(',')} roots=${roots.join(',')}`,
         );
         yield* Effect.log(`lab.mcp url=${links.local}mcp`);
-        // Every spoken beat's staging take kept ready for the Script reader when
-        // FILM_STAGING_FILL=true, beside the lab: a fill that dies leaves the lab up.
         if (yield* stagingFill) yield* fillBeside((yield* ScriptVoices).fill);
         else yield* Effect.log('staging.fill off');
         return yield* Option.match(exportsRead, {
@@ -1036,9 +984,6 @@ const lab = <E>(
       (lab) =>
         relaunchOnExportsChange(
           lab,
-          // The pages, built from the app's entries and watched while the lab runs,
-          // and the easel's warm pages over them, in this process's Chrome; the
-          // `critique` tool's critic, asking a fresh Claude per place.
           Layer.mergeAll(
             Layer.unwrap(
               Effect.map(filmsOut, (out) =>
@@ -1138,9 +1083,6 @@ export const runFilmCli = <E>({
   critique: critiquing,
   house,
 }: FilmApp<E>): void => {
-  // The film's services, the lab's included (`film-services.ts`), over the app's folders,
-  // reading a film fresh through this CLI, with the real ElevenLabs and the private store
-  // the app's sound library declares.
   const Services = filmServices({
     films,
     sounds,
@@ -1201,11 +1143,7 @@ export const runFilmCli = <E>({
       judge(films, judging.rules),
     ]),
   );
-  // Logs go to stderr, so stdout carries only what a command prints: the lines
-  // `cues`, `check` and `lab events --follow` hand to a reader or a Monitor.
   const Logs = Layer.succeed(Logger.LogToStderr, true);
-  // A bare `--accept-mismatch` stays bare: the parser would take the next word as its beats.
-  // A take heard as something else is printed with the flags that re-record or keep it.
   Stdio.Stdio.use(({ args }) =>
     Effect.flatMap(args, (given) =>
       Command.runWith(root, { version: '0.1.0' })(bareAcceptMismatch(given)).pipe(
@@ -1214,10 +1152,6 @@ export const runFilmCli = <E>({
     ),
   ).pipe(
     Effect.provide(Services),
-    // runMain would report a failure after these layers are gone, through the
-    // default logger, onto stdout; it is reported here instead, under `Logs`.
-    // It sits outside `Services`, so a service layer that fails to build (the
-    // media stack's native binary that fails to load) is reported too.
     Effect.tapCause(reportFailure),
     Effect.provide(Logs),
     BunRuntime.runMain({ disableErrorReporting: true }),

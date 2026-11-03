@@ -1,12 +1,3 @@
-// A scene's `light` multiplies its page and all on it: none leaves the page
-// as it is, an even light is one colour over the whole frame, a pool keeps
-// its colour over the middle and reaches its edge at the corners, and a light
-// read per frame comes up by its amount. A fixed light and the vignette go on
-// in one multiply, their product; a light read per frame takes its own.
-// Drawn through `createFilm` into a stand-in context, which records the sheet
-// each light is multiplied in with (inside the product, for a fixed one) and
-// the gradient the sheet was filled with; bun has no canvas.
-
 import { describe, expect, test } from 'bun:test';
 import { type Frame, type Light, SHEETS_KEPT, type SceneSpec, createFilm } from './film.ts';
 import { type Drawn, type StandInGradient, recorder, withDom } from './fixtures/stand-in.ts';
@@ -15,7 +6,6 @@ const W = 320;
 const H = 180;
 const DUR = 10;
 
-/** The rising light: one object, its amount rewritten each frame. */
 /** A light whose amount a scene rewrites each frame. */
 interface Rising extends Light {
   amount: number;
@@ -97,10 +87,8 @@ describe('a scene is lit by its light', () => {
       [1, '#000000'],
     ]);
     const [x0, y0, inner, x1, y1, outer] = g.circles;
-    // Both circles about the frame's middle, the colour held inside the inner one.
     expect([x0, y0, x1, y1]).toEqual([W / 2, H / 2, W / 2, H / 2]);
     expect(inner).toBeGreaterThan(0);
-    // The edge colour lands exactly on the corners.
     expect(outer).toBeCloseTo(Math.hypot(W / 2, H / 2));
   });
 
@@ -113,7 +101,6 @@ describe('a scene is lit by its light', () => {
     expect(multiplies('even', 0.5)).toHaveLength(1);
     expect(multiplies('pool', 0.5)).toHaveLength(1);
     expect(multiplies('rising', 0.5)).toHaveLength(2);
-    // Unlit, the vignette alone.
     expect(multiplies('unlit', 0.5)).toHaveLength(1);
   });
 
@@ -147,7 +134,6 @@ describe('a scene is lit by its light', () => {
       for (let i = 0; i < 40; i++) many.render(r.ctx, (i / 40) * DUR);
       return r.images.filter(isLight).map((d) => d.image);
     });
-    // Each frame made its own sheet; only the last few are held for reuse.
     expect(new Set(made).size).toBe(40);
     const first = withDom(() => {
       const r = recorder(W, H);

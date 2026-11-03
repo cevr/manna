@@ -1,9 +1,3 @@
-// A face's acting, host side: an expression is the face kit's numbers
-// (`FACE`, `rig/parts.ts`) without the gaze, and a beat moves the face from the
-// one it wears toward the next by the beat's cue. Every figure built on the
-// kit acts with the same numbers, so one expression reads the same on every
-// face. Pure.
-
 import { lerp } from '../core/time.ts';
 import { type FaceKnob, smooth } from './rig/parts.ts';
 

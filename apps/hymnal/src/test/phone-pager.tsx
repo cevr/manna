@@ -100,7 +100,6 @@ const app = () => {
   scrolls.sideways.splice(0);
   const { device, layer } = fakeDevice();
   const player = playerOn(layer, Duration.millis(1));
-  // One value for the app's life, as the app's own provider gives it, so a draw again of the route keeps it.
   const provided = Option.some(player);
   const registry = AtomRegistry.make();
   const host = document.createElement('div');
@@ -243,7 +242,6 @@ const until = (shown: App, holds: (state: { readonly _tag: string }) => boolean)
 
 const out: Record<string, unknown> = {};
 
-// From the home list: a row's press hands its list over, the pager opens at 3.
 {
   const shown = app();
   await shown.show(
@@ -267,7 +265,6 @@ const out: Record<string, unknown> = {};
   shown.close();
 }
 
-// From a search's results: the pager moves through them alone.
 {
   const shown = app();
   const found = [3, 30, 300].map((n) => Option.getOrThrow(hymnAt(String(n))));
@@ -314,9 +311,6 @@ const starPlaces = (host: HTMLElement) =>
       };
     });
 
-// The home list with the reader's lists: Recent above the first topic, and
-// each favourite starred in its rows, Recent's and its topic's; a row's
-// press in Recent hands the pager every hymn, as any home row does.
 {
   const shown = app();
   const of = (numbers: ReadonlyArray<number>) =>
@@ -355,8 +349,6 @@ const starPlaces = (host: HTMLElement) =>
   shown.close();
 }
 
-// The Recent screen: every hymn Recent keeps, the latest first, each
-// favourite starred; a row's press hands the pager the whole of Recent.
 {
   const shown = app();
   const kept = [30, 4, 3, 7, 8, 9, 10, 9999];
@@ -375,7 +367,6 @@ const starPlaces = (host: HTMLElement) =>
   shown.close();
 }
 
-// The Recent screen with nothing opened yet: it says so.
 {
   const shown = app();
   await shown.show(h(Recent), (host) => (host.textContent ?? '').length > 0);
@@ -383,7 +374,6 @@ const starPlaces = (host: HTMLElement) =>
   shown.close();
 }
 
-// The home list with no hymn in Recent: no shelf at all.
 {
   const shown = app();
   await shown.show(
@@ -400,7 +390,6 @@ const starPlaces = (host: HTMLElement) =>
   shown.close();
 }
 
-// A deep link to 600: every hymn, opened at 600.
 {
   const shown = app();
   await route(shown, 600);
@@ -410,7 +399,6 @@ const starPlaces = (host: HTMLElement) =>
   shown.close();
 }
 
-// Hymn 3 sounding, the pager settles on 4: the player is left alone.
 {
   const shown = app();
   await route(shown, 3);
@@ -441,13 +429,11 @@ const starPlaces = (host: HTMLElement) =>
   shown.close();
 }
 
-// One settle on 4: the pages drawn before it are not drawn again, only a page it brings in.
 {
   const shown = app();
   await route(shown, 3);
   await tick();
   const mounted = seen(shown).pages;
-  // The counter sees the pages' first draws, so a draw again would be counted too.
   const first = [...pageDraws].map(([number, draws]) => ({ number, draws }));
   pageDraws.clear();
   await settle(shown, 3);
@@ -461,8 +447,6 @@ const starPlaces = (host: HTMLElement) =>
   shown.close();
 }
 
-// The dials open over hymn 3's page (a first tap turns chords on, the second opens them), then a
-// swipe on the page: the backdrop over the pager takes it, so the dials close and the page stays.
 {
   const shown = app();
   await route(shown, 3);

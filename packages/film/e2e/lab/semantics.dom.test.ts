@@ -1,11 +1,3 @@
-// The lab's controls as assistive tech and the keyboard meet them, over the
-// studio film with the lab API faked: whatever the keyboard focuses (a
-// control, a link, a scroll box, a dialog, a receipt) shows the studio's
-// ring on every page and in every portal, never the browser's; and every
-// floating root (a dialog, a menu, a sheet, a receipt) shows it over its own
-// shadow, exactly, on every page that opens it, inside its edge when its box
-// fills the view.
-
 import { Effect, type Scope } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { pageHref } from '../../src/core/api.ts';
@@ -51,12 +43,10 @@ describe("the kit's focus ring", () => {
     () =>
       Effect.gen(function* () {
         const { page, errors } = yield* anAsk();
-        // The ask's Send (a kit button) and the header's Go to….
         for (const control of ['.ak-send [data-act="send"]', '.sh-header [data-act="search"]']) {
           yield* page.focus(control);
           yield* evaluates(page, FOCUS_SHOWN, 'ring');
         }
-        // The ⌘K sheet is portalled to the body, outside every page's scope: its query field too.
         yield* page.press('Control+k');
         yield* waitFor(page, '.lab-command-query:focus');
         yield* evaluates(page, FOCUS_SHOWN, 'ring');
@@ -316,8 +306,6 @@ const everyRoot = (walked: Walked) =>
 describe('every floating root shows the ring over its own shadow, exactly, on every page that opens it', () => {
   for (const walked of WALKED) alone(`on ${walked.name}`, everyRoot(walked), REGISTRY);
 
-  // A root a page opens that its row does not name fails it: name it, so the list stays the
-  // roots the pages open.
   it.effect('the roots walked are the ones the design language names', () =>
     Effect.sync(() =>
       expect([...new Set(WALKED.flatMap((w) => w.roots))].toSorted()).toEqual(ROOTS),

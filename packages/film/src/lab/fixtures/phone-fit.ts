@@ -1,27 +1,3 @@
-// Whether a page fits a phone (the design language's Mobile-first): it
-// never scrolls sideways, each of its controls (the touch-target check's
-// `TARGETS`, one list) shows inside the window's width, and its chrome (the bars that stay while the page
-// scrolls: a sticky header, a dock) holds at most a quarter of
-// the window's height. One script, so every page is asked the same way.
-//
-// A control counts where it shows: its box clipped by each ancestor that
-// clips (a strip that scrolls sideways shows a part of its row; what it
-// scrolled away is reached by scrolling it, not cut off), and nothing when
-// that leaves nothing, except that a control which a box that only clips
-// (hidden, clip) leaves nothing of is "cut off": no scrolling reaches it. The chrome is measured where it holds most: at the
-// page's top, its middle and its end, each the union of the rows its fixed
-// and stuck (sticky, with an edge set, to the window rather than to a box
-// that scrolls on its own, and held at that edge there: a section's sticky
-// head further down scrolls with the page until it reaches it) elements
-// cover in the window, each cut by the
-// window; a see-through frame (over the whole window, taking no pointer) is
-// what it holds, down through the frames in it (a sheet's overlay holds its
-// scroll container, which holds its stage, which holds its panel: a sheet
-// lowered to its peek counts as the peek that shows). A layer the page
-// has open (a scene's sheet, as an inspector is), with the frame that holds
-// it in the window, is no chrome: it is shut to go back to the page. Its
-// width and its controls are measured as the page's are.
-
 import { WAIT_MS, jsonOf } from './tab.ts';
 import type { Tab } from './tab.ts';
 import { CONTROL_WORDS, TARGETS } from './touch-targets.ts';

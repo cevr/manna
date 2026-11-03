@@ -1,16 +1,3 @@
-// The render catalogue on disk: `catalogue.json` in a film's project folder
-// (`out/<film>`, git-ignored), beside the renders it names. The renderer's
-// caller records each render there; the review and the options page list
-// renders from it; approvals and comments are written to it, and approvals
-// withdrawn from it. The domain (what a render is, when it is current, what
-// an approval means, `said`: the one change a say makes) is
-// `core/catalogue.ts`.
-//
-// The catalogue is a `ContentStore` manifest: each update reads the file,
-// applies a pure change and writes it back whole, one writer at a time across
-// processes (the review, a `film project` child per request, a terminal's
-// `project render`), so every approval, comment and render record lands.
-
 import { Context, Effect, Layer, Option, Path, Result, Schema } from 'effect';
 import type { Scope } from '../core/address.ts';
 import type { PlatformError } from 'effect/PlatformError';
@@ -128,7 +115,6 @@ export class RenderCatalogue extends Context.Service<RenderCatalogue, CatalogueS
         store
           .transact(manifestOf(project), (catalogue) => Effect.fromResult(change(catalogue)))
           .pipe(
-            // The store's own refusal by its schema: `change`'s refusals pass as they are.
             Effect.catchIf(Schema.is(FileInvalid), (error) => Effect.fail(invalid(error))),
             Effect.withSpan('RenderCatalogue.update'),
           );

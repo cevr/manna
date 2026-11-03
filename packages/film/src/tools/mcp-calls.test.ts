@@ -1,6 +1,3 @@
-// An MCP tool call's one log line: its tool, its ids, how it ended, never
-// its words.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Exit, Logger } from 'effect';
 import { logged } from './mcp-calls.ts';

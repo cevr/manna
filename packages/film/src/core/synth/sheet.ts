@@ -1,27 +1,3 @@
-// A sound's sheet: one picture an agent reads in place of listening (`sfx
-// render --sheet`), and the picture of the clips the owner hears in an ask
-// (`sfx ab`). Three panels share one clock, left to right over the sound:
-//
-// - the spectrogram (400 rows): each column the Hann frame of 2048 samples,
-//   on a 256-sample hop, whose middle lies nearest the column's (silence
-//   outside the sound, so a click at its very start shows as brightly as
-//   one in its middle; a sound longer than the columns' hops skips the
-//   frames between), each row a slice of 30 Hz
-//   to 16 kHz on a log scale coloured by its loudest bin, from -90 dB
-//   (black) to 0 dB (a full-scale sine: pale yellow), the power averaged
-//   over the channels;
-// - the waveform (160 rows): each column's least and greatest sample over
-//   every channel, full scale at the panel's edges;
-// - the momentary loudness (72 rows): BS.1770's 400 ms blocks, each at its
-//   middle, from -70 LUFS at the bottom to 0 at the top, faint lines every
-//   20 LU.
-//
-// Lines cross all three at each second (faint) and at the marks the caller
-// names: a one-shot's onset (green) and hit (red), and where a bed begins to
-// cross into its head as the mix loops it (cyan). The picture holds no text:
-// its numbers print beside it. Pure: RGBA bytes, which tools/png.ts writes
-// as a PNG.
-
 import type { Pcm } from '../audio.ts';
 import type { Raster } from '../raster.ts';
 import { frameSpectrum } from './analyse.ts';

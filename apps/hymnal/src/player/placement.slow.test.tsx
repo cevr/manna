@@ -152,7 +152,6 @@ test('placement serializes every global, override and hymn combination and rejec
 for (const changed of ['inherit', 'beat', 'simpler', 'file'] as const)
   test(`a ${changed} override changes only its hymn across seeded assignments and restart`, () => {
     const values = ['inherit', 'beat', 'simpler', 'file'] as const;
-    // A fixed, non-uniform assignment exposes aliased keys (including n % 100).
     const expected = Array.from(
       { length: 695 },
       (_, i) => values[((i + 1) * 17 + Math.floor(i / 7) + 41) % 4] ?? 'inherit',
@@ -306,7 +305,6 @@ test('placement updates real reader anchors in every player state without playba
     for (const state of states) {
       act(() => page.registry.set(page.state, state));
       const before = page.trace();
-      // Player states cross modes; styles cross modes once below.
       const styles: Array<'simple' | 'advanced'> = ['advanced'];
       if (state._tag === 'Idle') styles.unshift('simple');
       for (const style of styles) {
@@ -314,7 +312,6 @@ test('placement updates real reader anchors in every player state without playba
         for (const mode of placements.map((p) => p.value)) {
           page.choose(mode);
           expect(page.anchors().length).toBeGreaterThan(0);
-          // Numeric IDs and chord names only: a failure cannot print hymn words.
           expect(page.anchors()).toEqual(page.expected(mode));
           expect(page.host.querySelectorAll('[data-testid^="held-"]').length).toBe(0);
           expect(page.registry.get(page.state) === state).toBe(true);
@@ -348,7 +345,6 @@ test('Use global clears a hymn override, follows later defaults, and retires a f
     old.onDeactivate?.({ x: -52, velocityX: 2000, canceled: false });
   });
   act(() => page.get('[aria-label="Use global chord placement"]').click());
-  // This is the retired recognizer, as a late worklet/RN detent would be.
   act(() => old.onUpdate?.({ x: -104, translationX: 104 }));
   act(() => owed(2));
   expect(page.registry.get(page.reader.placementFor(388))).toBe('inherit');

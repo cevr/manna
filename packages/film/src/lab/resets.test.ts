@@ -1,10 +1,3 @@
-// A bare button's reset weighs nothing: a rule that gives every button of a
-// part the page's font (`font: inherit`) by its type is written in
-// `:where(…)`, so any rule of the part's own sets over it, whatever its
-// weight. A reset that weighs (0,1,1) outranks a chip's one class and sets
-// a mark's chip that seeks in the page's face, not the code's
-// (`docs/lessons.md`, `code-chip-font-under-button-reset`).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';

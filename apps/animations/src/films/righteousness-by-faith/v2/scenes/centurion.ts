@@ -1,14 +1,3 @@
-// The centurion. A warm cardboard street at midday: the soldier (grey, with a
-// Roman crest and cape) before Jesus, who offers to go to the house. Close on
-// the soldier's face, one hand up: stop, just speak the word. The camera
-// pulls out over the town: a gold word of light leaves Jesus and flies over
-// the rooftops like a paper plane to a house far off, where the servant in
-// bed sits up. Close on the servant's face, well. Then a cut back to the
-// soldier, holding out an open hand, and the word settles into it while the
-// definition of faith is read, held in one shot until `gift`. On `gift` the
-// frame pulls back from the gold word, now the word-bubble icon, to the three
-// icons in a row, and on "faith" the word-bubble lights: the first gift.
-
 import {
   type Camera,
   type Frame,
@@ -78,13 +67,10 @@ const knobs = {
   faceZoom: 2.5,
   town: [130, 590],
   townZoom: 0.62,
-  // The word in his hand: the shot opens at `handShotWide` and settles in to
-  // `handShotZoom`, then keeps pushing in by `pushOn` while it holds.
   handShot: [800, 680],
   handShotWide: 2.05,
   handShotZoom: 2.3,
   pushOn: 1.12,
-  // Where faith's disc opens on the word in his hand, in frame px, and its size there.
   iconFrom: [1410, 790],
   iconFromZoom: 1.6,
 } as const;
@@ -152,31 +138,21 @@ const timeline = {
   offer: { mark: 'offer', dur: 0.7 },
   push: { mark: 'only', offset: -0.2, dur: 0.9 },
   stop: { mark: 'only', offset: 0.25, dur: 0.6, ease: 'outCubic' },
-  // Out over the town as he says "come", and the word leaves with it.
   pullOut: { mark: 'only', word: 'come', dur: 1.1 },
   fly: { with: 'pullOut', offset: 0.07, dur: 1.7, ease: 'inOutSine' },
-  // Landed by the bed, the word's light fades.
   landed: { after: 'fly', dur: 1.5, ease: 'linear' },
   sit: { mark: 'healed', dur: 0.8, ease: 'outBack' },
-  // As the servant starts to sit up, the colour comes back to the face.
   colour: { with: 'sit', offset: 0.056, dur: 0 },
   toWindow: { mark: 'room', offset: -0.4, dur: 1.1 },
   handShot: { mark: 'room', word: 'room', dur: 1.2, ease: 'outCubic' },
   open: { mark: 'def', dur: 0.6 },
   settle: { mark: 'faith', offset: -0.8, dur: 1.5, ease: 'outCubic' },
-  // The word's fall into the palm, beside its glide across: down fast, then
-  // resting, so its path arcs over into the hand.
   drop: { with: 'settle', until: { cue: 'settle' }, ease: 'outExpo' },
   hold: { mark: 'faith', offset: 0.7, until: 'gift', ease: 'linear' },
-  // Faith's disc opens on the word in his hand and pulls back to the row's
-  // place; the robe and the heart pop in beside it as it settles, so no disc
-  // slides in cut by the frame.
   toIcons: { mark: 'gift', offset: -0.1, dur: 0.3 },
   pullBack: { with: 'toIcons', dur: 0.9, ease: 'inOutSine' },
   robeIn: { with: 'pullBack', offset: 0.45, dur: 0.4, ease: 'outBack' },
   heartIn: { with: 'pullBack', offset: 0.6, dur: 0.4, ease: 'outBack' },
-  // The word-bubble lights on "faith", a word with no mark of its own.
-  // Faith pops forward in gold on its word, the other two faded back.
   faithLit: { mark: 'gift', word: 'faith', dur: 0.6, ease: 'outBack' },
 } as const;
 
@@ -196,7 +172,6 @@ export const centurion = drawing({
     const toIcons = f.at('toIcons');
     if (toIcons < 1) street(f, hand);
 
-    // Pull back from the gold word to the three icons; faith's lights.
     if (toIcons > 0) {
       const pull = f.at('pullBack');
       const [fx, fy] = f.knob('iconFrom');
@@ -259,8 +234,6 @@ const street = (f: CenturionFrame, hand: Hands) => {
   const stop = f.at('stop') * (1 - f.at('pullOut'));
   const open = f.at('open');
   const offer = f.at('offer') * (1 - f.at('push'));
-  // His hands: out in worry, then up to stop; after the cut to his hand, held
-  // open for the word. Jesus's hand out as he offers to go.
   WORRIED.reach = worry;
   STOPPING.reach = stop;
   OPEN_FOR_WORD.reach = open;
@@ -273,7 +246,6 @@ const street = (f: CenturionFrame, hand: Hands) => {
     h,
     [
       {
-        // The far roofs of the town.
         z: 1.8,
         draw: () =>
           FAR.forEach((b, i) =>
@@ -293,7 +265,6 @@ const street = (f: CenturionFrame, hand: Hands) => {
           ),
       },
       {
-        // The street's houses, their windows lit or dark.
         z: 1.3,
         draw: () =>
           NEAR.forEach((b, i) => {
@@ -329,18 +300,15 @@ const street = (f: CenturionFrame, hand: Hands) => {
         z: 1,
         lift: 1.3,
         draw: () => {
-          // Read on this plane, where the two of them are drawn, so the lab's handles land on them.
           const SOLDIER = f.knob('soldier');
           const JESUS = f.knob('jesus');
           const flyPath = arc([JESUS[0] - 40, 600], [ROOM.x - 120, ROOM.y - 30], 520);
-          // The street.
           piece(ctx, rectShape(-2600, 950, 5400, 600), C.board, hand('street'), {
             role: 'scenery',
             line: 0,
             torn: 4,
           });
 
-          // The servant's house, open to show the room.
           piece(ctx, rectShape(HOUSE_X - 330, 520, 660, 440), C.boardLight, hand('house'), {
             role: 'scenery',
             kind: 'cut',
@@ -382,7 +350,6 @@ const street = (f: CenturionFrame, hand: Hands) => {
                 {
                   skin: f.at('colour') > 0 ? C.figure : C.figureShade,
                   body: C.figure,
-                  // In bed: the blanket and the bed carry the shadows.
                   ground: 0,
                   look: [lerp(-1, 3, sit), lerp(2, -3, sit)],
                   browL: 3 * sit,
@@ -403,7 +370,6 @@ const street = (f: CenturionFrame, hand: Hands) => {
           });
           ctx.restore();
 
-          // The soldier, his cape behind him; his shadow lies under the cape too.
           ground(ctx, SOLDIER[0], SOLDIER[1] + 4, 200);
           at(ctx, { x: SOLDIER[0], y: SOLDIER[1], scale: S }, () => {
             piece(
@@ -442,7 +408,6 @@ const street = (f: CenturionFrame, hand: Hands) => {
             });
           });
 
-          // Jesus, offering to go.
           glow(ctx, JESUS[0], JESUS[1] - 250, 320, C.glow, 0.7);
           at(ctx, { x: JESUS[0] - 20 * offer, y: JESUS[1], scale: S }, () =>
             christ(
@@ -457,7 +422,6 @@ const street = (f: CenturionFrame, hand: Hands) => {
             ),
           );
 
-          // The word, over the roofs to the bed.
           const fly = f.at('fly');
           if (fly < 1) flight(ctx, flyPath, fly, hand('word'), 1.1);
           else if (!inHand)
@@ -465,10 +429,8 @@ const street = (f: CenturionFrame, hand: Hands) => {
               wordLight(ctx, hand('word'), 0.3, 1 - f.at('landed')),
             );
 
-          // In the soldier's open hand, the word settles.
           const settle = f.at('settle');
           if (inHand && settle > 0) {
-            // On the open mitten, just above its middle.
             const [px, py] = handOf(HOLDING_WORD, 'near', hand('soldier'));
             const palm: Pt = [SOLDIER[0] + px * S, SOLDIER[1] + (py - ON_PALM) * S];
             at(

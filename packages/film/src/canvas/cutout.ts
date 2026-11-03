@@ -1,7 +1,3 @@
-// Cut paper. A cutout is a coloured sheet with a torn edge, a rim of the white
-// paper core showing where it tore, pastel grain on its face, and a soft
-// shadow where it lifts off the sheet beneath.
-
 import { type Vec2, vec2 } from 'math';
 import { type Boil, type Hand, type Path, type Pt, boilPhase, resample } from './ink.ts';
 import { offscreen, patternOf } from './paper.ts';
@@ -59,7 +55,6 @@ const tear = (shape: Path, amount: number, rough: number, seed: number, phase: n
   const pts = resample(closed, 3);
   const n = pts.length;
   if (n < 3) return pts;
-  // Winding decides which normal points out.
   let area = 0;
   for (let i = 0; i < n - 1; i++) {
     const a = pts[i] ?? [0, 0];
@@ -79,7 +74,6 @@ const tear = (shape: Path, amount: number, rough: number, seed: number, phase: n
     vec2.normalize(normal, normal);
     const nx = normal[0] * out;
     const ny = normal[1] * out;
-    // Torn fibre: coarse wander + fine tooth, and a whisper of boil.
     const d =
       amount +
       rough * (0.65 * noise1(s * 0.035, seed) + 0.35 * (hash2(i, seed) * 2 - 1)) +
@@ -293,7 +287,6 @@ export const cutout = (
   ctx.save();
   ctx.globalAlpha *= style.alpha ?? 1;
 
-  // Rim (the white core where the sheet tore), carrying the shadow.
   const lift = style.shadow ?? 0.5;
   const under = rim > 0 ? tear(shape, rim, torn * 1.3, hand.seed + 17, phase) : face;
   if (lift > 0) {
@@ -313,7 +306,6 @@ export const cutout = (
     ctx.fill();
   }
 
-  // Face, with its pastel grain.
   const grain = style.grain ?? 0.6;
   if (!blendedFace(ctx, face, style, grain, hand)) layeredFace(ctx, face, style, grain, hand);
   const probe = probeOf(ctx);

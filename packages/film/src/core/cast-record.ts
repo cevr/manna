@@ -1,22 +1,3 @@
-// A cast member's sheet record (`cast-sheet.json`): what its sheets are
-// painted from and every try made of them. The author writes the member's
-// pronoun, its scope (the library's, for a person every film shares, or one
-// film's own role), the reference images and what each is for, and per kind
-// the anchor view and, for poses and heads, the layout and each view's slot;
-// the look paragraph is `look.md` beside it. `film concept cast` adds each
-// try as it lands: its file, the prompt and references it was drawn from,
-// whether the underlay rode along, and what the measure flagged. It holds no
-// height: a sheet never sets a member's height (the cast band does). It
-// holds the member's proportion, how many of its own heads the grown member
-// stands (the cast's canon, 3.36, unless its design names its own: the plain
-// lead's 2.6), and, on a sheet that draws a smaller figure beside the grown
-// one (a child, a baby), that figure's share of the grown height as the
-// band gives it and its own heads; the brief, the underlay and the measure
-// read each figure's size from there. It says too whether the member's hair
-// shows, so a brief speaks of the hair only on a member whose hair is seen,
-// and whether it has a beard, so a brief tells of a beard only on one who has it.
-// Pure.
-
 import { Array as Arr, Boolean as Bool, Option, Predicate, Result, Schema } from 'effect';
 import {
   keptFile,

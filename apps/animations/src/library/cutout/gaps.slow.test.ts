@@ -1,11 +1,3 @@
-// Every cast member's named gaps (`<member>/cutout/cut.ts` `GAPS`, through
-// `cutTable`) against his kept sheets: each gap's point lies in a piece of
-// paper the view's ink encloses, read on the kept crop as a framed view's
-// figure is, and that piece's box is the box the gap names. A gap whose piece
-// moves or vanishes (the sheet redrawn, the frame moved, the paper reading
-// changed) fails here, where its view would otherwise hold the ground its
-// kept sheet shows open.
-
 import { enclosedPaperOf } from '@manna/film/core';
 import { Glob } from 'bun';
 import { Effect, Option, Record as Records } from 'effect';
@@ -59,7 +51,6 @@ const gapsOf = (file: string) =>
     return yield* Effect.forEach(views, ([view, gaps]) =>
       Effect.gen(function* () {
         const frame = cut.FRAMES[view];
-        // a bust's figure is read on its padded view closed by an ink row, not on its kept crop
         expect({ file, view, sheet: frame?.sheet }).not.toEqual({ file, view, sheet: 'heads' });
         const kept = yield* Option.match(Option.fromUndefinedOr(frame), {
           onNone: () => Effect.die(`${file}: ${view} names gaps and has no frame`),
@@ -84,7 +75,6 @@ describe('every named gap', () => {
       const read = (yield* Effect.forEach(MEMBERS, gapsOf)).flat(2);
       for (const { opened, box, ...gap } of read)
         expect({ ...gap, opened }).toEqual({ ...gap, opened: [box] });
-      // the 13 gaps the kept sheets show, found at 1:1 over every enclosed paper piece
       expect(read.length).toBe(13);
     }),
   );

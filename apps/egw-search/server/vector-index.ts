@@ -113,8 +113,6 @@ export const lateVectorIndex = <R>(
       return Context.make(
         SearchService,
         SearchService.of({
-          // `Ref.get` is synchronous, so a host that runs a search with
-          // `Effect.runSync` still can.
           query: (input) =>
             Effect.flatMap(Ref.get(state), (current) => current.search.query(input)),
         }),

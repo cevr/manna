@@ -190,9 +190,7 @@ const activeStep = (session: Session, active: boolean): Step => {
       return stopInto(next, Phase.Away(), 'away');
     return stay(next);
   }
-  // Back in the foreground under a covering route: the read waits for the screen's return.
   if (session.covered) return stay(next);
-  // Back in the foreground: the permission may have changed in Settings meanwhile, even under a read in flight.
   const back = !session.active && Phase.$is('Checking')(phase);
   if (back || Phase.$is('Away')(phase) || Phase.$is('Denied')(phase)) return recheck(next);
   return stay(next);
@@ -207,7 +205,6 @@ const coveredStep = (session: Session, covered: boolean): Step => {
       return stopInto(next, Phase.Away(), 'covered');
     return stay(next);
   }
-  // Shown again: the permission is read again, as on the app's return (it may have changed in Settings).
   const waiting = Phase.$is('Away')(phase) || Phase.$is('Denied')(phase);
   if (session.covered && session.active && waiting) return recheck(next);
   return stay(next);
@@ -226,7 +223,6 @@ const soundingStep = (session: Session, sounding: boolean): Step => {
 const startedStep = (session: Session, attempt: number): Step => {
   if (attempt === session.attempt && Phase.$is('Starting')(session.phase))
     return stay({ ...session, phase: Phase.Listening() });
-  // An older start resolved: the ear is idempotent, so a newer start holds it now; else give it back.
   if (holdsMicrophone(session.phase)) return stay(session);
   return giveBack(session);
 };
@@ -235,7 +231,6 @@ const startedStep = (session: Session, attempt: number): Step => {
 export const step = (session: Session, event: Event): Step => {
   const { phase } = session;
   if (Phase.$is('Closed')(phase)) {
-    // A start that resolves after the close is given back at once.
     if (Event.$is('Started')(event)) return giveBack(session);
     return stay(session);
   }
@@ -267,8 +262,6 @@ export const step = (session: Session, event: Event): Step => {
     Closed: () => stopInto(session, Phase.Closed(), 'closed'),
   });
 };
-
-// The display.
 
 /** Each string's name as the sheet shows it. */
 export const STRING_NAMES: Readonly<Record<StringId, string>> = {
@@ -411,8 +404,6 @@ export const stringLabel = (string: StringId, tuned: boolean): string => {
   if (tuned) return `${STRING_NAMES[string]} string, tuned`;
   return `${STRING_NAMES[string]} string`;
 };
-
-// The dev feed.
 
 /** The feed's sample rate. */
 export const FEED_RATE = 44_100;

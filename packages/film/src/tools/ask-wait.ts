@@ -1,17 +1,3 @@
-// `film ask wait`'s latch: an agent's background command that ends when the
-// owner has answered, so the agent hears it as the command's exit instead of
-// the owner saying "answered" in chat. It reads the lab's event stream
-// (`lab-stream.ts`, the one `film lab events --follow` prints). The asks are
-// the record: each read of them says whether the latch holds; the stream only
-// says when to read them again (a change to the ask, or any ask answered, a
-// `reset`, or a new session). The cursor is taken before the first read, so
-// an answer between the two is never missed, and it is the stream's, not a
-// session's: a lab that stops answering is asked again with backoff, and the
-// new session reads the asks again (a lab restarted saw what it missed as
-// its baseline, not as a change) and the feed on from the cursor.
-// What it held on (the ask, or every ask on the page) is printed a line
-// each (`askLines`).
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -67,7 +53,6 @@ export const ASK_WAIT_PACE: StreamPace = STREAM_PACE;
 const moves = (latch: AskLatch, change: HeardChange): boolean =>
   AskLatch.$match(latch, {
     One: ({ ask }) => change.ask === ask,
-    // An ask that joins the page moves it as much as one answered on it.
     Page: () => Predicate.isNotUndefined(change.ask),
     Any: () => change.kind === 'ask.answered',
   });

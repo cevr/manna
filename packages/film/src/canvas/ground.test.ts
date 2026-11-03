@@ -1,8 +1,3 @@
-// A contact shadow is a flat warm ellipse under the feet: it lands where it
-// is put, lies flat, stays within the direction's darkness, and makes its
-// gradient once per context rather than every frame. Drawn into the
-// stand-in, which records each fill's gradient and its transform.
-
 import { describe, expect, test } from 'bun:test';
 import { type Style, isRadial, recorder } from './fixtures/stand-in.ts';
 import { GROUND_ALPHA, GROUND_FLAT, ground } from './ground.ts';

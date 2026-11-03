@@ -14,12 +14,6 @@ import {
   Sink,
   Stream,
 } from 'effect';
-// The storyboard's tools: the board store keeps its record and images and
-// knows a missing or changed one; a run draws each planned panel twice with
-// the style's reference (and the beat's first panel as the second), records
-// every try as it lands and skips what is drawn; a beat boarded by hand keeps
-// its own panels; a tweak adds to a panel's history from its note; the image
-// route never sends `--model` and refuses a prompt naming anything private.
 
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -133,8 +127,6 @@ describe('a run of the board', () => {
           ['cold.righteous', [1, 2]],
           ['title.start', [1, 2]],
         ]);
-        // The beat's second panel (its tries the run's third and fourth calls) carries its first panel's shown try
-        // as the second reference.
         const second = calls[2];
         expect(second?.refs).toEqual([
           '/films/f/board/style.9005.png',
@@ -142,7 +134,6 @@ describe('a run of the board', () => {
         ]);
         expect(board.panels[1]?.tries[0]?.refs).toEqual(['style.9005.png', 'cold.room.1.png']);
         expect(lines.filter((l) => l._tag === 'Made')).toHaveLength(6);
-        // A second run draws nothing: every planned panel has its tries.
         yield* makeBoard(
           film,
           beats,
@@ -591,7 +582,6 @@ describe('two runs at once', () => {
     const files = new Map<string, Uint8Array>();
     return Effect.gen(function* () {
       yield* styled;
-      // Each draw waits until both have started, so both runs read the panel before either records a try.
       const both = yield* Deferred.make<void>();
       const started = yield* Ref.make(0);
       const route = ImageRoute.of({

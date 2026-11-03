@@ -116,7 +116,6 @@ const cutStartsOf = (timeline: Timeline, kept: ReadonlyArray<boolean>) => {
     if (kept[index] === true) at += line.until - line.start;
   }
   const end = at;
-  // A skipped line sits at the next kept line's start: walk back from the end.
   let next = end;
   for (let index = timeline.lines.length - 1; index >= 0; index--) {
     if (kept[index] === true) next = starts[index] ?? next;

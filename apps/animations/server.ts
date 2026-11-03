@@ -1,9 +1,3 @@
-// The app's render page (`index.html`), with each film's recorded narration
-// and its Board (what `film render --board` draws), on loopback for as long
-// as `render` or `check` runs (the film CLI's PreviewServer, cli.ts, at
-// `/?film=<name>&export`), and the pages the lab builds (`LAB_PAGES`). The
-// lab's own server is the framework's (`labServer`): `bun run lab`.
-
 import {
   CACHE,
   type FootageRoot,

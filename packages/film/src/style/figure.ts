@@ -1,24 +1,3 @@
-// A figure, composed: its parts (`parts/`), each a typed value its
-// constructor checked, put together and checked again as one (`figure`), so
-// a part spread with a field its kind lacks, or a paper copied with a grey
-// shade, is refused as the module that composes it loads, and so are parts
-// the house cannot draw together (hair, a headcloth or a beard on a round
-// head, a pivot outside its garment, cloth laid over the skin under a given
-// robe). Only a figure `figure` returned is one a film's figures file lays
-// (`isComposed`), and it is frozen through: a copy of it with a part changed
-// was never checked, and a change made in it throws, so a change is composed
-// from the figure's spec again. A figure stands on its feet, its origin, or
-// sits, its origin its body's middle at its head's height, the part of it
-// above what hides its feet drawn; an arm that reaches past its garment is
-// in its sleeve, cut in one outline with the garment, and turns about a
-// point inside it nearer the sleeve than the garment's edge, so the sleeve's
-// root stays under its paper however it swings, its hand past its sleeve's
-// end and touching it. Its view model's numbers are
-// its parts', in one order, never listed by hand (`knobsOf`). How it is
-// drawn is the house's (`rig/draw.ts`). A figure the owner locked carries
-// its lock, checked here, and its film holds its print to it (`lock.ts`).
-// Pure.
-
 import { Predicate, Schema } from 'effect';
 import { ConceptRef } from '../core/match.ts';
 import { decoder } from './decode.ts';
@@ -498,7 +477,6 @@ const composedOf = (spec: FigureSpec, concept: ConceptRef): ComposedParts => {
     hands,
   };
   if (parts.states.robe !== undefined) skinUnderRobe(parts);
-  // A figure that writes no path leaves the key out, so its parts are as they were.
   return spec.path === undefined ? parts : { ...parts, path: spec.path };
 };
 

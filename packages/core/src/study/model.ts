@@ -14,10 +14,6 @@ import { Schema, SchemaGetter } from 'effect';
 
 import { BookNumber, ChapterNumber, VerseNumber, VerseReference } from '../bible/model.js';
 
-// ---------------------------------------------------------------------------
-// Strong's
-// ---------------------------------------------------------------------------
-
 /** A Strong's number as `bible.db` stores it: `H` or `G` followed by digits,
  *  with no leading zero.
  *
@@ -117,10 +113,6 @@ export class StrongsStudy extends Schema.Class<StrongsStudy>('Study/StrongsStudy
    *  re-deriving the default. */
   limit: StudyLimit,
 }) {}
-
-// ---------------------------------------------------------------------------
-// The verse bundle (§8.1)
-// ---------------------------------------------------------------------------
 
 /** One word of the verse, with the Strong's numbers behind it.
  *

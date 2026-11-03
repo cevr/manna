@@ -1,9 +1,3 @@
-// The app the lab-page tests serve (`lab-page*.test.ts`): its pages as one
-// lab process serves them (`served`), over an app in a temp folder
-// (`appFolderWith`, `app`) where the box's watch is the question (a save, a
-// rename, a folder made), or over films in memory (`filmsInMemory`) where
-// only what a film's pages hear of a mix is, their watches told by the test.
-
 import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
@@ -60,7 +54,6 @@ export const appFolderWith = (own: Readonly<Record<string, string>>) =>
       'lib/shared.ts': "export const shared = 'shared one';\n",
       'src/render.ts': "console.log('the render page');\n",
       'src/notes.json': '{}',
-      // The ask page's server entry: the same shared source, and one only the server reads.
       'src/ask.server.tsx':
         "import { shared } from '../lib/shared.ts';\nimport { only } from '../lib/server-only.ts';\nexport const rendered = () => `${shared} ${only}`;\n",
       'lib/server-only.ts': "export const only = 'server one';\n",
@@ -203,7 +196,6 @@ export const filmsInMemory = Effect.gen(function* () {
     Effect.map(FileSystem.FileSystem, (fs) =>
       FileSystem.FileSystem.of({
         ...fs,
-        // Subscribed before it counts as running, so a save told once it runs is heard.
         watch: (dir) =>
           Stream.unwrap(
             Effect.gen(function* () {

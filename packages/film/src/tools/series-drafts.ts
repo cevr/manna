@@ -1,22 +1,3 @@
-// The app's series drafts (`series/<series>/scripts/<draft>.md`) as the lab
-// reads them beside its films: every series and its drafts, a draft's beats
-// read with the reader's codec (`core/draft.ts`), each spoken beat as a take
-// is kept against it in the staging voice (`stagingVoice`, so the fill and
-// the reader voice a draft as they voice a film), and a beat's delivery
-// marks written into the draft's Markdown.
-//
-// A mark write is the films' (`script-source.ts` through `SourceWriter`) in
-// small: the file read, its beat's line marked and not another byte changed
-// (`draftMarked`), read back (`draftMissed`), and written only over the very
-// text it was made from, under the file's store lock. Nothing formats a
-// draft (oxfmt ignores them: Markdown reads two `{*}` on a line as emphasis),
-// so a marked table cell widens its row and the columns stand as they were.
-// A draft is the owner's text, kept in git: no Undo of the lab's own is kept
-// for it.
-//
-// A name is only ever one the folder lists, so no request reaches a path the
-// series do not hold. An app with no series folder lists none.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -116,7 +97,6 @@ export class SeriesDrafts extends Context.Service<SeriesDrafts, SeriesDraftsServ
         const store = yield* ContentStore;
         const writer = yield* Semaphore.make(1);
 
-        // Only absence reads as nothing: a folder or plan the box cannot read is said, not hidden.
         const entries = (dir: string) =>
           Effect.flatMap(fs.exists(dir), (there) =>
             Bool.match(there, {
@@ -139,8 +119,6 @@ export class SeriesDrafts extends Context.Service<SeriesDrafts, SeriesDraftsServ
             (yield* entries(dir)).toSorted(),
             Effect.fn('SeriesDrafts.series')(function* (name) {
               const scripts = path.join(dir, name, SCRIPTS);
-              // A file beside the series (`README.md`, `delivery.md`) is no series.
-              // A link to nothing is no series either; a folder the box may not read is said.
               const folder = yield* fs.stat(path.join(dir, name)).pipe(
                 Effect.map((info): string => info.type),
                 Effect.catchIf(
@@ -230,7 +208,6 @@ export class SeriesDrafts extends Context.Service<SeriesDrafts, SeriesDraftsServ
                     reason: missed.join(', '),
                   });
                 if (after !== before) {
-                  // Only over the very text the edit was made from: a save in an editor since wins.
                   yield* store.modify({ file, codec: Schema.String, empty: '' }, (now) =>
                     Bool.match(now === before, {
                       onTrue: () => Result.succeed(after),

@@ -1,21 +1,3 @@
-// How the filler bases' four kept views are cut into parts (`cutParts`,
-// @manna/film's part sheet): each view a bust of two parts for a crowd, the
-// head over the rest, so that a head can turn while every pixel at rest stays
-// the sheet's. No ink line closes a chin on this sheet: the face's skin meets a
-// darker chin shadow at a sharp edge, so each head's line follows that edge,
-// and the shadow, the neck and the collar stay with the torso, which the
-// puppet's underlap carries under a turned head (`puppets.ts`). Each line
-// crosses the two jaw-to-shoulder junctions of ink at their narrowest row, and
-// on the women it runs below the grown woman's hair tie and the older woman's
-// bun, so all the hair is the head's. The lines are read in the kept view's
-// pixels; the shared cut table (`library/cutout/table.ts`) lays them in each
-// view's part sheet frame, its kept box padded (`frames.ts`), and reads each
-// bust's figure with the foot of the view closed. The bases' arms hang inside
-// the torso, so a turned head uncovers nothing a part hides: the member's
-// cutter (`sheets-cut.ts`) writes the part sheets straight from the kept sheet,
-// with no repaint. `HIDDEN` names what would lie behind each head for
-// `film concept parts`. Data.
-
 import type { HiddenEntry } from '@manna/film/tools';
 import { bustCut } from '../../../cutout/bust.ts';
 import { CUT_AWAY, KEEP_REST } from '../../../cutout/prompts.ts';

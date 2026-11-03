@@ -1,16 +1,8 @@
-// The sound graph's sample loops. Each writes or changes the first `n` frames
-// of an array its caller owns (Float32 samples; Float64 per-frame values) and
-// allocates nothing per sample. Arithmetic is IEEE's + − × ÷ and sqrt and the
-// graph's own transcendentals (math.ts), so a kernel gives the same samples on
-// every host.
-
 import { rng } from '../../random.ts';
 import { cosTurn, dbToGain, exp, exp2, sinTurn, tanh } from './math.ts';
 import type { FILTERS, PARTIAL_SETS } from './nodes.ts';
 import { triangle } from './track.ts';
 import { CONTROL, SYNTH_RATE } from './units.ts';
-
-// Sources.
 
 /** The PolyBLEP residual at phase `t` (turns) for a step of `dt` turns a frame. */
 const blep = (t: number, dt: number): number => {
@@ -155,14 +147,12 @@ interface Mode {
 
 /** The named sets of struck modes. */
 export const MODES: Readonly<Record<(typeof PARTIAL_SETS)[number], ReadonlyArray<Mode>>> = {
-  // A wine glass: nearly harmonic, long and pure.
   glass: [
     { ratio: 1, level: 1, decay: 1.3 },
     { ratio: 2, level: 0.28, decay: 0.8 },
     { ratio: 3.01, level: 0.1, decay: 0.45 },
     { ratio: 4.18, level: 0.05, decay: 0.3 },
   ],
-  // A small bell: the inharmonic partials of a struck bar.
   bell: [
     { ratio: 1, level: 1, decay: 1.1 },
     { ratio: 2, level: 0.35, decay: 0.7 },
@@ -206,8 +196,6 @@ export const strike = (
   }
 };
 
-// Shapers, each in place over the first `n` frames.
-
 /** `out` times `gain[i]`, a linear gain. */
 export const amplify = (out: Float32Array, n: number, gain: Float64Array): void => {
   for (let i = 0; i < n; i++) out[i] = (out[i] ?? 0) * (gain[i] ?? 0);
@@ -246,7 +234,6 @@ const transferred = (transfer: Transfer, x: number): number => {
     case 'hard':
       return Math.min(1, Math.max(-1, x));
     case 'fold': {
-      // A triangle of x: x itself on [−1, 1], folded back beyond.
       const y = x + 1;
       return 1 - Math.abs(y - 4 * Math.floor(y / 4) - 2);
     }
@@ -310,8 +297,6 @@ export const resample = (
     out[i] = ((c3 * f + c2) * f + c1) * f + x1;
   }
 };
-
-// The filter.
 
 type FilterType = (typeof FILTERS)[number];
 
@@ -446,8 +431,6 @@ export const biquad = (
     out[i] = y;
   }
 };
-
-// Space, each in place over the first `n` frames: the child in its head, silence after.
 
 /** The longest echo a delay takes, in frames. */
 const MOST_DELAY = 2 * SYNTH_RATE;

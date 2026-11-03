@@ -1,8 +1,3 @@
-// The lead's acting at the feast table, as bone numbers on his single-9
-// cut-out (`cold.ts` draws him): his lean all through, his idle in his joints
-// from the raise's landing, his head on the cues and the bottle arm's settle,
-// each joint inside the limits his cut-out draws clean at.
-
 import { act, blink, idle, lag } from '@manna/film/core';
 
 /** The most his bottle arm's bones turn from his single-9 view, degrees: at 25 the cuff breaks. */

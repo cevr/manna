@@ -1,12 +1,5 @@
-// The tools' own typed failures. The core errors and refusals the tools raise
-// are imported from the core where they are declared (`core/errors.ts`,
-// `core/refusals.ts`).
-
 import { Schema } from 'effect';
 import { EncoderName } from '../core/encoder.ts';
-
-// ---------------------------------------------------------------------------
-// The sound library (`sounds/`): what `sfx check` and `film check` report.
 
 /** The app has no `sounds/library.ts` where the tools look for one. */
 export class LibraryMissing extends Schema.TaggedError<LibraryMissing>()('LibraryMissing', {
@@ -645,9 +638,6 @@ export class StoreLocked extends Schema.TaggedError<StoreLocked>()('StoreLocked'
   }
 }
 
-// ---------------------------------------------------------------------------
-// Lab write-back: the scene source the lab edits.
-
 /** oxfmt failed on a file the lab wrote; the file was put back as it was. */
 export class FormatFailed extends Schema.TaggedError<FormatFailed>()('FormatFailed', {
   file: Schema.String,
@@ -693,9 +683,6 @@ export class TakeAmbiguous extends Schema.TaggedError<TakeAmbiguous>()('TakeAmbi
   }
 }
 
-// ---------------------------------------------------------------------------
-// Review: the box's renders, served where they lie.
-
 /** `film project approve` or `withdraw` with neither the scenes, an act nor `--all`. */
 export class ApprovalUnnamed extends Schema.TaggedError<ApprovalUnnamed>()('ApprovalUnnamed', {
   film: Schema.String,
@@ -725,9 +712,6 @@ export class ChaptersInvalid extends Schema.TaggedError<ChaptersInvalid>()('Chap
     return `${this.film}: no chapters (${this.reason})`;
   }
 }
-
-// ---------------------------------------------------------------------------
-// The footage library (`footage/`): what `film footage` refuses.
 
 /** An original whose picture is HDR (HLG, PQ or BT.2020): the render is SDR, and refuses a silent colour shift. */
 export class FootageHdr extends Schema.TaggedError<FootageHdr>()('FootageHdr', {
@@ -832,9 +816,6 @@ export class NotATalk extends Schema.TaggedError<NotATalk>()('NotATalk', {
     return `${this.film} is not a talk: it has no talk.ts`;
   }
 }
-
-// ---------------------------------------------------------------------------
-// A film's render cache (`out/<film>/cache`, `segment-cache.ts`).
 
 /** A prune asked for while a render of the film holds its cache. */
 export class CacheBusy extends Schema.TaggedError<CacheBusy>()('CacheBusy', {

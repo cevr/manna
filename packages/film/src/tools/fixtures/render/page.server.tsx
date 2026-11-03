@@ -1,9 +1,3 @@
-// The render fixture's server entry (`page-render.slow.test.ts`): a page that
-// names the URL it was asked at, whether the browser that asked keys as a
-// Mac, and its module's instance (drawn once per
-// import, so a fresh worker draws anew), and shows a read of the lab's API
-// once it is answered, streamed in after the shell.
-
 import { Loading } from '@solidjs/web';
 import { Boolean as Bool, Effect, Random } from 'effect';
 import { createMemo } from 'solid-js';

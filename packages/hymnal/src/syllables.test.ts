@@ -14,12 +14,10 @@ describe('Syllables.counts', () => {
     Effect.sync(() => {
       expect(Syllables.counts('Almighty,')).toEqual([3]);
       expect(Syllables.counts('Hallelujah!')).toEqual([4]);
-      // A singer runs these vowels together.
       expect(Syllables.counts('fire')).toEqual([2, 1]);
       expect(Syllables.counts('our')).toEqual([2, 1]);
       expect(Syllables.counts('glorious')).toEqual([3, 2]);
       expect(Syllables.counts('every')).toEqual([3, 2]);
-      // "us(2)" in the dictionary is U.S.: a variant with more syllables is never sung.
       expect(Syllables.counts('us')).toEqual([1]);
       expect(Syllables.counts('blessed')).toEqual([1, 2]);
       expect(Syllables.counts('—')).toEqual([]);
@@ -81,8 +79,6 @@ describe('Syllables.split', () => {
         'sus-tain',
         'mas-ter',
       ]);
-      // An R-coloured o opens inside a word; -est on a stem that is only a name is no ending;
-      // a plural -es keeps the cluster before it.
       expect(cuts('adoration victory harvest courses changes')).toEqual([
         'ad-o-ra-tion',
         'vic-to-ry',
@@ -123,7 +119,6 @@ describe('Syllables.stresses', () => {
         [false],
         [true],
       ]);
-      // Sung shorter than the dictionary has it: unknown.
       expect(Syllables.stresses('glorious', 2)).toBeUndefined();
     }),
   );

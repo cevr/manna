@@ -1,31 +1,3 @@
-// The farmer of James 5:7, who waits for the early and the latter rain: one
-// cast member, composed of the house's parts (`figure`), drawn whole from
-// rain.rain's kept try (try 2, `farmer-traced.ts`): his head turned
-// three-quarters to his left and tipped up to the rain, a round face, full
-// cheeks, his eyes set wide and his nose turned toward screen right, a round
-// beard; an off-white headcloth bound with a brown band, its flap over his
-// near shoulder; a tan tunic under a brown vest, his shoulders turned with
-// his head; his arms in the tunic's sleeves to the wrist, a circle hand at
-// the end of each: the near one down his side on the tunic, the far one his
-// own paper behind the tunic's, cut in one outline with it, that the host
-// swings from his side up to the rain (`FARMER_ARM`). His face's marks are
-// the face kit's, set and tipped where the panel draws them. The panel cuts
-// him at his knees; below it his tunic runs straight on to its hem and his
-// feet stand under it. How each part is cut, lit and drawn is the house's
-// (`drawFigure`): his face lies over his beard, and each paper of his head
-// tucks under those laid over it.
-//
-// Units are the cast's canon, the panel's pixels times 0.555 (`PANEL`): he
-// stands 450 tall from his headcloth to his soles, 3.4 times his head's
-// height (133), 0.96 of Christ's height, inside the cast's height band. His
-// feet are the artboard's origin.
-//
-// The host poses him by his view model, every frame: the face kit's numbers
-// (`FACE`); `lean`, radians about his feet; `tilt`, radians, his head about
-// his neck; `nod`, units, his head down toward his chest; `farArm`, radians,
-// his far arm about its pivot from the raised pose it is traced in. The rig
-// keeps its `breath` and the paper's `boil`.
-
 import {
   Arm,
   Beard,
@@ -209,11 +181,7 @@ const FAR_ARM = Arm({
  * across (rain.rain draws them 66 px across, his face 165).
  */
 export const farmer = figure({
-  // Room round him for his lean and his outline; his feet are the rig's origin.
   art: { width: 360, height: 520, feet: [160, 495] },
-  // `film match`'s concept: the farmer in rain.rain, the kept Board try his head is traced from, its
-  // ink closed under his beard and where his headcloth meets his mantle (the Board draws none there,
-  // so the face's fill ran into his body); cut at his chest, as the Board cuts him at his waist.
   concept: {
     image: { set: 'rbf-v3-cast-2026-10-18', file: 'aids/farmer-head-closed.png' },
     box: [190, 280, 720, 760],

@@ -1,10 +1,3 @@
-// The look pass: every scene drawn small at 2 fps in a pool of headless pages
-// (the player's `look` handle), then every frame across each hand's travel
-// (the hands pass), and measured by the pure functions in `look.ts`.
-// `film check` warns from it (`HeldShare`, `FaceSmall`, `ColourScript`,
-// `HandJump`, `HandFar`, `HandHidden`); `film lookbook` prints it. The pages
-// are a pool of `Pages`, in the look's scope, as in a render.
-
 import { Array as Arr, Context, Effect, Layer, type Option } from 'effect';
 import type { Scope } from '../core/address.ts';
 import type { PageOpenError } from './browser.ts';
@@ -63,7 +56,6 @@ export class Looker extends Context.Service<Looker, LookerService>()('@manna/fil
         return yield* Effect.scoped(
           Effect.gen(function* () {
             const size = Math.max(1, workers);
-            // The look handle draws without captions whatever the page's switch says.
             const pool = yield* pages.open(film.paths.name, {
               workers: size,
               captions: true,
@@ -96,9 +88,6 @@ export class Looker extends Context.Service<Looker, LookerService>()('@manna/fil
             const samples = lookSamples(placed, info.fps, info.frames);
             const drawn = yield* drawAll(samples, THUMB_W, THUMB_H);
             yield* Effect.log(`look.done film=${film.paths.name} frames=${samples.length}`);
-            // Hands: every frame across each hand's travel or change of work
-            // between two samples, so a hand that jumps is seen between the
-            // frames it jumps in.
             const coarse = handsOf(samples, drawn);
             const spans = handSpans(coarse, info.fps);
             const fine = handsOf(spans, yield* drawAll(spans, HANDS_THUMB, HANDS_THUMB));

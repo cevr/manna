@@ -60,10 +60,6 @@ describe('immutableFileUri', () => {
   it.effect('encodes the delimiters that would otherwise truncate the path', () =>
     Effect.sync(() => {
       const uri = immutableFileUri('/tmp/weird?dir#1/topics.db');
-      // The delimiters are gone from the path half; `?immutable=1` is the only
-      // query string. Under `encodeURI` this read
-      // `file:/tmp/weird?dir#1/topics.db?immutable=1`, whose path was
-      // `/tmp/weird`.
       expect(uri).toBe('file:/tmp/weird%3Fdir%231/topics.db?immutable=1');
       expect(uri.indexOf('?')).toBe(uri.lastIndexOf('?'));
       expect(uri).not.toContain('#');
@@ -90,11 +86,6 @@ describe('immutableFileUri', () => {
         database.close();
       });
 
-      // The strong form of the assertion: a real read-only, no-create open
-      // through the real driver. With `encodeURI` the URI's path was the
-      // truncated `…/weird`, `create: false` refused to conjure it, and the
-      // open died — the artifact was on disk and unreadable for no reason but
-      // its parent directory's name.
       const values = yield* readMarkerValues(file);
 
       expect(values).toEqual(['present']);

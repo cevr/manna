@@ -8,14 +8,6 @@ import { type Hymn, PER_BEAT, type Syllable, sung, type Timing } from './hymn.js
 import * as Midi from './midi.js';
 import * as Placement from './placement.js';
 
-/**
- * The compiler's placement rule, R1 (owner, 2026-10-24): a guitar change
- * moves to the next strong beat (a bar's first beat, and the third in a bar
- * of four), never onto or past the next change and never out of its line.
- * Held here over lines drawn from a fixed seed, and over every sung line of
- * the compiled set.
- */
-
 /** A fixed-seed source of numbers in [0, 1) (mulberry32), so each run draws the same lines. */
 const seeded = (seed: number) => {
   let state = seed >>> 0;
@@ -293,7 +285,6 @@ const loaded = Effect.gen(function* () {
       Effect.gen(function* () {
         const bytes = yield* fs.readFile(`${MIDI}${pad(hymn.number)}.mid`);
         const meters = [{ tick: 0, ...hymn.meter }];
-        // Only a file with more than one time signature is read whole: the hymn keeps its first.
         if (signatures(bytes) > 1) {
           const midi = yield* Midi.parse(bytes);
           const units = (tick: number) => (tick * PER_BEAT) / midi.ticksPerBeat;
@@ -382,7 +373,6 @@ const walked = ({ hymn }: Loaded): Walked[] => {
   if (timing === undefined) return [];
   const all = sung(hymn);
   const stored = storedAt(hymn, all, timing);
-  // The last chord sung so far, and the last in the line's laying (a stanza and the refrain after it).
   let held: Chord.Chord | undefined;
   let laid: Chord.Chord | undefined;
   return all.flatMap((line, i): Walked[] => {
@@ -474,15 +464,11 @@ describe('R1 over the compiled set', () => {
       Effect.gen(function* () {
         const hymns = yield* loaded;
         const unconfirmed = hymns.filter((h) => !h.confirmed).map((h) => h.hymn.number);
-        // Each a file whose bars or meter the printed page does not have: tick 0 not the printed
-        // downbeat (474), 6/4 bars in a 4/4 file (51, 259), and the rest the review's probe found.
         for (const n of [
           51, 127, 128, 245, 255, 259, 363, 396, 474, 489, 492, 540, 542, 547, 551, 634,
         ])
           expect(unconfirmed).toContain(n);
-        // 373's file and page agree: its refrain is struck as the owner strikes it.
         expect(unconfirmed).not.toContain(373);
-        // R1 still strikes the chords of nearly every hymn: 102 of 695 are left as their files play.
         expect(unconfirmed.length).toBeLessThan(120);
       }).pipe(Effect.provide(BunServices.layer)),
   );
@@ -538,10 +524,8 @@ describe('R1 over the compiled set', () => {
         const hymns = yield* loaded;
         const lines = hymns.flatMap((h) => walked(h).map((w) => ({ w, h })));
         const changes = lines.reduce((sum, { w }) => sum + w.line.changes.length, 0);
-        // A hymn whose melody does not confirm its file's bars keeps the file's placement.
         const found = lines.flatMap(({ w, h }) => (h.confirmed ? storedBreaches(w, h.grid) : []));
         expect(found.length, found.slice(0, 12).join('\n')).toBe(0);
-        // Nearly every one of the 13,318 sung lines is walked: none is left out unseen.
         expect(lines.length).toBeGreaterThan(13_000);
         expect(changes).toBeGreaterThan(70_000);
       }).pipe(Effect.provide(BunServices.layer)),

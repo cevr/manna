@@ -170,8 +170,6 @@ const sortBySlug = (sources: readonly TopicSource[]): readonly TopicSource[] =>
 const sourceDigest = (sources: readonly TopicSource[]): Effect.Effect<string> =>
   Effect.sync(() => {
     const hasher = new Bun.CryptoHasher('sha256');
-    // Sorted by slug so the digest is a property of the content set, not of
-    // the order the filesystem happened to hand the files over.
     for (const source of sortBySlug(sources)) {
       const fields = digestFields(source);
       hashScalar(hasher, 'slug', fields.slug);
@@ -233,8 +231,6 @@ const sourceAliases = (source: TopicSource): readonly CompiledAlias[] => {
   const aliases: CompiledAlias[] = [];
   for (const entry of entries) {
     const alias = normalizeAlias(entry.display);
-    // A topic repeating its own title in `aliases:` is harmless duplication
-    // within one page, not the cross-topic collision §3.4 rejects.
     if (alias.length === 0 || seen.has(alias)) continue;
     seen.add(alias);
     aliases.push({ alias, display: entry.display, slug, canonical: entry.canonical });
@@ -262,9 +258,6 @@ const compileAuthoredEdges = Effect.fn('TopicsCompiler.authoredEdges')(function*
   for (const source of ordered) {
     const from = source.frontmatter.slug;
     for (const [position, related] of (source.frontmatter.related ?? []).entries()) {
-      // A `related:` entry pointing at a draft or a typo would silently produce
-      // a dead edge; the artifact's FK would not catch it because `to_slug` is
-      // deliberately unconstrained (it may name a catalog page later).
       if (!slugs.has(related)) {
         return yield* UnknownRelatedSlugError.make({ slug: from, related });
       }
@@ -291,8 +284,6 @@ const sourceBacklinks = (
     if (target === from) continue;
     if (!targetAliases.some((alias) => containsPhrase(haystack, alias))) continue;
     const key = edgeKey({ from, to: target, kind: 'backlink' });
-    // An authored edge already says the same thing; the artifact should not
-    // carry both and the PK would reject the pair anyway.
     if (edgeKeys.has(edgeKey({ from, to: target, kind: 'authored' })) || edgeKeys.has(key)) {
       continue;
     }
@@ -337,8 +328,6 @@ const catalogKeyFor = Effect.fn('TopicsCompiler.catalogKey')(function* (
   if (ids.length > 1) {
     return yield* OverlayAmbiguityError.make({ slug, name, catalogIds: ids });
   }
-  // No match is fine and common — the page simply renders without the
-  // catalog-sourced key-verses section. Only ambiguity is an error.
   return Option.map(Option.fromNullishOr(ids[0]), (catalogId): CompiledCatalogKey => ({
     slug,
     catalogId,
@@ -367,10 +356,6 @@ const citationFailure = Effect.fn('TopicsCompiler.citationFailure')(function* (
   citation: CitationInline,
   paragraphs: ParagraphLookup,
 ) {
-  // A quote with no letter or digit — blank, or only punctuation — matches
-  // any paragraph carrying that same punctuation, so verification would
-  // "pass" without the source having said anything. Reject it before the
-  // lookup rather than let it through as a citation that asserts nothing.
   const quote = normalizeQuote(citation.text);
   if (!quotesText(quote)) return Option.some('citation quotes no text');
   const found = yield* paragraphs.paragraphsFor(citation.refcode);
@@ -388,8 +373,6 @@ const verifySourceCitations = Effect.fn('TopicsCompiler.verifySourceCitations')(
   body: ParsedBody,
   paragraphs: ParagraphLookup,
 ) {
-  // A citation the parser could not build at all — `{{REFCODE|}}` — never
-  // becomes a node, so it would otherwise leave no trace in the artifact.
   for (const malformed of body.blankCitations) {
     return yield* CitationUnverifiedError.make({
       slug,

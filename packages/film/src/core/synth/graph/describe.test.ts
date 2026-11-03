@@ -1,6 +1,3 @@
-// A code sound's one line, as a list and a review read it: each node by its
-// kind and its fields, its child in brackets, its children in square ones.
-
 import { describe, expect, test } from 'bun:test';
 import { describeGraph } from './describe.ts';
 import type { Node } from './nodes.ts';

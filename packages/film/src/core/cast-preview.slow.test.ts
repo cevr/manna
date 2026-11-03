@@ -1,8 +1,3 @@
-// A cast sheet try normalised as the trace will make it: every standing view
-// drawn one head height a head and the canon tall, however tall the painting
-// drew it, so a taller view comes out the canon's height; on a heads sheet
-// each view is only drawn at one head height, its body as painted.
-
 import { describe, expect, test } from 'bun:test';
 import { Result, Struct } from 'effect';
 import { sheetPreview } from './cast-preview.ts';
@@ -44,7 +39,6 @@ describe('a heads sheet', () => {
 });
 
 describe('a pose sheet whose smaller figure stands its own heads', () => {
-  // The grown one about 2.66 of its heads, the child about 2.2 of its own, at 0.75 of the grown height.
   const own = drawSheet([
     drawFigure({ ...base, robeDepth: 220 }),
     scaleRaster(drawFigure({ ...base, robeDepth: 154 }), (0.75 * 386) / 320),
@@ -58,7 +52,6 @@ describe('a pose sheet whose smaller figure stands its own heads', () => {
     figures: [{ view: 2, height: 0.75, heads: 2.2 }],
   };
   const read = Result.getOrThrow(measureSheet(own, options));
-  // The child's head left unread, as the measure leaves one that reads over half its figure.
   const unread = {
     ...read,
     views: read.views.map((v) => (v.view === 2 && Struct.omit(v, ['head'])) || v),

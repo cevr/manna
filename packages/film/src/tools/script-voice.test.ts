@@ -1,8 +1,3 @@
-// The Script reader's staging takes with fakes: unvoiced until the fill
-// runs, voiced once it does (the reader's film first), refused past the
-// day's cap or when it misread its line; a series draft voiced as a film
-// is. No network, no media files.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, Exit, Fiber, Layer, Logger, Option, Path } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -66,7 +61,6 @@ const voices = (
   const folder = Layer.succeed(
     FilmFolder,
     FilmFolder.of({
-      // The fill writes nothing of a film's: its paths are never read.
       paths: () => testFilm([], { voice: '', scenes: {} }).paths,
       names,
       sounds: Option.none(),
@@ -149,7 +143,6 @@ describe('ScriptVoices', () => {
     () => {
       const heard = new Map([['By faith.', 'Buy fate.']]);
       const files = new Map<string, Uint8Array>();
-      // Two labs over one staging cache: the owner's, and one started after it (a restart).
       const first = voices(1000, heard, new Map(), files);
       const second = voices(1000, heard, new Map(), files);
       /** A lab's fill run until nothing of the film is voicing, and the film's voice then. */
@@ -158,7 +151,6 @@ describe('ScriptVoices', () => {
           yield* Effect.forkScoped((yield* ScriptVoices).fill);
           yield* Effect.yieldNow;
           const voice = yield* settledVoice;
-          // A reader asking again the same day queues nothing more.
           yield* (yield* ScriptVoices).voice(film);
           yield* Effect.yieldNow;
           return voice;
@@ -168,12 +160,9 @@ describe('ScriptVoices', () => {
         expect(tags(voice)).toEqual(['Ready', 'Refused']);
         const refused = voice.beats[1]?.take;
         expect(refused?._tag === 'Refused' && refused.reason).toContain('heard "Buy fate."');
-        // Each beat read once: the misread is not read again that day.
         expect(first.calls.dialogue).toHaveLength(2);
-        // Nor by a lab started later that day: the take's own record says when it was made.
         expect(tags(yield* filled(second.layer))).toEqual(['Ready', 'Refused']);
         expect(second.calls.dialogue).toHaveLength(0);
-        // The next day it is read again, once, and reads its line.
         heard.clear();
         yield* TestClock.adjust('1 day');
         expect(tags(yield* filled(second.layer))).toEqual(['Ready', 'Ready']);
@@ -219,7 +208,6 @@ describe('ScriptVoices', () => {
       expect(lines.filter((line) => line.startsWith('staging.fill.died'))).toEqual([
         'staging.fill.died cause="Error: the films folder went away"',
       ]);
-      // A reader asking now queues nothing: its beats stay unvoiced until the lab restarts.
       const asked = yield* (yield* ScriptVoices).voice(film);
       yield* Effect.yieldNow;
       expect(tags(asked)).toEqual(['Unvoiced', 'Unvoiced']);
@@ -254,13 +242,11 @@ describe('ScriptVoices', () => {
       expect(tags(before)).toEqual(['Unvoiced']);
       yield* Effect.forkScoped(service.fill);
       yield* Effect.yieldNow;
-      // Read until its take is kept: the sweep comes to drafts after the films.
       const voice = yield* service.draft('talks', '01-grace').pipe(
         Effect.repeat({ until: (v) => tags(v).every((t) => t === 'Ready' || t === 'Refused') }),
         Effect.tap(() => Effect.yieldNow),
       );
       expect(tags(voice)).toEqual(['Ready']);
-      // The film's two beats and the draft's one, each asked for once.
       expect(calls.dialogue).toHaveLength(3);
       const unknown = yield* Effect.flip(service.draft('talks', '../../etc'));
       expect(unknown._tag).toBe('DraftUnknown');

@@ -1,30 +1,3 @@
-// A press followed to its end: every drag on the pages (the player's track,
-// the strip's scrub and its cue bars, a knob's handle, the wipe's divider, a
-// note's mark) goes through `Pointer`. The press itself is the element's
-// own `pointerdown`; from it the drag captures the pointer on that element,
-// hears its moves, and ends once: lifted (`pointerup`), or taken by the
-// browser (`pointercancel`, as a phone's page pan sends), let go
-// (`lostpointercapture`), or left (the window's `blur`, the tab hidden), so a
-// drag the browser ends never keeps scrubbing or holds the page's reload.
-// The page it listens on is the adapter's (`pointerOn`): the window live
-// (`pointer-browser.ts`), a test's own `EventTarget` in a test. It is the one
-// place a press is captured and its end heard (`film/host-events-through-adapter`).
-//
-// One press per surface (`press`): a surface (the strip, a note surface, the
-// editor's grips, a wipe's divider) follows one press at a time. A press on
-// it while it holds one (a second finger) is not the surface's: its work
-// never runs, and the first press goes on to its own end.
-//
-// One owner per press (`claimPress`, @manna/ui): a finger's press may be a
-// long press (a context menu's) until it moves past `LONG_PRESS_MOVE_THRESHOLD`,
-// the number the long press gives way at. Only then does the drag claim the
-// press and start, and a long press can no longer open; a press the long
-// press claimed first (its menu is open) never starts a drag, and its lift
-// ends this one as the browser ends one (`end(none)`): ownership governs
-// the completion as it does the moves, so nothing acts on that release. A
-// press no one claimed (a plain tap) is lifted as before. A mouse's drag
-// starts at its first move: a mouse has no long press.
-
 import { LONG_PRESS_MOVE_THRESHOLD, claimPress, liftHeldByOther } from '@manna/ui/press';
 import { Context, Effect, Layer, Option, Result } from 'effect';
 
@@ -81,7 +54,6 @@ const pointerOn = (page: EventTarget): PointerOps => {
     Effect.callback<void>((resume) => {
       const id = down.pointerId;
       const held = Option.filter(Option.fromNullishOr(down.currentTarget), captures);
-      // A pointer the browser no longer has (lifted already) cannot be captured: the drag still listens.
       Option.map(held, (el) =>
         // oxlint-disable-next-line film/host-events-through-adapter -- Pointer's own: the press it follows
         Result.try(() => el.setPointerCapture(id)),
@@ -99,7 +71,6 @@ const pointerOn = (page: EventTarget): PointerOps => {
         steps.end(lifted);
         resume(Effect.void);
       };
-      // A finger's drag starts once it has moved past the long press's threshold and holds the press.
       const self = Symbol('drag');
       let started = down.pointerType !== 'touch';
       const past = (e: PointerEvent) =>
@@ -113,8 +84,6 @@ const pointerOn = (page: EventTarget): PointerOps => {
         }),
         options,
       );
-      // A lift completes the drag only when no one else held the press (an open menu's is
-      // the menu's): then it ends as one the browser took, and nothing is made of it.
       // oxlint-disable-next-line film/host-events-through-adapter -- Pointer's own: the press's lift
       page.addEventListener(
         'pointerup',
@@ -133,11 +102,7 @@ const pointerOn = (page: EventTarget): PointerOps => {
         its(() => ended(Option.none())),
         options,
       );
-      // The page left mid-press (the window's focus gone, the tab hidden): a release
-      // outside it may never be heard, so the press ends as one the browser took. Only
-      // a visible page is pressed, so any visibility change mid-press is its hiding.
       for (const left of ['blur', 'visibilitychange'])
-        // Pointer's own: the page the press is on left.
         page.addEventListener(left, () => ended(Option.none()), options);
       return Effect.sync(() => listening.abort());
     });

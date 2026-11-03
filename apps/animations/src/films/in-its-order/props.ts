@@ -1,12 +1,3 @@
-// In Its Order's props, plain canvas pieces the film's figures hold or stand
-// beside (not rigs): the baby's bottle, the wooden plate, the low table and
-// the stool. Each is drawn about a point in the units of the figure it goes
-// with (the cast's canon, its origin the figure's feet), in the colours the
-// kept sheets paint them, its paper creased at the house's light (`creaseOf`)
-// with its far side turned toward the light's complement, and one ink line
-// round it. The cast render lays them where the kept sheets draw them
-// (`rigs/cast.ts`). Pure until drawn.
-
 import { unprobed } from '@manna/film/canvas';
 import { clamp } from '@manna/film/core';
 import { boxOf, creaseOf } from '@manna/film/style';
@@ -23,7 +14,6 @@ const SOFT = 0.06;
 /** A paper's lit colour and its shade, toward the light's complement, as the kept sheets paint them. */
 const PAPER = {
   milk: { lit: '#fde9c8', shade: '#e6d0c4' },
-  // The sheet's orange teat, its lit side and its shaded right (poses-1, rows 326-346).
   teat: { lit: '#fab85e', shade: '#e5943b' },
   wood: { lit: '#8a5233', shade: '#5f4535' },
 } as const;
@@ -59,7 +49,6 @@ const inked = (
   ctx.lineWidth = LINE;
   ctx.lineJoin = 'round';
   ctx.strokeStyle = palette.outline;
-  // The ink round a prop is its own edge, not a mark film check reads against text.
   unprobed(ctx, () => ctx.stroke());
 };
 
@@ -83,7 +72,6 @@ export const bottle =
     const collar = y - h - 7 * size;
     roundRect(ctx, x - 0.36 * w, collar, 0.72 * w, 8 * size, 3 * size);
     inked(ctx, PAPER.milk, [x - 0.36 * w, collar], [x + 0.36 * w, y - h + size]);
-    // The teat: its foot flared on the collar, its neck, its round tip.
     const [foot, neck] = [TEAT.foot * size, TEAT.neck * size];
     const rise = collar - TEAT.rise * size;
     ctx.beginPath();

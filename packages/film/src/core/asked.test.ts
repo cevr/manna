@@ -1,6 +1,3 @@
-// Answers in the order they were asked: one landing after a newer ask's
-// answer is dropped, and an ask knows when something was asked after it.
-
 import { describe, expect, test } from 'bun:test';
 import { newestAsked } from './asked.ts';
 

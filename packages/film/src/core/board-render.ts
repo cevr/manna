@@ -1,14 +1,3 @@
-// What a Board render shows at a film second (`film render --board`): the
-// animatic's shot there (`shotsOf`, the one rule for when a panel shows),
-// dissolved into the next across its cut, each picture panel moving slowly
-// over its hold, and the line a review copy burns in (a Board's `burnIn`, a
-// scenes render's `scenesBurnIn`). A picture panel's
-// motion is a pure function of its id, so the same panel moves the same way
-// on every render; a card (a text panel, a beat with no panel) holds still.
-// Its times are whole ticks of the Board's clock (`BoardClock`), so a frame
-// moved by whole frames with its shots works out the same numbers.
-// Pure:the page paints what this decides (`canvas/board.ts`, `boardFilm`).
-
 import { Array as Arr, Boolean as Bool, Data, Option, Order, Predicate } from 'effect';
 import { type BoardFile, shownTry } from './board.ts';
 import { RenderVariantName } from './catalogue.ts';

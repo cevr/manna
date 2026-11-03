@@ -1,6 +1,3 @@
-// A choice point read off the wire: its ref and its kind both come from its
-// id, so a `kind` that disagrees with the id never reaches a verb or a card.
-
 import { describe, expect, test } from 'bun:test';
 import { Result, Schema } from 'effect';
 import { ChoicePoint } from './choice.ts';

@@ -1,75 +1,3 @@
-// The docs name what the code has: each doc that teaches the film framework
-// (its README, the `film` skill and the loop's) is read against the source,
-// so a route, a rule, a script, a path, a flag or a finding renamed or removed
-// in the code fails here instead of waiting for a sweep to read it. Read:
-//
-// - the route tables in packages/film/README.md: each row is a route the lab's
-//   API declares (`routesOf`), and each declared route has a
-//   row. A cell may list more than one: `GET /api/films/<film>/script`, `/board`
-//   (a sibling of the path before), `GET /api/films/<film>/board`; `GET …/stale`
-//   (below it);
-// - each route in running text, here and in NORTH_STAR.md and the app's
-//   README: a `GET /api/…` span is a declared route, and a bare API path
-//   (`/api/review/frame`, or an old `/review/…` or `/lab/<film>/…`) is the
-//   path of one, or a prefix of some (`/api/films/<film>/studio/*`); and each
-//   route or bare API path a comment cites in the film package's code, its
-//   browser tests and the app's;
-// - each `film/<rule>` named: registered in the `film` lint plugin, and each
-//   registered rule turned on in .oxlintrc.json; a `film/<entry>` of the
-//   package or its src (`film/lint`, `film/lab`) is a directory, no rule;
-// - each `bun run <script>`, its options before the name: a script of the
-//   root, this package, or the app whose scripts run the film commands (its
-//   package.json, never its films), or of the package `--cwd` names; a run
-//   of a file (`cli.ts`) or of an installed binary (`vite`) names no script;
-// - a doc is read as GitHub shows it, through Bun's CommonMark and GFM parser
-//   (`Bun.markdown`): its prose (paragraphs, headings, list items, quotes,
-//   table rows) apart from its code blocks, wherever a block sits;
-// - each path written in backticks (a code span of the prose, or in a code
-//   block: a template an agent pastes names real paths too), in these docs
-//   and in NORTH_STAR.md, PRIOR_ARTS.md, CLAUDE.md, the design language, the packages' and
-//   apps' READMEs and the verify skills, from the repo root or from the doc's own package
-//   (`lab/page-shell.tsx`, `src/…`), exists, and each symbol written after it
-//   (`tools/review.ts` `Review.read`) is declared in its code, as the parser
-//   reads it (`Review` bound by a declaration, a function's local among
-//   them, and `read` a member or a key within that declaration's span; a
-//   type's member, a key handed to a call and a call declare nothing); an
-//   anchor names a symbol, never a `path:line`, so a moved line keeps it and
-//   a renamed symbol fails it (a receipt `at <commit>` or a path `deleted`
-//   names the tree as it was); in a doc whose every path is under its bases,
-//   a first directory under none of them is a mistyped path; and each file a
-//   markdown link or image names (`[CRAFT](../CRAFT.md)`, a reference's
-//   target; not code in a span or a block that looks like one) is there
-//   beside the doc. A symbol written with no path (`Name.member`) names no
-//   file, and is read as a bare name (below);
-// - in these docs (the README, the `film` skill and the loop's), each name
-//   written alone in a code span of the prose (`loadRigs`, `KNOBS`,
-//   `Effect.runPromise`, `drawRig()`) is a name the repo's code or config
-//   writes, as the parser reads it: an identifier, a module path, a string
-//   that is one name, a config's key; never a comment, a sentence in a
-//   string or a test's title, which a rename leaves behind. Only a part
-//   shaped as code is read (camelCase, a PascalCase compound, one led by an
-//   acronym, UPPER_SNAKE, all caps of five letters or more), never a
-//   lowercase or capitalised word, a short acronym or a file's name. A name
-//   of another tool the code never writes is a link to its source
-//   (`` [`waitUntil`](https://motioncanvas.io/api/core/flow) ``); a name
-//   followed by `at <commit>` is a receipt; a name to come is not code yet,
-//   so no span;
-// - the design language's §3 block is the player's tokens.css (the mocks'
-//   lengths are read in a browser: e2e/design-language/mocks.dom.test.ts);
-// - each `--flag` given to a film command written as a command, is declared
-//   by a `Flag` in src/tools (`--no-x` by its `x`): `bun run render <film>
-//   --stills …` anywhere; `film check --static` in a code span, in a line of
-//   prose that starts with the bin (after a `$`; a list's or a quote's mark
-//   is the parser's) up to its first span and holding no `;`, or in a code
-//   block's line, each of its commands (split at `&&`, `||`, `;`, `|`) that
-//   starts with the bin;
-// - on a line that runs `check` (`bun run check …  # warns …`, or one that
-//   names the run in a span), each finding named is a tagged error in src,
-//   or, named in a span mid-line, a name the code (.ts and .tsx) has as
-//   nothing else: declares, imports, or reads off a module.
-//
-// What a sentence claims about the code stays with the sweep's reading.
-
 import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import * as BunPath from '@effect/platform-bun/BunPath';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -199,7 +127,6 @@ const spanDrift = (markdown: Markdown, code: Code) => {
       const path = declaredPath(group(parts, 2));
       if (!API_PATH.test(path)) return [];
       if (method === '') {
-        // A prefix (`/api/`, `/api/films/<film>/studio/*`) names the routes under it.
         const prefix = path.replace(/\*$/, '');
         if (
           paths.has(path) ||
@@ -234,15 +161,26 @@ const pageDrift = (markdown: Markdown) =>
   });
 
 /**
- * Each rule a doc names, in the form the plugin registers (`film/no-read-once`,
- * a name of lowercase words joined by hyphens): a `film/<entry>` of the film
- * package or its src (`film/lint`, `film/lab`) names a directory, not a rule.
+ * Each rule a text names, in the form the plugin registers: a code span of
+ * `film/` and lowercase words joined by hyphens (`film/no-read-once`), by its
+ * name (`no-read-once`). `ruleDrift` checks these, and a whole doc's path check
+ * leaves them to it (`findAnchors`), so the two read the same names.
  */
-const ruleDrift = (markdown: Markdown, code: Code) =>
-  matches(proseOf(markdown), /`film\/([a-z]+(?:-[a-z]+)*)`/g)
-    .map(firstGroup)
+const rulesIn = (text: string): ReadonlyArray<string> =>
+  matches(text, /`film\/([a-z]+(?:-[a-z]+)*)`/g).map(firstGroup);
+
+/**
+ * Each rule a text names (`rulesIn`) that the plugin does not register: a
+ * `film/<entry>` of the film package or its src (`film/lint`, `film/lab`)
+ * names a directory, not a rule.
+ */
+const ruleDrift = (text: string, code: Code) =>
+  rulesIn(text)
     .filter((rule) => !code.registered.has(rule) && !code.entries.has(rule))
     .map((rule) => `rule film/${rule} is not registered`);
+
+/** A doc's every line, its prose and its code blocks' alike: what a whole doc's anchors are read from. */
+const linesOf = (markdown: Markdown) => markdown.lines.map((line) => line.text).join('\n');
 
 /** `bun run`'s options that take a value (`--cwd apps/animations`); any other is a switch. */
 const VALUED = '--cwd|--filter|-F|--env-file|--config|-c|--preload|-r';
@@ -275,7 +213,6 @@ const runsIn = (text: string): ReadonlyArray<Run> =>
         .replace(/^\.(?:\/|$)/, '')
         .replace(/\/$/, ''),
     ),
-    // A sentence's stop after it is not its own.
     script: group(m, 2).replace(/[.:]+$/, ''),
     rest: group(m, 3),
   }));
@@ -293,7 +230,7 @@ const scriptsFor = (run: Run, code: Code): ReadonlySet<string> =>
  * file (`cli.ts`, `src/x.ts`; a name with a dot or a slash that no script has).
  */
 const scriptDrift = (markdown: Markdown, code: Code) =>
-  runsIn(markdown.lines.map((line) => line.text).join('\n'))
+  runsIn(linesOf(markdown))
     .filter(
       (run) =>
         !scriptsFor(run, code).has(run.script) &&
@@ -424,7 +361,6 @@ const sourceOf = (text: string, file: string): Source => {
  */
 const declaresIn = (source: Source, symbol: string) => {
   if (symbol.startsWith("'")) {
-    // An import names another file's declaration.
     const code = uncommented(source.text).replace(
       /^import\s[\s\S]*?\sfrom\s*['"][^'"]+['"];?/gm,
       '',
@@ -467,6 +403,24 @@ const ignoredDirectories = (gitignore: string): ReadonlySet<string> =>
   );
 
 /**
+ * The paths a `.gitignore` in `dir` names whole, from the repo's root: each
+ * plain line (no glob, no `!`) under `dir`, so the root's `packages/core/data/webster.db`
+ * and an app's `/ios` (`apps/hymnal/ios`). Output, never in the tree.
+ */
+const ignoredPaths = (gitignore: string, dir: string): ReadonlyArray<string> =>
+  gitignore
+    .split('\n')
+    .map((line) =>
+      line
+        .trim()
+        .replace(/^\*\*\//, '')
+        .replace(/^\//, '')
+        .replace(/\/$/, ''),
+    )
+    .filter((line) => /^[\w.-]+(?:\/[\w.-]+)*$/.test(line))
+    .map((line) => [dir, line].filter((part) => part !== '').join('/'));
+
+/**
  * What a doc's anchors name that the tree lacks: a path that is gone, a
  * symbol its file no longer declares, or a `path:line` (a line moves under
  * an edit and still resolves; a symbol fails when it is renamed). A receipt
@@ -493,7 +447,12 @@ const anchorDrift = (
  * Each anchor looked up under the doc's bases: the first base that has its
  * first directory (and it is not ignored output) reads it. Under none, it is another tree's path, unless the
  * doc is whole and it is neither a package's (`@manna/url-state`, an
- * installed `effect/Schema`) nor ignored output (`tmp/logs`).
+ * installed `effect/Schema`), ignored output (`tmp/logs`) nor a rule
+ * (`film/no-read-once`, by `rulesIn` over every line, as a whole doc's
+ * `ruleDrift` reads it). A path that is, from one
+ * of its bases, one a `.gitignore` of the root or of that base names whole
+ * (`ignoredPaths`) is output: never the tree's. A path under that one is the
+ * tree's still, so a typo inside ignored output (`ios/Podz`) fails.
  */
 const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, doc: Doc) {
   const fs = yield* FileSystem.FileSystem;
@@ -504,15 +463,25 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
       Option.exists((info) => info.type === 'Directory'),
     );
   const ignored = ignoredDirectories(yield* fs.readFileString(path.join(root, '.gitignore')));
+  const outputs = new Set(
+    (yield* Effect.forEach(Array.from(new Set(['', ...doc.bases])), (dir) =>
+      Effect.map(Effect.option(fs.readFileString(path.join(root, dir, '.gitignore'))), (text) =>
+        Option.match(text, { onNone: () => [], onSome: (t) => ignoredPaths(t, dir) }),
+      ),
+    )).flat(),
+  );
+  const isOutput = (anchor: Anchor) =>
+    doc.bases.some((base) => outputs.has(path.join(base, anchor.path).replace(/\/$/, '')));
+  const rules = new Set(rulesIn(linesOf(markdownOf(doc.text))).map((rule) => `film/${rule}`));
   const elsewhere = (anchor: Anchor, first: string) =>
     Effect.map(
       isDirectory(path.join('node_modules', first)),
-      (installed) => installed || PACKAGE_NAME.test(anchor.path) || ignored.has(first),
+      (installed) =>
+        installed || PACKAGE_NAME.test(anchor.path) || ignored.has(first) || rules.has(anchor.path),
     );
   return yield* Effect.forEach(anchorsIn(doc), (anchor) =>
     Effect.gen(function* () {
       if (anchor.link) {
-        // A link is read where the doc is, as a viewer of the doc follows it.
         const at = path.join(path.dirname(doc.path), anchor.path);
         const there = yield* fs.exists(path.join(root, at));
         return {
@@ -523,7 +492,6 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
         } satisfies Found;
       }
       const first = anchor.path.split('/')[0] ?? '';
-      // Ignored output (`tmp/`) is never read, whether or not a run has made it here.
       const bases = yield* Effect.filter(doc.bases, (base) =>
         Effect.map(isDirectory(path.join(base, first)), (there) => there && !ignored.has(first)),
       );
@@ -533,11 +501,12 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
       const file = Option.map(Option.fromUndefinedOr(under[0]), (base) =>
         path.join(base, anchor.path),
       );
-      // Read only when a symbol is to be found in it.
       const read = Option.filter(file, () => anchor.symbols.length > 0);
       return {
         anchor,
-        ours: bases.length > 0 || (doc.whole && !(yield* elsewhere(anchor, first))),
+        ours:
+          !isOutput(anchor) &&
+          (bases.length > 0 || (doc.whole && !(yield* elsewhere(anchor, first)))),
         file,
         text: yield* Option.match(read, {
           onNone: () => Effect.succeed(Option.none<string>()),
@@ -692,7 +661,7 @@ const drift = (doc: Doc, code: Code): ReadonlyArray<string> => {
     ...routeDrift(markdown, code),
     ...spanDrift(markdown, code),
     ...pageDrift(markdown),
-    ...ruleDrift(markdown, code),
+    ...ruleDrift(proseOf(markdown), code),
     ...scriptDrift(markdown, code),
     ...markdown.lines.flatMap((line) => [
       ...flagDrift(line, code),
@@ -725,7 +694,6 @@ const workspacesIn = (root: string, parent: string) =>
     const names = yield* fs.readDirectory(path.join(root, parent));
     return yield* Effect.filter(names.map((name) => `${parent}/${name}`).toSorted(), (dir) =>
       Effect.flatMap(fs.stat(path.join(root, dir)), (info) =>
-        // Looked into only when a folder: a path under a file is an error, not absent.
         Effect.map(
           Effect.when(
             fs.exists(path.join(root, dir, 'package.json')),
@@ -905,7 +873,6 @@ const writtenIn = Effect.fn('test.docs.writtenIn')(function* (
                 (CODE_FILE.test(name) || (top && CONFIG_FILE.test(name)));
               return Effect.succeed([at].filter(() => read));
             }).pipe(
-              // A file another task removes between the listing and the stat (a build's journal) is gone, not a failure.
               Effect.catchIf(
                 (error) => error.reason._tag === 'NotFound',
                 () => Effect.succeed([]),
@@ -921,9 +888,6 @@ const writtenIn = Effect.fn('test.docs.writtenIn')(function* (
     ...(yield* Effect.forEach(workspaces, (dir) => filesIn(dir, true, true))).flat(),
   ];
   const cache = path.join(root, WRITTEN_CACHE);
-  // How names are read: this file's text, the anchors it matches
-  // (fixtures/doc-anchors.ts), the lock (oxc-parser's version) and the Bun
-  // that runs it (its JSONC and TOML parsers).
   const reader = Bun.hash(
     [
       yield* fs.readFileString(import.meta.path),
@@ -989,7 +953,6 @@ const readCode = Effect.fn('test.docs.readCode')(function* (root: string) {
   const tools = (yield* sources('packages/film/src/tools')).join('\n');
   const srcFiles = yield* sources('packages/film/src');
   const src = srcFiles.join('\n');
-  // Each file's comments left out on its own, so a `/*` in one file's string ends in it.
   const srcCode = srcFiles.map(uncommented).join('\n');
   const entries = yield* Effect.forEach(['packages/film', FILM_SRC], entriesOf);
   const bins = yield* Effect.forEach(['', ...workspaces.flat()], (dir) =>
@@ -1011,7 +974,6 @@ const readCode = Effect.fn('test.docs.readCode')(function* (root: string) {
         Option.toArray(Option.fromNullOr(/^bun cli\.ts ([a-z][\w-]*)/.exec(run))).map(firstGroup),
       ),
     ),
-    // A flag a command declares itself, and each field of a lab command (`film lab <name> --<field>`, `lab-cli.ts`).
     flags: new Set([
       ...matches(tools, /Flag\.\w+\(\s*'([a-z][a-z-]*)'/g).map(firstGroup),
       ...allCommands.flatMap((command) => fieldsOf(command.tool).map((field) => field.name)),
@@ -1024,7 +986,6 @@ const readCode = Effect.fn('test.docs.readCode')(function* (root: string) {
         ...matches(srcCode, /^import\s+(?:type\s+)?(?:\w+\s*,\s*)?\{([^}]*)\}/gm).flatMap((m) =>
           matches(firstGroup(m), /(?:^|[\s,])(?:type\s+)?([A-Z]\w*)/g),
         ),
-        // A namespace's or a default's binding (`import * as UrlAtom`, `import Foo from`).
         ...matches(srcCode, /^import\s+(?:type\s+)?(?:\w+\s*,\s*)?\*\s+as\s+([A-Z]\w*)/gm),
         ...matches(srcCode, /^import\s+(?:type\s+)?([A-Z]\w*)\s*(?:,|from\b)/gm),
       ].map(firstGroup),
@@ -1066,8 +1027,6 @@ const ROOT = Effect.map(Path.Path, (path) => path.join(import.meta.dir, '..', '.
 /** Every doc the test reads, listed as the file loads: a test each. */
 const PLACES = docPlaces(`${import.meta.dir}/../../..`);
 
-// The repo's code is read once, begun as the file loads: two tests check docs
-// against it, and a read walks every workspace's tree.
 const codeRead = Effect.runPromiseExit(
   Effect.flatMap(ROOT, readCode).pipe(Effect.provide(BunServices.layer)),
 );
@@ -1209,9 +1168,11 @@ const apiOf = (api: typeof LabHttpApi): Api => {
 
 /**
  * Each route or path a comment in `text` names that the API does not
- * declare, with its file and line: the comments as the parser (oxc) reads
- * them, so a comment after code or a block's unstarred body is read, and a
- * string that looks like one is not. A route (`GET /api/…`) is the method's;
+ * declare, with its file and line: each comment as the parser (oxc) reads
+ * it, and no string that looks like one. Outside a `.d.ts` file the tree's
+ * comments are `/**` doc comments and tool directives (`effect/noComments`,
+ * held by `strayComments`); a `.d.ts` file, which oxlint ignores, keeps any
+ * comment, a `//` line too. A route (`GET /api/…`) is the method's;
  * a bare path is any method's route, a prefix of some (`/api/`,
  * `/api/films/probe`), or a path the file's own code writes (the routes a
  * test's own server answers, `tools/page-render.slow.test.ts`).
@@ -1228,7 +1189,6 @@ const commentRouteDrift = (file: string, text: string, api: Api): ReadonlyArray<
   }
   parts.push(text.slice(after));
   const code = parts.join('');
-  // A comment's text starts after its `//` or `/*`.
   const lineAt = (comment: { readonly start: number }, at: number) =>
     text.slice(0, comment.start + 2 + at).split('\n').length;
   return parsed.comments.flatMap((comment) => [
@@ -1255,9 +1215,36 @@ const commentRouteDrift = (file: string, text: string, api: Api): ReadonlyArray<
   ]);
 };
 
+/**
+ * A tool directive's words, after any JSDoc gutter: a suppression, a
+ * type-check or Effect diagnostics switch, a triple-slash reference, a
+ * bundler annotation, a JSX pragma, or a formatter or coverage ignore.
+ */
+const DIRECTIVE =
+  /^[\s*]*(?:(?:oxlint|eslint)-(?:disable|enable)|@effect-diagnostics|@ts-(?:expect-error|ignore|nocheck|check)\b|\/\s*<(?:reference|amd-module|amd-dependency)\b|[#@]__\w+__|@jsx|(?:prettier|oxfmt)-ignore|(?:c8|v8|istanbul)\s+ignore\b)/;
+
+/**
+ * Each comment of `text` that is neither a `/**` doc comment nor a tool
+ * directive, with its file and line; none in a `.d.ts` file, which oxlint
+ * ignores.
+ */
+const strayComments = (file: string, text: string): ReadonlyArray<string> => {
+  if (file.endsWith('.d.ts')) return [];
+  return parseSync(file, text)
+    .comments.filter(
+      (comment) =>
+        !(comment.type === 'Block' && comment.value.startsWith('*')) &&
+        !DIRECTIVE.test(comment.value),
+    )
+    .map(
+      (comment) =>
+        `${file}:${text.slice(0, comment.start).split('\n').length}: a comment that is neither a doc comment nor a tool directive`,
+    );
+};
+
 describe('the docs', () => {
   it.effect.layer(BunServices.layer)(
-    'let no comment in the film package, its browser tests or the app name a route the API does not declare',
+    'let no comment in the film package, its browser tests or the app name a route the API does not declare, and none outside a .d.ts file be other than a doc comment or a tool directive',
     () =>
       Effect.gen(function* () {
         const root = yield* ROOT;
@@ -1279,9 +1266,23 @@ describe('the docs', () => {
           ),
         );
         expect(drift.flat()).toEqual([]);
-        // A comment that names a route the API lacks is red, wherever the comment sits: its
-        // own line, after code, a block's unstarred body; HEAD and OPTIONS too. A declared
-        // route is not, its parameters written as `<x>`, `:x` or `${…}`; nor is a string.
+        const stray = yield* Effect.forEach(files, (file) =>
+          Effect.map(fs.readFileString(`${root}/${file}`), (text) => strayComments(file, text)),
+        );
+        expect(stray.flat()).toEqual([]);
+        const kinds = [
+          '// A line.',
+          '/* A block. */',
+          '/** A doc. */',
+          '// oxlint-disable-next-line no-console',
+          '/* @ts-expect-error a block directive */',
+          'const a = 1; /* @__PURE__ */',
+        ];
+        expect(strayComments('red.ts', kinds.join('\n'))).toEqual([
+          'red.ts:1: a comment that is neither a doc comment nor a tool directive',
+          'red.ts:2: a comment that is neither a doc comment nor a tool directive',
+        ]);
+        expect(strayComments('red.d.ts', kinds.join('\n'))).toEqual([]);
         expect(
           commentRouteDrift(
             'red.ts',
@@ -1318,11 +1319,9 @@ describe('the docs', () => {
           'red.ts:11: HEAD /api/review/index is declared by no API',
           'red.ts:11: OPTIONS /api/films/<film>/notes is declared by no API',
           'red.ts:14: POST /api/films/<film>/script/marks(extra) is declared by no API',
-          // A bare path is any method's route, or a prefix of some, or the file's own.
           'red.ts:15: /api/review/gone?since= is declared by no API',
           'red.ts:15: /api/films/<film>/gone/too is declared by no API',
         ]);
-        // A file the parser cannot read is red: its comments are not known.
         expect(commentRouteDrift('broken.ts', 'const = ;', api)).toEqual([
           'broken.ts: the parser cannot read it',
         ]);
@@ -1352,7 +1351,6 @@ describe('the docs', () => {
           ),
         ]);
         expect(undocumented(docs, code)).toEqual([]);
-        // Each registered rule is on for the paths it guards.
         expect(Array.from(code.registered).filter((rule) => !code.enabled.has(rule))).toEqual([]);
       }),
   );
@@ -1369,6 +1367,66 @@ describe('the docs', () => {
         yield* fs.writeFileString(`${root}/packages/.DS_Store`, 'Bud1');
         expect(yield* workspacesIn(root, 'packages')).toEqual(['packages/kept']);
       }).pipe(Effect.scoped),
+  );
+
+  it.effect.layer(BunServices.layer)(
+    "read a path a .gitignore names, the root's or a base's own, as output, and a path under it as the tree's",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const root = yield* fs.makeTempDirectoryScoped();
+        yield* fs.makeDirectory(`${root}/data`);
+        yield* fs.makeDirectory(`${root}/app/src`, { recursive: true });
+        yield* fs.writeFileString(`${root}/.gitignore`, 'tmp/\ndata/built.db\n');
+        yield* fs.writeFileString(`${root}/app/.gitignore`, '/ios\n');
+        yield* fs.writeFileString(`${root}/app/src/kept.ts`, 'export const kept = 1;\n');
+        const doc: Doc = {
+          path: 'whole.md',
+          bases: ['', 'app'],
+          whole: true,
+          text: [
+            'Built to `data/built.db`, the app to `app/ios`, logged in `tmp/logs/latest`.',
+            'It reads `src/kept.ts`; mistyped, `src/gone.ts` and `data/gone.db`;',
+            'under the ignored `app/ios`, a folder no code makes: `ios/Podz`.',
+          ].join('\n'),
+        };
+        expect(yield* anchorsDrift(root, [doc])).toEqual([
+          'whole.md: path src/gone.ts does not exist',
+          'whole.md: path data/gone.db does not exist',
+          'whole.md: path ios/Podz does not exist',
+        ]);
+      }).pipe(Effect.scoped),
+  );
+
+  it.effect.layer(BunServices.layer)(
+    'read a `film/<rule>` in a whole doc as a rule the plugin registers, not as a path',
+    () =>
+      Effect.gen(function* () {
+        const root = yield* ROOT;
+        const code = yield* repoCode;
+        const doc: Doc = {
+          path: 'whole.md',
+          bases: ['', 'apps/hymnal'],
+          whole: true,
+          text: [
+            'A shared fixture builds as the file loads (`film/no-lazy-test-fixture`), never `film/no-such-rule`.',
+            '',
+            '```md',
+            '- A fixture is built lazily (`film/no-such-fenced-rule`).',
+            '```',
+          ].join('\n'),
+        };
+        expect([
+          ...NAMES_DRIFT.verify(doc, code),
+          ...NAMES_DRIFT.anchored(doc, code),
+          ...(yield* anchorsDrift(root, [doc])),
+        ]).toEqual([
+          'whole.md: rule film/no-such-rule is not registered',
+          'whole.md: rule film/no-such-fenced-rule is not registered',
+          'whole.md: rule film/no-such-rule is not registered',
+          'whole.md: rule film/no-such-fenced-rule is not registered',
+        ]);
+      }),
   );
 
   it.effect.layer(BunServices.layer)('fail a doc that names what the code no longer has', () =>
@@ -1411,9 +1469,6 @@ describe('the docs', () => {
           '```',
           '````',
           'Read [the gone page](guide/gone-too.md) after the block.',
-          // A command and a link are read wherever the parser puts them: a quote, a list item
-          // (`1)` too), a code block in either, a command after `cd … &&`, a table's cell, and a
-          // link after a tilde block that holds backticks.
           '',
           '> film check <film> --frob-quote',
           '',
@@ -1446,11 +1501,9 @@ describe('the docs', () => {
           '~~~',
           'Read [the gone tilde](guide/gone-tilde.md).',
           '',
-          // A path in a code block is the tree's too: a template an agent pastes names it.
           '```',
           'Write the rule in `packages/film/src/gone-fenced.ts`.',
           '```',
-          // A run ends at its line: the next fence's, the next heading's, the next line's is its own.
           '',
           '```sh',
           'bun run lint',
@@ -1512,9 +1565,6 @@ describe('the docs', () => {
         'stale.md: path guide/gone-table.md does not exist',
         'stale.md: path guide/gone-tilde.md does not exist',
       ]);
-      // What names no rule, script, link, flag or finding is not read as one: a directory of the
-      // film package, a binary or a file `bun run` runs, a call in code, a name the code has, and
-      // a sentence that says "film" before a flag.
       const correct: Doc = {
         path: 'correct.md',
         bases: ['', FILM_SRC],
@@ -1544,9 +1594,6 @@ describe('the docs', () => {
           'film check reads `--static` from its flags.',
           '`bun run lint -- --fix` fixes what it can; run `bun run --filter @manna/film test` first.',
           '',
-          // A sentence in a list item that starts with the bin and holds a `;`, code in a quote's
-          // or a list item's block, a command in a table, and a link GitHub shows as no link (in
-          // an HTML comment, or in a code block that a fence with an info string does not close).
           '- film render writes stills; Vite takes --host, not the CLI.',
           '- film render writes stills, and Vite takes --host, not the CLI.',
           '',
@@ -1575,8 +1622,6 @@ describe('the docs', () => {
       };
       expect(drift(correct, code)).toEqual([]);
       expect(yield* anchorsDrift(root, [correct])).toEqual([]);
-      // A symbol is declared by a binding, a class's or a type's member, or a key of its own
-      // statement's object; a line that calls it, or a key handed to a call, declares nothing.
       expect(
         [
           ['const run = () => {\n  frobnicate(1);\n};\n', 'frobnicate'],
@@ -1587,9 +1632,6 @@ describe('the docs', () => {
           ['interface Api {\n  readonly read: number;\n}\n', 'Api.read'],
           ['export const api = { read: 1, write };\n', 'api.write'],
           ['export const Store = Schema.Struct({ mtime: Schema.Number });\n', 'Store.mtime'],
-          // The head is a declaration that binds it, any of them: a member of a type, or a
-          // local of another function, named the same, is not the one that holds the member;
-          // a member of a type and a key handed to a call bind nothing.
           [
             'interface Deps {\n  readonly Review: unknown;\n}\nexport class Review {\n  static read() {}\n}\n',
             'Review.read',
@@ -1605,8 +1647,6 @@ describe('the docs', () => {
           ['use({ Review: { read: 1 } });\n', 'Review.read'],
         ].map(([text = '', symbol = '']) => declares(text, symbol)),
       ).toEqual([false, false, false, true, true, true, true, true, true, true, false, false]);
-      // A whole doc: a first directory under no base is a mistyped path,
-      // a package's name, an installed module and ignored output are not.
       const whole: Doc = {
         path: 'whole.md',
         bases: ['', FILM_SRC],
@@ -1621,9 +1661,6 @@ describe('the docs', () => {
 
   it.effect('read the names code writes as a rename reads them, and a bare name against them', () =>
     Effect.sync(() => {
-      // An identifier, a module path's words, a string that is one name, a JSX tag, a private
-      // member, a config's keys and its one-name values are written; a comment, a sentence in a
-      // string or a template, a test's title and a TOML comment keep no name.
       const code = [
         "import { a } from './dir/pathWord.ts';",
         "export * from 'pkg/exportWord';",
@@ -1641,7 +1678,6 @@ describe('the docs', () => {
         ...wordsOf('view.tsx', 'export const v = <PanelWord />;'),
         ...wordsOf(
           'config.json',
-          // A glob's `/*` opens no comment: the key after it is read.
           '{ "files": ["**/*.ts"], // a comment\n "jsPluginsWord": ["ValueWord", "a sentence"], "laterKey": 1 }',
         ),
         ...wordsOf('bunfig.toml', '# tomlCommentGone\n[test]\nconcurrentTestGlob = "x"\n'),
@@ -1658,8 +1694,6 @@ describe('the docs', () => {
           ...['blockGone', 'tomlCommentGone'],
         ].filter((name) => written.has(name)),
       ).toEqual([]);
-      // Against a set the test controls: what a doc names that is not written is red, each rule
-      // that keeps a span out holding a span that would be red without it.
       const known = new Set(['drawRig', 'loadRigs', 'KNOBS', 'drawImage', 'RiveEngine']);
       expect(
         bareNameDrift(
@@ -1689,8 +1723,6 @@ describe('the docs', () => {
         bareNameDrift(
           [
             'The rig is `loadRigs()` over `KNOBS`; `drawRig` draws with `drawImage`, typed `RiveEngine`.',
-            // A word, a capitalised word, a short acronym, a one-letter lead, an id, a file, a span
-            // that is no name (its dotted member unwritten), a link to a URL, a receipt.
             'Run `clear`, then `Look` at the `GET` from `RIVE`, on `XZoom`, in `PLH0Szn1yYNefD9pHcnyRivKRGpYGc2yfB`.',
             'Read `NORTH_STAR.md` and `rigs[key].memberGone`.',
             'Motion Canvas waits with [`waitUntilGone`](https://motioncanvas.io/api/core/flow).',
@@ -1725,7 +1757,6 @@ describe('the docs', () => {
         expect([...(yield* writtenIn(root, []))]).toEqual(
           expect.arrayContaining(['keptName', 'nameBefore']),
         );
-        // A name kept for kept.ts, its text unchanged: read from what was kept, never parsed.
         const cache = path.join(root, WRITTEN_CACHE);
         const held = yield* Effect.flatMap(
           fs.readFileString(cache),
@@ -1764,22 +1795,25 @@ describe('the docs', () => {
  * What a doc names that the code lacks, beyond its anchors, by its role: a
  * framework doc's every name (`drift`), a passing doc's routes and spans
  * (the owner's runbook, the prior arts and the app's README name routes
- * too), an anchored doc's none, and a verify skill's doc each `bun run`
+ * too), an anchored doc's rules (`film/<rule>`, on every line its anchors
+ * are read from, and never read as a path), and a verify skill's doc its
+ * rules likewise and each `bun run`
  * (`bun run --cwd apps/firsttheblade verify:drive`: a script of that package).
  */
 const NAMES_DRIFT: Record<DocPlace['role'], (doc: Doc, code: Code) => ReadonlyArray<string>> = {
   framework: drift,
   spanned: (doc, code) =>
     spanDrift(markdownOf(doc.text), code).map((what) => `${doc.path}: ${what}`),
-  anchored: () => [],
-  verify: (doc, code) =>
-    scriptDrift(markdownOf(doc.text), code).map((what) => `${doc.path}: ${what}`),
+  anchored: (doc, code) =>
+    ruleDrift(linesOf(markdownOf(doc.text)), code).map((what) => `${doc.path}: ${what}`),
+  verify: (doc, code) => {
+    const markdown = markdownOf(doc.text);
+    return [...ruleDrift(linesOf(markdown), code), ...scriptDrift(markdown, code)].map(
+      (what) => `${doc.path}: ${what}`,
+    );
+  },
 };
 
-// A test each doc, run together: the code is read once (`repoCode`) and each
-// file an anchor names is parsed once (`parsed`), whichever doc reads it first.
-// A doc's test reads files alone: the whole platform (its stdio's listeners on
-// stdin) built for each of the docs at once would be built and held for each.
 const DOC_SERVICES = Layer.merge(BunFileSystem.layer, BunPath.layer);
 
 describe.concurrent('each doc', () => {

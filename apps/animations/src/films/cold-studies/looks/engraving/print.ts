@@ -1,8 +1,3 @@
-// The print the engraving is pulled on: warm cream rag paper with its fibre
-// and mottle, the plate's impression pressed into it, and the ruled border
-// round the picture. Made once for each size from a fixed seed and kept, so
-// every frame lays the same sheet.
-
 import { type Hex, mix } from '@manna/film/canvas';
 import { rng } from '@manna/film/core';
 
@@ -33,9 +28,7 @@ export const paper = (w: number, h: number, seed: number): HTMLCanvasElement => 
   ctx.fillStyle = PAPER;
   ctx.fillRect(0, 0, w, h);
   const k = w / 1920;
-  // As many marks for each part of the sheet, whatever its size.
   const area = (w * h) / (1920 * 1080);
-  // Mottle: broad soft clouds a shade deeper and a shade paler.
   for (let i = 0; i < 70 * area; i++) {
     const x = r() * w;
     const y = r() * h;
@@ -47,7 +40,6 @@ export const paper = (w: number, h: number, seed: number): HTMLCanvasElement => 
     ctx.fillStyle = g;
     ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
   }
-  // Fibres: short hairlines lying every way.
   for (let i = 0; i < 2600 * area; i++) {
     const x = r() * w;
     const y = r() * h;
@@ -59,7 +51,6 @@ export const paper = (w: number, h: number, seed: number): HTMLCanvasElement => 
     ctx.fillRect(-len / 2, 0, len, Math.max(0.6, 0.9 * k));
     ctx.restore();
   }
-  // Foxing: a few small rust spots.
   for (let i = 0; i < 14 * area; i++) {
     const x = r() * w;
     const y = r() * h;

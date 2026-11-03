@@ -1,9 +1,3 @@
-// The spoken word, shared by `spoke`, `centurion` and `declared`: the word of
-// light (the three icons' gold word-bubble, lit), the arc it flies on, and
-// the dawn world it speaks into being. `declared` calls the dawn back in a
-// panel, so both draw this one layout in 1920×1080 frame units. (A beat on a
-// word with no mark is a word-pinned cue: `{ mark, word }` in the timeline.)
-
 import {
   type Hand,
   type Pt,
@@ -133,7 +127,6 @@ export const dawn = (ctx: CanvasRenderingContext2D, w: number, h: number, hand: 
     ctx.restore();
   }
 
-  // The sun, burst from the word: a ring of light and a gold disc.
   if (d.sun > 0) {
     const [sx, sy] = SUN;
     glow(ctx, sx, sy, 700 * d.sun, C.glow, 0.9);
@@ -154,7 +147,6 @@ export const dawn = (ctx: CanvasRenderingContext2D, w: number, h: number, hand: 
     );
   }
 
-  // Land and water, torn from board, rising from below in turn.
   if (d.land > 0) {
     const far = (1 - risen(d.land, 0)) * 520;
     piece(
@@ -211,7 +203,6 @@ export const dawn = (ctx: CanvasRenderingContext2D, w: number, h: number, hand: 
     });
   }
 
-  // The tree: a trunk that climbs, then its crown opening out of it.
   if (d.tree > 0)
     at(ctx, { x: TREE[0], y: TREE[1] }, () =>
       tree(ctx, hand('tree'), {

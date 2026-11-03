@@ -1,11 +1,3 @@
-// The man's head keys (`heads.ts`) against his poses-1 part sheet: each names
-// a part his sheet holds and is the sheet's size, as the loader asks before it
-// un-mattes a key in place of its part, and each holds his head down to his
-// head part's lowest row and no lower, so the drape below his chin stays on
-// his torso, as the feast mother's veil does, with the drape's two outlines
-// ending where his head part's end, so they run on into his torso's. Each case
-// decodes his sheets, so they run in the slow suite.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { type Raster, decodePng } from '@manna/film/tools';
 import { Array as Arr, Effect, FileSystem, Option } from 'effect';

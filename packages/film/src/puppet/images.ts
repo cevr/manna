@@ -1,10 +1,3 @@
-// A puppet's part PNGs as its load reaches them (`PuppetImages`): each
-// decoded to its RGBA bytes, by the URL (a page) or the path (Bun) its module
-// imported it as, and whether this host draws puppets at all. Two layers
-// give it: the page's (`images-browser.ts`), which decodes each image before
-// the load goes on, and Bun's (`images-bun.ts`), for `check --draw`, the
-// tests and the tools, which reads and decodes the file and draws nothing.
-
 import { Context, type Effect, Schema } from 'effect';
 import type { Raster } from '../core/raster.ts';
 

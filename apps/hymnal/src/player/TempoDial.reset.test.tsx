@@ -57,7 +57,6 @@ const framesAfter = (move: () => void) => {
   holdAnimations();
   using _held = { [Symbol.dispose]: landAnimations };
   move();
-  // One frame drawn; whether a turn still runs after it.
   const step = () => {
     let running = false;
     act(() => {

@@ -1,29 +1,3 @@
-// The cast reader's driver: the Python in `packages/film/reader/` (the model,
-// its train, read and eval), run from its own environment, as `earshot.ts`
-// keeps one:
-//
-// - a uv virtualenv outside the repo, `FILM_READER_HOME` (else
-//   ~/.cache/bible-film/reader), one per `uv.lock`: `venv-<its sha256, 12
-//   hex>`, made by `uv sync --frozen` from the lock, wheels only (the
-//   project sets `no-build`); a missing one is refused with the line that
-//   makes it;
-// - run as `python -I -B` (no user site, no current folder, no bytecode
-//   written) through a driver that puts the reader's folder first on
-//   `sys.path` and runs one of its scripts as `__main__`;
-// - the train runs on Modal (`modal run modal_app.py::train`), so only the
-//   train stage calls it, inside its `ctx.spend('modal', …)`; reads and
-//   evals run on this machine's CPU and spend nothing.
-//
-// `CastReader.sources` names the reader's files by role, each a closure
-// derived from the Python's local imports, as CPython's `ast` reads them in
-// one `python3` spawn (`scanOf`, `rolesOf`): `train`, what a train
-// runs (modal_app.py's closure; the Modal image installs `modal_app.PACKAGES`,
-// not the lock), which keys the checkpoint; `read`, what a local read runs
-// (read.py's closure and the environment, pyproject.toml and uv.lock); `eval`,
-// what a local eval runs (read.py's and eval.py's closures and the
-// environment). An edit to a read or eval file so re-runs the reads and evals,
-// and leaves the checkpoint's key, and so the checkpoint, as it is.
-
 import {
   Config,
   Context,

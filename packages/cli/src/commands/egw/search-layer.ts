@@ -34,30 +34,6 @@ import {
 } from './search-daemon-client.js';
 import { searchDaemonSocketPath } from './search-daemon-protocol.js';
 
-/** The installed index, parsed **once**, and only if the shipped parser accepts
- *  it.
- *
- *  §9.2's artifact is not self-describing enough for a digest to be the whole
- *  gate: a file can be intact and still be an index this build must not scan —
- *  built by another model, or tiled inconsistently. `loadVectorIndex` already
- *  maps every such fault onto §9.6's typed absence, so running it here and
- *  handing the *result* down is what makes "installed" mean "usable" for the
- *  rest of the process.
- *
- *  **The result, not the byte source** (round-2 F8). The earlier shape ran
- *  `loadVectorIndex` to decide, then provided `VectorIndexBytes` to
- *  `SearchService.Live`, which read and parsed the same file a second time —
- *  two full reads of a 246 MB artifact and two copies of its vector region at
- *  every CLI startup, for one decision. `ResolvedVectorIndex` carries the parsed
- *  index the gate already produced, so the file is read exactly once.
- *
- *  `VectorIndexBytes.None` is still provided beside it: the service's layer
- *  requires the byte source as the declaration of what a host ships, and this
- *  host has already turned its bytes into an index. Providing `None` says the
- *  bytes are not to be read again rather than leaving the requirement dangling.
- *
- *  The CLI reads whatever is already on disk, so it applies the gate at read
- *  time. */
 /** Read the gate's decision from the supplied byte source. The source layer is
  *  provided here, at this operation's own boundary. */
 const resolveVectorIndex = (source: Layer.Layer<VectorIndexBytes>) =>
@@ -77,7 +53,6 @@ export const verifiedVectorIndex = (
     Effect.gen(function* () {
       const loaded = yield* resolveVectorIndex(source);
       if (loaded._tag !== 'index') {
-        // Refused, and said so once at startup rather than per query.
         yield* Effect.logInfo('search.vectorIndex.refused').pipe(
           Effect.annotateLogs({ filename, reason: loaded.absence.reason }),
         );
@@ -95,16 +70,9 @@ export const installedSearchLayer: Layer.Layer<SearchService> = Layer.unwrap(
   Effect.gen(function* () {
     const path = yield* Path.Path;
     const home = yield* Config.String('HOME');
-    // Compiled-binary repair: onnxruntime's dylib must sit in the temp dir
-    // before the embedder's first load — a no-op in the workspace.
     yield* ensureOnnxDylibs;
     const at = (file: string): string => path.join(home, '.bible', file);
 
-    // `paragraphs_fts`, and nothing else: §9 ranks the writings, so the only
-    // corpus this opens is the one it ranks. The topic group the results page
-    // shows above the ranking is fetched beside the search, through `WikiLayer`
-    // — a machine with no `topics.db` therefore opens no wiki here at all
-    // instead of paying an absent-artifact lookup on every query.
     const sources = Layer.effect(
       SearchCorpusSources,
       Effect.gen(function* () {
@@ -115,29 +83,11 @@ export const installedSearchLayer: Layer.Layer<SearchService> = Layer.unwrap(
           },
         });
       }),
-    ).pipe(
-      Layer.provide(EGWDbBun.layerBun(at('egw-paragraphs.db'))),
-      // The writings database failing to open is the one hard input here: with
-      // no `paragraphs_fts` there is no lexical leg, and §9 has no degraded
-      // shape for that. It reports as a defect rather than as a search that
-      // silently finds nothing.
-      Layer.orDie,
-    );
+    ).pipe(Layer.provide(EGWDbBun.layerBun(at('egw-paragraphs.db'))), Layer.orDie);
 
     return SearchService.Live.pipe(
       Layer.provide(sources),
-      // Absent on every machine that has not built or downloaded one, which is
-      // the ordinary case — §9.6 makes that a typed value on the result rather
-      // than anything this layer has to handle.
-      //
-      // Gated on the shipped parser accepting it, so only an index this build
-      // can actually read reaches search. `loadVectorIndex` maps every fault
-      // onto §9.6's typed absence, so a truncated or foreign-fingerprint file
-      // degrades to lexical-only here rather than being scanned.
       Layer.provide(verifiedVectorIndex(at('vectors.bvi'))),
-      // Provided rather than omitted so the CLI *can* run the vector leg. If
-      // the model is not present locally the adapter declines and the result
-      // carries §9.6's `embedder` absence.
       Layer.provide(layerBunEmbedder),
     );
   }).pipe(Effect.provide(BunServices.layer), Effect.orDie),

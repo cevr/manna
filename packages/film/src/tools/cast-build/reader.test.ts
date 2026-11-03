@@ -11,12 +11,6 @@ import {
   Sink,
   Stream,
 } from 'effect';
-// The train and eval stages over a fake training set, with the reader's live
-// layer replaced: no Modal call without `--spend modal`; one train, then
-// each drawing's eval, when it is allowed; a rerun asks the reader nothing;
-// a change to one of the reader's source files is a new train. Every file
-// is on an in-memory disk; the committed folder is read in
-// reader.slow.test.ts.
 
 import { describe, expect, it } from 'effect-bun-test';
 import * as PlatformError from 'effect/PlatformError';
@@ -311,7 +305,6 @@ describe('cast build: train and eval', () => {
     () =>
       Effect.gen(function* () {
         const spend = { spend: new Set(['modal'] as const) };
-        // another build takes the key while the train runs: its run is fenced, so not promoted
         const lost = files();
         const fencedAsked: Array<string> = [];
         const fenced = yield* build(lost, fencedAsked, spend, graph(), {
@@ -319,7 +312,6 @@ describe('cast build: train and eval', () => {
         });
         expect(stateOf(fenced)['train']).toBe('failed');
         expect(fencedAsked.filter((a) => a.startsWith('promote'))).toEqual([]);
-        // a run that holds its key promotes its own run's checkpoint to the key's
         const asked: Array<string> = [];
         expect(stateOf(yield* build(files(), asked, spend))['train']).toBe('ran');
         const trains = asked.filter((a) => a.startsWith('train')).map(trainOf);
@@ -354,17 +346,14 @@ describe('cast build: train and eval', () => {
             Option.toArray(Option.fromUndefinedOr(s.unpromoted)),
           ),
         ).toEqual([{ run, reason: 'promote: reader promote: volume busy' }]);
-        // a plan reads the train cached and asks the reader nothing
         const planned: Array<string> = [];
         const plan = yield* build(disk, planned, { plan: true });
         expect(stateOf(plan)['train']).toBe('cached');
         expect(planned).toEqual([]);
-        // the next build promotes the first run, and trains nothing
         const again: Array<string> = [];
         const second = yield* build(disk, again, spend);
         expect(stateOf(second)['train']).toBe('cached');
         expect(again).toEqual([`promote ${key} ${run}`]);
-        // once promoted, a build asks nothing
         const third: Array<string> = [];
         yield* build(disk, third, spend);
         expect(third).toEqual([]);
@@ -482,7 +471,6 @@ describe('cast build: train and eval', () => {
 
   it.effect('a fit that flips flips the entry in the set on one cache, its pixels the same', () =>
     Effect.gen(function* () {
-      // the side's bars stay open throughout: only its trainable verdict flips
       const disk = files();
       disk.set(recordFile('side'), record('open'));
       disk.set(fitFile('side'), fitRows(false));
@@ -491,14 +479,12 @@ describe('cast build: train and eval', () => {
       const first: Array<string> = [];
       yield* build(disk, first, spend);
       expect(trained(first)).toEqual([expect.stringMatching(/ shards=1$/)]);
-      // fit false -> true: the side's status says trainable, and it joins, its renders cached
       disk.set(fitFile('side'), fitRows(true));
       const joined: Array<string> = [];
       const join = yield* build(disk, joined, spend);
       expect(stateOf(join)['renders:side@m']).toBe('cached');
       expect(stateOf(join)['status:side@m']).toBe('ran');
       expect(trained(joined)).toEqual([expect.stringMatching(/ shards=2$/)]);
-      // and back: the side leaves the set again, which is the first build's set, and its train
       disk.set(fitFile('side'), fitRows(false));
       const left: Array<string> = [];
       const back = yield* build(disk, left, spend);
@@ -543,7 +529,6 @@ describe('cast build: train and eval', () => {
         expect(asked.filter((a) => a.startsWith('train'))).toEqual([
           expect.stringMatching(/ shards=2$/),
         ]);
-        // without the okra spend the side waits, and the set trains on the front alone
         const waits: Array<string> = [];
         const held = yield* build(
           files(),
@@ -600,9 +585,7 @@ describe('cast build: the train adopts the committed checkpoint', () => {
         expect(report.modalCalls).toBe(0);
         expect(report.spendUsd).toBe(0);
         expect(asked.filter((a) => a.startsWith('train') || a.startsWith('promote'))).toEqual([]);
-        // its evals read the adopted checkpoint
         expect(stateOf(report)['eval:front@m']).toBe('ran');
-        // and a plan after it reads the train cached
         const plan = yield* build(disk, [], { plan: true });
         expect(stateOf(plan)['train']).toBe('cached');
       }),
@@ -734,10 +717,8 @@ describe('cast build: --keep-reader keeps the committed checkpoint across a key 
         expect(report.modalCalls).toBe(0);
         expect(report.spendUsd).toBe(0);
         expect(trainedOrPromoted(asked)).toEqual([]);
-        // the train read both held drawings, then each eval stage its own
         expect(evaluated(asked)).toBe(4);
         expect(stateOf(report)['eval:side@m']).toBe('ran');
-        // the flag is in no key: a plan after it, with or without it, reads the train cached
         expect(stateOf(yield* build(disk, [], { plan: true }, keep))['train']).toBe('cached');
         expect(stateOf(yield* build(disk, [], { plan: true }))['train']).toBe('cached');
       }),
@@ -758,7 +739,6 @@ describe('cast build: --keep-reader keeps the committed checkpoint across a key 
         expect(trainedOrPromoted(asked)).toEqual([]);
         expect(report.modalCalls).toBe(0);
         expect(evaluated(asked)).toBe(2);
-        // not cached: the next plan reads the train stale, and an equal read adopts
         expect(stateOf(yield* build(disk, [], { plan: true }, keep))['train']).toBe('stale');
         const again = yield* build(disk, [], {}, keep, { evaluate: scores() });
         expect(stateOf(again)['train']).toBe('ran');
@@ -785,12 +765,10 @@ describe('cast build: --keep-reader keeps the committed checkpoint across a key 
             expect.stringContaining(`m/side ${field} `),
           ]);
         }
-        // the front, first in order, refuses too
         const front = yield* build(yield* moved(), [], {}, keep, {
           evaluate: (shard) => evalJson(bySide(shard, LINE, { ...LINE, n: 1 })),
         });
         expect(reasonOf(front, 'train')).toContain('m/front n 12 -> 1');
-        // a drawing the eval finds no held samples for refuses
         const none = yield* build(yield* moved(), [], {}, keep, {
           evaluate: (shard) => bySide(shard, '{"seen":null}', evalJson(LINE)),
         });
@@ -841,7 +819,6 @@ describe('cast build: --keep-reader keeps the committed checkpoint across a key 
     'without the flag a moved key never adopts, though every held line would read the same; it logs what changed',
     () => {
       const lines: Array<string> = [];
-      // the rekeyed line kept, every other line dropped
       const logged = Logger.layer([
         Logger.make(({ message }) => {
           const line = [message].flat().join(' ');
@@ -870,7 +847,6 @@ describe('cast build: --keep-reader keeps the committed checkpoint across a key 
         const report = yield* build(disk, asked, {}, keep, { evaluate: scores() });
         expect(stateOf(report)['train']).toBe('ran');
         expect(trainedOrPromoted(asked)).toEqual([]);
-        // only the two eval stages read
         expect(evaluated(asked)).toBe(2);
       }),
   );
@@ -1224,7 +1200,6 @@ describe('the live reader', () => {
   it.effect("a train hands Modal the config's backbone and input side", () => {
     const spawned: Array<Spawned> = [];
     return Effect.gen(function* () {
-      // the recording spawner writes no checkpoint, so the train itself fails after its call
       yield* Effect.exit(
         (yield* CastReader).train({
           trainset: 'set',

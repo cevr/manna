@@ -145,11 +145,9 @@ describe('a tap on a chord', () => {
     const before = scroll.scrollTop;
 
     const simple = firstChord(app.host);
-    // The sounding A-flat under capo 1 is played in G: the stanza's first chord, I, is a G.
     expect(simple).toEqual({ id: 'chord-1-1-1', text: 'G' });
     press(`[data-testid="${simple.id}"]`);
     expect(pushed().length).toBe(1);
-    // The sheet is a route the stack presents, not a modal drawn over the page.
     expect(Option.isSome(find('[aria-modal]'))).toBe(false);
     expect(chordSheetOptions.presentation).toBe('formSheet');
     expect(chordSheetOptions.sheetGrabberVisible).toBe(true);
@@ -187,7 +185,6 @@ describe('a tap on a chord', () => {
       return px(style.left) + px(style.width) / 2;
     };
     const [low, high] = [middleOf(strings[0] ?? box), middleOf(strings[5] ?? box)];
-    // Five gaps of 22 points lie between the low E and the high E.
     expect(high - low).toBe(110);
     const neck = (low + high) / 2;
     expect(Math.abs(neck - px(getComputedStyle(box).width) / 2)).toBeLessThanOrEqual(1);
@@ -301,7 +298,6 @@ describe('the chord’s tap target', () => {
     const chord = firstChord(app.host);
     expect(chord.id).toBe('chord-1-1-1');
     const syllable = Option.getOrThrow(find('[data-testid="syllable-1-1-1"]'));
-    // The syllable's box holds the chord over its syllable; nothing between the box and the syllable takes a touch.
     const box = Option.getOrThrow(
       Option.fromNullishOr(
         app.host.querySelector<HTMLElement>(`[data-testid="${chord.id}"]`)?.parentElement,
@@ -313,8 +309,6 @@ describe('the chord’s tap target', () => {
     expect(between.some((element) => getComputedStyle(element).pointerEvents === 'none')).toBe(
       true,
     );
-    // The chord's target reaches 12 points under its 20-point row at the default size: a press there, over
-    // the syllable, lands on the chord and opens its sheet.
     expect(chordSlop(20).bottom).toBe(12);
     press(`[data-testid="${chord.id}"]`);
     expect(pushed()).toHaveLength(1);

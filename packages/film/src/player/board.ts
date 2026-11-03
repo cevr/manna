@@ -1,10 +1,3 @@
-// The Board a render page draws (`film render --board`, `boardFilm`): the
-// film's `board.json` and the try each picture panel shows, every one decoded
-// before the first frame, read from the page's server at `boardUrls` (the
-// app's server answers them, `boardFile`). A record or an image the page
-// cannot read fails the page, naming it: a Board render draws every kept try
-// or none.
-
 import { Effect, Option, Schema } from 'effect';
 import { HttpClient } from 'effect/http';
 import { type BoardFile, BoardFileJson, shownTry } from '../core/board.ts';

@@ -1,18 +1,3 @@
-// A film's choices as its source declares them, read and rewritten where
-// they are written:
-//
-// - a pick: the `play` string of an object a module exports, down a path of
-//   keys: the score's in `sound.ts` (`sound.score.play`), a look's in
-//   `palette.ts` (`looks.ground.play`);
-// - a look's levels in `palette.ts` (the keys of its `options`), read only.
-//
-// A sound layer's level in `sound.ts` is the agents' to set, as every other
-// literal of a film's source: no page draws a control for it.
-//
-// Parsed with oxc-parser (as a scene file is, `scene-source.ts`), so the one
-// literal rewritten is the one the parser proves is the value in effect.
-// Pure: text in, text out.
-
 import { Array as Arr, Option, Predicate, Result } from 'effect';
 import type { ObjectExpression, Program } from 'oxc-parser';
 import type { SourceRefused } from '../core/refusals.ts';
@@ -67,9 +52,6 @@ const objectAt = (
     ),
   );
 };
-
-// ---------------------------------------------------------------------------
-// A pick: `play`.
 
 /** Where a pick names its variant: `play` in the object `exported` declares, down `path`. */
 interface PickSite {

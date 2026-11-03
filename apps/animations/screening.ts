@@ -30,8 +30,6 @@
  * (`SCREENING_*`), written there by `bun run --cwd ../screening keys
  * [--stage <stage>]`; the stage they name is the site written to.
  */
-import { createHash } from 'node:crypto';
-
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Media } from '@manna/film/tools';
 import type { FilmManifest, Material, MaterialFile } from '@manna/screening';
@@ -144,7 +142,7 @@ const materialFile = Effect.fn('screening.file')(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const info = yield* fs.stat(file);
-  const hash = createHash('sha256');
+  const hash = new Bun.CryptoHasher('sha256');
   yield* Stream.runForEach(fs.stream(file), (chunk) => Effect.sync(() => hash.update(chunk)));
   return { file, sha256: hash.digest('hex'), bytes: Number(info.size), ext } satisfies MaterialFile;
 });
@@ -274,7 +272,6 @@ const gather = Effect.fn('screening.gather')(function* (
     title: yield* titleOf(paths.dir),
     version,
     at: DateTime.formatIso(now),
-    // The date on this machine's clock, as the owner would say it.
     day: DateTime.formatIsoDate(DateTime.setZone(now, DateTime.zoneMakeLocal())),
     video: yield* materialFile(video, 'mp4'),
     poster: yield* posterOf(video, path.join(paths.work, `${version}-poster.jpg`)),
@@ -307,7 +304,6 @@ const publish = Command.make(
     if (Option.isSome(input.from) && input.version !== 'final')
       return yield* fail('--from names the video of a final; a board or render is gathered here');
     const { site, url, desk } = yield* openSite;
-    // A film's folder name is a path segment here and a key prefix in the bucket.
     const film = yield* Schema.decodeEffect(site.FilmId)(input.film);
     const material = yield* gather(film, input.version, input.from);
     const { plan, held, pruned } = yield* site.publishTo(desk, material, input.dryRun);

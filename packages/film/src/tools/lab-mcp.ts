@@ -1,28 +1,3 @@
-// The lab as an MCP server, for agents: the running lab answers MCP at
-// `/mcp` (Streamable HTTP, Effect's `McpServer`), so an agent reads what
-// the owner said and kept in the lab, acts on it, and hears of each change
-// as it happens, instead of reading files and handing links back and forth.
-//
-// Its tools are the lab's command set (`lab-commands.ts`), each served from
-// its one definition (`lab-command.ts`): its arguments decoded by its
-// parameters (bad ones are the call's `InvalidParams`), its answer encoded by
-// its success as the structured answer and as JSON text (or, for a command
-// whose answer is pictures, its lines and images beside the structured
-// answer), its refusal said in its words, and each call logged once
-// (`mcp-calls.ts`). `film lab <name>` is made from the same definitions
-// (`lab-cli.ts`), so a terminal and an agent take the same actions by the
-// same names. Every write goes through the store the page writes through,
-// so there is no second write path.
-//
-// Resources (`lab://…`) say the same reads for a client that attaches them;
-// the `inbox` prompt opens a session on what waits.
-//
-// The lab is reached on loopback and from the owner's phone over the
-// tailnet (the lab listens on that address itself), and nowhere else, so
-// `/mcp` asks no token (owner, 2026-10-14: secure by obscurity). The lab's
-// gate (`api-server.ts`) runs first, as for any path, and Effect's server
-// refuses a request with a foreign `Origin`.
-
 import { Array as Arr, Cause, Context, Effect, Layer, Option, Schema } from 'effect';
 import * as McpProtocol from 'effect/ai/McpProtocol';
 import * as McpSchema from 'effect/ai/McpSchema';
@@ -41,9 +16,6 @@ import { LAB_SERVER } from './lab-mcp-parts.ts';
 import { BoardRead, type NoteRead, NotesRead, notesReads } from './notes-mcp.ts';
 
 export const MCP_PATH = '/mcp';
-
-// ---------------------------------------------------------------------------
-// A command as a tool
 
 const errorResult = (text: string) =>
   McpSchema.CallToolResult.make({ isError: true, content: [{ type: 'text', text }] });
@@ -154,9 +126,6 @@ const commandTools = Layer.effectDiscard(
   }),
 ).pipe(Layer.provide(McpServer.McpServer.layer));
 
-// ---------------------------------------------------------------------------
-// Resources and the prompt
-
 /** A read as a resource's JSON. */
 const json = <S extends Schema.Top>(schema: S) =>
   Schema.encodeEffect(Schema.fromJsonString(schema, { space: 2 }));
@@ -255,9 +224,6 @@ const inbox = McpServer.prompt({
       ].join('\n\n');
     }),
 });
-
-// ---------------------------------------------------------------------------
-// The server
 
 const INSTRUCTIONS = [
   "The film lab, where the owner answers the agents' asks: multiple-choice questions over the material itself (a script, a film's Board, a video, a take, a set's document). Beside the asks it holds each film's Board (tries kept, beats approved, tweaks asked of a panel), the sets of renders and the productions' ledgers. Read with `overview`, `asks`, `notes`, `board`, `catalogue`, `sets`, `set`, `timeline`; act with `ask`, `request_tweak`, `keep_try`, `resolve`, `publish_set`, `record_render`.",

@@ -50,13 +50,11 @@ export interface MockFileSystemState {
  * effects don't carry the `CallSequence` requirement.
  */
 export const createMockFileSystemLayer = (config: MockFileSystemConfig) => {
-  // Mutable state for the mock - JS is single-threaded so this is safe in tests
   const state: MockFileSystemState = {
     files: new Map(Object.entries(config.files)),
     directories: new Set(config.directories ?? []),
   };
 
-  // Add parent directories for all files
   for (const path of state.files.keys()) {
     const parts = path.split('/');
     for (let i = 1; i < parts.length; i++) {
@@ -147,7 +145,6 @@ export const createMockFileSystemLayer = (config: MockFileSystemConfig) => {
           Effect.gen(function* () {
             yield* recordCallSync({ _tag: 'FileSystem.writeFile', path });
             state.files.set(path, data);
-            // Ensure parent directories exist
             const parts = path.split('/');
             for (let i = 1; i < parts.length; i++) {
               state.directories.add(parts.slice(0, i).join('/'));
@@ -174,7 +171,6 @@ export const createMockFileSystemLayer = (config: MockFileSystemConfig) => {
               prefix = path;
             }
 
-            // Find all files in this directory
             for (const filePath of state.files.keys()) {
               if (filePath.startsWith(prefix)) {
                 const relativePath = filePath.slice(prefix.length);
@@ -185,7 +181,6 @@ export const createMockFileSystemLayer = (config: MockFileSystemConfig) => {
               }
             }
 
-            // Find all subdirectories
             for (const dirPath of state.directories) {
               if (dirPath.startsWith(prefix)) {
                 const relativePath = dirPath.slice(prefix.length);
@@ -207,8 +202,6 @@ export const createMockFileSystemLayer = (config: MockFileSystemConfig) => {
           }),
       });
 
-      // Override `exists`, `readFileString`, `writeFileString` to record their calls
-      // (FileSystem.make would otherwise derive these from access/readFile/writeFile).
       const mockFs: FileSystem.FileSystem = {
         ...baseFs,
         exists: (path) =>
@@ -236,7 +229,6 @@ export const createMockFileSystemLayer = (config: MockFileSystemConfig) => {
               content,
             });
             state.files.set(path, content);
-            // Ensure parent directories exist
             const parts = path.split('/');
             for (let i = 1; i < parts.length; i++) {
               state.directories.add(parts.slice(0, i).join('/'));

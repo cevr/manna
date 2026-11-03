@@ -1,50 +1,3 @@
-// The cast build's stage graph and its cache. A stage is `{ id, view?,
-// inputs, version, config?, run }`; its key is the SHA-256 of its id, its
-// version, its config and the hash of each input, where an input is a file's
-// bytes, named by its path from the checkout's root (so every checkout reads
-// the same keys), or an upstream stage's output. A stage's output is bytes, kept in
-// the cache as `objects/<sha256>`, and `build.json` (a `ContentStore`
-// manifest) maps each key to its output's hash and the stage's wall time,
-// with what the run noted (`ctx.note`) and the USD it counted, read
-// downstream through `ctx.built`.
-// A stage whose key is in the manifest is `cached` and does not run; one
-// that reruns and makes the same bytes leaves every stage below it cached
-// (early cutoff), since their keys read its output's hash, not its inputs.
-//
-// A stage spends (okra, Modal) only through `ctx.spend`, which runs the
-// spend when the build's `spend` names it and otherwise fails the stage as
-// `waiting-spend`; a stage that needs the owner fails as `waiting-owner`.
-// Neither is cached, so the next build asks again; the manifest keeps only
-// what it waited on, by key. Every stage below a waiting or failed stage
-// takes its state without running. `plan` runs no stage and reads nothing but
-// the cache and the input files (no lab, no network): one whose key is not
-// in the manifest is `stale`, and so is every stage below it, its output
-// unknown, unless it last waited at that key, when it waits again (a plan
-// granted its spend calls it stale); `touch` plans as if those files changed.
-//
-// A stage is decided under the manifest's lock (`ContentStore.transact`),
-// runs outside it, and is recorded under it again, so a plan or another build
-// reads the manifest while a 29 min train runs. The decision to run marks the
-// key as running (by build, pid, host, start and heartbeat); the build renews
-// the heartbeat every `HEARTBEAT` while the stage runs. A second build that
-// finds a live mark waits and decides again, sooner at first and then every
-// `BUSY_MOST` (the run it waits on may take an hour), so two builds never run
-// one stage. A run that dies lets its mark go; a mark whose process is gone on
-// this host, or from another host that this build has read unchanged for
-// `RUNNING_LEASE_MS` of its own clock, is cleared and taken over. A build
-// records what it ran only while its mark still holds the key (fencing): one
-// whose mark was taken discards its output and reports it. What a stage
-// writes outside the cache under the name its key owns (the reader's
-// checkpoint on its volume) it writes first under the build's own name
-// (`StageContext.run`), and its `promote` makes it the key's under the lock,
-// while the mark holds the key, so a fenced run's write is never the key's.
-// A promote that fails leaves the output recorded with its run unpromoted; the
-// next build takes the key's mark and promotes that run again, and runs the
-// stage again only if it no longer has the output.
-// An optional input (`optionalInput`) holds its stage only while it is stale in
-// a plan: a stage reading what this build made of a set (the training set) runs
-// over the inputs that did not wait or fail.
-
 import {
   Array as Arr,
   Clock,
@@ -488,7 +441,6 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
     );
   const inputLine = (input: Input) => {
     if (input._tag === 'File')
-      // every file input lies under the root (`checkRoot`), so its line names no checkout
       return Option.match(fromRoot(path, options.root, input.path), {
         onNone: () => Effect.die(`${input.path} is outside the root ${options.root}`),
         onSome: (named) => fileHash(input.path).pipe(Effect.map((h) => `file:${named}=${h}`)),
@@ -724,7 +676,6 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
     }).pipe(
       Effect.onExit((exit) => {
         if (Exit.isSuccess(exit)) return Effect.void;
-        // a run that died or was interrupted lets its key go, so the next build runs it
         return store
           .update(manifest, (current) => unmarked(current, key, build))
           .pipe(Effect.ignore);
@@ -759,7 +710,6 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
       stage.inputs.flatMap((input) => {
         if (input._tag === 'File') return [];
         const up = decided.get(input.id);
-        // an optional input holds the stage only while its output may yet come (a plan's stale)
         if (up?._tag === 'Held' && (input._tag === 'Stage' || up.state === 'stale'))
           return [up.state];
         return [];
@@ -779,8 +729,6 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         ...lines,
       ].join('\n'),
     );
-    // decide under the lock: cached, a plan's answer, another build's run to wait on, this build's to run, or a promote to make again;
-    // the output `spent` (one that no longer holds) counts as never built
     const decideOver = (spent: Option.Option<string>) =>
       store.transact(manifest, (current) =>
         Effect.gen(function* () {
@@ -792,7 +740,6 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
             const kept = yield* fs
               .exists(objectFile(built.value.output))
               .pipe(Effect.orElseSucceed(() => false));
-            // a run left unpromoted is promoted again under this build's mark (a plan reads it cached)
             const pending = Option.filter(
               Option.fromUndefinedOr(built.value.unpromoted),
               () => !options.plan && Option.isSome(Option.fromUndefinedOr(stage.promote)),
@@ -818,7 +765,6 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
           }
           const waited = Option.fromUndefinedOr(current.waited?.[key]);
           if (options.plan) {
-            // a stage that last waited at this key waits again, unless this plan grants its spend
             const waits = Option.filter(
               waited,
               (w) => !Option.exists(Option.fromUndefinedOr(w.spend), (s) => options.spend.has(s)),
@@ -842,10 +788,8 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
       );
     let decision: Decision = yield* decideOver(Option.none());
     let spent = Option.none<string>();
-    // a plan reads only the cache, so it takes the output last recorded as holding
     const holds = Option.filter(Option.fromUndefinedOr(stage.holds), () => !options.plan);
     if (decision._tag === 'cached' && Option.isSome(holds)) {
-      // a cached output that no longer holds is built again
       const output = decision.output;
       const held = yield* fs.readFile(objectFile(output)).pipe(
         Effect.mapError((e) => StageFailed.make({ reason: `its output: ${e.message}` })),
@@ -860,7 +804,6 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
       }
     }
     if (decision._tag === 'busy') {
-      // another build's run: decide again (BUSY) until its output or its key is free
       yield* Effect.logInfo(
         `cast.build.busy stage=${stage.id} reason="another build runs it; waiting on its output"`,
       );

@@ -1,16 +1,3 @@
-// Lay a film's sound on one track: the voice takes where the film places them,
-// the score option it plays under the voice and alone in its pauses, the
-// library's beds ducked under the voice (room tone is not),
-// and each effect on its cue at its level relative to the voice. What plays
-// where, and the signal processing, are core (core/mix.ts); `Mixer.mix` loads
-// the film and the app's library once, measures each derived sound the film
-// places once (`filmPlan`, the path `planKey` takes too, so the key the check
-// reads is the key the mix stamps), decodes what its plan plays (a code sound
-// is rendered, `SoundRender`; a library file not on disk is skipped with a
-// hint to `sfx pull`), mixes it and writes the track: one WAV that the player
-// streams and the renderer encodes a video's audio from. Remixing never calls
-// a paid API.
-
 import {
   Array as Arr,
   Context,
@@ -262,7 +249,6 @@ const decodePlan = (
     Effect.map(decodeAt(score.sound), (sound): ScoreBed<Pcm> => ({ ...score, sound }));
   const span = (bed: BedSpan<SoundSource>) =>
     Effect.map(decodeAt(bed.sound), (sound): BedSpan<Pcm> => ({ ...bed, sound }));
-  // A talk's section plays many pieces of one voice: each file is decoded once.
   const voiceFiles = [
     ...new Set(
       plan.voice
@@ -460,12 +446,6 @@ export class Mixer extends Context.Service<Mixer, MixerService>()('@manna/film/t
 
         const master = masterFile(film.paths);
         const stamp = yield* Effect.orDie(Schema.encodeEffect(MasterStampJson)({ key }));
-        // The track is written beside the old one (`writeWholeWith`), then it
-        // and its stamp land as one step under the stamp's lock: no other mix
-        // between the two, and the stamp only once the track is whole (a track
-        // with no stamp, or an old one, reads as stale). The lock is held for
-        // a rename, not for the write. A film with no take yet (a silent one)
-        // has no narration folder until its first mix makes it.
         yield* fs.makeDirectory(film.paths.narration, { recursive: true });
         yield* writeWholeWith(
           fs,

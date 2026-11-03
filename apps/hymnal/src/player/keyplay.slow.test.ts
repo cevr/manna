@@ -73,7 +73,6 @@ for (const number of [388, 373, 214])
           expect([place.line, place.syllable]).toEqual([line, syllable]);
         }
         expect(samples.length).toBeGreaterThan(0);
-        // A live Key change changes recording identity, never the score place.
         const before = app.state();
         app.move(number, 1);
         yield* settle;
@@ -132,7 +131,6 @@ const timeline: Timeline = {
   lines: [],
 };
 
-// Flush the registry, Promise adapter and stream queues without advancing time.
 const settle = Effect.forEach(Array.from({ length: 20 }), () => Effect.yieldNow);
 
 const native = (clock: Clock.Clock, recorded = 240_000) => {
@@ -164,7 +162,6 @@ const native = (clock: Clock.Clock, recorded = 240_000) => {
     calls.push({ operation, at, uri, time: clock.currentTimeMillisUnsafe() });
   const device: Device = {
     audio: {
-      // Every play here is at 1: the rate answers at once with the place.
       setPlaybackRate: () => Promise.resolve(read()),
       play: (uri) => {
         const owner = ++id;
@@ -333,7 +330,6 @@ for (const pauseIntent of [false, true])
         ...fake.device,
         audio: {
           ...fake.device.audio,
-          // One's native Play answers Loading before its seek can land.
           play: (uri) => {
             order.push('play');
             return fake.device.audio
@@ -468,8 +464,6 @@ it.effect('keyplay an obsolete readiness read cannot pause the newer recording',
   }),
 );
 
-// The oracle is independent of the adapters: only an already moving clock
-// keeps time during a hand-over. A chosen landing never consumes load time.
 const origins = [
   'Playing',
   'Paused',
@@ -584,9 +578,6 @@ for (const origin of origins)
           let recorded = 240_000;
           if (origin === 'silent-tail rewind probeM') recorded = 60_000;
           using app = yield* open(!silent, recorded);
-          // A paused native recording reloads without a Key change when
-          // Play retries its missing chosen set. This is distinct from
-          // resuming the silent score clock in probeL.
           if (origin === 'Paused' && !keyChange) {
             app.move(100, 1);
             app.missing.add(audioUrl(100, 1));
@@ -616,8 +607,6 @@ for (const origin of ['Loading probeA', 'after Seek', 'Sound-off resume probeL']
         expect(app.pending.length).toBeGreaterThan(0);
         app.send(Command.Resume());
         yield* settle;
-        // The device still waits for its source; Resume expresses intent,
-        // not evidence that music moved during the pending preparation.
         app.force({ state: 'loading', positionMs: 0, durationMs: 240_000 });
         yield* app.tick(1000);
         app.pending.at(-1)?.release();
@@ -928,7 +917,6 @@ it.effect('keyplay Sound on keeps reading through a failed preparation and fallb
     app.hold();
     yield* SubscriptionRef.set(app.sound, true);
     yield* settle;
-    // The native status can report failure before its play Promise answers.
     app.force({ state: 'failed', positionMs: 0, durationMs: 240_000 });
     yield* app.tick(500);
     expect(app.state()._tag).not.toBe('Failed');
@@ -1295,8 +1283,6 @@ for (const failed of [false, true])
         app.send(Command.Start({ track }));
         yield* settle;
         expect(app.pending).toHaveLength(3);
-        // The adapter's stale callers have been interrupted. Observe the native
-        // outcomes and prove neither completion can trigger a printed fallback.
         const outcomes = Promise.allSettled(app.pending.map((pending) => pending.result()));
         app.pending.forEach((pending, index) => pending.release(index < 2 && failed));
         expect((yield* Effect.promise(() => outcomes)).map((outcome) => outcome.status)).toEqual([
@@ -1356,7 +1342,6 @@ it.effect('keyplay a Sound-on hand-over cannot delay the third public Start', ()
     using app = yield* open(false);
     app.send(Command.Start({ track }));
     yield* app.playing;
-    // The Sound switch owns this load independently of the command's scope.
     app.hold();
     yield* SubscriptionRef.set(app.sound, true);
     yield* settle;
@@ -1394,7 +1379,6 @@ for (const state of ['playing', 'ended', 'failed'] as const)
       app.move(3, 2, 7);
       app.send(Command.Start({ track: other }));
       yield* settle;
-      // The old observer stays unresolved until the new recording plays.
       expect(
         app.calls.filter((call) => call.operation === 'play' && call.uri === audioUrl(3, 2)),
       ).toHaveLength(1);
@@ -1484,7 +1468,6 @@ for (const state of [
         Option.some({ number: 3, requested: 2, effective: 2 }),
       );
       expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(0);
-      // Return to the former page: this is a new Start, never its old place.
       app.move(100, -2, 11);
       app.send(Command.Start({ track }));
       yield* app.playing;
@@ -1569,7 +1552,6 @@ const replacementStep = (app: App, seed: number, step: number) =>
     app.hold();
     app.move(100, offset);
     yield* settle;
-    // One held reply can lose to a newer key, or finish under a Pause.
     if (step % 3 === 0) {
       let next = offset + 1;
       if (offset === 6) next = -5;

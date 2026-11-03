@@ -1,22 +1,3 @@
-// `film/no-history-comment`: a comment says what the code does now and why.
-// How it got here (the loop pass that found a defect, the batch that made a
-// change, the commit that fixed it) is history: it lives in the ledger and in
-// `git log`, and a comment that tells it goes stale while the code it sits on
-// stays true.
-//
-// Refused in a comment: a pass number (the word pass or passes and a number,
-// or pass, a dash and a number), a batch id (`p`, a number, a dash and a
-// word), a ledger id (a finding's or a decision's: one of the ledger's
-// prefixes, a dash and a number; two or more capitals ending in a digit, a
-// dash and a number, as a sweep names its findings; a guard's `G` and a
-// number with no dash) and a commit hash (7 to 40 hex digits holding a digit
-// and a letter, not a `#` colour, nor a name whose letters all come before its
-// digits, as an algorithm's `ed25519` does). A code span, a quoted literal ("…", or '…'
-// standing apart from the words around it) and a URL are values the code
-// reads, not history, and are not read. Only these forms are seen: history
-// told in words (what the code did before, which pass changed it) is the
-// reviewer's to find, as the repo's review criteria say (CLAUDE.md).
-
 import { Effect } from 'effect';
 import { Diagnostic, Rule, RuleContext, Visitor } from 'oxlint-plugin-effect/rule-bindings';
 

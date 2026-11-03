@@ -1,11 +1,3 @@
-// `runFillPicks`: the owner's picks filed onto each decision on an app's
-// productions' ledgers that names its ask and carries none, from the ask's
-// record in the app's lab (`ask-store.ts` `fillPicks`), for the app's own
-// script to run (`bun run fill-picks`). It prints a line per such decision,
-// filled or left and why, then how many of each. The app names its folders,
-// as it does for the `film` CLI (`runFilmCli`); FILMS_PRODUCTIONS and
-// FILMS_LAB, when set, win.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { ConfigProvider, Console, Effect, Layer, Match } from 'effect';
@@ -31,7 +23,6 @@ export const runFillPicks = (folders: {
   readonly productions: string;
 }): void => {
   const Platform = BunServices.layer;
-  // The app's folders under the environment's: FILMS_LAB and FILMS_PRODUCTIONS, when set, win.
   const Folders = ConfigProvider.layerAdd(
     ConfigProvider.fromUnknown({ FILMS_LAB: folders.lab, FILMS_PRODUCTIONS: folders.productions }),
   );

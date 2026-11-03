@@ -1,4 +1,5 @@
 /* oxlint-disable effect/noNewPromise, effect/noNewError -- the world stands in for One's `Audio` and `Network`, whose calls are promises the adapter wraps; a refused call rejects with an Error as One's do. */
+
 /**
  * The world the player's property and its fixed cases run in: One's `Audio`
  * and `Network` as each platform has them (the device), the host that holds
@@ -412,12 +413,6 @@ const initial = (platform: Platform, start: number) => ({
   }>(),
 });
 
-/**
- * A world on `platform` over the test's `clock`, with the player running in
- * it. Its methods are the world's acts; `tick` moves it one step.
- * `outOfOrder` tells presses late, after reads that show them (outside
- * One's order, for the census case that needs it).
- */
 /** A command or a page in a trace: its tag and fields, an option as its value or none. */
 const told = (value: { readonly _tag: string }) =>
   Object.entries(value)
@@ -453,13 +448,9 @@ export const makeWorld = (
     });
 
   const said = (): Status => {
-    // One 2.8.1 on Android says `failed` at 0 with no length whenever MediaPlayer has an error,
-    // and `loading` at 0 with no length until it is prepared, before it reads the place
-    // (HybridOneAudio.kt:1018-1031).
     if (platform === 'android' && w.phase === 'failed') return { state: 'failed', positionMs: 0 };
     if (platform === 'android' && w.phase !== 'idle' && !w.ready)
       return { state: 'loading', positionMs: 0 };
-    // Once prepared, a pause from before says `paused` over the sound (:1034-1036); an end wins.
     let state = stateOf(platform, w.phase);
     if (w.pausedEarly && w.phase !== 'ended') state = 'paused';
     const status = { state, positionMs: w.place };
@@ -483,8 +474,6 @@ export const makeWorld = (
   };
   const markLanded = (at: number) => {
     Option.map(w.target, (it) => {
-      // Sound the device made before the seek took is from its old place: the landing is the
-      // reader's place again.
       if (Math.abs(it.to - at) <= 2) {
         it.landed = true;
         w.readerPlace = Option.some(at);
@@ -502,17 +491,10 @@ export const makeWorld = (
     const at = Math.max(0, Math.min(w.length, Math.round(to * 0.6) / 0.6));
     markLanded(at);
     w.landing = Option.none();
-    // A landing at the end of a device already ended there moves nothing.
     if (at >= w.length && w.phase === 'ended') return;
-    // A landing breaks the sound's run, as the act that asked it does; a seek
-    // still on its way is superseded, as a later seekTo supersedes it.
     w.landedAt = w.t;
     if (told) w.landedKnown = w.t;
     w.place = at;
-    // One says ended only once the device played to the end (didPlayToEndTime, iOS
-    // HybridOneAudio.swift:148-152; OnCompletion, Android HybridOneAudio.kt:208-209), and a
-    // seek's completion clears it (:204, :302): a paused device stays paused at the end, and
-    // plays to it, so ends, when resumed. A failed device plays nothing, so never ends.
     if (w.place >= w.length && (w.phase === 'paused' || w.phase === 'failed')) return;
     if (w.place >= w.length) {
       w.phase = 'ended';
@@ -572,7 +554,6 @@ export const makeWorld = (
         if (status.state === 'ended') {
           w.endedSampled = Math.max(w.endedSampled, at, endSeen);
           w.endedAsked = ask.asked;
-          // A seek's answer is the device's word, as a read's is (Decided 12).
           if (ask.acts === w.acts) w.endedSaid = true;
         }
         ask.resolve(status);
@@ -614,8 +595,6 @@ export const makeWorld = (
       w.place = 0;
       w.leftEndAt = w.t;
       startSound();
-      // Android's and the web's one listener takes this seek to 0:00 too (HybridOneAudio.kt:264-267;
-      // the element's `seeked`, One 2.8.1 `src/platform/audio/index.ts:241`).
       if (platform !== 'ios') completed(false);
     } else if (w.phase === 'paused' && w.ready) startSound();
     else if (w.phase === 'paused') w.phase = 'loading';
@@ -630,16 +609,12 @@ export const makeWorld = (
   const seek = (positionMs: number) => {
     note(`device seek ${positionMs} phase=${w.phase} ready=${w.ready}`);
     w.sought.push(positionMs);
-    // Only the places not superseded are legal: a seek's place the page has not yet asked a
-    // later one past, and the latest play's. The page acts on the seeks told in order.
     const near2 = (it: number) =>
       Math.abs(Math.min(it, w.length) - positionMs) <= 2 || Math.abs(it - positionMs) <= 2;
     const served = w.seeks.findIndex(near2);
     if (served >= 0) w.seeks.splice(0, served);
     const asked =
       served >= 0 || Option.exists(w.playAsk, near2) || Option.exists(w.fromPending, near2);
-    // A seek into the last 5 s never goes to 0 (r1 m4): a 0 no reader asked, while the latest
-    // seek is near the end.
     const zero = positionMs <= 2 && Option.exists(w.target, (it) => it.to >= w.length - 5000);
     if (!asked && zero) breach('O7 seek in the last 5 s asked 0', `to=${positionMs}`);
     if (!asked && !zero)
@@ -650,10 +625,7 @@ export const makeWorld = (
     }
     count('D10 seek');
     let after = knobs.landAfter();
-    // MediaPlayer sounds from 0:00 until a play from a place lands (D4, 50 to 400 ms).
     if (Option.isSome(w.fromPending) && platform === 'android') after = Math.min(300, after);
-    // One answers a seek at its completion, never before: a phone's (`r3/premise-choice.md`)
-    // and the web's, at the element's `seeked` (One 2.8.1, `src/platform/audio/index.ts:246-278`).
     dropSeek(false);
     return new Promise<Status>((resolve, reject) => {
       w.seekAsk = Option.some({ resolve, reject, asked: w.t, acts: w.acts });
@@ -662,8 +634,6 @@ export const makeWorld = (
   };
 
   const audio: Device['audio'] = {
-    // The world's plays are all at 1: the rate answers at once, with no lag, so each play
-    // reaches the device when it did before One took a rate.
     setPlaybackRate: () => Promise.resolve(said()),
     play: () => {
       load();
@@ -739,21 +709,16 @@ export const makeWorld = (
         w.fromPending = Option.liftPredicate(fromMs, (from) => from > 0);
         w.playAsk = w.fromPending;
         w.fromSince = w.t;
-        // The play answers the latest Resume told before it (the page acts on each at its tell,
-        // and a Resume that asks no play leaves nothing behind): its places alone.
         const places = w.resumePlaces.splice(0).at(-1) ?? [];
         const resumed = places.length > 0;
         w.firstFrom = Option.filter(w.fromPending, () => resumed);
         const from = Math.min(fromMs, w.length);
-        // A place at the recording's end is its end: a play from there is from 0:00 (P8).
         const legal = (place: number) => near(from, place) || (place >= w.length && from === 0);
         if (resumed && !places.some(legal))
           breach(
             'O6 a Resume played from another place',
             `from=${fromMs} reader=${places.join('/')}`,
           );
-        // The place a play goes to is the reader's from then on, unless the reader sought
-        // after the press it answers (a phone's seek pressed later, told later).
         if (resumed && w.seekAt <= w.resumeAt)
           w.readerPlace = Option.some(Math.min(fromMs, w.length));
         w.unseenFrom = Option.none();
@@ -765,8 +730,6 @@ export const makeWorld = (
       return api.stop;
     }),
   });
-  // The JS side reads the host's time: a timer that falls due inside a hold fires at the resume
-  // and reads the resume's time, as on a device. Sleeps still run on the test's clock.
   const hostClock: Clock.Clock = {
     ...clock,
     currentTimeMillisUnsafe: () => w.js,
@@ -809,14 +772,6 @@ export const makeWorld = (
       },
     );
   const noteAct = () => {
-    // Whether the device stands at its end: it ended, and no landing, load or replay has moved
-    // it since (a pause or a failure leaves it there). World truth, never the page's tag.
-    // A read or a seek's answer must have sampled it ended: an end nothing sampled is one the
-    // page cannot know. A reader's seek since the end is the reader's place, landed or refused
-    // (P7), though a read since still says `ended`; a seek the device clamped to its end ends
-    // it at its landing, after the seek. A page that let the recording go after it asked the
-    // answer that said `ended` may have let it go first (a stop and an answer in one ms): its
-    // place stands.
     w.endedBefore =
       w.endedAt > Number.NEGATIVE_INFINITY &&
       w.endedAt >= Math.max(w.landedAt, w.loadAt, w.leftEndAt) &&
@@ -825,7 +780,6 @@ export const makeWorld = (
       w.stoppedAt < w.endedAsked;
     w.lastAct = w.t;
     w.acts += 1;
-    // The first sound after a later act is that act's, not a play's from before it.
     w.firstFrom = Option.none();
     w.endedSeen = false;
     w.endedSaid = false;
@@ -849,15 +803,12 @@ export const makeWorld = (
       landed: false,
       reported: false,
     });
-    // The page learns a phone's press at its tell: its place joins the legal ones there.
     if (!w.pressing) {
       w.seeks.push(Math.max(0, asked));
       seekAfterResume(to);
     }
     w.readerPlace = Option.some(to);
     w.unseenFrom = Option.none();
-    // A later seek is the place the device goes to, not a play's from before it. The play's
-    // place stays one the reader asked: until told of a phone's press, the page asks it again.
     w.fromPending = Option.none();
     return to;
   };
@@ -892,8 +843,6 @@ export const makeWorld = (
         countResume();
         wantSound();
         w.resumeAt = w.t;
-        // A phone press not told yet is unknown to the page: its Resume may play from the
-        // place before the first such press.
         w.resumePlaces.push([Option.getOrElse(w.readerPlace, () => 0), ...untoldBefore()]);
       },
       Pause: () => {
@@ -928,12 +877,9 @@ export const makeWorld = (
   };
   /** What a phone's session does at the press. */
   const pressPhone = (kind: Press, to: number) => {
-    // One's lock-screen play clears a pause from before prepare whatever the phase (:977-983).
     if (kind === 'play') w.pausedEarly = false;
     if (kind === 'play' && (w.phase === 'ended' || w.phase === 'paused')) resumeDevice();
     if (kind === 'pause') pauseDevice();
-    // MediaPlayer seeks only once prepared (One catches the refusal and tells nothing,
-    // HybridOneAudio.kt:999-1001; the world draws the wider case, told but not moved).
     if (kind === 'seek' && platform === 'android' && holding(w.phase) && w.ready) {
       land(to, false);
       completed(false);
@@ -971,7 +917,6 @@ export const makeWorld = (
       );
       return;
     }
-    // The lock screen's seek is a later AVPlayer seek: it cancels a page seek on its way.
     if (kind === 'seek' && platform === 'ios' && holding(w.phase)) {
       dropSeek(false);
       landAfter(to, knobs.remoteLand(), false);
@@ -990,11 +935,8 @@ export const makeWorld = (
   const press = (kind: Press, to = 0) => {
     note(`press ${kind} ${to}`);
     countPress(kind, to);
-    // One drops a seek with no place on a phone: nothing acts, nothing is told.
     if (kind === 'follow' && phone) return;
     const tell = tellPress(kind, to);
-    // The web's session only calls the page's handler, and an iOS seek lands after its
-    // tell: the press acts when the app is told.
     if (!phone || (platform === 'ios' && kind === 'seek')) {
       w.tells.push({
         pressedAt: w.t,
@@ -1020,8 +962,6 @@ export const makeWorld = (
     const pressedAct = w.acts;
     w.pressing = false;
     pressPhone(kind, to);
-    // An iOS seek pressed before acts at its tell, which the page gets first: its place is
-    // the reader's at this press.
     const placeThen = Option.getOrElse(
       Option.orElse(
         Option.fromNullishOr(w.tells.findLast((it) => 'seekTo' in it)?.seekTo),
@@ -1039,19 +979,12 @@ export const makeWorld = (
           w.resumePlaces.push([placeThen]);
           w.resumeAt = pressedAt;
         }
-        // The page acts on tells in order: a seek told after a page command it could not
-        // know of is the page's latest seek, so its place is the reader's from here.
-        // A later press is told later still, and is the latest then.
         if (kind === 'seek' && w.sentAct > pressedAct && w.pressedAct <= pressedAct) askSeek(to);
         else if (kind === 'seek') {
           w.seeks.push(Math.max(0, to));
           seekAfterResume(Math.min(w.length, Math.max(0, to)));
         }
-        // The page plays at this tell (Resume), so a device that paused itself since the press
-        // (D12) sounds again: the reader's latest word is still the play.
         if (kind === 'play' && w.readerPausedAt < pressedAt) w.wants = true;
-        // A page play between the press and its tell went to the place the page knew; told
-        // the seek, the page goes to its place, so the play's own place is owed no more.
         if (kind === 'seek' && w.plays.some((play) => play.t > pressedAt)) {
           w.readerPlace = Option.some(Math.min(w.length, Math.max(0, to)));
           w.fromPending = Option.none();
@@ -1067,7 +1000,6 @@ export const makeWorld = (
     w.pressedAct = w.acts;
     w.lastCommand = pressCommand(kind);
     if (kind === 'play') wantSound();
-    // The web's and an iOS seek's press acts at the tell, so it is known in order there.
     if (kind === 'play' && !phone) {
       w.resumePlaces.push([Option.getOrElse(w.readerPlace, () => 0)]);
       w.resumeAt = w.t;
@@ -1127,8 +1059,6 @@ export const makeWorld = (
   const interrupt = () => {
     if (!soundPhase(w.phase) && !silentPhase(w.phase)) return;
     count('D12 interrupted');
-    // Before prepare, Android's interruption only sets `playbackPaused` (:922-935): the load goes
-    // on and the device starts at prepare, so the pause takes hold, as One says it, there.
     if (pausesEarly()) {
       w.pausedEarly = true;
       return;
@@ -1149,8 +1079,6 @@ export const makeWorld = (
   };
   const becomeReady = () => {
     turnReady();
-    // A pause from before prepare: the device sounds, saying `paused` (:199-204). From here the
-    // device says it paused itself, and the reader is owed no sound.
     if (w.pausedEarly) {
       w.wants = false;
       w.toldWants = false;
@@ -1198,12 +1126,9 @@ export const makeWorld = (
       count('D3 dry');
       return;
     }
-    // An item that sounds is ready, as on a first load a close cut off.
     if (!w.ready) turnReady();
     const before = w.place;
     w.place = Math.min(w.length, w.place + step);
-    // Sound that carries the device onto a seek's place lands it, as the landing window of
-    // the Terms counts a place up to the time since the ask past the target.
     Option.map(
       Option.filter(w.target, (it) => !it.landed && before < it.to - 2 && w.place >= it.to - 2),
       (it) => {
@@ -1212,15 +1137,12 @@ export const makeWorld = (
       },
     );
     w.ahead -= step;
-    // Sound after a silence closes it: O10 reads the latest one.
     if (w.lastSound < w.t) w.quietRun = { from: w.lastSound, to: w.t };
     w.lastSound = w.t + step;
-    // Sound before a seek or a play from a place lands is not where the reader is.
     const seeking = Option.exists(w.target, (it) => !it.landed);
     if (Option.isSome(w.fromPending)) count('D4 lead-in');
     else if (!seeking) {
       firstSound();
-      // Sound in a host hold no read has sampled since is unseen (gap 3): the page may keep the place before it.
       if (!running() && Option.isNone(w.unseenFrom)) {
         w.unseenFrom = w.readerPlace;
         w.unseenSince = w.t;
@@ -1261,7 +1183,6 @@ export const makeWorld = (
     const quiet = w.wants && silentPhase(w.phase);
     w.quiet = keepRun(w.quiet, quiet, w.t);
     w.offQuiet = keepRun(w.offQuiet, quiet && !w.online, w.t);
-    // O2 judges the page's give-up by what it was told: a press counts at its tell, in order.
     const offTold = keepRun(w.offTold, w.toldWants && silentPhase(w.phase) && !w.online, w.t);
     if (!Object.is(offTold, w.offTold)) {
       w.offToldLog.push({ at: w.t, since: offTold });
@@ -1290,7 +1211,6 @@ export const makeWorld = (
       note(`read asked=${read.asked} sample=${read.sampleAt} ${seen.state} ${seen.positionMs}`);
       const current = read.acts === w.acts;
       if (seen.state === 'ended' && current) w.endedSaid = true;
-      // The page knows an end once it has the read.
       if (seen.state === 'ended') {
         w.endedSampled = Math.max(w.endedSampled, read.sampleAt, read.endSeen);
         w.endedAsked = read.asked;
@@ -1318,8 +1238,6 @@ export const makeWorld = (
     yield* settleJs;
   });
 
-  // A landing moves the device as the act that asked it does (D10: it says its old place
-  // until then), so the wait runs from the act or its landing, whichever is later.
   const quietFor = (since: number) => w.t - Math.max(since, w.lastAct, w.landedAt);
   /**
    * How long a run has been seen: from the answer of the first read asked once the run began
@@ -1328,8 +1246,6 @@ export const makeWorld = (
    */
   const seenFor = (since: number) => {
     const from = Math.max(since, w.lastAct, w.landedAt);
-    // Capped a cadence after the run began (or after the hold it began in), so a page that
-    // stops reading cannot empty the rule (Decided 11).
     const capped = Math.max(from, w.holdEnd) + cadence;
     const first = Option.match(
       Arr.findFirst(w.answered, (it) => it.asked >= from && it.sampleAt > from),
@@ -1342,15 +1258,10 @@ export const makeWorld = (
   const judgeFailed = (now: Player) => {
     if (now._tag !== 'Failed' || w.was === 'Failed') return;
     const byDevice = w.phase === 'failed' || w.failedAt >= w.lastAct;
-    // The page turns Failed at a read's answer, and knows the device only up to that read's
-    // sample (Terms): the run is judged as it stood at the sample. An act since the sample
-    // still breaks it, since the page knows each act before the read's answer.
     const sampled = Option.match(Arr.last(w.answered), {
       onNone: () => w.t,
       onSome: (read) => read.sampleAt,
     });
-    // The run starts again at an act the page knows (a press at its tell, never at the press),
-    // and at a landing it knows: one it asked or a told press made, or one a read sampled.
     const landed = Math.max(
       w.landedKnown,
       Option.getOrElse(
@@ -1358,7 +1269,6 @@ export const makeWorld = (
         () => Number.NEGATIVE_INFINITY,
       ),
     );
-    // A run broken at the sample (NaN) has held for no time.
     const offQuietFor = Option.getOrElse(
       Option.filter(
         Option.map(
@@ -1369,22 +1279,16 @@ export const makeWorld = (
       ),
       () => 0,
     );
-    // An online tell between the sample and the answer breaks the run: the page knew it.
     const toldOnline = w.onlineToldAt > sampled;
     if (!byDevice && (offQuietFor < 15_000 - span || toldOnline))
       breach('O2 Failed with no cause', `offQuietFor=${offQuietFor}`);
   };
   /** O1 to O3: Playing only with sound, Failed only with a cause, Playing owed. */
   const judgeSound = (now: Player) => {
-    // The device sounded in [t − B, t] after the latest load, B counted from the latest sound,
-    // or from the end of a hold that cut into B (`silentFrom`), or it sounded before a hold a
-    // read had already seen silent that ended a cadence ago: world time alone.
     const heard =
       w.lastSound >= w.loadAt &&
       (w.t - w.silentFrom <= allowance ||
         (w.heldUntil >= w.lastSound && w.t - w.heldUntil <= cadence));
-    // The cadence the bounds assume, measured: the gap since the latest sample while the page
-    // shows a reading state and the host has run for a span.
     if (isReading(now) && !reading.has(w.was)) w.readingFrom = w.t;
     const gap = w.t - Math.max(w.lastSampleAt, w.holdEnd, w.readingFrom);
     if (settled() && isReading(now) && gap > w.readGap) {
@@ -1407,14 +1311,9 @@ export const makeWorld = (
       if (!(Player.$is('Failed')(now) && now.offline)) breach('O4 Failed owed', `page=${now._tag}`);
       else if (w.stops !== 1) breach('O4 stop called once', `stops=${w.stops}`);
     }
-    // The load's first sound (P1), by O3's bound: once Playing was owed since the load, the
-    // page has proved sound, whatever its reads saw.
     const sounded = w.soundProved >= w.loadAt;
     if (unheld && sounded && seenFor(w.onQuiet) >= owed && !isRetry(now))
       breach('O5 Retry owed', `page=${now._tag}`);
-    // Judged at every step the page could have acted on: settled, with every press told.
-    // A new silence is the page's once a read sampled in it has answered, or a cadence after it
-    // began (`seenFor`): a Retry shown till then waits on the silence the page last saw.
     const known = settled() && !w.tells.some((tell) => tell.pressedAt < Number.POSITIVE_INFINITY);
     if (isRetry(now) && known && seenFor(w.quiet) >= 0 && quietFor(w.quiet) < 15_000 - span)
       breach('O5 Retry early', `quietFor=${quietFor(w.quiet)}`);
@@ -1424,16 +1323,12 @@ export const makeWorld = (
     if (isLetGo(now) && w.was !== now._tag)
       Option.map(now.at, (at) => {
         const expected = Option.getOrElse(w.readerPlace, () => 0);
-        // A place past an end the page cannot know yet lands at the end. A phone's press not
-        // told yet is unknown to the page: the place before it is the page's to keep.
         const kept = Math.min(at * 1000, w.length);
         const untold = untoldBefore();
         if (!near(kept, expected) && !untold.some((place) => Math.abs(kept - place) <= 1000))
           breach('O6 the page keeps another place', `at=${at} reader=${expected}`);
       });
     const latest = w.fromSince >= w.lastAct - 1;
-    // A refused place is asked again at a read that sees the item ready; the read in flight
-    // at the readiness may have seen it before, so the ask comes by the second read span.
     const dueAt = Math.max(w.fromSince, w.readyAt + span, w.holdEnd) + 1000 + span;
     if (Option.isSome(w.fromPending) && holding(w.phase) && settled() && latest && w.t >= dueAt)
       breach('O6 the play from a place never landed', `from=${Option.getOrThrow(w.fromPending)}`);
@@ -1441,28 +1336,22 @@ export const makeWorld = (
   /** O7: each seek lands. */
   const judgeSeek = () =>
     Option.map(w.target, (it) => {
-      // As a refused play's place: asked again by the second read span after the readiness.
       const dueAt = Math.max(it.at, w.readyAt + span, w.holdEnd) + 1000 + span;
       const latest = it.at >= w.lastAct && holding(w.phase) && settled();
       if (it.landed || it.reported || !latest || w.t < dueAt) return;
       breach('O7 the seek never landed', `to=${it.to}`);
-      // The breach is kept apart from the device: the seek stays unlanded.
       it.reported = true;
     });
   /** O8 and O9: Ended only once ended, Ended owed; Paused only after a pause. */
   const judgeEnd = (now: Player) => {
-    // An ended device a seek moves on was ended since the act; the page learns it by a read.
     const endedNow =
       w.phase === 'ended' ||
       w.endedSaid ||
       w.endedAt >= w.lastAct ||
       (w.endedLast >= w.lastAct && w.t - w.endedLast <= allowance);
-    // The page learns of an act at its tell; a read asked then answers within a span.
     const sinceKnown = w.t - Math.max(w.lastAct, w.toldAt);
     if (now._tag === 'Ended' && settled() && sinceKnown > span && !endedNow)
       breach('O8 Ended, not ended', '');
-    // Owed once a read saw it, or a cadence after the end, the act or the hold, whichever is
-    // latest: a page that stops reading cannot empty the rule (Decided 11).
     const endedOwed =
       w.endedSeen || w.t - Math.max(w.endedAt, w.lastAct, w.toldAt, w.holdEnd) >= cadence;
     if (settled() && endedOwed && w.phase === 'ended' && now._tag !== 'Ended')
@@ -1482,14 +1371,9 @@ export const makeWorld = (
         onNone: () => w.lastSampleAt,
         onSome: (read) => read.sampleAt,
       });
-    // An act, tell, landing, carry or load excuses a turn only within a cadence of it: the
-    // page learns each by then, and one earlier in the episode does not end the rule.
     const unacted =
       Math.max(w.lastAct, w.toldAt, w.landedAt, w.carriedAt, w.loadAt) < w.playingFrom ||
       w.t - Math.max(w.lastAct, w.toldAt, w.landedAt, w.carriedAt, w.loadAt) > cadence;
-    // The page turns at the answer of a read that sampled silence: sound may start between
-    // its sample and its answer (an answer, or a host hold), so a silence of the stand that
-    // ran up to that sample counts.
     const turnSample = Option.match(Arr.last(w.answered), {
       onNone: () => w.lastSampleAt,
       onSome: (read) => read.sampleAt,
@@ -1526,15 +1410,11 @@ export const makeWorld = (
     if (w.phase === 'ended') w.endedLast = w.t;
     w.t += step;
     w.silentFrom = Math.max(w.silentFrom, w.lastSound);
-    // Sound with no act for two cadences and an answer after the hold is sound a correct page
-    // has proved by a pair: the excuse for unseen sound ends, even with no read (Decided 11).
     if (
       w.t - Math.max(w.soundSince, w.lastAct, w.holdEnd, w.unseenSince) >=
       2 * cadence + answerMost
     )
       w.unseenFrom = Option.none();
-    // A hold inside B before any read sampled in the silence has answered moves B's start to its
-    // end; one after only owes a cadence past its end (`heldUntil`).
     if (!running() && w.t - w.silentFrom <= allowance) {
       if (w.answeredSample > w.lastSound) w.heldUntil = Math.max(w.heldUntil, w.holdUntil);
       else w.silentFrom = Math.max(w.silentFrom, w.holdUntil);
@@ -1545,8 +1425,6 @@ export const makeWorld = (
         w.lastSampleAt = w.t;
         if (said().state !== 'ended') continue;
         read.endSeen = w.endedAt;
-        // A read of `ended` lands every act (Terms): a seek asked before this sample is done,
-        // when the device ended after it. O7 still owes a seek asked of a device already ended.
         Option.map(w.target, (it) => {
           if (it.at < w.t && w.endedAt >= it.at) it.landed = true;
         });
@@ -1698,7 +1576,6 @@ const readerDrawn = (w: World, r: () => number, waiting: boolean) => {
 
 /** The world's acts at one step, drawn from `r`. */
 export const roam = (w: World, r: () => number) => {
-  // A wait on a Buffering page runs long enough for its Retry more often when the link holds.
   const waiting = w.state()._tag === 'Buffering' && !isRetry(w.state());
   if (r() < Math.max(0.001, 0.004 * Number(!waiting))) w.connect(!w.online);
   if (w.running() && r() < 0.002)
@@ -1711,7 +1588,6 @@ export const roam = (w: World, r: () => number) => {
       ),
     );
   const inside = w.phase === 'silent' || w.phase === 'held' || w.phase === 'reasked';
-  // Acts come often inside the short phases, and seldom inside the 30 s of a closed socket.
   let chance = 0.002;
   let commandChance = 0.006;
   if (w.phase === 'dry') chance = 0.005;
@@ -1720,7 +1596,6 @@ export const roam = (w: World, r: () => number) => {
     chance = 0.04;
     commandChance = 0.03;
   }
-  // A reader waits on a Buffering page, so a wait can run to its Retry.
   const shown = w.state();
   if (shown._tag === 'Buffering' && !isRetry(shown)) {
     chance /= 10;

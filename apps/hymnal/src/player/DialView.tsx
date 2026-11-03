@@ -201,25 +201,18 @@ function Dial<A>(props: DialProps<A>) {
   const detents = { name: dial, count: stops.length, wrap };
   const place = useSharedValue(index * DETENT);
   const start = useSharedValue(0);
-  // Whether the finger, or the glide it let go, moves the row: only then is a detent told.
   const driven = useSharedValue(false);
-  // The latest glide, counted: a glide stopped by a touch is told so a frame later, when the
-  // touch may already drive the row, so only the latest glide's end lets go of the row.
   const glides = useSharedValue(0);
   const walled = useSharedValue(false);
-  // Whether the touch under way has dragged the row.
   const dragged = useSharedValue(false);
-  // Whether a turn to a value set from outside (a reset, the twin dial) is under way, and where it goes.
   const following = useSharedValue(false);
   const aim = useSharedValue(index * DETENT);
-  // Whether the touch under way stopped such a turn: lifted with no drag, it lets the turn go on to its value.
   const stoppedFollow = useSharedValue(false);
   const stretch = useSharedValue(1);
   const [span, setSpan] = useState(0);
   const live = useRef(props);
   live.current = props;
   const homed = useRef(resets);
-  // The detents the finger or its glide told (`onTurn`) that have not come back as the value yet, in order.
   const told = useRef<Array<number>>([]);
 
   /** The row turns to `to`, a value set from outside, on `timing`; a touch that stops it and never drags lets it go on. */
@@ -236,16 +229,11 @@ function Dial<A>(props: DialProps<A>) {
   useEffect(() => {
     const byReset = homed.current !== resets;
     homed.current = resets;
-    // A value the dial told coming back, in the order told, is its own turn, which the row has shown
-    // already, however far it has turned on since; any other value is set from outside.
     const back = told.current.indexOf(index);
     const echo = !byReset && back >= 0;
     told.current = (echo && told.current.slice(back + 1)) || [];
-    // Where the row shows the value: a touch that stopped a turn there and lifts with no drag goes on to it.
-    // It is handed on as computed: a write here reaches the UI thread later than a read of it would.
     const to = placeOf(detents, place.value, index);
     aim.value = to;
-    // A row driven by the finger, or standing on the value, stays; any other turns to it.
     if (echo || driven.value || place.value === to) return;
     follow(
       to,
@@ -274,7 +262,6 @@ function Dial<A>(props: DialProps<A>) {
   useAnimatedReaction(
     () => detentAt(place.value),
     (now, before) => {
-      // The first call (before none) comes as the dial mounts, when nothing drives it.
       // oxlint-disable-next-line effect/noNullish -- Reanimated gives a reaction's first call its previous value as null.
       if (before === null || now === before) return;
       if (!reduced)
@@ -311,7 +298,6 @@ function Dial<A>(props: DialProps<A>) {
     onBegin: () => {
       'worklet';
       cancelAnimation(place);
-      // The touch stopped any glide where it stands: the row is the finger's now, and moves again only once it drags.
       glides.value += 1;
       driven.value = false;
       stoppedFollow.value = following.value;
@@ -323,7 +309,6 @@ function Dial<A>(props: DialProps<A>) {
     },
     onActivate: ({ translationX = 0, translationY = 0 }) => {
       'worklet';
-      // A turn set from outside while the finger was down gives way to the drag, which starts where it stands.
       if (following.value) {
         cancelAnimation(place);
         following.value = false;
@@ -349,10 +334,7 @@ function Dial<A>(props: DialProps<A>) {
         if (canceled) driven.value = false;
         return;
       }
-      // A turn set from outside after the finger came down (a reset, the twin dial) is under way: it goes on.
       if (following.value) return;
-      // A touch that stopped a turn from outside lets it go on to the dial's value as it is now;
-      // one that stopped a glide leaves the row between detents: it snaps.
       if (stoppedFollow.value)
         follow(aim.value, { duration: FOLLOW_TURN, easing: Easing.out(Easing.cubic) });
       else settle(0);
@@ -373,7 +355,6 @@ function Dial<A>(props: DialProps<A>) {
   const act = ({ nativeEvent }: AccessibilityActionEvent) => {
     const by = (nativeEvent.actionName === 'increment' && 1) || -1;
     cue({ _tag: 'detent', dial, at: ownDetent(detents, index + by) });
-    // A stopping dial is told one past its end, which its owner holds there.
     live.current.onTurn(
       Match.value(wrap).pipe(
         Match.when(true, () => ownDetent(detents, index + by)),
@@ -382,7 +363,6 @@ function Dial<A>(props: DialProps<A>) {
     );
   };
 
-  // A wrapping row draws the whole turns of its ring once each; a stopping row, its stops.
   const ring = ringOf(detents, span);
   const drawn = Array.from({ length: Math.max(ring / DETENT, stops.length) }, (_, n) => ({
     n,

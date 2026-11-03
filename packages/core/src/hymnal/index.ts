@@ -24,5 +24,4 @@ export {
   passageReaches,
 } from './schemas.js';
 
-// Re-export ID types
 export { CategoryId, HymnId, VerseId } from '../types/ids.js';

@@ -1,14 +1,3 @@
-// The accused as a Rive rig (in `figures.riv`, `figures.ts`), posed from
-// the court's cues and drawn by `f.rive` where the control draws its paper
-// person: same place, same camera, same plane. The look declares the rig
-// (`Look.rigs.accused`, `rigs.ts`); the film loads it before its first frame.
-//
-// The acting is the host's: the rig's timelines carry the body (the bow, the
-// stamp's flinch, the lift), and the face moves through its beats here, each
-// on the cue it reads (`acted`): worry as the evidence falls, shame on
-// "you did it", fear as the judge leans in, astonishment on "righteous" (the
-// verdict's stamp), then relief as the lift settles.
-
 import { ground } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import type { PoseOf } from '@manna/film/rive';
@@ -42,8 +31,6 @@ const settled = (f: CourtFrame) => {
   const { seconds, move } = ACCUSED_TIMELINES.lift;
   return Math.max(0, cueTime(f, 'lift', 'lift') - move) / (seconds - move);
 };
-
-// The face's beats, each a whole expression (`Expression`: the face kit's numbers).
 
 /** The evidence falling: the inner brows up, the mouth's corners a little down. */
 const WORRY: Expression = { ...EASE, browTilt: 0.26, browY: -1, mouth: -0.8 };
@@ -95,8 +82,6 @@ const poseOf = (f: CourtFrame): PoseOf<ReturnType<typeof accusedProp>> => {
     [ASTONISHED, f.at('stamp')],
     [RELIEF, smooth(0.1, 0.8, settled(f))],
   ]);
-  // The eyes: on us, on the evidence as it falls, down on the bow, flicking
-  // part way up to the judge as he leans in (they do not dare), then on him.
   const look = (axis: 0 | 1) => {
     const evidence = lerp(GAZE.rest[axis], GAZE.evidence[axis], drop);
     const down = lerp(evidence, GAZE.down[axis], bow);
@@ -112,7 +97,6 @@ const poseOf = (f: CourtFrame): PoseOf<ReturnType<typeof accusedProp>> => {
       ['bow', cueTime(f, 'bow', 'bow')],
       ['stamp', cueTime(f, 'stamp', 'stamp')],
       ['lift', cueTime(f, 'lift', 'lift'), f.t > f.cue('lift').start ? 1 : 0],
-      // The paper's crawl, on the film's own boil tick.
       ['boil', boilTime(f.boil)],
     ] as const,
     numbers: NUMBERS,

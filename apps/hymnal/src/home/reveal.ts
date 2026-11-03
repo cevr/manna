@@ -1,24 +1,4 @@
 /**
- * When the home list's tab row comes back pinned over the list's top, from
- * the scroll offset alone, as Safari's toolbar does: past the row's resting
- * place, an upward scroll of `travel` points (a drag or its glide) shows it,
- * and a downward scroll of as much sends it away. Each step is a worklet, so
- * the list's UI thread runs it in the frame the offset moves.
- *
- * A run is the distance scrolled one way since the offset last turned: the
- * hidden row tracks the deepest offset reached, the shown one the highest,
- * and the row turns once the offset has come `travel` back from it. At or
- * above the resting place (the offset at which the list's own row meets the
- * list's top) the row is the list's own, so the pinned copy is hidden there
- * and its run starts afresh.
- *
- * A move the app makes (a tab chosen, a tile picked) is no scroll of the
- * reader's: from it until the reader's finger meets the list, the row is
- * held, and every offset the list reports, its landing's included, only
- * moves the run's start.
- */
-
-/**
  * The pinned row's state: shown or not, the offset the current run counts
  * from, and `held` from the app's move until the reader touches the list.
  */

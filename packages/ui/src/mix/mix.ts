@@ -1,15 +1,3 @@
-// Not in upstream: Base UI composes a part's behaviour as props getters, and
-// Remix 3 as mixins on the host element (`mix={[...]}`). Solid 2 has no `mix`
-// prop, so a behaviour comes in two halves:
-// - a prop mixin, a props bag with getters for its live values: spread onto
-//   an element, its attributes render into the server's markup, and its
-//   handlers are delegated and merged (every one runs);
-// - a ref factory (`element.ts`), for work only the DOM can do (listener
-//   options, document and window listeners, observers, focus, measuring).
-//   Made inline in `ref={...}` on an element with a spread, it would be made
-//   in the browser alone: the server never evaluates such an element's
-//   `ref`, and the hydration ids would shift.
-// A prop mixin may carry its ref factories under `ref`.
 import type { JSX } from '@solidjs/web';
 
 import { mergePropsN } from '../merge-props/mergeProps.ts';

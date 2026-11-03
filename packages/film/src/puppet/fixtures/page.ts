@@ -1,12 +1,3 @@
-// A page that draws one puppet, for its slow test and the parity receipt: the
-// puppet a module declares (`module`'s export `name`, at `key` when given)
-// loaded as a film's are (`loadPuppet` over the page's image decoder) and
-// drawn by the draw path (`drawPuppet`, `canvas/puppet-gl.ts`) at a pose, in
-// its sheet's frame on a clear canvas the sheet's size, in the render path's
-// own Chrome (`openView(launchArgs)`). The page is built with Bun's bundler
-// into a folder under the package's `node_modules/.cache` (so `effect`
-// resolves from the package) and served on loopback for the scope.
-
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import type { PuppetDress, PuppetLook } from '../../canvas/puppet.ts';
 import type { PuppetPose } from '../../core/puppet.ts';

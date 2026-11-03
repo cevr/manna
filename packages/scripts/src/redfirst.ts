@@ -1,27 +1,4 @@
 #!/usr/bin/env bun
-// Red first, by machine: runs the test files a branch added or changed
-// against the base's product sources, and names every new or changed case
-// that passes there, a test the defect it was written for cannot fail.
-//
-//   bun run redfirst <base>     # HEAD's tests on <base>'s sources
-//
-// In a scratch worktree of <base> (dependencies installed from its lock), it
-// runs the base's own version of each changed test file, to learn the cases
-// the base had, then HEAD's version with HEAD's test code beside it (each
-// `*.test.ts(x)`, `fixtures/`, `testing.ts` the branch changed). A HEAD case
-// the base did not have, or whose lines the diff touched, is new or changed;
-// each one that passed is printed as `redfirst green on base: <file>:<line>
-// <name>`, and a count line ends the report. Browser-tier files
-// (`*.dom.test.ts`, `*.pixel.test.ts`) are named, not run. Slow (an install
-// and two runs), so never a hook: its output rides in a unit's review
-// request. A renamed test file runs at its new path, its base cases read at
-// its old one; a changed test file it does not run (a browser tier, a
-// deleted file) is named with why. Exits non-zero when git or the install
-// exits non-zero, or a test run writes no junit report: a report printed
-// is one every step of which ran. Each run carries a probe case beside the
-// package's files, so a run none of whose files loads on the base (a new
-// test of a new module) still writes its report, and those files are named
-// red whole.
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -149,8 +126,6 @@ const casesIn = Effect.fn('redfirst.casesIn')(function* (
     probe,
   ];
   const ran = yield* exec('bun', args, path.join(tree, prefix));
-  // A run exits 1 on a red case, a file that does not load among them; with
-  // the probe beside them, it ran only if it wrote its report.
   const junit = yield* Effect.option(fs.readFileString(report));
   if (ran.code > 1 || Option.isNone(junit))
     return yield* failed('bun', args, ran.code, `${ran.stderr}${ran.stdout}`.slice(-4000));
@@ -195,8 +170,6 @@ const redfirst = Effect.fn('redfirst')(function* (baseRef: string) {
   }
   const tree = yield* worktree(root, base);
   yield* run('bun', ['install', '--frozen-lockfile', '--ignore-scripts'], tree);
-  // The base's own cases, from its own version of each file it had (a renamed
-  // file's at its old path, keyed by its new one).
   const existed = lines(
     yield* run(
       'git',
@@ -215,9 +188,6 @@ const redfirst = Effect.fn('redfirst')(function* (baseRef: string) {
     ...c,
     file: toOf.get(c.file) ?? c.file,
   }));
-  // HEAD's test code over the base's sources, written by git from its own
-  // objects so a binary fixture (a PNG) lands byte for byte: text through
-  // stdout would decode it as UTF-8 and change it.
   const testCode = changed.filter(isTestCode);
   if (testCode.length > 0) yield* run('git', ['checkout', head, '--', ...testCode], tree);
   const headCases = yield* casesOfFiles(root, tree, tests);

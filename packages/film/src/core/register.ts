@@ -1,15 +1,3 @@
-// A picture drawn into a view's pixels by one similarity (a uniform scale and
-// a shift), and that similarity fitted on colour: the move that lays a
-// picture made from the view (okra's repaint of a padded copy of it) back
-// over the view, found where the picture should still show the view's own
-// pixels. A view point X is the picture's point (X - d) / s, both in pixel
-// corners; each view pixel takes the picture's mean over its footprint, read
-// exactly from the picture's summed areas. The fit is a coordinate descent
-// from a start (the padding's own move), each step halved when no move
-// lowers the mean RGB distance over the pixels asked, until a shift step is
-// under a 32nd of a pixel; a scale step turns about those pixels' middle, so
-// that it does not shift them. Pure and deterministic.
-
 import type { Raster } from './raster.ts';
 import { stretchRaster } from './raster.ts';
 
@@ -48,7 +36,6 @@ const summedOf = (r: Raster): Summed => {
  * corner totals, exact for pixels of one colour each.
  */
 const addTotal = (p: Summed, x: number, y: number, sign: number, out: Float64Array) => {
-  // the scoring loop calls this four times a pixel: plain locals, no array per call
   const cx = Math.max(0, Math.min(p.w, x));
   const cy = Math.max(0, Math.min(p.h, y));
   const x0 = Math.min(p.w - 1, Math.floor(cx));
@@ -239,7 +226,6 @@ export const padInto = (
       big.rgba.subarray(y * big.width * 4, (y + 1) * big.width * 4),
       ((oy + y) * width + ox) * 4,
     );
-  // the drawn size over the view's: each axis rounds to whole pixels, so the mean of the two
   const f = (big.width / view.width + big.height / view.height) / 2;
   return { picture: { width, height, rgba }, fit: { s: 1 / f, dx: -ox / f, dy: -oy / f } };
 };

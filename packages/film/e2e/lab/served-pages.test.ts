@@ -1,13 +1,3 @@
-// Every place of the lab rendered on the server once, by its page's own
-// server entry (`LAB_SERVERS`) bundled as the lab bundles it and held pure
-// (`servedFile`, `bundles.ts`): a render that writes state (Solid's
-// `SERVER_WRITE`, which the owner's lab logged at its start) or throws fails
-// here, naming the place. Each place is opened over the studio film
-// (`studio-film.ts`), its reads answered as `openServed` answers them
-// (`servedReads`). A read the fixture film does not answer fails the place
-// too, so each place renders past its fallback, with a film's data, as the
-// owner's lab renders a real film.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option, Result, Struct } from 'effect';
 import { LAB_SERVERS } from '../../../../apps/animations/server.ts';
@@ -110,7 +100,6 @@ describe("every place's server render", () => {
             onSome: ([page, r]) => {
               const answered: Array<Answered> = [];
               return rendered(r, href, readsOf(page, answered)).pipe(
-                // Read once the render has ended: every read it made is in.
                 Effect.map(() =>
                   answered
                     .filter((a) => a.status >= 400)

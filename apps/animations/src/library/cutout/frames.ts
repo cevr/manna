@@ -1,8 +1,3 @@
-// A cut view's frame on its kept sheet (`CutFrame`): its part sheet is cut
-// from the kept box padded, so the outer ink that runs a pixel or two past
-// the kept box, and a ground shadow that fades below the soles, are whole.
-// Each member's cut, part sheets, skeletons and puppets are in this frame.
-
 import type { CutFrame } from './table.ts';
 
 import type { Pt } from './rules.ts';

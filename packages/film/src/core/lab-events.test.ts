@@ -1,12 +1,3 @@
-// What the lab's change feed says of two reads of a file: a board's tries
-// added and kept, a beat approved and withdrawn; a catalogue's comment,
-// approval and render; a set published, then written again; an ask's steps
-// answered, its end reached, and its close; a note's own changes; a
-// production's words filed and versions opened. Each with the film, panel,
-// render, note, ask or production it is about and the lab path it opens on.
-// And the catalogue every change is an event of: each name once, one payload
-// schema, the read of its whole record, and the bound a payload keeps.
-
 import { describe, expect, it } from 'bun:test';
 import { Option, Record, Result, Schema } from 'effect';
 import { AskName, AskRecord, AskState } from './ask.ts';
@@ -90,11 +81,9 @@ describe('boardChanges', () => {
     expect(boardChanges(kept, approved, 'r1').map((c) => [c.kind, c.beat, c.path])).toEqual([
       ['beat.approved', 'cold', '/'],
     ]);
-    // Approved again (new tries) is an approval, not a withdrawal.
     const again = { ...kept, approvals: [{ ...approval, at: '2026-10-14T02:00:00.000Z' }] };
     expect(boardChanges(approved, again, 'r1').map((c) => c.kind)).toEqual(['beat.approved']);
     expect(boardChanges(again, kept, 'r1').map((c) => c.kind)).toEqual(['beat.withdrawn']);
-    // Nothing changed, nothing said.
     expect(boardChanges(kept, kept, 'r1')).toEqual([]);
   });
 
@@ -287,7 +276,6 @@ describe('askChanges', () => {
       ['ask.answered', answers],
     ]);
     expect(ended[0]?.step).toBe('why');
-    // Read again unchanged: nothing.
     expect(askChanges(Option.some(done), done)).toEqual([]);
   });
 
@@ -448,7 +436,6 @@ describe('the catalogue', () => {
     ).toEqual(['note.replied', 'note.resolved', 'tweak.requested']);
     expect(namesMatch(['board'], 'beat.approved')).toBe(true);
     expect(namesMatch(['notes'], 'board.kept')).toBe(false);
-    // A kind the catalogue does not know is read from no record.
     expect(namesMatch(['notes'], 'note.pinned')).toBe(false);
   });
 });
@@ -481,7 +468,6 @@ describe('a note log over time', () => {
       '2026-10-18T10:05:00.000Z',
     );
     expect(told(frame, replied)).toEqual([['note.replied', 'n1', 'lowered']]);
-    // A tweak is told by the owner, its read again tells nothing more.
     const tweak = made(replied, 'look up', '2026-10-18T10:06:00.000Z');
     expect(notesNews(replied, tweak).map((c) => [c.kind, c.note, c.by, c.text])).toEqual([
       ['tweak.requested', 'n3', 'owner', 'look up'],
@@ -497,11 +483,8 @@ describe('a note log over time', () => {
         (file, text, i) => made(file, text, `2026-10-18T11:0${i}:00.000Z`),
         emptyNotes('f'),
       );
-    // Below the old count: one new note where two were.
     expect(told(two, fresh(['after one']))).toEqual([['tweak.requested', 'n1', 'after one']]);
-    // At the old count: a new n1 where n1 was.
     expect(told(one, fresh(['after one']))).toEqual([['tweak.requested', 'n1', 'after one']]);
-    // Past it, inside one read: trashed, then two notes made.
     expect(told(one, fresh(['after one', 'after two']))).toEqual([
       ['tweak.requested', 'n1', 'after one'],
       ['tweak.requested', 'n2', 'after two'],
@@ -517,7 +500,6 @@ describe('a note log over time', () => {
     const after = made(emptyNotes('f'), 'after reset', '2026-10-18T11:00:00.000Z');
     expect(ids(before)).toHaveLength(1);
     expect(ids(after)).not.toEqual(ids(before));
-    // One note read twice (two labs, one file) keeps one id.
     expect(ids(before)).toEqual(ids(before));
     const replied = replyToNote(
       before,
@@ -556,12 +538,10 @@ describe('productionChanges', () => {
       ['production.decided', 'owner', '9005 over 9006', 'rbf-rive'],
       ['production.asked', 'agent', 'which?', 'rbf-rive'],
     ]);
-    // A word filed with an earlier time lands among them, and is told.
     const noted = { ...said, said: [word('Noted', 1.5, 'try the one line'), ...said.said] };
     expect(productionChanges(Option.some(said), noted).map((c) => c.kind)).toEqual([
       'production.noted',
     ]);
-    // A note with no words of the owner's is an agent's work note; one quoting him is his.
     const quoted = Said.cases.Noted.make({
       text: 'warmer',
       at: 1.7,

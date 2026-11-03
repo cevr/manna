@@ -132,10 +132,6 @@ interface StudyServiceApi {
   ) => Effect.Effect<StrongsStudy, StudyError>;
 }
 
-// ---------------------------------------------------------------------------
-// The commentary / parallel-writings partition (§8.1, §8.4)
-// ---------------------------------------------------------------------------
-
 /** The EGW Bible Commentary volumes, by their `books.book_code`.
  *
  *  Resolved from the corpus rather than guessed: in the 2026-08-14 snapshot
@@ -183,18 +179,10 @@ const isCommentaryVolume = (entry: CommentaryEntry): boolean =>
 const isEgwScope = (entry: CommentaryEntry): boolean =>
   EGW_SCOPE_AUTHORS.includes(entry.bookAuthor);
 
-// ---------------------------------------------------------------------------
-// Failures
-// ---------------------------------------------------------------------------
-
 const unavailable =
   (operation: string, source: StudySourceName) =>
   (cause: { readonly message: string }): StudyUnavailableError =>
     StudyUnavailableError.make({ operation, source, message: cause.message });
-
-// ---------------------------------------------------------------------------
-// Row → wire
-// ---------------------------------------------------------------------------
 
 /** How a reference reads, from the canon rather than from a stored string.
  *  `getBibleBook` is total over the 66 book numbers `BookNumber` admits, and the
@@ -240,10 +228,6 @@ const wordStrongs = (word: VerseWord): readonly StrongsNumber[] =>
 
 const studyWord = (word: VerseWord): StudyWord =>
   StudyWord.make({ text: word.text, strongs: wordStrongs(word), italic: word.italic });
-
-// ---------------------------------------------------------------------------
-// Decoding corpus rows (§8.4)
-// ---------------------------------------------------------------------------
 
 /** Decodes one corpus row, failing with the row's identity when it will not.
  *
@@ -381,10 +365,6 @@ const lexiconEntry = (
     entry.number,
   );
 
-// ---------------------------------------------------------------------------
-// Service
-// ---------------------------------------------------------------------------
-
 const makeVerse =
   (bible: BibleDatabaseService, commentary: EGWCommentaryServiceApi) =>
   (
@@ -399,10 +379,6 @@ const makeVerse =
       effect.pipe(Effect.mapError(unavailable(operation, 'bible')));
 
     return Effect.gen(function* () {
-      // Every source at once. The pane wants all five, and the four Bible reads
-      // hit one already-open SQLite connection while the fifth hits another —
-      // so concurrency here is the difference between five sequential awaits
-      // and one, inside the single round trip §8.2 promises.
       const [verse, words, crossRefs, marginNotes, refs] = yield* Effect.all(
         [
           fromBible(
@@ -421,9 +397,6 @@ const makeVerse =
             'verse.marginNotes',
             bible.getMarginNotes(reference.book, reference.chapter, reference.verse),
           ),
-          // The one reverse lookup that backs both `commentary` and
-          // `parallelWritings`: they are two views of one `paragraph_bible_refs`
-          // read, split below by book code, rather than two queries.
           commentary
             .getCommentary(reference)
             .pipe(Effect.mapError(unavailable('verse.commentary', 'writings'))),
@@ -432,20 +405,10 @@ const makeVerse =
       );
 
       const commentaryEntries = refs.entries.filter(isCommentaryVolume);
-      // Two filters, in this order, because they answer different questions:
-      // the first removes the volumes `commentary` already carries, the second
-      // keeps only the White-Estate half of what remains (§8.4). The order does
-      // not matter to the result — no BC volume is outside the EGW scope — but
-      // stating the exclusion first keeps this readable as "the parallel
-      // writings are the EGW rows that are not already above".
       const parallelEntries = refs.entries
         .filter((entry) => !isCommentaryVolume(entry))
         .filter(isEgwScope);
 
-      // Decoded before the cap for `commentary` and after it for
-      // `parallelWritings`, matching where each list is truncated: a malformed
-      // row the pane never renders is not a failure the reader should see, and
-      // `parallelWritingsTotal` counts rows, not decodes.
       const [crossReferences, notes, commentaryDecoded, parallelDecoded] = yield* Effect.all([
         Effect.forEach(crossRefs, studyCrossReference),
         Effect.forEach(marginNotes, studyMarginNote),
@@ -462,8 +425,6 @@ const makeVerse =
         marginNotes: notes,
         commentary: commentaryDecoded,
         parallelWritings: parallelDecoded,
-        // The post-scope, pre-cap count: the number a "show all" affordance
-        // must promise, and the number of rows the pane *could* show.
         parallelWritingsTotal: parallelEntries.length,
       });
     });
@@ -480,9 +441,6 @@ const makeStrongs =
       const [entry, hits, total] = yield* Effect.all(
         [
           bible.getStrongsEntry(number),
-          // The limit reaches the query rather than being applied after: a
-          // number like H430 has 2,500+ occurrences and materializing them to
-          // throw all but 50 away is work no caller asked for.
           bible.getVersesWithStrongs(number, limit),
           bible.getStrongsCount(number),
         ],

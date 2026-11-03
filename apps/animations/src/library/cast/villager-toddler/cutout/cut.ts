@@ -1,22 +1,3 @@
-// The villager toddler's kept views cut into parts (`cutParts`, @manna/film's
-// part sheet): each part their own pixels, front to back, so that a part can
-// move while every pixel at rest stays the sheet's. Parts are named from their
-// own side: `armLeft` is their left arm. They have no rig, so no part labels:
-// the round hand lies inside the sleeve's polygon whole, so no piece of it
-// stays behind when the arm moves. The cuts the sheet does not ink (the
-// sleeve's root, a crease; the neck under the chin; the hem; each sandal) are
-// polygons read off the view's ink and skin columns. Their head is the rows
-// above their chin and neck; a torso strip parts it from the sleeve's corner,
-// so the paint okra lays under the sleeve's root has torso behind it, never
-// head. Below the hem the sandals, each its top on the hem's lowest row and
-// its foot at its sole's ink, and the ground shadow behind them is a part of
-// its own. Each view names the parts a pose moves, and the words okra repaints
-// what they hide by (`HIDDEN`, read by `film concept parts`, which writes
-// `sheets/<view>/`). The lines are read in the kept view's pixels; the shared
-// cut table (`library/cutout/table.ts`) lays them in each view's part sheet
-// frame, its kept box padded (`frames.ts`). Data: the rules and the table are
-// the shared module's.
-
 import type { HiddenEntry, PartCut } from '@manna/film/tools';
 import { CUT_AWAY, grain } from '../../../cutout/prompts.ts';
 import { box, FAR, type Sleeve, type SoleRuns, sleeve, underSole } from '../../../cutout/rules.ts';
@@ -92,7 +73,6 @@ const P1_SOLES = {
 
 const POSES_1: PartCut = {
   parts: [
-    // right of the root's crease (x154) and above the sleeve's lower ink (1-2 px past it), the hand's whole ring inside
     {
       name: 'armLeft',
       take: [
@@ -110,7 +90,6 @@ const POSES_1: PartCut = {
       ],
       pivot: JOINTS['poses-1'].shoulderLeft,
     },
-    // above the chin's and the neck's lowest ink and skin, left of x148: the strip x148-154 over the sleeve's corner, and the chin's line where it meets the sleeve's top, are torso's
     {
       name: 'head',
       take: [
@@ -199,7 +178,6 @@ const POSES_1: PartCut = {
  * runs on past both sides of the box.
  */
 const P2_RIGHT: Sleeve = {
-  // their right sleeve (the viewer's left): a crease with no ink down to the cuff's ink (x29-53, y168)
   inner: [
     [56, 118],
     [56, 160],
@@ -210,7 +188,6 @@ const P2_RIGHT: Sleeve = {
   side: 'left',
 };
 const P2_LEFT: Sleeve = {
-  // their left sleeve (the viewer's right): a crease with no ink down to the cuff (x120-144, y168)
   inner: [
     [110, 118],
     [110, 160],
@@ -252,7 +229,6 @@ const P2_HANDS = {
     ],
   },
 } as const;
-// a strip under the jaw over each shoulder, between the head and the sleeve's corner, that no sleeve takes: torso, so the paint okra lays under each sleeve's root has torso behind it, never head
 const P2_BANDS = {
   right: box(43, 122, 70, 141),
   left: box(98, 122, 128, 141),
@@ -272,9 +248,7 @@ const POSES_2: PartCut = {
       unless: [...p2Left.unless, P2_BANDS.left],
       pivot: JOINTS['poses-2'].shoulderLeft,
     },
-    // above the strips under the jaw, and the neck between them down to its lowest skin
     { name: 'head', take: [box(-1, -1, FAR, 122), box(70, 122, 98, 137)] },
-    // their tunic, legs, sandals and the ground shadow: none of them moves in this pose
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };

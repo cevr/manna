@@ -433,7 +433,6 @@ describe('a stanza choice, Sound off', () => {
       const sought = yield* app.send(Command.Seek({ seconds: from / 1000 }));
       yield* app.walk(POLL);
       const changed = yield* Clock.currentTimeMillis;
-      // With every stanza kept, the sung place is the recording's.
       const left = from + (changed - sought);
       yield* app.choose(CHOSEN);
       const shown = shownIn(yield* app.walk(1000));
@@ -464,7 +463,6 @@ describe('a stanza choice, Sound off', () => {
         yield* app.choose([]);
         const shown = shownIn(yield* app.walk(1000));
         expect(shown.length).toBeGreaterThan(0);
-        // With every stanza kept, the sung place is the recording's.
         expect(driftOf(shown, (now) => left + (now - changed))).toBeLessThanOrEqual(POLL);
         expect(Math.abs((shown.at(-1)?.length ?? 0) - timeline.end)).toBeLessThanOrEqual(1);
       }),

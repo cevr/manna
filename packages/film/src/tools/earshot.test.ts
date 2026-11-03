@@ -10,12 +10,6 @@ import {
   Sink,
   Stream,
 } from 'effect';
-// earshot as `sfx fit` runs it (`Earshot.layer`, a recording spawner in place
-// of git and the sandbox): refused with its install line when its clone or
-// virtualenv is missing, or its clone is off the pin or changed; otherwise
-// run as `python -I -B` under a sandbox with no network, reading its clone,
-// its virtualenv and the recording's folder and writing only its scratch
-// folder, Hugging Face offline, the model it wrote read back.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -147,7 +141,6 @@ describe('earshot, as `sfx fit` runs it', () => {
       );
       expect(messages[0]).toContain(`not the pin ${EARSHOT_PIN}`);
       expect(messages[1]).toContain('earshot/forge/fit/auto.py');
-      // Neither ran the fit: only git read the clone.
       expect(changed.spawned.every(({ argv }) => argv[0] === 'git')).toBe(true);
     }),
   );
@@ -183,7 +176,6 @@ describe('earshot, as `sfx fit` runs it', () => {
           MPLCONFIGDIR: `${scratch}/matplotlib`,
           PYTHONDONTWRITEBYTECODE: '1',
         });
-        // The driver fits with no description.
         expect(argv[7]).toContain('clap=False');
       }),
   );

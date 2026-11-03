@@ -120,8 +120,6 @@ export const layer = (key: Redacted.Redacted<string>) =>
         const signature = Base64Url.decode(written);
         if (cut < 0 || Option.isNone(token) || Result.isFailure(signature)) return Option.none();
         const signed = new Uint8Array(signature.success);
-        // One text a token: the last character's unused bits must be zero,
-        // as `sign` writes them.
         if (Base64Url.encode(signed) !== written) return Option.none();
         const good = yield* Effect.promise(() =>
           crypto.subtle.verify('HMAC', cryptoKey, signed, bytes(payload)),

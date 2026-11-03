@@ -1,17 +1,3 @@
-// The reader lock: `reader.lock.json`, the record of the reader the cast
-// build trained, written by the build's last stage from its inputs' outputs
-// (`lockStage`). It names the reader's key on the volume, the train stage's
-// key, the train files the reader's key hashed (`trainer`), the training set (its hash and each drawing's shard), the train
-// config, the checkpoint's SHA-256, the train's fit summary and spend as the
-// train noted them in `build.json` (absent for a train that noted none; a
-// train that adopted the committed checkpoint notes the lock's own, kept),
-// each trained drawing's held numbers, each untrained drawing's, and every
-// clip's entry with its verdict (`clips.ts` `ClipLock`) and how many passed;
-// a failing clip is written all the same, and the build then fails with
-// `ClipsFailed` (`checkClips`). The stage's output is the file's bytes; a cached one
-// holds only while the file on disk has them, so a rerun with nothing
-// changed writes nothing, and a file edited or lost is written again.
-
 import { Effect, FileSystem, Option, Schema } from 'effect';
 import { sha256Hex } from '../digest.ts';
 import {

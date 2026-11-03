@@ -1,9 +1,3 @@
-// The note follower the docs give an agent hears every note the owner makes:
-// each follower a doc names for notes, read with its `--name`s, matches every
-// event the old `film notes --watch` printed that the feed still tells (a
-// tweak asked of a panel, and the owner's reply; a note on a frame is told
-// only as it is answered).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path } from 'effect';

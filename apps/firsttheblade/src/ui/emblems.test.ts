@@ -41,7 +41,6 @@ describe('the series marks laid in the page', () => {
       const leaf = turned.slice(from, turned.indexOf('</g>', from));
       const pageFrom = book.indexOf('<g class="book-page">');
       const page = book.slice(pageFrom, book.indexOf('</g>', pageFrom));
-      // The right page: its top edge from the spine's head, its outer edge, its foot, and three lines.
       const strokes = new Set(ds(page));
       expect(strokes.size).toBe(6);
       expect(ds(page)[0]).toStartWith('M24 15c5-3');

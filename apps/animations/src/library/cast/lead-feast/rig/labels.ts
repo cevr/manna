@@ -1,18 +1,3 @@
-// The series lead's part labels (`core/label.ts`): each part his turnaround's
-// views pick by colour class and by where it lies against another part, in
-// place of a seed in the sheet's pixels (`trace.ts`). His face is the largest
-// region of his skin; his hands the skin below it, to either side of it or
-// against the garment they come out of; his ears the skin beside it, against
-// it. From behind, his head's paper is his hair and his neck the skin against
-// it. In profile, his hand is the skin against his mantle, and the sleeve it
-// comes out of the mantle's teal (screen left) or the cream above his hand
-// (screen right). Measured: each label picks the region the seed it replaced
-// picked, and every table traced from them is the seeded one, byte for byte
-// (`labels.slow.test.ts`). A region the sheet runs on into another part
-// with no line between them (his mantle and a sleeve, his robe and a sleeve)
-// is read for other labels' rules, and compared on a render by no fit row
-// (`compared: false`). Pure.
-
 import type { LabelTable } from '@manna/film/tools';
 
 const SKIN = ['skin'];

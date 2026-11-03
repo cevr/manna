@@ -1,22 +1,3 @@
-// Where the lab's server is composed from its API (`core/api.ts`): the
-// handlers its groups derive, behind one gate every request passes first,
-// then its routes and the app's pages as one web handler.
-//
-// The gate is the only place a request is admitted (`admit`): the Host (or,
-// where no header is sent, the URL's host) must be the port of the listener
-// it came on, at that listener's own name or a loopback name; a browser's
-// `Sec-Fetch-Site` must be same-origin or none, except a link opened on
-// another site to one of the pages (`isNavigation`); a write must come from
-// no Origin (a tool, like curl) or one of those hosts' `http://`, and a POST,
-// or any write that declares a body, must carry JSON (a cross-site form can
-// post text/plain without a preflight; JSON cannot) of at most
-// `STUDIO_MAX_BODY` bytes, counted as it streams; a body-less DELETE (an MCP
-// client ending its session) has no body to judge (`carriesBody`). A new
-// route is behind the gate by being a route.
-//
-// Every film route names its film (`filmNamed`): one of the app's films, and
-// any other name is a 404 FilmUnknown before anything reads it.
-
 import {
   Array as Arr,
   Context,
@@ -270,7 +251,6 @@ const decodedOrRefused = <E, R>(
 ) =>
   Effect.catchDefect(routes, (defect) => {
     if (!HttpApiError.HttpApiSchemaError.is(defect)) return Effect.die(defect);
-    // The schema's words on one line: `Expected "pick" | … at ["verb"]`.
     const reason = defect.cause.message.replace(/\s*\n\s*/g, ' ');
     if (REQUEST_PARTS.includes(defect.kind))
       return answerRefused(request, RequestInvalid.make({ part: defect.kind, reason }));
@@ -641,7 +621,6 @@ export const serveApi = <
       | HttpRouter.Request.Only<'Requires', Needs>
       | HttpRouter.Request.Only<'GlobalRequires', Needs>
     >();
-    // The handler itself, for a page's reads as it renders (`PageReads`): known once made.
     const self = yield* Deferred.make<OwnHandler>();
     const app = Layer.mergeAll(
       routes,
@@ -649,9 +628,6 @@ export const serveApi = <
       gate(self),
       pageRoute(options.page, prefixesOf(api), self),
     ).pipe(Layer.provide(Etag.layerWeak), Layer.provideMerge(Layer.succeedContext(services)));
-    // What is left of `routes`' requirements is the router's markers; the
-    // services they name are in the app (`services`). Over a generic `Needs`
-    // the checker cannot reduce that, so the handler is typed as it is called.
     const web = yield* Effect.acquireRelease(
       Effect.sync(() => HttpRouter.toWebHandler(app, { disableLogger: true })),
       (opened) => Effect.promise(() => opened.dispose()),
@@ -662,8 +638,6 @@ export const serveApi = <
     const own = prefixesOf(api);
     const answer: LabHandler = (request, server) => {
       const context = Context.make(Connection, connectionOf(server));
-      // A HEAD of an API path is its GET's answer without the body (the pages
-      // answer HEAD themselves): the router takes a route by one method.
       if (
         request.method !== 'HEAD' ||
         !own.some((prefix) => new URL(request.url).pathname.startsWith(prefix))
@@ -675,8 +649,6 @@ export const serveApi = <
         signal: request.signal,
       });
       return handler(asked, context).then((response) => {
-        // The body is never sent, as Effect's own server omits it for a HEAD:
-        // dropped unread, and a stream that fails to cancel is no failure of the answer.
         Option.map(Option.fromNullishOr(response.body), (body) => body.cancel().catch(() => false));
         return new Response('', {
           status: response.status,

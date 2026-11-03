@@ -1,16 +1,3 @@
-// What a look is: the whole of the moment drawn in one art direction. The
-// study's two scenes own the timing (their cues, pinned to the take's marks,
-// in `scenes/`); a look owns every pixel inside them: the courtroom and its
-// people, Job's verse on its page, and the full-screen card's typography.
-// Each look lives in `looks/<name>/` and is one line of `looks/index.ts`.
-//
-// A look draws a frame as a pure function of the frame's time: everything it
-// shows at `f.t` is set from `f.t` and the cues (`f.at`, `f.keys`,
-// `f.stagger`), never from the frame before. A look drawn in 3D keeps its
-// renderer and its scene objects between frames but sets every transform,
-// material value and camera from `f` before it renders, then composites the
-// WebGL canvas into `f.ctx` with `drawImage` (`glCanvas`, `looks/ps1/`).
-
 import type { Box, CardWord, Light, Verse } from '@manna/film/canvas';
 import type { accusedProp, handProp, judgeProp } from './looks/rive/rigs.ts';
 import type { CourtFrame } from './scenes/court.ts';

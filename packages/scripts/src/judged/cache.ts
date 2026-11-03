@@ -1,22 +1,3 @@
-// The runner's side of the kept answers (`store.ts` holds their shape and
-// key): read whole, and written whole through a temporary file beside it,
-// removed if the write fails, under the store's lock, so two runs that keep
-// answers at once keep both and a reader sees the old store or the new one,
-// never a part. The lock is SQLite's write lock (`BEGIN IMMEDIATE`) on an
-// empty database file of its own beside the store (`.<name>.lock`), held
-// from the read to the rename: SQLite takes it with the operating system's
-// advisory file locks, which the kernel drops when the holding process ends,
-// so a run that dies leaves no lock to take, and no run ever takes one from
-// another. The file is never removed: removing a lock file another run holds
-// would let a third take a new one beside it. A missing store is an empty
-// one; a store that does not decode is an empty one, said on one line.
-// Every checkout shares the store (`store.ts`), so a write drops the answers
-// by their age alone, under the lock: an answer another checkout's tree reads
-// is kept however this tree has changed. The first answer kept for a key is
-// the store's: a run that asked about a key another run kept meanwhile keeps
-// that one, not its own, and reports by it, so two checkouts never report
-// one item two ways.
-
 import { Database } from 'bun:sqlite';
 import { Console, Effect, FileSystem, Option, Path, Result, Schedule, Schema } from 'effect';
 

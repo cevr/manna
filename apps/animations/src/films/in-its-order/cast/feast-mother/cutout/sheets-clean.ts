@@ -1,17 +1,3 @@
-// Clears the paper rim of the feast mother's drawings beside her part sheets
-// (`DRAWINGS`, her shut eyes): kept drawings of a part, not cut from a view,
-// so `film concept parts` does not make them and her cut table's clean rule
-// (`cut.ts`, `CLEAN`) never sees them. Each is laid in its part's place among
-// the view's parts as `concept parts` writes them, front to back, and the
-// paper rim of that figure (`library/cutout/clean.ts`, `paperRimOf`, with the
-// view's `PAPER_RIMS`) is cleared from it. The build does not run it: a
-// drawing is a kept input, cleaned once when it is kept, by hand from the
-// repo root with
-// `bun apps/animations/src/films/in-its-order/cast/feast-mother/cutout/sheets-clean.ts`.
-// Clearing is idempotent, so a kept drawing is the step's own answer: the
-// cast reproduce test (`library/cutout/reproduce.slow.test.ts`) holds that
-// the step clears nothing from each committed drawing.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { type Raster, decodePng, encodePng } from '@manna/film/tools';

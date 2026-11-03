@@ -1,11 +1,3 @@
-// Named cues: a scene's moments, declared once as data beside its drawing.
-// Each span anchors to a point in its scene (`ScenePoint`: a narration mark or
-// a word said after it, another cue, or a scene landmark) — never to an
-// absolute second — so a re-recorded take carries every cue with it. Resolved
-// once per layout; the picture and the sound both read the result. A timeline
-// that does not resolve fails as a value naming its scene and cue. Pure and
-// DOM-free.
-
 import { Predicate, Result } from 'effect';
 import {
   CueCycle,
@@ -263,7 +255,6 @@ export const resolveTimeline = (
       pointOn(clock, (n) => resolve(n, self), untilPoint(until), self),
       (point): Result.Result<number, TimelineError> => {
         const end = point + (span.untilOffset ?? 0);
-        // Before its start by more than float noise (`CLOCK_EPSILON`); within it, it ends on its start.
         if (end < start - CLOCK_EPSILON)
           return Result.fail(
             UntilBeforeStart.make({
@@ -287,7 +278,6 @@ export const resolveTimeline = (
       pointOn(clock, (n) => resolve(n, self), anchorPoint(span), self),
       (anchor) => {
         const at = anchor + (span.offset ?? 0);
-        // A span that `ends` on its anchor starts its length before it.
         const start = span.ends === true ? at - (span.dur ?? 0) : at;
         return Result.map(length(name, span, start), (dur) => ({ start, dur }));
       },
@@ -302,7 +292,6 @@ export const resolveTimeline = (
       return Result.fail(UnknownCue.make({ scene: clock.scene, cue: name, by, known }));
     if (visiting.includes(name))
       return Result.fail(CueCycle.make({ scene: clock.scene, cycle: [...visiting, name] }));
-    // Held through both ends, so an `until` that leads back here is a cycle too.
     visiting.push(name);
     const at = timed(name, span);
     visiting.pop();

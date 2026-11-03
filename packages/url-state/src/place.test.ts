@@ -307,7 +307,6 @@ describe('Place.history', () => {
     expect(panes('/?q=', '/?scope=egw').history).toBe('replace');
     expect(panes('/?q=x&limit=40', '/?q=x&noref=1').history).toBe('replace');
     expect(move('/films/a/lab/b?cue=', '/films/a/lab/b#t=2').history).toBe('replace');
-    // A pane's presence is its meaning: adding an empty one still pushes.
     expect(panes('/?q=x&q2=', '/?q=x&q2=&scope=egw').history).toBe('replace');
     expect(panes('/?q=x', '/?q=x&q2=&scope2=egw').history).toBe('push');
   });

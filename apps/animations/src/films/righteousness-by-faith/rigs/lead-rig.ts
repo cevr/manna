@@ -1,38 +1,3 @@
-// The lead of RBF, composed of the house's parts (`figure`), traced from the
-// front view of the cast sheets the owner kept as him (candidate 9, ask
-// `a8fb2170353`; `lead-traced.ts`): wavy brown hair over his ears' tops and
-// down beside them, no beard; a teal top with a round neck, his chin met by
-// the shade it lays on his neck and no line (`chin: 'open'`); his arms in
-// its sleeves, each bent at its elbow, lying on the top in one outline with
-// it, a crease of shade down each arm's inner edge, each upper sleeve
-// turning on a ball at its shoulder under the shoulder the top keeps in the
-// sleeve's colour (`YOKE`); khaki trousers, two legs either side of a line,
-// a brown waist band under the hem, which meets them with no line; brown
-// shoes. His
-// face is Kit A's marks where the sheet draws them; the stain on his top and
-// the white top he is given over it. His circle hands are drawn by the host
-// where his arms reach (`LEAD_ARMS`, each from its own artboard,
-// `drawHand`), so the rig is the body alone. How each part is cut, lit and
-// drawn is the house's (`drawFigure`). The owner locked him (ask
-// `a92f276635e`, 2026-10-17): `lead.lock.json` holds his print, and only an
-// override citing the owner's decision on him, filed after the lock, frees
-// a change to it (FigureLock, `@manna/film/style`'s `lock.ts`).
-//
-// Units are the cast's canon, the sheet's pixels times 0.693 (`PANEL`): he
-// stands 440 tall from his hair to his soles, 3.36 times his head's height,
-// 0.94 of Christ's. His feet are the artboard's origin.
-//
-// The host poses him by the view model `Lead`, every frame:
-// - the face kit's numbers (`FACE`);
-// - `lean`, radians about his feet; `tilt`, radians, his head about his
-//   neck; `nod`, units, his head sinking toward his top (a bow);
-// - `nearArm`, `farArm`, radians, each upper sleeve about its shoulder, and
-//   `nearElbow`, `farElbow`, each forearm about its elbow, from the pose he
-//   stands in (`LEAD_ARMS` reaches a hand to a point);
-// - `stain`, the scarlet blot on his top, 0..1; `robe`, the white top laid
-//   over his own, 0..1.
-// The rig keeps its `breath` and the paper's `boil`.
-
 import {
   Ear,
   GivenRobe,
@@ -190,9 +155,6 @@ const WAIST = PAPERS.leadWaist.color;
  * share of his head's width the sheet draws them.
  */
 export const lead = figure({
-  // The owner locked him (ask `a92f276635e`); he kept candidate 9's sheets as the lead (ask
-  // `a8fb2170353`, filed at the point item:lead after the lock), and this print is traced from
-  // them, its ink bound to the shot.
   lock: {
     ...LEAD_LOCK,
     override: {
@@ -203,12 +165,10 @@ export const lead = figure({
       frees: '55c5cc12ed69f14fef1899ab4f76e574b2fc8dcdd1b440aee09518ac7318a724',
     },
   },
-  // `film match`'s concept: candidate 9's turnaround, his front view.
   concept: {
     image: { set: 'rbf-lead-sheets-2026-10-19', file: 'images/1-turnaround.png' },
     box: [44, 195, 259, 834],
   },
-  // Room round him for his head's tilt, his arms' reach and his outline; his feet are the rig's origin.
   art: { width: 360, height: 560, feet: [180, 530] },
   stature: Stature.Canon(),
   stance: Stance.Standing({ breath: BREATH }),

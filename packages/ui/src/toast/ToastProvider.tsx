@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/toast/provider/ToastProvider.tsx
-//
-// Owns the toasts of the parts inside it: a store created once, kept in
-// step with the `limit` prop, and fed by a `toastManager` created outside
-// the tree when one is given. Upstream's provider-wide `timeout` is left
-// out: a toast takes its own `timeout`, else 5000 ms.
 import type { JSX } from '@solidjs/web';
 import { createEffect, createSignal, onCleanup, untrack } from 'solid-js';
 

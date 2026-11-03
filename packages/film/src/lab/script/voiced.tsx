@@ -1,15 +1,3 @@
-// How the Script reader shows the staging voice (`voice.tsx`) and a line's
-// delivery marks (`delivery.ts`): in a line, a pause's glyph in its gap
-// (`/` a breath, `//` and its seconds a hold) and a stressed word in a
-// heavier weight; in a beat's head, its take (▶, which plays it and the
-// ready beats after it, and its pace, named slow or fast outside the band;
-// else that it is voicing, or refused and why; a beat not voiced yet shows
-// nothing); the day's spend, one quiet line at the top of the page; and,
-// while words are selected, Hear them in the box's head and their delivery
-// under it: Stress and what stands in the gap before them (nothing, a breath
-// or a hold, its seconds picked from a few). Every edit is a tap on a
-// choice, written at once.
-
 import { Toggle } from '@manna/ui/toggle';
 import { ToggleGroup } from '@manna/ui/toggle-group';
 import { For, Show } from '@solidjs/web';
@@ -137,7 +125,6 @@ export const TakeState = (props: { readonly beat: string }) => {
                 </>
               ),
               Voicing: () => <span class="lab-script-voicing">voicing…</span>,
-              // Nothing to do about a beat not voiced yet: its missing ▶ says it.
               Unvoiced: () => <></>,
               Refused: (r) => (
                 <span class="lab-script-voicing" data-refused="true" title={r.reason}>
@@ -320,7 +307,6 @@ export const Delivery = (props: {
   readonly selected: Option.Option<Words>;
 }) => {
   const voice = useVoice();
-  // As the page has them: after its own write, the marks that write left, until the line is read again.
   const marks = () => voice.marksOf(props.beat, props.marks);
   const words = () => props.spoken.split(' ').filter((w) => w !== '').length;
   const selected = () => props.selected;

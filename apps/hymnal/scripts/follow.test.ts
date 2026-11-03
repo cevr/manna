@@ -167,7 +167,6 @@ describe('the follow judge', () => {
   it(`lets a mark sit up to ${TIMING} ms from its line's span, and no further`, () => {
     const at = (mark: number, ms: number) => sampleOf(nodes(TOPS, mark), 100, ms);
     const end = sampleOf(nodes(TOPS, -1, 'Play hymn 100 again'), 100, TIMED.end - TIMED.first);
-    // Line 1 is sung from 2000 to 3500 ms after the tap.
     const inside = [at(0, 200), at(1, 2000 - TIMING + 1), at(1, 3500 + TIMING - 1), at(3, 4400)];
     expect(judge(100, TIMED, [...inside, end], 1)).toMatchObject({ adrift: 0, holds: true });
     const outside = [at(0, 200), at(1, 2000 - TIMING - 1), at(1, 3500 + TIMING), at(3, 4400)];
@@ -197,7 +196,6 @@ describe('the follow judge', () => {
     const at = (mark: number, ms: number, button?: string) =>
       sampleOf(nodes(TOPS, mark, button), 100, ms);
     const ends = (ms: number) => at(-1, ms, 'Play hymn 100 again');
-    // Line 2 skipped: no length, at line 3's start.
     const cut = {
       first: 1000,
       countIn: 0,
@@ -213,7 +211,6 @@ describe('the follow judge', () => {
     expect(judge(100, cut, sung, 1)).toMatchObject({ skipped: 0, last: true, holds: true });
     const selected = [at(0, 200), at(1, 2200), at(2, 3500), at(3, 3700), ends(6500)];
     expect(judge(100, cut, selected, 1)).toMatchObject({ skipped: 1, holds: false });
-    // The last two lines skipped: line 1 is the last sung.
     const tail = {
       first: 1000,
       countIn: 0,

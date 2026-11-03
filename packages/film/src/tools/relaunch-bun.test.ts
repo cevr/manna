@@ -1,7 +1,3 @@
-// The relaunch over this process's host, with its two exits stood in for: it
-// ends the Chrome the lab's pages ran in before it starts the command again,
-// and starts it with the runtime's flags, the script and its arguments.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Exit } from 'effect';
 import { Relaunch } from './exports-watch.ts';
@@ -17,7 +13,6 @@ describe('the relaunch over Bun', () => {
         Bun.WebView.closeAll = () => {
           seen.push('chrome ended');
         };
-        // The real one never returns: this one ends the relaunch's fiber in its place.
         process.execve = (file, args): never => {
           seen.push({ execve: file, args });
           // oxlint-disable-next-line effect/noThrowStatement, effect/noNewError -- execve's own contract: it never returns, so the stand-in throws where the real one replaces the process

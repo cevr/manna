@@ -1,6 +1,3 @@
-// Time is the only input to a frame. These helpers turn "seconds since the
-// scene began" into eased 0→1 progress values and keyframed numbers.
-
 import { Option } from 'effect';
 import type { EaseName } from './schema.ts';
 
@@ -52,8 +49,6 @@ const timecodeParts = (seconds: number, fps: number): TimecodeParts => {
   const counted = countedWhole(fps);
   const firstFrameOf = (second: number) =>
     counted ? second * perSecond : frameAtOrAfter(second, fps);
-  // Within a second of the answer either way; each candidate, latest first,
-  // is judged by its first frame.
   const near = Math.floor(frames / (counted ? perSecond : fps));
   let whole = near + 1;
   while (whole >= near - 1 && firstFrameOf(whole) > frames) whole--;
@@ -214,11 +209,9 @@ export const ease = {
   outExpo: (t) => (t === 1 ? 1 : 1 - 2 ** (-10 * t)),
   inOutExpo: (t) =>
     t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ? 2 ** (20 * t - 10) / 2 : (2 - 2 ** (-20 * t + 10)) / 2,
-  // Pinned at 1: cos(π/2) lands at ~6e-17, which would read as "not quite there".
   inSine: (t) => (t >= 1 ? 1 : 1 - Math.cos((Math.PI * t) / 2)),
   inOutSine: (t) => (1 - Math.cos(Math.PI * t)) / 2,
   outBack: (t) => {
-    // Pinned ends: the polynomial lands at ~1e-16 for t = 0, which would read as "started".
     if (t <= 0) return 0;
     if (t >= 1) return 1;
     const c1 = 1.70158;

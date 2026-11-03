@@ -1,17 +1,3 @@
-// `film/lock-through-sqlite`: a manifest's lock file (`.<name>.lock` beside
-// the manifest) is opened by SQLite alone, in `tools/manifest-lock-bun.ts`.
-// The lock is the operating system's advisory lock SQLite holds on it, and
-// the kernel lets go of every such lock a process holds on a file when that
-// process closes any handle on the file: a read, a stat through an open
-// handle or a copy made elsewhere in the process drops the store's lock
-// while the store still believes it holds it, and two writers go in.
-//
-// Refused outside that module: a call of its `lockFile` (the lock file's
-// path: imported, under an alias, or read off the module imported whole; a
-// parameter called `lockFile` is its own binding), and a string or template that names a lock file (`.catalogue.json.lock`,
-// `` `.${name}.lock` ``). A test that reads a lock's name back (a folder's
-// listing) is the host's side and is let off by the config.
-
 import { Effect, Option, Predicate } from 'effect';
 import {
   Diagnostic,

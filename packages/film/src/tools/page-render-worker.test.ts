@@ -1,8 +1,3 @@
-// A build's render worker as the lab speaks to it (`page-render-protocol.ts`),
-// the real worker over entries written to a folder of its own: a render the
-// lab cancels while its server entry is still loading never starts, so once
-// the entry has loaded it sends no head and makes no read.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Exit, FileSystem, Layer, Path, Queue, Random } from 'effect';
@@ -94,14 +89,10 @@ describe("a build's render worker", () => {
         yield* worker.send(ToRender.Render({ id: 1, module: gated, url: URL_ASKED, mac: false }));
         yield* Deferred.await(loading);
         yield* worker.send(ToRender.Cancel({ id: 1 }));
-        // The worker takes its messages in order: once a later render has
-        // ended, the cancel was taken.
         yield* worker.send(ToRender.Render({ id: 3, module: fast, url: URL_ASKED, mac: false }));
         yield* heardFrom(3, 'End');
 
         channel.postMessage('open');
-        // The same entry, rendered again: its load is the one the cancelled
-        // render waited on, so its head comes after anything that render did.
         yield* worker.send(ToRender.Render({ id: 2, module: gated, url: URL_ASKED, mac: false }));
         const head = yield* heardFrom(2, 'Head');
         expect(head).toEqual(expect.objectContaining({ html: 'aborted=false' }));

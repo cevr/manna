@@ -1,11 +1,3 @@
-// The look pass, as pure functions: every scene drawn small at 2 fps (a
-// 64×36 thumb per sample, and the faces the kit declared), measured for what a
-// viewer across the room sees. How much of a scene holds still (`HeldShare`),
-// the light of each scene and act against the film's declared colour script
-// (`ColourScript`), whether a face ever reaches human scale (`FaceSmall`), how
-// the hands the kit declared move (`HandJump`, `HandFar`, `HandHidden`), and
-// the YouTube chapters the declared acts name. `looker.ts` draws the samples.
-
 import { Array as Arr, Option, Order, Result } from 'effect';
 import { type Placed, filmEnd } from '../core/layout.ts';
 import { CLOCK_EPSILON, frameAtOrAfter, secondsAt } from '../core/time.ts';
@@ -128,7 +120,6 @@ const readThumb = (thumb: Uint8Array, into: Sum): Float32Array => {
     grey[i] = y;
     luma += y;
     const hi = Math.max(r, g, b);
-    // Black has no hue: its spread is 0, over 1.
     saturation += (hi - Math.min(r, g, b)) / Math.max(1, hi);
     const bin = binOf(r, g, b) * 4;
     into.bins[bin] = (into.bins[bin] ?? 0) + 1;
@@ -347,9 +338,6 @@ interface Jump {
  */
 const jumpOf = (was: HandMark, now: HandMark): Option.Option<Jump> => {
   if (was.size <= 0 || now.size <= 0) return Option.none();
-  // Each frame in its figure's own measure (its reach, always longer than its
-  // hand; the hand's length when it declares none), so a zoom or the figure
-  // scaled changes nothing.
   const wasUnit = Math.max(was.radius, was.size);
   const nowUnit = Math.max(now.radius, now.size);
   const length = (was.size / wasUnit + now.size / nowUnit) / 2;

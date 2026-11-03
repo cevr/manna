@@ -1,10 +1,3 @@
-// The pixel reads under a cast sheet's measure (`cast-sheet.ts`): the sheet's
-// ink rings and the figures they draw, what the ink closes inside a figure,
-// its regions of one fill and their colours, the dark fills (hair, a beard)
-// apart from the ink, a garment's papers, and two views compared pixel by
-// pixel, flipped or not. Pure: RGBA in, numbers out; every loop indexes its
-// typed arrays inside their bounds.
-
 import type { Raster } from './raster.ts';
 import { scaleRaster } from './raster.ts';
 
@@ -228,13 +221,6 @@ const boxArea = (b: Box) => (b[2] - b[0]) * (b[3] - b[1]);
 /** An ink ring whose box is under this share of the largest one's is a part (a hand, a foot), never a figure of its own. */
 const BODY_SHARE = 0.15;
 
-/**
- * The `count` figures on a sheet, left to right: its `count` largest ink
- * rings by box, each at least `BODY_SHARE` of the largest, each joined by the
- * smaller ink nearest it (a hand, a foot, a mark) within six tenths of its
- * width. A sheet with fewer figures than `count` answers fewer; `found`
- * counts every ring that big, so a sheet that draws more is said.
- */
 /** The figures a sheet's measure reads, and how many it found. */
 interface SheetFigures {
   readonly figures: ReadonlyArray<SheetFigure>;

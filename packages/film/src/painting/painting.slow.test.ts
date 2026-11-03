@@ -1,14 +1,3 @@
-// A painted plate in the page: a fixture PNG with alpha (a clear left band, an
-// opaque red over blue body, a half-clear green band at its right) decoded by
-// the page's decoder (`PaintingImagesBrowser`), loaded on a film
-// (`loadPaintings`) and painted by `f.painting` under a scene transform off the
-// identity (the film's breath, then the scene's own translate and scale), in
-// the render path's Chrome. The plate lands where `paintingQuad` puts it, its
-// opaque paint keeps its colour, its clear band leaves the frame as the bare
-// film draws it, and its half-clear band and its keyed edge blend the paper
-// and the paint without darkening either (premultiplied alpha). Each case
-// opens Chrome, so it runs in the slow suite.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Path } from 'effect';
@@ -118,36 +107,29 @@ describe('a painted plate in the page', () => {
             move: { x: 301.25, y: 203.5, s: 1.5 },
             T: 1,
           });
-          // the scene's transform is off the identity (the breath scales about the frame's centre, then the scene's move): no turn
           expect(matrix.a).toBeGreaterThan(1.4);
           expect(matrix.e).toBeGreaterThan(200);
           expect(Math.abs(matrix.b) + Math.abs(matrix.c)).toBeLessThan(1e-6);
 
-          // where the frames differ is the plate's quad, but its clear band: right, top and bottom on the quad, left at the band's edge
           const quad = paintingQuad(matrix, SPEC);
           const box = differs(painted, bare, 2);
           const edgeX = matrix.a * (AT[0] + SCALE * CLEAR) + matrix.e;
           expect(Math.abs(box.x1 + 1 - quad[1][0])).toBeLessThanOrEqual(1.5);
           expect(Math.abs(box.y0 - quad[0][1])).toBeLessThanOrEqual(1.5);
           expect(Math.abs(box.y1 + 1 - quad[2][1])).toBeLessThanOrEqual(1.5);
-          // the smoothing spreads the keyed edge over half a plate px on its clear side
           expect(Math.abs(box.x0 - edgeX)).toBeLessThanOrEqual((matrix.a * SCALE) / 2 + 1);
 
-          // the opaque paint keeps its colour
           expect(off(rgbAt(painted, ...screenOf(matrix, 32, 10)), RED)).toBeLessThanOrEqual(3);
           expect(off(rgbAt(painted, ...screenOf(matrix, 32, 36)), BLUE)).toBeLessThanOrEqual(3);
 
-          // the clear band leaves the bare frame as it was
           const clear = screenOf(matrix, 6, 24);
           expect(off(rgbAt(painted, ...clear), rgbAt(bare, ...clear))).toBe(0);
 
-          // the half-clear band is paint over paper at its alpha, not darker
           const half = screenOf(matrix, 56, 12);
           const a = HALF / 255;
           const blended = rgbAt(bare, ...half).map((c, k) => c * (1 - a) + GREEN[k]! * a);
           expect(off(rgbAt(painted, ...half), blended)).toBeLessThanOrEqual(3);
 
-          // across the keyed edge (clear to red), each pixel lies between the paper and the paint: none darker than both
           const [, y] = screenOf(matrix, 32, 10);
           const from = Math.floor(edgeX) - 4;
           let soft = 0;
@@ -162,7 +144,6 @@ describe('a painted plate in the page', () => {
           }
           expect(off(rgbAt(painted, from, y), rgbAt(bare, from, y))).toBeLessThanOrEqual(1);
           expect(off(rgbAt(painted, from + 8, y), RED)).toBeLessThanOrEqual(3);
-          // the edge is drawn smooth (high-quality smoothing), not cut on one pixel
           expect(soft).toBeGreaterThanOrEqual(1);
         }),
       ).pipe(Effect.provide(BunServices.layer)),

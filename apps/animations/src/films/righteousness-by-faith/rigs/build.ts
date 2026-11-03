@@ -1,23 +1,3 @@
-// Build RBF's figures file (`FIGURES`, `figures.ts`) into `figures.riv`
-// beside this file, where `rigs.ts` imports it, with the stamp of what it was
-// built from (`figures.stamp.json`): the project the house prints from the
-// file (`figuresRml`, `@manna/film/style`), generated (`project/`) and
-// compiled by the house's `compile` (`@manna/film/style/build`: the Rive CLI,
-// offline and unsigned). It builds nothing while an override on a figure
-// cites a word that is not the owner's on that figure (`unsaid`): a decision
-// on RBF's ledger (`LEDGER`) filed at the point `item:<item>`, after the lock
-// it frees, in the override's words or with the pick it cites. Nor does it
-// build while a locked figure's print is not the one its lock holds, or its
-// lock names no decision on the ledger (`unlocked`), unless such an override
-// frees that very print, which it lists. A build whose stamp still holds
-// (`unbuilt`) compiles nothing, so to build with a newer CLI, delete the
-// stamp first. Fails when the CLI reports a problem. The film's test
-// (`build.slow.test.ts`) holds the overrides, the locks and the committed file to
-// the rigs through the same checks.
-// `bun src/films/righteousness-by-faith/rigs/build.ts`, from the app's
-// folder or anywhere: paths are this file's. The CLI is `rive` on the PATH,
-// or the one `RIVE` names.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';

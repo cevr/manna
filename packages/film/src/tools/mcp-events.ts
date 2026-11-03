@@ -1,37 +1,3 @@
-// MCP Events on the lab's MCP (protocol 2026-07-28, OpenAI's MCP Events
-// profile): a subscriber lists the lab's events (`events/list`, the
-// catalogue, `LAB_EVENTS`), subscribes to one (`events/subscribe`) with a
-// webhook and its secret, and the lab posts each event to it as it
-// happens, signed (Standard Webhooks), until it unsubscribes
-// (`events/unsubscribe`) or the subscription expires. Effect's McpServer
-// serves `server/discover` for 2026-07-28 with no `events` capability and
-// none of these methods (it answers them MethodNotFound), so the lab serves
-// them itself, in a middleware in front of its MCP route (`eventsRoute`):
-// a request the gate has admitted (`bodyAdmitted`) whose method is one of
-// them is answered here, `server/discover`'s answer gains `events`, and
-// every other request goes on to Effect's server.
-//
-// A subscription is one per webhook, event and arguments (its id is their
-// canonical JSON's digest, so the same subscribe again is the same
-// subscription, refreshed: its secret, cursor and expiry replaced). Before
-// it is kept, its callback is verified: posted a challenge, signed, which
-// it must echo in a 2xx (`CallbackEndpointError`, -32015, otherwise). Each
-// subscription delivers from its own cursor on the lab's change feed: one
-// POST per event, the body written once, its `webhook-id` the event's id
-// (the same on every retry, with a new timestamp and signature), retried on
-// `retry` for anything but a 2xx, a 410 (the subscription is dropped) or a
-// 413 (the event is skipped). Its cursor is kept after each event, in
-// `lab/events/subscriptions.json` (this module's own file), so a lab
-// restarted delivers on from it (a cursor of an earlier run reads every
-// change the new run has seen: what changed while the lab was down is its
-// baseline, as on every reader of the feed). A subscribe with a cursor
-// replays the events past it the feed still keeps, `truncated` when it no
-// longer keeps all of them. The lab has no accounts, so a subscription is
-// no one's: the lab answers loopback and the owner's phone alone
-// (`api-server.ts`). Any http or https callback URL is taken. ChatGPT reaches a server only over
-// public HTTPS, and the lab provides no public route: a ChatGPT subscriber
-// needs one made for it.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -186,7 +152,6 @@ const definitions: ReadonlyArray<EventDefinition> = Record.toEntries(LAB_EVENTS)
     name,
     description: event.description,
     delivery: ['webhook'],
-    // A subscribe refuses an argument it does not name, so the schema allows none.
     inputSchema: objectSchema(EventArguments, 'error'),
     payloadSchema: objectSchema(LabChange),
   }),
@@ -258,14 +223,11 @@ export class McpEvents extends Context.Service<McpEvents, McpEventsService>()(
             ),
           )
           .pipe(
-            // A callback that redirects is answered as it answers: its redirect is no 2xx.
             Effect.provideService(FetchHttpClient.RequestInit, { redirect: 'manual' }),
             Effect.timeoutOrElse({
               duration: pace.answerWithin,
               orElse: () => Effect.fail(Undelivered.make({ reason: 'timeout' })),
             }),
-            // Said by the failure's kind alone: the client's message holds the whole URL, and a
-            // webhook's path can be its secret.
             Effect.mapError((error) =>
               Undelivered.make({
                 reason: Match.value(error).pipe(
@@ -363,7 +325,6 @@ export class McpEvents extends Context.Service<McpEvents, McpEventsService>()(
     ) =>
       Effect.gen(function* () {
         const eventId = `evt_${change.id}`;
-        // The body is written once: every try sends these bytes.
         const body = deliveryJson({
           eventId,
           name: change.kind,
@@ -460,7 +421,6 @@ export class McpEvents extends Context.Service<McpEvents, McpEventsService>()(
     const run = (subscription: EventSubscription) =>
       FiberMap.run(running, subscription.id, deliveries(subscription));
 
-    // What the lab kept delivers on, each from its cursor: one that expired while the lab was down goes.
     const now = yield* Clock.currentTimeMillis;
     const stored = yield* Effect.orElseSucceed(store.read(manifest), () => manifest.empty);
     const expiredBy = (s: EventSubscription) =>
@@ -504,7 +464,6 @@ export class McpEvents extends Context.Service<McpEvents, McpEventsService>()(
         const of = { names: [params.name], ...args };
         const asked = Option.fromNullishOr(params.cursor);
         const answer = yield* events.since(asked, of);
-        // A cursor the feed no longer knows replays every change it kept: the cursor is where that replay starts.
         const replayFrom = Option.match(Arr.head(answer.changes), {
           onNone: () => answer.cursor,
           onSome: (first) => cursorAfter(answer.cursor, { seq: first.seq - 1 }),
@@ -584,9 +543,6 @@ export class McpEvents extends Context.Service<McpEvents, McpEventsService>()(
   /** The lab's subscriptions at its pace (`DELIVERY_PACE`). */
   static readonly layer = McpEvents.at(DELIVERY_PACE);
 }
-
-// ---------------------------------------------------------------------------
-// The methods, in front of Effect's MCP route
 
 /** A JSON-RPC message, as far as the events methods read one. */
 const Message = Schema.fromJsonString(

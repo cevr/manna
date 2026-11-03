@@ -1,17 +1,3 @@
-// The easel's tools on the lab's MCP, as a client calls them at `/mcp`: each
-// listed, the reads read-only; a look answered as images after their lines,
-// its view as the tool asks it (no captions; a crop a PNG at 1:1, a frame a
-// JPEG), and refused in the film's words: another checkout's films
-// (`LabElsewhere`, with how to reach a lab of its own), a films folder that
-// is not absolute or has a `..`, a film the lab lacks, the easel's refusal,
-// stills too large for a model's request, arguments that do not decode; a
-// check of the scenes named, drawn, a page at a time, its cursor checking
-// the same scenes (another scope starts again), and more scenes, or a longer
-// id, than a cursor leaves room for refused; a film's cue lines, `late`
-// said, a scene it lacks refused; the journal noted and read back with no
-// timeline resolved, its oldest entries counted with its file, an empty note
-// and a scene the film lacks refused.
-
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Deferred,
@@ -285,7 +271,6 @@ describe.concurrent("the easel's tools on the MCP", () => {
         data: Base64.encode(new Uint8Array([2, 2, 2])),
         mimeType: 'image/jpeg',
       });
-      // A crop reads a region at 1:1, as a PNG.
       const cropped = yield* look(call, { scene: 'roof', at: ['1'], crop: [10, 20, 110, 120] });
       expect(cropped.content[1].mimeType).toBe('image/png');
       expect(asked).toEqual([
@@ -308,7 +293,6 @@ describe.concurrent("the easel's tools on the MCP", () => {
           },
         },
       ]);
-      // Each look is its one log line, as every tool call is.
       expect(lines).toEqual([
         '[mcp] tool=look film=f scene=roof outcome=ok',
         '[mcp] tool=look film=f scene=roof outcome=ok',
@@ -328,17 +312,13 @@ describe.concurrent("the easel's tools on the MCP", () => {
           expect(answer.isError).toBe(true);
           return String(answer.content[0].text);
         });
-      // Another checkout's films: never answered with this lab's files.
       expect(yield* refused({ films: '/rift/films', scene: 'roof', at: ['1'] })).toBe(
         'LabElsewhere: this lab serves /films/f, not /rift/films/f: start a lab from your checkout (LAB_PORT=<port> bun cli.ts lab, in apps/animations) and call its MCP at http://localhost:<port>/mcp',
       );
-      // A refusal is a failed call in the log, though the tool answers it.
       expect(lines).toEqual(['[mcp] tool=look film=f scene=roof outcome=failed']);
-      // A relative films folder: the lab would read it from its own checkout.
       expect(yield* refused({ films: 'src/films', scene: 'roof', at: ['1'] })).toContain(
         "your checkout's films folder, absolute",
       );
-      // A .. in it: Node resolves it before the links it follows, so it may lead elsewhere.
       expect(yield* refused({ films: '/films/../films', scene: 'roof', at: ['1'] })).toContain(
         'absolute and with no ..',
       );
@@ -347,14 +327,12 @@ describe.concurrent("the easel's tools on the MCP", () => {
       expect(yield* refused({ scene: 'broken', at: ['1'] })).toBe(
         "PagesBroken: the lab's pages do not build:\nscenes/broken.ts failed to build",
       );
-      // Written, but more than a model's request takes: one still, or a look's all.
       expect(yield* refused({ scene: 'huge', at: ['1'] })).toBe(
         "LookTooLarge: the stills pass 3750000 bytes, more than a model's request takes: /out/f/look/huge/still0.jpg (3750001 bytes). They are written; look again with a smaller size, a smaller crop or fewer places",
       );
       expect(yield* refused({ scene: 'heavy', at: ['1', '2', '3', '4', '5'] })).toContain(
         'LookTooLarge: the stills pass 15000000 bytes',
       );
-      // Arguments that do not decode are the call's error: the easel is not asked.
       const before = asked.length;
       const undecoded: ReadonlyArray<Args> = [
         { scene: 'roof', at: [] },
@@ -690,7 +668,6 @@ describe.concurrent("the easel's tools on the MCP", () => {
       message: 'm'.repeat(370),
       address: { part: { _tag: 'Scenes', ids: ['roof'] }, time: index },
     }));
-    // The whole film has a finding more than the two scenes named.
     const check: FreshFilmService['check'] = (film, leg, scenes = []) =>
       Effect.sync(() => {
         checked.push([film, leg, scenes]);
@@ -712,17 +689,14 @@ describe.concurrent("the easel's tools on the MCP", () => {
       });
       expect(first.next.from).toBe(first.findings.length);
       expect(first.next.scenes).toEqual(['roof', 'gate']);
-      // Asked again with the cursor as it is: the same scenes, read on.
       const rest = yield* tool('check', { films: FILMS, film: 'f', ...first.next });
       expect(rest.restarted).toBeUndefined();
       expect(rest.findings[0].tag).toBe(`Finding${first.findings.length}`);
       expect(first.findings.length + rest.findings.length).toBe(30);
-      // Its place in another scope (the whole film, here) starts again from the first.
       const { scenes: _named, ...wider } = first.next;
       const whole = yield* tool('check', { films: FILMS, film: 'f', ...wider });
       expect([whole.from, whole.findings[0].tag, whole.warnings]).toEqual([0, 'Finding0', 1]);
       expect(whole.restarted).toContain('listed again from the first');
-      // More scenes, or a longer id, than a cursor that repeats them leaves room for: the call's error.
       for (const scenes of [Array.from({ length: 25 }, () => 'roof'), ['r'.repeat(65)]])
         expect((yield* tool('check', { films: FILMS, film: 'f', scenes })).refused).toContain(
           "Invalid parameters for tool 'check'",
@@ -766,8 +740,6 @@ describe.concurrent("the easel's tools on the MCP", () => {
       return Effect.gen(function* () {
         const { lab } = yield* labWithMcp;
         const { tool } = yield* mcpSession(lab);
-        // A relative films folder is refused before anything is written: the
-        // lab would write into its own checkout. The read below has one entry.
         expect(
           (yield* tool('journal_note', { films: 'src/films', film: 'f', text: 'x' })).refused,
         ).toContain("your checkout's films folder, absolute");
@@ -796,7 +768,6 @@ describe.concurrent("the easel's tools on the MCP", () => {
           expect((yield* asked).refused).toBe(
             'UnknownScene: the film has no scene "nope"; its scenes are roof, gate',
           );
-        // Many long entries: the newest that fit, the rest counted.
         for (let n = 0; n < 24; n += 1)
           yield* tool('journal_note', { films: FILMS, film: 'f', text: `${n} ${'w'.repeat(500)}` });
         const read = yield* tool('journal', { films: FILMS, film: 'f', last: 30 });
@@ -805,7 +776,6 @@ describe.concurrent("the easel's tools on the MCP", () => {
         expect(read.earlier).toBe(
           `${25 - read.lines.length} earlier entries not shown: /films/f/journal.md holds them all`,
         );
-        // Its scenes are read with no timeline resolved: no `film read cues` was run.
       }).pipe(Effect.scoped, Effect.provide(labOver(files, [], { scenes: scenesOfF })));
     },
   );

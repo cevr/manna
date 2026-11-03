@@ -48,7 +48,6 @@ export const voices = (midi: Midi): Voices => {
   const last = harmony.at(-1);
   if (last === undefined) return { S: [], A: [], T: [], B: [] };
   const first = midi.tracks.find((track) => track.notes.length > 0);
-  // The tune's own track, as `melodyOf` chooses it.
   const own = first !== undefined && !harmony.includes(first) ? first : harmony[0];
   const melody = melodyOf(midi, harmony);
   const sung = new Set(melody.map(onsetKey));

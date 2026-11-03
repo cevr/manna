@@ -1,8 +1,3 @@
-// The smallest painted plates a film can paint, for tests that load a film's
-// paintings without a file or a decoder: each PNG read from memory
-// (`PaintingImages`) at the size its spec declares, each PNG asked for
-// recorded, and a read's release logged when its scope closes.
-
 import { Array as Arr, Effect, Layer, Option } from 'effect';
 import type { PaintingSpec } from '../../canvas/painting.ts';
 import { PaintingImages, type PaintingImage } from '../images.ts';

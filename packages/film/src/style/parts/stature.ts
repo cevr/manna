@@ -1,11 +1,3 @@
-// A figure's height, by the rule it follows (character-design 3). The plain
-// lead keeps his own proportions: about 2.6 heads tall, about 0.88 of
-// Christ's height (2.3). A member of the cast stands in the cast's one
-// height band, the court's canon, Christ at its top. A stature names the
-// rule and no number: the figure's height is its parts' own, in the Board's
-// pixels at rest, and the house draws nothing from its stature, nor holds a
-// member to the band. Pure.
-
 import { Schema } from 'effect';
 import { decoder } from '../decode.ts';
 

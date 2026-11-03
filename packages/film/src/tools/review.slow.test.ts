@@ -1,11 +1,3 @@
-// The review over a synthetic tree: a project folder listed by its catalogue
-// (a set per address, the approval as its verdict, the film's pictures), a
-// montage by its manifest (the sets, variants, videos, images and docs it
-// names, a share copy standing in for its master), refs that never leave
-// their root nor answer a file no record names, and derived files (lengths,
-// frames, phone copies) made once, whole, through a stand-in Media that
-// copies and counts instead (`reviewMedia`).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -291,7 +283,6 @@ describe('a montage', () => {
       'compare.jpg',
       'check.log',
       'b.md',
-      // A file the manifest does not name is not shown.
       'stray.mp4',
     ]);
     const folder = montageFolder({
@@ -311,14 +302,12 @@ describe('a montage', () => {
     });
     expect(folder.title).toEqual(Option.some('Art 3'));
     expect(folder.blurb).toEqual(Option.some('six looks'));
-    // A set whose videos are not there is left out.
     expect(folder.sets.map((s) => s.id)).toEqual(['render:lone', 'render:roof']);
     expect(folder.sets.every((s) => s.kind === 'render' && Option.isNone(s.address))).toBe(true);
     const roof = folder.sets[1];
     expect(roof?.title).toBe('The roof');
     expect(roof?.start).toBe(2);
     expect(roof?.moments).toEqual(Option.some([1, 3]));
-    // Its order first, then the rest by name; a share copy stands in for its master.
     expect(roof?.variants.map((v) => [v.id, v.label, seenRef(Option.some(v)), phoneOf(v)])).toEqual(
       [
         ['C', 'C', Option.some('out/other/roof.C.mp4'), Option.some('none')],
@@ -327,7 +316,6 @@ describe('a montage', () => {
       ],
     );
     const bold = roof?.variants[1];
-    // Its tag and verdict are its lines.
     expect(bold?.lines).toEqual(['ink', 'keep']);
     expect(Option.map(bold?.notes ?? Option.none(), (n) => n.ref)).toEqual(
       Option.some('out/art/b.md'),
@@ -386,10 +374,8 @@ describe('a project folder', () => {
       ['short verdict', ['main']],
     ]);
     const [, coldSet, roofSet] = folder.sets;
-    // Each set is the render choice point at its address.
     expect(coldSet?.id).toBe('render:scenes:cold');
     expect(coldSet?.address).toEqual(Option.some(sceneAddress('cold')));
-    // The share copy plays; the owner's approval and comments are on each variant; a line says scale, commit and comments.
     expect(seenRef(Option.fromNullishOr(coldSet?.variants[0]))).toEqual(
       Option.some('out/f/scenes/cold/main.share.mp4'),
     );
@@ -525,7 +511,6 @@ const fixture = (
       yield* write('art/sheet.png', 'png');
       yield* write('art/brief.md', '# brief');
       yield* write('art/roof.A.md', 'notes');
-      // A log beside the renders: named by no record, never served.
       yield* write('art/render.log', 'a log');
       for (const name of ['film/main', 'film/wide', 'scenes/a/main']) {
         yield* write(`f/${name}.mp4`, 'm'.repeat(10));
@@ -534,7 +519,6 @@ const fixture = (
       }
       yield* write('f/catalogue.json', yield* Schema.encodeEffect(CatalogueJson)(projectCatalogue));
       const spawned: Array<string> = [];
-      // The stand-in, but a file named `unreadable` is counted, then fails as an unreadable one does.
       const media = Layer.effect(
         Media,
         Effect.gen(function* () {
@@ -593,7 +577,6 @@ describe('the review service', () => {
         Option.some('out/art/roof.B.mp4'),
         Option.some('out/elsewhere/roof.D.mp4'),
       ]);
-      // The big video waits for its phone copy.
       expect(art?.videos.map((v) => [v.name, v.phone])).toEqual([['big.mp4', 'pending']]);
       const project = folders.find((f) => f.ref === 'out/f');
       expect(
@@ -631,7 +614,6 @@ describe('the review service', () => {
         'out/art',
         'out/art/none.mp4',
         'nowhere/x.mp4',
-        // There, inside the root, but nothing a record names: the records, a log, a stray video.
         'out/art/review.json',
         'out/art/render.log',
         'out/art/stills/roof.C.mp4',
@@ -682,7 +664,6 @@ describe('the review service', () => {
     Effect.gen(function* () {
       const review = yield* Review;
       const spawned = yield* Spawned;
-      // The video's length and its own frame rate, as one read of it by the media gives them.
       expect(yield* review.duration('out/art/roof.A.mp4')).toEqual({
         seconds: 12.5,
         fps: Option.some(30000 / 1001),
@@ -696,7 +677,6 @@ describe('the review service', () => {
       );
       expect(a).toBe(b);
       expect(yield* (yield* FileSystem.FileSystem).readFileString(a)).toBe('a'.repeat(10));
-      // One read of it, whoever asked: the index's phone test (its bits a second) among them.
       expect(
         spawned.filter((c) => c.startsWith('timing') && c.endsWith('roof.A.mp4')),
       ).toHaveLength(1);
@@ -770,7 +750,6 @@ describe('the review service', () => {
         );
       expect(yield* (yield* FileSystem.FileSystem).readFileString(copy)).toBe('x'.repeat(200));
       expect((yield* Spawned).some((c) => c.startsWith('phone '))).toBe(true);
-      // The copy made drops the index's last read: a read that takes the cache says it is ready.
       const phone = yield* review.index(false).pipe(
         Effect.map((again) =>
           again.folders
@@ -795,7 +774,6 @@ describe('the review service', () => {
         const first = yield* review.index(true);
         const big = first.folders.flatMap((f) => f.videos).find((v) => v.name === 'big.mp4');
         expect(big?.phone).toBe('pending');
-        // The copy fails in the background: the index, read from its cache, says so once it has.
         const phone = yield* review.index(false).pipe(
           Effect.map((again) =>
             again.folders
@@ -822,7 +800,6 @@ describe('the review service', () => {
       Effect.gen(function* () {
         const { folders } = yield* (yield* Review).index(false);
         const roof = folders.find((f) => f.ref === 'out/art')?.sets[0];
-        // Ten bytes over 12.5 s: 6.4 bits a second, over the rate of 6 and under the size of 100.
         expect(roof?.variants.map(phoneOf)).toEqual([
           Option.some('pending'),
           Option.some('pending'),
@@ -842,7 +819,6 @@ describe('the review service', () => {
         const { folders } = yield* (yield* Review).index(false);
         const art = folders.find((f) => f.ref === 'out/art');
         expect(art?.videos.map((v) => [v.name, v.phone])).toEqual([['big.mp4', 'none']]);
-        // Too dense to play as made, the variants too: none is made, so none is waited for.
         expect(art?.sets[0]?.variants.map(phoneOf)).toEqual([
           Option.some('none'),
           Option.some('none'),
@@ -861,7 +837,6 @@ describe('the review service', () => {
           .filter((c) => c.startsWith('timing '))
           .map((c) => c.split('/').slice(-2).join('/'))
           .toSorted();
-        // A render plays its share copy, or its master where there is none: both are read.
         expect(read).toEqual([
           'a/main.mp4',
           'a/main.share.mp4',
@@ -940,7 +915,6 @@ describe('the review service', () => {
   it.effect(
     'a read that began before a write keeps nothing over the dropped cache: the next ask reads the write',
     () => {
-      // The first read of `art`'s manifest, once it has the text, waits for the test.
       const readOld = Deferred.makeUnsafe<boolean>();
       const release = Deferred.makeUnsafe<boolean>();
       const holdingFirstManifest = (fs: FileSystem.FileSystem): FileSystem.FileSystem => ({

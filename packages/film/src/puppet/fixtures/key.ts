@@ -1,10 +1,3 @@
-// A beat's key as the renderer reads it (`tools/stamp.ts`), for a scene that
-// draws a puppet: a fixture film (`sceneFixture`) whose `hand` scene imports
-// a puppet module laid beside it by `lay` (its part PNGs among the files),
-// keyed by the real `Stamps` with no checkout. A puppet's part PNG is in the
-// beat's key when changing its bytes changes the key: what the puppet's slow
-// test and the parity receipt run.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Layer, Path, Result, Schema, Sink, Stream } from 'effect';
 import { ChildProcessSpawner } from 'effect/process';

@@ -48,7 +48,6 @@ export interface FeelPorts {
 export const feelOver = (ports: FeelPorts): Tell => {
   const length = ports.sound.length ?? soundLength;
   let lastTick = Number.NEGATIVE_INFINITY;
-  // When the last sound's file ends.
   let quietAt = Number.NEGATIVE_INFINITY;
   const feel = (cue: Cue, haptic: Haptic, now: number) => {
     if (!isTick(cue)) return ports.haptics.play(haptic);

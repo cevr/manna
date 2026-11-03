@@ -1,14 +1,3 @@
-// How the woman's seated view is cut into parts (`film concept parts`): which
-// part each pixel of her kept view goes to, and what lies under her arms. She
-// sits on her stool facing the viewer, her round hands on her knees. Her olive
-// mantle is drawn over her head as a veil, and its drape hangs behind her
-// shoulders to a tip beside each arm: the shoulder's outline crosses in front
-// of it, and each arm runs from that outline down to the hand. Each arm is the
-// mantle over it, the dark crease where the mantle folds in at its front (the
-// cut runs down the crease's inner edge, so the crease's ink stays whole on the
-// arm), its cream cuff and its round hand (a disc), which lies in front of the
-// cuff and her knee. Pure data.
-
 import type { HiddenEntry, PartCut, SheetClean } from '@manna/film/tools';
 import { CUT_AWAY, shade, sides } from '../../../cutout/prompts.ts';
 import { FAR, box } from '../../../cutout/rules.ts';
@@ -31,7 +20,6 @@ const HAND_LEFT = { c: [282, 529], r: 44 } as const;
 
 const POSES_1: PartCut = {
   parts: [
-    // her right arm on the viewer's left: from the veil drape's tip along the shoulder's outline, down the mantle's crease and the cuff's inner ink to the hand on her knee, back up the cuff's outer outline
     {
       name: 'armRight',
       take: [
@@ -78,7 +66,6 @@ const POSES_1: PartCut = {
       ],
       pivot: JOINTS['poses-1'].shoulderRight,
     },
-    // her left arm on the viewer's right
     {
       name: 'armLeft',
       take: [
@@ -124,7 +111,6 @@ const POSES_1: PartCut = {
       ],
       pivot: JOINTS['poses-1'].shoulderLeft,
     },
-    // above her chin, her veil's top with it
     { name: 'head', take: [box(-1, -1, FAR, CHIN)] },
     { name: 'robe', take: [box(-1, HIP, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },

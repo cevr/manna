@@ -104,7 +104,6 @@ describe('a hymn page', () => {
     const html = page(1);
     expect(sectionsOf(html)).toEqual(['Stanza 1', 'Stanza 2', 'Stanza 3']);
     const text = readOf(html);
-    // Each stanza's first and last line, as the 1985 hymnal prints them.
     const expected = [
       '1 Praise to the Lord',
       '1 Praise to the Lord, the Almighty, the King of creation!',
@@ -131,9 +130,6 @@ describe('a hymn page', () => {
     const aboutAt = head.lastIndexOf('<', head.indexOf('data-testid="hymn-about"'));
     const topicAt = head.lastIndexOf('<', head.indexOf('data-testid="hymn-topic"'));
     const nameAt = head.lastIndexOf('<', head.indexOf('data-testid="hymn-name"'));
-    // The topic is its own line above the row, apart from the heading: the
-    // button `About this hymn`, its topic, its first passage with how many
-    // more follow, and a chevron.
     expect(passages.length).toBeGreaterThan(1);
     expect(textOf(head.slice(0, topicAt))).toBe('');
     expect(textOf(head.slice(topicAt, nameAt))).toBe(
@@ -142,7 +138,6 @@ describe('a hymn page', () => {
     const button = head.slice(aboutAt, head.indexOf('>', aboutAt));
     expect(button).toContain('role="button"');
     expect(button).toContain('aria-label="About this hymn"');
-    // The row lays its pieces side by side (the class a row View draws with): the number, then the title.
     const row = head.slice(nameAt);
     expect(row.slice(0, row.indexOf('>'))).toContain(rowClass);
     expect(textOf(row).startsWith(`${number} ${title}`)).toBe(true);
@@ -233,7 +228,6 @@ describe('a hymn page with chords off', () => {
     expect(lines.map((line) => line.label)).toEqual(words);
     expect(count(html, 'data-testid="syllable-')).toBe(syllableCount(100));
     expect(syllableCount(100)).toBeGreaterThan(24);
-    // The hyphens sit inside the words and are not read.
     for (const line of lines) expect(line.hyphens).toBe(line.hidden);
   });
 });
@@ -246,7 +240,6 @@ const linesOf = (html: string) =>
     .map((piece) => ({
       label: textOf(/aria-label="([^"]*)"/.exec(piece)?.[1] ?? ''),
       hyphens: count(piece, '>-</'),
-      // A hyphen is a span of its word's text, hidden from reading.
       hidden: [...piece.matchAll(/aria-hidden="true"[^>]*>-</g)].length,
     }));
 

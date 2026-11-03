@@ -253,9 +253,6 @@ export const SignedFromStrings = <const L extends readonly string[]>(
   return Schema.Array(Schema.String).pipe(
     Schema.decodeTo(Signed(literals), {
       decode: SchemaGetter.transform((values: readonly string[]) => {
-        // Typed as the narrowed union, not `string[]`, so the guard's
-        // narrowing is what builds the result and no assertion is needed to
-        // hand it back as a selection.
         const include: Value[] = [];
         const exclude: Value[] = [];
         for (const raw of values) {

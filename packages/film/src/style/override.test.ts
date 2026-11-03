@@ -1,13 +1,3 @@
-// What holds an override to the owner's word: every override a figure
-// carries, wherever it is laid (`overridesIn`); the word it cites, his words
-// verbatim or his pick on an ask, one and never both (`overrideOf`, as a lock
-// reads its override); each that no decision of his on its figure allows,
-// broken itself (`unbacked`): a decision filed at the point `item:<item>`,
-// after the lock when the override frees one, whose words are the quote's,
-// verbatim, or which answered the ask with the pick it cites; and the ledger
-// a film's build reads for them (`unsaid`), whose questions and notes decide
-// nothing.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { test } from 'bun:test';
@@ -130,7 +120,6 @@ describe('an override', () => {
     const both = () =>
       decodeLock({ ...LOCK_FILE, override: { ...PICKED, quote: SAID.quote } }, 'lock');
     expect(both).toThrow(/^lock refused by FigureLock, /);
-    // Neither form takes the other's citation.
     expect(both).toThrow(
       '): Expected no excess property\n  at ["override"]["answer"]\nExpected no excess property\n  at ["override"]["quote"]',
     );
@@ -151,14 +140,10 @@ describe('an override', () => {
   test('in words he never said, or his words on another figure, on none, or before its lock, or in a note, is broken', () => {
     const quotes = [
       'move his ear back, the owner wants it',
-      // On the judge.
       "the judge's ear too",
-      // On no figure: before the lock, and after it.
       'lets lock in that style',
       'lock in a rig and a style',
-      // On the lead, before the lock.
       'his ear as the concept cuts it',
-      // A question's words.
       'Move his ear back?',
     ];
     expect(
@@ -167,7 +152,6 @@ describe('an override', () => {
         DECISIONS,
       ),
     ).toEqual(quotes.map((quote) => ({ ...onLock({ ...SAID, quote }), why: unsaidWhy(quote) })));
-    // His note on the lead after the lock says the very words, and decides nothing.
     const noted = DECISIONS.filter((d) => d.at !== LOCK_AT + 3);
     expect(unbacked([onLock(SAID)], noted)).toEqual([
       { ...onLock(SAID), why: unsaidWhy(SAID.quote) },
@@ -183,13 +167,9 @@ describe('an override', () => {
     const cases = [
       ['a0000000000', 'ear', 'back'],
       [EAR_ASK, 'ear', 'front'],
-      // The value he picked for another question there is not his pick for this one.
       [EAR_ASK, 'notes', 'back'],
-      // A pick on the judge.
       [JUDGE_ASK, 'ear', 'back'],
-      // The pick the lock's own decision filed on him: at the lock, not after it.
       [LOCK_ASK, 'keep', 'lock'],
-      // Asked, then withdrawn: what the question and the withdrawal carry is no pick of his.
       [ARM_ASK, 'arm', 'arm'],
     ] as const;
     const laid = cases.map(([ask, question, value]) => ({

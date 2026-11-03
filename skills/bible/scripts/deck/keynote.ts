@@ -97,8 +97,6 @@ export const splitContents = (slide: Slide) => {
       30,
       GRAY,
     ),
-    // Keynote sizes the verse box to its wrapped text: measure it, then center
-    // the verse + reference block instead of estimating line counts.
     `      set verseHeight to height of verseItem`,
     `      set verseY to (1080 - verseHeight - 95) div 2`,
     `      set position of verseItem to {${x}, verseY}`,
@@ -115,9 +113,6 @@ export const buildScript = (manifest: Manifest, deckDir: string, savePath: strin
     `tell application "${esc(manifest.app)}"`,
     `  activate`,
     `  set theDoc to make new document with properties {document theme:theme "Basic Black", width:1920, height:1080}`,
-    // Saved at its path before any slide is drawn: a new document left unsaved
-    // is autosaved by Keynote Creator Studio into iCloud under its suggested
-    // name, a stray copy each build.
     `  save theDoc in POSIX file savePath`,
     `  tell theDoc`,
     `    set base slide of slide 1 to master slide "Blank"`,

@@ -1,11 +1,3 @@
-// The match's words (`film lab match`), shared by the page, the lab, the CLI and
-// the MCP: a figure's concept reference as a film declares it beside its
-// rig, a match asked, the table it answers (each ratio and shade of the
-// concept against the scene, flagged past its tolerance) and the files it
-// writes. Measuring is `figure.ts`; drawing and cropping, the lab's easel
-// (`tools/easel.ts`). Not a gate: a concept is painted, so the table guides
-// a painter and fails nothing. Pure.
-
 import { Array as Arr, Boolean as Bool, Match, Option, Order, Schema } from 'effect';
 import { keptFile, type SheetKind } from './cast-sheet.ts';
 import { ARTIFACT_KINDS, type ArtifactKind, type ArtifactMark } from './render-artifacts.ts';
@@ -21,9 +13,6 @@ import {
   type Shading,
 } from './figure.ts';
 import { type Raster, type RasterPath, besideRaster, scaleRaster, strokeRaster } from './raster.ts';
-
-// ---------------------------------------------------------------------------
-// A figure's concept, as a film declares it
 
 /** A name in a path: letters, digits, `_`, `.` and `-`, never `.` or `..` alone. */
 const NAME = '(?!\\.\\.?(?:/|$))[A-Za-z0-9_.-]+';
@@ -166,9 +155,6 @@ export const sceneBoxOf = (
   ];
 };
 
-// ---------------------------------------------------------------------------
-// A match asked and answered
-
 /** A match asked of the lab: the scene, one place in it (as `look` reads places), the figure (each with a concept, without one), and the asker's films folder. */
 export const MatchPost = Schema.Struct({
   scene: Schema.String,
@@ -248,9 +234,6 @@ export class MatchFigureUnknown extends Schema.TaggedError<MatchFigureUnknown>()
   }
 }
 
-// ---------------------------------------------------------------------------
-// The table
-
 /** A ratio past this share of the concept's is flagged. */
 const RATIO_TOLERANCE = 0.05;
 
@@ -270,7 +253,7 @@ const SILHOUETTE_TOLERANCE = { head: 0.03, body: 0.05 } as const;
  * 0.047, cold's prosecutor by −0.002 (measured, 2026-10-18). A three-quarter
  * concept drawn front (Christ's −0.142 drawn 0) would differ by 0.14.
  */
-const TURN_TOLERANCE = 0.1;
+const TURN_TOLERANCE_SKIN_SHARE = 0.1;
 
 /**
  * A head's roll past this many degrees, beside what a pixel either way at
@@ -280,7 +263,7 @@ const TURN_TOLERANCE = 0.1;
  * (a 28.6-pixel eye line) and −5.3° at court 16.51 s: 10.3° under his 11.5°
  * (measured, 2026-10-18).
  */
-const ROLL_TOLERANCE = 6;
+const ROLL_TOLERANCE_DEG = 6;
 
 /** The degrees one pixel either way at each eye can tilt an eye line `eyes` pixels long. */
 const rollGrain = (eyes: number) => (Math.atan2(2, Math.max(1, eyes)) * 180) / Math.PI;
@@ -640,7 +623,7 @@ const facingRows = (concept: FigureMeasure, scene: FigureMeasure): ReadonlyArray
     Option.some(c.turn),
     Option.some(s.turn),
     none,
-    TURN_TOLERANCE,
+    TURN_TOLERANCE_SKIN_SHARE,
   );
   const roll = rowOf(
     'head: roll (the eye line)',
@@ -648,7 +631,7 @@ const facingRows = (concept: FigureMeasure, scene: FigureMeasure): ReadonlyArray
     Option.some(c.roll),
     Option.some(s.roll),
     none,
-    ROLL_TOLERANCE + rollGrain(c.eyes) + rollGrain(s.eyes),
+    ROLL_TOLERANCE_DEG + rollGrain(c.eyes) + rollGrain(s.eyes),
   );
   return [turn, roll].map((row) =>
     Match.value(row.flagged).pipe(
@@ -942,7 +925,6 @@ const outlinePaths = (
     const angle = (2 * Math.PI * k) / silhouette.head.length;
     return at(r * Math.sin(angle), -r * Math.cos(angle));
   });
-  // The body's rows run in runs: a gap past three rows' spacing is where it is hidden, a side's jump past a quarter of a head where something meets it.
   type Edge = (typeof silhouette.body)[number];
   const joins = (last: Edge, row: Edge) =>
     row.y - last.y <= 0.16 &&

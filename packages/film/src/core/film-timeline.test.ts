@@ -1,15 +1,3 @@
-// The studio's read model over the films as they stand: Righteousness by
-// Faith at v3 (its registered files: a script on the estimated clock, its
-// concept kept by the owner's answers) and v2 (a version folder, `v2/`, read
-// from its own files: its Board, takes, scenes, acts and score), and the
-// cold studies (no ledger, no Board, no concept). The clocks are `film read
-// clock`'s answers for them (`--folder v2` for v2), the Board is v2's
-// `board.json` with its prompts left out. Only reached stages take a lane;
-// the stage is the first not done; the Next row names the first stage ahead
-// with what starts it, and the gap it starts from; the Board lane times its
-// panels as the animatic shows them; the flags and the header count what
-// waits on the owner; the open version is the default.
-
 import { describe, expect, test } from 'bun:test';
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import { type AskBlock, AskName, type AskRecord, AskState, oneQuestion } from './ask.ts';
@@ -253,7 +241,6 @@ describe('RBF v3: a kept script on the estimated clock, its concept kept', () =>
     const clips = laneOf(t, 'script')?.clips ?? [];
     expect(clips.map((c) => c.beat)).toEqual(rbfV3.beats.map((b) => b.id));
     expect(new Set(clips.map((c) => c.state))).toEqual(new Set(['kept']));
-    // The title and the credits are silent: their length is declared, not estimated.
     expect(clips.filter((c) => c.clock === 'measured').map((c) => c.beat)).toEqual([
       'title',
       'end',
@@ -351,7 +338,6 @@ describe('RBF v2, read as a version folder', () => {
     const righteous = markOf(rbfV2, 'cold', 'righteous');
     const asked = markOf(rbfV2, 'cold', 'asked');
     const job = markOf(rbfV2, 'cold', 'job');
-    // Held from its mark, `righteous`, which falls after the beat starts.
     expect(righteous).toBeGreaterThan(coldBeat.start);
     expect(panelClip(t, 'cold.righteous')).toMatchObject({
       start: coldBeat.start,
@@ -365,7 +351,6 @@ describe('RBF v2, read as a version folder', () => {
     expect(panelClip(t, 'cold.asked')).toMatchObject({ start: asked, card: true });
     expect(panelClip(t, 'cold.asked').try).toBeUndefined();
     expect(panelClip(t, 'cold.job').dur).toBeCloseTo(coldBeat.start + coldBeat.dur - job, 6);
-    // Every beat's first panel sits at its beat's start.
     const firsts = Arr.dedupeWith(laneOf(t, 'board')?.clips ?? [], (a, b) => a.beat === b.beat);
     expect(firsts.map((c) => c.start)).toEqual(firsts.map((c) => beatOf(rbfV2, c.beat).start));
   });
@@ -642,7 +627,6 @@ describe('the clock a version plays on', () => {
       approvals: [],
     };
     const t = timelineOf({ ...rbf(3), clock, board });
-    // From the line's first word to {m}; the payoff marked.
     expect(panelClip(t, 'a.start')).toMatchObject({
       card: true,
       text: { _tag: 'Card', payoff: 'two' },
@@ -651,7 +635,6 @@ describe('the clock a version plays on', () => {
         { text: 'two', payoff: true },
       ],
     });
-    // A payoff the line never says sets no words: the panel keeps what the engine would set.
     expect(panelClip(t, 'a.m').text).toEqual({ _tag: 'Card', payoff: 'grace' });
     expect(panelClip(t, 'a.m').words).toBeUndefined();
   });

@@ -41,10 +41,6 @@ export const layerFileVectorIndexBytes = (
       const fs = yield* FileSystem.FileSystem;
       return VectorIndexBytes.of({
         read: Effect.gen(function* () {
-          // §6.5's posture over the *declared* errors only. `catchCause` also
-          // converted defects and interruption, so a bug in the platform layer
-          // or a cancelled fiber read as "no index installed" — the one report
-          // this reader must never produce by accident.
           const found = yield* fs
             .exists(filename)
             .pipe(
@@ -57,15 +53,7 @@ export const layerFileVectorIndexBytes = (
             );
           if (!found) return Option.none<ArrayBuffer>();
           return yield* fs.readFile(filename).pipe(
-            // Copied into its own `ArrayBuffer` rather than handing the view's
-            // backing store to the parser. A `Uint8Array` from a read may be a
-            // window onto a larger pooled buffer, and the parser addresses the
-            // index from byte zero — so passing `bytes.buffer` straight through
-            // would read whatever else shared the pool.
             Effect.map((bytes) => Option.some(copyToBuffer(bytes))),
-            // Present but unreadable. The reader degrades identically to an
-            // absent index; the log is what says which one happened. Declared
-            // errors only, for the reason the stat above gives.
             Effect.catchTag('PlatformError', (cause) =>
               Effect.logWarning('search.vectorIndex.readFailed').pipe(
                 Effect.annotateLogs({ filename, cause: cause.message }),

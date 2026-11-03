@@ -1,12 +1,3 @@
-// When a word is heard. The aligner that times a take puts the pause before a
-// word into that word's start, so an aligned start can lead the voice by most
-// of a second. The voice's own onset and offset are measured once, from the
-// take's audio, when the take is timed (`narrate`, `takes import`, the lab's
-// studio): the first and last 10 ms window inside the word's aligned span
-// whose level passes a −40 dBFS gate. The take keeps both (`TakeWord`): a mark
-// reads the aligned start, and what must meet the ear (a short's captions,
-// its hook, its loop) reads the voice. Pure and DOM-free: no decode here.
-
 import type { Pcm } from './audio.ts';
 import { Heard, type HeardWord, type TakeWord, type Voiced, type Word } from './schema.ts';
 import { toMs } from './time.ts';
@@ -58,7 +49,6 @@ export const voicedSpan = (pcm: Pcm, start: number, end: number): Voiced => {
     last = b;
   }
   if (first < 0) return voicedAt(end, end);
-  // On the timings' millisecond grid, and never outside the span it was read in.
   const on = Math.min(end, Math.max(start, toMs(first / pcm.rate)));
   return voicedAt(on, Math.min(end, Math.max(on, toMs(last / pcm.rate))));
 };

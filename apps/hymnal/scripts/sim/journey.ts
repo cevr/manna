@@ -238,7 +238,6 @@ const act = (d: DriveMembers, place: Place, step: Step) => {
     case 'scroll':
       return Effect.as(d.scroll(place, step.target, step.direction, seconds), none);
     case 'gesture': {
-      // The decoder refused every `from` that is neither a point nor a target.
       const from = Option.getOrElse(panStart(step.from), () => step.from);
       return Effect.as(
         d.gesture(place, { from, dx: step.dx, dy: step.dy, ms: step.ms ?? PAN_MS }),
@@ -246,7 +245,6 @@ const act = (d: DriveMembers, place: Place, step: Step) => {
       );
     }
     case 'pinch': {
-      // The decoder refused every `at` that is neither a point nor a target.
       const at = Option.getOrElse(panStart(step.at), () => step.at);
       return Effect.as(d.pinch(place, at, step.scale), none);
     }
@@ -331,7 +329,6 @@ const runStep = (d: DriveMembers, place: Place, journey: Journey, step: Step, in
     const name = `${journey.feature}-${String(index + 1).padStart(2, '0')}-${step.name}`;
     const taken = yield* Effect.result(hostFailed(receipts(d, place, name, step.receipt)));
     const ms = (yield* Clock.currentTimeMillis) - started;
-    // The action's or an expect's error first; a receipt's only when the step itself passed.
     const failure = Option.orElse(Result.getFailure(done), () => Result.getFailure(taken));
     const line = encodeStep({
       ok: Option.isNone(failure),

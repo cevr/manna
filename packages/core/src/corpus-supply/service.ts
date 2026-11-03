@@ -131,9 +131,6 @@ const fileCorpora = {
   bible: BibleArtifact,
   topics: TopicsArtifact,
   webster: WebsterArtifact,
-  // §9.6's optional paragraph vector index. Best-effort like `topics` and one
-  // step more so: with no index installed, search still answers — lexically,
-  // carrying `VectorIndexUnavailable`.
   vectors: VectorsArtifact,
 } satisfies FileCorpusRegistry;
 
@@ -150,8 +147,6 @@ export class CorpusSupply extends Context.Service<CorpusSupply, CorpusSupplyServ
       const sourceOption = yield* Effect.serviceOption(WritingsAssetRecipe);
       const databaseOption = yield* Effect.serviceOption(EGWParagraphDatabase);
       const wired = new Map<CorpusFileName, WiredFileCorpus>();
-      // Keyed by the vocabulary itself, not by the registry values: `corpus` is
-      // the registry key, so a wired entry can only ever land under its own name.
       for (const corpus of CorpusFileName.literals) {
         const entry = yield* fileCorpora[corpus].wired;
         if (Option.isSome(entry)) wired.set(corpus, entry.value);
@@ -185,8 +180,6 @@ export class CorpusSupply extends Context.Service<CorpusSupply, CorpusSupplyServ
             continue;
           }
 
-          // A chapter the source fails to read fails as the source's error;
-          // only the database's own become an installation error.
           const installed = yield* database
             .installPublication(contribution.publication, contribution.provenance)
             .pipe(
@@ -240,19 +233,6 @@ export class CorpusSupply extends Context.Service<CorpusSupply, CorpusSupplyServ
           if (isCurrent && !refresh) {
             return CorpusSupplyReceipt.make({ activated: [], skipped: ['canonical'] });
           }
-          // **A startup must never re-floor a newer runtime artifact**
-          // (round-4 F2). `ensure` walks the *compiled* source list in priority
-          // order, and a packaged copy outranks a release — which is right for
-          // a fresh machine and wrong for a host that accepted §3.6's offer
-          // last week. Without this, launch N+1 installed the pin over
-          // generation 4 and the app silently went back a version.
-          //
-          // The comparison is on the ordinal, not the tag, for the reason
-          // `CorpusGeneration` exists: only a number carries the order.
-          // A candidate with **no** ordinal is every local source, so an
-          // artifact that came from a published release is never replaced by
-          // one that did not — the ordinal is what says "this is a content
-          // version", and something that is not one cannot be newer than one.
           if (isOutranked(current, artifact.provenance.generation)) {
             return CorpusSupplyReceipt.make({ activated: [], skipped: ['canonical'] });
           }
@@ -271,15 +251,6 @@ export class CorpusSupply extends Context.Service<CorpusSupply, CorpusSupplyServ
           });
         }
 
-        // No source could be acquired. When a verified artifact is already
-        // active, that is the spec's stale-fallback state, not a failure: the
-        // installed file was digest- and semantically verified before it was
-        // ever activated, so an offline host keeps serving it. Reporting an
-        // error here made hosts warn about a corpus that was working.
-        //
-        // Only reachable with an active artifact — with nothing installed there
-        // is nothing to fall back to, so Bible's fail-closed startup still
-        // fails exactly as before.
         if (Option.isSome(current)) {
           return CorpusSupplyReceipt.make({ activated: [], skipped: ['canonical'] });
         }
@@ -287,8 +258,6 @@ export class CorpusSupply extends Context.Service<CorpusSupply, CorpusSupplyServ
         return yield* CorpusRecipeUnavailableError.make({ corpus });
       });
 
-      // Exhaustive over CorpusTarget: adding a corpus target is a compile
-      // error here until the supply pipeline knows how to ensure it.
       const ensure: CorpusSupplyService['ensure'] = (input = CorpusSupplyInput.make({})) => {
         const refresh = input.refresh ?? false;
         const target = input.target ?? BootstrapTarget.make({});
@@ -341,11 +310,6 @@ export class CorpusSupply extends Context.Service<CorpusSupply, CorpusSupplyServ
           if (Option.isNone(recipe.releaseSource)) {
             return yield* CorpusRecipeUnavailableError.make({ corpus: request.corpus });
           }
-          // The ordinal travels *on the release*, so the candidate reaches the
-          // installer already carrying it — the same way a pinned release does.
-          // Re-stamping the provenance here instead meant the runtime leg and
-          // the pinned leg recorded the generation by two different mechanisms,
-          // and only one of them existed (round-4 F2).
           const source = recipe.releaseSource.value(request.release);
           const artifact = yield* source.acquire;
           const installed = yield* installer.install(artifact);

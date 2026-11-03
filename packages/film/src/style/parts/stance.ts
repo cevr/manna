@@ -1,12 +1,3 @@
-// How a figure holds itself, and the numbers that move it: every stance
-// leans (`lean`, radians), tilts its head about its neck (`tilt`, radians)
-// and nods (`nod`, units). Standing, his feet are the figure's origin: the
-// lean turns about them, and the breath lifts the trunk from its hem and the
-// neck with it. Seated, the part of him above the bench is drawn and his
-// body's middle at his head's height is the origin: the lean turns about his
-// garment's hem (its foot, behind the bench), and the breath swells the
-// garment across and lifts the neck. Pure.
-
 import { Schema } from 'effect';
 import { decoder } from '../decode.ts';
 import { Length, Units } from './measure.ts';

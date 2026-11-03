@@ -1,23 +1,3 @@
-// The seed, drawn to its Board (`seed.label` try 4, `seed.folded` and
-// `seed.life` try 3): word's page as word leaves it, the accused alone on it
-// in the peach light, the dry fig leaves at his feet. The leaves blow aside
-// and the camera pushes in on the gold wax seal on his tunic, in cold's shape
-// and scale (CRAFT rule 8), as the tablets beside him fade off the page. On
-// "label" the seal lifts off, its R to the front, flat as a sticker, nothing
-// behind it, the stain still there under where it was; his eyes go with it,
-// then come to us, worried. On `seed` the verse's full-screen card, "The seed
-// is the word of God.", "seed" large in gold, and a hard cut back on its last
-// word; the seal turns over in the air and its back is a seed, small and
-// plain, its gold unlit, and he is not impressed. On `alive` it rises, grows
-// and opens along its seam in cross-section, the camera going with it until
-// it floats alone on the page; on `folded` the blade curled in its hollow
-// swells, green, its root and first two leaves folded tight. On `life` a warm
-// light wakes in its heart and its gold glows as it comes back to him, the
-// camera back on the two of them, his face at a third of the frame; on "own"
-// he tips his head, interested despite himself, and on "Take" he leans in to
-// it. The narration's words are on the one card alone (CRAFT rule 1): the
-// one letter in the picture is the R in the seal's wax.
-
 import {
   type CardWord,
   at,
@@ -42,8 +22,6 @@ import { LEAD, LEAD_KNOBS, reachHands } from '../rigs/lead-rig.ts';
 import { cold } from './cold.ts';
 import { LAST_FRAME, fromLead, onHim, onLead, word } from './word.ts';
 
-// ─── the page as word leaves it ──────────────────────────────────────────────
-
 const L = LAST_FRAME;
 
 /** His breath's period and its offset, as word breathes him (`living`). */
@@ -55,8 +33,6 @@ const GUST = { reach: 560, lift: 70, spin: 2.6, lie: 0.9 } as const;
 /** The tablets beside him, lit as word leaves them (scratch: their stone rewritten each frame). */
 const TABS = tabletsAt(L.tablets[0], L.tablets[1]);
 TABS.lit.fill(1);
-
-// ─── the seal and the seed ───────────────────────────────────────────────────
 
 /** Where a thing floats on the page, Board pixels, and how tall it stands. */
 interface Float {
@@ -124,8 +100,6 @@ const across = (ctx: CanvasRenderingContext2D, x: number, k: number, draw: () =>
   ctx.restore();
 };
 
-// ─── the lead ────────────────────────────────────────────────────────────────
-
 /** Where he looks, from his feet: at us, and down at the seal on his chest. */
 const GAZE = {
   us: [LEAD_KNOBS.gazeX, LEAD_KNOBS.gazeY],
@@ -174,9 +148,6 @@ const quoted = (words: ReadonlyArray<CardWord>): ReadonlyArray<CardWord> => {
 
 export const seed = drawing({
   timeline: {
-    // The dry leaves blow aside off the page, one after another, as the camera pushes in on the
-    // seal over his stain, in cold's shape and scale, landing as he looks down at it on
-    // "righteous"; the tablets fade off the page beside him.
     gust: { at: 'start', dur: 1.6, stagger: 0.5, ease: 'inQuad', track: 'leaves' },
     push: { at: 'start', until: { cue: 'down' }, ease: 'inOutSine', track: 'camera' },
     fade: { at: 'start', offset: 0.4, dur: 1.6, ease: 'inOutSine', track: 'law' },
@@ -186,11 +157,7 @@ export const seed = drawing({
       ease: 'linear',
       track: 'camera',
     },
-    // "But when God says righteous,": he looks down at the seal on him.
     down: { mark: 'label', word: 'righteous', dur: 0.5, track: 'lead' },
-    // "it isn't a label": it lifts off, its R to the front, flat as a sticker, the stain still
-    // there under where it was; his eyes go with it, and the camera to the two of them, landing
-    // as he looks at us, worried, on "outside" (seed.label).
     lift: { mark: 'label', word: 'label', dur: 0.9, ease: 'inOutSine', track: 'seal' },
     follow: { mark: 'label', word: 'label', offset: 0.1, dur: 0.5, track: 'lead' },
     toLabel: {
@@ -202,57 +169,38 @@ export const seed = drawing({
     },
     worry: { mark: 'label', word: 'outside', dur: 0.6, track: 'lead' },
     onLabel: { after: 'toLabel', until: 'alive', ease: 'linear', track: 'camera' },
-    // "Jesus said,": he looks at the seal.
     regard: { mark: 'seed', dur: 0.6, track: 'lead' },
-    // “The seed is the word of God.”: the verse's card, cut back on its last word.
     card: { mark: 'seed', word: 'The', until: { cue: 'back', edge: 'start' }, track: 'card' },
     back: { mark: 'seed', word: 'God', offset: 0.6, dur: 0, track: 'card' },
-    // The seal turns over in the air: its back is a seed, small and plain, its gold unlit.
     flip: { after: 'back', offset: 0.15, dur: 0.6, ease: 'inOutSine', track: 'seal' },
-    // "A seed looks like nothing.": he is not impressed.
     meh: { mark: 'seed', word: 'looks', dur: 0.6, track: 'lead' },
-    // "But it's alive.": it rises and grows, the camera going with it, and opens along its seam.
     rise: { mark: 'alive', until: 'folded', ease: 'inOutSine', track: 'seed' },
     open: { mark: 'alive', word: 'alive', dur: 0.9, ease: 'outCubic', track: 'seed' },
     stir: { mark: 'alive', word: 'alive', dur: 0.4, track: 'lead' },
-    // "The life of the whole plant is folded up inside.": the blade in its hollow swells, folded
-    // tight (seed.folded).
     unfold: { mark: 'folded', dur: 1.4, ease: 'inOutSine', track: 'seed' },
     onOpen: { after: 'rise', until: 'life', ease: 'linear', track: 'camera' },
-    // "In the same way, every word God speaks carries His own life.": a warm light wakes in its
-    // heart and its gold glows; it comes back to him, the camera with it to the two of them.
     wake: { mark: 'life', dur: 1.6, ease: 'inOutSine', track: 'seed' },
     come: { mark: 'life', dur: 2.2, ease: 'inOutSine', track: 'seed' },
-    // "own": he tips his head, interested despite himself; "Take": he leans in to it.
     tip: { mark: 'life', word: 'own', dur: 0.7, track: 'lead' },
     lean: { mark: 'life', word: 'Take', dur: 0.9, track: 'lead' },
-    // "and you take in His life.": its light swells.
     swell: { at: 'speechEnd', dur: 1.2, ends: true, ease: 'inOutSine', track: 'seed' },
     onLife: { after: 'come', until: { at: 'end' }, ease: 'linear', track: 'camera' },
   },
   knobs: {
-    // How much closer the camera creeps while a framing holds.
     creep: 1.05,
-    // The seal lifted off beside him, his face at a third of the frame (seed.label).
     label: [575, 584],
     labelZoom: 3.4,
-    // The seed opened, alone on the page (seed.folded).
     folded: [870, 520],
     foldedZoom: 3.8,
-    // Back on the two of them, wider than his label: his hands in, the seed lit beside him over its shadow (seed.life).
     life: [590, 561],
     lifeZoom: 2.5,
   },
-  // The court's rigs: him and his hands.
   rigs: COURT_RIGS,
-  // The page's own light, as word leaves it.
   light: L.light,
   draw: (f) => {
     const { ctx, w, h } = f;
     const [fx, fy] = L.lead;
 
-    // ── the camera: from word's last framing in on the seal as cold frames it, then each
-    // framing on its beat, a slow creep while one holds
     const creep = f.knob('creep');
     const wordShot = f.knobsOf(word);
     const coldShot = f.knobsOf(cold);
@@ -269,15 +217,12 @@ export const seed = drawing({
       [f.at('hold'), pushOn(onSeal, creep, 1)],
       [f.at('toLabel'), label, pushInto],
       [f.at('onLabel'), pushOn(label, creep, 1)],
-      // With the seed as it rises, and with it as it comes back.
       [f.at('rise'), folded],
       [f.at('onOpen'), pushOn(folded, creep, 1)],
       [f.at('come'), life],
       [f.at('onLife'), pushOn(life, creep, 1)],
     ]);
 
-    // ── the seal: lifted off the stain on "label" to float beside him; turned over after the card,
-    // it is the seed, which rises, grows and opens on `alive`, and comes back to him on `life`
     const lean = LEAN_IN * f.at('lean');
     const lifted = f.at('lift');
     const hovering = (amount: number) => amount * Math.sin(f.t * 1.3);
@@ -297,11 +242,9 @@ export const seed = drawing({
     SEED.open = f.at('open');
     SEED.grown = f.at('unfold');
     SEED.glow = f.at('wake') + SWELL * f.at('swell');
-    // Face up, the seal; turned past edge on, the seed.
     const face = Math.cos(f.at('flip') * Math.PI);
     const thing: Pt = face > 0 ? [SEAL.x, SEAL.y] : [SEED.x, SEED.y];
 
-    // ── the lead: his face and his eyes on each beat, his head, his lean
     acted(LN, L.face, [
       [ON_IT, f.at('down')],
       [AFTER_IT, f.at('follow')],
@@ -329,7 +272,6 @@ export const seed = drawing({
     LN.lean = lean;
     LN.tilt = 0.05 * (1 - f.at('down')) + TIP * f.at('tip') + 0.012 * Math.sin(f.t * 0.7);
 
-    // His hands at rest beside him, each at its sleeve's end as his arms reach for them.
     const restOf = (side: Pt): Pt => fromLead(onHim(side, lean));
     const arms = reachHands(LN, restOf(L.hands.far), restOf(L.hands.near));
     const hand = (p: Pt) =>
@@ -337,7 +279,6 @@ export const seed = drawing({
         f.rive('leadHand', { timelines: [['boil', boilTime(f.boil)]], size: L.handScale }),
       );
 
-    // ── the dry leaves, blown off the page one after another
     const leaves = () =>
       L.leaves.forEach((p, i) => {
         const k = f.stagger('gust', i, L.leaves.length);
@@ -353,7 +294,6 @@ export const seed = drawing({
         });
       });
 
-    // ── the seal or the seed, and the seed's shadow on the page
     TABS.stone = 1 - f.at('fade');
     const shadow = () => {
       if (face > 0 || !(rise > 0)) return;
@@ -372,7 +312,6 @@ export const seed = drawing({
       else across(ctx, SEED.x, -face, () => openSeed(ctx, SEED));
     };
 
-    // ── the page, everything on it under the camera
     piece(ctx, rounded(w / 2, h / 2, L.sheet.w, L.sheet.h, 0), PAGE, f.handsOf(word)('page'), {
       role: 'scenery',
       kind: 'torn',

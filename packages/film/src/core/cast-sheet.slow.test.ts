@@ -1,10 +1,3 @@
-// The cast sheet's measure on sheets drawn with known faults (`fixtures/figure.ts`):
-// a clean turnaround reads no flag, and each fault drawn into a turnaround
-// is the flag it was drawn for. The poses, heads and headgear sheets are read
-// in `cast-sheet-poses.slow.test.ts`, and the crowded turnarounds and the sheets
-// that do not read as drawn in `cast-sheet-crowded.slow.test.ts`, so the three
-// files run side by side.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result, Schema } from 'effect';
 import {
@@ -85,7 +78,6 @@ describe('a clean turnaround', () => {
 });
 
 describe('a turnaround whose hands float free', () => {
-  // The old house hand: a circle a hand's width beside the robe, no sleeve or arm to it.
   const free = (eyeShift: number, extra: Partial<FigureSpec> = {}) =>
     drawFigure({ ...PLAIN, robeShade: [60, 78, 150], eyeShift, ...extra });
   const m = read(
@@ -119,7 +111,6 @@ describe('a turnaround whose hands float free', () => {
 describe('a turnaround drawn wrong', () => {
   const v2 = at(-14);
   const v3 = at(-26);
-  // The front tipped, the back's robe wider, view 5 a copy of view 3 (so it faces away from view 6), and view 6 view 2 flipped (lit on its right).
   const sheet = drawSheet([
     at(0, { roll: 6 }),
     v2,
@@ -171,7 +162,6 @@ describe('a sheet that does not read as asked', () => {
 });
 
 describe("a turnaround's partners with a hand against the robe", () => {
-  // View 6's hand touches the robe's ink, so the figure's ink ring spans it; its body is as wide as view 2's.
   const sheet = drawSheet([
     at(0),
     at(-14),

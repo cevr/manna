@@ -1,9 +1,3 @@
-// The audit's rules read in order, each word as itself (each prompt read as
-// one generated sound's, as `sfx audit` reads a library), and its verdicts on
-// the app's own library: the 22 generated sounds' (none code can make for
-// sure, 3 worth a try, 19 that need realism), pinned so that a new rule or a
-// reworded prompt shows which verdict it moved.
-
 import { describe, expect, test } from 'bun:test';
 import { Schema } from 'effect';
 import { library } from '../../../../apps/animations/sounds/library.ts';

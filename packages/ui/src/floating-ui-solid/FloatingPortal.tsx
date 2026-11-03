@@ -1,11 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/components/FloatingPortal.tsx,
-// packages/react/src/utils/resolveRef.ts
-//
-// Renders a popup into a portal node (a `<div data-base-ui-portal>` in the
-// body, or in the enclosing portal's node), out of any clipping ancestor. A
-// non-modal popup in a portal is still in the Tab order where its trigger
-// is: guards before and after the trigger's place send focus into the portal
-// and back out, and tabbing out past the end closes the popup.
 import { type JSX, Portal } from '@solidjs/web';
 import {
   type Accessor,
@@ -98,7 +90,6 @@ export function FloatingPortal(props: FloatingPortalProps): JSX.Element {
   };
 
   const beforeOutsideRef: { current: HTMLSpanElement | null } = { current: null };
-  // The after guard stays rendered (see below): it is the guard only while guarding.
   let afterOutsideElement: HTMLSpanElement | null = null;
   const afterOutsideRef: { current: HTMLSpanElement | null } = {
     get current() {
@@ -113,10 +104,8 @@ export function FloatingPortal(props: FloatingPortalProps): JSX.Element {
   const id = createUniqueId();
   let focusInsideDisabled = false;
 
-  // The enclosing portal's node, else the body.
   const mount = () => parent?.portalNode() ?? document.body;
 
-  // Elements inside a non-modal portal are tabbable only once focus has entered it.
   createEffect(
     () => [portalNode(), focusManagerState()?.modal] as const,
     ([node, modal]) => {
@@ -136,7 +125,6 @@ export function FloatingPortal(props: FloatingPortalProps): JSX.Element {
           }
         }
       };
-      // Capture, so this runs before a guard's own focus handler.
       return mergeCleanups(
         addEventListener(node, 'focusin', onFocus, true),
         addEventListener(node, 'focusout', onFocus, true),
@@ -150,7 +138,6 @@ export function FloatingPortal(props: FloatingPortalProps): JSX.Element {
       if (!node || open !== true || !focusInsideDisabled) {
         return;
       }
-      // Restore tabbability before the focus manager's queued initial focus.
       enableFocusInside(node);
       focusInsideDisabled = false;
     },
@@ -198,8 +185,6 @@ export function FloatingPortal(props: FloatingPortalProps): JSX.Element {
         <Show
           when={props.inline === true}
           fallback={
-            /* A server render has no body to portal into: Solid's server `Portal`
-               renders nothing and never reads its mount, as the client's hydration expects. */
             <Portal mount={mount()}>
               <PortalElement />
             </Portal>
@@ -208,9 +193,6 @@ export function FloatingPortal(props: FloatingPortalProps): JSX.Element {
           <PortalElement />
         </Show>
       </PortalContext>
-      {/* Always rendered (hidden while not guarding): were the guards on both sides of the
-          portal node to appear at once, Solid would move the node, and a move resets every
-          scroll position inside it. */}
       <FocusGuard
         data-type="outside"
         hidden={!shouldRenderGuards()}

@@ -45,7 +45,6 @@ const stepOf = (key: string, from: number, max: number): Option.Option<number> =
     Match.when('Home', () => Option.some(0)),
     Match.when('End', () => Option.some(max)),
     Match.orElse(() => Option.none<number>()),
-    // A whole step inside the range: a step rounded past the top falls back one.
     Option.map((to) => Math.min(Math.round(Math.min(Math.max(to, 0), max)), Math.floor(max))),
   );
 };
@@ -99,7 +98,6 @@ export function Scrubber(props: ScrubberProps) {
         onPointerDown={(event) => {
           if (event.button === 0) scrub.press(event.pointerId);
         }}
-        // React calls `onChange` only for a value it did not write: the reader's.
         onChange={(event) => scrub.move(Number(event.currentTarget.value))}
         onPointerUp={(event) => scrub.lift(event.pointerId)}
         onPointerCancel={(event) => scrub.drop(event.pointerId)}

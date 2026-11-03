@@ -52,10 +52,6 @@ export const VectorsArtifact = makeFileCorpusArtifact({
   Installer: VectorsArtifactInstaller,
 });
 
-// ---------------------------------------------------------------------------
-// The read side
-// ---------------------------------------------------------------------------
-
 /** How this host gets the installed index's bytes.
  *
  *  One method, because that is the only host-specific part: the parse, the
@@ -143,13 +139,8 @@ export const loadVectorIndex: Effect.Effect<LoadedVectorIndex, never, VectorInde
     }
     const parsed = parseVectorIndex(bytes.value);
     if (parsed._tag === 'ok') return { _tag: 'index', index: parsed.index };
-    // §10: "a model-fingerprint mismatch invalidates the vector leg rather than
-    // returning wrong neighbors". Its own reason, because the fix is an app
-    // update or a rebuilt index rather than an install.
     if (parsed._tag === 'fingerprint') {
       return { _tag: 'unavailable', absence: vectorUnavailable('fingerprint') };
     }
-    // A malformed index is `absent` to the reader: there is no usable index, and
-    // no action distinguishes it from one that was never installed.
     return { _tag: 'unavailable', absence: vectorUnavailable('absent') };
   });

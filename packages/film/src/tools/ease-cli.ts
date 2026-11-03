@@ -1,8 +1,3 @@
-// `film concept ease <film> <member> --from <pose> --to <pose> --seconds <s>
-// [--segment <a>-<b> ...] [--shuffle <seed>]`: one of the member's eases
-// (`EASES`, the film's `rigs/cast.ts`) drawn frame by frame in the ease page
-// by the real draw path (`ease.ts`), under out/<film>/cast/<member>/ease/<n>/.
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';

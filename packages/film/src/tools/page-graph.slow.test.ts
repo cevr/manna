@@ -1,12 +1,3 @@
-// The render page's code is its own: the app's pages (`LAB_PAGES`) built
-// together as the lab builds them (`LabPage`, `PageBundler`), and each
-// lab page's scripts, as its HTML and their static imports load them,
-// never hold the render page's handle (`window.__film`, `mountRender`) or the
-// encoder it alone imports (`player/encode.ts`, mediabunny). A bundler splits
-// the pages' code by the modules each reaches, so a lab page that reaches
-// the render page's module (an entry that re-exports it beside what the films
-// import) downloads the encoder on every load, a phone's too.
-
 import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -76,7 +67,6 @@ describe("the render page's code", () => {
         Effect.gen(function* () {
           const scripts = new Map<string, string>();
           const queue = headScripts(yield* ask(href));
-          // The queue grows as it is read: each script's imports join its end.
           for (const next of queue) {
             if (scripts.has(next)) continue;
             const script = yield* ask(next);
@@ -85,7 +75,6 @@ describe("the render page's code", () => {
           }
           return scripts;
         });
-      // The render page itself holds the mark: the probe reads what it means to.
       const render = yield* loaded(pageHref.export('f'));
       expect([...render.values()].some((script) => script.includes(RENDER_MARK))).toBe(true);
       const holding = yield* Effect.forEach(STUDIO, (href) =>

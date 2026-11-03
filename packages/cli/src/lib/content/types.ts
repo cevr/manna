@@ -1,6 +1,5 @@
 import type { Schema } from 'effect';
 
-// Sort strategies as discriminated union
 export type SortStrategy =
   | { readonly _tag: 'date-desc' }
   | { readonly _tag: 'chapter-asc' }

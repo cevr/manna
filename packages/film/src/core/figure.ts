@@ -1,57 +1,6 @@
-// A figure measured from its pixels (`film lab match`): one figure's crop, a
-// painted concept or a rig drawn alone, read as the house look draws a
-// figure (DIRECTION's K1: flat paper shapes inside one thick warm dark ink
-// line, three-mark faces, circle hands) and turned into proportions, each a
-// share of the head's outer width (the face's marks, of the eye spacing), so
-// a concept and a scene compare whatever their sizes. Pure: RGBA in, numbers
-// out.
-//
-// How it reads a crop:
-//
-// - The ink is the crop's commonest dark warm colour; a pixel near it, or a
-//   dark warm brown within reach of it, is ink. A dark fill (hair, however
-//   far its brown lies from the ink) is told from a line by its thickness:
-//   what an opening wider than the line keeps is a mass, a fill, and the
-//   dark joined to it that is not the ink's own colour is its paper too.
-// - Regions are the fills the ink closes (the ink thickened a little first,
-//   so a soft spot in a line leaks nothing); a mass is a region of its own,
-//   so the line beside dark hair, which is the hair's mass, still closes.
-// - The face is the region round the two eyes (a pair of small upright ink
-//   ovals on one row, the face either side of them); the head is the face
-//   and the hair regions joined to it across one line above the eyes (dark
-//   hair round the face, and a lit band painted on it, among them), and its
-//   outline: its sides are the silhouette ink's outer edge, never a part's
-//   lit value. Hair that blends into the face is the face's own region.
-// - The body is the fill most of the band under the chin is: a fill here is
-//   what the ink closes and no sharp step of colour splits (a shade's edge
-//   steps less than a robe against what it is drawn on), so a table painted
-//   across a robe with no line of its own still parts from it. A row of the
-//   body is measured where ink closes it at both ends, else it is hidden
-//   there. Past a thing drawn across it, the fills below as wide as it and of
-//   its colours are the body again.
-// - The hem is the lowest row of the body whose bottom line ends near the
-//   body's sides (a hand may sit there); a line running on past them is a
-//   bench the figure stands behind. The feet are the ink under the hem.
-// - An inner rim is a light band just inside the edge of a part of the head
-//   (an ear, the hair, the face round them) where that edge is not the
-//   figure's silhouette: each band pixel against the part's own fill a band
-//   deeper, near it, so a shade across the part does not read as a rim.
-// - Hands are round regions beside the body.
-// - Shading is a part's fill split in two by colour: the lit and shaded
-//   halves' hue, saturation and value, the edge between them (across the
-//   line joining their centres), and whether the shade is a colour (its hue
-//   moved, or its saturation kept) or a darkening toward grey.
-//
-// A concept is painted: its numbers are guidance, never a gate. A ratio the
-// crop does not show (a hem behind a bench) is left out, and `missing` says
-// why.
-
 import { Option, Result, Schema } from 'effect';
 import type { Raster } from './raster.ts';
 import { ArtifactMark, headArtifacts } from './render-artifacts.ts';
-
-// ---------------------------------------------------------------------------
-// What a measure answers
 
 /** A colour as hue (degrees, 0–360), saturation and value (0–1). */
 const Hsv = Schema.Struct({
@@ -182,7 +131,6 @@ export const FigureSilhouette = Schema.Struct({
 });
 export type FigureSilhouette = typeof FigureSilhouette.Type;
 
-/** A figure measured: its head's outer box, its ink, each ratio it shows, its outline, its shading, and each ratio it does not show. */
 /**
  * A mouth open (a filled shape, its stroke over 0.8 of the head's line: a
  * shout's is about 1.5) or closed (a line, about 0.4 of it).
@@ -250,9 +198,6 @@ class FigureUnread extends Schema.TaggedError<FigureUnread>()('FigureUnread', {
     return `no figure reads in the crop: ${this.reason}`;
   }
 }
-
-// ---------------------------------------------------------------------------
-// Colour
 
 type Rgb = readonly [number, number, number];
 
@@ -387,9 +332,6 @@ const clusters = (colours: ReadonlyArray<Rgb>, k: number) => {
     .sort((a, b) => b.share - a.share);
 };
 
-// ---------------------------------------------------------------------------
-// The ink
-
 /** A pixel nearer the ink than this is ink. */
 const INK_NEAR = 34;
 
@@ -429,9 +371,6 @@ const inkOf = (r: Raster): Option.Option<Rgb> => {
   const mean = (k: 0 | 1 | 2) => Math.round(near.reduce((s, c) => s + c[k], 0) / near.length);
   return Option.some([mean(0), mean(1), mean(2)]);
 };
-
-// ---------------------------------------------------------------------------
-// Distance transform: squared Euclidean (Felzenszwalb and Huttenlocher)
 
 const FAR = 1e20;
 
@@ -506,9 +445,6 @@ const distanceTo = (w: number, h: number, seed: (i: number) => boolean): Float64
   }
   return out;
 };
-
-// ---------------------------------------------------------------------------
-// Components
 
 /** A connected component: its id, pixel count, bounding box, and whether it touches the crop's edge. */
 interface Part {
@@ -611,9 +547,6 @@ const heightOf = (p: Part) => p.y1 - p.y0 + 1;
 const cxOf = (p: Part) => (p.x0 + p.x1) / 2;
 const cyOf = (p: Part) => (p.y0 + p.y1) / 2;
 
-// ---------------------------------------------------------------------------
-// A crop read: its ink, its masses, its regions and its marks
-
 interface Read {
   readonly r: Raster;
   readonly w: number;
@@ -674,7 +607,6 @@ const lineWidthOf = (ink: Uint8Array, w: number, h: number): number => {
   const inkOfRuns = (length: number) => length * (counts.get(length) ?? 0);
   const around = (k: number) => [k - 1, k, k + 1];
   const weigh = (k: number) => around(k).reduce((sum, j) => sum + inkOfRuns(j), 0);
-  // A line is thin against the crop: a twelfth of its shorter side at most (a band of dark across the crop runs longer).
   const most = Math.min(w, h) / 12;
   const heaviest = Math.max(0, ...[...counts.keys()].filter((k) => k <= most).map(weigh));
   const peak = (k: number) => k <= most && weigh(k) >= weigh(k - 1) && weigh(k) >= weigh(k + 1);
@@ -689,7 +621,6 @@ const readCrop = (r: Raster): Option.Option<Read> =>
   Option.map(inkOf(r), (inkColour) => {
     const { width: w, height: h } = r;
     const n = w * h;
-    // Ink proper (near its colour, and no bluer than green: a dark purple robe's shade is no line) gives the line's width and the masses; a line's lighter streaks join it after.
     const strong = new Uint8Array(n);
     const near = new Uint8Array(n);
     for (let i = 0; i < n; i++) {
@@ -699,18 +630,15 @@ const readCrop = (r: Raster): Option.Option<Read> =>
     }
     const line = lineWidthOf(strong, w, h);
     const half = line / 2;
-    // A mass: what an opening wider than the line keeps of the dark, the ink's colour or its streaks. A part is classed by its paper: dark hair a lit band lies on is a fill, never a line, however far its brown lies from the ink.
     const depth = distanceTo(w, h, (i) => near[i] === 0);
     const reach = half * 1.8 + 1;
     const fromCore = distanceTo(w, h, (i) => depth[i]! > reach * reach);
     const cored = (i: number) => near[i] === 1 && fromCore[i]! <= reach * reach;
-    // The fill's narrow runs (a strip of hair between the face and the outline, narrower than the opening) are its paper too: what joins a mass through dark that is not the ink's own colour.
     const mass = reachFrom(w, h, cored, (j) => near[j] === 1 && strong[j] === 0);
     const ink = new Uint8Array(n);
     for (let i = 0; i < n; i++) ink[i] = near[i] === 1 && mass[i] === 0 ? 1 : 0;
     const seal = Math.max(1, Math.round(half * 0.4));
     const sealed = distanceTo(w, h, (i) => ink[i] === 1);
-    // A mass is a region of its own: where it meets a fill or the ground with no ink between (the line beside dark hair is the hair's), it bars them as a line would.
     const regions = label(
       w,
       h,
@@ -886,7 +814,6 @@ const rayWidth = (
     [Math.round(centre[0] + dx * t), Math.round(centre[1] + dy * t)] as const;
   const inCrop = ([x, y]: readonly [number, number]) =>
     x >= 0 && y >= 0 && x < read.w && y < read.h;
-  // The last stretch of ink after the face's last pixel on this ray.
   let [start, end] = [-1, -1];
   for (let t = 0; inCrop(along(t)); t++) {
     const [x, y] = along(t);
@@ -903,7 +830,6 @@ const rayWidth = (
   const middle = Math.round((start + end) / 2);
   const inner = Array.from({ length: middle - (start - 2) }, (_, k) => along(start - 2 + k));
   const outer = Array.from({ length: end + 2 - middle }, (_, k) => along(middle + k));
-  // A ray off the normal crosses the line long: near a head's sides and bottom the normal runs along the ray.
   return Option.some(
     (coverage(read, inner, insideFill) + coverage(read, outer, outsideFill)) *
       Math.cos((turn * Math.PI) / 180),
@@ -922,9 +848,6 @@ const outlineOf = (read: Read, cx: number, cy: number, face: Part): number => {
     .sort((a, b) => a - b);
   return widths[Math.floor(widths.length / 2)] ?? read.line;
 };
-
-// ---------------------------------------------------------------------------
-// The face
 
 /** Whether ink part `p` reads as an eye: small, upright and filled. */
 const eyeLike = (p: Part) => {
@@ -945,7 +868,6 @@ const eyesOf = (read: Read, marks: ReadonlyArray<Part>) => {
       if (Math.abs(cyOf(a) - cyOf(b)) > 0.5 * Math.max(heightOf(a), heightOf(b))) continue;
       if (dx < 1.5 * widthOf(a) || dx > 12 * widthOf(a) || a.area + b.area <= score) continue;
       const between = regionNear(read, (cxOf(a) + cxOf(b)) / 2, (cyOf(a) + cyOf(b)) / 2, 4);
-      // The face lies either side of the pair: an ear's line beside the face, between it and the ear, is no eye.
       const left = regionNear(read, a.x0 - read.seal - 2, cyOf(a), 4);
       const right = regionNear(read, b.x1 + read.seal + 2, cyOf(b), 4);
       const face = Option.map(between, (p) => p.id);
@@ -959,9 +881,6 @@ const eyesOf = (read: Read, marks: ReadonlyArray<Part>) => {
     }
   return best;
 };
-
-// ---------------------------------------------------------------------------
-// An open chin
 
 /**
  * A neck against the face under the eyes: narrower than `NECK_NARROW` of it,
@@ -1038,7 +957,6 @@ const openChinOf = (
   if (neck >= NECK_NARROW * across || neck < NECK_LEAST * across || !widens) return Option.none();
   let chin = narrowest;
   while (chin > 0 && widths[chin - 1]! <= NECK_EVEN * neck) chin--;
-  // The plug spans the neck's fill and the unfilled band between it and the line on either side.
   const [lo, hi] = spans[chin]!;
   const pad = read.line + read.seal;
   return Option.some({
@@ -1092,9 +1010,6 @@ const cutAtChin = (read: Read, face: Part, seed: number, chin: number) => {
   return { read: { ...read, regions: { labels, parts } }, face: cut };
 };
 
-// ---------------------------------------------------------------------------
-// Shading
-
 interface Pixel {
   readonly c: Rgb;
   readonly x: number;
@@ -1141,7 +1056,6 @@ const shadingOf = (all: ReadonlyArray<Pixel>): Option.Option<Shading> => {
     2,
   );
   if (first === undefined || second === undefined) return Option.none();
-  // One tone (the paper's grain alone) is no shade, nor is a sliver of either side.
   if (dist(first.centre, second.centre) < 12 || second.share < 0.08) return Option.none();
   const [litC, shadeC] =
     hsvOf(first.centre).value >= hsvOf(second.centre).value
@@ -1160,7 +1074,6 @@ const shadingOf = (all: ReadonlyArray<Pixel>): Option.Option<Shading> => {
     ] as const;
   const [lx, ly] = centre(lit);
   const [sx, sy] = centre(shade);
-  // The edge runs across the line from the lit side's centre to the shade's; y grows down, so negate it.
   const across = (Math.atan2(-(sy - ly), sx - lx) * 180) / Math.PI;
   const edge = (((across + 90) % 180) + 180) % 180;
   const [litHsv, shadeHsv] = [hsvOf(litC), hsvOf(shadeC)];
@@ -1189,9 +1102,6 @@ const rowExtent = (read: Read, ids: ReadonlySet<number>, y: number) => {
       }
   return lo < 0 ? Option.none<readonly [number, number]>() : Option.some([lo, hi] as const);
 };
-
-// ---------------------------------------------------------------------------
-// The body
 
 /**
  * How far apart two neighbouring pixels may be and still be one fill: a
@@ -1275,9 +1185,6 @@ const lineRuns = (read: Read, y: number, lo: number, hi: number): readonly [numb
   };
   return [runs(lo, -1), runs(hi, 1)];
 };
-
-// ---------------------------------------------------------------------------
-// The measure
 
 const unread = (reason: string) => Result.fail(FigureUnread.make({ reason }));
 
@@ -1363,7 +1270,6 @@ const outerOf = (
         return x >= px0 && x <= px1 && y >= py0 && y <= py1;
       },
   });
-  // A light fill not the head's and larger than an ear (the robe under it, a chair behind it, a hand raised beside it) is off the head however the ink walls it in; a dark one is its hair or beard.
   const foreign = (j: number) => {
     const id = read.regions.labels[j]!;
     return (
@@ -1527,7 +1433,6 @@ const headOf = (
   given: Read,
 ): Result.Result<{ readonly head: Head; readonly read: Read }, FigureUnread> => {
   const { line, seal } = given;
-  // Marks: ink parts small against the crop, past the grain's specks, that touch no crop edge.
   const speck = (line * line) / 4;
   const marks = given.marks.parts.filter(
     (p) => !p.border && p.area >= speck && p.area < 0.01 * given.w * given.h,
@@ -1548,12 +1453,10 @@ const headOf = (
   const rim = seal + line;
   const masses = new Set(hair.filter((p) => massShare(read, p) > 0.5).map((p) => p.id));
   const parts = [face, ...hair];
-  // The head's own dark fills: hair, and the locks or the beard that meet the face with no ink between, however low they hang.
   const dark = new Set([
     ...parts.map((p) => p.id),
     ...[...touching(read, face)].filter((id) => massShare(read, read.regions.parts[id]!) > 0.5),
   ]);
-  // The parts' box only sizes the search: the head's sides are its silhouette's.
   const across =
     sideOf(parts, masses, rim, (p) => p.x1, 1, Math.max) +
     1 -
@@ -1566,7 +1469,6 @@ const headOf = (
     Option.map(open, (o) => o.plug),
   );
   const hy0 = outerTop(outer);
-  // An open chin has no line under it: the head ends where the neck starts.
   const hy1 = face.y1 + 1 + ((Option.isNone(open) && rim) || 0);
   const [hx0, hx1] = outerSides(read, outer, dark, hy0, hy1);
   const [cx, cy] = [(hx0 + hx1) / 2, (hy0 + hy1) / 2];
@@ -1624,7 +1526,6 @@ const browOver = (
 const faceRatios = (read: Read, head: Head, sink: Sink): Option.Option<MouthPose> => {
   const { a, b, W } = head;
   const [sa, sb] = [markSize(read, a), markSize(read, b)];
-  // A mark against the eye spacing (`FACE_MARKS`); the spacing and the marks' places against the head.
   const spacing = cxOf(b) - cxOf(a);
   const put = (ratio: Ratio, pixels: number) =>
     sink.put(ratio, pixels / (FACE_MARKS.has(ratio) ? spacing : W));
@@ -1693,10 +1594,6 @@ const faceBoxOf = (head: Head) => {
 const facingOf = (read: Read, head: Head): Facing => {
   const { a, b, outer } = head;
   const eyesX = (cxOf(a) + cxOf(b)) / 2;
-  // The face's opening on the cheek row just under the eyes: from between the
-  // eyes out to the last skin before the hair, the ink, the head's edge, or a
-  // fill that is not skin (a headcloth, a veil, a hood the house look draws
-  // with no ink between it and the face) either side.
   const y = Math.min(read.h - 1, Math.round(Math.max(a.y1, b.y1) + 0.5 * heightOf(a)));
   const hairIds = new Set(head.hair.map((p) => p.id));
   const open = (x: number) => {
@@ -1713,11 +1610,7 @@ const facingOf = (read: Read, head: Head): Facing => {
     return read.ink[i] === 0 && read.mass[i] === 0 && !hairIds.has(read.regions.labels[i]!);
   };
   const skin = skinOf(read, head);
-  // A run of non-skin as wide as the line ends the skin: one shorter is the paper's grain.
   const ends = Math.max(2, Math.round(read.line));
-  // The skin's edge on a side: the last skin before a run of non-skin, or the
-  // opening's own end when what lies past the skin is narrower than a light
-  // rim (`RIM_MOST_OF_HEAD`), which is the face's own paper lit at its edge.
   const edge = (step: 1 | -1) => {
     let [at, x, onSkin] = [Math.round(eyesX), Math.round(eyesX), true];
     while (x + step >= 0 && x + step < read.w && open(x + step)) {
@@ -1759,7 +1652,6 @@ const skinOf = (read: Read, head: Head): ((c: Rgb) => boolean) => {
       if (read.regions.labels[i] === face.id && read.ink[i] === 0 && read.mass[i] === 0)
         between.push(rgbAt(read.r, i));
     }
-  // Eyes that touch leave nothing between them: the face's colour on the eye line is the skin then.
   const lit = medianRgb(
     between.length > 0
       ? between
@@ -1801,7 +1693,6 @@ const hairBeardOf = (read: Read, head: Head): Option.Option<HairBeard> => {
       ox >= 0 && oy >= 0 && ox < outer.bw && oy < outer.bh && outer.mask[oy * outer.bw + ox] === 1
     );
   };
-  // A pixel the outline's width inside the head's edge: the ink's soft side is neither part.
   const deep = (x: number, y: number) =>
     inside(x, y) &&
     inside(x - off, y) &&
@@ -1898,7 +1789,6 @@ const hairRatios = (read: Read, head: Head, sink: Sink, rims: boolean): Array<nu
       'interiorInk',
       interiorInk(read, head.face, new Set(lightHair.map((p) => p.id)), span) / W,
     );
-  // A light rim inside the edges of the head's inner parts (an ear, the hair): the concept paints none.
   if (rims) sink.put('innerRim', innerRim(read, innerParts(read, head), W) / W);
   else sink.lacks('innerRim', 'a lean read reads no rims');
   return headRadii(head.outer, [head.cx, head.cy], W, span);
@@ -2011,7 +1901,6 @@ const bodyRowsOf = (read: Read, fills: Labelled, dominant: number, head: Head, g
   const ids = new Set([dominant]);
   const own = ownColours(read, fills, bodyRows(read, fills, ids, head.hy1, gap), dominant);
   let rows = bodyRows(read, fills, ids, head.hy1, gap);
-  // A thing drawn across the body (a table) cuts it: below, the fills as wide as it and of its colours are the body again, even where the thing's line seems to end at the body's sides.
   for (;;) {
     const below = fillsBelow(read, fills, ids, rows, own, head.W);
     if (below.length === 0) break;
@@ -2121,10 +2010,8 @@ const feetRatios = (
   sink.put('hem', (base.hi - base.lo + 1 + 2 * (read.seal + head.outline)) / W);
   const foot = footOf(read, bottom, base, head.outline);
   sink.put('heightInHeads', (foot + 1 - head.hy0) / head.H);
-  // The feet's width: the ink of the rows past the hem's line.
   const ink = feetInk(read, base, bottom.y + gap + 1, foot, W);
   if (Option.isNone(ink)) {
-    // Feet a fifth of a head tall would reach past the crop's edge: the frame cuts them, not the drawing.
     const why =
       bottom.y + gap + 0.2 * W >= read.h
         ? "its feet would lie past the crop's edge"
@@ -2231,7 +2118,6 @@ const readWith = (crop: Raster, rims: boolean) => {
     const { W } = head;
     sink.put('headHeight', head.H / W);
     sink.put('outline', head.outline / W);
-    // The jaw is the face's: hair hanging beside it (a crown that runs on into the beard) is no jaw.
     Option.match(rowExtent(read, new Set([head.face.id]), head.hy1 - 0.2 * W), {
       onNone: () => sink.lacks('jaw', 'no head 0.2 of a head above the chin'),
       onSome: ([lo, hi]) => sink.put('jaw', (hi - lo + 1 + 2 * head.rim) / W),
@@ -2282,7 +2168,6 @@ export const readFigure = (crop: Raster): Result.Result<FigureRead, FigureUnread
 /** Measure the figure in `crop`: one figure, with a little room round it. */
 export const measureFigure = (crop: Raster): Result.Result<FigureMeasure, FigureUnread> =>
   Result.map(readWith(crop, true), ({ figure, read, head, body }) => {
-    // The head's shade: the face's skin from just under the eyes to the chin, both read from the eyes (`faceBoxOf`). The face's region runs on, with no line between, into a fill of another paper (a headcloth hanging to the shoulder, a veil), which is no shade of the skin.
     const skin = skinOf(read, head);
     const chin = Math.min(head.hy1, faceBoxOf(head).y1);
     const headShading = shadingOf(
@@ -2323,7 +2208,6 @@ const reachFrom = (
 ): Uint8Array => {
   const reached = new Uint8Array(w * h);
   const steps = new Int32Array(w * h);
-  // Each pixel is queued once, when it is first reached.
   const queue = new Int32Array(w * h);
   let end = 0;
   for (let i = 0; i < w * h; i++)

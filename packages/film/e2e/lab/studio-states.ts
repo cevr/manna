@@ -1,7 +1,3 @@
-// What the lab's touch, token, budget and phone-fit guards open: the
-// devices they are asked on, every place a page is at in each state it
-// discloses (`STATES`), and how a state opens and is read.
-
 import { Effect, Option, type Scope, Struct } from 'effect';
 import { Place } from '@manna/url-state';
 import { Places, pageHref } from '../../src/core/api.ts';
@@ -109,11 +105,9 @@ export type ByPlace<A, First extends A = A> = Readonly<
   Record<PlaceName, readonly [First, ...ReadonlyArray<A>] | Exempt>
 >;
 
-// The type's own probe: a place given an empty list fails to typecheck.
 // @ts-expect-error: an empty list neither opens a place nor names it exempt
 void ([] satisfies ByPlace<State>[PlaceName]);
 
-// The table's own probe: a place at rest without a budget fails to typecheck.
 void ([
   // @ts-expect-error: the first case of a place is the place at rest, and carries its budget
   { name: 'a place', open: () => Effect.die('x'), disclose: () => Effect.void },
@@ -183,12 +177,9 @@ export const STATES: ByPlace<State, AtRest> = {
       name: "an agent's ask, at its first step: a choice of three",
       open: asked(pageHref.ask(STUDIO_ASK), ASK_READY),
       disclose: AT_REST,
-      // A page of one section has no "1 of 1" head, and an ask that waits wears no chip (the
-      // dock's count says what is left).
       budget: ASK_AT_REST,
     },
     {
-      // The shell's view menu (`⋯`), which the ask page's header holds.
       name: 'an ask, the view menu',
       open: asked(pageHref.ask(STUDIO_ASK), ASK_READY),
       disclose: opens('[data-act="view-menu"]', `${VIEW_MENU} [data-command]`),
@@ -201,7 +192,6 @@ export const STATES: ByPlace<State, AtRest> = {
       layer: COMMAND_MENU,
     },
     {
-      // A press on no thing opens the page's own commands.
       name: 'an ask, the context menu',
       open: asked(pageHref.ask(STUDIO_ASK), ASK_READY),
       disclose: (page) =>
@@ -218,7 +208,6 @@ export const STATES: ByPlace<State, AtRest> = {
       layer: KEYS,
     },
     {
-      // Copy link, run from ⌘K: its receipt says what it copied.
       name: 'an ask, a receipt',
       open: asked(pageHref.ask(STUDIO_ASK), ASK_READY),
       disclose: (page) =>
@@ -228,7 +217,6 @@ export const STATES: ByPlace<State, AtRest> = {
           yield* waitFor(page, `${COMMAND_MENU} [data-command="link.copy"]`);
           yield* page.press('Enter');
           yield* waitFor(page, `${RECEIPTS} [data-role="receipt"]`);
-          // The receipt's own timer does not put it away before it is measured.
           yield* page.clock.hold;
         }),
       layer: RECEIPTS,
@@ -239,8 +227,6 @@ export const STATES: ByPlace<State, AtRest> = {
       name: 'a page of three asks: the first answered and folded, two still asking',
       open: asked(pageHref.askPage(STUDIO_PAGE), PAGE_READY),
       disclose: AT_REST,
-      // The shell's, the page's head and count, the answered ask's one line, then each ask still
-      // asking: its head, why, choice and Send (measured 26 on a phone, 27 on a laptop).
       budget: most(26, 27),
     },
   ],
@@ -265,7 +251,6 @@ export const disclosed = (place: PlaceName, state: State, device: Device) =>
   Effect.gen(function* () {
     const page = yield* state.open(device.viewport);
     yield* isAt(page, place);
-    // The page has the device's pointer, so its density tokens are the device's.
     yield* page.until(`matchMedia('${device.pointer}').matches`);
     yield* state.disclose(page);
     return page;

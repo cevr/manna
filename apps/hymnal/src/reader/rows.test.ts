@@ -23,7 +23,6 @@ const rng = (seed: number) => () => {
 
 // oxlint-disable-next-line effect/noGlobals -- the run's seed comes from its shell, outside any Effect.
 const seed = Number(process.env['HYMNAL_ROWS_SEED'] ?? Date.now() % 1_000_000);
-// The test's name prints the seed: `HYMNAL_ROWS_SEED=<seed>` runs those cases again.
 const cases = 300;
 
 const names = [
@@ -50,7 +49,6 @@ const lengthOf = (r: () => number, k: number) => {
 const draw = (r: () => number, k: number): ReadonlyArray<Fixture> => {
   const length = lengthOf(r, k);
   const pool = 1 + Math.floor(r() * 70);
-  // 0: one run; 1: a new draw for every hymn; otherwise runs of random length.
   const cut = k % 4;
   const drawTopic = () => {
     const n = Math.floor(r() * pool);
@@ -102,7 +100,6 @@ describe('the hymn rows', () => {
       expect({ seed, k, seen }).toEqual({ seed, k, seen: expected });
       expect(sticky).toEqual(rows.flatMap((row, i) => [i].filter(() => row.kind === 'topic')));
       expect(new Set(rows.map((row) => row.key)).size).toBe(rows.length);
-      // No topic row is empty or followed by another topic row.
       for (const i of sticky) expect(rows[i + 1]?.kind).toBe('hymn');
     }
   });
@@ -156,7 +153,6 @@ describe('the reader’s shelves above the topics', () => {
       { kind: 'hymn', number: 3 },
     ]);
     expect(sticky).toEqual([6, 9]);
-    // A hymn on a shelf and under its topic is two rows, each keyed apart.
     expect(new Set(rows.map((row) => row.key)).size).toBe(rows.length);
   });
 
@@ -344,7 +340,6 @@ describe('a search’s result rows with the hymns about it', () => {
   });
 
   it('show each hymn once, a match the section holds under it alone, and page through the rows in their order', () => {
-    // 9 and 7 are both matches past the strongest and hymns about the query.
     const { rows } = resultRowsOf([1, 2, 3, 4, 5, 7, 6, 9].map(hymn), [9, 8, 7].map(hymn));
     const hymnRows = hymnRowsOf(rows);
     const shown = hymnRows.map((row) => row.hymn.number);

@@ -1,8 +1,3 @@
-// Paper by meaning: a piece's role decides its edge and its outline. A figure
-// is cut clean with a thin light core and keeps its ink outline; scenery is
-// torn with a white rim and has no outline; an ink letter has no core. What a
-// piece names for itself wins over its role.
-
 import { describe, expect, test } from 'bun:test';
 import { Schema } from 'effect';
 import { CRAWL_MAX, type Pt, rectShape } from './ink.ts';
@@ -127,7 +122,6 @@ describe('piece', () => {
     const step = most(style('figure'), 2, 3);
     expect(step).toBeGreaterThan(0);
     expect(step).toBeLessThanOrEqual(CRAWL_MAX);
-    // Named, ink boils as ink on a piece too.
     expect(most(style('figure', { boil: 'tick' }), 2, 3)).toBeGreaterThan(CRAWL_MAX);
   });
 

@@ -1,17 +1,3 @@
-// The cast sheet's measure on real tries the image route painted from the
-// cast sheet brief, each scaled to 0.75: a Christ turnaround, and the same
-// sheet rebuilt with its two profiles swapped, so each faces away from the
-// three-quarter on its side (a painted profile and three-quarter differ in
-// the body far more than a drawn fixture's do, so the profile is held to the
-// three-quarter on their heads); a turnaround painted close together, whose
-// body band crosses into its neighbours' crops; a heads sheet whose locks of
-// hair widen some heads' boxes; a pose sheet with a bare forearm painted on
-// to a hand under the chin; a farmer under a headcloth whose ends fall past
-// his hands; a farmer whose headcloth falls to his hem; and RBF's new lead
-// (the painter's B2 tries, 2026-10-19), a turnaround and a heads sheet whose
-// face runs into the neck with no line at the chin. The sheets are PNGs, so
-// they are decoded here, past core.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Result } from 'effect';
@@ -63,7 +49,6 @@ describe('a turnaround painted close together', () => {
   it.effect("reads each view's width on its own body, never a neighbour's robe in its crop", () =>
     Effect.gen(function* () {
       const sheet = yield* sheetAt('christ-turnaround-2.png');
-      // Seen: its front and back are as wide; the back's crop took the next view's sleeve, and read 31 % narrower.
       expect(flagsOf(sheet, { kind: 'turnaround', count: 6, anchor: 2 })).not.toContain(
         'width:1,4',
       );
@@ -82,7 +67,6 @@ describe("a heads sheet whose locks widen some heads' boxes", () => {
         slots: ['left', 'left', 'left', 'front', 'front', 'front'],
         level: [1, 4],
       };
-      // Seen: one head drawn six times, the lock beside the cheek falling wider on some; the heads' height on the level heads is a check of its own, held to the anchor.
       expect(
         measured(sheet, options)
           .flags.filter((f) => f.check === 'head' && f.note.includes("the eyes' spacing"))
@@ -147,7 +131,6 @@ describe('a farmer under a headcloth whose ends fall past his hands', () => {
     Effect.gen(function* () {
       const sheet = yield* sheetAt('farmer-turnaround-u2.png');
       const m = measured(sheet, { kind: 'turnaround', count: 6, anchor: 6, headgear: true });
-      // Seen: the hands touch the robe, with no sleeve; the cloth is not hair, so the side's rows start under the chin.
       expect(
         m.unmeasured
           .filter((u) => u.check === 'sleeveReach' && [1, 2, 6].includes(u.view))
@@ -169,7 +152,6 @@ describe('a farmer under a headcloth that falls to his hem', () => {
       Effect.gen(function* () {
         const sheet = yield* sheetAt('farmer-turnaround-2.png');
         const m = measured(sheet, { kind: 'turnaround', count: 6, anchor: 6, headgear: true });
-        // Seen: his hands hang at his sides on views 1, 2 and 6; the cloth's box runs down to the hem on view 6.
         expect(
           m.unmeasured
             .filter((u) => u.check === 'sleeveReach' && [1, 2, 6].includes(u.view))
@@ -193,12 +175,10 @@ describe('a lead whose face runs into his neck with no line at the chin', () => 
           count: 6,
           anchor: 1,
         });
-        // Seen: about 3.5 heads by his pixel rows, hair top to chin; the face's fill runs on down the neck into the shirt, so a head read that does not stop where the neck narrows takes him for one head tall.
         const heads = Option.getOrElse(Option.fromUndefinedOr(m.canon.heads), () => 0);
         expect(heads).toBeGreaterThan(3.3);
         expect(heads).toBeLessThan(3.8);
         expect(m.flags.filter((f) => f.check === 'squash')).toEqual([]);
-        // His open chin is his design (a shade step, no line): said, so no try of it is redrawn for it.
         expect(m.views.map((v) => v.chin ?? 'unread')).toEqual([
           'open',
           'open',
@@ -222,7 +202,6 @@ describe('a heads sheet whose faces run into their necks and whose busts are cut
         count: 6,
         anchor: 1,
       });
-      // Seen: each face's fill runs through the neck, the shirt and the bust's open foot into the paper, so a head read that does not stop where the neck narrows takes the paper for the head; the profile draws one eye.
       expect(
         m.views.flatMap((v) => (Option.isSome(Option.fromUndefinedOr(v.head)) && [v.view]) || []),
       ).toEqual([1, 2, 4, 5, 6]);

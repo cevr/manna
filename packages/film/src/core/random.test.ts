@@ -1,10 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { fbm, hash, hash2, noise1, rng, seedOf } from './random.ts';
 
-// What a film relies on: the same input gives the same number on every run,
-// numbers stay in their range, and another seed gives other numbers. The
-// numbers themselves are not pinned: a change to random.ts shows in its diff.
-
 /** The 2D value noise `fbm` stacks: one octave of it. */
 const noise2 = (x: number, y: number, seed: number) => fbm(x, y, seed, 1);
 
@@ -61,7 +57,6 @@ describe('random', () => {
   });
 
   test('seedOf is FNV-1a: the same name the same seed, names apart', () => {
-    // FNV-1a's offset basis: the hash of nothing.
     expect(seedOf('')).toBe(2166136261);
     expect(seedOf('sheep')).toBe(seedOf('sheep'));
     const names = ['sheep', 'robe', 'cold:accused', 'cold:accuser'];

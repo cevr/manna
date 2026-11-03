@@ -1,11 +1,3 @@
-// The clip rules (`clips.ts`): a clip passes when its figure keeps its height
-// and its feet line, every band's chain IoU reaches its bar and every band
-// that expects drawings names them on enough of its frames; the holds are
-// the longest start and end runs over the hold bar; a fal call is allowed
-// while the member's and the week's spend stay within their limits; and a
-// committed clip is adopted only when its provenance is the request's and its
-// mp4 is the one the provenance names, else it is missing, with the request.
-
 import { describe, expect, test as it } from 'bun:test';
 import { DateTime, Option, Schema } from 'effect';
 import {

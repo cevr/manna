@@ -1,16 +1,3 @@
-// `film/media-through-player`: a page plays sound and pictures through the
-// player's media module (`browser/media.ts`, `media-browser.ts`): one owner
-// of what an element does that a page cannot see from its markup (a play's
-// promise refused as its source changes, a phone that plays nothing until a
-// tap, the muted autoplay rule, an element's clock). An element made
-// elsewhere learns each of those again.
-//
-// Refused outside that module: an `<audio>` or `<video>` element written in
-// JSX, `document.createElement('audio' | 'video')` (any receiver's
-// `createElement` with that tag), and `new Audio(…)` (the global). The sites
-// that hold one today are let off by the config, each with the ticket that
-// moves it.
-
 import { Effect, Option, Predicate } from 'effect';
 import {
   Diagnostic,

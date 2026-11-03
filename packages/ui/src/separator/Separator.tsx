@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/separator/Separator.tsx
-//
-// A `role="separator"` between groups of items or controls: horizontal (a
-// menu's groups) or vertical (a toolbar's), said by `aria-orientation` and
-// drawn by `data-orientation`.
 import type { JSX } from '@solidjs/web';
 import { omit } from 'solid-js';
 

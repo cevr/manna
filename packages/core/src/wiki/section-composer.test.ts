@@ -43,10 +43,6 @@ import { SECTION_CAPS, SECTION_SCOPES, WikiSectionSources } from './section-comp
 import { layerBunOrAbsent } from './artifact-fixture.js';
 import { WikiService } from './service.js';
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 /** An `Option` as a zero-or-one array, so a `for` loop or a `flatMap` drops the
  *  empty case without a nullish check. */
 const present = <A>(value: Option.Option<A>): readonly A[] =>
@@ -176,8 +172,6 @@ const CROSS_REFS = verseNumbers(8).map((verse) => ({
   chapter: 11,
   verse,
   references: verseNumbers(3).map((target): CrossReference => ({
-    // Distinct targets per source verse, so the section's cap of 10 is
-    // reached by 8 verses × 3 refs rather than defeated by deduplication.
     book: 43,
     chapter: verse,
     verse: Option.some(target),
@@ -197,10 +191,6 @@ const VERSES = [
     versionCode: 'KJV',
     text: `John 11:${String(verse)} text`,
   })),
-  // Malachi 4 and Matthew 1, the two chapters `Mal.4.5-Matt.1.1` touches. The
-  // catalog really stores that token, and it is the one shape a per-book text
-  // read cannot serve: Malachi is book 39 and Matthew is book 40, so the span
-  // has to walk the canon rather than a chapter number.
   ...verseNumbers(6).map((verse) => ({
     book: 39,
     chapter: 4,
@@ -237,10 +227,6 @@ const sourcesLayer = (topics: readonly TopicDetail[], commentary: typeof COMMENT
       ),
     ),
   );
-
-// ---------------------------------------------------------------------------
-// A real topics artifact, for the flagship half
-// ---------------------------------------------------------------------------
 
 interface ArtifactTopic {
   readonly slug: string;
@@ -444,20 +430,14 @@ const sectionSourcesAreRequired: WikiSectionSources extends Requires<typeof Wiki
   : never = true;
 void sectionSourcesAreRequired;
 
-// ---------------------------------------------------------------------------
-
 describe('section composer', () => {
   const test = it.scopedLive.layer(BunFileSystem.layer);
 
   test('emits the §6.1 lineup in order with the specified caps', () =>
     Effect.gen(function* () {
-      // 12 catalog verses against a cap of 8, 6 hits per corpus against caps of
-      // 5, 24 cross-references against a cap of 10, and 2 edges against no cap.
       const wiki = yield* WikiService;
       const page = yield* wiki.topic(topicSlug('sanctuary'));
       expect(kinds(page.sections)).toEqual(LINEUP);
-      // 8 / 5 / 5 / 5 / 10 / uncapped — the §6.1 column, asserted as a shape
-      // rather than as six separate expectations that could each be relaxed.
       expect(counts(page.sections)).toEqual([
         Option.getOrThrow(SECTION_CAPS.keyVerses),
         Option.getOrThrow(SECTION_CAPS.egwStatements),
@@ -467,16 +447,7 @@ describe('section composer', () => {
         3,
       ]);
       expect(counts(page.sections)).toEqual([8, 5, 5, 5, 10, 3]);
-      // Section 6 is uncapped by §6.1, and the constant says so rather than a
-      // large number standing in for "no limit".
       expect(Option.isNone(SECTION_CAPS.relatedTopics)).toBe(true);
-      // `total` is the pre-cap count on **all six** sections, which is what a
-      // "show all" affordance needs and what proves the cap discarded
-      // something. Sections 2 and 4 are the ones this is hard for: their cap
-      // is pushed into SQL as a `LIMIT`, so a `total` computed from the
-      // returned rows saturates at 5 and can never report the tail §6.2's
-      // handoff exists to lead the reader into. Both read 7 here because the
-      // composer runs a real count query beside the ranked read.
       expect(page.sections.map((section) => section.total)).toEqual([
         12,
         MATCHING_PARAGRAPHS_PER_SCOPE,
@@ -513,8 +484,6 @@ describe('section composer', () => {
     Effect.gen(function* () {
       const wiki = yield* WikiService;
       const page = yield* wiki.topic(topicSlug('sanctuary'));
-      // §5: the layered anatomy only reads well arriving mid-rabbit-hole with
-      // key verses open. The page carries the flag so no UI hardcodes it.
       expect(page.sections.map((section) => section.defaultOpen)).toEqual([
         true,
         false,
@@ -551,14 +520,7 @@ describe('section composer', () => {
       const entry = egw.missingBooks[0];
       expect(entry?.refcode).toBe('ABSENT 12.3');
       expect(entry?.bookTitle).toBe('A Book You Do Not Have');
-      // The §6.3 facts and nothing else. There is no snippet field to fill:
-      // a snippet would have to be precomputed and FTS cannot reach the book
-      // at all, so the entry is a *different type* from a search hit rather
-      // than a hit with two empty halves.
       expect(entry?.absence).toBe('not-installed');
-      // And it is not an item: `items` is rank-ordered FTS output, and an
-      // unranked citation among them would both break the order and evict a
-      // ranked hit under the cap of 5.
       expect(egw.items.every((hit) => Option.isSome(hit.snippet))).toBe(true);
       expect(egw.items.every((hit) => Option.isNone(hit.absence))).toBe(true);
     }).pipe(
@@ -585,8 +547,6 @@ describe('section composer', () => {
       const pioneer = writingsSection(page.sections, 'pioneer-witnesses');
       expect(egw.length).toBeGreaterThan(0);
       expect(pioneer.length).toBeGreaterThan(0);
-      // Each side sees only its own half — the partition is binary, so a book
-      // appearing in both sections would mean the filter did nothing.
       expect(egw.every((hit) => EGW_SCOPE_AUTHORS.includes(hit.author))).toBe(true);
       expect(pioneer.every((hit) => !EGW_SCOPE_AUTHORS.includes(hit.author))).toBe(true);
       expect(egw.some((hit) => hit.bookCode === 'DAR')).toBe(false);
@@ -622,8 +582,6 @@ describe('section composer', () => {
       expect(pioneer.handoff).toEqual(
         Option.some({ query: 'heavenly sanctuary', scope: SECTION_SCOPES.pioneerWitnesses }),
       );
-      // The handoff's scope is the section's scope: a reader jumping into
-      // search lands in the corpus they were already reading.
       expect(SECTION_SCOPES.egwStatements).toBe('egw');
       expect(SECTION_SCOPES.pioneerWitnesses).toBe('pioneer');
     }).pipe(
@@ -634,8 +592,6 @@ describe('section composer', () => {
               slug: 'sanctuary',
               title: 'The Sanctuary',
               thesis: THESIS,
-              // The canonical alias is the handoff's pre-fill — not the page title,
-              // which is a heading rather than a phrase to search for.
               aliases: [
                 { alias: 'heavenly sanctuary', canonical: true },
                 { alias: 'sanctuary', canonical: false },
@@ -651,17 +607,13 @@ describe('section composer', () => {
     Effect.gen(function* () {
       const wiki = yield* WikiService;
       const flagship = yield* wiki.topic(topicSlug('sanctuary'));
-      // A slug the artifact does not carry, keyed to the same catalog row.
       const catalog = yield* wiki.topic(topicSlug('naves.sanctuary'));
       expect(flagship.status).toBe('flagship');
       expect(catalog.status).toBe('catalog');
       expect(Option.isNone(catalog.core)).toBe(true);
-      // Same lineup, same order, same caps — the whole point of §2.1's one
-      // code path. Only the authored core differs between the two statuses.
       expect(kinds(catalog.sections)).toEqual(LINEUP);
       expect(kinds(flagship.sections)).toEqual(kinds(catalog.sections));
       expect(counts(catalog.sections).slice(0, 5)).toEqual(counts(flagship.sections).slice(0, 5));
-      // A catalog page is titled by its catalog row, not by its slug.
       expect(catalog.title).toBe('Sanctuary');
     }).pipe(
       Effect.provide(
@@ -693,7 +645,6 @@ describe('section composer', () => {
         'zzz-backlink',
       ]);
       expect(related.items.map((item) => item.kind)).toEqual(['authored', 'authored', 'backlink']);
-      // Titles, not slugs — resolved from the artifact's own `topics` table.
       expect(related.items.map((item) => item.title)).toEqual([
         'First Authored',
         'Second Authored',
@@ -724,9 +675,6 @@ describe('section composer', () => {
 
   test('keeps the lineup whole when the corpus has nothing to say', () =>
     Effect.gen(function* () {
-      // No catalog overlay, no writings library, no commentary, no verses: the
-      // maximally partial corpus. Six empty sections, in order — not a failure
-      // and not a shorter list a client would have to index around.
       const wiki = yield* WikiService;
       const page = yield* wiki.topic(topicSlug('sanctuary'));
       expect(kinds(page.sections)).toEqual(LINEUP);
@@ -749,9 +697,6 @@ describe('section composer', () => {
                 ),
               ),
             ),
-            // Wired, not omitted: the empty sections below are the result of
-            // querying a bare corpus, which is a different fact than a host
-            // that never wired §6 at all.
             Layer.orDie,
           ),
         ),
@@ -802,9 +747,6 @@ describe('section composer', () => {
       const wiki = yield* WikiService;
       const page = yield* wiki.topic(topicSlug('naves.sanctuary'));
       const commentary = page.sections[2];
-      // The section survives, full to its cap. Before the fallback it came
-      // back *empty* — the citation-less row died inside `Effect.map`, which is
-      // a defect the section's own `orElseSucceed` does not rescue.
       expect(commentary?.items.length).toBe(Option.getOrThrow(SECTION_CAPS.commentary));
       const refcodes = (commentary?.items ?? []).map((item) =>
         Option.match(Option.filter(Option.some(item), Schema.is(WikiCommentaryEntry)), {
@@ -812,11 +754,7 @@ describe('section composer', () => {
           onSome: (entry) => entry.refcode,
         }),
       );
-      // The citation-less row is present and carries the book code in place of
-      // a refcode, so the line still names where the text came from rather than
-      // rendering an empty citation column.
       expect(refcodes).toContain('5BC');
-      // And it is a stand-in, not a blank: nothing empty reached the wire.
       expect(refcodes.every((refcode) => refcode.length > 0)).toBe(true);
     }).pipe(Effect.provide(uncitableLayer)));
 
@@ -824,8 +762,6 @@ describe('section composer', () => {
     Effect.gen(function* () {
       const wiki = yield* WikiService;
       const page = yield* wiki.topic(topicSlug('naves.sanctuary'));
-      // §3.5: no artifact still means a real page. The catalog tables ship
-      // inside the verified bible.db, so sections 1, 3 and 5 all answer.
       expect(page.unavailable).toEqual(Option.some('artifact-not-installed'));
       expect(kinds(page.sections)).toEqual(LINEUP);
       expect(page.sections[0]?.items.length).toBe(Option.getOrThrow(SECTION_CAPS.keyVerses));
@@ -871,15 +807,10 @@ describe('section composer', () => {
       if (keyVerses?._tag !== 'key-verses') {
         return yield* Effect.fail('lineup position 1 is not the key-verses section');
       }
-      // OSIS normalized into a navigable reference plus a readable label —
-      // `John.11.1` is not something a reader or a route can use.
       expect(keyVerses.items[0]?.start.book).toBe(JOHN?.number);
       expect(keyVerses.items[0]?.label).toBe('John 11:1');
       expect(keyVerses.items[0]?.text).toEqual(Option.some('John 11:1 text'));
-      // A single-verse reference carries no range end, so a client renders one
-      // reference rather than a degenerate range.
       expect(keyVerses.items[0]?.end).toEqual(Option.none());
-      // In catalog position order, which is the order the rows arrive in.
       expect(keyVerses.items.map((passage) => Number(passage.start.verse))).toEqual([
         1, 2, 3, 4, 5, 6, 7, 8,
       ]);
@@ -899,14 +830,6 @@ describe('section composer', () => {
       ),
     ));
 
-  // -------------------------------------------------------------------------
-  // OSIS ranges (§6.1 row 1)
-  //
-  // 11,464 of `bible.db`'s 76,957 catalog reference tokens are ranges, and 120
-  // catalog topics have *nothing but* ranges. A single-verse-only parse gives
-  // every one of those topics an empty key-verses section.
-  // -------------------------------------------------------------------------
-
   const rangesOnly = catalogTopicWith('naves.sanctuary', [
     { raw: 'Jn 11:1-3', osis: ['John.11.1-John.11.3'] },
     { raw: 'Jn 11:5-6', osis: ['John.11.5-John.11.6'] },
@@ -920,18 +843,12 @@ describe('section composer', () => {
       if (keyVerses._tag !== 'key-verses') {
         return yield* Effect.fail('lineup position 1 is not the key-verses section');
       }
-      // Non-empty is the whole assertion: dropping ranges makes this zero for
-      // 120 of the catalog's topics.
       expect(keyVerses.items.length).toBe(2);
-      // Each range is *one* entry, not the verses it spans — the reader asked
-      // for the passage, and expanding would spend the cap of 8 inside it.
       expect(keyVerses.items.map((passage) => passage.label)).toEqual([
         'John 11:1-3',
         'John 11:5-6',
       ]);
       expect(keyVerses.items.map((passage) => Option.isSome(passage.end))).toEqual([true, true]);
-      // The range's text is the spanned verses joined, read the same way the
-      // reading surface reads a chapter.
       expect(keyVerses.items[0]?.text).toEqual(
         Option.some('John 11:1 text John 11:2 text John 11:3 text'),
       );
@@ -955,8 +872,6 @@ describe('section composer', () => {
     { raw: 'Jn 11:4', osis: ['John.11.4'] },
     { raw: 'Jn 11:1-2', osis: ['John.11.1-John.11.2'] },
     { raw: 'Jn 11:7', osis: ['John.11.7'] },
-    // Apocrypha the 66-book canon cannot number, and a backwards range:
-    // both drop out rather than becoming references nothing can open.
     { raw: 'Wis 3:1', osis: ['Wis.3.1'] },
     { raw: 'Jn 11:9-8', osis: ['John.11.9-John.11.8'] },
   ]);
@@ -969,8 +884,6 @@ describe('section composer', () => {
       if (keyVerses._tag !== 'key-verses') {
         return yield* Effect.fail('lineup position 1 is not the key-verses section');
       }
-      // Catalog position, unsorted: the range sits where the catalog put it,
-      // between two single verses, rather than being appended after them.
       expect(keyVerses.items.map((passage) => passage.label)).toEqual([
         'John 11:4',
         'John 11:1-2',
@@ -1006,10 +919,6 @@ describe('section composer', () => {
         return yield* Effect.fail('lineup position 1 is not the key-verses section');
       }
       expect(keyVerses.items.map((passage) => passage.label)).toEqual(['Malachi 4:5-Matthew 1:1']);
-      // `Some`, and spanning both books. Before the fix the composer returned
-      // `None` for any range whose ends were in different books, so the
-      // reference rendered with a label and no text at all — indistinguishable
-      // to a reader from a Bible that does not contain Malachi.
       expect(keyVerses.items[0]?.text).toEqual(
         Option.some('Mal 4:5 text Mal 4:6 text Matt 1:1 text'),
       );
@@ -1031,8 +940,6 @@ describe('section composer', () => {
 
   const rejected = catalogTopicWith('naves.sanctuary', [
     { raw: 'Jn 11:4', osis: ['John.11.4'] },
-    // Reversed, and a three-part token: the two shapes that used to vanish
-    // without a trace.
     { raw: 'Jn 11:9-8', osis: ['John.11.9-John.11.8'] },
     { raw: 'Jn 11:1-2-3', osis: ['John.11.1-John.11.2-John.11.3'] },
   ]);
@@ -1047,8 +954,6 @@ describe('section composer', () => {
           if (keyVerses._tag !== 'key-verses') {
             return yield* Effect.fail('lineup position 1 is not the key-verses section');
           }
-          // The page still composes. A bad catalog row is not a reason to fail
-          // a view-time read, which is why this is a log and not an error.
           expect(keyVerses.items.map((passage) => passage.label)).toEqual(['John 11:4']);
         }),
       );
@@ -1075,16 +980,6 @@ describe('section composer', () => {
         ),
       ),
     ));
-
-  // -------------------------------------------------------------------------
-  // §3.5 — degradation is for absent corpora, and for nothing else
-  //
-  // `Layer.catchCause(() => NotWired)` converted every cause, so a null
-  // dereference in a service constructor and a shutdown interrupt both reached
-  // the reader as "this host wired no section sources". That is the same
-  // hiding round one removed one level down: a real fault wearing a
-  // degradation state's clothes.
-  // -------------------------------------------------------------------------
 
   /** The real shape of an absent corpus on this stack: the SQLite client
    *  reports a missing file as a typed `SqlError` (since effect 4.0.1; before,
@@ -1133,8 +1028,6 @@ describe('section composer', () => {
         }),
       );
 
-      // Degraded *and* accounted for. The reader only ever sees
-      // `sections-not-wired`; the driver's own message survives here or nowhere.
       expect(
         warnings.filter((entry) => entry.message === 'wiki.sectionSources.degraded-to-not-wired')
           .length,
@@ -1142,9 +1035,6 @@ describe('section composer', () => {
     }),
   );
 
-  // A bare thrown value, not a tagged error: the point is that something
-  // nobody modelled escaped a constructor, and that it still reaches the
-  // operator instead of being renamed to a degradation state.
   const boom = 'a service constructor threw';
   const dyingConstructor = WikiSectionSources.NotWiredOnCorpusAbsence(
     Layer.effect(WikiSectionSources, Effect.die(boom)),
@@ -1154,9 +1044,6 @@ describe('section composer', () => {
     Effect.gen(function* () {
       const exit = yield* Effect.exit(sourcingOver(dyingConstructor));
 
-      // The defect surfaces. Under the old blanket catch this exit was a
-      // *success* carrying `not-wired`, and the thrown error was gone — no log,
-      // no crash, just a page that quietly claimed its host had wired nothing.
       expect(Exit.isFailure(exit)).toBe(true);
       if (Exit.isFailure(exit)) {
         expect(Cause.hasDies(exit.cause)).toBe(true);
@@ -1164,10 +1051,6 @@ describe('section composer', () => {
       }
     }),
   );
-
-  // -------------------------------------------------------------------------
-  // §6.3 — citations never displace ranked hits
-  // -------------------------------------------------------------------------
 
   test('keeps all five ranked hits when an uninstalled citation is also present', () =>
     Effect.gen(function* () {
@@ -1177,16 +1060,8 @@ describe('section composer', () => {
       if (egw._tag !== 'egw-statements') {
         return yield* Effect.fail('lineup position 2 is not the EGW statements section');
       }
-      // The cap belongs to the ranked hits alone. Merging the citation into
-      // `items` first — as the pre-fix composer did — spends one of the five
-      // slots on a marker, and the fifth-ranked result is gone from the page
-      // for good.
       expect(egw.items.length).toBe(Option.getOrThrow(SECTION_CAPS.egwStatements));
       expect(egw.items.length).toBe(5);
-      // Every one of the five is a *ranked hit*: it carries a snippet and no
-      // absence. A count of five is not the claim — five search results is.
-      // A prepended marker keeps the count and still loses a result, which is
-      // exactly why the count alone would not catch the regression.
       expect(egw.items.every((hit) => Option.isSome(hit.snippet))).toBe(true);
       expect(egw.items.every((hit) => Option.isNone(hit.absence))).toBe(true);
       expect(egw.items.map((hit) => hit.refcode)).toEqual([
@@ -1196,7 +1071,6 @@ describe('section composer', () => {
         'GC 4.1',
         'GC 5.1',
       ]);
-      // And the marker is still on the page, beside them.
       expect(egw.missingBooks.map((entry) => entry.refcode)).toEqual(['ABSENT 12.3']);
     }).pipe(
       Effect.provide(
@@ -1214,16 +1088,9 @@ describe('section composer', () => {
       ),
     ));
 
-  // -------------------------------------------------------------------------
-  // §2.3 — live backlinks
-  // -------------------------------------------------------------------------
-
   test('gives a catalog page the live backlinks pointing at it', () =>
     Effect.gen(function* () {
       const wiki = yield* WikiService;
-      // A catalog page: no authored core, therefore no `core.edges` at all.
-      // §2.3 says its backlinks are computed live, and this is the only way
-      // the section can ever be non-empty for it.
       const page = yield* wiki.topic(topicSlug('naves.grace'));
       expect(page.status).toBe('catalog');
       const related = page.sections[5];
@@ -1232,7 +1099,6 @@ describe('section composer', () => {
       }
       expect(related.items.map((item) => String(item.slug))).toEqual(['sanctuary']);
       expect(related.items.map((item) => item.kind)).toEqual(['backlink']);
-      // The neighbour is named by its title, read from the artifact.
       expect(related.items.map((item) => item.title)).toEqual(['The Sanctuary']);
     }).pipe(
       Effect.provide(
@@ -1258,8 +1124,6 @@ describe('section composer', () => {
       if (related._tag !== 'related-topics') {
         return yield* Effect.fail('lineup position 6 is not the related-topics section');
       }
-      // Authored first, then live backlinks — §6.1 row 6's order, with the
-      // live half supplying the second name.
       expect(related.items.map((item) => String(item.slug))).toEqual([
         '2300-days',
         'day-of-atonement',
@@ -1275,8 +1139,6 @@ describe('section composer', () => {
               thesis: THESIS,
               edges: [{ to: '2300-days', kind: 'authored' }],
             },
-            // Points at `sanctuary` but is not named by it: only the live query
-            // finds this neighbour.
             {
               slug: 'day-of-atonement',
               title: 'Day of Atonement',
@@ -1290,24 +1152,14 @@ describe('section composer', () => {
       ),
     ));
 
-  // -------------------------------------------------------------------------
-  // §6 sourcing is a required, stated choice
-  // -------------------------------------------------------------------------
-
   test('reports a host that wired no section sources, with six empty sections', () =>
     Effect.gen(function* () {
       const wiki = yield* WikiService;
       const page = yield* wiki.topic(topicSlug('sanctuary'));
-      // The lineup is still the page's shape, so a client indexing position 3
-      // for commentary finds commentary there.
       expect(kinds(page.sections)).toEqual(LINEUP);
       expect(counts(page.sections)).toEqual([0, 0, 0, 0, 0, 0]);
       expect(page.sections.map((section) => section.total)).toEqual([0, 0, 0, 0, 0, 0]);
-      // And the reason travels with them. Without it, this page is
-      // indistinguishable from the "corpus has nothing to say" page above —
-      // which is a reader's problem, where this is an operator's.
       expect(page.sectionsUnavailable).toEqual(Option.some('sources-not-wired'));
-      // The authored core is untouched: the artifact opened fine.
       expect(Option.isSome(page.core)).toBe(true);
     }).pipe(
       Effect.provide(
@@ -1335,8 +1187,6 @@ describe('section composer', () => {
     Effect.gen(function* () {
       const wiki = yield* WikiService;
       const page = yield* wiki.topic(topicSlug('sanctuary'));
-      // Six empty sections again — but this host *did* look, so it makes the
-      // claim the `NotWired` host has no standing to make.
       expect(counts(page.sections)).toEqual([0, 0, 0, 0, 0, 0]);
       expect(Option.isNone(page.sectionsUnavailable)).toBe(true);
     }).pipe(

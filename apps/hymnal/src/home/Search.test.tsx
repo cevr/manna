@@ -95,7 +95,6 @@ const type = (host: HTMLElement, words: string) =>
     }),
   );
 
-// On a hymn page a result takes the page's place and closes the search (`numreplace.slow.test.tsx`).
 describe('back from a result to search on the home list', () => {
   const base = home;
   it('returns to the same results, mounted once and in reach, with the keyboard down', () => {
@@ -105,7 +104,6 @@ describe('back from a result to search on the home list', () => {
     const opened = byId(phone.host, 'search');
     const focusedAtPress = boxFocused(phone.host);
     blur(phone.host);
-    // A result pushes hymn 100; Back pops it.
     phone.show(base, hymn(100));
     const onPushed = { results: resultsInReach(phone.host), box: Option.isSome(box(phone.host)) };
     phone.show(base);
@@ -138,7 +136,6 @@ describe('the search a press on Search did not open', () => {
     const focusedAtPress = boxFocused(phone.host);
     blur(phone.host);
     press(button(phone.host, 'Cancel'));
-    // About this hymn's Scripture row: the query, the search at the home list, and the pop to it.
     act(() => {
       phone.registry.set(searchQuery, '1');
       phone.registry.set(searchOpen, searchAt('/', 'about'));

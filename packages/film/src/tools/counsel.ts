@@ -1,22 +1,3 @@
-// The counsel: a fresh model's answer to a prompt file, for the judge
-// (`tools/judge.ts`). One seam, two adapters. `Counsel.layer` runs headless
-// Claude Code (`claude -p`, Opus at max effort, its customizations and the
-// user's settings off, its one tool Read and that confined to the prompt's
-// folder, no session kept) in the counsel's sandbox (`tools/sandbox.ts`,
-// macOS's `sandbox-exec`). What it reads is an allow-list: the prompt's
-// folder (the packet and its stills, its working folder), Claude's install,
-// the user's keychains (its sign-in), and a scratch folder of the run's own
-// that holds its temp files and its state (`CLAUDE_CONFIG_DIR`), the only
-// place it writes. No home, no Claude state of the user's (other sessions,
-// transcripts, history, settings), no repo and no films' out folders (an
-// earlier judge's key) are readable there; the system's own files outside
-// the homes and temp folders are. The prompt goes in on stdin and the answer
-// comes back on stdout, which the host writes to `claude.md` in `dir`, beside
-// its stderr (`claude.err`), as each arrives. `Counsel.layerTest` answers
-// from a function of the prompt, written where the real one writes, so a
-// test runs the judge through the same files. The run is bounded: one past
-// `COUNSEL_LIMIT` is stopped and fails, and killed if it ignores the stop.
-
 import { Config, Context, Duration, Effect, FileSystem, Layer, Option, Path, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { CounselFailed } from '../core/judge.ts';
@@ -139,18 +120,12 @@ const claudeRun = (
     HOME: home,
     PATH: '/usr/bin:/bin',
     TMPDIR: folders.scratch,
-    // Claude's own temp files (`<it>/claude-<uid>/`), else under the shared /tmp.
     CLAUDE_CODE_TMPDIR: folders.scratch,
-    // Its state (settings, `.claude.json`, caches), a fresh one of the run's own.
     CLAUDE_CONFIG_DIR: `${folders.scratch}/claude`,
-    // Its sign-in, the keychain item of the default state folder: a state
-    // folder of its own would name another, suffixed with its hash.
     CLAUDE_SECURESTORAGE_CONFIG_DIR: '',
     DISABLE_AUTOUPDATER: '1',
     LANG: 'en_US.UTF-8',
     USER: home.split('/').at(-1) ?? '',
-    // The host's Claude proxy (the owner's teamclaude, rotating his accounts),
-    // so the counsel spends what the host's Claude spends, not one login.
     ...Option.match(proxy, { onNone: () => ({}), onSome: (url) => ({ ANTHROPIC_BASE_URL: url }) }),
   },
   command: [
@@ -269,7 +244,6 @@ export class Counsel extends Context.Service<Counsel, CounselService>()(
             return yield* failed(
               `the counsel exited ${exitCode}: ${tailOf(stderr) || tailOf(stdout)}`,
             );
-          // Paths as the sandbox resolved them (the temp folder's real one), said as the asker's.
           const text = stdout.replaceAll(asked.packet, path.dirname(prompt));
           if (text.trim() === '') return yield* failed(`it answered nothing in ${outputs.stdout}`);
           yield* Effect.log(`counsel.answered file=${outputs.stdout} chars=${text.length}`);

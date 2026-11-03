@@ -1,9 +1,3 @@
-// The render page in a browser (`render-page.ts`, the real `mountRender`)
-// for a film of the test registry, its export handle driven as the tools
-// drive it (`window.__film`): each call's answer as JSON. Its footage files
-// are answered by path, by byte range as the lab's routes answer media
-// (`tab.ts`), so mediabunny reads them as it reads them live.
-
 import { Effect, Option } from 'effect';
 import type { Scope } from 'effect';
 import type { CallArgs, ExportCall, WireAnswers } from '../../core/export-handle.ts';

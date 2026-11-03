@@ -1,10 +1,3 @@
-// The gate and the slow suite as the root manifest, turbo's config, `gate.sh`
-// and `test-slow.sh` lay them. The gate is the lint's deterministic rules and
-// the lessons ledger's check beside every workspace's unit tests, each cached
-// on its inputs, under no lock; the pre-commit checks the ledger too. Everything else (typecheck, builds, slow tests, browser checks, the
-// full lint) is the slow suite, run one task at a time under the host's test
-// lock, by hand and before each deploy.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { JSONC, YAML } from 'bun';
 import { describe, expect, it } from 'effect-bun-test';

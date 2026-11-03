@@ -1,16 +1,3 @@
-// A talk's page: the speaker's own take, cut on his words (`core/talk.ts`),
-// drawn as a film of its own so the player, the export and the checks serve
-// it as they serve any film. The page is 9:16, 1080 × 1920, at the talk's
-// rate (`TALK_FPS`). Each frame says which frame of the take it shows
-// (`footageAt`, through the cut's pieces: a pure function of the edit); the
-// host decodes it before the frame is drawn and hands it over
-// (`RenderOptions.footage`), and the frame draws it as given, cropped 9:16 by
-// its section's `frame` (the crop's centre, in the take's pixels) and `zoom`
-// knobs, with the hook (`vertical.ts`) and the captions (`talkPhrases`) set
-// inside every platform's zone (`TALK_LAYOUT`). Nothing passes from one frame
-// to the next: the words are measured once, as a short's are, and the rest
-// is the frame's own.
-
 import { Data, Option, Record as Rec, Schema } from 'effect';
 import { Knob, Point } from '../core/schema.ts';
 import {
@@ -211,10 +198,8 @@ export const createTalk = (
         for (const host of Option.toArray(Option.fromUndefinedOr(opts.footage))) {
           const image = Option.getOrThrowWith(
             Option.fromUndefinedOr(host.frame(read)),
-            // The host decodes every read before the frame is drawn; one it lacks is never drawn black.
             () => new FootageUndecoded({ source: read.source, at: read.at }),
           );
-          // The crop is in the take's px; the host's picture may be another size (the lab's proxy).
           const picture = sizeOf(image, take);
           const kx = picture.width / take.width;
           const ky = picture.height / take.height;

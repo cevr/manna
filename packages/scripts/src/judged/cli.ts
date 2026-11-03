@@ -1,12 +1,3 @@
-// The judged lint's command (`lint-judged.ts` runs it): its flag, the run
-// of every judged rule of the lint config over the repo's items, the
-// run's findings written by file for the plugin (`findings.ts`; one that
-// cannot be written is said on one line), the findings oxlint cannot report
-// printed, and the boundary that turns every failure but a gating finding and an interrupt
-// into one `reason=error` skip line and success. It takes its model as a
-// layer for the config's model name, so a test runs the whole command
-// in-process over a model of its own.
-
 import {
   Cause,
   Console,
@@ -120,9 +111,6 @@ const lint = Effect.fn('lintJudged')(function* (strict: boolean, read: Ref.Ref<n
     findingsFileOf(root, config.settings.checkout),
     findingsOf(day, config.settings.store, model, outcomes, tree.files),
   );
-  // oxlint reports, at the rule's severity, every finding the plugin can
-  // read; the runner prints and gates on the rest (a series script, an
-  // answer the store could not keep), or on every one under --strict.
   const own = outcomes.map((outcome) => ({
     rule: outcome.rule,
     findings: outcome.findings.filter(

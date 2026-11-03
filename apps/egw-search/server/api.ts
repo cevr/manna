@@ -73,12 +73,6 @@ export const EXAMPLE_QUERIES: Arr.NonEmptyReadonlyArray<string> = [
   'loud cry',
 ];
 
-/** One paragraph of context around a hit.
- *
- *  `before` and `after` are separate arrays rather than one window with the
- *  hit inside it, because the client renders the hit differently from its
- *  neighbours and a flat window would make it re-find which row was the
- *  match. */
 /** The deep link egwwritings.org expects. The corpus's `para_id` is exactly
  *  the panel id the reader addresses.
  *

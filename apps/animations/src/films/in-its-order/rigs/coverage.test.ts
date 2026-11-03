@@ -1,11 +1,3 @@
-// Each cast member's coverage manifest (`<member>/cutout/coverage.ts`, read by
-// `film concept coverage`) names every drawing the cut-out tables draw: each
-// member the cut-out table (`CUTOUT`) or the sheet table (`SHEETS`) holds has
-// a manifest, each `CUTOUT` view is a puppet entry `<kind>-<view>`, and each
-// `SHEETS` kind has at least one entry. A manifest decodes, names each entry
-// once, fits a pose only from a puppet entry of its own, and cites only
-// beats its script has.
-
 import { describe, expect, test } from 'bun:test';
 import { CoverageManifest } from '@manna/film/tools';
 import { Schema } from 'effect';

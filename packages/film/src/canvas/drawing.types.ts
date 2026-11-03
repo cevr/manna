@@ -1,7 +1,3 @@
-// Compile-time checks for `drawing()`, run by the package typecheck: every
-// name a drawing's timeline or its `draw` reads must be one the timeline
-// declares. Each `@ts-expect-error` fails the typecheck if the line compiles.
-
 import { drawing } from './film.ts';
 import type { RivePropSpec } from './rive.ts';
 
@@ -47,7 +43,6 @@ const is =
 
 export const knobbed = drawing({
   timeline: {
-    // An ease is one of the kit's names.
     slam: { mark: 'justified', ease: 'outBack' },
     // @ts-expect-error: `ease` names a curve in `ease`.
     thud: { mark: 'justified', ease: 'bouncy' },
@@ -74,7 +69,6 @@ export const knobless = drawing({
 export const callback = drawing({
   timeline: {},
   draw: (f) => {
-    // Another scene's knobs read by its drawing, typed as it declares them.
     const theirs = f.knobsOf(knobbed);
     is<number>()(theirs('handY'));
     is<readonly [number, number]>()(theirs('quoteAt'));

@@ -1,8 +1,3 @@
-// The most a code sound can be, at the most its draws allow: its length in
-// seconds and its work (the seconds of frames its nodes write, repetitions
-// counted). The library load refuses a sound past `MAX_CODE_SECS` or
-// `MAX_CODE_WORK` before anything renders, so a typo cannot render hours.
-
 import { Match, Predicate } from 'effect';
 import { MODES } from './kernels.ts';
 import { exp2 } from './math.ts';
@@ -118,7 +113,6 @@ export const boundOf = (node: Node, sampled: (name: string) => Bound): Bound => 
     case 'Loop':
       return over(of(node.of));
     case 'Resample': {
-      // Slowest at its lowest semitones: its length scales by 2^(−semitones/12).
       const child = of(node.of);
       return over(child, child.secs * (exp2(-least(node.semitones) / 12) - 1));
     }

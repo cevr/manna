@@ -12,18 +12,15 @@ describe('traceView', () => {
     const t = housed;
     const head = t.outlines['head'] ?? [];
     const body = t.outlines['body'] ?? [];
-    // The head's ink runs from 18 to 22 px out: its outline lies on the inner edge, since the house lays its line outside.
     const [hx0, hy0, hx1, hy1] = boxOf(head);
     expect(Math.abs(hx0 - 42)).toBeLessThanOrEqual(3);
     expect(Math.abs(hx1 - 78)).toBeLessThanOrEqual(3);
     expect(Math.abs(hy0 - 22)).toBeLessThanOrEqual(3);
     expect(Math.abs(hy1 - 58)).toBeLessThanOrEqual(3);
-    // The body is the cream and the teal shade the line runs round, as one outline, inside its line (34 to 86, down to 196).
     const [bx0, , bx1, by1] = boxOf(body);
     expect(Math.abs(bx0 - 34)).toBeLessThanOrEqual(2);
     expect(Math.abs(bx1 - 86)).toBeLessThanOrEqual(2);
     expect(Math.abs(by1 - 196)).toBeLessThanOrEqual(2);
-    // A point every step or so along the edge: no spike from a fine step.
     for (const pts of [head, body])
       pts.forEach((p, i) => {
         const q = pts[(i + 1) % pts.length] ?? p;
@@ -38,7 +35,6 @@ describe('traceView', () => {
   test('reads each brow between ends half its stroke inside its ink (its round cap reaches them), each mark its own ink, and takes a mouth given by its ends as given', () => {
     const base = sheet();
     const rgba = new Uint8Array(base.rgba);
-    // Two eyes and two brows, small ink pieces inside the head.
     for (let y = 26; y <= 44; y++)
       for (let x = 46; x <= 74; x++) {
         const eye =
@@ -54,7 +50,6 @@ describe('traceView', () => {
           [53, 40],
           [67, 40],
         ],
-        // The left brow's seed lies nearer its eye's ink than its own: the eye, taken first, leaves it the brow.
         brows: [
           [53, 35],
           [68, 30],
@@ -75,7 +70,6 @@ describe('traceView', () => {
     ]);
     expect(marks?.mouthLine).toBe(3);
     expect(Math.abs((marks?.eyes[0][0] ?? 0) - 53.5)).toBeLessThanOrEqual(1);
-    // The left brow's ink runs from x 49 to 56 (pixel centres 49.5 to 56.5), two pixels thick: its line, a pixel inside each end.
     const [from, to] = marks?.brows[0] ?? [
       [0, 0],
       [0, 0],
@@ -85,7 +79,6 @@ describe('traceView', () => {
   });
 
   test('refuses a face mark with no ink of its own to read, rather than throw', () => {
-    // A figure inked only round its outside: no small piece of ink for a mark.
     const [width, height] = [80, 80];
     const rgba = new Uint8Array(width * height * 4).fill(255);
     for (let y = 10; y < 70; y++)
@@ -107,7 +100,6 @@ describe('traceView', () => {
   });
 
   test('reads a curled part as a disc on each of its lobes', () => {
-    // Three lobes of brown, each a disc of radius 10, overlapping in a row, inked round.
     const lobes: ReadonlyArray<readonly [number, number]> = [
       [30, 40],
       [48, 40],
@@ -148,7 +140,6 @@ describe('traceView', () => {
     expect(chain.length % 3).toBe(0);
     const anchors = chain.filter((_, i) => i % 3 === 0);
     expect(anchors.length).toBeLessThanOrEqual(8);
-    // The body's paper runs 34 to 86 across and 66 to 196 down: each corner an anchor, within the pixel its edge loses to antialiasing and the pixel its smoothing rounds.
     for (const [x, y] of [
       [34, 66],
       [86, 66],
@@ -158,15 +149,11 @@ describe('traceView', () => {
       expect(Math.min(...anchors.map(([ax, ay]) => Math.hypot(ax - x, ay - y)))).toBeLessThan(3);
   });
 
-  test('writes a table that names what it was traced from, with no colour in it', () => {
-    const source = tracedModule(
-      ['Traced from a test sheet by `film concept trace`.'],
-      VIEW,
-      housed,
-    );
-    expect(source).toContain('// Traced from a test sheet by `film concept trace`.');
-    expect(source).toContain('export const HEAD: Pt[] = [');
-    expect(source).toContain('export const BODY: Pt[] = [');
+  test('writes a table of points, each part under its doc comment, with no other comment and no colour in it', () => {
+    const source = tracedModule(VIEW, housed);
+    expect(source).not.toMatch(/\/\/|\/\*(?!\*)/);
+    expect(source).toContain('/** The head. */\nexport const HEAD: Pt[] = [');
+    expect(source).toContain('/** The body. */\nexport const BODY: Pt[] = [');
     expect(source).not.toMatch(/#[0-9a-f]{6}/i);
   });
 });
@@ -198,7 +185,6 @@ const SKIN = [253, 175, 112] as const;
 
 describe('traceView, a sheet painted in dark brown beside its ink', () => {
   test("reads a part to its line's inner edge as well where the line's outer edge is antialiased: a ring of luma 70 outside the ink, seeded or the silhouette", () => {
-    // A cream body inked round 4 px (14 to 46 inside it); ringed, one pixel of luma 70 round the ink's outside.
     const body: ReadonlyArray<
       readonly [readonly [number, number, number], (x: number, y: number) => boolean]
     > = [
@@ -224,7 +210,6 @@ describe('traceView, a sheet painted in dark brown beside its ink', () => {
     got.forEach((edges, i) =>
       edges.forEach((v, j) => expect(Math.abs(v - (want[i]?.[j] ?? 0))).toBeLessThanOrEqual(1)),
     );
-    // Both end on the ink's inner edge, at 14 and 46.
     want.forEach(([l = 0, r = 0]) => {
       expect(Math.abs(l - 14)).toBeLessThanOrEqual(3);
       expect(Math.abs(r - 46)).toBeLessThanOrEqual(3);
@@ -232,7 +217,6 @@ describe('traceView, a sheet painted in dark brown beside its ink', () => {
   });
 
   test('reads a band of dark brown paint beside an ear (lighter than ink, no ink by it) as hair: an ear grown into ink alone grows over none of it', () => {
-    // Inked round, 4 px: hair over the top; below it his face, a band 6 px wide, his ear, and a band 17 px wide behind it, then hair.
     const sheet = painted(120, [
       [INK, (x, y) => x >= 10 && x <= 110 && y >= 10 && y <= 110],
       [HAIR, (x, y) => x >= 14 && x <= 106 && y >= 14 && y <= 106],
@@ -268,7 +252,6 @@ describe('traceView, a sheet painted in dark brown beside its ink', () => {
     const [ex0 = 0, ex1 = 0] = across(t.outlines['ear'] ?? []);
     expect(ex0).toBeGreaterThanOrEqual(50.5);
     expect(ex1).toBeLessThanOrEqual(67.5);
-    // Even-odd: whether `p` lies inside the hair's outline.
     const hair = t.outlines['hair'] ?? [];
     const inHair = ([px, py]: readonly [number, number]) =>
       hair.reduce((inside, [xi, yi], i) => {
@@ -280,7 +263,6 @@ describe('traceView, a sheet painted in dark brown beside its ink', () => {
   });
 
   test("reads a line whose inner part is painted the band's brown (6 px of it inside 1 px of ink) as line: the part ends at the brown's inner edge", () => {
-    // Inked round 6 px, but down its right side 1 px of ink with 6 px of brown inside it; hair within.
     const sheet = painted(80, [
       [INK, (x, y) => x >= 10 && x <= 70 && y >= 10 && y <= 70],
       [BAND, (x, y) => x >= 63 && x <= 69 && y >= 16 && y <= 64],
@@ -295,13 +277,11 @@ describe('traceView, a sheet painted in dark brown beside its ink', () => {
     const [x0 = 0, x1 = 0] = across(
       Result.getOrThrow(traceView(sheet, view)).outlines['hair'] ?? [],
     );
-    // Its left edge on the ink's inner edge, at 16; its right on the brown's, at 63, not the ink's at 70.
     expect(Math.abs(x0 - 16)).toBeLessThanOrEqual(2);
     expect(Math.abs(x1 - 63)).toBeLessThanOrEqual(2);
   });
 
   test("reads a part filled in the band's dark brown to its ink's inner edge unless the view reads a brown line: the brown is the part's own paint", () => {
-    // A dark-brown body inked round 4 px: its paint runs 14 to 86.
     const sheet = painted(100, [
       [INK, (x, y) => x >= 10 && x <= 90 && y >= 10 && y <= 90],
       [BAND, (x, y) => x >= 14 && x <= 86 && y >= 14 && y <= 86],
@@ -318,12 +298,10 @@ describe('traceView, a sheet painted in dark brown beside its ink', () => {
       const t = Result.getOrThrow(traceView(sheet, v));
       return ['body', 'whole'].map((name) => across(t.outlines[name] ?? []));
     };
-    // Read as ink alone (the default), each ends on the ink's inner edge.
     spans(plain).forEach(([l = 0, r = 0]) => {
       expect(Math.abs(l - 14)).toBeLessThanOrEqual(2);
       expect(Math.abs(r - 86)).toBeLessThanOrEqual(2);
     });
-    // Read as a brown line, its brown's first pixels are taken as line: the part ends inside its paint.
     spans({ ...plain, line: 'brown' }).forEach(([l = 0, r = 0]) => {
       expect(l).toBeGreaterThan(16.5);
       expect(r).toBeLessThan(84.5);
@@ -331,7 +309,6 @@ describe('traceView, a sheet painted in dark brown beside its ink', () => {
   });
 
   test("writes a thin tone along its edge pixels' outer sides as wide as the sheet paints it, where through their middles it reads a pixel short", () => {
-    // Skin inked round; across it a brown line 6 px tall (rows 40 to 45).
     const sheet = painted(100, [
       [INK, (x, y) => x >= 10 && x <= 90 && y >= 10 && y <= 90],
       [SKIN, (x, y) => x >= 16 && x <= 84 && y >= 16 && y <= 84],
@@ -353,7 +330,6 @@ describe('traceView, a sheet painted in dark brown beside its ink', () => {
   });
 
   test("reads a part that reaches the figure out to its polygon inside a line wider than the house's, and a part that does not to the line's inner reach", () => {
-    // A cream body inked round 16 px (its paint 26 to 74); a polygon 7 px inside the ink's outer edge.
     const sheet = painted(100, [
       [INK, (x, y) => x >= 10 && x <= 90 && y >= 10 && y <= 90],
       [[253, 225, 188], (x, y) => x >= 26 && x <= 74 && y >= 26 && y <= 74],
@@ -381,7 +357,6 @@ describe('traceView, a sheet painted in dark brown beside its ink', () => {
     const [rl = 0, rr = 0] = across(t.outlines['reaching'] ?? []);
     expect(Math.abs(rl - 17)).toBeLessThanOrEqual(1.5);
     expect(Math.abs(rr - 84)).toBeLessThanOrEqual(1.5);
-    // Inside the line: 11 px in from the ground's edge at most, never out to the polygon.
     const [il = 0, ir = 0] = across(t.outlines['inside'] ?? []);
     expect(il).toBeGreaterThan(20);
     expect(ir).toBeLessThan(81);

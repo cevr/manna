@@ -1,15 +1,3 @@
-// The lab's changes as pure data: what an agent is told happened in the lab
-// (a note written, a try kept, a beat approved, a render commented on, a set
-// published), each with enough to act on (the film, the panel or the render,
-// the words, a link to the place), and how each is read off two states of
-// the files that hold it. The lab's change feed (`tools/lab-events.ts`)
-// reads the files; these say what changed between two reads. A change is
-// read from the record, never from the route that made it, so a write from
-// the page, a terminal or an agent is seen alike. A change to a film's
-// source (a beat moved, a hold trimmed, an undo) is read from the record the
-// lab's writer keeps of each one that landed, which the page and the agents
-// write through alike. Pure and DOM-free.
-
 import { Array as Arr, Boolean as Bool, Match, Option, Record, Schema } from 'effect';
 import { addressKey } from './address.ts';
 import {
@@ -719,8 +707,6 @@ export const askChanges = (
       path,
     };
   });
-  // Each from the history, not the state's tag alone: an answer and a close
-  // read in one look still tell that the ask was answered, then closed.
   const held = (test: (r: AskRecord) => boolean) => Option.exists(before, test);
   const answered = Arr.filter(
     [
@@ -776,7 +762,6 @@ export const productionChanges = (
     production: after.production,
     ...Option.match(after.film, { onNone: () => ({}), onSome: (film) => ({ film }) }),
   };
-  // Words are kept in time order, so one filed with an earlier time lands among them: known by what it is.
   const wordKey = (word: ProductionFile['said'][number]) => `${word._tag} ${word.at} ${word.text}`;
   const known = new Set(
     Option.match(before, { onNone: () => [], onSome: (b) => b.said.map(wordKey) }),
@@ -813,7 +798,6 @@ export const productionChanges = (
       path: pageHref.home(),
     };
   });
-  // A ledger first seen is its first version: news only past it.
   return [...said, ...Arr.filter(opened, () => Option.isSome(before))];
 };
 

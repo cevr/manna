@@ -1,18 +1,3 @@
-// A clip's frames on the reader's canvas. A clip's map (`ClipMap`, kept in
-// its provenance) names where the canvas lies on the video: the video px of
-// the canvas origin and the video px per canvas px. A canvas pixel is the
-// mean of the video area the map gives it, each video pixel weighted by the
-// share of it the area covers, rounded half to even; where the area leaves
-// the video, the video's border paper stands in (`borderPaperOf`). At clip
-// B's map (-182, 68, 2) this is read.py's own mapping, pixel for pixel.
-//
-// `registerClip` finds a clip's map by laying frame 0's figure box on the
-// given first frame's (scale from the boxes' heights, origin from their
-// centres) and scores it by the IoU of the mapped frame 0's figure with the
-// first frame's; a map under `MAP_IOU` is refused. `figureNumbersOf`
-// measures each mapped frame's figure: its height over frame 0's, its feet
-// line less frame 0's, and its IoU with the first and last frames. Pure.
-
 import { Option } from 'effect';
 import type { Raster } from '../../core/raster.ts';
 import { figureOf } from './chain-steps.ts';

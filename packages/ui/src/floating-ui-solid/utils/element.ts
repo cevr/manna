@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/utils/element.ts,
-// packages/react/src/floating-ui-react/utils/constants.ts,
-// packages/react/src/floating-ui-react/utils/createAttribute.ts
-//
-// Element predicates the interactions share: typeable fields, `:focus-visible`,
-// and the element inside a popup that takes focus.
 import { isHTMLElement } from '@floating-ui/utils/dom';
 
 export const FOCUSABLE_ATTRIBUTE = 'data-base-ui-focusable';

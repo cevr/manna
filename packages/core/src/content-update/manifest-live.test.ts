@@ -44,13 +44,8 @@ describe('§10 M9 the manifest adapter, over Bun’s real HTTP client', () => {
     Effect.gen(function* () {
       const server = yield* serveFixtures;
       const table = yield* liveAdapterConformance({
-        // The client the CLI actually composes — not a stub, and not a client
-        // built for the test.
         client: FetchHttpClient.layer,
         baseUrl: `http://127.0.0.1:${String(server.port)}`,
-        // A port on the same loopback host with nothing bound: the origin gate
-        // admits it, so what answers `offline` is the transport failing to
-        // connect rather than the address being refused.
         closedUrl: 'http://127.0.0.1:1/manifest.json',
       });
       expect(table).toEqual(ADAPTER_EXPECTATIONS);

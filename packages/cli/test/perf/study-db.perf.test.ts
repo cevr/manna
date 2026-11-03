@@ -126,8 +126,6 @@ describe('Bible Database Performance', () => {
           `perf.searchStrongs statements=${steps.length} entries=${results.length}`,
         );
         expect(results.length).toBeGreaterThan(0);
-        // A word search reads every lemma (a LIKE has no index to use): one
-        // pass over the lexicon, one statement, and no other table.
         expect(steps.length).toBe(1);
         expect(steps.flatMap((s) => s.details)).toHaveLength(1);
         expect(scans(steps).every((d) => d.startsWith('SCAN strongs'))).toBe(true);

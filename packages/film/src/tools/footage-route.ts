@@ -1,17 +1,3 @@
-// The footage route, `/footage/<name>/<sha12>/<copy>.mp4` (`footageHref`),
-// for the render's server (the app's player, which the export decodes the
-// mezzanine through) and the lab's (which plays the proxy) alike: which file
-// a URL names, and the answer. The name is one the footage library's lock
-// lists now (read per request, so a take imported while a server runs is
-// served), the hash the head of its original's, the copy one `film footage
-// make` makes, and the copy on disk under the outputs folder; never a path,
-// never a dotfile. Any other URL under `/footage/` names none, a 404. A copy
-// is answered whole or by the byte range asked (206), as a decoder seeks it;
-// it is remade in place when its recipe changes, so the browser asks again
-// on every load. A talk's page reads its takes through the route too: the
-// lock (`/footage/library.lock.json`) and each transcript the lock names now
-// (`/footage/transcripts/<file>`), never another file under the library.
-
 import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Layer, Option, Path, Record as Rec, Schema } from 'effect';
@@ -103,7 +89,6 @@ const footageFile = Effect.fn('footageFile')(function* (root: FootageRoot, pathn
   if (Option.isSome(library)) return library;
   for (const { name, sha12, copy } of Option.toArray(named(pathname)))
     for (const lock of Option.toArray(yield* lockOf(root.dir)))
-      // A name the lock lists itself: `constructor`, which every object answers to, is none.
       for (const entry of Option.toArray(Rec.get(lock.footage, name))) {
         if (!entry.sha256.startsWith(sha12)) continue;
         const file = derivedFile(root.out, name, entry.sha256, `${copy}.mp4`);

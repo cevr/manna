@@ -152,7 +152,6 @@ describe('the score clock', () => {
           yield* TestClock.adjust(4000);
           expect((yield* api.status).positionMs).toBe(first + 5000);
 
-          // Pause holds the place; resume and seek move it as the device's do.
           expect((yield* api.pause).state).toBe('paused');
           yield* TestClock.adjust(3000);
           expect((yield* api.status).positionMs).toBe(first + 5000);
@@ -165,7 +164,6 @@ describe('the score clock', () => {
             durationMs: end,
           });
 
-          // To the timeline's end, then ended there.
           yield* TestClock.adjust(end);
           expect(yield* api.status).toEqual({ state: 'ended', positionMs: end, durationMs: end });
           expect(asked.play).toEqual([]);
@@ -183,7 +181,6 @@ describe('the score clock', () => {
         yield* TestClock.adjust(30_000);
         const before = (yield* api.status).positionMs;
 
-        // Off: the device pauses and the clock runs on from its place.
         yield* SubscriptionRef.set(sound, false);
         yield* TestClock.adjust(POLL);
         const off = yield* api.status;
@@ -193,7 +190,6 @@ describe('the score clock', () => {
         yield* TestClock.adjust(10_000);
         expect((yield* device.status).state).toBe('paused');
 
-        // On: the device plays from the clock's place.
         const silent = (yield* api.status).positionMs;
         yield* SubscriptionRef.set(sound, true);
         yield* TestClock.adjust(POLL);
@@ -213,7 +209,6 @@ describe('the score clock', () => {
       Effect.scoped(
         Effect.gen(function* () {
           const timeline = unplayedTail;
-          // The recording ends where its last played line does.
           const length = Math.max(...timeline.lines.filter((l) => l.played).map((l) => l.until));
           expect(timeline.end - length).toBeGreaterThan(10_000);
           const { device } = recording(length);
@@ -226,7 +221,6 @@ describe('the score clock', () => {
 
           const started = yield* api.play(audioUrl(100), 0);
           expect(started.durationMs).toBe(timeline.end);
-          // The player reads the status once a poll.
           for (let t = 0; t < length + 5000; t += POLL) {
             yield* TestClock.adjust(POLL);
             yield* api.status;
@@ -394,7 +388,6 @@ describe('the score clock at a tempo', () => {
         const { api, sound } = yield* clockOver(device, true);
         yield* api.play(audioUrl(100), 0, at(0.5));
         yield* TestClock.adjust(30_000);
-        // The recording's play is told the tempo, and the recording plays at it.
         expect(yield* place(api)).toBe(15_000);
         expect(options.map(Option.map((it) => it.rate))).toEqual([Option.some(0.5)]);
         yield* SubscriptionRef.set(sound, false);
@@ -450,7 +443,6 @@ describe('the score clock at a tempo', () => {
         yield* settle;
         yield* api.stop;
         yield* settle;
-        // A Sound switch changes no pace: the recording plays at the tempo too.
         expect(seen).toEqual([1, 0.8, 1.2, 1]);
       }),
     ),
@@ -544,7 +536,6 @@ describe('the player over the score clock', () => {
         expect(shown._tag).toBe('Playing');
         const at = Option.getOrThrow(Option.liftPredicate(shown, Player.$is('Playing'))).at * 1000;
         expect(at).toBeGreaterThanOrEqual(timeline.first);
-        // The follow marks line 0 at the place the player shows.
         expect(placeAt(timeline, at).line).toBe(0);
         expect(app.device.played).toEqual([]);
         expect(app.device.sought).toEqual([]);

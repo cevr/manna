@@ -1,10 +1,3 @@
-// Shorts: vertical cuts of a film, declared as data (`shorts.ts`). A short is
-// spans of the film's scenes, each from a mark, a named cue or a landmark to a
-// later one, played back to back; its picture and its sound are the film's own
-// under those spans. Resolved once against the film's layout, on whole frames,
-// so the picture the page draws and the track the renderer cuts agree to the
-// frame. Pure: the page, the tools and the tests read it alike.
-
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import { type ShortError, ShortSpanEmpty, UnknownScene } from './errors.ts';
 import { type Placed, pointIn } from './layout.ts';
@@ -85,16 +78,10 @@ const shareOf = (share: number, size: number) => Math.ceil(share * size);
 export const PLATFORM_ZONES = {
   youtube: {
     title: 'YouTube Shorts',
-    // Google Ads Help, "Use square and vertical video to engage mobile customers"
-    // (support.google.com/google-ads/answer/9128498): its 1080 × 1920 safe-zone image marks
-    // 288 px at the top, 672 at the bottom, 48 on the left and 192 on the right (the
-    // figures as upload-post.com/tools/safe-zone-checker transcribes them).
     zone: { top: 288, bottom: 672, left: 48, right: 192, columns: [] },
   },
   reels: {
     title: 'Instagram Reels',
-    // Meta Ads Guide, Instagram Reels video (facebook.com/business/ads-guide/update/video/instagram-reels):
-    // keep text, logos and other key elements out of the top 14%, the bottom 35% and 6% of each side.
     zone: {
       top: shareOf(0.14, SHORT_HEIGHT),
       bottom: shareOf(0.35, SHORT_HEIGHT),
@@ -105,11 +92,6 @@ export const PLATFORM_ZONES = {
   },
   tiktok: {
     title: 'TikTok',
-    // TikTok Ads Manager Help, "TikTok Auction In-Feed Ads"
-    // (ads.tiktok.com/help/article/tiktok-auction-in-feed-ads), whose safe-zone file
-    // "In-Feed Standard Version LTR" at 1080 × 1920 keeps 240 px at the top, 660 at the bottom
-    // and 120 on each side, and 300 px on the right from 840 px down, where its like, comment
-    // and share buttons stand (as upload-post.com/tools/safe-zone-checker measures it).
     zone: { top: 240, bottom: 660, left: 120, right: 120, columns: [{ right: 300, from: 840 }] },
   },
 } as const satisfies Record<string, { readonly title: string; readonly zone: SafeZone }>;
@@ -348,7 +330,6 @@ export const resolveShort = (
 export const shortSpanAt = (short: ResolvedShort, s: number): number => {
   const spans = short.spans;
   let i = spans.length - 1;
-  // The first span also holds every time before it.
   while (i > 0 && s < (spans[i]?.at ?? 0) - CLOCK_EPSILON) i--;
   return i;
 };

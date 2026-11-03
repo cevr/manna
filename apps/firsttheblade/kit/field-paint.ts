@@ -148,7 +148,6 @@ export const withoutRays = (image: Pixels, sky: Uint8Array) => {
   const to = Math.round(REPAINT_TO * width);
   const feather = scaled(image, FEATHER);
   for (let y = 0; y < height; y++) {
-    // Below the horizon the clear columns are hills, so the row is read from as far above it.
     const row = Math.max(0, y - 2 * Math.max(0, y - last));
     for (let x = 0; x < to + feather; x++) {
       const i = y * width + x;
@@ -271,7 +270,6 @@ const riseOf = (image: Pixels, streak: HillStreak) => {
     const low = ends(0);
     const high = ends(count - 9);
     const step = at(streak.step, k);
-    // A channel that barely steps has no rise to read: a straight ramp 2 px each way.
     const shares = smooth.map((v, b) => {
       const d = -STREAK_REACH + b * STREAK_BIN;
       if (Math.abs(high - low) < 2 || Math.abs(step) < 2)

@@ -128,14 +128,8 @@ const main = async (): Promise<void> => {
   }
   console.log(`book records fetched: ${String(records.length)}`);
 
-  // `{ readonly: false }` is not the same as omitting it: bun:sqlite requires
-  // one of the two open flags, and `readonly: false` sets neither.
   const db = dryRun ? new Database(CORPUS, { readonly: true }) : new Database(CORPUS);
 
-  // The columns are created by `EGWParagraphDatabase.layerCore`'s ALTER block,
-  // which only runs when something opens the corpus through Effect. This script
-  // opens it directly, so it adds them itself if the layer has not yet — the
-  // same idempotent `PRAGMA table_info` check, so running either first is fine.
   if (!dryRun) {
     const existing = new Set(
       db

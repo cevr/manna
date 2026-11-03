@@ -1,8 +1,3 @@
-// The player's clock machine, with no DOM: it plays and pauses, plays again
-// from the start once at the end, holds while a video stalls, scrubs
-// (playing on after if it was), steps, and keeps its rate and the sound it
-// plays through all of it; a seek counts, a tick does not.
-
 import { Effect } from 'effect';
 import { describe, expect, it, test } from 'effect-bun-test';
 import { assertPath, simulate } from 'effect-machine';
@@ -97,7 +92,6 @@ describe('the synced player', () => {
           SyncEvent.Toggled,
           SyncEvent.Stalled,
         ],
-        // A tick while it waits, and a stall once paused, change nothing.
         ['Paused', 'Playing', 'Buffering', 'Playing', 'Buffering', 'Paused'],
       );
     }),
@@ -135,7 +129,6 @@ describe('the synced player', () => {
         const frameOf = (t: number) => Math.round(t * UNTIMED_FPS * 1e6) / 1e6;
         const result = yield* simulate(player, [
           SyncEvent.Measured({ end: 10 }),
-          // A clock between frames (a video's time) steps from the frame its timecode reads.
           SyncEvent.Landed({ t: 1.0101 }),
           step(1),
           step(10),
@@ -151,10 +144,8 @@ describe('the synced player', () => {
           ['Paused', 41, 3],
           ['Playing', 41, 3],
           ['Playing', 40, 4],
-          // Never before the set's start.
           ['Playing', 30, 5],
         ]);
-        // On the grid: ten single steps land where one ×10 does, with no drift.
         const tens = yield* simulate(player, [
           SyncEvent.Measured({ end: 10 }),
           ...Array.from({ length: 10 }, () => step(1)),
@@ -175,7 +166,6 @@ describe('the synced player', () => {
           step,
           step,
         ]);
-        // At the film rate (30): frame 31; at 24, from the frame it reads (24.8, so 25) on.
         expect(result.states.map((s) => [s.fps, s.t])).toEqual([
           [UNTIMED_FPS, 1],
           [UNTIMED_FPS, 1],
@@ -204,7 +194,6 @@ describe('the synced player', () => {
         step,
         step,
       ]);
-      // Each step lands on a frame's own start: n of 30000/1001, the picture's time.
       const frames = result.states.slice(-5).map((s) => Math.round(s.t * 30000) / 1001);
       expect(frames).toEqual([30, 31, 1000, 1001, 1002]);
       expect(clockParts(result.finalState).at).toBe('00:00:33:12');

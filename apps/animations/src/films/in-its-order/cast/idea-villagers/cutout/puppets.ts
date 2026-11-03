@@ -1,13 +1,3 @@
-// The IDEA villagers' puppets, one a cut view (`canvas/puppet.ts`): each
-// view's part sheet (`sheets/<view>/`, made by `film concept parts`), its
-// parts front to back as the sheet's record lists them, each PNG imported by
-// its module so a scene that draws them is keyed by its bytes
-// (`tools/stamp.ts`), on the view's skeleton (`skeleton.ts`), with the origin
-// at the kept box's top-left corner in the padded part sheet (`frames.ts`):
-// their pixels are the sheet's, drawn at its one scale. They are a film's
-// member, so their folder is In Its Order's
-// (`films/in-its-order/cast/idea-villagers/`). Pure data.
-
 import p3ArmLeft from './sheets/poses-3/armLeft.png' with { type: 'file' };
 import p3ArmRight from './sheets/poses-3/armRight.png' with { type: 'file' };
 import p3Head from './sheets/poses-3/head.png' with { type: 'file' };

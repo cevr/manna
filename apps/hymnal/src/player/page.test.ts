@@ -98,7 +98,6 @@ const runOf = (seed: number) =>
         );
         const events: Array<PageEvent> = [];
         if (step === 'remount') {
-          // A page under the top hymn page whose effects run has them run again, with no focus.
           const topAt = stack.findLastIndex((screen) => screen._tag === 'Hymn');
           const lower = stack.flatMap(
             (screen, i) =>
@@ -143,7 +142,6 @@ describe('the page shown', () => {
       ),
     );
     expect(wrong.slice(0, 5)).toEqual([]);
-    // Every kind of step was taken.
     const steps = new Set(runs1000.flatMap(({ seen }) => seen.map(({ step }) => step)));
     expect([...steps].toSorted()).toEqual(['back', 'push', 'remount', 'sheet', 'turn']);
   });
@@ -159,7 +157,6 @@ describe('the page shown', () => {
         shownAmong(events.reduce<ReadonlyArray<Page>>(pagesAfter, [])),
         (track) => track.number,
       );
-    // A sheet over hymn 3 closes, and hymn 100's page under it runs its effects again.
     expect(
       shown([
         PageEvent.Mounted({ page: lower, focused: true }),
@@ -168,7 +165,6 @@ describe('the page shown', () => {
         PageEvent.Mounted({ page: lower, focused: false }),
       ]),
     ).toEqual(Option.some(3));
-    // The same hymn pushed twice, then a back from the second.
     expect(
       shown([
         PageEvent.Mounted({ page: lower, focused: true }),

@@ -1,20 +1,3 @@
-// Where the films' private media lives off the repo: the sound library's
-// generated files, the films' scores and review renders. Generated audio may
-// not be published (ElevenLabs' terms forbid distributing it as files) and
-// cannot be made again (the model has no seed), so `sfx push`/`media push`
-// copy it to a store and `sfx pull`/`media pull` bring it back.
-//
-// One small interface, two stores: a folder (`folderStore`, here) and a
-// private R2 bucket over the S3 API (`r2Store`, `r2-store.ts`). Keys:
-//
-//   files/<sound>/<hash>.<ext>   the library's generated files (the lock's paths)
-//   scores/<film>/<file>         each film's composed score options
-//   renders/<path>               share renders, montages, contact sheets
-//
-// A key's bytes are whole: `put` and `get` never leave half a file where a
-// reader could see it, and each key carries its bytes' sha256, so `hashOf`
-// answers without reading them.
-
 import { Effect, type FileSystem, Option, type Path, Stream } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 import { writeWhole } from './content-store.ts';

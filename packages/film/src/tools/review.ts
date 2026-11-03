@@ -1,30 +1,3 @@
-// Review: the box's renders, served where they lie and compared in sync.
-//
-// Nothing is copied. Each review root (a checkout's `out/`, a scratchpad's
-// montages) is read in place, and a folder is listed only by the record that
-// says what its files are; nothing reads a file's name back:
-//
-// - a film's project folder by its catalogue (`catalogue.json`,
-//   `core/catalogue.ts`): each address's renders are one comparison set, a
-//   variant each, with the owner's approval as its verdict; stills, sheets
-//   and captions are listed with the folder. A film's whole-film renders are
-//   also the pictures its options are heard against (`pictures`);
-// - a montage by its manifest (`review.json`): the sets, variants, videos,
-//   images, docs and downloads it names. A variant with no `file` is
-//   `<clip>.<id>.share.mp4`, else `<clip>.<id>.mp4`, beside it.
-//
-// A file is named by its ref, its root's label and its path under the root,
-// so a route never takes a path on the box, and a ref answers only a file the
-// index lists. Besides a say on a version of a set, written to its project
-// folder's own catalogue (`say`, through `RenderCatalogue`), the only files
-// the review writes are derived ones (a frame, a phone copy of a video too
-// big or too dense to play as made, a score option's mix) in its cache, keyed
-// by the source's path and mtime (a phone copy by its encode too; a mix by
-// its plan), each made once,
-// whole or not at all (`writeWhole`: a partial of its own beside its name,
-// renamed into place; the maker names its format, never the file's name).
-// Lengths, frames and phone copies are the Media service's (`media.ts`).
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -741,7 +714,6 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
           const unknown = ReviewFileUnknown.make({ ref });
           const at = pathOf(roots, ref, path);
           if (Option.isNone(at)) return yield* unknown;
-          // A link out of the roots is not followed: its real path must lie under one too.
           const real = yield* fs.realPath(at.value).pipe(Effect.option);
           const realRoots = yield* Effect.forEach(roots, (root) =>
             fs.realPath(root.path).pipe(
@@ -766,7 +738,6 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
               Effect.mapError(effect, cacheFailed(name));
             if (yield* cached(fs.exists(out))) return out;
             yield* cached(fs.makeDirectory(path.dirname(out), { recursive: true }));
-            // Whole or not at all: `make` writes a partial of its own, renamed into place.
             yield* writeWhole(fs, out, make).pipe(
               Effect.catchIf(isPlatformError, (error) => Effect.fail(cacheFailed(name)(error))),
             );
@@ -803,7 +774,6 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
           width: number,
         ) {
           const file = yield* resolve(ref);
-          // A time outside the video is its first or last frame: one key, one still.
           const { seconds: length } = yield* duration(ref);
           let t = 0;
           if (Option.isSome(at)) t = clamp(at.value, 0, length);
@@ -818,7 +788,6 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
           );
         });
 
-        // By the encode too (`PHONE_COPY`): a copy made with other settings is never served.
         const phonePath = (file: string) =>
           Effect.map(sourceKey(file, PHONE_COPY), (key) =>
             path.join(config.cache, 'phone', `${key}.mp4`),
@@ -826,9 +795,6 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
 
         const isFile = (file: string) => fs.exists(file).pipe(Effect.orElseSucceed(() => false));
 
-        // The phone copies this run tried to make and could not, by the copy's path: keyed by the
-        // video's mtime and the encode, so a video written again is asked for anew, as is every
-        // copy once the lab starts again.
         const unmade = new Set<string>();
 
         const phone = Effect.fn('Review.phone')(function* (ref: string) {
@@ -853,8 +819,6 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
           );
         };
 
-        // With the copies off (`FILM_REVIEW_PHONE=off`) none is made, so none is waited for: the
-        // video plays as made, and a page neither waits nor asks again.
         const phoneState = Effect.fn('Review.phoneState')(function* (video: Found) {
           if (!(yield* copied(video))) return 'none' satisfies PhoneState;
           if (!config.phoneCopies) return 'none' satisfies PhoneState;
@@ -864,21 +828,12 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
           return 'pending' satisfies PhoneState;
         });
 
-        // The index's last read and when it began, and how many times a write
-        // has dropped it: a read keeps its answer only when no write dropped the
-        // cache while it read, so a walk that began before a write never
-        // stands in for the walk after it.
         const cached = yield* Ref.make({
           drops: 0,
           last: Option.none<{ readonly at: number; readonly read: Read }>(),
         });
         const drop = Ref.update(cached, (c) => ({ drops: c.drops + 1, last: Option.none() }));
 
-        // Phone copies: one at a time, newest first, in the background, x264 on two
-        // threads (`x264.ts`) so the review answers while one encodes. A copy made
-        // changes what the index says of its video (`phone`), so it drops the
-        // index's last read: the next read, a page's that saw it ready, says so. One that cannot
-        // be made is kept as failed (\`unmade\`) and drops it too, so the next read says so.
         const queue = yield* Queue.unbounded<Found>();
         const queued = new Set<string>();
         const makePhone = Effect.fn('Review.makePhone')(function* (video: Found) {
@@ -993,7 +948,6 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
               pictures,
             });
           }
-          // A montage's manifest: the walk (`recordsUnder`) names a project folder by its catalogue.
           const manifest = yield* decodeRecord(file, ReviewManifestJson);
           if (Option.isNone(manifest)) return Option.none();
           const record = manifest.value;
@@ -1037,7 +991,6 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
             newestFirst,
           ).filter(hasAny);
           if (config.phoneCopies) yield* enqueue(built.flatMap((b) => b.pending));
-          // Newest render first, across every project folder of the film.
           const byFilm = Arr.groupBy(
             built.flatMap((b) =>
               Option.toArray(b.film).flatMap((film) => b.pictures.map((p) => ({ film, ...p }))),

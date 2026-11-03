@@ -78,9 +78,6 @@ const outcome = (
   detail: Record<string, string | number | boolean>,
 ): Outcome => ({ platform, paths, detail });
 
-// ---------------------------------------------------------------------------
-// The session.
-
 const SessionJson = Schema.fromJsonString(Session);
 
 const sessionFile = (place: Place) => `${place.state}/session.json`;
@@ -103,9 +100,6 @@ const writeSession = Effect.fn('Sim.writeSession')(function* (place: Place, sess
   );
   yield* fs.writeFileString(sessionFile(place), text);
 });
-
-// ---------------------------------------------------------------------------
-// The simulator.
 
 const Device = Schema.Struct({ name: Schema.String, udid: Schema.String, state: Schema.String });
 const DeviceList = Schema.fromJsonString(
@@ -183,7 +177,6 @@ const bootSimulator = Effect.fn('Sim.bootSimulator')(function* (port: number, se
   const state = all.find((entry) => entry.udid === udid)?.state ?? 'missing';
   if (state !== 'Booted') yield* succeed('xcrun', ['simctl', 'boot', udid], short);
   yield* succeed('xcrun', ['simctl', 'bootstatus', udid, '-b'], Duration.seconds(seconds));
-  // A Debug build asks this host:port for its bundle (RCTBundleURLProvider's `RCT_jsLocation`).
   yield* succeed(
     'xcrun',
     [
@@ -200,9 +193,6 @@ const bootSimulator = Effect.fn('Sim.bootSimulator')(function* (port: number, se
   );
   return udid;
 });
-
-// ---------------------------------------------------------------------------
-// The dev server.
 
 const answers = (port: number) =>
   Effect.gen(function* () {
@@ -223,8 +213,6 @@ export const serve = Effect.fn('Sim.serve')(function* (place: Place, port: numbe
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   yield* fs.makeDirectory(out, { recursive: true });
   const args = ['dev', '--port', String(port), '--host', '127.0.0.1'];
-  // vxrn's orphan check ends `one dev` once its parent's parent is launchd,
-  // as `serve`'s is: a shell between them is that parent, and `serve` its.
   const server = yield* Effect.acquireRelease(
     spawner.spawn(
       ChildProcess.make(
@@ -272,7 +260,6 @@ const startServer = Effect.fn('Sim.startServer')(function* (
     place.state,
   ];
   const background = 'nohup "$0" "$@" >/dev/null 2>&1 & echo $!';
-  // The dev server's iOS bundles compile with the Hermes compiler `boot` found.
   const command = Option.match(hermesc, {
     onNone: () => ['bun', ...args],
     onSome: (compiler) => ['/usr/bin/env', `HERMESC_PATH=${compiler}`, 'bun', ...args],
@@ -322,9 +309,6 @@ const serverUp = Effect.fn('Sim.serverUp')(function* (
   );
   return pid;
 });
-
-// ---------------------------------------------------------------------------
-// Targets: an accessibility id or label.
 
 interface Target {
   readonly by: 'id' | 'label';
@@ -430,9 +414,6 @@ const present = Effect.fn('Sim.present')(function* (
   ).pipe(Effect.catchTag('ToolFailed', missing));
 });
 
-// ---------------------------------------------------------------------------
-// The steps.
-
 export interface BootOptions {
   readonly platform: Platform;
   readonly port: number;
@@ -536,7 +517,6 @@ const buildApp = Effect.fn('Sim.buildApp')(function* (
     '-derivedDataPath',
     `${ios}/build/dd`,
     'SKIP_BUNDLING=1',
-    // One architecture: a universal simulator build is twice the disk.
     'ARCHS=arm64',
     'ONLY_ACTIVE_ARCH=YES',
     'build',
@@ -657,13 +637,8 @@ export const open = Effect.fn('Sim.open')(function* (
   let prompts = 0;
   if (session.platform === 'ios') {
     const udid = yield* booted(session);
-    // A retried open starts the app afresh; an app that is not running has
-    // nothing to terminate, which is no failure.
     if (options.terminate === true)
       yield* Effect.ignore(succeed('xcrun', ['simctl', 'terminate', udid, BUNDLE_ID], short));
-    // The driver's app session: `install` opens it, and a drive of an app
-    // installed before this boot opens it here (the app comes forward, or
-    // launches).
     yield* openApp(udid, Duration.seconds(seconds));
     yield* succeed('xcrun', ['simctl', 'openurl', udid, url], short);
     prompts = yield* confirmOpen(session);
@@ -896,9 +871,6 @@ export const down = Effect.fn('Sim.down')(function* (place: Place) {
   );
 });
 
-// ---------------------------------------------------------------------------
-// The journey's steps: see a target, pan, hold, relaunch, and clean the build.
-
 /** What `down --clean` deletes under the app, for good: the native build, the pods, the web export. */
 export const CLEAN_PATHS: ReadonlyArray<string> = ['ios/build', 'ios/Pods', 'dist'];
 
@@ -1017,7 +989,6 @@ export const relaunch = Effect.fn('Sim.relaunch')(function* (place: Place) {
   const session = yield* readSession(place);
   if (session.platform === 'ios') {
     const udid = yield* booted(session);
-    // An app that is not running has nothing to terminate, which is no failure.
     yield* Effect.ignore(succeed('xcrun', ['simctl', 'terminate', udid, BUNDLE_ID], short));
     yield* openApp(udid);
   } else yield* browser(['reload']);
@@ -1074,9 +1045,6 @@ export const clean = Effect.fn('Sim.clean')(function* (
   }
   return outcome(platform, doomed, { removed: Object.keys(doomed).length });
 });
-
-// ---------------------------------------------------------------------------
-// The doctor: is this drive worth driving?
 
 /** The parent of `pid`, or none once the chain ends. */
 const parentOf = (pid: number) =>
@@ -1159,10 +1127,6 @@ export const doctor = Effect.fn('Sim.doctor')(function* (place: Place) {
     },
   );
 });
-
-// ---------------------------------------------------------------------------
-// The drive as a service: the commands drive through `Drive`, so a test
-// stands a fake in its place and `sim.ts` provides `DriveLive`.
 
 /** What the live drive's steps need from the host. */
 type Host =

@@ -1,8 +1,3 @@
-// The moments of a scene worth looking at: every narration mark, every named
-// cue's start and end, and the 60% point, each as a frame inside the scene's
-// own span. `film check` probes them all; the look-book shows the cue edges and
-// the 60% point. Pure, so both agree on what a moment is and where it falls.
-
 import { Array as Arr, Option, Order } from 'effect';
 import { type Placed, transitionDur } from './layout.ts';
 import { framesOf, secondsAt } from './time.ts';
@@ -44,7 +39,6 @@ export const sceneMoments = (
       ]),
       ['60%', p.dur * 0.6],
     ];
-    // The first scene has nothing to arrive from.
     const settled = Math.min(p.index, 1) * transitionDur(p.spec.enter);
     const { first, last } = framesOf({ from: p.start + settled, to: p.start + p.dur }, fps);
     const byFrame = new Map<number, Array<string>>();

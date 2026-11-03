@@ -1,13 +1,3 @@
-// The outlines a figure is cut from, in the figure's units: a polygon with
-// its corners rounded, a garment's (a tunic cut from its neck and hem, a
-// robe from its corners or as traced), a shoe, and a blot (a head is traced
-// from its concept); whether a point lies inside an outline (`inside`) and
-// how far from its edge (`fromEdge`); and how one paper tucks under the
-// papers laid over it (`tucked`, and a paper rimmed all round deeper, under
-// their seams, `tuckedRimmed`). Each outline is a list of points the
-// generator's `piece` runs a smooth path through, dense enough along a
-// straight edge that the edge stays straight. Pure.
-
 import { rng } from '../../core/random.ts';
 import type { Garment, Tunic } from '../parts/body.ts';
 import type { Pt } from './parts.ts';
@@ -40,7 +30,6 @@ export const roundedPolygon = (
     const a = toward(prev, radius(i));
     const b = toward(next, radius(i));
     out.push(a, [(a[0] + b[0] + 2 * c[0]) / 4, (a[1] + b[1] + 2 * c[1]) / 4], b);
-    // The straight run to the next corner's rounding.
     const end = ((): Pt => {
       const after = corners[(i + 2) % n] ?? next;
       const len = Math.hypot(after[0] - next[0], after[1] - next[1]);
@@ -229,8 +218,6 @@ const nearestEdge = (p: Pt, poly: ReadonlyArray<Pt>, only?: ReadonlyArray<boolea
 
 /** How far `p` lies from the edge of the closed outline `poly`, inside it or out. */
 export const fromEdge = (p: Pt, poly: ReadonlyArray<Pt>) => nearestEdge(p, poly).d;
-
-// ─── tucking one paper under another ─────────────────────────────────────────
 
 /** A point walked along an outline, and whether it was one of the outline's own. */
 interface Walked {

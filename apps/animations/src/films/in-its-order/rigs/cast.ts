@@ -1,17 +1,3 @@
-// In Its Order's cast render (`film concept render in-its-order <member>`):
-// each kept view of the sheets of the members `cold` casts, drawn by its rig
-// in its pose (`CAST`), on the film's paper (`PAPER`), each sheet at its one
-// scale (`SHEETS`, sheet pixels a canon unit, from the member's anchor view
-// on that sheet). A standing view's rig stands with its feet where the sheet
-// draws them on its ground line; a bust (a heads view) lies with its eyes'
-// middle where the sheet draws it. A posed hand reaches to where the sheet
-// lays it (`armReach`), and the host draws each circle hand at its cuff
-// where the numbers put it (`tracedHands`); the props the sheet draws lie
-// where it draws them (`../props.ts`). Each view's rig declares the kept
-// view it is held to (`concept`: its sheet and box). `cast.test.ts` holds the
-// table to the members' records: every kept view, no other, each in its kept
-// box. Pure.
-
 import { cutoutTable } from '@manna/film/canvas';
 import { type CastProp, type CastView, castTable } from '@manna/film/rive';
 import {
@@ -873,7 +859,6 @@ type ViewFit = NonNullable<CastView['fit']>;
  * frown, heads-6's chin and ear).
  */
 const LEAD_FIT = {
-  // Each turnaround view's part rows, by the labels his tables are traced from (`labels.ts`). From behind, his head's label is his hair, which the fit rows read as his line (no fit class), so his head's, neck's, ears' and hands' rows fail as unresolved on both crops, and his back's critique waits, until his back has labels the fit classes read.
   turnaround: {
     front: {
       labels: LEAD_LABELS.front,
@@ -922,7 +907,6 @@ const LEAD_FIT = {
     },
     'poses-3': {
       probes: [
-        // a1: the stool's line under his torso, read across the seat; a2: the "A" bar on his chest (luma under 160, the review's #).
         { name: 'seat', along: 'row', at: 375, from: 180, to: 288 },
         { name: 'chestFold', along: 'row', at: 285, from: 98, to: 130, dark: 160 },
       ],
@@ -971,17 +955,14 @@ const LEAD_FIT = {
   heads: {
     'heads-1': { bars: BUST_BARS, probes: [EAR_PROBE] },
     'heads-2': { bars: BUST_BARS, probes: [CHIN_PROBE, EAR_PROBE] },
-    // a5: the frown, down x 72 above his chin (luma under 100).
     'heads-3': {
       bars: BUST_BARS,
       probes: [{ name: 'mouth', along: 'col', at: 72, from: 140, to: 200, dark: 100 }],
     },
     'heads-4': { bars: BUST_BARS, probes: [EAR_PROBE] },
     'heads-5': { bars: BUST_BARS, probes: [EAR_PROBE] },
-    // a4: the nod that cut his ears and raised his chin's line.
     'heads-6': { bars: BUST_BARS, probes: [CHIN_PROBE, EAR_PROBE] },
   },
-  // His single drawings (single-1 bottle raised, single-9 and single-5): the member's bars as they stand, and no labels yet, so their rows are the silhouette's and the classes'.
   single: {
     'single-1': {},
     'single-9': {},
@@ -1033,18 +1014,15 @@ export const CAST = castTable({
       ),
     },
     poses: {
-      // Three-quarters left, his near arm raised with the bottle at his shoulder's height: his raised composition, its sleeve and his rolled head as the sheet draws them.
       'poses-1': fitted(
         LEAD_FIT.poses['poses-1'],
         pose(LEAD_RAISED.BOX, LEAD_RAISED.FEET, LEAD.leadFeastRaised, RIGS.leadFeastRaisedProp, {
           lean: 0,
           numbers: { mouth: 3 },
           reach: [],
-          // The bottle in front of his fist, its foot at the sheet's (70, 418).
           props: [{ name: 'bottle', draw: bottle([-80, -299]), layer: 'front' }],
         }),
       ),
-      // In profile to the left, both hands up, his head tipped back, the plate at his mouth.
       'poses-2': fitted(
         LEAD_FIT.poses['poses-2'],
         pose(
@@ -1056,24 +1034,19 @@ export const CAST = castTable({
             lean: 0,
             numbers: {},
             reach: [],
-            // The plate's rim at his lips (the sheet's 397, 337), the dish out before his face; held: over his sleeves, under his hands.
             props: [{ name: 'plate', draw: plate([-55, -360], 0.55), layer: 'held' }],
           },
         ),
       ),
-      // Seated on the stool, three-quarters left, his near hand at his chin, his far hand on his lap.
       'poses-3': fitted(
         LEAD_FIT.poses['poses-3'],
         pose(LEAD_SEATED.BOX, LEAD_SEATED.FEET, LEAD.leadFeastSeated, RIGS.leadFeastSeatedProp, {
           lean: 0,
           numbers: {},
-          // His near arm is the raised sleeve the sheet draws, its hand at his chin as traced (`leadFeastSeated`): it reaches nowhere.
           reach: [['far', LEAD_SEATED.HAND_FAR.at]],
-          // The stool behind him, its seat's top on the sheet's line (row 703) and running in under his mantle; its front leg beside his robe's side (x 803-825) and its far one at x 855-877, where the sheet draws them.
           props: [{ name: 'stool', draw: stool(69, 133, -97), layer: 'behind' }],
         }),
       ),
-      // Three-quarters left, leaning to the low table, his near hand on the bottle there: his reaching composition, its sleeve as the sheet draws it.
       'poses-4': fitted(
         LEAD_FIT.poses['poses-4'],
         pose(
@@ -1085,7 +1058,6 @@ export const CAST = castTable({
             lean: 0,
             numbers: { mouth: 3 },
             reach: [],
-            // The table's top at the sheet's row 617 from its left end to 1007, its leg at 952; the bottle on it, its middle at 953, in front of his hand.
             props: [
               { name: 'table', draw: table(-152, -73, -146, -113), layer: 'behind' },
               { name: 'bottle', draw: bottle([-112, -146]), layer: 'front' },
@@ -1093,7 +1065,6 @@ export const CAST = castTable({
           },
         ),
       ),
-      // His front at rest.
       'poses-5': fitted(
         LEAD_FIT.poses['poses-5'],
         pose([1259, 225, 1493, 829], [1382, 829], LEAD.leadFeastFront, RIGS.leadFeastFrontProp, {
@@ -1108,7 +1079,6 @@ export const CAST = castTable({
       ),
     },
     heads: {
-      // Three-quarters left: glad, a warm smile.
       'heads-1': fitted(
         LEAD_FIT.heads['heads-1'],
         bust(
@@ -1120,7 +1090,6 @@ export const CAST = castTable({
           { mouth: 3.5 },
         ),
       ),
-      // Three-quarters left: a wince.
       'heads-2': fitted(
         LEAD_FIT.heads['heads-2'],
         bust(
@@ -1132,28 +1101,23 @@ export const CAST = castTable({
           WINCE,
         ),
       ),
-      // Three-quarters left, his head tipped: worried, his brows' inner ends up, his mouth turned down.
       'heads-3': fitted(
         LEAD_FIT.heads['heads-3'],
         bust(
           [530, 314, 763, 650],
-          // Where the sheet draws his eyes' middle less the 21 px his roll swings them right of his rig's (eyes 57-67 and 102-114 against the render's 80-89 and 122-133 at 615): his head inside its box.
           [594, 448],
           LEAD_TQ_LEFT,
           LEAD.leadFeastThreeQuarterLeft,
           RIGS.leadFeastThreeQuarterLeftProp,
           {
-            // Rolled 13°, as the sheet's head is.
             tilt: 0.22,
             browTilt: 0.4,
-            // His frown short and near flat, where the sheet draws it (rows 178-188 at x 65-80), under the line his rig's mouth lies on: 0.22 of his eyes' spacing wide.
             mouth: -0.5,
             mouthY: 12,
             mouthW: 0.76,
           },
         ),
       ),
-      // His front: plain, his mouth level.
       'heads-4': fitted(
         LEAD_FIT.heads['heads-4'],
         bust(
@@ -1165,7 +1129,6 @@ export const CAST = castTable({
           { mouth: 0 },
         ),
       ),
-      // His front: a wince.
       'heads-5': fitted(
         LEAD_FIT.heads['heads-5'],
         bust(
@@ -1177,7 +1140,6 @@ export const CAST = castTable({
           WINCE,
         ),
       ),
-      // His front: glad, his eyes shut in a smile and the glad mark's wide smile in place of his mouth's line, his face turned up as the sheet draws it: his marks lifted inside a head that holds the bust's place (`marksY`), so his chin's line and his ears stay where the sheet draws them.
       'heads-6': fitted(
         LEAD_FIT.heads['heads-6'],
         bust(
@@ -1189,7 +1151,6 @@ export const CAST = castTable({
           {
             glad: 1,
             marksY: -11,
-            // His brows 3 px back down, under the fringe his rig's hair hangs lower than the sheet's.
             browY: 2,
             eyes: 0,
             mouthLine: 0,

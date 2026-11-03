@@ -74,8 +74,6 @@ export const truncate = <E>(self: Schema.Codec<number, E>) =>
 export const clamp =
   (bounds: { readonly min?: number; readonly max?: number }) =>
   <E>(self: Schema.Codec<number, E>) => {
-    // A finite number always lies within the largest finite bounds, so an
-    // absent bound is one of those rather than an infinity.
     const min = bounds.min ?? -Number.MAX_VALUE;
     const max = bounds.max ?? Number.MAX_VALUE;
     return self.pipe(

@@ -115,7 +115,6 @@ export const awaitReady = Effect.fn('Verify.awaitReady')(function* (
       if (ok) return Effect.void;
       return Effect.fail(NotReady.make({ message: `${origin} does not answer yet` }));
     }),
-    // The deadline is the timeout below; the count is a second bound, past it.
     Effect.retry({ schedule: Schedule.spaced('100 millis'), times: 1000 }),
     Effect.timeout(deadlines.within),
     Effect.mapError(() =>
@@ -221,7 +220,6 @@ const prepareRoot = Effect.fn('Verify.prepareRoot')(function* (root: string) {
   yield* fs.makeDirectory(path.dirname(at.outbox), { recursive: true });
   if (yield* fs.exists(at.dist)) yield* fs.remove(at.dist);
   yield* fs.symlink(path.resolve(built), at.dist);
-  // The real path, as `lsof` reports the server's directory (macOS's /tmp is /private/tmp).
   return yield* fs.realPath(root);
 });
 

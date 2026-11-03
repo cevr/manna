@@ -172,9 +172,6 @@ describe('WikiService', () => {
       {
         const wiki = yield* WikiService;
         const topics = yield* wiki.list({});
-        // Flagship pages first, in artifact order, then the catalog entries no
-        // flagship page already covers — `sanctuary` is authored, so it appears
-        // once, as a flagship.
         expect(topics.map((topic: WikiPageSummary) => String(topic.slug))).toEqual([
           'sanctuary',
           '2300-days',
@@ -221,16 +218,12 @@ describe('WikiService', () => {
       const page = yield* wiki.topic(topicSlug('nowhere'));
       expect(page.status).toBe('catalog');
       expect(Option.isNone(page.core)).toBe(true);
-      // Not a *reason* — the artifact is fine, this topic simply has no core.
       expect(Option.isNone(page.unavailable)).toBe(true);
     }).pipe(Effect.provide(liveArtifact({ schemaMajor: '1' }))));
 
   test('refuses an artifact whose schema major exceeds this build', () =>
     Effect.gen(function* () {
       {
-        // Present on disk, readable, and still refused — as a typed value. The
-        // authored cores drop out; the catalog long tail does not, so a refused
-        // artifact degrades exactly as an absent one does.
         const wiki = yield* WikiService;
         const topics = yield* wiki.list({});
         expect(topics.every((topic: WikiPageSummary) => topic.status === 'catalog')).toBe(true);
@@ -255,9 +248,6 @@ describe('WikiService', () => {
   it.effect('a missing artifact yields catalog entries and a typed absence', () =>
     Effect.gen(function* () {
       const wiki = yield* WikiService;
-      // The whole point of §3.5: with no artifact the wiki is catalog-only, not
-      // empty. The catalog tables ship inside the verified bible.db, so the long
-      // tail is still fully listable.
       const topics = yield* wiki.list({});
       expect(topics.map((topic: WikiPageSummary) => String(topic.slug))).toEqual([
         'sanctuary',
@@ -281,7 +271,6 @@ describe('WikiService', () => {
       const failure = yield* Effect.flip(wiki.list({}));
       expect(failure.category).toBe('open-failed');
       expect(failure.operation).toBe('open-artifact');
-      // A defect would have killed the fiber instead of arriving here.
       expect(Option.isSome(Option.fromNullishOr(failure.message))).toBe(true);
     }).pipe(
       Effect.provide(
@@ -296,20 +285,12 @@ describe('WikiService', () => {
       const directory = yield* fs
         .makeTempDirectoryScoped({ prefix: 'bible-topics-corrupt-' })
         .pipe(Effect.orDie);
-      // Bytes that are emphatically not SQLite: the file exists, so this is the
-      // corrupt state, which must stay distinguishable from absence.
       const corrupt = `${directory}/topics.db`;
       yield* fs.writeFileString(corrupt, 'not a database at all').pipe(Effect.orDie);
 
-      // SQLite opens lazily, so garbage bytes surface on the first statement
-      // rather than at open — `corrupt` either way, and the point stands: a
-      // present-but-unreadable artifact is a typed error, never a defect and
-      // never silently reported as "not installed".
       const broken = yield* listFailureFrom(corrupt);
       expect(broken.category).toBe('corrupt');
 
-      // The same call against a path with no file is the typed absence, and it
-      // still lists the catalog.
       const absent = yield* availabilityFrom(`${directory}/absent.db`);
       expect(absent.availability).toEqual(Option.some('artifact-not-installed'));
       expect(absent.listed).toBe(2);
@@ -317,10 +298,6 @@ describe('WikiService', () => {
 
   test('reports an unreadable schema_major as corrupt, not as a usable version', () =>
     Effect.gen(function* () {
-      // `Number.parseInt('1junk', 10)` is 1, so a lenient read serves this file
-      // as v1 — every row interpreted under a schema the file never claimed.
-      // The whole artifact is present and queryable, so nothing else here would
-      // notice; the version gate is the only thing that can.
       for (const schemaMajor of ['1junk', '', ' 1', '1.5', 'NaN', '-1', '9'.repeat(30)]) {
         const file = yield* artifact({
           schemaMajor,
@@ -347,9 +324,6 @@ describe('WikiService', () => {
           schemaMajor: '1',
           topics: [{ slug: 'sanctuary', title: 'The Sanctuary', thesis: THESIS, body: EMPTY }],
         });
-        // The tables are all there; only the version row is gone. Reading such a
-        // file means guessing which schema its rows speak, which is not a
-        // degradation to smooth over.
         const database = new Database(file);
         database.exec("DELETE FROM meta WHERE key = 'schema_major'");
         database.close();
@@ -364,7 +338,6 @@ describe('WikiService', () => {
       const wiki = yield* WikiService;
       const found = yield* wiki.list({ query: 'sanctu' });
       expect(found.map((topic: WikiPageSummary) => String(topic.slug))).toEqual(['sanctuary']);
-      // A wildcard-only query must not act as a filter.
       expect((yield* wiki.list({ query: '%' })).length).toBe(2);
     }).pipe(
       Effect.provide(

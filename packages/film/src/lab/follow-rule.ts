@@ -1,8 +1,3 @@
-// Follow's rule, with no page (`follow.ts` applies it to a view's scroll
-// box): where a box's top goes to keep the playhead's span in sight
-// (`placeTo`), and to reveal what a press opened by the least scroll
-// (`revealTo`), from the box's scroll and height alone.
-
 import { Option } from 'effect';
 
 /** A box as a placement reads it: where its top is scrolled to, and how tall it shows. */

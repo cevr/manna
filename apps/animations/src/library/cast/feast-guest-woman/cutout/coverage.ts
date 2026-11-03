@@ -1,6 +1,3 @@
-// Every drawing the cast pipeline needs of the feast's guest woman (`film
-// concept coverage`): her neutral seated view, cut as a puppet. Pure data.
-
 import type { CoverageManifest } from '@manna/film/tools';
 
 const FOR = [{ script: 'in-its-order', beats: ['cold'] }];

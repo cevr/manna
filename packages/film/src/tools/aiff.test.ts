@@ -1,6 +1,3 @@
-// readAiff over AIFF files built here: 24-bit big-endian stereo, an AIFF-C
-// of little-endian 16-bit ('sowt'), and the ones it refuses.
-
 import { describe, expect, it } from 'bun:test';
 import { Option, Result } from 'effect';
 import { readAiff } from './aiff.ts';
@@ -12,7 +9,6 @@ const aiff = (
   frames: number,
 ) => {
   const width = Math.ceil(options.bits / 8);
-  // An AIFF-C's COMM also names its compression (and an empty name for it).
   const comm = 18 + Option.match(options.type, { onNone: () => 0, onSome: () => 6 });
   const sound = 8 + frames * options.channels * width;
   const bytes = new Uint8Array(12 + 8 + comm + 8 + sound);
@@ -26,7 +22,6 @@ const aiff = (
   view.setUint16(20, options.channels);
   view.setUint32(22, frames);
   view.setUint16(26, options.bits);
-  // 44100 as an 80-bit extended float.
   view.setUint16(28, 16383 + 15);
   view.setUint32(30, 44100 * 2 ** 16);
   Option.map(options.type, (type) => tag(38, type));

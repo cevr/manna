@@ -1,11 +1,3 @@
-// The media service: what a media file is asked (how long it plays, its sound
-// as PCM, a still), and what is written from PCM, a raster or a render's
-// segments (WAV, AAC, FLAC, PNG, a joined film, its share and phone copies).
-// Its live layer (`media-bun.ts`, which says how each is done) loads with
-// the media stack it needs (mediabunny, its coders, NodeAV) only when
-// `Media.layer` is built, so a module that names the service, or a test that
-// doubles it, loads none of it.
-
 import { Context, Effect, Layer, Match, type Option, Predicate } from 'effect';
 import type { EncodedPacket } from 'mediabunny';
 import type { Pcm } from '../core/audio.ts';

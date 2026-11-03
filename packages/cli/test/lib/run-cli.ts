@@ -87,7 +87,6 @@ const runProvided = (
   layer: Layer.Layer<never, never, never>,
   home: string,
 ): Effect.Effect<{ cliExit: Exit.Exit<void, unknown>; calls: ServiceCall[] }> =>
-  // The CLI's requirements are erased by `layer`, which the type cannot prove.
   // @effect-diagnostics-next-line unsafeEffectTypeAssertion:off
   Effect.gen(function* () {
     const cliExit = yield* Effect.exit(
@@ -108,26 +107,6 @@ const runProvided = (
     ),
   ) as Effect.Effect<{ cliExit: Exit.Exit<void, unknown>; calls: ServiceCall[] }>;
 
-/**
- * Execute a CLI command with test layers and return results for assertions.
- *
- * This follows the Effect testing pattern of testing whole command flows:
- * - Execute actual commands with real argument parsing
- * - Provide mock layers for external dependencies
- * - Assert on the sequence of observable side effects
- *
- * @param command The CLI command to run
- * @param args Command arguments (without 'node' and script name)
- * @param config Test layer configuration
- * @returns Result with exit status and recorded calls
- */
-// The composed test layer (BunServices + Logger + createTestLayer) provides
-// every service these commands depend on at runtime. The type system can't
-// always prove that — commands return concrete-but-structurally-distinct
-// service identities that confuse `Exclude` simplification — so we narrow the
-// residual context to `never` after Effect.provide. If a command actually
-// references a service the test layer doesn't supply, the run will die at
-// runtime; tests will catch it immediately.
 export const runCli = <Name extends string, Input, ContextInput, E, R>(
   command: Command.Command<Name, Input, ContextInput, E, R>,
   args: string[],
@@ -135,15 +114,8 @@ export const runCli = <Name extends string, Input, ContextInput, E, R>(
 ): Effect.Effect<RunCliResult> =>
   Effect.gen(function* () {
     const { layer, getAllCalls } = createTestLayer(config);
-    // Use Command.runWith to pass args directly (v4 pattern)
     const cli = Command.runWith(command, { version: 'test' });
 
-    // Real stdout, captured rather than printed. `Console.Console` is a
-    // `Context.Reference` whose default is the host's own `globalThis.console`,
-    // so overriding it substitutes the sink every `Console.log` in the command
-    // graph already writes to — no command has to be written differently to be
-    // observable. `log` returns `void` rather than an `Effect` because
-    // `Console.log` wraps the plain method in `Effect.sync` itself.
     const written: string[] = [];
     const diagnostics: string[] = [];
     const recordingConsole: Console.Console = {
@@ -164,13 +136,10 @@ export const runCli = <Name extends string, Input, ContextInput, E, R>(
     const effectCalls = result.calls;
     const success = Exit.isSuccess(exit);
 
-    // Get all calls (services + external - model, http, bun)
     const allServiceCalls = getAllCalls();
 
-    // Merge all calls - effect calls first, then service calls
     const calls = [...effectCalls, ...allServiceCalls];
 
-    // Log failure details for debugging
     if (Exit.isFailure(exit)) {
       yield* Effect.logError(`CLI command failed: ${Inspectable.toStringUnknown(exit.cause, 0)}`);
     }
@@ -193,7 +162,6 @@ const callMatches = (actualCall: ServiceCall, expectedCall: Partial<ServiceCall>
 
     const actualValue: unknown = Reflect.get(actualCall, key);
 
-    // Handle expect.stringContaining and other matchers
     if (Predicate.hasProperty(value, 'asymmetricMatch')) {
       return (value as { asymmetricMatch: (v: any) => boolean }).asymmetricMatch(actualValue);
     }

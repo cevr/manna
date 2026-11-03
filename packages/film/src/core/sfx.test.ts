@@ -82,21 +82,15 @@ describe('requestKey', () => {
     const slide = library['paper.slide'];
     expect(requestKey({ ...slide, level: -4 })).toBe(requestKey(slide));
     expect(requestKey({ ...slide, jitter: { pitch: 0, gain: 0 } })).toBe(requestKey(slide));
-    // Why it is generated is not what it sounds like: its takes stay current.
     expect(requestKey({ ...slide, why: 'another' })).toBe(requestKey(slide));
     expect(requestKey({ ...slide, prompt: 'another' })).not.toBe(requestKey(slide));
     expect(requestKey({ ...slide, secs: 2 })).not.toBe(requestKey(slide));
     expect(requestKey({ ...slide, influence: 0.9 })).not.toBe(requestKey(slide));
-    // The default influence for its use is the same request as naming it.
     expect(requestKey({ ...slide, influence: 0.7 })).toBe(requestKey(slide));
     const court = library['amb.court'];
     expect(requestKey({ ...court, influence: 0.3 })).toBe(requestKey(court));
   });
 
-  // The sweet-spot trials: a one-shot followed its prompt closely only
-  // from 0.7 up (a gavel at 0.5 came out 20–30 dB quieter and boomy); a bed
-  // keeps the model's own air. About a third of the takes were usable, so a
-  // one-shot is made as 6 and a bed as 3.
   test('a one-shot defaults to influence 0.7 and 6 candidates, a bed to 0.3 and 3', () => {
     expect(influenceOf(library['paper.slide'])).toBe(0.7);
     expect(influenceOf(library['amb.court'])).toBe(0.3);
@@ -158,7 +152,6 @@ describe('levels', () => {
   });
 
   test('a one-shot is levelled by its momentary max, a bed by its integrated loudness', () => {
-    // -8 under a voice at -17.1 is -25.1; a -20 LUFS peak comes down 5.1 dB.
     expect(20 * Math.log10(gainFor(-8, loud(-30, -20), 'one-shot'))).toBeCloseTo(
       VOICE_LEVEL - 8 + 20,
       6,
@@ -289,7 +282,6 @@ describe('soundState and keptLoudness', () => {
     expect(keptLoudness(slide, lock)).toEqual(Option.some(-20.6));
     expect(keptLoudness(library['amb.court'], lock)).toEqual(Option.some(-27));
     expect(keptLoudness(slide, Option.none())).toEqual(Option.none());
-    // A code sound's lock holds the takes it was; its seeds play.
     expect(keptLoudness(library['tone.chime'], lock)).toEqual(Option.none());
   });
 });
@@ -358,8 +350,6 @@ describe('the lock file', () => {
   });
 });
 
-// The owner's rule (2026-10-16): a recording may be CC0, or CC BY with a
-// credits line. A CC BY licence carries everything its line says.
 describe("a recording's licence", () => {
   const decode = Schema.decodeUnknownResult(LibraryEntry);
   const recorded = (licence: Readonly<Record<string, string | boolean>>) => ({
@@ -394,7 +384,6 @@ describe("a recording's licence", () => {
       unsaid,
       unlinked,
       { ...by, title: '' },
-      // A line that names nobody, or links to no page.
       { ...by, author: '' },
       { ...by, source: '' },
       { ...by, authorUrl: '' },
@@ -402,7 +391,6 @@ describe("a recording's licence", () => {
       { ...by, source: 'http://freesound.org/people/klankbeeld/sounds/440621' },
     ])
       expect(Result.isFailure(decode(recorded(licence)))).toBe(true);
-    // A CC0 record names its author and its page too.
     const free: ReadonlyArray<Readonly<Record<string, string>>> = [
       { id: 'CC0-1.0', author: '', source: 'https://f/1' },
       { id: 'CC0-1.0', author: 'a', source: '' },

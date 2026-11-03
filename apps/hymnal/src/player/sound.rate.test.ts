@@ -295,7 +295,6 @@ describe('the score clock at a tempo, Sound on', () => {
     Effect.scoped(
       Effect.gen(function* () {
         const timeline = unplayedTail;
-        // The recording ends where its last played line does: 8 s, 16 s of the host's at 50 %.
         const { device } = rated(8000);
         const sound = yield* SubscriptionRef.make(true);
         const api = yield* scoreClock(
@@ -304,7 +303,6 @@ describe('the score clock at a tempo, Sound on', () => {
           sound,
         );
         yield* api.play(audioUrl(100), 0, { continuous: false, ready: false, rate: 0.5 });
-        // The player reads the status once a poll.
         for (let t = 0; t < 20_000; t += POLL) {
           yield* TestClock.adjust(POLL);
           yield* api.status;
@@ -312,7 +310,6 @@ describe('the score clock at a tempo, Sound on', () => {
         expect((yield* device.status).state).toBe('ended');
         const past = yield* api.status;
         expect(past.state).toBe('playing');
-        // 4 s of the host's past the recording's end at 50 %: 2 s on into the silent stanzas.
         expect(Math.abs(past.positionMs - 10_000)).toBeLessThanOrEqual(POLL);
         expect(past.rate).toBe(0.5);
       }),

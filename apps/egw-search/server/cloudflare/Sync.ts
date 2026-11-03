@@ -228,7 +228,6 @@ const props = Effect.gen(function* () {
     main: import.meta.url,
     workersDev: false,
     observability: { enabled: true },
-    // A step installs a whole book: decoding its archive is the CPU.
     limits: { cpuMs: 300_000 },
   };
   if (!Option.contains(stage, 'prod')) return base;
@@ -269,8 +268,6 @@ export default class Sync extends Cloudflare.Worker<Sync>()(
       'CorpusSync',
       yield* workflowProps,
       Effect.gen(function* () {
-        // Read at deploy, they become the Worker's secrets; read at run time,
-        // they come back from them.
         const clientId = yield* Config.Redacted('EGW_CLIENT_ID');
         const clientSecret = yield* Config.Redacted('EGW_CLIENT_SECRET');
 
@@ -299,8 +296,6 @@ export default class Sync extends Cloudflare.Worker<Sync>()(
             ),
           ),
         );
-        // A layer that cannot be built (an unreachable token endpoint, a
-        // missing binding) is a defect of the step, which stops its retries.
         const planLayer = Layer.mergeAll(library, corpusLayer).pipe(Layer.orDie);
         const installLayer = CorpusSupply.layer.pipe(
           Layer.provide(
@@ -472,8 +467,6 @@ export default class Sync extends Cloudflare.Worker<Sync>()(
             Effect.gen(function* () {
               const changedIn = (books: readonly RecheckedBook[]) =>
                 books.filter(({ changes }) => changeCount(changes) > 0);
-              // A verified book's added paragraphs are counted, not quoted
-              // (`syncReport`), so only its edits and removals are kept.
               const read = (
                 books: readonly RecheckedBook[],
                 keep: (row: ParagraphChangeRow) => boolean,
@@ -625,8 +618,6 @@ export default class Sync extends Cloudflare.Worker<Sync>()(
             Effect.flatMap(corpusSyncInput(Option.fromNullishOr(payload)), runOnce),
           );
           if (Exit.isFailure(exit)) {
-            // Mailed, then failed with the same cause, so the dashboard and
-            // the engine see the run exactly as it stopped.
             const reason = Cause.pretty(exit.cause).slice(0, MAIL_CAUSE_LIMIT);
             yield* mailStep(SyncOutcome.Stopped({ reason }));
             return yield* Effect.failCause(exit.cause);

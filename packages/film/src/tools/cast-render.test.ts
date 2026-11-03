@@ -1,6 +1,3 @@
-// Which kinds a cast render draws (`renderedKinds`): a kind the ask names is
-// drawn or refused, never dropped because the table draws none of it.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Schema } from 'effect';
 import type { CastModule, CutoutView } from '../canvas/cast.ts';

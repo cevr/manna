@@ -103,7 +103,6 @@ it.effect(
       const fs = yield* FileSystem.FileSystem;
       const dir = yield* fs.makeTempDirectoryScoped();
       const legacy = `${dir}/legacy.db`;
-      // The independent source capture preserves every v0 title and ordered verse byte.
       const source = yield* readSourceText();
       yield* Effect.acquireUseRelease(
         Effect.sync(() => new Database(legacy)),
@@ -432,7 +431,6 @@ const auditTiming = (
 };
 
 const assertNoFaults = (faults: readonly string[]) => {
-  // Coordinates contain no corpus values, even when an assertion fails.
   expect(faults.length === 0, faults.slice(0, 8).join(',')).toBe(true);
 };
 
@@ -826,7 +824,6 @@ describe('generated corpus', () => {
         ];
         for (const [i, sql] of mutations.entries()) {
           db.exec('SAVEPOINT mutation');
-          // Delete dependents before the occurrence mutant, preserving actual FK enforcement.
           if (i === 5)
             db.exec(
               `DELETE FROM syllable_times WHERE line_time_id=(SELECT id FROM line_times WHERE hymn_id=${hymn.number} ORDER BY ordinal DESC LIMIT 1)`,
@@ -867,7 +864,6 @@ describe('generated corpus', () => {
         const sources = yield* readDatabaseSources();
         const a = `${dir}/a.db`,
           b = `${dir}/b.db`;
-        // This assignment also checks that the build does not require a caller's Scope.
         const build: Effect.Effect<void, unknown, FileSystem.FileSystem | Path.Path> =
           buildDatabase(a, sources);
         yield* build;

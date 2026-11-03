@@ -1,9 +1,3 @@
-// The kinds and views a member's cast render (`tools/cast-render.ts`)
-// draws: what the film's table (`rigs/cast.ts`, `CastTable`) draws of him,
-// by rig or by puppet, what the owner kept of his sheets, and the kinds an
-// ask selects from them (`renderedKinds`), each refused with its reason
-// (`CastRenderRefused`) when the table cannot draw it.
-
 import { Array as Arr, Effect, Option, Schema } from 'effect';
 import type { CastFigure, CastModule, CastView } from '../canvas/cast.ts';
 import { type CastSheetRecord, keptOf } from '../core/cast-record.ts';
@@ -100,8 +94,6 @@ export const renderedKinds = (
 ) =>
   Effect.gen(function* () {
     const viewAsked = (k: SheetKind) => ask.views.some((v) => v.startsWith(`${k}-`));
-    // A kind the table draws none of is left out only when the ask did not
-    // name it; a named one goes on to `coveredBy`, which refuses it.
     const kinds = Arr.filter(
       SheetKind.literals,
       (k) =>

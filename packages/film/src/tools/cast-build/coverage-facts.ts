@@ -1,13 +1,3 @@
-// The facts a member's coverage is read from, each read off his folder:
-// drawn, its file is on disk; kept, his `cast-sheet.json` names the view
-// kept, or his family's record (`cutout/<family>/record.json`) names the
-// key; cut, its part sheet's record (`cutout/sheets/<sheet>/record.json`)
-// is on disk and its kept answer was drawn from the current input; bars, that
-// answer misses no bar, or each bar it misses is named; fit, its fit rows
-// pass. Whether a record is current and whether the fit rows pass are stage
-// results, the build cache's at the current inputs (`built.ts`
-// `measuredOf`): one the caller does not pass is `unmeasured`.
-
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { SheetKind } from '../../core/cast-sheet.ts';
 import type { Coverage, Entry, EntryFacts, Requirement } from './coverage.ts';

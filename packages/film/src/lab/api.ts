@@ -1,12 +1,3 @@
-// The lab API as the page's machines call it: a client derived from the
-// routes' one declaration (`LabHttpApi` in `core/api.ts`), so each body is
-// encoded and each answer decoded by the route's own Schema. A refusal is
-// the server's own failure class (`AskRefused`, …), its message the words
-// the page shows; a request that never reached the server, or an answer
-// that does not decode, is LabUnreachable in its own words. One client
-// (`LabClient`) serves every page's calls; the ask page's build on it
-// (`ask/api.ts`).
-
 import { Cause, Context, Effect, Layer, Predicate, Schema } from 'effect';
 import { FetchHttpClient, HttpClient, HttpClientRequest } from 'effect/http';
 import * as HttpApiClient from 'effect/http-api/HttpApiClient';

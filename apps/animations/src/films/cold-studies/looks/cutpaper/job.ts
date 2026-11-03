@@ -1,9 +1,3 @@
-// The control's verse and card: Job 9:2 on a torn cream page laid on the
-// parchment, the phrase highlighted in the card's own ink so the flood is
-// the highlight grown; the card is the film's own (`righteousness-by-faith/
-// card.ts`: flush left, cream on near-black, cased as said), "just" in the
-// colour script's gold for the Word, underlined.
-
 import { type Box, type CardWord, at, fullCard, rounded, verse, write } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import { CARD_STYLE, VERSE_STYLE } from '../../../righteousness-by-faith/card.ts';

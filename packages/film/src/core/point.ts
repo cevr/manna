@@ -1,16 +1,3 @@
-// A choice point's id: what the point is (`PointRef`) and the one string it
-// is written as (`PointId`), on the wire, in a review URL and in
-// `catalogue.json`. Every id is built by encoding a ref and read back by
-// decoding it; no caller slices or splits one. Pure.
-//
-// The strings: `score`; `take:<sound>`; `voice:<beat>`; `look:<name>`;
-// `render:<address key>` for an address's render set and `render:<clip>`
-// for a montage's. Every name is non-empty, and a montage clip (named by its
-// file) is never `film`, `act:…`, `scenes:…` or `short:…` (`Clip` refuses
-// it), so every ref the schema admits reads back from its id as itself.
-// Reading back is canonical too: a string is a point only when it is that
-// point's own id, so `render:scenes:a,` is no point.
-
 import { Effect, Option, Schema, SchemaIssue, SchemaTransformation } from 'effect';
 import { Address, addressKey, addressOfKey } from './address.ts';
 import { PartId } from './address-schema.ts';
@@ -89,7 +76,6 @@ const decode = (id: string): Option.Option<PointRef> =>
 /** A choice point's id on the wire and on disk, decoded to the point it names. */
 export const PointId = Schema.String.pipe(
   Schema.decodeTo(
-    // Read by `read` and judged by `PointRef` (`decode`): already the point, names decoded.
     Schema.toType(PointRef),
     SchemaTransformation.transformEffect({
       decode: (id: string) =>

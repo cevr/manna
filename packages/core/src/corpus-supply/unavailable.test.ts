@@ -31,7 +31,6 @@ describe('KNOWN_UNAVAILABLE', () => {
 
   test('does not claim an available book is unavailable', () =>
     Effect.sync(() => {
-      // `DA` (Desire of Ages) syncs fine and must never be skipped.
       expect(isKnownUnavailable(130)).toBe(false);
       expect(unavailableReason(130)).toEqual(Option.none());
     }));

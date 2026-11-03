@@ -1,7 +1,3 @@
-// The burin as a material: the shader (`shader.ts`) with the hall's light
-// shared by every surface and each surface's own cut: how pale its stuff
-// is, how its lines are laid on it, its masonry joints, a hand-tinted wash.
-
 import {
   DoubleSide,
   FrontSide,

@@ -1,6 +1,3 @@
-// The film's cardboard city under the teal sky: the title's, and the
-// landing's (`rain`, `thesis`), one layout from the same rows and seeds.
-
 import { type Camera, type Pt, at, multiplane, rectShape, sky } from '@manna/film/canvas';
 import { lerp, rng } from '@manna/film/core';
 import { C, type Hands, christ, person, piece } from './kit.ts';
@@ -121,7 +118,6 @@ export const rooftop = (
       lift: 1.4,
       draw: () => {
         cityFront(ctx, hand);
-        // Sitting on the roof's edge, their legs over it.
         at(ctx, { x: ROOF.x + 34, y: ROOF.top, scale: 0.68 }, () =>
           christ(
             ctx,

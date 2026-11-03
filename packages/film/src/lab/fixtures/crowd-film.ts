@@ -1,7 +1,3 @@
-// A film of many short scenes with long names, as a real film's are: the
-// second film of the render page's registry and the studio's test page's
-// (`render-page.ts`, `player-page.ts`). It carries captions.
-
 import { type Film, createFilm, drawing } from '../../canvas/film.ts';
 
 /** The crowd film's name in its registry and in the player's URLs. */

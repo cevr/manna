@@ -170,7 +170,6 @@ export const placeAt = (timeline: Timeline, ms: number): Place => {
   return Option.match(Option.fromUndefinedOr(lines[index]), {
     onNone: () => nowhere(timeline.first),
     onSome: (line) => {
-      // Lines run on from one to the next, so only a line's own `until` can end it early.
       if (ms >= line.until) return nowhere(lines[index + 1]?.start ?? Infinity);
       const syllable = lastAtOrBefore(
         line.syllables.length,

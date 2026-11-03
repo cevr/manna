@@ -74,7 +74,6 @@ export function useTabReveal(scroll: SharedValue<number>, rest: number, height: 
     () => scroll.value,
     (now) => {
       const next = revealAt(state.value, now, rest);
-      // Held, the row neither turns nor slides.
       if (!next.held && now <= rest) {
         if (progress.value !== 0) progress.value = 0;
       } else if (next.shown !== state.value.shown) {
@@ -84,7 +83,6 @@ export function useTabReveal(scroll: SharedValue<number>, rest: number, height: 
     },
   );
   const cover = useDerivedValue(() => {
-    // With Reduce Motion the row stands in place while any of it shows, and fades.
     if (reduced) return shownHeight(Math.ceil(progress.value), height, scroll.value, rest);
     return shownHeight(progress.value, height, scroll.value, rest);
   });
@@ -93,7 +91,6 @@ export function useTabReveal(scroll: SharedValue<number>, rest: number, height: 
   };
   const touch = () => {
     const next = touched(state.value, scroll.value, rest);
-    // Let go at or above the resting place, the row is hidden there, slid out.
     if (state.value.shown && !next.shown) progress.value = 0;
     state.value = next;
   };

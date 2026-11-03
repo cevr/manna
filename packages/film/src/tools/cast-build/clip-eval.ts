@@ -1,18 +1,3 @@
-// A clip as the clip eval reads it (`eval:clip:<clip>@<member>`): its mp4
-// decoded in this process, each frame laid on the reader's canvas at the
-// map its provenance keeps (`clip-map.ts` `canvasOf`) and written as
-// `f%03d.png`, read.py's own frame ids, so the reader reads the canvases as a
-// folder of PNGs; and the figure numbers measured on those canvases
-// (`figureNumbersOf`).
-//
-// A frame is decoded by @mediabunny/server's FFmpeg (the coders the media
-// service registers) and turned to RGB by libavfilter at
-// `scale=flags=neighbor+accurate_rnd`, which is OpenCV's decode exactly; a
-// plain `format=rgb24` rounds otherwise by up to 4. At clip B's map the 124
-// canvases are read.py's, pixel for pixel (`clip-eval.slow.test.ts`). The
-// media stack loads only when a clip is decoded, so a module that names this
-// one loads none of it.
-
 import { Array as Arr, Effect, FileSystem, Option, Path, Schema, Stream } from 'effect';
 import type { VideoSample } from 'mediabunny';
 import type { Raster } from '../../core/raster.ts';
@@ -99,7 +84,6 @@ const mediaStack = Effect.all(
 export const clipFrames = (file: string): Stream.Stream<Raster, MediaFailed, Media> =>
   Stream.unwrap(
     Effect.gen(function* () {
-      // Built for its coders: @mediabunny/server's FFmpeg decodes the H.264.
       yield* Media;
       const [mediabunny, server, av] = yield* mediaStack;
       const failed = (cause: unknown) =>

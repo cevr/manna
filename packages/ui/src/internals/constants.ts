@@ -1,6 +1,3 @@
-// Upstream: packages/react/src/internals/constants.ts
-//
-// Constants the parts share.
 import type { JSX } from '@solidjs/web';
 
 export const TYPEAHEAD_RESET_MS = 500;

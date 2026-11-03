@@ -1,22 +1,3 @@
-// The keymap: which key runs which command. A command declares its keys as
-// chords (`mod+z`, `shift+arrowleft`, `?`), and those are the keys it has:
-// the page lists them (the `?` sheet, ⌘K, a control's title) and binds them,
-// the same for every viewer. A press binds to a chord by its key
-// and modifiers: `mod` is ⌘ or Ctrl, a letter reads the same with Caps Lock,
-// Shift counts on a letter, a digit or a named key but not on a symbol (`?`
-// is already shifted), a letter held with Alt reads by its physical key (⌥O
-// types `ø`), and so does a digit held with Shift or Alt (⇧1 is `shift+1`
-// whatever the layout types: the pages' ⇧1-⇧8). A command marked `stepped` also answers its keys held with
-// Shift (its coarse step, ×10) and with Alt (its fine step), unless that
-// chord is bound to something itself. Where focus is decides which commands'
-// keys are live (`Focus`, `context.ts`): the page's on the page, only those
-// that also run in a field there (Escape), and in the studio its own keys
-// first, then the page's; on a control (a button, a link), the page's; the
-// studio owns its keys, so one with nothing to do in the studio's state is
-// still not the page's. Of the commands a press binds to, the last
-// available one runs: the one registered last wins a key two commands
-// share. Pure.
-
 import { Data, Option } from 'effect';
 import type { KeyPress } from '../browser/keys.ts';
 import type { Command, CommandId, Invocation } from './command.ts';
@@ -147,7 +128,6 @@ const SCOPES: Readonly<Record<Focus, ReadonlyArray<Focus>>> = {
   field: ['field'],
   studio: ['studio', 'page'],
   slider: ['slider', 'page'],
-  // A control hears the page's keys; only a command's `when` tells it from the page (Tab).
   control: ['page'],
 };
 

@@ -1,12 +1,3 @@
-// A raster as a PNG file's bytes, and back: written 8-bit RGBA, not
-// interlaced, each row filtered by whichever of PNG's five filters leaves it
-// smallest by the standard's heuristic (the least sum of absolute bytes),
-// then deflated as one zlib stream; read from any 8-bit PNG that is not
-// interlaced and holds no palette (grey, grey and alpha, RGB, RGBA), as an
-// image model, a page or this writer saves one. Bun's `node:zlib` holds the
-// deflate, the inflate and the chunk CRC, so a sound's sheet and a figure's
-// concept need no image library (`sfx render --sheet`, `film lab match`).
-
 import { crc32, deflateSync, inflateSync } from 'node:zlib';
 import { Option, Result, Schema } from 'effect';
 import type { Raster } from '../core/raster.ts';
@@ -53,9 +44,6 @@ const paeth = (left: number, up: number, upLeft: number): number => {
 /** A row filtered against `above` (zeros for the first row) into `out`. */
 type RowFilter = (row: Uint8Array, above: Uint8Array, out: Uint8Array) => void;
 
-// Each filter's loop: each byte less what the filter predicts from its
-// neighbours. The first pixel has nothing to its left: its left and up-left
-// read as zero, as the standard reads them.
 const none: RowFilter = (row, _above, out) => out.set(row);
 const sub: RowFilter = (row, _above, out) => {
   for (let i = 0; i < CHANNELS; i++) out[i] = row[i] ?? 0;

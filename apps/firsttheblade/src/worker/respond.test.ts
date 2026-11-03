@@ -284,7 +284,6 @@ describe('the Worker policy', () => {
         expect([path, method, policies.length]).toEqual([path, method, 1]);
         expect([path, method, foreignPictures(policies[0] ?? '')]).toEqual([path, method, []]);
       }
-      // Each kind of answer was drawn: a file, a redirect, a refused method, the not-found page, a failed read.
       expect([200, 301, 404, 405, 500].filter((status) => !seen.has(status))).toEqual([]);
     }));
 

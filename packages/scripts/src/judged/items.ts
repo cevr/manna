@@ -1,33 +1,3 @@
-// The judged rules' selectors: the items of one source a rule judges, each
-// with its first line, its last line, its offset, its text and its key. The runner
-// (`sources.ts`) reads every item of the repo and asks the model of those
-// the store does not answer; the oxlint plugin
-// (`packages/scripts/lint/judged.ts`) takes every item of a file it lints
-// and reports the answers kept for them. Both read a source through `parse`
-// (oxc-parser), so an item's text, and with it its cache key, is the same in
-// both. An item's key is what a formatter does not change: code by its
-// parsed form (`parsedOf`: each node's type and fields, not where it stands
-// or how a literal is spelled) and its comments by their words, and a
-// comment or prose by its words with each run of whitespace one space; so two
-// items that parse or read differently never share a key. This module runs in Node (oxlint's plugin host) and in Bun, so it
-// imports nothing of either.
-//
-//   comments       each comment block (a block comment, or a run of line
-//                  comments on lines one after another, each first on its
-//                  line; a line comment after code is a block of its own)
-//   commentedCode  each comment block first on its line with the code it sits
-//                  on: the outermost node that starts the next line
-//   testCases      each test case (`it`/`test`, a name and a function,
-//                  layered or `.each` too) of a test file, with the file's
-//                  imports
-//   functions      each named function of a source that is not a test, with
-//                  the comment it sits under; one longer than FUNCTION_LINES
-//                  is no item, and the named functions inside it are
-//   scriptBeats    each beat's `say` and `picture` of a film's `script.ts`,
-//                  and of a series script's Markdown, in its tables' rows or
-//                  its `**say:**` and `**picture:**` paragraphs
-//                  (`markdownBeats`)
-
 import { Option, Predicate } from 'effect';
 import { type Comment, type Node, type Program, parseSync, visitorKeys } from 'oxc-parser';
 
@@ -139,7 +109,12 @@ interface Block {
   readonly alone: boolean;
 }
 
-/** Each comment block of `source`, in order. */
+/**
+ * Each comment block of `source`, in order, a run of line comments on lines
+ * of their own as one. The tree holds what `effect/noComments` leaves: each
+ * `/**` doc comment directly above a declaration or member, and each tool
+ * directive (`oxlint-disable-next-line`, `@ts-expect-error`).
+ */
 const commentBlocks = (source: Source): ReadonlyArray<Block> => {
   const { lineOf, startOf } = lineReader(source.text);
   const blocks: Array<{
@@ -218,12 +193,6 @@ const leftOut = (type: string, key: string) =>
 
 const PARSED = new WeakMap<object, string>();
 
-/**
- * A parsed value's form: a node's type and every field the parser gives it
- * but where it stands and a literal's spelling, its children's forms in
- * order. Two programs whose forms match parse the same, so they differ in
- * whitespace, quote marks or a number's spelling alone.
- */
 // oxlint-disable-next-line effect/noUnknownParameters -- a parser's fields, whatever their kind, walked whole
 const parsedOf = (value: unknown): string => {
   if (Array.isArray(value)) return `[${value.map(parsedOf).join(',')}]`;
@@ -282,7 +251,11 @@ const nodeAt = (program: Program, offset: number): Option.Option<Node> => {
   return found;
 };
 
-/** Each comment block first on its line, with the node that starts the line under it. */
+/**
+ * Each comment block first on its line, with the node that starts the line
+ * under it: in the tree, each doc comment with the declaration or member it
+ * documents, and each directive with the line it governs.
+ */
 const commentedCode = (source: Source): ReadonlyArray<Item> => {
   const { lineOf, startOf } = lineReader(source.text);
   return commentBlocks(source)

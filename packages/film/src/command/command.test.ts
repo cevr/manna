@@ -115,7 +115,6 @@ describe('the context', () => {
   });
 
   test('reads where a press puts the keyboard: a field, the studio, a slider, a control, the page', () => {
-    // An element as a key press's target is: its tag, and the ancestors `closest` finds.
     const el = (tagName: string, within: ReadonlyArray<string> = []) =>
       Option.some(
         Object.assign(new EventTarget(), {
@@ -124,24 +123,20 @@ describe('the context', () => {
         }),
       );
     expect(focusOf(el('INPUT'))).toBe('field');
-    // A picker's arrows pick, not scrub; an editable block is typed into (F5).
     expect(focusOf(el('SELECT'))).toBe('field');
     expect(
       focusOf(Option.map(el('DIV'), (div) => Object.assign(div, { isContentEditable: true }))),
     ).toBe('field');
     expect(focusOf(el('DIV', ['[role="dialog"]']))).toBe('field');
     expect(focusOf(el('BUTTON', ['[data-role="studio"]']))).toBe('studio');
-    // The recorder stands in a dialog over the studio: its section's keys are its own there.
     expect(focusOf(el('BUTTON', ['[data-role="studio"]', '[role="dialog"]']))).toBe('studio');
     expect(focusOf(el('TEXTAREA', ['[data-role="studio"]', '[role="dialog"]']))).toBe('field');
-    // A slider (a wipe's grip) takes its own arrows, Home and End.
     expect(focusOf(el('BUTTON', ['[role="slider"]']))).toBe('slider');
     expect(focusOf(el('circle', ['[role="slider"]']))).toBe('slider');
     expect(focusOf(el('BUTTON'))).toBe('control');
     expect(focusOf(el('A'))).toBe('control');
     expect(focusOf(el('BODY'))).toBe('page');
     expect(focusOf(Option.none())).toBe('page');
-    // Keys inside an open dialog are its own; a press there is a field's only on what is typed into.
     expect(isField(el('DIV', ['[role="dialog"]']))).toBe(false);
     expect(isField(el('INPUT', ['[role="dialog"]']))).toBe(true);
     expect(isField(el('TEXTAREA'))).toBe(true);

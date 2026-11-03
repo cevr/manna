@@ -33,7 +33,6 @@ export const Shelf = Cloudflare.R2.Bucket(
     name: bucketName(name),
     publicAccess: false,
     domains: [],
-    // A throwaway stage's objects are test data; prod's never go with it.
     forceDestroy: name !== 'prod',
   })),
 ).pipe(Alchemy.RemovalPolicy.retain(isProd));

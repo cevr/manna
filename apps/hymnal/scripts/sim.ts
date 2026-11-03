@@ -32,9 +32,6 @@ const main = Effect.gen(function* () {
 
 const Host = Layer.merge(BunServices.layer, FetchHttpClient.layer);
 
-// A command prints its own failure as its JSON result (stdout stays one JSON
-// line), so the runtime reports only a defect, on stderr; a failure still
-// exits non-zero.
 main.pipe(
   Effect.tapDefect((defect) => Console.error(defect)),
   Effect.provide(Layer.provideMerge(DriveLive, Host)),

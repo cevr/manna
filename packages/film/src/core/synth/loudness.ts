@@ -1,13 +1,3 @@
-// How loud a sound is, as ITU-R BS.1770-4 measures it: each channel through
-// the K-weighting (a +4 dB high shelf, then a 38 Hz high-pass), channel powers
-// summed with weight 1 (no surround channels here), then read over 400 ms
-// blocks. `integrated` gates the blocks (absolute at -70 LUFS, relative at
-// -10 LU) as the standard does; `momentaryMax` is the loudest block (100 ms
-// apart, ungated), which is how a one-shot is levelled; `peak` is the sample
-// peak. The filters are the RBJ biquads at the standard's analog parameters,
-// so any rate measures alike (pyloudnorm's approach; within 0.1 dB of
-// libebur128 on the prototype's sounds). Pure.
-
 import type { Pcm } from '../audio.ts';
 
 /** A sound's loudness: integrated and momentary max in LUFS, sample peak in dBFS; silence is -Infinity. */
@@ -90,13 +80,11 @@ const blockPowers = (pcm: Pcm): ReadonlyArray<number> => {
   const hop = Math.round(HOP * pcm.rate);
   const starts: Array<number> = [];
   for (let s = 0; s + block <= pcm.frames; s += hop) starts.push(s);
-  // A sound shorter than a block is one block, the rest of it silence.
   if (starts.length === 0) starts.push(0);
   const powers = starts.map(() => 0);
   for (const plane of pcm.channels) {
     let weighted = plane.subarray(0, pcm.frames);
     for (const stage of kWeighting(pcm.rate)) weighted = runBiquad(weighted, stage);
-    // Running sums of squares, so each block's power is one subtraction.
     const sums = new Float64Array(pcm.frames + 1);
     for (let i = 0; i < pcm.frames; i++) sums[i + 1] = (sums[i] ?? 0) + (weighted[i] ?? 0) ** 2;
     for (const [k, s] of starts.entries()) {

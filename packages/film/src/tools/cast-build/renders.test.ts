@@ -35,7 +35,6 @@ describe('the seeds of a shard', () => {
     const counts = { train: 4, held: 1 };
     const front = seedsIn(shardOf(SPEC, 'lead-feast', 'turnaround-front', counts));
     expect(seedsIn(shardOf(SPEC, 'lead-feast', 'turnaround-front', counts))).toEqual(front);
-    // a shorter shard of the same drawing draws the same first seeds
     const short = seedsIn(shardOf(SPEC, 'lead-feast', 'turnaround-front', { train: 1, held: 1 }));
     expect(Object.keys(short).toSorted()).toEqual(['held/0', 'train/0']);
     expect([short['train/0'], short['held/0']]).toEqual([front['train/0'], front['held/0']]);

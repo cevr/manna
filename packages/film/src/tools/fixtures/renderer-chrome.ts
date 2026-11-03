@@ -1,11 +1,3 @@
-// The renderer's Chrome, as `ps` sees it: this process opens a view with the
-// renderer's flags (`launchArgs`), reads the Chrome whose
-// parent is this process, kills it, opens another view (Bun spawns Chrome
-// again) and reads that one. It prints one JSON line: its own pid and each
-// Chrome's command line. Run by `e2e/tools/renderer-chrome.dom.test.ts`, as a
-// process of its own: Bun spawns one Chrome per process, with the first
-// view's flags.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Duration, Effect, Schedule, Schema } from 'effect';
@@ -52,7 +44,6 @@ const Seen = Schema.fromJsonString(
 Effect.gen(function* () {
   const first = yield* viewed;
   for (const chrome of first) process.kill(chrome.pid, 'SIGKILL');
-  // The next view opens once the killed Chrome is gone.
   yield* Effect.filterOrFail(ours, (left) => left.length === 0).pipe(
     Effect.retry({ schedule: Schedule.spaced(Duration.millis(100)), times: 50 }),
   );

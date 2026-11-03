@@ -1,7 +1,3 @@
-// The review's HTTP for the tool tests (`review.ts`; review-http,
-// ask-evidence): a review of one film served in memory, and requests to it
-// as a phone sends them.
-
 import { AskMaterials } from '../ask-materials.ts';
 import { AskStore } from '../ask-store.ts';
 import {

@@ -1,7 +1,3 @@
-// What the lab's commands share (`notes-mcp.ts`, `sets-mcp.ts`,
-// `asks-mcp.ts`, `timeline-mcp.ts`, `lab-commands.ts`): a command's refusal
-// in words, the film a command names, and a path kept inside its folder.
-
 import { Effect, Option, type Path, Schema } from 'effect';
 
 /** A tool's refusal, said in words the agent reads. */

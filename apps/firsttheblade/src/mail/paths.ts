@@ -1,10 +1,3 @@
-/**
- * Where the list lives on the site, in one place: the Worker's routes
- * (`./routes.ts`) answer at these paths and read these fields, and the
- * prerender writes the pages the routes send people to (`../pages.ts`) and
- * the form that posts to them (`../ui/mail.tsx`).
- */
-
 /** The routes the Worker answers before it looks for a file. */
 export const MAIL_ROUTES = {
   /** POST: the sign-up form. */

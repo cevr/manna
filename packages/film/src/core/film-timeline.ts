@@ -1,32 +1,3 @@
-// The studio's read model: a film's timeline, one version at a time, every
-// stage of the flow laid on the film's clock (script → concept → Board →
-// voice → animatic → scenes → sound → render → shorts). The lab's `timeline`
-// tool answers it, so every agent reads one model.
-//
-// It is built from what the lab already reads, never a file parsed a second
-// way: the version's clock (`FilmClock`, made by `film read clock` from
-// `core/layout.ts` over the version's scenes and takes, its registered
-// files' or its folder's), its Board (`core/board.ts`, timed by the
-// animatic's own rule, `core/animatic.ts`), the catalogue
-// (`core/catalogue.ts`), the production's ledger (`core/production.ts`), the
-// lab's asks (`core/ask.ts`) and the film's notes (`core/notes.ts`).
-//
-// A track is a stage. A stage with no material has no lane: it is named in
-// the flow (`ahead`, with what starts it) and the first one is the Next row.
-// The animatic has no lane (it is the Board on the voice clock) and is
-// reached when both are. The concept frames keep no record of their own, so
-// the concept is reached by a decision that keeps them and is otherwise a
-// named gap, never a lane. Each clip carries its state (made, kept,
-// approved) and its clock (`estimated`: its length is read from its words at
-// the reading pace, no take measures it). The header's
-// stage is the first, in the flow's order, that is not done.
-//
-// The markers are what waits on the owner and has a time: open asks and his
-// notes not yet done. The header counts what waits on him (open asks, notes
-// an agent answered, beats the open version's Board holds ready to approve).
-// Pure: the lab's service reads
-// the sources and calls `timelineOf`.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -91,9 +62,6 @@ import {
   type Waiting,
   type FilmTimeline,
 } from './timeline-schema.ts';
-
-// ---------------------------------------------------------------------------
-// The clock a version plays on
 
 /** What a part declares: the beat it begins on and its name (an act, a movement). */
 interface PartOf {
@@ -177,9 +145,6 @@ export const filmClock = (
     };
   });
 
-// ---------------------------------------------------------------------------
-// Versions
-
 /**
  * A film's versions: its production ledger's (`versions`, oldest first; the
  * last is open), each with a folder when `folders` names its number, the
@@ -247,9 +212,6 @@ export const pickVersion = (
       }),
   );
 };
-
-// ---------------------------------------------------------------------------
-// The model
 
 const STAGES: ReadonlyArray<Stage> = Stage.literals;
 
@@ -806,7 +768,6 @@ const markersOf = (
     href: pageHref.ask(ask.id),
   }));
   const placed = clock.beats.map((b) => ({ spec: { id: b.id }, start: b.start, dur: b.dur }));
-  // A note's time is on the registered film's clock: a version folder's flags none.
   const notes = Bool.match(sources.version.files === 'film', {
     onFalse: (): ReadonlyArray<Marker> => [],
     onTrue: () =>

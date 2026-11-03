@@ -1,14 +1,3 @@
-// Version 2's colour script: its acts (`acts.ts` here) lit by the film's
-// lights (`../light.ts`, where each light and its lift are made):
-//   - cold open: a cool, even room without sun;
-//   - message: the peach afternoon going toward dusk;
-//   - faith: a hazed noon, the dark world's own black in `spoke`;
-//   - forgiveness, the valley: sunset on `declared` and the cross, the court
-//     at first light after it, and the day coming up in `robe` as the loom
-//     weaves (its drawing's own light);
-//   - power: early gold morning, warm cream;
-//   - landing: teal day, the lightest touch.
-
 import type { Light } from '@manna/film/canvas';
 import { membersOf } from '@manna/film/core';
 import { Result } from 'effect';

@@ -65,7 +65,6 @@ const put = (
       sha256: change.sha256 ?? sha256Hex(MP3),
       rss: { ...RECORD_168.rss, render: change.render ?? RECORD_168.rss.render },
     };
-    // The memory check as a run under another cap recorded it.
     if (change.limit !== undefined)
       record.checks = {
         ...record.checks,

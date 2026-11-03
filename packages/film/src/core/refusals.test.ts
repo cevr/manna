@@ -1,6 +1,3 @@
-// A refusal over a missing render names the command that makes it: run as
-// printed, it renders the very scene and variant refused.
-
 import { describe, expect, test } from 'bun:test';
 import { SceneNotRendered } from './refusals.ts';
 

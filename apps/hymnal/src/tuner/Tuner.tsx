@@ -292,7 +292,6 @@ export function Tuner({
   const [shown, setShown] = useState<Shown>(nothing);
   const [label, setLabel] = useState('Listening');
   const [hint, setHint] = useState(hintOf(Option.none(), Option.none()));
-  // None is Auto: each frame is read against the nearest string.
   const [target, setTarget] = useState<Option.Option<StringId>>(Option.none());
   const needle = useSharedValue(0);
   const inTune = useSharedValue(0);
@@ -300,7 +299,6 @@ export function Tuner({
   const session = useRef<Option.Option<Session>>(Option.none());
   const rate = useRef(0);
   const latched = useRef<Latch>(unlatched);
-  // Where the focus stands after the last frame read; `unfocused` again on each start and each rest.
   const focused = useRef<Focus>(unfocused);
   const busy = useRef(false);
   const frames = useRef(0);
@@ -311,7 +309,6 @@ export function Tuner({
     at: number;
     pending: Option.Option<Fiber.Fiber<void>>;
   }>({ label: 'Listening', at: 0, pending: Option.none() });
-  // The latest props the session's work reads, so the subscriptions stay put.
   const latest = useRef({ device, source, pause });
   latest.current = { device, source, pause };
 
@@ -337,7 +334,6 @@ export function Tuner({
         said.label = words;
         said.at = yield* Clock.currentTimeMillis;
         setLabel(words);
-        // A screen covered, away or closed shows its words but says none of them.
         if (!Option.exists(session.current, voiced)) return;
         AccessibilityInfo.announceForAccessibility(words);
         log('[tuner] announced');
@@ -447,7 +443,6 @@ export function Tuner({
               onFailure: () => tell(Event.Refused({ attempt })),
               onSuccess: (hz) => {
                 rate.current = hz;
-                // A new listen holds nothing from the last, even at another rate.
                 focused.current = unfocused;
                 log(`[tuner] listen source=${from.name} rate=${hz}`);
                 tell(Event.Started({ attempt }));
@@ -480,13 +475,11 @@ export function Tuner({
       inTune.value = Number(Option.exists(heard, (each) => each.inTune));
       latched.current = latch(latched.current, heard);
       const lit = latched.current.tuned;
-      // A render only when what the screen shows changes; the needle moves on the UI thread.
       setShown((was) => {
         if (lit === was.tuned && sameHeard(was.heard, heard)) return was;
         return { heard, tuned: lit };
       });
       setHint(hintOf(target, heard));
-      // `take` reads frames only while listening.
       voice('Listening', heard);
     },
     [needle, inTune, voice],
@@ -530,10 +523,8 @@ export function Tuner({
       if (Option.isSome(said.pending)) fork(Fiber.interrupt(said.pending.value));
       latched.current = unlatched;
     };
-    // The screen's life: one opening, one close; the source and the device are read through `latest`.
   }, []);
 
-  // Another route over the screen covers it (a hymn link pushed over it): the session stops, and listens again once shown.
   useFocusEffect(
     useCallback(() => {
       tell(Event.Covered({ covered: false }));
@@ -549,18 +540,14 @@ export function Tuner({
   const swing = useAnimatedStyle(() => ({
     transform: [{ rotate: `${(needle.value / NEEDLE_CENTS) * SWING}deg` }],
   }));
-  // In tune the needle is wide and in the accent; out of tune, thin and in ink: a shape as well as a colour.
   const plain = useAnimatedStyle(() => ({ opacity: 1 - inTune.value }));
   const held = useAnimatedStyle(() => ({ opacity: inTune.value }));
 
-  // What the reading shows comes from the phase, as its words do; none while denied.
   const name = nameOf(phase, target, shown.heard);
-  // Listening, the label is the last words said (at most one change a second); else the phase's own, at once.
   const readingLabel = Match.value(phase).pipe(
     Match.when('Listening', () => label),
     Match.orElse((now) => Option.getOrElse(wordsOf(now, Option.none()), () => label)),
   );
-  // The circle lit: the target, or in Auto the nearest string heard.
   const lit = Option.orElse(target, () => Option.map(shown.heard, (heard) => heard.string));
   const auto = Option.isNone(target);
   const heardInTune = Option.exists(shown.heard, (heard) => heard.inTune);
@@ -874,7 +861,6 @@ const styles = StyleSheet.create({
   message: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
   title: { fontSize: 20, fontWeight: '600', color: color.ink, textAlign: 'center' },
   gauge: { width: 2 * RADIUS + 20, height: RADIUS + 16, alignItems: 'center' },
-  // A spoke turns about the gauge's pivot; only its tick, at the rim, is drawn.
   spoke: {
     position: 'absolute',
     bottom: 8,

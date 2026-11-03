@@ -1,9 +1,3 @@
-// The ear (character-design, K1): flat skin inside a traced head's outline,
-// behind the features where the concept cuts it, with no ink and no rim of
-// its own. A round ear is an ellipse; a traced ear is its concept's outline;
-// a head turned to us shows both, each traced, the near one on screen left.
-// Pure.
-
 import { Match, Schema } from 'effect';
 import { decoder } from '../decode.ts';
 import { Paper, Tones, unrimmed } from '../paper.ts';

@@ -200,7 +200,6 @@ const postingsOf = ({
 }: ReturnType<typeof vocabularyOf>) => {
   const N = hymnLine.length - 1;
   const V = vocabList.length;
-  // Each word's first place in each hymn, as its word, hymn and line, and each word's count of them.
   const seenIn = new Int32Array(V).fill(-1);
   const count = new Int32Array(V);
   const firstWord: Array<number> = [];
@@ -507,7 +506,6 @@ const runFrom = (index: SearchIndex, s: number, from: number, to: number, T: num
     Number((((index.strong[index.lineWords[place] ?? 0] ?? 0) >> t) & 1) === 0);
   let t = first;
   let at = s;
-  // How loose the run is: each word left out or swapped, then each word matched by a typo alone.
   let gaps = 0;
   let typos = typo(s, first);
   while (t + 1 < T) {
@@ -589,8 +587,6 @@ interface Ranked {
 const byWords = (index: SearchIndex, terms: ReadonlyArray<string>): ReadonlyArray<Ranked> => {
   const T = terms.length;
   const N = index.hymns.length;
-  // A one-letter last word of a longer query is still being typed: it
-  // shapes the runs in one line, but does not choose the hymns.
   const chosenBy = T - Number(T > 1 && (terms[T - 1]?.length ?? 0) < 2);
   const marked = mark(index, terms);
   const scores = terms.slice(0, chosenBy).map((term, t) => scoresOf(index, term, t === T - 1));
@@ -603,22 +599,14 @@ const byWords = (index: SearchIndex, terms: ReadonlyArray<string>): ReadonlyArra
       candidates.push(h);
       titled[h] = Number(titleHolds(index, h, chosenBy));
     }
-  // The hymns whose title holds the query first, in the hymnal's order;
-  // then the rest by how many words they hold, how many of them with no
-  // typo (so a hymn that holds a word comes before one a typo of it finds),
-  // and the measures after these.
   const before = (a: number, b: number) =>
     (titled[b] ?? 0) - (titled[a] ?? 0) ||
     (titled[a] ?? 0) * (a - b) ||
     (cover[b] ?? 0) - (cover[a] ?? 0) ||
     (sure[b] ?? 0) - (sure[a] ?? 0);
   candidates.sort((a, b) => before(a, b) || (total[b] ?? 0) - (total[a] ?? 0) || a - b);
-  // Runs are measured for the strongest only: at most `HEAD`, each holding
-  // at most one query word fewer than the most any hymn holds.
   const most = cover[candidates[0] ?? 0] ?? 0;
-  // A prefix: the titled come first, each holding every word, then the rest by cover.
   const heads = candidates.filter((h, i) => i < HEAD && (cover[h] ?? 0) >= most - 1).length;
-  // One word runs no longer than itself: its line is the one it scores best in.
   const runOf = (h: number) => {
     if (T === 1) return { run: 1, line: strongestLine(index, scores, h) };
     return runIn(index, h, T);

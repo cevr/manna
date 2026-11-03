@@ -1,15 +1,3 @@
-// The GPU launcher: how a Chrome Bun spawns gets its GPU back on macOS. Bun
-// 1.4.3 spawns every Chrome with `--disable-gpu` (hard-coded beside
-// `--headless`; no option drops it), which no later flag undoes: Chrome's GPU
-// process then runs with `--use-gl=disabled`, and a page has no hardware
-// video encoder. A Chrome whose flags ask for the GPU (`GPU_FLAG`) on macOS
-// is spawned through a launcher (`gpuLauncher`, written by `tools/chrome.ts`
-// into the process's Chrome profile and named to Bun as its Chrome), which
-// drops that one flag and execs the real Chrome. Only there: on Linux Chrome
-// has no hardware encoder to reach, so `--disable-gpu` costs a render
-// nothing, and the browser tests ask for no GPU, so on every platform they
-// keep Bun's own spawn.
-
 /**
  * The flag a caller asks for Chrome's GPU with (`launchArgs`,
  * tools/browser.ts): on macOS it launches Chrome through the GPU launcher

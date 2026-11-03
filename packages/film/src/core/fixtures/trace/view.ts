@@ -1,8 +1,3 @@
-// A sheet drawn in pixels for the tracer's tests (`trace.test.ts`,
-// `trace.slow.test.ts`): a round skin head inked round over a cream body
-// inked round, its lower half a teal shade, and the view that reads it.
-// Tests only.
-
 import type { Raster } from '../../raster.ts';
 import type { traceView } from '../../trace.ts';
 

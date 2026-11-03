@@ -1,10 +1,6 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noGlobals, effect/noThrowStatement, effect/noNewError -- a build
  * harness at the host boundary: Bun's bundler and Solid's compiler are
  * Promise based, and a failed build is a defect of the test. */
-// Compiles the SSR proof's App twice with Solid's compiler, as an app would:
-// the server bundle (`ssr`, hydratable, target bun) and the client bundle
-// (`dom`, hydratable, target browser, Solid's development build so a
-// hydration mismatch is reported).
 import { transform } from '@solidjs/compiler';
 import type { BunPlugin } from 'bun';
 

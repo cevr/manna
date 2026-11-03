@@ -1,5 +1,3 @@
-// The tab's title the lab's shell prints (`page-shell.tsx`). Pure.
-
 import { Array as Arr, Option } from 'effect';
 
 /**

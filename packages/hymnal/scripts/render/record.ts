@@ -82,7 +82,6 @@ export const expectedOf = (
   const stems: Record<string, number> = {};
   for (const { stem, notes } of planOf(voices(midi), style, hymn)) {
     if (notes.length === 0) continue;
-    // The stem's MIDI file holds each note for at least a tick (`stemMidi`).
     const lastOff = Math.max(...notes.map((n) => Math.max(n.end, n.start + 1)));
     stems[stem.name] = Math.round(at(lastOff) * style.rate);
   }

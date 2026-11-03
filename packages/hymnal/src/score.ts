@@ -70,8 +70,6 @@ const closingKey = (harmony: readonly Note[]): Chord.Key => {
 export const findVerses = (melody: readonly Note[], expected: number, bar: number): Verses => {
   const keys = melody.map((note) => note.key);
   const end = melody.at(-1)?.end ?? 0;
-  // The time from the note before to this one: a long note or a rest ends a phrase. The first
-  // note follows no pause.
   const pause = (i: number) => {
     const [before, note] = [melody[i - 1], melody[i]];
     if (note === undefined) return Number.NEGATIVE_INFINITY;
@@ -181,22 +179,16 @@ export const findVerses = (melody: readonly Note[], expected: number, bar: numbe
       return d >= 0 && (rb[d] ?? 0) > (ra[d] ?? 0) ? b : a;
     }, candidates[0] ?? center);
   };
-  // How many keys right before note `i` are the melody's last keys, in a row: a verse starts
-  // where the one before it ended as the tune ends.
   const ends = (i: number) => {
     let k = 0;
     while (k < OPENING && i - 1 - k >= 0 && keys[i - 1 - k] === keys[keys.length - 1 - k]) k++;
     return k;
   };
-  // An intro is none or at least two bars: verse 1 starts on note 0 or two bars in.
   const firsts = [...new Set([0, ...nearby(wanted.intro, -1)])].filter(
     (i) => i === 0 || (melody[i]?.start ?? 0) >= 2 * bar,
   );
-  // Where a note nearby ends as the tune ends, the intro ends there; else after the longest pause.
   const ended = Math.max(...firsts.map(ends)) >= ENDING;
   const first = top(firsts, (i) => (ended ? [ends(i), pause(i)] : [pause(i)]), wanted.intro);
-  // How many of verse 1's opening keys (verse 1 starting on note `from`) note `i` begins with,
-  // in a row.
   const opens = (i: number, from = first) => {
     let k = 0;
     while (k < OPENING && keys[i + k] !== undefined && keys[i + k] === keys[from + k]) k++;
@@ -208,14 +200,8 @@ export const findVerses = (melody: readonly Note[], expected: number, bar: numbe
     const center = after + wanted.length;
     starts.push(top(nearby(center, after), (i) => [ends(i) + opens(i), pause(i)], center));
   }
-  // The read stands where each later verse starts after the tune's last keys, or on verse 1's
-  // opening keys, in full.
   const placed = (i: number) => ends(i) >= OPENING || opens(i) >= OPENING;
   if (starts.slice(1).every(placed)) return { spans: spans(starts), exact: false };
-  // Else verses that differ by more than a note near each start still play equal bars: the first
-  // verse 1 (note 0 or two bars in, an intro of at most half) whose equal split in ticks of the
-  // rest of the file puts each later verse on the nearest note to that tick, after the tune's
-  // last keys and on verse 1's opening keys in full.
   const nearest = (tick: number) => {
     const next = melody.findIndex((note) => note.start >= tick);
     if (next === -1) return melody.length - 1;

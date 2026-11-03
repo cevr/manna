@@ -64,7 +64,6 @@ export function Seeker(props: ScrubberProps) {
   const under = (x: number) => placeAt(x - KNOB / 2, width - KNOB, scrub.max);
   const live = useRef({ scrub, under });
   live.current = { scrub, under };
-  // The stretch of track (`TICK` seconds each) the knob was last dragged over.
   const stretch = useRef(0);
   /** Drags the knob to `seconds`: one tick for each stretch boundary it passes. */
   const dragTo = (seconds: number) => {
@@ -85,7 +84,6 @@ export function Seeker(props: ScrubberProps) {
     failOffsetY: [-UPWARDS, UPWARDS],
     maxPointers: 1,
     shouldCancelWhenOutside: false,
-    // Nothing is pressed until the drag is sideways: a swipe up fails the pan, and sends nothing.
     onActivate: ({ x }) => {
       grown.value = withSpring(GROWN, { damping: 12, stiffness: 260 });
       cue(plain('seek-grab'));
@@ -103,7 +101,6 @@ export function Seeker(props: ScrubberProps) {
       );
     },
   });
-  // A still touch, or one that moves less than the drag takes: the knob jumps there and lands, with no grab.
   const tap = useTapGesture({
     testID: 'seek-tap',
     runOnJS: true,
@@ -140,7 +137,6 @@ export function Seeker(props: ScrubberProps) {
             aria-disabled={scrub.still}
             accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
             onAccessibilityAction={act}
-            // VoiceOver's double tap is handled here and does nothing: a view that handles none gets it as a touch at its centre, which the tap would seek to.
             onAccessibilityTap={ignore}
             onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
             testID="seek"

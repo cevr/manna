@@ -1,10 +1,3 @@
-// A vertical film's burned-in captions: a short's phrases (`shortPhrases`),
-// or a talk's (`talkPhrases`), one at a time, centred where its layout puts
-// them (under a short's band) with no plate. A quoted word takes a gold
-// marker stroke behind it, swept across it as it is read, so a quotation
-// lights word by word and plain narration stays plain. Every phrase is set
-// once (its lines, each word's place); a frame only looks one up and draws it.
-
 import type { Phrase } from '../core/phrases.ts';
 import { SHORT_LAYOUT } from '../core/shorts.ts';
 import { clamp } from '../core/time.ts';
@@ -83,7 +76,6 @@ export const breakLines = (widths: ReadonlyArray<number>, space: number, width: 
   if (greedy.length < 2 || n > 12) return greedy;
   let best: number[][] = greedy;
   let bestWidth = widest(greedy, widths, space);
-  // Each mask bit i cuts after word i; keep the masks with the greedy's number of cuts.
   for (let mask = 0; mask < 1 << (n - 1); mask++) {
     const lines: number[][] = [[0]];
     for (let i = 1; i < n; i++) {
@@ -192,7 +184,6 @@ export const burnedCaptions = (
     if (phrase === undefined) return;
     ctx.save();
     ctx.setTransform(k, 0, 0, k, 0, 0);
-    // The marker first, under the words: each quoted word's, swept as it is read.
     ctx.fillStyle = style.highlight;
     ctx.globalAlpha = MARK_ALPHA;
     for (const w of phrase.words) {

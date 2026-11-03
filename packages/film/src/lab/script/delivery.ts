@@ -1,11 +1,3 @@
-// How the Script reader shows and edits a beat's delivery marks (`core/
-// delivery.ts`) and reads its staging take: the stress on a word and the
-// pause in the gap before it, the marks a tap on Stress or a gap's choice
-// leaves, the take's pace against the band the delivery rules time a line
-// at, the word heard at a moment of the take, and the stretch of the take
-// that says words `from`–`to`, and whether a poll of the takes shows a
-// line changed under the reader. Pure, so the reader and its tests share it.
-
 import { Array as Arr, Option } from 'effect';
 import {
   HOLD_DEFAULT,

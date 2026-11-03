@@ -1,9 +1,3 @@
-// The `film` CLI for this app's films: the framework's commands over
-// `src/films`, with this app's player served for `render` and `check`, and
-// the lab (its pages `review.html` and `play.html`, every film) for `lab`
-// (`bun cli.ts --help`). A server starts with its command and stops when it
-// ends, fails or is interrupted.
-
 import { PreviewServer, runFilmCli } from '@manna/film/tools';
 import { Config, Effect, Layer, Path } from 'effect';
 import { checkoutRootsOf } from './checkouts.ts';
@@ -92,12 +86,9 @@ export const appCli = (films: string, sounds: string, self: string): void =>
     previewServer: player(films),
     lab: {
       at: labAt,
-      // The lab's pages, this app's entries: its review, its lab, its player and its
-      // render page, and the server entries of those the server renders.
       pages: { pages: LAB_PAGES, servers: LAB_SERVERS },
       roots: checkoutRoots,
     },
-    // This CLI, for the lab's fresh `check --static` after each write.
     self: ['bun', self],
     judge: { rules: JUDGE_RULES },
     critique: { rules: CRITIQUE_RULES },

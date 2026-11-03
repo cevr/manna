@@ -1,27 +1,3 @@
-// earshot (github.com/Leonxlnx/earshot, MIT): the fitter `sfx fit` runs on a
-// recording to get its model, a parametric account of the sound (struck
-// modes, partial tracks, bands of noise) that core/synth/fit writes as code.
-// It is downloaded code, so it runs as an external tool and is trusted with
-// nothing:
-//
-// - pinned at one commit (`EARSHOT_PIN`), its clone and its virtualenv kept
-//   outside the repo (`EARSHOT_HOME`, else ~/.cache/bible-film/earshot); a
-//   clone at another commit, or with any change in it, is refused;
-// - its packages installed from wheels only (no build or install scripts),
-//   and none of the CLAP describer's (no torch or transformers): the fit
-//   asks for no description;
-// - run as `python -I -B` (no user site, no current folder, no bytecode
-//   written), with an environment of its own (Hugging Face offline, its
-//   caches in the run's scratch folder), under macOS's sandbox with no
-//   network, reading only its clone, its virtualenv, the interpreter's
-//   install and the recording's folder, and writing only the run's scratch
-//   folder, where it leaves the model JSON and nothing else is kept;
-// - never in CI or the gate: only `sfx fit` runs it, on the owner's machine.
-//
-// The driver decodes the recording itself (soundfile, resampled to 48 kHz
-// with scipy) because earshot's own loader shells out to ffmpeg. A run past
-// `EARSHOT_LIMIT` is stopped.
-
 import { Config, Context, Duration, Effect, FileSystem, Layer, Path } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { EarshotFailed, EarshotMissing } from './errors.ts';
@@ -150,7 +126,6 @@ export class Earshot extends Context.Service<Earshot, EarshotService>()(
               venv: fs.realPath(path.join(home, 'venv')),
               python: fs.realPath(python),
             });
-            // The interpreter's install: its binary's folder's parent (uv's cpython-<version>-<platform>).
             const install = path.dirname(path.dirname(real.python));
             const command = sandboxArgs(
               {

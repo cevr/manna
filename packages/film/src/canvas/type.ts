@@ -1,7 +1,3 @@
-// Lettering. Text arrives glyph by glyph — written on like a pen, or popped in
-// like cut-out letters — and every glyph boils a little so type sits in the
-// same hand-made world as the drawings.
-
 import { type Hand, sub } from './ink.ts';
 import { probeOf, recordText, textExtent } from './probe.ts';
 import { hash2, noise1 } from '../core/random.ts';
@@ -47,7 +43,6 @@ export interface WriteOptions {
 const glyphs = (ctx: CanvasRenderingContext2D, text: string, style: TextStyle) => {
   ctx.font = font(style);
   const track = (style.tracking ?? 0) * style.size;
-  // Grapheme clusters, so combining marks (Greek accents, Hebrew points) stay on their letter.
   const chars = Array.from(graphemes.segment(text), (g) => g.segment);
   const xs: number[] = [];
   const ws: number[] = [];
@@ -57,7 +52,6 @@ const glyphs = (ctx: CanvasRenderingContext2D, text: string, style: TextStyle) =
   for (const ch of chars) {
     xs.push(x);
     prefix += ch;
-    // Advance by the kerned prefix, not the lone glyph.
     const after = ctx.measureText(prefix).width;
     const w = after - before;
     before = after;
@@ -194,7 +188,6 @@ export const write = (
   const { chars, xs, ws, width } = glyphs(ctx, text, style);
   const fill = fillLevel(opts.fill);
   const outline = opts.outline ?? 0;
-  // Neither filled nor outlined, the line draws nothing, and the check sees nothing.
   if (!inks(fill, outline)) return width;
   const x0 = leftEdge(style.align ?? 'left', x, width);
   const progress = clamp(opts.progress ?? 1);
@@ -207,9 +200,7 @@ export const write = (
   ctx.textAlign = 'left';
   ctx.fillStyle = style.color;
   const baseAlpha = ctx.globalAlpha * (opts.alpha ?? 1);
-  // Each glyph's own 0→1, overlapping its neighbours.
   const spread = reveal === 'write' ? 1 : 3;
-  // Only a check attaches a probe: the visible glyphs' span and their strongest opacity.
   const probe = probeOf(ctx);
   let shownFrom = Infinity;
   let shownTo = -Infinity;
@@ -330,7 +321,6 @@ const writeWhole = (
     return width;
   }
   const align = style.align ?? 'left';
-  // x is the line's left edge for 'left', its centre for 'center', its right edge for 'right'.
   const right = align === 'center' ? x + width / 2 : align === 'right' ? x : x + width;
   const p = clamp(opts.progress ?? 1);
   const b = opts.boil ?? 0.6;

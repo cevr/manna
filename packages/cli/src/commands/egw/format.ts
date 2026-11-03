@@ -82,10 +82,6 @@ export const formatRemoteHit = (hit: EGWSchemas.SearchHit, index: number): strin
   return `  ${index + 1}. ${ref}${title}${gated}\n     ${snippet}`;
 };
 
-// ---------------------------------------------------------------------------
-// §9 hybrid search
-// ---------------------------------------------------------------------------
-
 /** Why the vector leg did not run, in the terms a reader can act on.
  *
  *  §9.6 makes vector absence a *typed value on every result* rather than a
@@ -120,16 +116,7 @@ const formatSearchHit = (hit: SearchParagraphHit, index: number, full: boolean):
     provenance = `  [${legs.join(', ')}]`;
   }
   const snippet = snippetOf(hit.snippet, full);
-  // The book code stands in for a paragraph the corpus stores without a
-  // citation, exactly as `paragraphRefcode` above falls back to the publication
-  // code: the line still has to name where the text came from.
   const refcode = Option.getOrElse(hit.refcode, () => hit.bookCode);
-  // Says what the row is when it is not prose. A chapter title and a sentence
-  // print identically otherwise — a refcode and a line of text — and BM25
-  // normalizes by length, so a short title containing the whole query outranks
-  // the paragraphs that discuss it. Headings are 17.7% of the corpus and can be
-  // most of a result page: 32 of the top 40 for `latter rain`. The ranking
-  // puts both kinds after prose; the label says why a row is down there.
   let kind = '';
   if (hit.isHeading) {
     kind = ' [chapter]';
@@ -169,8 +156,6 @@ export const formatSearchResult = (
   if (topics.length > 0) {
     lines.push(`Topics (${String(topics.length)}):`);
     for (const topic of topics) {
-      // `/wiki/<slug>`, which is the route `route/codec.ts` decodes. A bare
-      // `/<slug>` is not a route this app has, so the printed link 404s.
       lines.push(`  • ${topic.title} [${topic.status}] — /wiki/${topic.slug}`);
     }
     lines.push('');

@@ -112,7 +112,6 @@ const mountPage = ({ number, choice }: Case) => {
       </RegistryContext>,
     ),
   );
-  // The follow measures a line's view as it scrolls to it: each measure is the line it asks for.
   lines().forEach((line, k) =>
     Object.assign(line, {
       measureLayout: () => {
@@ -166,7 +165,6 @@ type Page = ReturnType<typeof mountPage>;
 const countOf = (page: Page, k: number) =>
   Arr.makeBy(page.n, (index) => {
     page.beat(index);
-    // Line j's own box: its parent, led by it, holding the pulse beside it, not in it.
     const over = (bar: HTMLElement) =>
       page.lines().flatMap((line, j) => {
         const box = line.parentElement;

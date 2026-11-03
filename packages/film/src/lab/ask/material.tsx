@@ -1,17 +1,3 @@
-// The material an ask's section shows, in place, each through the part its
-// own view draws it with, over the same reads: a set's document as the set's
-// page reads it (`Markdown`, a long one clamped with Read all, so the
-// question stays near it), a script in the Script reader (a film's or a
-// series draft's, named as its page names it, its staging takes played and
-// its delivery marks written as on the Script and draft pages), the Board's
-// panels as the Board shows them (`PanelFigure`: each thumb, the words it
-// holds over and its mark; a still opens large), a video in the review's
-// player (`PlayedAlone`), a take as the studio plays it. Each part says
-// where its material stands while it is not shown: read under way, could
-// not be read (and why), or no longer there. Each part carries its own look
-// (`PlaceStyle`), so it rides only on a page that shows it. Nothing here is
-// a copy of a view: a fix to the view is a fix here.
-
 import { useAtomValue } from '@manna/atom-solid';
 import { Dialog } from '@manna/ui/dialog';
 import * as UrlAtom from '@manna/url-state/atom';
@@ -144,7 +130,6 @@ const Clamped = (props: ParentProps) => {
   const [long, setLong] = createSignal(false, { ownedWrite: true });
   let outer = Option.none<HTMLElement>();
   let words = Option.none<HTMLElement>();
-  // Once laid out, and as the words grow (a document's text arrives after it is drawn).
   createEffect(
     () => true,
     () =>
@@ -164,8 +149,6 @@ const Clamped = (props: ParentProps) => {
   };
   const id = createUniqueId();
   let panel = Option.none<HTMLElement>();
-  // Show less folds the words back under the button, which keeps the focus; the
-  // document's top comes back into view when it had scrolled past.
   const toggle = () => {
     const shutting = untrack(open);
     setOpen(!shutting);
@@ -397,7 +380,6 @@ const AskPanelThumb = (props: { readonly film: string; readonly panel: Panel }) 
 export const BoardPart = (props: { readonly block: BlockOf<'board'> }) => {
   const { meta } = useAskRoot();
   const read = useAtomValue(() => meta.board(props.block.film));
-  // The words each panel holds over are the script's: read as every reader of the film reads it.
   const script = useAtomValue(() => meta.script(props.block.film));
   const beats = createMemo(() =>
     Option.map(AsyncResult.value(read()), (board) =>
@@ -657,9 +639,6 @@ const CopySaid = (props: { readonly copy: PhoneCopy }) => (
 const ProxyPending = (props: { readonly video: ReviewVideo }) => {
   const { actions } = useAskRoot();
   const failed = () => props.video.phone === 'failed';
-  // Its still, while it can be drawn: one that cannot (a video no frame is read from) leaves the
-  // box empty at its 16:9, never a broken image. Kept by the still's address, so another video's
-  // is drawn afresh.
   const still = () => reviewFrameUrl(props.video.ref, Option.none(), POSTER_W);
   const [undrawn, setUndrawn] = createSignal(Option.none<string>(), { ownedWrite: true });
   const drawn = () => !Option.contains(undrawn(), still());

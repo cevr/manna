@@ -1,13 +1,3 @@
-// A film's render cache pruned: each segment no render used for the days
-// given and no render's record names goes, for good; one the pruning render
-// used, one a record names, a folder a render is still drawing (no record)
-// and everything outside the segments folder stay. `--days 0` keeps exactly
-// what the records name, and is refused on a cache with none or while a
-// video the catalogue holds has none. A prune by hand is refused while a
-// render holds the cache, and nothing is read or deleted through a link, nor
-// a lock file made through one. Explicit times, over a project folder in memory,
-// and on disk where a link must be real.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Cause, Effect, Exit, FileSystem, Option, Path, Schema, type Scope } from 'effect';
@@ -147,7 +137,6 @@ describe('pruning a film’s render cache', () => {
   it.effect('with 0 days keeps exactly what the newest render of each output used', () => {
     const files = new Map<string, Uint8Array>();
     const record = (key: string) => `${folder}/${key}/segment.json`;
-    // a and b written before renders marked them, a millisecond apart.
     const mtimes = new Map([
       [record('a'), NOW - 2],
       [record('b'), NOW - 1],
@@ -158,7 +147,6 @@ describe('pruning a film’s render cache', () => {
       yield* kept('earlier', 0);
       yield* kept('stray', 0);
       yield* recordRender(out, '/out/f/film/main.mp4', NOW - 10, ['earlier', 'a']);
-      // The film rendered again: its record now names what this render used.
       yield* recordRender(out, '/out/f/film/main.mp4', NOW, ['a', 'b']);
       yield* recordRender(out, '/out/f/acts/one/main.mp4', NOW, ['act']);
       const pruned = yield* prune({ days: 0 });
@@ -204,7 +192,6 @@ describe('pruning a film’s render cache', () => {
           ),
         );
         expect(left(files)).toEqual(['film', 'scene']);
-        // Their renders recorded, the prune runs.
         yield* recordRender(out, '/out/f/film/main.mp4', NOW, ['film']);
         yield* recordRender(out, '/out/f/acts/one/main.mp4', NOW, []);
         expect((yield* prune({ days: 0 })).removed).toEqual([]);
@@ -308,7 +295,6 @@ describe('pruning a film’s render cache', () => {
       );
       expect(busy).toEqual(Option.some(CacheBusy.make({ folder: '/out/f/cache' })));
       expect(left(files)).toEqual(['old']);
-      // Let go, the cache is pruned.
       expect((yield* prune()).removed.map((s) => s.key)).toEqual(['old']);
     }).pipe(over(files));
   });
@@ -460,7 +446,6 @@ describe('pruning a film’s render cache through a link', () => {
   );
 });
 
-// A segment pruned by a render runs holding the cache (`pruneHeld`): its own hold is not refused.
 describe('pruning held', () => {
   it.effect('runs while the caller holds the cache', () => {
     const files = new Map<string, Uint8Array>();

@@ -1,12 +1,3 @@
-// The lab's browser tests: the ask page (`openAsk`, the real `mountAsk` in
-// `fixtures/ask-page.ts`) bundled with Solid's compiler, served to a tab of
-// the test process's Chrome (`browsers.ts`) at its own origin, with the lab
-// API answered by routes the test gives (then the defaults below). Every
-// request the page makes is kept, so a test can read what the lab wrote. The
-// render page (`openRender`) is served the same way, and a page rendered on
-// the server and hydrated (`openServed`) too; the ask's videos are real
-// media (`TONE`) unless a test says not.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   Array as Arr,
@@ -227,11 +218,6 @@ export const bundleOf = (entry: string) => Effect.runSync(Effect.cached(bundled(
 const scriptAsset = (entry: string, name: string): Effect.Effect<Asset> =>
   Effect.map(bundled(entry), (js) => asset(name, respond(js, 'text/javascript')));
 
-/**
- * The ask page's script, the tokens and the player's styles: read as the
- * module loads, once per process, so no case's timeout counts
- * them (on a loaded runner the first cases spent 1-2 s waiting on them).
- */
 // oxlint-disable-next-line effect/noAsyncFunction -- the module's own load waits for its setup, so no case's timeout counts it
 const [askScript, tokens, playerCss] = await Effect.runPromise(
   Effect.all(
@@ -365,7 +351,6 @@ const asGet = (method: string): string => {
 const apiAnswer =
   (prefix: string, routes: ReadonlyArray<FakeRoute>, asked: Array<Asked>) =>
   (request: Request): Effect.Effect<Option.Option<Response>> => {
-    // Past `prefix` when under it (`/notes/wait`), else whole (`/api/review/build`).
     const under = Option.liftPredicate(request.url.pathname, (p) => p.startsWith(`${prefix}/`));
     const made: Asked = {
       method: request.method,
@@ -376,7 +361,6 @@ const apiAnswer =
       body: bodyOf(request),
     };
     asked.push(made);
-    // A HEAD is its GET's answer, as the lab's server answers it (the browser drops the body).
     const method = asGet(request.method);
     const found = Option.orElse(
       Option.fromUndefinedOr(routes.find((f) => f.method === method && f.path.test(made.path))),
@@ -868,8 +852,6 @@ export const openServed = Effect.fn('lab.fixture.served')(function* (
       Option.fromUndefinedOr(at.faceHeld),
     ),
   });
-  // A page served cut (its document carries the mark) is rendered anew; any other,
-  // a render that ended before `at.cut` among them, hydrates the server's markup.
   const mounted = Effect.suspend(() => {
     const servedCut = Option.exists(Arr.last(documents), (served) =>
       served.html.includes(PAGE_CUT_MARK),

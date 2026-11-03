@@ -1,17 +1,3 @@
-// The asks' routes, served by `film lab` (`AsksGroup` in `core/api.ts`): an
-// ask read as its record, or with the page of asks it is on, and its answers, each section's in order,
-// which move its machine (`AskStore.answerPage`); each answer is kept, so a
-// reload or the phone opens the ask where it was left. A page opened before
-// the one-page ask sends one step, taken as one section (`sectionsPosted`).
-// An ask's images keep the receipt rule (`receipted` in `ask-store.ts`): an
-// image whose src the receipt names is served only as its copy. Each
-// file-served image of an image block or an option is copied as the ask is
-// made, or the make is refused (`AskRefused`, naming the src). A board
-// block's panels and a video's poster or frame show live and bind nothing.
-// A copy's bytes are read once and checked against its hash before they are
-// answered (`AskStore.shownFile`), so the immutable copy a browser keeps is
-// the one the receipt holds.
-
 import { Effect, Option, Record } from 'effect';
 import { HttpServerResponse } from 'effect/http';
 import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';

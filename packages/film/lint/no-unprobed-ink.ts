@@ -1,23 +1,3 @@
-// `film/no-unprobed-ink`: `film check` sees ink only where the kit records it
-// (`stroke` and `cutout` in ink.ts and cutout.ts, `write` and `block`
-// in type.ts). A stroke or a line of text drawn straight on the context is
-// invisible to it, so it can run through a line of text and pass. A film draws
-// ink through the kit, or wraps a deliberate exception (texture that never
-// crosses text) in the kit's `unprobed(ctx, () => …)`, which says so where it
-// is drawn.
-//
-// The rule reads the ink method off any object, however it is spelled:
-// `ctx.stroke`, `ctx['stroke']`, `ctx.fillText.call(…)`, or destructured
-// (`const { fillText } = ctx`). A namespace import (`Canvas.stroke(ctx)`) is the
-// kit, not a context. The exemption is the kit's `unprobed`
-// (`@manna/film/canvas`), by its binding (`nodes.ts`): imported by name,
-// under an alias, or read off the kit imported whole. A local function, or
-// another module's export, that happens to be called `unprobed` exempts
-// nothing.
-//
-// Raw `fill`/`fillRect` are left out on purpose: they are backdrops and eyes,
-// which cover text rather than cross it.
-
 import { Effect, Option } from 'effect';
 import {
   Diagnostic,

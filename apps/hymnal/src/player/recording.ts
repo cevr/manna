@@ -107,8 +107,6 @@ export const recordingsOver = (device: PlaybackApi): PlaybackApi => {
           ),
         );
       }),
-    // A failure status may precede play's rejection. Keep the reader
-    // observing until this owner and its one fallback have answered.
     status: Effect.map(device.status, (status) =>
       selected(
         Option.match(preparing, {

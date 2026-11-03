@@ -1,11 +1,3 @@
-// The render page, framework-free: an app's `index.html` (the lab's export
-// place `/films/<name>/export`, or the PreviewServer's `/?film=<name>&export`) calls
-// `mountRender(films)`: the film with no chrome (its scenes, or its Board when
-// the address says `board`, `pictureOn`), and `window.__film` for the
-// renderer and the easel. Its own module, so the encoder
-// (`encode.ts`, mediabunny) is the render page's alone: the studio's pages,
-// which mount the preview (`main.ts`), never load it.
-
 import type { Film, RenderOptions } from '../canvas/film.ts';
 import type { ProbeSink } from '../canvas/probe.ts';
 import { Footage, type FootageShown, footageAt, footageReads } from '../browser/footage.ts';
@@ -116,7 +108,6 @@ const withFootageRun = <A>(
               Effect.runPromiseWith(context)(
                 Effect.map(run.next, (footage): FootageShown => ({ footage })),
               );
-            // `use`'s own failure (a frame missing, an encoder's) is the caller's, as it was thrown.
             return yield* Effect.promise(() => use(next));
           }),
         ),
@@ -163,7 +154,6 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
       return canvasBase64(canvas, type);
     },
     probe: async (i) => {
-      // A film that reads footage records each frame of it drawn; a drawn film's probe is as it was.
       const sink: ProbeSink = Option.match(footageReads(film), {
         onNone: () => ({ texts: [], inks: [] }),
         onSome: () => ({ texts: [], inks: [], footage: [] }),
@@ -181,7 +171,6 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
     encode: async (from, to, scale, copies, encoder) => {
       const began = nowMs();
       let drawing = 0;
-      // The chunk's frames' footage is decoded as one run, each packet at most once.
       const times = Array.from({ length: to - from }, (_, k) => secondsAt(from + k, film.fps));
       const chunk = await withFootageRun(host, film, times, (next) =>
         encodeChunk(
@@ -197,7 +186,6 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
           encoder,
         ),
       );
-      // Each copy the page made, as base64; one it did not make is left out.
       const made = Object.fromEntries(
         (['master', 'share'] as const).flatMap((copy) => {
           const bytes = chunk[copy];
@@ -223,7 +211,6 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
       await draw(i);
       return canvasLuma(canvas, area);
     },
-    // One frame at a time, each timed alone: its footage decoded before its clock starts.
     drawTimes: (frames) =>
       frames.reduce<Promise<ReadonlyArray<number>>>(
         async (before, i) => [...(await before), drawn(i, await footageOf(i))],
@@ -240,7 +227,6 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
       drawWith(i, await footageOf(i), { captions: false, probe: sink });
       return figures;
     },
-    // Read from the film's own decision, drawing nothing: a film that makes none reads its seconds in every frame.
     filmTimed: (from, to) =>
       Array.from({ length: Math.max(0, to - from) }, (_, k) =>
         Option.match(Option.fromUndefinedOr(film.filmTimed), {

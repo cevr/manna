@@ -92,8 +92,6 @@ const prerender = Effect.gen(function* () {
   const build = yield* readBuild(dist);
   yield* Effect.forEach(PAGES, (page) => writePage(dist, page, build), { concurrency: 4 });
 
-  // The art the pages import, emitted by the server build under the same
-  // fingerprinted names the pages print.
   yield* fs.copy(path.resolve('.prerender', 'assets'), path.join(dist, 'assets'), {
     overwrite: true,
   });
@@ -104,7 +102,6 @@ const prerender = Effect.gen(function* () {
   yield* fs.writeFileString(path.join(dist, 'llms.txt'), llmsTxt(PAGES));
   yield* fs.writeFileString(path.join(dist, 'site.webmanifest'), `${manifest}\n`);
 
-  // Vite's manifest has been read; the site does not serve it.
   yield* fs.remove(path.join(dist, '.vite'), { recursive: true });
   yield* Effect.logInfo('prerender.done').pipe(Effect.annotateLogs({ pages: PAGES.length }));
 });

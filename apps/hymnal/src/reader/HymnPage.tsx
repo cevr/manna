@@ -105,7 +105,6 @@ export const HymnPage = memo(function HymnPage({
   const move = useAtomValue(reader.move(hymn.number));
   const placement = useAtomValue(reader.effectivePlacement(hymn.number));
   const wordsBook = useMemo(() => reader.book.of(hymn.number), [reader.book, hymn.number]);
-  // The hymn's syllables are drawn with chords on or off, so its string is decoded once it is shown.
   const book = useMemo(
     () => reader.book.of(hymn.number, placement),
     [reader.book, hymn.number, placement],
@@ -126,7 +125,6 @@ export const HymnPage = memo(function HymnPage({
   });
   const follow = useFollow(hymn.number);
   const router = useRouter();
-  // The tap reads the key played at the tap, and stays one function so the chords do not draw again.
   const now = useRef({ router, played });
   now.current = { router, played };
   const tap = useCallback(
@@ -281,7 +279,6 @@ const Sections = memo(function Sections({
       }),
     [hymn, chords],
   );
-  // With chords off, only the bundled syllable text is used.
   const syllables = useMemo(
     () =>
       Option.match(book, {
@@ -413,21 +410,13 @@ export function NoHymn({ number }: { readonly number: string }) {
 }
 
 const styles = StyleSheet.create({
-  // A pager page is drawn before the pager's height is known, at its words'
-  // height; once the page takes the pager's height, iOS keeps this frame at
-  // the words' height unless it is bounded by its page, and a frame as tall as
-  // its words has nothing to scroll.
   frame: { flex: 1, maxHeight: '100%' },
-  // The pill a hand scroll shows stands over the sounding bar, which lies over the page's foot.
   overBar: { position: 'absolute', left: 0, right: 0, top: 0, bottom: RISE },
   page: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 48, gap: 24 },
   head: { gap: 4 },
-  // The quiet line is a button as wide as its words, so a tap beside it does nothing.
   about: { alignSelf: 'flex-start' },
   topic: { fontSize: 13, color: color.muted },
   pressed: { opacity: 0.5 },
-  // The number and title share a baseline; the Favourite button sits at the
-  // row's top, level with their first line.
   name: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   words: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexShrink: 1 },
   number: { fontSize: 22, fontWeight: '600', fontVariant: ['tabular-nums'] },

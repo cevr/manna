@@ -1,15 +1,3 @@
-// The parchment page of `word` (the Board's `word.all`, `word.short` and
-// `word.fig`), drawn as the court set is drawn (`court-set.ts`): in the
-// Board's pixels at the lead's size, each prop one paper creased once at the
-// light's angle and lined in the film's ink, its far side a hue of its own
-// (CRAFT rule 12). The warm peach page and the sun's shafts across it from
-// the upper left; the lilac shadows things cast on it, down and to the right,
-// away from the sun; the gold line, a strip of gold paper, the one thing on
-// the page that glows; the two stone tablets of the law, round at the top,
-// five lines on each, cut into the stone or lit gold; the green fig leaf,
-// lobed, cut from one paper, its veins its own shade. Pure: the same pose
-// draws the same page.
-
 import { type Hex, clearOf, mix, ramp, rounded, unprobed } from '@manna/film/canvas';
 import { clamp } from '@manna/film/core';
 import { type Pt, keyLight, shading } from '@manna/film/style';
@@ -34,8 +22,6 @@ const trace = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>) => {
   pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
   ctx.closePath();
 };
-
-// ─── the page ────────────────────────────────────────────────────────────────
 
 /** The page's paper: the film's cream warmed toward its peach, as the kept panels lay it. */
 export const PAGE: Hex = mix(C.cream, C.peachTop, 0.3);
@@ -150,8 +136,6 @@ export const cast = (
   ctx.restore();
 };
 
-// ─── the gold line ───────────────────────────────────────────────────────────
-
 /** The gold's glow: what it lays round a lit thing. */
 export const GOLD_GLOW: Hex = '#ffd35c';
 
@@ -219,8 +203,6 @@ export const goldLine = (
   unprobed(ctx, () => ctx.stroke());
   ctx.restore();
 };
-
-// ─── the tablets ─────────────────────────────────────────────────────────────
 
 /** Where a tablet's five lines lie: the first's and the last's height down it, and each line's length and thickness. */
 interface Lines {
@@ -377,7 +359,6 @@ const tabletLines = (ctx: CanvasRenderingContext2D, x0: number, p: TabletsPose, 
   for (let k = 0; k < LINES_EACH; k++) {
     const cy = p.y - h + h * (lines.first + ((lines.last - lines.first) * k) / (LINES_EACH - 1));
     const bar = rounded(cx, cy, len, thick, thick / 2);
-    // Cut into the stone: its shade.
     ctx.save();
     ctx.globalAlpha *= p.stone;
     ctx.fillStyle = STONE.shade;
@@ -386,7 +367,6 @@ const tabletLines = (ctx: CanvasRenderingContext2D, x0: number, p: TabletsPose, 
     ctx.restore();
     const lit = p.lit[from + k] ?? 0;
     if (lit <= 0) continue;
-    // Lit: its gold over the cut, and the glow close round it.
     ctx.save();
     ctx.globalAlpha *= p.stone * Math.min(1, lit);
     ctx.fillStyle = LIT.face;
@@ -405,8 +385,6 @@ const tabletLines = (ctx: CanvasRenderingContext2D, x0: number, p: TabletsPose, 
     );
   }
 };
-
-// ─── the fig leaf ────────────────────────────────────────────────────────────
 
 /** One lobe of a fig leaf: its angle off the leaf's tip (radians), its reach (a share of the leaf's) and its width. */
 interface Lobe {

@@ -1,7 +1,3 @@
-// A picture's brief in the Script reader, clipped to three lines on a phone
-// until More opens it: the film's reader fills it with its linked names
-// (`tied.tsx`, `Picture`), a series draft's with its text (`review/draft.tsx`).
-
 import { Show } from '@solidjs/web';
 import { Boolean as Bool, Option } from 'effect';
 import type { ParentProps } from 'solid-js';
@@ -21,8 +17,6 @@ export const BriefBox = (props: ParentProps) => {
   const [clips, setClips] = createSignal(false, { ownedWrite: true });
   const id = createUniqueId();
   let brief = Option.none<HTMLElement>();
-  // As the page lays it out, whether it runs past its lines on a phone, open or shut: the box shut keeps the whole
-  // height it scrolls. The stylesheet says where it shuts (and so where More shows), the phone's width.
   createEffect(
     () => true,
     () =>
@@ -50,7 +44,6 @@ export const BriefBox = (props: ParentProps) => {
           brief = Option.some(el);
         }}
         onFocusIn={(e) => {
-          // A key landing on a link the three lines hide opens it.
           const landed = e.target;
           if (
             landed instanceof HTMLElement &&

@@ -1,22 +1,3 @@
-// The library's walk of its code sounds, before anything renders: each graph
-// checked, and each sound it samples resolved first and put in place. Pure:
-// the library load lifts a refusal into its error channel.
-//
-// A sound is refused when it samples a name the library lacks, a sound that
-// is not code, or itself through others; when it plays a degree with no key;
-// when two of its nodes name one stream (they would draw the same numbers);
-// and when, at the most its draws allow, it is longer or writes more than a
-// render may. A sampled sound renders on its own seed, so its stream names
-// are its own: they are checked with it, never with the sounds that sample it.
-//
-// Each entry's code trial (core/sfx.ts `codeTrialOf`: a generated sound's
-// `code`, a recording's fit) is walked the same way, under its entry's name
-// and "(trial)", and resolved beside the code sounds. It is no code sound
-// itself, so nothing can sample it. A fit for a name the library does not
-// declare as a recording, or as code kept from one (`keptFit`, its entry
-// naming the recording's licence), is refused (`FitUnmatched`); a kept fit is
-// that entry's code, so it is no trial.
-
 import { Option, Predicate, Result, Schema } from 'effect';
 import {
   type CodeError,
@@ -167,7 +148,6 @@ const walkSound = (
     return Result.fail(
       CodeTooLong.make({ sound: name, measure: 'work', secs: bound.work, limit: MAX_CODE_WORK }),
     );
-  // The hash is the graph's and every sampled sound's, so an edit to a sampled sound moves it too.
   const sampledHashes = [...samples]
     .map(([sample, walked]) => `${sample}=${walked.sound.hash}`)
     .toSorted();
@@ -209,7 +189,6 @@ export const resolveCode = (
     const entry = soundEntry(library, name);
     if (Option.isNone(entry))
       return Result.fail(FitUnmatched.make({ sound: name, kind: 'undeclared' }));
-    // A fit is a recording's trial, or the code kept from one.
     const { kind } = entry.value;
     if (kind === 'recorded' || isKeptFit(entry.value)) continue;
     return Result.fail(FitUnmatched.make({ sound: name, kind }));

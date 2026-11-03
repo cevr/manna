@@ -1,8 +1,3 @@
-// The forms the burin cuts: bodies turned about an axis (a column, a robe,
-// a head, a scroll), with folds pressed into them; limbs swept along a path
-// (a sleeve, a beard's lock), carrying their own line coordinates; and plain
-// blocks. Every form is made once, from fixed numbers and a seed, in metres.
-
 import { BoxGeometry, BufferAttribute, BufferGeometry, SphereGeometry, Vector3 } from 'three';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -160,8 +155,6 @@ const smooth = (a: number, b: number, v: number) => {
 export const head = (s = 1): BufferGeometry => {
   const g = new SphereGeometry(1, 56, 40);
   const p = g.getAttribute('position');
-  // The engraver's accents, darker than the light makes them: the sockets
-  // and the eyes in them, under the brow and the nose, the mouth's line.
   const shade = new Float32Array(p.count);
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i);

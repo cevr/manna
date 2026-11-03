@@ -183,6 +183,5 @@ export const chordSlop = (lineHeight: number) => {
 const styles = StyleSheet.create({
   notice: { fontSize: 13, color: color.muted },
   chord: { fontSize: 15, lineHeight: 20, fontWeight: '600', paddingRight: 6 },
-  // As wide as a chord's own space after it, so a chordless box is never narrower than one.
   noChord: { width: 6 },
 });

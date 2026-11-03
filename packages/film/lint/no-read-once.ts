@@ -1,24 +1,3 @@
-// `film/no-read-once`: a lab browser test reads the page by waiting for the
-// value it asserts, never by reading once. A value read once is whatever the
-// page had drawn at that instant: a status line before its update lands, a
-// list before the write it shows comes back, a peak meter at the floor. That
-// passes on an idle machine and fails under load. The shared waits are in `packages/film/src/lab/fixtures/settled.ts`
-// (`textIs`, `textHas`, `countIs`, …).
-//
-// The tab (`lab/fixtures/tab.ts`) reads the page one way only, `evaluate`;
-// so refused in a `*.dom.test.ts` is an `evaluate(…)` (the tab's, or a
-// helper of that name: the tab is a value handed in, so its method is read by
-// its member's name) whose answer the runner's `expect` (`bun:test`'s,
-// `effect-bun-test`'s or bun's global, by its binding in `nodes.ts`; an
-// `expect` of the file's own asserts nothing) asserts or a matcher compares
-// with: directly, through a `const` bound to it (each read of the name), a
-// local helper whose arrow answers it (each call), a part of it
-// (`box.canvas`), a literal that holds it (`{ canvas }`) or a value computed
-// from it (`after - before`, `!open`, `` `at ${hash}` ``). An `evaluate` run
-// for what it does is an action, and passes; so does one whose kept answer
-// only a wait reads. An answer returned from a function body (`return yield*`)
-// is not followed.
-
 import { Effect, Option } from 'effect';
 import {
   Diagnostic,

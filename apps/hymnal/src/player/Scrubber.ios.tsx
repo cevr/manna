@@ -55,10 +55,8 @@ export function Scrubber(props: ScrubberProps) {
   );
   /** The place under the touch at `x`, along the track (the thumb's half inset at each end). */
   const under = (x: number) => placeAt(x - THUMB / 2, width - THUMB, scrub.max);
-  // The pan's callbacks read the bar as it is now, not as it was when the pan was made.
   const live = useRef({ scrub, under });
   live.current = { scrub, under };
-  // A still touch: the pan fails and the tap lands where the finger lifts, in either order.
   const tap = useTapGesture({
     testID: 'position-tap',
     runOnJS: true,
@@ -104,7 +102,6 @@ export function Scrubber(props: ScrubberProps) {
           accessibilityState={{ disabled: scrub.still }}
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
           onAccessibilityAction={act}
-          // VoiceOver's double tap is handled here and does nothing: a view that handles none gets it as a touch at its centre, which the tap would seek to.
           onAccessibilityTap={ignore}
           onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
           style={styles.bar}

@@ -1,7 +1,4 @@
 import { Redacted, Effect, FileSystem, Layer, Option, Path, Sink, Stream } from 'effect';
-// A fake member's stages, in a scratch folder: what each stage reads (its
-// source files, a fitted pose's files) and which drawings get renders.
-// Slow: `stages.ts` imports the parts command and the fit render.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -70,7 +67,6 @@ const withText = (png: Uint8Array) => {
   view.setUint32(0, data.length);
   chunk.set(typed, 4);
   view.setUint32(8 + data.length, crc32(typed));
-  // the signature (8 bytes) and the header chunk (25) lead every PNG
   return Uint8Array.from([...png.subarray(0, 33), ...chunk, ...png.subarray(33)]);
 };
 
@@ -99,7 +95,6 @@ const memberIn = (recorded: ReadonlyArray<string>) =>
     yield* write('cutout/raise/held/poses-1.png', 'png');
     yield* write('cutout/puppets.ts', 'export const PUPPETS = {};');
     for (const view of recorded) yield* write(`cutout/sheets/${view}/record.json`, '{}');
-    // the film's cast module, which the fit render loads by its path, and a file it imports
     yield* write(
       'films/in-its-order/rigs/cast.ts',
       "import { TABLE } from './table.ts';\nexport const CAST = TABLE;",
@@ -162,7 +157,6 @@ const leadFeastIn = Effect.gen(function* () {
   const sheet = path.join(member, 'cutout', 'sheets', 'front');
   yield* fs.makeDirectory(path.join(films, 'in-its-order', 'scenes'), { recursive: true });
   yield* fs.writeFileString(path.join(films, 'in-its-order', 'scenes', 'index.ts'), 'export {};\n');
-  // the film's cast module, which the fit stage's key reads; a stand-in, as no fit runs here
   yield* fs.makeDirectory(path.join(films, 'in-its-order', 'rigs'));
   yield* fs.writeFileString(path.join(films, 'in-its-order', 'rigs', 'cast.ts'), 'export {};\n');
   yield* fs.makeDirectory(path.join(member, 'cutout', 'sheets'), { recursive: true });
@@ -277,7 +271,6 @@ const partsOver = <E>(
           [`drawing:${FRONT.id}@lead-feast`, ...BUILT[upTo]].some((id) => id === s.id),
         );
         const report = yield* buildGraph(stages, {
-          // the member lies in a scratch folder and the stage sources in the repo
           root: '/',
           cache: at.cache,
           plan: false,
@@ -386,7 +379,6 @@ describe('memberStages', () => {
       expect(filesOf(stages, 'renders:turnaround-front@fake')).toEqual(
         expect.arrayContaining(yield* sourceFiles('renders')),
       );
-      // the fit runs the render, the page it draws in and the film's cast module, loaded by its path
       expect(ends(filesOf(stages, 'fit:poses-poses-1@fake'))).toEqual(
         expect.arrayContaining([
           'film/src/tools/cast-render.ts',
@@ -436,18 +428,14 @@ describe('memberStages', () => {
             ...(yield* sourceFiles('parts')),
           ]),
         );
-        // no head was committed: the one the cutter writes is new
         expect(parts?.state).toBe('ran');
         expect(report.okraCalls).toBe(0);
-        // run on a scratch sheets folder, never his own
         expect(spawned.map((c) => c.slice(0, 2))).toEqual([['bun', cutter]]);
         expect(spawned[0]?.[2]).not.toContain(dir);
         expect(yield* fs.readFile(head)).toEqual(kept);
-        // a committed head of the same pixels in other bytes holds
         yield* fs.writeFile(head, withText(kept));
         expect((yield* built([cutter])).parts?.state).toBe('ran');
         expect(yield* fs.readFile(head)).toEqual(withText(kept));
-        // a committed head of other pixels fails the stage, and writes nothing
         const committed = encodePng(pixels([40, 40, 200, 255]));
         yield* fs.writeFile(head, committed);
         const changed = (yield* built([cutter])).parts;
@@ -519,7 +507,6 @@ describe('memberStages', () => {
       () =>
         partsOver(({ at, run, spawned }) =>
           Effect.gen(function* () {
-            // `--check` writes nothing; `--reuse` lays every part again: the parts keep the time set here only under `--check`.
             const fs = yield* FileSystem.FileSystem;
             const parts = (yield* fs.readDirectory(at.sheet)).filter((f) => f.endsWith('.png'));
             expect(parts).toContain('head.png');
@@ -657,10 +644,8 @@ describe('memberStages', () => {
         );
         const inputs = clips.flatMap((c) => c.inputs);
         expect(inputs).toContainEqual({ _tag: 'Stage', id: 'train' });
-        // the reader's read files, beside the train: a read edit re-runs it with the train cached
         expect(inputs).toContainEqual({ _tag: 'File', path: '/reader/read.py' });
         expect(inputs).toContainEqual({ _tag: 'Stage', id: 'trainset' });
-        // the mp4 is the clip-make stage's output; its map is the provenance beside it
         expect(inputs).toContainEqual({ _tag: 'Stage', id: 'clip:b@fake' });
         expect(inputs).toContainEqual({ _tag: 'File', path: `${dir}/cutout/raise/clip/b.json` });
         expect(inputs).not.toContainEqual({ _tag: 'File', path: `${dir}/cutout/raise/clip/b.mp4` });
@@ -668,7 +653,6 @@ describe('memberStages', () => {
         expect(filesOf(clips, 'eval:clip:b@fake')).toEqual(
           expect.arrayContaining(yield* sourceFiles('chain')),
         );
-        // the decode and the map are the chain's code too
         expect(yield* sourceFiles('chain')).toContainEqual(
           expect.stringMatching(/\/cast-build\/clip-eval\.ts$/),
         );

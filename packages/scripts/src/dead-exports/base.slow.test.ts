@@ -102,8 +102,6 @@ describe('the debt held against its base', () => {
       }),
     ));
 
-  // A push of two commits: the first grows the debt, the second is unrelated.
-  // Against the head's parent the growth is hidden; against the pre-push SHA it is not.
   test('a push of several commits is held to the pre-push SHA, whatever the last commit touched', () =>
     run(
       Effect.gen(function* () {
@@ -142,7 +140,6 @@ describe('the debt held against its base', () => {
         yield* write(dir, FILES.check, '// the check\n');
         yield* commitDebt(dir, ['a', 'b'], 'adopt the check');
         expect(yield* grownOver(dir, FILES, Option.some(before), ['a', 'b'])).toEqual([]);
-        // The bypass: the debt file deleted, then recreated with more.
         yield* fs.remove(path.join(dir, FILES.debt));
         const deleted = yield* commit(dir, 'delete the debt');
         yield* commitDebt(dir, ['a', 'b', 'c'], 'recreate it with more');
@@ -152,7 +149,6 @@ describe('the debt held against its base', () => {
       }),
     ));
 
-  // `main` left behind while `origin/main` moved on: the branch left the newer one.
   test('a stale local main does not win over a current origin/main', () =>
     run(
       Effect.gen(function* () {

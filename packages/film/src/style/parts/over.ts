@@ -1,9 +1,3 @@
-// What lies on a garment with no line of its own: the judge's bands, two
-// tabs hanging under his chin a narrow gap apart, from their top down to
-// their ends, each wider at its end and splaying a little outward. They lie
-// under the head and over the garment, in a paper that takes no rim. How
-// they are cut is the house's (`rig/draw.ts`). Pure.
-
 import { Schema } from 'effect';
 import { decoder } from '../decode.ts';
 import { Paper, Tones, unrimmed } from '../paper.ts';

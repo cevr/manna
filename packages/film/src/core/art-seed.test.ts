@@ -2,12 +2,6 @@ import { describe, expect, test } from 'bun:test';
 import { Array as Arr, Option } from 'effect';
 import { type ArtAxis, type ArtDeck, artBrief, conflicts, drawBatch } from './art-seed.ts';
 
-// What the looks study relies on: a seed draws the same look forever (one
-// draw is pinned), a draw never holds an incompatible pair, it keeps its
-// distance from the existing looks and its batch-mates, a batch shares the
-// balanced axis out evenly, and adding an option leaves the seeds it does not
-// win as they were.
-
 type ArtOption = ArtAxis['options'][number];
 type Picks = Readonly<Record<string, string>>;
 
@@ -146,7 +140,6 @@ describe('art seed', () => {
       motion: 'push',
     };
     const brief = artBrief(DECK, { seed: 7, attempt: 0, picks, name: 'chalk-earth' }, 'seed-look');
-    // Only the medium (weight 3 of 8) differs from cutpaper: 37.5%.
     expect(brief).toContain('`cutpaper`, 38% apart');
     expect(brief).toContain('Seed `7`');
     expect(brief).toContain('`seed-look --seed 7`');
@@ -179,7 +172,6 @@ describe('art seed', () => {
         return { ...axis, options: [...axis.options, option('sepia')] };
       }),
     };
-    // A first attempt the new option did not win is the attempt it was before.
     const kept = SEEDS.flatMap((seed) =>
       Option.toArray(
         Option.filter(drawn(grown, seed), (d) => d.attempt === 0 && d.picks['palette'] !== 'sepia'),

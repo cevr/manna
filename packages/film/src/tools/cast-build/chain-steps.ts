@@ -1,8 +1,3 @@
-// The clip chain's pure steps (`chain.ts` runs them on a read clip): the
-// cut into runs, the gate and One Euro filter on a run's angles, the keys
-// a fit is run at, the corrections carried between keys, the figure and
-// its IoU, and each band's report. Pure: no file, process or clock.
-
 import { Schema } from 'effect';
 import type { Raster } from '../../core/raster.ts';
 

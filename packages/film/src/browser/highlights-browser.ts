@@ -1,7 +1,3 @@
-// The browser's own highlights (`highlights.ts`): the CSS Custom Highlight
-// API, a `Highlight` of `Range`s over the text under each name. A browser
-// without `CSS.highlights` paints nothing.
-
 import { Effect, Layer, Option } from 'effect';
 import { Highlights } from './highlights.ts';
 

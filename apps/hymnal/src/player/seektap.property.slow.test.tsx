@@ -114,7 +114,6 @@ const tapAt = (kind: BarKind, x: number, order: TapOrder, batch: Batch) => {
     act(() => touchUp(kind.tap, touch, order));
     return;
   }
-  // Each end in its own batch, each gesture read as its detector last drew it.
   const fail = () => act(() => gestureOf(kind.pan).onFinalize?.({ ...touch, canceled: true }));
   const land = () => {
     act(() => gestureOf(kind.tap).onActivate?.(touch));
@@ -133,7 +132,6 @@ const tapAt = (kind: BarKind, x: number, order: TapOrder, batch: Batch) => {
 /** The seeks a drag on a fresh bar sends when its finger lifts at `x`. */
 const draggedTo = (kind: BarKind, at: number, length: number, width: number, x: number) => {
   using bar = mount(kind, at, Option.some(length), width);
-  // The drag starts 30 points inside the bar from `x`'s nearer end.
   let start = x - 30;
   if (x < width / 2) start = x + 30;
   act(() => void drag(kind.pan, { x: start, y: 16, dx: x - start, dy: 0 }));
@@ -198,7 +196,6 @@ describe.each(BARS.map((kind) => [kind.name, kind] as const))('a tap on %s', (_,
       if (kind.cues) expect({ where, cues: bar.cues }).toEqual({ where, cues: ['seek-release'] });
       sent += expected.length;
     }
-    // Most generated taps land on another second than the one playing: the property is not vacuous.
     expect(sent).toBeGreaterThan(CASES / 2);
   });
 });

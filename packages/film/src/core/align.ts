@@ -1,11 +1,3 @@
-// A person's take is timed by what speech-to-text heard in it: the words it
-// heard carry the times, the script's words carry the text. The two are lined
-// up word by word (an edit-distance alignment), so a misheard word keeps its
-// place and a word nobody heard shares the gap its neighbours leave. The same
-// line-up places each beat inside one recording of the whole script.
-//
-// Pure: runs in the tools and the tests alike.
-
 import { Array as Arr, Option, Result } from 'effect';
 import { BeatUnplaced } from './errors.ts';
 import { normalizeWords } from './narration.ts';

@@ -1,10 +1,3 @@
-// An address as data: which part of a film a command works on, and the one
-// string it is keyed by, written and read back here. Its own module,
-// importing nothing of the film, so
-// `schema.ts` (a finding's address) and `address.ts` (resolving one against
-// the placed film, which reaches `schema.ts` through the layout) both read it
-// with no import cycle. `address.ts` re-exports it as the address's one face.
-
 import { Array as Arr, Match, Option, Schema } from 'effect';
 import { Segment } from './segment.ts';
 
@@ -23,7 +16,6 @@ export const PartId = Schema.String.check(
       PART_ID.test(id) ||
       `"${id}" is no id: lower case, digits and dashes, starting with a letter or a digit`,
   ),
-  // The pattern again, as a pattern: property tests generate ids from it.
   Schema.isPattern(PART_ID),
 );
 

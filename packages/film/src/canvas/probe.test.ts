@@ -1,9 +1,3 @@
-// The probe is attached to a context for one draw and detached after it, even
-// when the draw throws: the next frame's records must never land in the list
-// of a frame that failed. The same holds for `unprobed`, which puts the probe
-// back after a draw it hides from the check, and for `probePlate`, which
-// marks the lines drawn inside it as on its plate.
-
 import { describe, expect, test } from 'bun:test';
 import { Schema } from 'effect';
 import {

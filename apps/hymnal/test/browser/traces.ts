@@ -21,5 +21,4 @@
 
 Reflect.deleteProperty(console, 'createTask');
 Reflect.deleteProperty(console, 'timeStamp');
-// React writes the limit around each capture, so the setter ignores it: a read-only value would make that write throw.
 Object.defineProperty(Error, 'stackTraceLimit', { get: () => 0, set() {} });

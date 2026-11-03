@@ -1,7 +1,3 @@
-// A clip's given frames read off their pixels. Each frame is drawn at full
-// size (1066 x 1356, twice the canvas), about 100 ms a frame, so these checks
-// live in the slow suite, not the unit tests' budget.
-
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import { type Puppet, puppetOf } from '../../core/puppet.ts';
@@ -83,7 +79,6 @@ describe('clip frames', () => {
     expect(f.root[1]).toBeCloseTo(bottom + scale * (p.root[1] - 60), 3);
     expect(px(f.img, 0, 0)).toEqual([...PAPER, 255]);
     expect(px(f.img, 1065, 1355)).toEqual([...PAPER, 255]);
-    // the body column's centre stands on the canvas's centre line, unblurred
     expect(px(f.img, 533, Math.round(f.feet - 40))).toEqual([40, 40, 200, 255]);
   });
 
@@ -93,7 +88,6 @@ describe('clip frames', () => {
     expect(last.scale).toBe(first.scale);
     expect(last.root[0]).toBe(first.root[0]);
     expect(last.feet).toBe(first.feet);
-    // as read off the pixels: both stand on one row, though the last's sheet has more paper under its feet
     expect(Math.abs(standsOn(last.img, 533) - standsOn(first.img, 533))).toBeLessThanOrEqual(1);
     expect(standsOn(first.img, 533)).toBe(first.feet);
   });

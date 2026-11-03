@@ -279,7 +279,6 @@ describe('signing up', () => {
               Effect.andThen(addresses.keep(...args)),
             ),
         });
-        // The request's work starts now. The model's mail policy runs when settled.
         const eager = Background.of({
           run: (work) =>
             Effect.asVoid(
@@ -367,7 +366,6 @@ describe('signing up', () => {
     Effect.gen(function* () {
       const typos = ['', 'ann', 'ann@', '@example.com', 'ann@example', 'a b@example.com'];
       for (const [n, typed] of typos.entries()) {
-        // Each from a place of its own, under the minute's limit.
         const response = yield* signUp({ email: typed }, `198.51.100.${n}`);
         expect(header(response, 'location')).toBe(MAIL_PAGES.address);
       }
@@ -471,7 +469,6 @@ describe('confirming', () => {
       yield* signUp({ email: ANN });
       const [letter] = yield* letters;
       const token = tokenIn(letter?.text ?? '');
-      // Another subscriber's id under this one's signature, and a cut signature.
       const another = `c.${'A'.repeat(22)}.`;
       const others = [token.replace(/^c\.[\w-]{22}\./, another), token.slice(0, -4)];
       expect(others.every((other) => other !== token)).toBe(true);
@@ -653,7 +650,6 @@ describe('sending a film', () => {
       yield* joined(ANN);
       yield* admin(`{"film":"${FILM}"}`);
       const deliveries = yield* (yield* Queued).deliveries;
-      // The letter goes, and the delivery stops before its outcome is kept.
       const mailer = yield* Mailer;
       const gone = yield* Deferred.make<boolean>();
       const lost = Mailer.of({

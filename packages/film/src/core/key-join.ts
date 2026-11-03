@@ -1,18 +1,3 @@
-// How a drawn key joins the body it stands in: the rule of a swap's
-// compositing, read by the GL ink pass (`canvas/puppet-gl.ts`, which takes
-// these constants into its shader).
-//
-// The cut end: where the key's cut end lies over a body part's outline, the
-// body's ink under it is hidden. A body pixel the key does not cover, whose
-// colour is the line's ink, and which stands within the line's width of the
-// key's coverage takes the colour of the key's nearest covered pixel. Along
-// the key's inked side that pixel is the key's own line, so the line stays
-// one line; at its cut end it is the key's paint, so the torso's shoulder
-// line and side contour under the drawing go. The line's anti-aliased rim
-// goes with it: a body pixel beside one read as ink, standing nearer the ink
-// than the colour it would take, is hidden the same way, since a rim of 72 %
-// ink over cream paint lies about 98 from the ink, past KEY_JOIN_INK.
-
 import type { Rgb } from './cast-sheet-pixels.ts';
 import type { Raster } from './raster.ts';
 

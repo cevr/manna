@@ -1,20 +1,3 @@
-// The source files whose code makes each stage kind's bytes. Each kind names
-// the modules its code enters at; its sources are every local file those run
-// (`importClosure`), so a change anywhere in the code a stage runs stales the
-// stages of its kind with no VERSION bump; VERSION (`stages.ts`) stays for a
-// change of meaning outside that code. The train is keyed by the reader's own
-// files (`CastReader.sources`, the whole `reader/` folder), and drawing,
-// status, trainset and ask stages make their bytes from their inputs alone.
-// Entry paths are from this folder.
-//
-// A stage that runs a browser page is keyed by that page's own closure as
-// well (`pageSources`): the fit render draws in the app's render page, the
-// one file its CLI is given (the app's `RENDER_PAGE`), whose scripts no import
-// of the render reaches. A variable import (a module loaded
-// by its path at run time) is declared beside its kind in `STAGE_LOADS`, with
-// what it loads; a kind whose closure meets an undeclared one fails, so the
-// next one cannot hide.
-
 import { Effect, FileSystem, type Path } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 import { fileInput, type Input } from './graph.ts';

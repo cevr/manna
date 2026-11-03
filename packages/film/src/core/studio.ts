@@ -1,9 +1,3 @@
-// The lab's studio on the wire: what its panel reads (each beat's line as the
-// reading sheet sets it, and where its take stands) and what it sends (a
-// recorded take, or an earlier attempt to keep). Every body and answer is one
-// of these Schemas, decoded on both sides. Pure: the page and the tools share
-// them.
-
 import { Schema } from 'effect';
 import { Mark } from './delivery.ts';
 import { Line, TakeStaleReason } from './narration.ts';

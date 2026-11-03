@@ -1,20 +1,3 @@
-// The one stand-in 2D context, because bun has no canvas (`@manna/film/stand-in`,
-// for the framework's tests and a film's). It holds the drawing state a canvas
-// holds, starting from a canvas's defaults and saved and restored whole: the
-// transform (`setTransform` takes six numbers, a matrix or nothing), an alpha
-// it keeps only within 0..1, and every property a draw sets (shadow, font,
-// line width among them). It records what is filled and drawn under that
-// state, and a pixel read answers the colour of the last hex fill over it, so
-// a draw that reads its canvas back (a face's opacity) takes the branch it
-// takes on a canvas. Every other call answers `nothing`. It refuses what a real canvas
-// refuses (a negative arc, ellipse or gradient radius, a colour stop off
-// 0..1, a stop colour made of NaN or undefined, a non-finite gradient
-// coordinate), raising the defect the real one's IndexSizeError, SyntaxError
-// or TypeError would be. `withDom`
-// and `standInDom` put up a document whose canvases draw into stand-ins of
-// their own, for the paper, the light sheets and the fibre tile a film makes
-// off the page.
-
 import { Effect, Predicate, Schema, type Scope } from 'effect';
 import { type Affine, IDENTITY } from '../../core/affine.ts';
 import type { Point } from '../../core/schema.ts';
@@ -339,9 +322,6 @@ export const recorder = (width = 1920, height = 1080, options: StandInOptions = 
       images.push(drawn);
       ops.push(drawn);
     },
-    // The calls a frame makes most, which answer nothing on a real canvas
-    // too: plain functions, so each is one call rather than a trip through
-    // `nothing`.
     beginPath: quiet,
     closePath: quiet,
     moveTo: quiet,
@@ -452,8 +432,6 @@ export const recorder = (width = 1920, height = 1080, options: StandInOptions = 
     return state.props;
   };
   const onCall = options.onCall;
-  // With `onCall`, each call name's function is wrapped once, the first time
-  // it is asked for: a frame asks for `save` or `lineTo` thousands of times.
   const told = new Map<PropertyKey, (...args: ReadonlyArray<unknown>) => unknown>();
   const tellingOf = (key: PropertyKey, tell: NonNullable<StandInOptions['onCall']>) => {
     let wrapper = told.get(key);
@@ -529,7 +507,6 @@ const putUp = (options: StandInOptions) =>
       had: Reflect.has(globalThis, 'document'),
       document: Reflect.get(globalThis, 'document'),
     };
-    // Its fonts hold none a film asked for: what draws waits for nothing (`pictureFacesWait`).
     Reflect.set(globalThis, 'document', {
       createElement: () => standInCanvas(options),
       fonts: [],

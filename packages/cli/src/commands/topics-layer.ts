@@ -70,9 +70,6 @@ const installedContentLayer: Layer.Layer<ContentUpdate> = ContentUpdate.Live.pip
   Layer.provide(installedTopicsSupply),
   Layer.provide(layerHttpContentManifest),
   Layer.provide(FetchHttpClient.layer),
-  // The CLI reopens nothing after an activation: the next read is a new
-  // process, so there is no long-lived connection holding the old inode. Stated
-  // rather than left to an omitted dependency (§3.6).
   Layer.provide(ContentActivation.Inert),
 );
 

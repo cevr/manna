@@ -46,10 +46,6 @@ import {
   quantize,
 } from './vector-index.js';
 
-// ---------------------------------------------------------------------------
-// The corpus
-// ---------------------------------------------------------------------------
-
 const book = (code: string, title: string, author: string, id: number): BookRow => ({
   book_id: id,
   book_code: code,
@@ -168,10 +164,6 @@ export const GOLDEN_PARAGRAPHS: readonly TestParagraph[] = [
   }),
 ];
 
-// ---------------------------------------------------------------------------
-// The vector index
-// ---------------------------------------------------------------------------
-
 /** The EGW-scope paragraph ids the index covers, in buffer order.
  *
  *  Exactly the `GC` and `DA` paragraphs: §9.2 pins the index to the
@@ -232,10 +224,6 @@ export const goldenVectorIndexBytes = (fingerprint: string = MODEL_FINGERPRINT):
   });
 };
 
-// ---------------------------------------------------------------------------
-// The pinned topic group (§9.4)
-// ---------------------------------------------------------------------------
-
 /** The one topic the golden set matches, and the query it matches.
  *
  *  A topic group above a search ranking is an *application's* group now, not a
@@ -262,7 +250,6 @@ export const GOLDEN_TOPIC_SLUG = topicSlug('close-of-probation');
 const GOLDEN_TOPICS: readonly TopicDetail[] = [
   TopicDetail.make({
     id: Schema.decodeSync(TopicId)(String(GOLDEN_TOPIC_SLUG)),
-    // Contains `GOLDEN_TOPIC_QUERY`, so the double's substring match finds it.
     name: `What happens at the close of probation`,
     alternativeNames: [],
     sections: [],
@@ -285,10 +272,6 @@ export const goldenTopicCatalog: Layer.Layer<WikiService> = WikiService.Absent.p
   Layer.provide(TopicService.Test(GOLDEN_TOPICS)),
   Layer.provide(WikiSectionSources.NotWired),
 );
-
-// ---------------------------------------------------------------------------
-// The queries
-// ---------------------------------------------------------------------------
 
 /** One golden query and what §9 says must happen to it.
  *
@@ -362,17 +345,6 @@ export const GOLDEN_QUERIES: readonly GoldenQuery[] = [
   },
 ];
 
-// ---------------------------------------------------------------------------
-// The layer
-// ---------------------------------------------------------------------------
-
-/** A `SearchService` over the fixture corpus, parameterized by what the host is
- *  pretending to have.
- *
- *  One builder rather than a layer per scenario, because every §10 core test and
- *  every host adapter test differs only in these two knobs — which index bytes,
- *  and which embedder — and three suites each assembling the graph is three
- *  places for the fixture corpus to be wired slightly differently. */
 /** The fixture corpus alone, without a choice of index bytes.
  *
  *  Exported for the one suite that must supply its own `VectorIndexBytes` — the
@@ -399,9 +371,6 @@ export const goldenSearchLayer = (input?: {
   });
 
   const service = SearchService.Live.pipe(Layer.provide(goldenSearchSources), Layer.provide(bytes));
-  // `QueryEmbedder` is read with `Effect.serviceOption`, so a fixture without
-  // one is a host with no embedder and a fixture with one is a host that has
-  // one.
   return Option.match(Option.fromNullishOr(input?.embedder), {
     onNone: () => service,
     onSome: (embedder) => service.pipe(Layer.provide(embedder)),

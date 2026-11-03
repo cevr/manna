@@ -214,8 +214,5 @@ export const toggle = <K extends 'section' | 'type' | 'subtype'>(
   value: SearchParams[K]['include'][number],
 ): SearchParams => ({
   ...params,
-  // `cycle` is generic in the value type and only ever compares values for
-  // equality, so widening both sides of the pair to `string` loses nothing it
-  // uses. The caller's `K` still ties the key to the value it is given.
   [key]: cycle<string>(params[key], value),
 });

@@ -1,8 +1,3 @@
-// A labelling part's id (its own or a generated one), registered with the
-// part it labels while it renders: a dialog's title and description, a menu
-// group's label. The id is set from an effect, so a server render writes no
-// signal, and cleared on cleanup only while it is still the one set, so a
-// newer part's id outlives an older part's cleanup.
 import { createEffect, createUniqueId } from 'solid-js';
 
 /** Sets the registered id from the current one. */

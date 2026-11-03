@@ -1,21 +1,3 @@
-// One lab command, defined once: its name, what it takes and answers and
-// how it refuses (an Effect `Tool`: its parameters, success and failure
-// schemas), the effect it runs, and how a terminal reads its answer. The
-// transports are made from the definition and from nothing else
-// (`lab-commands.ts` lists the set):
-//
-// - MCP (`lab-mcp.ts`): the tool, its arguments decoded by its parameters,
-//   its answer encoded by its success, its refusal said in its words; a
-//   command whose answer is pictures (`content`) is answered with them beside
-//   the structured answer.
-// - The CLI (`lab-cli.ts`): `film lab <name>`, a flag for each field of its
-//   parameters, by the field's own name; `--json` prints the success's JSON,
-//   the plain answer its `lines`.
-//
-// What a command runs needs services (`R`): the set keeps each command where
-// those are (`HereNeeds` in a terminal's own process, `InLabNeeds` only in
-// the running lab), so where the CLI runs it follows from the types.
-
 import { Array as Arr, Context, Effect, Match, Option, Predicate, Schema } from 'effect';
 import type { FileSystem } from 'effect';
 import type * as McpSchema from 'effect/ai/McpSchema';
@@ -167,9 +149,6 @@ export const labCommand = <
     answered: (json) => Effect.map(decodeOutput(json), (output) => answerOf(output, json)),
   };
 };
-
-// ---------------------------------------------------------------------------
-// A plain answer, a line a record
 
 const BARE = /^[^\s"=]+$/;
 

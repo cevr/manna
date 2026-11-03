@@ -1,24 +1,3 @@
-// The places `within` calls back to, in the Board's pixels, as their beats'
-// kept panels lay them out, and the page's hold on the accused's feet. The
-// temple court of `woman` (woman.court, woman.told) in its early peach light:
-// the sky rose overhead and pale gold low down, its clouds, the far city's
-// white houses and the cypresses over the balustrade, the steps up to it, the
-// columns, the pale floor with the columns' violet shadows across it, and the
-// stones dropped in the dust. The house in Capernaum of `roof` (roof.saw,
-// within.bed, roof.went) in the light through its roof: the back wall with its
-// doorways and window, the beaten floor, the ceiling's boards and beams round
-// the torn hole and the sky in it, the shafts falling through, the ropes, the
-// bed, and the bed rolled up. The strip of the page over his feet (`we`), and
-// its two halves tearing off them (`arose`).
-// Every person in them but Christ is held as a blocked mass (look-props'
-// `campMass`, `lyingMass` for the man on his bed) at the cast band's height
-// against His, until the cast's kept renders are sheeted and drawn: the woman
-// of John 8, the man of Capernaum, the four at the hole, the crowd in the
-// house; his bed is held with him, its silhouette alone. The scenery and the
-// strip are torn or cut paper with no ink; the stones are props, and the bed a
-// held mass, lined in the ink, their lines drawn `unprobed` as every prop's
-// are. Pure: the same pose draws the same thing.
-
 import {
   type Hand,
   type Hex,
@@ -38,8 +17,6 @@ import { C, piece } from './kit.ts';
 import { type CamperName, type CamperPose, bodyOf, stand } from './look-props.ts';
 import { type Paper, paper, shafts } from './page-set.ts';
 import { type Torn, plane } from './spoke-props.ts';
-
-// ─── the cast's band ─────────────────────────────────────────────────────────
 
 /** Christ's height, His hair to His soles, at scale 1 (`rigs/christ-rig.ts`): the top of the cast's one band. */
 export const CHRIST_TALL = 468;
@@ -120,8 +97,6 @@ export const heldPose = (h: Held, scale: number, breath: number): CamperPose => 
   };
 };
 
-// ─── a place's planes ────────────────────────────────────────────────────────
-
 /** The Board's panel, Board pixels: what the sun's shafts fan over. */
 export const PANEL = { w: 1536, h: 1024 } as const;
 
@@ -165,8 +140,6 @@ const cypressShape = (x: number, foot: number, tall: number, wide: number): Pt[]
     ],
     6,
   );
-
-// ─── the temple court (woman.court, woman.told) ──────────────────────────────
 
 /** The court's sky at its heights on the panel: rose overhead, peach, pale gold low behind the city. */
 const TEMPLE_SKY: ReadonlyArray<readonly [number, Hex]> = [
@@ -260,7 +233,6 @@ export const templeFar = (ctx: CanvasRenderingContext2D, hand: Hand) => {
   for (const [x, tall, wide] of CYPRESSES) {
     const pts = cypressShape(x, SKYLINE + 4, tall, wide);
     cut(ctx, pts, { color: CYPRESS.color, shade: CYPRESS.color }, { line: 0, flat: true });
-    // Its far side in shade: the half away from the light.
     ctx.save();
     ctx.beginPath();
     ctx.rect(x + 0.06 * wide, SKYLINE - tall - 10, wide, tall + 20);
@@ -343,7 +315,6 @@ export const templeWall = (ctx: CanvasRenderingContext2D) => {
   const flat = (p: Paper, pts: ReadonlyArray<Pt>, which: 'color' | 'shade' = 'color') =>
     cut(ctx, pts, { color: p[which], shade: p[which] }, { line: 0, flat: true });
   const width = RUN.right - RUN.left;
-  // The balustrade: its recessed panels, its posts, its rail with the shade under its lip, its base.
   flat(STONE_POST, box(RUN.left, RAIL.under, width, RAIL.foot - RAIL.under));
   ctx.save();
   ctx.fillStyle = STONE_RECESS;
@@ -367,7 +338,6 @@ export const templeWall = (ctx: CanvasRenderingContext2D) => {
   flat(STONE_PALE, box(RUN.left, RAIL.under - 5, width, 5), 'shade');
   flat(STONE_PALE, box(RUN.left, RAIL.foot, width, RAIL.base - RAIL.foot));
   for (const c of FAR_COLUMNS) column(ctx, c);
-  // The steps down to the floor, each riser in a little shade under its lit tread.
   for (const [top, riser, tread] of STEPS) {
     flat(RISER, box(RUN.left, top, width, riser));
     flat(TREAD, box(RUN.left, top + riser, width, tread));
@@ -455,8 +425,6 @@ export const templeFloor = (ctx: CanvasRenderingContext2D) => {
 export const templeNear = (ctx: CanvasRenderingContext2D) => {
   for (const c of NEAR_COLUMNS) column(ctx, c);
 };
-
-// ─── the house in Capernaum (roof.saw, within.bed, roof.went) ────────────────
 
 /** Where the room's floor meets its back wall. */
 export const ROOM_FLOOR = 770;
@@ -650,7 +618,6 @@ export const roomCeiling = (ctx: CanvasRenderingContext2D) => {
   ctx.fillRect(RUN.left, RUN.top, RUN.right - RUN.left, CEILING.beam - RUN.top);
   for (const quad of BEAMS)
     cut(ctx, quad, { color: BEAM.color, shade: BEAM.color }, { line: 0, flat: true });
-  // Each beam's underside in shade: a strip along its lower edge.
   for (const quad of BEAMS) {
     const [, , c, d] = quad;
     if (c === undefined || d === undefined) continue;
@@ -780,8 +747,6 @@ export const TIES: readonly [Pt, Pt, Pt, Pt] = [
   [954, 787],
   [982, 792],
 ];
-
-// ─── the house's people, held ────────────────────────────────────────────────
 
 /**
  * The four who carry him, at the hole in the roof (within.bed, roof.saw):
@@ -1013,7 +978,6 @@ export const lyingMass = (ctx: CanvasRenderingContext2D, p: LyingPose) => {
   ctx.lineJoin = 'round';
   ctx.strokeStyle = C.outline;
   ctx.lineWidth = 2 * MASS_LINE * p.line;
-  // Sunk into the pallet: all of him above its top, a little short of its line.
   ctx.save();
   ctx.beginPath();
   ctx.rect(-4 * legs, -4 * legs, 8 * legs, 4 * legs + pallet - 2 / p.scale);
@@ -1121,8 +1085,6 @@ export const SLACK: readonly [Pt, Pt, Pt, Pt] = [
   [896, 344],
   [1062, 326],
 ];
-
-// ─── the page holding his feet (`we`, `arose`) ───────────────────────────────
 
 /**
  * The page holding his feet (`we`): a strip of it torn up and laid across

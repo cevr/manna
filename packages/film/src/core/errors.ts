@@ -1,7 +1,3 @@
-// Authoring errors the pure core returns as values. Tools lift them into their
-// typed failures; the browser, which cannot recover from a broken film, turns
-// them into a thrown error once at load.
-
 import { Option, Schema } from 'effect';
 
 export class UnknownScene extends Schema.TaggedError<UnknownScene>()('UnknownScene', {
@@ -337,10 +333,6 @@ export class UnknownVoice extends Schema.TaggedError<UnknownVoice>()('UnknownVoi
   }
 }
 
-// ---------------------------------------------------------------------------
-// Shorts: a span of a short (`shorts.ts`) that names what its film lacks.
-
-/** A short's span names a scene the film does not have. */
 /** A short's span that ends where it starts, or before. */
 export class ShortSpanEmpty extends Schema.TaggedError<ShortSpanEmpty>()('ShortSpanEmpty', {
   short: Schema.String,
@@ -377,10 +369,6 @@ export class SoundUseMismatch extends Schema.TaggedError<SoundUseMismatch>()('So
     return `sound "${this.name}" is declared a ${this.declared}, and placed as a ${this.placed}`;
   }
 }
-
-// ---------------------------------------------------------------------------
-// Code sounds: the library's walk of each graph before it renders
-// (core/synth/resolve.ts).
 
 /** A code sound samples a name the library does not declare. */
 export class SampleUnknown extends Schema.TaggedError<SampleUnknown>()('SampleUnknown', {

@@ -1,13 +1,3 @@
-// A person's recording made into a take the film can use as it uses a staging
-// take: one channel, the silence either side trimmed to the padding the
-// ElevenLabs takes have, and levelled to their speech loudness by one clean
-// gain, never past the ceiling. The numbers are measured from the committed
-// staging takes (30 takes across both films, 2026-09-28; see
-// packages/film/README.md), not chosen, so a recorded beat sits in the mix
-// where a staged one did.
-//
-// Pure: the tools decode and encode around it.
-
 import { Array as Arr, Option } from 'effect';
 import {
   type Pcm,
@@ -36,33 +26,33 @@ export const TAKE_LEVEL = { speech: -17.1, ceiling: -1 } as const;
 export const TAKE_PAD = { lead: 0.07, tail: 0 } as const;
 
 /** Sound is measured this many seconds at a time. */
-const TAKE_WINDOW = 0.01;
+const TAKE_WINDOW_S = 0.01;
 
 /**
  * A window is speech when it is within this many dB of the take's loudest.
  * The staging takes' loudest window is about −9.5 dBFS, so this is the −50
  * dBFS gate their padding was measured at.
  */
-const TAKE_GATE = 40;
+const TAKE_GATE_DB_UNDER_LOUDEST = 40;
 
 /**
  * A recording whose loudest speech is under this, in dBFS, holds none:
  * a quiet room reads −70 or lower, a voice at a normal distance −30 or higher.
  */
-const TAKE_FLOOR = -60;
+const TAKE_FLOOR_DBFS = -60;
 
 /**
  * Sound over the gate is speech when it lasts this long, in seconds, counting
  * any gaps under `TAKE_HOLD` inside it: a click, a tap or a lip smack is
  * shorter, and is trimmed with the silence around it.
  */
-const TAKE_MIN_SPEECH = 0.1;
+const TAKE_MIN_SPEECH_S = 0.1;
 
 /** Speech goes on across a gap under this, in seconds: a stop inside a word, or a breath between two. */
-const TAKE_HOLD = 0.25;
+const TAKE_HOLD_S = 0.25;
 
 /** A take fades in and out over this long, in seconds, so neither trim clicks. */
-const TAKE_FADE = 0.005;
+const TAKE_FADE_S = 0.005;
 
 /**
  * How loud the speech in `pcm` is, in dBFS, with pauses left out: the mean
@@ -73,7 +63,7 @@ const TAKE_FADE = 0.005;
  * makes a take louder or quieter. −Infinity when nothing passes.
  */
 export const speechLevel = (pcm: Pcm): number => {
-  const window = Math.max(1, Math.round(TAKE_WINDOW * pcm.rate));
+  const window = Math.max(1, Math.round(TAKE_WINDOW_S * pcm.rate));
   const powers = [...windowPowers(toMono(pcm), window)].map((db) => 10 ** (db / 10));
   const db = (p: number) => 10 * Math.log10(p);
   const meanOf = (ps: ReadonlyArray<number>) =>
@@ -120,16 +110,15 @@ const speechRuns = (
 const speechBounds = (
   mono: Pcm,
 ): Option.Option<{ readonly onset: number; readonly end: number }> => {
-  const window = Math.max(1, Math.round(TAKE_WINDOW * mono.rate));
+  const window = Math.max(1, Math.round(TAKE_WINDOW_S * mono.rate));
   const level = [...windowPowers(mono, window)];
-  const hold = Math.round(TAKE_HOLD / TAKE_WINDOW);
-  const min = Math.round(TAKE_MIN_SPEECH / TAKE_WINDOW);
-  // The loudest speech, not the loudest click: only sound that lasts counts.
+  const hold = Math.round(TAKE_HOLD_S / TAKE_WINDOW_S);
+  const min = Math.round(TAKE_MIN_SPEECH_S / TAKE_WINDOW_S);
   const loudest = Math.max(
-    ...speechRuns(level, TAKE_FLOOR, hold, min).flatMap((r) => level.slice(r.from, r.to)),
+    ...speechRuns(level, TAKE_FLOOR_DBFS, hold, min).flatMap((r) => level.slice(r.from, r.to)),
   );
-  if (!(loudest >= TAKE_FLOOR)) return Option.none();
-  const runs = speechRuns(level, loudest - TAKE_GATE, hold, min);
+  if (!(loudest >= TAKE_FLOOR_DBFS)) return Option.none();
+  const runs = speechRuns(level, loudest - TAKE_GATE_DB_UNDER_LOUDEST, hold, min);
   return Option.zipWith(Arr.head(runs), Arr.last(runs), (first, last) => ({
     onset: first.from * window,
     end: Math.min(mono.frames, last.to * window),
@@ -154,7 +143,7 @@ export const trimTail = (take: Pcm): Option.Option<Pcm> =>
   Option.flatMap(speechBounds(toMono(take)), ({ end }) => {
     const to = Math.min(take.frames, end + Math.round(TAKE_PAD.tail * take.rate));
     if (take.frames - to <= TAKE_TAIL_SLACK * take.rate) return Option.none();
-    return Option.some(fadeEdges(slice(take, 0, to), TAKE_FADE));
+    return Option.some(fadeEdges(slice(take, 0, to), TAKE_FADE_S));
   });
 
 /**
@@ -175,9 +164,9 @@ export const withGaps = (
 /** `pcm` with frames `[from, to)` replaced by `put` frames of silence, each side faded. */
 const spliced = (pcm: Pcm, from: number, to: number, put: number): Pcm =>
   concat(pcm.rate, pcm.channels.length, [
-    fadeEdges(slice(pcm, 0, from), TAKE_FADE),
+    fadeEdges(slice(pcm, 0, from), TAKE_FADE_S),
     silence(pcm.rate, put, pcm.channels.length),
-    fadeEdges(slice(pcm, to, pcm.frames - to), TAKE_FADE),
+    fadeEdges(slice(pcm, to, pcm.frames - to), TAKE_FADE_S),
   ]);
 
 /** One gap edit made: silence put in at its second, or its length cut out around it. */
@@ -207,14 +196,13 @@ export const prepareTake = (recording: Pcm): Option.Option<Pcm> => {
   const tail = Math.round(TAKE_PAD.tail * mono.rate);
   const from = Math.max(0, onset - lead);
   const to = Math.min(mono.frames, end + tail);
-  // A recording that starts or stops on a word gets the rest of its padding in silence.
   const trimmed = fadeEdges(
     concat(mono.rate, 1, [
       silence(mono.rate, from - (onset - lead), 1),
       slice(mono, from, to - from),
       silence(mono.rate, end + tail - to, 1),
     ]),
-    TAKE_FADE,
+    TAKE_FADE_S,
   );
   return Option.some(gain(trimmed, takeLift(trimmed)));
 };

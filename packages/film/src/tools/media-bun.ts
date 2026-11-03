@@ -1,42 +1,3 @@
-// Media files, in-process: how long a file plays, a sound decoded to PCM, PCM
-// written out as WAV or as an AAC `.m4a` (a review's mix), and a film joined
-// from its video segments with its track. mediabunny reads and writes the
-// containers (pure TypeScript); MP3 decodes through mpg123 (WASM), gapless;
-// AAC encodes through FFmpeg's encoder built to WASM
-// (@mediabunny/aac-encoder). Every byte moves through the FileSystem service
-// but a joined film's, which mediabunny writes by position itself, and a
-// container's length, which it reads in place. A render's master is a
-// browser's H.264 (player/encode.ts), and joining only copies its packets,
-// as it does a hardware render's share copy. A software render's share copy
-// is made here after the join, a mediabunny conversion through x264
-// (`x264.ts`); a re-mux copies its packets, reordered frames and all, beside
-// the new track.
-//
-// The review's stills and phone copies of a render are made here too: a
-// still is the frame at a time, decoded by mediabunny and written as a JPEG
-// (`jpeg.ts`); a phone copy is a mediabunny conversion to H.264 at 720p at
-// most (a smaller video keeps its size) through x264 at its own settings
-// (CRF 23 at preset medium, averaging `PHONE_RATE` at most, a key frame
-// every second, on two threads: `media.ts` `PHONE_ENCODE`), its track copied.
-// A card is a picture held over a sound, at those settings: a sound's sheet
-// over its line-up, the clip an ask plays (`sfx ab`). Its picture never
-// moves, so it runs at a frame a second, each frame a key frame (the phone
-// copy's interval): a player shows it wherever it seeks, and the encoder
-// spends nothing on frames that only repeat it.
-//
-// A person's recording comes in whatever a recorder wrote (WAV, FLAC, AIFF,
-// M4A, MP3, or an Ogg a library's preview is) at whatever rate its microphone ran, and loads in-process,
-// sample for sample: mediabunny opens the container and decodes PCM; MP3
-// goes through mpg123 as above; FLAC, AAC (and Opus, Vorbis) and H.264
-// through FFmpeg's own decoders in-process (@mediabunny/server, NodeAV: Bun
-// has no WebCodecs decoder), an AAC's priming dropped as the MP4's edit
-// list says; AIFF, which mediabunny has no reader for, is plain PCM read
-// here (`aiff.ts`). The mixdown to one channel and the rate change are
-// libswresample's (`resample.ts`). A person's take is the film's final
-// voice, so it leaves lossless: a 24-bit FLAC master, libFLAC's
-// (@mediabunny/flac-encoder, WASM), which decodes back sample for sample.
-// Staging takes stay the MP3s ElevenLabs sends.
-
 import { registerAacEncoder } from '@mediabunny/aac-encoder';
 import { registerFlacEncoder } from '@mediabunny/flac-encoder';
 import { registerMediabunnyServer } from '@mediabunny/server';
@@ -588,7 +549,6 @@ const rateOfTicks = (ticks: ReadonlyArray<number>, resolution: number): Option.O
  * the latest, as a reordered (B-frame) stream sends one.
  */
 const firstFrameTimes = (file: string, track: InputVideoTrack) => {
-  // From the first packet to the last: no packet bounds the read.
   const unbounded = Option.getOrUndefined(Option.none<EncodedPacket>());
   return Stream.fromAsyncIterable(
     new EncodedPacketSink(track).packets(unbounded, unbounded, { metadataOnly: true }),
@@ -766,11 +726,9 @@ const cardFile = (file: string, image: Raster, track: AacTrack, seconds: number)
       bitrate: phoneRateFor(seconds),
       keyFrameInterval: PHONE_ENCODE.keyEvery,
     });
-    // No rate on the track: mediabunny would snap the last frame's length to it.
     output.addVideoTrack(video);
     const audio = new EncodedAudioPacketSource('aac');
     output.addAudioTrack(audio);
-    // The last frame lasts as long as the sound has left, so the picture ends with it.
     const heldFor = (n: number) => {
       const left = seconds - n / CARD_FPS;
       if (left > 0 && left < 1 / CARD_FPS) return left;
@@ -839,15 +797,6 @@ export const layer = Layer.effect(
   Media,
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    // Bun has no AAC of its own; this one is mediabunny's to use from here on.
-    // It encodes in a worker thread, which listens on `worker_threads` under
-    // Bun (mediabunny 1.61.0 and later).
-    // So is libFLAC's, for a take's master, in its own worker the same way.
-    // mediabunny takes the first coder registered that can: these two come
-    // before @mediabunny/server's FFmpeg ones, which are here for the
-    // decoders Bun lacks (AAC, Opus, Vorbis, H.264) and the scaling a phone
-    // copy needs; H.264 encodes through x264 (`x264.ts`), registered first
-    // too. No hardware context: nothing here asks the GPU.
     yield* Effect.sync(() => {
       registerAacEncoder();
       registerFlacEncoder();
@@ -870,13 +819,11 @@ export const layer = Layer.effect(
           Effect.sync(() => new Input({ source: new BufferSource(bytes), formats: ALL_FORMATS })),
           (opened) => Effect.sync(() => opened.dispose()),
         );
-        // mediabunny has no AIFF reader: one is read by `aiff.ts`, the Input left unread.
         if (isAiff(bytes)) {
           const aiff: Opened = { file, bytes, input, codec: 'aiff' };
           return aiff;
         }
         const format = yield* attempt('read', file, () => input.getFormat());
-        // By identity: mediabunny's formats are singletons (a Match pattern would compare fields).
         const codec = Match.value(format).pipe(
           Match.when(
             (f) => f === MP3,
@@ -1009,7 +956,6 @@ export const layer = Layer.effect(
         ),
       );
 
-    // A failed or interrupted join leaves the file that was there before.
     const join = Effect.fn('Media.join')(function* (film: JoinedFilm) {
       yield* mediaWhole(film.out, (partial) => joinInto(fs, { ...film, out: partial }));
     });
@@ -1058,8 +1004,6 @@ export const layer = Layer.effect(
     });
 
     const phoneCopy = Effect.fn('Media.phoneCopy')(function* (video: string, out: string) {
-      // A video no taller than the copy keeps its size, made even by a line
-      // at most: a copy never scales up.
       const { height } = PHONE_ENCODE;
       const phone = reencode(
         video,
@@ -1102,7 +1046,6 @@ export const layer = Layer.effect(
 
     const load = Effect.fn('Media.load')(function* (file: string, rate: number) {
       const recording = yield* decode(file);
-      // One channel at the rate already: nothing to convert.
       if (recording.channels.length === 1 && recording.rate === rate) return recording;
       return yield* resample(file, recording, rate, 1);
     });
@@ -1110,8 +1053,6 @@ export const layer = Layer.effect(
     const encodeFlac = Effect.fn('Media.encodeFlac')(function* (pcm: Pcm) {
       const target = new BufferTarget();
       const output = new Output({ format: new FlacOutputFormat(), target });
-      // Float in, 24 bits out (libFLAC's depth for float samples): the one
-      // quantisation, 144 dB down, needs no dither.
       const source = new AudioSampleSource({ codec: 'flac' });
       output.addAudioTrack(source);
       yield* Effect.gen(function* () {

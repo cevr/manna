@@ -1,15 +1,3 @@
-// A synthetic camera file for the A/V sync guard (`av-sync.test.ts`), made
-// in the test with mediabunny: a dark picture with one white frame (the
-// flash) and a quiet sound with one click at the same moment, as a clapper
-// marks a take. Its picture may start after zero (`pictureStart`, as a
-// phone's file often does) and its frames may fall off one lattice
-// (`variable`, a phone's variable rate, on no lattice); its sound is AAC with the encoder's
-// priming before zero, which the edit list skips. It is either camera's file
-// (`camera`): an iPhone's, HEVC in a MOV and upright (9:16), or a Sony
-// ZV-E10's, XAVC S, which is H.264 in an MP4, and landscape (16:9). A talk's
-// take (`talk.test.ts`) adds a tone where someone speaks. No real footage is
-// ever used.
-
 import { Effect, Option } from 'effect';
 import {
   AudioSample,
@@ -95,12 +83,10 @@ export const syncClip = (clip: SyncClip): Effect.Effect<Uint8Array> =>
     const output = new Output({ format: camera.container(), target });
     const video = new VideoSampleSource({ codec: camera.codec, bitrate: 2_000_000 });
     const audio = new AudioSampleSource({ codec: 'aac', bitrate: 128_000 });
-    // No rate declared: the muxer would put every frame on its lattice, and a variable rate on none.
     output.addVideoTrack(video);
     output.addAudioTrack(audio);
     yield* Effect.promise(() => output.start());
     const seconds = frameTime(clip, clip.frames) + 0.2;
-    // The sound from a frame of priming before zero, which the edit list skips.
     const samples = sound(clip, seconds + 1024 / RATE);
     yield* Effect.acquireUseRelease(
       Effect.sync(

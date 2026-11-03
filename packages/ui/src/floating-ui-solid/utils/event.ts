@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/utils/event.ts,
-// packages/react/src/floating-ui-react/utils/createEventEmitter.ts,
-// packages/react/src/floating-ui-react/utils/enqueueFocus.ts
-//
-// Event predicates (a click from a screen reader or keyboard has no pointer),
-// the per-popup event emitter, and focus moved on the next frame.
 import { NOOP } from '../../utils/dom.ts';
 import { platform } from '../../utils/platform.ts';
 import type { FocusableElement } from './tabbable.ts';

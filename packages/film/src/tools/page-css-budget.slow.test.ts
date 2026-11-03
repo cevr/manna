@@ -1,14 +1,3 @@
-// The CSS that holds a page's first paint, as the lab answers the page: the
-// app's pages (`LAB_PAGES`, `LAB_SERVERS`) built and rendered on the server
-// as the lab builds and renders them (`LabPage`, `PageBundler`,
-// `PageRenderer`), and every stylesheet the answered head links and every
-// style the page holds weighed (`blockingCss`): the server's render's head is
-// the one it renders, whatever adds to it, and a place's own styles
-// (`PlaceStyle`) ride in its markup, ahead of what they draw. A phone on slow 4G paints nothing
-// until it has them all, so every place is held to one budget. The faces a
-// film draws in are no stylesheet's: the films' loaders add them
-// (`player/face.ts`).
-
 import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -122,7 +111,6 @@ describe("a page's render-blocking CSS", () => {
             if (status !== 200) return Number.POSITIVE_INFINITY;
             return new TextEncoder().encode(body).byteLength;
           });
-        // Each link is at the place it is keyed by.
         expect(
           Struct.keys(PLACE_HREFS).filter((place) => {
             const at: Place.Place<unknown> = Places[place];
@@ -132,7 +120,6 @@ describe("a page's render-blocking CSS", () => {
         const weighed = yield* Effect.forEach(Struct.keys(PLACE_HREFS), (place) =>
           Effect.gen(function* () {
             const { status, body } = yield* ask(PLACE_HREFS[place]);
-            // The server rendered it: its head holds the page's own styles.
             const rendered = status === 200 && body.includes('<style data-page-style');
             const bytes = yield* blockingCss(body, size);
             const own = placeCss(body);

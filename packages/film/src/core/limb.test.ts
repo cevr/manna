@@ -40,10 +40,6 @@ type Inked = readonly [boolean, boolean];
 const BOTH: Inked = [true, true];
 const NONE: Inked = [false, false];
 
-// A synthetic arm, 200 × 300 px: a straight chain tilted off the axes, its
-// sleeve two flat shade planes of different half-widths each side, inked 4 px
-// along the edges `Inked` names, a stub above the shoulder and a hand (a disc)
-// past the cuff.
 const [W, H] = [200, 300];
 const S: Pt = [60, 40];
 const E: Pt = [90, 150];
@@ -130,13 +126,6 @@ const LIMB: PuppetPartLimb = Result.getOrThrow(limbOf('arm', ARM, JOINTS, DECLAR
 const kindOf = (r: ReturnType<typeof limbOf>) =>
   Result.match(r, { onSuccess: () => 'measured', onFailure: (e) => e.kind });
 
-// A bent arm, 220 × 200 px, folded like the lead's right arm: the forearm
-// turned 135° toward the inner side, a 45° angle inside the elbow. Each texel
-// belongs to the segment it lies nearer (the elbow's own texels to the upper
-// arm), within that segment's half-widths: inner 18 px on both, so the inner
-// edges meet at a crease on the fold's bisector; outer tapering to 3 px at the
-// elbow, where a 3 px disc of ink rounds the corner. The ink is 4 px deep, so
-// the elbow's pivot lies in the outline's ink.
 const [BW, BH] = [220, 200];
 const BD1 = unit([20, 110]);
 const BD2: Pt = [Math.SQRT1_2 * (-BD1[1] - BD1[0]), Math.SQRT1_2 * (BD1[0] - BD1[1])];
@@ -223,8 +212,6 @@ const oklab = (rgb: Rgb): Rgb => {
   ];
 };
 
-// Frame results are pure. Reuse identical fixture poses across the ink,
-// connectivity and curvature assertions without rerasterizing each one.
 const bentFrames = new Map<string, Raster>();
 const bentAt = (elbowRight: number, wristRight = 0) =>
   Option.getOrElse(Option.fromUndefinedOr(bentFrames.get(`${elbowRight}/${wristRight}`)), () => {
@@ -248,8 +235,7 @@ const nearBoundary = (r: Raster, x: number, y: number, width: number, alpha = 12
   return false;
 };
 
-// The measured cut and the hand's own narrow alpha boundary receive ink.
-// A bar deep inside the hand or across the sleeve has no exemption here.
+/** The measured cut and the hand's own narrow alpha boundary receive ink; a bar deep inside the hand or across the sleeve has no exemption. */
 const cuffCut: Array<Pt> = [];
 const handEdge: Array<Pt> = [];
 for (let y = Math.floor(B_HAND[1] - 18); y <= Math.ceil(B_HAND[1] + 18); y++)
@@ -292,14 +278,9 @@ const strayInk = (r: Raster, elbow: number, width: number) => {
         BE[1] - Math.sin(turn) * dx + Math.cos(turn) * dy,
       ];
       const [u, v] = frame(q, BE, BD2, B_UPPER);
-      // Only the opening's measured cut gets a pen band, plus the diagonal
-      // footprint of one bilinear texel in the hand frame.
       const cuff = cuffCut.some(
         (p) => (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2 <= (width + Math.SQRT2) ** 2,
       );
-      // The hand's own narrow circle outline can lie over the generated
-      // sleeve. Its source alpha boundary is distinct from the cuff cut;
-      // neither permits ink deep in the hand or across the sleeve.
       const handOutline = handEdge.some(
         (p) =>
           (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2 <=
@@ -317,8 +298,6 @@ const strayInk = (r: Raster, elbow: number, width: number) => {
   return stray;
 };
 
-// The public raster catches ink left by overlapping segments; it cannot
-// establish the measured shape, which the acceptance compares to the paint.
 const components = (r: Raster) => {
   const seen = new Uint8Array(r.width * r.height);
   const queue: Array<number> = [];
@@ -348,8 +327,6 @@ const ghostInk = (r: Raster, width: number) => {
       const i = (y * r.width + x) * 4;
       const a = r.rgba[i + 3]!;
       if (a <= 0 || a >= 250 || r.rgba[i]! > 45) continue;
-      // Use the whole nonzero union, not its half-alpha threshold: a ghost
-      // must not count itself as clear ground and excuse its own outline.
       if (!nearBoundary(r, x, y, width, 1)) ghost++;
     }
   return ghost;
@@ -1108,7 +1085,6 @@ describe('limbBlend', () => {
     expect(limbBlend({ ...LIMB, fade: [-2, -1] }, {}).sleeve).toBe(1);
   });
 
-  // The acceptance's property (spec, check B) over the rule's whole domain.
   test('exact ends, monotone, no jump, in [0, 1], the elbow alone, from -540° to 540°', () => {
     const bad: Array<string> = [];
     const samples: Array<readonly [number, number, number]> = [];
@@ -1131,8 +1107,6 @@ describe('limbBlend', () => {
   });
 });
 
-// The straight arm with a body part beside its outer edge near the shoulder,
-// reaching `band` px past the shoulder's line, which a flap takes into the arm.
 const BAND = 12;
 const BODY_COLOUR = [120, 90, 200] as const;
 const flapSkeleton = (band: number): Skeleton => ({

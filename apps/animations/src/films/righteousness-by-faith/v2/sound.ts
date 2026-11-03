@@ -1,42 +1,3 @@
-// Version 2's sound (the version folder `v2/`): its score's movements start
-// at version 2's scenes. The film declares no sound of its own yet.
-//
-// The film's score, beds and effects.
-//
-// The score: three options, one film in three musical languages, all warm and
-// hopeful, never cinematic-epic: `piano` (felt piano and soft strings),
-// `ensemble` (a warm acoustic chamber group) and `ambient` (pads with a
-// four-note motif). They share one set of movements, so each turns where the
-// film does: the courtroom's question, the title's first statement of the
-// theme, the law's measure and our coming up short (a bass pedal swells),
-// the message rising, the gifts shown, faith from the word, forgiveness (the
-// low end thins), the exchange and the accuser (the climax: the bass pedal at
-// its loudest, dark, then dawn), the robe, power, the name, and the landing
-// lifting (`thesis`, music alone) into the credits. The generated music carries
-// little under 70 Hz on its own, so the swells are asked for by instrument
-// (bowed basses, a pedal tone, a soft timpani roll), not by band. The mix holds
-// the score about 18.5 dB under the voice wherever anyone speaks and lets it
-// rise to about 6 dB under where no one does (the title card, the landing, the
-// credits).
-//
-// Beds sit 17–20 dB under the voice. The parchment (IDEA) has one bed, the
-// paper room (`room.paper`); each STORY place has its own air from the
-// library. A bed that hands over to the next place ends where that scene's
-// voice begins (`at: 'speech'`), so the room changes as the new speaker does.
-// The code tones carry the film's one grammar:
-//   - a chime each time an icon lights on the row (the library's five
-//     variants rotate, so no two lightings in a row ring the same);
-//   - a low drone under `exchange`'s one black moment;
-//   - a bloom where righteousness is made (`declared`'s `made`) and where
-//     it lands true (`name`'s `true`);
-//   - a drain as the cold open's stamp drains to a hollow outline.
-//
-// The other sounds: everything the picture does by hand (paper, wood, cloth,
-// stone, steps) is a one-shot on the cue that draws it; a bed is placed only
-// where the picture has a real place to hear: the court's air under both
-// courts (`woman`'s temple court, and `accuser` into `robe`'s heavenly one),
-// the town's under `centurion` until its row.
-
 import type { Movement, Music, Sound } from '@manna/film/core';
 
 /**
@@ -171,13 +132,11 @@ const option = (styles: ReadonlyArray<string>, extra: ReadonlyArray<string> = []
  * never ducks, so it reads louder than its loudness says: −25 measures about
  * 19 dB under the voice while it speaks.
  */
-const PAPER = -25;
+const PAPER_ROOM_DB = -25;
 
 export const sound: Sound = {
   score: {
     play: 'piano',
-    // Integrated against the voice bus. Measured while the voice speaks (400 ms
-    // windows), −18.5 here played about 17.4 dB under; −19.5 plays about 18.4.
     under: -19.5,
     alone: -6,
     options: {
@@ -210,48 +169,43 @@ export const sound: Sound = {
     },
   },
   beds: [
-    // IDEA: the parchment page.
     {
       sound: 'room.paper',
-      level: PAPER,
+      level: PAPER_ROOM_DB,
       from: { scene: 'cold', at: 'start' },
       to: { scene: 'mirror', at: 'speech' },
     },
     {
       sound: 'room.paper',
-      level: PAPER,
+      level: PAPER_ROOM_DB,
       from: { scene: 'message', mark: 'three' },
       to: { scene: 'roof', at: 'speech' },
     },
     {
       sound: 'room.paper',
-      level: PAPER,
+      level: PAPER_ROOM_DB,
       from: { scene: 'woman', cue: 'toIdea' },
       to: { scene: 'spoke', cue: 'plunge' },
     },
     {
       sound: 'room.paper',
-      level: PAPER,
+      level: PAPER_ROOM_DB,
       from: { scene: 'centurion', cue: 'toIcons' },
       to: { scene: 'look', cue: 'toDesert' },
     },
     {
       sound: 'room.paper',
-      level: PAPER,
+      level: PAPER_ROOM_DB,
       from: { scene: 'look', cue: 'toIcons' },
       to: { scene: 'exchange', at: 'speech' },
     },
     {
       sound: 'room.paper',
-      level: PAPER,
+      level: PAPER_ROOM_DB,
       from: { scene: 'robe', cue: 'toIcons' },
       to: { scene: 'daily', mark: 'will' },
     },
 
-    // STORY: each place's own air. Each level is set so the bed measures
-    // about 19 dB under the voice while it speaks (the stems, 400 ms windows,
-    // ducked as the mix plays it): a sparse take (the garden's birds, the
-    // dawn's) sits higher than a dense one (a crowd).
     {
       sound: 'amb.garden',
       level: -6,
@@ -319,7 +273,6 @@ export const sound: Sound = {
       to: { scene: 'name', at: 'speech', offset: 0.2 },
     },
 
-    // The one black moment: the drone under the silhouette, until dawn.
     {
       sound: 'tone.low',
       level: -22,
@@ -328,7 +281,6 @@ export const sound: Sound = {
     },
   ],
   effects: {
-    // ── The tones ──────────────────────────────────────────────────────────
     lit: {
       sound: 'tone.chime',
       at: [
@@ -358,17 +310,8 @@ export const sound: Sound = {
       ],
     },
 
-    // ── Paper, wood and stone on the parchment ─────────────────────────────
-    // A level named here is where `check`'s EffectHot (each effect's loudest
-    // 50 ms against the voice around it) found the library's too hot.
-    // A one-shot with `sync: 'hit'` lands its loudest moment on the cue (the
-    // lock records where each take hits), so a swapped take stays on it; a
-    // sustained one with `sync: 'onset'` lands where its sound begins, past
-    // the take's silent lead-in (`check` warns `LeadIn` on one placed from
-    // its first sample that starts late).
     evidence: {
       sound: 'paper.stack',
-      // The stack settles as the last sheet lands.
       sync: 'hit',
       at: [{ scene: 'cold', cue: 'drop', edge: 'end' }],
     },
@@ -391,7 +334,6 @@ export const sound: Sound = {
     flip: {
       sound: 'paper.flip',
       level: -14,
-      // The page lands as the flip ends, and as the book's pages spread.
       sync: 'hit',
       at: [
         { scene: 'word', cue: 'flip', edge: 'end' },
@@ -408,7 +350,6 @@ export const sound: Sound = {
     tape: { sound: 'tape.measure', at: [{ scene: 'word', cue: 'tape' }] },
     book: { sound: 'book.close', level: -18, at: [{ scene: 'within', cue: 'book' }] },
 
-    // ── The garden ─────────────────────────────────────────────────────────
     leaves: { sound: 'leaves.rustle', at: [{ scene: 'mirror', cue: 'leaves' }] },
     scrub: { sound: 'glass.scrub', at: [{ scene: 'mirror', cue: 'scrub' }] },
     needle: {
@@ -418,7 +359,6 @@ export const sound: Sound = {
       at: [{ scene: 'mirror', cue: 'toSew', edge: 'end' }],
     },
 
-    // ── The hall ───────────────────────────────────────────────────────────
     banner: {
       sound: 'cloth.banner',
       level: -17,
@@ -427,7 +367,6 @@ export const sound: Sound = {
         { scene: 'rain', cue: 'fly' },
       ],
     },
-    // The hall stirs as the light comes, and swells as the angel flies in.
     crowd: { sound: 'crowd.swell', at: [{ scene: 'message', cue: 'light' }] },
     wings: {
       sound: 'wings.pass',
@@ -436,7 +375,6 @@ export const sound: Sound = {
       at: [{ scene: 'message', cue: 'fly' }],
     },
 
-    // ── Capernaum ──────────────────────────────────────────────────────────
     tiles: { sound: 'roof.tiles', at: [{ scene: 'roof', cue: 'tiles' }] },
     rope: { sound: 'rope.creak', at: [{ scene: 'roof', cue: 'lower' }] },
     mat: { sound: 'mat.roll', at: [{ scene: 'roof', cue: 'roll' }] },
@@ -451,11 +389,9 @@ export const sound: Sound = {
       ],
     },
 
-    // ── The temple court ───────────────────────────────────────────────────
     writing: { sound: 'dust.writing', at: [{ scene: 'woman', cue: 'writing' }] },
     stones: { sound: 'stones.dust', level: -13, at: [{ scene: 'woman', cue: 'drop' }] },
 
-    // ── The word flies ─────────────────────────────────────────────────────
     whoosh: {
       sound: 'paper.whoosh',
       sync: 'onset',
@@ -466,15 +402,10 @@ export const sound: Sound = {
       ],
     },
 
-    // ── The desert ─────────────────────────────────────────────────────────
     coins: { sound: 'coins.clatter', at: [{ scene: 'look', cue: 'slide' }] },
     snakes: { sound: 'snake.hiss', at: [{ scene: 'look', mark: 'desert' }] },
     pole: { sound: 'pole.creak', sync: 'onset', at: [{ scene: 'look', cue: 'rise' }] },
 
-    // ── The cross and the tomb ─────────────────────────────────────────────
-    // The lift's take opens on a soft thud 12 dB over its body (every
-    // candidate made has one, 12–20 dB); held under the voice, the body
-    // plays quietly under the words.
     cloth: {
       sound: 'cloth.lift',
       level: -19,
@@ -485,7 +416,6 @@ export const sound: Sound = {
     },
     stone: { sound: 'stone.roll', level: -12, at: [{ scene: 'exchange', cue: 'dawn' }] },
 
-    // ── The heavenly court ─────────────────────────────────────────────────
     stain: { sound: 'stain.hiss', at: [{ scene: 'accuser', cue: 'flare' }] },
     loom: { sound: 'loom.weave', level: -19, at: [{ scene: 'robe', cue: 'weave' }] },
     settle: { sound: 'cloth.settle', level: -19, at: [{ scene: 'robe', cue: 'settle' }] },

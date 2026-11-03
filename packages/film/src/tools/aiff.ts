@@ -1,9 +1,3 @@
-// An AIFF (or AIFF-C of plain PCM) read to planar samples: what a Mac's
-// recorders save that mediabunny has no reader for. Integers scale over
-// 2^(bits−1) of their whole bytes, as FFmpeg's PCM decoders scale them, so an
-// AIFF take reads as the same take in any other container does. Pure: bytes
-// in, samples or the reason not out.
-
 import { Array as Arr, Match, Option, Result } from 'effect';
 import type { Pcm } from '../core/audio.ts';
 
@@ -152,7 +146,6 @@ export const readAiff = (bytes: Uint8Array): Result.Result<Pcm, string> => {
       Arr.findFirst(chunks, (chunk) => chunk.id === id),
       () => `no ${id} chunk`,
     );
-  // A plain AIFF is big-endian integers; an AIFF-C names its layout after the rate.
   const typeOf = (comm: Chunk) =>
     Option.getOrElse(
       Option.map(

@@ -91,10 +91,6 @@ export const PRIOR_FIXES: ReadonlySet<number> = new Set([138, 203, 220, 438, 593
 
 const pad = (n: number) => String(n).padStart(3, '0');
 
-// ----------------------------------------------------------------------------
-// Words, units and runs
-// ----------------------------------------------------------------------------
-
 /** A text's words as compared: lower case, apostrophes dropped, split on all but letters and digits. */
 export const wordsOf = (text: string) =>
   text
@@ -333,10 +329,6 @@ export const wordlessLine = (line: string) => {
   }
   return open.length > 0 ? out + wordTag(wordsOf(inner)) : out;
 };
-
-// ----------------------------------------------------------------------------
-// The rulings
-// ----------------------------------------------------------------------------
 
 /**
  * What a judge ruled the crop prints at a place:
@@ -750,10 +742,6 @@ const spanIn = (applied: readonly Edit[], covered: ReadonlySet<Edit>, edit: Edit
   return { ruling: edit.ruling, ...spanOf(applied, twin ?? edit) };
 };
 
-// ----------------------------------------------------------------------------
-// The page inventory
-// ----------------------------------------------------------------------------
-
 const Images = Schema.Array(
   Schema.Struct({ file: Schema.String, hymns: Schema.Array(Schema.Int) }),
 );
@@ -893,7 +881,6 @@ const decideAll = (inventory: Inventory): ReadonlyMap<number, Deciding> => {
           },
     );
   }
-  // A borrower's deciding page holds the lender's too: the stanzas it sends the singer to.
   for (const lent of inventory.lent) {
     const own = deciding.get(lent.hymn);
     const lender = deciding.get(lent.from);
@@ -997,7 +984,6 @@ const bookOrderProblems = (inventory: Inventory): string[] => {
     const final = all[all.length - 1] ?? 0;
     if (all.some((p, i) => i > 0 && p !== (all[i - 1] ?? 0) + 1))
       problems.push(`${n} scan pages ${all.join(',')} are not consecutive`);
-    // Pages between the two hold no hymn only when each is a copy page.
     const skipped = Array.from({ length: Math.max(0, first - end - 1) }, (_, i) => end + 1 + i);
     if (n > FIRST && (first < start || final < end || skipped.some((p) => !copies.has(p))))
       problems.push(`${n} on scan pages ${first}-${final}, but ${n - 1} on ${start}-${end}`);
@@ -1042,10 +1028,6 @@ export const scanStatusProblems = (inventory: Inventory, fetched: readonly strin
   }
   return problems;
 };
-
-// ----------------------------------------------------------------------------
-// The census file and its sources
-// ----------------------------------------------------------------------------
 
 const Witness = Schema.Union([
   Schema.Struct({ hunks: Schema.Int, digest: Schema.String }),
@@ -1142,10 +1124,6 @@ export const fixUnitLinesOf = (fix: Fix): Array<Array<typeof Line.Type>> =>
         : [item],
     ),
   ]);
-
-// ----------------------------------------------------------------------------
-// The shape of the page
-// ----------------------------------------------------------------------------
 
 /**
  * One lyric row as a shape reader saw it: its system, the strip it read it
@@ -1508,7 +1486,6 @@ const oneEdit = (a: string, b: string) => {
   if (long.length - short.length > 1) return false;
   let i = 0;
   while (i < short.length && short[i] === long[i]) i++;
-  // Past the first difference the rest agree: after one change, or one letter of the longer skipped.
   return short.length === long.length
     ? short.slice(i + 1) === long.slice(i + 1)
     : short.slice(i) === long.slice(i + 1);
@@ -1542,8 +1519,6 @@ const spellsOver = (text: Text, anchor: Anchor, at: number, length: number, near
   const { words, joined, off } = text;
   const want = anchor.joined;
   const [head, tail] = [words[at]?.length ?? 0, words[at + length - 1]?.length ?? 0];
-  // Letters to spare: none for an exact spelling, one for a near one, less
-  // than the first or last word's for a split one.
   const spare = (off[at + length] ?? 0) - (off[at] ?? 0) - want.length;
   if (spare < -1 || (spare > 1 && spare >= head && spare >= tail)) return false;
   const [from, to] = [off[at] ?? 0, off[at + length] ?? 0];
@@ -1741,17 +1716,14 @@ const wordsAt = (one: Placed, count: number, at: number): readonly number[] => {
 const placeRow = (text: Text, row: OutlineRow, pos: number, held: boolean) => {
   const count = Math.max(1, row.words);
   const { first, last, mid } = anchorsOf(row);
-  // Its first words, where the row before ends.
   const slack = held ? 0 : SLACK;
   const near = seek(text, first, pos, [pos, pos + count], false, slack);
   const start = near >= 0 ? near : pos;
   const opens = anchorLine('opens', first, pos, near, slack);
-  // Its last words, its count later.
   const want = start + count;
   const to = seek(text, last, want, [start + 1, want + count], true);
   const end = to >= 0 ? to : want;
   const ends = anchorLine('ends', last, want, to);
-  // Its middle words, half its count in.
   const middle = start + Math.floor(count / 2);
   const holds = oneOf(placesOf(text, mid, middle - SLACK, middle + SLACK, false), middle);
   const centre = holds >= 0 ? '' : anchorLine('holds its middle', mid, middle, holds);
@@ -1765,9 +1737,6 @@ const placeRow = (text: Text, row: OutlineRow, pos: number, held: boolean) => {
     middle: Math.floor(count / 2) + 1,
     middleAt: holds >= 0 ? holds : NONE,
   };
-  // One past the last word any search above may read: each `placesOf` reads
-  // from its `lo` to its `hi` and an anchor's words (one more for a split
-  // spelling) after it, whichever search it took.
   const reads =
     Math.max(
       pos + count + first.words.length,
@@ -1958,8 +1927,6 @@ export const placing = function* (
     label: `the refrain after stanza ${i}: row ${r + 1}`,
     row,
   }));
-  // A refrain the page prints inside the stanza's run of systems, and the
-  // source writes inside each stanza, is sung where its systems stand.
   const inside = outline.refrain?.at === 'inside' && layout.refrain === undefined;
   const rows = [
     ...refrain.before.map((row, r) => ({
@@ -1975,8 +1942,6 @@ export const placing = function* (
   const each = yield* placeRows(what, text, rows, kept);
   const lines = each.flatMap((one) => one.lines);
   const end = each.at(-1)?.placed.end ?? 0;
-  // A word sung after the last row is in no row, unless an extra row of the
-  // page (an Amen printed apart, sung after the last stanza) stands there.
   const tail = words.length - end;
   if (
     tail > 0 &&
@@ -2515,10 +2480,6 @@ export const bookOf = (sources: Sources, n: number): ReadonlySet<string> =>
 /** The base row of a hymn: its row at the base commit, read from git. */
 export const baseOf = (sources: Sources, n: number): Verses => sources.base.get(n) ?? [];
 
-// ----------------------------------------------------------------------------
-// The photos and the crops
-// ----------------------------------------------------------------------------
-
 /** The orientation tags (0x0112) of an EXIF segment's first IFD, its TIFF header at `tiff`. */
 const orientationsAt = (view: DataView, tiff: number): number[] => {
   const little = view.getUint8(tiff) === 0x49;
@@ -2580,10 +2541,6 @@ const photoProblems = (photos: ReadonlyMap<string, Uint8Array>): string[] =>
         : undefined);
     return why === undefined ? [] : [`photo ${name} ${why}`];
   });
-
-// ----------------------------------------------------------------------------
-// The checks
-// ----------------------------------------------------------------------------
 
 /** What the rulings make of a hymn: its state, and the row its rulings give. */
 export interface Derived {
@@ -2734,7 +2691,6 @@ const rulingProblems = (
   rulings.flatMap((ruling, i) => {
     const what = `${n} ruling ${i + 1}`;
     const named = [...ruling.why.matchAll(IMAGE)].map((match) => match[0]);
-    // What a ruling may hold in place of a site: lines it settles, mutants it lists.
     const held = [ruling.settles, ruling.unreachable, ruling.gaps].flatMap((list) => list ?? []);
     return [
       ...(ruling.crops.length === 0 ? [`${what} names no crop`] : []),
@@ -2745,7 +2701,6 @@ const rulingProblems = (
       ...named
         .filter((image) => !crops.has(`${pad(n)}/${image}`))
         .map((image) => `${what} reads ${image}, which is no committed crop`),
-      // A dispute answered for the page holds its place in no line: the row now follows the page.
       ...(ruling.sites.length === 0 && held.length === 0 && !keepsPage(ruling)
         ? [`${what} has no site`]
         : []),
@@ -2804,7 +2759,6 @@ const fixFileProblems = (
   paged: boolean,
 ): string[] => {
   const n = entry.number;
-  // A row whose words are fixed and whose layout waits on the owner (`disputed`) keeps its fix file.
   const fixed = entry.row === 'fixed' || (entry.row === 'unsettled' && words === 'fixed');
   if (fix === undefined) return fixed ? [`${n} says ${entry.row} but has no fix file`] : [];
   const sings = unitDiff(
@@ -2846,7 +2800,6 @@ const spanProblems = (n: number, fix: Fix, rulings: readonly Ruling[], spans: re
       .filter((span) => span.ruling === ruling)
       .flatMap((span) => {
         const froms = units[span.unit - 1] ?? [];
-        // Words taken away leave no span: the line they stood in is the one before.
         const at = span.length > 0 ? span.start : Math.max(0, span.start - 1);
         return froms.slice(at, at + Math.max(1, span.length)).map(placeOf);
       });
@@ -3072,10 +3025,6 @@ export const baseProblems = (sources: Sources): string[] => {
   return problems;
 };
 
-// ----------------------------------------------------------------------------
-// The readings
-// ----------------------------------------------------------------------------
-
 /** A blind reading that transcribed nothing: the reader would not or could not read the page. */
 export const isRefusal = (reading: Reading) => reading.stanzas.length === 0;
 
@@ -3155,10 +3104,6 @@ export const readingProblems = (
   return problems;
 };
 
-// ----------------------------------------------------------------------------
-// The witness
-// ----------------------------------------------------------------------------
-
 /** A witness hymn: its stanzas' and its refrain blocks' text, in the order it prints them. */
 export interface WitnessHymn {
   readonly stanzas: readonly string[];
@@ -3226,10 +3171,6 @@ export const hunksOf = (row: Verses, witness: WitnessHymn): Hunk[] => {
 /** The first 16 hex digits of the sha256 of the hunks' canonical JSON. */
 export const digestOf = (hunks: readonly Hunk[]) =>
   createHash('sha256').update(JSON.stringify(hunks)).digest('hex').slice(0, 16);
-
-// ----------------------------------------------------------------------------
-// Loading
-// ----------------------------------------------------------------------------
 
 /** Every file under `dir` whose name ends with `ext`, by its path under `dir`, sorted. */
 const filesUnder = (dir: string, ext: string) =>
@@ -3391,10 +3332,6 @@ const loadReadings = (root: string) =>
     }
     return readings;
   });
-
-// ----------------------------------------------------------------------------
-// The script
-// ----------------------------------------------------------------------------
 
 /**
  * The shape readers' reports in `dir` (`*.json`, each `{ hymns: [...] }`),

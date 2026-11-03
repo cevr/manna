@@ -1,10 +1,3 @@
-// The mix's signal processing: sounds added in at a frame, the score's fades,
-// the duck under the voice and the final limiter. The fade, duck and limiter
-// keep the arithmetic of libavfilter's afade, sidechaincompress and alimiter
-// (n9.0.1), the filters the mix was balanced with, so a mix sounds as it
-// did when it was balanced. Pure sample loops over planar Float32Arrays;
-// past an array's end reads silence.
-
 /** `secs` as a frame count at `rate`, to the nearest frame. */
 export const toFrames = (secs: number, rate: number): number => Math.round(secs * rate);
 
@@ -278,7 +271,6 @@ export const limitInto = (
     nextlen: 0,
   };
   for (let n = 0; n < frames; n++) {
-    // Index loops: an iterator per frame per channel was most of a mix's time.
     for (let c = 0; c < channels; c++) l.buffer[l.pos + c] = input[c]?.[n] ?? 0;
     const peak = peakAt(l, l.pos);
     if (peak > ceiling) queuePeak(l, peak);

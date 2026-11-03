@@ -1,6 +1,3 @@
-// A films folder on disk for the scene tests (`scene-sources.ts`): one film's
-// scene sources, with the formatter they are written through.
-
 import { Effect, FileSystem, Path } from 'effect';
 
 /**

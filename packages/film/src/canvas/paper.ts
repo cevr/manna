@@ -1,8 +1,3 @@
-// The paper under everything, and the grain over everything. Both are built
-// once from a seed; grain cycles through a few tiles on the boil tick, each
-// shifted by the tick, so the surface feels alive without flickering at the
-// full frame rate. A frame's grain is a function of its tick alone.
-
 import type { Vec2 } from 'math';
 import { fbm, hash2, rng } from '../core/random.ts';
 
@@ -102,7 +97,6 @@ export const makePaper = (w: number, h: number, style: PaperStyle): HTMLCanvasEl
   ctx.fillStyle = style.base;
   ctx.fillRect(0, 0, w, h);
 
-  // Mottling: low-resolution fractal noise, upscaled smoothly.
   const lw = Math.ceil(w / 8);
   const lh = Math.ceil(h / 8);
   const low = offscreen(lw, lh);
@@ -130,7 +124,6 @@ export const makePaper = (w: number, h: number, style: PaperStyle): HTMLCanvasEl
   ctx.drawImage(low.c, 0, 0, w, h);
   ctx.restore();
 
-  // Fibres: short, faint, gently curved hairs.
   const r = rng(style.seed + 1);
   ctx.save();
   ctx.strokeStyle = style.tone;
@@ -154,7 +147,6 @@ export const makePaper = (w: number, h: number, style: PaperStyle): HTMLCanvasEl
     );
     ctx.stroke();
   }
-  // Flecks: tiny dark and light specks.
   const flecks = Math.round((w * h) / 9000);
   for (let i = 0; i < flecks; i++) {
     ctx.globalAlpha = 0.05 + r() * 0.12;
@@ -209,7 +201,6 @@ export const makeGrain = (
   sheets: Array.from({ length: count }, (_, k) => {
     const tile = grainTile(size, seed + k * 977);
     const { c, ctx } = offscreen(w + size, h + size);
-    // An unshifted repeat onto a clear sheet copies the opaque tile exactly.
     const pattern = ctx.createPattern(tile, 'repeat');
     if (pattern !== null) {
       ctx.fillStyle = pattern;

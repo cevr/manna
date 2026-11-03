@@ -1,23 +1,3 @@
-// A cast sheet's underlay: a layout picture the engine draws, never painted,
-// sent as a sheet try's last reference when a try faced the wrong way or
-// was drawn off its heads (the member's own: the canon's, its design's, or
-// a smaller figure's). Blank house mannequins standing level, each at
-// its view's figure's size (`Stature`): the grown member its own heads tall
-// (the cast's canon, 3.36, unless its design names its own), and a smaller
-// figure (a child beside the grown one) its share of the grown height and
-// its own heads, its head a larger share of it; each turned to its view's
-// slot by where its eyes, nose and feet point, each arm hanging in its
-// sleeve down the body's side with its hand a circle at the sleeve's end,
-// touching the body (the house hand, CRAFT rule 12): the route copies what
-// an underlay draws, so a hand drawn floating free would teach the retry to
-// float it, and `sleeveReach` would flag it. The image route takes facing and the
-// canon from a picture better than from words: in the prototype's first
-// round words alone faced 3 of 9 sheets right, and with this underlay 6 of 7.
-// The ground is the mannequins' soles alone, no line under them: on one
-// Christ turnaround's retry the route copied a drawn line as a rule under
-// every figure (3 of 3 tries) and drew one with none 2 of 3 times, facing
-// held both ways (2026-10-18). Pure: slots in, RGBA out.
-
 import { CANON_HEADS, type Slot, type Stature } from './cast-sheet.ts';
 import type { Raster } from './raster.ts';
 
@@ -210,8 +190,6 @@ export const mannequinUnderlay = (
   const ground = Math.round(0.91 * H);
   const step = W / slots.length;
   const sized = slots.map((_, k) => statures[k] ?? CANON_STATURE);
-  // The grown figure's height in pixels: the tallest stands in 0.8 of the picture, and each
-  // view's column holds its head, body and both arms (out to about 0.6 of a head each side).
   const grown = Math.min(
     ...sized.map((s) => (0.8 * H) / s.height),
     ...sized.map((s) => ((step / 2.1) * s.heads) / s.height),

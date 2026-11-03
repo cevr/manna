@@ -1,8 +1,3 @@
-// The host in memory for the tool tests: a file system that writes as a disk
-// does for each flag it models (and one that crashes on a chosen write), a
-// console that prints into a queue, the manifest locks, and the content and
-// private stores over them. No disk.
-
 import {
   Array as Arr,
   ByteSize,
@@ -190,7 +185,6 @@ const writeInto = (
         },
       },
     );
-    // Set in the same synchronous step as the read above: no other write lands between.
     files.set(path, landed);
     return Effect.void;
   });
@@ -283,7 +277,6 @@ const memoryOps = (
       });
     });
   return {
-    // Whether a path is there; a path below a file is refused (ENOTDIR), as Node's stat does.
     exists: (path) =>
       keyed(path, (key) => {
         if (tree.holds(key) !== 'nothing') return Effect.succeed(true);
@@ -291,7 +284,6 @@ const memoryOps = (
         if (below) return Effect.fail(refusal('BadResource', 'exists', key, 'ENOTDIR'));
         return Effect.succeed(false);
       }),
-    // The path as the tree resolves it (it holds no links), or Node's refusal.
     realPath: (path) => keyed(path, (key) => tree.realOf('realPath', key)),
     readFile: (path) => bytesAt('readFile', path),
     readFileString: (path) =>
@@ -300,8 +292,6 @@ const memoryOps = (
       writeInto(files, folders, 'writeFile', path, data, options?.flag),
     writeFileString: (path, data, options) =>
       writeInto(files, folders, 'writeFileString', path, text(data), options?.flag),
-    // A file's bytes written whole at another path, as Node's `copyFile` writes them; a
-    // folder is refused as Bun refuses it, its kind unknown.
     copyFile: (from, to) =>
       Effect.flatMap(
         keyed(from, (key) =>
@@ -309,9 +299,6 @@ const memoryOps = (
         ),
         (bytes) => writeInto(files, folders, 'copyFile', to, bytes.slice()),
       ),
-    // Made as Node's `mkdir` makes it: one folder in a folder that is there
-    // (ENOENT when not, EEXIST when the path is taken), or with `recursive`
-    // every folder down to it (ENOTDIR through a file, EEXIST on one).
     makeDirectory: (path, options) =>
       placed('makeDirectory', path, (key) => {
         const recursive = options?.recursive === true;
@@ -330,10 +317,6 @@ const memoryOps = (
           for (const folder of down) folders.add(folder);
         });
       }),
-    // Moved as Node's `rename` moves it, into a folder that is there: a file
-    // over a file (EISDIR over a folder); a folder, with all it holds, to a
-    // path that is free or an empty folder (ENOTDIR over a file, ENOTEMPTY
-    // over a folder holding anything, EINVAL into itself).
     rename: (from, to) =>
       keyed(from, (source) =>
         placed('rename', to, (target) => {
@@ -366,9 +349,6 @@ const memoryOps = (
           });
         }),
       ),
-    // Removed as Node's `rm` removes it: NotFound for nothing there unless
-    // `force`; a folder, empty or not, with everything in it only when
-    // `recursive` asks (Node's ERR_FS_EISDIR, which Effect files as Unknown).
     remove: (path, options) =>
       keyed(path, (key) => {
         const held = tree.holds(key);
@@ -378,24 +358,17 @@ const memoryOps = (
           return Effect.fail(refusal('Unknown', 'remove', key, 'ERR_FS_EISDIR'));
         return Effect.sync(() => drop(key));
       }),
-    // A new folder each call, as the system's are.
     makeTempDirectory: (options) => Effect.sync(() => tempFolder(options?.prefix)),
-    // The same, gone with everything in it when the scope closes, as the system's is.
     makeTempDirectoryScoped: (options) =>
       Effect.acquireRelease(
         Effect.sync(() => tempFolder(options?.prefix)),
         (dir) => Effect.sync(() => drop(dir)),
       ),
-    // An empty file in a new folder, as Node's are; the scoped one gone, its
-    // folder and all, when the scope closes.
     makeTempFile: (options) => tempFile('makeTempFile', options),
     makeTempFileScoped: (options) =>
       Effect.acquireRelease(tempFile('makeTempFileScoped', options), (file) =>
         Effect.sync(() => drop(file.slice(0, file.lastIndexOf('/')))),
       ),
-    // The names in a folder, made or holding a file, or with `recursive`
-    // every path under it; NotFound for nothing there, BadResource for a
-    // file (ENOTDIR).
     readDirectory: (path, options) =>
       keyed(path, (key) => {
         const held = tree.holds(key);
@@ -414,8 +387,6 @@ const memoryOps = (
         );
         return Effect.succeed([...new Set(names)]);
       }),
-    // A second name for a file, where nothing is (EEXIST when taken), in a
-    // folder that is there. Its bytes are copied (see above).
     link: (from, to) =>
       keyed(from, (source) =>
         placed('link', to, (target) =>
@@ -431,8 +402,6 @@ const memoryOps = (
           ),
         ),
       ),
-    // A file's size and kind, as a file server reads them before it answers a range,
-    // a folder's kind, and its mtime when the test keeps one (`mtimes`).
     stat: (path) =>
       keyed(path, (key) => {
         const held = tree.holds(key);
@@ -445,7 +414,6 @@ const memoryOps = (
           }),
         );
       }),
-    // A file's bytes from `offset`, `bytesToRead` of them when given, as one chunk.
     stream: (path, options) =>
       Stream.fromEffect(bytesAt('stream', path)).pipe(
         Stream.map((bytes) => {

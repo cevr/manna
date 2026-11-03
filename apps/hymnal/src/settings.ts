@@ -9,8 +9,6 @@
  */
 
 import { type Layer, Schema } from 'effect';
-// The module itself: the `effect/persistence` barrel brings in a SQL
-// migrator whose dynamic import() Hermes cannot compile.
 import type * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as Atom from 'effect/reactivity/Atom';
 

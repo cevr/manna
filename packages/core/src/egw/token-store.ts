@@ -16,8 +16,6 @@ import type { PlatformError } from 'effect/PlatformError';
 
 import { AccessToken } from './auth-types.js';
 
-// On-disk shape — secrets as plain strings so they round-trip through JSON.
-// Re-wrapped as Redacted on read.
 const PersistedToken = Schema.Struct({
   accessToken: Schema.NonEmptyString,
   refreshToken: Schema.optional(Schema.NonEmptyString),

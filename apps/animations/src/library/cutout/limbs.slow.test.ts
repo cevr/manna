@@ -1,15 +1,3 @@
-// The stroke limbs' census: every arm of every cast member's cut view is a
-// stroke limb, or says why it is not. Each view (`views.ts`) is loaded as the
-// film loads it (`puppetFrom`). Skin chains, declarations, painted arms and
-// refusals share one inventory, so a broken skin cannot erase an arm: a stroke
-// limb where its part carries one, else refused by `puppetOf` with the
-// refusal's reason (`Puppet.refused`), else kept painted by its view with
-// why (`painted`, `skeleton.ts`). An arm with none of the three fails here,
-// as does an empty reason, orphan refusal or declaration error. The last case prints the whole table
-// (member, view, side, and what the arm is) with its counts. Each case
-// decodes a view's sheets and measures its limbs, so they run in the slow
-// suite.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import type { PuppetSpec } from '@manna/film/canvas';
 import { PuppetImagesBun, puppetFrom } from '@manna/film/tools';
@@ -57,10 +45,10 @@ const rowsOf = (spec: PuppetSpec) =>
     });
   });
 
+/** The census: one row per arm of every cut view (`views.ts`), loaded as the film loads it, from one inventory of skin chains, declarations, painted arms and refusals, so a broken skin cannot erase an arm. Each row is a stroke limb, refused by `puppetOf` with its reason, or kept painted by its view with why; anything else, an empty reason, an orphan refusal or a declaration error fails. */
 const ROWS: Array<Row> = [];
 
-// Changing a limb into a refusal or opt-out requires an explicit census
-// change beside the declaration, so a missing measured arm cannot go quiet.
+/** The census's committed stroke limbs: turning one into a refusal or opt-out needs this list changed beside the declaration, so a missing measured arm cannot go quiet. */
 const EXPECTED_LIMBS = [
   'idea-villagers/poses-3/Left',
   'idea-villagers/poses-6/Left',

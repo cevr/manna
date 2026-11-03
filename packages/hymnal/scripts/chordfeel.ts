@@ -177,8 +177,6 @@ const compare = (today: readonly Placement.Change[], rule: readonly Placement.Ch
   return { moved, folded, changed: moved > 0 || folded !== 0 };
 };
 
-// --- 388: where its chords sit against its file ---
-
 interface Mismatch {
   readonly verse: number | 'refrain';
   readonly line: number;
@@ -306,8 +304,6 @@ const measureChords = (loaded: Loaded, lines: readonly Studied[]) => {
         onset !== undefined &&
         own !== undefined &&
         onset < own.start - slack;
-      // A chord today stands where the file changes, on today's syllables, so
-      // it differs from the soprano's laying only where the words lie on other notes.
       const cause: Mismatch['cause'] = heldOver
         ? 'held over'
         : here(nearestOnTune)
@@ -339,8 +335,6 @@ const measureChords = (loaded: Loaded, lines: readonly Studied[]) => {
     onTune,
   };
 };
-
-// --- The page ---
 
 const escape = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

@@ -1,16 +1,3 @@
-// How a change to the judged runner moves its answers: a seeded sample of
-// the repo's items whose answers the store keeps, asked again as the runner
-// asks now (`quality-run.ts` asks; this draws the sample and compares), and
-// each rule's new answers set beside the kept ones. A change of the request's
-// form, of its packing or of the model is measured so before it lands: an
-// answer moves with what it is asked beside, and a new form is a new
-// classifier, so a rule's findings can change with no rule's words changed.
-//
-// The sample is each rule's items drawn at random (`random`) and, past the
-// findings among them, more of its kept findings (`findings`), each item
-// once by its key in the store, in an order a seed fixes: two runs of one
-// seed over one store draw the same items.
-
 import { Option } from 'effect';
 
 import type { JudgedRule } from './rule.js';

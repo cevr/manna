@@ -72,7 +72,7 @@ interface RankedBook {
   hits: number;
 }
 
-const REMOTE_PAGE_SIZE = 100; // the EGW /search endpoint caps results at 100 per call
+const REMOTE_PAGE_SIZE = 100;
 
 /** Does a book author match any of the requested author filters (substring, case-insensitive)? */
 const authorMatches = (author: string, filters: string[]): boolean =>
@@ -152,8 +152,6 @@ const printUsage = Effect.gen(function* () {
   yield* Console.log('  manna egw study "loud cry" --export corpus/loud-cry.md');
 });
 
-// --- Phase 1: remote-search the subject (paged) and rank books by hits ------
-
 const scanRemoteHits = (plan: StudyPlan) =>
   Effect.gen(function* () {
     const client = yield* EGWApiClient;
@@ -169,7 +167,6 @@ const scanRemoteHits = (plan: StudyPlan) =>
       if (page.results.length === 0) break;
       hits.push(...page.results);
       scanOffset += page.results.length;
-      // Stop when the server has no more (short page, or we've seen the lot).
       if (page.results.length < REMOTE_PAGE_SIZE || scanOffset >= page.total) break;
     }
     return hits;
@@ -191,8 +188,6 @@ const rankBooks = (hits: ReadonlyArray<EGWSchemas.SearchHit>) => {
   }
   return rankMap;
 };
-
-// --- Phase 2: resolve pub_code -> Book, apply author filter, download --------
 
 /** Resolve pub_code -> Book (carries book_id + author) via title-search,
  *  matching exactly on code. Mirrors `manna egw download <code>`. */
@@ -241,8 +236,6 @@ const studyCandidate = (
   Effect.gen(function* () {
     const resolved = yield* resolveCatalogBook(plan, book);
     if (Option.isNone(resolved)) {
-      // Unresolvable (e.g. compound pub_code). Only note it when unscoped, to
-      // avoid noise; it can't be author-checked anyway.
       if (plan.scoped) return 'ignored' as const;
       yield* Console.log(`  ✗ ${book.pubCode}: could not resolve to a catalog book; skipping.`);
       return 'unresolved' as const;
@@ -285,8 +278,6 @@ const selectAndDownload = (
     return tally;
   });
 
-// --- Phase 3: local FTS across everything now installed ---------------------
-
 const searchLocal = (plan: StudyPlan) =>
   Effect.gen(function* () {
     const service = yield* WritingsService;
@@ -298,7 +289,6 @@ const searchLocal = (plan: StudyPlan) =>
       limit: plan.results * resultMultiplier,
     });
 
-    // When author-scoped, keep only hits whose book author matches.
     let filteredResults = rawResults;
     if (plan.scoped)
       filteredResults = rawResults.filter((r) =>
@@ -323,8 +313,6 @@ const printLocalHits = (
       yield* Console.log(`    ${clip(flatText(r))}\n`);
     }
   });
-
-// --- Optional: export the local hits as a refcode-tagged markdown corpus ----
 
 const renderCorpus = (
   plan: StudyPlan,
@@ -422,8 +410,6 @@ export const egwStudy = Command.make(
         return;
       }
 
-      // Rank by hits, threshold, take a generous slice (author filtering happens
-      // at resolve time, since hits don't reliably carry the author).
       const rankMap = rankBooks(hits);
       const candidatePool = [...rankMap.values()]
         .filter((b) => b.hits >= plan.minHits)

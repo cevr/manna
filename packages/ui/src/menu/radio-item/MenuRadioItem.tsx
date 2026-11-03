@@ -1,15 +1,3 @@
-// Upstream: packages/react/src/menu/radio-item/MenuRadioItem.tsx,
-// packages/react/src/menu/radio-item/MenuRadioItemContext.ts,
-// packages/react/src/menu/radio-item/MenuRadioItemDataAttributes.ts,
-// packages/react/src/menu/utils/stateAttributesMapping.ts
-//
-// An item of a `Menu.RadioGroup` (`role="menuitemradio"`): checked
-// (`aria-checked`, `data-checked`; else `data-unchecked`) while its `value`
-// is the group's, and a press offers its value to the group's owner. It is
-// an item as `Menu.Item` is (`useMenuItem`: the roving focus, Enter and
-// Space, a release after a drag), and keeps the menu open on a press
-// unless `closeOnClick`. Upstream's `disabled` and the filter's items are
-// left out.
 import type { JSX } from '@solidjs/web';
 import { createContext, omit, untrack, useContext } from 'solid-js';
 
@@ -79,7 +67,6 @@ export function MenuRadioItem(componentProps: MenuRadioItemProps): JSX.Element {
     },
   };
 
-  // A thunk, built under the provider below so its indicator reads it.
   const element = () =>
     useRenderElement('div', componentProps, {
       state,

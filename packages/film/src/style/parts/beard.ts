@@ -1,11 +1,3 @@
-// A figure's beard, cut inside its traced head's outline, and the lower lip
-// cut in it under the mouth line: each one flat paper, or one paper and the
-// light on it as tones, with no ink and no rim of its own, so the head's one
-// line goes round them all (`silhouette`, `rig/parts.ts`). The mouth is drawn
-// in the beard, so on a bearded head the face kit lies over every part cut
-// from it (`rig/draw.ts`). Traced from the concept, in the head's frame.
-// Pure.
-
 import { Schema } from 'effect';
 import { decoder } from '../decode.ts';
 import { Paper, Tones, unrimmed } from '../paper.ts';

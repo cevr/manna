@@ -1,10 +1,3 @@
-// What a sound is like, in numbers an agent can compare when it cannot
-// listen: where it starts and stops being heard, whether its loudest moment
-// stands out as a hit, how bright it is (spectral centroid) and how
-// noise-like (spectral flatness: 1 for white noise, near 0 for a pure tone).
-// Used to rank candidates before a person auditions them; its power spectrum
-// is also the band balance `compare.ts` reads.
-
 import type { Pcm } from '../audio.ts';
 
 /** A sound described. Seconds, Hz, and a 0–1 flatness. */
@@ -108,8 +101,6 @@ const planOf = (size: number): FftPlan => {
         sin: Float64Array.from({ length: span / 2 }, (_, k) => Math.sin(step * k)),
       };
     }),
-    // Hann's periodic form: frames a quarter of a frame apart sum its square
-    // to 1.5 at every sample.
     hann: Float64Array.from(
       { length: size },
       (_, i) => 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / size),
@@ -220,7 +211,6 @@ export const describeSound = (pcm: Pcm): Described => {
   let weighted = 0;
   let total = 0;
   let logSum = 0;
-  // Skip the DC bin: flatness is over the audible bins.
   for (let k = 1; k < power.length; k++) {
     const p = Math.max(power[k] ?? 0, 1e-20);
     weighted += p * ((k * pcm.rate) / FFT_SIZE);

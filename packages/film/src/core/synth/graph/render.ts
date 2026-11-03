@@ -1,8 +1,3 @@
-// A code sound rendered: a pure function of its resolved graph and a seed. One
-// channel at `SYNTH_RATE`, its peak at `SYNTH_PEAK`, the same samples for the
-// same graph and seed on every run and every host. Its buffers come from one
-// pool for the render, and a sound it samples is made once per seed.
-
 import type { Pcm } from '../../audio.ts';
 import { peakTo } from './kernels.ts';
 import { type Kit, ROOT, type ResolvedSound, planNode } from './plan.ts';

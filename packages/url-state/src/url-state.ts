@@ -123,15 +123,11 @@ export const layer: Layer.Layer<UrlState, never, Location> = Layer.effect(
       if (Option.isNone(batch)) return;
       const { href, move, entry } = batch.value;
       const current = yield* location.current;
-      // Another entry landed after the batch was written (Back, Forward, a
-      // push from outside): the batch belongs to an entry no longer on
-      // screen, and the entry that is shows.
       if (current.key !== entry) {
         yield* Effect.logDebug(`url-state.flush.dropped href=${href}`);
         yield* SubscriptionRef.set(view, current.href);
         return;
       }
-      // The batch's writes came back to where the entry is.
       if (href === current.href) return;
       yield* Effect.logDebug(`url-state.flush history=${move.history} href=${href}`);
       if (move.history === 'push') yield* location.push(href);
@@ -151,7 +147,6 @@ export const layer: Layer.Layer<UrlState, never, Location> = Layer.effect(
     );
 
     const flush = Effect.gen(function* () {
-      // The tick: every write made in this turn joins the batch first.
       yield* Effect.yieldNow;
       yield* drain;
     }).pipe(Effect.provideService(Scheduler.Scheduler, microtasks));
@@ -167,8 +162,6 @@ export const layer: Layer.Layer<UrlState, never, Location> = Layer.effect(
         ),
       );
       yield* SubscriptionRef.set(view, href);
-      // A batch that need not wait replaces a flush that is waiting out a
-      // throttle window; otherwise the flush already scheduled takes it.
       const throttled = Option.isSome(Option.flatMap(batch, (folded) => folded.move.throttle));
       yield* FiberHandle.run(flushing, flush, { onlyIfMissing: throttled });
     });
@@ -197,8 +190,6 @@ export const layer: Layer.Layer<UrlState, never, Location> = Layer.effect(
     );
 
     return UrlState.of({
-      // Derived, not mirrored: the waiting batch, else the entry on screen,
-      // so a read never lags an entry `Location` committed this instant.
       href: Effect.flatMap(Ref.get(pending), (waiting) =>
         Option.match(waiting, {
           onSome: (batch) => Effect.succeed(batch.href),

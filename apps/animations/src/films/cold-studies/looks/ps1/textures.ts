@@ -1,9 +1,3 @@
-// The ps1 world's textures, every one made here from seeded noise, as small
-// as the console's video memory kept them (16 to 64 texels a side) and read
-// nearest-neighbour, so each texel shows as a hard square on screen: wood
-// grain, cut stone, floor planks, cloth, the accused's stained tunic, paper
-// and card. Made once per WebGL context (`rig.ts`); nothing here reads time.
-
 import { hash2, lerp } from '@manna/film/core';
 import { DataTexture, NearestFilter, RepeatWrapping, RGBAFormat, UnsignedByteType } from 'three';
 
@@ -74,7 +68,6 @@ const planks = (size: number, rows: number, dark: string, light: string, seed: n
     if (inRow === 0) return mixRgb(d, [0, 0, 0], 0.35);
     const shift = Math.floor(hash2(row, seed) * size);
     const xx = (x + shift) % size;
-    // A butt joint once along each plank.
     if (xx === Math.floor(size * 0.5)) return mixRgb(d, [0, 0, 0], 0.2);
     const tone = 0.25 + 0.4 * hash2(row + 7, seed);
     const grain = Math.sin((inRow + 2.2 * tiled(xx / 6, row, size / 6, seed)) * 1.9);

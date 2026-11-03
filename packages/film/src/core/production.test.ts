@@ -97,7 +97,6 @@ describe('a production’s history', () => {
     const said = [
       word('Asked', HOUR, Option.some('Keep and lock them?'), Option.some('a92f276635e')),
       word('Decided', 2 * HOUR, Option.some('lets lock in that style')),
-      // An ask answered by a pick alone files no words, and its picks.
       word(
         'Decided',
         3 * HOUR,
@@ -106,7 +105,6 @@ describe('a production’s history', () => {
         Option.some({ keep: 'lock' }),
       ),
       word('Noted', 4 * HOUR, Option.some('lock in a rig and a style')),
-      // A question, and an ask withdrawn, decide nothing.
       word(
         'Asked',
         5 * HOUR,

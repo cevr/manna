@@ -1,16 +1,3 @@
-// The harvest's fields (the Board's `rain.harvest` and `rain.rain`), drawn in
-// the Board's own pixels (a panel is 1536 × 1024) as the court is: a teal sky
-// lit from the upper left, the sun's beams falling soft through it; lilac
-// hills far off, gold rolling fields under them with dark cypresses and
-// bushes on their rims; then the near field, its green rows running to a
-// point low at the right, red-brown furrows between them, and at the frame's
-// foot the near plants, tall leaves and ears, the one part lined in the ink.
-// The far planes are flat paper with no outline, paler as they stand back.
-// The grain ripens from the distance toward us (`ripe`), greens and stands
-// up under the rain (`green`), and the rain itself is flecks of silver and
-// gold falling a little to the left. Pure: the same numbers draw the same
-// field.
-
 import { type Hex, mix, unprobed } from '@manna/film/canvas';
 import { clamp, lerp, rng } from '@manna/film/core';
 import type { Pt } from '@manna/film/style';
@@ -87,7 +74,6 @@ export const farField = (ctx: CanvasRenderingContext2D) => {
   sky.addColorStop(1, F.skyLow);
   ctx.fillStyle = sky;
   ctx.fillRect(-700, -700, 3000, 1200);
-  // The sun's beams from the upper left, soft.
   ctx.save();
   for (const [a, w, alpha] of [
     [0.52, 0.05, 0.22],
@@ -108,11 +94,9 @@ export const farField = (ctx: CanvasRenderingContext2D) => {
   ctx.restore();
   fill(ctx, ridge(345, 30, 3, 520), F.hillFar);
   fill(ctx, ridge(372, 24, 5, 520), F.hillNear);
-  // The gold rolling fields, in three bands toward us.
   fill(ctx, ridge(405, 22, 7, 560), F.goldFar);
   fill(ctx, ridge(440, 18, 11, 560), F.goldBand);
   fill(ctx, ridge(470, 14, 13, 560), F.goldNear);
-  // Cypresses and bushes on the rims.
   for (const [x, y, h] of [
     [72, 412, 92],
     [152, 405, 120],
@@ -136,7 +120,6 @@ export const farField = (ctx: CanvasRenderingContext2D) => {
     [1010, 480, 20],
   ] as const)
     bush(ctx, x, y, rx);
-  // The haze that sets them back.
   ctx.save();
   ctx.globalAlpha = 0.18;
   ctx.fillStyle = F.skyLow;
@@ -218,7 +201,6 @@ export const nearField = (ctx: CanvasRenderingContext2D, s: FieldState) => {
       ],
       F.soil,
     );
-    // The furrow's far wall in shade, toward the light's complement.
     fill(
       ctx,
       [
@@ -229,8 +211,6 @@ export const nearField = (ctx: CanvasRenderingContext2D, s: FieldState) => {
       F.soilShade,
     );
   }
-  // The rows of grain between the furrows, each a run of leaf tops from the
-  // far edge toward us, far ones first so the near overlap them.
   const rows = FURROWS.slice(1).map((x) => x - STEP / 2);
   const steps = 34;
   for (let k = 0; k < steps; k++) {

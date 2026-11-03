@@ -112,7 +112,6 @@ export default class Desk extends Cloudflare.Worker<Desk>()(
     return {
       fetch: Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest;
-        // The binding is read per request: the environment fills in when the Worker runs.
         const secret = Option.getOrElse(readSecret(env['DESK_TOKEN']), () => '');
         return yield* respondDesk(store, secret, request);
       }),

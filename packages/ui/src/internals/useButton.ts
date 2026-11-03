@@ -1,14 +1,3 @@
-// Upstream: packages/react/src/internals/use-button/useButton.ts,
-// packages/react/src/utils/useFocusableWhenDisabled.ts,
-// packages/react/src/utils/dispatchClickWithModifiers.ts
-//
-// Button behaviour for a part's element, as a mixin (`../mix/mix.ts`): a
-// native `<button type="button">`, or a `role="button"` element that Enter
-// activates. Inside a composite widget (a toggle group, a menu) the element
-// takes its tab stop from the composite and Space activates on keydown.
-// Upstream's disabled state (`focusableWhenDisabled`, `aria-disabled`) and its
-// link arm are left out: no part is disabled through the button, and none
-// renders a link.
 import { isHTMLElement } from '@floating-ui/utils/dom';
 
 import { mix, type Mixin } from '../mix/mix.ts';
@@ -67,7 +56,6 @@ export function useButton(params: UseButtonParameters = {}): Mixin<HTMLButtonEle
   const composite = params.composite ?? false;
   return mix<HTMLButtonElement>(
     native ? { type: 'button' } : { role: 'button' },
-    // The composite owns its items' tab stops: the key is left out, so the item's stands.
     !composite && { tabindex: 0 },
     {
       onKeyDown(event) {
@@ -85,15 +73,12 @@ export function useButton(params: UseButtonParameters = {}): Mixin<HTMLButtonEle
             return;
           }
           event.preventDefault();
-          // Only a native-mode item that is not a real <button> is left out.
           if (!native || isButton) {
             dispatchClickWithModifiers(currentTarget, event);
           }
           return;
         }
 
-        // A native button activates itself; a `role="button"` element on Enter.
-        // A prevented keydown cancels activation.
         if (native || event.key !== 'Enter' || event.defaultPrevented) {
           return;
         }
@@ -101,7 +86,6 @@ export function useButton(params: UseButtonParameters = {}): Mixin<HTMLButtonEle
         dispatchClickWithModifiers(currentTarget, event);
       },
       onKeyUp(event) {
-        // A prevented keyup on a <button> stops Space from clicking it.
         if (
           event.target === event.currentTarget &&
           native &&

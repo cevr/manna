@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/menu/portal/MenuPortal.tsx,
-// packages/react/src/menu/portal/MenuPortalContext.ts
-//
-// Moves the menu's popup into a portal node at the end of `<body>` (or
-// where it is written, with `inline`). Renders only while the menu is mounted (upstream's
-// `keepMounted` is left out: no page keeps a closed menu in the DOM).
 import type { JSX } from '@solidjs/web';
 import { createContext, Show, useContext } from 'solid-js';
 

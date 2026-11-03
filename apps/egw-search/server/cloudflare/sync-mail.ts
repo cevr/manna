@@ -206,8 +206,6 @@ const planned = (plan: {
 /** The mail for a run's outcome. */
 export const syncMail: (outcome: SyncOutcome) => SyncMail = SyncOutcome.$match({
   Planned: ({ remote, installedBefore, pending, changed, verify, recheckLeft }) => {
-    // The library lists some books it never serves; a sync tries them again
-    // and they fail as expected, so they are not books to add.
     const withheld = pending.filter((book) => isKnownUnavailable(book.id));
     const toAdd = pending.filter((book) => !isKnownUnavailable(book.id));
     return planned({ remote, installedBefore, toAdd, withheld, changed, verify, recheckLeft });

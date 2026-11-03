@@ -1,22 +1,3 @@
-// The productions' ledgers on disk (`core/production.ts`): one small JSON
-// file each, `<productions>/<production>.json` under `FILMS_PRODUCTIONS` (the
-// app's `productions/`, committed: the owner's word, which no render can make
-// again, kept with the code and alike in every checkout; it names sets by
-// their folder and never holds an image or a render). Each is a `ContentStore` manifest, written whole by one
-// writer at a time across processes, so the lab's Move forward and an
-// agent's `film production` in a terminal never lose each other's write.
-// A ledger that does not decode is left out of the list with a warning,
-// never rewritten: the front door still opens. A ledger decodes from, and is
-// written to, only the file named for its production: a caller addresses a
-// ledger by the production it names, so one kept in another file would be
-// read from one file and written to another.
-//
-// The store is the timeline's one write path: the lab's Move forward (the
-// `productions` HTTP group), `film production` and `film publish` in a
-// terminal, and any other caller (an MCP tool) use its verbs (`start`,
-// `forward`, `say`, `file`, `publish`), each decided on the ledger as read
-// under its lock, so every caller gets the same refusals.
-
 import {
   Array as Arr,
   Config,

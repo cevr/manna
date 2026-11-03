@@ -1,12 +1,3 @@
-// Where the score sits (CRAFT rule 10): `under` the voice wherever anyone
-// speaks, short pauses included, and `alone` where no one speaks for a while
-// (the title card, a held beat, the landing, the credits), rising a moment
-// after the voice stops and settling back before it speaks again. Both levels
-// are dB against the voice, as BS.1770 hears each: the voice bus's integrated
-// loudness against the score's own over the stretches it plays at that level,
-// so a score that swells where the voice rests is not turned down for it.
-// Pure: the mix builds the envelope from its voice bus.
-
 import { type Pcm, SPEECH_GATE, concat, slice, windowPowers } from './audio.ts';
 import { loudness } from './synth/loudness.ts';
 import type { Interval } from './time.ts';

@@ -112,7 +112,6 @@ interface Fiber {
 
 /** The `onLayout` the view drawn as `element` was handed: react-native-web keeps it off the DOM. */
 const layoutOf = (element: Element): Option.Option<(event: Laid) => void> => {
-  // React keeps an element's fiber under a key it names at run time.
   const own = Option.fromNullishOr(
     Object.entries(element).find(([name]) => name.startsWith('__reactFiber$')),
   ).pipe(Option.map(([, fiber]): Fiber => fiber));
@@ -135,7 +134,6 @@ const shiftOf = (element: HTMLElement) =>
 const mounted = (c: Case) => {
   const told: Array<number> = [];
   const cued: Array<number> = [];
-  // The turns told and not yet taken, on a case with late turns.
   const waiting: Array<number> = [];
   const owner = { take: (_n: number) => {} };
   const tell = (cue: Cue) => {
@@ -257,7 +255,6 @@ const run = (c: Case): ReadonlyArray<string> => {
   const read = (where: string, still: boolean) => {
     if (problems.length > 0) return;
     if (still) takeAll(where);
-    // A busy owner takes a turn or two at a moment of its own.
     else if (late() < 0.2)
       for (const _ of [0, 1].slice(0, 1 + Math.floor(late() * 2))) dial.takeOne();
     for (const p of readOf(c, dial, still)) problems.push(`${caseText(c)}: ${where}: ${p}`);
@@ -289,7 +286,6 @@ const run = (c: Case): ReadonlyArray<string> => {
     while (stepAnimations(FRAME));
   });
   read('the end, still', true);
-  // Each detent cued is a step of one from the detent before it, from the key at the start.
   const jumps = dial.cued.filter(
     (at, k) =>
       ![1, 11].includes(

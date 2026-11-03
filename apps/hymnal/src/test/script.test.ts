@@ -17,7 +17,6 @@ const scripts: Record<string, string> = JSON.parse(
 ).scripts;
 const listed =
   `${scripts['test:slow']} ${scripts['test:offline']}`.match(/\.\/[\w./-]+\.tsx?\b/g) ?? [];
-// test:browser runs a directory: every file in it.
 const browser = [...new Bun.Glob('test/browser/**/*.{ts,tsx}').scanSync({ cwd: app })].map(
   (file) => `./${file}`,
 );

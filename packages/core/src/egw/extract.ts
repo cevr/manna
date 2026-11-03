@@ -63,8 +63,6 @@ const walkScriptureRefs = (nodes: readonly Node[], out: { readonly title: string
   for (const node of nodes) {
     if (node._tag === 'ScriptureRef') {
       out.push({ title: node.title });
-      // ScriptureRefs in this corpus don't nest other ScriptureRefs, but the
-      // recursion below covers it defensively without measurable cost.
     }
     if (isContainerNode(node)) {
       walkScriptureRefs(node.children, out);

@@ -1,10 +1,3 @@
-// `bun run merge-audit` over a real repository: a branch merges main inside
-// itself and resolves the conflict by keeping its own file whole, then main
-// merges the branch with no conflict left. The outer merge has nothing to
-// say; the edit main lost lives in the branch's own merge, which the audit
-// reads too: an outer merge with `conflicted=0` can sit over an inner merge
-// that dropped lines.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, test } from 'bun:test';
 import { Effect, FileSystem, Path, Stream } from 'effect';
@@ -47,7 +40,6 @@ const run = Effect.gen(function* () {
     ['# Notes', 'the second line, as main has it', 'the third line stays'],
     'main edit',
   );
-  // The batch merges main and keeps its own file whole.
   yield* git('checkout', '-q', 'batch');
   yield* git('merge', '-q', 'main');
   yield* git('checkout', '--ours', 'notes.md');
@@ -61,9 +53,6 @@ const run = Effect.gen(function* () {
   return { inner, outer, lines: out.split('\n') };
 }).pipe(Effect.scoped, Effect.provide(BunServices.layer));
 
-// `--review` over a repository whose ledger cites one of a review's three
-// findings: the cited one is routed, the one classed `none` is declined, the
-// third is unrouted, and the run fails on it alone.
 const runReview = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

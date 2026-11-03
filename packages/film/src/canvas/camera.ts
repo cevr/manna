@@ -1,5 +1,3 @@
-// A camera over a scene's world: (x, y) is the world point at frame centre.
-
 import { Predicate } from 'effect';
 import { lerp } from '../core/time.ts';
 import type { Clear, Hex } from './colour.ts';
@@ -110,7 +108,6 @@ export const hearingCameras = (
   drawing.add(ctx);
   const b = breathAt(breath.drift, breath.through);
   if (breath.outer && breath.drift !== 0 && b > STILL_BREATH) {
-    // The camera a scene with no shot would breathe through, as one transform over its draw.
     const { width: w, height: h } = breath;
     const s = 1 + breath.drift.zoom * b;
     ctx.save();
@@ -303,7 +300,6 @@ export const pushInto = (out: Camera, a: Camera, b: Camera, t: number): Camera =
   const ratio = Math.log(zb / za);
   if (!(Math.abs(ratio) > PAN_ONLY)) return lerpCamera(out, a, b, t);
   const z = za * Math.exp(ratio * t);
-  // The fixed point, and how far from it the centre stands, shrinking as the zoom grows.
   const px = (zb * b.x - za * a.x) / (zb - za);
   const py = (zb * b.y - za * a.y) / (zb - za);
   const k = za / z;
@@ -458,14 +454,11 @@ export const multiplane = (
   planes: ReadonlyArray<Plane>,
   depth: Depth = {},
 ) => {
-  // The shot as it breathes now, in the module's scratch camera, read out
-  // before any plane draws: a plane may hold a shot of its own, which rewrites it.
   const cam: Camera = { ...drifted(ctx, planing, framed, depth.drift ?? 1) };
   const rest = depth.rest ?? [w / 2, h / 2];
   const haze = depth.haze;
   const thickness = depth.thickness ?? 0;
   const ordered = [...planes].sort((a, b) => b.z - a.z);
-  // The shot, as a listener hears it: the focal plane's camera, once.
   tell(ctx, cam, framed, w, h);
   ordered.forEach((plane, i) => {
     const z = Math.max(plane.z, 1e-3);
@@ -475,10 +468,7 @@ export const multiplane = (
     if (soft > 0.05) ctx.filter = `blur(${soft.toFixed(2)}px)`;
     raised(ctx, plane.lift ?? planeLift(z), () => shoot(ctx, view, w, h, plane.draw, undefined));
     ctx.restore();
-    // The backdrop's paper grain, fixed to it: it slides with the backdrop's pan.
     if (i === 0) planeFibre(ctx, view, w, h, depth.fibre ?? PLANE_FIBRE);
-    // Haze over everything so far, as thick as the air between this plane
-    // and the next nearer one, or the focal plane after the nearest.
     const nearer = ordered[i + 1]?.z ?? 1;
     const veil = 1 - clearance(z, thickness) / clearance(nearer, thickness);
     if (haze !== undefined && veil > 1e-3) {

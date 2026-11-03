@@ -1,12 +1,3 @@
-// The cast reader's Python, run as the build runs it: its pytest cases in
-// its uv environment (`uv.lock`'s, under `FILM_READER_HOME`); and, with no
-// environment there, a refusal that names the line making one; the
-// committed folder's roles, as its imports derive them; the train config
-// against model.py's defaults; the unit tests' own file, which reads no
-// real folder; and the import scan (`scanOf`), CPython's `ast` in one
-// `python3` spawn, over every import form and every fault it refuses.
-// Slow: it starts Python and imports torch, and it reads the repo's files.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, FileSystem, Layer, Schema } from 'effect';
@@ -66,7 +57,6 @@ const FORMS: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
   ['s = f"{x:{\'>\'}3}"; import spec_field', ['spec_field']],
   ["s = f\"{ {'k': 1}['k']:>3} {d[1:2]!r:^{w}}\"; import brackets", ['brackets']],
   ['s = f"""{x # a comment\'s quote\n}"""; import field_comment', ['field_comment']],
-  // a docstring that reads as an open import, and a comment that ends in a backslash
   ['"""\nfrom example import (\n"""\nimport helper\n', ['helper']],
   [
     'from model import decode\n# a comment ending in a backslash \\\nimport helper\n',
@@ -75,12 +65,10 @@ const FORMS: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
   ['from model import decode\n"""\nimport helper\n"""\n# import other\n', ['model']],
   ['from model import Reader\nif True: import helper\n', ['helper', 'model']],
   ['from model import Reader\ndef load(): from helper import VALUE\n', ['helper', 'model']],
-  // a quote in a formatted string's format spec is a character of the spec
   ['s = f"{x:\'>10}"\nimport helper\n', ['helper']],
   ['a = f"{x:\'>3}"; import helper; b = f"{y:\'<3}"\n', ['helper']],
   ["import model\nx = f\"{x:'''}\"\nimport helper\nf\"{x:'''}\"\n", ['helper', 'model']],
   ['import model\ns = f"{x:{y:\'<\'}}"\nimport helper\nf"{y:{z:\'>\'}}"\n', ['helper', 'model']],
-  // a backslash before a formatted string's `{` escapes nothing: the `{` opens a field, or `{{` is a brace
   ["a = rf'\\{{'; import helper; b = '}'", ['helper']],
   ["a = f'\\{{'; import helper; b = '}'", ['helper']],
   ['a = rf\'\\{"\'"}\'; import helper  # "', ['helper']],
@@ -183,7 +171,6 @@ describe('cast reader (Python)', () => {
   it.effect("the train config's backbone and input, in its key, are model.py's defaults", () =>
     Effect.gen(function* () {
       const model = yield* fileHere('../../../reader/model.py');
-      // the config is the train key's (`graph.ts` keys every stage by its config)
       const train = decodeTrainConfig(
         trainStage([], [], '/nonexistent/reader.lock.json').config ?? '',
       );
@@ -193,7 +180,6 @@ describe('cast reader (Python)', () => {
     }).pipe(Effect.provide(BunServices.layer)),
   );
 
-  // the unit tests run on an in-memory disk: a real folder's read or write would take the gate's time and the host's files
   it.effect(
     'the cast reader unit tests read no real folder: reader.test.ts takes no Bun platform layer and names no file by its URL, through Bun, or through a Node file or OS module',
     () =>

@@ -1,11 +1,3 @@
-// What a context menu opens on: the thing under the pointer. A card, a row,
-// a cue, a note or a version says which thing it is by one attribute
-// (`data-target`, its `Selection` as JSON, `targetAttr`), so a page's one
-// context menu reads the thing from where the right-click or the long press
-// landed (`targetAt`) and lists the commands about it; a press on nothing
-// marked is about the page itself (`Page`). A command says which targets
-// show it (`about`, `command.ts`). Pure.
-
 import { Option, Predicate, Schema } from 'effect';
 import { Selection, type SelectionTag } from './selection.ts';
 

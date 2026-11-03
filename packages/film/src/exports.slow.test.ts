@@ -1,37 +1,3 @@
-// The package's browser and test entries carry only what their users use:
-// every name an entry exports is imported by name from it somewhere, by a
-// film's code under apps/, by a test (or a test's fixture, a lint rule's
-// among them), through the package specifier (`@manna/film/canvas`) or a
-// path to the entry's file. An export nobody reads is deleted from the
-// entry, not kept "in case", and an entry names its exports (`export *`
-// publishes a module whole). The engine's own parts stay exported from their
-// files for the framework and its tests, and in a swept directory (`SWEPT`)
-// only while another file imports them: a name its own file alone reads is
-// not exported. A directory joins `SWEPT` once its unread exports are gone.
-//
-// Imports and exports are read by the parser (oxc), so a comment or a string
-// that looks like code names nothing. A namespace import, an `import()` and
-// an `export * as` take a module whole.
-//
-// The entries guarded, and who uses them:
-//   canvas    films, their kits and the framework's tests: the draw kit
-//   player    the app's film registry and faces, a film's `Narrated` type
-//   render    the app's render page (`mountRender`)
-//   stand-in  the framework's tests, and `check --draw`'s leg
-//             (tools/draw-check.ts), which draws every scene into it
-//   core      films, their kits, the app's sound library and the framework's
-//             tests: the clock, the script and sound schemas, the mix plan,
-//             a cast record and its library reference (`castLock`)
-//   style     films' scenes, sets and rigs: the house look's acting, boil,
-//             key light and creases, the parts a figure is composed of,
-//             and the figures file a film lays and the house prints
-//   style/build
-//             a film's rig build and its test (`compile`, `unbuilt`,
-//             `unlocked`, `unsaid`)
-// `tools`, `lab`, `review` and `solid-plugin` are not guarded here: the
-// tooling entries are read by the CLI, the app's build and the tests, and the
-// framework reads each core module by its path.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, FileSystem, Option, Path, Schema } from 'effect';
@@ -203,10 +169,6 @@ const inEntryScope = (file: string) =>
   file.startsWith('packages/film/e2e/') ||
   file.startsWith('packages/film/lint/fixtures/');
 
-/**
- * The source graph both entry guards read, read once as the file loads, every
- * file at once: its cost is in no case's time limit.
- */
 // oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
 const graph = await Effect.runPromise(
   Effect.gen(function* () {
@@ -246,7 +208,6 @@ const graph = await Effect.runPromise(
 describe('the package entries', () => {
   it.effect('a comment or a string that looks like code hides nothing and names nothing', () =>
     Effect.sync(() => {
-      // tools/lab.ts's shape: a line comment holding `/*`, code, then a doc comment's `*/`.
       const record = recordOf(
         'm.ts',
         [

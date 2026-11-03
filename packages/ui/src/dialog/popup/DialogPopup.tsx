@@ -1,10 +1,3 @@
-// Upstream: packages/react/src/dialog/popup/DialogPopup.tsx
-//
-// The dialog's `role="dialog"` container, labelled by its title and
-// described by its description. Focus moves into it on open (the first
-// tabbable element) and, on close, back to what had it before the owner
-// opened the dialog; a modal dialog keeps Tab inside. Arrow, Home and End
-// keys stop here, so a composite widget around the dialog does not move.
 import type { JSX } from '@solidjs/web';
 import { omit, untrack } from 'solid-js';
 
@@ -45,7 +38,6 @@ function DialogPopupFocus(props: DialogPopupFocusProps): JSX.Element {
   return (
     <FloatingFocusManager
       context={store.floatingRootContext}
-      // The owner's `open` opens it: a programmatic open, so focus returns to what had it.
       openInteractionType={null}
       disabled={!store.mounted()}
       closeOnFocusOut={!store.disablePointerDismissal()}

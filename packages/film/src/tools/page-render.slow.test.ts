@@ -1,14 +1,3 @@
-// The server's render of a page, in its build's worker: the fixture's
-// server entry (`fixtures/render/page.server.tsx`), built as the lab builds
-// it, renders the hydration script and its styles into the head, its markup
-// into its root, and a read of the lab's API streamed in once answered; each
-// build renders in a worker of its own, imported afresh; a render of an
-// older build still under way finishes after a newer build renders; a page's
-// head preloads each UI face's latin file (the words face's and the
-// numbers' mono face's) and declares every subset at the URLs the browser's
-// build answers; and a server entry that is no page's render fails its
-// render.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -195,7 +184,6 @@ describe("a page's server render", () => {
         expect(page.markup).toMatch(/^<div class="fixture-root" data-page-root>/);
         expect(page.markup).toMatch(/<\/div>$/);
         expect(page.markup).toContain(URL_ASKED);
-        // Labelled for the browser that asked: its chords as a Mac's.
         expect(page.markup).toContain('<p id="keys">mac</p>');
         expect(page.markup).toContain('the answer');
         expect(reads).toEqual(['/api/fixture?x=1']);
@@ -246,7 +234,6 @@ describe("a page's server render", () => {
       return Effect.gen(function* () {
         const bundle = yield* fixtureBundle;
         yield* renderOf({ id: 2, bundle }, answering('two'));
-        // A request that named build 1 before build 2 rendered, answered late.
         const late = yield* renderOf({ id: 1, bundle }, answering('one'));
         expect(late.markup).toContain('one');
         expect(retired).toEqual(['1']);
@@ -298,7 +285,6 @@ describe("a page's server render", () => {
         yield* Effect.gen(function* () {
           const renderer = yield* PageRenderer;
           const page = yield* renderer.render({ id: 1, bundle }, 'ask', ASKED, read);
-          // The render goes on, its kept read held: the given-up read's handler stops now.
           const stopped = yield* Deferred.await(givenUpStopped).pipe(
             Effect.timeoutOption('2 seconds'),
           );
@@ -321,7 +307,6 @@ describe("a page's server render", () => {
           const fs = yield* FileSystem.FileSystem;
           const path = yield* Path.Path;
           const bundler = yield* PageBundler;
-          // A page whose script registers the face, as every page with chrome does.
           const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'film-face-page-' });
           yield* fs.writeFileString(
             path.join(dir, 'face.html'),
@@ -351,7 +336,6 @@ describe("a page's server render", () => {
             page.head.matchAll(/src:url\(([^)]+)\) format\('woff2'\);[^}]*font-display:(\w+)/g),
             (m) => [m[1] ?? '', m[2] ?? ''] as const,
           );
-          // Every subset declared, each blocking until its file lands; the preloaded among them.
           expect(declared.length).toBe(5);
           expect(new Set(declared.map(([, display]) => display))).toEqual(new Set(['block']));
           for (const url of preloaded) expect(declared.map(([u]) => u)).toContain(url);
@@ -426,7 +410,6 @@ describe("a page's server render", () => {
             `no end in ${Duration.format(END_WAIT)} after its head`,
           );
         }).pipe(Effect.scoped);
-        // The render's scope closed with the cut: its read's handler stopped with it.
         expect(yield* Deferred.isDone(stopped)).toBe(true);
       }).pipe(Effect.provide(Services)),
   );

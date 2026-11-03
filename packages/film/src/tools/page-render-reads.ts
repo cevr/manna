@@ -1,11 +1,3 @@
-// A build's render worker's reads of the lab (`page-render-worker.ts`): each
-// render's fetch sends a GET to the lab as a `Read` and waits for its
-// `Answer`, and refuses any other method, as a render only reads. A render
-// owns its reads: once it is over (ended, failed or cancelled), each read it
-// still waits on is aborted and dropped, as is one whose fetch's own signal
-// aborts (the lab told so, `ReadCancelled`, as the render goes on), and an
-// answer that comes after is no one's.
-
 import { Deferred, Effect, Option, Schema } from 'effect';
 import { FromRender, type ToRender } from './page-render-protocol.ts';
 
@@ -87,8 +79,6 @@ export const renderReads = (send: (message: FromRender) => void): RenderReads =>
     renders.set(id, over);
     const read = (input: RequestInfo | URL, init?: RequestInit) => {
       const request = new Request(input, init);
-      // Over when the render is, or when the fetch's own signal aborts: the
-      // fetch then fails with the signal's reason, as the web's fetch does.
       const signal = AbortSignal.any([over.signal, request.signal]);
       return Effect.runPromise(
         Effect.gen(function* () {

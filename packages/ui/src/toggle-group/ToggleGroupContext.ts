@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/toggle-group/ToggleGroupContext.ts
-//
-// What a toggle reads from the group around it: the owner's pressed values
-// (a getter, live), how to offer a change of them, whether focus is in the
-// group, and how to move focus off a press from outside it.
 import { createContext, useContext } from 'solid-js';
 
 export interface ToggleGroupContextValue<Value> {

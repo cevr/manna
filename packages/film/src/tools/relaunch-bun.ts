@@ -1,11 +1,3 @@
-// The host adapter that starts the lab again in its own process: it ends the
-// Chrome its pages ran in (`Bun.WebView.closeAll()`; closing a view leaves
-// Chrome running, and `execve` runs no exit handler), then `execve`s the
-// command line it was started with (the runtime's own flags, then the script
-// and its arguments), keeping its process id and its environment.
-// `relaunchOnExportsChange` (`exports-watch.ts`) calls it only once the lab's
-// servers and its pages are closed.
-
 import { Effect, Layer, Option } from 'effect';
 import { Relaunch } from './exports-watch.ts';
 
@@ -18,7 +10,6 @@ export const RelaunchBun = Layer.succeed(
         Effect.suspend(() =>
           Option.match(Option.fromUndefinedOr(process.execve), {
             onNone: () => Effect.die('this runtime cannot start itself again (no execve)'),
-            // The environment is the process's own: execve keeps it when none is given.
             onSome: (execve) =>
               Effect.sync(() => {
                 Bun.WebView.closeAll();

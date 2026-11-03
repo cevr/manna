@@ -171,9 +171,6 @@ describe('Score.fromMidi', () => {
       expect(Score.fromMidi(midi, 1).key).toEqual({ tonic: 'F', minor: false });
     }),
   );
-  // Each verse's first melody note, measured by keys, rhythm, bar phase and syllables per stanza.
-  // Each is read inexactly: a note split or joined near a verse start (126 and 292 differ by
-  // more than a note there). 214 and 149 are controls; 149's verse 2 splits its final note.
   const truths: ReadonlyArray<readonly [number, readonly number[]]> = [
     [54, [15, 55, 95]],
     [58, [0, 30]],

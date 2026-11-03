@@ -164,8 +164,6 @@ const ico = (images: ReadonlyArray<{ readonly size: number; readonly png: Uint8A
   return bytes;
 };
 
-// ── The YouTube kit ──────────────────────────────────────────────────────
-
 /** YouTube's banner areas, in its 2560 × 1440 frame. */
 const SAFE = { x: 507, y: 508.5, width: 1546, height: 423 } as const;
 const DESKTOP = { y: 508.5, height: 423 } as const;
@@ -216,8 +214,6 @@ const thumb = (film: Thumb) =>
     `<div style="position:absolute;inset:0;background:url(${kitArt(film.art)}) ${film.position}/cover"></div><div style="position:absolute;inset:0;background:linear-gradient(90deg in oklab,color-mix(in srgb,${PALETTE.night} 88%,transparent),color-mix(in srgb,${PALETTE.night} 62%,transparent) 36%,transparent 62%)"></div><div style="position:absolute;left:64px;top:50%;transform:translateY(-50%)"><div style="font:500 ${film.px}px/1.04 Newsreader;font-variation-settings:'opsz' 72;letter-spacing:-.015em;color:${PALETTE.wheat}">${film.lines.join('<br>')}</div></div>`,
   );
 
-// ── The Facebook Page ────────────────────────────────────────────────────
-
 /**
  * The cover at twice the phone's 640 × 360: a phone shows all of it, a
  * computer the band 1640 × 624 across its middle. The lockup stands in the
@@ -243,8 +239,6 @@ const coverCropsBoard = (src: string) => {
 <div>${label('COMPUTER · 1640 × 624')}<div style="width:820px;height:${COVER_DESKTOP.height * desk}px;background:url(${src}) 0 ${-COVER_DESKTOP.y * desk}px/820px ${COVER.height * desk}px"></div></div>
 <div>${label('PHONE · ALL 1640 × 924')}<div style="width:480px;height:${COVER.height * phone}px;background:url(${src}) 0 0/480px ${COVER.height * phone}px"></div></div></div>`;
 };
-
-// ── The site's link cards and icons ──────────────────────────────────────
 
 const OG = { width: 1200, height: 630 } as const;
 
@@ -280,14 +274,12 @@ interface Picture {
  * (`../scripts/promise.ts`).
  */
 export const seen = (wheat: string): ReadonlyArray<Picture> => [
-  // The avatar: the bare wheat on the night; YouTube's circle crop leaves it whole.
   {
     html: nightSquare(wheat, 800, 0.58),
     out: `${OUT}/avatar-800.png`,
     size: { width: 800, height: 800 },
     format: 'png',
   },
-  // The watermark: the bare wheat with nothing behind it (owner, decisions.log line 69).
   {
     html: frame(
       150,
@@ -318,7 +310,6 @@ export const seen = (wheat: string): ReadonlyArray<Picture> => [
     size: OG,
     format: 'jpeg',
   })),
-  // The manifest's icons and the touch icon are the wheat on a night square; each launcher rounds it as it does.
   ...(
     [
       ['icon-512.png', 512],
@@ -352,7 +343,6 @@ const kit = Effect.gen(function* () {
   );
   yield* fs.copyFile(`${KIT}/channel.md`, `${OUT}/channel.md`);
 
-  // The boards of what each screen shows, for the owner, drawn from the pictures above.
   yield* draw(browser, cropsBoard(url(`${OUT}/banner-2560x1440.png`)), `${OUT}/banner-crops.png`, {
     width: 1400,
     height: 400,
@@ -364,7 +354,6 @@ const kit = Effect.gen(function* () {
     { width: 1360, height: 340 },
   );
 
-  // The favicon is the wheat on a night square with rounded corners, so it reads at 16 px in a light tab strip and a dark one.
   const icons = [];
   for (const size of [16, 32, 48]) {
     const png = yield* draw(

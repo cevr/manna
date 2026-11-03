@@ -1,11 +1,3 @@
-// The man's puppet of his cut view (`canvas/puppet.ts`): the view's part
-// sheet (`sheets/<view>/`, made by `film concept parts`), its parts front to
-// back as the sheet's record lists them, each PNG imported by its module so a
-// scene that draws him is keyed by its bytes (`tools/stamp.ts`), on the view's
-// skeleton (`skeleton.ts`), with his origin at the kept box's top-left corner
-// in the padded part sheet (`frames.ts`): his pixels are the sheet's, drawn at
-// its one scale. Pure data.
-
 import p1ArmLeft from './sheets/poses-1/armLeft.png' with { type: 'file' };
 import p1ArmRight from './sheets/poses-1/armRight.png' with { type: 'file' };
 import p1Head from './sheets/poses-1/head.png' with { type: 'file' };
@@ -43,7 +35,6 @@ export const PUPPETS = puppetsOf({
   frames: FRAMES,
   skeletons: SKELETONS,
   papers: PAPERS,
-  // his head turns over his still torso at the chin: the torso's headcloth reaches 12 px under it
   underlap: { head: 12 },
   line: LINE,
   parts: {

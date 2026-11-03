@@ -1,7 +1,3 @@
-// The film skill's ElevenLabs delivery page says what the compiler sends: its
-// worked example, compiled on every model the page names, is on the page as
-// sent, so a change to either is made in both.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Path, Result } from 'effect';

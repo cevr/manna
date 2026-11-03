@@ -387,7 +387,6 @@ export const findRoom = (at: FindAt, inset: number): number =>
   FindAt.$match(at, {
     Nowhere: () => 0,
     OverBar: () => HASH_GAP + HASH,
-    // Kept while the `#` gives way, so no list's end moves under the dials.
     Yielded: () => HASH_GAP + HASH,
     Docked: () => Math.max(0, inset) + DOCKED_LIFT + HASH,
   });

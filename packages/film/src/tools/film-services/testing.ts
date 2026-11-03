@@ -1,7 +1,3 @@
-// The lab's film services in memory for the tool tests (`film-services.ts`):
-// a fresh film's runs answered from what a test gives, voices kept here, and
-// the services a test does not call standing in as ones that die if called.
-
 import type { Context, FileSystem, Path } from 'effect';
 import { Effect, Layer, Option, Schema, Sink, Stream } from 'effect';
 import { type ChildProcess, ChildProcessSpawner } from 'effect/process';
@@ -254,7 +250,6 @@ export const noWrites = Layer.succeed(
     around: () => unusedSource,
     undo: () => unusedSource,
     history: () => unusedSource,
-    // Nothing lands through a writer no test calls.
     landings: Effect.succeed([]),
   }),
 );
@@ -344,7 +339,6 @@ export const noRenders = Layer.succeed(
   Review.of({
     roots: [],
     index: () => unreviewed('index'),
-    // A write tells the review it wrote: with no review there is nothing to drop.
     written: Effect.void,
     pictures: () => unreviewed('pictures'),
     renderVideo: () => unreviewed('renderVideo'),

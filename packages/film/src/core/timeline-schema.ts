@@ -1,8 +1,3 @@
-// The shape of a film's timeline (`film-timeline.ts` builds it): the clock a
-// version plays on, its versions, and the timeline the `timeline` tool
-// answers, each a Schema. Kept apart from the model's functions so a reader
-// of the shape imports nothing the model imports.
-
 import { Schema } from 'effect';
 import { PanelText } from './board.ts';
 import { RenderKind } from './catalogue.ts';

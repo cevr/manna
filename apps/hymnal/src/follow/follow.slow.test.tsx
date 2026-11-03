@@ -181,7 +181,6 @@ const mount = (number: number, chords: boolean = false, stanzas: Choice = ALL) =
 describe('the follow on a hymn page', () => {
   it('marks only the sung line, and in it only the sung syllable in the accent, with chords off and on (F1c)', () => {
     const { k, line, second, at } = wordLineOf(timelineOf(100));
-    // The second word's first syllable, then the one after it inside a word when there is one.
     const inWord = line.words.findIndex((word, s) => s > 0 && word === line.words[s - 1]);
     const steps = [{ s: second, ms: at }];
     if (inWord > 0)
@@ -192,7 +191,6 @@ describe('the follow on a hymn page', () => {
       for (const { s, ms } of steps) {
         page.at(ms);
         expect(page.selected()).toEqual([k]);
-        // One element per syllable in both views: the sung one lit, the rest of the line muted.
         expect(page.colours(k)).toEqual(
           line.syllables.map((_, x) =>
             Match.value(x === s).pipe(
@@ -225,7 +223,6 @@ describe('the follow on a hymn page', () => {
     expect(bar.getAttribute('aria-valuenow')).toBe('26');
     expect(bar.getAttribute('aria-valuetext')).toBe('14 seconds to the first line');
     expect(page.selected()).toEqual([]);
-    // Drawn absolutely after line 0, in a box that holds line 0 either way: nothing moves.
     expect(getComputedStyle(bar).position).toBe('absolute');
     expect(bar.parentElement).toBe(parent);
     expect(parent?.firstElementChild).toBe(lineZero());
@@ -285,13 +282,11 @@ describe('the follow on a hymn page', () => {
   });
 
   it('follows only the chosen stanzas, in the sung time the player reads, and marks no skipped line', () => {
-    // Hymn 78 with stanzas 1 and 3: lines 0-7 and 16-23 sung, 8-15 and 24-31 skipped.
     const timeline = timelineOf(78);
     const sections = Option.getOrThrow(hymnAt('78')).sections;
     const cut = cutOf(timeline, keptOf(sections, [1, 3])).timeline;
     using page = mount(78, false, [1, 3]);
     expect(page.lines().length).toBe(timeline.lines.length);
-    // Line 16 starts in sung time where line 8 starts in the recording's.
     expect(lineOf(cut, 16).start).toBe(lineOf(timeline, 8).start);
     for (const k of [0, 7, 16, 23]) {
       page.at(lineOf(cut, k).start + 1, 'Playing');
@@ -323,9 +318,6 @@ describe('the follow on a hymn page', () => {
         page.at(start, 'Playing');
         page.drag();
         const before = page.scrolled.length;
-        // The player asks its playback for a place 100 ms on (`seeks.ts` counts it); the
-        // count's atom hears the change on its own fiber, so the page is let run until the pill
-        // goes, a turn at a time, for at most 100 turns.
         yield* SubscriptionRef.update(seeks, (n) => n + 1);
         const turn = Effect.promise(() => act(() => Effect.runPromise(Effect.yieldNow)));
         yield* Effect.repeat(turn, { until: () => Option.isNone(page.pill()), times: 100 });

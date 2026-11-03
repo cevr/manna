@@ -57,7 +57,6 @@ const route =
   (n: number, sheet = false) =>
   (reader: ChordReader) => {
     params['number'] = String(n);
-    // The sheet's route names its hymn, as the bar opens it.
     if (sheet) params['hymn'] = String(n);
     const hymn = Option.getOrThrow(hymnAt(String(n)));
     return (
@@ -140,7 +139,6 @@ const mount = (
   const player = playerOn(controlled, Duration.millis(1));
   const registry = AtomRegistry.make();
   const reader = readerOn(device);
-  // A reset's wait for its close runs on this clock, which the test moves: no real time passes.
   const clock = Effect.runSync(Effect.scoped(TestClock.make()));
   const host = document.createElement('div');
   document.body.append(host);
@@ -156,7 +154,6 @@ const mount = (
       </RegistryContext>,
     ),
   );
-  // Each command the player is sent changes its send's result.
   let sends = 0;
   const unsubscribe = registry.subscribe(player.send, () => void (sends += 1));
   const until = (holds: (state: Player) => boolean) =>
@@ -323,12 +320,10 @@ describe('bar J on a hymn page', () => {
         using page = mount(route(100));
         tapKey(page);
         const panel = page.get('[data-testid="dials-panel"]');
-        // The panel itself is a touch target while open: its padding and gaps do not pass a tap to the backdrop.
         expect(getComputedStyle(panel).pointerEvents).toBe('auto');
         holdAnimations();
         using _held = { [Symbol.dispose]: landAnimations };
         tapKey(page);
-        // Once its close has started it takes no touch.
         expect(getComputedStyle(page.get('[data-testid="dials-panel"]')).pointerEvents).toBe(
           'none',
         );
@@ -341,7 +336,6 @@ describe('bar J on a hymn page', () => {
       tapKey(page);
       holdAnimations();
       using _held = { [Symbol.dispose]: landAnimations };
-      // Hymn 225 has no chords yet: the panel still closes along its path, drawn as it was.
       act(() => turned.to(225));
       expect(page.find('[aria-label="Play hymn 225"]').pipe(Option.isSome)).toBe(true);
       expect(page.find('[data-testid="dials-panel"]').pipe(Option.isSome)).toBe(true);
@@ -360,7 +354,6 @@ describe('bar J on a hymn page', () => {
         expect(actionsOf(keyButton(page))).toEqual([{ name: 'chords', label: 'Turn chords off' }]);
         yield* hold(page, false);
         expect(device.get('chords')).toBe('false');
-        // The hold closed the dials, and the click after it opened nothing: no dial stands with chords off.
         expect(keyButton(page).getAttribute('aria-valuetext')).toBe('Chords off');
         expect(keyButton(page).textContent).toBe('');
         expect(Option.isNone(dial(page, 'Key'))).toBe(true);
@@ -368,7 +361,6 @@ describe('bar J on a hymn page', () => {
         expect(page.all('[data-testid^="chord-"]')).toHaveLength(0);
         expect(actionsOf(keyButton(page))).toEqual([{ name: 'chords', label: 'Turn chords on' }]);
 
-        // A tap with chords off turns them on in the printed key and opens no dial.
         pressKey(page);
         expect(device.get('chords')).toBe('true');
         expect(Option.isNone(dial(page, 'Key'))).toBe(true);
@@ -403,7 +395,6 @@ describe('bar J on a hymn page', () => {
         expect(valueOf(page, 'Capo')).toEqual(Option.some('Capo 1, Db shapes'));
         expect(page.get('[aria-label="Reset"]').textContent).toBe('↺ Db, no capo');
         page.press('Reset');
-        // The rows turn home with the dials still open, and the chip leaves.
         expect(device.get('move.100')).toBe('{"transpose":0,"capo":0}');
         expect(valueOf(page, 'Key')).toEqual(Option.some('Db'));
         expect(valueOf(page, 'Capo')).toEqual(Option.some('No capo'));
@@ -413,7 +404,6 @@ describe('bar J on a hymn page', () => {
         yield* page.advance(RESET_WAIT / 2 + 100);
         expect(Option.isNone(dial(page, 'Key'))).toBe(true);
 
-        // A double tap on a dial does the same.
         tapKey(page);
         turn(page, 'Capo');
         act(() => gestureOf('dial-capo-twice').onActivate?.({ x: 0 }));
@@ -448,7 +438,6 @@ describe('bar J on a hymn page', () => {
         expect(Option.isNone(dial(page, 'Key'))).toBe(true);
         tapKey(page);
         yield* page.advance(RESET_WAIT + 100);
-        // The wait ended with the tap: the dials opened after it stay open.
         expect(Option.isSome(dial(page, 'Key'))).toBe(true);
       }),
   );
@@ -482,20 +471,17 @@ describe('bar J on a hymn page', () => {
       const pan = () => gestureOf('dial-capo-pan');
       act(() => pan().onBegin?.({ x: 0 }));
       act(() => pan().onActivate?.({ x: 0 }));
-      // A drag two detents left brings fret 2 to the notch.
       for (const translationX of [-20, -44, -70, -88]) {
         act(() => pan().onUpdate?.({ x: 0, translationX }));
         writes.push(String(device.get('move.100')));
       }
       expect(valueOf(page, 'Capo')).toEqual(Option.some('Capo 2, B shapes'));
-      // A fling at the cap runs past fret 11, and stops there.
       act(() =>
         pan().onDeactivate?.({ x: 0, translationX: -88, velocityX: -3000, canceled: false }),
       );
       act(() => pan().onFinalize?.({ x: 0, canceled: false }));
       expect(valueOf(page, 'Capo')).toEqual(Option.some('Capo 11, D shapes'));
       expect(device.get('move.100')).toBe('{"transpose":0,"capo":11}');
-      // The drag wrote the move once per detent it crossed, and not between them.
       expect(new Set(writes).size).toBe(3);
     }),
   );
@@ -505,7 +491,6 @@ describe('bar J on a hymn page', () => {
       using page = mount(route(225));
       tapKey(page);
       expect(Option.isNone(dial(page, 'Key'))).toBe(true);
-      // A boolean, so a failure prints no hymn words.
       expect(
         page.get('[data-testid="page"]').textContent.includes('No chords for this hymn yet.'),
       ).toBe(true);
@@ -569,12 +554,10 @@ describe('bar J’s spring and seeker', () => {
       page.device.now = { state: 'playing', positionMs: 1_000, durationMs: 151_000 };
       yield* page.until((state) => Player.$is('Playing')(state) && state.at === 1);
       expect(heightOf(page)).toBe(SOUNDING);
-      // The screen keeps the bar's resting room: the spring lays nothing out again.
       expect(room()).toEqual([`${REST}px`]);
       const seek = page.get('[role="slider"][aria-label="Seek"]');
       expect(seek.getAttribute('aria-valuetext')).toBe('0:01 of 2:31');
 
-      // A drag to the seeker's middle: it is laid out 300 points wide.
       act(() =>
         (
           propsWith(seek, 'onLayout')['onLayout'] as (event: {
@@ -584,7 +567,6 @@ describe('bar J’s spring and seeker', () => {
           nativeEvent: { layout: { x: 0, y: 0, width: 300, height: 32 } },
         }),
       );
-      // A sideways drag from a third of the way to the middle seeks, once the finger lifts.
       expect(dragged('seek-pan', { x: 100, dx: 50, dy: 0 })).toEqual(Option.some('seek-pan'));
       expect(page.device.sought).toHaveLength(1);
       expect(Math.abs((page.device.sought[0] ?? 0) - 75_500)).toBeLessThan(1_000);
@@ -605,14 +587,12 @@ describe('bar J’s spring and seeker', () => {
       page.device.now = { state: 'playing', positionMs: 20_000, durationMs: 151_000 };
       yield* page.until((state) => Player.$is('Playing')(state) && state.at === 20);
       expect(heightOf(page)).toBe(SOUNDING);
-      // A hand scroll, as the web sees it, holds the follow and shows the pill.
       act(() => {
         page
           .get('[data-testid="hymn-scroll"]')
           .dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }));
       });
       const pill = page.get('[aria-label="Resume follow"]');
-      // The page ends on the resting bar's top (its room is REST), so the sounding bar stands RISE over the page's foot.
       const frame = Option.getOrThrow(
         Option.fromNullishOr(page.get('[data-testid="hymn-scroll"]').parentElement),
       );
@@ -632,12 +612,10 @@ describe('bar J’s spring and seeker', () => {
       page.device.now = { state: 'playing', positionMs: 20_000, durationMs: 151_000 };
       yield* page.until((state) => Player.$is('Playing')(state) && state.at === 20);
       const seek = page.get('[role="slider"][aria-label="Seek"]');
-      // The swipe starts on the seeker's middle, the strip nearest the thumb, and goes up.
       expect(dragged('seek-pan', { x: 150, dx: 0, dy: -60 })).toEqual(Option.some('bar-swipe'));
       expect(routed).toEqual(['push /player?hymn=100']);
       expect(page.device.sought).toEqual([]);
       expect(seek.getAttribute('aria-valuetext')).toBe('0:20 of 2:31');
-      // A swipe that wanders a little sideways on its way up is still the swipe.
       expect(dragged('seek-pan', { x: 150, dx: 6, dy: -60 })).toEqual(Option.some('bar-swipe'));
       expect(page.device.sought).toEqual([]);
     }),
@@ -659,10 +637,8 @@ describe('bar J’s spring and seeker', () => {
           nativeEvent: { layout: { x: 0, y: 0, width: 300, height: 32 } },
         }),
       );
-      // A still tap at x 150: the seeker's pan and the bar's swipe begin and fail, and the tap lands.
       act(() => touchDown('seek-tap', { x: 150, y: 16 }));
       act(() => touchUp('seek-tap', { x: 150, y: 16 }, 'pans-first'));
-      // The track runs 286 points between the knob's half insets: x 150 is half of 2:31.
       expect(page.device.sought).toHaveLength(1);
       expect(Math.abs((page.device.sought[0] ?? 0) - 75_500)).toBeLessThan(1_000);
       expect(seek.getAttribute('aria-valuetext')).toBe('1:15 of 2:31');
@@ -677,7 +653,6 @@ describe('bar J’s spring and seeker', () => {
       const bar = (to: number) =>
         animations.filter((a) => a.kind === 'spring' && a.to === to && a.from !== a.to);
       animations.splice(0);
-      // The first Play of a session: the page's own bar gives way to the docked one.
       page.press('Play hymn 100');
       page.device.now = { state: 'playing', positionMs: 1_000, durationMs: 151_000 };
       yield* page.until((state) => Player.$is('Playing')(state) && state.at === 1);
@@ -689,7 +664,6 @@ describe('bar J’s spring and seeker', () => {
       animations.splice(0);
       act(() => turned.to(101));
       expect(page.find('[aria-label="Play hymn 101"]').pipe(Option.isSome)).toBe(true);
-      // The same frame and seeker, and no spring started again.
       expect(page.get('[data-testid="bar-spring"]')).toBe(frame);
       expect(page.get('[role="slider"][aria-label="Seek"]')).toBe(seek);
       expect(animations.filter((a) => a.to === REST || a.to === SOUNDING)).toEqual([]);
@@ -706,26 +680,21 @@ describe('a dial stopped by a touch', () => {
       tapKey(page);
       const pan = () => gestureOf('dial-capo-pan');
       holdAnimations();
-      // Animations land at once again when the test ends, whatever it found.
       using _held = { [Symbol.dispose]: landAnimations };
-      // A fling at the cap: the glide toward fret 11 is under way.
       act(() => pan().onBegin?.({ x: 0 }));
       act(() => pan().onActivate?.({ x: 0 }));
       act(() => pan().onUpdate?.({ x: 0, translationX: 0 }));
       act(() => pan().onDeactivate?.({ x: 0, translationX: 0, velocityX: -3000, canceled: false }));
       act(() => pan().onFinalize?.({ x: 0, canceled: false }));
-      // A touch stops it half way, between frets 5 and 6, and lifts with no drag.
       act(() => pan().onBegin?.({ x: 0 }));
       act(() => pan().onFinalize?.({ x: 0, canceled: true }));
       act(() => landAnimations());
       expect(valueOf(page, 'Capo')).toEqual(Option.some('Capo 6, G shapes'));
       expect(device.get('move.100')).toBe('{"transpose":0,"capo":6}');
-      // The row rests with fret 6 at the notch, not between two frets.
       expect(atNotch(page, 'dial-capo')).toEqual([6]);
     }),
   );
 
-  // The capo two up comes home to fret 0; the key three up (E) comes home to Db, pitch 1.
   for (const { label, testID, said, home } of [
     { label: 'Capo', testID: 'dial-capo', said: 'No capo', home: 0 },
     { label: 'Key', testID: 'dial-key', said: 'Db', home: 1 },
@@ -742,15 +711,12 @@ describe('a dial stopped by a touch', () => {
           turn(page, 'Capo');
           turn(page, 'Capo');
           holdAnimations();
-          // Animations land at once again when the test ends, whatever it found.
           using _held = { [Symbol.dispose]: landAnimations };
-          // The rows turn home, and a finger comes down on the moving dial and lifts with no drag.
           page.press('Reset');
           act(() => gestureOf(`${testID}-pan`).onBegin?.({ x: 0 }));
           act(() => gestureOf(`${testID}-pan`).onFinalize?.({ x: 0, canceled: true }));
           act(() => landAnimations());
           expect(valueOf(page, label)).toEqual(Option.some(said));
-          // The row shows the value the dial holds, not the detent the touch stopped it nearest.
           expect(atNotch(page, testID)).toEqual([home]);
         }),
     );
@@ -762,7 +728,6 @@ describe('a dial stopped by a touch', () => {
       for (let k = 0; k < 3; k += 1) turn(page, 'Key');
       holdAnimations();
       using _held = { [Symbol.dispose]: landAnimations };
-      // A finger comes down on the still Key dial; a second finger presses Reset; the first lifts with no drag.
       act(() => gestureOf('dial-key-pan').onBegin?.({ x: 0 }));
       page.press('Reset');
       act(() => gestureOf('dial-key-pan').onFinalize?.({ x: 0, canceled: true }));
@@ -778,13 +743,10 @@ describe('a dial stopped by a touch', () => {
       Effect.sync(() => {
         using page = mount(route(100), chordsOn());
         tapKey(page);
-        // The twin dial in the player sheet writes the hymn's move to the reader's store, as this does.
         const twin = (capo: number) => act(() => page.setMove(100, { transpose: 0, capo }));
         holdAnimations();
         using _held = { [Symbol.dispose]: landAnimations };
-        // The twin dial turns the capo to 2: the row turns toward it.
         twin(2);
-        // A finger on the dial stops that turn half way, at fret 1; the twin goes back to 1; the finger lifts.
         act(() => gestureOf('dial-capo-pan').onBegin?.({ x: 0 }));
         twin(1);
         act(() => gestureOf('dial-capo-pan').onFinalize?.({ x: 0, canceled: true }));
@@ -888,7 +850,6 @@ describe('the player sheet over a hymn page', () => {
         expect(device.get('chords')).toBe('false');
         expect(toggle().checked).toBe(false);
         expect(page.all('[data-testid^="chord-"]')).toHaveLength(0);
-        // With chords off the section holds the switch alone: no dial stands with chords off.
         expect(Option.isNone(capo())).toBe(true);
         expect(Option.isNone(key())).toBe(true);
         expect(keyButton(page).getAttribute('aria-valuetext')).toBe('Chords off');
@@ -940,7 +901,6 @@ describe('the Tuner on the key button’s dials', () => {
       expect(tuner.getAttribute('role')).toBe('button');
       expect(tuner.getAttribute('aria-label')).toBe('Tuner');
       expect(tuner.textContent).toBe('Tuner');
-      // The chips' row is the dials' top row: the Tuner comes before the capo and the key dials.
       const capo = page.get('[data-testid="dial-capo"]');
       expect(tuner.compareDocumentPosition(capo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       expect(cues).toEqual([plain('press')]);
@@ -949,7 +909,6 @@ describe('the Tuner on the key button’s dials', () => {
       expect(keyButton(page).getAttribute('aria-expanded')).toBe('false');
       expect(routed).toEqual(['push /tuner']);
       expect(cues).toEqual([plain('press')]);
-      // The model was left closed: the next tap opens the dials again.
       tapKey(page);
       expect(Option.isSome(page.find('[data-testid="dials-tuner"]'))).toBe(true);
     }),
@@ -964,7 +923,6 @@ describe('the Tuner on the key button’s dials', () => {
         turn(page, 'Capo');
         const chips = page.all('[data-testid="dials"] [role="button"]');
         expect(chips.map((chip) => chip.getAttribute('aria-label'))).toEqual(['Tuner', 'Reset']);
-        // A hold turns chords off with the dials open, and closes them: no Tuner stands with chords off.
         yield* hold(page, false);
         expect(Option.isNone(page.find('[data-testid="dials-tuner"]'))).toBe(true);
         expect(Option.isNone(page.find('[data-testid="dial-capo"]'))).toBe(true);
@@ -977,7 +935,6 @@ describe('the Tuner on the key button’s dials', () => {
       using page = mount(route(100, true));
       tapKey(page);
       expect(Option.isSome(page.find('[data-testid="dials"] [data-testid="dial-key"]'))).toBe(true);
-      // The web has no ear, so the bar tells its dials no Tuner; the sheet's dials never hold one.
       expect(page.all('[data-testid="dials-tuner"]')).toHaveLength(0);
       expect(page.all('[aria-label="Tuner"]')).toHaveLength(0);
     }),
@@ -991,7 +948,6 @@ const panelMotion = (page: Page) =>
 describe('the bar and its dials under Reduce Motion', () => {
   it.live('follow a change of the setting made while the bar is on screen (M9)', () =>
     Effect.gen(function* () {
-      // The system's setting, as `AccessibilityInfo` tells it: off at the start, then changed by the test.
       const told = new Array<(on: boolean) => void>();
       // oxlint-disable-next-line effect/noModuleMocks -- the system's setting is React Native's own boundary, read by the bar's hook; the spy stands in for the system and is put back as the test ends.
       using _enabled = spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
@@ -1004,17 +960,14 @@ describe('the bar and its dials under Reduce Motion', () => {
         return { remove: () => void told.splice(told.indexOf(handler), 1) };
       }) as unknown as typeof AccessibilityInfo.addEventListener);
       using page = mount(route(100));
-      // The setting's first read lands before the first tap.
       yield* Effect.promise(() => act(() => Effect.runPromise(Effect.void)));
       tapKey(page);
-      // Motion allowed: the panel springs out of the key button, scaled and moved.
       expect(panelMotion(page)).toContain('scale(');
       tapKey(page);
       act(() => {
         for (const handler of [...told]) handler(true);
       });
       tapKey(page);
-      // Reduce Motion on: the open is a fade alone.
       expect(panelMotion(page)).not.toContain('scale(');
       tapKey(page);
       act(() => {
@@ -1030,12 +983,10 @@ describe('the docked bar’s left edge (O3)', () => {
   it.live('goes back on a pan to the right from the docked bar’s edge, and only there', () =>
     Effect.gen(function* () {
       using page = mount(route(100));
-      // The page's own bar lies in its screen, where the stack's edge pan reaches: no strip.
       expect(Option.isNone(page.find('[data-testid="bar-back-edge"]'))).toBe(true);
       page.press('Play hymn 100');
       page.device.now = { state: 'playing', positionMs: 1_000, durationMs: 151_000 };
       yield* page.until((state) => Player.$is('Playing')(state) && state.at === 1);
-      // Docked under the stack, the bar has the strip over its left padding.
       expect(Option.isSome(page.find('[data-testid="bar-back-edge"]'))).toBe(true);
       const edge = gestureOf('bar-back-edge');
       act(() => edge.onDeactivate?.({ x: 4, translationX: 12, velocityX: 100, canceled: false }));

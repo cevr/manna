@@ -111,8 +111,6 @@ export const RULES = [
 
 export type RuleId = (typeof RULES)[number]['id'];
 
-// --- The beat grid ---
-
 const isCompound = (meter: TimeSignature) => meter.numerator > 3 && meter.numerator % 3 === 0;
 const beatsInBar = (meter: TimeSignature) =>
   isCompound(meter) ? meter.numerator / 3 : meter.numerator;
@@ -177,8 +175,6 @@ export const nextStrong = (grid: Grid, from: number, to: number): number | undef
 
 /** A beat's length at a tick: a quarter in 4/4, a dotted quarter in 6/8, a half in 3/2. */
 const beatLengthAt = (grid: Grid, tick: number) => beatTicks(grid, meterAt(grid, tick).meter);
-
-// --- The bar grid the melody confirms ---
 
 /** The meters the hymnal's files carry: their strong beats are the grids a melody is held against. */
 const METERS: readonly TimeSignature[] = (
@@ -280,8 +276,6 @@ export const judgedLines = (hymn: Hymn): Syllable[][] => {
   });
 };
 
-// --- Chord tones ---
-
 const mod12 = (n: number) => ((n % 12) + 12) % 12;
 
 /** Each quality's intervals above its root. */
@@ -310,8 +304,6 @@ export const isChordTone = (grid: Grid, chord: Chord.Chord, key: number): boolea
     chord.bass === degree
   );
 };
-
-// --- Moving changes ---
 
 /** A change's tick. */
 export const tickOf = (line: Line, change: Change): number =>

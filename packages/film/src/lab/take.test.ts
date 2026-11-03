@@ -1,7 +1,3 @@
-// A beat's take as a page plays it: the attempt named, else the take the
-// beat's timings name (the attempt they name, kept, else the staging take),
-// each with its audio's URL; none when the beat has none of these.
-
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 import { attemptUrl } from '../core/api.ts';

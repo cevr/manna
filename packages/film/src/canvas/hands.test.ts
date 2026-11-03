@@ -1,11 +1,3 @@
-// A callback, or a shot carried over a cut, draws another scene's paper torn
-// as that scene tore it: `f.handsOf(drawing)` gives that scene's hands exactly
-// as its own `f.hand` does there (the same seed rule, one function), boiling
-// on this frame's tick. The scene is found by its drawing, as `f.knobsOf`
-// finds it, so a mistyped scene fails to compile, and a drawing the film does
-// not draw fails naming the asking scene rather than tearing new paper. Drawn
-// through `createFilm` into a stand-in context; bun has no canvas.
-
 import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
 import type { Hand } from './ink.ts';
@@ -61,14 +53,10 @@ describe('f.handsOf', () => {
       film.render(ctx, 1.5 * DUR);
     });
     expect(own).toHaveLength(3);
-    // Torn as the owning scene tore it: the same seeds, key for key.
     expect(borrowed.map((h) => h.seed)).toEqual(own.map((h) => h.seed));
-    // Boiling on the frame it is drawn in.
     expect(borrowed.map((h) => h.boil)).toEqual(taker.map((h) => h.boil));
     expect(borrowed.map((h) => h.boil)).not.toEqual(own.map((h) => h.boil));
-    // Not this scene's own paper.
     expect(borrowed.map((h) => h.seed)).not.toEqual(taker.map((h) => h.seed));
-    // A drawing no scene draws fails, naming the scene that asked.
     expect(unknown).toContain('scene taker');
     expect(unknown).toContain('0 scenes draw it');
   });

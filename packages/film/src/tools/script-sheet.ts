@@ -1,9 +1,3 @@
-// `film script <film> --sheet`: the reading sheet (core/sheet.ts) written to
-// `out/<film>/script-sheet.md` and a page to print beside it. The beats come
-// from the film's script when it has one (`script.ts`, with its sources) and
-// from its scenes when not; quotations are attributed from the film's
-// `quotes.jsonl`, each line decoded, when it has one.
-
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 import {

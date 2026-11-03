@@ -59,7 +59,6 @@ const KjvBookData = Schema.Record(
 const decodeJson = <S extends Schema.Top>(schema: S, source: string) =>
   Schema.decodeUnknownEffect(Schema.fromJsonString(schema))(source);
 
-// Book abbreviation mapping (OpenBible format -> our book numbers)
 const BOOK_MAP: ReadonlyMap<string, number> = new Map(
   Object.entries({
     Gen: 1,
@@ -131,7 +130,6 @@ const BOOK_MAP: ReadonlyMap<string, number> = new Map(
   }),
 );
 
-// KJV-Strongs book abbreviation mapping
 const KJV_STRONGS_BOOK_MAP: ReadonlyMap<string, number> = new Map(
   Object.entries({
     Gen: 1,
@@ -235,8 +233,8 @@ function cleanHtmlEntities(str: string): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&nbsp;/g, ' ')
-    .replace(/&#8212;?-?/g, '—') // em-dash with potential trailing dash
-    .replace(/&quot-/g, '"') // Fix malformed entities
+    .replace(/&#8212;?-?/g, '—')
+    .replace(/&quot-/g, '"')
     .replace(/-&quot/g, '"');
 }
 
@@ -256,7 +254,6 @@ interface VerseWithStrongs {
  * Parse OpenBible reference format: "Gen.1.1" or "Ps.89.11-Ps.89.12"
  */
 function parseOpenBibleRef(ref: string): Option.Option<Reference> {
-  // Handle range: "Ps.89.11-Ps.89.12"
   const rangeParts = ref.split('-');
   const mainRef = Option.fromNullishOr(rangeParts[0]);
   if (Option.isNone(mainRef)) return Option.none();
@@ -279,7 +276,6 @@ function parseOpenBibleRef(ref: string): Option.Option<Reference> {
 
   const result: Reference = { book: bookNum.value, chapter, verse };
 
-  // Handle verse range
   const endRef = Option.fromNullishOr(rangeParts[1]);
   if (Option.isSome(endRef)) {
     const endVerseText = Option.fromNullishOr(endRef.value.split('.')[2]);
@@ -318,7 +314,6 @@ const processCrossRefs = Effect.fn('processCrossRefs')(function* (dataRaw: strin
   let skipped = 0;
 
   for (const line of lines) {
-    // Skip header and comments
     if (line.startsWith('#') || line.startsWith('From')) continue;
     if (!line.trim()) continue;
 
@@ -411,7 +406,6 @@ function mergeOpenScriptures(
       strongs[key] = entry;
       added++;
     } else if (entry.pron && !existing.pron) {
-      // Add pronunciation if missing
       existing.pron = entry.pron;
       existing.kjvDef = entry.kjvDef;
     }
@@ -498,7 +492,6 @@ const processStrongs = Effect.fn('processStrongs')(function* (dataRaw: string) {
   yield* Effect.log("Processing Strong's dictionaries...");
 
   const strongs: Record<string, StrongsEntry> = {};
-  // First the lexicon, then supplement with the more detailed OpenScriptures data
   yield* loadLexicon(dataRaw, strongs);
   yield* mergeHebrew(dataRaw, strongs);
   yield* mergeGreek(dataRaw, strongs);
@@ -521,7 +514,6 @@ function parseWordWithStrongs(text: string): WordWithStrongs {
     }
   }
 
-  // Remove Strong's markers and <em> tags
   const cleanText = text
     .replace(/\[([HG]\d+)\]/g, '')
     .replace(/<\/?em>/g, '')
@@ -605,7 +597,6 @@ const processKjvBook = Effect.fn('processKjvBook')(function* (kjvDir: string, fi
     return [];
   }
 
-  // Navigate the nested structure: { "Gen": { "Gen|1": { "Gen|1|1": { "en": "..." } } } }
   const bookContent = bookData.value[bookAbbr];
   if (!bookContent) return [];
   return bookVerses(bookNum.value, bookContent);
@@ -622,7 +613,6 @@ const processKjvStrongs = Effect.fn('processKjvStrongs')(function* (dataRaw: str
   const kjvDir = path.join(dataRaw, 'kjv-strongs');
   const verses: VerseWithStrongs[] = [];
 
-  // Get all book files (exclude metadata files and non-JSON)
   const excludeFiles = ['books.json', 'chapter_count.json', 'lexicon.json', 'README.md'];
   const files = (yield* fs.readDirectory(kjvDir)).filter(
     (file) => file.endsWith('.json') && !excludeFiles.includes(file),
@@ -632,7 +622,6 @@ const processKjvStrongs = Effect.fn('processKjvStrongs')(function* (dataRaw: str
     verses.push(...(yield* processKjvBook(kjvDir, file)));
   }
 
-  // Sort by book, chapter, verse
   verses.sort((a, b) => {
     if (a.book !== b.book) return a.book - b.book;
     if (a.chapter !== b.chapter) return a.chapter - b.chapter;
@@ -643,7 +632,6 @@ const processKjvStrongs = Effect.fn('processKjvStrongs')(function* (dataRaw: str
   return verses;
 });
 
-// Main processing
 const program = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

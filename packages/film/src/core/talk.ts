@@ -1,40 +1,3 @@
-// A talk: a vertical talking-head short (TV's "piece to camera"), cut on its
-// speaker's own words. Its edit is data (`talk.ts`, a literal `satisfies
-// Talk`, so the lab rewrites the literal itself): the takes
-// it reads (footage names; each pins its transcript by hash in the footage
-// library's lock), and its sections, each a run of one take's words, from
-// one word to another, with the words struck from it (`cut`, the paper
-// edit: Cut and Restore are inverse writes on one array) and its marks. A
-// word is named by its index into the take's transcript, which never
-// changes: a take and its transcript are kept by hash.
-//
-// Sections are the scenes. What each plays is derived here, never stored,
-// and the page and the tools both derive it with this one function
-// (`talkCut`): its kept words; its seams, where it leaves the take and comes
-// back to it (a struck word, or a pause longer than `gaps`), each at the
-// frame boundary of the silence whose loudness (the transcript's 10 ms
-// envelope) is lowest, one instant for picture and sound; the pieces of the
-// take it plays, back to back (take seconds to section seconds); and so the
-// section's voice (its words retimed onto the section), its line (the kept
-// words, with `{mark}` before each marked word) and its `Timed`. A talk has
-// no `timings.json`: `layout()` reads the derived timings as it reads a
-// film's.
-//
-// A talk declares its format: "One Question" (45 to 65 s, the speaker on
-// screen 40 to 55% of it) or "Episode" (2:15 to 2:50, 20 to 30%). The
-// numbers are data (`TALK_FORMATS`): `film talk words` sets a talk's length
-// against its format's, as the short checks do; the cut never reads them.
-//
-// A talk's page (`canvas/talk.ts`) plays at `TALK_FPS`, its words set inside
-// every platform's zone (`TALK_LAYOUT`), its captions the kept words as they
-// are heard, spelt as the talk fixes them, a quoted word gold (`talkPhrases`).
-//
-// The takes a talk is cut on come from the footage library by one
-// derivation (`talkTakes`): the lock names each take's source and current
-// transcript, and the transcript gives its words and loudness. The page
-// (over the footage route) and the tools (over the disk) read the same files
-// and cut with it, so the picture and the sound play the same pieces.
-
 import { Array as Arr, Option, Order, Record as Rec, Result, Schema } from 'effect';
 import { PartId } from './address-schema.ts';
 import { Segment } from './segment.ts';
@@ -314,7 +277,6 @@ export const talkTakes = (
     for (const [key, name] of Object.entries(talk.takes)) {
       const unready = (reason: string) => () =>
         TalkTakeUnready.make({ take: key, footage: name, reason });
-      // A name the lock lists itself: `constructor`, which every object answers to, is none.
       const entry = yield* Result.fromOption(
         Rec.get(lock.footage, name),
         unready('which the footage library does not have (film footage import)'),
@@ -418,7 +380,6 @@ const STEP = 0.01;
 /** How loud the voice is at the instant `t`: the louder of the 10 ms steps either side of it. */
 const levelAt = (envelope: ReadonlyArray<number>, t: number): number => {
   const i = frameAtOrBefore(t, 1 / STEP);
-  // Past the voice's end there is no silence to cut in: it reads as loud as can be.
   return Arr.match(Arr.getSomes([Arr.get(envelope, i - 1), Arr.get(envelope, i)]), {
     onEmpty: () => 0,
     onNonEmpty: (either) => Math.max(...either),
@@ -452,7 +413,6 @@ const quietestIn = (
 ): Option.Option<number> => {
   const first = frameAtOrAfter(from, TALK_FPS);
   const last = frameAtOrBefore(to, TALK_FPS);
-  // `Array.from`, not `Arr.makeBy`: that makes at least one, and an empty silence has none.
   const boundaries = Array.from({ length: Math.max(0, last - first + 1) }, (_, k) =>
     secondsAt(first + k, TALK_FPS),
   );
@@ -626,7 +586,6 @@ export const talkCut = (
           () => text,
         );
       const words = retimed(runs, spelt);
-      // Every mark a word carries, in the order the edit names them.
       const marksOn = (i: number) =>
         Object.entries(section.marks ?? {}).flatMap(([name, at]) =>
           Option.toArray(Option.liftPredicate(name, () => at === i)),
@@ -640,7 +599,6 @@ export const talkCut = (
       const duration = pieces.reduce((sum, p) => sum + (p.to - p.from), 0);
       const voice: VoiceTiming = {
         hash: hashText(spoken),
-        // The take's voice, under the folder of copies: the tools play it from there.
         file: sourceFile(take.source, 'voice.flac'),
         duration,
         words,

@@ -1,8 +1,3 @@
-// The series lead's kept front and three-quarter views cut by his cut table
-// (`cut.ts`): every part he names holds pixels, the parts recompose each view
-// byte for byte, the paper between his sandals is no part's, and each joint
-// lies on its own arm.
-
 import { cutParts, recompose } from '@manna/film/tools';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';

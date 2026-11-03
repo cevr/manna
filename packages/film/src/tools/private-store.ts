@@ -1,10 +1,4 @@
 import { Mac } from 'effect/crypto';
-// The app's private store, as its `sounds/library.ts` declares it (`store`):
-// a folder, or a private R2 bucket. The declaration is public; what reaches
-// the bucket is not: its account and its bucket-scoped S3 key come from the
-// environment (or the app's git-ignored `.env`), read as `Redacted` and never
-// logged. The store is resolved on first use, once, so a command that never
-// touches it never needs its credentials.
 
 import { Config, Context, Effect, FileSystem, Layer, Option, Path, Redacted } from 'effect';
 import { HttpClient } from 'effect/http';
@@ -36,7 +30,6 @@ interface R2Env {
   readonly secretAccessKey: Option.Option<Redacted.Redacted<string>>;
 }
 
-// A variable that is set but unreadable is a broken environment, not a missing one.
 const readEnv = (name: string) => Config.option(Config.Redacted(name)).pipe(Effect.orDie);
 
 /** The bucket's access from the environment, or the names of the variables missing. */

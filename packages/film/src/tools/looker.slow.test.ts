@@ -1,7 +1,3 @@
-// Looker with fakes: every scene is drawn small at 2 fps on the page pool and
-// measured; an address of some scenes draws only those; every page, the browser and the
-// server close. No Chromium.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Result } from 'effect';
 import { type Address, resolveAddress } from '../core/address.ts';
@@ -13,12 +9,8 @@ import { emptyLedger, fakeRenderHost, testExportInfo } from './browser/testing.t
 import { holdScenes, holdTimings, testFilm } from './film-repo/testing.ts';
 
 const film = testFilm(holdScenes, holdTimings);
-// Each 2 fps sample flips between two greys.
 const heldFrame = (i: number) => Math.round(i / (LOOK_STEP * testExportInfo.fps)) % 2;
 
-// One hand in `held`: it jumps whole from its rest to its work at frame 20,
-// between the 2 fps samples at frames 15 and 30, and is lost behind its body
-// from then on.
 const POP_FRAME = 20;
 const hand = (i: number): HandMark => ({
   scene: 'held',
@@ -77,7 +69,6 @@ describe('Looker', () => {
       const looked = yield* look({ _tag: 'Film' });
       expect(looked.height).toBe(testExportInfo.height);
       expect(looked.looks.map((l) => l.scene)).toEqual(['held', 'brief', 'ambient']);
-      // Every sample alternates grey, so no second holds; a face counts only in its own scene.
       for (const l of looked.looks) expect([l.seconds > 0, l.held]).toEqual([true, 0]);
       expect(looked.looks.map((l) => l.face)).toEqual([500, 0, 0]);
       expect(ledger.server).toEqual({ started: 1, stopped: 1 });

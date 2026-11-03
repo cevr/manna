@@ -1,9 +1,3 @@
-// Select to here on words, as a command's `when` and `run` read it: the
-// selection in a word's section extended to the word the menu opened on (a
-// right-click, or a finger held still on it), so a phone, which has no Shift,
-// selects a range as a laptop does: tap the first word, hold the last, Select
-// to here. Pure.
-
 import { Option } from 'effect';
 import { type Context, selected } from '../../command/context.ts';
 import { Selection, type WordsSelection } from '../../command/selection.ts';

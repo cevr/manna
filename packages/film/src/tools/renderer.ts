@@ -1,15 +1,3 @@
-// Render a film frame by frame in headless Chromium. Every frame is a pure
-// function of time, so pages render any chunk in any order: a video splits
-// into chunks on a queue that idle pages pull from, each page drawing and
-// encoding its chunk to its own H.264 MP4, then the chunks join in order
-// (copied, not re-encoded) with the audio cut from the lossless master and
-// encoded to AAC. A video of the film, an act or a scene keeps each beat's
-// chunks under the film's project folder by what its frames read
-// (`segments.ts`) and draws only the beats it has not kept; once done, it
-// deletes the film's segments no render has used for a week. The server, the
-// browser and every page (a pool of `Pages`) live in one scope: a failure, or
-// Ctrl-C, closes them all.
-
 import { availableParallelism } from 'node:os';
 import {
   Array as Arr,
@@ -185,7 +173,6 @@ export const encoderReady: Effect.Effect<
 > = Effect.scoped(
   Effect.gen(function* () {
     const server = yield* PreviewServer;
-    // Pages of its own, so the doctor's other lines print when Chrome is missing.
     const browser = yield* makeBrowser;
     const page = yield* browser.open(`${server.url}?export`);
     const candidates = encoderCandidates(Option.none());
@@ -406,7 +393,6 @@ export const remuxer = Effect.fn('film.remuxer')(function* (film: LoadedFilm) {
   const pcm = yield* media.decode(masterFile(film.paths));
   return Effect.fn('film.remux')(function* (video: Remuxed) {
     const track = yield* cutTrack(media, pcm, video.pieces);
-    // The share copy takes the same track, as a render gives both.
     yield* Effect.forEach([video.clip, ...Option.toArray(video.share)], (file) =>
       media.remux(file, track),
     );
@@ -433,9 +419,6 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
       const pages = yield* Pages;
       const sounds = yield* SoundRender;
 
-      // Every file a render leaves is written beside itself and renamed over
-      // its place once whole, so a failed or interrupted render never leaves
-      // a torn file where the last good one was (the clips: `Media`).
       const textWhole = (file: string, text: string) =>
         writeWhole(fs, file, (partial) => fs.writeFileString(partial, text));
       const bytesWhole = (file: string, bytes: Uint8Array) =>
@@ -507,9 +490,6 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         clip: string,
         drawing: Drawing,
       ) {
-        // One page first says what the render draws and which encoder every
-        // page encodes with: the pages, and the encoders they may run, are
-        // sized from that choice before the pool opens.
         const platform = yield* Platform;
         const made = probeKey(page, job, platform);
         const { info, short, scale, encoder, filmTimed } = yield* drawing.probe(
@@ -524,13 +504,10 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
               });
               yield* declaredRate(film, first.info.fps);
               const found = yield* shortOn(placed, job.cut);
-              // A short's page is 9:16 at the film's density: it encodes down to 1080 × 1920.
               const k = Option.match(found, {
                 onNone: () => job.scale,
                 onSome: () => shortPage(first.info.width).scale * job.scale,
               });
-              // Before a frame is drawn: a browser that cannot encode the film with
-              // one of the encoders the render allows fails here.
               const candidates = encoderCandidates(job.encoder);
               const by = yield* first.use((one) => pageEncoder(one, k, job.copies, candidates));
               const timed = yield* first.use((one) => one.call('filmTimed', 0, first.info.frames));
@@ -557,12 +534,6 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         yield* fs.makeDirectory(path.dirname(target), { recursive: true });
         const range = { from: secondsAt(start, info.fps), to: secondsAt(end, info.fps) };
 
-        // The film declares its track only once every take is recorded (a
-        // short's page declares none: it plays the film's under its spans).
-        // Before a frame is drawn, its master must be there, cover the whole
-        // film to within a frame and be mixed for the plan the film plays
-        // now: a mix cut short would otherwise mux silence, and one made
-        // before a score pick or a re-take the wrong sound.
         const recorded = Option.match(where.short, {
           onNone: () => Option.isSome(Option.fromNullishOr(info.audio)),
           onSome: () => everyTakeRecorded(where.placed),
@@ -590,8 +561,6 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
             ),
         });
 
-        // Before the pool opens: pages past the encoders this encoder runs at once would hang
-        // (hardware) or fight for the cores (software).
         const cores = yield* Cores;
         const workers = videoWorkers(job.workers, encoder, cores);
         const encoders = yield* Effect.fromResult(
@@ -611,26 +580,16 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
           }),
         );
 
-        // The track, cut and encoded once beside the pages; both joins copy its packets.
         const aac = Option.match(audio, {
           onNone: () => Effect.succeedNone,
           onSome: (cut) => Effect.asSome(trackOf(cut)),
         });
 
-        // A chunk of no kept segment (a short's, a wedge's) goes in a folder
-        // of this render's own, made fresh by the system, so two renders at
-        // once never share one. It lives in the render's scope: joined,
-        // failed or interrupted, the render takes it with it.
         const work = yield* fs.makeTempDirectoryScoped({ prefix: 'film-segments-' });
         const segDir = path.join(work, 'segments');
         const shareDir = path.join(work, 'share');
-        // The copies the page encodes, chunk by chunk: the hardware encoder makes the share copy there.
         const copies = copiesInPage(job.copies, encoder);
 
-        // The frames split at the beats into segments, each kept by its key
-        // under the film's project folder: a render draws only the segments
-        // it finds no kept copy of. A short, or a wedge's look, draws all its
-        // frames as one segment and keeps none.
         const keeping = reuseOf(job);
         const folder = segmentsFolder(film.paths.out);
         const whole: ReadonlyArray<Segment> = [
@@ -660,11 +619,9 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                   beats,
                   board,
                   render: read,
-                  // A frame the page did not answer for is taken to read the film's seconds: its key holds its place.
                   filmTimed: (i) => filmTimed[i] ?? true,
                 }),
               ),
-              // A Board it cannot read draws every frame: the page names what it cannot read.
               Effect.catch((error) =>
                 Effect.as(Effect.logWarning(`render.reuse off reason="${error.message}"`), whole),
               ),
@@ -677,13 +634,9 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
             Effect.provideService(FileSystem.FileSystem, fs),
             Effect.provideService(Path.Path, path),
           );
-        // A render that keeps segments holds the film's cache from before it
-        // picks them until it is done, its prune included: no prune deletes
-        // what it reads or draws, and another render of the film waits its turn.
         if (Option.isSome(keeping)) yield* onDisk(holdCache(film.paths.out));
         /** This render's mark: each segment it reuses or keeps is recorded as used at it. */
         const used = yield* Clock.currentTimeMillis;
-        // --fresh finds no kept copy: it draws every segment again.
         const kept = yield* Effect.forEach(segments, (segment) =>
           Option.match(
             Option.filter(segment.key, () => !fresh),
@@ -697,10 +650,6 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         const missing = segments.flatMap((segment, at) =>
           Arr.filter([{ ...segment, at }], () => Option.isNone(kept[at] ?? Option.none())),
         );
-        // A segment to draw has no record while it is drawn (one whose files
-        // are gone, or a --fresh render's, loses its own), so a prune leaves
-        // its folder alone; its mark, kept as it is drawn again, is the
-        // later of the record's and this render's, so it never goes back.
         const marks = yield* Effect.forEach(missing, (segment) =>
           Option.match(segment.key, {
             onNone: () => Effect.succeed(used),
@@ -802,10 +751,7 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
             ),
         });
 
-        // One structured run: the first failure, a page's or the track's, stops the other.
         const [encoded, track] = yield* Effect.all([drawAll, aac], { concurrency: 'unbounded' });
-        // Each segment drawn whole is kept: its record written once all its chunks are there, their
-        // frames counted from its first so it joins wherever it sits next.
         yield* Effect.forEach(missing, (segment, k) =>
           Option.match(segment.key, {
             onNone: () => Effect.void,
@@ -830,7 +776,6 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         /** Every chunk of the render in frame order, kept or drawn: its files and its first frame in the film. */
         const all = segments.flatMap((segment, at) =>
           Option.match(kept[at] ?? Option.none(), {
-            // A kept chunk's frames count from its segment's first: it plays where the segment now starts.
             onSome: (chunks) =>
               chunks.map((c) => ({
                 from: segment.from + c.from,
@@ -860,12 +805,6 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         });
         /** The key of every segment the render used. */
         const keys = segments.flatMap((s) => Option.toArray(s.key));
-        // Before it replaces its files (under the cache's lock when it keeps
-        // segments), the render widens its lead file's record to name its
-        // keys beside the keys the records of both its files name: stopped
-        // or failed from here on, it leaves no segment of its own or of the
-        // renders before it unnamed. A widen that fails fails the render
-        // before any file is replaced.
         yield* onDisk(widenRecord(film.paths.out, lead, [other], used, keys));
         /** One copy's chunks, picked by `copy`, joined in order with the track into `out`. */
         const joined =
@@ -890,7 +829,6 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
           onSome: (short) => shortCaptions(where.placed, short, range),
         });
         yield* textWhole(captions, webVtt(cues));
-        // The whole film gets its video description; one that declares a look, its YouTube chapters too.
         const full = Option.isNone(where.short) && start === 0 && end === info.frames;
         const chapterLines = yield* Option.match(
           Option.liftPredicate(film, (declared) => full && Option.isSome(declared.look)),
@@ -945,13 +883,6 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         yield* Effect.log(
           `render.done frames=${total} chunks=${chunks.length} audio=${Option.isSome(audio)} secs=${secs.toFixed(1)} fps=${(total / secs).toFixed(1)} ${perFrame(spent)} file=${Option.getOrElse(masterAt, () => 'none')} share=${Option.getOrElse(shared, () => 'none')} captions=${captions}`,
         );
-        // Once done (still holding the cache when it keeps segments), the
-        // render records the keys it used for its lead file (its master, else
-        // its share copy), none when it keeps none, then removes the other
-        // file's record. One that keeps segments then prunes the film's: each
-        // no render used for PRUNE_DAYS and no record names goes. A record or
-        // a prune that fails leaves the render done, its widened record
-        // standing.
         yield* onDisk(
           Effect.andThen(
             recordRender(film.paths.out, lead, used, keys),
@@ -986,7 +917,6 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
           description,
           images: [],
           sound,
-          // A stretch of a video goes to --out, never the catalogue (`jobOf`).
           span: Option.none(),
         };
         return written;
@@ -1022,7 +952,6 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         dir: string,
       ) {
         const { info } = pool;
-        // Clipped to the film as a video's range is, so no frame repeats at either end.
         const { start, end } = frameSpan(info, job.from, job.to);
         if (end <= start)
           return yield* RangeEmpty.make({
@@ -1088,18 +1017,15 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                   picture: job.picture,
                 });
                 yield* declaredRate(film, pool.info.fps);
-                // A short's spans must resolve on the page's frames, as a video's do.
                 yield* shortOn(placed, cut);
                 return yield* run(pool);
               }),
             );
 
           return yield* RenderJob.$match(job, {
-            // A video writes its file (`--out`, else its clip) and what goes beside it; its segments are its own.
             Video: (v) => video(film, v, page, placed, where.clip, drawing),
             Stills: (s) =>
               drawn(Math.min(s.workers, s.times.length), (pool) => stills(s, pool, dir)),
-            // One page composes the whole sheet.
             Contact: (c) => drawn(1, (pool) => contact(c, pool, dir)),
             LookBook: () => drawn(1, (pool) => lookbook(pool, dir)),
           });

@@ -1,21 +1,3 @@
-// The v3 court (the Board's `cold.evidence`, `cold.cover` and `title.start`):
-// one set drawn in the Board's own pixels (a panel is 1536 × 1024), so a
-// scene frames it with a camera (`REST` is the evidence panel's framing) and
-// every figure stands where its panel stands it. The house look's paper:
-// flat pieces, each creased once at the light's angle, its far side the
-// paper's shade (a hue of its own, CRAFT rule 12); the props (dock, table,
-// bench, gavel, sheets, pews) lined in the film's ink, the scenery (wall,
-// window, pilasters, wainscot) with no outline and hazed as it stands back;
-// the sun at the upper left, through the high window; cast shadows violet
-// on the lilac floor, never grey. The room runs on past the
-// panel's edges, so `cold`'s camera can travel over it. `title`'s high wide
-// (`title.start`) is a room of its own, drawn in the frame's pixels as its
-// panel draws it: three walls in perspective, the floor running far back,
-// the pews nearest. Its lines (outlines, creases, the crack, the sheets' red scrawl) are the
-// backdrop that a title or card covers, never ink that crosses one, so each
-// is drawn `unprobed`. The v2 canvas court (`court.ts`) stays for v2 and
-// cold-studies. Pure: the same frame draws the same set.
-
 import { type Camera, type Hex, mix, ramp, unprobed } from '@manna/film/canvas';
 import { lerp, rng } from '@manna/film/core';
 import { type Pt, boxOf, creaseOf, keyLight, shading } from '@manna/film/style';
@@ -188,8 +170,6 @@ export const contact = (ctx: CanvasRenderingContext2D, x: number, y: number, rx:
   ctx.restore();
 };
 
-// ─── the room ────────────────────────────────────────────────────────────────
-
 /** How far the room runs past the panels' edges, for the camera's travel: left, right, up and down. */
 const ROOM = {
   left: -1300,
@@ -216,10 +196,8 @@ const SINK = 20;
 const column = (ctx: CanvasRenderingContext2D, x: number) => {
   const w = 96;
   cut(ctx, box(x - w / 2, ROOM.top, w, ROOM.wainscot - ROOM.top), P.column, { line: 0 });
-  // The base: two steps wider than the shaft, on the wainscot's rail.
   cut(ctx, box(x - w / 2 - 10, ROOM.wainscot - 58, w + 20, 30), P.columnDeep, { line: 0 });
   cut(ctx, box(x - w / 2 - 16, ROOM.wainscot - 28, w + 32, 28), P.columnDeep, { line: 0 });
-  // The fluting: two shallow grooves down the shaft.
   ctx.save();
   ctx.strokeStyle = `${P.column.shade}`;
   ctx.lineWidth = 6;
@@ -248,7 +226,6 @@ const window_ = (ctx: CanvasRenderingContext2D) => {
   sky.addColorStop(1, '#e4f3f6');
   ctx.fillStyle = sky;
   ctx.fillRect(ix, iy, iw, ih);
-  // A cloud, the far city's blocks, and the cypresses before them.
   ctx.fillStyle = '#f6fbfb';
   ctx.beginPath();
   ctx.ellipse(ix + 60, iy + 70, 48, 16, 0, 0, 2 * Math.PI);
@@ -273,7 +250,6 @@ const window_ = (ctx: CanvasRenderingContext2D) => {
     ctx.fill();
   }
   ctx.restore();
-  // The frame's inner edge: its own shade, no ink.
   ctx.save();
   ctx.lineWidth = 4;
   ctx.strokeStyle = P.frame.shade;
@@ -385,7 +361,6 @@ export const floor = (ctx: CanvasRenderingContext2D) => {
   g.addColorStop(1, '#e6dcef');
   ctx.fillStyle = g;
   ctx.fillRect(ROOM.left, ROOM.floor, ROOM.right - ROOM.left, ROOM.bottom - ROOM.floor);
-  // The skirting where the wainscot meets the floor: the wainscot's shade, no ink.
   ctx.save();
   ctx.strokeStyle = P.wainscot.shade;
   ctx.lineWidth = LINE_SMALL;
@@ -402,8 +377,6 @@ export const floor = (ctx: CanvasRenderingContext2D) => {
   ctx.restore();
   beams(ctx);
 };
-
-// ─── the furniture ───────────────────────────────────────────────────────────
 
 /** The dock: its posts and rails, the lead behind them. */
 const DOCK = { x0: 55, x1: 530, top: 590, foot: 825 } as const;
@@ -561,8 +534,6 @@ export const gavel = (ctx: CanvasRenderingContext2D, grip: Pt, rot: number) => {
   ctx.restore();
 };
 
-// ─── the evidence ────────────────────────────────────────────────────────────
-
 /**
  * One sheet of evidence, scribbled over in flat scarlet: no letters, no
  * numbers, no drips. `blotted` (0..1) is how far the bench's light has run
@@ -578,7 +549,6 @@ export const sheet = (
   ctx.save();
   ctx.translate(at.x, at.y);
   ctx.rotate(at.rot);
-  // A sheet lying on the table is seen shallow: `flat` of its depth.
   ctx.scale(1, flat);
   cut(ctx, box(-66, -46, 132, 92), P.sheet, {
     line: LINE_SMALL / flat > 8 ? 3 : LINE_SMALL,
@@ -622,8 +592,6 @@ export const LAID_SHEETS = [
   { x: 790, y: TABLE.top + 6, rot: 0.03 },
   { x: 905, y: TABLE.top + 2, rot: -0.04 },
 ] as const;
-
-// ─── the wide: `title.start` ─────────────────────────────────────────────────
 
 /**
  * `title.start`'s room, in the frame's pixels (1920 × 1080), seen from high
@@ -787,13 +755,11 @@ const WIDE_CRACK: ReadonlyArray<Pt> = [
  */
 export const wideRoom = (ctx: CanvasRenderingContext2D) => {
   const { left, right, rail, foot } = WIDE;
-  // The floor, lit nearest the window.
   const g = ctx.createLinearGradient(0, foot, 0, 1080);
   g.addColorStop(0, P.floor.color);
   g.addColorStop(1, '#ece2ef');
   ctx.fillStyle = g;
   ctx.fillRect(0, foot - 4, 1920, 1080 - foot + 4);
-  // The back wall.
   ctx.fillStyle = P.wall.color;
   ctx.fillRect(left, -20, right - left, rail + 20);
   wideWainscot(ctx, [left, rail], [right, rail], [right, foot], [left, foot]);
@@ -804,7 +770,6 @@ export const wideRoom = (ctx: CanvasRenderingContext2D) => {
     unprobed(ctx, () => ctx.strokeRect(x, rail + 38, 250, foot - rail - 66));
   ctx.restore();
   for (const x of [518, 1462]) widePilaster(ctx, x, 110, rail, foot);
-  // The left wall, receding to its corner with the back wall.
   cut(ctx, [[0, -20], [left, -20], leftWall(left, 1), [0, WIDE.leftFoot]], paper('#f7efe0'), {
     flat: true,
     line: 0,
@@ -813,7 +778,6 @@ export const wideRoom = (ctx: CanvasRenderingContext2D) => {
   wideWainscot(ctx, leftWall(0, 0), leftWall(left, 0), leftWall(left, 1), leftWall(0, 1));
   widePilaster(ctx, 72, 96, leftWall(72, 0)[1] - 30, leftWall(72, 1)[1]);
   widePilaster(ctx, 382, 78, rail, foot);
-  // The right wall's edge, and its pilaster nearest the frame.
   cut(
     ctx,
     [
@@ -827,7 +791,6 @@ export const wideRoom = (ctx: CanvasRenderingContext2D) => {
   );
   wideWainscot(ctx, [right, rail], [1920, WIDE.rightRail], [1920, WIDE.rightFoot], [right, foot]);
   widePilaster(ctx, 1815, 110, 490, 700);
-  // The haze over the walls, the sun's glow and its beams.
   ctx.save();
   ctx.globalAlpha = HAZE.alpha;
   ctx.fillStyle = HAZE.color;

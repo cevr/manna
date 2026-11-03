@@ -1,10 +1,3 @@
-// The image route the storyboard draws its panels on: `okra image`, on its
-// Codex route only (the subscription, no charge per image). Never `--model`:
-// that leaves the subscription for the paid Images API. A call sends only the
-// prompt and the reference images; a prompt that names a home path, an email
-// address or a key is refused before it leaves (`PromptPersonal`). Tests and
-// a dry run use a layer that draws nothing over the network.
-
 import { Context, Duration, Effect, FileSystem, Layer, Option, Schema } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { collectWithin } from './process.ts';

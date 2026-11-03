@@ -77,8 +77,6 @@ export const runSearchDaemon = (options: {
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
 
-    // Preflight: a live daemon on this socket makes this one redundant; a
-    // socket file nothing answers on is a previous daemon's crash residue.
     const occupied = yield* fs.exists(options.socketPath).pipe(Effect.orElseSucceed(() => false));
     if (occupied) {
       const resident = yield* probeSearchDaemon(options.socketPath);
@@ -94,9 +92,6 @@ export const runSearchDaemon = (options: {
       Effect.gen(function* () {
         const search = yield* SearchService;
         return {
-          // Forwarded, not decided here: the daemon is a transport for the
-          // same service the CLI calls in-process, so it answers the query it
-          // was sent, unchanged.
           'search.query': (query) => touch.pipe(Effect.andThen(search.query(query))),
           'daemon.status': () =>
             touch.pipe(
@@ -104,9 +99,6 @@ export const runSearchDaemon = (options: {
                 SearchDaemonStatus.make({ pid: options.pid, fingerprint: CLIENT_FINGERPRINT }),
               ),
             ),
-          // Acknowledge first, retire a beat later: succeeding the deferred
-          // interrupts the server, and an immediate interrupt can cut the
-          // socket before the response flushes.
           'daemon.shutdown': () =>
             Deferred.succeed(retire, 'retired').pipe(
               Effect.delay(Duration.millis(150)),
@@ -145,8 +137,6 @@ export const runSearchDaemon = (options: {
       );
     }).pipe(Effect.orDie, Effect.scoped);
 
-    // Node does not unlink a unix socket on close; the next daemon's
-    // preflight would find residue where this exit can leave none.
     yield* fs.remove(options.socketPath).pipe(Effect.ignore);
     return outcome;
   });

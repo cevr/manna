@@ -1,6 +1,3 @@
-// The window's media queries as the browser answers them (`viewport.ts`):
-// the one reader of `matchMedia` on the pages.
-
 import { Effect, Layer, Queue, Stream } from 'effect';
 import { Viewport } from './viewport.ts';
 
@@ -23,8 +20,6 @@ export const viewportLayer: Layer.Layer<Viewport> = Layer.succeed(
               Queue.offerUnsafe(queue, list.matches);
             };
             list.addEventListener('change', changed);
-            // The answer as it subscribes, read once it listens: a change that came since the
-            // subscriber read `matches` is not missed, and none can slip in before the listener.
             changed();
             return { list, changed };
           }),

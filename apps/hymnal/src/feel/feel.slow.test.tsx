@@ -276,7 +276,6 @@ describe('the dials under the Feel', () => {
       using page = mount(route());
       page.click(keyButton(page));
       page.feel.take();
-      // Hymn 100 is printed in Db, pitch class 1.
       const crossed = glide({ name: 'key', count: 12, wrap: true }, DETENT, FLING_CAP).crossed;
       fling('dial-key', 0, -FLING_CAP);
       expect(crossed.length).toBeGreaterThan(12);
@@ -324,7 +323,6 @@ describe('the page’s and the bar’s touches under the Feel', () => {
         expect(page.asked()).toEqual(nothingAsked);
         page.press('Play hymn 100');
         expect(page.feel.take()).toEqual(expected([plain('play')]));
-        // The one call Play sends: the hymn's recording (the test's device stands under the score clock).
         expect(page.asked().played).toHaveLength(1);
         page.device.now = { state: 'playing', positionMs: 1_000, durationMs: 151_000 };
         yield* page.until(Player.$is('Playing'));
@@ -371,7 +369,6 @@ describe('the page’s and the bar’s touches under the Feel', () => {
             }) => void
           )({ nativeEvent: { layout: { x: 0, y: 0, width: 300, height: 32 } } }),
         );
-        // The track is 286 points of 151 s: the knob is taken near 22.5 s and let go near 42.5 s.
         const before = page.asked();
         act(() => void drag('seek-pan', { x: 41, dx: 46.5, dy: 0 }));
         const sought = (page.device.sought.at(-1) ?? 0) / 1000;
@@ -386,7 +383,6 @@ describe('the page’s and the bar’s touches under the Feel', () => {
             plain('seek-release'),
           ]),
         );
-        // The seek is the one call the drag sends.
         expect(page.asked()).toEqual({ ...before, sought: [...before.sought, sought * 1000] });
       }),
   );
@@ -413,7 +409,6 @@ describe('Settings under the Feel', () => {
         act(() => toggle().click());
         expect(toggle().checked).toBe(false);
         page.press('Favourite');
-        // The press still tells its cue; the Feel gives it no body.
         expect(page.feel.take()).toEqual({ cues: [plain('favourite-on')], felt: [], heard: [] });
 
         act(() => toggle().click());
@@ -431,11 +426,7 @@ describe('the phone’s hymn list under the Feel', () => {
     'gives one section, with its place, as a topic takes the pin, and none as it mounts',
     () =>
       Effect.sync(() => {
-        // The phone's stand-ins are registered in a process of the script's own. Its limit, 4 s, is
-        // under the case's own 5 s, so a script that hangs is ended, and named, before the
-        // case's timeout cuts the run.
         const run = runScript(Bun.resolveSync('./list-feel.tsx', import.meta.dir), [], 4_000);
-        // The report is its last line: the store's fallback is logged before it.
         const report = run.stdout.trim().split('\n').at(-1) ?? '';
         expect(JSON.parse(report)).toEqual({
           mounted: [],

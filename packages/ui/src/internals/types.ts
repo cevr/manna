@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/types.ts, packages/react/src/internals/types.ts
-//
-// The shared prop and event types. A part's props are Solid's: `class` and
-// `style` (each may be a function of the part's state), lowercase attribute
-// names (`tabindex`), and a `render` function in place of React's element.
 import type { JSX } from '@solidjs/web';
 
 /** A bag of props as the parts merge them: any attribute, handler or `ref`. */

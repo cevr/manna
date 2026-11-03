@@ -1,14 +1,3 @@
-// A film's sound on one track. `mixPlan` is the whole decision, pure: which
-// take, score option, bed and effect play, where and how loud, with the
-// warnings a stale or missing asset earns. `renderMix` plays a plan out once
-// each sound in it is decoded: the voice bus, the score under the voice and
-// alone where no one speaks (`score.ts`), the beds looped and faded (ducked
-// unless they sit under everything), the effects on their cues, summed and
-// limited. Remixing never calls a paid API.
-//
-// Effects and beds name sounds from the app's library (`sfx.ts`), levelled in
-// dB relative to the voice's speech level by what each variant measured.
-
 import { Option, Result, Schema } from 'effect';
 import { CUT_FADE } from './align.ts';
 import { type Pcm, SPEECH_GATE, fadeEdges, slice, toStereo } from './audio.ts';
@@ -239,8 +228,6 @@ const variantsFor = (
     return [];
   }
   if (state._tag === 'Stale') warnings.push(`mix.stale sound=${name} hint="run sfx make ${name}"`);
-  // A derived sound plays only as measured, each seed or none, so a seed left
-  // unmeasured never moves which variant a placement plays.
   const unmeasured = unmeasuredOf(sounds, name, entry);
   if (unmeasured > 0) {
     warnings.push(`mix.unmeasured sound=${name} seeds=${unmeasured}`);
@@ -357,7 +344,6 @@ export const mixPlan = (input: MixInput): Result.Result<MixPlan<SoundSource>, Mi
 
     const voice = placed.flatMap((p): ReadonlyArray<Take<SoundSource>> =>
       Option.match(Option.fromUndefinedOr(input.pieces.get(p.spec.id)), {
-        // A talk's section: the pieces of its take's voice, back to back.
         onSome: ({ file, content, pieces }) =>
           pieces.map((piece) => ({
             name: p.spec.id,
@@ -395,7 +381,6 @@ export const mixPlan = (input: MixInput): Result.Result<MixPlan<SoundSource>, Mi
       }),
     );
 
-    // A stale score still plays, with a warning; a missing one is silence, with a warning.
     let played = Option.none<ScoreBed<SoundSource>>();
     const declared = Option.flatMap(input.sound, (s) => Option.fromNullishOr(s.score));
     if (Option.isSome(declared)) {
@@ -410,7 +395,6 @@ export const mixPlan = (input: MixInput): Result.Result<MixPlan<SoundSource>, Mi
         warnings.push(
           `mix.stale asset=score.${option.name} why=${state.why._tag} hint="movements or timing changed; run score to compose it again"`,
         );
-      // A score composed through a scene plays to its own end and leaves the rest without music.
       for (const range of Option.toArray(partialRange(state, placed)))
         warnings.push(
           `mix.partial asset=score.${option.name} through=${range.through} to=${range.to.toFixed(1)}s of=${range.end.toFixed(1)}s hint="no music after it; run score without --through to compose the whole film"`,
@@ -681,7 +665,6 @@ export const renderMix = (plan: MixPlan<Pcm>): Mixed => {
   ])
     addInto(sum, channels, 0, 1);
 
-  // The master is `sum` itself, lifted and limited in place: no bus of its own.
   const masterGain = masteringGain(pcm(frames, sum));
   const lift = 10 ** (masterGain / 20);
   for (const plane of sum) for (let i = 0; i < frames; i++) plane[i] = (plane[i] ?? 0) * lift;

@@ -1,12 +1,3 @@
-// Whether code can make a generated sound, read from its prompt's words by
-// ordered rules: the first rule that holds one of the prompt's words decides,
-// and the verdict names those words and the rule's reason. The owner's rule
-// is code for every simpler sound and ElevenLabs only for the realism code
-// cannot reach, so the audit is where a code trial starts (`sfx audit`).
-// Free and deterministic: a prompt's words are its letters, lowercased and
-// split at everything else; no model reads it, and a word reads only as
-// itself (the forms each rule lists, no stemming).
-
 import type { Generated, Library } from './sfx.ts';
 
 /** What the audit says of a prompt: code can make it (sure, or worth a try), or it needs realism. */

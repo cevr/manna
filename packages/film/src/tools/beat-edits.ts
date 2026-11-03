@@ -1,24 +1,3 @@
-// The studio's edits of a version's script, as the page, the lab's routes and
-// the MCP tools all make them: a beat moved before another (or to the end)
-// and a beat's hold set, each one write of the version's `script.ts`
-// through the SourceWriter (formatted, read back, only over the text it
-// read), so the owner's edits and the agents' share one history; and Undo
-// of the film's newest change, any writer's.
-//
-// A move is judged on the script as the writer's lock holds it (`editOrder`
-// over `movedOrder`): its beats in order, the acts and the score's movements
-// of the version's timeline as the lab reads it now (`FilmTimelines`) kept in
-// their declared order. A hold starts from each beat's holds as laid out
-// (`heldWithin`), and one that would change nothing the film plays is
-// refused (`holdUnchanged`). The rest of the film follows the script on its
-// next read: every later beat, its Board panels, its scene and the movements
-// that start on it play where the new order and holds lay them.
-//
-// An edit of a film with a production files the agents' work on its ledger
-// ("re-time, re-check seams, re-render") while it stands: once it lands; its
-// undo withdraws it (`Files`). What each edit says to
-// the owner (`Edited.said`) is in his words, never a file's name.
-
 import { Boolean as Bool, Clock, Context, Effect, Layer, Option, Path, Ref, Result } from 'effect';
 import {
   AGENTS_AFTER,
@@ -165,7 +144,6 @@ export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
       const writer = yield* SourceWriter;
       const productions = yield* ProductionStore;
       const films = yield* Effect.context<FilmFolder>();
-      // What each change of the studio's said, by its film and its id: what its Undo says.
       const words = yield* Ref.make<Words>(new Map());
 
       /**
@@ -250,7 +228,6 @@ export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
           target: at.target,
           edit,
           verify,
-          // The agents re-check what an edit leaves: the page is not held on a fresh check.
           check: () => Effect.void,
           ...Option.match(files, { onNone: () => ({}), onSome: (f) => ({ files: f }) }),
         });
@@ -284,7 +261,6 @@ export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
             already: `${ask.beat} is already there.`,
             by: ask.by,
           },
-          // Judged on the script as the writer's lock holds it, its parts kept.
           (source) => editOrder(source, ask.beat, ask.before, parts),
           (after, before) => orderMissed(after, before, ask.beat, ask.before),
         );
@@ -312,7 +288,6 @@ export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
           onSome: (reason) => HoldUnchanged.make({ beat: ask.beat, edge: ask.edge, reason }),
         });
         const as = holdWritten(ask.edge, value);
-        // A hold laid out where it is asked, and not declared, is already so: nothing to write.
         const already = value === now && !clip.hold.declared.includes(ask.edge);
         return yield* written(
           film,
@@ -321,7 +296,6 @@ export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
             file,
             beat: ask.beat,
             target,
-            // What plays: a min may take some of a tail's change.
             said: heldWords(ask.beat, ask.edge, now, heldTo(clip, ask.edge, value).hold[ask.edge]),
             already: heldAlready(ask.beat, ask.edge, value),
             by: ask.by,

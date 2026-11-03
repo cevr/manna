@@ -74,8 +74,6 @@ const prepare = (request: SearchRequest): PreparedSearch => ({
     section: request.section,
     type: request.type,
     subtype: request.subtype,
-    // Always on for this surface (see `NEVER_APPARATUS`); the field stays
-    // on the wire so a link can still say so explicitly.
     excludeApparatus: NEVER_APPARATUS,
   },
 });
@@ -97,8 +95,6 @@ const queryOne = (
     const result = yield* search.query(
       SearchQuery.make({
         text: prepared.text,
-        // `'all'` is passed as `none` rather than as the literal: the service
-        // treats an absent scope as unfiltered.
         scope: prepared.scope === 'all' ? Option.none() : Option.some(prepared.scope),
         bookCode: Option.none(),
         filter: prepared.filter,

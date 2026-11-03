@@ -216,8 +216,6 @@ const docScript = () =>
   ].join('\n');
 
 if (args.includes('--baseline')) {
-  // Keynote names a painting by the first file of the same bytes it took in, so
-  // a painting reused within the deck is looked for under that first name.
   const shownAs = new Map<string, string>();
   const shown = async (file: string) => {
     const bytes = await hash(file);
@@ -338,8 +336,6 @@ if (steps.length === 0) {
 }
 
 const report = await run(docScript(), 'sync-deck.applescript');
-// The deck now holds the manifest, but for words the owner changed in Keynote
-// (kept, and named in the report); a beat left in the deck stays recorded until pruned.
 await record({
   title: now.title,
   slides: Object.fromEntries(

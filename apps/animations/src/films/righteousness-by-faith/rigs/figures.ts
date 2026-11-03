@@ -1,19 +1,3 @@
-// RBF's Rive project: every figure rig of the film in one file
-// (`figures.riv`, built by `build.ts`), laid by one table (`FIGURES`), which
-// the house prints (`@manna/film/style` `figuresRml`). Each artboard has its
-// own view model, its name, the seed its paper's boil crawls by and its place
-// on the stage. It draws a composed figure, with the artboard its hands are
-// drawn on: the lead, the judge, the prosecutor, Christ in each of His two
-// views, and the farmer. Or it draws a circle hand: Christ's is held out to
-// us at each size it grows through (`hand-rig.ts`). The figures' ink is the
-// house look's line, as heavy against a head as the kept concept draws it
-// (`WEIGHT`), its widths bound to the shot (`BAKED` false: about 25% thinner
-// in a close shot). The house prints each locked figure's print alone, which
-// its lock holds (`lockedPrints`), as the file draws it, and lists every
-// override the figures carry with the artboard it is laid on
-// (`figureOverrides`), to be held to the owner's decisions on that figure
-// (`unsaid`, `@manna/film/style/build`). Pure.
-
 import { figuresFile } from '@manna/film/style';
 import { christ, christFront } from './christ-rig.ts';
 import { farmer } from './farmer-rig.ts';
@@ -53,10 +37,8 @@ export const FIGURES = figuresFile({
       figure: prosecutor,
       hands: 'skinHand',
     },
-    // The judge's and the prosecutor's hands: one artboard, of the paper both are composed with.
     skinHand: { name: 'SkinHand', seed: 2305, stage: 1420, hand: judge.hands.paper },
     christ: { name: 'Christ', seed: 2306, stage: 1540, figure: christ, hands: 'christHand' },
-    // Christ's hands, either view's: one artboard, of the paper He is composed with.
     christHand: { name: 'ChristHand', seed: 2307, stage: 1860, hand: christ.hands.paper },
     farmer: { name: 'Farmer', seed: 2308, stage: 1960, figure: farmer, hands: 'farmerHand' },
     farmerHand: { name: 'FarmerHand', seed: 2309, stage: 2280, hand: farmer.hands.paper },
@@ -67,7 +49,6 @@ export const FIGURES = figuresFile({
       figure: christFront,
       hands: 'christHand',
     },
-    // Christ's hand held out to us, an artboard for each size it grows through, smallest first.
     christHandOut1: {
       name: 'ChristHandOut1',
       seed: 2311,

@@ -252,8 +252,6 @@ export const layerEgwWritingsAssetSource: Layer.Layer<
   Effect.gen(function* () {
     const api = yield* EGWApiClient;
     const crypto = yield* Digest.Digest;
-    // The folder tree, read once per source: every book's section comes from
-    // it, and it changes far more rarely than a sync runs.
     const sections = yield* Effect.cached(
       api
         .getFoldersByLanguage('en')
@@ -324,7 +322,6 @@ export const layerEgwWritingsAssetSource: Layer.Layer<
           ),
         );
       }
-      // Built when the stream runs, so a second run starts from nothing.
       const archived = Stream.unwrap(
         Effect.sync(() => {
           const seen = new Set<string>();

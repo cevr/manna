@@ -1,14 +1,3 @@
-// The sound library: every sound a film may name, shared by all of an app's
-// films (`sounds/library.ts`), and what was made for each (`library.lock.json`,
-// written by the tools). A film names sounds (`paper.slide`, `amb.court`), never
-// prompts. A sound is generated (ElevenLabs, made once as candidates, curated,
-// then frozen: the model has no seed), code (a graph of nodes, rendered from
-// each seed whenever it is needed, so nothing is stored or paid for), or
-// recorded (a CC0 or CC BY file kept in the repo). Pure: names, schemas, the
-// request hash that says whether a sound is current, which variant each
-// placement plays and its jitter, the level arithmetic the mix gains a sound
-// by, and the credit lines a film owes for the CC BY recordings it places.
-
 import { Array as Arr, Match, Option, Result, Schema, flow } from 'effect';
 import type { Pcm } from './audio.ts';
 import { SoundUseMismatch, UnknownSound } from './errors.ts';
@@ -24,9 +13,6 @@ import type { ResolvedSound } from './synth/graph/plan.ts';
 import type { ResolvedTrial } from './synth/resolve.ts';
 import { RENDER_VERSION, renderCode } from './synth/graph/render.ts';
 import { toMs } from './time.ts';
-
-// ---------------------------------------------------------------------------
-// Names and declarations
 
 /** `family.thing`, lower case: `paper.slide`, `amb.court`, `tone.chime`. */
 const SoundName = Segment.check(Schema.isPattern(/^[a-z][a-z0-9]*(\.[a-z][a-z0-9-]*)+$/));
@@ -269,9 +255,6 @@ export const soundEntry = (library: Library, name: string): Option.Option<Librar
 /** Declare a library: the identity, typed, so a film's app gets its checks at the declaration. */
 export const defineLibrary = <const L extends Library>(library: L): L => library;
 
-// ---------------------------------------------------------------------------
-// What was made (`library.lock.json`)
-
 /** How loud a variant measured when it was made: LUFS and dBFS, silence floored at `SILENT`. */
 const VariantLoudness = Schema.Struct({
   integrated: Schema.Finite,
@@ -422,7 +405,6 @@ export const requestKey = (entry: LibraryEntry): string => {
       return hashText(
         Schema.encodeSync(RequestKey)({ kind: 'recorded', source: entry.licence.source }),
       );
-    // A code sound is never made for a request: this key only tells a take its lock kept from it.
     case 'code':
       return hashText(Schema.encodeSync(RequestKey)({ kind: 'code', sound: entry.sound }));
   }
@@ -481,9 +463,6 @@ export const keptLoudness = (
   return Option.some(measure.reduce((a, b) => a + b, 0) / measure.length);
 };
 
-/** How many candidates a generated sound is made as, when it names no number. */
-// About a third of the sweet-spot takes were usable: six one-shots,
-// or three beds, give one usable take nearly always.
 const DEFAULT_CANDIDATES = { 'one-shot': 6, bed: 3 } satisfies Record<SoundUse, number>;
 
 export const candidatesOf = (entry: Generated): number =>
@@ -562,9 +541,6 @@ export const trialEntry = (entry: Generated, trial: Trial) =>
     }),
   });
 
-// ---------------------------------------------------------------------------
-// Lookup
-
 /** The sound a film names, or `UnknownSound` listing its family's names (or every name). */
 export const resolveSound = (
   library: Library,
@@ -590,9 +566,6 @@ export const resolveUse = (
     return Result.fail(SoundUseMismatch.make({ name, declared: entry.use, placed: use }));
   });
 
-// ---------------------------------------------------------------------------
-// Levels: in dB relative to the voice
-
 /** The voice's speech level (dBFS) every take is levelled to: a sound's `level` counts from it. */
 export const VOICE_LEVEL = TAKE_LEVEL.speech;
 
@@ -613,13 +586,9 @@ export const levelOf = (entry: LibraryEntry, placed: Option.Option<number>): num
 export const gainFor = (level: number, loudness: VariantLoudness, use: SoundUse): number => {
   let measured = loudness.momentaryMax;
   if (use === 'bed') measured = loudness.integrated;
-  // A silent variant stays silent rather than being lifted without bound.
   if (measured <= SILENT) return 0;
   return 10 ** ((VOICE_LEVEL + level - measured) / 20);
 };
-
-// ---------------------------------------------------------------------------
-// What plays
 
 /** A derived variant as measured: its loudness, its onset and its hit. */
 export interface Measure {
@@ -791,9 +760,6 @@ export const placedSounds = (sound: Sound): ReadonlyArray<string> =>
     ...Object.values(sound.effects).map((effect) => effect.sound),
   ]);
 
-// ---------------------------------------------------------------------------
-// Credits
-
 /** A CC BY recording a film places, as its credit line names it (`creditLine`, `creditLink`). */
 export interface SoundCredit {
   readonly title: string;
@@ -890,9 +856,6 @@ export const playablesOf = (
   });
   return kept.map((v) => variantPlayable(sounds, v));
 };
-
-// ---------------------------------------------------------------------------
-// Variants and jitter
 
 /** A generated or recorded one-shot's spread when it declares none; derived and bed sounds have none (a derived sound's seeds are its spread). */
 export const DEFAULT_JITTER: Jitter = { pitch: 0.5, gain: 1 };

@@ -1,25 +1,3 @@
-// The oil pass: what turns the painted frame into a painting. The frame the
-// brush has painted is read into a WebGL 2 texture and drawn back through one
-// fragment shader that
-//
-// 1. pushes the paint about like a loaded brush: a Kuwahara filter (four
-//    overlapping quadrants, each pixel taking the calmest quadrant's mean,
-//    softly weighted), so gradients break into flat strokes and edges stay
-//    sharp;
-// 2. inks the forms: a dark teal line where the value turns, found by a Sobel
-//    on the frame, whose reach and weight grow as the paint darkens, so edges
-//    thicken in shadow and thin to nothing in the light;
-// 3. raises the paint off the canvas: a little relief lit from the upper left
-//    (impasto), and the canvas's plain weave under it all, fixed to the frame
-//    as a painting's canvas is;
-// 4. lays the gold leaf: wherever the brush used the one gold paint (`GOLD`),
-//    the shader lays beaten leaf instead, sheets with seams and a sheen that
-//    travels across it with the frame's time.
-//
-// Everything is set from the frame (its size, its time), so the pass is a pure
-// function of the painted frame and T. Where no WebGL 2 canvas can be made
-// (`check --draw`'s stand-in) the frame stays as the brush left it.
-
 import { glCanvas } from '@manna/film/canvas';
 import { P } from './palette.ts';
 
@@ -297,12 +275,10 @@ export const oil = (ctx: CanvasRenderingContext2D, o: Oil): boolean => {
   const hw = Math.ceil(width / 2);
   const hh = Math.ceil(height / 2);
   gl.bindVertexArray(pass.vao);
-  // The frame, read in.
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, pass.texture);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ctx.canvas);
-  // The Kuwahara, at half size, into its texture.
   gl.activeTexture(gl.TEXTURE1);
   gl.bindTexture(gl.TEXTURE_2D, pass.half);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, hw, hh, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -315,7 +291,6 @@ export const oil = (ctx: CanvasRenderingContext2D, o: Oil): boolean => {
   gl.uniform2f(k.at('res'), width, height);
   gl.uniform1f(k.at('pitch'), pitch);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
-  // The finish, at full size, onto the canvas.
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.viewport(0, 0, width, height);
   const f = pass.finish;

@@ -50,8 +50,6 @@ import {
 } from '@manna/hymnal/hymn';
 import { Array as Arr, Effect, Option } from 'effect';
 
-// The hymnal package does not export its read of the sung file; the encoder
-// reads it as the compiler does (`compile.ts`), from the same modules.
 import * as Midi from '../../../packages/hymnal/src/midi';
 import * as Sung from '../../../packages/hymnal/src/sung';
 

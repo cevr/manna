@@ -1,11 +1,3 @@
-// The crowd kit's rules over every seed 0..999 and the placements declared
-// here (scales 0.25-0.6, the far tables' range in `C-plan.md` §1): the kit's
-// mix (neighbours, cloths, robe white), the idle's reach at the smallest
-// scale, and the table top above every bust's foot and hands. The busts'
-// geometry is read from their skeletons and kept boxes, posed here by plain
-// rotations as the engine's bones turn (clockwise on screen, each child after
-// its parent), so no part sheet is read.
-
 import { describe, expect, test } from 'bun:test';
 import { ramp } from '@manna/film/canvas';
 import { keyLight, shading } from '@manna/film/style';
@@ -147,7 +139,6 @@ describe('the crowd kit', () => {
         ramp: ramp('#d1c6b4', keyLight, shading),
       })),
     };
-    // one figure of each hair, mantle and band: the dress is theirs alone
     const kinds = new Map(
       FIGURES.map((f) => [`${f.hair} ${mantleOf(f)} ${Option.getOrElse(f.band, () => 'none')}`, f]),
     );
@@ -178,7 +169,6 @@ describe('the crowd kit', () => {
     });
     const tied = FIGURES.find((f) => f.headwear === 'tied' && Option.isSome(f.mantle))!;
     expect(Object.keys(dressOf(tied, dressed).dye ?? {})).toEqual(['mantle', 'band']);
-    // each bust's own house parts: the women's veil is their mantle, and only the grown man's headcloth is tied with a band
     const own = Object.fromEntries(
       Object.entries(PUPPETS).map(([view, p]) => [
         view,
@@ -230,13 +220,8 @@ describe('the crowd kit', () => {
   });
 
   test('every head tip moves at least 2 screen px in every 2 s window at the smallest scale', () => {
-    // Sampled every 0.2 s over the film's crowd shots (0-32 s): every 2 s
-    // window holds one of the 1.8 s windows that start on a sample, and a
-    // window's sampled sway across the screen is no more than its own.
     const [step, size, samples] = [0.2, 10, 160];
     const xs = new Float64Array(samples);
-    // each window's least and most by blocks of its size: the run from a
-    // block's start up to a sample, and from a sample to its block's end
     const [upLo, upHi, downLo, downHi] = [
       new Float64Array(samples),
       new Float64Array(samples),
@@ -245,8 +230,6 @@ describe('the crowd kit', () => {
     ];
     let least = Number.POSITIVE_INFINITY;
     for (const f of FIGURES) {
-      // the tip turned by the head about the pivot, then by the lean about
-      // the root, as `turn` does, written out for the 5 million samples
       const { root, pivot } = rowsOf(f.body);
       const tip = PUPPETS[f.body].skeleton.bones[1]!.tip;
       const [hx, hy] = [tip[0] - pivot[0], tip[1] - pivot[1]];
@@ -284,8 +267,6 @@ describe('the crowd kit', () => {
   });
 
   test('the head turns on its neck within the 4 degrees its cut is held to', () => {
-    // the head's own turn is the breath and the tilt together, so its two
-    // swings bound it; sampled on one row to hold `idleAt` to that sum
     const most = Math.max(...FIGURES.map(({ idle }) => idle.breath.deg + idle.tilt.deg));
     expect(most).toBeLessThanOrEqual(4);
     let over = Number.NEGATIVE_INFINITY;
@@ -300,7 +281,6 @@ describe('the crowd kit', () => {
     for (const f of FIGURES) {
       const { breath } = f.idle;
       const low = lowOf(f);
-      // the breath reaches its swing either way at these times
       const peaks = [Math.PI / 2, (3 * Math.PI) / 2].map(
         (a) => ((a - breath.phase) * breath.period) / (2 * Math.PI),
       );
@@ -318,7 +298,6 @@ describe('the crowd kit', () => {
       for (const at of PLACEMENTS) {
         const { root, table } = rowsOf(f.body);
         const [x, y] = torsoAt(f, at, 0)([root[0], table]);
-        // the breath turns that row about the foot by at most its swing
         const reach = at.scale * (root[1] - table);
         const swing = f.idle.breath.deg * RAD;
         expect(Math.abs(y - at.top)).toBeLessThanOrEqual(reach * (1 - Math.cos(swing)) + 1e-9);

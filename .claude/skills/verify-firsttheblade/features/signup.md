@@ -31,7 +31,7 @@ sixth sign-up in a minute from one place to "Too many tries".
   field's own `required` check). Loading and open are n/a: the form posts
   and the browser loads the answer.
 - **Regression:** `apps/firsttheblade/src/mail/mail.test.ts`,
-  `apps/firsttheblade/src/mail/list.test.ts`,
+  `apps/firsttheblade/src/list/List.story.test.ts`,
   `apps/firsttheblade/src/mail/letters.test.ts`.
 
 1. **New address.** `ab open $O/`, then

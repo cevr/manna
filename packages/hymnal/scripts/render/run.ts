@@ -367,7 +367,6 @@ export const renderHymn = (setup: Setup, hymn: number) =>
     }));
     const decoded = mastered.pcm;
 
-    // The checks, on the MP3 as a player decodes it.
     const allNotes = [...parts.S, ...parts.A, ...parts.T, ...parts.B];
     const firstNote = Math.min(...allNotes.map((n) => at(n.start)));
     const sound = firstSound(decoded, LIMITS.onsetDb);
@@ -438,7 +437,6 @@ export const renderHymn = (setup: Setup, hymn: number) =>
         total: Math.round(((performance.now() - started) / 1000) * 100) / 100,
       },
       waitedSeconds: Math.round(waited),
-      // A key set's record says its key and each stem an octave moved; the printed key's has neither.
       transpose: setup.transpose === 0 ? undefined : setup.transpose,
       moves: setup.transpose === 0 ? undefined : source.moves,
     };

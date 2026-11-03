@@ -1,10 +1,3 @@
-// A text panel on the board is set by the engine in the film's card style: a
-// card held from the beat's start (the board's `start`, not a mark the line
-// says) sets the line from its first word. A Board render draws a picture
-// panel as its kept try, and every card (a card panel, a beat with no panel,
-// a card the film's scenes declare) through the film's own card code; its
-// review copy burns in where it is.
-
 import { describe, expect, test } from 'bun:test';
 import { Match, Option, Result, Schema } from 'effect';
 import { type BoardImage, boardFilm } from './board.ts';
@@ -91,7 +84,6 @@ describe('a Board render', () => {
       const { kept, images } = tries();
       boardFilm(f, board, images, false).render(r.ctx, 2);
       expect(r.images.map((d) => d.image)).toEqual([kept as never]);
-      // Covered: 1536 wide at 1.25 is the frame's 1920, at least, and it moves no more than the push.
       const [a] = r.images[0]!.m;
       expect(a).toBeGreaterThanOrEqual(1.25 - 1e-9);
       expect(a).toBeLessThanOrEqual(1.25 * 1.06 + 1e-9);
@@ -183,7 +175,6 @@ describe('a Board render', () => {
       });
       expect(calls).toHaveLength(1);
       const [image, ...at] = calls[0]! as [{ width: number; height: number }, ...Array<number>];
-      // drawImage(image, x, y), (…, x, y, w, h) or (…, sx, sy, sw, sh, x, y, w, h).
       const [x, y, dw, dh] = Match.value(at.length).pipe(
         Match.when(2, () => [at[0]!, at[1]!, image.width, image.height]),
         Match.when(4, () => at),
@@ -208,7 +199,6 @@ describe('a Board render', () => {
       const [start, end] = [rectAt(pan, 0), rectAt(pan, 5)];
       covers(start, 1);
       covers(end, 1);
-      // It travels 4 % of the width, the way it is said to.
       expect(end.left - start.left).toBeCloseTo(dir * 0.04 * 1920, 6);
     }
   });
@@ -226,7 +216,6 @@ describe('a Board render', () => {
       second.width = 1536;
       second.height = 1024;
       const all = new Map([...images, ['two.start.1.png', second]]);
-      // The cut at 5 s dissolves from 4.75 s to 5.25 s: at 5.1 s the incoming is 0.7 in.
       boardFilm(f, both, all, false).render(r.ctx, 5.1);
       return { kept, second };
     });
@@ -234,7 +223,6 @@ describe('a Board render', () => {
     const [under, over] = r.images;
     expect(under!.image).toBe(kept as never);
     expect(under!.alpha).toBe(1);
-    // The incoming shot is laid as its own canvas, not the try itself, at 0.7.
     expect(over!.image).not.toBe(kept as never);
     expect(over!.image).not.toBe(second as never);
     expect(over!.alpha).toBeCloseTo(0.7, 9);

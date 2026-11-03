@@ -45,7 +45,6 @@ export function FindDrums({
 }): ReactNode {
   const registry = use(RegistryContext);
   const outer = useCue();
-  // The Sound switch stays mounted, so each detent reads it from the registry's cache.
   useAtomMount(settings.sound);
   const [tell] = useState(() => drumTell(outer, () => registry.get(settings.sound)));
   const digits = digitsOf(number);
@@ -63,7 +62,6 @@ export function FindDrums({
                 stops={STOPS[drum]}
                 index={digits[drum]}
                 wrap={DRUMS[drum].wrap}
-                // The whole number in `said` redraws every drum on each dial, so each `onTurn` holds it fresh.
                 said={`${digits[drum]}, number ${number}`}
                 drawStop={(digit, current) => <Digit digit={digit} current={current} />}
                 onTurn={(n) => onDial(turn(number, drum, n))}

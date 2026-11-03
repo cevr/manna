@@ -1,6 +1,3 @@
-// What the ask page says of a failure and of a video's file, and which copy
-// of a video it plays: pure, so each reads the same in a test as on the page.
-
 import { Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import type { ReviewVideo } from '../../core/review.ts';
@@ -19,7 +16,6 @@ export const sizeText = (bytes: number): string => {
   const units = ['B', 'KB', 'MB', 'GB'];
   let n = bytes;
   for (const unit of units) {
-    // A tenth only where it tells: 2.4 GB, 36 MB.
     if (n < 10 && unit !== 'B') return `${n.toFixed(1)} ${unit}`;
     if (n < 1024) return `${n.toFixed(0)} ${unit}`;
     n /= 1024;

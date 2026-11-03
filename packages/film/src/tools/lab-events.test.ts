@@ -1,11 +1,3 @@
-// The lab's change feed over its files: the first read is the baseline (a
-// note made before the lab started is not news), a board first written after
-// it tells its tries, and a cursor from another run is answered with every
-// change kept, said as a reset. A production's ledger is read too, and a
-// reader is answered only the events it names (globs) about the film it names.
-// A change to a film's source through the lab's writer (an agent's beat
-// move, its undo) is told as it landed: written, undone.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Fiber, FileSystem, Option, Result, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -81,7 +73,6 @@ describe('the change feed', () => {
         { local: 'http://localhost:8229/' },
       ]);
       expect(seen.reset).toBe(false);
-      // Read again with nothing new: nothing said twice.
       yield* events.look;
       expect((yield* events.since(Option.some(seen.cursor))).changes).toEqual([]);
       const other = yield* events.since(Option.some('zzz.1'));
@@ -100,7 +91,6 @@ describe('the change feed', () => {
       yield* notes.add(film, { ...tweak, text: 'before' }, text('png'));
       yield* events.look;
       yield* fs.remove(`${NOTES_LAB}/f/notes.json`);
-      // Made again later: its n1 is a note of its own, made at another time.
       yield* TestClock.adjust('1 minute');
       yield* notes.add(film, { ...tweak, text: 'after one' }, text('png'));
       yield* notes.add(film, { ...tweak, text: 'after two' }, text('png'));
@@ -123,12 +113,10 @@ describe('the change feed', () => {
       yield* events.look;
       const { cursor } = yield* events.since(Option.none());
       const waiting = yield* Effect.forkChild(events.wait(Option.some(cursor), '5 seconds'));
-      // The wait has heard nothing yet when the note lands.
       yield* Effect.repeat(Effect.yieldNow, { times: 10 });
       expect(waiting.pollUnsafe()).toBeUndefined();
       yield* notes.add(film, { ...tweak, text: 'heard' }, text('png'));
       yield* events.look;
-      // The test clock stands still: a wait that polled the clock would never answer.
       const heard = yield* Fiber.join(waiting);
       expect(heard.changes.map((change) => change.text)).toEqual(['heard']);
     }).pipe(Effect.provide(labInMemory(files()))),
@@ -207,7 +195,6 @@ describe('the change feed', () => {
         verify: () => Result.succeed([]),
         check: () => Effect.void,
       });
-      // A film's own file (no scene) is told on the film, its studio unselected.
       yield* writer.around(
         'f',
         '/films/f/sound.ts',
@@ -230,11 +217,9 @@ describe('the change feed', () => {
         ['source.undone', 'f', 'the film', 'score play piano'],
         ['source.undone', 'f', 'cold', 'knob palm'],
       ]);
-      // One change, each step its own id; read as its timeline.
       const knob = [filmWide.changes[0], told.changes[1]].map((c) => c?.id);
       expect(new Set(knob).size).toBe(2);
       expect(told.changes[1]?.read.cli).toBe('bun cli.ts lab timeline --film f');
-      // Read again with nothing new: nothing said twice.
       yield* events.look;
       expect((yield* events.since(Option.some(told.cursor))).changes).toEqual([]);
     }).pipe(

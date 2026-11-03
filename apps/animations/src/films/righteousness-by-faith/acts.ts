@@ -1,11 +1,3 @@
-// The film's acts, declared once: each from its first scene, the narrator's
-// question that names its chapter, and the light it should measure (CRAFT
-// rule 11). Which scenes an act holds is `membersOf` in the film core: an act
-// runs from its scene until the next act's. The colour script (`look`, which
-// `film check` warns against and `film lookbook` measures), the chapters
-// (`film chapters`) and the lights (`light.ts`) all read these acts. Imports
-// nothing that touches the DOM, so the scenes can light themselves from it.
-
 import type { Look } from '@manna/film/core';
 import { GROUND, type Ground } from './palette.ts';
 
@@ -20,16 +12,13 @@ const range = (by: Readonly<Record<Ground, readonly [number, number]>>) => by[GR
 export const look = {
   acts: [
     {
-      // The verdict: the bright, warm, sunlit court of the kept panels.
       from: 'cold',
       name: 'verdict',
       chapter: 'How can God call a guilty man righteous?',
       luma: range({ now: [140, 165], light: [155, 180], lighter: [165, 190] }),
-      // The kept panels measure 0.27–0.31 at the lookbook's thumb.
       saturation: [0.25, 0.35],
     },
     {
-      // The seed: the parchment page, and the dark world lit in `spoke`.
       from: 'word',
       name: 'seed',
       chapter: "Is God's verdict a cover-up?",
@@ -37,7 +26,6 @@ export const look = {
       saturation: [0.2, 0.3],
     },
     {
-      // The three gifts: the two stories that count them, and the hand that takes.
       from: 'roof',
       name: 'gifts',
       chapter: "What does that look like in a real person's life?",
@@ -45,7 +33,6 @@ export const look = {
       saturation: range({ now: [0.2, 0.3], light: [0.2, 0.3], lighter: [0.15, 0.25] }),
     },
     {
-      // The grain: the valley, sunset down to its one black moment.
       from: 'grain',
       name: 'grain',
       chapter: 'How can God forgive?',
@@ -53,7 +40,6 @@ export const look = {
       dark: 0.05,
     },
     {
-      // He is still at work: dawn in heaven's court, then morning.
       from: 'priest',
       name: 'still at work',
       chapter: "Does Jesus's work end at the cross?",
@@ -61,7 +47,6 @@ export const look = {
       saturation: range({ now: [0.25, 0.35], light: [0.25, 0.35], lighter: [0.2, 0.3] }),
     },
     {
-      // The harvest: teal day, the most saturated, and the court come back.
       from: 'rain',
       name: 'harvest',
       chapter: 'Where is all this heading?',

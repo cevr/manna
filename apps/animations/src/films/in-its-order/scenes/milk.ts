@@ -1,31 +1,3 @@
-// What milk is, drawn to its kept panels (`milk.newborn.5`, `milk.word.5`,
-// `milk.shame.6`) on the parchment page matched from the cup on the
-// courtyard table in `cold` (`PAGE`). The grown villager stands right of
-// centre with his cup raised at picture left (his kept single-15 view, whose
-// sides are kept, so the shot mirrors the panel), swaying a little as he
-// stands, and on `peter` the camera pushes in on him and his cup. On
-// `newborn` a shut book drifts in above his cup and opens, tilts toward the
-// cup, and on the word "milk" a white ribbon runs out of its pages down into
-// the cup (`POUR`), which fills, a few drops falling off its lip into the
-// cup and hopping where it goes in (`DROPS`). On `sincere` the ribbon's tail falls in and
-// the camera closes on his face and the cup as an ink dropper comes down over
-// it (`INK`); on `mixed`, at "nothing", he leans back from it and it goes.
-// On `word` the camera draws back to the book and the cup and the ribbon
-// pours again, filling the cup to its brim. On `good` the pour ends and the
-// book fades away as the camera settles on him and his full cup.
-//
-// On `need` the scene cuts to the kept drinking row on the same page (`ROW`):
-// a baby with his bottle, a toddler, a child and the grown villager, each
-// with his cup, come in in turn from the left as the camera trucks along
-// them. On `began` the camera draws back to the whole page, and on `shame`
-// the lead comes in at the row's right end, drinking.
-//
-// A shot's camera is a centre and a zoom on the page's frame px; each move
-// runs from where the last one left it (`MOVES`, `ROW_MOVES`). The page covers frame x
-// 0..1920 and y -100..1180, so every framing keeps 960/k <= x <= 1920 - 960/k
-// and 540/k - 100 <= y <= 1180 - 540/k, and a straight move in (x, y, k)
-// between two framings that keep them keeps them all the way.
-
 import { drawing, fly, flyV, stream } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import { palette } from '../palette.ts';
@@ -297,7 +269,6 @@ export const milk = drawing({
   },
   draw: (f) => {
     const { ctx, w } = f;
-    // The page's frame px under the camera.
     const view = (camera: Camera, draw: () => void) => {
       ctx.save();
       ctx.scale(w / 1920, w / 1920);
@@ -309,28 +280,21 @@ export const milk = drawing({
     };
     const sway = (degrees: number, period: number, phase: number) =>
       degrees * Math.sin((2 * Math.PI * f.t) / period + phase);
-    // How far he is turned about his feet.
     const turn =
       ((sway(MAN.sway, MAN.swayPeriod, 0) + MAN.recoil * Math.sin(Math.PI * f.at('recoil'))) *
         Math.PI) /
       180;
-    // His cup's mouth on the page at rest, and as he sways (its ellipse
-    // tipped with him).
     const [mx, my] = onPage(CUP.mouth);
     const [fx, fy] = MAN.feet;
     const mouth = turned([mx, my], MAN.feet, turn);
     const [rx, ry] = [MAN.scale * CUP.rx, MAN.scale * CUP.ry];
 
-    // The book's centre on the page, drifting in and floating, and how far it is tipped toward the cup.
     const enter = f.at('book');
     const [bx, by] = [
       BOOK.at[0] + BOOK.drift[0] * (1 - enter),
       BOOK.at[1] + BOOK.drift[1] * (1 - enter) + sway(BOOK.bob, BOOK.bobPeriod, 0),
     ];
     const tip = (BOOK.tilt * f.at('tilt') * Math.PI) / 180;
-    // The book, shut as it fades in, turning open edge on: the shut book
-    // narrows away as the turn's cosine falls to 0, the open one widens in.
-    // On `good` it fades away.
     const book = () => {
       const across = Math.cos(f.at('flip') * Math.PI);
       ctx.save();
@@ -341,7 +305,6 @@ export const milk = drawing({
       f.painting(across > 0 ? 'shut' : 'open');
       ctx.restore();
     };
-    // Where the ribbon leaves the book, on the page.
     const spout = (): Pt => {
       const [px, py] = [BOOK.s * POUR.from[0], BOOK.s * POUR.from[1]];
       return [
@@ -349,9 +312,6 @@ export const milk = drawing({
         by + px * Math.sin(tip) + py * Math.cos(tip),
       ];
     };
-    // The ribbon from the book into the cup, its rows `tail` to `reach` shown,
-    // the leading row rounded; above the mouth it hangs in front of the cup's
-    // back rim, under it only inside the mouth.
     const ribbon = (tail: number, reach: number) => {
       if (reach <= tail) return;
       const from = spout();
@@ -384,7 +344,6 @@ export const milk = drawing({
       f.painting('ribbon');
       ctx.restore();
     };
-    // The milk in his cup, `fill` of the way up.
     const milkIn = (fill: number) => {
       if (fill <= 0) return;
       ctx.save();
@@ -405,9 +364,6 @@ export const milk = drawing({
       ctx.fill();
       ctx.restore();
     };
-    // One drop of milk at `at` moving at `v` px/s, `r` px in radius:
-    // stretched along its motion, ringed in ink, lilac in shade and lit
-    // cream toward the light at its upper left.
     const drop = (at: Pt, v: Pt, r: number) => {
       const stretch = 1 + Math.min(0.8, Math.hypot(v[0], v[1]) / 1200);
       const a = Math.atan2(v[1], v[0]);
@@ -421,9 +377,6 @@ export const milk = drawing({
       blob(0, 0, r * stretch, r, DROPS.shade);
       blob(-0.25 * r, -0.25 * r, 0.7 * r * stretch, 0.7 * r, CUP.colour);
     };
-    // The drops of a pour (`pour`, ended by `stop`): off the ribbon's lip
-    // and into the mouth, and hopping up where it goes in, shown above the
-    // mouth and inside it, as the ribbon is.
     const drops = (pour: 'pour' | 'pour2', stop: 'stop' | 'stop2') => {
       const [poured, stopped] = [f.cue(pour), f.cue(stop)];
       if (f.t < poured.end - DROPS.fall[1] || f.t > stopped.end + DROPS.bounce[1]) return;
@@ -468,8 +421,6 @@ export const milk = drawing({
       );
       ctx.restore();
     };
-    // The dropper coming in over his cup along its length, hovering, and
-    // going back out: the dropper turned, its drop hanging straight under it.
     const dropper = () => {
       const fall = INK.from * (1 - f.at('ink') + f.at('away'));
       const lean = (INK.lean * Math.PI) / 180;
@@ -493,8 +444,6 @@ export const milk = drawing({
       ctx.restore();
     };
 
-    // The drinking row, left to right: the four coming in in turn (`row`),
-    // then the lead (`lead`).
     const row = () => {
       for (const [i, [name, d]] of DRINKING.entries()) {
         const shown = name === 'lead' ? f.at('lead') : f.stagger('row', i, DRINKING.length - 1);
@@ -512,7 +461,6 @@ export const milk = drawing({
       }
     };
 
-    // Shot B: on `need` the scene cuts to the drinking row on the same page.
     if (f.t >= f.cue('truck').start) {
       const along = ROW_MOVES.reduce<Camera>(
         (cam, [cue, to]) => between(cam, to, f.at(cue)),

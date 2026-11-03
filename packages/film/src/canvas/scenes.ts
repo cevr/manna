@@ -1,11 +1,3 @@
-// A film's scenes from its script: each beat paired with the drawing its id
-// names, or its storyboard card where it has none yet (`film check` names
-// each card left, `Storyboard`). A scene is lit by its drawing's own light
-// (one that reads the drawing's cues, typed by them) or else by the light the
-// film gives it (its act's). The drawings and the lights are keyed by the
-// script's ids (`defineScript`), so a key the script lacks is a compile
-// error, not a beat that quietly falls back to a card.
-
 import type { Beat } from '../core/schema.ts';
 import type { SceneSpec } from './film.ts';
 import { type CardType, storyboard } from './storyboard.ts';

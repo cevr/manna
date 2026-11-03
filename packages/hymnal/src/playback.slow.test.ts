@@ -32,8 +32,6 @@ const linesOf = (text: string) =>
     .split('\n')
     .map((s) => s.trim())
     .filter(Boolean);
-// Values are schema-checked at their input boundary; comparisons need no
-// second validation traversal through each cut and chord.
 const json = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 const withoutGuitar = (hymn: Hymn) => {
   const part = (p: Hymn['stanzas'][number]) => {
@@ -65,8 +63,6 @@ const groupFaults = (alignment: Align.Alignment, start: number) => {
           anchor.end !== alignment.melody[anchor.note + anchor.notes - 1]?.end)
       )
         faults.push([5, l, k]);
-      // A shared note inherits the preceding anchor; leading shared notes use
-      // the line's first owned onset (tested independently on generated shapes).
     }
   return { faults, anchors };
 };
@@ -280,8 +276,6 @@ const expectedChanges = (
     });
     if (kept[0] && kept[1] && kept[1].tick - kept[0].tick < beat(meter(kept[0].tick)))
       kept.splice(0, 2, { ...kept[0], chord: kept[1].chord });
-    // A displayed event must change the harmony still sounding after folds.
-    // State this independently of the production fold's retention predicate.
     events = kept.filter((event, i) => {
       const prior = kept[i - 1];
       return prior === undefined || !Chord.equals(event.chord, prior.chord);
@@ -480,7 +474,7 @@ const placementFaults = (
       const original = part.lines[lineIndex] ?? [];
       const { owned, input } = rawPlacementLine(alignment, l, original, before, score.ticksPerBeat);
       before = input.changes.at(-1)?.chord ?? before;
-      if (refrain && v !== storedFrom) continue; // Repeated occurrences share the stored refrain's anchors, checked below.
+      if (refrain && v !== storedFrom) continue;
       lines++;
       faults.push(
         ...comparePlacementLine(modes, v, lineIndex, refrain, owned, input, grid, confirmed),
@@ -539,9 +533,6 @@ for (const [from, to] of [
           )
             faults.push([row.number, 15]);
           if (json(metadata) !== expected) faults.push([row.number, 1]);
-          // Compare the complete in-memory readings, excluding only guitar.
-          // This also holds words/cuts, not merely their numeric projection.
-          // Never print these strings: only a numeric fault leaves this check.
           const unchanged = withoutGuitar(fresh);
           for (const other of [modes.file, modes.simpler]) {
             if (withoutGuitar(other) !== unchanged) faults.push([row.number, 13]);
@@ -678,10 +669,8 @@ it.effect(
             const rawTick = at * 4;
             const expected =
               (Math.min(rawTick, tick) * 500000 + Math.max(0, rawTick - tick) * 750000) / 384 / 1e6;
-            // Rounding a tempo event onto the 1/96-beat grid permits at most 4 ms here.
             if (Math.abs(secondsAt(timing)(at) - expected) > 0.004) faults.push([seed, 2]);
           }
-        // A dedicated monophonic tune survives; a polyphonic distractor does not.
         const soprano = { name: '', program: 5, notes: melody };
         const accompaniment = {
           name: '',

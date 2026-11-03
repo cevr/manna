@@ -1,24 +1,3 @@
-// Where each scene's `timeline` and `knobs` live in source: the file and the
-// `drawing({...})` call the lab edits (the writes are SceneWriter's).
-//
-// Locating is by identity, not by name: a scene belongs to the exported
-// `drawing({...})` call whose `timeline` (or `knobs`) is the very object the
-// scene reads. Proving that imports the film's modules, so it runs in a
-// process that imports them as they stand: `locateHere` (`read-cli.ts`) is
-// that proof, run by `film read sites` and by the CLI's own commands
-// (`scenesLocatedHere`). The lab runs for days and Bun keeps a module as it
-// first imported it, so the lab's `SceneSources.layer` asks a fresh process
-// (`FreshFilm.sites`), and keeps the answer only while the film's source
-// stamp (`FilmFolder.stamp`) stands: a scene added, renamed or made to share
-// a drawing while the lab runs is located as the files now say.
-//
-// Each field is then writable on its own terms: cues only when the scene's
-// timeline is the drawing's own object, knobs only when its knobs are. A
-// scene that spreads a drawing and overrides its timeline plays a timeline no
-// file declares as a literal, so its cues are refused (its knobs may still be
-// written); a literal two scenes read (both spread one drawing) is refused for
-// both, since a write for one would move the other.
-
 import {
   Array as Arr,
   Cache,

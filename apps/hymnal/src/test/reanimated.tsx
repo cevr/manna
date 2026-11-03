@@ -148,13 +148,10 @@ const shared = <T,>(initial: T): SharedValue<T> => {
           tell();
           next.done?.(true);
         };
-        // How long a stepped timing has run; 0 until a test steps it.
         let ran = 0;
         if (held) {
           waiting.set(box as SharedValue<unknown>, {
             land,
-            // A stopped animation stops half way and says at once it did not finish; a stepped one
-            // stops where a step left it and says so on the next frame.
             stop: () => {
               if (ran === 0 && typeof now === 'number' && typeof next.to === 'number')
                 now = (now + (next.to - now) / 2) as T;
@@ -183,9 +180,6 @@ const shared = <T,>(initial: T): SharedValue<T> => {
         land();
         return;
       }
-      // Reanimated's valueSetter skips a plain value equal by `===` to the one it holds, after it
-      // has stopped the running animation (as above), so nothing that reads it runs again. `===`,
-      // not `Object.is`, as there: a NaN set always tells, and -0 over 0 does not.
       if (next === now) return;
       now = next;
       tell();

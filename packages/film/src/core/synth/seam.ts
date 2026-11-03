@@ -1,6 +1,3 @@
-// Where a bed loops: how its end meets its start. A loop that jumps in level
-// or steps sharply across the join is heard as a seam every time it repeats.
-
 import type { Pcm } from '../audio.ts';
 
 /** How a bed's end meets its start when looped. */

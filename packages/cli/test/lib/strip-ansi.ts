@@ -1,24 +1,8 @@
-/**
- * ANSI Stripping Utilities
- *
- * Utilities for removing ANSI escape codes from terminal output
- * to enable plain-text assertions in tests.
- */
-
-// ANSI escape code regex pattern
-// Matches:
-// - CSI sequences: \x1b[...X (where X is any letter)
-// - OSC sequences: \x1b]...;...\x07 or \x1b]...;...\x1b\\
-// - Simple escape sequences: \x1b followed by single char
 const ANSI_REGEX = new RegExp(
   [
-    // CSI sequences (cursor movement, colors, etc.)
     '\\x1b\\[[0-9;]*[A-Za-z]',
-    // CSI sequences with ? (like ?1049h for alternate screen)
     '\\x1b\\[\\?[0-9;]*[A-Za-z]',
-    // OSC sequences (like title setting)
     '\\x1b\\][^\x07]*(?:\x07|\\x1b\\\\)',
-    // Simple escape sequences
     '\\x1b[PX^_][^\x1b]*\\x1b\\\\',
     '\\x1b.',
   ].join('|'),

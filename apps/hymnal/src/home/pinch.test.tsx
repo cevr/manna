@@ -98,7 +98,6 @@ describe('the ways into All at once past the group headings', () => {
         act(() => gesture.onUpdate?.({ x: 0, scale }));
         zooms += Number(tilesShow(host) !== before);
       }
-      // Back in from the tiles, then the rest of the same gesture: it has committed, so it asks nothing more.
       pinch('tiles-pinch', [1.3]);
       act(() => gesture.onDeactivate?.({ x: 0, scale: 0.5, velocity: -3, canceled: false }));
       expect({ zooms, shown: tilesShow(host) }).toEqual({ zooms: 1, shown: false });
@@ -110,7 +109,6 @@ describe('the ways into All at once past the group headings', () => {
       const seen = [enabled()];
       act(() => registry.set(searchOpen, searchAt('/', 'field')));
       seen.push(enabled());
-      // Search open on another screen leaves the home list's pinch alone.
       act(() => registry.set(searchOpen, searchAt('/hymns/8', 'field')));
       seen.push(enabled());
       act(() => registry.set(find, Find.Open({ number: 1 })));

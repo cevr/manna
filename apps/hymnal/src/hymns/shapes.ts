@@ -69,10 +69,6 @@ const X = -1;
 
 type Frets = ReadonlyArray<number>;
 
-// ----------------------------------------------------------------------------
-// The fingerings
-// ----------------------------------------------------------------------------
-
 /** Frets as a chart writes them, the low E first: "x32010". */
 const fretsOf = (written: string): Frets =>
   [...written].map((c) => (c === 'x' && X) || Number.parseInt(c, 16));
@@ -219,10 +215,6 @@ const candidates = (
 
 const lowestHeld = (frets: Frets) => Math.min(...frets.filter((f) => f > 0));
 
-// ----------------------------------------------------------------------------
-// Fingers
-// ----------------------------------------------------------------------------
-
 interface Hand {
   readonly fingers: ReadonlyArray<Option.Option<Finger>>;
   readonly barre: Option.Option<Barre>;
@@ -283,10 +275,6 @@ const handFor = (frets: Frets): Option.Option<Hand> => {
   return Option.orElse(oneEach(frets, dots), () => barred(frets, dots));
 };
 
-// ----------------------------------------------------------------------------
-// Tones
-// ----------------------------------------------------------------------------
-
 /** Each quality's tones above its root, and those a fingering must hold: all but a perfect fifth. */
 const TONES: Record<Chord.Quality, ReadonlyArray<number>> = {
   '': [0, 4, 7],
@@ -320,10 +308,6 @@ const sounds = (frets: Frets, root: number, quality: Chord.Quality, bass: number
     soundOf(frets).length >= 4
   );
 };
-
-// ----------------------------------------------------------------------------
-// Slash chords
-// ----------------------------------------------------------------------------
 
 /** The lowest string `frets` sound. */
 const lowestSounding = (frets: Frets): number => frets.findIndex((f) => f >= 0);
@@ -378,10 +362,6 @@ const bassAt = (s: number, t: number, f: number, low: number, g: number): number
   if (s < low) return X;
   return g;
 };
-
-// ----------------------------------------------------------------------------
-// The lookup
-// ----------------------------------------------------------------------------
 
 const fingeringOfFrets = (
   frets: Frets,
@@ -457,10 +437,6 @@ export const fingeringOf = (chord: Chord.Chord, key: Chord.Key): Option.Option<F
 
 const lowestIs = (frets: Frets, pc: number): boolean =>
   Option.exists(Option.fromUndefinedOr(soundOf(frets)[0]), (low) => low === pc);
-
-// ----------------------------------------------------------------------------
-// Words
-// ----------------------------------------------------------------------------
 
 const playWords: (play: Play) => string = Match.type<Play>().pipe(
   Match.tagsExhaustive({

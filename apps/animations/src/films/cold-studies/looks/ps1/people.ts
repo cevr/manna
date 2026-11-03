@@ -1,10 +1,3 @@
-// The ps1 world's people: low-poly, about three and a half heads tall, the
-// head a faceted ball with a cap of hair and a fringe of spikes, a face of
-// flat pieces (two tall dark eyes with a glint, two brows, a mouth), a
-// tapered drum for the body, block arms with block hands. Built once; a
-// pose (`pose`) sets every joint and the face from the frame, so nothing
-// carries over from one frame to the next.
-
 import {
   CircleGeometry,
   ConeGeometry,
@@ -86,9 +79,6 @@ export const person = (w: World, tex: Textures, b: Build): Person => {
 
   if (b.robe === true) put(root, post(0.25, 0.32, 0.62, 7), cloth, 0, 0.31, 0);
   else for (const x of [-0.1, 0.1]) put(root, box(0.15, 0.6, 0.17), legs, x, 0.3, 0);
-  // The body: a drum, narrow at the shoulders. Its sides wear the cloth and
-  // its caps the sleeves' (a cap samples the texture's middle, and a dyed
-  // panel there would show as flecks at the collar).
   const torso = new Mesh(post(0.2, 0.25, 0.6, 7, 2, 1), [cloth, sleeve, sleeve]);
   torso.position.set(0, 0.3, 0);
   body.add(torso);
@@ -100,7 +90,6 @@ export const person = (w: World, tex: Textures, b: Build): Person => {
   head.position.y = 0.66;
   body.add(head);
   put(head, new SphereGeometry(R, 10, 8), skin, 0, R, 0).scale.set(1, 1.04, 0.96);
-  // The hair: a cap tipped back by how far it recedes, and a fringe of spikes.
   const cap = put(
     head,
     new SphereGeometry(R * 1.1, 9, 5, 0, Math.PI * 2, 0, Math.PI * 0.5),
@@ -115,12 +104,10 @@ export const person = (w: World, tex: Textures, b: Build): Person => {
     const spike = put(head, new ConeGeometry(0.06, 0.15, 4), hair, x, R * 1.62, R * 0.78);
     spike.rotation.set(Math.PI - 0.55, 0, -x * 1.8);
   }
-  // The face: flat pieces on the ball's front.
   const eye = new CircleGeometry(1, 6);
   const eyes = [-1, 1].map((s) => {
     const e = onFace(head, new Mesh(eye, ink), s * 0.095, -0.01);
     e.scale.set(0.034, 0.055, 1);
-    // The glint rides on the eye, so it closes and looks down with it.
     put(e, new PlaneGeometry(0.62, 0.45), glint, 0.35, 0.36, 0.004);
     return e;
   });
@@ -200,7 +187,6 @@ export const pose = (p: Person, s: Pose) => {
   });
   for (const e of p.eyes) {
     e.scale.y = 0.055 * Math.max(s.open, 0.12);
-    // The glint goes with the eye's light: none on an eye nearly shut.
     for (const g of e.children) g.visible = s.open > 0.4;
     e.position.y = R - 0.01 - s.down * 0.015;
   }

@@ -122,7 +122,6 @@ const frameOf = (p: Pluck, next: Draw) => {
     out[i] = sample * Math.exp(-t / p.decay);
   }
   const rms = Math.sqrt(out.reduce((sum, x) => sum + x * x, 0) / FRAME);
-  // Uniform noise of RMS `p.noise · rms`: a uniform on [-a, a] has RMS a/√3.
   const reach = p.noise * rms * Math.sqrt(3);
   return Float32Array.from(out, (x) => ((x + reach * (2 * next() - 1)) / rms) * 0.2);
 };

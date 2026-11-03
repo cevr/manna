@@ -1,15 +1,3 @@
-// A cast member's coverage: every drawing the cast pipeline needs of him,
-// named once in his `cutout/coverage.ts` (`COVERAGE`), each a puppet view
-// (cut into parts, posed and trained on) or a drawn key (shown whole on
-// twos, never posed), and the rule that says what each still lacks.
-//
-// An entry is complete when it is drawn and kept, and a puppet also cut, its
-// part sheet's bars passed and its fit rows passed: the library's readiness.
-// A puppet entry cut from its own sheet is trainable when it is drawn, kept,
-// cut and its fit rows pass: the reader needs a puppet that poses as its
-// sheet does, and the bars judge the laid paint for a film frame, not that.
-// The facts come from `coverage-facts.ts`; this module is pure.
-
 import { Option, Schema } from 'effect';
 
 /** What an entry needs, in the order a report names it. */

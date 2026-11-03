@@ -88,26 +88,14 @@ export type EGWParsedRef =
   | EGWBookRef
   | EGWSearchQuery;
 
-/**
- * Reference patterns
- *
- * Book codes are typically 1-4 uppercase letters, sometimes with a leading number.
- * Examples: PP, DA, GC, 1BC, 2BC, 3SG, EW, SC, MB, COL, AA, PK, MH, Ed, CT, etc.
- */
-
-// Pattern: "PP 351.1" or "1BC 1111.2" (book code + page + paragraph)
 const PARAGRAPH_PATTERN = /^([A-Z0-9]+)\s+(\d+)\.(\d+)$/i;
 
-// Pattern: "PP 351.1-5" (book code + page + paragraph range)
 const PARAGRAPH_RANGE_PATTERN = /^([A-Z0-9]+)\s+(\d+)\.(\d+)-(\d+)$/i;
 
-// Pattern: "PP 351" (book code + page)
 const PAGE_PATTERN = /^([A-Z0-9]+)\s+(\d+)$/i;
 
-// Pattern: "PP 351-355" (book code + page range)
 const PAGE_RANGE_PATTERN = /^([A-Z0-9]+)\s+(\d+)-(\d+)$/i;
 
-// Pattern: "PP" (book code only)
 const BOOK_PATTERN = /^([A-Z0-9]+)$/i;
 
 /**
@@ -119,7 +107,6 @@ const BOOK_PATTERN = /^([A-Z0-9]+)$/i;
 export function parseEGWRef(input: string): EGWParsedRef {
   const trimmed = input.trim();
 
-  // Try paragraph reference: "PP 351.1"
   const paragraphMatch = trimmed.match(PARAGRAPH_PATTERN);
   if (paragraphMatch && paragraphMatch[1] && paragraphMatch[2] && paragraphMatch[3]) {
     return {
@@ -130,7 +117,6 @@ export function parseEGWRef(input: string): EGWParsedRef {
     };
   }
 
-  // Try paragraph range: "PP 351.1-5"
   const paragraphRangeMatch = trimmed.match(PARAGRAPH_RANGE_PATTERN);
   if (
     paragraphRangeMatch &&
@@ -148,7 +134,6 @@ export function parseEGWRef(input: string): EGWParsedRef {
     };
   }
 
-  // Try page range: "PP 351-355"
   const pageRangeMatch = trimmed.match(PAGE_RANGE_PATTERN);
   if (pageRangeMatch && pageRangeMatch[1] && pageRangeMatch[2] && pageRangeMatch[3]) {
     return {
@@ -159,7 +144,6 @@ export function parseEGWRef(input: string): EGWParsedRef {
     };
   }
 
-  // Try single page: "PP 351"
   const pageMatch = trimmed.match(PAGE_PATTERN);
   if (pageMatch && pageMatch[1] && pageMatch[2]) {
     return {
@@ -169,7 +153,6 @@ export function parseEGWRef(input: string): EGWParsedRef {
     };
   }
 
-  // Try book only: "PP"
   const bookMatch = trimmed.match(BOOK_PATTERN);
   if (bookMatch && bookMatch[1]) {
     return {
@@ -178,7 +161,6 @@ export function parseEGWRef(input: string): EGWParsedRef {
     };
   }
 
-  // Fall back to search query
   return {
     _tag: 'search',
     query: trimmed,
@@ -207,10 +189,6 @@ export function formatEGWRef(ref: EGWParsedRef): string {
 export function isSearchQuery(ref: EGWParsedRef): ref is EGWSearchQuery {
   return ref._tag === 'search';
 }
-
-// ---------------------------------------------------------------------------
-// Element type utilities (renderer-agnostic)
-// ---------------------------------------------------------------------------
 
 /**
  * Check if element type is a chapter heading.

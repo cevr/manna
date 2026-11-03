@@ -1,8 +1,3 @@
-// A page's command registry, read and run from ⌘K as the viewer would, for
-// the e2e suites that walk every command a page offers: the ring's property
-// (`focus-follows-input.dom.test.ts`) and the floating roots' guard
-// (`semantics.dom.test.ts`).
-
 import { Effect, Exit, Option, Scope } from 'effect';
 import type { Input } from '../../src/browser/keys.ts';
 import { menuEntry } from '../../src/lab/fixtures/gestures.ts';
@@ -77,7 +72,6 @@ export const sampled = (ids: ReadonlyArray<string>): ReadonlyArray<string> => {
 export const runFromMenu = (page: Tab, id: string, input: Input) =>
   Effect.gen(function* () {
     const row = menuEntry(id);
-    // A page with no Go to… (the studio draws its own header, with none) opens ⌘K by its keys.
     const goTo = yield* page.evaluate<boolean>(
       `document.querySelector('.sh-header [data-act="search"]') !== null`,
     );

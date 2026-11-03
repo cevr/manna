@@ -1,8 +1,4 @@
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
-// `film options` names its film first, as the review's fresh runs ask it: a
-// film that is not one of the films answers FilmUnknown, as one line of JSON
-// on stdout (a refusal as itself) and a failed run, whichever subcommand asks.
-// A verb it does not know is the command line's refusal, before any film is read.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -117,7 +113,6 @@ describe.concurrent('film options', () => {
           'frob',
         );
         expect(Exit.isFailure(exit)).toBe(true);
-        // The command line's usage is printed; no answer line of JSON is.
         expect(lines.join('\n')).toContain('pick, unpick, reject');
         expect(lines.filter((line) => line.startsWith('{'))).toEqual([]);
       }).pipe(Effect.provide(world)),

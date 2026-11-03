@@ -1,6 +1,3 @@
-// A placeholder for a beat that has words but no drawing yet: the beat's id
-// and its picture brief, pinned to the page like a storyboard card.
-
 import type { SceneSpec } from './film.ts';
 import { rectShape } from './ink.ts';
 import { cutout } from './cutout.ts';
@@ -55,7 +52,6 @@ export const storyboard = (
       { color: '#fbf6ea', torn: 3, rim: 0, shadow: 0.6, grain: 0.3 },
       f.hand('card'),
     );
-    // The id and the brief sit on the card: `film check` finds a line that runs off it.
     probePlate(ctx, CARD, () => {
       write(
         ctx,

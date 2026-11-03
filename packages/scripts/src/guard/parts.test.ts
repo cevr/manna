@@ -11,7 +11,6 @@ describe('the parts a tool runs in', () => {
       { name: 'd.ts', bytes: 40 },
       { name: 'e.ts', bytes: 20 },
     ];
-    // b (70) → 1; d (40) → 2; c (30) → 2 (40 < 70) = 70; e (20) → 1 (tie, the first) = 90; a (10) → 2 = 80.
     expect(partsOf(files, 2)).toEqual([
       ['b.ts', 'e.ts'],
       ['a.ts', 'c.ts', 'd.ts'],

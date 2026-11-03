@@ -1,21 +1,3 @@
-// Narration drives the clock. A scene's length is its spoken line plus
-// breathing room, and animation cues are named marks inside the text:
-//
-//   "God's word {speak}speaks, and what it says {is}is."
-//
-// `{speak}` resolves to the moment the next word is spoken — measured from the
-// recorded voice when timings exist, estimated from the text when they don't.
-// A film read by a cast hands a line to another voice the same way:
-//
-//   "That's the law. {@ask}So where does that leave us? {@lead}Stuck."
-//
-// And how a line is said is marked in it too (`delivery.ts`): a stressed
-// word, a breath, a hold.
-//
-//   "Not by sewing a better garment. {//} By taking God at his {*}word."
-//
-// Pure: runs in the browser, in scripts, and in tests.
-
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import {
   DELIVERY,
@@ -179,7 +161,6 @@ const chunksOf = (text: string): ReadonlyArray<string> => text.trim().split(/(\s
  */
 export const withDelivery = (text: string, marks: ReadonlyArray<Mark>): string => {
   const chunks = chunksOf(text).map((chunk) => chunk.replace(DELIVERY, ''));
-  // The chunks that say a word, in order (spacing says none, nor a chunk of cues alone).
   const saying = chunks.flatMap((chunk, i) => {
     if (i % 2 === 1 || chunk.replace(TOKEN, '').length === 0) return [];
     return [i];
@@ -194,7 +175,6 @@ export const withDelivery = (text: string, marks: ReadonlyArray<Mark>): string =
       },
     ),
   );
-  // A chunk that held only delivery tokens is empty now: the spaces either side of it close into one.
   return out
     .join('')
     .replace(/[ \t]{2,}/g, ' ')
@@ -273,7 +253,6 @@ export const linesOf = (
     if (to <= from) return;
     const text = words.slice(from, to).join(' ');
     const before = lines.at(-1);
-    // A turn to the voice already reading continues its line.
     if (before !== undefined && before.name === reader.name)
       lines[lines.length - 1] = { ...before, text: `${before.text} ${text}` };
     else lines.push({ name: reader.name, voiceId: reader.voiceId, text });

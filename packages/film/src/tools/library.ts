@@ -1,21 +1,3 @@
-// The sound library as the tools see it: an app's `sounds/` folder, shared by
-// all its films. `library.ts` declares every sound by name (committed);
-// `library.lock.json` records what was made for each, written only here
-// (committed); `files/` holds the generated audio (git-ignored, synced with a
-// private store by `pull`/`push`); `public/` holds recordings under a licence
-// that may be public (committed). Code sounds are rendered from their data
-// whenever they are needed (`SoundRender`), so nothing of theirs is stored.
-//
-// `make` is the only paid call: generated sounds are made as candidates, each
-// measured and hashed into the lock, and curated by `keep` and `reject`. A
-// sound whose request is current is never generated again; a missing file is
-// a `pull`, not a remake.
-//
-// A sound is judged without listening by its renders' numbers (`compare`)
-// and pictures (`render --sheet`: core/synth/sheet.ts), and heard by the
-// owner in an ask's clips (`ab`): what plays now and its code trial, each
-// lined up as the mix levels it, under its sheet.
-
 import {
   Array as Arr,
   Config,
@@ -700,7 +682,6 @@ interface SoundLibraryService {
   >;
 }
 
-/** Every variant and candidate of every sound, with its name. */
 /** A variant's onset and hit, when the lock records both. */
 const timingOf = (v: Variant) =>
   Option.all({ onset: Option.fromUndefinedOr(v.onset), hit: Option.fromUndefinedOr(v.hit) });
@@ -809,7 +790,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           Effect.gen(function* () {
             const folder = path.join(paths.files, name);
             yield* fs.makeDirectory(folder, { recursive: true });
-            // Scoped: the temporary file and the folder made for it go, even when interrupted.
             const raw = yield* fs.makeTempFileScoped({ directory: folder, prefix: '.candidate-' });
             yield* elevenLabs.soundEffect(
               {
@@ -1028,7 +1008,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           replace = false,
         ) {
           return yield* curate(name, takes, 'candidates', (had, chosen, request) => {
-            // Variants for an older request play only until new ones are kept.
             const current = had.variants.filter((v) => v.request === request);
             if (!replace)
               return {
@@ -1076,7 +1055,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           if (entry.kind !== 'recorded')
             return yield* SoundKindMismatch.make({ name, kind: entry.kind, wanted: 'recorded' });
           const source = yield* media.load(file, LIBRARY_RATE);
-          // A given cut is clipped to the source and recorded as clipped: what was taken.
           const cut = yield* Option.match(given, {
             onNone: () =>
               Effect.succeed(
@@ -1102,7 +1080,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
             onNone: () => source,
             onSome: (c) => cutOf(source, c),
           });
-          // A bed's ends are its loop: only a one-shot loses its quiet ends.
           let trimmed = taken;
           if (entry.use === 'one-shot') trimmed = trimQuiet(taken, TRIM_FLOOR, TRIM_PAD);
           const level = levelOvers(trimmed);
@@ -1309,7 +1286,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
         ) {
           const loaded = yield* load;
           const entry = yield* entryOf(loaded, name);
-          // Any seed renders, past the variants that play: each seed is one draw of the sound.
           const seedsOf = (variants: number) =>
             Option.match(which.seed, {
               onNone: () => Array.from({ length: variants }, (_, i) => i + 1),
@@ -1470,7 +1446,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
             const findings: Array<LibraryFinding> = [];
             if (entry.use !== 'bed') return findings;
             for (const [i, p] of playablesOf(sounds, name, entry).entries()) {
-              // A missing or corrupt file is reported above; its seam cannot be heard.
               if (p.source._tag === 'File' && broken.has(p.source.file)) continue;
               const seam = loopSeam(yield* decoded(p.source));
               let of: LoopSeam['of'] = 'seed';
@@ -1538,7 +1513,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           const loaded = yield* load;
           const findings: Array<LibraryFinding> = [];
           const entries = Object.entries(loaded.library).sort(([a], [b]) => a.localeCompare(b));
-          // A bed's seams are heard in its audio: each derived bed is rendered and measured once.
           const beds = entries.filter(([, entry]) => entry.use === 'bed').map(([name]) => name);
           const sounds = yield* made.measured(soundsOf(loaded), beds);
           for (const [name, entry] of entries) {
@@ -1547,8 +1521,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
             if (state._tag === 'Missing')
               findings.push(SoundUnmade.make({ name, candidates: state.candidates }));
             if (state._tag === 'Stale') findings.push(SoundStale.make({ name }));
-            // A code sound plays its seeds. The takes its record keeps play
-            // again only when it is generated once more, and are checked then.
             const kept = Option.match(
               Option.filter(record, () => !isDerived(entry)),
               { onNone: (): ReadonlyArray<Variant> => [], onSome: (r) => r.variants },

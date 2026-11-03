@@ -1,11 +1,3 @@
-// Every drawing the cast pipeline needs of the feast lead
-// (`film concept coverage`): his six cut views, poses-1 fitted from his
-// front, and his raise's keys. K2 and K3 split onto the upper arm and the
-// forearm (0.8 % and 1.4 % of their pixels within both segments' sleeve
-// half-width), so each is a puppet to cut; K4-K6 fold the forearm over the
-// upper arm and stay drawn keys, shown whole on twos. His reader is scored
-// on clip B (`clips`). Pure data.
-
 import type { CoverageManifest } from '@manna/film/tools';
 
 const BEATS = [
@@ -28,9 +20,7 @@ export const COVERAGE: CoverageManifest = {
     },
     { id: 'heads-heads-4', cut: 'puppet', file: 'cast-sheet/views/heads-4.png', for: BEATS },
     { id: 'single-single-1', cut: 'puppet', file: 'cast-sheet/views/single-1.png', for: BEATS },
-    // seated on his stool, the bottle raised (cold.bottle, cold.letter)
     { id: 'single-single-9', cut: 'puppet', file: 'cast-sheet/views/single-9.png', for: RAISE },
-    // his wince (cold.ouch), a bust played beside heads-4
     { id: 'single-single-5', cut: 'puppet', file: 'cast-sheet/views/single-5.png', for: RAISE },
     {
       id: 'poses-poses-1',
@@ -83,9 +73,6 @@ export const COVERAGE: CoverageManifest = {
       why: 'folds the forearm: elbow 1.9 deg, 63.3 % of its pixels within both segments (bar 5 %)',
     },
   ],
-  // clip B (fal, first frame only): he stands at the front to f30 and holds
-  // the bottle raised from f41; f31-f40 lift it into sight, a move between
-  // the two drawings that neither band holds
   clips: [
     {
       id: 'raise/clip-b',

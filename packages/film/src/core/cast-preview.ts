@@ -1,17 +1,3 @@
-// A cast sheet try normalised as the trace will make it: each view cut from
-// the sheet, drawn at one head height, and a standing view's body under the
-// chin drawn to its figure's own heads (the cast's canon, 3.36, unless the
-// member's design or a smaller figure names its own) with its head held, so
-// the ask shows what a keep sets, never the painting's own height. The views
-// stand side by side, their tops on one row, with the anchor's band
-// across them: the top of the head, the chin and the soles. A view whose head does not read is
-// drawn at the anchor's head scaled by the two figures' heights, each over
-// its own heads; a heads sheet, and a
-// view that does not stand (lying, crouching), only at one head height.
-// Under headgear the head reads the face opening, whose top is not the
-// view's, so no body is drawn to the canon there either (the canon is read
-// on the lock). Pure.
-
 import { Array as Arr, Option } from 'effect';
 import { type SheetMeasure, type SheetOptions, standingOf, statureOf } from './cast-sheet.ts';
 import {

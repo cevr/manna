@@ -1,12 +1,3 @@
-// The sower's puppets, one a cut view (`canvas/puppet.ts`): each view's part
-// sheet (`sheets/<view>/`, made by `film concept parts`), its parts front to
-// back as the sheet's record lists them, each PNG imported by its module so
-// a scene that draws him is keyed by its bytes (`tools/stamp.ts`), on the
-// view's skeleton (`skeleton.ts`), with his origin at the kept box's top-left
-// corner in the padded part sheet (`frames.ts`): his pixels are the sheet's,
-// drawn at its one scale. His turnaround and his poses are two sheets drawn
-// in two inks, so each sheet's views take its own line. Pure data.
-
 import backArmLeft from './sheets/back/armLeft.png' with { type: 'file' };
 import backArmRight from './sheets/back/armRight.png' with { type: 'file' };
 import backFootLeft from './sheets/back/footLeft.png' with { type: 'file' };

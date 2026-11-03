@@ -46,7 +46,6 @@ const fake = () => {
   const one = (action: Action) => () => void asked.push(`One's ${action} handler`);
   const device: Device = {
     audio: {
-      // The rate each play tells first is `playback.live.rate.test.ts`'s; here it answers at once.
       setPlaybackRate: () => Effect.runPromise(Effect.succeed(status)),
       play: (uri) => {
         asked.push(`play ${uri}`);
@@ -113,7 +112,6 @@ describe('the live playback’s remote presses', () => {
           yield* Effect.forkChild(playback.play('https://hymns.cvr.im/audio/sdah/100.mp3', 0), {
             startImmediately: true,
           });
-          // While the recording loads, before any announcement.
           yield* press('play');
           yield* playback.announce({ title: 'Great Is Thy Faithfulness', artist: 'Hymn 100' });
           yield* press('pause');
@@ -159,7 +157,6 @@ describe('the live playback’s remote presses', () => {
         playback,
         3,
         Effect.gen(function* () {
-          // The player's listener is set once its stream runs.
           yield* Effect.yieldNow.pipe(
             Effect.andThen(Effect.sync(() => listeners.length)),
             Effect.repeat({ until: (count) => count > 0 }),

@@ -1,29 +1,3 @@
-// The prosecutor, composed of the house's parts (`figure`) in the kept
-// concept's (`cold-34`) proportions and shading: tall and narrow, a large
-// rounded block of a head turned three-quarters toward screen left and
-// canted, its jaw one curve into a broad chin, short black hair peaked in a
-// tuft over his brow, his head and hair traced from the concept
-// (`traced.ts`), one ink line round head, hair and ear together, the
-// concept's peach skin, a long narrow olive robe a little wider at the hem,
-// dark shoes under it; Kit A at his size, and a mouth that opens wide for
-// his shout. His circle hands are drawn by the host where they work (laying
-// a sheet on the stack, thrown up on `cover`), each from its own artboard
-// (`drawHand`). How each part is cut, lit and drawn is the house's
-// (`drawFigure`). The owner locked him (ask `a92f276635e`, 2026-10-17, the
-// shoe's sole fixed in passing): `prosecutor.lock.json` holds his print, and
-// only an override citing the owner's decision on him, filed after the lock,
-// frees a change to it (FigureLock, `@manna/film/style`'s `lock.ts`).
-//
-// Units are the Board's pixels: in `cold.evidence` he stands 540 tall behind
-// the table. His feet are the artboard's origin.
-//
-// The host poses him by the view model `Prosecutor`, every frame: the face
-// kit's numbers (`FACE`) and `shout`, 0..1, his mouth thrown wide open (the
-// kit's "oh" is a gasp, too small for a shout); `lean`, radians about his
-// feet; `tilt`, radians, his head about his neck; `nod`, units, his head down
-// toward his chest.
-// The rig keeps its `breath` and the paper's `boil`.
-
 import {
   Ear,
   Hair,
@@ -98,9 +72,6 @@ const TUFT = [{ pts: ellipse(-46, -63, 12, 7, 14), color: '#5e4a47', soft: true 
  * hands are 0.44 of his head across, as the concept draws them.
  */
 export const PROSECUTOR_SPEC = {
-  // The owner locked him (ask `a92f276635e`): his print is the one this lock holds but for its
-  // line, which the file binds to the shot (`FIGURES.shot`); the owner's OK on the close-shot
-  // line (2026-10-20, filed at the point item:prosecutor) frees that print.
   lock: {
     ...PROSECUTOR_LOCK,
     override: {
@@ -111,12 +82,10 @@ export const PROSECUTOR_SPEC = {
       frees: '55449cb8729ff73d146a092fd13abf9b9add389ac3b1db60653b072527a760ee',
     },
   },
-  // `film match`'s concept: the prosecutor pointing in cold.34, the kept concept.
   concept: {
     image: { set: 'rbf-v3-concepts-2026-10-15', file: 'images/1-cold-34.png' },
     box: [560, 200, 900, 830],
   },
-  // Room round him for his lean and his outline; his feet are the rig's origin.
   art: { width: 360, height: 640, feet: [180, 610] },
   stature: Stature.Canon(),
   stance: Stance.Standing({ breath: BREATH }),

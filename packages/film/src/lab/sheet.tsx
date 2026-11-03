@@ -1,6 +1,3 @@
-// The one rule a sheet a URL keeps open is dismissed by: an ask's still opened
-// full size (`Zoom`, `ask/material.tsx`) closes by it.
-
 import { useAtomValue } from '@manna/atom-solid';
 import { Location } from '@manna/url-state';
 import * as UrlAtom from '@manna/url-state/atom';
@@ -35,16 +32,11 @@ export const useSheetDismissal = (
   names: (href: string, thing: string) => boolean,
 ): SheetDismissal => {
   const entry = useAtomValue(() => UrlAtom.entry);
-  // The thing a tap named on a shut sheet and the entry it was named on, until the next
-  // entry lands; then, when that entry is a new one naming it, the entry's key. A new entry is
-  // known by its key, not by how the entry on screen last arrived: the push may be replaced
-  // in the same tick (the player keeping its time), and a replace keeps the key.
   let opening = Option.none<{
     readonly thing: string;
     readonly from: string;
     readonly before: string;
   }>();
-  // The pushed entry's key, and the href of the entry the tap left, which Back would land on.
   let openedBy = Option.none<Opened>();
   createEffect(entry, (e) => {
     const pushed =

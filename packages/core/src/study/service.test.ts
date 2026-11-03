@@ -37,20 +37,10 @@ import {
 } from './model.js';
 import { StudyService } from './service.js';
 
-// Wire-shape fields the EGW schema encodes as `null` when absent.
 const wireNull = Option.getOrNull(Option.none<never>());
 
 const DANIEL = 27;
 const DAN_8_13 = Reference.verse(DANIEL, 8, 13);
-
-// ---------------------------------------------------------------------------
-// The writings half: one Bible Commentary volume and one book that is not.
-//
-// Both carry a `paragraph_bible_refs` row for Dan 8:13, which is exactly the
-// situation the partition exists for: `EGWCommentaryService.getCommentary` is
-// unfiltered and returns both, and `StudyService` has to send `5BC` to
-// `commentary` and `GC` to `parallelWritings`.
-// ---------------------------------------------------------------------------
 
 const commentaryBook: BookRow = {
   book_id: 501,
@@ -232,15 +222,10 @@ const sparseWritings = EGWParagraphDatabase.Test({
   bibleRefs: [bibleRef(501, '5BC 1116.1', 27)],
 });
 
-// ---------------------------------------------------------------------------
-// The Bible half.
-// ---------------------------------------------------------------------------
-
 const words: readonly VerseWord[] = [
   { text: 'Then', strongsNumbers: [], italic: false },
   { text: 'I heard', strongsNumbers: ['H8085'], italic: false },
   { text: 'the daily', strongsNumbers: ['H8548'], italic: false },
-  // A supplied word: no lexicon backing, and italic in the KJV.
   { text: 'sacrifice', strongsNumbers: [], italic: true },
 ];
 
@@ -253,8 +238,6 @@ const crossRefs: readonly CrossReference[] = [
     source: 'openbible',
     previewText: Option.some('And the woman fled into the wilderness…'),
   },
-  // A chapter-level target: `cross_refs` really stores these, and a label that
-  // read "Rev 12:undefined" would be the bug the three-shape label prevents.
   {
     book: 66,
     chapter: 13,
@@ -370,83 +353,57 @@ describe('StudyService.verse', () => {
       expect(bundle.label).toBe('Daniel 8:13');
       expect(bundle.text).toEqual(Option.some('Then I heard one saint speaking…'));
 
-      // 1 — words, with the Strong's numbers that make them tap targets.
       expect(bundle.words.map((word) => word.text)).toEqual([
         'Then',
         'I heard',
         'the daily',
         'sacrifice',
       ]);
-      // Branded, so compared as string projections rather than by
-      // reconstructing the brand in the expectation.
       expect(bundle.words[2]?.strongs.map(String)).toEqual(['H8548']);
       expect(bundle.words[3]?.italic).toBe(true);
 
-      // 2 — cross-references, both shapes labelled correctly.
       expect(bundle.crossRefs.map((reference) => reference.label)).toEqual([
         'Revelation 12:6',
         'Revelation 13',
       ]);
       expect(bundle.crossRefs[0]?.source).toBe('openbible');
 
-      // 3 — margin notes (§8.3: in scope, and the data already ships).
       expect(bundle.marginNotes.map((note) => note.text)).toEqual([
         'Heb. the continual',
         'Or, making desolate',
       ]);
       expect(bundle.marginNotes[0]?.kind).toBe('hebrew');
 
-      // 4 — commentary: the Bible Commentary volume, and only it.
       expect(bundle.commentary.map((entry) => entry.bookCode)).toEqual(['5BC']);
       expect(bundle.commentary[0]?.content).toBe('The daily is the continual mediation of Christ.');
 
-      // 5 — parallel writings: the EGW-scope rows the BC exclusion left, and
-      // only those. `MHC` and `SC` cite the verse too and are deliberately
-      // absent — the section is "parallel EGW" (§8.4), not "everything else".
       expect(bundle.parallelWritings.map((entry) => entry.bookCode)).toEqual(['GC', 'LDE']);
       expect(bundle.parallelWritingsTotal).toBe(2);
 
-      // The partition is not exhaustive over the reverse lookup, and that is
-      // the fix: five rows came back, three are in scope, two are not.
       expect(bundle.commentary.length + bundle.parallelWritings.length).toBe(3);
     }).pipe(Effect.provide(study(writings))),
   );
 
   it.effect('keeps only EGW-scope rows in parallel writings', () =>
     Effect.gen(function* () {
-      // Blocker 1. `EGWCommentaryService.getCommentary` reads
-      // `paragraph_bible_refs` across the whole library, so "not a BC volume"
-      // is not "parallel EGW": on the live corpus Dan 7:25 answers with 431
-      // rows, 4 of them BC, and only 10 of the remaining 427 White-Estate
-      // published. Treating the other 417 as parallel writings filled the
-      // section with Matthew Henry and Strong's under an EGW heading.
       const bundle = yield* Effect.flatMap(StudyService, (service) => service.verse(DAN_8_13));
 
       const authors = new Set(bundle.parallelWritings.map((entry) => entry.bookCode));
       expect(authors.has('MHC')).toBe(false);
       expect(authors.has('SC')).toBe(false);
-      // Both halves of `EGW_SCOPE_AUTHORS` survive, so the filter is that
-      // constant and not an equality test against Ellen White alone.
       expect(authors.has('GC')).toBe(true);
       expect(authors.has('LDE')).toBe(true);
-      // And the total counts the same rows the list is drawn from: a total of
-      // 4 here would be the pre-scope count promising two citations by authors
-      // this section will never show.
       expect(bundle.parallelWritingsTotal).toBe(2);
     }).pipe(Effect.provide(study(writings))),
   );
 
   it.effect('yields an empty parallel-writings list on sparse refs, not an error', () =>
     Effect.gen(function* () {
-      // §8.4: bible-ref rows are markup-dependent and populated for 45 of 648
-      // books. The pane must render for the other 603, so this is a value.
       const bundle = yield* Effect.flatMap(StudyService, (service) => service.verse(DAN_8_13));
 
       expect(bundle.parallelWritings).toEqual([]);
       expect(bundle.parallelWritingsTotal).toBe(0);
       expect(bundle.commentary).toEqual([]);
-      // And the rest of the bundle still answered — sparseness in one source
-      // does not degrade the other four.
       expect(bundle.marginNotes.length).toBe(2);
       expect(bundle.crossRefs.length).toBe(2);
       expect(bundle.words.length).toBe(4);
@@ -455,18 +412,10 @@ describe('StudyService.verse', () => {
 
   it.effect('caps parallel writings at the default and reports the post-scope total', () =>
     Effect.gen(function* () {
-      // Should-fix 7. The retired version of this test used one row and a limit
-      // of 1, where `items.length === total === 1` holds whether the total is
-      // counted before the cap, after it, or not at all. Forty rows — thirty in
-      // scope, ten out — separate all three: 25 items, and a total that is
-      // neither 25 (post-cap) nor 40 (pre-scope).
       const bundle = yield* Effect.flatMap(StudyService, (service) => service.verse(DAN_8_13));
 
       expect(bundle.parallelWritings.length).toBe(DEFAULT_PARALLEL_WRITINGS_LIMIT);
       expect(bundle.parallelWritingsTotal).toBe(30);
-      // Stated as inequalities too, because those are the two numbers a wrong
-      // implementation would produce and the assertion above only excludes by
-      // arithmetic coincidence otherwise.
       expect(bundle.parallelWritingsTotal).not.toBe(bundle.parallelWritings.length);
       expect(bundle.parallelWritingsTotal).not.toBe(40);
     }).pipe(Effect.provide(study(manyWritings))),
@@ -484,17 +433,11 @@ describe('StudyService.verse', () => {
 
   it.effect('fails with a typed corpus-data error on a malformed row', () =>
     Effect.gen(function* () {
-      // Should-fix 9, restated over a row that is actually malformed. The
-      // margin note's `type` is not one of `MarginNoteKind`'s five values, so
-      // the artifact disagrees with the schema and an operator needs to hear
-      // about it. Dropping it silently is what this forbids.
       const outcome = yield* Effect.flip(
         Effect.flatMap(StudyService, (service) => service.verse(DAN_8_13)),
       );
 
       expect(outcome._tag).toBe('StudyCorpusDataError');
-      // Typed, and it names the row: `source` says which corpus, `operation`
-      // says which section, `row` says which one an operator should look at.
       if (outcome._tag !== 'StudyCorpusDataError') return;
       expect(outcome.source).toBe('bible');
       expect(outcome.operation).toBe('verse.marginNotes');
@@ -504,27 +447,12 @@ describe('StudyService.verse', () => {
 
   it.effect('returns a citation-less row rather than failing the whole bundle', () =>
     Effect.gen(function* () {
-      // The line between the two, and the bug this pair exists to hold. A
-      // blank refcode is *absence*, not a defect: ~563 corpus paragraphs have
-      // none, and the five that cite a verse cite John 1:1, John 1:14,
-      // Matthew 27:54, Romans 1:25 and Colossians 2:8.
-      //
-      // It used to be `NonEmptyString`, and because `verse()` decodes its five
-      // sections under one `Effect.all`, that single row failed the *entire*
-      // bundle — no verse text, no Strong's words, no cross-references, no
-      // margin notes. The study pane for John 1:1 did not open.
       const bundle = yield* Effect.flatMap(StudyService, (service) => service.verse(DAN_8_13));
 
-      // The bundle is whole: the sections that have nothing to do with the
-      // uncitable row are unaffected, which is the whole difference.
       expect(Option.isSome(bundle.text)).toBe(true);
       expect(bundle.words.length).toBeGreaterThan(0);
       expect(bundle.crossRefs.length).toBeGreaterThan(0);
 
-      // And the row itself comes back, carrying its absence rather than a
-      // placeholder. Dropping it would leave the section one short of its own
-      // total with nothing saying why — §8.4's sparseness posture makes that
-      // indistinguishable from the verse having fewer citations.
       expect(bundle.parallelWritings.length).toBe(1);
       expect(bundle.parallelWritingsTotal).toBe(1);
       expect(Option.isNone(bundle.parallelWritings[0]?.refcode ?? Option.some('x'))).toBe(true);
@@ -533,9 +461,6 @@ describe('StudyService.verse', () => {
 
   it.effect('sparse refs stay a value, not a corpus-data failure', () =>
     Effect.gen(function* () {
-      // The other half of should-fix 9, and the line the fix must not cross:
-      // *absent* rows are §8.4's common case and remain an empty list. Only
-      // *malformed* rows fail.
       const bundle = yield* Effect.flatMap(StudyService, (service) => service.verse(DAN_8_13));
       expect(bundle.parallelWritings).toEqual([]);
       expect(bundle.parallelWritingsTotal).toBe(0);
@@ -552,8 +477,6 @@ describe('StudyService.strongs', () => {
 
       expect(result.occurrences.length).toBe(5);
       expect(result.limit).toBe(5);
-      // The number a "show all" affordance renders, and one the capped list
-      // cannot produce.
       expect(result.total).toBe(60);
       expect(result.occurrences[0]?.label).toBe('Exodus 25:1');
       expect(result.occurrences[0]?.word).toBe('continual');
@@ -585,8 +508,6 @@ describe('StudyService.strongs', () => {
 
   it.effect('reports an absent lexicon entry as a value, with the concordance intact', () =>
     Effect.gen(function* () {
-      // A number the lexicon has no row for is a gap in the corpus, not a
-      // broken request — and the reverse concordance can still answer.
       const result = yield* Effect.flatMap(StudyService, (service) =>
         service.strongs(strongsNumber('H9999')),
       );

@@ -17,8 +17,6 @@
  * reader holds only the forms its author thought of; the bytes the build
  * wrote are what the site serves.
  */
-import { createHash } from 'node:crypto';
-
 import { Effect, FileSystem, Option, Path, Schema, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
@@ -138,7 +136,8 @@ export const formatOf = (bytes: Uint8Array): Option.Option<Format> => {
 };
 
 /** The SHA-256 of bytes, in hex. */
-export const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
+export const sha256 = (bytes: Uint8Array) =>
+  new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
 
 /** An image of the built site: its path from `dist/`, its format, and the SHA-256 of its bytes. */
 export interface BuiltImage {

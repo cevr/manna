@@ -1,8 +1,3 @@
-// The review on the wire: the folders it lists (a film's project folder by
-// its catalogue, a montage by its manifest), each with its comparison sets
-// (render choice points, `choice.ts`) and the files in no set. Pure: the
-// review's server and its page share them.
-
 import { Array as Arr, Effect, Option, Record as Rec, Schema } from 'effect';
 import { ChoicePoint, seenVariants } from './choice.ts';
 import { Clip } from './point.ts';

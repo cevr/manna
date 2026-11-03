@@ -1,13 +1,3 @@
-// A member's cast render page (`<film>/cast/<member>`): each kind of his
-// kept sheets a scene of its own, a canvas the sheet's size with each kept
-// view's rig drawn in its pose, laid in its kept box at the sheet's one scale
-// (`CastTable`, the film's `rigs/cast.ts`), on the film's paper, with no
-// light, vignette, grain or breath of the camera over it. It is a film like
-// any other, made by `createFilm` and drawn by `drawRig` through `f.rive`,
-// its rigs loaded as a film's are (`loadRigs`): the render is what a scene
-// draws, and `film concept render` takes a still of each scene
-// (`tools/cast-render.ts`).
-
 import { Effect, Layer, ManagedRuntime, type Scope } from 'effect';
 import { FetchHttpClient, type HttpClient } from 'effect/http';
 import { SheetKind } from '../core/cast-sheet.ts';

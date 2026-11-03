@@ -81,7 +81,6 @@ describe("a workspace's test script", () => {
       Effect.gen(function* () {
         const path = yield* Path.Path;
         const root = path.join(import.meta.dir, '..', '..', '..', '..');
-        // Each unit-test task the gate runs: a workspace's `test`, or each of its parts.
         const units = unitTests(
           yield* testDryRun(root, path.join(root, 'node_modules', '.bin', 'turbo')),
         );
@@ -117,8 +116,6 @@ describe("a workspace's test script", () => {
                 Option.fromUndefinedOr(scripts?.['test:slow']),
                 () => '',
               );
-              // `bun test` exits 1 when its filters match no file, so the deploy that runs it first never deploys.
-              // Each filter is a path substring, so `.slow.test.` and a named file are checked alike.
               const filters = bunTests(script)
                 .filter((words) => !words.includes('--pass-with-no-tests'))
                 .flatMap((words) => words.filter((word) => word.includes('.slow.test.')));

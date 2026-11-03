@@ -25,7 +25,6 @@ export function Scrubber(props: ScrubberProps) {
       value={scrub.value}
       onValueChange={scrub.change}
       minimumValue={0}
-      // A length not yet known draws a still bar over a range of one.
       maximumValue={Option.getOrElse(
         Option.liftPredicate(scrub.max, (max) => max > 0),
         () => 1,

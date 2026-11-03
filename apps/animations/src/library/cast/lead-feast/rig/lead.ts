@@ -1,20 +1,3 @@
-// The series lead, the young man at the feast, composed from each view of
-// his kept sheets (`<view>-traced.ts`, written by `film concept trace` from
-// `trace.ts`): one composition a view, each its own trace (his mantle makes
-// him asymmetric and the key light is upper left, so no view is a mirror of
-// another), laid in each film's figures file. Every view is composed the one
-// way (`leadView`): his traced head with his curls (their light and dark laid
-// on them as tones), his ears cut inside it, and Kit A's marks where the
-// sheet draws them; a head whose chin is open traced down into his garment's
-// neck, the shade under his jaw a tone on it; his tunic and the mantle over
-// it as one garment, the mantle and its far side, the sash, its knot and
-// their rose edge and (from behind) his neck laid on it as tones; his two
-// arms in their sleeves, each cut at its elbow, his right sleeve cream and
-// his left teal; his feet in their sandals, each strap laid on its foot; his
-// circle hands drawn by the host at his cuffs. Units are the cast's canon, one
-// scale a sheet (`SHEETS`): he stands 440 from his hair to his soles, 3.36 of
-// his heads, 0.94 of Christ's 468 (look.md). Pure.
-
 import { type Pt, type TracedFigureSpec, type TracedTone, tracedFigure } from '@manna/film/style';
 import * as BACK from './back-traced.ts';
 import * as FRONT from './front-traced.ts';
@@ -37,7 +20,6 @@ const LEAD_FEAST_HEIGHT = 440;
  */
 export const SHEETS = {
   turnaround: { scale: LEAD_FEAST_HEIGHT / (FRONT.FEET[1] - FRONT.HEAD_AT.top) },
-  // His poses: poses-5, his front at rest, his hair (row 225) to his soles (row 829).
   poses: { scale: LEAD_FEAST_HEIGHT / (829 - 225) },
 } as const;
 
@@ -399,8 +381,6 @@ export const leadFeastRaised = leadView(
     ears: { near: RAISED.EAR_NEAR },
     face: { ...AT_REST, marks: RAISED.MARKS, extra: WITH_EXTRA },
     sleeves: { near: 'raised', far: 'teal' },
-    // Turned about a point on the line from his hand through his elbow's fold (the notch at 105,443 and the elbow's corner at 55,505 lie square across it), so its cut at his elbow runs through both.
-    // Its upper sleeve ends where the sheet ends it, its root under his tunic: a ball would show past its edges.
     nearArm: { pivot: [144, 476], elbow: 0.35, root: 'traced', tones: RAISED_SLEEVE },
   },
 );
@@ -488,7 +468,6 @@ const seatedArms = () => {
   return {
     ARM_NEAR: SEATED.ARM_NEAR,
     ARM_FAR: THREE_QUARTER_LEFT.ARM_FAR.map(moved),
-    // His hand at his chin 4 px down onto his wrist: the sheet's hand hides the sleeve's top, so the traced sleeve stops short of it.
     HAND_NEAR: {
       ...SEATED.HAND_NEAR,
       at: [SEATED.HAND_NEAR.at[0], SEATED.HAND_NEAR.at[1] + SEATED_WRIST] satisfies Pt,
@@ -650,7 +629,6 @@ export const leadFeastSeated = leadView(
     ears: { near: SEATED.EAR_NEAR },
     face: { ...AT_REST, marks: SEATED.MARKS, extra: WITH_EXTRA },
     sleeves: { near: 'creamAcross', far: 'teal' },
-    // His elbow on his knee, the raised sleeve's lowest middle.
     nearArm: { pivot: [692, 622], tones: SEATED_SLEEVE },
     farArm: { tones: LAP_SLEEVE },
   },

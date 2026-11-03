@@ -1,10 +1,3 @@
-// The lab's browser tests read the page only through these: each waits until
-// the page shows what the test expects, so a value the page is still drawing
-// (a status line mid-update, a list read again after a write) is never taken
-// as its answer. A read that times out fails naming what it wanted and what the
-// page last showed. `film/no-read-once` refuses a one-shot read (an asserted
-// `evaluate`) in a `*.dom.test.ts`.
-
 import { Predicate, Schema } from 'effect';
 import type { Tab } from './tab.ts';
 

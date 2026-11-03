@@ -1,20 +1,3 @@
-// The lab as an MCP server, through the lab's own handler as a client calls
-// it at `/mcp`: answered with no token, refused by the lab's gate on a Host
-// or Origin not its own; a session started (its header kept, so the write gate's read body
-// keeps what MCP answers with); every tool listed; the owner's note seen
-// in the change feed with its link; an agent's reply and done landing in the
-// note's thread; a tweak asked of a board panel; a set published into the
-// lab's out/ and listed, and seen as published; an ask made (its machine
-// checked first), answered by the owner a step at a time through the page's
-// route and heard on `changes` with its answers typed, then closed and filed
-// on its production's timeline. `film lab ask` makes the lab's own
-// ask from a terminal, through the same command. What the owner said in chat is filed by `decide`
-// and `note` on his timeline, his own words required and who filed it kept,
-// its set by ref or folder (one two roots hold refused, for an ask too): a
-// note leaves a question waiting, a decision on its set answers it, and each
-// lands in the version open when it is filed. The lab client's session ends
-// with its scope, a handshake failed halfway too, and the lab forgets it.
-
 import { FilmName } from './film-repo.ts';
 import { NotesStore } from './notes-store.ts';
 import { describe, expect, it } from 'effect-bun-test';
@@ -124,7 +107,6 @@ const files = () =>
     ['/films/f/board/cold.judge.1.png', text('the judge')],
     ['/films/f/board/cold.judge.2.png', text('the judge again')],
     ['/work/judge-calmer.png', text('a calmer judge')],
-    // A set of the same folder's name in another root (`reviewAt` names it).
     [
       '/elsewhere/judge-faces/review.json',
       text('{"title":"Judge faces elsewhere","images":["calm.png"]}'),
@@ -160,7 +142,6 @@ const providedWith =
       Effect.scoped,
       Effect.provide(
         Layer.mergeAll(RenderCatalogue.layer, review).pipe(
-          // The asks find a set's files through the same review the lab's routes serve them by.
           Layer.provideMerge(
             labInMemory(files(), echoPages, { asking: Layer.mergeAll(review, noStudio) }),
           ),
@@ -205,7 +186,6 @@ describe('who may use the MCP', () => {
             );
           expect(yield* status({ host: STRANGER })).toBe(403);
           expect(yield* status({ origin: `http://${STRANGER}` })).toBe(403);
-          // No Authorization header: a session starts (`mcpSession` checks its header).
           yield* mcpSession(lab);
         }),
       ),
@@ -218,7 +198,6 @@ describe('who may use the MCP', () => {
         Effect.gen(function* () {
           const { lab } = yield* labWithMcp;
           const { session } = yield* mcpSession(lab);
-          // As the MCP SDK's `terminateSession` sends it: the session's headers, nothing else.
           const end = () =>
             Effect.promise(() =>
               lab(
@@ -284,7 +263,6 @@ describe('the lab as an MCP server', () => {
           ].toSorted(),
         );
         const { cursor } = yield* tool('overview');
-        // An agent waits; the owner writes a note on the page; the feed reads it.
         const waiting = yield* Effect.forkChild(tool('changes', { since: cursor, wait: 5 }));
         yield* ownerNote('the judge looks away too soon');
         yield* events.look;
@@ -347,7 +325,6 @@ describe('the lab as an MCP server', () => {
           files: [{ from: '/work/judge-calmer.png', to: 'calmer.png' }],
           manifest: { title: 'Judge faces', images: ['calmer.png'] },
         });
-        // No page shows a set: an ask shows its files in place, so the answer names none.
         expect(published.set).toBe('spare/judge-faces');
         expect('links' in published).toBe(false);
         expect(
@@ -395,7 +372,6 @@ describe('a set published through the MCP', () => {
           const { tool } = yield* mcpSession(lab);
           const publish = (name: string, manifest: Schema.Json, files: Schema.Json = []) =>
             tool('publish_set', { name, files, manifest });
-          // Film f's own folder, and a folder a catalogue keeps: the review shows them as projects.
           expect((yield* publish('f', { title: 'x' })).refused).toContain(
             "film f's project folder",
           );
@@ -404,7 +380,6 @@ describe('a set published through the MCP', () => {
           );
           const clip = (variants: Schema.Json) => ({ sets: { cold: { variants } } });
           const video = { from: '/work/judge-calmer.png', to: 'cold.b.mp4' };
-          // A variant's own file, its notes, and one with neither copy beside it.
           expect((yield* publish('cuts', clip({ a: { file: 'a.mp4' } }))).refused).toContain(
             'a.mp4',
           );
@@ -414,7 +389,6 @@ describe('a set published through the MCP', () => {
           const implicit = (yield* publish('cuts', clip({ c: {} }))).refused;
           expect(implicit).toContain('cold.c.share.mp4');
           expect(implicit).toContain('cold.c.mp4');
-          // A variant with no file is its share copy or its master: either is enough.
           const published = yield* publish('cuts', clip({ b: {} }), [video]);
           expect(published.set).toBe('spare/cuts');
         }),
@@ -440,7 +414,6 @@ describe('a refused publish', () => {
         });
         expect(first.set).toBe('spare/faces');
         const manifest = yield* fs.readFileString(path.join(dir, 'review.json'));
-        // Each publish copies two.png over a.png and into a new b.png, and names a file the folder lacks.
         const over = [
           { from: '/work/two.png', to: 'a.png' },
           { from: '/work/two.png', to: 'b.png' },
@@ -460,7 +433,6 @@ describe('a refused publish', () => {
           expect(yield* fs.exists(path.join(dir, 'b.png'))).toBe(false);
           expect(yield* fs.readFileString(path.join(dir, 'review.json'))).toBe(manifest);
         }
-        // A name a copy brings is there: the same publish with no missing name lands whole.
         const landed = yield* tool('publish_set', {
           name: 'faces',
           files: over,
@@ -483,7 +455,6 @@ describe('the review after an MCP write', () => {
         const { lab } = yield* labWithMcp;
         const { tool } = yield* mcpSession(lab);
         const review = yield* Review;
-        // The read a page makes: kept for a while, so a write must drop it.
         const listed = Effect.map(review.index(false), (index) =>
           index.folders.map((f) => [f.ref, f.images.length]),
         );
@@ -535,7 +506,6 @@ describe('the sets the MCP lists', () => {
           yield* put('f/review.json', '{"title":"Not a montage"}');
           yield* put('f/cold.png', 'a still');
           yield* put('broken/review.json', '{"title":');
-          // Records with nothing to review: a project's empty catalogue, a manifest with a title alone.
           yield* put(
             'g/catalogue.json',
             yield* Schema.encodeEffect(CatalogueJson)(emptyCatalogue('g')),
@@ -554,7 +524,6 @@ describe('the sets the MCP lists', () => {
               files: { images: ['cold.png'] },
             },
           });
-          // The feed's first look takes what is there as it stands.
           yield* events.look;
           const { cursor } = yield* tool('overview');
           yield* put('stories/rbf/deep.png', 'deep');
@@ -570,7 +539,6 @@ describe('the sets the MCP lists', () => {
               ['spare/stories/rbf', 'montage'],
             ].toSorted(),
           );
-          // The same sets as the review's own index.
           const index = yield* (yield* Review).index(true);
           expect(index.folders.map((f) => f.ref).toSorted()).toEqual(
             rows.map(([set]: ReadonlyArray<string>) => set).toSorted(),
@@ -648,7 +616,6 @@ describe('asks through the MCP', () => {
                 },
               ],
             });
-          // A path the page would 404 on: the set's page, a file the set lacks, a board's missing try.
           for (const src of [
             '/api/sets/spare%2Fjudge-faces/images/calmer.png',
             '/api/review/files/spare/judge-faces/missing.png',
@@ -658,7 +625,6 @@ describe('asks through the MCP', () => {
               `image ${src}: the lab serves no file there now`,
             );
           expect((yield* tool('asks', {})).asks).toEqual([]);
-          // The set's own answer is served, and so is a try on the board.
           expect(yield* showing(published.files[0].src)).toMatchObject({ status: 'asking' });
         }),
       ),
@@ -711,7 +677,6 @@ describe('asks through the MCP', () => {
               const bytes = yield* Effect.promise(() => response.arrayBuffer());
               return { status: response.status, bytes: new Uint8Array(bytes) };
             });
-          // The set's own route serves its file as it stands; the ask's image is the copy it was made with.
           expect(new TextDecoder().decode((yield* get(published.files[0].src)).bytes)).toBe(
             'the judge drawn again',
           );
@@ -803,7 +768,6 @@ describe('asks through the MCP', () => {
         expect(
           (yield* tool('asks', { status: 'asking' })).asks.map((a: { ask: string }) => a.ask),
         ).toEqual([one.ask]);
-        // Its page: it opened one, and its page's links are the ones to hand the owner.
         expect(one.onPage).toBe(`opened page ${one.ask}`);
         expect(one.page).toEqual({
           id: one.ask,
@@ -812,13 +776,11 @@ describe('asks through the MCP', () => {
             phone: `${MCP_PHONE}asks/page/${one.ask}`,
           },
         });
-        // The next ask from the same asker, while the first still asks, joins its page.
         const name = [{ kind: 'free_text', id: 'name', label: 'And its sequel?' }];
         const two = yield* tool('ask', { ...who, blocks: name });
         expect(two.onPage).toBe(`joined page ${one.ask}, 2 asks`);
         expect(two.page).toEqual(one.page);
         expect(two.links.local).toBe(`${MCP_BASE}asks/${two.ask}`);
-        // Another asker opens a page of its own; `page: "new"` does too; `page` names one to join.
         const other = yield* tool('ask', { ...who, by: 'painter', blocks: name });
         expect(other.onPage).toBe(`opened page ${other.ask}`);
         const fresh = yield* tool('ask', { ...who, blocks: name, page: 'new' });
@@ -828,7 +790,6 @@ describe('asks through the MCP', () => {
         expect((yield* tool('ask', { ...who, blocks: name, page: 'a0000000000' })).refused).toBe(
           'no ask a0000000000 whose page to join: `asks` lists them',
         );
-        // The asks list names each ask's page (made at one clock time, so their order is not told).
         const pages = new Map(
           (yield* tool('asks', { status: 'asking' })).asks.map(
             (a: { ask: string; page: { id: string } }) => [a.ask, a.page.id],
@@ -926,7 +887,6 @@ describe('asks through the MCP', () => {
           expect(picked.status).toBe(200);
           expect((yield* ownerAnswers(lab, made.ask, 'pick', { try: '1' })).status).toBe(409);
           yield* events.look;
-          // The ask's own events: its filing on the timeline is a `production.asked` beside them.
           const heard = yield* tool('changes', { since: cursor, name: ['ask.*'] });
           expect(
             heard.changes.map(
@@ -947,11 +907,7 @@ describe('asks through the MCP', () => {
               `${MCP_BASE}asks/${made.ask}`,
             ],
           ]);
-          // A page with no sections is no answer; a tab opened before the one-page ask sends one
-          // step as it did, and it is taken.
           expect((yield* answerPosted(lab, made.ask, { sections: [] })).status).toBe(400);
-          // A body is one form or the other: sections beside a step are refused, whatever they are,
-          // never read as the old form with the sections dropped.
           for (const sections of [[], 'bad'])
             expect(
               (yield* answerPosted(lab, made.ask, {
@@ -971,7 +927,6 @@ describe('asks through the MCP', () => {
             'ask.step',
             'ask.answered',
           ]);
-          // The optional field left empty is told, typed; the timeline's decision leaves it out.
           const answers = {
             try: { kind: 'choose', value: 'calm', label: 'Calmer' },
             why: { kind: 'free_text', text: 'he listens' },
@@ -989,7 +944,6 @@ describe('asks through the MCP', () => {
             closed: 'kept the calmer judge',
             answers,
           });
-          // Closed again: as it is, and filed once.
           yield* tool('close_ask', { ask: made.ask, why: 'kept the calmer judge' });
           const said = Option.getOrThrow(yield* productions.read('f')).said;
           expect(said.map((w) => [w._tag, w.text, w.quote, w.set])).toEqual([
@@ -1008,10 +962,8 @@ describe('asks through the MCP', () => {
             ),
           ).toEqual([
             ['ask.closed', 'kept the calmer judge'],
-            // Its filing, heard on the timeline.
             ['production.decided', `Which judge? (ask ${made.ask}): try: Calmer · why: he listens`],
           ]);
-          // An ask withdrawn unanswered files a note naming it, which closes its question.
           const other = yield* tool('ask', {
             title: 'Name the judge?',
             why: 'the credits',
@@ -1204,7 +1156,6 @@ const changesEdited =
         const answered = yield* Effect.promise(() => lab(request, mcpBound));
         if (!asked.includes('"name":"changes"')) return answered;
         const body = yield* Effect.promise(() => answered.text());
-        // The answer's one message with a result, the whole body or an event stream's `data:` line.
         const { jsonrpc, id, result } = yield* Effect.fromOption(
           Arr.findFirst(
             [body, ...Array.from(body.matchAll(/^data: (.*)$/gm), (data) => data[1] ?? '')],
@@ -1319,7 +1270,6 @@ describe('film lab events', () => {
           const second = yield* Queue.take(out);
           expect(second).toMatch(/^tweak\.requested cursor=\w+\.2 .* note=n2 /);
           yield* Fiber.interrupt(fiber);
-          // The events past the first line's cursor, as JSON, then the cursor to read on from.
           const past = yield* filmCli(fetch, [
             'lab',
             'events',
@@ -1335,7 +1285,6 @@ describe('film lab events', () => {
           });
           expect(end).toEqual({ cursor: cursorIn(second) });
           expect(past.lines).toHaveLength(2);
-          // The full record each line's `read` names: every note a line, then the log's last change.
           const read = yield* filmCli(fetch, ['lab', 'notes', '--film', 'f', '--status', 'all']);
           expect(read.failed).toBe('');
           expect(read.lines).toHaveLength(3);
@@ -1364,7 +1313,6 @@ describe('film lab events', () => {
           expect(yield* Queue.take(err)).toMatch(
             /^lab events: lost the lab \(no lab answered at .*\); asking again$/,
           );
-          // What the owner does while the line is down, the lab keeps.
           yield* ownerNote('two');
           yield* events.look;
           yield* line.restore;
@@ -1387,7 +1335,6 @@ describe('film lab events, against a lab that runs other code', () => {
       provided(
         Effect.gen(function* () {
           const { lab, events } = yield* labWithMcp;
-          // A newer lab's feed: a note whose words are `pinned` is told as a `note.pinned`, a field this checkout has not with it.
           const newer = changesEdited(lab, (result) => ({
             ...result,
             changes: result.changes.map((change) =>
@@ -1419,7 +1366,6 @@ describe('film lab events, against a lab that runs other code', () => {
           yield* ownerNote('two');
           yield* events.look;
           expect(yield* Queue.take(out)).toMatch(/^tweak\.requested cursor=\w+\.4 .* note=n4 /);
-          // Said once for its kind, and no loss said.
           expect(yield* Queue.size(err)).toBe(0);
           yield* Fiber.interrupt(fiber);
         }),
@@ -1432,7 +1378,6 @@ describe('film lab events, against a lab that runs other code', () => {
       provided(
         Effect.gen(function* () {
           const { lab, events } = yield* labWithMcp;
-          // A newer lab whose notes record tells a `note.pinned`: it narrows by `notes` and sends it.
           const newer = changesEdited(lab, (result) => ({
             ...result,
             changes: result.changes.map((change) =>
@@ -1491,7 +1436,6 @@ describe('film lab events, against a lab that runs other code', () => {
             (yield* filmCli(fetch, ['lab', 'resolve', '--film', 'f', '--note', 'n1'])).failed,
           ).toBe('');
           yield* events.look;
-          // The note made is not asked for, so the first line is the note done.
           expect(yield* Queue.take(out)).toMatch(
             /^note\.resolved cursor=\w+\.2 at=\S+ film=f note=n1 /,
           );
@@ -1563,8 +1507,6 @@ describe("film lab events' outages", () => {
           expect(yield* Queue.take(err)).toContain('lab events: following');
           yield* line.drop;
           expect(yield* Queue.take(err)).toMatch(/^lab events: lost the lab /);
-          // Each try opens a session and its poll is lost again: the try past 5 s since the first loss
-          // (250 ms, 500 ms, 1 s, 2 s, 4 s after one another) ends it.
           yield* TestClock.adjust('10 seconds');
           expect(Exit.isFailure(yield* Fiber.await(fiber))).toBe(true);
           expect(yield* Queue.take(err)).toMatch(/^lab events: reconnected to /);
@@ -1587,7 +1529,6 @@ describe("film lab events' outages", () => {
           const line = yield* countedDroppable(lab);
           const { out, err, fiber } = yield* filmRunning(line.fetch, ['lab', 'events', '--follow']);
           expect(yield* Queue.take(err)).toContain('lab events: following');
-          // A long outage: the tries back off to their 10 s cap.
           yield* line.drop;
           expect(yield* Queue.take(err)).toMatch(/^lab events: lost the lab /);
           for (let n = 0; n < 7; n++) {
@@ -1597,11 +1538,9 @@ describe("film lab events' outages", () => {
           yield* line.restore;
           yield* TestClock.adjust('10 seconds');
           expect(yield* Queue.take(err)).toMatch(/^lab events: reconnected to /);
-          // A session that works.
           yield* ownerNote('one');
           yield* events.look;
           expect(yield* Queue.take(out)).toMatch(/^tweak\.requested .* note=n1 /);
-          // Lost again: asked again within the schedule's first step, not its cap.
           yield* line.drop;
           expect(yield* Queue.take(err)).toMatch(/^lab events: lost the lab /);
           yield* line.restore;
@@ -1639,7 +1578,6 @@ describe('a set a terminal published', () => {
       provided(
         Effect.gen(function* () {
           const { lab } = yield* labWithMcp;
-          // The lab has read its index, and keeps it.
           expect((yield* (yield* Review).index(false)).folders).toEqual([]);
           expect((yield* publishNotes(lab)).failed).toBe('');
           const blocks: Schema.Json = [
@@ -1779,7 +1717,6 @@ describe('film lab ask', () => {
             `phone ${MCP_PHONE}asks/page/${made.ask}`,
             `then: bun cli.ts ask wait ${made.ask} in the background (it exits once answered, with the answers; --page ${made.ask} for every ask on the page); close_ask it once acted on`,
           ]);
-          // Filed the way the MCP files it: the lab's own ledger, its choice carried.
           const said = Option.getOrThrow(yield* productions.read('f')).said;
           expect(said.map((w) => [w._tag, w.text, w.set, w.point, w.ask])).toEqual([
             [
@@ -1790,7 +1727,6 @@ describe('film lab ask', () => {
               Option.some(made.ask),
             ],
           ]);
-          // `--json` prints the answer the MCP answers, one line.
           const read = yield* filmCli(
             (request) => lab(request, mcpBound),
             ['lab', 'ask_read', '--ask', made.ask, '--json'],
@@ -1823,7 +1759,6 @@ describe('film lab ask', () => {
           expect(elsewhere.failed).toBe(
             'LabToolRefused: the lab refused ask: no production nope: film production new nope --title "<title>"',
           );
-          // Input the command's parameters do not read is refused here, in the words MCP says it.
           const unread = yield* filmCli(atLab, ['lab', 'ask', ...who, '--blocks', '{"kind":1}']);
           expect(unread.failed).toContain("LabInputInvalid: Invalid parameters for tool 'ask'");
           const noJson = yield* filmCli(atLab, ['lab', 'ask', ...who, '--blocks', '[oops']);
@@ -1875,7 +1810,6 @@ describe('a set published onto a production through the MCP', () => {
         const stamped = Effect.flatMap(fs.readFileString(review), Schema.decodeEffect(StampedJson));
         yield* publish({ ...manifest, production: 'f', version: 1 });
         expect(yield* stamped).toStrictEqual({ production: 'f', version: 1, published: 5000 });
-        // A publish naming no version drops the one before: the set falls in the version open now.
         yield* publish({ production: 'f' });
         expect(yield* stamped).toStrictEqual({ production: 'f', published: 5000 });
         const folders = (yield* (yield* Review).index(true)).folders;
@@ -1915,7 +1849,6 @@ describe('a stamp the store refuses', () => {
               expect.stringContaining(reason),
             ]);
           }
-          // A version under 1: the MCP's schema refuses it, and the store refuses the CLI's.
           const zero = yield* filmCli(fetch, [
             'publish',
             folder,
@@ -1925,7 +1858,6 @@ describe('a stamp the store refuses', () => {
             '0',
           ]);
           expect(zero.failed).toContain('f has no v0 (v1 to v1)');
-          // A version with no production: the MCP's patch says so, and the CLI's flag is required.
           const versionOnly = yield* tool('publish_set', {
             name: 'judge-faces',
             manifest: { version: 1 },
@@ -1960,7 +1892,6 @@ describe('film publish', () => {
           expect(listed.lines).toEqual([
             expect.stringMatching(/^published spare\/judge-faces to f at \S+$/),
           ]);
-          // A folder no root of the lab's holds: the lab says so.
           yield* fs.makeDirectory('/work/loose', { recursive: true });
           yield* fs.writeFileString('/work/loose/review.json', '{}\n');
           const loose = yield* filmCli(fetch, ['publish', '/work/loose', '--production', 'f']);
@@ -1969,7 +1900,6 @@ describe('film publish', () => {
               /^published \/work\/loose to f at \S+; the lab at http:\/\/localhost:4401\/ does not list it: /,
             ),
           ]);
-          // No lab answering: the set is published, and whether a lab lists it is unknown.
           const alone = yield* filmCli(
             // oxlint-disable-next-line effect/noNewPromise, effect/noNewError -- fetch's own contract: a closed port rejects with a TypeError
             () => Promise.reject(new TypeError('Unable to connect')),
@@ -2090,7 +2020,6 @@ describe("the owner's word through the MCP", () => {
           });
           const question = `Which judge? (ask ${asked.ask})`;
           expect(yield* waitingOnF).toEqual([question]);
-          // A note decides nothing: the question still waits. Its set named by its folder.
           const noted = yield* tool('note', {
             production: 'f',
             text: 'The paper reads cold',
@@ -2115,7 +2044,6 @@ describe("the owner's word through the MCP", () => {
             },
           });
           expect(yield* waitingOnF).toEqual([question]);
-          // A decision on the set, named by its ref as `sets` lists it, answers it.
           const decided = yield* tool('decide', {
             production: 'f',
             text: 'The calmer judge',
@@ -2135,7 +2063,6 @@ describe("the owner's word through the MCP", () => {
             variant: 'calm',
             by: 'painter',
           });
-          // On a choice, it answers a question on that choice only: this one is on the set.
           expect(yield* waitingOnF).toEqual([question]);
           yield* tool('decide', {
             production: 'f',
@@ -2145,7 +2072,6 @@ describe("the owner's word through the MCP", () => {
             set: 'judge-faces',
           });
           expect(yield* waitingOnF).toEqual([question]);
-          // Moved forward, the next word lands in the version open now.
           yield* productions.modify('f', (current) =>
             moveForward(current, { after: 1, title: 'v2', because: Option.none() }, 60_000),
           );
@@ -2194,7 +2120,6 @@ describe("the owner's word through the MCP", () => {
             ],
             ['Noted', Option.some('slow it all down'), Option.none(), Option.some('painter')],
           ]);
-          // `film lab note --by` files the same word; the ledger prints who filed each.
           const cli = (args: ReadonlyArray<string>) =>
             filmCli((request) => lab(request, mcpBound), args);
           yield* cli([
@@ -2254,7 +2179,6 @@ describe("the owner's word through the MCP", () => {
           expect(
             (yield* tool('decide', { ...quoted, set: 'judge-faces', variant: 'calm' })).refused,
           ).toBe("`variant` is one of a choice's: name the `point`");
-          // `film lab decide` files through the same store, so it refuses the same word.
           const cli = (args: ReadonlyArray<string>) =>
             filmCli((request) => lab(request, mcpBound), args);
           const said = ['--production', 'f', '--text', 'x', '--quote', 'x', '--by', 'painter'];
@@ -2297,7 +2221,6 @@ describe("the owner's word through the MCP", () => {
           decision,
         });
         expect((yield* tool('forward', move(0))).refused).toBe(undecided(1));
-        // A note decides nothing.
         const noted = filedAt(
           yield* tool('note', { ...word, text: 'Warmer', quote: 'warm it up' }),
         );
@@ -2314,7 +2237,6 @@ describe("the owner's word through the MCP", () => {
           [calmer, 'Warmer title card'],
           [cold, 'The cold judge'],
         ] as const;
-        // A time that is no decision of his (the note's), and another production's decision.
         expect((yield* tool('forward', move(noted))).refused).toBe(unknown(1, noted, held));
         yield* TestClock.adjust('1 minute');
         const elsewhere = filedAt(
@@ -2322,7 +2244,6 @@ describe("the owner's word through the MCP", () => {
         );
         expect((yield* tool('forward', move(elsewhere))).refused).toBe(unknown(1, elsewhere, held));
         yield* TestClock.adjust('1 minute');
-        // The decision named, not the newest: the move is on the cold judge.
         expect(yield* tool('forward', move(cold))).toEqual({
           production: 'f',
           version: 2,
@@ -2336,7 +2257,6 @@ describe("the owner's word through the MCP", () => {
         expect((yield* tool('forward', move(cold))).refused).toBe(
           'f is at v2 now, not v1: read it again before moving forward',
         );
-        // The decision moved it into v2: v2 holds none of its own yet, and v1's is not v2's.
         expect((yield* tool('forward', move(cold, 2))).refused).toBe(undecided(2));
         yield* TestClock.adjust('1 minute');
         const next = filedAt(
@@ -2428,7 +2348,6 @@ describe('the lab client', () => {
       Effect.gen(function* () {
         const { lab } = yield* labWithMcp;
         const answered: Array<string> = [];
-        // The lab answers each request but `notifications/initialized`, lost on its way.
         const losing = HttpClient.make((request) =>
           Effect.gen(function* () {
             const web = yield* Effect.orDie(HttpClientRequest.toWeb(request));
@@ -2447,7 +2366,6 @@ describe('the lab client', () => {
         );
         const failed = yield* Effect.flip(Effect.scoped(client.session));
         expect(failed.message).toContain(`no lab answered at ${MCP_BASE}`);
-        // The session the lab named is ended all the same.
         expect(answered).toEqual(['POST 200', 'DELETE 204']);
       }),
     ),
@@ -2483,7 +2401,6 @@ describe('film channel', () => {
                     ),
                 }),
                 clientOf(lab, polling),
-                // The CLI runs with these; the bridge spawns nothing and asks nothing of a terminal.
                 formatAsIs,
                 BunTerminal.layer,
                 ConfigProvider.layer(

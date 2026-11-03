@@ -1,15 +1,3 @@
-// A wedge (a printer's term: one strip printed at each of several grades, to
-// choose one): a film drawn with a look at another level than the one it
-// plays, its pick never written. The film's `palette.ts` is read as a pick of
-// that level would write it (`editPick`, the very edit a pick makes) and
-// swapped in only where the pages are built: the lab's warm pages for a look
-// (`LabPage.wedge`, `tools/easel.ts`), and for a render (`film render
-// --level`) the render page alone, built here and served on loopback for as
-// long as the render runs, in place of the app's PreviewServer; `check
-// --level` draws on that server too, and its `--draw` leg, which draws in
-// this process, imports the film's module built with the swap
-// (`wedge-module.ts`, kept apart: the lab reads this file, and imports no film).
-
 import { Array as Arr, Context, Effect, FileSystem, Layer, Option, Path, Result } from 'effect';
 import { HttpServer, HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { NetAddress } from 'effect/net';

@@ -1,13 +1,3 @@
-// IIO's cast render table (`cast.ts` `CAST`) is the members' kept views: for
-// each member `cold` casts, every view of every sheet his record keeps
-// (`cast-sheet.json` `kept.<kind>.views`), no other, each in its kept box;
-// every rig it draws, its own and those drawn with it, is an artboard of the
-// film's figures file; and each view's rig is traced from a kept view of that
-// sheet (`concept`), so `film match` holds it there in a scene too. A view the
-// owner keeps later fails here until the table draws it. A single drawing
-// (`kept.single`, a list of drawings) has no traced rig: the cut-out table
-// draws it, so the rig table leaves its kind out while `SHEETS` sizes it.
-
 import { describe, expect, test } from 'bun:test';
 import LEAD_FEAST from '../../../library/cast/lead-feast/cast-sheet/cast-sheet.json' with { type: 'json' };
 import * as LEAD from '../../../library/cast/lead-feast/rig/lead.ts';

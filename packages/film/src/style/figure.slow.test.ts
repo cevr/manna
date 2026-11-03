@@ -25,9 +25,6 @@ import { FACE, type FaceKnob, type Pt, ellipse, kitMarks, figure as rigOf } from
 import { type Element, el, fragment, ids } from './rig/rml.ts';
 import { roundedPolygon, tucked, tuckedRimmed } from './rig/shapes.ts';
 
-// A figure composed of the house's parts, each checked as it is made: the
-// refusals name the rule a part breaks (`rules.ts`).
-
 const SKIN = paper({ color: '#ece7fa', shade: '#c9bcf2', light: '#fffffb' }, 'skin');
 const WHITE = paper({ color: '#fcfbfc', shade: '#dcd9ec', light: '#ffffff' }, 'white');
 const HAIR = paper({ color: '#433736', shade: '#2e2a2c', light: '#5a4846' }, 'hair');
@@ -80,11 +77,9 @@ describe('a composed figure', () => {
       'stain',
       'robe',
     ]);
-    // Its type names the same numbers, read off its parts' types.
     expectTypeOf(Rec.keys(lead.knobs)).toEqualTypeOf<
       Array<FaceKnob | 'lean' | 'tilt' | 'nod' | 'faceY' | 'stain' | 'robe'>
     >();
-    // His eyes on us at rest: the face's place on his head, from the head's centre.
     expect(lead.knobs.gazeY).toBe(-288);
     expect(lead.knobs.stain).toBe(1);
     expect(lead.knobs.robe).toBe(0);
@@ -484,7 +479,6 @@ describe('a traced figure, standing or seated', () => {
       const rml = drawnOf(robedFigure);
       const ids = Array.from(rml.matchAll(/ id="([^"]+)"/g), (m) => m[1]);
       expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
-      // The given robe's node, shown by its number, lies over the garment's own paper, also named `robe`.
       const number = rml.match(/<ViewModelPropertyNumber name="robe" id="([^"]+)"\/>/)?.[1];
       expect(number).toBeDefined();
       expect(
@@ -778,7 +772,6 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
     expect(printed(rml, 'footNear')).toEqual(toMillionth(roundedPolygon(NEAR_FOOT, [2])));
     expect(printed(rml, 'footNearTone0')).toEqual(STRAP);
     expect(rml).toMatch(/name="footNearTone0"[^]*?colorValue="FF6B4430"/);
-    // Each sole runs 4 units past its foot's heel and toe, from 6.5 above the ground to 4 below it.
     expect(printed(rml, 'footNearTone1')).toEqual([
       [-64, -6.5],
       [-14, -6.5],
@@ -836,7 +829,6 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
       expect(rml).toMatch(new RegExp(`<Shape [^>]*name="${eye}" [^>]*rotation="-0.175"`));
     expect(rml.match(/rotation="-0.175"/g)).toHaveLength(2);
     expect(rml.indexOf('name="faceTurn"')).toBeLessThan(rml.indexOf('name="eyeL"'));
-    // A kit whose concept leans no eye leans none.
     expect(drawnOf(figure(standingOf()))).not.toMatch(/<Shape [^>]*name="eyeL" [^>]*rotation=/);
   });
 
@@ -866,7 +858,6 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
     expect(rml).toMatch(/name="robeTone0"[^]*?colorValue="FF714B38"/);
     expect(rml).toContain('<Node y="-15" name="trunk"');
     expect(rml).toContain('<Node y="15" name="robeSide">');
-    // Checked again as its kind when a figure takes it.
     const inked = { ...tunic, ink: '#000000' };
     expect(() => figure({ ...standingOf(), body: inked })).toThrow(/body refused by InteriorInk/);
   });
@@ -922,7 +913,6 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
         turn: 0.5,
         brows: [-5, 5.5],
         browY: -5.5,
-        // Each brow's half-length, averaged: 2.55 and 3.04.
         browHalf: 2.8,
         brow: 2,
         mouth: [0, 10],
@@ -930,7 +920,6 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
         mouthLine: 1.5,
       },
     });
-    // An eye line tipped 10 px over 20 turns the kit 0.46 radians, the eyes level in its frame.
     const tipped = tracedKit(
       {
         ...marks,
@@ -1013,7 +1002,6 @@ describe('an arm in its sleeve', () => {
     expect(boundIn(rml, 'farSleeveArm')).toBe(numberIn(rml, 'farArm'));
     expect(printed(rml, 'farSleeve')).toEqual(SLEEVE);
     expect(printed(rml, 'farSleeveTone0')).toEqual(SLEEVE_LIT);
-    // The cut's line runs round the garment; the sleeve inks its own, hidden under the garment's paper inside it.
     expect(rml).toContain('name="robeCutInkrobe.0"');
     expect(rml).not.toContain('name="robeCutInkfarSleeve.0"');
     expect(rml).toMatch(
@@ -1033,7 +1021,6 @@ describe('an arm in its sleeve', () => {
       /arms\.far refused: [^]*its pivot \(400, 0\) lies outside its garment: an arm turns inside it/,
     );
     expect(() => figure({ ...standingOf(), arms: { near: astray } })).toThrow(/arms\.near refused/);
-    // The sleeve's pivot lies inside the cut robe, but above the plain lead's tunic.
     expect(() => figure({ ...leadOf([]), arms: { far: sleeve } })).toThrow(
       /arms\.far refused: [^]*its pivot \(30, -290\) lies outside/,
     );
@@ -1050,7 +1037,6 @@ describe('an arm in its sleeve', () => {
   });
 
   test("whose sleeve lies as far from its pivot as its garment's edge, or farther, is refused, unless the pivot lies inside the sleeve", () => {
-    // The pivot lies inside the cut robe, 16.4 from its edge.
     const away = Arm({
       pivot: [30, -290],
       rest: 0,
@@ -1061,7 +1047,6 @@ describe('an arm in its sleeve', () => {
     expect(() => figure({ ...standingOf(), arms: { far: away } })).toThrow(
       /arms\.far refused: [^]*its sleeve lies 442\.0 from its pivot, its garment's edge 16\.4: a sleeve lies nearer its pivot than the edge/,
     );
-    // The raised sleeve lies 13.4 from it and is taken; moved 6 out, it lies 16.5 from it.
     expect(figure({ ...standingOf(), arms: { far: sleeve } }).arms.far).toEqual(sleeve);
     const out = SLEEVE.map(([x, y]): Pt => [x + 6, y - 6]);
     const moved = Arm({
@@ -1074,7 +1059,6 @@ describe('an arm in its sleeve', () => {
     expect(() => figure({ ...standingOf(), arms: { far: moved } })).toThrow(
       /arms\.far refused: [^]*its sleeve lies 16\.5 from its pivot, its garment's edge 16\.4/,
     );
-    // A sleeve round its pivot, its edge 30 from it, keeps that point under the garment's paper.
     const round = Arm({
       pivot: [30, -290],
       rest: 0,
@@ -1083,7 +1067,6 @@ describe('an arm in its sleeve', () => {
       paper: FLAT,
     });
     expect(figure({ ...standingOf(), arms: { far: round } }).arms.far).toEqual(round);
-    // A sleeve exactly as far from its pivot as the garment's edge is refused.
     const square = Robe.Traced({ outline: SQUARE, hem: 0, paper: SKIN });
     const level = Arm({
       pivot: [0, -300],
@@ -1098,7 +1081,6 @@ describe('an arm in its sleeve', () => {
   });
 
   test("whose hand lies short of its sleeve's end, or past it with its circle clear of the sleeve, is refused", () => {
-    // The raised sleeve's end lies 166.4 from its pivot; the figure's hand is 0.44 of a head 100 across.
     const short = Arm({ ...armOf(sleeve), hand: [60, -350] });
     expect(() => figure({ ...standingOf(), arms: { far: short } })).toThrow(
       /arms\.far refused: [^]*its hand \(60, -350\) lies 67\.1 from its pivot, its sleeve's end 166\.4: a hand lies past its sleeve's end/,
@@ -1114,7 +1096,6 @@ describe('an arm in its sleeve', () => {
     expect(armHand(sleeve, 0)).toEqual(sleeve.hand);
     const [x, y] = armHand(sleeve, Math.PI / 2);
     const [hx, hy] = sleeve.hand;
-    // A quarter turn clockwise on screen (y down) takes (dx, dy) from the pivot to (-dy, dx).
     expect(x).toBeCloseTo(30 - (hy + 290), 9);
     expect(y).toBeCloseTo(-290 + (hx - 30), 9);
   });
@@ -1147,7 +1128,6 @@ describe('an arm in its sleeve', () => {
     const lead = figure({ ...leadOf([robe]), arms: hanging });
     expect(isComposed(lead)).toBe(true);
     const rml = drawnOf(lead);
-    // The robe and its sleeves, cut in one outline, over the garment and its own.
     const places = placesOf(rml, [
       'robePaperCut',
       'robePaper',
@@ -1165,12 +1145,10 @@ describe('an arm in its sleeve', () => {
     expect(places.every((at) => at >= 0)).toBe(true);
     expect(places).toEqual(places.toSorted((a, b) => a - b));
     for (const side of ARM_SIDES) {
-      // Each sleeve of the robe is its arm's, turned by its arm's number, in the robe's paper and none of the arm's.
       expect(boundIn(rml, `${side}RobeSleeveArm`)).toBe(numberIn(rml, `${side}Arm`));
       expect(printed(rml, `${side}RobeSleeve`)).toEqual([...hanging[side].outline]);
       expect(paperIn(rml, `${side}RobeSleeve`)).toEqual(paperIn(rml, 'robePaper'));
       expect(paperIn(rml, `${side}RobeSleeve`)).not.toEqual(paperIn(rml, `${side}Sleeve`));
-      // It inks its own line, hidden under the robe's paper inside it.
       expect(rml).toMatch(
         new RegExp(
           `<Shape name="${side}RobeSleeve" id="[^"]+">(?:(?!</Shape>)[^])*?<Stroke [^>]*name="Ink">`,
@@ -1180,7 +1158,6 @@ describe('an arm in its sleeve', () => {
     expect(numberIn(rml, 'nearArm')).not.toBe(numberIn(rml, 'farArm'));
     expect(printed(rml, 'farSleeveTone0')).toEqual(HANGING_LIT);
     expect(rml).not.toContain('name="farRobeSleeveTone0.0"');
-    // The robe's line runs round the robe and its sleeves: its paper inside the cut lays none.
     expect(rml).toContain('name="robePaperCutInkrobePaper.0"');
     expect(rml).not.toMatch(
       /<Shape name="robePaper" id="[^"]+">(?:(?!<\/Shape>)[^])*?<Stroke [^>]*name="Ink">/,
@@ -1190,7 +1167,6 @@ describe('an arm in its sleeve', () => {
     );
     expect(boundIn(seated, 'nearRobeSleeveArm')).toBe(numberIn(seated, 'nearArm'));
     expect(printed(seated, 'nearRobeSleeve')).toEqual(RESTING);
-    // With no arms the robe is one piece, its line its own.
     const bare = drawnOf(figure(leadOf([robe])));
     expect(bare).not.toContain('name="robePaperCut"');
     expect(bare).toMatch(
@@ -1228,7 +1204,6 @@ describe('an arm in its sleeve', () => {
       }
       return '';
     };
-    // His skin in the robe's V under his head and its soft shade under his chin, a fold's shade, and his skin past the raised sleeve's cuff with its soft shade.
     const neck: Pt[] = [
       [-18, -330],
       [18, -330],
@@ -1281,7 +1256,6 @@ describe('an arm in its sleeve', () => {
     const rml = drawnOf(
       figure({ ...standingOf(), body, states: [robe], arms: { near: sleeve, far } }),
     );
-    // The garment and its sleeve lay all the colour on them, his cloth and his skin.
     expect(printed(rml, 'robeTone0')).toEqual(fold);
     expect(printed(rml, 'robeTone1')).toEqual(neck);
     expect(printed(rml, 'robeTone2')).toEqual(chin);
@@ -1295,7 +1269,6 @@ describe('an arm in its sleeve', () => {
     expect(paintIn(rml, 'farSleeveTone2')).toContain(
       '<GradientStop colorValue="80D98A64" position="0"/>',
     );
-    // The robe lays his skin again over its paper and its sleeve's, in the order and the paint they lay it, and none of his cloth.
     expect(printed(rml, 'robePaperTone0')).toEqual(neck);
     expect(printed(rml, 'robePaperTone1')).toEqual(chin);
     expect(paintIn(rml, 'robePaperTone0')).toBe(paintIn(rml, 'robeTone1'));
@@ -1307,7 +1280,6 @@ describe('an arm in its sleeve', () => {
     expect(paintIn(rml, 'farRobeSleeveTone1')).toBe(paintIn(rml, 'farSleeveTone2'));
     expect(rml).not.toContain('name="farRobeSleeveTone2"');
     expect(rml).not.toContain('name="nearRobeSleeveTone0"');
-    // Each lies in the robe's node, over the garment, in the piece of the paper it is clipped to, laid over it in its order.
     expect(rml.indexOf('<Node name="robe" id=')).toBeLessThan(
       rml.indexOf('<Shape name="robe" id='),
     );
@@ -1357,7 +1329,6 @@ describe('an arm in its sleeve', () => {
       [110, -414],
       [92, -425],
     ];
-    // The seated figure's V at its robe's neck, and a sash across its lap, each inside its robe.
     const seatedNeck: Pt[] = [
       [-18, 28],
       [18, 28],
@@ -1399,7 +1370,6 @@ describe('an arm in its sleeve', () => {
     const sashCloth = { pts: sash, color: '#8a5a3c' } as const;
     const seatedSkin = { ...skin, pts: seatedNeck } as const;
     const seatedSash = { ...sashCloth, pts: seatedLap } as const;
-    // The seated figure, its cut robe laying a sash after its skin, and a stain on its robe.
     const seated = { ...seatedOf(), body: seatedRobe([seatedSkin, seatedSash]) };
     const seatedStain = Stain({
       at: [-6, 200],
@@ -1411,7 +1381,6 @@ describe('an arm in its sleeve', () => {
     const wristSkin = { pts: wrist, color: '#f0a27c', skin: true } as const;
     const lit = { pts: SLEEVE_LIT, color: '#efca9a' } as const;
     const cuffShade = { pts: cuff, color: '#c98a5e' } as const;
-    // A sash laid over the skin in the robe's V (its shade laid after the sash), and a cuff's shade over the skin past the cuff: the robe would show the skin they cover.
     const sashed = tracedRobe([skin, sashCloth, neckShade]);
     const cuffed = raised([lit, wristSkin, cuffShade]);
     const skinLast = tracedRobe([sashCloth, skin, neckShade]);
@@ -1422,7 +1391,6 @@ describe('an arm in its sleeve', () => {
     expect(() => figure({ ...robed(skinLast, cuffed), states: [robe] })).toThrow(
       refusal('arms.far', 2, 1),
     );
-    // The cloth laid after the skin and its shade, on a cut robe as on a traced one, and on the near arm as on the far one.
     expect(() =>
       figure({ ...robed(tracedRobe([skin, neckShade, sashCloth]), cuffSkinLast), states: [robe] }),
     ).toThrow(refusal('body', 2, 0));
@@ -1432,7 +1400,6 @@ describe('an arm in its sleeve', () => {
     expect(() => figure({ ...robed(skinLast, cuffSkinLast, cuffed), states: [robe] })).toThrow(
       refusal('arms.near', 2, 1),
     );
-    // Under a robe and a stain, as RBF's lead wears them; on a seated figure, a stain on it or none; and on an arm under a garment that lays no tones.
     expect(() => figure({ ...robed(sashed, cuffSkinLast), states: [robe, stain] })).toThrow(
       refusal('body', 1, 0),
     );
@@ -1441,7 +1408,6 @@ describe('an arm in its sleeve', () => {
     expect(() => figure({ ...robed(standingOf().body, cuffed), states: [robe] })).toThrow(
       refusal('arms.far', 2, 1),
     );
-    // With no robe over them, the skin is laid where the garment and the sleeve lay it, on a traced robe, a cut one or a seated figure's, a stain on them or none.
     const bare = [
       robed(sashed, cuffed, cuffed),
       robed(tracedRobe([skin, neckShade, sashCloth]), cuffed),
@@ -1453,7 +1419,6 @@ describe('an arm in its sleeve', () => {
     }
     expect(() => figure(seated)).not.toThrow();
     expect(() => figure({ ...seated, states: [seatedStain] })).not.toThrow();
-    // Laid after the cloth, the skin is taken under the robe, on a cut robe and on each arm.
     expect(() =>
       figure({ ...robed(skinLast, cuffSkinLast, cuffSkinLast), states: [robe] }),
     ).not.toThrow();
@@ -1506,7 +1471,6 @@ describe('the parts', () => {
     expect(() =>
       figure({ ...standingOf(), body: { ...standingOf().body, corners: doubled } }),
     ).toThrow(/body refused: [^]*corners 0 and 1 lie at one point/);
-    // A foot whose last corner is its first again.
     const closed: Pt[] = [
       [18, -1],
       [18, -16],
@@ -1526,7 +1490,6 @@ describe('the parts', () => {
 
   test('bands whose top is not above their ends are refused', () => {
     const bands = { x: 0, gap: 3, top: 17, bottom: 25, splay: 4, paper: FLAT };
-    // A top at the ends' height, with no splay: each tab flat, its outline NaN.
     expect(() => Bands({ ...bands, splay: 0, from: -200, to: -200 })).toThrow(
       /Bands refused: [^]*their top \(-200\) lies at or below their ends \(-200\)/,
     );
@@ -1551,11 +1514,9 @@ describe('the parts', () => {
     expect(() => Arm({ pivot, rest: 0, outline: flat, hand: pivot, paper: FLAT })).toThrow(
       /Arm refused: [^]*its points all lie on one line, so it encloses no area/,
     );
-    // A figure given such a sleeve says so, not how far the sleeve lies from its pivot.
     expect(() => figure({ ...standingOf(), arms: { far: { ...sleeve, outline: point } } })).toThrow(
       /arms\.far refused: [^]*its points all lie at \(30, -290\)/,
     );
-    // A slanting line, a cut robe's corners and a tone's points are refused alike.
     const slant: Pt[] = [
       [0, 0],
       [10, 10],
@@ -1572,7 +1533,6 @@ describe('the parts', () => {
     expect(() => Robe.Traced({ ...toned, tones: [{ pts: slant, color: '#efca9a' }] })).toThrow(
       /Robe\.Traced refused: [^]*its points all lie on one line/,
     );
-    // A line whose numbers carry float error lies on one line, and so does a point off a long line by less than a billionth of its length.
     const along = [0, 10.1, 23.7, 41.3].map((r): Pt => [
       30 + r * Math.cos(0.7),
       -290 + r * Math.sin(0.7),
@@ -1588,7 +1548,6 @@ describe('the parts', () => {
     expect(() => Arm({ pivot, rest: 0, outline: sliver, hand: pivot, paper: FLAT })).toThrow(
       /Arm refused: [^]*its points all lie on one line/,
     );
-    // Three points, one a hundredth of a unit off the line through the others, do not lie on one line.
     const thin: Pt[] = [
       [30, -290],
       [60, -290],
@@ -1642,7 +1601,6 @@ describe('the parts', () => {
     const thumbed = { paper: SKIN, share: 0.3, thumb: 1 };
     expect(() => Hands(thumbed)).toThrow(/; nothing frees it\): /);
     const nosed = { x: 0, y: 0, scale: 1, gaze: [0, 0] as const, nose: 1 };
-    // No part carries an override of KitA, so the refusal promises none.
     expect(() => KitA(nosed)).toThrow(
       /; no part carries an override of it: only the owner may change it, so ask him first\): /,
     );
@@ -1714,7 +1672,6 @@ describe('the parts', () => {
   });
 
   test('a tone marked as skin is taken by a garment and an arm, and refused by every other part as a field it lacks; `skin` is true or left out', () => {
-    // A tone spread with `skin`, as one copied from a garment's would carry it.
     const tones = [{ pts: BAND_LIT, color: '#e29662' as const, skin: true as const }];
     const lacks = (at: string) =>
       new RegExp(
@@ -1746,7 +1703,6 @@ describe('the parts', () => {
     );
     const { _tag: _arm, ...arm } = sleeve;
     expect(Arm({ ...arm, tones }).tones).toEqual(tones);
-    // `skin` is true or left out: a tone of cloth leaves it out, so a garment and an arm refuse `skin: false`.
     const woven = [{ pts: BAND_LIT, color: '#e29662' as const, skin: false }];
     const onlyTrue = /refused: Expected true\s+at \["tones"\]\[0\]\["skin"\]/;
     const cutCloth = { ...cut, tones: woven };
@@ -1997,7 +1953,6 @@ describe('an arm bent at its elbow, trousers, and an open chin', () => {
     expect(boundTo('farSleeveForefarSleeveArmPaper')).toBe(numberOf('farArm'));
     expect(boundTo('farSleeveForefarSleeveElbowPaper')).toBe(numberOf('farElbow'));
     expect(boundTo('farSleevefarSleeveArmPaper')).toBe(numberOf('farArm'));
-    // Two parts on one shoulder each turn in a node of their own, so no id is given twice.
     const nodeIds = Array.from(rml.matchAll(/<Node [^>]*\bid="([^"]+)"/g), (m) => m[1]);
     expect(new Set(nodeIds).size).toBe(nodeIds.length);
   });
@@ -2012,7 +1967,6 @@ describe('an arm bent at its elbow, trousers, and an open chin', () => {
     expect(near.hand[0]).toBeCloseTo(110, 6);
     expect(near.hand[1]).toBeCloseTo(-220, 6);
     expect(armHand(bent, near.turn, near.bend)).toEqual(near.hand);
-    // Past its reach it lies straight along the line to the point, its upper sleeve and forearm end to end.
     const upper = Math.hypot(bent.elbow[0] - bent.pivot[0], bent.elbow[1] - bent.pivot[1]);
     const fore = Math.hypot(bent.hand[0] - bent.elbow[0], bent.hand[1] - bent.elbow[1]);
     const far = armReach(bent, [40, 200]);
@@ -2179,7 +2133,6 @@ describe('a traced figure', () => {
       pivot,
       root: 'traced',
     });
-    // The figure's units: one a sheet pixel, about its feet.
     const fromFeet = ([x, y]: Pt): Pt => [x - 100, y - 450];
     expect(arms.far.pivot).toEqual(fromFeet(pivot));
     const [px, py] = fromFeet(pivot);

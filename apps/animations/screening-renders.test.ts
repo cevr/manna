@@ -1,7 +1,3 @@
-// Which catalogued render a screening version publishes, over a catalogue as
-// `film render` writes one: the full render among the Board renders, look
-// wedges and proofs rendered after it.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option, Schema } from 'effect';
 import { CatalogueRender, isBoardRender, isFullRender, newestOf } from './screening-renders.ts';

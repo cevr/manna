@@ -59,7 +59,6 @@ const seedLook = Command.make(
   Effect.fn('art.seedLook')(function* (input) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    // A look the draws keep away from must be one the deck can describe.
     for (const look of DECK.existing) {
       const found = conflicts(DECK, look.picks);
       if (found.length > 0)

@@ -1,12 +1,3 @@
-// The export page's handle, declared once: what the render page
-// (`mountRender`) hands out on `window.__film`, and what crosses the page
-// boundary for each call. The page implements `ExportHandle`
-// (player/render.ts); the tools call it through one typed path that decodes
-// every answer with its schema here (`FramePage.call`, tools/browser.ts), and
-// the test fake answers the same calls in memory (tools/browser/testing.ts). A new
-// capability is a row in `CallArgs` and in `Answers`, and a type error in
-// each of those three places until it is written there.
-
 import { Schema } from 'effect';
 import { SceneTimes, type StillView } from './easel.ts';
 import { type Copies, type Encoder, EncoderChoice } from './encoder.ts';

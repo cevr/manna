@@ -95,7 +95,6 @@ describe("a stepped command in a context menu (a finger's Shift)", () => {
       ['play.scene-next', 'Next scene', 'normal'],
     ]);
     expect(new Set(rows.map(rowKey)).size).toBe(rows.length);
-    // Its keys read as the keymap steps them: the coarse row's with Shift.
     expect(rows.slice(0, 2).map((r) => rowChord(r, 'arrowright'))).toEqual([
       'arrowright',
       'shift+arrowright',

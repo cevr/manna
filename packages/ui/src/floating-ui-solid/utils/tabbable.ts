@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/utils/tabbable.ts
-//
-// Which elements take focus, and which of those the Tab key reaches, in DOM
-// order through slots and open shadow roots. Base UI's own reading of the
-// HTML focus rules (inert, hidden, closed <details>, named radio groups), so
-// the `tabbable` package is not needed.
 import { getComputedStyle, getNodeName, isHTMLElement, isShadowRoot } from '@floating-ui/utils/dom';
 
 import { activeElement, contains, ownerDocument } from '../../utils/dom.ts';
@@ -50,7 +44,6 @@ function isFocusableCandidate(element: Element | null): element is FocusableElem
       (element.parentElement != null &&
         getNodeName(element.parentElement) === 'details' &&
         getDetailsSummary(element.parentElement) === element)) &&
-    // A <details> with a summary takes focus only when given a tabindex (its summary does).
     (nodeName !== 'details' ||
       getDetailsSummary(element) == null ||
       element.hasAttribute('tabindex')) &&

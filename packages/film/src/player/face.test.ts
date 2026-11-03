@@ -1,9 +1,3 @@
-// What waits for a film's picture faces (`pictureFacesWait`): nothing once
-// every one asked for has loaded, or none was asked for, so a page whose
-// faces are in draws at once; else each one still loading, failing when one
-// will not load. The UI faces (Geist and Geist Mono) are the chrome's, and
-// nothing waits for them.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Exit, Fiber, Option } from 'effect';
 import { pictureFacesWait } from './face.ts';

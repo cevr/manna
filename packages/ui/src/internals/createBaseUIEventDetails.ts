@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/internals/createBaseUIEventDetails.ts
-//
-// The details every change callback receives: why (`reason`), the DOM event
-// behind it, the trigger involved, and `cancel()` to keep the current state.
-
 /** The details of a change a callback may cancel. */
 export type BaseUIChangeEventDetails<Reason extends string = string> = {
   reason: Reason;

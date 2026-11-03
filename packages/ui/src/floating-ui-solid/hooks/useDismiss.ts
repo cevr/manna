@@ -1,10 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/hooks/useDismiss.ts
-//
-// Closes a popup on Escape and on a press outside it (its popup and its
-// trigger are inside). A press that starts inside and ends
-// outside (a text selection drag) does not close an `intentional` popup.
-// Touch scrolls do not count as presses. The React-portal bookkeeping
-// upstream (`insideReactTree`) is not needed: Solid's events follow the DOM.
 import {
   getComputedStyle,
   getParentNode,
@@ -149,7 +142,6 @@ export function useDismiss(
       }
 
       function handleCompositionEnd() {
-        // Safari fires `compositionend` before the Escape that ended the composition.
         compositionTimeout.start(platform.engine.webkit ? 5 : 0, () => {
           isComposing = false;
         });
@@ -214,7 +206,6 @@ export function useDismiss(
           targetRootAncestor = nextParent;
         }
 
-        // A press on an element a third-party modal added after this popup opened.
         if (
           markers.length &&
           isElement(target) &&
@@ -225,7 +216,6 @@ export function useDismiss(
           return;
         }
 
-        // A press on a scrollbar is not an outside press.
         if (isHTMLElement(target) && !('touches' in event)) {
           const lastTraversableNode = isLastTraversableNode(target);
           const style = getComputedStyle(target);
@@ -314,8 +304,6 @@ export function useDismiss(
         }
       }
 
-      // Listens on the event's own target once, so a handler that stops
-      // propagation there still sees the press (as the bubbling phase would).
       function addTargetEventListenerOnce<E extends Event>(event: E, listener: (event: E) => void) {
         const target = getTarget(event);
         if (!target) {

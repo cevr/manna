@@ -1,18 +1,3 @@
-// `film media`: review renders (share renders, montages, contact sheets) kept
-// in the private store under `renders/`, so a render can go from the disk and
-// come back when it is wanted. Free; nothing is deleted anywhere, and nothing
-// kept is replaced unasked: a key the store holds with other bytes is refused
-// (`--replace` sends them anyway).
-//
-//   film media push <file…> [--under dir] [--replace]
-//       each as renders/<its path under FILMS_OUT> (or renders/<dir>/<name>),
-//       read back by hash
-//   film media pull <key…> [--to dir]        each into <FILMS_OUT>/renders (or dir), whole
-//   film media list [prefix]                 size, when written and key, under renders/
-//
-// A page reads the same store through `PrivateStore` (`list`, and
-// `read` with a byte range), not through this command.
-
 import { Console, Effect, FileSystem, Option, Path } from 'effect';
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';

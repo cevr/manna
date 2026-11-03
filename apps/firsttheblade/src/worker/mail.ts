@@ -128,8 +128,6 @@ export const layerCloudflare = Layer.unwrap(
         ),
     });
 
-    // A limit that cannot be read lets the sign-up through: the honeypot
-    // and the hour between confirm letters still hold.
     const throttle = Throttle.of({
       allow: (key) =>
         inRuntime(limit.limit({ key })).pipe(

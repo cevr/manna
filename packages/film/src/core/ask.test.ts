@@ -1,10 +1,3 @@
-// An ask's machine, with no lab: the check that runs before it renders
-// (bounded, every step reached, no loop, every guard on a choice of its own
-// step, words required only where nothing is chosen), and the run: a pick
-// of try 7 or 8 asks why, any other ends it; words left empty are answered
-// skipped unless required; an answer that does not fit, or to a step the ask
-// has left, moves nothing; closing keeps what was answered.
-
 import { Boolean as Bool, Effect, Option, Schema } from 'effect';
 import { describe, expect, it, test } from 'effect-bun-test';
 import { Machine } from 'effect-machine';
@@ -152,7 +145,6 @@ describe('the check before an ask renders', () => {
     const decode = Schema.decodeUnknownExit(Schema.fromJsonString(AskSchema));
     const page =
       '{"blocks":[{"kind":"free_text","id":"why","label":"Why?"}],"next":[{"to":"done"}]}';
-    // JSON, so `__proto__` is a key of its own, as an agent's tool call sends it.
     const text = (...names: ReadonlyArray<string>) =>
       `{"start":"pick","steps":{"pick":${page},${names
         .map((name) => `"${name}":{"end":true},`)
@@ -386,7 +378,6 @@ describe('the check before an ask renders', () => {
       { try: '7' },
       { why: 'light' },
     ]);
-    // A run already on a later step shows from there; an ask at its end shows none.
     expect(
       sectionsOf(proof, AskState.Asking({ step: step('why'), answers: {} }), {}).map(
         (s): string => s.name,
@@ -448,7 +439,6 @@ describe('the check before an ask renders', () => {
     expect(asked({ try: '7' })).toEqual(['pick:try:true', 'why:why:false']);
     expect(asked({ try: '7', why: '  ' })).toEqual(['pick:try:true', 'why:why:false']);
     expect(asked({ try: '7', why: 'light' })).toEqual(['pick:try:true', 'why:why:true']);
-    // Optional words are no question the page waits on.
     expect(questionsOf(sectionsOf(proof, askStart(proof), { try: '7' })).length).toBe(1);
   });
 
@@ -497,7 +487,6 @@ describe('the run', () => {
   it.effect('words left empty are answered skipped, unless required', () =>
     Effect.gen(function* () {
       const asked = yield* run([AskEvent.Answer({ step: step('pick'), values: { try: '7' } })]);
-      // The proof's why carries no flag, as no ask made before the flag does: optional.
       const done = yield* run(
         [AskEvent.Answer({ step: step('why'), values: { why: ' \n ' } })],
         asked,
@@ -526,8 +515,6 @@ describe('the run', () => {
   );
 
   test('an ask kept before the flag and before material reads as it did, its words now optional', () => {
-    // The bytes as an ask kept on 2026-10-15 holds them: a picture, a choice
-    // that recommends nothing, a free text with no flag; no title, no material.
     const kept =
       '{"id":"a0123456789","title":"Two calls","why":"the build waits","by":"main",' +
       '"created":"2026-10-15T00:27:56.767Z","ask":{"start":"ask","steps":{"ask":{"blocks":' +

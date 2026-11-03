@@ -169,8 +169,6 @@ export class TopicService extends Context.Service<TopicService, TopicServiceApi>
           });
         }).pipe(
           Effect.mapError((cause) => {
-            // A row that failed to decode already carries its own operation;
-            // relabelling it as `topic` would hide which column was corrupt.
             if (Schema.is(TopicNotFoundError)(cause)) return cause;
             if (Schema.is(TopicUnavailableError)(cause)) return cause;
             return unavailable('topic')(cause);

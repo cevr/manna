@@ -1,9 +1,3 @@
-// The page's window as a CSS media query sees it: whether it is a phone's
-// width (the inspector's bottom sheet, the copy the review plays). The live
-// adapter is `viewport-browser.ts` (the window's `matchMedia`); a server
-// render has no window, and answers as the studio is designed for first: a
-// phone held upright (`Viewport.layerPhone`).
-
 import { Context, Effect, Layer, Option, Stream } from 'effect';
 
 interface ViewportOps {

@@ -1,12 +1,3 @@
-// The Canvas 2D draw kit a film draws with (ink, cut paper, paper light, type,
-// floating hands (the one mitten, no arm), a multiplane camera, storyboard
-// cards, full-screen cards and the verse a card follows, a WebGL 2 canvas for
-// a look drawn in 3D, credits) and the compositor that turns scenes into a film. A film's
-// people live in its own kit. Only what films, their kits and their tests use
-// is here; the engine's own parts (the paper's sheets, the probe's sink, the
-// hand's geometry) are exported from their files for the framework and its
-// tests alone.
-
 export {
   type Hand,
   type Pt,

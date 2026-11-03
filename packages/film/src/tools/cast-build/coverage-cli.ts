@@ -1,14 +1,3 @@
-// `film concept coverage <film> (<member> | --cast) [--measure] [--json]`:
-// what each cast member's coverage manifest (`<member>/cutout/coverage.ts`)
-// still lacks. A member is one with a `cutout/` folder in the film's cast or
-// the library's (the film's own first, as `castFolder` reads him). It exits
-// non-zero when any member reported is incomplete or has no manifest. Cut
-// and fit are the build cache's results at the current inputs (`built.ts`,
-// the keys `concept build` writes); one the cache lacks is `unmeasured`.
-// `--measure` first runs the free stages those results come from (drawing,
-// `concept parts --check`, cut, the fit render) with no spend, and the cache
-// keeps what they make.
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';

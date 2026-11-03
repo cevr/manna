@@ -207,7 +207,6 @@ describe('the `#` drums’ Open', () => {
         open: Option.isSome(phone.registry.get(searchOpen)),
         query: phone.registry.get(searchQuery),
       };
-      // The page left (or kept), shown again, holds its folded find bar: no search waits there.
       phone.show(home, hymn(8));
       const again = {
         results: Option.isSome(byId(phone.host, 'search')),
@@ -262,10 +261,8 @@ describe('a search’s result', () => {
       open: Option.isSome(phone.registry.get(searchOpen)),
       query: phone.registry.get(searchQuery),
     };
-    // Back lands on the screen under the page replaced: no results stand over it.
     phone.show(...screens.slice(0, -1));
     const landed = { results: Option.isSome(byId(phone.host, 'search')) };
-    // The page left, opened again later, shows its folded find bar: no search waits there.
     phone.show(...screens);
     const again = {
       results: Option.isSome(byId(phone.host, 'search')),

@@ -1,10 +1,3 @@
-// RBF's figure rigs as a drawing declares them (`drawing({ rigs })`): each
-// artboard of `figures.riv` (`figures.ts`) with the timelines a pose may
-// name, the view model's numbers it may set, where on it our origin stands,
-// and how it follows the shot (`FIGURES.shot`: the house's close shot thins
-// its line when the file binds its ink; baked, it follows none). Canvas 2D is
-// the engine, and every scene draws them the same way.
-
 import type { RivePropSpec } from '@manna/film/rive';
 import {
   FIGURE_TIMELINES,

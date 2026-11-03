@@ -1,9 +1,3 @@
-// Browser fixture scripts are compiled once by the suite runner, shared as
-// immutable files for that invocation. A direct `bun test` still builds its
-// own script. No result survives an invocation or a source change. A page's
-// server entry is bundled as the lab bundles it (Solid's server output, for
-// Bun) by the test process that renders it, and loaded there.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Array as Arr, Config, Effect, FileSystem, Option, Predicate } from 'effect';
 import type { BunPlugin } from 'bun';
@@ -20,7 +14,6 @@ const servedFonts: BunPlugin = {
   name: 'served-fonts',
   setup(build) {
     build.onLoad({ filter: /\.woff2$/ }, (args) => ({
-      // A fontsource file's name is letters, digits and dashes: no quote to escape.
       contents: `export default "/${args.path.slice(args.path.lastIndexOf('/') + 1)}";`,
       loader: 'js' as const,
     }));
@@ -95,7 +88,6 @@ export const compile = (entry: string) =>
       target: 'browser',
       format: 'iife',
       minify: true,
-      // The host-reach check reads a call's frames back to the files that wrote them.
       sourcemap: 'inline',
       plugins: [
         solidPlugin,
@@ -201,7 +193,6 @@ export const servedFile = (module: string, name: string): Effect.Effect<PageRend
           [heard]: `export { ${name} } from '${module}';\nexport { OBSERVE } from 'solid-js';\n`,
         },
         target: 'bun',
-        // The head's face (`FACE_HEAD`) named as the fixture's scripts name it, from the pages' root.
         plugins: [solidPluginFor('ssr'), servedFonts],
         outdir: dir,
         naming: 'server.js',

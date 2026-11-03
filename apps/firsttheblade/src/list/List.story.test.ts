@@ -153,7 +153,6 @@ describe('confirming', () => {
         Story.given(sam, ...signedUp(T0), ...signedUp(newer)),
         Story.clock(at(after(newer, '1 minute'))),
         Story.when(sam, Confirm.make({ issued: T0 })),
-        // The constructor includes YieldableError, which Story checks for rejections.
         // @effect-diagnostics-next-line newSchemaClass:off
         Story.rejected(new StaleLink({})),
         Story.when(sam, Confirm.make({ issued: newer })),
@@ -171,7 +170,6 @@ describe('confirming', () => {
         Story.given(sam, ...signedUp(T0)),
         Story.clock(at(after(T0, CONFIRM_FOR) + 1)),
         Story.when(sam, Confirm.make({ issued: T0 })),
-        // The constructor includes YieldableError, which Story checks for rejections.
         // @effect-diagnostics-next-line newSchemaClass:off
         Story.rejected(new StaleLink({})),
       );
@@ -191,7 +189,6 @@ describe('leaving', () => {
         Story.then(sam, ...signedUp(back)),
         ...mailed(sam, back),
         Story.when(sam, Confirm.make({ issued: T0 })),
-        // The constructor includes YieldableError, which Story checks for rejections.
         // @effect-diagnostics-next-line newSchemaClass:off
         Story.rejected(new StaleLink({})),
         Story.when(sam, Confirm.make({ issued: back })),
@@ -318,7 +315,6 @@ describe("a film's letter", () => {
         Story.when(sam, ClaimFilmLetter.make({ film: FILM })),
         Story.replied({ claimed: false }),
       );
-      // History reaches the projections (not the policies), so both are on the roster.
       expect(yield* roster.counts(FILM)).toEqual({
         confirmed: 2,
         sent: 1,

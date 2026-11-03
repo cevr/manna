@@ -88,7 +88,6 @@ const recorded = (on: () => boolean, silent = () => false) => {
   const tell = feelOver({
     haptics: { play: (haptic) => void felt.push(['haptic', haptic]) },
     sound: {
-      // The fake OS: a system sound asked for while silent is not heard.
       play: (sound) => {
         asked.push(['sound', sound]);
         if (!silent()) heard.push(['sound', sound]);
@@ -261,7 +260,6 @@ describe('the sounds’ gap', () => {
   it('starts a sound only once the last one has ended, and always once it has, over generated flings', () => {
     for (let seed = 1; seed <= 200; seed += 1) {
       const random = seeded(seed);
-      // Lengths the port gives, so the rule is read apart from the voice's own.
       const lengths = new Map(
         RECIPES.map(([name]) => [name, 20 + Math.floor(random() * 300)] as const),
       );

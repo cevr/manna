@@ -1,10 +1,3 @@
-// Christ's head as court-12 (the kept concept) draws it, traced there: the
-// region inside its ink (the head's paper), the hair over it from the crown
-// down behind His ear to His shoulder, the beard from cheek to cheek round
-// His chin, and His ear; each outline the inner edge of the concept's ink,
-// in units (the Board's pixels, court-12 at scale 1) about the head's
-// centre. Front-facing as court-12 turns Him, a little toward screen left.
-
 import type { Pt } from '@manna/film/style';
 
 export const CHRIST_REGION: Pt[] = [

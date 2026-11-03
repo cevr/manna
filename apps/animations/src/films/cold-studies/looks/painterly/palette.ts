@@ -1,13 +1,3 @@
-// The painterly look's colours: a muted oil palette of teal, slate and ochre.
-// Shadow runs cool (deep teal, slate), light runs warm (ochre, lamp cream),
-// and every material is a ramp of five paints from its shadow to its light,
-// which the brush picks from by the light that falls on it (`brush.ts`).
-// Three colours keep the colour script's meanings: the scarlet stain on the
-// accused's shirt (sin, on the cloth that carries it), and gold leaf, the
-// Word, for the verdict and the card's payoff. Gold is painted in one exact
-// paint (`GOLD`), which the oil pass finds and lays as leaf (`oil.ts`); no
-// other paint comes near it.
-
 import type { Hex } from '@manna/film/canvas';
 
 /** Five paints from a material's deepest shadow to its full light. */

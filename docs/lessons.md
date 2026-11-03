@@ -958,7 +958,7 @@ The form of an entry, each field on its own line:
 - **Source:** p6-closeink/review-6.md F1
 - **Wrong:** A test helper's comment said it skipped a named node after its `skip` was removed.
 - **Cause:** The helper's code changed and its comment was not read back.
-- **Guard:** skill: whether a comment still says what its code does is judged by reading both, and the judged comment rule is off on its corpus. Carried by `CLAUDE.md`: "A comment says what the code does now and why"
+- **Guard:** skill: whether a comment still says what its code does is judged by reading both, and the judged comment rule, which reads each doc comment or tool directive with the code under it, is off on its corpus. Carried by `CLAUDE.md`: "A `/** */` doc comment directly above a declaration or member says what it does now and why"
 
 ### hand-prop-comment-after-unbake
 
@@ -968,7 +968,7 @@ The form of an entry, each field on its own line:
 - **Source:** rbf-unbake/review-1.md F1
 - **Wrong:** RBF's hand spec said a circle hand has no view model after the file bound its ink, which gives every hand the number `ink`.
 - **Cause:** The unbake changed one flag in `figures.ts`; the comment on the hand spec in `rigs.ts` reads that flag's effect and was not read back.
-- **Guard:** skill: whether a comment still says what its code does is judged by reading both, and the judged comment rule is off on its corpus. Carried by `CLAUDE.md`: "A comment says what the code does now and why"
+- **Guard:** skill: whether a comment still says what its code does is judged by reading both, and the judged comment rule, which reads each doc comment or tool directive with the code under it, is off on its corpus. Carried by `CLAUDE.md`: "A `/** */` doc comment directly above a declaration or member says what it does now and why"
 
 ### veil-drawn-without-its-scarlet
 
@@ -2332,7 +2332,7 @@ The form of an entry, each field on its own line:
 - **Source:** in-its-order/review-1.md F4
 - **Wrong:** The film's `script.ts` header said how the draft drew the thesis and how the film now differs, which is the text's history; it now says what the card holds and why.
 - **Cause:** The comment was written while the draft and the film were being compared, and kept that comparison.
-- **Guard:** skill: the judged history rule only warns (now 4 positives in its corpus, `packages/scripts/src/judged/fixtures/history-comment.json`), so a reader holds it. Carried by `CLAUDE.md`: "A comment says what the code does now and why"
+- **Guard:** skill: the judged history rule, which reads each doc comment and tool directive, only warns (now 4 positives in its corpus, `packages/scripts/src/judged/fixtures/history-comment.json`), so a reader holds it. Carried by `CLAUDE.md`: "A `/** */` doc comment directly above a declaration or member says what it does now and why"
 
 ### confirm-without-reload
 
@@ -2542,7 +2542,7 @@ The form of an entry, each field on its own line:
 - **Source:** rbf-lead/review-1.md F3
 - **Wrong:** RBF's rig test called the lead a round head after his head was traced.
 - **Cause:** The comment named the lead's part kind in words, and the change of kind touched the rig file, not the test.
-- **Guard:** skill: a comment's words about another file's part kind carry no name a check can follow. Carried by `CLAUDE.md`: "A comment says what the code does now and why"
+- **Guard:** skill: a comment's words about another file's part kind carry no name a check can follow. Carried by `CLAUDE.md`: "A `/** */` doc comment directly above a declaration or member says what it does now and why"
 
 ### repo-json-fill-counts-comma
 
@@ -3422,7 +3422,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-motion/rewrite-round-2-findings.md F5
 - **Wrong:** `src/motion/shaders.ts` and `shaders.test.ts` named the sway's earlier value beside the owner's choice.
 - **Cause:** The comment was written as the change's story, not as what the code does and why.
-- **Guard:** skill: the judged rule `judged/historyComment` warns and fails open, so it gates nothing; the repo's comment rule is read by every review. Carried by `CLAUDE.md`: "A comment says what the code does now and why; history told in words (what it used to do, which pass changed it) is a finding."
+- **Guard:** skill: the judged rule `judged/historyComment`, which reads each doc comment and tool directive, warns and fails open, so it gates nothing; the repo's comment rule is read by every review. Carried by `CLAUDE.md`: "says what it does now and why; any other fact a reader needs lives in a name, a test or a doc. History told in words (what it used to do, which pass changed it) is a finding."
 
 ### styles-test-reads-scope-roots
 
@@ -3481,8 +3481,8 @@ The form of an entry, each field on its own line:
 - **Said:** "\"shown\" is the bytes the lab serves at approve time, not the bytes it showed before the answer"; "the receipt holds the bytes at make time, so a set file changed before the answer approves bytes the owner never saw"; "premise 1 is written wider than the code holds it, and its property draws only set files on one page"
 - **Source:** ftb-motion/rewrite-round-3-findings.md F2; ftb-approval-receipts/round-1-findings.md F1; ftb-approval-receipts/round-2-findings.md F1
 - **Wrong:** `kit:approve` fetched each image block's file from the lab and hashed it at approve time, so a file rewritten after the answer approved bytes the owner never saw. Then the lab hashed each file as it made the ask but its page still served the set's file as it stood, so a second `publish_set` before the answer showed the owner other bytes than the receipt held, and `approve` took the receipt's. Then the docs said every image a page serves is a copy, while a board block and a video poster show live, and a file that failed to copy kept its live src with no receipt; the property drew only set files in image blocks on one page.
-- **Cause:** The premise "the lab's file at a shown src is what the owner saw" was false twice, and its replacement was written wider than the code held it, in six places worded apart. The rule is one sentence now, the doc of `receipted` in `ask-store.ts`, and each place that states it states it word for word: An image whose src the receipt names is served only as its copy. Each file-served image of an image block or an option is copied as the ask is made, or the make is refused (`AskRefused`, naming the src). A board block's panels and a video's poster or frame show live and bind nothing. The shown route serves a copy only while it holds its hash, and the lab refuses an answer while a copy no longer does.
-- **Guard:** code: `packages/film/src/tools/receipt-rule.test.ts` `is the doc of receipted in ask-store.ts, its first three sentences`, `packages/film/src/tools/receipt-rule.test.ts` `is stated word for word in each place that states it`, `packages/film/src/tools/ask-materials.slow.test.ts` `shows each image file as the copy it makes with the ask, by its SHA-256, which a later rewrite of the file does not move; a video's frame has none`, `packages/film/src/tools/ask-materials.slow.test.ts` `serves each image of random asks only as the copy its receipt holds, over the receipt rule's whole domain: set files, board tries and note stills, in image blocks and options, on pages of one to three steps and asks sharing a page, their files rewritten at random; a frame, a board block and a video block show live; a file missing or failing to copy refuses the make, naming its src`, `packages/film/src/tools/ask-materials.slow.test.ts` `refuses an answer, and serves no bytes, once a copy its page shows no longer holds its hash, and takes and serves it while the copy does`, `packages/film/src/tools/lab-mcp.slow.test.ts` `serves an ask's image from the copy it made, after a second publish_set rewrites the set's file, and takes the answer on it`, `packages/film/src/tools/ask-store.test.ts` `keeps the receipt of its images as it makes the ask: each try's file copied by its SHA-256 and shown as the copy; a try with no file refuses the make, naming its src`, `apps/firsttheblade/kit/approval.slow.test.ts` `refuses an ask the lab does not hold, and one whose record holds no receipt, on pin and approve; a file its receipt has no hash of shows nothing`, `apps/firsttheblade/kit/approval.slow.test.ts` `pin saves the ask as the lab gives it with its receipt, and approve saves it again as answered with the receipt of the steps he reached`.
+- **Cause:** The premise "the lab's file at a shown src is what the owner saw" was false twice, and its replacement was written wider than the code held it, in six places worded apart. The rule is one sentence now, `RECEIPT_RULE` in `packages/film/src/core/ask.ts`, which the description of an ask record's receipt (`shown`) gives, and each doc that states it states it word for word: An image whose src the receipt names is served only as its copy. Each file-served image of an image block or an option is copied as the ask is made, or the make is refused (`AskRefused`, naming the src). A board block's panels and a video's poster or frame show live and bind nothing. The shown route serves a copy only while it holds its hash, and the lab refuses an answer while a copy no longer does.
+- **Guard:** code: `packages/film/src/tools/receipt-rule.test.ts` `is the rule the description of an ask record's receipt gives`, `packages/film/src/tools/receipt-rule.test.ts` `is stated word for word in each doc that states it`, `packages/film/src/tools/ask-materials.slow.test.ts` `shows each image file as the copy it makes with the ask, by its SHA-256, which a later rewrite of the file does not move; a video's frame has none`, `packages/film/src/tools/ask-materials.slow.test.ts` `serves each image of random asks only as the copy its receipt holds, over the receipt rule's whole domain: set files, board tries and note stills, in image blocks and options, on pages of one to three steps and asks sharing a page, their files rewritten at random; a frame, a board block and a video block show live; a file missing or failing to copy refuses the make, naming its src`, `packages/film/src/tools/ask-materials.slow.test.ts` `refuses an answer, and serves no bytes, once a copy its page shows no longer holds its hash, and takes and serves it while the copy does`, `packages/film/src/tools/lab-mcp.slow.test.ts` `serves an ask's image from the copy it made, after a second publish_set rewrites the set's file, and takes the answer on it`, `packages/film/src/tools/ask-store.test.ts` `keeps the receipt of its images as it makes the ask: each try's file copied by its SHA-256 and shown as the copy; a try with no file refuses the make, naming its src`, `apps/firsttheblade/kit/approval.slow.test.ts` `refuses an ask the lab does not hold, and one whose record holds no receipt, on pin and approve; a file its receipt has no hash of shows nothing`, `apps/firsttheblade/kit/approval.slow.test.ts` `pin saves the ask as the lab gives it with its receipt, and approve saves it again as answered with the receipt of the steps he reached`.
 
 ### shown-copy-checked-before-it-is-served
 

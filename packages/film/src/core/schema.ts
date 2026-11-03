@@ -1,9 +1,3 @@
-// Every piece of film data that crosses a boundary, as Schema: the files the
-// tools write (`narration/timings.json`, `sound/manifest.json`), the voice a
-// film is read in, and the sound it declares. The TypeScript types are derived
-// from these, so a decoded file and a hand-written film module share one
-// definition. Pure: Schema runs in the browser, the tools and the tests alike.
-
 import { Array as Arr, Option, Predicate, Schema, SchemaTransformation, Struct } from 'effect';
 import { ActName, Address, PartId } from './address-schema.ts';
 import { isSegment } from './segment.ts';
@@ -129,9 +123,6 @@ export const repoJson = <S extends Parameters<typeof Schema.fromJsonString>[0]>(
 const repeated = (names: ReadonlyArray<string>): ReadonlyArray<string> => [
   ...new Set(names.filter((name, i) => names.indexOf(name) !== i)),
 ];
-
-// ---------------------------------------------------------------------------
-// Narration
 
 /** Seconds: finite, never negative. */
 export const Seconds = Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0));
@@ -333,10 +324,6 @@ export type Voice = typeof Voice.Type;
 
 /** Whether a film is read by a cast in conversation rather than by one voice. */
 export const isCast = (voice: Voice): voice is Cast => 'voices' in voice;
-
-// ---------------------------------------------------------------------------
-// Scenes: the part of a scene the clock reads. A drawing adds `draw`, which is
-// code, not data; the tools decode only this part.
 
 /** How a scene arrives from the previous one. */
 export const Transition = Schema.Union([
@@ -621,9 +608,6 @@ export const defineScript = <const Id extends string>(
 export const HeardAs = Schema.Record(Schema.String, Schema.Array(Schema.String));
 export type HeardAs = typeof HeardAs.Type;
 
-// ---------------------------------------------------------------------------
-// Shorts
-
 /** One stretch of one scene a short plays: `from` a point `to` a later one. */
 export const ShortSpan = Schema.Struct({
   scene: Schema.String,
@@ -655,9 +639,6 @@ export const Shorts = Schema.Array(Short).check(
   }),
 );
 export type Shorts = typeof Shorts.Type;
-
-// ---------------------------------------------------------------------------
-// Sound
 
 /** A sound cue's scene and its nudge off the point, in seconds. */
 const inScene = { scene: Schema.String, offset: Schema.optionalKey(Schema.Finite) };
@@ -814,11 +795,6 @@ export type PlanChunk = typeof PlanChunk.Type;
 export const Plan = Schema.Struct({ chunks: Schema.Array(PlanChunk) });
 export type Plan = typeof Plan.Type;
 
-// ---------------------------------------------------------------------------
-// Content keys. Each is the JSON of exactly the fields that change the
-// generated audio, so a gain or a comment never makes an asset stale. The
-// encoded field order is the key: never reorder these structs.
-
 /** What a voice take depends on besides its text and its voices. */
 export const VoiceKey = Schema.fromJsonString(VoiceSettings);
 
@@ -889,11 +865,6 @@ type LookOption = typeof LookOption.Type;
 /** A film's look options by name (`export const looks` in `palette.ts`). */
 export const Looks = Schema.Record(Schema.String, LookOption);
 export type Looks = typeof Looks.Type;
-
-// ---------------------------------------------------------------------------
-// Lab notes: what a viewer marks on a frame in the lab (`film lab`), and the
-// thread the agent answers it in. `lab/<film>/notes.json` holds them; stills sit
-// beside it in `stills/`.
 
 /** A pinned point (`w` and `h` 0) or a dragged box, in canvas pixels. */
 const NoteBox = Schema.Struct({
@@ -1134,9 +1105,6 @@ export type NoteEvent = typeof NoteEvent.Type;
 /** What a wait returns: the changes past `since`, in order, and the cursor to wait past next. */
 export const NotesWait = Schema.Struct({ cursor: Seq, events: Schema.Array(NoteEvent) });
 export type NotesWait = typeof NotesWait.Type;
-
-// ---------------------------------------------------------------------------
-// Lab write-back: the lab edits a scene's cues and knobs in its source file.
 
 /** A cue's offset from its anchor, in seconds. */
 const CueOffset = Schema.Finite;

@@ -1,18 +1,3 @@
-// A workspace's `test` script runs its tests at their full strength: no flag
-// of `bun test` in it runs a test less or gives it more time, so no suite
-// fits the ten-second budget (`budget.ts`) by weakening. The tests' own
-// skips, retries and timeouts are oxlint's (`film/tests-keep-their-strength`);
-// a script is not a source oxlint reads, so its flags are read here:
-// `strength.test.ts` holds every workspace's `test` script of the repo to it
-// in the gate, and `test:budget` measures no workspace whose script weakens.
-//
-// Refused, in each `bun test` command of the script (a script may chain
-// several with `&&`, `||`, `;`, `&` or `|`, and set variables before one,
-// bare or through `env`, a value quoted or not, a separator in quotes no
-// separator): `--timeout` over bun's 5 s default, of 0 or under (which
-// sets none), or one that is not a number, `--retry`, `--only` and `-t` /
-// `--test-name-pattern` (`-t` with its value attached too, `-tfast`).
-
 import { Option } from 'effect';
 import { bunTests } from './shell.ts';
 

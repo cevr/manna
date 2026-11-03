@@ -1,7 +1,3 @@
-// The judged selectors over sources written out: which items each reads,
-// with which lines, which words and which key. The runner and the plugin
-// both read through these, so an item's key here is its cache key's in both.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Glob } from 'bun';
 import { Effect, FileSystem } from 'effect';
@@ -47,9 +43,24 @@ describe('the judged keys', () => {
         expect(keys('functions', 'src/a.ts', ["const f = () => 'a b' + 0x10;"])).toEqual(
           keys('functions', 'src/a.ts', ['const f = () => "a b" + 16;']),
         );
-        expect(keys('comments', 'src/b.ts', ['// One line,', '// then another.'])).toEqual(
-          keys('comments', 'src/b.ts', ['    // One line, then', '    // another.']),
-        );
+        const doc = keys('comments', 'src/b.ts', ['/** One line,', ' * then another. */']);
+        expect(doc).toEqual(['One line, then another.']);
+        expect(
+          keys('comments', 'src/b.ts', ['  /**', '   * One line, then', '   * another.', '   */']),
+        ).toEqual(doc);
+        const stacked = keys('comments', 'src/b.ts', [
+          '// oxlint-disable-next-line a',
+          '// @ts-expect-error b',
+          'const c = 1;',
+        ]);
+        expect(stacked).toEqual(['oxlint-disable-next-line a @ts-expect-error b']);
+        expect(
+          keys('comments', 'src/b.ts', [
+            '    // oxlint-disable-next-line a',
+            '    // @ts-expect-error b',
+            '    const c = 1;',
+          ]),
+        ).toEqual(stacked);
       }),
   );
 
@@ -85,45 +96,54 @@ describe('the judged keys', () => {
         ];
         for (const [file, one, other] of pairs)
           expect(keys('functions', file, [one])).not.toEqual(keys('functions', file, [other]));
-        expect(keys('comments', 'src/b.ts', ['// a - b'])).not.toEqual(
-          keys('comments', 'src/b.ts', ['// a-b']),
+        expect(keys('comments', 'src/b.ts', ['/** a - b */'])).not.toEqual(
+          keys('comments', 'src/b.ts', ['/** a-b */']),
         );
       }),
   );
 });
 
 describe('the judged selectors', () => {
-  it.effect('commentedCode takes a comment first on its line with the node under it, whole', () =>
-    Effect.sync(() => {
-      expect(
-        read('commentedCode', 'src/a.ts', [
-          '// The header, apart.', // 1
-          '', // 2
-          '/** Doubles `n`. */', // 3
-          'export const double = (n: number) =>', // 4
-          '  n * 2;', // 5
-          'const c = 1; // after code', // 6
-          '// The last line.', // 7
-        ]),
-      ).toEqual([
-        [
-          3,
-          5,
-          'Comment:\nDoubles `n`.\n\nCode it sits on:\nexport const double = (n: number) =>\n  n * 2;',
-        ],
-      ]);
-    }),
+  it.effect(
+    'commentedCode takes a doc comment or a directive first on its line with the node under it, whole',
+    () =>
+      Effect.sync(() => {
+        expect(
+          read('commentedCode', 'src/a.ts', [
+            '/** The header, apart. */',
+            '',
+            '/** Doubles `n`. */',
+            'export const double = (n: number) =>',
+            '  n * 2;',
+            'const c = 1; /** after code */',
+            '// oxlint-disable-next-line no-console',
+            'console.log(c);',
+            '/** The last line. */',
+          ]),
+        ).toEqual([
+          [
+            3,
+            5,
+            'Comment:\nDoubles `n`.\n\nCode it sits on:\nexport const double = (n: number) =>\n  n * 2;',
+          ],
+          [
+            7,
+            8,
+            'Comment:\noxlint-disable-next-line no-console\n\nCode it sits on:\nconsole.log(c);',
+          ],
+        ]);
+      }),
   );
 
   it.effect('testCases takes each case with a name and a function, with the imports', () =>
     Effect.sync(() => {
       const lines = [
-        "import { expect, it } from 'effect-bun-test';", // 1
-        "import { double } from './double.ts';", // 2
-        "describe('double', () => {", // 3
-        "  it.effect('doubles', () => Effect.sync(() => expect(double(2)).toBe(4)));", // 4
-        '  it(name, () => {});', // 5
-        '});', // 6
+        "import { expect, it } from 'effect-bun-test';",
+        "import { double } from './double.ts';",
+        "describe('double', () => {",
+        "  it.effect('doubles', () => Effect.sync(() => expect(double(2)).toBe(4)));",
+        '  it(name, () => {});',
+        '});',
       ];
       expect(read('testCases', 'src/double.test.ts', lines)).toEqual([
         [
@@ -142,14 +162,14 @@ describe('the judged selectors', () => {
         const long = Array.from({ length: 120 }, (_, i) => `  const v${i} = ${i};`);
         expect(
           read('functions', 'src/f.ts', [
-            '/** One. */', // 1
-            'export function one() {', // 2
-            '  const inner = () => 1;', // 3
-            '  return inner();', // 4
-            '}', // 5
-            "const two = Effect.fn('two')(function* () {});", // 6
-            'function long() {', // 7
-            '  const inside = () => 2;', // 8
+            '/** One. */',
+            'export function one() {',
+            '  const inner = () => 1;',
+            '  return inner();',
+            '}',
+            "const two = Effect.fn('two')(function* () {});",
+            'function long() {',
+            '  const inside = () => 2;',
             ...long,
             '}',
           ]),
@@ -169,9 +189,9 @@ describe('the judged selectors', () => {
     Effect.sync(() => {
       expect(
         read('scriptBeats', 'apps/animations/src/films/f/script.ts', [
-          'export const beats = [', // 1
-          "  { id: 'cold', say: 'In the beginning.', picture: `A page. ${CARDS}`, mark: 'x' },", // 2
-          '];', // 3
+          'export const beats = [',
+          "  { id: 'cold', say: 'In the beginning.', picture: `A page. ${CARDS}`, mark: 'x' },",
+          '];',
         ]),
       ).toEqual([
         [2, 2, 'say: In the beginning.'],
@@ -183,10 +203,10 @@ describe('the judged selectors', () => {
   it.effect('testCases takes a layered case and an each case by their root name', () =>
     Effect.sync(() => {
       const lines = [
-        "import { it, test } from 'effect-bun-test';", // 1
-        "it.effect.layer(Live)('reads the layer', () => Effect.void);", // 2
-        "test.each([1, 2])('takes %d', (n) => expect(n).toBeGreaterThan(0));", // 3
-        "describe.each([1])('a group %d', () => {});", // 4
+        "import { it, test } from 'effect-bun-test';",
+        "it.effect.layer(Live)('reads the layer', () => Effect.void);",
+        "test.each([1, 2])('takes %d', (n) => expect(n).toBeGreaterThan(0));",
+        "describe.each([1])('a group %d', () => {});",
       ];
       expect(read('testCases', 'src/a.test.ts', lines).map(([line]) => line)).toEqual([2, 3]);
     }),
@@ -196,14 +216,14 @@ describe('the judged selectors', () => {
     Effect.sync(() => {
       const items = markdownBeats(
         [
-          '## Beat 1 · hook', // 1
-          '', // 2
-          '**say:** {a}A baby drinks milk. {/} {b}And nobody minds.', // 3
-          '**cite:** Hebrews 5:12; E. G. White, Education, 13', // 4
-          '**picture:** STORY: a courtyard,', // 5
-          'lanterns strung.', // 6
-          '', // 7
-          '**Say:** Second.', // 8
+          '## Beat 1 · hook',
+          '',
+          '**say:** {a}A baby drinks milk. {/} {b}And nobody minds.',
+          '**cite:** Hebrews 5:12; E. G. White, Education, 13',
+          '**picture:** STORY: a courtyard,',
+          'lanterns strung.',
+          '',
+          '**Say:** Second.',
         ].join('\n'),
       );
       expect(items.map((item) => [item.line, item.end, item.text])).toEqual([
@@ -235,11 +255,11 @@ describe('the judged selectors', () => {
     Effect.sync(() => {
       const items = markdownBeats(
         [
-          '# A talk', // 1
-          '| # | Spoken (owner, to lens) | On screen / B-roll | Source note |', // 2
-          '| - | - | - | - |', // 3
-          '| 1 · Hook | He said, "Rest." | A lakeshore | DA 360.2 |', // 4
-          '| 2 | A breath. |  | Mark 6 |', // 5
+          '# A talk',
+          '| # | Spoken (owner, to lens) | On screen / B-roll | Source note |',
+          '| - | - | - | - |',
+          '| 1 · Hook | He said, "Rest." | A lakeshore | DA 360.2 |',
+          '| 2 | A breath. |  | Mark 6 |',
         ].join('\n'),
       );
       expect(items.map((item) => [item.line, item.text])).toEqual([

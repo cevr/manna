@@ -1,13 +1,3 @@
-// The fixture rig (`src/rive/fixtures/arm/arm.rml`, built to `build/arm.riv` by
-// `cd src/rive/fixtures/arm && rive . --once`): a 200 × 200 artboard `Arm`
-// with two bones (`upper`, `lower`) reaching for a node `target` through one
-// IK constraint (`Reach`, its strength bound to the view model's `reach`),
-// the target's x keyed by the timeline `reach` (60 → 170 over 2 s) and its y
-// bound to the number `lift`, a `face` node at the lower bone's tip, an
-// empty `idle` timeline, and a `boil` that crawls the upper piece's width
-// (60, 60.4, 59.8, 60.2, a quarter second each, looped). Feet (the
-// artboard's centre) at our origin.
-
 import { Option } from 'effect';
 import type { PoseOf, RiveEngine, RivePropSpec } from '../rive.ts';
 import { type SceneSpec, createFilm, drawing } from '../film.ts';
@@ -44,7 +34,6 @@ export const armPose = (t: number): ArmPose => ({
     ['reach', t % 2, Number(t < 1.5)],
     ['boil', t % 1],
   ],
-  // Slack, the lift left at its rest; then reaching, the lift swung.
   numbers: Option.match(
     Option.liftPredicate(t, (s) => s < 0.5),
     {

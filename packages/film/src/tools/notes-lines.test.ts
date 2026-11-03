@@ -1,7 +1,3 @@
-// A note as `film lab notes` prints it: one line of `key=value` fields, each
-// one the note has (where in its scene, the stretch it is about, the line of
-// code or the words it cites), its still's path and its words last. Pure.
-
 import { describe, expect, test } from 'bun:test';
 import type { Note } from '../core/schema.ts';
 import { noteLine } from './notes-lines.ts';

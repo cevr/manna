@@ -1,7 +1,3 @@
-// The sound graph's units and limits: the one sample rate, the peak a render
-// is made at, the longest a code sound may be and the most work it may take,
-// and seconds as whole frames.
-
 /** Every made sound is at the mix's rate, so it never resamples. */
 export const SYNTH_RATE = 44100;
 

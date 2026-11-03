@@ -1,14 +1,3 @@
-// A film's storyboard as pure data: the board a film is drawn to, before its
-// scenes are built. Each beat gets a few panels, each held from a `{mark}`
-// its picture turns on (or from the beat's start); each panel is the images
-// tried for it (generated, imported or made again on a tweak note), the one
-// kept and why. A beat's board is approved as it stands: the approval keeps
-// the tries it was given on, so a later pick leaves it stale, never deleted,
-// as the catalogue's approvals are. `src/films/<film>/board.json` holds the
-// record (committed); the images sit beside it in `board/` (git-ignored, like
-// the sounds), each checked by its sha256. The store and the image route are
-// the tools'; the lab and the CLI read these. Pure and DOM-free.
-
 import { Array as Arr, Boolean as Bool, Option, Order, Predicate, Result, Schema } from 'effect';
 import { parse, readsWord } from './narration.ts';
 import { repoJson } from './schema.ts';

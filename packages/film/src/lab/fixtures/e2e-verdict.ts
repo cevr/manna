@@ -1,19 +1,3 @@
-// What `bun run test:e2e:check` reads and writes, pure: the failures of an
-// e2e log (bun's own output, run here or in CI: a `gh run view --log-failed`
-// file reads as well), each a failed case, a worker that crashed with its
-// file, or an error bun caught between tests; whether the suite finished;
-// the command that reruns one failure alone; what a rerun showed; and the
-// verdict on each failure, against what the base showed of it.
-//
-// Every failure is rerun alone three times. Green in all three, it is
-// "green alone": it failed only beside the rest of the suite, which the
-// reruns cannot tell apart as load or order (a case another left running).
-// Red alone, it is the base's only when the base's own check saw the same
-// failure red alone; it is the unit's when the base passed it (its suite
-// finished without it, or its check saw it green alone); anything else is
-// unresolved. A unit-caused or unresolved failure, or a suite that never
-// finished or failed naming nothing, blocks.
-
 import { Array as Arr, Match, Option, Schema } from 'effect';
 
 /**

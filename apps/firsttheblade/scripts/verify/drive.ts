@@ -497,7 +497,6 @@ const journey = Effect.fn('Verify.journey')(function* (name: JourneyName, option
       drive.posts.push(request.url());
   });
   const ran = yield* Effect.exit(spec.run(drive));
-  // A failed step keeps the page as it stood, beside the steps that passed.
   if (Exit.isFailure(ran))
     yield* record(drive, 'failed', 'the journey stopped here', failureLine(ran.cause)).pipe(
       Effect.ignore,

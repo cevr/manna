@@ -1,10 +1,3 @@
-// The layout leg of `film check`: the player draws each sampled frame with the
-// text probe on, in a pool of headless pages, and the pure detectors in
-// `check.ts` read the boxes it reports. Then it probes across each stretch the
-// static leg names as a hold candidate, to tell a still picture from motion
-// no cue declares. The pages are a pool of `Pages`, in the check's scope, as
-// in a render.
-
 import { Array as Arr, Context, Effect, Layer, Option } from 'effect';
 import type { Scope } from '../core/address.ts';
 import { CLOCK_EPSILON, type Interval, secondsAt } from '../core/time.ts';
@@ -129,12 +122,10 @@ const confirmHold = (
     const probeAt = probedOnce(pages, seen);
     const ticks = holdTicks(hold, fps);
     const grid = holdGrid(ticks);
-    // The grid first, as many at once as there are pages.
     yield* Effect.forEach(grid, probeAt, { concurrency: workers, discard: true });
     let longest: Interval = { from: hold.from, to: hold.from };
     let reached = -1;
     for (const [tick, next] of Arr.zip(grid, grid.slice(1))) {
-      // A grid tick inside the run found last would only find it again.
       if (tick <= reached) continue;
       const anchor = yield* probeAt(tick);
       if (!heldStill([anchor, yield* probeAt(next)])) continue;
@@ -231,7 +222,6 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
               pool.use((page) =>
                 Effect.gen(function* () {
                   const probed = yield* page.call('probe', sample.frame);
-                  // A plate past an edge may be moving: only then is the next frame worth drawing.
                   if (platesOffFrame(sample, probed, info).length === 0)
                     return frameFindings(sample, probed, info);
                   const next = yield* page.call(
@@ -295,7 +285,6 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
               server: Option.none(),
             });
             const info = pool.info;
-            // The short's page is named for the short: the film's title and size are on the film's page.
             const { title, band } = yield* Effect.map(
               pages.open(name, { workers: 1, captions: true, server: Option.none() }),
               (whole) => ({ title: whole.title, band: bandOf(whole.info) }),
@@ -315,7 +304,6 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
             const titled = Option.flatMap(Arr.head(open), (first) =>
               titleOpen(cut.id, first, title),
             );
-            // The film's frame alone, where the page draws it: the hook and captions are the short's, and differ by design.
             const frame: LumaArea = {
               x: 0,
               y: band.top,
@@ -357,7 +345,6 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
             const { info } = pool;
             const k = info.width / SHORT_WIDTH;
             const probeAt = (i: number) => pool.call('probe', i);
-            // The frames the scope spans: every one for the whole film.
             const inSpan = (i: number) =>
               Option.match(span, {
                 onNone: () => true,

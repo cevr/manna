@@ -177,7 +177,6 @@ const movedPixel = Effect.fn('FieldStill.movedPixel')(function* (
   const code = at(image.data, pixel * 4 + channel);
   const movedBy = (by: number, encoding: Encoding) => {
     const data = new Uint8ClampedArray(image.data);
-    // Up by `by`, or down by it where up would pass 255.
     data[pixel * 4 + channel] = code + by - 2 * by * Number(code + by > 255);
     return encoded(still, { ...image, data }, encoding);
   };

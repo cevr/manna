@@ -1,8 +1,3 @@
-// The browser in memory for the tool tests (`browser.ts`): a render host whose
-// pages answer the export handle's calls (`core/export-handle.ts`) and record
-// each in a ledger, the marks a page reports, and the render's media. No
-// Chromium.
-
 import { Array as Arr, Effect, Exit, Layer, Option, Schema } from 'effect';
 import { silence } from '../../core/audio.ts';
 import { MIX_RATE } from '../../core/mix.ts';
@@ -82,7 +77,6 @@ export interface RenderLedger {
   readonly encodedBy: Array<Encoder['_tag']>;
   /** The encoders each page choosing one was allowed, in order. */
   readonly encoderAsked: Array<ReadonlyArray<Encoder['_tag']>>;
-  /** Every share copy made by x264 from a joined master. */
   /** Every frame drawn, by any page. */
   readonly frames: Array<number>;
   /** Look-books composed, by any page. */
@@ -273,7 +267,6 @@ export const fakeRenderHost = (ledger: RenderLedger, host: FakeRenderHost = {}) 
             ),
         ).pipe(
           Effect.as({
-            // As the page: each copy asked for that the encoder makes there.
             master: Option.filter(Option.some(text(`mp4 ${from}-${to}`)), () =>
               hasMaster(copiesInPage(copies, by)),
             ),
@@ -346,7 +339,6 @@ export const fakeRenderHost = (ledger: RenderLedger, host: FakeRenderHost = {}) 
             Effect.acquireRelease(
               Effect.sync(() => {
                 ledger.urls.push(url);
-                // The page is its number, made here: the open it counts.
                 const page = ledger.pages.opened + 1;
                 ledger.pages.opened = page;
                 return page;

@@ -1,6 +1,3 @@
-// The third version's sound: one score option in one movement, from its
-// first scene. Data only.
-
 export const sound = {
   score: {
     play: 'piano',

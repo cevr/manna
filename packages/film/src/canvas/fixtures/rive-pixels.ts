@@ -1,13 +1,3 @@
-// Browser side of rive.pixel.test.ts: the fixture rig (`fixtures/arm.ts`)
-// drawn by the `webgl2` engine through a fixture film, loaded as a page loads
-// a film's rigs (the page's Rive runtimes, the `.riv` through its `fetch`
-// client). `riveFrames` draws, for each target time, a history of frames and
-// then the target, and hands back each target frame's pixels as a hash, and
-// how many pixels of the rig's box differ from the same frame with the rig
-// left out. `riveAfterLoss` draws a time, has the rig's WebGL context lost
-// (by the browser's cap on live contexts, or by the page's budget that
-// `glCanvas` shares), and draws it again.
-
 import { Effect, Layer, Scope } from 'effect';
 import { FetchHttpClient } from 'effect/http';
 import { glCanvas } from '../gl.ts';

@@ -106,7 +106,6 @@ export const followerOf = (timeline: Timeline, host: Host) => {
     if (line && line.syllables.length === 0) marks.set(place.line, WHOLE);
     else marks.set(place.line, place.syllable);
     const ahead = placeAt(timeline, at + LEAD);
-    // A seek shows the line sung now; playing on shows the next line LEAD ms early.
     let target = ahead.line;
     if (snap) target = place.line;
     if ((playing || snap) && !held.get() && target >= 0 && target !== shown) {
@@ -116,7 +115,6 @@ export const followerOf = (timeline: Timeline, host: Host) => {
     snap = false;
     if (!playing) return;
     const next = Math.min(place.nextAt, ahead.nextAt - LEAD);
-    // The wait is in the host's ms: the hymn's ms to the next change, at the clock's rate.
     if (Number.isFinite(next)) cancel = host.wake(Math.max(0, next - at) / clock.value.rate, tick);
   };
 
@@ -145,7 +143,6 @@ export const followerOf = (timeline: Timeline, host: Host) => {
         },
       }),
     );
-    // A report this far off is a seek too, as when the lock screen moved the place.
     if (snap) release();
     tick();
   };

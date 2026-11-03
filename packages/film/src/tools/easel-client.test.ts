@@ -1,8 +1,3 @@
-// The easel client of the lab's look route: a request it cannot even
-// send (a size the route refuses) is `LookInvalid`, asked of no lab, never
-// `LabDown`; and a failure prints as the very JSON the route answers with,
-// one shape for a tool to read whichever side it came from.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Schema } from 'effect';
 import { FetchHttpClient, HttpClient, HttpClientResponse } from 'effect/http';
@@ -44,7 +39,6 @@ describe('the easel client, as the look route sees it', () => {
     }).pipe(Effect.provide(labAnswering(200, '{}', asked))),
   );
 
-  // The route's answer to a look whose page failed, as the lab's own test shows it.
   const routeBody = '{"_tag":"LookFailed","reason":"no easel in this test"}';
   it.effect('a failure prints as the route answered it', () =>
     Effect.gen(function* () {

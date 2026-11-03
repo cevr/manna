@@ -1,10 +1,3 @@
-// Type inside the ps1 world: painted into small 2D canvases at about the
-// size it shows on the low-res screen and worn as textures, so it is pixel
-// type, chunky and a little uneven where the texture is sampled
-// nearest-neighbour, the way the console's games put words on things. The
-// verdict on its plate is painted once; Job's page is repainted every frame
-// from `f` (its highlight moves), into the one canvas kept for it.
-
 import {
   type Box,
   type Hand,
@@ -72,7 +65,6 @@ export const paintPage = (
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = PAGE.paper;
   ctx.fillRect(0, 0, PAGE.w, PAGE.h);
-  // A rule at the head of the page and down its outer edge, as a Bible prints them.
   ctx.fillStyle = PAGE.rule;
   ctx.fillRect(14, 30, PAGE.w - 28, 2);
   ctx.fillRect(14, PAGE.h - 24, PAGE.w - 28, 1);
@@ -94,7 +86,6 @@ export const paintPage = (
     STILL,
     { boil: 0 },
   );
-  // The verses round it, as grey lines too small to read: only Job 9:2 is set in words.
   ctx.fillStyle = '#c4b89e';
   for (let row = 0; row < 7; row++) {
     const y = 210 + row * 18;

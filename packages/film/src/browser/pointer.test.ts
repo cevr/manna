@@ -1,11 +1,3 @@
-// A drag follows its press: it captures the pointer on the pressed element,
-// hears that pointer's moves (not another finger's), and ends once, lifted
-// or ended by the browser (a cancel, a lost capture); after its end, and once
-// interrupted, it hears nothing more. A finger's press another holds (an open
-// menu's long press) tells neither its moves nor its lift; a plain tap lifts.
-// A surface follows one press at a time: a second finger's press on it while
-// it follows one does nothing, and the next press after that one ends does.
-
 import { describe, expect, test } from 'bun:test';
 import { claimPress } from '@manna/ui/press';
 import { Effect, Fiber, Option } from 'effect';
@@ -22,7 +14,6 @@ class Pressable extends EventTarget {
 
 /** A pointer event of `type`, for pointer `id` at `x`, of a mouse unless said. */
 const pointer = (type: string, id: number, x = 0, pointerType = 'mouse') =>
-  // Bun has no PointerEvent; the drag reads only these fields.
   Object.assign(new Event(type, { bubbles: true }), {
     pointerId: id,
     clientX: x,
@@ -43,7 +34,6 @@ const page = () => {
   const ends: Array<Option.Option<number>> = [];
   let drag = Option.none<Fiber.Fiber<void>>();
   element.addEventListener('pointerdown', (e) => {
-    // Dispatched by `press` below.
     const down = e as PointerEvent;
     drag = Option.some(
       Effect.runForkWith(host)(
@@ -136,9 +126,7 @@ describe("Pointer.press's drag", () => {
   test("a finger's press the long press holds (its menu open) tells neither its moves nor its lift", () => {
     const p = page();
     p.touch(21);
-    // The long press's delay ends: it claims the press and its menu opens.
     expect(claimPress(21, Symbol('menu'), p.window)).toBe(true);
-    // The finger slides 30 px and lifts, over the menu.
     p.send('pointermove', 21, 30);
     p.send('pointerup', 21, 30);
     expect(p.moves).toEqual([]);
@@ -174,7 +162,6 @@ const surface = (follow: (id: number) => boolean = () => true) => {
   const moves: Array<string> = [];
   const fibers: Array<Fiber.Fiber<void>> = [];
   element.addEventListener('pointerdown', (e) => {
-    // Dispatched by `press` below.
     const down = e as PointerEvent;
     fibers.push(
       Effect.runForkWith(host)(
@@ -211,7 +198,6 @@ describe('Pointer.press', () => {
     s.send('pointermove', 2, 20);
     expect(s.took).toEqual([1]);
     expect(s.moves).toEqual(['1:10']);
-    // The first press ends: the surface takes the next one.
     s.send('pointerup', 1, 10);
     s.press(3);
     s.send('pointermove', 3, 30);

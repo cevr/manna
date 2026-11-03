@@ -1,14 +1,3 @@
-// A script's styles as it is read aloud (`words/film-script.tsx` in the
-// studio's Words section, a series draft in the review, an ask's script):
-// each beat under a head line of its id and badge, its picture's brief in the
-// secondary ink at the body size (on a phone three lines of it until More
-// opens it), its line at the reading size (`--fs-read`: text read aloud, as
-// the prompter's) with how it is said, its staging take and its pace, the
-// delivery of the words selected and its sources quiet under that. Read only
-// through the tokens (`player/tokens.css`). The pages that read a script put
-// these in their head while they are mounted: no page's first paint waits
-// for them.
-
 import { PHONE, WIDE } from '../viewport.ts';
 
 /** How many lines of a picture's brief a phone shows until More opens it (`tied.tsx` asks whether it runs past them). */

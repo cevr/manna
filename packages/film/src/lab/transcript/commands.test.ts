@@ -1,9 +1,3 @@
-// Select to here on words: on a word the menu opened on, the words selected
-// in its section extended to it, from the first of them to that word,
-// whichever comes first (a phone's range: no Shift); none with nothing
-// selected in the word's section, on the word selected alone, or on no one
-// word.
-
 import { Option } from 'effect';
 import { describe, expect, test } from 'effect-bun-test';
 import { type Context, contextAt, withSelection } from '../../command/context.ts';

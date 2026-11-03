@@ -1,10 +1,3 @@
-// A beat's take as a page plays it (an ask's audio, the studio's Voice): the
-// attempt named, else the take the beat's timings name, which the read of
-// its takes says (`StudioAttempts`): the attempt they name (`kept`), else a
-// staging take in the film's `narration/` (`staged`), with what
-// speech-to-text heard an attempt say. One read of a beat's takes
-// (`GET …/studio/takes/:beat/attempts`) answers both pages.
-
 import { Array as Arr, Option } from 'effect';
 import { attemptUrl } from '../core/api.ts';
 import type { StudioAttempt, StudioAttempts } from '../core/studio.ts';

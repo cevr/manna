@@ -1,14 +1,3 @@
-// The two gospel sets, where scripture shows the three gifts given in order:
-// the house in Capernaum (`roof`), where four friends lower a paralysed man
-// through the roof while two scribes reason on their bench (Mark 2:1–12),
-// and the temple court (`woman`), where a woman taken in adultery is brought
-// before Jesus by men holding stones, who drop them and go (John 8:2–11).
-// `look`, `robe` and `within` call them back under their icons in the
-// stories' own framings (CRAFT rule 8), so each set is drawn once, here, in
-// 1920×1080 frame units, and each scene passes only where its people are.
-// Screen direction holds the film's: the one receiving stands screen-left,
-// Jesus screen-right.
-
 import {
   type Camera,
   type Pt,
@@ -46,8 +35,6 @@ import {
   tracePath,
 } from './kit.ts';
 import { tablets } from './law.ts';
-
-// ─── people of the gospel ────────────────────────────────────────────────────
 
 /** A headcloth over a head of radii (rx, ry): over the crown, framing the face, falling `drape` down the sides. */
 const clothShape = (rx: number, ry: number, drape: number): Pt[] =>
@@ -106,8 +93,6 @@ interface Onlooker {
   readonly body: Hex;
   readonly look: Pt;
 }
-
-// ─── the house in Capernaum ──────────────────────────────────────────────────
 
 /** The roof's top, the slab's depth, the room's floor and the house's walls. */
 const ROOF_TOP = 300;
@@ -274,7 +259,6 @@ const TOWN: ReadonlyArray<readonly [number, number, number]> = [
   [1960, 280, 200],
 ];
 
-/** The specks of sin on the man's garment, in his units: each is lifted off him on "son". */
 /** The specks lift off him one after another, their starts over the first 3/13 of the lift. */
 const SPECKS_SHARE = 3 / 13;
 const MAN_SPECKS = [
@@ -337,7 +321,6 @@ export const house = (
     h,
     [
       {
-        // The far town.
         z: 1.8,
         draw: () =>
           TOWN.forEach(([x, bw, top], i) =>
@@ -357,7 +340,6 @@ export const house = (
           ),
       },
       {
-        // The room's back wall, its window and its door.
         z: 1.25,
         draw: () => {
           piece(ctx, rectShape(60, ROOF_TOP, 1800, 760), C.boardLight, hand('wall'), {
@@ -379,7 +361,6 @@ export const house = (
         },
       },
       {
-        // The roof and the four on it, the room's floor, its crowd, the man and Jesus.
         z: 1,
         lift: 1.3,
         draw: () => {
@@ -388,7 +369,6 @@ export const house = (
         },
       },
       {
-        // The near crowd, at the frame's sides.
         z: 0.8,
         draw: () => onlookers(ctx, hand, NEAR_CROWD, 'near', s.wonder, BED_X, NEAR_PART * s.walk),
       },
@@ -473,7 +453,6 @@ const roofTop = (ctx: CanvasRenderingContext2D, hand: Hands, s: House) => {
         }),
     );
   });
-  // Faith seen: the four faces lit gold from the room below (the callback).
   if (s.holeLit > 0) {
     const cx = (HOLE[0] + HOLE[1]) / 2;
     glow(ctx, cx, ROOF_TOP + SLAB, 420, C.glow, 0.9 * s.holeLit);
@@ -585,7 +564,6 @@ const room = (ctx: CanvasRenderingContext2D, hand: Hands, s: House) => {
     line: 0,
     torn: 4,
   });
-  // His light, on the back of the room: behind the crowd and him, never fog over them.
   const [jx, jy] = JESUS_HOUSE;
   glow(ctx, jx, jy - 240, 330, C.glow, 0.6);
   ropes(ctx, hand, s);
@@ -600,7 +578,6 @@ const room = (ctx: CanvasRenderingContext2D, hand: Hands, s: House) => {
   );
   scribes(ctx, hand, s);
 
-  // Jesus, looking to the man, up at the four, and after the man as he goes.
   const up = s.lookUp * (1 - s.reach);
   OUT_TO_HIM.reach = s.reach;
   at(ctx, { x: jx, y: jy, scale: JESUS_HOUSE_S }, () =>
@@ -619,7 +596,6 @@ const room = (ctx: CanvasRenderingContext2D, hand: Hands, s: House) => {
     ),
   );
 
-  // The bed, flat, until he rolls it up.
   const y = bedY(s.lower);
   const flat = 1 - s.roll;
   if (flat > 0.02) {
@@ -631,7 +607,6 @@ const room = (ctx: CanvasRenderingContext2D, hand: Hands, s: House) => {
     });
   }
 
-  // The man: lying, sitting up and standing about his hips, then walking out.
   const rise = s.rise;
   const hx = lerp(HIP_X, WALK_TO, s.walk);
   const hy = lerp(y - BED_H / 2 - HIP_LIE, FLOOR - HIP_STAND - s.bob, rise);
@@ -645,18 +620,14 @@ const room = (ctx: CanvasRenderingContext2D, hand: Hands, s: House) => {
   MAN.browR = 2 + 1.5 * s.glad;
   MAN.browTilt = 0.35;
   MAN.mouth = 0.4 * s.glad * (1 - s.walk);
-  // His near hand steadies the rolled bed on his shoulder, going to it as it lands there.
   ON_ROLL.reach = s.steady;
   FOLDED_NEAR.reach = 1 - rise;
   FOLDED_FAR.reach = 1 - rise;
   MAN.near = s.steady > 0 ? ON_ROLL : FOLDED_NEAR;
   MAN.far = FOLDED_FAR;
-  // Once the specks start to lift, the ones in flight stand in for those on him.
   for (let i = 0; i < MAN_WASH.length; i++) MAN_WASH[i] = s.specks > 0 ? 1 : 0;
-  // The count's robe: his garment going white.
   MAN.body = inWhite(MAN_BODY, s.robed);
   MAN.shade = inWhite(MAN_SHADE, s.robed);
-  // The bed rolled up and carried on his shoulder, behind his head and under his hand.
   if (s.roll > 0) {
     const onShoulder = clamp(2 * s.roll - 1);
     at(
@@ -679,16 +650,13 @@ const room = (ctx: CanvasRenderingContext2D, hand: Hands, s: House) => {
   at(ctx, { x: hx, y: hy, rot: lerp(LIE, 0, rise) }, () =>
     at(ctx, { x: 0, y: HIP_STAND, scale: MAN_S }, () => {
       person(ctx, MAN, hand('man'));
-      // The count's heart: lit gold from inside, on his chest.
       if (s.heart > 0) litHeart(ctx, hand, s.heart);
     }),
   );
-  // The specks lift off him and go.
   if (s.specks > 0 && s.specks < 1)
     MAN_SPECKS.forEach((speck, i) => {
       const k = staggered(s.specks, i / MAN_SPECKS.length, SPECKS_SHARE);
       at(ctx, { x: hx, y: hy, rot: LIE }, () =>
-        // Up and away from him, in the frame he lies in.
         at(ctx, { x: 90 * k, y: HIP_STAND - 30 * k, scale: MAN_S }, () =>
           piece(ctx, speck, C.scarlet, sub(hand('speck'), i), {
             role: 'figure',
@@ -699,7 +667,6 @@ const room = (ctx: CanvasRenderingContext2D, hand: Hands, s: House) => {
         ),
       );
     });
-  // A blanket over him while he lies there.
   const blanket = clamp(1 - 2.5 * rise);
   if (blanket > 0)
     piece(ctx, rounded(BED_X + 70, y - BED_H / 2 - 16, 220, 46, 16), C.cream, hand('blanket'), {
@@ -745,8 +712,6 @@ const scribes = (ctx: CanvasRenderingContext2D, hand: Hands, s: House) => {
     );
   });
 };
-
-// ─── the temple court ────────────────────────────────────────────────────────
 
 /** The court's floor, where the woman stands, Jesus and his scale, and the court framed wide. */
 const COURT_FLOOR = 950;
@@ -927,7 +892,6 @@ export const temple = (
     h,
     [
       {
-        // The sanctuary and its courts, far off.
         z: 1.9,
         draw: () => {
           for (const [x, top, bw, k] of [
@@ -962,7 +926,6 @@ export const temple = (
         },
       },
       {
-        // The colonnade.
         z: 1.3,
         draw: () => {
           piece(ctx, rectShape(-400, 150, 2720, 50), C.boardShade, hand('lintel'), {
@@ -992,13 +955,11 @@ export const temple = (
         },
       },
       {
-        // The court's floor, the stones and the writing, the woman and Jesus.
         z: 1,
         lift: 1.3,
         draw: () => court(ctx, hand, s),
       },
       {
-        // A near pillar at the frame's left edge.
         z: 0.75,
         draw: () =>
           piece(ctx, rectShape(-330, -200, 260, 1500), C.board, hand('nearPillar'), {
@@ -1043,15 +1004,12 @@ const accusers = (ctx: CanvasRenderingContext2D, hand: Hands, s: Temple) => {
     ACCUSER.far = charger ? held : undefined;
     const me = sub(hand('accuser'), i);
     at(ctx, { x, y, scale: a.s }, () => {
-      // The charge first, so the hand holding it up is drawn over its foot.
       if (charger && s.charge > 0) {
         const [cx, cy] = handOf(ACCUSER, 'near', me);
         at(ctx, { x: cx, y: cy - CHARGE_ABOVE, scale: CHARGE_S }, () => tablets(ctx, hand));
       }
       person(ctx, ACCUSER, me);
     });
-    // His stone: in his fist (showing over its top), falling from it, then
-    // lying where it landed.
     const [hx, hy] = handOf(ACCUSER, charger ? 'far' : 'near', me);
     const fall = clamp(3 * dropped);
     const heldX = a.from + hx * a.s;
@@ -1104,7 +1062,6 @@ const court = (ctx: CanvasRenderingContext2D, hand: Hands, s: Temple) => {
   });
   accusers(ctx, hand, s);
 
-  // Jesus: stooped to the dust, writing; standing to speak.
   const stand = s.stand;
   const [jx, jy] = JESUS_AT;
   glow(ctx, jx, jy - 250 + 90 * (1 - stand), 340, C.glow, 0.6);
@@ -1114,7 +1071,6 @@ const court = (ctx: CanvasRenderingContext2D, hand: Hands, s: Temple) => {
   HIS_BUILD[1] = lerp(STOOP[1], 1, stand);
   WRITES.reach = s.writes;
   SENDS.reach = s.sends;
-  // One far hand: the finger in the dust while he writes, open to her once he has stood and speaks.
   HIM.far = s.sends > 0 ? SENDS : WRITES;
   HIM.tilt = -0.2 * (1 - stand);
   HIM.nod = 6 * (1 - stand);
@@ -1125,7 +1081,6 @@ const court = (ctx: CanvasRenderingContext2D, hand: Hands, s: Temple) => {
   HIM.smile = 0.25 * stand;
   at(ctx, { x: jx, y: jy, scale: JESUS_S }, () => christ(ctx, HIM, hand));
 
-  // The woman, alone where they left her; in white in the callback.
   const wm = s.woman;
   const white = wm.white;
   HER_LOOK[0] = wm.look[0];
@@ -1142,7 +1097,6 @@ const court = (ctx: CanvasRenderingContext2D, hand: Hands, s: Temple) => {
   HER.smile = 0.7 * wm.glad;
   const [wx, wy] = WOMAN_AT;
   at(ctx, { x: lerp(wx, WOMAN_OUT, wm.walk), y: wy - wm.bob, scale: WOMAN_S }, () => {
-    // The count's faith: a light behind her face as she looks up and calls him Lord.
     if (wm.faith > 0) {
       glow(ctx, FACE_LIGHT[0], FACE_LIGHT[1], 150, C.glow, 0.95 * wm.faith);
       glow(ctx, FACE_LIGHT[0], FACE_LIGHT[1], 80, C.gold, 0.45 * wm.faith);
@@ -1153,8 +1107,6 @@ const court = (ctx: CanvasRenderingContext2D, hand: Hands, s: Temple) => {
 };
 /** Where the light of her faith sits behind her head, in her units: up and toward him. */
 const FACE_LIGHT: Pt = [30, -190];
-
-// ─── callbacks ───────────────────────────────────────────────────────────────
 
 /** The frame the sets are drawn in, and the share of it a callback shows them at: people there stand 140 px and more. */
 const FRAME_W = 1920;

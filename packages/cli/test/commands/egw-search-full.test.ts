@@ -58,8 +58,6 @@ const hit = (text: string): SearchHit =>
 
 describe('egw search result formatting — --full', () => {
   it('cuts at the limit and marks the cut by default', () => {
-    // The premise, stated rather than assumed: a shorter paragraph would make
-    // both assertions below vacuous.
     expect(LONG_TEXT.length).toBeGreaterThan(SNIPPET_LIMIT);
 
     const line = formatLocalSearchResult(hit(LONG_TEXT), 0);
@@ -72,16 +70,11 @@ describe('egw search result formatting — --full', () => {
   it('prints the whole paragraph, with no ellipsis, when asked', () => {
     const line = formatLocalSearchResult(hit(LONG_TEXT), 0, true);
 
-    // The whole paragraph, not a longer prefix of it.
     expect(line).toContain(LONG_TEXT);
-    // And no truncation marker: that character is the only way a reader can
-    // tell a complete paragraph from a cut one.
     expect(line).not.toContain('…');
   });
 
   it('leaves a paragraph shorter than the limit alone either way', () => {
-    // The flag changes how much is shown, never the text itself — a short
-    // paragraph must not gain an ellipsis or lose a character.
     const short = 'Eve was not quite as tall as Adam.';
     expect(short.length).toBeLessThan(SNIPPET_LIMIT);
 
@@ -91,8 +84,6 @@ describe('egw search result formatting — --full', () => {
   });
 
   it('reports an empty paragraph rather than printing nothing', () => {
-    // The branch the cut shares with the full path: both must still say
-    // something a reader can read.
     expect(formatLocalSearchResult(hit(''), 0)).toContain('(no content)');
     expect(formatLocalSearchResult(hit(''), 0, true)).toContain('(no content)');
   });

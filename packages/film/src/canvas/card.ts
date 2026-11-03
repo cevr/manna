@@ -1,25 +1,3 @@
-// Full-screen cards (CRAFT rule 1, from the owner's editing reference,
-// `.claude/skills/film/reference/real-life-tv-study.md` §3): the narration's
-// own words typeset over the whole frame. The picture cuts to the card and
-// back; each word appears as it is heard; one payoff word is set large in a
-// colour from the colour script. And the verse a card may follow: Scripture
-// on its page, the phrase highlighted, the highlight flooding into the card.
-//
-// A scene declares its cards on its drawing (`drawing({ cards })`), more than
-// one where it needs them, each over its own cue: the cue the card holds the
-// frame for (a hard cut in at its start and out at its end; no two cards of a
-// scene hold at one instant), the words it sets (from a mark, as the take says
-// them) and its payoff word, and, when it follows a highlight, the cue the
-// highlight floods the frame over. The scene's draw returns where on the frame the highlight
-// stands (`verse` returns it so), and the flood grows from that box: the
-// same frame's, never one an earlier frame left. The film draws the card in
-// place of the scene, on the film's paper (opaque, so the frame is the same
-// whatever was drawn before it), so no act light or vignette dims it, and no
-// caption is set over it: the card is the words (`film.ts`); a flood is drawn
-// over the lit scene, after its light and vignette. What the card looks like is the look's: `fullCard` sets the words
-// in a `CardStyle` (its ground, face, sizes, case and the payoff's colour and
-// treatment), or a look draws them its own way from the same `CardWord`s.
-
 import { Option, Predicate, Result } from 'effect';
 import { type Hand, sub } from './ink.ts';
 import { type TextStyle, measure, write } from './type.ts';
@@ -205,7 +183,6 @@ const cardLayout = (
   const out: SetWord[] = [];
   for (const l of lines) {
     const tall = leading(l.style);
-    // The baseline sits where a line's capitals centre in its leading.
     const y = top + tall / 2 + l.style.size * 0.35;
     let x = style.align === 'center' ? (w - l.width) / 2 : margin;
     const space = measure(ctx, ' ', l.style);
@@ -316,8 +293,6 @@ const verseLayout = (
 ): VerseSet => {
   const words = verse.text.split(/\s+/).filter((s) => s.length > 0);
   const phrase = verse.phrase.split(/\s+/).filter((s) => s.length > 0);
-  // A phrase that is not a run of the verse's words (a typo, other punctuation) would
-  // highlight nothing and flood from nowhere: Scripture is set verbatim, so it stops here.
   const found = Option.filter(phraseAt(words, phrase), () => phrase.length > 0);
   if (Option.isNone(found))
     throw new Error(

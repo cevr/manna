@@ -1,6 +1,3 @@
-// The lab's MCP for the tool tests (`lab-mcp.ts`): the lab served in memory
-// with its MCP, and a client of it as one calls `/mcp`.
-
 import { Boolean as Bool, Context, Effect, Layer, Option, Schedule, Schema } from 'effect';
 import { labHandler } from '../lab.ts';
 import { LabEvents } from '../lab-events.ts';
@@ -129,13 +126,11 @@ export const mcpSession = Effect.fn('mcpSession')(function* (lab: LabFetch) {
     const asked = n;
     const answer = yield* mcpPost(lab, { jsonrpc: '2.0', id: asked, method, params }, headers);
     const body = yield* Effect.promise(() => answer.text());
-    // Read as a client reads JSON: the test names the fields it checks.
     // oxlint-disable-next-line typescript/no-explicit-any -- a test reads an answer's fields as a client reads JSON
     const messages: ReadonlyArray<any> = yield* Effect.orDie(
       Effect.forEach(answerTexts(answer, body), (text) => readMcpJson(text)),
     );
     const said = messages.find((message) => message.id === asked);
-    // A JSON-RPC error (the arguments did not decode) is said as a refusal.
     return Option.getOrElse(Option.fromNullishOr(said?.result), () => ({
       isError: true,
       content: [{ type: 'text', text: writeMcpJson(said?.error) }],

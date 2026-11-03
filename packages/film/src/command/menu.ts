@@ -1,12 +1,3 @@
-// What ⌘K (the command menu), a context menu and the `?` sheet list, from
-// the registry and the keymap alone (nothing is written twice): the menu,
-// the commands available where the page is, matched by what was typed; a
-// context menu, the commands available about the thing it opened on
-// (`target.ts`), a stepped one also at ×10, a finger's Shift; the sheet,
-// every command registered, by group, with its
-// keys and how a phone reaches it; the view menu, the `View` commands available and
-// the keys sheet (`viewRows`). Pure.
-
 import { Array as Arr, Option } from 'effect';
 import { type Command, type CommandId, type Invocation, labelOf } from './command.ts';
 import type { Context } from './context.ts';
@@ -131,7 +122,6 @@ export const contextRows = (
   const targetsOf = (c: Command): ReadonlyArray<Target> =>
     Option.getOrElse(Option.fromUndefinedOr(c.about), () => []);
   const about = available.filter((c) => targetsOf(c).includes(target));
-  // The thing's own verbs first; what every menu offers (Copy link, the command menu) after them.
   const everywhere = (c: Command) => EVERYWHERE.every((t) => targetsOf(c).includes(t));
   return byGroup([...about.filter((c) => !everywhere(c)), ...about.filter(everywhere)]).map(
     ([group, commands]) =>

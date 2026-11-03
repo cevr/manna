@@ -340,7 +340,6 @@ describe('hymns CLI corpus contract', () => {
           true,
         );
 
-        // An index row the reader cannot decode is an error, never the legacy `indexes: null`.
         const corrupt = `${dir}/corrupt.db`;
         yield* fs.copyFile(ARTIFACT, corrupt);
         yield* Effect.acquireUseRelease(
@@ -356,7 +355,6 @@ describe('hymns CLI corpus contract', () => {
         const broken = yield* cli(dir, corrupt, ['get', '2', '--json']);
         expect(broken.code === 0, 'corrupt:exit').toBe(false);
         expect(broken.stderr.includes('note:'), 'corrupt:no-note').toBe(false);
-        // The CLI logger writes the failure to stdout when it is not a terminal.
         expect(`${broken.stdout}${broken.stderr}`, 'corrupt:message').toContain(
           "this hymnal.db's index tables could not be read",
         );

@@ -1,15 +1,3 @@
-// The AST reads the `film` lint rules share: a node's ancestors, the name a
-// member expression reads, and the one binding reader: what a name is bound
-// to where it is read (a definition, an import, a global, a top-level const,
-// the frame a draw is handed), a number written out or named by a top-level
-// const, an object literal's property by name, and whether an expression is
-// a cue's progress. No rule reads a file's scope tree but through this module
-// (`.oxlintrc.json` refuses `Scope`, `SourceCode`, `Variable` and their kin
-// from `oxlint-plugin-effect/rule-bindings` and from the package root, with
-// the root's `ruleBindings`, and the context's `getScope`,
-// `getDeclaredVariables`, `scopeManager`, `isGlobalReference` and
-// `markVariableAsUsed`, to the others).
-
 import { Effect, Option, Predicate } from 'effect';
 import {
   type Definition,
@@ -95,11 +83,6 @@ export const unwrapped = (node: ESTree.Node): ESTree.Node => {
     return unwrapped(node.expression);
   return node;
 };
-
-// Bindings. Every name a rule reads a meaning into (a const's value, an
-// import, a global, a type, the frame) is resolved by the file's scope tree
-// where it is read, so a parameter, a local or a type parameter of the same
-// name is its own binding.
 
 /** A name, where it is read. */
 export type Named = ESTree.Node & { readonly name: string };
@@ -246,15 +229,6 @@ const writtenNumber = (n: ESTree.Node): Option.Option<number> => {
  * parameter `HOLD`).
  */
 export type NumberOf = (n: ESTree.Node) => Option.Option<number>;
-
-// The frame. A draw is handed one instant of its scene, a `Frame`
-// (`canvas/film.ts`): the first parameter of a callback of the spec handed
-// to `drawing(…)` that takes the frame (`draw: (f) => …`, `light: (f) =>
-// …`), or a parameter whose type is film's `Frame` (imported, read off the canvas
-// module imported whole, or a local alias of one: `type RoofFrame =
-// Frame<…>`). Its members (`t`, `T`, `at`) are read off it (`f.t`), taken
-// apart from it (`const { t } = f`, `({ t }: Frame) => …`), or named by a
-// `const` holding such a read (`const now = f.t`).
 
 /** The module film's `Frame` and `drawing` are exported from. */
 export const isCanvas: Module = (from) =>

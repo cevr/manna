@@ -68,7 +68,6 @@ describe('iOS’s position bar', () => {
 
   it('sends one seek, to the place under the finger, once the finger lifts', () => {
     using bar = mount(Option.some(120));
-    // happy-dom lays the bar out 0 points wide: every place is the start.
     act(() => pan().onBegin?.({ x: 0 }));
     act(() => pan().onUpdate?.({ x: 0 }));
     expect(bar.sought).toEqual([]);
@@ -86,9 +85,7 @@ describe('iOS’s position bar', () => {
   it('jumps to a tap’s place, once, whether the pan fails before the tap lands or after', () => {
     for (const order of ['pans-first', 'tap-first'] as const) {
       using bar = mount(Option.some(120));
-      // 220 points wide: the track runs 200 points between the thumb's half insets, so x 110 is 1:00.
       bar.layOut(220);
-      // The bar draws the pan's press under the finger before the finger lifts, and both ends come in one batch.
       act(() => touchDown('position-tap', { x: 110 }));
       act(() => touchUp('position-tap', { x: 110 }, order));
       expect({ order, sought: bar.sought }).toEqual({ order, sought: [60] });
@@ -135,7 +132,6 @@ const mountBar = (Bar: ComponentType<ScrubberProps>, selector: string) => {
   };
 };
 
-// VoiceOver's double tap on a view that handles no activation is a touch at the view's centre, which the bar's tap would take as a seek to the middle.
 describe('VoiceOver on a seek bar', () => {
   for (const [name, Bar, selector] of [
     ['the docked bar’s Seek', Seeker, '[data-testid="seek"]'],

@@ -1,11 +1,3 @@
-// Export pages, pooled: the one way `check`, `look` and `render` draw a film
-// in headless Chromium. `open` builds the export URL for a film page (a film,
-// a cut or a short, by its page name), opens a bounded pool of pages on it in
-// the caller's scope, and reads the film's info and title once. A call runs on
-// whichever page is free; a page whose renderer crashed under it is dropped,
-// and the next call opens a fresh one. The scope closing (done, failed or
-// interrupted) closes every page.
-
 import { Array as Arr, Context, Effect, Layer, Option, Pool, Predicate, type Scope } from 'effect';
 import type { CallAnswers, CallArgs, ExportCall, ExportInfo } from '../core/export-handle.ts';
 import { Browser, type CallErrors, type FramePage, type PageOpenError } from './browser.ts';

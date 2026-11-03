@@ -1,27 +1,3 @@
-// Figures drawn in pixels for the measure's tests (`figure.slow.test.ts`, the
-// easel's match): the house look reduced to what the measure reads, flat
-// fills inside one warm dark ink line, so every ratio is known from the
-// numbers it was drawn with. A circle head with its outline, a hair cap
-// (its own ink along the hair line, or none), an ear on the face (a light
-// rim inside its edge, or none), the hair dark and grained (or light and
-// flat), two upright oval eyes, a mouth under them (open, or a closed
-// line, or none), a robe down to a hem, two feet (or none), a round hand, a
-// rail in front of the robe's foot (or none), and a wall's thin lines behind
-// it (or none). For a cast sheet's tests (`cast-sheet.slow.test.ts`): the eyes
-// turned off the face's middle, long dark hair down the head's sides and a
-// beard (parted from the hair by a line, or running into it), a front
-// light's lit band on that hair, the house arm
-// (a sleeve from the shoulder to the hand at rest at its end), a sleeve
-// hanging at rest with the hand floating free beside it, a sleeve reaching
-// to the hand, a bare arm, a limb (a sleeve, a
-// bare forearm or nothing) bent from the shoulder into a hand at any place
-// and angle, its cuff inked or not, no hands at all, bare skin on the robe
-// (a yoke, two shoulders, a patch on the chest), one eye (a profile), a
-// headcloth with its face opening, a head tipped, a robe of another colour,
-// the robe lit on its right (so a view drawn facing left and flipped is lit
-// as the house lights), a view flipped, and figures side by side on one
-// sheet. Tests only.
-
 import { MutableHashMap, Option } from 'effect';
 import type { Raster } from '../raster.ts';
 
@@ -199,7 +175,6 @@ type Canvas = ReturnType<typeof canvasOf>;
 const frameOf = (spec: FigureSpec) => {
   const chin = spec.cy + spec.ry;
   const hem = chin + spec.robeDepth;
-  // The robe: a trapezoid from under the chin to the hem, inside its line.
   const halfAt = (y: number) =>
     spec.robeTop / 2 + ((spec.robeHem - spec.robeTop) / 2) * ((y - chin) / spec.robeDepth);
   const robe = (pad: number) => {
@@ -282,7 +257,6 @@ const drawArm = (c: Canvas, spec: FigureSpec, f: Frame) => {
   c.fill(ellipse(hand.x, hand.y, hand.r + line, hand.r + line), INK);
   if (spec.arm === 'bare') c.fill(reach(0), SKIN);
   c.fill(ellipse(hand.x, hand.y, hand.r, hand.r), SKIN);
-  // The robe over the arm's root, so the arm leaves from its side.
   if (spec.arm !== undefined) drawRobeFill(c, spec, f);
 };
 
@@ -409,7 +383,6 @@ const drawEar = (c: Canvas, spec: FigureSpec) => {
 const drawFace = (c: Canvas, spec: FigureSpec) => {
   const { cy } = spec;
   const eyeX = spec.cx + (spec.eyeShift ?? 0);
-  // A head tipped `roll` px: the right eye that much lower than the left.
   const tip = spec.roll ?? 0;
   const sides = spec.oneEye === true ? [Math.sign(spec.eyeShift ?? 0) || 1] : [-1, 1];
   for (const side of sides)
@@ -449,13 +422,11 @@ const drawnFresh = (spec: FigureSpec): Raster => {
   const c = canvasOf(400, 640);
   const { cx, cy, rx, ry, line } = spec;
   const f = frameOf(spec);
-  // The wall's lines, behind everything.
   for (const k of (spec.wall === true && Array.from({ length: 8 }, (_, i) => i)) || [])
     c.fill(
       within([0, 260 + 32 * k, 400, 263 + 32 * k], (_, y) => y >= 260 + 32 * k && y < 263 + 32 * k),
       INK,
     );
-  // The feet, under the hem.
   for (const dx of (spec.feet === false && []) || [-40, 40]) {
     c.fill(ellipse(cx + dx, f.hem + 12, 24 + line, 10 + line), INK);
     c.fill(ellipse(cx + dx, f.hem + 12, 24, 10), SHOE);
@@ -465,7 +436,6 @@ const drawnFresh = (spec: FigureSpec): Raster => {
   drawArm(c, spec, f);
   drawBareSkin(c, spec, f);
   drawLimb(c, spec, f);
-  // The head over the robe's top: its line and its skin, then its hair.
   c.fill(ellipse(cx, cy, rx + line, ry + line), INK);
   c.fill(ellipse(cx, cy, rx, ry), SKIN);
   drawHair(c, spec);
@@ -478,7 +448,6 @@ const drawnFresh = (spec: FigureSpec): Raster => {
     );
   }
   drawEar(c, spec);
-  // The rail, in front of the robe's foot: its line, its wood.
   if (spec.rail === true) {
     const bar = (pad: number): PixelTest =>
       within(

@@ -76,9 +76,6 @@ describe('the hub', () => {
     const { hub, stop } = pageWith();
     const frame = counter('play.frame-next', { keys: ['arrowright'] });
     hub.commands.register(frame.command);
-    // A part inside a wrapper (a dialog) that would stop the arrow keys on their way to the
-    // page: what the part's listener leaves goes on to the wrapper (a later listener reads
-    // whether its propagation was stopped).
     const part = new EventTarget();
     const reached: Array<string> = [];
     const host = hostOf(Keys.layerOn(new EventTarget()));
@@ -135,7 +132,6 @@ describe('the hub', () => {
       run: () => Effect.succeed(said('done')),
     });
     hub.invokeId('x', { step: 'normal', via: 'menu' });
-    // A write no command ran says its own, in its writer's slot.
     hub.announce(said('wrote'), 'edit');
     expect(heard).toEqual([
       [said('done'), 'x'],
@@ -168,16 +164,13 @@ describe('the hub', () => {
       }).command,
     );
     const button = { step: 'normal', via: 'button' } as const;
-    // Nothing asked yet: a move the page makes on its own is a pointer's, with no ring.
     expect(hub.input()).toBe('pointer');
     hub.invokeId('note.frame', button);
     keydown('n');
     expect(hub.input()).toBe('key');
-    // A button the keyboard pressed (Enter on it) is the keyboard's; one clicked, the pointer's.
     hub.invokeId('note.frame', button);
     pointerdown();
     hub.invokeId('note.frame', button);
-    // An asker that saw its input (⌘K's row chosen by Enter) says it, whatever came last.
     hub.invokeId('note.frame', { ...button, input: 'key' });
     expect(inputs).toEqual(['pointer', 'key', 'key', 'pointer', 'key']);
   });
@@ -191,7 +184,6 @@ describe('the hub', () => {
     pointerup();
     keydown('Shift', { shiftKey: true });
     expect(hub.input()).toBe('key');
-    // A pointer let go outside the window is never heard going up: the window's blur lets it go.
     pointerdown();
     keydown('Shift', { shiftKey: true });
     expect(hub.input()).toBe('pointer');
@@ -202,7 +194,6 @@ describe('the hub', () => {
 
   test('a step through the history is a key only when a key the browser walks it by asked, once', () => {
     const { hub, keydown, pointerdown, pointerup } = pageWith();
-    // Nothing heard: the toolbar's Back, a swipe.
     expect(hub.traversed()).toBe('pointer');
     for (const walk of [
       { key: 'ArrowLeft', held: { altKey: true } },
@@ -215,17 +206,14 @@ describe('the hub', () => {
     ]) {
       keydown(walk.key, walk.held);
       expect([walk.key, hub.traversed()]).toEqual([walk.key, 'key']);
-      // Read once: a later step nothing asked (the toolbar's Back) is not the key's.
       expect([walk.key, hub.traversed()]).toEqual([walk.key, 'pointer']);
     }
-    // Any other key last (the toolbar's Back after typing), or a pointer: nothing asked the step.
     keydown('Shift', { shiftKey: true });
     expect(hub.traversed()).toBe('pointer');
     keydown('ArrowLeft', { altKey: true });
     pointerdown();
     pointerup();
     expect(hub.traversed()).toBe('pointer');
-    // A walking key the page took for its own (its default prevented) walks nothing.
     hub.commands.register(counter('take.left', { keys: ['alt+arrowleft'] }).command);
     expect(keydown('ArrowLeft', { altKey: true })).toBe(true);
     expect(hub.traversed()).toBe('pointer');

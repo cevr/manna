@@ -1,41 +1,3 @@
-// A cast sheet measured (`film concept measure`): a member painted in the
-// house look in several views on one image, its figures found by their ink
-// and held, before any judge or pick, to the rules a rig traced from it must
-// keep (the concept stage's cast sheets: the film skill's Concept step).
-//
-// - Facing first: each view's head turns as its slot says (a turnaround's
-//   slots are front, three-quarter and profile to the viewer's left, back,
-//   profile and three-quarter to the right). Two partner views that match
-//   better unflipped than flipped were drawn facing one way; a profile, which
-//   reads no face, is held to the three-quarter on its side the same way; a
-//   turnaround head tipped past 5° is a redraw.
-// - The canon: the anchor view's height in heads, and the squash a trace to
-//   the member's own heads would apply with the head held: the cast's canon
-//   (3.36 heads) unless the member's design names its own (the plain lead's
-//   2.6), and a smaller figure its own (a child's head is a larger share of
-//   it). A sheet never sets a height; the cast band does.
-// - Held to the anchor (the view that passes the concept's match): height
-//   on standing views and the head, each a smaller figure's by its share of
-//   the grown one, the hand, the hair's fall under the chin on
-//   level heads, the papers; the partners' body widths, the hands cut out;
-//   one ground line. A heads sheet holds the head's height on its level
-//   heads and its width within each turn, and reads no hands.
-// - The look's rules: a lit side on the left (the key light is upper left;
-//   a view lit on its right was flipped), no grey shade, a partner never a
-//   mirror of the other, a beard parted from the hair as the kept concept
-//   parts it (owner, 2026-10-18: "Jesus's render confuses parts of his hair
-//   with his beard, look more closely to the concept"), and no skin below the
-//   neck but the hands, and every hand at the end of an arm in its sleeve,
-//   never floating free of the body (owner, 2026-10-18: "I actually like the
-//   style when they have sleeves and like arms, kind of like we have with
-//   Jesus and a lot of the characters so far in the cast"). The face is
-//   found by its own read (the skin round the eyes), never as the skin above
-//   the chin.
-//
-// A sheet is painted: what a view does not show is listed as not measured,
-// never guessed, and the measure guides the retry and the ask; it does not
-// keep a view.
-
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import {
   arcOf,
@@ -74,9 +36,6 @@ import {
 } from './figure.ts';
 import { compareFigures } from './match.ts';
 import { cropRaster, type Raster, type RasterPath, strokeRaster } from './raster.ts';
-
-// ---------------------------------------------------------------------------
-// What a sheet is asked to hold
 
 /** Where a view faces: front, three-quarter or profile toward the viewer's left or right, the back, or free (a pose sheet's view whose facing is not held). */
 export const Slot = Schema.Literals(['front', 'left', 'right', 'back', 'free']);
@@ -160,11 +119,8 @@ export interface SheetConcept {
   readonly view: number;
 }
 
-// ---------------------------------------------------------------------------
-// Its tolerances
-
 /** A view's height, head and hand against the anchor's, and partners' widths, in percent (the concepttool measure). */
-const TOLERANCE = 5;
+const TOLERANCE_PERCENT = 5;
 /** The squash to the canon past which a sheet is redrawn, in percent (a guess; calibrated on the first kept sheet). */
 const SQUASH_MAX = 10;
 /** A head's turn inside which it faces the viewer, and past which it faces a side (`figure.ts`'s facing). */
@@ -205,9 +161,6 @@ const HEAD_CORE = 0.95;
 /** A dark fill (hair, a beard): darker than this luma, and farther than `PARTING_INK` from the ink. */
 const DARK_LUMA = 115;
 const PARTING_INK = 44;
-
-// ---------------------------------------------------------------------------
-// What the measure answers
 
 export const SheetCheck = Schema.Literals([
   'facing',
@@ -342,9 +295,6 @@ class SheetUnread extends Schema.TaggedError<SheetUnread>()('SheetUnread', {
     return `the sheet does not read: ${this.reason}`;
   }
 }
-
-// ---------------------------------------------------------------------------
-// One view read
 
 /** A view as read, with what the checks need beside its record: its crop, its figure's measure, its hands and the unmeasured. */
 interface ViewRead {
@@ -576,7 +526,6 @@ const roundOf = (region: Region, frame: SkinFrame) => {
 const maskedBy = (region: Region, f: HeadFrame, neck: boolean) => {
   const [x0, y0, x1, y1] = region.box;
   const pastHead = x0 < f.left || x1 > f.right || y1 > f.chin;
-  // A hand on the neck has its middle under the chin, though its ring may start above it.
   return (
     !holdsEyes(region, f) &&
     ((neck && (y0 + y1) / 2 >= f.chin) || (facePart(region, f) && pastHead))
@@ -950,7 +899,6 @@ const readMeasured = (
     onNone: () => [],
     onSome: (s) => skinRegionsOf(crop, inside, s),
   });
-  // The face opening under a headcloth: the skin's own paper round the eyes, inside the head's box (a tan tunic joins no face).
   const faceOpening = Arr.findFirst(
     regions,
     (r) =>
@@ -960,7 +908,6 @@ const readMeasured = (
       r.box[3] > f.eyeY &&
       r.box[3] <= m.head[3] + 0.1 * f.H,
   );
-  // Under a headcloth the head's box runs down the cloth: the face, the neck and the shoulders are read on the face opening's frame instead.
   const at = Option.getOrElse(
     Option.filter(
       Option.map(faceOpening, (r) => clothedFrame(f, r.box, closed, crop.width)),
@@ -1016,7 +963,6 @@ const readMeasured = (
   const head =
     (ctx.headgear && Option.map(faceOpening, (r) => r.box[3] - r.box[1])) ||
     Option.some(m.head[3] - m.head[1]);
-  // Under a headcloth no hair shows: the dark the beard meets is the cloth's.
   const hair = Option.filter(hairOf(crop, m, f), () => !ctx.headgear);
   if (ctx.headgear)
     unmeasured.push({
@@ -1028,7 +974,6 @@ const readMeasured = (
     unmeasured.push({ check: 'hairBeard', view: ctx.view, why: 'no dark hair reads at the crown' });
   if (Option.exists(hair, (h) => Option.isNone(h.beard)))
     unmeasured.push({ check: 'hairBeard', view: ctx.view, why: 'no beard reads under the mouth' });
-  // The side's rows start under the hair, which falls over the shoulders outside the garment's line.
   const fallen = Option.getOrElse(
     Option.map(hair, (h) => h.lowest + line),
     () => at.chin,
@@ -1112,13 +1057,11 @@ const readView = (
   const [ox, oy] = [Math.max(0, x0 - PAD), Math.max(0, y0 - PAD)];
   const crop = cropRaster(sheet, [x0 - PAD, y0 - PAD, x1 + PAD, y1 + PAD]);
   const height = y1 - y0;
-  // The full measure only where a concept is held to the view: its rims, shading and artifacts are read for the concept's compare alone.
   const heldToConcept = (options.concepts || []).some((c) => c.view === view);
   const full = Option.flatMap(
     Option.liftPredicate(crop, () => heldToConcept),
     (c) => Result.getSuccess(measureFigure(c)),
   );
-  // The lean read where no concept is held, or the full one failed: its failure says why no face reads.
   const lean = Option.match(full, {
     onNone: () => readFigure(crop),
     onSome: (m) => Result.succeed<FigureRead>(m),
@@ -1231,9 +1174,6 @@ const measuredFields = (
   const chin = Option.getOrElse(Option.fromUndefinedOr(m.chin), () => 'closed' as const);
   return { ...head, ...hand, ...hair, ...reach, ...free, chin };
 };
-
-// ---------------------------------------------------------------------------
-// The checks
 
 const pct = (a: number, b: number) => (100 * (a - b)) / b;
 
@@ -1393,8 +1333,8 @@ const percentOff =
   (value: number, against: number) => {
     const d = pct(value, against);
     return Option.liftPredicate(
-      { value: d, limit: TOLERANCE, note: `${what} ${d.toFixed(1)} % off ${whose}` },
-      () => Math.abs(d) > TOLERANCE,
+      { value: d, limit: TOLERANCE_PERCENT, note: `${what} ${d.toFixed(1)} % off ${whose}` },
+      () => Math.abs(d) > TOLERANCE_PERCENT,
     );
   };
 
@@ -1709,8 +1649,8 @@ const pairFlags = (pairs: ReadonlyArray<typeof SheetPair.Type>): ReadonlyArray<S
         ),
       ]) ||
       []),
-    ...((Math.abs(p.widths) > TOLERANCE && [
-      flag('width', p.views, p.widths, TOLERANCE, "the partners' widths differ"),
+    ...((Math.abs(p.widths) > TOLERANCE_PERCENT && [
+      flag('width', p.views, p.widths, TOLERANCE_PERCENT, "the partners' widths differ"),
     ]) ||
       []),
   ]);
@@ -1788,7 +1728,6 @@ const checked = (
 ): SheetMeasure => {
   const headgear = options.headgear === true;
   const heads = options.kind === 'heads';
-  // A standing view (each the options name, else every view) whose head reads over half its figure is read with no head: its head's reads are said, never a squash or a drift that sends a retry. A low pose the options do not stand keeps its head.
   const stands = (v: SheetView) =>
     Option.match(Option.fromUndefinedOr(options.standing), {
       onNone: () => true,
@@ -1878,9 +1817,6 @@ const checked = (
   };
 };
 
-// ---------------------------------------------------------------------------
-// What a reader sees
-
 /** An optional number as a table writes it: to `places`, or a dash. */
 const fixed = (v: Option.Option<number>, places: number) =>
   Option.getOrElse(
@@ -1916,7 +1852,7 @@ export const sheetTable = (name: string, m: SheetMeasure): string => {
       '',
     ]) ||
       []),
-    `${m.kind}, ${m.views.length} views. ${canon} Held within ${TOLERANCE} %; papers within ΔE ${PAPER_DE}; a mirror under ${MIRROR_FLOOR}; a pair under ${SAME_WAY} of its flipped difference faces one way; every hand at the end of a sleeve or an arm, never free.`,
+    `${m.kind}, ${m.views.length} views. ${canon} Held within ${TOLERANCE_PERCENT} %; papers within ΔE ${PAPER_DE}; a mirror under ${MIRROR_FLOOR}; a pair under ${SAME_WAY} of its flipped difference faces one way; every hand at the end of a sleeve or an arm, never free.`,
     '',
     '| View | Slot | Turn | Roll | Height | Head | Heads tall | W/H | Hand | Hair fall | Hair/beard | Chin | Lit | Reach | Free | Bare | Papers |',
     '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',

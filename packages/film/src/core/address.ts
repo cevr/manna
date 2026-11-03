@@ -1,11 +1,3 @@
-// An address: which part of a film a command works on. The whole film, one of
-// its acts (`look.acts`), some of its scenes, or one of its shorts; a layer
-// inside a scene comes later. It is named once (`addressOf`, from what a
-// command was given) and resolved once against the placed film
-// (`resolveAddress`), so render, check and the look pass read the same
-// scenes, span and acts, and a misspelt name fails here with what the film
-// has. Pure: it reads only the placed film and its declarations.
-
 import { Array as Arr, Match, Option, Order, Result } from 'effect';
 import type { ActName, Address } from './address-schema.ts';
 import { type PartError, type Stretch, stretchesOf } from './acts.ts';
@@ -136,12 +128,8 @@ export const resolveAddress = (
           () => UnknownAct.make({ act: named.act, known: all.map((a) => a.part.name) }),
         ),
       ),
-    // Named in any order, the scenes are one part: its address lists them as
-    // the film plays them, so `b,a` and `a,b` key one slot and one stamp. The
-    // part is one stretch, so its span covers exactly the scenes it names.
     Scenes: (named) =>
       Result.flatMap(scenesOf(film.placed, named.ids), (): Result.Result<Scope, ScenesApart> => {
-        // Every id is the film's here: `scenesOf` refused any other.
         const ids = new Set(named.ids);
         const first = film.placed.findIndex((p) => ids.has(p.spec.id));
         const last = film.placed.findLastIndex((p) => ids.has(p.spec.id));

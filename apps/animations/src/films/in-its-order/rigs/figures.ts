@@ -1,14 +1,3 @@
-// In Its Order's Rive project: every figure rig of the film in one file
-// (`figures.riv`, built by `build.ts`), laid by one table (`FIGURES`), which
-// the house prints (`@manna/film/style` `figuresRml`). Each artboard has its
-// own view model, its name, the seed its paper's boil crawls by and its place
-// on the stage. It draws a composed figure, one a view of a member's kept
-// sheets (the series lead's compositions are the library's,
-// `src/library/cast/lead-feast/rig/`), with the artboard its hands are drawn
-// on, or a circle hand. The figures' ink is the house look's line, as heavy
-// against a head as the kept sheets draw it (`WEIGHT`), its widths bound to
-// the shot (`BAKED` false: thinner in a close shot, as RBF's). Pure.
-
 import { figuresFile } from '@manna/film/style';
 import * as LEAD from '../../../library/cast/lead-feast/rig/lead.ts';
 import { PAPERS as LEAD_FEAST } from '../../../library/cast/lead-feast/rig/papers.ts';
@@ -34,7 +23,6 @@ export const FIGURES = figuresFile({
       figure: LEAD.leadFeastFront.figure,
       hands: 'leadFeastHand',
     },
-    // The series lead's hands, every view's: one artboard, of his hands' paper.
     leadFeastHand: { name: 'LeadFeastHand', seed: 3102, stage: 400, hand: LEAD_FEAST.hand },
     leadFeastThreeQuarterLeft: {
       name: 'LeadFeastThreeQuarterLeft',

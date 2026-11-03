@@ -1,23 +1,3 @@
-// The exchange: a sunset path at the foot of a cardboard hill, the sun
-// sinking toward the hilltop from the first words to "cross". The grey figure
-// from the cold open, the same stains on their garment, turns toward the hill
-// and asks how God can be fair; on "fair" Jesus walks up to them, and on
-// "treated" the camera closes on both faces. On "took" the scarlet lifts off the figure as
-// a cloth and settles on his shoulders, and he carries it up the hill. On
-// "cross" the film's one black moment: the hill, the cross and the figure in
-// silhouette against the last red of the sky. On "rose" dawn: the empty tomb,
-// the stone rolled back, the grave cloths folded. On "up" the camera rises
-// with him into a teal sky, to the gold sanctuary in heaven with its two
-// rooms, and he arrives in the holy place as high priest ("high priest"): the
-// breastplate on him, his hands lifted at the altar of incense, the veil
-// shut. On "right now" a cut, not a walk: a new framing, close in the most
-// holy place, the veil open, and Christ pleading before the ark (the ministry
-// `rain` looks up to). The cut is the time jump the sanctuary frame asks for:
-// the holy place first, the most holy place in 1844, never one move from the
-// ascension. The most holy place holds, the camera easing in as she speaks,
-// through "pleading for his people in the courts of heaven", the scene's
-// last words.
-
 import {
   type Camera,
   type Frame,
@@ -109,17 +89,12 @@ const timeline = {
   puzzle: { mark: 'fair', dur: 0.4 },
   walkIn: { mark: 'fair', word: 'fair', until: 'notes', ease: 'inOutSine' },
   close: { mark: 'treated', offset: -0.4, dur: 1, ease: 'inOutCubic' },
-  // The figure's hand to the cloth on their chest, it lifts across to him, and his hand takes it.
   give: { with: 'lift', dur: 0.4, ends: true },
   lift: { mark: 'took', dur: 1.2, ease: 'inOutSine' },
-  // The figure's stains go with the cloth as it starts to lift.
   unstained: { with: 'lift', offset: 0.172, dur: 0 },
-  // Halfway through the lift one hand lets the cloth go as the other takes it.
   letGo: { with: 'lift', offset: 0.5, dur: 0.5 },
-  // Back out on "that we might take His righteousness", and he walks up the hill.
   back: { mark: 'took', word: 'take', offset: -0.05, dur: 1.3, ease: 'inOutCubic' },
   walkUp: { with: 'back', offset: 0.2, dur: 1.9, ease: 'inOutSine' },
-  // The figure turns to watch him over the first half of his walk up.
   watch: { with: 'walkUp', dur: 0.95, ease: 'inSine' },
   dark: { mark: 'cross', offset: -0.4, dur: 0.9, ease: 'inOutSine' },
   dawn: { mark: 'rose', offset: -0.3, dur: 1, ease: 'inOutSine' },
@@ -133,15 +108,10 @@ const timeline = {
 const knobs = {
   figure: [560, 960],
   sun: [1450, 300],
-  // Close on both faces.
   close: [700, 650],
   closeZoom: 2.1,
-  // Up in heaven at the sanctuary.
   heaven: [960, -560],
   heavenZoom: 1,
-  // After the cut: close in the most holy place, the veil at the left edge,
-  // Christ before the ark; the camera eases in a little, to `arkInZoom`, as
-  // the last words are spoken.
   ark: [1224, -450],
   arkZoom: 2.5,
   arkInZoom: 2.75,
@@ -174,21 +144,17 @@ const hill = (f: ExchangeFrame) => {
   const walkIn = f.at('walkIn');
   const sun = f.at('sun');
 
-  // Jesus: walking in, then up the hill with the cloth.
   const cx = walkUp > 0 ? lerp(BESIDE, TOP - 50, walkUp) : lerp(2120, BESIDE, walkIn);
   const cy = walkUp > 0 ? ridge(cx) : fy;
   const cs = lerp(SCALE, 1.15, walkUp);
-  // Each walk's steps start from its own cue, so the bob never jumps.
   const walking = gait(t, f.cue('walkIn')) + gait(t, f.cue('walkUp'));
   const shoulders: Pt = [cx, cy - walking - 118 * cs];
-  // Where the cloth is: off the figure's chest, across in an arc, onto his shoulders.
   const from: Pt = [fx + 10, fy - 76 * SCALE];
   const clothX = lerp(from[0], shoulders[0], lift);
   const clothY = lerp(from[1], shoulders[1], lift) - 120 * Math.sin(Math.PI * lift);
   GIVING.to[0] = (clothX - fx) / SCALE;
   GIVING.to[1] = (clothY - fy) / SCALE;
   GIVING.reach = f.at('give') * (1 - f.at('letGo'));
-  // His hand takes the cloth by its near end, so on his shoulders it holds it clear of his body.
   const clothS = lerp(SCALE, cs, lift);
   TAKING.to[0] = (clothX - CLOTH_END * clothWidth(lift) * clothS - cx) / cs;
   TAKING.to[1] = (clothY - (cy - walking)) / cs;
@@ -198,7 +164,6 @@ const hill = (f: ExchangeFrame) => {
     [f.at('close'), knobCamera(f.knob('close'), f.knob('closeZoom'))],
     [f.at('back'), UNMOVED],
   ]);
-  // The sky reddens as the sun goes down toward the hilltop.
   sky(ctx, w, h, [
     [0, C.sunsetTop],
     [0.55, mix(C.peachTop, C.sunsetTop, 0.6 * sun)],
@@ -214,7 +179,6 @@ const hill = (f: ExchangeFrame) => {
       const sunY = sy + SUN_FALL * sun;
       glow(ctx, sx, sunY + 200, 520, C.glow, 0.6);
       glow(ctx, sx, sunY, 200, C.glow, 0.8 - 0.3 * sun);
-      // Built where it stands: the ink reads a shape's own points, so a moved copy draws other pixels.
       piece(ctx, ellipseShape(sx, sunY, 62, 62), mix(C.gold, C.sunsetTop, sun), hand('sun'), {
         role: 'scenery',
         line: 0,
@@ -227,7 +191,6 @@ const hill = (f: ExchangeFrame) => {
         torn: 4,
       });
 
-      // The figure: turned toward the hill, puzzled on "fair", then watching him go.
       const turn = f.at('turn') * (1 - walkIn);
       const puzzle = f.at('puzzle') * (1 - f.at('close'));
       const after = f.at('watch');
@@ -247,7 +210,6 @@ const hill = (f: ExchangeFrame) => {
         ),
       );
 
-      // Jesus, facing the figure, the cloth on his shoulders once it lands.
       at(ctx, { x: cx, y: cy - walking, scale: cs }, () =>
         christ(
           ctx,
@@ -262,7 +224,6 @@ const hill = (f: ExchangeFrame) => {
         ),
       );
 
-      // The scarlet cloth: lifted off the figure, onto his shoulders.
       if (lift > 0) {
         at(ctx, { x: clothX, y: clothY, scale: clothS, rot: 0.3 * Math.sin(Math.PI * lift) }, () =>
           piece(
@@ -292,10 +253,7 @@ const blackMoment = (f: ExchangeFrame) => {
     [0.7, C.scarletShade],
     [1, C.sunsetLow],
   ]);
-  // The last of the light, low behind the hill.
   glow(ctx, TOP, 420, 520, C.sunsetTop, 0.7);
-  // The cross holds still, the film's designed stillness; the hill beneath
-  // lets its drift go over the same cue, so the two never part.
   camera(
     ctx,
     UNMOVED,
@@ -321,7 +279,6 @@ const blackMoment = (f: ExchangeFrame) => {
       });
       piece(ctx, BEAM, C.night, hand('beam'), { role: 'scenery', kind: 'cut', line: 0, shadow: 0 });
       ctx.save();
-      // His hands out along the beam as the silhouette comes up with the dark.
       NAILED_FAR.reach = f.at('dark');
       NAILED_NEAR.reach = NAILED_FAR.reach;
       ctx.translate(TOP, NAILED);
@@ -376,7 +333,6 @@ const tomb = (ctx: CanvasRenderingContext2D, hand: Hands) => {
       role: 'scenery',
       line: 2.5,
     });
-  // Clouds between earth and heaven.
   for (const [x, y, k] of CLOUDS)
     piece(ctx, blob(x, y, 260, 70, 120 + k), C.robe, sub(hand('cloud'), k), {
       role: 'scenery',
@@ -444,7 +400,6 @@ const heaven = (f: ExchangeFrame, dawn: number) => {
           if (arrived) priestAt(ctx, hand, HOLY_PLACE, f.at('minister'), 0.35, f.at('robed'));
         }),
       );
-      // Rising with the camera from the garden to the holy place.
       if (ascend > 0 && !arrived) {
         const [hx, hy] = inHeaven(HOLY_PLACE);
         glow(ctx, lerp(1000, hx, ascend), lerp(930, hy, ascend) - 250, 300, C.glow, 0.8);

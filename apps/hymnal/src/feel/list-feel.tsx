@@ -17,8 +17,6 @@ import { phone } from '../test/phone';
 
 phone({ nativeList: true });
 
-// Reanimated's stand-in (`src/test/reanimated.tsx`), as the app's tests have it: a shared value
-// set from here tells its derived values and reactions at once, as the UI thread would.
 const reanimated = Bun.resolveSync('../test/reanimated.tsx', import.meta.dir);
 plugin({
   name: 'feel-list-reanimated',
@@ -107,8 +105,6 @@ await frames();
 const mounted = [...told];
 told.splice(0);
 
-// Past the second topic's row: 20 hymn rows and a topic row are well under 1500 points. The
-// stand-in derives the pin as the list draws, so its reaction reads it on the scroll's next frame.
 await act(async () => void (scroll.value = 1500));
 await act(async () => void (scroll.value = 1501));
 await frames();

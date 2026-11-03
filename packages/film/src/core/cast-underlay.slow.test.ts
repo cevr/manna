@@ -1,11 +1,3 @@
-// A cast sheet's underlay: one mannequin per view, their soles on one row and no line under them, each
-// as tall as the others, its eyes and its nose showing the way its slot
-// faces (two eyes from the front, one in profile, none from behind; the nose
-// past the head on the side it faces), each hand at the end of its sleeve on
-// the body; on a sheet of figures of their own sizes (a child beside the
-// grown member, a member of its own design), each mannequin stands its own
-// height and its own heads.
-
 import { describe, expect, test } from 'bun:test';
 import { CANON_HEADS, TURNAROUND_SLOTS } from './cast-sheet.ts';
 import { mannequinUnderlay } from './cast-underlay.ts';
@@ -60,12 +52,10 @@ describe("a turnaround's underlay", () => {
   });
 
   test('shows two eyes from the front and at three-quarters, one in profile and none from behind', () => {
-    // Each eye is an ink run between the head's two contour runs.
     expect(views.map((_, k) => column(k).inkRuns(eyeRow(k)) - 2)).toEqual([2, 2, 1, 0, 1, 2]);
   });
 
   test('hangs each hand at the end of its sleeve on the body: from the chin to the hem, each row of a mannequin is one piece', () => {
-    // A hand drawn beside the body leaves paper between them on the hand's rows.
     const pieces = (k: number, y: number) => {
       const xs = Array.from({ length: Math.floor(step) }, (_, i) => Math.floor(k * step) + i);
       return xs.filter((x, i) => !PAPER.has(rgbAt(x, y)) && (i === 0 || PAPER.has(rgbAt(x - 1, y))))
@@ -169,7 +159,6 @@ describe('an underlay of figures of their own sizes', () => {
     ]).toEqual([true, true, true]);
   });
 
-  // Drawn wrong once each: a child of 2.5 heads, or of 2, in place of 2.2, and one at 0.75 of the height.
   test('tells a child drawn at the wrong heads or the wrong share from the one asked', () => {
     const at = (child: { height: number; heads: number }) =>
       sized([{ height: 1, heads: CANON_HEADS }, child]);

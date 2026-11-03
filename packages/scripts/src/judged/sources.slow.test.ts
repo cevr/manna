@@ -101,18 +101,18 @@ const withFs = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(Effect.scoped, Effect.provide(BunServices.layer));
 
 const A = [
-  '// One run of line comments,', // 1
-  '// read as one block.', // 2
-  'const a = 1;', // 3
-  '', // 4
-  '/**', // 5
-  ' * A JSDoc block,', // 6
-  ' * its stars gone.', // 7
-  ' */', // 8
-  'const b = 2;', // 9
-  '', // 10
-  '// Untouched.', // 11
-  'const c = 3;', // 12
+  '// One run of line comments,',
+  '// read as one block.',
+  'const a = 1;',
+  '',
+  '/**',
+  ' * A JSDoc block,',
+  ' * its stars gone.',
+  ' */',
+  'const b = 2;',
+  '',
+  '// Untouched.',
+  'const c = 3;',
 ];
 
 describe("the repo's items", () => {
@@ -277,8 +277,6 @@ describe("the repo's items", () => {
           expect(first.items).toEqual([
             { selector: 'comments', file: 'src/a.ts', line: 1, text: 'One.' },
           ]);
-          // The memo says the item stands on line 7: a read that parsed the
-          // file again would say line 1.
           const memo = yield* fs.readFileString(memoOf(dir));
           yield* fs.writeFileString(memoOf(dir), memo.replace('"line":1', '"line":7'));
           const again = yield* treeOf(dir, [], ['comments']);
@@ -312,7 +310,6 @@ describe("the repo's items", () => {
           ]);
           const memo = yield* fs.readFileString(memoOf(dir));
           expect([memo.includes('"src/a.ts"'), memo.includes('"src/b.ts"')]).toEqual([true, false]);
-          // The memo's line, past what the file says, is read only in the form it was made.
           yield* fs.writeFileString(memoOf(dir), memo.replace('"line":1', '"line":7'));
           const reworded = rulesOf(['comments']).map((rule) => ({
             ...rule,

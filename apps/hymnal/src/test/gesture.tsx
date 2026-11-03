@@ -159,7 +159,6 @@ export const drag = (
   { x = 0, y = 0, dx, dy }: { x?: number; y?: number; dx: number; dy: number },
 ): Option.Option<string> => {
   const start = gestureOf(testID);
-  // Each gesture around it as its detector last drew it, so its callbacks are the latest.
   const around = start.within.map(
     (gesture) =>
       (gesture.testID !== undefined && gestureOf(gesture.testID)) || {
@@ -169,7 +168,6 @@ export const drag = (
   );
   const touched = [start, ...around].filter((gesture) => gesture.pan && gesture.enabled !== false);
   for (const pan of touched) pan.onBegin?.({ x, y });
-  // The drag is played a point at a time along its longer side.
   const steps = Math.max(Math.ceil(Math.max(Math.abs(dx), Math.abs(dy))), 1);
   const failed = new Set<PanConfig>();
   let winner: PanConfig | undefined;

@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/toast/useToastManager.ts (types),
-// packages/react/src/toast/createToastManager.ts (types)
-//
-// The shapes a toast takes: what a caller passes to `add`, and the toast
-// object the store keeps and the parts render.
 import type { JSX } from '@solidjs/web';
 
 export interface ToastObject<Data extends object = object> {

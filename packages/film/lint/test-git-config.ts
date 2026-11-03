@@ -1,22 +1,3 @@
-// `film/test-git-config`: a test file writes no git config of its own. A
-// test repository's git runs with `TEST_GIT` (packages/scripts/src/testing.ts)
-// ahead of its arguments, which keeps the machine's name, mail, signing,
-// hooks and editor out and turns git's automatic maintenance off: git starts
-// it detached after a commit, and it writes and removes
-// `.git/objects/maintenance.lock` while the test's scope deletes the folder,
-// so the delete fails (ENOENT, in 11 runs of 15 on one process) and the case
-// with it. A config copied into one file leaves that out.
-//
-// It reports a `'-c'` element of git's arguments followed by a `key=value`
-// string, git's form of one setting on its command line. An array is git's
-// arguments when it starts at a `'git'` element, when a call is handed it
-// beside a `'git'` argument or by a name that says git (`git(dir, [...])`),
-// or when a name that says git holds it (`const GIT = [...]`); an array
-// held by any other name is git's when git's arguments spread it
-// (`const AS_TEST = [...]`, then `git(dir, [...AS_TEST, 'commit'])`).
-// Another program's `-c` (`tar -c`) is its own. The config turns it on over every
-// test file.
-
 import { Array as Arr, Effect, Option, Predicate } from 'effect';
 import {
   Diagnostic,

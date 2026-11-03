@@ -1,8 +1,3 @@
-// A render's profile and two sides' distance, on sounds whose answer is known:
-// a tone's power in its own band, rumble below 30 Hz, a copy at no distance,
-// a low-pass that moves the high bands down, a delay that moves only the hit;
-// and the hit's move as each sync hears it, on profiles written by hand.
-
 import { describe, expect, test } from 'bun:test';
 import type { Pcm } from '../audio.ts';
 import { rng } from '../random.ts';
@@ -45,7 +40,6 @@ const band = (profile: Profile, k: number) => profile.bands[k] ?? 0;
 
 describe('profileOf', () => {
   test("a tone's power is in its own band, and none of it is rumble", () => {
-    // Faded in and out over 10 ms, so neither end clicks: a hard edge is heard in every band.
     const fade = 0.01 * RATE;
     const plane = sine(1000, 1);
     const tone = profileOf(
@@ -79,8 +73,6 @@ describe('profileOf', () => {
   });
 
   test('a click weighs alike in the bands at the very start, in the middle and at the very end', () => {
-    // A 3 ms click of 4 kHz over a soft 100 Hz hum, 0.3 s long: the click's
-    // band (4 kHz is band 21) holds the same share wherever it lands.
     const share = (at: number) => {
       const plane = sine(100, 0.3).map((v) => v * 0.2);
       const click = sine(4000, 0.003);
@@ -94,12 +86,10 @@ describe('profileOf', () => {
   });
 
   test('a bed is read as the mix loops it: a loop that joins its head has no edge to hear', () => {
-    // A thousand whole cycles of 1 kHz in a second: looped, it never ends.
     const loop = sine(1000, 1);
     const bed = profileOf(pcmOf(loop), 'bed');
     expect(bed.rumble).toBeLessThan(1e-9);
     expect(bed.bands.filter((share, k) => k !== 15).reduce((a, b) => a + b, 0)).toBeLessThan(1e-6);
-    // Heard once, its hard ends click in every band.
     expect(profileOf(pcmOf(loop), 'one-shot').rumble).toBeGreaterThan(1e-7);
   });
 
@@ -145,7 +135,6 @@ describe('distance', () => {
       profileOf(pcmOf(lowPassed(hiss, 500)), 'one-shot'),
     );
     const moved = (name: string) => away.bands.find((row) => row.band === name)?.moved ?? 0;
-    // Shares: the power the filter takes off the top is a larger share left at the bottom.
     expect(moved('8 kHz') - moved('100 Hz')).toBeLessThan(-20);
     expect(Math.abs(moved('63 Hz') - moved('100 Hz'))).toBeLessThan(1);
     expect(moved('100 Hz')).toBeGreaterThan(0);
@@ -178,7 +167,6 @@ describe('hitMove', () => {
   });
 
   test('synced to its onset, the hit moves only as far as it moved from the onset', () => {
-    // The takes are heard 50, 70 and 250 ms past their onsets; the seeds 80, 60 and 50 ms.
     const moved = hitMove('onset', takes, [at(0.2, 0.28), at(0.21, 0.27), at(0.15, 0.2)]);
     expect([moved.median, moved.worst].map((s) => Math.round(s * 1000))).toEqual([-10, -20]);
   });

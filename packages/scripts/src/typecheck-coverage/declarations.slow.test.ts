@@ -1,13 +1,3 @@
-// The check's copy of TypeScript's rule against TypeScript's own, over
-// generated names, each judged as written: a `files` entry keeps its spelling,
-// so tsc judges the name the test wrote. TypeScript's answer is read from its
-// program: with `skipLibCheck` on, tsc reports a file's type error only when
-// the file is not a declaration file, so each file carries one and the silent
-// ones are TypeScript's declaration files. The routes where tsc spells a file
-// otherwise than the disk are check.slow.test.ts's census, generated over the
-// rule's two edges (the root, `node_modules`), each way tsc crosses one, and
-// each spelling a disk folds.
-
 import { describe, expect, it } from 'bun:test';
 import { BunServices } from '@effect/platform-bun';
 import { Effect, FileSystem, Option, Schema, Stream } from 'effect';
@@ -43,8 +33,6 @@ const middles = [
   '.d.x.y',
   '..d',
 ];
-// Lower case only: a case-sensitive tsc refuses `a.TS` as an unsupported
-// extension, so it never reaches the rule. The middles keep the rule's case.
 const extensions = ['.ts', '.tsx', '.mts', '.cts'];
 
 const pick = <A>(next: () => number, from: ReadonlyArray<A>): A =>
@@ -94,8 +82,6 @@ const typescriptDeclarations = (names: ReadonlyArray<string>) =>
     const fs = yield* FileSystem.FileSystem;
     const spawner = yield* ChildProcessSpawner;
     const root = yield* fs.makeTempDirectoryScoped();
-    // One directory a name, so names that differ in case never meet on a
-    // case-insensitive disk.
     const files = names.map((name, index) => `f${String(index)}/${name}`);
     for (const file of files) {
       yield* fs.makeDirectory(`${root}/${file.slice(0, file.lastIndexOf('/'))}`, {

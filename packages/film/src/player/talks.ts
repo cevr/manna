@@ -1,11 +1,3 @@
-// A talk as its page loads it. The page reads what the tools read: the
-// talk's edit (its `talk.ts`, imported as the films index imports a film),
-// the footage library's lock and the transcripts it names (through the
-// footage route, `FOOTAGE_LOCK_HREF` and `transcriptHref`), and builds the
-// takes with the one derivation the tools use (`talkTakes`), so the picture
-// it cuts and the sound the tools mix play the same pieces. A file it cannot
-// fetch or read, or a take that is not ready, is an error naming it.
-
 import { Effect, type Layer, Record as Rec, Schema } from 'effect';
 import { FetchHttpClient, HttpClient } from 'effect/http';
 import type { Film } from '../canvas/film.ts';

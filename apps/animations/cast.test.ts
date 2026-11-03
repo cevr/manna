@@ -1,12 +1,3 @@
-// Every file a film's board can send as a cast member's library reference
-// travels with the repository: a board run reads it in any checkout, so none
-// may be left untracked, as `.gitignore` would keep it (a fresh checkout's
-// `film board` would refuse with `CastReferenceMissing`). A record that keeps
-// a sheet sends its kept sheets or its own views of them (`kept/`, `views/`);
-// a record that keeps none sends its own references (`castLock`). Every record
-// is held, the library's and each film's own roles, whether a beat names the
-// member yet or not.
-
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Boolean as Bool, Effect, FileSystem, Layer, Path, Schema, Stream } from 'effect';

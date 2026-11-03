@@ -47,7 +47,6 @@ describe('UrlState', () => {
       const committed = yield* nextEntries(1);
       yield* UrlState.update(Lab, (value) => ({ ...value, query: { ...value.query, knob: 'k' } }));
       yield* UrlState.update(Lab, (value) => ({ ...value, query: { ...value.query, cue: 'c' } }));
-      // Both writes read the URL as the first left it.
       expect(yield* UrlState.get(Lab)).toEqual(
         Option.some({
           path: { film: 'f', scene: 's' },
@@ -110,7 +109,6 @@ describe('UrlState', () => {
       yield* seek(2);
       yield* Effect.yieldNow;
       yield* seek(3);
-      // The URL as the program sees it moves at once; the entry waits.
       expect(Option.map(yield* UrlState.get(Lab), (value) => value.hash.t)).toEqual(Option.some(3));
       yield* TestClock.adjust('250 millis');
       expect(yield* Fiber.join(committed)).toEqual([
@@ -222,8 +220,6 @@ describe('UrlState', () => {
   it.effect('a write made while a flush commits is committed too', () =>
     Effect.gen(function* () {
       const location = yield* Location;
-      // An entry subscriber that answers the flush's own push with a write,
-      // as the push lands.
       yield* location.changes.pipe(
         Stream.filter((entry) => entry.navigation === 'push'),
         Stream.take(1),

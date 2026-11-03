@@ -50,15 +50,12 @@ const pairs: ReadonlyArray<readonly [text: keyof Roles, on: keyof Roles]> = [
   ['muted', 'soft'],
   ['onAccent', 'accent'],
   ['onPressed', 'pressed'],
-  // The open dials' panel: its labels and keys in muted, its current stop in chord, the Reset pill's ink on the pill.
   ['ink', 'panel'],
   ['muted', 'panel'],
   ['accent', 'panel'],
   ['chord', 'panel'],
   ['onPill', 'pill'],
-  // A checked chip: its words in onChosen on the chosen mark.
   ['onChosen', 'chosen'],
-  // The docked bar: its title in ink, its marks in muted and accent.
   ['ink', 'bar'],
   ['muted', 'bar'],
   ['accent', 'bar'],
@@ -136,8 +133,6 @@ const fills = [
 test('text on any fill, as onColor picks it, meets WCAG AA', () => {
   const under = fills.filter((fill) => contrast(onColor(fill), fill) < 4.5);
   expect(under).toEqual([]);
-  // The night where it reaches AA (on the wheat), else white (on the deepened
-  // wheat), else black (on a mid teal, where neither does).
   expect([onColor(PALETTE.wheat), onColor(PALETTE.accent), onColor('#099197')]).toEqual([
     PALETTE.night,
     '#ffffff',
@@ -148,7 +143,6 @@ test('text on any fill, as onColor picks it, meets WCAG AA', () => {
 test('the contrast ratio is WCAG 2’s', () => {
   expect(contrast('#000000', '#ffffff')).toBeCloseTo(21, 5);
   expect(contrast('#777777', '#ffffff')).toBeCloseTo(4.48, 2);
-  // A colour whose channels differ: the night on the paper.
   expect(contrast('#12354e', '#fff9e0')).toBeCloseTo(12.08, 2);
 });
 

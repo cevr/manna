@@ -1,7 +1,3 @@
-// Hand-drawn ink. Every line is a filled, variable-width polygon whose points
-// wobble with noise keyed to `boil` — a counter that ticks at 12 fps, so lines
-// "boil" like hand-inked animation on twos while motion stays smooth at 30 fps.
-
 import { type Vec2, vec2 } from 'math';
 import { probeOf, recordInk } from './probe.ts';
 import { hash2, noise1 } from '../core/random.ts';
@@ -9,8 +5,6 @@ import { clamp, frameAtOrBefore, lerp } from '../core/time.ts';
 
 export type Pt = readonly [number, number];
 export type Path = ReadonlyArray<Pt>;
-
-// ─── path builders ───────────────────────────────────────────────────────────
 
 /** Evenly spaced points along a polyline. */
 export const resample = (path: Path, spacing = 4): Pt[] => {
@@ -33,7 +27,6 @@ export const resample = (path: Path, spacing = 4): Pt[] => {
   }
   const last = path[path.length - 1];
   if (last === undefined) return out;
-  // A path a whole number of spacings long put its last point there already.
   if (carry < ON_END) out[out.length - 1] = last;
   else out.push(last);
   return out;
@@ -190,8 +183,6 @@ export const blob = (x: number, y: number, w: number, h: number, seed: number): 
     true,
   );
 
-// ─── wobble ──────────────────────────────────────────────────────────────────
-
 /** Scratch for the unit normal at each point, written and read within one step. */
 const normal: Vec2 = [0, 0];
 
@@ -298,8 +289,6 @@ const wobble = (
   return out;
 };
 
-// ─── stroke ──────────────────────────────────────────────────────────────────
-
 /**
  * A stroke's normal wobble, in its own px, unless its style sets `jitter`:
  * each point sits up to this far off the path, so between two boil ticks it
@@ -350,7 +339,6 @@ export const stroke = (
   const progress = style.progress ?? 1;
   if (progress <= 0 || path.length < 2) return;
   const base = resample(path, Math.max(2, style.width * 0.6));
-  // A ring only once it is drawn whole: while it draws on, it has a tip.
   const ring = style.closed === true && progress >= 1;
   const pts = wobble(
     base,
@@ -377,9 +365,6 @@ export const stroke = (
     normalAt(drawn, i, ring);
     const nx = normal[0];
     const ny = normal[1];
-    // Taper the tail against the full stroke, and the head against what has
-    // been drawn so far — a growing stroke always has a pointed brush tip.
-    // A ring has no ends to taper.
     const tail = ring ? 1 : taperCurve(s / (total * taper || 1));
     const head = ring ? 1 : taperCurve((drawnLen - s) / (total * taper || 1));
     const swell = 1 + pressure * alongNoise(s, drawnLen, 0.01, 0, hand.seed + 11, ring);

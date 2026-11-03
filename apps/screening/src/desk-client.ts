@@ -219,7 +219,6 @@ export const deskClient = Effect.fn('desk.client')(function* (
           HttpClientRequest.bodyText(encodeParts({ parts: written }), 'application/json'),
         ),
       );
-    // A write that fails or is interrupted part way is aborted, so its parts do not stay in the bucket.
     const abort = send(
       'abort',
       each.key,
@@ -273,9 +272,7 @@ export const publishTo = Effect.fn('desk.publish')(function* (
   );
   for (const text of plan.texts)
     if (text.key !== PAGE_KEYS.index) yield* desk.write(text.key, text.text);
-  // Another film's publish may have written its manifest since this one read them, so the index is drawn from the manifests as they are now, this film's new one among them.
   yield* desk.write(PAGE_KEYS.index, indexPage(yield* desk.manifests));
-  // The version's folder keeps its page, the files the new version names and those of the version it replaced (a viewer may be playing it); any other is older.
   const folder = `${material.film}/${material.version}/`;
   const kept = new Set([
     ...plan.uploads.map((each) => each.key),

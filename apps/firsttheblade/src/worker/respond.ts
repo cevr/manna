@@ -153,7 +153,6 @@ const answer = Effect.fn('Site.answer')(function* (request: HttpServerRequest.Ht
  */
 export const respond = (request: HttpServerRequest.HttpServerRequest) =>
   answer(request).pipe(
-    // The log line names the defect's class, never its message, which may hold a path or a query.
     Effect.catchDefect((defect) =>
       Effect.logError(
         `[site] defect status=500 kind=${Option.match(Option.liftPredicate(defect, Predicate.isError), { onNone: () => 'thrown', onSome: (error) => error.name })}`,

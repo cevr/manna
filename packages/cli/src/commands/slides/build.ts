@@ -65,9 +65,6 @@ const keynoteBuildScript = (
     )
     .join(', ¬\n\t\t');
 
-  // When !open, close the just-saved deck by basename after the build so we
-  // don't leave it open. (The Untitled sweep can't catch it — Keynote renames
-  // the doc in place on save-as.)
   let closeNamed = `\tclose (every document whose name is ${asText(basename(outPath))}) saving no\n`;
   if (args.open) closeNamed = '';
 

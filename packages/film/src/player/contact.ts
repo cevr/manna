@@ -1,6 +1,3 @@
-// The contact sheet: frames of the film tiled six across, 480 px wide and
-// 4 px apart on black, composed in the page (`film render --contact`).
-
 /** Tiles across. */
 const COLS = 6;
 /** A tile's width; its height keeps the frame's shape. */

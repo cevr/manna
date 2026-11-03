@@ -1,36 +1,3 @@
-// `film sfx`: the app's sound library from the command line. Every command
-// but `make` is free: `list`, `plan` and `check` read the library and
-// its lock; `describe` records each variant's onset and hit from its file;
-// `audition` and `render` write WAVs under `<FILMS_OUT>/sounds` (`--trial`,
-// a sound's code trial: its code version, heard beside its takes; `render
-// --sheet`, each WAV's sheet beside it as a PNG, read in place of
-// listening); `compare` prints a code trial's numbers beside what plays,
-// each render's and each side's median, how far apart they stand, and how
-// far each film's placement would hear the hit move; `audit` reads which
-// generated sounds code can make, from their prompts; `fit` writes a
-// recording's code trial from earshot's model of it (core/synth/fit); `ab`
-// writes a sound's clips for an ask; `keep`, `reject` and `import` curate
-// the lock; `pull` and `push` sync the private `files/` (and the films'
-// scores) with the store; `push --from` sends from an older folder store too (the move to
-// R2). `make` is the one paid command: it prints its plan and cost, and
-// spends only with `--yes`, under `--cap` counting what `--tally` already
-// records.
-//
-//   film sfx list [family] [--missing | --stale]
-//   film sfx plan [name…] [--force]
-//   film sfx make [name…] [--force] [--yes] [--cap n] [--tally file]
-//   film sfx try <name> [--prompt p] [--secs s] [--influence i] [--count n] [--yes] [--cap n] [--tally file]
-//   film sfx audition <name> [--candidates | --trial]
-//   film sfx keep <name> <n…> [--replace]
-//   film sfx unkeep <name> <n…>    film sfx reject <name> <n…>
-//   film sfx import <file> <name>
-//   film sfx render <name> [--seed n] [--trial] [--sheet]
-//   film sfx compare <name>        film sfx audit
-//   film sfx fit <name> [--size small|full] [--from model.json]
-//   film sfx ab <name> --out <dir>
-//   film sfx check [--json]      film sfx describe
-//   film sfx pull                  film sfx push [--from folder]
-
 import { Array as Arr, Console, Effect, Option, Schema } from 'effect';
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';

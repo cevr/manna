@@ -1,30 +1,3 @@
-// Follow: the one rule by which a view's scroll box keeps what the frame
-// lights in sight, as the words reader keeps the beat at the playhead
-// (`words/reader.tsx`). The page's clock is the view's to give
-// (`FollowClock`). Whether the view places its box is one `Following` the
-// view makes, and its Follow button (`follow-button.tsx`) shows while a
-// reader has the box.
-// The view names a target as a key that only changes when the target does
-// (so a frame that moves nothing reads no layout), and a span of rows for it.
-// When the key changes, or the box or its content is resized, and the span is
-// not inside the box (its edges kept clear by `clear`), one instant scroll
-// brings its first row a third of the way down, its last in sight if it fits.
-// A scroll is the view's when it lands where the view put the box, and
-// layout's when it lands where the box's geometry now clamps that; any other
-// scroll is a reader's, however it came (wheel, finger and its momentum,
-// keys, the scrollbar, find-in-page, assistive tech), and the view's
-// `Following` is suspended until it is taken back. A placement asks the same
-// before it scrolls, so a reader's scroll whose event is still on its way is
-// not undone, and so may the view before it moves on the page's word. Play
-// takes the view back.
-// What a press opens under the rows (the Script's box under a line) is named
-// as a key too (`opened`), and brought into sight as it opens, by the least
-// scroll, whoever holds the box: the press was the reader's own. Layout that
-// moves it while it is open brings it back, until a reader scrolls the box.
-// While the film stands still it holds the box; opened while the film plays,
-// it takes the box from the view as a reader's scroll does (`suspend` told),
-// so the frame moving on never scrolls it away.
-
 import { Option } from 'effect';
 import { placeTo, revealTo } from './follow-rule.ts';
 import { type Accessor, createEffect, createSignal, untrack } from 'solid-js';
@@ -104,16 +77,9 @@ const extentOf = (box: HTMLElement, span: Span) => {
  * (`following.suspend` told if so): what anything that would move the view on the page's word (a settle on a line) asks first.
  */
 export const useFollow = (options: FollowOptions, clock: FollowClock): (() => boolean) => {
-  // Whether the film plays, as the effects below ask it once they run: an answer, never a read they track.
   const playingNow = () => untrack(clock.playing);
-  // Where the view last authored the box: the scroll it wrote, read back (so clamping and rounding are in it), or
-  // the clamp layout made of it. A reader's scroll is measured from here, so steps too small to tell one by one add up.
   let anchor = 0;
-  // Each resize of the box or its content: the view measures its target again.
   const [laidOut, setLaidOut] = createSignal(0);
-  // Whether the box stands where a reader put it: off the anchor, and off the clamp layout made of it (that clamp
-  // becomes the anchor). Asked by each scroll event and before each placement, since a busy page may deliver a
-  // reader's scroll event only after the view has measured again.
   const readerMoved = (box: HTMLElement): boolean => {
     const at = box.scrollTop;
     if (Math.abs(at - anchor) <= SLACK) return false;
@@ -123,19 +89,16 @@ export const useFollow = (options: FollowOptions, clock: FollowClock): (() => bo
     return false;
   };
 
-  // Play takes the view back.
   let wasPlaying = false;
   createEffect(
     () => clock.drawn(),
     () => {
       const playing = playingNow();
-      // The view's answer is a reaction to the press, not a read this effect tracks.
       if (playing && !wasPlaying) untrack(options.following.resume);
       wasPlaying = playing;
     },
   );
 
-  // Once, after mount: the box and its content are found from the refs the view's markup set.
   createEffect(
     () => true,
     () =>
@@ -165,15 +128,8 @@ export const useFollow = (options: FollowOptions, clock: FollowClock): (() => bo
       () => '',
     );
 
-  // Whether a press that opened something while the film played has the box, until the view is taken back.
-  // `suspend` is told too, but its word reaches `following.on` only as the flush that carries it ends: a placement in
-  // that flush asks here, so it never scrolls over what the press opened, whichever effect the scheduler runs first.
   let heldByPress = false;
 
-  // One effect places the box, and first takes it back when placing turns on (Follow, Play, a line held again): the
-  // box where it stands is the view's from then. In one effect, the take-back comes before the placement's own check
-  // for a reader's scroll by the code's order, not by the scheduler's.
-  // Placing as the view mounts is where it starts, not a take-back: what a link opened holds the box from the first frame.
   let wasPlacing = untrack(options.following.on);
   createEffect(
     () => [options.target(), laidOut(), options.following.on()] as const,
@@ -187,20 +143,15 @@ export const useFollow = (options: FollowOptions, clock: FollowClock): (() => bo
         });
       }
       if (!on || heldByPress || key === '') return;
-      // What a press opened holds the box while the film stands still: neither the press's own seek nor the resize its
-      // opening made places the frame's row over it. Play, or the view taken back, places it.
       if (!takenBack && untrack(opened) !== '' && !playingNow()) return;
       Option.map(
         Option.flatMap(options.box(), (box) =>
           Option.map(options.span(key), (span) => ({ box, span })),
         ),
         ({ box, span }) => {
-          // A row with no box (its lane folded away in this mode) has no place to scroll to.
           if (span.first.getClientRects().length === 0) return;
-          // A reader's scroll not heard yet is the reader's all the same: the view lets go rather than undo it.
           if (readerMoved(box)) return options.following.suspend();
           Option.map(placeTo(box, extentOf(box, span), options.clear(box)), (to) => {
-            // Instant, so the move is one scroll that lands on the anchor, never a smooth run of them.
             box.scrollTo({ top: to, behavior: 'instant' });
             anchor = box.scrollTop;
           });
@@ -209,13 +160,6 @@ export const useFollow = (options: FollowOptions, clock: FollowClock): (() => bo
     },
   );
 
-  // What a press opened comes into sight as it opens, by the least scroll: the box it opened (the span's last row)
-  // and the first row it is about with it when both fit between the clear edges; else the box alone, its top never
-  // pushed above the clear top. Placing or not: the press was the reader's, and while the film plays it takes the box
-  // from the view, so the frame's next row is never placed over it. A resize while it stays open (the page still
-  // settling, the box growing as it is typed in) brings it into sight again, while the film stands still and no
-  // reader has scrolled the box since. The scroll is the view's, so it is never taken for a reader's; a reader's not
-  // heard yet is told first.
   let revealed = '';
   createEffect(
     () => [opened(), laidOut()] as const,
@@ -235,7 +179,6 @@ export const useFollow = (options: FollowOptions, clock: FollowClock): (() => bo
           if (span.first.getClientRects().length === 0) return;
           if (readerMoved(box)) {
             options.following.suspend();
-            // Since it opened, the box is the reader's: only a press brings what it opens into sight over that.
             if (!fresh) return;
           }
           const to = revealTo(
@@ -245,7 +188,6 @@ export const useFollow = (options: FollowOptions, clock: FollowClock): (() => bo
             options.clear(box),
           );
           if (Math.abs(to - box.scrollTop) > SLACK) box.scrollTo({ top: to, behavior: 'instant' });
-          // Where it stands now is the view's, scrolled or let be: a resize measures from here.
           anchor = box.scrollTop;
         },
       );

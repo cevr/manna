@@ -1,18 +1,3 @@
-// The legs of `film check`, each an Effect over the services it needs, so
-// what a leg may cost is in its type. The static leg reads the film's files
-// and the master's length and stamp (FileSystem, Media), and measures the
-// derived sounds the film places (SoundRender): the lab runs it after every
-// write. The sound leg renders the mix the film makes now (Mixer). The
-// layout leg draws frames (Checker, Looker). The draw leg draws every scene
-// in this process, into the stand-in context, at its moments (no browser).
-// The cast leg asks the cast library for each member the script's beats name.
-// The short leg checks one short (Checker). A talk is a vertical film of its
-// own: what its words tell (`talkWords`: its length against its format's,
-// its first word, its loop's silence) goes with the static leg, and the
-// layout leg probes its page for text past every platform's zone and a still
-// open. Each hands back its findings; `report` levels and addresses them as
-// one Report.
-
 import {
   Array as Arr,
   Effect,

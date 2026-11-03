@@ -80,7 +80,6 @@ describe('the ear’s audio session', () => {
       ),
     );
     expect(named).toEqual([]);
-    // Its one tap is on the input node.
     expect(swift.split('installTap(').length).toBe(2);
     expect(swift).toContain('input.installTap(onBus: 0');
     expect(swift).toContain('let input = engine.inputNode');
@@ -100,14 +99,10 @@ describe('the ear’s audio session', () => {
   });
 
   it('gives the session back in the category, mode and options it found, unless another owner took it', () => {
-    // One's resume() only calls the player's play(): a paused hymn sounds again only when the
-    // tuner puts back the category it found, since `.record` silences playback.
     const start = swift.slice(swift.indexOf('func start()'), swift.indexOf('func stop()'));
     const saved = start.indexOf('before = Before(of: session)');
     expect(saved).toBeGreaterThan(-1);
     expect(start.indexOf('setCategory(.record, mode: .measurement)')).toBeGreaterThan(saved);
-    // Each failure after the save (the session, the input, the engine) gives it back too: the
-    // branch that logs the failure, from its opening brace, releases.
     for (const status of ['session', 'input', 'engine']) {
       const logged = start.indexOf(`listen.failed status=${status}`);
       expect(logged).toBeGreaterThan(saved);
@@ -129,8 +124,6 @@ describe('the ear’s audio session', () => {
     expect(owned).toBeGreaterThan(-1);
     expect(deactivated).toBeGreaterThan(owned);
     expect(restored).toBeGreaterThan(deactivated);
-    // The restore runs whether or not the deactivation threw: the deactivation's `catch` closes
-    // before it, so it never sits inside that catch.
     const caught = release.indexOf('} catch {', deactivated);
     expect(caught).toBeGreaterThan(deactivated);
     expect(closesBefore(release.slice(caught + '} catch {'.length, restored))).toBe(true);
@@ -152,7 +145,6 @@ describe('the Swift module’s declaration', () => {
         source: string,
       ) => { readonly declaration: string };
     };
-    // Pre-commit's oxfmt ends each member with a semicolon that One's typegen leaves out.
     const unformatted = (text: string) => text.replaceAll(/;$/gm, '');
     const written = readFileSync(join(app, 'native', 'tuner', 'Listen.d.swift.ts'), 'utf8');
     expect(unformatted(written)).toContain(

@@ -1,12 +1,3 @@
-/**
- * What changed between two versions of a paragraph, word by word.
- *
- * The sync's report shows an edited paragraph as one text with the removed
- * words struck and the added ones marked, rather than as two whole
- * paragraphs a reader has to compare by eye. A paragraph is a few hundred
- * words at most, so the longest common subsequence over its words is cheap.
- */
-
 /** A run of words the two versions share, or that only one of them has. */
 export interface DiffSegment {
   readonly kind: 'same' | 'removed' | 'added';

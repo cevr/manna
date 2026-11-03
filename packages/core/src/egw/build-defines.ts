@@ -26,10 +26,6 @@ declare global {
   var __EGW_USER_AGENT__: string;
 }
 
-// Vite's `define` substitutes empty strings for keys that aren't in `.env`
-// (we `JSON.stringify(env[key] ?? '')` in vite.config.ts). Treat empty as
-// absent so `Option.orElse` fallbacks actually fire — a bare `""` was
-// silently sending OAuth requests to the dev-server origin and 404-ing.
 const nonEmpty = (value: string): Option.Option<string> => {
   if (value === '') return Option.none();
   return Option.some(value);
@@ -38,10 +34,6 @@ const nonEmpty = (value: string): Option.Option<string> => {
 const baked = (value: string): Option.Option<string> =>
   Option.fromNullishOr(value).pipe(Option.flatMap(nonEmpty));
 
-// Safe `process.env` lookup. `process` is not defined in the renderer; the
-// `globalThis.process` property read yields `undefined` there instead of the
-// ReferenceError a bare `process.env[...]` read would throw. Use this
-// anywhere the node-side fallback is wanted.
 export const envVar = (key: string): Option.Option<string> =>
   Option.fromNullishOr(globalThis.process).pipe(
     Option.flatMap((proc) => Option.fromNullishOr(proc.env[key])),

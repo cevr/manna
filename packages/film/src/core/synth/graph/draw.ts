@@ -1,9 +1,3 @@
-// The sound graph's draws. Every random number a render takes comes from a
-// stream named for where it is taken: a node's seed is the render's seed and
-// its place (or its `stream` name), and each of its fields draws from its own
-// stream of that seed. So an edit to one node or one field leaves every other
-// draw as it was, and a longer noise keeps its first samples.
-
 import { fnv1a, hash2, rng } from '../../random.ts';
 import { exp, log } from './math.ts';
 import { type Pick, type Value, isPick, isVary } from './nodes.ts';

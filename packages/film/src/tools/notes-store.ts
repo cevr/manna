@@ -1,11 +1,3 @@
-// The lab's notes, on disk: `lab/<film>/notes.json` and the stills in
-// `lab/<film>/stills/`. The file is the source of truth; the lab server and
-// `film lab` both read and write it through this store, so either works
-// without the other. Every change is one `ContentStore.transact`: written
-// whole, one writer at a time across processes (the manifest's lock,
-// `ManifestLock`), its still written under the same lock, so a note saved
-// in the lab and a reply sent from the CLI at the same moment both land.
-
 import {
   Array as Arr,
   Config,
@@ -145,7 +137,6 @@ export class NotesStore extends Context.Service<NotesStore, NotesStoreService>()
           Effect.gen(function* () {
             const next = addNote(current, draft, yield* now);
             const made = yield* Effect.fromOption(Arr.last(next.notes)).pipe(Effect.orDie);
-            // The still first: a note never names a frame that is not on disk.
             yield* store.writeFile(path.join(at.stills, made.still), still);
             return [made, next] as const;
           }),
@@ -163,7 +154,6 @@ export class NotesStore extends Context.Service<NotesStore, NotesStoreService>()
         const note = yield* store.transact(at.notes, (current) =>
           Effect.gen(function* () {
             yield* find(film, current, id);
-            // The reply's number is the next change: its still is named for it.
             const name = replyStill(id, current.seq + 1);
             yield* Effect.forEach(Option.toArray(input.still), (bytes) =>
               store.writeFile(path.join(at.stills, name), bytes),

@@ -1,13 +1,3 @@
-// The villager child's skeletons, one a cut view (`core/puppet.ts`), read in
-// view pixels and moved into its part sheet's frame (`frames.ts`) by the
-// shared skeleton (`library/cutout/skeleton.ts`): his lean from his hip to the
-// base of his neck, his neck and head above it, and each arm's shoulder, elbow
-// and wrist on the joints his cut records (`joints.ts`), the wrist at the cuff
-// and its tip at his circle hand's middle. His kept pose writing on a board
-// (poses-5) is cut as drawn, its skeleton written out: his hanging right arm's
-// flap runs as `front` does, from its inner crease to the sheet's left edge;
-// his raised left arm's flap covers the sleeve and hand. Pure data.
-
 import type { Skeleton } from '@manna/film/core';
 import { type Body, armLimbs, framed } from '../../../cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';

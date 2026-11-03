@@ -55,15 +55,6 @@ import {
   WikiWritingsHit,
 } from './model.js';
 
-// ---------------------------------------------------------------------------
-// Composer constants (§6.1)
-//
-// "Caps and ordering live in core as composer constants, so every client caps
-// identically." They are values here rather than call-site literals for
-// exactly that reason: a client cannot pass its own cap, and a test asserts the
-// constant rather than a number it copied.
-// ---------------------------------------------------------------------------
-
 /** The §6.1 cap per section. Section 6's row is uncapped — §6.2 records why it
  *  needs no cap: graph degree stays small because the long tail is a search
  *  handoff rather than a section — so its cap is `Option.none()` rather than a
@@ -133,14 +124,6 @@ interface CappedItems<A> {
   readonly items: readonly A[];
   readonly total: number;
 }
-
-// §5's arrival rule is no longer a function here: `WikiKeyVersesSection` types
-// `defaultOpen` as `true` and the other five type it as `false`, so the rule is
-// enforced by the constructor rather than by a helper a caller could bypass.
-
-// ---------------------------------------------------------------------------
-// Inputs
-// ---------------------------------------------------------------------------
 
 /** Everything the composer reads, as the four service interfaces that already
  *  own those tables. Interfaces rather than `Context.Service` tags so the
@@ -241,12 +224,7 @@ export class WikiSectionSources extends Context.Service<WikiSectionSources, Sect
       Layer.catchCause((cause) =>
         Layer.unwrap(
           Effect.gen(function* () {
-            // Re-raised unchanged, defect and interrupt alike: this combinator
-            // narrows what degrades, it does not reclassify what does not.
             if (!isCorpusUnavailable(cause)) return yield* Effect.failCause(cause);
-            // Logged on the way down. The reader sees `sections-not-wired` and
-            // has no way to ask *why*; the operator needs the driver's own
-            // message, and this is the only place that still holds it.
             yield* Effect.logWarning('wiki.sectionSources.degraded-to-not-wired').pipe(
               Effect.annotateLogs({ cause: Cause.pretty(cause) }),
             );
@@ -319,10 +297,6 @@ export interface ComposeInput {
    *  a catalog page has no core to read edges out of. */
   readonly backlinksTo: (slug: TopicSlug) => Effect.Effect<readonly TopicEdge[]>;
 }
-
-// ---------------------------------------------------------------------------
-// Section 1 — key verses (catalog `topic_references`, OSIS-normalized, cap 8)
-// ---------------------------------------------------------------------------
 
 const OSIS_VERSE = /^(\w+)\.(\d+)\.(\d+)$/;
 
@@ -466,21 +440,12 @@ const keyVerses = (
           }
         }
       }
-      // A warning rather than a failure or a silence. The composer runs at view
-      // time, so a bad catalog token must not take the page down — but it must
-      // also not disappear, which is how a reversed range in `topic_references`
-      // could quietly shrink section 1 on one page and nowhere else. The token
-      // and the slug together are enough to find the row.
       return Effect.forEach(rejected, (entry) =>
         Effect.logWarning('wiki.keyVerses.rejected-osis-token').pipe(
           Effect.annotateLogs({ slug, token: entry.token, reason: entry.reason }),
         ),
       ).pipe(Effect.as(passages));
     }),
-    // A page whose catalog overlay cannot be read is a page with no key verses,
-    // not a failed page. The overlay is one of five sources; letting it fail the
-    // whole compose would make an unreadable catalog row indistinguishable from
-    // a broken artifact, and §3.5's posture is that the page still renders.
     Effect.orElseSucceed((): readonly WikiPassageRef[] => []),
   );
 };
@@ -553,18 +518,6 @@ interface ChapterAddress {
   readonly chapter: number;
 }
 
-/** Every chapter a range touches, inclusive, in canonical order — across book
- *  boundaries as well as within one book.
- *
- *  The canonical order is `BIBLE_BOOKS`' own: book numbers run 1..66 in order
- *  and each book states its chapter count, so walking from the start book to
- *  the end book and taking chapters 1..n of every book between them is the
- *  reading order itself rather than a second ordering this module invented.
- *
- *  Returns empty past `PASSAGE_TEXT_CHAPTER_LIMIT` — the caller reads that as
- *  "no text", which is the honest answer for a span too large to render inline.
- *  A book number the canon does not know also yields empty: the range has no
- *  chapters this library could read. */
 /** Where the span starts inside one book of it: at the range's own verse in the
  *  opening book, and at chapter 1 in every book after it. */
 const firstChapterOf = (book: number, start: WikiVerseRef): number => {
@@ -615,10 +568,6 @@ const withinSpan = (
   return true;
 };
 
-// ---------------------------------------------------------------------------
-// Sections 2 and 4 — FTS by corpus scope, rank order, cap 5 each
-// ---------------------------------------------------------------------------
-
 /** The topic's canonical phrase: the alias the compiler marked canonical, and
  *  the page title when the artifact carries no authored core to mark one. It is
  *  both the FTS query for sections 2 and 4 and the §6.2 handoff's pre-fill, so
@@ -658,9 +607,6 @@ const writingsHits = (
   const hits = sources.writings
     .search(
       query,
-      // The FTS limit is the section cap pushed down into the query: an
-      // uncapped section asks for the default window rather than for a number
-      // this module invented.
       Option.match(cap, {
         onNone: () => ({ scope }),
         onSome: (limit) => ({ limit, scope }),
@@ -674,19 +620,11 @@ const writingsHits = (
             bookCode: hit.publication.code,
             bookTitle: hit.publication.title,
             author: hit.publication.author,
-            // An FTS hit is by definition text this library holds — the index
-            // cannot reach a book that is not installed. So it always carries a
-            // snippet and never an absence; the §6.3 pair is produced by the
-            // citation path below, which is the only path that can name a book
-            // the library lacks.
             snippet: Option.some(nodesToText(hit.paragraph.nodes)),
             absence: Option.none(),
           }),
         ),
       ),
-      // An unavailable writings library is an empty section, not a failed page.
-      // The reader is looking at a topic, and four of the six sources still have
-      // something to say.
       Effect.orElseSucceed((): readonly WikiWritingsHit[] => []),
     );
   const matches = sources.writings.searchCount(query, { scope }).pipe(
@@ -699,10 +637,6 @@ const writingsHits = (
         onNone: () => all,
         onSome: (limit) => all.slice(0, limit),
       });
-      // A count that would not run leaves the section reporting what it can
-      // show. `total` is a number, so there is no absence to encode — and 0
-      // beside a non-empty `items` would be a worse lie than the count being
-      // merely a floor.
       return { items, total: Option.getOrElse(total, () => items.length) };
     }),
   );
@@ -776,10 +710,6 @@ const resolveCitation = (
     Effect.map((publication) => {
       const installed = Option.getOrElse(publication.paragraphCount, () => 0) > 0;
       if (installed) return Option.none<WikiMissingBook>();
-      // Present in the catalog, absent from disk: the §6.3 entry. The book
-      // title is available because `books` carries catalog metadata for every
-      // publication, installed or not — which is precisely what lets the entry
-      // say *which* book to get.
       return Option.some(
         WikiMissingBook.make({
           refcode,
@@ -790,9 +720,6 @@ const resolveCitation = (
         }),
       );
     }),
-    // A refcode naming a publication the catalog has never heard of is not an
-    // uninstalled book — nothing could be downloaded to satisfy it — so it
-    // yields no entry rather than a get-this-book marker pointing at nothing.
     Effect.orElseSucceed(() => Option.none<WikiMissingBook>()),
   );
 };
@@ -818,22 +745,6 @@ const scopeAdmits = (scope: CorpusScope, author: string): boolean => {
   return !isEgw;
 };
 
-// ---------------------------------------------------------------------------
-// Section 3 — commentary on the key verses (verse order, cap 5)
-// ---------------------------------------------------------------------------
-
-/** Commentary for the key verses, in verse order.
- *
- *  "Verse order" is the order section 1 already presents — which is catalog
- *  position, not canonical order — so this walks the capped key passages and
- *  keeps their sequence rather than re-sorting. Two sections claiming to be in
- *  "verse order" while disagreeing about what that means would be worse than
- *  either order alone.
- *
- *  A range is keyed by the verse it opens at. `getCommentary` takes one verse,
- *  and the opening verse is the one a reader following the passage arrives at
- *  first — walking every verse of every range instead would spend the cap of 5
- *  inside a single reference. */
 /** A corpus refcode, or a stand-in when the row has none.
  *
  *  The corpus spells "no citation" as the empty string; `NonEmptyString`
@@ -856,24 +767,6 @@ const commentaryEntries = (
         result.entries.map((entry) =>
           WikiCommentaryEntry.make({
             verse: passage.start,
-            // The book code stands in for a paragraph the corpus stores with no
-            // refcode, exactly as the paragraph-hit builder above falls back to
-            // the publication code. ~563 corpus rows have none and five of them
-            // cite a verse, so this is reachable: John 1:1, John 1:14, Matthew
-            // 27:54, Romans 1:25 and Colossians 2:8 all reach a `*****` section
-            // divider in 5BC/7BC.
-            //
-            // A fallback rather than an `Option` here, unlike `StudyRefcode` and
-            // `SearchParagraphHit.refcode`: this section is capped and every row
-            // is rendered as one line, so there is no total for a substituted
-            // label to contradict and no client that must decide what an absent
-            // citation looks like. `refcode` stays `NonEmptyString` and the four
-            // render sites stay unchanged.
-            //
-            // It has to happen *here* rather than be left to fail: `.make`
-            // throws inside `Effect.map`, which is a defect, and the
-            // `orElseSucceed` below only rescues failures — verified, it does
-            // not catch this. One such row took out the whole section.
             refcode: refcodeOr(entry.refcode, entry.bookCode),
             bookCode: entry.bookCode,
             bookTitle: entry.bookTitle,
@@ -887,10 +780,6 @@ const commentaryEntries = (
 
 const verseReference = (verse: WikiVerseRef): VerseReference =>
   BibleReference.verse(verse.book, verse.chapter, verse.verse);
-
-// ---------------------------------------------------------------------------
-// Section 5 — cross-references from the key verses (source order, cap 10)
-// ---------------------------------------------------------------------------
 
 /** `getCrossRefs` returns rows in stored order per verse (`ORDER BY rowid`, the
  *  artifact's insertion order); walking the key passages in their own order and
@@ -934,9 +823,6 @@ const crossReferences = (
       const seen = new Set<string>();
       const all: WikiCrossReference[] = [];
       for (const reference of perVerse.flat()) {
-        // The same target reached from two key verses is one cross-reference,
-        // not two: the reader is being pointed at a passage, and a cap of 10
-        // spent listing the same passage twice is a shorter page for no gain.
         const key = verseKey(reference.to);
         if (seen.has(key)) continue;
         seen.add(key);
@@ -970,10 +856,6 @@ const crossReferenceTarget = (
   );
 };
 
-// ---------------------------------------------------------------------------
-// Section 6 — related topics (authored edges, then backlinks; uncapped)
-// ---------------------------------------------------------------------------
-
 /** Authored edges first, then backlinks, each in edge position (§6.1 row 6).
  *
  *  Two sources join here. The authored core's own `topic_edges` rows arrive
@@ -1003,9 +885,6 @@ const relatedTopics = (input: ComposeInput): Effect.Effect<readonly WikiRelatedT
       ...edges.filter((edge) => edge.kind === 'backlink'),
       ...live,
     ]) {
-      // A neighbour the authored core already names is not listed twice because
-      // it also links back — the edge is one relationship, and the authored
-      // half is the one the author chose to say something about.
       const key = String(edge.slug);
       if (seen.has(key)) continue;
       seen.add(key);
@@ -1023,10 +902,6 @@ const relatedTopics = (input: ComposeInput): Effect.Effect<readonly WikiRelatedT
       ),
     );
   });
-
-// ---------------------------------------------------------------------------
-// The composer
-// ---------------------------------------------------------------------------
 
 /** Builds the §6.1 lineup for any topic page.
  *
@@ -1058,16 +933,9 @@ export const composeSections = Effect.fn('Wiki.composeSections')(function* (
       crossReferences(sources, withText, SECTION_CAPS.crossReferences),
       relatedTopics(input),
     ],
-    // The five remaining sources are independent reads over three databases,
-    // and §6's whole premise is that the batch is warm-fast (0.1-4.3 ms). Run
-    // them together.
     { concurrency: 'unbounded' },
   );
 
-  // Sections 2 and 4 arrive already capped *and* already carrying their real
-  // pre-cap count — `writingsHits` runs the count query the `LIMIT` makes
-  // impossible to infer — so nothing is re-capped here. All six sections'
-  // `total` therefore mean the same thing: matches before the cap.
   const relatedTopicsSection = capped(related, SECTION_CAPS.relatedTopics);
 
   const lineup: WikiSectionLineup = [

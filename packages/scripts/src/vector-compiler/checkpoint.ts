@@ -97,8 +97,6 @@ const resumePoint = (
     const wanted = BigInt(checkpoint.completed * DIMENSIONS);
     if (Option.isNone(stat) || stat.value.size < wanted) return yield* fresh;
     if (stat.value.size > wanted) {
-      // The crash window between an append and its checkpoint: the tail bytes
-      // are real vectors, but nothing records which rows they belong to.
       yield* fs
         .truncate(partPath(out), Number(wanted))
         .pipe(
@@ -137,8 +135,6 @@ const reportProgress = (input: {
     const ratePerSecond = (input.done - input.startRow) / elapsedSeconds;
     const remaining = input.total - input.done;
     const percent = ((input.done / input.total) * 100).toFixed(1);
-    // A zero rate cannot happen after a flush (at least one row embedded),
-    // but the guard keeps the arithmetic total rather than yielding Infinity.
     const etaSeconds = remaining / Math.max(ratePerSecond, 0.001);
     const etaHours = Math.floor(etaSeconds / 3600);
     const etaMinutes = Math.floor((etaSeconds % 3600) / 60);

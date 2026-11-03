@@ -547,9 +547,9 @@ the −1 dBFS ceiling: min(target − speech level, ceiling − peak), with no
 limiter, so the voice keeps its dynamics and a longer pause never changes
 its level. `TAKE_PAD` is 0.07 s lead and no tail; a recording that starts on
 its first word gets the lead in silence. Speech is sound over the gate that
-lasts 0.1 s (`TAKE_MIN_SPEECH`) counting gaps under 0.25 s (`TAKE_HOLD`), so
+lasts 0.1 s (`TAKE_MIN_SPEECH_S`) counting gaps under 0.25 s (`TAKE_HOLD_S`), so
 a click or tap after the line is trimmed with its silence, and the take fades
-over 5 ms (`TAKE_FADE`) at both ends so neither trim clicks.
+over 5 ms (`TAKE_FADE_S`) at both ends so neither trim clicks.
 
 `film script <film>` prints the reading sheet (`core/sheet.ts`), and
 `--sheet` writes it to `out/<film>/script-sheet.md` and a page to print,
@@ -2773,6 +2773,19 @@ do not compute it. The per-limb shoulder guard reads these actual pixels,
 with one diagonal pixel of reconstruction fringe. Its fixed reference
 keeps unchanged cap ink from disappearing into a moving exclusion.
 
+The limb's measured constants, and why each holds its value: the default
+window (`LIMB_FADE`) ends at 25° because the stroke probe's cut-out arm tore
+open past about 25°. A texel at a sleeve's edge is ink under CIE L* 20
+(`INK_L`): the lead's ink (rgb 33 15 3) reads L* 0 to 15 on both arms of
+single-9, and his blue sleeve's darkest shade reaches L* 20; at 30, that
+shade read as ink at two knots of its cut edge. A flap's body texel may lie
+at most half way down the upper arm (`FLAP_REACH`), past which the body's
+pixels would ride the stroke's sleeve; the lead's right shoulder band
+reaches 20.4 px of a 154 px upper arm (0.13), his left 4.0 px of 176. The
+fold's ink line weighs 0.6 of the measured silhouette ink (`FOLD_WEIGHT`)
+and spans the whole forearm (`FOLD_LENGTH` 1, `FOLD_INSET` 0, fractions of
+its length).
+
 A puppet (`core/puppet.ts`) is a part sheet on a skeleton
 (`<member>/cutout/skeleton.ts`: bones named by the shared controls (`lean`,
 `neck`, `head`, `shoulder`, `elbow` and `wrist` by side), each turning about its pivot after its parent; each
@@ -3793,11 +3806,12 @@ criteria, the label that reports, a threshold and a message;
 `settings.judged` names the model by its exact id (`jev-1.13.0`), whose
 measurements set the thresholds, and where the answers are kept. Its
 severity is its gate: `warn` reports, `error` fails the lint, `off` judges
-nothing. The rules are `historyComment` (a comment's history), `testOracle`
-(a test whose oracle is its code), `silentDrop` (a function that drops what
-it cannot handle unsaid), all at `warn`, `scriptSpeech` (a film beat that
-names its sources or church history), at `error`, and `commentClaimsCode` (a
-comment that claims more than its code), `off`: reviewers found none of its
+nothing. The rules are `historyComment` (the history a doc comment or a
+tool directive tells), `testOracle` (a test whose oracle is its code),
+`silentDrop` (a function that drops what it cannot handle unsaid), all at
+`warn`, `scriptSpeech` (a film beat that names its sources or church
+history), at `error`, and `commentClaimsCode` (a doc comment or a tool
+directive that claims more than the code under it), `off`: reviewers found none of its
 findings over the repo true (`docs/lessons.md`); over each,
 `.oxlintrc.json` says what its corpus measured. To add one: write its entry
 in `.oxlintrc.json` (at `warn`), add its id to `RULE_IDS` in
@@ -4107,7 +4121,7 @@ through them, rather than a flat cutout.
   `haze` takes a sky of stops as well as one colour.
 - **Painted plates** (`canvas/painting.ts`, `PaintingSpec`): an 8-bit RGBA
   PNG, not interlaced (the Bun decoder, `tools/png.ts`, refuses a palette,
-  16-bit or interlaced PNG and reads no `tRNS`), in the film's folder, painted at the fidelity of the concept art. A drawing
+  16-bit or interlaced PNG and reads no [`tRNS`](https://www.w3.org/TR/png-3/#11tRNS)), in the film's folder, painted at the fidelity of the concept art. A drawing
   declares its `paintings` as it declares its puppets
   (`drawing({ paintings: { sky: SKY }, draw: (f) => … f.painting('sky') … })`),
   and `f.painting(name)` paints one as a plane under the ctx's current

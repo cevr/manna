@@ -142,7 +142,6 @@ const open = async ({
       () => Promise.reject(error),
       () => Promise.reject(error),
     );
-  // A step that waits waits for a reader's moment, not for ever: a list that draws no row fails here.
   context.setDefaultTimeout(3000);
   const page: Page = await context.newPage().catch(fail);
   let size = windowOf(height);
@@ -171,7 +170,6 @@ const open = async ({
     size = windowOf(to);
     await page.setViewportSize(size);
     await settle(0);
-    // A shorter window can scroll less: the browser moves the list in, and the reader did that.
     await page.evaluate(() => window.hymnal.jumps.splice(0));
   };
 
@@ -265,13 +263,10 @@ const open = async ({
    * message, when the list is not shown or the link is not there.
    */
   const leaveAtOnce = async (at: number, tab?: string) => {
-    // A row he can press is drawn.
     await middleRow();
     await page.evaluate((y) => window.hymnal.away(y), at);
     return page.evaluate(
       ([y, link]) =>
-        // Inside the frame's callback a throw reaches only the page's error event; in the
-        // microtask that follows it, still before the frame draws, it rejects what the press answers.
         new Promise<number>((frame) => requestAnimationFrame(frame)).then(() =>
           window.hymnal.leave(y, link),
         ),
@@ -353,9 +348,6 @@ const open = async ({
 type Session = Awaited<ReturnType<typeof open>>;
 
 beforeAll(async () => {
-  // Chromium starts while the server's app loads: neither needs the other. Its pages run V8 with
-  // no optimizing compiler (TurboFan): with it, a run of the file measured about 7 CPU seconds more
-  // (55 against 48) and no shorter wall. Turning off Maglev as well measured slower.
   const launching = chromium.launch({ args: ['--js-flags=--no-opt'] }).then((launched) => {
     browser = launched;
   });
@@ -367,7 +359,6 @@ beforeAll(async () => {
       const { pathname } = new URL(request.url);
       return pathname === '/page.js'
         ? new Response(script, {
-            // Each page loads it again on every cold load: the browser keeps it.
             headers: {
               'content-type': 'text/javascript',
               'cache-control': 'max-age=3600, immutable',
@@ -388,7 +379,6 @@ const seed = ((given) =>
   given !== undefined && given !== '' ? Number(given) >>> 0 : Math.floor(Math.random() * 2 ** 32))(
   process.env['HYMNAL_LIST_SEED'],
 );
-// Once a run, before any case: a case that throws or times out names no seed of its own.
 console.log(`hymnal browser test: HYMNAL_LIST_SEED=${seed}`);
 
 /**
@@ -598,7 +588,6 @@ const visit = async (list: ListName, visits: ReadonlyArray<Visit>) => {
         after,
       };
       if (v.press === 'now') atOnce.tries += 1;
-      // Only the label makes a try again: a try that went wrong is a miss, whatever its label.
       if (labelled(s) || wrong(s) || attempt === tries) {
         seen.push(s);
         break;
@@ -625,7 +614,6 @@ describe('a list comes back where the reader left it', () => {
   });
 
   for (const list of ['hymns', 'search'] as const) {
-    // A list's visits in pages of three at once.
     for (const [page, part] of groups(visitsOf(list, seed), 3).entries()) {
       it.concurrent(`the ${list} list, visits ${page * 3 + 1} to ${page * 3 + part.length}`, async () => {
         expect(await visit(list, part)).toEqual({ seed, hydration: [], misses: [] });
@@ -634,7 +622,6 @@ describe('a list comes back where the reader left it', () => {
   }
 
   it.concurrent('the search list, its results shorter than the window grown while he was away, draws every row once he clears the search', async () => {
-    // A small phone's window: the results of "shepherd" scroll there, and the whole hymnal's list is far longer.
     await using app = await open({ path: lists.search.path, height: 320 });
     await app.page.getByRole('searchbox').fill('shepherd');
     await app.page.waitForFunction(() => {
@@ -645,7 +632,6 @@ describe('a list comes back where the reader left it', () => {
     const left = await app.scrollTo(max);
     await app.settle(150);
     const row = await app.press('search', 'later', left);
-    // Taller than the results by two rows: the list comes back at its top.
     await app.resize(320 + max + 2 * rowHeight);
     await app.comeBack('search', row.label, () => app.page.goBack());
     const found = (await app.place()).top;
@@ -661,8 +647,6 @@ describe('a list comes back where the reader left it', () => {
   });
 });
 
-// The cases run at once, each taking a page as one opens, in the order they are declared: the
-// longest first, so the short ones fill the last places and the run ends soon after its last page.
 describe('a list loaded cold hydrates the server’s list', () => {
   /**
    * On a page of its own in a window of `height`, loads the list cold once
@@ -679,8 +663,6 @@ describe('a list loaded cold hydrates the server’s list', () => {
       if (index > 0) await app.load();
       const { max } = await app.place();
       const before = await app.scroll(Math.round(max * c.before));
-      // Hydration waits for the scroll's own event, so the list cannot see it and must be told of
-      // it. Every case scrolls before hydration, so a load with no event is a miss, named below.
       const waited = await app.page
         .evaluate(() => window.hymnal.heard())
         .then(
@@ -705,8 +687,6 @@ describe('a list loaded cold hydrates the server’s list', () => {
         blankAfter: await app.blank(),
         jumps: await app.jumps(),
       };
-      // The case the load names: the scroll before hydration, its event too, so the list must be told of it.
-      // The wait must end on that event: a load whose wait ran out is a miss, even if the event came.
       const clean =
         waited === 'heard' &&
         seen.eventBeforeHydration &&
@@ -723,7 +703,6 @@ describe('a list loaded cold hydrates the server’s list', () => {
 
   for (const list of ['hymns', 'search'] as const) {
     for (const height of heights) {
-      // A window height's loads in two pages at once.
       const cases = coldsOf(list, seed).filter((c) => c.height === height);
       for (const [page, part] of groups(cases, Math.ceil(cases.length / 2)).entries()) {
         it.concurrent(`the ${list} list, ${height} px high, keeps a scroll made before and after hydration, page ${page + 1}`, async () => {
@@ -785,7 +764,6 @@ describe('the search field', () => {
       if (pressed) await app.page.getByRole('searchbox').click();
       await app.page.evaluate(() => window.hymnal.hydrate());
       await app.hydrated();
-      // Past the list's scroll end, which it tells 100 ms after a scroll.
       await app.settle(150);
       expect(await typed(app, 'lord')).toEqual({ focused: 'searchbox', text: 'lord' });
     });
@@ -826,7 +804,6 @@ describe('the search field', () => {
 describe('a press at once', () => {
   it.concurrent('whose link is not there fails at once, saying so', async () => {
     await using app = await open();
-    // A press that hung would fail on the case's timeout; the message says the press failed at the link.
     const outcome = await app.leaveAtOnce(2000, 'Nowhere').then(
       () => 'pressed',
       (error: Error) => error.message,
@@ -848,7 +825,6 @@ describe('a row', () => {
   });
 
   it.concurrent('keeps a long title on one line, in a row of the height the list counts on', async () => {
-    // The narrowest phone the app meets (an iPhone SE), where the longest titles reach the edge.
     await using app = await open({ height: 568 });
     await app.page.setViewportSize({ width: 320, height: 568 });
     await app.settle(0);

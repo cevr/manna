@@ -1,9 +1,3 @@
-// The in-memory file system the tool tests run on writes as a disk does for
-// each flag it models, and refuses a flag it does not model. One contract runs
-// every operation the tools lean on against it and against Bun's file system,
-// and their outcomes must match: a test on the double then passes only where
-// the box would.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Predicate, Stream } from 'effect';
@@ -36,7 +30,6 @@ describe('the in-memory file system', () => {
     );
   });
 
-  // Each writer runs long enough for the scheduler to yield it mid-write.
   it.live("keeps every byte two writers append at once, 1,500 each, as a disk's 'a' does", () => {
     const files = new Map<string, Uint8Array>();
     return over(
@@ -147,7 +140,6 @@ const CASES: ReadonlyArray<readonly [string, Operation]> = [
   ['makes a folder whose parent is missing', (fs, at) => fs.makeDirectory(at('x/y'))],
   ['makes a folder already there', (fs, at) => fs.makeDirectory(at('sub'))],
   ['makes a folder where a file is', (fs, at) => fs.makeDirectory(at('a.txt'))],
-  // Node's recursive `mkdir` answers the first folder it made, past `void`.
   [
     'makes a folder already there, recursive',
     (fs, at) => Effect.asVoid(fs.makeDirectory(at('sub'), { recursive: true })),
@@ -173,8 +165,6 @@ const CASES: ReadonlyArray<readonly [string, Operation]> = [
   ['links a file over one there', (fs, at) => fs.link(at('a.txt'), at('sub/inner.txt'))],
   ['links a file not there', (fs, at) => fs.link(at('nope.txt'), at('b.txt'))],
   ['links into a folder never made', (fs, at) => fs.link(at('a.txt'), at('no/b.txt'))],
-  // A draft as journal.ts's note makes one beside the journal: empty, in the
-  // folder named, and gone, its own folder and all, with its scope.
   [
     'makes a file for a scope, in a folder',
     (fs, at) =>
@@ -191,9 +181,6 @@ const CASES: ReadonlyArray<readonly [string, Operation]> = [
     'makes a file for a scope, in a folder not there',
     (fs, at) => Effect.scoped(fs.makeTempFileScoped({ directory: at('nope'), prefix: 'p-' })),
   ],
-  // A path as the disk resolves it, told by whether it is where the plain path leads
-  // (Bun's temporary folder may itself sit behind a link). Node takes `..` as
-  // `path.resolve` does, before it walks the folders.
   [
     'resolves a path through ..',
     (fs, at) =>

@@ -1,8 +1,3 @@
-// A picture as plain bytes: what a sound's sheet is drawn into
-// (`synth/sheet.ts`), what a PNG reads back as (`tools/png.ts`), what a
-// figure is measured from (`figure.ts`) and what a match strokes a concept's
-// outline over (`match.ts`). Pure.
-
 /** A picture: `width` × `height` pixels of four bytes (red, green, blue, alpha), row by row from the top. */
 export interface Raster {
   readonly width: number;
@@ -44,7 +39,6 @@ export const stretchRaster = (r: Raster, fx: number, fy: number): Raster => {
   const height = Math.max(1, Math.round(r.height * fy));
   const rgba = new Uint8Array(width * height * 4);
   const src = r.rgba;
-  // Each column's two source columns (as byte offsets in a row) and its blend, once.
   const left = new Int32Array(width);
   const right = new Int32Array(width);
   const tx = new Float64Array(width);

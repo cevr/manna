@@ -1,14 +1,3 @@
-// The judge as Rive rigs (in `figures.riv`, `figures.ts`), at the bench
-// where the control draws its paper judge: his body behind the bench, and
-// over it the paper he reads, the court's gavel lined in the props' ink and
-// his circle hand on it. The look declares both rigs (`Look.rigs.judge`,
-// `Look.rigs.hand`, `rigs.ts`).
-//
-// His acting, on the court's cues: reading the paper before him, eyes down,
-// until he leans in on "the judge looks at you", his eyes coming up to the
-// accused's face, his head held still (`follow` 0: the eyes do the looking);
-// on the verdict his face softens (`acted`).
-
 import { at, rectShape, rounded } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import type { PoseOf } from '@manna/film/rive';
@@ -58,9 +47,6 @@ const poseOf = (f: CourtFrame, lean: number): PoseOf<ReturnType<typeof judgeProp
   };
 };
 
-// His hand's reach, from his head's centre, as the court's `judgeGavel` sets it
-// (`righteousness-by-faith/court.ts`: `JUDGE_SHOULDER`, `JUDGE_REST`, `GAVEL`,
-// `GAVEL_GRIP`, not exported there).
 /** His near shoulder, inside the robe's top. */
 const SHOULDER: Pt = [74, 70];
 /** Where the hand rests: on the bench's rim, short of the gavel. */
@@ -69,8 +55,6 @@ const REST: Pt = [92, 104];
 const GAVEL: Pt = [1330, 445];
 const GRIP = 16;
 
-// The court's gavel (`righteousness-by-faith/court.ts`: `gavel`, which lines
-// it in the kit's outline): the same paper and cut, lined in the props' ink.
 const GAVEL_HANDLE = rounded(0, -52, 12, 100, 4);
 const GAVEL_HEAD = rounded(0, -104, 64, 34, 8);
 

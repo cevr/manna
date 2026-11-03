@@ -1,22 +1,3 @@
-// `film channel`: the lab's change feed pushed into a Claude Code session as
-// channel events. Claude Code reads a server's push only from a stdio server
-// it spawned, that declares `experimental['claude/channel']`, through the
-// method `notifications/claude/channel`; the lab is an HTTP server many
-// sessions share, and Effect's stdio server sends neither that capability nor
-// that method. So the bridge is its own small JSON-RPC loop over stdin and
-// stdout: it answers Claude Code's handshake, then asks the lab's MCP at
-// `FILM_LAB_URL` (through `lab-client.ts`, the one client of it) for
-// `changes`, waiting up to `WAIT_S` each time, and sends each change on as
-// one channel event: its summary and links as the text, what it is about as
-// attributes.
-// The lab stays the one record and the one feed; the bridge reads the lab's
-// event stream (`lab-stream.ts`, the one `film lab events --follow` prints),
-// whose cursor outlives a session: a lab that stops answering is asked again
-// with backoff and read on from it.
-//
-//   claude mcp add lab-events -s user -- bun <app>/cli.ts channel
-//   claude --dangerously-load-development-channels server:lab-events
-
 import {
   Array as Arr,
   Boolean as Bool,

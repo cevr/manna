@@ -1,9 +1,3 @@
-// A cast member's sheet drawn on the image route: each try is measured as it
-// lands and recorded with its flags; a try drawn facing the wrong way is
-// drawn once more with its drift named and the underlay as its last
-// reference, and a retry that still drifts is kept, flagged, never dropped.
-// A kind the record does not set up stops the run before any draw.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, Exit, FileSystem, Layer, Path, Result, Schema } from 'effect';
@@ -170,7 +164,6 @@ describe('a try drawn the wrong way', () => {
         ]);
         expect(calls[1]?.prompt).toContain("Figure 2 faces the viewer's left");
         expect(calls[1]?.prompt).toContain('Image 3 is a layout, never a look');
-        // The house image's hands float (the look from before 2026-10-18): the try takes its paper, line and light only.
         expect(calls[0]?.prompt).toContain(
           'Image 1 is the house look: take its paper, its line and its light from it; its hands float free beside the body, which no figure on this sheet does.',
         );
@@ -181,14 +174,12 @@ describe('a try drawn the wrong way', () => {
           files.has(`${OUT}/poses-2.overlay.png`) && files.has(`${OUT}/poses-2.preview.png`),
         ).toBe(true);
         expect(castLine(lines[0]!)).toStartWith('made christ.poses try=1 flags=1 underlay=false');
-        // A member of the canon: briefed at its heads with its hair, its underlay's figures of one height.
         expect(calls[0]?.prompt).toContain(
           'a standing figure stands about three and a third heads tall',
         );
         expect(calls[0]?.prompt).toContain('The hair and the beard');
         const [left, right] = standing(files.get(`${OUT}/underlay-poses.png`) ?? new Uint8Array());
         expect(left).toBe(right);
-        // Its record written as the formatter leaves it: a short array on one line.
         const written = new TextDecoder().decode(files.get(`${FOLDER}/cast-sheet.json`));
         expect(written).toContain('\n      "slots": ["front", "left"],\n');
       }).pipe(Effect.provide(castOver(files, calls, (r) => (underlaid(r) && clean) || wrong)));
@@ -230,7 +221,6 @@ describe('a member of its own sizes', () => {
         expect(calls[0]?.prompt).not.toContain('The hair and the beard');
         const [grown, child] = standing(files.get(`${OUT}/underlay-poses.png`) ?? new Uint8Array());
         expect((child ?? 0) / (grown ?? 1)).toBeCloseTo(0.5, 1);
-        // The first try draws the child as tall as the grown one: the retry holds it to its own size.
         const retry = calls[1]?.prompt ?? '';
         expect(retry).toContain(
           "Figure 2 stands about 50 % of figure 1's height, its soles level with theirs",
@@ -288,7 +278,6 @@ describe('a heads sheet whose head drifts within its turn', () => {
           },
         },
       };
-      // The bowed head is shorter on the page; the third, level, is drawn bigger than the first, its eyes farther apart.
       const drifted = encodePng(
         drawSheet([bust({}), bust({ ry: 56, eyeBelow: 22 }), bust({ rx: 70, eyeGap: 56 })]),
       );
@@ -309,7 +298,6 @@ describe('a try the measure cannot read', () => {
     const files = new Map<string, Uint8Array>();
     const calls: Array<ImageRequest> = [];
     const lines: Array<CastLine> = [];
-    // One figure where the sheet names two.
     const lone = encodePng(drawSheet([at(0)]));
     return Effect.gen(function* () {
       const kept = yield* ran(files, lines);

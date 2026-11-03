@@ -1,10 +1,3 @@
-// A beat's recorded attempts as the lab answers them: the handlers of the lab
-// API's `studio` group (`core/api.ts`), which an ask's take block calls to
-// list a beat's attempts and play one. The lab runs for hours and keeps the
-// film's modules as it first imported them, so the script and the beats are
-// read from a fresh process (`FreshFilm.reading`, kept under the film's
-// source stamp): a line fixed while the lab is open reaches the list at once.
-
 import { Array as Arr, Cache, Context, Effect, Layer, Option } from 'effect';
 import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
 import { LabHttpApi } from '../core/api.ts';
@@ -110,7 +103,6 @@ export const beatAttempts = Effect.fn('studio.beatAttempts')(function* (params: 
       current: Option.exists(script, (b) => a.take.hash === hashText(b.script)),
     })),
   };
-  // The take the timings name, when no attempt is it: a staging take, heard until the owner records his.
   return Option.match(
     Option.filter(timing, (t) => !attempts.some((a) => a.file === t.file)),
     {
@@ -130,7 +122,6 @@ export const studioGroup = HttpApiBuilder.group(LabHttpApi, 'studio', (handlers)
           const { film, beat } = yield* filmBeat(params);
           const found = yield* (yield* Takes).attemptFile(yield* pathsOf(film), beat, params.file);
           if (Option.isNone(found)) return yield* AttemptUnknown.make({ beat, file: params.file });
-          // A phone's Safari plays and seeks an <audio> by byte ranges.
           return yield* serveFile(request, found.value, CACHE.derived);
         }),
       ),

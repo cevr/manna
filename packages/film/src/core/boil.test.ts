@@ -7,7 +7,6 @@ describe('the boil field', () => {
       const a = boilField(tick, -3, 2, 6, 5);
       expect(boilField(tick + 48, -3, 2, 6, 5)).toEqual(a);
       expect(boilField(tick - 48, -3, 2, 6, 5)).toEqual(a);
-      // a function of the tick alone: the same field twice
       expect(boilField(tick, -3, 2, 6, 5)).toEqual(a);
     }
     expect(boilField(1, 0, 0, 4, 4)).not.toEqual(boilField(0, 0, 0, 4, 4));

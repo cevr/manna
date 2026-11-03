@@ -1,26 +1,3 @@
-// `film ask wait`: a command that ends when the owner has answered an ask on
-// the running lab (`FILM_LAB_URL`, through `lab-client.ts`), for an agent
-// to run in the background and act on when it exits, instead of asking the
-// owner to say "answered". The latch is `ask-wait.ts`: the lab's asks read,
-// and read again whenever the lab's event stream (`lab-stream.ts`, the one
-// `film lab events --follow` prints) says something moved; a lab that does
-// not answer is asked again with backoff and never ends the wait.
-//
-//   film ask wait <ask> [--step <id>] [--timeout <dur>] [--json]
-//       until the ask is answered to its end or closed (with --step, until
-//       that step is answered, or the ask can no longer reach it)
-//   film ask wait --page <id> [--timeout <dur>] [--json]
-//       until every ask on the page (`<id>` any ask's, its page the one it
-//       is on) is answered or closed, an ask that joins it meanwhile too
-//   film ask wait --any [--production <p>] [--timeout <dur>] [--json]
-//       until any ask (of that production) is answered after the wait began
-//
-// It prints each ask it held on (the page's in the order made) as the lab
-// MCP's `ask_read` answers it, a line each (`askLines`, `ask-wait.ts`), or
-// as one JSON line each (`--json`), and exits 0. An ask the lab
-// does not have is `AskUnknown`; `--timeout` elapsed is `AskWaitTimeout`
-// (`ask.wait.timeout`), each a non-zero exit.
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';

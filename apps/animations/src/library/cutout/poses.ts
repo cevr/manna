@@ -1,18 +1,3 @@
-// A member's cut-out views (`CUTOUT`), in one of two forms.
-//
-// `own`: a kept view cut into its own parts, its puppet at rest as drawn,
-// standing where the kept view stands. No fitting.
-//
-// `fitted`: a pose view drawn by his turnaround puppet fitted to it
-// (`film concept fit`, `poses/<kind>-<view>.json`): the body as the better of
-// his standing puppets fits it (its lean, neck and head, its root and its one
-// scale, in the pose view's crop's frame), with the drawings the raise lays
-// (`raise/`): the pose view's own drawn key in place of one of his parts, and
-// its hand with what it holds, each laid where the pose view draws it.
-//
-// What a member with poses alone can and cannot get: the film skill
-// (`.claude/skills/film/SKILL.md`, "A cut-out member").
-
 import type { CutoutView, PuppetLook, PuppetPose } from '@manna/film/canvas';
 import { Record as Records, Schema } from 'effect';
 import type { CutPuppet } from './puppets.ts';
@@ -113,14 +98,12 @@ export const fitted = <V extends string>(made: Fitted<V>) => {
       raise.views.find((v) => v.id === made.swap.drawing)?.source,
     );
     const held = Schema.decodeUnknownSync(Held)(raise.held.find((h) => h.id === made.view));
-    // a drawing px p lies on the view at (p - d) / s, and on the sheet where the pose lays that
     const [s, dx, dy] = [1 / (arm.s * pose.scale), arm.dx / arm.s, arm.dy / arm.s];
     const corner = sheetOf(root, pose, [-dx, -dy]);
     const hand = sheetOf(root, pose, [
       (held.c[0] - held.source.dx) / held.source.s,
       (held.c[1] - held.source.dy) / held.source.s,
     ]);
-    // the key's place is on the sheet where the fitted pose lays it, so its part's bones carry it no further
     const look: Omit<PuppetLook, 'boil' | 'amp'> = {
       swaps: [
         {

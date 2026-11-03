@@ -1,49 +1,3 @@
-// `film read`: what the lab reads of a film, in this process, as the film's
-// sources stand on disk. The lab runs these in a fresh process (`FreshFilm`,
-// `fresh-film.ts`) because its own imports of the film's script, voice and
-// scenes are as they were at its start. Each prints one line of JSON
-// (`FreshLine`) on stdout; logs go to stderr. A run that fails answers with
-// its failure (`answering`: a refusal as itself, any other as ServerFailed),
-// so a film that does not load reads as one sentence.
-//
-//   film read voice <film>
-//       what the studio reads: the voice, how speech-to-text writes the
-//       script's names, each beat's line, and the reading sheet
-//   film read script <film>
-//       what the words reader reads beside the staged film: each beat of
-//       `script.ts` in order, its picture's brief and its sources (none for a
-//       film that keeps no script)
-//   film read cue <film> <scene> <cue> [--spans <json>] [--patch <json>]
-//       the cue on its scene's clock, as the scene file now declares it (or
-//       with `spans` in place of its own: a write the lab has not made yet,
-//       and `patch` over the cue's own span when its source computes part of
-//       it, so no literal span says it), or why the scene's timeline does not
-//       resolve
-//   film read sites <film>
-//       where each scene's drawing is declared, and what of it the lab may
-//       write (`locateHere`), or why a scene is not located
-//   film read cues <film> [scene]
-//       each scene's placement, marks and named cues, one line each as
-//       `film cues` prints them (`sceneReport`), or the one scene's, and how
-//       many cues end after their scene (the lab's `cues` tool)
-//   film read clock <film> [--folder <v>]
-//       a version's clock (`core/film-timeline.ts`): each beat's span,
-//       speech, marks and voice, its acts and its score's movements, laid
-//       out by `layout()` with no cue resolved (a beat's length never
-//       reads its cues), so a scene whose timeline does not resolve still
-//       has its place; with `--folder`, the version folder's
-//       (`<film>/<folder>/`: its scenes, takes, acts and score, loaded as the
-//       film's are), or, for a folder that holds a script alone, its
-//       `script.ts` on the folder's own takes (no acts, no score, no scene
-//       draws it). The lab's `timeline` tool and the studio read it
-//   film read scenes <film>
-//       the film's scenes by id, in order, as `film lab journal` knows them: no
-//       timeline is resolved, so a scene that does not lay out still names
-//       its film's scenes (the lab's `journal` and `journal_note` tools)
-//
-// `locateHere` also serves the CLI's own commands (`scenesLocatedHere`):
-// each runs in a process of its own, which imports the film as it stands.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -279,7 +233,6 @@ export const locateHere = Effect.fn('film.read.sites.locate')(function* (film: s
     .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts') && !f.endsWith('.d.ts'))
     .map((f) => path.join(dir, f))
     .sort();
-  // Every exported drawing({...}) call, by file, as the files read now.
   const parsed = yield* Effect.forEach(
     files,
     (file) =>
@@ -292,8 +245,6 @@ export const locateHere = Effect.fn('film.read.sites.locate')(function* (film: s
     { concurrency: 8 },
   );
   const withSites = parsed.filter((p) => p.sites.length > 0);
-  // The object each exported name evaluates to as `timeline` and as
-  // `knobs`, as this process loaded it: one map per field.
   const owners = {
     timeline: new Map<object, Array<Owned>>(),
     knobs: new Map<object, Array<Owned>>(),
@@ -321,7 +272,6 @@ export const locateHere = Effect.fn('film.read.sites.locate')(function* (film: s
       Option.toArray(Option.map(identity(scene, field), (obj) => ({ field, obj }))),
     );
     if (objects.length === 0) continue;
-    // One drawing may be exported under several names: one call, one literal.
     const calls = Arr.dedupeWith(
       objects.flatMap(({ field, obj }) => owners[field].get(obj) ?? []),
       (a, b) => a.file === b.file && a.at === b.at,
@@ -543,12 +493,10 @@ const clock = Command.make(
     const scriptAlone =
       Option.isSome(input.folder) && !(yield* fs.exists(path.join(at.dir, 'scenes', 'index.ts')));
     const read = yield* Bool.match(scriptAlone, {
-      // A script written alone in its folder: its beats on the folder's own takes.
       onTrue: () =>
         Effect.gen(function* () {
           const script = yield* repo.script(input.film, Option.getOrUndefined(input.folder));
           const timings = yield* (yield* ContentStore).read(at.timings);
-          // The rate the film declares: a version folder keeps no `film.ts` of its own.
           const { fps } = yield* repo.load(input.film);
           return yield* Effect.fromResult(
             Result.flatMap(

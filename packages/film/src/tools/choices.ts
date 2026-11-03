@@ -1,43 +1,3 @@
-// A film's choices: its choice points (`core/choice.ts`, listed by
-// `choice-points.ts`), each variant heard in place, and each verb landed
-// where the film declares the pick:
-//
-// - score: `play` in `sound.ts`, and look: `play` of a look in `palette.ts`,
-//   each the one string spliced by the parser (`choice-source.ts`) through
-//   the SourceWriter (a score's pick mixes the track again once it lands,
-//   and on its Undo);
-// - take: kept, unkept or rejected by its sha256 through the library's own
-//   operations (`SoundLibrary.keep`/`unkeep`/`reject`) by the film CLI in a
-//   fresh process (the library's prompts are its sources too), recorded
-//   around the lock's rewrite by the SourceWriter, so it is undone the same
-//   way. A seed of a sound made from data (a code sound's or a code trial's)
-//   takes no verb: it is tuned by editing that data (its `fixed` says so).
-//   It is heard alone as the film CLI renders it in a fresh process
-//   (`film options sound`), once into the review's cache under its label,
-//   which names the data and the renderer;
-// - voice: an attempt kept as its beat's take by `keepVoice`, the one way an
-//   attempt becomes a take, which the studio's keep and its posted take call
-//   too: by the film CLI in a fresh process (it reads the script, and
-//   remixes), recorded around the timings' rewrite with the takes they name,
-//   so it runs under the writer's lock and Undo brings back the take it
-//   replaced;
-// - a say (approve, withdraw, comment): the catalogue's records
-//   (`RenderCatalogue`), on the variant as it is now; the points last read
-//   are said of again from the catalogue it leaves, in this process.
-//
-// The review runs for days and its own imports of a film stay as they were at
-// start, so the film's points are read, and its takes and mixes made, in a
-// fresh process (`FreshFilm`, `fresh-film.ts`): every answer is the film as it
-// stands on disk. This service needs no module loader (`ChoicesNeeds`), so a
-// read of the film in this process does not compile.
-//
-// The film's sources as they stand are stamped by the newest mtime under its
-// folder and the library's lock. A verb is checked against the points last
-// read at the same stamp (read again when the stamp moved), and every mix is
-// derived once into the review's cache under it, so a change to the film
-// reads and makes them again. A write answers the points and the static
-// check of the sources it leaves, from one fresh run.
-
 import {
   Array as Arr,
   Cache,
@@ -269,13 +229,11 @@ const keepVoice = Effect.fn('keepVoice')(function* (
   const timings = paths.timings.file;
   const target = `voice ${beat} keep ${file}`;
   const track = yield* trackOf(film);
-  // The keep remixes the track itself: when it landed is read in the act, under the lock.
   const [[kept, mixed], change] = yield* (yield* SourceWriter).around(
     film,
     timings,
     target,
     Effect.flatMap(fresh.keepVoice(film, beat, file, options), (done) => {
-      // A keep whose mix failed landed no track.
       if (!done.mixed) return Effect.succeed([done, Option.none<number>()] as const);
       return Effect.map(track.landed, (at) => [done, at] as const);
     }),
@@ -371,7 +329,6 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
           film,
           Effect.map(fresh.choices(film), (p) => ({ points: p })),
         );
-        // The film's whole-film renders, by its catalogues: a scene or a short is never its picture.
         const result: FilmChoices = {
           film,
           pictures: yield* review.pictures(film),
@@ -461,7 +418,6 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
           target,
           fresh.take(film, point.id, take, verb),
         );
-        // The lock changes what the library offers, not the track: nothing is mixed.
         const picked: Picked = { file, target, change, mixed: Option.none() };
         return picked;
       });
@@ -567,15 +523,12 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
         }
         if (ref._tag !== 'Take') return yield* unheard();
         const name = ref.sound;
-        // A take's file is the lock's record of it: data, read as it stands.
         const manifest = yield* lockOf(unheard);
         const lock = yield* store.read(manifest);
         const take = Option.flatMap(Option.fromUndefinedOr(lock[name]), (entry) =>
           Arr.findFirst([...entry.variants, ...entry.candidates], (v) => v.sha256 === variant),
         );
         if (Option.isSome(take)) return path.join(path.dirname(manifest.file), take.value.file);
-        // Any other variant of a take point is a seed. Its label names its
-        // data and the renderer, so the file made for it never goes stale.
         const file = `sound/${cacheKey([variant])}.wav`;
         return yield* once(
           sounding,

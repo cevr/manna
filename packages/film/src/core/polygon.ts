@@ -1,7 +1,3 @@
-// Plane polygons, pure and DOM-free: the check's collisions (`film check`) and
-// the probe's hands (whether a hand lies inside its own body) ask the same
-// question of a shape.
-
 import { Array as Arr } from 'effect';
 import type { Point } from './schema.ts';
 

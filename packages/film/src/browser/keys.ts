@@ -1,22 +1,3 @@
-// The page's keys: the one key listener on a page. The page's keymap
-// (`command/hub.ts`) hears every press through `Keys.listen` and binds it to
-// a command; nothing else on the page listens to the keyboard. A press
-// reaches `take` with its key, the physical key it came from (`code`: a
-// letter held with Alt still names its letter), its modifiers and its target
-// (where focus was: the keymap reads from it whether a field has the keys,
-// `command/context.ts`). A press some control on the page has already
-// handled (its default prevented: a menu's arrow, a number field's step) and
-// a press composing text (an input method's) are not heard. `take` runs in
-// the press's own dispatch, so the default of a press it takes is prevented
-// in time. It also hears which input the viewer last used (`inputs`: a key
-// pressed or a pointer put down, heard before any control handles it; a key
-// pressed while a pointer is down is the click's, not the keyboard's), so
-// the hub knows whether the keyboard asked for a command (`Invocation.input`)
-// and whether a key the browser walks the history by asked for a step
-// through it (`Heard.walks`).
-// The page it listens on is the adapter's (`keysOn`): the window live
-// (`keys-browser.ts`), a test's own `EventTarget` in a test.
-
 import { Context, Effect, Layer, Option, Schema } from 'effect';
 
 /** A key press as the pages read it. */
@@ -173,9 +154,7 @@ const keysOn = (page: EventTarget, mac: boolean): KeysOps => ({
   inputs: (heard) =>
     Effect.callback<never>(() => {
       const listening = new AbortController();
-      // Captured, so a press a control handles (⌘K's Enter, a menu's arrow) is heard too.
       const on = { capture: true, signal: listening.signal };
-      // The pointers down now: a key pressed while one is (Shift held mid-click) is the click's.
       const down = new Set<unknown>();
       const up = (e: PointerFields) => down.delete(e.pointerId);
       page.addEventListener(
@@ -194,13 +173,10 @@ const keysOn = (page: EventTarget, mac: boolean): KeysOps => ({
         },
         on,
       );
-      // Heard, never ended here: a pointer's lift only says it is up (`Pointer.press` ends a drag).
       // oxlint-disable-next-line film/host-events-through-adapter -- Keys' own: whether a pointer is down
       page.addEventListener('pointerup', up, on);
       // oxlint-disable-next-line film/host-events-through-adapter -- Keys' own: whether a pointer is down
       page.addEventListener('pointercancel', up, on);
-      // A pointer let go outside the window is never heard going up: the window's own blur lets
-      // it go (not an element's, which the capture hears too as a click moves the focus).
       page.addEventListener(
         'blur',
         (e) => {

@@ -77,8 +77,6 @@ const rangesIn = (
   }
   const { from, to } = passage;
   if (chapter < from.chapter || chapter > to.chapter) return [];
-  // A span's first chapter starts at its verse, any later one at verse 1;
-  // its last ends at its verse, any earlier one at the chapter's end.
   let start = 1;
   if (chapter === from.chapter) start = from.verse;
   let end = Infinity;

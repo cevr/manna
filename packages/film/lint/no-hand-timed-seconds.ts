@@ -1,56 +1,3 @@
-// `film/no-hand-timed-seconds`: a time in a film is a cue or a mark, never a
-// second written by hand. A literal second in a draw compiles and passes `film
-// check`, but the lab cannot reach it and a sound cannot follow it (the
-// 2026-09-25 ledger moved sound up to 0.80 s to meet hand-timed picture), and
-// a re-take leaves it behind its word. The rule reads the shapes such a time
-// takes in the draw path:
-//
-// 1. `clamp(x / 0.3)` or `clamp(x * 4)` over the scene clock: a progress
-//    rolled by hand;
-// 2. `(t - cue.start) / 0.5` or `(t - 3) / 2` anywhere: the same, unclamped;
-// 3. `progress(t, …)` with a literal start, length or `± literal` among its
-//    times;
-// 4. `keys(t, …)`: keyframes on the scene clock (`keys(t - cue.start, …)`,
-//    a motion's shape inside a cue, is fine; `f.keys(cue, …)` is better);
-// 5. `cue.end + 0.5`, `f.mark('x') - 0.4`, `f.dur - 1.5`, `t - 4.2`: a
-//    literal offset from a cue edge, a length, a mark or the clock itself (the
-//    outermost sum, once, and not inside a call 1-4 reported);
-// 7. `t > 3.5`, `t - cue.start > 0.5`: the clock, or a time on it, compared
-//    with a literal second (`t > 0`, "has it started", is not a second);
-//
-// and, in a timeline, the spans whose offset stands in for a word or a pause:
-//
-// 6. a span anchored to a `mark`, or to the scene's `start` or `speech`
-//    (`at`, the one landmark key every point uses), whose literal `offset` is
-//    over 1 s: past a word or two from its anchor. Pin it to the word
-//    (`{ mark, word }`), to a nearer mark, to a named cue (`after`/`with`)
-//    or to the voice's end (`at: 'speechEnd'`). A sound cue's point is the
-//    same shape and is read the same way. A span's end is read the same way
-//    off its `until` point (a mark, a landmark, a cue's edge): a literal
-//    `untilOffset` over 1 s, unless the point is the voice's end, after which
-//    no word is left to pin it to.
-//
-// Each name is read by its binding where it is written (`nodes.ts`). The
-// clock is the frame's `t` or `T`: read off the frame a drawing's `draw` or `light` is handed
-// (`f.t`, `f.T`), taken apart from it (`const { t } = f`), or a `const`
-// bound to either (`const now = f.t`); a parameter `t` of a curve or a share
-// is no clock. `clamp`, `progress` and `keys` are film's (`core/time.ts`:
-// imported, under an alias, or read off the module imported whole). A
-// literal is a number written out, or a top-level `const` holding one
-// (`const HOLD = 0.5`): a parameter `HOLD` is not the const.
-//
-// A rate (`Math.sin(t * 7)`, a phase `t * 2 + 1.3`), an item's stagger across
-// a cue (`f.stagger`) and a small lead-in before a word (`offset: -0.3`) are
-// not times.
-//
-// Limits: a product is taken for a rate, so `Math.min(1, (t - c.start) * 2)`
-// (a 0.5 s length as its reciprocal) passes unless `clamp` wraps it alone;
-// the clock handed on as a helper's parameter, a const declared inside a
-// function, an offset spread in (`{ mark, ...LATE }`) and a helper that hides
-// the subtraction (`since(t, c.start) / 0.5`) pass; and any member named
-// `start`, `end` or `dur` is read as a time (geometry such as `seg.end + 20`
-// is flagged, though none is in a film today).
-
 import { Effect, Option, Predicate } from 'effect';
 import {
   Diagnostic,
@@ -264,7 +211,6 @@ export const noHandTimedSeconds = Rule.define({
         if (handTimedRate(b, node) && !reportedAbove(b, node))
           return report(node, 'a progress over a literal length');
         if (node.operator !== '+' && node.operator !== '-') return Effect.void;
-        // The outermost sum only, once.
         if (
           node.parent.type === 'BinaryExpression' &&
           (node.parent.operator === '+' || node.parent.operator === '-')

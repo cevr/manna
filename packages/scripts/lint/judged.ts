@@ -1,26 +1,3 @@
-// The repo's `judged` oxlint plugin: each judged rule (`src/judged/rule.ts`) is
-// `judged/<id>` in `.oxlintrc.json`, its options its whole definition, and
-// this reports the answers the runner (`bun run lint:judged`) has kept for it
-// at their lines, at the rule's severity. It asks no model: oxlint's rules
-// are synchronous and run where there is no key (CI).
-//
-// A file the checkout's last run read as it stands is reported from that
-// run's findings (`src/judged/findings.ts`), by the file's hash and the
-// rule's signature, when the run's item code is this code's and the run is
-// no older than the store keeps answers, with no parse. Any other file is read item by item:
-// the store is keyed by content (`src/judged/store.ts`), so each item of the
-// file is hashed and its answer read by its text, wherever the text now
-// lives, and a moved or copied breach reports at its new place. An item no
-// answer is kept for says nothing, and so does a checkout with no kept
-// answers: the rule fails open.
-//
-// oxlint runs its plugins in Node, so this reads both files with node's file
-// system: the findings from the checkout (`settings.judged.checkout`, from
-// the root oxlint runs in), the store from the git common dir
-// (`settings.judged.store`), which every checkout shares. Each rule's id is
-// named here once; the config test (`src/judged/config.test.ts`) holds the
-// names to the config's `judged/*` entries.
-
 import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
 import { Clock, Effect, Option, Schema } from 'effect';

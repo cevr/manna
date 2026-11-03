@@ -1,7 +1,3 @@
-// The sources the credits roll (the framework's `creditRoll`): each beat's
-// `cite`, grouped under the film's authors in the order given here, after
-// scripture.
-
 import { type Author, type Credit, creditRoll } from '@manna/film/canvas';
 import { TITLE, script } from './script.ts';
 

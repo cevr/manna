@@ -1,29 +1,3 @@
-// The findings of the checkout's last judged run, file by file, for the
-// oxlint plugin (`packages/scripts/lint/judged.ts`): the runner has read
-// every item and its kept answer, so the plugin reports a file's findings
-// from here when the file's text hashes as it did then, and parses nothing.
-// A file whose text has changed since, or a rule whose words, label,
-// threshold, selector or model have, is not answered here: the plugin reads
-// its items and the store, as it does with no file at all. So is every file
-// when the code that makes the items and their keys (`makersHash`) is not
-// the code the run read them with, or when the run is older than the store
-// keeps an answer no run reads (`MAX_AGE_DAYS`): the store may have dropped
-// the answers its findings came from; and when the checkout's settings name
-// another store than the run read (`settings.judged.store`): its findings
-// are that store's answers, not this one's.
-//
-// Each file the run read holds the findings of each rule whose every item
-// in it has an answer the store keeps, as the store held it after the run's
-// write; a rule with an item there the store keeps no answer for (none came,
-// or the write failed) is left out of that file, so the plugin reads the
-// store for it. A finding holds its item's offset and the probability of the
-// rule's reporting label, as the plugin would find them in the store.
-//
-// The file is the checkout's own (`settings.judged.checkout`, from its
-// root): it says what this tree held at the run. The plugin runs in Node, so
-// this module imports nothing of Bun, only node's crypto, fs, module, path
-// and url.
-
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';

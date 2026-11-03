@@ -1,12 +1,5 @@
-/**
- * The meaning table, made by `packages/hymnal/scripts/meaning/build.ts` (its format: `table.ts` there). Do not edit.
- *
- * Modified from EmbeddingGemma (google/embeddinggemma-300m), a Gemma model by Google: the model
- * was run on single words and on the hymns, and its outputs were weighted and cut to 4 and 8 bits.
- * Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms
- * (a copy: `gemma-terms.js` beside this file). This file is under those Terms, not the
- * repository's licence, and its use is subject to their section 3.2 use restrictions (`LICENSE`).
- */
+export const notice =
+  "The meaning table, made by `packages/hymnal/scripts/meaning/build.ts` (its format: `table.ts` there). Do not edit. Modified from EmbeddingGemma (google/embeddinggemma-300m), a Gemma model by Google: the model was run on single words and on the hymns, and its outputs were weighted and cut to 4 and 8 bits. Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms (a copy: `gemma-terms.js` beside this file). This file is under those Terms, not the repository's licence, and its use is subject to their section 3.2 use restrictions (`LICENSE`).";
 export const meaning = () => ({
   source:
     'onnx-community/embeddinggemma-300m-ONNX@5090578d9565bb06545b4552f76e6bc2c93e4a66 fp32; words: google-bert/bert-base-uncased@86b5e0934494bd15c9632b12f734a8a67f723594 and the hymnal words',

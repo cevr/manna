@@ -1,15 +1,3 @@
-// An ask's provider: its page machine (one actor per ask on a page of asks,
-// on the review's runtime), and what the page's parts read and do through it. The
-// parts (`parts.tsx`) never see the machine: they read the record, the
-// sections its page shows, the draft and what the last send said, and they
-// set an answer or send the page. The provider is the one place that knows how.
-//
-// The tab keeps the draft unsent (`sessionStorage`, through `TabStore`, which
-// keeps nothing past the page when the tab's storage cannot be used): read
-// once the page has settled (a server render has no tab), taken back by the
-// page once it is open, then written as it changes. A landed send leaves the
-// draft only what the lab still asks, so a page sent to its end keeps none.
-
 import { useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { Effect, Match, Option, Record } from 'effect';
 import * as ActorAtom from 'effect-machine/atom';
@@ -147,7 +135,6 @@ const Body = (
   const send = useAtomSet(() => stateAtom);
   keepDraft(props.ask, page, send);
   const record = createMemo(() => Option.map(pageOf(page()), (p) => p.record));
-  // The run as first read; each move past it (an answer landed, or read again where another device left it) is said.
   let run = Option.none<string>();
   createEffect(
     () => runOf(record()),
@@ -201,7 +188,6 @@ export const Provider = (
   }>,
 ) => {
   const { meta } = useAskRoot();
-  // The ask as the page's read had it, taken once as the actor starts: later reads are the machine's own.
   return (
     <Actor
       runtime={meta.runtime}

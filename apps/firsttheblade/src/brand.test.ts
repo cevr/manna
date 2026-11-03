@@ -126,7 +126,6 @@ describe('the brand: Moonwheat, small capitals, fine lines, no torn paper', () =
           },
         );
       }
-      // The leaf the page lays into the book (`ui/emblems.ts`) is drawn the same way.
       expect(/fill="#|<clipPath/.test(yield* read('ui/emblems.ts'))).toBe(false);
     }));
 });

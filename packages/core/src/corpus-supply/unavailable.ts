@@ -54,7 +54,6 @@ interface UnavailablePublication {
 }
 
 export const KNOWN_UNAVAILABLE: readonly UnavailablePublication[] = [
-  // SDA Bible Commentary, volumes 1-7.
   { bookId: 12515, code: '1SDABC', reason: 'subscription' },
   { bookId: 12511, code: '2SDABC', reason: 'subscription' },
   { bookId: 12516, code: '3SDABC', reason: 'subscription' },
@@ -62,14 +61,12 @@ export const KNOWN_UNAVAILABLE: readonly UnavailablePublication[] = [
   { bookId: 12514, code: '5SDABC', reason: 'subscription' },
   { bookId: 12518, code: '6SDABC', reason: 'subscription' },
   { bookId: 12517, code: '7SDABC', reason: 'subscription' },
-  // Companion reference works, same gate.
   { bookId: 12362, code: 'EGWEnc', reason: 'subscription' },
   { bookId: 12668, code: 'SDAEnc', reason: 'subscription' },
   { bookId: 12666, code: 'HSDAT', reason: 'subscription' },
   { bookId: 12669, code: 'SDASB', reason: 'subscription' },
   { bookId: 14720, code: 'ABC-OT', reason: 'subscription' },
   { bookId: 14721, code: 'ABC-NT', reason: 'subscription' },
-  // Copyrighted modern translations. These advertise a download URL that 404s.
   { bookId: 14334, code: 'NKJV', reason: 'third-party-licence' },
   { bookId: 14340, code: 'NIV', reason: 'third-party-licence' },
   { bookId: 14341, code: 'NET', reason: 'third-party-licence' },

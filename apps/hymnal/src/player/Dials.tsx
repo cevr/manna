@@ -92,30 +92,23 @@ export const useThumb = (number: number) => {
     [book, style],
   );
   const [open, setOpen] = useState(false);
-  // How many resets were told here: a dial turns home on the reset's curve when the count moves.
   const [resets, setResets] = useState(0);
-  // Whether the last reset's close waits; each reset starts its wait again.
   const [waiting, setWaiting] = useState(false);
-  // The dials open on one hymn: another hymn's page (a page turn) finds them closed, and no close waits.
   const [openOn, setOpenOn] = useState(number);
   if (openOn !== number) {
     setOpenOn(number);
     setOpen(false);
     setWaiting(false);
   }
-  // No dials stand with chords off: chords turned off away from these dials (the sheet's
-  // switch, Settings, another page's hold) find them closed, and closed when chords return.
   if (open && !chords) {
     setOpen(false);
     setWaiting(false);
   }
   const cue = useCue();
   const clock = use(ResetClock);
-  // Events that come before the page draws again (a fling's detents) each step from the last.
   const now = useRef<Thumb>({ chords, move, open });
   now.current = { chords, move, open };
   const apply = (event: ThumbEvent) => {
-    // A hymn with no chords opens no dials: a hold still turns chords on or off, and a tap turns them on.
     const key = Option.orElse(printed, () =>
       Option.liftPredicate(noKey, () => keyless(event, now.current.chords)),
     );
@@ -127,14 +120,11 @@ export const useThumb = (number: number) => {
       if (!sameMove(next.state.move, was.move)) setMove(next.state.move);
       if (next.state.open !== was.open) setOpen(next.state.open);
       for (const cued of next.cues) cue(cued);
-      // A reset of a hymn already at home turns nothing home, so it neither counts nor waits.
       if (!ThumbEvent.$is('Reset')(event) || isStill(was.move)) continue;
       setResets((count) => count + 1);
       setWaiting(next.state.open);
     }
   };
-  // The handlers stay one pair of functions for the page's life, so the dials need not draw again
-  // for a draw of the bar (a playback tick); each call runs the latest `apply`.
   const latest = useRef(apply);
   useLayoutEffect(() => {
     latest.current = apply;
@@ -214,7 +204,6 @@ export const Dials = memo(function Dials({
         if (row === 'chips')
           return (
             <PanelRow key="chips" fromBottom={fromBottom}>
-              {/* With the Tuner, it leads and Reset trails, so neither moves as the other comes or goes. */}
               <View style={[styles.chips, tuner && styles.ends]}>
                 {chips.map((chip) =>
                   Match.value(chip).pipe(

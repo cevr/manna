@@ -1,21 +1,3 @@
-// A review record (`film review`): the evidence that a scene's figures were
-// looked at closely before the owner is asked to keep them. It is a list of
-// reviews, one per run, each appended and never written over: a run takes
-// one scene of one film, its source key read before its first place and
-// again after its last (the same, or the run is refused), each figure's
-// crops at 1:1 at two places or more, and a fresh critique's findings, each
-// with a stable id and, once answered, what was done about it.
-//
-// The keep gate (`tools/ask-materials.ts`) reads what an ask keeps by its
-// types (`AskKeeps` on an option whose `outcome` is `keep`, on the ask's
-// recommended way), never by its words: each scene and figure kept needs a
-// review of it from the scene as it stands now, every finding on it answered
-// (`evidenceProblems`), or the owner's own words override it. The owner,
-// 2026-10-17 (his local day), after a keep recommended on figures nobody had
-// looked at 1:1: "theres some artifacts in the render, and the farmer looks
-// nothing like the concept, face proportions and angles are off". Pure: the
-// record, the problems, its page.
-
 import { Array as Arr, Boolean as Bool, Effect, Option, Predicate, Result, Schema } from 'effect';
 import { type Ask, type AskKeeps, recommendedPath, untypedKeeps } from './ask.ts';
 import { CRITIQUE_ASPECTS } from './critique.ts';

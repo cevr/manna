@@ -103,7 +103,6 @@ export function useRail({
   const y = useSharedValue(0);
   const height = useSharedValue(0);
   const shift = useDerivedValue(() => railShift(rest, scroll.value));
-  // The marks live in a shared value, so the gesture's worklets carry no copy of them.
   const held = useSharedValue<ReadonlyArray<Mark>>(marks);
   useEffect(() => {
     held.value = marks;
@@ -135,7 +134,6 @@ export function useRail({
     minDistance: 0,
     maxPointers: 1,
     shouldCancelWhenOutside: false,
-    // The touch is the rail's from its first point: a tap jumps, a drag drives.
     onBegin: ({ y: touch }) => {
       'worklet';
       quiet.value = true;

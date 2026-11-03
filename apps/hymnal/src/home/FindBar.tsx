@@ -110,7 +110,6 @@ export const useCancelSearch = () => {
 const useKeyboardHeight = () => {
   const height = useSharedValue(0);
   useEffect(() => {
-    // iOS tells the keyboard's move as it starts; Android only once it is done.
     const [rises, falls] = Platform.select({
       ios: ['keyboardWillShow', 'keyboardWillHide'] as const,
       default: ['keyboardDidShow', 'keyboardDidHide'] as const,
@@ -180,8 +179,6 @@ export function FindBar({
   const cue = useCue();
   const accent = useAccent();
   const reduced = useReduceMotion();
-  // The search this bar's `Search` opened, until its box first opens: only then does the box take focus. A search
-  // opened some other way, a later one, and the same one shown again on the way back from a result leave the keyboard down.
   const [asked, setAsked] = useState(Option.none<Searching>());
   const focusBox =
     row === 'open' &&
@@ -194,7 +191,6 @@ export function FindBar({
   const [width, setWidth] = useState(0);
   const [cancelWidth, setCancelWidth] = useState(0);
   const chosen = chosenOf(row, drumsOpen);
-  // Which end the chosen mark stands at: 0 behind the `#` at the trailing end, 1 behind Search at the leading end.
   const side = useSharedValue(Number(chosen === 'search'));
   const wasChosen = useRef(chosen);
   useEffect(() => {
@@ -222,9 +218,7 @@ export function FindBar({
     if (row === 'open') setAsked(Option.none());
     if (before === 'open' && row === 'folded') focusOn(searchButton);
   }, [row, reduced, focusBox, progress, fade]);
-  // Where the bar stands, its bottom over the window's: `bottom`, reached as `glideOf` says from where it stood.
   const stand = useSharedValue(bottom);
-  // The whole bar's opacity: 1, but for the fade that stands in for a glide under Reduce Motion.
   const seen = useSharedValue(1);
   const stood = useRef({ at, bottom });
   useEffect(() => {
@@ -239,33 +233,27 @@ export function FindBar({
     seen.value = 0;
     seen.value = withTiming(1, { duration: 150 });
   }, [bottom, reduced, stand, seen]);
-  // The keyboard lift composes over the place: while the keyboard is up the bar rides 8 points over its top.
   const placed = useAnimatedStyle(() => {
     const lift = (keyboard.value > 0 && Math.max(0, keyboard.value + HASH_GAP - stand.value)) || 0;
     return { bottom: stand.value, opacity: seen.value, transform: [{ translateY: -lift }] };
   });
   const open = Math.max(FOLDED, width - cancelWidth - CANCEL_GAP);
-  // Unmeasured, the open capsule fills the row by flex (`styles.grow`).
   const grown = useAnimatedStyle(() => {
     if (width === 0) return {};
     return { width: FOLDED + (open - FOLDED) * progress.value };
   });
-  // The chosen mark rides from the trailing end across the capsule as it is now, less its own width: a new
-  // row width moves its place at once, and only a change of side slides it.
   const slid = useAnimatedStyle(() => {
     if (width === 0) return { transform: [{ translateX: 0 }] };
     const across = FOLDED + (open - FOLDED) * progress.value - HASH;
     return { transform: [{ translateX: -across * side.value }] };
   });
   const faded = useAnimatedStyle(() => ({ opacity: fade.value }));
-  // Search's magnifier: on the chosen mark while Search is chosen, else on the glass. The `#` takes its ink from its look.
   const searchInk = (chosen === 'search' && color.onGlassChosen) || color.onGlass;
   const reach = (control: Control) => !inReach(control, drumsOpen) && outOfReach;
   const startSearch = () => {
     cue(plain('tab'));
     const opened = searchAt(path, 'field');
     setAsked(opened);
-    // One search at a time: opened here, it leaves any other screen, and starts with an empty box.
     setQuery('');
     setSearching(opened);
   };
@@ -285,7 +273,6 @@ export function FindBar({
             {...(drumsOpen && passThrough)}
             style={[styles.capsule, row === 'open' && width === 0 && styles.grow, grown]}
           >
-            {/* Drawn first, so it lies behind the controls; it takes no touch and VoiceOver passes it by. */}
             <Animated.View
               testID="find-chosen"
               aria-hidden

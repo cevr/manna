@@ -1,11 +1,3 @@
-// A page's reach of the host is failed by the harness, whatever the spelling:
-// a script whose source map names a file of the film's own source outside its
-// adapters (`src/browser/`) and that moves the history, hears the window's
-// keys, ends a press or takes a pointer fails its case, though the case never
-// looked. The same call from an adapter, a library or a script with no source
-// map is told and let through. Each script here is a page's script with its
-// inline source map naming the file that "wrote" it.
-
 import { Effect } from 'effect';
 import { Base64 } from 'effect/encoding';
 import { describe, expect, it } from 'effect-bun-test';
@@ -59,7 +51,6 @@ const outcome = (js: string) =>
           });
           yield* tab.goto('/');
           yield* evaluates(tab, 'window.ran === true', true);
-          // The page's report is an event: one more round trip, and it has been heard.
           yield* tab.evaluate('true');
         }),
       ),

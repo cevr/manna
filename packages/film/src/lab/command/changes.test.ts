@@ -1,6 +1,3 @@
-// What a title or a label names as a command's key is the hub's binding now,
-// as the viewer's keyboard writes it, with no literal left behind.
-
 import { describe, expect, test } from 'bun:test';
 import { Effect, Layer } from 'effect';
 import { Clipboard } from '../../browser/clipboard.ts';

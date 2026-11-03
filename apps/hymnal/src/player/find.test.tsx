@@ -97,7 +97,6 @@ describe('a tap outside the find drums', () => {
       routed: [],
       behind: [],
     });
-    // Closed, the screen behind takes its presses again.
     click(get(host, 'behind-row'));
     expect(behind).toEqual(['row']);
   });
