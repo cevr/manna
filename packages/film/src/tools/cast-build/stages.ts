@@ -238,7 +238,9 @@ const contentOf = (name: string, bytes: Uint8Array) => {
  * holds must hold the same content (`contentOf`). One that differs fails the
  * stage and nothing is written, so the build never rewrites a committed part;
  * a change meant is made by running the cutters by hand and committing what
- * they write. A file his folder does not hold yet is new, and is copied in.
+ * they write. A committed file they no longer write (outside an `okra/`
+ * folder) fails the stage too, so a part the cutters dropped is not kept
+ * stale. A file his folder does not hold yet is new, and is copied in.
  */
 const checkedCutters = (memberDir: string, scripts: ReadonlyArray<string>) =>
   Effect.gen(function* () {
@@ -250,6 +252,14 @@ const checkedCutters = (memberDir: string, scripts: ReadonlyArray<string>) =>
     const made = yield* Effect.forEach(yield* filesUnder(scratch), (name) =>
       Effect.map(fs.readFile(path.join(scratch, name)), (bytes) => ({ name, bytes })),
     );
+    const madeNames = new Set(made.map((f) => f.name));
+    const unmade = (yield* filesUnder(sheets)).filter(
+      (name) => !madeNames.has(name) && !name.split(path.sep).includes('okra'),
+    );
+    if (unmade.length > 0)
+      return yield* StageFailed.make({
+        reason: `his cutters no longer make ${unmade.join(', ')}; run them by hand and commit to drop it`,
+      });
     const committed = yield* Effect.forEach(made, (file) =>
       fs.readFile(path.join(sheets, file.name)).pipe(
         Effect.map((held) => ({ ...file, held: Option.some(held) })),
@@ -372,8 +382,9 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
   const cutters = Option.map(Option.fromUndefinedOr(m.coverage.cutters), (scripts) =>
     scripts.map((s) => path.join(m.memberDir, s)),
   );
+  // the parts stage is keyed by its own code and by what makes his sheets
   const maker = yield* Option.match(cutters, {
-    onNone: () => Effect.map(cutTableSources(m.memberDir), (cut) => [...cut, ...src.parts]),
+    onNone: () => cutTableSources(m.memberDir),
     onSome: cutterSources,
   });
   for (const entry of m.coverage.entries) {
@@ -405,6 +416,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
       inputs: [
         stageInput(`drawing:${at(entry.id)}`),
         ...maker,
+        ...src.parts,
         ...sheetFiles.map((f) => fileInput(path.join(sheet, f))),
       ],
       version: VERSION.parts,

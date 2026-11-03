@@ -297,6 +297,73 @@ const partsOver = <E>(
     yield* body({ at, run, spawned });
   }).pipe(Effect.scoped, Effect.provide(partsLayer));
 
+/** Why a stage of a report failed; empty when it did not, or is not there. */
+const reasonOf = (stage: Option.Option<{ readonly reason: Option.Option<string> }>) =>
+  Option.getOrElse(
+    Option.flatMap(stage, (p) => p.reason),
+    () => '',
+  );
+
+/**
+ * A fake member cut by his own cutter, which copies his kept PNG to his
+ * front's head, and his front's drawing and parts stages built: each process
+ * the build starts, recorded, and only `bun` run.
+ */
+const ownCutterMember = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem;
+  const real = yield* ChildProcessSpawner.ChildProcessSpawner;
+  const dir = yield* fs.realPath(yield* memberIn([]));
+  yield* fs.makeDirectory(`${dir}/cast-sheet/views`, { recursive: true });
+  yield* fs.writeFileString(`${dir}/cast-sheet/views/front.png`, 'png');
+  const kept = encodePng(pixels([200, 40, 40, 255]));
+  yield* fs.writeFile(`${dir}/cast-sheet/kept.png`, kept);
+  const cutter = `${dir}/cutout/cutter.ts`;
+  yield* fs.writeFileString(
+    cutter,
+    [
+      "import kept from '../cast-sheet/kept.png' with { type: 'file' };",
+      "import { copyFileSync, mkdirSync } from 'node:fs';",
+      'mkdirSync(`${process.argv[2]}/front`, { recursive: true });',
+      'copyFileSync(kept, `${process.argv[2]}/front/head.png`);',
+    ].join('\n'),
+  );
+  const spawned: Array<ReadonlyArray<string>> = [];
+  const recording = ChildProcessSpawner.make((command) => {
+    if (command._tag !== 'StandardCommand') return Effect.die('no piped process in this test');
+    spawned.push([command.command, ...command.args.map(wordValue)]);
+    if (command.command !== 'bun') return Effect.die(`no ${command.command} in this test`);
+    return real.spawn(command);
+  });
+  const entry = FRONT;
+  const services = Layer.merge(
+    FilmFolder.layer(`${dir}/films`),
+    Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, recording),
+  );
+  const built = (touch: ReadonlyArray<string> = []) =>
+    Effect.gen(function* () {
+      const stages = (yield* memberStages(
+        {
+          film: 'in-its-order' as never,
+          member: 'fake',
+          memberDir: dir,
+          coverage: { member: 'fake', entries: [entry], cutters: ['cutout/cutter.ts'] },
+          facts: { [entry.id]: complete },
+        },
+        yield* buildSources('in-its-order' as never, RENDER_PAGE),
+      )).filter((s) => [`drawing:${entry.id}@fake`, `parts:${entry.id}@fake`].includes(s.id));
+      const report = yield* buildGraph(stages, {
+        root: '/',
+        cache: `${dir}/cache`,
+        plan: false,
+        touch,
+        spend: new Set(),
+      });
+      const parts = report.stages.find((s) => s.id === `parts:${entry.id}@fake`);
+      return { stages, report, parts };
+    }).pipe(Effect.provide(services));
+  return { dir, cutter, kept, head: `${dir}/cutout/sheets/front/head.png`, spawned, built };
+});
+
 describe('memberStages', () => {
   it.effect('a fitted entry’s fit reads its fitted pose and held drawing', () =>
     Effect.gen(function* () {
@@ -359,61 +426,15 @@ describe('memberStages', () => {
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
-        const real = yield* ChildProcessSpawner.ChildProcessSpawner;
-        const dir = yield* fs.realPath(yield* memberIn([]));
-        yield* fs.makeDirectory(`${dir}/cast-sheet/views`, { recursive: true });
-        yield* fs.writeFileString(`${dir}/cast-sheet/views/front.png`, 'png');
-        const kept = encodePng(pixels([200, 40, 40, 255]));
-        yield* fs.writeFile(`${dir}/cast-sheet/kept.png`, kept);
-        const cutter = `${dir}/cutout/cutter.ts`;
-        yield* fs.writeFileString(
-          cutter,
-          [
-            "import kept from '../cast-sheet/kept.png' with { type: 'file' };",
-            "import { copyFileSync, mkdirSync } from 'node:fs';",
-            'mkdirSync(`${process.argv[2]}/front`, { recursive: true });',
-            'copyFileSync(kept, `${process.argv[2]}/front/head.png`);',
-          ].join('\n'),
-        );
-        const spawned: Array<ReadonlyArray<string>> = [];
-        const recording = ChildProcessSpawner.make((command) => {
-          if (command._tag !== 'StandardCommand')
-            return Effect.die('no piped process in this test');
-          spawned.push([command.command, ...command.args.map(wordValue)]);
-          if (command.command !== 'bun') return Effect.die(`no ${command.command} in this test`);
-          return real.spawn(command);
-        });
+        const { dir, cutter, kept, head, spawned, built } = yield* ownCutterMember;
         const entry = FRONT;
-        const services = Layer.merge(
-          FilmFolder.layer(`${dir}/films`),
-          Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, recording),
-        );
-        const built = (touch: ReadonlyArray<string> = []) =>
-          Effect.gen(function* () {
-            const stages = (yield* memberStages(
-              {
-                film: 'in-its-order' as never,
-                member: 'fake',
-                memberDir: dir,
-                coverage: { member: 'fake', entries: [entry], cutters: ['cutout/cutter.ts'] },
-                facts: { [entry.id]: complete },
-              },
-              yield* buildSources('in-its-order' as never, RENDER_PAGE),
-            )).filter((s) => [`drawing:${entry.id}@fake`, `parts:${entry.id}@fake`].includes(s.id));
-            const report = yield* buildGraph(stages, {
-              root: '/',
-              cache: `${dir}/cache`,
-              plan: false,
-              touch,
-              spend: new Set(),
-            });
-            const parts = report.stages.find((s) => s.id === `parts:${entry.id}@fake`);
-            return { stages, report, parts };
-          }).pipe(Effect.provide(services));
-        const head = `${dir}/cutout/sheets/front/head.png`;
         const { stages, report, parts } = yield* built();
         expect(filesOf(stages, `parts:${entry.id}@fake`)).toEqual(
-          expect.arrayContaining([cutter, `${dir}/cast-sheet/kept.png`]),
+          expect.arrayContaining([
+            cutter,
+            `${dir}/cast-sheet/kept.png`,
+            ...(yield* sourceFiles('parts')),
+          ]),
         );
         // no head was committed: the one the cutter writes is new
         expect(parts?.state).toBe('ran');
@@ -431,13 +452,31 @@ describe('memberStages', () => {
         yield* fs.writeFile(head, committed);
         const changed = (yield* built([cutter])).parts;
         expect(changed?.state).toBe('failed');
-        expect(
-          Option.getOrElse(
-            Option.flatMap(Option.fromUndefinedOr(changed), (p) => p.reason),
-            () => '',
-          ),
-        ).toContain('head.png');
+        expect(reasonOf(Option.fromUndefinedOr(changed))).toContain('head.png');
         expect(yield* fs.readFile(head)).toEqual(committed);
+      }).pipe(Effect.scoped, Effect.provide(partsLayer)),
+  );
+
+  it.effect(
+    'a member cut by his own cutters fails his parts on a committed part they no longer make, and leaves it; his okra folder is not theirs',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const { dir, kept, head, built } = yield* ownCutterMember;
+        const sheet = `${dir}/cutout/sheets/front`;
+        yield* fs.makeDirectory(`${sheet}/okra`, { recursive: true });
+        yield* fs.writeFile(head, kept);
+        yield* fs.writeFileString(`${sheet}/okra/calls.json`, '{}');
+        const arm = `${sheet}/arm.png`;
+        yield* fs.writeFile(arm, kept);
+        const stale = (yield* built()).parts;
+        expect(stale?.state).toBe('failed');
+        expect(reasonOf(Option.fromUndefinedOr(stale))).toContain(
+          'his cutters no longer make front/arm.png; run them by hand and commit to drop it',
+        );
+        expect(yield* fs.readFile(arm)).toEqual(kept);
+        yield* fs.remove(arm);
+        expect((yield* built()).parts?.state).toBe('ran');
       }).pipe(Effect.scoped, Effect.provide(partsLayer)),
   );
 
