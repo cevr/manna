@@ -147,7 +147,7 @@
       "target": "id=key-button",
       "expect": [
         { "shows": "id=chord-1-1-1" },
-        { "shows": "id=key-face" },
+        { "shows": "role=statictext label=KEY" },
         { "hides": "id=dials" }
       ],
       "receipt": "snapshot"
@@ -213,7 +213,7 @@
       "name": "chords-mode-kept",
       "action": "open",
       "link": "hymns/100",
-      "expect": [{ "shows": "id=chord-1-1-1" }, { "shows": "id=key-face" }],
+      "expect": [{ "shows": "id=chord-1-1-1" }, { "shows": "role=statictext label=KEY" }],
       "receipt": "snapshot"
     },
     {
