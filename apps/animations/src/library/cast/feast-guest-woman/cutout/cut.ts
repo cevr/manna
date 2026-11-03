@@ -9,7 +9,7 @@
 // arm), its cream cuff and its round hand (a disc), which lies in front of the
 // cuff and her knee. Pure data.
 
-import type { HiddenEntry, PartCut } from '@manna/film/tools';
+import type { HiddenEntry, PartCut, SheetClean } from '@manna/film/tools';
 import { CUT_AWAY, shade, sides } from '../../../cutout/prompts.ts';
 import { FAR, box } from '../../../cutout/rules.ts';
 import { CUFF, type CuffInk, cuffsToArms } from '../../../cutout/clean.ts';
@@ -200,4 +200,6 @@ export const cleanPoses1With = (cuff: CuffInk) =>
   });
 
 /** What each view's laid part sheet runs before it is written (`film concept parts`): her arms take the cuff ink her hand discs leave on her torso and robe, and the two pieces of her torso stranded off her outer cuffs, so no specks stay behind when an arm turns. */
-export const CLEAN = { 'poses-1': cleanPoses1With(CUFF) };
+export const CLEAN = { 'poses-1': cleanPoses1With(CUFF) } satisfies Partial<
+  Record<keyof typeof CUTS, SheetClean>
+>;

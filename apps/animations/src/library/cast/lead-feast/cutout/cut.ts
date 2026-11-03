@@ -22,7 +22,7 @@
 // (`frames.ts`), and reads a standing view's figure in the kept box as the
 // kept view's own. Data: the rules and the table are the shared module's.
 
-import type { HiddenEntry, PartCut } from '@manna/film/tools';
+import type { HiddenEntry, PartCut, SheetClean } from '@manna/film/tools';
 import { CUT_AWAY, KEEP_REST, grain, shade, sides } from '../../../cutout/prompts.ts';
 import {
   FAR,
@@ -828,4 +828,4 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
 /** What each view's laid part sheet runs before it is written (`film concept parts`): single-9's right arm drops the two specks of paper and ink its paint leaves floating off his sleeve. */
 export const CLEAN = {
   'single-9': clearSpecks('armRight', 50),
-};
+} satisfies Partial<Record<keyof typeof CUTS, SheetClean>>;

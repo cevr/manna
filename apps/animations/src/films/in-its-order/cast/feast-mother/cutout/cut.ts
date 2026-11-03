@@ -16,7 +16,7 @@
 // the rules and the table are the library's. Her poses, holding the baby, are
 // cut by each arm's own outline instead (see `POSES_1`).
 
-import type { HiddenEntry, PartCut, PartRule } from '@manna/film/tools';
+import type { HiddenEntry, PartCut, PartRule, SheetClean } from '@manna/film/tools';
 import { Record as Records } from 'effect';
 import { type PaperRim, clearPaperRim } from '../../../../../library/cutout/clean.ts';
 import { CUT_AWAY, grain, shade, sides } from '../../../../../library/cutout/prompts.ts';
@@ -926,4 +926,6 @@ export const PAPER_RIMS = Records.map(
 );
 
 /** What each view's laid part sheet runs before it is written (`film concept parts`): every view clears the pale paper band her paint keeps just outside her ink (251,243,226 at the median on poses-1, against its paper 253,240,215), which her un-matte would read as her cream cloth and draw as a white torn rim. */
-export const CLEAN = Records.map(PAPER_RIMS, clearPaperRim);
+export const CLEAN = Records.map(PAPER_RIMS, clearPaperRim) satisfies Partial<
+  Record<keyof typeof CUTS, SheetClean>
+>;
