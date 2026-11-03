@@ -17,34 +17,20 @@ type Box = { readonly x0: number; readonly y0: number; readonly x1: number; read
 const W = 48;
 const PAPER: Rgb = [244, 232, 212];
 const OLIVE: Rgb = [150, 140, 100];
-/** The sleeve's cream: what a speck of the kept arm left in the paint shows. */
 const CREAM: Rgb = [217, 191, 165];
-/** A grey of the olive's lightness: shade with no colour. */
 const GREY: Rgb = [138, 138, 138];
-/** The ink of an outline drawn in the paint. */
 const INK: Rgb = [70, 58, 46];
-/** A skin beside the olive: a second material of the torso. */
 const SKIN: Rgb = [214, 160, 128];
-/** A light tunic: the cloth the robe and most of the torso keep. */
 const TUNIC: Rgb = [225, 215, 190];
-/** The olive 5.3 L* lighter: a fleck of fine grain, under the speck's 12 L* and over the grain's 4. */
 const FLECK: Rgb = [164, 154, 114];
-/** An olive cloth as dark as L* 40, under the ink's 45: shade a figure's cloth keeps. */
 const DARK_OLIVE: Rgb = [105, 95, 60];
-/** The dark olive 5 L* darker: a fleck of fine grain in it. */
 const DARK_FLECK: Rgb = [93, 83, 49];
-/** An ink of L* 20, drawn as an outline through the dark olive. */
 const DARK_INK: Rgb = [56, 47, 37];
-/** A brown cloth of L* 15.25: the darkest kept cloth of the cast measures L* 15.2, under 1 above the outline's 15. */
 const DEEP: Rgb = [45, 37, 26];
-/** The deep brown 6.1 L* lighter: a fleck of fine grain in it. */
 const DEEP_FLECK: Rgb = [59, 50, 36];
-/** An ink of L* 5: an outline's core. */
 const OUTLINE_INK: Rgb = [20, 16, 14];
-/** An outline's ramp into its cloth, L* 46. */
 const RAMP: Rgb = [118, 108, 96];
 
-/** The torso in a picture `h` px tall: 4 px in from its top and foot. */
 const torsoOf = (h: number): Box => ({ x0: 6, y0: 4, x1: 42, y1: h - 4 });
 const ARM: Box = { x0: 18, y0: 8, x1: 30, y1: 40 };
 const inside = (b: Box, x: number, y: number) => x >= b.x0 && x < b.x1 && y >= b.y0 && y < b.y1;
@@ -66,14 +52,6 @@ const corners = (b: Box): ReadonlyArray<readonly [number, number]> => [
 type Paint = (x: number, y: number) => Rgb;
 type Still = { readonly name: string; readonly polygon: ReadonlyArray<readonly [number, number]> };
 
-/**
- * A torso of `cloth` (flat olive unless given) on `paper` (flat unless
- * given), in a picture `h` px tall (`W` unless given), cut into the `still`
- * parts (one torso unless given), with a cream arm in `arm` in front of it
- * that moves, and okra's answer laid on it: the view with the arm's place
- * painted, the cloth or paper at its edge and `inner` more than `margin` px
- * in from it (2 unless given, where the seam never reads).
- */
 const layOn =
   (
     arm: Box,
@@ -122,10 +100,8 @@ const layOn =
 
 type Lay = Result.Result.Success<ReturnType<typeof layAnswer>>;
 
-/** Each measure `measuresOf` gave, with the whole lay it came from: the fit and the sheet made, for the golden digests. */
 const lays = new WeakMap<HiddenMeasures, Lay>();
 
-/** The measures of `answer` laid on `view`, cut by `cut` within `figure`, with the arm moving. */
 const measuresOf = (view: Raster, cut: PartCut, figure: Uint8Array, answer: Raster) => {
   const sheet = Result.getOrThrow(cutParts(view, cut, { figure }));
   const hidden = hiddenOf(sheet, ['arm']);
@@ -143,7 +119,6 @@ const measuresOf = (view: Raster, cut: PartCut, figure: Uint8Array, answer: Rast
   return lay.measures;
 };
 
-/** A digest of the whole lay behind `measures`: its fit and measures to the last bit, and every byte of the sheet it made. */
 const digestOf = (measures: HiddenMeasures) => {
   const lay = lays.get(measures);
   const fit = lay?.fit ?? { s: 0, dx: 0, dy: 0, score: 0 };
@@ -156,25 +131,15 @@ const digestOf = (measures: HiddenMeasures) => {
   return hash.digest('hex').slice(0, 16);
 };
 
-/** The size of the strip `layStrip` lays: tall enough for its edge to cross eight rows of grain cells. */
 const STRIP = { w: 72, h: 192 } as const;
-/** The torso's left edge in the strip: one pixel out every four rows, from x 6. */
 const stripEdge = (y: number) => 6 + Math.floor(y / 4);
-/** The corners down the strip's edge, `d` px right of it, for a strip `h` px tall. */
 const stairOf = (d: number, h: number = STRIP.h): ReadonlyArray<readonly [number, number]> =>
   Array.from({ length: h / 4 }, (_, s) => [
     [6 + s + d, 4 * s] as const,
     [6 + s + d, 4 * s + 4] as const,
   ]).flat();
-/** A patch the arm takes inside the torso, in grain cells of its own, the answer paints smooth. */
 const PATCH: Box = { x0: 50, y0: 8, x1: 66, y1: 72 };
 
-/**
- * A torso of flat olive whose left edge slants (`stripEdge`), with a cream
- * arm in front of that edge, 6 px over the ground and 7 px over the torso,
- * and in `PATCH`; and okra's answer laid on it: the patch olive, and under
- * the arm the paper to the edge, then `edge[d]` for the 7 px `d` in from it.
- */
 const layStrip = (edge: ReadonlyArray<Rgb>) => {
   const { w, h } = STRIP;
   const ground = (x: number, y: number) => x < stripEdge(y) - 6 || x >= w - 4;
@@ -215,26 +180,12 @@ const layStrip = (edge: ReadonlyArray<Rgb>) => {
   return measuresOf(view, cut, figure, answer);
 };
 
-/** A part's own outline along its edge, read in from the edge: 4 px of ink, a ramp and 2 px of cloth. */
 const OUTLINE: ReadonlyArray<Rgb> = [...Array<Rgb>(4).fill(OUTLINE_INK), RAMP, OLIVE, OLIVE];
-/**
- * How far in from the strip's edge the arm lies over the outlined torso, and
- * where the torso ends, px: its 7 px of olive past the arm are enough of its
- * kept cloth that the pooled grain reads it smooth beside the outline (6 px
- * are not), and few enough that the outline, read as cloth, is near 5 % of
- * each cell's kept cloth.
- */
 const BESIDE = {
   arm: [OUTLINE.length, OUTLINE.length + 16],
   end: OUTLINE.length + 16 + 7,
 } as const;
 
-/**
- * A torso, half the strip's height, whose left edge slants (`stripEdge`):
- * its `OUTLINE` kept along that edge, a cream arm that moves over the 16 px
- * in from it, and a band of olive past the arm; and okra's answer laid on
- * it: `inner` in the arm's place, the view elsewhere.
- */
 const layBeside = (inner: Paint) => {
   const [w, h] = [STRIP.w, STRIP.h / 2];
   const [a0, a1] = BESIDE.arm;
@@ -276,22 +227,17 @@ const layBeside = (inner: Paint) => {
 
 const laid = layOn(ARM);
 const olive = () => OLIVE;
-/** The arm laid in smooth olive, the kept cloth: two tests read it and neither changes it. */
 const smoothArm = laid(olive);
-/** The arm laid with a cream pixel every 3 px across the paint, the sleeve's colour left in the torso: a test and the golden digests read it. */
 const fleckedArm = laid((x, y) =>
   Bool.match((x - ARM.x0) % 3 === 2 && (y - ARM.y0) % 3 === 2, {
     onTrue: () => CREAM,
     onFalse: () => OLIVE,
   }),
 );
-/** One pixel in 14, 5.3 L* lighter than the olive: fine grain the part's pooled grain reads as smooth. */
 const fineFleck = (x: number, y: number): Rgb =>
   Bool.match((x + 5 * y) % 14 === 0, { onTrue: () => FLECK, onFalse: () => OLIVE });
-/** Fine grain painted beside a part's own outline: a test and the golden digests read it. */
 const grainyBeside = layBeside(fineFleck);
 
-/** A fixed scatter of each channel of `c` up to `k` either way, pixel by pixel: grain with no seed to keep. */
 const grained =
   (c: Rgb, k: number): Paint =>
   (x, y) => {
@@ -303,16 +249,7 @@ const grained =
     };
     return [at(0), at(1), at(2)];
   };
-/** The arm across the torso's left edge, half on the paper. */
 const ACROSS: Box = { x0: 2, y0: 8, x1: 30, y1: 40 };
-/**
- * For the golden digests only, the three reads the other lays never decide:
- * a torso whose cloth runs more than the 24 px lattice reach past the paint;
- * paint of 2 px cream stripes every 4 px, so a speck at its edge is read
- * against an even count of neighbours, half cream; and the arm across the
- * torso's edge onto paper grained 16 either way, the paper under it grained
- * 40, so the paper's spread, not its floor, sets how far the ground reaches.
- */
 const acrossTheEdge = layOn(ACROSS, { h: 72, paper: grained(PAPER, 16) })((x, y) =>
   Bool.match(x < torsoOf(72).x0, {
     onTrue: () => grained(PAPER, 40)(x, y),
@@ -346,7 +283,6 @@ describe('the part sheet lay', () => {
   });
 
   test('paint hatched with dashes of the kept sleeve, 4 × 1 on every fourth row, misses the speck bar', () => {
-    // two dashes a row, x 19..22 and 25..28, clear of the edge ring the speck read leaves out
     const dash = (x: number, y: number) =>
       (y - ARM.y0) % 4 === 2 && [1, 2, 3, 4, 7, 8, 9, 10].includes(x - ARM.x0);
     const hatched = layOn(ARM, { margin: 0 })((x, y) =>
@@ -359,7 +295,6 @@ describe('the part sheet lay', () => {
   test('a thin outline in the paint, dotted along its edge or drawn across it, is not speckle', () => {
     const edge = (x: number, y: number) =>
       (x === ARM.x0 || x === ARM.x1 - 1 || y === ARM.y0 || y === ARM.y1 - 1) && (x + y) % 2 === 0;
-    // a steep line, one step across for every four down, from the top of the arm to its foot
     const across = (x: number, y: number) => x === ARM.x0 + 2 + Math.floor((y - ARM.y0) / 4);
     const outlined = layOn(ARM, { margin: 0 })((x, y) =>
       Bool.match(edge(x, y) || across(x, y), { onTrue: () => INK, onFalse: () => OLIVE }),
@@ -369,7 +304,6 @@ describe('the part sheet lay', () => {
   });
 
   test('paint of two materials, each matching its cloth, with a cell too sparse to read, meets the speck and drift bars', () => {
-    // the olive gives way to skin inside the first chroma cell; the arm's cells below y 24 hold 2 rows
     const cloth = (x: number): Rgb =>
       Bool.match(x < 21, { onTrue: () => OLIVE, onFalse: () => SKIN });
     const mixed = layOn({ x0: 18, y0: 8, x1: 30, y1: 26 }, { cloth })((x) => cloth(x));
@@ -380,8 +314,6 @@ describe('the part sheet lay', () => {
   });
 
   test('paint with fine grain in a cell misses the grain bar over smooth cloth; paint as grainy as its cloth meets it', () => {
-    // one pixel in 14, 5.3 L* lighter than the olive: fine grain the part's pooled grain reads as smooth;
-    // the arm lies in the 24 px cells x 24..47, y 0..23 and y 24..47, 150 read pixels each
     const fleck = (x: number, y: number): Rgb =>
       Bool.match((x + 5 * y) % 14 === 0, { onTrue: () => FLECK, onFalse: () => OLIVE });
     const arm = { x0: 24, y0: 8, x1: 36, y1: 40 };
@@ -394,8 +326,6 @@ describe('the part sheet lay', () => {
   });
 
   test('fine grain in one cell among smooth cells misses the grain bar, though pooled over the part it is under the bar', () => {
-    // the arm takes four 24 px cells down x 24..47; the flecks of the test above fill only the cell
-    // y 24..47, about 7 % of it, so over the part's paint they are under the 3 % the bar allows
     const arm = { x0: 24, y0: 8, x1: 40, y1: 88 };
     const fleck = (x: number, y: number): Rgb =>
       Bool.match(y >= 24 && y < 48 && (x + 5 * y) % 14 === 0, {
@@ -405,19 +335,15 @@ describe('the part sheet lay', () => {
     const patched = layOn(arm, { margin: 0, h: 96 })(fleck);
     expect(patched.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'outside' })]);
     expect(missedBars(patched)).toContain('grain');
-    // each of the four cells is read, and the flecked one stands for the part
     expect(patched.grain[0]?.fine.cells).toBe(4);
     expect(patched.grain[0]?.fine.painted.share).toBeGreaterThan(0.06);
   });
 
   test('fine grain in cloth as dark as L* 40 misses the grain bar; an ink outline through it is not grain; smooth dark paint meets it', () => {
-    // one pixel in 14, 5 L* darker than the cloth, in the cells of the test above; the arm is 16 px
-    // wide, so with the line and the ring about it left out each cell still reads 100 pixels
     const arm = { x0: 24, y0: 8, x1: 40, y1: 40 };
     const dark = (): Rgb => DARK_OLIVE;
     const fleck = (x: number, y: number): Rgb =>
       Bool.match((x + 5 * y) % 14 === 0, { onTrue: () => DARK_FLECK, onFalse: dark });
-    // a steep line of L* 20, one step across for every four down, from the top of the arm to its foot
     const inked = (x: number, y: number): Rgb =>
       Bool.match(x === arm.x0 + 2 + Math.floor((y - arm.y0) / 4), {
         onTrue: () => DARK_INK,
@@ -434,7 +360,6 @@ describe('the part sheet lay', () => {
   });
 
   test('fine grain in cloth as dark as the darkest kept cloth misses the grain bar; smooth paint of it meets it', () => {
-    // the grain read leaves out only ink darker than any cloth, so the deep cloth and its flecks are read
     const arm = { x0: 24, y0: 8, x1: 40, y1: 40 };
     const deep = (): Rgb => DEEP;
     const fleck = (x: number, y: number): Rgb =>
@@ -448,16 +373,12 @@ describe('the part sheet lay', () => {
   });
 
   test("a part's own outline along its edge, 4 px of ink, a ramp and 2 px of cloth, is not grain beside smooth kept cloth", () => {
-    // the edge slants a pixel every four rows, so the line rule takes none of the ink; read as cloth,
-    // the outline is grain in each of the six cells it crosses (lead-feast front's torso, art review 4)
     const outlined = layStrip(OUTLINE);
     expect(outlined.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'within' })]);
     expect(missedBars(outlined)).not.toContain('grain');
   });
 
   test("fine grain painted beside a part's own outline in its kept cloth misses the grain bar", () => {
-    // the flecks of the tests above, about 7 % of a cell; the kept outline is no grain of the cloth, so
-    // it lifts no cell's allowance over them (read as cloth, it is near 5 % of each cell's kept cloth)
     const [grainy, smooth] = [grainyBeside, layBeside(olive)];
     expect(grainy.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'outside' })]);
     expect(missedBars(grainy)).toContain('grain');
@@ -480,7 +401,6 @@ describe('the part sheet lay', () => {
   });
 
   test('a region with one pixel fewer than the speck floor misses the speck bar and ranks below one at the floor', () => {
-    // the speck is read inside the region's edge ring: 10 × 10 px of a 12 × 12 region, 9 × 11 of 11 × 13
     const atFloor = layOn({ x0: 8, y0: 8, x1: 20, y1: 20 })(olive);
     const under = layOn({ x0: 8, y0: 8, x1: 19, y1: 21 })(olive);
     expect(atFloor.speck).toEqual([
@@ -508,7 +428,6 @@ describe('the part sheet lay', () => {
     expect(rankOrder(under, atFloor)).toBe(1);
   });
 
-  // a torso over a robe that meets it at y 26 behind the arm; the torso keeps an olive vest right of the arm, past the line
   const torsoOverRobe: ReadonlyArray<Still> = [
     {
       name: 'torso',
@@ -523,14 +442,12 @@ describe('the part sheet lay', () => {
     },
     { name: 'robe', polygon: corners({ x0: 6, y0: 26, x1: 30, y1: 44 }) },
   ];
-  /** Tunic paint under a torso and a robe, the torso's taking the vest beside it into its tone: a test and the golden digests read it. */
   const steppedTunic = layOn(ARM, {
     cloth: (x) => Bool.match(x >= 30, { onTrue: () => OLIVE, onFalse: () => TUNIC }),
     still: torsoOverRobe,
   })(() => TUNIC);
 
   test('paint toned into a step across a part line the answer paints flat misses the step bar', () => {
-    // the torso's paint takes the vest beside it into its tone, the robe's does not
     const stepped = steppedTunic;
     expect(stepped.step).toEqual([
       expect.objectContaining({
@@ -555,7 +472,6 @@ describe('the part sheet lay', () => {
   });
 
   test('the lays the tests above read are made to the bit as recorded', () => {
-    // a digest of each whole lay (fit, measures, the sheet's every byte), so no change to the lay goes unseen
     expect(
       [smoothArm, fleckedArm, grainyBeside, steppedTunic, acrossTheEdge].map(digestOf),
     ).toEqual([
@@ -567,13 +483,11 @@ describe('the part sheet lay', () => {
     ]);
   });
 
-  /** A part's fine grain read in two cells, its paint as grainy as its cloth. */
   const fineWithin = {
     painted: { share: 0.01, px: 300 },
     kept: { share: 0.01, px: 900 },
     cells: 2,
   };
-  /** A measure that meets every bar, with the reads `over` names. */
   const measured = (over: Partial<HiddenMeasures>): HiddenMeasures => ({
     seam: { deltaE: Option.some(4), pairs: 80 },
     drift: { deltaE: 3, px: 900, chroma: [] },
@@ -613,7 +527,6 @@ describe('the part sheet lay', () => {
   });
 
   test('paint far greyer than its cloth ranks below paint that misses two bars by a little', () => {
-    // sower threeQuarterRight, measured: white robe paint (chroma 0.01 against 22.11) against a greyer torso and a step of -7.15 against -0.2
     const far = measured({ drift: { deltaE: 3, px: 900, chroma: [robeChroma(0.01, 22.11)] } });
     const near = measured({
       drift: { deltaE: 3, px: 900, chroma: [robeChroma(7.43, 13.81)] },
@@ -625,7 +538,6 @@ describe('the part sheet lay', () => {
   });
 
   test('an answer whose step went unread ranks below one whose step misses by a little', () => {
-    // feast-mother back, measured: a line read on 3 pairs against a line read on 9, stepping -7.87 against -0.57
     const unread = measured({
       step: [{ ...robeStep(-8.81, -0.13), pairs: 3, verdict: 'unverified' }],
     });
@@ -659,7 +571,6 @@ describe('the part sheet lay', () => {
   });
 
   test('of two answers whose misses are the same size, the one that misses one bar more ranks below', () => {
-    // the step 2.5 past its bar of 5 and the grain 0.25 past its bar of 0.5: each half its bar again
     const step = measured({ step: [robeStep(7.5, 0)] });
     const both = measured({
       step: [robeStep(7.5, 0)],
@@ -679,7 +590,6 @@ describe('the part sheet lay', () => {
 
   test("a miss 1.5 of its bar's allowances past weighs as a step miss 1.5 allowances past, on every bar", () => {
     const grain = measured({}).grain[0];
-    // each bar's read 1.5 allowances past it: seam 10, drift 5, chroma 3, grain 0.5 pooled and 0.03 fine, speck 0.04
     const misses: ReadonlyArray<readonly [string, HiddenMeasures]> = [
       ['seam', measured({ seam: { deltaE: Option.some(25), pairs: 80 } })],
       ['drift', measured({ drift: { deltaE: 12.5, px: 900, chroma: [] } })],
@@ -717,7 +627,6 @@ describe('the part sheet lay', () => {
         }),
       ],
     ];
-    // a step miss 0.5, 1.4 and 1.6 allowances past its bar of 5
     const steps = [0.5, 1.4, 1.6].map((k) => measured({ step: [robeStep(5 + 5 * k, 0)] }));
     for (const [bar, miss] of misses) {
       expect(missedBars(miss)).toEqual([bar]);

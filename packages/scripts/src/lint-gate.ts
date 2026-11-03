@@ -1,20 +1,4 @@
 #!/usr/bin/env bun
-// The gate's lint (`gate.sh`): every deterministic rule over the gate's files
-// (`guard/files.ts`), the judged rules left to `bun run lint`, in two oxlints
-// side by side (`lint-gate/config.ts` derives their configs):
-//
-// 1. the native rules alone, over every file, every run;
-// 2. the JS plugins' rules (and the native ones beside them), only over the
-//    files no earlier run passed at their content now, in parts
-//    (`guard/parts.ts`), a part per 64 files up to the machine's share; each
-//    file the run passed is kept.
-//
-// The kept files live in `node_modules/.cache/manna-lint/kept.json`, under a
-// key of the derived config, every repository file the JS plugins run (each
-// plugin and the modules it imports, `lint-gate/closure.ts`) and `bun.lock`
-// (the versions of oxlint, its effect plugin and effect): a change to any of
-// them lints every file again. Prints a failing oxlint's report, then one line of
-// counts and time; exits with the highest code an oxlint answered.
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -35,13 +19,9 @@ import {
   withoutJudged,
 } from './lint-gate/config.js';
 
-/** The files oxlint lints, by extension. */
 const LINTED = /\.[cm]?[jt]sx?$/;
-/** Where the derived configs and the kept files live, from the root. */
 const CACHE = 'node_modules/.cache/manna-lint';
-/** The judged plugin as the config names it. */
 const JUDGED_PLUGIN = './packages/scripts/lint/judged.ts';
-/** Files a part takes before another part pays its JS plugins' load (0.3 s). */
 const PER_PART = 64;
 
 const ConfigJson = Schema.fromJsonString(LintConfig);
@@ -54,7 +34,6 @@ Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const started = yield* Clock.currentTimeMillis;
-  // packages/scripts/src → the repo root.
   const root = path.resolve(import.meta.dir, '..', '..', '..');
   const cache = path.join(root, CACHE);
   yield* fs.makeDirectory(cache, { recursive: true });

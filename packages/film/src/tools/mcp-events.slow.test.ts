@@ -1,15 +1,3 @@
-// MCP Events on the lab's MCP, end to end against a local HTTP callback:
-// `server/discover` says `events`, `events/list` lists the catalogue; a
-// subscribe verifies its callback (a signed challenge it echoes) before it
-// is kept, then each event is posted once, signed as Standard Webhooks
-// signs (checked here by that algorithm, not the lab's code), tried again
-// with the same event id when the callback fails; the same subscribe again
-// is the same subscription, and with a cursor it replays what is past it;
-// an unsubscribe stops it. A bad secret, an unknown event and a callback
-// that does not echo are refused in the profile's codes. The subscriptions
-// are kept in the lab's folder: a lab started again delivers on from the
-// cursor it kept, and a subscription past its `refreshBefore` is dropped.
-
 import { FilmName } from './film-repo.ts';
 import { NotesStore } from './notes-store.ts';
 import { describe, expect, it } from 'effect-bun-test';
@@ -36,15 +24,12 @@ import { text } from './host/testing.ts';
 import { NOTES_LAB, labInMemory } from './lab/testing.ts';
 import { type LabFetch, labWithMcp, mcpPost } from './lab-mcp/testing.ts';
 
-/** A secret of 32 bytes, as a subscriber makes one. */
 const SECRET = `whsec_${Base64.encode(new Uint8Array(32).fill(7))}`;
 
-/** JSON read as a client reads it: the test names the fields it checks. */
 const readJson: (text: string) => any = Schema.decodeUnknownSync(
   Schema.fromJsonString(Schema.Json),
 );
 
-/** What the callback heard: the path it was posted to, its headers and its body as sent. */
 interface Heard {
   readonly path: string;
   readonly headers: Readonly<Record<string, string>>;
@@ -56,11 +41,6 @@ const Challenge = Schema.fromJsonString(
 );
 const readChallenge = Schema.decodeUnknownOption(Challenge);
 
-/**
- * A subscriber's callback on a local port: each POST offered to `heard` as
- * it comes; a verification echoed (unless `echo` is false); a delivery
- * answered with the next of `statuses`, 200 once they are spent.
- */
 const callback = Effect.gen(function* () {
   const heard = yield* Queue.unbounded<Heard>();
   const statuses = yield* Ref.make<ReadonlyArray<number>>([]);
@@ -90,7 +70,6 @@ const callback = Effect.gen(function* () {
   return { heard, statuses, echo, url: HttpServer.formatAddress(http.address) };
 });
 
-/** Whether `heard` is signed with `secret` as Standard Webhooks signs: `v1,` base64 HMAC-SHA256 of `<id>.<timestamp>.<body>`, keyed by the secret's base64 after `whsec_`. */
 const signedWith = (secret: string, heard: Heard) => {
   const key = Result.getOrThrow(Base64.decode(secret.slice('whsec_'.length)));
   const expected = new Bun.CryptoHasher('sha256', key)
@@ -99,7 +78,6 @@ const signedWith = (secret: string, heard: Heard) => {
   return (heard.headers['webhook-signature'] ?? '').split(' ').includes(`v1,${expected}`);
 };
 
-/** The answer's one message: its JSON, or the last event of a stream of them. */
 const lastMessage = (body: string) =>
   readJson(
     body
@@ -109,7 +87,6 @@ const lastMessage = (body: string) =>
       .at(-1) ?? body,
   );
 
-/** A 2026-07-28 request to the lab's MCP, its answer's JSON. */
 const rpc = (lab: LabFetch, method: string, params: Schema.JsonObject = {}) =>
   Effect.flatMap(
     mcpPost(
@@ -135,7 +112,6 @@ const rpc = (lab: LabFetch, method: string, params: Schema.JsonObject = {}) =>
       ),
   );
 
-/** A tweak the owner asked of film `f`'s panel `cold.judge`, written to its notes through the store. */
 const ownerNote = (words: string) =>
   Effect.gen(function* () {
     const notes = yield* NotesStore;
@@ -152,7 +128,6 @@ const ownerNote = (words: string) =>
     );
   });
 
-/** A subscription to `name` (of film `f` unless `args` says otherwise) at the callback's `path`, with `more` of subscribe's params (its `secret` the delivery's). */
 const subscribeAt = (
   url: string,
   { secret = SECRET, ...more }: { readonly secret?: string } & Schema.JsonObject = {},
@@ -215,7 +190,6 @@ describe('MCP Events on the lab', () => {
           );
           expect(definitions[0]).toMatchObject({
             delivery: ['webhook'],
-            // A subscribe takes no argument the schema does not name.
             inputSchema: {
               type: 'object',
               properties: { film: { type: 'string' } },
@@ -224,7 +198,6 @@ describe('MCP Events on the lab', () => {
             payloadSchema: { type: 'object' },
           });
 
-          // Subscribed once the callback echoes its challenge, signed.
           const made = yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/a`));
           expect(made).toMatchObject({
             result: {
@@ -241,7 +214,6 @@ describe('MCP Events on the lab', () => {
           expect(verification.headers['x-mcp-subscription-id']).toBe(id);
           expect(signedWith(SECRET, verification)).toBe(true);
 
-          // One POST per event, signed, its id the webhook's.
           yield* ownerNote('the judge looks away too soon');
           yield* events.look;
           const first = yield* Queue.take(hook.heard);
@@ -255,10 +227,8 @@ describe('MCP Events on the lab', () => {
           expect(first.headers['x-mcp-subscription-id']).toBe(id);
           expect(first.headers['content-type']).toBe('application/json');
           expect(signedWith(SECRET, first)).toBe(true);
-          // A signature over other bytes does not check.
           expect(signedWith(SECRET, { ...first, body: `${first.body} ` })).toBe(false);
 
-          // A callback that fails is tried again: the same event id, the same body.
           yield* Ref.set(hook.statuses, [500]);
           yield* ownerNote('and the hand is late');
           yield* events.look;
@@ -269,7 +239,6 @@ describe('MCP Events on the lab', () => {
           expect(signedWith(SECRET, retried)).toBe(true);
           expect(readDelivered(retried.body).data.note).toBe('n2');
 
-          // The same subscribe again is the same subscription; from a cursor it replays what is past it.
           const again = yield* rpc(
             lab,
             'events/subscribe',
@@ -280,7 +249,6 @@ describe('MCP Events on the lab', () => {
           expect(replayed.headers['webhook-id']).toBe(failed.headers['webhook-id']);
           expect(readDelivered(replayed.body).data.note).toBe('n2');
 
-          // Unsubscribed, it hears nothing more; a second subscription hears the next note alone.
           expect(
             yield* rpc(lab, 'events/unsubscribe', {
               name: 'tweak.requested',
@@ -309,9 +277,6 @@ describe('MCP Events on the lab', () => {
           expect([third.path, readDelivered(third.body).data.note]).toEqual(['/b', 'n3']);
           expect(yield* Queue.size(hook.heard)).toBe(0);
 
-          // The lab keeps the subscriptions in its folder, each with the cursor
-          // after the last event it was sent: written once the callback has
-          // answered, so read until it is.
           const fs = yield* FileSystem.FileSystem;
           const delivered = readDelivered(third.body).cursor;
           const kept = yield* Effect.repeat(
@@ -359,7 +324,6 @@ describe('MCP Events on the lab', () => {
           expect(
             yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/a`, {}, 'note.nope')),
           ).toMatchObject({ error: { code: -32602 } });
-          // A ttlMs past the lab's longest is invalid params, not a failure of the lab's.
           expect(
             yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/a`, { ttlMs: 1e20 })),
           ).toMatchObject({
@@ -368,10 +332,8 @@ describe('MCP Events on the lab', () => {
               message: expect.stringContaining('ttlMs 100000000000000000000'),
             },
           });
-          // Nothing was posted for a refused subscribe.
           expect(yield* Queue.size(hook.heard)).toBe(0);
           yield* Ref.set(hook.echo, false);
-          // Said by its category alone: nothing of what the callback answered.
           expect(yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/a`))).toEqual({
             jsonrpc: '2.0',
             id: 1,
@@ -397,7 +359,6 @@ describe('MCP Events on the lab', () => {
           yield* Effect.scoped(
             Effect.gen(function* () {
               const { lab, events } = yield* labWithMcp;
-              // A subscription that never expires is the profile's own null, asked and answered.
               // oxlint-disable-next-line effect/noNullish -- the profile's ttlMs null: no expiry
               const forever = subscribeAt(`${hook.url}/a`, { ttlMs: null });
               const made = yield* rpc(lab, 'events/subscribe', forever);
@@ -408,13 +369,11 @@ describe('MCP Events on the lab', () => {
               expect(readDelivered((yield* Queue.take(hook.heard)).body).data.note).toBe('n1');
             }),
           );
-          // The lab again, over the same folder: its subscription delivers on.
           const { lab, events } = yield* labWithMcp;
           yield* ownerNote('two');
           yield* events.look;
           expect(readDelivered((yield* Queue.take(hook.heard)).body).data.note).toBe('n2');
 
-          // A subscription asked for a second lasts the lab's least, a minute, and goes when it passes.
           const brief = yield* rpc(
             lab,
             'events/subscribe',
@@ -465,7 +424,6 @@ describe('MCP Events on the lab', () => {
           // oxlint-disable-next-line effect/noNullish -- the profile's ttlMs null: no expiry
           yield* rpc(first.lab, 'events/subscribe', subscribeAt(`${hook.url}/a`, { ttlMs: null }));
           yield* Queue.take(hook.heard);
-          // The lab started again before the first has stopped: both deliver from the folder's subscription.
           const second = yield* labWithMcp;
           yield* ownerNote('one');
           yield* first.events.look;
@@ -497,7 +455,6 @@ describe('MCP Events on the lab', () => {
         yield* Ref.set(hook.echo, false);
         yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/other/T1SECRET`));
         yield* Queue.take(hook.heard);
-        // A callback where nothing listens: the client's failure names the whole URL, the log its kind.
         const closed = 'http://127.0.0.1:1';
         yield* rpc(lab, 'events/subscribe', subscribeAt(`${closed}/hooks/T2SECRET?token=Q5SECRET`));
         const said = lines.filter((line) => line.startsWith('mcp.events.'));
@@ -528,7 +485,6 @@ describe('MCP Events on the lab', () => {
         const hook = yield* callback;
         yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/a`));
         yield* Queue.take(hook.heard);
-        // The subscriptions file made unwritable: a folder where it was.
         const fs = yield* FileSystem.FileSystem;
         yield* fs.remove(SUBSCRIPTIONS);
         yield* fs.makeDirectory(SUBSCRIPTIONS);

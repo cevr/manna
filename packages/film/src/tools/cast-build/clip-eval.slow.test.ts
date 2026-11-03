@@ -1,7 +1,3 @@
-// Clip B decoded in process and laid on the canvas at its provenance's map
-// (`clip-eval.ts`): the 124 canvases are read.py's own, pixel for pixel.
-// Slow: it decodes a real mp4 through the media stack and maps every frame.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Result } from 'effect';
@@ -14,12 +10,6 @@ const CLIP = new URL(
   import.meta.url,
 ).pathname;
 
-/**
- * The sha256 of read.py's canvases of clip B, every frame's RGBA from f000
- * to f123 in order: measured 2026-11-01 over the five reads of clip B in the
- * cast cache (`<cache>/reads/<key>/canvas`, read.py's `--save-mapped`), all
- * five alike.
- */
 const READ_PY_CANVASES = 'b3c51eeab04c19794cb345ad029cbf9a8c3449fbb2838eba88095f52c8d9a788';
 
 const MS = 60_000;
