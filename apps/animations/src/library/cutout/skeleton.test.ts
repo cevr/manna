@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { type Body, type Standing, standing } from './skeleton.ts';
+import { type Body, type Standing, framed, standing } from './skeleton.ts';
 
 /** A member whose part sheets have no sash: his flaps come from a part named `body`. */
 const PARTS = ['head', 'body', 'sleeveRight', 'sleeveLeft', 'robe'] as const;
@@ -114,5 +114,19 @@ describe('a standing skeleton', () => {
       ['sleeveLeft', 'body', 'shoulderLeft'],
     ]);
     expect(xs(made.flaps?.[0]?.region ?? [])).toEqual([70, 110]);
+  });
+
+  test("declares a stroke limb only for each arm its view names, on that arm's three bones, its cuff moved with the frame", () => {
+    expect(standing(BODY, at('front')).limbs).toEqual([]);
+    const made = standing(BODY, { ...at('front'), limbs: ['left'], cuffLeft: [83, 140] });
+    expect(made.limbs).toEqual([
+      { part: 'sleeveLeft', bones: ['shoulderLeft', 'elbowLeft', 'wristLeft'], cuff: [83, 140] },
+    ]);
+    const both = framed([5, 7], standing(BODY, { ...at('front'), limbs: ['right', 'left'] }));
+    expect(both.limbs).toEqual([
+      { part: 'sleeveRight', bones: ['shoulderRight', 'elbowRight', 'wristRight'] },
+      { part: 'sleeveLeft', bones: ['shoulderLeft', 'elbowLeft', 'wristLeft'] },
+    ]);
+    expect(framed([5, 7], made).limbs?.[0]?.cuff).toEqual([88, 147]);
   });
 });

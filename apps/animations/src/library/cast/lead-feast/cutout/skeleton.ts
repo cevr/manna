@@ -86,7 +86,8 @@ export const SKELETONS = {
       capLeft: 13,
     }),
   ),
-  // seated on his stool, the bottle raised: his lap, stool and sandals stand with the root
+  // seated on his stool, the bottle raised: his lap, stool and sandals stand
+  // with the root; both his arms are stroke limbs, his left ending at its cuff
   'single-9': framed(
     keptAt('single-9'),
     standing(BODY, {
@@ -96,6 +97,7 @@ export const SKELETONS = {
       chin: [308, 365],
       crown: [300, 5],
       ...JOINTS['single-9'],
+      limbs: ['right', 'left'],
       wristRight: [77, 406],
       handRight: [73, 338],
       wristLeft: [462, 688],
