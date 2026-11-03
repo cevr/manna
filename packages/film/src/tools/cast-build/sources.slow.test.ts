@@ -12,7 +12,8 @@ import { memoryLocks, text } from '../host/testing.ts';
 import { castRoot } from './built.ts';
 import { type Input, type Stage, buildGraph } from './graph.ts';
 import { FILMS, RENDER_PAGE, serve } from '../../../../../apps/animations/server.ts';
-import { filmCastSources, pageSources, stageSources } from './sources.ts';
+import { UndeclaredImport } from './imports.ts';
+import { cutterSources, filmCastSources, pageSources, stageSources } from './sources.ts';
 
 /** The files among inputs, by path. */
 const pathsOf = (inputs: ReadonlyArray<Input>) =>
@@ -165,5 +166,34 @@ describe('stage sources', () => {
       Effect.scoped,
       Effect.provide(ContentStore.layer.pipe(Layer.provideMerge([local, memoryLocks]))),
     ),
+  );
+
+  it.effect(
+    'own cutters run the tools barrel and its film-module loader; their own variable import fails',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const cutout = new URL(
+          '../../../../../apps/animations/src/library/cast/filler-bases/cutout/',
+          import.meta.url,
+        ).pathname;
+        const files = pathsOf(
+          yield* cutterSources([`${cutout}sheets-cut.ts`, `${cutout}parts-cut.ts`]),
+        );
+        expect(ends(files.filter((f) => /film-repo\.ts$|png\.ts$|poses\.png$/.test(f)))).toEqual([
+          'library/cast/filler-bases/cast-sheet/kept/poses.png',
+          'tools/film-repo.ts',
+          'tools/png.ts',
+        ]);
+        const dir = yield* fs.realPath(yield* fs.makeTempDirectoryScoped({ prefix: 'cutter-' }));
+        const cutter = `${dir}/cut.ts`;
+        yield* fs.writeFileString(
+          cutter,
+          'export const load = (n: string) => import(`./x/${n}.ts`);',
+        );
+        expect(yield* Effect.flip(cutterSources([cutter]))).toEqual(
+          UndeclaredImport.make({ file: cutter, argument: '`./x/${n}.ts`' }),
+        );
+      }).pipe(Effect.scoped, Effect.provide(local)),
   );
 });

@@ -61,6 +61,15 @@ const STAGE_LOADS = {
   chain: [],
 } satisfies { readonly [K in SourcedStage]: ReadonlyArray<string> };
 
+/**
+ * The files (from this folder) whose variable imports a member's own cutters
+ * meet. They import the `@manna/film/tools` barrel, which runs `film-repo.ts`
+ * and so defines `importFilmModule`; no cutter calls it, so the stage loads
+ * no module by path and adds nothing for it. A variable import of a cutter's
+ * own still fails.
+ */
+const CUTTER_LOADS = ['../film-repo.ts'];
+
 /** Every stage kind's source files as its inputs. */
 type StageSources = { readonly [K in SourcedStage]: ReadonlyArray<Input> };
 
@@ -124,7 +133,7 @@ export const cutterSources = (scripts: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const real = yield* Effect.forEach(scripts, (s) => fs.realPath(s));
-    const files = yield* declaredClosure(real, []);
+    const files = yield* declaredClosure(real, CUTTER_LOADS.map(here));
     return [...new Set([...scripts, ...files])].map(fileInput);
   });
 
