@@ -56,7 +56,7 @@ const INK_L = 20;
 const KNOT = 2;
 
 /** The width over which one region gives way to the next, px. */
-const FEATHER = 2;
+export const FEATHER = 2;
 
 /** The shortest a bone of the chain may be, px: two feathers, so the regions' borders never meet. */
 const SHORTEST = 2 * FEATHER;
@@ -105,7 +105,7 @@ interface LimbChain {
 }
 
 /** A side of a sleeve: `outer`, the side a positive elbow turn opens, or `inner`. */
-type LimbSideName = 'outer' | 'inner';
+export type LimbSideName = 'outer' | 'inner';
 
 /**
  * What a side's width ends on at a knot:
@@ -152,7 +152,7 @@ interface LimbStation {
  * - `cuff`: across the cuff opening, one feather inside the sleeve, on the
  *   forearm's frame.
  */
-interface LimbStations {
+export interface LimbStations {
   readonly shoulder: LimbStation;
   readonly elbowUpper: LimbStation;
   readonly elbowFore: LimbStation;
@@ -217,7 +217,7 @@ export class LimbRefused extends Schema.TaggedError<LimbRefused>()('LimbRefused'
   }
 }
 
-const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+export const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 /** 0 at or under `a`, 1 at or past `b`, 3s² − 2s³ between: exact at its ends, monotone, steepest 1.5 / (b − a) a degree. */
 const ramp = ([a, b]: Ramp, x: number) => {
@@ -260,14 +260,14 @@ export const limbShares = (
 /** A byte view of `a`: reads that are typed numbers, and a RangeError past its end. */
 const bytes = (a: Uint8Array) => new DataView(a.buffer, a.byteOffset, a.byteLength);
 
-const sub = (a: Pt, b: Pt): Pt => [a[0] - b[0], a[1] - b[1]];
-const dot = (a: Pt, b: Pt) => a[0] * b[0] + a[1] * b[1];
-const unit = (a: Pt): Pt => {
+export const sub = (a: Pt, b: Pt): Pt => [a[0] - b[0], a[1] - b[1]];
+export const dot = (a: Pt, b: Pt) => a[0] * b[0] + a[1] * b[1];
+export const unit = (a: Pt): Pt => {
   const l = Math.hypot(a[0], a[1]);
   return [a[0] / l, a[1] / l];
 };
 /** The side a positive turn opens of a segment running along `d`: `d` turned a right angle against the turn. */
-const opens = (d: Pt): Pt => [d[1], -d[0]];
+export const opens = (d: Pt): Pt => [d[1], -d[0]];
 
 /** The distance from `p` to the segment from `a` running `l` px along `d`. */
 const toSegment = (p: Pt, a: Pt, d: Pt, l: number) => {

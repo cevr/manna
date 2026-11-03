@@ -59,7 +59,15 @@
 import { Option, Result, Schema } from 'effect';
 import { IDENTITY } from './affine.ts';
 import type { Rgb } from './cast-sheet-pixels.ts';
-import { LimbRefused, type PuppetLimb, type PuppetPartLimb, limbOf } from './limb.ts';
+import {
+  LimbRefused,
+  type PuppetLimb,
+  type PuppetPartLimb,
+  limbBlend,
+  limbOf,
+  limbShares,
+} from './limb.ts';
+import { limbStroke } from './limb-stroke.ts';
 import type { Raster } from './raster.ts';
 import { type BoxEdge, unmatte } from './unmatte.ts';
 
@@ -1047,16 +1055,133 @@ export const rasterOf = (
   const moving = (n: number) => partTurned(puppet, n, m);
   for (let k = puppet.parts.length - 1; k >= 0; k--) {
     const part = puppet.parts[k]!;
-    const t = part.mesh.triangles;
-    for (const tex of [
+    const layers = [
       part.pixels,
       ...sealsShown(part.seals, k, moving),
       ...revealedShown(part.revealed, k, moving),
-    ])
-      for (let i = 0; i < t.length; i += 3)
-        layTriangle(acc, tex, part.mesh.vertices, posed[k]!, [t[i]!, t[i + 1]!, t[i + 2]!], [W, H]);
+    ];
+    Option.match(
+      Option.filter(
+        Option.fromUndefinedOr(part.limb),
+        (limb) => limbBlend(limb, pose.numbers).sleeve > 0,
+      ),
+      {
+        onNone: () => layPart(acc, part, layers, posed[k]!, [0, 0], [W, H]),
+        onSome: (limb) => layLimb(acc, puppet, pose, m, part, limb, layers, posed[k]!, [W, H]),
+      },
+    );
   }
   return unpremultiplied(acc, W, H);
+};
+
+/** Each of `layers` (a part's texture, then its seals and revealed paint) laid over `acc` (`W` × `H`, its origin at `origin` of the frame) on `part`'s posed vertices `q`, triangle by triangle in mesh order. */
+const layPart = (
+  acc: Float64Array,
+  part: PuppetPart,
+  layers: ReadonlyArray<Raster>,
+  q: Float64Array,
+  origin: Pt,
+  [W, H]: readonly [number, number],
+) => {
+  const t = part.mesh.triangles;
+  const shifted = q.map((c, i) => c - origin[i % 2]!);
+  for (const tex of layers)
+    for (let i = 0; i < t.length; i += 3)
+      layTriangle(acc, tex, part.mesh.vertices, shifted, [t[i]!, t[i + 1]!, t[i + 2]!], [W, H]);
+};
+
+/** Each limb's part's pixels kept only on its stub (alpha times the stub's share): what the stroke leaves painted. */
+const STUBS = new WeakMap<PuppetPartLimb, Raster>();
+
+const stubOf = (limb: PuppetPartLimb, pixels: Raster): Raster => {
+  const known = STUBS.get(limb);
+  if (known !== undefined) return known;
+  const rgba = Uint8Array.from(pixels.rgba);
+  for (let y = 0; y < pixels.height; y++)
+    for (let x = 0; x < pixels.width; x++) {
+      const o = (y * pixels.width + x) * 4 + 3;
+      rgba[o] = Math.round(rgba[o]! * limbShares(limb, x, y)[0]);
+    }
+  const stub = { width: pixels.width, height: pixels.height, rgba };
+  STUBS.set(limb, stub);
+  return stub;
+};
+
+/** Bone `name`'s drawn map at `pose` (its transform in `m`, then the root's move and scale), inverted: drawn point → rest point. */
+const restMap = (puppet: Puppet, pose: PuppetPose, m: Float64Array, name: string) => {
+  const o = puppet.bones.findIndex((b) => b.name === name) * 6;
+  const s = pose.scale;
+  const [a, b, c, d] = [s * m[o]!, s * m[o + 1]!, s * m[o + 2]!, s * m[o + 3]!];
+  const e = s * m[o + 4]! + pose.root[0] - s * puppet.root[0];
+  const f = s * m[o + 5]! + pose.root[1] - s * puppet.root[1];
+  const det = a * d - b * c;
+  return Float64Array.from([d, -b, -c, a, c * f - d * e, b * e - a * f], (v) => v / det);
+};
+
+/**
+ * A part with a stroke limb its pose shows (`limbBlend`'s sleeve over 0)
+ * laid over `acc`: over the box its posed mesh and its limb's rigid pieces
+ * reach, each pixel the painted part (its `layers` on its mesh) and the
+ * stroke (`limbStroke`, over the part's stub as painted) mixed by the
+ * sleeve's share.
+ */
+const layLimb = (
+  acc: Float64Array,
+  puppet: Puppet,
+  pose: PuppetPose,
+  m: Float64Array,
+  part: PuppetPart,
+  limb: PuppetPartLimb,
+  layers: ReadonlyArray<Raster>,
+  q: Float64Array,
+  [W, H]: readonly [number, number],
+) => {
+  const shown = limbBlend(limb, pose.numbers);
+  const frames = {
+    upper: restMap(puppet, pose, m, limb.bones[0]),
+    fore: restMap(puppet, pose, m, limb.bones[1]),
+    hand: restMap(puppet, pose, m, limb.bones[2]),
+  };
+  const xs: Array<number> = [];
+  const ys: Array<number> = [];
+  for (let i = 0; i < q.length; i += 2) [xs[xs.length], ys[ys.length]] = [q[i]!, q[i + 1]!];
+  const [rx, ry, rw, rh] = limb.regions.box;
+  for (const inv of [frames.upper, frames.fore, frames.hand]) {
+    const det = inv[0]! * inv[3]! - inv[1]! * inv[2]!;
+    const fwd = [inv[3]!, -inv[1]!, -inv[2]!, inv[0]!].map((v) => v / det);
+    for (const [cx, cy] of [
+      [rx, ry],
+      [rx + rw, ry],
+      [rx, ry + rh],
+      [rx + rw, ry + rh],
+    ] as const) {
+      const [dx, dy] = [cx - inv[4]!, cy - inv[5]!];
+      xs.push(fwd[0]! * dx + fwd[2]! * dy);
+      ys.push(fwd[1]! * dx + fwd[3]! * dy);
+    }
+  }
+  const x0 = Math.max(0, Math.floor(Math.min(...xs)) - 2);
+  const y0 = Math.max(0, Math.floor(Math.min(...ys)) - 2);
+  const bw = Math.min(W, Math.ceil(Math.max(...xs)) + 2) - x0;
+  const bh = Math.min(H, Math.ceil(Math.max(...ys)) + 2) - y0;
+  if (bw <= 0 || bh <= 0) return;
+  const painted = new Float64Array(bw * bh * 4);
+  const stub = new Float64Array(bw * bh * 4);
+  layPart(painted, part, layers, q, [x0, y0], [bw, bh]);
+  layPart(stub, part, [stubOf(limb, part.pixels)], q, [x0, y0], [bw, bh]);
+  const stroke = limbStroke(limb, frames, pose.numbers, (sx, sy, into) =>
+    sampleAt(part.pixels, sx, sy, into),
+  );
+  const drawn = new Float64Array(4);
+  const mixed = new Float64Array(4);
+  const s = shown.sleeve;
+  for (let y = 0; y < bh; y++)
+    for (let x = 0; x < bw; x++) {
+      const o = (y * bw + x) * 4;
+      stroke(x0 + x + 0.5, y0 + y + 0.5, stub.subarray(o, o + 4), drawn);
+      for (let c = 0; c < 4; c++) mixed[c] = (1 - s) * painted[o + c]! + s * drawn[c]!;
+      if (mixed[3]! > 0) over(acc, ((y0 + y) * W + x0 + x) * 4, mixed);
+    }
 };
 
 /** The premultiplied bilinear sample of `tex` (a `W` × `H` RGBA texture) at `(sx, sy)` into `into`: colour in 0..255, alpha in 0..1. */
