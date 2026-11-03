@@ -12,7 +12,7 @@ import {
   type KeptPaint,
   type Witness,
 } from './coverage.ts';
-import { deltaLab, flatMedian, rgbOf, type Raster, type Rgb } from './measures.ts';
+import { deltaLab, flatMedian, lab, PROBE_FLAT, rgbOf, type Raster, type Rgb } from './measures.ts';
 import { decode, VIEWS } from './pipeline.ts';
 import {
   ColourCoverageJson,
@@ -106,7 +106,7 @@ const syntheticAt = (x: number, y: number): Rgb => {
     return rgbOf('#b07a5a');
   if (x < 22) return rgbOf('#f9dbb6');
   const t = (x - 24) / 17;
-  return [Math.round(74 - 27 * t), Math.round(122 - 36 * t), Math.round(154 - 42 * t)];
+  return [Math.round(150 - 110 * t), Math.round(190 - 110 * t), Math.round(220 - 110 * t)];
 };
 
 describe("a kept view's flat witnesses", () => {
@@ -137,6 +137,11 @@ describe("a kept view's flat witnesses", () => {
     ).toEqual(expected);
     expect(new Set(paint.witnesses.map((v) => v.region)).size).toBe(2);
     expect(expected.filter((e) => e.endsWith('right')).length).toBeGreaterThan(30);
+    const span = paint.witnesses.map((v) => {
+      const ls = [v.box.x0, v.box.x1].map((x) => lab(syntheticAt(x, v.box.y0))[0]);
+      return Math.abs((ls[0] ?? 0) - (ls[1] ?? 0));
+    });
+    expect(Math.max(...span)).toBeGreaterThan(PROBE_FLAT);
     expect(expected.some((e) => e.startsWith('10,26'))).toBe(false);
   });
 });

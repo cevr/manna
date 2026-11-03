@@ -60,7 +60,7 @@ const idsFor = (kept: Raster, probes: ReadonlyArray<ColourProbe>): Raster => {
   return { width: kept.width, height: kept.height, rgba };
 };
 
-/** Whether a repaint changed any pixel of the probe's box: an untouched probe reads the repaint as it reads the kept, ΔE 0 where the control passes at 0, so the verdict is read over the touched probes alone. */
+/** Whether a repaint changed any pixel of the probe's box: an untouched probe reads the repaint as it reads the kept, ΔE 0 where the control passes at 0, so the verdict is read over the touched probes alone, and a repaint that touches no probe escapes. */
 const touches = (kept: Raster, scene: Raster, probe: ColourProbe): boolean => {
   const [x0, y0, w, h] = probe.box;
   for (let y = y0; y < y0 + h; y++) {
@@ -97,7 +97,11 @@ describe('a kept flat paint repainted another paint of its region', () => {
               const touched = list.filter((probe) => touches(kept, scene, probe));
               return [
                 `${view} ${witnessText(paint, from.seed)} painted Lab ${to.seed.lab.map((v) => v.toFixed(1)).join(' ')}`,
-              ].filter(() => colourOf(view, readProbes(view, touched, kept, scene, ids)).pass);
+              ].filter(
+                () =>
+                  touched.length === 0 ||
+                  colourOf(view, readProbes(view, touched, kept, scene, ids)).pass,
+              );
             });
             const stray = pairs.slice(0, 1).flatMap((first) =>
               pairs
