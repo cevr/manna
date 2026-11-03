@@ -59,29 +59,29 @@ export const ProbedPaint = Schema.Struct({
 /** A shown paint the kept view reads at the named probes, each of that part and paint. */
 export interface ProbedPaint extends Schema.Schema.Type<typeof ProbedPaint> {}
 
-/** A shown paint the kept view has no flat box for, with the specific reason. */
+/** A paint the kept view does not show, or shows with no flat box to probe, with the specific reason. */
 export const UnavailablePaint = Schema.Struct({
   part: ProbePart,
   paint: ProbePaint,
   unavailable: Schema.NonEmptyString,
 });
 
-/** One shown (part, paint) of a kept view: probed, or unavailable with its reason. */
-export const ShownPaint = Schema.Union([ProbedPaint, UnavailablePaint]);
+/** One (part, paint) of a kept view, decided: probed, or unavailable with its reason. */
+export const CoverageEntry = Schema.Union([ProbedPaint, UnavailablePaint]);
 
-/** One shown (part, paint) of a kept view: probed, or unavailable with its reason. */
-export type ShownPaint = Schema.Schema.Type<typeof ShownPaint>;
+/** One (part, paint) of a kept view, decided: probed, or unavailable with its reason. */
+export type CoverageEntry = Schema.Schema.Type<typeof CoverageEntry>;
 
-/** A member's reviewed colour coverage, `cast/<member>/cast-sheet/colour-coverage.json`: every (part, paint) each kept view shows, read off the view at 1:1, so a paint left without a probe is seen. */
+/** A member's reviewed colour coverage, `cast/<member>/cast-sheet/colour-coverage.json`: every (part, paint) of each kept view, read off the view at 1:1 and decided, so a shown paint left without a probe is seen. */
 export const ColourCoverage = Schema.Struct({
   member: Schema.String,
   views: Schema.Struct({
-    front: Schema.Array(ShownPaint),
-    threeQuarterLeft: Schema.Array(ShownPaint),
-    profileLeft: Schema.Array(ShownPaint),
-    back: Schema.Array(ShownPaint),
-    profileRight: Schema.Array(ShownPaint),
-    threeQuarterRight: Schema.Array(ShownPaint),
+    front: Schema.Array(CoverageEntry),
+    threeQuarterLeft: Schema.Array(CoverageEntry),
+    profileLeft: Schema.Array(CoverageEntry),
+    back: Schema.Array(CoverageEntry),
+    profileRight: Schema.Array(CoverageEntry),
+    threeQuarterRight: Schema.Array(CoverageEntry),
   } satisfies Record<ViewName, Schema.Top>),
 });
 

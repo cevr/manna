@@ -27,7 +27,7 @@ import {
   ProbePart,
   type ColourProbe,
   type ProbedPaint,
-  type ShownPaint,
+  type CoverageEntry,
 } from './probes.ts';
 import { probesFile } from './run.ts';
 import { verdictOf, type CheckVerdict, type Measured } from './verdict.ts';
@@ -465,14 +465,14 @@ describe("the lead's authored colour probes", () => {
   );
 });
 
-/** A view's shown paints that name probes. */
-const probedOf = (shown: ReadonlyArray<ShownPaint>): ReadonlyArray<ProbedPaint> =>
+/** A view's coverage entries that name probes. */
+const probedOf = (shown: ReadonlyArray<CoverageEntry>): ReadonlyArray<ProbedPaint> =>
   shown.filter((entry): entry is ProbedPaint => 'probes' in entry);
 
 /** Each way a view's coverage and its probes disagree: a probe id used twice, a (part, paint) listed twice, a probed paint naming a probe the view lacks or one of another part or paint, or a probe no shown paint names. */
 const coverageGaps = (
   view: ViewName,
-  shown: ReadonlyArray<ShownPaint>,
+  shown: ReadonlyArray<CoverageEntry>,
   probes: ReadonlyArray<ColourProbe>,
 ): ReadonlyArray<string> => {
   const byId = new Map(probes.map((probe) => [probe.id, probe] as const));
