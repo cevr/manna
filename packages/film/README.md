@@ -4110,7 +4110,7 @@ through them, rather than a flat cutout.
   `haze` takes a sky of stops as well as one colour.
 - **Painted plates** (`canvas/painting.ts`, `PaintingSpec`): an 8-bit RGBA
   PNG, not interlaced (the Bun decoder, `tools/png.ts`, refuses a palette,
-  16-bit or interlaced PNG and reads no `tRNS`), in the film's folder, painted at the fidelity of the concept art. A drawing
+  16-bit or interlaced PNG and reads no [`tRNS`](https://www.w3.org/TR/png-3/#11tRNS)), in the film's folder, painted at the fidelity of the concept art. A drawing
   declares its `paintings` as it declares its puppets
   (`drawing({ paintings: { sky: SKY }, draw: (f) => … f.painting('sky') … })`),
   and `f.painting(name)` paints one as a plane under the ctx's current
