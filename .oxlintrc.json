@@ -241,6 +241,8 @@
     "**/dist/**",
     "**/node_modules/**",
     "**/*.d.ts",
+    "**/*.d.swift.ts",
+    "**/*.d.kt.ts",
     "**/outputs/**",
     "**/lint/fixtures/**",
     "**/.alchemy/**",
