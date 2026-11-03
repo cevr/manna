@@ -171,6 +171,9 @@ const ruleDrift = (markdown: Markdown, code: Code) =>
     .filter((rule) => !code.registered.has(rule) && !code.entries.has(rule))
     .map((rule) => `rule film/${rule} is not registered`);
 
+/** A rule's name as `ruleDrift` reads it (`film/no-read-once`): a path only where a base holds a `film` directory. */
+const RULE_NAME = /^film\/[a-z]+(?:-[a-z]+)*$/;
+
 /** `bun run`'s options that take a value (`--cwd apps/animations`); any other is a switch. */
 const VALUED = '--cwd|--filter|-F|--env-file|--config|-c|--preload|-r';
 
@@ -392,6 +395,24 @@ const ignoredDirectories = (gitignore: string): ReadonlySet<string> =>
   );
 
 /**
+ * The paths a `.gitignore` in `dir` names whole, from the repo's root: each
+ * plain line (no glob, no `!`) under `dir`, so the root's `packages/core/data/webster.db`
+ * and an app's `/ios` (`apps/hymnal/ios`). Output, never in the tree.
+ */
+const ignoredPaths = (gitignore: string, dir: string): ReadonlyArray<string> =>
+  gitignore
+    .split('\n')
+    .map((line) =>
+      line
+        .trim()
+        .replace(/^\*\*\//, '')
+        .replace(/^\//, '')
+        .replace(/\/$/, ''),
+    )
+    .filter((line) => /^[\w.-]+(?:\/[\w.-]+)*$/.test(line))
+    .map((line) => [dir, line].filter((part) => part !== '').join('/'));
+
+/**
  * What a doc's anchors name that the tree lacks: a path that is gone, a
  * symbol its file no longer declares, or a `path:line` (a line moves under
  * an edit and still resolves; a symbol fails when it is renamed). A receipt
@@ -418,7 +439,11 @@ const anchorDrift = (
  * Each anchor looked up under the doc's bases: the first base that has its
  * first directory (and it is not ignored output) reads it. Under none, it is another tree's path, unless the
  * doc is whole and it is neither a package's (`@manna/url-state`, an
- * installed `effect/Schema`) nor ignored output (`tmp/logs`).
+ * installed `effect/Schema`), ignored output (`tmp/logs`) nor a rule
+ * (`film/no-read-once`, which `ruleDrift` reads). A path that is, from one
+ * of its bases, one a `.gitignore` of the root or of that base names whole
+ * (`ignoredPaths`) is output: never the tree's. A path under that one is the
+ * tree's still, so a typo inside ignored output (`ios/Podz`) fails.
  */
 const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, doc: Doc) {
   const fs = yield* FileSystem.FileSystem;
@@ -429,10 +454,23 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
       Option.exists((info) => info.type === 'Directory'),
     );
   const ignored = ignoredDirectories(yield* fs.readFileString(path.join(root, '.gitignore')));
+  const outputs = new Set(
+    (yield* Effect.forEach(Array.from(new Set(['', ...doc.bases])), (dir) =>
+      Effect.map(Effect.option(fs.readFileString(path.join(root, dir, '.gitignore'))), (text) =>
+        Option.match(text, { onNone: () => [], onSome: (t) => ignoredPaths(t, dir) }),
+      ),
+    )).flat(),
+  );
+  const isOutput = (anchor: Anchor) =>
+    doc.bases.some((base) => outputs.has(path.join(base, anchor.path).replace(/\/$/, '')));
   const elsewhere = (anchor: Anchor, first: string) =>
     Effect.map(
       isDirectory(path.join('node_modules', first)),
-      (installed) => installed || PACKAGE_NAME.test(anchor.path) || ignored.has(first),
+      (installed) =>
+        installed ||
+        PACKAGE_NAME.test(anchor.path) ||
+        ignored.has(first) ||
+        RULE_NAME.test(anchor.path),
     );
   return yield* Effect.forEach(anchorsIn(doc), (anchor) =>
     Effect.gen(function* () {
@@ -459,7 +497,9 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
       const read = Option.filter(file, () => anchor.symbols.length > 0);
       return {
         anchor,
-        ours: bases.length > 0 || (doc.whole && !(yield* elsewhere(anchor, first))),
+        ours:
+          !isOutput(anchor) &&
+          (bases.length > 0 || (doc.whole && !(yield* elsewhere(anchor, first)))),
         file,
         text: yield* Option.match(read, {
           onNone: () => Effect.succeed(Option.none<string>()),
@@ -1276,6 +1316,58 @@ describe('the docs', () => {
       }).pipe(Effect.scoped),
   );
 
+  it.effect.layer(BunServices.layer)(
+    "read a path a .gitignore names, the root's or a base's own, as output, and a path under it as the tree's",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const root = yield* fs.makeTempDirectoryScoped();
+        yield* fs.makeDirectory(`${root}/data`);
+        yield* fs.makeDirectory(`${root}/app/src`, { recursive: true });
+        yield* fs.writeFileString(`${root}/.gitignore`, 'tmp/\ndata/built.db\n');
+        yield* fs.writeFileString(`${root}/app/.gitignore`, '/ios\n');
+        yield* fs.writeFileString(`${root}/app/src/kept.ts`, 'export const kept = 1;\n');
+        const doc: Doc = {
+          path: 'whole.md',
+          bases: ['', 'app'],
+          whole: true,
+          text: [
+            'Built to `data/built.db`, the app to `app/ios`, logged in `tmp/logs/latest`.',
+            'It reads `src/kept.ts`; mistyped, `src/gone.ts` and `data/gone.db`;',
+            'under the ignored `app/ios`, a folder no code makes: `ios/Podz`.',
+          ].join('\n'),
+        };
+        expect(yield* anchorsDrift(root, [doc])).toEqual([
+          'whole.md: path src/gone.ts does not exist',
+          'whole.md: path data/gone.db does not exist',
+          'whole.md: path ios/Podz does not exist',
+        ]);
+      }).pipe(Effect.scoped),
+  );
+
+  it.effect.layer(BunServices.layer)(
+    'read a `film/<rule>` in a whole doc as a rule the plugin registers, not as a path',
+    () =>
+      Effect.gen(function* () {
+        const root = yield* ROOT;
+        const code = yield* repoCode;
+        const doc: Doc = {
+          path: 'whole.md',
+          bases: ['', 'apps/hymnal'],
+          whole: true,
+          text: 'A shared fixture builds as the file loads (`film/no-lazy-test-fixture`), never `film/no-such-rule`.',
+        };
+        expect([
+          ...NAMES_DRIFT.verify(doc, code),
+          ...NAMES_DRIFT.anchored(doc, code),
+          ...(yield* anchorsDrift(root, [doc])),
+        ]).toEqual([
+          'whole.md: rule film/no-such-rule is not registered',
+          'whole.md: rule film/no-such-rule is not registered',
+        ]);
+      }),
+  );
+
   it.effect.layer(BunServices.layer)('fail a doc that names what the code no longer has', () =>
     Effect.gen(function* () {
       const root = yield* ROOT;
@@ -1642,16 +1734,22 @@ describe('the docs', () => {
  * What a doc names that the code lacks, beyond its anchors, by its role: a
  * framework doc's every name (`drift`), a passing doc's routes and spans
  * (the owner's runbook, the prior arts and the app's README name routes
- * too), an anchored doc's none, and a verify skill's doc each `bun run`
+ * too), an anchored doc's rules (`film/<rule>`, never read as a path), and
+ * a verify skill's doc its rules and each `bun run`
  * (`bun run --cwd apps/firsttheblade verify:drive`: a script of that package).
  */
 const NAMES_DRIFT: Record<DocPlace['role'], (doc: Doc, code: Code) => ReadonlyArray<string>> = {
   framework: drift,
   spanned: (doc, code) =>
     spanDrift(markdownOf(doc.text), code).map((what) => `${doc.path}: ${what}`),
-  anchored: () => [],
-  verify: (doc, code) =>
-    scriptDrift(markdownOf(doc.text), code).map((what) => `${doc.path}: ${what}`),
+  anchored: (doc, code) =>
+    ruleDrift(markdownOf(doc.text), code).map((what) => `${doc.path}: ${what}`),
+  verify: (doc, code) => {
+    const markdown = markdownOf(doc.text);
+    return [...ruleDrift(markdown, code), ...scriptDrift(markdown, code)].map(
+      (what) => `${doc.path}: ${what}`,
+    );
+  },
 };
 
 const DOC_SERVICES = Layer.merge(BunFileSystem.layer, BunPath.layer);
