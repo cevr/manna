@@ -1,5 +1,5 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { describe, expect } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { Effect, FileSystem, Option, Schema } from 'effect';
 import { it } from 'effect-bun-test';
 import type { ViewName } from '../render.ts';
@@ -12,7 +12,7 @@ import {
   type KeptPaint,
   type Witness,
 } from './coverage.ts';
-import { deltaLab } from './measures.ts';
+import { deltaLab, flatMedian, rgbOf, type Raster, type Rgb } from './measures.ts';
 import { decode, VIEWS } from './pipeline.ts';
 import {
   ColourCoverageJson,
@@ -86,6 +86,60 @@ const soleCovers = (
   }
   return [...sole].map(([probe, witnesses]) => ({ probe, witnesses }));
 };
+
+/** A 48 × 40 figure on paper: a 2 px ink outline round x 4 to 43, y 4 to 35; an ink line at x 22 and 23 splits a flat skin left (with a checker of skin and its shade at x 8 to 15, y 24 to 31) from a blue right that darkens across x. */
+const SYNTHETIC = { w: 48, h: 40 };
+
+/** Whether (x, y) of the synthetic figure is ink: its outline or its splitting line. */
+const syntheticInk = (x: number, y: number): boolean =>
+  (x >= 4 && x <= 43 && y >= 4 && y <= 35 && (x <= 5 || x >= 42 || y <= 5 || y >= 34)) ||
+  ((x === 22 || x === 23) && y >= 4 && y <= 35);
+
+/** Whether (x, y) of the synthetic figure lies inside its outline. */
+const syntheticInside = (x: number, y: number): boolean => x >= 4 && x <= 43 && y >= 4 && y <= 35;
+
+/** The synthetic figure's colour at (x, y). */
+const syntheticAt = (x: number, y: number): Rgb => {
+  if (syntheticInk(x, y)) return rgbOf('#140a05');
+  if (!syntheticInside(x, y)) return rgbOf('#fdf1d9');
+  if (x < 22 && x >= 8 && x <= 15 && y >= 24 && y <= 31 && (x + y) % 2 === 0)
+    return rgbOf('#b07a5a');
+  if (x < 22) return rgbOf('#f9dbb6');
+  const t = (x - 24) / 17;
+  return [Math.round(74 - 27 * t), Math.round(122 - 36 * t), Math.round(154 - 42 * t)];
+};
+
+describe("a kept view's flat witnesses", () => {
+  test('are every 4 px box on the 2 px grid inside the outline, 2 px clear of ink and flat by the probes rule, each in the region of its side of the line', () => {
+    const { w, h } = SYNTHETIC;
+    const rgba = new Uint8Array(w * h * 4);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) rgba.set([...syntheticAt(x, y), 255], (y * w + x) * 4);
+    const raster: Raster = { width: w, height: h, rgba };
+    const clear = (x0: number, y0: number): boolean => {
+      for (let y = y0 - 2; y <= y0 + 5; y++)
+        for (let x = x0 - 2; x <= x0 + 5; x++) if (syntheticInk(x, y)) return false;
+      return syntheticInside(x0, y0) && syntheticInside(x0 + 3, y0 + 3);
+    };
+    const expected: Array<string> = [];
+    for (let y0 = 0; y0 + 4 <= h; y0 += 2)
+      for (let x0 = 0; x0 + 4 <= w; x0 += 2) {
+        const box = { x0, y0, x1: x0 + 3, y1: y0 + 3 };
+        if (clear(x0, y0) && Option.isSome(flatMedian(raster, box)))
+          expected.push(`${x0},${y0} ${['right', 'left'][Number(x0 < 22)]}`);
+      }
+    const paint = keptPaint(raster);
+    const left = paint.witnesses.filter((v) => v.box.x0 < 22).map((v) => v.region);
+    expect(
+      paint.witnesses.map(
+        (v) => `${v.box.x0},${v.box.y0} ${['right', 'left'][Number(v.region === left[0])]}`,
+      ),
+    ).toEqual(expected);
+    expect(new Set(paint.witnesses.map((v) => v.region)).size).toBe(2);
+    expect(expected.filter((e) => e.endsWith('right')).length).toBeGreaterThan(30);
+    expect(expected.some((e) => e.startsWith('10,26'))).toBe(false);
+  });
+});
 
 describe("the lead's colour coverage of the kept views' flat paints", () => {
   it.effect(

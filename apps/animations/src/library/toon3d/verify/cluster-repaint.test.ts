@@ -99,16 +99,38 @@ describe('a kept flat paint repainted another paint of its region', () => {
                 `${view} ${witnessText(paint, from.seed)} painted Lab ${to.seed.lab.map((v) => v.toFixed(1)).join(' ')}`,
               ].filter(() => colourOf(view, readProbes(view, touched, kept, scene, ids)).pass);
             });
+            const stray = pairs.slice(0, 1).flatMap((first) =>
+              pairs
+                .filter((next) => next.from.region !== first.from.region)
+                .slice(0, 1)
+                .map((next) => {
+                  repaint(first.from, first.to);
+                  const scene = repaint(next.from, next.to);
+                  return paint.region.filter(
+                    (r, i) =>
+                      r !== next.from.region &&
+                      kept.rgba
+                        .subarray(i * 4, i * 4 + 4)
+                        .some((v, k) => v !== scene.rgba[i * 4 + k]),
+                  ).length;
+                }),
+            );
             return {
               control: `${view} ${control.pass} ${control.value}`,
               pairs: pairs.length,
               escaped,
+              stray,
             };
           }),
         );
         expect(rows.map((r) => r.control)).toEqual(VIEWS.map((view) => `${view} true 0`));
         expect(rows.flatMap((r) => r.escaped)).toEqual([]);
         expect(Math.min(...rows.map((r) => r.pairs))).toBeGreaterThan(50);
+        const stray = rows.flatMap((r) => r.stray);
+        expect({ checked: stray.length >= 3, stray: stray.filter((n) => n > 0) }).toEqual({
+          checked: true,
+          stray: [],
+        });
       }).pipe(Effect.provide(BunServices.layer)),
   );
 });
