@@ -9,7 +9,7 @@
       "expect": [
         { "shows": "id=key-button" },
         { "hides": "id=chord-1-1-1" },
-        { "hides": "id=key-face" }
+        { "hides": "role=statictext label=KEY" }
       ],
       "receipt": "snapshot"
     },
@@ -69,7 +69,7 @@
     {
       "name": "chords-levels",
       "action": "open",
-      "link": "hymns/126",
+      "link": "hymns/181",
       "expect": [{ "shows": "label=No chords for this hymn yet." }, { "hides": "id=chord-1-1-1" }]
     },
     {
@@ -106,7 +106,7 @@
       "link": "hymns/100",
       "expect": [
         { "shows": "id=key-button" },
-        { "hides": "id=key-face" },
+        { "hides": "role=statictext label=KEY" },
         { "hides": "id=chord-1-1-1" }
       ],
       "receipt": "snapshot"

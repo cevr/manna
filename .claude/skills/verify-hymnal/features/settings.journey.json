@@ -63,7 +63,7 @@
       "name": "settings-chords-switch",
       "action": "tap",
       "target": "role=switch label=Chords",
-      "expect": [{ "shows": "label=Advanced" }, { "shows": "label=Chord placement" }],
+      "expect": [{ "shows": "label=Advanced" }],
       "receipt": "snapshot"
     },
     {

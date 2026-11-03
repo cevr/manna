@@ -43,7 +43,7 @@ Read in the receipts:
 
 - `settings`: `Appearance` with `System` checked. `dark`: the shot dark, `Dark` checked. `second-view`: `Dark` still checked, the shot dark.
 - `about`: the heading `About`, `Salamander Grand Piano`, `CC BY 3.0` as a link and `VS Chamber Orchestra 2`.
-- `settings-chords-switch-off` (raw snapshot): the switch `Chords` value `0`, after `Appearance`; no `Advanced`, no `Chord placement`, no `Tuner`. `settings-chords-switch`: `Chords` `1`; `Chord style` with `Simple` and `Advanced`, and `Chord placement`; `Tuner` read, not required (the simulator has the ear only if the build gives it).
+- `settings-chords-switch-off` (raw snapshot): the switch `Chords` value `0`, after `Appearance`; no `Advanced`, no `Chord placement`, no `Tuner`. `settings-chords-switch`: `Chords` `1`; `Chord style` with `Simple` and `Advanced` (`Advanced` is the step's `shows`), and `Chord placement` in the snapshot (below the fold at the half detent, so not a `shows`); `Tuner` read, not required (the simulator has the ear only if the build gives it).
 - `settings-feel`: the switch `Sounds and haptics` after `Advanced` and before `About`, off (iOS value 0).
 - `settings-chords-off` (raw snapshot): `Chords` `0`, and no `Advanced` or `Chord placement`.
 - `leave` and `close`: no `Sheet Grabber`, the home screen. `kept`: `Advanced` checked after the relaunch; `kept-feel`: `Sounds and haptics` still off. `feel-put-back`: on (`[checked]` or value 1).
@@ -58,6 +58,7 @@ By hand: **Chord style on a hymn (`settings-chords`).** With `Advanced` checked,
 - `Settings` names the tab and the screen title on iOS: use `role=button`.
 - On iOS Settings is a form sheet with no header: `sim back` does not close it and no `Hymns` button shows. Drag it down by its grabber before you leave, or the next deep link stacks over it: `sim gesture pan "role=button label=Sheet Grabber" 0 400 --ms 300` at the half detent it opens at, `0 760 --ms 400` once a scroll has raised it to full (a pan that leaves the screen is refused, and a fast flick from full stops at half).
 - `label=Chords` matches two switches: the player sheet's and Settings'. Tap a switch as `role=switch label=Chords` on the screen that shows it (only one is mounted at a time); the heading `Chords` in Settings is text, not a target.
+- With chords on, at the half detent Settings opens at, `Chord placement` and `Tuner` are in the tree but below the fold: a `shows` (or `sim wait`) of either fails until `sim scroll "label=Chord placement" down`. `Advanced` is on screen there.
 - A run that leaves chords on changes every later run's `off` steps (`chords-and-capo.md`): always end with chords off.
 - The switch reads as a cell and a switch both named `Sounds and haptics`: tap `role=switch label=Sounds and haptics`. Below the half detent it is not on screen: `sim scroll "label=Sounds and haptics" down` first.
 - A run that leaves `Dark` chosen changes the next run's screenshots: always end at `System`.
