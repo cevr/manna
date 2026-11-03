@@ -20,7 +20,13 @@ import { Match, Option } from 'effect';
 import type { Pt } from './rules.ts';
 
 /** An arm a view keeps painted rather than drawn as a stroke limb: its part, and why. */
-export const LIMB_LIMITS = { whole: 12, exposed: 8, unprotected: 0, ghost: 0 } as const;
+export const LIMB_LIMITS = {
+  whole: 12,
+  exposed: 8,
+  unprotected: 0,
+  ghost: 0,
+  shoulder: 0,
+} as const;
 
 /** A measured condition that keeps an arm painted. Its current value is
  * computed by the sweep; only the measure, pose and bound are recorded. */

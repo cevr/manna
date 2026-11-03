@@ -1,5 +1,5 @@
 /* oxlint-disable typescript/no-non-null-assertion -- independent raster oracle indexes bounded pixel buffers */
-import { labOf, type rasterOf } from '@manna/film/core';
+import { labOf, rasterOf } from '@manna/film/core';
 import { Option } from 'effect';
 
 type Pt = readonly [number, number];
@@ -13,6 +13,7 @@ export const inverse = (
   measured: ReturnType<typeof measuredHand>,
   elbow: number,
   wrist: number,
+  offset: Pt = [0, 0],
 ) => {
   const e = (elbow * Math.PI) / 180,
     angle = ((elbow + wrist) * Math.PI) / 180;
@@ -24,7 +25,14 @@ export const inverse = (
   const wy = pivot[1] + Math.sin(e) * x + Math.cos(e) * y;
   const c = Math.cos(angle),
     s = Math.sin(angle);
-  return [c, -s, s, c, cuff[0] - c * wx - s * wy, cuff[1] + s * wx - c * wy];
+  return [
+    c,
+    -s,
+    s,
+    c,
+    cuff[0] - c * (wx + offset[0]) - s * (wy + offset[1]),
+    cuff[1] + s * (wx + offset[0]) - c * (wy + offset[1]),
+  ];
 };
 const mapped = (m: ReadonlyArray<number>, x: number, y: number): Pt => [
   m[0]! * x + m[2]! * y + m[4]!,
@@ -85,6 +93,20 @@ export const measuredHand = (puppet: Puppet, name: string) => {
     ] as const;
   };
   const { cloth: CLOTH, skin: SKIN } = references(arm.pixels, limb);
+  const [rx, ry, rw, rh] = limb.regions.box;
+  let hx0 = rx + rw,
+    hy0 = ry + rh,
+    hx1 = rx,
+    hy1 = ry;
+  for (let y = ry; y < ry + rh; y++)
+    for (let x = rx; x < rx + rw; x++)
+      if (share(x, y) > 0 && alpha(x, y) > 0) {
+        hx0 = Math.min(hx0, x);
+        hy0 = Math.min(hy0, y);
+        hx1 = Math.max(hx1, x + 1);
+        hy1 = Math.max(hy1, y + 1);
+      }
+  const handBox = [hx0 - 1, hy0 - 1, hx1 + 1, hy1 + 1] as const;
   const clothAt = (sx: number, sy: number) => {
     const lab = labOf(paintAt(sx, sy));
     return (
@@ -104,7 +126,19 @@ export const measuredHand = (puppet: Puppet, name: string) => {
     // mixed with the source colour, within two bytes of rounding error.
     return source.every((c, k) => Math.abs(rgb[k]! - (c - weight * d[k]!)) <= 2);
   };
-  return { arm, limb, wrist, alpha, sample, clothAt, inkAt, cloth: CLOTH, skin: SKIN };
+  return {
+    arm,
+    limb,
+    wrist,
+    alpha,
+    sample,
+    handBox,
+    paintAt,
+    clothAt,
+    inkAt,
+    cloth: CLOTH,
+    skin: SKIN,
+  };
 };
 
 /** Paper, ink, cloth and skin in the rendered result, independent of source ownership. */
@@ -218,7 +252,12 @@ const references = (pixels: Raster, limb: NonNullable<Puppet['parts'][number]['l
 
 /** Acceptance D: extra light, bare edge pixels near the elbow or posed cuff.
  * Uses the entire canvas, so moving a tear cannot move it outside a crop. */
-export const bareEdges = (r: Raster, measured: ReturnType<typeof measuredHand>, elbow: number) => {
+export const bareEdges = (
+  r: Raster,
+  measured: ReturnType<typeof measuredHand>,
+  elbow: number,
+  offset: Pt = [0, 0],
+) => {
   const { elbow: e, fore } = measured.limb.chain;
   const cuff = measured.wrist;
   const a = (elbow * Math.PI) / 180,
@@ -230,8 +269,8 @@ export const bareEdges = (r: Raster, measured: ReturnType<typeof measuredHand>, 
   for (let y = 1; y < r.height - 1; y++)
     for (let x = 1; x < r.width - 1; x++) {
       if (
-        (x - e[0]) ** 2 + (y - e[1]) ** 2 > (0.6 * fore) ** 2 &&
-        (x - wx) ** 2 + (y - wy) ** 2 > (0.35 * fore) ** 2
+        (x - offset[0] - e[0]) ** 2 + (y - offset[1] - e[1]) ** 2 > (0.6 * fore) ** 2 &&
+        (x - offset[0] - wx) ** 2 + (y - offset[1] - wy) ** 2 > (0.35 * fore) ** 2
       )
         continue;
       const i = y * r.width + x,
@@ -295,41 +334,30 @@ export const colourMatch = (
   return { iou: inter / Math.max(1, union), de: total / Math.max(1, count) };
 };
 
-/** New interior ink near the fixed shoulder, compared with the painted
- * whole figure. The rigid hand and moving forearm support (including their
- * measured ink/filter footprints) are excluded: their outlines are not a
- * fixed shoulder seam. The remaining count has no allowance. */
+/** New interior ink in the fixed shoulder disc. Only actual moving alpha
+ * plus one diagonal texel footprint for the byte mask's reconstruction
+ * is excluded. Unchanged fixed ink cannot disappear under a moving mask.
+ * No count allowance: the remaining interior ink must be zero. */
 export const shoulderInk = (
   engine: Raster,
   painted: Raster,
   measured: ReturnType<typeof measuredHand>,
-  elbow: number,
+  _elbow: number,
   offset: Pt = [0, 0],
-  wrist = 0,
+  _wrist = 0,
+  fixed?: Raster,
+  moving: Uint8Array = new Uint8Array(0),
+  fixedMoving: Uint8Array = new Uint8Array(0),
 ) => {
-  const { shoulder, upper, fore, elbow: e } = measured.limb.chain;
+  const { shoulder, upper } = measured.limb.chain;
   const sx = shoulder[0] + offset[0],
     sy = shoulder[1] + offset[1];
-  const a = (elbow * Math.PI) / 180,
-    dx = measured.wrist[0] - e[0],
-    dy = measured.wrist[1] - e[1];
-  const wx = e[0] + Math.cos(a) * dx - Math.sin(a) * dy + offset[0];
-  const wy = e[1] + Math.sin(a) * dx + Math.cos(a) * dy + offset[1];
-  const handFrame = inverse(measured, elbow, wrist);
-  const foreFrame = inverse(measured, elbow, 0);
-  const dfx = (measured.limb.chain.cuff[0] - e[0]) / fore;
-  const dfy = (measured.limb.chain.cuff[1] - e[1]) / fore;
-  const foreWidth =
-    Math.max(
-      measured.limb.stations.elbowFore.inner,
-      measured.limb.stations.elbowFore.outer,
-      measured.limb.stations.cuff.inner,
-      measured.limb.stations.cuff.outer,
-      ...measured.limb.outer.widths,
-      ...measured.limb.inner.widths,
-    ) +
-    measured.limb.inkWidth +
-    Math.SQRT2;
+  const coverage = Option.getOrThrow(
+    Option.filter(
+      Option.some(moving),
+      (mask) => mask.length === engine.width * engine.height && fixedMoving.length === mask.length,
+    ),
+  );
   const ink = (r: Raster, i: number) =>
     r.rgba[i * 4 + 3]! >= 128 &&
     labOf([r.rgba[i * 4]!, r.rgba[i * 4 + 1]!, r.rgba[i * 4 + 2]!])[0] < INK_L;
@@ -342,32 +370,6 @@ export const shoulderInk = (
           yy = y + dy;
         if (xx < 0 || yy < 0 || xx >= engine.width || yy >= engine.height) return true;
         if (hit(yy * engine.width + xx)) return true;
-      }
-    return false;
-  };
-  const moving = (x: number, y: number) => {
-    const handRadius = Math.max(
-      0.35 * fore,
-      measured.limb.stations.cuff.inner + measured.limb.inkWidth,
-      measured.limb.stations.cuff.outer + measured.limb.inkWidth,
-    );
-    if ((x - wx) ** 2 + (y - wy) ** 2 <= handRadius ** 2) return true;
-    const h = mapped(handFrame, x + 0.5 - offset[0], y + 0.5 - offset[1]);
-    if (measured.sample(h[0], h[1], true) > 0) return true;
-    const q = mapped(foreFrame, x + 0.5 - offset[0], y + 0.5 - offset[1]);
-    const rx = q[0] - e[0],
-      ry = q[1] - e[1],
-      u = rx * dfx + ry * dfy;
-    return u >= -foreWidth && u <= fore + foreWidth && Math.abs(rx * dfy - ry * dfx) <= foreWidth;
-  };
-  const handFringe = (x: number, y: number) => {
-    const q = mapped(handFrame, x + 0.5 - offset[0], y + 0.5 - offset[1]);
-    const radius = measured.limb.inkWidth / 2 + Math.SQRT2;
-    const reach = Math.ceil(radius);
-    for (let dx = -reach; dx <= reach; dx++)
-      for (let dy = -reach; dy <= reach; dy++) {
-        if (dx * dx + dy * dy > radius * radius) continue;
-        if (measured.sample(q[0] + dx, q[1] + dy, true) > 0) return true;
       }
     return false;
   };
@@ -384,13 +386,208 @@ export const shoulderInk = (
       x <= Math.min(engine.width - 1, sx + radius);
       x++
     ) {
-      if ((x - sx) ** 2 + (y - sy) ** 2 > radius * radius || moving(x, y)) continue;
+      if ((x - sx) ** 2 + (y - sy) ** 2 > radius * radius) continue;
       const i = y * engine.width + x;
       if (!ink(engine, i) || painted.rgba[i * 4 + 3]! < 128) continue;
       if (near(x, y, width + 1, (j) => engine.rgba[j * 4 + 3]! < 128)) continue;
       if (near(x, y, width / 2 + 1, (j) => ink(painted, j))) continue;
-      if (handFringe(x, y)) continue;
+      const unchanged = Option.match(Option.fromUndefinedOr(fixed), {
+        onNone: () => false,
+        onSome: (r) =>
+          !near(x, y, Math.SQRT2, (j) => fixedMoving[j]! > 0) &&
+          [0, 1, 2, 3].every((c) => r.rgba[i * 4 + c] === engine.rgba[i * 4 + c]),
+      });
+      if (!unchanged && near(x, y, Math.SQRT2, (j) => coverage[j]! > 0)) continue;
       count++;
     }
   return count;
+};
+
+/** A crop containing the complete arm's transformed source box and all
+ * capsule caps, plus the fixed shoulder oracle neighbourhood. The canvas
+ * never cuts a limb distance field; other parts retain their normal order. */
+export const limbCanvas = (
+  puppet: Puppet,
+  measured: ReturnType<typeof measuredHand>,
+  elbow: number,
+  wrist: number,
+) => {
+  const [bx, by, bw, bh] = measured.limb.regions.box;
+  const xs = [measured.limb.chain.shoulder[0]],
+    ys = [measured.limb.chain.shoulder[1]];
+  const frames = [[1, 0, 0, 1, 0, 0], inverse(measured, elbow, 0), inverse(measured, elbow, wrist)];
+  for (const m of frames)
+    for (const [x, y] of [
+      [bx, by],
+      [bx + bw, by],
+      [bx, by + bh],
+      [bx + bw, by + bh],
+    ]) {
+      xs.push(m[0]! * (x! - m[4]!) - m[2]! * (y! - m[5]!));
+      ys.push(-m[1]! * (x! - m[4]!) + m[3]! * (y! - m[5]!));
+    }
+  const margin = Math.ceil(
+    Math.max(
+      0.6 * measured.limb.chain.upper,
+      ...measured.limb.inner.widths,
+      ...measured.limb.outer.widths,
+      ...[
+        measured.limb.stations.shoulder,
+        measured.limb.stations.elbowUpper,
+        measured.limb.stations.elbowFore,
+        measured.limb.stations.cuff,
+      ].flatMap((s) => [s.inner, s.outer]),
+    ) +
+      measured.limb.inkWidth +
+      6,
+  );
+  const left = Math.floor(Math.min(...xs)) - margin,
+    top = Math.floor(Math.min(...ys)) - margin;
+  const size = [
+    Math.ceil(Math.max(...xs)) + margin - left,
+    Math.ceil(Math.max(...ys)) + margin - top,
+  ] as const;
+  const offset: Pt = [-left, -top];
+  const pose = {
+    numbers: { [measured.limb.bones[1]]: elbow, [measured.limb.bones[2]]: wrist },
+    root: [puppet.root[0] - left, puppet.root[1] - top] as const,
+    scale: 1,
+  };
+  return Option.getOrThrow(
+    Option.filter(
+      Option.some({ pose, size, offset }),
+      ({ size, offset }) =>
+        size.every((n) => Number.isSafeInteger(n) && n > 0) && offset.every(Number.isFinite),
+    ),
+  );
+};
+
+const FIXED = new WeakMap<Puppet, Map<string, Raster>>();
+export const shoulderCanvas = (
+  puppet: Puppet,
+  measured: ReturnType<typeof measuredHand>,
+  elbow: number,
+  wrist: number,
+) => {
+  // Closing, opening, final closing, ink and the oracle's neighbour search
+  // together reach less than six pens from the disc. Keep that entire halo.
+  const radius = Math.ceil(0.6 * measured.limb.chain.upper + 6 * measured.limb.inkWidth + 12);
+  const [sx, sy] = measured.limb.chain.shoulder;
+  const offset: Pt = [radius - Math.floor(sx), radius - Math.floor(sy)];
+  const pose = {
+    numbers: { [measured.limb.bones[1]]: elbow, [measured.limb.bones[2]]: wrist },
+    root: [puppet.root[0] + offset[0], puppet.root[1] + offset[1]] as const,
+    scale: 1,
+  };
+  return { pose, size: [2 * radius + 2, 2 * radius + 2] as const, offset };
+};
+export const shoulderRasters = (
+  puppet: Puppet,
+  measured: ReturnType<typeof measuredHand>,
+  elbow: number,
+  wrist: number,
+) => {
+  const { pose, size, offset } = shoulderCanvas(puppet, measured, elbow, wrist);
+  const base = { ...puppet, parts: puppet.parts.map(({ limb: _limb, ...p }) => p) };
+  const known = Option.getOrElse(
+    Option.fromUndefinedOr(FIXED.get(puppet)),
+    () => new Map<string, Raster>(),
+  );
+  const fixed = Option.getOrElse(Option.fromUndefinedOr(known.get(measured.arm.name)), () => {
+    const canvas = shoulderCanvas(puppet, measured, 25, -21);
+    const raster = rasterOf(puppet, canvas.pose, canvas.size, measured.arm.name);
+    known.set(measured.arm.name, raster);
+    FIXED.set(puppet, known);
+    return raster;
+  });
+  const engine = rasterOf(puppet, pose, size, measured.arm.name);
+  return {
+    engine,
+    painted: rasterOf(base, pose, size),
+    fixed,
+    offset,
+    moving: Option.getOrThrow(Option.fromUndefinedOr(engine.moving)),
+    fixedMoving: Option.getOrThrow(Option.fromUndefinedOr(fixed.moving)),
+  };
+};
+
+/** Visible skin belonging to this hand. Use the larger of painted skin
+ * and independently posed owned skin after front-body occlusion. The owned
+ * reference also subtracts front-body coverage from the engine count.
+ * Empty visible references are reported explicitly and have share one. */
+export const handShare = (
+  engine: Raster,
+  painted: Raster,
+  front: Raster,
+  measured: ReturnType<typeof measuredHand>,
+  elbow: number,
+  wrist: number,
+  offset: Pt = [0, 0],
+) => {
+  const h = inverse(measured, elbow, wrist, offset);
+  const skin = (r: Raster, i: number) => {
+    const o = i * 4;
+    if (r.rgba[o + 3]! < 128) return false;
+    const lab = labOf([r.rgba[o]!, r.rgba[o + 1]!, r.rgba[o + 2]!]);
+    return (
+      lab[0] >= INK_L &&
+      Math.hypot(lab[1] - measured.skin[1], lab[2] - measured.skin[2]) <
+        Math.hypot(lab[1] - measured.cloth[1], lab[2] - measured.cloth[2])
+    );
+  };
+  let visible = 0,
+    original = 0,
+    owned = 0,
+    visibleFront = 0,
+    ownedFront = 0;
+  const [x0, y0, x1, y1] = measured.handBox;
+  const xs: Array<number> = [],
+    ys: Array<number> = [];
+  for (const [x, y] of [
+    [x0, y0],
+    [x0, y1],
+    [x1, y0],
+    [x1, y1],
+  ]) {
+    xs.push(h[0]! * (x! - h[4]!) - h[2]! * (y! - h[5]!));
+    ys.push(-h[1]! * (x! - h[4]!) + h[3]! * (y! - h[5]!));
+  }
+  const count = (x: number, y: number) => {
+    const i = y * engine.width + x,
+      o = i * 4;
+    const q = mapped(h, x + 0.5, y + 0.5);
+    if (measured.sample(q[0], q[1], true) < 0.5) return;
+    const e = skin(engine, i),
+      p = skin(painted, i);
+    const native = labOf(measured.paintAt(q[0], q[1]))[0] >= INK_L && !measured.clothAt(q[0], q[1]);
+    if (e) visible++;
+    if (p) original++;
+    if (native) owned++;
+    if (front.rgba[o + 3]! < 128) {
+      if (e) visibleFront++;
+      if (native) ownedFront++;
+    }
+  };
+  for (
+    let y = Math.max(0, Math.floor(Math.min(...ys)));
+    y < Math.min(engine.height, Math.ceil(Math.max(...ys)));
+    y++
+  )
+    for (
+      let x = Math.max(0, Math.floor(Math.min(...xs)));
+      x < Math.min(engine.width, Math.ceil(Math.max(...xs)));
+      x++
+    )
+      count(x, y);
+  let reference = 'painted';
+  let denominator = original;
+  if (ownedFront > original) {
+    reference = 'owned-minus-front';
+    denominator = ownedFront;
+    visible = visibleFront;
+  }
+  let share = 1;
+  if (denominator > 0) share = visible / denominator;
+  else reference += '-empty';
+  return { visible, painted: original, owned, reference, share };
 };

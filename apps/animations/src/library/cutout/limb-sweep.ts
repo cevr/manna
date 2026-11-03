@@ -11,6 +11,9 @@ import {
   kindsOf,
   measuredHand,
   shoulderInk,
+  shoulderRasters,
+  handShare,
+  limbCanvas,
 } from './limb-check.ts';
 import { censusOf, paintedArms, refusalErrors } from './limb-census.ts';
 import { posesFor, shardOf } from './limb-shards.ts';
@@ -57,16 +60,17 @@ export const sweep = (file: string) =>
         const where = { whole: '', exposed: '', unprotected: '', ghost: '' };
         for (const [elbow, wrist] of ownedPoses)
           it.effect(`${spec.key} ${arm.name} ${elbow}/${wrist}: whole and inked cuff`, () =>
-            Effect.sync(() => {
-              const r = draw(elbow, wrist);
+            Effect.gen(function* () {
+              const canvas = limbCanvas(puppet, measured, elbow, wrist);
+              const r = rasterOf(alone, canvas.pose, canvas.size);
               const edges = countEdges(
                 r,
                 kindsOf(r, measured),
-                inverse(measured, elbow, wrist),
+                inverse(measured, elbow, wrist, canvas.offset),
                 measured,
               );
               const values = {
-                whole: Math.max(0, bareEdges(r, measured, elbow) - rest),
+                whole: Math.max(0, bareEdges(r, measured, elbow, canvas.offset) - rest),
                 exposed: edges.exposed,
                 unprotected: edges.unprotected,
                 ghost: edges.ghost,
@@ -76,30 +80,39 @@ export const sweep = (file: string) =>
                   worst[key] = values[key];
                   where[key] = `${elbow}/${wrist}`;
                 }
+              const crop = shoulderRasters(puppet, measured, elbow, wrist);
+              const shoulder = shoulderInk(
+                crop.engine,
+                crop.painted,
+                measured,
+                elbow,
+                crop.offset,
+                wrist,
+                crop.fixed,
+                crop.moving,
+                crop.fixedMoving,
+              );
+              const paintedArm = { ...alone, parts: base.parts.filter((p) => p.name === arm.name) };
+              const front = { ...base, parts: base.parts.slice(0, puppet.parts.indexOf(arm)) };
+              const hand = handShare(
+                r,
+                rasterOf(paintedArm, canvas.pose, canvas.size),
+                rasterOf(front, canvas.pose, canvas.size),
+                measured,
+                elbow,
+                wrist,
+                canvas.offset,
+              );
+              yield* Console.log(
+                `HAND ${spec.key} ${arm.name} ${elbow}/${wrist}: share=${hand.share.toFixed(4)} reference=${hand.reference} visible=${hand.visible} painted=${hand.painted} owned=${hand.owned}; whole=${values.whole} mixed=${values.exposed} unprotected=${values.unprotected} ghost=${values.ghost} shoulder=${shoulder}`,
+              );
               expect(values.whole).toBeLessThanOrEqual(12);
               expect(values.exposed).toBeLessThanOrEqual(8);
               expect(values.unprotected).toBe(0);
               expect(values.ghost).toBe(0);
-              const padded = {
-                ...puppet,
-                width: puppet.width + 512,
-                height: puppet.height + 512,
-              };
-              const wholePose = {
-                numbers: { [elbowBone]: elbow, [wristBone]: wrist },
-                root: [puppet.root[0] + 256, puppet.root[1] + 256] as const,
-                scale: 1,
-              };
-              const painted = { ...padded, parts: base.parts };
-              const shoulder = shoulderInk(
-                rasterOf(padded, wholePose),
-                rasterOf(painted, wholePose),
-                measured,
-                elbow,
-                [256, 256],
-                wrist,
-              );
               expect(shoulder).toBe(0);
+              expect(hand.owned).toBeGreaterThan(0);
+              expect(hand.share).toBeGreaterThanOrEqual(0.85);
             }),
           );
         if (index % shards === shard) {
@@ -217,6 +230,7 @@ export const sweep = (file: string) =>
                 });
               const rest = bareEdges(draw(0, 0), measured, 0);
               const receipt: Array<string> = [];
+              const conditions: Array<readonly [number, number]> = [];
               for (const reason of out.reason) {
                 const r = draw(reason.elbow, reason.wrist);
                 const edges = countEdges(
@@ -225,16 +239,33 @@ export const sweep = (file: string) =>
                   inverse(measured, reason.elbow, reason.wrist),
                   measured,
                 );
+                let shoulder = 0;
+                if (reason.measure === 'shoulder') {
+                  const crop = shoulderRasters(trial, measured, reason.elbow, reason.wrist);
+                  shoulder = shoulderInk(
+                    crop.engine,
+                    crop.painted,
+                    measured,
+                    reason.elbow,
+                    crop.offset,
+                    reason.wrist,
+                    crop.fixed,
+                    crop.moving,
+                    crop.fixedMoving,
+                  );
+                }
                 const values = {
                   ...edges,
                   whole: Math.max(0, bareEdges(r, measured, reason.elbow) - rest),
+                  shoulder,
                 };
-                expect(values[reason.measure]).toBeGreaterThan(reason.bound);
+                conditions.push([values[reason.measure], reason.bound]);
                 receipt.push(`${reason.measure}=${values[reason.measure]}`);
               }
               yield* Console.log(
                 `OUT ${spec.key} ${out.part}: ${paintedReason(out)}; measured ${receipt.join('; ')}`,
               );
+              for (const [value, bound] of conditions) expect(value).toBeGreaterThan(bound);
             }),
           );
       }

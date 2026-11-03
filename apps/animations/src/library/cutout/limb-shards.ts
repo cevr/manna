@@ -4,9 +4,15 @@ import { Option, Result } from 'effect';
  * one file unbounded. View metadata and opt-outs have one file owner. */
 export const LIMB_POSES: ReadonlyArray<readonly [number, number]> = [
   25, 40, 55, 70, 85, 100, 115, 120,
-].flatMap((elbow) =>
-  [-120, -90, -60, -30, 0, 30, 60, 90, 120].map((wrist) => [elbow, wrist] as const),
-);
+]
+  .flatMap((elbow) =>
+    [-120, -90, -60, -30, 0, 30, 60, 90, 120].map((wrist) => [elbow, wrist] as const),
+  )
+  .concat([
+    [45, -38.25],
+    [90, -76.5],
+    [90, 0],
+  ]);
 
 export const posesFor = (view: number, shard: { readonly index: number; readonly count: number }) =>
   LIMB_POSES.filter((_, pose) => (view * LIMB_POSES.length + pose) % shard.count === shard.index);

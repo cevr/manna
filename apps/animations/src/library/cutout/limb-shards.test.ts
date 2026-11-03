@@ -23,8 +23,8 @@ it.effect(
       );
       for (const view of [0, 7, 49]) {
         const poses = indices.flatMap((index) => posesFor(view, { index, count: names.length }));
-        expect(poses.length).toBe(72);
-        expect(new Set(poses.map((p) => p.join('/'))).size).toBe(72);
+        expect(poses.length).toBe(75);
+        expect(new Set(poses.map((p) => p.join('/'))).size).toBe(75);
       }
       expect(
         Result.isFailure(
