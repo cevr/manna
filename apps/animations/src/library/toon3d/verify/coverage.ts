@@ -3,7 +3,7 @@ import {
   components,
   deltaLab,
   dilate,
-  figureMask,
+  INK_LIGHTNESS,
   labPlane,
   median,
   pixel,
@@ -74,16 +74,34 @@ const flatOf = (plane: Float32Array, at: ReadonlyArray<number>): Option.Option<R
 };
 
 /**
+ * The pixels inside the figure's drawn outline: all but those the picture's
+ * border reaches without crossing ink (`INK_LIGHTNESS`). The ground the feet
+ * stand on, its cast shadow and the paper between the feet lie outside, as
+ * the paper does.
+ */
+const insideOutline = (plane: Float32Array, w: number, h: number): Uint8Array => {
+  const inside = new Uint8Array(w * h).fill(1);
+  const onBorder = (i: number): boolean => {
+    const x = i % w;
+    return x === 0 || x === w - 1 || i < w || i >= w * (h - 1);
+  };
+  for (const pixels of components(w, h, (i) => (plane[i * 3] ?? 0) >= INK_LIGHTNESS))
+    if (pixels.some(onBorder)) for (const i of pixels) inside[i] = 0;
+  return inside;
+};
+
+/**
  * A kept view read for coverage. A region is a 4-connected component of the
- * figure's pixels that are not line ink, so the drawn lines split the parts.
- * A witness is a `WITNESS_SIDE` box on a `WITNESS_STRIDE` grid inside the
- * figure, `INK_CLEAR` px from line ink, every pixel within `PROBE_FLAT` of its
- * median: a flat paint a probe could read.
+ * pixels inside the figure's outline that are not line ink, so the drawn
+ * lines split the parts. A witness is a `WITNESS_SIDE` box on a
+ * `WITNESS_STRIDE` grid inside the outline, `INK_CLEAR` px from line ink,
+ * every pixel within `PROBE_FLAT` of its median: a flat paint a probe could
+ * read.
  */
 export const keptPaint = (kept: Raster): KeptPaint => {
   const { width: w, height: h } = kept;
   const plane = labPlane(kept);
-  const figure = figureMask(kept);
+  const figure = insideOutline(plane, w, h);
   const ink = new Uint8Array(w * h).map((_, i) => Number((plane[i * 3] ?? 0) < LINE_INK));
   const nearInk = dilate(ink, w, h, INK_CLEAR);
   const region = new Int32Array(w * h).fill(-1);
