@@ -26,7 +26,7 @@ topical sections (each hymn's topic is joined from the compiled
 the list's foot holds `Search`, which grows into a search box (number,
 title or first line) over the list, and the `#`. A hymn page shows the same
 bar over the right end of its own bar, and its `Search` searches in place
-over the page. A gear in the title row opens Settings (appearance, chord style) as a
+over the page. A gear in the title row opens Settings (appearance, chords) as a
 sheet. A hymn opens pushed over the home screen. A hymn shows its words in the order they are sung: each stanza
 under its number, and the refrain written out each time it is sung.
 
@@ -177,6 +177,34 @@ under its number, and the refrain written out each time it is sung.
 
 ## Chords
 
+Chords disclose the instrument: the stored `chords` setting, off by
+default and kept across launches, is one switch with three doors. With
+chords off the app is a singer's hymnal: the words, the player and its
+bar, `Tempo`, `Stanzas`, `Start` (`Intro`, `Click`), `Sound`, the reading
+choices and the find bar all show, and nothing for playing an instrument
+does. The doors stay: the bar's `Key` button is the guitar's head alone,
+dim (value `Chords off`, hint `Turns chords on`), and a tap on it turns
+chords on and opens nothing, on every hymn's page, one with no chords
+too; the player sheet's `Chords` switch heads its `Chord settings` group
+whenever the sheet holds a hymn; Settings' `Chords` switch heads its
+`Chords` section. Turning chords on brings in the chords over the words,
+the `KEY`/`CAPO` face on `Key`, its key and capo dials (and their `Tuner`
+chip), the sheet's key and capo dials (over the hymn's own page, the
+hymn having chords) and its `Chord placement` dial, and Settings'
+`Chord style`, `Chord placement` and `Tuner` (where the tuner has an ear).
+A hold of `Key` turns chords on or off in both states. Chords turned off
+by any door close the bar's dials (`useThumb` in `src/player/Dials.tsx`),
+and they stay closed when chords come back. The tuner and chord-sheet
+routes stay open to a link; only their entries hide.
+
+While chords are off the recording plays in the hymn's printed key:
+`settings.heardMove(n)` (`src/settings.ts`) is the hymn's stored move
+with chords on and `still` with them off, and `LivePlayer` hands it to the
+player as `moveFor`. It is derived and never written, so each hymn's
+stored key and capo are kept and heard again once chords come back on.
+Turning chords off while a moved hymn plays is a key change, on the path
+a key turn takes.
+
 `Chord placement` in Settings chooses On the beat (default), Simpler, or
 As the file plays. Each hymn's player sheet has the same three choices on
 an adjustable dial. Turning it stores an override for that hymn;
@@ -185,8 +213,7 @@ a relaunch and take effect during play without a recording command.
 Placement changes numeric guitar anchors before Simple/Advanced spelling.
 It changes no words, timing, sounding Key or capo. Only actual changes show.
 
-The `Chords` button in a hymn's header (the stored `chords` setting, off by
-default) draws the hymn's guitar chords over its words. Each sung syllable
+With chords on, the page draws the hymn's guitar chords over its words. Each sung syllable
 is a box with its chords above it in the body's own font, a word's boxes
 stay together, and a line wraps between words; a chord wider than its
 syllable widens the box, and inside a word the gap shows a hyphen. Both
@@ -203,8 +230,9 @@ the twelve keys, and `Capo down`/`Capo up` set a capo fret, 0 to 11, the
 chords then shown as the shapes that fret plays (`Capo <n>, <key> shapes`).
 Each hymn keeps its own move (`move.<number>` in the settings store).
 
-Settings → Chords chooses how the chords are shown (`Chord style`, stored
-as `chords.style`, the same for every hymn):
+With chords on, Settings → Chords chooses how the chords are shown
+(`Chord style`, stored as `chords.style`, the same for every hymn; kept
+while chords are off):
 
 - `Simple`, the default, for a beginner: each syllable shows at most one
   plain chord (major, minor or seventh), only where the harmony changes, so
@@ -242,7 +270,9 @@ length. The recording plays on when the reader leaves the hymn, and a bar
 docked at the foot of the screen shows the hymn playing (its number, title and Play or Pause);
 a press on it opens the hymn. Playing another hymn replaces the first.
 
-The held hymn's saved Key selects its signed recording set (offset -5…6).
+The held hymn's saved Key selects its signed recording set (offset -5…6)
+while chords are on; with chords off it plays the printed key (`heardMove`,
+Chords).
 From Playing, a Key change replaces One's global session at the retained
 musical place plus elapsed preparation time. Loading, Buffering, a resume
 from Paused and a Seek keep a fixed landing through preparation. Follow
@@ -471,8 +501,10 @@ Android haptics only.
   to ±50 cents (`needleOf`), and lights a string after 8 frames in a row
   in tune on it (`latch`).
 - `src/tuner/Tuner.tsx` is the sheet at `/tuner`, opened by the chord
-  sheet's `Tuner` button and Settings' `Tuner` row, both shown only where
-  the tuner has an ear (iOS). It says the reading at most once a second,
+  sheet's `Tuner` button, the bar's dials' `Tuner` chip and Settings'
+  `Tuner` row, each shown only where the tuner has an ear (iOS); the chip
+  and the row only with chords on, and the chord sheet is reached from a
+  chord, which shows only then. It says the reading at most once a second,
   shows `Open Settings` when the microphone is denied and `Tap to listen
   again` when listening ended. In development
   `hymnal://tuner?feed=<string>:<cents>` (for example `A2:-12`) feeds it
