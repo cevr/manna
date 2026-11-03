@@ -1168,9 +1168,10 @@ const apiOf = (api: typeof LabHttpApi): Api => {
 
 /**
  * Each route or path a comment in `text` names that the API does not
- * declare, with its file and line: the comments as the parser (oxc) reads
- * them, so a comment after code or a block's unstarred body is read, and a
- * string that looks like one is not. A route (`GET /api/…`) is the method's;
+ * declare, with its file and line: each comment as the parser (oxc) reads
+ * it, and no string that looks like one. Under `effect/noComments` the
+ * tree's comments are each `/**` doc comment directly above a declaration
+ * or member and each tool directive. A route (`GET /api/…`) is the method's;
  * a bare path is any method's route, a prefix of some (`/api/`,
  * `/api/films/probe`), or a path the file's own code writes (the routes a
  * test's own server answers, `tools/page-render.slow.test.ts`).
@@ -1215,7 +1216,7 @@ const commentRouteDrift = (file: string, text: string, api: Api): ReadonlyArray<
 
 describe('the docs', () => {
   it.effect.layer(BunServices.layer)(
-    'let no comment in the film package, its browser tests or the app name a route the API does not declare',
+    'let no doc comment in the film package, its browser tests or the app name a route the API does not declare',
     () =>
       Effect.gen(function* () {
         const root = yield* ROOT;
