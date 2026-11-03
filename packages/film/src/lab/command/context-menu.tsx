@@ -42,7 +42,6 @@ export const TargetMenu = (props: ParentProps<{ readonly hub: Hub }>) => {
         if (!isOpen) run.closed();
       }}
     >
-      {}
       <ContextMenu.Trigger class="lab-page-target" style={{ display: 'contents' }}>
         {props.children}
       </ContextMenu.Trigger>

@@ -184,7 +184,6 @@ export function FloatingPortal(props: FloatingPortalProps): JSX.Element {
           <PortalElement />
         </Show>
       </PortalContext>
-      {}
       <FocusGuard
         data-type="outside"
         hidden={!shouldRenderGuards()}

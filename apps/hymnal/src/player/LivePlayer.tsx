@@ -108,7 +108,6 @@ function Finding({ children }: { readonly children: ReactNode }) {
   return (
     <FindRoom value={findRoom(at, inset)}>
       {children}
-      {}
       {FindAt.$match(at, {
         Nowhere: () => <></>,
         Yielded: () => <></>,

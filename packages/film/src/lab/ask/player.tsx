@@ -75,7 +75,6 @@ const TransportRow = (
         disabled={Option.isSome(failure())}
         onClick={() => send.sync(SyncEvent.Toggled)}
       >
-        {}
         <span aria-hidden="true">
           {Match.value(playing()).pipe(
             Match.when(true, () => '❚❚'),
@@ -84,9 +83,7 @@ const TransportRow = (
         </span>
       </button>
       <span class="rv-time" data-state={sync()._tag}>
-        {}
         <span class="rv-time-at">{time().at}</span>
-        {}
         <span class="rv-time-rest">{time().rest}</span>
       </span>
       <Show
@@ -231,7 +228,6 @@ export const PlayedAlone = (
                   {CANNOT_PLAY}
                 </span>
               </Show>
-              {}
               <Show when={atRest(sync()) && !failed()}>
                 <span class="rv-rest" data-role="at-rest" aria-hidden="true">
                   <span class="rv-rest-play">
@@ -245,7 +241,6 @@ export const PlayedAlone = (
                 </span>
               </Show>
             </button>
-            {}
             <Show when={!atRest(sync()) && !failed()}>
               <TransportRow
                 sync={sync}

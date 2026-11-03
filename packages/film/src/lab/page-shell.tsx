@@ -58,7 +58,6 @@ export const PageShell = (props: PageShellProps) => {
         <Show when={Option.getOrUndefined(props.crumb())}>
           {(text) => (
             <span class="sh-crumb" data-role="crumb">
-              {}
               <span class="sh-crumb-text">{text()}</span>
             </span>
           )}

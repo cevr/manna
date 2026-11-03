@@ -59,7 +59,6 @@ export function Home() {
           <Title height={title} scroll={scroll} onAllAtOnce={zoomOut} />
         </TabList>
       </View>
-      {}
       <View style={[styles.scrim, { height: insets.top }]} />
     </GestureHandlerRootView>
   );

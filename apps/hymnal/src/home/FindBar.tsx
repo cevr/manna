@@ -221,7 +221,6 @@ export function FindBar({
             {...(drumsOpen && passThrough)}
             style={[styles.capsule, row === 'open' && width === 0 && styles.grow, grown]}
           >
-            {}
             <Animated.View
               testID="find-chosen"
               aria-hidden

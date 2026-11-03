@@ -50,7 +50,6 @@ function BasicDialog(): JSX.Element {
             </button>
             <input id="input" />
             <Dialog.Close id="close">Close</Dialog.Close>
-            {}
             <Show when={param('closes') === 'owner'}>
               <button type="button" id="owner-close" onClick={() => owner.setOpen(false)}>
                 Owner close

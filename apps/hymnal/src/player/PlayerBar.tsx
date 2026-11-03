@@ -154,7 +154,6 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
         ),
       })}
       <View pointerEvents="box-none" style={styles.dock}>
-        {}
         <View pointerEvents="box-none" style={styles.dials}>
           <DialPopover
             open={Option.isSome(Option.filter(dials, ({ bound }) => bound.state.open))}
@@ -216,7 +215,6 @@ function Frame({
     <View role="region" aria-label="Player" style={[styles.frame, { paddingBottom: inset }]}>
       <Animated.View testID="bar-spring" style={[styles.spring, springing]}>
         <GestureHandlerRootView style={styles.root}>
-          {}
           <GestureDetector gesture={swipe}>
             <View>
               <View style={styles.bar}>

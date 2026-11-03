@@ -19,7 +19,6 @@ export const StartSwitches = memo(function StartSwitches() {
             The recording’s introduction, or a count-in with Sound off.
           </Text>
         </View>
-        {}
         <Switch accessibilityLabel="Intro" value={intro} onValueChange={setIntro} />
       </View>
       <View style={styles.row}>
@@ -31,7 +30,6 @@ export const StartSwitches = memo(function StartSwitches() {
             A click on each beat of the count-in.
           </Text>
         </View>
-        {}
         <Switch
           accessibilityLabel="Click"
           accessibilityState={{ disabled: !intro }}

@@ -134,7 +134,6 @@ export const CommandMenu = (props: { readonly hub: Hub }) => {
               )}
             </For>
           </div>
-          {}
           <Show when={rows().length === 0}>
             <p class="lab-command-none">No command matches.</p>
           </Show>

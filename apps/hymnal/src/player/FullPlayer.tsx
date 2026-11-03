@@ -208,7 +208,6 @@ const ChordSection = memo(function ChordSection({ track }: { readonly track: Tra
         <Text style={styles.switchLabel} dynamicTypeRamp="body" aria-hidden>
           Chords
         </Text>
-        {}
         <Switch
           accessibilityLabel="Chords"
           value={thumb.state.chords}

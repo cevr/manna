@@ -122,7 +122,6 @@ function FeelSwitch() {
       <Text style={styles.label} dynamicTypeRamp="body" aria-hidden>
         Sounds and haptics
       </Text>
-      {}
       <Switch accessibilityLabel="Sounds and haptics" value={on} onValueChange={turn} />
     </View>
   );

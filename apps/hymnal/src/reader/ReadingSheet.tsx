@@ -146,7 +146,6 @@ function Awake({ awake }: { readonly awake: Atom.Writable<boolean> }) {
       <Text style={styles.label} dynamicTypeRamp="body" aria-hidden>
         Keep screen on
       </Text>
-      {}
       <Switch accessibilityLabel="Keep screen on" value={on} onValueChange={turn} />
     </View>
   );

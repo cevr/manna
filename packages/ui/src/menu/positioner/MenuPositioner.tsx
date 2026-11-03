@@ -123,7 +123,6 @@ export function MenuPositioner(componentProps: MenuPositionerProps): JSX.Element
         labelsRef={store.itemLabels}
         onMapChange={store.followActiveItem}
       >
-        {}
         {untrack(() =>
           usePositioner(componentProps, state, {
             styles: positioner.positionerStyles,

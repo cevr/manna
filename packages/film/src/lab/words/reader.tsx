@@ -183,7 +183,6 @@ const Selected = (props: {
             .join(' ')}
           selected={props.words}
         />
-        {}
         <Show
           when={Option.getOrUndefined(
             Option.map(props.noting, (note) => ({

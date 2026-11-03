@@ -693,7 +693,6 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
         />
       </Show>
       {props.children}
-      {}
       <FocusGuard
         data-type="inside"
         hidden={!shouldRenderGuards()}

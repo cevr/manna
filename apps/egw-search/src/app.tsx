@@ -495,7 +495,6 @@ const Results = () => {
                 class={search.pending() ? 'results stale' : 'results'}
                 aria-busy={search.pending() ? 'true' : 'false'}
               >
-                {}
                 <For each={rows()} keyed={false}>
                   {(hit) => <HitRow hit={hit()} />}
                 </For>
@@ -555,7 +554,6 @@ const Empty = () => {
 
   return (
     <div class="empty">
-      {}
       <Show when={!nonSelective()} fallback={<div>too common to rank</div>}>
         <div>{search.params().q === '' ? 'no query yet' : 'no matches'}</div>
       </Show>
@@ -565,7 +563,6 @@ const Empty = () => {
           surface anything in particular. Add a word or two to narrow it.
         </div>
       </Show>
-      {}
       <Show
         when={narrowed()}
         fallback={
@@ -635,11 +632,9 @@ const HitRow = (props: { readonly hit: Hit }) => {
       <div class="meta">
         <Reference class="refcode" refcode={props.hit.refcode} url={props.hit.url} />
         <span class="book">{props.hit.bookTitle}</span>
-        {}
         <Show when={props.hit.isHeading}>
           <span class="kind">Chapter</span>
         </Show>
-        {}
         <Show when={props.hit.backMatter}>
           <span class="kind">Back matter</span>
         </Show>
@@ -651,7 +646,6 @@ const HitRow = (props: { readonly hit: Hit }) => {
           </button>
         </Show>
         <For each={before().shown}>{(para) => <Context para={para} />}</For>
-        {}
         <div class={props.hit.isHeading ? 'match heading' : 'match'}>
           <p class="text">{props.hit.text}</p>
         </div>

@@ -19,7 +19,6 @@ export default function HymnalLayout() {
         <View style={styles.stack}>
           <StackBottom>
             <Stack screenOptions={useStackOptions(stackHeaders)}>
-              {}
               <Stack.Screen name="index" options={{ title: 'Hymns', headerShown: false }} />
               <Stack.Screen name="recent" options={{ title: 'Recent' }} />
               <Stack.Screen

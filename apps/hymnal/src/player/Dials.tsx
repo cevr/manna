@@ -161,7 +161,6 @@ export const Dials = memo(function Dials({
         if (row === 'chips')
           return (
             <PanelRow key="chips" fromBottom={fromBottom}>
-              {}
               <View style={[styles.chips, tuner && styles.ends]}>
                 {chips.map((chip) =>
                   Match.value(chip).pipe(

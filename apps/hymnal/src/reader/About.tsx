@@ -115,7 +115,6 @@ function Group({ name, children }: { readonly name: string; readonly children: A
   if (children.length === 0) return <></>;
   return (
     <>
-      {}
       <Text
         role="heading"
         aria-level={2}
