@@ -1169,9 +1169,10 @@ const apiOf = (api: typeof LabHttpApi): Api => {
 /**
  * Each route or path a comment in `text` names that the API does not
  * declare, with its file and line: each comment as the parser (oxc) reads
- * it, and no string that looks like one. Under `effect/noComments` the
- * tree's comments are each `/**` doc comment directly above a declaration
- * or member and each tool directive. A route (`GET /api/…`) is the method's;
+ * it, and no string that looks like one. Outside a `.d.ts` file the tree's
+ * comments are `/**` doc comments and tool directives (`effect/noComments`,
+ * held by `strayComments`); a `.d.ts` file, which oxlint ignores, keeps any
+ * comment, a `//` line too. A route (`GET /api/…`) is the method's;
  * a bare path is any method's route, a prefix of some (`/api/`,
  * `/api/films/probe`), or a path the file's own code writes (the routes a
  * test's own server answers, `tools/page-render.slow.test.ts`).
@@ -1214,9 +1215,36 @@ const commentRouteDrift = (file: string, text: string, api: Api): ReadonlyArray<
   ]);
 };
 
+/**
+ * A tool directive's words, after any JSDoc gutter: a suppression, a
+ * type-check or Effect diagnostics switch, a triple-slash reference, a
+ * bundler annotation, a JSX pragma, or a formatter or coverage ignore.
+ */
+const DIRECTIVE =
+  /^[\s*]*(?:(?:oxlint|eslint)-(?:disable|enable)|@effect-diagnostics|@ts-(?:expect-error|ignore|nocheck|check)\b|\/\s*<(?:reference|amd-module|amd-dependency)\b|[#@]__\w+__|@jsx|(?:prettier|oxfmt)-ignore|(?:c8|v8|istanbul)\s+ignore\b)/;
+
+/**
+ * Each comment of `text` that is neither a `/**` doc comment nor a tool
+ * directive, with its file and line; none in a `.d.ts` file, which oxlint
+ * ignores.
+ */
+const strayComments = (file: string, text: string): ReadonlyArray<string> => {
+  if (file.endsWith('.d.ts')) return [];
+  return parseSync(file, text)
+    .comments.filter(
+      (comment) =>
+        !(comment.type === 'Block' && comment.value.startsWith('*')) &&
+        !DIRECTIVE.test(comment.value),
+    )
+    .map(
+      (comment) =>
+        `${file}:${text.slice(0, comment.start).split('\n').length}: a comment that is neither a doc comment nor a tool directive`,
+    );
+};
+
 describe('the docs', () => {
   it.effect.layer(BunServices.layer)(
-    'let no doc comment in the film package, its browser tests or the app name a route the API does not declare',
+    'let no comment in the film package, its browser tests or the app name a route the API does not declare, and none outside a .d.ts file be other than a doc comment or a tool directive',
     () =>
       Effect.gen(function* () {
         const root = yield* ROOT;
@@ -1238,6 +1266,23 @@ describe('the docs', () => {
           ),
         );
         expect(drift.flat()).toEqual([]);
+        const stray = yield* Effect.forEach(files, (file) =>
+          Effect.map(fs.readFileString(`${root}/${file}`), (text) => strayComments(file, text)),
+        );
+        expect(stray.flat()).toEqual([]);
+        const kinds = [
+          '// A line.',
+          '/* A block. */',
+          '/** A doc. */',
+          '// oxlint-disable-next-line no-console',
+          '/* @ts-expect-error a block directive */',
+          'const a = 1; /* @__PURE__ */',
+        ];
+        expect(strayComments('red.ts', kinds.join('\n'))).toEqual([
+          'red.ts:1: a comment that is neither a doc comment nor a tool directive',
+          'red.ts:2: a comment that is neither a doc comment nor a tool directive',
+        ]);
+        expect(strayComments('red.d.ts', kinds.join('\n'))).toEqual([]);
         expect(
           commentRouteDrift(
             'red.ts',
