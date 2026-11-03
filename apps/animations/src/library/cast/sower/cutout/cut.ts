@@ -18,7 +18,9 @@
 // kept box padded (`frames.ts`). Data: the rules and the table are the shared
 // module's.
 
-import type { HiddenEntry, PartCut, PartRule } from '@manna/film/tools';
+import type { HiddenEntry, PartCut, PartRule, SheetClean } from '@manna/film/tools';
+import { Record as Records } from 'effect';
+import { type PaperRim, clearPaperRim } from '../../../cutout/clean.ts';
 import { CUT_AWAY, grain, shade, sides } from '../../../cutout/prompts.ts';
 import {
   FAR,
@@ -33,6 +35,7 @@ import {
 import { cutTable } from '../../../cutout/table.ts';
 import { FRAMES } from './frames.ts';
 import { JOINTS } from './joints.ts';
+import { POSES_PAPERS, TURNAROUND_PAPERS } from './papers.ts';
 
 export { FRAMES, JOINTS };
 
@@ -1716,3 +1719,20 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   hidden: HIDDEN_ENTRIES,
   ink: INK,
 });
+
+/** How far the clear ground's flood reaches through paper-coloured pixels, 8-steps: his band runs 1 to 4 px wide outside his ink, and through the fading edge of his ground shadow under his feet up to 54 (threeQuarterLeft), so one pass clears it all; his ink is closed on every view, so the flood reaches no cloth at that depth. */
+const RIM_BAND = 64;
+
+/** A pixel is paper-coloured within this ΔE76 of the view's paper: his band lies 4 to 8 from it at the median, his ink's blend farther. */
+const RIM_NEAR = 12;
+
+/** Each view's paper rim, as his part sheets clear it. */
+export const PAPER_RIMS = Records.map(
+  { ...TURNAROUND_PAPERS, ...POSES_PAPERS },
+  (paper): PaperRim => ({ paper, band: RIM_BAND, near: RIM_NEAR }),
+);
+
+/** What each view's laid part sheet runs before it is written (`film concept parts`): every view clears the pale paper band his paint keeps just outside his ink (251,243,228 at the median on the front, against its paper 250,237,217), which his un-matte would read as his cream linen and draw as a white torn rim. */
+export const CLEAN = Records.map(PAPER_RIMS, clearPaperRim) satisfies Partial<
+  Record<keyof typeof CUTS, SheetClean>
+>;

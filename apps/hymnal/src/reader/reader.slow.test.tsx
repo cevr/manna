@@ -359,7 +359,7 @@ describe('the bar’s key button', () => {
     expect(chordRows(app.host)).toBeGreaterThan(0);
   });
 
-  it('opens the capo and key dials on a tap, and the key dial alone with chords off', () => {
+  it('opens the capo and key dials on a tap; a hold to off closes them, and a tap then turns chords on and opens nothing', () => {
     using app = mount(withKey(3, readerOn(chordsOn())));
     expect(textOf(app.host.innerHTML)).not.toContain('CAPO');
     press(app.host, 'Key');
@@ -368,8 +368,12 @@ describe('the bar’s key button', () => {
     hold(app.host);
     expect(keyButton(app.host)).toEqual(Option.some({ value: 'Chords off', head: true }));
     expect(app.host.querySelector('[role="slider"][aria-label="Capo"]')).toBeNull();
-    expect(valueOf(app.host, 'Key')).toBe('G');
+    expect(app.host.querySelector('[role="slider"][aria-label="Key"]')).toBeNull();
     expect(chordRows(app.host)).toBe(0);
+    press(app.host, 'Key');
+    expect(keyButton(app.host)).toEqual(Option.some({ value: 'G', head: true }));
+    expect(app.host.querySelector('[role="slider"]')).toBeNull();
+    expect(chordRows(app.host)).toBeGreaterThan(0);
   });
 
   it('opens with chords shown over a store that kept chords on', () => {

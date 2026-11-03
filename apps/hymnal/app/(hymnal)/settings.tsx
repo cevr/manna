@@ -1,4 +1,4 @@
-import { useAtom } from '@effect/atom-react';
+import { useAtom, useAtomValue } from '@effect/atom-react';
 import type * as Atom from 'effect/reactivity/Atom';
 import {
   Pressable,
@@ -19,6 +19,7 @@ import { settings } from '~/store';
 import { color, useAccent } from '~/color';
 import { placements } from '~/settings';
 import { Downloads } from '~/offline/Downloads';
+import { chordsCue } from '~/player/thumb';
 import { available } from '~/tuner/native';
 
 interface Choice<A extends string> {
@@ -39,6 +40,7 @@ const chordStyles: ReadonlyArray<Choice<ChordStyle>> = [
 
 /** Settings, a sheet over the home screen on a phone: it draws its own heading, the sheet no header. */
 export default function Settings() {
+  const chords = useAtomValue(settings.chords);
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text role="heading" aria-level={1} style={styles.title}>
@@ -47,11 +49,16 @@ export default function Settings() {
       <Heading>Appearance</Heading>
       <Choices label="Appearance" value={settings.appearance} choices={appearances} />
       <Heading style={styles.section}>Chords</Heading>
-      <Choices label="Chord style" value={settings.chordStyle} choices={chordStyles} />
-      <Heading style={styles.section}>Chord placement</Heading>
-      <Choices label="Chord placement" value={settings.placement} choices={placements} />
+      <ChordsSwitch />
+      {chords && (
+        <>
+          <Choices label="Chord style" value={settings.chordStyle} choices={chordStyles} />
+          <Heading style={styles.section}>Chord placement</Heading>
+          <Choices label="Chord placement" value={settings.placement} choices={placements} />
+        </>
+      )}
       <FeelSwitch />
-      {available && <TunerRow />}
+      {chords && available && <TunerRow />}
       <Downloads />
       <About />
     </ScrollView>
@@ -125,6 +132,28 @@ function FeelSwitch() {
       </Text>
       {/* React Native's Switch hands iOS no `aria-label`; it reads `accessibilityLabel` on every platform. */}
       <Switch accessibilityLabel="Sounds and haptics" value={on} onValueChange={turn} />
+    </View>
+  );
+}
+
+/**
+ * `Chords`: whether the chords show, with every control for playing them
+ * (here `Chord style`, `Chord placement` and `Tuner`). The same setting as
+ * the player sheet's switch and the bar's guitar head, felt as they are.
+ */
+function ChordsSwitch() {
+  const [on, setOn] = useAtom(settings.chords);
+  const cue = useCue();
+  const turn = (to: boolean) => {
+    setOn(to);
+    cue(chordsCue(to));
+  };
+  return (
+    <View style={[styles.group, styles.row]}>
+      <Text style={styles.label} dynamicTypeRamp="body" aria-hidden>
+        Chords
+      </Text>
+      <Switch accessibilityLabel="Chords" value={on} onValueChange={turn} />
     </View>
   );
 }

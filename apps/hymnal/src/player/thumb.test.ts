@@ -10,6 +10,7 @@
 
 import * as Chord from '@manna/hymnal/chord';
 import { describe, expect, it } from 'bun:test';
+import { Match, Option } from 'effect';
 
 import { plain } from '~/feel/cue';
 import { type Move, soundingKey, still } from '~/hymns/chords';
@@ -18,6 +19,7 @@ import {
   capoStops,
   chipsOf,
   faceOf,
+  hintOf,
   isStill,
   keyStops,
   type Shown,
@@ -98,26 +100,53 @@ describe('the key model', () => {
       expect(next.cues).toEqual((state.chords && []) || [plain('chords-on')]);
     }));
 
-  it('flips chords on a hold, and leaves the move and the dials', () =>
+  it('flips chords on a hold and leaves the move; a hold to off closes the dials, a hold to on leaves them', () =>
     each((printed, state, event) => {
       if (event._tag !== 'Hold') return;
       const next = step(printed, state, event);
-      expect(next.state).toEqual({ ...state, chords: !state.chords });
+      expect(next.state).toEqual({
+        ...state,
+        chords: !state.chords,
+        open: !state.chords && state.open,
+      });
       expect(next.cues).toEqual([plain((state.chords && 'chords-off') || 'chords-on')]);
     }));
 
-  it('opens closed dials on a tap and closes open ones, with a press; a tap on the page closes them', () =>
+  it('with chords on, opens closed dials on a tap and closes open ones, with a press; with chords off, a tap turns chords on and opens nothing; a tap on the page closes them', () =>
     each((printed, state, event) => {
-      if (event._tag === 'Tap')
+      if (event._tag === 'Tap' && state.chords)
         expect(step(printed, state, event)).toEqual({
           state: { ...state, open: !state.open },
           cues: [plain('press')],
+        });
+      if (event._tag === 'Tap' && !state.chords)
+        expect(step(printed, state, event)).toEqual({
+          state: { ...state, chords: true, open: false },
+          cues: [plain('chords-on')],
         });
       if (event._tag === 'TapPage')
         expect(step(printed, state, event)).toEqual({
           state: { ...state, open: false },
           cues: [],
         });
+    }));
+
+  it('hints what a tap does: turns chords on, opens the dials, or closes them; on a hymn with no chords, with chords on, nothing', () =>
+    each((printed, state, event) => {
+      if (event._tag !== 'Tap') return;
+      const next = step(printed, state, event).state;
+      const done = Match.value({ on: !state.chords && next.chords, open: next.open }).pipe(
+        Match.when({ on: true }, () => 'Turns chords on'),
+        Match.when({ open: true }, () => 'Opens the key and capo dials'),
+        Match.orElse(() => 'Closes the key and capo dials'),
+      );
+      expect({
+        printed: hintOf(Option.some(printed), state),
+        none: hintOf(Option.none(), state),
+      }).toEqual({
+        printed: Option.some(done),
+        none: (state.chords && Option.none()) || Option.some('Turns chords on'),
+      });
     }));
 
   it('sets the capo held to 0 to 11, leaves the transpose, and cues a wall once past an end', () =>

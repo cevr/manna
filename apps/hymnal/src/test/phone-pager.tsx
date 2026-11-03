@@ -461,8 +461,8 @@ const starPlaces = (host: HTMLElement) =>
   shown.close();
 }
 
-// The dials open over hymn 3's page, then a swipe on the page: the backdrop over the pager takes it,
-// so the dials close and the page stays.
+// The dials open over hymn 3's page (a first tap turns chords on, the second opens them), then a
+// swipe on the page: the backdrop over the pager takes it, so the dials close and the page stays.
 {
   const shown = app();
   await route(shown, 3);
@@ -473,6 +473,8 @@ const starPlaces = (host: HTMLElement) =>
         new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }),
       );
     });
+  await click(shown.host.querySelector('[data-testid="key-button"]'));
+  await tick();
   await click(shown.host.querySelector('[data-testid="key-button"]'));
   await tick();
   const backdrop = shown.host.querySelector('[data-testid="dials-backdrop"]');

@@ -7,12 +7,12 @@
   "parts": [
     {
       "name": "armRight",
-      "kept": 13867,
+      "kept": 13307,
       "painted": 0
     },
     {
       "name": "armLeft",
-      "kept": 19884,
+      "kept": 19671,
       "painted": 0
     },
     {
@@ -22,23 +22,23 @@
     },
     {
       "name": "baby",
-      "kept": 30139,
+      "kept": 29594,
       "painted": 12633
     },
     {
       "name": "head",
-      "kept": 51394,
+      "kept": 49315,
       "painted": 0
     },
     {
       "name": "robe",
-      "kept": 103196,
+      "kept": 99868,
       "painted": 0
     },
     {
       "name": "torso",
-      "kept": 13378,
-      "painted": 13840
+      "kept": 12422,
+      "painted": 13825
     }
   ],
   "moving": ["armRight", "armLeft"],

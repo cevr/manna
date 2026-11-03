@@ -47,6 +47,26 @@
       "expect": [{ "shows": "label=System" }]
     },
     {
+      "name": "settings-chords-switch-off",
+      "action": "scroll",
+      "target": "role=switch label=Chords",
+      "direction": "down",
+      "expect": [
+        { "shows": "role=switch label=Chords" },
+        { "hides": "label=Advanced" },
+        { "hides": "label=Chord placement" },
+        { "hides": "label=Tuner" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "settings-chords-switch",
+      "action": "tap",
+      "target": "role=switch label=Chords",
+      "expect": [{ "shows": "label=Advanced" }],
+      "receipt": "snapshot"
+    },
+    {
       "name": "about",
       "action": "scroll",
       "target": "screen",
@@ -93,6 +113,21 @@
       "action": "tap",
       "target": "role=switch label=Sounds and haptics",
       "expect": [{ "shows": "label=Sounds and haptics" }]
+    },
+    {
+      "name": "chords-switch-again",
+      "action": "scroll",
+      "target": "role=switch label=Chords",
+      "direction": "up",
+      "expect": [{ "shows": "role=switch label=Chords" }],
+      "receipt": "none"
+    },
+    {
+      "name": "settings-chords-off",
+      "action": "tap",
+      "target": "role=switch label=Chords",
+      "expect": [{ "hides": "label=Advanced" }, { "hides": "label=Chord placement" }],
+      "receipt": "snapshot"
     },
     {
       "name": "close",

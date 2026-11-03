@@ -24,10 +24,14 @@
 // leaves it out of its parts, so no sheet pixel is drawn by two views. Data:
 // the rules and the table are the shared module's.
 
+import type { SheetClean } from '@manna/film/tools';
+import { Record as Records } from 'effect';
 import { bustCut, bustHidden } from '../../../cutout/bust.ts';
+import { type PaperRim, clearPaperRim } from '../../../cutout/clean.ts';
 import { FAR, box } from '../../../cutout/rules.ts';
 import { cutTable } from '../../../cutout/table.ts';
 import { FRAMES } from './frames.ts';
+import { PAPERS } from './papers.ts';
 
 export { FRAMES };
 
@@ -240,3 +244,21 @@ export const { CUTS, cutOptionsFor, HIDDEN, paperOf } = cutTable({
   hidden: HIDDEN_ENTRIES,
   ink: INK,
 });
+
+/** How far the clear ground's flood reaches through paper-coloured pixels, 8-steps: his band runs 1 to 4 px wide outside his ink, and its thin tail reaches 5 to 8 (heads-2 the farthest), so one pass clears it all. */
+const RIM_BAND = 12;
+
+/** A pixel is paper-coloured within this ΔE76 of the view's paper: his band lies 4 to 5 from it at the median, his ink's blend farther. */
+const RIM_NEAR = 12;
+
+/** Each view's paper rim, as his part sheets clear it. */
+export const PAPER_RIMS = Records.map(PAPERS, (paper): PaperRim => ({
+  paper,
+  band: RIM_BAND,
+  near: RIM_NEAR,
+}));
+
+/** What each view's laid part sheet runs before it is written (`film concept parts`): every view clears the pale paper band his paint keeps just outside his ink (249,244,235 at the median, against his paper 252,243,226), which his un-matte would read as his linen and draw as faint white specks round him. */
+export const CLEAN = Records.map(PAPER_RIMS, clearPaperRim) satisfies Partial<
+  Record<keyof typeof CUTS, SheetClean>
+>;

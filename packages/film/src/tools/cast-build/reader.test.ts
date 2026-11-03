@@ -82,7 +82,6 @@ const MEMBER = {
   film: 'f' as never,
   member: 'm',
   memberDir: '/m',
-  libraryPuppets: '/library/puppets.ts',
   coverage: {
     member: 'm',
     entries: VIEWS.map((v) => ({ id: v, cut: 'puppet' as const, file: `${v}.png`, for: [] })),

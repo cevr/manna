@@ -14,9 +14,11 @@
  * in that wait (a dial, the key button, the page) ends it: a dial touched
  * keeps the dials open, a tap on the key button closes them at once. A page
  * turn and the page's going end it too. In the player sheet the dials stay.
+ * No dials stand while chords are off: turned off anywhere, they close.
  *
- * The held hymn's sounding key is observed by the player. Capo and chords
- * change only the reading; neither reaches the recording.
+ * The held hymn's sounding key is observed by the player while chords are
+ * on; with chords off it plays as printed (`heardMove`). Capo changes only
+ * the reading; it never reaches the recording.
  */
 
 import * as Chord from '@manna/hymnal/chord';
@@ -101,14 +103,22 @@ export const useThumb = (number: number) => {
     setOpen(false);
     setWaiting(false);
   }
+  // No dials stand with chords off: chords turned off away from these dials (the sheet's
+  // switch, Settings, another page's hold) find them closed, and closed when chords return.
+  if (open && !chords) {
+    setOpen(false);
+    setWaiting(false);
+  }
   const cue = useCue();
   const clock = use(ResetClock);
   // Events that come before the page draws again (a fling's detents) each step from the last.
   const now = useRef<Thumb>({ chords, move, open });
   now.current = { chords, move, open };
   const apply = (event: ThumbEvent) => {
-    // A hymn with no chords opens no dials: a hold still turns chords on or off.
-    const key = Option.orElse(printed, () => Option.liftPredicate(noKey, () => keyless(event)));
+    // A hymn with no chords opens no dials: a hold still turns chords on or off, and a tap turns them on.
+    const key = Option.orElse(printed, () =>
+      Option.liftPredicate(noKey, () => keyless(event, now.current.chords)),
+    );
     for (const printedKey of Option.toArray(key)) {
       const next = step(printedKey, now.current, event);
       const was = now.current;
@@ -161,12 +171,18 @@ export const useThumb = (number: number) => {
 
 export type BoundThumb = ReturnType<typeof useThumb>;
 
-/** The key a hold steps from on a hymn with no chords: a hold reads none. */
+/** The key a hymn with no chords steps from: a hold, a tap on the page and the switch's tap read none. */
 const noKey: Chord.Key = { tonic: 'C', minor: false };
 
-/** The events a hymn with no chords takes: a hold, and a tap on the page. */
-const keyless = (event: ThumbEvent) =>
-  ThumbEvent.$is('Hold')(event) || ThumbEvent.$is('TapPage')(event);
+/**
+ * The events a hymn with no chords takes: a hold, a tap on the page, and a
+ * tap while chords are off, which turns them on (the key button is the
+ * chords switch on every hymn's page). With chords on a tap opens nothing.
+ */
+const keyless = (event: ThumbEvent, chords: boolean) =>
+  ThumbEvent.$is('Hold')(event) ||
+  ThumbEvent.$is('TapPage')(event) ||
+  (ThumbEvent.$is('Tap')(event) && !chords);
 
 const sameMove = (a: Move, b: Move) => a.transpose === b.transpose && a.capo === b.capo;
 

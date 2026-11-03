@@ -1,22 +1,32 @@
 # Chords and capo
 
-A reader turns chords on and off at the thumb: a hold of the bottom bar's
+Chords are off at first, and the app is a singer's hymnal: the words, the
+player, `Tempo`, `Stanzas`, `Start` and the reading choices, with nothing
+for playing an instrument. Chords on discloses the instrument. A reader
+turns chords on and off at the thumb: the bottom bar's
 `Key` button (an acoustic guitar's head, then a small `KEY` over the
-sounding key, or `CAPO n` over the key the chords are played in), or the
-`Chords` switch in the player sheet over the hymn's page. Each guitar
-chord shows above the syllable where it changes, in the words' own font, the
-lines wrapping between words. A tap on `Key` opens two dials above the bar:
-the key dial turns the sounding key through the twelve keys and wraps, the
-printed key marked; the capo dial sets a fret from 0 to 11 and stops at each
-end, each fret over the key played there, the open keys (C, A, G, E, D)
-marked. Each dial drags, flings and snaps to a detent. With chords off the
-button is the dim guitar alone, and a tap opens the key dial alone: turning
-it turns chords on. Each hymn keeps its own key and capo; chords on or off
+sounding key, or `CAPO n` over the key the chords are played in, with
+chords on; the head alone, dim, with chords off),
+the `Chords` switch in the player sheet, or the `Chords` switch in Settings
+(`settings.md`). With chords off a tap on `Key` turns chords on and opens
+nothing, on every hymn, one with no chords too; a hold turns chords on or
+off in both states. Each guitar chord shows above the syllable where it
+changes, in the words' own font, the lines wrapping between words. With
+chords on a tap on `Key` opens two dials above the bar: the key dial turns
+the sounding key through the twelve keys and wraps, the printed key
+marked; the capo dial sets a fret from 0 to 11 and stops at each end, each
+fret over the key played there, the open keys (C, A, G, E, D) marked. Each
+dial drags, flings and snaps to a detent. Chords turned off by any of the
+three close the dials, and no dial, `Chord placement` or `Tuner` shows
+with chords off. Each hymn keeps its own key and capo; chords on or off
 holds for every hymn. Chords are Simple at first: at most one plain chord
 over a syllable, where the harmony changes; Settings → Chords → `Advanced`
-shows every chord as compiled. Key selects the held hymn's recording at its
-current place. Capo and a chord hold change the reading only. Reset changes
-the recording only when it changes the sounding Key.
+shows every chord as compiled. With chords on, Key selects the held
+hymn's recording at its current place; with chords off the recording plays
+in the printed key, and the hymn's key returns with chords. Capo changes
+the reading only; chords turned on or off change the recording only on a
+hymn whose key is moved. Reset changes the recording only when it changes
+the sounding Key.
 
 ## Sub-features
 
@@ -26,8 +36,12 @@ the recording only when it changes the sounding Key.
 - `chords-placement-reset`: pressing `Use global chord placement` or double-tapping the placement dial retires its touch/fling owner. A queued detent from that owner cannot replace the clear.
 - `chords-placement-kept`: after leaving, returning and relaunching, each override stays; another hymn still inherits global. The global row is in `settings.md`.
 
-- `chords`: a hold (450 ms) of the bar's `Key` shows and hides the chords on every hymn, and no tap follows the hold; VoiceOver's action on `Key` is `Turn chords off` or `Turn chords on`. The player sheet's `Chords` switch, in its group `Chord settings` over the hymn's own page, does the same with a tap. The header holds no button.
-- `chords-key`: a tap on `Key` opens the `Capo` and `Key` dials above the bar, and a tap on `Key` or on the page closes them. A swipe on the page with the dials open only closes them, and the page does not turn: as an iOS popover swallows the touch that dismisses it, the backdrop over the page takes it (`apps/hymnal/src/reader/pager.slow.test.ts`). With chords off it opens the `Key` dial alone, and one turn of it turns chords on and keeps the key turned to. On a device with the ear (iOS) the panel's top row also holds `Tuner` (`id=dials-tuner`, with chords on or off), which opens the tuner (`tuner.md`).
+- `chords`: a hold (450 ms) of the bar's `Key` shows and hides the chords on every hymn, and no tap follows the hold; a hold that hides them closes the dials. VoiceOver's action on `Key` is `Turn chords off` or `Turn chords on`. With chords off a tap on `Key` turns chords on and opens no dial (its hint `Turns chords on`), on a hymn with no chords too. The player sheet's `Chords` switch, in its group `Chord settings` whenever the sheet holds a hymn, and Settings' `Chords` switch do the same with a tap. The header holds no button.
+- `chords-key`: with chords on, a tap on `Key` opens the `Capo` and `Key` dials above the bar, and a tap on `Key` or on the page closes them. A swipe on the page with the dials open only closes them, and the page does not turn: as an iOS popover swallows the touch that dismisses it, the backdrop over the page takes it (`apps/hymnal/src/reader/pager.slow.test.ts`). With chords off no dial opens: the tap turns chords on (`chords`). On a device with the ear (iOS) the panel's top row also holds `Tuner` (`id=dials-tuner`), which opens the tuner (`tuner.md`).
+- `chords-mode-simple`: with chords off (a fresh install), hymn 100's `id=key-button` reads `Chords off`, its `id=key-face` holds the dim guitar head alone (no `KEY` text), and there is no `id=chord-1-1-1`. The player sheet holds `id=dial-tempo`, `id=stanzas`, `id=start` and `id=dial-size`, and the switch `Chords` reading `0`; no `id=dial-key`, `id=dial-capo` or `id=dial-placement`.
+- `chords-mode-on`: with chords off, a tap on `id=key-button` opens no `id=dials`; `id=chord-1-1-1` and `id=key-face` show. The player sheet's `Chords` then reads `1`, and `id=dial-key`, `id=dial-capo` and `id=dial-placement` show.
+- `chords-mode-off`: in the sheet, a tap on the switch `Chords` → `0`, and `id=dial-key`, `id=dial-capo` and `id=dial-placement` are gone; the sheet closed, no `id=chord-1-1-1`, and `id=key-button` reads `Chords off`.
+- `chords-mode-kept`: chords turned on, then `sim relaunch` and hymn 100 → `id=chord-1-1-1` with no touch; the journey turns chords off after.
 - `transpose`: the `Key` dial (adjustable, its value the sounding key, `Db`) turns through the twelve keys and wraps.
 - `capo`: the `Capo` dial (adjustable, its value `No capo` or `Capo <n>, <key> shapes`) runs from 0 to 11 and stops at each end; the chords show that key's shapes, and `Key` reads `CAPO n` over them.
 - `chords-reset`: while the key or the capo differs from the printed hymn, `Reset` reads `↺ <printed key>, no capo`; it, or a double tap on either dial, turns both rows home where the reader sees them (the printed key, no capo), and the dials close 600 ms after the touch. A double tap on a dial of a hymn already at home closes the dials at once, with no `reset` cue. A touch on a dial in that wait keeps them open; a tap on `Key` closes them at once. In the player sheet the rows turn home and the dials stay.
@@ -35,7 +49,7 @@ the recording only when it changes the sounding Key.
 - `chords-motion`: a hold of `Key` presses the button in (to 0.90 of its size by the toggle) and springs it out past its size and back at the toggle; a tap dips it and settles with no overshoot. The dials spring open out of the button (smaller, lower and faded at first, a little past their size, then at rest) and close back into it; the button's frame is the same open and closed. With Reduce Motion on, open and close are a fade alone.
 - `chords-fling`: the key dial never goes blank: on every frame of a drag and of the glide after a fling, at any speed, and over flings chained before the last glide ends, every slot of the row shows a key, the keys in order; it lands on the key its value reads, and a finger that rests on a turning dial while a second finger sets the value (the sheet's twin dial, `Reset`) lets it go on to that value.
 - `chords-sound`: with sound off, while a hymn plays, turning the capo and the key, a reset and a hold leave the player's place and state as they are.
-- `chords-levels`: both alignment levels keep each chord group over its compiled syllable, including when a line wraps; a plain part shows its words alone; a hymn with no chords shows its words and "No chords for this hymn yet.", and `Key` opens no dials there.
+- `chords-levels`: both alignment levels keep each chord group over its compiled syllable, including when a line wraps; a plain part shows its words alone; a hymn with no chords shows its words and "No chords for this hymn yet." with chords on, and `Key` opens no dials there; with chords off a tap on its `Key` turns chords on and the notice shows.
 - `chords-changes-only`: only actual changes show in the chord colour. A line with no change at its first syllable has no opening chord. On hymn 373's first refrain, neither `held-2-1-1` nor `chord-2-1-1` exists; `chord-2-1-4` remains over its syllable and opens its chord sheet in Simple and Advanced, at capo 0 and 1. Check both appearances and chords off/on.
 - `chords-kept`: each hymn's key and capo, and chords on or off, survive leaving the hymn and relaunching the app.
 - `chords-simple`: Simple by default: at most one plain chord (major, minor or seventh) over a syllable, none where the chord sounding is the one shown before it; the key and the capo move it as they move Advanced. On hymn 3 some Simple chord boxes are wider than their syllable (a known follow-up, F2).
@@ -43,35 +57,40 @@ the recording only when it changes the sounding Key.
 
 ## How to get to it (user POV)
 
-- The hymn reader, `hymnal://hymns/<n>` (iOS) or `/hymns/<n>` (web): the bottom bar's `Key` button at its left end, the only chord control.
-- A tap on `Key` opens the dials above the bar: `Capo`, then `Key`, and `Reset` above them while the hymn is moved. The player sheet (`Open player`) holds the group `Chord settings` while it is over the hymn's own page: the `Chords` switch, then the same two dials and `Reset`.
+- The hymn reader, `hymnal://hymns/<n>` (iOS) or `/hymns/<n>` (web): the bottom bar's `Key` button at its left end, the only chord control on the page. With chords off a tap on it turns chords on.
+- With chords on, a tap on `Key` opens the dials above the bar: `Capo`, then `Key`, and `Reset` above them while the hymn is moved. The player sheet (`Open player`) holds the group `Chord settings` whenever it holds a hymn: the `Chords` switch, then, with chords on over the hymn's own page, the same two dials and `Reset`, and with chords on the `Chord placement` dial.
+- Settings (`hymnal://settings`): the `Chords` switch under the heading `Chords` (`settings.md`, `settings-chords-switch`).
 - Each chord's text is its symbol. The box over syllable s of line l of the page's section p (each from 1, in page order) has the id `chord-p-l-s`; a syllable with no chord has none. Both alignment levels keep these compiled anchors: a wrapped word takes its chords with it. The syllable's text has the id `syllable-p-l-s`. On iOS a text holds more than one syllable where none has a chord (a word with chords off, the chordless syllables after a chordless one under chords): the text is named by its first syllable, and a later syllable in it has no element of its own (the web keeps one per syllable, as a span). `apps/hymnal/src/reader/line-level.test.tsx` guards the anchors, Simple/Advanced spelling, gold role and empty chordless openings.
 
 ## Driving it with sim
 
-- **Preconditions:** chords off, chord style `Simple`, and every hymn at no transpose and no capo (the default of a fresh install, and how the journey leaves it). On iOS read `Key`'s value, a dial's value and `Sound`'s value from `agent-device snapshot --json --raw --observe-only --force-full --session verify-hymnal` (the presented snapshot shows labels only).
+- **Preconditions:** chords off, chord style `Simple`, and every hymn at no transpose and no capo (the default of a fresh install, and how the journey leaves it). Before the first gesture, the bar's `Sound` off and Settings' `Sounds and haptics` off, each read back as `0` in a raw snapshot (`feel.md`); put them back after. No step presses Play. On iOS read `Key`'s value, a dial's value, a switch's `0`/`1` and `Sound`'s value from `agent-device snapshot --json --raw --observe-only --force-full --session verify-hymnal` (the presented snapshot shows labels only).
 - **A hold:** `sim hold id=key-button --settle 2` when a check then waits for what the hold shows; before a check that something is gone, keep the default settle (the press lands 5 to 9 s after the hold returns).
 - **A dial turn:** `sim gesture pan id=dial-key -52 0` from the dial's middle turns it one detent up (`52`, one down); `--ms 300` flings it on past several. VoiceOver's swipe up and down on a dial turns it one detent.
 - **States:** default (off), open (on, the dials closed), dials open, empty (a hymn with no chords: the notice). Focus-visible, loading and error are n/a.
-- **Regression:** `apps/hymnal/src/player/thumb.test.ts`, `apps/hymnal/src/player/dial.test.ts`, `apps/hymnal/src/player/thumb.slow.test.tsx`, `apps/hymnal/src/player/wrap.property.slow.test.tsx` (the key dial's every slot on every frame of a fling), `apps/hymnal/src/hymns/chords.property.test.ts`, `apps/hymnal/src/hymns/chords.test.ts`, `apps/hymnal/src/hymns/simple.test.ts`, `apps/hymnal/src/reader/reader.slow.test.tsx`, `apps/hymnal/src/hymns/shapes.test.ts`, `apps/hymnal/src/hymns/shapes.property.test.ts`, `apps/hymnal/src/reader/chordtap.slow.test.tsx`, `apps/hymnal/src/player/ui.slow.test.tsx`, `apps/hymnal/src/settings.test.ts`, `apps/hymnal/src/feel/feel.slow.test.tsx` (each dial's detent, wall, press and chords cues), `apps/hymnal/src/theme.test.ts` (the panel's fill and edge against the page, and every text on the panel).
+- **Regression:** `apps/hymnal/src/player/thumb.test.ts`, `apps/hymnal/src/player/thumb.chordmode.test.ts` (the key button's tap and hold over every key, move, state and event: no dials with chords off, the switch never writes a key), `apps/hymnal/src/player/chordmode.slow.test.tsx` (every row of the sheet and the bar with chords off and on, the switch on a hymn with no chords, kept across a remount, and the key heard), `apps/hymnal/src/settings.chordmode.test.ts` (`heardMove` over every move with chords on and off), `apps/hymnal/src/home/settings.chordmode.test.tsx` (Settings' switch and what it shows), `apps/hymnal/src/player/dial.test.ts`, `apps/hymnal/src/player/thumb.slow.test.tsx`, `apps/hymnal/src/player/wrap.property.slow.test.tsx` (the key dial's every slot on every frame of a fling), `apps/hymnal/src/hymns/chords.property.test.ts`, `apps/hymnal/src/hymns/chords.test.ts`, `apps/hymnal/src/hymns/simple.test.ts`, `apps/hymnal/src/reader/reader.slow.test.tsx`, `apps/hymnal/src/hymns/shapes.test.ts`, `apps/hymnal/src/hymns/shapes.property.test.ts`, `apps/hymnal/src/reader/chordtap.slow.test.tsx`, `apps/hymnal/src/player/ui.slow.test.tsx`, `apps/hymnal/src/settings.test.ts`, `apps/hymnal/src/feel/feel.slow.test.tsx` (each dial's detent, wall, press and chords cues), `apps/hymnal/src/theme.test.ts` (the panel's fill and edge against the page, and every text on the panel).
 
-**The journey:** `sim journey chords-and-capo`. Hymn 100 with chords off (`off`), a hold of `Key` (`chords`), the dials (`chords-key`), one key detent up (`transpose`), `Reset` (`chords-reset`) and the dials again with no `Reset` (`reset-home`), a relaunch with chords still on (`chords-kept`), hymn 126's notice (`chords-levels`), hymn 3 with `chord-1-1-5` and no `chord-1-1-6` (`chords-simple`), a chord's sheet and `Done` (`chords-tap`), then a hold of `Key` to put chords off again.
+**The journey:** `sim journey chords-and-capo`. Hymn 100 with chords off (`off`), a hold of `Key` (`chords`), the dials (`chords-key`), one key detent up (`transpose`), `Reset` (`chords-reset`) and the dials again with no `Reset` (`reset-home`), a relaunch with chords still on (`chords-kept`), hymn 181's notice (`chords-levels`), hymn 3 with `chord-1-1-5` and no `chord-1-1-6` (`chords-simple`), a chord's sheet and `Done` (`chords-tap`), then a hold of `Key` to put chords off again. Then the simple view: hymn 100 and its sheet with chords off (`chords-mode-simple`), a tap on `Key` (`chords-mode-on`) and the sheet's dials, the sheet's `Chords` switch off (`chords-mode-off`) and the sheet closed, then chords on by `Key`, a relaunch, hymn 100 with chords (`chords-mode-kept`) and a hold of `Key` to end with chords off. The `chords-mode-*` steps keep a snapshot and no screenshot.
 
 Read in the receipts (each crop to the bar, the dials or the sheet; the video of the journey):
 
-- `off`: the header holds no button; `Key`'s value `Chords off`, the dim guitar alone.
+- `off`: the header holds no button; `Key`'s value `Chords off`, the dim guitar alone: `id=key-face` holds no `KEY` text.
 - `chords`: `Key` reads `Db` (`KEY` over `Db`); `chord-1-1-1` reads `Db`; each chord above its syllable with no padded spaces; no dial opened.
 - `chords-key`: the `Capo` dial (`No capo`) and the `Key` dial (`Db`) above the bar, no `Reset`. `transpose`: `Key` reads `D`, `chord-1-1-1` `D`, `Reset` reads `↺ Db, no capo`.
 - `chords-reset`: the rows turn home in view, then the dials close (about 0.9 s after the touch).
 - `chords-simple`: `chord-1-1-1` reads `G`, `chord-1-1-5` `D`.
 - `chords-tap`: a form sheet with a grabber and `Done`, one box under the name `G`; its label (`chord-box-0`) `G. low E fret 3, finger 2; A fret 2, finger 1; D open; G open; B open; high E fret 3, finger 3`, no text with `capo` (raw snapshot); the box centred on the screen's width; the shot shows six strings, the nut thick, `o` over D, G and B, each dot with its finger's number. No sound, no `Resume following`.
+- `chords-mode-simple` (raw snapshot): `id=key-button` value `Chords off`; no `KEY` text in `id=key-face`, no `id=chord-1-1-1`. `chords-mode-simple-sheet`: `id=dial-tempo`; `chords-mode-simple-switch`: `id=stanzas` and `id=start` before the switch `Chords` in tree order, the switch `0`, `id=dial-size` after it, and no `id=dial-key`, `id=dial-capo` or `id=dial-placement`.
+- `chords-mode-on`: no `id=dials`; `id=chord-1-1-1` reads `Db`, `id=key-face` present, `id=key-button` value `Db`. `chords-mode-on-sheet`: the switch `Chords` `1`, `id=dial-key`, `id=dial-capo` and `id=dial-placement` present.
+- `chords-mode-off`: the switch `Chords` `0`; `id=dial-key`, `id=dial-capo` and `id=dial-placement` gone. `chords-mode-off-close`: no `Sheet Grabber`, no `id=chord-1-1-1`, `id=key-button` value `Chords off`.
+- `chords-mode-kept`: after the relaunch, `id=chord-1-1-1` and `id=key-face` with no touch. `chords-mode-kept-off`: no `id=chord-1-1-1`, `id=key-button` value `Chords off`.
 
 By hand:
 
 1. **Capo (`capo`).** On hymn 100 with chords on and the dials open, `sim gesture pan id=dial-capo -52 0` twice. → `Capo 2, C shapes`; `chord-1-1-1` reads `C`; the button reads `CAPO 2` over `C`. `sim gesture pan id=dial-capo -300 0 --ms 300`. → it stops at `Capo 11`; fling it back down to `No capo`. Double tap the key dial (`agent-device press <x> <y> --double-tap --session verify-hymnal`). → the rows turn home, the dials close.
 2. **Kept per hymn (`chords-kept`).** Turn the key one detent and the capo two, close the dials. `sim open hymns/1 --expect "label=Stanza 1"`. → chords on, hymn 1's own key, no capo. `sim open hymns/100`, then `sim relaunch` and `sim open hymns/100` again. → `Key` reads `CAPO 2` over `C` each time. `Reset` after.
 3. **Levels (`chords-levels`, `chords-changes-only`).** On hymn 91, `id=chord-1-1-1` is over its syllable. In Simple and Advanced, at 100% and 124% text size, each chord group stays over its own syllable on the same visual row, wrapped lines too. On hymn 373, scroll to the first refrain: no `held-2-1-1` or `chord-2-1-1`; `chord-2-1-4` stays over its syllable and opens its sheet. Check both styles, capo 0 and 1, both appearances and chords off/on, then put each back. When lyrics must not be saved, use filtered in-memory AX ids, chord symbols and numeric rectangles; save no raw AX, shots or recordings.
-4. **The sheet's switch.** On hymn 100, `sim tap "label=Open player"`, `sim tap label=Chords`. → the switch on, the sheet's `Capo` dial, and `chord-1-1-1` reads `Db` behind the sheet. `sim tap label=Chords` again. → off; close the sheet with `sim back`.
+4. **The sheet's switch.** On hymn 100 with chords off, `sim tap "label=Open player"`, `sim tap "role=switch label=Chords"`. → the switch on, the sheet's `Capo` and `Key` dials and `Chord placement`, and `chord-1-1-1` reads `Db` behind the sheet. `sim tap "role=switch label=Chords"` again. → off, and the three dials gone; close the sheet with `sim back`.
 5. **The largest page.** `sim open hymns/150 --expect "label=Stanza 1"`, `sim hold id=key-button --settle 2`, `sim snapshot` holds `chord-1-1-1`; three trials, chords off between them.
 6. **Key and capo in Simple.** On hymn 3, the key one detent up. → `Ab`, `chord-1-1-1` `Ab`, `chord-1-1-5` `Eb`. The capo one up. → `Capo 1, G shapes`, `chord-1-1-1` `G`, `chord-1-1-5` `D`.
 7. **A chord's touch area (`chords-tap`).** Read `chord-1-1-1`'s rect in the raw snapshot and `agent-device press <x> <bottom+4>`, then `<bottom+11>` and `<top-4>`. → the sheet each time (5 of 5 tries). 18 pt under the chord's text opens nothing. Close the sheet with `Done`: `syllable-1-1-1`'s rect is where it was. `sim tap id=chord-1-1-5` → the box for `D` (`xx0232`, fingers 1, 3, 2).
@@ -86,9 +105,11 @@ By hand:
 
 - Hymn 100 is printed in D-flat: `Db` at rest is right, and twelve detents of the key dial come back to `Db`, never `C#`.
 - The capo dial stops at 0 and at 11; the key dial wraps. A capo dial that will not go past 11 is right.
-- A hold must last past 450 ms: a short press is a tap and opens the dials.
+- A hold must last past 450 ms: a short press is a tap, which opens the dials with chords on and turns chords on with them off.
 - `sim relaunch` ends and launches the app `sim install` installed; never end it by its bundle id by hand.
-- A run that leaves chords on or a move set changes the next run's `off` step: finish with `Reset` and a hold of `Key` (chords off), as the journey does. A run that leaves `Advanced` chosen changes `chords-simple`'s readings.
+- A run that leaves chords on or a move set changes the next run's `off` step: finish with `Reset` and a hold of `Key` (chords off), as the journey does. A move left set is not heard with chords off, yet it returns with chords.
+- `id=key-face` is in the tree in both states (with chords off it holds the dim guitar head alone), so `hides id=key-face` never passes: read chords off as no `role=statictext label=KEY`. `agent-device` matches a label with case ignored, so a bare `label=KEY` or `label=Key` also finds the button `Key`, its wrappers and, with chords on, the key face's `KEY` and the dial `Key`: drive the button by `id=key-button`. The journey reads the no-chords notice on hymn 181; `apps/hymnal/scripts/sim/features.test.ts` fails a notice step whose hymn has chords in the compiled data.
+- `label=Chords` names the player sheet's switch and Settings' switch (and Settings' heading `Chords`, which is text): tap `role=switch label=Chords` on the screen that shows it. A run that leaves `Advanced` chosen changes `chords-simple`'s readings.
 - VoiceOver reads a syllable-level line in syllable pieces: a known gap, not a failure of this journey.
 - Under `agent-device` the app gets a touch 20 to 25 frames (about 0.7 to 0.8 s) after the recording's touch indicator shows it, and an injected tap is held about 330 ms. Time a motion from the app's own first frame of it (the button's press-in, or the first frame that moves), never from the indicator. The dials open at a tap's release, as a hold must be told from a tap.
 - Reduce Motion is read as the app starts: relaunch it after the switch changes, before reading a fade.

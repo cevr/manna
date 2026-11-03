@@ -32,17 +32,40 @@
 // the strokes it drops), its ramp and lightness spread, and the hair of the
 // head drawn with the parts that no part covers above the eyes (`showing`).
 // Run it from the repo root with
-// `bun apps/animations/src/library/cast/filler-bases/cutout/parts-cut.ts`.
+// `bun apps/animations/src/library/cast/filler-bases/cutout/parts-cut.ts [<sheets folder>]`.
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { type Raster, decodePng, encodePng } from '@manna/film/tools';
-import { Array as Arr, Console, Effect, FileSystem, Option, Record as Records } from 'effect';
+import {
+  Array as Arr,
+  Console,
+  Effect,
+  FileSystem,
+  Option,
+  Record as Records,
+  Stdio,
+} from 'effect';
+// the kept sheets, imported as files so the cast build keys the parts stage by them (`COVERAGE.cutters`)
+import dressed1 from '../../filler-dressed/cast-sheet/views/poses-1.png' with { type: 'file' };
+import dressed2 from '../../filler-dressed/cast-sheet/views/poses-2.png' with { type: 'file' };
+import dressed3 from '../../filler-dressed/cast-sheet/views/poses-3.png' with { type: 'file' };
+import dressed4 from '../../filler-dressed/cast-sheet/views/poses-4.png' with { type: 'file' };
+import BASE from '../cast-sheet/kept/poses.png' with { type: 'file' };
 import { FRAMES, type FramedView, boxOf } from './frames.ts';
 
-const here = import.meta.dir;
-const BASE = `${here}/../cast-sheet/kept/poses.png`;
-const DRESSED = (view: FramedView) => `${here}/../../filler-dressed/cast-sheet/views/${view}.png`;
+/** The sheets folder it reads `sheets-cut.ts`'s heads from and writes to: its one argument, else its own `sheets/` (the cast build passes a scratch folder to check it). */
+const sheetsFolder = Stdio.Stdio.use(({ args }) =>
+  Effect.map(args, (a) => Option.getOrElse(Arr.head(a), () => `${import.meta.dir}/sheets`)),
+);
+
+/** Each view's kept dressed drawing (`filler-dressed`). */
+const DRESSED: Readonly<Record<FramedView, string>> = {
+  'poses-1': dressed1,
+  'poses-2': dressed2,
+  'poses-3': dressed3,
+  'poses-4': dressed4,
+};
 
 type Rgb = readonly [number, number, number];
 type Pt = readonly [number, number];
@@ -741,11 +764,11 @@ const coveredOf = (head: Raster, figure: Raster): Raster => {
 
 const pt = ([x, y]: Pt) => `(${x.toFixed(1)},${y.toFixed(1)})`;
 
-const cutView = (sheet: Raster, view: FramedView) =>
+const cutView = (sheet: Raster, view: FramedView, sheets: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const base = cropOf(sheet, boxOf(view));
-    const dressed = yield* Effect.fromResult(decodePng(yield* fs.readFile(DRESSED(view))));
+    const dressed = yield* Effect.fromResult(decodePng(yield* fs.readFile(DRESSED[view])));
     const baseEyes = yield* Effect.fromOption(eyesOf(base)).pipe(
       Effect.mapError(() => `${view}: no eyes found on the base`),
     );
@@ -779,7 +802,7 @@ const cutView = (sheet: Raster, view: FramedView) =>
         );
     const owned = Records.fromEntries(seated.map((s) => [s.name, s.regions]));
     const head = yield* Effect.fromResult(
-      decodePng(yield* fs.readFile(`${here}/sheets/${view}/head.png`)),
+      decodePng(yield* fs.readFile(`${sheets}/${view}/head.png`)),
     );
     const covered = Option.liftPredicate(
       coveredOf(
@@ -796,7 +819,7 @@ const cutView = (sheet: Raster, view: FramedView) =>
     );
     yield* Option.match(covered, {
       onNone: () => Effect.void,
-      onSome: (r) => fs.writeFile(`${here}/sheets/${view}/head-covered.png`, encodePng(r)),
+      onSome: (r) => fs.writeFile(`${sheets}/${view}/head-covered.png`, encodePng(r)),
     });
     const written = yield* Effect.forEach(HOUSE[view], (part) =>
       Effect.gen(function* () {
@@ -813,7 +836,7 @@ const cutView = (sheet: Raster, view: FramedView) =>
           base.width,
           base.height,
         );
-        yield* fs.writeFile(`${here}/sheets/${view}/${part.name}.png`, encodePng(raster));
+        yield* fs.writeFile(`${sheets}/${view}/${part.name}.png`, encodePng(raster));
         const ramp = Option.liftPredicate(rampOf(dressed, own), () => DYED.includes(part.name));
         yield* Console.log(
           `  ${part.name}.png: ${own.length} regions${own.map((r) => ` [${r.px.length} px ${r.box.join(',')} ${hexOf(r.median)}]`).join('')}${Option.match(
@@ -865,18 +888,17 @@ ${Object.entries(ramps)
         )
         .join('')}  },\n`,
   )
-  .join('')}} as const satisfies Readonly<
-  Record<string, Readonly<Record<string, Ramp>>>
->;
+  .join('')}} as const satisfies Readonly<Record<string, Readonly<Record<string, Ramp>>>>;
 `;
 
 const cut = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const sheet = yield* Effect.fromResult(decodePng(yield* fs.readFile(BASE)));
+  const sheets = yield* sheetsFolder;
   const ramps = yield* Effect.forEach(Records.keys(FRAMES), (view) =>
-    Effect.map(cutView(sheet, view), (r) => [view, r] as const),
+    Effect.map(cutView(sheet, view, sheets), (r) => [view, r] as const),
   );
-  yield* fs.writeFileString(`${here}/sheets/ramps.ts`, rampsModule(Records.fromEntries(ramps)));
+  yield* fs.writeFileString(`${sheets}/ramps.ts`, rampsModule(Records.fromEntries(ramps)));
 });
 
 if (import.meta.main) cut.pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);

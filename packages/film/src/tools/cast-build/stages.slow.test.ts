@@ -6,7 +6,9 @@ import { Redacted, Effect, FileSystem, Layer, Option, Path, Sink, Stream } from 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { ChildProcessSpawner } from 'effect/process';
+import { crc32 } from 'node:zlib';
 import { PuppetImagesBun } from '../../puppet/images-bun.ts';
+import { encodePng } from '../png.ts';
 import { ContentStore } from '../content-store.ts';
 import { Critic } from '../critique.ts';
 import { FilmFolder } from '../film-repo.ts';
@@ -52,6 +54,26 @@ const COVERAGE: Coverage = {
   ],
 };
 
+/** A 2×1 picture of one colour. */
+const pixels = (rgba: readonly [number, number, number, number]) => ({
+  width: 2,
+  height: 1,
+  rgba: Uint8Array.from([...rgba, ...rgba]),
+});
+
+/** `png` with a text chunk after its header: other bytes, the same pixels. */
+const withText = (png: Uint8Array) => {
+  const data = new TextEncoder().encode('Comment\0held');
+  const typed = Uint8Array.from([...new TextEncoder().encode('tEXt'), ...data]);
+  const chunk = new Uint8Array(12 + data.length);
+  const view = new DataView(chunk.buffer);
+  view.setUint32(0, data.length);
+  chunk.set(typed, 4);
+  view.setUint32(8 + data.length, crc32(typed));
+  // the signature (8 bytes) and the header chunk (25) lead every PNG
+  return Uint8Array.from([...png.subarray(0, 33), ...chunk, ...png.subarray(33)]);
+};
+
 const complete: EntryFacts = { drawn: true, kept: true, cut: true, bars: true, fit: true };
 
 /** A member folder: his poses module and the files it imports, and a recorded sheet for each view in `recorded`. */
@@ -93,7 +115,6 @@ const stagesOf = (dir: string, facts: Record<string, EntryFacts> = {}) =>
         film: 'in-its-order' as never,
         member: 'fake',
         memberDir: dir,
-        libraryPuppets: `${dir}/library-puppets.ts`,
         coverage: COVERAGE,
         facts,
       },
@@ -210,18 +231,27 @@ const PARTS_MS = 20_000;
 /** A time no build writes a part at: 2000-01-01, in seconds as `utimes` reads a number. */
 const LONG_AGO = 946_684_800;
 
+const CUT = 'cut:turnaround-front@lead-feast';
+
+/** The stages a case builds past the drawing, each named in its answer by its kind. */
+const BUILT = { parts: [PARTS], cut: [PARTS, CUT] } as const;
+
 /**
  * `body` over the lead in a scratch films folder: `run` builds his front's
- * drawing and parts under a spend setting and answers the parts stage's
- * state and the okra calls the build counted; `spawned` holds every process
- * asked for.
+ * drawing and parts (and his cut, `upTo` 'cut') under a spend setting and
+ * answers each built stage's state by its kind and the okra calls the build
+ * counted; `spawned` holds every process asked for.
  */
 const partsOver = <E>(
   body: (over: {
     readonly at: Scratch;
-    readonly run: (spend: ReadonlySet<'okra'>) => Effect.Effect<{ parts?: string; okra: number }>;
+    readonly run: (
+      spend: ReadonlySet<'okra'>,
+      touch?: ReadonlyArray<string>,
+    ) => Effect.Effect<Readonly<Record<string, string | number>>>;
     readonly spawned: ReadonlyArray<ReadonlyArray<string>>;
   }) => Effect.Effect<void, E, FileSystem.FileSystem>,
+  upTo: keyof typeof BUILT = 'parts',
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -232,34 +262,107 @@ const partsOver = <E>(
       Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, okraAnswering(fs, spawned)),
     );
     const context = yield* Effect.context<Layer.Success<typeof partsLayer>>();
-    const run = (spend: ReadonlySet<'okra'>) =>
+    const run = (spend: ReadonlySet<'okra'>, touch: ReadonlyArray<string> = []) =>
       Effect.gen(function* () {
         const stages = (yield* memberStages(
           {
             film: 'in-its-order' as never,
             member: 'lead-feast',
             memberDir: at.member,
-            libraryPuppets: `${at.member}/library-puppets.ts`,
             coverage: { member: 'lead-feast', entries: [FRONT] },
             facts: { [FRONT.id]: complete },
           },
           yield* buildSources('in-its-order' as never, RENDER_PAGE),
-        )).filter((s) => [`drawing:${FRONT.id}@lead-feast`, PARTS].includes(s.id));
+        )).filter((s) =>
+          [`drawing:${FRONT.id}@lead-feast`, ...BUILT[upTo]].some((id) => id === s.id),
+        );
         const report = yield* buildGraph(stages, {
           // the member lies in a scratch folder and the stage sources in the repo
           root: '/',
           cache: at.cache,
           plan: false,
-          touch: [],
+          touch,
           spend,
         });
         return {
-          parts: report.stages.find((s) => s.id === PARTS)?.state,
+          ...Object.fromEntries(
+            BUILT[upTo].map((id) => [
+              id.split(':')[0],
+              report.stages.find((s) => s.id === id)?.state ?? 'not built',
+            ]),
+          ),
           okra: report.okraCalls,
         };
       }).pipe(Effect.provide(services), Effect.provide(context), Effect.orDie);
     yield* body({ at, run, spawned });
   }).pipe(Effect.scoped, Effect.provide(partsLayer));
+
+/** Why a stage of a report failed; empty when it did not, or is not there. */
+const reasonOf = (stage: Option.Option<{ readonly reason: Option.Option<string> }>) =>
+  Option.getOrElse(
+    Option.flatMap(stage, (p) => p.reason),
+    () => '',
+  );
+
+/**
+ * A fake member cut by his own cutter, which copies his kept PNG to his
+ * front's head, and his front's drawing and parts stages built: each process
+ * the build starts, recorded, and only `bun` run.
+ */
+const ownCutterMember = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem;
+  const real = yield* ChildProcessSpawner.ChildProcessSpawner;
+  const dir = yield* fs.realPath(yield* memberIn([]));
+  yield* fs.makeDirectory(`${dir}/cast-sheet/views`, { recursive: true });
+  yield* fs.writeFileString(`${dir}/cast-sheet/views/front.png`, 'png');
+  const kept = encodePng(pixels([200, 40, 40, 255]));
+  yield* fs.writeFile(`${dir}/cast-sheet/kept.png`, kept);
+  const cutter = `${dir}/cutout/cutter.ts`;
+  yield* fs.writeFileString(
+    cutter,
+    [
+      "import kept from '../cast-sheet/kept.png' with { type: 'file' };",
+      "import { copyFileSync, mkdirSync } from 'node:fs';",
+      'mkdirSync(`${process.argv[2]}/front`, { recursive: true });',
+      'copyFileSync(kept, `${process.argv[2]}/front/head.png`);',
+    ].join('\n'),
+  );
+  const spawned: Array<ReadonlyArray<string>> = [];
+  const recording = ChildProcessSpawner.make((command) => {
+    if (command._tag !== 'StandardCommand') return Effect.die('no piped process in this test');
+    spawned.push([command.command, ...command.args.map(wordValue)]);
+    if (command.command !== 'bun') return Effect.die(`no ${command.command} in this test`);
+    return real.spawn(command);
+  });
+  const entry = FRONT;
+  const services = Layer.merge(
+    FilmFolder.layer(`${dir}/films`),
+    Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, recording),
+  );
+  const built = (touch: ReadonlyArray<string> = []) =>
+    Effect.gen(function* () {
+      const stages = (yield* memberStages(
+        {
+          film: 'in-its-order' as never,
+          member: 'fake',
+          memberDir: dir,
+          coverage: { member: 'fake', entries: [entry], cutters: ['cutout/cutter.ts'] },
+          facts: { [entry.id]: complete },
+        },
+        yield* buildSources('in-its-order' as never, RENDER_PAGE),
+      )).filter((s) => [`drawing:${entry.id}@fake`, `parts:${entry.id}@fake`].includes(s.id));
+      const report = yield* buildGraph(stages, {
+        root: '/',
+        cache: `${dir}/cache`,
+        plan: false,
+        touch,
+        spend: new Set(),
+      });
+      const parts = report.stages.find((s) => s.id === `parts:${entry.id}@fake`);
+      return { stages, report, parts };
+    }).pipe(Effect.provide(services));
+  return { dir, cutter, kept, head: `${dir}/cutout/sheets/front/head.png`, spawned, built };
+});
 
 describe('memberStages', () => {
   it.effect('a fitted entry’s fit reads its fitted pose and held drawing', () =>
@@ -318,6 +421,98 @@ describe('memberStages', () => {
     }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
+  it.effect(
+    'a member cut by his own cutters runs them for his parts, keyed by what they import, never asks okra, and fails on a committed part whose pixels they change',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const { dir, cutter, kept, head, spawned, built } = yield* ownCutterMember;
+        const entry = FRONT;
+        const { stages, report, parts } = yield* built();
+        expect(filesOf(stages, `parts:${entry.id}@fake`)).toEqual(
+          expect.arrayContaining([
+            cutter,
+            `${dir}/cast-sheet/kept.png`,
+            ...(yield* sourceFiles('parts')),
+          ]),
+        );
+        // no head was committed: the one the cutter writes is new
+        expect(parts?.state).toBe('ran');
+        expect(report.okraCalls).toBe(0);
+        // run on a scratch sheets folder, never his own
+        expect(spawned.map((c) => c.slice(0, 2))).toEqual([['bun', cutter]]);
+        expect(spawned[0]?.[2]).not.toContain(dir);
+        expect(yield* fs.readFile(head)).toEqual(kept);
+        // a committed head of the same pixels in other bytes holds
+        yield* fs.writeFile(head, withText(kept));
+        expect((yield* built([cutter])).parts?.state).toBe('ran');
+        expect(yield* fs.readFile(head)).toEqual(withText(kept));
+        // a committed head of other pixels fails the stage, and writes nothing
+        const committed = encodePng(pixels([40, 40, 200, 255]));
+        yield* fs.writeFile(head, committed);
+        const changed = (yield* built([cutter])).parts;
+        expect(changed?.state).toBe('failed');
+        expect(reasonOf(Option.fromUndefinedOr(changed))).toContain('head.png');
+        expect(yield* fs.readFile(head)).toEqual(committed);
+      }).pipe(Effect.scoped, Effect.provide(partsLayer)),
+  );
+
+  it.effect(
+    'a member cut by his own cutters fails his parts on a committed part they no longer make, and leaves it; his okra folder is not theirs',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const { dir, kept, head, built } = yield* ownCutterMember;
+        const sheet = `${dir}/cutout/sheets/front`;
+        yield* fs.makeDirectory(`${sheet}/okra`, { recursive: true });
+        yield* fs.writeFile(head, kept);
+        yield* fs.writeFileString(`${sheet}/okra/calls.json`, '{}');
+        const arm = `${sheet}/arm.png`;
+        yield* fs.writeFile(arm, kept);
+        const stale = (yield* built()).parts;
+        expect(stale?.state).toBe('failed');
+        expect(reasonOf(Option.fromUndefinedOr(stale))).toContain(
+          'his cutters no longer make front/arm.png; run them by hand and commit to drop it',
+        );
+        expect(yield* fs.readFile(arm)).toEqual(kept);
+        yield* fs.remove(arm);
+        expect((yield* built()).parts?.state).toBe('ran');
+      }).pipe(Effect.scoped, Effect.provide(partsLayer)),
+  );
+
+  it.effect(
+    'the cut stage of a member with ramps reads them, and the library modules his puppets import',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const member = yield* fs.realPath(`${LEAD_FEAST}/../filler-bases`);
+        const library = yield* fs.realPath(`${LEAD_FEAST}/../../cutout`);
+        const stages = yield* memberStages(
+          {
+            film: 'in-its-order' as never,
+            member: 'filler-bases',
+            memberDir: member,
+            coverage: { member: 'filler-bases', entries: [FRONT] },
+            facts: { [FRONT.id]: complete },
+          },
+          yield* buildSources('in-its-order' as never, RENDER_PAGE),
+        );
+        expect(filesOf(stages, `cut:${FRONT.id}@filler-bases`)).toEqual(
+          expect.arrayContaining([
+            `${member}/cutout/sheets/ramps.ts`,
+            `${library}/puppets.ts`,
+            `${library}/frames.ts`,
+          ]),
+        );
+      }).pipe(
+        Effect.provide(
+          FilmFolder.layer(`${LEAD_FEAST}/../../../films`).pipe(
+            Layer.provideMerge(BunServices.layer),
+          ),
+        ),
+      ),
+  );
+
   describe('the parts stage, on the lead with okra answering from his kept answer', () => {
     it.effect(
       'the sheet holds its answers: it checks, spending nothing',
@@ -338,6 +533,56 @@ describe('memberStages', () => {
             expect(times).toEqual(parts.map(() => Option.some(LONG_AGO * 1000)));
             expect(spawned).toEqual([]);
           }),
+        ),
+      // oxlint-disable-next-line film/tests-keep-their-strength -- the parts stage lays a real part sheet in this process (image decode and composite): 5.6 s at a load of 43, past bun's 5 s; a slow test may wait.
+      PARTS_MS,
+    );
+
+    it.effect(
+      'a change to a clean rule his cut table imports runs it again; a library module it does not import leaves it cached',
+      () =>
+        partsOver(({ run, spawned }) =>
+          Effect.gen(function* () {
+            const library = `${LEAD_FEAST}/../../cutout`;
+            expect(yield* run(new Set())).toEqual({ parts: 'ran', okra: 0 });
+            expect(yield* run(new Set())).toEqual({ parts: 'cached', okra: 0 });
+            expect(yield* run(new Set(), [`${library}/bust.ts`])).toEqual({
+              parts: 'cached',
+              okra: 0,
+            });
+            expect(yield* run(new Set(), [`${library}/clean.ts`])).toEqual({
+              parts: 'ran',
+              okra: 0,
+            });
+            expect(spawned).toEqual([]);
+          }),
+        ),
+      // oxlint-disable-next-line film/tests-keep-their-strength -- the parts stage lays a real part sheet in this process (image decode and composite): 5.6 s at a load of 43, past bun's 5 s; a slow test may wait.
+      PARTS_MS,
+    );
+
+    it.effect(
+      'a change to a library module his puppets module imports runs his cut again, his parts cached; a module neither imports leaves both cached',
+      () =>
+        partsOver(
+          ({ run, spawned }) =>
+            Effect.gen(function* () {
+              const library = `${LEAD_FEAST}/../../cutout`;
+              expect(yield* run(new Set())).toEqual({ parts: 'ran', cut: 'ran', okra: 0 });
+              expect(yield* run(new Set())).toEqual({ parts: 'cached', cut: 'cached', okra: 0 });
+              expect(yield* run(new Set(), [`${library}/bust.ts`])).toEqual({
+                parts: 'cached',
+                cut: 'cached',
+                okra: 0,
+              });
+              expect(yield* run(new Set(), [`${library}/puppets.ts`])).toEqual({
+                parts: 'cached',
+                cut: 'ran',
+                okra: 0,
+              });
+              expect(spawned).toEqual([]);
+            }),
+          'cut',
         ),
       // oxlint-disable-next-line film/tests-keep-their-strength -- the parts stage lays a real part sheet in this process (image decode and composite): 5.6 s at a load of 43, past bun's 5 s; a slow test may wait.
       PARTS_MS,
@@ -390,7 +635,6 @@ describe('memberStages', () => {
             film: 'in-its-order' as never,
             member: 'fake',
             memberDir: dir,
-            libraryPuppets: `${dir}/library-puppets.ts`,
             coverage: {
               ...COVERAGE,
               clips: [

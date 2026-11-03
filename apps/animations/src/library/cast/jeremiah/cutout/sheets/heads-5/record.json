@@ -7,12 +7,12 @@
   "parts": [
     {
       "name": "head",
-      "kept": 45306,
+      "kept": 43781,
       "painted": 0
     },
     {
       "name": "torso",
-      "kept": 13278,
+      "kept": 13274,
       "painted": 3459
     }
   ],

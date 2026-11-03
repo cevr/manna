@@ -14,4 +14,6 @@ export const COVERAGE: CoverageManifest = {
     { id: 'poses-poses-3', cut: 'puppet', file: 'cast-sheet/views/poses-3.png', for: FOR },
     { id: 'poses-poses-4', cut: 'puppet', file: 'cast-sheet/views/poses-4.png', for: FOR },
   ],
+  // their busts are cut and dressed by their own cutters, with no repaint
+  cutters: ['cutout/sheets-cut.ts', 'cutout/parts-cut.ts'],
 };

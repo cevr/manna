@@ -6,7 +6,12 @@
       "name": "off",
       "action": "open",
       "link": "hymns/100",
-      "expect": [{ "shows": "id=key-button" }, { "hides": "id=chord-1-1-1" }]
+      "expect": [
+        { "shows": "id=key-button" },
+        { "hides": "id=chord-1-1-1" },
+        { "hides": "role=statictext label=KEY" }
+      ],
+      "receipt": "snapshot"
     },
     {
       "name": "chords",
@@ -64,7 +69,7 @@
     {
       "name": "chords-levels",
       "action": "open",
-      "link": "hymns/126",
+      "link": "hymns/181",
       "expect": [{ "shows": "label=No chords for this hymn yet." }, { "hides": "id=chord-1-1-1" }]
     },
     {
@@ -94,6 +99,129 @@
       "action": "hold",
       "target": "id=key-button",
       "expect": [{ "hides": "id=chord-1-1-1" }]
+    },
+    {
+      "name": "chords-mode-simple",
+      "action": "open",
+      "link": "hymns/100",
+      "expect": [
+        { "shows": "id=key-button" },
+        { "hides": "role=statictext label=KEY" },
+        { "hides": "id=chord-1-1-1" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "chords-mode-simple-sheet",
+      "action": "tap",
+      "target": "label=Open player",
+      "expect": [{ "shows": "label=Sheet Grabber" }, { "shows": "id=dial-tempo" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "chords-mode-simple-switch",
+      "action": "scroll",
+      "target": "role=switch label=Chords",
+      "direction": "down",
+      "expect": [
+        { "shows": "role=switch label=Chords" },
+        { "hides": "id=dial-key" },
+        { "hides": "id=dial-capo" },
+        { "hides": "id=dial-placement" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "chords-mode-simple-close",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [{ "shows": "id=key-button" }, { "hides": "label=Sheet Grabber" }],
+      "receipt": "none"
+    },
+    {
+      "name": "chords-mode-on",
+      "action": "tap",
+      "target": "id=key-button",
+      "expect": [
+        { "shows": "id=chord-1-1-1" },
+        { "shows": "role=statictext label=KEY" },
+        { "hides": "id=dials" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "chords-mode-on-sheet",
+      "action": "tap",
+      "target": "label=Open player",
+      "expect": [{ "shows": "label=Sheet Grabber" }],
+      "receipt": "none"
+    },
+    {
+      "name": "chords-mode-on-dials",
+      "action": "scroll",
+      "target": "id=dial-placement",
+      "direction": "down",
+      "expect": [
+        { "shows": "role=switch label=Chords" },
+        { "shows": "id=dial-key" },
+        { "shows": "id=dial-capo" },
+        { "shows": "id=dial-placement" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "chords-mode-off",
+      "action": "tap",
+      "target": "role=switch label=Chords",
+      "expect": [
+        { "hides": "id=dial-key" },
+        { "hides": "id=dial-capo" },
+        { "hides": "id=dial-placement" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "chords-mode-off-close",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [
+        { "shows": "id=key-button" },
+        { "hides": "label=Sheet Grabber" },
+        { "hides": "id=chord-1-1-1" }
+      ],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "chords-mode-kept-on",
+      "action": "tap",
+      "target": "id=key-button",
+      "expect": [{ "shows": "id=chord-1-1-1" }],
+      "receipt": "none"
+    },
+    {
+      "name": "chords-mode-kept-relaunch",
+      "action": "relaunch",
+      "receipt": "none"
+    },
+    {
+      "name": "chords-mode-kept",
+      "action": "open",
+      "link": "hymns/100",
+      "expect": [{ "shows": "id=chord-1-1-1" }, { "shows": "role=statictext label=KEY" }],
+      "receipt": "snapshot"
+    },
+    {
+      "name": "chords-mode-kept-off",
+      "action": "hold",
+      "target": "id=key-button",
+      "expect": [{ "hides": "id=chord-1-1-1" }],
+      "receipt": "snapshot"
     }
   ]
 }

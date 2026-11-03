@@ -16,12 +16,15 @@
 // the rules and the table are the library's. Her poses, holding the baby, are
 // cut by each arm's own outline instead (see `POSES_1`).
 
-import type { HiddenEntry, PartCut, PartRule } from '@manna/film/tools';
+import type { HiddenEntry, PartCut, PartRule, SheetClean } from '@manna/film/tools';
+import { Record as Records } from 'effect';
+import { type PaperRim, clearPaperRim } from '../../../../../library/cutout/clean.ts';
 import { CUT_AWAY, grain, shade, sides } from '../../../../../library/cutout/prompts.ts';
 import { FAR, type Sleeve, box, sleeve } from '../../../../../library/cutout/rules.ts';
 import { cutTable } from '../../../../../library/cutout/table.ts';
 import { FRAMES } from './frames.ts';
 import { JOINTS } from './joints.ts';
+import { POSES_PAPERS, TURNAROUND_PAPERS } from './papers.ts';
 
 export { FRAMES, JOINTS };
 
@@ -909,3 +912,20 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   hidden: HIDDEN_ENTRIES,
   ink: INK,
 });
+
+/** How far the clear ground's flood reaches through paper-coloured pixels, 8-steps: her band runs 1 to 5 px wide, and where it meets the fading edge of her ground shadow up to 19, so one pass clears it all; a gap in her ink could let it into her cream cloth no farther. */
+const RIM_BAND = 24;
+
+/** A pixel is paper-coloured within this ΔE76 of the view's paper: her band lies about 5 from it, her ink's blend 20 or more. */
+const RIM_NEAR = 12;
+
+/** Each view's paper rim, as her part sheets and her drawings beside them (`sheets-clean.ts`) clear it. */
+export const PAPER_RIMS = Records.map(
+  { ...TURNAROUND_PAPERS, ...POSES_PAPERS },
+  (paper): PaperRim => ({ paper, band: RIM_BAND, near: RIM_NEAR }),
+);
+
+/** What each view's laid part sheet runs before it is written (`film concept parts`): every view clears the pale paper band her paint keeps just outside her ink (251,243,226 at the median on poses-1, against its paper 253,240,215), which her un-matte would read as her cream cloth and draw as a white torn rim. */
+export const CLEAN = Records.map(PAPER_RIMS, clearPaperRim) satisfies Partial<
+  Record<keyof typeof CUTS, SheetClean>
+>;

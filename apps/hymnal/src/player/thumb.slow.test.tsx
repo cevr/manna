@@ -258,6 +258,18 @@ const tapKey = (page: Page) =>
     );
   });
 
+/**
+ * A tap as a finger makes it, the press first: after a hold the button lets
+ * no click go until a new press starts.
+ */
+const pressKey = (page: Page) =>
+  act(() => {
+    const button = keyButton(page);
+    for (const type of ['mousedown', 'mouseup', 'click']) {
+      button.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0 }));
+    }
+  });
+
 /** One straight drag that starts on the detector of gesture `testID`; the test id of the pan that took it, if one did. */
 const dragged = (testID: string, touch: Parameters<typeof drag>[1]) => {
   let took = Option.none<string>();
@@ -338,31 +350,33 @@ describe('bar J on a hymn page', () => {
     }),
   );
 
-  it.live('turns chords off on a hold with no tap after it, and the dials show the key alone', () =>
-    Effect.gen(function* () {
-      const device = chordsOn();
-      using page = mount(route(100), device);
-      tapKey(page);
-      expect(actionsOf(keyButton(page))).toEqual([{ name: 'chords', label: 'Turn chords off' }]);
-      yield* hold(page, false);
-      expect(device.get('chords')).toBe('false');
-      // The click after the hold opened nothing and closed nothing: the dials are still open.
-      expect(keyButton(page).getAttribute('aria-valuetext')).toBe('Chords off');
-      expect(keyButton(page).textContent).toBe('');
-      expect(Option.isSome(dial(page, 'Key'))).toBe(true);
-      expect(Option.isNone(dial(page, 'Capo'))).toBe(true);
-      expect(page.all('[data-testid^="chord-"]')).toHaveLength(0);
-      expect(actionsOf(keyButton(page))).toEqual([{ name: 'chords', label: 'Turn chords on' }]);
+  it.live(
+    'turns chords off on a hold with no tap after it and closes the dials; a tap then turns chords on and opens nothing',
+    () =>
+      Effect.gen(function* () {
+        const device = chordsOn();
+        using page = mount(route(100), device);
+        tapKey(page);
+        expect(actionsOf(keyButton(page))).toEqual([{ name: 'chords', label: 'Turn chords off' }]);
+        yield* hold(page, false);
+        expect(device.get('chords')).toBe('false');
+        // The hold closed the dials, and the click after it opened nothing: no dial stands with chords off.
+        expect(keyButton(page).getAttribute('aria-valuetext')).toBe('Chords off');
+        expect(keyButton(page).textContent).toBe('');
+        expect(Option.isNone(dial(page, 'Key'))).toBe(true);
+        expect(Option.isNone(dial(page, 'Capo'))).toBe(true);
+        expect(page.all('[data-testid^="chord-"]')).toHaveLength(0);
+        expect(actionsOf(keyButton(page))).toEqual([{ name: 'chords', label: 'Turn chords on' }]);
 
-      // One turn of the key dial turns chords on and keeps the key turned to.
-      turn(page, 'Key');
-      expect(device.get('chords')).toBe('true');
-      expect(valueOf(page, 'Key')).toEqual(Option.some('D'));
-      expect(keyButton(page).getAttribute('aria-valuetext')).toBe('D');
-      expect(
-        page.find('[data-testid="chord-1-1-1"]').pipe(Option.map((c) => c.textContent)),
-      ).toEqual(Option.some('D'));
-    }),
+        // A tap with chords off turns them on in the printed key and opens no dial.
+        pressKey(page);
+        expect(device.get('chords')).toBe('true');
+        expect(Option.isNone(dial(page, 'Key'))).toBe(true);
+        expect(keyButton(page).getAttribute('aria-valuetext')).toBe('Db');
+        expect(
+          page.find('[data-testid="chord-1-1-1"]').pipe(Option.map((c) => c.textContent)),
+        ).toEqual(Option.some('Db'));
+      }),
   );
 
   it.live('turns chords on and off by VoiceOver’s action, with no hold', () =>
@@ -867,13 +881,16 @@ describe('the player sheet over a hymn page', () => {
           page.get('[aria-label="Chord settings"] [aria-label="Chords"]') as HTMLInputElement;
         const capo = () =>
           page.find('[aria-label="Chord settings"] [role="slider"][aria-label="Capo"]');
+        const key = () =>
+          page.find('[aria-label="Chord settings"] [role="slider"][aria-label="Key"]');
         expect(toggle().checked).toBe(true);
         act(() => toggle().click());
         expect(device.get('chords')).toBe('false');
         expect(toggle().checked).toBe(false);
         expect(page.all('[data-testid^="chord-"]')).toHaveLength(0);
-        // With chords off the section holds the key dial alone, as over the bar.
+        // With chords off the section holds the switch alone: no dial stands with chords off.
         expect(Option.isNone(capo())).toBe(true);
+        expect(Option.isNone(key())).toBe(true);
         expect(keyButton(page).getAttribute('aria-valuetext')).toBe('Chords off');
         act(() => toggle().click());
         expect(device.get('chords')).toBe('true');
@@ -939,7 +956,7 @@ describe('the Tuner on the key button’s dials', () => {
   );
 
   it.live(
-    'leads Reset with it while moved, and shows with chords off over the key dial alone',
+    'leads Reset with it while moved, and goes with the dials when a hold turns chords off',
     () =>
       Effect.gen(function* () {
         using page = mount(keyPanel(100, true, []));
@@ -947,11 +964,11 @@ describe('the Tuner on the key button’s dials', () => {
         turn(page, 'Capo');
         const chips = page.all('[data-testid="dials"] [role="button"]');
         expect(chips.map((chip) => chip.getAttribute('aria-label'))).toEqual(['Tuner', 'Reset']);
-        // A hold turns chords off with the dials open, and they stay open.
+        // A hold turns chords off with the dials open, and closes them: no Tuner stands with chords off.
         yield* hold(page, false);
-        expect(Option.isSome(page.find('[data-testid="dials-tuner"]'))).toBe(true);
+        expect(Option.isNone(page.find('[data-testid="dials-tuner"]'))).toBe(true);
         expect(Option.isNone(page.find('[data-testid="dial-capo"]'))).toBe(true);
-        expect(Option.isSome(page.find('[data-testid="dial-key"]'))).toBe(true);
+        expect(Option.isNone(page.find('[data-testid="dial-key"]'))).toBe(true);
       }),
   );
 

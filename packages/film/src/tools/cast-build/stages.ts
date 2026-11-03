@@ -40,11 +40,12 @@ import {
   Option,
   Path,
   Predicate,
+  Result,
   Schema,
   type Scope,
   Struct,
 } from 'effect';
-import type { ChildProcessSpawner } from 'effect/process';
+import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import type { PuppetSpec } from '../../canvas/puppet.ts';
 import type { PuppetImages } from '../../puppet/images.ts';
 import { puppetFrom } from '../../puppet/load.ts';
@@ -53,6 +54,7 @@ import { sha256Hex } from '../digest.ts';
 import { FilmFolder, type FilmName, importFilmModule } from '../film-repo.ts';
 import type { Media } from '../media.ts';
 import { parts } from '../part-sheet-cli.ts';
+import { decodePng } from '../png.ts';
 import { ChainFailed, chainOf } from './chain.ts';
 import { type Band, CHAIN, ClipReadJson } from './chain-steps.ts';
 import {
@@ -79,7 +81,14 @@ import {
 } from './graph.ts';
 import { CastReader, type ReaderError } from './reader.ts';
 import { SAMPLES, shardOf, trainsetOf } from './renders.ts';
-import { filmCastSources, pageSources, stageSources } from './sources.ts';
+import {
+  cutTableSources,
+  cutterSources,
+  puppetSources,
+  filmCastSources,
+  pageSources,
+  stageSources,
+} from './sources.ts';
 
 /** Bumped when a stage's code makes other bytes from the same inputs. */
 const VERSION = {
@@ -180,22 +189,6 @@ const RENDERS_CONFIG = Schema.encodeSync(ConfigJson)(SAMPLES);
 const TRAIN_CONFIG = Schema.encodeSync(ConfigJson)(TRAIN);
 const PuppetsModule = Schema.Struct({ PUPPETS: Schema.Record(Schema.String, Schema.Unknown) });
 
-/** The member's cutout sources a puppet spec is built from: every `cutout/*.ts` of his, and the library's `cutout/puppets.ts`. */
-const specSources = (memberDir: string, libraryPuppets: string) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    const cutout = path.join(memberDir, 'cutout');
-    const names = yield* fs.readDirectory(cutout).pipe(Effect.orElseSucceed(() => []));
-    return [
-      ...names
-        .filter((n) => n.endsWith('.ts') && !n.endsWith('.test.ts'))
-        .toSorted()
-        .map((n) => path.join(cutout, n)),
-      libraryPuppets,
-    ];
-  });
-
 /**
  * The files the member's fitted poses are made from: every file his
  * `cutout/poses.ts` imports other than a module (the fitted pose JSON, a held
@@ -217,6 +210,79 @@ const fittedFiles = (memberDir: string) =>
 /** A command's run, its error read as the stage's failure. */
 const runParts = (film: FilmName, member: string, view: string, flags: ReadonlyArray<string>) =>
   Command.runWith(parts, { version: 'build' })([film, member, '--view', view, ...flags]);
+
+/** A member's own cutter (`Coverage.cutters`), run with bun on the sheets folder it writes; a run that fails or exits nonzero fails the stage. */
+const runCutter = (script: string, sheets: string) =>
+  Effect.gen(function* () {
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+    const code = yield* spawner
+      .exitCode(ChildProcess.make('bun', [script, sheets], { forceKillAfter: '5 seconds' }))
+      .pipe(Effect.mapError((e) => StageFailed.make({ reason: `${script}: ${e.message}` })));
+    if (code !== 0) return yield* StageFailed.make({ reason: `${script} exited ${code}` });
+  });
+
+/** A file's content as the cutters' check compares it: a PNG's size and decoded RGBA, any other file's bytes. */
+const contentOf = (name: string, bytes: Uint8Array) => {
+  const asBytes = `bytes:${sha256Hex(bytes)}`;
+  if (!name.endsWith('.png')) return asBytes;
+  return Result.match(decodePng(bytes), {
+    onSuccess: (r) => `${r.width}x${r.height}:${sha256Hex(r.rgba)}`,
+    onFailure: () => asBytes,
+  });
+};
+
+/**
+ * A member's own cutters run and checked, as `concept parts --check` holds a
+ * sheet to what it lays: each runs in order (`runCutter`) on a scratch sheets
+ * folder, and every file they write there that his `cutout/sheets` folder
+ * holds must hold the same content (`contentOf`). One that differs fails the
+ * stage and nothing is written, so the build never rewrites a committed part;
+ * a change meant is made by running the cutters by hand and committing what
+ * they write. A committed file they no longer write (outside an `okra/`
+ * folder) fails the stage too, so a part the cutters dropped is not kept
+ * stale. A file his folder does not hold yet is new, and is copied in.
+ */
+const checkedCutters = (memberDir: string, scripts: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const sheets = path.join(memberDir, 'cutout', 'sheets');
+    const scratch = yield* fs.makeTempDirectoryScoped();
+    yield* Effect.forEach(scripts, (s) => runCutter(s, scratch), { discard: true });
+    const made = yield* Effect.forEach(yield* filesUnder(scratch), (name) =>
+      Effect.map(fs.readFile(path.join(scratch, name)), (bytes) => ({ name, bytes })),
+    );
+    const madeNames = new Set(made.map((f) => f.name));
+    const unmade = (yield* filesUnder(sheets)).filter(
+      (name) => !madeNames.has(name) && !name.split(path.sep).includes('okra'),
+    );
+    if (unmade.length > 0)
+      return yield* StageFailed.make({
+        reason: `his cutters no longer make ${unmade.join(', ')}; run them by hand and commit to drop it`,
+      });
+    const committed = yield* Effect.forEach(made, (file) =>
+      fs.readFile(path.join(sheets, file.name)).pipe(
+        Effect.map((held) => ({ ...file, held: Option.some(held) })),
+        Effect.orElseSucceed(() => ({ ...file, held: Option.none<Uint8Array>() })),
+      ),
+    );
+    const changed = committed.filter(({ name, bytes, held }) =>
+      Option.exists(held, (h) => contentOf(name, h) !== contentOf(name, bytes)),
+    );
+    if (changed.length > 0)
+      return yield* StageFailed.make({
+        reason: `his cutters change ${changed.map((c) => c.name).join(', ')} from the committed files; run them by hand and commit to keep a change`,
+      });
+    for (const { name, bytes } of committed.filter((c) => Option.isNone(c.held))) {
+      yield* fs.makeDirectory(path.dirname(path.join(sheets, name)), { recursive: true });
+      yield* fs.writeFile(path.join(sheets, name), bytes);
+    }
+  }).pipe(
+    Effect.scoped,
+    Effect.catchTag('PlatformError', (e) =>
+      StageFailed.make({ reason: `his cutters' sheets: ${e.message}` }),
+    ),
+  );
 
 /** `entry`'s puppet spec, as the member's `cutout/puppets.ts` declares it (`PUPPETS[<sheet>]`). */
 const puppetSpecIn = (memberDir: string, entry: Coverage['entries'][number]) =>
@@ -245,14 +311,13 @@ export type StageServices =
   | Path.Path
   | PuppetImages
   | Effect.Services<ReturnType<typeof runParts>>
+  | ChildProcessSpawner.ChildProcessSpawner
   | Exclude<Effect.Services<ReturnType<typeof renderCast>>, Scope.Scope>;
 
 export interface MemberStages {
   readonly film: FilmName;
   readonly member: string;
   readonly memberDir: string;
-  /** The library's `cutout/puppets.ts`, which every member's puppets are built through. */
-  readonly libraryPuppets: string;
   readonly coverage: Coverage;
   readonly facts: Readonly<Record<string, EntryFacts>>;
 }
@@ -286,7 +351,8 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
   built: BuildSources,
 ) {
   const path = yield* Path.Path;
-  const sources = yield* specSources(m.memberDir, m.libraryPuppets);
+  // the cut stage loads his puppets module by its path: it is keyed by every file that module runs
+  const puppets = yield* puppetSources(m.memberDir);
   const src = built.stage;
   /** An entry named in a stage id: `<entry>@<member>`, so `cut:<entry>` leads it and two members never share one. */
   const at = (id: string) => `${id}@${m.member}`;
@@ -311,48 +377,62 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
       },
     });
   }
+  // his part sheets are made by his own cutters, with no repaint, or by `concept parts` from his
+  // cut table, which asks okra only for a view with no answer drawn
+  const cutters = Option.map(Option.fromUndefinedOr(m.coverage.cutters), (scripts) =>
+    scripts.map((s) => path.join(m.memberDir, s)),
+  );
+  // the parts stage is keyed by its own code and by what makes his sheets
+  const maker = yield* Option.match(cutters, {
+    onNone: () => cutTableSources(m.memberDir),
+    onSome: cutterSources,
+  });
   for (const entry of m.coverage.entries) {
     if (entry.cut !== 'puppet' || Option.isSome(Option.fromUndefinedOr(entry.fitted))) continue;
     const sheet = path.join(m.memberDir, 'cutout', 'sheets', sheetOf(entry));
     // every file of the sheet folder: its record and part PNGs (which `--check` holds to its
     // answers), and its okra ledger and answers
     const sheetFiles = yield* filesUnder(sheet);
+    /** `concept parts` on the view: free when its answers are drawn, else okra under `--spend okra`. */
+    const byParts = (ctx: StageContext) =>
+      Effect.gen(function* () {
+        const free = yield* runParts(m.film, m.member, entry.id, ['--check']).pipe(
+          Effect.catch(() => runParts(m.film, m.member, entry.id, ['--reuse'])),
+          Effect.option,
+        );
+        if (Option.isNone(free))
+          yield* ctx.spend(
+            'okra',
+            runParts(m.film, m.member, entry.id, []).pipe(
+              Effect.mapError((e) =>
+                StageFailed.make({ reason: `concept parts ${entry.id}: ${String(e)}` }),
+              ),
+            ),
+          );
+      });
     stages.push({
       id: `parts:${at(entry.id)}`,
       view: entry.id,
       inputs: [
         stageInput(`drawing:${at(entry.id)}`),
-        fileInput(path.join(m.memberDir, 'cutout', 'cut.ts')),
-        ...sheetFiles.map((f) => fileInput(path.join(sheet, f))),
+        ...maker,
         ...src.parts,
+        ...sheetFiles.map((f) => fileInput(path.join(sheet, f))),
       ],
       version: VERSION.parts,
       run: (ctx) =>
         Effect.gen(function* () {
-          const free = yield* runParts(m.film, m.member, entry.id, ['--check']).pipe(
-            Effect.catch(() => runParts(m.film, m.member, entry.id, ['--reuse'])),
-            Effect.option,
-          );
-          if (Option.isNone(free))
-            yield* ctx.spend(
-              'okra',
-              runParts(m.film, m.member, entry.id, []).pipe(
-                Effect.mapError((e) =>
-                  StageFailed.make({ reason: `concept parts ${entry.id}: ${String(e)}` }),
-                ),
-              ),
-            );
+          yield* Option.match(cutters, {
+            onNone: () => byParts(ctx),
+            onSome: (scripts) => checkedCutters(m.memberDir, scripts),
+          });
           return yield* partsOutput(sheet);
         }),
     });
     stages.push({
       id: `cut:${at(entry.id)}`,
       view: entry.id,
-      inputs: [
-        stageInput(`parts:${at(entry.id)}`),
-        ...sources.map((s): Input => fileInput(s)),
-        ...src.cut,
-      ],
+      inputs: [stageInput(`parts:${at(entry.id)}`), ...puppets, ...src.cut],
       version: VERSION.cut,
       run: (ctx) =>
         Effect.gen(function* () {

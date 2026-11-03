@@ -54,12 +54,17 @@ export {
   type PartCut,
   type PartCutOptions,
   type PartRule,
+  type PartSheet,
+  type SheetClean,
+  SheetCleanRefused,
+  countedOf,
   cutParts,
   inkOf,
   inkTo,
   recompose,
 } from '../core/part-sheet.ts';
-export type { HiddenEntry } from './part-sheet-cli.ts';
+export { type HiddenEntry, type PartsJob, jobOf, runParts, viewCutOf } from './part-sheet-cli.ts';
+export { ImageRoute } from './image-route.ts';
 export {
   type KeyFit,
   type Limb,

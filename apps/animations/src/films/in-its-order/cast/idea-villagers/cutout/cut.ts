@@ -11,12 +11,15 @@
 // pixels; the shared cut table (`library/cutout/table.ts`) lays them in each
 // view's part sheet frame. Data: the rules and the table are the library's.
 
-import type { HiddenEntry, PartCut } from '@manna/film/tools';
+import type { HiddenEntry, PartCut, SheetClean } from '@manna/film/tools';
+import { Record as Records } from 'effect';
+import { type PaperRim, clearPaperRim } from '../../../../../library/cutout/clean.ts';
 import { CUT_AWAY, grain, shade, sides } from '../../../../../library/cutout/prompts.ts';
 import { FAR, box } from '../../../../../library/cutout/rules.ts';
 import { cutTable } from '../../../../../library/cutout/table.ts';
 import { FRAMES } from './frames.ts';
 import { JOINTS } from './joints.ts';
+import { PAPERS } from './papers.ts';
 
 export { FRAMES, JOINTS };
 
@@ -312,3 +315,21 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   hidden: HIDDEN_ENTRIES,
   ink: INK,
 });
+
+/** How far the clear ground's flood reaches through paper-coloured pixels, 8-steps: their band runs 1 to 4 px wide outside their ink, and its thin tail on their own figures reaches 14 at most (single-15), so one pass clears it all there; on poses-3 the flood would run on into the baby's cream cloth, which the sheet's edge leaves open in the `neighbour` part no puppet draws, and this depth stops it there. */
+const RIM_BAND = 16;
+
+/** A pixel is paper-coloured within this ΔE76 of the view's paper: their band lies 5 to 6 from it at the median, their ink's blend farther. */
+const RIM_NEAR = 12;
+
+/** Each view's paper rim, as their part sheets clear it. */
+export const PAPER_RIMS = Records.map(PAPERS, (paper): PaperRim => ({
+  paper,
+  band: RIM_BAND,
+  near: RIM_NEAR,
+}));
+
+/** What each view's laid part sheet runs before it is written (`film concept parts`): every view clears the pale paper band their paint keeps just outside their ink (250,241,225 at the median on single-15, against its paper 253,239,216), which their un-matte would read as their cream linen and draw as white specks round them. */
+export const CLEAN = Records.map(PAPER_RIMS, clearPaperRim) satisfies Partial<
+  Record<keyof typeof CUTS, SheetClean>
+>;

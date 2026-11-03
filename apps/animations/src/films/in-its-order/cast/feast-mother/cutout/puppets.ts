@@ -59,16 +59,8 @@ import tqrTorso from './sheets/threeQuarterRight/torso.png' with { type: 'file' 
 import { puppetsOf } from '../../../../../library/cutout/puppets.ts';
 import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';
+import { POSES_PAPERS, type PoseView, TURNAROUND_PAPERS, type TurnaroundView } from './papers.ts';
 import { SKELETONS } from './skeleton.ts';
-
-/** Her turnaround's cut views, drawn on one sheet in one ink. */
-type TurnaroundView =
-  | 'front'
-  | 'threeQuarterLeft'
-  | 'back'
-  | 'profileLeft'
-  | 'profileRight'
-  | 'threeQuarterRight';
 
 /**
  * Her sheet's line, which a look draws again near what moved: the median run
@@ -113,21 +105,6 @@ const CLOTH = [
  * through.
  */
 const GRAIN = 2.04;
-
-/**
- * Each cut view's paper, the median of its kept view's border ground (its rim
- * is un-matted from it, `core/unmatte.ts`): 252,241,221 on all but
- * profileRight, whose ground is 252,242,222, the ground each view's dry-run
- * pads its part sheet with.
- */
-const TURNAROUND_PAPERS = {
-  front: [252, 241, 221],
-  threeQuarterLeft: [252, 241, 221],
-  back: [252, 241, 221],
-  profileLeft: [252, 241, 221],
-  profileRight: [252, 242, 222],
-  threeQuarterRight: [252, 241, 221],
-} as const satisfies Readonly<Record<TurnaroundView, readonly [number, number, number]>>;
 
 /** Her turnaround's puppets, by the view's name in her sheets' views (`library/cutout/puppets.ts`). */
 const TURNAROUND = puppetsOf<TurnaroundView>({
@@ -183,9 +160,6 @@ const TURNAROUND = puppetsOf<TurnaroundView>({
   },
 });
 
-/** Her poses, each holding the baby, drawn on her poses sheet. */
-type PoseView = 'poses-1' | 'poses-2' | 'poses-3';
-
 /**
  * Her poses sheet's line: the median run of ink (r+g+b < 200) across her
  * outer outline, every 10th row of each pose, is 12 px (quartiles 12 and
@@ -193,13 +167,6 @@ type PoseView = 'poses-1' | 'poses-2' | 'poses-3';
  * poses' darkest 1 % (19,4,0 to 21,5,0).
  */
 const POSES_LINE = { width: 12.5, ink: [20, 4, 0] } as const;
-
-/** Each pose's paper, the median of its kept view's border ground (its rim is un-matted from it, `core/unmatte.ts`). */
-const POSES_PAPERS = {
-  'poses-1': [253, 240, 215],
-  'poses-2': [253, 239, 215],
-  'poses-3': [253, 240, 215],
-} as const satisfies Readonly<Record<PoseView, readonly [number, number, number]>>;
 
 /** Her poses' puppets: the baby, the cup and the stool are parts of their own behind her hands. */
 const POSES = puppetsOf<PoseView>({
