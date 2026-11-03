@@ -7,8 +7,9 @@
  * snapshots, peeks and finish. Built recalls beside them reach each help a
  * clean recall's grade turns on: none, either cue, and a peek the later
  * speech corrected. Numbers are held to their value over spellings
- * generated from known values, every coefficient one and every additive
- * `and` varied, against their near misses.
+ * generated from known values across the whole safe-integer domain, its
+ * top from nine quadrillion included, every coefficient one and every
+ * additive `and` varied, against their near misses.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -278,17 +279,44 @@ describe('the matcher follows its model', () => {
   });
 });
 
+/** The largest safe integer, 9,007,199,254,740,991, as its groups of three digits. */
+const LARGEST = [9, 7, 199, 254, 740, 991] as const;
+
 /**
- * A value's groups of three digits, highest first, leaning on ones and
- * hundreds so every coefficient one is common; never past nine quadrillion.
+ * A value anywhere in the safe-integer domain as its groups of three
+ * digits, highest first, leaning on ones and hundreds so every coefficient
+ * one is common. One draw in seven opens with nine quadrillion; while a
+ * value's groups so far equal the largest safe integer's, the next group is
+ * held at or below that integer's group, so no value passes it.
  */
 const groupsOf = (pick: (n: number) => number) => {
-  const count = 1 + pick(6);
+  const draw = pick(7);
   const any = () => [0, 1, 100 + pick(100), pick(1000), 1 + pick(99)][pick(5)] ?? 0;
+  let count = 1 + draw;
   let top = [1, 100 + pick(100), 1 + pick(999)][pick(3)] ?? 1;
-  if (count === 6) top = 1 + pick(8);
-  return [top, ...Array.from({ length: count - 1 }, any)];
+  if (count === 6) top = 1 + pick(9);
+  if (draw === 6) {
+    count = 6;
+    top = 9;
+  }
+  const groups = [top];
+  let held = count === LARGEST.length && top === LARGEST[0];
+  for (let i = 1; i < count; i++) {
+    let most = 999;
+    if (held) most = LARGEST[i] ?? 999;
+    const group = any() % (most + 1);
+    groups.push(group);
+    held = held && group === most;
+  }
+  return groups;
 };
+
+/** Whether groups lie from nine quadrillion up to the largest safe integer. */
+const atTop = (groups: readonly number[]) =>
+  groups.length === LARGEST.length && groups[0] === LARGEST[0];
+
+/** A coefficient one's place, without first or later. */
+const placeOf = (form: NumberForm) => /^(article|one) \w+ (hundred|scale)$/u.exec(form);
 
 const COEFFICIENT = /^(?:two|three|four|five|six|seven|eight|nine)$/u;
 const MULTIPLIER = /^(?:hundred|thousand|million|billion|trillion|quadrillion)$/u;
@@ -328,12 +356,20 @@ describe('numbers match by value over generated spellings', () => {
   it('holds every spelling of a value, articles and ands varied, equal to its numeral and to another spelling, and none of its near misses', () => {
     const pick = random(4_242);
     const reached = new Set<NumberForm>();
+    const top = new Set<string>();
     let misses = 0;
     for (let i = 0; i < 120; i++) {
       const groups = groupsOf(pick);
       const { numeral, text, forms } = spellVaried(groups, pick);
       const other = spellVaried(groups, pick);
+      expect(BigInt(numeral) <= 9_007_199_254_740_991n, numeral).toBe(true);
       for (const form of forms) reached.add(form);
+      if (atTop(groups)) {
+        for (const form of [...forms, ...other.forms]) {
+          const place = placeOf(form);
+          if (place) top.add(`${place[1]} ${place[2]}`);
+        }
+      }
       expect(same(text, numeral), `${text} = ${numeral}`).toBe(true);
       expect(same(numeral, text), `${numeral} = ${text}`).toBe(true);
       expect(same(text, other.text), `${text} = ${other.text}`).toBe(true);
@@ -354,8 +390,42 @@ describe('numbers match by value over generated spellings', () => {
       'article later scale',
       'hyphen',
       'inverted',
+      'one first hundred',
+      'one first scale',
+      'one later hundred',
+      'one later scale',
     ];
     expect([...reached].toSorted()).toEqual(every.toSorted());
+    expect([...top].toSorted(), 'from nine quadrillion up').toEqual([
+      'article hundred',
+      'article scale',
+      'one hundred',
+      'one scale',
+    ]);
     expect(misses).toBeGreaterThan(400);
+  });
+
+  it('holds the top of the domain: an article past nine quadrillion, the largest safe integer however spelled, and none past it', () => {
+    for (const [phrase, numeral] of [
+      ['nine quadrillion a hundred', '9000000000000100'],
+      ['nine quadrillion an hundred and one', '9000000000000101'],
+      ['nine quadrillion a thousand', '9000000000001000'],
+      ['nine quadrillion seven trillion a hundred billion', '9007100000000000'],
+    ] as const) {
+      expect(same(phrase, numeral), `${phrase} = ${numeral}`).toBe(true);
+      expect(same(numeral, phrase), `${numeral} = ${phrase}`).toBe(true);
+    }
+    const pick = random(991);
+    const largest = '9007199254740991';
+    for (let i = 0; i < 8; i++) {
+      const { numeral, text } = spellVaried(LARGEST, pick);
+      expect(numeral).toBe(largest);
+      expect(same(text, largest), `${text} = ${largest}`).toBe(true);
+      expect(same(largest, text), `${largest} = ${text}`).toBe(true);
+    }
+    const past = spellVaried([...LARGEST.slice(0, 5), 992], pick);
+    expect(past.numeral).toBe('9007199254740992');
+    expect(same(past.text, past.numeral), `${past.text} != ${past.numeral}`).toBe(false);
+    expect(same(past.numeral, past.text), `${past.numeral} != ${past.text}`).toBe(false);
   });
 });

@@ -281,12 +281,12 @@ const underThousand = (n: number, style: Spelling) => {
   return head || tail;
 };
 
-/** Which optional choices a varied spelling took: articles by place, and `and` by junction. */
+/**
+ * Which optional choices a varied spelling took: `one` or an article for a
+ * coefficient one by place, and `and` by junction.
+ */
 export type NumberForm =
-  | 'article first hundred'
-  | 'article first scale'
-  | 'article later hundred'
-  | 'article later scale'
+  | `${'article' | 'one'} ${'first' | 'later'} ${'hundred' | 'scale'}`
   | 'and between groups'
   | 'and after hundred'
   | 'and in tens'
@@ -316,7 +316,7 @@ export const spellVaried = (
   const forms = new Set<NumberForm>();
   const one = (later: boolean, place: 'hundred' | 'scale') => {
     const word = ['one', 'a', 'an'][pick(3)] ?? 'one';
-    if (word !== 'one') forms.add(`article ${later ? 'later' : 'first'} ${place}`);
+    forms.add(`${word === 'one' ? 'one' : 'article'} ${later ? 'later' : 'first'} ${place}`);
     return word;
   };
   const underHundredVaried = (n: number) => {
