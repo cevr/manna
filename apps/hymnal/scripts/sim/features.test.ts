@@ -155,6 +155,21 @@ describe('verify-hymnal journey files', () => {
     }).pipe(Effect.provide(BunServices.layer)),
   );
 
+  it.effect('a compiled hymn with chords is chorded; one with none is not', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const read = (number: number) =>
+        Effect.flatMap(
+          fs.readFileString(`${HYMNS}/${String(number).padStart(3, '0')}.json`),
+          decodeHymn,
+        );
+      expect({ 100: chorded(yield* read(100)), 181: chorded(yield* read(181)) }).toEqual({
+        100: true,
+        181: false,
+      });
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
   it.effect(
     'an open of a hymn that expects the no-chords notice is named; another open is not',
     () =>

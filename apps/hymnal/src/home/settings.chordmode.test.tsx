@@ -17,6 +17,8 @@
  *   About.
  * - d4 A tap on the switch turns chords on and the chord rows come in; a
  *   second tap turns them off and they go.
+ * - d5 Those two taps are felt as the bar's are (`chordsCue`): `chords-on`,
+ *   then `chords-off`, told through the route's cue context.
  *
  * The web has no ear (`~/tuner/native`'s `available` is false), so a case
  * that asks for one gives the route `available: true` through `mock.module`
@@ -34,6 +36,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import Settings from '../../app/(hymnal)/settings';
+import { type Cue, CueProvider, type Tell } from '~/feel/cue';
 import { settings } from '~/store';
 import * as native from '~/tuner/native';
 
@@ -57,10 +60,11 @@ const earOf = (ear: boolean) => {
 };
 
 /**
- * The route mounted on `device` over a fresh registry. Chords are set on
- * when the device has them on; off is the default, never set.
+ * The route mounted on `device` over a fresh registry, telling each cue it
+ * gives to `tell` (by default, nothing). Chords are set on when the device
+ * has them on; off is the default, never set.
  */
-const mount = (device: Device) => {
+const mount = (device: Device, tell: Tell = () => {}) => {
   const ear = earOf(device.ear);
   const registry = AtomRegistry.make();
   const unmountChords = registry.mount(settings.chords);
@@ -71,7 +75,9 @@ const mount = (device: Device) => {
   act(() =>
     root.render(
       <RegistryContext value={registry}>
-        <Settings />
+        <CueProvider value={tell}>
+          <Settings />
+        </CueProvider>
       </RegistryContext>,
     ),
   );
@@ -257,5 +263,13 @@ describe('the Settings route’s Chords switch', () => {
       },
       twice: closed,
     });
+  });
+
+  it('d5 the switch is felt as the bar’s guitar head is: chords-on as a tap turns chords on, chords-off as the next turns them off', () => {
+    const told: Array<Cue> = [];
+    using page = mount({ chords: false, ear: false }, (cue) => told.push(cue));
+    page.tap();
+    page.tap();
+    expect(told.map((cue) => cue._tag)).toEqual(['chords-on', 'chords-off']);
   });
 });

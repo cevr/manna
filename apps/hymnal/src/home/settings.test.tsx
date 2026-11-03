@@ -33,6 +33,7 @@ describe('the Settings route', () => {
         ...page.matchAll(/<div (?=[^>]*role="radiogroup")(?=[^>]*aria-label="([^"]+)")/g),
       ].map(([, label]) => label),
       chords: page.includes('>Chords<'),
+      chordsSwitch: /<input (?=[^>]*role="switch")(?=[^>]*aria-label="Chords")/.test(page),
       downloads: ['Downloads', 'Download all recordings', 'Delete downloads'].every((label) =>
         page.includes(label),
       ),
@@ -41,6 +42,7 @@ describe('the Settings route', () => {
       heading: true,
       groups: ['Appearance'],
       chords: true,
+      chordsSwitch: true,
       downloads: true,
       radios: [
         { label: 'System', checked: true },

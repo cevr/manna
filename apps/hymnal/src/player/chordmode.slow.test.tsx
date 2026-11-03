@@ -249,6 +249,27 @@ const sheetAlone = (n: number) => () => {
   );
 };
 
+/**
+ * The player sheet on hymn `held` at `/player?hymn=<held>&page=<page>`, over
+ * hymn `page`'s page: the bar opened its hymn while the reader was on another.
+ */
+const sheetOver = (held: number, page: number) => (reader: ChordReader) => {
+  params['hymn'] = String(held);
+  params['page'] = String(page);
+  const shown = Option.getOrThrow(hymnAt(String(page)));
+  return (
+    <>
+      <View testID="page">
+        <Shown hymn={shown} />
+        <HymnPage hymn={shown} reader={reader} />
+      </View>
+      <View testID="sheet">
+        <FullPlayer />
+      </View>
+    </>
+  );
+};
+
 const clearParams = () => {
   for (const key of Object.keys(params)) delete params[key];
 };
@@ -391,6 +412,15 @@ const chordless = (() => {
   return Option.getOrThrow(Option.fromUndefinedOr(found));
 })();
 
+/** A hymn the book has chords for other than 100, the first by number. */
+const chordedOther = (() => {
+  const book = chordBook(bundled);
+  const found = Array.from({ length: 695 }, (_, k) => k + 1).find(
+    (n) => n !== 100 && Option.isSome(hymnAt(String(n))) && Option.exists(book.of(n), hasChords),
+  );
+  return Option.getOrThrow(Option.fromUndefinedOr(found));
+})();
+
 describe('chords off: the simple view', () => {
   it.live('c1 shows every simple row and the switch, reading off, and no row for playing', () =>
     Effect.sync(() => {
@@ -450,9 +480,11 @@ describe('chords off: the simple view', () => {
       });
       expect(notice()).toBe(true);
       expect(keyButton(page).getAttribute('aria-valuetext')).toBe('No chords');
-      // With chords on, a hymn with no chords still opens no dials.
+      // With chords on, a hymn with no chords still opens no dials: no backdrop waits for a tap, and the button reads closed.
       tapKey(page);
       expect(page.has(BAR_DIALS)).toBe(false);
+      expect(page.has('[data-testid="dials-backdrop"]')).toBe(false);
+      expect(keyButton(page).getAttribute('aria-expanded')).toBe('false');
       expect(device.get('chords')).toBe('true');
     }),
   );
@@ -560,6 +592,52 @@ describe('chords on: every control', () => {
       expect(page.has('[data-testid="sheet"] [data-testid="dial-key"]')).toBe(false);
       expect(page.has('[data-testid="sheet"] [data-testid="dial-capo"]')).toBe(false);
     }),
+  );
+
+  it.live(
+    'c9 holds the switch and the placement but no key dials on a sheet over another hymn’s page',
+    () =>
+      Effect.sync(() => {
+        const device = new Map([['chords', 'true']]);
+        using page = mount(sheetOver(chordedOther, 100), device);
+        const sheetHas = (id: string) => page.has(`[data-testid="sheet"] [data-testid="${id}"]`);
+        expect({
+          held: chordedOther,
+          switches: page.all(SWITCH).length,
+          on: switchOn(page),
+          placement: sheetHas('dial-placement'),
+          key: sheetHas('dial-key'),
+          capo: sheetHas('dial-capo'),
+        }).toEqual({
+          held: chordedOther,
+          switches: 1,
+          on: true,
+          placement: true,
+          key: false,
+          capo: false,
+        });
+      }),
+  );
+
+  it.live(
+    'c10 hints what the next tap does with chords on: opens the dials, then closes them',
+    () =>
+      Effect.sync(() => {
+        const device = new Map([['chords', 'true']]);
+        using page = mount(route(100), device);
+        const before = hintOf(page);
+        tapKey(page);
+        const open = {
+          expanded: keyButton(page).getAttribute('aria-expanded'),
+          hint: hintOf(page),
+        };
+        tapKey(page);
+        expect({ before, open, after: hintOf(page) }).toEqual({
+          before: Option.some('Opens the key and capo dials'),
+          open: { expanded: 'true', hint: Option.some('Closes the key and capo dials') },
+          after: Option.some('Opens the key and capo dials'),
+        });
+      }),
   );
 });
 
