@@ -259,10 +259,17 @@ export const VERIFY_SKILLS: ReadonlyArray<readonly [string, string]> = [
  * and its skills, read in full against the code), `spanned` (it names the
  * code in passing), `anchored` (its anchors alone are read) or `verify` (a
  * verify skill's: its anchors and its scripts).
+ *
+ * Only an anchored or a verify doc may be whole: a whole doc's path check
+ * leaves each `film/<rule>` it writes to its rule check, and only those two
+ * roles read rules on every line, a code block's too. A framework doc reads
+ * rules in its prose alone and a spanned doc none.
  */
-export interface DocPlace extends Omit<Doc, 'text'> {
-  readonly role: 'framework' | 'spanned' | 'anchored' | 'verify';
-}
+export type DocPlace = Omit<Doc, 'text' | 'whole'> &
+  (
+    | { readonly role: 'framework' | 'spanned'; readonly whole: false }
+    | { readonly role: 'anchored' | 'verify'; readonly whole: boolean }
+  );
 
 /**
  * Every doc the docs test reads, as the tree under `root` stands. Listed at

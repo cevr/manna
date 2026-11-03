@@ -1405,6 +1405,28 @@ describe('the docs', () => {
     }),
   );
 
+  it.effect('let a doc be whole only in a role that reads its rules on every line', () =>
+    Effect.sync(() => {
+      const places: ReadonlyArray<DocPlace> = [
+        { path: 'a.md', bases: [], whole: true, role: 'anchored' },
+        { path: 'v.md', bases: [], whole: true, role: 'verify' },
+        // @ts-expect-error a framework doc reads rules in its prose alone, so it is never whole
+        { path: 'f.md', bases: [], whole: true, role: 'framework' },
+        // @ts-expect-error a spanned doc reads no rules, so it is never whole
+        { path: 's.md', bases: [], whole: true, role: 'spanned' },
+      ];
+      expect(places.map((place) => place.role)).toEqual([
+        'anchored',
+        'verify',
+        'framework',
+        'spanned',
+      ]);
+      expect(new Set(PLACES.filter((place) => place.whole).map((place) => place.role))).toEqual(
+        new Set(['anchored', 'verify']),
+      );
+    }),
+  );
+
   it.effect.layer(BunServices.layer)(
     'read each current architecture doc, and no record of a past state',
     () =>
