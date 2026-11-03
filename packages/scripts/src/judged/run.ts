@@ -1,7 +1,7 @@
 import { Clock, Console, Duration, Effect, Option, Predicate, Ref, Result, Schema } from 'effect';
 import { type AiError, Decision, DecisionModel } from 'effect/ai';
 
-import { changes, keepAnswers, readCache } from './cache.js';
+import { JudgedStore, changes } from './cache.js';
 import type { JudgedRule } from './rule.js';
 import { type Verdict, dayOf } from './store.js';
 
@@ -448,7 +448,8 @@ export const judge = Effect.fn('judged.judge')(function* <E>(
   items: ReadonlyArray<RuleItem>,
   judging: Judging<E>,
 ) {
-  const cache = yield* readCache(judging.storeFile);
+  const kept = yield* JudgedStore;
+  const cache = yield* kept.read(judging.storeFile);
   const day = dayOf(yield* Clock.currentTimeMillis);
   const isCached = (item: RuleItem) => cache.has(item.key);
   const fresh = [
@@ -472,7 +473,7 @@ export const judge = Effect.fn('judged.judge')(function* <E>(
   const keeping = { fresh: answered, read: new Set(items.map((item) => item.key)), day };
   let store: Option.Option<ReadonlyMap<string, Verdict>> = Option.some(cache);
   if (changes(cache, keeping))
-    store = yield* keepAnswers(judging.storeFile, keeping).pipe(
+    store = yield* kept.keep(judging.storeFile, keeping).pipe(
       Effect.asSome,
       Effect.catch((error) =>
         Console.error(
@@ -560,3 +561,11 @@ export const runLine = (outcome: Outcome) =>
     onNone: () =>
       `[judged] rule=${outcome.rule.id} items=${outcome.items} cached=${outcome.cached} asked=${outcome.asked} findings=${outcome.findings.length}`,
   });
+
+/**
+ * A review's one `[judged]` line for a rule, which asks nothing: how many of
+ * its items the store holds an answer for (`judged`), how many it holds none
+ * for (`unjudged`), and its findings among the judged.
+ */
+export const reviewLine = (outcome: Outcome) =>
+  `[judged] rule=${outcome.rule.id} items=${outcome.items} judged=${outcome.cached} unjudged=${outcome.asked} findings=${outcome.findings.length}`;

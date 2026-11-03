@@ -1,9 +1,10 @@
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { Effect, FileSystem, Path, Stream } from 'effect';
+import { Effect, FileSystem, Layer, Path, Stream } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
+import { judgedStoreLayer } from './cache.js';
 import type { Selector } from './items.js';
 import type { JudgedRule } from './rule.js';
 import { repoItems } from './sources.js';
@@ -99,7 +100,13 @@ const repo = (
   });
 
 const withFs = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  effect.pipe(Effect.scoped, Effect.provide([BunServices.layer, BunCrypto.layerDigest]));
+  effect.pipe(
+    Effect.scoped,
+    Effect.provide([
+      Layer.provideMerge(judgedStoreLayer, BunServices.layer),
+      BunCrypto.layerDigest,
+    ]),
+  );
 
 const A = [
   '// One run of line comments,',

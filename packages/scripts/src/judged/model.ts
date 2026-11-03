@@ -35,7 +35,12 @@ const typesafeKey = Effect.gen(function* () {
   return Option.map(yield* keychainKey, (key) => Redacted.make(key));
 });
 
-const missingKey = Layer.effect(DecisionModel.DecisionModel)(
+/**
+ * A model that refuses every question as asked with no key: it reads no key,
+ * from the environment or the keychain, and calls no host. The lint asks it
+ * when it finds no key, and a review (`lint:review`) asks it always.
+ */
+export const refusingModel = Layer.effect(DecisionModel.DecisionModel)(
   DecisionModel.make({
     decide: () =>
       Effect.fail(
@@ -58,7 +63,7 @@ export const judgedModel = (model: string) =>
     Effect.map(
       typesafeKey,
       Option.match({
-        onNone: () => missingKey,
+        onNone: () => refusingModel,
         onSome: (apiKey) =>
           TypeSafeDecisionModel.layer({ model }).pipe(
             Layer.provide(TypeSafeClient.layer({ apiKey })),

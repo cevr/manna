@@ -7,7 +7,7 @@ import { Console, Duration, Effect, Layer, Option, Path } from 'effect';
 import { Command, Flag } from 'effect/cli';
 import { FetchHttpClient } from 'effect/http';
 
-import { readCache } from './cache.js';
+import { judgedStoreLayer, readCache } from './cache.js';
 import { JudgedLint, judgedLintLayer } from './config.js';
 import { judgedModel } from './model.js';
 import { agreementOf, sampleOf } from './quality.js';
@@ -157,7 +157,7 @@ const command = Command.make(
         budget,
         model: Option.getOrElse(model, () => config.settings.model),
       });
-    }).pipe(Effect.provide(Layer.provideMerge(asking, repo)));
+    }).pipe(Effect.provide(Layer.provideMerge(asking, Layer.merge(repo, judgedStoreLayer))));
   },
 ).pipe(
   Command.withDescription(

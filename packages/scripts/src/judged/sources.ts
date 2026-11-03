@@ -2,6 +2,7 @@ import { Glob } from 'bun';
 import { Console, Effect, FileSystem, Option, Path, Schema } from 'effect';
 
 import { gateFiles } from '../guard/files.js';
+import { JudgedStore } from './cache.js';
 import { makersHash, textHash } from './findings.js';
 import { type Item, type Selector, itemsOf, markdownBeats, parse, selects } from './items.js';
 import { type JudgedRule, ruleKey } from './rule.js';
@@ -101,15 +102,11 @@ const readMemo = (file: string, form: string) =>
     Effect.map((memo) => Option.filter(memo, (read) => read.form === form)),
   );
 
-/** Writes `memo` to `file` whole: a temporary file beside it, renamed over it. */
+/** Writes `memo` to `file` whole, as the run's store writes a checkout file. */
 const writeMemo = (file: string, memo: Memo) =>
   Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    yield* fs.makeDirectory(path.dirname(file), { recursive: true });
-    const temporary = `${file}.${process.pid}.tmp`;
-    yield* fs.writeFileString(temporary, yield* Schema.encodeEffect(Memo)(memo));
-    yield* fs.rename(temporary, file);
+    const store = yield* JudgedStore;
+    yield* store.write(file, yield* Schema.encodeEffect(Memo)(memo));
   });
 
 /** Whether `next` holds other files, or a file of another text, than `memo`. */

@@ -5,7 +5,7 @@ import { type Decision, DecisionModel } from 'effect/ai';
 import { describe, expect, it } from 'effect-bun-test';
 import { TestClock } from 'effect/testing';
 
-import { changes, keepAnswers, readCache } from './cache.js';
+import { changes, judgedStoreLayer, keepAnswers, readCache } from './cache.js';
 import { judgedModel } from './model.js';
 import type { JudgedRule } from './rule.js';
 import { findingLine, judge, partsOf, runLine } from './run.js';
@@ -117,7 +117,10 @@ const keep = (file: string, fresh: ReadonlyMap<string, Verdict>) =>
   );
 
 const withFs = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-  effect.pipe(Effect.scoped, Effect.provide(BunServices.layer));
+  effect.pipe(
+    Effect.scoped,
+    Effect.provide(Layer.provideMerge(judgedStoreLayer, BunServices.layer)),
+  );
 
 /**
  * Judges `items`, each by its rule, as the runner does: each keyed in the

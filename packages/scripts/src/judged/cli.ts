@@ -1,23 +1,14 @@
-import {
-  Cause,
-  Console,
-  Effect,
-  FileSystem,
-  Layer,
-  Option,
-  Path,
-  Ref,
-  Runtime,
-  Schema,
-} from 'effect';
+import { Cause, Console, Effect, Layer, Option, Path, Ref, Runtime, Schema } from 'effect';
 import type { DecisionModel } from 'effect/ai';
 import { Command, Flag } from 'effect/cli';
 
+import { JudgedStore, judgedStoreLayer, readOnlyStoreLayer } from './cache.js';
 import { Findings, findingsFileOf, makersHash, ruleSignature } from './findings.js';
 import { readByOxlint } from './items.js';
 import { JudgedLint, judgedLintLayer } from './config.js';
+import { refusingModel } from './model.js';
 import { cacheModel, ruleKey } from './rule.js';
-import { LIMITS, detailOf, findingLine, judge, runLine } from './run.js';
+import { LIMITS, detailOf, findingLine, judge, reviewLine, runLine } from './run.js';
 import { repoItems } from './sources.js';
 import { storeFileOf } from './store.js';
 
@@ -82,21 +73,20 @@ const findingsOf = (
     }),
   );
 
-/** Writes `findings` to `file` whole, through a temporary file renamed over it; one that cannot be written is said on one line. */
+/** Writes `findings` to `file` whole, as the run's store writes a checkout file; one that cannot be written is said on one line. */
 const writeFindings = (file: string, findings: Findings) =>
   Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    yield* fs.makeDirectory(path.dirname(file), { recursive: true });
-    const temporary = `${file}.${process.pid}.tmp`;
-    yield* fs.writeFileString(temporary, yield* Schema.encodeEffect(Findings)(findings));
-    yield* fs.rename(temporary, file);
+    const store = yield* JudgedStore;
+    yield* store.write(file, yield* Schema.encodeEffect(Findings)(findings));
   }).pipe(
     Effect.catch((error) => Console.error(`[judged] findings not kept detail=${error._tag}`)),
   );
 
-/** Lints the repo's items; `read` holds how many items the selectors found. */
-const lint = Effect.fn('lintJudged')(function* (strict: boolean, read: Ref.Ref<number>) {
+/**
+ * Judges the repo's items and writes the checkout's findings for the plugin:
+ * each rule's outcome. `read` holds how many items the selectors found.
+ */
+const judgeRepo = Effect.fn('judged.judgeRepo')(function* (read: Ref.Ref<number>) {
   const config = yield* JudgedLint;
   const path = yield* Path.Path;
   const root = config.root;
@@ -118,6 +108,17 @@ const lint = Effect.fn('lintJudged')(function* (strict: boolean, read: Ref.Ref<n
     findingsFileOf(root, config.settings.checkout),
     yield* findingsOf(day, config.settings.store, model, outcomes, tree.files),
   );
+  return outcomes;
+});
+
+/**
+ * Prints the findings of `outcomes` oxlint does not report (a kept finding in
+ * a file it lints is its own), or every one under `strict`: each rule's.
+ */
+const printFindings = Effect.fn('judged.printFindings')(function* (
+  outcomes: Effect.Success<ReturnType<typeof judgeRepo>>,
+  strict: boolean,
+) {
   const own = outcomes.map((outcome) => ({
     rule: outcome.rule,
     findings: outcome.findings.filter(
@@ -128,11 +129,42 @@ const lint = Effect.fn('lintJudged')(function* (strict: boolean, read: Ref.Ref<n
     yield* Effect.forEach(outcome.findings, (finding) =>
       Console.log(findingLine(outcome.rule, finding)),
     );
-  yield* Effect.forEach(outcomes, (outcome) => Console.log(runLine(outcome)));
-  const gating = own
+  return own;
+});
+
+/**
+ * Fails with the count of `printed` findings that gate: a rule's at `error`,
+ * or any under `strict`.
+ */
+const gate = Effect.fn('judged.gate')(function* (
+  printed: Effect.Success<ReturnType<typeof printFindings>>,
+  strict: boolean,
+) {
+  const gating = printed
     .filter((outcome) => strict || outcome.rule.severity === 'error')
     .reduce((n, outcome) => n + outcome.findings.length, 0);
   if (gating > 0) return yield* GatingFindings.make({ findings: gating });
+});
+
+/** Lints the repo's items; `read` holds how many items the selectors found. */
+const lint = Effect.fn('lintJudged')(function* (strict: boolean, read: Ref.Ref<number>) {
+  const outcomes = yield* judgeRepo(read);
+  const own = yield* printFindings(outcomes, strict);
+  yield* Effect.forEach(outcomes, (outcome) => Console.log(runLine(outcome)));
+  yield* gate(own, strict);
+});
+
+/**
+ * Reviews the repo's items by the store's answers alone, failing where
+ * `bun run lint` fails on the same store: it prints every kept finding, as
+ * it writes no findings file for oxlint to report one by, and each rule's
+ * review line, and fails on a finding of a rule at `error`, Markdown's too.
+ */
+const review = Effect.fn('lintReview')(function* (read: Ref.Ref<number>) {
+  const outcomes = yield* judgeRepo(read);
+  const printed = yield* printFindings(outcomes, true);
+  yield* Effect.forEach(outcomes, (outcome) => Console.log(reviewLine(outcome)));
+  yield* gate(printed, false);
 });
 
 const commandOf = (read: Ref.Ref<number>) =>
@@ -183,7 +215,7 @@ export const lintJudged = <E extends { readonly _tag: string }, R>(
 ) =>
   Effect.suspend(() => {
     const read = Ref.makeUnsafe(0);
-    const repo = judgedLintLayer(cwd);
+    const repo = Layer.merge(judgedLintLayer(cwd), judgedStoreLayer);
     const model = Layer.unwrap(
       Effect.gen(function* () {
         const config = yield* JudgedLint;
@@ -192,6 +224,29 @@ export const lintJudged = <E extends { readonly _tag: string }, R>(
     );
     return Command.runWith(commandOf(read), { version: '1.0.0' })(args).pipe(
       Effect.provide(Layer.provideMerge(model, repo)),
+      failOpen(read),
+    );
+  });
+
+const reviewCommandOf = (read: Ref.Ref<number>) =>
+  Command.make('lint-review', {}, () => review(read)).pipe(
+    Command.withDescription(
+      "Report the judged rules' kept answers over the repo's items, and count the items with none: no key, no model, no write",
+    ),
+  );
+
+/**
+ * The judged review with `args` in the repo at `cwd`: the judged lint over
+ * the refusing model (`refusingModel`) and the read-only store
+ * (`readOnlyStoreLayer`), so it reads no key, calls no host, takes no lock
+ * and writes nothing. It fails on a kept finding of a rule at `error`, and
+ * otherwise fails open, as the lint does.
+ */
+export const lintReview = (args: ReadonlyArray<string>, cwd: string) =>
+  Effect.suspend(() => {
+    const read = Ref.makeUnsafe(0);
+    return Command.runWith(reviewCommandOf(read), { version: '1.0.0' })(args).pipe(
+      Effect.provide(Layer.mergeAll(judgedLintLayer(cwd), readOnlyStoreLayer, refusingModel)),
       failOpen(read),
     );
   });

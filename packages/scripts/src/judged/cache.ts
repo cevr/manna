@@ -1,5 +1,17 @@
 import { Database } from 'bun:sqlite';
-import { Console, Effect, FileSystem, Option, Path, Result, Schedule, Schema } from 'effect';
+import {
+  Console,
+  Context,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Path,
+  type PlatformError,
+  Result,
+  Schedule,
+  Schema,
+} from 'effect';
 
 import { type Answer, MAX_AGE_DAYS, Store, type Verdict } from './store.js';
 
@@ -135,3 +147,64 @@ export const keepAnswers = Effect.fn('judged.keepAnswers')(function* (
     }),
   );
 });
+
+/**
+ * Where a judged run reads and keeps what it learns: the answers of the store
+ * every checkout shares, and the checkout's own files (its items memo, its
+ * last run's findings).
+ */
+export class JudgedStore extends Context.Service<
+  JudgedStore,
+  {
+    /** The answers kept in the store at `file` (`readCache`). */
+    readonly read: (file: string) => Effect.Effect<Map<string, Answer>>;
+    /** Keeps a run's answers in the store at `file`: the answers to report by. */
+    readonly keep: (
+      file: string,
+      keeping: Keeping,
+    ) => Effect.Effect<ReadonlyMap<string, Answer>, Effect.Error<ReturnType<typeof keepAnswers>>>;
+    /** Writes a checkout file whole, through a temporary file renamed over it. */
+    readonly write: (
+      file: string,
+      text: string,
+    ) => Effect.Effect<void, PlatformError.PlatformError>;
+  }
+>()('judged/JudgedStore') {}
+
+/** `readCache` over the file system the layer is built with. */
+const reader = Effect.map(
+  Effect.context<FileSystem.FileSystem>(),
+  (context) => (file: string) => readCache(file).pipe(Effect.provideContext(context)),
+);
+
+/** The store as `bun run lint:judged` keeps it: answers kept under its lock, and the checkout's files written. */
+export const judgedStoreLayer = Layer.effect(JudgedStore)(
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const context = yield* Effect.context<FileSystem.FileSystem | Path.Path>();
+    return JudgedStore.of({
+      read: yield* reader,
+      keep: (file, keeping) => keepAnswers(file, keeping).pipe(Effect.provideContext(context)),
+      write: (file, text) =>
+        Effect.gen(function* () {
+          yield* fs.makeDirectory(path.dirname(file), { recursive: true });
+          const temporary = `${file}.${process.pid}.tmp`;
+          yield* fs.writeFileString(temporary, text);
+          yield* fs.rename(temporary, file);
+        }),
+    });
+  }),
+);
+
+/**
+ * The store as a reviewer reads it: its answers, and nothing written
+ * anywhere. Keeping answers takes no lock and changes no file: the store
+ * stays as it is, and a run reports by its answers as read.
+ */
+export const readOnlyStoreLayer = Layer.effect(JudgedStore)(
+  Effect.gen(function* () {
+    const read = yield* reader;
+    return JudgedStore.of({ read, keep: (file) => read(file), write: () => Effect.void });
+  }),
+);
