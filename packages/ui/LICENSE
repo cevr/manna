@@ -4,8 +4,8 @@ Copyright (c) 2019 Material-UI SAS
 
 The code under src/ is a port of Base UI (@base-ui/react 1.8.0,
 https://github.com/mui/base-ui, packages/react/src and packages/utils/src)
-from React to Solid 2. Each ported file names its upstream path in a header
-comment. The ported code keeps Base UI's copyright and this license.
+from React to Solid 2. THIRD_PARTY_NOTICES.md names each ported file's
+upstream paths. The ported code keeps Base UI's copyright and this license.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

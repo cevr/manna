@@ -1,0 +1,110 @@
+# Third-party notices
+
+The code under `src/` is a port of Base UI (@base-ui/react 1.8.0, https://github.com/mui/base-ui) from React to Solid 2, and some tests under `src/` and `test/` port Base UI's. They keep Base UI's copyright and licence (`LICENSE`). Each ported file and the upstream files it ports, under https://github.com/mui/base-ui:
+
+- `src/context-menu/index.parts.ts`: packages/react/src/context-menu/index.parts.ts
+- `src/context-menu/index.ts`: packages/react/src/context-menu/index.ts
+- `src/context-menu/root/ContextMenuRoot.tsx`: packages/react/src/context-menu/root/ContextMenuRoot.tsx
+- `src/context-menu/root/ContextMenuRootContext.ts`: packages/react/src/context-menu/root/ContextMenuRootContext.ts
+- `src/context-menu/trigger/ContextMenuTrigger.tsx`: packages/react/src/context-menu/trigger/ContextMenuTrigger.tsx
+- `src/dialog/backdrop/DialogBackdrop.tsx`: packages/react/src/dialog/backdrop/DialogBackdrop.tsx
+- `src/dialog/close/DialogClose.tsx`: packages/react/src/dialog/close/DialogClose.tsx
+- `src/dialog/index.parts.ts`: packages/react/src/dialog/index.parts.ts
+- `src/dialog/index.ts`: packages/react/src/dialog/index.ts
+- `src/dialog/popup/DialogPopup.tsx`: packages/react/src/dialog/popup/DialogPopup.tsx
+- `src/dialog/portal/DialogPortal.tsx`: packages/react/src/dialog/portal/DialogPortal.tsx, packages/react/src/dialog/portal/DialogPortalContext.ts
+- `src/dialog/root/DialogRoot.tsx`: packages/react/src/dialog/root/DialogRoot.tsx, packages/react/src/dialog/root/useRenderDialogRoot.tsx, packages/react/src/dialog/root/useDialogRoot.ts
+- `src/dialog/root/DialogRootContext.ts`: packages/react/src/dialog/root/DialogRootContext.ts
+- `src/dialog/store/DialogStore.ts`: packages/react/src/dialog/store/DialogStore.ts
+- `src/dialog/title/DialogTitle.tsx`: packages/react/src/dialog/title/DialogTitle.tsx, packages/react/src/dialog/description/DialogDescription.tsx
+- `src/floating-ui-solid/FloatingFocusManager.tsx`: packages/react/src/floating-ui-react/components/FloatingFocusManager.tsx
+- `src/floating-ui-solid/FloatingPortal.tsx`: packages/react/src/floating-ui-react/components/FloatingPortal.tsx, packages/react/src/utils/resolveRef.ts
+- `src/floating-ui-solid/FloatingRootContext.ts`: packages/react/src/floating-ui-react/components/FloatingRootStore.ts, packages/react/src/floating-ui-react/hooks/useFloatingRootContext.ts, packages/react/src/floating-ui-react/hooks/useSyncedFloatingRootContext.ts, packages/react/src/floating-ui-react/types.ts
+- `src/floating-ui-solid/hooks/useClick.ts`: packages/react/src/floating-ui-react/hooks/useClick.ts
+- `src/floating-ui-solid/hooks/useDismiss.ts`: packages/react/src/floating-ui-react/hooks/useDismiss.ts
+- `src/floating-ui-solid/hooks/useListNavigation.ts`: packages/react/src/floating-ui-react/hooks/useListNavigation.ts
+- `src/floating-ui-solid/hooks/useTypeahead.ts`: packages/react/src/floating-ui-react/hooks/useTypeahead.ts
+- `src/floating-ui-solid/middleware.ts`: packages/react/src/utils/hideMiddleware.ts, packages/react/src/floating-ui-react/middleware/arrow.ts
+- `src/floating-ui-solid/utils/composite.ts`: packages/react/src/floating-ui-react/utils/composite.ts
+- `src/floating-ui-solid/utils/element.ts`: packages/react/src/floating-ui-react/utils/element.ts, packages/react/src/floating-ui-react/utils/constants.ts, packages/react/src/floating-ui-react/utils/createAttribute.ts
+- `src/floating-ui-solid/utils/event.ts`: packages/react/src/floating-ui-react/utils/event.ts, packages/react/src/floating-ui-react/utils/createEventEmitter.ts, packages/react/src/floating-ui-react/utils/enqueueFocus.ts
+- `src/floating-ui-solid/utils/markOthers.ts`: packages/react/src/floating-ui-react/utils/markOthers.ts
+- `src/floating-ui-solid/utils/tabbable.ts`: packages/react/src/floating-ui-react/utils/tabbable.ts
+- `src/internals/composite/CompositeItem.tsx`: packages/react/src/internals/composite/item/CompositeItem.tsx
+- `src/internals/composite/CompositeList.tsx`: packages/react/src/internals/composite/list/CompositeList.tsx, packages/react/src/internals/composite/list/useCompositeListItem.ts, packages/react/src/internals/composite/list/CompositeListContext.ts
+- `src/internals/composite/CompositeRoot.tsx`: packages/react/src/internals/composite/root/CompositeRoot.tsx
+- `src/internals/composite/CompositeRootContext.ts`: packages/react/src/internals/composite/root/CompositeRootContext.ts
+- `src/internals/composite/composite.test.ts`: packages/react/src/internals/composite/root/CompositeRoot.test.tsx (the key cases)
+- `src/internals/composite/composite.ts`: packages/react/src/internals/composite/composite.ts, packages/react/src/internals/composite/constants.ts, packages/react/src/internals/composite/root/useCompositeRoot.ts (the key logic)
+- `src/internals/composite/useCompositeItem.ts`: packages/react/src/internals/composite/item/useCompositeItem.ts
+- `src/internals/composite/useCompositeRoot.ts`: packages/react/src/internals/composite/root/useCompositeRoot.ts
+- `src/internals/constants.ts`: packages/react/src/internals/constants.ts
+- `src/internals/createBaseUIEventDetails.ts`: packages/react/src/internals/createBaseUIEventDetails.ts
+- `src/internals/getStateAttributesProps.ts`: packages/react/src/internals/getStateAttributesProps.ts
+- `src/internals/reasons.ts`: packages/react/src/internals/reason-parts.ts, packages/react/src/internals/reasons.ts
+- `src/internals/transitions.ts`: packages/react/src/internals/useTransitionStatus.ts, packages/react/src/internals/useAnimationsFinished.ts, packages/react/src/internals/useOpenChangeComplete.tsx, packages/react/src/internals/useUnmountAfterClose.ts, packages/react/src/utils/getFiniteAnimations.ts, packages/react/src/internals/stateAttributesMapping.ts, packages/react/src/internals/TransitionStatusDataAttributes.ts
+- `src/internals/types.ts`: packages/react/src/types.ts, packages/react/src/internals/types.ts
+- `src/internals/useAnchorPositioning.ts`: packages/react/src/internals/useAnchorPositioning.ts, packages/react/src/floating-ui-react/hooks/useFloating.ts, packages/react/src/floating-ui-react/middleware/arrow.ts (the centre the origin reads)
+- `src/internals/useButton.ts`: packages/react/src/internals/use-button/useButton.ts, packages/react/src/utils/useFocusableWhenDisabled.ts, packages/react/src/utils/dispatchClickWithModifiers.ts
+- `src/internals/useRenderElement.tsx`: packages/react/src/internals/useRenderElement.tsx
+- `src/menu/group/MenuGroup.tsx`: packages/react/src/menu/group/MenuGroup.tsx, packages/react/src/menu/group/MenuGroupContext.ts, packages/react/src/menu/group-label/MenuGroupLabel.tsx
+- `src/menu/index.parts.ts`: packages/react/src/menu/index.parts.ts
+- `src/menu/index.ts`: packages/react/src/menu/index.ts
+- `src/menu/item/MenuItem.tsx`: packages/react/src/menu/item/MenuItem.tsx, packages/react/src/menu/item/MenuItemDataAttributes.ts, packages/react/src/menu/item/useMenuItem.ts, packages/react/src/menu/item/useMenuItemCommonProps.ts
+- `src/menu/popup/MenuPopup.tsx`: packages/react/src/menu/popup/MenuPopup.tsx
+- `src/menu/portal/MenuPortal.tsx`: packages/react/src/menu/portal/MenuPortal.tsx, packages/react/src/menu/portal/MenuPortalContext.ts
+- `src/menu/positioner/MenuPositioner.tsx`: packages/react/src/menu/positioner/MenuPositioner.tsx, packages/react/src/menu/positioner/MenuPositionerContext.ts, packages/react/src/context-menu/positioner/ContextMenuPositioner.tsx
+- `src/menu/radio-group/MenuRadioGroup.tsx`: packages/react/src/menu/radio-group/MenuRadioGroup.tsx, packages/react/src/menu/radio-group/MenuRadioGroupContext.ts
+- `src/menu/radio-item-indicator/MenuRadioItemIndicator.tsx`: packages/react/src/menu/radio-item-indicator/MenuRadioItemIndicator.tsx
+- `src/menu/radio-item/MenuRadioItem.tsx`: packages/react/src/menu/radio-item/MenuRadioItem.tsx, packages/react/src/menu/radio-item/MenuRadioItemContext.ts, packages/react/src/menu/radio-item/MenuRadioItemDataAttributes.ts, packages/react/src/menu/utils/stateAttributesMapping.ts
+- `src/menu/root/MenuRoot.tsx`: packages/react/src/menu/root/MenuRoot.tsx
+- `src/menu/root/MenuRootContext.ts`: packages/react/src/menu/root/MenuRootContext.ts
+- `src/menu/store/MenuStore.ts`: packages/react/src/menu/store/MenuStore.ts
+- `src/menu/trigger/MenuTrigger.tsx`: packages/react/src/menu/trigger/MenuTrigger.tsx
+- `src/menu/utils/isKeyboardOpen.ts`: packages/react/src/menu/utils/isKeyboardOpen.ts, packages/react/src/menu/utils/findRootOwnerId.ts
+- `src/merge-props/mergeProps.test.ts`: packages/react/src/merge-props/mergeProps.test.ts
+- `src/merge-props/mergeProps.ts`: packages/react/src/merge-props/mergeProps.ts
+- `src/separator/Separator.tsx`: packages/react/src/separator/Separator.tsx
+- `src/toast/ToastAction.tsx`: packages/react/src/toast/action/ToastAction.tsx
+- `src/toast/ToastClose.tsx`: packages/react/src/toast/close/ToastClose.tsx
+- `src/toast/ToastContent.tsx`: packages/react/src/toast/content/ToastContent.tsx
+- `src/toast/ToastPortal.tsx`: packages/react/src/toast/portal/ToastPortal.tsx
+- `src/toast/ToastProvider.tsx`: packages/react/src/toast/provider/ToastProvider.tsx
+- `src/toast/ToastProviderContext.ts`: packages/react/src/toast/provider/ToastProviderContext.ts
+- `src/toast/ToastRoot.tsx`: packages/react/src/toast/root/ToastRoot.tsx, packages/react/src/toast/root/ToastRootCssVars.ts, packages/react/src/toast/root/ToastRootDataAttributes.ts
+- `src/toast/ToastRootContext.ts`: packages/react/src/toast/root/ToastRootContext.ts
+- `src/toast/ToastTitle.tsx`: packages/react/src/toast/title/ToastTitle.tsx, packages/react/src/toast/utils/useToastLabelPart.ts
+- `src/toast/ToastViewport.tsx`: packages/react/src/toast/viewport/ToastViewport.tsx
+- `src/toast/createToastManager.ts`: packages/react/src/toast/createToastManager.ts
+- `src/toast/index.parts.ts`: packages/react/src/toast/index.parts.ts
+- `src/toast/index.ts`: packages/react/src/toast/index.ts
+- `src/toast/store.test.ts`: packages/react/src/toast/store.test.ts, packages/react/src/toast/utils/isRenderableNode.test.ts
+- `src/toast/store.ts`: packages/react/src/toast/store.ts
+- `src/toast/types.ts`: packages/react/src/toast/useToastManager.ts (types), packages/react/src/toast/createToastManager.ts (types)
+- `src/toast/useToastManager.ts`: packages/react/src/toast/useToastManager.ts
+- `src/toast/utils.ts`: packages/react/src/toast/utils/isRenderableNode.ts, packages/react/src/toast/utils/focusVisible.ts
+- `src/toggle-group/ToggleGroup.tsx`: packages/react/src/toggle-group/ToggleGroup.tsx
+- `src/toggle-group/ToggleGroupContext.ts`: packages/react/src/toggle-group/ToggleGroupContext.ts
+- `src/toggle-group/index.ts`: packages/react/src/toggle-group/index.ts
+- `src/toggle/Toggle.tsx`: packages/react/src/toggle/Toggle.tsx
+- `src/toggle/index.ts`: packages/react/src/toggle/index.ts
+- `src/utils/FocusGuard.tsx`: packages/react/src/utils/FocusGuard.tsx, packages/react/src/utils/InternalBackdrop.tsx
+- `src/utils/dom.ts`: packages/utils/src/owner.ts, packages/utils/src/shadowDom.ts, packages/utils/src/addEventListener.ts, packages/utils/src/mergeCleanups.ts, packages/utils/src/empty.ts
+- `src/utils/getPseudoElementBounds.ts`: packages/react/src/utils/getPseudoElementBounds.ts
+- `src/utils/platform.ts`: packages/utils/src/platform/ (shared.ts, os.ts, engine.ts, env.ts)
+- `src/utils/popupStateMapping.ts`: packages/react/src/utils/popupStateMapping.ts, packages/react/src/utils/CommonPopupDataAttributes.ts, packages/react/src/utils/CommonTriggerDataAttributes.ts
+- `src/utils/popups/popupStore.ts`: packages/react/src/utils/popups/store.ts, packages/react/src/utils/popups/popupStoreUtils.ts, packages/react/src/utils/popups/useTriggerFocusGuards.ts
+- `src/utils/timers.ts`: packages/utils/src/useTimeout.ts, packages/utils/src/useAnimationFrame.ts
+- `src/utils/useOpenInteractionType.ts`: packages/react/src/utils/useOpenInteractionType.ts, packages/utils/src/useEnhancedClickHandler.ts (folded in)
+- `src/utils/usePositioner.ts`: packages/react/src/utils/usePositioner.tsx, packages/react/src/internals/getDisabledMountTransitionStyles.ts
+- `src/utils/useScrollLock.ts`: packages/utils/src/useScrollLock.ts, packages/react/src/utils/useAnchoredPopupScrollLock.ts
+- `src/utils/useSwipeDismiss.test.ts`: packages/react/src/utils/useSwipeDismiss.test.tsx
+- `src/utils/useSwipeDismiss.ts`: packages/react/src/utils/useSwipeDismiss.ts, packages/react/src/utils/getElementTransform.ts
+- `src/utils/visuallyHidden.ts`: packages/utils/src/visuallyHidden.ts
+- `test/browser/context-menu.test.ts`: packages/react/src/context-menu/trigger/ContextMenuTrigger.test.tsx, packages/react/src/context-menu/root/ContextMenuRoot.test.tsx
+- `test/browser/dialog.test.ts`: packages/react/src/dialog/root/DialogRoot.test.tsx, packages/react/src/dialog/popup/DialogPopup.test.tsx, packages/react/src/dialog/backdrop/DialogBackdrop.test.tsx, packages/react/src/dialog/close/DialogClose.test.tsx
+- `test/browser/foundations.test.ts`: packages/react/src/use-render/useRender.test.tsx (its cases run against useRenderElement, the engine every part renders through), packages/react/src/internals/useRenderElement.test.tsx
+- `test/browser/menu.test.ts`: packages/react/src/menu/root/MenuRoot.test.tsx, packages/react/src/menu/trigger/MenuTrigger.test.tsx, packages/react/src/menu/item/MenuItem.test.tsx, packages/react/src/menu/group-label/MenuGroupLabel.test.tsx, packages/react/src/menu/popup/MenuPopup.test.tsx, packages/react/src/menu/radio-item/MenuRadioItem.test.tsx, packages/react/src/menu/radio-item-indicator/MenuRadioItemIndicator.test.tsx
+- `test/browser/separator.test.ts`: packages/react/src/separator/Separator.test.tsx
+- `test/browser/toast.test.ts`: packages/react/src/toast/useToastManager.test.tsx, packages/react/src/toast/createToastManager.test.tsx, packages/react/src/toast/root/ToastRoot.test.tsx, packages/react/src/toast/viewport/ToastViewport.test.tsx, packages/react/src/toast/action/ToastAction.test.tsx, packages/react/src/toast/close/ToastClose.test.tsx, packages/react/src/toast/title/ToastTitle.test.tsx, packages/react/src/toast/content/ToastContent.test.tsx
+- `test/browser/toggle.test.ts`: packages/react/src/toggle/Toggle.test.tsx, packages/react/src/toggle-group/ToggleGroup.test.tsx
