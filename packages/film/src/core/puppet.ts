@@ -1169,8 +1169,13 @@ const layLimb = (
   const stub = new Float64Array(bw * bh * 4);
   layPart(painted, part, layers, q, [x0, y0], [bw, bh]);
   layPart(stub, part, [stubOf(limb, part.pixels)], q, [x0, y0], [bw, bh]);
-  const stroke = limbStroke(limb, frames, pose.numbers, (sx, sy, into) =>
-    sampleAt(part.pixels, sx, sy, into),
+  const stroke = limbStroke(
+    limb,
+    frames,
+    pose.numbers,
+    (sx, sy, into) => sampleAt(part.pixels, sx, sy, into),
+    [x0, y0, bw, bh],
+    stub,
   );
   const drawn = new Float64Array(4);
   const mixed = new Float64Array(4);
@@ -1178,7 +1183,7 @@ const layLimb = (
   for (let y = 0; y < bh; y++)
     for (let x = 0; x < bw; x++) {
       const o = (y * bw + x) * 4;
-      stroke(x0 + x + 0.5, y0 + y + 0.5, stub.subarray(o, o + 4), drawn);
+      drawn.set(stroke.subarray(o, o + 4));
       for (let c = 0; c < 4; c++) mixed[c] = (1 - s) * painted[o + c]! + s * drawn[c]!;
       if (mixed[3]! > 0) over(acc, ((y0 + y) * W + x0 + x) * 4, mixed);
     }

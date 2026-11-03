@@ -172,6 +172,106 @@ const BENT_LIMB = Result.getOrThrow(
 );
 const FOLD_SLOPE = Math.tan(Math.PI / 8);
 
+const BENT_BONES: Skeleton['bones'] = [
+  { name: CHAIN[0], pivot: BS, tip: BE },
+  { name: CHAIN[1], parent: CHAIN[0], pivot: BE, tip: BC },
+  { name: CHAIN[2], parent: CHAIN[1], pivot: BC, tip: B_HAND },
+];
+const BENT_PUPPET = Result.getOrThrow(
+  puppetOf(
+    { width: BW, height: BH, parts: [{ name: 'arm', pixels: BENT }] },
+    { bones: BENT_BONES, skin: { arm: [...CHAIN] }, limbs: [DECLARED] },
+  ),
+);
+
+/** Brute-force distance to the raster's alpha boundary: independent of the stroke's distance transform. */
+const nearBoundary = (r: Raster, x: number, y: number, width: number) => {
+  const radius = Math.ceil(width);
+  for (let dy = -radius; dy <= radius; dy++)
+    for (let dx = -radius; dx <= radius; dx++) {
+      if (Math.hypot(dx, dy) > width) continue;
+      if (r.rgba[((y + dy) * r.width + x + dx) * 4 + 3]! < 128) return true;
+    }
+  return false;
+};
+
+const strayInk = (r: Raster, elbow: number, width: number) => {
+  const radius = Math.ceil(width + 1);
+  const turn = (elbow * Math.PI) / 180;
+  let stray = 0;
+  for (let y = radius; y < r.height - radius; y++)
+    for (let x = radius; x < r.width - radius; x++) {
+      const i = (y * r.width + x) * 4;
+      if (r.rgba[i + 3]! < 128 || r.rgba[i]! > 45) continue;
+      if (nearBoundary(r, x, y, width + 1)) continue;
+      const dx = x + 0.5 - BE[0],
+        dy = y + 0.5 - BE[1];
+      const q: Pt = [
+        BE[0] + Math.cos(turn) * dx + Math.sin(turn) * dy,
+        BE[1] - Math.sin(turn) * dx + Math.cos(turn) * dy,
+      ];
+      const [u, v] = frame(q, BE, BD2, B_UPPER);
+      const fold =
+        elbow > 60 &&
+        u >= B_UPPER &&
+        u <= B_UPPER + B_FORE &&
+        Math.abs(v - bentOuter(u)) <= width + 1;
+      if (!fold) stray++;
+    }
+  return stray;
+};
+
+// The public raster catches ink left by overlapping segments; it cannot
+// establish the measured shape, which the acceptance compares to the paint.
+describe('rasterOf stroke silhouette', () => {
+  test('at 45 degrees the sleeve has no ink strictly inside its single outline', () => {
+    const r = rasterOf(BENT_PUPPET, {
+      numbers: { elbowRight: 45 },
+      root: BENT_PUPPET.root,
+      scale: 1,
+    });
+    expect(strayInk(r, 45, BENT_LIMB.inkWidth)).toBe(0);
+  });
+
+  test('at 90 degrees ink stays on the union boundary or the measured outer fold', () => {
+    const r = rasterOf(BENT_PUPPET, {
+      numbers: { elbowRight: 90 },
+      root: BENT_PUPPET.root,
+      scale: 1,
+    });
+    expect(strayInk(r, 90, BENT_LIMB.inkWidth)).toBe(0);
+  });
+
+  test('a hand turned back over its sleeve stays skin, opaque, above the sleeve', () => {
+    const elbow = Math.PI / 4;
+    const r = rasterOf(BENT_PUPPET, {
+      numbers: { elbowRight: 45, wristRight: 180 },
+      root: BENT_PUPPET.root,
+      scale: 1,
+    });
+    const q = along(BC, BD2, -14);
+    const dx = q[0] - BE[0],
+      dy = q[1] - BE[1];
+    const x = Math.floor(BE[0] + Math.cos(elbow) * dx - Math.sin(elbow) * dy);
+    const y = Math.floor(BE[1] + Math.sin(elbow) * dx + Math.cos(elbow) * dy);
+    expect([...r.rgba.subarray((y * BW + x) * 4, (y * BW + x) * 4 + 4)]).toEqual([...SKIN, 255]);
+  });
+
+  test('past the full fade no painted pixel survives at partial alpha', () => {
+    const forced = {
+      ...BENT_PUPPET,
+      parts: BENT_PUPPET.parts.map((part) => ({
+        ...part,
+        limb: { ...BENT_LIMB, fade: [-2, -1] as const },
+      })),
+    };
+    for (const elbowRight of [25, 90]) {
+      const pose = { numbers: { elbowRight, wristRight: -38 }, root: BENT_PUPPET.root, scale: 1 };
+      expect(rasterOf(BENT_PUPPET, pose).rgba).toEqual(rasterOf(forced, pose).rgba);
+    }
+  });
+});
+
 /** Where the bent limb's widths stray more than 1 px from the drawing, or a side ends on what the drawing does not. */
 const bentFaults = (limb: PuppetPartLimb) => {
   const faults: Array<string> = [];
@@ -239,6 +339,27 @@ describe('limbOf', () => {
     expect(limbShares(LIMB, ...at(-8))).toEqual([1, 0, 0]);
     expect(limbShares(LIMB, ...at(UPPER / 2))).toEqual([0, 1, 0]);
     expect(limbShares(LIMB, Math.floor(HAND[0]), Math.floor(HAND[1]))).toEqual([0, 0, 1]);
+  });
+
+  test('keeps the lining with the sleeve to the first skin pixel, with no half-owned hand texels', () => {
+    const lined = paint(W, H, (x, y) => {
+      const [u] = frame([x + 0.5, y + 0.5], S, D, 0);
+      if (u > CUFF && u < CUFF + 8 && ARM.rgba[(y * W + x) * 4 + 3]! > 0) return [DARK];
+      return texelAt(x, y, BOTH);
+    });
+    const limb = Result.getOrThrow(limbOf('arm', lined, JOINTS, DECLARED));
+    const lining = along(C, D, 4),
+      skin = along(C, D, 12);
+    expect(limbShares(limb, Math.floor(lining[0]), Math.floor(lining[1]))).toEqual([0, 1, 0]);
+    expect(limbShares(limb, Math.floor(skin[0]), Math.floor(skin[1]))).toEqual([0, 0, 1]);
+    const [bx, by, bw, bh] = limb.regions.box;
+    let partial = 0;
+    for (let y = by; y < by + bh; y++)
+      for (let x = bx; x < bx + bw; x++) {
+        const hand = limbShares(limb, x, y)[2];
+        if (hand > 0 && hand < 1) partial++;
+      }
+    expect(partial).toBe(0);
   });
 
   test('refuses an arm it cannot measure, naming the kind', () => {

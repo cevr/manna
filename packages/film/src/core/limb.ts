@@ -26,10 +26,11 @@
 //   median of each channel over the bounded runs' texels) and width (the
 //   median bounded depth).
 // - **Regions.** Each texel lies in the stub (u < 0, the part's join to the
-//   body, which stays painted), the sleeve (0 to the cuff's u, which the
-//   stroke draws) or the hand (past the cuff, drawn from its own pixels on
-//   the wrist bone), by its u, the borders feathered over `FEATHER` px: the
-//   three shares sum to one at every texel.
+//   body, which stays painted), the sleeve or the hand. The sleeve keeps
+//   its lining to the first measured skin; the hand turns on the wrist.
+//   Only the stub's border feathers over `FEATHER` px. The hand owns whole
+//   texels so a turned cuff never mixes lining and skin at partial alpha.
+//   The three shares sum to one at every texel.
 // - The shade planes and the brush texture are not reduced to numbers: the
 //   stroke samples the part's own texture through the unroll, so it carries
 //   them as painted.
@@ -50,12 +51,12 @@ const LIMB_FADE: Ramp = [15, 25];
 const LIMB_FOLD: Ramp = [60, 90];
 
 /** The CIE L* under which a texel at a sleeve's edge is its ink. The lead's ink (rgb 33 15 3) reads L* 0 to 15 on both arms of single-9, and his blue sleeve's darkest shade reaches L* 20; at 30, that shade reads as ink at two knots of its cut edge. */
-const INK_L = 20;
+export const INK_L = 20;
 
 /** The length of sleeve between two width knots, at most, px. */
 const KNOT = 2;
 
-/** The width over which one region gives way to the next, px. */
+/** The shoulder stub's feather, and the offset used to read inside a painted edge, px. */
 export const FEATHER = 2;
 
 /** The shortest a bone of the chain may be, px: two feathers, so the regions' borders never meet. */
@@ -458,44 +459,69 @@ const endOf = (run: Run): LimbEnd => {
 
 const finite = (p: Pt) => Number.isFinite(p[0]) && Number.isFinite(p[1]);
 
-/**
- * The sleeve's painted end across its opening: for each whole `v` from
- * `-cuff.inner` to `cuff.outer` (index `v + ceil(cuff.inner)`), the u where
- * the cuff's own ink run ends, read outward along the forearm from one
- * feather inside the cuff's u. The run must begin within `inkWidth` past the
- * cuff's u (else the next dark run is the hand's outline, and the end stays
- * the cuff's u); it ends on the first opaque texel that is not ink, or on
- * clear paint. The sleeve's lip past the chain's cuff point then moves with
- * the forearm, and the hand starts where its own paint does.
- */
+/** The first skin across the opening, distinguished from the lining by measured chroma. Lightness is omitted so a shaded lining stays cloth. Rays outside the skin keep the closest measured skin boundary, including the hand's outline on its own frame. */
 const cuffEdgeOf = (t: Texels, chain: LimbChain, cuff: LimbStation, inkWidth: number) => {
   const length = chain.upper + chain.fore;
   const d = unit(sub(chain.cuff, chain.elbow));
   const n = opens(d);
   const lo = Math.ceil(cuff.inner);
-  const edges = new Float64Array(lo + Math.ceil(cuff.outer) + 1).fill(length);
-  const isInk = (x: number, y: number) => labOf(t.rgb(x, y))[0] < INK_L;
-  for (let i = 0; i < edges.length; i++) {
+  const edges = new Map<number, number>();
+  const at = (u: number, v: number): Pt => [
+    Math.floor(chain.elbow[0] + (u - chain.upper) * d[0] + v * n[0]),
+    Math.floor(chain.elbow[1] + (u - chain.upper) * d[1] + v * n[1]),
+  ];
+  const colours = (from: number, to: number) => {
+    const labs: Array<Rgb> = [];
+    for (let u = from; u <= to; u += INK_STEP) {
+      const [x, y] = at(u, 0);
+      if (!t.holds(x, y) || t.byte(x, y, 3) < 128) continue;
+      const lab = labOf(t.rgb(x, y));
+      if (lab[0] >= INK_L) labs.push(lab);
+    }
+    return labs;
+  };
+  const clothPaint = colours(length - 2 * inkWidth, length - inkWidth);
+  if (clothPaint.length === 0) return Result.fail('no cloth on the cuff axis');
+  const cloth: Rgb = [
+    median(clothPaint.map((l) => l[0])),
+    median(clothPaint.map((l) => l[1])),
+    median(clothPaint.map((l) => l[2])),
+  ];
+  const chroma = (lab: Rgb, of: Rgb) => Math.hypot(lab[1] - of[1], lab[2] - of[2]);
+  const reach = Math.max(cuff.inner, cuff.outer);
+  const skin = colours(length, length + reach).toSorted(
+    (a, b) => chroma(b, cloth) - chroma(a, cloth),
+  )[0];
+  if (!skin || chroma(skin, cloth) === 0) return Result.fail('no distinct skin on the cuff axis');
+  for (let i = 0; i <= lo + Math.ceil(cuff.outer); i++) {
     const v = i - lo;
-    let seen = false;
-    for (let s = length - FEATHER; s <= length + 2 * inkWidth; s += INK_STEP) {
-      const p: Pt = [
-        chain.elbow[0] + (s - chain.upper) * d[0] + v * n[0],
-        chain.elbow[1] + (s - chain.upper) * d[1] + v * n[1],
-      ];
-      const [x, y] = [Math.floor(p[0]), Math.floor(p[1])];
+    for (let s = length - 2 * inkWidth; s <= length + reach; s += INK_STEP) {
+      const [x, y] = at(s, v);
       const opaque = t.holds(x, y) && t.byte(x, y, 3) >= 128;
-      const ink = opaque && isInk(x, y);
-      if (!seen && s > length + inkWidth) break;
-      if (seen && !ink) {
-        edges[i] = Math.max(length, s);
+      if (!opaque) {
+        if (s >= length) break;
+        continue;
+      }
+      const lab = labOf(t.rgb(x, y));
+      if (lab[0] >= INK_L && chroma(lab, skin) < chroma(lab, cloth)) {
+        edges.set(i, s);
         break;
       }
-      seen = seen || ink;
     }
   }
-  return (v: number) =>
-    Option.getOrElse(Option.fromUndefinedOr(edges[Math.round(v) + lo]), () => length);
+  if (edges.size === 0) return Result.fail('no skin boundary across the cuff');
+  const measured = [...edges.entries()];
+  const nearestEdge = (i: number) =>
+    measured.reduce((a, b) => {
+      if (Math.abs(b[0] - i) < Math.abs(a[0] - i)) return b;
+      return a;
+    })[1];
+  const measuredEdges = new Float64Array(lo + Math.ceil(cuff.outer) + 1);
+  for (let i = 0; i < measuredEdges.length; i++) measuredEdges[i] = nearestEdge(i);
+  return Result.succeed((v: number) => {
+    const i = Math.max(0, Math.min(measuredEdges.length - 1, Math.round(v) + lo));
+    return Option.getOrThrow(Option.fromUndefinedOr(measuredEdges[i]));
+  });
 };
 
 /** The regions over the box of `pixels`' paint: each texel's stub and hand shares by its u on `chain`, the hand's from the sleeve's painted end (`edge`, `cuffEdgeOf`), a flap's body pixels wholly stub (painted, on the flap's weights, never redrawn by the stroke). */
@@ -513,7 +539,7 @@ const regionsOf = (
       const [u, v] = unroll(chain, [bx + x + 0.5, by + y + 0.5]);
       const body = t.isBody(bx + x, by + y);
       const stub = Math.round(255 * Math.max(Number(body), clamp01(0.5 - u / FEATHER)));
-      const hand = Number(!body) * Math.round(255 * clamp01(0.5 + (u - edge(v)) / FEATHER));
+      const hand = Number(!body && u >= edge(v)) * 255;
       shares.set([stub, hand], 2 * (y * bw + x));
     }
   return { box, shares: bytes(shares) };
@@ -722,24 +748,25 @@ export const limbOf = (
           `on its ${side} side ${count(side, 'unbounded')} knots' dark runs reach the chain and ${count(side, 'ink')} end on cloth over L* ${INK_L}`,
         ),
       onNone: () =>
-        Result.succeed({
-          bones: declared.bones,
-          fade: Option.getOrElse(Option.fromUndefinedOr(declared.fade), () => LIMB_FADE),
-          fold: Option.getOrElse(Option.fromUndefinedOr(declared.fold), () => LIMB_FOLD),
-          chain,
-          step,
-          outer: sides.outer,
-          inner: sides.inner,
-          ink: [channel(0), channel(1), channel(2)] as const,
-          inkWidth: median(depths),
-          regions: regionsOf(
-            pixels,
-            t,
-            chain,
-            cuffEdgeOf(t, chain, stations.success.cuff, median(depths)),
+        Result.flatMap(
+          Result.mapError(cuffEdgeOf(t, chain, stations.success.cuff, median(depths)), (detail) =>
+            LimbRefused.make({ part, kind: 'no-station', detail }),
           ),
-          stations: stations.success,
-        }),
+          (edge) =>
+            Result.succeed({
+              bones: declared.bones,
+              fade: Option.getOrElse(Option.fromUndefinedOr(declared.fade), () => LIMB_FADE),
+              fold: Option.getOrElse(Option.fromUndefinedOr(declared.fold), () => LIMB_FOLD),
+              chain,
+              step,
+              outer: sides.outer,
+              inner: sides.inner,
+              ink: [channel(0), channel(1), channel(2)] as const,
+              inkWidth: median(depths),
+              regions: regionsOf(pixels, t, chain, edge),
+              stations: stations.success,
+            }),
+        ),
     },
   );
 };
