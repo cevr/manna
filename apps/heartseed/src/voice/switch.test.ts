@@ -3,7 +3,8 @@
 /**
  * The off switch in command order: whatever order the source's stops
  * settle in, the stored switch and a restart follow the last `setEnabled`
- * call, and the view follows each call at once. Each stop is held on a
+ * call, and the view follows each call at once; over a store that writes
+ * at once, the switch is stored before any stop settles. Each stop is held on a
  * Deferred at the `VoiceSource` seam and released in a generated order,
  * while newer reads, stops and switch calls run past it.
  */
@@ -112,6 +113,7 @@ const runHistory = (seed: number) =>
     );
     const live = yield* start(deps);
     let expected = stored !== 'false';
+    let text = stored;
     const fibers: Array<Fiber.Fiber<void>> = [];
     const trail: string[] = [`stored=${String(stored)} slow=${String(slow)}`];
     for (let i = 0; i < 14; i++) {
@@ -127,6 +129,7 @@ const runHistory = (seed: number) =>
         case 'off':
         case 'on':
           expected = op === 'on';
+          text = String(expected);
           fibers.push(yield* launch(live.voice.setEnabled(expected), fake.held));
           break;
         case 'settle-oldest':
@@ -146,15 +149,15 @@ const runHistory = (seed: number) =>
       }
       const where = `seed ${seed}: ${trail.join(' ')}`;
       expect((yield* live.voice.view).enabled, where).toBe(expected);
+      if (!slow)
+        expect(backing.get(ENABLED_KEY), `${where} (stored before the stops settle)`).toBe(text);
     }
     const where = `seed ${seed}: ${trail.join(' ')}`;
     fake.free.on = true;
     for (const done of fake.held.splice(0)) yield* Deferred.succeed(done, undefined);
     for (const fiber of fibers) yield* Fiber.join(fiber);
     expect((yield* live.voice.view).enabled, where).toBe(expected);
-    expect(backing.get(ENABLED_KEY), where).toBe(
-      trail.some((op) => op === 'on' || op === 'off') ? String(expected) : stored,
-    );
+    expect(backing.get(ENABLED_KEY), where).toBe(text);
     yield* Scope.close(live.scope, Exit.void);
     const restarted = yield* start(deps);
     expect((yield* restarted.voice.view).enabled, where).toBe(expected);
