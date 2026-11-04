@@ -966,14 +966,14 @@ const EDGE: ReadonlyArray<Drawn> = ['ink', 'blend', 'hair', 'footwear', 'other']
  * The row the collar starts at in column `x`, below the face's first skin
  * row `face`, or none where the column cannot tell the collar from a mark
  * drawn on the face. A run of cloth (garment or sash), read down through
- * cloth and blends, is a mark on the face when skin is below it: directly,
- * or past its edge (`EDGE`: ink, blends, hair, a cloth fringe) where that
- * skin is the skin the mark is drawn on, joined round the mark, or runs on down into cloth,
- * the neck into its collar. Skin past an edge that is neither, closed below
- * by anything but cloth, is a hand on the robe as much as a face below a
- * mark, so the column reads none. The first run of cloth with no skin below
- * it, past its edge, is the collar; none when no run ends so. The line read
- * depends on what the figure draws, never on how deep a mark is.
+ * cloth and blends, is a mark on the face when the pixel below it, directly
+ * or past its edge (`EDGE`: ink, blends, hair, a cloth fringe), is skin of
+ * the face's own region (4-connected from the face's first row), joined
+ * round the mark. Skin below a run that the face cannot reach is a hand on
+ * the robe as much as a neck under a mark drawn across the face, so the
+ * column reads none. The first run of cloth with no skin below it, past its
+ * edge, is the collar; none when no run ends so. The line read depends on
+ * what the figure draws, never on how deep a mark is.
  */
 const collarOf = (
   r: Raster,
@@ -983,7 +983,6 @@ const collarOf = (
 ): Option.Option<number> => {
   const nearest = nearestOf(paints);
   const cloth = new Set(paintRows(r, x, face, ['garment', 'sash'], paints));
-  const skin = new Set(paintRows(r, x, face, ['skin'], paints));
   const drawnAt = (y: number): Drawn => {
     const q = y * r.width + x;
     if (y >= r.height || alphaAt(r, q) === 0) return 'clear';
@@ -1007,26 +1006,14 @@ const collarOf = (
     }
     return y;
   };
-  const joined = (above: number, below: number): boolean =>
-    regionAt(
-      r,
-      above * r.width + x,
-      (q) => isRole(r, q, 'skin', paints, nearest),
-      around4,
-    ).includes(below * r.width + x);
-  let drawnOn = face;
+  const own = new Set(
+    regionAt(r, face * r.width + x, (q) => isRole(r, q, 'skin', paints, nearest), around4),
+  );
   for (let y = face; y < r.height; y++) {
-    if (skin.has(y)) drawnOn = y;
     if (!cloth.has(y)) continue;
-    const end = past(y, CLOTH);
-    if (skin.has(end)) {
-      y = end - 1;
-      continue;
-    }
-    const below = edgeEnd(end);
-    if (!skin.has(below)) return Option.some(y);
-    const next = drawnAt(past(below, ['skin', 'blend']));
-    if (!joined(drawnOn, below) && next !== 'garment' && next !== 'sash') return Option.none();
+    const below = edgeEnd(past(y, CLOTH));
+    if (drawnAt(below) !== 'skin') return Option.some(y);
+    if (!own.has(below * r.width + x)) return Option.none();
     y = below - 1;
   }
   return Option.none();

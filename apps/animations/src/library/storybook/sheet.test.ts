@@ -847,7 +847,7 @@ const banded = (
 
 /** The bands of a figure drawn at `height` rows from shares of its height: each band's end as a share, and its paint. */
 const scaledBands = (shares: ReadonlyArray<Band>, height: number): ReadonlyArray<Band> =>
-  shares.map(([end, paint]) => [end * height, paint] as const);
+  shares.map(([end, paint, span]) => [end * height, paint, span ?? WHOLE] as const);
 
 /** The paints a mark on a generated face is drawn in: either cloth, the ink, the sandals' paint, the hair. */
 const MARK_PAINTS: ReadonlyArray<Rgb> = [ROBE, SASH, INK, SANDAL, HAIR];
@@ -871,21 +871,22 @@ const halfOf = (a: Rgb, b: Rgb): Rgb => [
  * with up to three marks drawn on it, each in a cloth, the ink, the
  * sandals' or the hair's paint, from one row to six hundredths of the
  * figure deep (a jaw line as deep as a collar or deeper), across the face
- * or across part of it with skin either side, half of them edged below in
- * the ink, the hair's or the sandals' paint, a row to a hundredth deep,
- * with a blend row before or after it or none; skin above and below; a
- * collar band in a cloth from two rows to eight hundredths deep; then the
- * clothes, run on or broken by an ink line, a sash, or a hand in skin
- * ringed in ink; the soles in sandals. A tenth of the figures wear no
- * clothes below the face. The figure is 15 to 40 px wide with up to 6
- * clear columns either side of it.
+ * or across the head column and part of the face with skin beside it, half
+ * of them edged below in the ink, the hair's or the sandals' paint, a row
+ * to a hundredth deep, with a blend row before or after it or none; skin
+ * above and below; a collar band in a cloth from two rows to eight
+ * hundredths deep; then the clothes, run on or broken by an ink line, a
+ * sash, or a hand in skin right under the collar, ringed in ink, edged in
+ * ink above and its sleeve joining its lower edge, or drawn straight on the
+ * collar; the soles in sandals. A tenth of the figures wear no clothes
+ * below the face. The figure is 15 to 40 px wide with up to 6 clear
+ * columns either side of it.
  *
- * A cloth mark across the face with an edge drawn in its head column (a
- * pixel of the edge's own paint there) leaves skin below it that does not
- * join the skin it is drawn on; the figure tells it from the collar only
- * when that skin runs on down into cloth. A hand ringed in ink right under
- * the collar's ink edge is the same drawing as such a mark with ink below
- * its skin, so neither is told.
+ * A mark across the whole face cuts the skin below it off from the face's
+ * own skin. A cloth mark read in the head column at or below such a cut
+ * leaves skin below it the face cannot reach, as a hand right under the
+ * collar does: the column cannot tell the collar from the mark, so neither
+ * is told.
  */
 const generatedFigure = (seed: number) => {
   const draw = rng(seed);
@@ -899,7 +900,7 @@ const generatedFigure = (seed: number) => {
   const bands: Array<Band> = [];
   const starts: Array<number> = [];
   const halves = new Set<Rgb>();
-  const marks: Array<{ readonly mark: number; readonly edge: number; readonly part: boolean }> = [];
+  const marks: Array<{ readonly mark: number; readonly part: boolean }> = [];
   const hands: Array<number> = [];
   let y = 0;
   const add = (depth: number, paint: Rgb, span: Span = WHOLE) => {
@@ -913,9 +914,13 @@ const generatedFigure = (seed: number) => {
   for (let k = Math.floor(draw() * 4); k > 0; k--) {
     const paint = pick(MARK_PAINTS, ROBE);
     const part = draw() < 0.5;
+    const left = draw() < 0.5;
     const span: Span = [
-      [1, int(2, column - 1)][Number(part)] ?? 1,
-      [placing.width - 2, int(column + 1, placing.width - 3)][Number(part)] ?? placing.width - 2,
+      [1, [int(3, column - 1), 1][Number(left)] ?? 1][Number(part)] ?? 1,
+      [
+        placing.width - 2,
+        [placing.width - 2, int(column + 1, placing.width - 4)][Number(left)] ?? placing.width - 2,
+      ][Number(part)] ?? placing.width - 2,
     ];
     const mark = add(1 + draw() * height * 0.06, paint, span);
     const blend = int(0, 2);
@@ -924,15 +929,14 @@ const generatedFigure = (seed: number) => {
       halves.add(c);
       add(1 + draw(), c, span);
     };
-    let edge = -1;
     if (draw() < 0.5) {
       const paintOfEdge = pick(EDGE_PAINTS, INK);
       if (blend === 1) half(paint, paintOfEdge);
-      edge = add(1 + draw() * height * 0.01, paintOfEdge, span);
+      add(1 + draw() * height * 0.01, paintOfEdge, span);
       if (blend === 2) half(paintOfEdge, SKIN);
     }
     add(2 + draw() * height * 0.04, SKIN);
-    marks.push({ mark, edge, part });
+    marks.push({ mark, part });
   }
   const bare = draw() < 0.1;
   const collar = y + dy;
@@ -942,6 +946,8 @@ const generatedFigure = (seed: number) => {
     [SASH, ROBE],
     [INK, ROBE, INK, SKIN, INK, ROBE],
     [INK, SKIN, INK, ROBE],
+    [INK, SKIN, ROBE],
+    [SKIN, ROBE],
   ];
   if (bare) add(Math.max(2, height * 0.92 - y), INK);
   else {
@@ -951,7 +957,8 @@ const generatedFigure = (seed: number) => {
     const drawn = below.map((paint) =>
       add(Math.max(1, (room / below.length) * (0.5 + draw())), paint),
     );
-    if (below[0] === INK && below[1] === SKIN) hands.push(drawn[0] ?? -1);
+    const hand = below.indexOf(SKIN);
+    if (hand === 0 || hand === 1) hands.push(drawn[hand] ?? -1);
   }
   add(Math.max(2, height - y), SANDAL);
   const raster = banded(bands, Math.ceil(y), dy, placing);
@@ -967,31 +974,22 @@ const generatedFigure = (seed: number) => {
         return true;
     return false;
   };
-  const nextShown = (from: number): Rgb =>
-    bands.slice(from + 1).find((b, i) => shown(from + 1 + i) && b[1] !== SKIN)?.[1] ?? SANDAL;
-  const opens = [
-    ...marks
-      .filter(
-        ({ mark, edge, part }) =>
-          isCloth(bands[mark]?.[1] ?? SKIN) && shown(mark) && shown(edge) && !part,
-      )
-      .map(({ edge }) => edge),
-    ...hands.filter(shown),
-  ];
-  const skinAfter = (band: number) =>
-    band + 1 + bands.slice(band + 1).findIndex((b) => b[1] === SKIN);
+  const cut = marks.findIndex(({ part }) => !part);
+  const cutOff = marks.some(
+    ({ mark }, i) => cut >= 0 && i >= cut && isCloth(bands[mark]?.[1] ?? SKIN) && shown(mark),
+  );
   return {
     raster,
     collar: Option.some(collar).pipe(Option.filter(() => !bare)),
-    untold: opens.some((band) => !isCloth(nextShown(skinAfter(band)))),
+    untold: cutOff || hands.some(shown),
   };
 };
 
-/** The bands of the verifier's figure (round 2, M2): a jaw line 1.8 % of its height deep at a fifth of it, the collar at 33 %, 2.6 % deep, an ink line, the robe and sandals. */
+/** The bands of the verifier's figure (round 2, M2): a jaw line 1.8 % of its height deep at a fifth of it, across the head column with skin to its right, the collar at 33 %, 2.6 % deep, an ink line, the robe and sandals. */
 const JAW_AND_COLLAR: ReadonlyArray<Band> = [
   [0.15, INK],
   [0.2, SKIN],
-  [0.218, ROBE],
+  [0.218, ROBE, [1, 10]],
   [0.33, SKIN],
   [0.356, ROBE],
   [0.406, INK],
@@ -1012,6 +1010,68 @@ const onSheet = (r: Raster): Raster => {
       const q = (y * r.width + x) * 4;
       if ((r.rgba[q + 3] ?? 0) > 0)
         rgba.set(r.rgba.subarray(q, q + 4), ((y + 10) * width + x + 10) * 4);
+    }
+  return { width, height, rgba };
+};
+
+const ANATOMY_INK: Rgb = [20, 10, 5];
+const ANATOMY_SKIN: Rgb = [240, 180, 130];
+const ANATOMY_ROBE: Rgb = [110, 130, 125];
+const ANATOMY_HAIR: Rgb = [90, 50, 20];
+const ANATOMY_SASH: Rgb = [150, 60, 80];
+const ANATOMY_SHOE: Rgb = [70, 50, 60];
+
+/** The round-4 verifier's palette: ink, skin, a robe, hair, a sash and shoes. */
+const ANATOMY: Palette = {
+  ink: hexOf(ANATOMY_INK),
+  parts: [
+    { name: 'skin', role: 'skin', base: hexOf(ANATOMY_SKIN) },
+    { name: 'robe', role: 'garment', base: hexOf(ANATOMY_ROBE) },
+    { name: 'hair', role: 'hair', base: hexOf(ANATOMY_HAIR) },
+    { name: 'shoe', role: 'footwear', base: hexOf(ANATOMY_SHOE) },
+    { name: 'sash', role: 'sash', base: hexOf(ANATOMY_SASH) },
+  ],
+};
+
+/**
+ * The round-4 verifier's figure (M1), 81 by 240, its body 41 px wide in ink
+ * at its sides: hair to row 36, skin to 80, the collar in the robe from 80,
+ * an ink line in rows 87 to 94, the robe on down. `paint` draws over it.
+ */
+const anatomyFigure = (paint: (x: number, y: number) => Option.Option<Rgb>): Raster => {
+  const [width, height] = [81, 240];
+  const rgba = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y++)
+    for (let x = 20; x <= 60; x++) {
+      const drawn = [
+        [y < 36, ANATOMY_HAIR],
+        [y < 80, ANATOMY_SKIN],
+        [y >= 87 && y < 95, ANATOMY_INK],
+        [true, ANATOMY_ROBE],
+      ] as const;
+      const base = drawn.find(([at]) => at)?.[1] ?? ANATOMY_ROBE;
+      const c = [base, ANATOMY_INK][Number(x === 20 || x === 60)] ?? base;
+      rgba.set([...Option.getOrElse(paint(x, y), () => c), 255], (y * width + x) * 4);
+    }
+  return { width, height, rgba };
+};
+
+/** A round hand ringed in ink under the collar's ink line, centred at (40, 107), 13 px across, the sleeve's skin joining its lower edge in rows 118 on. */
+const roundHand = (x: number, y: number): Option.Option<Rgb> => {
+  const d = (x - 40) ** 2 + (y - 107) ** 2;
+  if (y < 95 || y > 121 || d > 13 ** 2) return Option.none();
+  if (d >= 11.5 ** 2 && !(y >= 118 && Math.abs(x - 40) <= 4)) return Option.some(ANATOMY_INK);
+  return Option.some(ANATOMY_SKIN);
+};
+
+/** `r` drawn `scale` times as large, `dx` and `dy` clear px on each side. */
+const enlarged = (r: Raster, scale: number, dx: number, dy: number): Raster => {
+  const [width, height] = [r.width * scale + dx * 2, r.height * scale + dy * 2];
+  const rgba = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height - dy * 2; y++)
+    for (let x = 0; x < width - dx * 2; x++) {
+      const q = (Math.floor(y / scale) * r.width + Math.floor(x / scale)) * 4;
+      rgba.set(r.rgba.subarray(q, q + 4), ((y + dy) * width + x + dx) * 4);
     }
   return { width, height, rgba };
 };
@@ -1066,22 +1126,30 @@ describe('linesOf', () => {
     expect([lines.centreColumn, lines.hem]).toEqual([7, Option.some(15)]);
   });
 
-  test("reads the collar below a jaw line drawn in a garment's colour with skin above and below it (round 2: the man's turned head)", () => {
-    const rows = [
-      '..kkkkk..',
-      '..ksssk..',
-      '..ksssk..',
-      '..ksssk..',
-      '..krrrk..',
-      '..krrrk..',
-      '..krrrk..',
-      '..ksssk..',
-      '..ksssk..',
-      ...Array.from({ length: 14 }, () => '.krrrrrk.'),
-      '.kkkkkkk.',
-    ];
-    const lines = Option.getOrThrow(linesOf(art(rows, FIGURE_KEY), paints));
-    expect([lines.crown, Option.getOrThrow(lines.head)]).toEqual([0, 9]);
+  test("reads the collar below a jaw line drawn in a garment's colour with the face's skin above, beside and below it, and none where the line crosses the whole face (round 2: the man's turned head; round 4, M1)", () => {
+    const figure = (jaw: string) =>
+      art(
+        [
+          '..kkkkkkk..',
+          '..ksssssk..',
+          '..ksssssk..',
+          '..ksssssk..',
+          jaw,
+          jaw,
+          jaw,
+          '..ksssssk..',
+          '..ksssssk..',
+          ...Array.from({ length: 14 }, () => '.krrrrrrrk.'),
+          '.kkkkkkkkk.',
+        ],
+        FIGURE_KEY,
+      );
+    const read = (jaw: string) => {
+      const lines = Option.getOrThrow(linesOf(figure(jaw), paints));
+      return [lines.crown, lines.headColumn, lines.head];
+    };
+    expect(read('..krrrrsk..')).toEqual([0, 5, Option.some(9)]);
+    expect(read('..krrrrrk..')).toEqual([0, 5, Option.none()]);
   });
 
   test('reads the same collar in one figure drawn 200 and 240 rows tall, a jaw line as deep as the collar above it (round 2, M2)', () => {
@@ -1096,6 +1164,7 @@ describe('linesOf', () => {
 
   test('over generated figures (marks on the face of any paint, depth and width, edged in ink and blends or not; collars two rows deep and more; clothes broken by ink, a sash or a hand), widths, sizes and offsets: reads the head to the row the collar band starts in, none where no clothes follow the face or the column cannot tell the collar from a mark', () => {
     const marked = paintsOf(MARKED);
+    const kinds: Array<readonly [boolean, boolean]> = [];
     for (let seed = 1; seed <= 200; seed++) {
       const { raster, collar, untold } = generatedFigure(seed);
       const head = Option.flatMap(linesOf(raster, marked), (l) => l.head);
@@ -1115,7 +1184,13 @@ describe('linesOf', () => {
         head,
         true,
       ]);
+      kinds.push([untold, Option.isSome(head)]);
     }
+    const [unread, told] = [
+      kinds.filter(([u]) => u).length,
+      kinds.filter(([u, read]) => !u && read).length,
+    ];
+    expect([unread, told, unread >= 50, told >= 50]).toEqual([unread, told, true, true]);
   });
 
   test('over generated figures drawn on a sheet and split (`splitSheet`): reads the head to the row the collar band starts in, or none, never another row', () => {
@@ -1164,11 +1239,58 @@ describe('linesOf', () => {
       return { width: 15, height: 240, rgba };
     };
     const headOf = (r: Raster) => Option.flatMap(linesOf(r, own), (l) => l.head);
+    const collarOrNone = (head: Option.Option<number>) =>
+      Option.match(head, { onNone: () => true, onSome: (h) => h === 80 });
     const open = [0, 1, 2, 4].map((edge) => figure(edge, false));
-    expect(open.map(headOf)).toEqual(open.map(() => Option.some(80)));
-    expect(open.map((r) => splitHeadOf(r, palette))).toEqual(open.map(() => Option.some(80)));
+    const reads = [...open.map(headOf), ...open.map((r) => splitHeadOf(r, palette))];
+    expect(reads.map((h) => [h, collarOrNone(h)])).toEqual(reads.map((h) => [h, true]));
     const closed = figure(1, true);
     expect([headOf(closed), splitHeadOf(closed, palette)]).toEqual([Option.none(), Option.none()]);
+  });
+
+  test('reads none, never the hand, from a round hand ringed in ink under the collar whose sleeve joins its lower edge, at scales 1 to 3 and offsets, drawn and through `splitSheet` (round 4, M1: 121 for 80)', () => {
+    const own = paintsOf(ANATOMY);
+    const plain = anatomyFigure(() => Option.none());
+    const hand = anatomyFigure(roundHand);
+    for (const scale of [1, 2, 3])
+      for (const [dx, dy] of [
+        [0, 0],
+        [5, 7],
+      ] as const) {
+        const [a, b] = [enlarged(plain, scale, dx, dy), enlarged(hand, scale, dx, dy)];
+        const heads = [a, b].map((r) => Option.flatMap(linesOf(r, own), (l) => l.head));
+        expect([scale, dx, dy, ...heads, splitHeadOf(b, ANATOMY)]).toEqual([
+          scale,
+          dx,
+          dy,
+          Option.some(80 * scale),
+          Option.none(),
+          Option.none(),
+        ]);
+      }
+  });
+
+  test('reads 80 or none, never the mark, from a neck 1 to 5 px wide ringed in ink under a jaw mark across the face in any paint, edged in ink or not (round 4, M1: 48 for 80)', () => {
+    const own = paintsOf(ANATOMY);
+    for (const neck of [1, 2, 3, 5])
+      for (const paint of [ANATOMY_ROBE, ANATOMY_SASH, ANATOMY_HAIR, ANATOMY_SHOE, ANATOMY_INK])
+        for (const edge of [0, 1, 4]) {
+          const r = anatomyFigure((x, y) => {
+            if (y < 48 || y >= 80 || x < 21 || x > 59) return Option.none();
+            if (y < 53) return Option.some(paint);
+            if (y < 53 + edge || Math.abs(x - 40) > (neck - 1) / 2) return Option.some(ANATOMY_INK);
+            return Option.some(ANATOMY_SKIN);
+          });
+          const head = Option.flatMap(linesOf(r, own), (l) => l.head);
+          const read = Option.match(head, { onNone: () => true, onSome: (h) => h === 80 });
+          expect([neck, hexOf(paint), edge, head, read]).toEqual([
+            neck,
+            hexOf(paint),
+            edge,
+            head,
+            true,
+          ]);
+        }
   });
 
   test('reads no head from a figure with no face in its head column', () => {
