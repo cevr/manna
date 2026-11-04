@@ -17,10 +17,14 @@ import {
   type Palette,
   paintsOf,
   rgbAt,
+  rgbOfHex,
   type Rgb,
   sheetHeadOf,
+  SKIN_REACH,
+  SPECK_PX,
   snapped,
   splitSheet,
+  tidied,
 } from './sheet.ts';
 
 const INK: Rgb = [30, 20, 15];
@@ -55,13 +59,13 @@ const KEY = { k: INK, b: BASE, s: SHADE, g: GROUND, f: FOREIGN };
 const mend = (r: Raster): Raster => mendPockets(r, GROUND, PAINTS, drawnNearestOf(r, PAINTS));
 
 /** Each pixel as a letter: `.` clear, else the letter of the key colour it is exactly, `?` for none. */
-const lettersOf = (r: Raster): ReadonlyArray<string> =>
+const lettersOf = (r: Raster, key: Readonly<Record<string, Rgb>> = KEY): ReadonlyArray<string> =>
   Array.from({ length: r.height }, (_, y) =>
     Array.from({ length: r.width }, (_, x) => {
       const q = y * r.width + x;
       if (alphaAt(r, q) === 0) return '.';
       const c = hexOf(rgbAt(r, q));
-      return Object.entries(KEY).find(([, v]) => hexOf(v) === c)?.[0] ?? '?';
+      return Object.entries(key).find(([, v]) => hexOf(v) === c)?.[0] ?? '?';
     }).join(''),
   );
 
@@ -277,6 +281,214 @@ describe('snapped', () => {
   });
 });
 
+/** The lead's skin, tunic and sash paints, and the two thin lines a drawing drew on his cloth: a fold and the sash's edge. */
+const LEAD_KEY = {
+  k: rgbOfHex('#130803'),
+  a: rgbOfHex('#f2b27c'),
+  r: rgbOfHex('#c9877e'),
+  t: rgbOfHex('#f2d8b7'),
+  v: rgbOfHex('#cbbfd2'),
+  s: rgbOfHex('#eadcc2'),
+  w: rgbOfHex('#c8bdd6'),
+  f: rgbOfHex('#bc9e9a'),
+  e: rgbOfHex('#b3a89a'),
+};
+
+const LEAD_PALETTE: Palette = {
+  ink: '#130803',
+  parts: [
+    { name: 'skin', base: '#f2b27c', shade: '#c9877e', role: 'skin' },
+    { name: 'tunic', base: '#f2d8b7', shade: '#cbbfd2', role: 'garment' },
+    { name: 'sash', base: '#eadcc2', shade: '#c8bdd6', role: 'sash' },
+  ],
+};
+
+/** `drawn` snapped and tidied with `palette`, each colour read as the paint the picture draws it as. */
+const tidy = (drawn: Raster, palette: Palette): Raster => {
+  const paints = paintsOf(palette);
+  const nearest = drawnNearestOf(drawn, paints);
+  return tidied(drawn, snapped(drawn, paints, nearest), paints, nearest);
+};
+
+/** Each skin-paint pixel of `r` with no skin base within `SKIN_REACH` px (a square round it): the rose on cloth. */
+const skinOnCloth = (r: Raster, palette: Palette): ReadonlyArray<number> => {
+  const paints = paintsOf(palette);
+  const role = (q: number) =>
+    paints.find((p) => hexOf(p.rgb) === hexOf(rgbAt(r, q)) && alphaAt(r, q) > 0);
+  const base = (q: number) => role(q)?.role === 'skin' && role(q)?.tone === 'base';
+  return Array.from({ length: r.width * r.height }, (_, q) => q).filter((q) => {
+    if (role(q)?.role !== 'skin') return false;
+    const [x, y] = [q % r.width, Math.floor(q / r.width)];
+    return !area(x - SKIN_REACH, x + SKIN_REACH + 1, y - SKIN_REACH, y + SKIN_REACH + 1).some(
+      ([u, v]) => u >= 0 && v >= 0 && u < r.width && v < r.height && base(v * r.width + u),
+    );
+  });
+};
+
+const SPECK: Rgb = [230, 180, 140];
+
+const SPECK_PALETTE: Palette = {
+  ink: hexOf(INK),
+  parts: [
+    { name: 'a', base: hexOf(BASE) },
+    { name: 'b', base: hexOf(SHADE) },
+    { name: 'c', base: hexOf(SPECK) },
+  ],
+};
+
+const SPECK_KEY = { k: INK, b: BASE, s: SHADE, c: SPECK };
+
+/** The side of the speck pictures, square. */
+const SPECK_SIDE = 40;
+
+/** A 4-connected blob of `size` pixels grown at random from a seed pixel, 2 px or more inside the picture. */
+const blobOf = (int: (a: number, b: number) => number, size: number): ReadonlyArray<number> => {
+  const w = SPECK_SIDE;
+  const blob = [int(3, w - 4) + int(3, w - 4) * w];
+  while (blob.length < size) {
+    const from = blob[int(0, blob.length - 1)] ?? 0;
+    const next = [from - 1, from + 1, from - w, from + w][int(0, 3)] ?? from;
+    const [x, y] = [next % w, Math.floor(next / w)];
+    const inside = x >= 2 && y >= 2 && x < w - 2 && y < w - 2;
+    if (inside && !blob.includes(next)) blob.push(next);
+  }
+  return blob;
+};
+
+/** Each pixel of `blob` and its 8 neighbours. */
+const haloOf = (blob: ReadonlyArray<number>): ReadonlyArray<number> =>
+  blob.flatMap((q) => [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => q + dy * SPECK_SIDE + dx)));
+
+/** The letter most of `blob`'s distinct 4-neighbours outside it are, `b` before `s` when equal. */
+const rimMajority = (letters: ReadonlyArray<string>, blob: ReadonlyArray<number>): string => {
+  const w = SPECK_SIDE;
+  const rim = [...new Set(blob.flatMap((q) => [q - 1, q + 1, q - w, q + w]))].filter(
+    (q) => !blob.includes(q),
+  );
+  const [b, s] = ['b', 's'].map((ch) => rim.filter((q) => letters[q] === ch).length);
+  return ['b', 's'][Number((s ?? 0) > (b ?? 0))] ?? 'b';
+};
+
+/** A picture of two cloths, `b` left and `s` right of a ragged seam, with up to 6 blobs of `c` apart from each other, each with the letter it must end as: its rim's majority when 12 px or fewer, else `c`. */
+const speckCase = (seed: number) => {
+  const draw = rng(seed);
+  const int = (a: number, b: number) => a + Math.floor(draw() * (b - a + 1));
+  const w = SPECK_SIDE;
+  const seam = int(14, 26);
+  const letters = Array.from({ length: w * w }, (_, q) => {
+    const [x, y] = [q % w, Math.floor(q / w)];
+    return ['b', 's'][Number(x >= seam + (y % 3) - 1)] ?? 'b';
+  });
+  const taken = new Set<number>();
+  const wants: Array<{ readonly cells: ReadonlyArray<number>; readonly want: string }> = [];
+  for (let tries = 0; tries < 60 && wants.length < 6; tries++) {
+    const size = [int(1, 12), int(13, 18)][Number(draw() < 0.25)] ?? 1;
+    const blob = blobOf(int, size);
+    const halo = haloOf(blob);
+    if (halo.some((q) => taken.has(q))) continue;
+    for (const q of halo) taken.add(q);
+    wants.push({
+      cells: blob,
+      want: [rimMajority(letters, blob), 'c'][Number(size > SPECK_PX)] ?? 'c',
+    });
+    for (const q of blob) letters[q] = 'c';
+  }
+  const rows = Array.from({ length: w }, (_, y) => letters.slice(y * w, y * w + w).join(''));
+  return { rows, wants };
+};
+
+describe('tidied', () => {
+  test("paints a thin line darker than one part's cloth on both sides in that part's shade, and one between two parts in ink (critique 1, item 1)", () => {
+    const row = 'kttttftttesssssk';
+    const rows = ['kkkkkkkkkkkkkkkk', ...Array.from({ length: 13 }, () => row), 'kkkkkkkkkkkkkkkk'];
+    const out = lettersOf(tidy(art(rows, LEAD_KEY), LEAD_PALETTE), LEAD_KEY);
+    const want = 'kttttvtttksssssk';
+    expect(out).toEqual([
+      'kkkkkkkkkkkkkkkk',
+      ...Array.from({ length: 13 }, () => want),
+      'kkkkkkkkkkkkkkkk',
+    ]);
+  });
+
+  test('over generated faces and cloth: no skin paint stays farther than SKIN_REACH from skin base, and the skin shade beside the skin stays (critique 1, item 1: rose on cloth = 0)', () => {
+    for (let seed = 1; seed <= 24; seed++) {
+      const draw = rng(seed);
+      const int = (a: number, b: number) => a + Math.floor(draw() * (b - a + 1));
+      const [width, height] = [48, 36];
+      const grid = Array.from({ length: height }, () => Array.from({ length: width }, () => 't'));
+      const paint = (x0: number, y0: number, w: number, h: number, ch: string) => {
+        for (const [x, y] of area(x0, x0 + w, y0, y0 + h)) {
+          const line = grid[y];
+          if (line && x >= 0 && x < width) line[x] = ch;
+        }
+      };
+      const [fx, fy, fw, fh] = [int(4, 10), int(4, 10), int(6, 10), int(6, 10)];
+      paint(fx, fy, fw, fh, 'a');
+      const ry = fy + int(0, fh - 4);
+      paint(fx + fw, ry, 4, 4, 'r');
+      const blobs = int(1, 3);
+      for (let b = 0; b < blobs; b++)
+        paint(int(fx + fw + 4 + SKIN_REACH + 1, width - 5), int(0, height - 5), 4, 4, 'r');
+      const out = tidy(
+        art(
+          grid.map((l) => l.join('')),
+          LEAD_KEY,
+        ),
+        LEAD_PALETTE,
+      );
+      const beside = lettersOf(out, LEAD_KEY)
+        .slice(ry, ry + 4)
+        .map((l) => l.slice(fx + fw, fx + fw + 4));
+      expect({ seed, onCloth: skinOnCloth(out, LEAD_PALETTE).length }).toEqual({
+        seed,
+        onCloth: 0,
+      });
+      expect({ seed, beside }).toEqual({ seed, beside: ['rrrr', 'rrrr', 'rrrr', 'rrrr'] });
+    }
+  });
+
+  test('gives a speck of 12 px or fewer the paint most of its distinct rim is, the ink not counted, and keeps a larger patch and a speck ringed in ink (critique 1, item 6)', () => {
+    const rows = [
+      'bbbbbbbbbbbbssssssss',
+      'bsbbbbbbbbbbssssssss',
+      'bbbbbbbbbbbbsssbssss',
+      'bbbbkkkbbbbbssssssss',
+      'bbbbkbkbbbbbssssssss',
+      'bbbbkkkbbbsssbbbbsss',
+      'bbbbbbbbbbsssbbbbsss',
+      'bssssbbbbbsssbbbbsss',
+      'bssssbbbbbsssbbbbsss',
+      'bssssbbbbbssssssssss',
+      'bbbbbbbbbbssssssssss',
+    ];
+    expect(lettersOf(tidy(art(rows, KEY), PALETTE))).toEqual([
+      'bbbbbbbbbbbbssssssss',
+      'bbbbbbbbbbbbssssssss',
+      'bbbbbbbbbbbbssssssss',
+      'bbbbkkkbbbbbssssssss',
+      'bbbbkbkbbbbbssssssss',
+      'bbbbkkkbbbsssbbbbsss',
+      'bbbbbbbbbbsssbbbbsss',
+      'bbbbbbbbbbsssbbbbsss',
+      'bbbbbbbbbbsssbbbbsss',
+      'bbbbbbbbbbssssssssss',
+      'bbbbbbbbbbssssssssss',
+    ]);
+  });
+
+  test('over generated specks on two cloths and their seam: each island of 12 px or fewer takes the paint most of its distinct rim pixels are, a larger one stays (critique 1, item 6)', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const { rows, wants } = speckCase(seed);
+      const out = lettersOf(tidy(art(rows, SPECK_KEY), SPECK_PALETTE), SPECK_KEY).join('');
+      for (const { cells, want } of wants)
+        expect({ seed, got: [...new Set(cells.map((q) => out[q]))] }).toEqual({
+          seed,
+          got: [want],
+        });
+    }
+  });
+});
+
 describe('cellsOf', () => {
   test('cuts through a one-column touch, the lowest occupancy, the touch going to the right cell', () => {
     const r = art(['bbbb.bbb', 'bbbbbbbb', 'bbbb.bbb'], KEY);
@@ -392,12 +604,26 @@ const trueGap = (e: Easel, f: number, p: Place) => {
   for (const [x, y] of area(p.left + 4, p.left + 7, p.soles - 7, p.soles - 4)) e.free(x, y);
 };
 
-/** A small sheet drawn as the acceptance draws its own: inked figures in a row on noisy ground, half with a pale pocket, half a true gap, a foreign patch, specks above. */
-const generated = (seed: number): Generated => {
+/** A ring 1 or 2 px wide round a figure's box, outside its outline, of the ground blended 20 to 50 % toward the ink: a drawing's soft edge on its ground, which no figure owns. */
+const fringe = (e: Easel, p: Place) => {
+  const w = e.int(1, 2);
+  for (const [x, y] of area(p.left - w, p.left + p.fw + w, p.top - w, p.soles + w + 1)) {
+    if (x >= p.left && x < p.left + p.fw && y >= p.top && y <= p.soles) continue;
+    const t = e.int(20, 50) / 100;
+    e.put(x, y, [
+      Math.round(GROUND[0] + (INK[0] - GROUND[0]) * t),
+      Math.round(GROUND[1] + (INK[1] - GROUND[1]) * t),
+      Math.round(GROUND[2] + (INK[2] - GROUND[2]) * t),
+    ]);
+  }
+};
+
+/** A small sheet drawn as the acceptance draws its own: inked figures in a row on noisy ground, half with a pale pocket, half a true gap, a foreign patch, specks above; `fringed`, each figure in a soft fringe outside its outline. */
+const generated = (seed: number, fringed = false): Generated => {
   const draw = rng(seed);
   const int = (a: number, b: number) => a + Math.floor(draw() * (b - a + 1));
   const n = int(2, 4);
-  const [slot, gap, margin] = [24, int(4, 8), 6];
+  const [slot, gap, margin] = [24, int(4, 8) + 4 * Number(fringed), 6];
   const width = margin * 2 + n * slot + (n - 1) * gap;
   const rgba = new Uint8Array(width * HEIGHT * 4);
   const owner = new Int32Array(width * HEIGHT).fill(-1);
@@ -434,6 +660,7 @@ const generated = (seed: number): Generated => {
     if (e.chance()) palePocket(e, f, p);
     if (e.chance()) trueGap(e, f, p);
     for (const [x, y] of area(p.left + 4, p.left + 6, p.top - 6, p.top - 4)) put(x, y, noisy(BASE));
+    if (fringed) fringe(e, p);
   }
   return { n, raster: { width, height: HEIGHT, rgba }, owner, want };
 };
@@ -472,6 +699,13 @@ describe('splitSheet over generated sheets', () => {
   test('gives each figure alone, pale pockets refilled, gaps and specks cleared, foreign paint kept, every other pixel snapped exactly', () => {
     const misses = Array.from({ length: 6 }, (_, k) => k + 1).flatMap((seed) =>
       missesOf(generated(seed)).map((m) => `seed ${seed}: ${m}`),
+    );
+    expect(misses.slice(0, 10)).toEqual([]);
+  });
+
+  test('peels a soft fringe of ground and ink outside the outline, so no ground-coloured pixel stays on a figure rim (critique 1, item 2)', () => {
+    const misses = Array.from({ length: 6 }, (_, k) => k + 1).flatMap((seed) =>
+      missesOf(generated(seed, true)).map((m) => `seed ${seed}: ${m}`),
     );
     expect(misses.slice(0, 10)).toEqual([]);
   });

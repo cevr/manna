@@ -575,6 +575,245 @@ export const snapped = (
   return { width: r.width, height: r.height, rgba };
 };
 
+/** How near (ΔE76) a drawn colour lies to the paint it snaps to for the snap to read it as that paint drawn plain; a farther one, up to `SNAP_RADIUS`, is a blend or a thin line. */
+export const PLAIN_RADIUS = 12;
+
+/** How far (px) along a row, a column or a diagonal the line rule looks each way for the paints a thin line lies between. */
+const LINE_REACH = 3;
+
+/** How far (px, in the square round it) a pixel of a skin paint may lie from skin base: farther, it is cloth drawn in a skin colour. */
+export const SKIN_REACH = 4;
+
+/** The most pixels a 4-connected island of one paint holds for the snap to read it as a speck. */
+export const SPECK_PX = 12;
+
+/** How many pixels deep the split peels a figure's rim of everything but ink. */
+export const RIM_PEEL = 2;
+
+/** A pixel of a paint map that is clear, and one the snap kept as drawn. */
+const CLEAR = -1;
+const DRAWN = -2;
+
+/** The steps of a row, a column and the two diagonals, in the order the line rule reads them. */
+const AXES: ReadonlyArray<readonly [number, number]> = [
+  [1, 0],
+  [0, 1],
+  [1, 1],
+  [1, -1],
+];
+
+/** A colour as one number, for a lookup. */
+const keyOf = (c: Rgb): number => (c[0] << 16) | (c[1] << 8) | c[2];
+
+/** A snapped picture as a paint map: each pixel's paint index, `CLEAR` or `DRAWN`. */
+const paintMapOf = (snap: Raster, paints: ReadonlyArray<Paint>): Int32Array => {
+  const byColour = new Map(paints.map((p, i) => [keyOf(p.rgb), i] as const));
+  const map = new Int32Array(snap.width * snap.height);
+  for (let q = 0; q < map.length; q++) {
+    map[q] = CLEAR;
+    if (alphaAt(snap, q) > 0) map[q] = byColour.get(keyOf(rgbAt(snap, q))) ?? DRAWN;
+  }
+  return map;
+};
+
+/** What the tidying rules read: the drawing, its snapped paint map, the paints and how far each drawn pixel lies from its paint. */
+interface Tidy {
+  readonly drawn: Raster;
+  readonly map: Int32Array;
+  readonly paints: ReadonlyArray<Paint>;
+  readonly loose: Uint8Array;
+}
+
+/** The paint a thin line meets `LINE_REACH` px or less from `q` along (`dx`, `dy`): the first plain paint other than ink, past any loose pixel; none at ink, a clear pixel or the edge. */
+const sideOf = (t: Tidy, q: number, dx: number, dy: number): Option.Option<number> => {
+  const { width, height } = t.drawn;
+  const [x, y] = [q % width, Math.floor(q / width)];
+  for (let k = 1; k <= LINE_REACH; k++) {
+    const [u, v] = [x + dx * k, y + dy * k];
+    if (u < 0 || v < 0 || u >= width || v >= height) return Option.none();
+    const m = v * width + u;
+    const index = t.map[m] ?? CLEAR;
+    if (index === CLEAR || index === 0) return Option.none();
+    if (index > 0 && t.loose[m] === 0) return Option.some(index);
+  }
+  return Option.none();
+};
+
+/**
+ * What a thin line at `q` is (critique 1, item 1): a loose pixel darker
+ * than the plain paints either side of it along a row, a column or a
+ * diagonal (the first that has both) is a line; between two parts it is
+ * the ink, inside one part that part's shade (its base when it has none).
+ * None for any other pixel.
+ */
+const lineAt = (
+  t: Tidy,
+  q: number,
+  shadeOf: ReadonlyMap<string, number>,
+): Option.Option<number> => {
+  const index = t.map[q] ?? CLEAR;
+  if (index <= 0 || t.loose[q] === 0) return Option.none();
+  const lightness = labOf(rgbAt(t.drawn, q))[0];
+  const lighter = (i: number) => (t.paints[i]?.lab[0] ?? 0) > lightness;
+  for (const [dx, dy] of AXES) {
+    const sides = Option.all([sideOf(t, q, dx, dy), sideOf(t, q, -dx, -dy)]);
+    if (Option.isNone(sides)) continue;
+    const [a, b] = sides.value;
+    if (!lighter(a) || !lighter(b)) continue;
+    const [pa, pb] = [t.paints[a]?.part ?? '', t.paints[b]?.part ?? ''];
+    if (pa !== pb) return Option.some(0);
+    return Option.some(shadeOf.get(pa) ?? a);
+  }
+  return Option.none();
+};
+
+/** Each pixel's count of `mask` pixels in the square `reach` px round it, through a summed-area table. */
+const nearCounts = (mask: Uint8Array, width: number, height: number, reach: number) => {
+  const sums = new Int32Array((width + 1) * (height + 1));
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++)
+      sums[(y + 1) * (width + 1) + x + 1] =
+        (mask[y * width + x] ?? 0) +
+        (sums[y * (width + 1) + x + 1] ?? 0) +
+        (sums[(y + 1) * (width + 1) + x] ?? 0) -
+        (sums[y * (width + 1) + x] ?? 0);
+  return (q: number): number => {
+    const [x, y] = [q % width, Math.floor(q / width)];
+    const [x0, y0] = [Math.max(0, x - reach), Math.max(0, y - reach)];
+    const [x1, y1] = [Math.min(width, x + reach + 1), Math.min(height, y + reach + 1)];
+    return (
+      (sums[y1 * (width + 1) + x1] ?? 0) -
+      (sums[y0 * (width + 1) + x1] ?? 0) -
+      (sums[y1 * (width + 1) + x0] ?? 0) +
+      (sums[y0 * (width + 1) + x0] ?? 0)
+    );
+  };
+};
+
+/**
+ * The map with skin only by skin (critique 1, item 1: no rose on cloth): a
+ * pixel of a skin paint with no skin base within `SKIN_REACH` px takes the
+ * nearest paint, to its drawn colour, that is not skin.
+ */
+const skinBySkin = (t: Tidy, map: Int32Array): Int32Array => {
+  const skin = (i: number) => t.paints[i]?.role === 'skin';
+  const others = t.paints.flatMap((p, i) => {
+    if (p.role === 'skin') return [];
+    return [i];
+  });
+  const base = Uint8Array.from(map, (i) => Number(skin(i) && t.paints[i]?.tone === 'base'));
+  const near = nearCounts(base, t.drawn.width, t.drawn.height, SKIN_REACH);
+  const labs = t.paints.map((p) => p.lab);
+  return map.map((index, q) => {
+    if (index < 0 || !skin(index) || near(q) > 0) return index;
+    return nearestAmong(labOf(rgbAt(t.drawn, q)), others, labs);
+  });
+};
+
+/** The pixels of the 4-connected island of `map`'s paint at `q`, `seen` marked as it goes. */
+const islandAt = (map: Int32Array, width: number, q0: number, seen: Uint8Array) => {
+  const index = map[q0];
+  const island: Array<number> = [];
+  const stack = [q0];
+  seen[q0] = 1;
+  while (stack.length > 0) {
+    const q = stack.pop() ?? 0;
+    island.push(q);
+    for (const m of around4(q, width, map.length / width)) {
+      if (seen[m] === 1 || map[m] !== index) continue;
+      seen[m] = 1;
+      stack.push(m);
+    }
+  }
+  return island;
+};
+
+/**
+ * The map with its specks gone (critique 1, item 6): each 4-connected
+ * island of one paint other than ink, `SPECK_PX` pixels or fewer, takes the
+ * paint most of its distinct rim pixels are (the ink, clear and drawn
+ * pixels not counted; the lower index of equals); an island whose rim holds
+ * no such paint stays.
+ */
+const despecked = (map: Int32Array, width: number): Int32Array => {
+  const out = map.slice();
+  const seen = new Uint8Array(map.length);
+  for (let q = 0; q < map.length; q++) {
+    if (seen[q] === 1 || (map[q] ?? CLEAR) <= 0) continue;
+    const island = islandAt(map, width, q, seen);
+    if (island.length > SPECK_PX) continue;
+    const inside = new Set(island);
+    const rim = new Set(
+      island.flatMap((p) => around4(p, width, map.length / width).filter((m) => !inside.has(m))),
+    );
+    const votes = new Map<number, number>();
+    for (const m of rim) {
+      const index = map[m] ?? CLEAR;
+      if (index > 0) votes.set(index, (votes.get(index) ?? 0) + 1);
+    }
+    const winner = [...votes].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
+    if (winner) for (const p of island) out[p] = winner[0];
+  }
+  return out;
+};
+
+/**
+ * A snapped cell tidied by the rules a drawing's own marks need, in order:
+ * each thin line on cloth as ink between two parts or the part's shade
+ * inside one (`lineAt`), skin only by skin (`skinBySkin`), and every speck
+ * the paint round it (`despecked`). `drawn` is the cell before the snap,
+ * `snap` it after, `nearest` the snap's lookup.
+ */
+export const tidied = (
+  drawn: Raster,
+  snap: Raster,
+  paints: ReadonlyArray<Paint>,
+  nearest: (c: Rgb) => Nearest,
+): Raster => {
+  const map = paintMapOf(snap, paints);
+  const loose = Uint8Array.from(map, (index, q) =>
+    Number(index > 0 && nearest(rgbAt(drawn, q)).distance > PLAIN_RADIUS),
+  );
+  const t: Tidy = { drawn, map, paints, loose };
+  const shadeOf = new Map(
+    paints.flatMap((p, i) => {
+      if (p.tone !== 'shade') return [];
+      return [[p.part, i] as const];
+    }),
+  );
+  const lined = map.map((index, q) => Option.getOrElse(lineAt(t, q, shadeOf), () => index));
+  const final = despecked(skinBySkin(t, lined), drawn.width);
+  const rgba = snap.rgba.slice();
+  for (let q = 0; q < final.length; q++) {
+    const paint = paints[final[q] ?? CLEAR];
+    if (paint) rgba.set(paint.rgb, q * 4);
+  }
+  return { width: snap.width, height: snap.height, rgba };
+};
+
+/**
+ * `r` peeled (critique 1, item 2): `RIM_PEEL` times over, every opaque
+ * pixel that is not the ink and touches a clear one or the picture's edge
+ * (a cell's edge is the sheet's ground) is cleared, so a soft edge drawn on
+ * the ground outside the outline never stays on a figure.
+ */
+export const peeled = (r: Raster, paints: ReadonlyArray<Paint>): Raster => {
+  const ink = keyOf(paints[0]?.rgb ?? [0, 0, 0]);
+  const rgba = r.rgba.slice();
+  const clear = (q: number) => (rgba[q * 4 + 3] ?? 0) === 0;
+  const onEdge = (q: number) => around4(q, r.width, r.height).length < 4;
+  for (let pass = 0; pass < RIM_PEEL; pass++) {
+    const rim: Array<number> = [];
+    for (let q = 0; q < r.width * r.height; q++) {
+      if (clear(q)) continue;
+      const c: Rgb = [rgba[q * 4] ?? 0, rgba[q * 4 + 1] ?? 0, rgba[q * 4 + 2] ?? 0];
+      if (keyOf(c) !== ink && (onEdge(q) || around4(q, r.width, r.height).some(clear))) rim.push(q);
+    }
+    for (const q of rim) rgba[q * 4 + 3] = 0;
+  }
+  return { width: r.width, height: r.height, rgba };
+};
+
 /** One cell of a split sheet: its box in the sheet and its pixels. */
 export interface SplitCell {
   readonly box: Box;
@@ -600,14 +839,11 @@ export const splitSheet = (
     const nearest = drawnNearestOf(cleared, paints);
     return {
       ground,
-      cells: boxes.map((box) => ({
-        box,
-        raster: snapped(
-          mendPockets(largestPiece(cropOf(cleared, box)), ground, paints, nearest),
-          paints,
-          nearest,
-        ),
-      })),
+      cells: boxes.map((box) => {
+        const mended = mendPockets(largestPiece(cropOf(cleared, box)), ground, paints, nearest);
+        const snap = snapped(mended, paints, nearest);
+        return { box, raster: peeled(tidied(mended, snap, paints, nearest), paints) };
+      }),
     };
   });
 };
