@@ -430,7 +430,7 @@ describe('scaleSamples', () => {
       ]),
     );
     const none = (at: string) => ({
-      at: `${at}: no head, nor crown and soles, read in its cell or the lead's`,
+      at: `${at}: no head read, nor one from crown-to-soles, in its cell or the lead's`,
       value: Option.none(),
     });
     expect(scaleSamples(planned, [lead, guest, headless], 'lead')).toEqual({

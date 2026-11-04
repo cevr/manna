@@ -356,7 +356,7 @@ export const scaleSamples = (
         const named = `${f.name} frame ${index} (${cellAt(f.cell, mine)}; ${lead} ${cellAt(ref.cell, theirs)})`;
         const sample = Option.match(both, {
           onNone: () =>
-            unreadAt(`${at}: no head, nor crown and soles, read in its cell or the lead's`),
+            unreadAt(`${at}: no head read, nor one from crown-to-soles, in its cell or the lead's`),
           onSome: ([m, t]) =>
             one(named, drawn(f, m) / (drawn(ref, t) * (1 / z) * (zoom ** (1 / z) / zoom))),
         });
