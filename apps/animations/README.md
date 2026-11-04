@@ -516,7 +516,9 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   blink is the held cell with the blink key's closed eyes pasted over its
   own (`blinkOf`, built as the shot loads); nothing outside the eyes
   changes, so the outline never twitches. No plate drawn over a figure may
-  cover its face in any frame (`shots/feast-courtyard.test.ts`). It has no scale: its head is the shot's
+  cover its face in any frame, a moving plate read where its key puts it
+  (`verify/covers.ts`, held by `shots/feast-courtyard.test.ts` and each
+  film's `covers-*.test.ts`). It has no scale: its head is the shot's
   `headPx` over its layer's depth, against its sheet's median head. It has no
   light: the shot's one light tints every base paint and shades every shade
   paint once per cell, the ink untouched. `frameAt` is a pure function of t.
@@ -550,6 +552,24 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   is the one drawn and no resampling has blended an edge; the `light` bar
   keeps the renders' colour checked. The bars stay `orchestrator-proposed`
   until the owner OKs their numbers.
+- **A film's shots** live in `src/films/<film>/storybook/`: its sheet
+  declarations (`sheets.ts`, drawn with `draw <member> <sheet-id> --film
+  <film>`, a member found in the film's `cast/` first), its shots
+  (`shots/*.ts`, each a `FilmShot` whose span and cues are the scene's own
+  anchors: marks, words and other cues, never a film second) and its
+  storybook scenes (`stories.ts`: each scene's shots, cards and light). A
+  shot's frames are the film's frames inside its span, so `plan`, `render`
+  and `verify` take `<film>/<shot>` and judge the very instants the film
+  draws. `storybook shots <film> --out <file>` writes the film's layout, its
+  shots, cards and sheets as JSON and prints `INFO unkept <member>/<sheet>`
+  for each sheet the owner has not kept.
+- **The scene drawing** (`scene.ts`, `storyDrawing`) makes a storybook scene
+  an engine `drawing`: one cue per shot (`shot:<id>`), each shot's cues as
+  `<id>:<name>` and each card's (`card:<scene>`), so `bun run cues` prints the
+  shot list; the frame is painted by the same painter the verify page uses
+  (`painter.ts`), lit in the page by `litColour`; under a card nothing is
+  painted. A figure is placed by its crown: its ground is its crown plus its
+  sheet's crown-to-soles at its scale.
 
 ## How a film is built
 
