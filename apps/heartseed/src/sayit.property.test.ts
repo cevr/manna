@@ -411,38 +411,40 @@ describe('Say it', () => {
 
   it('keeps each recital while the screen is held up past its end and the next press, then shows and ticks only the recital under way', () =>
     Effect.runPromise(
-      Effect.gen(function* () {
-        const text = POOL.join(' ');
-        const held = yield* Deferred.make<void>();
-        const live = yield* rig({
-          passage: { reference: 'Made 5:5', text },
-          source: scriptedSource(recite(text, { every: 1, pace: 4 })),
-          endsByItself: true,
-          tick: Effect.andThen(Effect.yieldNow, Deferred.await(held)),
-        });
-        const recital = Effect.gen(function* () {
-          yield* run(live, { t: 'press' });
-          for (let k = 0; k < 12; k++) yield* run(live, { t: 'wait', ms: 4 });
-          expect((yield* live.dictation.view).ended).toBe('finished');
-        });
-        yield* settle;
-        yield* recital;
-        expect(live.ticks.n).toBe(1);
-        yield* recital;
-        expect(live.ticks.n).toBe(1);
-        expect(live.kept.map((recall) => [recall.startedAt, recall.grade])).toEqual([
-          [0, 3],
-          [48, 3],
-        ]);
-        yield* Deferred.succeed(held, undefined);
-        yield* settle;
-        expect(live.ticks.n).toBe(1 + POOL.length);
-        expect((yield* live.sayIt.view).dictation).toBe(yield* live.dictation.view);
-        yield* recital;
-        expect(live.ticks.n).toBe(1 + 2 * POOL.length);
-        expect(live.kept.map((recall) => recall.startedAt)).toEqual([0, 48, 96]);
-        yield* Scope.close(live.scope, Exit.void);
-      }),
+      Effect.forEach([POOL.length, 3], (words) =>
+        Effect.gen(function* () {
+          const text = POOL.slice(0, words).join(' ');
+          const held = yield* Deferred.make<void>();
+          const live = yield* rig({
+            passage: { reference: 'Made 5:5', text },
+            source: scriptedSource(recite(text, { every: 1, pace: 4 })),
+            endsByItself: true,
+            tick: Effect.andThen(Effect.yieldNow, Deferred.await(held)),
+          });
+          const recital = Effect.gen(function* () {
+            yield* run(live, { t: 'press' });
+            for (let k = 0; k < 12; k++) yield* run(live, { t: 'wait', ms: 4 });
+            expect((yield* live.dictation.view).ended).toBe('finished');
+          });
+          yield* settle;
+          yield* recital;
+          expect(live.ticks.n).toBe(1);
+          yield* recital;
+          expect(live.ticks.n).toBe(1);
+          expect(live.kept.map((recall) => [recall.startedAt, recall.grade])).toEqual([
+            [0, 3],
+            [48, 3],
+          ]);
+          yield* Deferred.succeed(held, undefined);
+          yield* settle;
+          expect(live.ticks.n, `${words} words`).toBe(1 + words);
+          expect((yield* live.sayIt.view).dictation).toBe(yield* live.dictation.view);
+          yield* recital;
+          expect(live.ticks.n, `${words} words`).toBe(1 + 2 * words);
+          expect(live.kept.map((recall) => recall.startedAt)).toEqual([0, 48, 96]);
+          yield* Scope.close(live.scope, Exit.void);
+        }),
+      ),
     ));
 
   it('never finishes the next recital on a lit last word the screen was held up on', () =>
