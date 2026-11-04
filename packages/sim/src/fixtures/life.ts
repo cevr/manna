@@ -78,6 +78,8 @@ export interface Proc {
   window: boolean;
   /** The booting command exited abruptly inside the window. */
   exempt: boolean;
+  /** The file writes under its state folder its booting command made inside the window. */
+  writes: number;
   readonly signalledBy: Array<number>;
 }
 
@@ -240,6 +242,7 @@ export const newProc = (
     alive: true,
     window: fields.kind === 'server',
     exempt: false,
+    writes: 0,
     signalledBy: [],
   };
   w.procs.push(proc);
@@ -363,7 +366,60 @@ const die = (c: Ctx) => {
   c.settle('exited');
 };
 
-/** One host call of `c`: counted, paused, faulted, then judged. */
+/** FileSystem calls that write. */
+const WRITES = new Set([
+  'makeDirectory',
+  'writeFile',
+  'writeFileString',
+  'remove',
+  'rename',
+  'link',
+  'symlink',
+  'copy',
+  'copyFile',
+  'chmod',
+  'truncate',
+]);
+
+/** `path` without macOS's `/private` alias of `/var` and `/tmp`. */
+const unaliased = (path: string) => path.replace(/^\/private\//, '/');
+
+/** The most file writes under its state folder a boot makes between its server's start and its record. */
+const WINDOW_WRITES = 3;
+
+/**
+ * A host call of `c` while a server it spawned is alive and not yet named
+ * by its state's record: only a file write under the state folder, at most
+ * `WINDOW_WRITES` of them, or a start-time read or a signal of the stop
+ * rule; anything else (a tool, a request, a read) keeps the server
+ * unrecorded longer than the window allows.
+ */
+const checkWindow = (c: Ctx, call: Call) => {
+  const state = c.w.states[c.cmd.s];
+  for (const p of c.spawned) {
+    if (!p.window || !p.alive) continue;
+    if (names(record(c.w, c.cmd.s), p)) {
+      p.window = false;
+      continue;
+    }
+    if (call.kind === 'os' && (call.name === 'started' || call.name === 'signal')) continue;
+    if (
+      call.kind === 'fs' &&
+      WRITES.has(call.name) &&
+      unaliased(call.path).startsWith(`${unaliased(state)}/`)
+    ) {
+      p.writes += 1;
+      if (p.writes <= WINDOW_WRITES) continue;
+    }
+    violate(
+      c.w,
+      'found',
+      `${c.id} ${call.kind} ${call.name} ${call.path} inside the spawn-to-record window of ${p.pid} (after ${p.writes} writes)`,
+    );
+  }
+};
+
+/** One host call of `c`: counted, judged against its window, paused, faulted, then judged. */
 const host = <A, E>(
   c: Ctx,
   call: Call,
@@ -374,6 +430,7 @@ const host = <A, E>(
     if (c.dead) return Effect.never;
     c.calls += 1;
     if (c.faulted) c.afterFault += 1;
+    checkWindow(c, call);
     if (call.kind !== 'os') c.events.push({ type: 'call' });
     let before: Effect.Effect<unknown> = Effect.void;
     const pause = c.plan.pause;
