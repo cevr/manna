@@ -215,6 +215,14 @@ const RowMember = [
   ['idea-villagers', 'iio-milk', 'villager', 1240, 'cup', 'cup', 300],
 ] as const;
 
+/** The row's turns to drink: one cue whose starts spread over its `stagger` share of its `dur`, the baby's first. */
+const DRINKS = { mark: 'need', offset: 0.15, dur: 2.8, stagger: 0.75 } as const;
+
+/** When each of the row's drinkers turns to drink, left to right, in seconds after `milk-row:drinks` starts; the shot and the sound's chimes both read it. */
+export const drinkTurns: ReadonlyArray<number> = RowMember.map(
+  (_, i) => (DRINKS.dur * DRINKS.stagger * i) / (RowMember.length - 1),
+);
+
 /**
  * `milk-row`, `need` to the scene's end: the row on the page, the baby, the
  * toddler, the child and the villager, each drinking in turn as the camera
@@ -227,7 +235,7 @@ export const milkRow: FilmShot = {
   span: { mark: 'need', until: { at: 'end' } },
   cues: {
     truck: { mark: 'need', until: 'began' },
-    drinks: { mark: 'need', offset: 0.15, dur: 2.8, stagger: 0.75 },
+    drinks: DRINKS,
     pull: { mark: 'began', until: 'shame', untilOffset: 0.4 },
     lift: { mark: 'shame', dur: 0.22 },
   },
@@ -235,7 +243,7 @@ export const milkRow: FilmShot = {
     const drinks = cue('drinks');
     const lift = cue('lift');
     const at = { headPx: ROW.headPx, z: 1 };
-    const turnAt = (i: number) => drinks.start + 0.7 * i;
+    const turnAt = (i: number) => drinks.start + (drinkTurns[i] ?? 0);
     const row = RowMember.flatMap(([member, sheet, name, x, rest, blink, w], i) => {
       const crown = ROW.ground - tallOf(member, sheet, ROW.headPx, 1);
       return [

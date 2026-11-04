@@ -1,17 +1,6 @@
 import type { Sound } from '@manna/film/core';
 
-import { milk } from './scenes/milk.ts';
-
-/**
- * Where each of the drinking row's four (the baby, the toddler, the child
- * and the grown villager) starts coming in, seconds after the `row` cue
- * starts: the scene staggers them (`f.stagger`), so their starts spread
- * evenly over the cue's `stagger` share of its `dur`, the first at its start.
- */
-const comingIn = (count: number): ReadonlyArray<number> => {
-  const { dur, stagger } = milk.timeline.row;
-  return Array.from({ length: count }, (_, i) => (dur * stagger * i) / (count - 1));
-};
+import { drinkTurns } from './storybook/shots/milk.ts';
 
 /** What no option plays: the epic, the electronic and the drum kit. */
 const AVOID = [
@@ -251,15 +240,15 @@ export const sound: Sound = {
       sound: 'milk.pour',
       level: -22,
       fade: 0.3,
-      from: { scene: 'milk', cue: 'fill' },
-      to: { scene: 'milk', cue: 'stop', edge: 'end' },
+      from: { scene: 'milk', cue: 'milk-pour:pour' },
+      to: { scene: 'milk', cue: 'milk-pour:stop', edge: 'end' },
     },
     {
       sound: 'milk.pour',
       level: -22,
       fade: 0.3,
-      from: { scene: 'milk', cue: 'fill2' },
-      to: { scene: 'milk', cue: 'stop2', edge: 'end' },
+      from: { scene: 'milk', cue: 'milk-pour:again' },
+      to: { scene: 'milk', cue: 'milk-pour:full', edge: 'end' },
     },
   ],
   effects: {
@@ -267,39 +256,43 @@ export const sound: Sound = {
       sound: 'scroll.drop',
       level: -16,
       sync: 'hit',
-      at: [{ scene: 'cold', cue: 'drop', edge: 'end' }],
+      at: [{ scene: 'cold', cue: 'cold-letter:fall', edge: 'end' }],
     },
     hop: {
       sound: 'scroll.drop',
       level: -23,
       sync: 'hit',
-      at: [{ scene: 'cold', cue: 'hop', edge: 'end' }],
+      at: [{ scene: 'cold', cue: 'cold-letter:hop', edge: 'end' }],
     },
     unroll: {
       sound: 'scroll.unroll',
       level: -20,
       sync: 'onset',
-      at: [{ scene: 'cold', cue: 'unfurl' }],
+      at: [{ scene: 'cold', cue: 'cold-letter:unroll' }],
     },
 
     lower: {
       sound: 'paper.whoosh',
       level: -24,
       sync: 'onset',
-      at: [{ scene: 'milk', cue: 'ink' }],
+      at: [{ scene: 'milk', cue: 'milk-pour:dropper' }],
     },
     lift: {
       sound: 'paper.whoosh',
       level: -24,
       sync: 'hit',
-      at: [{ scene: 'milk', cue: 'away', edge: 'end' }],
+      at: [{ scene: 'milk', cue: 'milk-pour:away', edge: 'end' }],
     },
 
     comeIn: {
       sound: 'tone.chime',
       level: -24,
-      at: comingIn(4).map((offset) => ({ scene: 'milk', cue: 'row', offset })),
+      at: drinkTurns.map((offset) => ({ scene: 'milk', cue: 'milk-row:drinks', offset })),
     },
-    lastIn: { sound: 'tone.chime', level: -24, at: [{ scene: 'milk', cue: 'lead' }] },
+    lastIn: {
+      sound: 'tone.chime',
+      level: -24,
+      at: [{ scene: 'milk', cue: 'milk-row:lift' }],
+    },
   },
 };
