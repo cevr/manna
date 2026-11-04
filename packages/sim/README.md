@@ -198,7 +198,12 @@ unrecorded, a window of at most three file writes; the spec accepts it.
 
 ## Tests
 
-- `bun run test`: the commands over a stand-in Drive, the journeys, the App
+- The unit tests run as two parts, each a turbo task the gate's `turbo run
+  test` runs and each under 1 s alone (`bun run test:budget @manna/sim`):
+  `bun run test:host` runs `host.test.ts`, and `bun run test:drive` runs
+  every other unit-test file under `src` (`turbo.json`; `parts.test.ts`
+  holds each unit-test file to exactly one part). Together they run the
+  commands over a stand-in Drive, the journeys, the App
   property over one representative generated app (`app.property.test.ts`),
   and the contained host on the four ways a link once led the driver out of
   the app and on the layouts a real checkout has, and its resolver and tree
