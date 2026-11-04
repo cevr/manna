@@ -112,13 +112,8 @@ const motherBaby: SheetDecl = {
   rules: seated('#c9877e'),
 };
 
-/** A guest beside the lead at the table, turning toward him at picture `side` (the man at his left turns right, the woman at his right turns left). */
-const guest = (
-  member: string,
-  side: 'right' | 'left',
-  seat: string,
-  more: ReadonlyArray<string> = [],
-): SheetDecl => ({
+/** A guest beside the lead at the table, turning toward him at picture `side` (the man at his left turns right). */
+const guest = (member: string, side: 'right' | 'left', seat: string): SheetDecl => ({
   member,
   id: 'iio-table',
   keys: ['neutral', 'neutralBlink', 'stare', 'smile'],
@@ -130,8 +125,32 @@ const guest = (
     smile: `seated on the stool exactly as in the first figure, the head a quarter turned toward the viewer's ${side} as in the third figure, a broad warm closed smile, the mouth shut, the cheeks lifted`,
   },
   refs: ['poses-1', 'poses-2', 'poses-3'],
-  rules: [...seated(seat), ...more],
+  rules: seated(seat),
 });
+
+/**
+ * The guest woman's take-5 sheet (`feast-courtyard`, the woman the owner chose
+ * as the guest), cast as drawn: its pose words as its record holds them, no
+ * rules of the film's, since it was drawn before them (`storybook draw`
+ * refuses an id drawn already). Her `turn`, toward the viewer's left, is her
+ * stare at the lead beside her.
+ */
+const guestWoman: SheetDecl = {
+  member: 'feast-guest-woman',
+  id: 'feast-courtyard',
+  keys: ['neutral', 'smile', 'turn', 'neutralBlink'],
+  poses: {
+    neutral:
+      'seated on the low wooden stool facing the viewer square, both round hands resting on the knees, head and eyes to the viewer, a calm short smile line',
+    smile:
+      'seated on the stool exactly as in the first figure, head and eyes still to the viewer, a broad warm closed smile, the mouth shut, the cheeks lifted',
+    turn: "seated on the stool exactly as in the first figure, the head a quarter turned toward the viewer's left (whatever side the description names), looking at someone who stands there, the same broad warm closed smile, the mouth shut",
+    neutralBlink:
+      'seated on the stool exactly as in the first figure, every line the same, the eyes closed in a blink: each eye a short downward-curved ink line',
+  },
+  refs: ['poses-1', 'poses-2', 'poses-3'],
+  rules: [],
+};
 
 /** One dressed diner at the long table, the n-th person of `filler-dressed`, turning toward a neighbour at picture `side` to talk. */
 const diner = (n: 1 | 2 | 3 | 4, side: 'right' | 'left'): SheetDecl => ({
@@ -212,7 +231,7 @@ export const SHEETS: ReadonlyArray<SheetDecl> = [
   leadMilk,
   motherBaby,
   guest('feast-guest-man', 'right', '#692e18'),
-  guest('feast-guest-woman', 'left', '#553019', [HEMMED]),
+  guestWoman,
   diner(1, 'right'),
   diner(2, 'left'),
   diner(3, 'right'),

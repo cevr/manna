@@ -83,7 +83,7 @@ export const titleShot: FilmShot = {
           seat(
             {
               member: 'feast-guest-woman',
-              sheet: 'iio-table',
+              sheet: 'feast-courtyard',
               name: 'woman',
               x: X.woman,
               crown: CROWN,

@@ -107,7 +107,7 @@ const guests = (man: ReadonlyArray<Span>, woman: ReadonlyArray<Span>) => {
       ...ms,
     ]),
     seat(
-      { member: 'feast-guest-woman', sheet: 'iio-table', name: 'woman', ...AT_TABLE.woman },
+      { member: 'feast-guest-woman', sheet: 'feast-courtyard', name: 'woman', ...AT_TABLE.woman },
       at,
       [w0 ?? hold(0, 1, 'neutral'), ...ws],
     ),
@@ -248,7 +248,7 @@ export const coldTable: FilmShot = {
           guestSpans(
             'neutral',
             [
-              [cue('stared').start, 'stare'],
+              [cue('stared').start, 'turn'],
               [cue('smiled').start, 'smile'],
             ],
             duration,
@@ -334,7 +334,7 @@ export const coldLetter: FilmShot = {
         layer('table', Z.table, [
           ...guests(
             guestSpans('smile', [[cue('stare').start, 'stare']], duration),
-            guestSpans('smile', [[cue('stared').start, 'stare']], duration),
+            guestSpans('smile', [[cue('stared').start, 'turn']], duration),
           ),
           leadAt([
             blinkingHold(0, cue('down').start, 'bottle', 'frontBlink'),
@@ -386,7 +386,7 @@ export const coldOuch: FilmShot = {
         ...backdrop(),
         dinersLayer(new Map(), duration, CLOSE.diners),
         layer('table', Z.table, [
-          ...guests(guestSpans('stare', [], duration), guestSpans('stare', [], duration)),
+          ...guests(guestSpans('stare', [], duration), guestSpans('turn', [], duration)),
           seat(
             { member: 'lead-feast', sheet: 'iio-close', name: 'lead', x: 960, crown },
             { headPx: HEAD, z: Z.table },

@@ -115,7 +115,7 @@ export const TALL: ReadonlyMap<string, number> = new Map([
   ['lead-feast/iio-milk', 868],
   ['feast-mother/iio-baby', 922],
   ['feast-guest-man/iio-table', 668],
-  ['feast-guest-woman/iio-table', 677],
+  ['feast-guest-woman/feast-courtyard', 629],
   ['filler-dressed/iio-diner-1', 818],
   ['filler-dressed/iio-diner-2', 926],
   ['filler-dressed/iio-diner-3', 772],

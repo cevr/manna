@@ -399,6 +399,21 @@ const castMisses = (shots: Shots) =>
     ];
   });
 
+/**
+ * Sheets the owner kept before the cards rule (`CARDS_RULE`), each with why:
+ * their records stay as they were drawn, so their prompts are held to the hand
+ * rules alone (orchestrator ruling on fix 7, 2026-11-04).
+ */
+const BEFORE_CARDS: ReadonlyMap<string, string> = new Map([
+  ['feast-guest-woman/feast-courtyard', 'drawn and kept in take 5, before CARDS_RULE'],
+]);
+
+/** Each house rule a sheet's record prompt lacks, named: the hand rules for every sheet, the cards rule for each not kept before it. */
+const promptMisses = (sheet: string, prompt: string) =>
+  ['no fingers', 'wrist', ...[CARDS_RULE].filter(() => !BEFORE_CARDS.has(sheet))]
+    .filter((rule) => !prompt.includes(rule))
+    .map((rule) => `${sheet} prompt lacks ${rule}`);
+
 /** Every sheet a figure names that is not listed, every listed sheet no figure uses, and every record whose prompt lacks a house rule. */
 const sheetMisses = Effect.fn('Act1.sheetMisses')(function* (shots: Shots) {
   const fs = yield* FileSystem.FileSystem;
@@ -414,9 +429,7 @@ const sheetMisses = Effect.fn('Act1.sheetMisses')(function* (shots: Shots) {
       continue;
     }
     const record = yield* Schema.decodeEffect(RecordJson)(yield* fs.readFileString(file));
-    for (const rule of ['no fingers', 'wrist', CARDS_RULE])
-      if (!record.prompt.includes(rule))
-        misses.push(`${sheet.member}/${sheet.id} prompt lacks ${rule}`);
+    misses.push(...promptMisses(`${sheet.member}/${sheet.id}`, record.prompt));
   }
   return misses;
 });
@@ -460,6 +473,23 @@ const planMisses = (shots: Shots, id: string, plan: Plan) => {
 };
 
 describe('In Its Order act 1 in style B: the cast and the plans', () => {
+  it.effect(
+    'holds a sheet kept before the cards rule to the hand rules alone, and every other sheet to the cards rule too',
+    () =>
+      Effect.sync(() => {
+        const hands = 'round hands, no fingers, each at the wrist of its sleeve.';
+        expect(promptMisses('feast-guest-woman/feast-courtyard', hands)).toEqual([]);
+        expect(promptMisses('feast-guest-man/iio-table', hands)).toEqual([
+          `feast-guest-man/iio-table prompt lacks ${CARDS_RULE}`,
+        ]);
+        expect(promptMisses('feast-guest-man/iio-table', `${hands} ${CARDS_RULE}`)).toEqual([]);
+        expect(promptMisses('feast-guest-woman/feast-courtyard', 'round hands.')).toEqual([
+          'feast-guest-woman/feast-courtyard prompt lacks no fingers',
+          'feast-guest-woman/feast-courtyard prompt lacks wrist',
+        ]);
+      }),
+  );
+
   it.effect(
     'casts each shot as its panels do, every sheet recorded with the house rules, every plan frame of the film drawn from its own sheet, alive and never enlarged past the cap',
     () =>
