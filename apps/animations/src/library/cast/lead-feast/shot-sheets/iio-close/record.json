@@ -25,7 +25,7 @@
         "width": 446,
         "height": 1024
       },
-      "sha256": "b0c55ddfedd5f5bcb146ce78b5cb1e2a3cb1de7169b0faecac98c051643f099e"
+      "sha256": "9296bb7a5348c8a971d830d6fed1ca48ce01a69447838f3d6adc7e1d4de15b1b"
     },
     {
       "key": "downBlink",
@@ -35,7 +35,7 @@
         "width": 512,
         "height": 1024
       },
-      "sha256": "1e757c5ec31e9e1ac06dd589fad674199dfb1f2d2098b064de9bcb3bbe1a1552"
+      "sha256": "d9615f5cf0764c7eed1327a255ae4e51f3a73d4d0b9857c90d382588867d314d"
     },
     {
       "key": "wince",
@@ -45,8 +45,8 @@
         "width": 447,
         "height": 1024
       },
-      "sha256": "e8ce9175f964569f25781dcb97cec6cb79ac06cace1589706abc55303ba789ae"
+      "sha256": "001226a901fedd96611c38f9c56d506ffdf6ce6403c69d8a40dbc391e2f52327"
     }
   ],
-  "rules": ["unstray", "feet-low"]
+  "rules": ["unstray", "feet-low", "sash-band"]
 }

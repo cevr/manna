@@ -29,7 +29,7 @@
         "width": 236,
         "height": 1024
       },
-      "sha256": "343e2c61497dd49b419e763aa403fd68d126d0645677cac6e2643e4bfc32218c"
+      "sha256": "73cfe04efca420a51def62f80f842b7c0a27fcbbc7fe73702b382380a8b9427f"
     },
     {
       "key": "frontBlink",
@@ -39,7 +39,7 @@
         "width": 251,
         "height": 1024
       },
-      "sha256": "028881dbe0f8d77b889f611cbc3a1d5a9d876dd7b1e633063e2526b9c3762d31"
+      "sha256": "35eda88c0e392288d7b0a8992873900e448aaf40f7bfcd109b1e06ba27487b72"
     },
     {
       "key": "lift",
@@ -49,7 +49,7 @@
         "width": 253,
         "height": 1024
       },
-      "sha256": "922649fbcdc12ec27bde55dcdbb96675b7afbb7b212c7c7c98cd344fbf775ef0"
+      "sha256": "074f2d8958c515d879e19aa52255c6b107a7154b14ef7a59fb11008edc064be9"
     },
     {
       "key": "bottle",
@@ -59,7 +59,7 @@
         "width": 259,
         "height": 1024
       },
-      "sha256": "550a1f97ce4d4bfba8ecee58531d65a495697b76ecdb2a05d0e010f8f698642d"
+      "sha256": "62c998fdec851ee78bb0c098d5512f959bea77cde75ba914d7e1a83147a287b5"
     },
     {
       "key": "down",
@@ -69,7 +69,7 @@
         "width": 245,
         "height": 1024
       },
-      "sha256": "1ab1761dc58a1c38d3e45a7e066ad9bc166b96e2f91012833d399b91b17883e9"
+      "sha256": "482b85ae922fd725b5c2b2dab715fe3922175eee7aba481072d5ce2019cb5de0"
     },
     {
       "key": "downBlink",
@@ -79,10 +79,10 @@
         "width": 238,
         "height": 1024
       },
-      "sha256": "1796bdea71a0ac1f21d291e5d42d3067f73d8c14eb960a1ff3ec448aab1e8229"
+      "sha256": "b4551dbc63075147ae811b52e2cbcbdc40ac0a58124eca6f5fa1ea86b65d97ef"
     }
   ],
-  "rules": ["unstray", "feet-low", "unmottle"],
+  "rules": ["unstray", "feet-low", "unmottle", "sash-band"],
   "props": [
     {
       "name": "bottle",
