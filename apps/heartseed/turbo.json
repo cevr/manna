@@ -9,8 +9,8 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
-        "!src/{core-import.property,core-import,dictation.property,display,matcher,today,voice.property}.test.*",
-        "!src/{dictation,voice}/**/*.test.*",
+        "!src/{core-import.property,core-import,dictation.property,display,matcher,sayit.property,today,voice.property}.test.*",
+        "!src/{dictation,sayit,voice}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -21,8 +21,8 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
-        "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,today}.test.*",
-        "!src/dictation/**/*.test.*",
+        "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,today}.test.*",
+        "!src/{dictation,sayit}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -33,8 +33,20 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
-        "!src/{core-import.property,core-import,display,matcher.property,matcher,today,voice.property}.test.*",
-        "!src/voice/**/*.test.*",
+        "!src/{core-import.property,core-import,display,matcher.property,matcher,sayit.property,today,voice.property}.test.*",
+        "!src/{sayit,voice}/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:sayit": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,today,voice.property}.test.*",
+        "!src/{dictation,voice}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -62,6 +74,7 @@
         "test:matcher",
         "test:voice",
         "test:dictation",
+        "test:sayit",
         "test:rest",
         "test:infra"
       ]

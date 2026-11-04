@@ -7,7 +7,8 @@
  * - `react-native` is react-native-web, as on the web;
  * - `virtual:heartseed-passage` is the passage the bundler plugin derives,
  *   by the same script (`vite/passage.ts`);
- * - `one` is `src/test/one.tsx`: a phone's safe area with no insets.
+ * - `one` is `src/test/one.tsx`: a phone's safe area with no insets, its
+ *   haptics felt by nothing, and device info that reads a phone.
  */
 
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
