@@ -6,9 +6,10 @@ import {
   type Span,
   turn,
 } from '../../../../library/storybook/shot.ts';
-import { BABY_BACK, FAR_TABLE, TABLE, WHAT } from '../../plates/plates.ts';
+import { BABY_BACK, FAR_TABLE, TABLE } from '../../plates/plates.ts';
 import { SCROLL_OPEN, SCROLL_ROLLED } from '../../plates/props.ts';
-import { cam, holds, key, layer, plateOf, plateOn, seat } from '../kit.ts';
+import { cam, holds, key, layer, plateOf, plateOn, seat, STORY_PLATES } from '../kit.ts';
+import { WHAT_DAY, WHAT_DAY_SCALE } from '../plates/what-day.ts';
 import {
   AT_TABLE,
   backdrop,
@@ -420,7 +421,7 @@ export const coldOuch: FilmShot = {
   },
 };
 
-/** `cold-what`, `what` to the scene's end: the cup and the loaf alone, lit; the camera lifts and pushes in toward them. No figure. */
+/** `cold-what`, `what` to the scene's end: the cup and the loaf on the table by day, the feast beyond (owner O1); the camera lifts and pushes in toward them. No figure. */
 export const coldWhat: FilmShot = {
   id: 'cold-what',
   span: { mark: 'what', until: { at: 'end' } },
@@ -428,6 +429,10 @@ export const coldWhat: FilmShot = {
   build: ({ duration }) => ({
     headPx: HEAD,
     camera: [cam(0, 960, 540, 1), cam(duration, 960, 500, 1.08)],
-    layers: [layer('what', 1, [plateOf('cold-what.png', WHAT)])],
+    layers: [
+      layer('what', 1, [
+        plateOf('cold-what-day.png', WHAT_DAY, { scale: WHAT_DAY_SCALE, dir: STORY_PLATES }),
+      ]),
+    ],
   }),
 };

@@ -1,6 +1,5 @@
 import type { PaintingSpec } from '@manna/film/canvas';
 import babyBackPng from './cold-baby-back.png' with { type: 'file' };
-import whatPng from './cold-what.png' with { type: 'file' };
 import farTablePng from './far-table.png' with { type: 'file' };
 import distancePng from './distance.png' with { type: 'file' };
 import nearPng from './near.png' with { type: 'file' };
@@ -73,18 +72,6 @@ export const FAR_TABLE = {
 export const BABY_BACK = {
   key: 'in-its-order/cold-baby-back',
   png: babyBackPng,
-  size: [1920, 1280],
-  at: [0, -100],
-} as const satisfies PaintingSpec;
-
-/**
- * `cold`'s last close, painted to `board/cold.what.3.png`: a clay cup of milk
- * and a round loaf on a clay platter on the cream table top, the only props
- * lit, and beyond the table a soft plum-indigo dark. The whole picture.
- */
-export const WHAT = {
-  key: 'in-its-order/cold-what',
-  png: whatPng,
   size: [1920, 1280],
   at: [0, -100],
 } as const satisfies PaintingSpec;
