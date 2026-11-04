@@ -8,13 +8,13 @@ reference and the words are made when the app is bundled, from the KJV in
 `@manna/core` (`apps/heartseed/vite/passage.ts`), shown by the display rule
 of `apps/heartseed/src/display.ts`: a leading `¶` and the space after it
 are dropped, and so is every `[`, `]`, `‹` and `›`, the words they enclose
-kept. The screen has no button yet, asks for no permission and makes no
-sound.
+kept. Below the passage is one button, `Say it` (`sayit.md`);
+until it is pressed the screen asks for no permission and makes no sound.
 
 ## Sub-features
 
 - `today-passage`: on launch, Today shows the header `Today` (role header),
-  the reference `Isaiah 41:10` and its KJV text, exactly
+  the reference `Isaiah 41:10`, one `Say it` button, and its KJV text, exactly
   `Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee; yea, I will uphold thee with the right hand of my righteousness.`
 
 ## How to get to it (user POV)
@@ -34,7 +34,10 @@ sim snapshot today
 
 → `open` is ok, and the snapshot (`$EVIDENCE/snapshots/today.txt`) lists,
 under `[application] "Heartseed"`, the text nodes `Today`, `Isaiah 41:10`
-and the passage above, whole, with no `¶`, `[`, `]`, `‹` or `›` in it.
+and the passage above, whole, with no `¶`, `[`, `]`, `‹` or `›` in it,
+and a node `Say it`, with no `Listening` and no grade (`Again`, `Hard`,
+`Good`, `Easy`). A short label can appear on two nodes, so check that the
+labels are present, not how many nodes carry them.
 Count those nodes, report the counts, then delete the snapshot: it holds
 the passage's words.
 

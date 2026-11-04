@@ -1,8 +1,9 @@
 # Heartseed
 
 Scripture memorization on One (React Native on iOS, react-native-web on the
-web). Today (`app/index.tsx`) shows the passage the reader is learning; the
-word matcher (`src/matcher.ts`) grades a recall against the verse.
+web). Today (`app/index.tsx`) shows the passage the reader is learning and
+one button, Say it, which hears the reader recite it; the word matcher
+(`src/matcher.ts`) grades a recall against the verse.
 
 Run it as a reader does with the verify skill,
 `.claude/skills/verify-heartseed`. It drives through `bun run sim`
@@ -13,8 +14,8 @@ simulator, ports 8280-8289, iOS alone).
 ## Voice
 
 The voice reads a verse aloud on the device and lights each word as it is
-spoken; the reader can turn it off. No screen calls it yet: the hear phase
-will call `Voice.read`.
+spoken; the reader can turn it off. No screen calls it yet (Say it reads no
+word aloud): the hear phase will call `Voice.read`.
 
 - `src/voice.ts` is the `Voice` service (Effect): `read`, `pause`,
   `resume`, `stop`, `setEnabled`, and the `view` a screen shows (`status`,
@@ -56,8 +57,8 @@ will call `Voice.read`.
 ## Dictation
 
 Dictation hears the reader say a verse and lights each word as it is said,
-marking a miss while they speak. No reader-facing screen calls it yet: Say
-it will call `Dictation.start`.
+marking a miss while they speak. Today's Say it calls it, through the app's
+one runtime (`src/app.ts`, below).
 
 - `src/dictation.ts` is the `Dictation` service (Effect): `start` (a verse
   and its cue), `finish`, `cancel`, `peek`, the `engines` report, and the
@@ -116,6 +117,49 @@ it will call `Dictation.start`.
   Today's passage, less its 11th word, through the module's replay and
   shows counts only. A release build renders nothing.
 
+## Say it
+
+Today's one button. A press recites the passage: its words hide, each word
+lights as the reader says it, with one soft haptic tick, and a missed word
+shows only a mark that a tap reveals (a peek). The recital finishes itself
+when its last word lights, or at a press. When it ends `finished`, Today
+shows the count (`<lit> of <total> words`, and `, <n> peeked` once a word
+was peeked), the matcher's suggested grade, and FSRS's four grades with the
+suggestion chosen; the reader can change it. Any other ending shows one
+alert and the verse whole, and keeps nothing. Say it reads no word aloud.
+
+- `src/sayit.ts` is the `SayIt` service (Effect) over `Dictation`: `press`
+  (start a recital, or finish the one under way; it never replaces one),
+  `peek`, `choose`, and the `view` Today shows (the latest Dictation view,
+  `startedAt` and the `choice`) with its `changes`. The ticks follow
+  Dictation's `changes`, diffed from each recital's first view; the endings
+  come from Dictation's `endings`, which loses none, the n-th ending being
+  the n-th recital's. Each change of a finished recital's recall (its first
+  suggestion, a changed grade, a later peek) is handed once to `Recalls`,
+  keyed for the scheduler by `startedAt` on the service's own clock.
+  `Haptics` is the tick.
+- `src/app.ts` is the app's one runtime: one Dictation over the source
+  this build hears, Say it over it, `liveHaptics` (One's soft impact) and
+  `loggedRecalls` (counts and the reference logged as `sayit.recall.kept`,
+  stored nowhere until the scheduler takes the seam). Every screen that
+  hears the reader takes Dictation from here. The runtime is not kept
+  alive: when Today leaves, its scope closes and Dictation cancels a
+  recital under way. `press`, `peek` and `choose` run to their ends.
+- The source: `sourceKind({ dev, simulator })` (`src/sayit/source.ts`)
+  answers the module's replay of the probe's plan only when `dev`
+  (`__DEV__`, nothing else) and the simulator (One's device info; a read
+  that fails or takes over 2 s counts as a device) are both true, so a
+  release build and a development build on a phone hear the microphone.
+- `src/sayit/screen.ts` reads what Today draws from Say it's view;
+  `app/index.tsx` draws it: one element per word, so each is its own
+  accessibility element (an unsaid or half-heard word hidden from the
+  screen reader, a mark named `Missed word <n>`, a peeked word
+  `<word>, peeked`), the radio group `Grade`, and the button `Say it` or
+  `Listening`. A word lights with a short fade and the button pulses while
+  it listens; Reduce Motion stills both (Reanimated's `ReduceMotion.System`).
+- `src/sayit/guard.test.ts` holds the source choice, the one Dictation, no
+  word aloud and the soft tick to the sources.
+
 ## Tests
 
 - The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as parts, each a
@@ -133,8 +177,8 @@ it will call `Dictation.start`.
     service against its model) and `src/dictation` (the scripted source,
     the hints and the native module's guards).
   - `test:sayit`: `src/sayit.property.test.ts` (Say it against its model)
-    and `src/sayit` (Today's Say it in happy-dom, and the source Say it
-    hears).
+    and `src/sayit` (Today's Say it in happy-dom, the source Say it hears,
+    and its guards).
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

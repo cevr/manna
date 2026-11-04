@@ -2,8 +2,10 @@
 
 Dictation hears a verse said and lights each word as it is said
 (`apps/heartseed/src/dictation.ts`, over the Swift package
-`apps/heartseed/native/dictation`). No reader-facing screen calls it yet:
-Say it will. A development probe, `app/probe/dictation.tsx`, recites
+`apps/heartseed/native/dictation`). Today's Say it calls it through the
+app's one runtime (`apps/heartseed/src/app.ts`; `sayit.md`),
+which in a development build on the simulator plays the same scripted
+replay as the probe. A development probe, `app/probe/dictation.tsx`, recites
 Today's passage less its 11th word through the module's scripted replay,
 so the drive checks the module, its events crossing into JS and the
 matcher, with no microphone. It shows counts only, never a word.

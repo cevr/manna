@@ -135,16 +135,20 @@ the target. `sim snapshot <step>` writes the screen's nodes, as
 `[role] "text"`, to `$EVIDENCE/snapshots/<step>.txt`; a feature file says
 which nodes prove it. A target is `label=<accessible name>` or
 `id=<testID>`, matched whole. `sim tap`, `sim scroll` and `sim back` work as
-the hymnal's skill describes; Today has nothing to tap yet. Heartseed has no
-journey files yet. The features:
+the hymnal's skill describes; on Today a reader taps `Say it`, a grade and a
+missed word's mark. Heartseed has no journey files yet. The features:
 
-- [features/today.md](features/today.md): Today, its header, reference and
-  passage.
+- [features/today.md](features/today.md): Today, its header, reference,
+  passage and its one button.
+- [features/sayit.md](features/sayit.md): Say it on Today, over the scripted
+  replay on the simulator: the lit words, the mark and its peek, the count,
+  the suggested grade and a changed one.
 - [features/voice.md](features/voice.md): the voice's native module, built
   with the app (no screen calls it yet).
 - [features/dictation.md](features/dictation.md): dictation's native
   module, built with the app and its prompts, and its scripted replay on
-  the development probe (`apps/heartseed/app/probe/dictation.tsx`).
+  the development probe (`apps/heartseed/app/probe/dictation.tsx`). Say it
+  calls it on Today.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.

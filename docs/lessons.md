@@ -5013,3 +5013,43 @@ The form of an entry, each field on its own line:
 - **Wrong:** The development probe could render in a release build, listen on the microphone instead of replaying, or show verse words; the service could import native code, a second file could import the Swift module, the committed declaration could fall behind the Swift file, and a device build without the two prompts crashes on the first listen.
 - **Cause:** The probe is the only screen that reaches dictation in this unit, and One's bundler refuses a `.swift` import off iOS.
 - **Guard:** code: `apps/heartseed/src/dictation/guard.test.ts` `is the only screen that reaches dictation, and it replays, never listens`; `apps/heartseed/src/dictation/guard.test.ts` `renders and starts only in a development build, and shows no verse word`; `apps/heartseed/src/dictation/guard.test.ts` `asks for speech recognition and the microphone, and prebuild reads it`; `apps/heartseed/src/dictation/guard.test.ts` `keeps the service free of native code`; `apps/heartseed/src/dictation/guard.test.ts` `imports the Swift file from source.ios.ts alone`; `apps/heartseed/src/dictation/guard.test.ts` `commits the declaration One’s native source writes for Dictation.swift`
+
+### heartseed-sayit-replay-only-in-a-development-build-on-the-simulator
+
+- **Date:** 2026-11-04
+- **Kind:** owner
+- **Said:** "a scripted word source for tests and the simulator"
+- **Source:** hymnapp/selahone/units.md row 4 (Done line); hymnapp/hssayit/spec.md Path ("A release build must never hear a scripted recital in place of the reader."), Decided 1 and Risks
+- **Wrong:** Say it could hear the module's scripted replay in a release build or on a phone, through an environment variable, a link parameter, a default argument, a `dev` taken from anything but `__DEV__`, or the probe's plan imported into a screen.
+- **Cause:** The replay is the simulator's only useful source, and the switch that picks it is one line of `src/app.ts` that no unit run on the web build can watch choose.
+- **Guard:** code: `apps/heartseed/src/sayit/source.test.ts` `is the replay only in a development build on the simulator, over all four builds`; `apps/heartseed/src/sayit/guard.test.ts` `takes dev from __DEV__ alone, and the kind from sourceKind over dev and the device info`; `apps/heartseed/src/sayit/guard.test.ts` `calls replaySource only where the kind is the replay, with the simulator plan`; `apps/heartseed/src/sayit/guard.test.ts` `decides by a rule that reads no build flag or environment, whose plan reaches no screen but through src/app.ts`
+
+### heartseed-sayit-recall-kept-on-every-change
+
+- **Date:** 2026-11-04
+- **Kind:** owner
+- **Said:** "After a recall the verse grows a stage, and Heartseed suggests the grade, which the user can change."
+- **Source:** hymnapp/selahone/units.md row 5 (Done lines); hymnapp/hssayit/spec.md Decided 2 and Risks
+- **Wrong:** The recall Say it hands the scheduler could be kept for a recital that did not finish, carry an old recital's ending onto the next, miss a peek after the end or a changed grade, keep the same recall twice, fold two recitals that share a start into one, or lose its hand-over to a second tap; each corrupts the reader's review history for good. Its readers of Dictation's `changes` and `endings`, forked without starting, also lost the first recital's ending to a press made as soon as the service was built (an unbounded stream with no replay keeps nothing for a reader not yet subscribed), so that recital never showed its grade or kept its recall.
+- **Cause:** Endings, views and the reader's taps arrive on separate fibers, the ending of one recital can be read after the next has started, and a forked fiber subscribes only when it first runs (the acceptance harness yields before its first press, so it never saw that gap).
+- **Guard:** code: `apps/heartseed/src/sayit.property.test.ts` `agrees with its model on 240 seeded histories of 30 steps, over self-ending and open sources`; `apps/heartseed/src/sayit.property.test.ts` `recites the passage by the simulator plan: all lit but the 11th, Hard suggested, and a changed grade and a later peek kept`; `apps/heartseed/src/sayit.property.test.ts` `never lands an ending it reads late on the next recital`; `apps/heartseed/src/sayit.property.test.ts` `keeps a finished recital while the screen’s view is held up, and ticks the next recital from its first view`; `apps/heartseed/src/sayit.property.test.ts` `ticks and keeps each recital heard whole inside its listen, pressed as soon as Say it is built`
+
+### heartseed-sayit-one-dictation-no-word-aloud-soft-tick
+
+- **Date:** 2026-11-04
+- **Kind:** owner
+- **Said:** "One button, "Say it". Each word lights as the user says it, with a soft haptic tick."
+- **Source:** hymnapp/selahone/units.md row 5 (Done lines); hymnapp/hssayit/spec.md Decided 8, Today (Never read aloud) and Risks
+- **Wrong:** A screen could build a second Dictation on the module's one native channel (two services apply each other's events), Say it could read a word aloud or announce it, and a tick could be a hard impact or another haptic.
+- **Cause:** The native channel, the speech and the haptics are reached by name from any screen, and no web test can feel or hear them.
+- **Guard:** code: `apps/heartseed/src/sayit/guard.test.ts` `is built only in src/app.ts and the development probe, and Today reaches it through src/app.ts`; `apps/heartseed/src/sayit/guard.test.ts` `reads no word aloud: Today and Say it name no voice, speech synthesis or announcement`; `apps/heartseed/src/sayit/guard.test.ts` `is soft: the app’s one call of One’s haptics is impact("soft"), in Say it’s live parts`
+
+### heartseed-sayit-marks-for-the-screen-reader
+
+- **Date:** 2026-11-04
+- **Kind:** owner
+- **Said:** "click the mark and see the word if you want. Like you said it counts as a peak."
+- **Source:** hymnapp/plan.md line 117 (the owner, 2026-10-19); hymnapp/hssayit/spec.md Today and Risks
+- **Wrong:** Nested words make the verse one accessibility element with no tappable mark; an unsaid or half-heard word read by the screen reader gives the recital away; a mark not named `Missed word <n>`, a grade group without its checked state, or an inexact count leaves VoiceOver and the drive without their target; and leaving Today could leave a recital listening.
+- **Cause:** The screen reader and the simulator driver read only the accessible names, roles and states, which no picture of the screen shows.
+- **Guard:** code: `apps/heartseed/src/sayit/today.test.tsx` `reads a whole recital: each lit word by its name, the miss as a numbered mark, the count, the suggestion and the grade, then a changed grade and a peek`; `apps/heartseed/src/sayit/today.test.tsx` `hides each unsaid word from the screen reader and reads Listening while it listens, with no grade`; `apps/heartseed/src/sayit/today.test.tsx` `leaving mid-recital cancels it once and keeps nothing, with the registry still alive`
