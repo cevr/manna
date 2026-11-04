@@ -243,8 +243,6 @@
         "!src/films/righteousness-by-faith/**/*.test.*",
         "!src/films/in-its-order/rigs/**/*.test.*",
         "!src/films/in-its-order/scenes/**/*.test.*",
-        "!src/films/in-its-order/storybook/*.test.ts",
-        "src/films/in-its-order/storybook/paints.test.ts",
         "!src/library/**/*.test.*"
       ]
     }
