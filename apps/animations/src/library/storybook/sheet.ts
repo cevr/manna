@@ -900,8 +900,15 @@ const meanColumn = (r: Raster, y0: number, y1: number): Option.Option<number> =>
 /** The fewest rows in a run a line reads as paint: a shorter one is the anti-aliased fringe at an outline, snapped to whatever paint lay near. */
 const LINE_RUN = 3;
 
-/** How many rows of garment the head column must run through below the face for the first to be the collar: a jaw line drawn in a garment's colour runs a few rows, the clothes far more. */
-const COLLAR_RUN = 12;
+/**
+ * The share of a figure's height the head column must run through garment
+ * below the face for the first row to be the collar: a jaw line drawn in a
+ * garment's colour runs about a hundredth of it, the clothes over a fortieth
+ * even where a render's soft rows thin the band. A share, not a row count,
+ * so a figure reads one collar at its sheet's size and at any size a render
+ * draws it.
+ */
+const COLLAR_SHARE = 1 / 60;
 
 /** The rows of column `x` from `from` downward whose pixel is exactly a paint of one of `roles`, in runs of `least` (`LINE_RUN` unless named) or more; clear pixels, the ink and colours left as drawn are skipped. */
 const rowsOfRole = (
@@ -970,7 +977,14 @@ export const linesOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<
     ) ?? top,
   );
   const face = rowsOfRole(r, headColumn, crown, ['skin'], paints)[0] ?? r.height;
-  const collar = rowsOfRole(r, headColumn, face, ['garment', 'sash'], paints, COLLAR_RUN)[0];
+  const collar = rowsOfRole(
+    r,
+    headColumn,
+    face,
+    ['garment', 'sash'],
+    paints,
+    Math.max(LINE_RUN, height * COLLAR_SHARE),
+  )[0];
   const garment = rowsOfRole(r, centreColumn, top, ['garment'], paints);
   return Option.some({
     top,

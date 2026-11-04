@@ -786,6 +786,46 @@ const standing = (offer: boolean): Raster => {
   );
 };
 
+/** Where the collar band starts, as a share of the figure's height (the lead's side cell: 151 of 458). */
+const COLLAR_AT = 0.33;
+
+/**
+ * The bands of a figure from crown to soles, each a share of its height and
+ * the colour it is painted: hair, the face with a jaw line in the robe's
+ * colour a hundredth deep (the man's turned head, 7 of 705 rows), a collar
+ * band in the robe's colour as deep as the lead's rendered side cell reads
+ * it (11 of 427 rows), an ink line, the robe, and sandals.
+ */
+const BANDS: ReadonlyArray<readonly [number, Rgb]> = [
+  [0.15, INK],
+  [0.2, SKIN],
+  [0.211, ROBE],
+  [COLLAR_AT, SKIN],
+  [COLLAR_AT + 0.026, ROBE],
+  [COLLAR_AT + 0.038, INK],
+  [0.92, ROBE],
+  [1, SANDAL],
+];
+
+/** A figure 15 px wide and `height` rows tall, outlined in ink at its sides, its bands moved `dy` of a row down: a row two bands share is their blend by cover, as a render's resampling paints it. */
+const banded = (height: number, dy: number): Raster => {
+  const width = 15;
+  const rgba = new Uint8Array(width * height * 4);
+  const bandAt = (v: number): Rgb => BANDS.find(([end]) => v < end * height + dy)?.[1] ?? SANDAL;
+  for (let y = 0; y < height; y++) {
+    const [a, b] = [bandAt(y), bandAt(y + 0.999)];
+    const edge = BANDS.map(([end]) => end * height + dy).find((e) => e > y && e < y + 1) ?? y;
+    const cover = edge - y;
+    const row = [0, 1, 2].map((k) => Math.round((a[k] ?? 0) * cover + (b[k] ?? 0) * (1 - cover)));
+    const mixed = [a, [row[0] ?? 0, row[1] ?? 0, row[2] ?? 0] as const][Number(a !== b)] ?? a;
+    for (let x = 0; x < width; x++) {
+      const outline = x === 0 || x === width - 1;
+      rgba.set([...([mixed, INK][Number(outline)] ?? mixed), 255], (y * width + x) * 4);
+    }
+  }
+  return { width, height, rgba };
+};
+
 describe('linesOf', () => {
   const paints = paintsOf(DRESSED);
 
@@ -828,7 +868,7 @@ describe('linesOf', () => {
     expect([lines.centreColumn, lines.hem]).toEqual([7, Option.some(15)]);
   });
 
-  test("reads the collar below a jaw line drawn a few rows deep in a garment's colour, where the clothes run on (round 2: the man's turned head)", () => {
+  test("reads the collar below a jaw line drawn a few rows of a tall figure deep in a garment's colour, where the clothes run on (round 2: the man's turned head)", () => {
     const rows = [
       '..kkkkk..',
       '..ksssk..',
@@ -839,11 +879,27 @@ describe('linesOf', () => {
       '..krrrk..',
       '..ksssk..',
       '..ksssk..',
-      ...Array.from({ length: 14 }, () => '.krrrrrk.'),
+      ...Array.from({ length: 240 }, () => '.krrrrrk.'),
       '.kkkkkkk.',
     ];
     const lines = Option.getOrThrow(linesOf(art(rows, FIGURE_KEY), paints));
     expect([lines.crown, Option.getOrThrow(lines.head)]).toEqual([0, 9]);
+  });
+
+  test('over generated figure sizes and sub-pixel offsets: reads the collar at the top of a band a fortieth of the figure deep, below a jaw line a hundredth deep, at any size a render draws (round 2: the lead read 189 for 146 at frame 17)', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const draw = rng(seed);
+      const height = 200 + Math.floor(draw() * 521);
+      const dy = draw();
+      const raster = banded(height, dy);
+      const lines = Option.getOrThrow(linesOf(raster, paints));
+      const head = Option.getOrElse(lines.head, () => -1);
+      expect([seed, height, Math.abs(head - COLLAR_AT * height) <= 2]).toEqual([
+        seed,
+        height,
+        true,
+      ]);
+    }
   });
 
   test('reads no sash top from stray sash pixels too few to make a band', () => {
