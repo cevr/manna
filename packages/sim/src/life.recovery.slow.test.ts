@@ -20,7 +20,7 @@ const SECONDS = ['fail', 'exit'] as const;
 /** The first fault's host calls: every other one, up to past each subject's last. */
 const CALLS = Array.from({ length: 12 }, (_, at) => 1 + at * 2);
 /** First-fault calls per test. */
-const PER = 4;
+const PER = 2;
 
 describe('a fault inside the recovery of a fault, over the model', () => {
   for (const subject of SUBJECTS.filter((one) => NAMES.includes(one.name)))

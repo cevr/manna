@@ -259,18 +259,14 @@ const start = (w: World, a: Actor) => {
   });
 };
 
-/** How many turns of the event loop the actors get to reach their next call; past it, a hang. */
-const TURNS = 20_000;
-
-/** Wait until no actor runs: each is waiting at a call or has ended. */
+/**
+ * Wait until no actor runs: each is waiting at a call or has ended. A
+ * woken actor's call is real file work, which a loaded host can make slow,
+ * so the wait counts no turns and has no time limit of its own: an actor
+ * that never reaches its next call holds the test past bun's time limit.
+ */
 const settle = async (w: World) => {
-  for (let turn = 0; turn < TURNS; turn += 1) {
-    if (w.running <= 0) return true;
-    await new Promise((resolve) => setImmediate(resolve));
-  }
-  const running = w.actors.filter((a) => a.status === 'run').map((a) => a.name);
-  violate(w, 'untyped', `hang: ${running.join(', ')} still running`);
-  return false;
+  while (w.running > 0) await new Promise((resolve) => setImmediate(resolve));
 };
 
 /** A schedule's opening: wake `name` that many times (or until it ends), in order. */
@@ -281,7 +277,7 @@ const schedule = async (w: World, script: Script = []) => {
   let last: Actor | undefined;
   const steps = script.map(([name, count]) => [name, count] as [string, number | 'done']);
   for (let guard = 0; guard < 5000; guard += 1) {
-    if (!(await settle(w))) return;
+    await settle(w);
     const waiting = w.actors.filter((a) => a.status === 'gate');
     if (waiting.length === 0) return;
     let pick: Actor | undefined;

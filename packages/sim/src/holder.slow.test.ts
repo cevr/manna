@@ -1,6 +1,6 @@
 /**
  * The state holder's generated worlds past the unit test's first 50
- * (`fixtures/holders.ts`): seeds 51 to 4050, in parts of 500. Each world is
+ * (`fixtures/holders.ts`): seeds 51 to 4050, in parts of 250. Each world is
  * 3-5 commands at once with typed failures and abrupt exits, then 1-3 more
  * (some on a dead command's pid), then a fresh command alone.
  */
@@ -10,8 +10,8 @@ import { Effect } from 'effect';
 import { generatedRange } from './fixtures/holders.ts';
 
 const FIRST = 51;
-const PART = 500;
-const PARTS = 8;
+const PART = 250;
+const PARTS = 16;
 
 describe('the state holder over generated interleavings', () => {
   for (let part = 0; part < PARTS; part += 1) {
