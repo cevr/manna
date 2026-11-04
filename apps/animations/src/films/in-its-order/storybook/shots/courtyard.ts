@@ -1,8 +1,6 @@
-import type { Figure, Layer, Span } from '../../../../library/storybook/shot.ts';
-import { figure } from '../../../../library/storybook/shot.ts';
+import type { Figure, Layer } from '../../../../library/storybook/shot.ts';
 import { DISTANCE, FAR_TABLE, NEAR, SKY, TABLE } from '../../plates/plates.ts';
-import { sheetNamed } from '../sheets.ts';
-import { layer, plateOf } from '../kit.ts';
+import { layer, plateOf, seat } from '../kit.ts';
 
 /**
  * A grown head (crown to collar) on the table's plane in the courtyard's
@@ -15,20 +13,6 @@ export const HEAD = 120;
 /** How far each courtyard plane stands, as a camera's divisor. */
 export const Z = { sky: 12, distance: 5, near: 2, diners: 1.4, guests: 1.15, table: 1 } as const;
 
-/** The keys a declared sheet holds, as a figure's spans may name them. */
-export const keysOf = (member: string, id: string): ReadonlyArray<string> =>
-  sheetNamed(member, id)?.keys ?? [];
-
-/** A figure of the film on its declared sheet. */
-export const cast = (
-  member: string,
-  sheet: string,
-  name: string,
-  at: { readonly x: number; readonly ground: number },
-  spans: Figure['spans'],
-  worn: Figure['worn'] = [],
-): Figure => figure(keysOf(member, sheet), { name, member, sheet, at, spans, worn });
-
 /** The courtyard behind its people: the sky, the hills and town, and the near pergola, each on its plane. */
 export const backdrop = (): ReadonlyArray<Layer> => [
   layer('sky', Z.sky, [plateOf('sky.png', SKY)]),
@@ -36,22 +20,40 @@ export const backdrop = (): ReadonlyArray<Layer> => [
   layer('near', Z.near, [plateOf('near.png', NEAR)]),
 ];
 
-/** The long table in front, on the table's plane: every chin at the table sits above its top. */
+/** The long table in front, on the table's plane: every chin at the table sits above its top (frame y 915 at its highest). */
 export const table = () => plateOf('table.png', TABLE);
 
 /** The far table the diners sit behind, on their plane, a fifth wider than the frame so a truck never shows its ends. */
 export const farTable = () =>
   plateOf('far-table.png', FAR_TABLE, { at: [-192, FAR_TABLE.at[1]], scale: 1.2 });
 
-/** A seated guest's holds through a shot: `[from, cell]` runs, each a blinking hold to the next, the last to `end`. */
-export const holds = (
-  runs: ReadonlyArray<readonly [number, string, string]>,
-  end: number,
-): ReadonlyArray<Span> =>
-  runs.map(([from, cell, blink], i) => ({
-    _tag: 'Hold',
-    from,
-    to: runs[i + 1]?.[0] ?? end,
-    cell,
-    blink,
-  }));
+/** The three at the table on its plane: the man at picture left, the lead in the middle, the woman at picture right, each crown where the panel draws it. */
+export const AT_TABLE = {
+  man: { x: 730, crown: 760 },
+  lead: { x: 960, crown: 744 },
+  woman: { x: 1190, crown: 760 },
+} as const;
+
+/** The diners' row behind on its plane, left to right, and the mother at its far right: their crowns high enough that every chin clears the far table's top (840). */
+export const DINERS_ROW = {
+  crown: 700,
+  xs: [180, 420, 1440, 1640],
+  mother: { x: 1830, crown: 712 },
+} as const;
+
+/** The four dressed diners, each on its own sheet, the side each `talk` turns to. */
+export const DINERS = [1, 2, 3, 4] as const;
+
+/** Diner `n` at `x`, its crown at `crown`, on a plane at `z` under a grown head of `headPx`. */
+export const diner = (
+  n: (typeof DINERS)[number],
+  x: number,
+  crown: number,
+  at: { readonly headPx: number; readonly z: number },
+  spans: Figure['spans'],
+): Figure =>
+  seat(
+    { member: 'filler-dressed', sheet: `iio-diner-${n}`, name: `diner-${n}`, x, crown },
+    at,
+    spans,
+  );

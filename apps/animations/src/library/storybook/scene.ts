@@ -71,8 +71,8 @@ export interface StoryCard<F = FilmFrame> {
   readonly draw: (f: F, words: ReadonlyArray<CardWord>) => void;
 }
 
-/** What a storybook scene reads of the film's frame: its canvas, its time and size, its hands, and its paintings by name. */
-export type PaintingFrame = Pick<FilmFrame, 'ctx' | 't' | 'w' | 'h' | 'hand'> & {
+/** What a storybook scene reads of the film's frame: its canvas, its time and size, its hands, its cues' progress, and its paintings by name. */
+export type PaintingFrame = Pick<FilmFrame, 'ctx' | 't' | 'w' | 'h' | 'hand' | 'at'> & {
   readonly painting: (name: string) => void;
 };
 

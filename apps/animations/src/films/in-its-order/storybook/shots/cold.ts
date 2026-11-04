@@ -1,0 +1,393 @@
+import type { FilmShot } from '../../../../library/storybook/scene.ts';
+import { blinkingHold, hold, type Span, turn } from '../../../../library/storybook/shot.ts';
+import { BABY_BACK, FAR_TABLE, TABLE, WHAT } from '../../plates/plates.ts';
+import { SCROLL_OPEN, SCROLL_ROLLED, SCROLL_ROLLER } from '../../plates/props.ts';
+import { cam, holds, key, layer, plateOf, plateOn, seat } from '../kit.ts';
+import { AT_TABLE, backdrop, DINERS_ROW, diner, farTable, HEAD, table, Z } from './courtyard.ts';
+
+/** The guests' run through a shot: `[at, cell]` changes, each a turn of `TURN` s from the cell before; the first cell held from 0 with its blink. */
+const TURN = 0.3;
+
+/** A guest at the table holding `first` (blinking with `neutralBlink`), then turning to each next cell at its time and holding it, blinking with the neutral blink's shut eyes pasted on its own. */
+const guestSpans = (
+  first: string,
+  changes: ReadonlyArray<readonly [number, string]>,
+  end: number,
+): readonly [Span, ...ReadonlyArray<Span>] => {
+  const cells = [first, ...changes.map(([, c]) => c)];
+  const starts = [0, ...changes.map(([at]) => at)];
+  const head = blinkingHold(0, changes[0]?.[0] ?? end, first, 'neutralBlink');
+  const rest = changes.flatMap(([at, cell], i): ReadonlyArray<Span> => {
+    const to = starts[i + 2] ?? end;
+    return [
+      turn(at, TURN, cells[i] ?? first, cell),
+      blinkingHold(at + TURN, to, cell, 'neutralBlink'),
+    ];
+  });
+  return [head, ...rest];
+};
+
+/** The diners' row on its plane, each holding and blinking; diners 1, 2 and 4 turn to talk over `talks` (diner 3's open mouth is a drawn red the palette lacks, so it never talks). */
+const dinersOn = (
+  at: { readonly headPx: number; readonly z: number },
+  row: { readonly crown: number; readonly xs: ReadonlyArray<number> },
+  talks: ReadonlyMap<1 | 2 | 4, readonly [number, number]>,
+  end: number,
+) =>
+  ([1, 2, 3, 4] as const).map((n, i) => {
+    const talk = [...talks].filter(([d]) => d === n).map(([, span]) => span);
+    const runs = talk.flatMap(
+      ([from, to]) =>
+        [
+          [from, 'talk', 'talk'],
+          [to, 'neutral', 'neutralBlink'],
+        ] as const,
+    );
+    return diner(
+      n,
+      row.xs[i] ?? 0,
+      row.crown,
+      at,
+      holds([[0, 'neutral', 'neutralBlink'], ...runs], end),
+    );
+  });
+
+/** The mother at the far right of the diners' row, the cup at the baby's lips, blinking. */
+const motherOn = (at: { readonly headPx: number; readonly z: number }, end: number) =>
+  seat(
+    {
+      member: 'feast-mother',
+      sheet: 'iio-baby',
+      name: 'mother',
+      x: DINERS_ROW.mother.x,
+      crown: DINERS_ROW.mother.crown,
+    },
+    at,
+    holds([[0, 'cup', 'cupBlink']], end),
+  );
+
+/** The diners' plane of the courtyard at the table: the row, the mother, and the far table before them. */
+const dinersLayer = (talks: ReadonlyMap<1 | 2 | 4, readonly [number, number]>, end: number) => {
+  const at = { headPx: HEAD, z: Z.diners };
+  return layer('diners', Z.diners, [
+    ...dinersOn(at, DINERS_ROW, talks, end),
+    motherOn(at, end),
+    farTable(),
+  ]);
+};
+
+/** The man and the woman either side of the lead, each on the table's plane. */
+const guests = (man: ReadonlyArray<Span>, woman: ReadonlyArray<Span>) => {
+  const at = { headPx: HEAD, z: Z.table };
+  const [m0, ...ms] = man;
+  const [w0, ...ws] = woman;
+  return [
+    seat({ member: 'feast-guest-man', sheet: 'iio-table', name: 'man', ...AT_TABLE.man }, at, [
+      m0 ?? hold(0, 1, 'neutral'),
+      ...ms,
+    ]),
+    seat(
+      { member: 'feast-guest-woman', sheet: 'iio-table', name: 'woman', ...AT_TABLE.woman },
+      at,
+      [w0 ?? hold(0, 1, 'neutral'), ...ws],
+    ),
+  ];
+};
+
+/** The lead at the table on his `iio-table` sheet. */
+const leadAt = (spans: readonly [Span, ...ReadonlyArray<Span>]) =>
+  seat(
+    { member: 'lead-feast', sheet: 'iio-table', name: 'lead', ...AT_TABLE.lead },
+    { headPx: HEAD, z: Z.table },
+    spans,
+  );
+
+/** The close of the mother: a grown head on her plane, so the diners behind read at matched scale on theirs. */
+const BABY_HEAD = 480;
+
+/** Where the baby's face is in the close, frame px at the shot's start: the push holds it there. */
+const BABY_FACE = [720, 470] as const;
+
+/**
+ * `cold-baby`, the scene's start to `grown`: the close on the mother, the
+ * cup at her baby's lips; the baby drinks on "drinks" and she lowers the cup
+ * a little after. The diners sit at their table beyond (two turn to talk),
+ * the courtyard behind, and the near table's edge before her. A slow push
+ * holds the baby's face where the panel has it.
+ */
+export const coldBaby: FilmShot = {
+  id: 'cold-baby',
+  span: { at: 'start', until: 'grown' },
+  cues: {
+    sip: { mark: 'baby', word: 'drinks', dur: 1.2 },
+    talk: { mark: 'baby', word: 'milk', dur: 1 },
+    reply: { mark: 'baby', word: 'nobody', dur: 1 },
+  },
+  build: ({ duration, cue }) => {
+    const far = { headPx: BABY_HEAD, z: 4.4 };
+    const push = 1.06;
+    return {
+      headPx: BABY_HEAD,
+      camera: [
+        cam(0, 960, 540, 1),
+        cam(
+          duration,
+          BABY_FACE[0] + (960 - BABY_FACE[0]) / push,
+          BABY_FACE[1] + (540 - BABY_FACE[1]) / push,
+          push,
+        ),
+      ],
+      layers: [
+        layer('back', 6, [plateOf('cold-baby-back.png', BABY_BACK)]),
+        layer('diners', far.z, [
+          ...dinersOn(
+            far,
+            { crown: 396, xs: [120, 320, 1600, 1800] },
+            new Map([
+              [1, [cue('talk').start, cue('talk').end]],
+              [4, [cue('reply').start, cue('reply').end]],
+            ] as const),
+            duration,
+          ),
+          plateOn('far-table.png', FAR_TABLE, [960, 110], [960, 590], 1.2),
+        ]),
+        layer('mother', 1, [
+          seat(
+            {
+              member: 'feast-mother',
+              sheet: 'iio-baby',
+              name: 'mother',
+              x: 990,
+              crown: 65,
+            },
+            { headPx: BABY_HEAD, z: 1 },
+            holds(
+              [
+                [0, 'cup', 'cupBlink'],
+                [cue('sip').start, 'sip', 'sip'],
+                [cue('sip').end, 'cup', 'cupBlink'],
+              ],
+              duration,
+            ),
+          ),
+        ]),
+        layer('near table', 0.8, [plateOn('table.png', TABLE, [960, 1050], [960, 985], 2.75)]),
+      ],
+    };
+  },
+};
+
+/**
+ * `cold-table`, `grown` to `letter`: the camera trucks from the diners at
+ * picture left to the three at the table and holds them in a medium; the
+ * lead lifts the bottle on `bottle` and holds it up, the man and the woman
+ * turn to stare on the word "bottle" (the woman a beat after) and turn to
+ * smile on `smile`, and the camera eases back to waist-up over the smile.
+ */
+export const coldTable: FilmShot = {
+  id: 'cold-table',
+  span: { mark: 'grown', until: 'letter' },
+  cues: {
+    truck: { mark: 'grown', until: 'bottle', untilOffset: -0.3 },
+    lift: { mark: 'bottle', dur: 0.22 },
+    stare: { mark: 'bottle', word: 'bottle', dur: 0.3 },
+    stared: { mark: 'bottle', word: 'bottle', offset: 0.15, dur: 0.3 },
+    smile: { mark: 'smile', dur: 0.35 },
+    smiled: { mark: 'smile', offset: 0.1, dur: 0.35 },
+    back: { mark: 'smile', until: 'letter' },
+    talk: { mark: 'grown', word: 'wedding', dur: 1.2 },
+    reply: { mark: 'smile', word: 'smile', dur: 1 },
+  },
+  build: ({ duration, cue }) => ({
+    headPx: HEAD,
+    camera: [
+      cam(0, 560, 830, 2.2),
+      cam(cue('truck').end, 960, 830, 2.2),
+      cam(cue('back').start, 960, 830, 2.2),
+      cam(cue('back').end, 960, 845, 1.95),
+    ],
+    layers: [
+      ...backdrop(),
+      dinersLayer(
+        new Map([
+          [1, [cue('talk').start, cue('talk').end]],
+          [2, [cue('reply').start, cue('reply').end]],
+        ] as const),
+        duration,
+      ),
+      layer('table', Z.table, [
+        ...guests(
+          guestSpans(
+            'neutral',
+            [
+              [cue('stare').start, 'stare'],
+              [cue('smile').start, 'smile'],
+            ],
+            duration,
+          ),
+          guestSpans(
+            'neutral',
+            [
+              [cue('stared').start, 'stare'],
+              [cue('smiled').start, 'smile'],
+            ],
+            duration,
+          ),
+        ),
+        leadAt(
+          holds(
+            [
+              [0, 'front', 'frontBlink'],
+              [cue('lift').start, 'lift', 'lift'],
+              [cue('lift').end, 'bottle', 'frontBlink'],
+            ],
+            duration,
+          ),
+        ),
+        table(),
+      ]),
+    ],
+  }),
+};
+
+/** The scroll's size on the table, a share of its painted size. */
+const SCROLL = 0.62;
+
+/** Where the scroll lies on the table, layer px: its foot's centre rolled, its top's centre unrolled. */
+const SCROLL_AT = { foot: [960, 990], top: [960, 952] } as const;
+
+/**
+ * `cold-letter`, `letter` to the card: a rolled scroll falls onto the table
+ * before the lead, hops and unrolls toward the viewer; the lead lowers the
+ * bottle and looks down at it, the guests turn to stare at it, and on
+ * `quote` the camera eases in toward its seal until the card as the lead
+ * looks up from it (his bowed `down` face has no eyes a blink can read, so
+ * he changes key within the alive bound instead).
+ */
+export const coldLetter: FilmShot = {
+  id: 'cold-letter',
+  span: { mark: 'letter', until: 'such' },
+  cues: {
+    fall: { mark: 'letter', offset: 0.4, dur: 0.45 },
+    hop: { after: 'cold-letter:fall', dur: 0.24 },
+    unroll: { after: 'cold-letter:hop', dur: 1 },
+    down: { mark: 'letter', offset: 0.5, dur: 0.3 },
+    stare: { mark: 'letter', offset: 0.3, dur: 0.3 },
+    stared: { mark: 'letter', offset: 0.45, dur: 0.3 },
+    quote: { mark: 'quote', until: 'such' },
+    up: { mark: 'quote', dur: 0.3 },
+    talk: { mark: 'letter', word: 'letters', dur: 1.2 },
+  },
+  build: ({ duration, cue }) => {
+    const fall = cue('fall');
+    const hop = cue('hop');
+    const unroll = cue('unroll');
+    const open = 368 * SCROLL;
+    const roller = 280 * SCROLL;
+    return {
+      headPx: HEAD,
+      camera: [
+        cam(0, 960, 860, 2.2),
+        cam(cue('quote').start, 960, 860, 2.2),
+        cam(cue('quote').end, 960, 900, 2.5),
+      ],
+      layers: [
+        ...backdrop(),
+        dinersLayer(new Map([[4, [cue('talk').start, cue('talk').end]]] as const), duration),
+        layer('table', Z.table, [
+          ...guests(
+            guestSpans('smile', [[cue('stare').start, 'stare']], duration),
+            guestSpans('smile', [[cue('stared').start, 'stare']], duration),
+          ),
+          leadAt([
+            hold(0, cue('down').start, 'bottle'),
+            turn(cue('down').start, cue('down').end - cue('down').start, 'bottle', 'down'),
+            hold(cue('down').end, cue('up').start, 'down'),
+            turn(cue('up').start, cue('up').end - cue('up').start, 'down', 'front'),
+            blinkingHold(cue('up').end, duration, 'front', 'frontBlink'),
+          ]),
+          table(),
+          plateOn('scroll-rolled.png', SCROLL_ROLLED, [214.5, 202], SCROLL_AT.foot, SCROLL, {
+            moves: [
+              [fall.start, key({ y: -700, alpha: 0 })],
+              [fall.start, key({ y: -700 })],
+              [fall.end, key({})],
+              [hop.start + (hop.end - hop.start) / 2, key({ y: -18 })],
+              [hop.end, key({})],
+              [unroll.start, key({})],
+              [unroll.start, key({ alpha: 0 })],
+            ],
+          }),
+          plateOn('scroll-open.png', SCROLL_OPEN, [225, 0], SCROLL_AT.top, SCROLL, {
+            moves: [
+              [unroll.start, key({ y: -open * 0.95, sy: 0.05, alpha: 0 })],
+              [unroll.start, key({ y: -open * 0.95, sy: 0.05 })],
+              [unroll.end, key({})],
+            ],
+          }),
+          plateOn('scroll-roller.png', SCROLL_ROLLER, [225, 0], [960, 952 + roller], SCROLL, {
+            moves: [
+              [unroll.start, key({ y: -roller, alpha: 0 })],
+              [unroll.start, key({ y: -roller })],
+              [unroll.end, key({})],
+            ],
+          }),
+        ]),
+      ],
+    };
+  },
+};
+
+/** The lead's close head: a third of the frame at the close's zoom. */
+const CLOSE_ZOOM = 3;
+
+/**
+ * `cold-ouch`, the card's end to `what`: close on the lead, his head a third
+ * of the frame; he winces on `ouch` and lowers his eyes again, under a slow
+ * push.
+ */
+export const coldOuch: FilmShot = {
+  id: 'cold-ouch',
+  span: { after: 'card:cold', until: 'what' },
+  cues: {
+    wince: { mark: 'ouch', dur: 1.4 },
+  },
+  build: ({ duration, cue }) => {
+    const crown = AT_TABLE.lead.crown;
+    const y = crown + (540 - 160) / CLOSE_ZOOM;
+    return {
+      headPx: HEAD,
+      camera: [cam(0, 960, y, CLOSE_ZOOM), cam(duration, 960, y + 6, CLOSE_ZOOM * 1.05)],
+      layers: [
+        ...backdrop(),
+        layer('table', Z.table, [
+          seat(
+            { member: 'lead-feast', sheet: 'iio-close', name: 'lead', x: 960, crown },
+            { headPx: HEAD, z: Z.table },
+            holds(
+              [
+                [0, 'down', 'downBlink'],
+                [cue('wince').start, 'wince', 'wince'],
+                [cue('wince').end, 'down', 'downBlink'],
+              ],
+              duration,
+            ),
+          ),
+          table(),
+        ]),
+      ],
+    };
+  },
+};
+
+/** `cold-what`, `what` to the scene's end: the cup and the loaf alone, lit; the camera lifts and pushes in toward them. No figure. */
+export const coldWhat: FilmShot = {
+  id: 'cold-what',
+  span: { mark: 'what', until: { at: 'end' } },
+  cues: {},
+  build: ({ duration }) => ({
+    headPx: HEAD,
+    camera: [cam(0, 960, 540, 1), cam(duration, 960, 500, 1.08)],
+    layers: [layer('what', 1, [plateOf('cold-what.png', WHAT)])],
+  }),
+};
