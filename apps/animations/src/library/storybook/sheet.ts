@@ -953,13 +953,27 @@ const rowsOfRole = (
   return rows.filter((y) => run(y, -1) + run(y, 1) + 1 >= LINE_RUN);
 };
 
+/** What a pixel is drawn in, read by the paint it is exactly: its role, a blend when it is no paint exactly, clear when it is clear. */
+type Drawn = Role | 'ink' | 'blend' | 'clear';
+
+/** What a run of cloth is read down through: cloth and blends. */
+const CLOTH: ReadonlyArray<Drawn> = ['garment', 'sash', 'blend'];
+
+/** What an edge below a run of cloth is drawn in: anything opaque but skin and cloth, an ink line, a blend, a mark in hair or another part's paint; and cloth in a run shorter than `LINE_RUN`, a fringe between them snapped to a cloth. */
+const EDGE: ReadonlyArray<Drawn> = ['ink', 'blend', 'hair', 'footwear', 'other'];
+
 /**
  * The row the collar starts at in column `x`, below the face's first skin
- * row `face`: the first row of cloth (garment or sash) whose run, read down
- * through cloth and blends, ends at anything but skin. A run of cloth with
- * skin directly below it is a mark drawn on the face, a jaw line in a
- * garment's colour, however deep it is drawn; so the line read depends on
- * what the figure draws, not on its size. None when no run ends so.
+ * row `face`, or none where the column cannot tell the collar from a mark
+ * drawn on the face. A run of cloth (garment or sash), read down through
+ * cloth and blends, is a mark on the face when skin is below it: directly,
+ * or past its edge (`EDGE`: ink, blends, hair, a cloth fringe) where that
+ * skin is the skin the mark is drawn on, joined round the mark, or runs on down into cloth,
+ * the neck into its collar. Skin past an edge that is neither, closed below
+ * by anything but cloth, is a hand on the robe as much as a face below a
+ * mark, so the column reads none. The first run of cloth with no skin below
+ * it, past its edge, is the collar; none when no run ends so. The line read
+ * depends on what the figure draws, never on how deep a mark is.
  */
 const collarOf = (
   r: Raster,
@@ -970,19 +984,50 @@ const collarOf = (
   const nearest = nearestOf(paints);
   const cloth = new Set(paintRows(r, x, face, ['garment', 'sash'], paints));
   const skin = new Set(paintRows(r, x, face, ['skin'], paints));
-  const runsOn = (y: number): boolean => {
+  const drawnAt = (y: number): Drawn => {
     const q = y * r.width + x;
-    if (alphaAt(r, q) === 0) return false;
+    if (y >= r.height || alphaAt(r, q) === 0) return 'clear';
     const { index, distance } = nearest(rgbAt(r, q));
-    const role = paints[index]?.role ?? 'ink';
-    return distance > 0 || role === 'garment' || role === 'sash';
+    if (distance > 0) return 'blend';
+    return paints[index]?.role ?? 'ink';
   };
+  const past = (from: number, through: ReadonlyArray<Drawn>): number => {
+    let y = from;
+    while (y < r.height && through.includes(drawnAt(y))) y += 1;
+    return y;
+  };
+  const edgeEnd = (from: number): number => {
+    let y = from;
+    while (y < r.height) {
+      const drawn = drawnAt(y);
+      const run = past(y, CLOTH) - y;
+      if (EDGE.includes(drawn)) y += 1;
+      else if ((drawn === 'garment' || drawn === 'sash') && run < LINE_RUN) y += run;
+      else return y;
+    }
+    return y;
+  };
+  const joined = (above: number, below: number): boolean =>
+    regionAt(
+      r,
+      above * r.width + x,
+      (q) => isRole(r, q, 'skin', paints, nearest),
+      around4,
+    ).includes(below * r.width + x);
+  let drawnOn = face;
   for (let y = face; y < r.height; y++) {
+    if (skin.has(y)) drawnOn = y;
     if (!cloth.has(y)) continue;
-    let end = y;
-    while (end < r.height && runsOn(end)) end += 1;
-    if (!skin.has(end)) return Option.some(y);
-    y = end;
+    const end = past(y, CLOTH);
+    if (skin.has(end)) {
+      y = end - 1;
+      continue;
+    }
+    const below = edgeEnd(end);
+    if (!skin.has(below)) return Option.some(y);
+    const next = drawnAt(past(below, ['skin', 'blend']));
+    if (!joined(drawnOn, below) && next !== 'garment' && next !== 'sash') return Option.none();
+    y = below - 1;
   }
   return Option.none();
 };
