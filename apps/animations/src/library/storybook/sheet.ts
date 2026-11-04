@@ -843,7 +843,7 @@ export interface Split {
   readonly cells: ReadonlyArray<SplitCell>;
 }
 
-/** A drawn sheet split into `n` cells: the background cleared, the cells cut, each kept to its largest piece, its pockets mended and its paints snapped to `palette`, each colour to the paint the whole sheet draws it as (`drawnNearestOf`). */
+/** A drawn sheet split into `n` cells: the background cleared, the cells cut, each kept to its largest piece, its pockets mended and its paints snapped to `palette`, each colour to the paint the whole sheet draws it as (`drawnNearestOf`), its drawing's own marks tidied, its face's marks inked (`inkedFaceMarks`) and its rim peeled. */
 export const splitSheet = (
   sheet: Raster,
   n: number,
@@ -859,7 +859,8 @@ export const splitSheet = (
       cells: boxes.map((box) => {
         const mended = mendPockets(largestPiece(cropOf(cleared, box)), ground, paints, nearest);
         const snap = snapped(mended, paints, nearest);
-        return { box, raster: peeled(tidied(mended, snap, paints, nearest), paints) };
+        const tidy = tidied(mended, snap, paints, nearest);
+        return { box, raster: peeled(inkedFaceMarks(tidy, paints), paints) };
       }),
     };
   });
@@ -1051,6 +1052,218 @@ export const medianOf = (values: ReadonlyArray<number>): Option.Option<number> =
 export const sheetHeadOf = (
   heads: ReadonlyMap<string, Option.Option<number>>,
 ): Option.Option<number> => medianOf([...heads.values()].flatMap((h) => Option.toArray(h)));
+
+/** A figure's face: the 4-connected skin round the face's first skin row in the head column, as a mask over the picture, and its box. */
+interface Face {
+  readonly mask: Uint8Array;
+  readonly box: Box;
+}
+
+/** The box round a set of pixels of a picture `width` wide. */
+const boxOf = (px: ReadonlyArray<number>, width: number): Box => {
+  const xs = px.map((q) => q % width);
+  const ys = px.map((q) => Math.floor(q / width));
+  const [x0, y0] = [Math.min(...xs), Math.min(...ys)];
+  return { x: x0, y: y0, width: Math.max(...xs) - x0 + 1, height: Math.max(...ys) - y0 + 1 };
+};
+
+/** Whether pixel `q` of `r` is exactly a paint of role `role`. */
+const isRole = (
+  r: Raster,
+  q: number,
+  role: Role | 'ink',
+  paints: ReadonlyArray<Paint>,
+  nearest: (c: Rgb) => Nearest,
+): boolean => {
+  if (alphaAt(r, q) === 0) return false;
+  const { index, distance } = nearest(rgbAt(r, q));
+  return distance === 0 && (paints[index]?.role ?? 'ink') === role;
+};
+
+/** A figure's face, none when its head column reads no face. */
+const faceOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<Face> => {
+  const nearest = nearestOf(paints);
+  const seedOf = (l: Lines) =>
+    Option.map(
+      Option.fromUndefinedOr(rowsOfRole(r, l.headColumn, l.crown, ['skin'], paints)[0]),
+      (row) => row * r.width + l.headColumn,
+    );
+  return Option.flatMap(Option.flatMap(linesOf(r, paints), seedOf), (seed) => {
+    const skin = regionsOf(r, (q) => isRole(r, q, 'skin', paints, nearest), around4).find((px) =>
+      px.includes(seed),
+    );
+    return Option.map(Option.fromUndefinedOr(skin), (px) => {
+      const mask = new Uint8Array(r.width * r.height);
+      for (const q of px) mask[q] = 1;
+      return { mask, box: boxOf(px, r.width) };
+    });
+  });
+};
+
+/** The marks drawn on a face: each 4-connected run of opaque pixels that are not skin, within the face's box, ringed all round by the face's skin. */
+const faceMarksOf = (
+  r: Raster,
+  paints: ReadonlyArray<Paint>,
+  face: Face,
+): ReadonlyArray<ReadonlyArray<number>> => {
+  const nearest = nearestOf(paints);
+  const { box, mask } = face;
+  const inBox = (q: number) => {
+    const [x, y] = [q % r.width, Math.floor(q / r.width)];
+    return x >= box.x && y >= box.y && x < box.x + box.width && y < box.y + box.height;
+  };
+  return regionsOf(
+    r,
+    (q) => inBox(q) && mask[q] !== 1 && alphaAt(r, q) > 0 && !isRole(r, q, 'skin', paints, nearest),
+    around4,
+  ).filter((px) => {
+    const own = new Set(px);
+    return px.every((q) => {
+      const around = around4(q, r.width, r.height);
+      return around.length === 4 && around.every((m) => own.has(m) || mask[m] === 1);
+    });
+  });
+};
+
+/**
+ * `r` with every mark drawn on its face that holds ink painted all in ink
+ * (critique 2, item 2): an eye or a mouth drawn with part of it in another
+ * part's colour snaps that part to a paint that does not belong on a face,
+ * a stool's wood or a mantle's cloth. A mark with no ink in it, a blush or
+ * an ear's fold, stays; a picture with no face is answered as it is.
+ */
+export const inkedFaceMarks = (r: Raster, paints: ReadonlyArray<Paint>): Raster =>
+  Option.match(faceOf(r, paints), {
+    onNone: () => r,
+    onSome: (face) => {
+      const nearest = nearestOf(paints);
+      const ink = paints[0]?.rgb ?? [0, 0, 0];
+      const rgba = r.rgba.slice();
+      for (const px of faceMarksOf(r, paints, face))
+        if (px.some((q) => isRole(r, q, 'ink', paints, nearest)))
+          for (const q of px) rgba.set(ink, q * 4);
+      return { width: r.width, height: r.height, rgba };
+    },
+  });
+
+/** The fewest pixels a mark on a face holds to be read as a brow, an eye or a mouth: a smaller one is a speck. */
+const MARK_PX = 8;
+
+/**
+ * A face's eyes, left to right: its marks all in ink of `MARK_PX` or more,
+ * gathered into rows (a mark joins the row above when their rows overlap),
+ * the second row from the top, between the brows and the mouth. None when
+ * the face draws fewer than three such rows (a profile, a face with no
+ * brows apart from the hair).
+ */
+const eyesOf = (
+  r: Raster,
+  paints: ReadonlyArray<Paint>,
+  face: Face,
+): Option.Option<ReadonlyArray<ReadonlyArray<number>>> => {
+  const nearest = nearestOf(paints);
+  const marks = faceMarksOf(r, paints, face)
+    .filter((px) => px.length >= MARK_PX && px.every((q) => isRole(r, q, 'ink', paints, nearest)))
+    .map((px) => ({ px, box: boxOf(px, r.width) }))
+    .toSorted((a, b) => a.box.y - b.box.y);
+  const rows: Array<Array<(typeof marks)[number]>> = [];
+  for (const m of marks) {
+    const row = rows.at(-1);
+    const bottom = Math.max(...(row ?? []).map((n) => n.box.y + n.box.height - 1));
+    if (row && m.box.y <= bottom) row.push(m);
+    else rows.push([m]);
+  }
+  if (rows.length < 3) return Option.none();
+  return Option.some((rows[1] ?? []).toSorted((a, b) => a.box.x - b.box.x).map((m) => m.px));
+};
+
+/** A blink could not be built: why. */
+export class BlinkRefused extends Schema.TaggedError<BlinkRefused>()('BlinkRefused', {
+  reason: Schema.String,
+}) {
+  override get message() {
+    return `no blink: ${this.reason}`;
+  }
+}
+
+/** A cell's face and its eyes, or why they are not read. */
+const eyedFaceOf = (r: Raster, paints: ReadonlyArray<Paint>, which: string) =>
+  Option.match(
+    Option.flatMap(faceOf(r, paints), (face) =>
+      Option.map(eyesOf(r, paints, face), (eyes) => ({ face, eyes })),
+    ),
+    {
+      onNone: () =>
+        Result.fail(
+          BlinkRefused.make({ reason: `the ${which} reads no eyes between brows and mouth` }),
+        ),
+      onSome: (read) => Result.succeed(read),
+    },
+  );
+
+/** The middle of a box, in its picture's px, as a fraction when its side is even. */
+const middleOf = (b: Box): readonly [number, number] => [
+  b.x + (b.width - 1) / 2,
+  b.y + (b.height - 1) / 2,
+];
+
+/** The colour most of a mark's ring of face skin is painted. */
+const ringPaintOf = (r: Raster, px: ReadonlyArray<number>, face: Face): Rgb => {
+  const own = new Set(px);
+  const votes = new Map<number, { readonly rgb: Rgb; n: number }>();
+  for (const q of px)
+    for (const m of around4(q, r.width, r.height)) {
+      if (own.has(m) || face.mask[m] !== 1) continue;
+      const rgb = rgbAt(r, m);
+      const vote = votes.get(keyOf(rgb)) ?? { rgb, n: 0 };
+      vote.n += 1;
+      votes.set(keyOf(rgb), vote);
+    }
+  return [...votes.values()].toSorted((a, b) => b.n - a.n)[0]?.rgb ?? [0, 0, 0];
+};
+
+/**
+ * The open cell `open` blinking (critique 2, items 3 and 4): each of its
+ * eyes painted out in the skin round it, and the closed eye `closed` draws
+ * nearest it (by its place across its own face) stamped in ink centred on
+ * it, on the face only. Nothing outside the eyes' boxes changes, so a blink
+ * moves no outline. Refused when either face reads no eyes.
+ */
+export const blinkOf = (
+  open: Raster,
+  closed: Raster,
+  paints: ReadonlyArray<Paint>,
+): Result.Result<Raster, BlinkRefused> =>
+  Result.flatMap(eyedFaceOf(open, paints, 'open cell'), (o) =>
+    Result.map(eyedFaceOf(closed, paints, 'blink drawing'), (c) => {
+      const ink = paints[0]?.rgb ?? [0, 0, 0];
+      const rgba = open.rgba.slice();
+      const across = (b: Box, face: Face) => (middleOf(b)[0] - face.box.x) / face.box.width;
+      const stamps = c.eyes.map((px) => ({ px, box: boxOf(px, closed.width) }));
+      for (const px of o.eyes) {
+        const eye = boxOf(px, open.width);
+        const skin = ringPaintOf(open, px, o.face);
+        for (const q of px) rgba.set(skin, q * 4);
+        const stamp = stamps.toSorted(
+          (a, b) =>
+            Math.abs(across(a.box, c.face) - across(eye, o.face)) -
+            Math.abs(across(b.box, c.face) - across(eye, o.face)),
+        )[0];
+        if (!stamp) continue;
+        const [ex, ey] = middleOf(eye);
+        const [sx, sy] = middleOf(stamp.box);
+        const [ox, oy] = [Math.round(ex - sx), Math.round(ey - sy)];
+        const own = new Set(px);
+        for (const q of stamp.px) {
+          const [x, y] = [(q % closed.width) + ox, Math.floor(q / closed.width) + oy];
+          const at = y * open.width + x;
+          if (x < 0 || y < 0 || x >= open.width || y >= open.height) continue;
+          if (o.face.mask[at] === 1 || own.has(at)) rgba.set(ink, at * 4);
+        }
+      }
+      return { width: open.width, height: open.height, rgba };
+    }),
+  );
 
 /** The share of a picture taken as its ink: its darkest 2 % of opaque pixels. */
 const INK_SHARE = 0.02;

@@ -4,6 +4,7 @@ import { Option, Result } from 'effect';
 import { describe, expect, test } from 'effect-bun-test';
 import {
   alphaAt,
+  blinkOf,
   cellsOf,
   clearBackground,
   deltaE,
@@ -11,6 +12,7 @@ import {
   figuresIn,
   groundOf,
   hexOf,
+  inkedFaceMarks,
   largestPiece,
   linesOf,
   mendPockets,
@@ -997,5 +999,161 @@ describe('linesOf', () => {
     ]);
     expect(sheetHeadOf(heads)).toEqual(Option.some(5));
     expect(sheetHeadOf(new Map([['a', Option.none<number>()]]))).toEqual(Option.none());
+  });
+});
+
+/** A box of a drawn face mark, inclusive, in its picture's px. */
+interface MarkBox {
+  readonly x0: number;
+  readonly y0: number;
+  readonly x1: number;
+  readonly y1: number;
+}
+
+/**
+ * A generated head and shoulders `FACE_W` px wide: an ink crown, a face of
+ * skin ringed in ink, a pair of brows, a pair of eyes (open ovals, or closed
+ * bars two rows deep), a mouth, a robe below. The face sits `dx`, `dy` off
+ * its place; `lower` paints each open eye's lower half (critique 2, item 2);
+ * `cheek` adds a robe patch on the face with no ink in it. Answers the
+ * picture, its face's inside and each eye's pixels.
+ */
+const FACE_W = 90;
+interface FaceBox {
+  readonly fx: number;
+  readonly fy: number;
+  readonly fw: number;
+  readonly fh: number;
+  readonly height: number;
+}
+/** The paint of the figure's body at a pixel, before any mark: ink hair above, the ringed skin face, the ringed robe below; none off the figure. */
+const bodyPaintAt = (b: FaceBox, x: number, y: number): Option.Option<Rgb> => {
+  if (x < 4 || x >= FACE_W - 4) return Option.none();
+  if (y < b.fy) return Option.liftPredicate(INK, () => x >= b.fx && x < b.fx + b.fw);
+  if (y < b.fy + b.fh) {
+    const edge = x === b.fx || x === b.fx + b.fw - 1 || y === b.fy || y === b.fy + b.fh - 1;
+    return Option.liftPredicate(
+      [SKIN, INK][Number(edge)] ?? SKIN,
+      () => x >= b.fx && x < b.fx + b.fw,
+    );
+  }
+  const edge = x === 4 || x === FACE_W - 5 || y === b.fy + b.fh || y === b.height - 1;
+  return Option.some([ROBE, INK][Number(edge)] ?? ROBE);
+};
+const faceFigure = (
+  draw: () => number,
+  o: {
+    readonly closed: boolean;
+    readonly dx: number;
+    readonly dy: number;
+    readonly lower: Rgb;
+    readonly cheek: boolean;
+  },
+) => {
+  const int = (a: number, b: number) => a + Math.floor(draw() * (b - a + 1));
+  const [fx, fy, fw, fh] = [20 + o.dx, 4 + o.dy, int(44, 56), int(44, 56)];
+  const height = fh + 60;
+  const rgba = new Uint8Array(FACE_W * height * 4);
+  const put = (x: number, y: number, c: Rgb) => rgba.set([...c, 255], (y * FACE_W + x) * 4);
+  const inside = new Set<number>();
+  const body = { fx, fy, fw, fh, height };
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < FACE_W; x++)
+      Option.map(bodyPaintAt(body, x, y), (c) => {
+        put(x, y, c);
+        if (c === SKIN) inside.add(y * FACE_W + x);
+      });
+  const mark = (b: MarkBox, paint: (x: number, y: number) => Rgb): ReadonlyArray<number> => {
+    const px: Array<number> = [];
+    for (let y = b.y0; y <= b.y1; y++)
+      for (let x = b.x0; x <= b.x1; x++) {
+        put(x, y, paint(x, y));
+        px.push(y * FACE_W + x);
+      }
+    return px;
+  };
+  const [cl, cr] = [fx + Math.floor(fw * 0.3) + int(-1, 1), fx + Math.floor(fw * 0.7) + int(-1, 1)];
+  for (const c of [cl, cr]) {
+    const w = int(3, 4);
+    mark({ x0: c - w, y0: fy + 6, x1: c + w, y1: fy + 7 }, () => INK);
+  }
+  const eyes = [cl, cr].map((c) => {
+    if (o.closed) {
+      const w = int(3, 5);
+      const b = { x0: c - w, y0: fy + 15, x1: c + w, y1: fy + 16 };
+      return { box: b, px: mark(b, () => INK) };
+    }
+    const [w, h] = [int(1, 3), int(3, 5)];
+    const b = { x0: c - w, y0: fy + 16 - h, x1: c + w, y1: fy + 16 + h };
+    return { box: b, px: mark(b, (_, y) => [INK, o.lower][Number(y > fy + 16)] ?? INK) };
+  });
+  const m = int(4, 7);
+  mark(
+    { x0: fx + (fw >> 1) - m, y0: fy + fh - 12, x1: fx + (fw >> 1) + m, y1: fy + fh - 11 },
+    () => INK,
+  );
+  const cheek = mark(
+    { x0: fx + 3, y0: fy + 24, x1: fx + 5, y1: fy + 26 },
+    () => [SKIN, ROBE][Number(o.cheek)] ?? SKIN,
+  );
+  return { raster: { width: FACE_W, height, rgba }, inside, eyes, cheek };
+};
+
+describe('inkedFaceMarks (critique 2, item 2)', () => {
+  const paints = paintsOf(DRESSED);
+
+  test('over generated faces: every mark the face rings that holds ink is drawn all in ink, a mark with no ink and everything off the face stay', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const draw = rng(seed);
+      const lower = [ROBE, SANDAL, SASH, INK][Math.floor(draw() * 4)] ?? ROBE;
+      const f = faceFigure(draw, { closed: false, dx: 0, dy: 0, lower, cheek: true });
+      const want = new Uint8Array(f.raster.rgba);
+      for (const eye of f.eyes) for (const q of eye.px) want.set(INK, q * 4);
+      const got = inkedFaceMarks(f.raster, paints);
+      expect([seed, [...got.rgba].join() === [...want].join()]).toEqual([seed, true]);
+    }
+  });
+
+  test('leaves a picture with no face as it is', () => {
+    const r = art(['kkk', 'krk', 'kkk'], FIGURE_KEY);
+    expect([...inkedFaceMarks(r, paints).rgba]).toEqual([...r.rgba]);
+  });
+});
+
+describe('blinkOf (critique 2, items 3 and 4)', () => {
+  const paints = paintsOf(DRESSED);
+
+  test('over generated faces and blink drawings set off from them: each open eye painted out in the face skin and the drawing nearest closed eye stamped centred on it, every other pixel the open cell', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const draw = rng(seed);
+      const open = faceFigure(draw, { closed: false, dx: 0, dy: 0, lower: INK, cheek: false });
+      const shut = faceFigure(rng(seed + 1000), {
+        closed: true,
+        dx: Math.floor(draw() * 9) - 4,
+        dy: Math.floor(draw() * 5) - 2,
+        lower: INK,
+        cheek: false,
+      });
+      const want = new Uint8Array(open.raster.rgba);
+      for (const [i, eye] of open.eyes.entries()) {
+        for (const q of eye.px) want.set(SKIN, q * 4);
+        const stamp = shut.eyes[i] ?? eye;
+        const ox = Math.round((eye.box.x0 + eye.box.x1) / 2 - (stamp.box.x0 + stamp.box.x1) / 2);
+        const oy = Math.round((eye.box.y0 + eye.box.y1) / 2 - (stamp.box.y0 + stamp.box.y1) / 2);
+        for (const q of stamp.px) {
+          const at = q + oy * FACE_W + ox;
+          if (open.inside.has(at)) want.set(INK, at * 4);
+        }
+      }
+      const got = Result.map(blinkOf(open.raster, shut.raster, paints), (r) => [...r.rgba].join());
+      expect([seed, got]).toEqual([seed, Result.succeed([...want].join())]);
+    }
+  });
+
+  test('refuses an open cell or a blink drawing whose face holds no row of eyes between its brows and its mouth', () => {
+    const open = faceFigure(rng(7), { closed: false, dx: 0, dy: 0, lower: INK, cheek: false });
+    const bare = art(['kkk', 'ksk', 'kkk'], FIGURE_KEY);
+    expect(Result.isFailure(blinkOf(bare, open.raster, paints))).toBe(true);
+    expect(Result.isFailure(blinkOf(open.raster, bare, paints))).toBe(true);
   });
 });

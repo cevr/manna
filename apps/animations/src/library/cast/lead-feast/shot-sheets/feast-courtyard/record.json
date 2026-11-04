@@ -29,7 +29,7 @@
         "width": 152,
         "height": 1024
       },
-      "sha256": "847115b7a03281118777c436359590e8cb0847428abfffb73abce2f3c0839ce3"
+      "sha256": "aa7f8aa4b6713158dafa6d88927420d92d575462dc954c82433181bf71d8cb72"
     },
     {
       "key": "threeQuarter",
@@ -49,7 +49,7 @@
         "width": 171,
         "height": 1024
       },
-      "sha256": "d81b37acbc01a8ec8d081ccb820ca89f693d32b978e0b2acb1e40f5f3fb2fdc6"
+      "sha256": "526a6649ebc7de43bff7090c0179f1bb527562feef3f9edb81fc76483d915741"
     },
     {
       "key": "front",
@@ -59,7 +59,7 @@
         "width": 187,
         "height": 1024
       },
-      "sha256": "fca8fd2235994ce14f21437f5f53828018f2c34ed868ebd0f80595b849a2bf15"
+      "sha256": "1b8b96e70465936c739bcd05dff48cc27cd9c78c12b9f86a23a77326754a4eb3"
     },
     {
       "key": "lift",
@@ -69,7 +69,7 @@
         "width": 187,
         "height": 1024
       },
-      "sha256": "361df6c59f1beec04a2db0e8355b22908c7fbbc2da0f3844fe9ab5fa90cacea8"
+      "sha256": "4a48a791841fb95110a491584048ecc5ac7740fdb7d84c53a30c42b0080ae11e"
     },
     {
       "key": "offer",
@@ -79,7 +79,7 @@
         "width": 214,
         "height": 1024
       },
-      "sha256": "c5bbc470c8ba7a87c6383fb9d8b9eb214b3455fc0c1e58a2cff8ad08cccca3f0"
+      "sha256": "0c0f8bac35c15e06410cfe5f19bf9ed95e81c95ad227149771cf36f5e77a2111"
     },
     {
       "key": "wave-1",
@@ -89,7 +89,7 @@
         "width": 183,
         "height": 1024
       },
-      "sha256": "04f3b03a04c48d2eb4a7855b43e7afad046d5559ccd7b04e61da2bd1d9788104"
+      "sha256": "548611a6060a9ae1ab705e72e397e78591413dbb44cf9db1896000c1a683c9c1"
     },
     {
       "key": "wave-2",
@@ -99,7 +99,7 @@
         "width": 213,
         "height": 1024
       },
-      "sha256": "ddbe9b3839076340dc0435dd5f5a1189c1a5230440087e88a5b4a888b9645b75"
+      "sha256": "a94c63f3ffa8033e369a73163c09c3ac16eed73d464cb9256b7ece0d1eadf741"
     }
   ]
 }
