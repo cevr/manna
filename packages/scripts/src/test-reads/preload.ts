@@ -22,17 +22,35 @@ const record = (target: unknown) => {
   fs.appendFileSync(log, `${resolve(named)}\n`);
 };
 
-/** `module` with each function `names` lists recording its first argument. */
+/** Records each named call's first argument without losing function properties. */
 const traced = (module: object, names: ReadonlyArray<string>) => {
   const copy: Record<string, unknown> = { ...module };
+  const wrappers = new WeakMap<
+    (...args: Array<unknown>) => unknown,
+    (...args: Array<unknown>) => unknown
+  >();
+  const wrap = (original: (...args: Array<unknown>) => unknown) => {
+    const cached = wrappers.get(original);
+    if (cached) return cached;
+    const proxy = new Proxy(original, {
+      apply(target, thisArg, args) {
+        record(args[0]);
+        return Reflect.apply(target, thisArg, args);
+      },
+      get(target, property, receiver) {
+        const value = Reflect.get(target, property, receiver);
+        return property === 'native' && typeof value === 'function'
+          ? wrap(value as (...args: Array<unknown>) => unknown)
+          : value;
+      },
+    });
+    wrappers.set(original, proxy);
+    return proxy;
+  };
   for (const name of names) {
     const original = copy[name];
     if (typeof original !== 'function') continue;
-    const read = original as (...args: Array<unknown>) => unknown;
-    copy[name] = (...args: Array<unknown>) => {
-      record(args[0]);
-      return read(...args);
-    };
+    copy[name] = wrap(original as (...args: Array<unknown>) => unknown);
   }
   return copy;
 };
