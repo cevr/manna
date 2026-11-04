@@ -21,6 +21,7 @@ import {
   GROUNDS,
   groundFor,
   keepSheet,
+  POSES,
   promptOf,
   readRecord,
   RecordJson,
@@ -312,7 +313,7 @@ describe('promptOf', () => {
     expect(prompt).toContain('sandals #7a5236, drawn flat in that one colour');
   });
 
-  test('sets apart every pair of parts whose base paints lie within ΔE 12, naming both by hex, and no farther pair', () => {
+  test('outlines every pair of parts whose base paints lie within ΔE 12 in the ink, naming both by hex, and no farther pair', () => {
     for (let seed = 1; seed <= 24; seed++) {
       const draw = rng(seed);
       const channel = () => 120 + Math.floor(draw() * 40);
@@ -335,13 +336,13 @@ describe('promptOf', () => {
       ))
         expect(line).toMatch(
           new RegExp(
-            `^Close colours: the ${a} ${aHex} and the ${b} ${bHex} are two different colours: paint the ${b} [a-z ]+, exactly ${bHex}, and the ${a} [a-z ]+, exactly ${aHex}, never both in one colour`,
+            `^Close colours: the ${a} ${aHex} and the ${b} ${bHex} lie close, so the bold ink ${hexOf(INK)} outline runs between them wherever they meet, and each is painted exactly its own hex`,
           ),
         );
     }
   });
 
-  test("tells the sash of the lead's palette from his tunic: greyer, never the tunic's hex", () => {
+  test("parts the lead's sash from his tunic by its ink outline, as the kept views do, its knot one shape in every figure, and no rose on the clothes (critique 1, items 1 and 11)", () => {
     const lead: Palette = {
       ink: '#130803',
       parts: [
@@ -349,8 +350,33 @@ describe('promptOf', () => {
         { name: 'sash', base: '#eadcc2', role: 'sash' },
       ],
     };
-    expect(promptOf('A man.', ['front'], lead, '#a6dcae')).toContain(
-      'Close colours: the tunic #f2d8b7 and the sash #eadcc2 are two different colours: paint the sash greyer, exactly #eadcc2, and the tunic stronger, exactly #f2d8b7, never both in one colour, so the sash reads apart from the tunic wherever they meet.',
+    const words = promptOf('A man.', ['front'], lead, '#a6dcae');
+    expect(words).toContain(
+      'Close colours: the tunic #f2d8b7 and the sash #eadcc2 lie close, so the bold ink #130803 outline runs between them wherever they meet, and each is painted exactly its own hex; the sash reads apart from the tunic by that outline.',
+    );
+    expect(words).toContain('The sash: outlined all round in the same ink #130803 as the figure');
+    expect(words).toContain('the knot the same small round knot in every figure');
+    expect(words).toContain('no rose, pink or skin colour anywhere on the clothes');
+    expect(words).not.toMatch(/greyer/);
+    expect(promptOf('A man.', ['front'], PALETTE, '#a6dcae')).not.toMatch(/^The [a-z]+: outlined/m);
+  });
+
+  test("turns the guests' smile toward the viewer's left with the mouth shut, never a gasp, and draws each blink as its pose with the eyes closed (critique 1, items 3, 5 and 9)", () => {
+    const words = promptOf(
+      'A guest.',
+      ['neutral', 'smile', 'turn', 'neutralBlink'],
+      PALETTE,
+      '#a6dcae',
+    );
+    expect(words).toMatch(
+      /3\. [^\n]*a quarter turned toward the viewer's left[^\n]*the mouth shut/,
+    );
+    expect(words).not.toMatch(/open mouth|surprised/);
+    expect(words).toMatch(
+      /4\. seated on the stool exactly as in the first figure[^\n]*eyes closed in a blink/,
+    );
+    expect(POSES.get('threeQuarterBlink')).toMatch(
+      /three-quarters toward the viewer's right[^\n]*eyes closed/,
     );
   });
 });

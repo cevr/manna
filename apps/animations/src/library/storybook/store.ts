@@ -1,10 +1,8 @@
-import { labOf } from '@manna/film/core';
 import { decodePng, encodePng, ImageRoute, type Raster } from '@manna/film/tools';
 import { DateTime, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { Digest } from 'effect/crypto';
 import {
   deltaE,
-  type Rgb,
   figuresIn,
   clearBackground,
   groundOf,
@@ -214,11 +212,19 @@ export const POSES = new Map<string, string>([
   ],
   [
     'smile',
-    'seated on the stool exactly as in the first figure, the head a quarter turned toward the side the description names, a kind closed smile',
+    'seated on the stool exactly as in the first figure, head and eyes still to the viewer, a broad warm closed smile, the mouth shut, the cheeks lifted',
   ],
   [
     'turn',
-    'seated on the stool exactly as in the first figure, the head a quarter turned toward the side the description names, surprised: brows raised, eyes open, a small round open mouth',
+    "seated on the stool exactly as in the first figure, the head a quarter turned toward the viewer's left (whatever side the description names), looking at someone who stands there, the same broad warm closed smile, the mouth shut",
+  ],
+  [
+    'neutralBlink',
+    'seated on the stool exactly as in the first figure, every line the same, the eyes closed in a blink: each eye a short downward-curved ink line',
+  ],
+  [
+    'threeQuarterBlink',
+    "standing exactly as the figure turned three-quarters toward the viewer's right, every line the same, the eyes closed in a blink: each eye a short downward-curved ink line",
   ],
 ]);
 
@@ -237,41 +243,30 @@ const paintWords = (palette: Palette): string =>
 /** How near (ΔE76) two parts' base paints lie for the prompt to set them apart: a part drawn this far off its hex can land nearer the other's, and the snap then paints it the other part. */
 export const CLOSE_PAINTS = 12;
 
-/** The words for a step of 1 or more, the later colour's first: `[less, more]` below, `[more, less]` above; none for a smaller step. */
-const stepWords = (
-  step: number,
-  less: string,
-  more: string,
-): ReadonlyArray<readonly [string, string]> => {
-  if (Math.abs(step) < 1) return [];
-  if (step > 0) return [[more, less]];
-  return [[less, more]];
-};
-
-/** How `b` and `a` differ in words a drawing can follow, `b`'s then `a`'s: lighter or darker, greyer or stronger, each for a step of 1 or more in Lab lightness or chroma; `a shade apart` for each when neither step is. */
-const apartWords = (a: Rgb, b: Rgb): readonly [string, string] => {
-  const [la, aa, ba] = labOf(a);
-  const [lb, ab, bb] = labOf(b);
-  const steps = [
-    ...stepWords(lb - la, 'darker', 'lighter'),
-    ...stepWords(Math.hypot(ab, bb) - Math.hypot(aa, ba), 'greyer', 'stronger'),
-  ];
-  if (steps.length === 0) return ['a shade apart', 'a shade apart'];
-  return [steps.map((s) => s[0]).join(' and '), steps.map((s) => s[1]).join(' and ')];
-};
-
-/** The prompt's words for each pair of parts whose base paints lie within `CLOSE_PAINTS`: two different colours, each painted as it differs from the other and exactly its own hex, never both in one. */
+/**
+ * The prompt's words for each pair of parts whose base paints lie within
+ * `CLOSE_PAINTS`: the ink outline drawn between them wherever they meet,
+ * each exactly its own hex. The kept views part a pale sash from a pale
+ * tunic by its outline, not by its colour (critique 1, item 1).
+ */
 const closeWords = (palette: Palette): ReadonlyArray<string> =>
   palette.parts.flatMap((a, i) =>
     palette.parts.slice(i + 1).flatMap((b) => {
-      const [ra, rb] = [rgbOfHex(a.base), rgbOfHex(b.base)];
-      if (deltaE(ra, rb) >= CLOSE_PAINTS) return [];
-      const [bWords, aWords] = apartWords(ra, rb);
+      if (deltaE(rgbOfHex(a.base), rgbOfHex(b.base)) >= CLOSE_PAINTS) return [];
       return [
-        `the ${a.name} ${a.base} and the ${b.name} ${b.base} are two different colours: paint the ${b.name} ${bWords}, exactly ${b.base}, and the ${a.name} ${aWords}, exactly ${a.base}, never both in one colour, so the ${b.name} reads apart from the ${a.name} wherever they meet`,
+        `the ${a.name} ${a.base} and the ${b.name} ${b.base} lie close, so the bold ink ${palette.ink} outline runs between them wherever they meet, and each is painted exactly its own hex; the ${b.name} reads apart from the ${a.name} by that outline`,
       ];
     }),
   );
+
+/** The prompt's words for a sash, when the palette has one: outlined in the ink like every part, its knot one small round knot with two tails hanging, the same in every figure (critique 1, items 1 and 11). */
+const sashWords = (palette: Palette): ReadonlyArray<string> =>
+  palette.parts.flatMap((p) => {
+    if (p.role !== 'sash') return [];
+    return [
+      `The ${p.name}: outlined all round in the same ink ${palette.ink} as the figure, as in the reference images; tied in front with one small round knot and two tails hanging, the knot the same small round knot in every figure; its folds in its own shade, never pink.`,
+    ];
+  });
 
 /**
  * The prompt of one shot sheet: the person (their look), each key's pose in
@@ -292,7 +287,9 @@ export const promptOf = (
     `The person, as described: ${look.trim()} Where the description names an order of figures, the order above holds.`,
     `Continuity: this is one person drawn ${keys.length} times in one pass, so every figure has the same face, the same head size, the same body proportions, the same colours, the same line weight and the same shading; only the turn and the pose change. All figures stand on one baseline at one size, the soles of every figure on the same line.`,
     'House rules: each hand is a plain round circle of skin at the end of its sleeve, no thumb and no fingers. Sleeves run to the wrist in every figure, the raised arm too: no bare arm or forearm ever shows. One bold warm-dark outline of even weight round each figure. One flat shade per colour: no gradient, no texture, no airbrush, no highlight.',
+    `Clothes: every part of the clothes is outlined in the same ink ${palette.ink} as the figure; a fold on cloth is a line in that cloth's own shade; no rose, pink or skin colour anywhere on the clothes, skin colour only on the face, neck, hands and feet.`,
     `Paint with exactly these colours: ${paintWords(palette)}.`,
+    ...sashWords(palette),
     ...closeWords(palette).map((w) => `Close colours: ${w}.`),
     `The ground: one flat colour, ${ground}, everywhere behind and between the figures, with wide clear ground between each figure and the next (a reaching or raised hand too) so no figure touches or nears another; no glow, halo or soft light round any figure; no floor, no cast shadow, no text, no frame.`,
   ].join('\n');

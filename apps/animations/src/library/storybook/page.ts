@@ -39,7 +39,7 @@ export interface PageScene {
   }>;
 }
 
-/** One figure of a frame: its cell, its soles' centre in its layer's px, its squash and its scale. */
+/** One figure of a frame: its cell, its soles' centre in its layer's px, its stretch across and up (squash, and breath up) and its scale. */
 export interface PageFigure {
   readonly name: string;
   readonly cell: string;

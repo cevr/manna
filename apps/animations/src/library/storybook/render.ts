@@ -176,16 +176,16 @@ export const storybookPage = (
       );
   });
 
-/** One render of a frame: `colour` the whole frame, `figure:<name>` that figure alone. */
+/** One render of a frame: `colour` the whole frame, `figure:<name>` that figure alone; each figure's stretch up is its squash times its breath. */
 export const requestOf = (frame: Frame, output: string): PageRequest => ({
   camera: { x: frame.camera.x, y: frame.camera.y, zoom: frame.camera.zoom },
-  figures: frame.figures.map(({ name, cell, x, y, sx, sy, scale }) => ({
+  figures: frame.figures.map(({ name, cell, x, y, sx, sy, breath, scale }) => ({
     name,
     cell,
     x,
     y,
     sx,
-    sy,
+    sy: sy * breath,
     scale,
   })),
   output,

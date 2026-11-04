@@ -1,5 +1,5 @@
 import type { Raster } from '@manna/film/tools';
-import { labOf } from '@manna/film/core';
+import { labOf, rng } from '@manna/film/core';
 import type { Paint, Rgb } from './sheet.ts';
 import { alphaAt, rgbAt, rgbOfHex } from './sheet.ts';
 
@@ -27,12 +27,17 @@ export interface CameraKey {
   readonly zoom: number;
 }
 
-/** The figure stands in `cell` from `from` s to `to` s. */
+/**
+ * The figure stands in `cell` from `from` s to `to` s, breathing; `blink`,
+ * when given, names the key drawn as `cell` with the eyes closed, shown on
+ * the figure's own seeded schedule of blinks.
+ */
 export interface Hold<K extends string = string> {
   readonly _tag: 'Hold';
   readonly from: number;
   readonly to: number;
   readonly cell: K;
+  readonly blink?: K;
 }
 
 /** The figure turns from cell `from` to cell `to` over `dur` s from `at` s: the drawn cell swaps at 40 % under a small squash. */
@@ -128,6 +133,14 @@ export const hold = <const K extends string>(from: number, to: number, cell: K):
   cell,
 });
 
+/** A hold that blinks: `blink` is the key drawn as `cell` with the eyes closed. */
+export const blinkingHold = <const K extends string>(
+  from: number,
+  to: number,
+  cell: K,
+  blink: K,
+): Hold<K> => ({ _tag: 'Hold', from, to, cell, blink });
+
 export const turn = <const K extends string>(at: number, dur: number, from: K, to: K): Turn<K> => ({
   _tag: 'Turn',
   at,
@@ -183,25 +196,83 @@ export const startOf = (s: Span): number => {
 export const spanAt = <K extends string>(spans: Figure<K>['spans'], t: number): Span<K> =>
   spans.filter((s) => startOf(s) <= t).at(-1) ?? spans[0];
 
-/** A figure's drawing at one moment: its cell, its soles' centre in its layer's px and its squash. */
+/** A figure's drawing at one moment: its cell, its soles' centre in its layer's px, its squash, and its breath (how far it stretches up about its soles, 1 at rest). */
 export interface Posed {
   readonly cell: string;
   readonly x: number;
   readonly y: number;
   readonly sx: number;
   readonly sy: number;
+  readonly breath: number;
 }
+
+/** How far a breath stretches a holding figure up about its soles at its fullest: 0.4 %, about 2 px on the lead (critique 1, item 5). */
+export const BREATH = 0.004;
+
+/** The shortest and longest breath, in s; each figure's own lies between, drawn from its name. */
+const BREATH_PERIOD = [3.2, 3.9] as const;
+
+/** How long a blink shows its key, in s. */
+export const BLINK = 0.125;
+
+/** When a hold's first blink may come after its start, and the gap from one blink to the next, in s: each drawn from the figure's name and the hold's start. */
+const FIRST_BLINK = [0.6, 1.8] as const;
+const BLINK_GAP = [2.4, 4.4] as const;
+
+/** A seeded draw in [0, 1) from a name: FNV-1a of its characters into the engine's `rng`. */
+const drawsOf = (name: string): (() => number) => {
+  let h = 0x811c9dc5;
+  for (const ch of name) h = Math.imul(h ^ (ch.codePointAt(0) ?? 0), 0x01000193) >>> 0;
+  return rng(h);
+};
+
+const within = (range: readonly [number, number], u: number): number =>
+  range[0] + (range[1] - range[0]) * u;
+
+/** A holding figure's breath at `t`: from rest at the hold's start up to 1 + `BREATH` and back, once per its own period. */
+const breathAt = (name: string, from: number, t: number): number => {
+  const period = within(BREATH_PERIOD, drawsOf(name)());
+  return 1 + (BREATH * (1 - Math.cos((2 * Math.PI * (t - from)) / period))) / 2;
+};
+
+/** Whether a hold shows its blink at `t`: its blinks start a seeded wait after its start and a seeded gap apart, each `BLINK` s long and ending inside the hold. */
+const blinkingAt = (name: string, s: Hold, t: number): boolean => {
+  const draw = drawsOf(`${name}@${s.from}`);
+  for (let start = s.from + within(FIRST_BLINK, draw()); start + BLINK <= s.to;) {
+    if (t < start) return false;
+    if (t < start + BLINK) return true;
+    start += within(BLINK_GAP, draw());
+  }
+  return false;
+};
+
+/** A holding figure's pose: its cell, or its blink key while it blinks, breathing. */
+const holdPose = (name: string, s: Hold, t: number, x: number, y: number): Posed => ({
+  cell: [s.cell, s.blink ?? s.cell][Number(blinkingAt(name, s, t))] ?? s.cell,
+  x,
+  y,
+  sx: 1,
+  sy: 1,
+  breath: breathAt(name, s.from, t),
+});
 
 const turnPose = (s: Turn, t: number, x: number, y: number): Posed => {
   const u = (t - s.at) / s.dur;
-  if (u <= 0) return { cell: s.from, x, y, sx: 1, sy: 1 };
-  if (u >= 1) return { cell: s.to, x, y, sx: 1, sy: 1 };
+  if (u <= 0) return { cell: s.from, x, y, sx: 1, sy: 1, breath: 1 };
+  if (u >= 1) return { cell: s.to, x, y, sx: 1, sy: 1, breath: 1 };
   if (u < SWAP) {
     const k = ease(u / SWAP);
-    return { cell: s.from, x, y, sx: 1 - SQUASH.x * k, sy: 1 + SQUASH.y * k };
+    return { cell: s.from, x, y, sx: 1 - SQUASH.x * k, sy: 1 + SQUASH.y * k, breath: 1 };
   }
   const k = ease((u - SWAP) / (1 - SWAP));
-  return { cell: s.to, x, y, sx: 1 - SQUASH.x * (1 - k), sy: 1 + SQUASH.y * (1 - k) };
+  return {
+    cell: s.to,
+    x,
+    y,
+    sx: 1 - SQUASH.x * (1 - k),
+    sy: 1 + SQUASH.y * (1 - k),
+    breath: 1,
+  };
 };
 
 const walkPose = (s: Walk, t: number, ground: number): Posed => {
@@ -214,6 +285,7 @@ const walkPose = (s: Walk, t: number, ground: number): Posed => {
     y: ground - lift,
     sx: 1,
     sy: 1,
+    breath: 1,
   };
 };
 
@@ -221,10 +293,10 @@ const walkPose = (s: Walk, t: number, ground: number): Posed => {
 export const poseAt = (f: Figure, t: number): Posed => {
   const s = spanAt(f.spans, t);
   const { x, ground } = f.at;
-  const still = (cell: string): Posed => ({ cell, x, y: ground, sx: 1, sy: 1 });
+  const still = (cell: string): Posed => ({ cell, x, y: ground, sx: 1, sy: 1, breath: 1 });
   switch (s._tag) {
     case 'Hold':
-      return still(s.cell);
+      return holdPose(f.name, s, t, x, ground);
     case 'Turn':
       return turnPose(s, t, x, ground);
     case 'Keys':

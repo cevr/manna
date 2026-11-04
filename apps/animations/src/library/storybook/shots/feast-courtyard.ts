@@ -1,11 +1,20 @@
-import { figure, hold, keyRun, type Shot, turn, walk } from '../shot.ts';
+import { blinkingHold, figure, hold, keyRun, type Shot, turn, walk } from '../shot.ts';
 
 /** The set's plates, relative to apps/animations: test art until the concept step keeps real ones. */
 const SET = 'src/library/storybook/set/feast-courtyard';
 
 /** The keys of each member's feast-courtyard sheet, as drawn. */
-const LEAD = ['side', 'threeQuarter', 'front', 'lift', 'offer', 'wave-1', 'wave-2'] as const;
-const GUEST = ['neutral', 'smile', 'turn'] as const;
+const LEAD = [
+  'side',
+  'threeQuarter',
+  'threeQuarterBlink',
+  'front',
+  'lift',
+  'offer',
+  'wave-1',
+  'wave-2',
+] as const;
+const GUEST = ['neutral', 'smile', 'turn', 'neutralBlink'] as const;
 
 /** The guests' layer's depth: their heads read 0.92 of the lead's, as take 4 drew them. */
 const GUESTS_Z = 1 / 0.92;
@@ -13,8 +22,10 @@ const GUESTS_Z = 1 / 0.92;
 /**
  * The feast courtyard, take 4 ported: the lead walks in on his side with a
  * bob, turns to the viewer, greets the guests with a run of drawn keys, and
- * turns toward them; the guests smile, then turn. The camera pans 100 px
- * and pushes in 7 % over the shot.
+ * turns toward them, then holds, breathing and blinking. The guests sit
+ * breathing and blinking, smile as he waves, then look toward him at
+ * picture left (critique 1, items 3, 5 and 9). The woman sits clear of the
+ * jug (item 4). The camera pans 100 px and pushes in 7 % over the shot.
  */
 export const feastCourtyard: Shot = {
   id: 'feast-courtyard',
@@ -55,24 +66,20 @@ export const feastCourtyard: Shot = {
           sheet: 'feast-courtyard',
           at: { x: 670, ground: 532 },
           spans: [
-            keyRun([
-              [0, 'neutral'],
-              [4.6, 'smile'],
-              [7.7, 'turn'],
-            ]),
+            blinkingHold(0, 4.6, 'neutral', 'neutralBlink'),
+            hold(4.6, 7, 'smile'),
+            hold(7, 12, 'turn'),
           ],
         }),
         figure(GUEST, {
           name: 'woman',
           member: 'feast-guest-woman',
           sheet: 'feast-courtyard',
-          at: { x: 930, ground: 532 },
+          at: { x: 875, ground: 532 },
           spans: [
-            keyRun([
-              [0, 'neutral'],
-              [5.1, 'smile'],
-              [8.4, 'turn'],
-            ]),
+            blinkingHold(0, 4.9, 'neutral', 'neutralBlink'),
+            hold(4.9, 7.3, 'smile'),
+            hold(7.3, 12, 'turn'),
           ],
         }),
         {
@@ -113,7 +120,7 @@ export const feastCourtyard: Shot = {
               [6.7, 'front'],
             ]),
             turn(7.3, 0.4, 'front', 'threeQuarter'),
-            hold(7.7, 12, 'threeQuarter'),
+            blinkingHold(7.7, 12, 'threeQuarter', 'threeQuarterBlink'),
           ],
         }),
       ],

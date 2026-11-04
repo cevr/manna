@@ -4,6 +4,9 @@ import { Option } from 'effect';
 import { describe, expect, test } from 'effect-bun-test';
 import { hexOf, type Palette, paintsOf, rgbAt, type Rgb, rgbOfHex } from './sheet.ts';
 import {
+  BLINK,
+  blinkingHold,
+  BREATH,
   chromaOf,
   figure,
   type Figure,
@@ -267,6 +270,82 @@ describe('frameAt over generated shots', () => {
       expect(timesOf(shot).map((t) => again.get(t))).toEqual(first);
     }
   });
+
+  test('breathes only on a hold, the crown rising no more than BREATH of the height from rest at its start, never squashing (critique 1, item 5)', () => {
+    const misses = SEEDS.flatMap((seed) => {
+      const { shot, figures, heads } = generatedShot(seed);
+      return timesOf(shot).flatMap((t) =>
+        frameAt(shot, heads, t).figures.flatMap((f) => {
+          const span = spanOfWindow(figures, f.name, t);
+          const holding = Option.exists(span, (s) => s._tag === 'Hold');
+          const atStart = Option.exists(span, (s) => s._tag === 'Hold' && s.from === t);
+          const ok =
+            (holding && f.breath >= 1 && f.breath <= 1 + BREATH && (!atStart || f.breath === 1)) ||
+            (!holding && f.breath === 1);
+          if (ok) return [];
+          return [`seed ${seed} t ${t}: ${f.name} breath ${f.breath}, holding ${holding}`];
+        }),
+      );
+    });
+    expect(misses.slice(0, 5)).toEqual([]);
+  });
+});
+
+describe('a hold', () => {
+  const still = (name: string) =>
+    figure(['a', 'b'], {
+      name,
+      member: 'm',
+      sheet: 's',
+      at: { x: 0, ground: 0 },
+      spans: [blinkingHold(0, 12, 'a', 'b')],
+    });
+  const shotOf = (figures: ReadonlyArray<Figure>): Shot => ({
+    id: 'hold',
+    size: { width: 100, height: 100 },
+    fps: 240,
+    duration: 12,
+    headPx: 100,
+    light: LIGHT,
+    camera: [{ t: 0, x: 0, y: 0, zoom: 1 }],
+    layers: [{ name: 'l', z: 1, blur: 0, items: figures }],
+  });
+  const runsOf = (name: string): ReadonlyArray<readonly [number, number]> => {
+    const shot = shotOf([still(name)]);
+    const runs: Array<[number, number]> = [];
+    for (const t of timesOf(shot)) {
+      const f = frameAt(shot, new Map(), t).figures[0];
+      if (f?.cell !== 'b') continue;
+      const last = runs.at(-1);
+      if (last && t - last[1] < 0.01) last[1] = t;
+      else runs.push([t, t]);
+    }
+    return runs;
+  };
+
+  test('breathes a full breath and back over its length, the same at every call, each figure at its own pace (critique 1, item 5)', () => {
+    const shot = shotOf([still('one'), still('two')]);
+    const breaths = (i: number) =>
+      timesOf(shot).map((t) => frameAt(shot, new Map(), t).figures[i]?.breath ?? 0);
+    const one = breaths(0);
+    expect(Math.max(...one)).toBeGreaterThan(1 + BREATH * 0.99);
+    expect(Math.min(...one)).toBe(1);
+    expect(breaths(0)).toEqual(one);
+    expect(breaths(1)).not.toEqual(one);
+    const f = frameAt(shot, new Map(), 5).figures[0];
+    expect([f?.sx, f?.sy]).toEqual([1, 1]);
+  });
+
+  test('shows its blink key on a seeded schedule: blinks of BLINK s, two or more in 12 s, 2 s or more apart, none in its first half second, the same at every call (critique 1, item 5)', () => {
+    const runs = runsOf('one');
+    expect(runs.length).toBeGreaterThanOrEqual(2);
+    for (const [from, to] of runs) expect(to - from + 1 / 240).toBeCloseTo(BLINK, 2);
+    for (const [[, end], [start]] of runs.slice(1).map((r, i) => [runs[i] ?? r, r] as const))
+      expect(start - end).toBeGreaterThan(2);
+    expect(runs[0]?.[0]).toBeGreaterThan(0.5);
+    expect(runsOf('one')).toEqual(runs);
+    expect(runsOf('two')).not.toEqual(runs);
+  });
 });
 
 describe('the feast courtyard', () => {
@@ -281,10 +360,20 @@ describe('the feast courtyard', () => {
       for (const f of frameAt(feastCourtyard, heads, t).figures)
         used.set(f.name, (used.get(f.name) ?? new Set<string>()).add(f.cell));
     expect([...(used.get('lead') ?? [])].toSorted()).toEqual(
-      ['front', 'lift', 'offer', 'side', 'threeQuarter', 'wave-1', 'wave-2'].toSorted(),
+      [
+        'front',
+        'lift',
+        'offer',
+        'side',
+        'threeQuarter',
+        'threeQuarterBlink',
+        'wave-1',
+        'wave-2',
+      ].toSorted(),
     );
-    expect([...(used.get('man') ?? [])].toSorted()).toEqual(['neutral', 'smile', 'turn']);
-    expect([...(used.get('woman') ?? [])].toSorted()).toEqual(['neutral', 'smile', 'turn']);
+    const guest = ['neutral', 'neutralBlink', 'smile', 'turn'];
+    expect([...(used.get('man') ?? [])].toSorted()).toEqual(guest);
+    expect([...(used.get('woman') ?? [])].toSorted()).toEqual(guest);
   });
 
   test('lights its shade with a hue as coloured as its tint, never black or grey (CRAFT rule 12)', () => {
