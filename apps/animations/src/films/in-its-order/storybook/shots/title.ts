@@ -12,23 +12,32 @@ const BRUSH = PATH_BRUSH.map(([x, y, r]) => [x - 869, y - 428, r] as const);
 /** The guests' crowns on their plane: every chin clears the table's top in the pull's first frame too. */
 const CROWN = 770;
 
-/** The eight at the long table, left to right, on the guests' plane. */
+/**
+ * The eight at the long table, left to right, on the guests' plane, in the
+ * panel's groups: two diners turned to each other, the man and the woman
+ * either side of the lead and turned to him, the mother, then two diners
+ * turned to each other; shoulders overlap within a group.
+ */
 const X = {
-  diner1: 260,
-  diner2: 470,
-  man: 690,
+  diner1: 470,
+  diner2: 568,
+  man: 855,
   lead: 960,
-  woman: 1220,
-  mother: 1430,
-  diner3: 1630,
-  diner4: 1810,
+  woman: 1065,
+  mother: 1165,
+  diner3: 1340,
+  diner4: 1438,
 } as const;
 
+/** The pull's first framing: nearer than the wide, so the group fills the frame as the panel's start does, its heads about a third bigger. */
+const NEAR_START = { x: 960, y: 700, zoom: 1.3 } as const;
+
 /**
- * The title: the camera pulls from the table's middle back to the wide
- * (1.12 to 1) over the scene, the gold path is laid along its brush from its
- * foot, and the eight at the long table sit breathing and blinking, two
- * diners turning to talk to a neighbour in turn.
+ * The title: the camera pulls from the group at the table's middle back to
+ * the wide (1.3 to 1) over the scene, the gold path is laid along its brush
+ * from its foot, and the eight at the long table sit breathing and blinking
+ * in their groups, the man and the woman turned to the lead, and the diners
+ * of each pair talking to each other in turn.
  */
 export const titleShot: FilmShot = {
   id: 'title',
@@ -53,7 +62,7 @@ export const titleShot: FilmShot = {
       );
     return {
       headPx: HEAD,
-      camera: [cam(0, 960, 690, 1.12), cam(duration, 960, 540, 1)],
+      camera: [cam(0, NEAR_START.x, NEAR_START.y, NEAR_START.zoom), cam(duration, 960, 540, 1)],
       layers: [
         ...backdrop(),
         layer('path', Z.distance, [
@@ -62,12 +71,36 @@ export const titleShot: FilmShot = {
           }),
         ]),
         layer('guests', Z.guests, [
-          diner(1, X.diner1, CROWN, at, neutral),
-          diner(2, X.diner2, CROWN, at, talk('talk')),
+          diner(1, X.diner1, CROWN, at, talk('talk')),
+          diner(2, X.diner2, CROWN, at, talk('reply')),
+          diner(3, X.diner3, CROWN, at, neutral),
+          diner(4, X.diner4, CROWN, at, talk('reply')),
+          seat(
+            {
+              member: 'feast-mother',
+              sheet: 'iio-baby',
+              name: 'mother',
+              x: X.mother,
+              crown: CROWN,
+            },
+            at,
+            holds([[0, 'cup', 'cupBlink']], duration),
+          ),
           seat(
             { member: 'feast-guest-man', sheet: 'iio-table', name: 'man', x: X.man, crown: CROWN },
             at,
-            neutral,
+            holds([[0, 'smile', 'neutralBlink']], duration),
+          ),
+          seat(
+            {
+              member: 'feast-guest-woman',
+              sheet: 'feast-courtyard',
+              name: 'woman',
+              x: X.woman,
+              crown: CROWN,
+            },
+            at,
+            holds([[0, 'turn', 'neutralBlink']], duration),
           ),
           seat(
             {
@@ -80,30 +113,6 @@ export const titleShot: FilmShot = {
             at,
             holds([[0, 'front', 'frontBlink']], duration),
           ),
-          seat(
-            {
-              member: 'feast-guest-woman',
-              sheet: 'feast-courtyard',
-              name: 'woman',
-              x: X.woman,
-              crown: CROWN,
-            },
-            at,
-            neutral,
-          ),
-          seat(
-            {
-              member: 'feast-mother',
-              sheet: 'iio-baby',
-              name: 'mother',
-              x: X.mother,
-              crown: CROWN,
-            },
-            at,
-            holds([[0, 'cup', 'cupBlink']], duration),
-          ),
-          diner(3, X.diner3, CROWN, at, neutral),
-          diner(4, X.diner4, CROWN, at, talk('reply')),
         ]),
         layer('table', Z.table, [table()]),
       ],

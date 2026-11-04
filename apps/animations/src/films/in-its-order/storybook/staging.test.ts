@@ -26,13 +26,13 @@ const placed = await Effect.runPromise(
   ),
 );
 
-/** Each shot's push cap its spec row names, as the largest zoom over the smallest across the shot: cold-letter's "≤ 15 %", cold-ouch's and milk-pour's "≤ 5 %", and each named push or pull's range. */
+/** Each shot's push cap its spec row names, as the largest zoom over the smallest across the shot: cold-letter's "≤ 15 %", cold-ouch's and milk-pour's "≤ 5 %", and each named push or pull's range; the title's pull starts nearer, at 1.3, by the orchestrator's ruling on critique 1, item 9. */
 const PUSH_CAPS: ReadonlyMap<string, number> = new Map([
   ['cold-baby', 1.06],
   ['cold-letter', 1.15],
   ['cold-ouch', 1.05],
   ['cold-what', 1.08],
-  ['title', 1.12],
+  ['title', 1.3],
   ['milk-cup', 1.1],
   ['milk-pour', 1.05],
 ]);
@@ -221,6 +221,32 @@ describe("In Its Order's staging", () => {
     expect(
       table?.items.some((i) => i._tag === 'Plate' && i.file.endsWith('/scroll-open.png')),
     ).toBe(true);
+  });
+
+  test('seats the title’s eight in the panel’s groups, shoulders close within each, the man and the woman turned to the lead throughout (critique 1, item 9)', () => {
+    const title = placed.find(({ shot }) => shot.id === 'title')?.shot;
+    if (!title) return expect(title).toBeDefined();
+    const seated = figuresOf(title)
+      .map(({ figure }) => figure)
+      .toSorted((a, b) => a.at.x - b.at.x);
+    const groups = seated.reduce<Array<Array<string>>>((all, figure, i) => {
+      const gap = figure.at.x - (seated[i - 1]?.at.x ?? Number.NEGATIVE_INFINITY);
+      const last = all.at(-1);
+      if (last && gap <= 150) last.push(figure.name);
+      else all.push([figure.name]);
+      return all;
+    }, []);
+    expect(groups).toEqual([
+      ['diner-1', 'diner-2'],
+      ['man', 'lead', 'woman', 'mother'],
+      ['diner-3', 'diner-4'],
+    ]);
+    const turned = (name: string) =>
+      seated
+        .filter((f) => f.name === name)
+        .flatMap((f) => [...new Set(timesOf(title).map((t) => poseAt(f, t).cell))]);
+    expect(turned('man')).toEqual(['smile']);
+    expect(turned('woman')).toEqual(['turn']);
   });
 
   test('draws the open scroll in cold-letter, at rest on the table at the shot’s end', () => {
