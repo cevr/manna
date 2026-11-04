@@ -31,11 +31,15 @@ and the microphone revoked):
 
 → `sim install` is ok; `grep -F OneSwiftPackages/dictation apps/heartseed/ios/Podfile.lock`
 succeeds, `ls apps/heartseed/ios/OneSwiftPackages` lists `dictation`,
-`$EVIDENCE/build.log` ends `** BUILD SUCCEEDED **`, and
-`apps/heartseed/ios/Heartseed/Info.plist` holds the keys
-`NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription`
-(`plutil -extract <key> raw apps/heartseed/ios/Heartseed/Info.plist`
-exits 0 for each).
+`$EVIDENCE/build.log` ends `** BUILD SUCCEEDED **`, and the app's
+Info.plist (the Heartseed folder of `apps/heartseed/ios`) holds the keys
+`NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription`;
+each of these exits 0:
+
+```bash
+plutil -extract NSMicrophoneUsageDescription raw apps/heartseed/ios/Heartseed/Info.plist
+plutil -extract NSSpeechRecognitionUsageDescription raw apps/heartseed/ios/Heartseed/Info.plist
+```
 
 `dictation-script`, with the microphone revoked
 (`xcrun simctl privacy <udid> revoke microphone app.heartseed` before the

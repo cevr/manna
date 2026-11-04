@@ -141,7 +141,7 @@ journey files yet. The features:
   with the app (no screen calls it yet).
 - [features/dictation.md](features/dictation.md): dictation's native
   module, built with the app and its prompts, and its scripted replay on
-  the development probe `probe/dictation`.
+  the development probe (`apps/heartseed/app/probe/dictation.tsx`).
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.
