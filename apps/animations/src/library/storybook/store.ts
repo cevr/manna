@@ -512,6 +512,58 @@ export const cellsModuleOf = (entries: ReadonlyArray<CellEntry>): string =>
     '',
   ].join('\n');
 
+/** A cell's entry as a cells module holds it, its PNG aside. */
+interface HeldEntry {
+  readonly size: readonly [number, number];
+  readonly ax: number;
+  readonly ay: number;
+  readonly head?: number;
+}
+
+/**
+ * Every way a sheet's cells module (`cells`, as a film imports it) differs
+ * from the sheet stored in `dir`: a key out of the record's order, a PNG that
+ * is not the recorded one, an entry the store reads otherwise off its cell.
+ */
+export const cellsMisses = Effect.fn('Storybook.cellsMisses')(function* (
+  dir: string,
+  paints: ReadonlyArray<Paint>,
+  cells: Readonly<Record<string, HeldEntry & { readonly png: string }>>,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const record = yield* Schema.decodeEffect(RecordJson)(
+    yield* fs.readFileString(`${dir}/record.json`),
+  );
+  const keys = record.cells.map((c) => c.key);
+  const order = Option.toArray(
+    Option.some(`${dir} holds ${Object.keys(cells).join(',')}, its record ${keys.join(',')}`).pipe(
+      Option.filter(() => Object.keys(cells).join() !== keys.join()),
+    ),
+  );
+  const each = yield* Effect.forEach(record.cells, (c) =>
+    Effect.gen(function* () {
+      const entry = Option.fromUndefinedOr(cells[c.key]);
+      if (Option.isNone(entry)) return [];
+      const bytes = yield* fs.readFile(entry.value.png);
+      if ((yield* sha256(bytes)) !== c.sha256) return [`${dir}/${c.key} is not the recorded PNG`];
+      const raster = yield* pngOf(bytes, entry.value.png);
+      const read = cellEntryOf(c.key, raster, paints);
+      const head = Option.getOrElse(read.head, () => -1);
+      const same =
+        entry.value.size[0] === read.size[0] &&
+        entry.value.size[1] === read.size[1] &&
+        entry.value.ax === read.ax &&
+        entry.value.ay === read.ay &&
+        (entry.value.head ?? -1) === head;
+      if (same) return [];
+      return [
+        `${dir}/${c.key} holds ${entry.value.size} ${entry.value.ax},${entry.value.ay} head ${entry.value.head ?? 'none'}, reads ${read.size} ${read.ax},${read.ay} head ${head}`,
+      ];
+    }),
+  );
+  return [...order, ...each.flat()];
+});
+
 /** A record written as `<dir>/record.json`. */
 const writeRecord = Effect.fn('Storybook.writeRecord')(function* (
   dir: string,
