@@ -786,35 +786,17 @@ const standing = (offer: boolean): Raster => {
   );
 };
 
-/** Where the collar band starts, as a share of the figure's height (the lead's side cell: 151 of 458). */
-const COLLAR_AT = 0.33;
+/** One band of a figure's head column, crown to soles: the row its paint ends at (a fraction of a row allowed) and the paint. */
+type Band = readonly [number, Rgb];
 
-/**
- * The bands of a figure from crown to soles, each a share of its height and
- * the colour it is painted: hair, the face with a jaw line in the robe's
- * colour a hundredth deep (the man's turned head, 7 of 705 rows), a collar
- * band in the robe's colour as deep as the lead's rendered side cell reads
- * it (11 of 427 rows), an ink line, the robe, and sandals.
- */
-const BANDS: ReadonlyArray<readonly [number, Rgb]> = [
-  [0.15, INK],
-  [0.2, SKIN],
-  [0.211, ROBE],
-  [COLLAR_AT, SKIN],
-  [COLLAR_AT + 0.026, ROBE],
-  [COLLAR_AT + 0.038, INK],
-  [0.92, ROBE],
-  [1, SANDAL],
-];
-
-/** A figure 15 px wide and `height` rows tall, outlined in ink at its sides, its bands moved `dy` of a row down: a row two bands share is their blend by cover, as a render's resampling paints it. */
-const banded = (height: number, dy: number): Raster => {
+/** A figure 15 px wide and `height` rows tall, outlined in ink at its sides, painted in `bands` moved `dy` of a row down: a row two bands share is their blend by cover, as drawing at a fraction of a pixel paints it. */
+const banded = (bands: ReadonlyArray<Band>, height: number, dy: number): Raster => {
   const width = 15;
   const rgba = new Uint8Array(width * height * 4);
-  const bandAt = (v: number): Rgb => BANDS.find(([end]) => v < end * height + dy)?.[1] ?? SANDAL;
+  const bandAt = (v: number): Rgb => bands.find(([end]) => v < end + dy)?.[1] ?? SANDAL;
   for (let y = 0; y < height; y++) {
     const [a, b] = [bandAt(y), bandAt(y + 0.999)];
-    const edge = BANDS.map(([end]) => end * height + dy).find((e) => e > y && e < y + 1) ?? y;
+    const edge = bands.map(([end]) => end + dy).find((e) => e > y && e < y + 1) ?? y;
     const cover = edge - y;
     const row = [0, 1, 2].map((k) => Math.round((a[k] ?? 0) * cover + (b[k] ?? 0) * (1 - cover)));
     const mixed = [a, [row[0] ?? 0, row[1] ?? 0, row[2] ?? 0] as const][Number(a !== b)] ?? a;
@@ -825,6 +807,74 @@ const banded = (height: number, dy: number): Raster => {
   }
   return { width, height, rgba };
 };
+
+/** The bands of a figure drawn at `height` rows from shares of its height: each band's end as a share, and its paint. */
+const scaledBands = (shares: ReadonlyArray<Band>, height: number): ReadonlyArray<Band> =>
+  shares.map(([end, paint]) => [end * height, paint] as const);
+
+/**
+ * A generated figure's head column and the row its collar starts at, none
+ * when no clothes follow the face: an ink crown; the face in skin with up
+ * to three marks drawn on it, each in a cloth, the ink or the sandals'
+ * paint, from one row to six hundredths of the figure deep (a jaw line as
+ * deep as a collar or deeper) with skin above and below; a collar band in
+ * a cloth from two rows to eight hundredths deep; then the clothes, run on
+ * or broken by an ink line, a sash, or a hand in skin ringed in ink; the
+ * soles in sandals. A tenth of the figures wear no clothes below the face.
+ * Every band is a row deep or more, every skin between marks two.
+ */
+const generatedFigure = (seed: number) => {
+  const draw = rng(seed);
+  const pick = <A>(xs: ReadonlyArray<A>, fallback: A): A =>
+    xs[Math.floor(draw() * xs.length)] ?? fallback;
+  const height = 120 + Math.floor(draw() * 900);
+  const dy = draw();
+  const bands: Array<Band> = [];
+  let y = 0;
+  const add = (depth: number, paint: Rgb) => {
+    y += depth;
+    bands.push([y, paint]);
+  };
+  add(2 + draw() * height * 0.12, INK);
+  add(4 + draw() * height * 0.06, SKIN);
+  for (let k = Math.floor(draw() * 4); k > 0; k--) {
+    add(1 + draw() * height * 0.06, pick([ROBE, SASH, INK, SANDAL], ROBE));
+    add(2 + draw() * height * 0.04, SKIN);
+  }
+  const bare = draw() < 0.1;
+  const collar = y + dy;
+  const clothes: ReadonlyArray<ReadonlyArray<Rgb>> = [
+    [ROBE],
+    [INK, ROBE],
+    [SASH, ROBE],
+    [INK, ROBE, INK, SKIN, INK, ROBE],
+    [INK, SKIN, INK, ROBE],
+  ];
+  if (bare) add(Math.max(2, height * 0.92 - y), INK);
+  else {
+    add(2 + draw() * height * 0.08, pick([ROBE, SASH], ROBE));
+    const below = pick(clothes, [ROBE]);
+    const room = Math.max(0, height * 0.92 - y);
+    for (const paint of below) add(Math.max(1, (room / below.length) * (0.5 + draw())), paint);
+  }
+  add(Math.max(2, height - y), SANDAL);
+  return {
+    raster: banded(bands, Math.ceil(y), dy),
+    collar: Option.some(collar).pipe(Option.filter(() => !bare)),
+  };
+};
+
+/** The bands of the verifier's figure (round 2, M2): a jaw line 1.8 % of its height deep at a fifth of it, the collar at 33 %, 2.6 % deep, an ink line, the robe and sandals. */
+const JAW_AND_COLLAR: ReadonlyArray<Band> = [
+  [0.15, INK],
+  [0.2, SKIN],
+  [0.218, ROBE],
+  [0.33, SKIN],
+  [0.356, ROBE],
+  [0.406, INK],
+  [0.92, ROBE],
+  [1, SANDAL],
+];
 
 describe('linesOf', () => {
   const paints = paintsOf(DRESSED);
@@ -868,7 +918,7 @@ describe('linesOf', () => {
     expect([lines.centreColumn, lines.hem]).toEqual([7, Option.some(15)]);
   });
 
-  test("reads the collar below a jaw line drawn a few rows of a tall figure deep in a garment's colour, where the clothes run on (round 2: the man's turned head)", () => {
+  test("reads the collar below a jaw line drawn in a garment's colour with skin above and below it (round 2: the man's turned head)", () => {
     const rows = [
       '..kkkkk..',
       '..ksssk..',
@@ -879,27 +929,46 @@ describe('linesOf', () => {
       '..krrrk..',
       '..ksssk..',
       '..ksssk..',
-      ...Array.from({ length: 240 }, () => '.krrrrrk.'),
+      ...Array.from({ length: 14 }, () => '.krrrrrk.'),
       '.kkkkkkk.',
     ];
     const lines = Option.getOrThrow(linesOf(art(rows, FIGURE_KEY), paints));
     expect([lines.crown, Option.getOrThrow(lines.head)]).toEqual([0, 9]);
   });
 
-  test('over generated figure sizes and sub-pixel offsets: reads the collar at the top of a band a fortieth of the figure deep, below a jaw line a hundredth deep, at any size a render draws (round 2: the lead read 189 for 146 at frame 17)', () => {
-    for (let seed = 1; seed <= 40; seed++) {
-      const draw = rng(seed);
-      const height = 200 + Math.floor(draw() * 521);
-      const dy = draw();
-      const raster = banded(height, dy);
-      const lines = Option.getOrThrow(linesOf(raster, paints));
-      const head = Option.getOrElse(lines.head, () => -1);
-      expect([seed, height, Math.abs(head - COLLAR_AT * height) <= 2]).toEqual([
+  test('reads the same collar in one figure drawn 200 and 240 rows tall, a jaw line as deep as the collar above it (round 2, M2)', () => {
+    const heads = [200, 240].map((height) =>
+      Option.flatMap(
+        linesOf(banded(scaledBands(JAW_AND_COLLAR, height), height, 0), paints),
+        (l) => l.head,
+      ),
+    );
+    expect(heads).toEqual([Option.some(66), Option.some(80)]);
+  });
+
+  test('over generated figures (jaw lines and other marks on the face of any depth, collars two rows deep and more, clothes broken by ink, a sash or a hand), sizes and sub-pixel offsets: reads the head to the row the collar band starts in, or none where no clothes follow the face', () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const { raster, collar } = generatedFigure(seed);
+      const head = Option.flatMap(linesOf(raster, paints), (l) => l.head);
+      const within = Option.match(collar, {
+        onNone: () => Option.isNone(head),
+        onSome: (c) => Option.exists(head, (h) => h >= Math.floor(c) && h <= Math.ceil(c)),
+      });
+      expect([seed, raster.height, collar, head, within]).toEqual([
         seed,
-        height,
+        raster.height,
+        collar,
+        head,
         true,
       ]);
     }
+  });
+
+  test('reads no head from a figure with no face in its head column', () => {
+    const rows = ['..kkkkk..', ...Array.from({ length: 12 }, () => '..krrrk..'), '..kkkkk..'];
+    expect(Option.flatMap(linesOf(art(rows, FIGURE_KEY), paints), (l) => l.head)).toEqual(
+      Option.none(),
+    );
   });
 
   test('reads no sash top from stray sash pixels too few to make a band', () => {
@@ -919,9 +988,14 @@ describe('linesOf', () => {
     );
   });
 
-  test("a sheet's head is the median of its cells' heads", () => {
-    expect(sheetHeadOf([standing(false), standing(true), standing(false)], paints)).toEqual(
-      Option.some(4),
-    );
+  test("a sheet's head is the median of its cells' heads, over the cells that read one", () => {
+    const heads = new Map([
+      ['a', Option.some(4)],
+      ['b', Option.none()],
+      ['c', Option.some(6)],
+      ['d', Option.some(5)],
+    ]);
+    expect(sheetHeadOf(heads)).toEqual(Option.some(5));
+    expect(sheetHeadOf(new Map([['a', Option.none<number>()]]))).toEqual(Option.none());
   });
 });

@@ -7,6 +7,8 @@ import {
   clearBackground,
   groundOf,
   hexOf,
+  type Lines,
+  linesOf,
   type Paint,
   type Palette,
   PaletteJson,
@@ -465,17 +467,24 @@ export const resplitSheet = Effect.fn('Storybook.resplitSheet')(function* (
   return again;
 });
 
-/** One figure of a shot as stored: its layer and item, its sheet's record, its palette's paints, its cells by key and its sheet's head. */
+/**
+ * One figure of a shot as stored: its layer and item, its sheet's record,
+ * its palette's paints, its cells by key, each cell's lines and head read
+ * once on the cell at its sheet's own size (none where they read none), and
+ * its sheet's head.
+ */
 export interface StoredFigure {
   readonly layer: Layer;
   readonly figure: Figure;
   readonly record: SheetRecord;
   readonly paints: ReadonlyArray<Paint>;
   readonly cells: ReadonlyMap<string, Raster>;
+  readonly lines: ReadonlyMap<string, Option.Option<Lines>>;
+  readonly heads: ReadonlyMap<string, Option.Option<number>>;
   readonly head: number;
 }
 
-/** Every figure of `shot` read from the cast: each its one sheet's record, palette and stored cells; fails on a sheet whose cells read no head. */
+/** Every figure of `shot` read from the cast: each its one sheet's record, palette, stored cells and their lines; fails on a sheet whose cells read no head. */
 export const loadFigures = Effect.fn('Storybook.loadFigures')(function* (cast: string, shot: Shot) {
   return yield* Effect.forEach(figuresOf(shot), ({ layer, figure: f }) =>
     Effect.gen(function* () {
@@ -484,10 +493,23 @@ export const loadFigures = Effect.fn('Storybook.loadFigures')(function* (cast: s
       const cells = new Map<string, Raster>();
       for (const c of record.cells)
         cells.set(c.key, yield* readCell(cast, f.member, f.sheet, c.key));
-      const head = sheetHeadOf([...cells.values()], paints);
+      const lines = new Map([...cells].map(([key, cell]) => [key, linesOf(cell, paints)] as const));
+      const heads = new Map(
+        [...lines].map(([key, l]) => [key, Option.flatMap(l, (x) => x.head)] as const),
+      );
+      const head = sheetHeadOf(heads);
       if (Option.isNone(head))
         return yield* StoreFailed.make({ reason: `${f.member}'s sheet ${f.sheet} reads no head` });
-      return { layer, figure: f, record, paints, cells, head: head.value } satisfies StoredFigure;
+      return {
+        layer,
+        figure: f,
+        record,
+        paints,
+        cells,
+        lines,
+        heads,
+        head: head.value,
+      } satisfies StoredFigure;
     }),
   );
 });
