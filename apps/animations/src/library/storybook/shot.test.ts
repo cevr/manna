@@ -5,11 +5,14 @@ import { describe, expect, test } from 'effect-bun-test';
 import { hexOf, type Palette, paintsOf, rgbAt, type Rgb, rgbOfHex } from './sheet.ts';
 import {
   BLINK,
+  BLINK_GAP,
   blinkingHold,
   BREATH,
   chromaOf,
+  drawnKeyOf,
   figure,
   type Figure,
+  figuresOf,
   frameAt,
   hold,
   keyRun,
@@ -76,6 +79,7 @@ const spanIn = (draw: () => number, from: number, to: number): Span<Key> => {
   );
   const kinds: ReadonlyArray<() => Span<Key>> = [
     () => hold(from, to, first),
+    () => blinkingHold(from, to, first, other),
     () => turn(from, len * (0.3 + draw() * 0.7), first, other),
     () => keyRun<Key>([[from, first], ...offsets.map((t) => [t, key()] as const)]),
     () =>
@@ -172,6 +176,30 @@ describe('frameAt over generated shots', () => {
           });
           if (f.cell === want) return [];
           return [`seed ${seed} t ${t}: ${f.name} draws ${f.cell}, its span names ${want}`];
+        }),
+      );
+    });
+    expect(misses.slice(0, 5)).toEqual([]);
+  });
+
+  test("shows its cell's own eyes but in a blinking hold, and there only its blink key's, a blink at a time", () => {
+    const misses = SEEDS.flatMap((seed) => {
+      const { shot, figures, heads } = generatedShot(seed);
+      const run = new Map<string, number>();
+      return timesOf(shot).flatMap((t) =>
+        frameAt(shot, heads, t).figures.flatMap((f) => {
+          const blink = Option.flatMap(spanOfWindow(figures, f.name, t), (s) => {
+            if (s._tag !== 'Hold') return Option.none();
+            return Option.fromUndefinedOr(s.blink);
+          });
+          run.set(f.name, ((run.get(f.name) ?? 0) + 1) * Number(f.eyes !== f.cell));
+          const ok =
+            f.eyes === f.cell ||
+            (Option.contains(blink, f.eyes) &&
+              drawnKeyOf(f) === `${f.cell}~${f.eyes}` &&
+              (run.get(f.name) ?? 0) <= Math.round(BLINK * shot.fps));
+          if (ok) return [];
+          return [`seed ${seed} t ${t}: ${f.name} in ${f.cell} shows ${f.eyes}'s eyes`];
         }),
       );
     });
@@ -310,12 +338,15 @@ describe('a hold', () => {
     camera: [{ t: 0, x: 0, y: 0, zoom: 1 }],
     layers: [{ name: 'l', z: 1, blur: 0, items: figures }],
   });
-  const runsOf = (name: string): ReadonlyArray<readonly [number, number]> => {
-    const shot = shotOf([still(name)]);
+  const runsOf = (
+    name: string,
+    made: Figure = still(name),
+  ): ReadonlyArray<readonly [number, number]> => {
+    const shot = shotOf([made]);
     const runs: Array<[number, number]> = [];
     for (const t of timesOf(shot)) {
       const f = frameAt(shot, new Map(), t).figures[0];
-      if (f?.cell !== 'b') continue;
+      if (f?.eyes !== 'b') continue;
       const last = runs.at(-1);
       if (last && t - last[1] < 0.01) last[1] = t;
       else runs.push([t, t]);
@@ -346,6 +377,33 @@ describe('a hold', () => {
     expect(runsOf('one')).toEqual(runs);
     expect(runsOf('two')).not.toEqual(runs);
   });
+
+  test('keeps one schedule across cuts from hold to hold, so no gap between blinks passes BLINK_GAP however the holds are cut, the first within 1.8 s (critique 2, item 4)', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const draw = rng(seed);
+      const cuts = [0];
+      while ((cuts.at(-1) ?? 12) < 12)
+        cuts.push(Math.min(12, (cuts.at(-1) ?? 0) + 0.4 + draw() * 4.6));
+      const holds = cuts
+        .slice(1)
+        .map((to, i) => blinkingHold<'a' | 'b'>(cuts[i] ?? 0, to, 'a', 'b'));
+      const made = figure(['a', 'b'], {
+        name: `cut ${seed}`,
+        member: 'm',
+        sheet: 's',
+        at: { x: 0, ground: 0 },
+        spans: [holds[0] ?? blinkingHold(0, 12, 'a', 'b'), ...holds.slice(1)],
+      });
+      const starts = runsOf(`cut ${seed}`, made).map(([from]) => from);
+      const gaps = [
+        starts[0] ?? 12,
+        ...starts.slice(1).map((s, i) => s - (starts[i] ?? 0)),
+        12 - (starts.at(-1) ?? 0),
+      ];
+      expect([seed, (starts[0] ?? 12) <= 1.8 + 1e-9]).toEqual([seed, true]);
+      expect([seed, Math.max(...gaps) <= BLINK_GAP[1] + 1e-9]).toEqual([seed, true]);
+    }
+  });
 });
 
 describe('the feast courtyard', () => {
@@ -358,7 +416,7 @@ describe('the feast courtyard', () => {
     const used = new Map<string, Set<string>>();
     for (const t of timesOf(feastCourtyard))
       for (const f of frameAt(feastCourtyard, heads, t).figures)
-        used.set(f.name, (used.get(f.name) ?? new Set<string>()).add(f.cell));
+        used.set(f.name, (used.get(f.name) ?? new Set<string>()).add(f.cell).add(f.eyes));
     expect([...(used.get('lead') ?? [])].toSorted()).toEqual(
       [
         'front',
@@ -374,6 +432,44 @@ describe('the feast courtyard', () => {
     const guest = ['neutral', 'neutralBlink', 'smile', 'turn'];
     expect([...(used.get('man') ?? [])].toSorted()).toEqual(guest);
     expect([...(used.get('woman') ?? [])].toSorted()).toEqual(guest);
+  });
+
+  test('blinks in every hold, the guests from the first frame to the last, with eyes open no longer than BLINK_GAP between blinks (critique 2, item 4)', () => {
+    const holds = figuresOf(feastCourtyard).flatMap(({ figure: f }) =>
+      f.spans.flatMap((s) => {
+        if (s._tag !== 'Hold') return [];
+        return [{ name: f.name, s }];
+      }),
+    );
+    expect(holds.filter(({ s }) => s.blink === s.cell || !s.blink).map((h) => h.name)).toEqual([]);
+    for (const guest of ['man', 'woman'])
+      expect(
+        holds
+          .filter((h) => h.name === guest)
+          .map((h) => [h.s.from, h.s.to])
+          .flat()
+          .filter((t) => t === 0 || t === feastCourtyard.duration),
+      ).toEqual([0, feastCourtyard.duration]);
+    const open = new Map<string, number>();
+    const longest = new Map<string, number>();
+    for (const t of timesOf(feastCourtyard))
+      for (const f of frameAt(feastCourtyard, new Map(), t).figures) {
+        const holding = holds.some((h) => h.name === f.name && h.s.from <= t && t < h.s.to);
+        if (!holding || f.eyes !== f.cell) open.delete(f.name);
+        else open.set(f.name, open.get(f.name) ?? t);
+        longest.set(
+          f.name,
+          Math.max(
+            longest.get(f.name) ?? 0,
+            t + 1 / feastCourtyard.fps - (open.get(f.name) ?? t + 1),
+          ),
+        );
+      }
+    expect([...longest].map(([name, s]) => [name, s <= BLINK_GAP[1]])).toEqual([
+      ['man', true],
+      ['woman', true],
+      ['lead', true],
+    ]);
   });
 
   test('lights its shade with a hue as coloured as its tint, never black or grey (CRAFT rule 12)', () => {

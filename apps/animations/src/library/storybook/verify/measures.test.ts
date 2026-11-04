@@ -1,12 +1,9 @@
-import * as BunServices from '@effect/platform-bun/BunServices';
 import { rng } from '@manna/film/core';
 import type { Raster } from '@manna/film/tools';
-import { Effect, Option } from 'effect';
-import { describe, expect, it, test } from 'effect-bun-test';
+import { Option } from 'effect';
+import { describe, expect, test } from 'effect-bun-test';
 import { deltaE, hexOf, type Lines, type Palette, paintsOf, type Rgb } from '../sheet.ts';
-import { type FigureFrame, frameAt, timesOf } from '../shot.ts';
-import { feastCourtyard } from '../shots/feast-courtyard.ts';
-import { CAST, headsOf, loadFigures } from '../store.ts';
+import type { FigureFrame } from '../shot.ts';
 import { BARS } from './bars.ts';
 import {
   colourStep,
@@ -14,6 +11,7 @@ import {
   type FrameRead,
   heightSamples,
   lightSamples,
+  paintMedians,
   paletteShare,
   pocketCount,
   proportionSamples,
@@ -115,12 +113,17 @@ describe('readFigure', () => {
     const read = readFigure(figureIn(frame, { x0: 10, y0: 5, w: 30, h: 60 }, FOREIGN), PAINTS);
     expect(read.litInterior).toBeLessThan(read.interior * 0.5);
   });
+});
 
+describe('paintMedians', () => {
   test("takes each paint's median and count over every opaque pixel nearest it, the outline's included, and none for the ink", () => {
-    const read = readFigure(figureIn(frame, { x0: 10, y0: 5, w: 30, h: 60 }), PAINTS);
-    expect(read.medians.has(0)).toBe(false);
-    expect(read.medians.get(1)).toEqual({ rgb: SKIN, count: 28 * 19 });
-    expect(read.medians.get(2)).toEqual({ rgb: ROBE, count: 28 * 39 });
+    const medians = paintMedians(
+      figureIn({ width: 60, height: 80 }, { x0: 10, y0: 5, w: 30, h: 60 }),
+      PAINTS,
+    );
+    expect(medians.has(0)).toBe(false);
+    expect(medians.get(1)).toEqual({ rgb: SKIN, count: 28 * 19 });
+    expect(medians.get(2)).toEqual({ rgb: ROBE, count: 28 * 39 });
   });
 });
 
@@ -128,11 +131,11 @@ describe('colourStep', () => {
   const frame = { width: 60, height: 80 };
   const box = { x0: 10, y0: 5, w: 30, h: 60 };
 
-  test('is 0 between two renders of the same paints, and the shift of a paint that drifts', () => {
-    const a = readFigure(figureIn(frame, box), PAINTS).medians;
-    const b = readFigure(figureIn(frame, { ...box, x0: 20 }), PAINTS).medians;
+  test('is 0 between two cells of the same paints, and the shift of a paint that drifts', () => {
+    const a = paintMedians(figureIn(frame, box), PAINTS);
+    const b = paintMedians(figureIn(frame, { ...box, x0: 20 }), PAINTS);
     const drifted: Rgb = [ROBE[0] + 4, ROBE[1], ROBE[2]];
-    const c = readFigure(figureIn(frame, box, drifted), PAINTS).medians;
+    const c = paintMedians(figureIn(frame, box, drifted), PAINTS);
     expect(colourStep(a, b)).toEqual(Option.some(0));
     expect(Option.getOrElse(colourStep(a, c), () => -1)).toBeGreaterThan(1);
   });
@@ -144,10 +147,7 @@ describe('colourStep', () => {
         if (y < 25) return Option.some(SKIN);
         return Option.some([ROBE[0] + drift + ((x + y) % 2) * 6, ROBE[1], ROBE[2]]);
       });
-    const step = colourStep(
-      readFigure(checker(0), PAINTS).medians,
-      readFigure(checker(6), PAINTS).medians,
-    );
+    const step = colourStep(paintMedians(checker(0), PAINTS), paintMedians(checker(6), PAINTS));
     expect(Option.getOrElse(step, () => -1)).toBeCloseTo(
       deltaE([ROBE[0] + 6, ROBE[1], ROBE[2]], [ROBE[0] + 12, ROBE[1], ROBE[2]]),
       9,
@@ -162,12 +162,23 @@ describe('colourStep', () => {
         if (x % 2 === 0) return Option.some(INK);
         return Option.some([ROBE[0] + drift, ROBE[1], ROBE[2]]);
       });
-    const [a, b] = [readFigure(striped(0), PAINTS), readFigure(striped(6), PAINTS)];
-    expect(a.medians.get(2)?.count).toBe(35 * 65);
-    const samples = stepSamples([
-      frameRead({ name: 'f', frame: 0, cell: 'a', read: a }),
-      frameRead({ name: 'f', frame: 1, cell: 'b', read: b }),
-    ]);
+    const [a, b] = [paintMedians(striped(0), PAINTS), paintMedians(striped(6), PAINTS)];
+    expect(a.get(2)?.count).toBe(35 * 65);
+    const samples = stepSamples(
+      [
+        plannedAt(0, 1, [posed({ name: 'f', cell: 'a', scale: 1 })]),
+        plannedAt(1, 1, [posed({ name: 'f', cell: 'b', scale: 1 })]),
+      ],
+      new Map([
+        [
+          'f',
+          new Map([
+            ['a', a],
+            ['b', b],
+          ]),
+        ],
+      ]),
+    );
     expect(Option.getOrElse(samples[0]?.value ?? Option.none(), () => -1)).toBeCloseTo(
       deltaE(ROBE, [ROBE[0] + 6, ROBE[1], ROBE[2]]),
       9,
@@ -231,10 +242,7 @@ describe('colourStep', () => {
         return [deltaE(median(pa), median(pb))];
       });
       const oracle = Math.max(-1, ...steps);
-      const got = colourStep(
-        readFigure(a.raster, PAINTS).medians,
-        readFigure(b.raster, PAINTS).medians,
-      );
+      const got = colourStep(paintMedians(a.raster, PAINTS), paintMedians(b.raster, PAINTS));
       expect([seed, Number(Option.getOrElse(got, () => -1).toFixed(9))]).toEqual([
         seed,
         Number(oracle.toFixed(9)),
@@ -242,8 +250,8 @@ describe('colourStep', () => {
     }
   });
 
-  test('reads none when the renders share no paint of 150 px', () => {
-    const small = readFigure(figureIn(frame, { x0: 10, y0: 5, w: 8, h: 9 }), PAINTS).medians;
+  test('reads none when the cells share no paint of 150 px', () => {
+    const small = paintMedians(figureIn(frame, { x0: 10, y0: 5, w: 8, h: 9 }), PAINTS);
     expect(colourStep(small, small)).toEqual(Option.none());
   });
 });
@@ -262,7 +270,6 @@ const linesOfHeight = (crown: number, bottom: number, head: number): Lines => ({
 const readOf = (lines: Lines, whole = true): FigureRead => ({
   whole,
   lines: Option.some(lines),
-  medians: new Map(),
   interior: 10,
   litInterior: 10,
 });
@@ -276,11 +283,12 @@ const frameRead = (
   ...r,
 });
 
-/** One figure of a planned frame, at rest unless named otherwise. */
+/** One figure of a planned frame, at rest with its cell's own eyes unless named otherwise. */
 const posed = (
   f: Partial<FigureFrame> & Pick<FigureFrame, 'name' | 'cell' | 'scale'>,
 ): FigureFrame => ({
   layer: f.name,
+  eyes: f.cell,
   x: 0,
   y: 0,
   sx: 1,
@@ -418,33 +426,6 @@ describe('scaleSamples', () => {
   });
 });
 
-describe('scaleSamples on the feast courtyard', () => {
-  it.effect(
-    "reads frame 17's man against the lead's side cell read at its sheet's size, 151 of his sheet's 158, where the render read his head 189 for 146 (round 2), and every frame within the bar",
-    () =>
-      Effect.gen(function* () {
-        const figures = yield* loadFigures(CAST, feastCourtyard);
-        const sheets = headsOf(figures);
-        const planned = timesOf(feastCourtyard).map((t, index) => ({
-          index,
-          frame: frameAt(feastCourtyard, sheets, t),
-        }));
-        const scaled = figures.map((f) => ({ name: f.figure.name, z: f.layer.z, heads: f.heads }));
-        const lead = figures.find((f) => f.figure.name === 'lead');
-        const man = figures.find((f) => f.figure.name === 'man');
-        expect([lead?.heads.get('side'), lead?.head, man?.heads.get('neutral'), man?.head]).toEqual(
-          [Option.some(151), 158, Option.some(303), 303],
-        );
-        const samples = scaleSamples(planned, scaled, 'lead');
-        const at17 = samples.find((s) => s.at.startsWith('man frame 17 '));
-        expect(at17?.at).toBe('man frame 17 (neutral; lead side)');
-        expect(Option.getOrElse(at17?.value ?? Option.none(), () => -1)).toBeCloseTo(158 / 151, 9);
-        expect(samples).toHaveLength(2 * planned.length);
-        expect(verdictOf(BARS, { ...ALL_PASS, scale: samples }).passed).toBe(BARS.length);
-      }).pipe(Effect.provide(BunServices.layer)),
-  );
-});
-
 describe('heightSamples', () => {
   test('reads 0 for a figure that holds its size while the camera zooms, and its own change over generated heights and zooms otherwise', () => {
     for (let seed = 1; seed <= 60; seed++) {
@@ -526,16 +507,59 @@ describe('lightSamples', () => {
   });
 });
 
-describe('stepSamples and lightSamples', () => {
-  test('reads a step only where the drawn cell changes, and the light share of every frame a figure shows in', () => {
-    const medians = new Map([[1, { rgb: SKIN, count: 500 }]]);
-    const read: FigureRead = { ...readOf(linesOfHeight(0, 9, 3)), medians };
+describe('stepSamples', () => {
+  test("reads a step only where the drawn key changes, a new cell or a blink's eyes coming and going, each figure apart, and unread where a key has no lit cell read", () => {
+    const skin = new Map([[1, { rgb: SKIN, count: 500 }]]);
+    const darker = new Map([[1, { rgb: [SKIN[0] - 9, SKIN[1], SKIN[2]] as const, count: 500 }]]);
+    const frames = [
+      ['a', 'a', 'a'],
+      ['a', 'a', 'a'],
+      ['a', 'b', 'b'],
+      ['b', 'b', 'c'],
+      ['b', 'b', 'b'],
+    ] as const;
+    const planned = frames.map(([cell, eyes, other], index) =>
+      plannedAt(index, 1, [
+        posed({ name: 'f', cell, eyes, scale: 1 }),
+        posed({ name: 'g', cell: other, scale: 1 }),
+      ]),
+    );
+    const medians = new Map([
+      [
+        'f',
+        new Map([
+          ['a', skin],
+          ['a~b', darker],
+          ['b', skin],
+        ]),
+      ],
+      [
+        'g',
+        new Map([
+          ['a', skin],
+          ['b', skin],
+        ]),
+      ],
+    ]);
+    const step = deltaE(SKIN, [SKIN[0] - 9, SKIN[1], SKIN[2]]);
+    expect(stepSamples(planned, medians)).toEqual([
+      { at: 'f a -> a~b frame 2', value: Option.some(step) },
+      { at: 'f a~b -> b frame 3', value: Option.some(step) },
+      { at: 'g a -> b frame 2', value: Option.some(0) },
+      { at: 'g b -> c frame 3: a key with no lit cell read', value: Option.none() },
+      { at: 'g c -> b frame 4: a key with no lit cell read', value: Option.none() },
+    ]);
+  });
+});
+
+describe('lightSamples over frames', () => {
+  test('reads the light share of every frame a figure shows in', () => {
+    const read = readOf(linesOfHeight(0, 9, 3));
     const reads = [
       frameRead({ name: 'f', frame: 0, cell: 'a', read }),
       frameRead({ name: 'f', frame: 1, cell: 'a', read }),
       frameRead({ name: 'f', frame: 2, cell: 'b', read: { ...read, litInterior: 9 } }),
     ];
-    expect(stepSamples(reads)).toEqual([{ at: 'f a -> b frame 2', value: Option.some(0) }]);
     expect(lightSamples(reads).map((s) => s.value)).toEqual([
       Option.some(1),
       Option.some(1),

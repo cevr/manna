@@ -63,7 +63,7 @@ export const BARS: ReadonlyArray<BarRow> = [
   ),
   proposed(
     'colour-step',
-    "figure-alone renders, lit: ΔE76 between the per-paint medians (each over every opaque pixel nearest the paint, the ink's left out) of the frames either side of each change of drawn cell (paints of 150 px or more in both), worst step",
+    "each used cell, lit (each blink too, as its open cell with the eyes pasted): ΔE76 between the per-paint medians (each over every opaque pixel nearest the paint, the ink's left out) of the two cells either side of each change of drawn key in the plan (paints of 150 px or more in both), worst step",
     Bar.AtMost({ max: 1 }),
   ),
   proposed(
@@ -73,7 +73,7 @@ export const BARS: ReadonlyArray<BarRow> = [
   ),
   proposed(
     'scale',
-    "each stored cell's head (crown to collar) read once at its sheet's own size × the plan's draw scale, plane zoom and squash, every planned frame: each figure's head ÷ (the same frame's lead head × 1/z × zoom^(1/z) ÷ zoom), z its depth and zoom the camera's, farthest from 1; a cell whose head reads none is unread",
+    "each stored cell's head (crown to collar) read once at its sheet's own size × the plan's draw scale, plane zoom and squash, every planned frame: each figure's head ÷ (the same frame's lead head × 1/z × zoom^(1/z) ÷ zoom), z its depth and zoom the camera's, farthest from 1; a cell whose head reads none is unread. A hold's breath (at most 0.4 % up about the soles) is not counted",
     Bar.Near({ target: 1, share: 0.05 }),
   ),
   proposed(

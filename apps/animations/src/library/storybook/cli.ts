@@ -26,7 +26,7 @@ const SHOTS = { 'feast-courtyard': feastCourtyard } as const;
 
 const SHOT_IDS = ['feast-courtyard'] as const;
 
-/** A plan: each frame's time and, per figure, its cell, place, squash, breath and scale. */
+/** A plan: each frame's time and, per figure, its cell, the key whose eyes it shows, its place, squash, breath and scale. */
 const PlanJson = Schema.fromJsonString(
   Schema.Struct({
     fps: Schema.Finite,
@@ -38,6 +38,7 @@ const PlanJson = Schema.fromJsonString(
           Schema.Struct({
             name: Schema.String,
             cell: Schema.String,
+            eyes: Schema.String,
             x: Schema.Finite,
             y: Schema.Finite,
             sx: Schema.Finite,
@@ -64,9 +65,10 @@ const writePlan = Effect.fn('Storybook.writePlan')(function* (
     const frame = frameAt(shot, heads, t);
     return {
       t,
-      figures: frame.figures.map(({ name, cell, x, y, sx, sy, breath, scale }) => ({
+      figures: frame.figures.map(({ name, cell, eyes, x, y, sx, sy, breath, scale }) => ({
         name,
         cell,
+        eyes,
         x,
         y,
         sx,

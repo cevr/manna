@@ -3,9 +3,9 @@ import { Effect, FileSystem, Option, Path, Schema, type Scope } from 'effect';
 import { Base64 } from 'effect/encoding';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import type { PageCell, PageItem, PageRequest, PageScene } from './page.ts';
-import { linesOf } from './sheet.ts';
-import { type Frame, frameAt, lit, type Shot, timesOf } from './shot.ts';
-import { CAST, headsOf, loadFigures, type StoredFigure } from './store.ts';
+import { type Lines, linesOf } from './sheet.ts';
+import { drawnKeyOf, type Frame, frameAt, lit, type Shot, timesOf } from './shot.ts';
+import { CAST, drawnCellOf, headsOf, loadFigures, type StoredFigure } from './store.ts';
 
 /** The shot's page failed: its build, its Chrome, its script, a render or the clip. */
 export class StorybookFailed extends Schema.TaggedError<StorybookFailed>()('StorybookFailed', {
@@ -76,11 +76,10 @@ const pngOfUrl = (dataUrl: string) =>
     Effect.mapError(failed),
   );
 
-/** One stored cell as the page draws it: lit by the shot's one light, anchored at its soles' centre. */
+/** One drawn key (a stored cell, or a blink built from one) as the page draws it: lit by the shot's one light, anchored at its soles' centre. */
 const pageCellOf = (shot: Shot, stored: StoredFigure, key: string) =>
   Effect.gen(function* () {
-    const raster = stored.cells.get(key);
-    const lines = Option.flatMap(Option.fromUndefinedOr(raster), (r) =>
+    const lines = Option.flatMap(drawnCellOf(stored, key), (r) =>
       linesOf(r, stored.paints).pipe(Option.map((l) => ({ r, l }))),
     );
     if (Option.isNone(lines))
@@ -90,12 +89,17 @@ const pageCellOf = (shot: Shot, stored: StoredFigure, key: string) =>
     const { r, l } = lines.value;
     return {
       image: dataUrlOf(encodePng(lit(r, shot.light, stored.paints))),
-      ax: l.centreColumn + 0.5,
-      ay: l.bottom + 1,
+      ...anchorOf(l),
     } satisfies PageCell;
   });
 
-/** The shot as the page holds it: each plate's file and each figure's lit cells, by layer in drawing order. */
+/** Where the page pins a cell to its figure's place: its soles' centre, the centre column's middle and the row below its soles, in its own px. */
+export const anchorOf = (l: Lines) => ({
+  ax: l.centreColumn + 0.5,
+  ay: l.bottom + 1,
+});
+
+/** The shot as the page holds it: each plate's file and each figure's lit cells and blinks by drawn key, by layer in drawing order. */
 export const sceneOf = Effect.fn('Storybook.sceneOf')(function* (
   shot: Shot,
   figures: ReadonlyArray<StoredFigure>,
@@ -114,7 +118,8 @@ export const sceneOf = Effect.fn('Storybook.sceneOf')(function* (
         const stored = byName.get(item.name);
         if (!stored) return yield* StorybookFailed.make({ reason: `${item.name} is not loaded` });
         const cells: Record<string, PageCell> = {};
-        for (const key of stored.cells.keys()) cells[key] = yield* pageCellOf(shot, stored, key);
+        for (const key of [...stored.cells.keys(), ...stored.blinks.keys()])
+          cells[key] = yield* pageCellOf(shot, stored, key);
         return { _tag: 'Figure', name: item.name, cells } satisfies PageItem;
       }),
     ).pipe(Effect.map((items) => ({ name: layer.name, z: layer.z, blur: layer.blur, items }))),
@@ -176,12 +181,12 @@ export const storybookPage = (
       );
   });
 
-/** One render of a frame: `colour` the whole frame, `figure:<name>` that figure alone; each figure's stretch up is its squash times its breath. */
+/** One render of a frame: `colour` the whole frame, `figure:<name>` that figure alone; each figure draws its drawn key (`drawnKeyOf`), and its stretch up is its squash times its breath. */
 export const requestOf = (frame: Frame, output: string): PageRequest => ({
   camera: { x: frame.camera.x, y: frame.camera.y, zoom: frame.camera.zoom },
-  figures: frame.figures.map(({ name, cell, x, y, sx, sy, breath, scale }) => ({
+  figures: frame.figures.map(({ name, cell, eyes, x, y, sx, sy, breath, scale }) => ({
     name,
-    cell,
+    cell: drawnKeyOf({ cell, eyes }),
     x,
     y,
     sx,

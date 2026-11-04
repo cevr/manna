@@ -29,8 +29,8 @@ export interface CameraKey {
 
 /**
  * The figure stands in `cell` from `from` s to `to` s, breathing; `blink`,
- * when given, names the key drawn as `cell` with the eyes closed, shown on
- * the figure's own seeded schedule of blinks.
+ * when given, names the key whose closed eyes `cell` shows on the figure's
+ * own seeded schedule of blinks (`blinkOf` pastes them over `cell`'s eyes).
  */
 export interface Hold<K extends string = string> {
   readonly _tag: 'Hold';
@@ -133,7 +133,7 @@ export const hold = <const K extends string>(from: number, to: number, cell: K):
   cell,
 });
 
-/** A hold that blinks: `blink` is the key drawn as `cell` with the eyes closed. */
+/** A hold that blinks: `blink` is the key whose closed eyes `cell` shows while the figure blinks. */
 export const blinkingHold = <const K extends string>(
   from: number,
   to: number,
@@ -196,9 +196,10 @@ export const startOf = (s: Span): number => {
 export const spanAt = <K extends string>(spans: Figure<K>['spans'], t: number): Span<K> =>
   spans.filter((s) => startOf(s) <= t).at(-1) ?? spans[0];
 
-/** A figure's drawing at one moment: its cell, its soles' centre in its layer's px, its squash, and its breath (how far it stretches up about its soles, 1 at rest). */
+/** A figure's drawing at one moment: its cell, the key whose eyes it shows (its cell, or its hold's blink key while it blinks), its soles' centre in its layer's px, its squash, and its breath (how far it stretches up about its soles, 1 at rest). */
 export interface Posed {
   readonly cell: string;
+  readonly eyes: string;
   readonly x: number;
   readonly y: number;
   readonly sx: number;
@@ -215,9 +216,9 @@ const BREATH_PERIOD = [3.2, 3.9] as const;
 /** How long a blink shows its key, in s. */
 export const BLINK = 0.125;
 
-/** When a hold's first blink may come after its start, and the gap from one blink to the next, in s: each drawn from the figure's name and the hold's start. */
+/** When a figure's first blink may come after the shot's start, and the gap from one blink's start to the next's, in s: each drawn from the figure's name. */
 const FIRST_BLINK = [0.6, 1.8] as const;
-const BLINK_GAP = [2.4, 4.4] as const;
+export const BLINK_GAP = [2.4, 4.4] as const;
 
 /** A seeded draw in [0, 1) from a name: FNV-1a of its characters into the engine's `rng`. */
 const drawsOf = (name: string): (() => number) => {
@@ -235,20 +236,24 @@ const breathAt = (name: string, from: number, t: number): number => {
   return 1 + (BREATH * (1 - Math.cos((2 * Math.PI * (t - from)) / period))) / 2;
 };
 
-/** Whether a hold shows its blink at `t`: its blinks start a seeded wait after its start and a seeded gap apart, each `BLINK` s long and ending inside the hold. */
-const blinkingAt = (name: string, s: Hold, t: number): boolean => {
-  const draw = drawsOf(`${name}@${s.from}`);
-  for (let start = s.from + within(FIRST_BLINK, draw()); start + BLINK <= s.to;) {
-    if (t < start) return false;
+/**
+ * Whether a figure is mid-blink at `t`: its blinks run over the whole shot,
+ * the first a seeded wait after its start and each next a seeded gap later,
+ * each `BLINK` s long, all drawn from its name alone. One schedule across
+ * its holds, so a cut from one hold to the next never restarts the wait
+ * (critique 2, item 4).
+ */
+const blinkingAt = (name: string, t: number): boolean => {
+  const draw = drawsOf(`${name} blinks`);
+  for (let start = within(FIRST_BLINK, draw()); start <= t; start += within(BLINK_GAP, draw()))
     if (t < start + BLINK) return true;
-    start += within(BLINK_GAP, draw());
-  }
   return false;
 };
 
-/** A holding figure's pose: its cell, or its blink key while it blinks, breathing. */
+/** A holding figure's pose: its cell, showing its blink key's eyes while it blinks, breathing. */
 const holdPose = (name: string, s: Hold, t: number, x: number, y: number): Posed => ({
-  cell: [s.cell, s.blink ?? s.cell][Number(blinkingAt(name, s, t))] ?? s.cell,
+  cell: s.cell,
+  eyes: [s.cell, s.blink ?? s.cell][Number(blinkingAt(name, t))] ?? s.cell,
   x,
   y,
   sx: 1,
@@ -256,7 +261,16 @@ const holdPose = (name: string, s: Hold, t: number, x: number, y: number): Posed
   breath: breathAt(name, s.from, t),
 });
 
-const turnPose = (s: Turn, t: number, x: number, y: number): Posed => {
+/** A pose with its cell's own eyes. */
+const open = (p: Omit<Posed, 'eyes'>): Posed => ({ ...p, eyes: p.cell });
+
+/** The key a pose draws: its cell, or its cell with its blink key's eyes as `<cell>~<eyes>`. */
+export const drawnKeyOf = (p: Pick<Posed, 'cell' | 'eyes'>): string => {
+  if (p.eyes === p.cell) return p.cell;
+  return `${p.cell}~${p.eyes}`;
+};
+
+const turnPose = (s: Turn, t: number, x: number, y: number): Omit<Posed, 'eyes'> => {
   const u = (t - s.at) / s.dur;
   if (u <= 0) return { cell: s.from, x, y, sx: 1, sy: 1, breath: 1 };
   if (u >= 1) return { cell: s.to, x, y, sx: 1, sy: 1, breath: 1 };
@@ -275,7 +289,7 @@ const turnPose = (s: Turn, t: number, x: number, y: number): Posed => {
   };
 };
 
-const walkPose = (s: Walk, t: number, ground: number): Posed => {
+const walkPose = (s: Walk, t: number, ground: number): Omit<Posed, 'eyes'> => {
   const u = clamp01((t - s.from) / Math.max(1e-6, s.to - s.from));
   const settle = 1 - ease((t - (s.to - SETTLE)) / SETTLE);
   const lift = s.bob * Math.abs(Math.sin(Math.PI * s.rate * Math.max(0, t - s.from))) * settle;
@@ -293,16 +307,17 @@ const walkPose = (s: Walk, t: number, ground: number): Posed => {
 export const poseAt = (f: Figure, t: number): Posed => {
   const s = spanAt(f.spans, t);
   const { x, ground } = f.at;
-  const still = (cell: string): Posed => ({ cell, x, y: ground, sx: 1, sy: 1, breath: 1 });
   switch (s._tag) {
     case 'Hold':
       return holdPose(f.name, s, t, x, ground);
     case 'Turn':
-      return turnPose(s, t, x, ground);
-    case 'Keys':
-      return still((s.keys.filter(([at]) => at <= t).at(-1) ?? s.keys[0])[1]);
+      return open(turnPose(s, t, x, ground));
+    case 'Keys': {
+      const cell = (s.keys.filter(([at]) => at <= t).at(-1) ?? s.keys[0])[1];
+      return open({ cell, x, y: ground, sx: 1, sy: 1, breath: 1 });
+    }
     case 'Walk':
-      return walkPose(s, t, ground);
+      return open(walkPose(s, t, ground));
   }
 };
 

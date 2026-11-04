@@ -1,4 +1,4 @@
-import { blinkingHold, figure, hold, keyRun, type Shot, turn, walk } from '../shot.ts';
+import { blinkingHold, figure, keyRun, type Shot, turn, walk } from '../shot.ts';
 
 /** The set's plates, relative to apps/animations: test art until the concept step keeps real ones. */
 const SET = 'src/library/storybook/set/feast-courtyard';
@@ -19,13 +19,19 @@ const GUEST = ['neutral', 'smile', 'turn', 'neutralBlink'] as const;
 /** The guests' layer's depth: their heads read 0.92 of the lead's, as take 4 drew them. */
 const GUESTS_Z = 1 / 0.92;
 
+/** The guests' ground line in their layer's px: high enough that the table's tallest prop, the vine's stalk at y 307 over the man, sits below both chins (the man's at 302 at rest, the woman's at 311). */
+const GUESTS_GROUND = 500;
+
 /**
  * The feast courtyard, take 4 ported: the lead walks in on his side with a
  * bob, turns to the viewer, greets the guests with a run of drawn keys, and
  * turns toward them, then holds, breathing and blinking. The guests sit
- * breathing and blinking, smile as he waves, then look toward him at
- * picture left (critique 1, items 3, 5 and 9). The woman sits clear of the
- * jug (item 4). The camera pans 100 px and pushes in 7 % over the shot.
+ * breathing and blinking in every hold, smile as he waves, then look toward
+ * him at picture left (critique 1, items 3, 5 and 9; critique 2, item 4);
+ * each blink pastes their `neutralBlink` eyes over the cell they hold. The
+ * woman sits clear of the jug (critique 1, item 4), and both sit high
+ * enough that no prop of the table crosses a face (critique 2, item 1).
+ * The camera pans 100 px and pushes in 7 % over the shot.
  */
 export const feastCourtyard: Shot = {
   id: 'feast-courtyard',
@@ -64,22 +70,22 @@ export const feastCourtyard: Shot = {
           name: 'man',
           member: 'feast-guest-man',
           sheet: 'feast-courtyard',
-          at: { x: 670, ground: 532 },
+          at: { x: 670, ground: GUESTS_GROUND },
           spans: [
             blinkingHold(0, 4.6, 'neutral', 'neutralBlink'),
-            hold(4.6, 7, 'smile'),
-            hold(7, 12, 'turn'),
+            blinkingHold(4.6, 7, 'smile', 'neutralBlink'),
+            blinkingHold(7, 12, 'turn', 'neutralBlink'),
           ],
         }),
         figure(GUEST, {
           name: 'woman',
           member: 'feast-guest-woman',
           sheet: 'feast-courtyard',
-          at: { x: 875, ground: 532 },
+          at: { x: 875, ground: GUESTS_GROUND },
           spans: [
             blinkingHold(0, 4.9, 'neutral', 'neutralBlink'),
-            hold(4.9, 7.3, 'smile'),
-            hold(7.3, 12, 'turn'),
+            blinkingHold(4.9, 7.3, 'smile', 'neutralBlink'),
+            blinkingHold(7.3, 12, 'turn', 'neutralBlink'),
           ],
         }),
         {

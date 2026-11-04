@@ -16,7 +16,7 @@ import {
   type Rgb,
   rgbSum,
 } from '../sheet.ts';
-import type { FigureFrame, Frame } from '../shot.ts';
+import { drawnKeyOf, type FigureFrame, type Frame } from '../shot.ts';
 import { one, type Sample, type Samples, unreadAt } from './verdict.ts';
 
 /** A colour as one number, for sets and maps. */
@@ -65,17 +65,16 @@ export const STEP_PIXELS = 150;
 /** How near (ΔE76) the light bar holds a pixel to its neighbours (interior) and to a lit paint. */
 const LIGHT_NEAR = 1;
 
-/** One paint's median colour in a render, and how many pixels it was read over. */
+/** One paint's median colour in a picture, and how many pixels it was read over. */
 export interface PaintMedian {
   readonly rgb: Rgb;
   readonly count: number;
 }
 
-/** What one figure-alone render reads: whether the figure lies whole inside the frame, its lines, each paint but the ink its median over every opaque pixel nearest it, and its interior pixels, all and lit. */
+/** What one figure-alone render reads: whether the figure lies whole inside the frame, its lines, and its interior pixels, all and lit. */
 export interface FigureRead {
   readonly whole: boolean;
   readonly lines: Option.Option<Lines>;
-  readonly medians: ReadonlyMap<number, PaintMedian>;
   readonly interior: number;
   readonly litInterior: number;
 }
@@ -83,23 +82,24 @@ export interface FigureRead {
 const NOTHING: FigureRead = {
   whole: false,
   lines: Option.none(),
-  medians: new Map(),
   interior: 0,
   litInterior: 0,
 };
 
 /**
- * Each paint's median colour over its whole population, by the paint's
- * index: every opaque pixel whose nearest paint it is, however far its
- * colour strays and wherever it lies, the ink's left out. A paint drawn in
- * stripes one pixel wide or in two alternating colours steps as its median
- * does.
+ * Each paint's median colour over its whole population in a picture, by
+ * the paint's index in `lit`: every opaque pixel whose nearest paint it is,
+ * however far its colour strays and wherever it lies, the ink's left out. A
+ * paint drawn in stripes one pixel wide or in two alternating colours steps
+ * as its median does. The colour step reads it on each drawn cell lit by the
+ * shot's light, where every colour is the one drawn and no resampling has
+ * blended an edge.
  */
-const mediansOf = (
+export const paintMedians = (
   r: Raster,
   lit: ReadonlyArray<Paint>,
-  near: (c: Rgb) => { readonly index: number; readonly distance: number },
 ): ReadonlyMap<number, PaintMedian> => {
+  const near = nearestOf(lit);
   const channels = new Map<number, readonly [Array<number>, Array<number>, Array<number>]>();
   for (let q = 0; q < r.width * r.height; q++) {
     if (alphaAt(r, q) !== 255) continue;
@@ -168,8 +168,7 @@ const interiorOf = (r: Raster): ReadonlyArray<number> => {
 /**
  * One figure-alone render read against its member's lit paints: cropped to
  * the figure, whether it lies whole in the frame (clear of every edge), its
- * lines, each paint but the ink its median over every opaque pixel nearest
- * it (the colour step's) and its interior pixels, all and lit (the light's).
+ * lines, and its interior pixels, all and lit (the light's).
  */
 export const readFigure = (render: Raster, lit: ReadonlyArray<Paint>): FigureRead =>
   Option.match(opaqueBox(render), {
@@ -185,14 +184,13 @@ export const readFigure = (render: Raster, lit: ReadonlyArray<Paint>): FigureRea
           box.x + box.width < render.width &&
           box.y + box.height < render.height,
         lines: linesOf(r, lit),
-        medians: mediansOf(r, lit, near),
         interior: interior.length,
         litInterior: interior.filter((q) => near(rgbAt(r, q)).distance <= LIGHT_NEAR).length,
       };
     },
   });
 
-/** The worst ΔE76 between two renders' medians of the paints each covers with `STEP_PIXELS` or more, none when they share no such paint. */
+/** The worst ΔE76 between two pictures' medians of the paints each covers with `STEP_PIXELS` or more, none when they share no such paint. */
 export const colourStep = (
   a: ReadonlyMap<number, PaintMedian>,
   b: ReadonlyMap<number, PaintMedian>,
@@ -220,18 +218,34 @@ export interface FrameRead {
 /** A crown-to-soles height from a figure's lines. */
 const heightOf = (l: Lines): number => l.bottom - l.crown + 1;
 
-/** Each change of drawn cell, per figure: the ΔE step between the frames either side of it. */
-export const stepSamples = (reads: ReadonlyArray<FrameRead>): Samples => {
-  const byName = Map.groupBy(reads, (r) => r.name);
-  return [...byName].flatMap(([name, frames]) =>
+/**
+ * Each change of drawn key per figure over the planned frames (a new cell,
+ * or its blink's eyes coming or going): the ΔE step between the two keys'
+ * paint medians, each read on the drawn cell lit (`medians`, by figure
+ * name, then drawn key). Unread where a key has no medians, or the two
+ * share no paint of `STEP_PIXELS`.
+ */
+export const stepSamples = (
+  planned: ReadonlyArray<PlannedFrame>,
+  medians: ReadonlyMap<string, ReadonlyMap<string, ReadonlyMap<number, PaintMedian>>>,
+): Samples => {
+  const drawn = planned.flatMap(({ index, frame }) =>
+    frame.figures.map((f) => ({ index, name: f.name, key: drawnKeyOf(f) })),
+  );
+  return [...Map.groupBy(drawn, (d) => d.name)].flatMap(([name, frames]) =>
     frames.flatMap((f, i): ReadonlyArray<Sample> => {
       const prev = frames[i - 1];
-      if (!prev || prev.cell === f.cell) return [];
-      const at = `${name} ${prev.cell} -> ${f.cell} frame ${f.frame}`;
+      if (!prev || prev.key === f.key) return [];
+      const at = `${name} ${prev.key} -> ${f.key} frame ${f.index}`;
+      const of = (key: string) => Option.fromUndefinedOr(medians.get(name)?.get(key));
       return [
-        Option.match(colourStep(prev.read.medians, f.read.medians), {
-          onNone: () => unreadAt(`${at}: no paint of ${STEP_PIXELS} px in both`),
-          onSome: (v) => one(at, v),
+        Option.match(Option.all([of(prev.key), of(f.key)]), {
+          onNone: () => unreadAt(`${at}: a key with no lit cell read`),
+          onSome: ([a, b]) =>
+            Option.match(colourStep(a, b), {
+              onNone: () => unreadAt(`${at}: no paint of ${STEP_PIXELS} px in both`),
+              onSome: (v) => one(at, v),
+            }),
         }),
       ];
     }),

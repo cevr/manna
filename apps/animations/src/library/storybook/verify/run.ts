@@ -12,13 +12,14 @@ import {
   storybookPage,
 } from '../render.ts';
 import { rgbOfHex, splitSheet } from '../sheet.ts';
-import { frameAt, litPaints, platesOf, type Shot, timesOf } from '../shot.ts';
-import { CAST, memberPalette, sha256, sheetDir, type StoredFigure } from '../store.ts';
+import { drawnKeyOf, frameAt, lit, litPaints, platesOf, type Shot, timesOf } from '../shot.ts';
+import { CAST, drawnCellOf, memberPalette, sha256, sheetDir, type StoredFigure } from '../store.ts';
 import { BARS } from './bars.ts';
 import {
   type FrameRead,
   heightSamples,
   lightSamples,
+  paintMedians,
   paletteShare,
   type PlannedFrame,
   pocketCount,
@@ -152,14 +153,41 @@ const firstLaunch = Effect.fn('StorybookVerify.firstLaunch')(function* (
   return { hashes, reads, colour };
 });
 
-/** The cells each figure draws over the planned frames, by figure name. */
+/** The stored cells each figure draws over the planned frames, by figure name: each cell, and each key whose eyes a blink shows. */
 const usedCells = (
   planned: ReadonlyArray<PlannedFrame>,
 ): ReadonlyMap<string, ReadonlySet<string>> => {
   const used = new Map<string, Set<string>>();
   for (const p of planned)
-    for (const f of p.frame.figures) used.set(f.name, (used.get(f.name) ?? new Set()).add(f.cell));
+    for (const f of p.frame.figures)
+      used.set(f.name, (used.get(f.name) ?? new Set()).add(f.cell).add(f.eyes));
   return used;
+};
+
+/** Each figure's paint medians per key it draws over the planned frames (`drawnKeyOf`), each read on its cell or blink lit by the shot's light, the colour step's. */
+const litMedians = (
+  shot: Shot,
+  figures: ReadonlyArray<StoredFigure>,
+  planned: ReadonlyArray<PlannedFrame>,
+) => {
+  const keys = new Map<string, Set<string>>();
+  for (const p of planned)
+    for (const f of p.frame.figures)
+      keys.set(f.name, (keys.get(f.name) ?? new Set()).add(drawnKeyOf(f)));
+  return new Map(
+    figures.map((f) => {
+      const paints = litPaints(f.paints, shot.light);
+      const medians = [...(keys.get(f.figure.name) ?? [])].flatMap((key) =>
+        Option.toArray(
+          Option.map(
+            drawnCellOf(f, key),
+            (r) => [key, paintMedians(lit(r, shot.light, f.paints), paints)] as const,
+          ),
+        ),
+      );
+      return [f.figure.name, new Map(medians)] as const;
+    }),
+  );
 };
 
 /** Whether a figure draws only cells of its one sheet, and its stored cells are that sheet's split, byte for byte; answers what is wrong, none when nothing is. */
@@ -349,7 +377,7 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
   const measured: Measured = {
     palette: stores.palette,
     pockets: stores.pockets,
-    'colour-step': stepSamples(first.reads),
+    'colour-step': stepSamples(planned, litMedians(shot, figures, planned)),
     proportions: stores.proportions,
     scale: scaleSamples(
       planned,

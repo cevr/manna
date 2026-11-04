@@ -1,7 +1,8 @@
 import { decodePng, encodePng, ImageRoute, type Raster } from '@manna/film/tools';
-import { DateTime, Effect, FileSystem, Option, Path, Schema } from 'effect';
+import { DateTime, Effect, FileSystem, Option, Path, Result, Schema } from 'effect';
 import { Digest } from 'effect/crypto';
 import {
+  blinkOf,
   deltaE,
   figuresIn,
   clearBackground,
@@ -19,7 +20,7 @@ import {
   splitSheet,
   type Split,
 } from './sheet.ts';
-import { type Figure, figuresOf, type Layer, type Shot } from './shot.ts';
+import { drawnKeyOf, type Figure, figuresOf, type Layer, type Shot } from './shot.ts';
 
 /** The shared cast, where each member's palette, kept views and shot sheets live. */
 export const CAST = `${import.meta.dir}/../cast`;
@@ -469,7 +470,8 @@ export const resplitSheet = Effect.fn('Storybook.resplitSheet')(function* (
 
 /**
  * One figure of a shot as stored: its layer and item, its sheet's record,
- * its palette's paints, its cells by key, each cell's lines and head read
+ * its palette's paints, its cells by key, each blink its holds show by its
+ * drawn key `<cell>~<blink>` (`drawnKeyOf`), each cell's lines and head read
  * once on the cell at its sheet's own size (none where they read none), and
  * its sheet's head.
  */
@@ -479,12 +481,43 @@ export interface StoredFigure {
   readonly record: SheetRecord;
   readonly paints: ReadonlyArray<Paint>;
   readonly cells: ReadonlyMap<string, Raster>;
+  readonly blinks: ReadonlyMap<string, Raster>;
   readonly lines: ReadonlyMap<string, Option.Option<Lines>>;
   readonly heads: ReadonlyMap<string, Option.Option<number>>;
   readonly head: number;
 }
 
-/** Every figure of `shot` read from the cast: each its one sheet's record, palette, stored cells and their lines; fails on a sheet whose cells read no head. */
+/** The picture a figure draws for a drawn key: a stored cell, or a blink built from one; none for a key it holds neither of. */
+export const drawnCellOf = (f: StoredFigure, key: string): Option.Option<Raster> =>
+  Option.orElse(Option.fromUndefinedOr(f.cells.get(key)), () =>
+    Option.fromUndefinedOr(f.blinks.get(key)),
+  );
+
+/** Each blink a figure's holds show, by its drawn key: the hold's cell with its blink key's closed eyes pasted over its own (`blinkOf`); fails on a cell its sheet lacks or a face whose eyes do not read. */
+const blinksOf = (f: Figure, cells: ReadonlyMap<string, Raster>, paints: ReadonlyArray<Paint>) =>
+  Effect.forEach(
+    f.spans.flatMap((s) => {
+      if (s._tag !== 'Hold') return [];
+      return Option.toArray(
+        Option.map(Option.fromUndefinedOr(s.blink), (blink) => ({ cell: s.cell, blink })),
+      );
+    }),
+    ({ cell, blink }) =>
+      Effect.gen(function* () {
+        const key = drawnKeyOf({ cell, eyes: blink });
+        const [open, closed] = [cells.get(cell), cells.get(blink)];
+        if (!open || !closed)
+          return yield* StoreFailed.make({ reason: `${f.member} has no cell ${cell} or ${blink}` });
+        const built = blinkOf(open, closed, paints);
+        if (Result.isFailure(built))
+          return yield* StoreFailed.make({
+            reason: `${f.member}'s ${key}: ${built.failure.message}`,
+          });
+        return [key, built.success] as const;
+      }),
+  ).pipe(Effect.map((pairs) => new Map(pairs)));
+
+/** Every figure of `shot` read from the cast: each its one sheet's record, palette, stored cells, the blinks its holds show and its cells' lines; fails on a sheet whose cells read no head and on a blink that cannot be built. */
 export const loadFigures = Effect.fn('Storybook.loadFigures')(function* (cast: string, shot: Shot) {
   return yield* Effect.forEach(figuresOf(shot), ({ layer, figure: f }) =>
     Effect.gen(function* () {
@@ -506,6 +539,7 @@ export const loadFigures = Effect.fn('Storybook.loadFigures')(function* (cast: s
         record,
         paints,
         cells,
+        blinks: yield* blinksOf(f, cells, paints),
         lines,
         heads,
         head: head.value,
