@@ -5,12 +5,12 @@ The work, in the owner's words (2026-10-16/17): a hymnal app on One (onestack.de
 Host: claude (laptop) · Units at once: 1 agent (owner, 2026-10-21) · Gate: ~35 s warm (`bun run gate`, 31 tasks) · Reserved: publish, paid calls, force-push (the r2 deploy and copy are the orchestrator's after merge, owner 2026-10-18; the owner deleted S3 `cvr-hymns` 2026-10-18 after all 694 objects matched R2 by size) · Repo: ~/Developer/personal/bible-tools · Base: b27a9471b
 Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>` (rift fails on this repo), branch `hymnapp/<unit>`. Merge = rebase on origin/main, gate, `git push origin HEAD:main` (ff only).
 
-| Unit      | Depends on | Workspace          | Agents                                                                       | Result                                                        |
-| --------- | ---------- | ------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| topicsdb  | initfresh  |                    |                                                                              | parked (owner: topics follow the films)                       |
-| keyfollow | worship    |                    | owner note: the playing recording follows a key change made in the hymn view | blocked: not reproduced, waits on the owner (Owner questions) |
-| selah     | reader     | .rifts/manna/selah |                                                                              |                                                               |
-| simheart  | simlife    |                    |                                                                              |                                                               |
+| Unit      | Depends on      | Workspace          | Agents                                                                       | Result                                                        |
+| --------- | --------------- | ------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| topicsdb  | initfresh       |                    |                                                                              | parked (owner: topics follow the films)                       |
+| keyfollow | worship         |                    | owner note: the playing recording follows a key change made in the hymn view | blocked: not reproduced, waits on the owner (Owner questions) |
+| selah     | reader          | .rifts/manna/selah |                                                                              |                                                               |
+| hsdictate | hsmatch, simkit |                    |                                                                              |                                                               |
 
 Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `inexact` (the 7 MIDI files whose verses do not split: 126 225 262 292 403 453 580), `decks` (syllable splits into feat/hymn-decks, last by the owner's word), `selah` (planned: after reader, see Decisions; macOS stays SwiftUI until react-native-gpui ships a real package).
 
@@ -67,6 +67,8 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 - keyfollow: the key change that did not follow the playing hymn is not reproduced (simulator, three variations; an off-device fake follows the key every time). Next time it happens: which control turned the key (the key dial on the hymn page, or another), how many turns, and how long the old key kept sounding, on the current build. (keyfollow, asked 2026-11-01) **Answer (owner, 2026-11-04):** the owner notes the control, the number of turns and how long the old key kept sounding the next time it happens on the current build; keyfollow stays blocked until then.
 
 ## Follow-ups
+
+- simheart (`tmp/orchestrate/hymnapp/simheart/`, merged 0ac60353c): the planner's check (`heart.ts`) does not read the skill for seven owner rules the verifier's mutants removed unseen (the 8191 and 8095 previews, the microphone kept revoked or granted by hand, `verify-hymnal` off limits, a snapshot kept with the report, a `--state` naming the hymnal's); the skill keeps them all today, and a docs-test or skill-lint guard would hold them; the shared driver's help mentions the web for an iOS-only app; both apps' `sim.ts` hold the same warm-checkout list; any app's `--state` can point at another app's state, so its `down` can stop that app's server (the stop rule checks identity, not the app); the cold Heartseed build left about 7 GB free, under the 12 GB build bar, until its rift's `ios/build` is removed.
 
 - simlife (`tmp/orchestrate/hymnapp/simlife/`, merged 4b1c013e8): the hymnal dev server's typegen rewrites `apps/hymnal/native/feel/Voice.d.swift.ts` and `native/tuner/Listen.d.swift.ts` during `open`; a ledger lint that an owner entry cites words the owner said; filing a session across devices (EXDEV) fails as on base; two test-strength notes (`app.property` no longer checks the start script, and `host.scenarios`' socket hash differs from the product's outside the BMP); `@manna/sim`'s slow files total about 4 min, each under the 240 s alarm alone.
 
