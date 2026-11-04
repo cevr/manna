@@ -199,6 +199,48 @@ describe("a kept view's flat witnesses and patches", () => {
     expect(new Set(pixels)).toEqual(boxes);
   });
 
+  test("at every flat 4 px box of the drawn figure, a probe there covers exactly the patches with a witness its box overlaps within the bar of the box's median, and some boxes overlap a patch only past the bar, within twice it", () => {
+    const raster = synthetic();
+    const paint = keptPaint(raster);
+    const patches = patchesOf(paint);
+    const rows = Array.from({ length: 26 * 34 }, (_, n) => {
+      const x0 = 6 + (n % 34);
+      const y0 = 6 + Math.floor(n / 34);
+      const box = { x0, y0, x1: x0 + 3, y1: y0 + 3 };
+      return Option.match(flatMedian(raster, box), {
+        onNone: () => [],
+        onSome: (m) => {
+          const probe: ColourProbe = {
+            id: 'body.base.0',
+            part: 'body',
+            paint: 'base',
+            box: [x0, y0, 4, 4],
+          };
+          const got = coverOf(paint, patches, [probe]).map((c) => c.length > 0);
+          const under = patches.map((p) =>
+            p.witnesses
+              .filter(
+                (v) =>
+                  v.box.x0 <= box.x1 &&
+                  box.x0 <= v.box.x1 &&
+                  v.box.y0 <= box.y1 &&
+                  box.y0 <= v.box.y1,
+              )
+              .map((v) => deltaLab(v.lab, m)),
+          );
+          const want = under.map((ds) => ds.some((d) => d <= COVER));
+          const past = under.filter(
+            (ds) => ds.length > 0 && ds.every((d) => d > COVER) && ds.some((d) => d <= 2 * COVER),
+          ).length;
+          return [{ at: `${x0},${y0}`, agree: got.every((g, k) => g === want[k]), past }];
+        },
+      });
+    }).flat();
+    expect(rows.filter((r) => !r.agree).map((r) => r.at)).toEqual([]);
+    expect(rows.length).toBeGreaterThan(200);
+    expect(rows.reduce((n, r) => n + r.past, 0)).toBeGreaterThan(10);
+  });
+
   test("a probe covers only a patch its box overlaps, at a witness within the bar of the probe's colour", () => {
     const paint = keptPaint(synthetic());
     const patches = patchesOf(paint);

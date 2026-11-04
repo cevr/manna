@@ -53,12 +53,13 @@ const idsFor = (kept: Raster, probes: ReadonlyArray<ColourProbe>): Raster => {
 };
 
 /**
- * Round 6's verifier repaints of a hand's shade: in the hand's rectangle
- * (`x0`, `y0` inclusive to `x1`, `y1` exclusive), each figure pixel of skin
- * (L* 65 to 85, a* over 15, b* over 25) more than ΔE 3 from the hand's first
- * base probe's median takes that probe's central pixel, which erases the
- * shade the hand's dark rim shows; the brighter repaint lays instead the base
- * probes' pixel farthest from the shade, past twice the bar from it.
+ * The verifiers' repaints of a hand's shade, from rounds 5 and 6: in the
+ * hand's rectangle (`x0`, `y0` inclusive to `x1`, `y1` exclusive), each figure
+ * pixel of skin (L* 65 to 85, a* over 15, b* over 25) more than ΔE 3 from the
+ * hand's first base probe's median takes that probe's central pixel, which
+ * erases the shade the hand's dark rim shows (`changed` pixels); each
+ * `brighter` colour, one of the hand's base probe pixels past twice the bar
+ * from the shade, is laid there instead in a further repaint.
  */
 const HANDS = [
   {
@@ -67,7 +68,7 @@ const HANDS = [
     base: 'handL.base.0',
     rect: { x0: 210, y0: 410, x1: 241, y1: 448 },
     changed: 211,
-    brighter: [247, 167, 116],
+    brighter: [[247, 167, 116]],
   },
   {
     view: 'profileRight',
@@ -75,7 +76,31 @@ const HANDS = [
     base: 'handR.base.0',
     rect: { x0: 64, y0: 416, x1: 101, y1: 449 },
     changed: 248,
-    brighter: [249, 170, 115],
+    brighter: [[249, 170, 115]],
+  },
+  {
+    view: 'back',
+    part: 'handL',
+    base: 'handL.base.0',
+    rect: { x0: 10, y0: 410, x1: 47, y1: 447 },
+    changed: 362,
+    brighter: [],
+  },
+  {
+    view: 'front',
+    part: 'handR',
+    base: 'handR.base.0',
+    rect: { x0: 13, y0: 412, x1: 46, y1: 443 },
+    changed: 234,
+    brighter: [],
+  },
+  {
+    view: 'profileLeft',
+    part: 'handL',
+    base: 'handL.base.0',
+    rect: { x0: 72, y0: 412, x1: 108, y1: 443 },
+    changed: 191,
+    brighter: [],
   },
 ] as const;
 
@@ -108,9 +133,9 @@ const shadeRepainted = (
   return { scene: { width: kept.width, height: kept.height, rgba }, changed };
 };
 
-describe("round 6's hand shades erased", () => {
+describe("rounds 5 and 6's hand shades erased", () => {
   it.effect(
-    "the front left hand's and profileRight right hand's dark rims repainted the hand's base, or a brighter base past twice the bar, fail colour at a probe of the hand, and some probe of the hand reads the repaint past the bar, where the kept itself passes",
+    "each verifier's hand whose dark rim is repainted the hand's base, or a brighter base past twice the bar, fails colour at a probe of the hand, and some probe of the hand reads the repaint past the bar, where the kept itself passes",
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
@@ -146,23 +171,23 @@ describe("round 6's hand shades erased", () => {
               return `${v.pass} ${v.at.startsWith(`${view} ${part} `)} ${Math.max(...seen) > 3}`;
             };
             const erased = shadeRepainted(kept, rect, median, central);
-            const bright = shadeRepainted(kept, rect, median, brighter);
             return {
-              view,
+              hand: `${view} ${part}`,
               control: colourOf(view, readProbes(view, list, kept, kept, ids)).value,
               changed: erased.changed,
-              erased: read(erased.scene),
-              brighter: read(bright.scene),
+              repaints: [
+                read(erased.scene),
+                ...brighter.map((colour) => read(shadeRepainted(kept, rect, median, colour).scene)),
+              ],
             };
           }),
         );
         expect(rows).toEqual(
-          Arr.map(HANDS, ({ view, changed }) => ({
-            view,
+          Arr.map(HANDS, ({ view, part, changed, brighter }) => ({
+            hand: `${view} ${part}`,
             control: '0',
             changed,
-            erased: 'false true true',
-            brighter: 'false true true',
+            repaints: ['false true true', ...brighter.map(() => 'false true true')],
           })),
         );
       }).pipe(Effect.provide(BunServices.layer)),
