@@ -61,9 +61,6 @@ export const opaqueBox = (r: Raster): Option.Option<Box> => {
 /** The fewest pixels a paint must cover in both frames of a step for its median to count. */
 export const STEP_PIXELS = 150;
 
-/** How near (ΔE76) a rendered pixel must lie to a lit paint to count toward that paint's median. */
-const MEDIAN_NEAR = 10;
-
 /** How near (ΔE76) the light bar holds a pixel to its neighbours (interior) and to a lit paint. */
 const LIGHT_NEAR = 1;
 
@@ -73,7 +70,7 @@ export interface PaintMedian {
   readonly count: number;
 }
 
-/** What one figure-alone render reads: whether the figure lies whole inside the frame, its lines, each paint's median, and its interior pixels, all and lit. */
+/** What one figure-alone render reads: whether the figure lies whole inside the frame, its lines, each paint's median over all its opaque pixels, and its interior pixels, all and lit. */
 export interface FigureRead {
   readonly whole: boolean;
   readonly lines: Option.Option<Lines>;
@@ -90,17 +87,30 @@ const NOTHING: FigureRead = {
   litInterior: 0,
 };
 
-/** Each paint's median colour over the interior pixels nearest it (within `MEDIAN_NEAR`), by the paint's index: an outline's blended fringe never counts. */
+/**
+ * Each paint's median colour over its area, by the paint's index: every
+ * opaque pixel nearest it whose four neighbours are opaque and nearest it
+ * too, however far its colour strays, so a paint drawn in two alternating
+ * colours steps as its median does. Only the pixels where two paints meet
+ * are left out: the render's resampling blends them, and a thin paint's
+ * median would be its edges' blends, not its colour.
+ */
 const mediansOf = (
   r: Raster,
-  interior: ReadonlyArray<number>,
   near: (c: Rgb) => { readonly index: number; readonly distance: number },
 ): ReadonlyMap<number, PaintMedian> => {
   const channels = new Map<number, readonly [Array<number>, Array<number>, Array<number>]>();
-  for (const q of interior) {
+  const paintAt = (q: number): number => {
+    if (alphaAt(r, q) !== 255) return -1;
+    return near(rgbAt(r, q)).index;
+  };
+  for (let q = 0; q < r.width * r.height; q++) {
+    const index = paintAt(q);
+    const x = q % r.width;
+    if (index < 0 || x === 0 || x === r.width - 1 || q < r.width) continue;
+    if (q >= r.width * (r.height - 1)) continue;
+    if ([q - 1, q + 1, q - r.width, q + r.width].some((m) => paintAt(m) !== index)) continue;
     const c = rgbAt(r, q);
-    const { index, distance } = near(c);
-    if (distance > MEDIAN_NEAR) continue;
     const ch = channels.get(index) ?? ([[], [], []] as const);
     ch[0].push(c[0]);
     ch[1].push(c[1]);
@@ -163,7 +173,8 @@ const interiorOf = (r: Raster): ReadonlyArray<number> => {
 /**
  * One figure-alone render read against its member's lit paints: cropped to
  * the figure, whether it lies whole in the frame (clear of every edge), its
- * lines in its head and centre columns, each paint's median and its interior.
+ * lines, each paint's median over all its opaque pixels (the colour step's)
+ * and its interior pixels, all and lit (the light's).
  */
 export const readFigure = (render: Raster, lit: ReadonlyArray<Paint>): FigureRead =>
   Option.match(opaqueBox(render), {
@@ -179,7 +190,7 @@ export const readFigure = (render: Raster, lit: ReadonlyArray<Paint>): FigureRea
           box.x + box.width < render.width &&
           box.y + box.height < render.height,
         lines: linesOf(r, lit),
-        medians: mediansOf(r, interior, near),
+        medians: mediansOf(r, near),
         interior: interior.length,
         litInterior: interior.filter((q) => near(rgbAt(r, q)).distance <= LIGHT_NEAR).length,
       };
@@ -241,23 +252,33 @@ const levelOf = (r: FrameRead): Option.Option<number> =>
   );
 
 /**
- * Each figure's head in every frame it lies whole and unsquashed in,
- * brought to the focal plane (over its plane zoom, times its depth), over
- * the lead's head: the median of the lead's heads brought there the same
- * way, so one number stands for the lead's head and a figure is judged
- * against it in every frame.
+ * Each figure's head against the lead's in the same frame, in every frame
+ * where both lie whole and unsquashed: its head over the lead's head × 1/z
+ * × zoom^(1/z) ÷ zoom (z its depth, zoom the camera's), worked as each head
+ * brought to the focal plane (over its plane zoom, times its depth). Unread
+ * where either head is not read in such a frame, and for a figure that
+ * shares no such frame with the lead.
  */
 export const scaleSamples = (reads: ReadonlyArray<FrameRead>, lead: string): Samples => {
   const still = reads.filter((f) => f.read.whole && !f.squashed);
-  const leadHead = medianOf(
-    still.filter((f) => f.name === lead).flatMap((f) => Option.toArray(levelOf(f))),
-  );
-  if (Option.isNone(leadHead)) return [unreadAt(`${lead}: no head read in a whole frame`)];
-  return still.map((f): Sample => {
-    const at = `${f.name} frame ${f.frame}`;
-    return Option.match(levelOf(f), {
-      onNone: () => unreadAt(`${at}: no head read`),
-      onSome: (mine) => one(at, mine / leadHead.value),
+  const leads = new Map(still.filter((f) => f.name === lead).map((f) => [f.frame, f] as const));
+  const others = [...new Set(reads.filter((f) => f.name !== lead).map((f) => f.name))];
+  return others.flatMap((name): Samples => {
+    const paired = still
+      .filter((f) => f.name === name)
+      .flatMap((f) =>
+        Option.toArray(
+          Option.map(Option.fromUndefinedOr(leads.get(f.frame)), (ref) => ({ f, ref })),
+        ),
+      );
+    if (paired.length === 0)
+      return [unreadAt(`${name}: no frame where it and ${lead} lie whole and unsquashed`)];
+    return paired.map(({ f, ref }): Sample => {
+      const at = `${name} frame ${f.frame}`;
+      return Option.match(Option.all([levelOf(f), levelOf(ref)]), {
+        onNone: () => unreadAt(`${at}: no head read, or no head of ${lead}`),
+        onSome: ([mine, theirs]) => one(at, mine / theirs),
+      });
     });
   });
 };
@@ -281,11 +302,23 @@ export const heightSamples = (reads: ReadonlyArray<FrameRead>): Samples =>
     });
   });
 
-/** Each figure's share of interior pixels the one light lit from a palette paint, per frame it shows in. */
+/**
+ * Each figure's share of interior pixels the one light lit from a palette
+ * paint, per frame it shows in with an interior. A frame it lies whole in
+ * with no interior pixel is unread, as is a figure with no frame to read;
+ * a frame that cuts it to a sliver with no interior is skipped.
+ */
 export const lightSamples = (reads: ReadonlyArray<FrameRead>): Samples =>
-  reads
-    .filter((r) => r.read.interior > 0)
-    .map((r) => one(`${r.name} frame ${r.frame}`, r.read.litInterior / r.read.interior));
+  [...Map.groupBy(reads, (r) => r.name)].flatMap(([name, frames]): Samples => {
+    const samples = frames.flatMap((r): Samples => {
+      const at = `${name} frame ${r.frame}`;
+      if (r.read.interior > 0) return [one(at, r.read.litInterior / r.read.interior)];
+      if (r.read.whole) return [unreadAt(`${at}: no interior pixel`)];
+      return [];
+    });
+    if (samples.length === 0) return [unreadAt(`${name}: no frame with an interior pixel`)];
+    return samples;
+  });
 
 /** The lines the proportions bar reads: the soles row, the hem, the sash top and the head (crown to collar), each with the roles its palette must hold. */
 const LINES: ReadonlyArray<{
@@ -301,9 +334,9 @@ const LINES: ReadonlyArray<{
 
 /**
  * A sheet's proportions: per line its palette has the roles for, (max − min)
- * over the sheet's cells as a share of their median crown-to-soles height. A
- * line read in no cell is skipped (the drawing holds no such line); one read
- * in some cells and not others is unread.
+ * over the sheet's cells as a share of their median crown-to-soles height.
+ * A line its palette has the roles for is unread when any cell does not
+ * read it, and when none does; a line it has no role for is skipped.
  */
 export const proportionSamples = (
   member: string,
@@ -322,7 +355,7 @@ export const proportionSamples = (
       const values = lined.map((c) => ({ key: c.key, v: line.read(c.l) }));
       const read = values.flatMap((x) => Option.toArray(x.v));
       const missing = values.find((x) => Option.isNone(x.v));
-      if (read.length === 0) return [];
+      if (read.length === 0) return [unreadAt(`${member} ${line.name}: unread in every cell`)];
       if (missing) return [unreadAt(`${member} ${line.name}: unread in ${missing.key}`)];
       return [one(`${member} ${line.name}`, (Math.max(...read) - Math.min(...read)) / height)];
     },

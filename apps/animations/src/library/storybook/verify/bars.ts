@@ -63,17 +63,17 @@ export const BARS: ReadonlyArray<BarRow> = [
   ),
   proposed(
     'colour-step',
-    'figure-alone renders, lit: ΔE76 between the per-paint medians of the frames either side of each change of drawn cell (paints of 150 px or more in both), worst step',
+    "figure-alone renders, lit: ΔE76 between the per-paint medians (each over all the paint's opaque pixels) of the frames either side of each change of drawn cell (paints of 150 px or more in both), worst step",
     Bar.AtMost({ max: 1 }),
   ),
   proposed(
     'proportions',
-    "each sheet's stored cells: per line (soles, hem, sash top, head), max − min over the cells as a share of the median crown-to-soles height, worst line",
+    "each sheet's stored cells: per line its palette has the roles for (soles, hem, sash top, head), max − min over the cells as a share of the median crown-to-soles height, worst line; a line unread in any cell is unread",
     Bar.AtMost({ max: 0.04 }),
   ),
   proposed(
     'scale',
-    "figure-alone renders, whole and with no squash: each figure's head over its plane zoom times its depth, over the lead's median head read so, farthest from 1",
+    "figure-alone renders at frames where the figure and the lead lie whole with no squash: each figure's head ÷ (the same frame's lead head × 1/z × zoom^(1/z) ÷ zoom), z its depth and zoom the camera's, farthest from 1",
     Bar.Near({ target: 1, share: 0.05 }),
   ),
   proposed(
@@ -83,12 +83,12 @@ export const BARS: ReadonlyArray<BarRow> = [
   ),
   proposed(
     'light',
-    "figure-alone renders: share of interior pixels within ΔE 1 of the one light's colour of a palette paint, worst figure and frame",
+    "figure-alone renders: share of interior pixels within ΔE 1 of the one light's colour of a palette paint, worst figure and frame; a whole figure with no interior pixel is unread",
     Bar.AtLeast({ min: 0.98 }),
   ),
   proposed(
     'render-height',
-    'figure-alone renders with no squash: (max − min) of crown-to-soles over plane zoom, over the median, worst figure',
+    "figure-alone renders with no squash: (max − min) of crown-to-soles ÷ the camera's zoom at the figure's plane, over the median, worst figure (the camera's push is not the figure resizing)",
     Bar.AtMost({ max: 0.02 }),
   ),
   proposed(
