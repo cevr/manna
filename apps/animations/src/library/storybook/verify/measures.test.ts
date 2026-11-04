@@ -546,6 +546,36 @@ describe('heightSamples', () => {
     expect(values).toHaveLength(1);
     expect(values[0] ?? -1).toBeCloseTo(0.02, 9);
   });
+
+  test('passes two keys of one sheet that differ in height by 3 %, each holding its own height', () => {
+    const reads = (
+      [
+        ['front', 99],
+        ['front', 99],
+        ['down', 96],
+        ['down', 96],
+      ] as const
+    ).map(([cell, bottom], frame) =>
+      frameRead({ name: 'f', frame, cell, read: readOf(linesOfHeight(0, bottom, 20)) }),
+    );
+    expect(heightSamples(reads)).toEqual([{ at: 'f/front over 2 frames', value: Option.some(0) }]);
+    expect(verdictOf(BARS, { ...ALL_PASS, 'render-height': heightSamples(reads) }).passed).toBe(
+      BARS.length,
+    );
+  });
+
+  test('fails one key that swells 3 % within its hold, and reports that key as the worst', () => {
+    const reads = [
+      frameRead({ name: 'f', frame: 0, cell: 'front', read: readOf(linesOfHeight(0, 99, 20)) }),
+      frameRead({ name: 'f', frame: 1, cell: 'front', read: readOf(linesOfHeight(0, 99, 20)) }),
+      frameRead({ name: 'f', frame: 2, cell: 'down', read: readOf(linesOfHeight(0, 99, 20)) }),
+      frameRead({ name: 'f', frame: 3, cell: 'down', read: readOf(linesOfHeight(0, 102, 20)) }),
+    ];
+    const samples = heightSamples(reads);
+    expect(samples.map((s) => s.at)).toEqual(['f/down over 2 frames']);
+    expect(Option.getOrElse(samples[0]?.value ?? Option.none(), () => -1)).toBeCloseTo(3 / 103, 9);
+    expect(verdictOf(BARS, { ...ALL_PASS, 'render-height': samples }).passed).toBe(BARS.length - 1);
+  });
 });
 
 describe('lightSamples', () => {

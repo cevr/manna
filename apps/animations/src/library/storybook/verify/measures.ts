@@ -363,22 +363,41 @@ export const scaleSamples = (
   };
 };
 
-/** Each figure's crown-to-soles height over its plane zoom, over its whole unsquashed frames: (max − min) over the median. */
+/** One key's crown-to-soles heights over its plane zoom: (max − min) over the median, with how many frames it read. */
+const keySpread = (heights: ReadonlyArray<number>) =>
+  Option.map(medianOf(heights), (median) => ({
+    frames: heights.length,
+    spread: (Math.max(...heights) - Math.min(...heights)) / median,
+  }));
+
+/**
+ * Each figure's crown-to-soles height over its plane zoom, over its whole
+ * unsquashed frames, spread within each key it holds: (max − min) over the
+ * median, its worst key. Two keys of one sheet differ in height by design (a
+ * bowed head, a seat), which the scale and proportions bars hold across keys;
+ * this reads only the figure growing or shrinking while one key holds.
+ */
 export const heightSamples = (reads: ReadonlyArray<FrameRead>): Samples =>
   [...Map.groupBy(reads, (r) => r.name)].map(([name, frames]): Sample => {
     const still = frames.filter((f) => f.read.whole && !f.squashed);
     const unread = still.find((f) => Option.isNone(f.read.lines));
     if (unread) return unreadAt(`${name} frame ${unread.frame}: no lines read`);
-    const heights = still.flatMap((f) =>
-      Option.toArray(Option.map(f.read.lines, (l) => heightOf(l) / f.zoom)),
-    );
-    return Option.match(medianOf(heights), {
-      onNone: () => unreadAt(`${name}: no whole unsquashed frame`),
-      onSome: (median) =>
-        one(
-          `${name} over ${heights.length} frames`,
-          (Math.max(...heights) - Math.min(...heights)) / median,
+    const keys = [...Map.groupBy(still, (f) => f.cell)].flatMap(([cell, held]) =>
+      Option.toArray(
+        Option.map(
+          keySpread(
+            held.flatMap((f) =>
+              Option.toArray(Option.map(f.read.lines, (l) => heightOf(l) / f.zoom)),
+            ),
+          ),
+          (s) => ({ cell, ...s }),
         ),
+      ),
+    );
+    const worst = Option.fromUndefinedOr(keys.toSorted((a, b) => b.spread - a.spread)[0]);
+    return Option.match(worst, {
+      onNone: () => unreadAt(`${name}: no whole unsquashed frame`),
+      onSome: (k) => one(`${name}/${k.cell} over ${k.frames} frames`, k.spread),
     });
   });
 

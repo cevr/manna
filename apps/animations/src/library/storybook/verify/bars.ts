@@ -88,7 +88,7 @@ export const BARS: ReadonlyArray<BarRow> = [
   ),
   proposed(
     'render-height',
-    "figure-alone renders with no squash: (max − min) of crown-to-soles ÷ the camera's zoom at the figure's plane, over the median, worst figure (the camera's push is not the figure resizing)",
+    "figure-alone renders with no squash: (max − min) of crown-to-soles ÷ the camera's zoom at the figure's plane, over the median, within each key the figure holds, worst figure and key (the camera's push is not the figure resizing; two keys of one sheet differ in height by design, which scale and proportions hold)",
     Bar.AtMost({ max: 0.02 }),
   ),
   proposed(
