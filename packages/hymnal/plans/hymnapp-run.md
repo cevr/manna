@@ -54,17 +54,17 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 
 ## Owner questions
 
-- Heartseed "understand it first" lines (hsgloss): who writes them, from which sources? Recommended: an agent drafts one line per promise (158) from the KJV and its context in the pioneer frame, and the owner reviews them in one sitting before hsgloss merges; other passages get Webster 1828 word glosses only. (selahone, asked 2026-11-03)
+- Heartseed "understand it first" lines (hsgloss): who writes them, from which sources? Recommended: an agent drafts one line per promise (158) from the KJV and its context in the pioneer frame, and the owner reviews them in one sitting before hsgloss merges; other passages get Webster 1828 word glosses only. (selahone, asked 2026-11-03) **Answer (owner, 2026-11-04):** agent drafts one line per promise from the KJV and its context in the pioneer frame; the owner reviews them in one sitting before hsgloss merges; other passages get Webster 1828 word glosses only.
 
-- Heartseed Pro texts (hstexts): which public-domain texts beyond the KJV? Recommended: none in the first Pro release; name them when hstexts is planned. (selahone, asked 2026-11-03)
+- Heartseed Pro texts (hstexts): which public-domain texts beyond the KJV? Recommended: none in the first Pro release; name them when hstexts is planned. (selahone, asked 2026-11-03) **Answer (owner, 2026-11-04):** KJV only in the first Pro release; name others when hstexts is planned.
 
-- Heartseed App Store setup (reserved for the owner): bundle id `app.heartseed` (permanent after the first upload), product ids `app.heartseed.pro.monthly`, `.yearly`, `.lifetime` at $2.99, $14.99, $39.99. Recommended: register when hsship is ready. (selahone, asked 2026-11-03)
+- Heartseed App Store setup (reserved for the owner): bundle id `app.heartseed` (permanent after the first upload), product ids `app.heartseed.pro.monthly`, `.yearly`, `.lifetime` at $2.99, $14.99, $39.99. Recommended: register when hsship is ready. (selahone, asked 2026-11-03) **Answer (owner, 2026-11-04):** register the bundle id and the three products when hsship is ready; ids and prices as listed.
 
-- Heartseed licensed texts (hslicense, NKJV/ESV need publisher licences and fees). Recommended: defer until Pro has users. (selahone, asked 2026-11-03)
+- Heartseed licensed texts (hslicense, NKJV/ESV need publisher licences and fees). Recommended: defer until Pro has users. (selahone, asked 2026-11-03) **Answer (owner, 2026-11-04):** defer until Pro has users.
 
-- Heartseed hands-free: spoken commands ("again", "next") beside the lock-screen and headphone controls? Recommended: yes, through the same speech module. (selahone, asked 2026-11-03)
+- Heartseed hands-free: spoken commands ("again", "next") beside the lock-screen and headphone controls? Recommended: yes, through the same speech module. (selahone, asked 2026-11-03) **Answer (owner, 2026-11-04):** yes, spoken commands ("again", "next") through the same on-device speech module.
 
-- keyfollow: the key change that did not follow the playing hymn is not reproduced (simulator, three variations; an off-device fake follows the key every time). Next time it happens: which control turned the key (the key dial on the hymn page, or another), how many turns, and how long the old key kept sounding, on the current build. (keyfollow, asked 2026-11-01)
+- keyfollow: the key change that did not follow the playing hymn is not reproduced (simulator, three variations; an off-device fake follows the key every time). Next time it happens: which control turned the key (the key dial on the hymn page, or another), how many turns, and how long the old key kept sounding, on the current build. (keyfollow, asked 2026-11-01) **Answer (owner, 2026-11-04):** the owner notes the control, the number of turns and how long the old key kept sounding the next time it happens on the current build; keyfollow stays blocked until then.
 
 ## Follow-ups
 
