@@ -14,14 +14,19 @@
  * Also: the module emits only for the session it holds and lets go of it
  * before it stops it; the service imports no native code; only
  * `source.ios.ts` names the Swift file; nothing of dictation reaches for
- * One's own speech module; and the committed declaration of the Swift
- * module is the one One's native source writes for it now.
+ * One's own speech module; the committed declaration of the Swift module
+ * is the one One's native source writes for it now; the development probe
+ * is the only screen that reaches dictation, replays and never listens,
+ * renders only in a development build and shows no verse word; and the
+ * manifest asks for speech recognition and the microphone.
  */
 
 import { describe, expect, it } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join, relative } from 'node:path';
+
+import { app } from '../../vite/app';
 
 const APP = join(import.meta.dir, '..', '..');
 const SWIFT = join(APP, 'native', 'dictation', 'Dictation.swift');
@@ -342,5 +347,48 @@ describe('dictation’s seams', () => {
     expect(unformatted(written)).toContain(unformatted(expected));
     for (const method of ['engines', 'listen', 'replay', 'finish', 'cancel', 'onEvent'])
       expect(expected).toContain(`${method}(`);
+  });
+});
+
+describe('the development probe and the manifest', () => {
+  const PROBE = join(APP, 'app', 'probe', 'dictation.tsx');
+  const probe = readFileSync(PROBE, 'utf8');
+
+  it('is the only screen that reaches dictation, and it replays, never listens', () => {
+    const callers = filesUnder(join(APP, 'app'))
+      .filter(
+        (file) =>
+          /\.tsx?$/.test(file) &&
+          imports(readFileSync(file, 'utf8')).some((s) => s.includes('src/dictation')),
+      )
+      .map((file) => relative(APP, file));
+    expect(callers).toEqual(['app/probe/dictation.tsx']);
+    expect(imports(probe).filter((s) => s.includes('src/dictation'))).toEqual([
+      '../../src/dictation',
+      '../../src/dictation/script',
+      '../../src/dictation/source',
+    ]);
+    expect(probe).toContain('replaySource(recite(passage.text');
+    expect(probe).not.toContain('microphoneSource');
+  });
+
+  it('renders and starts only in a development build, and shows no verse word', () => {
+    expect(probe).toContain("const dev = typeof __DEV__ !== 'undefined' && __DEV__;");
+    expect(probe).toContain('if (!dev) return;');
+    expect(probe).toContain('if (!dev || Option.isNone(view)) return;');
+    expect(Array.from(probe.matchAll(/passage\.(\w+)/g), (m) => m[0])).toEqual([
+      'passage.text',
+      'passage.text',
+    ]);
+    expect(probe).toMatch(/dictation\.start\(passage\.text\)/);
+  });
+
+  it('asks for speech recognition and the microphone, and prebuild reads it', () => {
+    expect(app.ios.bundleId).toBe('app.heartseed');
+    expect(app.speech.recognition.trim().length).toBeGreaterThan(0);
+    expect(app.speech.microphone.trim().length).toBeGreaterThan(0);
+    expect(readFileSync(join(APP, 'vite.config.ts'), 'utf8')).toMatch(
+      /import \{ app \} from '\.\/vite\/app\.ts';/,
+    );
   });
 });

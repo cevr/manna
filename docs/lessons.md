@@ -4953,3 +4953,63 @@ The form of an entry, each field on its own line:
 - **Wrong:** The view broadcast was an unbounded PubSub with replay 1: replay bounds what a new subscriber sees, not what a held one keeps, so a paused screen kept every view the service ever made.
 - **Cause:** A latest-state stream was given a queue whose growth nothing bounded.
 - **Guard:** code: `apps/heartseed/src/voice/changes.test.ts` `keeps a bounded window of a 10,000-view burst and ends at the current view`
+
+### heartseed-dictation-microphone-off-simulator
+
+- **Date:** 2026-11-04
+- **Kind:** owner
+- **Said:** "The microphone stays revoked."
+- **Source:** .claude/skills/verify-heartseed/SKILL.md (the owner's rules); hymnapp/hsdictate/spec.md Path and Risks
+- **Wrong:** The app's first microphone path could open an audio input, ask for a permission, change the audio session or start recognition on the simulator, whose microphone is the Mac's, through an inverted, nested or `#elseif` branch, or a simulator listen could do more than log and fail.
+- **Cause:** A simulator build compiles only one branch of `#if targetEnvironment(simulator)`, so nothing but a reading of the Swift source shows what the other holds.
+- **Guard:** code: `apps/heartseed/src/dictation/guard.test.ts` `opens the microphone, asks for a permission, takes the session and starts recognition only on a device`; `apps/heartseed/src/dictation/guard.test.ts` `on the simulator, a listen only logs its skip and fails unavailable`; `apps/heartseed/src/dictation/guard.test.ts` `reads branches as Swift does, nested, with #elseif and #else`
+
+### heartseed-dictation-on-device-only
+
+- **Date:** 2026-11-04
+- **Kind:** owner
+- **Said:** "the speech recognizer is on-device only"
+- **Source:** hymnapp/hsdictate/spec.md Decided 3 (selahone's decision) and Risks
+- **Wrong:** An SFSpeechRecognizer request without `requiresOnDeviceRecognition = true` may recognize over the network, a file recognition request or One's own `One.Speech` (transcript only, no on-device flag) could stand in for the module, and a player or synthesizer could make a sound.
+- **Cause:** SFSpeechRecognizer recognizes on Apple's servers unless the request asks otherwise, and One ships a speech module of its own.
+- **Guard:** code: `apps/heartseed/src/dictation/guard.test.ts` `recognizes on the device only: on-device recognition asked for and never turned off, no file recognized, no sound`
+
+### heartseed-dictation-follows-only-its-session
+
+- **Date:** 2026-11-04
+- **Kind:** owner
+- **Said:** "maybe real time so they can see their mistakes as they speak if possible?"
+- **Source:** hymnapp/selahone/units.md row 4 (Done line); hymnapp/hsdictate/spec.md The recital's rules and Risks
+- **Wrong:** A dictation service could light words from a stale event of a cancelled or replaced session, fall back to the next engine after words were heard or on a denial, reuse a session id on a fallback, ignore a refused listen, end a newer recital from an old grace, never end a finish, hold a command on a pending listen, or feed the matcher a snapshot it rejects (a NaN, negative or backward time, punctuation as a word), which lights nothing.
+- **Cause:** Events reach JS asynchronously from the native side, a listen's answer can come after newer commands, and a recognizer's runs carry times the matcher does not accept as they come.
+- **Guard:** code: `apps/heartseed/src/dictation.property.test.ts` `agrees on 250 seeded histories of 31 steps`; `apps/heartseed/src/dictation.property.test.ts` `waits on no pending listen, and a late refusal leaves a newer recital as it was`; `apps/heartseed/src/dictation/guard.test.ts` `emits only for the session it holds, and lets go of it before it stops it`
+
+### heartseed-dictation-endings-lossless
+
+- **Date:** 2026-11-04
+- **Kind:** review
+- **Said:** "A terminal view _can_ be missed when a subsequent read replaces it and more than 16 later views arrive before the consumer resumes"
+- **Source:** hymnapp/hsvoice/round-2-findings.md M2 (the M2 repair's note, taken up as a follow-up for hssayit); hymnapp/hsdictate/spec.md Decided 7
+- **Wrong:** A screen that reads how a recital ended from a bounded latest-state stream can miss an ending a later view slid out, while an unbounded view stream keeps every view a held screen never read.
+- **Cause:** One stream served both the latest view and the terminal events.
+- **Guard:** code: `apps/heartseed/src/dictation.property.test.ts` `gives a slow reader of endings every one of 101 endings, in order`; `apps/heartseed/src/dictation.property.test.ts` `starts changes at the current view and keeps a bounded window of a 10,000-view burst`
+
+### heartseed-dictation-scripted-source
+
+- **Date:** 2026-11-04
+- **Kind:** owner
+- **Said:** "a scripted word source for tests and the simulator"
+- **Source:** hymnapp/selahone/units.md row 4 (Done line); hymnapp/hsdictate/spec.md Decided 5
+- **Wrong:** The scripted recital could finalize a word late, drop the rest of the script on a finish, play on after a cancel or a newer listen, or play on the real clock where a test's TestClock cannot drive it.
+- **Cause:** The script stands in for a recognizer that no test can run, so its rules are the only record of how a recital reports.
+- **Guard:** code: `apps/heartseed/src/dictation/script.test.ts` `writes a growing tail after each word, finalized every so many words and at the last`; `apps/heartseed/src/dictation/script.test.ts` `sends the rest at once and ends on a finish, and nothing more after a cancel`; `apps/heartseed/src/dictation/script.test.ts` `stops the replay it holds at a newer listen: the old session sends nothing more`
+
+### heartseed-dictation-probe-and-seams
+
+- **Date:** 2026-11-04
+- **Kind:** owner
+- **Said:** "The microphone stays revoked."
+- **Source:** hymnapp/hsdictate/spec.md The development probe, Manifest and Risks
+- **Wrong:** The development probe could render in a release build, listen on the microphone instead of replaying, or show verse words; the service could import native code, a second file could import the Swift module, the committed declaration could fall behind the Swift file, and a device build without the two prompts crashes on the first listen.
+- **Cause:** The probe is the only screen that reaches dictation in this unit, and One's bundler refuses a `.swift` import off iOS.
+- **Guard:** code: `apps/heartseed/src/dictation/guard.test.ts` `is the only screen that reaches dictation, and it replays, never listens`; `apps/heartseed/src/dictation/guard.test.ts` `renders and starts only in a development build, and shows no verse word`; `apps/heartseed/src/dictation/guard.test.ts` `asks for speech recognition and the microphone, and prebuild reads it`; `apps/heartseed/src/dictation/guard.test.ts` `keeps the service free of native code`; `apps/heartseed/src/dictation/guard.test.ts` `imports the Swift file from source.ios.ts alone`; `apps/heartseed/src/dictation/guard.test.ts` `commits the declaration One’s native source writes for Dictation.swift`

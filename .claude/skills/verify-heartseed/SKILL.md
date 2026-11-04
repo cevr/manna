@@ -92,8 +92,10 @@ tmp/verify-heartseed, one drive at a time per checkout; never point its
    a given build instead (a copy, the scheme added, signed ad hoc). There is
    no other build: never run one by hand.
 
-5. **The microphone.** The app asks for no permission. Keep the microphone
-   revoked on the udid `boot` printed:
+5. **The microphone.** The app declares two prompts, speech recognition
+   and the microphone (`apps/heartseed/vite/app.ts`), for dictation on a
+   device; on the simulator it asks for neither, and no drive ever grants
+   either. Keep the microphone revoked on the udid `boot` printed:
 
    ```bash
    xcrun simctl privacy <udid> revoke microphone app.heartseed
@@ -137,6 +139,9 @@ journey files yet. The features:
   passage.
 - [features/voice.md](features/voice.md): the voice's native module, built
   with the app (no screen calls it yet).
+- [features/dictation.md](features/dictation.md): dictation's native
+  module, built with the app and its prompts, and its scripted replay on
+  the development probe `probe/dictation`.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.

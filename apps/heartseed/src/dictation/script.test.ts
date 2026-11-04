@@ -20,7 +20,7 @@ import { recite, scriptedSource, type DictationStep } from './script';
 const VERSE = 'Alpha beta, gamma; delta — epsilon zeta: eta.';
 
 describe('recite', () => {
-  it('writes a growing tail after each word, finalized every `every` words and at the last', () => {
+  it('writes a growing tail after each word, finalized every so many words and at the last', () => {
     expect(recite('one two three', { skip: [1], every: 5, pace: 100 })).toEqual([
       { at: 50, final: false, runs: [{ text: 'one', start: 0, end: 50 }] },
       {

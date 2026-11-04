@@ -53,6 +53,69 @@ will call `Voice.read`.
   word markers at their sample times, so the words light at the pace they
   would be heard. `src/voice/guard.test.ts` holds the Swift file to this.
 
+## Dictation
+
+Dictation hears the reader say a verse and lights each word as it is said,
+marking a miss while they speak. No reader-facing screen calls it yet: Say
+it will call `Dictation.start`.
+
+- `src/dictation.ts` is the `Dictation` service (Effect): `start` (a verse
+  and its cue), `finish`, `cancel`, `peek`, the `engines` report, and the
+  `view` a screen shows (`status`, the `engine` it listens with, the
+  `verse`, the matcher's view and how the recital `ended`), with its
+  `changes` (a new subscriber starts at the current view, and one held up
+  keeps only the last 16) and its `endings`, which deliver every ending to
+  every reader, in order, however late it reads. Its rules are a pure
+  reducer, `src/dictation/attempt.ts`: a command changes the view at its
+  call, then makes its one source call, so no command waits on another's;
+  an event counts only for the current session while a recital is under
+  way. A recital tries the engines of `CHAIN` in order (`analyzer`, then
+  `dictation`, then `recognizer`): one that answers `unavailable` (or a
+  refused listen) before anything is heard falls back to the next under a
+  new session id; anything else ends it. A finish waits for the source's
+  end, at most `FINISH_GRACE_MS` (1.5 s) on the service's clock, then ends
+  the recital itself and cancels the source.
+- Each result's runs become the matcher's words by `wordsOf`
+  (`src/dictation/words.ts`): a run splits at whitespace into its spoken
+  words, which share its time evenly, never before the last final word or 0. A final result appends to the final words and empties the tail; any
+  other is the whole tail. So every snapshot the matcher gets is one it
+  accepts. A listen hints the verse's distinct word keys (`hintsOf`, at
+  most 100), so the recognizer expects its archaic words.
+- `src/dictation/script.ts` is the scripted word source: `recite` writes a
+  recital as a recognizer reports it, and `scriptedSource` plays it on
+  Effect's clock with no microphone, for tests.
+- `src/dictation/source.ios.ts` is the source on iOS: the Swift package
+  `native/dictation`, which One's prebuild makes the local pod
+  `OneSwiftPackages/dictation`. `microphoneSource` listens; `replaySource`
+  has the module play a script in its place (the simulator's source).
+  `src/dictation/source.ts` is every other platform's: no engines, and
+  every listen refused, so a recital ends `unavailable`. The module's
+  declaration (`native/dictation/Dictation.d.swift.ts`) is committed as One
+  writes it.
+- On a device the module asks for the microphone, then runs the engine:
+  SpeechAnalyzer with SpeechTranscriber, SpeechAnalyzer with
+  DictationTranscriber, or SFSpeechRecognizer with on-device recognition
+  required (it also asks for speech recognition). Recognition never leaves
+  the device. An analyzer engine whose model is supported but not
+  installed asks iOS to install it in the background and answers
+  `unavailable` at once, so that recital falls to the next engine. While
+  it listens it holds the audio session for recording and puts back what
+  it found; an interruption ends the recital `interrupted`.
+- The module emits events only for the session it holds; one that JS
+  cancelled or replaced emits nothing more, so a late event cannot reach a
+  recital that came after it, even across a JS reload.
+- On the simulator the module opens nothing and asks for nothing: a listen
+  logs `[dictation] listen session=<n> skipped=simulator` and fails
+  `unavailable`. A replay (`[dictation] replay session=<n> steps=<count>`)
+  opens nothing anywhere. `src/dictation/guard.test.ts` holds the Swift
+  file to this.
+- The manifest (`vite/app.ts`) declares the two prompts iOS shows before
+  the first listen: speech recognition and the microphone.
+- `app/probe/dictation.tsx` is a development probe for the live check
+  (`.claude/skills/verify-heartseed/features/dictation.md`): it recites
+  Today's passage, less its 11th word, through the module's replay and
+  shows counts only. A release build renders nothing.
+
 ## Tests
 
 - The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as parts, each a
