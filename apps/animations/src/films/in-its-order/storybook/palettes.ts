@@ -67,6 +67,13 @@ export const MEASURED: ReadonlyArray<MeasuredPaint> = [
     box: { x: 1310, y: 326, width: 18, height: 8 },
     what: "the older man's open mouth in `talk` (iio-diner-3's prop)",
   },
+  {
+    member: 'lead-feast',
+    hex: '#fcebb4',
+    source: 'shot-sheets/iio-table/sheet.png',
+    box: { x: 970, y: 345, width: 20, height: 30 },
+    what: "the baby's bottle he holds up in `bottle` (iio-table's prop; asked as #f3e3a0)",
+  },
 ];
 
 /** Each of `hexes` a member's palette takes that neither its `look` (lowercased) gives nor one of its `measured` paints declares. */

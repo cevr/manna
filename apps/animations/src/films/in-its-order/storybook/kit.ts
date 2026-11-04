@@ -110,7 +110,7 @@ export const layer = (name: string, z: number, items: Layer['items']): Layer => 
  * read them): what places a figure by its crown.
  */
 export const TALL: ReadonlyMap<string, number> = new Map([
-  ['lead-feast/iio-table', 563],
+  ['lead-feast/iio-table', 604],
   ['lead-feast/iio-close', 888],
   ['lead-feast/iio-milk', 868],
   ['feast-mother/iio-baby', 922],

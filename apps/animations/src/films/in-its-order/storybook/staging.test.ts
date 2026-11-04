@@ -18,8 +18,10 @@ import { CELLS as VILLAGER_CELLS } from '../cast/idea-villagers/shot-sheets/iio-
 import { inItsOrder } from './index.ts';
 import { drawScaleOf } from './kit.ts';
 import { TABLE } from '../plates/plates.ts';
-import { BABY_MOTHER, TABLE_TOP_PX } from './shots/cold.ts';
-import { TABLE_TOP } from './shots/courtyard.ts';
+import { BABY_MOTHER, HELD_BODY, TABLE_TOP_PX } from './shots/cold.ts';
+import { HEAD, TABLE_TOP } from './shots/courtyard.ts';
+import { CELLS as LEAD_TABLE_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
+import { BOTTLE, BOTTLE_BODY } from './plates/bottle.ts';
 import { CUP_MOUTHS, GUTTER } from './shots/milk.ts';
 
 // oxlint-disable-next-line effect/noAsyncFunction -- read once at module evaluation, so no case pays the read inside its time limit (film/no-lazy-test-fixture)
@@ -330,5 +332,31 @@ describe("In Its Order's staging", () => {
     if (!letter || open?._tag !== 'Plate') return;
     const end = letter.duration - 1 / letter.fps;
     expect(footAt(open, end).y).toBe(TABLE_TOP.y + TABLE_TOP.height);
+  });
+
+  test('sets the bottle down on the table top in cold-letter from the frame his hand empties to the shot’s end, his held bottle’s size (critique 1, items 6 and 7)', () => {
+    const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
+    const lead = letter && figuresOf(letter).find(({ figure }) => figure.name === 'lead')?.figure;
+    const bottle = letter?.layers
+      .flatMap((l) => l.items)
+      .find((item) => item._tag === 'Plate' && item.file.endsWith('/bottle.png'));
+    if (!letter || !lead || bottle?._tag !== 'Plate')
+      return expect([letter?.id, lead?.name, bottle?._tag]).toEqual([
+        'cold-letter',
+        'lead',
+        'Plate',
+      ]);
+    const times = timesOf(letter);
+    const held = times.filter((t) => ['lift', 'bottle'].includes(poseAt(lead, t).cell));
+    const shown = times.filter((t) => plateAt(bottle, t).alpha > 0);
+    expect([held.length > 0, shown.length > 0]).toEqual([true, true]);
+    expect(shown.some((t) => held.includes(t))).toBe(false);
+    expect(shown.at(-1)).toBe(times.at(-1));
+    const foot = bottle.place.y + bottle.place.height;
+    expect(foot).toBeGreaterThanOrEqual(TABLE_TOP.y);
+    expect(foot).toBeLessThanOrEqual(TABLE_TOP.y + TABLE_TOP.height);
+    const body = (bottle.place.width * BOTTLE_BODY) / BOTTLE.size[0];
+    const heldBody = (HEAD / LEAD_TABLE_CELLS.bottle.head) * HELD_BODY;
+    expect(Math.abs(body / heldBody - 1)).toBeLessThanOrEqual(0.05);
   });
 });

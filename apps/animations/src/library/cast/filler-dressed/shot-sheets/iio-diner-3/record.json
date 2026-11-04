@@ -48,7 +48,7 @@
     {
       "name": "open mouth",
       "base": "#b6502e",
-      "role": "other"
+      "role": "prop"
     }
   ]
 }

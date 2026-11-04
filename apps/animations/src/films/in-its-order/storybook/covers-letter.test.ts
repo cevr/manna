@@ -19,7 +19,6 @@ describe("In Its Order's letter shot", () => {
         'cold-letter',
         [
           `${scroll} lead frames 20–23`,
-          `${scroll} lead frames 28–29`,
           `${scroll} diner-3 frames 21–23`,
           `${scroll} diner-3 frames 27–30`,
           `${scroll} diner-4 frames 21–31`,

@@ -4,8 +4,12 @@ import {
   hold,
   type Plate,
   type Span,
+  swapOf,
   turn,
+  wholeBlinkingHold,
 } from '../../../../library/storybook/shot.ts';
+import { CELLS as LEAD_TABLE } from '../../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
+import { BOTTLE, BOTTLE_BODY, BOTTLE_FOOT } from '../plates/bottle.ts';
 import { BABY_BACK, FAR_TABLE, TABLE } from '../../plates/plates.ts';
 import { SCROLL_OPEN, SCROLL_ROLLED } from '../../plates/props.ts';
 import { cam, holds, key, layer, plateOf, plateOn, seat, STORY_PLATES } from '../kit.ts';
@@ -293,6 +297,30 @@ const SCROLL_AT = [960, TABLE_TOP.y + TABLE_TOP.height] as const;
 /** How deep the open scroll lies on the table top, a share of its painted height: flat and seen from just above the table, its far roller over the top's back edge. */
 const SCROLL_LIES = 0.35;
 
+/** Where the lead sets the bottle down, layer px: on the table top, at his left hand (the viewer's right), clear of the open scroll's right end. */
+export const BOTTLE_AT = [1130, TABLE_TOP.y + TABLE_TOP.height / 2] as const;
+
+/** The cream body across of the bottle the lead holds in his table sheet's `bottle` cell, in its px (196 to 232). */
+export const HELD_BODY = 37;
+
+/** The bottle on the table from `at` s (the swap that empties his hand) to the shot's end, its cream body the width of the one he held: his table sheet's draw scale (`HEAD` over that cell's head) times that bottle's body across. */
+export const bottleSetDown = (at: number): Plate =>
+  plateOn(
+    'bottle.png',
+    BOTTLE,
+    BOTTLE_FOOT,
+    BOTTLE_AT,
+    (HEAD / LEAD_TABLE.bottle.head) * (HELD_BODY / BOTTLE_BODY),
+    {
+      dir: STORY_PLATES,
+      moves: [
+        [0, key({ alpha: 0 })],
+        [at, key({ alpha: 0 })],
+        [at, key({})],
+      ],
+    },
+  );
+
 /** The open scroll on the table top, its near roller on the top's front edge, moved by `moves`. */
 export const scrollLaid = (moves: NonNullable<Plate['moves']>): Plate =>
   plateOn('scroll-open.png', SCROLL_OPEN, [225, 368], SCROLL_AT, SCROLL, { moves });
@@ -335,6 +363,7 @@ export const coldLetter: FilmShot = {
     const hop = cue('hop');
     const unroll = cue('unroll');
     const { from, to } = LETTER;
+    const setDown = turn(cue('down').start, cue('down').end - cue('down').start, 'bottle', 'down');
     return {
       headPx: HEAD,
       camera: [
@@ -352,10 +381,11 @@ export const coldLetter: FilmShot = {
           ),
           leadAt([
             blinkingHold(0, cue('down').start, 'bottle', 'frontBlink'),
-            turn(cue('down').start, cue('down').end - cue('down').start, 'bottle', 'down'),
-            blinkingHold(cue('down').end, duration, 'down', 'downBlink'),
+            setDown,
+            wholeBlinkingHold(cue('down').end, duration, 'down', 'downBlink'),
           ]),
           table(),
+          bottleSetDown(swapOf(setDown)),
           plateOn('scroll-rolled.png', SCROLL_ROLLED, [214.5, 202], SCROLL_AT, SCROLL, {
             moves: [
               [fall.start, key({ y: -700, alpha: 0 })],

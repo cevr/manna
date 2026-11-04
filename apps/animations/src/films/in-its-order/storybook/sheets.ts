@@ -25,9 +25,12 @@ const standing: ReadonlyArray<string> = FILM_RULES;
 const blink = (of: string): string =>
   `exactly as the ${of} figure, every line the same, the eyes closed in a blink: each eye a short downward-curved ink line`;
 
-/** The lead's baby's bottle, as every key that holds it names it: his mantle's teal with a teat in his sandals' brown (a cream bottle, asked three times, snapped to his sash's paint and read as his sash's top). */
+/** The lead's baby's bottle's paint, his table sheet's prop, as his sheet draws it (asked as `BOTTLE` names it; a measured paint): a butter cream apart from his tunic's and his sash's creams (a bottle asked in a costume paint snapped to his sash and read as its top, critique 1, items 6 and 7). Its teat takes his skin: the tan drawn for it lies in his skin's own drawn grain, so a teat paint mottled his face and hands. */
+const BOTTLE_PROPS = [{ name: 'bottle', base: '#fcebb4', role: 'prop' }] as const;
+
+/** The lead's baby's bottle, as every key that holds it names it: one cream, its teat one tan, each its own paint. */
 const BOTTLE =
-  "a small baby's bottle painted exactly his mantle's teal #58767a, with a short rounded teat in brown #7a5236";
+  "a small plain baby's bottle painted exactly butter cream #f3e3a0, flat in that one colour, with a short rounded teat painted exactly tan #b98a5e";
 
 /** The small clay cup, in the member's footwear brown, milk in its pale paint inside. */
 const cup = (clay: string, milk: string): string =>
@@ -50,7 +53,19 @@ const SASH_ALONE =
 const HEMMED =
   'The robe or dress ends in one level hem at the same height in every figure, just above the ankles, the sandals and ankles showing below it, and nothing of the robe hangs between the feet.';
 
-/** The lead at the feast table (shots 2, 3 and the title): seated, the bottle up, then lowered. */
+/** The lead at the table with the bottle set down (critique 1, item 6): the first figure's head and body unchanged, only the eyes lowered to the table before him. */
+const TABLE_DOWN =
+  'seated on the stool exactly as in the first figure, the head held exactly as in the first figure, the same hair, ears, face and size, only the eyes lowered: the upper lids half down and the eyes looking down at the table in front of him, both round hands resting empty on the knees in their sleeves, no bottle, a small sheepish mouth';
+
+/** What the lead's table sheet asks of his sash and his bottle: the sash's pale cream on the sash alone, the bottle its own cream. */
+const TABLE_SASH =
+  "The sash's pale cream #eadcc2 is on the sash alone, and the tunic and its neckline are the tunic's warm cream #f2d8b7: the bottle is its own butter cream #f3e3a0, never the tunic's or the sash's.";
+
+/** What the lead's table sheet asks of his head in every figure (critique 1, items 6 and 16): the front reference's head, so a key swap changes only the face. */
+const TABLE_HEAD =
+  "Every figure's head is drawn exactly as in the front reference image and as in the first figure, at the same size: the hair his warm brown #6c432b, its plum shade #57384a only in the small undersides of a few curls, no flecks of it at the hairline, jaw or collar; the ears and the neck his skin #f2b27c; the round hands his skin #f2b27c, never cream. Only the eyes, the mouth and the held arm change from figure to figure.";
+
+/** The lead at the feast table (shots 2, 3 and the title): seated, the bottle up, then set down on the table (a plate), his eyes on it. */
 const leadTable: SheetDecl = {
   member: 'lead-feast',
   id: 'iio-table',
@@ -61,11 +76,12 @@ const leadTable: SheetDecl = {
     frontBlink: `seated ${blink('first')}`,
     lift: `seated on the stool exactly as in the first figure, the left hand (on the viewer's right) lifted in its sleeve to the chest holding ${BOTTLE} upright, the other hand on the knee, a hopeful smile`,
     bottle: `seated on the stool exactly as in the first figure, the left hand (on the viewer's right) raised in its sleeve beside the head holding up ${BOTTLE}, hopeful, eyes to the viewer, the other hand on the knee`,
-    down: LEAD_DOWN,
+    down: TABLE_DOWN,
     downBlink: `seated ${blink('fifth')}`,
   },
   refs: ['front', 'threeQuarterRight', 'poses-1'],
-  rules: [...seated('#7a5236'), SASH_ALONE],
+  rules: [...seated('#7a5236'), TABLE_SASH, TABLE_HEAD],
+  props: BOTTLE_PROPS,
 };
 
 /** What the lead's close asks of his head beyond `seated` (critique 1, item 4: drawn darker, the snap split his hair between its shade and the sandals' brown): the hair, ears and neck as the front reference draws them. */
@@ -177,7 +193,7 @@ const diner = (n: 1 | 2 | 3 | 4, side: 'right' | 'left'): SheetDecl => ({
 });
 
 /** The older man's open talking mouth, as his sheet draws it (a measured paint): the diners' palette has no red, so his mouth snapped toward the walnut mantle and he could not talk (critique 1, item 17). */
-const DINER_MOUTH = { name: 'open mouth', base: '#b6502e', role: 'other' } as const;
+const DINER_MOUTH = { name: 'open mouth', base: '#b6502e', role: 'prop' } as const;
 
 /** The grown villager on the parchment (`milk-cup` to `milk-row`): five keys, the cup in every one. */
 const villagerMilk: SheetDecl = {
