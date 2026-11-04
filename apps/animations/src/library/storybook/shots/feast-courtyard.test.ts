@@ -343,12 +343,12 @@ const inkIn = (r: Raster, rect: Rect, ink: Rgb): number => {
 };
 
 describe('the feast courtyard as drawn', () => {
-  test("reads frame 17's man against the lead's side cell read at its sheet's size, 151 of his sheet's 158, where the render read his head 189 for 146 (round 2), and every frame within the scale bar", () => {
+  test("reads frame 17's man against the lead's side cell read at its sheet's size, 151 of his sheet's 158, where the render read his head 189 for 146 (round 2), his turn frames (head column unread) from crown-to-soles and named so, and every frame within the scale bar", () => {
     const planned = timesOf(feastCourtyard).map((t, index) => ({
       index,
       frame: frameAt(feastCourtyard, heads, t),
     }));
-    const scaled = figures.map((f) => ({ name: f.figure.name, z: f.layer.z, heads: f.heads }));
+    const scaled = figures.map((f) => ({ name: f.figure.name, z: f.layer.z, lines: f.lines }));
     const [lead, man] = [byName.get('lead'), byName.get('man')];
     expect([lead?.heads.get('side'), lead?.head, man?.heads.get('neutral'), man?.head]).toEqual([
       Option.some(151),
@@ -356,7 +356,17 @@ describe('the feast courtyard as drawn', () => {
       Option.some(303),
       303,
     ]);
-    const samples = scaleSamples(planned, scaled, 'lead');
+    const { samples, fallbacks } = scaleSamples(planned, scaled, 'lead');
+    const turns = planned.flatMap(({ index, frame }) =>
+      frame.figures
+        .filter((f) => f.name === 'man' && f.cell === 'turn')
+        .map(
+          () =>
+            `man frame ${index} (turn: head unread, from crown-to-soles; lead ${frame.figures.find((l) => l.name === 'lead')?.cell})`,
+        ),
+    );
+    expect([man?.heads.get('turn'), turns.length > 0]).toEqual([Option.none(), true]);
+    expect(fallbacks).toEqual(turns);
     const at17 = samples.find((s) => s.at.startsWith('man frame 17 '));
     expect(at17?.at).toBe('man frame 17 (neutral; lead side)');
     expect(Option.getOrElse(at17?.value ?? Option.none(), () => -1)).toBeCloseTo(158 / 151, 9);

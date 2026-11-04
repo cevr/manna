@@ -25,6 +25,7 @@ import {
   pocketCount,
   proportionSamples,
   readFigure,
+  scaleInfo,
   scaleSamples,
   stepSamples,
 } from './measures.ts';
@@ -374,16 +375,18 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
   const differing = first.hashes.filter((h, k) => h !== second[k]).length;
   const used = usedCells(planned);
   const stores = yield* storeMeasures(figures, used);
+  const scale = scaleSamples(
+    planned,
+    figures.map((f) => ({ name: f.figure.name, z: f.layer.z, lines: f.lines })),
+    leadOf(figures),
+  );
+  const info = [...infoOf(figures), ...scaleInfo(scale)];
   const measured: Measured = {
     palette: stores.palette,
     pockets: stores.pockets,
     'colour-step': stepSamples(planned, litMedians(shot, figures, planned)),
     proportions: stores.proportions,
-    scale: scaleSamples(
-      planned,
-      figures.map((f) => ({ name: f.figure.name, z: f.layer.z, heads: f.heads })),
-      leadOf(figures),
-    ),
+    scale: scale.samples,
     'one-sheet': stores.oneSheet,
     light: lightSamples(first.reads),
     'render-height': heightSamples(first.reads),
@@ -410,7 +413,7 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
     frames: Object.fromEntries(first.colour),
     set: platesOf(shot).map((p) => ({ file: p.file, testArt: p.testArt })),
   });
-  yield* fs.writeFileString(`${out}/verdict.md`, verdictText(verdict, infoOf(figures)));
+  yield* fs.writeFileString(`${out}/verdict.md`, verdictText(verdict, info));
   yield* fs.writeFileString(
     `${out}/verdict.json`,
     `${yield* Schema.encodeEffect(VerdictJson)(verdict)}\n`,
@@ -418,5 +421,5 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
   yield* fs.writeFileString(`${out}/manifest.json`, `${manifest}\n`);
   yield* contactSheet(shot, planned, out);
   yield* encodeClip(`${out}/frames`, shot.fps / every, `${out}/shot.mp4`);
-  return { verdict, info: infoOf(figures) };
+  return { verdict, info };
 });

@@ -529,11 +529,17 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   `verify/bars.ts`: `verdict.md` opens `PASS n/n pass` or `FAIL k/n pass`;
   beside it `verdict.json`, `manifest.json`, `contact.png`, `shot.mp4`,
   `frames/` and `figures/`. It exits 0 only on PASS n/n. A head (crown to
-  the collar: the first run of clothes in the head column that skin does
-  not close below, so a jaw line drawn in a garment's colour is not the
-  collar) is read once on each stored cell at its sheet's own size; the
-  `scale` bar reads those heads as the plan draws them in every frame, not
-  from renders, with each squash and no breath. The `colour-step` bar also
+  the collar: the first run of clothes in the head column that the face's
+  own skin, 4-connected, does not close below, so a jaw line drawn in a
+  garment's colour is not the collar; skin below that does not join the
+  face leaves the column ambiguous, and the head reads none) is read once
+  on each stored cell at its sheet's own size; the `scale` bar reads those
+  heads as the plan draws them in every frame, not from renders, with each
+  squash and no breath. A cell whose head reads none is read at its sheet's
+  head × its own crown-to-soles over the sheet's median crown-to-soles
+  (both over the cells that read a head), and each such frame is named in
+  its sample and on an `INFO scale fallback:` line of `verdict.md`; a cell
+  whose crown and soles do not read either stays unread. The `colour-step` bar also
   reads cells, not renders: each drawn key's cell (or blink) lit by the
   shot's light, at every change of drawn key in the plan, where every colour
   is the one drawn and no resampling has blended an edge; the `light` bar

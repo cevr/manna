@@ -252,12 +252,65 @@ export const stepSamples = (
   );
 };
 
-/** A figure the scale bar reads: its name, its layer's depth, and each stored cell's head (crown to collar) read once at its sheet's own size, none where the cell's anatomy reads none. */
+/** A figure the scale bar reads: its name, its layer's depth, and each stored cell's lines read once at its sheet's own size, none where the cell's anatomy reads none. */
 export interface ScaledFigure {
   readonly name: string;
   readonly z: number;
-  readonly heads: ReadonlyMap<string, Option.Option<number>>;
+  readonly lines: ReadonlyMap<string, Option.Option<Lines>>;
 }
+
+/** What the scale bar read: a sample per guest per planned frame, and the place of each sample that read a cell from its crown-to-soles. */
+export interface ScaleRead {
+  readonly samples: Samples;
+  readonly fallbacks: ReadonlyArray<string>;
+}
+
+/** How a sample names a cell whose head column reads none, read from its crown-to-soles. */
+const FROM_HEIGHT = 'head unread, from crown-to-soles';
+
+/** A cell's head at its sheet's size, and whether it was read from the cell's crown-to-soles. */
+interface CellHead {
+  readonly head: number;
+  readonly fromHeight: boolean;
+}
+
+/**
+ * A figure's cell heads: the cell's own head where its head column reads
+ * one; else, where its crown and soles read, its sheet's head × its
+ * crown-to-soles over its sheet's median crown-to-soles, both medians over
+ * the cells that read a head. None where its lines read none, or its sheet
+ * reads no head.
+ */
+const cellHeadsOf = (f: ScaledFigure) => {
+  const read = [...f.lines.values()].flatMap((l) =>
+    Option.toArray(Option.filter(l, (x) => Option.isSome(x.head))),
+  );
+  const sheet = Option.all([
+    medianOf(read.flatMap((l) => Option.toArray(l.head))),
+    medianOf(read.map(heightOf)),
+  ]);
+  return (cell: string): Option.Option<CellHead> =>
+    Option.flatMap(Option.flatten(Option.fromUndefinedOr(f.lines.get(cell))), (l) =>
+      Option.match(l.head, {
+        onSome: (head): Option.Option<CellHead> => Option.some({ head, fromHeight: false }),
+        onNone: () =>
+          Option.map(sheet, ([head, height]): CellHead => ({
+            head: (head * heightOf(l)) / height,
+            fromHeight: true,
+          })),
+      }),
+    );
+};
+
+/** A cell's name in a sample, with the fallback named when its head was read from its crown-to-soles. */
+const cellAt = (cell: string, read: Option.Option<CellHead>): string => {
+  if (Option.exists(read, (r) => r.fromHeight)) return `${cell}: ${FROM_HEIGHT}`;
+  return cell;
+};
+
+/** The INFO lines verdict.md carries for the scale bar: each frame read from crown-to-soles, one line each. */
+export const scaleInfo = (read: ScaleRead): ReadonlyArray<string> =>
+  read.fallbacks.map((at) => `scale fallback: ${at}`);
 
 /** One planned frame: its index among the shot's frames, and the frame. */
 export interface PlannedFrame {
@@ -270,35 +323,50 @@ export interface PlannedFrame {
  * draws them: its cell's head at its sheet's size × its draw scale × its
  * plane's zoom (zoom^(1/z)) × its squash up, over the lead's drawn so × 1/z
  * × zoom^(1/z) ÷ zoom (z its depth, zoom the camera's). No render is read,
- * so a frame that cuts a figure off or resamples it reads the same. Unread
- * where its cell's head or the lead's was not read.
+ * so a frame that cuts a figure off or resamples it reads the same. A cell
+ * whose head column reads none is read from its crown-to-soles
+ * (`cellHeadsOf`), named so in its sample and in the fallbacks. Unread where
+ * its cell's head or the lead's was read neither way.
  */
 export const scaleSamples = (
   planned: ReadonlyArray<PlannedFrame>,
   figures: ReadonlyArray<ScaledFigure>,
   lead: string,
-): Samples => {
-  const byName = new Map(figures.map((f) => [f.name, f] as const));
-  return planned.flatMap(({ index, frame }): Samples => {
+): ScaleRead => {
+  const byName = new Map(figures.map((f) => [f.name, { z: f.z, headOf: cellHeadsOf(f) }] as const));
+  const read = planned.flatMap(({ index, frame }) => {
     const zoom = frame.camera.zoom;
-    const drawn = (f: FigureFrame): Option.Option<number> => {
+    const headOf = (f: FigureFrame): Option.Option<CellHead> =>
+      Option.flatMap(Option.fromUndefinedOr(byName.get(f.name)), (b) => b.headOf(f.cell));
+    const drawn = (f: FigureFrame, h: CellHead): number => {
       const z = byName.get(f.name)?.z ?? 1;
-      const head = Option.flatten(Option.fromUndefinedOr(byName.get(f.name)?.heads.get(f.cell)));
-      return Option.map(head, (h) => h * f.scale * zoom ** (1 / z) * f.sy);
+      return h.head * f.scale * zoom ** (1 / z) * f.sy;
     };
     const ref = frame.figures.find((f) => f.name === lead);
     if (!ref) return [];
+    const theirs = headOf(ref);
     return frame.figures
       .filter((f) => f.name !== lead)
-      .map((f): Sample => {
+      .map((f) => {
         const z = byName.get(f.name)?.z ?? 1;
+        const mine = headOf(f);
+        const both = Option.all([mine, theirs]);
+        const fromHeight = Option.exists(both, ([m, t]) => m.fromHeight || t.fromHeight);
         const at = `${f.name} frame ${index} (${f.cell}; ${lead} ${ref.cell})`;
-        return Option.match(Option.all([drawn(f), drawn(ref)]), {
-          onNone: () => unreadAt(`${at}: no head read in its cell or the lead's`),
-          onSome: ([mine, theirs]) => one(at, mine / (theirs * (1 / z) * (zoom ** (1 / z) / zoom))),
+        const named = `${f.name} frame ${index} (${cellAt(f.cell, mine)}; ${lead} ${cellAt(ref.cell, theirs)})`;
+        const sample = Option.match(both, {
+          onNone: () =>
+            unreadAt(`${at}: no head, nor crown and soles, read in its cell or the lead's`),
+          onSome: ([m, t]) =>
+            one(named, drawn(f, m) / (drawn(ref, t) * (1 / z) * (zoom ** (1 / z) / zoom))),
         });
+        return { sample, fromHeight };
       });
   });
+  return {
+    samples: read.map((r) => r.sample),
+    fallbacks: read.filter((r) => r.fromHeight).map((r) => r.sample.at),
+  };
 };
 
 /** Each figure's crown-to-soles height over its plane zoom, over its whole unsquashed frames: (max − min) over the median. */
