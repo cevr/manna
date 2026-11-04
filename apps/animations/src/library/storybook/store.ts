@@ -84,7 +84,12 @@ export const SheetRecord = Schema.Struct({
 export type SheetRecord = typeof SheetRecord.Type;
 
 /** The split rules a sheet drawn now is split under, and its record names: all of them. */
-export const DRAWN_RULES: SplitRules = { unstray: true, feetLow: true, unmottle: true };
+export const DRAWN_RULES: SplitRules = {
+  unstray: true,
+  feetLow: true,
+  unmottle: true,
+  sashBand: true,
+};
 
 /** The split rules a stored sheet re-splits under, as its record names them. */
 export const splitRulesOf = (record: SheetRecord): SplitRules => {
@@ -93,6 +98,7 @@ export const splitRulesOf = (record: SheetRecord): SplitRules => {
     unstray: named.has('unstray'),
     feetLow: named.has('feet-low'),
     unmottle: named.has('unmottle'),
+    sashBand: named.has('sash-band'),
   };
 };
 
@@ -100,7 +106,12 @@ export const splitRulesOf = (record: SheetRecord): SplitRules => {
 const ruleNamesOf = (rules: SplitRules): ReadonlyArray<(typeof SPLIT_RULES)[number]> =>
   SPLIT_RULES.filter(
     (name) =>
-      ({ unstray: rules.unstray, 'feet-low': rules.feetLow, unmottle: rules.unmottle })[name],
+      ({
+        unstray: rules.unstray,
+        'feet-low': rules.feetLow,
+        unmottle: rules.unmottle,
+        'sash-band': rules.sashBand,
+      })[name],
   );
 
 export const RecordJson = Schema.fromJsonString(SheetRecord, { space: 2 });

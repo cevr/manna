@@ -22,6 +22,7 @@ import {
   type Rgb,
   PLAIN_SPLIT,
   PROP_FLECK_PX,
+  SASH_FLECK_SHARE,
   SHADE_REACH,
   SKIN_REACH,
   strayShadeShare,
@@ -860,6 +861,52 @@ describe('tidied under unmottle', () => {
   });
 });
 
+describe('tidied under sash-band', () => {
+  /** A 120 × 40 cell of tunic: a 60 × 8 sash band at (10, 28) and a `fleck` px block of sash (two rows) at (40, 6). */
+  const cell = (fleck: number): Raster => {
+    const [width, height] = [120, 40];
+    const rgba = new Uint8Array(width * height * 4);
+    for (let q = 0; q < width * height; q++) {
+      const [x, y] = [q % width, Math.floor(q / width)];
+      const band = x >= 10 && x < 70 && y >= 28 && y < 36;
+      const spot = x >= 40 && x < 40 + fleck / 2 && y >= 6 && y < 8;
+      const paints: ReadonlyArray<Rgb> = [
+        [242, 216, 183],
+        [234, 220, 194],
+      ];
+      const paint: Rgb = paints[Number(band || spot)] ?? [0, 0, 0];
+      rgba.set([...paint, 255], q * 4);
+    }
+    return { width, height, rgba };
+  };
+  const palette: Palette = {
+    ink: '#130803',
+    parts: [
+      { name: 'tunic', base: '#f2d8b7', role: 'garment' },
+      { name: 'sash', base: '#eadcc2', role: 'sash' },
+    ],
+  };
+  const sashPx = (fleck: number, sashBand: boolean) => {
+    const drawn = cell(fleck);
+    const paints = paintsOf(palette);
+    const nearest = drawnNearestOf(drawn, paints);
+    const out = tidied(drawn, snapped(drawn, paints, nearest), paints, nearest, {
+      ...PLAIN_SPLIT,
+      sashBand,
+    });
+    return Array.from({ length: out.width * out.height }, (_, q) => q).filter(
+      (q) => hexOf(rgbAt(out, q)) === '#eadcc2',
+    ).length;
+  };
+
+  test('gives each fleck of a sash paint up to SASH_FLECK_SHARE of its band the paint round it and keeps the band and a larger piece; a plain split keeps the fleck (his tunic’s light cloth at the neckline read as the lead’s sash top, critique 1, items 6 and 7)', () => {
+    const band = 60 * 8;
+    expect(sashPx(40, true)).toBe(band);
+    expect(sashPx(band * SASH_FLECK_SHARE + 2, true)).toBe(band + band * SASH_FLECK_SHARE + 2);
+    expect(sashPx(40, false)).toBe(band + 40);
+  });
+});
+
 describe('tidied with a prop', () => {
   /** A 120 × 30 cell of `garment` with an 11 × 11 block of `prop` at its left and, apart from it, `fleck` px of `prop` in a row. */
   const cell = (garment: Rgb, prop: Rgb, fleck: number): Raster => {
@@ -897,6 +944,57 @@ describe('tidied with a prop', () => {
     expect(propPx('prop', PROP_FLECK_PX)).toBe(121);
     expect(propPx('prop', PROP_FLECK_PX + 1)).toBe(121 + PROP_FLECK_PX + 1);
     expect(propPx('other', 40)).toBe(121 + 40);
+  });
+
+  /**
+   * A 100 × 40 cell of tunic: a 30 × 24 bottle at (10, 8) holding a 26 × 4
+   * band of sash at (12, 14) with a 6 × 3 skin teat on its top edge, and a
+   * 6 × 6 skin hand at (22, 24); a 20 × 4 band of sash on the tunic at
+   * (60, 18). Answers each region's paint after the split as hexes.
+   */
+  const heldCell = (role: 'prop' | 'other') => {
+    const sash: Rgb = [234, 220, 194];
+    const skin: Rgb = [242, 178, 124];
+    const [width, height] = [100, 40];
+    const rgba = new Uint8Array(width * height * 4);
+    const inBox = (x: number, y: number, [bx, by, bw, bh]: readonly number[]) =>
+      x >= (bx ?? 0) && x < (bx ?? 0) + (bw ?? 0) && y >= (by ?? 0) && y < (by ?? 0) + (bh ?? 0);
+    const regions: ReadonlyArray<readonly [readonly number[], Rgb]> = [
+      [[60, 18, 20, 4], sash],
+      [[22, 24, 6, 6], skin],
+      [[18, 11, 6, 3], skin],
+      [[12, 14, 26, 4], sash],
+      [[10, 8, 30, 24], prop],
+    ];
+    for (let q = 0; q < width * height; q++) {
+      const [x, y] = [q % width, Math.floor(q / width)];
+      const hit = regions.find(([box]) => inBox(x, y, box));
+      rgba.set([...(hit?.[1] ?? garment), 255], q * 4);
+    }
+    const drawn = { width, height, rgba };
+    const paints = paintsOf({
+      ink: '#130803',
+      parts: [
+        { name: 'tunic', base: hexOf(garment), role: 'garment' },
+        { name: 'sash', base: hexOf(sash), role: 'sash' },
+        { name: 'skin', base: hexOf(skin), role: 'skin' },
+        { name: 'bottle', base: hexOf(prop), role },
+      ],
+    });
+    const nearest = drawnNearestOf(drawn, paints);
+    const out = tidied(drawn, snapped(drawn, paints, nearest), paints, nearest);
+    const at = (x: number, y: number) => hexOf(rgbAt(out, y * width + x));
+    return { band: at(25, 16), tunicSash: at(70, 20), hand: at(24, 26), teat: at(19, 12) };
+  };
+
+  test('gives a costume band drawn inside a prop, its rim mostly the prop, the prop’s paint; a sash band on the tunic and a hand on the prop keep theirs; a palette with no prop keeps the band (the bottle’s collar read as the lead’s sash top, critique 1, items 6 and 7)', () => {
+    expect(heldCell('prop')).toEqual({
+      band: hexOf(prop),
+      tunicSash: '#eadcc2',
+      hand: '#f2b27c',
+      teat: '#f2b27c',
+    });
+    expect(heldCell('other').band).toBe('#eadcc2');
   });
 });
 

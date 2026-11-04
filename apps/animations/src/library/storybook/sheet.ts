@@ -840,12 +840,18 @@ export const PROP_FLECK_PX = 60;
  * 4-connected island of a prop paint, `PROP_FLECK_PX` pixels or fewer,
  * takes the paint most of its rim is, as a speck does, or the ink where
  * its rim is all ink; a figure's light fringe drawn near a prop's colour
- * stays the figure's (critique 1, items 6 and 7). A palette with no prop is
- * left as it is.
+ * stays the figure's (critique 1, items 6 and 7). Then each 4-connected
+ * island of a costume paint (garment, sash or other) smaller than the prop
+ * whose painted rim is mostly prop paint takes the prop paint most of that
+ * rim is (`withinProps`): a band drawn on
+ * the prop in a shade near the costume's (the bottle's collar, near his
+ * sash's cream) is the prop's, and never reads as the costume's line. A
+ * palette with no prop is left as it is.
  */
 const propsWhole = (map: Int32Array, width: number, paints: ReadonlyArray<Paint>): Int32Array => {
+  const prop = (index: number) => paints[index]?.role === 'prop';
   const fleck = (index: number) => {
-    if (paints[index]?.role === 'prop') return PROP_FLECK_PX;
+    if (prop(index)) return PROP_FLECK_PX;
     return 0;
   };
   const taken = islandsTaken(map, width, fleck);
@@ -855,7 +861,63 @@ const propsWhole = (map: Int32Array, width: number, paints: ReadonlyArray<Paint>
     const island = islandAt(taken, width, q, seen);
     if (island.length <= fleck(taken[q] ?? CLEAR)) for (const p of island) taken[p] = 0;
   }
-  return taken;
+  return withinProps(taken, width, paints);
+};
+
+/** The roles whose islands a prop may hold inside it as a band of its own drawing. */
+const HELD_IN_PROP: ReadonlyArray<Role> = ['garment', 'sash', 'other'];
+
+/** `map` with each island of a `HELD_IN_PROP` paint whose painted rim (ink and clear not counted) is more than half prop paint, and which holds fewer pixels than the cell paints in that prop's paint, repainted in the prop paint most of that rim is: a band inside the prop, never the costume round it. */
+const withinProps = (map: Int32Array, width: number, paints: ReadonlyArray<Paint>): Int32Array => {
+  if (!paints.some((p) => p.role === 'prop')) return map;
+  const drawnPx = new Map<number, number>();
+  for (const index of map) drawnPx.set(index, (drawnPx.get(index) ?? 0) + 1);
+  const out = map.slice();
+  const seen = new Uint8Array(map.length);
+  for (let q = 0; q < map.length; q++) {
+    const index = map[q] ?? CLEAR;
+    if (seen[q] === 1 || index <= 0) continue;
+    const island = islandAt(map, width, q, seen);
+    if (!HELD_IN_PROP.some((role) => role === paints[index]?.role)) continue;
+    const prop = Option.filter(
+      heldBy(rimVotes(map, width, island), paints),
+      (p) => island.length < (drawnPx.get(p) ?? 0),
+    );
+    if (Option.isSome(prop)) for (const p of island) out[p] = prop.value;
+  }
+  return out;
+};
+
+/** The painted pixels round an island (ink and clear not counted), by paint: how many of the island's 4-neighbours outside it each paint holds. */
+const rimVotes = (
+  map: Int32Array,
+  width: number,
+  island: ReadonlyArray<number>,
+): ReadonlyArray<readonly [number, number]> => {
+  const inside = new Set(island);
+  const votes = new Map<number, number>();
+  for (const p of island)
+    for (const m of around4(p, width, map.length / width)) {
+      const at = map[m] ?? CLEAR;
+      if (inside.has(m) || at <= 0) continue;
+      votes.set(at, (votes.get(at) ?? 0) + 1);
+    }
+  return [...votes];
+};
+
+/** The prop paint most of a rim is, when prop paints are more than half of it; none otherwise. */
+const heldBy = (
+  rim: ReadonlyArray<readonly [number, number]>,
+  paints: ReadonlyArray<Paint>,
+): Option.Option<number> => {
+  const props = rim.filter(([i]) => paints[i]?.role === 'prop');
+  const total = (of: ReadonlyArray<readonly [number, number]>) =>
+    of.reduce((sum, [, n]) => sum + n, 0);
+  if (total(props) * 2 <= total(rim)) return Option.none();
+  return Option.map(
+    Option.fromUndefinedOr(props.toSorted((a, b) => b[1] - a[1] || a[0] - b[0])[0]),
+    ([i]) => i,
+  );
 };
 
 /** The most pixels a 4-connected island of skin shade holds for the split to read it as a blotch of the drawing's grain on the skin, not a shading: the lead's redrawn table sheet draws them up to 74 px across his face, his sheets before it 4 px at most. */
@@ -873,6 +935,30 @@ const unmottled = (map: Int32Array, width: number, paints: ReadonlyArray<Paint>)
     if (p?.role === 'skin' && p.tone === 'shade') return MOTTLE_PX;
     return 0;
   });
+
+/** The share of a cell's largest island of a sash paint at or below which another island of that paint reads as a fleck of the drawing's light cloth, not the band: the lead's redrawn table sheet draws such flecks at his neckline at 25 to 41 px, against pieces of the band of 400 px and more. */
+export const SASH_FLECK_SHARE = 0.1;
+
+/**
+ * The map with the sash's flecks gone (critique 1, items 6 and 7: a fleck
+ * of his tunic's light cloth at the neckline read as the sash's top): each
+ * 4-connected island of a sash paint holding `SASH_FLECK_SHARE` or less of
+ * that paint's largest island in the cell takes the paint most of its rim
+ * is, as a speck does.
+ */
+const sashBanded = (map: Int32Array, width: number, paints: ReadonlyArray<Paint>): Int32Array => {
+  const largest = new Map<number, number>();
+  const seen = new Uint8Array(map.length);
+  for (let q = 0; q < map.length; q++) {
+    const index = map[q] ?? CLEAR;
+    if (seen[q] === 1 || index <= 0 || paints[index]?.role !== 'sash') continue;
+    const n = islandAt(map, width, q, seen).length;
+    largest.set(index, Math.max(largest.get(index) ?? 0, n));
+  }
+  return islandsTaken(map, width, (index) =>
+    Math.floor((largest.get(index) ?? 0) * SASH_FLECK_SHARE),
+  );
+};
 
 /** The map with each 4-connected island of one paint other than ink, `most(paint)` pixels or fewer, given the paint most of its distinct rim pixels are (the ink, clear and drawn pixels not counted; the lower index of equals); an island whose rim holds no such paint stays. */
 const islandsTaken = (
@@ -1062,7 +1148,11 @@ export const tidiedReport = (
     if (!rules.unmottle) return m;
     return unmottled(m, drawn.width, paints);
   };
-  const final = propsWhole(smooth(skinned), drawn.width, paints);
+  const banded = (m: Int32Array) => {
+    if (!rules.sashBand) return m;
+    return sashBanded(m, drawn.width, paints);
+  };
+  const final = propsWhole(banded(smooth(skinned)), drawn.width, paints);
   const rgba = snap.rgba.slice();
   let skinFar = 0;
   for (let q = 0; q < final.length; q++) {
@@ -1112,17 +1202,23 @@ export interface Split {
 }
 
 /** The opt-in split rules by the names a sheet's record gives them. */
-export const SPLIT_RULES = ['unstray', 'feet-low', 'unmottle'] as const;
+export const SPLIT_RULES = ['unstray', 'feet-low', 'unmottle', 'sash-band'] as const;
 
-/** The split's rules a sheet opts into, as its record names them: `unstray`, each stray hair shade its neighbours' paint (`unstrayed`); `feetLow` (`feet-low`), the footwear paint only in the figure's lower half (`feetLowOnly`); `unmottle`, each blotch of skin shade inside the skin its base (`unmottled`). */
+/** The split's rules a sheet opts into, as its record names them: `unstray`, each stray hair shade its neighbours' paint (`unstrayed`); `feetLow` (`feet-low`), the footwear paint only in the figure's lower half (`feetLowOnly`); `unmottle`, each blotch of skin shade inside the skin its base (`unmottled`); `sashBand` (`sash-band`), each fleck of a sash paint far smaller than its band the paint round it (`sashBanded`). */
 export interface SplitRules {
   readonly unstray: boolean;
   readonly feetLow: boolean;
   readonly unmottle: boolean;
+  readonly sashBand: boolean;
 }
 
 /** The split as sheets drawn before any opt-in rule were split. */
-export const PLAIN_SPLIT: SplitRules = { unstray: false, feetLow: false, unmottle: false };
+export const PLAIN_SPLIT: SplitRules = {
+  unstray: false,
+  feetLow: false,
+  unmottle: false,
+  sashBand: false,
+};
 
 /** A drawn sheet split into `n` cells: the background cleared, the cells cut, each kept to its largest piece, its pockets mended and its paints snapped to `palette`, each colour to the paint the whole sheet draws it as (`drawnNearestOf`), its drawing's own marks tidied under `rules` (`tidied`), its face's marks inked (`inkedFaceMarks`) and its rim peeled. */
 export const splitSheet = (
