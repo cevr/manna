@@ -1219,8 +1219,11 @@ interface MarkBox {
  * skin ringed in ink, a pair of brows, a pair of eyes (open ovals, or closed
  * bars two rows deep), a mouth, a robe below. The face sits `dx`, `dy` off
  * its place; `lower` paints each open eye's lower half (critique 2, item 2);
- * `cheek` adds a robe patch on the face with no ink in it. Answers the
- * picture, its face's inside and each eye's pixels.
+ * `cheek` adds a robe patch on the face with no ink in it. Its `look` sets
+ * the eyes `near` the face's sides (a skin pixel between each eye and the
+ * ring), a `hood` of robe right beside the face, and the `reach` of a
+ * closed eye's half width. Answers the picture, its face's inside and each
+ * eye's pixels.
  */
 const FACE_W = 90;
 interface FaceBox {
@@ -1229,17 +1232,24 @@ interface FaceBox {
   readonly fw: number;
   readonly fh: number;
   readonly height: number;
+  readonly hood: boolean;
 }
-/** The paint of the figure's body at a pixel, before any mark: ink hair above, the ringed skin face, the ringed robe below; none off the figure. */
+/** How a generated face is drawn past its marks: its eyes near its sides or in their places, a hood beside it or none, and the half width a closed eye reaches. */
+interface Look {
+  readonly near: boolean;
+  readonly hood: boolean;
+  readonly reach: number;
+}
+const PLAIN: Look = { near: false, hood: false, reach: 5 };
+/** The paint of the figure's body at a pixel, before any mark: ink hair above, the ringed skin face, a robe hood beside it when it wears one, the ringed robe below; none off the figure. */
 const bodyPaintAt = (b: FaceBox, x: number, y: number): Option.Option<Rgb> => {
   if (x < 4 || x >= FACE_W - 4) return Option.none();
   if (y < b.fy) return Option.liftPredicate(INK, () => x >= b.fx && x < b.fx + b.fw);
   if (y < b.fy + b.fh) {
     const edge = x === b.fx || x === b.fx + b.fw - 1 || y === b.fy || y === b.fy + b.fh - 1;
-    return Option.liftPredicate(
-      [SKIN, INK][Number(edge)] ?? SKIN,
-      () => x >= b.fx && x < b.fx + b.fw,
-    );
+    const onFace = x >= b.fx && x < b.fx + b.fw;
+    if (!onFace) return Option.liftPredicate(ROBE, () => b.hood);
+    return Option.some([SKIN, INK][Number(edge)] ?? SKIN);
   }
   const edge = x === 4 || x === FACE_W - 5 || y === b.fy + b.fh || y === b.height - 1;
   return Option.some([ROBE, INK][Number(edge)] ?? ROBE);
@@ -1253,6 +1263,7 @@ const faceFigure = (
     readonly lower: Rgb;
     readonly cheek: boolean;
   },
+  look: Look = PLAIN,
 ) => {
   const int = (a: number, b: number) => a + Math.floor(draw() * (b - a + 1));
   const [fx, fy, fw, fh] = [20 + o.dx, 4 + o.dy, int(44, 56), int(44, 56)];
@@ -1260,7 +1271,7 @@ const faceFigure = (
   const rgba = new Uint8Array(FACE_W * height * 4);
   const put = (x: number, y: number, c: Rgb) => rgba.set([...c, 255], (y * FACE_W + x) * 4);
   const inside = new Set<number>();
-  const body = { fx, fy, fw, fh, height };
+  const body = { fx, fy, fw, fh, height, hood: look.hood };
   for (let y = 0; y < height; y++)
     for (let x = 0; x < FACE_W; x++)
       Option.map(bodyPaintAt(body, x, y), (c) => {
@@ -1276,15 +1287,26 @@ const faceFigure = (
       }
     return px;
   };
-  const [cl, cr] = [fx + Math.floor(fw * 0.3) + int(-1, 1), fx + Math.floor(fw * 0.7) + int(-1, 1)];
+  const centres = (): readonly [number, number] => {
+    if (look.near) return [fx + 5 + int(0, 2), fx + fw - 6 - int(0, 2)];
+    return [fx + Math.floor(fw * 0.3) + int(-1, 1), fx + Math.floor(fw * 0.7) + int(-1, 1)];
+  };
+  const [cl, cr] = centres();
   for (const c of [cl, cr]) {
     const w = int(3, 4);
-    mark({ x0: c - w, y0: fy + 6, x1: c + w, y1: fy + 7 }, () => INK);
+    mark(
+      { x0: Math.max(c - w, fx + 2), y0: fy + 6, x1: Math.min(c + w, fx + fw - 3), y1: fy + 7 },
+      () => INK,
+    );
   }
   const eyes = [cl, cr].map((c) => {
     if (o.closed) {
-      const w = int(3, 5);
-      const b = { x0: c - w, y0: fy + 15, x1: c + w, y1: fy + 16 };
+      const w = int(3, look.reach);
+      const mid = fx + (fw >> 1);
+      const left = c < mid;
+      const lo = [mid + 1, fx + 2][Number(left)] ?? fx + 2;
+      const hi = [fx + fw - 3, mid - 1][Number(left)] ?? mid - 1;
+      const b = { x0: Math.max(c - w, lo), y0: fy + 15, x1: Math.min(c + w, hi), y1: fy + 16 };
       return { box: b, px: mark(b, () => INK) };
     }
     const [w, h] = [int(1, 3), int(3, 5)];
@@ -1327,17 +1349,26 @@ describe('inkedFaceMarks (critique 2, item 2)', () => {
 describe('blinkOf (critique 2, items 3 and 4)', () => {
   const paints = paintsOf(DRESSED);
 
-  test('over generated faces and blink drawings set off from them: each open eye painted out in the face skin and the drawing nearest closed eye stamped centred on it, every other pixel the open cell', () => {
+  test('over generated faces and blink drawings set off from them, eyes in place or near the face sides, a hood beside the face or none, closed eyes up to 19 px wide: each open eye painted out in the face skin and the drawing nearest closed eye stamped centred on it on the face only, every other pixel the open cell', () => {
     for (let seed = 1; seed <= 60; seed++) {
       const draw = rng(seed);
-      const open = faceFigure(draw, { closed: false, dx: 0, dy: 0, lower: INK, cheek: false });
-      const shut = faceFigure(rng(seed + 1000), {
-        closed: true,
-        dx: Math.floor(draw() * 9) - 4,
-        dy: Math.floor(draw() * 5) - 2,
-        lower: INK,
-        cheek: false,
-      });
+      const look = { near: draw() < 0.5, hood: draw() < 0.5, reach: 5 + Math.floor(draw() * 5) };
+      const open = faceFigure(
+        draw,
+        { closed: false, dx: 0, dy: 0, lower: INK, cheek: false },
+        { ...look, reach: 5 },
+      );
+      const shut = faceFigure(
+        rng(seed + 1000),
+        {
+          closed: true,
+          dx: Math.floor(draw() * 9) - 4,
+          dy: Math.floor(draw() * 5) - 2,
+          lower: INK,
+          cheek: false,
+        },
+        { ...look, near: false },
+      );
       const want = new Uint8Array(open.raster.rgba);
       for (const [i, eye] of open.eyes.entries()) {
         for (const q of eye.px) want.set(SKIN, q * 4);
@@ -1352,6 +1383,51 @@ describe('blinkOf (critique 2, items 3 and 4)', () => {
       const got = Result.map(blinkOf(open.raster, shut.raster, paints), (r) => [...r.rgba].join());
       expect([seed, got]).toEqual([seed, Result.succeed([...want].join())]);
     }
+  });
+
+  test('stamps a closed eye 17 px wide over an open eye 3 px wide beside a hood on the face only, the hood and the ring as they were (round 3, T1)', () => {
+    const ink: Rgb = [20, 10, 5];
+    const skin: Rgb = [240, 180, 130];
+    const robe: Rgb = [110, 130, 125];
+    const own = paintsOf({
+      ink: hexOf(ink),
+      parts: [
+        { name: 'skin', role: 'skin', base: hexOf(skin) },
+        { name: 'robe', role: 'garment', base: hexOf(robe) },
+      ],
+    });
+    const face = (closed: boolean): Raster => {
+      const at = (x: number, y: number): Option.Option<Rgb> => {
+        const inRows = (a: number, b: number) => y >= a && y <= b;
+        const inCols = (a: number, b: number) => x >= a && x <= b;
+        if (y < 10) return Option.liftPredicate(ink, () => inCols(20, 79));
+        if (y >= 70) return Option.liftPredicate(robe, () => inCols(5, 94));
+        if (!inCols(20, 79)) return Option.liftPredicate(robe, () => inCols(10, 89));
+        const marks = [
+          x === 20 || x === 79 || y === 10 || y === 69,
+          inRows(20, 21) && (inCols(23, 31) || inCols(61, 69)),
+          closed && inRows(35, 36) && (inCols(28, 44) || inCols(55, 71)),
+          !closed && inRows(32, 39) && (inCols(22, 24) || inCols(63, 65)),
+          inRows(55, 56) && inCols(43, 56),
+        ];
+        return Option.some([skin, ink][Number(marks.some(Boolean))] ?? ink);
+      };
+      const rgba = new Uint8Array(100 * 120 * 4);
+      for (let y = 0; y < 120; y++)
+        for (let x = 0; x < 100; x++)
+          Option.map(at(x, y), (c) => rgba.set([...c, 255], (y * 100 + x) * 4));
+      return { width: 100, height: 120, rgba };
+    };
+    const opened = face(false);
+    const built = Result.getOrThrow(blinkOf(opened, face(true), own));
+    const changedOffFace: Array<readonly [number, number]> = [];
+    for (let q = 0; q < 100 * 120; q++) {
+      const [x, y] = [q % 100, Math.floor(q / 100)];
+      const offFace = x <= 20 || x >= 79 || y <= 10 || y >= 69;
+      if (offFace && hexOf(rgbAt(opened, q)) !== hexOf(rgbAt(built, q)))
+        changedOffFace.push([x, y]);
+    }
+    expect(changedOffFace).toEqual([]);
   });
 
   test('refuses an open cell or a blink drawing whose face holds no row of eyes between its brows and its mouth', () => {
