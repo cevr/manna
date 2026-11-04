@@ -23,23 +23,23 @@ const PLATES = 'src/films/in-its-order/plates';
 /** Where the plates the storybook adds lie (the parchment's shadow), relative to apps/animations. */
 export const STORY_PLATES = 'src/films/in-its-order/storybook/plates';
 
-/** A plate of the film at rest: its painting as declared (in `dir`, the film's `plates/` unless named), placed where the painting's `at` puts it, `scale` times its size about that corner. */
+/** A plate of the film at rest: its painting as declared (in `dir`, the film's `plates/` unless named), placed where the painting's `at` puts it, `scale` times its size about that corner (one factor, or one across and one down). */
 export const plateOf = (
   name: string,
   spec: PaintingSpec,
   more: Partial<Pick<Plate, 'moves' | 'reveal'>> & {
     readonly at?: readonly [number, number];
-    readonly scale?: number;
+    readonly scale?: number | readonly [number, number];
     readonly dir?: string;
   } = {},
 ): Plate => {
   const [x, y] = more.at ?? spec.at ?? [0, 0];
-  const s = more.scale ?? 1;
+  const [sx = 1, sy = sx] = [more.scale ?? 1].flat();
   return {
     _tag: 'Plate',
     file: `${more.dir ?? PLATES}/${name}`,
     testArt: false,
-    place: { x, y, width: spec.size[0] * s, height: spec.size[1] * s },
+    place: { x, y, width: spec.size[0] * sx, height: spec.size[1] * sy },
     painting: spec,
     ...Option.match(Option.fromUndefinedOr(more.moves), {
       onNone: () => ({}),
@@ -62,6 +62,21 @@ export const plateOn = (
   more: Partial<Pick<Plate, 'moves' | 'reveal'>> & { readonly dir?: string } = {},
 ): Plate =>
   plateOf(name, spec, { ...more, at: [at[0] - on[0] * scale, at[1] - on[1] * scale], scale });
+
+/** A plate stretched across and down so its own points `ends` (its px) land on layer points `to`, in order: what lays a stream from one thing to another. */
+export const plateAcross = (
+  name: string,
+  spec: PaintingSpec,
+  ends: readonly [readonly [number, number], readonly [number, number]],
+  to: readonly [readonly [number, number], readonly [number, number]],
+  more: Partial<Pick<Plate, 'moves' | 'reveal'>> & { readonly dir?: string } = {},
+): Plate => {
+  const [[px, py], [qx, qy]] = ends;
+  const [[ax, ay], [bx, by]] = to;
+  const sx = (bx - ax) / (qx - px);
+  const sy = (by - ay) / (qy - py);
+  return plateOf(name, spec, { ...more, at: [ax - px * sx, ay - py * sy], scale: [sx, sy] });
+};
 
 /** A key of a moving plate: at rest but for the fields given. */
 export const key = (k: Partial<PlateKey>): PlateKey => ({
@@ -120,16 +135,16 @@ const sheetHead = (sheet: SheetCells): number =>
     () => 1,
   );
 
-/** How tall a member's figure on `sheet` draws on its plane, crown to soles, in layer px, under a shot whose grown head is `headPx`, on a layer at depth `z`. */
-export const tallOf = (member: string, sheet: string, headPx: number, z: number): number => {
+/** The scale a member's figure on `sheet` draws at on its plane, its px to layer px, under a shot whose grown head is `headPx`, on a layer at depth `z`: as the page scales it. */
+export const drawScaleOf = (member: string, sheet: string, headPx: number, z: number): number => {
   const cells = SHEET_CELLS.get(`${member}/${sheet}`);
   if (!cells) return 0;
-  return (
-    ((TALL.get(`${member}/${sheet}`) ?? 0) * headPx * shareOf(cells.palette, sheet)) /
-    z /
-    sheetHead(cells)
-  );
+  return (headPx * shareOf(cells.palette, sheet)) / z / sheetHead(cells);
 };
+
+/** How tall a member's figure on `sheet` draws on its plane, crown to soles, in layer px, under a shot whose grown head is `headPx`, on a layer at depth `z`. */
+export const tallOf = (member: string, sheet: string, headPx: number, z: number): number =>
+  (TALL.get(`${member}/${sheet}`) ?? 0) * drawScaleOf(member, sheet, headPx, z);
 
 /** A figure of the film on its declared sheet, its crown at `crown` in its layer's px (its ground derived from its sheet, the shot's head and its layer's depth). */
 export const seat = (

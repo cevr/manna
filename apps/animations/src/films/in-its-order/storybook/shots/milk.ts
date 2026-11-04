@@ -6,8 +6,21 @@ import {
   type Span,
   turn,
 } from '../../../../library/storybook/shot.ts';
-import { BOOK_OPEN, BOOK_SHUT, DROPPER, PAGE, RIBBON } from '../../plates/milk.ts';
-import { cam, holds, key, layer, plateOn, seat, STORY_PLATES, tallOf } from '../kit.ts';
+import { CELLS as VILLAGER_CELLS } from '../../cast/idea-villagers/shot-sheets/iio-milk/cells.ts';
+import { BOOK_OPEN, BOOK_SHUT, DROPPER, PAGE } from '../../plates/milk.ts';
+import {
+  cam,
+  drawScaleOf,
+  holds,
+  key,
+  layer,
+  plateAcross,
+  plateOn,
+  seat,
+  STORY_PLATES,
+  tallOf,
+} from '../kit.ts';
+import { MILK_ARC, MILK_ARC_BRUSH, MILK_ARC_ENDS } from '../plates/milk-arc.ts';
 import { SHADOW } from '../plates/shadow.ts';
 
 /** How far the parchment page stands behind the figures, as a camera's divisor: a truck shows them standing off it. */
@@ -42,11 +55,36 @@ const villager = (spans: readonly [Span, ...ReadonlyArray<Span>]) =>
 const villagerGround = () =>
   VILLAGER.crown + tallOf('idea-villagers', 'iio-milk', VILLAGER.headPx, 1);
 
-/** The book at picture right, beside his shoulder and clear of his face, its centre and its size. */
-const BOOK = { x: 885, y: 480, s: 0.55 } as const;
+/** The milk's face in the villager's cup, in each cell he holds it in while it pours, in that cell's px: the cup's mouth, read on the cells. */
+export const CUP_MOUTHS = {
+  cup: { x: 100, y: 501, width: 42, height: 8 },
+  look: { x: 131, y: 501, width: 43, height: 8 },
+} as const;
 
-/** The camera at the end of `milk-cup`'s push: on the villager and the book. */
-const PUSHED = { x: 860, y: 500, zoom: 1.1 } as const;
+/** Where the milk falls into the cup in his `cup` hold, on the figures' plane: the mouth's middle across, 2 px under its rim, so his breath stays inside it. */
+const cupMouth = (): readonly [number, number] => {
+  const s = drawScaleOf('idea-villagers', 'iio-milk', VILLAGER.headPx, 1);
+  const m = CUP_MOUTHS.cup;
+  return [
+    VILLAGER.x + (m.x + m.width / 2 - VILLAGER_CELLS.cup.ax) * s,
+    villagerGround() + (m.y + 2 - VILLAGER_CELLS.cup.ay) * s,
+  ];
+};
+
+/** The open book at picture right, as the panel sets it, its centre and its scale: the panel's book is about 480 px across. */
+export const BOOK = { x: 1367, y: 586, s: 1.12 } as const;
+
+/** The gutter of the open book, in its own px: the fold the milk leaves from, its upper half. */
+export const GUTTER = { x: 195, y: 40, width: 41, height: 100 } as const;
+
+/** The point in the gutter the milk leaves from, on the figures' plane. */
+const gutterPour = (): readonly [number, number] => [
+  BOOK.x + (GUTTER.x + GUTTER.width / 2 - BOOK_OPEN.size[0] / 2) * BOOK.s,
+  BOOK.y + (GUTTER.y + GUTTER.height / 2 - BOOK_OPEN.size[1] / 2) * BOOK.s,
+];
+
+/** The camera at the end of `milk-cup`'s push: on the villager, the book and the milk's arc between them. */
+const PUSHED = { x: 1020, y: 520, zoom: 1.1 } as const;
 
 /**
  * `milk-cup`, the scene's start to the card: the villager on the parchment
@@ -102,27 +140,22 @@ export const milkCup: FilmShot = {
   },
 };
 
-/** Where the milk leaves the book and where it goes into the cup, figures' plane px. */
-const POUR = { top: [742, 505], scale: 0.32 } as const;
-
-/** One pour of the ribbon: laid from the book down into the cup over `from`..`from + 0.6` s, gone at `stop`. */
+/** One pour of the milk: its arc laid from the book's gutter over and down into the cup's mouth over `from`..`from + 0.6` s, gone at `stop`. */
 const ribbon = (from: number, stop: number): Plate =>
-  plateOn('milk-ribbon.png', RIBBON, [56, 4], POUR.top, POUR.scale, {
-    reveal: { brush: RIBBON_BRUSH, from, to: from + 0.6 },
-    moves: [
-      [stop, key({})],
-      [stop + 0.25, key({ alpha: 0 })],
-    ],
-  });
-
-/** The ribbon's brush in its own px, its top end first: down its middle to its foot, wide enough to cover its twist. */
-const RIBBON_BRUSH: ReadonlyArray<readonly [number, number, number]> = [
-  [56, 4, 60],
-  [60, 80, 70],
-  [75, 160, 75],
-  [85, 240, 70],
-  [93, 305, 60],
-];
+  plateAcross(
+    'milk-arc.png',
+    MILK_ARC,
+    [MILK_ARC_ENDS.source, MILK_ARC_ENDS.mouth],
+    [gutterPour(), cupMouth()],
+    {
+      dir: STORY_PLATES,
+      reveal: { brush: MILK_ARC_BRUSH, from, to: from + 0.6 },
+      moves: [
+        [stop, key({})],
+        [stop + 0.25, key({ alpha: 0 })],
+      ],
+    },
+  );
 
 /**
  * `milk-pour`, the card's end (`thereby`, the word's end in the take, which
