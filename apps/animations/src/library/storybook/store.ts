@@ -1,6 +1,7 @@
 import { decodePng, encodePng, ImageRoute, type Raster } from '@manna/film/tools';
 import { DateTime, Effect, FileSystem, Option, Path, Result, Schema } from 'effect';
 import { Digest } from 'effect/crypto';
+import sharp from 'sharp';
 import {
   blinkOf,
   deltaE,
@@ -126,6 +127,26 @@ export const readRecord = Effect.fn('Storybook.readRecord')(function* (
   );
 });
 
+/**
+ * A stored cell's PNG as its 8-bit RGBA pixels, decoded by libvips
+ * (sharp), or why not, naming `file`. A cell is written 8-bit RGBA with no
+ * colour profile (`encodePng`), which libvips reads pixel for pixel as
+ * `decodePng` does, about ten times faster: a shot's load decodes every
+ * cell of every sheet.
+ */
+const cellPngOf = (bytes: Uint8Array, file: string) =>
+  Effect.tryPromise({
+    try: () =>
+      sharp(bytes).ensureAlpha().raw({ depth: 'uchar' }).toBuffer({ resolveWithObject: true }),
+    catch: (e) => StoreFailed.make({ reason: `${file}: ${String(e)}` }),
+  }).pipe(
+    Effect.map(({ data, info }): Raster => ({
+      width: info.width,
+      height: info.height,
+      rgba: new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
+    })),
+  );
+
 /** A stored cell's pixels, `cells/<key>.png` of a member's sheet. */
 export const readCell = Effect.fn('Storybook.readCell')(function* (
   cast: string,
@@ -135,7 +156,7 @@ export const readCell = Effect.fn('Storybook.readCell')(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const file = `${sheetDir(cast, member, id)}/cells/${key}.png`;
-  return yield* pngOf(yield* fs.readFile(file), file);
+  return yield* cellPngOf(yield* fs.readFile(file), file);
 });
 
 /** A sheet split into `cells` cells with `palette`, writing `cell-<i>.png` and `cells.json` to `out`. */

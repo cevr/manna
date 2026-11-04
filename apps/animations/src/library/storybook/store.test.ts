@@ -23,6 +23,7 @@ import {
   keepSheet,
   POSES,
   promptOf,
+  readCell,
   readRecord,
   RecordJson,
   resplitSheet,
@@ -216,6 +217,37 @@ describe('resplitSheet', () => {
       expect(refused._tag).toBe('StoreFailed');
     }).pipe(Effect.scoped, Effect.provide(routeOf(sheetOf(2, PAPER), calls)));
   });
+});
+
+describe('readCell', () => {
+  it.effect(
+    "reads a stored cell's pixels as `decodePng` reads them, colour kept under any alpha (0 and 255 included), over generated cells; refuses bytes that are no PNG",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const cast = yield* fs.makeTempDirectoryScoped();
+        const dir = `${sheetDir(cast, 'm', 's')}/cells`;
+        yield* fs.makeDirectory(dir, { recursive: true });
+        for (let seed = 1; seed <= 12; seed++) {
+          const draw = rng(seed);
+          const [width, height] = [1 + Math.floor(draw() * 40), 1 + Math.floor(draw() * 40)];
+          const alphas = [0, 255, 1, 128];
+          const rgba = Uint8Array.from({ length: width * height * 4 }, (_, i) => {
+            if (i % 4 !== 3) return Math.floor(draw() * 256);
+            return alphas[Math.floor(draw() * 5)] ?? Math.floor(draw() * 256);
+          });
+          const bytes = encodePng({ width, height, rgba });
+          yield* fs.writeFile(`${dir}/k${seed}.png`, bytes);
+          const read = yield* readCell(cast, 'm', 's', `k${seed}`);
+          expect(read).toEqual(Result.getOrThrow(decodePng(bytes)));
+          expect(read.rgba).toEqual(rgba);
+        }
+        yield* fs.writeFile(`${dir}/bad.png`, Uint8Array.of(1, 2, 3));
+        const bad = yield* Effect.flip(readCell(cast, 'm', 's', 'bad'));
+        expect(bad._tag).toBe('StoreFailed');
+        expect(bad.message).toContain(`${dir}/bad.png: `);
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
 });
 
 describe('sha256', () => {

@@ -124,6 +124,24 @@ export const nearestOf = (paints: ReadonlyArray<Paint>): ((c: Rgb) => Nearest) =
   };
 };
 
+/** `nearestOf` read at pixel `q` of a picture: the colour's key taken from its bytes, and the last colour met answered first, so a scan over a run of one paint looks nothing up and builds no colour it has met before. */
+const pixelNearestOf = (paints: ReadonlyArray<Paint>): ((r: Raster, q: number) => Nearest) => {
+  const nearest = nearestOf(paints);
+  const known = new Map<number, Nearest>();
+  let lastKey = -1;
+  let last: Nearest = { index: 0, distance: Number.POSITIVE_INFINITY };
+  return (r, q) => {
+    const p = q * 4;
+    const key = ((r.rgba[p] ?? 0) << 16) | ((r.rgba[p + 1] ?? 0) << 8) | (r.rgba[p + 2] ?? 0);
+    if (key === lastKey) return last;
+    const found = known.get(key) ?? nearest(rgbAt(r, q));
+    known.set(key, found);
+    lastKey = key;
+    last = found;
+    return found;
+  };
+};
+
 /** The colour of pixel `q` of `r`. */
 export const rgbAt = (r: Raster, q: number): Rgb => [
   r.rgba[q * 4] ?? 0,
@@ -981,12 +999,12 @@ const collarOf = (
   face: number,
   paints: ReadonlyArray<Paint>,
 ): Option.Option<number> => {
-  const nearest = nearestOf(paints);
+  const nearest = pixelNearestOf(paints);
   const cloth = new Set(paintRows(r, x, face, ['garment', 'sash'], paints));
   const drawnAt = (y: number): Drawn => {
     const q = y * r.width + x;
     if (y >= r.height || alphaAt(r, q) === 0) return 'clear';
-    const { index, distance } = nearest(rgbAt(r, q));
+    const { index, distance } = nearest(r, q);
     if (distance > 0) return 'blend';
     return paints[index]?.role ?? 'ink';
   };
@@ -1027,11 +1045,11 @@ const paintRows = (
   roles: ReadonlyArray<Role | 'ink'>,
   paints: ReadonlyArray<Paint>,
 ): ReadonlyArray<number> => {
-  const nearest = nearestOf(paints);
+  const nearest = pixelNearestOf(paints);
   const inRoles = (u: number, y: number): boolean => {
     const q = y * r.width + u;
     if (u < 0 || u >= r.width || alphaAt(r, q) === 0) return false;
-    const { index, distance } = nearest(rgbAt(r, q));
+    const { index, distance } = nearest(r, q);
     return distance === 0 && roles.includes(paints[index]?.role ?? 'ink');
   };
   const rows: Array<number> = [];
@@ -1040,45 +1058,50 @@ const paintRows = (
   return rows;
 };
 
-/**
- * A figure's lines, read so a raised arm never moves one: the crown and the
- * collar in the head column, the hem in the centre column, ink marks
- * skipped, and the sash top as the top of its band (`bandTop`); none when
- * the picture holds no opaque pixel.
- */
-export const linesOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<Lines> => {
-  const rows = Array.from({ length: r.height }, (_, y) => y).filter((y) =>
-    Array.from({ length: r.width }, (_, x) => x).some((x) => alphaAt(r, y * r.width + x) > 0),
-  );
-  const top = rows[0] ?? -1;
-  const bottom = rows.at(-1) ?? -1;
+/** The lines a figure's opaque pixels alone give: its top and bottom rows, its head and centre columns, and its crown. */
+type Outline = Pick<Lines, 'top' | 'bottom' | 'headColumn' | 'centreColumn' | 'crown'>;
+
+/** A figure's outline (`Outline`), none when the picture holds no opaque pixel. */
+const outlineOf = (r: Raster): Option.Option<Outline> => {
+  const opaqueRow = (y: number): boolean => {
+    for (let x = 0; x < r.width; x++) if (alphaAt(r, y * r.width + x) > 0) return true;
+    return false;
+  };
+  let top = 0;
+  while (top < r.height && !opaqueRow(top)) top += 1;
+  let bottom = r.height - 1;
+  while (bottom > top && !opaqueRow(bottom)) bottom -= 1;
   const height = bottom - top + 1;
-  if (top < 0) return Option.none();
+  if (top >= r.height) return Option.none();
   const headColumn = Math.round(
     Option.getOrElse(meanColumn(r, top, top + Math.ceil(height * 0.1) - 1), () => 0),
   );
   const centreColumn = Math.round(
     Option.getOrElse(meanColumn(r, bottom - Math.ceil(height * 0.08) + 1, bottom), () => 0),
   );
-  const crown = Math.max(
-    top,
-    Array.from({ length: r.height }, (_, y) => y).find(
-      (y) => alphaAt(r, y * r.width + headColumn) > 0,
-    ) ?? top,
-  );
-  const face = rowsOfRole(r, headColumn, crown, ['skin'], paints)[0] ?? r.height;
-  const garment = rowsOfRole(r, centreColumn, top, ['garment'], paints);
-  return Option.some({
-    top,
-    bottom,
-    headColumn,
-    centreColumn,
-    crown,
-    head: Option.map(collarOf(r, headColumn, face, paints), (y) => y - crown),
-    hem: Option.fromUndefinedOr(garment.at(-1)),
-    sashTop: bandTop(r, ['sash'], paints),
-  });
+  let crown = top;
+  while (crown <= bottom && alphaAt(r, crown * r.width + headColumn) === 0) crown += 1;
+  if (crown > bottom) crown = top;
+  return Option.some({ top, bottom, headColumn, centreColumn, crown });
 };
+
+/**
+ * A figure's lines, read so a raised arm never moves one: the crown and the
+ * collar in the head column, the hem in the centre column, ink marks
+ * skipped, and the sash top as the top of its band (`bandTop`); none when
+ * the picture holds no opaque pixel.
+ */
+export const linesOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<Lines> =>
+  Option.map(outlineOf(r), (o) => {
+    const face = rowsOfRole(r, o.headColumn, o.crown, ['skin'], paints)[0] ?? r.height;
+    const garment = rowsOfRole(r, o.centreColumn, o.top, ['garment'], paints);
+    return {
+      ...o,
+      head: Option.map(collarOf(r, o.headColumn, face, paints), (y) => y - o.crown),
+      hem: Option.fromUndefinedOr(garment.at(-1)),
+      sashTop: bandTop(r, ['sash'], paints),
+    };
+  });
 
 /**
  * The top row of the first `LINE_RUN` × `LINE_RUN` block of pixels that are
@@ -1092,21 +1115,26 @@ const bandTop = (
   roles: ReadonlyArray<Role>,
   paints: ReadonlyArray<Paint>,
 ): Option.Option<number> => {
-  const nearest = nearestOf(paints);
+  const nearest = pixelNearestOf(paints);
   const of = new Uint8Array(r.width * r.height);
-  for (let q = 0; q < r.width * r.height; q++) {
-    if (alphaAt(r, q) === 0) continue;
-    const { index, distance } = nearest(rgbAt(r, q));
-    const role = paints[index]?.role ?? 'ink';
-    if (distance === 0 && role !== 'ink' && roles.includes(role)) of[q] = 1;
-  }
+  const readRow = (y: number) => {
+    for (let q = y * r.width; q < (y + 1) * r.width; q++) {
+      if (alphaAt(r, q) === 0) continue;
+      const { index, distance } = nearest(r, q);
+      const role = paints[index]?.role ?? 'ink';
+      if (distance === 0 && role !== 'ink' && roles.includes(role)) of[q] = 1;
+    }
+  };
   const block = (x: number, y: number): boolean => {
     for (let dy = 0; dy < LINE_RUN; dy++)
       for (let dx = 0; dx < LINE_RUN; dx++) if (of[(y + dy) * r.width + x + dx] !== 1) return false;
     return true;
   };
-  for (let y = 0; y + LINE_RUN <= r.height; y++)
+  for (let y = 0; y < Math.min(LINE_RUN - 1, r.height); y++) readRow(y);
+  for (let y = 0; y + LINE_RUN <= r.height; y++) {
+    readRow(y + LINE_RUN - 1);
     for (let x = 0; x + LINE_RUN <= r.width; x++) if (block(x, y)) return Option.some(y);
+  }
   return Option.none();
 };
 
@@ -1139,22 +1167,22 @@ const isRole = (
   q: number,
   role: Role | 'ink',
   paints: ReadonlyArray<Paint>,
-  nearest: (c: Rgb) => Nearest,
+  nearest: (r: Raster, q: number) => Nearest,
 ): boolean => {
   if (alphaAt(r, q) === 0) return false;
-  const { index, distance } = nearest(rgbAt(r, q));
+  const { index, distance } = nearest(r, q);
   return distance === 0 && (paints[index]?.role ?? 'ink') === role;
 };
 
 /** A figure's face, none when its head column reads no face. */
 const faceOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<Face> => {
-  const nearest = nearestOf(paints);
-  const seedOf = (l: Lines) =>
+  const nearest = pixelNearestOf(paints);
+  const seedOf = (l: Outline) =>
     Option.map(
       Option.fromUndefinedOr(rowsOfRole(r, l.headColumn, l.crown, ['skin'], paints)[0]),
       (row) => row * r.width + l.headColumn,
     );
-  return Option.flatMap(Option.flatMap(linesOf(r, paints), seedOf), (seed) => {
+  return Option.flatMap(Option.flatMap(outlineOf(r), seedOf), (seed) => {
     const skin = regionAt(r, seed, (q) => isRole(r, q, 'skin', paints, nearest), around4);
     if (skin.length === 0) return Option.none();
     const mask = new Uint8Array(r.width * r.height);
@@ -1173,7 +1201,7 @@ const faceMarksOf = (
   paints: ReadonlyArray<Paint>,
   face: Face,
 ): ReadonlyArray<ReadonlyArray<number>> => {
-  const nearest = nearestOf(paints);
+  const nearest = pixelNearestOf(paints);
   const { box, mask } = face;
   const inBox = (q: number) => {
     const [x, y] = [q % r.width, Math.floor(q / r.width)];
@@ -1204,7 +1232,7 @@ export const inkedFaceMarks = (r: Raster, paints: ReadonlyArray<Paint>): Raster 
   Option.match(faceOf(r, paints), {
     onNone: () => r,
     onSome: (face) => {
-      const nearest = nearestOf(paints);
+      const nearest = pixelNearestOf(paints);
       const ink = paints[0]?.rgb ?? [0, 0, 0];
       const rgba = r.rgba.slice();
       for (const px of faceMarksOf(r, paints, face))
@@ -1229,7 +1257,7 @@ const eyesOf = (
   paints: ReadonlyArray<Paint>,
   face: Face,
 ): Option.Option<ReadonlyArray<ReadonlyArray<number>>> => {
-  const nearest = nearestOf(paints);
+  const nearest = pixelNearestOf(paints);
   const marks = faceMarksOf(r, paints, face)
     .filter((px) => px.length >= MARK_PX && px.every((q) => isRole(r, q, 'ink', paints, nearest)))
     .map((px) => ({ px, box: boxOf(px, r.width) }))
@@ -1362,7 +1390,7 @@ interface Head {
 
 /** A figure's head (`Head`) reaching `past` rows below its chin, none when it reads no face. */
 const headOf = (r: Raster, paints: ReadonlyArray<Paint>, past = 0): Option.Option<Head> =>
-  Option.flatMap(linesOf(r, paints), (lines) =>
+  Option.flatMap(outlineOf(r), (lines) =>
     Option.map(faceOf(r, paints), (face) => {
       const chin = face.box.y + face.box.height - 1;
       const px = regionAt(
@@ -1411,9 +1439,8 @@ export const withHeadOf = (
       HeadRefused.make({ reason: `the ${which} reads no face` }),
     );
   const refuse = (reason: string) => Result.fail(HeadRefused.make({ reason }));
-  const nearest = nearestOf(paints);
-  const roleAt = (r: Raster, q: number): Role | 'ink' =>
-    paints[nearest(rgbAt(r, q)).index]?.role ?? 'ink';
+  const nearest = pixelNearestOf(paints);
+  const roleAt = (r: Raster, q: number): Role | 'ink' => paints[nearest(r, q).index]?.role ?? 'ink';
   return Result.flatMap(read(body, 'body cell', 0), (b) =>
     Result.flatMap(read(head, 'head cell', 0), (h0) => {
       const [dw, dh] = [b.face.width - h0.face.width, b.face.height - h0.face.height];
