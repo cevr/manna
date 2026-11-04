@@ -458,6 +458,99 @@ lists the seeds it passed over. The draw itself is the framework's
 deck is this app's, which is why the command is an app script, not a `film`
 command.
 
+## Storybook shots
+
+The look the owner chose on 2026-11-03: flat drawn figures on depth layers in
+front of a painted set, the camera moving through the layers. A big move is a
+run of whole-figure drawn keys, never a part on a hinge; every hand is a round
+circle at the end of its sleeve, with no fingers (`.claude/skills/film/CRAFT.md`).
+The library is `src/library/storybook/`, one command, from `apps/animations`:
+
+```bash
+bun run storybook draw <member> <sheet-id> --keys side,front,lift --refs front,profileRight
+bun run storybook keep <member> <sheet-id> --why "<the owner's words>" --ask <id>
+bun run storybook resplit <member> <sheet-id>
+bun run storybook split <sheet.png> --cells <n> --palette <palette.json> --out <dir>
+bun run storybook plan <shot> --out <plan.json>
+bun run storybook render <shot> [--out <dir>]
+bun run storybook verify <shot> [--quick] [--out <dir>]
+```
+
+- **A shot sheet** is one person drawn n times in one `okra image` pass (the
+  subscription route, never `--spend`), so every key shares one face, one
+  size and one set of colours. It lives at
+  `src/library/cast/<member>/shot-sheets/<sheet-id>/`: `sheet.png` as drawn,
+  `record.json` (the prompt, each ref and its sha256, the measured ground,
+  each cell's box and sha256, and `kept` once the owner keeps it) and
+  `cells/<key>.png`. A sheet is drawn once; `draw` refuses an id drawn
+  already, a ground near a paint and a split with fewer figures than keys,
+  and then the agent draws again. No pixel of a sheet or cell is edited by
+  hand. The poses a key may name are `POSES` in `store.ts`; a blink key
+  (`neutralBlink`, `threeQuarterBlink`) is its pose with the eyes closed, and
+  a shot shows only its eyes (below).
+  When the split changes, `resplit` cuts a stored sheet again and rewrites
+  its cells and its record's cells; the drawing, prompt and refs stand.
+- **The split** (`sheet.ts`) clears the ground joined to the border, cuts the
+  sheet at the lowest-occupancy columns, keeps each cell's largest piece,
+  mends each pocket by its rim (ground inside a ring of only ink, or of ink
+  and an outline's soft blends, is a gap, cleared; else a garment painted
+  the paper's colour, refilled with its rim's paint) and snaps every pixel
+  within ΔE 30 of a paint to it exactly, each colour to the paint the whole
+  sheet draws it as. Then it tidies the drawing's own marks: a thin line on
+  cloth darker than both sides becomes the ink between two parts or the
+  part's shade inside one, a speck of 12 px or fewer takes the paint round
+  it, skin paint stays only within 4 px of skin, and the figure's rim is
+  peeled of everything but ink 2 px deep. A mark ringed by the face's skin
+  that holds any ink (an eye, a mouth) is painted all ink, so an eye drawn
+  half in a stool's or a mantle's colour reads as an eye. The paints are the member's
+  `cast-sheet/palette.json`: every hex is one his `look.md` names, and the ink
+  is measured on his first kept view.
+- **A shot** (`shot.ts`, one per file in `shots/`) is layers at depths, each
+  holding plates and figures, under one light and one camera. A figure names
+  one member and one sheet, and its spans (`hold`, `blinkingHold`, `turn`,
+  `keyRun`, `walk`) name only that sheet's keys. A hold breathes (the figure
+  stretches up 0.4 % about its soles and back, at its own pace). A
+  `blinkingHold` blinks for 0.125 s at a time on one schedule per figure,
+  seeded by its name and running across the whole shot, so a cut from hold
+  to hold never restarts the wait (no more than 4.4 s between blinks). A
+  blink is the held cell with the blink key's closed eyes pasted over its
+  own (`blinkOf`, built as the shot loads); nothing outside the eyes
+  changes, so the outline never twitches. No plate drawn over a figure may
+  cover its face in any frame (`shots/feast-courtyard.test.ts`). It has no scale: its head is the shot's
+  `headPx` over its layer's depth, against its sheet's median head. It has no
+  light: the shot's one light tints every base paint and shades every shade
+  paint once per cell, the ink untouched. `frameAt` is a pure function of t.
+- **The render** (`render.ts`, `page.ts`) draws each frame from its time
+  alone in a headless Chrome on the CPU, each layer a plane of the engine's
+  `multiplane` at its depth, with the engine's backdrop fibre; frames and
+  `shot.mp4` go to `out/storybook/<shot>/`.
+- **The verify** renders every frame (every sixth with `--quick`, under
+  `quick/`) twice, colour and each figure alone, and judges the bars in
+  `verify/bars.ts`: `verdict.md` opens `PASS n/n pass` or `FAIL k/n pass`;
+  beside it `verdict.json`, `manifest.json`, `contact.png`, `shot.mp4`,
+  `frames/` and `figures/`. It exits 0 only on PASS n/n. A head (crown to
+  the collar: the first run of clothes in the head column that the face's
+  own skin, 4-connected, does not close below, so a jaw line drawn in a
+  garment's colour is not the collar; skin below that does not join the
+  face leaves the column ambiguous, and the head reads none) is read once
+  on each stored cell at its sheet's own size; the `scale` bar reads those
+  heads as the plan draws them in every frame, not from renders, with each
+  squash and no breath. A cell whose head reads none is read at its sheet's
+  head × its own crown-to-soles over the sheet's median crown-to-soles
+  (both over the cells that read a head), and each such frame is named in
+  its sample and on an `INFO scale fallback:` line of `verdict.md`; a cell
+  whose crown and soles do not read either stays unread. The `proportions`
+  bar reads every cell of a sheet: each must read its crown and soles, and
+  its hem and sash top where its palette has their roles. Its head line is
+  judged over the cells that read a head; each cell left out is named in
+  the head's sample and on an `INFO proportions left out:` line, and the
+  head is unread when no cell reads one. The `colour-step` bar also
+  reads cells, not renders: each drawn key's cell (or blink) lit by the
+  shot's light, at every change of drawn key in the plan, where every colour
+  is the one drawn and no resampling has blended an edge; the `light` bar
+  keeps the renders' colour checked. The bars stay `orchestrator-proposed`
+  until the owner OKs their numbers.
+
 ## How a film is built
 
 A film goes through a studio's stages: the script, concept art (the tent

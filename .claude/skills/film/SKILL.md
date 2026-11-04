@@ -22,6 +22,8 @@ A film lives in `apps/animations/src/films/<film>/`. The engine is the `@manna/f
 - **DIRECTION: [reference/director-vision.md](reference/director-vision.md)** is how a film looks, moves and sounds (a painted storybook cartoon, [CRAFT.md](CRAFT.md) 12), with the reasons and numbers behind CRAFT's look, camera and sound rules. Read it before a film's colour script, its first scene, or any change to the look.
 - **VOICE: [reference/owner-voice.md](reference/owner-voice.md)** is how the owner preaches, measured on nine of his sermons: his openings, how he builds a case and lands it, his tone, cadence and words, and the film form of each church habit. He records every film's voice: read it before writing or revising a script's spoken lines.
 
+A storybook shot (flat drawn figures on depth layers before a painted set, its shot sheets drawn in one pass, `bun run storybook`) is `apps/animations/README.md`, Storybook shots.
+
 Every ElevenLabs call and every render needs `dangerouslyDisableSandbox: true` (the CLI's login sits in the Keychain on macOS; the renderer opens Chrome through Bun.WebView, using `BUN_CHROME_PATH` or the Chrome Bun finds, with a cached Chromium fallback).
 
 ## Corpus, not memory (paramount)
