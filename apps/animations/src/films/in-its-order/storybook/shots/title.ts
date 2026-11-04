@@ -115,7 +115,7 @@ export const titleShot: FilmShot = {
 const NAME = {
   x: 960,
   y: 112,
-  w: 975,
+  w: 940,
   h: 162,
   drop: 28,
   style: { family: fonts.display, size: 95, weight: 700, color: P.cream, align: 'center' },
