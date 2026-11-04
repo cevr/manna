@@ -1,8 +1,10 @@
 {
   "ink": "#1b0b03",
+  "head": 1.21,
   "parts": [
     { "name": "skin", "base": "#f2b27c", "shade": "#c9877e", "role": "skin" },
-    { "name": "dress", "base": "#5f7fa8", "shade": "#4c5687", "role": "garment" },
-    { "name": "veil", "base": "#eadcc2", "shade": "#c8bdd6", "role": "other" }
+    { "name": "dress", "base": "#5b6190", "shade": "#4c5687", "role": "garment" },
+    { "name": "veil", "base": "#eadcc2", "shade": "#c8bdd6", "role": "other" },
+    { "name": "hair", "base": "#ca7c65", "role": "hair" }
   ]
 }

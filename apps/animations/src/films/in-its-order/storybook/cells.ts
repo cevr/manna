@@ -13,7 +13,9 @@ import { CELLS as TODDLER_MILK } from '../../../library/cast/villager-toddler/sh
 import { CELLS as MOTHER_BABY } from '../cast/feast-mother/shot-sheets/iio-baby/cells.ts';
 import { CELLS as VILLAGER_BABY } from '../cast/idea-villagers/shot-sheets/iio-milk-baby/cells.ts';
 import { CELLS as VILLAGER_MILK } from '../cast/idea-villagers/shot-sheets/iio-milk/cells.ts';
+import { withProps } from '../../../library/storybook/sheet.ts';
 import { PALETTES } from './palettes.ts';
+import { sheetNamed } from './sheets.ts';
 
 /** Each drawn sheet's cells module, by `<member>/<sheet>`. */
 const CELLS: ReadonlyArray<readonly [string, string, SheetCells['cells']]> = [
@@ -33,11 +35,12 @@ const CELLS: ReadonlyArray<readonly [string, string, SheetCells['cells']]> = [
   ['villager-child', 'iio-milk', CHILD_MILK],
 ];
 
-/** Every sheet act 1 draws as its film draws it: the member's palette and each cell's PNG and entry, by `<member>/<sheet>`. */
+/** Every sheet act 1 draws as its film draws it: the member's palette with the props the sheet adds, and each cell's PNG and entry, by `<member>/<sheet>`. */
 export const SHEET_CELLS: Sheets = new Map(
   CELLS.flatMap(([member, sheet, cells]) => {
     const palette = PALETTES.get(member);
     if (!palette) return [];
-    return [[`${member}/${sheet}`, { palette, cells }] as const];
+    const props = sheetNamed(member, sheet)?.props ?? [];
+    return [[`${member}/${sheet}`, { palette: withProps(palette, props), cells }] as const];
   }),
 );
