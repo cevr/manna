@@ -12,7 +12,7 @@ import { Context, Duration, Effect, Option } from 'effect';
 import type { ChildProcessSpawner } from 'effect/process';
 
 import { ReadinessTimedOut, type Escaped, ToolFailed, type ToolMissing } from './errors.ts';
-import { attempt, ready, succeed, type Vars } from './tools.ts';
+import { attempt, exchange, ready, type Vars } from './tools.ts';
 
 /** A process: its pid and its start time, both read when the drive first saw it. */
 export interface Identity {
@@ -70,32 +70,78 @@ const signalLive = Effect.fn('Sim.Os.signal')(function* (pid: number, signal: Si
   return done.exitCode === 0;
 });
 
-/** A shell starts the process in the background and prints its pid, so it outlives this command. */
-const BACKGROUND = 'nohup "$0" "$@" >/dev/null 2>&1 & echo $!';
+/**
+ * The start, run as `/bin/sh -c START BECOME argv…`. It starts `BECOME` in
+ * the background, with no output of its own, and holds this command's
+ * stdin open for it, passing on the one line it reads there (none when the
+ * input ends first) and closing the pipe. The child alone holds this
+ * command's stdout, so that output ends when the child prints its identity
+ * and closes it, or when the child ends.
+ */
+const START = [
+  'exec 4<&0 5>&1 >/dev/null 2>&1',
+  `{ IFS= read -r go && printf '%s\\n' "$go"; } <&4 4<&- 5>&- | { exec 4<&- 6<&0; nohup /bin/sh -c "$0" "$@" <&6 6<&- 3>&5 5>&- & } &`,
+  'exec 4<&- 5>&-',
+  'wait',
+].join('\n');
 
+/**
+ * The child: it reads its own start time, prints its pid and that time, and
+ * becomes `argv` (the same process, so the same pid and start time) only
+ * once it reads `go`; when the read fails, the line cannot be printed, or
+ * any other answer or the end of input comes, it ends itself, so nothing
+ * runs that this command does not know by its identity.
+ */
+const BECOME = [
+  `started=$(LC_ALL=C TZ=UTC ps -o lstart= -p "$$") && [ -n "$started" ] || exit 3`,
+  `printf '%s %s\\n' "$$" "$started" >&3 || exit 3`,
+  'IFS= read -r go && [ "$go" = go ] || exit 3',
+  'exec "$0" "$@" 3>&- </dev/null',
+].join('\n');
+
+/** The tool and arguments `spawn` runs to start `argv`. */
+export const startCommand = (argv: ReadonlyArray<string>) =>
+  ['/bin/sh', '-c', START, BECOME, ...argv] as const;
+
+/** The identity the child printed: its pid, and its start time in the canonical form (`startedLive`). */
+const identified = (line: Option.Option<string>) => {
+  const words = Option.getOrElse(line, () => '')
+    .trim()
+    .split(/\s+/);
+  const [first = '', ...rest] = words;
+  return Option.liftPredicate(
+    { pid: Number(first), started: rest.join(' ') } satisfies Identity,
+    (child) => /^\d+$/.test(first) && signalable(child.pid) && child.started !== '',
+  );
+};
+
+/**
+ * Start `argv` as a process of its own that outlives this command. The
+ * child becomes `argv` only after its identity is read here and answered;
+ * a typed failure or an interruption before the answer leaves its input
+ * closed unanswered, and it ends itself, so a failed spawn leaves nothing
+ * running and no signal is sent. Interruptions after the answer land on
+ * the caller (`exchange`): `boot` runs this uninterruptibly.
+ */
 const spawnLive = Effect.fn('Sim.Os.spawn')(function* (
   argv: ReadonlyArray<string>,
   options: { readonly cwd: string; readonly env?: Vars },
 ) {
-  const args = ['-c', BACKGROUND, ...argv];
-  const printed = yield* succeed('/bin/sh', args, short, options);
-  const pid = Number.parseInt(printed.trim(), 10);
-  if (!signalable(pid))
-    return yield* ToolFailed.make({
-      tool: '/bin/sh',
-      args,
-      exitCode: 0,
-      output: `no pid: ${printed}`,
-    });
-  const started = yield* startedLive(pid);
-  if (Option.isNone(started))
-    return yield* ToolFailed.make({
-      tool: '/bin/sh',
-      args,
-      exitCode: 0,
-      output: `${argv.join(' ')} (pid ${pid}) exited as it started`,
-    });
-  return { pid, started: started.value } satisfies Identity;
+  const [tool, ...args] = startCommand(argv);
+  return yield* exchange(tool, args, short, options, (line) =>
+    Option.match(identified(line), {
+      onNone: () =>
+        Effect.fail(
+          ToolFailed.make({
+            tool,
+            args,
+            exitCode: 0,
+            output: `${argv.join(' ')} did not start: ${Option.getOrElse(line, () => 'it printed no identity')}`,
+          }),
+        ),
+      onSome: (child) => Effect.succeed(['go\n', child] as const),
+    }),
+  );
 });
 
 const selfLive = Effect.gen(function* () {

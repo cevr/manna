@@ -412,7 +412,7 @@ const tool = (
   }
   if (command === '/bin/sh' && (args[1] ?? '').includes('nohup')) {
     run.served = true;
-    return { exitCode: 0, stdout: '4242\n' };
+    return { exitCode: 0, stdout: `4242 ${STARTED}\n` };
   }
   if (command === 'kill') {
     run.term = true;

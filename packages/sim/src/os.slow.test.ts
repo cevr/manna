@@ -10,11 +10,11 @@
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Clock, Console, Duration, Effect, FileSystem, Option } from 'effect';
+import { Clock, Console, Duration, Effect, Fiber, FileSystem, Option } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { type Identity, Os, type OsMembers, stop } from './os.ts';
-import { attempt, type Vars } from './tools.ts';
+import { attempt, ready, type Vars } from './tools.ts';
 
 /** The timeout of a test that spawns `sh`, `ps` and `kill`: a loaded machine's spawns are slow (effect/requireSpawnBudget). */
 const SPAWNS_MS = 120_000;
@@ -130,6 +130,37 @@ const median = (values: ReadonlyArray<number>) => {
 const gone = (owned: Identity, now: Option.Option<string>) =>
   Option.match(now, { onNone: () => true, onSome: (start) => start !== owned.started });
 
+/** A sleep no other process on this host runs: its seconds carry this run's millisecond. */
+const marked = Effect.map(Clock.currentTimeMillis, (now) => `29.${Number(now) % 1_000_000}`);
+
+/** Whether a process runs whose command line holds `mark`, by one `ps` of every process. */
+const runs = (mark: string) =>
+  Effect.map(attempt('ps', ['-A', '-o', 'command='], Duration.seconds(30)), (done) =>
+    done.output.split('\n').some((line) => line.includes(mark)),
+  );
+
+/** Wait, at most `seconds`, until `runs(mark)` answers `wanted`. */
+const until = (mark: string, wanted: boolean, seconds: number) =>
+  ready(
+    `a process with ${mark} to ${String(wanted)}`,
+    seconds,
+    Effect.filterOrFail(
+      runs(mark),
+      (now) => now === wanted,
+      () => 'not yet',
+    ),
+  );
+
+/** A folder holding an executable `ps` that runs `body`, for a start's own start-time read. */
+const stubPs = (body: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const dir = yield* fs.makeTempDirectoryScoped();
+    yield* fs.writeFileString(`${dir}/ps`, `#!/bin/sh\n${body}\n`);
+    yield* fs.chmod(`${dir}/ps`, 0o755);
+    return { dir, path: `${dir}:/usr/bin:/bin` };
+  });
+
 describe('the live Os', () => {
   it.scopedLive.layer(BunServices.layer)(
     'spawn answers the child itself: its pid holds a sleep, and its start time reads back the same twice',
@@ -211,6 +242,43 @@ describe('the live Os', () => {
         expect(yield* stop(owned).pipe(through(into))).toBe(true);
         expect(killed(into)).toEqual([owned.pid]);
         expect(gone(owned, yield* os.started(owned.pid).pipe(through(into)))).toBe(true);
+      }),
+    SPAWNS_MS,
+  );
+
+  it.scopedLive.layer(BunServices.layer)(
+    'a spawn whose child cannot read its own start time fails typed, and the child ends itself before it becomes the program',
+    () =>
+      Effect.gen(function* () {
+        const os = yield* Os;
+        const into = seen();
+        const mark = yield* marked;
+        const stub = yield* stubPs('exit 2');
+        const exit = yield* Effect.exit(
+          os.spawn(['/bin/sleep', mark], { cwd: stub.dir, env: { PATH: stub.path } }),
+        );
+        expect(exit._tag).toBe('Failure');
+        yield* until(mark, false, 10).pipe(through(into));
+        expect(killed(into)).toEqual([]);
+      }),
+    SPAWNS_MS,
+  );
+
+  it.scopedLive.layer(BunServices.layer)(
+    'a spawn interrupted while its child reads its start time leaves no process: the child sees its input end and ends itself',
+    () =>
+      Effect.gen(function* () {
+        const os = yield* Os;
+        const into = seen();
+        const mark = yield* marked;
+        const stub = yield* stubPs('/bin/sleep 1\nexec /bin/ps "$@"');
+        const spawning = yield* Effect.forkChild(
+          os.spawn(['/bin/sleep', mark], { cwd: stub.dir, env: { PATH: stub.path } }),
+        );
+        yield* until(mark, true, 10).pipe(through(into));
+        yield* Fiber.interrupt(spawning);
+        yield* until(mark, false, 10).pipe(through(into));
+        expect(killed(into)).toEqual([]);
       }),
     SPAWNS_MS,
   );

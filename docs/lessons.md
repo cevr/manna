@@ -4884,6 +4884,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The journey reported only its loading, and wrote each line to the results file with nothing to report the write's own failure; `serve` reported nothing. Each output-folder write in a journey now prints its failure line, and `serve` prints its result as every other command does.
 - **Guard:** code: `packages/sim/src/refusals.slow.test.ts` `each refused call fails typed and prints its failure line once`; `packages/sim/src/host.scenarios.test.ts` `prints the refusal when the journey results file leads out`, `prints the refusal when the server output folder leads out`
 
+### sim-start-leaves-its-server-unrecorded
+
+- **Date:** 2026-11-04
+- **Kind:** review
+- **Said:** "A typed failure of the start-time read inside the live `Os.spawn` leaves the started server running, with no record and no stop."
+- **Source:** hymnapp/simlife/rw-round-1-findings.md M1
+- **Wrong:** The live `Os.spawn` started the server, then read its start time with a `ps` of its own; when that read failed typed, `boot` failed before it knew the server's identity, so the server ran with no record, and the next `down` failed `NoSession`.
+- **Cause:** The start made the server first and learned who it was second, so every failure between the two left a process nothing could name. The child now reads its own start time and prints its identity, and becomes the server only once the drive has read it and answered `go`; any other way out closes its input, and it ends itself.
+- **Guard:** code: `packages/sim/src/spawn.test.ts` `a boot whose read of its new server start time fails leaves nothing running unrecorded`; `packages/sim/src/spawn.slow.test.ts` `nothing runs unrecorded, and the down leaves nothing`; `packages/sim/src/os.slow.test.ts` `a spawn whose child cannot read its own start time fails typed`
+
 ### heartseed-tests-run-as-parts
 
 - **Date:** 2026-10-22

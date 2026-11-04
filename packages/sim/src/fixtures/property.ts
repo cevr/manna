@@ -36,6 +36,7 @@ import { ChildProcessSpawner } from 'effect/process';
 import { App, defineApp } from '../app.ts';
 import { runSim } from '../command.ts';
 import { Drive, type DriveMembers, DriveLive, type Outcome, type Place } from '../drive.ts';
+import { startCommand } from '../os.ts';
 import type { Platform } from '../result.ts';
 
 /** An app, and what this file expects of it, written here rather than taken from the driver. */
@@ -51,7 +52,6 @@ const ROOT = '/nonexistent/loop-probe-x';
 const UDID = 'PROBE-UDID';
 const RUNTIME = 'com.apple.CoreSimulator.SimRuntime.iOS-27-0';
 const PLIST = '/usr/libexec/PlistBuddy';
-const BACKGROUND = 'nohup "$0" "$@" >/dev/null 2>&1 & echo $!';
 const MUTED = '--mute-audio,--disable-audio-output';
 const BOOTED_AT = '2026-10-21T00:00:00.000Z';
 /** The start time `ps` reads for the stand-in server until a `kill` reaches it, and for the command itself. */
@@ -274,7 +274,7 @@ const standInHost = () => {
         let answer = host.world.answer(argv, host.world.runs);
         if (argv[0] === '/bin/sh') {
           host.world.serving = true;
-          answer = ok(`${SERVER}\n`);
+          answer = ok(`${SERVER} ${STARTED}\n`);
         }
         if (startRead) {
           const killed = host.world.runs.some((run) => run[0] === 'kill');
@@ -441,18 +441,17 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
   const webSession = sessionOf(app, place, 'web');
   const read = `read ${place.state}/session.json`;
   const serve = [
-    '/bin/sh',
-    '-c',
-    BACKGROUND,
-    'bun',
-    place.script,
-    'serve',
-    '--port',
-    String(port),
-    '--out',
-    out,
-    '--state',
-    place.state,
+    ...startCommand([
+      'bun',
+      place.script,
+      'serve',
+      '--port',
+      String(port),
+      '--out',
+      out,
+      '--state',
+      place.state,
+    ]),
   ];
   const bootOptions = (platform: Platform) => ({
     platform,
@@ -534,7 +533,6 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
         ['xcrun', 'simctl', 'bootstatus', UDID, '-b'],
         defaults,
         serve,
-        startRead,
       ],
       touched: wrote,
     },
@@ -542,15 +540,7 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
       name: 'boot ios on the booted simulator of its name',
       world: { answer: ios(booted) },
       run: (d) => d.boot(place, bootOptions('ios')),
-      runs: [
-        selfRead,
-        list,
-        list,
-        ['xcrun', 'simctl', 'bootstatus', UDID, '-b'],
-        defaults,
-        serve,
-        startRead,
-      ],
+      runs: [selfRead, list, list, ['xcrun', 'simctl', 'bootstatus', UDID, '-b'], defaults, serve],
       touched: wrote,
     },
     {
@@ -734,12 +724,7 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
         name: 'boot the web',
         world: {},
         run: (d) => d.boot(place, bootOptions('web')),
-        runs: [
-          selfRead,
-          serve,
-          startRead,
-          web('--args', MUTED, 'open', `http://127.0.0.1:${port}/`),
-        ],
+        runs: [selfRead, serve, web('--args', MUTED, 'open', `http://127.0.0.1:${port}/`)],
         touched: wrote,
       },
       {

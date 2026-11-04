@@ -392,7 +392,7 @@ describe('sim commands', () => {
       Effect.gen(function* () {
         let stopped = false;
         const answers = standIn((line) => {
-          if (line.startsWith('/bin/sh')) return ok('4242\n');
+          if (line.startsWith('/bin/sh')) return ok(`4242 ${STARTED}\n`);
           if (line === 'kill -s TERM 4242') stopped = true;
           if (line === START_READ && stopped) return failed();
           if (line === START_READ) return ok(`${STARTED}\n`);

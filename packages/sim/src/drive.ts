@@ -521,10 +521,13 @@ const stamp = Effect.map(DateTime.now, (now) => DateTime.formatIso(now));
  * anything else. Then, holding the state: a record that does not decode, a
  * legacy one, or one whose server still runs refuses the boot with nothing
  * started; a stale one is filed away. Then the simulator, a free port, the
- * drivers' HOME, the server, and its record as the very next step. Any
- * failure or interruption after the start stops the server by the stop rule
- * and, once it is gone, files its record away; a server that will not stop
- * keeps its record for the next `down`.
+ * drivers' HOME, the server, and its record as the very next step. A start
+ * that fails or is interrupted before the server is known by its identity
+ * leaves nothing running (`Os.spawn`); from the start to the record this
+ * runs uninterruptibly, a record that cannot be written stops the server
+ * (`stopUnrecorded`), and any failure or interruption after the record
+ * stops the server by the stop rule and, once it is gone, files its record
+ * away; a server that will not stop keeps its record for the next `down`.
  */
 const boot = Effect.fn('Sim.boot')(function* (place: Place, options: BootOptions) {
   const path = yield* Path.Path;
