@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/app.tsbuildinfo && tsc --noEmit -p tsconfig.test.json --incremental --tsBuildInfoFile node_modules/.cache/tsc/test.tsbuildinfo",
     "test:matcher": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/matcher.property.test.ts",
     "test:voice": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/voice.property.test.ts ./src/voice",
+    "test:dictation": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/dictation.property.test.ts ./src/dictation",
     "test:rest": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/core-import.property.test.ts ./src/core-import.test.ts ./src/display.test.ts ./src/matcher.test.ts ./src/today.test.tsx",
     "test:infra": "bun test --no-isolate --parallel=3 --path-ignore-patterns='**/*.slow.test.*' ./scripts ./vite"
   },
