@@ -119,7 +119,8 @@ const RIBBON_BRUSH: ReadonlyArray<readonly [number, number, number]> = [
 ];
 
 /**
- * `milk-pour`, the card's end to `need`: held on the villager and the open
+ * `milk-pour`, the card's end (`thereby`, the word's end in the take, which
+ * the card runs until) to `need`: held on the villager and the open
  * book, the milk pours from the book into his cup until `sincere`; on
  * "nothing" a dropper comes over the cup and he waves it away; on `word` he
  * looks to the book and it pours again, filling the cup, until `good`, and
@@ -131,6 +132,7 @@ export const milkPour: FilmShot = {
   id: 'milk-pour',
   span: { after: 'card:milk', until: 'need' },
   cues: {
+    thereby: { mark: 'desire', word: 'thereby', offset: 0.56 },
     pour: { after: 'card:milk', dur: 0.3 },
     stop: { mark: 'sincere', dur: 0.25 },
     toCup: { after: 'card:milk', dur: 0.3 },

@@ -40,8 +40,7 @@ export const TITLE_STORY: StoryScene = {
 /**
  * The milk on the parchment: the villager and the book, the pour and the
  * row drinking in turn; 1 Pet 2:2 on its card, cut in on "desire" and out
- * at the end of "thereby" (the `thereby` mark plus the word's length in the
- * take).
+ * at the end of "thereby" (`milk-pour:thereby`, pinned to the word).
  */
 export const MILK_STORY: StoryScene = {
   scene: 'milk',
@@ -49,7 +48,7 @@ export const MILK_STORY: StoryScene = {
   shots: [milkCup, milkPour, milkRow],
   cards: [
     {
-      span: { mark: 'desire', until: 'thereby', untilOffset: 0.56 },
+      span: { mark: 'desire', until: { cue: 'milk-pour:thereby' } },
       from: 'desire',
       to: 'sincere',
       payoff: 'grow',
