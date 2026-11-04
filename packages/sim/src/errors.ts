@@ -108,6 +108,30 @@ export class Unhealthy extends Schema.TaggedError<Unhealthy>()('Unhealthy', {
   }
 }
 
+/**
+ * `boot` started nothing, or stopped what it started: the state folder holds
+ * a live, legacy or unreadable session, or the drivers' socket path would
+ * not fit.
+ */
+export class BootRefused extends Schema.TaggedError<BootRefused>()('BootRefused', {
+  state: Schema.String,
+  reason: Schema.String,
+}) {
+  override get message() {
+    return `sim boot refused in ${this.state}: ${this.reason}`;
+  }
+}
+
+/** Another running command holds the state (its pid), so this one changed nothing. */
+export class StateBusy extends Schema.TaggedError<StateBusy>()('StateBusy', {
+  state: Schema.String,
+  pid: Schema.Finite,
+}) {
+  override get message() {
+    return `another sim command (pid ${this.pid}) holds ${this.state}; wait for it to end`;
+  }
+}
+
 /** The helper ran in a warm checkout, the clean source worktrees are made from. */
 export class WarmCheckout extends Schema.TaggedError<WarmCheckout>()('WarmCheckout', {
   checkout: Schema.String,
@@ -182,5 +206,7 @@ export const SimError = Schema.Union([
   Escaped,
   BadArguments,
   Unhealthy,
+  BootRefused,
+  StateBusy,
 ]);
 export type SimError = typeof SimError.Type;

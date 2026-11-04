@@ -319,7 +319,11 @@
       // The simulator driver reaches the host's files and tools only through
       // its contained host (packages/sim/src/host.ts), which refuses a path a
       // link leads out of its root; a direct node:fs, child_process or
-      // Bun.write/file/spawn call would bypass it (docs/lessons.md).
+      // Bun.write/file/spawn/$ call would bypass it (docs/lessons.md). A
+      // process.kill would bypass the Os seam's stop rule
+      // (packages/sim/src/os.ts), which signals only a pid that still holds
+      // its recorded start time, and a process.pid read would bypass
+      // Os.self, the identity the state's holder records.
       "files": ["**/packages/sim/src/**/*.ts"],
       "rules": {
         "no-restricted-imports": [
@@ -365,6 +369,21 @@
             "object": "Bun",
             "property": "spawnSync",
             "message": "Spawn through the contained host's ChildProcessSpawner (packages/sim/src/host.ts)."
+          },
+          {
+            "object": "Bun",
+            "property": "$",
+            "message": "Start a process through the Os seam (packages/sim/src/os.ts) or the contained host's ChildProcessSpawner (packages/sim/src/host.ts)."
+          },
+          {
+            "object": "process",
+            "property": "kill",
+            "message": "Signal only through the Os seam's stop rule (packages/sim/src/os.ts), which signals a pid only while its start time read just before is the recorded one."
+          },
+          {
+            "object": "process",
+            "property": "pid",
+            "message": "Read the command's own identity through Os.self (packages/sim/src/os.ts), the pid and start time the state's holder records."
           }
         ]
       }

@@ -3,7 +3,7 @@
  * each run to completion through the platform's ChildProcessSpawner, and the
  * readiness wait every start uses.
  */
-import { Duration, Effect, Stream } from 'effect';
+import { Context, Duration, Effect, Option, Stream } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
@@ -20,10 +20,51 @@ const text = (stream: Stream.Stream<Uint8Array, PlatformError>) =>
 const isNotFound = (error: PlatformError) =>
   error.reason._tag === 'NotFound' && error.reason.module === 'ChildProcess';
 
+/** Variables a tool's environment takes over the caller's; one set to `undefined` is removed. */
+export type Vars = Readonly<Record<string, string | undefined>>; // oxlint-disable-line effect/noNullish -- ChildProcess's extendEnv removes a variable set to undefined from the child's environment
+
+/** `names` removed from a tool's environment. */
+export const removed = (names: ReadonlyArray<string>): Vars =>
+  // oxlint-disable-next-line effect/noNullish -- ChildProcess's extendEnv removes a variable set to undefined from the child's environment
+  Object.fromEntries(names.map((name) => [name, undefined]));
+
+/** Where a tool runs: its working folder, and variables over the caller's environment. */
+export interface Launch {
+  readonly cwd?: string;
+  readonly env?: Vars;
+}
+
+/** The drivers, which keep their state under HOME: only they run in a drive's child environment. */
+const DRIVERS: ReadonlySet<string> = new Set(['agent-device', 'agent-browser']);
+
+/**
+ * The environment the drivers run in for the running step (`drive.ts`
+ * `driverEnv`): a booted drive's child HOME and socket folder, or none, so
+ * they keep the caller's (a legacy session, whose agent sessions live there).
+ */
+export const DriverEnv = Context.Reference<Option.Option<Vars>>('@manna/sim/DriverEnv', {
+  defaultValue: () => Option.none(),
+});
+
+/** The variables `tool` runs with over the caller's: the launch's, and the drive's child ones for a driver. */
+const envOf = Effect.fnUntraced(function* (tool: string, options: Launch) {
+  const drivers = yield* DriverEnv;
+  const vars = {
+    ...options.env,
+    ...Option.getOrElse(
+      Option.filter(drivers, () => DRIVERS.has(tool)),
+      () => ({}),
+    ),
+  } satisfies Vars;
+  return Option.liftPredicate(vars, (all) => Object.keys(all).length > 0);
+});
+
 /**
  * Run `tool` to its end, or for at most `limit`: its exit code and what it
  * printed (stdout, then stderr). A tool still running at `limit` is killed
- * as its scope closes and fails as `ToolFailed` with exit code -1.
+ * as its scope closes and fails as `ToolFailed` with exit code -1. It runs
+ * in `options.cwd`, with `options.env` over the caller's environment, and a
+ * driver with the running step's `DriverEnv` over that.
  *
  * The tool runs in this process's group (`detached: false`): the spawner
  * then leaves alone what the tool started to outlive it (the drivers'
@@ -33,12 +74,22 @@ export const attempt = Effect.fn('Sim.attempt')(function* (
   tool: string,
   args: ReadonlyArray<string>,
   limit: Duration.Duration,
+  options: Launch = {},
 ) {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+  const env = yield* envOf(tool, options);
   const run = Effect.scoped(
     Effect.gen(function* () {
       const handle = yield* spawner.spawn(
-        ChildProcess.make(tool, [...args], { detached: false, forceKillAfter: '3 seconds' }),
+        ChildProcess.make(tool, [...args], {
+          detached: false,
+          forceKillAfter: '3 seconds',
+          cwd: options.cwd,
+          ...Option.match(env, {
+            onNone: () => ({}),
+            onSome: (vars) => ({ env: vars, extendEnv: true }),
+          }),
+        }),
       );
       const [stdout, stderr, exitCode] = yield* Effect.all(
         [text(handle.stdout), text(handle.stderr), handle.exitCode],
@@ -76,8 +127,9 @@ export const succeed = Effect.fn('Sim.succeed')(function* (
   tool: string,
   args: ReadonlyArray<string>,
   limit: Duration.Duration,
+  options: Launch = {},
 ) {
-  const finished = yield* attempt(tool, args, limit);
+  const finished = yield* attempt(tool, args, limit, options);
   if (finished.exitCode !== 0)
     return yield* ToolFailed.make({
       tool,
