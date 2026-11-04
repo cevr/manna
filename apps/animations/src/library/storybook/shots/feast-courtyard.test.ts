@@ -4,7 +4,7 @@ import { Effect, Option } from 'effect';
 import { describe, expect, it, test } from 'effect-bun-test';
 import sharp from 'sharp';
 import { anchorOf, APP } from '../render.ts';
-import { type Box, eyeBoxesOf, faceBoxOf, nearestOf, rgbAt } from '../sheet.ts';
+import { type Box, eyeBoxesOf, faceBoxOf, hexOf, nearestOf, type Rgb, rgbAt } from '../sheet.ts';
 import {
   type CameraKey,
   drawnKeyOf,
@@ -226,6 +226,15 @@ const changesOf = (open: Raster, blink: Raster, rects: ReadonlyArray<Rect>) => {
   return { inside, outside };
 };
 
+/** How many pixels of `r` inside `rect` are exactly the ink. */
+const inkIn = (r: Raster, rect: Rect, ink: Rgb): number => {
+  let n = 0;
+  for (let y = Math.max(0, Math.ceil(rect[1])); y < Math.min(r.height, rect[3]); y++)
+    for (let x = Math.max(0, Math.ceil(rect[0])); x < Math.min(r.width, rect[2]); x++)
+      if (hexOf(rgbAt(r, y * r.width + x)) === hexOf(ink)) n += 1;
+  return n;
+};
+
 describe('the feast courtyard as drawn', () => {
   test("reads frame 17's man against the lead's side cell read at its sheet's size, 151 of his sheet's 158, where the render read his head 189 for 146 (round 2), and every frame within the scale bar", () => {
     const planned = timesOf(feastCourtyard).map((t, index) => ({
@@ -280,7 +289,10 @@ describe('the feast courtyard as drawn', () => {
       ];
       if (!open || !blink || Option.isNone(rects)) return [`${f.figure.name} ${key}: no eyes read`];
       const { inside, outside } = changesOf(open, blink, rects.value);
-      const shut = rects.value.every((_, k) => (inside.get(k) ?? 0) > 0);
+      const ink = f.paints[0]?.rgb ?? [0, 0, 0];
+      const shut = rects.value.every(
+        (rect, k) => (inside.get(k) ?? 0) > 0 && inkIn(blink, rect, ink) < inkIn(open, rect, ink),
+      );
       return [
         ...outside.slice(0, 3).map((at) => `${f.figure.name} ${key}: ${at} changed`),
         ...[`${f.figure.name} ${key}: an eye left open`].filter(() => !shut),
