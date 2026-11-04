@@ -10,6 +10,7 @@ import {
   BREATH,
   chromaOf,
   drawnKeyOf,
+  drawOrder,
   figure,
   type Figure,
   figuresOf,
@@ -316,6 +317,19 @@ describe('frameAt over generated shots', () => {
       );
     });
     expect(misses.slice(0, 5)).toEqual([]);
+  });
+});
+
+describe('drawOrder', () => {
+  test('draws the farthest layer first and layers of one depth in their given order, the later over the earlier, as a stable sort by depth does', () => {
+    const layers = [
+      { name: 'a', z: 1 },
+      { name: 'b', z: 3 },
+      { name: 'c', z: 1.4 },
+      { name: 'd', z: 3 },
+      { name: 'e', z: 1.4 },
+    ];
+    expect(drawOrder(layers).map((l) => l.name)).toEqual(['b', 'd', 'c', 'e', 'a']);
   });
 });
 

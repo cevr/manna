@@ -4,7 +4,7 @@ import { Base64 } from 'effect/encoding';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import type { PageCell, PageItem, PageRequest, PageScene } from './page.ts';
 import { type Lines, linesOf } from './sheet.ts';
-import { drawnKeyOf, type Frame, frameAt, lit, type Shot, timesOf } from './shot.ts';
+import { drawnKeyOf, drawOrder, type Frame, frameAt, lit, type Shot, timesOf } from './shot.ts';
 import { CAST, drawnCellOf, headsOf, loadFigures, type StoredFigure } from './store.ts';
 
 /** The shot's page failed: its build, its Chrome, its script, a render or the clip. */
@@ -106,7 +106,7 @@ export const sceneOf = Effect.fn('Storybook.sceneOf')(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const byName = new Map(figures.map((f) => [f.figure.name, f] as const));
-  const layers = yield* Effect.forEach(shot.layers, (layer) =>
+  const layers = yield* Effect.forEach(drawOrder(shot.layers), (layer) =>
     Effect.forEach(layer.items, (item) =>
       Effect.gen(function* () {
         if (item._tag === 'Plate')

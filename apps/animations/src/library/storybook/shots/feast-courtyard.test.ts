@@ -11,7 +11,9 @@ import {
   type FigureFrame,
   type Frame,
   frameAt,
+  drawOrder,
   type Plate,
+  type Shot,
   timesOf,
 } from '../shot.ts';
 import { CAST, drawnCellOf, headsOf, loadFigures, type StoredFigure } from '../store.ts';
@@ -103,23 +105,17 @@ const planeOf = (z: number, camera: CameraKey) => {
   return { scale, ox: w / 2 - vx * scale, oy: h / 2 - vy * scale };
 };
 
-/** Every plate drawn over a figure on layer `index`: the plates after it on its own layer, and every plate of a nearer layer, each with its layer's depth and blur. */
-const platesOver = (index: number, name: string) => {
-  const z = feastCourtyard.layers[index]?.z ?? 1;
-  return feastCourtyard.layers.flatMap((layer, i) => {
-    const over = () => {
-      if (i === index)
-        return layer.items.slice(
-          layer.items.findIndex((it) => it._tag === 'Figure' && it.name === name) + 1,
-        );
-      if (layer.z < z) return layer.items;
-      return [];
-    };
-    return over().flatMap((it) => {
-      if (it._tag !== 'Plate') return [];
-      return [{ plate: it, z: layer.z, blur: layer.blur }];
+/** Every plate the page draws after figure `name` of `shot` (`drawOrder`, then each layer's items in order), so over it, each with its layer's depth and blur. */
+const platesOver = (shot: Shot, name: string) => {
+  const drawn = drawOrder(shot.layers).flatMap((layer) =>
+    layer.items.map((item) => ({ item, z: layer.z, blur: layer.blur })),
+  );
+  return drawn
+    .slice(drawn.findIndex(({ item }) => item._tag === 'Figure' && item.name === name) + 1)
+    .flatMap(({ item, z, blur }) => {
+      if (item._tag !== 'Plate') return [];
+      return [{ plate: item, z, blur }];
     });
-  });
 };
 
 /** A figure's face box in its layer's px in one frame: its drawn key's face box, placed as the page places the cell (scale, squash and breath about the anchor); none when its cell reads no lines or its drawing no face. */
@@ -156,16 +152,16 @@ const intoLayer = (
 
 /** What covers each figure's face in one frame: a line per plate drawn over it with any pixel inside the face box (a blurred plate's within three blurs of it), or a line for a figure whose face reads none. */
 const coversIn = (
+  shot: Shot,
   frame: Frame,
   index: number,
   pictures: ReadonlyMap<string, Coverage>,
 ): ReadonlyArray<string> =>
   frame.figures.flatMap((f) => {
     const stored = byName.get(f.name);
-    const layer = feastCourtyard.layers.findIndex((l) => l.name === f.layer);
     const face = Option.flatMap(Option.fromUndefinedOr(stored), (s) => faceInLayer(f, s));
     if (!stored || Option.isNone(face)) return [`${f.name} frame ${index}: no face read`];
-    return platesOver(layer, f.name).flatMap(({ plate, z, blur }) => {
+    return platesOver(shot, f.name).flatMap(({ plate, z, blur }) => {
       const rect = intoLayer(face.value, stored.layer.z, z, frame.camera, 3 * blur);
       const n = Option.match(Option.fromUndefinedOr(pictures.get(plate.file)), {
         onNone: () => 0,
@@ -175,6 +171,21 @@ const coversIn = (
       return [`${f.name} frame ${index}: ${plate.file} covers ${n} px`];
     });
   });
+
+/** The coverage of every plate `shot` draws over a figure, by file. */
+const picturesOver = Effect.fnUntraced(function* (shot: Shot) {
+  const pictures = new Map<string, Coverage>();
+  for (const layer of shot.layers)
+    for (const it of layer.items)
+      if (it._tag === 'Figure')
+        for (const { plate } of platesOver(shot, it.name))
+          if (!pictures.has(plate.file)) pictures.set(plate.file, yield* plateCoverage(plate));
+  return pictures;
+});
+
+/** What covers each figure's face in every frame of `shot` (`coversIn`). */
+const coversOf = (shot: Shot, pictures: ReadonlyMap<string, Coverage>): ReadonlyArray<string> =>
+  timesOf(shot).flatMap((t, i) => coversIn(shot, frameAt(shot, heads, t), i, pictures));
 
 /** Each hold of the shot that blinks: its figure, its cell and its blink key. */
 const blinkingHolds = figures.flatMap((f) =>
@@ -264,18 +275,32 @@ describe('the feast courtyard as drawn', () => {
     "covers no figure's face with a plate drawn over it in any frame, a blurred plate's spread of three blurs included (critique 2, item 1)",
     () =>
       Effect.gen(function* () {
-        const pictures = new Map<string, Coverage>();
-        for (const [index, layer] of feastCourtyard.layers.entries())
-          for (const it of layer.items)
-            if (it._tag === 'Figure')
-              for (const { plate } of platesOver(index, it.name))
-                if (!pictures.has(plate.file))
-                  pictures.set(plate.file, yield* plateCoverage(plate));
+        const pictures = yield* picturesOver(feastCourtyard);
         expect([...pictures.keys()].length).toBeGreaterThanOrEqual(2);
-        const covered = timesOf(feastCourtyard).flatMap((t, i) =>
-          coversIn(frameAt(feastCourtyard, heads, t), i, pictures),
-        );
-        expect(covered.slice(0, 5)).toEqual([]);
+        expect(coversOf(feastCourtyard, pictures).slice(0, 5)).toEqual([]);
+      }),
+  );
+
+  it.effect(
+    "counts a plate on a later layer of a figure's own depth as over it, as the page draws it: the table copied onto such a layer 32 px up crosses the man's face (round 3, T2)",
+    () =>
+      Effect.gen(function* () {
+        const guests = feastCourtyard.layers.findIndex((l) => l.name === 'guests');
+        const layer = feastCourtyard.layers[guests];
+        const table = layer?.items.find((it) => it._tag === 'Plate');
+        expect(table?._tag).toBe('Plate');
+        if (!layer || table?._tag !== 'Plate') return;
+        const tied = {
+          ...layer,
+          name: 'table at the guests depth',
+          items: [{ ...table, place: { ...table.place, y: table.place.y - 32 } }],
+        };
+        const shot: Shot = {
+          ...feastCourtyard,
+          layers: feastCourtyard.layers.toSpliced(guests + 1, 0, tied),
+        };
+        const covered = coversOf(shot, yield* picturesOver(shot));
+        expect(covered.some((line) => line.startsWith('man frame 0:'))).toBe(true);
       }),
   );
 

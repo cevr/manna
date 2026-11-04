@@ -365,6 +365,11 @@ export const figuresOf = (
     }),
   );
 
+/** Layers in the order the page draws them, each over the ones before: farthest first, layers of one depth in their given order, as the engine's multiplane sorts its planes (a stable sort by depth). */
+export const drawOrder = <L extends { readonly z: number }>(
+  layers: ReadonlyArray<L>,
+): ReadonlyArray<L> => layers.toSorted((a, b) => b.z - a.z);
+
 /** Every plate of a shot. */
 export const platesOf = (shot: Shot): ReadonlyArray<Plate> =>
   shot.layers.flatMap((layer) =>
