@@ -486,7 +486,8 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   already, a ground near a paint and a split with fewer figures than keys,
   and then the agent draws again. No pixel of a sheet or cell is edited by
   hand. The poses a key may name are `POSES` in `store.ts`; a blink key
-  (`neutralBlink`, `threeQuarterBlink`) is its pose with the eyes closed.
+  (`neutralBlink`, `threeQuarterBlink`) is its pose with the eyes closed, and
+  a shot shows only its eyes (below).
   When the split changes, `resplit` cuts a stored sheet again and rewrites
   its cells and its record's cells; the drawing, prompt and refs stand.
 - **The split** (`sheet.ts`) clears the ground joined to the border, cuts the
@@ -499,16 +500,23 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   cloth darker than both sides becomes the ink between two parts or the
   part's shade inside one, a speck of 12 px or fewer takes the paint round
   it, skin paint stays only within 4 px of skin, and the figure's rim is
-  peeled of everything but ink 2 px deep. The paints are the member's
+  peeled of everything but ink 2 px deep. A mark ringed by the face's skin
+  that holds any ink (an eye, a mouth) is painted all ink, so an eye drawn
+  half in a stool's or a mantle's colour reads as an eye. The paints are the member's
   `cast-sheet/palette.json`: every hex is one his `look.md` names, and the ink
   is measured on his first kept view.
 - **A shot** (`shot.ts`, one per file in `shots/`) is layers at depths, each
   holding plates and figures, under one light and one camera. A figure names
   one member and one sheet, and its spans (`hold`, `blinkingHold`, `turn`,
   `keyRun`, `walk`) name only that sheet's keys. A hold breathes (the figure
-  stretches up 0.4 % about its soles and back, at its own pace) and a
-  `blinkingHold` shows its blink key for 0.125 s on a schedule seeded by the
-  figure's name. It has no scale: its head is the shot's
+  stretches up 0.4 % about its soles and back, at its own pace). A
+  `blinkingHold` blinks for 0.125 s at a time on one schedule per figure,
+  seeded by its name and running across the whole shot, so a cut from hold
+  to hold never restarts the wait (no more than 4.4 s between blinks). A
+  blink is the held cell with the blink key's closed eyes pasted over its
+  own (`blinkOf`, built as the shot loads); nothing outside the eyes
+  changes, so the outline never twitches. No plate drawn over a figure may
+  cover its face in any frame (`shots/feast-courtyard.test.ts`). It has no scale: its head is the shot's
   `headPx` over its layer's depth, against its sheet's median head. It has no
   light: the shot's one light tints every base paint and shades every shade
   paint once per cell, the ink untouched. `frameAt` is a pure function of t.
@@ -525,8 +533,12 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   not close below, so a jaw line drawn in a garment's colour is not the
   collar) is read once on each stored cell at its sheet's own size; the
   `scale` bar reads those heads as the plan draws them in every frame, not
-  from renders. The bars stay `orchestrator-proposed` until the owner OKs
-  their numbers.
+  from renders, with each squash and no breath. The `colour-step` bar also
+  reads cells, not renders: each drawn key's cell (or blink) lit by the
+  shot's light, at every change of drawn key in the plan, where every colour
+  is the one drawn and no resampling has blended an edge; the `light` bar
+  keeps the renders' colour checked. The bars stay `orchestrator-proposed`
+  until the owner OKs their numbers.
 
 ## How a film is built
 
