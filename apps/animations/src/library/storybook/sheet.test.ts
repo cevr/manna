@@ -18,7 +18,10 @@ import {
   rgbAt,
   rgbOfHex,
   type Rgb,
+  PLAIN_SPLIT,
+  SHADE_REACH,
   SKIN_REACH,
+  strayShadeShare,
   SPECK_PX,
   snapped,
   splitSheet,
@@ -394,6 +397,73 @@ const speckCase = (seed: number) => {
 };
 
 describe('tidied', () => {
+  test('under unstray, gives a hair shade farther than SHADE_REACH from its hair base its neighbours’ paint, and keeps the shade beside the hair; a plain split keeps both; the share reads them (critique 1, items 15 and 16)', () => {
+    const key = {
+      k: rgbOfHex('#130803'),
+      a: rgbOfHex('#f2b27c'),
+      h: rgbOfHex('#4f291c'),
+      p: rgbOfHex('#57384a'),
+    };
+    const palette: Palette = {
+      ink: '#130803',
+      parts: [
+        { name: 'skin', base: '#f2b27c', role: 'skin' },
+        { name: 'hair', base: '#4f291c', shade: '#57384a', role: 'hair' },
+      ],
+    };
+    const row = 'hhhhhpkaapaaaaak';
+    const rows = Array.from({ length: 24 }, () => row);
+    const drawn = art(rows, key);
+    const paints = paintsOf(palette);
+    const nearest = drawnNearestOf(drawn, paints);
+    const snap = snapped(drawn, paints, nearest);
+    const plain = lettersOf(tidied(drawn, snap, paints, nearest), key);
+    const unstray = lettersOf(
+      tidied(drawn, snap, paints, nearest, { ...PLAIN_SPLIT, unstray: true }),
+      key,
+    );
+    expect(plain).toEqual(rows);
+    expect(unstray).toEqual(Array.from({ length: 24 }, () => 'hhhhhpkaaaaaaaak'));
+    expect(9 - 4).toBeGreaterThan(SHADE_REACH);
+    expect(strayShadeShare(drawn, paints)).toBeCloseTo(1 / 16, 9);
+    expect(strayShadeShare(art(unstray, key), paints)).toBe(0);
+  });
+
+  test('under feetLow, gives a footwear paint above the figure’s middle row its nearest other paint, the hair here, and keeps it below; a plain split keeps both (critique 1, item 4)', () => {
+    const key = {
+      k: rgbOfHex('#130803'),
+      a: rgbOfHex('#f2b27c'),
+      h: rgbOfHex('#6c432b'),
+      f: rgbOfHex('#7a5236'),
+    };
+    const palette: Palette = {
+      ink: '#130803',
+      parts: [
+        { name: 'skin', base: '#f2b27c', role: 'skin' },
+        { name: 'hair', base: '#6c432b', role: 'hair' },
+        { name: 'sandals', base: '#7a5236', role: 'footwear' },
+      ],
+    };
+    const rows = [
+      ...Array.from({ length: 10 }, () => 'hhhhffffaaaa'),
+      ...Array.from({ length: 10 }, () => 'aaaaffffaaaa'),
+    ];
+    const drawn = art(rows, key);
+    const paints = paintsOf(palette);
+    const nearest = drawnNearestOf(drawn, paints);
+    const snap = snapped(drawn, paints, nearest);
+    const plain = lettersOf(tidied(drawn, snap, paints, nearest), key);
+    const low = lettersOf(
+      tidied(drawn, snap, paints, nearest, { ...PLAIN_SPLIT, feetLow: true }),
+      key,
+    );
+    expect(plain).toEqual(rows);
+    expect(low).toEqual([
+      ...Array.from({ length: 10 }, () => 'hhhhhhhhaaaa'),
+      ...Array.from({ length: 10 }, () => 'aaaaffffaaaa'),
+    ]);
+  });
+
   test("paints a thin line darker than one part's cloth on both sides in that part's shade, and one between two parts in ink (critique 1, item 1)", () => {
     const row = 'kttttftttesssssk';
     const rows = ['kkkkkkkkkkkkkkkk', ...Array.from({ length: 13 }, () => row), 'kkkkkkkkkkkkkkkk'];

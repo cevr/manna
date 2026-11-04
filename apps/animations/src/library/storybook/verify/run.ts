@@ -33,6 +33,7 @@ import {
   sha256,
   sharesOf,
   sheetDir,
+  splitRulesOf,
   type StoredFigure,
 } from '../store.ts';
 import { BARS, type CheckId } from './bars.ts';
@@ -236,6 +237,7 @@ const sheetFault = Effect.fn('StorybookVerify.sheetFault')(function* (
     yield* decoded(bytes, `${dir}/sheet.png`),
     keys.length,
     yield* memberPalette(cast, f.figure.member),
+    splitRulesOf(f.record),
   );
   if (Result.isFailure(split)) return Option.some(`${f.figure.name}: ${split.failure.reason}`);
   for (const [i, c] of f.record.cells.entries()) {

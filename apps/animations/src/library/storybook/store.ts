@@ -22,6 +22,8 @@ import {
   sheetHeadOf,
   splitSheet,
   type Split,
+  SPLIT_RULES,
+  type SplitRules,
   withHeadOf,
 } from './sheet.ts';
 import { drawnKeyOf, type Figure, figuresOf, type Layer, type Shot } from './shot.ts';
@@ -67,6 +69,8 @@ export const SheetRecord = Schema.Struct({
   /** The day it was drawn, `YYYY-MM-DD`. */
   drawn: Schema.String,
   cells: Schema.Array(Schema.Struct({ key: Name, box: BoxJson, sha256: Schema.String })),
+  /** The opt-in split rules its cells were cut under (`SplitRules`), by name: every one on a sheet drawn since the rules, none (absent) on a sheet drawn before them, which re-splits as it was. */
+  rules: Schema.optionalKey(Schema.Array(Schema.Literals(SPLIT_RULES))),
   /** The owner's keep: absent until he keeps the sheet. */
   kept: Schema.optionalKey(
     Schema.Struct({ date: Schema.String, why: Schema.String, ask: Schema.String }),
@@ -74,6 +78,19 @@ export const SheetRecord = Schema.Struct({
 });
 
 export type SheetRecord = typeof SheetRecord.Type;
+
+/** The split rules a sheet drawn now is split under, and its record names: all of them. */
+export const DRAWN_RULES: SplitRules = { unstray: true, feetLow: true };
+
+/** The split rules a stored sheet re-splits under, as its record names them. */
+export const splitRulesOf = (record: SheetRecord): SplitRules => {
+  const named = new Set(record.rules ?? []);
+  return { unstray: named.has('unstray'), feetLow: named.has('feet-low') };
+};
+
+/** The rule names a record holds for `rules`. */
+const ruleNamesOf = (rules: SplitRules): ReadonlyArray<(typeof SPLIT_RULES)[number]> =>
+  SPLIT_RULES.filter((name) => ({ unstray: rules.unstray, 'feet-low': rules.feetLow })[name]);
 
 export const RecordJson = Schema.fromJsonString(SheetRecord, { space: 2 });
 
@@ -366,7 +383,7 @@ export const checkDrawn = (
       return yield* DrawRefused.make({
         reason: `its split finds ${figures} figures, ${keys.length} keys asked`,
       });
-    return yield* Effect.fromResult(splitSheet(raster, keys.length, palette)).pipe(
+    return yield* Effect.fromResult(splitSheet(raster, keys.length, palette, DRAWN_RULES)).pipe(
       Effect.mapError((e) => DrawRefused.make({ reason: e.reason })),
     );
   });
@@ -433,6 +450,7 @@ export const drawSheet = Effect.fn('Storybook.drawSheet')(function* (
     member,
     id,
     prompt,
+    rules: ruleNamesOf(DRAWN_RULES),
     refs: refShas,
     sheet: yield* sha256(bytes),
     size: SHEET_SIZE,
@@ -598,7 +616,12 @@ export const resplitSheet = Effect.fn('Storybook.resplitSheet')(function* (
     });
   const palette = yield* memberPalette(cast, member);
   const split = yield* Effect.fromResult(
-    splitSheet(yield* pngOf(bytes, `${dir}/sheet.png`), record.cells.length, palette),
+    splitSheet(
+      yield* pngOf(bytes, `${dir}/sheet.png`),
+      record.cells.length,
+      palette,
+      splitRulesOf(record),
+    ),
   );
   const again: SheetRecord = {
     ...record,

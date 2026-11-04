@@ -776,18 +776,23 @@ const nearCounts = (mask: Uint8Array, width: number, height: number, reach: numb
  * pixel of a skin paint with no skin base within `SKIN_REACH` px takes the
  * nearest paint, to its drawn colour, that is not skin.
  */
-const skinBySkin = (t: Tidy, map: Int32Array): Int32Array => {
+const skinBySkin = (t: Tidy, map: Int32Array, feetBarred: (q: number) => boolean): Int32Array => {
   const skin = (i: number) => t.paints[i]?.role === 'skin';
   const others = t.paints.flatMap((p, i) => {
     if (p.role === 'skin') return [];
     return [i];
   });
+  const high = others.filter((i) => t.paints[i]?.role !== 'footwear');
   const base = Uint8Array.from(map, (i) => Number(skin(i) && t.paints[i]?.tone === 'base'));
   const near = nearCounts(base, t.drawn.width, t.drawn.height, SKIN_REACH);
   const labs = t.paints.map((p) => p.lab);
   return map.map((index, q) => {
     if (index < 0 || !skin(index) || near(q) > 0) return index;
-    return nearestAmong(labOf(rgbAt(t.drawn, q)), others, labs);
+    return nearestAmong(
+      labOf(rgbAt(t.drawn, q)),
+      [others, high][Number(feetBarred(q))] ?? others,
+      labs,
+    );
   });
 };
 
@@ -839,18 +844,109 @@ const despecked = (map: Int32Array, width: number): Int32Array => {
 };
 
 /**
+ * The map with the footwear paint only in the figure's lower half (critique
+ * 1, item 4: no sandal brown on hair, ears or neck): a pixel of a footwear
+ * paint above the middle row of the cell's opaque rows takes the nearest
+ * paint, to its drawn colour, that is not footwear. The seat, painted the
+ * footwear's hex, lies below a seated figure's middle.
+ */
+const feetLowOnly = (t: Tidy, map: Int32Array, barred: (q: number) => boolean): Int32Array => {
+  const feet = (i: number) => t.paints[i]?.role === 'footwear';
+  const others = t.paints.flatMap((p, i) => {
+    if (p.role === 'footwear') return [];
+    return [i];
+  });
+  const labs = t.paints.map((p) => p.lab);
+  return map.map((index, q) => {
+    if (index < 0 || !feet(index) || !barred(q)) return index;
+    return nearestAmong(labOf(rgbAt(t.drawn, q)), others, labs);
+  });
+};
+
+/** Where `rules` bar the footwear paint from a cell's map: above the middle of its opaque rows under `feetLow` (`feetLowOnly`), nowhere else. */
+const feetBarOf = (map: Int32Array, width: number, rules: SplitRules) => {
+  const first = map.findIndex((index) => index !== CLEAR);
+  const last = map.findLastIndex((index) => index !== CLEAR);
+  const middle = (Math.floor(first / width) + Math.floor(last / width)) / 2;
+  return (q: number) => rules.feetLow && Math.floor(q / width) < middle;
+};
+
+/** How far (px, in the square round it) a pixel of a hair shade may lie from its hair's base: farther, it is a stray shade along a line (critique 1, item 16). */
+export const SHADE_REACH = 3;
+
+/** The pixels of `map` that are a stray hair shade: a hair part's shade with no pixel of that part's base within `SHADE_REACH` px. A garment's shade is left out: a cloth's whole far side may be its shade. */
+const strayShadesOf = (
+  map: Int32Array,
+  width: number,
+  paints: ReadonlyArray<Paint>,
+): ReadonlyArray<number> => {
+  const height = map.length / width;
+  const nearBase = new Map(
+    paints.flatMap((p, i) => {
+      if (p.tone !== 'shade' || p.role !== 'hair') return [];
+      const base = paints.findIndex((b) => b.part === p.part && b.tone === 'base');
+      const mask = Uint8Array.from(map, (index) => Number(index === base));
+      return [[i, nearCounts(mask, width, height, SHADE_REACH)] as const];
+    }),
+  );
+  return Array.from(map.keys()).filter((q) => {
+    const near = nearBase.get(map[q] ?? CLEAR);
+    if (!near) return false;
+    return near(q) === 0;
+  });
+};
+
+/** The share of a cell's opaque pixels that are a stray hair shade (`strayShadesOf`), its paints read exactly. */
+export const strayShadeShare = (r: Raster, paints: ReadonlyArray<Paint>): number => {
+  const map = paintMapOf(r, paints);
+  const opaque = map.filter((index) => index !== CLEAR).length;
+  return strayShadesOf(map, r.width, paints).length / Math.max(1, opaque);
+};
+
+/**
+ * The map with every stray shade (`strayShadesOf`) given the paint most of
+ * its eight neighbours that are not a stray shade are (clear and drawn
+ * pixels not counted; the lower index of equals), so a dash of shade along a
+ * line takes the line's or the part's paint (critique 1, items 15 and 16);
+ * a stray with no such neighbour stays.
+ */
+const unstrayed = (map: Int32Array, width: number, paints: ReadonlyArray<Paint>): Int32Array => {
+  const height = map.length / width;
+  const strays = new Set(strayShadesOf(map, width, paints));
+  const out = map.slice();
+  for (const q of strays) {
+    const [x, y] = [q % width, Math.floor(q / width)];
+    const votes = new Map<number, number>();
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const [u, v] = [x + dx, y + dy];
+        if ((dx === 0 && dy === 0) || u < 0 || v < 0 || u >= width || v >= height) continue;
+        const m = v * width + u;
+        const index = map[m] ?? CLEAR;
+        if (index < 0 || strays.has(m)) continue;
+        votes.set(index, (votes.get(index) ?? 0) + 1);
+      }
+    const winner = [...votes].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
+    if (winner) out[q] = winner[0];
+  }
+  return out;
+};
+
+/**
  * A snapped cell tidied by the rules a drawing's own marks need, in order:
  * each thin line on cloth as ink between two parts or the part's shade
  * inside one (`lineAt`), every speck the paint round it (`despecked`), and
  * skin only by skin (`skinBySkin`), last, so no speck's vote puts skin
- * colour back on cloth. `drawn` is the cell before the snap, `snap` it
- * after, `nearest` the snap's lookup.
+ * colour back on cloth; under `rules.unstray`, every stray hair shade its
+ * neighbours' paint (`unstrayed`) before the skin rule. `drawn` is the cell
+ * before the snap, `snap` it after, `nearest` the snap's lookup.
  */
 export const tidied = (
   drawn: Raster,
   snap: Raster,
   paints: ReadonlyArray<Paint>,
   nearest: (c: Rgb) => Nearest,
+  rules: SplitRules = PLAIN_SPLIT,
 ): Raster => {
   const map = paintMapOf(snap, paints);
   const loose = Uint8Array.from(map, (index, q) =>
@@ -864,7 +960,16 @@ export const tidied = (
     }),
   );
   const lined = map.map((index, q) => Option.getOrElse(lineAt(t, q, shadeOf), () => index));
-  const final = skinBySkin(t, despecked(lined, drawn.width));
+  const strayed = (m: Int32Array) => {
+    if (!rules.unstray) return m;
+    return unstrayed(m, drawn.width, paints);
+  };
+  const barred = feetBarOf(map, drawn.width, rules);
+  const final = skinBySkin(
+    t,
+    strayed(feetLowOnly(t, despecked(lined, drawn.width), barred)),
+    barred,
+  );
   const rgba = snap.rgba.slice();
   for (let q = 0; q < final.length; q++) {
     const paint = paints[final[q] ?? CLEAR];
@@ -908,11 +1013,24 @@ export interface Split {
   readonly cells: ReadonlyArray<SplitCell>;
 }
 
-/** A drawn sheet split into `n` cells: the background cleared, the cells cut, each kept to its largest piece, its pockets mended and its paints snapped to `palette`, each colour to the paint the whole sheet draws it as (`drawnNearestOf`), its drawing's own marks tidied, its face's marks inked (`inkedFaceMarks`) and its rim peeled. */
+/** The opt-in split rules by the names a sheet's record gives them. */
+export const SPLIT_RULES = ['unstray', 'feet-low'] as const;
+
+/** The split's rules a sheet opts into, as its record names them: `unstray`, each stray hair shade its neighbours' paint (`unstrayed`); `feetLow` (`feet-low`), the footwear paint only in the figure's lower half (`feetLowOnly`). */
+export interface SplitRules {
+  readonly unstray: boolean;
+  readonly feetLow: boolean;
+}
+
+/** The split as sheets drawn before any opt-in rule were split. */
+export const PLAIN_SPLIT: SplitRules = { unstray: false, feetLow: false };
+
+/** A drawn sheet split into `n` cells: the background cleared, the cells cut, each kept to its largest piece, its pockets mended and its paints snapped to `palette`, each colour to the paint the whole sheet draws it as (`drawnNearestOf`), its drawing's own marks tidied under `rules` (`tidied`), its face's marks inked (`inkedFaceMarks`) and its rim peeled. */
 export const splitSheet = (
   sheet: Raster,
   n: number,
   palette: Palette,
+  rules: SplitRules = PLAIN_SPLIT,
 ): Result.Result<Split, SplitRefused> => {
   const ground = groundOf(sheet);
   const cleared = clearBackground(sheet, ground);
@@ -924,7 +1042,7 @@ export const splitSheet = (
       cells: boxes.map((box) => {
         const mended = mendPockets(largestPiece(cropOf(cleared, box)), ground, paints, nearest);
         const snap = snapped(mended, paints, nearest);
-        const tidy = tidied(mended, snap, paints, nearest);
+        const tidy = tidied(mended, snap, paints, nearest, rules);
         return { box, raster: peeled(inkedFaceMarks(tidy, paints), paints) };
       }),
     };
