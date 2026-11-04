@@ -188,7 +188,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
           return Effect.asVoid(PubSub.publish(views, next.view));
         });
 
-      /** Hands the finished recital's recall to `Recalls`, unless it is the one last kept for it. */
+      /** Hands the finished recital's recall to `Recalls`, unless it is the one last kept for it; once marked kept, the hand-over is never cut off. */
       const keep = Effect.gen(function* () {
         const { recital, view } = MutableRef.get(held);
         const { matcher } = yield* dictation.view;
@@ -205,7 +205,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
           ...now,
           recital: { ...recital, kept: Option.some(recall) },
         }));
-        yield* recalls.keep(recall);
+        yield* Effect.uninterruptible(recalls.keep(recall));
       });
 
       /** Applies an ending to the recital under way: a finished one takes its suggestion as the choice and is kept; any other keeps nothing. */

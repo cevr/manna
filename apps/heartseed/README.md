@@ -133,7 +133,8 @@ it will call `Dictation.start`.
     service against its model) and `src/dictation` (the scripted source,
     the hints and the native module's guards).
   - `test:sayit`: `src/sayit.property.test.ts` (Say it against its model)
-    and `src/sayit` (the source Say it hears).
+    and `src/sayit` (Today's Say it in happy-dom, and the source Say it
+    hears).
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

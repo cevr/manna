@@ -1,0 +1,80 @@
+/**
+ * The app's one runtime for the reader's screens: one `Dictation` over the
+ * source this build hears, Say it over it, the soft tick and the logged
+ * recalls. Every screen that hears the reader takes Dictation from here, so
+ * two services never share the module's one channel.
+ *
+ * The source is the module's replay of a scripted recital only in a
+ * development build (`__DEV__`) on the simulator, which can never listen;
+ * every other build hears the microphone. A device-info read that fails or
+ * hangs counts as a device. The runtime is not kept alive: when Today
+ * leaves, its scope closes and Dictation cancels a recital under way.
+ */
+
+import { Duration, Effect, Layer, Stream } from 'effect';
+import * as Atom from 'effect/reactivity/Atom';
+import { One } from 'one';
+import passage from 'virtual:heartseed-passage';
+
+import { layer as dictationLayer, type DictationSource } from './dictation';
+import { recite } from './dictation/script';
+import { microphoneSource, replaySource } from './dictation/source';
+import { layer as sayItLayer, SayIt, type Grade, type Haptics, type Recalls } from './sayit';
+import { liveHaptics, loggedRecalls } from './sayit/live';
+import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
+
+const dev = typeof __DEV__ !== 'undefined' && __DEV__;
+
+/** How long the device-info read may take before the app counts itself on a device. */
+const DEVICE_INFO_WAIT = Duration.seconds(2);
+
+/** Whether the app runs on the simulator, by One's device info. */
+const onSimulator = Effect.tryPromise(() => One.Device.getInfo()).pipe(
+  Effect.map((info) => info.isSimulator),
+  Effect.timeout(DEVICE_INFO_WAIT),
+  Effect.orElseSucceed(() => false),
+);
+
+/** The source this build hears. */
+export const appSource: Layer.Layer<DictationSource> = Layer.unwrap(
+  Effect.gen(function* () {
+    const simulator = yield* onSimulator;
+    const kind = sourceKind({ dev, simulator });
+    yield* Effect.logInfo('sayit.source').pipe(Effect.annotateLogs({ kind }));
+    if (kind === 'replay') return replaySource(recite(passage.text, SIMULATOR_PLAN));
+    return microphoneSource;
+  }),
+);
+
+/** The app's services over its parts: Say it and the one Dictation it runs over. */
+export const appLayer = (parts: {
+  readonly source: Layer.Layer<DictationSource>;
+  readonly haptics: Layer.Layer<Haptics>;
+  readonly recalls: Layer.Layer<Recalls>;
+}) =>
+  sayItLayer(passage).pipe(
+    Layer.provideMerge(dictationLayer.pipe(Layer.provide(parts.source))),
+    Layer.provide(Layer.mergeAll(parts.haptics, parts.recalls)),
+  );
+
+export const runtime = Atom.runtime(
+  appLayer({ source: appSource, haptics: liveHaptics, recalls: loggedRecalls }),
+);
+
+/** What Today shows of Say it. */
+export const sayItView = runtime.atom(Stream.unwrap(Effect.map(SayIt, (sayIt) => sayIt.changes)));
+
+/** A press of the one button. Each command runs to its end, so a second tap never cuts off the first one's recall. */
+export const press = runtime.fn(() => Effect.flatMap(SayIt, (sayIt) => sayIt.press), {
+  concurrent: true,
+});
+
+export const peek = runtime.fn(
+  (index: number) => Effect.flatMap(SayIt, (sayIt) => sayIt.peek(index)),
+  { concurrent: true },
+);
+
+export const choose = runtime.fn(
+  (grade: Grade) => Effect.flatMap(SayIt, (sayIt) => sayIt.choose(grade)),
+  { concurrent: true },
+);
