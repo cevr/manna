@@ -13,6 +13,9 @@ import {
   withHeadOf,
 } from './sheet.ts';
 import {
+  type Dress,
+  dressed,
+  dressedPaints,
   drawnKeyOf,
   drawOrder,
   type Figure,
@@ -112,12 +115,13 @@ export const paintSceneOf = (shot: Shot, paper: string, source: SceneSource): Pa
         cells,
         worn: item.worn ?? [],
         blinks: blinksOf(item),
+        dress: item.dress ?? [],
       };
     }),
   })),
 });
 
-/** A figure as the painter draws it: its name, its member's palette, its sheet's head share (`shareOf`), its stored cells by key, the keys it wears another head on and the blinks its holds show (`[cell, blink]`). */
+/** A figure as the painter draws it: its name, its member's palette, its sheet's head share (`shareOf`), its stored cells by key, the keys it wears another head on, the blinks its holds show (`[cell, blink]`) and the paints it wears in other colours. */
 export interface PaintFigure {
   readonly _tag: 'Figure';
   readonly name: string;
@@ -126,6 +130,7 @@ export interface PaintFigure {
   readonly cells: Readonly<Record<string, PaintCell>>;
   readonly worn: ReadonlyArray<Worn>;
   readonly blinks: ReadonlyArray<readonly [string, string]>;
+  readonly dress: ReadonlyArray<Dress>;
 }
 
 /** A shot's set and cast as the painter holds them: the frame's size, the paper behind everything, the scene's one light, and each layer's depth, blur and items in drawing order. */
@@ -298,12 +303,13 @@ export const prepare = (scene: PaintScene, pictures: Pictures): Option.Option<Pr
       const paints = paintsOf(item.palette);
       const drawn = drawnOf(item, pictures, paints);
       if (Option.isNone(drawn)) return Option.none();
+      const worn = dressedPaints(paints, item.dress);
       const read = new Map<string, Option.Option<number>>();
       for (const d of [...drawn.value.cells, ...drawn.value.blinks]) {
         const { anchor, head } = readOf(d, paints);
         if (!drawn.value.blinks.includes(d)) read.set(d.key, head);
         cells.set(`${item.name}/${d.key}`, {
-          canvas: canvasOf(lit(d.raster, scene.light, paints)),
+          canvas: canvasOf(lit(dressed(d.raster, item.dress), scene.light, worn)),
           ...anchor,
         });
       }

@@ -12,7 +12,17 @@ import {
   storybookPage,
 } from '../render.ts';
 import { rgbOfHex, shareOf, splitSheet } from '../sheet.ts';
-import { drawnKeyOf, frameAt, lit, litPaints, platesOf, type Shot, timesOf } from '../shot.ts';
+import {
+  dressed,
+  dressedPaints,
+  drawnKeyOf,
+  frameAt,
+  lit,
+  litPaints,
+  platesOf,
+  type Shot,
+  timesOf,
+} from '../shot.ts';
 import {
   CAST,
   type Cast,
@@ -131,7 +141,13 @@ const firstLaunch = Effect.fn('StorybookVerify.firstLaunch')(function* (
   const path = yield* Path.Path;
   const byName = new Map(figures.map((f) => [f.figure.name, f] as const));
   const lit = new Map(
-    figures.map((f) => [f.figure.name, litPaints(f.paints, shot.light)] as const),
+    figures.map(
+      (f) =>
+        [
+          f.figure.name,
+          litPaints(dressedPaints(f.paints, f.figure.dress ?? []), shot.light),
+        ] as const,
+    ),
   );
   const reads: Array<FrameRead> = [];
   const colour = new Map<string, string>();
@@ -186,12 +202,14 @@ const litMedians = (
       keys.set(f.name, (keys.get(f.name) ?? new Set()).add(drawnKeyOf(f)));
   return new Map(
     figures.map((f) => {
-      const paints = litPaints(f.paints, shot.light);
+      const dress = f.figure.dress ?? [];
+      const worn = dressedPaints(f.paints, dress);
+      const paints = litPaints(worn, shot.light);
       const medians = [...(keys.get(f.figure.name) ?? [])].flatMap((key) =>
         Option.toArray(
           Option.map(
             drawnCellOf(f, key),
-            (r) => [key, paintMedians(lit(r, shot.light, f.paints), paints)] as const,
+            (r) => [key, paintMedians(lit(dressed(r, dress), shot.light, worn), paints)] as const,
           ),
         ),
       );

@@ -127,6 +127,14 @@ export interface Figure<K extends string = string> {
   readonly spans: readonly [Span<K>, ...ReadonlyArray<Span<K>>];
   /** Keys drawn as one cell's body wearing another's head (`withHeadOf`): the keys of one view share its head, a key that changes only its face keeps the neutral body. */
   readonly worn?: ReadonlyArray<Worn<K>>;
+  /** Paints of its member's palette this figure wears in other colours (`dressed`): one sheet's figure told apart from another member's who dresses alike, with no new drawing. */
+  readonly dress?: ReadonlyArray<Dress>;
+}
+
+/** One paint of a palette, as its cells hold it (`from`, hex), worn in another colour (`to`, hex). */
+export interface Dress {
+  readonly from: string;
+  readonly to: string;
 }
 
 /** Key `key` drawn as cell `body` wearing the head of cell `head`. */
@@ -554,6 +562,35 @@ export const lit = (cell: Raster, light: Light, paints: ReadonlyArray<Paint>): R
     rgba.set(litColour(c, tones.get(`${c[0]},${c[1]},${c[2]}`) ?? 'drawn', light), q * 4);
   }
   return { width: cell.width, height: cell.height, rgba };
+};
+
+/** A colour's key for an exact lookup: its three channels. */
+const rgbKey = (c: Rgb) => `${c[0]},${c[1]},${c[2]}`;
+
+/** A cell in a figure's dress: every pixel of a dressed paint in its new colour, every other pixel as it was. */
+export const dressed = (cell: Raster, dress: ReadonlyArray<Dress>): Raster => {
+  if (dress.length === 0) return cell;
+  const to = new Map(dress.map((d) => [rgbKey(rgbOfHex(d.from)), rgbOfHex(d.to)] as const));
+  const rgba = cell.rgba.slice();
+  for (let q = 0; q < cell.width * cell.height; q++) {
+    if (alphaAt(cell, q) === 0) continue;
+    const c = to.get(rgbKey(rgbAt(cell, q)));
+    if (c) rgba.set(c, q * 4);
+  }
+  return { width: cell.width, height: cell.height, rgba };
+};
+
+/** A palette's paints in a figure's dress: each dressed paint in its new colour, its part, tone and role as they were. */
+export const dressedPaints = (
+  paints: ReadonlyArray<Paint>,
+  dress: ReadonlyArray<Dress>,
+): ReadonlyArray<Paint> => {
+  const to = new Map(dress.map((d) => [rgbKey(rgbOfHex(d.from)), rgbOfHex(d.to)] as const));
+  return paints.map((p) => {
+    const rgb = to.get(rgbKey(p.rgb));
+    if (!rgb) return p;
+    return { ...p, rgb, lab: labOf(rgb) };
+  });
 };
 
 /** A palette's paints as the light leaves them: each paint's colour `litColour` of it, its part, tone and role as they were. */

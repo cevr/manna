@@ -11,6 +11,8 @@ import {
   BREATH,
   BREATH_PERIOD,
   chromaOf,
+  dressed,
+  dressedPaints,
   drawnKeyOf,
   drawOrder,
   figure,
@@ -597,6 +599,61 @@ describe('lit', () => {
       expect([0, 1, 2].map((q) => rgbAt(litA, q))).toEqual([0, 1, 2].map((q) => rgbAt(litB, q)));
       expect(rgbAt(litA, 0)).toEqual(ink);
     }
+  });
+});
+
+describe('a figure’s dress', () => {
+  test('wears each dressed paint in its new colour, lit as that paint’s tone, every other pixel and every clear pixel as it was', () => {
+    for (const seed of SEEDS) {
+      const draw = rng(seed);
+      const ink = colourOf(draw);
+      const base = colourOf(draw);
+      const shade = colourOf(draw);
+      const own = colourOf(draw);
+      const to = colourOf(draw);
+      const toShade = colourOf(draw);
+      const palette: Palette = {
+        ink: hexOf(ink),
+        parts: [
+          { name: 'cloth', base: hexOf(base), shade: hexOf(shade) },
+          { name: 'own', base: hexOf(own) },
+        ],
+      };
+      const dress = [
+        { from: hexOf(base), to: hexOf(to) },
+        { from: hexOf(shade), to: hexOf(toShade) },
+      ];
+      const cell = rowOf([ink, base, shade, own]);
+      cell.rgba.set([...base, 0], 3 * 4);
+      const worn = dressed(cell, dress);
+      expect([0, 1, 2].map((q) => rgbAt(worn, q))).toEqual([ink, to, toShade]);
+      expect([...worn.rgba.slice(12)]).toEqual([...base, 0]);
+      const paints = dressedPaints(paintsOf(palette), dress);
+      expect(paints.map((p) => [p.part, p.tone, hexOf(p.rgb)])).toEqual(
+        paintsOf(palette).map((p) => [
+          p.part,
+          p.tone,
+          hexOf(
+            new Map([
+              [hexOf(base), to],
+              [hexOf(shade), toShade],
+            ]).get(hexOf(p.rgb)) ?? p.rgb,
+          ),
+        ]),
+      );
+      const light: Light = {
+        tint: { colour: hexOf(colourOf(draw)), amount: 0.1 + draw() * 0.2 },
+        shade: { colour: hexOf(colourOf(draw)), amount: 0.1 + draw() * 0.2 },
+      };
+      const shown = lit(worn, light, paints);
+      expect(rgbAt(shown, 2)).toEqual(rgbAt(lit(rowOf([toShade]), light, paints), 0));
+      expect(rgbAt(shown, 1)).toEqual(rgbAt(lit(rowOf([to]), light, paints), 0));
+    }
+  });
+
+  test('leaves a cell as it was when the figure wears no dress', () => {
+    const cell = rowOf([[10, 20, 30]]);
+    expect(dressed(cell, [])).toBe(cell);
   });
 });
 
