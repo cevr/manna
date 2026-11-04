@@ -32,12 +32,14 @@ const BANNED = [
   ['One.', 'Audio'],
 ].map((parts) => parts.join(''));
 
-/** One's native source writes `.one-native-source.*` (gitignored) beside the Swift; the scan reads tracked files only. */
-const generated = (name: string) => name.startsWith('.one-native-source.');
+/** One writes `.one-native-source.*` beside the Swift and `app/routes.d.ts` (both gitignored); the scan reads tracked files only. */
+const generated = (dir: string, name: string) =>
+  name.startsWith('.one-native-source.') ||
+  relative(APP, join(dir, name)) === join('app', 'routes.d.ts');
 
 const filesUnder = (dir: string): ReadonlyArray<string> =>
   readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => !generated(entry.name))
+    .filter((entry) => !generated(dir, entry.name))
     .flatMap((entry) => {
       if (entry.isDirectory()) return filesUnder(join(dir, entry.name));
       return [join(dir, entry.name)];
