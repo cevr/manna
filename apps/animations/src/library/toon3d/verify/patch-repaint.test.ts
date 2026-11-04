@@ -61,12 +61,37 @@ const idsFor = (kept: Raster, probes: ReadonlyArray<ColourProbe>): Raster => {
   return { width: kept.width, height: kept.height, rgba };
 };
 
-/** Whether any pixel of the probe's box is set in `mask`: an untouched probe reads the repaint as it reads the kept, ΔE 0 where the control passes at 0, so the verdict is read over the touched probes alone, and a repaint that touches no probe escapes. */
-const touches = (mask: Uint8Array, width: number, probe: ColourProbe): boolean => {
-  const [x0, y0, w, h] = probe.box;
-  for (let y = y0; y < y0 + h; y++)
-    for (let x = x0; x < x0 + w; x++) if (mask[y * width + x] === 1) return true;
-  return false;
+/** The probes whose boxes hold any of `pixels`, in their order: an untouched probe reads the repaint as it reads the kept, ΔE 0 where the control passes at 0, so the verdict is read over the touched probes alone, and a repaint that touches no probe escapes. */
+const touchedBy = (
+  probes: ReadonlyArray<ColourProbe>,
+  width: number,
+): ((pixels: ReadonlyArray<number>) => ReadonlyArray<ColourProbe>) => {
+  const owners = new Map<number, Array<number>>();
+  probes.forEach((probe, n) => {
+    const [x0, y0, w, h] = probe.box;
+    for (let y = y0; y < y0 + h; y++)
+      for (let x = x0; x < x0 + w; x++) {
+        const at = owners.get(y * width + x) ?? [];
+        at.push(n);
+        owners.set(y * width + x, at);
+      }
+  });
+  return (pixels) => {
+    const hit = new Set(pixels.flatMap((i) => owners.get(i) ?? []));
+    return probes.filter((_, n) => hit.has(n));
+  };
+};
+
+/** The pixels where two rasters of one size differ. */
+const differing = (a: Raster, b: Raster): ReadonlyArray<number> => {
+  const out: Array<number> = [];
+  for (let i = 0; i < a.width * a.height; i++)
+    for (let k = i * 4; k < i * 4 + 4; k++)
+      if (a.rgba[k] !== b.rgba[k]) {
+        out.push(i);
+        break;
+      }
+  return out;
 };
 
 describe('a kept flat patch repainted alone, to a colour past twice the bar from it', () => {
@@ -90,7 +115,7 @@ describe('a kept flat patch repainted alone, to a colour past twice the bar from
             const paint = keptPaint(kept);
             const patches = patchesOf(paint);
             const repaint = patchRepainter(kept);
-            const mask = new Uint8Array(kept.width * kept.height);
+            const touched = touchedBy(list, kept.width);
             const control = colourOf(view, readProbes(view, list, kept, kept, ids));
             const checked = patches
               .map((patch, k) => ({ patch, k }))
@@ -100,26 +125,19 @@ describe('a kept flat patch repainted alone, to a colour past twice the bar from
                 onNone: () => [`${view} ${patchText(paint, patch)} has no colour to repaint`],
                 onSome: (colour) => {
                   const scene = repaint(patch, colour);
-                  for (const i of patch.pixels) mask[i] = 1;
-                  const touched = list.filter((probe) => touches(mask, kept.width, probe));
-                  for (const i of patch.pixels) mask[i] = 0;
-                  return [`${view} ${patchText(paint, patch)} painted ${colour.join(' ')}`].filter(
-                    () =>
-                      touched.length === 0 ||
-                      colourOf(view, readProbes(view, touched, kept, scene, ids)).pass,
-                  );
+                  const read = touched(patch.pixels);
+                  const seen =
+                    read.length > 0 &&
+                    !colourOf(view, readProbes(view, read, kept, scene, ids)).pass;
+                  return [seen]
+                    .filter((s) => !s)
+                    .map(() => `${view} ${patchText(paint, patch)} painted ${colour.join(' ')}`);
                 },
               }),
             );
             const stray = checked.slice(0, 3).map(({ patch }) => {
-              const scene = repaint(patch, [0, 255, 0]);
+              const changed = differing(kept, repaint(patch, [0, 255, 0]));
               const own = new Set(patch.pixels);
-              const changed: Array<number> = [];
-              for (let i = 0; i < kept.width * kept.height; i++)
-                if (
-                  kept.rgba.subarray(i * 4, i * 4 + 4).some((v, n) => v !== scene.rgba[i * 4 + n])
-                )
-                  changed.push(i);
               return changed.length === own.size && changed.every((i) => own.has(i));
             });
             return {
