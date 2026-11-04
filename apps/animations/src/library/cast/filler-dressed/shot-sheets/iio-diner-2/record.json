@@ -1,0 +1,47 @@
+{
+  "member": "filler-dressed",
+  "id": "iio-diner-2",
+  "prompt": "One shot sheet for an animated film: the one person in the reference images drawn 3 times in one row, left to right, in exactly this order:\n1. seated on the low stool facing the viewer square, both round hands resting on the knees, head and eyes to the viewer, a calm short smile line.\n2. seated exactly as the first figure, every line the same, the eyes closed in a blink: each eye a short downward-curved ink line.\n3. seated on the stool exactly as in the first figure, the head a quarter turned toward the viewer's left, talking to a neighbour at the picture's left, the mouth open in a glad smile.\nThe person, as described: The people are the base filler cast dressed in the story crowd kit: the four plain, never-named grown people of the Bible's own time kept in the library as base sizes and genders (`filler-bases`, kept poses), drawn once more in their kept stance, place and size, each wearing the kit's house parts over an unchanged body (in-its-order item 3), so a film's crowd takes its headcloths, veils, mantles and beards from this sheet and dyes them to any story cloth. The house look: a painted storybook cartoon of flat colour shapes, one bold warm-dark outline of even weight round each figure, shading with colour only. Each stands front at rest, about three and a third heads tall, both round hands low at the sides at the ends of their sleeves; each head is the base's upright oval a little taller than it is wide, with the base's three-mark face (two short, thick, dark-brown brows, two small dark oval eyes set close, a short smile line) and warm peach skin. Left to right: the grown man wears a linen headcloth (#d1c6b4) falling behind the ears to the shoulders, tied round the brow with a plain indigo band (#4b566b), a short dark walnut beard (#6b4630), and a walnut mantle (#ab8163) open down the front over his cream robe; the grown woman wears an olive mantle (#768059) drawn over her head as a veil framing her face, open down the front over her cream robe; the older man wears a linen headcloth (#d1c6b4) draped to the shoulders with no band, a pale cool beard (#dcdce4, the pale cool paper of old hair, never white), and an indigo mantle (#4b566b) open down the front over his oatmeal robe; the older woman wears a camel mantle (#8c7762) drawn over her head as a veil framing her face, open down the front over her grey-beige robe. No hair shows on any of them. Each house part is one flat colour of its own cloth, its far side a deeper hue of the same colour turned toward violet, with no pattern or texture and a clean edge at the face, the robe and the paper, so the cut keys each part by its colour and the crowd dyes it to another cloth. The plain flat sashes, the brown sandals and the robes below the mantles stay as the bases draw them. Where the description names an order of figures, the order above holds.\nContinuity: this is one person drawn 3 times in one pass, so every figure has the same face, the same head size, the same body proportions, the same colours, the same line weight and the same shading; only the turn and the pose change. All figures stand on one baseline at one size, the soles of every figure on the same line.\nHouse rules: each hand is a plain round circle of skin at the end of its sleeve, no thumb and no fingers. Sleeves run to the wrist in every figure, the raised arm too: no bare arm or forearm ever shows. One bold warm-dark outline of even weight round each figure. One flat shade per colour: no gradient, no texture, no airbrush, no highlight.\nClothes: every part of the clothes is outlined in the same ink #200d02 as the figure; a fold on cloth is a line in that cloth's own shade; no rose, pink or skin colour anywhere on the clothes, skin colour only on the face, neck, hands and feet.\nPaint with exactly these colours: the outline ink #200d02; skin #fdb577, drawn flat in that one colour; headcloth #d1c6b4, drawn flat in that one colour; indigo band and mantle #4b566b, drawn flat in that one colour; walnut beard #6b4630, drawn flat in that one colour; pale beard #dcdce4, drawn flat in that one colour; walnut mantle #ab8163, drawn flat in that one colour; olive mantle #768059, drawn flat in that one colour; camel mantle #8c7762, drawn flat in that one colour; cream robe #f9e7cf with its shaded side #e7d2d3; oatmeal robe #e6cfb2, drawn flat in that one colour; grey-beige robe #e1cfbd, drawn flat in that one colour.\nClose colours: the headcloth #d1c6b4 and the oatmeal robe #e6cfb2 lie close, so the bold ink #200d02 outline runs between them wherever they meet, and each is painted exactly its own hex; the oatmeal robe reads apart from the headcloth by that outline.\nClose colours: the headcloth #d1c6b4 and the grey-beige robe #e1cfbd lie close, so the bold ink #200d02 outline runs between them wherever they meet, and each is painted exactly its own hex; the grey-beige robe reads apart from the headcloth by that outline.\nClose colours: the cream robe #f9e7cf and the oatmeal robe #e6cfb2 lie close, so the bold ink #200d02 outline runs between them wherever they meet, and each is painted exactly its own hex; the oatmeal robe reads apart from the cream robe by that outline.\nClose colours: the cream robe #f9e7cf and the grey-beige robe #e1cfbd lie close, so the bold ink #200d02 outline runs between them wherever they meet, and each is painted exactly its own hex; the grey-beige robe reads apart from the cream robe by that outline.\nClose colours: the oatmeal robe #e6cfb2 and the grey-beige robe #e1cfbd lie close, so the bold ink #200d02 outline runs between them wherever they meet, and each is painted exactly its own hex; the grey-beige robe reads apart from the oatmeal robe by that outline.\nThe ground: one flat colour, #a6dcae, everywhere behind and between the figures, with wide clear ground between each figure and the next (a reaching or raised hand too) so no figure touches or nears another; no glow, halo or soft light round any figure; no floor, no cast shadow, no text, no frame.\nThe narration's words appear only as full-screen cards: nothing in the picture carries lettering.\nA held prop is named in the pose words and is the same prop, the same size and the same colours in every figure that holds it. No prop carries text, letters, numbers or marks.\nWhere a pose turns the head, it turns exactly as the pose words say, toward the viewer's left or right as written, whatever way the description or the reference images face.\nThe seat is one low plain wooden stool painted exactly #6b4630, flat, with no shade of its own.\nEach seated figure is drawn whole, from the top of the head to the soles of both feet resting flat on the ground line: no table, bench or anything else in front of the figure hides any part of it.\nDraw only the one person of the reference image: the second person the description names, in exactly that person's headcloth or veil, mantle, beard and robe; the other three people of the description are not on this sheet. Their sandals painted exactly #6b4630.",
+  "refs": [
+    {
+      "file": "cast-sheet/views/poses-2.png",
+      "sha256": "f29666d06cac829f6267ed34be2e9467063b67ddf6e0c9236c003ce55cfcf93f"
+    }
+  ],
+  "sheet": "7d00aac62b130a4e3dc306d88885aa19046cbdee9ac753561f064dc19a8cde11",
+  "size": "1536x1024",
+  "ground": "#a4ddab",
+  "drawn": "2026-11-04",
+  "cells": [
+    {
+      "key": "neutral",
+      "box": {
+        "x": 36,
+        "y": 0,
+        "width": 476,
+        "height": 1024
+      },
+      "sha256": "4d1d51a718b8c419713559a6e8d6b0c6e36ad75e1335a4b87e1284b4f77973ec"
+    },
+    {
+      "key": "neutralBlink",
+      "box": {
+        "x": 512,
+        "y": 0,
+        "width": 511,
+        "height": 1024
+      },
+      "sha256": "1e671fbaa4871a93c60537ef3475f96d13ac8727a2a9459b039999ec5e9f3c2d"
+    },
+    {
+      "key": "talk",
+      "box": {
+        "x": 1023,
+        "y": 0,
+        "width": 477,
+        "height": 1024
+      },
+      "sha256": "b0c25636aa94be191493579dcd3582ce4e7d75beaab0300c382772a37989ecf7"
+    }
+  ]
+}

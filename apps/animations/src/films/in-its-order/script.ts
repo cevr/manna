@@ -10,7 +10,7 @@ const CARDS =
 export const script = defineScript([
   {
     id: 'cold',
-    say: '{baby}A baby drinks milk, and nobody minds. {/} {grown}But picture a young man at a wedding feast, {bottle}still asking for his {*}bottle. {/} {smile}We would {*}smile. {/} {letter}And yet one of the letters in our Bible says nearly that to its {*}readers. {/} {quote}They “are become such as have need of milk, and not of strong {*}meat.” {//} {ouch}Grown believers, still on {*}milk. {/} {what}So what is milk, and what is meat? {/} {why}And why would the Bible care which one we eat?',
+    say: '{baby}A baby drinks milk, and nobody minds. {/} {grown}But picture a young man at a wedding feast, {bottle}still asking for his {*}bottle. {/} {smile}We would {*}smile. {/} {letter}And yet one of the letters in our Bible says nearly that to its {*}readers. {/} {quote}They “are become {such}such as have need of milk, and not of strong {*}meat.” {//} {ouch}Grown believers, still on {*}milk. {/} {what}So what is milk, and what is meat? {/} {why}And why would the Bible care which one we eat?',
     cite: ['Hebrews 5:12'],
     cast: ['lead-feast', 'feast-mother'],
     picture: `STORY: a cardboard courtyard at a village wedding, teal day, lanterns strung, a long table of bread, fruit and dishes. On \`baby\` a mother lifts a cup to a baby's lips, close on the baby's glad face. On \`grown\` the camera trucks down the table to a tall young man in his festive long cream tunic and teal mantle, the series lead; on \`bottle\` he holds up a baby's bottle, hopeful, and the guests either side turn and stare (a light moment); on \`smile\` they smile kindly at him. On \`letter\` a rolled scroll drops onto the table in front of him and unrolls; on \`quote\` its words are not shown (CRAFT rule 1), only the gold seal. On \`ouch\` he winces. On \`what\` the camera lifts to a cup of milk and a platter of bread side by side, the only props lit. ${CARDS}`,
@@ -21,7 +21,7 @@ export const script = defineScript([
   },
   {
     id: 'milk',
-    say: "{start}Start with the milk. {/} {peter}Peter writes, {newborn}“As newborn babes, desire the sincere milk of the word, that ye may {*}grow thereby.” {/} {sincere}Sincere here means pure, {mixed}with {*}nothing mixed in. {/} {word}So the milk is God's word, plain and unmixed. {/} {good}And milk is {*}good. {/} {need}A baby cannot do without it. {/} {began}Every one of us began there, {shame}and there is no shame in a cup of milk.",
+    say: "{start}Start with the milk. {/} {peter}Peter writes, {newborn}“As newborn babes, {desire}desire the sincere milk of the word, that ye may {*}grow thereby.” {/} {sincere}Sincere here means pure, {mixed}with {*}nothing mixed in. {/} {word}So the milk is God's word, plain and unmixed. {/} {good}And milk is {*}good. {/} {need}A baby cannot do without it. {/} {began}Every one of us began there, {shame}and there is no shame in a cup of milk.",
     cite: [
       '1 Peter 2:2',
       'E. J. Waggoner, The Present Truth, August 17, 1893, 315',

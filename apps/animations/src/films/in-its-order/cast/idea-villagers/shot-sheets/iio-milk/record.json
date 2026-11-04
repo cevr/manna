@@ -1,0 +1,71 @@
+{
+  "member": "idea-villagers",
+  "id": "iio-milk",
+  "prompt": "One shot sheet for an animated film: the one person in the reference images drawn 5 times in one row, left to right, in exactly this order:\n1. the grown villager standing facing the viewer, both round hands in their sleeves holding a small plain clay cup painted exactly #7a5236, milk #d9cdb8 showing at its rim before the waist, smiling.\n2. standing exactly as the first figure, every line the same, the eyes closed in a blink: each eye a short downward-curved ink line.\n3. standing exactly as in the first figure, the cup held the same, the head a quarter turned toward the viewer's right, looking at something beside him at the picture's right, curious, the brows raised.\n4. standing facing the viewer, the cup held in the right hand (on the viewer's left) before the waist, the left hand (on the viewer's right) raised in its sleeve beside the shoulder, the round hand turned out, waving something away, a gentle smiling no.\n5. standing facing the viewer, both round hands in their sleeves holding the same cup up to the lips, drinking, the eyes shut as two glad upward-curved ink lines.\nThe person, as described: The people are the plain villagers of the film's IDEA pages, never named, ordinary people of the Bible's own time drawn in one plain dress: an undyed linen tunic (#d9cdb8, its far side turned toward a lavender-violet #b4a8c4) to the shins for a grown figure and to the ankles for a child, with long sleeves to the wrist, and brown sandals (#7a5236); no pattern, belt, trim or colour of their own, so the page's one accent stays the cup or the stone. Warm peach skin (#f2b27c, its shade a rosy violet #c9877e); a face of three marks: two short brows, two small dark oval eyes and a one-line mouth; feeling is in the brows' tilt, the mouth's bend and the head's tilt. Each has hair of their own and never the series lead's waves: the grown villager a linen headcloth (#d1c6b4) tied with a plain walnut band over short straight dark hair (#3b2a24), and a short dark beard, so no grown villager is read as Christ (owner, 2026-10-25, ask a8c0f607f34); the child straight black hair (#2a2026) cut in a short fringe across the brow; the toddler a few straight light-brown wisps (#8a6648) on a round head; the baby a small tuft. A grown villager stands three and a third heads tall; the child three quarters of a grown figure's height, the toddler two thirds, the baby about half, each's head a larger share of its height. Arms in sleeves to the wrist, each round hand at the end of its sleeve, no thumbs. What they hold, and only where a pose names it: a small clay cup; a stub of white chalk.\n\nWho this member holds (the owner: \"Yes, take all of them\", ask ab7a4d8f60e). The grown villager (views 3 and 6) is a dress variant of the `sower` base rig, the kept adult whose face, beard and build his drawing shares: the sower's small dark oval eyes, short dark brows and short dark beard with the mouth inside it, his working build and his linen tunic to the shins; he keeps the sower's linen headcloth and its walnut band, and the sower's olive mantle, walnut belt and seed bag are off. He needs no figure of his own. The baby (view 4) stays here. The child (view 5) is the library's `villager-child` and the toddler (views 1 and 2) its `villager-toddler`, base sizes for filler cast; the kept sheet draws all six, and this record keeps views 3, 4 and 6. Where the description names an order of figures, the order above holds.\nContinuity: this is one person drawn 5 times in one pass, so every figure has the same face, the same head size, the same body proportions, the same colours, the same line weight and the same shading; only the turn and the pose change. All figures stand on one baseline at one size, the soles of every figure on the same line.\nHouse rules: each hand is a plain round circle of skin at the end of its sleeve, no thumb and no fingers. Sleeves run to the wrist in every figure, the raised arm too: no bare arm or forearm ever shows. One bold warm-dark outline of even weight round each figure. One flat shade per colour: no gradient, no texture, no airbrush, no highlight.\nClothes: every part of the clothes is outlined in the same ink #090401 as the figure; a fold on cloth is a line in that cloth's own shade; no rose, pink or skin colour anywhere on the clothes, skin colour only on the face, neck, hands and feet.\nPaint with exactly these colours: the outline ink #090401; skin #f2b27c with its shaded side #c9877e; hair #3b2a24, drawn flat in that one colour; headcloth #d1c6b4, drawn flat in that one colour; tunic #d9cdb8 with its shaded side #b4a8c4; sandals #7a5236, drawn flat in that one colour.\nClose colours: the headcloth #d1c6b4 and the tunic #d9cdb8 lie close, so the bold ink #090401 outline runs between them wherever they meet, and each is painted exactly its own hex; the tunic reads apart from the headcloth by that outline.\nThe ground: one flat colour, #a6dcae, everywhere behind and between the figures, with wide clear ground between each figure and the next (a reaching or raised hand too) so no figure touches or nears another; no glow, halo or soft light round any figure; no floor, no cast shadow, no text, no frame.\nThe narration's words appear only as full-screen cards: nothing in the picture carries lettering.\nA held prop is named in the pose words and is the same prop, the same size and the same colours in every figure that holds it. No prop carries text, letters, numbers or marks.\nWhere a pose turns the head, it turns exactly as the pose words say, toward the viewer's left or right as written, whatever way the description or the reference images face.\nDraw only the grown villager of the description (the bearded man in the linen headcloth): no child, toddler or baby on this sheet.",
+  "refs": [
+    {
+      "file": "cast-sheet/views/poses-3.png",
+      "sha256": "1919984410a3b8d966b0566c323b0e38e35ada4703cc0a4534f7a5d5115d11eb"
+    },
+    {
+      "file": "cast-sheet/views/poses-6.png",
+      "sha256": "2ece9022ae17044a8049de8de252e6495b5c526400ec65482a5889a2c6f38b0e"
+    }
+  ],
+  "sheet": "8fd9692ce3b84106b0ceb1f056ea8820e704edd6ce8d19a0ec09136d4bf85c10",
+  "size": "1536x1024",
+  "ground": "#9ddda8",
+  "drawn": "2026-11-04",
+  "cells": [
+    {
+      "key": "cup",
+      "box": {
+        "x": 37,
+        "y": 0,
+        "width": 270,
+        "height": 1024
+      },
+      "sha256": "944c577e85e026419a448824ea789c199a2f4835041e6a8a2bf39090c3bdc0e2"
+    },
+    {
+      "key": "cupBlink",
+      "box": {
+        "x": 307,
+        "y": 0,
+        "width": 298,
+        "height": 1024
+      },
+      "sha256": "1caad5eced375afbb0a67c40189fe56f582fd4edc74a87c19b403d2d900d0dd1"
+    },
+    {
+      "key": "look",
+      "box": {
+        "x": 605,
+        "y": 0,
+        "width": 296,
+        "height": 1024
+      },
+      "sha256": "87278de4106cbfa80213aa679a85275a7585d7b2ba95e077e309ec6be19fdc5b"
+    },
+    {
+      "key": "wave",
+      "box": {
+        "x": 901,
+        "y": 0,
+        "width": 339,
+        "height": 1024
+      },
+      "sha256": "0b0154f92569f3d74f1967cf1e710ba36808c9df84198fb589f9781690a8b19a"
+    },
+    {
+      "key": "drink",
+      "box": {
+        "x": 1240,
+        "y": 0,
+        "width": 258,
+        "height": 1024
+      },
+      "sha256": "636eed088fb270c7d0fefdefec89509caf2b378dfc03b4f373475114abecd9c2"
+    }
+  ]
+}

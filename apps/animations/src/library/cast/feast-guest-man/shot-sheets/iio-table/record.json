@@ -1,0 +1,65 @@
+{
+  "member": "feast-guest-man",
+  "id": "iio-table",
+  "prompt": "One shot sheet for an animated film: the one person in the reference images drawn 4 times in one row, left to right, in exactly this order:\n1. seated on the low stool facing the viewer square, both round hands resting on the knees, head and eyes to the viewer, a calm short smile line.\n2. seated exactly as the first figure, every line the same, the eyes closed in a blink: each eye a short downward-curved ink line.\n3. seated on the stool exactly as in the first figure, the head a quarter turned toward the viewer's right, staring at someone at the picture's right: the eyes, nose and mouth shifted toward the picture's right, the eyes wide, the brows raised, the mouth a small flat line.\n4. seated on the stool exactly as in the first figure, the head a quarter turned toward the viewer's right as in the third figure, a broad warm closed smile, the mouth shut, the cheeks lifted.\nThe person, as described: The man is the feast's seated male guest, a plain, never-named grown man of the Bible's own time built on the base filler cast's grown man (`filler-bases`, view poses-1) with two house parts over him (in-its-order item 3), drawn in the house look: a painted storybook cartoon of flat colour shapes, one bold warm-dark outline of even weight round the figure, shading with colour only. He sits on the house's low wooden stool facing the viewer square, both round hands resting on the knees, three times in one row: neutral (head and eyes to the viewer, a calm short smile line), turn (head a quarter toward the viewer's right, surprised: brows raised, eyes open, a small round open mouth) and smile (the same turn, a kind closed smile). He sits picture-left at the feast and turns toward the viewer's right, toward the lead beside him. Seated, he is 2.876 of his own heads from the headcloth's top to the soles. His head is the base's upright oval with ears showing and the base's three-mark face; a little of his short dark-brown hair (#422017 as drawn) shows below the band at the temples; he is clean-shaven. Over the base's cream robe and plain flat sash he wears a linen headcloth falling behind the ears to the shoulders, tied round the brow with a plain indigo band (#3d4c73 as drawn, asked #4b566b), and a walnut mantle open down the front to the lap (#bd825c as drawn, its shaded side #b47954, asked #ab8163); brown sandals (#692e18) on bare feet; the stool's wood #a7592d, its far side #914928; a soft lavender contact shadow (#cebfeb) under the stool. The kept sheet draws the skin and the cloth paler than the look asks: skin #febe90 as drawn against the base's #fdb577, the robe #fdf4e2 (its shaded side turned toward lavender #ebdadb) against #f9e7cf, and the headcloth almost white (#fef6e3, its shade #e3cabf) against linen #d1c6b4; tint them at the cut if a scene needs the house palette. His round hands are drawn about 20 % too big, so the seated frames shrink each hand's skin disc to 0.82 about its centre at the cut (`../cutout/seated/frames/record.json`). His eyes sit lower on the figure than the seated lead's; set his scale in the scene against the lead, not from the sheet alone. Where the description names an order of figures, the order above holds.\nContinuity: this is one person drawn 4 times in one pass, so every figure has the same face, the same head size, the same body proportions, the same colours, the same line weight and the same shading; only the turn and the pose change. All figures stand on one baseline at one size, the soles of every figure on the same line.\nHouse rules: each hand is a plain round circle of skin at the end of its sleeve, no thumb and no fingers. Sleeves run to the wrist in every figure, the raised arm too: no bare arm or forearm ever shows. One bold warm-dark outline of even weight round each figure. One flat shade per colour: no gradient, no texture, no airbrush, no highlight.\nClothes: every part of the clothes is outlined in the same ink #130601 as the figure; a fold on cloth is a line in that cloth's own shade; no rose, pink or skin colour anywhere on the clothes, skin colour only on the face, neck, hands and feet.\nPaint with exactly these colours: the outline ink #130601; skin #febe90, drawn flat in that one colour; hair #422017, drawn flat in that one colour; robe #fdf4e2 with its shaded side #ebdadb; headcloth #fef6e3 with its shaded side #e3cabf; band #3d4c73, drawn flat in that one colour; mantle #bd825c with its shaded side #b47954; sandals #692e18, drawn flat in that one colour; stool #a7592d with its shaded side #914928; contact shadow #cebfeb, drawn flat in that one colour.\nClose colours: the robe #fdf4e2 and the headcloth #fef6e3 lie close, so the bold ink #130601 outline runs between them wherever they meet, and each is painted exactly its own hex; the headcloth reads apart from the robe by that outline.\nThe ground: one flat colour, #a6dcae, everywhere behind and between the figures, with wide clear ground between each figure and the next (a reaching or raised hand too) so no figure touches or nears another; no glow, halo or soft light round any figure; no floor, no cast shadow, no text, no frame.\nThe narration's words appear only as full-screen cards: nothing in the picture carries lettering.\nA held prop is named in the pose words and is the same prop, the same size and the same colours in every figure that holds it. No prop carries text, letters, numbers or marks.\nWhere a pose turns the head, it turns exactly as the pose words say, toward the viewer's left or right as written, whatever way the description or the reference images face.\nThe seat is one low plain wooden stool painted exactly #692e18, flat, with no shade of its own.\nEach seated figure is drawn whole, from the top of the head to the soles of both feet resting flat on the ground line: no table, bench or anything else in front of the figure hides any part of it.",
+  "refs": [
+    {
+      "file": "cast-sheet/views/poses-1.png",
+      "sha256": "bd574e3d38ee242984ba9bd890a492bb1430a96e2d461eb81e7a7b0d49ad217a"
+    },
+    {
+      "file": "cast-sheet/views/poses-2.png",
+      "sha256": "f2a00ffa48b2dddcfbd241bf97b2358d5f3c9c90c1dd03a253bb56db957e0a13"
+    },
+    {
+      "file": "cast-sheet/views/poses-3.png",
+      "sha256": "993b21cfd769408546a7dccb229cc2e4ad8ad67fbd17a099f2f909a5f48869a7"
+    }
+  ],
+  "sheet": "d1ce09266fe7e20362e06144156144096080835829f1c9403f2a74803e9d3cbc",
+  "size": "1536x1024",
+  "ground": "#a1dea8",
+  "drawn": "2026-11-04",
+  "cells": [
+    {
+      "key": "neutral",
+      "box": {
+        "x": 14,
+        "y": 0,
+        "width": 369,
+        "height": 1024
+      },
+      "sha256": "248b86de2efc7412e59e0efabe93f3e228e6d67f6be64db25d0406b2eb1f36bd"
+    },
+    {
+      "key": "neutralBlink",
+      "box": {
+        "x": 383,
+        "y": 0,
+        "width": 384,
+        "height": 1024
+      },
+      "sha256": "75b13684d7f5bea065e393a8ddad84aaa6d8bb6faacec977a6c07716f81828ee"
+    },
+    {
+      "key": "stare",
+      "box": {
+        "x": 767,
+        "y": 0,
+        "width": 384,
+        "height": 1024
+      },
+      "sha256": "967e463ddafce6ccad94561de57a6b6fc57d5313dca4edfd2c12e2e4777af3f7"
+    },
+    {
+      "key": "smile",
+      "box": {
+        "x": 1151,
+        "y": 0,
+        "width": 371,
+        "height": 1024
+      },
+      "sha256": "dc50d0c26f3d5c0034db2b8b12f6fc8c9b740eef1016de01cf8ee2c3c7754b4c"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "member": "villager-toddler",
+  "id": "iio-milk",
+  "prompt": "One shot sheet for an animated film: the one person in the reference images drawn 3 times in one row, left to right, in exactly this order:\n1. the toddler standing facing the viewer, both round hands in their sleeves holding a small plain clay cup painted exactly #7a5236, milk #d9cdb8 showing at its rim before the waist, a small glad smile.\n2. standing exactly as the first figure, every line the same, the eyes closed in a blink: each eye a short downward-curved ink line.\n3. standing exactly as in the first figure, both round hands lifting the same cup to the lips, drinking, the eyes shut as two glad upward-curved ink lines.\nThe person, as described: The person is the villager toddler, a library base size for filler cast (the owner: \"Yes, take all of them\", ask ab7a4d8f60e): a plain, never-named toddler of the Bible's own time, drawn as In Its Order's IDEA pages draw them (the toddler who runs and sits down hard, `idea-villagers` poses try 2, views 1 and 2), and kept in the library so later films' crowds can use them. They stand about two thirds of a grown figure's height, the head a large share of the height, round. A few straight light-brown wisps of hair (#8a6648) on a round head, never the series lead's curls. Warm peach skin (#f2b27c, its shade a rosy violet #c9877e); a face of three marks: two short brows, two small dark oval eyes and a one-line mouth; feeling is in the brows' tilt, the mouth's bend and the head's tilt. An undyed linen tunic (#d9cdb8, its far side turned toward a lavender-violet #b4a8c4) to the ankles with long sleeves to the wrist, and brown sandals (#7a5236); no pattern, belt, trim or colour of their own. Arms in sleeves to the wrist, each round hand at the end of its sleeve, no thumbs. A crowd varies them by house parts (hair, dress colour) over this base. Where the description names an order of figures, the order above holds.\nContinuity: this is one person drawn 3 times in one pass, so every figure has the same face, the same head size, the same body proportions, the same colours, the same line weight and the same shading; only the turn and the pose change. All figures stand on one baseline at one size, the soles of every figure on the same line.\nHouse rules: each hand is a plain round circle of skin at the end of its sleeve, no thumb and no fingers. Sleeves run to the wrist in every figure, the raised arm too: no bare arm or forearm ever shows. One bold warm-dark outline of even weight round each figure. One flat shade per colour: no gradient, no texture, no airbrush, no highlight.\nClothes: every part of the clothes is outlined in the same ink #100602 as the figure; a fold on cloth is a line in that cloth's own shade; no rose, pink or skin colour anywhere on the clothes, skin colour only on the face, neck, hands and feet.\nPaint with exactly these colours: the outline ink #100602; skin #f2b27c with its shaded side #c9877e; hair #8a6648, drawn flat in that one colour; tunic #d9cdb8 with its shaded side #b4a8c4; sandals #7a5236, drawn flat in that one colour.\nClose colours: the hair #8a6648 and the sandals #7a5236 lie close, so the bold ink #100602 outline runs between them wherever they meet, and each is painted exactly its own hex; the sandals reads apart from the hair by that outline.\nThe ground: one flat colour, #a6dcae, everywhere behind and between the figures, with wide clear ground between each figure and the next (a reaching or raised hand too) so no figure touches or nears another; no glow, halo or soft light round any figure; no floor, no cast shadow, no text, no frame.\nThe narration's words appear only as full-screen cards: nothing in the picture carries lettering.\nA held prop is named in the pose words and is the same prop, the same size and the same colours in every figure that holds it. No prop carries text, letters, numbers or marks.\nWhere a pose turns the head, it turns exactly as the pose words say, toward the viewer's left or right as written, whatever way the description or the reference images face.",
+  "refs": [
+    {
+      "file": "cast-sheet/views/poses-1.png",
+      "sha256": "702674b084410364040da84b1d8d4106b8c8c2ba7f2d3e9a5ba97f066122925e"
+    },
+    {
+      "file": "cast-sheet/views/poses-2.png",
+      "sha256": "648b338dd812e2da119e24bce1548bfdfd91a328665ba43632aaaaf0cb60d522"
+    }
+  ],
+  "sheet": "33a5959d77d134c1e776fc04131f010719a6c6073da59407fd3bf8857305f031",
+  "size": "1536x1024",
+  "ground": "#a0dca8",
+  "drawn": "2026-11-04",
+  "cells": [
+    {
+      "key": "hold",
+      "box": {
+        "x": 61,
+        "y": 0,
+        "width": 450,
+        "height": 1024
+      },
+      "sha256": "703274a58355649cba6b3f74c8790194ce4dbadfdaee3f39dbd08e54a8e0c777"
+    },
+    {
+      "key": "holdBlink",
+      "box": {
+        "x": 511,
+        "y": 0,
+        "width": 512,
+        "height": 1024
+      },
+      "sha256": "09da721f723f4de710e7b893b5c6458e2c210ae8a997b2ad5c74675abb54c247"
+    },
+    {
+      "key": "drink",
+      "box": {
+        "x": 1023,
+        "y": 0,
+        "width": 452,
+        "height": 1024
+      },
+      "sha256": "5b556da4caba7b9a6328338ff6b9467bc3cca619b19c0e98a52efc03a31a5711"
+    }
+  ]
+}

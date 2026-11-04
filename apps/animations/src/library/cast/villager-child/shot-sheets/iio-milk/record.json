@@ -1,0 +1,47 @@
+{
+  "member": "villager-child",
+  "id": "iio-milk",
+  "prompt": "One shot sheet for an animated film: the one person in the reference images drawn 3 times in one row, left to right, in exactly this order:\n1. the child standing facing the viewer, both round hands in their sleeves holding a small plain clay cup painted exactly #7a5236, milk #d9cdb8 showing at its rim before the waist, a small glad smile.\n2. standing exactly as the first figure, every line the same, the eyes closed in a blink: each eye a short downward-curved ink line.\n3. standing exactly as in the first figure, both round hands lifting the same cup to the lips, drinking, the eyes shut as two glad upward-curved ink lines.\nThe person, as described: The person is the villager child, a library base size for filler cast (the owner: \"Yes, take all of them\", ask ab7a4d8f60e): a plain, never-named child of the Bible's own time, drawn as In Its Order's IDEA pages draw him (the child at the slate, `idea-villagers` poses try 2, view 5), and kept in the library so later films' crowds can use him. He stands about three quarters of a grown figure's height, his head a larger share of his height than a grown figure's. Straight black hair (#2a2026) cut in a short fringe across the brow, never the series lead's curls. Warm peach skin (#f2b27c, its shade a rosy violet #c9877e); a face of three marks: two short brows, two small dark oval eyes and a one-line mouth; feeling is in the brows' tilt, the mouth's bend and the head's tilt. An undyed linen tunic (#d9cdb8, its far side turned toward a lavender-violet #b4a8c4) to the ankles with long sleeves to the wrist, and brown sandals (#7a5236); no pattern, belt, trim or colour of his own, so the page's one accent stays the cup or the stone. Arms in sleeves to the wrist, each round hand at the end of its sleeve, no thumbs. A crowd varies him by house parts (hair, dress colour) over this base. What he holds, and only where a pose names it: a stub of white chalk. Where the description names an order of figures, the order above holds.\nContinuity: this is one person drawn 3 times in one pass, so every figure has the same face, the same head size, the same body proportions, the same colours, the same line weight and the same shading; only the turn and the pose change. All figures stand on one baseline at one size, the soles of every figure on the same line.\nHouse rules: each hand is a plain round circle of skin at the end of its sleeve, no thumb and no fingers. Sleeves run to the wrist in every figure, the raised arm too: no bare arm or forearm ever shows. One bold warm-dark outline of even weight round each figure. One flat shade per colour: no gradient, no texture, no airbrush, no highlight.\nClothes: every part of the clothes is outlined in the same ink #0e0501 as the figure; a fold on cloth is a line in that cloth's own shade; no rose, pink or skin colour anywhere on the clothes, skin colour only on the face, neck, hands and feet.\nPaint with exactly these colours: the outline ink #0e0501; skin #f2b27c with its shaded side #c9877e; hair #2a2026, drawn flat in that one colour; tunic #d9cdb8 with its shaded side #b4a8c4; sandals #7a5236, drawn flat in that one colour.\nThe ground: one flat colour, #a6dcae, everywhere behind and between the figures, with wide clear ground between each figure and the next (a reaching or raised hand too) so no figure touches or nears another; no glow, halo or soft light round any figure; no floor, no cast shadow, no text, no frame.\nThe narration's words appear only as full-screen cards: nothing in the picture carries lettering.\nA held prop is named in the pose words and is the same prop, the same size and the same colours in every figure that holds it. No prop carries text, letters, numbers or marks.\nWhere a pose turns the head, it turns exactly as the pose words say, toward the viewer's left or right as written, whatever way the description or the reference images face.",
+  "refs": [
+    {
+      "file": "cast-sheet/views/poses-5.png",
+      "sha256": "389c594a35a613fcdad2d9eacb60d65beea7121157f2f265d305a6ca86823e7c"
+    }
+  ],
+  "sheet": "5db7a4f09d47f951f447dde98b096c3c78fc0101efee212c27dede9a6080b1dc",
+  "size": "1536x1024",
+  "ground": "#9ddba5",
+  "drawn": "2026-11-04",
+  "cells": [
+    {
+      "key": "hold",
+      "box": {
+        "x": 81,
+        "y": 0,
+        "width": 430,
+        "height": 1024
+      },
+      "sha256": "125ef79ffa602506b386241be6fcdf745450f020a7c104bdd08fc409b02b6eb7"
+    },
+    {
+      "key": "holdBlink",
+      "box": {
+        "x": 511,
+        "y": 0,
+        "width": 513,
+        "height": 1024
+      },
+      "sha256": "c2214df7236e30a2d4501d2bbcaf91865525b1fb78ef1a7a42f77eac90889ed4"
+    },
+    {
+      "key": "drink",
+      "box": {
+        "x": 1024,
+        "y": 0,
+        "width": 431,
+        "height": 1024
+      },
+      "sha256": "45025e3631c6d7bf6a0c7f3d2cd33296cebafedd2ff6fe76907f9148da065ea2"
+    }
+  ]
+}
