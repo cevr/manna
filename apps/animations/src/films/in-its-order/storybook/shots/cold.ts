@@ -1,9 +1,25 @@
 import type { FilmShot } from '../../../../library/storybook/scene.ts';
-import { blinkingHold, hold, type Span, turn } from '../../../../library/storybook/shot.ts';
+import {
+  blinkingHold,
+  hold,
+  type Plate,
+  type Span,
+  turn,
+} from '../../../../library/storybook/shot.ts';
 import { BABY_BACK, FAR_TABLE, TABLE, WHAT } from '../../plates/plates.ts';
-import { SCROLL_OPEN, SCROLL_ROLLED, SCROLL_ROLLER } from '../../plates/props.ts';
+import { SCROLL_OPEN, SCROLL_ROLLED } from '../../plates/props.ts';
 import { cam, holds, key, layer, plateOf, plateOn, seat } from '../kit.ts';
-import { AT_TABLE, backdrop, DINERS_ROW, diner, farTable, HEAD, table, Z } from './courtyard.ts';
+import {
+  AT_TABLE,
+  backdrop,
+  DINERS_ROW,
+  diner,
+  farTable,
+  HEAD,
+  table,
+  TABLE_TOP,
+  Z,
+} from './courtyard.ts';
 
 /** The guests' run through a shot: `[at, cell]` changes, each a turn of `TURN` s from the cell before; the first cell held from 0 with its blink. */
 const TURN = 0.3;
@@ -253,16 +269,35 @@ export const coldTable: FilmShot = {
 /** The scroll's size on the table, a share of its painted size. */
 const SCROLL = 0.62;
 
-/** Where the scroll lies on the table, layer px: its foot's centre rolled, its top's centre unrolled. */
-const SCROLL_AT = { foot: [960, 990], top: [960, 952] } as const;
+/** Where the scroll's near edge lies on the table, layer px: the centre of the table top's front edge. */
+const SCROLL_AT = [960, TABLE_TOP.y + TABLE_TOP.height] as const;
+
+/** How deep the open scroll lies on the table top, a share of its painted height: flat and seen from just above the table, its far roller over the top's back edge. */
+const SCROLL_LIES = 0.35;
+
+/** The open scroll on the table top, its near roller on the top's front edge, moved by `moves`. */
+export const scrollLaid = (moves: NonNullable<Plate['moves']>): Plate =>
+  plateOn('scroll-open.png', SCROLL_OPEN, [225, 368], SCROLL_AT, SCROLL, { moves });
+
+/** The scroll unrolling flat away from the viewer over `start`..`end`, from a sliver at its near roller to lying open. */
+const unrolling = (start: number, end: number): NonNullable<Plate['moves']> => [
+  [start, key({ sy: 0.08, alpha: 0 })],
+  [start, key({ sy: 0.08 })],
+  [end, key({ sy: SCROLL_LIES })],
+];
+
+/** The push into the scroll's seal on `quote`: from the table's framing to 15 % in (the spec's cap), toward the seal. */
+const LETTER = {
+  from: { x: 960, y: 860, zoom: 1.9 },
+  to: { x: 980, y: 900, zoom: 1.9 * 1.15 },
+} as const;
 
 /**
  * `cold-letter`, `letter` to the card: a rolled scroll falls onto the table
- * before the lead, hops and unrolls toward the viewer; the guests turn to
- * stare at it, the lead lowers the bottle and looks down at it as it
- * unrolls (late enough that his bowed `down` face, whose eyes no blink can
- * read, holds within the alive bound), and on `quote` the camera eases in
- * toward its seal until the card.
+ * before the lead, hops and unrolls flat across the table top away from the
+ * viewer; the guests turn to stare at it, the lead lowers the bottle and
+ * looks down at it as it unrolls, and on `quote` the camera eases in toward
+ * its seal until the card.
  */
 export const coldLetter: FilmShot = {
   id: 'cold-letter',
@@ -281,14 +316,13 @@ export const coldLetter: FilmShot = {
     const fall = cue('fall');
     const hop = cue('hop');
     const unroll = cue('unroll');
-    const open = 368 * SCROLL;
-    const roller = 280 * SCROLL;
+    const { from, to } = LETTER;
     return {
       headPx: HEAD,
       camera: [
-        cam(0, 960, 860, 1.9),
-        cam(cue('quote').start, 960, 860, 1.9),
-        cam(cue('quote').end, 960, 900, 2.5),
+        cam(0, from.x, from.y, from.zoom),
+        cam(cue('quote').start, from.x, from.y, from.zoom),
+        cam(cue('quote').end, to.x, to.y, to.zoom),
       ],
       layers: [
         ...backdrop(),
@@ -304,7 +338,7 @@ export const coldLetter: FilmShot = {
             blinkingHold(cue('down').end, duration, 'down', 'downBlink'),
           ]),
           table(),
-          plateOn('scroll-rolled.png', SCROLL_ROLLED, [214.5, 202], SCROLL_AT.foot, SCROLL, {
+          plateOn('scroll-rolled.png', SCROLL_ROLLED, [214.5, 202], SCROLL_AT, SCROLL, {
             moves: [
               [fall.start, key({ y: -700, alpha: 0 })],
               [fall.start, key({ y: -700 })],
@@ -315,20 +349,7 @@ export const coldLetter: FilmShot = {
               [unroll.start, key({ alpha: 0 })],
             ],
           }),
-          plateOn('scroll-open.png', SCROLL_OPEN, [225, 0], SCROLL_AT.top, SCROLL, {
-            moves: [
-              [unroll.start, key({ y: -open * 0.95, sy: 0.05, alpha: 0 })],
-              [unroll.start, key({ y: -open * 0.95, sy: 0.05 })],
-              [unroll.end, key({})],
-            ],
-          }),
-          plateOn('scroll-roller.png', SCROLL_ROLLER, [225, 0], [960, 952 + roller], SCROLL, {
-            moves: [
-              [unroll.start, key({ y: -roller, alpha: 0 })],
-              [unroll.start, key({ y: -roller })],
-              [unroll.end, key({})],
-            ],
-          }),
+          scrollLaid(unrolling(unroll.start, unroll.end)),
         ]),
       ],
     };

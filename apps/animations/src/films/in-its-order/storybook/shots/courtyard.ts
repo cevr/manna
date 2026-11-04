@@ -23,6 +23,9 @@ export const backdrop = (): ReadonlyArray<Layer> => [
 /** The long table in front, on the table's plane: every chin at the table sits above its top (frame y 915 at its highest). */
 export const table = () => plateOf('table.png', TABLE);
 
+/** The long table's top in its plane's px: its back edge at 961 and its front edge at 985, as `table.png`'s wood reads 100 px up. */
+export const TABLE_TOP = { x: 0, y: 961, width: 1920, height: 24 } as const;
+
 /** The far table the diners sit behind, on their plane, a fifth wider than the frame so a truck never shows its ends. */
 export const farTable = () =>
   plateOf('far-table.png', FAR_TABLE, { at: [-192, FAR_TABLE.at[1]], scale: 1.2 });
