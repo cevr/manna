@@ -427,6 +427,15 @@ describe('tidied', () => {
     expect(9 - 4).toBeGreaterThan(SHADE_REACH);
     expect(strayShadeShare(drawn, paints)).toBeCloseTo(1 / 16, 9);
     expect(strayShadeShare(art(unstray, key), paints)).toBe(0);
+    const block = Array.from({ length: 24 }, () => 'hhhhhpkapppaaaak');
+    const blocked = art(block, key);
+    const near = drawnNearestOf(blocked, paints);
+    const kept = tidied(blocked, snapped(blocked, paints, near), paints, near, {
+      ...PLAIN_SPLIT,
+      unstray: true,
+    });
+    expect(lettersOf(kept, key)).toEqual(block);
+    expect(strayShadeShare(blocked, paints)).toBe(0);
   });
 
   test('under feetLow, gives a footwear paint above the figure’s middle row its nearest other paint, the hair here, and keeps it below; a plain split keeps both (critique 1, item 4)', () => {

@@ -874,25 +874,43 @@ const feetBarOf = (map: Int32Array, width: number, rules: SplitRules) => {
 /** How far (px, in the square round it) a pixel of a hair shade may lie from its hair's base: farther, it is a stray shade along a line (critique 1, item 16). */
 export const SHADE_REACH = 3;
 
-/** The pixels of `map` that are a stray hair shade: a hair part's shade with no pixel of that part's base within `SHADE_REACH` px. A garment's shade is left out: a cloth's whole far side may be its shade. */
+/**
+ * The pixels of `map` that are a stray hair shade: a hair part's shade with
+ * no pixel of that part's base within `SHADE_REACH` px, on a thin run (no
+ * 3 × 3 block of that shade within a pixel of it), as a dash along a line
+ * is. A curl's shaded underside, a block of its own, stays, however its ink
+ * parts it from the base; a garment's shade is left out, since a cloth's
+ * whole far side may be its shade.
+ */
 const strayShadesOf = (
   map: Int32Array,
   width: number,
   paints: ReadonlyArray<Paint>,
 ): ReadonlyArray<number> => {
   const height = map.length / width;
-  const nearBase = new Map(
+  const of = (index: number) => Uint8Array.from(map, (i) => Number(i === index));
+  const tests = new Map(
     paints.flatMap((p, i) => {
       if (p.tone !== 'shade' || p.role !== 'hair') return [];
       const base = paints.findIndex((b) => b.part === p.part && b.tone === 'base');
-      const mask = Uint8Array.from(map, (index) => Number(index === base));
-      return [[i, nearCounts(mask, width, height, SHADE_REACH)] as const];
+      const shade = of(i);
+      const inBlock = nearCounts(shade, width, height, 1);
+      const core = Uint8Array.from(shade, (s, q) => Number(s === 1 && inBlock(q) === 9));
+      return [
+        [
+          i,
+          {
+            nearBase: nearCounts(of(base), width, height, SHADE_REACH),
+            thick: nearCounts(core, width, height, 1),
+          },
+        ] as const,
+      ];
     }),
   );
   return Array.from(map.keys()).filter((q) => {
-    const near = nearBase.get(map[q] ?? CLEAR);
-    if (!near) return false;
-    return near(q) === 0;
+    const t = tests.get(map[q] ?? CLEAR);
+    if (!t) return false;
+    return t.nearBase(q) === 0 && t.thick(q) === 0;
   });
 };
 
