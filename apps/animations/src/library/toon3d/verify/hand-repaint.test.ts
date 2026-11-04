@@ -1,6 +1,6 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect } from 'bun:test';
-import { Array as Arr, Effect, FileSystem, Option, Schema } from 'effect';
+import { Array as Arr, Effect, FileSystem, Option, Result, Schema } from 'effect';
 import { it } from 'effect-bun-test';
 import { PART } from '../figure.ts';
 import type { ViewName } from '../render.ts';
@@ -110,7 +110,7 @@ const shadeRepainted = (
 
 describe("round 6's hand shades erased", () => {
   it.effect(
-    "the front left hand's and profileRight right hand's dark rims repainted the hand's base, or a brighter base past twice the bar, fail colour at a probe of the hand, where the kept itself passes",
+    "the front left hand's and profileRight right hand's dark rims repainted the hand's base, or a brighter base past twice the bar, fail colour at a probe of the hand, and some probe of the hand reads the repaint past the bar, where the kept itself passes",
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
@@ -137,9 +137,13 @@ describe("round 6's hand shades erased", () => {
                 box.x0 +
                 ((box.x1 - box.x0 + 1) >> 1),
             );
+            const hand = list.filter((p) => p.part === part);
             const read = (scene: Raster): string => {
               const v = colourOf(view, readProbes(view, list, kept, scene, ids));
-              return `${v.pass} ${v.at.startsWith(`${view} ${part} `)} ${Number(v.value) > 3}`;
+              const seen = readProbes(view, hand, kept, scene, ids).flatMap((r) =>
+                Option.toArray(Result.getSuccess(r.read)),
+              );
+              return `${v.pass} ${v.at.startsWith(`${view} ${part} `)} ${Math.max(...seen) > 3}`;
             };
             const erased = shadeRepainted(kept, rect, median, central);
             const bright = shadeRepainted(kept, rect, median, brighter);
