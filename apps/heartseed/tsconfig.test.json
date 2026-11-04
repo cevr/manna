@@ -3,6 +3,13 @@
   "compilerOptions": {
     "types": ["react", "bun"]
   },
-  "include": ["app/**/*.ts", "app/**/*.tsx", "src/**/*.ts", "src/**/*.tsx", "vite/**/*.ts"],
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "scripts/**/*.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vite/**/*.ts"
+  ],
   "exclude": ["node_modules", "dist", "ios", "android"]
 }

@@ -1,6 +1,7 @@
 import { one } from 'one/vite';
 import { defineConfig } from 'vite';
 
+import { app } from './vite/app.ts';
 import { passage } from './vite/plugin.ts';
 
 export default defineConfig({
@@ -10,11 +11,7 @@ export default defineConfig({
       web: { defaultRenderMode: 'spa' },
       native: {
         bundlerOptions: { plugins: [passage()] },
-        app: {
-          name: 'Heartseed',
-          ios: { bundleId: 'app.heartseed', deploymentTarget: '17.0' },
-          android: { applicationId: 'app.heartseed' },
-        },
+        app,
       },
     }),
   ],

@@ -2,12 +2,14 @@
 
 /**
  * The app's tests run its screens under Bun, mounted in a browser's
- * document (happy-dom) as the web build renders them. Three boundaries
+ * document (happy-dom) as the web build renders them, with `__DEV__` false
+ * as in a release build (Reanimated reads it as it loads). Three boundaries
  * stand in, as the bundler and the router would provide them:
  * - `react-native` is react-native-web, as on the web;
  * - `virtual:heartseed-passage` is the passage the bundler plugin derives,
  *   by the same script (`vite/passage.ts`);
- * - `one` is `src/test/one.tsx`: a phone's safe area with no insets.
+ * - `one` is `src/test/one.tsx`: a phone's safe area with no insets, its
+ *   haptics felt by nothing, and device info that reads a phone.
  */
 
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
@@ -16,7 +18,7 @@ import { plugin } from 'bun';
 import { readPassage } from '../../vite/passage';
 
 GlobalRegistrator.register({ url: 'http://localhost/' });
-Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true, __DEV__: false });
 
 plugin({
   name: 'heartseed-test-boundaries',

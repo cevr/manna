@@ -16,7 +16,10 @@ An app's script is a few lines: its `App` and a `launch` call with its place
 (the app's folder, the state folder, the script, the journeys' feature
 folder, the warm checkouts it refuses). The hymnal's are
 `apps/hymnal/scripts/sim-app.ts` and `apps/hymnal/scripts/sim.ts`; the
-verify-hymnal skill drives through them.
+verify-hymnal skill drives through them. Heartseed's are
+`apps/heartseed/scripts/sim-app.ts` and `apps/heartseed/scripts/sim.ts`
+(iOS alone, so the parser refuses a web ask before any step); the
+verify-heartseed skill drives through them.
 
 | File                             | What it holds                                                           |
 | -------------------------------- | ----------------------------------------------------------------------- |

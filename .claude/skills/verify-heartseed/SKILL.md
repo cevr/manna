@@ -4,8 +4,8 @@ description: >
   Launch, check and drive Heartseed (apps/heartseed, One: React Native on
   iOS) as a reader does, and keep the proof. Use to build Heartseed for the
   iOS simulator, run it on its own simulator (verify-heartseed) against a
-  dev server, read its screen through agent-device, or check a Heartseed
-  change in the real app before review or merge.
+  dev server, read its screen through the shared simulator driver, or check
+  a Heartseed change in the real app before review or merge.
 ---
 
 # Verify Heartseed
@@ -16,162 +16,195 @@ passage Today shows is made when the dev server bundles the app, from the
 KJV in `@manna/core` (`apps/heartseed/vite/plugin.ts`), so a drive reads the
 corpus the checkout holds. iOS is the target; the web build is not.
 
-This is a start: the launch is the manual steps below, one shell command
-each. Every command names the simulator `verify-heartseed` or its udid.
-Never use `booted` or `all`, never `erase`, and never boot or drive another
-simulator (`verify-hymnal` is the hymnal's) or the owner's iPhone. Never
-drive the owner's previews on ports 8191 and 8095. No screenshot, no
-recording and no sound: the screen is read from the accessibility tree.
+Every step is one command of one helper, `apps/heartseed/scripts/sim.ts`, an
+Effect CLI that prints one JSON line per command. It is the shared driver
+`@manna/sim` (`packages/sim`) run with Heartseed's values,
+`apps/heartseed/scripts/sim-app.ts`: the simulator named `verify-heartseed`
+(an iPhone 17, created when missing, never another one), the bundle
+`app.heartseed` and its `heartseed://` links, the dev server on a port of
+8280-8289, and iOS alone. A web ask (`--platform web`) fails `BadArguments`
+before anything is created.
+
+The owner's rules:
+
+- Drive only `verify-heartseed`. The helper names it or its udid in every
+  simulator call, and never uses `booted` or `all`; never erase a
+  simulator, and never boot or drive another one (`verify-hymnal` is the
+  hymnal's) or the owner's iPhone.
+- Never drive the owner's previews on ports 8191 and 8095.
+- No screenshot, no recording and no sound: the screen is read from the
+  accessibility tree, by the helper's snapshot. Never ask the helper for a
+  shot, a video or a journey that records one.
+- The microphone stays revoked.
 
 Run every command from the repo root of a worktree of the commit under
-test, never the warm main checkout (`/Users/cvr/Developer/personal/manna`).
-Shell variables do not outlive one agent command, so each value is kept in
-a file and read back:
-
-- `RUN` names this run (`heartseed-<topic>`);
-- `EVIDENCE=$PWD/tmp/verify/$RUN` is its proof folder (`tmp/` is git-ignored);
-- `APP=$PWD/apps/heartseed`;
-- `PORT` is a free port of 8280-8289, kept in `$EVIDENCE/port`;
-- `UDID` is the udid of `verify-heartseed`, kept in `$EVIDENCE/udid`;
-- `SESSION=heartseed-$RUN` is the agent-device session of this drive.
-
-Append each command's exit code to `$EVIDENCE/exits.txt` as
-`<step> exit <code>`: run it as `<command>; echo "<step> exit $?" >> "$EVIDENCE/exits.txt"`.
+test. `RUN` names this run (`heartseed-<topic>`), `EVIDENCE=$PWD/tmp/verify/$RUN`
+is its proof folder (`tmp/` is git-ignored), and `PORT` is a free port of
+8280-8289. The helper keeps the drive's session in session.json under
+tmp/verify-heartseed, one drive at a time per checkout; never point its
+`--state` at another app's state folder.
 
 ## Launch
 
-1. **The worktree.** `bun install --frozen-lockfile` once, and again only
-   when `bun.lock` changed. Then `mkdir -p "$EVIDENCE"`.
+1. **The worktree.** The helper refuses the warm main checkout
+   (`/Users/cvr/Developer/personal/manna`, and `/workspaces/bible-tools` on
+   the Workbox) with `WarmCheckout`, before it reads any argument: never
+   drive or `bun install` there. In the worktree, run
+   `bun install --frozen-lockfile` once, and again only when `bun.lock`
+   changed.
 2. **The host.** A 1-minute load at most 12 (`sysctl -n vm.loadavg`), swap
    below 8 GB (`sysctl -n vm.swapusage`), and at least 12 GB free on
    `df -h /System/Volumes/Data`. One Debug build leaves about 9.5 GB in the
    app's git-ignored `ios` folder (1.3 GB of Pods, the rest derived data).
    Run one iOS build on the host at a time. Short of disk, stop: a build
    that dies for disk is a host failure.
-3. **Prebuild.** It writes the app's git-ignored `ios` folder and runs pod
-   install:
+3. **Boot.** It boots `verify-heartseed` (creating it when missing), starts
+   the dev server (`one dev`, its output in `$EVIDENCE/server.log`) and
+   points the app at it:
 
    ```bash
-   bun run --cwd apps/heartseed prebuild:native > "$EVIDENCE/prebuild.log" 2>&1; echo "prebuild exit $?" >> "$EVIDENCE/exits.txt"
+   bun run --cwd apps/heartseed sim boot --port $PORT --out "$EVIDENCE"
    ```
 
-   Exit 0. One warning is known and harmless: the vxrn patch "matched
-   nothing in RCTTurboModule.mm - it is stale" (One's, not the app's).
-   Skip this step while `apps/heartseed/ios` is fresh from the same
-   `vite.config.ts`.
+   Ready is `{"ok":true,"command":"boot",…,"detail":{"udid":…,"port":…,"serverPid":…}}`
+   once the server answers. `boot` ends while the server runs on.
 
-4. **Build** Debug for the simulator, arm64 only, its derived data inside
-   the `build` folder of the app's `ios` (git-ignored with it):
+4. **Build, install and launch** this checkout's app:
 
    ```bash
-   xcodebuild -workspace "$APP/ios/Heartseed.xcworkspace" -scheme Heartseed -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath "$APP/ios/build/dd" SKIP_BUNDLING=1 ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build > "$EVIDENCE/build.log" 2>&1; echo "build exit $?" >> "$EVIDENCE/exits.txt"
+   bun run --cwd apps/heartseed sim install
    ```
 
-   Read the log's tail only: it ends `** BUILD SUCCEEDED **`. Cold, it took
-   397 s on a loaded host; a later build is incremental. Lines with
-   `error:` in a successful log are flag and file names, not failures. The
-   app is `$APP/ios/build/dd/Build/Products/Debug-iphonesimulator/Heartseed.app`.
+   It runs `prebuild:native` (`one prebuild`, which writes the app's
+   git-ignored `ios` folder and runs pod install) when that folder holds no
+   Heartseed.xcworkspace, or with `--prebuild`. One warning is known and
+   harmless: the vxrn patch "matched nothing in RCTTurboModule.mm - it is
+   stale" (One's, not the app's). It adds the `heartseed` URL scheme to
+   that folder's Heartseed/Info.plist (`detail.schemeAdded`), builds Debug for the simulator (arm64 only, its
+   derived data in the `build` folder of the app's `ios`), installs,
+   launches, and waits for `label=Isaiah 41:10`, Today showing its
+   reference (`detail.expect`). The build log is `$EVIDENCE/build.log`; it
+   ends `** BUILD SUCCEEDED **`, and `detail.buildMs` is the build's time.
+   Cold, a build took 397 s on a loaded host; a later one is incremental.
+   Lines with `error:` in a successful log are flag and file names, not
+   failures. Pass `--prebuild` again when the `build` folder was removed:
+   it holds the codegen pod install wrote. `--app <Heartseed.app>` installs
+   a given build instead (a copy, the scheme added, signed ad hoc). There is
+   no other build: never run one by hand.
 
-5. **The simulator.** Find `verify-heartseed`:
+5. **The microphone.** The app declares two prompts, speech recognition
+   and the microphone (`apps/heartseed/vite/app.ts`), for dictation on a
+   device; on the simulator it asks for neither, and no drive ever grants
+   either. Keep the microphone revoked on the udid `boot` printed:
 
    ```bash
-   xcrun simctl list devices | grep 'verify-heartseed ('
+   xcrun simctl privacy <udid> revoke microphone app.heartseed
    ```
 
-   When it is missing, create it (an iPhone 17 on iOS 27.0) and keep its udid:
+   The revoke stops the running app, and a link that launches the app
+   lands on Today, so a drive's first step after it is `sim open /`.
 
-   ```bash
-   xcrun simctl create verify-heartseed com.apple.CoreSimulator.SimDeviceType.iPhone-17 com.apple.CoreSimulator.SimRuntime.iOS-27-0 > "$EVIDENCE/udid"
-   ```
+## Doctor
 
-   Otherwise write the udid the list shows to `$EVIDENCE/udid`. Then, with
-   `UDID=$(cat "$EVIDENCE/udid")`, boot it and wait for it:
+Before the first drive, and again after any surprising result:
 
-   ```bash
-   xcrun simctl boot "$UDID"; echo "boot exit $?" >> "$EVIDENCE/exits.txt"
-   xcrun simctl bootstatus "$UDID" -b; echo "bootstatus exit $?" >> "$EVIDENCE/exits.txt"
-   ```
+```bash
+bun run --cwd apps/heartseed sim doctor
+```
 
-   `boot` fails with "Unable to boot device in current state: Booted" when
-   it is up already; `bootstatus` then answers at once.
-
-6. **The dev server.** Pick a port of 8280-8289 that nothing listens on
-   (`lsof -nP -iTCP:$PORT -sTCP:LISTEN` prints nothing) and write it to
-   `$EVIDENCE/port`. Start `one dev` so it outlives the command that starts
-   it: an agent runs it as a background task (Bash with
-   `run_in_background`), a person in a terminal of its own. A detached `&`
-   or `nohup` inside a one-shot shell dies with that shell. The command
-   records its own pid, then becomes the server, with the pod's Hermes
-   compiler for the native bundle:
-
-   ```bash
-   cd "$APP" && echo $$ > "$EVIDENCE/server.pid" && HERMESC_PATH="$APP/ios/Pods/hermes-engine/destroot/bin/hermesc" exec ./node_modules/.bin/one dev --port "$PORT" > "$EVIDENCE/server.log" 2>&1
-   ```
-
-   Ready when `curl -sf "http://127.0.0.1:$PORT/" > /dev/null` exits 0
-   (within seconds). `server.log` shows `Server running` and the Local URL
-   on the port.
-
-7. **Point the app at the server, install and launch:**
-
-   ```bash
-   xcrun simctl spawn "$UDID" defaults write app.heartseed RCT_jsLocation "127.0.0.1:$PORT"; echo "jslocation exit $?" >> "$EVIDENCE/exits.txt"
-   xcrun simctl install "$UDID" "$APP/ios/build/dd/Build/Products/Debug-iphonesimulator/Heartseed.app"; echo "install exit $?" >> "$EVIDENCE/exits.txt"
-   xcrun simctl launch "$UDID" app.heartseed; echo "launch exit $?" >> "$EVIDENCE/exits.txt"
-   ```
-
-   The bundle id is `app.heartseed`. The app asks for no permission.
+It is read only. It prints `detail` with `head` (the commit the checkout is
+at: compare it with the commit under test), `audioHolders`, `load`, `cores`
+and `timingsHold`; when `timingsHold` is false, no timing of this drive
+claims anything. Or it fails with `Unhealthy` naming the first check that
+does not hold (`server-pid`, `port-owner`, `server-answers`, `server-log`);
+a simulator that is not booted fails as `SimulatorDown`.
 
 ## Drive
 
-agent-device (0.21.35 or later on the PATH) reads the screen through its own
-session, named for this run, never another drive's:
+The feature files write `bun run --cwd apps/heartseed sim` as `sim`. Each
+step is one command:
 
 ```bash
-agent-device open app.heartseed --platform ios --udid "$UDID" --session "$SESSION" --metro-port "$PORT" --no-record; echo "open exit $?" >> "$EVIDENCE/exits.txt"
-agent-device wait text "Isaiah 41:10" 120000 --session "$SESSION"; echo "wait exit $?" >> "$EVIDENCE/exits.txt"
-agent-device snapshot --session "$SESSION" > "$EVIDENCE/snapshot-today.txt"; echo "snapshot exit $?" >> "$EVIDENCE/exits.txt"
+bun run --cwd apps/heartseed sim open / --expect "label=Isaiah 41:10"
+bun run --cwd apps/heartseed sim snapshot today
 ```
 
-The first open bundles the app on the dev server, so the wait can take a
-minute on a cold server. The snapshot lists the screen's nodes as
-`[role] "text"`; a feature file says which nodes prove it. The features:
+`sim open <link> --expect <target>` opens `heartseed://<link>`, answers the
+"Open in “Heartseed”?" prompt with Open (`detail.prompts`), and waits for
+the target. `sim snapshot <step>` writes the screen's nodes, as
+`[role] "text"`, to `$EVIDENCE/snapshots/<step>.txt`; a feature file says
+which nodes prove it. A target is `label=<accessible name>` or
+`id=<testID>`, matched whole. `sim tap`, `sim scroll` and `sim back` work as
+the hymnal's skill describes; on Today a reader taps `Say it`, a grade and a
+missed word's mark. Heartseed has no journey files yet. The features:
 
-- [features/today.md](features/today.md): Today, its header, reference and
-  passage.
+- [features/today.md](features/today.md): Today, its header, reference,
+  passage and its one button.
+- [features/sayit.md](features/sayit.md): Say it on Today, over the scripted
+  replay on the simulator: the lit words, the mark and its peek, the count,
+  the suggested grade and a changed one.
 - [features/voice.md](features/voice.md): the voice's native module, built
   with the app (no screen calls it yet).
+- [features/dictation.md](features/dictation.md): dictation's native
+  module, built with the app and its prompts, and its scripted replay on
+  the development probe (`apps/heartseed/app/probe/dictation.tsx`). Say it
+  calls it on Today.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.
 
+## Gotchas
+
+- **The first bundle.** The first open after a fresh dev server waits on
+  the bundle: `sim install` waits up to 180 s for Today (`--timeout`)
+  before it fails `ReadinessTimedOut`.
+- **The passage comes from the server's bundle**, so a change to the corpus
+  or to the display rule shows after the server restarts (`sim down`, then
+  `sim boot`), with no rebuild of the app.
+- **The Hermes compiler.** `sim boot` hands the dev server the
+  `hermes-compiler` that the checkout's react-native depends on
+  (`detail.hermesc`), not the pod's. A red box naming the Hermes compiler
+  means it did not: give the caller's `HERMESC_PATH` an absolute path to a
+  working `hermesc` and boot again.
+
 ## Evidence
 
-All of it goes under `$EVIDENCE`, outside the tracked files: `exits.txt`
-(each step's exit), `prebuild.log`, `build.log`, `server.log`, and one
-`snapshot-<step>.txt` a read. A report quotes the exit lines and the
-snapshot's text nodes. A flaky step is reported as n/n trials with the
-load; a failure is run again on the base commit, in its own worktree and
-port, to tell a new failure from an old one.
+All of it goes under `$EVIDENCE`, outside the tracked files: `server.log`,
+`build.log`, each command's JSON line, the session file `sim down` files
+there, and the snapshots. A snapshot of Today holds the passage's words:
+read it for the feature's nodes, report only counts, booleans and the
+reference, and delete the `snapshots` folder once read. A flaky step is
+reported as n/n trials with the load; a failure is run again on the base
+commit, in its own worktree and port, to tell a new failure from an old
+one.
 
 ## Cleanup
 
-1. Close the driver's session:
-   `agent-device close --session "$SESSION"`.
-2. Stop the dev server by its recorded pid, never by name or port: read
-   `$EVIDENCE/server.pid`, check `ps -o command= -p <pid>` shows the One dev
-   server, and send that pid alone a SIGTERM. Nothing then listens on
-   `$PORT`.
-3. Shut the simulator down: `xcrun simctl shutdown "$UDID"`. Keep it for
-   the next drive; it is never erased.
-4. When disk is short (under 12 GB free), or when the worktree's work is
-   done, delete the app's build output, the `build` folder of
-   `apps/heartseed/ios`, after checking the path lies inside
-   `apps/heartseed`. The next build is cold
-   again. Delete `apps/heartseed/ios` whole only when prebuild must run
-   afresh.
+```bash
+bun run --cwd apps/heartseed sim down
+```
 
-Evidence stays.
+`sim down` closes the driver session, shuts down `verify-heartseed` (kept
+for the next drive, never erased), asks agent-device to stop its daemon in
+the drive's own HOME (the state folder's `home`), stops the dev server by
+its recorded pid and start time (never by name or port), and only then
+files the session into `$EVIDENCE`. A second `sim down` fails `NoSession`.
+When disk is short (under 12 GB free), or when the worktree's work is done,
+`sim down --clean` also deletes the app's build output, the `build` folder
+of `apps/heartseed/ios` (the clean paths of `apps/heartseed/scripts/sim-app.ts`),
+after checking it lies inside the app. The next build is cold again, and
+needs `--prebuild`. Delete `apps/heartseed/ios` whole only when prebuild
+must run afresh. Evidence stays.
+
+## Helpers
+
+`apps/heartseed/scripts/sim.ts` (`bun run --cwd apps/heartseed sim <command>`;
+`--help` on any command). Every command prints one JSON line on stdout and
+exits 0, or a line with `"ok":false` and its error's `_tag` and exits 1. The
+driver's commands, its tags, the drivers' own HOME and the stop rule are the
+hymnal's (`.claude/skills/verify-hymnal/SKILL.md`, Helpers, and
+`packages/sim/README.md`). Its tests: the driver's in `packages/sim/src`,
+and Heartseed's values and refusals in `apps/heartseed/scripts/sim.test.ts`.
 
 ## Hosts
 
