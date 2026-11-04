@@ -1,9 +1,10 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { labOf } from '@manna/film/core';
 import { Effect, FileSystem, Option, Schema } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { describe, expect, it } from 'effect-bun-test';
 import sharp from 'sharp';
+import { film, fps } from '../film.ts';
+import { PARITY, grained, grainOf, parity } from './parity.ts';
 
 /** The app's root: every command runs from it and every file the shots name is relative to it. */
 const APP = `${import.meta.dir}/../../../..`;
@@ -49,9 +50,6 @@ const ALIVE = 4.6;
 
 /** How long after its last word's voiced end a card may hold (CRAFT rule 1: a hard cut out on the last word). */
 const CARD_TAIL = 0.15;
-
-/** The share of a film still's pixels within ΔE 2 of the storybook verify's frame at the same film frame. */
-const PARITY = 0.995;
 
 /** The members each shot must cast (it may cast more), and the fewest figures it draws (the kept panels' density). */
 const CASTS: ReadonlyArray<readonly [string, ReadonlyArray<string>, number]> = [
@@ -485,28 +483,26 @@ const pixelsOf = Effect.fn('Act1.pixels')(function* (file: string) {
   );
 });
 
-const covered = (overlays: ReadonlyArray<Overlay>, x: number, y: number) =>
-  overlays.some((o) => x >= o.x && x < o.x + o.width && y >= o.y && y < o.y + o.height);
+/** The grain the film lays over every frame, read from its own look (its timings play no part in it). */
+const FILM_GRAIN = grainOf(film({ timings: { voice: '', scenes: {} }, audio: '', fps }).look);
 
-/** The share of two frames' pixels outside `overlays` within ΔE76 2 of each other; 0 when their sizes differ. */
+/**
+ * The share of a film still's pixels outside `overlays` within ΔE76 2 of the
+ * verify's frame with the film's grain laid over it as at film second `t`
+ * (the bars read the frame ungrained: grain is the film's finish, not the
+ * drawing); 0 when their sizes differ.
+ */
 const parityOf = Effect.fn('Act1.parity')(function* (
-  a: string,
-  b: string,
+  still: string,
+  frame: string,
   overlays: ReadonlyArray<Overlay>,
+  t: number,
 ) {
-  const p = yield* pixelsOf(a);
-  const q = yield* pixelsOf(b);
+  const p = yield* pixelsOf(still);
+  const q = yield* pixelsOf(frame);
   if (p.info.width !== q.info.width || p.info.height !== q.info.height) return 0;
-  let near = 0;
-  let n = 0;
-  for (let i = 0; i < p.info.width * p.info.height; i++) {
-    if (covered(overlays, i % p.info.width, Math.floor(i / p.info.width))) continue;
-    n++;
-    const x = labOf([p.data[3 * i] ?? 0, p.data[3 * i + 1] ?? 0, p.data[3 * i + 2] ?? 0]);
-    const y = labOf([q.data[3 * i] ?? 0, q.data[3 * i + 1] ?? 0, q.data[3 * i + 2] ?? 0]);
-    if (Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) <= 2) near++;
-  }
-  return near / Math.max(1, n);
+  const { width, height } = p.info;
+  return parity(p.data, grained(q.data, width, height, FILM_GRAIN, t), width, height, overlays);
 });
 
 /** A still's file name as the film's render writes it (`stillName` in `@manna/film/tools`). */
@@ -568,6 +564,7 @@ describe('In Its Order act 1 in style B: the bars and the film', () => {
             `${stills}/${stillName(Number(t.toFixed(4)))}`,
             frame,
             overlays,
+            t,
           );
           if (share < PARITY) off.push(`${id} at ${t.toFixed(3)} s: ${share.toFixed(4)}`);
         }

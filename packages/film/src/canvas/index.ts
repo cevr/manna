@@ -3,6 +3,7 @@ export {
   type Pt,
   type StrokeStyle,
   blob,
+  boilTick,
   ellipse,
   ellipseShape,
   length,
@@ -69,3 +70,4 @@ export { type Each, type Life, type Rng, burst, cycle, fly, flyV, stream } from 
 export { type CutoutEase, type CutoutEaseFrame, type CutoutView, cutoutTable } from './cast.ts';
 export { type PuppetDress, type PuppetLook, type PuppetPose, type PuppetSpec } from './puppet.ts';
 export { type Edge, type PaintingSpec, type Paintings } from './painting.ts';
+export { grainShift } from './paper.ts';
