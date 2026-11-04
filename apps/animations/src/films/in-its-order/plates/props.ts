@@ -1,7 +1,6 @@
 import type { PaintingSpec } from '@manna/film/canvas';
 import openPng from './scroll-open.png' with { type: 'file' };
 import rolledPng from './scroll-rolled.png' with { type: 'file' };
-import rollerPng from './scroll-roller.png' with { type: 'file' };
 
 /** The rolled scroll, its two rollers bound by a band and the gold seal; its foot's centre at the origin. */
 export const SCROLL_ROLLED = {
@@ -18,14 +17,5 @@ export const SCROLL_OPEN = {
   png: openPng,
   size: [450, 368],
   at: [-225, 0],
-  open: ['top', 'right', 'bottom', 'left'],
-} as const satisfies PaintingSpec;
-
-/** The open scroll's lower roller, its rows 280 to 368, where it lies on the open scroll. */
-export const SCROLL_ROLLER = {
-  key: 'in-its-order/scroll-roller',
-  png: rollerPng,
-  size: [450, 88],
-  at: [-225, 280],
   open: ['top', 'right', 'bottom', 'left'],
 } as const satisfies PaintingSpec;
