@@ -107,7 +107,7 @@ const launch = <E, R>(
     for (const p of planned)
       for (const output of ['colour', ...figures.map((f) => `figure:${f.figure.name}`)]) {
         const png = yield* render(requestOf(p.frame, output));
-        hashes.push(sha256(png));
+        hashes.push(yield* sha256(png));
         yield* seen(p, output, png);
       }
     return hashes;
@@ -136,7 +136,7 @@ const firstLaunch = Effect.fn('StorybookVerify.firstLaunch')(function* (
     Effect.gen(function* () {
       const file = frameName(p.index);
       if (output === 'colour') {
-        colour.set(file, sha256(png));
+        colour.set(file, yield* sha256(png));
         return yield* fs.writeFile(path.join(out, 'frames', file), png);
       }
       const name = output.slice('figure:'.length);
@@ -177,7 +177,7 @@ const sheetFault = Effect.fn('StorybookVerify.sheetFault')(function* (
   const stray = [...used].find((k) => !keys.includes(k));
   if (stray) return Option.some(`${f.figure.name} draws ${stray}, not a cell of its sheet`);
   const bytes = yield* fs.readFile(`${dir}/sheet.png`);
-  if (sha256(bytes) !== f.record.sheet)
+  if ((yield* sha256(bytes)) !== f.record.sheet)
     return Option.some(`${f.figure.name}'s sheet.png is not the one its record names`);
   const split = splitSheet(
     yield* decoded(bytes, `${dir}/sheet.png`),
@@ -186,16 +186,18 @@ const sheetFault = Effect.fn('StorybookVerify.sheetFault')(function* (
   );
   if (Result.isFailure(split)) return Option.some(`${f.figure.name}: ${split.failure.reason}`);
   for (const [i, c] of f.record.cells.entries()) {
-    const stored = sha256(yield* fs.readFile(`${dir}/cells/${c.key}.png`));
-    const same = Option.exists(
-      Option.fromUndefinedOr(split.success.cells[i]),
-      (again) =>
-        sha256(encodePng(again.raster)) === c.sha256 &&
-        stored === c.sha256 &&
-        [again.box.x, again.box.y, again.box.width, again.box.height].join() ===
-          [c.box.x, c.box.y, c.box.width, c.box.height].join(),
-    );
-    if (!same) return Option.some(`${f.figure.name}'s ${c.key} does not re-split byte for byte`);
+    const stored = yield* sha256(yield* fs.readFile(`${dir}/cells/${c.key}.png`));
+    const fault = Option.some(`${f.figure.name}'s ${c.key} does not re-split byte for byte`);
+    const again = Option.fromUndefinedOr(split.success.cells[i]);
+    if (Option.isNone(again)) return fault;
+    const { box, raster } = again.value;
+    if (
+      (yield* sha256(encodePng(raster))) !== c.sha256 ||
+      stored !== c.sha256 ||
+      [box.x, box.y, box.width, box.height].join() !==
+        [c.box.x, c.box.y, c.box.width, c.box.height].join()
+    )
+      return fault;
   }
   return Option.none<string>();
 });

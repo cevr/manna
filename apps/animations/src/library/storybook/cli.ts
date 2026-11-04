@@ -1,3 +1,4 @@
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { ImageRoute } from '@manna/film/tools';
@@ -10,7 +11,15 @@ import { frameAt, type Shot, timesOf } from './shot.ts';
 import { verdictText } from './verify/verdict.ts';
 import { VerdictFailed, verifyShot } from './verify/run.ts';
 import { feastCourtyard } from './shots/feast-courtyard.ts';
-import { CAST, drawSheet, headsOf, keepSheet, loadFigures, splitFiles } from './store.ts';
+import {
+  CAST,
+  drawSheet,
+  headsOf,
+  keepSheet,
+  loadFigures,
+  resplitSheet,
+  splitFiles,
+} from './store.ts';
 
 /** The shots the command knows, by id. */
 const SHOTS = { 'feast-courtyard': feastCourtyard } as const;
@@ -230,10 +239,25 @@ const keepCommand = Command.make(
     ),
 ).pipe(Command.withDescription("Write the owner's keep on a drawn shot sheet's record"));
 
+const resplitCommand = Command.make('resplit', { member, sheetId }, ({ member, sheetId }) =>
+  resplitSheet(CAST, member, sheetId).pipe(
+    Effect.flatMap((record) =>
+      Console.log(
+        `resplit ${member}/shot-sheets/${sheetId}: ${record.cells.map((c) => c.key).join(', ')}`,
+      ),
+    ),
+  ),
+).pipe(
+  Command.withDescription(
+    "Split a drawn shot sheet again as split splits it now, rewriting its cells and its record's cells; the drawing, prompt, refs and keep stand",
+  ),
+);
+
 const storybook = Command.make('storybook').pipe(
   Command.withSubcommands([
     splitCommand,
     drawCommand,
+    resplitCommand,
     keepCommand,
     planCommand,
     renderCommand,
@@ -244,6 +268,6 @@ const storybook = Command.make('storybook').pipe(
 
 if (import.meta.main)
   Command.run(storybook, { version: '0.1.0' }).pipe(
-    Effect.provide(BunServices.layer),
+    Effect.provide([BunServices.layer, BunCrypto.layerDigest]),
     BunRuntime.runMain,
   );

@@ -29,7 +29,7 @@
         "width": 475,
         "height": 1024
       },
-      "sha256": "cd2e6ed9200d04981a929029bbe403da5966b3f896460efce32ed121bc6f74ac"
+      "sha256": "0a71a57556d54da7fa2129e09b75cf2f24483ac21d2d02b77ee647e4f29f3307"
     },
     {
       "key": "smile",
@@ -39,7 +39,7 @@
         "width": 500,
         "height": 1024
       },
-      "sha256": "1733728566c5942b4f61aca35581c6b5e63ecda13af4551b2b6acb66bbec47fa"
+      "sha256": "70215240beb7c65c799bd98a4a352ddca4712ea62927cdb51b7dd581c89af271"
     },
     {
       "key": "turn",
@@ -49,7 +49,7 @@
         "width": 476,
         "height": 1024
       },
-      "sha256": "89a3b074648fe6c42980b478b0552600b9ef96d2546d851d36f5b265f9e9f619"
+      "sha256": "4966c2cb584c86ccb0b38ec02f527cbc4b21e0199d84ab6ff765a3a1909beba7"
     }
   ]
 }

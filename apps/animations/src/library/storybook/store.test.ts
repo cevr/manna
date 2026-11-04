@@ -1,4 +1,6 @@
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import * as BunServices from '@effect/platform-bun/BunServices';
+import { rng } from '@manna/film/core';
 import { decodePng, encodePng, ImageRoute, type Raster } from '@manna/film/tools';
 import { Effect, FileSystem, Layer, Option, Result, Schema } from 'effect';
 import { describe, expect, it, test } from 'effect-bun-test';
@@ -14,15 +16,22 @@ import {
 } from './sheet.ts';
 import {
   CAST,
+  CLOSE_PAINTS,
   drawSheet,
   GROUNDS,
   groundFor,
   keepSheet,
   promptOf,
   readRecord,
+  RecordJson,
+  resplitSheet,
   sha256,
   sheetDir,
 } from './store.ts';
+
+/** SHA-256 in hex by Bun's own hasher: the oracle the store's `Digest` hashes are held to. */
+const sha256Of = (bytes: Uint8Array): string =>
+  new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
 
 const INK: Rgb = [30, 20, 15];
 const BASE: Rgb = [200, 80, 60];
@@ -74,7 +83,7 @@ const routeOf = (raster: Raster, calls: Array<string>) =>
   ImageRoute.fake((request) => {
     calls.push(request.prompt);
     return encodePng(raster);
-  }).pipe(Layer.provideMerge(BunServices.layer));
+  }).pipe(Layer.provideMerge(Layer.merge(BunServices.layer, BunCrypto.layerDigest)));
 
 describe('drawSheet', () => {
   it.effect(
@@ -91,10 +100,10 @@ describe('drawSheet', () => {
         expect(record.refs).toEqual([
           {
             file: 'cast-sheet/views/front.png',
-            sha256: sha256(yield* fs.readFile(`${cast}/m/cast-sheet/views/front.png`)),
+            sha256: sha256Of(yield* fs.readFile(`${cast}/m/cast-sheet/views/front.png`)),
           },
         ]);
-        expect(record.sheet).toBe(sha256(yield* fs.readFile(`${dir}/sheet.png`)));
+        expect(record.sheet).toBe(sha256Of(yield* fs.readFile(`${dir}/sheet.png`)));
         expect([record.size, record.ground, 'kept' in record]).toEqual([
           '1536x1024',
           hexOf(PAPER),
@@ -106,7 +115,7 @@ describe('drawSheet', () => {
         expect(record.cells.map((c) => c.box)).toEqual(split.cells.map((c) => c.box));
         for (const [i, cell] of record.cells.entries()) {
           const png = yield* fs.readFile(`${dir}/cells/${cell.key}.png`);
-          expect(sha256(png)).toBe(cell.sha256);
+          expect(sha256Of(png)).toBe(cell.sha256);
           expect(png).toEqual(encodePng(split.cells[i]?.raster ?? drawn));
         }
       }).pipe(Effect.scoped, Effect.provide(routeOf(drawn, calls)));
@@ -161,6 +170,65 @@ describe('drawSheet', () => {
       expect(yield* fs.exists(`${sheetDir(cast, 'm', 's1')}/record.json`)).toBe(false);
     }).pipe(Effect.scoped, Effect.provide(routeOf(sheetOf(2, near), calls)));
   });
+});
+
+describe('resplitSheet', () => {
+  it.effect(
+    'rewrites stale cells as the split cuts the stored sheet now, the drawing, prompt, refs and keep standing',
+    () => {
+      const calls: Array<string> = [];
+      return Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const cast = yield* castWith(PALETTE);
+        yield* drawSheet(cast, 'm', 's1', ['side', 'front'], ['front']);
+        const kept = yield* keepSheet(cast, 'm', 's1', 'keep it', 'abc123');
+        const dir = sheetDir(cast, 'm', 's1');
+        const stale = encodePng(sheetOf(1, [9, 9, 9]));
+        yield* fs.writeFile(`${dir}/cells/side.png`, stale);
+        yield* fs.writeFileString(
+          `${dir}/record.json`,
+          `${yield* Schema.encodeEffect(RecordJson)({
+            ...kept,
+            cells: kept.cells.map((c) => ({ ...c, sha256: sha256Of(stale) })),
+          })}\n`,
+        );
+        const again = yield* resplitSheet(cast, 'm', 's1');
+        expect(again).toEqual(kept);
+        expect(yield* readRecord(cast, 'm', 's1')).toEqual(kept);
+        for (const cell of again.cells)
+          expect(sha256Of(yield* fs.readFile(`${dir}/cells/${cell.key}.png`))).toBe(cell.sha256);
+      }).pipe(Effect.scoped, Effect.provide(routeOf(sheetOf(2, PAPER), calls)));
+    },
+  );
+
+  it.effect('refuses a sheet.png its record does not name', () => {
+    const calls: Array<string> = [];
+    return Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const cast = yield* castWith(PALETTE);
+      yield* drawSheet(cast, 'm', 's1', ['side', 'front'], ['front']);
+      yield* fs.writeFile(
+        `${sheetDir(cast, 'm', 's1')}/sheet.png`,
+        encodePng(sheetOf(2, [9, 9, 9])),
+      );
+      const refused = yield* Effect.flip(resplitSheet(cast, 'm', 's1'));
+      expect(refused._tag).toBe('StoreFailed');
+    }).pipe(Effect.scoped, Effect.provide(routeOf(sheetOf(2, PAPER), calls)));
+  });
+});
+
+describe('sha256', () => {
+  it.effect("is the SHA-256 of the bytes in hex, as Bun's hasher gives it", () =>
+    Effect.gen(function* () {
+      for (let seed = 1; seed <= 8; seed++) {
+        const draw = rng(seed);
+        const bytes = Uint8Array.from({ length: Math.floor(draw() * 300) }, () =>
+          Math.floor(draw() * 256),
+        );
+        expect(yield* sha256(bytes)).toBe(sha256Of(bytes));
+      }
+    }).pipe(Effect.provide(BunCrypto.layerDigest)),
+  );
 });
 
 describe('keepSheet', () => {
@@ -242,5 +310,47 @@ describe('promptOf', () => {
     for (const hex of [PALETTE.ink, hexOf(BASE), '#5a78c8', '#7a5236', '#a6dcae'])
       expect(prompt).toContain(hex);
     expect(prompt).toContain('sandals #7a5236, drawn flat in that one colour');
+  });
+
+  test('sets apart every pair of parts whose base paints lie within ΔE 12, naming both by hex, and no farther pair', () => {
+    for (let seed = 1; seed <= 24; seed++) {
+      const draw = rng(seed);
+      const channel = () => 120 + Math.floor(draw() * 40);
+      const parts = Array.from({ length: 2 + Math.floor(draw() * 4) }, (_, i) => ({
+        name: `p${i}`,
+        base: hexOf([channel(), channel(), channel()]),
+      }));
+      const lines = promptOf('A plain man.', ['front'], { ink: hexOf(INK), parts }, '#a6dcae')
+        .split('\n')
+        .filter((l) => l.startsWith('Close colours: '));
+      const close = parts.flatMap((a, i) =>
+        parts
+          .slice(i + 1)
+          .filter((b) => deltaE(rgbOfHex(a.base), rgbOfHex(b.base)) < CLOSE_PAINTS)
+          .map((b) => [b.name, b.base, a.name, a.base] as const),
+      );
+      expect(lines).toHaveLength(close.length);
+      for (const [[b, bHex, a, aHex], line] of close.map(
+        (pair, k) => [pair, lines[k] ?? ''] as const,
+      ))
+        expect(line).toMatch(
+          new RegExp(
+            `^Close colours: the ${a} ${aHex} and the ${b} ${bHex} are two different colours: paint the ${b} [a-z ]+, exactly ${bHex}, and the ${a} [a-z ]+, exactly ${aHex}, never both in one colour`,
+          ),
+        );
+    }
+  });
+
+  test("tells the sash of the lead's palette from his tunic: greyer, never the tunic's hex", () => {
+    const lead: Palette = {
+      ink: '#130803',
+      parts: [
+        { name: 'tunic', base: '#f2d8b7', role: 'garment' },
+        { name: 'sash', base: '#eadcc2', role: 'sash' },
+      ],
+    };
+    expect(promptOf('A man.', ['front'], lead, '#a6dcae')).toContain(
+      'Close colours: the tunic #f2d8b7 and the sash #eadcc2 are two different colours: paint the sash greyer, exactly #eadcc2, and the tunic stronger, exactly #f2d8b7, never both in one colour, so the sash reads apart from the tunic wherever they meet.',
+    );
   });
 });

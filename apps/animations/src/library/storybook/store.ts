@@ -1,7 +1,10 @@
+import { labOf } from '@manna/film/core';
 import { decodePng, encodePng, ImageRoute, type Raster } from '@manna/film/tools';
 import { DateTime, Effect, FileSystem, Option, Path, Schema } from 'effect';
+import { Digest } from 'effect/crypto';
 import {
   deltaE,
+  type Rgb,
   figuresIn,
   clearBackground,
   groundOf,
@@ -85,8 +88,9 @@ export class DrawRefused extends Schema.TaggedError<DrawRefused>()('DrawRefused'
   }
 }
 
-export const sha256 = (bytes: Uint8Array): string =>
-  new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
+/** The SHA-256 of `bytes` in lowercase hex, by the `Digest` the context provides. */
+export const sha256 = (bytes: Uint8Array): Effect.Effect<string, never, Digest.Digest> =>
+  Digest.Digest.use((digest) => digest.digestHex(Digest.sha256, bytes));
 
 /** Where a member's shot sheet lives. */
 export const sheetDir = (cast: string, member: string, id: string): string =>
@@ -149,7 +153,7 @@ export const splitFiles = Effect.fn('Storybook.splitFiles')(function* (
     yield* fs.writeFile(path.join(out, `cell-${i}.png`), encodePng(cell.raster));
   yield* fs.writeFileString(
     path.join(out, 'cells.json'),
-    `${yield* Schema.encodeEffect(CellsJson)({ sheet: sha256(bytes), cells: split.cells.map((c) => c.box) })}\n`,
+    `${yield* Schema.encodeEffect(CellsJson)({ sheet: yield* sha256(bytes), cells: split.cells.map((c) => c.box) })}\n`,
   );
   return split;
 });
@@ -230,11 +234,51 @@ const paintWords = (palette: Palette): string =>
     ),
   ].join('; ');
 
+/** How near (ΔE76) two parts' base paints lie for the prompt to set them apart: a part drawn this far off its hex can land nearer the other's, and the snap then paints it the other part. */
+export const CLOSE_PAINTS = 12;
+
+/** The words for a step of 1 or more, the later colour's first: `[less, more]` below, `[more, less]` above; none for a smaller step. */
+const stepWords = (
+  step: number,
+  less: string,
+  more: string,
+): ReadonlyArray<readonly [string, string]> => {
+  if (Math.abs(step) < 1) return [];
+  if (step > 0) return [[more, less]];
+  return [[less, more]];
+};
+
+/** How `b` and `a` differ in words a drawing can follow, `b`'s then `a`'s: lighter or darker, greyer or stronger, each for a step of 1 or more in Lab lightness or chroma; `a shade apart` for each when neither step is. */
+const apartWords = (a: Rgb, b: Rgb): readonly [string, string] => {
+  const [la, aa, ba] = labOf(a);
+  const [lb, ab, bb] = labOf(b);
+  const steps = [
+    ...stepWords(lb - la, 'darker', 'lighter'),
+    ...stepWords(Math.hypot(ab, bb) - Math.hypot(aa, ba), 'greyer', 'stronger'),
+  ];
+  if (steps.length === 0) return ['a shade apart', 'a shade apart'];
+  return [steps.map((s) => s[0]).join(' and '), steps.map((s) => s[1]).join(' and ')];
+};
+
+/** The prompt's words for each pair of parts whose base paints lie within `CLOSE_PAINTS`: two different colours, each painted as it differs from the other and exactly its own hex, never both in one. */
+const closeWords = (palette: Palette): ReadonlyArray<string> =>
+  palette.parts.flatMap((a, i) =>
+    palette.parts.slice(i + 1).flatMap((b) => {
+      const [ra, rb] = [rgbOfHex(a.base), rgbOfHex(b.base)];
+      if (deltaE(ra, rb) >= CLOSE_PAINTS) return [];
+      const [bWords, aWords] = apartWords(ra, rb);
+      return [
+        `the ${a.name} ${a.base} and the ${b.name} ${b.base} are two different colours: paint the ${b.name} ${bWords}, exactly ${b.base}, and the ${a.name} ${aWords}, exactly ${a.base}, never both in one colour, so the ${b.name} reads apart from the ${a.name} wherever they meet`,
+      ];
+    }),
+  );
+
 /**
  * The prompt of one shot sheet: the person (their look), each key's pose in
  * order, the continuity clause, the house rules (round hands with no thumb
  * and no fingers, sleeves to the wrist, one flat shade per colour), the
- * palette by hex and the one flat ground by hex.
+ * palette by hex, each pair of close paints set apart, and the one flat
+ * ground by hex.
  */
 export const promptOf = (
   look: string,
@@ -249,6 +293,7 @@ export const promptOf = (
     `Continuity: this is one person drawn ${keys.length} times in one pass, so every figure has the same face, the same head size, the same body proportions, the same colours, the same line weight and the same shading; only the turn and the pose change. All figures stand on one baseline at one size, the soles of every figure on the same line.`,
     'House rules: each hand is a plain round circle of skin at the end of its sleeve, no thumb and no fingers. Sleeves run to the wrist in every figure, the raised arm too: no bare arm or forearm ever shows. One bold warm-dark outline of even weight round each figure. One flat shade per colour: no gradient, no texture, no airbrush, no highlight.',
     `Paint with exactly these colours: ${paintWords(palette)}.`,
+    ...closeWords(palette).map((w) => `Close colours: ${w}.`),
     `The ground: one flat colour, ${ground}, everywhere behind and between the figures, with wide clear ground between each figure and the next (a reaching or raised hand too) so no figure touches or nears another; no glow, halo or soft light round any figure; no floor, no cast shadow, no text, no frame.`,
   ].join('\n');
 
@@ -318,9 +363,10 @@ export const drawSheet = Effect.fn('Storybook.drawSheet')(function* (
   const look = yield* fs.readFileString(`${cast}/${member}/cast-sheet/look.md`);
   const refFiles = refs.map((view) => `cast-sheet/views/${view}.png`);
   const refShas = yield* Effect.forEach(refFiles, (file) =>
-    fs
-      .readFile(`${cast}/${member}/${file}`)
-      .pipe(Effect.map((bytes) => ({ file, sha256: sha256(bytes) }))),
+    fs.readFile(`${cast}/${member}/${file}`).pipe(
+      Effect.flatMap(sha256),
+      Effect.map((hash) => ({ file, sha256: hash })),
+    ),
   );
   const prompt = promptOf(look, keys, palette, ground.value);
   const scratch = yield* fs.makeTempDirectory({ prefix: `storybook-${member}-${id}-` });
@@ -335,32 +381,91 @@ export const drawSheet = Effect.fn('Storybook.drawSheet')(function* (
   const split = yield* checkDrawn(yield* pngOf(bytes, out), keys, palette).pipe(
     Effect.mapError((e) => DrawRefused.make({ reason: `${e.reason}; the draw is at ${out}` })),
   );
-  yield* fs.makeDirectory(`${dir}/cells`, { recursive: true });
+  yield* fs.makeDirectory(dir, { recursive: true });
   yield* fs.writeFile(`${dir}/sheet.png`, bytes);
-  const cells = yield* Effect.forEach(split.cells, (cell, i) =>
-    Effect.gen(function* () {
-      const key = keys[i] ?? `cell-${i}`;
-      const png = encodePng(cell.raster);
-      yield* fs.writeFile(`${dir}/cells/${key}.png`, png);
-      return { key, box: cell.box, sha256: sha256(png) };
-    }),
-  );
   const record: SheetRecord = {
     member,
     id,
     prompt,
     refs: refShas,
-    sheet: sha256(bytes),
+    sheet: yield* sha256(bytes),
     size: SHEET_SIZE,
     ground: hexOf(split.ground),
     drawn: yield* today,
-    cells,
+    cells: yield* storeCells(dir, keys, split),
   };
+  yield* writeRecord(dir, record);
+  return record;
+});
+
+/** A split's cells stored as `<dir>/cells/<key>.png`, the keys in the cells' order: each key, its box and its PNG's sha256. */
+const storeCells = Effect.fn('Storybook.storeCells')(function* (
+  dir: string,
+  keys: ReadonlyArray<string>,
+  split: Split,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  yield* fs.makeDirectory(`${dir}/cells`, { recursive: true });
+  return yield* Effect.forEach(split.cells, (cell, i) =>
+    Effect.gen(function* () {
+      const key = keys[i] ?? `cell-${i}`;
+      const png = encodePng(cell.raster);
+      yield* fs.writeFile(`${dir}/cells/${key}.png`, png);
+      return { key, box: cell.box, sha256: yield* sha256(png) };
+    }),
+  );
+});
+
+/** A record written as `<dir>/record.json`. */
+const writeRecord = Effect.fn('Storybook.writeRecord')(function* (
+  dir: string,
+  record: SheetRecord,
+) {
+  const fs = yield* FileSystem.FileSystem;
   yield* fs.writeFileString(
     `${dir}/record.json`,
     `${yield* Schema.encodeEffect(RecordJson)(record)}\n`,
   );
-  return record;
+});
+
+/**
+ * A drawn sheet split again: its stored `sheet.png` split with the member's
+ * palette as `storybook split` splits it now, each `cells/<key>.png` and the
+ * record's ground and cells rewritten; the prompt, refs, sheet hash, day
+ * drawn and keep stand, since the drawing is the same. Refuses a
+ * `sheet.png` that is not the one its record names.
+ */
+export const resplitSheet = Effect.fn('Storybook.resplitSheet')(function* (
+  cast: string,
+  member: string,
+  id: string,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const dir = sheetDir(cast, member, id);
+  const record = yield* readRecord(cast, member, id);
+  const bytes = yield* fs.readFile(`${dir}/sheet.png`);
+  if ((yield* sha256(bytes)) !== record.sheet)
+    return yield* StoreFailed.make({
+      reason: `${member}'s sheet ${id}: sheet.png is not the one its record names`,
+    });
+  const split = yield* Effect.fromResult(
+    splitSheet(
+      yield* pngOf(bytes, `${dir}/sheet.png`),
+      record.cells.length,
+      yield* memberPalette(cast, member),
+    ),
+  );
+  const again: SheetRecord = {
+    ...record,
+    ground: hexOf(split.ground),
+    cells: yield* storeCells(
+      dir,
+      record.cells.map((c) => c.key),
+      split,
+    ),
+  };
+  yield* writeRecord(dir, again);
+  return again;
 });
 
 /** One figure of a shot as stored: its layer and item, its sheet's record, its palette's paints, its cells by key and its sheet's head. */
@@ -402,12 +507,8 @@ export const keepSheet = Effect.fn('Storybook.keepSheet')(function* (
   why: string,
   ask: string,
 ) {
-  const fs = yield* FileSystem.FileSystem;
   const record = yield* readRecord(cast, member, id);
   const kept: SheetRecord = { ...record, kept: { date: yield* today, why, ask } };
-  yield* fs.writeFileString(
-    `${sheetDir(cast, member, id)}/record.json`,
-    `${yield* Schema.encodeEffect(RecordJson)(kept)}\n`,
-  );
+  yield* writeRecord(sheetDir(cast, member, id), kept);
   return kept;
 });
