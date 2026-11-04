@@ -13,6 +13,7 @@ import {
   timesOf,
 } from '../../../library/storybook/shot.ts';
 import VILLAGER_PALETTE from '../cast/idea-villagers/cast-sheet/palette.json';
+import { CELLS as LEAD_MILK_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-milk/cells.ts';
 import { CELLS as VILLAGER_CELLS } from '../cast/idea-villagers/shot-sheets/iio-milk/cells.ts';
 import { inItsOrder } from './index.ts';
 import { drawScaleOf } from './kit.ts';
@@ -61,6 +62,24 @@ const pointOn = (plate: Plate, t: number, p: readonly [number, number]) => {
 /** The villager's cup mouths and his cells, by cell. */
 const MOUTHS = new Map(Object.entries(CUP_MOUTHS));
 const CELL_OF = new Map(Object.entries(VILLAGER_CELLS));
+
+/** milk-row's two grown men's cells, by `<member>/<cell>`. */
+const ROW_CELLS = new Map<string, { readonly png: string; readonly ay: number }>([
+  ...Object.entries(LEAD_MILK_CELLS).map(([cell, c]) => [`lead-feast/${cell}`, c] as const),
+  ...Object.entries(VILLAGER_CELLS).map(([cell, c]) => [`idea-villagers/${cell}`, c] as const),
+]);
+
+/** A cell's first row holding an opaque pixel: its crown. */
+const firstInkedRow = (raw: {
+  readonly data: Buffer;
+  readonly info: { readonly width: number; readonly height: number };
+}) =>
+  Array.from({ length: raw.info.height }, (_, y) => y).find((y) =>
+    Array.from(
+      { length: raw.info.width },
+      (_, x) => raw.data[(y * raw.info.width + x) * 4 + 3] ?? 0,
+    ).some((a) => a > 127),
+  ) ?? raw.info.height;
 
 /** A villager paint's hex by part name. */
 const paintOf = (name: string) => VILLAGER_PALETTE.parts.find((p) => p.name === name)?.base ?? '';
@@ -261,6 +280,34 @@ describe("In Its Order's staging", () => {
     const tall = mother.at.ground - BABY_MOTHER.crown;
     expect(top).toBeLessThanOrEqual(mother.at.ground - tall / 5);
   });
+
+  it.effect(
+    'stands the lead’s and the villager’s crowns within 30 px of each other at milk-row’s last frame, each read on the cell it draws there (owner O2, by the orchestrator’s ruling; 99 px before)',
+    () =>
+      Effect.gen(function* () {
+        const row = placed.find(({ shot }) => shot.id === 'milk-row')?.shot;
+        if (!row) return expect(row).toBeDefined();
+        const last = timesOf(row).at(-1) ?? 0;
+        const crowns = yield* Effect.forEach(['lead', 'villager'], (name) => {
+          const figure = figuresOf(row).find(({ figure }) => figure.name === name)?.figure;
+          const pose = figure && poseAt(figure, last);
+          const cell = pose && ROW_CELLS.get(`${figure.member}/${pose.cell}`);
+          if (!figure || !pose || !cell) return Effect.succeed(Number.NaN);
+          const s = drawScaleOf(figure.member, figure.sheet, row.headPx, 1) * (figure.size ?? 1);
+          return Effect.map(
+            Effect.promise(() =>
+              sharp(cell.png).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+            ),
+            (raw) => {
+              const top = firstInkedRow(raw);
+              return pose.y + (top - cell.ay) * s * pose.sy * pose.breath;
+            },
+          );
+        });
+        const [lead, villager] = crowns;
+        expect(Math.abs((lead ?? Number.NaN) - (villager ?? Number.NaN))).toBeLessThanOrEqual(30);
+      }),
+  );
 
   test('draws the open scroll in cold-letter, at rest on the table at the shot’s end', () => {
     const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;

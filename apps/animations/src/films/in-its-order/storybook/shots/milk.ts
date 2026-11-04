@@ -244,6 +244,15 @@ export const milkPour: FilmShot = {
 /** The row's ground line and its grown head on the figures' plane, at the whole row's framing. */
 const ROW = { ground: 995, headPx: 285 } as const;
 
+/**
+ * milk-row's sizes on their head shares (owner O2, by the orchestrator's
+ * ruling): the lead a little smaller and the row a little larger, so the two
+ * grown men's crowns come near level, as the panel stands them; each the
+ * farthest the scale bar's ±5 % allows over the cells the shot draws (the
+ * lead's `front` reads 0.993 of his share, the toddler's `hold` 1.005).
+ */
+export const ROW_SIZES = { lead: 0.958, row: 1.043 } as const;
+
 /** The row left to right: each member, sheet, name, its x, its first cell and blink, and its contact shadow's width. */
 const RowMember = [
   ['idea-villagers', 'iio-milk-baby', 'baby', 360, 'sit', 'sitBlink', 230],
@@ -282,11 +291,11 @@ export const milkRow: FilmShot = {
     const at = { headPx: ROW.headPx, z: 1 };
     const turnAt = (i: number) => drinks.start + (drinkTurns[i] ?? 0);
     const row = RowMember.flatMap(([member, sheet, name, x, rest, blink, w], i) => {
-      const crown = ROW.ground - tallOf(member, sheet, ROW.headPx, 1);
+      const crown = ROW.ground - tallOf(member, sheet, ROW.headPx, 1) * ROW_SIZES.row;
       return [
         shadowAt(x, ROW.ground, w),
         seat(
-          { member, sheet, name, x, crown },
+          { member, sheet, name, x, crown, size: ROW_SIZES.row },
           at,
           holds(
             [
@@ -319,7 +328,8 @@ export const milkRow: FilmShot = {
               sheet: 'iio-milk',
               name: 'lead',
               x: leadX,
-              crown: ROW.ground - tallOf('lead-feast', 'iio-milk', ROW.headPx, 1),
+              crown: ROW.ground - tallOf('lead-feast', 'iio-milk', ROW.headPx, 1) * ROW_SIZES.lead,
+              size: ROW_SIZES.lead,
             },
             at,
             holds(

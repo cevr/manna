@@ -156,6 +156,7 @@ export const seat = (
     readonly crown: number;
     readonly worn?: Figure['worn'];
     readonly dress?: Figure['dress'];
+    readonly size?: number;
   },
   at: { readonly headPx: number; readonly z: number },
   spans: Figure['spans'],
@@ -164,10 +165,14 @@ export const seat = (
     name: f.name,
     member: f.member,
     sheet: f.sheet,
-    at: { x: f.x, ground: f.crown + tallOf(f.member, f.sheet, at.headPx, at.z) },
+    at: {
+      x: f.x,
+      ground: f.crown + tallOf(f.member, f.sheet, at.headPx, at.z) * (f.size ?? 1),
+    },
     spans,
     worn: f.worn ?? [],
     dress: f.dress ?? [],
+    size: f.size ?? 1,
   });
 
 /** One hold: a blinking hold, or a still one where its blink key is its own cell (a short key change). */
