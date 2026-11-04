@@ -216,7 +216,7 @@ export const POSES = new Map<string, string>([
   ],
   [
     'turn',
-    "seated on the stool exactly as in the first figure, the head a quarter turned toward the viewer's left (whatever side the description names), looking at someone who stands there, the same broad warm closed smile, the mouth shut",
+    "seated on the stool exactly as in the first figure, the head a quarter turned toward the viewer's left, looking at someone who stands at the left edge of the picture: the eyes, nose and mouth shifted toward the picture's left, the ear on the picture's right showing; this turn is to the viewer's left even where the description names the right; the same broad warm closed smile, the mouth shut",
   ],
   [
     'neutralBlink',
