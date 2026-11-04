@@ -3,6 +3,7 @@ import {
   type PaintRequest,
   type PaintScene,
   type Pictures,
+  canvasOf,
   paintFrame,
   prepare,
 } from './painter.ts';
@@ -23,9 +24,15 @@ const decoded = (url: string) => {
   return Effect.promise(() => image.decode()).pipe(Effect.as([url, image] as const));
 };
 
-/** The page's pictures: each decoded image drawn as it is, its pixels read off a canvas of its size. */
-const picturesFrom = (images: ReadonlyMap<string, HTMLImageElement>): Pictures => ({
-  pixels: (id, size) =>
+/**
+ * The page's pictures: each decoded image's pixels read off a canvas of its
+ * size, and a draw of it from a CPU canvas of those pixels (`canvasOf`, held
+ * once per picture), as a cell is drawn and as a film's storybook scene draws
+ * every picture: a canvas and a decoded image are resampled differently when
+ * the camera enlarges them.
+ */
+const picturesFrom = (images: ReadonlyMap<string, HTMLImageElement>): Pictures => {
+  const pixels: Pictures['pixels'] = (id, size) =>
     Option.flatMap(Option.fromUndefinedOr(images.get(id)), (image) => {
       const canvas = document.createElement('canvas');
       canvas.width = size[0];
@@ -39,12 +46,19 @@ const picturesFrom = (images: ReadonlyMap<string, HTMLImageElement>): Pictures =
         height: size[1],
         rgba: new Uint8Array(data.data.buffer),
       });
-    }),
-  draw: (ctx, id) => {
-    const image = images.get(id);
-    if (image) ctx.drawImage(image, 0, 0);
-  },
-});
+    });
+  const held = new Map<string, Option.Option<HTMLCanvasElement>>();
+  return {
+    pixels,
+    draw: (ctx, id, size) => {
+      const canvas =
+        held.get(id) ??
+        held.set(id, Option.map(pixels(id, size), canvasOf)).get(id) ??
+        Option.none();
+      if (Option.isSome(canvas)) ctx.drawImage(canvas.value, 0, 0);
+    },
+  };
+};
 
 /** The page's renderer for one scene whose pictures are decoded and prepared: each request painted from itself alone (`paintFrame`), answered as a PNG data URL, or why not. */
 const rendererOf = (
