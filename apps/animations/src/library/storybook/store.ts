@@ -84,17 +84,24 @@ export const SheetRecord = Schema.Struct({
 export type SheetRecord = typeof SheetRecord.Type;
 
 /** The split rules a sheet drawn now is split under, and its record names: all of them. */
-export const DRAWN_RULES: SplitRules = { unstray: true, feetLow: true };
+export const DRAWN_RULES: SplitRules = { unstray: true, feetLow: true, unmottle: true };
 
 /** The split rules a stored sheet re-splits under, as its record names them. */
 export const splitRulesOf = (record: SheetRecord): SplitRules => {
   const named = new Set(record.rules ?? []);
-  return { unstray: named.has('unstray'), feetLow: named.has('feet-low') };
+  return {
+    unstray: named.has('unstray'),
+    feetLow: named.has('feet-low'),
+    unmottle: named.has('unmottle'),
+  };
 };
 
 /** The rule names a record holds for `rules`. */
 const ruleNamesOf = (rules: SplitRules): ReadonlyArray<(typeof SPLIT_RULES)[number]> =>
-  SPLIT_RULES.filter((name) => ({ unstray: rules.unstray, 'feet-low': rules.feetLow })[name]);
+  SPLIT_RULES.filter(
+    (name) =>
+      ({ unstray: rules.unstray, 'feet-low': rules.feetLow, unmottle: rules.unmottle })[name],
+  );
 
 export const RecordJson = Schema.fromJsonString(SheetRecord, { space: 2 });
 
@@ -696,7 +703,7 @@ export const drawnCellOf = (f: StoredFigure, key: string): Option.Option<Raster>
 const blinksOf = (f: Figure, cells: ReadonlyMap<string, Raster>, paints: ReadonlyArray<Paint>) =>
   Effect.forEach(
     f.spans.flatMap((s) => {
-      if (s._tag !== 'Hold') return [];
+      if (s._tag !== 'Hold' || s.whole === true) return [];
       return Option.toArray(
         Option.map(Option.fromUndefinedOr(s.blink), (blink) => ({ cell: s.cell, blink })),
       );

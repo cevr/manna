@@ -22,8 +22,8 @@ export const POCKET_SUM = 30;
 /** How near (ΔE76) a drawn colour lies to the paint it snaps to for the snap to read it as that paint drawn plain; a farther one, up to `SNAP_RADIUS`, is a blend or a thin line. Ground drawn this near the ground's colour, lighter or darker inside a ring of outline, is ground too. */
 export const PLAIN_RADIUS = 12;
 
-/** What each part of a figure is, so a measure knows which lines a palette draws. */
-export const ROLES = ['skin', 'hair', 'garment', 'sash', 'footwear', 'other'] as const;
+/** What each part of a figure is, so a measure knows which lines a palette draws; a `prop` is a thing a sheet's figure holds (`SheetRecord.props`), whose paint a pixel takes only by its own drawn colour, never as a rule's stand-in for another paint. */
+export const ROLES = ['skin', 'hair', 'garment', 'sash', 'footwear', 'other', 'prop'] as const;
 
 export type Role = (typeof ROLES)[number];
 
@@ -782,12 +782,12 @@ const nearCounts = (mask: Uint8Array, width: number, height: number, reach: numb
 /**
  * The map with skin only by skin (critique 1, item 1: no rose on cloth): a
  * pixel of a skin paint with no skin base within `SKIN_REACH` px takes the
- * nearest paint, to its drawn colour, that is not skin.
+ * nearest paint, to its drawn colour, that is neither skin nor a prop.
  */
 const skinBySkin = (t: Tidy, map: Int32Array, feetBarred: (q: number) => boolean): Int32Array => {
   const skin = (i: number) => t.paints[i]?.role === 'skin';
   const others = t.paints.flatMap((p, i) => {
-    if (p.role === 'skin') return [];
+    if (p.role === 'skin' || p.role === 'prop') return [];
     return [i];
   });
   const high = others.filter((i) => t.paints[i]?.role !== 'footwear');
@@ -829,13 +829,63 @@ const islandAt = (map: Int32Array, width: number, q0: number, seen: Uint8Array) 
  * pixels not counted; the lower index of equals); an island whose rim holds
  * no such paint stays.
  */
-const despecked = (map: Int32Array, width: number): Int32Array => {
+const despecked = (map: Int32Array, width: number): Int32Array =>
+  islandsTaken(map, width, () => SPECK_PX);
+
+/** The most pixels a 4-connected island of a prop's paint holds for the split to read it as a fleck of the figure's own colour, not the prop: a prop a figure holds is drawn far larger (the lead's bottle about 1,300 px, the diner's open mouth about 440). */
+export const PROP_FLECK_PX = 60;
+
+/**
+ * The map with every fleck of a prop's paint gone (`role: 'prop'`): each
+ * 4-connected island of a prop paint, `PROP_FLECK_PX` pixels or fewer,
+ * takes the paint most of its rim is, as a speck does, or the ink where
+ * its rim is all ink; a figure's light fringe drawn near a prop's colour
+ * stays the figure's (critique 1, items 6 and 7). A palette with no prop is
+ * left as it is.
+ */
+const propsWhole = (map: Int32Array, width: number, paints: ReadonlyArray<Paint>): Int32Array => {
+  const fleck = (index: number) => {
+    if (paints[index]?.role === 'prop') return PROP_FLECK_PX;
+    return 0;
+  };
+  const taken = islandsTaken(map, width, fleck);
+  const seen = new Uint8Array(taken.length);
+  for (let q = 0; q < taken.length; q++) {
+    if (seen[q] === 1 || (taken[q] ?? CLEAR) <= 0) continue;
+    const island = islandAt(taken, width, q, seen);
+    if (island.length <= fleck(taken[q] ?? CLEAR)) for (const p of island) taken[p] = 0;
+  }
+  return taken;
+};
+
+/** The most pixels a 4-connected island of skin shade holds for the split to read it as a blotch of the drawing's grain on the skin, not a shading: the lead's redrawn table sheet draws them up to 74 px across his face, his sheets before it 4 px at most. */
+export const MOTTLE_PX = 80;
+
+/**
+ * The map with the skin's mottle gone (critique 1, item 16, on the redrawn
+ * table sheet): each 4-connected island of a skin shade, `MOTTLE_PX` pixels
+ * or fewer, takes the paint most of its rim is, as a speck does, so a
+ * blotch inside the face takes the skin's base.
+ */
+const unmottled = (map: Int32Array, width: number, paints: ReadonlyArray<Paint>): Int32Array =>
+  islandsTaken(map, width, (index) => {
+    const p = paints[index];
+    if (p?.role === 'skin' && p.tone === 'shade') return MOTTLE_PX;
+    return 0;
+  });
+
+/** The map with each 4-connected island of one paint other than ink, `most(paint)` pixels or fewer, given the paint most of its distinct rim pixels are (the ink, clear and drawn pixels not counted; the lower index of equals); an island whose rim holds no such paint stays. */
+const islandsTaken = (
+  map: Int32Array,
+  width: number,
+  most: (index: number) => number,
+): Int32Array => {
   const out = map.slice();
   const seen = new Uint8Array(map.length);
   for (let q = 0; q < map.length; q++) {
     if (seen[q] === 1 || (map[q] ?? CLEAR) <= 0) continue;
     const island = islandAt(map, width, q, seen);
-    if (island.length > SPECK_PX) continue;
+    if (island.length > most(map[q] ?? CLEAR)) continue;
     const inside = new Set(island);
     const rim = new Set(
       island.flatMap((p) => around4(p, width, map.length / width).filter((m) => !inside.has(m))),
@@ -855,13 +905,13 @@ const despecked = (map: Int32Array, width: number): Int32Array => {
  * The map with the footwear paint only in the figure's lower half (critique
  * 1, item 4: no sandal brown on hair, ears or neck): a pixel of a footwear
  * paint above the middle row of the cell's opaque rows takes the nearest
- * paint, to its drawn colour, that is not footwear. The seat, painted the
+ * paint, to its drawn colour, that is neither footwear nor a prop. The seat, painted the
  * footwear's hex, lies below a seated figure's middle.
  */
 const feetLowOnly = (t: Tidy, map: Int32Array, barred: (q: number) => boolean): Int32Array => {
   const feet = (i: number) => t.paints[i]?.role === 'footwear';
   const others = t.paints.flatMap((p, i) => {
-    if (p.role === 'footwear') return [];
+    if (p.role === 'footwear' || p.role === 'prop') return [];
     return [i];
   });
   const labs = t.paints.map((p) => p.lab);
@@ -1007,7 +1057,12 @@ export const tidiedReport = (
   };
   const barred = feetBarOf(map, drawn.width, rules);
   const before = strayed(feetLowOnly(t, despecked(lined, drawn.width), barred));
-  const final = skinBySkin(t, before, barred);
+  const skinned = skinBySkin(t, before, barred);
+  const smooth = (m: Int32Array) => {
+    if (!rules.unmottle) return m;
+    return unmottled(m, drawn.width, paints);
+  };
+  const final = propsWhole(smooth(skinned), drawn.width, paints);
   const rgba = snap.rgba.slice();
   let skinFar = 0;
   for (let q = 0; q < final.length; q++) {
@@ -1057,16 +1112,17 @@ export interface Split {
 }
 
 /** The opt-in split rules by the names a sheet's record gives them. */
-export const SPLIT_RULES = ['unstray', 'feet-low'] as const;
+export const SPLIT_RULES = ['unstray', 'feet-low', 'unmottle'] as const;
 
-/** The split's rules a sheet opts into, as its record names them: `unstray`, each stray hair shade its neighbours' paint (`unstrayed`); `feetLow` (`feet-low`), the footwear paint only in the figure's lower half (`feetLowOnly`). */
+/** The split's rules a sheet opts into, as its record names them: `unstray`, each stray hair shade its neighbours' paint (`unstrayed`); `feetLow` (`feet-low`), the footwear paint only in the figure's lower half (`feetLowOnly`); `unmottle`, each blotch of skin shade inside the skin its base (`unmottled`). */
 export interface SplitRules {
   readonly unstray: boolean;
   readonly feetLow: boolean;
+  readonly unmottle: boolean;
 }
 
 /** The split as sheets drawn before any opt-in rule were split. */
-export const PLAIN_SPLIT: SplitRules = { unstray: false, feetLow: false };
+export const PLAIN_SPLIT: SplitRules = { unstray: false, feetLow: false, unmottle: false };
 
 /** A drawn sheet split into `n` cells: the background cleared, the cells cut, each kept to its largest piece, its pockets mended and its paints snapped to `palette`, each colour to the paint the whole sheet draws it as (`drawnNearestOf`), its drawing's own marks tidied under `rules` (`tidied`), its face's marks inked (`inkedFaceMarks`) and its rim peeled. */
 export const splitSheet = (

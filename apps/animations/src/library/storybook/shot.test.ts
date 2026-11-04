@@ -34,6 +34,7 @@ import {
   timesOf,
   turn,
   walk,
+  wholeBlinkingHold,
 } from './shot.ts';
 import { feastCourtyard } from './shots/feast-courtyard.ts';
 
@@ -385,6 +386,24 @@ describe('a hold', () => {
     }
     return runs;
   };
+
+  test('blinks a whole-blinking hold by its blink key’s whole cell, at the same times a pasted blink shows its eyes, breathing on as it does (a cell whose eyes are lids, critique 1, item 6)', () => {
+    const whole = figure(['a', 'b'], {
+      name: 'one',
+      member: 'm',
+      sheet: 's',
+      at: { x: 0, ground: 0 },
+      spans: [wholeBlinkingHold(0, 12, 'a', 'b')],
+    });
+    const shot = shotOf([whole]);
+    const posed = timesOf(shot).map((t) => frameAt(shot, new Map(), t, ADULTS).figures[0]);
+    const pasted = shotOf([still('one')]);
+    const eyes = timesOf(pasted).map((t) => frameAt(pasted, new Map(), t, ADULTS).figures[0]);
+    expect(posed.map((f) => [f?.cell, f?.eyes, f?.breath])).toEqual(
+      eyes.map((f) => [f?.eyes, f?.eyes, f?.breath]),
+    );
+    expect(posed.filter((f) => f?.cell === 'b').length).toBeGreaterThan(0);
+  });
 
   test('breathes a full breath and back over its length, the same at every call, each figure at its own pace (critique 1, item 5)', () => {
     const shot = shotOf([still('one'), still('two')]);

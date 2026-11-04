@@ -14,12 +14,14 @@ import {
   largestPiece,
   measuredPaint,
   mendPockets,
+  MOTTLE_PX,
   type Palette,
   paintsOf,
   rgbAt,
   rgbOfHex,
   type Rgb,
   PLAIN_SPLIT,
+  PROP_FLECK_PX,
   SHADE_REACH,
   SKIN_REACH,
   strayShadeShare,
@@ -810,6 +812,91 @@ describe('tidiedReport', () => {
       parts: [...base.parts, { name: 'hair', base: hexOf(terracotta), role: 'hair' }],
     };
     expect(reportOf(haired).skinFar).toBe(0);
+  });
+});
+
+describe('tidied under unmottle', () => {
+  /** A 120 × 30 cell of skin with a `size`-pixel block (two rows) of skin shade inside it. */
+  const face = (size: number): Raster => {
+    const [width, height] = [120, 30];
+    const rgba = new Uint8Array(width * height * 4);
+    for (let q = 0; q < width * height; q++) {
+      const [x, y] = [q % width, Math.floor(q / width)];
+      const blotch = y >= 10 && y < 12 && x >= 10 && x < 10 + size / 2;
+      rgba.set(
+        [
+          ...([
+            [242, 178, 124],
+            [201, 135, 126],
+          ][Number(blotch)] ?? [0, 0, 0]),
+          255,
+        ],
+        q * 4,
+      );
+    }
+    return { width, height, rgba };
+  };
+  const palette: Palette = {
+    ink: '#130803',
+    parts: [{ name: 'skin', base: '#f2b27c', shade: '#c9877e', role: 'skin' }],
+  };
+  const shadePx = (size: number, unmottle: boolean) => {
+    const drawn = face(size);
+    const paints = paintsOf(palette);
+    const nearest = drawnNearestOf(drawn, paints);
+    const out = tidied(drawn, snapped(drawn, paints, nearest), paints, nearest, {
+      ...PLAIN_SPLIT,
+      unmottle,
+    });
+    return Array.from({ length: out.width * out.height }, (_, q) => q).filter(
+      (q) => hexOf(rgbAt(out, q)) === '#c9877e',
+    ).length;
+  };
+
+  test('gives each blotch of skin shade up to MOTTLE_PX inside the skin the skin’s base, and keeps a larger shading; a plain split keeps both (the redrawn table sheet’s mottled face, critique 1, item 16)', () => {
+    expect(shadePx(40, true)).toBe(0);
+    expect(shadePx(MOTTLE_PX + 2, true)).toBe(MOTTLE_PX + 2);
+    expect(shadePx(40, false)).toBe(40);
+  });
+});
+
+describe('tidied with a prop', () => {
+  /** A 120 × 30 cell of `garment` with an 11 × 11 block of `prop` at its left and, apart from it, `fleck` px of `prop` in a row. */
+  const cell = (garment: Rgb, prop: Rgb, fleck: number): Raster => {
+    const [width, height] = [120, 30];
+    const rgba = new Uint8Array(width * height * 4);
+    for (let q = 0; q < width * height; q++) {
+      const [x, y] = [q % width, Math.floor(q / width)];
+      const block = x >= 4 && x < 15 && y >= 4 && y < 15;
+      const row = y === 20 && x >= 30 && x < 30 + fleck;
+      rgba.set([...([garment, prop][Number(block || row)] ?? prop), 255], q * 4);
+    }
+    return { width, height, rgba };
+  };
+  const garment: Rgb = [242, 216, 183];
+  const prop: Rgb = [252, 235, 180];
+  const palette = (role: 'prop' | 'other'): Palette => ({
+    ink: '#130803',
+    parts: [
+      { name: 'tunic', base: hexOf(garment), role: 'garment' },
+      { name: 'bottle', base: hexOf(prop), role },
+    ],
+  });
+  const propPx = (role: 'prop' | 'other', fleck: number) => {
+    const drawn = cell(garment, prop, fleck);
+    const paints = paintsOf(palette(role));
+    const nearest = drawnNearestOf(drawn, paints);
+    const out = tidied(drawn, snapped(drawn, paints, nearest), paints, nearest);
+    return Array.from({ length: out.width * out.height }, (_, q) => q).filter(
+      (q) => hexOf(rgbAt(out, q)) === hexOf(prop),
+    ).length;
+  };
+
+  test('gives each fleck of a prop’s paint up to PROP_FLECK_PX the paint round it and keeps the prop itself; a paint of another role keeps its flecks as before', () => {
+    expect(propPx('prop', 40)).toBe(121);
+    expect(propPx('prop', PROP_FLECK_PX)).toBe(121);
+    expect(propPx('prop', PROP_FLECK_PX + 1)).toBe(121 + PROP_FLECK_PX + 1);
+    expect(propPx('other', 40)).toBe(121 + 40);
   });
 });
 
