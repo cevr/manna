@@ -11,16 +11,20 @@
  * are held against the OS on the same receipts in `host.test.ts`.
  */
 import * as nfs from 'node:fs';
+import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect } from 'effect';
 
+import { socketFolder } from './drive.ts';
 import { runScenario } from './fixtures/contain.ts';
 
 const scenario = (name: string, setup: Parameters<typeof runScenario>[1]) =>
   Effect.promise(() => runScenario(name, setup));
 
-const read = (line: string): { ok?: unknown; error?: { _tag?: unknown } } => JSON.parse(line);
+const read = (
+  line: string,
+): { ok?: unknown; error?: { _tag?: unknown }; paths?: Record<string, string> } => JSON.parse(line);
 
 /** The run failed typed, changed nothing outside, and printed its refusal once. */
 const refusedOnce = (ran: Awaited<ReturnType<typeof runScenario>>) => {
@@ -101,24 +105,70 @@ describe('the contained host on the review receipts', () => {
       refusedOnce(ran);
     }),
   );
+
+  it.live('refuses a driver whose HOME holds a link out', () =>
+    Effect.gen(function* () {
+      const ran = yield* scenario('ios:tap id=probe', (l) => {
+        nfs.mkdirSync(`${l.place.state}/home`, { recursive: true, mode: 0o700 });
+        nfs.mkdirSync(`${l.base}/outside/agent-device`, { recursive: true });
+        nfs.symlinkSync(`${l.base}/outside/agent-device`, `${l.place.state}/home/.agent-device`);
+      });
+      refusedOnce(ran);
+    }),
+  );
+
+  it.live('refuses a browser whose socket folder is a link', () =>
+    Effect.gen(function* () {
+      const planted: Array<string> = [];
+      const ran = yield* scenario('web:tap id=probe', (l) => {
+        nfs.mkdirSync(`${l.base}/outside/sockets`, { recursive: true });
+        const folder = socketFolder(resolve(l.place.state, 'home'));
+        nfs.symlinkSync(`${l.base}/outside/sockets`, folder);
+        planted.push(folder);
+      }).pipe(Effect.ensuring(Effect.sync(() => planted.forEach((link) => nfs.unlinkSync(link)))));
+      refusedOnce(ran);
+    }),
+  );
+
+  it.live('refuses a browser whose socket folder holds a link where it writes its pid file', () =>
+    Effect.gen(function* () {
+      const planted: Array<string> = [];
+      const ran = yield* scenario('web:tap id=probe', (l) => {
+        nfs.mkdirSync(`${l.base}/outside`, { recursive: true });
+        nfs.writeFileSync(`${l.base}/outside/kept`, 'kept');
+        const folder = socketFolder(resolve(l.place.state, 'home'));
+        nfs.mkdirSync(folder);
+        planted.push(folder);
+        nfs.symlinkSync(`${l.base}/outside/kept`, `${folder}/verify-hymnal.pid`);
+      }).pipe(
+        Effect.ensuring(
+          Effect.sync(() =>
+            planted.forEach((dir) => nfs.rmSync(dir, { recursive: true, force: true })),
+          ),
+        ),
+      );
+      refusedOnce(ran);
+    }),
+  );
 });
 
 describe('the contained host keeps the layouts it must', () => {
   it.live('clean refuses linked Pods before it removes anything', () =>
     Effect.gen(function* () {
+      let app = '';
       const ran = yield* scenario('ios:down --clean', (l) => {
-        const app = l.place.app;
+        app = l.place.app;
         nfs.renameSync(`${app}/ios/Pods`, `${l.base}/outside/pods`);
         nfs.symlinkSync(`${l.base}/outside/pods`, `${app}/ios/Pods`);
       });
       expect(ran.violations).toEqual([]);
       expect(ran.ok).toBe(false);
-      expect(ran.ops.filter((op) => op.startsWith('remove '))).toEqual([]);
+      expect(ran.ops.filter((op) => op.startsWith(`remove ${app}`))).toEqual([]);
       expect(ran.lines.map(read).map((line) => line.error?._tag)).toEqual(['Unhealthy']);
     }),
   );
 
-  it.live("down replaces a destination link, not the link's target", () =>
+  it.live('down files beside a destination link, never through it or over it', () =>
     Effect.gen(function* () {
       const ran = yield* scenario('ios:down', (l) => {
         nfs.writeFileSync(`${l.base}/outside/archive.json`, 'outside sentinel');
@@ -126,7 +176,10 @@ describe('the contained host keeps the layouts it must', () => {
       });
       expect(ran.violations).toEqual([]);
       expect(ran.ok).toBe(true);
-      expect(ran.ops.some((op) => op.startsWith('rename '))).toBe(true);
+      expect(ran.lines.map(read).map((line) => line.paths?.['session'])).toEqual([
+        expect.stringMatching(/\/out\/session-2\.json$/),
+      ]);
+      expect(ran.ops.filter((op) => op.startsWith('rename '))).toEqual([]);
     }),
   );
 

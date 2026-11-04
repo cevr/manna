@@ -3,11 +3,15 @@
  * headless browser) and a dev server, install the build, open a screen,
  * tap, scroll, shoot, read the log, and shut it all down.
  *
- * Separate commands share one drive through its session file, which `boot`
- * writes and `down` files away into the drive's output directory. The dev
- * server belongs to `serve`, a process of its own that `boot` starts and
- * leaves running: `serve` owns `one dev` in a scope, so stopping it (down's
- * SIGTERM) closes the scope and kills the server.
+ * Separate commands share one drive through its record (`record.ts`),
+ * which `boot` writes and `down` files away into the drive's output
+ * directory once its server is gone. The dev server belongs to `serve`, a
+ * process of its own that `boot` starts and leaves running, its pid and
+ * start time recorded: `serve` owns `one dev` in a scope, so stopping it
+ * (the stop rule's SIGTERM, `os.ts`) closes the scope and kills the server.
+ * `boot` and `down` hold the state (`holder.ts`) while they read, write or
+ * signal for it. The drivers run with a HOME under the state folder, so
+ * their daemons and sessions belong to the drive.
  */
 import {
   Array as Arr,
@@ -21,14 +25,17 @@ import {
   Option,
   Path,
   Predicate,
+  Result,
   Schema,
   Stream,
 } from 'effect';
 import { HttpClient } from 'effect/http';
+import type { PlatformError } from 'effect/PlatformError';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import type { App } from './app.ts';
 import {
+  BootRefused,
   HostFailed,
   NoSession,
   Unhealthy,
@@ -37,9 +44,12 @@ import {
   TargetMissing,
   ToolFailed,
 } from './errors.ts';
+import { acquire, release } from './holder.ts';
+import { either, holds, type Identity, Os, stop } from './os.ts';
+import { fileAway, ownedBy, readRecord, recordFile, writeRecord } from './record.ts';
 import { type Platform, Session } from './result.ts';
 import { admit, contain, executing, type Reach } from './host.ts';
-import { attempt, ready, succeed } from './tools.ts';
+import { attempt, DriverEnv, ready, removed, succeed, type Vars } from './tools.ts';
 
 const short = Duration.seconds(30);
 const build = Duration.minutes(45);
@@ -74,7 +84,7 @@ const outcome = (
 
 const SessionJson = Schema.fromJsonString(Session);
 
-const sessionFile = (place: Place) => `${place.state}/session.json`;
+const sessionFile = (place: Place) => recordFile(place.state);
 
 /** The booted drive, or `NoSession`; its output folder becomes a root of the step. */
 const readSession = Effect.fn('Sim.readSession')(function* (place: Place) {
@@ -86,15 +96,6 @@ const readSession = Effect.fn('Sim.readSession')(function* (place: Place) {
   );
   yield* admit(session.out);
   return session;
-});
-
-const writeSession = Effect.fn('Sim.writeSession')(function* (place: Place, session: Session) {
-  const fs = yield* FileSystem.FileSystem;
-  yield* fs.makeDirectory(place.state, { recursive: true });
-  const text = yield* Schema.encodeEffect(SessionJson)(session).pipe(
-    Effect.mapError((error) => HostFailed.make({ reason: error.message })),
-  );
-  yield* fs.writeFileString(sessionFile(place), text);
 });
 
 const Device = Schema.Struct({ name: Schema.String, udid: Schema.String, state: Schema.String });
@@ -246,9 +247,9 @@ export const serve = (place: Place, port: number, out: string) =>
   contain(place, [out])(serveIn(place, port, out));
 
 /**
- * Start `serve` as a process of its own, left running past this command; its
- * pid. A shell starts it in the background and exits, so `serve` outlives
- * this command's runtime, which ends the children it spawned itself.
+ * Start `serve` as a process of its own, left running past this command
+ * (`Os.spawn`): its pid and start time, the identity the stop rule needs.
+ * It keeps the caller's environment, with `HERMESC_PATH` when given.
  */
 const startServer = Effect.fn('Sim.startServer')(function* (
   place: Place,
@@ -256,54 +257,19 @@ const startServer = Effect.fn('Sim.startServer')(function* (
   out: string,
   hermesc: Option.Option<string>,
 ) {
-  const args = [
-    place.script,
-    'serve',
-    '--port',
-    String(port),
-    '--out',
-    out,
-    '--state',
-    place.state,
-  ];
-  const background = 'nohup "$0" "$@" >/dev/null 2>&1 & echo $!';
-  const command = Option.match(hermesc, {
-    onNone: () => ['bun', ...args],
-    onSome: (compiler) => ['/usr/bin/env', `HERMESC_PATH=${compiler}`, 'bun', ...args],
+  const os = yield* Os;
+  const argv = ['bun', place.script, 'serve', '--port', String(port), '--out', out];
+  const env = Option.match(hermesc, {
+    onNone: (): Vars => ({}),
+    onSome: (compiler): Vars => ({ HERMESC_PATH: compiler }),
   });
-  const pid = yield* succeed('/bin/sh', ['-c', background, ...command], short).pipe(
-    executing([command[0] ?? 'bun', place.script]),
-  );
-  const parsed = Number.parseInt(pid.trim(), 10);
-  if (!Number.isInteger(parsed))
-    return yield* ToolFailed.make({ tool: '/bin/sh', args, exitCode: 0, output: `no pid: ${pid}` });
-  return parsed;
+  return yield* os
+    .spawn([...argv, '--state', place.state], { cwd: place.app, env })
+    .pipe(executing(['bun', place.script]));
 });
 
-/** The server process is gone, or still there after the wait. */
-const gone = (pid: number) =>
-  Effect.gen(function* () {
-    const alive = yield* attempt('kill', ['-0', String(pid)], short);
-    if (alive.exitCode === 0) return yield* Effect.fail('running');
-  });
-
-/** Stop `serve` (SIGTERM closes its scope, which kills `one dev`); SIGKILL if it outlasts the wait. */
-const stopServer = Effect.fn('Sim.stopServer')(function* (pid: number) {
-  yield* attempt('kill', ['-TERM', String(pid)], short);
-  yield* ready('the dev server to stop', 15, gone(pid)).pipe(
-    Effect.catchTag('ReadinessTimedOut', (error) =>
-      Effect.andThen(attempt('kill', ['-KILL', String(pid)], short), Effect.fail(error)),
-    ),
-  );
-});
-
-const serverUp = Effect.fn('Sim.serverUp')(function* (
-  place: Place,
-  port: number,
-  out: string,
-  seconds: number,
-  hermesc: Option.Option<string>,
-) {
+/** Nothing answers on `port` yet, or the boot fails before it starts anything. */
+const portFree = Effect.fn('Sim.portFree')(function* (place: Place, port: number) {
   const taken = yield* Effect.isSuccess(answers(port));
   if (taken)
     return yield* ToolFailed.make({
@@ -312,12 +278,117 @@ const serverUp = Effect.fn('Sim.serverUp')(function* (
       exitCode: -1,
       output: `port ${port} already answers; pick another of ${place.config.ports.min}-${place.config.ports.max}`,
     });
-  const pid = yield* startServer(place, port, out, hermesc);
-  yield* ready(`the dev server on port ${port}`, seconds, answers(port)).pipe(
-    Effect.onError(() => Effect.ignore(stopServer(pid))),
-  );
-  return pid;
 });
+
+/** How many times a just-started server whose record could not be written is stopped. */
+const UNRECORDED_STOPS = 3;
+
+/**
+ * Stop a just-started server whose record could not be written, by the stop
+ * rule; again after a failed host call, at most `UNRECORDED_STOPS` times in
+ * all. A server that outlives the stop's SIGKILL is not tried again.
+ */
+const stopUnrecorded = (owned: Identity) =>
+  Effect.ignore(
+    stop(owned).pipe(
+      Effect.retry({
+        times: UNRECORDED_STOPS - 1,
+        while: (error) => error._tag !== 'ReadinessTimedOut',
+      }),
+    ),
+  );
+
+/** agent-browser's longest socket path: macOS's `sun_path` holds 104 bytes with its NUL. */
+const SOCKET_MAX = 103;
+
+/** A short name that stays the same for `text`: FNV-1a, 64 bits, over its UTF-16 units, as hex. */
+const digest = (text: string) => {
+  let hash = 0xcb_f2_9c_e4_84_22_23_25n;
+  for (let at = 0; at < text.length; at += 1) {
+    hash ^= BigInt(text.charCodeAt(at));
+    hash = (hash * 0x1_00_00_00_01_b3n) & 0xff_ff_ff_ff_ff_ff_ff_ffn;
+  }
+  return hash.toString(16).padStart(16, '0');
+};
+
+/** agent-browser's socket folder for the drivers' HOME `home`: short, under /tmp, one per HOME. */
+export const socketFolder = (home: string) => `/tmp/sim-${digest(home)}`;
+
+/** The drivers' child environment for a drive: its HOME, its socket folder, and the variables over the caller's. */
+interface Drivers {
+  readonly home: string;
+  readonly sockets: string;
+  readonly vars: Vars;
+}
+
+/**
+ * The child environment the drivers of the drive in `place` run in. HOME
+ * is `<state>/home`, where agent-device keeps its daemon and runner build;
+ * agent-browser's sockets go to a short folder under /tmp named for that
+ * HOME, so a socket path fits whatever the state folder's length; and
+ * neither driver inherits the caller's `XDG_RUNTIME_DIR` or
+ * `AGENT_DEVICE_STATE_DIR`. Every other variable is the caller's.
+ */
+const driversOf = (path: Path.Path, place: Place): Drivers => {
+  const home = path.resolve(place.state, 'home');
+  const sockets = socketFolder(home);
+  return {
+    home,
+    sockets,
+    vars: {
+      ...removed(['XDG_RUNTIME_DIR', 'AGENT_DEVICE_STATE_DIR']),
+      HOME: home,
+      AGENT_BROWSER_SOCKET_DIR: sockets,
+    },
+  };
+};
+
+const utf8Bytes = (text: string) => new TextEncoder().encode(text).byteLength;
+
+const isNotFound = (error: PlatformError) => error.reason._tag === 'NotFound';
+
+/**
+ * The drivers' HOME, made through the contained host and kept across drives
+ * of the state (agent-device's runner build is its cache): a folder, not a
+ * link, that only its owner may read.
+ */
+const ensureHome = Effect.fn('Sim.ensureHome')(function* (home: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const found = yield* fs.lstat(home).pipe(
+    Effect.asSome,
+    Effect.catchIf(isNotFound, () => Effect.succeedNone),
+  );
+  const isPrivate = (info: FileSystem.File.Info) =>
+    info.type === 'Directory' && (info.mode & 0o777) === 0o700;
+  if (Option.exists(found, isPrivate)) return;
+  if (Option.exists(found, (info) => info.type !== 'Directory'))
+    return yield* HostFailed.make({
+      reason: `the drivers' HOME ${home} is not a folder (a link, or a file); remove it`,
+    });
+  yield* fs.makeDirectory(home, { recursive: true, mode: 0o700 });
+  yield* fs.chmod(home, 0o700);
+});
+
+/**
+ * The drivers' environment for a step in `place`: the child one (its HOME
+ * made sure of) when the state holds a session this driver booted, else
+ * none, so they keep the caller's: no session, one that does not decode, or
+ * a legacy one, whose agent sessions live in the caller's HOME.
+ */
+const driverEnv = Effect.fn('Sim.driverEnv')(function* (place: Place) {
+  const path = yield* Path.Path;
+  const found = yield* readRecord(place.state);
+  const session = Option.flatMap(found, (record) => record.session);
+  if (!Option.exists(session, (booted) => Option.isSome(ownedBy(booted))))
+    return Option.none<Vars>();
+  const drivers = driversOf(path, place);
+  yield* ensureHome(drivers.home);
+  return Option.some(drivers.vars);
+});
+
+/** Run `use` holding the state: released on success, failure and interruption; an abrupt exit leaves a hold found dead. */
+const holding = <A, E, R>(place: Place, use: Effect.Effect<A, E, R>) =>
+  Effect.acquireUseRelease(acquire(place.state), () => use, release);
 
 interface Target {
   readonly by: 'id' | 'label';
@@ -445,6 +516,16 @@ export interface BootOptions {
 
 const stamp = Effect.map(DateTime.now, (now) => DateTime.formatIso(now));
 
+/**
+ * Boot the drive. A web drive whose socket path cannot fit is refused before
+ * anything else. Then, holding the state: a record that does not decode, a
+ * legacy one, or one whose server still runs refuses the boot with nothing
+ * started; a stale one is filed away. Then the simulator, a free port, the
+ * drivers' HOME, the server, and its record as the very next step. Any
+ * failure or interruption after the start stops the server by the stop rule
+ * and, once it is gone, files its record away; a server that will not stop
+ * keeps its record for the next `down`.
+ */
 const boot = Effect.fn('Sim.boot')(function* (place: Place, options: BootOptions) {
   const path = yield* Path.Path;
   const bootedAt = yield* stamp;
@@ -452,27 +533,83 @@ const boot = Effect.fn('Sim.boot')(function* (place: Place, options: BootOptions
     path.join(place.state, bootedAt.replaceAll(':', '-')),
   );
   yield* admit(out);
-  const udid = yield* bootSimulatorFor(place.config, options);
-  const serverPid = yield* serverUp(place, options.port, out, options.seconds, options.hermesc);
-  const session: Session = {
-    platform: options.platform,
-    out,
-    port: options.port,
-    serverPid,
-    udid,
-    bootedAt,
-  };
-  yield* writeSession(place, session);
-  if (options.platform === 'web')
-    yield* browser(
-      place.config,
-      ['--args', MUTED, 'open', `http://127.0.0.1:${options.port}/`],
-      Duration.seconds(options.seconds),
+  const drivers = driversOf(path, place);
+  const refuse = (reason: string) => BootRefused.make({ state: place.state, reason });
+  const socket = `${drivers.sockets}/${place.config.driverSession}.sock`;
+  if (options.platform === 'web' && utf8Bytes(socket) > SOCKET_MAX)
+    return yield* refuse(
+      `agent-browser's socket ${socket} is ${utf8Bytes(socket)} bytes, past macOS's ${SOCKET_MAX}; shorten the app's driverSession`,
     );
-  return outcome(
-    options.platform,
-    { session: sessionFile(place), out, server: `${out}/server.log` },
-    { udid, port: options.port, serverPid, hermesc: Option.getOrElse(options.hermesc, () => '') },
+  return yield* holding(
+    place,
+    Effect.gen(function* () {
+      const found = yield* readRecord(place.state);
+      if (Option.isSome(found)) {
+        const { file, session } = found.value;
+        if (Option.isNone(session))
+          return yield* refuse(`${file} does not decode; move it away by hand`);
+        const owned = ownedBy(session.value);
+        if (Option.isNone(owned))
+          return yield* refuse(
+            `a legacy session (an older sim's) holds it; run sim down, then stop its server (pid ${session.value.serverPid}) by hand`,
+          );
+        if (yield* holds(owned.value))
+          return yield* refuse(
+            `a booted drive holds it (sim serve, pid ${owned.value.pid}); run sim down`,
+          );
+        yield* fileAway(place.state, session.value.out);
+      }
+      const udid = yield* bootSimulatorFor(place.config, options);
+      yield* portFree(place, options.port);
+      yield* ensureHome(drivers.home);
+      return yield* Effect.uninterruptibleMask((restore) =>
+        Effect.gen(function* () {
+          const owned = yield* startServer(place, options.port, out, options.hermesc);
+          const session: Session = {
+            platform: options.platform,
+            out,
+            port: options.port,
+            serverPid: owned.pid,
+            udid,
+            bootedAt,
+            serverStarted: owned.started,
+            home: drivers.home,
+          };
+          yield* writeRecord(place.state, session).pipe(
+            Effect.onError(() => stopUnrecorded(owned)),
+          );
+          const up = Effect.gen(function* () {
+            yield* ready(
+              `the dev server on port ${options.port}`,
+              options.seconds,
+              answers(options.port),
+            );
+            if (options.platform === 'web')
+              yield* browser(
+                place.config,
+                ['--args', MUTED, 'open', `http://127.0.0.1:${options.port}/`],
+                Duration.seconds(options.seconds),
+              );
+          });
+          yield* restore(up.pipe(Effect.provideService(DriverEnv, Option.some(drivers.vars)))).pipe(
+            Effect.onError(() =>
+              Effect.ignore(Effect.andThen(stop(owned), fileAway(place.state, out))),
+            ),
+          );
+          return outcome(
+            options.platform,
+            { session: sessionFile(place), out, server: `${out}/server.log`, home: drivers.home },
+            {
+              udid,
+              port: options.port,
+              serverPid: owned.pid,
+              serverStarted: owned.started,
+              hermesc: Option.getOrElse(options.hermesc, () => ''),
+            },
+          );
+        }),
+      );
+    }),
   );
 });
 
@@ -893,25 +1030,86 @@ const appLog = Effect.fn('Sim.appLog')(function* (app: App, session: Session) {
   );
 });
 
-const down = Effect.fn('Sim.down')(function* (place: Place) {
-  const fs = yield* FileSystem.FileSystem;
-  const session = yield* readSession(place);
-  const app = place.config;
-  if (session.platform === 'ios') {
-    yield* Effect.ignore(attempt('agent-device', ['close', '--session', app.driverSession], short));
-    yield* Effect.ignore(attempt('xcrun', ['simctl', 'shutdown', session.udid], short));
-  } else
-    yield* Effect.ignore(
-      attempt('agent-browser', ['--session', app.driverSession, 'close'], short),
+/**
+ * Close the drive's drivers in the environment they ran in: the child one
+ * for a session this driver booted (its HOME made sure of first), whose
+ * agent-device daemon is then asked to stop (it checks its own pid and start
+ * time), or the caller's for a legacy session, whose shared daemon is left
+ * alone. Each step is tried; a tool that fails or is missing is passed
+ * over, and the first other failure (a HOME that cannot be used, a refused
+ * path) is answered once every step has run.
+ */
+const closeDrivers = Effect.fn('Sim.closeDrivers')(
+  function* (place: Place, session: Session, child: Option.Option<Drivers>) {
+    const app = place.config;
+    if (Option.isSome(child)) yield* ensureHome(child.value.home);
+    const closing = {
+      ios: [
+        attempt('agent-device', ['close', '--session', app.driverSession], short),
+        attempt('xcrun', ['simctl', 'shutdown', session.udid], short),
+      ],
+      web: [attempt('agent-browser', ['--session', app.driverSession, 'close'], short)],
+    } satisfies Record<Platform, ReadonlyArray<unknown>>;
+    const steps = [
+      ...closing[session.platform],
+      ...Option.toArray(
+        Option.map(child, () => attempt('agent-device', ['daemon', 'stop'], short)),
+      ),
+    ];
+    const results = yield* Effect.forEach(steps, (step) =>
+      Effect.result(
+        step.pipe(
+          Effect.asVoid,
+          Effect.catchTags({ ToolFailed: () => Effect.void, ToolMissing: () => Effect.void }),
+        ),
+      ),
     );
-  yield* stopServer(session.serverPid);
-  yield* fs.makeDirectory(session.out, { recursive: true });
-  const kept = `${session.out}/session.json`;
-  yield* fs.rename(sessionFile(place), kept);
-  return outcome(
-    session.platform,
-    { session: kept },
-    { serverPid: session.serverPid, port: session.port },
+    const refused = Arr.findFirst(results, Result.isFailure);
+    if (Option.isSome(refused)) return yield* refused.value.failure;
+  },
+  (effect, _place, _session, child) =>
+    Effect.provideService(
+      effect,
+      DriverEnv,
+      Option.map(child, (drivers) => drivers.vars),
+    ),
+);
+
+/**
+ * Shut the drive down, holding the state: close its drivers, stop its
+ * server by the stop rule when the record names it by identity (a legacy or
+ * stale one is not signalled), and only once it is gone file the record
+ * away. The record stays in the state through every step before, so a
+ * failure, an interruption or an abrupt exit leaves it where the next
+ * `down` reads it. Drivers that could not be closed are answered after the
+ * server this `down` stopped is gone and its record filed.
+ */
+const down = Effect.fn('Sim.down')(function* (place: Place) {
+  const path = yield* Path.Path;
+  return yield* holding(
+    place,
+    Effect.gen(function* () {
+      const file = sessionFile(place);
+      const found = yield* readRecord(place.state);
+      const session = Option.flatMap(found, (record) => record.session);
+      if (Option.isNone(session)) return yield* NoSession.make({ file });
+      const booted = session.value;
+      yield* admit(booted.out);
+      const owned = ownedBy(booted);
+      const child = Option.map(owned, () => driversOf(path, place));
+      const closed = yield* Effect.result(closeDrivers(place, booted, child));
+      const stopped = yield* Option.match(owned, {
+        onNone: () => Effect.succeed(false),
+        onSome: stop,
+      });
+      const kept = yield* fileAway(place.state, booted.out);
+      if (stopped && Result.isFailure(closed)) return yield* closed.failure;
+      return outcome(
+        booted.platform,
+        { session: kept },
+        { serverPid: booted.serverPid, port: booted.port, serverStopped: stopped },
+      );
+    }),
   );
 });
 
@@ -1125,9 +1323,17 @@ const doctor = Effect.fn('Sim.doctor')(function* (place: Place) {
   const fs = yield* FileSystem.FileSystem;
   const session = yield* readSession(place);
   const sick = (check: string, reason: string) => Effect.fail(Unhealthy.make({ check, reason }));
-  const alive = yield* attempt('kill', ['-0', String(session.serverPid)], short);
-  if (alive.exitCode !== 0)
-    return yield* sick('server-pid', `sim serve (pid ${session.serverPid}) is not running`);
+  const owned = ownedBy(session);
+  if (Option.isNone(owned))
+    return yield* sick(
+      'server-pid',
+      `the session records no start time for sim serve (pid ${session.serverPid}), so the drive cannot tell it is its own; run sim down, then sim boot`,
+    );
+  if (!(yield* holds(owned.value)))
+    return yield* sick(
+      'server-pid',
+      `sim serve (pid ${session.serverPid}, started ${owned.value.started}) is not running`,
+    );
   const listening = yield* attempt(
     'lsof',
     ['-nP', `-iTCP:${session.port}`, '-sTCP:LISTEN', '-t'],
@@ -1186,9 +1392,9 @@ type Host =
   | HttpClient.HttpClient
   | Reach;
 
-/** A step with its host requirements already met. */
+/** A step with its host requirements already met, and its drivers' environment chosen (`driverEnv`). */
 type Hosted<F> = F extends (...args: infer A) => Effect.Effect<infer X, infer E, Host>
-  ? (...args: A) => Effect.Effect<X, E>
+  ? (...args: A) => Effect.Effect<X, E | HostFailed | PlatformError>
   : never;
 
 /** The drive's steps, each taking the place first. */
@@ -1220,38 +1426,55 @@ export class Drive extends Context.Service<Drive, DriveMembers>()('@manna/sim/Dr
 /**
  * The drive on this host: the simulator, the browser and the dev server.
  * It needs only the platform's services; each step runs over the contained
- * host of its place (`host.ts`), never over the platform's own.
+ * host of its place (`host.ts`), never over the platform's own, with its
+ * drivers in the environment of the session it drives (`driverEnv`). Its
+ * processes are the `Os` (`os.ts`) the step runs with, or else the one the
+ * layer was built with.
  */
 export const DriveLive = Layer.effect(
   Drive,
   Effect.gen(function* () {
     const platform = yield* Effect.context<Exclude<Host, Reach>>();
+    const built = yield* Os;
     const hosted =
       <A extends readonly [Place, ...Array<unknown>], X, E>(
         step: (...args: A) => Effect.Effect<X, E, Host>,
       ) =>
       (...args: A) =>
-        Effect.provideContext(contain(args[0])(step(...args)), platform);
+        Effect.gen(function* () {
+          const os = either(yield* Os, built);
+          const inPlace = contain(args[0])(step(...args));
+          return yield* Effect.provideContext(inPlace, Context.add(platform, Os, os));
+        });
+    /** A step that runs the drivers: in the environment of the session the state holds. */
+    const driving = <A extends readonly [Place, ...Array<unknown>], X, E>(
+      step: (...args: A) => Effect.Effect<X, E, Host>,
+    ) =>
+      hosted((...args: A) =>
+        Effect.flatMap(driverEnv(args[0]), (env) =>
+          Effect.provideService(step(...args), DriverEnv, env),
+        ),
+      );
     return Drive.of({
       readSession: hosted(readSession),
       boot: hosted(boot),
-      install: hosted(install),
-      open: hosted(open),
-      tap: hosted(tap),
-      fill: hosted(fill),
-      back: hosted(back),
-      scroll: hosted(scroll),
-      shot: hosted(shot),
-      snapshot: hosted(snapshot),
-      record: hosted(record),
-      log: hosted(log),
+      install: driving(install),
+      open: driving(open),
+      tap: driving(tap),
+      fill: driving(fill),
+      back: driving(back),
+      scroll: driving(scroll),
+      shot: driving(shot),
+      snapshot: driving(snapshot),
+      record: driving(record),
+      log: driving(log),
       doctor: hosted(doctor),
       down: hosted(down),
-      sees: hosted(sees),
-      gesture: hosted(gesture),
-      pinch: hosted(pinch),
-      hold: hosted(hold),
-      relaunch: hosted(relaunch),
+      sees: driving(sees),
+      gesture: driving(gesture),
+      pinch: driving(pinch),
+      hold: driving(hold),
+      relaunch: driving(relaunch),
       clean: hosted(clean),
     });
   }),

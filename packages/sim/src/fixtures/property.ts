@@ -16,6 +16,7 @@
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
+  ByteSize,
   Console,
   Effect,
   Exit,
@@ -29,6 +30,7 @@ import {
   Stream,
 } from 'effect';
 import { HttpClient, HttpClientError, HttpClientResponse } from 'effect/http';
+import * as PlatformError from 'effect/PlatformError';
 import { ChildProcessSpawner } from 'effect/process';
 
 import { App, defineApp } from '../app.ts';
@@ -52,6 +54,32 @@ const PLIST = '/usr/libexec/PlistBuddy';
 const BACKGROUND = 'nohup "$0" "$@" >/dev/null 2>&1 & echo $!';
 const MUTED = '--mute-audio,--disable-audio-output';
 const BOOTED_AT = '2026-10-21T00:00:00.000Z';
+/** The start time `ps` reads for the stand-in server until a `kill` reaches it, and for the command itself. */
+const STARTED = 'Wed Oct 21 00:00:00 2026';
+/** The stand-in server's pid. */
+const SERVER = '4242';
+/** How the command's own identity read (`Os.self`) is written down: the test process's pid is no app's value. */
+const SELF = 'self';
+/** The file of its own a record write goes through, its random name written down as one. */
+const OWN = /\/session\.[a-z0-9]+\.writing$/;
+
+/** What `lstat` finds at the drivers' HOME: a private folder. */
+const DIRECTORY: FileSystem.File.Info = {
+  type: 'Directory',
+  mtime: Option.none(),
+  atime: Option.none(),
+  birthtime: Option.none(),
+  dev: 0n,
+  ino: Option.none(),
+  mode: 0o700,
+  nlink: Option.none(),
+  uid: Option.none(),
+  gid: Option.none(),
+  rdev: Option.none(),
+  size: ByteSize.bytes(0),
+  blksize: Option.none(),
+  blocks: Option.none(),
+};
 
 /** Words with spaces, quotes, a backslash and a letter past ASCII, and none a real app's. */
 const WORDS = [
@@ -231,7 +259,8 @@ const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.toType(Schema.
 /** The host every step of every case runs on: one spawner, filesystem and dev server, each reading the step's world. */
 const standInHost = () => {
   const host = { world: world({}) };
-  const touch = (op: string, path: string) => void host.world.touched.push(`${op} ${path}`);
+  const touch = (op: string, path: string) =>
+    void host.world.touched.push(`${op} ${path.replace(OWN, '/session.<own>.writing')}`);
   const spawner = Layer.succeed(
     ChildProcessSpawner.ChildProcessSpawner,
     ChildProcessSpawner.make((command) =>
@@ -239,11 +268,18 @@ const standInHost = () => {
         const argv: Array<string> = [command._tag];
         if (command._tag === 'StandardCommand')
           argv.splice(0, 1, command.command, ...command.args.map(String));
+        const startRead = argv[0] === 'ps' && argv.includes('lstart=');
+        if (startRead && argv.at(-1) !== SERVER) argv.splice(-1, 1, SELF);
         host.world.runs.push(argv);
         let answer = host.world.answer(argv, host.world.runs);
         if (argv[0] === '/bin/sh') {
           host.world.serving = true;
-          answer = ok('4242\n');
+          answer = ok(`${SERVER}\n`);
+        }
+        if (startRead) {
+          const killed = host.world.runs.some((run) => run[0] === 'kill');
+          answer = ok(`${STARTED}\n`);
+          if (argv.at(-1) === SERVER && killed) answer = failed;
         }
         const stdout = Stream.encodeText(Stream.make(answer.stdout));
         return ChildProcessSpawner.makeHandle({
@@ -264,12 +300,30 @@ const standInHost = () => {
   );
   const files = FileSystem.layerNoop({
     readFileString: (path) =>
-      Effect.sync(() => {
+      Effect.suspend(() => {
         touch('read', path);
-        return host.world.session;
+        if (host.world.session === '')
+          return Effect.fail(
+            PlatformError.systemError({
+              _tag: 'NotFound',
+              module: 'FileSystem',
+              method: 'readFileString',
+              pathOrDescriptor: path,
+            }),
+          );
+        return Effect.succeed(host.world.session);
       }),
     writeFileString: (path) => Effect.sync(() => touch('write', path)),
     makeDirectory: (path) => Effect.sync(() => touch('mkdir', path)),
+    readDirectory: () => Effect.succeed([]),
+    symlink: (_target, path) => Effect.sync(() => touch('symlink', path)),
+    link: (from, to) =>
+      Effect.sync(() => {
+        touch('link-from', from);
+        touch('link', to);
+      }),
+    lstat: () => Effect.succeed(DIRECTORY),
+    chmod: (path) => Effect.sync(() => touch('chmod', path)),
     exists: (path) =>
       Effect.sync(() => {
         touch('exists', path);
@@ -338,6 +392,8 @@ const sessionOf = (app: App, place: Place, platform: Platform) =>
     serverPid: 4242,
     udid: { ios: UDID, web: '' }[platform],
     bootedAt: BOOTED_AT,
+    serverStarted: STARTED,
+    home: `${place.state}/home`,
   });
 
 /** Each step of the drive for case `n`, with the commands and files written out from its fields. */
@@ -374,7 +430,6 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
         return ok(encodeJson({ runtimes: [{ identifier: RUNTIME, isAvailable: true }] }));
       if (argv[2] === 'create') return ok(`${UDID}\n`);
       if (argv[0] === PLIST && argv[2]?.startsWith('Print')) return plist;
-      if (argv[0] === 'kill' && argv[1] === '-0') return failed;
       if (argv[0] === 'agent-device' && argv[1] === 'wait' && argv[2] === app.openPrompt) {
         const asked = runs.filter((run) => run[2] === app.openPrompt).length;
         if (asked > 1) return failed;
@@ -406,7 +461,30 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
     seconds: 5,
     hermesc: Option.none<string>(),
   });
-  const wrote = [`mkdir ${place.state}`, `write ${place.state}/session.json`];
+  const record = `${place.state}/session.json`;
+  const holders = `${place.state}/holders`;
+  /** What a step that holds the state touches around `inside`: its generation made, then released. */
+  const held = (inside: ReadonlyArray<string>) => [
+    `mkdir ${holders}`,
+    `symlink ${holders}/000000000001`,
+    ...inside,
+    `symlink ${holders}/000000000001.done`,
+  ];
+  const own = `${place.state}/session.<own>.writing`;
+  const wrote = held([read, `write ${own}`, `link-from ${own}`, `link ${record}`, `remove ${own}`]);
+  const filed = held([
+    read,
+    `mkdir ${out}`,
+    `link-from ${record}`,
+    `link ${out}/session.json`,
+    `remove ${record}`,
+  ]);
+  /** What a step that runs the drivers touches first: the session it reads their environment from (their HOME is a private folder already). */
+  const driven = [read];
+  const selfRead = ['ps', '-o', 'lstart=', '-p', SELF];
+  const startRead = ['ps', '-o', 'lstart=', '-p', SERVER];
+  const term = ['kill', '-s', 'TERM', SERVER];
+  const daemonStop = ['agent-device', 'daemon', 'stop'];
   const defaults = [
     'xcrun',
     'simctl',
@@ -447,6 +525,7 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
       world: { answer: ios(Option.none()) },
       run: (d) => d.boot(place, bootOptions('ios')),
       runs: [
+        selfRead,
         list,
         ['xcrun', 'simctl', 'list', 'runtimes', '-j'],
         ['xcrun', 'simctl', 'create', app.simulator, app.deviceType, RUNTIME],
@@ -455,6 +534,7 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
         ['xcrun', 'simctl', 'bootstatus', UDID, '-b'],
         defaults,
         serve,
+        startRead,
       ],
       touched: wrote,
     },
@@ -462,7 +542,15 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
       name: 'boot ios on the booted simulator of its name',
       world: { answer: ios(booted) },
       run: (d) => d.boot(place, bootOptions('ios')),
-      runs: [list, list, ['xcrun', 'simctl', 'bootstatus', UDID, '-b'], defaults, serve],
+      runs: [
+        selfRead,
+        list,
+        list,
+        ['xcrun', 'simctl', 'bootstatus', UDID, '-b'],
+        defaults,
+        serve,
+        startRead,
+      ],
       touched: wrote,
     },
     {
@@ -484,7 +572,7 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
         [...opened.slice(0, -2), '--relaunch', '--session', session],
         dev('wait', c.ready, '5000'),
       ],
-      touched: [read, `mkdir ${out}`, `copy-from ${given}`, `copy ${copied}`],
+      touched: [...driven, read, `mkdir ${out}`, `copy-from ${given}`, `copy ${copied}`],
     },
     {
       name: 'install a build of the checkout',
@@ -521,7 +609,12 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
         [...opened.slice(0, -2), '--relaunch', '--session', session],
         dev('wait', c.ready, '5000'),
       ],
-      touched: [read, `exists ${place.app}/${app.ios.workspace}`, `write ${out}/build.log`],
+      touched: [
+        ...driven,
+        read,
+        `exists ${place.app}/${app.ios.workspace}`,
+        `write ${out}/build.log`,
+      ],
     },
     {
       name: 'open a link on ios',
@@ -536,14 +629,14 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
         dev('press', 'label="Open"', '--settle'),
         dev('wait', app.openPrompt, '3000'),
       ],
-      touched: [read],
+      touched: [...driven, read],
     },
     {
       name: 'relaunch on ios',
       world: { answer: ios(booted), session: iosSession },
       run: (d) => d.relaunch(place),
       runs: [list, ['xcrun', 'simctl', 'terminate', UDID, app.bundleId], opened],
-      touched: [read],
+      touched: [...driven, read],
     },
     {
       name: 'read the log on ios',
@@ -566,14 +659,14 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
           `process == ${quote(app.ios.logProcess)}`,
         ],
       ],
-      touched: [read, `write ${out}/app.log`],
+      touched: [...driven, read, `write ${out}/app.log`],
     },
     {
       name: 'tap on a simulator that is shut down',
       world: { answer: ios(Option.some('Shutdown')), session: iosSession },
       run: (d) => d.tap(place, 'label=Go', 5),
       runs: [list],
-      touched: [read],
+      touched: [...driven, read],
       fails: { _tag: 'SimulatorDown', name: app.simulator, state: 'Shutdown' },
     },
     {
@@ -581,17 +674,15 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
       world: { answer: ios(booted), session: iosSession },
       run: (d) => d.down(place),
       runs: [
+        selfRead,
         dev('close'),
         ['xcrun', 'simctl', 'shutdown', UDID],
-        ['kill', '-TERM', '4242'],
-        ['kill', '-0', '4242'],
+        daemonStop,
+        startRead,
+        term,
+        startRead,
       ],
-      touched: [
-        read,
-        `mkdir ${out}`,
-        `rename-from ${place.state}/session.json`,
-        `rename ${out}/session.json`,
-      ],
+      touched: filed,
     },
     {
       name: 'clean the build output',
@@ -643,7 +734,12 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
         name: 'boot the web',
         world: {},
         run: (d) => d.boot(place, bootOptions('web')),
-        runs: [serve, web('--args', MUTED, 'open', `http://127.0.0.1:${port}/`)],
+        runs: [
+          selfRead,
+          serve,
+          startRead,
+          web('--args', MUTED, 'open', `http://127.0.0.1:${port}/`),
+        ],
         touched: wrote,
       },
       {
@@ -651,7 +747,7 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
         world: { session: webSession },
         run: (d) => d.open(place, link, Option.none(), 5),
         runs: [web('open', `http://127.0.0.1:${port}/route ${n}/deep`)],
-        touched: [read],
+        touched: [...driven, read],
       },
       {
         name: 'tap on the web',
@@ -661,19 +757,14 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
           web('wait', '[aria-label="Go"]', '--timeout', '5000'),
           web('click', '[aria-label="Go"]'),
         ],
-        touched: [read],
+        touched: [...driven, read],
       },
       {
         name: 'down on the web',
         world: { session: webSession, answer: ios(booted) },
         run: (d) => d.down(place),
-        runs: [web('close'), ['kill', '-TERM', '4242'], ['kill', '-0', '4242']],
-        touched: [
-          read,
-          `mkdir ${out}`,
-          `rename-from ${place.state}/session.json`,
-          `rename ${out}/session.json`,
-        ],
+        runs: [selfRead, web('close'), daemonStop, startRead, term, startRead],
+        touched: filed,
       },
     );
   return steps;

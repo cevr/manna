@@ -55,7 +55,8 @@ const standIn = (
         const run: Spawned = { line, killed: false };
         runs.push(run);
         if (Option.isSome(started)) yield* Deferred.completeWith(started.value, Effect.void);
-        const answer = script(line);
+        let answer = ok(`${STARTED}\n`);
+        if (!isSelfRead(line)) answer = script(line);
         const { exitCode, stdout } = outputOf(answer);
         return ChildProcessSpawner.makeHandle({
           pid: ChildProcessSpawner.ProcessId(4242),
@@ -108,6 +109,12 @@ const ServerDown = Layer.succeed(
 
 const UDID = '9EB6603E-F956-4357-BB74-543644BC3E2C';
 
+/** The start time `ps` reads for the stand-in server (and the command itself), and the one its session records. */
+const STARTED = 'Wed Oct 21 00:00:00 2026';
+const START_READ = 'ps -o lstart= -p 4242';
+/** The command's own identity read (`Os.self`): a start-time read of any pid but the server's. */
+const isSelfRead = (line: string) => line.startsWith('ps -o lstart= -p ') && line !== START_READ;
+
 const session = (platform: Session['platform'], out: string): Session => ({
   platform,
   out,
@@ -115,6 +122,7 @@ const session = (platform: Session['platform'], out: string): Session => ({
   serverPid: 4242,
   udid: { ios: UDID, web: '' }[platform],
   bootedAt: '2026-10-21T00:00:00.000Z',
+  serverStarted: STARTED,
 });
 
 const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.toType(Schema.Unknown)));
@@ -240,7 +248,7 @@ describe('sim commands', () => {
   it.scoped('a doctor whose server process is gone fails as Unhealthy at server-pid', () =>
     Effect.gen(function* () {
       const answers = standIn((line) => {
-        if (line.startsWith('kill -0')) return failed();
+        if (line === START_READ) return failed();
         return ok();
       });
       const { exit, printed } = yield* sim(['doctor'], answers, Option.some('web'));
@@ -249,7 +257,7 @@ describe('sim commands', () => {
         ok: false,
         error: { _tag: 'Unhealthy', check: 'server-pid' },
       });
-      expect(answers.runs.map((run) => run.line)).toEqual(['kill -0 4242']);
+      expect(answers.runs.map((run) => run.line)).toEqual([START_READ]);
     }).pipe(Effect.provide(Host)),
   );
 
@@ -257,6 +265,7 @@ describe('sim commands', () => {
     Effect.gen(function* () {
       const answers = standIn((line) => {
         if (line.startsWith('lsof')) return ok('999\n');
+        if (line === START_READ) return ok(`${STARTED}\n`);
         if (line.startsWith('ps')) return ok('1\n');
         return ok();
       });
@@ -384,8 +393,9 @@ describe('sim commands', () => {
         let stopped = false;
         const answers = standIn((line) => {
           if (line.startsWith('/bin/sh')) return ok('4242\n');
-          if (line === 'kill -TERM 4242') stopped = true;
-          if (line === 'kill -0 4242' && stopped) return failed();
+          if (line === 'kill -s TERM 4242') stopped = true;
+          if (line === START_READ && stopped) return failed();
+          if (line === START_READ) return ok(`${STARTED}\n`);
           return ok();
         });
         const { exit, printed } = yield* sim(
@@ -398,7 +408,7 @@ describe('sim commands', () => {
           command: 'boot',
           error: { _tag: 'ReadinessTimedOut', seconds: 1 },
         });
-        expect(answers.runs.map((run) => run.line)).toContain('kill -TERM 4242');
+        expect(answers.runs.map((run) => run.line)).toContain('kill -s TERM 4242');
       }),
     ).pipe(Effect.provide(Host)),
   );
