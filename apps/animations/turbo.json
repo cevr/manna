@@ -9,6 +9,9 @@
         "test:films",
         "test:library",
         "test:storybook",
+        "test:storybook-lines",
+        "test:storybook-lines-split",
+        "test:storybook-faces",
         "test:storybook-shots"
       ]
     },
@@ -58,7 +61,74 @@
         "!src/films/**/*.test.*",
         "!src/library/cutout/**/*.test.*",
         "!src/library/toon3d/**/*.test.*",
-        "!src/library/cast/**/*.test.*"
+        "!src/library/cast/**/*.test.*",
+        "!src/library/storybook/lines.test.ts",
+        "!src/library/storybook/lines-split.test.ts",
+        "!src/library/storybook/faces.test.ts",
+        "!src/library/storybook/shots/**/*.test.*"
+      ]
+    },
+    "test:storybook-lines": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/**/*.test.*",
+        "!src/library/cutout/**/*.test.*",
+        "!src/library/toon3d/**/*.test.*",
+        "!src/library/cast/**/*.test.*",
+        "!src/library/storybook/sheet.test.ts",
+        "!src/library/storybook/shot.test.ts",
+        "!src/library/storybook/store.test.ts",
+        "!src/library/storybook/verify/**/*.test.*",
+        "!src/library/storybook/lines-split.test.ts",
+        "!src/library/storybook/faces.test.ts",
+        "!src/library/storybook/shots/**/*.test.*"
+      ]
+    },
+    "test:storybook-lines-split": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/**/*.test.*",
+        "!src/library/cutout/**/*.test.*",
+        "!src/library/toon3d/**/*.test.*",
+        "!src/library/cast/**/*.test.*",
+        "!src/library/storybook/sheet.test.ts",
+        "!src/library/storybook/shot.test.ts",
+        "!src/library/storybook/store.test.ts",
+        "!src/library/storybook/verify/**/*.test.*",
+        "!src/library/storybook/lines.test.ts",
+        "!src/library/storybook/faces.test.ts",
+        "!src/library/storybook/shots/**/*.test.*"
+      ]
+    },
+    "test:storybook-faces": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/**/*.test.*",
+        "!src/library/cutout/**/*.test.*",
+        "!src/library/toon3d/**/*.test.*",
+        "!src/library/cast/**/*.test.*",
+        "!src/library/storybook/sheet.test.ts",
+        "!src/library/storybook/shot.test.ts",
+        "!src/library/storybook/store.test.ts",
+        "!src/library/storybook/verify/**/*.test.*",
+        "!src/library/storybook/lines.test.ts",
+        "!src/library/storybook/lines-split.test.ts",
+        "!src/library/storybook/shots/**/*.test.*"
       ]
     },
     "test:storybook-shots": {
@@ -72,7 +142,14 @@
         "!src/films/**/*.test.*",
         "!src/library/cutout/**/*.test.*",
         "!src/library/toon3d/**/*.test.*",
-        "!src/library/cast/**/*.test.*"
+        "!src/library/cast/**/*.test.*",
+        "!src/library/storybook/sheet.test.ts",
+        "!src/library/storybook/shot.test.ts",
+        "!src/library/storybook/store.test.ts",
+        "!src/library/storybook/verify/**/*.test.*",
+        "!src/library/storybook/lines.test.ts",
+        "!src/library/storybook/lines-split.test.ts",
+        "!src/library/storybook/faces.test.ts"
       ]
     }
   }

@@ -42,6 +42,9 @@
     "test:films": "bun test --parallel --path-ignore-patterns='**/*.slow.test.*' ./src/films/righteousness-by-faith/rigs ./src/films/in-its-order/rigs ./src/films/in-its-order/scenes/lead.test.ts ./src/films/in-its-order/scenes/table.test.ts",
     "test:library": "bun test --parallel --path-ignore-patterns='**/*.slow.test.*' ./src/library/cutout ./src/library/toon3d ./src/library/cast/filler-bases/cutout/crowd.test.ts",
     "test:storybook": "bun test --parallel --path-ignore-patterns='**/*.slow.test.*' ./src/library/storybook/sheet.test.ts ./src/library/storybook/shot.test.ts ./src/library/storybook/store.test.ts ./src/library/storybook/verify",
+    "test:storybook-lines": "bun test --parallel --path-ignore-patterns='**/*.slow.test.*' ./src/library/storybook/lines.test.ts",
+    "test:storybook-lines-split": "bun test --parallel --path-ignore-patterns='**/*.slow.test.*' ./src/library/storybook/lines-split.test.ts",
+    "test:storybook-faces": "bun test --parallel --path-ignore-patterns='**/*.slow.test.*' ./src/library/storybook/faces.test.ts",
     "test:storybook-shots": "bun test --parallel --path-ignore-patterns='**/*.slow.test.*' ./src/library/storybook/shots",
     "test:slow": "bun test .slow.test."
   },
