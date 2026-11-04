@@ -45,13 +45,13 @@ export interface Witness {
   readonly lab: Rgb;
 }
 
-/** A kept view read for coverage: each pixel's Lab, every flat witness in reading order, and each witness's index by its grid cell. */
+/** A kept view read for coverage: each pixel's Lab, every flat witness in reading order, and each grid cell's witness index (-1 where the cell holds none). */
 export interface KeptPaint {
   readonly width: number;
   readonly height: number;
   readonly plane: Float32Array;
   readonly witnesses: ReadonlyArray<Witness>;
-  readonly grid: ReadonlyMap<number, number>;
+  readonly grid: Int32Array;
 }
 
 /** The square of ΔE76 between pixel `i` of a plane and the Lab `c`. */
@@ -146,14 +146,14 @@ export const keptPaint = (kept: Raster): KeptPaint => {
   const clear = new Uint8Array(w * h).map((_, i) => Number(figure[i] === 1 && nearInk[i] === 0));
   const sorting = new Float64Array(WITNESS_SIDE * WITNESS_SIDE);
   const witnesses: Array<Witness> = [];
-  const grid = new Map<number, number>();
+  const grid = new Int32Array(cellOf(w, 0, h + WITNESS_STRIDE)).fill(-1);
   for (let y0 = 0; y0 + WITNESS_SIDE <= h; y0 += WITNESS_STRIDE)
     for (let x0 = 0; x0 + WITNESS_SIDE <= w; x0 += WITNESS_STRIDE) {
       const box = { x0, y0, x1: x0 + WITNESS_SIDE - 1, y1: y0 + WITNESS_SIDE - 1 };
       if (!allClear(clear, plane, box, w)) continue;
       const flat = flatOf(plane, indicesIn(box, w), sorting);
       if (Option.isNone(flat)) continue;
-      grid.set(cellOf(w, x0, y0), witnesses.length);
+      grid[cellOf(w, x0, y0)] = witnesses.length;
       witnesses.push({ box, lab: flat.value });
     }
   return { width: w, height: h, plane, witnesses, grid };
@@ -164,12 +164,12 @@ const witnessesOver = (paint: KeptPaint, box: Box): ReadonlyArray<number> => {
   const out: Array<number> = [];
   const first = (v: number): number =>
     Math.max(0, Math.ceil((v - WITNESS_SIDE + 1) / WITNESS_STRIDE) * WITNESS_STRIDE);
-  for (let y0 = first(box.y0); y0 <= box.y1; y0 += WITNESS_STRIDE)
-    for (let x0 = first(box.x0); x0 <= box.x1; x0 += WITNESS_STRIDE)
-      Option.map(Option.fromUndefinedOr(paint.grid.get(cellOf(paint.width, x0, y0))), (k) =>
-        out.push(k),
-      );
-  return out;
+  const lastX = Math.min(box.x1, paint.width - WITNESS_SIDE);
+  const lastY = Math.min(box.y1, paint.height - WITNESS_SIDE);
+  for (let y0 = first(box.y0); y0 <= lastY; y0 += WITNESS_STRIDE)
+    for (let x0 = first(box.x0); x0 <= lastX; x0 += WITNESS_STRIDE)
+      out.push(paint.grid[cellOf(paint.width, x0, y0)] ?? -1);
+  return out.filter((k) => k >= 0);
 };
 
 /** The box a witness's box overlaps or touches: its own grown by one pixel on each side. */
@@ -207,17 +207,22 @@ export const patchesOf = (paint: KeptPaint): ReadonlyArray<Patch> => {
       (touching[k] ?? []).filter((n) => deltaLab(v.lab, witnesses[n]?.lab ?? v.lab) <= COVER)
         .length,
   );
-  const order = witnesses
-    .map((_, k) => k)
-    .toSorted((a, b) => (alike[b] ?? 0) - (alike[a] ?? 0) || a - b);
+  const byAlike = Array.from(
+    { length: (2 * (WITNESS_SIDE / WITNESS_STRIDE) + 1) ** 2 },
+    (): Array<number> => [],
+  );
+  alike.forEach((a, k) => byAlike[a]?.push(k));
   const held = new Uint8Array(witnesses.length);
-  return order.flatMap((k) =>
-    Option.match(
-      Option.filter(Option.fromUndefinedOr(witnesses[k]), () => held[k] !== 1),
-      {
-        onNone: (): ReadonlyArray<Patch> => [],
-        onSome: (seed) => grow(paint, touching, held, k, seed),
-      },
+  const stamp = new Int32Array(paint.width * paint.height).fill(-1);
+  return byAlike.toReversed().flatMap((ks) =>
+    ks.flatMap((k) =>
+      Option.match(
+        Option.filter(Option.fromUndefinedOr(witnesses[k]), () => held[k] !== 1),
+        {
+          onNone: (): ReadonlyArray<Patch> => [],
+          onSome: (seed) => grow(paint, touching, held, stamp, k, seed),
+        },
+      ),
     ),
   );
 };
@@ -227,6 +232,7 @@ const grow = (
   paint: KeptPaint,
   touching: ReadonlyArray<ReadonlyArray<number>>,
   held: Uint8Array,
+  stamp: Int32Array,
   k: number,
   seed: Witness,
 ): ReadonlyArray<Patch> => {
@@ -242,9 +248,15 @@ const grow = (
   const taken = members
     .toSorted((a, b) => a - b)
     .flatMap((n) => Option.toArray(Option.fromUndefinedOr(witnesses[n])));
-  const pixels = new Set<number>();
-  for (const v of taken) for (const i of indicesIn(v.box, w)) pixels.add(i);
-  return [{ seed, witnesses: taken, pixels: [...pixels].toSorted((a, b) => a - b) }];
+  const pixels: Array<number> = [];
+  for (const v of taken)
+    for (let y = v.box.y0; y <= v.box.y1; y++)
+      for (let i = y * w + v.box.x0; i <= y * w + v.box.x1; i++)
+        if (stamp[i] !== k) {
+          stamp[i] = k;
+          pixels.push(i);
+        }
+  return [{ seed, witnesses: taken, pixels }];
 };
 
 /** What a probe reads in the kept view for coverage: its box and its median Lab; none when it leaves the picture or is not flat. */
@@ -258,6 +270,10 @@ export const probeReach = (
   return Option.map(flatOf(paint.plane, indicesIn(box, paint.width)), (lab) => ({ box, lab }));
 };
 
+/** Whether two boxes share a pixel. */
+const overlaps = (a: Box, b: Box): boolean =>
+  a.x0 <= b.x1 && b.x0 <= a.x1 && a.y0 <= b.y1 && b.y0 <= a.y1;
+
 /** Each patch's covering probes: those whose box overlaps a witness of the patch whose median lies within `COVER` of the probe's kept median. A probe never covers a patch it does not touch. */
 export const coverOf = (
   paint: KeptPaint,
@@ -269,22 +285,29 @@ export const coverOf = (
     for (const v of p.witnesses) home.set(v, k);
   });
   const by = patches.map((): Array<ColourProbe> => []);
-  for (const probe of probes)
-    Option.map(probeReach(paint, probe), ({ box, lab }) => {
-      const reached = new Set<number>();
-      for (const n of witnessesOver(paint, box))
-        Option.map(
-          Option.flatMap(
-            Option.filter(
-              Option.fromUndefinedOr(paint.witnesses[n]),
-              (v) => deltaLab(v.lab, lab) <= COVER,
-            ),
-            (v) => Option.fromUndefinedOr(home.get(v)),
-          ),
-          (k) => reached.add(k),
+  const held = [...home.keys()].map((v) => v.box);
+  const span = {
+    x0: Math.min(...held.map((b) => b.x0)),
+    y0: Math.min(...held.map((b) => b.y0)),
+    x1: Math.max(...held.map((b) => b.x1)),
+    y1: Math.max(...held.map((b) => b.y1)),
+  };
+  for (const probe of probes.filter((p) => overlaps(probeBox(p), span))) {
+    const under = witnessesOver(paint, probeBox(probe)).flatMap((n) =>
+      Option.toArray(
+        Option.flatMap(Option.fromUndefinedOr(paint.witnesses[n]), (v) =>
+          Option.map(Option.fromUndefinedOr(home.get(v)), (k) => ({ v, k })),
+        ),
+      ),
+    );
+    if (under.length > 0)
+      Option.map(probeReach(paint, probe), ({ lab }) => {
+        const reached = new Set(
+          under.filter(({ v }) => deltaLab(v.lab, lab) <= COVER).map(({ k }) => k),
         );
-      for (const k of reached) by[k]?.push(probe);
-    });
+        for (const k of reached) by[k]?.push(probe);
+      });
+  }
   return by;
 };
 
