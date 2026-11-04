@@ -307,31 +307,65 @@ export const cropOf = (r: Raster, box: Box): Raster => {
   return { width: box.width, height: box.height, rgba };
 };
 
-/** The pixels of each connected region of `r` that `member` admits, found by `around`, in scan order of their first pixel. */
-const regionsOf = (
+/** The pixels `member` admits reached from `q0` (admitted, marked seen) through `around`, every pixel reached marked in `seen`. */
+const flood = (
   r: Raster,
+  seen: Uint8Array,
+  q0: number,
+  member: (q: number) => boolean,
+  around: (q: number, width: number, height: number) => ReadonlyArray<number>,
+): Array<number> => {
+  const region: Array<number> = [];
+  const stack = [q0];
+  while (stack.length > 0) {
+    const q = stack.pop() ?? 0;
+    region.push(q);
+    for (const m of around(q, r.width, r.height)) {
+      if (seen[m] === 1 || !member(m)) continue;
+      seen[m] = 1;
+      stack.push(m);
+    }
+  }
+  return region;
+};
+
+/** The pixels of each connected region of `r` that `member` admits with its first pixel in `box`, found by `around`, in scan order of their first pixel. */
+const regionsIn = (
+  r: Raster,
+  box: Box,
   member: (q: number) => boolean,
   around: (q: number, width: number, height: number) => ReadonlyArray<number>,
 ): ReadonlyArray<ReadonlyArray<number>> => {
   const seen = new Uint8Array(r.width * r.height);
   const regions: Array<Array<number>> = [];
-  for (let q0 = 0; q0 < r.width * r.height; q0++) {
-    if (seen[q0] === 1 || !member(q0)) continue;
-    const region: Array<number> = [];
-    const stack = [q0];
-    seen[q0] = 1;
-    while (stack.length > 0) {
-      const q = stack.pop() ?? 0;
-      region.push(q);
-      for (const m of around(q, r.width, r.height)) {
-        if (seen[m] === 1 || !member(m)) continue;
-        seen[m] = 1;
-        stack.push(m);
-      }
+  for (let y = box.y; y < box.y + box.height; y++)
+    for (let q0 = y * r.width + box.x; q0 < y * r.width + box.x + box.width; q0++) {
+      if (seen[q0] === 1 || !member(q0)) continue;
+      seen[q0] = 1;
+      regions.push(flood(r, seen, q0, member, around));
     }
-    regions.push(region);
-  }
   return regions;
+};
+
+/** The pixels of each connected region of `r` that `member` admits, found by `around`, in scan order of their first pixel. */
+const regionsOf = (
+  r: Raster,
+  member: (q: number) => boolean,
+  around: (q: number, width: number, height: number) => ReadonlyArray<number>,
+): ReadonlyArray<ReadonlyArray<number>> =>
+  regionsIn(r, { x: 0, y: 0, width: r.width, height: r.height }, member, around);
+
+/** The pixels of the connected region of `r` that `member` admits holding `seed`, found by `around`; none when `member` does not admit `seed`. */
+const regionAt = (
+  r: Raster,
+  seed: number,
+  member: (q: number) => boolean,
+  around: (q: number, width: number, height: number) => ReadonlyArray<number>,
+): ReadonlyArray<number> => {
+  if (!member(seed)) return [];
+  const seen = new Uint8Array(r.width * r.height);
+  seen[seed] = 1;
+  return flood(r, seen, seed, member, around);
 };
 
 /** `r` with only its largest 8-connected opaque piece left (the first found of equal ones). */
@@ -1089,16 +1123,17 @@ const faceOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<Face> =>
       (row) => row * r.width + l.headColumn,
     );
   return Option.flatMap(Option.flatMap(linesOf(r, paints), seedOf), (seed) => {
-    const skin = regionsOf(r, (q) => isRole(r, q, 'skin', paints, nearest), around4).find((px) =>
-      px.includes(seed),
-    );
-    return Option.map(Option.fromUndefinedOr(skin), (px) => {
-      const mask = new Uint8Array(r.width * r.height);
-      for (const q of px) mask[q] = 1;
-      return { mask, box: boxOf(px, r.width) };
-    });
+    const skin = regionAt(r, seed, (q) => isRole(r, q, 'skin', paints, nearest), around4);
+    if (skin.length === 0) return Option.none();
+    const mask = new Uint8Array(r.width * r.height);
+    for (const q of skin) mask[q] = 1;
+    return Option.some({ mask, box: boxOf(skin, r.width) });
   });
 };
+
+/** The box round a figure's face (`faceOf`: the skin region at the first skin row of its head column), none when it reads no face. */
+export const faceBoxOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<Box> =>
+  Option.map(faceOf(r, paints), (face) => face.box);
 
 /** The marks drawn on a face: each 4-connected run of opaque pixels that are not skin, within the face's box, ringed all round by the face's skin. */
 const faceMarksOf = (
@@ -1112,8 +1147,9 @@ const faceMarksOf = (
     const [x, y] = [q % r.width, Math.floor(q / r.width)];
     return x >= box.x && y >= box.y && x < box.x + box.width && y < box.y + box.height;
   };
-  return regionsOf(
+  return regionsIn(
     r,
+    box,
     (q) => inBox(q) && mask[q] !== 1 && alphaAt(r, q) > 0 && !isRole(r, q, 'skin', paints, nearest),
     around4,
   ).filter((px) => {
@@ -1176,6 +1212,15 @@ const eyesOf = (
   if (rows.length < 3) return Option.none();
   return Option.some((rows[1] ?? []).toSorted((a, b) => a.box.x - b.box.x).map((m) => m.px));
 };
+
+/** The boxes round a figure's eyes, left to right (`eyesOf`), none when its face reads no eyes. */
+export const eyeBoxesOf = (
+  r: Raster,
+  paints: ReadonlyArray<Paint>,
+): Option.Option<ReadonlyArray<Box>> =>
+  Option.flatMap(faceOf(r, paints), (face) =>
+    Option.map(eyesOf(r, paints, face), (eyes) => eyes.map((px) => boxOf(px, r.width))),
+  );
 
 /** A blink could not be built: why. */
 export class BlinkRefused extends Schema.TaggedError<BlinkRefused>()('BlinkRefused', {

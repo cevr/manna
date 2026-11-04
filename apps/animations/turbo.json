@@ -3,7 +3,14 @@
   "extends": ["//"],
   "tasks": {
     "test": {
-      "dependsOn": ["$TURBO_EXTENDS$", "test:app", "test:films", "test:library", "test:storybook"]
+      "dependsOn": [
+        "$TURBO_EXTENDS$",
+        "test:app",
+        "test:films",
+        "test:library",
+        "test:storybook",
+        "test:storybook-shots"
+      ]
     },
     "test:app": {
       "dependsOn": ["^transit"],
@@ -41,6 +48,20 @@
       ]
     },
     "test:storybook": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/**/*.test.*",
+        "!src/library/cutout/**/*.test.*",
+        "!src/library/toon3d/**/*.test.*",
+        "!src/library/cast/**/*.test.*"
+      ]
+    },
+    "test:storybook-shots": {
       "dependsOn": ["^transit"],
       "outputs": [],
       "inputs": [
