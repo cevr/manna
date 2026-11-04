@@ -220,7 +220,7 @@ export interface Posed {
 export const BREATH = 0.004;
 
 /** The shortest and longest breath, in s; each figure's own lies between, drawn from its name. */
-const BREATH_PERIOD = [3.2, 3.9] as const;
+export const BREATH_PERIOD = [3.2, 3.9] as const;
 
 /** How long a blink shows its key, in s. */
 export const BLINK = 0.125;
@@ -239,10 +239,17 @@ const drawsOf = (name: string): (() => number) => {
 const within = (range: readonly [number, number], u: number): number =>
   range[0] + (range[1] - range[0]) * u;
 
-/** A holding figure's breath at `t`: from rest at the hold's start up to 1 + `BREATH` and back, once per its own period. */
+/** A holding figure's breath at `t`: from rest at `from` up to 1 + `BREATH` and back, once per its own period. */
 const breathAt = (name: string, from: number, t: number): number => {
   const period = within(BREATH_PERIOD, drawsOf(name)());
   return 1 + (BREATH * (1 - Math.cos((2 * Math.PI * (t - from)) / period))) / 2;
+};
+
+/** Where the breath of a hold starting at `from` starts: the start of the run of holds it ends, each starting where the one before it ends, so a key change from hold to hold breathes on and only a hold after a move or a turn starts from rest (critique 4, C). */
+const breathFrom = (spans: ReadonlyArray<Span>, from: number): number => {
+  const before = spans.find((p): p is Hold => p._tag === 'Hold' && p.to === from && p.from < from);
+  if (!before) return from;
+  return breathFrom(spans, before.from);
 };
 
 /**
@@ -259,15 +266,15 @@ const blinkingAt = (name: string, t: number): boolean => {
   return false;
 };
 
-/** A holding figure's pose: its cell, showing its blink key's eyes while it blinks, breathing. */
-const holdPose = (name: string, s: Hold, t: number, x: number, y: number): Posed => ({
+/** A holding figure's pose: its cell, showing its blink key's eyes while it blinks, breathing on from the start of its run of holds (`breathFrom`). */
+const holdPose = (f: Figure, s: Hold, t: number): Posed => ({
   cell: s.cell,
-  eyes: [s.cell, s.blink ?? s.cell][Number(blinkingAt(name, t))] ?? s.cell,
-  x,
-  y,
+  eyes: [s.cell, s.blink ?? s.cell][Number(blinkingAt(f.name, t))] ?? s.cell,
+  x: f.at.x,
+  y: f.at.ground,
   sx: 1,
   sy: 1,
-  breath: breathAt(name, s.from, t),
+  breath: breathAt(f.name, breathFrom(f.spans, s.from), t),
 });
 
 /** A pose with its cell's own eyes. */
@@ -318,7 +325,7 @@ export const poseAt = (f: Figure, t: number): Posed => {
   const { x, ground } = f.at;
   switch (s._tag) {
     case 'Hold':
-      return holdPose(f.name, s, t, x, ground);
+      return holdPose(f, s, t);
     case 'Turn':
       return open(turnPose(s, t, x, ground));
     case 'Keys': {

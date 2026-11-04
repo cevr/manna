@@ -8,6 +8,7 @@ import {
   BLINK_GAP,
   blinkingHold,
   BREATH,
+  BREATH_PERIOD,
   chromaOf,
   drawnKeyOf,
   drawOrder,
@@ -300,19 +301,25 @@ describe('frameAt over generated shots', () => {
     }
   });
 
-  test('breathes only on a hold, the crown rising no more than BREATH of the height from rest at its start, never squashing (critique 1, item 5)', () => {
+  test('breathes only on a hold, the crown rising no more than BREATH of the height, never squashing, and from one frame to the next in holds no further than a breath moves in a frame, across a key change from hold to hold too (critique 1, item 5; critique 4, C)', () => {
     const misses = SEEDS.flatMap((seed) => {
       const { shot, figures, heads } = generatedShot(seed);
+      const step = (BREATH * Math.PI) / BREATH_PERIOD[0] / shot.fps;
+      const last = new Map<string, number>();
       return timesOf(shot).flatMap((t) =>
         frameAt(shot, heads, t).figures.flatMap((f) => {
           const span = spanOfWindow(figures, f.name, t);
           const holding = Option.exists(span, (s) => s._tag === 'Hold');
-          const atStart = Option.exists(span, (s) => s._tag === 'Hold' && s.from === t);
+          const before = last.get(f.name) ?? f.breath;
+          last.set(f.name, f.breath);
+          const smooth = Math.abs(f.breath - before) <= step * 1.0001;
           const ok =
-            (holding && f.breath >= 1 && f.breath <= 1 + BREATH && (!atStart || f.breath === 1)) ||
+            (holding && f.breath >= 1 && f.breath <= 1 + BREATH && smooth) ||
             (!holding && f.breath === 1);
           if (ok) return [];
-          return [`seed ${seed} t ${t}: ${f.name} breath ${f.breath}, holding ${holding}`];
+          return [
+            `seed ${seed} t ${t}: ${f.name} breath ${f.breath} after ${before}, holding ${holding}`,
+          ];
         }),
       );
     });
@@ -379,6 +386,39 @@ describe('a hold', () => {
     expect(breaths(1)).not.toEqual(one);
     const f = frameAt(shot, new Map(), 5).figures[0];
     expect([f?.sx, f?.sy]).toEqual([1, 1]);
+  });
+
+  test('breathes on across a key change from hold to hold, no frame stepping further than a breath moves in one frame, and starts from rest after a turn (critique 4, C)', () => {
+    const changing = figure(['a', 'b'], {
+      name: 'guest',
+      member: 'm',
+      sheet: 's',
+      at: { x: 0, ground: 0 },
+      spans: [hold(0, 2.3, 'a'), hold(2.3, 5.1, 'b'), blinkingHold(5.1, 12, 'a', 'b')],
+    });
+    const turning = figure(['a', 'b'], {
+      name: 'lead',
+      member: 'm',
+      sheet: 's',
+      at: { x: 0, ground: 0 },
+      spans: [hold(0, 7, 'a'), turn(7, 0.5, 'a', 'b'), hold(7.5, 12, 'b')],
+    });
+    const shot = shotOf([changing, turning]);
+    const step = (BREATH * Math.PI) / BREATH_PERIOD[0] / shot.fps;
+    const breaths = (i: number) =>
+      timesOf(shot).map((t) => [t, frameAt(shot, new Map(), t).figures[i]?.breath ?? 0] as const);
+    const guest = breaths(0);
+    const jumps = guest
+      .slice(1)
+      .filter(([, b], i) => Math.abs(b - (guest[i]?.[1] ?? b)) > step * 1.0001)
+      .map(([t]) => t);
+    const at = (rows: typeof guest, t: number) =>
+      rows.filter(([u]) => Math.abs(u - t) < 1e-9).map(([, b]) => b);
+    expect([jumps, at(guest, 2.3).map((b) => b > 1), at(breaths(1), 7.5)]).toEqual([
+      [],
+      [true],
+      [1],
+    ]);
   });
 
   test('shows its blink key on a seeded schedule: blinks of BLINK s, two or more in 12 s, 2 s or more apart, none in its first half second, the same at every call (critique 1, item 5)', () => {
