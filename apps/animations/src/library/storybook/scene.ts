@@ -10,24 +10,15 @@ import type { Raster } from '@manna/film/tools';
 import { Option } from 'effect';
 import {
   canvasOf,
-  type PaintFigure,
-  type PaintPlate,
   type PaintScene,
   type Pictures,
   type Prepared,
   paintFrame,
+  paintSceneOf,
   prepare,
 } from './painter.ts';
-import { type Palette, shareOf } from './sheet.ts';
-import {
-  drawOrder,
-  drawnKeyOf,
-  figuresOf,
-  frameAt,
-  type Item,
-  type Light,
-  type Shot,
-} from './shot.ts';
+import type { Palette } from './sheet.ts';
+import { drawnKeyOf, figuresOf, frameAt, type Item, type Light, type Shot } from './shot.ts';
 
 /** A scene's timeline, as the engine reads it. */
 type Timeline = NonNullable<SceneSpec['timeline']>;
@@ -209,35 +200,30 @@ export const paintingsOf = (
     }),
   );
 
+/** Every painting a storybook scene's drawing declares: each of its shots' plates and stored cells (`paintingsOf`), its shots laid at rest. */
+export const storyPaintings = (
+  story: StoryScene,
+  sheets: Sheets,
+  grid: Grid,
+): Readonly<Record<string, PaintingSpec>> =>
+  paintingsOf(
+    story.shots.map((s) =>
+      shotOf(story, s, () => ({ start: 0, end: 1 }), grid).layers.flatMap((l) => l.items),
+    ),
+    sheets,
+  );
+
 /** A shot as the painter holds it in a film: each plate and each cell by its painting key, under the scene's light. */
-export const filmSceneOf = (shot: Shot, sheets: Sheets): PaintScene => ({
-  width: shot.size.width,
-  height: shot.size.height,
-  paper: PAPER,
-  light: shot.light,
-  layers: drawOrder(shot.layers).map((layer) => ({
-    name: layer.name,
-    z: layer.z,
-    blur: layer.blur,
-    items: layer.items.map((item): PaintPlate | PaintFigure => {
-      if (item._tag === 'Plate')
-        return {
-          _tag: 'Plate',
-          image: item.file,
-          size: item.painting?.size ?? [item.place.width, item.place.height],
-          place: item.place,
-          moves: item.moves ?? [],
-          ...Option.match(Option.fromUndefinedOr(item.reveal), {
-            onNone: () => ({}),
-            onSome: (reveal) => ({ reveal }),
-          }),
-        };
+export const filmSceneOf = (shot: Shot, sheets: Sheets): PaintScene =>
+  paintSceneOf(shot, PAPER, {
+    plate: (item) => ({
+      image: item.file,
+      size: item.painting?.size ?? [item.place.width, item.place.height],
+    }),
+    figure: (item) => {
       const sheet = sheets.get(`${item.member}/${item.sheet}`);
       return {
-        _tag: 'Figure',
-        name: item.name,
         palette: sheet?.palette ?? NO_PALETTE,
-        share: shareOf(sheet?.palette ?? NO_PALETTE, item.sheet),
         cells: Object.fromEntries(
           Object.entries(sheet?.cells ?? {}).map(([key, c]) => [
             key,
@@ -253,26 +239,12 @@ export const filmSceneOf = (shot: Shot, sheets: Sheets): PaintScene => ({
             },
           ]),
         ),
-        worn: item.worn ?? [],
-        blinks: blinksOf(item),
       };
-    }),
-  })),
-});
+    },
+  });
 
 /** The palette of a figure whose sheet the film does not declare: no paint, so it draws nothing. */
 const NO_PALETTE: Palette = { ink: '#000000', parts: [] };
-
-/** The blinks a figure's holds show, `[cell, blink]`, each once. */
-const blinksOf = (
-  f: Extract<Item, { _tag: 'Figure' }>,
-): ReadonlyArray<readonly [string, string]> => {
-  const keys = new Map<string, readonly [string, string]>();
-  for (const s of f.spans)
-    if (s._tag === 'Hold' && s.blink)
-      keys.set(drawnKeyOf({ cell: s.cell, eyes: s.blink }), [s.cell, s.blink]);
-  return [...keys.values()];
-};
 
 /** The house paper, behind every plate: the storybook page's. */
 export const PAPER = '#fdf7e5';
@@ -378,15 +350,12 @@ const UNLIT = { color: '#ffffff', amount: 0, vignette: 0 } as const;
  * renders it.
  */
 export const storyDrawing = (story: StoryScene, sheets: Sheets, grid: Grid) => {
-  const atRest = story.shots.map((s) =>
-    shotOf(story, s, () => ({ start: 0, end: 1 }), grid).layers.flatMap((l) => l.items),
-  );
   const prepared = new Map<string, Option.Option<Prepared>>();
   const canvases = new Map<'frame', Option.Option<CpuCanvas>>();
   const held = new Map<string, Option.Option<HTMLCanvasElement>>();
   return drawing({
     timeline: timelineOf(story),
-    paintings: paintingsOf(atRest, sheets),
+    paintings: storyPaintings(story, sheets, grid),
     drift: 0,
     light: UNLIT,
     cards: story.cards.map((c, i) => ({

@@ -2,11 +2,11 @@ import { Effect, FileSystem, Option, Path, Schema, type Scope } from 'effect';
 import { Base64 } from 'effect/encoding';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import sharp from 'sharp';
-import type { PaintCell, PaintFigure, PaintPlate, PaintRequest, PaintScene } from './painter.ts';
-import { shareOf } from './sheet.ts';
+import { type PaintCell, type PaintRequest, type PaintScene, paintSceneOf } from './painter.ts';
 import {
   drawnKeyOf,
   drawOrder,
+  type Figure,
   type Frame,
   frameAt,
   type Plate,
@@ -94,40 +94,6 @@ const pngOfUrl = (dataUrl: string) =>
     Effect.mapError(failed),
   );
 
-/** A figure as the painter draws it: its member's palette, each stored cell of its sheet unlit as a data URL with its entry (`cellEntryOf`), the keys it wears another head on, and the blinks its holds show. */
-const paintFigureOf = (
-  stored: StoredFigure,
-  cells: Readonly<Record<string, PaintCell>>,
-): PaintFigure => ({
-  _tag: 'Figure',
-  name: stored.figure.name,
-  palette: stored.palette,
-  share: shareOf(stored.palette, stored.figure.sheet),
-  cells,
-  worn: stored.figure.worn ?? [],
-  blinks: [...stored.blinks.keys()].map((key) => {
-    const [cell = key, blink = key] = key.split('~');
-    return [cell, blink] as const;
-  }),
-});
-
-/** A plate as the painter draws it: its picture, its size, its place, its moves and reveal. */
-export const paintPlateOf = (
-  plate: Plate,
-  image: string,
-  size: readonly [number, number],
-): PaintPlate => ({
-  _tag: 'Plate',
-  image,
-  size,
-  place: plate.place,
-  moves: plate.moves ?? [],
-  ...Option.match(Option.fromUndefinedOr(plate.reveal), {
-    onNone: () => ({}),
-    onSome: (reveal) => ({ reveal }),
-  }),
-});
-
 /** A cell's entry as the painter holds it: its picture and its entry, its head where it reads one. */
 export const paintCellOf = (image: string, e: CellEntry): PaintCell => ({
   image,
@@ -145,39 +111,46 @@ export const sceneOf = Effect.fn('Storybook.sceneOf')(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const byName = new Map(figures.map((f) => [f.figure.name, f] as const));
-  const layers = yield* Effect.forEach(drawOrder(shot.layers), (layer) =>
-    Effect.forEach(layer.items, (item) =>
-      Effect.gen(function* () {
-        if (item._tag === 'Plate') {
+  const items = drawOrder(shot.layers).flatMap((layer) => layer.items);
+  const plates = new Map(
+    yield* Effect.forEach(
+      items.filter((item): item is Plate => item._tag === 'Plate'),
+      (item) =>
+        Effect.gen(function* () {
           const bytes = yield* fs.readFile(`${APP}/${item.file}`);
           const meta = yield* Effect.tryPromise({
             try: () => sharp(bytes).metadata(),
             catch: (cause) => StorybookFailed.make({ reason: `${item.file}: ${String(cause)}` }),
           });
-          return paintPlateOf(item, dataUrlOf(bytes), [meta.width, meta.height]);
-        }
-        const stored = byName.get(item.name);
-        if (!stored) return yield* StorybookFailed.make({ reason: `${item.name} is not loaded` });
-        const cells: Record<string, PaintCell> = {};
-        for (const c of stored.record.cells) {
-          const raster = stored.cells.get(c.key);
-          if (!raster) continue;
-          const bytes = yield* fs.readFile(
-            `${sheetDir(cast, item.member, item.sheet)}/cells/${c.key}.png`,
-          );
-          cells[c.key] = paintCellOf(dataUrlOf(bytes), cellEntryOf(c.key, raster, stored.paints));
-        }
-        return paintFigureOf(stored, cells);
-      }),
-    ).pipe(Effect.map((items) => ({ name: layer.name, z: layer.z, blur: layer.blur, items }))),
+          const size: readonly [number, number] = [meta.width, meta.height];
+          return [item.file, { image: dataUrlOf(bytes), size }] as const;
+        }),
+    ),
   );
-  return {
-    width: shot.size.width,
-    height: shot.size.height,
-    paper: PAPER,
-    light: shot.light,
-    layers,
-  } satisfies PaintScene;
+  const held = new Map(
+    yield* Effect.forEach(
+      items.filter((item): item is Figure => item._tag === 'Figure'),
+      (item) =>
+        Effect.gen(function* () {
+          const stored = byName.get(item.name);
+          if (!stored) return yield* StorybookFailed.make({ reason: `${item.name} is not loaded` });
+          const cells: Record<string, PaintCell> = {};
+          for (const c of stored.record.cells) {
+            const raster = stored.cells.get(c.key);
+            if (!raster) continue;
+            const bytes = yield* fs.readFile(
+              `${sheetDir(cast, item.member, item.sheet)}/cells/${c.key}.png`,
+            );
+            cells[c.key] = paintCellOf(dataUrlOf(bytes), cellEntryOf(c.key, raster, stored.paints));
+          }
+          return [item.name, { palette: stored.palette, cells }] as const;
+        }),
+    ),
+  );
+  return paintSceneOf(shot, PAPER, {
+    plate: (item) => plates.get(item.file) ?? { image: '', size: [0, 0] },
+    figure: (item) => held.get(item.name) ?? { palette: { ink: '#000000', parts: [] }, cells: {} },
+  });
 });
 
 /** Renders one request to PNG bytes. */

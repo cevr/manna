@@ -1,10 +1,14 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { Effect, FileSystem, Option, Schema } from 'effect';
+import { Effect, FileSystem, Layer, Option, Schema } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { describe, expect, it } from 'effect-bun-test';
 import sharp from 'sharp';
+import { filmFolder, shotsOf as libraryShotsOf } from '../../../library/storybook/films.ts';
+import { timesOf } from '../../../library/storybook/shot.ts';
 import { film, fps } from '../film.ts';
+import { inItsOrder } from './index.ts';
 import { PARITY, grained, grainOf, parity } from './parity.ts';
+import { stateFrames } from './testing.ts';
 
 /** The app's root: every command runs from it and every file the shots name is relative to it. */
 const APP = `${import.meta.dir}/../../../..`;
@@ -511,12 +515,15 @@ const stillName = (t: number): string => `t${t.toFixed(2).padStart(7, '0')}.png`
 
 describe('In Its Order act 1 in style B: the bars and the film', () => {
   it.effect(
-    'verifies every shot PASS 9/9, and the film draws each shot’s middle frame as the verify rendered it',
+    'verifies every shot PASS 9/9, and the film draws each shot’s middle frame, and each frame that shows a plate at its fullest or a figure key first (`stateFrames`), as the verify rendered it',
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const tmp = yield* fs.makeTempDirectoryScoped();
         const shots = yield* shotsOf(tmp);
+        const library = new Map(
+          (yield* libraryShotsOf(inItsOrder)).map(({ shot }) => [shot.id, shot] as const),
+        );
         const middles: Array<readonly [string, number, string, ReadonlyArray<Overlay>]> = [];
         for (const shot of shots.shots) {
           const out = `${tmp}/verify-${shot.id}`;
@@ -533,13 +540,18 @@ describe('In Its Order act 1 in style B: the bars and the film', () => {
           );
           const frames = filmFrames(shot.from, shot.to, shots.fps);
           const i = Math.floor(frames.count / 2);
-          middles.push([
-            shot.id,
-            (frames.first + i) / shots.fps,
-            `${out}/frames/f${String(i).padStart(4, '0')}.png`,
-            shot.overlays,
-          ]);
+          const own = Option.fromUndefinedOr(library.get(shot.id));
+          expect(Option.map(own, (s) => timesOf(s).length)).toEqual(Option.some(frames.count));
+          const states = Option.match(own, { onNone: () => [], onSome: stateFrames });
+          for (const k of [i, ...states.filter((k) => k !== i)])
+            middles.push([
+              shot.id,
+              (frames.first + k) / shots.fps,
+              `${out}/frames/f${String(k).padStart(4, '0')}.png`,
+              shot.overlays,
+            ]);
         }
+        expect(middles.length).toBeGreaterThan(shots.shots.length);
         const stills = `${APP}/out/${FILM}/film/parity/stills`;
         yield* fs.remove(stills, { recursive: true, force: true });
         const times = middles.map(([, t]) => t.toFixed(4)).join(',');
@@ -570,7 +582,10 @@ describe('In Its Order act 1 in style B: the bars and the film', () => {
           if (share < PARITY) off.push(`${id} at ${t.toFixed(3)} s: ${share.toFixed(4)}`);
         }
         expect(off).toEqual([]);
-      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+      }).pipe(
+        Effect.scoped,
+        Effect.provide([filmFolder.pipe(Layer.provide(BunServices.layer)), BunServices.layer]),
+      ),
     7_200_000,
   );
 });

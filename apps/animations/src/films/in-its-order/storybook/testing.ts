@@ -1,15 +1,34 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Layer, Option } from 'effect';
 import { filmCast, filmFolder, shotsOf } from '../../../library/storybook/films.ts';
-import type { SheetDecl } from '../../../library/storybook/scene.ts';
+import { type PaintScene, paintSceneOf } from '../../../library/storybook/painter.ts';
+import { APP } from '../../../library/storybook/render.ts';
+import {
+  filmSceneOf,
+  PAPER,
+  type SheetDecl,
+  storyPaintings,
+} from '../../../library/storybook/scene.ts';
 import { anchorOf, faceBoxOf, paintsOf } from '../../../library/storybook/sheet.ts';
-import { frameAt, type Plate, type Shot } from '../../../library/storybook/shot.ts';
+import {
+  drawnKeyOf,
+  type Figure,
+  frameAt,
+  type Plate,
+  plateAt,
+  revealAt,
+  type Shot,
+  timesOf,
+} from '../../../library/storybook/shot.ts';
 import {
   cellsMisses,
   drawnCellOf,
   headsOf,
   loadFigures,
+  memberPalette,
+  readRecord,
   sharesOf,
+  sheetDir,
   type StoredFigure,
 } from '../../../library/storybook/store.ts';
 import { type Coverage, coversOf, picturesOver } from '../../../library/storybook/verify/covers.ts';
@@ -79,6 +98,193 @@ export const faceCovers = (ids: ReadonlyArray<string>) =>
       );
     }).pipe(Effect.provide([filmFolder.pipe(Layer.provide(BunServices.layer)), BunServices.layer])),
   );
+
+/** A picture file's real path and its pixel size, read off its PNG header. */
+const pictureOf = Effect.fn('Act1Testing.pictureOf')(function* (file: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const bytes = yield* fs.readFile(file);
+  const header = new DataView(bytes.buffer, bytes.byteOffset + 16, 8);
+  const size: readonly [number, number] = [header.getUint32(0), header.getUint32(4)];
+  return { file: yield* fs.realPath(file), size };
+});
+
+/** What a painted shot reads, comparable path to path: its size, paper and light, then per layer each plate's picture file, size, place, moves and reveal, and each figure's head share, worn heads, blinks and each cell's picture file and size. */
+const resourcesOf = (scene: PaintScene, files: ReadonlyMap<string, string>) => ({
+  size: [scene.width, scene.height],
+  paper: scene.paper,
+  light: scene.light,
+  layers: scene.layers.map((layer) => ({
+    name: layer.name,
+    z: layer.z,
+    blur: layer.blur,
+    items: layer.items.map((item) => {
+      if (item._tag === 'Plate')
+        return {
+          plate: files.get(item.image) ?? `unread ${item.image}`,
+          size: item.size,
+          place: item.place,
+          moves: item.moves,
+          reveal: item.reveal ?? 'none',
+        };
+      return {
+        figure: item.name,
+        share: item.share,
+        worn: item.worn,
+        blinks: item.blinks,
+        cells: Object.entries(item.cells).map(([key, c]) => ({
+          key,
+          file: files.get(c.image) ?? `unread ${c.image}`,
+          size: c.size,
+        })),
+      };
+    }),
+  })),
+});
+
+/**
+ * Each storybook shot of the film as the film paints it and as the verify's
+ * page paints it, both through `paintSceneOf` and reduced to the files and
+ * sizes they read (`resourcesOf`): the film's from its declared sheets
+ * (`SHEET_CELLS`) and each picture's painting in its scene's drawing
+ * (`storyPaintings`), the verify's from the files its page reads (each
+ * plate's file, each cell of the sheet's record, the member's palette).
+ * Each cell's anchors and head are held to its PNG by `sheetsMisses`.
+ */
+export const shotResources = () =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const cast = yield* filmCast(inItsOrder);
+      const placed = yield* shotsOf(inItsOrder);
+      const films = new Map(
+        inItsOrder.stories.flatMap((story) =>
+          story.shots.map(
+            (s) => [s.id, storyPaintings(story, SHEET_CELLS, inItsOrder.grid)] as const,
+          ),
+        ),
+      );
+      return yield* Effect.forEach(placed, ({ shot }) =>
+        Effect.gen(function* () {
+          const film = filmSceneOf(shot, SHEET_CELLS);
+          const paintings = films.get(shot.id) ?? {};
+          const filmFiles = new Map(
+            yield* Effect.forEach(
+              film.layers.flatMap((l) =>
+                l.items.flatMap((item) => {
+                  if (item._tag === 'Plate') return [item.image];
+                  return Object.values(item.cells).map((c) => c.image);
+                }),
+              ),
+              (image) =>
+                Effect.map(
+                  pictureOf(paintings[image]?.png ?? `${import.meta.dir}/unpainted`),
+                  (p) => [image, p.file] as const,
+                ),
+            ),
+          );
+          const plates = new Map(
+            yield* Effect.forEach(figuresAndPlates(shot).plates, (p) =>
+              Effect.map(pictureOf(`${APP}/${p.file}`), (pic) => [p.file, pic] as const),
+            ),
+          );
+          const figures = new Map(
+            yield* Effect.forEach(figuresAndPlates(shot).figures, (f) =>
+              Effect.gen(function* () {
+                const record = yield* readRecord(cast, f.member, f.sheet);
+                const dir = sheetDir(cast, f.member, f.sheet);
+                const cells = yield* Effect.forEach(record.cells, (c) =>
+                  Effect.map(
+                    pictureOf(`${dir}/cells/${c.key}.png`),
+                    (pic) => [c.key, pic] as const,
+                  ),
+                );
+                return [f.name, { palette: yield* memberPalette(cast, f.member), cells }] as const;
+              }),
+            ),
+          );
+          const verify = paintSceneOf(shot, PAPER, {
+            plate: (p) => ({
+              image: plates.get(p.file)?.file ?? p.file,
+              size: plates.get(p.file)?.size ?? [0, 0],
+            }),
+            figure: (f) => ({
+              palette: figures.get(f.name)?.palette ?? { ink: '#000000', parts: [] },
+              cells: Object.fromEntries(
+                (figures.get(f.name)?.cells ?? []).map(([key, pic]) => [
+                  key,
+                  { image: pic.file, size: pic.size, ax: 0, ay: 0 },
+                ]),
+              ),
+            }),
+          });
+          const verifyFiles = new Map(
+            [
+              ...plates.values(),
+              ...[...figures.values()].flatMap((f) => f.cells.map(([, p]) => p)),
+            ].map((p) => [p.file, p.file] as const),
+          );
+          return [shot.id, resourcesOf(film, filmFiles), resourcesOf(verify, verifyFiles)] as const;
+        }),
+      );
+    }).pipe(Effect.provide([filmFolder.pipe(Layer.provide(BunServices.layer)), BunServices.layer])),
+  );
+
+/** How much of a plate is shown at `t`: its key's alpha, times the brush points its reveal has drawn when it has one. */
+const shownOf = (plate: Plate, t: number): number =>
+  plateAt(plate, t).alpha *
+  Option.match(Option.fromUndefinedOr(plate.reveal), {
+    onNone: () => 1,
+    onSome: (reveal) => revealAt(reveal, t).length,
+  });
+
+/**
+ * The frames of a shot that together show every picture it paints, each at
+ * its fullest: each plate at the first frame it is most shown (`shownOf`),
+ * then the frame showing the most figure keys not yet shown (each figure's
+ * drawn key, a blink included), until every key is. Indices into
+ * `timesOf(shot)`, in order.
+ */
+export const stateFrames = (shot: Shot): ReadonlyArray<number> => {
+  const times = timesOf(shot);
+  const unshared = new Map<string, number>();
+  const keys = times.map(
+    (t) =>
+      new Set(
+        frameAt(shot, unshared, t, unshared).figures.map((f) => `${f.name} ${drawnKeyOf(f)}`),
+      ),
+  );
+  const chosen = new Set(
+    figuresAndPlates(shot).plates.flatMap((p) => {
+      const shown = times.map((t) => shownOf(p, t));
+      const most = Math.max(...shown);
+      if (most <= 0) return [];
+      return [shown.indexOf(most)];
+    }),
+  );
+  const left = new Set(keys.flatMap((k) => [...k]));
+  const take = (i: number) => {
+    chosen.add(i);
+    for (const k of keys[i] ?? []) left.delete(k);
+  };
+  for (const i of chosen) take(i);
+  while (left.size > 0) {
+    let [best, most] = [0, 0];
+    keys.forEach((k, i) => {
+      const n = [...k].filter((x) => left.has(x)).length;
+      if (n > most) [best, most] = [i, n];
+    });
+    take(best);
+  }
+  return [...chosen].toSorted((a, b) => a - b);
+};
+
+/** A shot's plates and figures, each once, in drawing order. */
+const figuresAndPlates = (shot: Shot) => {
+  const items = shot.layers.flatMap((l) => l.items);
+  return {
+    plates: items.filter((item): item is Plate => item._tag === 'Plate'),
+    figures: items.filter((item): item is Figure => item._tag === 'Figure'),
+  };
+};
 
 /** Where a sheet lies: the film's own roles first, then the library's (`castFolder`'s order). */
 const dirOf = Effect.fn('Act1Testing.dirOf')(function* (member: string, id: string) {

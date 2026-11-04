@@ -8,17 +8,22 @@ import {
   type Paint,
   type Palette,
   paintsOf,
+  shareOf,
   sheetHeadOf,
   withHeadOf,
 } from './sheet.ts';
 import {
   drawnKeyOf,
+  drawOrder,
+  type Figure,
   type Light,
   lit,
+  type Plate,
   type PlateKey,
   plateAt,
   type Reveal,
   revealAt,
+  type Shot,
   type Worn,
 } from './shot.ts';
 
@@ -45,6 +50,72 @@ export interface PaintPlate {
   readonly moves: ReadonlyArray<readonly [number, PlateKey]>;
   readonly reveal?: Reveal;
 }
+
+/** Where one path holds a shot's pictures: each plate's picture id and pixel size, and each figure's member's palette and stored cells by key. */
+export interface SceneSource {
+  readonly plate: (plate: Plate) => {
+    readonly image: string;
+    readonly size: readonly [number, number];
+  };
+  readonly figure: (figure: Figure) => {
+    readonly palette: Palette;
+    readonly cells: Readonly<Record<string, PaintCell>>;
+  };
+}
+
+/** The blinks a figure's holds show, `[cell, blink]`, each once. */
+const blinksOf = (f: Figure): ReadonlyArray<readonly [string, string]> => {
+  const keys = new Map<string, readonly [string, string]>();
+  for (const s of f.spans)
+    if (s._tag === 'Hold' && s.blink)
+      keys.set(drawnKeyOf({ cell: s.cell, eyes: s.blink }), [s.cell, s.blink]);
+  return [...keys.values()];
+};
+
+/**
+ * A shot as the painter holds it, one description for the verify's page and
+ * the film alike: the frame's size, the house paper, the shot's light, and
+ * each layer in drawing order with its plates (place, moves, reveal) and
+ * figures (head share, worn heads, blinks); only where each path holds a
+ * picture comes from `source`.
+ */
+export const paintSceneOf = (shot: Shot, paper: string, source: SceneSource): PaintScene => ({
+  width: shot.size.width,
+  height: shot.size.height,
+  paper,
+  light: shot.light,
+  layers: drawOrder(shot.layers).map((layer) => ({
+    name: layer.name,
+    z: layer.z,
+    blur: layer.blur,
+    items: layer.items.map((item): PaintPlate | PaintFigure => {
+      if (item._tag === 'Plate') {
+        const { image, size } = source.plate(item);
+        return {
+          _tag: 'Plate',
+          image,
+          size,
+          place: item.place,
+          moves: item.moves ?? [],
+          ...Option.match(Option.fromUndefinedOr(item.reveal), {
+            onNone: () => ({}),
+            onSome: (reveal) => ({ reveal }),
+          }),
+        };
+      }
+      const { palette, cells } = source.figure(item);
+      return {
+        _tag: 'Figure',
+        name: item.name,
+        palette,
+        share: shareOf(palette, item.sheet),
+        cells,
+        worn: item.worn ?? [],
+        blinks: blinksOf(item),
+      };
+    }),
+  })),
+});
 
 /** A figure as the painter draws it: its name, its member's palette, its sheet's head share (`shareOf`), its stored cells by key, the keys it wears another head on and the blinks its holds show (`[cell, blink]`). */
 export interface PaintFigure {
