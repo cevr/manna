@@ -102,5 +102,38 @@
     "seconds": 5,
     "usd": 0.1625,
     "kept": true
+  },
+  {
+    "at": "2026-11-03T16:06:30Z",
+    "member": "lead-feast",
+    "clip": "toon3d/gen-meshy",
+    "endpoint": "fal-ai/meshy/v7.1/multi-image-to-3d",
+    "requestId": "01a1a229-8ff5-7d73-b39b-96c456fe0371",
+    "seconds": 0,
+    "usd": 0.8,
+    "kept": false,
+    "external": true
+  },
+  {
+    "at": "2026-11-03T16:06:30Z",
+    "member": "lead-feast",
+    "clip": "toon3d/gen-tripo",
+    "endpoint": "tripo3d/h3.1/multiview-to-3d",
+    "requestId": "01a1a229-902f-7022-bb9a-3d7525c9a1ab",
+    "seconds": 0,
+    "usd": 0.6,
+    "kept": false,
+    "external": true
+  },
+  {
+    "at": "2026-11-03T16:06:30Z",
+    "member": "lead-feast",
+    "clip": "toon3d/gen-trellis",
+    "endpoint": "fal-ai/trellis-2",
+    "requestId": "01a1a229-9028-7be2-a844-a84a502d9d80",
+    "seconds": 0,
+    "usd": 0.15,
+    "kept": false,
+    "external": true
   }
 ]
