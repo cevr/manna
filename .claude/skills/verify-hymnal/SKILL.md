@@ -88,7 +88,10 @@ at: compare it with the commit under test), `audioHolders` (lines of
 `pmset -g assertions` that hold audio out), `load`, `cores` and
 `timingsHold`; when `timingsHold` is false, no timing of this drive claims
 anything. Or it fails with `Unhealthy` naming the first check that does not
-hold: `server-pid` (the recorded `sim serve` runs), `port-owner` (the port
+hold: `server-pid` (the recorded `sim serve` runs: its pid still holds the
+start time `boot` recorded, `serverStarted` in the session file; a legacy
+session, an older `sim`'s with no start time, fails it, so run `sim down`
+and boot again), `port-owner` (the port
 is held by that process or a child of it), `server-answers` (the server
 answers), `server-log` (no failure line in `server.log`); on iOS a simulator
 that is not booted fails as `SimulatorDown`.
@@ -204,8 +207,25 @@ bun run --cwd apps/hymnal sim down --clean
 ```
 
 `sim down` closes the driver session, shuts down `verify-hymnal` (iOS),
-stops the dev server by its recorded PID (never by name), and moves the
-session file into `$EVIDENCE`. `--clean` then deletes the app's build
+asks agent-device to stop its daemon in the drive's own HOME, stops the dev
+server by its recorded pid and start time (never by name, and never a pid
+whose start time no longer matches), and only then moves the session file
+into `$EVIDENCE` (as `session.json`, or `session-<n>.json` beside one filed
+there already; it never replaces a file). A legacy session (no
+`serverStarted`) is filed away with no signal and
+`detail.serverStopped: false`: stop its server by hand, after checking with
+`ps -o lstart= -p <pid>` that the pid is still it. `down` keeps the drive's
+HOME (the state folder's `home`) for the next boot, which reuses
+agent-device's runner build there. A `down` that fails, is interrupted or
+is killed before the server is stopped leaves the session file in the
+state, so run `sim down` again: it finds the server and stops it. One that
+could not close a driver (its HOME no longer a folder, an `Escaped`
+refusal) still stops the server and files the session, then fails with
+that error. `boot`, `down` and `down --clean` hold the state while they
+run (the state folder's `holders` folder, one link per holding command,
+never removed); a second one at once fails `StateBusy` naming the holder's
+pid, and changes nothing. A holder whose command was killed is known by
+its pid's start time and reclaimed by the next command. `--clean` then deletes the app's build
 output (the clean paths of `apps/hymnal/scripts/sim-app.ts` `app`: the `build` and
 `Pods` folders of `apps/hymnal/ios`, and `apps/hymnal/dist`, each checked
 to lie inside the app first) and fails `Unhealthy` (`port-free`) while
@@ -222,8 +242,21 @@ and exits 1 (`journey` prints one line per step, then its summary). The
 tags: `WarmCheckout`, `NoSession`, `SimulatorDown`, `ReadinessTimedOut`,
 `TargetMissing` (with what the driver said), `TargetShown` (a `hides`
 expect still showed), `BadJourney` (a journey file that does not decode),
-`ToolMissing`, `ToolFailed`, `NotOnPlatform`, `HostFailed`, `Unhealthy`,
-`BadArguments` (an unknown command or flag; the help goes to stderr). The
+`ToolMissing`, `ToolFailed`, `NotOnPlatform`, `HostFailed`, `Escaped` (the
+contained host refused a path that leads out of its roots), `Unhealthy`,
+`BootRefused` (`boot` started nothing: the state holds a live, legacy or
+undecodable session, or the browser's socket path would not fit),
+`StateBusy` (another `boot` or `down` holds the state; it names that
+command's pid), `BadArguments` (an unknown command or flag; the help goes
+to stderr). agent-device and agent-browser run with `HOME` the drive's own
+folder, `<state>/home` (mode 0700; `paths.home` in `boot`'s line), and
+agent-browser's sockets in `/tmp/sim-<hash of that HOME>`, so they never
+read or write the caller's `~/.agent-device` or `~/.agent-browser`; every
+other tool keeps the caller's environment. A link in that HOME that leads
+out of the state, or a socket folder that is a link or holds one at the
+session's files, fails the step with error `Escaped` before the driver
+runs. `boot`'s line records the server's identity (`detail.serverPid` and
+`detail.serverStarted`), as the session file does. The
 commands: `boot`, `install`, `doctor`, `journey`, `open`, `tap`, `back`,
 `fill`, `scroll`, `gesture`, `hold`, `relaunch`, `shot`, `snapshot`,
 `record`, `log`, `down`, and `serve` (the dev server's own process, which

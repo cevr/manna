@@ -27,7 +27,7 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { Cause, Clock, Console, Effect, Exit, FileSystem, Layer, Sink, Stream } from 'effect';
 import { HttpClient, HttpClientResponse } from 'effect/http';
 import * as PlatformError from 'effect/PlatformError';
-import { ChildProcessSpawner } from 'effect/process';
+import { type ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import type { App } from '../app.ts';
 import { runSim } from '../command.ts';
@@ -57,6 +57,8 @@ export const APP: App = {
   cleanPaths: ['ios/build', 'ios/Pods', 'dist'],
 };
 const FIXED = Date.UTC(2026, 10, 3, 12, 0, 0);
+/** The start time `ps` reads for the stand-in server (and the command) until a stop, and the one a session records. */
+const STARTED = 'Tue Nov 3 12:00:00 2026';
 const PRODUCTS = 'Build/Products/Debug-iphonesimulator';
 
 type Variant = 'plain' | 'nm' | 'pods' | 'spm' | 'ancestor';
@@ -153,6 +155,7 @@ const makeLayout = (base: string, variant: Variant, session: Session): Layout =>
         serverPid: 4242,
         udid: session === 'ios' ? 'PROBE-UDID' : '',
         bootedAt: '2026-11-03T12:00:00.000Z',
+        serverStarted: STARTED,
       }),
     );
   const roots = ROOT_KEYS.map((key) => {
@@ -226,7 +229,8 @@ const outsideState = (layout: Layout) => {
 
 const LOOKS = new Set(['exists', 'stat', 'lstat', 'realPath', 'readLink', 'access', 'glob']);
 const TWO_PATHS = new Set(['copy', 'copyFile', 'rename']);
-const ITSELF = new Set(['remove', 'rename']);
+/** Calls that act on the path's last name itself, never where a link there leads: a symlink is made at the name, or fails on one. */
+const ITSELF = new Set(['remove', 'rename', 'symlink']);
 
 interface Run {
   readonly layout: Layout;
@@ -315,8 +319,53 @@ const runtimes = JSON.stringify({
   runtimes: [{ identifier: 'com.apple.CoreSimulator.SimRuntime.iOS-26-0', isAvailable: true }],
 });
 
+/** The variables a spawn sets over the caller's: a string, or none when it is unset or removed. */
+type SpawnEnv = ChildProcess.CommandOptions['env'];
+
+const envString = (env: SpawnEnv, name: string) => {
+  const value = env?.[name];
+  return typeof value === 'string' ? value : undefined;
+};
+
+/**
+ * What a driver writes because of the environment the drive gives it, as
+ * agent-device 0.21.35 and agent-browser 0.39.2 choose their paths: the
+ * daemon's state and log under `AGENT_DEVICE_STATE_DIR`, else
+ * `$HOME/.agent-device`; the browser's socket and its pid file (beside
+ * them it keeps its engine, stream and version files the same way) under
+ * `AGENT_BROWSER_SOCKET_DIR`, else `XDG_RUNTIME_DIR`, else
+ * `$HOME/.agent-browser` (made there, and written in a folder outside the
+ * test's tree only when that folder is already there, as the drive never
+ * makes it). A driver in the caller's environment (no HOME given) writes
+ * nothing here: what it writes is the caller's, not the drive's.
+ */
+const driverWrites = (run: Run, command: string, env: SpawnEnv) => {
+  const home = envString(env, 'HOME');
+  if (home === undefined) return;
+  if (command === 'agent-device') {
+    const state = envString(env, 'AGENT_DEVICE_STATE_DIR') ?? `${home}/.agent-device`;
+    toolWrite(run, `${state}/daemon.json`, 'daemon');
+    toolWrite(run, `${state}/logs/daemon.log`, 'log');
+    return;
+  }
+  const dir =
+    envString(env, 'AGENT_BROWSER_SOCKET_DIR') ??
+    envString(env, 'XDG_RUNTIME_DIR') ??
+    `${home}/.agent-browser`;
+  if (!under(resolve(dir), run.layout.base) && !nfs.existsSync(dir)) return;
+  toolWrite(run, `${dir}/${APP.driverSession}.sock`, 'socket');
+  toolWrite(run, `${dir}/${APP.driverSession}.pid`, 'pid');
+};
+
 /** What a stand-in tool does to the files and prints. */
-const tool = (run: Run, command: string, args: ReadonlyArray<string>, cwd: string | undefined) => {
+const tool = (
+  run: Run,
+  command: string,
+  args: ReadonlyArray<string>,
+  cwd: string | undefined,
+  env: SpawnEnv,
+) => {
+  if (command === 'agent-device' || command === 'agent-browser') driverWrites(run, command, env);
   const after = (flag: string) => args[args.indexOf(flag) + 1] ?? '';
   const last = args.at(-1) ?? '';
   const joined = args.join(' ');
@@ -363,12 +412,15 @@ const tool = (run: Run, command: string, args: ReadonlyArray<string>, cwd: strin
   }
   if (command === '/bin/sh' && (args[1] ?? '').includes('nohup')) {
     run.served = true;
-    return { exitCode: 0, stdout: '4242\n' };
+    return { exitCode: 0, stdout: `4242 ${STARTED}\n` };
   }
   if (command === 'kill') {
-    if (args[0] === '-0') return { exitCode: run.term ? 1 : 0, stdout: '' };
     run.term = true;
     return { exitCode: 0, stdout: '' };
+  }
+  if (command === 'ps' && args.includes('lstart=')) {
+    if (run.term && args.at(-1) === '4242') return { exitCode: 1, stdout: '' };
+    return { exitCode: 0, stdout: `${STARTED}\n` };
   }
   if (command === 'sysctl')
     return { exitCode: 0, stdout: args.includes('vm.loadavg') ? '{ 1.00 1.00 1.00 }\n' : '12\n' };
@@ -414,6 +466,7 @@ const standInSpawner = (run: Run) =>
     const name = command._tag === 'StandardCommand' ? command.command : 'piped';
     const args = command._tag === 'StandardCommand' ? command.args.map(String) : [];
     const cwd = command._tag === 'StandardCommand' ? command.options.cwd : undefined;
+    const env = command._tag === 'StandardCommand' ? command.options.env : undefined;
     run.ops.push(`spawn ${name} cwd=${cwd ?? ''}`);
     const refused = refusal(run, 'spawn', name);
     if (refused) return Effect.fail(refused);
@@ -421,7 +474,7 @@ const standInSpawner = (run: Run) =>
       judgeSpawn(run, name, args, cwd);
       let answer = { exitCode: 1, stdout: '' };
       try {
-        answer = tool(run, name, args, cwd);
+        answer = tool(run, name, args, cwd, env);
       } catch (error) {
         answer = { exitCode: 1, stdout: String(error) };
       }
@@ -733,15 +786,16 @@ const parsed = (line: string): Printed => {
  * contained host refuses one: each run that fails must fail typed and print
  * its error once as a failure line (`ok: false` with the error); what it
  * printed otherwise is the command's own. Each problem found, named by the
- * call refused.
+ * call refused. Part `part` of `parts` refuses every `parts`-th call from
+ * the `part + 1`-th, so a command with many calls runs in parts.
  */
-export const refusals = async (name: string): Promise<Array<string>> => {
+export const refusals = async (name: string, part = 0, parts = 1): Promise<Array<string>> => {
   const scratch = nfs.mkdtempSync(join(tmpdir(), 'sim-refusals-'));
   const command = commandNamed(name);
   const problems: Array<string> = [];
   try {
     const plain = await runCase(scratch, command, 'plain');
-    for (let at = 1; at <= plain.calls; at += 1) {
+    for (let at = 1 + part; at <= plain.calls; at += parts) {
       const ran = await runCase(scratch, command, 'plain', undefined, undefined, { refuseAt: at });
       nfs.rmSync(ran.base, { recursive: true, force: true });
       const said = `${name}: host call ${at} (${ran.ops[at - 1] ?? '?'}) refused`;
