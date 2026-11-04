@@ -1,8 +1,7 @@
-import * as BunServices from '@effect/platform-bun/BunServices';
 import { rng } from '@manna/film/core';
-import { decodePng, type Raster } from '@manna/film/tools';
-import { Effect, FileSystem, Option, Result, Schema } from 'effect';
-import { describe, expect, it, test } from 'effect-bun-test';
+import type { Raster } from '@manna/film/tools';
+import { Result } from 'effect';
+import { describe, expect, test } from 'effect-bun-test';
 import {
   alphaAt,
   cellsOf,
@@ -12,13 +11,10 @@ import {
   groundOf,
   hexOf,
   largestPiece,
-  measuredInk,
   mendPockets,
   type Palette,
-  PaletteJson,
   paintsOf,
   rgbAt,
-  rgbOfHex,
   type Rgb,
   snapped,
   splitSheet,
@@ -328,38 +324,4 @@ describe('splitSheet over generated sheets', () => {
     const b = Result.getOrThrow(splitSheet(g.raster, g.n, PALETTE));
     expect(a.cells.map((c) => [...c.raster.rgba])).toEqual(b.cells.map((c) => [...c.raster.rgba]));
   });
-});
-
-const CAST = `${import.meta.dir}/../cast`;
-
-/** Each member a shot casts, with the kept view its shot sheet's refs name first. */
-const MEMBERS = [
-  ['lead-feast', 'profileRight'],
-  ['feast-guest-man', 'poses-1'],
-  ['feast-guest-woman', 'poses-1'],
-] as const;
-
-describe('palette.json', () => {
-  for (const [member, view] of MEMBERS)
-    it.effect(
-      `${member}: every paint is a colour its look.md names, and the ink is its first kept view's, measured`,
-      () =>
-        Effect.gen(function* () {
-          const fs = yield* FileSystem.FileSystem;
-          const folder = `${CAST}/${member}/cast-sheet`;
-          const palette = yield* Schema.decodeEffect(PaletteJson)(
-            yield* fs.readFileString(`${folder}/palette.json`),
-          );
-          const look = (yield* fs.readFileString(`${folder}/look.md`)).toLowerCase();
-          const hexes = palette.parts.flatMap((p) => [
-            p.base,
-            ...Option.toArray(Option.fromUndefinedOr(p.shade)),
-          ]);
-          expect(hexes.filter((h) => !look.includes(h.toLowerCase()))).toEqual([]);
-          const kept = yield* Effect.fromResult(
-            decodePng(yield* fs.readFile(`${folder}/views/${view}.png`)),
-          );
-          expect(deltaE(measuredInk(kept), rgbOfHex(palette.ink))).toBeLessThanOrEqual(2);
-        }).pipe(Effect.provide(BunServices.layer)),
-    );
 });

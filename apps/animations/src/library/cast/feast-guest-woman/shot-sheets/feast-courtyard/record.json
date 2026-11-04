@@ -1,0 +1,55 @@
+{
+  "member": "feast-guest-woman",
+  "id": "feast-courtyard",
+  "prompt": "One shot sheet for an animated film: the one person in the reference images drawn 3 times in one row, left to right, in exactly this order:\n1. seated on the low wooden stool facing the viewer square, both round hands resting on the knees, head and eyes to the viewer, a calm short smile line.\n2. seated on the stool exactly as in the first figure, the head a quarter turned toward the side the description names, a kind closed smile.\n3. seated on the stool exactly as in the first figure, the head a quarter turned toward the side the description names, surprised: brows raised, eyes open, a small round open mouth.\nThe person, as described: The woman is the feast's seated female guest, a plain, never-named grown woman of the Bible's own time built on the base filler cast's grown woman (`filler-bases`) with one house part over her (in-its-order item 3), drawn in the house look: a painted storybook cartoon of flat colour shapes, one bold warm-dark outline of even weight round the figure, shading with colour only. She sits on the house's low wooden stool facing the viewer square, both round hands resting on the knees, three times in one row: neutral (head and eyes to the viewer, a calm short smile line), turn (head a quarter toward the viewer's left, surprised: brows raised, eyes open, a small round open mouth) and smile (the same turn, a kind closed smile). She sits picture-right at the feast and turns toward the viewer's left, toward the lead beside her. Seated, she is 2.831 of her own heads from the veil's top to the soles. Her head is the base's upright oval with ears showing and the base's three-mark face; her dark-brown hair (#6e3f1f as drawn) is parted in the middle and shows at the brow and behind the turned head. Over the base's cream robe and plain flat sash she wears an olive mantle drawn over her head as a veil, framing her face, and open down the front over the robe (#80774c as drawn, its shaded side #686141, asked #768059: the drawn olive is warmer, toward khaki); brown sandals (#553019) on bare feet; the stool's wood #8e4c27, its far side #884728; a soft lavender contact shadow (#e6d7f0) under the stool. The kept sheet draws the skin and the robe paler than the look asks: skin #fdbd83 as drawn against the base's #fdb577, and the robe #fdf4e2 (its shaded side turned toward lavender #e7d7ef) against #f9e7cf; tint them at the cut if a scene needs the house palette. Her eyes sit lower on the figure than the seated lead's; set her scale in the scene against the lead, not from the sheet alone. Where the description names an order of figures, the order above holds.\nContinuity: this is one person drawn 3 times in one pass, so every figure has the same face, the same head size, the same body proportions, the same colours, the same line weight and the same shading; only the turn and the pose change. All figures stand on one baseline at one size, the soles of every figure on the same line.\nHouse rules: each hand is a plain round circle of skin at the end of its sleeve, no thumb and no fingers. Sleeves run to the wrist in every figure, the raised arm too: no bare arm or forearm ever shows. One bold warm-dark outline of even weight round each figure. One flat shade per colour: no gradient, no texture, no airbrush, no highlight.\nPaint with exactly these colours: the outline ink #1b0a01; skin #fdbd83, drawn flat in that one colour; hair #6e3f1f, drawn flat in that one colour; robe #fdf4e2 with its shaded side #e7d7ef; mantle #80774c with its shaded side #686141; sandals #553019, drawn flat in that one colour; stool #8e4c27 with its shaded side #884728; contact shadow #e6d7f0, drawn flat in that one colour.\nThe ground: one flat colour, #a6dcae, everywhere behind and between the figures, with clear ground between each figure and the next so no figure touches another; no floor, no cast shadow, no text, no frame.",
+  "refs": [
+    {
+      "file": "cast-sheet/views/poses-1.png",
+      "sha256": "5fc27a3a715b34513f72e85684b4c4c833145117693512e3c20f176ff78b4e2f"
+    },
+    {
+      "file": "cast-sheet/views/poses-2.png",
+      "sha256": "71e60ab948bc1b9591a7b8170f5a59ce584c6d361957ce299f0422ea77f90a3d"
+    },
+    {
+      "file": "cast-sheet/views/poses-3.png",
+      "sha256": "3df28a3d0809c6b488a4617a88e7bdacdd499778e08a2b8eca0163b46f6079fa"
+    }
+  ],
+  "sheet": "64d23dc84124828ebeeb29a05d3c7430431886a7fd0e27f20e927bd6bb99d9d6",
+  "size": "1536x1024",
+  "ground": "#a2deab",
+  "drawn": "2026-11-04",
+  "cells": [
+    {
+      "key": "neutral",
+      "box": {
+        "x": 41,
+        "y": 0,
+        "width": 475,
+        "height": 1024
+      },
+      "sha256": "cd2e6ed9200d04981a929029bbe403da5966b3f896460efce32ed121bc6f74ac"
+    },
+    {
+      "key": "smile",
+      "box": {
+        "x": 516,
+        "y": 0,
+        "width": 500,
+        "height": 1024
+      },
+      "sha256": "1733728566c5942b4f61aca35581c6b5e63ecda13af4551b2b6acb66bbec47fa"
+    },
+    {
+      "key": "turn",
+      "box": {
+        "x": 1016,
+        "y": 0,
+        "width": 476,
+        "height": 1024
+      },
+      "sha256": "89a3b074648fe6c42980b478b0552600b9ef96d2546d851d36f5b265f9e9f619"
+    }
+  ]
+}
