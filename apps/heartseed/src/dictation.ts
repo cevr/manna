@@ -126,20 +126,18 @@ export const layer: Layer.Layer<Dictation, never, DictationSource> = Layer.effec
 
     /** A listen whose refusal counts as that session's `unavailable`. */
     const listen = (call: Extract<Call, { _tag: 'Listen' }>) =>
-      source
-        .listen(call.session, call.engine, call.locale, call.hints)
-        .pipe(
-          Effect.catchTag('DictationUnavailable', (error) =>
-            Effect.logDebug('dictation.listen.refused').pipe(
-              Effect.annotateLogs({
-                session: call.session,
-                engine: call.engine,
-                reason: error.reason,
-              }),
-              Effect.andThen(run({ _tag: 'Refused', session: call.session })),
-            ),
+      source.listen(call.session, call.engine, call.locale, call.hints).pipe(
+        Effect.catchTag('DictationUnavailable', (error) =>
+          Effect.logDebug('dictation.listen.refused').pipe(
+            Effect.annotateLogs({
+              session: call.session,
+              engine: call.engine,
+              reason: error.reason,
+            }),
+            Effect.andThen(run({ _tag: 'Refused', session: call.session })),
           ),
-        );
+        ),
+      );
 
     /** The grace: after `FINISH_GRACE_MS` on the service's own clock, whoever called finish, a session still finishing ends finished. */
     const grace = (session: number) =>
