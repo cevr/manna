@@ -1,11 +1,93 @@
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { ImageRoute } from '@manna/film/tools';
-import { Console, Effect } from 'effect';
+import { Console, Effect, FileSystem, Schema } from 'effect';
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
-import { CAST, drawSheet, keepSheet, splitFiles } from './store.ts';
+import { frameAt, timesOf } from './shot.ts';
+import { feastCourtyard } from './shots/feast-courtyard.ts';
+import { CAST, drawSheet, headsOf, keepSheet, loadFigures, splitFiles } from './store.ts';
+
+/** The shots the command knows, by id. */
+const SHOTS = { 'feast-courtyard': feastCourtyard } as const;
+
+const SHOT_IDS = ['feast-courtyard'] as const;
+
+/** A plan: each frame's time and, per figure, its cell, place, squash and scale. */
+const PlanJson = Schema.fromJsonString(
+  Schema.Struct({
+    fps: Schema.Finite,
+    duration: Schema.Finite,
+    frames: Schema.Array(
+      Schema.Struct({
+        t: Schema.Finite,
+        figures: Schema.Array(
+          Schema.Struct({
+            name: Schema.String,
+            cell: Schema.String,
+            x: Schema.Finite,
+            y: Schema.Finite,
+            sx: Schema.Finite,
+            sy: Schema.Finite,
+            scale: Schema.Finite,
+          }),
+        ),
+      }),
+    ),
+  }),
+  { space: 2 },
+);
+
+/** Write the plan of `shot`: every frame at `i / fps`, each figure's scale from its stored sheet. */
+const writePlan = Effect.fn('Storybook.writePlan')(function* (
+  id: (typeof SHOT_IDS)[number],
+  out: string,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const shot = SHOTS[id];
+  const heads = headsOf(yield* loadFigures(CAST, shot));
+  const frames = timesOf(shot).map((t) => {
+    const frame = frameAt(shot, heads, t);
+    return {
+      t,
+      figures: frame.figures.map(({ name, cell, x, y, sx, sy, scale }) => ({
+        name,
+        cell,
+        x,
+        y,
+        sx,
+        sy,
+        scale,
+      })),
+    };
+  });
+  yield* fs.writeFileString(
+    out,
+    `${yield* Schema.encodeEffect(PlanJson)({ fps: shot.fps, duration: shot.duration, frames })}\n`,
+  );
+  return frames.length;
+});
+
+const shotArgument = Argument.Literals('shot', SHOT_IDS).pipe(
+  Argument.withDescription('the shot, by id (storybook/shots/)'),
+);
+
+const planCommand = Command.make(
+  'plan',
+  {
+    shot: shotArgument,
+    out: Flag.String('out').pipe(Flag.withDescription('the plan file to write')),
+  },
+  ({ shot, out }) =>
+    writePlan(shot, out).pipe(
+      Effect.flatMap((n) => Console.log(`planned ${shot}: ${n} frames in ${out}`)),
+    ),
+).pipe(
+  Command.withDescription(
+    "Write a shot's plan: every frame at i / fps, each figure's cell, place, squash and derived scale",
+  ),
+);
 
 /** A comma-separated list's items, blanks dropped. */
 const listOf = (text: string): ReadonlyArray<string> =>
@@ -88,7 +170,7 @@ const keepCommand = Command.make(
 ).pipe(Command.withDescription("Write the owner's keep on a drawn shot sheet's record"));
 
 const storybook = Command.make('storybook').pipe(
-  Command.withSubcommands([splitCommand, drawCommand, keepCommand]),
+  Command.withSubcommands([splitCommand, drawCommand, keepCommand, planCommand]),
   Command.withDescription('Shot sheets and storybook shots: flat drawn figures on depth layers'),
 );
 

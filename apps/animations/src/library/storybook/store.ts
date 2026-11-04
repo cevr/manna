@@ -6,14 +6,17 @@ import {
   clearBackground,
   groundOf,
   hexOf,
+  type Paint,
   type Palette,
   PaletteJson,
   paintsOf,
   rgbOfHex,
   rgbSum,
+  sheetHeadOf,
   splitSheet,
   type Split,
 } from './sheet.ts';
+import { type Figure, figuresOf, type Layer, type Shot } from './shot.ts';
 
 /** The shared cast, where each member's palette, kept views and shot sheets live. */
 export const CAST = `${import.meta.dir}/../cast`;
@@ -359,6 +362,37 @@ export const drawSheet = Effect.fn('Storybook.drawSheet')(function* (
   );
   return record;
 });
+
+/** One figure of a shot as stored: its layer and item, its sheet's record, its palette's paints, its cells by key and its sheet's head. */
+export interface StoredFigure {
+  readonly layer: Layer;
+  readonly figure: Figure;
+  readonly record: SheetRecord;
+  readonly paints: ReadonlyArray<Paint>;
+  readonly cells: ReadonlyMap<string, Raster>;
+  readonly head: number;
+}
+
+/** Every figure of `shot` read from the cast: each its one sheet's record, palette and stored cells; fails on a sheet whose cells read no head. */
+export const loadFigures = Effect.fn('Storybook.loadFigures')(function* (cast: string, shot: Shot) {
+  return yield* Effect.forEach(figuresOf(shot), ({ layer, figure: f }) =>
+    Effect.gen(function* () {
+      const record = yield* readRecord(cast, f.member, f.sheet);
+      const paints = paintsOf(yield* memberPalette(cast, f.member));
+      const cells = new Map<string, Raster>();
+      for (const c of record.cells)
+        cells.set(c.key, yield* readCell(cast, f.member, f.sheet, c.key));
+      const head = sheetHeadOf([...cells.values()], paints);
+      if (Option.isNone(head))
+        return yield* StoreFailed.make({ reason: `${f.member}'s sheet ${f.sheet} reads no head` });
+      return { layer, figure: f, record, paints, cells, head: head.value } satisfies StoredFigure;
+    }),
+  );
+});
+
+/** Each figure's sheet head by figure name, as `frameAt` reads them. */
+export const headsOf = (figures: ReadonlyArray<StoredFigure>): ReadonlyMap<string, number> =>
+  new Map(figures.map((f) => [f.figure.name, f.head] as const));
 
 /** The owner's keep written on a drawn sheet's record: the day, his words and the ask he answered. */
 export const keepSheet = Effect.fn('Storybook.keepSheet')(function* (

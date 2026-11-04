@@ -435,6 +435,130 @@ export const splitSheet = (
   }));
 };
 
+/** The lines of one drawn figure, in its picture's rows and columns: none where a line cannot be read. */
+export interface Lines {
+  /** The top and bottom opaque rows of the whole figure. */
+  readonly top: number;
+  readonly bottom: number;
+  /** The mean x of the opaque pixels in the top tenth of the figure. */
+  readonly headColumn: number;
+  /** The soles' centre: the mean x of the opaque pixels in the bottom 8 % of the figure's rows. */
+  readonly centreColumn: number;
+  /** The first opaque row in the head column. */
+  readonly crown: number;
+  /** The crown to the collar: the first garment or sash row below the face's first skin row in the head column. */
+  readonly head: Option.Option<number>;
+  /** The last garment row in the centre column. */
+  readonly hem: Option.Option<number>;
+  /** The first sash row in the centre column. */
+  readonly sashTop: Option.Option<number>;
+}
+
+/** The mean x of the opaque pixels in rows `y0..y1` (inclusive), none when there are none. */
+const meanColumn = (r: Raster, y0: number, y1: number): Option.Option<number> => {
+  let sum = 0;
+  let count = 0;
+  for (let y = Math.max(0, y0); y <= Math.min(r.height - 1, y1); y++)
+    for (let x = 0; x < r.width; x++)
+      if (alphaAt(r, y * r.width + x) > 0) {
+        sum += x;
+        count += 1;
+      }
+  return Option.some(sum / Math.max(1, count)).pipe(Option.filter(() => count > 0));
+};
+
+/** The fewest rows in a run a line reads as paint: a shorter one is the anti-aliased fringe at an outline, snapped to whatever paint lay near. */
+const LINE_RUN = 3;
+
+/** The rows of column `x` from `from` downward whose pixel is exactly a paint of one of `roles`, in runs of `LINE_RUN` or more; clear pixels, the ink and colours left as drawn are skipped. */
+const rowsOfRole = (
+  r: Raster,
+  x: number,
+  from: number,
+  roles: ReadonlyArray<Role | 'ink'>,
+  paints: ReadonlyArray<Paint>,
+): ReadonlyArray<number> => {
+  const rows = paintRows(r, x, from, roles, paints);
+  const painted = new Set(rows);
+  const run = (y: number, step: number) => {
+    let n = 0;
+    while (painted.has(y + step * (n + 1))) n += 1;
+    return n;
+  };
+  return rows.filter((y) => run(y, -1) + run(y, 1) + 1 >= LINE_RUN);
+};
+
+const paintRows = (
+  r: Raster,
+  x: number,
+  from: number,
+  roles: ReadonlyArray<Role | 'ink'>,
+  paints: ReadonlyArray<Paint>,
+): ReadonlyArray<number> => {
+  const nearest = nearestOf(paints);
+  const rows: Array<number> = [];
+  for (let y = from; y < r.height; y++) {
+    const q = y * r.width + x;
+    if (alphaAt(r, q) === 0) continue;
+    const { index, distance } = nearest(rgbAt(r, q));
+    const role = paints[index]?.role ?? 'ink';
+    if (distance === 0 && roles.includes(role)) rows.push(y);
+  }
+  return rows;
+};
+
+/**
+ * A figure's lines, read in its head column and its centre column so a
+ * raised arm never moves one: the crown and the collar in the head column,
+ * the sash top and the hem in the centre column, ink marks skipped; none
+ * when the picture holds no opaque pixel.
+ */
+export const linesOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<Lines> => {
+  const rows = Array.from({ length: r.height }, (_, y) => y).filter((y) =>
+    Array.from({ length: r.width }, (_, x) => x).some((x) => alphaAt(r, y * r.width + x) > 0),
+  );
+  const top = rows[0] ?? -1;
+  const bottom = rows.at(-1) ?? -1;
+  const height = bottom - top + 1;
+  if (top < 0) return Option.none();
+  const headColumn = Math.round(
+    Option.getOrElse(meanColumn(r, top, top + Math.ceil(height * 0.1) - 1), () => 0),
+  );
+  const centreColumn = Math.round(
+    Option.getOrElse(meanColumn(r, bottom - Math.ceil(height * 0.08) + 1, bottom), () => 0),
+  );
+  const crown = Math.max(
+    top,
+    Array.from({ length: r.height }, (_, y) => y).find(
+      (y) => alphaAt(r, y * r.width + headColumn) > 0,
+    ) ?? top,
+  );
+  const face = rowsOfRole(r, headColumn, crown, ['skin'], paints)[0] ?? r.height;
+  const collar = rowsOfRole(r, headColumn, face, ['garment', 'sash'], paints)[0];
+  const garment = rowsOfRole(r, centreColumn, top, ['garment'], paints);
+  return Option.some({
+    top,
+    bottom,
+    headColumn,
+    centreColumn,
+    crown,
+    head: Option.map(Option.fromUndefinedOr(collar), (y) => y - crown),
+    hem: Option.fromUndefinedOr(garment.at(-1)),
+    sashTop: Option.fromUndefinedOr(rowsOfRole(r, centreColumn, top, ['sash'], paints)[0]),
+  });
+};
+
+/** The median of `values`, none when there are none. */
+export const medianOf = (values: ReadonlyArray<number>): Option.Option<number> =>
+  Option.fromUndefinedOr(values.toSorted((a, b) => a - b)[values.length >> 1]);
+
+/** A sheet's head: the median head (crown to collar) over its cells that read one. */
+export const sheetHeadOf = (
+  cells: ReadonlyArray<Raster>,
+  paints: ReadonlyArray<Paint>,
+): Option.Option<number> =>
+  medianOf(cells.flatMap((c) => Option.toArray(Option.flatMap(linesOf(c, paints), (l) => l.head))));
+
 /** The share of a picture taken as its ink: its darkest 2 % of opaque pixels. */
 const INK_SHARE = 0.02;
 

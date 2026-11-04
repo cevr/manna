@@ -1,0 +1,351 @@
+import { rng } from '@manna/film/core';
+import type { Raster } from '@manna/film/tools';
+import { Option } from 'effect';
+import { describe, expect, test } from 'effect-bun-test';
+import { hexOf, type Palette, paintsOf, rgbAt, type Rgb, rgbOfHex } from './sheet.ts';
+import {
+  chromaOf,
+  figure,
+  type Figure,
+  frameAt,
+  hold,
+  keyRun,
+  type Layer,
+  type Light,
+  lit,
+  scaleOf,
+  type Shot,
+  type Span,
+  SQUASH,
+  timesOf,
+  turn,
+  walk,
+} from './shot.ts';
+import { feastCourtyard } from './shots/feast-courtyard.ts';
+
+const KEYS = ['a', 'b', 'c', 'd'] as const;
+
+type Key = (typeof KEYS)[number];
+
+/** One span of a generated figure and the time it holds the figure, from its start to the next span's. */
+interface Window {
+  readonly span: Span<Key>;
+  readonly from: number;
+  readonly to: number;
+}
+
+/** A generated figure: the figure, its layer's depth, its sheet's head and its spans' windows. */
+interface Generated {
+  readonly figure: Figure<Key>;
+  readonly z: number;
+  readonly head: number;
+  readonly windows: ReadonlyArray<Window>;
+}
+
+/** The cell the span's own rule names at `t`, read from the span alone. */
+const cellOf = (s: Span<Key>, t: number): Key => {
+  switch (s._tag) {
+    case 'Hold':
+    case 'Walk':
+      return s.cell;
+    case 'Turn':
+      if (t < s.at + 0.4 * s.dur) return s.from;
+      return s.to;
+    case 'Keys':
+      return (s.keys.filter(([at]) => at <= t).at(-1) ?? s.keys[0])[1];
+  }
+};
+
+const pick = <A>(draw: () => number, xs: ReadonlyArray<A>, fallback: A): A =>
+  xs[Math.floor(draw() * xs.length)] ?? fallback;
+
+const spanIn = (draw: () => number, from: number, to: number): Span<Key> => {
+  const key = () => pick(draw, KEYS, 'a');
+  const first = key();
+  const other = pick(
+    draw,
+    KEYS.filter((k) => k !== first),
+    'b',
+  );
+  const len = to - from;
+  const offsets = Array.from({ length: Math.floor(draw() * 4) }, () => from + draw() * len).sort(
+    (a, b) => a - b,
+  );
+  const kinds: ReadonlyArray<() => Span<Key>> = [
+    () => hold(from, to, first),
+    () => turn(from, len * (0.3 + draw() * 0.7), first, other),
+    () => keyRun<Key>([[from, first], ...offsets.map((t) => [t, key()] as const)]),
+    () =>
+      walk<Key>({
+        from,
+        to,
+        cell: first,
+        x0: draw() * 400 - 200,
+        x1: draw() * 400 + 200,
+        bob: draw() * 8,
+        rate: 1 + draw() * 2,
+      }),
+  ];
+  return pick(draw, kinds, kinds[0] ?? (() => hold(from, to, first)))();
+};
+
+const generatedFigure = (draw: () => number, name: string, duration: number): Generated => {
+  const windows: Array<Window> = [];
+  for (let from = 0; from < duration;) {
+    const to = from + 0.5 + draw() * 2;
+    windows.push({ span: spanIn(draw, from, to), from, to });
+    from = to;
+  }
+  const [first, ...rest] = windows.map((w) => w.span);
+  return {
+    figure: figure(KEYS, {
+      name,
+      member: 'm',
+      sheet: 's',
+      at: { x: draw() * 1000, ground: 400 + draw() * 300 },
+      spans: [first ?? hold(0, duration, 'a'), ...rest],
+    }),
+    z: 0.6 + draw() * 2.7,
+    head: 80 + draw() * 320,
+    windows,
+  };
+};
+
+const LIGHT: Light = {
+  tint: { colour: '#ffd79a', amount: 0.1 },
+  shade: { colour: '#5b4a8c', amount: 0.1 },
+};
+
+/** A generated shot of one to three layers, one or two figures each, with each figure's spans and sheet head. */
+const generatedShot = (seed: number) => {
+  const draw = rng(seed);
+  const duration = 6 + Math.floor(draw() * 6);
+  const figures: Array<Generated> = [];
+  const layers: Array<Layer> = Array.from({ length: 1 + Math.floor(draw() * 3) }, (_, l) => {
+    const made = Array.from({ length: 1 + Math.floor(draw() * 2) }, (_, f) =>
+      generatedFigure(draw, `f${l}-${f}`, duration),
+    );
+    const z = made[0]?.z ?? 1;
+    figures.push(...made.map((g) => ({ ...g, z })));
+    return { name: `l${l}`, z, blur: 0, items: made.map((g) => g.figure) };
+  });
+  const shot: Shot = {
+    id: `s${seed}`,
+    size: { width: 1280, height: 720 },
+    fps: 24,
+    duration,
+    headPx: 100 + draw() * 100,
+    light: LIGHT,
+    camera: [
+      { t: 0, x: 640, y: 360, zoom: 1 },
+      { t: duration, x: 600 + draw() * 80, y: 360, zoom: 1 + draw() * 0.2 },
+    ],
+    layers,
+  };
+  const heads = new Map(figures.map((g) => [g.figure.name, g.head] as const));
+  return { shot, figures, heads };
+};
+
+const SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+/** The span a generated figure is in at `t` by its windows, none for a figure not generated. */
+const spanOfWindow = (figures: ReadonlyArray<Generated>, name: string, t: number) =>
+  Option.fromUndefinedOr(
+    figures
+      .find((g) => g.figure.name === name)
+      ?.windows.filter((w) => w.from <= t)
+      .at(-1)?.span,
+  );
+
+describe('frameAt over generated shots', () => {
+  test('draws each figure at every frame in the cell its span names', () => {
+    const misses = SEEDS.flatMap((seed) => {
+      const { shot, figures, heads } = generatedShot(seed);
+      return timesOf(shot).flatMap((t) =>
+        frameAt(shot, heads, t).figures.flatMap((f) => {
+          const want = Option.match(spanOfWindow(figures, f.name, t), {
+            onNone: () => 'none',
+            onSome: (s) => cellOf(s, t),
+          });
+          if (f.cell === want) return [];
+          return [`seed ${seed} t ${t}: ${f.name} draws ${f.cell}, its span names ${want}`];
+        }),
+      );
+    });
+    expect(misses.slice(0, 5)).toEqual([]);
+  });
+
+  test('changes the drawn cell exactly once in a turn, squashing within its bounds and back', () => {
+    const misses = SEEDS.flatMap((seed) => {
+      const { shot, figures, heads } = generatedShot(seed);
+      return figures.flatMap((g) =>
+        g.windows.flatMap((w) => {
+          if (w.span._tag !== 'Turn') return [];
+          const end = w.span.at + w.span.dur;
+          const frames = Array.from(
+            { length: 241 },
+            (_, i) => w.from + ((end - w.from) * i) / 240,
+          ).flatMap((t) => frameAt(shot, heads, t).figures.filter((f) => f.name === g.figure.name));
+          const swaps = frames.filter((f, i) => i > 0 && f.cell !== frames[i - 1]?.cell).length;
+          const last = frames.at(-1);
+          const settled = [last?.sx, last?.sy];
+          if (swaps === 1 && settled.join() === '1,1') return [];
+          return [`seed ${seed} ${g.figure.name}: ${swaps} swaps, ends at ${settled.join()}`];
+        }),
+      );
+    });
+    expect(misses.slice(0, 5)).toEqual([]);
+  });
+
+  test('keeps every squash within 6 % across and 3 % up, and only a turn squashes', () => {
+    const misses = SEEDS.flatMap((seed) => {
+      const { shot, figures, heads } = generatedShot(seed);
+      return timesOf(shot).flatMap((t) =>
+        frameAt(shot, heads, t).figures.flatMap((f) => {
+          const turning = Option.exists(spanOfWindow(figures, f.name, t), (s) => s._tag === 'Turn');
+          const bounded =
+            f.sx >= 1 - SQUASH.x - 1e-12 && f.sx <= 1 && f.sy >= 1 && f.sy <= 1 + SQUASH.y + 1e-12;
+          const still = f.sx === 1 && f.sy === 1;
+          if (bounded && (turning || still)) return [];
+          return [`seed ${seed} t ${t}: ${f.name} sx ${f.sx} sy ${f.sy}`];
+        }),
+      );
+    });
+    expect(misses.slice(0, 5)).toEqual([]);
+  });
+
+  test('moves a figure only in a walk, and a walk moves only its x and its bob, never its drawing', () => {
+    const misses = SEEDS.flatMap((seed) => {
+      const { shot, figures, heads } = generatedShot(seed);
+      return timesOf(shot).flatMap((t) =>
+        frameAt(shot, heads, t).figures.flatMap((f) => {
+          const at = figures.find((x) => x.figure.name === f.name)?.figure.at ?? {
+            x: Number.NaN,
+            ground: Number.NaN,
+          };
+          const span = Option.getOrElse(spanOfWindow(figures, f.name, t), () => hold(0, 0, 'a'));
+          if (span._tag === 'Walk') {
+            const inside =
+              f.cell === span.cell &&
+              f.sx === 1 &&
+              f.sy === 1 &&
+              f.y <= at.ground &&
+              f.y >= at.ground - span.bob - 1e-9 &&
+              f.x >= Math.min(span.x0, span.x1) - 1e-9 &&
+              f.x <= Math.max(span.x0, span.x1) + 1e-9;
+            if (inside) return [];
+          }
+          if (span._tag !== 'Walk' && f.x === at.x && f.y === at.ground) return [];
+          return [`seed ${seed} t ${t}: ${f.name} in ${span._tag} at ${f.x},${f.y}`];
+        }),
+      );
+    });
+    expect(misses.slice(0, 5)).toEqual([]);
+  });
+
+  test("derives every figure's head from the shot's head over its layer's depth, so heads go as 1/z", () => {
+    for (const seed of SEEDS) {
+      const { shot, figures, heads } = generatedShot(seed);
+      const frame = frameAt(shot, heads, shot.duration / 2);
+      const drawn = figures.map((g) => {
+        const f = frame.figures.find((x) => x.name === g.figure.name);
+        return { z: g.z, head: (f?.scale ?? 0) * g.head };
+      });
+      for (const d of drawn) expect(d.head).toBeCloseTo(shot.headPx / d.z, 9);
+      const [a, b] = drawn;
+      if (a && b) expect(a.head / b.head).toBeCloseTo(b.z / a.z, 9);
+    }
+    expect(scaleOf(150, 2, 300)).toBe(0.25);
+  });
+
+  test('is a pure function of t: two calls agree, whatever was drawn between them', () => {
+    for (const seed of SEEDS.slice(0, 4)) {
+      const { shot, heads } = generatedShot(seed);
+      const first = timesOf(shot).map((t) => frameAt(shot, heads, t));
+      const shuffled = timesOf(shot).toReversed();
+      const again = new Map(shuffled.map((t) => [t, frameAt(shot, heads, t)] as const));
+      expect(timesOf(shot).map((t) => again.get(t))).toEqual(first);
+    }
+  });
+});
+
+describe('the feast courtyard', () => {
+  test('frames every figure from the keys of its own sheet', () => {
+    const heads = new Map([
+      ['lead', 147],
+      ['man', 335],
+      ['woman', 373],
+    ]);
+    const used = new Map<string, Set<string>>();
+    for (const t of timesOf(feastCourtyard))
+      for (const f of frameAt(feastCourtyard, heads, t).figures)
+        used.set(f.name, (used.get(f.name) ?? new Set<string>()).add(f.cell));
+    expect([...(used.get('lead') ?? [])].toSorted()).toEqual(
+      ['front', 'lift', 'offer', 'side', 'threeQuarter', 'wave-1', 'wave-2'].toSorted(),
+    );
+    expect([...(used.get('man') ?? [])].toSorted()).toEqual(['neutral', 'smile', 'turn']);
+    expect([...(used.get('woman') ?? [])].toSorted()).toEqual(['neutral', 'smile', 'turn']);
+  });
+
+  test('lights its shade with a hue as coloured as its tint, never black or grey (CRAFT rule 12)', () => {
+    const { tint, shade } = feastCourtyard.light;
+    expect(chromaOf(rgbOfHex(shade.colour))).toBeGreaterThanOrEqual(
+      chromaOf(rgbOfHex(tint.colour)),
+    );
+    expect(chromaOf(rgbOfHex(shade.colour))).toBeGreaterThan(20);
+  });
+
+  test('a figure names no cell its sheet does not hold', () => {
+    const made = figure(['a', 'b'], {
+      name: 'x',
+      member: 'm',
+      sheet: 's',
+      at: { x: 0, ground: 0 },
+      // @ts-expect-error -- 'z' is no key of the figure's sheet
+      spans: [hold(0, 1, 'z')],
+    });
+    expect(made._tag).toBe('Figure');
+  });
+});
+
+/** A one-row picture of `colours`, opaque. */
+const rowOf = (colours: ReadonlyArray<Rgb>): Raster => {
+  const rgba = new Uint8Array(colours.length * 4);
+  colours.forEach((c, i) => rgba.set([...c, 255], i * 4));
+  return { width: colours.length, height: 1, rgba };
+};
+
+const colourOf = (draw: () => number): Rgb => [
+  Math.floor(draw() * 256),
+  Math.floor(draw() * 256),
+  Math.floor(draw() * 256),
+];
+
+describe('lit', () => {
+  test('maps a colour two palettes share the same way in both, the ink unchanged', () => {
+    for (const seed of SEEDS) {
+      const draw = rng(seed);
+      const ink = colourOf(draw);
+      const base = colourOf(draw);
+      const shade = colourOf(draw);
+      const shared = { name: 'shared', base: hexOf(base), shade: hexOf(shade) };
+      const a: Palette = {
+        ink: hexOf(ink),
+        parts: [shared, { name: 'own', base: hexOf(colourOf(draw)) }],
+      };
+      const b: Palette = {
+        ink: hexOf(ink),
+        parts: [{ name: 'own', base: hexOf(colourOf(draw)) }, shared],
+      };
+      const light: Light = {
+        tint: { colour: hexOf(colourOf(draw)), amount: draw() * 0.3 },
+        shade: { colour: hexOf(colourOf(draw)), amount: draw() * 0.3 },
+      };
+      const cell = rowOf([ink, base, shade]);
+      const litA = lit(cell, light, paintsOf(a));
+      const litB = lit(cell, light, paintsOf(b));
+      expect([0, 1, 2].map((q) => rgbAt(litA, q))).toEqual([0, 1, 2].map((q) => rgbAt(litB, q)));
+      expect(rgbAt(litA, 0)).toEqual(ink);
+    }
+  });
+});

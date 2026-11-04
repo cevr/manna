@@ -1,6 +1,6 @@
 import { rng } from '@manna/film/core';
 import type { Raster } from '@manna/film/tools';
-import { Result } from 'effect';
+import { Option, Result } from 'effect';
 import { describe, expect, test } from 'effect-bun-test';
 import {
   alphaAt,
@@ -11,11 +11,13 @@ import {
   groundOf,
   hexOf,
   largestPiece,
+  linesOf,
   mendPockets,
   type Palette,
   paintsOf,
   rgbAt,
   type Rgb,
+  sheetHeadOf,
   snapped,
   splitSheet,
 } from './sheet.ts';
@@ -323,5 +325,86 @@ describe('splitSheet over generated sheets', () => {
     const a = Result.getOrThrow(splitSheet(g.raster, g.n, PALETTE));
     const b = Result.getOrThrow(splitSheet(g.raster, g.n, PALETTE));
     expect(a.cells.map((c) => [...c.raster.rgba])).toEqual(b.cells.map((c) => [...c.raster.rgba]));
+  });
+});
+
+const SKIN: Rgb = [230, 180, 140];
+const ROBE: Rgb = [120, 60, 40];
+const SASH: Rgb = [200, 190, 220];
+const SANDAL: Rgb = [90, 60, 40];
+
+const DRESSED: Palette = {
+  ink: hexOf(INK),
+  parts: [
+    { name: 'skin', base: hexOf(SKIN), role: 'skin' },
+    { name: 'robe', base: hexOf(ROBE), role: 'garment' },
+    { name: 'sash', base: hexOf(SASH), role: 'sash' },
+    { name: 'sandals', base: hexOf(SANDAL), role: 'footwear' },
+  ],
+};
+
+const FIGURE_KEY = { k: INK, s: SKIN, r: ROBE, h: SASH, f: SANDAL };
+
+/** A standing figure, the head on top, its arms down; `offer` reaches the right arm out at the shoulder in its sleeve, a round hand at the end. */
+const standing = (offer: boolean): Raster => {
+  const arm = ['..........', 'rrrrrrrkss', 'rrrrrrrkss', 'kkkkkkkk..'];
+  const still = ['..........', '..........', '..........', '..........'];
+  const reach = [still, arm][Number(offer)] ?? still;
+  return art(
+    [
+      '....kkkkk...........',
+      '....ksssk...........',
+      '....ksssk...........',
+      '....ksssk...........',
+      '...krrrrrk..........',
+      `..krrrrrrr${reach[0]}`,
+      `..krrrrrrr${reach[1]}`,
+      `..krrrrrrr${reach[2]}`,
+      `..krrrrrrr${reach[3]}`,
+      '..khhhhhhhk.........',
+      '..khhhhhhhk.........',
+      '..khhhhhhhk.........',
+      '..krrrrrrrk.........',
+      '..krrrrrrrk.........',
+      '..krrrrrrrk.........',
+      '..krrrrrrrk.........',
+      '..kkkkkkkkk.........',
+      '...kfffkfffk........',
+      '...kfffkfffk........',
+      '...kkkkkkkkk........',
+    ],
+    FIGURE_KEY,
+  );
+};
+
+describe('linesOf', () => {
+  const paints = paintsOf(DRESSED);
+
+  test('reads the crown, the head (crown to collar), the sash top and the hem in the head and centre columns', () => {
+    const lines = Option.getOrThrow(linesOf(standing(false), paints));
+    expect([lines.top, lines.bottom, lines.headColumn, lines.crown]).toEqual([0, 19, 6, 0]);
+    expect([lines.head, lines.sashTop, lines.hem]).toEqual([
+      Option.some(4),
+      Option.some(9),
+      Option.some(15),
+    ]);
+  });
+
+  test('holds every line when the arm reaches out at the shoulder, where a row-wide count moves', () => {
+    const down = Option.getOrThrow(linesOf(standing(false), paints));
+    const out = Option.getOrThrow(linesOf(standing(true), paints));
+    expect(out).toEqual(down);
+  });
+
+  test('reads none from a picture with no opaque pixel', () => {
+    expect(linesOf({ width: 3, height: 3, rgba: new Uint8Array(36) }, paints)).toEqual(
+      Option.none(),
+    );
+  });
+
+  test("a sheet's head is the median of its cells' heads", () => {
+    expect(sheetHeadOf([standing(false), standing(true), standing(false)], paints)).toEqual(
+      Option.some(4),
+    );
   });
 });
