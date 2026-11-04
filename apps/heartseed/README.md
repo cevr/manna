@@ -16,7 +16,9 @@ will call `Voice.read`.
 - `src/voice.ts` is the `Voice` service (Effect): `read`, `pause`,
   `resume`, `stop`, `setEnabled`, and the `view` a screen shows (`status`,
   the `verse`, its `words`, how many are `lit`, the `current` word range and
-  how the reading `ended`), with its `changes`. Its rules are a pure reducer,
+  how the reading `ended`), with its `changes`: a new subscriber starts at
+  the current view, and one held up keeps only the last 16, so it always
+  reaches the latest and never holds the history. Its rules are a pure reducer,
   `src/voice/reading.ts`: a command changes the view at its call, then makes
   its one source call, so no command waits on another's; an event changes
   the view only for the current utterance while a reading is under way, and

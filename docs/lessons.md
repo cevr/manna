@@ -4923,3 +4923,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `setEnabled(false)` wrote `false` only after the source's stop settled, so an `on` called while that stop was pending was overwritten: the view read enabled, the store and the next launch read disabled. An already-settled native promise was enough to reorder them.
 - **Cause:** The write waited on the source call and wrote the call's own argument, not the switch the latest call left.
 - **Guard:** code: `apps/heartseed/src/voice/switch.test.ts` `stores and restarts with the last switch call over 300 histories of held stops`; `apps/heartseed/src/voice/switch.test.ts` `keeps a later on over an off whose stop is an already-resolved promise`
+
+### heartseed-voice-changes-bounded
+
+- **Date:** 2026-11-03
+- **Kind:** review
+- **Said:** "A slow changes consumer creates an unbounded retained-view backlog"
+- **Source:** hymnapp/hsvoice/round-1-findings.md M2
+- **Wrong:** The view broadcast was an unbounded PubSub with replay 1: replay bounds what a new subscriber sees, not what a held one keeps, so a paused screen kept every view the service ever made.
+- **Cause:** A latest-state stream was given a queue whose growth nothing bounded.
+- **Guard:** code: `apps/heartseed/src/voice/changes.test.ts` `keeps a bounded window of a 10,000-view burst and ends at the current view`

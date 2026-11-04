@@ -88,6 +88,9 @@ export class Voice extends Context.Service<
 /** The store key of the off switch; its text is the JSON `true` or `false`. */
 export const ENABLED_KEY = 'heartseed/voice/enabled';
 
+/** The views a held subscriber of `changes` keeps: past it, its oldest view slides out, so it always reaches the latest. */
+const WINDOW = 16;
+
 const eligible = (voice: VoiceInfo) =>
   (voice.language === 'en' || voice.language.startsWith('en-')) &&
   !voice.novelty &&
@@ -152,16 +155,22 @@ export const layer: Layer.Layer<Voice, never, VoiceSource | KeyValueStore.KeyVal
         onSome: (chosen) => chosen.id,
       });
       const state = MutableRef.make<Reading>(initial(enabled));
-      const views = yield* PubSub.unbounded<VoiceView>({ replay: 1 });
+      const views = yield* PubSub.sliding<VoiceView>({ capacity: WINDOW, replay: 1 });
       const writes = yield* Semaphore.make(1);
-      PubSub.publishUnsafe(views, state.current.view);
+      const runSync = Effect.runSyncWith(yield* Effect.context<never>());
+
+      /** Publishes a view at once: the sliding strategy drops a held subscriber's oldest view and never suspends. */
+      const publish = (view: VoiceView) => {
+        runSync(PubSub.publish(views, view));
+      };
+      publish(state.current.view);
 
       /** Applies one input at once, publishes a changed view, and answers the call it asks for. */
       const dispatch = (input: Input): Option.Option<Call> => {
         const before = MutableRef.get(state);
         const next = step(before, input);
         MutableRef.set(state, next.reading);
-        if (next.reading.view !== before.view) PubSub.publishUnsafe(views, next.reading.view);
+        if (next.reading.view !== before.view) publish(next.reading.view);
         return next.call;
       };
 
