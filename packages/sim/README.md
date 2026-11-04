@@ -221,8 +221,11 @@ unrecorded, a window of at most three file writes; the spec accepts it.
   every call of the recovery of a first (`life.recovery.slow.test.ts`), and
   overlapping pairs, a newer command at every host call, and 60 generated
   sequences (`life.overlap.slow.test.ts`). Every live server is named by its
-  state's record at every host call but inside boot's window, no two
-  commands signal one process, every signal follows a read of that
+  state's record at every host call but inside boot's window, inside which
+  the booting command makes at most three file writes under the state
+  folder and, past them, only the stop rule's start-time reads and signals
+  (so a record written after readiness is red), no two commands signal one
+  process, every signal follows a read of that
   process's start time, no `*.json` is replaced, and each undisturbed
   command ends as the reference model says.
 
