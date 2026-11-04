@@ -54,15 +54,21 @@ const pageScript = Effect.gen(function* () {
   return texts.join('\n');
 });
 
-/** An expression that runs `script` as the page's own script element and answers `ready`, or the error it threw. */
-const loadScript = (script: string): string => `(() => {
-  const failures = [];
+/**
+ * Runs in the page, not here: `source` as the page's own script element,
+ * answering `ready` once the script set `window.ready`, else the errors it
+ * threw. The page is sent this function's own source, so the code it runs
+ * is linted like any other.
+ */
+const bootPage = (source: string): string => {
+  const failures: Array<string> = [];
   window.addEventListener('error', (e) => failures.push(String(e.message)));
   const tag = document.createElement('script');
-  tag.textContent = ${jsonOf(script)};
+  tag.textContent = source;
   document.head.appendChild(tag);
-  return window.ready === true ? 'ready' : 'page failed: ' + failures.join('; ');
-})()`;
+  if (Reflect.get(window, 'ready') === true) return 'ready';
+  return `page failed: ${failures.join('; ')}`;
+};
 
 /** A PNG data URL's bytes. */
 const pngOfUrl = (dataUrl: string) =>
@@ -149,7 +155,7 @@ export const storybookPage = (
     );
     yield* Effect.tryPromise({ try: () => view.navigate('about:blank'), catch: failed });
     const loaded = yield* Effect.tryPromise({
-      try: () => view.evaluate<string>(loadScript(script)),
+      try: () => view.evaluate<string>(`(${bootPage.toString()})(${jsonOf(script)})`),
       catch: failed,
     });
     if (loaded !== 'ready') return yield* StorybookFailed.make({ reason: loaded });
