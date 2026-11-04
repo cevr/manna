@@ -1,0 +1,12 @@
+{
+  "ink": "#1b0a01",
+  "parts": [
+    { "name": "skin", "base": "#fdbd83", "role": "skin" },
+    { "name": "hair", "base": "#6e3f1f", "role": "hair" },
+    { "name": "robe", "base": "#fdf4e2", "shade": "#e7d7ef", "role": "garment" },
+    { "name": "mantle", "base": "#80774c", "shade": "#686141", "role": "garment" },
+    { "name": "sandals", "base": "#553019", "role": "footwear" },
+    { "name": "stool", "base": "#8e4c27", "shade": "#884728", "role": "other" },
+    { "name": "contact shadow", "base": "#e6d7f0", "role": "other" }
+  ]
+}

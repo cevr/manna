@@ -537,7 +537,6 @@ describe('storybook shot sheets: split', () => {
         for (let seed = 1; seed <= 24; seed++) failures.push(...(yield* splitCase(tmp, seed)));
         expect(failures.slice(0, 20)).toEqual([]);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
-    // oxlint-disable-next-line film/tests-keep-their-strength -- 48 spawned splits of generated sheets (spawn budget).
     120_000,
   );
 });
@@ -646,7 +645,6 @@ describe('storybook acceptance shot: the feast courtyard', () => {
             [2, 5][Number(figure.member === 'lead-feast')] ?? 5,
           );
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
-    // oxlint-disable-next-line film/tests-keep-their-strength -- the shot renders every frame in two headless Chrome launches, then encodes (spawn budget).
     600_000,
   );
 });

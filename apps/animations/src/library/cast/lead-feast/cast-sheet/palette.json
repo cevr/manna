@@ -1,0 +1,11 @@
+{
+  "ink": "#130803",
+  "parts": [
+    { "name": "skin", "base": "#f2b27c", "shade": "#c9877e", "role": "skin" },
+    { "name": "hair", "base": "#6c432b", "shade": "#57384a", "role": "hair" },
+    { "name": "tunic", "base": "#f2d8b7", "shade": "#cbbfd2", "role": "garment" },
+    { "name": "mantle", "base": "#58767a", "shade": "#4f5f78", "role": "garment" },
+    { "name": "sash", "base": "#eadcc2", "shade": "#c8bdd6", "role": "sash" },
+    { "name": "sandals", "base": "#7a5236", "role": "footwear" }
+  ]
+}
