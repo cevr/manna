@@ -194,7 +194,7 @@ export const loadShot = Effect.fn('Storybook.loadShot')(function* (shot: Shot) {
   return { figures, heads: headsOf(figures), scene: yield* sceneOf(shot, figures) };
 });
 
-/** A clip of the frames `f%04d.png` in `frames`: the shot's fps, H.264 at crf 18, yuv420p. */
+/** A clip of the frames `f*.png` in `frames`, in name order: at `fps`, H.264 at crf 18, yuv420p. */
 export const encodeClip = Effect.fn('Storybook.encodeClip')(function* (
   frames: string,
   fps: number,
@@ -210,8 +210,10 @@ export const encodeClip = Effect.fn('Storybook.encodeClip')(function* (
         'error',
         '-framerate',
         String(fps),
+        '-pattern_type',
+        'glob',
         '-i',
-        `${frames}/f%04d.png`,
+        `${frames}/f*.png`,
         '-c:v',
         'libx264',
         '-crf',

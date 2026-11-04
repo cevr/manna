@@ -458,6 +458,58 @@ lists the seeds it passed over. The draw itself is the framework's
 deck is this app's, which is why the command is an app script, not a `film`
 command.
 
+## Storybook shots
+
+The look the owner chose on 2026-11-03: flat drawn figures on depth layers in
+front of a painted set, the camera moving through the layers. A big move is a
+run of whole-figure drawn keys, never a part on a hinge; every hand is a round
+circle at the end of its sleeve, with no fingers (`.claude/skills/film/CRAFT.md`).
+The library is `src/library/storybook/`, one command, from `apps/animations`:
+
+```bash
+bun run storybook draw <member> <sheet-id> --keys side,front,lift --refs front,profileRight
+bun run storybook keep <member> <sheet-id> --why "<the owner's words>" --ask <id>
+bun run storybook split <sheet.png> --cells <n> --palette <palette.json> --out <dir>
+bun run storybook plan <shot> --out <plan.json>
+bun run storybook render <shot> [--out <dir>]
+bun run storybook verify <shot> [--quick] [--out <dir>]
+```
+
+- **A shot sheet** is one person drawn n times in one `okra image` pass (the
+  subscription route, never `--spend`), so every key shares one face, one
+  size and one set of colours. It lives at
+  `src/library/cast/<member>/shot-sheets/<sheet-id>/`: `sheet.png` as drawn,
+  `record.json` (the prompt, each ref and its sha256, the measured ground,
+  each cell's box and sha256, and `kept` once the owner keeps it) and
+  `cells/<key>.png`. A sheet is drawn once; `draw` refuses an id drawn
+  already, a ground near a paint and a split with fewer figures than keys,
+  and then the agent draws again. No pixel of a sheet or cell is edited by
+  hand. The poses a key may name are `POSES` in `store.ts`.
+- **The split** (`sheet.ts`) clears the ground joined to the border, cuts the
+  sheet at the lowest-occupancy columns, keeps each cell's largest piece,
+  mends each pocket by its rim (all ink: a gap, cleared; else a garment
+  painted the paper's colour, refilled with its rim's paint) and snaps every
+  pixel within ΔE 30 of a paint to it exactly. The paints are the member's
+  `cast-sheet/palette.json`: every hex is one his `look.md` names, and the ink
+  is measured on his first kept view.
+- **A shot** (`shot.ts`, one per file in `shots/`) is layers at depths, each
+  holding plates and figures, under one light and one camera. A figure names
+  one member and one sheet, and its spans (`hold`, `turn`, `keyRun`, `walk`)
+  name only that sheet's keys. It has no scale: its head is the shot's
+  `headPx` over its layer's depth, against its sheet's median head. It has no
+  light: the shot's one light tints every base paint and shades every shade
+  paint once per cell, the ink untouched. `frameAt` is a pure function of t.
+- **The render** (`render.ts`, `page.ts`) draws each frame from its time
+  alone in a headless Chrome on the CPU, each layer a plane of the engine's
+  `multiplane` at its depth, with the engine's backdrop fibre; frames and
+  `shot.mp4` go to `out/storybook/<shot>/`.
+- **The verify** renders every frame (every sixth with `--quick`, under
+  `quick/`) twice, colour and each figure alone, and judges the bars in
+  `verify/bars.ts`: `verdict.md` opens `PASS n/n pass` or `FAIL k/n pass`;
+  beside it `verdict.json`, `manifest.json`, `contact.png`, `shot.mp4`,
+  `frames/` and `figures/`. It exits 0 only on PASS n/n. The bars stay
+  `orchestrator-proposed` until the owner OKs their numbers.
+
 ## How a film is built
 
 A film goes through a studio's stages: the script, concept art (the tent

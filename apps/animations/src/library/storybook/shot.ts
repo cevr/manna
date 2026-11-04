@@ -334,6 +334,13 @@ export const lit = (cell: Raster, light: Light, paints: ReadonlyArray<Paint>): R
   return { width: cell.width, height: cell.height, rgba };
 };
 
+/** A palette's paints as the light leaves them: each paint's colour `litColour` of it, its part, tone and role as they were. */
+export const litPaints = (paints: ReadonlyArray<Paint>, light: Light): ReadonlyArray<Paint> =>
+  paints.map((p) => {
+    const rgb = litColour(p.rgb, p.tone, light);
+    return { ...p, rgb, lab: labOf(rgb) };
+  });
+
 /** A colour's chroma in Lab: how coloured it is, whatever its lightness. */
 export const chromaOf = (c: Rgb): number => {
   const [, a, b] = labOf(c);

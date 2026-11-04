@@ -1,12 +1,14 @@
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { ImageRoute } from '@manna/film/tools';
-import { Console, Effect, FileSystem, Option, Schema } from 'effect';
+import { Clock, Console, Effect, FileSystem, Option, Schema } from 'effect';
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
 import { outOf, renderShot } from './render.ts';
-import { frameAt, timesOf } from './shot.ts';
+import { frameAt, type Shot, timesOf } from './shot.ts';
+import { verdictText } from './verify/verdict.ts';
+import { VerdictFailed, verifyShot } from './verify/run.ts';
 import { feastCourtyard } from './shots/feast-courtyard.ts';
 import { CAST, drawSheet, headsOf, keepSheet, loadFigures, splitFiles } from './store.ts';
 
@@ -87,6 +89,43 @@ const planCommand = Command.make(
 ).pipe(
   Command.withDescription(
     "Write a shot's plan: every frame at i / fps, each figure's cell, place, squash and derived scale",
+  ),
+);
+
+/** Where a verify run writes: `out` (default `out/storybook/<shot>/`), under its `quick/` for a quick run. */
+const verifyOut = (shot: Shot, out: Option.Option<string>, quick: boolean): string => {
+  const dir = Option.getOrElse(out, () => outOf(shot));
+  if (quick) return `${dir}/quick`;
+  return dir;
+};
+
+const verifyCommand = Command.make(
+  'verify',
+  {
+    shot: shotArgument,
+    quick: Flag.Boolean('quick').pipe(
+      Flag.withDefault(false),
+      Flag.withDescription('every sixth frame, written under quick/: iterate, not judge'),
+    ),
+    out: Flag.String('out').pipe(
+      Flag.optional,
+      Flag.withDescription('where the run writes (default out/storybook/<shot>/)'),
+    ),
+  },
+  ({ shot, quick, out }) =>
+    Effect.gen(function* () {
+      const started = yield* Clock.currentTimeMillis;
+      const dir = verifyOut(SHOTS[shot], out, quick);
+      const { verdict, info } = yield* verifyShot(SHOTS[shot], dir, [1, 6][Number(quick)] ?? 1);
+      yield* Console.log(verdictText(verdict, info));
+      const took = ((yield* Clock.currentTimeMillis) - started) / 1000;
+      yield* Console.log(`wrote ${dir} in ${took.toFixed(1)} s`);
+      if (verdict.passed !== verdict.total)
+        return yield* VerdictFailed.make({ passed: verdict.passed, total: verdict.total });
+    }),
+).pipe(
+  Command.withDescription(
+    'Render every frame of a shot (colour and each figure alone) in two page launches, measure every bar in storybook/verify/bars.ts, and write verdict.md, verdict.json, manifest.json, contact.png and shot.mp4. Exits 0 only on PASS n/n',
   ),
 );
 
@@ -192,7 +231,14 @@ const keepCommand = Command.make(
 ).pipe(Command.withDescription("Write the owner's keep on a drawn shot sheet's record"));
 
 const storybook = Command.make('storybook').pipe(
-  Command.withSubcommands([splitCommand, drawCommand, keepCommand, planCommand, renderCommand]),
+  Command.withSubcommands([
+    splitCommand,
+    drawCommand,
+    keepCommand,
+    planCommand,
+    renderCommand,
+    verifyCommand,
+  ]),
   Command.withDescription('Shot sheets and storybook shots: flat drawn figures on depth layers'),
 );
 
