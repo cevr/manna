@@ -87,6 +87,19 @@ describe('mendPockets', () => {
     expect(lettersOf(mend(r))).toEqual(['kkkkk', 'k...k', 'k...k', 'kkkkk']);
   });
 
+  test('reads ground drawn a little lighter inside a ring of ink as a gap: within ΔE 12 of the ground, past its channel sum (round 2: the ground between the raised arm and the head)', () => {
+    const halo: Rgb = [GROUND[0] + 10, GROUND[1] + 14, GROUND[2] + 16];
+    expect(deltaE(halo, GROUND)).toBeLessThanOrEqual(12);
+    const r = art(['kkkkk', 'khhhk', 'khghk', 'kkkkk'], { ...KEY, h: halo });
+    expect(lettersOf(mend(r))).toEqual(['kkkkk', 'k...k', 'k...k', 'kkkkk']);
+  });
+
+  test("clears a gap whose ring holds a blend of ink and paint, a vote only a plain paint casts (round 2: an outline's soft edge on the ring)", () => {
+    const blend = atDistance(20);
+    const r = art(['kkkkkk', 'kggggk', 'kggggm', 'kkkkkk'], { ...KEY, m: blend });
+    expect(lettersOf(mend(r))).toEqual(['kkkkkk', 'k....k', 'k....?', 'kkkkkk']);
+  });
+
   test('refills by the most of its rim, the ink not counted, however large or high the pocket', () => {
     const r = art(['kkkkkkk', 'kgggggs', 'kgggggs', 'kbbbbbk'], KEY);
     expect(lettersOf(mend(r))).toEqual(['kkkkkkk', 'kbbbbbs', 'kbbbbbs', 'kbbbbbk']);
@@ -813,6 +826,24 @@ describe('linesOf', () => {
     });
     const lines = Option.getOrThrow(linesOf(art(rows, FIGURE_KEY), paints));
     expect([lines.centreColumn, lines.hem]).toEqual([7, Option.some(15)]);
+  });
+
+  test("reads the collar below a jaw line drawn a few rows deep in a garment's colour, where the clothes run on (round 2: the man's turned head)", () => {
+    const rows = [
+      '..kkkkk..',
+      '..ksssk..',
+      '..ksssk..',
+      '..ksssk..',
+      '..krrrk..',
+      '..krrrk..',
+      '..krrrk..',
+      '..ksssk..',
+      '..ksssk..',
+      ...Array.from({ length: 14 }, () => '.krrrrrk.'),
+      '.kkkkkkk.',
+    ];
+    const lines = Option.getOrThrow(linesOf(art(rows, FIGURE_KEY), paints));
+    expect([lines.crown, Option.getOrThrow(lines.head)]).toEqual([0, 9]);
   });
 
   test('reads no sash top from stray sash pixels too few to make a band', () => {

@@ -19,6 +19,9 @@ export const SNAP_RADIUS = 30;
 /** How near the ground a pixel lies, as the sum of its three channels' differences, to be ground: the background's flood and a pocket's test. */
 export const POCKET_SUM = 30;
 
+/** How near (ΔE76) a drawn colour lies to the paint it snaps to for the snap to read it as that paint drawn plain; a farther one, up to `SNAP_RADIUS`, is a blend or a thin line. Ground drawn this near the ground's colour, lighter or darker inside a ring of outline, is ground too. */
+export const PLAIN_RADIUS = 12;
+
 /** What each part of a figure is, so a measure knows which lines a palette draws. */
 export const ROLES = ['skin', 'hair', 'garment', 'sash', 'footwear', 'other'] as const;
 
@@ -345,7 +348,12 @@ export const largestPiece = (r: Raster): Raster => {
   return { width: r.width, height: r.height, rgba };
 };
 
-/** The paint most of a pocket's non-ink rim pixels lie nearest, each rim pixel counted once however many pocket pixels it touches; none when its rim is all ink (or it has none). */
+/**
+ * The paint most of a pocket's plain non-ink rim pixels are, each rim pixel
+ * counted once however many pocket pixels it touches; none when no rim
+ * pixel is a paint other than the ink drawn plain (within `PLAIN_RADIUS`):
+ * an outline's soft edge, a blend of ink and ground, casts no vote.
+ */
 const rimPaint = (
   r: Raster,
   pocket: ReadonlyArray<number>,
@@ -359,8 +367,8 @@ const rimPaint = (
   );
   const votes = new Map<number, number>();
   for (const m of rim) {
-    const { index } = nearest(rgbAt(r, m));
-    if (index !== 0) votes.set(index, (votes.get(index) ?? 0) + 1);
+    const { index, distance } = nearest(rgbAt(r, m));
+    if (index !== 0 && distance <= PLAIN_RADIUS) votes.set(index, (votes.get(index) ?? 0) + 1);
   }
   return Option.fromUndefinedOr(
     [...votes].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([index]) => index)[0],
@@ -369,10 +377,12 @@ const rimPaint = (
 
 /**
  * `r` with its pockets mended (owner, take 3: a raised sleeve painted the
- * paper's colour keyed out): each 4-connected region of opaque pixels within
- * `POCKET_SUM` of the ground is a true gap, cleared, when every opaque
- * 4-neighbour round it is ink, and else a garment painted the paper's
- * colour, refilled with the paint most of its non-ink rim is, by `nearest`.
+ * paper's colour keyed out): each 4-connected region of opaque pixels of
+ * the ground (within `POCKET_SUM` of it, or within `PLAIN_RADIUS` ΔE: the
+ * ground a drawing paints a little lighter inside a ring of outline) is a
+ * true gap, cleared, when no plain paint but the ink lies round it, and
+ * else a garment painted the paper's colour, refilled with the paint most
+ * of its plain rim is, by `nearest` (`rimPaint`).
  */
 export const mendPockets = (
   r: Raster,
@@ -380,11 +390,20 @@ export const mendPockets = (
   paints: ReadonlyArray<Paint>,
   nearest: (c: Rgb) => Nearest,
 ): Raster => {
-  const pockets = regionsOf(
-    r,
-    (q) => alphaAt(r, q) > 0 && rgbSum(rgbAt(r, q), ground) <= POCKET_SUM,
-    around4,
-  );
+  const groundLab = labOf(ground);
+  const known = new Map<number, boolean>();
+  const fresh = (key: number, c: Rgb): boolean => {
+    const lab = labOf(c);
+    const near = Math.hypot(lab[0] - groundLab[0], lab[1] - groundLab[1], lab[2] - groundLab[2]);
+    const answer = rgbSum(c, ground) <= POCKET_SUM || near <= PLAIN_RADIUS;
+    known.set(key, answer);
+    return answer;
+  };
+  const isGround = (c: Rgb): boolean => {
+    const key = (c[0] << 16) | (c[1] << 8) | c[2];
+    return known.get(key) ?? fresh(key, c);
+  };
+  const pockets = regionsOf(r, (q) => alphaAt(r, q) > 0 && isGround(rgbAt(r, q)), around4);
   const rgba = r.rgba.slice();
   for (const pocket of pockets)
     Option.match(rimPaint(r, pocket, nearest), {
@@ -575,9 +594,6 @@ export const snapped = (
   return { width: r.width, height: r.height, rgba };
 };
 
-/** How near (ΔE76) a drawn colour lies to the paint it snaps to for the snap to read it as that paint drawn plain; a farther one, up to `SNAP_RADIUS`, is a blend or a thin line. */
-export const PLAIN_RADIUS = 12;
-
 /** How far (px) along a row, a column or a diagonal the line rule looks each way for the paints a thin line lies between. */
 const LINE_REACH = 3;
 
@@ -760,9 +776,10 @@ const despecked = (map: Int32Array, width: number): Int32Array => {
 /**
  * A snapped cell tidied by the rules a drawing's own marks need, in order:
  * each thin line on cloth as ink between two parts or the part's shade
- * inside one (`lineAt`), skin only by skin (`skinBySkin`), and every speck
- * the paint round it (`despecked`). `drawn` is the cell before the snap,
- * `snap` it after, `nearest` the snap's lookup.
+ * inside one (`lineAt`), every speck the paint round it (`despecked`), and
+ * skin only by skin (`skinBySkin`), last, so no speck's vote puts skin
+ * colour back on cloth. `drawn` is the cell before the snap, `snap` it
+ * after, `nearest` the snap's lookup.
  */
 export const tidied = (
   drawn: Raster,
@@ -782,7 +799,7 @@ export const tidied = (
     }),
   );
   const lined = map.map((index, q) => Option.getOrElse(lineAt(t, q, shadeOf), () => index));
-  const final = despecked(skinBySkin(t, lined), drawn.width);
+  const final = skinBySkin(t, despecked(lined, drawn.width));
   const rgba = snap.rgba.slice();
   for (let q = 0; q < final.length; q++) {
     const paint = paints[final[q] ?? CLEAR];
@@ -883,13 +900,17 @@ const meanColumn = (r: Raster, y0: number, y1: number): Option.Option<number> =>
 /** The fewest rows in a run a line reads as paint: a shorter one is the anti-aliased fringe at an outline, snapped to whatever paint lay near. */
 const LINE_RUN = 3;
 
-/** The rows of column `x` from `from` downward whose pixel is exactly a paint of one of `roles`, in runs of `LINE_RUN` or more; clear pixels, the ink and colours left as drawn are skipped. */
+/** How many rows of garment the head column must run through below the face for the first to be the collar: a jaw line drawn in a garment's colour runs a few rows, the clothes far more. */
+const COLLAR_RUN = 12;
+
+/** The rows of column `x` from `from` downward whose pixel is exactly a paint of one of `roles`, in runs of `least` (`LINE_RUN` unless named) or more; clear pixels, the ink and colours left as drawn are skipped. */
 const rowsOfRole = (
   r: Raster,
   x: number,
   from: number,
   roles: ReadonlyArray<Role | 'ink'>,
   paints: ReadonlyArray<Paint>,
+  least = LINE_RUN,
 ): ReadonlyArray<number> => {
   const rows = paintRows(r, x, from, roles, paints);
   const painted = new Set(rows);
@@ -898,7 +919,7 @@ const rowsOfRole = (
     while (painted.has(y + step * (n + 1))) n += 1;
     return n;
   };
-  return rows.filter((y) => run(y, -1) + run(y, 1) + 1 >= LINE_RUN);
+  return rows.filter((y) => run(y, -1) + run(y, 1) + 1 >= least);
 };
 
 /** The rows of column `x` from `from` downward whose pixel and its left and right neighbours are exactly paints of `roles`: an outline's fringe a pixel or two wide, snapped to a paint where it meets the clear ground, never reads as one. */
@@ -949,7 +970,7 @@ export const linesOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<
     ) ?? top,
   );
   const face = rowsOfRole(r, headColumn, crown, ['skin'], paints)[0] ?? r.height;
-  const collar = rowsOfRole(r, headColumn, face, ['garment', 'sash'], paints)[0];
+  const collar = rowsOfRole(r, headColumn, face, ['garment', 'sash'], paints, COLLAR_RUN)[0];
   const garment = rowsOfRole(r, centreColumn, top, ['garment'], paints);
   return Option.some({
     top,
