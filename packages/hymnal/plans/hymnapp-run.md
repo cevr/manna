@@ -67,6 +67,8 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 
 ## Follow-ups
 
+- hsvoice (`tmp/orchestrate/hymnapp/hsvoice/`, merged e954b1101): hssayit must not rely on `changes` for a reading's terminal event (a sliding buffer of 16 can drop it after a replacement plus 16 views; read `events`); Heartseed's `tsconfig.test.json` excludes `scripts/`; on the device, agent-device reports Today's heading as plain text although the source sets `role="heading"` (check in hssayit's live drive). The quiet-host budget was measured before the r3 rebase (matcher 0.85 s).
+
 - simkit (`tmp/orchestrate/hymnapp/simkit/`, merged 6748f0194): parts 2 and 3 are `simlife` (scratch child HOME and owned teardown, per `split.md`'s ruling) and `simheart` (Heartseed adapter and both live drives); hsdictate waits on both. The planner's A6 oracle `contain.ts` walks links lexically and misses the alias and `..` class (the package's own oracle does not). On main, the hymnal web SSR fails with `Unexpected token 'typeof'` while `doctor` reports ok (web is not a target; `doctor` should read `server.err.log`). `one prebuild` reformats two tracked `*.d.swift.ts` files in the hymnal; recheck after hsvoice's oxfmt ignore merges.
 
 - hsmatch (`tmp/orchestrate/hymnapp/hsmatch/`): the next Heartseed unit that adds tests splits `@manna/heartseed`'s tests into parts first (0.92 to 0.95 s alone).
