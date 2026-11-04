@@ -402,6 +402,67 @@ describe('the voice against its model', () => {
       ),
     ));
 
+  it('lights a range a source sends inside its own speak call, by UTF-16 spans', () =>
+    Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const verse = '\u{1D509}ear cafe\u0301';
+          const listeners = new Set<(event: VoiceEvent) => void>();
+          const spoken: string[] = [];
+          const source = VoiceSource.of({
+            voices: Effect.succeed([]),
+            speak: (utterance, text) =>
+              Effect.sync(() => {
+                spoken.push(text);
+                for (const listener of listeners)
+                  listener({ utterance, kind: 'range', location: 6, length: 5 });
+              }),
+            pause: Effect.void,
+            resume: Effect.void,
+            stop: Effect.void,
+            subscribe: (listener) =>
+              Effect.acquireRelease(
+                Effect.sync(() => void listeners.add(listener)),
+                () => Effect.sync(() => void listeners.delete(listener)),
+              ),
+          });
+          const services = yield* Layer.build(
+            Layer.provide(
+              layer,
+              Layer.mergeAll(Layer.succeed(VoiceSource, source), KeyValueStore.layerMemory),
+            ),
+          );
+          const voice = Context.get(services, Voice);
+          yield* voice.read(verse);
+          const view = yield* voice.view;
+          expect(spoken).toEqual([verse]);
+          expect(view).toMatchObject({
+            status: 'reading',
+            words: 2,
+            lit: 2,
+            current: { first: 1, last: 1 },
+          });
+          expect(Option.getOrUndefined(yield* Stream.runHead(voice.changes))).toEqual(view);
+        }),
+      ),
+    ));
+
+  it('closing a paused service twice stops it once and lets go of its listener', () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const fake = scripted([]);
+        const live = yield* start(
+          Layer.mergeAll(Layer.succeed(VoiceSource, fake.source), KeyValueStore.layerMemory),
+        );
+        yield* live.voice.read('one two');
+        yield* live.voice.pause;
+        yield* Scope.close(live.scope, Exit.void);
+        yield* Scope.close(live.scope, Exit.void);
+        expect(fake.calls.map((c) => c.type)).toEqual(['speak', 'pause', 'stop']);
+        expect(fake.listeners.size).toBe(0);
+      }),
+    ));
+
   it('starts its changes at the current view, and closing a reading service stops it once', () =>
     Effect.runPromise(
       Effect.gen(function* () {
