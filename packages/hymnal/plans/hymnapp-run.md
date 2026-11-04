@@ -10,6 +10,8 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | topicsdb  | initfresh  |                    |                                                                              | parked (owner: topics follow the films)                       |
 | keyfollow | worship    |                    | owner note: the playing recording follows a key change made in the hymn view | blocked: not reproduced, waits on the owner (Owner questions) |
 | selah     | reader     | .rifts/manna/selah |                                                                              |                                                               |
+| simlife   | simkit     |                    |                                                                              |                                                               |
+| simheart  | simlife    |                    |                                                                              |                                                               |
 
 Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `inexact` (the 7 MIDI files whose verses do not split: 126 225 262 292 403 453 580), `decks` (syllable splits into feat/hymn-decks, last by the owner's word), `selah` (planned: after reader, see Decisions; macOS stays SwiftUI until react-native-gpui ships a real package).
 
@@ -64,6 +66,8 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 - keyfollow: the key change that did not follow the playing hymn is not reproduced (simulator, three variations; an off-device fake follows the key every time). Next time it happens: which control turned the key (the key dial on the hymn page, or another), how many turns, and how long the old key kept sounding, on the current build. (keyfollow, asked 2026-11-01)
 
 ## Follow-ups
+
+- simkit (`tmp/orchestrate/hymnapp/simkit/`, merged 6748f0194): parts 2 and 3 are `simlife` (scratch child HOME and owned teardown, per `split.md`'s ruling) and `simheart` (Heartseed adapter and both live drives); hsdictate waits on both. The planner's A6 oracle `contain.ts` walks links lexically and misses the alias and `..` class (the package's own oracle does not). On main, the hymnal web SSR fails with `Unexpected token 'typeof'` while `doctor` reports ok (web is not a target; `doctor` should read `server.err.log`). `one prebuild` reformats two tracked `*.d.swift.ts` files in the hymnal; recheck after hsvoice's oxfmt ignore merges.
 
 - hsmatch (`tmp/orchestrate/hymnapp/hsmatch/`): the next Heartseed unit that adds tests splits `@manna/heartseed`'s tests into parts first (0.92 to 0.95 s alone).
 
