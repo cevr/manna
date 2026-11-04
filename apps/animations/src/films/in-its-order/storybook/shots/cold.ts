@@ -82,11 +82,15 @@ const motherOn = (at: { readonly headPx: number; readonly z: number }, end: numb
     holds([[0, 'cup', 'cupBlink']], end),
   );
 
-/** The diners' plane of the courtyard at the table: the row, the mother, and the far table before them. */
-const dinersLayer = (talks: ReadonlyMap<1 | 2 | 4, readonly [number, number]>, end: number) => {
+/** The diners' plane of the courtyard at the table: the row (those of it `seen`, all four unless named), the mother, and the far table before them. */
+const dinersLayer = (
+  talks: ReadonlyMap<1 | 2 | 4, readonly [number, number]>,
+  end: number,
+  seen: ReadonlyArray<string> = ['diner-1', 'diner-2', 'diner-3', 'diner-4'],
+) => {
   const at = { headPx: HEAD, z: Z.diners };
   return layer('diners', Z.diners, [
-    ...dinersOn(at, DINERS_ROW, talks, end),
+    ...dinersOn(at, DINERS_ROW, talks, end).filter((d) => seen.includes(d.name)),
     motherOn(at, end),
     farTable(),
   ]);
@@ -356,13 +360,15 @@ export const coldLetter: FilmShot = {
   },
 };
 
-/** The lead's close: his head near a third of the frame, his whole seated figure (crown to soles) inside it at the shot's start. */
-const CLOSE = { zoom: 2.75, crown: 70 } as const;
+/** The lead's close: his head a third of the frame's height (its crown at frame y 70), the guests either side and the scroll on the table before him; his soles below the frame, his whole figure read in cold-table. The diners its frame shows: diner 1, at the row's left end, falls outside it. */
+const CLOSE = { zoom: 3.3, crown: 70, diners: ['diner-2', 'diner-3', 'diner-4'] } as const;
 
 /**
  * `cold-ouch`, the card's end to `what`: close on the lead, his head a third
- * of the frame; he winces on `ouch` and lowers his eyes again, under a slow
- * push.
+ * of the frame, at the same table as cold-letter leaves it: the guests
+ * either side still staring at the scroll, the diners beyond, the scroll
+ * open before him. He winces on `ouch` and lowers his eyes again, under a
+ * slow push.
  */
 export const coldOuch: FilmShot = {
   id: 'cold-ouch',
@@ -378,7 +384,9 @@ export const coldOuch: FilmShot = {
       camera: [cam(0, 960, y, CLOSE.zoom), cam(duration, 960, y + 6, CLOSE.zoom * 1.05)],
       layers: [
         ...backdrop(),
+        dinersLayer(new Map(), duration, CLOSE.diners),
         layer('table', Z.table, [
+          ...guests(guestSpans('stare', [], duration), guestSpans('stare', [], duration)),
           seat(
             { member: 'lead-feast', sheet: 'iio-close', name: 'lead', x: 960, crown },
             { headPx: HEAD, z: Z.table },
@@ -392,6 +400,7 @@ export const coldOuch: FilmShot = {
             ),
           ),
           table(),
+          scrollLaid([[0, key({ sy: SCROLL_LIES })]]),
         ]),
       ],
     };

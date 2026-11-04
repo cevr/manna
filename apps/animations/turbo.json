@@ -16,6 +16,7 @@
         "test:storybook-film",
         "test:storybook-heads",
         "test:storybook-covers-table",
+        "test:storybook-covers-ouch",
         "test:storybook-covers-rest"
       ]
     },
@@ -173,6 +174,20 @@
       ]
     },
     "test:storybook-covers-table": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/righteousness-by-faith/**/*.test.*",
+        "!src/films/in-its-order/rigs/**/*.test.*",
+        "!src/films/in-its-order/scenes/**/*.test.*",
+        "!src/library/**/*.test.*"
+      ]
+    },
+    "test:storybook-covers-ouch": {
       "dependsOn": ["^transit"],
       "outputs": [],
       "inputs": [

@@ -49,6 +49,7 @@
     "test:storybook-film": "bun test --parallel --path-ignore-patterns='**/*.slow.test.*' --path-ignore-patterns='**/heads.test.ts' --path-ignore-patterns='**/covers-*.test.ts' ./src/films/in-its-order/storybook",
     "test:storybook-heads": "bun test --parallel ./src/films/in-its-order/storybook/heads.test.ts",
     "test:storybook-covers-table": "bun test --parallel ./src/films/in-its-order/storybook/covers-baby.test.ts ./src/films/in-its-order/storybook/covers-letter.test.ts",
+    "test:storybook-covers-ouch": "bun test --parallel ./src/films/in-its-order/storybook/covers-ouch.test.ts",
     "test:storybook-covers-rest": "bun test --parallel ./src/films/in-its-order/storybook/covers-title.test.ts ./src/films/in-its-order/storybook/covers-milk.test.ts",
     "test:slow": "bun test .slow.test."
   },

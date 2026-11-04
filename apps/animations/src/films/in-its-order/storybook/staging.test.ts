@@ -5,6 +5,7 @@ import sharp from 'sharp';
 import { filmFolder, shotsOf } from '../../../library/storybook/films.ts';
 import {
   cameraAt,
+  figuresOf,
   type Plate,
   plateAt,
   poseAt,
@@ -194,6 +195,33 @@ describe("In Its Order's staging", () => {
         expect(wrong.flat()).toEqual([]);
       }),
   );
+
+  test('frames the lead’s head at a third of the frame’s height or more through cold-ouch, at the table as cold-letter leaves it: the guests staring, the diners’ plane, the scroll laid open (critique 1, item 1)', () => {
+    const ouch = placed.find(({ shot }) => shot.id === 'cold-ouch')?.shot;
+    const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
+    if (!ouch || !letter)
+      return expect([ouch?.id, letter?.id]).toEqual(['cold-ouch', 'cold-letter']);
+    const table = ouch.layers.find((l) => l.name === 'table');
+    const heads = timesOf(ouch).map(
+      (t) => (ouch.headPx * cameraAt(ouch.camera, t).zoom) / ouch.size.height,
+    );
+    expect(Math.min(...heads)).toBeGreaterThanOrEqual(1 / 3);
+    const membersIn = (shot: typeof ouch) => [
+      ...new Set(figuresOf(shot).map(({ figure }) => figure.member)),
+    ];
+    expect(membersIn(ouch).toSorted()).toEqual(membersIn(letter).toSorted());
+    expect(figuresOf(ouch).length).toBeGreaterThanOrEqual(7);
+    const cellAt = (shot: typeof ouch, name: string, t: number) =>
+      figuresOf(shot)
+        .filter(({ figure }) => figure.name === name)
+        .map(({ figure }) => poseAt(figure, t).cell);
+    const guestsAt = (shot: typeof ouch, t: number) =>
+      ['man', 'woman'].flatMap((name) => cellAt(shot, name, t));
+    expect(guestsAt(ouch, 0)).toEqual(guestsAt(letter, letter.duration - 1 / letter.fps));
+    expect(
+      table?.items.some((i) => i._tag === 'Plate' && i.file.endsWith('/scroll-open.png')),
+    ).toBe(true);
+  });
 
   test('draws the open scroll in cold-letter, at rest on the table at the shot’s end', () => {
     const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
