@@ -7,7 +7,9 @@ import {
   blinkOf,
   hexOf,
   inkedFaceMarks,
+  type Palette,
   paintsOf,
+  type Role,
   rgbAt,
   type Rgb,
   withHeadOf,
@@ -279,17 +281,45 @@ interface HeadDrawing {
 const HEADED_W = 140;
 const HEADED_H = 124;
 
+/** Headwear hanging against a face's left ink ring, from the second row under its locks down to `past` rows below the chin: its paint, its width, whether an ink ring outlines it, and whether its foot is open, drawn in its paint so that past the chin it meets the robe paint to paint. */
+interface Hood {
+  readonly paint: Rgb;
+  readonly width: number;
+  readonly inked: boolean;
+  readonly open: boolean;
+  readonly past: number;
+}
+
+const VEIL: Rgb = [200, 60, 160];
+const CLOAK: Rgb = [40, 150, 90];
+
+/** `MARKED` with headwear paints: a veil drawn as `other` and a cloak as `garment`. */
+const HOODED: Palette = {
+  ink: MARKED.ink,
+  parts: [
+    ...MARKED.parts,
+    { name: 'veil', base: hexOf(VEIL), role: 'other' },
+    { name: 'cloak', base: hexOf(CLOAK), role: 'garment' },
+  ],
+};
+
 /**
  * A figure drawn as `d` says, `HEADED_W` by `HEADED_H`: a block of hair
  * from the crown down to the face's ink ring and locks beside the face,
- * the face in skin inside the ring, a neck in skin between ink sides, and
- * the robe ringed in ink to the bottom. `arm` raises a sleeve from the
- * robe beside the head, a hand ringed in ink at its end, its left column
- * at the given x, from the ring's top row down. Answers the picture, its
- * chin (the face's last skin row), its hair's rightmost column, and the
- * arm's pixels.
+ * the face in skin inside the ring, a neck in skin between ink sides, the
+ * robe ringed in ink to the bottom, and a hand ringed in ink resting on the
+ * robe well below the neck. `arm` raises a sleeve from the robe beside the
+ * head, a hand ringed in ink at its end, its left column at the given x,
+ * from the ring's top row down. `hood` hangs headwear beside the face,
+ * over the robe when it reaches that far. Answers the picture, its chin
+ * (the face's last skin row), its hair's rightmost column, and the arm's
+ * pixels.
  */
-const headedFigure = (d: HeadDrawing, arm: Option.Option<number>) => {
+const headedFigure = (
+  d: HeadDrawing,
+  arm: Option.Option<number>,
+  hood: Option.Option<Hood> = Option.none(),
+) => {
   const [width, height] = [HEADED_W, HEADED_H];
   const rgba = new Uint8Array(width * height * 4);
   const ring = d.crown + d.hair;
@@ -315,6 +345,7 @@ const headedFigure = (d: HeadDrawing, arm: Option.Option<number>) => {
       (x, y) => [paint, INK][Number(x === x0 || x === x1 || y === y0 || y === y1)] ?? INK,
     );
   ringed(20, width - 21, robeTop, height - 1, ROBE);
+  ringed(90, 100, robeTop + 20, robeTop + 30, SKIN);
   const neck = d.fx + 1 + (d.fw >> 1);
   rect(
     neck - 4,
@@ -340,6 +371,13 @@ const headedFigure = (d: HeadDrawing, arm: Option.Option<number>) => {
     for (let y = ring; y < robeTop; y++)
       for (let x = x0; x <= x0 + 8; x++) armed.add(y * width + x);
   });
+  Option.map(hood, (o) => {
+    const x1 = d.fx - 1;
+    const [x0, y0, y1] = [x1 - o.width + 1, ring + d.lock + 2, chin + o.past];
+    if (o.inked) ringed(x0, x1, y0, y1, o.paint);
+    else rect(x0, x1, y0, y1, () => o.paint);
+    if (o.open) rect(x0 + 1, x1 - 1, y1, y1, () => o.paint);
+  });
   return { raster: { width, height, rgba }, chin, right, armed };
 };
 
@@ -359,7 +397,7 @@ const headedFigure = (d: HeadDrawing, arm: Option.Option<number>) => {
  * the two chins laid over them, set on the body's crown row and its face's
  * middle column.
  */
-const wornCase = (seed: number) => {
+const wornCase = (seed: number, hooded = false) => {
   const draw = rng(seed + 500);
   const int = (a: number, b: number) => a + Math.floor(draw() * (b - a + 1));
   const b: HeadDrawing = {
@@ -391,11 +429,13 @@ const wornCase = (seed: number) => {
   const oldRight = b.fx + b.fw + 1 + b.right;
   const wornRight = head.right + ox;
   const armAt = Option.liftPredicate(Math.max(oldRight, wornRight) + 1, () => draw() < 0.5);
-  const body = headedFigure(b, armAt);
+  const hood = Option.liftPredicate(hoodOf(seed), () => hooded);
+  const body = headedFigure(b, armAt, hood);
   const leftAgainstArm =
     Option.isSome(armAt) &&
     (oldRight > wornRight || (oldRight === wornRight && b.hair + b.lock > h.hair + h.lock));
-  const refused = Math.abs(tilt) > 1 || leftAgainstArm;
+  const hoodLeft = Option.exists(hood, (o) => o.paint !== HAIR || o.past > 0);
+  const refused = Math.abs(tilt) > 1 || leftAgainstArm || hoodLeft;
   const want = new Uint8Array(body.raster.rgba.length);
   for (let q = 0; q < HEADED_W * HEADED_H; q++)
     if (Math.floor(q / HEADED_W) > body.chin || body.armed.has(q))
@@ -412,6 +452,29 @@ const wornCase = (seed: number) => {
     head: head.raster,
     want: Option.liftPredicate(want, () => !refused),
     armed: Option.isSome(armAt),
+    hood,
+  };
+};
+
+/**
+ * The headwear a generated body hangs beside its face (round 5, M1): hair,
+ * a veil drawn as `other`, or a cloak drawn as `garment` in the robe's own
+ * paint or another, 3 to 6 px wide, outlined in ink or not, ending at the
+ * chin or 6 to 12 rows below it, over the robe, its foot open or inked so
+ * it joins the robe paint to paint or across ink. The worn head draws
+ * nothing left of its face ring below its locks, so a part of the headwear
+ * is always left; only hair ending at the chin, joining no other paint, is
+ * the old head and clears.
+ */
+const hoodOf = (seed: number): Hood => {
+  const draw = rng(seed + 900);
+  const int = (a: number, b: number) => a + Math.floor(draw() * (b - a + 1));
+  return {
+    paint: [HAIR, VEIL, HAIR, ROBE, CLOAK][int(0, 4)] ?? HAIR,
+    width: int(3, 6),
+    inked: draw() < 0.5,
+    open: draw() < 0.5,
+    past: [0, int(6, 12)][int(0, 1)] ?? 0,
   };
 };
 
@@ -441,6 +504,81 @@ describe('withHeadOf (critique 3, items 2 and 6)', () => {
       true,
       true,
     ]);
+  });
+
+  test("over generated bodies hanging headwear beside the face, hair, a veil or a cloak in the robe's paint or another, outlined in ink or not, ending at the chin or running on over the robe across ink or paint to paint, a hand resting on the robe below and a sleeve and hand raised or not: the paste is refused whenever any of the old headwear would be left, and a hair lock ending at the chin clears with the old head, the arm kept (round 5, M1)", () => {
+    const hooded = paintsOf(HOODED);
+    const cases = Array.from({ length: 80 }, (_, k) => {
+      const { body, head, want, armed, hood } = wornCase(k + 1, true);
+      const got = Result.match(withHeadOf(body, head, hooded), {
+        onFailure: () => Option.none(),
+        onSuccess: (r) => Option.some([...r.rgba].join()),
+      });
+      expect([k + 1, got]).toEqual([k + 1, Option.map(want, (w) => [...w].join())]);
+      return { armed, worn: Option.isSome(want), hood: Option.getOrThrow(hood) };
+    });
+    const count = (paint: Rgb, worn: boolean) =>
+      cases.filter((c) => c.hood.paint === paint && c.worn === worn).length;
+    const joinsRobe = cases.filter(
+      (c) => c.hood.paint !== HAIR && c.hood.inked && c.hood.open && c.hood.past > 0,
+    );
+    expect({
+      hairCleared: count(HAIR, true) >= 3,
+      armKept: cases.some((c) => c.armed && c.worn),
+      veilRefused: count(VEIL, false) >= 3,
+      robeRefused: count(ROBE, false) >= 3,
+      cloakRefused: count(CLOAK, false) >= 3,
+      clothWorn: [VEIL, ROBE, CLOAK].map((p) => count(p, true)),
+      joinsRobe: joinsRobe.length >= 2,
+    }).toEqual({
+      hairCleared: true,
+      armKept: true,
+      veilRefused: true,
+      robeRefused: true,
+      cloakRefused: true,
+      clothWorn: [0, 0, 0],
+      joinsRobe: true,
+    });
+  });
+
+  test('refuses a headcloth strip beside the face, drawn as other or as garment, that meets the cap and the face across ink and runs on below the chin, where the worn head has none: none of it is put back (round 5, M1: 440 px of the old headcloth kept)', () => {
+    const ink: Rgb = [20, 10, 5];
+    const skin: Rgb = [240, 180, 130];
+    const robe: Rgb = [110, 130, 125];
+    const hair: Rgb = [90, 50, 20];
+    const veil: Rgb = [80, 110, 190];
+    const paintsAs = (role: Role) =>
+      paintsOf({
+        ink: hexOf(ink),
+        parts: [
+          { name: 'skin', role: 'skin', base: hexOf(skin) },
+          { name: 'robe', role: 'garment', base: hexOf(robe) },
+          { name: 'hair', role: 'hair', base: hexOf(hair) },
+          { name: 'headcloth', role, base: hexOf(veil) },
+        ],
+      });
+    const drawn = (cloth: boolean): Raster => {
+      const [width, height] = [81, 240];
+      const rgba = new Uint8Array(width * height * 4);
+      const set = (x: number, y: number, c: Rgb) => rgba.set([...c, 255], (y * width + x) * 4);
+      for (let y = 0; y < height; y++)
+        for (let x = 20; x <= 60; x++) {
+          const paint = [robe, skin, hair][Number(y < 80) + Number(y < 36)] ?? robe;
+          set(x, y, [paint, ink][Number(x === 20 || x === 60)] ?? ink);
+        }
+      for (let y = 0; y < 36; y++)
+        for (let x = 10; x <= 70; x++) set(x, y, [hair, ink][Number(y === 35)] ?? ink);
+      if (cloth) for (let y = 36; y <= 100; y++) for (let x = 10; x <= 19; x++) set(x, y, veil);
+      return { width, height, rgba };
+    };
+    const [body, donor] = [drawn(true), drawn(false)];
+    const outcome = (role: Role) =>
+      Result.match(withHeadOf(body, donor, paintsAs(role)), {
+        onFailure: (e) => e.message.includes('is not an arm'),
+        onSuccess: () => false,
+      });
+    expect([outcome('other'), outcome('garment')]).toEqual([true, true]);
+    expect(Result.isSuccess(withHeadOf(donor, donor, paintsAs('other')))).toBe(true);
   });
 
   test("clears the body's wider hair beyond a narrower worn head of the same face, none of it left (round 4, M2: 1,224 px of old hair kept)", () => {

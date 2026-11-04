@@ -1379,11 +1379,12 @@ export class HeadRefused extends Schema.TaggedError<HeadRefused>()('HeadRefused'
   }
 }
 
-/** A figure's head: the opaque pixels joined to its face from its crown down to its chin (the face's last row) or `past` rows below it, their box, the face's box, and the crown and chin rows. */
+/** A figure's head: the opaque pixels joined to its face from its crown down to its chin (the face's last row) or `past` rows below it, their box, the face's box, the face's own skin region (`Face.mask`), and the crown and chin rows. */
 interface Head {
   readonly px: ReadonlyArray<number>;
   readonly box: Box;
   readonly face: Box;
+  readonly skin: Uint8Array;
   readonly crown: number;
   readonly chin: number;
 }
@@ -1402,7 +1403,14 @@ const headOf = (r: Raster, paints: ReadonlyArray<Paint>, past = 0): Option.Optio
         },
         around4,
       );
-      return { px, box: boxOf(px, r.width), face: face.box, crown: lines.crown, chin };
+      return {
+        px,
+        box: boxOf(px, r.width),
+        face: face.box,
+        skin: face.mask,
+        crown: lines.crown,
+        chin,
+      };
     }),
   );
 
@@ -1417,17 +1425,15 @@ export const headBoxOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Optio
  * there, set on `body`'s crown row and its face's middle column, reaching
  * down to the lower of the two chins so no row of `body`'s face is left.
  * Of the cleared pixels the worn head does not cover, each 4-connected
- * piece drawn only in ink and hair is the old head, its outline or its
- * hair, and stays clear; a piece holding another paint that joins the rest
- * of `body` paint to paint (a raised sleeve and its hand, a shoulder) is
- * put back when it holds no hair and meets the worn head only across ink,
- * an outline between two parts. Refused when either cell reads no face; when the
- * faces differ by more than a pixel in width or height, a head turned or
- * tilted; when the crowns and the face middles disagree by more than a
- * pixel, hair drawn taller or shorter; and when a piece cannot be told
- * body or head: one joining the body that holds hair or runs paint to
- * paint into the worn head, or one joining nothing that holds skin or
- * cloth, a hand or a part of the head.
+ * piece drawn only in ink and hair, joining no other paint, is the old
+ * head, its outline or its hair, and stays clear; a piece that is part of
+ * an arm (`armOf`, a raised sleeve and its hand) is put back when it holds
+ * no hair and meets the worn head only across ink. Refused when either
+ * cell reads no face; when the faces differ by more than a pixel in width
+ * or height, a head turned or tilted; when the crowns and the face middles
+ * disagree by more than a pixel, hair drawn taller or shorter; and when
+ * any other piece is left, its part not told: hair joining the body, or
+ * cloth or skin that is not an arm, a headcloth, a hood or a shoulder.
  */
 export const withHeadOf = (
   body: Raster,
@@ -1479,11 +1485,14 @@ export const withHeadOf = (
         }
         const left = new Set([...cleared].filter((q) => !worn.has(q)));
         const seen = new Uint8Array(body.width * body.height);
+        const floor = [...cleared].reduce((y, q) => Math.max(y, Math.floor(q / body.width)), 0);
+        const wearing = { body, head, cleared, worn, roleAt };
+        const arm = armOf({ ...wearing, skin: b.skin, floor });
         for (const q0 of left) {
           if (seen[q0] === 1) continue;
           seen[q0] = 1;
           const piece = flood(body, seen, q0, (q) => left.has(q), around4);
-          const fate = pieceFateOf(piece, { body, head, cleared, worn, roleAt });
+          const fate = pieceFateOf(piece, { ...wearing, arm });
           if (Result.isFailure(fate)) return Result.fail(fate.failure);
           if (fate.success)
             for (const q of piece) rgba.set(body.rgba.subarray(q * 4, q * 4 + 4), q * 4);
@@ -1505,39 +1514,117 @@ interface Wearing {
 
 /**
  * Whether `withHeadOf` puts a piece of `body` it cleared back: false for
- * the old head (drawn only in ink and hair), true for a body part (another
- * paint joining the rest of `body` paint to paint, holding no hair, meeting
- * the worn head only across ink); refused when its part cannot be told.
+ * the old head (drawn only in ink and hair, joining no other paint), true
+ * for a part of an arm (`armOf`: every pixel of it not ink a sleeve that
+ * meets a hand, or a hand that meets a sleeve, holding no hair and meeting
+ * the worn head only across ink). Every other piece is refused, its part
+ * not told: paint and joins cannot tell a headcloth or hood from a sleeve,
+ * but an arm always ends in a hand.
  */
 const pieceFateOf = (
   piece: ReadonlyArray<number>,
-  { body, head, cleared, worn, roleAt }: Wearing,
+  { body, head, cleared, worn, roleAt, arm }: Wearing & { readonly arm: (q: number) => boolean },
 ): Result.Result<boolean, HeadRefused> => {
   const roles = new Set(piece.map((q) => roleAt(body, q)));
+  const refuse = (why: string) =>
+    Result.fail(
+      HeadRefused.make({
+        reason: `a piece of ${piece.length} px in ${[...roles].join(', ')} ${why}: its part cannot be told`,
+      }),
+    );
   const painted = (q: number, next: (m: number) => boolean) =>
     roleAt(body, q) !== 'ink' && around4(q, body.width, body.height).some(next);
-  const joins = piece.some((q) =>
-    painted(q, (m) => alphaAt(body, m) > 0 && !cleared.has(m) && roleAt(body, m) !== 'ink'),
-  );
+  if ([...roles].every((role) => role === 'ink' || role === 'hair')) {
+    const joins = piece.some((q) =>
+      painted(q, (m) => alphaAt(body, m) > 0 && !cleared.has(m) && roleAt(body, m) !== 'ink'),
+    );
+    if (joins) return refuse('joins the body');
+    return Result.succeed(false);
+  }
+  if (roles.has('hair')) return refuse('holds hair beside another paint');
   const runsIn = piece.some((q) =>
     painted(q, (m) =>
       Option.exists(Option.fromUndefinedOr(worn.get(m)), (hq) => roleAt(head, hq) !== 'ink'),
     ),
   );
-  const oldHead = [...roles].every((role) => role === 'ink' || role === 'hair');
-  if (joins && (roles.has('hair') || (!oldHead && runsIn)))
-    return Result.fail(
-      HeadRefused.make({
-        reason: `a piece of ${piece.length} px joins the body and the head: its part cannot be told`,
-      }),
-    );
-  if (!joins && !oldHead)
-    return Result.fail(
-      HeadRefused.make({
-        reason: `a piece of ${piece.length} px in ${[...roles].join(', ')} joins nothing: a hand or a part of the head`,
-      }),
-    );
-  return Result.succeed(!oldHead);
+  if (runsIn) return refuse('runs paint to paint into the worn head');
+  const stray = piece.filter((q) => roleAt(body, q) !== 'ink' && !arm(q));
+  if (stray.length > 0) {
+    const box = boxOf(stray, body.width);
+    const where = `${[...new Set(stray.map((q) => roleAt(body, q)))].join(', ')} at x ${box.x}–${box.x + box.width - 1}, y ${box.y}–${box.y + box.height - 1}`;
+    return refuse(`is not an arm, a sleeve ending in a hand (its ${where})`);
+  }
+  return Result.succeed(true);
+};
+
+/**
+ * Whether a pixel of `body` is part of an arm, the only part a worn head
+ * puts back: a hand is a region of skin that is not the face's own skin
+ * region (`skin`); a sleeve is a region of paint other than ink, hair and
+ * skin at or above `floor`, the last row the paste clears. A sleeve that meets a hand, or a hand that meets a sleeve, is an
+ * arm. Two regions meet when they touch or when a straight run of ink, an
+ * outline as thick as it is drawn, lies between them across a row or a
+ * column. A path down past `floor`
+ * into the robe is not followed, so cloth joined to the robe below the head
+ * is never an arm by a hand the robe meets elsewhere.
+ */
+const armOf = ({
+  body,
+  roleAt,
+  skin,
+  floor,
+}: Pick<Wearing, 'body' | 'roleAt'> & {
+  readonly skin: Uint8Array;
+  readonly floor: number;
+}): ((q: number) => boolean) => {
+  const { width, height } = body;
+  const drawn = (q: number) => alphaAt(body, q) > 0;
+  const isSkin = (q: number) => drawn(q) && roleAt(body, q) === 'skin';
+  const isSleeve = (q: number) =>
+    drawn(q) &&
+    Math.floor(q / width) <= floor &&
+    !['ink', 'hair', 'skin'].includes(roleAt(body, q));
+  const isInk = (q: number) => drawn(q) && roleAt(body, q) === 'ink';
+  const fate = new Uint8Array(width * height);
+  const regionOf = (q0: number, member: (q: number) => boolean) => {
+    const seen = new Uint8Array(width * height);
+    seen[q0] = 1;
+    return flood(body, seen, q0, member, around4);
+  };
+  const hands = new Uint8Array(width * height);
+  const isHand = (q: number): boolean => {
+    if (!isSkin(q)) return false;
+    if (hands[q] === 0) {
+      const region = regionOf(q, isSkin);
+      const own = Number(region.some((m) => skin[m] === 1)) + 1;
+      for (const m of region) hands[m] = own;
+    }
+    return hands[q] === 1;
+  };
+  const steps = [1, -1, width, -width];
+  const meets = (q: number, other: (m: number) => boolean) =>
+    steps.some((step) => {
+      const across = (m: number) => Math.abs((m % width) - ((m - step) % width)) <= 1;
+      let m = q + step;
+      while (m >= 0 && m < width * height && across(m) && isInk(m)) m += step;
+      return m >= 0 && m < width * height && across(m) && other(m);
+    });
+  const settle = (region: ReadonlyArray<number>, armed: boolean) => {
+    for (const m of region) fate[m] = Number(armed) + 1;
+    return armed;
+  };
+  return (q) => {
+    if (fate[q] !== 0) return fate[q] === 2;
+    if (isSleeve(q)) {
+      const sleeve = regionOf(q, isSleeve);
+      return settle(
+        sleeve,
+        sleeve.some((m) => meets(m, isHand)),
+      );
+    }
+    const hand = regionOf(q, isSkin);
+    return settle(hand, isHand(q) && hand.some((m) => meets(m, isSleeve)));
+  };
 };
 
 /** The share of a picture taken as its ink: its darkest 2 % of opaque pixels. */
