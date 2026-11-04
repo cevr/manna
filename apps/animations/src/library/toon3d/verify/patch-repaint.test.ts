@@ -6,12 +6,13 @@ import { PART } from '../figure.ts';
 import type { ViewName } from '../render.ts';
 import { BARS } from './bars.ts';
 import {
-  clustersOf,
   keptPaint,
+  PATCH_FLOOR,
+  patchesOf,
+  patchRepainter,
+  patchText,
   REPAINT_APART,
-  repainter,
-  repaintPairs,
-  witnessText,
+  repaintColour,
 } from './coverage.ts';
 import type { Raster } from './measures.ts';
 import { decode, readProbes, VIEWS } from './pipeline.ts';
@@ -60,19 +61,17 @@ const idsFor = (kept: Raster, probes: ReadonlyArray<ColourProbe>): Raster => {
   return { width: kept.width, height: kept.height, rgba };
 };
 
-/** Whether a repaint changed any pixel of the probe's box: an untouched probe reads the repaint as it reads the kept, ΔE 0 where the control passes at 0, so the verdict is read over the touched probes alone, and a repaint that touches no probe escapes. */
-const touches = (kept: Raster, scene: Raster, probe: ColourProbe): boolean => {
+/** Whether any pixel of the probe's box is set in `mask`: an untouched probe reads the repaint as it reads the kept, ΔE 0 where the control passes at 0, so the verdict is read over the touched probes alone, and a repaint that touches no probe escapes. */
+const touches = (mask: Uint8Array, width: number, probe: ColourProbe): boolean => {
   const [x0, y0, w, h] = probe.box;
-  for (let y = y0; y < y0 + h; y++) {
-    const at = (y * kept.width + x0) * 4;
-    for (let k = at; k < at + w * 4; k++) if (kept.rgba[k] !== scene.rgba[k]) return true;
-  }
+  for (let y = y0; y < y0 + h; y++)
+    for (let x = x0; x < x0 + w; x++) if (mask[y * width + x] === 1) return true;
   return false;
 };
 
-describe('a kept flat paint repainted another paint of its region', () => {
+describe('a kept flat patch repainted alone, to a colour past twice the bar from it', () => {
   it.effect(
-    "in every kept view, repainting any witness cluster's colour to the nearest of its region's other clusters' past twice the bar fails colour, where the kept itself passes",
+    'in every kept view, repainting the pixels of any one patch at or above the area floor, and no other, to the nearest patch colour more than twice the bar from each of its witnesses fails colour, where the kept itself passes',
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
@@ -89,39 +88,43 @@ describe('a kept flat paint repainted another paint of its region', () => {
             const list = probes.views[view];
             const ids = idsFor(kept, list);
             const paint = keptPaint(kept);
-            const pairs = repaintPairs(clustersOf(paint), REPAINT_APART);
-            const repaint = repainter(kept, paint);
+            const patches = patchesOf(paint);
+            const repaint = patchRepainter(kept);
+            const mask = new Uint8Array(kept.width * kept.height);
             const control = colourOf(view, readProbes(view, list, kept, kept, ids));
-            const escaped = pairs.flatMap(({ from, to }) => {
-              const scene = repaint(from, to);
-              const touched = list.filter((probe) => touches(kept, scene, probe));
-              return [
-                `${view} ${witnessText(paint, from.seed)} painted Lab ${to.seed.lab.map((v) => v.toFixed(1)).join(' ')}`,
-              ].filter(
-                () =>
-                  touched.length === 0 ||
-                  colourOf(view, readProbes(view, touched, kept, scene, ids)).pass,
-              );
-            });
-            const stray = pairs.slice(0, 1).flatMap((first) =>
-              pairs
-                .filter((next) => next.from.region !== first.from.region)
-                .slice(0, 1)
-                .map((next) => {
-                  repaint(first.from, first.to);
-                  const scene = repaint(next.from, next.to);
-                  return paint.region.filter(
-                    (r, i) =>
-                      r !== next.from.region &&
-                      kept.rgba
-                        .subarray(i * 4, i * 4 + 4)
-                        .some((v, k) => v !== scene.rgba[i * 4 + k]),
-                  ).length;
-                }),
+            const checked = patches
+              .map((patch, k) => ({ patch, k }))
+              .filter(({ patch }) => patch.pixels.length >= PATCH_FLOOR);
+            const escaped = checked.flatMap(({ patch, k }) =>
+              Option.match(repaintColour(kept, paint, patches, k, REPAINT_APART), {
+                onNone: () => [`${view} ${patchText(paint, patch)} has no colour to repaint`],
+                onSome: (colour) => {
+                  const scene = repaint(patch, colour);
+                  for (const i of patch.pixels) mask[i] = 1;
+                  const touched = list.filter((probe) => touches(mask, kept.width, probe));
+                  for (const i of patch.pixels) mask[i] = 0;
+                  return [`${view} ${patchText(paint, patch)} painted ${colour.join(' ')}`].filter(
+                    () =>
+                      touched.length === 0 ||
+                      colourOf(view, readProbes(view, touched, kept, scene, ids)).pass,
+                  );
+                },
+              }),
             );
+            const stray = checked.slice(0, 3).map(({ patch }) => {
+              const scene = repaint(patch, [0, 255, 0]);
+              const own = new Set(patch.pixels);
+              const changed: Array<number> = [];
+              for (let i = 0; i < kept.width * kept.height; i++)
+                if (
+                  kept.rgba.subarray(i * 4, i * 4 + 4).some((v, n) => v !== scene.rgba[i * 4 + n])
+                )
+                  changed.push(i);
+              return changed.length === own.size && changed.every((i) => own.has(i));
+            });
             return {
               control: `${view} ${control.pass} ${control.value}`,
-              pairs: pairs.length,
+              checked: checked.length,
               escaped,
               stray,
             };
@@ -129,12 +132,8 @@ describe('a kept flat paint repainted another paint of its region', () => {
         );
         expect(rows.map((r) => r.control)).toEqual(VIEWS.map((view) => `${view} true 0`));
         expect(rows.flatMap((r) => r.escaped)).toEqual([]);
-        expect(Math.min(...rows.map((r) => r.pairs))).toBeGreaterThan(50);
-        const stray = rows.flatMap((r) => r.stray);
-        expect({ checked: stray.length >= 3, stray: stray.filter((n) => n > 0) }).toEqual({
-          checked: true,
-          stray: [],
-        });
+        expect(Math.min(...rows.map((r) => r.checked))).toBeGreaterThan(100);
+        expect(rows.flatMap((r) => r.stray)).toEqual(VIEWS.flatMap(() => [true, true, true]));
       }).pipe(Effect.provide(BunServices.layer)),
   );
 });

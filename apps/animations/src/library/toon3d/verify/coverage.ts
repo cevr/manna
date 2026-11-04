@@ -25,36 +25,34 @@ export const WITNESS_SIDE = 4;
 /** The grid step (px, both axes) of the witness enumeration. */
 export const WITNESS_STRIDE = 2;
 
-/** A witness is covered by a probe of its region whose kept median lies within this ΔE of the witness's: the colour bar. */
+/** The colour bar (ΔE): a patch holds the witnesses within it of its seed, and a probe covers a patch when its kept median lies within it of a witness of the patch its box overlaps. */
 export const COVER = 3;
 
-/** A cluster is repainted only to a colour more than this ΔE from its seed: a colour within it shares with the seed a probe colour within the bar of both, so the bar need not see the repaint. */
+/** A patch is repainted only to a colour more than this ΔE from every witness of it: a covering probe's kept median lies within `COVER` of one of them, so the repaint lies more than `COVER` from the probe's colour. */
 export const REPAINT_APART = 2 * COVER;
 
-/** A flat box of a kept view: its box, its median Lab and its region. */
+/**
+ * The area floor (px): a patch of fewer pixels is watercolour grain, exempt by
+ * rule. 32 px is two witnesses side by side; the smallest shown paint of a
+ * part the lead's reviewed probes mark holds a patch of 36 px, and each hand
+ * shade of round 6's finding a patch of 52.
+ */
+export const PATCH_FLOOR = 32;
+
+/** A flat box of a kept view: its box and its median Lab. */
 export interface Witness {
   readonly box: Box;
   readonly lab: Rgb;
-  readonly region: number;
 }
 
-/** A kept view read for coverage: each pixel's Lab and region (-1 off every region), each region's pixels and first pixel, and every flat witness. */
+/** A kept view read for coverage: each pixel's Lab, every flat witness in reading order, and each witness's index by its grid cell. */
 export interface KeptPaint {
   readonly width: number;
   readonly height: number;
   readonly plane: Float32Array;
-  readonly region: Int32Array;
-  readonly members: ReadonlyArray<ReadonlyArray<number>>;
-  readonly firsts: ReadonlyArray<number>;
   readonly witnesses: ReadonlyArray<Witness>;
+  readonly grid: ReadonlyMap<number, number>;
 }
-
-/** The Lab of pixel `i` of a plane. */
-const labOf = (plane: Float32Array, i: number): Rgb => [
-  plane[i * 3] ?? 0,
-  plane[i * 3 + 1] ?? 0,
-  plane[i * 3 + 2] ?? 0,
-];
 
 /** The square of ΔE76 between pixel `i` of a plane and the Lab `c`. */
 const offAt = (plane: Float32Array, i: number, c: Rgb): number => {
@@ -63,6 +61,13 @@ const offAt = (plane: Float32Array, i: number, c: Rgb): number => {
   const db = (plane[i * 3 + 2] ?? 0) - c[2];
   return dl * dl + da * da + db * db;
 };
+
+/** The Lab of pixel `i` of a plane. */
+const labOf = (plane: Float32Array, i: number): Rgb => [
+  plane[i * 3] ?? 0,
+  plane[i * 3 + 1] ?? 0,
+  plane[i * 3 + 2] ?? 0,
+];
 
 /** The pixel indices of `box` in a `w`-wide picture, row by row. */
 const indicesIn = (box: Box, w: number): ReadonlyArray<number> => {
@@ -122,10 +127,12 @@ const insideOutline = (plane: Float32Array, w: number, h: number): Uint8Array =>
   return inside;
 };
 
+/** The grid cell of a witness whose box starts at (x0, y0), in a `width`-wide picture. */
+const cellOf = (width: number, x0: number, y0: number): number =>
+  (y0 / WITNESS_STRIDE) * (Math.floor(width / WITNESS_STRIDE) + 1) + x0 / WITNESS_STRIDE;
+
 /**
- * A kept view read for coverage. A region is a 4-connected component of the
- * pixels inside the figure's outline that are not line ink, so the drawn
- * lines split the parts. A witness is a `WITNESS_SIDE` box on a
+ * A kept view read for coverage. A witness is a `WITNESS_SIDE` box on a
  * `WITNESS_STRIDE` grid inside the outline, `INK_CLEAR` px from line ink,
  * every pixel within `PROBE_FLAT` of its median: a flat paint a probe could
  * read.
@@ -136,194 +143,234 @@ export const keptPaint = (kept: Raster): KeptPaint => {
   const figure = insideOutline(plane, w, h);
   const ink = new Uint8Array(w * h).map((_, i) => Number((plane[i * 3] ?? 0) < LINE_INK));
   const nearInk = dilate(ink, w, h, INK_CLEAR);
-  const region = new Int32Array(w * h).fill(-1);
-  const parts = components(w, h, (i) => figure[i] === 1 && ink[i] === 0);
-  parts.forEach((pixels, k) => {
-    for (const i of pixels) region[i] = k;
-  });
   const clear = new Uint8Array(w * h).map((_, i) => Number(figure[i] === 1 && nearInk[i] === 0));
   const sorting = new Float64Array(WITNESS_SIDE * WITNESS_SIDE);
   const witnesses: Array<Witness> = [];
+  const grid = new Map<number, number>();
   for (let y0 = 0; y0 + WITNESS_SIDE <= h; y0 += WITNESS_STRIDE)
     for (let x0 = 0; x0 + WITNESS_SIDE <= w; x0 += WITNESS_STRIDE) {
       const box = { x0, y0, x1: x0 + WITNESS_SIDE - 1, y1: y0 + WITNESS_SIDE - 1 };
       if (!allClear(clear, plane, box, w)) continue;
       const flat = flatOf(plane, indicesIn(box, w), sorting);
-      if (Option.isSome(flat))
-        witnesses.push({ box, lab: flat.value, region: region[y0 * w + x0] ?? -1 });
+      if (Option.isNone(flat)) continue;
+      grid.set(cellOf(w, x0, y0), witnesses.length);
+      witnesses.push({ box, lab: flat.value });
     }
-  return {
-    width: w,
-    height: h,
-    plane,
-    region,
-    members: parts,
-    firsts: parts.map((pixels) => pixels[0] ?? 0),
-    witnesses,
-  };
+  return { width: w, height: h, plane, witnesses, grid };
 };
 
-/** A region's name: its first pixel in reading order, as `x,y`. */
-export const regionName = (paint: KeptPaint, region: number): string => {
-  const first = paint.firsts[region] ?? 0;
-  return `${first % paint.width},${Math.floor(first / paint.width)}`;
-};
-
-/** What a probe reads in the kept view for coverage: the regions its box lies in and its median Lab; none when it leaves the picture or is not flat. */
-export const probeReach = (
-  paint: KeptPaint,
-  probe: ColourProbe,
-): Option.Option<{ readonly regions: ReadonlySet<number>; readonly lab: Rgb }> => {
-  const box = probeBox(probe);
-  if (box.x0 < 0 || box.y0 < 0 || box.x1 >= paint.width || box.y1 >= paint.height)
-    return Option.none();
-  const at = indicesIn(box, paint.width);
-  return Option.map(flatOf(paint.plane, at), (lab) => ({
-    regions: new Set(at.map((i) => paint.region[i] ?? -1)),
-    lab,
-  }));
-};
-
-/** Each witness no probe covers and no exemption lets go: no probe of its region has a kept median within `COVER` of it, and no exemption of its region names a colour within `COVER` of it. */
-export const uncovered = (
-  paint: KeptPaint,
-  probes: ReadonlyArray<ColourProbe>,
-  exempt: ReadonlyArray<CoverageExemption>,
-): ReadonlyArray<Witness> => {
-  const reach = probes.flatMap((probe) => Option.toArray(probeReach(paint, probe)));
-  const lets = exempt.map((e) => ({
-    region: paint.region[e.at[1] * paint.width + e.at[0]] ?? -1,
-    lab: e.lab,
-  }));
-  return paint.witnesses.filter(
-    (w) =>
-      !reach.some((p) => p.regions.has(w.region) && deltaLab(p.lab, w.lab) <= COVER) &&
-      !lets.some((e) => e.region === w.region && deltaLab(e.lab, w.lab) <= COVER),
-  );
-};
-
-/** A witness as the coverage test names it: its region, its box as `[x, y, w, h]` and its Lab. */
-export const witnessText = (paint: KeptPaint, w: Witness): string =>
-  `region ${regionName(paint, w.region)} [${w.box.x0}, ${w.box.y0}, ${WITNESS_SIDE}, ${WITNESS_SIDE}] Lab ${w.lab.map((v) => v.toFixed(1)).join(' ')}`;
-
-/** One colour of one region: the witnesses within `COVER` of its seed, the first witness of that colour in reading order. */
-export interface Cluster {
-  readonly region: number;
-  readonly seed: Witness;
-  readonly witnesses: ReadonlyArray<Witness>;
-}
-
-/** A kept view's witness clusters: each witness joins the first cluster of its region whose seed lies within `COVER` of it, else seeds a new one, so the seeds of a region lie more than `COVER` apart. */
-export const clustersOf = (paint: KeptPaint): ReadonlyArray<Cluster> => {
-  const out: Array<{ region: number; seed: Witness; witnesses: Array<Witness> }> = [];
-  for (const w of paint.witnesses) {
-    Option.match(
-      Option.fromUndefinedOr(
-        out.find((c) => c.region === w.region && deltaLab(c.seed.lab, w.lab) <= COVER),
-      ),
-      {
-        onNone: () => out.push({ region: w.region, seed: w, witnesses: [w] }),
-        onSome: (home) => home.witnesses.push(w),
-      },
-    );
-  }
+/** The indices of the witnesses whose boxes share a pixel with `box`. */
+const witnessesOver = (paint: KeptPaint, box: Box): ReadonlyArray<number> => {
+  const out: Array<number> = [];
+  const first = (v: number): number =>
+    Math.max(0, Math.ceil((v - WITNESS_SIDE + 1) / WITNESS_STRIDE) * WITNESS_STRIDE);
+  for (let y0 = first(box.y0); y0 <= box.y1; y0 += WITNESS_STRIDE)
+    for (let x0 = first(box.x0); x0 <= box.x1; x0 += WITNESS_STRIDE)
+      Option.map(Option.fromUndefinedOr(paint.grid.get(cellOf(paint.width, x0, y0))), (k) =>
+        out.push(k),
+      );
   return out;
 };
 
-/** The pixel of a cluster's seed box nearest its median, as sRGB bytes: the colour a repaint lays. */
-const seedRgb = (kept: Raster, paint: KeptPaint, c: Cluster): Rgb => {
-  const off = (i: number): number => deltaLab(labOf(paint.plane, i), c.seed.lab);
-  const at = indicesIn(c.seed.box, paint.width).toSorted((a, b) => off(a) - off(b));
+/** The box a witness's box overlaps or touches: its own grown by one pixel on each side. */
+const touchBox = (w: Witness): Box => ({
+  x0: w.box.x0 - 1,
+  y0: w.box.y0 - 1,
+  x1: w.box.x1 + 1,
+  y1: w.box.y1 + 1,
+});
+
+/**
+ * A flat patch of a kept view: one area of one flat colour. Its seed is the
+ * witness, of those no earlier patch holds, with the most witnesses within
+ * `COVER` of it among those its box overlaps or touches (the first in reading
+ * order of equals), so a seed lies inside its paint, not on its edge. The
+ * patch grows box to box through witnesses whose boxes overlap or touch one
+ * it holds, taking each whose median lies within `COVER` of the seed's, so a
+ * slow gradient is cut into patches no wider than the bar. Its pixels are its
+ * witnesses' boxes.
+ */
+export interface Patch {
+  readonly seed: Witness;
+  readonly witnesses: ReadonlyArray<Witness>;
+  readonly pixels: ReadonlyArray<number>;
+}
+
+/** A kept view's flat patches, in the order of their seeds. */
+export const patchesOf = (paint: KeptPaint): ReadonlyArray<Patch> => {
+  const { witnesses } = paint;
+  const touching = witnesses.map((v, k) =>
+    witnessesOver(paint, touchBox(v)).filter((n) => n !== k),
+  );
+  const alike = witnesses.map(
+    (v, k) =>
+      (touching[k] ?? []).filter((n) => deltaLab(v.lab, witnesses[n]?.lab ?? v.lab) <= COVER)
+        .length,
+  );
+  const order = witnesses
+    .map((_, k) => k)
+    .toSorted((a, b) => (alike[b] ?? 0) - (alike[a] ?? 0) || a - b);
+  const held = new Uint8Array(witnesses.length);
+  return order.flatMap((k) =>
+    Option.match(
+      Option.filter(Option.fromUndefinedOr(witnesses[k]), () => held[k] !== 1),
+      {
+        onNone: (): ReadonlyArray<Patch> => [],
+        onSome: (seed) => grow(paint, touching, held, k, seed),
+      },
+    ),
+  );
+};
+
+/** The patch `patchesOf` grows from the seed witness `k`, holding each witness it takes in `held`. */
+const grow = (
+  paint: KeptPaint,
+  touching: ReadonlyArray<ReadonlyArray<number>>,
+  held: Uint8Array,
+  k: number,
+  seed: Witness,
+): ReadonlyArray<Patch> => {
+  const { witnesses, width: w } = paint;
+  held[k] = 1;
+  const members: Array<number> = [k];
+  for (let q = 0; q < members.length; q++)
+    for (const n of touching[members[q] ?? k] ?? []) {
+      if (held[n] === 1 || deltaLab(seed.lab, witnesses[n]?.lab ?? seed.lab) > COVER) continue;
+      held[n] = 1;
+      members.push(n);
+    }
+  const taken = members
+    .toSorted((a, b) => a - b)
+    .flatMap((n) => Option.toArray(Option.fromUndefinedOr(witnesses[n])));
+  const pixels = new Set<number>();
+  for (const v of taken) for (const i of indicesIn(v.box, w)) pixels.add(i);
+  return [{ seed, witnesses: taken, pixels: [...pixels].toSorted((a, b) => a - b) }];
+};
+
+/** What a probe reads in the kept view for coverage: its box and its median Lab; none when it leaves the picture or is not flat. */
+export const probeReach = (
+  paint: KeptPaint,
+  probe: ColourProbe,
+): Option.Option<{ readonly box: Box; readonly lab: Rgb }> => {
+  const box = probeBox(probe);
+  if (box.x0 < 0 || box.y0 < 0 || box.x1 >= paint.width || box.y1 >= paint.height)
+    return Option.none();
+  return Option.map(flatOf(paint.plane, indicesIn(box, paint.width)), (lab) => ({ box, lab }));
+};
+
+/** Each patch's covering probes: those whose box overlaps a witness of the patch whose median lies within `COVER` of the probe's kept median. A probe never covers a patch it does not touch. */
+export const coverOf = (
+  paint: KeptPaint,
+  patches: ReadonlyArray<Patch>,
+  probes: ReadonlyArray<ColourProbe>,
+): ReadonlyArray<ReadonlyArray<ColourProbe>> => {
+  const home = new Map<Witness, number>();
+  patches.forEach((p, k) => {
+    for (const v of p.witnesses) home.set(v, k);
+  });
+  const by = patches.map((): Array<ColourProbe> => []);
+  for (const probe of probes)
+    Option.map(probeReach(paint, probe), ({ box, lab }) => {
+      const reached = new Set<number>();
+      for (const n of witnessesOver(paint, box))
+        Option.map(
+          Option.flatMap(
+            Option.filter(
+              Option.fromUndefinedOr(paint.witnesses[n]),
+              (v) => deltaLab(v.lab, lab) <= COVER,
+            ),
+            (v) => Option.fromUndefinedOr(home.get(v)),
+          ),
+          (k) => reached.add(k),
+        );
+      for (const k of reached) by[k]?.push(probe);
+    });
+  return by;
+};
+
+/** Whether an exemption names a patch: its pixel `at` lies in a witness of the patch whose median lies within `COVER` of the exemption's colour. */
+export const exemptsPatch = (patch: Patch, e: CoverageExemption): boolean => {
+  const [x, y] = e.at;
+  return patch.witnesses.some(
+    (v) =>
+      x >= v.box.x0 &&
+      x <= v.box.x1 &&
+      y >= v.box.y0 &&
+      y <= v.box.y1 &&
+      deltaLab(v.lab, e.lab) <= COVER,
+  );
+};
+
+/** Each patch of at least `floor` px that no probe covers and no exemption names. */
+export const uncoveredPatches = (
+  paint: KeptPaint,
+  patches: ReadonlyArray<Patch>,
+  probes: ReadonlyArray<ColourProbe>,
+  exempt: ReadonlyArray<CoverageExemption>,
+  floor: number,
+): ReadonlyArray<Patch> => {
+  const cover = coverOf(paint, patches, probes);
+  return patches.filter(
+    (patch, k) =>
+      patch.pixels.length >= floor &&
+      (cover[k] ?? []).length === 0 &&
+      !exempt.some((e) => exemptsPatch(patch, e)),
+  );
+};
+
+/** A box as `[x, y, w, h]`. */
+const boxText = (b: Box): string => `[${b.x0}, ${b.y0}, ${b.x1 - b.x0 + 1}, ${b.y1 - b.y0 + 1}]`;
+
+/** The bounds of a patch's pixels. */
+export const patchBounds = (paint: KeptPaint, patch: Patch): Box => {
+  const xs = patch.pixels.map((i) => i % paint.width);
+  const ys = patch.pixels.map((i) => Math.floor(i / paint.width));
+  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+};
+
+/** A patch as the coverage test names it: its seed's box and Lab, its area and its bounds. */
+export const patchText = (paint: KeptPaint, patch: Patch): string =>
+  `patch ${boxText(patch.seed.box)} Lab ${patch.seed.lab.map((v) => v.toFixed(1)).join(' ')} area ${patch.pixels.length} bounds ${boxText(patchBounds(paint, patch))}`;
+
+/** The pixel of a witness's box nearest its median, as sRGB bytes. */
+const witnessRgb = (kept: Raster, paint: KeptPaint, w: Witness): Rgb => {
+  const off = (i: number): number => deltaLab(labOf(paint.plane, i), w.lab);
+  const at = indicesIn(w.box, paint.width).toSorted((a, b) => off(a) - off(b));
   return pixel(kept, at[0] ?? 0);
 };
 
-/** Each cluster that shares its region with another whose seed lies more than `apart` from its own, paired with the nearest such in colour: the paint a repaint of it lays. */
-export const repaintPairs = (
-  clusters: ReadonlyArray<Cluster>,
-  apart: number,
-): ReadonlyArray<{ readonly from: Cluster; readonly to: Cluster }> =>
-  clusters.flatMap((from) =>
-    clusters
-      .filter((to) => to.region === from.region)
-      .map((to) => ({ to, d: deltaLab(to.seed.lab, from.seed.lab) }))
-      .filter(({ d }) => d > apart)
-      .toSorted((a, b) => a.d - b.d)
-      .slice(0, 1)
-      .map(({ to }) => ({ from, to })),
-  );
-
-/**
- * A kept view's cluster repaint: the view with `from`'s colour painted `to`'s.
- * Every pixel of their region within `PROBE_FLAT` of `from`'s seed and nearer
- * it than `to`'s seed takes the colour of `to`'s seed; ink and the other
- * regions stay. Each region's pixels are bucketed by whole L* once, so a
- * repaint reads only the buckets within `PROBE_FLAT` of the seed's L*. The
- * repaints share one buffer, each undoing the last: a repaint's raster holds
- * until the next repaint.
- */
-export const repainter = (
+/** The colour a repaint of patch `k` lays: the seed colour (as sRGB bytes, its seed box's pixel nearest its median) of the patch whose seed lies nearest `k`'s seed in the picture, of those whose seed colour lies more than `apart` from every witness of `k`; none when no patch's does. */
+export const repaintColour = (
   kept: Raster,
   paint: KeptPaint,
-): ((from: Cluster, to: Cluster) => Raster) => {
-  const buckets = paint.members.map((pixels) => byLightness(paint.plane, pixels));
+  patches: ReadonlyArray<Patch>,
+  k: number,
+  apart: number,
+): Option.Option<Rgb> =>
+  Option.flatMap(Option.fromUndefinedOr(patches[k]), (from) => {
+    const far = (to: Patch): boolean =>
+      from.witnesses.every((v) => deltaLab(v.lab, to.seed.lab) > apart);
+    const gap = (to: Patch): number =>
+      Math.hypot(to.seed.box.x0 - from.seed.box.x0, to.seed.box.y0 - from.seed.box.y0);
+    return Option.map(
+      Option.fromUndefinedOr(
+        patches
+          .filter((to, n) => n !== k)
+          .toSorted((a, b) => gap(a) - gap(b))
+          .find(far),
+      ),
+      (to) => witnessRgb(kept, paint, to.seed),
+    );
+  });
+
+/** A kept view's patch repaint: the view with one patch's pixels, and no other, painted `colour`. The repaints share one buffer, each undoing the last: a repaint's raster holds until the next repaint. */
+export const patchRepainter = (kept: Raster): ((patch: Patch, colour: Rgb) => Raster) => {
   const rgba = kept.rgba.slice();
   let last: ReadonlyArray<number> = [];
-  return (from, to) => {
+  return (patch, colour) => {
     for (const i of last) for (let k = i * 4; k < i * 4 + 4; k++) rgba[k] = kept.rgba[k] ?? 0;
-    last = Option.match(Option.fromUndefinedOr(buckets[from.region]), {
-      onNone: () => [],
-      onSome: (bucketed) => repaintCluster(rgba, kept, paint, bucketed, from, to),
-    });
+    for (const i of patch.pixels) rgba.set([...colour, 255], i * 4);
+    last = patch.pixels;
     return { width: kept.width, height: kept.height, rgba };
   };
-};
-
-/** A region's pixels in buckets of whole L* (0 to 100): bucket `l` is `pixels[starts[l]]` up to `pixels[starts[l + 1]]`. */
-interface Bucketed {
-  readonly pixels: Int32Array;
-  readonly starts: Int32Array;
-}
-
-/** Whole L* of pixel `i`, within 0 to 100. */
-const bucketOf = (plane: Float32Array, i: number): number =>
-  Math.min(100, Math.max(0, Math.floor(plane[i * 3] ?? 0)));
-
-/** `pixels` bucketed by whole L*, by a counting sort. */
-const byLightness = (plane: Float32Array, pixels: ReadonlyArray<number>): Bucketed => {
-  const starts = new Int32Array(102);
-  for (const i of pixels)
-    starts[bucketOf(plane, i) + 1] = (starts[bucketOf(plane, i) + 1] ?? 0) + 1;
-  for (let l = 1; l < 102; l++) starts[l] = (starts[l] ?? 0) + (starts[l - 1] ?? 0);
-  const next = starts.slice();
-  const out = new Int32Array(pixels.length);
-  for (const i of pixels) {
-    const l = bucketOf(plane, i);
-    out[next[l] ?? 0] = i;
-    next[l] = (next[l] ?? 0) + 1;
-  }
-  return { pixels: out, starts };
-};
-
-/** `repainter`'s repaint into `rgba` over the region's bucketed pixels; the pixels it painted. */
-const repaintCluster = (
-  rgba: Uint8Array,
-  kept: Raster,
-  paint: KeptPaint,
-  { pixels, starts }: Bucketed,
-  from: Cluster,
-  to: Cluster,
-): ReadonlyArray<number> => {
-  const colour = [...seedRgb(kept, paint, to), 255];
-  const lo = Math.max(0, Math.floor(from.seed.lab[0] - PROBE_FLAT));
-  const hi = Math.min(100, Math.floor(from.seed.lab[0] + PROBE_FLAT));
-  const painted: Array<number> = [];
-  for (let k = starts[lo] ?? 0; k < (starts[hi + 1] ?? 0); k++) {
-    const i = pixels[k] ?? 0;
-    const d = offAt(paint.plane, i, from.seed.lab);
-    if (d <= PROBE_FLAT * PROBE_FLAT && d < offAt(paint.plane, i, to.seed.lab)) {
-      rgba.set(colour, i * 4);
-      painted.push(i);
-    }
-  }
-  return painted;
 };
