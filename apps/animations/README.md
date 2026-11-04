@@ -520,8 +520,13 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   `quick/`) twice, colour and each figure alone, and judges the bars in
   `verify/bars.ts`: `verdict.md` opens `PASS n/n pass` or `FAIL k/n pass`;
   beside it `verdict.json`, `manifest.json`, `contact.png`, `shot.mp4`,
-  `frames/` and `figures/`. It exits 0 only on PASS n/n. The bars stay
-  `orchestrator-proposed` until the owner OKs their numbers.
+  `frames/` and `figures/`. It exits 0 only on PASS n/n. A head (crown to
+  the collar: the first run of clothes in the head column that skin does
+  not close below, so a jaw line drawn in a garment's colour is not the
+  collar) is read once on each stored cell at its sheet's own size; the
+  `scale` bar reads those heads as the plan draws them in every frame, not
+  from renders. The bars stay `orchestrator-proposed` until the owner OKs
+  their numbers.
 
 ## How a film is built
 
