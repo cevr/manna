@@ -155,6 +155,7 @@ export const seat = (
     readonly x: number;
     readonly crown: number;
     readonly worn?: Figure['worn'];
+    readonly dress?: Figure['dress'];
   },
   at: { readonly headPx: number; readonly z: number },
   spans: Figure['spans'],
@@ -166,6 +167,7 @@ export const seat = (
     at: { x: f.x, ground: f.crown + tallOf(f.member, f.sheet, at.headPx, at.z) },
     spans,
     worn: f.worn ?? [],
+    dress: f.dress ?? [],
   });
 
 /** One hold: a blinking hold, or a still one where its blink key is its own cell (a short key change). */

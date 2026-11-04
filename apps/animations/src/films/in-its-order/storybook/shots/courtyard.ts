@@ -53,7 +53,27 @@ export const DINERS_ROW = {
 /** The four dressed diners, each on its own sheet, the side each `talk` turns to. */
 export const DINERS = [1, 2, 3, 4] as const;
 
-/** Diner `n` at `x`, its crown at `crown`, on a plane at `z` under a grown head of `headPx`. */
+/**
+ * What diners 1 and 2 wear in other colours, so neither doubles a guest
+ * (critique 1, item 9; the owner's O3): diner 1's pale headcloth (the
+ * palette's grey-beige) in ochre, his band (its indigo) in rust and his vest
+ * (its walnut) in slate, beside the guest man's white headcloth, blue band
+ * and brown vest; diner 2's veil and mantle (its olive) in a madder rose,
+ * beside the guest woman's green.
+ */
+export const DINER_DRESS: ReadonlyMap<number, Figure['dress']> = new Map([
+  [
+    1,
+    [
+      { from: '#e1cfbd', to: '#d9b56c' },
+      { from: '#4b566b', to: '#a4553a' },
+      { from: '#ab8163', to: '#66778f' },
+    ],
+  ],
+  [2, [{ from: '#768059', to: '#b3786a' }]],
+]);
+
+/** Diner `n` at `x`, its crown at `crown`, on a plane at `z` under a grown head of `headPx`, in its dress. */
 export const diner = (
   n: (typeof DINERS)[number],
   x: number,
@@ -62,7 +82,14 @@ export const diner = (
   spans: Figure['spans'],
 ): Figure =>
   seat(
-    { member: 'filler-dressed', sheet: `iio-diner-${n}`, name: `diner-${n}`, x, crown },
+    {
+      member: 'filler-dressed',
+      sheet: `iio-diner-${n}`,
+      name: `diner-${n}`,
+      x,
+      crown,
+      dress: DINER_DRESS.get(n) ?? [],
+    },
     at,
     spans,
   );
