@@ -469,6 +469,7 @@ The library is `src/library/storybook/`, one command, from `apps/animations`:
 ```bash
 bun run storybook draw <member> <sheet-id> --keys side,front,lift --refs front,profileRight
 bun run storybook keep <member> <sheet-id> --why "<the owner's words>" --ask <id>
+bun run storybook resplit <member> <sheet-id>
 bun run storybook split <sheet.png> --cells <n> --palette <palette.json> --out <dir>
 bun run storybook plan <shot> --out <plan.json>
 bun run storybook render <shot> [--out <dir>]
@@ -484,18 +485,30 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   `cells/<key>.png`. A sheet is drawn once; `draw` refuses an id drawn
   already, a ground near a paint and a split with fewer figures than keys,
   and then the agent draws again. No pixel of a sheet or cell is edited by
-  hand. The poses a key may name are `POSES` in `store.ts`.
+  hand. The poses a key may name are `POSES` in `store.ts`; a blink key
+  (`neutralBlink`, `threeQuarterBlink`) is its pose with the eyes closed.
+  When the split changes, `resplit` cuts a stored sheet again and rewrites
+  its cells and its record's cells; the drawing, prompt and refs stand.
 - **The split** (`sheet.ts`) clears the ground joined to the border, cuts the
   sheet at the lowest-occupancy columns, keeps each cell's largest piece,
-  mends each pocket by its rim (all ink: a gap, cleared; else a garment
-  painted the paper's colour, refilled with its rim's paint) and snaps every
-  pixel within ΔE 30 of a paint to it exactly. The paints are the member's
+  mends each pocket by its rim (ground inside a ring of only ink, or of ink
+  and an outline's soft blends, is a gap, cleared; else a garment painted
+  the paper's colour, refilled with its rim's paint) and snaps every pixel
+  within ΔE 30 of a paint to it exactly, each colour to the paint the whole
+  sheet draws it as. Then it tidies the drawing's own marks: a thin line on
+  cloth darker than both sides becomes the ink between two parts or the
+  part's shade inside one, a speck of 12 px or fewer takes the paint round
+  it, skin paint stays only within 4 px of skin, and the figure's rim is
+  peeled of everything but ink 2 px deep. The paints are the member's
   `cast-sheet/palette.json`: every hex is one his `look.md` names, and the ink
   is measured on his first kept view.
 - **A shot** (`shot.ts`, one per file in `shots/`) is layers at depths, each
   holding plates and figures, under one light and one camera. A figure names
-  one member and one sheet, and its spans (`hold`, `turn`, `keyRun`, `walk`)
-  name only that sheet's keys. It has no scale: its head is the shot's
+  one member and one sheet, and its spans (`hold`, `blinkingHold`, `turn`,
+  `keyRun`, `walk`) name only that sheet's keys. A hold breathes (the figure
+  stretches up 0.4 % about its soles and back, at its own pace) and a
+  `blinkingHold` shows its blink key for 0.125 s on a schedule seeded by the
+  figure's name. It has no scale: its head is the shot's
   `headPx` over its layer's depth, against its sheet's median head. It has no
   light: the shot's one light tints every base paint and shades every shade
   paint once per cell, the ink untouched. `frameAt` is a pure function of t.
