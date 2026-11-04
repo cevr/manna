@@ -17,7 +17,7 @@ import {
   paintFrame,
   prepare,
 } from './painter.ts';
-import type { Palette } from './sheet.ts';
+import { type Palette, shareOf } from './sheet.ts';
 import {
   drawOrder,
   drawnKeyOf,
@@ -235,7 +235,8 @@ export const filmSceneOf = (shot: Shot, sheets: Sheets): PaintScene => ({
       return {
         _tag: 'Figure',
         name: item.name,
-        palette: sheet?.palette ?? { ink: '#000000', parts: [] },
+        palette: sheet?.palette ?? NO_PALETTE,
+        share: shareOf(sheet?.palette ?? NO_PALETTE, item.sheet),
         cells: Object.fromEntries(
           Object.entries(sheet?.cells ?? {}).map(([key, c]) => [
             key,
@@ -257,6 +258,9 @@ export const filmSceneOf = (shot: Shot, sheets: Sheets): PaintScene => ({
     }),
   })),
 });
+
+/** The palette of a figure whose sheet the film does not declare: no paint, so it draws nothing. */
+const NO_PALETTE: Palette = { ink: '#000000', parts: [] };
 
 /** The blinks a figure's holds show, `[cell, blink]`, each once. */
 const blinksOf = (

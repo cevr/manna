@@ -1,0 +1,210 @@
+import type { SheetDecl } from '../../../library/storybook/scene.ts';
+
+/** The film's sentence every brief and image prompt carries (CRAFT rule 1). */
+export const CARDS_RULE =
+  "The narration's words appear only as full-screen cards: nothing in the picture carries lettering.";
+
+/** What every sheet of the film asks beyond the house rules: the cards sentence, the props, and faces turned by pose words alone. */
+const FILM_RULES = [
+  CARDS_RULE,
+  'A held prop is named in the pose words and is the same prop, the same size and the same colours in every figure that holds it. No prop carries text, letters, numbers or marks.',
+  "Where a pose turns the head, it turns exactly as the pose words say, toward the viewer's left or right as written, whatever way the description or the reference images face.",
+] as const;
+
+/** The rules of a seated sheet: the seat in one named paint, and the whole figure drawn, soles included, the table left out. */
+const seated = (seat: string): ReadonlyArray<string> => [
+  ...FILM_RULES,
+  `The seat is one low plain wooden stool painted exactly ${seat}, flat, with no shade of its own.`,
+  'Each seated figure is drawn whole, from the top of the head to the soles of both feet resting flat on the ground line: no table, bench or anything else in front of the figure hides any part of it.',
+];
+
+/** The rules of a standing sheet. */
+const standing: ReadonlyArray<string> = FILM_RULES;
+
+/** The pose words of a blink: the figure exactly as `of`, the eyes closed. */
+const blink = (of: string): string =>
+  `exactly as the ${of} figure, every line the same, the eyes closed in a blink: each eye a short downward-curved ink line`;
+
+/** The lead's baby's bottle, as every key that holds it names it: his tunic's cream with a teat in his sandals' brown. */
+const BOTTLE = "a small baby's bottle, cream #f2d8b7 with a short teat in brown #7a5236";
+
+/** The small clay cup, in the member's footwear brown, milk in its pale paint inside. */
+const cup = (clay: string, milk: string): string =>
+  `a small plain clay cup painted exactly ${clay}, milk ${milk} showing at its rim`;
+
+const LEAD_CUP = cup('#7a5236', '#eadcc2');
+const VILLAGER_CUP = cup('#7a5236', '#d9cdb8');
+
+/** The lead seated with the bottle lowered on his lap, head bowed: one pose in his table sheet and his close. */
+const LEAD_DOWN = `seated on the stool exactly as in the first figure, the head bowed a little, the eyes looking down in front of him, both round hands in their sleeves resting on the knees holding ${BOTTLE} lowered on the lap, a small sheepish mouth`;
+
+/** The lead at the feast table (shots 2, 3 and the title): seated, the bottle up, then lowered. */
+const leadTable: SheetDecl = {
+  member: 'lead-feast',
+  id: 'iio-table',
+  keys: ['front', 'frontBlink', 'lift', 'bottle', 'down', 'downBlink'],
+  poses: {
+    front:
+      'seated on the low stool facing the viewer square, both round hands resting on the knees in their sleeves, head and eyes to the viewer, a calm short smile line',
+    frontBlink: `seated ${blink('first')}`,
+    lift: `seated on the stool exactly as in the first figure, the left hand (on the viewer's right) lifted in its sleeve to the chest holding ${BOTTLE} upright, the other hand on the knee, a hopeful smile`,
+    bottle: `seated on the stool exactly as in the first figure, the left hand (on the viewer's right) raised in its sleeve beside the head holding up ${BOTTLE}, hopeful, eyes to the viewer, the other hand on the knee`,
+    down: LEAD_DOWN,
+    downBlink: `seated ${blink('fifth')}`,
+  },
+  refs: ['front', 'threeQuarterRight', 'poses-1'],
+  rules: seated('#7a5236'),
+};
+
+/** The lead close (`cold-ouch`): three keys, so a close stays under the enlargement cap. */
+const leadClose: SheetDecl = {
+  member: 'lead-feast',
+  id: 'iio-close',
+  keys: ['down', 'downBlink', 'wince'],
+  poses: {
+    down: LEAD_DOWN.replace('exactly as in the first figure', 'facing the viewer'),
+    downBlink: `seated ${blink('first')}`,
+    wince: `seated on the stool exactly as in the first figure, the bottle on the lap, the head bowed the same, wincing: the eyes squeezed shut as two short tight ink lines, the brows drawn together and tilted up at their inner ends, the mouth a short wavy line`,
+  },
+  refs: ['front', 'heads-1'],
+  rules: seated('#7a5236'),
+};
+
+/** The lead on the parchment (`milk-row`): standing, taking a cup. */
+const leadMilk: SheetDecl = {
+  member: 'lead-feast',
+  id: 'iio-milk',
+  keys: ['front', 'frontBlink', 'lift', 'cup'],
+  poses: {
+    front:
+      'standing facing the viewer square, both arms hanging in their sleeves at the sides, a calm short smile line',
+    frontBlink: `standing ${blink('first')}`,
+    lift: `standing facing the viewer, the left hand (on the viewer's right) lifted in its sleeve to the front of the waist holding ${LEAD_CUP}, the other arm hanging, a glad smile`,
+    cup: `standing facing the viewer, both round hands in their sleeves holding ${LEAD_CUP} up before the chest, a broad warm closed smile, the cheeks lifted`,
+  },
+  refs: ['front', 'poses-1'],
+  rules: standing,
+};
+
+/** The mother with her baby (`cold-baby` to the title): seated, the cup at the baby's lips. */
+const motherBaby: SheetDecl = {
+  member: 'feast-mother',
+  id: 'iio-baby',
+  keys: ['cup', 'sip', 'cupBlink'],
+  poses: {
+    cup: `seated on the low stool facing the viewer, the baby in her left arm, her right hand in its sleeve holding ${cup('#c9877e', '#eadcc2')} to the baby's lips, her head tilted toward the baby, a tender smile; her brown hair under the veil and her sandals painted exactly #c9877e`,
+    sip: "seated exactly as in the first figure, the cup held the same at the baby's lips, the baby drinking with its eyes shut as two glad upward-curved ink lines and its cheeks lifted, the mother smiling",
+    cupBlink: `seated ${blink('first')}, the mother's eyes closed and the baby's open`,
+  },
+  refs: ['poses-1', 'poses-2', 'front'],
+  rules: seated('#c9877e'),
+};
+
+/** A guest beside the lead at the table, turning toward him at picture `side` (the man at his left turns right, the woman at his right turns left). */
+const guest = (member: string, side: 'right' | 'left', seat: string): SheetDecl => ({
+  member,
+  id: 'iio-table',
+  keys: ['neutral', 'neutralBlink', 'stare', 'smile'],
+  poses: {
+    neutral:
+      'seated on the low stool facing the viewer square, both round hands resting on the knees, head and eyes to the viewer, a calm short smile line',
+    neutralBlink: `seated ${blink('first')}`,
+    stare: `seated on the stool exactly as in the first figure, the head a quarter turned toward the viewer's ${side}, staring at someone at the picture's ${side}: the eyes, nose and mouth shifted toward the picture's ${side}, the eyes wide, the brows raised, the mouth a small flat line`,
+    smile: `seated on the stool exactly as in the first figure, the head a quarter turned toward the viewer's ${side} as in the third figure, a broad warm closed smile, the mouth shut, the cheeks lifted`,
+  },
+  refs: ['poses-1', 'poses-2', 'poses-3'],
+  rules: seated(seat),
+});
+
+/** One dressed diner at the long table, the n-th person of `filler-dressed`, turning toward a neighbour at picture `side` to talk. */
+const diner = (n: 1 | 2 | 3 | 4, side: 'right' | 'left'): SheetDecl => ({
+  member: 'filler-dressed',
+  id: `iio-diner-${n}`,
+  keys: ['neutral', 'neutralBlink', 'talk'],
+  poses: {
+    neutral:
+      'seated on the low stool facing the viewer square, both round hands resting on the knees, head and eyes to the viewer, a calm short smile line',
+    neutralBlink: `seated ${blink('first')}`,
+    talk: `seated on the stool exactly as in the first figure, the head a quarter turned toward the viewer's ${side}, talking to a neighbour at the picture's ${side}, the mouth open in a glad smile`,
+  },
+  refs: [`poses-${n}`],
+  rules: [
+    ...seated('#6b4630'),
+    `Draw only the one person of the reference image: the ${['', 'first', 'second', 'third', 'fourth'][n]} person the description names, in exactly that person's headcloth or veil, mantle, beard and robe; the other three people of the description are not on this sheet. Their sandals painted exactly #6b4630.`,
+  ],
+});
+
+/** The grown villager on the parchment (`milk-cup` to `milk-row`): five keys, the cup in every one. */
+const villagerMilk: SheetDecl = {
+  member: 'idea-villagers',
+  id: 'iio-milk',
+  keys: ['cup', 'cupBlink', 'look', 'wave', 'drink'],
+  poses: {
+    cup: `the grown villager standing facing the viewer, both round hands in their sleeves holding ${VILLAGER_CUP} before the waist, smiling`,
+    cupBlink: `standing ${blink('first')}`,
+    look: `standing exactly as in the first figure, the cup held the same, the head a quarter turned toward the viewer's right, looking at something beside him at the picture's right, curious, the brows raised`,
+    wave: `standing facing the viewer, the cup held in the right hand (on the viewer's left) before the waist, the left hand (on the viewer's right) raised in its sleeve beside the shoulder, the round hand turned out, waving something away, a gentle smiling no`,
+    drink:
+      'standing facing the viewer, both round hands in their sleeves holding the same cup up to the lips, drinking, the eyes shut as two glad upward-curved ink lines',
+  },
+  refs: ['poses-3', 'poses-6'],
+  rules: [
+    ...standing,
+    'Draw only the grown villager of the description (the bearded man in the linen headcloth): no child, toddler or baby on this sheet.',
+  ],
+};
+
+/** The baby of the villagers' row (`milk-row`), sitting with the cup in both hands. */
+const babyMilk: SheetDecl = {
+  member: 'idea-villagers',
+  id: 'iio-milk-baby',
+  keys: ['sit', 'sitBlink', 'drink'],
+  poses: {
+    sit: `the baby sitting on the ground facing the viewer, legs out in front, both round hands in their sleeves holding ${VILLAGER_CUP} in the lap, a small glad smile`,
+    sitBlink: `sitting ${blink('first')}`,
+    drink:
+      'sitting exactly as in the first figure, both round hands lifting the same cup to the lips, drinking, the eyes shut as two glad upward-curved ink lines',
+  },
+  refs: ['poses-4'],
+  rules: [
+    ...standing,
+    'Draw only the baby of the description (the small tuft of hair, the round head): no grown villager, child or toddler on this sheet. The baby sits on the ground line, its soles on it.',
+  ],
+};
+
+/** A small villager of the row standing with the cup in both hands, drinking in turn. */
+const small = (member: string, refs: ReadonlyArray<string>, who: string): SheetDecl => ({
+  member,
+  id: 'iio-milk',
+  keys: ['hold', 'holdBlink', 'drink'],
+  poses: {
+    hold: `${who} standing facing the viewer, both round hands in their sleeves holding ${VILLAGER_CUP} before the waist, a small glad smile`,
+    holdBlink: `standing ${blink('first')}`,
+    drink:
+      'standing exactly as in the first figure, both round hands lifting the same cup to the lips, drinking, the eyes shut as two glad upward-curved ink lines',
+  },
+  refs,
+  rules: standing,
+});
+
+/** Every shot sheet act 1 draws, in the order they are drawn. */
+export const SHEETS: ReadonlyArray<SheetDecl> = [
+  leadTable,
+  leadClose,
+  leadMilk,
+  motherBaby,
+  guest('feast-guest-man', 'right', '#692e18'),
+  guest('feast-guest-woman', 'left', '#553019'),
+  diner(1, 'right'),
+  diner(2, 'left'),
+  diner(3, 'right'),
+  diner(4, 'left'),
+  villagerMilk,
+  babyMilk,
+  small('villager-toddler', ['poses-1', 'poses-2'], 'the toddler'),
+  small('villager-child', ['poses-5'], 'the child'),
+];
+
+/** A declared sheet by member and id. */
+export const sheetNamed = (member: string, id: string) =>
+  SHEETS.find((s) => s.member === member && s.id === id);

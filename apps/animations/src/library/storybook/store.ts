@@ -18,6 +18,7 @@ import {
   paintsOf,
   rgbOfHex,
   rgbSum,
+  shareOf,
   sheetHeadOf,
   splitSheet,
   type Split,
@@ -668,7 +669,7 @@ export const loadFigures = Effect.fn('Storybook.loadFigures')(function* (cast: C
 
 /** Each figure's member's head share by figure name, as `frameAt` reads them. */
 export const sharesOf = (figures: ReadonlyArray<StoredFigure>): ReadonlyMap<string, number> =>
-  new Map(figures.map((f) => [f.figure.name, f.palette.head ?? 1] as const));
+  new Map(figures.map((f) => [f.figure.name, shareOf(f.palette, f.figure.sheet)] as const));
 
 /** Each figure's sheet head by figure name, as `frameAt` reads them. */
 export const headsOf = (figures: ReadonlyArray<StoredFigure>): ReadonlyMap<string, number> =>

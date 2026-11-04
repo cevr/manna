@@ -1,0 +1,10 @@
+{
+  "ink": "#100602",
+  "head": 0.81,
+  "parts": [
+    { "name": "skin", "base": "#f2b27c", "shade": "#c9877e", "role": "skin" },
+    { "name": "hair", "base": "#8a6648", "role": "hair" },
+    { "name": "tunic", "base": "#d9cdb8", "shade": "#b4a8c4", "role": "garment" },
+    { "name": "sandals", "base": "#7a5236", "role": "footwear" }
+  ]
+}

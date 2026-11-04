@@ -3,6 +3,7 @@ import { Base64 } from 'effect/encoding';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import sharp from 'sharp';
 import type { PaintCell, PaintFigure, PaintPlate, PaintRequest, PaintScene } from './painter.ts';
+import { shareOf } from './sheet.ts';
 import {
   drawnKeyOf,
   drawOrder,
@@ -101,6 +102,7 @@ const paintFigureOf = (
   _tag: 'Figure',
   name: stored.figure.name,
   palette: stored.palette,
+  share: shareOf(stored.palette, stored.figure.sheet),
   cells,
   worn: stored.figure.worn ?? [],
   blinks: [...stored.blinks.keys()].map((key) => {

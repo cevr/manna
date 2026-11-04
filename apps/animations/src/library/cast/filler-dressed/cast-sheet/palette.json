@@ -1,0 +1,16 @@
+{
+  "ink": "#200d02",
+  "parts": [
+    { "name": "skin", "base": "#fdb577", "role": "skin" },
+    { "name": "headcloth", "base": "#d1c6b4", "role": "other" },
+    { "name": "indigo band and mantle", "base": "#4b566b", "role": "garment" },
+    { "name": "walnut beard", "base": "#6b4630", "role": "hair" },
+    { "name": "pale beard", "base": "#dcdce4", "role": "hair" },
+    { "name": "walnut mantle", "base": "#ab8163", "role": "garment" },
+    { "name": "olive mantle", "base": "#768059", "role": "garment" },
+    { "name": "camel mantle", "base": "#8c7762", "role": "garment" },
+    { "name": "cream robe", "base": "#f9e7cf", "shade": "#e7d2d3", "role": "garment" },
+    { "name": "oatmeal robe", "base": "#e6cfb2", "role": "garment" },
+    { "name": "grey-beige robe", "base": "#e1cfbd", "role": "garment" }
+  ]
+}

@@ -11,7 +11,7 @@ import {
   StorybookFailed,
   storybookPage,
 } from '../render.ts';
-import { rgbOfHex, splitSheet } from '../sheet.ts';
+import { rgbOfHex, shareOf, splitSheet } from '../sheet.ts';
 import { drawnKeyOf, frameAt, lit, litPaints, platesOf, type Shot, timesOf } from '../shot.ts';
 import {
   CAST,
@@ -390,7 +390,7 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
     figures.map((f) => ({
       name: f.figure.name,
       z: f.layer.z,
-      share: f.palette.head ?? 1,
+      share: shareOf(f.palette, f.figure.sheet),
       lines: f.lines,
     })),
     shot.headPx,

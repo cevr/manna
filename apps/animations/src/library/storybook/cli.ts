@@ -2,31 +2,65 @@ import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { ImageRoute } from '@manna/film/tools';
-import { Clock, Console, Effect, FileSystem, Option, Schema } from 'effect';
+import { Clock, Console, Effect, FileSystem, Layer, Option, Schema } from 'effect';
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
-import { outOf, renderShot } from './render.ts';
+import { filmCast, filmFolder, filmNamed, filmShot, shotsJsonOf } from './films.ts';
+import { APP, outOf, renderShot, StorybookFailed } from './render.ts';
 import { frameAt, type Shot, timesOf } from './shot.ts';
 import { verdictText } from './verify/verdict.ts';
 import { VerdictFailed, verifyShot } from './verify/run.ts';
 import { feastCourtyard } from './shots/feast-courtyard.ts';
 import {
   CAST,
+  type Cast,
   drawSheet,
   headsOf,
   keepSheet,
+  LIBRARY_WORDS,
   loadFigures,
   resplitSheet,
+  type SheetWords,
+  sharesOf,
   splitFiles,
 } from './store.ts';
 
-/** The shots the command knows, by id. */
-const SHOTS = { 'feast-courtyard': feastCourtyard } as const;
+/** The library's own shots, by id. */
+const SHOTS: ReadonlyMap<string, Shot> = new Map([['feast-courtyard', feastCourtyard]]);
 
-const SHOT_IDS = ['feast-courtyard'] as const;
+/** A shot the command can draw: the shot, where its members live, and where a run writes by default. */
+interface Named {
+  readonly shot: Shot;
+  readonly cast: Cast;
+  readonly out: string;
+}
 
-/** A plan: each frame's time and, per figure, its cell, the key whose eyes it shows, its place, squash, breath and scale. */
+/** A shot by name: a library shot's id, or `<film>/<shot>` for a film's storybook shot made from its scene's cues as laid out. */
+const shotNamed = Effect.fn('Storybook.shotNamed')(function* (name: string) {
+  const [film = '', id = ''] = name.split('/');
+  if (!name.includes('/'))
+    return yield* Effect.fromOption(
+      Option.map(Option.fromUndefinedOr(SHOTS.get(name)), (shot): Named => ({
+        shot,
+        cast: CAST,
+        out: outOf(shot),
+      })),
+      () =>
+        StorybookFailed.make({
+          reason: `no shot ${name} (${[...SHOTS.keys()].join(', ')}, or <film>/<shot>)`,
+        }),
+    );
+  const story = yield* filmNamed(film);
+  const placed = yield* filmShot(story, id);
+  return {
+    shot: placed.shot,
+    cast: yield* filmCast(story),
+    out: `${APP}/out/storybook/${film}/${id}`,
+  } satisfies Named;
+});
+
+/** A plan: each frame's time and camera and, per figure, its cell, the key whose eyes it shows, its place, squash, breath, scale and its plane's zoom. */
 const PlanJson = Schema.fromJsonString(
   Schema.Struct({
     fps: Schema.Finite,
@@ -34,6 +68,7 @@ const PlanJson = Schema.fromJsonString(
     frames: Schema.Array(
       Schema.Struct({
         t: Schema.Finite,
+        camera: Schema.Struct({ x: Schema.Finite, y: Schema.Finite, zoom: Schema.Finite }),
         figures: Schema.Array(
           Schema.Struct({
             name: Schema.String,
@@ -45,6 +80,7 @@ const PlanJson = Schema.fromJsonString(
             sy: Schema.Finite,
             breath: Schema.Finite,
             scale: Schema.Finite,
+            zoom: Schema.Finite,
           }),
         ),
       }),
@@ -53,19 +89,18 @@ const PlanJson = Schema.fromJsonString(
   { space: 2 },
 );
 
-/** Write the plan of `shot`: every frame at `i / fps`, each figure's scale from its stored sheet. */
-const writePlan = Effect.fn('Storybook.writePlan')(function* (
-  id: (typeof SHOT_IDS)[number],
-  out: string,
-) {
+/** Write the plan of a shot: every frame it draws (`timesOf`), the camera, and each figure's scale from its stored sheet and its member's head share, and its plane's zoom. */
+const writePlan = Effect.fn('Storybook.writePlan')(function* (name: string, out: string) {
   const fs = yield* FileSystem.FileSystem;
-  const shot = SHOTS[id];
-  const heads = headsOf(yield* loadFigures(CAST, shot));
+  const { shot, cast } = yield* shotNamed(name);
+  const figures = yield* loadFigures(cast, shot);
+  const [heads, shares] = [headsOf(figures), sharesOf(figures)];
   const frames = timesOf(shot).map((t) => {
-    const frame = frameAt(shot, heads, t);
+    const frame = frameAt(shot, heads, t, shares);
     return {
       t,
-      figures: frame.figures.map(({ name, cell, eyes, x, y, sx, sy, breath, scale }) => ({
+      camera: { x: frame.camera.x, y: frame.camera.y, zoom: frame.camera.zoom },
+      figures: frame.figures.map(({ name, cell, eyes, x, y, sx, sy, breath, scale, zoom }) => ({
         name,
         cell,
         eyes,
@@ -75,6 +110,7 @@ const writePlan = Effect.fn('Storybook.writePlan')(function* (
         sy,
         breath,
         scale,
+        zoom,
       })),
     };
   });
@@ -85,8 +121,10 @@ const writePlan = Effect.fn('Storybook.writePlan')(function* (
   return frames.length;
 });
 
-const shotArgument = Argument.Literals('shot', SHOT_IDS).pipe(
-  Argument.withDescription('the shot, by id (storybook/shots/)'),
+const shotArgument = Argument.String('shot').pipe(
+  Argument.withDescription(
+    "the shot: a library shot's id (storybook/shots/), or <film>/<shot> for a film's storybook shot",
+  ),
 );
 
 const planCommand = Command.make(
@@ -105,9 +143,9 @@ const planCommand = Command.make(
   ),
 );
 
-/** Where a verify run writes: `out` (default `out/storybook/<shot>/`), under its `quick/` for a quick run. */
-const verifyOut = (shot: Shot, out: Option.Option<string>, quick: boolean): string => {
-  const dir = Option.getOrElse(out, () => outOf(shot));
+/** Where a verify run writes: `out` (default the shot's own folder under `out/storybook/`), under its `quick/` for a quick run. */
+const verifyOut = (named: Named, out: Option.Option<string>, quick: boolean): string => {
+  const dir = Option.getOrElse(out, () => named.out);
   if (quick) return `${dir}/quick`;
   return dir;
 };
@@ -128,8 +166,14 @@ const verifyCommand = Command.make(
   ({ shot, quick, out }) =>
     Effect.gen(function* () {
       const started = yield* Clock.currentTimeMillis;
-      const dir = verifyOut(SHOTS[shot], out, quick);
-      const { verdict, info } = yield* verifyShot(SHOTS[shot], dir, [1, 6][Number(quick)] ?? 1);
+      const named = yield* shotNamed(shot);
+      const dir = verifyOut(named, out, quick);
+      const { verdict, info } = yield* verifyShot(
+        named.shot,
+        dir,
+        [1, 6][Number(quick)] ?? 1,
+        named.cast,
+      );
       yield* Console.log(verdictText(verdict, info));
       const took = ((yield* Clock.currentTimeMillis) - started) / 1000;
       yield* Console.log(`wrote ${dir} in ${took.toFixed(1)} s`);
@@ -153,8 +197,9 @@ const renderCommand = Command.make(
   },
   ({ shot, out }) =>
     Effect.gen(function* () {
-      const dir = Option.getOrElse(out, () => outOf(SHOTS[shot]));
-      const n = yield* renderShot(SHOTS[shot], dir);
+      const named = yield* shotNamed(shot);
+      const dir = Option.getOrElse(out, () => named.out);
+      const n = yield* renderShot(named.shot, dir, named.cast);
       yield* Console.log(`rendered ${shot}: ${n} frames and shot.mp4 in ${dir}`);
     }),
 ).pipe(
@@ -200,29 +245,77 @@ const sheetId = Argument.String('sheet-id').pipe(
   Argument.withDescription("the shot sheet's id, a folder under the member's shot-sheets/"),
 );
 
+const filmFlag = Flag.String('film').pipe(
+  Flag.optional,
+  Flag.withDescription(
+    "a film drawn in storybook shots: its member is found in the film's cast/ first, then the library's, and draw takes the sheet's keys, pose words, refs and rules from the film's declaration",
+  ),
+);
+
+/** Where a command's member lives: the film's cast when it names a film, else the library's. */
+const castFor = (film: Option.Option<string>) =>
+  Option.match(film, {
+    onNone: () => Effect.succeed(CAST),
+    onSome: (name) => Effect.flatMap(filmNamed(name), filmCast),
+  });
+
+/** What a draw asks: the film's declaration of the sheet, or the keys and refs given with the library's pose words. */
+const drawAsk = Effect.fn('Storybook.drawAsk')(function* (
+  film: Option.Option<string>,
+  member: string,
+  sheetId: string,
+  keys: Option.Option<string>,
+  refs: Option.Option<string>,
+) {
+  if (Option.isSome(film)) {
+    const story = yield* filmNamed(film.value);
+    const decl = yield* Effect.fromOption(
+      Option.fromUndefinedOr(story.sheets.find((s) => s.member === member && s.id === sheetId)),
+      () =>
+        StorybookFailed.make({ reason: `${film.value} declares no sheet ${member}/${sheetId}` }),
+    );
+    return {
+      cast: yield* filmCast(story),
+      keys: decl.keys,
+      refs: decl.refs,
+      words: { poses: new Map(Object.entries(decl.poses)), rules: decl.rules } satisfies SheetWords,
+    };
+  }
+  return {
+    cast: CAST,
+    keys: listOf(Option.getOrElse(keys, () => '')),
+    refs: listOf(Option.getOrElse(refs, () => '')),
+    words: LIBRARY_WORDS,
+  };
+});
+
 const drawCommand = Command.make(
   'draw',
   {
     member,
     sheetId,
     keys: Flag.String('keys').pipe(
-      Flag.withDescription('the poses left to right, comma-separated (store.ts POSES)'),
+      Flag.optional,
+      Flag.withDescription(
+        'the poses left to right, comma-separated (store.ts POSES); not with --film',
+      ),
     ),
     refs: Flag.String('refs').pipe(
+      Flag.optional,
       Flag.withDescription(
-        "the member's kept views drawn from, comma-separated names under cast-sheet/views/",
+        "the member's kept views drawn from, comma-separated names under cast-sheet/views/; not with --film",
       ),
     ),
+    film: filmFlag,
   },
-  ({ member, sheetId, keys, refs }) =>
-    drawSheet(CAST, member, sheetId, listOf(keys), listOf(refs)).pipe(
-      Effect.flatMap((record) =>
-        Console.log(
-          `drew ${member}/shot-sheets/${sheetId}: ${record.cells.map((c) => c.key).join(', ')} on ground ${record.ground}`,
-        ),
-      ),
-      Effect.provide(ImageRoute.layer),
-    ),
+  ({ member, sheetId, keys, refs, film }) =>
+    Effect.gen(function* () {
+      const ask = yield* drawAsk(film, member, sheetId, keys, refs);
+      const record = yield* drawSheet(ask.cast, member, sheetId, ask.keys, ask.refs, ask.words);
+      yield* Console.log(
+        `drew ${member}/shot-sheets/${sheetId}: ${record.cells.map((c) => c.key).join(', ')} on ground ${record.ground}`,
+      );
+    }).pipe(Effect.provide(ImageRoute.layer)),
 ).pipe(
   Command.withDescription(
     "Draw a member's shot sheet in one okra image pass (the subscription route), split it into one cell per key and write its record; refuses a ground near a paint, too few figures, or an id drawn already",
@@ -236,29 +329,59 @@ const keepCommand = Command.make(
     sheetId,
     why: Flag.String('why').pipe(Flag.withDescription("the owner's words")),
     ask: Flag.String('ask').pipe(Flag.withDescription('the ask he answered')),
+    film: filmFlag,
   },
-  ({ member, sheetId, why, ask }) =>
-    keepSheet(CAST, member, sheetId, why, ask).pipe(
+  ({ member, sheetId, why, ask, film }) =>
+    castFor(film).pipe(
+      Effect.flatMap((cast) => keepSheet(cast, member, sheetId, why, ask)),
       Effect.flatMap(() => Console.log(`kept ${member}/shot-sheets/${sheetId}`)),
     ),
 ).pipe(Command.withDescription("Write the owner's keep on a drawn shot sheet's record"));
 
-const resplitCommand = Command.make('resplit', { member, sheetId }, ({ member, sheetId }) =>
-  resplitSheet(CAST, member, sheetId).pipe(
-    Effect.flatMap((record) =>
-      Console.log(
-        `resplit ${member}/shot-sheets/${sheetId}: ${record.cells.map((c) => c.key).join(', ')}`,
+const resplitCommand = Command.make(
+  'resplit',
+  { member, sheetId, film: filmFlag },
+  ({ member, sheetId, film }) =>
+    castFor(film).pipe(
+      Effect.flatMap((cast) => resplitSheet(cast, member, sheetId)),
+      Effect.flatMap((record) =>
+        Console.log(
+          `resplit ${member}/shot-sheets/${sheetId}: ${record.cells.map((c) => c.key).join(', ')}`,
+        ),
       ),
     ),
-  ),
 ).pipe(
   Command.withDescription(
     "Split a drawn shot sheet again as split splits it now, rewriting its cells and its record's cells; the drawing, prompt, refs and keep stand",
   ),
 );
 
+const shotsCommand = Command.make(
+  'shots',
+  {
+    film: Argument.String('film').pipe(
+      Argument.withDescription('a film drawn in storybook shots (storybook/films.ts)'),
+    ),
+    out: Flag.String('out').pipe(Flag.withDescription('the JSON file to write')),
+  },
+  ({ film, out }) =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const story = yield* filmNamed(film);
+      const { json, unkept } = yield* shotsJsonOf(story);
+      yield* fs.writeFileString(out, `${json}\n`);
+      for (const sheet of unkept) yield* Console.log(`INFO unkept ${sheet}`);
+      yield* Console.log(`wrote ${film}'s storybook shots, cards and sheets to ${out}`);
+    }),
+).pipe(
+  Command.withDescription(
+    "Write a film's layout, its storybook shots and cards in film seconds, and its sheets as JSON, and name each sheet the owner has not kept",
+  ),
+);
+
 const storybook = Command.make('storybook').pipe(
   Command.withSubcommands([
+    shotsCommand,
     splitCommand,
     drawCommand,
     resplitCommand,
@@ -272,6 +395,10 @@ const storybook = Command.make('storybook').pipe(
 
 if (import.meta.main)
   Command.run(storybook, { version: '0.1.0' }).pipe(
-    Effect.provide([BunServices.layer, BunCrypto.layerDigest]),
+    Effect.provide([
+      filmFolder.pipe(Layer.provide(BunServices.layer)),
+      BunServices.layer,
+      BunCrypto.layerDigest,
+    ]),
     BunRuntime.runMain,
   );

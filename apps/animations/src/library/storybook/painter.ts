@@ -46,11 +46,12 @@ export interface PaintPlate {
   readonly reveal?: Reveal;
 }
 
-/** A figure as the painter draws it: its name, its member's palette, its stored cells by key, the keys it wears another head on and the blinks its holds show (`[cell, blink]`). */
+/** A figure as the painter draws it: its name, its member's palette, its sheet's head share (`shareOf`), its stored cells by key, the keys it wears another head on and the blinks its holds show (`[cell, blink]`). */
 export interface PaintFigure {
   readonly _tag: 'Figure';
   readonly name: string;
   readonly palette: Palette;
+  readonly share: number;
   readonly cells: Readonly<Record<string, PaintCell>>;
   readonly worn: ReadonlyArray<Worn>;
   readonly blinks: ReadonlyArray<readonly [string, string]>;
@@ -230,7 +231,7 @@ export const prepare = (scene: PaintScene, pictures: Pictures): Option.Option<Pr
         item.name,
         Option.getOrElse(sheetHeadOf(read), () => 1),
       );
-      shares.set(item.name, item.palette.head ?? 1);
+      shares.set(item.name, item.share);
     }
   return Option.some({ cells, heads, shares });
 };

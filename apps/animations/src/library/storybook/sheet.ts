@@ -45,11 +45,19 @@ export const Palette = Schema.Struct({
   parts: Schema.Array(PalettePart),
   /** The member's head (crown to collar) as a share of a grown adult's, measured on the kept lineup: 1 when it names none. */
   head: Schema.optionalKey(Schema.Finite.check(Schema.isGreaterThan(0))),
+  /** A head share by sheet id, for a sheet that draws another of the member's people (a member that holds a grown villager and a baby): it wins over `head` on that sheet. */
+  heads: Schema.optionalKey(
+    Schema.Record(Schema.String, Schema.Finite.check(Schema.isGreaterThan(0))),
+  ),
 });
 
 export type Palette = typeof Palette.Type;
 
 export const PaletteJson = Schema.fromJsonString(Palette);
+
+/** The head share a member's sheet draws: the sheet's own (`heads`), else the member's (`head`), else a grown adult's 1. */
+export const shareOf = (palette: Palette, sheet: string): number =>
+  palette.heads?.[sheet] ?? palette.head ?? 1;
 
 /** `#rrggbb` as a colour. */
 export const rgbOfHex = (hex: string): Rgb => [

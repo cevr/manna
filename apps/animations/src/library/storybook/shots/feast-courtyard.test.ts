@@ -14,6 +14,7 @@ import {
   linesOf,
   type Rgb,
   rgbAt,
+  shareOf,
 } from '../sheet.ts';
 import {
   type CameraKey,
@@ -352,7 +353,7 @@ describe('the feast courtyard as drawn', () => {
     const scaled = figures.map((f) => ({
       name: f.figure.name,
       z: f.layer.z,
-      share: f.palette.head ?? 1,
+      share: shareOf(f.palette, f.figure.sheet),
       lines: f.lines,
     }));
     const [lead, man] = [byName.get('lead'), byName.get('man')];
