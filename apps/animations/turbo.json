@@ -183,9 +183,6 @@
         "!src/films/righteousness-by-faith/**/*.test.*",
         "!src/films/in-its-order/rigs/**/*.test.*",
         "!src/films/in-its-order/scenes/**/*.test.*",
-        "!src/films/in-its-order/storybook/*.test.ts",
-        "src/films/in-its-order/storybook/covers-baby.test.ts",
-        "src/films/in-its-order/storybook/covers-letter.test.ts",
         "!src/library/**/*.test.*"
       ]
     },
@@ -200,9 +197,6 @@
         "!src/films/righteousness-by-faith/**/*.test.*",
         "!src/films/in-its-order/rigs/**/*.test.*",
         "!src/films/in-its-order/scenes/**/*.test.*",
-        "!src/films/in-its-order/storybook/*.test.ts",
-        "src/films/in-its-order/storybook/covers-title.test.ts",
-        "src/films/in-its-order/storybook/covers-milk.test.ts",
         "!src/library/**/*.test.*"
       ]
     },
