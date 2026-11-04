@@ -83,13 +83,20 @@ one whose server still runs refuses the boot (`BootRefused`) with nothing
 started; a stale one (its server gone, or its pid taken by another process)
 is filed away into its own output folder. Then the simulator, a free port,
 the drivers' HOME, the server, and its record as the very next step. The
-server starts through the `Os` seam (`src/os.ts`), which reads its pid and
-its start time at the start (`ps -o lstart=`, read with `LC_ALL=C` and
-`TZ=UTC` over the caller's environment, so one process reads the same
-whatever the caller's time zone and locale). Any failure or interruption
-after the start stops the server by the stop rule and, once it is gone,
-files its record away; a server that will not stop keeps its record for the
-next `down`.
+server starts through the `Os` seam (`src/os.ts`) in two steps. A shell
+starts a child that reads its own start time (`ps -o lstart=`, read with
+`LC_ALL=C` and `TZ=UTC` over the caller's environment, so one process
+reads the same whatever the caller's time zone and locale), prints its pid
+and that time, and waits. Only once the drive has read that identity does
+it answer `go` on the start's stdin, and only then does the child become
+`serve` (by `exec`: the same pid and start time). A failure or an
+interruption before the answer (the child's read, its line, the drive's
+read of it, the answer itself) closes the start's input unanswered, and the
+child ends itself: the boot fails typed, with nothing running and nothing
+signalled. From the answer on, `boot` runs uninterruptibly up to the
+record; any failure or interruption after the record stops the server by
+the stop rule and, once it is gone, files its record away; a server that
+will not stop keeps its record for the next `down`.
 
 **The record** (`src/record.ts`) is written whole and only where none is:
 the encoded session goes to a file of this write's own name
@@ -97,9 +104,11 @@ the encoded session goes to a file of this write's own name
 `session.json` (a record already there fails the link) and then removed; a
 leftover from a killed command is ignored. If the write or the link fails,
 the just-started server is stopped by the stop rule, again after a failed
-host call, three times at most. From the start until the record names the
+host call, three times at most. From the answer until the record names the
 server, the booting command makes at most three file writes; a `kill -9`
 inside that window leaves the server unrecorded (the residual race below).
+A `kill -9` before the answer closes the start's input, and the child ends
+itself.
 
 **`down`**, holding the state: read the record (none, or one that does not
 decode: `NoSession`); close the drivers; stop the server by the stop rule
@@ -163,7 +172,7 @@ closes agent-browser's session; the drive never signals either daemon.
 
 **The residual race.** Between the start-time read and the signal lie two
 tool runs, `ps` then `kill`. `os.slow.test.ts` measures that gap over 20
-stops of its own sleeps: 2.6 ms median and 3.8 ms at most (12 cores,
+stops of its own sleeps: 2.8 ms median and 3.4 ms at most (12 cores,
 2026-11-04). A wrong signal needs both of these: the server exits inside
 that window, and macOS gives its pid to a new process inside the same
 window. Nothing bounds the process creations between the exit and the
@@ -176,9 +185,10 @@ this). What bounds the risk is the window itself: the server must exit on
 its own within those milliseconds. For the SIGTERM, that is a crash at that
 instant; for the SIGKILL, a server that ignored SIGTERM for 15 s exiting in
 the same milliseconds. No rate of such a race is claimed. The same
-condition covers the window between the start and its start-time read, and
-the holder's read of a command's own identity (`Os.self`). A `kill -9` of
-`boot` between the server's start and its record leaves the server
+condition covers the holder's read of a command's own identity (`Os.self`).
+The start has no such window: the child reads its own start time while it
+runs, so its pid cannot pass to another process before the read. A
+`kill -9` of `boot` between the answer and the record leaves the server
 unrecorded, a window of at most three file writes; the spec accepts it.
 
 ## Tests
@@ -197,7 +207,10 @@ unrecorded, a window of at most three file writes; the spec accepts it.
   holder reclaimed, two downs reclaiming one (`life.test.ts`), and the
   holder under a scheduler that wakes one command at a time at every
   FileSystem and `Os` call, on four fixed interleavings and 50 generated
-  worlds (`holder.test.ts`, `src/fixtures/holders.ts`).
+  worlds (`holder.test.ts`, `src/fixtures/holders.ts`), and the live start
+  under `boot` over a model host whose read of the new server's start time
+  fails: nothing runs, and the `down` after it has nothing to stop
+  (`spawn.test.ts`, `src/fixtures/spawning.ts`).
 - `bun run test:slow`: the commands over the live Drive with a stand-in
   host, a script launched as a process (`sim.slow.test.ts`), the App
   property complete, over 128 generated apps and the edges
@@ -208,7 +221,10 @@ unrecorded, a window of at most three file writes; the spec accepts it.
   `src/fixtures/oracle.ts`), every command with each host call refused in
   turn (`refusals.slow.test.ts`), the static leg's oxlint block
   (`lint.slow.test.ts`), the live `Os` over `/bin/sleep`s the test starts
-  itself and signals only while it holds them (`os.slow.test.ts`), the
+  itself and signals only while it holds them, and a start whose child
+  cannot read its start time, or is interrupted while it reads, leaving no
+  process (`os.slow.test.ts`), the live start under `boot` and `down` with a
+  typed failure or an interruption at each of its steps (`spawn.slow.test.ts`), the
   holder over 4,000 more generated worlds (`holder.slow.test.ts`), and the
   drive's lifecycle over the model (`src/fixtures/life.ts`,
   `src/fixtures/life-cases.ts`): each command is a fresh `DriveLive` over
