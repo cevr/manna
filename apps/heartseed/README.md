@@ -5,7 +5,10 @@ web). Today (`app/index.tsx`) shows the passage the reader is learning; the
 word matcher (`src/matcher.ts`) grades a recall against the verse.
 
 Run it as a reader does with the verify skill,
-`.claude/skills/verify-heartseed`.
+`.claude/skills/verify-heartseed`. It drives through `bun run sim`
+(`scripts/sim.ts`): the shared simulator driver `@manna/sim` with
+Heartseed's values, `scripts/sim-app.ts` (the `verify-heartseed`
+simulator, ports 8280-8289, iOS alone).
 
 ## Voice
 
@@ -65,7 +68,10 @@ will call `Voice.read`.
     and `src/voice` (the native module's guards).
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
-  - `test:infra`: `scripts` and `vite`.
+  - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
+    (Heartseed's `sim` over a stand-in Drive: its values, the web and a
+    port outside 8280-8289 refused before any step, and `install` waiting
+    for Today's reference).
 
   Run one with `bun run test:<part>` here, or all with `bun run test
   --filter=@manna/heartseed` at the repository root. A new test file at the

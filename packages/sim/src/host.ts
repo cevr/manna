@@ -85,6 +85,22 @@ const PREBUILD_SKIPS = ['Pods/Headers'];
 
 const LINK_HOPS = 40;
 
+/** Variables that send a tool's writes to a folder it fills: agent-device's and agent-browser's HOME, agent-device's state. */
+const ENV_TREES = ['HOME', 'AGENT_DEVICE_STATE_DIR'];
+/** Variables that name the folder a tool binds its socket in. */
+const ENV_SOCKETS = ['AGENT_BROWSER_SOCKET_DIR', 'XDG_RUNTIME_DIR'];
+/** The files agent-browser 0.39.2 keeps in its socket folder for a session, after the session's name. */
+const SOCKET_FILES = [
+  '.sock',
+  '.pid',
+  '.version',
+  '.stream',
+  '.engine',
+  '.provider',
+  '.extensions',
+  '.log',
+];
+
 /** Every FileSystem member: each one is written out, so a member added upstream fails to compile here. */
 type Members = Omit<FileSystem.FileSystem, '~effect/FileSystem'>;
 
@@ -331,10 +347,56 @@ const make = (
   /** The folder `prebuild:native` writes: the app's native folder, where its workspace lies. */
   const native = path.join(where.app, path.dirname(where.config.ios.workspace));
 
+  /**
+   * A socket folder outside every root, which the tool makes and the drive
+   * never touches: it must not be a link, and no file agent-browser keeps
+   * there for the app's driver session may be one, so the socket it binds
+   * and the files it writes beside it land in the folder, not where a link
+   * leads. Each name is read as a link only (a look), never listed, since
+   * the folder lies under no root.
+   */
+  const socketFolder = (operation: string, dir: string) =>
+    Effect.gen(function* () {
+      const link = yield* Effect.option(base.readLink(dir));
+      if (Option.isSome(link)) return yield* refuse(operation, dir, link.value, []);
+      for (const suffix of SOCKET_FILES) {
+        const entry = path.join(dir, `${where.config.driverSession}${suffix}`);
+        const inner = yield* Effect.option(base.readLink(entry));
+        if (Option.isSome(inner)) return yield* refuse(operation, entry, inner.value, []);
+      }
+    });
+
+  /**
+   * The folders a tool writes because of the variables the drive sets for
+   * it: a HOME or a state folder is checked as a tree, like any tree a tool
+   * acts on whole; a socket folder as a tree when a root holds it, else as
+   * `socketFolder`.
+   */
+  const checkEnv = (env: ChildProcess.CommandOptions['env']) =>
+    Effect.gen(function* () {
+      const value = (name: string) =>
+        Option.map(
+          Option.flatMap(Option.fromUndefinedOr(env), (vars) => Option.fromUndefinedOr(vars[name])),
+          wordText,
+        );
+      for (const name of ENV_TREES)
+        yield* Option.match(value(name), {
+          onNone: () => Effect.void,
+          onSome: (dir) => Effect.asVoid(tree('spawn', dir)),
+        });
+      for (const name of ENV_SOCKETS) {
+        const dir = value(name);
+        if (Option.isNone(dir)) continue;
+        if ((yield* holders(dir.value)).length > 0) yield* tree('spawn', dir.value);
+        else yield* socketFolder('spawn', dir.value);
+      }
+    });
+
   const checkSpawn = (command: ChildProcess.Command) =>
     Effect.gen(function* () {
       if (command._tag !== 'StandardCommand')
         return yield* refuse('spawn', 'a piped command', 'a piped command', []);
+      yield* checkEnv(command.options.env);
       const programs = yield* Executables;
       const args = command.args.map(wordText);
       if (command.command === 'bun' && args.includes('prebuild:native'))

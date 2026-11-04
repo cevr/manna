@@ -4884,6 +4884,26 @@ The form of an entry, each field on its own line:
 - **Cause:** The journey reported only its loading, and wrote each line to the results file with nothing to report the write's own failure; `serve` reported nothing. Each output-folder write in a journey now prints its failure line, and `serve` prints its result as every other command does.
 - **Guard:** code: `packages/sim/src/refusals.slow.test.ts` `each refused call fails typed and prints its failure line once`; `packages/sim/src/host.scenarios.test.ts` `prints the refusal when the journey results file leads out`, `prints the refusal when the server output folder leads out`
 
+### sim-start-leaves-its-server-unrecorded
+
+- **Date:** 2026-11-04
+- **Kind:** review
+- **Said:** "A typed failure of the start-time read inside the live `Os.spawn` leaves the started server running, with no record and no stop."
+- **Source:** hymnapp/simlife/rw-round-1-findings.md M1
+- **Wrong:** The live `Os.spawn` started the server, then read its start time with a `ps` of its own; when that read failed typed, `boot` failed before it knew the server's identity, so the server ran with no record, and the next `down` failed `NoSession`.
+- **Cause:** The start made the server first and learned who it was second, so every failure between the two left a process nothing could name. The child now reads its own start time and prints its identity, and becomes the server only once the drive has read it and answered `go`; any other way out closes its input, and it ends itself.
+- **Guard:** code: `packages/sim/src/spawn.test.ts` `a boot whose read of its new server start time fails leaves nothing running unrecorded`; `packages/sim/src/spawn.slow.test.ts` `nothing runs unrecorded, and the down leaves nothing`; `packages/sim/src/os.slow.test.ts` `a spawn whose child cannot read its own start time fails typed`
+
+### sim-spawned-server-holds-the-boots-output
+
+- **Date:** 2026-11-04
+- **Kind:** retraction
+- **Said:** "Start `argv` as a process of its own that outlives this command."
+- **Source:** `packages/sim/src/os.ts` `spawnLive` at b8b344936; tmp/orchestrate/hymnapp/simlife/l5.md (the merge-time live drive, steps 2.1 and 3.1)
+- **Wrong:** `sim boot` printed its ok line and released its hold, then ran on until the server it started ended (337 s on iOS, 23 s on web): the server held a copy of the boot's stdout at fd 10, so the boot's read of the start's output never ended.
+- **Cause:** The child became the server with `exec "$0" "$@" 3>&- </dev/null`; `/bin/sh` (bash 3.2) keeps a copy of a descriptor closed on the line that runs a program open in that program. The child now closes fd 3 and sets its input in an `exec` of their own, then runs the program. The live seam test spawned only from inside the test's own process, so it never asked whether the spawning command could end.
+- **Guard:** code: `packages/sim/src/os.slow.test.ts` `a command that spawns through the live Os ends while its child runs on`
+
 ### heartseed-tests-run-as-parts
 
 - **Date:** 2026-10-22

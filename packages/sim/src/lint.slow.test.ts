@@ -1,8 +1,10 @@
 /**
  * The static leg of the contained host: `.oxlintrc.json`'s block for
  * `packages/sim/src` refuses `node:fs`, `fs`, `child_process` and Bun's own
- * file and spawn calls, which would reach the host around `host.ts`, and no
- * later block lets a driver source off. oxlint runs the block's own rules
+ * file and spawn calls, which would reach the host around `host.ts`,
+ * `process.kill`, which would signal around the `Os` seam's stop rule
+ * (`os.ts`), and `process.pid`, which would read an identity around
+ * `Os.self`; no later block lets a driver source off. oxlint runs the block's own rules
  * over a probe and reports each banned line, and only those.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -36,9 +38,12 @@ const PROBE = [
   "Bun.file('/nonexistent/loop-probe-x');",
   "Bun.spawn(['true']);",
   'Bun.spawnSync([`true`]);',
+  'await Bun.$`true`;',
+  'process.kill(4_000_001, 0);',
+  'export const self = process.pid;',
   'export const used = [writeFileSync, readFile, spawn, Effect];',
 ];
-const REPORTED_LINES = [1, 2, 3, 5, 6, 7, 8];
+const REPORTED_LINES = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11];
 
 const root = Effect.gen(function* () {
   const path = yield* Path.Path;

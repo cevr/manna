@@ -22,6 +22,15 @@ export const Session = Schema.Struct({
   udid: Schema.String,
   /** When `boot` started, ISO 8601: `log` reads the app's log from here. */
   bootedAt: Schema.String,
+  /**
+   * The server's start time, read when `boot` started it (`os.ts`): with
+   * `serverPid`, the process the drive may stop. A session without it is
+   * legacy (an older `boot`'s): it grants no signal, and its drivers keep
+   * the caller's environment.
+   */
+  serverStarted: Schema.optionalKey(Schema.String),
+  /** The drivers' HOME, `<state>/home`, which `boot` made; absent in a legacy session. */
+  home: Schema.optionalKey(Schema.String),
 });
 export interface Session extends Schema.Schema.Type<typeof Session> {}
 

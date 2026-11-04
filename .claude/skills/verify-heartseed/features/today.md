@@ -23,20 +23,28 @@ sound.
 
 ## Driving it
 
-After the Launch of `SKILL.md`, its Drive's three commands are this
-feature's drive: `open`, `wait text "Isaiah 41:10"`, and the snapshot into
-`$EVIDENCE/snapshot-today.txt`.
+After the Launch of `SKILL.md` (`sim boot`, then `sim install`, which
+waits for `label=Isaiah 41:10`), its Drive's two commands are this
+feature's drive:
 
-→ `wait` exits 0, and the snapshot lists, under `[application] "Heartseed"`,
-the text nodes `Today`, `Isaiah 41:10` and the passage above, whole, with
-no `¶`, `[`, `]`, `‹` or `›` in it.
+```bash
+sim open / --expect "label=Isaiah 41:10"
+sim snapshot today
+```
+
+→ `open` is ok, and the snapshot (`$EVIDENCE/snapshots/today.txt`) lists,
+under `[application] "Heartseed"`, the text nodes `Today`, `Isaiah 41:10`
+and the passage above, whole, with no `¶`, `[`, `]`, `‹` or `›` in it.
+Count those nodes, report the counts, then delete the snapshot: it holds
+the passage's words.
 
 ## Gotchas
 
-- The first open after a fresh dev server waits on the bundle: give
-  `wait` its full 120 s before calling the step failed.
-- A red box naming the Hermes compiler means the dev server started
-  without the pod's `HERMESC_PATH` (`SKILL.md`, step 6).
+- The first open after a fresh dev server waits on the bundle:
+  `sim install` gives it 180 s before it fails `ReadinessTimedOut`.
+- A red box naming the Hermes compiler means the dev server did not get a
+  working one (`SKILL.md`, Gotchas: `detail.hermesc`, and the caller's
+  `HERMESC_PATH`).
 - The passage comes from the dev server's bundle, so a change to the
   corpus or to the display rule shows after the server restarts, with no
   rebuild of the app.
