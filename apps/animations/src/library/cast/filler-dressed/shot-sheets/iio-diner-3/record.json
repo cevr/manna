@@ -21,7 +21,7 @@
         "width": 448,
         "height": 1024
       },
-      "sha256": "a64871251a43eb5354ae13e91b66ab65f09f75818784d252027a7dc000f21e35"
+      "sha256": "b811b85f9e1bf2e136162e559628804eb391a9b41e2e59acccc002abad7a8893"
     },
     {
       "key": "neutralBlink",
@@ -31,7 +31,7 @@
         "width": 505,
         "height": 1024
       },
-      "sha256": "37719bea1fe7db3d3eeb842e8b77b04dfa4b789bd622c74f486730025559f8e2"
+      "sha256": "6f85c4e631c3c55a9cff8689dfed3d744eacf8d85edc7307c53dbf47f14be147"
     },
     {
       "key": "talk",
@@ -41,7 +41,14 @@
         "width": 449,
         "height": 1024
       },
-      "sha256": "87264a8da4b69cbc528b0eb291fe9d705ec085a0be4989815e31fef7aca02605"
+      "sha256": "06b1e6687e4ed22f391e86d4f3c658aa1b49fcf31725aad749a6748719b8db4c"
+    }
+  ],
+  "props": [
+    {
+      "name": "open mouth",
+      "base": "#b6502e",
+      "role": "other"
     }
   ]
 }

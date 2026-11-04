@@ -60,6 +60,13 @@ export const MEASURED: ReadonlyArray<MeasuredPaint> = [
     box: { x: 230, y: 640, width: 60, height: 120 },
     what: "her dress's main colour (her lap, first figure)",
   },
+  {
+    member: 'filler-dressed',
+    hex: '#b6502e',
+    source: 'shot-sheets/iio-diner-3/sheet.png',
+    box: { x: 1310, y: 326, width: 18, height: 8 },
+    what: "the older man's open mouth in `talk` (iio-diner-3's prop)",
+  },
 ];
 
 /** Each of `hexes` a member's palette takes that neither its `look` (lowercased) gives nor one of its `measured` paints declares. */

@@ -270,6 +270,18 @@ describe("In Its Order's staging", () => {
     expect(turned('woman')).toEqual(['turn']);
   });
 
+  test('has each diner of the title talk in turn, diner-3 too, his mouth his sheet’s own paint (critique 1, item 17)', () => {
+    const title = placed.find(({ shot }) => shot.id === 'title')?.shot;
+    if (!title) return expect(title).toBeDefined();
+    const talks = figuresOf(title)
+      .map(({ figure }) => figure)
+      .filter((f) => f.name.startsWith('diner-'))
+      .filter((f) => timesOf(title).some((t) => poseAt(f, t).cell === 'talk'))
+      .map((f) => f.name)
+      .toSorted();
+    expect(talks).toEqual(['diner-1', 'diner-2', 'diner-3', 'diner-4']);
+  });
+
   test('lays cold-baby’s near table across the mother’s lap, its top over her stool, a fifth of her height or more above her soles (critique 1, item 10)', () => {
     const baby = placed.find(({ shot }) => shot.id === 'cold-baby')?.shot;
     const near = baby?.layers.find((l) => l.name === 'near table')?.items[0];

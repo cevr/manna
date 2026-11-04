@@ -50,7 +50,6 @@ export const titleShot: FilmShot = {
   },
   build: ({ duration, cue }) => {
     const at = { headPx: HEAD, z: Z.guests };
-    const neutral = holds([[0, 'neutral', 'neutralBlink']], duration);
     const talk = (c: string) =>
       holds(
         [
@@ -73,7 +72,7 @@ export const titleShot: FilmShot = {
         layer('guests', Z.guests, [
           diner(1, X.diner1, CROWN, at, talk('talk')),
           diner(2, X.diner2, CROWN, at, talk('reply')),
-          diner(3, X.diner3, CROWN, at, neutral),
+          diner(3, X.diner3, CROWN, at, talk('talk')),
           diner(4, X.diner4, CROWN, at, talk('reply')),
           seat(
             {

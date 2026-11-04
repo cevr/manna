@@ -173,7 +173,11 @@ const diner = (n: 1 | 2 | 3 | 4, side: 'right' | 'left'): SheetDecl => ({
     `Draw only the one person of the reference image: the ${['', 'first', 'second', 'third', 'fourth'][n]} person the description names, in exactly that person's headcloth or veil, mantle, beard and robe; the other three people of the description are not on this sheet. Their sandals painted exactly #6b4630.`,
     ...[HEMMED].filter(() => n === 4),
   ],
+  props: [DINER_MOUTH].filter(() => n === 3),
 });
+
+/** The older man's open talking mouth, as his sheet draws it (a measured paint): the diners' palette has no red, so his mouth snapped toward the walnut mantle and he could not talk (critique 1, item 17). */
+const DINER_MOUTH = { name: 'open mouth', base: '#b6502e', role: 'other' } as const;
 
 /** The grown villager on the parchment (`milk-cup` to `milk-row`): five keys, the cup in every one. */
 const villagerMilk: SheetDecl = {
