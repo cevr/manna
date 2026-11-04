@@ -4913,3 +4913,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** A voice service could light words from a stale event of an earlier utterance, light backward, keep reading after the switch went off, speak while off, let a late failed speak end a newer reading, or hold a command on a pending speak.
 - **Cause:** Events reach JS asynchronously from the native side, and a speak's answer can come after newer commands.
 - **Guard:** code: `apps/heartseed/src/voice.property.test.ts` `agrees on 300 seeded histories of 40 steps`; `apps/heartseed/src/voice.property.test.ts` `waits on no pending speak, and a late failure ends only its own reading`; `apps/heartseed/src/voice/guard.test.ts` `emits only for the utterance it holds, and lets go of it before it stops the synthesizer`
+
+### heartseed-voice-switch-in-command-order
+
+- **Date:** 2026-11-03
+- **Kind:** review
+- **Said:** "An older off call overwrites a newer enabled setting"
+- **Source:** hymnapp/hsvoice/round-1-findings.md M1
+- **Wrong:** `setEnabled(false)` wrote `false` only after the source's stop settled, so an `on` called while that stop was pending was overwritten: the view read enabled, the store and the next launch read disabled. An already-settled native promise was enough to reorder them.
+- **Cause:** The write waited on the source call and wrote the call's own argument, not the switch the latest call left.
+- **Guard:** code: `apps/heartseed/src/voice/switch.test.ts` `stores and restarts with the last switch call over 300 histories of held stops`; `apps/heartseed/src/voice/switch.test.ts` `keeps a later on over an off whose stop is an already-resolved promise`

@@ -8,7 +8,19 @@
  * source sends applies at once, inside its listener, and calls nothing.
  */
 
-import { Context, Effect, Layer, Match, MutableRef, Option, PubSub, Schema, Stream } from 'effect';
+import {
+  Context,
+  Effect,
+  Fiber,
+  Layer,
+  Match,
+  MutableRef,
+  Option,
+  PubSub,
+  Schema,
+  Semaphore,
+  Stream,
+} from 'effect';
 import type { Scope } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
@@ -141,6 +153,7 @@ export const layer: Layer.Layer<Voice, never, VoiceSource | KeyValueStore.KeyVal
       });
       const state = MutableRef.make<Reading>(initial(enabled));
       const views = yield* PubSub.unbounded<VoiceView>({ replay: 1 });
+      const writes = yield* Semaphore.make(1);
       PubSub.publishUnsafe(views, state.current.view);
 
       /** Applies one input at once, publishes a changed view, and answers the call it asks for. */
@@ -179,6 +192,16 @@ export const layer: Layer.Layer<Voice, never, VoiceSource | KeyValueStore.KeyVal
           Option.match(dispatch(input), { onNone: () => Effect.void, onSome: perform }),
         );
 
+      /**
+       * Writes the switch the view holds now, one write at a time: the last
+       * write to start begins after every call's view change, so the store
+       * ends at the last call's switch whatever order the source's stops
+       * and the store's writes settle in.
+       */
+      const persist = writes.withPermit(
+        Effect.suspend(() => writeEnabled(store, MutableRef.get(state).view.enabled)),
+      );
+
       yield* source.subscribe((event) => {
         dispatch({ _tag: 'Event', event });
       });
@@ -197,8 +220,11 @@ export const layer: Layer.Layer<Voice, never, VoiceSource | KeyValueStore.KeyVal
         resume: run({ _tag: 'Resume' }),
         stop: run({ _tag: 'Stop' }),
         setEnabled: Effect.fn('Voice.setEnabled')(function* (on: boolean) {
-          yield* run({ _tag: 'SetEnabled', on });
-          yield* writeEnabled(store, on);
+          const call = yield* Effect.forkChild(run({ _tag: 'SetEnabled', on }), {
+            startImmediately: true,
+          });
+          yield* persist;
+          yield* Fiber.join(call);
         }),
         view: Effect.sync(() => MutableRef.get(state).view),
         changes: Stream.fromPubSub(views),

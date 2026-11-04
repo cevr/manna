@@ -25,7 +25,10 @@ will call `Voice.read`.
 - The switch is kept under `heartseed/voice/enabled` in the app's settings
   store, `src/store.ts` (One's key-value store, or memory where it cannot
   open). Only the text `false` turns it off; a failed read or write is
-  logged and never fails the service.
+  logged and never fails the service. `setEnabled` writes the switch while
+  its stop is under way, not after it, one write at a time, each the
+  switch the view holds then, so the store ends at the last call's switch
+  however the stops settle.
 - `src/voice/source.ios.ts` is the source on iOS: the Swift package
   `native/voice` over AVSpeechSynthesizer, which One's prebuild makes the
   local pod `OneSwiftPackages/voice`. Its voices and its events cross as the
