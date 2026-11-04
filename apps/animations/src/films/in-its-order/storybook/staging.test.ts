@@ -16,6 +16,8 @@ import VILLAGER_PALETTE from '../cast/idea-villagers/cast-sheet/palette.json';
 import { CELLS as VILLAGER_CELLS } from '../cast/idea-villagers/shot-sheets/iio-milk/cells.ts';
 import { inItsOrder } from './index.ts';
 import { drawScaleOf } from './kit.ts';
+import { TABLE } from '../plates/plates.ts';
+import { BABY_MOTHER, TABLE_TOP_PX } from './shots/cold.ts';
 import { TABLE_TOP } from './shots/courtyard.ts';
 import { CUP_MOUTHS, GUTTER } from './shots/milk.ts';
 
@@ -247,6 +249,17 @@ describe("In Its Order's staging", () => {
         .flatMap((f) => [...new Set(timesOf(title).map((t) => poseAt(f, t).cell))]);
     expect(turned('man')).toEqual(['smile']);
     expect(turned('woman')).toEqual(['turn']);
+  });
+
+  test('lays cold-baby’s near table across the mother’s lap, its top over her stool, a fifth of her height or more above her soles (critique 1, item 10)', () => {
+    const baby = placed.find(({ shot }) => shot.id === 'cold-baby')?.shot;
+    const near = baby?.layers.find((l) => l.name === 'near table')?.items[0];
+    const mother = baby && figuresOf(baby).find(({ figure }) => figure.name === 'mother')?.figure;
+    if (!baby || near?._tag !== 'Plate' || !mother)
+      return expect([baby?.id, near?._tag, mother?.name]).toEqual(['cold-baby', 'Plate', 'mother']);
+    const top = near.place.y + (TABLE_TOP_PX / TABLE.size[1]) * near.place.height;
+    const tall = mother.at.ground - BABY_MOTHER.crown;
+    expect(top).toBeLessThanOrEqual(mother.at.ground - tall / 5);
   });
 
   test('draws the open scroll in cold-letter, at rest on the table at the shot’s end', () => {

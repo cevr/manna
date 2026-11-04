@@ -125,6 +125,18 @@ const leadAt = (spans: readonly [Span, ...ReadonlyArray<Span>]) =>
 /** The close of the mother: a grown head on her plane, so the diners behind read at matched scale on theirs, and her whole seated figure (crown to the stool's feet) fits the frame at the shot's start. */
 const BABY_HEAD = 430;
 
+/** The diners' places behind the mother in cold-baby, layer px: either side of her and close to her, as the panel seats them. */
+const BABY_DINERS = [250, 470, 1380, 1600];
+
+/** The table plate's top edge in its own px: where its wood begins under the bowls. */
+export const TABLE_TOP_PX = 1061;
+
+/** The mother in cold-baby, layer px: her centre and her crown. */
+export const BABY_MOTHER = { x: 990, crown: 55 } as const;
+
+/** Where the near table's top lies in cold-baby, layer px: across her lap, as the panel lays it, so its food stands before her and her stool is hidden. */
+const NEAR_TOP = 800;
+
 /** Where the baby's face is in the close, frame px at the shot's start: the push holds it there. */
 const BABY_FACE = [748, 418] as const;
 
@@ -162,7 +174,7 @@ export const coldBaby: FilmShot = {
         layer('diners', far.z, [
           ...dinersOn(
             far,
-            { crown: 396, xs: [120, 320, 1600, 1800] },
+            { crown: 396, xs: BABY_DINERS },
             new Map([
               [1, [cue('talk').start, cue('talk').end]],
               [4, [cue('reply').start, cue('reply').end]],
@@ -177,8 +189,7 @@ export const coldBaby: FilmShot = {
               member: 'feast-mother',
               sheet: 'iio-baby',
               name: 'mother',
-              x: 990,
-              crown: 55,
+              ...BABY_MOTHER,
             },
             { headPx: BABY_HEAD, z: 1 },
             holds(
@@ -191,7 +202,9 @@ export const coldBaby: FilmShot = {
             ),
           ),
         ]),
-        layer('near table', 0.8, [plateOn('table.png', TABLE, [960, 1050], [960, 985], 2.75)]),
+        layer('near table', 0.8, [
+          plateOn('table.png', TABLE, [960, TABLE_TOP_PX], [960, NEAR_TOP], 2.75),
+        ]),
       ],
     };
   },
