@@ -286,7 +286,11 @@ const drawAsk = Effect.fn('Storybook.drawAsk')(function* (
       cast: yield* filmCast(story),
       keys: decl.keys,
       refs: decl.refs,
-      words: { poses: new Map(Object.entries(decl.poses)), rules: decl.rules } satisfies SheetWords,
+      words: {
+        poses: new Map(Object.entries(decl.poses)),
+        rules: decl.rules,
+        props: decl.props ?? [],
+      } satisfies SheetWords,
     };
   }
   return {

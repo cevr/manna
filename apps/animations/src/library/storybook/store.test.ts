@@ -13,6 +13,7 @@ import {
   rgbOfHex,
   type Rgb,
   splitSheet,
+  withProps,
 } from './sheet.ts';
 import {
   CAST,
@@ -30,6 +31,7 @@ import {
   resplitSheet,
   sha256,
   sheetDir,
+  sheetPalette,
 } from './store.ts';
 
 /** SHA-256 in hex by Bun's own hasher: the oracle the store's `Digest` hashes are held to. */
@@ -219,6 +221,53 @@ describe('resplitSheet', () => {
       expect(refused._tag).toBe('StoreFailed');
     }).pipe(Effect.scoped, Effect.provide(routeOf(sheetOf(2, PAPER), calls)));
   });
+});
+
+/** A prop one sheet paints that its member's palette lacks, near its cloth (as the lead's cream bottle lies near his sash): the member's palette alone snaps it to the cloth. */
+const PROP = { name: 'bottle', base: '#d26e46', role: 'other' } as const;
+
+/** `sheetOf(n, PAPER)` with an 8 × 13 patch of the prop inside the first figure. */
+const sheetWithProp = (n: number): Raster => {
+  const drawn = sheetOf(n, PAPER);
+  const rgba = drawn.rgba.slice();
+  for (let y = 8; y < 21; y++)
+    for (let x = 8; x < 16; x++) rgba.set([...rgbOfHex(PROP.base), 255], (y * drawn.width + x) * 4);
+  return { ...drawn, rgba };
+};
+
+/** Pixels of `r` painted exactly `hex`. */
+const painted = (r: Raster, hex: string): number => {
+  const [cr, cg, cb] = rgbOfHex(hex);
+  let n = 0;
+  for (let q = 0; q < r.width * r.height; q++)
+    if (r.rgba[q * 4] === cr && r.rgba[q * 4 + 1] === cg && r.rgba[q * 4 + 2] === cb) n++;
+  return n;
+};
+
+describe('a sheet’s props', () => {
+  it.effect(
+    'paint a prop on that sheet alone: its record, prompt, cells and re-split keep the prop paint, and another sheet of the member splits with the member’s palette as before',
+    () => {
+      const calls: Array<string> = [];
+      return Effect.gen(function* () {
+        const cast = yield* castWith(PALETTE);
+        const words = { poses: POSES, rules: [], props: [PROP] };
+        const drawn = yield* drawSheet(cast, 'm', 's1', ['side', 'front'], ['front'], words);
+        expect(drawn.props).toEqual([PROP]);
+        expect(calls[0]).toContain(PROP.base);
+        expect(yield* sheetPalette(cast, drawn)).toEqual(withProps(PALETTE, [PROP]));
+        const side = yield* readCell(cast, 'm', 's1', 'side');
+        expect(painted(side, PROP.base)).toBe(8 * 13);
+        const split = Result.getOrThrow(splitSheet(sheetWithProp(2), 2, PALETTE));
+        expect(painted(split.cells[0]?.raster ?? side, PROP.base)).toBe(0);
+        expect(yield* resplitSheet(cast, 'm', 's1')).toEqual(drawn);
+        expect(painted(yield* readCell(cast, 'm', 's1', 'side'), PROP.base)).toBe(8 * 13);
+        const plain = yield* drawSheet(cast, 'm', 's2', ['side', 'front'], ['front']);
+        expect('props' in plain).toBe(false);
+        expect(yield* sheetPalette(cast, plain)).toEqual(PALETTE);
+      }).pipe(Effect.scoped, Effect.provide(routeOf(sheetWithProp(2), calls)));
+    },
+  );
 });
 
 describe('readCell', () => {

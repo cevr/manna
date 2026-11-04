@@ -17,7 +17,7 @@ import {
   paintSceneOf,
   prepare,
 } from './painter.ts';
-import type { Palette } from './sheet.ts';
+import type { Palette, PalettePart } from './sheet.ts';
 import { drawnKeyOf, figuresOf, frameAt, type Item, type Light, type Shot } from './shot.ts';
 
 /** A scene's timeline, as the engine reads it. */
@@ -422,7 +422,7 @@ export const storyDrawing = (story: StoryScene, sheets: Sheets, grid: Grid) => {
   });
 };
 
-/** One shot sheet a film declares: its member and id, its keys left to right with each key's pose words, the member's kept views it is drawn from, and the film's own prompt rules. */
+/** One shot sheet a film declares: its member and id, its keys left to right with each key's pose words, the member's kept views it is drawn from, the film's own prompt rules, and the props it paints beyond its member's palette (none when it names none). */
 export interface SheetDecl {
   readonly member: string;
   readonly id: string;
@@ -430,6 +430,7 @@ export interface SheetDecl {
   readonly poses: Readonly<Record<string, string>>;
   readonly refs: ReadonlyArray<string>;
   readonly rules: ReadonlyArray<string>;
+  readonly props?: ReadonlyArray<PalettePart>;
 }
 
 /** A film drawn in storybook shots: its name, its frame grid, its scenes as the film lays them out, its storybook scenes, its narration's timings file, its sheets declared and drawn. */

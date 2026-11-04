@@ -12,6 +12,7 @@ import {
   groundOf,
   hexOf,
   largestPiece,
+  measuredPaint,
   mendPockets,
   type Palette,
   paintsOf,
@@ -769,6 +770,49 @@ const missesOf = (g: Generated): ReadonlyArray<string> => {
   if (kept !== owned) misses.push(`${kept} pixels kept, ${owned} owned`);
   return misses;
 };
+
+describe('measuredPaint', () => {
+  /** A 60 × 40 drawing over generated seeds: a flat paint `a` on the left half and `b` on the right, ±2 of grain, an ink line every 5th row, a transparent column every 7th. */
+  const drawing = (seed: number, a: Rgb, b: Rgb): Raster => {
+    const next = rng(seed);
+    const [width, height] = [60, 40];
+    const rgba = new Uint8Array(width * height * 4);
+    for (let q = 0; q < width * height; q++) {
+      const [x, y] = [q % width, Math.floor(q / width)];
+      const paint = [[a, b][Number(x >= 30)] ?? a, INK][Number(y % 5 === 0)] ?? INK;
+      const grain = Math.round(next() * 4) - 2;
+      rgba.set(
+        [
+          ...paint.map((c) => Math.min(255, Math.max(0, c + grain))),
+          [255, 0][Number(x % 7 === 0)] ?? 0,
+        ],
+        q * 4,
+      );
+    }
+    return { width, height, rgba };
+  };
+
+  test('reads the paint a box lies on within ΔE 2, its ink lines, grain and clear pixels left out, a box past the edge clipped; a box on the other paint reads that one', () => {
+    const misses = Array.from({ length: 8 }, (_, k) => k + 1).flatMap((seed) => {
+      const next = rng(seed * 31);
+      const a: Rgb = [
+        40 + Math.floor(next() * 170),
+        40 + Math.floor(next() * 170),
+        40 + Math.floor(next() * 170),
+      ];
+      const b: Rgb = [255 - a[0], a[2], a[1]];
+      const r = drawing(seed, a, b);
+      const reads: ReadonlyArray<readonly [string, Rgb, Rgb]> = [
+        ['left', measuredPaint(r, { x: -6, y: 2, width: 30, height: 30 }), a],
+        ['right', measuredPaint(r, { x: 34, y: 20, width: 40, height: 40 }), b],
+      ];
+      return reads
+        .filter(([, got, want]) => deltaE(got, want) > 2)
+        .map(([side, got, want]) => `seed ${seed}: ${side} ${hexOf(got)} for ${hexOf(want)}`);
+    });
+    expect(misses).toEqual([]);
+  });
+});
 
 describe('splitSheet over generated sheets', () => {
   test('gives each figure alone, pale pockets refilled, gaps and specks cleared, foreign paint kept, every other pixel snapped exactly', () => {

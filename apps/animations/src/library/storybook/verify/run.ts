@@ -29,10 +29,10 @@ import {
   drawnCellOf,
   headsOf,
   loadFigures,
-  memberPalette,
   sha256,
   sharesOf,
   sheetDir,
+  sheetPalette,
   splitRulesOf,
   type StoredFigure,
 } from '../store.ts';
@@ -236,7 +236,7 @@ const sheetFault = Effect.fn('StorybookVerify.sheetFault')(function* (
   const split = splitSheet(
     yield* decoded(bytes, `${dir}/sheet.png`),
     keys.length,
-    yield* memberPalette(cast, f.figure.member),
+    yield* sheetPalette(cast, f.record),
     splitRulesOf(f.record),
   );
   if (Result.isFailure(split)) return Option.some(`${f.figure.name}: ${split.failure.reason}`);

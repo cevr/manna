@@ -32,12 +32,14 @@ const Hex = Schema.String.check(
 );
 
 /** One part of a member's palette: its base paint, its shade paint when its look names one, and what it is. */
-const PalettePart = Schema.Struct({
+export const PalettePart = Schema.Struct({
   name: Schema.String,
   base: Hex,
   shade: Schema.optionalKey(Hex),
   role: Schema.optionalKey(Schema.Literals(ROLES)),
 });
+
+export type PalettePart = typeof PalettePart.Type;
 
 /** A member's palette, `cast/<member>/cast-sheet/palette.json`: the ink and every part's paints. */
 export const Palette = Schema.Struct({
@@ -54,6 +56,12 @@ export const Palette = Schema.Struct({
 export type Palette = typeof Palette.Type;
 
 export const PaletteJson = Schema.fromJsonString(Palette);
+
+/** A member's palette as one sheet splits with it: its parts, then the props that sheet alone adds (`SheetRecord.props`), so every paint the member has keeps its place and the member's other sheets split as before. */
+export const withProps = (palette: Palette, props: ReadonlyArray<PalettePart>): Palette => ({
+  ...palette,
+  parts: [...palette.parts, ...props],
+});
 
 /** The head share a member's sheet draws: the sheet's own (`heads`), else the member's (`head`), else a grown adult's 1. */
 export const shareOf = (palette: Palette, sheet: string): number =>
@@ -1718,6 +1726,19 @@ const pieceFateOf = (
       }),
     );
   return Result.succeed(!oldHead);
+};
+
+/** The paint a drawing lays inside `box` (clipped to the picture): each channel's median over the box's fully opaque pixels, black when none lies there. A box read on a flat patch of one paint reads that paint, its ink lines and grain left out by the median. */
+export const measuredPaint = (r: Raster, box: Box): Rgb => {
+  const picked: Array<Rgb> = [];
+  for (let y = Math.max(0, box.y); y < Math.min(r.height, box.y + box.height); y++)
+    for (let x = Math.max(0, box.x); x < Math.min(r.width, box.x + box.width); x++) {
+      const q = y * r.width + x;
+      if (alphaAt(r, q) === 255) picked.push(rgbAt(r, q));
+    }
+  const median = (k: 0 | 1 | 2) =>
+    picked.map((p) => p[k]).sort((a, b) => a - b)[picked.length >> 1] ?? 0;
+  return [median(0), median(1), median(2)];
 };
 
 /** The share of a picture taken as its ink: its darkest 2 % of opaque pixels. */

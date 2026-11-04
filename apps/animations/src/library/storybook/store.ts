@@ -15,6 +15,7 @@ import {
   type Paint,
   type Palette,
   PaletteJson,
+  PalettePart,
   paintsOf,
   rgbOfHex,
   rgbSum,
@@ -25,6 +26,7 @@ import {
   SPLIT_RULES,
   type SplitRules,
   withHeadOf,
+  withProps,
 } from './sheet.ts';
 import { drawnKeyOf, type Figure, figuresOf, type Layer, type Shot } from './shot.ts';
 
@@ -71,6 +73,8 @@ export const SheetRecord = Schema.Struct({
   cells: Schema.Array(Schema.Struct({ key: Name, box: BoxJson, sha256: Schema.String })),
   /** The opt-in split rules its cells were cut under (`SplitRules`), by name: every one on a sheet drawn since the rules, none (absent) on a sheet drawn before them, which re-splits as it was. */
   rules: Schema.optionalKey(Schema.Array(Schema.Literals(SPLIT_RULES))),
+  /** Paints this sheet alone adds to its member's palette (a prop the sheet draws, as the lead's bottle on `iio-table`): appended after the member's parts, so every other sheet of the member splits as it did. */
+  props: Schema.optionalKey(Schema.Array(PalettePart)),
   /** The owner's keep: absent until he keeps the sheet. */
   kept: Schema.optionalKey(
     Schema.Struct({ date: Schema.String, why: Schema.String, ask: Schema.String }),
@@ -141,6 +145,14 @@ export const readPalette = Effect.fn('Storybook.readPalette')(function* (file: s
 /** A member's palette, `cast/<member>/cast-sheet/palette.json`. */
 export const memberPalette = (cast: Cast, member: string) =>
   readPalette(`${cast.dirOf(member)}/cast-sheet/palette.json`);
+
+/** The palette a stored sheet splits with: its member's, then the props its record adds. */
+export const sheetPalette = Effect.fn('Storybook.sheetPalette')(function* (
+  cast: Cast,
+  record: SheetRecord,
+) {
+  return withProps(yield* memberPalette(cast, record.member), record.props ?? []);
+});
 
 /** A member's shot sheet record. */
 export const readRecord = Effect.fn('Storybook.readRecord')(function* (
@@ -348,14 +360,15 @@ export const promptOf = (
     ...words.rules,
   ].join('\n');
 
-/** What a sheet's prompt says beyond the house rules: each key's pose words, and any rules its film adds, each a line of its own after the ground. */
+/** What a sheet's prompt says beyond the house rules: each key's pose words, any rules its film adds, each a line of its own after the ground, and the props it paints beyond its member's palette (`SheetRecord.props`). */
 export interface SheetWords {
   readonly poses: ReadonlyMap<string, string>;
   readonly rules: ReadonlyArray<string>;
+  readonly props: ReadonlyArray<PalettePart>;
 }
 
-/** The library's own words: its `POSES`, and no rule beyond the house's. */
-export const LIBRARY_WORDS: SheetWords = { poses: POSES, rules: [] };
+/** The library's own words: its `POSES`, no rule beyond the house's and no prop. */
+export const LIBRARY_WORDS: SheetWords = { poses: POSES, rules: [], props: [] };
 
 /** Each pose key `keys` names, or the first key no pose is written for. */
 const unknownKey = (
@@ -417,7 +430,7 @@ export const drawSheet = Effect.fn('Storybook.drawSheet')(function* (
     return yield* DrawRefused.make({
       reason: `no pose is written for key ${unknown.value} (${[...words.poses.keys()].join(', ')})`,
     });
-  const palette = yield* memberPalette(cast, member);
+  const palette = withProps(yield* memberPalette(cast, member), words.props);
   const ground = groundFor(palette);
   if (Option.isNone(ground))
     return yield* DrawRefused.make({
@@ -451,6 +464,7 @@ export const drawSheet = Effect.fn('Storybook.drawSheet')(function* (
     id,
     prompt,
     rules: ruleNamesOf(DRAWN_RULES),
+    ...propsOf(words.props),
     refs: refShas,
     sheet: yield* sha256(bytes),
     size: SHEET_SIZE,
@@ -461,6 +475,16 @@ export const drawSheet = Effect.fn('Storybook.drawSheet')(function* (
   yield* writeRecord(dir, record);
   return record;
 });
+
+/** A record's `props` field: the props when a sheet paints any, else no field, so a sheet with none records as before. */
+const propsOf = (props: ReadonlyArray<PalettePart>): Pick<SheetRecord, 'props'> =>
+  Option.match(
+    Option.liftPredicate(props, (p) => p.length > 0),
+    {
+      onNone: () => ({}),
+      onSome: (some) => ({ props: some }),
+    },
+  );
 
 /** A split's cells stored as `<dir>/cells/<key>.png`, the keys in the cells' order, and the sheet's cells module (`cellsModuleOf`): each key, its box and its PNG's sha256. */
 const storeCells = Effect.fn('Storybook.storeCells')(function* (
@@ -614,7 +638,7 @@ export const resplitSheet = Effect.fn('Storybook.resplitSheet')(function* (
     return yield* StoreFailed.make({
       reason: `${member}'s sheet ${id}: sheet.png is not the one its record names`,
     });
-  const palette = yield* memberPalette(cast, member);
+  const palette = yield* sheetPalette(cast, record);
   const split = yield* Effect.fromResult(
     splitSheet(
       yield* pngOf(bytes, `${dir}/sheet.png`),
@@ -713,7 +737,7 @@ export const loadFigures = Effect.fn('Storybook.loadFigures')(function* (cast: C
   return yield* Effect.forEach(figuresOf(shot), ({ layer, figure: f }) =>
     Effect.gen(function* () {
       const record = yield* readRecord(cast, f.member, f.sheet);
-      const palette = yield* memberPalette(cast, f.member);
+      const palette = yield* sheetPalette(cast, record);
       const paints = paintsOf(palette);
       const stored = new Map<string, Raster>();
       for (const c of record.cells)
