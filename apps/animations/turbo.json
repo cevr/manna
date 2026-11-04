@@ -15,6 +15,7 @@
         "test:storybook-shots",
         "test:storybook-film",
         "test:storybook-heads",
+        "test:storybook-paints",
         "test:storybook-covers-table",
         "test:storybook-covers-ouch",
         "test:storybook-covers-rest"
@@ -169,6 +170,7 @@
         "!src/films/in-its-order/rigs/**/*.test.*",
         "!src/films/in-its-order/scenes/**/*.test.*",
         "!src/films/in-its-order/storybook/heads.test.ts",
+        "!src/films/in-its-order/storybook/paints.test.ts",
         "!src/films/in-its-order/storybook/covers-*.test.ts",
         "!src/library/**/*.test.*"
       ]
@@ -227,6 +229,22 @@
         "!src/films/in-its-order/rigs/**/*.test.*",
         "!src/films/in-its-order/scenes/**/*.test.*",
         "!src/films/in-its-order/storybook/palettes.test.ts",
+        "!src/library/**/*.test.*"
+      ]
+    },
+    "test:storybook-paints": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/righteousness-by-faith/**/*.test.*",
+        "!src/films/in-its-order/rigs/**/*.test.*",
+        "!src/films/in-its-order/scenes/**/*.test.*",
+        "!src/films/in-its-order/storybook/*.test.ts",
+        "src/films/in-its-order/storybook/paints.test.ts",
         "!src/library/**/*.test.*"
       ]
     }

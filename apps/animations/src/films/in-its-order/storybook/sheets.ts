@@ -68,6 +68,10 @@ const leadTable: SheetDecl = {
   rules: [...seated('#7a5236'), SASH_ALONE],
 };
 
+/** What the lead's close asks of his head beyond `seated` (critique 1, item 4: drawn darker, the snap split his hair between its shade and the sandals' brown): the hair, ears and neck as the front reference draws them. */
+const HEAD_AS_FRONT =
+  "His head is drawn exactly as in the front reference image at this larger size: the hair his warm brown #6c432b, its plum shade #57384a only in the small undersides of a few curls; the ears and the neck his skin #f2b27c, never brown; the sandals' brown #7a5236 on the sandals and the stool alone.";
+
 /** The lead close (`cold-ouch`): three keys, so a close stays under the enlargement cap. */
 const leadClose: SheetDecl = {
   member: 'lead-feast',
@@ -79,7 +83,7 @@ const leadClose: SheetDecl = {
     wince: `seated on the stool exactly as in the first figure, both hands resting empty on the knees, the head bowed the same, wincing: the eyes squeezed shut as two short tight ink lines, the brows drawn together and tilted up at their inner ends, the mouth a short wavy line`,
   },
   refs: ['front', 'heads-1'],
-  rules: [...seated('#7a5236'), SASH_ALONE],
+  rules: [...seated('#7a5236'), SASH_ALONE, HEAD_AS_FRONT],
 };
 
 /** The lead on the parchment (`milk-row`): standing, taking a cup. */
