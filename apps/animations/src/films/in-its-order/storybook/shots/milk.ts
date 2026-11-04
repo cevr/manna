@@ -1,5 +1,11 @@
 import type { FilmShot } from '../../../../library/storybook/scene.ts';
-import { hold, type Plate, type Span, turn } from '../../../../library/storybook/shot.ts';
+import {
+  blinkingHold,
+  hold,
+  type Plate,
+  type Span,
+  turn,
+} from '../../../../library/storybook/shot.ts';
 import { BOOK_OPEN, BOOK_SHUT, DROPPER, PAGE, RIBBON } from '../../plates/milk.ts';
 import { cam, holds, key, layer, plateOn, seat, STORY_PLATES, tallOf } from '../kit.ts';
 import { SHADOW } from '../plates/shadow.ts';
@@ -72,7 +78,7 @@ export const milkCup: FilmShot = {
         layer('figures', 1, [
           shadowAt(VILLAGER.x, villagerGround(), 330),
           villager([
-            hold(0, look.start, 'cup'),
+            blinkingHold(0, look.start, 'cup', 'cupBlink'),
             turn(look.start, look.end - look.start, 'cup', 'look'),
             hold(look.end, duration, 'look'),
           ]),
@@ -124,9 +130,7 @@ const RIBBON_BRUSH: ReadonlyArray<readonly [number, number, number]> = [
  * book, the milk pours from the book into his cup until `sincere`; on
  * "nothing" a dropper comes over the cup and he waves it away; on `word` he
  * looks to the book and it pours again, filling the cup, until `good`, and
- * he drinks. A slow push. His `cup` face shows no eyes a blink can read, so
- * each `cup` hold is still and ends in a look, a wave or a sip within the
- * alive bound.
+ * he drinks. A slow push. Each `cup` hold blinks through `cupBlink`.
  */
 export const milkPour: FilmShot = {
   id: 'milk-pour',
@@ -169,9 +173,9 @@ export const milkPour: FilmShot = {
             turn(toCup.start, toCup.end - toCup.start, 'look', 'cup'),
             ...holds(
               [
-                [toCup.end, 'cup', 'cup'],
+                [toCup.end, 'cup', 'cupBlink'],
                 [dropper.start, 'wave', 'wave'],
-                [away.end, 'cup', 'cup'],
+                [away.end, 'cup', 'cupBlink'],
               ],
               look.start,
             ),
@@ -180,9 +184,9 @@ export const milkPour: FilmShot = {
             turn(back.start, back.end - back.start, 'look', 'cup'),
             ...holds(
               [
-                [back.end, 'cup', 'cup'],
+                [back.end, 'cup', 'cupBlink'],
                 [drink.start, 'drink', 'drink'],
-                [drink.end, 'cup', 'cup'],
+                [drink.end, 'cup', 'cupBlink'],
               ],
               duration,
             ),
@@ -212,7 +216,7 @@ const RowMember = [
   ['idea-villagers', 'iio-milk-baby', 'baby', 360, 'sit', 'sitBlink', 230],
   ['villager-toddler', 'iio-milk', 'toddler', 640, 'hold', 'holdBlink', 210],
   ['villager-child', 'iio-milk', 'child', 900, 'hold', 'holdBlink', 230],
-  ['idea-villagers', 'iio-milk', 'villager', 1240, 'cup', 'cup', 300],
+  ['idea-villagers', 'iio-milk', 'villager', 1240, 'cup', 'cupBlink', 300],
 ] as const;
 
 /** The row's turns to drink: one cue whose starts spread over its `stagger` share of its `dur`, the baby's first. */
@@ -289,7 +293,7 @@ export const milkRow: FilmShot = {
               [
                 [0, 'front', 'frontBlink'],
                 [lift.start, 'lift', 'lift'],
-                [lift.end, 'cup', 'frontBlink'],
+                [lift.end, 'cup', 'cup'],
               ],
               duration,
             ),

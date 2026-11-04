@@ -301,7 +301,7 @@ export const coldLetter: FilmShot = {
           leadAt([
             blinkingHold(0, cue('down').start, 'bottle', 'frontBlink'),
             turn(cue('down').start, cue('down').end - cue('down').start, 'bottle', 'down'),
-            hold(cue('down').end, duration, 'down'),
+            blinkingHold(cue('down').end, duration, 'down', 'downBlink'),
           ]),
           table(),
           plateOn('scroll-rolled.png', SCROLL_ROLLED, [214.5, 202], SCROLL_AT.foot, SCROLL, {

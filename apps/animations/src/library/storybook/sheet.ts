@@ -1267,9 +1267,12 @@ const MARK_PX = 8;
 /**
  * A face's eyes, left to right: its marks all in ink of `MARK_PX` or more,
  * gathered into rows (a mark joins the row above when their rows overlap),
- * the second row from the top, between the brows and the mouth. None when
- * the face draws fewer than three such rows (a profile, a face with no
- * brows apart from the hair).
+ * the second row from the top, between the brows and the mouth. A face of
+ * two rows reads its eyes there too when its top row's marks are all wider
+ * than tall, brows over a mouth the beard holds (no face skin rings it);
+ * a face of one row reads it as its eyes when it is two marks each taller
+ * than wide, open eyes whose brows the hair holds and whose mouth the beard
+ * does. None otherwise (a profile, eyes over a mouth with no brows).
  */
 const eyesOf = (
   r: Raster,
@@ -1288,8 +1291,14 @@ const eyesOf = (
     if (row && m.box.y <= bottom) row.push(m);
     else rows.push([m]);
   }
-  if (rows.length < 3) return Option.none();
-  return Option.some((rows[1] ?? []).toSorted((a, b) => a.box.x - b.box.x).map((m) => m.px));
+  const [top = [], second = []] = rows;
+  const leftToRight = (row: typeof marks) =>
+    Option.some(row.toSorted((a, b) => a.box.x - b.box.x).map((m) => m.px));
+  const browed = top.every((m) => m.box.width > m.box.height);
+  const ovals = top.length === 2 && top.every((m) => m.box.height > m.box.width);
+  if (rows.length >= 3 || (rows.length === 2 && browed)) return leftToRight(second);
+  if (rows.length === 1 && ovals) return leftToRight(top);
+  return Option.none();
 };
 
 /** The boxes round a figure's eyes, left to right (`eyesOf`), none when its face reads no eyes. */
@@ -1325,6 +1334,22 @@ const eyedFaceOf = (r: Raster, paints: ReadonlyArray<Paint>, which: string) =>
     },
   );
 
+/** An open cell's read face as it is, or refused when every one of its eyes is wider than tall: arcs (a smile's ∩, closed lids' ∪) with nothing open to close. */
+const openEyed =
+  (open: Raster) =>
+  <F extends { readonly eyes: ReadonlyArray<ReadonlyArray<number>> }>(
+    read: F,
+  ): Result.Result<F, BlinkRefused> => {
+    const opened = read.eyes.some((px) => {
+      const b = boxOf(px, open.width);
+      return b.height >= b.width;
+    });
+    if (opened) return Result.succeed(read);
+    return Result.fail(
+      BlinkRefused.make({ reason: 'the open cell’s eyes are arcs, each wider than tall' }),
+    );
+  };
+
 /** The middle of a box, in its picture's px, as a fraction when its side is even. */
 const middleOf = (b: Box): readonly [number, number] => [
   b.x + (b.width - 1) / 2,
@@ -1358,7 +1383,7 @@ export const blinkOf = (
   closed: Raster,
   paints: ReadonlyArray<Paint>,
 ): Result.Result<Raster, BlinkRefused> =>
-  Result.flatMap(eyedFaceOf(open, paints, 'open cell'), (o) =>
+  Result.flatMap(Result.flatMap(eyedFaceOf(open, paints, 'open cell'), openEyed(open)), (o) =>
     Result.map(eyedFaceOf(closed, paints, 'blink drawing'), (c) => {
       const ink = paints[0]?.rgb ?? [0, 0, 0];
       const rgba = open.rgba.slice();

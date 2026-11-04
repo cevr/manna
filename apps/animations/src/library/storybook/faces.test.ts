@@ -520,3 +520,103 @@ describe('withHeadOf (critique 3, items 2 and 6)', () => {
     expect(Result.isFailure(withHeadOf(narrow.raster, bare, paints))).toBe(true);
   });
 });
+
+/** The paints of a `markedFace`: its ink, skin and robe. */
+const MARKED_PAINTS = paintsOf({
+  ink: '#140a05',
+  parts: [
+    { name: 'skin', role: 'skin', base: '#f0b482' },
+    { name: 'robe', role: 'garment', base: '#6e827d' },
+  ],
+});
+
+/** Which marks a `markedFace` draws: brows, its eyes as `open` ovals (3 × 8), `arcs` (13 × 3) or `shut` lids (17 × 2), and a mouth. */
+interface FaceMarks {
+  readonly brows: boolean;
+  readonly eyes: 'open' | 'arcs' | 'shut';
+  readonly mouth: boolean;
+}
+
+/** A 100 × 120 face: an ink ring with skin inside, a robe under it, and `marks` in ink on the skin. */
+const markedFace = (marks: FaceMarks): Raster => {
+  const [ink, skin, robe] = MARKED_PAINTS.map((p) => p.rgb);
+  const rgba = new Uint8Array(100 * 120 * 4);
+  const rows = (y: number, a: number, b: number) => y >= a && y <= b;
+  const cols = (x: number, spans: ReadonlyArray<readonly [number, number]>) =>
+    spans.some(([a, b]) => x >= a && x <= b);
+  const eyes = {
+    open: (x: number, y: number) =>
+      rows(y, 32, 39) &&
+      cols(x, [
+        [28, 30],
+        [69, 71],
+      ]),
+    arcs: (x: number, y: number) =>
+      rows(y, 33, 35) &&
+      cols(x, [
+        [23, 35],
+        [64, 76],
+      ]),
+    shut: (x: number, y: number) =>
+      rows(y, 35, 36) &&
+      cols(x, [
+        [22, 38],
+        [61, 77],
+      ]),
+  }[marks.eyes];
+  const inked = (x: number, y: number) =>
+    [
+      y < 10 && x >= 20 && x <= 79,
+      rows(y, 10, 69) && (x === 20 || x === 79 || y === 10 || y === 69),
+      marks.brows &&
+        rows(y, 20, 21) &&
+        cols(x, [
+          [24, 34],
+          [65, 75],
+        ]),
+      y > 10 && y < 69 && eyes(x, y),
+      marks.mouth && rows(y, 55, 56) && cols(x, [[43, 56]]),
+    ].some(Boolean);
+  const paintAt = (x: number, y: number): Option.Option<Rgb> => {
+    const layers: ReadonlyArray<readonly [boolean, Rgb]> = [
+      [inked(x, y), ink ?? INK],
+      [y > 10 && y < 69 && x > 20 && x < 79, skin ?? SKIN],
+      [y >= 70 && x >= 5 && x <= 94, robe ?? ROBE],
+    ];
+    return Option.map(Option.fromUndefinedOr(layers.find(([on]) => on)), ([, c]) => c);
+  };
+  for (let y = 0; y < 120; y++)
+    for (let x = 0; x < 100; x++)
+      Option.map(paintAt(x, y), (c) => rgba.set([...c, 255], (y * 100 + x) * 4));
+  return { width: 100, height: 120, rgba };
+};
+
+describe('blinkOf on faces of every row count (critique 1, items 13 and 14)', () => {
+  const shut = markedFace({ brows: true, eyes: 'shut', mouth: true });
+  const blinks = (open: FaceMarks) =>
+    Result.isSuccess(blinkOf(markedFace(open), shut, MARKED_PAINTS));
+
+  test('refuses an open cell whose eyes are arcs, a smile’s ∩ with nothing open to close, and blinks the same face with its eyes open', () => {
+    expect([
+      blinks({ brows: true, eyes: 'arcs', mouth: true }),
+      blinks({ brows: true, eyes: 'open', mouth: true }),
+    ]).toEqual([false, true]);
+  });
+
+  test('reads the eyes of a bearded face, whose mouth no face skin rings: brows over open eyes, or open eyes alone; and none of open eyes over a mouth with no brows', () => {
+    expect([
+      blinks({ brows: true, eyes: 'open', mouth: false }),
+      blinks({ brows: false, eyes: 'open', mouth: false }),
+      blinks({ brows: false, eyes: 'open', mouth: true }),
+    ]).toEqual([true, true, false]);
+    expect(
+      Result.isSuccess(
+        blinkOf(
+          markedFace({ brows: true, eyes: 'open', mouth: false }),
+          markedFace({ brows: true, eyes: 'shut', mouth: false }),
+          MARKED_PAINTS,
+        ),
+      ),
+    ).toBe(true);
+  });
+});
