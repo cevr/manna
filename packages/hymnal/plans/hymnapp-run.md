@@ -17,6 +17,7 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 ## Decisions
 
+- Orchestrator, 2026-11-04, voicedocs decide: hsvoice merged with the film docs test red, because the merge legs did not run it (the gate does not; it is a slow test). Every merge now also runs `cd packages/film && bun test ./src/docs.slow.test.ts` at the head and reads its fail count.
 - Orchestrator, 2026-11-03, simkit part 1 decide: three failed rounds, all in one class: a path the driver reads, writes, builds into or installs from leaves its root through a symlink. The triggers were r1 the configured workspace and plist, r2 `dd/Build`, and r3 the `build.log` write copied from base. Every repair assumed containment is a check added at chosen call sites. The rewrite's premise is that the driver reaches the host only through one contained host layer (FileSystem and tool path arguments, checked at use against the Place's roots), with a property over every host call. The rewrite runs on a new branch `hymnapp/simkit2` from main. The old branch `hymnapp/simkit` (e3f39c010) is data, and its parity move may be ported. Write containment moves from part 2 into part 1; part 2 keeps HOME and teardown. Record: `tmp/orchestrate/hymnapp/simkit/rewrite.md`.
 
 - Orchestrator, 2026-11-03, orchestrate update (dotfiles c496317, relayed by personal-5a): the machine is plan, implement, verify, with three roles. One verifier per round, from the other model family, on a clean checkout of the head, proves the change does what the spec says (the acceptance check, each new test red under its mutation, its own probes: a property, a model test, or a live drive) and that it follows the written rules (`CLAUDE.md`, the dotfiles principles, the owning skills). It files no Minor, Optional or nit. Opus-built units get a Codex sol thread (`role: "verifier"`) told `verify directly`; Codex-built units get an Opus `verifier` (agent types `planner`, `implementor`, `verifier` and `worker` since dotfiles b8e0983; the `orchestrate-` prefix is gone). This run has no separate review round or counsel round from here on. hsmatch r2's queued verifier brief was amended before its turn started.
@@ -53,17 +54,17 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 
 ## Owner questions
 
-- Heartseed "understand it first" lines (hsgloss): who writes them, from which sources? Recommended: an agent drafts one line per promise (158) from the KJV and its context in the pioneer frame, and the owner reviews them in one sitting before hsgloss merges; other passages get Webster 1828 word glosses only. (selahone, asked 2026-11-03)
+- Heartseed "understand it first" lines (hsgloss): who writes them, from which sources? Recommended: an agent drafts one line per promise (158) from the KJV and its context in the pioneer frame, and the owner reviews them in one sitting before hsgloss merges; other passages get Webster 1828 word glosses only. (selahone, asked 2026-11-03) **Answer (owner, 2026-11-04):** agent drafts one line per promise from the KJV and its context in the pioneer frame; the owner reviews them in one sitting before hsgloss merges; other passages get Webster 1828 word glosses only.
 
-- Heartseed Pro texts (hstexts): which public-domain texts beyond the KJV? Recommended: none in the first Pro release; name them when hstexts is planned. (selahone, asked 2026-11-03)
+- Heartseed Pro texts (hstexts): which public-domain texts beyond the KJV? Recommended: none in the first Pro release; name them when hstexts is planned. (selahone, asked 2026-11-03) **Answer (owner, 2026-11-04):** KJV only in the first Pro release; name others when hstexts is planned.
 
-- Heartseed App Store setup (reserved for the owner): bundle id `app.heartseed` (permanent after the first upload), product ids `app.heartseed.pro.monthly`, `.yearly`, `.lifetime` at $2.99, $14.99, $39.99. Recommended: register when hsship is ready. (selahone, asked 2026-11-03)
+- Heartseed App Store setup (reserved for the owner): bundle id `app.heartseed` (permanent after the first upload), product ids `app.heartseed.pro.monthly`, `.yearly`, `.lifetime` at $2.99, $14.99, $39.99. Recommended: register when hsship is ready. (selahone, asked 2026-11-03) **Answer (owner, 2026-11-04):** register the bundle id and the three products when hsship is ready; ids and prices as listed.
 
-- Heartseed licensed texts (hslicense, NKJV/ESV need publisher licences and fees). Recommended: defer until Pro has users. (selahone, asked 2026-11-03)
+- Heartseed licensed texts (hslicense, NKJV/ESV need publisher licences and fees). Recommended: defer until Pro has users. (selahone, asked 2026-11-03) **Answer (owner, 2026-11-04):** defer until Pro has users.
 
-- Heartseed hands-free: spoken commands ("again", "next") beside the lock-screen and headphone controls? Recommended: yes, through the same speech module. (selahone, asked 2026-11-03)
+- Heartseed hands-free: spoken commands ("again", "next") beside the lock-screen and headphone controls? Recommended: yes, through the same speech module. (selahone, asked 2026-11-03) **Answer (owner, 2026-11-04):** yes, spoken commands ("again", "next") through the same on-device speech module.
 
-- keyfollow: the key change that did not follow the playing hymn is not reproduced (simulator, three variations; an off-device fake follows the key every time). Next time it happens: which control turned the key (the key dial on the hymn page, or another), how many turns, and how long the old key kept sounding, on the current build. (keyfollow, asked 2026-11-01)
+- keyfollow: the key change that did not follow the playing hymn is not reproduced (simulator, three variations; an off-device fake follows the key every time). Next time it happens: which control turned the key (the key dial on the hymn page, or another), how many turns, and how long the old key kept sounding, on the current build. (keyfollow, asked 2026-11-01) **Answer (owner, 2026-11-04):** the owner notes the control, the number of turns and how long the old key kept sounding the next time it happens on the current build; keyfollow stays blocked until then.
 
 ## Follow-ups
 

@@ -20,9 +20,9 @@ word ranges by their sample times. The audio session is left alone.
 After Launch steps 2-4 of `SKILL.md` (the host, the prebuild, the build),
 with no simulator booted:
 
-→ `prebuild` exits 0, `apps/heartseed/ios/Podfile.lock` names
-`OneSwiftPackages/voice`, `ls apps/heartseed/ios/OneSwiftPackages` lists
-`voice`, and `build.log` ends `** BUILD SUCCEEDED **`.
+→ `prebuild` exits 0; `grep -F OneSwiftPackages/voice apps/heartseed/ios/Podfile.lock`
+succeeds, `ls apps/heartseed/ios/OneSwiftPackages` lists `voice`, and
+`build.log` ends `** BUILD SUCCEEDED **`.
 
 ## Gotchas
 
