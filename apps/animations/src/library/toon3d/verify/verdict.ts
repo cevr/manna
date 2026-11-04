@@ -1,4 +1,4 @@
-import { Option } from 'effect';
+import { Option, Result } from 'effect';
 import { PART } from '../figure.ts';
 import type { ViewName } from '../render.ts';
 import {
@@ -10,13 +10,19 @@ import {
   type MeasureName,
   type Stage,
 } from './bars.ts';
-import { worstDrift, type Flatness, type PartDelta } from './measures.ts';
+import { worstDrift, type Flatness, type ProbeRead } from './measures.ts';
+
+/** One authored colour probe read in a view: where it sits (view, part, paint, index) and its reading. */
+export interface ProbeMeasured {
+  readonly at: string;
+  readonly read: ProbeRead;
+}
 
 /** One view at rest against its kept view. */
 export interface ViewMeasured {
   readonly view: ViewName;
   readonly iou: number;
-  readonly parts: ReadonlyArray<PartDelta>;
+  readonly probes: ReadonlyArray<ProbeMeasured>;
   readonly flatness: ReadonlyArray<Flatness>;
   readonly keptHairBlobs: number;
   readonly inkWidth: number;
@@ -51,8 +57,20 @@ export interface Measured {
   readonly turn: ReadonlyArray<FrameMeasured>;
 }
 
-/** A measure's readings: each value with where it was read; empty when it could not be read. */
-export type Samples = ReadonlyArray<{ readonly at: string; readonly value: number }>;
+/** One reading of a measure: where it was read, and its value, none where that place could not be read. */
+export interface Sample {
+  readonly at: string;
+  readonly value: Option.Option<number>;
+}
+
+/** A measure's readings, each place it should be read; a check fails as unread when any is none, or when there are none. */
+export type Samples = ReadonlyArray<Sample>;
+
+/** A reading that was read. */
+export interface ReadSample {
+  readonly at: string;
+  readonly value: number;
+}
 
 const partName = (id: number): string =>
   Option.getOrElse(
@@ -60,80 +78,81 @@ const partName = (id: number): string =>
     () => `part ${id}`,
   );
 
-const one = (at: string, value: number): Samples => [{ at, value }];
-
-const fromOption = (at: string, o: Option.Option<number>): Samples =>
-  Option.match(o, { onNone: () => [], onSome: (value) => one(at, value) });
+const one = (at: string, value: number): Sample => ({ at, value: Option.some(value) });
 
 const series = (
   frames: ReadonlyArray<FrameMeasured>,
   pick: (f: FrameMeasured) => number,
-): Samples => frames.map((f) => ({ at: `frame ${f.frame}`, value: pick(f) }));
+): Samples => frames.map((f) => one(`frame ${f.frame}`, pick(f)));
 
-/** A series' drift from its first frame; none when that frame was not read. */
-const drift = (
+/** A bone's drift over the bend from frame 0: unread at the first frame that bone is not read in, so every frame and the reference are judged. */
+const boneDrift = (
+  bone: string,
   frames: ReadonlyArray<FrameMeasured>,
   pick: (f: FrameMeasured) => Option.Option<number>,
-): Option.Option<number> =>
-  Option.flatMap(Option.fromUndefinedOr(frames[0]), (first) =>
-    Option.map(pick(first), () => worstDrift(frames.flatMap((f) => Option.toArray(pick(f))))),
-  );
+): Sample =>
+  Option.match(Option.fromUndefinedOr(frames.find((f) => Option.isNone(pick(f)))), {
+    onSome: (f) => ({ at: `${bone} frame ${f.frame}`, value: Option.none() }),
+    onNone: () => ({
+      at: bone,
+      value: worstDrift(frames.flatMap((f) => Option.toArray(pick(f)))),
+    }),
+  });
 
 /** Each measure's readings from a run: the verdict reduces them against the check's bar. */
 export const READERS: Record<MeasureName, (m: Measured) => Samples> = {
-  differingRenders: (m) => one(`${m.renders.compared} renders`, m.renders.differing.length),
-  iou: (m) => m.views.map((v) => ({ at: v.view, value: v.iou })),
-  frontFlaggedRows: (m) =>
-    fromOption(
-      'front',
-      Option.map(m.frontRows, (r) => r.flagged),
-    ),
-  partDeltaE: (m) =>
+  differingRenders: (m) => [one(`${m.renders.compared} renders`, m.renders.differing.length)],
+  iou: (m) => m.views.map((v) => one(v.view, v.iou)),
+  frontFlaggedRows: (m) => [
+    {
+      at: 'front',
+      value: Option.map(m.frontRows, (r) => r.flagged),
+    },
+  ],
+  probeDeltaE: (m) =>
     m.views.flatMap((v) =>
-      v.parts.map((p) => ({ at: `${v.view} ${partName(p.part)}`, value: p.deltaE })),
+      v.probes.map((p) =>
+        Result.match(p.read, {
+          onSuccess: (value) => one(p.at, value),
+          onFailure: (why) => ({ at: `${p.at} (${why})`, value: Option.none() }),
+        }),
+      ),
     ),
   flatShare: (m) =>
-    m.views.flatMap((v) =>
-      v.flatness.map((f) => ({ at: `${v.view} ${partName(f.part)}`, value: f.share })),
-    ),
+    m.views.flatMap((v) => v.flatness.map((f) => one(`${v.view} ${partName(f.part)}`, f.share))),
   shadeBlobs: (m) =>
     m.views.flatMap((v) =>
       v.flatness
         .filter((f) => f.part !== PART.hair)
-        .map((f) => ({ at: `${v.view} ${partName(f.part)}`, value: f.blobs })),
+        .map((f) => one(`${v.view} ${partName(f.part)}`, f.blobs)),
     ),
   hairBlobsOverKept: (m) =>
     m.views.flatMap((v) =>
       v.flatness
         .filter((f) => f.part === PART.hair)
-        .map((f) => ({
-          at: `${v.view} hair ${f.blobs} (kept ${v.keptHairBlobs})`,
-          value: f.blobs - v.keptHairBlobs,
-        })),
+        .map((f) =>
+          one(`${v.view} hair ${f.blobs} (kept ${v.keptHairBlobs})`, f.blobs - v.keptHairBlobs),
+        ),
     ),
-  inkWidth: (m) =>
-    m.views.map((v) => ({ at: `${v.view} (kept ${v.keptInkWidth})`, value: v.inkWidth })),
-  inkDeltaE: (m) => m.views.flatMap((v) => fromOption(v.view, v.inkDeltaE)),
-  faceOffset: (m) => fromOption('front', m.face),
+  inkWidth: (m) => m.views.map((v) => one(`${v.view} (kept ${v.keptInkWidth})`, v.inkWidth)),
+  inkDeltaE: (m) => m.views.map((v) => ({ at: v.view, value: v.inkDeltaE })),
+  faceOffset: (m) => [{ at: 'front', value: m.face }],
   bendTears: (m) => series(m.bend, (f) => f.tears),
-  bendOutlineDrift: (m) => one('bend', worstDrift(m.bend.map((f) => f.ink))),
+  bendOutlineDrift: (m) => [{ at: 'bend', value: worstDrift(m.bend.map((f) => f.ink)) }],
   bendSleeveDrift: (m) => [
-    ...fromOption(
-      'upper arm',
-      drift(m.bend, (f) => f.upper),
-    ),
-    ...fromOption(
-      'forearm',
-      drift(m.bend, (f) => f.fore),
-    ),
+    boneDrift('upper arm', m.bend, (f) => f.upper),
+    boneDrift('forearm', m.bend, (f) => f.fore),
   ],
   bendDoubled: (m) => series(m.bend, (f) => f.doubled - (m.bend[0]?.doubled ?? 0)),
   turnTears: (m) => series(m.turn, (f) => f.tears),
-  turnOutlineDrift: (m) => one('turn', worstDrift(m.turn.map((f) => f.ink))),
+  turnOutlineDrift: (m) => [{ at: 'turn', value: worstDrift(m.turn.map((f) => f.ink)) }],
 };
 
 /** The reading a bar judges: the largest for at-most, the smallest for at-least, the farthest from the target for near. */
-export const worstFor = (bar: Bar, samples: Samples): Option.Option<Samples[number]> => {
+export const worstFor = (
+  bar: Bar,
+  samples: ReadonlyArray<ReadSample>,
+): Option.Option<ReadSample> => {
   const score = (value: number): number =>
     Bar.$match(bar, {
       AtMost: () => value,
@@ -163,13 +182,32 @@ export interface Verdict {
 
 const shown = (value: number): string => String(Number(value.toFixed(3)));
 
-/** Each bar against its measure's worst reading; a measure with no reading fails. */
+/** Each bar against its measure's worst reading; a measure with no reading, or any place it could not read, fails as unread. */
 export const verdictOf = (bars: ReadonlyArray<BarRow>, measured: Measured): Verdict => {
   const checks = bars.map((row): CheckVerdict => {
     const base = { id: row.id, stage: row.stage, bar: barText(row.bar), source: row.source };
-    return Option.match(worstFor(row.bar, READERS[row.measure](measured)), {
-      onNone: () => ({ ...base, pass: false, value: 'unread', at: 'no reading' }),
-      onSome: (s) => ({ ...base, pass: meets(row.bar, s.value), value: shown(s.value), at: s.at }),
+    const samples = READERS[row.measure](measured);
+    const unread = (at: string): CheckVerdict => ({ ...base, pass: false, value: 'unread', at });
+    return Option.match(Option.fromUndefinedOr(samples.find((s) => Option.isNone(s.value))), {
+      onSome: (s) => unread(s.at),
+      onNone: () =>
+        Option.match(
+          worstFor(
+            row.bar,
+            samples.flatMap((s) =>
+              Option.toArray(Option.map(s.value, (value) => ({ at: s.at, value }))),
+            ),
+          ),
+          {
+            onNone: () => unread('no reading'),
+            onSome: (s) => ({
+              ...base,
+              pass: meets(row.bar, s.value),
+              value: shown(s.value),
+              at: s.at,
+            }),
+          },
+        ),
     });
   });
   return { passed: checks.filter((c) => c.pass).length, total: checks.length, checks };

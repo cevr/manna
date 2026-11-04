@@ -3814,6 +3814,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The recorder was written to the reads the first finding named, not to every way a bun process opens a file. It now records `dlopen` (`bun:ffi` and `process.dlopen`) and each loaded module, and `packages/core/turbo.json` hashes `dist-native/**` in core's `test` and `transit` inputs.
 - **Guard:** code: `packages/scripts/src/test-reads/preload.slow.test.ts` `records a file a test reads, a module it imports and a native library it loads, in each test runner mode`, `packages/scripts/src/test-slow.sh` `bun run test:reads`
 
+### test-reads-preserves-native-function-properties
+
+- **Date:** 2026-11-03
+- **Kind:** review
+- **Said:** "The recorder must be transparent."
+- **Source:** tmp/orchestrate/hymnapp/readsnative/round-1-review.md F1
+- **Wrong:** Replacing each traced filesystem function with an arrow removed its own properties, including the `native` realpath methods, and left those path reads unrecorded.
+- **Cause:** The wrapper copied calls but not the original function's properties; the native methods were properties on the replaced functions.
+- **Guard:** code: `packages/scripts/src/test-reads/preload.slow.test.ts` `preserves own property keys for every name in READS and SYNC_READS`, `packages/scripts/src/test-reads/preload.slow.test.ts` `keeps native realpath behavior and records each path when a child uses the preload`
+
 ### hymn-left-edge-goes-back-over-the-pager
 
 - **Date:** 2026-10-22

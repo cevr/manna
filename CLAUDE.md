@@ -11,6 +11,7 @@ manna/
 │   ├── animations/     # Narrated storybook explainer films (@manna/animations, built on @manna/film)
 │   ├── egw-search/     # EGW search: Solid 2 page over an Effect HttpApi server (@manna/egw-search; Alchemy → Cloudflare, egw.cvr.im)
 │   ├── firsttheblade/  # The First the Blade site: Solid 2 prerender behind an Effect Worker (@manna/firsttheblade; Alchemy → Cloudflare)
+│   ├── heartseed/      # Heartseed: Scripture memory on One (React 19.3, React Native 0.88) for iOS first (@manna/heartseed)
 │   ├── hymnal/         # The hymnal app: One 2.11 (React 19.3, React Native 0.88) for iOS, Android and web (@manna/hymnal-app)
 │   └── selah/          # Native macOS Scripture memorization (@manna/selah; SwiftUI, FSRS)
 ├── packages/
@@ -90,7 +91,8 @@ second development log directory or transport.
 To run an app and check a change in it as its user does, use its verify
 skill: the First the Blade site is `.claude/skills/verify-firsttheblade`
 (launch, doctor, drive, proof); the hymnal, on its iOS simulator or the web,
-is `.claude/skills/verify-hymnal`.
+is `.claude/skills/verify-hymnal`; Heartseed, on its iOS simulator, is
+`.claude/skills/verify-heartseed`.
 
 <!-- effect-solutions:start -->
 

@@ -1,10 +1,17 @@
 import { compareFigures, measureFigure } from '@manna/film/core';
-import { Effect, Option, Result, Schema } from 'effect';
+import { Duration, Effect, Option, Result, Schema, type Scope } from 'effect';
 import sharp from 'sharp';
 import { PART } from '../figure.ts';
 import type { ArmJoints } from '../mesh/rig.ts';
-import type { RenderRequest } from '../page.ts';
-import { HEAD_PX, toon3dPage, YAWS, type RenderPng, type ViewName } from '../render.ts';
+import type { PageFigure, RenderRequest } from '../page.ts';
+import {
+  HEAD_PX,
+  toon3dPage,
+  YAWS,
+  type RenderPng,
+  type Toon3dFailed,
+  type ViewName,
+} from '../render.ts';
 import type { BuiltFigure } from '../source.ts';
 import { REST, REST_ARM, type MemberSpec, type PaintName, type Pose, type Vec3 } from '../spec.ts';
 import {
@@ -13,6 +20,7 @@ import {
   doubledInk,
   faceMarks,
   faceOffset,
+  enclosedGround,
   figureMask,
   flatness,
   idAt,
@@ -21,7 +29,7 @@ import {
   strokeWidth,
   iou,
   keptBlobs,
-  partDeltas,
+  probeDelta,
   rgbOf,
   tears,
   wholeBox,
@@ -31,7 +39,14 @@ import {
   type Point,
   type Raster,
 } from './measures.ts';
-import type { FrameMeasured, Measured, RowsMeasured, ViewMeasured } from './verdict.ts';
+import { probeAt, probeBox, type ColourProbe, type ColourProbes } from './probes.ts';
+import type {
+  FrameMeasured,
+  Measured,
+  ProbeMeasured,
+  RowsMeasured,
+  ViewMeasured,
+} from './verdict.ts';
 
 /** A verify step failed outside the figure's page: decoding a picture or reading a kept view. */
 export class VerifyFailed extends Schema.TaggedError<VerifyFailed>()('VerifyFailed', {
@@ -39,6 +54,25 @@ export class VerifyFailed extends Schema.TaggedError<VerifyFailed>()('VerifyFail
 }) {}
 
 const failed = (cause: unknown) => VerifyFailed.make({ reason: String(cause) });
+
+/** The figure's page gave no answer within the launch's bound: to its opening or to one render, named by `job`. */
+export class RenderHung extends Schema.TaggedError<RenderHung>()('RenderHung', {
+  job: Schema.String,
+  bound: Schema.String,
+}) {
+  override get message() {
+    return `${this.job} hung: no answer within ${this.bound}`;
+  }
+}
+
+/** `self`, failed as `RenderHung` naming `job` when it has not ended within `bound`. */
+const within =
+  (job: string, bound: Duration.Duration) =>
+  <A, E, R>(self: Effect.Effect<A, E, R>): Effect.Effect<A, E | RenderHung, R> =>
+    Effect.timeoutOrElse(self, {
+      duration: bound,
+      orElse: () => Effect.fail(RenderHung.make({ job, bound: Duration.format(bound) })),
+    });
 
 /** How much a run renders: which kept views, and how many bend and turn frames. */
 export interface Plan {
@@ -164,7 +198,7 @@ const viewRequest = (
  * pixel onto the kept's.
  */
 export const placeView = Effect.fn('Toon3dVerify.placeView')(function* (
-  render: RenderPng,
+  render: JobRender,
   view: ViewName,
   kept: Raster,
 ) {
@@ -176,7 +210,9 @@ export const placeView = Effect.fn('Toon3dVerify.placeView')(function* (
     oy: kept.height - 8,
   };
   for (let k = 0; k < 2; k++) {
-    const shot = yield* decode(yield* render(viewRequest(view, place, 'colour')));
+    const shot = yield* decode(
+      yield* render(`place ${view} ${k + 1}`, viewRequest(view, place, 'colour')),
+    );
     const b = boxOrWhole(figureMask(shot), shot);
     place = {
       ...place,
@@ -221,13 +257,42 @@ export const jobsOf = (
 /** The page's size: a render sets its own canvas size, so this only bounds the window. */
 const PAGE_SIZE = { width: 400, height: 700 };
 
+/** How a run opens the figure's page, and how long the page's opening or one render may take before the run fails as hung. */
+export interface Launch {
+  readonly open: Effect.Effect<RenderPng, Toon3dFailed, Scope.Scope>;
+  readonly bound: Duration.Duration;
+}
+
+/** Renders one request, named by `job` for a failure's report. */
+type JobRender = (
+  job: string,
+  req: RenderRequest,
+) => Effect.Effect<Uint8Array, Toon3dFailed | RenderHung>;
+
+/** The launch's page, opened within its bound, and its renders each bound and named `<name>: <job>`. */
+const opened = (launch: Launch, name: string) =>
+  launch.open.pipe(
+    within(`${name}: page`, launch.bound),
+    Effect.map(
+      (render): JobRender =>
+        (job, req) =>
+          render(req).pipe(within(`${name}: ${job}`, launch.bound)),
+    ),
+  );
+
+/** The page a real run opens: the member's figure in a software-GL Chrome page. */
+export const pageLaunch = (figure: PageFigure): Launch => ({
+  open: toon3dPage(PAGE_SIZE, figure),
+  bound: Duration.seconds(120),
+});
+
 /** The run's first launch: each view placed over its kept picture, then every job rendered. */
 export const firstLaunch = Effect.fn('Toon3dVerify.firstLaunch')(function* (
-  figure: BuiltFigure,
+  launch: Launch,
   plan: Plan,
   kept: ReadonlyMap<ViewName, Raster>,
 ) {
-  const render = yield* toon3dPage(PAGE_SIZE, figure.page);
+  const render = yield* opened(launch, 'first launch');
   const places = new Map<ViewName, Placement>();
   for (const view of plan.views) {
     const keptView = kept.get(view);
@@ -235,17 +300,17 @@ export const firstLaunch = Effect.fn('Toon3dVerify.firstLaunch')(function* (
     places.set(view, yield* placeView(render, view, keptView));
   }
   const jobs = jobsOf(plan, places);
-  const pngs = yield* Effect.forEach(jobs, (job) => render(job.request));
+  const pngs = yield* Effect.forEach(jobs, (job) => render(job.name, job.request));
   return { jobs, pngs };
 }, Effect.scoped);
 
 /** A second, separate launch of the page rendering the same jobs, for the determinism check. */
 export const secondLaunch = Effect.fn('Toon3dVerify.secondLaunch')(function* (
-  figure: BuiltFigure,
+  launch: Launch,
   jobs: ReadonlyArray<RenderJob>,
 ) {
-  const render = yield* toon3dPage(PAGE_SIZE, figure.page);
-  return yield* Effect.forEach(jobs, (job) => render(job.request));
+  const render = yield* opened(launch, 'second launch');
+  return yield* Effect.forEach(jobs, (job) => render(job.name, job.request));
 }, Effect.scoped);
 
 /** Each figure part's paints, for the flatness and colour measures: base, shade, and the sandal's on a foot. */
@@ -326,32 +391,47 @@ export const sleeveAcross = (arm: ArmJoints, request: RenderRequest, ids: Raster
 /** A frame whose sleeve is not read: the turn's. */
 const NO_SLEEVE: SleeveWidths = { upper: Option.none(), fore: Option.none() };
 
-/** One motion frame's measures: ink, doubled px and tears from its colour and ids, and the sleeve as read elsewhere. */
+/** One motion frame's measures: ink, doubled px and tears from its colour and ids (against `held`, frame 0's enclosed ground), and the sleeve as read elsewhere. */
 export const measureFrame = (
   frame: number,
   colour: Raster,
   ids: Raster,
   box: Box,
   sleeve: SleeveWidths,
+  held: Uint8Array,
 ): FrameMeasured => ({
   frame,
   ink: strokeWidth(colour, box),
   doubled: doubledInk(colour, box),
-  tears: tears(ids, colour, isGround),
+  tears: tears(ids, colour, isGround, held),
   ...sleeve,
 });
 
-/** One view's measures against its kept picture. */
+/** Each of a view's authored colour probes read against its render. */
+export const readProbes = (
+  view: ViewName,
+  probes: ReadonlyArray<ColourProbe>,
+  kept: Raster,
+  colour: Raster,
+  ids: Raster,
+): ReadonlyArray<ProbeMeasured> =>
+  probes.map((probe, k) => ({
+    at: probeAt(view, probe, k),
+    read: probeDelta(kept, colour, ids, PART[probe.part], probeBox(probe)),
+  }));
+
+/** One view's measures against its kept picture and its authored colour probes. */
 export const measureView = (
   spec: MemberSpec,
   view: ViewName,
+  probes: ReadonlyArray<ColourProbe>,
   kept: Raster,
   colour: Raster,
   ids: Raster,
 ): ViewMeasured => ({
   view,
   iou: iou(figureMask(kept), figureMask(colour)),
-  parts: partDeltas(kept, colour, ids, partPaints(spec)),
+  probes: readProbes(view, probes, kept, colour, ids),
   flatness: flatness(colour, ids, partPaints(spec)),
   keptHairBlobs: keptBlobs(kept, ids, partPaints(spec), PART.hair),
   inkWidth: inkWidth(colour, wholeBox(colour)),
@@ -361,17 +441,22 @@ export const measureView = (
   ),
 });
 
+/** One row of the film's figure match. */
+type MatchRow = ReturnType<typeof compareFigures>[number];
+
+/** A figure match's proportion rows counted: its ratio rows only, so a silhouette gap, a shade, the facing or a rule is not counted as a proportion. */
+export const proportionRows = (rows: ReadonlyArray<MatchRow>): RowsMeasured => {
+  const ratios = rows.filter((r) => r.unit === 'ratio');
+  const flagged = ratios.filter((r) => r.flagged);
+  return { flagged: flagged.length, compared: ratios.length, names: flagged.map((r) => r.name) };
+};
+
 /** The front's proportion rows (the film's figure measure on both pictures); none when either cannot be read. */
 export const frontRows = (kept: Raster, colour: Raster): Option.Option<RowsMeasured> => {
   const k = measureFigure(kept);
   const s = measureFigure(colour);
   if (Result.isFailure(k) || Result.isFailure(s)) return Option.none();
-  const rows = compareFigures(k.success, s.success);
-  return Option.some({
-    flagged: rows.filter((r) => r.flagged).length,
-    compared: rows.length,
-    names: rows.filter((r) => r.flagged).map((r) => r.name),
-  });
+  return Option.some(proportionRows(compareFigures(k.success, s.success)));
 };
 
 /** The front's face marks against the kept front's, inside the render's head; none when either face does not read as five marks. */
@@ -394,6 +479,7 @@ export const measureRun = Effect.fn('Toon3dVerify.measureRun')(function* (
   figure: BuiltFigure,
   plan: Plan,
   kept: ReadonlyMap<ViewName, Raster>,
+  probes: ColourProbes,
   jobs: ReadonlyArray<RenderJob>,
   renders: Renders,
   differing: ReadonlyArray<string>,
@@ -412,7 +498,10 @@ export const measureRun = Effect.fn('Toon3dVerify.measureRun')(function* (
     if (!keptView) return yield* VerifyFailed.make({ reason: `no kept picture for ${view}` });
     const colour = yield* raster(`views/${view}.png`);
     const ids = yield* raster(`views-ids/${view}.png`);
-    views.push(measureView(figure.spec, view, keptView, colour, ids));
+    const viewProbes = probes.views[view];
+    if (viewProbes.length === 0)
+      return yield* VerifyFailed.make({ reason: `no colour probes for ${view}` });
+    views.push(measureView(figure.spec, view, viewProbes, keptView, colour, ids));
     if (view === 'front') {
       rows = frontRows(keptView, colour);
       face = frontFace(keptView, colour, ids);
@@ -431,15 +520,18 @@ export const measureRun = Effect.fn('Toon3dVerify.measureRun')(function* (
     boxFor: (ids: Raster, colour: Raster) => Box,
     sleeveOf: (k: number) => Effect.Effect<SleeveWidths, VerifyFailed>,
   ) =>
-    Effect.forEach(
-      Array.from({ length: count }, (_, k) => k),
-      (k) =>
-        Effect.gen(function* () {
-          const colour = yield* raster(`${dir}/${frameName(k)}`);
-          const ids = yield* raster(`${dir}-ids/${frameName(k)}`);
-          return measureFrame(k, colour, ids, boxFor(ids, colour), yield* sleeveOf(k));
-        }),
-    );
+    Effect.gen(function* () {
+      const held = enclosedGround(yield* raster(`${dir}-ids/${frameName(0)}`), isGround);
+      return yield* Effect.forEach(
+        Array.from({ length: count }, (_, k) => k),
+        (k) =>
+          Effect.gen(function* () {
+            const colour = yield* raster(`${dir}/${frameName(k)}`);
+            const ids = yield* raster(`${dir}-ids/${frameName(k)}`);
+            return measureFrame(k, colour, ids, boxFor(ids, colour), yield* sleeveOf(k), held);
+          }),
+      );
+    });
   const bend = yield* frames(
     'bend',
     bendAngles(plan.bendFrames).length,

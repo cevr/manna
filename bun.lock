@@ -90,6 +90,32 @@
         "vite-plugin-solid": "catalog:",
       },
     },
+    "apps/heartseed": {
+      "name": "@manna/heartseed",
+      "version": "0.1.0",
+      "dependencies": {
+        "@manna/core": "workspace:*",
+        "@react-navigation/native": "8.0.0-alpha.51",
+        "effect": "catalog:",
+        "one": "2.11.1",
+        "react": "19.3.0",
+        "react-dom": "19.3.0",
+        "react-native": "0.88.0",
+        "react-native-gesture-handler": "3.4.0",
+        "react-native-reanimated": "4.7.1",
+        "react-native-screens": "4.30.0",
+        "react-native-web": "0.21.4",
+        "react-native-worklets": "0.13.0",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "21.0.3",
+        "@react-native-community/template": "0.88.0",
+        "@types/react": "19.3.0",
+        "@types/react-dom": "19.3.0",
+        "oxc-parser": "0.153.0",
+        "vite": "8.3.4",
+      },
+    },
     "apps/hymnal": {
       "name": "@manna/hymnal-app",
       "version": "0.1.0",
@@ -729,6 +755,8 @@
     "@manna/film": ["@manna/film@workspace:packages/film"],
 
     "@manna/firsttheblade": ["@manna/firsttheblade@workspace:apps/firsttheblade"],
+
+    "@manna/heartseed": ["@manna/heartseed@workspace:apps/heartseed"],
 
     "@manna/hymnal": ["@manna/hymnal@workspace:packages/hymnal"],
 

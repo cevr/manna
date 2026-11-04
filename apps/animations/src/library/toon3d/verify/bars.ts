@@ -19,7 +19,7 @@ export const MEASURES = [
   'differingRenders',
   'iou',
   'frontFlaggedRows',
-  'partDeltaE',
+  'probeDeltaE',
   'flatShare',
   'shadeBlobs',
   'hairBlobsOverKept',
@@ -90,8 +90,8 @@ export const BARS: ReadonlyArray<BarRow> = [
   approved(
     'colour',
     'palette',
-    "ΔE between the kept's and the render's median flat colour of each paint, worst part of any view",
-    'partDeltaE',
+    "ΔE between the kept's and the render's median at each authored colour probe (part, paint), worst probe of any view; an unreadable probe fails",
+    'probeDeltaE',
     Bar.AtMost({ max: 3 }),
   ),
   approved(
