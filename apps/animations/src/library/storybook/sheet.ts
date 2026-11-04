@@ -1351,15 +1351,17 @@ export class HeadRefused extends Schema.TaggedError<HeadRefused>()('HeadRefused'
   }
 }
 
-/** A figure's head: the opaque pixels joined to its face from its crown down to its chin (the face's last row), their box, and the face's box. */
+/** A figure's head: the opaque pixels joined to its face from its crown down to its chin (the face's last row) or `past` rows below it, their box, the face's box, and the crown and chin rows. */
 interface Head {
   readonly px: ReadonlyArray<number>;
   readonly box: Box;
   readonly face: Box;
+  readonly crown: number;
+  readonly chin: number;
 }
 
-/** A figure's head (`Head`), none when it reads no face. */
-const headOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<Head> =>
+/** A figure's head (`Head`) reaching `past` rows below its chin, none when it reads no face. */
+const headOf = (r: Raster, paints: ReadonlyArray<Paint>, past = 0): Option.Option<Head> =>
   Option.flatMap(linesOf(r, paints), (lines) =>
     Option.map(faceOf(r, paints), (face) => {
       const chin = face.box.y + face.box.height - 1;
@@ -1368,11 +1370,11 @@ const headOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<Head> =>
         face.mask.indexOf(1),
         (q) => {
           const y = Math.floor(q / r.width);
-          return y >= lines.crown && y <= chin && alphaAt(r, q) > 0;
+          return y >= lines.crown && y <= chin + past && alphaAt(r, q) > 0;
         },
         around4,
       );
-      return { px, box: boxOf(px, r.width), face: face.box };
+      return { px, box: boxOf(px, r.width), face: face.box, crown: lines.crown, chin };
     }),
   );
 
@@ -1382,69 +1384,133 @@ export const headBoxOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Optio
 
 /**
  * The cell `body` wearing the head `head` draws (critique 3, items 2 and
- * 6): the worn head's pixels pasted over `body`, moved so its face's
- * middle lands on `body`'s face's middle, as `blinkOf` lands a closed eye;
- * then each piece of `body`'s own head left showing inside the box the
- * worn head lands in is cleared, unless it reaches out of the box into
- * `body`'s head rows, a raised sleeve or a hand beside the head. Every
- * pixel outside that box is `body`'s, so the keys of one view draw one head
- * and a key that changes only its face keeps its body. Refused when either
- * reads no face, or when the faces differ by more than a pixel in width or
- * height: a head turned or tilted, which an aligned paste would cut.
+ * 6; round 4, M2): `body`'s own head (`headOf`) and every opaque pixel in
+ * the box the worn head lands in are cleared, and the worn head is pasted
+ * there, set on `body`'s crown row and its face's middle column, reaching
+ * down to the lower of the two chins so no row of `body`'s face is left.
+ * Of the cleared pixels the worn head does not cover, each 4-connected
+ * piece drawn only in ink and hair is the old head, its outline or its
+ * hair, and stays clear; a piece holding another paint that joins the rest
+ * of `body` paint to paint (a raised sleeve and its hand, a shoulder) is
+ * put back when it holds no hair and meets the worn head only across ink,
+ * an outline between two parts. Refused when either cell reads no face; when the
+ * faces differ by more than a pixel in width or height, a head turned or
+ * tilted; when the crowns and the face middles disagree by more than a
+ * pixel, hair drawn taller or shorter; and when a piece cannot be told
+ * body or head: one joining the body that holds hair or runs paint to
+ * paint into the worn head, or one joining nothing that holds skin or
+ * cloth, a hand or a part of the head.
  */
 export const withHeadOf = (
   body: Raster,
   head: Raster,
   paints: ReadonlyArray<Paint>,
 ): Result.Result<Raster, HeadRefused> => {
-  const read = (r: Raster, which: string) =>
-    Result.fromOption(headOf(r, paints), () =>
+  const read = (r: Raster, which: string, past: number) =>
+    Result.fromOption(headOf(r, paints, past), () =>
       HeadRefused.make({ reason: `the ${which} reads no face` }),
     );
-  return Result.flatMap(read(body, 'body cell'), (b) =>
-    Result.flatMap(read(head, 'head cell'), (h) => {
-      const [dw, dh] = [b.face.width - h.face.width, b.face.height - h.face.height];
+  const refuse = (reason: string) => Result.fail(HeadRefused.make({ reason }));
+  const nearest = nearestOf(paints);
+  const roleAt = (r: Raster, q: number): Role | 'ink' =>
+    paints[nearest(rgbAt(r, q)).index]?.role ?? 'ink';
+  return Result.flatMap(read(body, 'body cell', 0), (b) =>
+    Result.flatMap(read(head, 'head cell', 0), (h0) => {
+      const [dw, dh] = [b.face.width - h0.face.width, b.face.height - h0.face.height];
       if (Math.abs(dw) > 1 || Math.abs(dh) > 1)
-        return Result.fail(
-          HeadRefused.make({
-            reason: `the faces differ (${h.face.width}×${h.face.height} worn on ${b.face.width}×${b.face.height}): a head turned or tilted`,
-          }),
+        return refuse(
+          `the faces differ (${h0.face.width}×${h0.face.height} worn on ${b.face.width}×${b.face.height}): a head turned or tilted`,
         );
       const [bx, by] = middleOf(b.face);
-      const [hx, hy] = middleOf(h.face);
-      const [ox, oy] = [Math.round(bx - hx), Math.round(by - hy)];
-      const inBox = (q: number) => {
-        const [x, y] = [q % body.width, Math.floor(q / body.width)];
-        return (
-          x >= h.box.x + ox &&
-          y >= h.box.y + oy &&
-          x < h.box.x + h.box.width + ox &&
-          y < h.box.y + h.box.height + oy
+      const [hx, hy] = middleOf(h0.face);
+      const [ox, oy] = [Math.round(bx - hx), b.crown - h0.crown];
+      if (Math.abs(by - hy - oy) > 1)
+        return refuse(
+          `the crowns and the faces disagree (${by - hy - oy} px): hair drawn taller or shorter`,
         );
-      };
-      const rgba = body.rgba.slice();
-      const worn = new Set<number>();
-      for (const q of h.px) {
-        const [x, y] = [(q % head.width) + ox, Math.floor(q / head.width) + oy];
-        if (x < 0 || y < 0 || x >= body.width || y >= body.height) continue;
-        worn.add(y * body.width + x);
-        rgba.set(head.rgba.subarray(q * 4, q * 4 + 4), (y * body.width + x) * 4);
-      }
-      const own = new Set(b.px);
-      const left = new Set(b.px.filter((q) => inBox(q) && !worn.has(q)));
-      const seen = new Uint8Array(body.width * body.height);
-      for (const q0 of left) {
-        if (seen[q0] === 1) continue;
-        seen[q0] = 1;
-        const piece = flood(body, seen, q0, (q) => left.has(q), around4);
-        const attached = piece.some((q) =>
-          around4(q, body.width, body.height).some((m) => own.has(m) && !inBox(m)),
-        );
-        if (!attached) for (const q of piece) rgba.fill(0, q * 4, q * 4 + 4);
-      }
-      return Result.succeed({ width: body.width, height: body.height, rgba });
+      return Result.flatMap(read(head, 'head cell', Math.max(0, b.chin - oy - h0.chin)), (h) => {
+        const inBox = (q: number) => {
+          const [x, y] = [q % body.width, Math.floor(q / body.width)];
+          return (
+            x >= h.box.x + ox &&
+            y >= h.box.y + oy &&
+            x < h.box.x + h.box.width + ox &&
+            y < h.box.y + h.box.height + oy
+          );
+        };
+        const cleared = new Set(b.px);
+        for (let q = 0; q < body.width * body.height; q++)
+          if (alphaAt(body, q) > 0 && inBox(q)) cleared.add(q);
+        const rgba = body.rgba.slice();
+        for (const q of cleared) rgba.fill(0, q * 4, q * 4 + 4);
+        const worn = new Map<number, number>();
+        for (const q of h.px) {
+          const [x, y] = [(q % head.width) + ox, Math.floor(q / head.width) + oy];
+          if (x < 0 || y < 0 || x >= body.width || y >= body.height) continue;
+          worn.set(y * body.width + x, q);
+          rgba.set(head.rgba.subarray(q * 4, q * 4 + 4), (y * body.width + x) * 4);
+        }
+        const left = new Set([...cleared].filter((q) => !worn.has(q)));
+        const seen = new Uint8Array(body.width * body.height);
+        for (const q0 of left) {
+          if (seen[q0] === 1) continue;
+          seen[q0] = 1;
+          const piece = flood(body, seen, q0, (q) => left.has(q), around4);
+          const fate = pieceFateOf(piece, { body, head, cleared, worn, roleAt });
+          if (Result.isFailure(fate)) return Result.fail(fate.failure);
+          if (fate.success)
+            for (const q of piece) rgba.set(body.rgba.subarray(q * 4, q * 4 + 4), q * 4);
+        }
+        return Result.succeed({ width: body.width, height: body.height, rgba });
+      });
     }),
   );
+};
+
+/** What `withHeadOf` reads a left-over piece against: the two cells, the pixels it cleared, where each worn head pixel landed (body px to head px), and the role a pixel is drawn in. */
+interface Wearing {
+  readonly body: Raster;
+  readonly head: Raster;
+  readonly cleared: ReadonlySet<number>;
+  readonly worn: ReadonlyMap<number, number>;
+  readonly roleAt: (r: Raster, q: number) => Role | 'ink';
+}
+
+/**
+ * Whether `withHeadOf` puts a piece of `body` it cleared back: false for
+ * the old head (drawn only in ink and hair), true for a body part (another
+ * paint joining the rest of `body` paint to paint, holding no hair, meeting
+ * the worn head only across ink); refused when its part cannot be told.
+ */
+const pieceFateOf = (
+  piece: ReadonlyArray<number>,
+  { body, head, cleared, worn, roleAt }: Wearing,
+): Result.Result<boolean, HeadRefused> => {
+  const roles = new Set(piece.map((q) => roleAt(body, q)));
+  const painted = (q: number, next: (m: number) => boolean) =>
+    roleAt(body, q) !== 'ink' && around4(q, body.width, body.height).some(next);
+  const joins = piece.some((q) =>
+    painted(q, (m) => alphaAt(body, m) > 0 && !cleared.has(m) && roleAt(body, m) !== 'ink'),
+  );
+  const runsIn = piece.some((q) =>
+    painted(q, (m) =>
+      Option.exists(Option.fromUndefinedOr(worn.get(m)), (hq) => roleAt(head, hq) !== 'ink'),
+    ),
+  );
+  const oldHead = [...roles].every((role) => role === 'ink' || role === 'hair');
+  if (joins && (roles.has('hair') || (!oldHead && runsIn)))
+    return Result.fail(
+      HeadRefused.make({
+        reason: `a piece of ${piece.length} px joins the body and the head: its part cannot be told`,
+      }),
+    );
+  if (!joins && !oldHead)
+    return Result.fail(
+      HeadRefused.make({
+        reason: `a piece of ${piece.length} px in ${[...roles].join(', ')} joins nothing: a hand or a part of the head`,
+      }),
+    );
+  return Result.succeed(!oldHead);
 };
 
 /** The share of a picture taken as its ink: its darkest 2 % of opaque pixels. */

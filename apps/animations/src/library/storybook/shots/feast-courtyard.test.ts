@@ -4,7 +4,16 @@ import { Effect, Option } from 'effect';
 import { describe, expect, it, test } from 'effect-bun-test';
 import sharp from 'sharp';
 import { anchorOf, APP } from '../render.ts';
-import { type Box, eyeBoxesOf, faceBoxOf, headBoxOf, hexOf, type Rgb, rgbAt } from '../sheet.ts';
+import {
+  type Box,
+  eyeBoxesOf,
+  faceBoxOf,
+  headBoxOf,
+  hexOf,
+  linesOf,
+  type Rgb,
+  rgbAt,
+} from '../sheet.ts';
 import {
   type CameraKey,
   drawnKeyOf,
@@ -220,28 +229,51 @@ const pieceOf = (
   return { piece, out };
 };
 
-/** `cell` against `front` inside `front`'s head box, aligned on their faces: how many head pixels of `front` it draws otherwise, and how many pixels it draws where `front` is clear that join nothing outside the box (`unjoined`); none when either reads no face. */
+/**
+ * `cell` against `front` as the page draws them, set on their soles (the
+ * row below each one's lowest pixel, `anchorOf`) and on their faces'
+ * middle columns, over both head boxes: `front`'s moved so and `cell`'s
+ * own. How many head pixels of `front` it draws otherwise, and how many
+ * pixels it draws where `front` is clear that join nothing outside the
+ * boxes (`unjoined`); none when either reads no face.
+ */
 const headAgainst = (front: Raster, cell: Raster, paints: StoredFigure['paints']) =>
-  Option.all([headBoxOf(front, paints), faceBoxOf(front, paints), faceBoxOf(cell, paints)]).pipe(
-    Option.map(([head, from, to]) => {
+  Option.all([
+    headBoxOf(front, paints),
+    headBoxOf(cell, paints),
+    faceBoxOf(front, paints),
+    faceBoxOf(cell, paints),
+    linesOf(front, paints),
+    linesOf(cell, paints),
+  ]).pipe(
+    Option.map(([head, own, from, to, frontLines, cellLines]) => {
       const [ox, oy] = [
         Math.round(to.x + (to.width - 1) / 2 - from.x - (from.width - 1) / 2),
-        Math.round(to.y + (to.height - 1) / 2 - from.y - (from.height - 1) / 2),
+        cellLines.bottom - frontLines.bottom,
+      ];
+      const [x0, y0] = [Math.min(head.x + ox, own.x), Math.min(head.y + oy, own.y)];
+      const [x1, y1] = [
+        Math.max(head.x + head.width + ox, own.x + own.width),
+        Math.max(head.y + head.height + oy, own.y + own.height),
       ];
       const inBox = (q: number) => {
-        const [u, v] = [(q % cell.width) - ox, Math.floor(q / cell.width) - oy];
-        return u >= head.x && v >= head.y && u < head.x + head.width && v < head.y + head.height;
+        const [x, y] = [q % cell.width, Math.floor(q / cell.width)];
+        return x >= x0 && y >= y0 && x < x1 && y < y1;
       };
       let headDiffers = 0;
       const loose = new Set<number>();
-      for (let y = head.y; y < head.y + head.height; y++)
-        for (let x = head.x; x < head.x + head.width; x++) {
-          const [p, q] = [y * front.width + x, (y + oy) * cell.width + x + ox];
+      for (let y = y0; y < y1; y++)
+        for (let x = x0; x < x1; x++) {
+          const [u, v] = [x - ox, y - oy];
+          const p = v * front.width + u;
+          const onFront = u >= 0 && v >= 0 && u < front.width && v < front.height;
+          const q = y * cell.width + x;
           const same =
+            onFront &&
             front.rgba.subarray(p * 4, p * 4 + 4).join() ===
-            cell.rgba.subarray(q * 4, q * 4 + 4).join();
-          if (opaqueAt(front, p) && !same) headDiffers += 1;
-          if (!opaqueAt(front, p) && opaqueAt(cell, q)) loose.add(q);
+              cell.rgba.subarray(q * 4, q * 4 + 4).join();
+          if (onFront && opaqueAt(front, p) && !same) headDiffers += 1;
+          if (!(onFront && opaqueAt(front, p)) && opaqueAt(cell, q)) loose.add(q);
         }
       return { headDiffers, loose: unjoined(cell, loose, inBox) };
     }),
@@ -421,7 +453,7 @@ describe('the feast courtyard as drawn', () => {
     );
   });
 
-  test("draws one head in every key of the lead's front view: inside the front cell's head box, aligned on the face, each key draws the front cell's head pixel for pixel, and draws nothing past it but the body reaching in from outside the box, a raised sleeve or hand (critique 3, item 2)", () => {
+  test("draws one head in every key of the lead's front view: set on the soles as the page draws it and on the face's middle column, over the front cell's head box and the key's own, each key draws the front cell's head pixel for pixel, and draws nothing past it but the body reaching in from outside the boxes, a raised sleeve or hand (critique 3, item 2; critique 4, A and B)", () => {
     const lead = byName.get('lead');
     const front = lead?.cells.get('front');
     expect(Option.isSome(Option.fromUndefinedOr(front))).toBe(true);
@@ -438,27 +470,53 @@ describe('the feast courtyard as drawn', () => {
     );
   });
 
-  test("keeps each guest's neutral body under the smile: the drawn smile's pixels outside its head box are the neutral cell's (critique 3, item 6)", () => {
+  test("lands the front head on the crown row in offer and wave-2, whose drawn faces end a row lower or start a row lower than front's: each worn key's head and face span the front cell's rows, crown 280 to chin 408, no strip of its own crown above (round 4, M2; critique 4, A and B)", () => {
+    const lead = byName.get('lead');
+    const front = lead?.cells.get('front');
+    if (!lead || !front) return;
+    const rowsOf = (cell: Raster) =>
+      Option.all([headBoxOf(cell, lead.paints), faceBoxOf(cell, lead.paints)]).pipe(
+        Option.map(([head, face]) => [
+          head.y,
+          head.y + head.height - 1,
+          face.y,
+          face.y + face.height - 1,
+        ]),
+      );
+    const want = rowsOf(front);
+    expect(want).toEqual(Option.some([280, 408, 313, 408]));
+    expect(['offer', 'wave-2'].map((key) => [key, rowsOf(lead.cells.get(key) ?? front)])).toEqual([
+      ['offer', want],
+      ['wave-2', want],
+    ]);
+  });
+
+  test("keeps each guest's neutral body under the smile: the drawn smile's pixels outside its head box and the neutral cell's own are the neutral cell's (critique 3, item 6; round 4, M2)", () => {
     const differing = ['man', 'woman'].map((name) => {
       const f = byName.get(name);
       const [neutral, smile] = [f?.cells.get('neutral'), f?.cells.get('smile')];
       if (!f || !neutral || !smile) return [name, Option.none()];
       return [
         name,
-        Option.map(headBoxOf(smile, f.paints), (head) => {
-          let n = 0;
-          for (let q = 0; q < smile.width * smile.height; q++) {
-            const [x, y] = [q % smile.width, Math.floor(q / smile.width)];
-            const inHead =
-              x >= head.x && y >= head.y && x < head.x + head.width && y < head.y + head.height;
-            const same =
-              smile.width === neutral.width &&
-              smile.rgba.subarray(q * 4, q * 4 + 4).join() ===
-                neutral.rgba.subarray(q * 4, q * 4 + 4).join();
-            if (!inHead && !same) n += 1;
-          }
-          return n;
-        }),
+        Option.map(
+          Option.all([headBoxOf(smile, f.paints), headBoxOf(neutral, f.paints)]),
+          (boxes) => {
+            let n = 0;
+            for (let q = 0; q < smile.width * smile.height; q++) {
+              const [x, y] = [q % smile.width, Math.floor(q / smile.width)];
+              const inHead = boxes.some(
+                (head) =>
+                  x >= head.x && y >= head.y && x < head.x + head.width && y < head.y + head.height,
+              );
+              const same =
+                smile.width === neutral.width &&
+                smile.rgba.subarray(q * 4, q * 4 + 4).join() ===
+                  neutral.rgba.subarray(q * 4, q * 4 + 4).join();
+              if (!inHead && !same) n += 1;
+            }
+            return n;
+          },
+        ),
       ];
     });
     expect(differing).toEqual([

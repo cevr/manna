@@ -1565,75 +1565,239 @@ describe('blinkOf (critique 2, items 3 and 4)', () => {
 const faceWidthOf = (f: { readonly inside: ReadonlySet<number> }, dx: number): number =>
   Math.max(...[...f.inside].map((q) => q % FACE_W)) - (20 + dx) + 2;
 
-/** Paints `c` (rgba) at every pixel of `r` in columns `x0..x1` and rows `y0..y1`, inclusive, that `at` admits. */
-const fill = (
-  r: Raster,
-  [x0, x1, y0, y1]: readonly [number, number, number, number],
-  c: (x: number, y: number) => ReadonlyArray<number>,
-  at: (x: number, y: number) => boolean = () => true,
-) => {
-  for (let y = y0; y <= y1; y++)
-    for (let x = x0; x <= x1; x++) if (at(x, y)) r.rgba.set(c(x, y), (y * r.width + x) * 4);
+/** How a head figure for `withHeadOf` is drawn: its crown row, the rows of hair above its face's ink ring, the ring's left column, the face's skin width and height inside the ring, the hair's reach left and right of the ring, and how far its locks hang down beside the face. */
+interface HeadDrawing {
+  readonly crown: number;
+  readonly hair: number;
+  readonly fx: number;
+  readonly fw: number;
+  readonly fh: number;
+  readonly left: number;
+  readonly right: number;
+  readonly lock: number;
+}
+
+const HEADED_W = 140;
+const HEADED_H = 124;
+
+/**
+ * A figure drawn as `d` says, `HEADED_W` by `HEADED_H`: a block of hair
+ * from the crown down to the face's ink ring and locks beside the face,
+ * the face in skin inside the ring, a neck in skin between ink sides, and
+ * the robe ringed in ink to the bottom. `arm` raises a sleeve from the
+ * robe beside the head, a hand ringed in ink at its end, its left column
+ * at the given x, from the ring's top row down. Answers the picture, its
+ * chin (the face's last skin row), its hair's rightmost column, and the
+ * arm's pixels.
+ */
+const headedFigure = (d: HeadDrawing, arm: Option.Option<number>) => {
+  const [width, height] = [HEADED_W, HEADED_H];
+  const rgba = new Uint8Array(width * height * 4);
+  const ring = d.crown + d.hair;
+  const chin = ring + d.fh;
+  const robeTop = chin + 5;
+  const right = d.fx + d.fw + 1 + d.right;
+  const rect = (
+    x0: number,
+    x1: number,
+    y0: number,
+    y1: number,
+    c: (x: number, y: number) => Rgb,
+  ) => {
+    for (let y = y0; y <= y1; y++)
+      for (let x = x0; x <= x1; x++) rgba.set([...c(x, y), 255], (y * width + x) * 4);
+  };
+  const ringed = (x0: number, x1: number, y0: number, y1: number, paint: Rgb) =>
+    rect(
+      x0,
+      x1,
+      y0,
+      y1,
+      (x, y) => [paint, INK][Number(x === x0 || x === x1 || y === y0 || y === y1)] ?? INK,
+    );
+  ringed(20, width - 21, robeTop, height - 1, ROBE);
+  const neck = d.fx + 1 + (d.fw >> 1);
+  rect(
+    neck - 4,
+    neck + 4,
+    chin + 2,
+    chin + 4,
+    (x) => [SKIN, INK][Number(Math.abs(x - neck) === 4)] ?? INK,
+  );
+  rect(d.fx - d.left, right, d.crown, ring - 1, () => HAIR);
+  rect(d.fx - d.left, d.fx - 1, ring, ring + d.lock, () => HAIR);
+  rect(d.fx + d.fw + 2, right, ring, ring + d.lock, () => HAIR);
+  ringed(d.fx, d.fx + d.fw + 1, ring, chin + 1, SKIN);
+  const armed = new Set<number>();
+  Option.map(arm, (x0) => {
+    ringed(x0, x0 + 8, ring, ring + 8, SKIN);
+    rect(
+      x0,
+      x0 + 8,
+      ring + 9,
+      robeTop - 1,
+      (x) => [ROBE, INK][Number(x === x0 || x === x0 + 8)] ?? INK,
+    );
+    for (let y = ring; y < robeTop; y++)
+      for (let x = x0; x <= x0 + 8; x++) armed.add(y * width + x);
+  });
+  return { raster: { width, height, rgba }, chin, right, armed };
 };
 
 /**
- * One generated case of a worn head: a body face and a head face of one
- * size set off from each other, the head's crown cut at its two corners
- * `cut` px deep; half the bodies hold a hand ringed in ink beside the face
- * and a sleeve across the crown's right corner. Answers the body, the head
- * and the picture wearing it should give: the head's drawn pixels landed
- * aligned on the body's face, its cut corners clear but where the sleeve
- * reaches in, every other pixel the body's.
+ * One generated case of a worn head (round 4, M2; critique 4, A and B):
+ * a body and a head cell drawn apart, the head's crown up to 2 rows above
+ * or 3 below the body's, its hair a row taller or shorter above its face,
+ * its face a pixel wider, narrower or shorter, its hair reaching further
+ * or less far either side and its locks hanging longer or shorter, set off
+ * by up to 4 px; the body's face no lower than the head's lands. Half the
+ * bodies raise a sleeve and hand beside the head, touching its hair where
+ * the body's hair reaches furthest. Answers the body, the head and what
+ * `withHeadOf` should give: refused when the crowns and the face middles
+ * disagree by more than a pixel, or when the body's own hair is left
+ * against the raised hand; else every pixel clear but the body below its
+ * chin and its arm, with the head's pixels from its crown to the lower of
+ * the two chins laid over them, set on the body's crown row and its face's
+ * middle column.
  */
 const wornCase = (seed: number) => {
   const draw = rng(seed + 500);
   const int = (a: number, b: number) => a + Math.floor(draw() * (b - a + 1));
-  const [bx, by, hx, cut] = [int(-4, 4), int(0, 2), int(-4, 4), int(2, 6)];
-  const hy = by + int(0, 2);
-  const hand = draw() < 0.5;
-  const plain = { lower: INK, cheek: false };
-  const body = faceFigure(rng(seed), { ...plain, closed: false, dx: bx, dy: by }).raster;
-  const headFace = faceFigure(rng(seed), { ...plain, closed: true, dx: hx, dy: hy });
-  const head = headFace.raster;
-  const width = faceWidthOf(headFace, hx);
-  const [hfx, bfx] = [20 + hx, 20 + bx];
-  const clear = () => [0, 0, 0, 0];
-  fill(head, [hfx, hfx + width - 1, 0, cut - 1], clear, (x, y) => x - hfx < cut - y);
-  fill(head, [hfx, hfx + width - 1, 0, cut - 1], clear, (x, y) => hfx + width - 1 - x < cut - y);
-  if (hand) {
-    const [x0, y0] = [bfx + width, 4 + by + 20];
-    fill(body, [x0, x0 + 10, y0, y0 + 10], (x, y) => [
-      ...([SKIN, INK][Number(y === y0 || y === y0 + 10 || x === x0 + 10)] ?? INK),
-      255,
-    ]);
-    fill(body, [x0 - cut, x0 + 6, 0, cut - 1], () => [...ROBE, 255]);
-  }
-  const want: Raster = { ...body, rgba: new Uint8Array(body.rgba) };
-  const [ox, oy] = [bx - hx, by - hy];
-  const landed = (x: number, y: number) => {
-    const q = ((y - oy) * FACE_W + x - ox) * 4;
-    return [...head.rgba.subarray(q, q + 4)];
+  const b: HeadDrawing = {
+    crown: int(2, 5),
+    hair: int(14, 18),
+    fx: int(40, 46),
+    fw: int(30, 40),
+    fh: int(30, 40),
+    left: int(2, 8),
+    right: int(2, 8),
+    lock: int(4, 14),
   };
-  const shows = (x: number, y: number) =>
-    (landed(x, y)[3] ?? 0) > 0 || !hand || x - ox < hfx + width / 2;
-  fill(
-    want,
-    [hfx + ox, hfx + ox + width - 1, 0, 4 + hy + head.height - 60 - 2 + oy],
-    landed,
-    shows,
-  );
-  return { body, head, want: want.rgba };
+  const hair = b.hair + int(-1, 1);
+  const tall = b.fh + int(-1, 1);
+  const h: HeadDrawing = {
+    crown: b.crown + int(-2, 3),
+    hair,
+    fx: b.fx + int(-4, 4),
+    fw: b.fw + int(-1, 1),
+    fh: Math.min(tall, b.hair + b.fh - hair),
+    left: int(2, 8),
+    right: int(2, 8),
+    lock: int(4, 14),
+  };
+  const ox = Math.round(b.fx + (b.fw - 1) / 2 - h.fx - (h.fw - 1) / 2);
+  const oy = b.crown - h.crown;
+  const tilt = b.crown + b.hair + (b.fh - 1) / 2 - (h.crown + h.hair + (h.fh - 1) / 2) - oy;
+  const head = headedFigure(h, Option.none());
+  const oldRight = b.fx + b.fw + 1 + b.right;
+  const wornRight = head.right + ox;
+  const armAt = Option.liftPredicate(Math.max(oldRight, wornRight) + 1, () => draw() < 0.5);
+  const body = headedFigure(b, armAt);
+  const leftAgainstArm =
+    Option.isSome(armAt) &&
+    (oldRight > wornRight || (oldRight === wornRight && b.hair + b.lock > h.hair + h.lock));
+  const refused = Math.abs(tilt) > 1 || leftAgainstArm;
+  const want = new Uint8Array(body.raster.rgba.length);
+  for (let q = 0; q < HEADED_W * HEADED_H; q++)
+    if (Math.floor(q / HEADED_W) > body.chin || body.armed.has(q))
+      want.set(body.raster.rgba.subarray(q * 4, q * 4 + 4), q * 4);
+  const to = Math.max(head.chin, body.chin - oy);
+  for (let y = h.crown; y <= to; y++)
+    for (let x = 0; x < HEADED_W; x++) {
+      const q = y * HEADED_W + x;
+      if ((head.raster.rgba[q * 4 + 3] ?? 0) === 0) continue;
+      want.set(head.raster.rgba.subarray(q * 4, q * 4 + 4), ((y + oy) * HEADED_W + x + ox) * 4);
+    }
+  return {
+    body: body.raster,
+    head: head.raster,
+    want: Option.liftPredicate(want, () => !refused),
+    armed: Option.isSome(armAt),
+  };
 };
 
 describe('withHeadOf (critique 3, items 2 and 6)', () => {
   const paints = paintsOf(DRESSED);
 
-  test("over generated faces, the worn head set off from the body's and cut at its crown's corners, the body holding a hand beside its face or not: the worn head lands aligned on the body's face, the body's own head left showing in its box is cleared, and every other pixel, the hand too, is the body's", () => {
+  test("over generated heads, their hair reaching further or less far than the body's, their faces a pixel apart in size, start or middle, the body raising a sleeve and hand against its hair or not: the worn head lands on the body's crown row and face middle down to the lower chin, none of the body's own head is left over either head, the body below the chin and its arm are kept, and a paste whose parts cannot be told is refused (round 4, M2; critique 4, A and B)", () => {
+    const marked = paintsOf(MARKED);
+    const kinds: Array<readonly [boolean, boolean]> = [];
     for (let seed = 1; seed <= 40; seed++) {
-      const { body, head, want } = wornCase(seed);
-      const got = Result.map(withHeadOf(body, head, paints), (r) => [...r.rgba].join());
-      expect([seed, got]).toEqual([seed, Result.succeed([...want].join())]);
+      const { body, head, want, armed } = wornCase(seed);
+      const got = Result.match(withHeadOf(body, head, marked), {
+        onFailure: () => Option.none(),
+        onSuccess: (r) => Option.some([...r.rgba].join()),
+      });
+      expect([seed, got]).toEqual([seed, Option.map(want, (w) => [...w].join())]);
+      kinds.push([armed, Option.isSome(want)]);
     }
+    const [kept, refused] = [
+      kinds.filter(([armed, worn]) => armed && worn).length,
+      kinds.filter(([, worn]) => !worn).length,
+    ];
+    expect([kept, refused, kept >= 5, refused >= 3, refused <= 20]).toEqual([
+      kept,
+      refused,
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  test("clears the body's wider hair beyond a narrower worn head of the same face, none of it left (round 4, M2: 1,224 px of old hair kept)", () => {
+    const own = paintsOf(ANATOMY);
+    const hair = (x0: number, x1: number) => (x: number, y: number) =>
+      Option.liftPredicate(ANATOMY_HAIR, () => y < 36 && x >= x0 && x <= x1);
+    const wide = anatomyFigure(() => Option.none());
+    for (let y = 0; y < 36; y++)
+      for (let x = 10; x <= 70; x++)
+        wide.rgba.set([...ANATOMY_HAIR, 255], (y * wide.width + x) * 4);
+    const narrow = anatomyFigure(hair(27, 53));
+    for (let y = 0; y < 36; y++)
+      for (const x of [20, 21, 22, 23, 24, 25, 26, 54, 55, 56, 57, 58, 59, 60])
+        narrow.rgba.fill(0, (y * narrow.width + x) * 4, (y * narrow.width + x) * 4 + 4);
+    const worn = Result.getOrThrow(withHeadOf(wide, narrow, own));
+    let old = 0;
+    for (let q = 0; q < wide.width * wide.height; q++)
+      if (alphaAt(narrow, q) === 0 && alphaAt(worn, q) > 0) old += 1;
+    expect([old, [...worn.rgba].join() === [...narrow.rgba].join()]).toEqual([0, true]);
+  });
+
+  test("refuses a head whose hair stands a row and more taller or shorter over its face than the body's, so the crowns and the face middles disagree by more than a pixel (critique 4, A and B)", () => {
+    const base: HeadDrawing = {
+      crown: 4,
+      hair: 16,
+      fx: 44,
+      fw: 34,
+      fh: 34,
+      left: 4,
+      right: 4,
+      lock: 6,
+    };
+    const of = (d: HeadDrawing) => headedFigure(d, Option.none()).raster;
+    const marked = paintsOf(MARKED);
+    const reads = [-2, -1, 0, 1, 2].map((dh) =>
+      Result.isSuccess(withHeadOf(of(base), of({ ...base, hair: base.hair + dh }), marked)),
+    );
+    expect(reads).toEqual([false, true, true, true, false]);
+  });
+
+  test("refuses a head whose locks end above the body's own, which hang past the chin: the body's hair left over the head runs on down into the hair below, so its part cannot be told; locks as long are worn (round 4, M2)", () => {
+    const base: HeadDrawing = {
+      crown: 4,
+      hair: 16,
+      fx: 44,
+      fw: 34,
+      fh: 34,
+      left: 4,
+      right: 4,
+      lock: 40,
+    };
+    const of = (d: HeadDrawing) => headedFigure(d, Option.none()).raster;
+    const marked = paintsOf(MARKED);
+    expect(
+      [40, 20].map((lock) => Result.isSuccess(withHeadOf(of(base), of({ ...base, lock }), marked))),
+    ).toEqual([true, false]);
   });
 
   test("refuses a head whose face is wider or taller by more than a pixel than the body's, a head turned or tilted, and a cell that reads no face", () => {
