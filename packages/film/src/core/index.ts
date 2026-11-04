@@ -1,7 +1,8 @@
 export { type Key, clamp, ease, gait, keys, lerp, staggered } from './time.ts';
 export { act, blink, idle, lag } from './motion.ts';
 export { hash2, rng } from './random.ts';
-export { Look, Looks, Movement, Music, Shorts, Sound, defineScript } from './schema.ts';
+export { Look, Looks, Movement, Music, Shorts, Sound, Timings, defineScript } from './schema.ts';
+export { type Placed, layout } from './layout.ts';
 export { membersOf } from './acts.ts';
 export { defineLibrary, keptFit, soundCredits } from './sfx.ts';
 export {

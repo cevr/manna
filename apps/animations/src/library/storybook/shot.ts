@@ -1,3 +1,4 @@
+import type { PaintingSpec } from '@manna/film/canvas';
 import type { Raster } from '@manna/film/tools';
 import { labOf, rng } from '@manna/film/core';
 import type { Paint, Rgb } from './sheet.ts';
@@ -107,6 +108,8 @@ export interface Plate {
   /** Keys `[t, key]` in time order: smoothstep from each to the next, held before the first and after the last; at rest when it names none. */
   readonly moves?: ReadonlyArray<readonly [number, PlateKey]>;
   readonly reveal?: Reveal;
+  /** The plate as a film's drawing declares it (its PNG as imported, its pixel size, its clear edges); a library shot, which no film draws, names none. */
+  readonly painting?: PaintingSpec;
 }
 
 /**

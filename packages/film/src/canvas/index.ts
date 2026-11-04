@@ -59,6 +59,7 @@ export {
   type CardWord,
   type Verse,
   type VerseStyle,
+  cardWords,
   floodBox,
   fullCard,
   verse,
