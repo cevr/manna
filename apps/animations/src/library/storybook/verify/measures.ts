@@ -16,6 +16,7 @@ import {
   type Rgb,
   rgbSum,
 } from '../sheet.ts';
+import type { FigureFrame, Frame } from '../shot.ts';
 import { one, type Sample, type Samples, unreadAt } from './verdict.ts';
 
 /** A colour as one number, for sets and maps. */
@@ -70,7 +71,7 @@ export interface PaintMedian {
   readonly count: number;
 }
 
-/** What one figure-alone render reads: whether the figure lies whole inside the frame, its lines, each paint's median over all its opaque pixels, and its interior pixels, all and lit. */
+/** What one figure-alone render reads: whether the figure lies whole inside the frame, its lines, each paint but the ink its median over every opaque pixel nearest it, and its interior pixels, all and lit. */
 export interface FigureRead {
   readonly whole: boolean;
   readonly lines: Option.Option<Lines>;
@@ -88,29 +89,23 @@ const NOTHING: FigureRead = {
 };
 
 /**
- * Each paint's median colour over its area, by the paint's index: every
- * opaque pixel nearest it whose four neighbours are opaque and nearest it
- * too, however far its colour strays, so a paint drawn in two alternating
- * colours steps as its median does. Only the pixels where two paints meet
- * are left out: the render's resampling blends them, and a thin paint's
- * median would be its edges' blends, not its colour.
+ * Each paint's median colour over its whole population, by the paint's
+ * index: every opaque pixel whose nearest paint it is, however far its
+ * colour strays and wherever it lies, the ink's left out. A paint drawn in
+ * stripes one pixel wide or in two alternating colours steps as its median
+ * does.
  */
 const mediansOf = (
   r: Raster,
+  lit: ReadonlyArray<Paint>,
   near: (c: Rgb) => { readonly index: number; readonly distance: number },
 ): ReadonlyMap<number, PaintMedian> => {
   const channels = new Map<number, readonly [Array<number>, Array<number>, Array<number>]>();
-  const paintAt = (q: number): number => {
-    if (alphaAt(r, q) !== 255) return -1;
-    return near(rgbAt(r, q)).index;
-  };
   for (let q = 0; q < r.width * r.height; q++) {
-    const index = paintAt(q);
-    const x = q % r.width;
-    if (index < 0 || x === 0 || x === r.width - 1 || q < r.width) continue;
-    if (q >= r.width * (r.height - 1)) continue;
-    if ([q - 1, q + 1, q - r.width, q + r.width].some((m) => paintAt(m) !== index)) continue;
+    if (alphaAt(r, q) !== 255) continue;
     const c = rgbAt(r, q);
+    const index = near(c).index;
+    if (lit[index]?.role === 'ink') continue;
     const ch = channels.get(index) ?? ([[], [], []] as const);
     ch[0].push(c[0]);
     ch[1].push(c[1]);
@@ -173,8 +168,8 @@ const interiorOf = (r: Raster): ReadonlyArray<number> => {
 /**
  * One figure-alone render read against its member's lit paints: cropped to
  * the figure, whether it lies whole in the frame (clear of every edge), its
- * lines, each paint's median over all its opaque pixels (the colour step's)
- * and its interior pixels, all and lit (the light's).
+ * lines, each paint but the ink its median over every opaque pixel nearest
+ * it (the colour step's) and its interior pixels, all and lit (the light's).
  */
 export const readFigure = (render: Raster, lit: ReadonlyArray<Paint>): FigureRead =>
   Option.match(opaqueBox(render), {
@@ -190,7 +185,7 @@ export const readFigure = (render: Raster, lit: ReadonlyArray<Paint>): FigureRea
           box.x + box.width < render.width &&
           box.y + box.height < render.height,
         lines: linesOf(r, lit),
-        medians: mediansOf(r, near),
+        medians: mediansOf(r, lit, near),
         interior: interior.length,
         litInterior: interior.filter((q) => near(rgbAt(r, q)).distance <= LIGHT_NEAR).length,
       };
@@ -212,12 +207,11 @@ export const colourStep = (
   return Option.some(Math.max(...steps)).pipe(Option.filter(() => steps.length > 0));
 };
 
-/** One figure in one rendered frame: its name, cell, layer depth, plane zoom, whether a turn squashes it, and its render's reading. */
+/** One figure in one rendered frame: its name, cell, plane zoom, whether a turn squashes it, and its render's reading. */
 export interface FrameRead {
   readonly frame: number;
   readonly name: string;
   readonly cell: string;
-  readonly z: number;
   readonly zoom: number;
   readonly squashed: boolean;
   readonly read: FigureRead;
@@ -244,42 +238,52 @@ export const stepSamples = (reads: ReadonlyArray<FrameRead>): Samples => {
   );
 };
 
-/** A figure's head in one frame brought to the focal plane: over its plane's zoom, times its layer's depth. */
-const levelOf = (r: FrameRead): Option.Option<number> =>
-  Option.map(
-    Option.flatMap(r.read.lines, (l) => l.head),
-    (h) => (h / r.zoom) * r.z,
-  );
+/** A figure the scale bar reads: its name, its layer's depth, and each stored cell's head (crown to collar) read once at its sheet's own size, none where the cell's anatomy reads none. */
+export interface ScaledFigure {
+  readonly name: string;
+  readonly z: number;
+  readonly heads: ReadonlyMap<string, Option.Option<number>>;
+}
+
+/** One planned frame: its index among the shot's frames, and the frame. */
+export interface PlannedFrame {
+  readonly index: number;
+  readonly frame: Frame;
+}
 
 /**
- * Each figure's head against the lead's in the same frame, in every frame
- * where both lie whole and unsquashed: its head over the lead's head × 1/z
- * × zoom^(1/z) ÷ zoom (z its depth, zoom the camera's), worked as each head
- * brought to the focal plane (over its plane zoom, times its depth). Unread
- * where either head is not read in such a frame, and for a figure that
- * shares no such frame with the lead.
+ * Each figure's head against the lead's in every planned frame, as the plan
+ * draws them: its cell's head at its sheet's size × its draw scale × its
+ * plane's zoom (zoom^(1/z)) × its squash up, over the lead's drawn so × 1/z
+ * × zoom^(1/z) ÷ zoom (z its depth, zoom the camera's). No render is read,
+ * so a frame that cuts a figure off or resamples it reads the same. Unread
+ * where its cell's head or the lead's was not read.
  */
-export const scaleSamples = (reads: ReadonlyArray<FrameRead>, lead: string): Samples => {
-  const still = reads.filter((f) => f.read.whole && !f.squashed);
-  const leads = new Map(still.filter((f) => f.name === lead).map((f) => [f.frame, f] as const));
-  const others = [...new Set(reads.filter((f) => f.name !== lead).map((f) => f.name))];
-  return others.flatMap((name): Samples => {
-    const paired = still
-      .filter((f) => f.name === name)
-      .flatMap((f) =>
-        Option.toArray(
-          Option.map(Option.fromUndefinedOr(leads.get(f.frame)), (ref) => ({ f, ref })),
-        ),
-      );
-    if (paired.length === 0)
-      return [unreadAt(`${name}: no frame where it and ${lead} lie whole and unsquashed`)];
-    return paired.map(({ f, ref }): Sample => {
-      const at = `${name} frame ${f.frame}`;
-      return Option.match(Option.all([levelOf(f), levelOf(ref)]), {
-        onNone: () => unreadAt(`${at}: no head read, or no head of ${lead}`),
-        onSome: ([mine, theirs]) => one(at, mine / theirs),
+export const scaleSamples = (
+  planned: ReadonlyArray<PlannedFrame>,
+  figures: ReadonlyArray<ScaledFigure>,
+  lead: string,
+): Samples => {
+  const byName = new Map(figures.map((f) => [f.name, f] as const));
+  return planned.flatMap(({ index, frame }): Samples => {
+    const zoom = frame.camera.zoom;
+    const drawn = (f: FigureFrame): Option.Option<number> => {
+      const z = byName.get(f.name)?.z ?? 1;
+      const head = Option.flatten(Option.fromUndefinedOr(byName.get(f.name)?.heads.get(f.cell)));
+      return Option.map(head, (h) => h * f.scale * zoom ** (1 / z) * f.sy);
+    };
+    const ref = frame.figures.find((f) => f.name === lead);
+    if (!ref) return [];
+    return frame.figures
+      .filter((f) => f.name !== lead)
+      .map((f): Sample => {
+        const z = byName.get(f.name)?.z ?? 1;
+        const at = `${f.name} frame ${index} (${f.cell}; ${lead} ${ref.cell})`;
+        return Option.match(Option.all([drawn(f), drawn(ref)]), {
+          onNone: () => unreadAt(`${at}: no head read in its cell or the lead's`),
+          onSome: ([mine, theirs]) => one(at, mine / (theirs * (1 / z) * (zoom ** (1 / z) / zoom))),
+        });
       });
-    });
   });
 };
 

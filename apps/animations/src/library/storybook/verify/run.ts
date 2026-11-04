@@ -11,8 +11,8 @@ import {
   StorybookFailed,
   storybookPage,
 } from '../render.ts';
-import { linesOf, rgbOfHex, splitSheet } from '../sheet.ts';
-import { type Frame, frameAt, litPaints, platesOf, type Shot, timesOf } from '../shot.ts';
+import { rgbOfHex, splitSheet } from '../sheet.ts';
+import { frameAt, litPaints, platesOf, type Shot, timesOf } from '../shot.ts';
 import { CAST, memberPalette, sha256, sheetDir, type StoredFigure } from '../store.ts';
 import { BARS } from './bars.ts';
 import {
@@ -20,6 +20,7 @@ import {
   heightSamples,
   lightSamples,
   paletteShare,
+  type PlannedFrame,
   pocketCount,
   proportionSamples,
   readFigure,
@@ -79,12 +80,6 @@ export class VerdictFailed extends Schema.TaggedError<VerdictFailed>()('VerdictF
   }
 }
 
-/** One frame the run renders: its index among the shot's frames and the frame itself. */
-interface Planned {
-  readonly index: number;
-  readonly frame: Frame;
-}
-
 /** The figure a shot's scale is read against: the one on the layer nearest the focal plane. */
 const leadOf = (figures: ReadonlyArray<StoredFigure>): string =>
   figures.toSorted((a, b) => Math.abs(a.layer.z - 1) - Math.abs(b.layer.z - 1))[0]?.figure.name ??
@@ -98,9 +93,9 @@ const decoded = (png: Uint8Array, at: string) =>
 /** Every render of the run in one page launch: each frame's colour, then each figure alone; answers each render's sha256 in order and hands each to `seen`. */
 const launch = <E, R>(
   render: RenderPng,
-  planned: ReadonlyArray<Planned>,
+  planned: ReadonlyArray<PlannedFrame>,
   figures: ReadonlyArray<StoredFigure>,
-  seen: (p: Planned, output: string, png: Uint8Array) => Effect.Effect<void, E, R>,
+  seen: (p: PlannedFrame, output: string, png: Uint8Array) => Effect.Effect<void, E, R>,
 ) =>
   Effect.gen(function* () {
     const hashes: Array<string> = [];
@@ -117,7 +112,7 @@ const launch = <E, R>(
 const firstLaunch = Effect.fn('StorybookVerify.firstLaunch')(function* (
   shot: Shot,
   render: RenderPng,
-  planned: ReadonlyArray<Planned>,
+  planned: ReadonlyArray<PlannedFrame>,
   figures: ReadonlyArray<StoredFigure>,
   out: string,
 ) {
@@ -148,7 +143,6 @@ const firstLaunch = Effect.fn('StorybookVerify.firstLaunch')(function* (
         frame: p.index,
         name,
         cell: posed.cell,
-        z: stored.layer.z,
         zoom: p.frame.camera.zoom ** (1 / stored.layer.z),
         squashed: posed.sx !== 1 || posed.sy !== 1,
         read: readFigure(yield* decoded(png, `${name} ${file}`), lit.get(name) ?? []),
@@ -159,7 +153,9 @@ const firstLaunch = Effect.fn('StorybookVerify.firstLaunch')(function* (
 });
 
 /** The cells each figure draws over the planned frames, by figure name. */
-const usedCells = (planned: ReadonlyArray<Planned>): ReadonlyMap<string, ReadonlySet<string>> => {
+const usedCells = (
+  planned: ReadonlyArray<PlannedFrame>,
+): ReadonlyMap<string, ReadonlySet<string>> => {
   const used = new Map<string, Set<string>>();
   for (const p of planned)
     for (const f of p.frame.figures) used.set(f.name, (used.get(f.name) ?? new Set()).add(f.cell));
@@ -244,9 +240,7 @@ const storeMeasures = Effect.fn('StorybookVerify.storeMeasures')(function* (
         f.figure.member,
         f.record.cells.map((c) => ({
           key: c.key,
-          lines: Option.flatMap(Option.fromUndefinedOr(f.cells.get(c.key)), (r) =>
-            linesOf(r, f.paints),
-          ),
+          lines: Option.flatten(Option.fromUndefinedOr(f.lines.get(c.key))),
         })),
         f.paints,
       ),
@@ -272,7 +266,7 @@ const CONTACT_PAPER = { r: 253, g: 247, b: 229, alpha: 1 };
 /** contact.png: twelve of the run's frames, evenly spaced, at a quarter size, four to a row. */
 const contactSheet = Effect.fn('StorybookVerify.contactSheet')(function* (
   shot: Shot,
-  planned: ReadonlyArray<Planned>,
+  planned: ReadonlyArray<PlannedFrame>,
   out: string,
 ) {
   const fs = yield* FileSystem.FileSystem;
@@ -357,7 +351,11 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
     pockets: stores.pockets,
     'colour-step': stepSamples(first.reads),
     proportions: stores.proportions,
-    scale: scaleSamples(first.reads, leadOf(figures)),
+    scale: scaleSamples(
+      planned,
+      figures.map((f) => ({ name: f.figure.name, z: f.layer.z, heads: f.heads })),
+      leadOf(figures),
+    ),
     'one-sheet': stores.oneSheet,
     light: lightSamples(first.reads),
     'render-height': heightSamples(first.reads),

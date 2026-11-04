@@ -1,8 +1,12 @@
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { rng } from '@manna/film/core';
 import type { Raster } from '@manna/film/tools';
-import { Option } from 'effect';
-import { describe, expect, test } from 'effect-bun-test';
+import { Effect, Option } from 'effect';
+import { describe, expect, it, test } from 'effect-bun-test';
 import { deltaE, hexOf, type Lines, type Palette, paintsOf, type Rgb } from '../sheet.ts';
+import { type FigureFrame, frameAt, timesOf } from '../shot.ts';
+import { feastCourtyard } from '../shots/feast-courtyard.ts';
+import { CAST, headsOf, loadFigures } from '../store.ts';
 import { BARS } from './bars.ts';
 import {
   colourStep,
@@ -112,12 +116,11 @@ describe('readFigure', () => {
     expect(read.litInterior).toBeLessThan(read.interior * 0.5);
   });
 
-  test("takes each paint's median over its area, the pixels whose four neighbours are that paint too: a one-pixel outline has none", () => {
+  test("takes each paint's median and count over every opaque pixel nearest it, the outline's included, and none for the ink", () => {
     const read = readFigure(figureIn(frame, { x0: 10, y0: 5, w: 30, h: 60 }), PAINTS);
     expect(read.medians.has(0)).toBe(false);
-    expect(Option.map(Option.fromUndefinedOr(read.medians.get(1)), (m) => m.rgb)).toEqual(
-      Option.some(SKIN),
-    );
+    expect(read.medians.get(1)).toEqual({ rgb: SKIN, count: 28 * 19 });
+    expect(read.medians.get(2)).toEqual({ rgb: ROBE, count: 28 * 39 });
   });
 });
 
@@ -151,47 +154,65 @@ describe('colourStep', () => {
     );
   });
 
-  test("over generated paint regions, layouts and shifts: the worst ΔE between each paint's median over its area", () => {
-    for (let seed = 1; seed <= 40; seed++) {
+  test('reads the step of a paint drawn in one-pixel stripes between ink stripes, none of whose pixels has a neighbour of its own paint (round 2, M1)', () => {
+    const striped = (drift: number): Raster =>
+      pictureOf(80, 100, (x, y) => {
+        if (x < 5 || x >= 75 || y < 5 || y >= 95) return Option.none();
+        if (y < 30) return Option.some(SKIN);
+        if (x % 2 === 0) return Option.some(INK);
+        return Option.some([ROBE[0] + drift, ROBE[1], ROBE[2]]);
+      });
+    const [a, b] = [readFigure(striped(0), PAINTS), readFigure(striped(6), PAINTS)];
+    expect(a.medians.get(2)?.count).toBe(35 * 65);
+    const samples = stepSamples([
+      frameRead({ name: 'f', frame: 0, cell: 'a', read: a }),
+      frameRead({ name: 'f', frame: 1, cell: 'b', read: b }),
+    ]);
+    expect(Option.getOrElse(samples[0]?.value ?? Option.none(), () => -1)).toBeCloseTo(
+      deltaE(ROBE, [ROBE[0] + 6, ROBE[1], ROBE[2]]),
+      9,
+    );
+    expect(verdictOf(BARS, { ...ALL_PASS, 'colour-step': samples }).passed).toBe(BARS.length - 1);
+  });
+
+  test("over generated layouts (stripes and checks one to six px wide, scattered patches, ink between), shifts and counts: the worst ΔE between each paint's median over every pixel drawn in it", () => {
+    for (let seed = 1; seed <= 60; seed++) {
       const draw = rng(seed);
       const int = (a: number, b: number) => a + Math.floor(draw() * (b - a + 1));
-      const layout = int(0, 2);
+      const layout = int(0, 4);
       const shift: Rgb = [int(-4, 4), int(-4, 4), int(-4, 4)];
-      const rows = int(8, 20);
-      const band = int(3, 6);
+      const rows = int(2, 20);
+      const band = int(1, 6);
+      const inked = draw() < 0.5;
+      const patches = new Set(
+        Array.from({ length: int(120, 220) }, () => int(0, 39) * 40 + int(0, 39)),
+      );
       const size = 40;
-      const paintAt = (x: number, y: number): 1 | 2 => {
+      const paintAt = (x: number, y: number): 0 | 1 | 2 => {
+        if (inked && (x + 2 * y) % 7 === 0) return 0;
         if (layout === 0 && (Math.floor(x / band) + Math.floor(y / band)) % 2 === 0) return 1;
         if (layout === 1 && Math.floor(y / band) % 2 === 0) return 1;
         if (layout === 2 && y < rows) return 1;
+        if (layout === 3 && Math.floor(x / band) % 2 === 0) return 1;
+        if (layout === 4 && !patches.has(y * size + x)) return 1;
         return 2;
       };
-      const inArea = (x: number, y: number): boolean =>
-        x > 0 &&
-        y > 0 &&
-        x < size - 1 &&
-        y < size - 1 &&
-        [
-          [x - 1, y],
-          [x + 1, y],
-          [x, y - 1],
-          [x, y + 1],
-        ].every(([u = 0, v = 0]) => paintAt(u, v) === paintAt(x, y));
       const frameOf = (k: 0 | 1) => {
-        const truth = new Map<1 | 2, Array<Rgb>>([
+        const truth = new Map<0 | 1 | 2, Array<Rgb>>([
+          [0, []],
           [1, []],
           [2, []],
         ]);
         const raster = pictureOf(size, size, (x, y) => {
           const p = paintAt(x, y);
-          const base = [SKIN, ROBE][p - 1] ?? SKIN;
+          const base = [INK, SKIN, ROBE][p] ?? INK;
           const wobble = ((x * 7 + y * 3 + k) % 5) - 2;
           const c: Rgb = [
             base[0] + shift[0] * k + wobble,
             base[1] + shift[1] * k,
             base[2] + shift[2] * k,
           ];
-          if (inArea(x, y)) truth.get(p)?.push(c);
+          truth.get(p)?.push(c);
           return Option.some(c);
         });
         return { raster, truth };
@@ -250,91 +271,178 @@ const frameRead = (
   r: Partial<FrameRead> & Pick<FrameRead, 'name' | 'frame' | 'read'>,
 ): FrameRead => ({
   cell: 'a',
-  z: 1,
   zoom: 1,
   squashed: false,
   ...r,
 });
 
-/** A guest and the lead in generated frames: the camera's zoom, the guest's depth, the lead's head and the guest's head as a share of what the bar wants, each frame. */
+/** One figure of a planned frame, at rest unless named otherwise. */
+const posed = (
+  f: Partial<FigureFrame> & Pick<FigureFrame, 'name' | 'cell' | 'scale'>,
+): FigureFrame => ({
+  layer: f.name,
+  x: 0,
+  y: 0,
+  sx: 1,
+  sy: 1,
+  breath: 1,
+  ...f,
+});
+
+/** A planned frame: its index, the camera's zoom and its figures. */
+const plannedAt = (index: number, zoom: number, figures: ReadonlyArray<FigureFrame>) => ({
+  index,
+  frame: { t: index / 24, camera: { t: index / 24, x: 0, y: 0, zoom }, figures },
+});
+
+/**
+ * The lead and a guest over generated frames: the guest's depth, each
+ * frame's zoom, each figure's draw scale, squash and cell, each cell's head
+ * at its sheet's size, and the share of the bar's wanted head the guest is
+ * drawn at. The guest's cell head is made from the share by the head each
+ * figure is drawn at brought to the focal plane (cell head × draw scale ×
+ * squash up × depth), not by the bar's own formula.
+ */
 const scaleCase = (seed: number) => {
   const draw = rng(seed);
   const z = 0.6 + draw() * 1.4;
-  return Array.from({ length: 2 + Math.floor(draw() * 6) }, (_, frame) => {
-    const camera = 1 + draw() * 0.12;
-    const leadHead = 60 + draw() * 80;
+  const frames = Array.from({ length: 2 + Math.floor(draw() * 6) }, (_, index) => {
+    const zoom = 1 + draw() * 0.12;
+    const lead = { head: 60 + draw() * 300, scale: 0.2 + draw(), sy: 1 + (draw() - 0.5) * 0.06 };
+    const guest = { scale: 0.2 + draw(), sy: 1 + (draw() - 0.5) * 0.06 };
     const share = [0.94, 0.951, 1, 1.049, 1.06][Math.floor(draw() * 5)] ?? 1;
-    const wanted = leadHead * (1 / z) * (camera ** (1 / z) / camera);
-    return { frame, z, camera, leadHead, guestHead: wanted * share, share };
+    const head = (share * lead.head * lead.scale * lead.sy) / (guest.scale * guest.sy * z);
+    return { index, zoom, lead, guest, head, share };
   });
+  return {
+    planned: frames.map((f) =>
+      plannedAt(f.index, f.zoom, [
+        posed({ name: 'lead', cell: `l${f.index}`, scale: f.lead.scale, sy: f.lead.sy }),
+        posed({ name: 'guest', cell: `g${f.index}`, scale: f.guest.scale, sy: f.guest.sy }),
+      ]),
+    ),
+    figures: [
+      {
+        name: 'lead',
+        z: 1,
+        heads: new Map(frames.map((f) => [`l${f.index}`, Option.some(f.lead.head)] as const)),
+      },
+      {
+        name: 'guest',
+        z,
+        heads: new Map(frames.map((f) => [`g${f.index}`, Option.some(f.head)] as const)),
+      },
+    ],
+    shares: frames.map((f) => f.share),
+  };
 };
 
 describe('scaleSamples', () => {
-  test("judges each figure against the same frame's lead: head ÷ (the lead's head × 1/z × zoom^(1/z) ÷ zoom), over generated depths, zooms and heads", () => {
+  test("judges each figure's head as the plan draws it (its cell's head at its sheet's size × draw scale × plane zoom × squash) against the same frame's lead: head ÷ (the lead's × 1/z × zoom^(1/z) ÷ zoom), over generated depths, zooms, scales, squashes and heads", () => {
     for (let seed = 1; seed <= 60; seed++) {
-      const frames = scaleCase(seed);
-      const reads = frames.flatMap((f) => [
-        frameRead({
-          name: 'lead',
-          frame: f.frame,
-          zoom: f.camera,
-          read: readOf(linesOfHeight(0, 400, f.leadHead)),
-        }),
-        frameRead({
-          name: 'guest',
-          frame: f.frame,
-          z: f.z,
-          zoom: f.camera ** (1 / f.z),
-          read: readOf(linesOfHeight(0, 400, f.guestHead)),
-        }),
-      ]);
-      const values = scaleSamples(reads, 'lead').map((s) => Option.getOrElse(s.value, () => -1));
-      expect(values.map((v) => Number(v.toFixed(9)))).toEqual(
-        frames.map((f) =>
-          Number(
-            (f.guestHead / (f.leadHead * (1 / f.z) * (f.camera ** (1 / f.z) / f.camera))).toFixed(
-              9,
-            ),
-          ),
-        ),
+      const { planned, figures, shares } = scaleCase(seed);
+      const samples = scaleSamples(planned, figures, 'lead');
+      expect(samples.map((s) => Number(Option.getOrElse(s.value, () => -1).toFixed(9)))).toEqual(
+        shares.map((s) => Number(s.toFixed(9))),
       );
-      const verdict = verdictOf(BARS, { ...ALL_PASS, scale: scaleSamples(reads, 'lead') });
-      expect(verdict.checks.find((c) => c.id === 'scale')?.pass).toBe(
-        frames.every((f) => Math.abs(f.share - 1) <= 0.05),
+      expect(verdictOf(BARS, { ...ALL_PASS, scale: samples }).checks[4]?.pass).toBe(
+        shares.every((s) => Math.abs(s - 1) <= 0.05),
       );
     }
   });
 
-  test("fails a guest steady against the lead's median but off the same frame's lead (round 1, M1)", () => {
-    const reads = [95.1, 100, 100].flatMap((lead, frame) => [
-      frameRead({ name: 'lead', frame, read: readOf(linesOfHeight(0, 400, lead)) }),
-      frameRead({ name: 'guest', frame, read: readOf(linesOfHeight(0, 400, 104.9)) }),
+  test("reads every planned frame, a figure cut off by the frame's edge or turning included, and fails a guest steady against the lead's median head but off the same frame's lead (round 1, M1)", () => {
+    const lead = {
+      name: 'lead',
+      z: 1,
+      heads: new Map([
+        ['a', Option.some(95.1)],
+        ['b', Option.some(100)],
+      ]),
+    };
+    const guest = { name: 'guest', z: 1, heads: new Map([['n', Option.some(104.9)]]) };
+    const planned = ['a', 'b', 'b'].map((cell, index) =>
+      plannedAt(index, 1, [
+        posed({ name: 'lead', cell, scale: 1, x: -400 }),
+        posed({ name: 'guest', cell: 'n', scale: 1 }),
+      ]),
+    );
+    const samples = scaleSamples(planned, [lead, guest], 'lead');
+    expect(
+      samples.map((s) => [s.at, Number(Option.getOrElse(s.value, () => -1).toFixed(9))]),
+    ).toEqual([
+      ['guest frame 0 (n; lead a)', Number((104.9 / 95.1).toFixed(9))],
+      ['guest frame 1 (n; lead b)', 1.049],
+      ['guest frame 2 (n; lead b)', 1.049],
     ]);
-    const samples = scaleSamples(reads, 'lead');
-    expect(samples[0]).toEqual({ at: 'guest frame 0', value: Option.some(104.9 / 95.1) });
     expect(verdictOf(BARS, { ...ALL_PASS, scale: samples }).passed).toBe(BARS.length - 1);
   });
 
-  test('skips a frame where the guest or the lead is squashed or cut off, and reads unread where either head is not read or a guest has no such frame', () => {
-    const noHead: Lines = { ...linesOfHeight(0, 400, 100), head: Option.none() };
-    const reads = [
-      frameRead({ name: 'lead', frame: 0, read: readOf(linesOfHeight(0, 400, 100)) }),
-      frameRead({ name: 'g', frame: 0, read: readOf(linesOfHeight(0, 400, 1), false) }),
-      frameRead({ name: 'lead', frame: 1, squashed: true, read: readOf(linesOfHeight(0, 400, 1)) }),
-      frameRead({ name: 'g', frame: 1, read: readOf(linesOfHeight(0, 400, 1)) }),
-      frameRead({ name: 'lead', frame: 2, read: readOf(linesOfHeight(0, 400, 100)) }),
-      frameRead({ name: 'g', frame: 2, read: readOf(noHead) }),
-      frameRead({ name: 'lead', frame: 3, read: readOf(noHead) }),
-      frameRead({ name: 'g', frame: 3, read: readOf(linesOfHeight(0, 400, 100)) }),
-      frameRead({ name: 'lead', frame: 4, read: readOf(linesOfHeight(0, 400, 100)) }),
-      frameRead({ name: 'h', frame: 4, squashed: true, read: readOf(linesOfHeight(0, 400, 100)) }),
-    ];
-    expect(scaleSamples(reads, 'lead')).toEqual([
-      { at: 'g frame 2: no head read, or no head of lead', value: Option.none() },
-      { at: 'g frame 3: no head read, or no head of lead', value: Option.none() },
-      { at: 'h: no frame where it and lead lie whole and unsquashed', value: Option.none() },
+  test("reads unread where a cell's head was not read at its sheet's size, the guest's or the lead's, and where a figure's sheet has no such cell", () => {
+    const lead = {
+      name: 'lead',
+      z: 1,
+      heads: new Map([
+        ['a', Option.some(100)],
+        ['x', Option.none()],
+      ]),
+    };
+    const guest = {
+      name: 'g',
+      z: 1,
+      heads: new Map([
+        ['a', Option.some(100)],
+        ['x', Option.none()],
+      ]),
+    };
+    const planned = [
+      ['a', 'x'],
+      ['x', 'a'],
+      ['a', 'missing'],
+      ['a', 'a'],
+    ].map(([l = '', g = ''], index) =>
+      plannedAt(index, 1, [
+        posed({ name: 'lead', cell: l, scale: 1 }),
+        posed({ name: 'g', cell: g, scale: 1 }),
+      ]),
+    );
+    expect(scaleSamples(planned, [lead, guest], 'lead')).toEqual([
+      { at: "g frame 0 (x; lead a): no head read in its cell or the lead's", value: Option.none() },
+      { at: "g frame 1 (a; lead x): no head read in its cell or the lead's", value: Option.none() },
+      {
+        at: "g frame 2 (missing; lead a): no head read in its cell or the lead's",
+        value: Option.none(),
+      },
+      { at: 'g frame 3 (a; lead a)', value: Option.some(1) },
     ]);
   });
+});
+
+describe('scaleSamples on the feast courtyard', () => {
+  it.effect(
+    "reads frame 17's man against the lead's side cell read at its sheet's size, 151 of his sheet's 158, where the render read his head 189 for 146 (round 2), and every frame within the bar",
+    () =>
+      Effect.gen(function* () {
+        const figures = yield* loadFigures(CAST, feastCourtyard);
+        const sheets = headsOf(figures);
+        const planned = timesOf(feastCourtyard).map((t, index) => ({
+          index,
+          frame: frameAt(feastCourtyard, sheets, t),
+        }));
+        const scaled = figures.map((f) => ({ name: f.figure.name, z: f.layer.z, heads: f.heads }));
+        const lead = figures.find((f) => f.figure.name === 'lead');
+        const man = figures.find((f) => f.figure.name === 'man');
+        expect([lead?.heads.get('side'), lead?.head, man?.heads.get('neutral'), man?.head]).toEqual(
+          [Option.some(151), 158, Option.some(303), 303],
+        );
+        const samples = scaleSamples(planned, scaled, 'lead');
+        const at17 = samples.find((s) => s.at.startsWith('man frame 17 '));
+        expect(at17?.at).toBe('man frame 17 (neutral; lead side)');
+        expect(Option.getOrElse(at17?.value ?? Option.none(), () => -1)).toBeCloseTo(158 / 151, 9);
+        expect(samples).toHaveLength(2 * planned.length);
+        expect(verdictOf(BARS, { ...ALL_PASS, scale: samples }).passed).toBe(BARS.length);
+      }).pipe(Effect.provide(BunServices.layer)),
+  );
 });
 
 describe('heightSamples', () => {
@@ -352,7 +460,6 @@ describe('heightSamples', () => {
         frameRead({
           name: 'f',
           frame: f.frame,
-          z,
           zoom: f.plane,
           read: readOf(linesOfHeight(0, Math.round(height * f.own * f.plane) - 1, 20)),
         }),
