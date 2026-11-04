@@ -27,6 +27,7 @@ import {
   snapped,
   splitSheet,
   tidied,
+  withHeadOf,
 } from './sheet.ts';
 
 const INK: Rgb = [30, 20, 15];
@@ -1435,5 +1436,102 @@ describe('blinkOf (critique 2, items 3 and 4)', () => {
     const bare = art(['kkk', 'ksk', 'kkk'], FIGURE_KEY);
     expect(Result.isFailure(blinkOf(bare, open.raster, paints))).toBe(true);
     expect(Result.isFailure(blinkOf(open.raster, bare, paints))).toBe(true);
+  });
+});
+
+/** A generated face's width, ring to ring, read from its inside: the face set `dx` off its place. */
+const faceWidthOf = (f: { readonly inside: ReadonlySet<number> }, dx: number): number =>
+  Math.max(...[...f.inside].map((q) => q % FACE_W)) - (20 + dx) + 2;
+
+/** Paints `c` (rgba) at every pixel of `r` in columns `x0..x1` and rows `y0..y1`, inclusive, that `at` admits. */
+const fill = (
+  r: Raster,
+  [x0, x1, y0, y1]: readonly [number, number, number, number],
+  c: (x: number, y: number) => ReadonlyArray<number>,
+  at: (x: number, y: number) => boolean = () => true,
+) => {
+  for (let y = y0; y <= y1; y++)
+    for (let x = x0; x <= x1; x++) if (at(x, y)) r.rgba.set(c(x, y), (y * r.width + x) * 4);
+};
+
+/**
+ * One generated case of a worn head: a body face and a head face of one
+ * size set off from each other, the head's crown cut at its two corners
+ * `cut` px deep; half the bodies hold a hand ringed in ink beside the face
+ * and a sleeve across the crown's right corner. Answers the body, the head
+ * and the picture wearing it should give: the head's drawn pixels landed
+ * aligned on the body's face, its cut corners clear but where the sleeve
+ * reaches in, every other pixel the body's.
+ */
+const wornCase = (seed: number) => {
+  const draw = rng(seed + 500);
+  const int = (a: number, b: number) => a + Math.floor(draw() * (b - a + 1));
+  const [bx, by, hx, cut] = [int(-4, 4), int(0, 2), int(-4, 4), int(2, 6)];
+  const hy = by + int(0, 2);
+  const hand = draw() < 0.5;
+  const plain = { lower: INK, cheek: false };
+  const body = faceFigure(rng(seed), { ...plain, closed: false, dx: bx, dy: by }).raster;
+  const headFace = faceFigure(rng(seed), { ...plain, closed: true, dx: hx, dy: hy });
+  const head = headFace.raster;
+  const width = faceWidthOf(headFace, hx);
+  const [hfx, bfx] = [20 + hx, 20 + bx];
+  const clear = () => [0, 0, 0, 0];
+  fill(head, [hfx, hfx + width - 1, 0, cut - 1], clear, (x, y) => x - hfx < cut - y);
+  fill(head, [hfx, hfx + width - 1, 0, cut - 1], clear, (x, y) => hfx + width - 1 - x < cut - y);
+  if (hand) {
+    const [x0, y0] = [bfx + width, 4 + by + 20];
+    fill(body, [x0, x0 + 10, y0, y0 + 10], (x, y) => [
+      ...([SKIN, INK][Number(y === y0 || y === y0 + 10 || x === x0 + 10)] ?? INK),
+      255,
+    ]);
+    fill(body, [x0 - cut, x0 + 6, 0, cut - 1], () => [...ROBE, 255]);
+  }
+  const want: Raster = { ...body, rgba: new Uint8Array(body.rgba) };
+  const [ox, oy] = [bx - hx, by - hy];
+  const landed = (x: number, y: number) => {
+    const q = ((y - oy) * FACE_W + x - ox) * 4;
+    return [...head.rgba.subarray(q, q + 4)];
+  };
+  const shows = (x: number, y: number) =>
+    (landed(x, y)[3] ?? 0) > 0 || !hand || x - ox < hfx + width / 2;
+  fill(
+    want,
+    [hfx + ox, hfx + ox + width - 1, 0, 4 + hy + head.height - 60 - 2 + oy],
+    landed,
+    shows,
+  );
+  return { body, head, want: want.rgba };
+};
+
+describe('withHeadOf (critique 3, items 2 and 6)', () => {
+  const paints = paintsOf(DRESSED);
+
+  test("over generated faces, the worn head set off from the body's and cut at its crown's corners, the body holding a hand beside its face or not: the worn head lands aligned on the body's face, the body's own head left showing in its box is cleared, and every other pixel, the hand too, is the body's", () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const { body, head, want } = wornCase(seed);
+      const got = Result.map(withHeadOf(body, head, paints), (r) => [...r.rgba].join());
+      expect([seed, got]).toEqual([seed, Result.succeed([...want].join())]);
+    }
+  });
+
+  test("refuses a head whose face is wider or taller by more than a pixel than the body's, a head turned or tilted, and a cell that reads no face", () => {
+    const plain = { closed: false, dx: 0, dy: 0, lower: INK, cheek: false };
+    const faces = Array.from({ length: 20 }, (_, k) => faceFigure(rng(k + 1), plain));
+    const narrow = faces[0] ?? faceFigure(rng(1), plain);
+    const sizeOf = (f: typeof narrow) => [faceWidthOf(f, 0), f.raster.height - 60] as const;
+    const [w0, h0] = sizeOf(narrow);
+    const wider = faces.filter((f) => Math.abs(sizeOf(f)[0] - w0) > 1 && sizeOf(f)[1] === h0);
+    const taller = faces.filter((f) => sizeOf(f)[0] === w0 && Math.abs(sizeOf(f)[1] - h0) > 1);
+    const near = faces.filter(
+      (f) => Math.abs(sizeOf(f)[0] - w0) <= 1 && Math.abs(sizeOf(f)[1] - h0) <= 1,
+    );
+    const bare = art(['kkk', 'krk', 'kkk'], FIGURE_KEY);
+    expect([wider.length > 0, taller.length > 0 || near.length > 0]).toEqual([true, true]);
+    for (const f of [...wider, ...taller])
+      expect(Result.isFailure(withHeadOf(narrow.raster, f.raster, paints))).toBe(true);
+    for (const f of near)
+      expect(Result.isSuccess(withHeadOf(narrow.raster, f.raster, paints))).toBe(true);
+    expect(Result.isFailure(withHeadOf(bare, narrow.raster, paints))).toBe(true);
+    expect(Result.isFailure(withHeadOf(narrow.raster, bare, paints))).toBe(true);
   });
 });

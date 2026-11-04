@@ -1355,6 +1355,111 @@ export const blinkOf = (
     }),
   );
 
+/** A head could not be worn: why. */
+export class HeadRefused extends Schema.TaggedError<HeadRefused>()('HeadRefused', {
+  reason: Schema.String,
+}) {
+  override get message() {
+    return `no head: ${this.reason}`;
+  }
+}
+
+/** A figure's head: the opaque pixels joined to its face from its crown down to its chin (the face's last row), their box, and the face's box. */
+interface Head {
+  readonly px: ReadonlyArray<number>;
+  readonly box: Box;
+  readonly face: Box;
+}
+
+/** A figure's head (`Head`), none when it reads no face. */
+const headOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<Head> =>
+  Option.flatMap(linesOf(r, paints), (lines) =>
+    Option.map(faceOf(r, paints), (face) => {
+      const chin = face.box.y + face.box.height - 1;
+      const px = regionAt(
+        r,
+        face.mask.indexOf(1),
+        (q) => {
+          const y = Math.floor(q / r.width);
+          return y >= lines.crown && y <= chin && alphaAt(r, q) > 0;
+        },
+        around4,
+      );
+      return { px, box: boxOf(px, r.width), face: face.box };
+    }),
+  );
+
+/** The head `r` draws as `paints` read it, inclusive box; none when it reads no face. */
+export const headBoxOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<Box> =>
+  Option.map(headOf(r, paints), (h) => h.box);
+
+/**
+ * The cell `body` wearing the head `head` draws (critique 3, items 2 and
+ * 6): the worn head's pixels pasted over `body`, moved so its face's
+ * middle lands on `body`'s face's middle, as `blinkOf` lands a closed eye;
+ * then each piece of `body`'s own head left showing inside the box the
+ * worn head lands in is cleared, unless it reaches out of the box into
+ * `body`'s head rows, a raised sleeve or a hand beside the head. Every
+ * pixel outside that box is `body`'s, so the keys of one view draw one head
+ * and a key that changes only its face keeps its body. Refused when either
+ * reads no face, or when the faces differ by more than a pixel in width or
+ * height: a head turned or tilted, which an aligned paste would cut.
+ */
+export const withHeadOf = (
+  body: Raster,
+  head: Raster,
+  paints: ReadonlyArray<Paint>,
+): Result.Result<Raster, HeadRefused> => {
+  const read = (r: Raster, which: string) =>
+    Result.fromOption(headOf(r, paints), () =>
+      HeadRefused.make({ reason: `the ${which} reads no face` }),
+    );
+  return Result.flatMap(read(body, 'body cell'), (b) =>
+    Result.flatMap(read(head, 'head cell'), (h) => {
+      const [dw, dh] = [b.face.width - h.face.width, b.face.height - h.face.height];
+      if (Math.abs(dw) > 1 || Math.abs(dh) > 1)
+        return Result.fail(
+          HeadRefused.make({
+            reason: `the faces differ (${h.face.width}×${h.face.height} worn on ${b.face.width}×${b.face.height}): a head turned or tilted`,
+          }),
+        );
+      const [bx, by] = middleOf(b.face);
+      const [hx, hy] = middleOf(h.face);
+      const [ox, oy] = [Math.round(bx - hx), Math.round(by - hy)];
+      const inBox = (q: number) => {
+        const [x, y] = [q % body.width, Math.floor(q / body.width)];
+        return (
+          x >= h.box.x + ox &&
+          y >= h.box.y + oy &&
+          x < h.box.x + h.box.width + ox &&
+          y < h.box.y + h.box.height + oy
+        );
+      };
+      const rgba = body.rgba.slice();
+      const worn = new Set<number>();
+      for (const q of h.px) {
+        const [x, y] = [(q % head.width) + ox, Math.floor(q / head.width) + oy];
+        if (x < 0 || y < 0 || x >= body.width || y >= body.height) continue;
+        worn.add(y * body.width + x);
+        rgba.set(head.rgba.subarray(q * 4, q * 4 + 4), (y * body.width + x) * 4);
+      }
+      const own = new Set(b.px);
+      const left = new Set(b.px.filter((q) => inBox(q) && !worn.has(q)));
+      const seen = new Uint8Array(body.width * body.height);
+      for (const q0 of left) {
+        if (seen[q0] === 1) continue;
+        seen[q0] = 1;
+        const piece = flood(body, seen, q0, (q) => left.has(q), around4);
+        const attached = piece.some((q) =>
+          around4(q, body.width, body.height).some((m) => own.has(m) && !inBox(m)),
+        );
+        if (!attached) for (const q of piece) rgba.fill(0, q * 4, q * 4 + 4);
+      }
+      return Result.succeed({ width: body.width, height: body.height, rgba });
+    }),
+  );
+};
+
 /** The share of a picture taken as its ink: its darkest 2 % of opaque pixels. */
 const INK_SHARE = 0.02;
 

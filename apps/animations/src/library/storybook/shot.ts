@@ -95,6 +95,15 @@ export interface Figure<K extends string = string> {
   readonly sheet: string;
   readonly at: { readonly x: number; readonly ground: number };
   readonly spans: readonly [Span<K>, ...ReadonlyArray<Span<K>>];
+  /** Keys drawn as one cell's body wearing another's head (`withHeadOf`): the keys of one view share its head, a key that changes only its face keeps the neutral body. */
+  readonly worn?: ReadonlyArray<Worn<K>>;
+}
+
+/** Key `key` drawn as cell `body` wearing the head of cell `head`. */
+export interface Worn<K extends string = string> {
+  readonly key: K;
+  readonly head: K;
+  readonly body: K;
 }
 
 export type Item = Plate | Figure;

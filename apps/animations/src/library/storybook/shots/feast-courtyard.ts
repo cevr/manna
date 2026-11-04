@@ -71,6 +71,7 @@ export const feastCourtyard: Shot = {
           member: 'feast-guest-man',
           sheet: 'feast-courtyard',
           at: { x: 670, ground: GUESTS_GROUND },
+          worn: [{ key: 'smile', head: 'smile', body: 'neutral' }],
           spans: [
             blinkingHold(0, 4.6, 'neutral', 'neutralBlink'),
             blinkingHold(4.6, 7, 'smile', 'neutralBlink'),
@@ -82,6 +83,7 @@ export const feastCourtyard: Shot = {
           member: 'feast-guest-woman',
           sheet: 'feast-courtyard',
           at: { x: 875, ground: GUESTS_GROUND },
+          worn: [{ key: 'smile', head: 'smile', body: 'neutral' }],
           spans: [
             blinkingHold(0, 4.9, 'neutral', 'neutralBlink'),
             blinkingHold(4.9, 7.3, 'smile', 'neutralBlink'),
@@ -106,6 +108,11 @@ export const feastCourtyard: Shot = {
           member: 'lead-feast',
           sheet: 'feast-courtyard',
           at: { x: 320, ground: 690 },
+          worn: (['lift', 'offer', 'wave-1', 'wave-2'] as const).map((key) => ({
+            key,
+            head: 'front' as const,
+            body: key,
+          })),
           spans: [
             walk({ from: 0, to: 3, cell: 'side', x0: -140, x1: 320, bob: 5, rate: 2.6 }),
             turn(3.05, 0.34, 'side', 'threeQuarter'),

@@ -19,6 +19,7 @@ import {
   sheetHeadOf,
   splitSheet,
   type Split,
+  withHeadOf,
 } from './sheet.ts';
 import { drawnKeyOf, type Figure, figuresOf, type Layer, type Shot } from './shot.ts';
 
@@ -517,15 +518,36 @@ const blinksOf = (f: Figure, cells: ReadonlyMap<string, Raster>, paints: Readonl
       }),
   ).pipe(Effect.map((pairs) => new Map(pairs)));
 
-/** Every figure of `shot` read from the cast: each its one sheet's record, palette, stored cells, the blinks its holds show and its cells' lines; fails on a sheet whose cells read no head and on a blink that cannot be built. */
+/** A figure's cells as it draws them: its stored cells, each key it wears another head on (`Figure.worn`) built from the stored cells (`withHeadOf`); fails on a cell its sheet lacks or a head that cannot be worn. */
+const wornCellsOf = (
+  f: Figure,
+  stored: ReadonlyMap<string, Raster>,
+  paints: ReadonlyArray<Paint>,
+) =>
+  Effect.forEach(f.worn ?? [], ({ key, head, body }) =>
+    Effect.gen(function* () {
+      const [b, h] = [stored.get(body), stored.get(head)];
+      if (!b || !h)
+        return yield* StoreFailed.make({ reason: `${f.member} has no cell ${body} or ${head}` });
+      const built = withHeadOf(b, h, paints);
+      if (Result.isFailure(built))
+        return yield* StoreFailed.make({
+          reason: `${f.member}'s ${key} (${head}'s head on ${body}): ${built.failure.message}`,
+        });
+      return [key, built.success] as const;
+    }),
+  ).pipe(Effect.map((pairs) => new Map([...stored, ...pairs])));
+
+/** Every figure of `shot` read from the cast: each its one sheet's record, palette, cells as it draws them (`wornCellsOf`), the blinks its holds show and its cells' lines; fails on a sheet whose cells read no head, on a head that cannot be worn and on a blink that cannot be built. */
 export const loadFigures = Effect.fn('Storybook.loadFigures')(function* (cast: string, shot: Shot) {
   return yield* Effect.forEach(figuresOf(shot), ({ layer, figure: f }) =>
     Effect.gen(function* () {
       const record = yield* readRecord(cast, f.member, f.sheet);
       const paints = paintsOf(yield* memberPalette(cast, f.member));
-      const cells = new Map<string, Raster>();
+      const stored = new Map<string, Raster>();
       for (const c of record.cells)
-        cells.set(c.key, yield* readCell(cast, f.member, f.sheet, c.key));
+        stored.set(c.key, yield* readCell(cast, f.member, f.sheet, c.key));
+      const cells = yield* wornCellsOf(f, stored, paints);
       const lines = new Map([...cells].map(([key, cell]) => [key, linesOf(cell, paints)] as const));
       const heads = new Map(
         [...lines].map(([key, l]) => [key, Option.flatMap(l, (x) => x.head)] as const),

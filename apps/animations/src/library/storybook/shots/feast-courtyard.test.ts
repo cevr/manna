@@ -4,7 +4,7 @@ import { Effect, Option } from 'effect';
 import { describe, expect, it, test } from 'effect-bun-test';
 import sharp from 'sharp';
 import { anchorOf, APP } from '../render.ts';
-import { type Box, eyeBoxesOf, faceBoxOf, hexOf, nearestOf, type Rgb, rgbAt } from '../sheet.ts';
+import { type Box, eyeBoxesOf, faceBoxOf, headBoxOf, hexOf, type Rgb, rgbAt } from '../sheet.ts';
 import {
   type CameraKey,
   drawnKeyOf,
@@ -183,6 +183,70 @@ const picturesOver = Effect.fnUntraced(function* (shot: Shot) {
   return pictures;
 });
 
+/** Whether pixel `q` of `r` lies in it and is not clear. */
+const opaqueAt = (r: Raster, q: number): boolean =>
+  q >= 0 && q < r.width * r.height && (r.rgba[q * 4 + 3] ?? 0) > 0;
+
+/** How many of `loose` pixels of `cell` join no opaque pixel outside `inBox` through opaque pixels of `loose` (4-connected): pieces left of an old head, not a sleeve or a hand reaching in. */
+const unjoined = (cell: Raster, loose: ReadonlySet<number>, inBox: (q: number) => boolean) => {
+  const reached = new Set<number>();
+  for (const q0 of loose) {
+    if (reached.has(q0)) continue;
+    const { piece, out } = pieceOf(cell, q0, loose, inBox);
+    if (out) for (const q of piece) reached.add(q);
+  }
+  return loose.size - reached.size;
+};
+
+/** The piece of `loose` pixels of `cell` 4-connected to `q0`, and whether it touches an opaque pixel outside `inBox`. */
+const pieceOf = (
+  cell: Raster,
+  q0: number,
+  loose: ReadonlySet<number>,
+  inBox: (q: number) => boolean,
+) => {
+  const piece = [q0];
+  const held = new Set(piece);
+  let out = false;
+  for (let i = 0; i < piece.length; i++)
+    for (const m of [1, -1, cell.width, -cell.width].map((d) => (piece[i] ?? 0) + d)) {
+      if (held.has(m) || !opaqueAt(cell, m)) continue;
+      out ||= !inBox(m);
+      if (inBox(m) && loose.has(m)) {
+        held.add(m);
+        piece.push(m);
+      }
+    }
+  return { piece, out };
+};
+
+/** `cell` against `front` inside `front`'s head box, aligned on their faces: how many head pixels of `front` it draws otherwise, and how many pixels it draws where `front` is clear that join nothing outside the box (`unjoined`); none when either reads no face. */
+const headAgainst = (front: Raster, cell: Raster, paints: StoredFigure['paints']) =>
+  Option.all([headBoxOf(front, paints), faceBoxOf(front, paints), faceBoxOf(cell, paints)]).pipe(
+    Option.map(([head, from, to]) => {
+      const [ox, oy] = [
+        Math.round(to.x + (to.width - 1) / 2 - from.x - (from.width - 1) / 2),
+        Math.round(to.y + (to.height - 1) / 2 - from.y - (from.height - 1) / 2),
+      ];
+      const inBox = (q: number) => {
+        const [u, v] = [(q % cell.width) - ox, Math.floor(q / cell.width) - oy];
+        return u >= head.x && v >= head.y && u < head.x + head.width && v < head.y + head.height;
+      };
+      let headDiffers = 0;
+      const loose = new Set<number>();
+      for (let y = head.y; y < head.y + head.height; y++)
+        for (let x = head.x; x < head.x + head.width; x++) {
+          const [p, q] = [y * front.width + x, (y + oy) * cell.width + x + ox];
+          const same =
+            front.rgba.subarray(p * 4, p * 4 + 4).join() ===
+            cell.rgba.subarray(q * 4, q * 4 + 4).join();
+          if (opaqueAt(front, p) && !same) headDiffers += 1;
+          if (!opaqueAt(front, p) && opaqueAt(cell, q)) loose.add(q);
+        }
+      return { headDiffers, loose: unjoined(cell, loose, inBox) };
+    }),
+  );
+
 /** What covers each figure's face in every frame of `shot` (`coversIn`). */
 const coversOf = (shot: Shot, pictures: ReadonlyMap<string, Coverage>): ReadonlyArray<string> =>
   timesOf(shot).flatMap((t, i) => coversIn(shot, frameAt(shot, heads, t), i, pictures));
@@ -341,24 +405,65 @@ describe('the feast courtyard as drawn', () => {
     );
   });
 
-  test("paints the man's smile eyes all ink, where the drawing painted their lower halves in stool and mantle paint (critique 2, item 2)", () => {
+  test("paints the man's smile eyes all ink, where the drawing painted their lower halves in stool and mantle paint, so each reads as one eye of its full height (critique 2, item 2)", () => {
     const man = byName.get('man');
     const smile = man?.cells.get('smile');
     expect(Option.isSome(Option.fromUndefinedOr(smile))).toBe(true);
     if (!man || !smile) return;
-    const near = nearestOf(man.paints);
-    const misses = [
-      [165, 170],
-      [220, 224],
-    ].flatMap(([x0 = 0, x1 = 0]) =>
-      Array.from({ length: 5 }, (_, k) => 316 + k).flatMap((y) =>
-        Array.from({ length: x1 - x0 + 1 }, (_, k) => x0 + k).flatMap((x) => {
-          const { index, distance } = near(rgbAt(smile, y * smile.width + x));
-          if (index === 0 && distance === 0) return [];
-          return [`(${x},${y}) is ${man.paints[index]?.part ?? 'ink'}`];
-        }),
-      ),
+    const eyes = Option.map(eyeBoxesOf(smile, man.paints), (boxes) =>
+      boxes.map((b) => [b.width, b.height]),
     );
-    expect(misses).toEqual([]);
+    expect(eyes).toEqual(
+      Option.some([
+        [21, 31],
+        [23, 29],
+      ]),
+    );
+  });
+
+  test("draws one head in every key of the lead's front view: inside the front cell's head box, aligned on the face, each key draws the front cell's head pixel for pixel, and draws nothing past it but the body reaching in from outside the box, a raised sleeve or hand (critique 3, item 2)", () => {
+    const lead = byName.get('lead');
+    const front = lead?.cells.get('front');
+    expect(Option.isSome(Option.fromUndefinedOr(front))).toBe(true);
+    if (!lead || !front) return;
+    const differing = ['lift', 'offer', 'wave-1', 'wave-2'].map((key) => [
+      key,
+      headAgainst(front, lead.cells.get(key) ?? front, lead.paints),
+    ]);
+    expect(differing).toEqual(
+      ['lift', 'offer', 'wave-1', 'wave-2'].map((k) => [
+        k,
+        Option.some({ headDiffers: 0, loose: 0 }),
+      ]),
+    );
+  });
+
+  test("keeps each guest's neutral body under the smile: the drawn smile's pixels outside its head box are the neutral cell's (critique 3, item 6)", () => {
+    const differing = ['man', 'woman'].map((name) => {
+      const f = byName.get(name);
+      const [neutral, smile] = [f?.cells.get('neutral'), f?.cells.get('smile')];
+      if (!f || !neutral || !smile) return [name, Option.none()];
+      return [
+        name,
+        Option.map(headBoxOf(smile, f.paints), (head) => {
+          let n = 0;
+          for (let q = 0; q < smile.width * smile.height; q++) {
+            const [x, y] = [q % smile.width, Math.floor(q / smile.width)];
+            const inHead =
+              x >= head.x && y >= head.y && x < head.x + head.width && y < head.y + head.height;
+            const same =
+              smile.width === neutral.width &&
+              smile.rgba.subarray(q * 4, q * 4 + 4).join() ===
+                neutral.rgba.subarray(q * 4, q * 4 + 4).join();
+            if (!inHead && !same) n += 1;
+          }
+          return n;
+        }),
+      ];
+    });
+    expect(differing).toEqual([
+      ['man', Option.some(0)],
+      ['woman', Option.some(0)],
+    ]);
   });
 });
