@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish, effect/noGlobals -- the harness drives the service from plain branches, reads a missing store key as undefined, and names each failing history as JSON text. */
+/* oxlint-disable effect/noNullish -- the harness reads a missing store key as undefined, as the store answers it, and settles its held stops with no value. */
 
 /**
  * The off switch in command order: whatever order the source's stops
