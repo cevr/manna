@@ -11,7 +11,7 @@ import { Clock, Effect, Exit, Fiber, Option } from 'effect';
 import { type ChildProcess, ChildProcessSpawner } from 'effect/process';
 import * as TestClock from 'effect/testing/TestClock';
 
-import { type Identity, Os, type OsMembers, type Signal, stop } from './os.ts';
+import { type Identity, Os, stop } from './os.ts';
 
 const PID = 4_000_123;
 const START = 'Tue Nov 3 21:00:00 2026';
@@ -28,7 +28,12 @@ type Call =
       readonly pid: number;
       readonly now: Option.Option<string>;
     }
-  | { readonly _tag: 'signal'; readonly at: number; readonly pid: number; readonly signal: Signal }
+  | {
+      readonly _tag: 'signal';
+      readonly at: number;
+      readonly pid: number;
+      readonly signal: 'SIGTERM' | 'SIGKILL';
+    }
   | { readonly _tag: 'tool'; readonly at: number; readonly line: string };
 
 /** What a read of `pid` finds: the holder of the scripted pid, none for any other, or the recorded start for every pid (`any`). */
@@ -47,7 +52,7 @@ const lineOf = (command: ChildProcess.Command) => {
 const scripted = (behaviour: Behaviour | 'any', holder: Option.Option<string>) => {
   const calls: Array<Call> = [];
   let now = holder;
-  const os: OsMembers = {
+  const os: (typeof Os)['Service'] = {
     spawn: () => Effect.die('the stop rule starts nothing'),
     self: Effect.die('the stop rule reads no identity of its own'),
     started: (pid) =>

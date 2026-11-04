@@ -58,7 +58,7 @@ import { ChildProcessSpawner } from 'effect/process';
 import { runSim } from '../command.ts';
 import { DriveLive, type Place } from '../drive.ts';
 import { ToolFailed } from '../errors.ts';
-import { Os, type OsMembers } from '../os.ts';
+import { Os } from '../os.ts';
 import { APP } from './contain.ts';
 
 export type StateKey = 'a' | 'b';
@@ -579,7 +579,7 @@ const signalled = (c: Ctx, pid: number) => {
   return true;
 };
 
-const osFor = (c: Ctx): OsMembers => {
+const osFor = (c: Ctx): (typeof Os)['Service'] => {
   const call = (name: string): Call => ({ kind: 'os', name, path: '' });
   const failure = (tool: string) => () =>
     ToolFailed.make({ tool, args: [], exitCode: 1, output: 'injected fault' });

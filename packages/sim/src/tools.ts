@@ -29,7 +29,7 @@ export const removed = (names: ReadonlyArray<string>): Vars =>
   Object.fromEntries(names.map((name) => [name, undefined]));
 
 /** Where a tool runs: its working folder, and variables over the caller's environment. */
-export interface Launch {
+interface Launch {
   readonly cwd?: string;
   readonly env?: Vars;
 }

@@ -22,7 +22,7 @@ const decode = Schema.decodeOption(SessionJson);
 export const recordFile = (state: string) => `${state}/session.json`;
 
 /** What the state's record file holds: its session when it decodes, none when it does not. */
-export interface Found {
+interface Found {
   readonly file: string;
   readonly session: Option.Option<Session>;
 }

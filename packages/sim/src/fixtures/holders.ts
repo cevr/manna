@@ -25,7 +25,7 @@ import { ChildProcessSpawner } from 'effect/process';
 
 import { ToolFailed } from '../errors.ts';
 import { acquire, release } from '../holder.ts';
-import { Os, type OsMembers } from '../os.ts';
+import { Os } from '../os.ts';
 
 interface Proc {
   readonly pid: number;
@@ -169,7 +169,7 @@ const fsFor = (w: World, a: Actor): FileSystem.FileSystem =>
     },
   });
 
-const osFor = (w: World, a: Actor): OsMembers => {
+const osFor = (w: World, a: Actor): (typeof Os)['Service'] => {
   const failure = () =>
     ToolFailed.make({ tool: 'ps', args: [], exitCode: 1, output: 'injected fault' });
   return {

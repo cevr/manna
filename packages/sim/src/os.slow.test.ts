@@ -13,7 +13,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Clock, Console, Duration, Effect, Fiber, FileSystem, Option } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
-import { type Identity, Os, type OsMembers, stop } from './os.ts';
+import { type Identity, Os, stop } from './os.ts';
 import { attempt, ready, type Vars } from './tools.ts';
 
 /** The timeout of a test that spawns `sh`, `ps` and `kill`: a loaded machine's spawns are slow (effect/requireSpawnBudget). */
@@ -101,7 +101,7 @@ const rawStart = (pid: number) =>
   );
 
 /** The live `Os`, with each signal's gap from the start of the read before it to its own end recorded in `gaps`. */
-const timed = (live: OsMembers, gaps: Array<number>): OsMembers => {
+const timed = (live: (typeof Os)['Service'], gaps: Array<number>): (typeof Os)['Service'] => {
   let readAt = 0;
   return {
     spawn: live.spawn,

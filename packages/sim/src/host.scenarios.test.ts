@@ -16,8 +16,17 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect } from 'effect';
 
-import { socketFolder } from './drive.ts';
 import { runScenario } from './fixtures/contain.ts';
+
+/** The socket folder the README names for a drive's child HOME: `/tmp/sim-` and the HOME's FNV-1a 64, as 16 hex digits. */
+const socketFolder = (home: string) => {
+  let hash = 0xcb_f2_9c_e4_84_22_23_25n;
+  for (const unit of home) {
+    hash ^= BigInt(unit.charCodeAt(0));
+    hash = (hash * 0x1_00_00_00_01_b3n) % 2n ** 64n;
+  }
+  return `/tmp/sim-${hash.toString(16).padStart(16, '0')}`;
+};
 
 const scenario = (name: string, setup: Parameters<typeof runScenario>[1]) =>
   Effect.promise(() => runScenario(name, setup));

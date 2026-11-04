@@ -20,13 +20,13 @@ export interface Identity {
   readonly started: string;
 }
 
-export type Signal = 'SIGTERM' | 'SIGKILL';
+type Signal = 'SIGTERM' | 'SIGKILL';
 
-export type OsError = ToolFailed | ToolMissing | Escaped;
+type OsError = ToolFailed | ToolMissing | Escaped;
 type Spawns = ChildProcessSpawner.ChildProcessSpawner;
 
 /** What the drive asks of the host's processes. */
-export interface OsMembers {
+interface OsMembers {
   /** Start `argv` as a process of its own that outlives the command: its pid and start time. */
   readonly spawn: (
     argv: ReadonlyArray<string>,
@@ -100,7 +100,7 @@ const BECOME = [
 ].join('\n');
 
 /** The tool and arguments `spawn` runs to start `argv`. */
-export const startCommand = (argv: ReadonlyArray<string>) =>
+const startCommand = (argv: ReadonlyArray<string>) =>
   ['/bin/sh', '-c', START, BECOME, ...argv] as const;
 
 /** The identity the child printed: its pid, and its start time in the canonical form (`startedLive`). */

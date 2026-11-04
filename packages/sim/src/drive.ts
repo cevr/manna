@@ -312,7 +312,7 @@ const digest = (text: string) => {
 };
 
 /** agent-browser's socket folder for the drivers' HOME `home`: short, under /tmp, one per HOME. */
-export const socketFolder = (home: string) => `/tmp/sim-${digest(home)}`;
+const socketFolder = (home: string) => `/tmp/sim-${digest(home)}`;
 
 /** The drivers' child environment for a drive: its HOME, its socket folder, and the variables over the caller's. */
 interface Drivers {

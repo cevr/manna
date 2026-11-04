@@ -36,8 +36,11 @@ import { ChildProcessSpawner } from 'effect/process';
 import { App, defineApp } from '../app.ts';
 import { runSim } from '../command.ts';
 import { Drive, type DriveMembers, DriveLive, type Outcome, type Place } from '../drive.ts';
-import { startCommand } from '../os.ts';
 import type { Platform } from '../result.ts';
+
+/** The start's two shell scripts stand in a plan by these names (`scriptless`). */
+const START = '<start>';
+const BECOME = '<become>';
 
 /** An app, and what this file expects of it, written here rather than taken from the driver. */
 export interface Case {
@@ -441,17 +444,19 @@ const stepsOf = (c: Case, n: number): ReadonlyArray<Step> => {
   const webSession = sessionOf(app, place, 'web');
   const read = `read ${place.state}/session.json`;
   const serve = [
-    ...startCommand([
-      'bun',
-      place.script,
-      'serve',
-      '--port',
-      String(port),
-      '--out',
-      out,
-      '--state',
-      place.state,
-    ]),
+    '/bin/sh',
+    '-c',
+    START,
+    BECOME,
+    'bun',
+    place.script,
+    'serve',
+    '--port',
+    String(port),
+    '--out',
+    out,
+    '--state',
+    place.state,
   ];
   const bootOptions = (platform: Platform) => ({
     platform,
@@ -762,6 +767,16 @@ const timeless = (argv: ReadonlyArray<string>) =>
     return arg;
   });
 
+/**
+ * A start (`/bin/sh -c <start> <become> argv…`) with its two scripts named,
+ * not spelled: they are the drive's own, run for real in `os.slow.test.ts`,
+ * so the plan holds their place and the server's argv after them.
+ */
+const scriptless = (argv: ReadonlyArray<string>) => {
+  if (argv[0] !== '/bin/sh' || argv[1] !== '-c' || argv.length < 4) return argv;
+  return [argv[0], argv[1], START, BECOME, ...argv.slice(4)];
+};
+
 /** Each path a step read or wrote lies under the place's app or state (its output is under its state). */
 const contained = (place: Place, entry: string) => {
   const path = entry.slice(entry.indexOf(' ') + 1);
@@ -792,7 +807,7 @@ const judge = (
   seen: Pick<World, 'runs' | 'touched'>,
 ) => {
   const problems: Array<string> = [];
-  const runs = seen.runs.map(timeless);
+  const runs = seen.runs.map((argv) => scriptless(timeless(argv)));
   if (encodeJson(runs) !== encodeJson(step.runs))
     problems.push(`${where}: ran ${encodeJson(runs)}, not ${encodeJson(step.runs)}`);
   if (encodeJson(seen.touched) !== encodeJson(step.touched))

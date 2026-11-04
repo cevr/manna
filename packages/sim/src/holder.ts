@@ -18,7 +18,7 @@ import { StateBusy } from './errors.ts';
 import { type Identity, Os, signalable } from './os.ts';
 
 /** A hold on a state: the holders folder and the generation this command created. */
-export interface Held {
+interface Held {
   readonly folder: string;
   readonly generation: number;
 }
