@@ -4,13 +4,15 @@
  * `started` reads the same start time again, whatever the caller's `TZ` and
  * locale; the stop rule leaves a process alive under a wrong recorded start
  * and ends it under the right one; `self` answers this test's own process;
- * and the gap from the start-time read to the signal it allows, over many
- * stops, is printed. Every tool runs through a spawner that records it, and
+ * a command that spawns (`fixtures/spawner.ts`) ends while its sleep runs
+ * on, the sleep holding no file but `/dev/null` on fds 0-2; and the gap
+ * from the start-time read to the signal it allows, over many stops, is
+ * printed. Every tool runs through a spawner that records it, and
  * every `kill` it ran named a pid this test's own spawn returned.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Clock, Console, Duration, Effect, Fiber, FileSystem, Option } from 'effect';
+import { Clock, Console, Duration, Effect, Fiber, FileSystem, Option, Path, Schema } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { type Identity, Os, stop } from './os.ts';
@@ -151,6 +153,35 @@ const until = (mark: string, wanted: boolean, seconds: number) =>
     ),
   );
 
+/** How long the sleep a spawning command starts runs: far past the bound that command has to end in. */
+const OUTLIVES = '20';
+
+/** How long a command that spawned through the live `Os` may take, from its start to its end. */
+const ENDS_MS = 8_000;
+
+const decodeIdentity = Schema.decodeUnknownEffect(
+  Schema.fromJsonString(Schema.Struct({ pid: Schema.Int, started: Schema.String })),
+);
+
+/** The open descriptors of `pid` (`lsof`, read only), each with the file it names. */
+const descriptors = (pid: number) =>
+  Effect.map(
+    attempt(
+      'lsof',
+      ['-nP', '-a', '-p', String(pid), '-d', '0-1023', '-F', 'fn'],
+      Duration.seconds(30),
+    ),
+    (done) => {
+      const open: Array<readonly [fd: number, name: string]> = [];
+      let fd = -1;
+      for (const line of done.output.split('\n')) {
+        if (line.startsWith('f')) fd = Number(line.slice(1));
+        if (line.startsWith('n')) open.push([fd, line.slice(1)]);
+      }
+      return open;
+    },
+  );
+
 /** A folder holding an executable `ps` that runs `body`, for a start's own start-time read. */
 const stubPs = (body: string) =>
   Effect.gen(function* () {
@@ -278,6 +309,39 @@ describe('the live Os', () => {
         yield* until(mark, true, 10).pipe(through(into));
         yield* Fiber.interrupt(spawning);
         yield* until(mark, false, 10).pipe(through(into));
+        expect(killed(into)).toEqual([]);
+      }),
+    SPAWNS_MS,
+  );
+
+  it.scopedLive.layer(BunServices.layer)(
+    'a command that spawns through the live Os ends while its child runs on, and the child shares no file with it: it holds fds 0-2 only, each /dev/null',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const os = yield* Os;
+        const into = seen();
+        const cwd = yield* fs.makeTempDirectoryScoped();
+        const script = path.join(import.meta.dirname, 'fixtures', 'spawner.ts');
+        const begun = yield* Clock.currentTimeMillis;
+        const done = yield* attempt('bun', [script, cwd, OUTLIVES], Duration.seconds(60)).pipe(
+          through(into),
+        );
+        const took = Number(yield* Clock.currentTimeMillis) - Number(begun);
+        expect(done.exitCode).toBe(0);
+        const owned = yield* decodeIdentity(done.output.trim());
+        into.spawned.add(owned.pid);
+        yield* Effect.addFinalizer(() => Effect.ignore(stop(owned).pipe(through(into))));
+        expect(took).toBeLessThan(ENDS_MS);
+        expect(yield* os.started(owned.pid).pipe(through(into))).toEqual(
+          Option.some(owned.started),
+        );
+        expect(yield* descriptors(owned.pid).pipe(through(into))).toEqual([
+          [0, '/dev/null'],
+          [1, '/dev/null'],
+          [2, '/dev/null'],
+        ]);
         expect(killed(into)).toEqual([]);
       }),
     SPAWNS_MS,

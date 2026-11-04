@@ -89,7 +89,10 @@ starts a child that reads its own start time (`ps -o lstart=`, read with
 reads the same whatever the caller's time zone and locale), prints its pid
 and that time, and waits. Only once the drive has read that identity does
 it answer `go` on the start's stdin, and only then does the child become
-`serve` (by `exec`: the same pid and start time). A failure before the
+`serve` (by `exec`: the same pid and start time). It first closes the
+start's output and sets its input to `/dev/null`, so `serve` holds only
+fds 0-2 and no file the booting command holds, and `boot` ends while
+`serve` runs. A failure before the
 answer (the start itself, the child's read, its line, the drive's read of
 it, the answer itself) closes the start's input unanswered, and the child
 ends itself: the boot fails typed, with nothing running and nothing
@@ -233,7 +236,9 @@ unrecorded, a window of at most three file writes; the spec accepts it.
   (`lint.slow.test.ts`), the live `Os` over `/bin/sleep`s the test starts
   itself and signals only while it holds them, and a start whose child
   cannot read its start time, or is interrupted while it reads, leaving no
-  process (`os.slow.test.ts`), the live start under `boot` and `down` with a
+  process, and a command that spawns (`src/fixtures/spawner.ts`) ending
+  while its sleep runs on, the sleep holding only `/dev/null` on fds 0-2
+  (`os.slow.test.ts`), the live start under `boot` and `down` with a
   typed failure or an interruption at each of its steps: a failure signals
   nothing, and an interruption is held until the record names the server,
   which one SIGTERM then stops (`spawn.slow.test.ts`), the holder over 4,000
@@ -262,5 +267,5 @@ value differs from every other and from any real app's; the contained
 host's tests use the hymnal's values in a scratch tree they remove. No test
 boots a device or touches a file outside its own scratch folder. The tools
 a test runs are oxlint (`lint.slow.test.ts`) and, in `os.slow.test.ts`,
-`/bin/sleep`, `ps` and `kill`, which signals only a sleep that test started
-and still holds.
+`/bin/sleep`, `ps`, `lsof` (read only), `bun` (its own spawning fixture)
+and `kill`, which signals only a sleep that test started and still holds.

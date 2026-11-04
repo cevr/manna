@@ -90,13 +90,18 @@ const START = [
  * becomes `argv` (the same process, so the same pid and start time) only
  * once it reads `go`; when the read fails, the line cannot be printed, or
  * any other answer or the end of input comes, it ends itself, so nothing
- * runs that this command does not know by its identity.
+ * runs that this command does not know by its identity. Before it becomes
+ * `argv` it closes this command's stdout and sets its input to `/dev/null`
+ * in an `exec` of their own, so `argv` holds no file this command holds and
+ * this command can end while it runs: `/bin/sh` (bash 3.2) keeps a copy of
+ * a descriptor closed on the line that runs a program open in that program.
  */
 const BECOME = [
   `started=$(LC_ALL=C TZ=UTC ps -o lstart= -p "$$") && [ -n "$started" ] || exit 3`,
   `printf '%s %s\\n' "$$" "$started" >&3 || exit 3`,
   'IFS= read -r go && [ "$go" = go ] || exit 3',
-  'exec "$0" "$@" 3>&- </dev/null',
+  'exec 3>&- </dev/null',
+  'exec "$0" "$@"',
 ].join('\n');
 
 /** The tool and arguments `spawn` runs to start `argv`. */
