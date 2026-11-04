@@ -499,6 +499,10 @@ const storeCells = Effect.fn('Storybook.storeCells')(function* (
     Effect.gen(function* () {
       const key = keys[i] ?? `cell-${i}`;
       const png = encodePng(cell.raster);
+      if (cell.skinFar > 0)
+        yield* Effect.logWarning(
+          `storybook.skin-far sheet=${dir} cell=${key} px=${cell.skinFar}: skin repainted with a paint past SNAP_RADIUS of its drawn colour; the palette lacks a paint for that colour`,
+        );
       yield* fs.writeFile(`${dir}/cells/${key}.png`, png);
       return { key, box: cell.box, sha256: yield* sha256(png) };
     }),

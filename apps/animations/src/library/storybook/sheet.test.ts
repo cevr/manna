@@ -27,6 +27,7 @@ import {
   snapped,
   splitSheet,
   tidied,
+  tidiedReport,
 } from './sheet.ts';
 import { art, FOREIGN, GROUND, INK } from './testing.ts';
 
@@ -770,6 +771,47 @@ const missesOf = (g: Generated): ReadonlyArray<string> => {
   if (kept !== owned) misses.push(`${kept} pixels kept, ${owned} owned`);
   return misses;
 };
+
+describe('tidiedReport', () => {
+  /** A 40 × 20 cell of `garment` with a skin patch at its left and, 12 px from it, an 8 × 8 island of `island`. */
+  const cell = (skin: Rgb, garment: Rgb, island: Rgb): Raster => {
+    const [width, height] = [40, 20];
+    const rgba = new Uint8Array(width * height * 4);
+    for (let q = 0; q < width * height; q++) {
+      const [x, y] = [q % width, Math.floor(q / width)];
+      const inIsland = x >= 24 && x < 32 && y >= 6 && y < 14;
+      const paint =
+        [[garment, skin][Number(x < 12)] ?? garment, island][Number(inIsland)] ?? island;
+      rgba.set([...paint, 255], q * 4);
+    }
+    return { width, height, rgba };
+  };
+  const skin: Rgb = [242, 178, 124];
+  const garment: Rgb = [91, 97, 144];
+  const terracotta: Rgb = [202, 124, 101];
+  const base: Palette = {
+    ink: '#1b0b03',
+    parts: [
+      { name: 'skin', base: hexOf(skin), shade: '#c9877e', role: 'skin' },
+      { name: 'dress', base: hexOf(garment), role: 'garment' },
+    ],
+  };
+  const reportOf = (palette: Palette) => {
+    const drawn = cell(skin, garment, terracotta);
+    const paints = paintsOf(palette);
+    const nearest = drawnNearestOf(drawn, paints);
+    return tidiedReport(drawn, snapped(drawn, paints, nearest), paints, nearest);
+  };
+
+  test('counts each skin pixel the skin rule repaints with a paint past SNAP_RADIUS of its drawn colour (the mother’s terracotta hair, critique 1, item 2), and none once the palette has a paint for it', () => {
+    expect(reportOf(base).skinFar).toBe(64);
+    const haired: Palette = {
+      ...base,
+      parts: [...base.parts, { name: 'hair', base: hexOf(terracotta), role: 'hair' }],
+    };
+    expect(reportOf(haired).skinFar).toBe(0);
+  });
+});
 
 describe('measuredPaint', () => {
   /** A 60 × 40 drawing over generated seeds: a flat paint `a` on the left half and `b` on the right, ±2 of grain, an ink line every 5th row, a transparent column every 7th. */

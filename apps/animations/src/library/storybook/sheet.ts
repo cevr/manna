@@ -973,7 +973,22 @@ export const tidied = (
   paints: ReadonlyArray<Paint>,
   nearest: (c: Rgb) => Nearest,
   rules: SplitRules = PLAIN_SPLIT,
-): Raster => {
+): Raster => tidiedReport(drawn, snap, paints, nearest, rules).raster;
+
+/** A tidied cell and what its skin rule could not say plainly: the pixels `skinBySkin` repainted with a paint past `SNAP_RADIUS` of their drawn colour (a colour the palette has no paint for, given the nearest one that is not skin). */
+export interface Tidied {
+  readonly raster: Raster;
+  readonly skinFar: number;
+}
+
+/** `tidied`, with the count of its far skin repaints (`Tidied.skinFar`), so no repaint past `SNAP_RADIUS` goes unreported. */
+export const tidiedReport = (
+  drawn: Raster,
+  snap: Raster,
+  paints: ReadonlyArray<Paint>,
+  nearest: (c: Rgb) => Nearest,
+  rules: SplitRules = PLAIN_SPLIT,
+): Tidied => {
   const map = paintMapOf(snap, paints);
   const loose = Uint8Array.from(map, (index, q) =>
     Number(index > 0 && nearest(rgbAt(drawn, q)).distance > PLAIN_RADIUS),
@@ -991,17 +1006,18 @@ export const tidied = (
     return unstrayed(m, drawn.width, paints);
   };
   const barred = feetBarOf(map, drawn.width, rules);
-  const final = skinBySkin(
-    t,
-    strayed(feetLowOnly(t, despecked(lined, drawn.width), barred)),
-    barred,
-  );
+  const before = strayed(feetLowOnly(t, despecked(lined, drawn.width), barred));
+  const final = skinBySkin(t, before, barred);
   const rgba = snap.rgba.slice();
+  let skinFar = 0;
   for (let q = 0; q < final.length; q++) {
     const paint = paints[final[q] ?? CLEAR];
-    if (paint) rgba.set(paint.rgb, q * 4);
+    if (!paint) continue;
+    rgba.set(paint.rgb, q * 4);
+    if (final[q] !== before[q] && labDistance(labOf(rgbAt(drawn, q)), paint.lab) > SNAP_RADIUS)
+      skinFar++;
   }
-  return { width: snap.width, height: snap.height, rgba };
+  return { raster: { width: snap.width, height: snap.height, rgba }, skinFar };
 };
 
 /**
@@ -1027,10 +1043,11 @@ export const peeled = (r: Raster, paints: ReadonlyArray<Paint>): Raster => {
   return { width: r.width, height: r.height, rgba };
 };
 
-/** One cell of a split sheet: its box in the sheet and its pixels. */
+/** One cell of a split sheet: its box in the sheet, its pixels, and its far skin repaints (`Tidied.skinFar`). */
 export interface SplitCell {
   readonly box: Box;
   readonly raster: Raster;
+  readonly skinFar: number;
 }
 
 /** A split sheet: its measured ground and its cells, left to right. */
@@ -1068,8 +1085,12 @@ export const splitSheet = (
       cells: boxes.map((box) => {
         const mended = mendPockets(largestPiece(cropOf(cleared, box)), ground, paints, nearest);
         const snap = snapped(mended, paints, nearest);
-        const tidy = tidied(mended, snap, paints, nearest, rules);
-        return { box, raster: peeled(inkedFaceMarks(tidy, paints), paints) };
+        const tidy = tidiedReport(mended, snap, paints, nearest, rules);
+        return {
+          box,
+          raster: peeled(inkedFaceMarks(tidy.raster, paints), paints),
+          skinFar: tidy.skinFar,
+        };
       }),
     };
   });
