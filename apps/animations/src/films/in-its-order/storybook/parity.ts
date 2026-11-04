@@ -65,26 +65,27 @@ const overlay = (b: number, s: number): number => {
 };
 
 /**
- * `rgb` (a `width` × `height` frame, three bytes a pixel) with the film's
- * grain laid over it as the page lays it at film second `t`: tick
- * `boilTick(t)` reads tile `tick mod tiles`, shifted by `grainShift`, and
- * overlays it at the grain's strength.
+ * `rgb` (the frame's `region`, three bytes a pixel, row by row) with the
+ * film's grain laid over it as the page lays it at film second `t`: tick
+ * `boilTick(t)` reads tile `tick mod tiles`, shifted by `grainShift` and
+ * read at each pixel's place in the frame, and overlays it at the grain's
+ * strength.
  */
 export const grained = (
   rgb: ArrayLike<number>,
-  width: number,
-  height: number,
+  region: Box,
   grain: FilmGrain,
   t: number,
 ): Uint8ClampedArray => {
+  const { width, height } = region;
   const boil = boilTick(t);
   const tile = tileOf(grain.size, grain.seed + (boil % grain.tiles) * 977);
   const shift = grainShift([0, 0], boil, grain.size);
   const out = new Uint8ClampedArray(width * height * 3);
   for (let y = 0; y < height; y++) {
-    const row = ((y + shift[1]) % grain.size) * grain.size;
+    const row = ((region.y + y + shift[1]) % grain.size) * grain.size;
     for (let x = 0; x < width; x++) {
-      const s = (tile[row + ((x + shift[0]) % grain.size)] ?? 0) / 255;
+      const s = (tile[row + ((region.x + x + shift[0]) % grain.size)] ?? 0) / 255;
       for (let c = 0; c < 3; c++) {
         const i = 3 * (y * width + x) + c;
         const b = (rgb[i] ?? 0) / 255;

@@ -502,7 +502,8 @@ const parityOf = Effect.fn('Act1.parity')(function* (
   const q = yield* pixelsOf(frame);
   if (p.info.width !== q.info.width || p.info.height !== q.info.height) return 0;
   const { width, height } = p.info;
-  return parity(p.data, grained(q.data, width, height, FILM_GRAIN, t), width, height, overlays);
+  const frameBox = { x: 0, y: 0, width, height };
+  return parity(p.data, grained(q.data, frameBox, FILM_GRAIN, t), width, height, overlays);
 });
 
 /** A still's file name as the film's render writes it (`stillName` in `@manna/film/tools`). */
