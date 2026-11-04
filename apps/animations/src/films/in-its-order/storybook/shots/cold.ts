@@ -102,11 +102,11 @@ const leadAt = (spans: readonly [Span, ...ReadonlyArray<Span>]) =>
     spans,
   );
 
-/** The close of the mother: a grown head on her plane, so the diners behind read at matched scale on theirs. */
-const BABY_HEAD = 480;
+/** The close of the mother: a grown head on her plane, so the diners behind read at matched scale on theirs, and her whole seated figure (crown to the stool's feet) fits the frame at the shot's start. */
+const BABY_HEAD = 430;
 
 /** Where the baby's face is in the close, frame px at the shot's start: the push holds it there. */
-const BABY_FACE = [720, 470] as const;
+const BABY_FACE = [748, 418] as const;
 
 /**
  * `cold-baby`, the scene's start to `grown`: the close on the mother, the
@@ -158,7 +158,7 @@ export const coldBaby: FilmShot = {
               sheet: 'iio-baby',
               name: 'mother',
               x: 990,
-              crown: 65,
+              crown: 55,
             },
             { headPx: BABY_HEAD, z: 1 },
             holds(
@@ -258,11 +258,11 @@ const SCROLL_AT = { foot: [960, 990], top: [960, 952] } as const;
 
 /**
  * `cold-letter`, `letter` to the card: a rolled scroll falls onto the table
- * before the lead, hops and unrolls toward the viewer; the lead lowers the
- * bottle and looks down at it, the guests turn to stare at it, and on
- * `quote` the camera eases in toward its seal until the card as the lead
- * looks up from it (his bowed `down` face has no eyes a blink can read, so
- * he changes key within the alive bound instead).
+ * before the lead, hops and unrolls toward the viewer; the guests turn to
+ * stare at it, the lead lowers the bottle and looks down at it as it
+ * unrolls (late enough that his bowed `down` face, whose eyes no blink can
+ * read, holds within the alive bound), and on `quote` the camera eases in
+ * toward its seal until the card.
  */
 export const coldLetter: FilmShot = {
   id: 'cold-letter',
@@ -271,11 +271,10 @@ export const coldLetter: FilmShot = {
     fall: { mark: 'letter', offset: 0.4, dur: 0.45 },
     hop: { after: 'cold-letter:fall', dur: 0.24 },
     unroll: { after: 'cold-letter:hop', dur: 1 },
-    down: { mark: 'letter', offset: 0.5, dur: 0.3 },
+    down: { with: 'cold-letter:unroll', offset: 0.4, dur: 0.3 },
     stare: { mark: 'letter', offset: 0.3, dur: 0.3 },
     stared: { mark: 'letter', offset: 0.45, dur: 0.3 },
     quote: { mark: 'quote', until: 'such' },
-    up: { mark: 'quote', dur: 0.3 },
     talk: { mark: 'letter', word: 'letters', dur: 1.2 },
   },
   build: ({ duration, cue }) => {
@@ -287,8 +286,8 @@ export const coldLetter: FilmShot = {
     return {
       headPx: HEAD,
       camera: [
-        cam(0, 960, 860, 2.2),
-        cam(cue('quote').start, 960, 860, 2.2),
+        cam(0, 960, 860, 1.9),
+        cam(cue('quote').start, 960, 860, 1.9),
         cam(cue('quote').end, 960, 900, 2.5),
       ],
       layers: [
@@ -300,11 +299,9 @@ export const coldLetter: FilmShot = {
             guestSpans('smile', [[cue('stared').start, 'stare']], duration),
           ),
           leadAt([
-            hold(0, cue('down').start, 'bottle'),
+            blinkingHold(0, cue('down').start, 'bottle', 'frontBlink'),
             turn(cue('down').start, cue('down').end - cue('down').start, 'bottle', 'down'),
-            hold(cue('down').end, cue('up').start, 'down'),
-            turn(cue('up').start, cue('up').end - cue('up').start, 'down', 'front'),
-            blinkingHold(cue('up').end, duration, 'front', 'frontBlink'),
+            hold(cue('down').end, duration, 'down'),
           ]),
           table(),
           plateOn('scroll-rolled.png', SCROLL_ROLLED, [214.5, 202], SCROLL_AT.foot, SCROLL, {
@@ -338,8 +335,8 @@ export const coldLetter: FilmShot = {
   },
 };
 
-/** The lead's close head: a third of the frame at the close's zoom. */
-const CLOSE_ZOOM = 3;
+/** The lead's close: his head near a third of the frame, his whole seated figure (crown to soles) inside it at the shot's start. */
+const CLOSE = { zoom: 2.75, crown: 70 } as const;
 
 /**
  * `cold-ouch`, the card's end to `what`: close on the lead, his head a third
@@ -354,10 +351,10 @@ export const coldOuch: FilmShot = {
   },
   build: ({ duration, cue }) => {
     const crown = AT_TABLE.lead.crown;
-    const y = crown + (540 - 160) / CLOSE_ZOOM;
+    const y = crown + (540 - CLOSE.crown) / CLOSE.zoom;
     return {
       headPx: HEAD,
-      camera: [cam(0, 960, y, CLOSE_ZOOM), cam(duration, 960, y + 6, CLOSE_ZOOM * 1.05)],
+      camera: [cam(0, 960, y, CLOSE.zoom), cam(duration, 960, y + 6, CLOSE.zoom * 1.05)],
       layers: [
         ...backdrop(),
         layer('table', Z.table, [

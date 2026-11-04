@@ -34,11 +34,17 @@ export const AT_TABLE = {
   woman: { x: 1190, crown: 760 },
 } as const;
 
-/** The diners' row behind on its plane, left to right, and the mother at its far right: their crowns high enough that every chin clears the far table's top (840). */
+/**
+ * The diners' row behind on its plane, left to right, and the mother at its
+ * right: their crowns high enough that every chin clears the far table's top
+ * (840), each seen whole between the three at the table under the table's
+ * medium (zoom 1.9 to 1.95): two left of the man, one between him and the
+ * lead, one between the lead and the woman, the mother right of her.
+ */
 export const DINERS_ROW = {
   crown: 700,
-  xs: [180, 420, 1440, 1640],
-  mother: { x: 1830, crown: 712 },
+  xs: [470, 590, 820, 1100],
+  mother: { x: 1400, crown: 712 },
 } as const;
 
 /** The four dressed diners, each on its own sheet, the side each `talk` turns to. */
