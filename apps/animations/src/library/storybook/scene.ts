@@ -9,6 +9,7 @@ import {
 import type { Raster } from '@manna/film/tools';
 import { Option } from 'effect';
 import {
+  canvasOf,
   type PaintFigure,
   type PaintPlate,
   type PaintScene,
@@ -277,42 +278,87 @@ const blinksOf = (
 export const PAPER = '#fdf7e5';
 
 /**
- * A film's pictures for the painter: a painting drawn as the drawing
- * declares it (`f.painting`, at rest at (0, 0)), its pixels read back off
- * the frame's own canvas a canvas-sized tile at a time. None where no page
- * draws (Bun's check): there the scene paints nothing.
+ * A film's pictures for the painter: each painting's pixels read back off
+ * the frame's own canvas a canvas-sized tile at a time, as the drawing
+ * declares it (`f.painting`, at rest at (0, 0)); a draw puts those pixels,
+ * held once per picture in `held`, onto whichever context paints, as the
+ * page draws its decoded image. Where no page draws (Bun's check) the
+ * pixels are none and a draw is the painting on the frame's own canvas.
  */
-const filmPictures = (f: PaintingFrame): Pictures => ({
-  pixels: (image, size) => {
-    const ctx = f.ctx;
-    if (!('document' in globalThis) || !('getImageData' in ctx)) return Option.none<Raster>();
-    const [w, h] = size;
-    const [cw, ch] = [ctx.canvas.width, ctx.canvas.height];
-    const rgba = new Uint8Array(w * h * 4);
-    for (let ty = 0; ty < h; ty += ch)
-      for (let tx = 0; tx < w; tx += cw) {
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.globalAlpha = 1;
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.filter = 'none';
-        ctx.clearRect(0, 0, cw, ch);
-        ctx.translate(-tx, -ty);
-        f.painting(image);
-        ctx.restore();
-        const [tw, th] = [Math.min(cw, w - tx), Math.min(ch, h - ty)];
-        const data = ctx.getImageData(0, 0, tw, th).data;
-        for (let y = 0; y < th; y++)
-          rgba.set(data.subarray(y * tw * 4, (y + 1) * tw * 4), ((ty + y) * w + tx) * 4);
-      }
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.restore();
-    return Option.some({ width: w, height: h, rgba });
+const filmPictures = (
+  f: PaintingFrame,
+  held: Map<string, Option.Option<HTMLCanvasElement>>,
+): Pictures => ({
+  draw: (ctx, image, size) => {
+    const canvas =
+      held.get(image) ??
+      held.set(image, Option.map(pixelsOf(f, image, size), canvasOf)).get(image) ??
+      Option.none();
+    Option.match(canvas, {
+      onNone: () => f.painting(image),
+      onSome: (c) => ctx.drawImage(c, 0, 0),
+    });
   },
-  draw: (_ctx, image) => f.painting(image),
+  pixels: (image, size) => pixelsOf(f, image, size),
 });
+
+/** A painting's pixels at `size`, read back off the frame's own canvas a canvas-sized tile at a time; none where no page draws. */
+const pixelsOf = (
+  f: PaintingFrame,
+  image: string,
+  size: readonly [number, number],
+): Option.Option<Raster> => {
+  const ctx = f.ctx;
+  if (!('document' in globalThis) || !('getImageData' in ctx)) return Option.none<Raster>();
+  const [w, h] = size;
+  const [cw, ch] = [ctx.canvas.width, ctx.canvas.height];
+  const rgba = new Uint8Array(w * h * 4);
+  for (let ty = 0; ty < h; ty += ch)
+    for (let tx = 0; tx < w; tx += cw) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.filter = 'none';
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.translate(-tx, -ty);
+      f.painting(image);
+      ctx.restore();
+      const [tw, th] = [Math.min(cw, w - tx), Math.min(ch, h - ty)];
+      const data = ctx.getImageData(0, 0, tw, th).data;
+      for (let y = 0; y < th; y++)
+        rgba.set(data.subarray(y * tw * 4, (y + 1) * tw * 4), ((ty + y) * w + tx) * 4);
+    }
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cw, ch);
+  ctx.restore();
+  return Option.some({ width: w, height: h, rgba });
+};
+
+/** A canvas whose pixels live on the CPU, its 2d context and its own untouched transform. */
+interface CpuCanvas {
+  readonly c: HTMLCanvasElement;
+  readonly ctx: CanvasRenderingContext2D;
+  readonly identity: DOMMatrix;
+}
+
+/**
+ * A canvas of `width` × `height` whose pixels live on the CPU
+ * (`willReadFrequently`), as every canvas of the storybook page does, so a
+ * cell drawn smaller is resampled as the verify resampled it; none where no
+ * 2d context is made.
+ */
+const cpuCanvas = (width: number, height: number): Option.Option<CpuCanvas> => {
+  if (!('document' in globalThis)) return Option.none();
+  const c = document.createElement('canvas');
+  c.width = width;
+  c.height = height;
+  return Option.map(
+    Option.fromNullishOr(c.getContext('2d', { willReadFrequently: true })),
+    (ctx) => ({ c, ctx, identity: ctx.getTransform() }),
+  );
+};
 
 /** No light and no vignette: the storybook shot lights its own cells, so the film adds nothing over it. */
 const UNLIT = { color: '#ffffff', amount: 0, vignette: 0 } as const;
@@ -323,15 +369,21 @@ const UNLIT = { color: '#ffffff', amount: 0, vignette: 0 } as const;
  * stored cell its shots name; its draw paints the shot that holds the frame
  * through the painter the storybook page shares (`paintFrame`), each cell
  * lit in the page by the scene's light, and the film's own drawing over it;
- * under a card it paints nothing, the card holding the frame. Drawn with no
- * drift, no light and no vignette of the film's, so the frame is the
- * shot's as the verify renders it.
+ * under a card it paints nothing, the card holding the frame. The shot is
+ * painted on a CPU canvas of the grid's size from CPU canvases of its
+ * plates and cells, as the storybook page paints it, then copied onto the
+ * film's frame: the film's page draws on the GPU, which resamples a cell
+ * drawn smaller otherwise than the page. Drawn with no drift, no light and
+ * no vignette of the film's, so the frame is the shot's as the verify
+ * renders it.
  */
 export const storyDrawing = (story: StoryScene, sheets: Sheets, grid: Grid) => {
   const atRest = story.shots.map((s) =>
     shotOf(story, s, () => ({ start: 0, end: 1 }), grid).layers.flatMap((l) => l.items),
   );
   const prepared = new Map<string, Option.Option<Prepared>>();
+  const canvases = new Map<'frame', Option.Option<CpuCanvas>>();
+  const held = new Map<string, Option.Option<HTMLCanvasElement>>();
   return drawing({
     timeline: timelineOf(story),
     paintings: paintingsOf(atRest, sheets),
@@ -355,7 +407,7 @@ export const storyDrawing = (story: StoryScene, sheets: Sheets, grid: Grid) => {
       if (!active) return;
       const shot = shotOf(story, active, (name) => f.cue(name), grid);
       const scene = filmSceneOf(shot, sheets);
-      const pictures = filmPictures(f);
+      const pictures = filmPictures(f, held);
       const base = f.ctx.getTransform();
       const ready =
         prepared.get(active.id) ??
@@ -367,20 +419,33 @@ export const storyDrawing = (story: StoryScene, sheets: Sheets, grid: Grid) => {
       }
       const t = f.t - (shot.from ?? 0);
       const frame = frameAt(shot, ready.value.heads, t, ready.value.shares);
+      const paint = (ctx: CanvasRenderingContext2D, from: DOMMatrix) =>
+        paintFrame(ctx, from, scene, ready.value, pictures, {
+          t,
+          camera: { x: frame.camera.x, y: frame.camera.y, zoom: frame.camera.zoom },
+          figures: frame.figures.map(({ name, cell, eyes, x, y, sx, sy, breath, scale }) => ({
+            name,
+            cell: drawnKeyOf({ cell, eyes }),
+            x,
+            y,
+            sx,
+            sy: sy * breath,
+            scale,
+          })),
+          only: '',
+        });
+      const cpu =
+        canvases.get('frame') ??
+        canvases.set('frame', cpuCanvas(grid.size.width, grid.size.height)).get('frame') ??
+        Option.none();
       f.ctx.save();
-      paintFrame(f.ctx, base, scene, ready.value, pictures, {
-        t,
-        camera: { x: frame.camera.x, y: frame.camera.y, zoom: frame.camera.zoom },
-        figures: frame.figures.map(({ name, cell, eyes, x, y, sx, sy, breath, scale }) => ({
-          name,
-          cell: drawnKeyOf({ cell, eyes }),
-          x,
-          y,
-          sx,
-          sy: sy * breath,
-          scale,
-        })),
-        only: '',
+      Option.match(cpu, {
+        onNone: () => paint(f.ctx, base),
+        onSome: (canvas) => {
+          paint(canvas.ctx, canvas.identity);
+          f.ctx.setTransform(base);
+          f.ctx.drawImage(canvas.c, 0, 0);
+        },
       });
       f.ctx.restore();
       for (const o of story.over.filter((x) => x.shot === active.id)) o.draw(f);

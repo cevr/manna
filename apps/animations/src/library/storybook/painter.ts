@@ -95,10 +95,14 @@ export interface PaintRequest {
   readonly only: string;
 }
 
-/** Where the painter reads a picture by its id: its pixels, and a draw of it at (0, 0) under the context's transform at its own size. */
+/** Where the painter reads a picture by its id: its pixels, and a draw of it onto `ctx` at (0, 0) under that context's transform at its own size, `size`. */
 export interface Pictures {
   readonly pixels: (image: string, size: readonly [number, number]) => Option.Option<Raster>;
-  readonly draw: (ctx: CanvasRenderingContext2D, image: string) => void;
+  readonly draw: (
+    ctx: CanvasRenderingContext2D,
+    image: string,
+    size: readonly [number, number],
+  ) => void;
 }
 
 /** A drawn key ready to paint: its lit picture and its soles' centre in its own px. */
@@ -115,12 +119,17 @@ export interface Prepared {
   readonly shares: ReadonlyMap<string, number>;
 }
 
-/** A raster as a canvas of its own size. */
-const canvasOf = (r: Raster): HTMLCanvasElement => {
+/**
+ * A raster as a canvas of its own size, its pixels on the CPU
+ * (`willReadFrequently`): a page that draws on the GPU resamples a
+ * GPU-backed source otherwise, and a cell drawn smaller would not match the
+ * storybook page's.
+ */
+export const canvasOf = (r: Raster): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
   canvas.width = r.width;
   canvas.height = r.height;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (ctx) {
     const data = ctx.createImageData(r.width, r.height);
     data.data.set(r.rgba);
@@ -289,7 +298,7 @@ const paintPlate = (
       () => true,
     )
   )
-    pictures.draw(ctx, p.image);
+    pictures.draw(ctx, p.image, p.size);
   ctx.restore();
 };
 
