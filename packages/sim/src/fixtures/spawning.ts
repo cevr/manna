@@ -280,6 +280,8 @@ export interface Seen {
   readonly left: ReadonlyArray<string>;
   /** Signals that named no running model process. */
   readonly strays: ReadonlyArray<string>;
+  /** The signals the boot sent, as `kill`'s arguments. */
+  readonly bootSignals: ReadonlyArray<string>;
 }
 
 const Recorded = Schema.fromJsonString(
@@ -341,6 +343,7 @@ export const bootThenDown = (fault: Option.Option<Fault>) =>
           Effect.andThen(Deferred.await(m.interrupt), Fiber.interrupt(booting)),
         );
         const boot = yield* Fiber.await(booting);
+        const bootSignals = [...m.kills];
         const record = yield* recorded(place.state);
         const unrecorded = m.procs
           .filter(running)
@@ -354,6 +357,7 @@ export const bootThenDown = (fault: Option.Option<Fault>) =>
           unrecorded,
           left: m.procs.filter(running).map(shown),
           strays: m.kills.filter((kill) => kill.endsWith('(no model process)')),
+          bootSignals,
         } satisfies Seen;
       }),
     (parent) => Effect.sync(() => dispose(parent)),

@@ -24,6 +24,7 @@ describe('the live start over a model host', () => {
           unrecorded: [],
           left: [],
           strays: [],
+          bootSignals: [],
         });
       }),
   );

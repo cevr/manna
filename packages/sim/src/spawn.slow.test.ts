@@ -7,12 +7,17 @@
  * process that runs is named by its state's record; after the down, none
  * runs; no signal names a process the model did not start, and no failure
  * is untyped. A boot the fault reached fails (typed, or interrupted), and
- * the down after a failed boot finds no session.
+ * the down after a failed boot finds no session. A boot that fails at any
+ * step signals nothing; `boot` holds an interruption at any step until the
+ * record names the server, then stops it with one SIGTERM.
  */
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option } from 'effect';
 
 import { bootThenDown, STEPS } from './fixtures/spawning.ts';
+
+/** The pid the model host gives the server it starts. */
+const SERVER = 4_000_242;
 
 describe('the live start over a model host, a fault at each step', () => {
   it.live('with no fault, the boot records its server and the down stops it', () =>
@@ -25,6 +30,7 @@ describe('the live start over a model host, a fault at each step', () => {
         unrecorded: [],
         left: [],
         strays: [],
+        bootSignals: [],
       });
     }),
   );
@@ -39,8 +45,13 @@ describe('the live start over a model host, a fault at each step', () => {
           expect(seen.strays).toEqual([]);
           expect(seen.boot).not.toMatch(/^died/);
           expect(seen.down).not.toMatch(/^died/);
-          if (how === 'interrupt') expect(seen.boot).toBe('interrupted');
-          else expect(seen.boot).not.toBe('ok');
+          if (how === 'interrupt') {
+            expect(seen.boot).toBe('interrupted');
+            expect(seen.bootSignals).toEqual([`-s TERM ${SERVER}`]);
+          } else {
+            expect(seen.boot).not.toBe('ok');
+            expect(seen.bootSignals).toEqual([]);
+          }
           if (seen.boot !== 'ok') expect(seen.down).toBe('NoSession');
         }),
       );

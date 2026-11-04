@@ -89,14 +89,18 @@ starts a child that reads its own start time (`ps -o lstart=`, read with
 reads the same whatever the caller's time zone and locale), prints its pid
 and that time, and waits. Only once the drive has read that identity does
 it answer `go` on the start's stdin, and only then does the child become
-`serve` (by `exec`: the same pid and start time). A failure or an
-interruption before the answer (the child's read, its line, the drive's
-read of it, the answer itself) closes the start's input unanswered, and the
-child ends itself: the boot fails typed, with nothing running and nothing
-signalled. From the answer on, `boot` runs uninterruptibly up to the
-record; any failure or interruption after the record stops the server by
-the stop rule and, once it is gone, files its record away; a server that
-will not stop keeps its record for the next `down`.
+`serve` (by `exec`: the same pid and start time). A failure before the
+answer (the start itself, the child's read, its line, the drive's read of
+it, the answer itself) closes the start's input unanswered, and the child
+ends itself: the boot fails typed, with nothing running and nothing
+signalled. `boot` runs uninterruptibly from the start to the record, so an
+interruption anywhere in that span is held: the drive still answers `go`
+and writes the record, and only then does the interruption land. It stops
+the server by the stop rule (a SIGTERM) and, once it is gone, files its
+record away, and the boot ends interrupted. Any failure or interruption
+after the record stops the server by the stop rule and, once it is gone,
+files its record away; a server that will not stop keeps its record for
+the next `down`.
 
 **The record** (`src/record.ts`) is written whole and only where none is:
 the encoded session goes to a file of this write's own name
@@ -120,9 +124,10 @@ or an abrupt exit at any of them is followed by a `down` that finds the
 server and stops it. A driver `down` could not close (its HOME no longer a
 folder, a refusal of the contained host) does not keep the server running:
 the server is stopped and the record filed, then `down` fails with that
-problem. `down --clean` keeps its port-free check, which never stops the
-port's holder: it fails `Unhealthy` while another process holds the
-recorded port.
+problem. With no server to stop (a stale or legacy record), the record is
+filed and `down` succeeds. `down --clean` keeps its port-free check, which
+never stops the port's holder: it fails `Unhealthy` while another process
+holds the recorded port.
 
 **Filing a record away** links it to `<out>/session.json`, else to
 `<out>/session-<n>.json` for the first free `n` up to 64, then removes it
@@ -224,8 +229,10 @@ unrecorded, a window of at most three file writes; the spec accepts it.
   itself and signals only while it holds them, and a start whose child
   cannot read its start time, or is interrupted while it reads, leaving no
   process (`os.slow.test.ts`), the live start under `boot` and `down` with a
-  typed failure or an interruption at each of its steps (`spawn.slow.test.ts`), the
-  holder over 4,000 more generated worlds (`holder.slow.test.ts`), and the
+  typed failure or an interruption at each of its steps: a failure signals
+  nothing, and an interruption is held until the record names the server,
+  which one SIGTERM then stops (`spawn.slow.test.ts`), the holder over 4,000
+  more generated worlds (`holder.slow.test.ts`), and the
   drive's lifecycle over the model (`src/fixtures/life.ts`,
   `src/fixtures/life-cases.ts`): each command is a fresh `DriveLive` over
   one scratch tree and one model process table, whose pids lie above
