@@ -12,6 +12,7 @@ import {
   frameAt,
   type Plate,
   plateAt,
+  type PlateKey,
   type Shot,
   timesOf,
 } from '../shot.ts';
@@ -168,35 +169,91 @@ export const picturesOver = Effect.fnUntraced(function* (
   return pictures;
 });
 
+/** What covers the faces of a shot: each fault (a plate at rest over a face, a face that reads none), and each run of frames a moving plate crosses a face, as an INFO line. */
+export interface Covers {
+  readonly faults: ReadonlyArray<string>;
+  readonly moving: ReadonlyArray<string>;
+}
+
+/** A face a plate at rest covers in one frame, or a face that reads none. */
+interface Fault {
+  readonly _tag: 'Fault';
+  readonly line: string;
+}
+
+/** A face a moving plate crosses in one frame. */
+interface Passing {
+  readonly _tag: 'Passing';
+  readonly figure: string;
+  readonly plate: string;
+  readonly frame: number;
+}
+
+/** One face a plate crosses in one frame: a fault when the plate stands still there, a passing when its key moves. */
+type Crossing = Fault | Passing;
+
+const isFault = (c: Crossing): c is Fault => c._tag === 'Fault';
+const isPassing = (c: Crossing): c is Passing => c._tag === 'Passing';
+
+/** Whether two plate keys place, stretch and fade a plate alike. */
+const sameKey = (a: PlateKey, b: PlateKey): boolean =>
+  a.x === b.x && a.y === b.y && a.sx === b.sx && a.sy === b.sy && a.alpha === b.alpha;
+
+/** Whether a plate's key moves at `t`: it differs from its key one frame on. */
+const movingAt = (plate: Plate, t: number, fps: number): boolean =>
+  !sameKey(plateAt(plate, t), plateAt(plate, t + 1 / fps));
+
+/** Each moving plate's crossings of one face, as INFO lines, one per run of consecutive frames. */
+const passingLines = (passings: ReadonlyArray<Passing>): ReadonlyArray<string> =>
+  [...Map.groupBy(passings, (p) => `${p.plate} over ${p.figure}`)].flatMap(([what, ps]) =>
+    ps
+      .reduce<Array<[number, number]>>((runs, p) => {
+        const last = runs.at(-1);
+        if (last && last[1] === p.frame - 1) last[1] = p.frame;
+        else runs.push([p.frame, p.frame]);
+        return runs;
+      }, [])
+      .map(([a, b]) => `INFO cover moving: ${what} frames ${a}–${b}`),
+  );
+
 /**
- * What covers each figure's face in every frame of `shot`: a line per plate
- * drawn over it with any pixel inside the face box (a blurred plate's within
- * three blurs of it), or a line for a figure whose face reads none.
+ * What covers each figure's face in every frame of `shot`: a fault per plate
+ * drawn over it at rest with any pixel inside the face box (a blurred plate's
+ * within three blurs of it), or a fault for a figure whose face reads none.
+ * A plate whose key moves in that frame (a prop falling past) only passes,
+ * named as an INFO line per run of frames.
  */
 export const coversOf = (
   shot: Shot,
   figures: ReadonlyArray<StoredFigure>,
   pictures: ReadonlyMap<string, Coverage>,
-): ReadonlyArray<string> => {
+): Covers => {
   const byName = new Map(figures.map((f) => [f.figure.name, f] as const));
   const boxes = faceBoxesOf(figures);
   const heads = headsOf(figures);
-  const coversIn = (frame: Frame, index: number, t: number) =>
-    frame.figures.flatMap((f) => {
+  const coversIn = (frame: Frame, index: number, t: number): ReadonlyArray<Crossing> =>
+    frame.figures.flatMap((f): ReadonlyArray<Crossing> => {
       const stored = byName.get(f.name);
       const face = Option.flatMap(Option.fromUndefinedOr(stored), (s) =>
         faceInLayer(f, s, boxes.get(f.name) ?? new Map()),
       );
-      if (!stored || Option.isNone(face)) return [`${f.name} frame ${index}: no face read`];
-      return platesOver(shot, f.name).flatMap(({ plate, z, blur }) => {
+      if (!stored || Option.isNone(face))
+        return [{ _tag: 'Fault', line: `${f.name} frame ${index}: no face read` }];
+      return platesOver(shot, f.name).flatMap(({ plate, z, blur }): ReadonlyArray<Crossing> => {
         const rect = intoLayer(shot.size, face.value, [stored.layer.z, z], frame.camera, 3 * blur);
         const n = Option.match(Option.fromUndefinedOr(pictures.get(plate.file)), {
           onNone: () => 0,
           onSome: (picture) => coverAt(plate, picture, rect, t),
         });
         if (n === 0) return [];
-        return [`${f.name} frame ${index}: ${plate.file} covers ${n} px`];
+        if (movingAt(plate, t, shot.fps))
+          return [{ _tag: 'Passing', figure: f.name, plate: plate.file, frame: index }];
+        return [{ _tag: 'Fault', line: `${f.name} frame ${index}: ${plate.file} covers ${n} px` }];
       });
     });
-  return timesOf(shot).flatMap((t, i) => coversIn(frameAt(shot, heads, t), i, t));
+  const crossings = timesOf(shot).flatMap((t, i) => coversIn(frameAt(shot, heads, t), i, t));
+  return {
+    faults: crossings.filter(isFault).map((c) => c.line),
+    moving: passingLines(crossings.filter(isPassing)),
+  };
 };

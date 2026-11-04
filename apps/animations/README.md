@@ -516,9 +516,11 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   blink is the held cell with the blink key's closed eyes pasted over its
   own (`blinkOf`, built as the shot loads); nothing outside the eyes
   changes, so the outline never twitches. No plate drawn over a figure may
-  cover its face in any frame, a moving plate read where its key puts it
-  (`verify/covers.ts`, held by `shots/feast-courtyard.test.ts` and each
-  film's `covers-*.test.ts`). It has no scale: its head is the shot's
+  cover its face at rest in any frame, a moving plate read where its key
+  puts it; a plate whose key moves that frame (a prop falling past) may
+  cross a face, named as `INFO cover moving: <plate> over <figure> frames
+  a–b` (`verify/covers.ts`, held by `shots/feast-courtyard.test.ts` and each
+  film's `covers-*.test.ts`, which name every such line). It has no scale: its head is the shot's
   `headPx` over its layer's depth, against its sheet's median head. It has no
   light: the shot's one light tints every base paint and shades every shade
   paint once per cell, the ink untouched. `frameAt` is a pure function of t.
@@ -550,7 +552,11 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   reads cells, not renders: each drawn key's cell (or blink) lit by the
   shot's light, at every change of drawn key in the plan, where every colour
   is the one drawn and no resampling has blended an edge; the `light` bar
-  keeps the renders' colour checked. The bars stay `orchestrator-proposed`
+  keeps the renders' colour checked. The `render-height` bar reads the
+  renders' crown-to-soles within each key a figure holds and reports its
+  worst key: two keys of one sheet differ in height by design (a bowed head,
+  a seat), which `scale` and `proportions` hold, so it catches only a figure
+  growing or shrinking while one key holds. The bars stay `orchestrator-proposed`
   until the owner OKs their numbers.
 - **A film's shots** live in `src/films/<film>/storybook/`: its sheet
   declarations (`sheets.ts`, drawn with `draw <member> <sheet-id> --film

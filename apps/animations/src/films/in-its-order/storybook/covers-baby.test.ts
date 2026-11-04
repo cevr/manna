@@ -7,8 +7,9 @@ const covers = await faceCovers(['cold-baby', 'cold-table']);
 describe("In Its Order's baby and table shots", () => {
   test.each(covers)(
     "%s covers no figure's face with a plate drawn over it in any frame, and reads every face (the table below every chin, critique 2, item 1)",
-    (_, lines) => {
-      expect(lines).toEqual([]);
+    (_, faults, moving) => {
+      expect(faults).toEqual([]);
+      expect(moving).toEqual([]);
     },
   );
 

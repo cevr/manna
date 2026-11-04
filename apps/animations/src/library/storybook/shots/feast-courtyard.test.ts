@@ -247,7 +247,7 @@ describe('the feast courtyard as drawn', () => {
       Effect.gen(function* () {
         const pictures = yield* picturesOver(feastCourtyard);
         expect([...pictures.keys()].length).toBeGreaterThanOrEqual(2);
-        expect(coversOf(feastCourtyard, figures, pictures).slice(0, 5)).toEqual([]);
+        expect(coversOf(feastCourtyard, figures, pictures).faults.slice(0, 5)).toEqual([]);
       }),
   );
 
@@ -270,7 +270,7 @@ describe('the feast courtyard as drawn', () => {
           layers: feastCourtyard.layers.toSpliced(guests + 1, 0, tied),
         };
         const covered = coversOf(shot, figures, yield* picturesOver(shot));
-        expect(covered.some((line) => line.startsWith('man frame 0:'))).toBe(true);
+        expect(covered.faults.some((line) => line.startsWith('man frame 0:'))).toBe(true);
       }),
   );
 
@@ -296,9 +296,51 @@ describe('the feast courtyard as drawn', () => {
         ];
         const man = (shot: Shot) =>
           Effect.map(picturesOver(shot), (pictures) =>
-            coversOf(shot, figures, pictures).some((line) => line.startsWith('man frame 0:')),
+            coversOf(shot, figures, pictures).faults.some((line) =>
+              line.startsWith('man frame 0:'),
+            ),
           );
         expect([yield* man(moved), yield* man(clear)]).toEqual([true, false]);
+      }),
+  );
+
+  it.effect(
+    "lets a plate cross a face only while its key moves, as a named INFO line, and fails the same plate stopped there: the table on the guests' depth sliding up across the man's face over the shot's first frames, then held there",
+    () =>
+      Effect.gen(function* () {
+        const guests = feastCourtyard.layers.findIndex((l) => l.name === 'guests');
+        const layer = feastCourtyard.layers[guests];
+        const table = layer?.items.find((it) => it._tag === 'Plate');
+        if (!layer || table?._tag !== 'Plate') return yield* Effect.die('no table on the guests');
+        const sliding = (end: number): Shot => ({
+          ...feastCourtyard,
+          duration: 4 / feastCourtyard.fps,
+          layers: feastCourtyard.layers.toSpliced(guests + 1, 0, {
+            ...layer,
+            name: 'table at the guests depth',
+            items: [
+              {
+                ...table,
+                moves: [
+                  [0, { ...AT_REST, y: -28 }],
+                  [end, { ...AT_REST, y: -36 }],
+                ],
+              },
+            ],
+          }),
+        });
+        const [passing, stopped] = [sliding(1), sliding(2 / feastCourtyard.fps)];
+        const read = (shot: Shot) =>
+          Effect.map(picturesOver(shot), (pictures) => coversOf(shot, figures, pictures));
+        const [moving, held] = [yield* read(passing), yield* read(stopped)];
+        expect(moving.faults).toEqual([]);
+        expect(moving.moving).toContain(`INFO cover moving: ${table.file} over man frames 0–3`);
+        expect(
+          held.faults
+            .filter((line) => line.startsWith('man frame '))
+            .map((line) => line.split(':')[0]),
+        ).toEqual(['man frame 2', 'man frame 3']);
+        expect(held.moving).toContain(`INFO cover moving: ${table.file} over man frames 0–1`);
       }),
   );
 

@@ -8,7 +8,7 @@ import { type Coverage, coversOf, picturesOver } from '../../../library/storyboo
 import { SHEET_CELLS } from './cells.ts';
 import { inItsOrder } from './index.ts';
 
-/** What covers a face in each named shot of the film, by shot id (`coversOf`, its first five lines): each shot's figures as stored, and every plate drawn over one. */
+/** What covers a face in each named shot of the film, by shot id (`coversOf`: its first five faults, then its moving plates' INFO lines): each shot's figures as stored, and every plate drawn over one. */
 export const faceCovers = (ids: ReadonlyArray<string>) =>
   Effect.runPromise(
     Effect.gen(function* () {
@@ -21,7 +21,8 @@ export const faceCovers = (ids: ReadonlyArray<string>) =>
           Effect.gen(function* () {
             const figures = yield* loadFigures(cast, shot);
             const pictures = yield* picturesOver(shot, read);
-            return [shot.id, coversOf(shot, figures, pictures).slice(0, 5)] as const;
+            const covers = coversOf(shot, figures, pictures);
+            return [shot.id, covers.faults.slice(0, 5), covers.moving] as const;
           }),
       );
     }).pipe(Effect.provide([filmFolder.pipe(Layer.provide(BunServices.layer)), BunServices.layer])),
