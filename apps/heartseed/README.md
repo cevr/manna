@@ -151,13 +151,15 @@ alert and the verse whole, and keeps nothing. Say it reads no word aloud.
   (`__DEV__`, nothing else) and the simulator (One's device info; a read
   that fails or takes over 2 s counts as a device) are both true, so a
   release build and a development build on a phone hear the microphone.
-- `src/sayit/screen.ts` reads what Today draws from Say it's view;
+- `src/sayit/screen.ts` reads what Today draws from Say it's view, and
+  `wordOf` how each word shows (its ink, whether it is hidden, its name);
   `app/index.tsx` draws it: one element per word, so each is its own
   accessibility element (an unsaid or half-heard word hidden from the
-  screen reader, a mark named `Missed word <n>`, a peeked word
-  `<word>, peeked`), the radio group `Grade`, and the button `Say it` or
-  `Listening`. A word lights with a short fade and the button pulses while
-  it listens; Reduce Motion stills both (Reanimated's `ReduceMotion.System`).
+  screen reader, an unsaid one drawn as an empty slot its width, a mark
+  named `Missed word <n>`, a peeked word `<word>, peeked`), the radio
+  group `Grade`, and the button `Say it` or `Listening`. A word lights with
+  a short fade and the button pulses while it listens; Reduce Motion stills
+  both (Reanimated's `ReduceMotion.System`).
 - `src/sayit/guard.test.ts` holds the source choice, the one Dictation, no
   word aloud and the soft tick to the sources.
 

@@ -35,6 +35,12 @@ const until = async (holds: () => boolean, ms = 3000) => {
   return true;
 };
 
+/** Whether a node's text is drawn: its colour, as react-native-web's style sheet gives it, is not fully transparent. */
+const seen = (node: Element) => {
+  const color = getComputedStyle(node).color;
+  return color !== 'transparent' && !/^rgba\(.*,\s*0(\.0+)?\)$/.test(color);
+};
+
 /** Today over `source`, under a registry that keeps living after Today leaves, as the app's does. */
 const mount = async (source: Layer.Layer<DictationSource>) => {
   const ticks = { n: 0 };
@@ -174,6 +180,27 @@ describe('Today’s Say it', () => {
     expect(hidden.length).toBeGreaterThan(WORDS.length - 5);
     expect(today.radios()).toHaveLength(0);
     expect(today.one('[data-testid="summary"]')).toBe(null);
+    await today.leave();
+  });
+
+  it('shows a word still being heard softly but hides it from the screen reader, and draws each unsaid word as an empty slot', async () => {
+    const today = await mount(scriptedSource(recite(passage.text, { every: 100, pace: 60 })));
+    expect(await until(() => today.label() === 'Say it')).toBe(true);
+    await today.click(today.button()[0]);
+    expect(await until(() => today.word(0)?.firstElementChild === null)).toBe(true);
+    const first = today.word(0);
+    expect(first?.textContent).toBe(WORDS[0]);
+    expect(first?.getAttribute('aria-hidden')).toBe('true');
+    expect(first && seen(first)).toBe(true);
+    const slots = today
+      .all('[data-testid^="word-"]')
+      .filter((node) => node.firstElementChild !== null);
+    expect(slots.length).toBeGreaterThan(WORDS.length - 5);
+    for (const slot of slots) {
+      expect(slot.getAttribute('aria-hidden')).toBe('true');
+      expect(slot.firstElementChild && seen(slot.firstElementChild)).toBe(false);
+    }
+    expect(today.ticks.n).toBe(0);
     await today.leave();
   });
 

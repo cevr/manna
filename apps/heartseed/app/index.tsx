@@ -19,7 +19,7 @@ import { choose, peek, press, sayItView } from '../src/app';
 import type { Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
 import { GRADE_NAMES, GRADES, type Grade } from '../src/sayit';
-import { screenOf, type Result } from '../src/sayit/screen';
+import { screenOf, wordOf, type Ink, type Result, type ShownWord } from '../src/sayit/screen';
 
 /** Palette A (Wada No. 167) over the prototype's tokens. */
 const color = {
@@ -38,54 +38,55 @@ const WORDS = sourceWords(passage.text);
 /** A word lights with a short fade; under Reduce Motion it shows at once. */
 const LIGHT = FadeIn.duration(180).reduceMotion(ReduceMotion.System);
 
-/** One source word as the recital shows it: lit, being heard, unsaid, missed (a mark to peek at) or peeked. */
+/** One source word drawn as `wordOf` shows it: a mark to peek at, or its text in its ink, an unseen one in a slot its width. */
 function Word({
-  mark,
-  word,
+  shown,
   onPeek,
 }: {
-  readonly mark: Mark;
-  readonly word: string;
+  readonly shown: ShownWord;
   readonly onPeek: (index: number) => void;
 }) {
-  const id = `word-${mark.index}`;
-  switch (mark.status) {
-    case 'matched':
+  const id = `word-${shown.index}`;
+  if (shown._tag === 'Mark')
+    return (
+      <Pressable
+        testID={id}
+        role="button"
+        aria-label={shown.label}
+        hitSlop={10}
+        onPress={() => onPeek(shown.index)}
+        style={({ pressed }) => [styles.mark, pressed && styles.pressed]}
+      >
+        <View style={styles.dot} />
+      </Pressable>
+    );
+  const style = [styles.word, INK[shown.ink]];
+  const label = Option.getOrUndefined(shown.label);
+  switch (shown.ink) {
+    case 'unseen':
       return (
-        <Animated.Text testID={id} entering={LIGHT} style={[styles.word, styles.lit]}>
-          {word}
+        <View testID={id} aria-hidden={shown.hidden} aria-label={label} style={styles.slot}>
+          <Text style={style}>{shown.text}</Text>
+        </View>
+      );
+    case 'lit':
+      return (
+        <Animated.Text
+          testID={id}
+          entering={LIGHT}
+          aria-hidden={shown.hidden}
+          aria-label={label}
+          style={style}
+        >
+          {shown.text}
         </Animated.Text>
       );
-    case 'peek':
+    case 'hearing':
+    case 'peeked':
       return (
-        <Text testID={id} aria-label={`${word}, peeked`} style={[styles.word, styles.peeked]}>
-          {word}
+        <Text testID={id} aria-hidden={shown.hidden} aria-label={label} style={style}>
+          {shown.text}
         </Text>
-      );
-    case 'miss':
-      return (
-        <Pressable
-          testID={id}
-          role="button"
-          aria-label={`Missed word ${mark.index + 1}`}
-          hitSlop={10}
-          onPress={() => onPeek(mark.index)}
-          style={({ pressed }) => [styles.mark, pressed && styles.pressed]}
-        >
-          <View style={styles.dot} />
-        </Pressable>
-      );
-    case 'tentative':
-      return (
-        <Text testID={id} aria-hidden style={[styles.word, styles.hearing]}>
-          {word}
-        </Text>
-      );
-    case 'pending':
-      return (
-        <View testID={id} aria-hidden style={styles.slot}>
-          <Text style={[styles.word, styles.unsaid]}>{word}</Text>
-        </View>
       );
   }
 }
@@ -107,7 +108,7 @@ function Verse({
     onSome: (shown) => (
       <View style={styles.verse}>
         {shown.map((mark) => (
-          <Word key={mark.index} mark={mark} word={WORDS[mark.index] ?? ''} onPeek={onPeek} />
+          <Word key={mark.index} shown={wordOf(mark, WORDS[mark.index] ?? '')} onPeek={onPeek} />
         ))}
       </View>
     ),
@@ -310,3 +311,11 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.6 },
   buttonText: { color: color.ground, fontSize: 17, fontWeight: '600' },
 });
+
+/** Each ink's style: an unseen word is laid out transparent, so only its slot's underline shows. */
+const INK: Readonly<Record<Ink, (typeof styles)[keyof typeof styles]>> = {
+  lit: styles.lit,
+  hearing: styles.hearing,
+  peeked: styles.peeked,
+  unseen: styles.unsaid,
+};

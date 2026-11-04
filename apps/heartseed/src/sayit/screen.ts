@@ -1,7 +1,8 @@
 /**
  * Today's Say it as the screen draws it, read from Say it's view: whether
  * the button takes a press and what it says, the recital's marks (while one
- * is heard, and after one that finished) or the verse whole, the result of a
+ * is heard, and after one that finished) or the verse whole, how each word
+ * of a recital shows and what the screen reader reads of it, the result of a
  * finished recital, and the alert after one that could not be heard. A
  * cancelled recital shows the verse whole and says nothing.
  */
@@ -37,6 +38,48 @@ const ALERTS: Partial<Record<NonNullable<DictationView['ended']>, string>> = {
   unavailable: 'Speech recognition isn’t available on this iPhone right now.',
   interrupted: 'The recital was interrupted. Say it again when you’re ready.',
   failed: 'That recital didn’t come through. Say it again.',
+};
+
+/** How a word's text is drawn: lit, softly while it is being heard, in the mark's colour once peeked, or laid out unseen so that only its slot shows. */
+export type Ink = 'lit' | 'hearing' | 'peeked' | 'unseen';
+
+/**
+ * One source word as a recital shows it: its text in an ink, or the mark of
+ * a missed word to peek at. `hidden` keeps it from the screen reader;
+ * `label` names it where its text does not.
+ */
+export type ShownWord =
+  | {
+      readonly _tag: 'Text';
+      readonly index: number;
+      readonly text: string;
+      readonly ink: Ink;
+      readonly hidden: boolean;
+      readonly label: Option.Option<string>;
+    }
+  | { readonly _tag: 'Mark'; readonly index: number; readonly label: string };
+
+const text = (mark: Mark, word: string, ink: Ink, hidden: boolean, label = Option.none<string>()) =>
+  ({ _tag: 'Text', index: mark.index, text: word, ink, hidden, label }) as const;
+
+/**
+ * How the word at a mark shows: a lit word by its name, a word being heard
+ * softly and an unsaid one unseen (each hidden from the screen reader), a
+ * missed word as a numbered mark, and a peeked word by its name and `peeked`.
+ */
+export const wordOf = (mark: Mark, word: string): ShownWord => {
+  switch (mark.status) {
+    case 'matched':
+      return text(mark, word, 'lit', false);
+    case 'tentative':
+      return text(mark, word, 'hearing', true);
+    case 'pending':
+      return text(mark, word, 'unseen', true);
+    case 'peek':
+      return text(mark, word, 'peeked', false, Option.some(`${word}, peeked`));
+    case 'miss':
+      return { _tag: 'Mark', index: mark.index, label: `Missed word ${mark.index + 1}` };
+  }
 };
 
 const NOT_READY: Screen = {
