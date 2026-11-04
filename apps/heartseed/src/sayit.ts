@@ -8,9 +8,10 @@
  * first suggestion, a changed grade, a later peek) is handed to `Recalls`
  * once. Every other ending keeps nothing.
  *
- * The ticks follow `Dictation.changes`, the views the screen shows; the
- * endings come from `Dictation.endings`, which loses none, and the n-th
- * ending is the n-th recital's, since no recital is ever replaced.
+ * Each of `Dictation.changes` has the screen show Dictation's view as it is
+ * then, and tick for the words it lights since the recital's own last view
+ * shown; the endings come from `Dictation.endings`, which loses none, and
+ * the n-th ending is the n-th recital's, since no recital is ever replaced.
  */
 
 import { Clock, Context, Effect, Layer, MutableRef, Option, PubSub, Stream } from 'effect';
@@ -139,22 +140,14 @@ type Recital =
       readonly kept: Option.Option<Recall>;
     };
 
-/** Say it's state: the view, the current recital, the recitals started and the endings read, and the matcher view the screen last showed. */
+/** Say it's state: the view, the current recital, the recitals started and the endings read, and the matcher view last shown of the current recital (none before its first). */
 interface Held {
   readonly view: SayItView;
   readonly recital: Recital;
   readonly started: number;
   readonly endings: number;
   readonly shown: OrNull<MatcherView>;
-  /** The last view shown was idle, so the next active one opens a recital and is diffed against nothing. */
-  readonly between: boolean;
 }
-
-/** What `next` is diffed against for its ticks: nothing when it opens a recital, else the view shown last. */
-const lastShown = (held: Held, next: DictationView): OrNull<MatcherView> => {
-  if (held.between && next.status !== 'idle') return ABSENT;
-  return held.shown;
-};
 
 export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | Haptics | Recalls> =>
   Layer.effect(
@@ -173,7 +166,6 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
         started: 0,
         endings: 0,
         shown: ABSENT,
-        between: true,
       });
       const views = yield* PubSub.sliding<SayItView>({ capacity: WINDOW, replay: 1 });
       yield* PubSub.publish(views, MutableRef.get(held).view);
@@ -231,20 +223,28 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
           yield* keep;
         });
 
-      /** Shows one view: ticks for each word it newly lights, and finishes the recital under way once its last word is lit. */
-      const show = (next: DictationView) =>
-        Effect.gen(function* () {
-          const ticks = ticksOf(lastShown(MutableRef.get(held), next), next.matcher);
-          yield* update((now) => ({
-            ...now,
-            shown: next.matcher,
-            between: next.status === 'idle',
-            view: { ...now.view, dictation: next },
-          }));
-          for (let tick = 0; tick < ticks; tick += 1) yield* haptics.tick;
-          const current = yield* dictation.view;
-          if (current.status === 'listening' && isLit(current.matcher, -1)) yield* dictation.finish;
-        });
+      /**
+       * Shows Dictation's view as it is now; a change only signals that it
+       * moved, so a reader held up past dropped views, or past a recital's
+       * end and the next press, still shows the current recital and diffs
+       * it against that recital's own last view. Ticks once for each word it
+       * newly lights, then finishes the recital under way, read again after
+       * the ticks, once its last word is lit.
+       */
+      const show = Effect.gen(function* () {
+        const current = yield* dictation.view;
+        const before = MutableRef.get(held);
+        if (current === before.view.dictation) return;
+        const ticks = ticksOf(before.shown, current.matcher);
+        yield* update((now) => ({
+          ...now,
+          shown: current.matcher,
+          view: { ...now.view, dictation: current },
+        }));
+        for (let tick = 0; tick < ticks; tick += 1) yield* haptics.tick;
+        const after = yield* dictation.view;
+        if (after.status === 'listening' && isLit(after.matcher, -1)) yield* dictation.finish;
+      });
 
       /** Reads one ending: it is the recital's under way only when it is the ending for the last recital started. */
       const read = (ended: DictationView) =>
@@ -256,9 +256,12 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
           return close(ended);
         });
 
-      yield* Effect.forkScoped(Stream.runForEach(dictation.changes, show), {
-        startImmediately: true,
-      });
+      yield* Effect.forkScoped(
+        Stream.runForEach(dictation.changes, () => show),
+        {
+          startImmediately: true,
+        },
+      );
       yield* Effect.forkScoped(Stream.runForEach(dictation.endings, read), {
         startImmediately: true,
       });
@@ -273,7 +276,8 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
           ...now,
           started: now.started + 1,
           recital: { _tag: 'Open', startedAt },
-          view: { ...now.view, startedAt, choice: ABSENT },
+          shown: ABSENT,
+          view: { dictation: current, startedAt, choice: ABSENT },
         }));
         yield* dictation.start(passage.text);
       });

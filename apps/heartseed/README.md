@@ -131,8 +131,9 @@ alert and the verse whole, and keeps nothing. Say it reads no word aloud.
 - `src/sayit.ts` is the `SayIt` service (Effect) over `Dictation`: `press`
   (start a recital, or finish the one under way; it never replaces one),
   `peek`, `choose`, and the `view` Today shows (the latest Dictation view,
-  `startedAt` and the `choice`) with its `changes`. The ticks follow
-  Dictation's `changes`, diffed from each recital's first view; the endings
+  `startedAt` and the `choice`) with its `changes`. On each of Dictation's
+  `changes` it shows Dictation's view as it is then, and ticks for the
+  words lit since the last view it showed of the same recital; the endings
   come from Dictation's `endings`, which loses none, the n-th ending being
   the n-th recital's. Each change of a finished recital's recall (its first
   suggestion, a changed grade, a later peek) is handed once to `Recalls`,

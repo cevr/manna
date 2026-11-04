@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { Context, Deferred, Effect, Exit, Layer, MutableRef, Scope, Stream } from 'effect';
+import { Context, Deferred, Effect, Exit, Fiber, Layer, MutableRef, Scope, Stream } from 'effect';
 import * as TestClock from 'effect/testing/TestClock';
 import passage from 'virtual:heartseed-passage';
 
@@ -409,29 +409,67 @@ describe('Say it', () => {
       }),
     ));
 
-  it('keeps a finished recital while the screen’s view is held up, and ticks the next recital from its first view', () =>
+  it('keeps each recital while the screen is held up past its end and the next press, then shows and ticks only the recital under way', () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        const text = POOL.slice(0, 4).join(' ');
+        const text = POOL.join(' ');
         const held = yield* Deferred.make<void>();
         const live = yield* rig({
           passage: { reference: 'Made 5:5', text },
           source: scriptedSource(recite(text, { every: 1, pace: 4 })),
           endsByItself: true,
-          tick: Deferred.await(held),
+          tick: Effect.andThen(Effect.yieldNow, Deferred.await(held)),
         });
-        yield* run(live, { t: 'press' });
-        for (let k = 0; k < 10; k++) yield* run(live, { t: 'wait', ms: 4 });
-        expect((yield* live.dictation.view).ended).toBe('finished');
+        const recital = Effect.gen(function* () {
+          yield* run(live, { t: 'press' });
+          for (let k = 0; k < 12; k++) yield* run(live, { t: 'wait', ms: 4 });
+          expect((yield* live.dictation.view).ended).toBe('finished');
+        });
+        yield* settle;
+        yield* recital;
         expect(live.ticks.n).toBe(1);
-        expect(live.kept.map((recall) => [recall.grade, recall.missed])).toEqual([[3, 0]]);
+        yield* recital;
+        expect(live.ticks.n).toBe(1);
+        expect(live.kept.map((recall) => [recall.startedAt, recall.grade])).toEqual([
+          [0, 3],
+          [48, 3],
+        ]);
         yield* Deferred.succeed(held, undefined);
         yield* settle;
-        expect(live.ticks.n).toBe(4);
+        expect(live.ticks.n).toBe(1 + POOL.length);
+        expect((yield* live.sayIt.view).dictation).toBe(yield* live.dictation.view);
+        yield* recital;
+        expect(live.ticks.n).toBe(1 + 2 * POOL.length);
+        expect(live.kept.map((recall) => recall.startedAt)).toEqual([0, 48, 96]);
+        yield* Scope.close(live.scope, Exit.void);
+      }),
+    ));
+
+  it('never finishes the next recital on a lit last word the screen was held up on', () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const text = POOL.slice(0, 1).join(' ');
+        const held = yield* Deferred.make<void>();
+        const live = yield* rig({
+          passage: { reference: 'Made 9:9', text },
+          source: scriptedSource(recite(text, { every: 1, pace: 4 })),
+          endsByItself: true,
+          tick: Effect.andThen(Effect.yieldNow, Deferred.await(held)),
+        });
+        yield* settle;
         yield* run(live, { t: 'press' });
-        for (let k = 0; k < 10; k++) yield* run(live, { t: 'wait', ms: 4 });
-        expect(live.ticks.n).toBe(8);
-        expect(live.kept.map((recall) => recall.startedAt)).toEqual([0, 40]);
+        for (let k = 0; k < 6; k++) yield* run(live, { t: 'wait', ms: 4 });
+        expect((yield* live.dictation.view).ended).toBe('finished');
+        expect(live.ticks.n).toBe(1);
+        yield* run(live, { t: 'press' });
+        expect((yield* live.dictation.view).status).toBe('listening');
+        yield* Deferred.succeed(held, undefined);
+        yield* settle;
+        expect((yield* live.dictation.view).status).toBe('listening');
+        expect(count(live.calls, 'finish')).toBe(0);
+        for (let k = 0; k < 6; k++) yield* run(live, { t: 'wait', ms: 4 });
+        expect(live.ticks.n).toBe(2);
+        expect(live.kept.map((recall) => recall.startedAt)).toEqual([0, 24]);
         yield* Scope.close(live.scope, Exit.void);
       }),
     ));
@@ -471,6 +509,37 @@ describe('Say it', () => {
         for (let k = 0; k < 6; k++) yield* run(live, { t: 'wait', ms: 4 });
         expect((yield* live.sayIt.view).choice).toBe(3);
         expect(live.kept.map((recall) => recall.startedAt)).toEqual([0, 24, 48]);
+        yield* Scope.close(live.scope, Exit.void);
+      }),
+    ));
+
+  it('finishes handing over a recall when the call that made it is interrupted', () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const text = POOL.slice(0, 3).join(' ');
+        const held = yield* Deferred.make<void>();
+        const handed: number[] = [];
+        const live = yield* rig({
+          passage: { reference: 'Made 8:8', text },
+          source: scriptedSource(recite(text, { every: 1, pace: 4 })),
+          endsByItself: true,
+          keep: (recall) =>
+            Effect.andThen(
+              recall.grade === 4 ? Deferred.await(held) : Effect.void,
+              Effect.sync(() => void handed.push(recall.grade)),
+            ),
+        });
+        yield* settle;
+        yield* run(live, { t: 'press' });
+        for (let k = 0; k < 6; k++) yield* run(live, { t: 'wait', ms: 4 });
+        expect(handed).toEqual([3]);
+        const choosing = yield* Effect.forkChild(live.sayIt.choose(4));
+        yield* settle;
+        const interrupting = yield* Effect.forkChild(Fiber.interrupt(choosing));
+        yield* settle;
+        yield* Deferred.succeed(held, undefined);
+        yield* Fiber.join(interrupting);
+        expect(handed).toEqual([3, 4]);
         yield* Scope.close(live.scope, Exit.void);
       }),
     ));
