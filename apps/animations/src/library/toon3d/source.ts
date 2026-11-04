@@ -1,7 +1,8 @@
 import { Data, Effect, FileSystem, Schema } from 'effect';
 import { armChain } from './figure.ts';
 import { readSkinned } from './mesh/glb.ts';
-import { prepareMesh, LABELS } from './mesh/prepare.ts';
+import type { MeshLabels } from './mesh/labels.ts';
+import { prepareMesh } from './mesh/prepare.ts';
 import { toPayload } from './mesh/payload.ts';
 import { armJoints, type ArmJoints } from './mesh/rig.ts';
 import type { PageFigure } from './page.ts';
@@ -10,12 +11,13 @@ import type { MemberSpec, Pose } from './spec.ts';
 
 /**
  * Where a member's figure comes from: the code-built `Parametric` spec, or a
- * generated `Mesh` painted with the spec's paints, light, face and ink, whose
- * `mesh.json` names its glb, its face labels and their sha256s.
+ * generated `Mesh` labelled by the member's authored rules and painted with
+ * the spec's paints, light, face and ink, whose `mesh.json` names its glb
+ * and the glb's sha256.
  */
 export type FigureSource = Data.TaggedEnum<{
   Parametric: { readonly spec: MemberSpec };
-  Mesh: { readonly spec: MemberSpec; readonly manifest: string };
+  Mesh: { readonly spec: MemberSpec; readonly labels: MeshLabels; readonly manifest: string };
 }>;
 
 export const FigureSource = Data.taggedEnum<FigureSource>();
@@ -33,7 +35,7 @@ export class SourceInvalid extends Schema.TaggedError<SourceInvalid>()('SourceIn
 export const sha256 = (bytes: Uint8Array | string): string =>
   new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
 
-/** `mesh.json`: the generated mesh, where it came from, how it is stored, its height on the kept front view and its face labels. */
+/** `mesh.json`: the generated mesh, where it came from, how it is stored and its height on the kept front view. */
 const MeshManifest = Schema.fromJsonString(
   Schema.Struct({
     glb: Schema.String,
@@ -48,22 +50,8 @@ const MeshManifest = Schema.fromJsonString(
     }),
     storage: Schema.String,
     heightPx: Schema.Finite,
-    labels: Schema.String,
-    labelsSha256: Schema.String,
   }),
 );
-
-/** The labels file: one label per glb triangle, in index-buffer order, each an index into `legend`. */
-const FaceLabels = Schema.fromJsonString(
-  Schema.Struct({
-    faces: Schema.Finite,
-    legend: Schema.Array(Schema.String),
-    labels: Schema.Array(Schema.Finite),
-  }),
-);
-
-/** The rounds of smoothing a mesh's label edges get. */
-const LABEL_ROUNDS = 4;
 
 /**
  * A figure ready for the page and the measures: the spec it paints with, what
@@ -108,8 +96,12 @@ const readChecked = Effect.fnUntraced(function* (file: string, expected: string)
 
 const dirOf = (file: string): string => file.slice(0, file.lastIndexOf('/'));
 
-/** The mesh source built: its glb read, its labels checked against the glb's triangles, the mesh stood and welded. */
-const buildMesh = Effect.fnUntraced(function* (spec: MemberSpec, manifestFile: string) {
+/** The mesh source built: its glb read and checked against its sha256, the mesh stood and welded. */
+const buildMesh = Effect.fnUntraced(function* (
+  spec: MemberSpec,
+  labels: MeshLabels,
+  manifestFile: string,
+) {
   const fs = yield* FileSystem.FileSystem;
   const manifestText = yield* fs
     .readFileString(manifestFile)
@@ -119,26 +111,10 @@ const buildMesh = Effect.fnUntraced(function* (spec: MemberSpec, manifestFile: s
   );
   const dir = dirOf(manifestFile);
   const glb = yield* readChecked(`${dir}/${manifest.glb}`, manifest.sha256);
-  const labelBytes = yield* readChecked(`${dir}/${manifest.labels}`, manifest.labelsSha256);
-  const labels = yield* Schema.decodeEffect(FaceLabels)(new TextDecoder().decode(labelBytes)).pipe(
-    Effect.mapError((e) => invalid(`${manifest.labels}: ${e.message}`)),
-  );
-  if (labels.legend.join(',') !== LABELS.join(','))
-    return yield* invalid(
-      `${manifest.labels} has legend ${labels.legend.join(',')}, not ${LABELS.join(',')}`,
-    );
   const rest = yield* Effect.fromResult(readSkinned(glb)).pipe(
     Effect.mapError((e) => invalid(`${manifest.glb}: ${e.reason}`)),
   );
-  const triangles = rest.indices.length / 3;
-  if (labels.faces !== triangles || labels.labels.length !== triangles)
-    return yield* invalid(
-      `${manifest.labels} labels ${labels.labels.length} of ${labels.faces} faces, the glb has ${triangles}`,
-    );
-  const mesh = prepareMesh(rest, labels.labels, {
-    height: manifest.heightPx / HEAD_PX,
-    labelRounds: LABEL_ROUNDS,
-  });
+  const mesh = prepareMesh(rest, labels, manifest.heightPx / HEAD_PX);
   const built: BuiltFigure = {
     spec,
     page: { _tag: 'Mesh', spec, mesh: toPayload(mesh) },
@@ -146,7 +122,6 @@ const buildMesh = Effect.fnUntraced(function* (spec: MemberSpec, manifestFile: s
     inputs: {
       'mesh/mesh.json': sha256(manifestText),
       [`mesh/${manifest.glb}`]: manifest.sha256,
-      [`mesh/${manifest.labels}`]: manifest.labelsSha256,
     },
   };
   return built;
@@ -164,5 +139,5 @@ export const buildSource = (
         rightArm: parametricRightArm(spec),
         inputs: {},
       }),
-    Mesh: ({ spec, manifest }) => buildMesh(spec, manifest),
+    Mesh: ({ spec, labels, manifest }) => buildMesh(spec, labels, manifest),
   });

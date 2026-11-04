@@ -14,6 +14,7 @@ import {
 import { PART, type Figure } from '../figure.ts';
 import { toonMaterial } from '../shader.ts';
 import { REST, type MemberSpec, type PaintName, type Pose } from '../spec.ts';
+import { LABEL_GLSL, labelUniforms, MESH_LABEL } from './labels.ts';
 import type { MeshFigure } from './prepare.ts';
 import { skin, smoothNormals } from './rig.ts';
 
@@ -23,38 +24,33 @@ const CHIN = 2.4;
 /** The rounds of neighbour averaging the posed normals get, so a part's shade is one shape. */
 const NORMAL_ROUNDS = 3;
 
-/** The sash band's half-width: tunic or mantle inside the band and nearer the middle than this is sash. */
-const BAND_X = 0.4;
-
 /**
- * The mesh's toon shader. Each fragment's label is the largest of six
- * smoothed label shares (skin, hair, tunic, mantle, sash, sandal), so a
- * label's edge is a curve through the triangles. A fragment more than half
- * an arm's is that arm's sleeve (in the arm's paint) or, if skin, its hand.
- * Tunic or mantle inside the sash's band is sash. The shade is the hard
- * two-tone ramp of the code-built figure, read from a proxy normal (a
- * sphere for the head, an upright cylinder for the clothes) turned with the
- * vertex, or the smoothed posed normal for skin and sandals.
+ * The mesh's toon shader. Each fragment's label comes from the member's
+ * label rules (`LABEL_GLSL`) read at its rest position, so a label's edge is
+ * the clean curve of a plane or an azimuth curve and moves with the
+ * skinning. A fragment more than half an arm's is that arm's hand where the
+ * hand bone leads its weights by the rules' lead, else its sleeve (in the
+ * arm's paint). The shade is the hard two-tone ramp of the code-built
+ * figure, read from a proxy normal (a sphere for the head, an upright
+ * cylinder for the clothes) turned with the vertex, or the smoothed posed
+ * normal for skin and sandals.
  */
 const VERTEX = `
 attribute vec3 rest;
 attribute vec4 turn;
-attribute vec3 shareA;
-attribute vec3 shareB;
 attribute vec2 arm;
+attribute vec2 hand;
 varying vec3 vObj;
-varying vec3 vShareA;
-varying vec3 vShareB;
 varying vec2 vArm;
+varying vec2 vHand;
 varying vec3 vNormal;
 varying vec4 vTurn;
 varying vec3 vCamObj;
 varying float vDepth;
 void main() {
   vObj = rest;
-  vShareA = shareA;
-  vShareB = shareB;
   vArm = arm;
+  vHand = hand;
   vNormal = normal;
   vTurn = turn;
   vCamObj = normalize(vec3(0.0, 0.0, 1.0) * mat3(modelViewMatrix));
@@ -67,15 +63,14 @@ void main() {
 const FRAGMENT = `
 uniform mat3 normalMatrix;
 uniform int uMode;
-uniform vec3 uBase[9];
-uniform vec3 uShade[9];
-uniform float uIdOf[9];
+uniform vec3 uBase[7];
+uniform vec3 uShade[7];
+uniform float uIdOf[7];
 uniform float uHandId[2];
+uniform float uHandLead;
 uniform vec3 uLight;
 uniform float uThreshold;
 uniform float uSoft;
-uniform vec2 uBand;
-uniform float uBandX;
 uniform float uChin;
 uniform vec3 uHead;
 uniform vec3 uBody;
@@ -88,14 +83,14 @@ uniform float uLean;
 uniform float uCentreZ;
 uniform vec3 uInk;
 varying vec3 vObj;
-varying vec3 vShareA;
-varying vec3 vShareB;
 varying vec2 vArm;
+varying vec2 vHand;
 varying vec3 vNormal;
 varying vec4 vTurn;
 varying vec3 vCamObj;
 varying float vDepth;
 const float TAU = 6.28318530718;
+${LABEL_GLSL}
 
 float arcInk(vec2 q, vec4 arc, vec2 span) {
   vec2 d = q - arc.xy;
@@ -129,65 +124,52 @@ vec3 turned(vec3 n, vec4 q) {
 }
 
 void main() {
-  float w[7];
-  w[0] = 0.0;
-  w[1] = vShareA.x;
-  w[2] = vShareA.y;
-  w[3] = vShareA.z;
-  w[4] = vShareB.x;
-  w[5] = vShareB.y;
-  w[6] = vShareB.z;
-  int l = 1;
-  float best = w[1];
-  for (int i = 2; i < 7; i++) {
-    if (w[i] > best) {
-      best = w[i];
-      l = i;
-    }
-  }
   int side = 0;
   if (vArm.x > 0.5) side = 1;
   if (vArm.y > 0.5 && vArm.y >= vArm.x) side = 2;
+  int l = bodyLabel(vObj);
   int slot = l;
   float id = uIdOf[l];
-  if (side > 0 && l == 1) id = uHandId[side - 1];
-  if (side > 0 && l != 1 && l != 6) {
-    slot = 6 + side;
-    id = uIdOf[slot];
+  if (side > 0) {
+    float lead = side == 1 ? vHand.x : vHand.y;
+    if (lead > uHandLead) {
+      l = ${MESH_LABEL.skin};
+      slot = l;
+      id = uHandId[side - 1];
+    } else {
+      l = ${MESH_LABEL.tunic};
+      slot = 4 + side;
+      id = uIdOf[slot];
+    }
   }
-  if (side == 0 && (l == 3 || l == 4) && vObj.y > uBand.x && vObj.y < uBand.y && abs(vObj.x) < uBandX) {
-    slot = 5;
-    id = uIdOf[5];
-  }
-  bool head = side == 0 && vObj.y > uChin && (l == 1 || l == 2);
+  bool skinLike = l == ${MESH_LABEL.skin} || l == ${MESH_LABEL.sandal};
+  bool head = side == 0 && vObj.y > uChin && (l == ${MESH_LABEL.skin} || l == ${MESH_LABEL.hair});
   if (uMode == 1) {
     gl_FragColor = vec4(id / 255.0, vDepth, 0.0, 1.0);
     return;
   }
   vec3 n = normalize(vNormal);
   if (head) n = turned(normalize(vObj - uHead), normalize(vTurn));
-  if (!head && l != 1 && l != 6) {
+  if (!head && !skinLike) {
     vec3 d = vObj - uBody;
     n = turned(normalize(vec3(d.x, 0.0, d.z)), normalize(vTurn));
   }
   n = normalize(normalMatrix * n);
   float lit = smoothstep(uThreshold - uSoft, uThreshold + uSoft, dot(n, normalize(uLight)));
   vec3 c = mix(uShade[slot], uBase[slot], lit);
-  if (head && l == 1) c = mix(c, uInk, faceInk());
+  if (head && l == ${MESH_LABEL.skin}) c = mix(c, uInk, faceInk());
   gl_FragColor = vec4(c, 1.0);
 }
 `;
 
 const colour = (hex: string): Color => new Color().setStyle(hex, 'srgb-linear');
 
-/** The paint of each shader slot: none, the six labels, then the right and the left sleeve. */
+/** The paint of each shader slot: the five labels in `MESH_LABEL`'s order, then the right and the left sleeve. */
 const slotPaints = (spec: MemberSpec): ReadonlyArray<PaintName> => [
-  'tunic',
   'skin',
   'hair',
   'tunic',
   'mantle',
-  'sash',
   'sandal',
   spec.arms.right.paint,
   spec.arms.left.paint,
@@ -195,12 +177,10 @@ const slotPaints = (spec: MemberSpec): ReadonlyArray<PaintName> => [
 
 /** The part id of each shader slot. */
 const SLOT_IDS = [
-  PART.body,
   PART.head,
   PART.hair,
   PART.body,
   PART.mantle,
-  PART.sash,
   PART.foot,
   PART.sleeveR,
   PART.sleeveL,
@@ -222,14 +202,12 @@ const meshMaterial = (spec: MemberSpec, mesh: MeshFigure): ShaderMaterial => {
       uShade: { value: paints.map((p) => colour(p.shade)) },
       uIdOf: { value: SLOT_IDS },
       uHandId: { value: [PART.handR, PART.handL] },
+      uHandLead: { value: mesh.labels.hand },
       uLight: { value: new Vector3(...spec.light.direction).normalize() },
       uThreshold: { value: spec.light.threshold },
       uSoft: { value: spec.light.soft },
-      uBand: {
-        value: new Vector2(spec.sash.y - spec.sash.height / 2, spec.sash.y + spec.sash.height / 2),
-      },
-      uBandX: { value: BAND_X },
       uChin: { value: CHIN },
+      ...labelUniforms(mesh.labels),
       uHead: { value: new Vector3(hc[0], hc[1], hc[2] + mesh.faceZ) },
       uBody: { value: new Vector3(bc[0], bc[1], bc[2] + mesh.bodyZ) },
       uEyes: {
@@ -250,15 +228,6 @@ const meshMaterial = (spec: MemberSpec, mesh: MeshFigure): ShaderMaterial => {
   });
 };
 
-/** A vertex attribute of `size` taken from every `stride`-th group of `from`, starting at `at`. */
-const columns = (from: Float32Array, stride: number, at: number, size: number): Float32Array => {
-  const count = from.length / stride;
-  const out = new Float32Array(count * size);
-  for (let v = 0; v < count; v++)
-    for (let c = 0; c < size; c++) out[v * size + c] = from[v * stride + at + c] ?? 0;
-  return out;
-};
-
 /**
  * A member's figure from a generated mesh: one skinned mesh with the mesh
  * toon shader and the code-built figure's ground shadow, posed by the rig's
@@ -274,9 +243,8 @@ export const buildMeshFigure = (spec: MemberSpec, mesh: MeshFigure): Figure => {
   geometry.setAttribute('normal', new BufferAttribute(new Float32Array(count * 3), 3));
   geometry.setAttribute('rest', new BufferAttribute(mesh.rig.positions, 3));
   geometry.setAttribute('turn', new BufferAttribute(new Float32Array(count * 4), 4));
-  geometry.setAttribute('shareA', new BufferAttribute(columns(mesh.labels, 6, 0, 3), 3));
-  geometry.setAttribute('shareB', new BufferAttribute(columns(mesh.labels, 6, 3, 3), 3));
   geometry.setAttribute('arm', new BufferAttribute(mesh.arms, 2));
+  geometry.setAttribute('hand', new BufferAttribute(mesh.hands, 2));
   geometry.setIndex(new BufferAttribute(mesh.indices, 1));
   const material = meshMaterial(spec, mesh);
   const body = new Mesh(geometry, material);

@@ -6,7 +6,9 @@ import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import sharp from 'sharp';
+import { leadFeastLabels } from '../lead-feast-labels.ts';
 import { leadFeast } from '../lead-feast.ts';
+import type { MeshLabels } from '../mesh/labels.ts';
 import type { ViewName } from '../render.ts';
 import { buildSource, FigureSource, sha256 } from '../source.ts';
 import type { MemberSpec } from '../spec.ts';
@@ -31,6 +33,9 @@ import { verdictOf, verdictText, type Verdict } from './verdict.ts';
 const MEMBERS = { 'lead-feast': leadFeast } satisfies Readonly<Record<string, MemberSpec>>;
 
 type MemberName = keyof typeof MEMBERS;
+
+/** Each member's mesh label rules, by member. */
+const MESH_LABELS: Readonly<Record<MemberName, MeshLabels>> = { 'lead-feast': leadFeastLabels };
 
 const MEMBER_NAMES: ReadonlyArray<MemberName> = ['lead-feast'];
 
@@ -94,10 +99,11 @@ export const probesFile = (member: string): string =>
 /** Where a run writes: `apps/animations/out/toon3d/<member>/`. */
 const outDir = (member: string): string => `${here}/../../../../out/toon3d/${member}`;
 
-/** A member's generated mesh, named by its `mesh.json`, painted with the member's spec. */
+/** A member's generated mesh, named by its `mesh.json`, labelled by the member's rules and painted with its spec. */
 const meshOf = (member: MemberName) =>
   FigureSource.Mesh({
     spec: MEMBERS[member],
+    labels: MESH_LABELS[member],
     manifest: `${here}/../../cast/${member}/mesh/mesh.json`,
   });
 

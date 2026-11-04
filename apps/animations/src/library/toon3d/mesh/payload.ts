@@ -1,6 +1,7 @@
 import { Result } from 'effect';
 import { Base64 } from 'effect/encoding';
 import type { Vec3 } from '../spec.ts';
+import type { MeshLabels } from './labels.ts';
 import type { MeshFigure } from './prepare.ts';
 
 /** A mesh figure as JSON carries it to the page: each typed array's bytes in base64, the rest as they are. */
@@ -11,8 +12,9 @@ export interface MeshPayload {
   readonly names: ReadonlyArray<string>;
   readonly heads: ReadonlyArray<Vec3>;
   readonly indices: string;
-  readonly labels: string;
+  readonly labels: MeshLabels;
   readonly arms: string;
+  readonly hands: string;
   readonly faceZ: number;
   readonly bodyZ: number;
 }
@@ -28,8 +30,9 @@ export const toPayload = (m: MeshFigure): MeshPayload => ({
   names: m.rig.names,
   heads: m.rig.heads,
   indices: bytes(m.indices),
-  labels: bytes(m.labels),
+  labels: m.labels,
   arms: bytes(m.arms),
+  hands: bytes(m.hands),
   faceZ: m.faceZ,
   bodyZ: m.bodyZ,
 });
@@ -52,8 +55,9 @@ export const fromPayload = (p: MeshPayload): MeshFigure => ({
     heads: p.heads,
   },
   indices: new Uint32Array(unbase(p.indices)),
-  labels: new Float32Array(unbase(p.labels)),
+  labels: p.labels,
   arms: new Float32Array(unbase(p.arms)),
+  hands: new Float32Array(unbase(p.hands)),
   faceZ: p.faceZ,
   bodyZ: p.bodyZ,
 });

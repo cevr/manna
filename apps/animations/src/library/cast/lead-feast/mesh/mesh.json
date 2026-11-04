@@ -10,7 +10,5 @@
     "symmetry": true
   },
   "storage": "git (no LFS in repo)",
-  "heightPx": 656,
-  "labels": "labels.json",
-  "labelsSha256": "d8626a74f13e1b077aaed8ca32aff383fff87c5904d04e96d8898f7cd2c67bf0"
+  "heightPx": 656
 }
