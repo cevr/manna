@@ -130,8 +130,8 @@ it will call `Dictation.start`.
   - `test:voice`: `src/voice.property.test.ts` (the voice against its model)
     and `src/voice` (the native module's guards).
   - `test:dictation`: `src/dictation.property.test.ts` (the dictation
-    service against its model) and `src/dictation` (the scripted source and
-    the native module's guards).
+    service against its model) and `src/dictation` (the scripted source,
+    the hints and the native module's guards).
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
