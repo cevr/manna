@@ -7,6 +7,7 @@ import {
   cellsOf,
   clearBackground,
   deltaE,
+  drawnNearestOf,
   figuresIn,
   groundOf,
   hexOf,
@@ -50,6 +51,9 @@ const art = (rows: ReadonlyArray<string>, key: Readonly<Record<string, Rgb>>): R
 
 const KEY = { k: INK, b: BASE, s: SHADE, g: GROUND, f: FOREIGN };
 
+/** `r` with its pockets mended on the ground, each rim colour read as the paint the picture draws it as. */
+const mend = (r: Raster): Raster => mendPockets(r, GROUND, PAINTS, drawnNearestOf(r, PAINTS));
+
 /** Each pixel as a letter: `.` clear, else the letter of the key colour it is exactly, `?` for none. */
 const lettersOf = (r: Raster): ReadonlyArray<string> =>
   Array.from({ length: r.height }, (_, y) =>
@@ -64,7 +68,7 @@ const lettersOf = (r: Raster): ReadonlyArray<string> =>
 describe('mendPockets', () => {
   test('refills a pale pocket with the paint of its rim: a garment painted the paper', () => {
     const r = art(['kkkkkk', 'kbbbbk', 'kbggbk', 'kbgbbk', 'kbbbbk', 'kkkkkk'], KEY);
-    expect(lettersOf(mendPockets(r, GROUND, PAINTS))).toEqual([
+    expect(lettersOf(mend(r))).toEqual([
       'kkkkkk',
       'kbbbbk',
       'kbbbbk',
@@ -76,17 +80,95 @@ describe('mendPockets', () => {
 
   test('clears a pocket ringed all in ink: a true gap', () => {
     const r = art(['kkkkk', 'kgggk', 'kgggk', 'kkkkk'], KEY);
-    expect(lettersOf(mendPockets(r, GROUND, PAINTS))).toEqual(['kkkkk', 'k...k', 'k...k', 'kkkkk']);
+    expect(lettersOf(mend(r))).toEqual(['kkkkk', 'k...k', 'k...k', 'kkkkk']);
   });
 
   test('refills by the most of its rim, the ink not counted, however large or high the pocket', () => {
     const r = art(['kkkkkkk', 'kgggggs', 'kgggggs', 'kbbbbbk'], KEY);
-    expect(lettersOf(mendPockets(r, GROUND, PAINTS))).toEqual([
-      'kkkkkkk',
-      'kbbbbbs',
-      'kbbbbbs',
-      'kbbbbbk',
+    expect(lettersOf(mend(r))).toEqual(['kkkkkkk', 'kbbbbbs', 'kbbbbbs', 'kbbbbbk']);
+  });
+
+  test('counts each rim pixel once, however many pocket pixels it touches: a concave pocket (round 1, case 54)', () => {
+    const r = art(
+      [
+        'kkkkkkkkk',
+        'kkkkkkkkk',
+        'kkkkskskk',
+        'kksbgbgbk',
+        'kbgggggsk',
+        'kksbsgbkk',
+        'kkkkkskkk',
+        'kkkkkkkkk',
+        'kkkkkkkkk',
+      ],
+      KEY,
+    );
+    expect(lettersOf(mend(r))).toEqual([
+      'kkkkkkkkk',
+      'kkkkkkkkk',
+      'kkkkskskk',
+      'kksbsbsbk',
+      'kbssssssk',
+      'kksbssbkk',
+      'kkkkkskkk',
+      'kkkkkkkkk',
+      'kkkkkkkkk',
     ]);
+  });
+});
+
+/** A pocket grown at random from the middle of a 13 × 13 inked picture: its pixels, each a 4-neighbour of one before it, and its rim painted at random base, shade or ink. */
+const pocketCase = (seed: number) => {
+  const draw = rng(seed);
+  const size = 13;
+  const pocket = new Set([6 * size + 6]);
+  const grow = 1 + Math.floor(draw() * 24);
+  for (let k = 0; k < grow * 8 && pocket.size < grow; k++) {
+    const from = [...pocket][Math.floor(draw() * pocket.size)] ?? 0;
+    const step = [1, -1, size, -size][Math.floor(draw() * 4)] ?? 1;
+    const x = (from + step) % size;
+    const y = Math.floor((from + step) / size);
+    if (x >= 2 && x <= 10 && y >= 2 && y <= 10) pocket.add(from + step);
+  }
+  const paints: ReadonlyArray<Rgb> = [BASE, SHADE, INK];
+  const rgba = new Uint8Array(size * size * 4);
+  for (let q = 0; q < size * size; q++) rgba.set([...INK, 255], q * 4);
+  for (const q of pocket) {
+    rgba.set([...GROUND, 255], q * 4);
+    for (const m of [q - 1, q + 1, q - size, q + size])
+      if (!pocket.has(m)) rgba.set([...(paints[Math.floor(draw() * 3)] ?? INK), 255], m * 4);
+  }
+  return { picture: { width: size, height: size, rgba }, pocket };
+};
+
+/** The paint a rim of `base` base pixels and `shade` shade pixels fills with: the more, the base on a tie (it comes first in the palette). */
+const winner = (base: number, shade: number): Rgb => {
+  if (shade > base) return SHADE;
+  return BASE;
+};
+
+describe('mendPockets over generated pockets', () => {
+  test('fills each pocket with the paint most of its distinct non-ink rim pixels are, or clears it when its rim is all ink', () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const { picture, pocket } = pocketCase(seed);
+      const size = picture.width;
+      const rim = new Set(
+        [...pocket].flatMap((q) =>
+          [q - 1, q + 1, q - size, q + size].filter((m) => !pocket.has(m)),
+        ),
+      );
+      const count = (paint: Rgb) =>
+        [...rim].filter((m) => hexOf(rgbAt(picture, m)) === hexOf(paint)).length;
+      const [base, shade] = [count(BASE), count(SHADE)];
+      const mended = mend(picture);
+      const want = hexOf(winner(base, shade));
+      for (const q of pocket) {
+        const got = { alpha: alphaAt(mended, q), hex: hexOf(rgbAt(mended, q)) };
+        if (base + shade === 0)
+          expect({ seed, q, alpha: got.alpha }).toEqual({ seed, q, alpha: 0 });
+        else expect({ seed, q, ...got }).toEqual({ seed, q, alpha: 255, hex: want });
+      }
+    }
   });
 });
 
@@ -106,6 +188,73 @@ const atDistance = (want: number): Rgb => {
   return BASE;
 };
 
+/** A channel held to 0..255. */
+const clamp = (v: number): number => Math.max(0, Math.min(255, v));
+
+/** A drawing of a generated palette: every paint drawn flat in its hex moved by one cast, with ±1 of noise, in strips of 20 to 300 pixels; one pair of parts as close as the lead's tunic and sash (ΔE 5 to 12), every other paint ΔE 25 or more from the rest. */
+const castCase = (seed: number) => {
+  const draw = rng(seed);
+  const int = (a: number, b: number) => a + Math.floor(draw() * (b - a + 1));
+  const bases: Array<Rgb> = [];
+  const apart = int(2, 5);
+  for (let tries = 0; tries < 2000 && bases.length < apart; tries++) {
+    const c: Rgb = [int(40, 230), int(40, 230), int(40, 230)];
+    if ([INK, ...bases].every((b) => deltaE(b, c) >= 25)) bases.push(c);
+  }
+  const first = bases[0] ?? BASE;
+  for (let tries = 0; tries < 400; tries++) {
+    const c: Rgb = [
+      clamp(first[0] + int(-9, 9)),
+      clamp(first[1] + int(-9, 9)),
+      clamp(first[2] + int(-9, 9)),
+    ];
+    const near = deltaE(first, c);
+    if (near >= 5 && near <= 12 && [INK, ...bases.slice(1)].every((b) => deltaE(b, c) >= 25)) {
+      bases.push(c);
+      break;
+    }
+  }
+  const palette: Palette = {
+    ink: hexOf(INK),
+    parts: bases.map((b, i) => ({ name: `p${i}`, base: hexOf(b) })),
+  };
+  const cast: Rgb = [int(-8, 8), int(-8, 8), int(-8, 8)];
+  const truth: Array<string> = [];
+  const pixels: Array<Rgb> = [];
+  for (const paint of [INK, ...bases])
+    for (let k = int(20, 300); k > 0; k--) {
+      pixels.push([
+        clamp(paint[0] + cast[0] + int(-1, 1)),
+        clamp(paint[1] + cast[1] + int(-1, 1)),
+        clamp(paint[2] + cast[2] + int(-1, 1)),
+      ]);
+      truth.push(hexOf(paint));
+    }
+  const rgba = new Uint8Array(pixels.length * 4);
+  pixels.forEach((c, q) => rgba.set([...c, 255], q * 4));
+  return { palette, picture: { width: pixels.length, height: 1, rgba }, truth };
+};
+
+describe('drawnNearestOf over generated drawings', () => {
+  test("snaps every pixel to the paint it was drawn as, though a cast moves a close paint nearer its neighbour's hex", () => {
+    for (let seed = 1; seed <= 120; seed++) {
+      const { palette, picture, truth } = castCase(seed);
+      const paints = paintsOf(palette);
+      const out = snapped(picture, paints, drawnNearestOf(picture, paints));
+      const wrong = truth.flatMap((want, q) => {
+        const got = hexOf(rgbAt(out, q));
+        if (got === want) return [];
+        return [`${q}: ${got}, drawn as ${want}`];
+      });
+      expect({ seed, wrong: wrong.slice(0, 3), count: wrong.length }).toEqual({
+        seed,
+        wrong: [],
+        count: 0,
+      });
+    }
+  });
+});
+
 describe('snapped', () => {
   test('takes a paint exactly within ΔE 30 and keeps a farther pixel as drawn, every opaque pixel at alpha 255', () => {
     const near = atDistance(29);
@@ -117,7 +266,14 @@ describe('snapped', () => {
       height: 1,
       rgba: new Uint8Array([...near, 200, ...far, 255, ...INK, 0]),
     };
-    expect([...snapped(r, PAINTS).rgba]).toEqual([...BASE, 255, ...far, 255, ...INK, 0]);
+    expect([...snapped(r, PAINTS, drawnNearestOf(r, PAINTS)).rgba]).toEqual([
+      ...BASE,
+      255,
+      ...far,
+      255,
+      ...INK,
+      0,
+    ]);
   });
 });
 
@@ -345,34 +501,40 @@ const DRESSED: Palette = {
 
 const FIGURE_KEY = { k: INK, s: SKIN, r: ROBE, h: SASH, f: SANDAL };
 
-/** A standing figure, the head on top, its arms down; `offer` reaches the right arm out at the shoulder in its sleeve, a round hand at the end. */
+/** A standing figure's rows, the head on top, its arms down, the sash in rows 9 to 11. */
+const STANDING: ReadonlyArray<string> = [
+  '....kkkkk...........',
+  '....ksssk...........',
+  '....ksssk...........',
+  '....ksssk...........',
+  '...krrrrrk..........',
+  '..krrrrrrr..........',
+  '..krrrrrrr..........',
+  '..krrrrrrr..........',
+  '..krrrrrrr..........',
+  '..khhhhhhhk.........',
+  '..khhhhhhhk.........',
+  '..khhhhhhhk.........',
+  '..krrrrrrrk.........',
+  '..krrrrrrrk.........',
+  '..krrrrrrrk.........',
+  '..krrrrrrrk.........',
+  '..kkkkkkkkk.........',
+  '...kfffkfffk........',
+  '...kfffkfffk........',
+  '...kkkkkkkkk........',
+];
+
+/** A standing figure; `offer` reaches the right arm out at the shoulder in its sleeve, a round hand at the end. */
 const standing = (offer: boolean): Raster => {
   const arm = ['..........', 'rrrrrrrkss', 'rrrrrrrkss', 'kkkkkkkk..'];
   const still = ['..........', '..........', '..........', '..........'];
   const reach = [still, arm][Number(offer)] ?? still;
   return art(
-    [
-      '....kkkkk...........',
-      '....ksssk...........',
-      '....ksssk...........',
-      '....ksssk...........',
-      '...krrrrrk..........',
-      `..krrrrrrr${reach[0]}`,
-      `..krrrrrrr${reach[1]}`,
-      `..krrrrrrr${reach[2]}`,
-      `..krrrrrrr${reach[3]}`,
-      '..khhhhhhhk.........',
-      '..khhhhhhhk.........',
-      '..khhhhhhhk.........',
-      '..krrrrrrrk.........',
-      '..krrrrrrrk.........',
-      '..krrrrrrrk.........',
-      '..krrrrrrrk.........',
-      '..kkkkkkkkk.........',
-      '...kfffkfffk........',
-      '...kfffkfffk........',
-      '...kkkkkkkkk........',
-    ],
+    STANDING.map((row, y) => {
+      if (y < 5 || y > 8) return row;
+      return `${row.slice(0, 10)}${reach[y - 5] ?? ''}`;
+    }),
     FIGURE_KEY,
   );
 };
@@ -394,6 +556,40 @@ describe('linesOf', () => {
     const down = Option.getOrThrow(linesOf(standing(false), paints));
     const out = Option.getOrThrow(linesOf(standing(true), paints));
     expect(out).toEqual(down);
+  });
+
+  test('reads the sash top across the figure, where a sleeve hangs over the belt at the centre column or a drawn line runs down it (round 1, M3)', () => {
+    for (const letter of ['r', 'k', 's']) {
+      const rows = STANDING.map((row, y) => {
+        if (y < 9 || y > 11) return row;
+        return `${row.slice(0, 7)}${letter}${row.slice(8)}`;
+      });
+      expect([
+        letter,
+        Option.flatMap(linesOf(art(rows, FIGURE_KEY), paints), (l) => l.sashTop),
+      ]).toEqual([letter, Option.some(9)]);
+    }
+  });
+
+  test('reads the hem above an outline fringe between the legs that snapped to a garment paint (round 2: ink on a green ground blends to teal)', () => {
+    const rows = STANDING.map((row, y) => {
+      if (y === 16) return '..kkkkkkkkkkk.......';
+      if (y > 16) return '..kffk.r.kffk.......';
+      return row;
+    });
+    const lines = Option.getOrThrow(linesOf(art(rows, FIGURE_KEY), paints));
+    expect([lines.centreColumn, lines.hem]).toEqual([7, Option.some(15)]);
+  });
+
+  test('reads no sash top from stray sash pixels too few to make a band', () => {
+    const rows = STANDING.map((row, y) => {
+      if (y >= 9 && y <= 11) return '..krrrrrrrk.........';
+      if (y >= 5 && y <= 7) return '..krhrrrrr..........';
+      return row;
+    });
+    expect(Option.flatMap(linesOf(art(rows, FIGURE_KEY), paints), (l) => l.sashTop)).toEqual(
+      Option.none(),
+    );
   });
 
   test('reads none from a picture with no opaque pixel', () => {

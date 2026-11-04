@@ -345,20 +345,23 @@ export const largestPiece = (r: Raster): Raster => {
   return { width: r.width, height: r.height, rgba };
 };
 
-/** The paint most of a pocket's non-ink rim pixels lie nearest, none when its rim is all ink (or it has none). */
+/** The paint most of a pocket's non-ink rim pixels lie nearest, each rim pixel counted once however many pocket pixels it touches; none when its rim is all ink (or it has none). */
 const rimPaint = (
   r: Raster,
   pocket: ReadonlyArray<number>,
   nearest: (c: Rgb) => Nearest,
 ): Option.Option<number> => {
   const inside = new Set(pocket);
+  const rim = new Set(
+    pocket.flatMap((q) =>
+      around4(q, r.width, r.height).filter((m) => !inside.has(m) && alphaAt(r, m) > 0),
+    ),
+  );
   const votes = new Map<number, number>();
-  for (const q of pocket)
-    for (const m of around4(q, r.width, r.height)) {
-      if (inside.has(m) || alphaAt(r, m) === 0) continue;
-      const { index } = nearest(rgbAt(r, m));
-      if (index !== 0) votes.set(index, (votes.get(index) ?? 0) + 1);
-    }
+  for (const m of rim) {
+    const { index } = nearest(rgbAt(r, m));
+    if (index !== 0) votes.set(index, (votes.get(index) ?? 0) + 1);
+  }
   return Option.fromUndefinedOr(
     [...votes].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([index]) => index)[0],
   );
@@ -369,10 +372,14 @@ const rimPaint = (
  * paper's colour keyed out): each 4-connected region of opaque pixels within
  * `POCKET_SUM` of the ground is a true gap, cleared, when every opaque
  * 4-neighbour round it is ink, and else a garment painted the paper's
- * colour, refilled with the paint most of its non-ink rim lies nearest.
+ * colour, refilled with the paint most of its non-ink rim is, by `nearest`.
  */
-export const mendPockets = (r: Raster, ground: Rgb, paints: ReadonlyArray<Paint>): Raster => {
-  const nearest = nearestOf(paints);
+export const mendPockets = (
+  r: Raster,
+  ground: Rgb,
+  paints: ReadonlyArray<Paint>,
+  nearest: (c: Rgb) => Nearest,
+): Raster => {
   const pockets = regionsOf(
     r,
     (q) => alphaAt(r, q) > 0 && rgbSum(rgbAt(r, q), ground) <= POCKET_SUM,
@@ -392,9 +399,172 @@ export const mendPockets = (r: Raster, ground: Rgb, paints: ReadonlyArray<Paint>
   return { width: r.width, height: r.height, rgba };
 };
 
-/** `r` snapped: every opaque pixel at alpha 255, each within `SNAP_RADIUS` of a paint taking that paint exactly, a farther one kept as drawn. */
-export const snapped = (r: Raster, paints: ReadonlyArray<Paint>): Raster => {
-  const nearest = nearestOf(paints);
+/** How many rounds the drawn paints are read again from the colours they gather: a fixed count, so two splits of one sheet agree. */
+const DRAWN_ROUNDS = 8;
+
+/** One drawn colour of a sheet: its Lab and how many opaque pixels are drawn in it. */
+interface DrawnColour {
+  readonly rgb: Rgb;
+  readonly lab: Rgb;
+  readonly count: number;
+}
+
+/** The weighted median of each Lab channel of `colours`. */
+const medianLab = (colours: ReadonlyArray<DrawnColour>): Rgb => {
+  const total = colours.reduce((sum, c) => sum + c.count, 0);
+  const channel = (k: 0 | 1 | 2): number => {
+    const sorted = colours.toSorted((a, b) => a.lab[k] - b.lab[k]);
+    let seen = 0;
+    for (const c of sorted) {
+      seen += c.count;
+      if (seen * 2 >= total) return c.lab[k];
+    }
+    return 0;
+  };
+  return [channel(0), channel(1), channel(2)];
+};
+
+/** How much nearer its nearest paint than its second a colour must lie for its offset from that paint to count toward the sheet's cast. */
+const PLAIN_SHARE = 0.5;
+
+/**
+ * The sheet's cast: the per-channel weighted median, in Lab, of each plain
+ * colour's offset from its nearest paint, a plain colour being one within
+ * `SNAP_RADIUS` of a paint and at most `PLAIN_SHARE` as far from it as from
+ * any other; none (0, 0, 0) when no colour is plain.
+ */
+const castOf = (colours: ReadonlyArray<DrawnColour>, paints: ReadonlyArray<Paint>): Rgb => {
+  const offsets = colours.flatMap((c): ReadonlyArray<DrawnColour> => {
+    const [first, second] = paints
+      .map((p) => ({
+        p,
+        distance: Math.hypot(c.lab[0] - p.lab[0], c.lab[1] - p.lab[1], c.lab[2] - p.lab[2]),
+      }))
+      .toSorted((a, b) => a.distance - b.distance);
+    if (!first || first.distance > SNAP_RADIUS) return [];
+    if (second && first.distance > second.distance * PLAIN_SHARE) return [];
+    const lab: Rgb = [
+      c.lab[0] - first.p.lab[0],
+      c.lab[1] - first.p.lab[1],
+      c.lab[2] - first.p.lab[2],
+    ];
+    return [{ rgb: c.rgb, lab, count: c.count }];
+  });
+  if (offsets.length === 0) return [0, 0, 0];
+  return medianLab(offsets);
+};
+
+/** ΔE76 between two Lab colours. */
+const labDistance = (a: Rgb, b: Rgb): number => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+/** The difference (ΔE76) below which two paints are one colour to the eye: no drawing tells them apart. */
+const ONE_TO_THE_EYE = 2.3;
+
+/** Each paint's leader: the first paint, in palette order, its own leader and less than `ONE_TO_THE_EYE` from it; the drawn snap tells leaders apart, and a leader's paints by their hexes. */
+const leadersOf = (paints: ReadonlyArray<Paint>): ReadonlyArray<number> => {
+  const leaders: Array<number> = [];
+  for (const [i, p] of paints.entries()) {
+    const leader = paints.findIndex(
+      (o, j) => j < i && leaders[j] === j && labDistance(o.lab, p.lab) < ONE_TO_THE_EYE,
+    );
+    if (leader < 0) leaders.push(i);
+    else leaders.push(leader);
+  }
+  return leaders;
+};
+
+/** The index of the paint among `candidates` whose Lab in `labs` lies nearest `lab`, the first of equals. */
+const nearestAmong = (
+  lab: Rgb,
+  candidates: ReadonlyArray<number>,
+  labs: ReadonlyArray<Rgb>,
+): number => {
+  let best = candidates[0] ?? 0;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const i of candidates) {
+    const p = labs[i] ?? lab;
+    const distance = Math.hypot(lab[0] - p[0], lab[1] - p[1], lab[2] - p[2]);
+    if (distance < bestDistance) [best, bestDistance] = [i, distance];
+  }
+  return best;
+};
+
+/**
+ * The paint each colour of a drawn sheet was drawn as: of the paints within
+ * `SNAP_RADIUS` of the colour, the one whose colour as this sheet draws it
+ * lies nearest, and its distance from the palette's own colour; a colour no
+ * paint lies within the radius of answers its nearest paint, as
+ * `nearestOf`. A drawing shifts its paints off their hexes (a warm cast, a
+ * paler cream), so two close paints can both lie nearer one hex; the colour
+ * each is drawn in on the sheet tells them apart. Each leading paint's
+ * drawn colour (`leadersOf`: paints one to the eye share one) starts at its
+ * own moved by the sheet's cast (`castOf`), and is read again
+ * `DRAWN_ROUNDS` times as the per-channel median, in Lab, of the sheet's
+ * opaque colours it gathers; a paint that gathers none keeps its last.
+ * Among a leader's paints a colour takes the nearest hex, as `nearestOf`.
+ */
+export const drawnNearestOf = (r: Raster, paints: ReadonlyArray<Paint>): ((c: Rgb) => Nearest) => {
+  const byPalette = nearestOf(paints);
+  const counts = new Map<number, number>();
+  for (let q = 0; q < r.width * r.height; q++) {
+    if (alphaAt(r, q) === 0) continue;
+    const c = rgbAt(r, q);
+    const key = (c[0] << 16) | (c[1] << 8) | c[2];
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const leaders = leadersOf(paints);
+  const colours = [...counts]
+    .map(([key, count]): DrawnColour => {
+      const rgb: Rgb = [(key >> 16) & 255, (key >> 8) & 255, key & 255];
+      return { rgb, lab: labOf(rgb), count };
+    })
+    .map((c) => {
+      const within = paints.flatMap((p, i) => {
+        if (labDistance(c.lab, p.lab) > SNAP_RADIUS) return [];
+        return [i];
+      });
+      return { ...c, within, led: [...new Set(within.map((i) => leaders[i] ?? i))] };
+    })
+    .filter((c) => c.within.length > 0);
+  const cast = castOf(colours, paints);
+  let drawn: ReadonlyArray<Rgb> = paints.map((p) => [
+    p.lab[0] + cast[0],
+    p.lab[1] + cast[1],
+    p.lab[2] + cast[2],
+  ]);
+  for (let round = 0; round < DRAWN_ROUNDS; round++) {
+    const gathered = paints.map((): Array<DrawnColour> => []);
+    for (const c of colours) gathered[nearestAmong(c.lab, c.led, drawn)]?.push(c);
+    drawn = gathered.map((g, i) => {
+      if (g.length === 0) return drawn[i] ?? [0, 0, 0];
+      return medianLab(g);
+    });
+  }
+  const settled = drawn;
+  const hexes = paints.map((p) => p.lab);
+  const known = new Map(
+    colours.map((c) => {
+      const leader = nearestAmong(c.lab, c.led, settled);
+      const index = nearestAmong(
+        c.lab,
+        c.within.filter((i) => leaders[i] === leader),
+        hexes,
+      );
+      return [
+        (c.rgb[0] << 16) | (c.rgb[1] << 8) | c.rgb[2],
+        { index, distance: labDistance(c.lab, hexes[index] ?? c.lab) },
+      ] as const;
+    }),
+  );
+  return (c) => known.get((c[0] << 16) | (c[1] << 8) | c[2]) ?? byPalette(c);
+};
+
+/** `r` snapped: every opaque pixel at alpha 255, each whose paint by `nearest` lies within `SNAP_RADIUS` taking that paint exactly, a farther one kept as drawn. */
+export const snapped = (
+  r: Raster,
+  paints: ReadonlyArray<Paint>,
+  nearest: (c: Rgb) => Nearest,
+): Raster => {
   const rgba = r.rgba.slice();
   for (let q = 0; q < r.width * r.height; q++) {
     if (alphaAt(r, q) === 0) continue;
@@ -417,7 +587,7 @@ export interface Split {
   readonly cells: ReadonlyArray<SplitCell>;
 }
 
-/** A drawn sheet split into `n` cells: the background cleared, the cells cut, each kept to its largest piece, its pockets mended and its paints snapped to `palette`. */
+/** A drawn sheet split into `n` cells: the background cleared, the cells cut, each kept to its largest piece, its pockets mended and its paints snapped to `palette`, each colour to the paint the whole sheet draws it as (`drawnNearestOf`). */
 export const splitSheet = (
   sheet: Raster,
   n: number,
@@ -426,13 +596,20 @@ export const splitSheet = (
   const ground = groundOf(sheet);
   const cleared = clearBackground(sheet, ground);
   const paints = paintsOf(palette);
-  return Result.map(cellsOf(cleared, n), (boxes) => ({
-    ground,
-    cells: boxes.map((box) => ({
-      box,
-      raster: snapped(mendPockets(largestPiece(cropOf(cleared, box)), ground, paints), paints),
-    })),
-  }));
+  return Result.map(cellsOf(cleared, n), (boxes) => {
+    const nearest = drawnNearestOf(cleared, paints);
+    return {
+      ground,
+      cells: boxes.map((box) => ({
+        box,
+        raster: snapped(
+          mendPockets(largestPiece(cropOf(cleared, box)), ground, paints, nearest),
+          paints,
+          nearest,
+        ),
+      })),
+    };
+  });
 };
 
 /** The lines of one drawn figure, in its picture's rows and columns: none where a line cannot be read. */
@@ -450,7 +627,7 @@ export interface Lines {
   readonly head: Option.Option<number>;
   /** The last garment row in the centre column. */
   readonly hem: Option.Option<number>;
-  /** The first sash row in the centre column. */
+  /** The top row of the sash: the first row of a 3 × 3 block of sash paint anywhere across the figure. */
   readonly sashTop: Option.Option<number>;
 }
 
@@ -488,6 +665,7 @@ const rowsOfRole = (
   return rows.filter((y) => run(y, -1) + run(y, 1) + 1 >= LINE_RUN);
 };
 
+/** The rows of column `x` from `from` downward whose pixel and its left and right neighbours are exactly paints of `roles`: an outline's fringe a pixel or two wide, snapped to a paint where it meets the clear ground, never reads as one. */
 const paintRows = (
   r: Raster,
   x: number,
@@ -496,22 +674,23 @@ const paintRows = (
   paints: ReadonlyArray<Paint>,
 ): ReadonlyArray<number> => {
   const nearest = nearestOf(paints);
-  const rows: Array<number> = [];
-  for (let y = from; y < r.height; y++) {
-    const q = y * r.width + x;
-    if (alphaAt(r, q) === 0) continue;
+  const inRoles = (u: number, y: number): boolean => {
+    const q = y * r.width + u;
+    if (u < 0 || u >= r.width || alphaAt(r, q) === 0) return false;
     const { index, distance } = nearest(rgbAt(r, q));
-    const role = paints[index]?.role ?? 'ink';
-    if (distance === 0 && roles.includes(role)) rows.push(y);
-  }
+    return distance === 0 && roles.includes(paints[index]?.role ?? 'ink');
+  };
+  const rows: Array<number> = [];
+  for (let y = from; y < r.height; y++)
+    if (inRoles(x - 1, y) && inRoles(x, y) && inRoles(x + 1, y)) rows.push(y);
   return rows;
 };
 
 /**
- * A figure's lines, read in its head column and its centre column so a
- * raised arm never moves one: the crown and the collar in the head column,
- * the sash top and the hem in the centre column, ink marks skipped; none
- * when the picture holds no opaque pixel.
+ * A figure's lines, read so a raised arm never moves one: the crown and the
+ * collar in the head column, the hem in the centre column, ink marks
+ * skipped, and the sash top as the top of its band (`bandTop`); none when
+ * the picture holds no opaque pixel.
  */
 export const linesOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<Lines> => {
   const rows = Array.from({ length: r.height }, (_, y) => y).filter((y) =>
@@ -544,8 +723,38 @@ export const linesOf = (r: Raster, paints: ReadonlyArray<Paint>): Option.Option<
     crown,
     head: Option.map(Option.fromUndefinedOr(collar), (y) => y - crown),
     hem: Option.fromUndefinedOr(garment.at(-1)),
-    sashTop: Option.fromUndefinedOr(rowsOfRole(r, centreColumn, top, ['sash'], paints)[0]),
+    sashTop: bandTop(r, ['sash'], paints),
   });
+};
+
+/**
+ * The top row of the first `LINE_RUN` × `LINE_RUN` block of pixels that are
+ * exactly paints of `roles`, anywhere across the figure; none when no such
+ * block is drawn. A belt is read so: a hanging sleeve covers it at the
+ * centre column in profile, and a knot's drawn edge can run down that
+ * column, but an arm is never sash, so a raised arm moves no band's top.
+ */
+const bandTop = (
+  r: Raster,
+  roles: ReadonlyArray<Role>,
+  paints: ReadonlyArray<Paint>,
+): Option.Option<number> => {
+  const nearest = nearestOf(paints);
+  const of = new Uint8Array(r.width * r.height);
+  for (let q = 0; q < r.width * r.height; q++) {
+    if (alphaAt(r, q) === 0) continue;
+    const { index, distance } = nearest(rgbAt(r, q));
+    const role = paints[index]?.role ?? 'ink';
+    if (distance === 0 && role !== 'ink' && roles.includes(role)) of[q] = 1;
+  }
+  const block = (x: number, y: number): boolean => {
+    for (let dy = 0; dy < LINE_RUN; dy++)
+      for (let dx = 0; dx < LINE_RUN; dx++) if (of[(y + dy) * r.width + x + dx] !== 1) return false;
+    return true;
+  };
+  for (let y = 0; y + LINE_RUN <= r.height; y++)
+    for (let x = 0; x + LINE_RUN <= r.width; x++) if (block(x, y)) return Option.some(y);
+  return Option.none();
 };
 
 /** The median of `values`, none when there are none. */
