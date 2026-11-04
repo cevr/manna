@@ -27,6 +27,13 @@ describe("In Its Order's parchment shots", () => {
     ]);
   });
 
+  test("faults a still 2×2 plate laid inside each milk-row figure's lower face where the page paints it, the baby, the toddler and the child at their head shares (0.68, 0.81, 0.86) included (round 1, M1)", () => {
+    const row = covers.find(([id]) => id === 'milk-row');
+    expect(row?.[3].toSorted(([a], [b]) => a.localeCompare(b))).toEqual(
+      ['baby', 'child', 'lead', 'toddler', 'villager'].map((name) => [name, true]),
+    );
+  });
+
   test('reads the three shots', () => {
     expect(covers.map(([id]) => id)).toEqual(['milk-cup', 'milk-pour', 'milk-row']);
   });

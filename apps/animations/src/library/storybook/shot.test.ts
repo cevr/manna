@@ -161,6 +161,9 @@ const generatedShot = (seed: number) => {
 
 const SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
 
+/** No figure's head share named: every member's head a grown adult's. */
+const ADULTS: ReadonlyMap<string, number> = new Map();
+
 /** The span a generated figure is in at `t` by its windows, none for a figure not generated. */
 const spanOfWindow = (figures: ReadonlyArray<Generated>, name: string, t: number) =>
   Option.fromUndefinedOr(
@@ -175,7 +178,7 @@ describe('frameAt over generated shots', () => {
     const misses = SEEDS.flatMap((seed) => {
       const { shot, figures, heads } = generatedShot(seed);
       return timesOf(shot).flatMap((t) =>
-        frameAt(shot, heads, t).figures.flatMap((f) => {
+        frameAt(shot, heads, t, ADULTS).figures.flatMap((f) => {
           const want = Option.match(spanOfWindow(figures, f.name, t), {
             onNone: () => 'none',
             onSome: (s) => cellOf(s, t),
@@ -193,7 +196,7 @@ describe('frameAt over generated shots', () => {
       const { shot, figures, heads } = generatedShot(seed);
       const run = new Map<string, number>();
       return timesOf(shot).flatMap((t) =>
-        frameAt(shot, heads, t).figures.flatMap((f) => {
+        frameAt(shot, heads, t, ADULTS).figures.flatMap((f) => {
           const blink = Option.flatMap(spanOfWindow(figures, f.name, t), (s) => {
             if (s._tag !== 'Hold') return Option.none();
             return Option.fromUndefinedOr(s.blink);
@@ -222,7 +225,9 @@ describe('frameAt over generated shots', () => {
           const frames = Array.from(
             { length: 241 },
             (_, i) => w.from + ((end - w.from) * i) / 240,
-          ).flatMap((t) => frameAt(shot, heads, t).figures.filter((f) => f.name === g.figure.name));
+          ).flatMap((t) =>
+            frameAt(shot, heads, t, ADULTS).figures.filter((f) => f.name === g.figure.name),
+          );
           const swaps = frames.filter((f, i) => i > 0 && f.cell !== frames[i - 1]?.cell).length;
           const last = frames.at(-1);
           const settled = [last?.sx, last?.sy];
@@ -238,7 +243,7 @@ describe('frameAt over generated shots', () => {
     const misses = SEEDS.flatMap((seed) => {
       const { shot, figures, heads } = generatedShot(seed);
       return timesOf(shot).flatMap((t) =>
-        frameAt(shot, heads, t).figures.flatMap((f) => {
+        frameAt(shot, heads, t, ADULTS).figures.flatMap((f) => {
           const turning = Option.exists(spanOfWindow(figures, f.name, t), (s) => s._tag === 'Turn');
           const bounded =
             f.sx >= 1 - SQUASH.x - 1e-12 && f.sx <= 1 && f.sy >= 1 && f.sy <= 1 + SQUASH.y + 1e-12;
@@ -255,7 +260,7 @@ describe('frameAt over generated shots', () => {
     const misses = SEEDS.flatMap((seed) => {
       const { shot, figures, heads } = generatedShot(seed);
       return timesOf(shot).flatMap((t) =>
-        frameAt(shot, heads, t).figures.flatMap((f) => {
+        frameAt(shot, heads, t, ADULTS).figures.flatMap((f) => {
           const at = figures.find((x) => x.figure.name === f.name)?.figure.at ?? {
             x: Number.NaN,
             ground: Number.NaN,
@@ -283,7 +288,7 @@ describe('frameAt over generated shots', () => {
   test("derives every figure's head from the shot's head over its layer's depth, so heads go as 1/z", () => {
     for (const seed of SEEDS) {
       const { shot, figures, heads } = generatedShot(seed);
-      const frame = frameAt(shot, heads, shot.duration / 2);
+      const frame = frameAt(shot, heads, shot.duration / 2, ADULTS);
       const drawn = figures.map((g) => {
         const f = frame.figures.find((x) => x.name === g.figure.name);
         return { z: g.z, head: (f?.scale ?? 0) * g.head };
@@ -298,9 +303,9 @@ describe('frameAt over generated shots', () => {
   test('is a pure function of t: two calls agree, whatever was drawn between them', () => {
     for (const seed of SEEDS.slice(0, 4)) {
       const { shot, heads } = generatedShot(seed);
-      const first = timesOf(shot).map((t) => frameAt(shot, heads, t));
+      const first = timesOf(shot).map((t) => frameAt(shot, heads, t, ADULTS));
       const shuffled = timesOf(shot).toReversed();
-      const again = new Map(shuffled.map((t) => [t, frameAt(shot, heads, t)] as const));
+      const again = new Map(shuffled.map((t) => [t, frameAt(shot, heads, t, ADULTS)] as const));
       expect(timesOf(shot).map((t) => again.get(t))).toEqual(first);
     }
   });
@@ -311,7 +316,7 @@ describe('frameAt over generated shots', () => {
       const step = (BREATH * Math.PI) / BREATH_PERIOD[0] / shot.fps;
       const last = new Map<string, number>();
       return timesOf(shot).flatMap((t) =>
-        frameAt(shot, heads, t).figures.flatMap((f) => {
+        frameAt(shot, heads, t, ADULTS).figures.flatMap((f) => {
           const span = spanOfWindow(figures, f.name, t);
           const holding = Option.exists(span, (s) => s._tag === 'Hold');
           const before = last.get(f.name) ?? f.breath;
@@ -370,7 +375,7 @@ describe('a hold', () => {
     const shot = shotOf([made]);
     const runs: Array<[number, number]> = [];
     for (const t of timesOf(shot)) {
-      const f = frameAt(shot, new Map(), t).figures[0];
+      const f = frameAt(shot, new Map(), t, ADULTS).figures[0];
       if (f?.eyes !== 'b') continue;
       const last = runs.at(-1);
       if (last && t - last[1] < 0.01) last[1] = t;
@@ -382,13 +387,13 @@ describe('a hold', () => {
   test('breathes a full breath and back over its length, the same at every call, each figure at its own pace (critique 1, item 5)', () => {
     const shot = shotOf([still('one'), still('two')]);
     const breaths = (i: number) =>
-      timesOf(shot).map((t) => frameAt(shot, new Map(), t).figures[i]?.breath ?? 0);
+      timesOf(shot).map((t) => frameAt(shot, new Map(), t, ADULTS).figures[i]?.breath ?? 0);
     const one = breaths(0);
     expect(Math.max(...one)).toBeGreaterThan(1 + BREATH * 0.99);
     expect(Math.min(...one)).toBe(1);
     expect(breaths(0)).toEqual(one);
     expect(breaths(1)).not.toEqual(one);
-    const f = frameAt(shot, new Map(), 5).figures[0];
+    const f = frameAt(shot, new Map(), 5, ADULTS).figures[0];
     expect([f?.sx, f?.sy]).toEqual([1, 1]);
   });
 
@@ -410,7 +415,9 @@ describe('a hold', () => {
     const shot = shotOf([changing, turning]);
     const step = (BREATH * Math.PI) / BREATH_PERIOD[0] / shot.fps;
     const breaths = (i: number) =>
-      timesOf(shot).map((t) => [t, frameAt(shot, new Map(), t).figures[i]?.breath ?? 0] as const);
+      timesOf(shot).map(
+        (t) => [t, frameAt(shot, new Map(), t, ADULTS).figures[i]?.breath ?? 0] as const,
+      );
     const guest = breaths(0);
     const jumps = guest
       .slice(1)
@@ -473,7 +480,7 @@ describe('the feast courtyard', () => {
     ]);
     const used = new Map<string, Set<string>>();
     for (const t of timesOf(feastCourtyard))
-      for (const f of frameAt(feastCourtyard, heads, t).figures)
+      for (const f of frameAt(feastCourtyard, heads, t, ADULTS).figures)
         used.set(f.name, (used.get(f.name) ?? new Set<string>()).add(f.cell).add(f.eyes));
     expect([...(used.get('lead') ?? [])].toSorted()).toEqual(
       [
@@ -511,7 +518,7 @@ describe('the feast courtyard', () => {
     const open = new Map<string, number>();
     const longest = new Map<string, number>();
     for (const t of timesOf(feastCourtyard))
-      for (const f of frameAt(feastCourtyard, new Map(), t).figures) {
+      for (const f of frameAt(feastCourtyard, new Map(), t, ADULTS).figures) {
         const holding = holds.some((h) => h.name === f.name && h.s.from <= t && t < h.s.to);
         if (!holding || f.eyes !== f.cell) open.delete(f.name);
         else open.set(f.name, open.get(f.name) ?? t);
@@ -668,7 +675,7 @@ describe('head shares', () => {
       ['woman', 300],
       ['lead', 158],
     ]);
-    const plain = frameAt(feastCourtyard, heads, 1);
+    const plain = frameAt(feastCourtyard, heads, 1, ADULTS);
     const halved = frameAt(feastCourtyard, heads, 1, shares);
     const scale = (f: typeof plain, name: string) =>
       f.figures.find((x) => x.name === name)?.scale ?? 0;
@@ -677,7 +684,7 @@ describe('head shares', () => {
   });
 
   test('reports each figure’s plane zoom as the camera’s zoom to the power 1 / z', () => {
-    const frame = frameAt(feastCourtyard, new Map(), 12);
+    const frame = frameAt(feastCourtyard, new Map(), 12, ADULTS);
     for (const f of frame.figures) {
       const z = feastCourtyard.layers.find((l) => l.name === f.layer)?.z ?? 1;
       expect(f.zoom).toBeCloseTo(frame.camera.zoom ** (1 / z), 12);

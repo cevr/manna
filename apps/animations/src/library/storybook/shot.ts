@@ -437,14 +437,15 @@ export const platesOf = (shot: Shot): ReadonlyArray<Plate> =>
 /**
  * The frame at `t`: the camera, and per figure its cell, place, squash,
  * scale and plane zoom (`sheetHeads` names each figure's sheet's median head
- * in px, `shares` each figure's member's head share, 1 when it names none).
- * A pure function of `t`.
+ * in px, `shares` each figure's member's head share, 1 when it names none:
+ * `sharesOf` its stored figures, so every reader sizes a child as the page
+ * paints it). A pure function of `t`.
  */
 export const frameAt = (
   shot: Shot,
   sheetHeads: ReadonlyMap<string, number>,
   t: number,
-  shares: ReadonlyMap<string, number> = new Map(),
+  shares: ReadonlyMap<string, number>,
 ): Frame => {
   const camera = cameraAt(shot.camera, t);
   return {

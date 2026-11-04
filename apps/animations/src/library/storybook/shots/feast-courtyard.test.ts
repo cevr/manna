@@ -1,8 +1,10 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
+import { rng } from '@manna/film/core';
 import type { Raster } from '@manna/film/tools';
 import { Effect, Option } from 'effect';
 import { describe, expect, it, test } from 'effect-bun-test';
 import {
+  anchorOf,
   type Box,
   eyeBoxesOf,
   faceBoxOf,
@@ -13,10 +15,20 @@ import {
   rgbAt,
   shareOf,
 } from '../sheet.ts';
-import { AT_REST, drawnKeyOf, frameAt, type PlateKey, type Shot, timesOf } from '../shot.ts';
-import { CAST, headsOf, loadFigures, type StoredFigure } from '../store.ts';
+import {
+  AT_REST,
+  drawnKeyOf,
+  type Figure,
+  frameAt,
+  keyRun,
+  type Plate,
+  type PlateKey,
+  type Shot,
+  timesOf,
+} from '../shot.ts';
+import { CAST, headsOf, loadFigures, sharesOf, type StoredFigure } from '../store.ts';
 import { BARS, meets } from '../verify/bars.ts';
-import { coversOf, picturesOver } from '../verify/covers.ts';
+import { type Coverage, coversOf, picturesOver } from '../verify/covers.ts';
 import { proportionSamples, scaleSamples } from '../verify/measures.ts';
 import { feastCourtyard } from './feast-courtyard.ts';
 
@@ -182,7 +194,7 @@ describe('the feast courtyard as drawn', () => {
   test("reads every figure against the shot's grown head at its member's share: frame 17's lead in his side cell at 151 of his sheet's 158, the man's neutral at his sheet's 303, his turn frames (head column unread) from crown-to-soles and named so, and every frame within the scale bar", () => {
     const planned = timesOf(feastCourtyard).map((t, index) => ({
       index,
-      frame: frameAt(feastCourtyard, heads, t),
+      frame: frameAt(feastCourtyard, heads, t, sharesOf(figures)),
     }));
     const scaled = figures.map((f) => ({
       name: f.figure.name,
@@ -468,4 +480,65 @@ describe('the feast courtyard as drawn', () => {
       ['woman', Option.some(0)],
     ]);
   });
+
+  test("fails a still 2×2 plate inside the man's lower face, and names a moving one as passing, at any head share and depth: the face placed by the shot's head law (head px × share ÷ depth ÷ sheet head) from his own cell, anchor and sheet head (round 1, M1)", () => {
+    const man = byName.get('man');
+    const key = [...(man?.cells.keys() ?? [])][0] ?? '';
+    const cell = man?.cells.get(key);
+    const geometry = Option.all([
+      Option.flatten(Option.fromUndefinedOr(man?.lines.get(key))),
+      Option.flatMap(Option.fromUndefinedOr(cell), (c) => faceBoxOf(c, man?.paints ?? [])),
+    ]);
+    if (!man || !cell || Option.isNone(geometry)) return expect(Option.isSome(geometry)).toBe(true);
+    const [lines, face] = geometry.value;
+    const { ax, ay } = anchorOf(lines);
+    const draw = rng(17);
+    const cases = Array.from({ length: COVER_CASES }, (_, i) => {
+      const [share, z, moving] = [0.4 + draw(), 0.6 + 2.4 * draw(), i % 2];
+      const k = (feastCourtyard.headPx * share) / z / man.head;
+      const x = man.figure.at.x + (face.x + face.width / 2 - ax) * k;
+      const y = man.figure.at.ground + (face.y + face.height * 0.75 - ay) * k;
+      const figure: Figure = { ...man.figure, spans: [keyRun([[0, key]])] };
+      const plate: Plate = {
+        _tag: 'Plate',
+        file: 'probe',
+        testArt: true,
+        place: { x: x - 1, y: y - 1, width: 2, height: 2 },
+        moves: [
+          [0, AT_REST],
+          [1, { ...AT_REST, x: 4 * moving }],
+        ],
+      };
+      const layer = { ...man.layer, z, blur: 0, items: [figure, plate] };
+      const stored: StoredFigure = {
+        ...man,
+        cells: new Map([[key, cell]]),
+        blinks: new Map(),
+        figure,
+        layer,
+        palette: { ...man.palette, heads: { [man.figure.sheet]: share } },
+      };
+      const shot: Shot = {
+        ...feastCourtyard,
+        from: 0,
+        duration: 1 / feastCourtyard.fps,
+        layers: [layer],
+      };
+      const covers = coversOf(shot, [stored], new Map([['probe', OPAQUE]]));
+      return {
+        i,
+        got: [covers.faults.length, covers.moving.length],
+        expected: [1 - moving, moving],
+      };
+    });
+    expect(cases.map(({ i, got }) => [i, got])).toEqual(
+      cases.map(({ i, expected }) => [i, expected]),
+    );
+  });
 });
+
+/** How many seeded cases the face-cover property draws, each a head share, a depth and a still or moving plate. */
+const COVER_CASES = 24;
+
+/** The coverage of a picture of one opaque pixel: a probe plate's. */
+const OPAQUE: Coverage = { width: 1, height: 1, sums: new Int32Array([0, 0, 0, 1]) };

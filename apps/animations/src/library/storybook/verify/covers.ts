@@ -16,7 +16,7 @@ import {
   type Shot,
   timesOf,
 } from '../shot.ts';
-import { drawnCellOf, headsOf, type StoredFigure } from '../store.ts';
+import { drawnCellOf, headsOf, sharesOf, type StoredFigure } from '../store.ts';
 
 /** A plate's picture as a count of its pixels that are not clear above and left of each corner: (width + 1) × (height + 1) sums, so a box's count is four reads. */
 export interface Coverage {
@@ -230,7 +230,7 @@ export const coversOf = (
 ): Covers => {
   const byName = new Map(figures.map((f) => [f.figure.name, f] as const));
   const boxes = faceBoxesOf(figures);
-  const heads = headsOf(figures);
+  const [heads, shares] = [headsOf(figures), sharesOf(figures)];
   const coversIn = (frame: Frame, index: number, t: number): ReadonlyArray<Crossing> =>
     frame.figures.flatMap((f): ReadonlyArray<Crossing> => {
       const stored = byName.get(f.name);
@@ -251,7 +251,9 @@ export const coversOf = (
         return [{ _tag: 'Fault', line: `${f.name} frame ${index}: ${plate.file} covers ${n} px` }];
       });
     });
-  const crossings = timesOf(shot).flatMap((t, i) => coversIn(frameAt(shot, heads, t), i, t));
+  const crossings = timesOf(shot).flatMap((t, i) =>
+    coversIn(frameAt(shot, heads, t, shares), i, t),
+  );
   return {
     faults: crossings.filter(isFault).map((c) => c.line),
     moving: passingLines(crossings.filter(isPassing)),
