@@ -86,7 +86,7 @@ const coverIn = (plate: Plate, picture: Coverage, rect: Rect): number => {
  * `z`, its zoom the `z`-th root of the camera's. Answers screen = layer ×
  * scale + offset.
  */
-const planeOf = (size: Shot['size'], z: number, camera: CameraKey) => {
+export const planeOf = (size: Shot['size'], z: number, camera: CameraKey) => {
   const { width: w, height: h } = size;
   const scale = camera.zoom ** (1 / z);
   const [vx, vy] = [w / 2 + (camera.x - w / 2) / z, h / 2 + (camera.y - h / 2) / z];

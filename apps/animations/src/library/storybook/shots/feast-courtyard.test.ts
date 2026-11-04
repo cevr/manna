@@ -30,6 +30,7 @@ import { CAST, headsOf, loadFigures, sharesOf, type StoredFigure } from '../stor
 import { BARS, meets } from '../verify/bars.ts';
 import { type Coverage, coversOf, picturesOver } from '../verify/covers.ts';
 import { proportionSamples, scaleSamples } from '../verify/measures.ts';
+import { wholeFigures } from '../verify/whole.ts';
 import { feastCourtyard } from './feast-courtyard.ts';
 
 // oxlint-disable-next-line effect/noAsyncFunction -- read once at module evaluation, so no case pays the read inside its time limit (film/no-lazy-test-fixture)
@@ -191,6 +192,21 @@ const inkIn = (r: Raster, rect: Rect, ink: Rgb): number => {
 };
 
 describe('the feast courtyard as drawn', () => {
+  test('finds each figure whole in some frame of the take as the page places it, and the lead not whole in a close on his face that cuts his soles (critique 1, item 1)', () => {
+    const first: Shot = { ...feastCourtyard, duration: 1 / feastCourtyard.fps };
+    const shares = sharesOf(figures);
+    expect([...wholeFigures(feastCourtyard, figures, heads, shares)].toSorted()).toEqual(
+      figures.map((f) => f.figure.name).toSorted(),
+    );
+    const lead = frameAt(first, heads, 0, shares).figures.find((f) => f.name === 'lead');
+    expect(lead).toBeDefined();
+    const close: Shot = {
+      ...first,
+      camera: [{ t: 0, x: lead?.x ?? 0, y: (lead?.y ?? 0) - 260, zoom: 3 }],
+    };
+    expect([...wholeFigures(close, figures, heads, shares)]).not.toContain('lead');
+  });
+
   test("reads every figure against the shot's grown head at its member's share: frame 17's lead in his side cell at 151 of his sheet's 158, the man's neutral at his sheet's 303, his turn frames (head column unread) from crown-to-soles and named so, and every frame within the scale bar", () => {
     const planned = timesOf(feastCourtyard).map((t, index) => ({
       index,

@@ -9,6 +9,7 @@ import {
   colourStep,
   type FigureRead,
   type FrameRead,
+  heightInfo,
   heightSamples,
   lightSamples,
   paintMedians,
@@ -575,6 +576,61 @@ describe('heightSamples', () => {
     expect(samples.map((s) => s.at)).toEqual(['f/down over 2 frames']);
     expect(Option.getOrElse(samples[0]?.value ?? Option.none(), () => -1)).toBeCloseTo(3 / 103, 9);
     expect(verdictOf(BARS, { ...ALL_PASS, 'render-height': samples }).passed).toBe(BARS.length - 1);
+  });
+
+  test('reads a figure the frame cuts in every frame where the same figure lies whole in another shot of its scene, and as unread with no such shot (critique 1, item 1)', () => {
+    const reads = [
+      frameRead({ name: 'lead', frame: 0, read: readOf(linesOfHeight(0, 80, 20), false) }),
+      frameRead({ name: 'lead', frame: 1, read: readOf(linesOfHeight(0, 81, 20), false) }),
+      frameRead({ name: 'man', frame: 0, read: readOf(linesOfHeight(0, 99, 20)) }),
+      frameRead({ name: 'man', frame: 1, read: readOf(linesOfHeight(0, 99, 20)) }),
+    ];
+    const away = new Map([['lead', 'cold-letter']]);
+    expect(heightSamples(reads, away)).toEqual([
+      { at: 'man/a over 2 frames', value: Option.some(0) },
+    ]);
+    expect(heightInfo(reads, away)).toEqual([
+      'render-height elsewhere: lead cut by the frame in every frame, read whole in cold-letter',
+    ]);
+    expect(heightSamples(reads).map((s) => s.at)).toEqual([
+      'lead: no whole unsquashed frame',
+      'man/a over 2 frames',
+    ]);
+    expect(verdictOf(BARS, { ...ALL_PASS, 'render-height': heightSamples(reads) }).passed).toBe(
+      BARS.length - 1,
+    );
+  });
+
+  test('passes the bar as read elsewhere only when no figure here reads, and judges the figures that do', () => {
+    const cut = [
+      frameRead({ name: 'lead', frame: 0, read: readOf(linesOfHeight(0, 80, 20), false) }),
+    ];
+    const away = new Map([['lead', 'cold-letter']]);
+    const where = new Map([
+      ['render-height', 'every figure cut here, read whole in cold-letter'] as const,
+    ]);
+    const alone = verdictOf(
+      BARS,
+      { ...ALL_PASS, 'render-height': heightSamples(cut, away) },
+      true,
+      where,
+    );
+    expect(alone.checks.find((c) => c.id === 'render-height')).toMatchObject({
+      pass: true,
+      value: 'elsewhere',
+    });
+    expect(verdictOf(BARS, { ...ALL_PASS, 'render-height': heightSamples(cut, away) }).passed).toBe(
+      BARS.length - 1,
+    );
+    const swelling = [
+      ...cut,
+      frameRead({ name: 'man', frame: 0, read: readOf(linesOfHeight(0, 99, 20)) }),
+      frameRead({ name: 'man', frame: 1, read: readOf(linesOfHeight(0, 104, 20)) }),
+    ];
+    expect(
+      verdictOf(BARS, { ...ALL_PASS, 'render-height': heightSamples(swelling, away) }, true, where)
+        .passed,
+    ).toBe(BARS.length - 1);
   });
 });
 

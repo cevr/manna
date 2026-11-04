@@ -375,31 +375,61 @@ const keySpread = (heights: ReadonlyArray<number>) =>
  * unsquashed frames, spread within each key it holds: (max − min) over the
  * median, its worst key. Two keys of one sheet differ in height by design (a
  * bowed head, a seat), which the scale and proportions bars hold across keys;
- * this reads only the figure growing or shrinking while one key holds.
+ * this reads only the figure growing or shrinking while one key holds. A
+ * figure the frame cuts in every frame (a close) is read where the same
+ * figure lies whole in another shot of its scene (`elsewhere`, by name):
+ * no sample here; with no such shot it is unread.
  */
-export const heightSamples = (reads: ReadonlyArray<FrameRead>): Samples =>
-  [...Map.groupBy(reads, (r) => r.name)].map(([name, frames]): Sample => {
+export const heightSamples = (
+  reads: ReadonlyArray<FrameRead>,
+  elsewhere: ReadonlyMap<string, string> = new Map(),
+): Samples =>
+  [...Map.groupBy(reads, (r) => r.name)].flatMap(([name, frames]): Samples => {
     const still = frames.filter((f) => f.read.whole && !f.squashed);
-    const unread = still.find((f) => Option.isNone(f.read.lines));
-    if (unread) return unreadAt(`${name} frame ${unread.frame}: no lines read`);
-    const keys = [...Map.groupBy(still, (f) => f.cell)].flatMap(([cell, held]) =>
-      Option.toArray(
-        Option.map(
-          keySpread(
-            held.flatMap((f) =>
-              Option.toArray(Option.map(f.read.lines, (l) => heightOf(l) / f.zoom)),
-            ),
-          ),
-          (s) => ({ cell, ...s }),
-        ),
-      ),
-    );
-    const worst = Option.fromUndefinedOr(keys.toSorted((a, b) => b.spread - a.spread)[0]);
-    return Option.match(worst, {
-      onNone: () => unreadAt(`${name}: no whole unsquashed frame`),
-      onSome: (k) => one(`${name}/${k.cell} over ${k.frames} frames`, k.spread),
-    });
+    if (still.length === 0 && elsewhere.has(name)) return [];
+    return [keyHeightSample(name, still)];
   });
+
+/** One figure's worst key spread over its whole unsquashed frames, unread where a frame reads no lines or none is whole. */
+const keyHeightSample = (name: string, still: ReadonlyArray<FrameRead>): Sample => {
+  const unread = still.find((f) => Option.isNone(f.read.lines));
+  if (unread) return unreadAt(`${name} frame ${unread.frame}: no lines read`);
+  const keys = [...Map.groupBy(still, (f) => f.cell)].flatMap(([cell, held]) =>
+    Option.toArray(
+      Option.map(
+        keySpread(
+          held.flatMap((f) =>
+            Option.toArray(Option.map(f.read.lines, (l) => heightOf(l) / f.zoom)),
+          ),
+        ),
+        (s) => ({ cell, ...s }),
+      ),
+    ),
+  );
+  const worst = Option.fromUndefinedOr(keys.toSorted((a, b) => b.spread - a.spread)[0]);
+  return Option.match(worst, {
+    onNone: () => unreadAt(`${name}: no whole unsquashed frame`),
+    onSome: (k) => one(`${name}/${k.cell} over ${k.frames} frames`, k.spread),
+  });
+};
+
+/** The INFO lines verdict.md carries for the height bar: each figure the frame cuts in every frame, and the shot of its scene its member is read whole in. */
+export const heightInfo = (
+  reads: ReadonlyArray<FrameRead>,
+  elsewhere: ReadonlyMap<string, string>,
+): ReadonlyArray<string> =>
+  [...Map.groupBy(reads, (r) => r.name)].flatMap(([name, frames]) =>
+    Option.toArray(
+      Option.map(
+        Option.filter(
+          Option.fromUndefinedOr(elsewhere.get(name)),
+          () => !frames.some((f) => f.read.whole && !f.squashed),
+        ),
+        (shot) =>
+          `render-height elsewhere: ${name} cut by the frame in every frame, read whole in ${shot}`,
+      ),
+    ),
+  );
 
 /**
  * Each figure's share of interior pixels the one light lit from a palette
