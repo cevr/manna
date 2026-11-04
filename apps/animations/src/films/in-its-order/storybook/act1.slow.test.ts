@@ -111,6 +111,16 @@ const Word = Schema.Struct({
   voiced: Schema.Struct({ start: Schema.Finite, end: Schema.Finite }),
 });
 
+/** A rectangle of the frame in film px: where the film draws over a shot (the title's name), which the verify does not render. */
+const Box = Schema.Struct({
+  x: Schema.Finite,
+  y: Schema.Finite,
+  width: Schema.Finite,
+  height: Schema.Finite,
+});
+
+type Overlay = typeof Box.Type;
+
 const TimingsJson = Schema.fromJsonString(
   Schema.Struct({
     scenes: Schema.Record(Schema.String, Schema.Struct({ words: Schema.Array(Word) })),
@@ -140,6 +150,7 @@ const ShotsJson = Schema.fromJsonString(
         figures: Schema.Array(
           Schema.Struct({ name: Schema.String, member: Schema.String, sheet: Schema.String }),
         ),
+        overlays: Schema.Array(Box),
       }),
     ),
     cards: Schema.Array(
@@ -474,19 +485,28 @@ const pixelsOf = Effect.fn('Act1.pixels')(function* (file: string) {
   );
 });
 
-/** The share of two frames' pixels within ΔE76 2 of each other; 0 when their sizes differ. */
-const parityOf = Effect.fn('Act1.parity')(function* (a: string, b: string) {
+const covered = (overlays: ReadonlyArray<Overlay>, x: number, y: number) =>
+  overlays.some((o) => x >= o.x && x < o.x + o.width && y >= o.y && y < o.y + o.height);
+
+/** The share of two frames' pixels outside `overlays` within ΔE76 2 of each other; 0 when their sizes differ. */
+const parityOf = Effect.fn('Act1.parity')(function* (
+  a: string,
+  b: string,
+  overlays: ReadonlyArray<Overlay>,
+) {
   const p = yield* pixelsOf(a);
   const q = yield* pixelsOf(b);
   if (p.info.width !== q.info.width || p.info.height !== q.info.height) return 0;
   let near = 0;
-  const n = p.info.width * p.info.height;
-  for (let i = 0; i < n; i++) {
+  let n = 0;
+  for (let i = 0; i < p.info.width * p.info.height; i++) {
+    if (covered(overlays, i % p.info.width, Math.floor(i / p.info.width))) continue;
+    n++;
     const x = labOf([p.data[3 * i] ?? 0, p.data[3 * i + 1] ?? 0, p.data[3 * i + 2] ?? 0]);
     const y = labOf([q.data[3 * i] ?? 0, q.data[3 * i + 1] ?? 0, q.data[3 * i + 2] ?? 0]);
     if (Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) <= 2) near++;
   }
-  return near / n;
+  return near / Math.max(1, n);
 });
 
 /** A still's file name as the film's render writes it (`stillName` in `@manna/film/tools`). */
@@ -500,7 +520,7 @@ describe('In Its Order act 1 in style B: the bars and the film', () => {
         const fs = yield* FileSystem.FileSystem;
         const tmp = yield* fs.makeTempDirectoryScoped();
         const shots = yield* shotsOf(tmp);
-        const middles: Array<readonly [string, number, string]> = [];
+        const middles: Array<readonly [string, number, string, ReadonlyArray<Overlay>]> = [];
         for (const shot of shots.shots) {
           const out = `${tmp}/verify-${shot.id}`;
           expect(yield* run(STORYBOOK, ['verify', `${FILM}/${shot.id}`, '--out', out])).toBe(0);
@@ -520,6 +540,7 @@ describe('In Its Order act 1 in style B: the bars and the film', () => {
             shot.id,
             (frames.first + i) / shots.fps,
             `${out}/frames/f${String(i).padStart(4, '0')}.png`,
+            shot.overlays,
           ]);
         }
         const stills = `${APP}/out/${FILM}/film/parity/stills`;
@@ -537,8 +558,17 @@ describe('In Its Order act 1 in style B: the bars and the film', () => {
           ]),
         ).toBe(0);
         const off: Array<string> = [];
-        for (const [id, t, frame] of middles) {
-          const share = yield* parityOf(`${stills}/${stillName(Number(t.toFixed(4)))}`, frame);
+        expect(shots.shots.filter((s) => s.id !== 'title' && s.overlays.length > 0)).toEqual([]);
+        for (const shot of shots.shots)
+          expect(shot.overlays.reduce((sum, o) => sum + o.width * o.height, 0)).toBeLessThanOrEqual(
+            0.1 * shots.width * shots.height,
+          );
+        for (const [id, t, frame, overlays] of middles) {
+          const share = yield* parityOf(
+            `${stills}/${stillName(Number(t.toFixed(4)))}`,
+            frame,
+            overlays,
+          );
           if (share < PARITY) off.push(`${id} at ${t.toFixed(3)} s: ${share.toFixed(4)}`);
         }
         expect(off).toEqual([]);
