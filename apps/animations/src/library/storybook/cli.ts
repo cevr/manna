@@ -1,10 +1,11 @@
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { ImageRoute } from '@manna/film/tools';
-import { Console, Effect, FileSystem, Schema } from 'effect';
+import { Console, Effect, FileSystem, Option, Schema } from 'effect';
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
+import { outOf, renderShot } from './render.ts';
 import { frameAt, timesOf } from './shot.ts';
 import { feastCourtyard } from './shots/feast-courtyard.ts';
 import { CAST, drawSheet, headsOf, keepSheet, loadFigures, splitFiles } from './store.ts';
@@ -89,6 +90,27 @@ const planCommand = Command.make(
   ),
 );
 
+const renderCommand = Command.make(
+  'render',
+  {
+    shot: shotArgument,
+    out: Flag.String('out').pipe(
+      Flag.optional,
+      Flag.withDescription('where frames/ and shot.mp4 go (default out/storybook/<shot>/)'),
+    ),
+  },
+  ({ shot, out }) =>
+    Effect.gen(function* () {
+      const dir = Option.getOrElse(out, () => outOf(SHOTS[shot]));
+      const n = yield* renderShot(SHOTS[shot], dir);
+      yield* Console.log(`rendered ${shot}: ${n} frames and shot.mp4 in ${dir}`);
+    }),
+).pipe(
+  Command.withDescription(
+    "Render every frame of a shot in a headless Chrome, each from its time alone, and its clip: the set's plates and each figure's lit cells on their layers through the shot's camera",
+  ),
+);
+
 /** A comma-separated list's items, blanks dropped. */
 const listOf = (text: string): ReadonlyArray<string> =>
   text
@@ -170,7 +192,7 @@ const keepCommand = Command.make(
 ).pipe(Command.withDescription("Write the owner's keep on a drawn shot sheet's record"));
 
 const storybook = Command.make('storybook').pipe(
-  Command.withSubcommands([splitCommand, drawCommand, keepCommand, planCommand]),
+  Command.withSubcommands([splitCommand, drawCommand, keepCommand, planCommand, renderCommand]),
   Command.withDescription('Shot sheets and storybook shots: flat drawn figures on depth layers'),
 );
 
