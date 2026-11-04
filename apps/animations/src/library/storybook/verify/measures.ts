@@ -406,44 +406,69 @@ export const lightSamples = (reads: ReadonlyArray<FrameRead>): Samples =>
     return samples;
   });
 
-/** The lines the proportions bar reads: the soles row, the hem, the sash top and the head (crown to collar), each with the roles its palette must hold. */
+/** The lines the proportions bar reads: the soles row, the hem, the sash top and the head (crown to collar), each with the roles its palette must hold, and whether it is judged over the cells that read it (`overRead`) rather than failing on the first cell that misses it. */
 const LINES: ReadonlyArray<{
   readonly name: string;
   readonly roles: ReadonlyArray<Role>;
   readonly read: (l: Lines) => Option.Option<number>;
+  readonly overRead: boolean;
 }> = [
-  { name: 'soles', roles: [], read: (l) => Option.some(l.bottom) },
-  { name: 'hem', roles: ['garment'], read: (l) => l.hem },
-  { name: 'sash top', roles: ['sash'], read: (l) => l.sashTop },
-  { name: 'head', roles: ['skin', 'garment'], read: (l) => l.head },
+  { name: 'soles', roles: [], read: (l) => Option.some(l.bottom), overRead: false },
+  { name: 'hem', roles: ['garment'], read: (l) => l.hem, overRead: false },
+  { name: 'sash top', roles: ['sash'], read: (l) => l.sashTop, overRead: false },
+  { name: 'head', roles: ['skin', 'garment'], read: (l) => l.head, overRead: true },
 ];
+
+/** What the proportions bar read of a sheet: a sample per line, and each cell (`<member> <cell>`) the head line left out because its head column reads none. */
+export interface ProportionRead {
+  readonly samples: Samples;
+  readonly leftOut: ReadonlyArray<string>;
+}
 
 /**
  * A sheet's proportions: per line its palette has the roles for, (max − min)
  * over the sheet's cells as a share of their median crown-to-soles height.
- * A line its palette has the roles for is unread when any cell does not
- * read it, and when none does; a line it has no role for is skipped.
+ * Every cell must read its crown and soles, and its hem and sash top where
+ * its palette has their roles; a line one cell misses is unread. The head
+ * is judged over the cells that read one, as a head column can read none
+ * where the jaw cuts the face from the neck: each cell left out is named in
+ * the head's sample and in `leftOut`, and the head is unread when no cell
+ * reads one. A line the palette has no role for is skipped.
  */
 export const proportionSamples = (
   member: string,
   cells: ReadonlyArray<{ readonly key: string; readonly lines: Option.Option<Lines> }>,
   paints: ReadonlyArray<Paint>,
-): Samples => {
+): ProportionRead => {
   const unlined = cells.find((c) => Option.isNone(c.lines));
-  if (unlined) return [unreadAt(`${member} ${unlined.key}: no lines read`)];
+  if (unlined)
+    return { samples: [unreadAt(`${member} ${unlined.key}: no lines read`)], leftOut: [] };
   const lined = cells.flatMap((c) =>
     Option.toArray(Option.map(c.lines, (l) => ({ key: c.key, l }))),
   );
   const height = Option.getOrElse(medianOf(lined.map((c) => heightOf(c.l))), () => 1);
   const roles = new Set(paints.map((p) => p.role));
-  return LINES.filter((line) => line.roles.every((r) => roles.has(r))).flatMap(
-    (line): ReadonlyArray<Sample> => {
-      const values = lined.map((c) => ({ key: c.key, v: line.read(c.l) }));
-      const read = values.flatMap((x) => Option.toArray(x.v));
-      const missing = values.find((x) => Option.isNone(x.v));
-      if (read.length === 0) return [unreadAt(`${member} ${line.name}: unread in every cell`)];
-      if (missing) return [unreadAt(`${member} ${line.name}: unread in ${missing.key}`)];
-      return [one(`${member} ${line.name}`, (Math.max(...read) - Math.min(...read)) / height)];
-    },
-  );
+  const read = LINES.filter((line) => line.roles.every((r) => roles.has(r))).map((line) => {
+    const values = lined.map((c) => ({ key: c.key, v: line.read(c.l) }));
+    const known = values.flatMap((x) => Option.toArray(x.v));
+    const missing = values.filter((x) => Option.isNone(x.v)).map((x) => x.key);
+    const spread = (Math.max(...known) - Math.min(...known)) / height;
+    if (known.length === 0)
+      return { sample: unreadAt(`${member} ${line.name}: unread in every cell`), leftOut: [] };
+    if (missing.length === 0) return { sample: one(`${member} ${line.name}`, spread), leftOut: [] };
+    if (!line.overRead)
+      return { sample: unreadAt(`${member} ${line.name}: unread in ${missing[0]}`), leftOut: [] };
+    return {
+      sample: one(`${member} ${line.name} (${missing.join(', ')}: ${LEFT_OUT})`, spread),
+      leftOut: missing.map((key) => `${member} ${key}`),
+    };
+  });
+  return { samples: read.map((r) => r.sample), leftOut: read.flatMap((r) => r.leftOut) };
 };
+
+/** How the head's sample names the cells it left out. */
+const LEFT_OUT = 'head unread, left out';
+
+/** The INFO lines verdict.md carries for the proportions bar: each cell the head line left out, one line each. */
+export const proportionInfo = (read: ProportionRead): ReadonlyArray<string> =>
+  read.leftOut.map((at) => `proportions left out: ${at} (head unread)`);

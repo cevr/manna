@@ -27,7 +27,7 @@ import {
 } from '../shot.ts';
 import { CAST, drawnCellOf, headsOf, loadFigures, type StoredFigure } from '../store.ts';
 import { BARS, meets } from '../verify/bars.ts';
-import { scaleSamples } from '../verify/measures.ts';
+import { proportionSamples, scaleSamples } from '../verify/measures.ts';
 import { feastCourtyard } from './feast-courtyard.ts';
 
 // oxlint-disable-next-line effect/noAsyncFunction -- read once at module evaluation, so no case pays the read inside its time limit (film/no-lazy-test-fixture)
@@ -374,6 +374,30 @@ describe('the feast courtyard as drawn', () => {
     const bar = BARS.find((b) => b.id === 'scale');
     expect(
       samples.filter((s) => !bar || !Option.exists(s.value, (v) => meets(bar.bar, v))),
+    ).toEqual([]);
+  });
+
+  test("judges each sheet's proportions over every cell, the head over the cells that read one: only the man's turn is left out, named, and every line within the proportions bar", () => {
+    const reads = figures.map((f) =>
+      proportionSamples(
+        f.figure.member,
+        f.record.cells.map((c) => ({
+          key: c.key,
+          lines: Option.flatten(Option.fromUndefinedOr(f.lines.get(c.key))),
+        })),
+        f.paints,
+      ),
+    );
+    const man = byName.get('man')?.figure.member;
+    expect(reads.flatMap((r) => r.leftOut)).toEqual([`${man} turn`]);
+    expect(reads.flatMap((r) => r.samples.map((s) => s.at))).toContain(
+      `${man} head (turn: head unread, left out)`,
+    );
+    const bar = BARS.find((b) => b.id === 'proportions');
+    expect(
+      reads
+        .flatMap((r) => r.samples)
+        .filter((s) => !bar || !Option.exists(s.value, (v) => meets(bar.bar, v))),
     ).toEqual([]);
   });
 

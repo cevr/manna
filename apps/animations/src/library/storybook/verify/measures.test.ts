@@ -14,13 +14,14 @@ import {
   paintMedians,
   paletteShare,
   pocketCount,
+  proportionInfo,
   proportionSamples,
   readFigure,
   scaleInfo,
   scaleSamples,
   stepSamples,
 } from './measures.ts';
-import { type Measured, one, verdictOf, verdictText } from './verdict.ts';
+import { type Measured, one, unreadAt, verdictOf, verdictText } from './verdict.ts';
 
 /** A run where every check reads one passing value: each test swaps in the check it holds. */
 const ALL_PASS: Measured = {
@@ -688,9 +689,10 @@ describe('lightSamples over frames', () => {
 
 describe('proportionSamples', () => {
   const cell = (key: string, l: Lines) => ({ key, lines: Option.some(l) });
+  const unheaded = (l: Lines): Lines => ({ ...l, head: Option.none() });
 
   test('spreads each line the palette has roles for over the median height, skipping a line no cell reads', () => {
-    const samples = proportionSamples(
+    const { samples, leftOut } = proportionSamples(
       'm',
       [
         cell('a', linesOfHeight(0, 99, 20)),
@@ -704,24 +706,86 @@ describe('proportionSamples', () => {
       ['m hem', 0.01],
       ['m head', 0.02],
     ]);
+    expect(leftOut).toEqual([]);
   });
 
-  test('reads a line its palette has the roles for as unread when no cell reads it, and skips a line it has no role for (round 1, M3)', () => {
+  test('reads a hem or sash top its palette has the roles for as unread when no cell reads it, skips a line it has no role for (round 1, M3), and reads the head unread only when no cell reads one', () => {
     const sashed = paintsOf({
       ...PALETTE,
       parts: [...PALETTE.parts, { name: 'sash', base: '#eadcc2', role: 'sash' }],
     });
     const cells = [cell('a', linesOfHeight(0, 99, 20)), cell('b', linesOfHeight(0, 99, 20))];
-    const samples = proportionSamples('m', cells, sashed);
+    const { samples } = proportionSamples('m', cells, sashed);
     expect(samples.find((s) => Option.isNone(s.value))?.at).toBe(
       'm sash top: unread in every cell',
     );
     expect(verdictOf(BARS, { ...ALL_PASS, proportions: samples }).passed).toBe(BARS.length - 1);
-    expect(proportionSamples('m', cells, PAINTS).every((s) => Option.isSome(s.value))).toBe(true);
+    expect(proportionSamples('m', cells, PAINTS).samples.every((s) => Option.isSome(s.value))).toBe(
+      true,
+    );
+    const headless = proportionSamples(
+      'm',
+      [
+        cell('a', unheaded(linesOfHeight(0, 99, 20))),
+        cell('b', unheaded(linesOfHeight(0, 99, 20))),
+      ],
+      PAINTS,
+    );
+    expect(headless.samples.filter((s) => Option.isNone(s.value)).map((s) => s.at)).toEqual([
+      'm head: unread in every cell',
+    ]);
+    expect(headless.leftOut).toEqual([]);
+    expect(verdictOf(BARS, { ...ALL_PASS, proportions: headless.samples }).passed).toBe(
+      BARS.length - 1,
+    );
   });
 
-  test('over generated palettes and cells: unread exactly when a line its roles ask for is missing from any cell', () => {
-    const lines = ['hem', 'sashTop'] as const;
+  test('judges the head over the cells that read one, and names each cell left out in its sample and on an INFO line', () => {
+    const read = proportionSamples(
+      'm',
+      [
+        cell('a', linesOfHeight(0, 99, 20)),
+        cell('b', unheaded(linesOfHeight(0, 99, 60))),
+        cell('c', linesOfHeight(0, 99, 22)),
+        cell('d', unheaded(linesOfHeight(0, 99, 5))),
+      ],
+      PAINTS,
+    );
+    expect(read.samples.map((s) => [s.at, Option.getOrElse(s.value, () => -1)])).toEqual([
+      ['m soles', 0],
+      ['m hem', 0],
+      ['m head (b, d: head unread, left out)', 0.02],
+    ]);
+    expect(read.leftOut).toEqual(['m b', 'm d']);
+    const text = verdictText(
+      verdictOf(BARS, { ...ALL_PASS, proportions: read.samples }),
+      proportionInfo(read),
+    );
+    expect(text.split('\n').filter((line) => line.startsWith('INFO'))).toEqual([
+      'INFO proportions left out: m b (head unread)',
+      'INFO proportions left out: m d (head unread)',
+    ]);
+    expect(text).toContain('PASS proportions 0.02 ');
+  });
+
+  test('reads a figure unread when any cell reads no crown or soles, whatever the others read, and leaves nothing out', () => {
+    const read = proportionSamples(
+      'm',
+      [
+        cell('a', linesOfHeight(0, 99, 20)),
+        { key: 'b', lines: Option.none() },
+        cell('c', unheaded(linesOfHeight(0, 99, 20))),
+      ],
+      PAINTS,
+    );
+    expect(read).toEqual({ samples: [unreadAt('m b: no lines read')], leftOut: [] });
+    expect(verdictOf(BARS, { ...ALL_PASS, proportions: read.samples }).passed).toBe(
+      BARS.length - 1,
+    );
+  });
+
+  test('over generated palettes and cells: unread exactly when a hem or sash top its roles ask for is missing from any cell, or the head from every cell; the head spread over the cells that read one, the others left out', () => {
+    const lines = ['hem', 'sashTop', 'head'] as const;
     for (let seed = 1; seed <= 60; seed++) {
       const draw = rng(seed);
       const sash = draw() < 0.5;
@@ -733,25 +797,40 @@ describe('proportionSamples', () => {
         ],
       });
       const cells = Array.from({ length: 1 + Math.floor(draw() * 6) }, (_, i) => {
-        const missing = lines.filter(() => draw() < 0.2);
+        const missing = lines.filter(() => draw() < 0.3);
+        const head = 20 + Math.floor(draw() * 8);
         const l: Lines = {
-          ...linesOfHeight(0, 99, 20),
+          ...linesOfHeight(0, 99, head),
           sashTop: Option.some(40),
           ...Object.fromEntries(missing.map((k) => [k, Option.none()])),
         };
-        return { key: `c${i}`, lines: Option.some(l), missing };
+        return { key: `c${i}`, lines: Option.some(l), missing, head };
       });
-      const asked = cells.some(
-        (c) => c.missing.includes('hem') || (sash && c.missing.includes('sashTop')),
-      );
-      const samples = proportionSamples('m', cells, paints);
+      const headed = cells.filter((c) => !c.missing.includes('head'));
+      const asked =
+        headed.length === 0 ||
+        cells.some((c) => c.missing.includes('hem') || (sash && c.missing.includes('sashTop')));
+      const { samples, leftOut } = proportionSamples('m', cells, paints);
       expect([seed, samples.some((s) => Option.isNone(s.value))]).toEqual([seed, asked]);
+      const spread = Option.match(
+        Option.filter(Option.some(headed.map((c) => c.head)), (h) => h.length > 0),
+        { onNone: () => -1, onSome: (h) => (Math.max(...h) - Math.min(...h)) / 100 },
+      );
+      const head = samples.find((s) => s.at.startsWith('m head'));
+      expect([seed, leftOut]).toEqual([
+        seed,
+        cells.filter((c) => headed.length > 0 && !headed.includes(c)).map((c) => `m ${c.key}`),
+      ]);
+      expect([seed, Option.getOrElse(head?.value ?? Option.none(), () => -1)]).toEqual([
+        seed,
+        spread,
+      ]);
     }
   });
 
-  test('reads a line read in some cells and not others as unread', () => {
+  test('reads a hem read in some cells and not others as unread', () => {
     const noHem: Lines = { ...linesOfHeight(0, 100, 20), hem: Option.none() };
-    const samples = proportionSamples(
+    const { samples } = proportionSamples(
       'm',
       [cell('a', linesOfHeight(0, 100, 20)), cell('b', noHem)],
       PAINTS,

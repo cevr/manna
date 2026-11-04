@@ -23,6 +23,7 @@ import {
   paletteShare,
   type PlannedFrame,
   pocketCount,
+  proportionInfo,
   proportionSamples,
   readFigure,
   scaleInfo,
@@ -264,7 +265,7 @@ const storeMeasures = Effect.fn('StorybookVerify.storeMeasures')(function* (
         pockets.reduce((sum, p) => sum + p.n, 0),
       ),
     ],
-    proportions: figures.flatMap((f) =>
+    proportions: figures.map((f) =>
       proportionSamples(
         f.figure.member,
         f.record.cells.map((c) => ({
@@ -380,12 +381,16 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
     figures.map((f) => ({ name: f.figure.name, z: f.layer.z, lines: f.lines })),
     leadOf(figures),
   );
-  const info = [...infoOf(figures), ...scaleInfo(scale)];
+  const info = [
+    ...infoOf(figures),
+    ...scaleInfo(scale),
+    ...stores.proportions.flatMap(proportionInfo),
+  ];
   const measured: Measured = {
     palette: stores.palette,
     pockets: stores.pockets,
     'colour-step': stepSamples(planned, litMedians(shot, figures, planned)),
-    proportions: stores.proportions,
+    proportions: stores.proportions.flatMap((p) => p.samples),
     scale: scale.samples,
     'one-sheet': stores.oneSheet,
     light: lightSamples(first.reads),

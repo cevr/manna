@@ -539,7 +539,12 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   head × its own crown-to-soles over the sheet's median crown-to-soles
   (both over the cells that read a head), and each such frame is named in
   its sample and on an `INFO scale fallback:` line of `verdict.md`; a cell
-  whose crown and soles do not read either stays unread. The `colour-step` bar also
+  whose crown and soles do not read either stays unread. The `proportions`
+  bar reads every cell of a sheet: each must read its crown and soles, and
+  its hem and sash top where its palette has their roles. Its head line is
+  judged over the cells that read a head; each cell left out is named in
+  the head's sample and on an `INFO proportions left out:` line, and the
+  head is unread when no cell reads one. The `colour-step` bar also
   reads cells, not renders: each drawn key's cell (or blink) lit by the
   shot's light, at every change of drawn key in the plan, where every colour
   is the one drawn and no resampling has blended an edge; the `light` bar
