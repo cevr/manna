@@ -8,12 +8,6 @@ import pathPng from './path.png' with { type: 'file' };
 import skyPng from './sky.png' with { type: 'file' };
 import tablePng from './table.png' with { type: 'file' };
 
-/** The kept panel's pixels on the frame: frame = (panel - [0, y]) x scale; the plates are painted to it. */
-export const PANEL = { scale: 1.25, y: 80 } as const;
-
-/** How far each plane stands, as a camera's divisor: a far plane moves less in a pull. */
-export const PLANES = { sky: 12, distance: 5, near: 2, guests: 1.15, table: 1 } as const;
-
 /** The sky, teal at the top to pale green at the hills, opaque over the whole plate. */
 export const SKY = {
   key: 'in-its-order/sky',
@@ -56,8 +50,8 @@ export const TABLE = {
 } as const satisfies PaintingSpec;
 
 /**
- * The crowd's tables, drawn small on each crowd row's plane (`CROWD_ROWS` in
- * `scenes/crowd.ts`): `table.png` cut to its plate rows 940..1184 (the props,
+ * The diners' far table, drawn small on their plane: `table.png` cut to its
+ * plate rows 940..1184 (the props,
  * the top, the face and the legs down to the paving), the stone step at its
  * left (x < 210, rows from 1148) cleared, and its last 10 rows faded to clear,
  * so the legs end soft above the floor and no paving comes with it.

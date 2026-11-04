@@ -94,7 +94,7 @@ export const layer = (name: string, z: number, items: Layer['items']): Layer => 
  * cell (its soles' row less its first inked row, as `storybook draw`'s lines
  * read them): what places a figure by its crown.
  */
-const TALL: ReadonlyMap<string, number> = new Map([
+export const TALL: ReadonlyMap<string, number> = new Map([
   ['lead-feast/iio-table', 563],
   ['lead-feast/iio-close', 945],
   ['lead-feast/iio-milk', 868],

@@ -2,10 +2,7 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import type { Raster } from '@manna/film/tools';
 import { Effect, Option } from 'effect';
 import { describe, expect, it, test } from 'effect-bun-test';
-import sharp from 'sharp';
-import { APP } from '../render.ts';
 import {
-  anchorOf,
   type Box,
   eyeBoxesOf,
   faceBoxOf,
@@ -16,19 +13,10 @@ import {
   rgbAt,
   shareOf,
 } from '../sheet.ts';
-import {
-  type CameraKey,
-  drawnKeyOf,
-  type FigureFrame,
-  type Frame,
-  frameAt,
-  drawOrder,
-  type Plate,
-  type Shot,
-  timesOf,
-} from '../shot.ts';
-import { CAST, drawnCellOf, headsOf, loadFigures, type StoredFigure } from '../store.ts';
+import { AT_REST, drawnKeyOf, frameAt, type PlateKey, type Shot, timesOf } from '../shot.ts';
+import { CAST, headsOf, loadFigures, type StoredFigure } from '../store.ts';
 import { BARS, meets } from '../verify/bars.ts';
+import { coversOf, picturesOver } from '../verify/covers.ts';
 import { proportionSamples, scaleSamples } from '../verify/measures.ts';
 import { feastCourtyard } from './feast-courtyard.ts';
 
@@ -39,160 +27,10 @@ const figures = await Effect.runPromise(
 
 const byName = new Map(figures.map((f) => [f.figure.name, f] as const));
 
-/** Each figure's face box per drawn key it shows, read once: its stored cells' and its blinks'. */
-const faceBoxes = new Map(
-  figures.map(
-    (f) =>
-      [
-        f.figure.name,
-        new Map(
-          [...f.cells.keys(), ...f.blinks.keys()].map(
-            (key) =>
-              [key, Option.flatMap(drawnCellOf(f, key), (r) => faceBoxOf(r, f.paints))] as const,
-          ),
-        ),
-      ] as const,
-  ),
-);
-
 const heads = headsOf(figures);
-
-/** A plate's picture as a count of its pixels that are not clear above and left of each corner: (width + 1) × (height + 1) sums, so a box's count is four reads. */
-interface Coverage {
-  readonly width: number;
-  readonly height: number;
-  readonly sums: Int32Array;
-}
-
-const coverageOf = (picture: Raster): Coverage => {
-  const w = picture.width + 1;
-  const sums = new Int32Array(w * (picture.height + 1));
-  for (let y = 0; y < picture.height; y++)
-    for (let x = 0; x < picture.width; x++)
-      sums[(y + 1) * w + x + 1] =
-        Number((picture.rgba[(y * picture.width + x) * 4 + 3] ?? 0) > 0) +
-        (sums[y * w + x + 1] ?? 0) +
-        (sums[(y + 1) * w + x] ?? 0) -
-        (sums[y * w + x] ?? 0);
-  return { width: picture.width, height: picture.height, sums };
-};
-
-/** A plate's picture decoded with its alpha, as its coverage. */
-const plateCoverage = (plate: Plate) =>
-  Effect.promise(() =>
-    sharp(`${APP}/${plate.file}`).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
-  ).pipe(
-    Effect.map(({ data, info }) =>
-      coverageOf({ width: info.width, height: info.height, rgba: new Uint8Array(data) }),
-    ),
-  );
 
 /** An axis-aligned rectangle in some picture's or layer's px: left, top, right, bottom. */
 type Rect = readonly [number, number, number, number];
-
-/** How many of a plate's pixels inside `rect` (in its layer's px) are not clear. */
-const coverIn = (plate: Plate, picture: Coverage, rect: Rect): number => {
-  const { x, y, width, height } = plate.place;
-  const [sx, sy] = [picture.width / width, picture.height / height];
-  const x0 = Math.min(picture.width, Math.max(0, Math.floor((rect[0] - x) * sx)));
-  const y0 = Math.min(picture.height, Math.max(0, Math.floor((rect[1] - y) * sy)));
-  const x1 = Math.max(x0, Math.min(picture.width, Math.ceil((rect[2] - x) * sx)));
-  const y1 = Math.max(y0, Math.min(picture.height, Math.ceil((rect[3] - y) * sy)));
-  const w = picture.width + 1;
-  const at = (u: number, v: number) => picture.sums[v * w + u] ?? 0;
-  return at(x1, y1) - at(x0, y1) - at(x1, y0) + at(x0, y0);
-};
-
-/**
- * Where a layer at depth `z` lands on screen under `camera`, as the page's
- * multiplane draws it with no drift: its pan from the frame's centre over
- * `z`, its zoom the `z`-th root of the camera's. Answers screen = layer ×
- * scale + offset.
- */
-const planeOf = (z: number, camera: CameraKey) => {
-  const { width: w, height: h } = feastCourtyard.size;
-  const scale = camera.zoom ** (1 / z);
-  const [vx, vy] = [w / 2 + (camera.x - w / 2) / z, h / 2 + (camera.y - h / 2) / z];
-  return { scale, ox: w / 2 - vx * scale, oy: h / 2 - vy * scale };
-};
-
-/** Every plate the page draws after figure `name` of `shot` (`drawOrder`, then each layer's items in order), so over it, each with its layer's depth and blur. */
-const platesOver = (shot: Shot, name: string) => {
-  const drawn = drawOrder(shot.layers).flatMap((layer) =>
-    layer.items.map((item) => ({ item, z: layer.z, blur: layer.blur })),
-  );
-  return drawn
-    .slice(drawn.findIndex(({ item }) => item._tag === 'Figure' && item.name === name) + 1)
-    .flatMap(({ item, z, blur }) => {
-      if (item._tag !== 'Plate') return [];
-      return [{ plate: item, z, blur }];
-    });
-};
-
-/** A figure's face box in its layer's px in one frame: its drawn key's face box, placed as the page places the cell (scale, squash and breath about the anchor); none when its cell reads no lines or its drawing no face. */
-const faceInLayer = (f: FigureFrame, stored: StoredFigure): Option.Option<Rect> =>
-  Option.flatMap(Option.flatten(Option.fromUndefinedOr(stored.lines.get(f.cell))), (lines) =>
-    Option.map(
-      Option.flatten(Option.fromUndefinedOr(faceBoxes.get(stored.figure.name)?.get(drawnKeyOf(f)))),
-      (b): Rect => {
-        const { ax, ay } = anchorOf(lines);
-        const [kx, ky] = [f.scale * f.sx, f.scale * f.sy * f.breath];
-        return [
-          f.x + (b.x - ax) * kx,
-          f.y + (b.y - ay) * ky,
-          f.x + (b.x + b.width - ax) * kx,
-          f.y + (b.y + b.height - ay) * ky,
-        ];
-      },
-    ),
-  );
-
-/** A face box in its own layer's px moved into another layer's px through the screen, grown by `spread` screen px each side. */
-const intoLayer = (
-  face: Rect,
-  from: number,
-  to: number,
-  camera: CameraKey,
-  spread: number,
-): Rect => {
-  const [a, b] = [planeOf(from, camera), planeOf(to, camera)];
-  const x = (u: number, grow: number) => (u * a.scale + a.ox + grow - b.ox) / b.scale;
-  const y = (v: number, grow: number) => (v * a.scale + a.oy + grow - b.oy) / b.scale;
-  return [x(face[0], -spread), y(face[1], -spread), x(face[2], spread), y(face[3], spread)];
-};
-
-/** What covers each figure's face in one frame: a line per plate drawn over it with any pixel inside the face box (a blurred plate's within three blurs of it), or a line for a figure whose face reads none. */
-const coversIn = (
-  shot: Shot,
-  frame: Frame,
-  index: number,
-  pictures: ReadonlyMap<string, Coverage>,
-): ReadonlyArray<string> =>
-  frame.figures.flatMap((f) => {
-    const stored = byName.get(f.name);
-    const face = Option.flatMap(Option.fromUndefinedOr(stored), (s) => faceInLayer(f, s));
-    if (!stored || Option.isNone(face)) return [`${f.name} frame ${index}: no face read`];
-    return platesOver(shot, f.name).flatMap(({ plate, z, blur }) => {
-      const rect = intoLayer(face.value, stored.layer.z, z, frame.camera, 3 * blur);
-      const n = Option.match(Option.fromUndefinedOr(pictures.get(plate.file)), {
-        onNone: () => 0,
-        onSome: (picture) => coverIn(plate, picture, rect),
-      });
-      if (n === 0) return [];
-      return [`${f.name} frame ${index}: ${plate.file} covers ${n} px`];
-    });
-  });
-
-/** The coverage of every plate `shot` draws over a figure, by file. */
-const picturesOver = Effect.fnUntraced(function* (shot: Shot) {
-  const pictures = new Map<string, Coverage>();
-  for (const layer of shot.layers)
-    for (const it of layer.items)
-      if (it._tag === 'Figure')
-        for (const { plate } of platesOver(shot, it.name))
-          if (!pictures.has(plate.file)) pictures.set(plate.file, yield* plateCoverage(plate));
-  return pictures;
-});
 
 /** Whether pixel `q` of `r` lies in it and is not clear. */
 const opaqueAt = (r: Raster, q: number): boolean =>
@@ -280,10 +118,6 @@ const headAgainst = (front: Raster, cell: Raster, paints: StoredFigure['paints']
       return { headDiffers, loose: unjoined(cell, loose, inBox) };
     }),
   );
-
-/** What covers each figure's face in every frame of `shot` (`coversIn`). */
-const coversOf = (shot: Shot, pictures: ReadonlyMap<string, Coverage>): ReadonlyArray<string> =>
-  timesOf(shot).flatMap((t, i) => coversIn(shot, frameAt(shot, heads, t), i, pictures));
 
 /** Each hold of the shot that blinks: its figure, its cell and its blink key. */
 const blinkingHolds = figures.flatMap((f) =>
@@ -413,7 +247,7 @@ describe('the feast courtyard as drawn', () => {
       Effect.gen(function* () {
         const pictures = yield* picturesOver(feastCourtyard);
         expect([...pictures.keys()].length).toBeGreaterThanOrEqual(2);
-        expect(coversOf(feastCourtyard, pictures).slice(0, 5)).toEqual([]);
+        expect(coversOf(feastCourtyard, figures, pictures).slice(0, 5)).toEqual([]);
       }),
   );
 
@@ -435,8 +269,36 @@ describe('the feast courtyard as drawn', () => {
           ...feastCourtyard,
           layers: feastCourtyard.layers.toSpliced(guests + 1, 0, tied),
         };
-        const covered = coversOf(shot, yield* picturesOver(shot));
+        const covered = coversOf(shot, figures, yield* picturesOver(shot));
         expect(covered.some((line) => line.startsWith('man frame 0:'))).toBe(true);
+      }),
+  );
+
+  it.effect(
+    "reads a moving plate where its key puts it: the table on the guests' depth moved 32 px up by its key crosses the man's face, and the same table clear by its key covers nothing",
+    () =>
+      Effect.gen(function* () {
+        const guests = feastCourtyard.layers.findIndex((l) => l.name === 'guests');
+        const layer = feastCourtyard.layers[guests];
+        const table = layer?.items.find((it) => it._tag === 'Plate');
+        if (!layer || table?._tag !== 'Plate') return yield* Effect.die('no table on the guests');
+        const tiedBy = (key: PlateKey): Shot => ({
+          ...feastCourtyard,
+          layers: feastCourtyard.layers.toSpliced(guests + 1, 0, {
+            ...layer,
+            name: 'table at the guests depth',
+            items: [{ ...table, moves: [[0, key]] }],
+          }),
+        });
+        const [moved, clear] = [
+          tiedBy({ ...AT_REST, y: -32 }),
+          tiedBy({ ...AT_REST, y: -32, alpha: 0 }),
+        ];
+        const man = (shot: Shot) =>
+          Effect.map(picturesOver(shot), (pictures) =>
+            coversOf(shot, figures, pictures).some((line) => line.startsWith('man frame 0:')),
+          );
+        expect([yield* man(moved), yield* man(clear)]).toEqual([true, false]);
       }),
   );
 
