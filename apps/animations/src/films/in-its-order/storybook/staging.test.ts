@@ -18,11 +18,55 @@ import { CELLS as VILLAGER_CELLS } from '../cast/idea-villagers/shot-sheets/iio-
 import { inItsOrder } from './index.ts';
 import { drawScaleOf } from './kit.ts';
 import { TABLE } from '../plates/plates.ts';
-import { BABY_MOTHER, HELD_BODY, TABLE_TOP_PX } from './shots/cold.ts';
+import { BABY_MOTHER, TABLE_TOP_PX } from './shots/cold.ts';
 import { HEAD, TABLE_TOP } from './shots/courtyard.ts';
 import { CELLS as LEAD_TABLE_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
-import { BOTTLE, BOTTLE_BODY } from './plates/bottle.ts';
+import LEAD_TABLE_RECORD from '../../../library/cast/lead-feast/shot-sheets/iio-table/record.json';
+import { MEASURED } from './palettes.ts';
 import { CUP_MOUTHS, GUTTER } from './shots/milk.ts';
+
+/** The lead's table sheet's record, read for its props alone (a sheet drawn before props records none). */
+const TABLE_RECORD: {
+  readonly props?: ReadonlyArray<{
+    readonly name: string;
+    readonly base: string;
+    readonly role: string;
+  }>;
+} = LEAD_TABLE_RECORD;
+
+/** How far (RGB distance) a keyed plate's cream may sit from its sheet's prop paint and still read as the bottle's body: the plate is keyed from a drawing, not snapped to a palette. */
+const CREAM_REACH = 30;
+
+/** The widest run, along any one row, of a drawing's opaque pixels within `reach` (RGB distance) of `hex`: a drawn part's width across, read on its own pixels. */
+const widestRun = (
+  raw: {
+    readonly data: Buffer;
+    readonly info: { readonly width: number; readonly height: number };
+  },
+  hex: string,
+  reach: number,
+) => {
+  const channel = (at: number) => Number.parseInt(hex.slice(at, at + 2), 16);
+  const { width, height } = raw.info;
+  const near = (i: number) =>
+    raw.data.readUInt8(i + 3) > 128 &&
+    Math.hypot(
+      raw.data.readUInt8(i) - channel(1),
+      raw.data.readUInt8(i + 1) - channel(3),
+      raw.data.readUInt8(i + 2) - channel(5),
+    ) <= reach;
+  return Array.from(
+    { length: height },
+    (_, y) =>
+      Array.from({ length: width }, (_, x) => near((y * width + x) * 4)).reduce(
+        (acc, hit) => {
+          const run = Number(hit) * (acc.run + 1);
+          return { run, best: Math.max(acc.best, run) };
+        },
+        { run: 0, best: 0 },
+      ).best,
+  ).reduce((a, w) => Math.max(a, w), 0);
+};
 
 // oxlint-disable-next-line effect/noAsyncFunction -- read once at module evaluation, so no case pays the read inside its time limit (film/no-lazy-test-fixture)
 const placed = await Effect.runPromise(
@@ -334,29 +378,48 @@ describe("In Its Order's staging", () => {
     expect(footAt(open, end).y).toBe(TABLE_TOP.y + TABLE_TOP.height);
   });
 
-  test('sets the bottle down on the table top in cold-letter from the frame his hand empties to the shot’s end, his held bottle’s size (critique 1, items 6 and 7)', () => {
-    const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
-    const lead = letter && figuresOf(letter).find(({ figure }) => figure.name === 'lead')?.figure;
-    const bottle = letter?.layers
-      .flatMap((l) => l.items)
-      .find((item) => item._tag === 'Plate' && item.file.endsWith('/bottle.png'));
-    if (!letter || !lead || bottle?._tag !== 'Plate')
-      return expect([letter?.id, lead?.name, bottle?._tag]).toEqual([
-        'cold-letter',
-        'lead',
-        'Plate',
-      ]);
-    const times = timesOf(letter);
-    const held = times.filter((t) => ['lift', 'bottle'].includes(poseAt(lead, t).cell));
-    const shown = times.filter((t) => plateAt(bottle, t).alpha > 0);
-    expect([held.length > 0, shown.length > 0]).toEqual([true, true]);
-    expect(shown.some((t) => held.includes(t))).toBe(false);
-    expect(shown.at(-1)).toBe(times.at(-1));
-    const foot = bottle.place.y + bottle.place.height;
-    expect(foot).toBeGreaterThanOrEqual(TABLE_TOP.y);
-    expect(foot).toBeLessThanOrEqual(TABLE_TOP.y + TABLE_TOP.height);
-    const body = (bottle.place.width * BOTTLE_BODY) / BOTTLE.size[0];
-    const heldBody = (HEAD / LEAD_TABLE_CELLS.bottle.head) * HELD_BODY;
-    expect(Math.abs(body / heldBody - 1)).toBeLessThanOrEqual(0.05);
-  });
+  it.effect(
+    'sets the bottle down on the table top in cold-letter from the frame his hand empties to the shot’s end: his table sheet records its cream bottle as a measured prop, and the plate’s cream body across is the held bottle’s, read on both drawings (critique 1, items 6 and 7)',
+    () =>
+      Effect.gen(function* () {
+        const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
+        const lead =
+          letter && figuresOf(letter).find(({ figure }) => figure.name === 'lead')?.figure;
+        const prop = (TABLE_RECORD.props ?? []).find((p) => p.name === 'bottle');
+        const measured = MEASURED.some(
+          (m) =>
+            m.member === 'lead-feast' && m.hex === prop?.base && m.source.includes('iio-table'),
+        );
+        const bottle = letter?.layers
+          .flatMap((l) => l.items)
+          .find((item) => item._tag === 'Plate' && item.file.endsWith('/bottle.png'));
+        const png = bottle?._tag === 'Plate' && bottle.painting;
+        if (!letter || !lead || !prop || !measured || bottle?._tag !== 'Plate' || !png)
+          return expect([letter?.id, lead?.name, prop?.role, measured, bottle?._tag]).toEqual([
+            'cold-letter',
+            'lead',
+            'prop',
+            true,
+            'Plate',
+          ]);
+        const times = timesOf(letter);
+        const held = times.filter((t) => ['lift', 'bottle'].includes(poseAt(lead, t).cell));
+        const shown = times.filter((t) => plateAt(bottle, t).alpha > 0);
+        expect([held.length > 0, shown.length > 0]).toEqual([true, true]);
+        expect(shown.some((t) => held.includes(t))).toBe(false);
+        expect(shown.at(-1)).toBe(times.at(-1));
+        const foot = bottle.place.y + bottle.place.height;
+        expect(foot).toBeGreaterThanOrEqual(TABLE_TOP.y);
+        expect(foot).toBeLessThanOrEqual(TABLE_TOP.y + TABLE_TOP.height);
+        const raw = (file: string) =>
+          Effect.promise(() =>
+            sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+          );
+        const [cell, plate] = yield* Effect.all([raw(LEAD_TABLE_CELLS.bottle.png), raw(png.png)]);
+        const heldBody = (HEAD / LEAD_TABLE_CELLS.bottle.head) * widestRun(cell, prop.base, 0);
+        const body = (bottle.place.width * widestRun(plate, prop.base, CREAM_REACH)) / png.size[0];
+        expect(heldBody).toBeGreaterThan(0);
+        expect(Math.abs(body / heldBody - 1)).toBeLessThanOrEqual(0.05);
+      }),
+  );
 });

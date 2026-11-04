@@ -301,7 +301,7 @@ const SCROLL_LIES = 0.35;
 export const BOTTLE_AT = [1130, TABLE_TOP.y + TABLE_TOP.height / 2] as const;
 
 /** The cream body across of the bottle the lead holds in his table sheet's `bottle` cell, in its px (196 to 232). */
-export const HELD_BODY = 37;
+const HELD_BODY = 37;
 
 /** The bottle on the table from `at` s (the swap that empties his hand) to the shot's end, its cream body the width of the one he held: his table sheet's draw scale (`HEAD` over that cell's head) times that bottle's body across. */
 export const bottleSetDown = (at: number): Plate =>
