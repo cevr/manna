@@ -101,6 +101,9 @@ tmp/verify-heartseed, one drive at a time per checkout; never point its
    xcrun simctl privacy <udid> revoke microphone app.heartseed
    ```
 
+   The revoke stops the running app, and a link that launches the app
+   lands on Today, so a drive's first step after it is `sim open /`.
+
 ## Doctor
 
 Before the first drive, and again after any surprising result:

@@ -43,9 +43,11 @@ plutil -extract NSSpeechRecognitionUsageDescription raw apps/heartseed/ios/Heart
 
 `dictation-script`, with the microphone revoked
 (`xcrun simctl privacy <udid> revoke microphone app.heartseed` before the
-open):
+opens). The revoke stops the app, so open Today first: it launches the app
+afresh, and a link opened into a running app reaches its route (Gotchas):
 
 ```bash
+sim open / --expect "label=Isaiah 41:10"
 sim open probe/dictation --expect "label=ended finished"
 sim snapshot dictation
 ```
@@ -55,11 +57,27 @@ sim snapshot dictation
 passage has 37 words), and one node each starting `analyzer `,
 `dictation ` and `recognizer ` with a status (`ready`, `missing` or
 `unsupported`): record those three as evidence of what the simulator
-offers, not as a pass or a fail. `$EVIDENCE/server.log` or the
-simulator's log holds `[dictation] replay session=1` and no
-`[dictation] listen` line. Report counts only, then delete the snapshot.
+offers, not as a pass or a fail. The simulator's log holds
+`[dictation] replay session=1` and no `[dictation] listen` line (the
+module logs with `NSLog`, which the dev server's log does not carry):
+
+```bash
+xcrun simctl spawn <udid> log show --last 10m --style compact --predicate 'eventMessage CONTAINS "[dictation]" AND process == "Heartseed"'
+```
+
+Report counts only, then delete the snapshot.
 
 ## Gotchas
+
+- **A link that launches the app lands on Today.** `sim open probe/dictation`
+  into a stopped app shows Today, and so does its one retry, which stops
+  the app again; into the running app it shows the probe. One reads a
+  launch link with a 150 ms limit (`getInitialURL` in its native linking),
+  the likely cause. Revoking a permission stops the app. Open `/` first,
+  then the probe.
+- One open may log the replay twice, each `session=1`: a development build
+  runs the probe's effect, cleans it up and runs it again, and each run
+  builds its own service, whose sessions start at 1.
 
 - The prebuild writes `.one-native-source.json` (and maybe
   `.one-native-source.swift.txt`) beside `Dictation.swift`; both are
