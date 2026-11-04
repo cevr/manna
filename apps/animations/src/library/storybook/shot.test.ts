@@ -740,6 +740,39 @@ describe('head shares', () => {
     expect(scale(halved, 'woman')).toBe(scale(plain, 'woman'));
   });
 
+  test('a figure’s size multiplies its draw scale, every other figure’s unchanged, and 1 when none is named', () => {
+    const heads = new Map([
+      ['man', 300],
+      ['woman', 300],
+      ['lead', 158],
+    ]);
+    const sized: typeof feastCourtyard = {
+      ...feastCourtyard,
+      layers: feastCourtyard.layers.map((l) => ({
+        ...l,
+        items: l.items.map((i) => {
+          if (i._tag !== 'Figure' || i.name !== 'man') return i;
+          return { ...i, size: 0.96 };
+        }),
+      })),
+    };
+    const unit: typeof feastCourtyard = {
+      ...feastCourtyard,
+      layers: feastCourtyard.layers.map((l) => ({
+        ...l,
+        items: l.items.map((i) => {
+          if (i._tag !== 'Figure') return i;
+          return { ...i, size: 1 };
+        }),
+      })),
+    };
+    const scale = (shot: typeof feastCourtyard, name: string) =>
+      frameAt(shot, heads, 1, ADULTS).figures.find((x) => x.name === name)?.scale ?? 0;
+    expect(scale(sized, 'man')).toBeCloseTo(scale(feastCourtyard, 'man') * 0.96, 12);
+    expect(scale(sized, 'woman')).toBe(scale(feastCourtyard, 'woman'));
+    expect(scale(unit, 'man')).toBe(scale(feastCourtyard, 'man'));
+  });
+
   test('reports each figure’s plane zoom as the camera’s zoom to the power 1 / z', () => {
     const frame = frameAt(feastCourtyard, new Map(), 12, ADULTS);
     for (const f of frame.figures) {

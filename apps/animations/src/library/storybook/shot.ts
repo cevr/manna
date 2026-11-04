@@ -129,6 +129,8 @@ export interface Figure<K extends string = string> {
   readonly worn?: ReadonlyArray<Worn<K>>;
   /** Paints of its member's palette this figure wears in other colours (`dressed`): one sheet's figure told apart from another member's who dresses alike, with no new drawing. */
   readonly dress?: ReadonlyArray<Dress>;
+  /** A factor on its draw scale (1 when none): a figure set a little larger or smaller than its head share gives, so two figures of one row stand level; the scale bar reads it as any other draw scale, so it stays inside the bar's band. */
+  readonly size?: number;
 }
 
 /** One paint of a palette, as its cells hold it (`from`, hex), worn in another colour (`to`, hex). */
@@ -462,12 +464,13 @@ export const frameAt = (
     figures: figuresOf(shot).map(({ layer, figure: f }) => ({
       name: f.name,
       layer: layer.name,
-      scale: scaleOf(
-        shot.headPx,
-        layer.z,
-        sheetHeads.get(f.name) ?? shot.headPx,
-        shares.get(f.name) ?? 1,
-      ),
+      scale:
+        scaleOf(
+          shot.headPx,
+          layer.z,
+          sheetHeads.get(f.name) ?? shot.headPx,
+          shares.get(f.name) ?? 1,
+        ) * (f.size ?? 1),
       zoom: camera.zoom ** (1 / layer.z),
       ...poseAt(f, t),
     })),
