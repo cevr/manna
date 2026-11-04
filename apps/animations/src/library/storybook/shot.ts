@@ -69,7 +69,31 @@ export interface Walk<K extends string = string> {
 
 export type Span<K extends string = string> = Hold<K> | Turn<K> | Keys<K> | Walk<K>;
 
-/** A painted plate of the set: its file (relative to apps/animations), whether it is test art, and its place in its layer's px. */
+/** Where a moving plate is at one key: moved `x`, `y` layer px off its place, stretched `sx`, `sy` about its foot (the middle of its bottom edge), and how opaque, 0..1. */
+export interface PlateKey {
+  readonly x: number;
+  readonly y: number;
+  readonly sx: number;
+  readonly sy: number;
+  readonly alpha: number;
+}
+
+/** A plate at rest: in its place, unstretched, opaque. */
+export const AT_REST: PlateKey = { x: 0, y: 0, sx: 1, sy: 1, alpha: 1 };
+
+/**
+ * A plate shown along a brush: the polyline `brush` (`[x, y, r]` in the
+ * plate's own px, its foot first) is laid from its foot to its far end over
+ * `[from, to]` s, eased by smoothstep, and the plate shows only under the
+ * laid part, each point a disc of radius `r`.
+ */
+export interface Reveal {
+  readonly brush: ReadonlyArray<readonly [number, number, number]>;
+  readonly from: number;
+  readonly to: number;
+}
+
+/** A painted plate of the set: its file (relative to apps/animations), whether it is test art, its place in its layer's px, and, when it moves, its keys and its reveal. */
 export interface Plate {
   readonly _tag: 'Plate';
   readonly file: string;
@@ -80,6 +104,9 @@ export interface Plate {
     readonly width: number;
     readonly height: number;
   };
+  /** Keys `[t, key]` in time order: smoothstep from each to the next, held before the first and after the last; at rest when it names none. */
+  readonly moves?: ReadonlyArray<readonly [number, PlateKey]>;
+  readonly reveal?: Reveal;
 }
 
 /**
@@ -122,7 +149,13 @@ export interface Shot {
   readonly size: { readonly width: number; readonly height: number };
   readonly fps: number;
   readonly duration: number;
-  /** The lead's head (crown to collar) in px on the focal plane at zoom 1: every figure's head is this over its layer's z. */
+  /**
+   * Where the shot starts in its scene, in s (0 when it names none): its
+   * frames are the scene's whole frames from there, each at shot time
+   * `k / fps − from`, so a film shot's frames are the film's own.
+   */
+  readonly from?: number;
+  /** A grown adult's head (crown to collar) in px on the focal plane at zoom 1: every figure's head is this times its member's head share, over its layer's z. */
   readonly headPx: number;
   readonly light: Light;
   readonly camera: ReadonlyArray<CameraKey>;
@@ -349,18 +382,21 @@ export const cameraAt = (keys: ReadonlyArray<CameraKey>, t: number): CameraKey =
 };
 
 /**
- * A figure's draw scale: the shot's head over its layer's depth, over the
- * head its sheet draws (`sheetHeadPx`, the median over its cells), so every
- * figure's head is the lead's times 1/z. One scale for all its cells.
+ * A figure's draw scale: the shot's head times its member's head share
+ * (`share`, 1 for a grown adult), over its layer's depth, over the head its
+ * sheet draws (`sheetHeadPx`, the median over its cells), so every figure's
+ * head is a grown adult's times its share times 1/z. One scale for all its
+ * cells.
  */
-export const scaleOf = (headPx: number, z: number, sheetHeadPx: number): number =>
-  headPx / z / sheetHeadPx;
+export const scaleOf = (headPx: number, z: number, sheetHeadPx: number, share = 1): number =>
+  (headPx * share) / z / sheetHeadPx;
 
-/** One figure in one frame, as plain data. */
+/** One figure in one frame, as plain data: its zoom is its plane's, `zoom^(1/z)` of the camera's. */
 export interface FigureFrame extends Posed {
   readonly name: string;
   readonly layer: string;
   readonly scale: number;
+  readonly zoom: number;
 }
 
 /** One frame: its time, the camera, and each figure. */
@@ -396,24 +432,98 @@ export const platesOf = (shot: Shot): ReadonlyArray<Plate> =>
   );
 
 /**
- * The frame at `t`: the camera, and per figure its cell, place, squash and
- * scale (`sheetHeads` names each figure's sheet's median head in px). A
- * pure function of `t`.
+ * The frame at `t`: the camera, and per figure its cell, place, squash,
+ * scale and plane zoom (`sheetHeads` names each figure's sheet's median head
+ * in px, `shares` each figure's member's head share, 1 when it names none).
+ * A pure function of `t`.
  */
-export const frameAt = (shot: Shot, sheetHeads: ReadonlyMap<string, number>, t: number): Frame => ({
-  t,
-  camera: cameraAt(shot.camera, t),
-  figures: figuresOf(shot).map(({ layer, figure: f }) => ({
-    name: f.name,
-    layer: layer.name,
-    scale: scaleOf(shot.headPx, layer.z, sheetHeads.get(f.name) ?? shot.headPx),
-    ...poseAt(f, t),
-  })),
+export const frameAt = (
+  shot: Shot,
+  sheetHeads: ReadonlyMap<string, number>,
+  t: number,
+  shares: ReadonlyMap<string, number> = new Map(),
+): Frame => {
+  const camera = cameraAt(shot.camera, t);
+  return {
+    t,
+    camera,
+    figures: figuresOf(shot).map(({ layer, figure: f }) => ({
+      name: f.name,
+      layer: layer.name,
+      scale: scaleOf(
+        shot.headPx,
+        layer.z,
+        sheetHeads.get(f.name) ?? shot.headPx,
+        shares.get(f.name) ?? 1,
+      ),
+      zoom: camera.zoom ** (1 / layer.z),
+      ...poseAt(f, t),
+    })),
+  };
+};
+
+/** How near a time may lie past a frame's and still be read as on it: the engine's clock epsilon. */
+const ON_FRAME = 1e-6;
+
+/**
+ * The times of a shot's frames: the scene's whole frames `k` with
+ * `from ≤ k / fps < from + duration`, each at `k / fps − from` (`from` 0
+ * when it names none: `i / fps` for each i below `duration × fps`).
+ */
+export const timesOf = (shot: Shot): ReadonlyArray<number> => {
+  const from = shot.from ?? 0;
+  const first = Math.ceil(from * shot.fps - ON_FRAME);
+  const last = Math.ceil((from + shot.duration) * shot.fps - ON_FRAME);
+  return Array.from({ length: last - first }, (_, i) => (first + i) / shot.fps - from);
+};
+
+const keyLerp = (a: PlateKey, b: PlateKey, u: number): PlateKey => ({
+  x: lerp(a.x, b.x, u),
+  y: lerp(a.y, b.y, u),
+  sx: lerp(a.sx, b.sx, u),
+  sy: lerp(a.sy, b.sy, u),
+  alpha: lerp(a.alpha, b.alpha, u),
 });
 
-/** The times of a shot's frames: `i / fps` for each i below `round(duration × fps)`. */
-export const timesOf = (shot: Shot): ReadonlyArray<number> =>
-  Array.from({ length: Math.round(shot.duration * shot.fps) }, (_, i) => i / shot.fps);
+/** Where a plate is at `t`: its keys eased (smoothstep) from one to the next, held before the first and after the last; at rest when it has none. */
+export const plateAt = (plate: Pick<Plate, 'moves'>, t: number): PlateKey => {
+  const keys = plate.moves ?? [];
+  const next = keys.findIndex(([at]) => at > t);
+  if (next === 0) return keys[0]?.[1] ?? AT_REST;
+  if (next < 0) return keys.at(-1)?.[1] ?? AT_REST;
+  const [ta, a] = keys[next - 1] ?? [0, AT_REST];
+  const [tb, b] = keys[next] ?? [0, AT_REST];
+  return keyLerp(a, b, ease((t - ta) / Math.max(1e-6, tb - ta)));
+};
+
+/** The discs of a plate's brush laid by `t`, in the plate's own px: every brush point within the laid length, and the point where the laying has reached; every disc when it has no reveal. */
+export const revealAt = (
+  reveal: Reveal,
+  t: number,
+): ReadonlyArray<readonly [number, number, number]> => {
+  const pts = reveal.brush;
+  const lengths = pts.slice(1).map((p, i) => {
+    const q = pts[i] ?? p;
+    return Math.hypot(p[0] - q[0], p[1] - q[1]);
+  });
+  const total = lengths.reduce((a, b) => a + b, 0);
+  let left = ease((t - reveal.from) / Math.max(1e-6, reveal.to - reveal.from)) * total;
+  if (left <= 0) return [];
+  const laid: Array<readonly [number, number, number]> = [];
+  for (const [i, p] of pts.entries()) {
+    laid.push(p);
+    const q = pts[i + 1];
+    const len = lengths[i] ?? 0;
+    if (!q) break;
+    if (left <= len) {
+      const u = left / Math.max(1e-6, len);
+      laid.push([lerp(p[0], q[0], u), lerp(p[1], q[1], u), lerp(p[2], q[2], u)]);
+      break;
+    }
+    left -= len;
+  }
+  return laid;
+};
 
 const mixed = (c: Rgb, to: Rgb, amount: number): Rgb => [
   Math.round(c[0] + (to[0] - c[0]) * amount),

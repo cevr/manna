@@ -16,7 +16,7 @@ import {
   type Rgb,
   rgbSum,
 } from '../sheet.ts';
-import { drawnKeyOf, type FigureFrame, type Frame } from '../shot.ts';
+import { drawnKeyOf, type Frame } from '../shot.ts';
 import { one, type Sample, type Samples, unreadAt } from './verdict.ts';
 
 /** A colour as one number, for sets and maps. */
@@ -256,6 +256,8 @@ export const stepSamples = (
 export interface ScaledFigure {
   readonly name: string;
   readonly z: number;
+  /** Its member's head share: its head as a share of a grown adult's. */
+  readonly share: number;
   readonly lines: ReadonlyMap<string, Option.Option<Lines>>;
 }
 
@@ -319,49 +321,41 @@ export interface PlannedFrame {
 }
 
 /**
- * Each figure's head against the lead's in every planned frame, as the plan
+ * Each figure's head against the shot's in every planned frame, as the plan
  * draws them: its cell's head at its sheet's size × its draw scale × its
- * plane's zoom (zoom^(1/z)) × its squash up, over the lead's drawn so × 1/z
- * × zoom^(1/z) ÷ zoom (z its depth, zoom the camera's). No render is read,
- * so a frame that cuts a figure off or resamples it reads the same. A cell
- * whose head column reads none is read from its crown-to-soles
- * (`cellHeadsOf`), named so in its sample and in the fallbacks. Unread where
- * its cell's head or the lead's was read neither way.
+ * plane's zoom (zoom^(1/z)) × its squash up, over the shot's grown head
+ * `headPx` × its member's head share × 1/z × zoom^(1/z) (z its depth, zoom
+ * the camera's). No render is read, so a frame that cuts a figure off or
+ * resamples it reads the same. A cell whose head column reads none is read
+ * from its crown-to-soles (`cellHeadsOf`), named so in its sample and in the
+ * fallbacks. Unread where its cell's head was read neither way.
  */
 export const scaleSamples = (
   planned: ReadonlyArray<PlannedFrame>,
   figures: ReadonlyArray<ScaledFigure>,
-  lead: string,
+  headPx: number,
 ): ScaleRead => {
-  const byName = new Map(figures.map((f) => [f.name, { z: f.z, headOf: cellHeadsOf(f) }] as const));
+  const byName = new Map(
+    figures.map((f) => [f.name, { z: f.z, share: f.share, headOf: cellHeadsOf(f) }] as const),
+  );
   const read = planned.flatMap(({ index, frame }) => {
     const zoom = frame.camera.zoom;
-    const headOf = (f: FigureFrame): Option.Option<CellHead> =>
-      Option.flatMap(Option.fromUndefinedOr(byName.get(f.name)), (b) => b.headOf(f.cell));
-    const drawn = (f: FigureFrame, h: CellHead): number => {
-      const z = byName.get(f.name)?.z ?? 1;
-      return h.head * f.scale * zoom ** (1 / z) * f.sy;
-    };
-    const ref = frame.figures.find((f) => f.name === lead);
-    if (!ref) return [];
-    const theirs = headOf(ref);
-    return frame.figures
-      .filter((f) => f.name !== lead)
-      .map((f) => {
-        const z = byName.get(f.name)?.z ?? 1;
-        const mine = headOf(f);
-        const both = Option.all([mine, theirs]);
-        const fromHeight = Option.exists(both, ([m, t]) => m.fromHeight || t.fromHeight);
-        const at = `${f.name} frame ${index} (${f.cell}; ${lead} ${ref.cell})`;
-        const named = `${f.name} frame ${index} (${cellAt(f.cell, mine)}; ${lead} ${cellAt(ref.cell, theirs)})`;
-        const sample = Option.match(both, {
-          onNone: () =>
-            unreadAt(`${at}: no head read, nor one from crown-to-soles, in its cell or the lead's`),
-          onSome: ([m, t]) =>
-            one(named, drawn(f, m) / (drawn(ref, t) * (1 / z) * (zoom ** (1 / z) / zoom))),
-        });
-        return { sample, fromHeight };
+    return frame.figures.map((f) => {
+      const b = byName.get(f.name) ?? { z: 1, share: 1, headOf: () => Option.none<CellHead>() };
+      const mine = b.headOf(f.cell);
+      const fromHeight = Option.exists(mine, (m) => m.fromHeight);
+      const at = `${f.name} frame ${index} (${f.cell})`;
+      const sample = Option.match(mine, {
+        onNone: () => unreadAt(`${at}: no head read, nor one from crown-to-soles, in its cell`),
+        onSome: (m) =>
+          one(
+            `${f.name} frame ${index} (${cellAt(f.cell, mine)})`,
+            (m.head * f.scale * zoom ** (1 / b.z) * f.sy) /
+              ((headPx * b.share * zoom ** (1 / b.z)) / b.z),
+          ),
       });
+      return { sample, fromHeight };
+    });
   });
   return {
     samples: read.map((r) => r.sample),

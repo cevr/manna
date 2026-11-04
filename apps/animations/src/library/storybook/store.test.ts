@@ -21,6 +21,7 @@ import {
   GROUNDS,
   groundFor,
   keepSheet,
+  libraryCast,
   POSES,
   promptOf,
   readCell,
@@ -69,14 +70,15 @@ const sheetOf = (n: number, ground: Rgb): Raster => {
 const castWith = (palette: Palette) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const cast = yield* fs.makeTempDirectoryScoped();
-    yield* fs.makeDirectory(`${cast}/m/cast-sheet/views`, { recursive: true });
+    const root = yield* fs.makeTempDirectoryScoped();
+    const cast = libraryCast(root);
+    yield* fs.makeDirectory(`${root}/m/cast-sheet/views`, { recursive: true });
     yield* fs.writeFileString(
-      `${cast}/m/cast-sheet/palette.json`,
+      `${root}/m/cast-sheet/palette.json`,
       yield* Schema.encodeEffect(PaletteJson)(palette),
     );
-    yield* fs.writeFileString(`${cast}/m/cast-sheet/look.md`, 'A plain man in a red robe.\n');
-    yield* fs.writeFile(`${cast}/m/cast-sheet/views/front.png`, encodePng(sheetOf(1, PAPER)));
+    yield* fs.writeFileString(`${root}/m/cast-sheet/look.md`, 'A plain man in a red robe.\n');
+    yield* fs.writeFile(`${root}/m/cast-sheet/views/front.png`, encodePng(sheetOf(1, PAPER)));
     return cast;
   });
 
@@ -102,7 +104,7 @@ describe('drawSheet', () => {
         expect(record.refs).toEqual([
           {
             file: 'cast-sheet/views/front.png',
-            sha256: sha256Of(yield* fs.readFile(`${cast}/m/cast-sheet/views/front.png`)),
+            sha256: sha256Of(yield* fs.readFile(`${cast.dirOf('m')}/cast-sheet/views/front.png`)),
           },
         ]);
         expect(record.sheet).toBe(sha256Of(yield* fs.readFile(`${dir}/sheet.png`)));
@@ -225,7 +227,7 @@ describe('readCell', () => {
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
-        const cast = yield* fs.makeTempDirectoryScoped();
+        const cast = libraryCast(yield* fs.makeTempDirectoryScoped());
         const dir = `${sheetDir(cast, 'm', 's')}/cells`;
         yield* fs.makeDirectory(dir, { recursive: true });
         for (let seed = 1; seed <= 12; seed++) {
@@ -306,7 +308,7 @@ describe('palette.json', () => {
       () =>
         Effect.gen(function* () {
           const fs = yield* FileSystem.FileSystem;
-          const folder = `${CAST}/${member}`;
+          const folder = CAST.dirOf(member);
           const palette = yield* Schema.decodeEffect(PaletteJson)(
             yield* fs.readFileString(`${folder}/cast-sheet/palette.json`),
           );

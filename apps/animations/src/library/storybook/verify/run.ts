@@ -13,8 +13,16 @@ import {
 } from '../render.ts';
 import { rgbOfHex, splitSheet } from '../sheet.ts';
 import { drawnKeyOf, frameAt, lit, litPaints, platesOf, type Shot, timesOf } from '../shot.ts';
-import { CAST, drawnCellOf, memberPalette, sha256, sheetDir, type StoredFigure } from '../store.ts';
-import { BARS } from './bars.ts';
+import {
+  CAST,
+  type Cast,
+  drawnCellOf,
+  memberPalette,
+  sha256,
+  sheetDir,
+  type StoredFigure,
+} from '../store.ts';
+import { BARS, type CheckId } from './bars.ts';
 import {
   type FrameRead,
   heightSamples,
@@ -82,11 +90,6 @@ export class VerdictFailed extends Schema.TaggedError<VerdictFailed>()('VerdictF
     return `FAIL ${this.passed}/${this.total}`;
   }
 }
-
-/** The figure a shot's scale is read against: the one on the layer nearest the focal plane. */
-const leadOf = (figures: ReadonlyArray<StoredFigure>): string =>
-  figures.toSorted((a, b) => Math.abs(a.layer.z - 1) - Math.abs(b.layer.z - 1))[0]?.figure.name ??
-  '';
 
 const decoded = (png: Uint8Array, at: string) =>
   Effect.fromResult(decodePng(png)).pipe(
@@ -196,9 +199,10 @@ const litMedians = (
 const sheetFault = Effect.fn('StorybookVerify.sheetFault')(function* (
   f: StoredFigure,
   used: ReadonlySet<string>,
+  cast: Cast,
 ) {
   const fs = yield* FileSystem.FileSystem;
-  const dir = sheetDir(CAST, f.figure.member, f.figure.sheet);
+  const dir = sheetDir(cast, f.figure.member, f.figure.sheet);
   const keys = f.record.cells.map((c) => c.key);
   const stray = [...used].find((k) => !keys.includes(k));
   if (stray) return Option.some(`${f.figure.name} draws ${stray}, not a cell of its sheet`);
@@ -208,7 +212,7 @@ const sheetFault = Effect.fn('StorybookVerify.sheetFault')(function* (
   const split = splitSheet(
     yield* decoded(bytes, `${dir}/sheet.png`),
     keys.length,
-    yield* memberPalette(CAST, f.figure.member),
+    yield* memberPalette(cast, f.figure.member),
   );
   if (Result.isFailure(split)) return Option.some(`${f.figure.name}: ${split.failure.reason}`);
   for (const [i, c] of f.record.cells.entries()) {
@@ -228,10 +232,14 @@ const sheetFault = Effect.fn('StorybookVerify.sheetFault')(function* (
   return Option.none<string>();
 });
 
+/** The info line of a shot with no figure: the figure bars read none, and pass. */
+const NO_FIGURES = 'no figures: the figure bars read none and pass; determinism judges the shot';
+
 /** The stores' measures: each used cell's palette share and pockets, each sheet's proportions, and the one-sheet rule. */
 const storeMeasures = Effect.fn('StorybookVerify.storeMeasures')(function* (
   figures: ReadonlyArray<StoredFigure>,
   used: ReadonlyMap<string, ReadonlySet<string>>,
+  cast: Cast,
 ) {
   const cells = figures.flatMap((f) =>
     [...(used.get(f.figure.name) ?? [])].flatMap((key) =>
@@ -249,7 +257,7 @@ const storeMeasures = Effect.fn('StorybookVerify.storeMeasures')(function* (
     n: pocketCount(c.raster, rgbOfHex(c.f.record.ground)),
   }));
   const faults = yield* Effect.forEach(figures, (f) =>
-    sheetFault(f, used.get(f.figure.name) ?? new Set()),
+    sheetFault(f, used.get(f.figure.name) ?? new Set(), cast),
   );
   const faulty = faults.flatMap(Option.toArray);
   return {
@@ -354,15 +362,16 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
   shot: Shot,
   out: string,
   every: number,
+  cast: Cast = CAST,
 ) {
   const fs = yield* FileSystem.FileSystem;
   yield* fs.remove(out, { recursive: true, force: true });
   yield* fs.makeDirectory(out, { recursive: true });
-  const { figures, heads, scene } = yield* loadShot(shot);
+  const { figures, heads, shares, scene } = yield* loadShot(shot, cast);
   const planned = timesOf(shot)
     .map((t, index) => ({ index, t }))
     .filter((p) => p.index % every === 0)
-    .map((p) => ({ index: p.index, frame: frameAt(shot, heads, p.t) }));
+    .map((p) => ({ index: p.index, frame: frameAt(shot, heads, p.t, shares) }));
   const first = yield* Effect.scoped(
     Effect.flatMap(storybookPage(scene), (render) =>
       firstLaunch(shot, render, planned, figures, out),
@@ -375,24 +384,32 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
   );
   const differing = first.hashes.filter((h, k) => h !== second[k]).length;
   const used = usedCells(planned);
-  const stores = yield* storeMeasures(figures, used);
+  const stores = yield* storeMeasures(figures, used, cast);
   const scale = scaleSamples(
     planned,
-    figures.map((f) => ({ name: f.figure.name, z: f.layer.z, lines: f.lines })),
-    leadOf(figures),
+    figures.map((f) => ({
+      name: f.figure.name,
+      z: f.layer.z,
+      share: f.palette.head ?? 1,
+      lines: f.lines,
+    })),
+    shot.headPx,
   );
+  const drawn = figures.length > 0;
   const info = [
     ...infoOf(figures),
     ...scaleInfo(scale),
     ...stores.proportions.flatMap(proportionInfo),
+    ...[NO_FIGURES].filter(() => !drawn),
   ];
+  const figureBar = (samples: Measured[CheckId]): Measured[CheckId] => samples.filter(() => drawn);
   const measured: Measured = {
     palette: stores.palette,
-    pockets: stores.pockets,
+    pockets: figureBar(stores.pockets),
     'colour-step': stepSamples(planned, litMedians(shot, figures, planned)),
     proportions: stores.proportions.flatMap((p) => p.samples),
     scale: scale.samples,
-    'one-sheet': stores.oneSheet,
+    'one-sheet': figureBar(stores.oneSheet),
     light: lightSamples(first.reads),
     'render-height': heightSamples(first.reads),
     determinism: [
@@ -402,7 +419,7 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
       ),
     ],
   };
-  const verdict: Verdict = verdictOf(BARS, measured);
+  const verdict: Verdict = verdictOf(BARS, measured, drawn);
   const manifest = yield* Schema.encodeEffect(ManifestJson)({
     shot: shot.id,
     head: yield* gitHead,

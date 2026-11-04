@@ -302,6 +302,7 @@ const posed = (
 ): FigureFrame => ({
   layer: f.name,
   eyes: f.cell,
+  zoom: 1,
   x: 0,
   y: 0,
   sx: 1,
@@ -317,133 +318,118 @@ const plannedAt = (index: number, zoom: number, figures: ReadonlyArray<FigureFra
 });
 
 /**
- * The lead and a guest over generated frames: the guest's depth, each
- * frame's zoom, each figure's draw scale, squash and cell, each cell's head
- * at its sheet's size, and the share of the bar's wanted head the guest is
- * drawn at. The guest's cell head is made from the share by the head each
- * figure is drawn at brought to the focal plane (cell head × draw scale ×
- * squash up × depth), not by the bar's own formula.
+ * Figures over generated frames, each with its depth, its member's head
+ * share, and per frame the camera's zoom, its draw scale, squash and cell,
+ * and the ratio of the bar's wanted head it is drawn at. Each cell's head is
+ * made from the ratio by the head the figure is drawn at brought to the focal
+ * plane (cell head × draw scale × squash up × depth) being the ratio × the
+ * shot's grown head × its share, not by the bar's own formula.
  */
 const scaleCase = (seed: number) => {
   const draw = rng(seed);
-  const z = 0.6 + draw() * 1.4;
-  const frames = Array.from({ length: 2 + Math.floor(draw() * 6) }, (_, index) => {
-    const zoom = 1 + draw() * 0.12;
-    const lead = { head: 60 + draw() * 300, scale: 0.2 + draw(), sy: 1 + (draw() - 0.5) * 0.06 };
-    const guest = { scale: 0.2 + draw(), sy: 1 + (draw() - 0.5) * 0.06 };
-    const share = [0.94, 0.951, 1, 1.049, 1.06][Math.floor(draw() * 5)] ?? 1;
-    const head = (share * lead.head * lead.scale * lead.sy) / (guest.scale * guest.sy * z);
-    return { index, zoom, lead, guest, head, share };
-  });
+  const headPx = 60 + draw() * 200;
+  const members = Array.from({ length: 1 + Math.floor(draw() * 3) }, (_, m) => ({
+    name: `f${m}`,
+    z: 0.6 + draw() * 1.4,
+    share: 0.5 + draw() * 0.5,
+  }));
+  const frames = Array.from({ length: 2 + Math.floor(draw() * 6) }, (_, index) => ({
+    index,
+    zoom: 1 + draw() * 0.12,
+    figures: members.map((m) => {
+      const scale = 0.2 + draw();
+      const sy = 1 + (draw() - 0.5) * 0.06;
+      const ratio = [0.94, 0.951, 1, 1.049, 1.06][Math.floor(draw() * 5)] ?? 1;
+      return { ...m, scale, sy, ratio, head: (ratio * headPx * m.share) / (scale * sy * m.z) };
+    }),
+  }));
   return {
+    headPx,
     planned: frames.map((f) =>
-      plannedAt(f.index, f.zoom, [
-        posed({ name: 'lead', cell: `l${f.index}`, scale: f.lead.scale, sy: f.lead.sy }),
-        posed({ name: 'guest', cell: `g${f.index}`, scale: f.guest.scale, sy: f.guest.sy }),
-      ]),
+      plannedAt(
+        f.index,
+        f.zoom,
+        f.figures.map((g) =>
+          posed({ name: g.name, cell: `c${f.index}`, scale: g.scale, sy: g.sy }),
+        ),
+      ),
     ),
-    figures: [
-      {
-        name: 'lead',
-        z: 1,
-        lines: new Map(frames.map((f) => [`l${f.index}`, headed(f.lead.head)] as const)),
-      },
-      {
-        name: 'guest',
-        z,
-        lines: new Map(frames.map((f) => [`g${f.index}`, headed(f.head)] as const)),
-      },
-    ],
-    shares: frames.map((f) => f.share),
+    figures: members.map((m) => ({
+      ...m,
+      lines: new Map(
+        frames.map((f) => [
+          `c${f.index}`,
+          headed(f.figures.find((g) => g.name === m.name)?.head ?? 0),
+        ]),
+      ),
+    })),
+    ratios: frames.flatMap((f) => f.figures.map((g) => g.ratio)),
   };
 };
 
 describe('scaleSamples', () => {
-  test("judges each figure's head as the plan draws it (its cell's head at its sheet's size × draw scale × plane zoom × squash) against the same frame's lead: head ÷ (the lead's × 1/z × zoom^(1/z) ÷ zoom), over generated depths, zooms, scales, squashes and heads", () => {
+  test("judges each figure's head as the plan draws it (its cell's head at its sheet's size × draw scale × plane zoom × squash) against the shot's: head ÷ (the grown head × its member's share × 1/z × zoom^(1/z)), over generated depths, shares, zooms, scales, squashes and heads", () => {
     for (let seed = 1; seed <= 60; seed++) {
-      const { planned, figures, shares } = scaleCase(seed);
-      const { samples, fallbacks } = scaleSamples(planned, figures, 'lead');
+      const { headPx, planned, figures, ratios } = scaleCase(seed);
+      const { samples, fallbacks } = scaleSamples(planned, figures, headPx);
       expect(samples.map((s) => Number(Option.getOrElse(s.value, () => -1).toFixed(9)))).toEqual(
-        shares.map((s) => Number(s.toFixed(9))),
+        ratios.map((s) => Number(s.toFixed(9))),
       );
       expect(fallbacks).toEqual([]);
       expect(verdictOf(BARS, { ...ALL_PASS, scale: samples }).checks[4]?.pass).toBe(
-        shares.every((s) => Math.abs(s - 1) <= 0.05),
+        ratios.every((s) => Math.abs(s - 1) <= 0.05),
       );
     }
   });
 
-  test("reads every planned frame, a figure cut off by the frame's edge or turning included, and fails a guest steady against the lead's median head but off the same frame's lead (round 1, M1)", () => {
-    const lead = {
-      name: 'lead',
+  test("fails a figure whose member's share is wrong: a baby whose palette says 0.6 drawn at a grown head, or drawn at its share while the bar is told 1, reads 1 / 0.6 or 0.6; read at its own share it passes", () => {
+    const baby = (share: number) => ({
+      name: 'baby',
       z: 1,
-      lines: new Map([
-        ['a', headed(95.1)],
-        ['b', headed(100)],
-      ]),
-    };
-    const guest = { name: 'guest', z: 1, lines: new Map([['n', headed(104.9)]]) };
-    const planned = ['a', 'b', 'b'].map((cell, index) =>
-      plannedAt(index, 1, [
-        posed({ name: 'lead', cell, scale: 1, x: -400 }),
-        posed({ name: 'guest', cell: 'n', scale: 1 }),
-      ]),
-    );
-    const { samples } = scaleSamples(planned, [lead, guest], 'lead');
-    expect(
-      samples.map((s) => [s.at, Number(Option.getOrElse(s.value, () => -1).toFixed(9))]),
-    ).toEqual([
-      ['guest frame 0 (n; lead a)', Number((104.9 / 95.1).toFixed(9))],
-      ['guest frame 1 (n; lead b)', 1.049],
-      ['guest frame 2 (n; lead b)', 1.049],
+      share,
+      lines: new Map([['a', headed(60)]]),
+    });
+    const planned = (scale: number) => [
+      plannedAt(0, 1, [posed({ name: 'baby', cell: 'a', scale })]),
+    ];
+    const ratio = (s: ReturnType<typeof scaleSamples>) =>
+      s.samples.map((x) => Number(Option.getOrElse(x.value, () => -1).toFixed(9)));
+    expect(ratio(scaleSamples(planned(100 / 60), [baby(0.6)], 100))).toEqual([
+      Number((1 / 0.6).toFixed(9)),
     ]);
-    expect(verdictOf(BARS, { ...ALL_PASS, scale: samples }).passed).toBe(BARS.length - 1);
+    expect(ratio(scaleSamples(planned(1), [baby(1)], 100))).toEqual([0.6]);
+    expect(ratio(scaleSamples(planned(1), [baby(0.6)], 100))).toEqual([1]);
   });
 
-  test("reads unread where a cell's head was not read at its sheet's size and its crown and soles were not either, the guest's or the lead's, where a figure's sheet has no such cell, and where its sheet reads no head to scale from", () => {
-    const lead = {
-      name: 'lead',
-      z: 1,
-      lines: new Map([
-        ['a', headed(100)],
-        ['x', Option.none()],
-      ]),
-    };
+  test("reads unread where a cell's head was not read at its sheet's size and its crown and soles were not either, where a figure's sheet has no such cell, and where its sheet reads no head to scale from", () => {
     const guest = {
       name: 'g',
       z: 1,
+      share: 1,
       lines: new Map([
         ['a', headed(100)],
         ['x', Option.none()],
       ]),
     };
-    const headless = { name: 'h', z: 1, lines: new Map([['u', unheaded(100)]]) };
-    const planned = [
-      ['a', 'x', 'u'],
-      ['x', 'a', 'u'],
-      ['a', 'missing', 'u'],
-      ['a', 'a', 'u'],
-    ].map(([l = '', g = '', h = ''], index) =>
+    const headless = { name: 'h', z: 1, share: 1, lines: new Map([['u', unheaded(100)]]) };
+    const planned = ['x', 'missing', 'a'].map((g, index) =>
       plannedAt(index, 1, [
-        posed({ name: 'lead', cell: l, scale: 1 }),
         posed({ name: 'g', cell: g, scale: 1 }),
-        posed({ name: 'h', cell: h, scale: 1 }),
+        posed({ name: 'h', cell: 'u', scale: 1 }),
       ]),
     );
     const none = (at: string) => ({
-      at: `${at}: no head read, nor one from crown-to-soles, in its cell or the lead's`,
+      at: `${at}: no head read, nor one from crown-to-soles, in its cell`,
       value: Option.none(),
     });
-    expect(scaleSamples(planned, [lead, guest, headless], 'lead')).toEqual({
+    expect(scaleSamples(planned, [guest, headless], 100)).toEqual({
       samples: [
-        none('g frame 0 (x; lead a)'),
-        none('h frame 0 (u; lead a)'),
-        none('g frame 1 (a; lead x)'),
-        none('h frame 1 (u; lead x)'),
-        none('g frame 2 (missing; lead a)'),
-        none('h frame 2 (u; lead a)'),
-        { at: 'g frame 3 (a; lead a)', value: Option.some(1) },
-        none('h frame 3 (u; lead a)'),
+        none('g frame 0 (x)'),
+        none('h frame 0 (u)'),
+        none('g frame 1 (missing)'),
+        none('h frame 1 (u)'),
+        { at: 'g frame 2 (a)', value: Option.some(1) },
+        none('h frame 2 (u)'),
       ],
       fallbacks: [],
     });
@@ -472,74 +458,51 @@ describe('scaleSamples', () => {
     return { head, ratio, lines };
   };
 
-  test("reads a cell whose head column is ambiguous at its sheet's head × the cell's own crown-to-soles over the sheet's median crown-to-soles (over the cells that read a head), the guest's or the lead's, and names each such frame in its sample and its fallbacks", () => {
+  test("reads a cell whose head column is ambiguous at its sheet's head × the cell's own crown-to-soles over the sheet's median crown-to-soles (over the cells that read a head), and names each such frame in its sample and its fallbacks", () => {
     for (let seed = 1; seed <= 40; seed++) {
       const draw = rng(seed);
       const g = sheetCase(draw);
-      const l = sheetCase(draw);
-      const lead = { name: 'lead', z: 1, lines: l.lines };
-      const guest = { name: 'guest', z: 1, lines: g.lines };
-      const planned = [
-        ['c0', 'u'],
-        ['u', 'c0'],
-        ['u', 'u'],
-      ].map(([lc = '', gc = ''], index) =>
-        plannedAt(index, 1, [
-          posed({ name: 'lead', cell: lc, scale: 1 }),
-          posed({ name: 'guest', cell: gc, scale: 1 }),
-        ]),
+      const guest = { name: 'guest', z: 1, share: 1, lines: g.lines };
+      const planned = ['u', 'c0', 'u'].map((gc, index) =>
+        plannedAt(index, 1, [posed({ name: 'guest', cell: gc, scale: 1 })]),
       );
-      const [lc0, gc0] = [l, g].map((s) =>
-        Option.getOrElse(
-          Option.flatMap(Option.flatten(Option.fromUndefinedOr(s.lines.get('c0'))), (x) => x.head),
-          () => -1,
-        ),
+      const gc0 = Option.getOrElse(
+        Option.flatMap(Option.flatten(Option.fromUndefinedOr(g.lines.get('c0'))), (x) => x.head),
+        () => -1,
       );
       const from = 'head unread, from crown-to-soles';
-      const read = scaleSamples(planned, [lead, guest], 'lead');
+      const read = scaleSamples(planned, [guest], 100);
       expect(
         read.samples.map((s) => [s.at, Number(Option.getOrElse(s.value, () => -1).toFixed(9))]),
       ).toEqual([
-        [
-          `guest frame 0 (u: ${from}; lead c0)`,
-          Number(((g.head * g.ratio) / (lc0 ?? 1)).toFixed(9)),
-        ],
-        [
-          `guest frame 1 (c0; lead u: ${from})`,
-          Number(((gc0 ?? 1) / (l.head * l.ratio)).toFixed(9)),
-        ],
-        [
-          `guest frame 2 (u: ${from}; lead u: ${from})`,
-          Number(((g.head * g.ratio) / (l.head * l.ratio)).toFixed(9)),
-        ],
+        [`guest frame 0 (u: ${from})`, Number(((g.head * g.ratio) / 100).toFixed(9))],
+        ['guest frame 1 (c0)', Number((gc0 / 100).toFixed(9))],
+        [`guest frame 2 (u: ${from})`, Number(((g.head * g.ratio) / 100).toFixed(9))],
       ]);
-      expect(read.fallbacks).toEqual(read.samples.map((s) => s.at));
+      expect(read.fallbacks).toEqual(read.samples.filter((_, i) => i !== 1).map((s) => s.at));
     }
   });
 
   test("names every frame the scale bar read from crown-to-soles in verdict.md, one INFO line each, and none for a frame read at its cell's head", () => {
-    const lead = { name: 'lead', z: 1, lines: new Map([['a', headed(100, 500)]]) };
     const man = {
       name: 'man',
       z: 1,
+      share: 1,
       lines: new Map([
         ['neutral', headed(100, 500)],
         ['turn', unheaded(500)],
       ]),
     };
     const planned = ['neutral', 'turn', 'turn'].map((cell, index) =>
-      plannedAt(index, 1, [
-        posed({ name: 'lead', cell: 'a', scale: 1 }),
-        posed({ name: 'man', cell, scale: 1 }),
-      ]),
+      plannedAt(index, 1, [posed({ name: 'man', cell, scale: 1 })]),
     );
-    const read = scaleSamples(planned, [lead, man], 'lead');
+    const read = scaleSamples(planned, [man], 100);
     const text = verdictText(verdictOf(BARS, { ...ALL_PASS, scale: read.samples }), [
       ...scaleInfo(read),
     ]);
     expect(text.split('\n').filter((line) => line.startsWith('INFO'))).toEqual([
-      'INFO scale fallback: man frame 1 (turn: head unread, from crown-to-soles; lead a)',
-      'INFO scale fallback: man frame 2 (turn: head unread, from crown-to-soles; lead a)',
+      'INFO scale fallback: man frame 1 (turn: head unread, from crown-to-soles)',
+      'INFO scale fallback: man frame 2 (turn: head unread, from crown-to-soles)',
     ]);
     expect(text).toContain('PASS scale 1 ');
   });

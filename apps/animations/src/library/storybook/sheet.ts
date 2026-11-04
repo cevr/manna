@@ -40,7 +40,12 @@ const PalettePart = Schema.Struct({
 });
 
 /** A member's palette, `cast/<member>/cast-sheet/palette.json`: the ink and every part's paints. */
-export const Palette = Schema.Struct({ ink: Hex, parts: Schema.Array(PalettePart) });
+export const Palette = Schema.Struct({
+  ink: Hex,
+  parts: Schema.Array(PalettePart),
+  /** The member's head (crown to collar) as a share of a grown adult's, measured on the kept lineup: 1 when it names none. */
+  head: Schema.optionalKey(Schema.Finite.check(Schema.isGreaterThan(0))),
+});
 
 export type Palette = typeof Palette.Type;
 
@@ -1141,6 +1146,12 @@ const bandTop = (
 /** The median of `values`, none when there are none. */
 export const medianOf = (values: ReadonlyArray<number>): Option.Option<number> =>
   Option.fromUndefinedOr(values.toSorted((a, b) => a - b)[values.length >> 1]);
+
+/** Where a cell is pinned to its figure's place: its soles' centre, the centre column's middle and the row below its soles, in its own px. */
+export const anchorOf = (l: Lines) => ({
+  ax: l.centreColumn + 0.5,
+  ay: l.bottom + 1,
+});
 
 /** A sheet's head: the median of its cells' heads, over the cells that read one. */
 export const sheetHeadOf = (

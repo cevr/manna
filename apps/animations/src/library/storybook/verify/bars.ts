@@ -73,7 +73,7 @@ export const BARS: ReadonlyArray<BarRow> = [
   ),
   proposed(
     'scale',
-    "each stored cell's head (crown to collar) read once at its sheet's own size × the plan's draw scale, plane zoom and squash, every planned frame: each figure's head ÷ (the same frame's lead head × 1/z × zoom^(1/z) ÷ zoom), z its depth and zoom the camera's, farthest from 1; a cell whose head reads none is unread. A hold's breath (at most 0.4 % up about the soles) is not counted",
+    "each stored cell's head (crown to collar) read once at its sheet's own size × the plan's draw scale, plane zoom and squash, every planned frame: each figure's head ÷ (the shot's grown head × its member's head share × 1/z × zoom^(1/z)), z its depth and zoom the camera's, farthest from 1; a cell whose head reads none is unread. A hold's breath (at most 0.4 % up about the soles) is not counted",
     Bar.Near({ target: 1, share: 0.05 }),
   ),
   proposed(

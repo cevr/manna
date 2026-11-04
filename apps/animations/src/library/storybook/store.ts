@@ -3,6 +3,7 @@ import { DateTime, Effect, FileSystem, Option, Path, Result, Schema } from 'effe
 import { Digest } from 'effect/crypto';
 import sharp from 'sharp';
 import {
+  anchorOf,
   blinkOf,
   deltaE,
   figuresIn,
@@ -24,8 +25,16 @@ import {
 } from './sheet.ts';
 import { drawnKeyOf, type Figure, figuresOf, type Layer, type Shot } from './shot.ts';
 
+/** Where each member's folder lies (its `cast-sheet/` and `shot-sheets/`): the library's cast, or a film's own roles before it. */
+export interface Cast {
+  readonly dirOf: (member: string) => string;
+}
+
+/** A cast whose every member is a folder under `root`. */
+export const libraryCast = (root: string): Cast => ({ dirOf: (member) => `${root}/${member}` });
+
 /** The shared cast, where each member's palette, kept views and shot sheets live. */
-export const CAST = `${import.meta.dir}/../cast`;
+export const CAST = libraryCast(`${import.meta.dir}/../cast`);
 
 /** The size every shot sheet is drawn at: a wide row of figures. */
 export const SHEET_SIZE = '1536x1024';
@@ -96,8 +105,8 @@ export const sha256 = (bytes: Uint8Array): Effect.Effect<string, never, Digest.D
   Digest.Digest.use((digest) => digest.digestHex(Digest.sha256, bytes));
 
 /** Where a member's shot sheet lives. */
-export const sheetDir = (cast: string, member: string, id: string): string =>
-  `${cast}/${member}/shot-sheets/${id}`;
+export const sheetDir = (cast: Cast, member: string, id: string): string =>
+  `${cast.dirOf(member)}/shot-sheets/${id}`;
 
 /** `bytes` as a PNG's pixels, or why not, naming `file`. */
 export const pngOf = (bytes: Uint8Array, file: string) =>
@@ -112,12 +121,12 @@ export const readPalette = Effect.fn('Storybook.readPalette')(function* (file: s
 });
 
 /** A member's palette, `cast/<member>/cast-sheet/palette.json`. */
-export const memberPalette = (cast: string, member: string) =>
-  readPalette(`${cast}/${member}/cast-sheet/palette.json`);
+export const memberPalette = (cast: Cast, member: string) =>
+  readPalette(`${cast.dirOf(member)}/cast-sheet/palette.json`);
 
 /** A member's shot sheet record. */
 export const readRecord = Effect.fn('Storybook.readRecord')(function* (
-  cast: string,
+  cast: Cast,
   member: string,
   id: string,
 ) {
@@ -149,7 +158,7 @@ const cellPngOf = (bytes: Uint8Array, file: string) =>
 
 /** A stored cell's pixels, `cells/<key>.png` of a member's sheet. */
 export const readCell = Effect.fn('Storybook.readCell')(function* (
-  cast: string,
+  cast: Cast,
   member: string,
   id: string,
   key: string,
@@ -305,10 +314,11 @@ export const promptOf = (
   keys: ReadonlyArray<string>,
   palette: Palette,
   ground: string,
+  words: SheetWords = LIBRARY_WORDS,
 ): string =>
   [
     `One shot sheet for an animated film: the one person in the reference images drawn ${keys.length} times in one row, left to right, in exactly this order:`,
-    ...keys.map((k, i) => `${i + 1}. ${POSES.get(k) ?? k}.`),
+    ...keys.map((k, i) => `${i + 1}. ${words.poses.get(k) ?? k}.`),
     `The person, as described: ${look.trim()} Where the description names an order of figures, the order above holds.`,
     `Continuity: this is one person drawn ${keys.length} times in one pass, so every figure has the same face, the same head size, the same body proportions, the same colours, the same line weight and the same shading; only the turn and the pose change. All figures stand on one baseline at one size, the soles of every figure on the same line.`,
     'House rules: each hand is a plain round circle of skin at the end of its sleeve, no thumb and no fingers. Sleeves run to the wrist in every figure, the raised arm too: no bare arm or forearm ever shows. One bold warm-dark outline of even weight round each figure. One flat shade per colour: no gradient, no texture, no airbrush, no highlight.',
@@ -317,11 +327,23 @@ export const promptOf = (
     ...sashWords(palette),
     ...closeWords(palette).map((w) => `Close colours: ${w}.`),
     `The ground: one flat colour, ${ground}, everywhere behind and between the figures, with wide clear ground between each figure and the next (a reaching or raised hand too) so no figure touches or nears another; no glow, halo or soft light round any figure; no floor, no cast shadow, no text, no frame.`,
+    ...words.rules,
   ].join('\n');
 
+/** What a sheet's prompt says beyond the house rules: each key's pose words, and any rules its film adds, each a line of its own after the ground. */
+export interface SheetWords {
+  readonly poses: ReadonlyMap<string, string>;
+  readonly rules: ReadonlyArray<string>;
+}
+
+/** The library's own words: its `POSES`, and no rule beyond the house's. */
+export const LIBRARY_WORDS: SheetWords = { poses: POSES, rules: [] };
+
 /** Each pose key `keys` names, or the first key no pose is written for. */
-const unknownKey = (keys: ReadonlyArray<string>): Option.Option<string> =>
-  Option.fromUndefinedOr(keys.find((k) => !POSES.has(k)));
+const unknownKey = (
+  keys: ReadonlyArray<string>,
+  poses: SheetWords['poses'],
+): Option.Option<string> => Option.fromUndefinedOr(keys.find((k) => !poses.has(k)));
 
 /** Refuse a drawn sheet whose ground lies near a paint or whose split finds fewer figures than keys; else its split. */
 export const checkDrawn = (
@@ -360,21 +382,22 @@ const today = Effect.map(DateTime.now, DateTime.formatIsoDate);
  * refused draw writes nothing under the cast.
  */
 export const drawSheet = Effect.fn('Storybook.drawSheet')(function* (
-  cast: string,
+  cast: Cast,
   member: string,
   id: string,
   keys: ReadonlyArray<string>,
   refs: ReadonlyArray<string>,
+  words: SheetWords = LIBRARY_WORDS,
 ) {
   const fs = yield* FileSystem.FileSystem;
   const route = yield* ImageRoute;
   const dir = sheetDir(cast, member, id);
   if (yield* fs.exists(`${dir}/record.json`))
     return yield* DrawRefused.make({ reason: `${member}'s sheet ${id} is drawn already` });
-  const unknown = unknownKey(keys);
+  const unknown = unknownKey(keys, words.poses);
   if (Option.isSome(unknown))
     return yield* DrawRefused.make({
-      reason: `no pose is written for key ${unknown.value} (${[...POSES.keys()].join(', ')})`,
+      reason: `no pose is written for key ${unknown.value} (${[...words.poses.keys()].join(', ')})`,
     });
   const palette = yield* memberPalette(cast, member);
   const ground = groundFor(palette);
@@ -382,20 +405,20 @@ export const drawSheet = Effect.fn('Storybook.drawSheet')(function* (
     return yield* DrawRefused.make({
       reason: `no ground lies apart from every paint of ${member}`,
     });
-  const look = yield* fs.readFileString(`${cast}/${member}/cast-sheet/look.md`);
+  const look = yield* fs.readFileString(`${cast.dirOf(member)}/cast-sheet/look.md`);
   const refFiles = refs.map((view) => `cast-sheet/views/${view}.png`);
   const refShas = yield* Effect.forEach(refFiles, (file) =>
-    fs.readFile(`${cast}/${member}/${file}`).pipe(
+    fs.readFile(`${cast.dirOf(member)}/${file}`).pipe(
       Effect.flatMap(sha256),
       Effect.map((hash) => ({ file, sha256: hash })),
     ),
   );
-  const prompt = promptOf(look, keys, palette, ground.value);
+  const prompt = promptOf(look, keys, palette, ground.value, words);
   const scratch = yield* fs.makeTempDirectory({ prefix: `storybook-${member}-${id}-` });
   const out = `${scratch}/sheet.png`;
   yield* route.draw({
     prompt,
-    refs: refFiles.map((file) => `${cast}/${member}/${file}`),
+    refs: refFiles.map((file) => `${cast.dirOf(member)}/${file}`),
     size: SHEET_SIZE,
     out,
   });
@@ -414,21 +437,22 @@ export const drawSheet = Effect.fn('Storybook.drawSheet')(function* (
     size: SHEET_SIZE,
     ground: hexOf(split.ground),
     drawn: yield* today,
-    cells: yield* storeCells(dir, keys, split),
+    cells: yield* storeCells(dir, keys, split, paintsOf(palette)),
   };
   yield* writeRecord(dir, record);
   return record;
 });
 
-/** A split's cells stored as `<dir>/cells/<key>.png`, the keys in the cells' order: each key, its box and its PNG's sha256. */
+/** A split's cells stored as `<dir>/cells/<key>.png`, the keys in the cells' order, and the sheet's cells module (`cellsModuleOf`): each key, its box and its PNG's sha256. */
 const storeCells = Effect.fn('Storybook.storeCells')(function* (
   dir: string,
   keys: ReadonlyArray<string>,
   split: Split,
+  paints: ReadonlyArray<Paint>,
 ) {
   const fs = yield* FileSystem.FileSystem;
   yield* fs.makeDirectory(`${dir}/cells`, { recursive: true });
-  return yield* Effect.forEach(split.cells, (cell, i) =>
+  const stored = yield* Effect.forEach(split.cells, (cell, i) =>
     Effect.gen(function* () {
       const key = keys[i] ?? `cell-${i}`;
       const png = encodePng(cell.raster);
@@ -436,7 +460,56 @@ const storeCells = Effect.fn('Storybook.storeCells')(function* (
       return { key, box: cell.box, sha256: yield* sha256(png) };
     }),
   );
+  yield* fs.writeFileString(
+    `${dir}/cells.ts`,
+    cellsModuleOf(split.cells.map((c, i) => cellEntryOf(keys[i] ?? `cell-${i}`, c.raster, paints))),
+  );
+  return stored;
 });
+
+/** One cell as a film draws it: its key, its size in px, its soles' centre (`anchorOf`) and its head (crown to collar) in px where its lines read one. */
+export interface CellEntry {
+  readonly key: string;
+  readonly size: readonly [number, number];
+  readonly ax: number;
+  readonly ay: number;
+  readonly head: Option.Option<number>;
+}
+
+/** A stored cell's entry, read as the store reads it: its lines on the cell at its sheet's size. */
+export const cellEntryOf = (key: string, cell: Raster, paints: ReadonlyArray<Paint>): CellEntry => {
+  const lines = linesOf(cell, paints);
+  const anchor = Option.match(lines, {
+    onNone: () => ({ ax: cell.width / 2, ay: cell.height }),
+    onSome: anchorOf,
+  });
+  return {
+    key,
+    size: [cell.width, cell.height],
+    ...anchor,
+    head: Option.flatMap(lines, (l) => l.head),
+  };
+};
+
+/**
+ * A sheet's cells module, `cells.ts` beside its record: each cell's PNG
+ * imported as a file and its entry, so a film's drawing declares and pins
+ * the cells as the store reads them. Written by `storybook draw` and
+ * `storybook resplit`, and held to the cells by a unit test.
+ */
+export const cellsModuleOf = (entries: ReadonlyArray<CellEntry>): string =>
+  [
+    ...entries.map((e, i) => `import cell${i} from './cells/${e.key}.png' with { type: 'file' };`),
+    '',
+    '/** Each cell of this sheet as a film draws it: its PNG, its size in px, its soles’ centre and its head (crown to collar) in px where its lines read one. Written by `storybook draw` and `storybook resplit`. */',
+    'export const CELLS = {',
+    ...entries.map((e, i) => {
+      const head = Option.match(e.head, { onNone: () => '', onSome: (h) => `, head: ${h}` });
+      return `  '${e.key}': { png: cell${i}, size: [${e.size[0]}, ${e.size[1]}], ax: ${e.ax}, ay: ${e.ay}${head} },`;
+    }),
+    '} as const;',
+    '',
+  ].join('\n');
 
 /** A record written as `<dir>/record.json`. */
 const writeRecord = Effect.fn('Storybook.writeRecord')(function* (
@@ -458,7 +531,7 @@ const writeRecord = Effect.fn('Storybook.writeRecord')(function* (
  * `sheet.png` that is not the one its record names.
  */
 export const resplitSheet = Effect.fn('Storybook.resplitSheet')(function* (
-  cast: string,
+  cast: Cast,
   member: string,
   id: string,
 ) {
@@ -470,12 +543,9 @@ export const resplitSheet = Effect.fn('Storybook.resplitSheet')(function* (
     return yield* StoreFailed.make({
       reason: `${member}'s sheet ${id}: sheet.png is not the one its record names`,
     });
+  const palette = yield* memberPalette(cast, member);
   const split = yield* Effect.fromResult(
-    splitSheet(
-      yield* pngOf(bytes, `${dir}/sheet.png`),
-      record.cells.length,
-      yield* memberPalette(cast, member),
-    ),
+    splitSheet(yield* pngOf(bytes, `${dir}/sheet.png`), record.cells.length, palette),
   );
   const again: SheetRecord = {
     ...record,
@@ -484,6 +554,7 @@ export const resplitSheet = Effect.fn('Storybook.resplitSheet')(function* (
       dir,
       record.cells.map((c) => c.key),
       split,
+      paintsOf(palette),
     ),
   };
   yield* writeRecord(dir, again);
@@ -507,6 +578,8 @@ export interface StoredFigure {
   readonly lines: ReadonlyMap<string, Option.Option<Lines>>;
   readonly heads: ReadonlyMap<string, Option.Option<number>>;
   readonly head: number;
+  /** Its member's palette, the head share with it (`Palette.head`, 1 when it names none). */
+  readonly palette: Palette;
 }
 
 /** The picture a figure draws for a drawn key: a stored cell, or a blink built from one; none for a key it holds neither of. */
@@ -560,11 +633,12 @@ const wornCellsOf = (
   ).pipe(Effect.map((pairs) => new Map([...stored, ...pairs])));
 
 /** Every figure of `shot` read from the cast: each its one sheet's record, palette, cells as it draws them (`wornCellsOf`), the blinks its holds show and its cells' lines; fails on a sheet whose cells read no head, on a head that cannot be worn and on a blink that cannot be built. */
-export const loadFigures = Effect.fn('Storybook.loadFigures')(function* (cast: string, shot: Shot) {
+export const loadFigures = Effect.fn('Storybook.loadFigures')(function* (cast: Cast, shot: Shot) {
   return yield* Effect.forEach(figuresOf(shot), ({ layer, figure: f }) =>
     Effect.gen(function* () {
       const record = yield* readRecord(cast, f.member, f.sheet);
-      const paints = paintsOf(yield* memberPalette(cast, f.member));
+      const palette = yield* memberPalette(cast, f.member);
+      const paints = paintsOf(palette);
       const stored = new Map<string, Raster>();
       for (const c of record.cells)
         stored.set(c.key, yield* readCell(cast, f.member, f.sheet, c.key));
@@ -586,10 +660,15 @@ export const loadFigures = Effect.fn('Storybook.loadFigures')(function* (cast: s
         lines,
         heads,
         head: head.value,
+        palette,
       } satisfies StoredFigure;
     }),
   );
 });
+
+/** Each figure's member's head share by figure name, as `frameAt` reads them. */
+export const sharesOf = (figures: ReadonlyArray<StoredFigure>): ReadonlyMap<string, number> =>
+  new Map(figures.map((f) => [f.figure.name, f.palette.head ?? 1] as const));
 
 /** Each figure's sheet head by figure name, as `frameAt` reads them. */
 export const headsOf = (figures: ReadonlyArray<StoredFigure>): ReadonlyMap<string, number> =>
@@ -597,7 +676,7 @@ export const headsOf = (figures: ReadonlyArray<StoredFigure>): ReadonlyMap<strin
 
 /** The owner's keep written on a drawn sheet's record: the day, his words and the ask he answered. */
 export const keepSheet = Effect.fn('Storybook.keepSheet')(function* (
-  cast: string,
+  cast: Cast,
   member: string,
   id: string,
   why: string,

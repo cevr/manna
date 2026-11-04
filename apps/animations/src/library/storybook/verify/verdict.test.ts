@@ -115,3 +115,35 @@ describe('verdictText', () => {
     expect(text).toContain('FAIL pockets 3 <= 0 (x; orchestrator-proposed)');
   });
 });
+
+describe('a shot with no figure', () => {
+  const figureless = (determinism: number): Measured => ({
+    palette: [],
+    pockets: [],
+    'colour-step': [],
+    proportions: [],
+    scale: [],
+    'one-sheet': [],
+    light: [],
+    'render-height': [],
+    determinism: [one('8 renders, two launches', determinism)],
+  });
+
+  test('passes every figure bar as no figure and is judged by determinism alone; with figures, the same empty readings fail unread', () => {
+    const still = verdictOf(BARS, figureless(0), false);
+    expect([still.passed, still.total]).toEqual([9, 9]);
+    expect(still.checks.filter((c) => c.value === 'no figure').map((c) => c.id)).toEqual(
+      CHECKS.filter((id) => id !== 'determinism'),
+    );
+    expect(verdictOf(BARS, figureless(2), false).checks.map((c) => c.pass)).toEqual([
+      ...CHECKS.filter((id) => id !== 'determinism').map(() => true),
+      false,
+    ]);
+    expect(verdictOf(BARS, figureless(0), true).passed).toBe(1);
+  });
+
+  test('never passes a figure bar that read something: a reading is judged as ever', () => {
+    const v = verdictOf(BARS, { ...figureless(0), pockets: [one('x', 3)] }, false);
+    expect(v.checks.find((c) => c.id === 'pockets')?.pass).toBe(false);
+  });
+});

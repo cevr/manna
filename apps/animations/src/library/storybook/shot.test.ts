@@ -4,6 +4,7 @@ import { Option } from 'effect';
 import { describe, expect, test } from 'effect-bun-test';
 import { hexOf, type Palette, paintsOf, rgbAt, type Rgb, rgbOfHex } from './sheet.ts';
 import {
+  AT_REST,
   BLINK,
   BLINK_GAP,
   blinkingHold,
@@ -21,6 +22,9 @@ import {
   type Layer,
   type Light,
   lit,
+  plateAt,
+  type PlateKey,
+  revealAt,
   scaleOf,
   type Shot,
   type Span,
@@ -585,6 +589,98 @@ describe('lit', () => {
       const litB = lit(cell, light, paintsOf(b));
       expect([0, 1, 2].map((q) => rgbAt(litA, q))).toEqual([0, 1, 2].map((q) => rgbAt(litB, q)));
       expect(rgbAt(litA, 0)).toEqual(ink);
+    }
+  });
+});
+
+describe('a shot on its scene’s frames', () => {
+  test('draws exactly the scene frames k with from ≤ k / fps < from + duration, each at k / fps − from, over generated starts, lengths and rates; a shot from 0 draws i / fps', () => {
+    for (let seed = 1; seed <= 80; seed++) {
+      const draw = rng(seed);
+      const fps = [24, 25, 30][Math.floor(draw() * 3)] ?? 30;
+      const from = draw() * 20;
+      const duration = 0.2 + draw() * 8;
+      const times = timesOf({ ...feastCourtyard, fps, from, duration });
+      const frames = times.map((t) => Math.round((t + from) * fps));
+      expect(frames.every((k, i) => Math.abs((times[i] ?? 0) + from - k / fps) < 1e-9)).toBe(true);
+      expect(frames.every((k, i) => i === 0 || k === (frames[i - 1] ?? 0) + 1)).toBe(true);
+      expect(frames[0]).toBe(Math.ceil(from * fps - 1e-6));
+      expect((frames.at(-1) ?? 0) + 1).toBe(Math.ceil((from + duration) * fps - 1e-6));
+    }
+    expect(timesOf(feastCourtyard)).toEqual(
+      Array.from({ length: 288 }, (_, i) => i / feastCourtyard.fps),
+    );
+  });
+});
+
+describe('a moving plate', () => {
+  const key = (x: number, alpha = 1): PlateKey => ({ x, y: 0, sx: 1, sy: 1, alpha });
+
+  test('rests with no keys, holds its first key before it and its last after, and eases (smoothstep) from one to the next, a pure function of t', () => {
+    expect(plateAt({}, 3)).toEqual(AT_REST);
+    const moves = [
+      [1, key(0, 0)],
+      [2, key(100)],
+      [4, key(40)],
+    ] as const;
+    expect(plateAt({ moves }, 0)).toEqual(key(0, 0));
+    expect(plateAt({ moves }, 9)).toEqual(key(40));
+    expect(plateAt({ moves }, 1.5)).toEqual(key(50, 0.5));
+    expect(plateAt({ moves }, 3).x).toBeCloseTo(70, 9);
+    expect(plateAt({ moves }, 2.25).x).toBeGreaterThan(plateAt({ moves }, 2.5).x);
+  });
+
+  test('lays its brush from its foot: nothing before its start, the whole brush after its end, and between, points along it to the eased share of its length', () => {
+    const brush = [
+      [0, 100, 5],
+      [0, 0, 5],
+      [100, 0, 9],
+    ] as const;
+    const reveal = { brush, from: 1, to: 3 };
+    expect(revealAt(reveal, 0.5)).toEqual([]);
+    expect(revealAt(reveal, 4)).toEqual(brush);
+    expect(revealAt(reveal, 2)).toEqual([
+      [0, 100, 5],
+      [0, 0, 5],
+    ]);
+    const quarter = revealAt(reveal, 1 + 2 * 0.3263518223);
+    expect(quarter.length).toBe(2);
+    expect(quarter[1]?.[1]).toBeCloseTo(50, 3);
+  });
+});
+
+describe('head shares', () => {
+  test('a figure is drawn at the grown head times its member’s share over its depth: the scale is proportional to the share, 1 when none is named', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const draw = rng(seed);
+      const [head, z, sheet, share] = [
+        80 + draw() * 200,
+        0.5 + draw() * 2,
+        50 + draw() * 300,
+        0.4 + draw() * 0.6,
+      ];
+      expect(scaleOf(head, z, sheet, share)).toBeCloseTo(scaleOf(head, z, sheet) * share, 12);
+      expect(scaleOf(head, z, sheet, share) * sheet * z).toBeCloseTo(head * share, 9);
+    }
+    const shares = new Map([['man', 0.5]]);
+    const heads = new Map([
+      ['man', 300],
+      ['woman', 300],
+      ['lead', 158],
+    ]);
+    const plain = frameAt(feastCourtyard, heads, 1);
+    const halved = frameAt(feastCourtyard, heads, 1, shares);
+    const scale = (f: typeof plain, name: string) =>
+      f.figures.find((x) => x.name === name)?.scale ?? 0;
+    expect(scale(halved, 'man')).toBeCloseTo(scale(plain, 'man') / 2, 12);
+    expect(scale(halved, 'woman')).toBe(scale(plain, 'woman'));
+  });
+
+  test('reports each figure’s plane zoom as the camera’s zoom to the power 1 / z', () => {
+    const frame = frameAt(feastCourtyard, new Map(), 12);
+    for (const f of frame.figures) {
+      const z = feastCourtyard.layers.find((l) => l.name === f.layer)?.z ?? 1;
+      expect(f.zoom).toBeCloseTo(frame.camera.zoom ** (1 / z), 12);
     }
   });
 });
