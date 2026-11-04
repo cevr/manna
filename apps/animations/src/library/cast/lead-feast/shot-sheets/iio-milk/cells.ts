@@ -5,8 +5,8 @@ import cell3 from './cells/cup.png' with { type: 'file' };
 
 /** Each cell of this sheet as a film draws it: its PNG, its size in px, its soles’ centre and its head (crown to collar) in px where its lines read one. Written by `storybook draw` and `storybook resplit`. */
 export const CELLS = {
-  front: { png: cell0, size: [352, 1024], ax: 161.5, ay: 949, head: 301 },
-  frontBlink: { png: cell1, size: [379, 1024], ax: 190.5, ay: 949, head: 301 },
-  lift: { png: cell2, size: [374, 1024], ax: 189.5, ay: 949, head: 300 },
-  cup: { png: cell3, size: [347, 1024], ax: 192.5, ay: 950, head: 300 },
+  front: { png: cell0, size: [346, 1024], ax: 162.5, ay: 945, head: 284 },
+  frontBlink: { png: cell1, size: [368, 1024], ax: 183.5, ay: 945, head: 285 },
+  lift: { png: cell2, size: [370, 1024], ax: 183.5, ay: 945, head: 286 },
+  cup: { png: cell3, size: [341, 1024], ax: 182.5, ay: 945, head: 286 },
 } as const;

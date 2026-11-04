@@ -25,18 +25,30 @@ const standing: ReadonlyArray<string> = FILM_RULES;
 const blink = (of: string): string =>
   `exactly as the ${of} figure, every line the same, the eyes closed in a blink: each eye a short downward-curved ink line`;
 
-/** The lead's baby's bottle, as every key that holds it names it: his tunic's cream with a teat in his sandals' brown. */
-const BOTTLE = "a small baby's bottle, cream #f2d8b7 with a short teat in brown #7a5236";
+/** The lead's baby's bottle, as every key that holds it names it: his mantle's teal with a teat in his sandals' brown (a cream bottle, asked three times, snapped to his sash's paint and read as his sash's top). */
+const BOTTLE =
+  "a small baby's bottle painted exactly his mantle's teal #58767a, with a short rounded teat in brown #7a5236";
 
 /** The small clay cup, in the member's footwear brown, milk in its pale paint inside. */
 const cup = (clay: string, milk: string): string =>
   `a small plain clay cup painted exactly ${clay}, milk ${milk} showing at its rim`;
 
-const LEAD_CUP = cup('#7a5236', '#eadcc2');
+/** The lead's cup, seen from the side so its rim hides the milk: one paint, his sandals' brown, which no cloth of his is near (his sash's cream read as a sash where milk showed). */
+const LEAD_CUP =
+  'a small plain clay cup painted exactly #7a5236, seen from the side, its rim hiding the milk';
 const VILLAGER_CUP = cup('#7a5236', '#d9cdb8');
 
-/** The lead seated with the bottle lowered on his lap, head bowed: one pose in his table sheet and his close. */
-const LEAD_DOWN = `seated on the stool exactly as in the first figure, the head bowed a little, the eyes looking down in front of him, both round hands in their sleeves resting on the knees holding ${BOTTLE} lowered on the lap, a small sheepish mouth`;
+/** The lead seated, the bottle set down out of the picture, head bowed: one pose in his table sheet and his close (the table hides his lap, and a cream bottle on it read as his sash). */
+const LEAD_DOWN =
+  'seated on the stool exactly as in the first figure, the head bowed a little, the eyes looking down in front of him, both round hands in their sleeves resting empty on the knees, no bottle, a small sheepish mouth';
+
+/** What the lead's seated sheets ask beyond `seated`: his sash's pale cream on the sash alone, since his tunic's cream is near it and anything else in it read as the sash's top. */
+const SASH_ALONE =
+  "The sash's pale cream #eadcc2 is on the sash alone: the tunic, its neckline and anything held, the bottle too, are the tunic's warm cream #f2d8b7 or another paint, never the sash's.";
+
+/** What a seated sheet whose skirt reaches the feet asks beyond `seated`: one hem line in every figure. */
+const HEMMED =
+  'The robe or dress ends in one level hem at the same height in every figure, just above the ankles, the sandals and ankles showing below it, and nothing of the robe hangs between the feet.';
 
 /** The lead at the feast table (shots 2, 3 and the title): seated, the bottle up, then lowered. */
 const leadTable: SheetDecl = {
@@ -53,7 +65,7 @@ const leadTable: SheetDecl = {
     downBlink: `seated ${blink('fifth')}`,
   },
   refs: ['front', 'threeQuarterRight', 'poses-1'],
-  rules: seated('#7a5236'),
+  rules: [...seated('#7a5236'), SASH_ALONE],
 };
 
 /** The lead close (`cold-ouch`): three keys, so a close stays under the enlargement cap. */
@@ -64,10 +76,10 @@ const leadClose: SheetDecl = {
   poses: {
     down: LEAD_DOWN.replace('exactly as in the first figure', 'facing the viewer'),
     downBlink: `seated ${blink('first')}`,
-    wince: `seated on the stool exactly as in the first figure, the bottle on the lap, the head bowed the same, wincing: the eyes squeezed shut as two short tight ink lines, the brows drawn together and tilted up at their inner ends, the mouth a short wavy line`,
+    wince: `seated on the stool exactly as in the first figure, both hands resting empty on the knees, the head bowed the same, wincing: the eyes squeezed shut as two short tight ink lines, the brows drawn together and tilted up at their inner ends, the mouth a short wavy line`,
   },
   refs: ['front', 'heads-1'],
-  rules: seated('#7a5236'),
+  rules: [...seated('#7a5236'), SASH_ALONE],
 };
 
 /** The lead on the parchment (`milk-row`): standing, taking a cup. */
@@ -101,7 +113,12 @@ const motherBaby: SheetDecl = {
 };
 
 /** A guest beside the lead at the table, turning toward him at picture `side` (the man at his left turns right, the woman at his right turns left). */
-const guest = (member: string, side: 'right' | 'left', seat: string): SheetDecl => ({
+const guest = (
+  member: string,
+  side: 'right' | 'left',
+  seat: string,
+  more: ReadonlyArray<string> = [],
+): SheetDecl => ({
   member,
   id: 'iio-table',
   keys: ['neutral', 'neutralBlink', 'stare', 'smile'],
@@ -113,7 +130,7 @@ const guest = (member: string, side: 'right' | 'left', seat: string): SheetDecl 
     smile: `seated on the stool exactly as in the first figure, the head a quarter turned toward the viewer's ${side} as in the third figure, a broad warm closed smile, the mouth shut, the cheeks lifted`,
   },
   refs: ['poses-1', 'poses-2', 'poses-3'],
-  rules: seated(seat),
+  rules: [...seated(seat), ...more],
 });
 
 /** One dressed diner at the long table, the n-th person of `filler-dressed`, turning toward a neighbour at picture `side` to talk. */
@@ -131,6 +148,7 @@ const diner = (n: 1 | 2 | 3 | 4, side: 'right' | 'left'): SheetDecl => ({
   rules: [
     ...seated('#6b4630'),
     `Draw only the one person of the reference image: the ${['', 'first', 'second', 'third', 'fourth'][n]} person the description names, in exactly that person's headcloth or veil, mantle, beard and robe; the other three people of the description are not on this sheet. Their sandals painted exactly #6b4630.`,
+    ...[HEMMED].filter(() => n === 4),
   ],
 });
 
@@ -163,7 +181,7 @@ const babyMilk: SheetDecl = {
     sit: `the baby sitting on the ground facing the viewer, legs out in front, both round hands in their sleeves holding ${VILLAGER_CUP} in the lap, a small glad smile`,
     sitBlink: `sitting ${blink('first')}`,
     drink:
-      'sitting exactly as in the first figure, both round hands lifting the same cup to the lips, drinking, the eyes shut as two glad upward-curved ink lines',
+      "sitting exactly as in the first figure, both round hands lifting the same cup to one corner of the mouth at the picture's left, drinking, the middle of the face, the chin and the neck clear of the cup, the eyes shut as two glad upward-curved ink lines",
   },
   refs: ['poses-4'],
   rules: [
@@ -194,7 +212,7 @@ export const SHEETS: ReadonlyArray<SheetDecl> = [
   leadMilk,
   motherBaby,
   guest('feast-guest-man', 'right', '#692e18'),
-  guest('feast-guest-woman', 'left', '#553019'),
+  guest('feast-guest-woman', 'left', '#553019', [HEMMED]),
   diner(1, 'right'),
   diner(2, 'left'),
   diner(3, 'right'),

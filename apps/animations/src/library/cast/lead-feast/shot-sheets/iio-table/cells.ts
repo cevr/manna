@@ -7,10 +7,10 @@ import cell5 from './cells/downBlink.png' with { type: 'file' };
 
 /** Each cell of this sheet as a film draws it: its PNG, its size in px, its soles’ centre and its head (crown to collar) in px where its lines read one. Written by `storybook draw` and `storybook resplit`. */
 export const CELLS = {
-  front: { png: cell0, size: [243, 1024], ax: 113.5, ay: 814, head: 212 },
-  frontBlink: { png: cell1, size: [252, 1024], ax: 128.5, ay: 814, head: 212 },
-  lift: { png: cell2, size: [246, 1024], ax: 124.5, ay: 814, head: 212 },
-  bottle: { png: cell3, size: [265, 1024], ax: 126.5, ay: 814, head: 212 },
-  down: { png: cell4, size: [250, 1024], ax: 121.5, ay: 814, head: 208 },
-  downBlink: { png: cell5, size: [240, 1024], ax: 127.5, ay: 814, head: 208 },
+  front: { png: cell0, size: [234, 1024], ax: 109.5, ay: 796, head: 231 },
+  frontBlink: { png: cell1, size: [251, 1024], ax: 127.5, ay: 797, head: 231 },
+  lift: { png: cell2, size: [248, 1024], ax: 124.5, ay: 797, head: 231 },
+  bottle: { png: cell3, size: [266, 1024], ax: 126.5, ay: 797, head: 231 },
+  down: { png: cell4, size: [243, 1024], ax: 117.5, ay: 797, head: 220 },
+  downBlink: { png: cell5, size: [236, 1024], ax: 127.5, ay: 797, head: 221 },
 } as const;

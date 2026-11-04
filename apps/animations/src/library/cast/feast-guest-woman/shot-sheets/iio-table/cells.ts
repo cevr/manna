@@ -5,8 +5,8 @@ import cell3 from './cells/smile.png' with { type: 'file' };
 
 /** Each cell of this sheet as a film draws it: its PNG, its size in px, its soles’ centre and its head (crown to collar) in px where its lines read one. Written by `storybook draw` and `storybook resplit`. */
 export const CELLS = {
-  neutral: { png: cell0, size: [365, 1024], ax: 174.5, ay: 841, head: 287 },
-  neutralBlink: { png: cell1, size: [384, 1024], ax: 193.5, ay: 841, head: 287 },
-  stare: { png: cell2, size: [384, 1024], ax: 193.5, ay: 841, head: 287 },
-  smile: { png: cell3, size: [367, 1024], ax: 193.5, ay: 841, head: 287 },
+  neutral: { png: cell0, size: [363, 1024], ax: 174.5, ay: 843, head: 294 },
+  neutralBlink: { png: cell1, size: [385, 1024], ax: 195.5, ay: 843, head: 294 },
+  stare: { png: cell2, size: [384, 1024], ax: 193.5, ay: 843, head: 294 },
+  smile: { png: cell3, size: [363, 1024], ax: 194.5, ay: 843, head: 294 },
 } as const;
