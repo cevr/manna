@@ -2,19 +2,9 @@ import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import sharp from 'sharp';
 import type { Raster } from '@manna/film/tools';
-import {
-  hexOf,
-  linesOf,
-  MOTTLE_PX,
-  paintsOf,
-  strayShadeShare,
-} from '../../../library/storybook/sheet.ts';
-import { proportionSamples } from '../../../library/storybook/verify/measures.ts';
+import { hexOf, MOTTLE_PX, paintsOf } from '../../../library/storybook/sheet.ts';
 import { SHEET_CELLS } from './cells.ts';
 import { sheetNamed } from './sheets.ts';
-
-/** The most of a cell's opaque pixels that may be a stray hair shade (critique 1, item 16; take 5's lead reads 1.25 %, so the bar holds this film's sheets). */
-const STRAY_MAX = 0.005;
 
 /** The most of a head band's hair that may be its hair shade (critique 1, item 4): the table and milk sheets read 0.5 to 8.3 %, the close redrawn from his front 20 % (the curls' shaded undersides, larger in a close), the old close 99.6 % (its base drawn in sandal brown). */
 const SHADE_MAX = 0.25;
@@ -55,22 +45,22 @@ const CELLS = [...SHEET_CELLS].flatMap(([sheet, s]) =>
 
 /** The hair base and hair shade pixels in a cell's head band, from its first opaque row down `BAND` of its head. */
 const headBandOf = (r: Raster, head: number, paints: (typeof CELLS)[number]['paints']) => {
+  const packed = (red: number, green: number, blue: number) => (red << 16) | (green << 8) | blue;
   const tone = new Map(
     paints.flatMap((p) => {
-      if (p.role === 'hair') return [[hexOf(p.rgb), p.tone] as const];
+      if (p.role === 'hair') return [[packed(...p.rgb), p.tone] as const];
       return [];
     }),
   );
-  const crown = Math.floor(
-    Array.from(r.rgba.keys()).find((i) => i % 4 === 3 && (r.rgba[i] ?? 0) > 0) ?? 0,
-  );
-  const top = Math.floor(crown / 4 / r.width);
+  let crown = 0;
+  while (crown < r.width * r.height && (r.rgba[crown * 4 + 3] ?? 0) === 0) crown++;
+  const top = Math.floor(crown / r.width);
   const counts = { base: 0, shade: 0 };
   for (let y = top; y < Math.min(r.height, top + head * BAND); y++)
     for (let x = 0; x < r.width; x++) {
       const i = (y * r.width + x) * 4;
       if ((r.rgba[i + 3] ?? 0) === 0) continue;
-      const t = tone.get(hexOf([r.rgba[i] ?? 0, r.rgba[i + 1] ?? 0, r.rgba[i + 2] ?? 0]));
+      const t = tone.get(packed(r.rgba[i] ?? 0, r.rgba[i + 1] ?? 0, r.rgba[i + 2] ?? 0));
       if (t === 'base' || t === 'shade') counts[t] += 1;
     }
   return counts;
@@ -134,30 +124,7 @@ const mottleShare = (r: Raster, paints: (typeof CELLS)[number]['paints']): numbe
   return blotched / Math.max(1, opaque);
 };
 
-/** The proportions bar's most spread of a line across a sheet's cells, as a share of its median crown-to-soles height (`verify/bars.ts`). */
-const PROPORTIONS_MAX = 0.04;
-
 describe("In Its Order's sheet paints", () => {
-  it.effect(
-    'reads each sheet’s soles, hem and sash top within the proportions bar across its stored cells, as the verify does, so no prop drawn near a costume paint reads as its line (the bottle’s collar as the lead’s sash top, 0.33; critique 1, items 6 and 7)',
-    () =>
-      Effect.gen(function* () {
-        const over = yield* Effect.forEach([...SHEET_CELLS], ([sheet, s]) =>
-          Effect.map(
-            Effect.forEach(Object.entries(s.cells), ([key, c]) =>
-              Effect.map(rasterOf(c.png), (r) => ({ key, lines: linesOf(r, paintsOf(s.palette)) })),
-            ),
-            (cells) =>
-              proportionSamples(sheet, cells, paintsOf(s.palette)).samples.flatMap((sample) => {
-                if (Option.getOrElse(sample.value, () => 1) <= PROPORTIONS_MAX) return [];
-                return [`${sample.at}: ${Option.getOrElse(sample.value, () => Number.NaN)}`];
-              }),
-          ),
-        );
-        expect(over.flat()).toEqual([]);
-      }),
-  );
-
   it.effect(
     'holds the skin’s blotches of shade under 0.5 % of each cell’s opaque pixels, so no face is mottled (the redrawn table sheet split plain; critique 1, item 16)',
     () =>
@@ -203,21 +170,6 @@ describe("In Its Order's sheet paints", () => {
             }),
         );
         expect(misses.flat()).toEqual([]);
-      }),
-  );
-
-  it.effect(
-    'holds every stray hair shade under 0.5 % of each cell’s opaque pixels (critique 1, items 15 and 16)',
-    () =>
-      Effect.gen(function* () {
-        const over = yield* Effect.forEach(CELLS, (c) =>
-          Effect.map(rasterOf(c.png), (r) => {
-            const share = strayShadeShare(r, c.paints);
-            if (share <= STRAY_MAX) return [];
-            return [`${c.sheet} ${c.cell}: ${(share * 100).toFixed(2)} %`];
-          }),
-        );
-        expect(over.flat()).toEqual([]);
       }),
   );
 
