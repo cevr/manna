@@ -16,7 +16,8 @@
  * rewrite, or kept in other than nine fields; and a new press whose start
  * reuses a stored key (the clock set back) that moves that key's day,
  * giving an old record an offset or a new one another, in a read or an
- * unread garden. It misses what the screen draws under the cue, which the
+ * unread garden, or that drops an unread keep whose read of its key's stamp
+ * failed rather than writing it with its press's offset. It misses what the screen draws under the cue, which the
  * screen tests own.
  */
 
@@ -302,7 +303,7 @@ describe('Today’s press', () => {
       }).pipe(Effect.ensuring(Effect.sync(() => restore(host)))),
     ));
 
-  it('keeps the stamp a stored key holds when a press in New York reuses its start, in a read or an unread garden: an old record stays eight fields on its UTC day, a +840 one keeps +840, days sown stay 2, and an unread keep whose read of its key fails writes nothing', () =>
+  it('keeps the stamp a stored key holds when a press in New York reuses its start, in a read or an unread garden: an old record stays eight fields on its UTC day, a +840 one keeps +840, days sown stay 2; an unread keep whose read of its key fails still writes, with New York’s offset, the one history that may lower days sown (2 to 1)', () =>
     run(
       Effect.gen(function* () {
         const a = Date.UTC(2026, 0, 5, 2);
@@ -349,10 +350,10 @@ describe('Today’s press', () => {
           stamp,
           keys,
           gets,
-          landed: gets === 0,
-          fields: stamp === undefined ? 8 : 9,
-          offset: stamp ?? 'none',
-          sown: [keys === 0 ? 2 : -1, 2],
+          landed: true,
+          fields: stamp === undefined && gets === 0 ? 8 : 9,
+          offset: gets === 1 ? -300 : (stamp ?? 'none'),
+          sown: [keys === 0 ? 2 : -1, gets === 1 ? 1 : 2],
         });
         expect(seen).toEqual([
           want(undefined, 0, 0),

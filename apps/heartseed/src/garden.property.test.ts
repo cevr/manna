@@ -484,7 +484,7 @@ describe('the garden over the device', () => {
         };
         const grown = { ...planted, startedAt: planted.startedAt + 2 * DAY };
         const chimes: Growth[] = [];
-        device.launch([[keyOf(planted), JSON.stringify(planted)]]).fail('open', 4);
+        device.launch([[keyOf(planted), JSON.stringify(planted)]]).fail('open', 5);
         yield* Effect.scoped(
           Effect.gen(function* () {
             const { garden, recalls } = yield* launch(chimes, []);
@@ -503,8 +503,8 @@ describe('the garden over the device', () => {
             ]);
             yield* TestClock.adjust('1 minute');
             expect(device.calls).toMatchObject({
-              open: 5,
-              failedOpens: 4,
+              open: 6,
+              failedOpens: 5,
               keys: 0,
               get: 1,
               set: 1,

@@ -15,15 +15,25 @@
  * back, so the key is reused, mostly from another zone); a grade change,
  * Again or a peek after travel keeps the recital's offset; a write the
  * device refuses adds no day and the same recital lands at its next keep.
- * After each step a read launch's field is the rule's over the records the
- * device holds (`test/field-model.ts`, by the model, whose reused key keeps
- * its first stamp, and by the disk), and its days sown are never below the
- * last it showed, through a last read launch after each device's own. It
- * catches a count that falls (a streak, days in the device's zone now,
- * days from what one launch kept, a reused key whose day moves), counts a
- * refused write, or misses an unread session's recitals at the next
- * launch; it misses the screen (`screen.test.tsx`) and Say it's press
- * (`press.test.ts`).
+ * An unread launch fails at its listing or at its record reads, and each
+ * keep's read of its key's stamp fails or not apart from whether its write
+ * lands, over fresh keys and keys holding old or new records, in read and
+ * unread launches. After each keep the device holds the model's record at
+ * its key (`test/garden-model.ts`: a reused key keeps its first stamp, but
+ * an unread keep whose stamp read failed writes its press's offset), so a
+ * finished recital is never lost to a failed read. After each step a read
+ * launch's field is the rule's over the records the device holds
+ * (`test/field-model.ts`, by the model and by the disk), and its days sown
+ * are never below the last it showed, through a last read launch after
+ * each device's own; the one history excused from that is a key held under
+ * another stamp whose stamp read failed in an unread launch while its write
+ * landed (the spec's decided exception), where the write is asserted to
+ * have landed as the press gave it. It catches a count that falls (a
+ * streak, days in the device's zone now, days from what one launch kept, a
+ * reused key whose day moves), counts a refused write, drops or guesses a
+ * keep whose stamp read failed, or misses an unread session's recitals at
+ * the next launch; it misses the screen (`screen.test.tsx`) and Say it's
+ * press (`press.test.ts`).
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -36,7 +46,16 @@ import { Recalls, type Recall } from '../sayit';
 import { store } from '../store';
 import { CHANGES, fourIn } from '../test/day-model';
 import { after, fieldRule, heldOn, historyOf, otherReference, recallOf } from '../test/field-model';
-import { below, DAY, GardenModel, keyOf, MINUTE, pickOf, random } from '../test/garden-model';
+import {
+  below,
+  DAY,
+  GardenModel,
+  keyOf,
+  MINUTE,
+  pickOf,
+  PREFIX,
+  random,
+} from '../test/garden-model';
 import { device } from '../test/one';
 import { hostZone, offsetIn, restore, travel, ZONES } from '../test/zone';
 
@@ -169,8 +188,10 @@ const newRecital = (
 ) => {
   const grade = pickOf(next, [3, 3, 4, 2] as const);
   const stored = [...model.records.values()];
+  const old = stored.filter((recall) => recall.offset === undefined);
   if (stored.length > 0 && next() < reuse) {
-    const taken = pickOf(next, stored as [Recall, ...Recall[]]);
+    const from = old.length > 0 && next() < 0.5 ? old : stored;
+    const taken = pickOf(next, from as [Recall, ...Recall[]]);
     const recall = inZoneOf(zone, recallOf(taken.reference, taken.startedAt, grade, 0));
     return { recall, kind: 'reuse' };
   }
@@ -241,7 +262,7 @@ const take = (
     return undefined;
   }
   if (step === 'new' || step === 'refused' || open.current === undefined) {
-    const made = newRecital(next, model, open.at, open.zone, open.read ? 0.15 : 0.45);
+    const made = newRecital(next, model, open.at, open.zone, open.read ? 0.2 : 0.45);
     bump(`time:${made.kind}`);
     countReuse(model, open, made.recall, bump);
     open.at = Math.max(open.at, made.recall.startedAt);
@@ -255,11 +276,32 @@ const take = (
   return open.current;
 };
 
-/** What the field last showed on the device, which no later field may fall below. */
+/** What the field last showed on the device, which no later field may fall below unless the device's history holds the one excused keep (`excusedBy`). */
 interface Shown {
   sown: number;
   harvest: number;
+  excused: boolean;
 }
+
+/** The key a keep writes: fresh, or holding an old record (no offset) or a new one. */
+const heldKind = (held: Recall | undefined) => {
+  if (held === undefined) return 'fresh';
+  return held.offset === undefined ? 'old' : 'new';
+};
+
+/**
+ * Whether a keep is the one history the rule lets lower days sown: in an
+ * unread launch, a key the device already holds under another stamp, whose
+ * read of that stamp failed while its write landed, so the recital is
+ * written with its press's offset rather than dropped.
+ */
+const excusedBy = (
+  read: boolean,
+  held: Recall | undefined,
+  recall: Recall,
+  stampFails: boolean,
+  refused: boolean,
+) => !read && stampFails && !refused && held !== undefined && held.offset !== recall.offset;
 
 /** A launch's check: its view read or unread as scripted, and a read field equal to the rule over the model's records and over the disk, never below the last shown. */
 const checker =
@@ -282,7 +324,9 @@ const checker =
         field: want,
         disk: want,
       });
-      expect({ ...where, fell: field.sown < shown.sown }).toEqual({ ...where, fell: false });
+      if (!shown.excused)
+        expect({ ...where, fell: field.sown < shown.sown }).toEqual({ ...where, fell: false });
+      if (shown.excused && field.sown < shown.sown) bump('excused:fell');
       if (shown.sown >= 0 && field.sown > shown.sown) bump('sown rose');
       if (shown.harvest >= 0 && field.harvest < shown.harvest) bump('harvest fell');
       shown.sown = field.sown;
@@ -290,7 +334,7 @@ const checker =
     });
 
 describe('days sown over the device', () => {
-  it('never fall and always equal the rule’s over the records the device holds, across 80 generated devices of old and new records, skipped records, travel between launches and while open, keeps at 04:00 and daylight-saving edges, months on or set back, a stored start reused from another zone, Again and grade changes after travel, peeks, refused writes landing at the next keep, relaunches and unread sessions', () =>
+  it('never fall and always equal the rule’s over the records the device holds, across 80 generated devices of old and new records, skipped records, travel between launches and while open, keeps at 04:00 and daylight-saving edges, months on or set back, a stored start reused from another zone, Again and grade changes after travel, peeks, refused writes landing at the next keep, relaunches, unread sessions, and stamp reads that fail apart from writes (a keep then written with its press’s offset, the one history excused from never falling)', () =>
     quietly(
       Effect.gen(function* () {
         const cover = new Map<string, number>();
@@ -301,17 +345,28 @@ describe('days sown over the device', () => {
           const { model } = seeded;
           let { at } = seeded;
           let zone: string = pickOf(next, ZONES);
-          const shown: Shown = { sown: -1, harvest: -1 };
+          const shown: Shown = { sown: -1, harvest: -1, excused: false };
           for (let l = 0, launches = 1 + below(next, 4); l < launches; l += 1) {
-            const read = l === 0 || next() < 0.75;
+            const read = l === 0 || next() < 0.6;
             if (l > 0 && next() < 0.6) {
               zone = pickOf(next, ZONES);
               bump('zone:between launches');
             }
             travel(zone);
             device.launch(device.disk);
-            if (!read) device.script([{ at: 'keys' }, { at: 'keys' }, { at: 'keys' }]);
+            model.restart(read);
+            const listed = [...device.disk.keys()].some((key) => key.startsWith(PREFIX));
+            const unreadAt = listed && next() < 0.5 ? 'records' : 'listing';
+            if (!read && unreadAt === 'listing')
+              device.script([{ at: 'keys' }, { at: 'keys' }, { at: 'keys' }]);
+            if (!read && unreadAt === 'records')
+              device.script([
+                { at: 'get', nth: 1 },
+                { at: 'get', nth: 1 },
+                { at: 'get', nth: 1 },
+              ]);
             bump(read ? 'launch:read' : 'launch:unread');
+            if (!read) bump(`launch:unread:${unreadAt}`);
             yield* Effect.scoped(
               Effect.gen(function* () {
                 const { garden, recalls } = yield* launch;
@@ -330,10 +385,39 @@ describe('days sown over the device', () => {
                   bump(`step:${step}${read ? '' : ':unread'}`);
                   const recall = take(next, model, open, step, bump);
                   if (recall === undefined) continue;
-                  device.failing.set = step === 'refused' ? 1 : 0;
+                  const key = keyOf(recall);
+                  const held = model.records.get(key);
+                  const stampFails = next() < 0.4;
+                  const refused = step === 'refused' || next() < 0.2;
+                  const where = { seed, l, s, step, zone: open.zone, stampFails, refused };
+                  bump(
+                    `keep:${heldKind(held)}:${read ? 'read' : 'unread'}:${stampFails ? 'get fails' : 'get ok'}:${refused ? 'refused' : 'lands'}`,
+                  );
+                  device.failing.get = stampFails ? 1 : 0;
+                  device.failing.set = refused ? 1 : 0;
                   yield* recalls.keep(recall);
-                  model.keep(recall, step !== 'refused');
-                  open.pending = step === 'refused';
+                  device.failing.get = 0;
+                  model.keep(recall, !refused, stampFails);
+                  open.pending = refused;
+                  const stored = device.disk.get(key);
+                  expect({
+                    ...where,
+                    stored: stored == null ? undefined : JSON.parse(stored),
+                  }).toEqual({
+                    ...where,
+                    stored: model.records.get(key),
+                  });
+                  if (excusedBy(read, held, recall, stampFails, refused)) {
+                    shown.excused = true;
+                    bump(`excused:${heldKind(held)}`);
+                    expect({
+                      ...where,
+                      landed: stored == null ? undefined : JSON.parse(stored),
+                    }).toEqual({
+                      ...where,
+                      landed: recall,
+                    });
+                  }
                   yield* check({ seed, l, s, step, zone: open.zone });
                 }
                 zone = open.zone;
@@ -343,6 +427,7 @@ describe('days sown over the device', () => {
           }
           travel(zone);
           device.launch(device.disk);
+          model.restart(true);
           yield* Effect.scoped(
             Effect.gen(function* () {
               const { garden } = yield* launch;
@@ -382,6 +467,23 @@ describe('days sown over the device', () => {
           'reuse:unread': 12,
           'reuse:other offset': 40,
           'reuse:other offset:unread': 12,
+          'launch:unread:listing': 8,
+          'launch:unread:records': 10,
+          'excused:old': 8,
+          'excused:new': 3,
+          'excused:fell': 1,
+          ...Object.fromEntries(
+            ['fresh', 'old', 'new'].flatMap((kind) =>
+              ['read', 'unread'].flatMap((launch) =>
+                ['get ok', 'get fails'].flatMap((get) =>
+                  ['lands', 'refused'].map((write) => [
+                    `keep:${kind}:${launch}:${get}:${write}`,
+                    4,
+                  ]),
+                ),
+              ),
+            ),
+          ),
         };
         for (const [key, floor] of Object.entries(floors))
           expect({

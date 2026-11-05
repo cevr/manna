@@ -242,7 +242,20 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice}/**/*.test.*",
-        "!src/field/{screen,garden,walk,walk-grades}.test.*",
+        "!src/field/{screen,garden,walk,walk-grades,unread-keep}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:field-unread": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice}/**/*.test.*",
+        "!src/field/{sown,unread,reach,screen,garden,walk,walk-grades}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -255,7 +268,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice}/**/*.test.*",
-        "!src/field/{sown,unread,reach,walk,walk-grades}.test.*",
+        "!src/field/{sown,unread,unread-keep,reach,walk,walk-grades}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -268,7 +281,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice}/**/*.test.*",
-        "!src/field/{sown,unread,reach,screen,garden,walk-grades}.test.*",
+        "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk-grades}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -281,7 +294,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice}/**/*.test.*",
-        "!src/field/{sown,unread,reach,screen,garden,walk}.test.*",
+        "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -325,6 +338,7 @@
         "test:walk-reading",
         "test:walk-taps",
         "test:field",
+        "test:field-unread",
         "test:field-screen",
         "test:field-walk",
         "test:field-grades",

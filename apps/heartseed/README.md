@@ -303,7 +303,11 @@ Silent mode mutes. Nothing leaves the device.
   another zone) keeps that recall's `offset`, or its lack of one for an old
   record, and only a key written for the first time takes the press's
   offset. A read garden knows the stored recall from its view; an unread
-  one reads that one key first, and writes nothing when that read fails.
+  one reads that one key first. When that read fails, the keep writes as a
+  first write, with the press's offset (`garden.keep.unstamped`): a
+  finished recital is never lost, and the one cost is that a key already
+  stored under another stamp (a start reused after the clock went back,
+  with that read failing while writes work) can move its day.
   The garden writes no other key and removes none. Nothing else is stored: a
   plant's card is the fold of its recalls in `startedAt` order from a new
   card, and its stage is read from its recalls and their cards each time.
@@ -397,7 +401,9 @@ them.
   grade change, Again or a peek rewrites the same recital with the same
   start and offset, and a new recital that reuses a stored start keeps that
   key's stamp, so the count never falls under travel or any clock: it
-  is no streak. The costs: a recital between 00:00 and 04:00 counts for the
+  is no streak. The one exception is an unread keep whose read of a reused
+  key's stamp fails while its write lands: the recital is kept with its
+  press's offset rather than lost, and that key's day may move. The costs: a recital between 00:00 and 04:00 counts for the
   day before; an old evening record keeps its UTC date, so on the
   upgrade's day it and a new next-morning recital can share a day; and
   where the runtime keeps the zone it launched in after the reader changes
@@ -457,7 +463,8 @@ them.
     and its press's offset, kept through a refused write, a grade change and
     Again after the device changed zone; a press that reuses a stored
     start after the clock went back, in a read or an unread garden, keeping
-    that key's stamp, old or new), and
+    that key's stamp, old or new, or, when an unread keep's read of that
+    stamp fails, still writing it with the press's offset), and
     in `src/garden` the growth sound and the native module's guard.
   - `test:today`: `src/garden/today.test.tsx`, Today's stage in happy-dom
     over the real store on the device (the journey from not planted to a
@@ -511,7 +518,10 @@ them.
     garden on the device across keeps, Again, peeks, refused writes then
     landed, relaunches, unread sessions, zone changes while open and
     between launches, and new recitals at the start of a stored record, old
-    or new, from another zone, never falling; and
+    or new, from another zone, with each keep's read of its key's stamp
+    failing or not apart from its write, the device holding the model's
+    record after every keep, never falling but in the one excused history
+    (a stored key whose stamp read failed while its write landed); and
     `src/field/unread.test.tsx`, no field offered in any frame of a held
     launch, an unread session or the first minute; and
     `src/field/reach.test.tsx`, the control outside Today's scroll view
@@ -519,6 +529,11 @@ them.
     it deciding both the control and the field: with the root's news of
     Say it held back, a tap in the first frame that offers the control
     after a growing recital opens the field.
+  - `test:field-unread`: `src/field/unread-keep.test.tsx`, an unread
+    session whose listing and then its keep's read of its key fail, or
+    whose every record read fails, while writes work: its finished recital
+    is written with its zone's offset and the next healthy launch counts
+    its day.
   - `test:field-screen`: `src/field/screen.test.tsx`, the field from Today
     in happy-dom over the real store on the device through
     `src/test/field-rig.tsx` (the rig holds every frame to the field's
