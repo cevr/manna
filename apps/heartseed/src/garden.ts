@@ -9,7 +9,9 @@
  * all the same; one whose `offset` is no whole number of minutes within 18
  * hours of UTC is no recall. A recall kept again for the same
  * recital writes the same key, so the last keep wins, and a restart reads
- * the same plants back. A plant's FSRS card is the fold of its recalls in
+ * the same plants back; a key's day stamp never changes once stored (its
+ * `offset`, or none), so a new recital whose start reuses a stored key
+ * keeps that key's stamp, and no keep can move a counted day. A plant's FSRS card is the fold of its recalls in
  * time order, and its stage is read from its recalls and the cards they fold
  * to each time, as is the cue it is said under next (full text, then first
  * letters, then nothing): nothing but the recalls is stored.
@@ -18,8 +20,9 @@
  * at start it lists the store's keys and reads every recall key, and any
  * call that fails (the open, the listing or one record's read) fails that
  * attempt whole. It tries three times in all, a few milliseconds apart; past
- * that the garden is unread for the session, and nothing reads the store
- * again until the next launch. A record that reads but is no recall of its
+ * that the garden is unread for the session, and nothing lists the store
+ * again until the next launch: a keep then reads only its own key, for the
+ * stamp it holds, and a keep whose read fails writes nothing. A record that reads but is no recall of its
  * own key, or a listed key with no value, is skipped and logged.
  *
  * A keep runs alone, in the order keeps are called. It writes the record
@@ -262,14 +265,35 @@ const keptFor = (view: ReadGarden, recall: Recall) =>
     Arr.findFirst(plant.recalls, (kept) => kept.startedAt === recall.startedAt),
   );
 
+/**
+ * `recall` with the day stamp of `stored`, the recall its key already
+ * holds: that recall's offset, or none when it was kept before recalls
+ * carried one. A key's day never changes once stored, so a new recital that
+ * reuses an earlier start (the clock set back, the zone changed) cannot move
+ * a day the field has counted; only a key written for the first time takes
+ * the press's offset.
+ */
+const stampedLike = (recall: Recall, stored: Option.Option<Recall>): Recall =>
+  Option.match(stored, {
+    onNone: () => recall,
+    onSome: (kept) => {
+      if (kept.offset === recall.offset) return recall;
+      const { offset: _, ...rest } = recall;
+      return Option.match(Option.fromNullishOr(kept.offset), {
+        onNone: (): Recall => rest,
+        onSome: (offset): Recall => ({ ...rest, offset }),
+      });
+    },
+  });
+
 /** How many attempts in all the garden makes to read the store at start. */
 const READ_ATTEMPTS = 3;
 
 /** The waits between attempts: 10 ms, then 20 ms. */
 const READ_WAITS = Schedule.exponential('10 millis');
 
-/** A stored value decoded: the recall it holds when it is a valid recall of its own key, else none, logged as skipped. */
-const recordAt = (key: string, value: Option.Option<string>) =>
+/** A stored value decoded: the recall it holds when it is a valid recall of its own key, else none. */
+const recallIn = (key: string, value: Option.Option<string>) =>
   Option.match(value, {
     onNone: () => Effect.succeed(Option.none<Recall>()),
     onSome: (text) =>
@@ -279,7 +303,11 @@ const recordAt = (key: string, value: Option.Option<string>) =>
         ),
         Effect.orElseSucceed(() => Option.none<Recall>()),
       ),
-  }).pipe(
+  });
+
+/** A stored value decoded as `recallIn` does, logged as skipped when it holds no recall. */
+const recordAt = (key: string, value: Option.Option<string>) =>
+  recallIn(key, value).pipe(
     Effect.tap((recall) =>
       Effect.when(
         Effect.logWarning('garden.record.skipped').pipe(Effect.annotateLogs({ key })),
@@ -343,19 +371,38 @@ export const layer: Layer.Layer<Garden | Recalls, never, KeyValueStore.KeyValueS
       });
 
       /**
-       * Keeps one recall: writes its record, then changes the view, then
+       * The recall a key already holds: the read view's, or for an unread
+       * garden, which knows no history, the record read from the store at
+       * that key (a read that fails fails the keep).
+       */
+      const storedAt = (view: GardenView, recall: Recall) => {
+        if (view._tag === 'Read') return Effect.succeed(keptFor(view, recall));
+        const key = recallKey(recall);
+        return Effect.flatMap(store.get(key), (value) =>
+          recallIn(key, Option.fromNullishOr(value)),
+        );
+      };
+
+      /**
+       * Keeps one recall under the day stamp its key already holds
+       * (`stampedLike`): writes its record, then changes the view, then
        * sounds a growth; a failed write changes nothing. An unread garden
        * still writes the record, but its view stays unread and it never
        * sounds, as the history the growth is measured from is unknown.
        */
-      const keep = Effect.fn('Garden.keep')(function* (recall: Recall) {
+      const keep = Effect.fn('Garden.keep')(function* (given: Recall) {
         const before = MutableRef.get(held);
+        const stamped = yield* Effect.option(
+          Effect.map(storedAt(before, given), (stored) => stampedLike(given, stored)),
+        );
+        const recall = Option.getOrElse(stamped, () => given);
         if (
           before._tag === 'Read' &&
           Option.exists(keptFor(before, recall), (kept) => sameRecall(kept, recall))
         )
           return;
-        const written = yield* Schema.encodeEffect(RecallRecord)(recall).pipe(
+        const written = yield* Effect.fromOption(stamped).pipe(
+          Effect.flatMap(Schema.encodeEffect(RecallRecord)),
           Effect.flatMap((text) => store.set(recallKey(recall), text)),
           Effect.as(true),
           Effect.catch(() =>

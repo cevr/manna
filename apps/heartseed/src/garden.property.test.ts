@@ -506,7 +506,7 @@ describe('the garden over the device', () => {
               open: 5,
               failedOpens: 4,
               keys: 0,
-              get: 0,
+              get: 1,
               set: 1,
               remove: 0,
               clear: 0,

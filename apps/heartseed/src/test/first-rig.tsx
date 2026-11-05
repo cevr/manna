@@ -940,7 +940,7 @@ export const session = (count: (key: string) => void) => {
     m.disk.set(key, device.disk.get(key) ?? null);
   };
 
-  /** A kept recital's write, as the model expects it: counted, then landed or refused by the store's state. It reaches the store's `setItem` once the store is open; a down device refuses the open first. */
+  /** A kept recital's write, as the model expects it: counted, then landed or refused by the store's state. It reaches the store's `setItem` once the store is open; a down device refuses the open first, and in an unread launch it refuses the read of the key's stamp the write waits on. */
   const write = (mode: Write) => {
     const wasDown = m.down;
     count(`write:${m.screen}:${wasDown ? 'while-down' : mode}`);
@@ -948,7 +948,7 @@ export const session = (count: (key: string) => void) => {
       m.down = true;
       setDown(true);
     }
-    if (m.opened || !m.down) m.sets += 1;
+    if (!m.down || (m.opened && !m.unread)) m.sets += 1;
     if (!m.down) m.opened = true;
     if (mode === 'refused' && !m.down) device.fail('set', 1);
     const lands = mode === 'lands' && !m.down;

@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish -- the store stand-in keeps its disk and its faults in plain maps and counters a case sets between steps; the dictation view gives an absent matcher as null. */
+/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noTernary -- the store stand-in keeps its disk and its faults in plain maps and counters a case sets between steps; the dictation view gives an absent matcher as null; the fixed cases write their records and expectations as plain branches over an absent offset. */
 
 /**
  * Today's press over the app's own layer: the cue a recital is said under,
@@ -13,7 +13,10 @@
  * stage it never read, a passage not planted said under anything but
  * the full text, and a record whose zone offset is not its press's: one
  * taken at a keep after travel or a daylight-saving change, dropped from a
- * rewrite, or kept in other than nine fields. It misses what the screen draws under the cue, which the
+ * rewrite, or kept in other than nine fields; and a new press whose start
+ * reuses a stored key (the clock set back) that moves that key's day,
+ * giving an old record an offset or a new one another, in a read or an
+ * unread garden. It misses what the screen draws under the cue, which the
  * screen tests own.
  */
 
@@ -37,7 +40,8 @@ import passage from 'virtual:heartseed-passage';
 
 import { appLayer, pressToday } from './app';
 import { recite, scriptedSource } from './dictation/script';
-import { Chime, Garden } from './garden';
+import { fieldOf } from './field';
+import { Chime, Garden, type GardenView } from './garden';
 import type { Cue } from './matcher';
 import { Haptics, SayIt, type Recall } from './sayit';
 import { below, DAY, keyOf, MINUTE, pickOf, random } from './test/garden-model';
@@ -74,9 +78,10 @@ const recallAt = (startedAt: number, reference = passage.reference): Recall => (
   extra: 0,
 });
 
-/** What a case does to the store: listings to fail, writes to refuse, and a write to hold until its gate opens. */
+/** What a case does to the store: listings to fail, record reads to fail, writes to refuse, and a write to hold until its gate opens. */
 interface Faults {
   keys: number;
+  gets: number;
   refuse: number;
   hold: Option.Option<Deferred.Deferred<void>>;
 }
@@ -89,7 +94,12 @@ const memory = (disk: Map<string, string>, faults: Faults) =>
   Layer.succeed(
     KeyValueStore.KeyValueStore,
     KeyValueStore.makeStringOnly({
-      get: (key) => Effect.sync(() => disk.get(key)),
+      get: (key) =>
+        Effect.suspend(() => {
+          if (faults.gets === 0) return Effect.succeed(disk.get(key));
+          faults.gets -= 1;
+          return Effect.fail(failed('get'));
+        }),
       set: (key, value) =>
         Effect.gen(function* () {
           if (faults.refuse > 0) {
@@ -150,7 +160,12 @@ const run = <A, E>(effect: Effect.Effect<A, E, Scope.Scope>) =>
     effect.pipe(Effect.scoped, Effect.provide(Layer.merge(Logger.layer([]), TestClock.layer()))),
   );
 
-const none = (): Faults => ({ keys: 0, refuse: 0, hold: Option.none() });
+const none = (): Faults => ({ keys: 0, gets: 0, refuse: 0, hold: Option.none() });
+
+const PASSAGES = [{ title: passage.reference, verses: [passage.reference] }];
+
+/** The days sown a garden view shows, none when it is unread. */
+const sownIn = (view: GardenView) => (view._tag === 'Read' ? fieldOf(view, PASSAGES).sown : -1);
 
 const said = (cue: Cue, suggested: 1 | 2 | 3) => ({ cue, suggested });
 
@@ -256,6 +271,97 @@ describe('Today’s press', () => {
         }
         expect(reached.moved).toBeGreaterThanOrEqual(15);
         expect(reached.refused).toBeGreaterThanOrEqual(10);
+      }).pipe(Effect.ensuring(Effect.sync(() => restore(host)))),
+    ));
+
+  it('keeps a key’s day when a press reuses its start after the clock went back and the zone changed: Kiritimati, a day back, then the first start again in Pago Pago leaves 2 days sown and the record at +840', () =>
+    run(
+      Effect.gen(function* () {
+        const first = Date.UTC(2026, 0, 6);
+        const second = Date.UTC(2026, 0, 5);
+        const app = yield* launch([], none(), first);
+        const seen = [];
+        for (const [zone, at] of [
+          ['Pacific/Kiritimati', first],
+          ['Pacific/Kiritimati', second],
+          ['Pacific/Pago_Pago', first],
+        ] as const) {
+          travel(zone);
+          yield* TestClock.setTime(at);
+          yield* app.say;
+          const record = JSON.parse(
+            app.disk.get(keyOf({ reference: passage.reference, startedAt: at })) ?? '{}',
+          );
+          seen.push({ zone, offset: record.offset, sown: sownIn(yield* app.garden.view) });
+        }
+        expect(seen).toEqual([
+          { zone: 'Pacific/Kiritimati', offset: 840, sown: 1 },
+          { zone: 'Pacific/Kiritimati', offset: 840, sown: 2 },
+          { zone: 'Pacific/Pago_Pago', offset: 840, sown: 2 },
+        ]);
+      }).pipe(Effect.ensuring(Effect.sync(() => restore(host)))),
+    ));
+
+  it('keeps the stamp a stored key holds when a press in New York reuses its start, in a read or an unread garden: an old record stays eight fields on its UTC day, a +840 one keeps +840, days sown stay 2, and an unread keep whose read of its key fails writes nothing', () =>
+    run(
+      Effect.gen(function* () {
+        const a = Date.UTC(2026, 0, 5, 2);
+        const b = Date.UTC(2026, 0, 6, 2);
+        const key = keyOf({ reference: passage.reference, startedAt: b });
+        const seen = [];
+        for (const stamp of [undefined, 840]) {
+          const stamped = (at: number): Recall => {
+            const recall = { ...recallAt(at), grade: 1 as const };
+            return stamp === undefined ? recall : { ...recall, offset: stamp };
+          };
+          for (const [keys, gets] of [
+            [0, 0],
+            [3, 0],
+            [3, 1],
+          ] as const) {
+            travel('America/New_York');
+            const faults = { ...none(), keys };
+            const app = yield* launch([stamped(a), stamped(b)], faults, b);
+            const before = sownIn(yield* app.garden.view);
+            faults.gets = gets;
+            yield* TestClock.setTime(b);
+            yield* app.say;
+            const record = JSON.parse(app.disk.get(key) ?? '{}');
+            const again = yield* launch(
+              [...app.disk.values()].map((text) => JSON.parse(text)),
+              none(),
+              b,
+            );
+            seen.push({
+              stamp,
+              keys,
+              gets,
+              landed: record.grade !== 1,
+              fields: Object.keys(record).length,
+              offset: 'offset' in record ? record.offset : 'none',
+              sown: [before, sownIn(yield* again.garden.view)],
+            });
+            yield* Scope.close(again.scope, Exit.void);
+            yield* Scope.close(app.scope, Exit.void);
+          }
+        }
+        const want = (stamp: number | undefined, keys: 0 | 3, gets: 0 | 1) => ({
+          stamp,
+          keys,
+          gets,
+          landed: gets === 0,
+          fields: stamp === undefined ? 8 : 9,
+          offset: stamp ?? 'none',
+          sown: [keys === 0 ? 2 : -1, 2],
+        });
+        expect(seen).toEqual([
+          want(undefined, 0, 0),
+          want(undefined, 3, 0),
+          want(undefined, 3, 1),
+          want(840, 0, 0),
+          want(840, 3, 0),
+          want(840, 3, 1),
+        ]);
       }).pipe(Effect.ensuring(Effect.sync(() => restore(host)))),
     ));
 

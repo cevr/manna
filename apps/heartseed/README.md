@@ -297,7 +297,13 @@ Silent mode mutes. Nothing leaves the device.
   never rewritten or migrated. A record whose `offset` holds anything else
   (a string, a fraction, `null`, a boolean, beyond ±1080) is no recall and
   is skipped whole. A later keep of the same recital writes the same key,
-  start and offset, so the last one wins.
+  start and offset, so the last one wins. A key's day stamp never changes
+  once stored: a keep to a key that already holds a recall (a new recital
+  whose start reuses an earlier one's after the clock went back, maybe in
+  another zone) keeps that recall's `offset`, or its lack of one for an old
+  record, and only a key written for the first time takes the press's
+  offset. A read garden knows the stored recall from its view; an unread
+  one reads that one key first, and writes nothing when that read fails.
   The garden writes no other key and removes none. Nothing else is stored: a
   plant's card is the fold of its recalls in `startedAt` order from a new
   card, and its stage is read from its recalls and their cards each time.
@@ -308,7 +314,8 @@ Silent mode mutes. Nothing leaves the device.
   attempt whole, and no partial view is published. It tries three times in
   all (`READ_ATTEMPTS`, 10 ms and then 20 ms apart, each failure logged
   `garden.read.retry`); past that the garden is `Unread` for the session
-  (`garden.read.failed`) and reads the store no more until the next launch.
+  (`garden.read.failed`) and lists the store no more until the next launch;
+  a keep then reads only its own key, for the stamp it holds.
   A value that is no valid recall of its own key, or a listed key with no
   value, is skipped and logged (`garden.record.skipped`), and the read stays
   complete.
@@ -388,7 +395,8 @@ them.
   so the upgrade cannot lower the count. Each day is a function of its
   record alone; the garden writes recalls and never removes one, and a
   grade change, Again or a peek rewrites the same recital with the same
-  start and offset, so the count never falls under travel or any clock: it
+  start and offset, and a new recital that reuses a stored start keeps that
+  key's stamp, so the count never falls under travel or any clock: it
   is no streak. The costs: a recital between 00:00 and 04:00 counts for the
   day before; an old evening record keeps its UTC date, so on the
   upgrade's day it and a new next-morning recital can share a day; and
@@ -447,7 +455,9 @@ them.
     recites under, a keep in flight, a refused write, an unread garden, and
     generated presses in zones every side of UTC: each record's nine fields
     and its press's offset, kept through a refused write, a grade change and
-    Again after the device changed zone), and
+    Again after the device changed zone; a press that reuses a stored
+    start after the clock went back, in a read or an unread garden, keeping
+    that key's stamp, old or new), and
     in `src/garden` the growth sound and the native module's guard.
   - `test:today`: `src/garden/today.test.tsx`, Today's stage in happy-dom
     over the real store on the device (the journey from not planted to a
@@ -497,8 +507,9 @@ them.
     saving north, south and by half an hour, a clock set back, and bad
     offsets; and `src/field/sown.test.ts`, days sown as a model test over the
     garden on the device across keeps, Again, peeks, refused writes then
-    landed, relaunches, unread sessions and zone changes while open and
-    between launches, never falling; and
+    landed, relaunches, unread sessions, zone changes while open and
+    between launches, and new recitals at the start of a stored record, old
+    or new, from another zone, never falling; and
     `src/field/unread.test.tsx`, no field offered in any frame of a held
     launch, an unread session or the first minute; and
     `src/field/reach.test.tsx`, the control outside Today's scroll view

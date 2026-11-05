@@ -11,7 +11,7 @@
  *   prefix's card, a recall's help derived from the cue the stage before it
  *   gives, the ladder of cues, and the growth rule;
  * - `GardenModel`: the records the device holds (one per recital, the last
- *   write that landed wins), what a launch knows of them (all of them once
+ *   write that landed wins, under the offset its key first held), what a launch knows of them (all of them once
  *   its read completed, nothing when it failed), and the chimes it sounds
  *   (once per recital in a launch, at its first landed keep that grows the
  *   verse, and only in a launch that read the store; planting never).
@@ -182,10 +182,15 @@ export class GardenModel {
     return [...new Set([...this.records.values()].map((recall) => recall.reference))].toSorted();
   }
 
-  /** A keep of `recall`, whose write the device took when `landed`; a write it refused changes nothing. */
-  keep(recall: Recall, landed = true) {
+  /** A keep of `recall`, whose write the device took when `landed`; a write it refused changes nothing. A key already held keeps its offset, or its lack of one, whatever `recall` carries. */
+  keep(given: Recall, landed = true) {
     if (!landed) return;
-    const key = keyOf(recall);
+    const key = keyOf(given);
+    const stored = this.records.get(key);
+    const { offset: _, ...rest } = given;
+    let recall = given;
+    if (stored !== undefined) recall = rest;
+    if (stored?.offset !== undefined) recall = { ...rest, offset: stored.offset };
     this.records.set(key, recall);
     if (!this.read || this.sounded.has(key)) return;
     const growth = growthRule(this.recallsOf(recall.reference), recall.startedAt);

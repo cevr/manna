@@ -10,15 +10,19 @@
  * key). Its zone changes between launches and while open; each new recital
  * is stamped with its zone's offset at its start (by `Intl`, `test/zone.ts`)
  * and starts minutes, hours, days or months on, at a local 04:00 or a
- * daylight-saving edge, or set back; a grade change, Again or a peek after
- * travel keeps the recital's offset; a write the device refuses adds no day
- * and the same recital lands at its next keep. After each step a read
- * launch's field is the rule's over the records the device holds
- * (`test/field-model.ts`, by the model and by the disk), and its days sown
- * are never below the last it showed. It catches a count that falls (a
- * streak, days in the device's zone now, days from what one launch kept),
- * counts a refused write, or misses an unread session's recitals at the
- * next launch; it misses the screen (`screen.test.tsx`) and Say it's press
+ * daylight-saving edge, set back, or at the very start of a record the
+ * device holds, old or new, in a read or an unread launch (a clock set
+ * back, so the key is reused, mostly from another zone); a grade change,
+ * Again or a peek after travel keeps the recital's offset; a write the
+ * device refuses adds no day and the same recital lands at its next keep.
+ * After each step a read launch's field is the rule's over the records the
+ * device holds (`test/field-model.ts`, by the model, whose reused key keeps
+ * its first stamp, and by the disk), and its days sown are never below the
+ * last it showed, through a last read launch after each device's own. It
+ * catches a count that falls (a streak, days in the device's zone now,
+ * days from what one launch kept, a reused key whose day moves), counts a
+ * refused write, or misses an unread session's recitals at the next
+ * launch; it misses the screen (`screen.test.tsx`) and Say it's press
  * (`press.test.ts`).
  */
 
@@ -150,17 +154,31 @@ const seedDevice = (next: () => number, bump: (key: string) => void) => {
   };
 };
 
-/** A new recital after `at` in `zone`, of the passage or a verse held, stamped with the zone's offset at its start; none when its key is taken. */
-const newRecital = (next: () => number, model: GardenModel, at: number, zone: string) => {
+/**
+ * A new recital in `zone`, stamped with the zone's offset at its start: of
+ * the passage or a verse held, after `at`, or, a `reuse` share of the time,
+ * at the very start of a record the device holds (old or new), as a clock
+ * set back gives; a start that lands on a held key by chance is kept too.
+ */
+const newRecital = (
+  next: () => number,
+  model: GardenModel,
+  at: number,
+  zone: string,
+  reuse: number,
+) => {
+  const grade = pickOf(next, [3, 3, 4, 2] as const);
+  const stored = [...model.records.values()];
+  if (stored.length > 0 && next() < reuse) {
+    const taken = pickOf(next, stored as [Recall, ...Recall[]]);
+    const recall = inZoneOf(zone, recallOf(taken.reference, taken.startedAt, grade, 0));
+    return { recall, kind: 'reuse' };
+  }
   const held = model.references();
   const reference =
     next() < 0.5 || held.length === 0 ? PASSAGE : pickOf(next, held as [string, ...string[]]);
   const then = nextStart(next, at, zone);
-  const recall = inZoneOf(
-    zone,
-    recallOf(reference, then.at, pickOf(next, [3, 3, 4, 2] as const), 0),
-  );
-  if (model.records.has(keyOf(recall))) return undefined;
+  const recall = inZoneOf(zone, recallOf(reference, then.at, grade, 0));
   return { recall, kind: then.kind };
 };
 
@@ -183,14 +201,29 @@ const STEPS: readonly [Step, ...Step[]] = [
   'travel',
 ];
 
-/** A launch as it goes: the device's zone, the latest start, the recital under way, whether its last write was refused, and whether the device traveled since its press. */
+/** A launch as it goes: whether its read completed, the device's zone, the latest start, the recital under way, whether its last write was refused, and whether the device traveled since its press. */
 interface Open {
+  read: boolean;
   zone: string;
   at: number;
   current: Recall | undefined;
   pending: boolean;
   traveled: boolean;
 }
+
+/** Counts a new recital whose key the device already holds: over an old or a new record, in a read or an unread launch, and from another offset. */
+const countReuse = (
+  model: GardenModel,
+  open: Open,
+  recall: Recall,
+  bump: (key: string) => void,
+) => {
+  const stored = model.records.get(keyOf(recall));
+  if (stored === undefined) return;
+  bump(`reuse:${stored.offset === undefined ? 'old' : 'new'}`);
+  bump(`reuse:${open.read ? 'read' : 'unread'}`);
+  if (stored.offset !== recall.offset) bump(`reuse:other offset${open.read ? '' : ':unread'}`);
+};
 
 /** Takes one step into `open`: travel changes the zone and keeps nothing; a new or refused recital starts after the latest; a peek, Again or grade change rewrites the one under way. Answers the recall to keep, none for travel or a taken key. */
 const take = (
@@ -208,9 +241,9 @@ const take = (
     return undefined;
   }
   if (step === 'new' || step === 'refused' || open.current === undefined) {
-    const made = newRecital(next, model, open.at, open.zone);
-    if (made === undefined) return undefined;
+    const made = newRecital(next, model, open.at, open.zone, open.read ? 0.15 : 0.45);
     bump(`time:${made.kind}`);
+    countReuse(model, open, made.recall, bump);
     open.at = Math.max(open.at, made.recall.startedAt);
     open.current = made.recall;
     open.traveled = false;
@@ -257,7 +290,7 @@ const checker =
     });
 
 describe('days sown over the device', () => {
-  it('never fall and always equal the rule’s over the records the device holds, across 80 generated devices of old and new records, skipped records, travel between launches and while open, keeps at 04:00 and daylight-saving edges, months on or set back, Again and grade changes after travel, peeks, refused writes landing at the next keep, relaunches and unread sessions', () =>
+  it('never fall and always equal the rule’s over the records the device holds, across 80 generated devices of old and new records, skipped records, travel between launches and while open, keeps at 04:00 and daylight-saving edges, months on or set back, a stored start reused from another zone, Again and grade changes after travel, peeks, refused writes landing at the next keep, relaunches and unread sessions', () =>
     quietly(
       Effect.gen(function* () {
         const cover = new Map<string, number>();
@@ -285,6 +318,7 @@ describe('days sown over the device', () => {
                 const check = checker(garden, model, read, shown, bump);
                 yield* check({ seed, l, zone });
                 const open: Open = {
+                  read,
                   zone,
                   at,
                   current: undefined,
@@ -307,6 +341,14 @@ describe('days sown over the device', () => {
               }),
             );
           }
+          travel(zone);
+          device.launch(device.disk);
+          yield* Effect.scoped(
+            Effect.gen(function* () {
+              const { garden } = yield* launch;
+              yield* checker(garden, model, true, shown, bump)({ seed, l: 'last', zone });
+            }),
+          );
         }
         const floors = {
           'launch:unread': 12,
@@ -334,6 +376,12 @@ describe('days sown over the device', () => {
           'bad:past west': 20,
           'skip:misfiled': 20,
           'skip:grade 5': 20,
+          'reuse:old': 15,
+          'reuse:new': 35,
+          'reuse:read': 40,
+          'reuse:unread': 12,
+          'reuse:other offset': 40,
+          'reuse:other offset:unread': 12,
         };
         for (const [key, floor] of Object.entries(floors))
           expect({
