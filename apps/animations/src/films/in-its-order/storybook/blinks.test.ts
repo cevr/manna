@@ -89,7 +89,7 @@ describe("In Its Order's storybook blinks keep the body (round 3, M1)", () => {
   );
 
   it.effect(
-    'counts the whole-drawing blink round 2 showed (the lead’s `downBlink` cell in place of `down`, verifier r2 M1) as a body that moves: 4,243 painted px outside the eye band, 3,100 of them in his lowest 350 rows (the verifier’s 23,285 there count clear px whose hidden colour differs too)',
+    'counts the whole-drawing blink round 2 showed (the lead’s `downBlink` cell in place of `down`, verifier r2 M1) as a body that moves: 4,217 painted px outside the eye band, 3,074 of them in his lowest 350 rows (the verifier’s 23,285 there count clear px whose hidden colour differs too)',
     () =>
       Effect.gen(function* () {
         const down = yield* cellOf('lead-feast/iio-table', 'down');
@@ -99,7 +99,7 @@ describe("In Its Order's storybook blinks keep the body (round 3, M1)", () => {
         expect([
           changedOutsideBand(down.raster, down.at, shut.raster, shut.at, band),
           changedOutsideBand(down.raster, down.at, shut.raster, shut.at, lowest),
-        ]).toEqual([4243, 3100]);
+        ]).toEqual([4217, 3074]);
       }),
   );
 });

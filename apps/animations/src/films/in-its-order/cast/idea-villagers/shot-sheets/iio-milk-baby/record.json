@@ -21,7 +21,7 @@
         "width": 461,
         "height": 1024
       },
-      "sha256": "094bb25e56fa6e0d11a89a81eaea4fc0c32e5d9a363a0c17796a2eca43951dff"
+      "sha256": "3e16eff45302d23e4127ae9ec654d5dd47f66c34dc31174615f900559ddf9bce"
     },
     {
       "key": "sitBlink",
@@ -31,7 +31,7 @@
         "width": 505,
         "height": 1024
       },
-      "sha256": "9e4ac6619b47ab24e9f9bb10abe5eb8d945a832936adec46da1d2037ba40caa2"
+      "sha256": "1d56387daef56b4dccc84e21d145c239be4d4654ec715a6b55b4ac259916f30d"
     },
     {
       "key": "drink",
@@ -41,7 +41,7 @@
         "width": 462,
         "height": 1024
       },
-      "sha256": "0e08bce64b98d404d42d6aa64cfb72c6203efe1d939830edf22840b88c581364"
+      "sha256": "8c55a307933973856970e6df0d9c8d8ecc6fc72b2f8c37ffb1ebdb2642fbcd10"
     }
   ]
 }

@@ -25,7 +25,7 @@
         "width": 346,
         "height": 1024
       },
-      "sha256": "dcd5123a62ff2d7ddd2d37649c3a9b53103899477ad6dfedbf25dd3080318c02"
+      "sha256": "2201873b53d7c91802a978425cd8769d6893c16cad4ea6163badca262f94781c"
     },
     {
       "key": "frontBlink",
@@ -35,7 +35,7 @@
         "width": 368,
         "height": 1024
       },
-      "sha256": "2c46c6b6cb7af024b59bf9db7c84746394acea663753e5d6f2d7ffd8451b2389"
+      "sha256": "3f2ddec027d28ed38cd22a52f16713694c7d9e6b726e1534994e9f32e795ac78"
     },
     {
       "key": "lift",
@@ -45,7 +45,7 @@
         "width": 370,
         "height": 1024
       },
-      "sha256": "28152788c6f587bc2a2ba9ca95dbe1d69f2fed0da139aa51febcaa513b4fb522"
+      "sha256": "1d5049c0d7d366181aa0173e0c7f487d69644b5a350d84923085096dfd9501be"
     },
     {
       "key": "cup",
@@ -55,7 +55,7 @@
         "width": 341,
         "height": 1024
       },
-      "sha256": "3986637629d5e719a60d94bbc66ff0da4537635a5d3f0b0dabefba0fe3848b67"
+      "sha256": "644572d6b55e64664a1b395dd04db3efd6d14a1d363913ad000354e6e84dedae"
     }
   ]
 }

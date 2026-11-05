@@ -18,6 +18,7 @@
         "test:storybook-paints",
         "test:storybook-measured",
         "test:storybook-strays",
+        "test:storybook-soles",
         "test:storybook-blinks",
         "test:storybook-resources",
         "test:storybook-resources-close",
@@ -272,6 +273,20 @@
       ]
     },
     "test:storybook-strays": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/righteousness-by-faith/**/*.test.*",
+        "!src/films/in-its-order/rigs/**/*.test.*",
+        "!src/films/in-its-order/scenes/**/*.test.*",
+        "!src/library/**/*.test.*"
+      ]
+    },
+    "test:storybook-soles": {
       "dependsOn": ["^transit"],
       "outputs": [],
       "inputs": [

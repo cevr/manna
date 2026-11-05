@@ -25,7 +25,7 @@
         "width": 270,
         "height": 1024
       },
-      "sha256": "944c577e85e026419a448824ea789c199a2f4835041e6a8a2bf39090c3bdc0e2"
+      "sha256": "7de3f740fb08281a8d2bb3f47d0c7891184a3c0ee019c8fde9940c4fe49a8dd0"
     },
     {
       "key": "cupBlink",
@@ -35,7 +35,7 @@
         "width": 298,
         "height": 1024
       },
-      "sha256": "1caad5eced375afbb0a67c40189fe56f582fd4edc74a87c19b403d2d900d0dd1"
+      "sha256": "94c2b7c6b399c11adce01acdf8fdb38f2ca9611c629a93ddc65e1a5465938267"
     },
     {
       "key": "look",
@@ -45,7 +45,7 @@
         "width": 296,
         "height": 1024
       },
-      "sha256": "87278de4106cbfa80213aa679a85275a7585d7b2ba95e077e309ec6be19fdc5b"
+      "sha256": "97888b2409d2eb84893af0da3e7d0d12378adafa5dab3f8c36aae41f369342c1"
     },
     {
       "key": "wave",
@@ -55,7 +55,7 @@
         "width": 339,
         "height": 1024
       },
-      "sha256": "0b0154f92569f3d74f1967cf1e710ba36808c9df84198fb589f9781690a8b19a"
+      "sha256": "4cdf8d8bbc33db14c3b4c731ecd57b86ac0b0ad941b81bbd9b04959111e3c54f"
     },
     {
       "key": "drink",
@@ -65,7 +65,7 @@
         "width": 258,
         "height": 1024
       },
-      "sha256": "636eed088fb270c7d0fefdefec89509caf2b378dfc03b4f373475114abecd9c2"
+      "sha256": "f0ad6fce3cea3e0066ac8985244ec0f92ba1f34bd00f0dd3dc831868ba25d160"
     }
   ]
 }

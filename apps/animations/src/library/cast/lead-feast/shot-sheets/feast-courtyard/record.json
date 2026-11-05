@@ -29,7 +29,7 @@
         "width": 152,
         "height": 1024
       },
-      "sha256": "aa7f8aa4b6713158dafa6d88927420d92d575462dc954c82433181bf71d8cb72"
+      "sha256": "88aac66ecc3c501a449679c3ca0600fbbcdbe419469db14d57aa7fa9283da57e"
     },
     {
       "key": "threeQuarter",
@@ -39,7 +39,7 @@
         "width": 178,
         "height": 1024
       },
-      "sha256": "48ee02b510fd69328347d3d853faa1da960c12552693e9e9ee9146739bb9d716"
+      "sha256": "1326bd2a074d444811c89b51146f97840ae08e1c4b0de0cf14aa8a184275540f"
     },
     {
       "key": "threeQuarterBlink",
@@ -49,7 +49,7 @@
         "width": 171,
         "height": 1024
       },
-      "sha256": "526a6649ebc7de43bff7090c0179f1bb527562feef3f9edb81fc76483d915741"
+      "sha256": "df65573661fccf57a9c3d6a30f32d52efee0329032b21c0adb50233e71ce8e39"
     },
     {
       "key": "front",
@@ -59,7 +59,7 @@
         "width": 187,
         "height": 1024
       },
-      "sha256": "1b8b96e70465936c739bcd05dff48cc27cd9c78c12b9f86a23a77326754a4eb3"
+      "sha256": "5208cd1762c48096ff8e0716dc2ed3cdba267852a01665b02eca78419573d081"
     },
     {
       "key": "lift",
@@ -69,7 +69,7 @@
         "width": 187,
         "height": 1024
       },
-      "sha256": "4a48a791841fb95110a491584048ecc5ac7740fdb7d84c53a30c42b0080ae11e"
+      "sha256": "a87f63ad38d606f1c512dc346ff5d99dcd274bf0ffafaabc51db839fb2d63fb4"
     },
     {
       "key": "offer",
@@ -79,7 +79,7 @@
         "width": 214,
         "height": 1024
       },
-      "sha256": "0c0f8bac35c15e06410cfe5f19bf9ed95e81c95ad227149771cf36f5e77a2111"
+      "sha256": "86c82d7515f232bcf47ed7a9f640e9868fc2e3f4962203df32b35956eb22e613"
     },
     {
       "key": "wave-1",
@@ -89,7 +89,7 @@
         "width": 183,
         "height": 1024
       },
-      "sha256": "548611a6060a9ae1ab705e72e397e78591413dbb44cf9db1896000c1a683c9c1"
+      "sha256": "31215d7426f4ce5cc5ae55366758b50f357550e057e54d808a93494d816c8a72"
     },
     {
       "key": "wave-2",
@@ -99,7 +99,7 @@
         "width": 213,
         "height": 1024
       },
-      "sha256": "a94c63f3ffa8033e369a73163c09c3ac16eed73d464cb9256b7ece0d1eadf741"
+      "sha256": "e58fe1a13c6f29abe0151fc870f03fa7061baa5e4557837160c421c34f52a4b4"
     }
   ]
 }

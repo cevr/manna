@@ -25,6 +25,8 @@ import {
   SASH_FLECK_SHARE,
   SHADE_REACH,
   SKIN_REACH,
+  soleHairOf,
+  type SplitRules,
   strayShadeShare,
   SPECK_PX,
   snapped,
@@ -476,6 +478,42 @@ describe('tidied', () => {
       ...Array.from({ length: 10 }, () => 'hhhhhhhhaaaa'),
       ...Array.from({ length: 10 }, () => 'aaaaffffaaaa'),
     ]);
+  });
+
+  test('gives a hair paint in the soles’ band its footwear paint under any rules, keeps the hair above it, and keeps a member with no footwear paint as drawn (critique 2, items 10 and 11)', () => {
+    const key = {
+      a: rgbOfHex('#f2b27c'),
+      h: rgbOfHex('#3b2a24'),
+      f: rgbOfHex('#7a5236'),
+    };
+    const shod: Palette = {
+      ink: '#130803',
+      parts: [
+        { name: 'skin', base: '#f2b27c', role: 'skin' },
+        { name: 'hair', base: '#3b2a24', role: 'hair' },
+        { name: 'sandals', base: '#7a5236', role: 'footwear' },
+      ],
+    };
+    const bare: Palette = { ink: shod.ink, parts: shod.parts.slice(0, 2) };
+    const rows = [
+      ...Array.from({ length: 10 }, () => 'hhhhaaaaaaaa'),
+      ...Array.from({ length: 31 }, () => 'aaaaaaaaaaaa'),
+      ...Array.from({ length: 2 }, () => 'hhhhhhhhaaaa'),
+      ...Array.from({ length: 3 }, () => 'aaaaaaaaaaaa'),
+      ...Array.from({ length: 4 }, () => 'hhhhaaaahhhh'),
+    ];
+    const drawn = art(rows, key);
+    const split = (palette: Palette, rules: SplitRules) => {
+      const paints = paintsOf(palette);
+      const nearest = drawnNearestOf(drawn, paints);
+      return tidied(drawn, snapped(drawn, paints, nearest), paints, nearest, rules);
+    };
+    const shodRows = [...rows.slice(0, 46), ...Array.from({ length: 4 }, () => 'ffffaaaaffff')];
+    expect(lettersOf(split(shod, PLAIN_SPLIT), key)).toEqual(shodRows);
+    expect(lettersOf(split(shod, { ...PLAIN_SPLIT, feetLow: true }), key)).toEqual(shodRows);
+    expect(lettersOf(split(bare, PLAIN_SPLIT), key)).toEqual(rows);
+    expect(soleHairOf(drawn, paintsOf(shod))).toBe(32);
+    expect(soleHairOf(split(shod, PLAIN_SPLIT), paintsOf(shod))).toBe(0);
   });
 
   test("paints a thin line darker than one part's cloth on both sides in that part's shade, and one between two parts in ink (critique 1, item 1)", () => {

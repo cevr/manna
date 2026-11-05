@@ -1015,6 +1015,48 @@ const feetBarOf = (map: Int32Array, width: number, rules: SplitRules) => {
   return (q: number) => rules.feetLow && Math.floor(q / width) < middle;
 };
 
+/** The share of a figure's opaque rows, from its lowest, that is its soles' band: the rows `Lines.centreColumn` reads the soles on. */
+export const SOLE_BAND = 0.08;
+
+/** Whether pixel `q` of a cell's map lies in its soles' band (`SOLE_BAND` of its opaque rows, from the lowest), raised `above` rows. */
+const soleBandOf = (map: Int32Array, width: number, above = 0) => {
+  const first = Math.floor(map.findIndex((index) => index !== CLEAR) / width);
+  const last = Math.floor(map.findLastIndex((index) => index !== CLEAR) / width);
+  const top = last - Math.ceil((last - first + 1) * SOLE_BAND) + 1 - above;
+  return (q: number) => Math.floor(q / width) >= top;
+};
+
+/**
+ * The map with no hair paint in the soles' band (critique 2, items 10 and
+ * 11: sandals drawn dark took the hair's paint): each such pixel takes the
+ * footwear paint nearest its drawn colour; a member with no footwear paint
+ * keeps its map. The band is raised `RIM_PEEL` rows, so the band of the
+ * cell once its rim is peeled (`peeled`, at most `RIM_PEEL` rows off each
+ * end) lies inside it.
+ */
+const solesShod = (t: Tidy, map: Int32Array): Int32Array => {
+  const shoes = t.paints.flatMap((p, i) => {
+    if (p.role !== 'footwear') return [];
+    return [i];
+  });
+  if (shoes.length === 0) return map;
+  const labs = t.paints.map((p) => p.lab);
+  const inBand = soleBandOf(map, t.drawn.width, RIM_PEEL);
+  return map.map((index, q) => {
+    if (index <= 0 || t.paints[index]?.role !== 'hair' || !inBand(q)) return index;
+    return nearestAmong(labOf(rgbAt(t.drawn, q)), shoes, labs);
+  });
+};
+
+/** The pixels of a stored cell's soles' band (`SOLE_BAND`) that hold a hair paint, its paints read exactly. */
+export const soleHairOf = (r: Raster, paints: ReadonlyArray<Paint>): number => {
+  const map = paintMapOf(r, paints);
+  const inBand = soleBandOf(map, r.width);
+  return Array.from(map.keys()).filter(
+    (q) => (map[q] ?? CLEAR) > 0 && paints[map[q] ?? CLEAR]?.role === 'hair' && inBand(q),
+  ).length;
+};
+
 /** How far (px, in the square round it) a pixel of a hair shade may lie from its hair's base: farther, it is a stray shade along a line (critique 1, item 16). */
 export const SHADE_REACH = 3;
 
@@ -1100,7 +1142,10 @@ const unstrayed = (map: Int32Array, width: number, paints: ReadonlyArray<Paint>)
  * inside one (`lineAt`), every speck the paint round it (`despecked`), and
  * skin only by skin (`skinBySkin`), last, so no speck's vote puts skin
  * colour back on cloth; under `rules.unstray`, every stray hair shade its
- * neighbours' paint (`unstrayed`) before the skin rule. `drawn` is the cell
+ * neighbours' paint (`unstrayed`), and, under any rules, every hair paint in
+ * the soles' band a footwear paint (`solesShod`), both before the skin rule,
+ * the soles once more last, so no later vote gives them hair again. `drawn`
+ * is the cell
  * before the snap, `snap` it after, `nearest` the snap's lookup.
  */
 export const tidied = (
@@ -1142,7 +1187,7 @@ export const tidiedReport = (
     return unstrayed(m, drawn.width, paints);
   };
   const barred = feetBarOf(map, drawn.width, rules);
-  const before = strayed(feetLowOnly(t, despecked(lined, drawn.width), barred));
+  const before = solesShod(t, strayed(feetLowOnly(t, despecked(lined, drawn.width), barred)));
   const skinned = skinBySkin(t, before, barred);
   const smooth = (m: Int32Array) => {
     if (!rules.unmottle) return m;
@@ -1152,7 +1197,7 @@ export const tidiedReport = (
     if (!rules.sashBand) return m;
     return sashBanded(m, drawn.width, paints);
   };
-  const final = propsWhole(banded(smooth(skinned)), drawn.width, paints);
+  const final = solesShod(t, propsWhole(banded(smooth(skinned)), drawn.width, paints));
   const rgba = snap.rgba.slice();
   let skinFar = 0;
   for (let q = 0; q < final.length; q++) {
