@@ -3,14 +3,20 @@ import { Effect, Layer, Option } from 'effect';
 import { describe, expect, it, test } from 'effect-bun-test';
 import sharp from 'sharp';
 import { filmFolder, shotsOf } from '../../../library/storybook/films.ts';
+import { rng } from '@manna/film/core';
 import {
   cameraAt,
+  type Figure,
+  figure,
   figuresOf,
+  hold,
   type Plate,
   plateAt,
   poseAt,
   revealAt,
+  swapOf,
   timesOf,
+  turn,
 } from '../../../library/storybook/shot.ts';
 import VILLAGER_PALETTE from '../cast/idea-villagers/cast-sheet/palette.json';
 import { CELLS as LEAD_MILK_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-milk/cells.ts';
@@ -18,7 +24,7 @@ import { CELLS as VILLAGER_CELLS } from '../cast/idea-villagers/shot-sheets/iio-
 import { inItsOrder } from './index.ts';
 import { drawScaleOf } from './kit.ts';
 import { TABLE } from '../plates/plates.ts';
-import { BABY_MOTHER, TABLE_TOP_PX } from './shots/cold.ts';
+import { BABY_MOTHER, bottleSetDown, TABLE_TOP_PX } from './shots/cold.ts';
 import { HEAD, TABLE_TOP } from './shots/courtyard.ts';
 import { CELLS as LEAD_TABLE_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
 import LEAD_TABLE_RECORD from '../../../library/cast/lead-feast/shot-sheets/iio-table/record.json';
@@ -33,6 +39,13 @@ const TABLE_RECORD: {
     readonly role: string;
   }>;
 } = LEAD_TABLE_RECORD;
+
+/** The lead's table cells that draw the bottle in his hand. */
+const HOLDING = new Set(['lift', 'bottle']);
+
+/** Each of `times` at which his hand (`poseAt`'s cell) and the plate (`plateAt`'s alpha) both show the bottle, or neither does: a hand-off shows it exactly once at every frame. */
+const handOffMisses = (lead: Figure, plate: Plate, times: ReadonlyArray<number>) =>
+  times.filter((t) => HOLDING.has(poseAt(lead, t).cell) === plateAt(plate, t).alpha > 0);
 
 /** How far (RGB distance) a keyed plate's cream may sit from its sheet's prop paint and still read as the bottle's body: the plate is keyed from a drawing, not snapped to a palette. */
 const CREAM_REACH = 30;
@@ -422,4 +435,38 @@ describe("In Its Order's staging", () => {
         expect(Math.abs(body / heldBody - 1)).toBeLessThanOrEqual(0.05);
       }),
   );
+
+  test('hands the bottle off with no gap and no overlap: at every frame of cold-letter exactly one of his hand and the table’s plate shows it, as at every frame of generated set-downs (start, length, frame phase), and a plate set at 0.8 of the turn leaves a gap (round 3, M4)', () => {
+    const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
+    const lead = letter && figuresOf(letter).find(({ figure }) => figure.name === 'lead')?.figure;
+    const plate = letter?.layers
+      .flatMap((l) => l.items)
+      .find((item): item is Plate => item._tag === 'Plate' && item.file.endsWith('/bottle.png'));
+    if (!letter || !lead || !plate)
+      return expect([letter?.id, lead?.name, plate?.file]).toEqual(['cold-letter', 'lead', '']);
+    expect(handOffMisses(lead, plate, timesOf(letter))).toEqual([]);
+    const misses = Array.from({ length: 64 }, (_, seed) => {
+      const draw = rng(seed + 1);
+      const fps = [24, 30, 60][Math.floor(draw() * 3)] ?? 30;
+      const [at, dur, phase] = [0.2 + draw() * 5, 0.25 + draw() * 1.25, draw() / fps];
+      const setDown = turn(at, dur, 'bottle', 'down');
+      const held = figure(['bottle', 'down'], {
+        name: 'lead',
+        member: 'lead-feast',
+        sheet: 'iio-table',
+        at: { x: 0, ground: 0 },
+        spans: [hold(0, at, 'bottle'), setDown, hold(at + dur, at + dur + 1, 'down')],
+      });
+      const times = Array.from(
+        { length: Math.ceil((at + dur + 1) * fps) },
+        (_, k) => k / fps + phase,
+      );
+      return [
+        seed,
+        handOffMisses(held, bottleSetDown(swapOf(setDown)), times).length,
+        handOffMisses(held, bottleSetDown(at + dur * 0.8), times).length > 0,
+      ];
+    });
+    expect(misses.filter(([, gaps, late]) => gaps !== 0 || late !== true)).toEqual([]);
+  });
 });
