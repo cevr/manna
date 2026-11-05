@@ -52,8 +52,11 @@ apps/heartseed/react-native.config.cjs` is empty. Otherwise build first
 With `RUN`, `EVIDENCE` and `PORT` as `first.md` sets them, after its
 steps 1 to 8 (and `grow.md`'s rows, when they run in the same drive):
 
-1. The app is booted on Today (`first-today` or `first-again`), with the
-   microphone revoked (`first.md` step 1).
+1. The app is booted with the garden holding the passage's seed and the
+   microphone revoked (`first.md` steps 1 to 8). A Today that a recital
+   has ended on (`first-today`, or after `grow.md`'s rows) still shows
+   that recital's count and grades, so relaunch for a clean one:
+   `sim relaunch`.
 2. `sim open / --expect "id=stage"`, then `sim snapshot today`
    → `today-passage` holds, a node `Say it` exists, no `Listening`, no
    radio label. Record the role the snapshot gives the `Today` node.

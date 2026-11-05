@@ -29,7 +29,7 @@ A fresh install plants its seed in the first minute (`first.md`:
 planted` shows only when another verse is planted and the passage is not,
 which no screen does yet, so it is retired here (`grow-unplanted`) and the
 unit tests own it (`src/garden/today.test.tsx`). Every row below starts
-from the Today `first-today` opens, at `Stage: seed`.
+from the clean Today `first-again` relaunches into, at `Stage: seed`.
 
 - `grow-ear`: a second recital, alone: `Stage: ear`, `Grew to an ear.`,
   exactly one `[growth] play` line, ending `skipped=simulator`.

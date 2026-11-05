@@ -19,8 +19,8 @@ makes no sound.
 
 ## Sub-features
 
-- `today-passage`: after the first minute (`first-today`), and at every
-  launch after it, Today shows the header `Today` (role header),
+- `today-passage`: at every launch after the first minute (`first-again`,
+  or a `sim relaunch` later), Today shows the header `Today` (role header),
   the reference `Isaiah 41:10`, its stage line (a label starting `Stage: `),
   one `Say it` button, and its KJV text, exactly
   `Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee; yea, I will uphold thee with the right hand of my righteousness.`
@@ -33,8 +33,10 @@ makes no sound.
 ## Driving it
 
 After the Launch of `SKILL.md` (`sim boot`, then `sim install`, which
-waits for `label=Isaiah 41:10`) and `first.md` through `first-today` (or on
-an install whose garden already holds a recall), its Drive's two commands
+waits for `label=Isaiah 41:10`) and `first.md` through `first-again` (or a
+`sim relaunch` on an install whose garden already holds a recall; the
+Today `Continue` opens at `first-today` still shows the alone recital's
+count and grades, so it is not this row's start), its Drive's two commands
 are this feature's drive, the open waiting for the stage line
 (`id=stage`), which shows only once the garden is read:
 

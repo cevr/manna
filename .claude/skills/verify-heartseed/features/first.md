@@ -47,9 +47,14 @@ word 11 and the seed is graded Hard.
 - `first-planted`: `Planted`, `Stage: seed`, `Continue`; no `[growth] play`
   line (planting never sounds).
 - `first-today`: `Continue` opens `Today` at `Stage: seed`, with no label
-  starting `Grew to`, and `Say it`.
+  starting `Grew to`, and `Say it`. Today keeps the alone recital on the
+  screen, as Say it keeps any finished recital: its count
+  `36 of 37 words`, the mark `Missed word 11`, `Suggested: Hard` and the
+  four grades with `Hard` checked (a grade changed here is kept, as on
+  Today).
 - `first-again`: a relaunch shows no first-minute heading in its launch
-  frame, then `Today` at `Stage: seed`.
+  frame, then a clean `Today` at `Stage: seed`: no grade, no count, and the
+  passage whole (`today-passage`).
 
 ## How to get to it (user POV)
 
@@ -94,14 +99,18 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
    `Stage: seed`, `Continue`; the log holds no `[growth] play` line.
 7. `first-today`: `sim tap "label=Continue"`, `sim open / --expect
    "id=stage"`, `sim snapshot first-today` → `Today`, `Stage: seed`, no
-   label starting `Grew to`, `Say it`.
+   label starting `Grew to`, `Say it`; the recap `36 of 37 words`,
+   `Missed word 11`, `Suggested: Hard`, and every `Hard` line `[checked]`.
 8. `first-again`: `sim relaunch`, `sim open / --expect "label=Isaiah
    41:10"` and at once `sim snapshot first-again-launch` → no `Hear it`,
    `Say it with help`, `Say it alone` or `Planted`. Then `sim open /
    --expect "id=stage"`, `sim snapshot first-again` → `Today`,
-   `Stage: seed`, no first-minute heading.
-9. From this Today run `grow.md` from `grow-ear` and then `sayit.md`, then
-   `sim doctor` (record `head` and `timingsHold`) and `sim down`.
+   `Stage: seed`, no first-minute heading, and `today-passage`
+   (`today.md`): the passage whole, `Say it`, no `Listening`, no grade
+   label and no label ending `words`.
+9. From this Today run `grow.md` from `grow-ear` to `grow-again`, then
+   `sayit.md` (its step 1 relaunches for a clean Today), then `sim doctor`
+   (record `head` and `timingsHold`) and `sim down`.
 
 The log: `xcrun simctl spawn <udid> log show --start "$START" --style
 compact --predicate '(eventMessage CONTAINS "[voice]" OR eventMessage
