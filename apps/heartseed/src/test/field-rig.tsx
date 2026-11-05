@@ -31,8 +31,8 @@ import { Chime } from '../garden';
 import { Haptics, type Recall } from '../sayit';
 import { store } from '../store';
 import { voiceSource } from '../voice/source';
-import { fieldRule, heldOn, type ModelPlantStage } from './field-model';
-import { keyOf } from './garden-model';
+import { fieldRule, heldOn, verseNumberRule, type ModelPlantStage } from './field-model';
+import { keyOf, PREFIX } from './garden-model';
 import { device } from './one';
 
 const PASSAGES = [{ title: passage.reference, verses: [passage.reference] }];
@@ -126,7 +126,47 @@ export const readField = (host: Element) => {
         node.getAttribute('data-testid') !== 'field-plant' &&
         !hidden(node)),
   ).length;
-  return { sown: counted(host, 'sown'), harvest: counted(host, 'harvest'), rows, strays };
+  const faint = [...host.querySelectorAll('*')]
+    .filter((node) => node.children.length === 0 && text(node) !== '' && seen(node))
+    .filter((node) => contrastOf(node) < AA)
+    .map((node) => node.closest('[data-testid]')?.getAttribute('data-testid') ?? 'text');
+  return {
+    sown: counted(host, 'sown'),
+    harvest: counted(host, 'harvest'),
+    rows,
+    strays,
+    faint: [...new Set(faint)],
+  };
+};
+
+/** WCAG 2's AA minimum contrast for normal text. */
+const AA = 4.5;
+
+/** A computed colour's channels and alpha. */
+const channels = (css: string) => {
+  const values = (css.match(/[\d.]+/g) ?? []).map(Number);
+  const [r = 0, g = 0, b = 0, a = values.length >= 3 ? 1 : 0] = values;
+  return { rgb: [r, g, b], a };
+};
+
+/** WCAG 2's relative luminance of sRGB channels 0-255. */
+const luminance = (rgb: readonly number[]) => {
+  const [r = 0, g = 0, b = 0] = rgb.map((channel) => {
+    const c = channel / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+/** The contrast of a text node's computed ink against the nearest opaque background behind it; 0 when it has none. */
+export const contrastOf = (node: Element) => {
+  let ground: Element | null = node;
+  while (ground !== null && channels(getComputedStyle(ground).backgroundColor).a < 1)
+    ground = ground.parentElement;
+  if (ground === null) return 0;
+  const ink = luminance(channels(getComputedStyle(node).color).rgb);
+  const back = luminance(channels(getComputedStyle(ground).backgroundColor).rgb);
+  return (Math.max(ink, back) + 0.05) / (Math.min(ink, back) + 0.05);
 };
 
 /** The field frame the rule gives over the disk as it stands. */
@@ -137,16 +177,14 @@ export const wantField = () => {
     harvest: field.harvest === 1 ? '1 verse at full corn' : `${field.harvest} verses at full corn`,
     rows: field.rows.map((row) => ({
       title: row.title.replace(/\s+/g, ' ').trim(),
-      plants: row.plants.map((plant) => {
-        const colon = plant.reference.lastIndexOf(':');
-        return {
-          label: `${plant.reference}, ${plant.stage}`,
-          drawn: [...LOOK[plant.stage]],
-          shown: colon < 0 ? '' : plant.reference.slice(colon + 1).trim(),
-        };
-      }),
+      plants: row.plants.map((plant) => ({
+        label: `${plant.reference}, ${plant.stage}`,
+        drawn: [...LOOK[plant.stage]],
+        shown: verseNumberRule(plant.reference).replace(/\s+/g, ' ').trim(),
+      })),
     })),
     strays: 0,
+    faint: [],
   };
 };
 
@@ -171,6 +209,7 @@ export const mount = async (read: boolean, held: Promise<void> = Promise.resolve
   const host = document.createElement('div');
   document.body.append(host);
   const faults: string[] = [];
+  const fixed = new Map(device.disk);
   const frames = { control: 0, listening: 0, field: 0, pending: 0 };
   const state = { released: false };
   const headings = () => [...host.querySelectorAll('[role="heading"]')].map(text);
@@ -235,6 +274,9 @@ export const mount = async (read: boolean, held: Promise<void> = Promise.resolve
     });
   };
   const summary = () => text(host.querySelector('[data-testid="summary"]'));
+  /** The grade checked on Today, none when no grade shows. */
+  const checked = () =>
+    host.querySelector('[role="radio"][aria-checked="true"]')?.getAttribute('aria-label') ?? null;
   const stage = () =>
     host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label') ?? null;
   /** Says the passage to a new summary. */
@@ -248,23 +290,80 @@ export const mount = async (read: boolean, held: Promise<void> = Promise.resolve
       }),
     ).toBe(true);
   };
-  /** Opens the field and reads it whole, checking the device took no write and kept its disk. */
+  /** The device's whole disk and its write, remove and clear counts. */
+  const stored = () => ({
+    disk: [...device.disk],
+    set: device.calls.set,
+    remove: device.calls.remove,
+    clear: device.calls.clear,
+  });
+  /** Runs a field-only transition to `heading` and holds the device as it was across it, a moment past its frame included. */
+  const still = async (label: string, heading: string) => {
+    const before = stored();
+    await tap(label);
+    expect(await until(() => headings().includes(heading))).toBe(true);
+    await until(() => false, 8);
+    expect({ through: label, ...stored() }).toEqual({ through: label, ...before });
+  };
+  /** Opens the field and reads it whole; the device takes no write, remove or clear, and keeps its disk. */
   const field = async () => {
-    const disk = [...device.disk];
-    const sets = device.calls.set;
-    await tap('Your field');
-    expect(await until(() => headings().includes('Your field'))).toBe(true);
-    expect([device.calls.set, [...device.disk]]).toEqual([sets, disk]);
+    await still('Your field', 'Your field');
     return readField(host);
   };
-  const back = async () => {
-    await tap('Today');
-    expect(await until(() => headings().includes('Today'))).toBe(true);
+  /** Goes back to Today; the device takes no write, remove or clear, and keeps its disk. */
+  const back = () => still('Today', 'Today');
+  /** What the disk shows wrong against the launch's: a key removed, a key other than the passage's recalls changed or added, or a passage recall that is not one. */
+  const diskFaults = () => {
+    const own = `${PREFIX}${passage.reference}/`;
+    const out: string[] = [];
+    for (const [key, value] of fixed) {
+      if (!device.disk.has(key)) out.push('a key removed');
+      else if (!key.startsWith(own) && device.disk.get(key) !== value) out.push('a key changed');
+    }
+    for (const [key, value] of device.disk) {
+      if (fixed.has(key)) continue;
+      const recall = heldOn(new Map([[key, value]]))[0];
+      if (!key.startsWith(own) || recall?.reference !== passage.reference)
+        out.push('a key added that is no recall of the passage');
+    }
+    return out;
   };
+  /** The lowest contrast among the seen text of the field's readouts: the days sown, the harvest, the row titles and the plants' verse numbers. */
+  const readouts = () => {
+    const lowest = (id: string) =>
+      Math.min(
+        ...[...host.querySelectorAll(`[data-testid="${id}"], [data-testid="${id}"] *`)]
+          .filter((node) => node.children.length === 0 && text(node) !== '' && seen(node))
+          .map(contrastOf),
+      );
+    return {
+      sown: lowest('sown'),
+      harvest: lowest('harvest'),
+      titles: lowest('row-title'),
+      numbers: lowest('field-plant'),
+    };
+  };
+  /** Ends the launch, and answers what its disk shows wrong against the launch's start (`diskFaults`). */
   const leave = async () => {
     watch.disconnect();
     await act(async () => root.unmount());
     host.remove();
+    return diskFaults();
   };
-  return { faults, frames, headings, buttons, until, tap, say, field, back, summary, stage, leave };
+  return {
+    faults,
+    frames,
+    headings,
+    buttons,
+    until,
+    tap,
+    say,
+    field,
+    back,
+    summary,
+    checked,
+    stage,
+    readouts,
+    leave,
+  };
 };

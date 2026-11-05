@@ -4,16 +4,15 @@
  * The field from Today, through the screen rig (`src/test/field-rig.tsx`),
  * which holds every frame to the field's rules: the way there and back
  * through recitals, Again and a relaunch, Today coming back as it was and
- * the field writing nothing; and a garden of forty other verses at every
- * stage. It counts words without printing one.
+ * the device untouched across each open and each way back, and every text
+ * at AA contrast in every field frame. It counts words without printing one.
  */
 
 import { describe, expect, it } from 'bun:test';
 import passage from 'virtual:heartseed-passage';
 
-import { historyOf, recallOf } from '../test/field-model';
+import { recallOf } from '../test/field-model';
 import { mount, record, SOIL, wantField } from '../test/field-rig';
-import { DAY, random } from '../test/garden-model';
 import { device } from '../test/one';
 
 describe('the field from Today', () => {
@@ -60,41 +59,15 @@ describe('the field from Today', () => {
     ]);
     expect(again).toEqual(wantField());
     expect([app.frames.listening > 0, app.faults]).toEqual([true, []]);
-    await app.leave();
+    expect(await app.leave()).toEqual([]);
 
     device.launch();
     const next = await mount(true);
     expect(await next.until(() => next.buttons().includes('Your field'))).toBe(true);
     expect(next.headings()).toEqual(['Today']);
     expect(await next.field()).toEqual(again);
+    await next.back();
     expect(next.faults).toEqual([]);
-    await next.leave();
-  });
-
-  it('shows forty other verses in the order first sown, a harvest and every stage, each plant drawn and labelled as the rule has it', async () => {
-    const next = random(41);
-    const start = Date.UTC(2026, 3, 1) / DAY;
-    const references = [
-      passage.reference,
-      ...Array.from({ length: 40 }, (_, at) => `Made ${at % 7}:${at}`),
-    ];
-    device.launch(
-      references
-        .flatMap((reference, at) => historyOf(next, reference, start + (at % 9)))
-        .map(record),
-    );
-    const app = await mount(true);
-    expect(await app.until(() => app.buttons().includes('Your field'))).toBe(true);
-    const field = await app.field();
-    const stages = new Set(
-      field.rows.flatMap((row) => row.plants.map((plant) => plant.label?.replace(/^.*, /, ''))),
-    );
-    expect([field.rows.length, [...stages].toSorted(), field.harvest]).toEqual([
-      41,
-      ['blade', 'ear', 'full corn', 'seed'],
-      wantField().harvest,
-    ]);
-    expect([field.harvest === '0 verses at full corn', app.faults]).toEqual([false, []]);
-    await app.leave();
+    expect(await next.leave()).toEqual([]);
   });
 });

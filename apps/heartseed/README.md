@@ -364,7 +364,9 @@ them.
   for a verse not planted) over its verse number, one image to the screen
   reader labelled `<reference>, <stage>`, and a legend of the four stages,
   hidden from the screen reader, over the caption `Mark 4:28`. No other
-  number shows, and nothing moves.
+  number shows, and nothing moves. Every text is Palette A's ink (the
+  counts in Today's summary style), never the muted grey, so each reads at
+  WCAG AA's 4.5:1 on the ground and on a card.
 
 ## Tests
 
@@ -437,8 +439,16 @@ them.
     `src/test/field-rig.tsx` (the rig holds every frame to the field's
     rules: the control only on a read, quiet Today; each field frame the
     rule's rows, plants, drawings, days sown and harvest as seen and
-    exposed): the way there and back through recitals, Again and a
-    relaunch, writing nothing, and a garden of forty other verses.
+    exposed, every text at AA contrast; each open and way back leaving the
+    whole disk and taking no write, remove or clear): the way there and
+    back through recitals, Again and a relaunch; and
+    `src/field/garden.test.tsx`, a generated garden past forty other verses
+    of any reference, each verse number the text after its last colon.
+  - `test:field-walk` and `test:field-grades`: `src/field/walk.test.tsx`
+    and `src/field/walk-grades.test.tsx`, generated sequences of opens,
+    ways back, recitals, Again, peeks and relaunches through
+    `src/test/field-walk.ts`, each command's writes modelled apart from the
+    app; each file's seeds reach its own floors (relaunches, or Again).
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

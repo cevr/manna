@@ -25,7 +25,7 @@ describe('the field before a read', () => {
     gate.resolve();
     expect(await held.until(() => held.buttons().includes('Your field'))).toBe(true);
     expect(held.faults).toEqual([]);
-    await held.leave();
+    expect(await held.leave()).toEqual([]);
 
     device.launch().fail('keys', 3);
     const unread = await mount(false);
@@ -33,13 +33,14 @@ describe('the field before a read', () => {
     await unread.say();
     await unread.until(() => false, 20);
     expect([unread.frames.control, unread.headings(), unread.faults]).toEqual([0, ['Today'], []]);
-    await unread.leave();
+    expect(await unread.leave()).toEqual([]);
 
     device.launch();
     const after = await mount(true);
     expect(await after.until(() => after.buttons().includes('Your field'))).toBe(true);
     expect([heldOn(device.disk).length, (await after.field()).sown]).toEqual([2, '2 days sown']);
-    await after.leave();
+    await after.back();
+    expect(await after.leave()).toEqual([]);
 
     device.launch([['heartseed/voice/enabled', 'true']]);
     const fresh = await mount(true);
@@ -50,6 +51,6 @@ describe('the field before a read', () => {
       0,
       [],
     ]);
-    await fresh.leave();
+    expect(await fresh.leave()).toEqual([]);
   });
 });

@@ -13,7 +13,9 @@
  *
  * It also holds the generator of references the field's tests share: the
  * passage's look-alikes (a prefix, an extension, a trailing space, a case
- * change), `/`, accents and spaces, no colon, and plain generated ones.
+ * change), `/`, accents and spaces, no colon, any string built from repeated
+ * colons, every kind of space and other scripts, and plain generated ones;
+ * and the verse number rule (the text after the last colon).
  */
 
 import type { Grade, Recall } from '../sayit';
@@ -144,11 +146,55 @@ export const trickyReferences = (passage: string): readonly [string, ...string[]
   'Mark 4:28',
 ];
 
-/** A reference for an other verse: a tricky one, or a plain generated one. */
-export const otherReference = (next: () => number, passage: string) =>
-  next() < 0.5
-    ? pickOf(next, trickyReferences(passage))
-    : `Made ${1 + below(next, 9)}:${1 + below(next, 30)}`;
+/** The pieces an arbitrary reference is built from: letters, digits, repeated colons, every kind of space, `/`, accents, other scripts, an emoji (two code units), a zero-width space. */
+const PIECES = [
+  'a',
+  'Z',
+  '7',
+  '10',
+  ':',
+  '::',
+  ' ',
+  '  ',
+  '\t',
+  '\u00a0',
+  '\u200b',
+  '/',
+  '.',
+  'é',
+  'ï',
+  'Ψ',
+  'א',
+  '中',
+  '🌾',
+] as const;
+
+/** Any non-empty string a reference may be: the passage's prefix or the passage with a piece before or after it, or one to six pieces, some of them the passage's own (its book and chapter, its `:verse`). */
+export const anyReference = (next: () => number, passage: string) => {
+  const own = passage.split(/(?=:)/u) as [string, ...string[]];
+  const piece = () => (next() < 0.15 ? pickOf(next, own) : pickOf(next, PIECES));
+  if (next() < 0.25)
+    return pickOf(next, [
+      passage.slice(0, 1 + below(next, passage.length - 1)),
+      `${passage}${piece()}`,
+      `${piece()}${passage}`,
+    ]);
+  return Array.from({ length: 1 + below(next, 6) }, piece).join('');
+};
+
+/** A reference for an other verse: a tricky one, any string, or a plain generated one. */
+export const otherReference = (next: () => number, passage: string) => {
+  const roll = next();
+  if (roll < 0.4) return pickOf(next, trickyReferences(passage));
+  if (roll < 0.7) return anyReference(next, passage);
+  return `Made ${1 + below(next, 9)}:${1 + below(next, 30)}`;
+};
+
+/** The number shown under a plant, as the spec defines it: the text after the reference's last colon, nothing when it has none. */
+export const verseNumberRule = (reference: string) => {
+  const parts = reference.split(':');
+  return parts.length < 2 ? '' : (parts.at(-1) ?? '');
+};
 
 export const HOUR = 3_600_000;
 
