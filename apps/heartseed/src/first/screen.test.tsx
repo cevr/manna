@@ -9,8 +9,9 @@
  * read: a frame before the garden's read shows no heading and no button,
  * and no first-minute frame names a stage outside Planted. The letters
  * phase shows each letter in Today's cue ink at AA on its ground, at rest
- * and while listening, and the hear phase's words not yet read keep the
- * mute. It counts words without printing one.
+ * and while listening, and the hear phase's words not yet read, the phase
+ * line and the reference keep the mute. It counts words without printing
+ * one.
  */
 
 import { RegistryProvider } from '@effect/atom-react';
@@ -39,7 +40,7 @@ const SPANS = wordSpans(passage.text);
 const INK = 'rgba(6, 79, 110, 1.00)';
 /** Today's cue ink, `#56656d`: the first minute's letters are seen in it. */
 const CUE = 'rgba(86, 101, 109, 1.00)';
-/** The mute, `#7d8d95`: the hear phase's words not yet read and the reference keep it. */
+/** The mute, `#7d8d95`: the hear phase's words not yet read, the phase line and the reference keep it. */
 const MUTE = 'rgba(125, 141, 149, 1.00)';
 const HEADINGS = ['Hear it', 'Say it with help', 'Say it alone', 'Planted', 'Today'];
 const CLAIM = /\b(seeds?|planted|plants?|grew|growth|stages?)\b/iu;
@@ -194,6 +195,15 @@ const lettersLook = (host: Element) => {
   };
 };
 
+/** How many texts are seen in the mute: each element that holds text and no other element, painted `#7d8d95`. */
+const mutedTexts = (host: Element) =>
+  [...host.querySelectorAll('*')].filter(
+    (node) =>
+      node.children.length === 0 &&
+      (node.textContent ?? '') !== '' &&
+      getComputedStyle(node).color === MUTE,
+  ).length;
+
 describe('the first minute', () => {
   it('on a fresh install: hears the verse lit word by word, says it with first letters keeping nothing, says it alone and plants one seed, then Continue opens Today at a seed, as does the next launch', async () => {
     device.launch([]);
@@ -255,7 +265,7 @@ describe('the first minute', () => {
     await next.leave();
   });
 
-  it('shows every letter of the letters phase in Today’s cue ink at AA on its ground, at rest and while its recital listens, while the hear phase’s words not yet read and the reference keep the mute', async () => {
+  it('shows every letter of the letters phase in Today’s cue ink at AA on its ground, at rest and while its recital listens, while the hear phase’s words not yet read, the phase line and the reference keep the mute', async () => {
     device.launch([]);
     const open = scriptedSource([{ at: 600_000, final: false, runs: [] }]);
     const first = await mount(Promise.resolve(), open);
@@ -270,13 +280,14 @@ describe('the first minute', () => {
       return index > 0 && node !== null && getComputedStyle(node).color === MUTE;
     }).length;
     expect(unread).toBe(WORDS.length - 1);
+    expect(mutedTexts(first.host)).toBe(WORDS.length - 1 + 2);
     await first.send({ kind: 'finish', location: 0, length: 0 });
     expect(await first.until(() => first.heading() === 'Say it with help')).toBe(true);
     const all = { letters: WORDS.length, cue: WORDS.length, aa: WORDS.length };
-    expect(lettersLook(first.host)).toEqual(all);
+    expect([lettersLook(first.host), mutedTexts(first.host)]).toEqual([all, 2]);
     await first.click('Say it');
     expect(await first.until(() => first.buttons().includes('Listening'))).toBe(true);
-    expect(lettersLook(first.host)).toEqual(all);
+    expect([lettersLook(first.host), mutedTexts(first.host)]).toEqual([all, 2]);
     expect(reference === null ? null : getComputedStyle(reference).color).toBe(MUTE);
     await first.leave();
   });
