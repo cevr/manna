@@ -56,7 +56,7 @@ import {
   PREFIX,
   random,
 } from '../test/garden-model';
-import { device } from '../test/one';
+import { device, type AttemptFault } from '../test/one';
 import { hostZone, offsetIn, restore, travel, ZONES } from '../test/zone';
 
 const PASSAGE = 'Isaiah 41:10';
@@ -303,6 +303,63 @@ const excusedBy = (
   refused: boolean,
 ) => !read && stampFails && !refused && held !== undefined && held.offset !== recall.offset;
 
+/** Scripts the launch's read: none fails for a read launch; an unread one fails each attempt at its listing, or, when the disk holds a recall key, half the time at its first record read. */
+const scriptRead = (next: () => number, read: boolean, bump: (key: string) => void) => {
+  const listed = [...device.disk.keys()].some((key) => key.startsWith(PREFIX));
+  const unreadAt = listed && next() < 0.5 ? 'records' : 'listing';
+  bump(read ? 'launch:read' : 'launch:unread');
+  if (read) return;
+  bump(`launch:unread:${unreadAt}`);
+  const fault: AttemptFault = unreadAt === 'records' ? { at: 'get', nth: 1 } : { at: 'keys' };
+  device.script([fault, fault, fault]);
+};
+
+/** What a launch's keeps share: the seeded draws, the garden's `Recalls`, the model, the launch under way, what the field last showed, and the coverage count. */
+interface Keeping {
+  readonly next: () => number;
+  readonly keeps: Recalls['Service'];
+  readonly model: GardenModel;
+  readonly open: Open;
+  readonly shown: Shown;
+  readonly bump: (key: string) => void;
+}
+
+/**
+ * Keeps `recall` with the read of its key's stamp failing or not (40%) and
+ * its write refused or not (a refused step, or 20%), apart from each other,
+ * and holds the device to the model's record at its key after it. The one
+ * excused history (`excusedBy`) is asserted to have landed as the press gave
+ * it, and excuses the device's later fields from never falling.
+ */
+const keepUnder = (
+  { next, keeps, model, open, shown, bump }: Keeping,
+  step: Step,
+  recall: Recall,
+  at: Readonly<Record<string, string | number>>,
+) =>
+  Effect.gen(function* () {
+    const key = keyOf(recall);
+    const held = model.records.get(key);
+    const stampFails = next() < 0.4;
+    const refused = step === 'refused' || next() < 0.2;
+    const where = { ...at, stampFails, refused };
+    const outcome = `${stampFails ? 'get fails' : 'get ok'}:${refused ? 'refused' : 'lands'}`;
+    bump(`keep:${heldKind(held)}:${open.read ? 'read' : 'unread'}:${outcome}`);
+    device.failing.get = stampFails ? 1 : 0;
+    device.failing.set = refused ? 1 : 0;
+    yield* keeps.keep(recall);
+    device.failing.get = 0;
+    model.keep(recall, !refused, stampFails);
+    open.pending = refused;
+    const text = device.disk.get(key);
+    const stored = text == null ? undefined : JSON.parse(text);
+    expect({ ...where, stored }).toEqual({ ...where, stored: model.records.get(key) });
+    if (!excusedBy(open.read, held, recall, stampFails, refused)) return;
+    shown.excused = true;
+    bump(`excused:${heldKind(held)}`);
+    expect({ ...where, landed: stored }).toEqual({ ...where, landed: recall });
+  });
+
 /** A launch's check: its view read or unread as scripted, and a read field equal to the rule over the model's records and over the disk, never below the last shown. */
 const checker =
   (
@@ -355,18 +412,7 @@ describe('days sown over the device', () => {
             travel(zone);
             device.launch(device.disk);
             model.restart(read);
-            const listed = [...device.disk.keys()].some((key) => key.startsWith(PREFIX));
-            const unreadAt = listed && next() < 0.5 ? 'records' : 'listing';
-            if (!read && unreadAt === 'listing')
-              device.script([{ at: 'keys' }, { at: 'keys' }, { at: 'keys' }]);
-            if (!read && unreadAt === 'records')
-              device.script([
-                { at: 'get', nth: 1 },
-                { at: 'get', nth: 1 },
-                { at: 'get', nth: 1 },
-              ]);
-            bump(read ? 'launch:read' : 'launch:unread');
-            if (!read) bump(`launch:unread:${unreadAt}`);
+            scriptRead(next, read, bump);
             yield* Effect.scoped(
               Effect.gen(function* () {
                 const { garden, recalls } = yield* launch;
@@ -385,40 +431,14 @@ describe('days sown over the device', () => {
                   bump(`step:${step}${read ? '' : ':unread'}`);
                   const recall = take(next, model, open, step, bump);
                   if (recall === undefined) continue;
-                  const key = keyOf(recall);
-                  const held = model.records.get(key);
-                  const stampFails = next() < 0.4;
-                  const refused = step === 'refused' || next() < 0.2;
-                  const where = { seed, l, s, step, zone: open.zone, stampFails, refused };
-                  bump(
-                    `keep:${heldKind(held)}:${read ? 'read' : 'unread'}:${stampFails ? 'get fails' : 'get ok'}:${refused ? 'refused' : 'lands'}`,
+                  const where = { seed, l, s, step, zone: open.zone };
+                  yield* keepUnder(
+                    { next, keeps: recalls, model, open, shown, bump },
+                    step,
+                    recall,
+                    where,
                   );
-                  device.failing.get = stampFails ? 1 : 0;
-                  device.failing.set = refused ? 1 : 0;
-                  yield* recalls.keep(recall);
-                  device.failing.get = 0;
-                  model.keep(recall, !refused, stampFails);
-                  open.pending = refused;
-                  const stored = device.disk.get(key);
-                  expect({
-                    ...where,
-                    stored: stored == null ? undefined : JSON.parse(stored),
-                  }).toEqual({
-                    ...where,
-                    stored: model.records.get(key),
-                  });
-                  if (excusedBy(read, held, recall, stampFails, refused)) {
-                    shown.excused = true;
-                    bump(`excused:${heldKind(held)}`);
-                    expect({
-                      ...where,
-                      landed: stored == null ? undefined : JSON.parse(stored),
-                    }).toEqual({
-                      ...where,
-                      landed: recall,
-                    });
-                  }
-                  yield* check({ seed, l, s, step, zone: open.zone });
+                  yield* check(where);
                 }
                 zone = open.zone;
                 at = open.at;
