@@ -8,7 +8,7 @@ import {
   turn,
 } from '../../../../library/storybook/shot.ts';
 import { CELLS as LEAD_TABLE } from '../../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
-import { BOTTLE, BOTTLE_BODY, BOTTLE_FOOT, BOTTLE_MIDDLE } from '../plates/bottle.ts';
+import { BOTTLE, BOTTLE_BODY, BOTTLE_FOOT } from '../plates/bottle.ts';
 import { BABY_BACK, FAR_TABLE, TABLE } from '../../plates/plates.ts';
 import { SCROLL_OPEN, SCROLL_ROLLED } from '../../plates/props.ts';
 import {
@@ -308,31 +308,27 @@ const SCROLL_AT = [960, TABLE_TOP.y + TABLE_TOP.height] as const;
 /** How deep the open scroll lies on the table top, a share of its painted height: flat and seen from just above the table, its far roller over the top's back edge. */
 const SCROLL_LIES = 0.35;
 
-/** Where the lead sets the bottle down, layer px: on the table top, at his left hand (the viewer's right), clear of the open scroll's right end. */
-export const BOTTLE_AT = [1130, TABLE_TOP.y + TABLE_TOP.height / 2] as const;
+/** The hand his table sheet's `down` cell lowers on the viewer's right (the hand that held the bottle), in its px: its middle across and its lowest drawn row. */
+export const DOWN_HAND = [178, 629] as const;
+
+/** Where the lead's `down` hand reaches at his place at the table, layer px: under its middle, at its lowest row, which lies on the table top. */
+const downHandAt = (): readonly [number, number] => {
+  const s = drawScaleOf('lead-feast', 'iio-table', HEAD, Z.table);
+  const ground = AT_TABLE.lead.crown + tallOf('lead-feast', 'iio-table', HEAD, Z.table);
+  return [
+    AT_TABLE.lead.x + (DOWN_HAND[0] - LEAD_TABLE.down.ax) * s,
+    ground + (DOWN_HAND[1] - LEAD_TABLE.down.ay) * s,
+  ];
+};
+
+/** Where the bottle stands on the table, layer px (its foot): where his lowered hand rests, so the key that lowers his hands puts it down in the one drawn step. */
+export const BOTTLE_AT = downHandAt();
 
 /** The cream body across of the bottle the lead holds in his table sheet's `bottle` cell, in its px (196 to 232). */
 const HELD_BODY = 37;
 
-/** The middle of the cream bottle he holds in his table sheet's `bottle` cell, in its px: where the bottle leaves his hand. */
-const HELD_MIDDLE = [212, 362] as const;
-
 /** The bottle plate's scale: its cream body the width of the one he held, his table sheet's draw scale (`HEAD` over that cell's head) times that bottle's body across. */
 const BOTTLE_SCALE = (HEAD / LEAD_TABLE.bottle.head) * (HELD_BODY / BOTTLE_BODY);
-
-/** How far the bottle plate's middle lies from where his raised hand held it, layer px: the bottle in his `bottle` cell, at his place at the table, less the plate's middle at rest on the table top. */
-const fromHand = (): readonly [number, number] => {
-  const s = drawScaleOf('lead-feast', 'iio-table', HEAD, Z.table);
-  const ground = AT_TABLE.lead.crown + tallOf('lead-feast', 'iio-table', HEAD, Z.table);
-  return [
-    AT_TABLE.lead.x +
-      (HELD_MIDDLE[0] - LEAD_TABLE.bottle.ax) * s -
-      (BOTTLE_AT[0] + (BOTTLE_MIDDLE[0] - BOTTLE_FOOT[0]) * BOTTLE_SCALE),
-    ground +
-      (HELD_MIDDLE[1] - LEAD_TABLE.bottle.ay) * s -
-      (BOTTLE_AT[1] + (BOTTLE_MIDDLE[1] - BOTTLE_FOOT[1]) * BOTTLE_SCALE),
-  ];
-};
 
 /** The bottle on the table, moved by `moves` (at rest when none). */
 const bottleOn = (moves: NonNullable<Plate['moves']>): Plate =>
@@ -344,16 +340,13 @@ const bottleOn = (moves: NonNullable<Plate['moves']>): Plate =>
 /** The bottle standing on the table top from a shot's start, where cold-letter sets it down. */
 export const bottleOnTable = (): Plate => bottleOn([[0, key({})]]);
 
-/** The bottle set down from `at` s (the swap that empties his hand) to the shot's end: from where his hand held it, it travels down onto the table top by `settled` s and stands there. */
-export const bottleSetDown = (at: number, settled: number): Plate => {
-  const [x, y] = fromHand();
-  return bottleOn([
+/** The bottle on the table from `at` s (the swap of his key that lowers his hands) to the shot's end: it stands under his lowered hand from that frame and never moves alone. */
+export const bottleSetDown = (at: number): Plate =>
+  bottleOn([
     [0, key({ alpha: 0 })],
     [at, key({ alpha: 0 })],
-    [at, key({ x, y })],
-    [settled, key({})],
+    [at, key({})],
   ]);
-};
 
 /** The open scroll on the table top, its near roller on the top's front edge, moved by `moves`. */
 export const scrollLaid = (moves: NonNullable<Plate['moves']>): Plate =>
@@ -387,7 +380,6 @@ export const coldLetter: FilmShot = {
     hop: { after: 'cold-letter:fall', dur: 0.24 },
     unroll: { after: 'cold-letter:hop', dur: 1 },
     down: { with: 'cold-letter:unroll', offset: 0.4, dur: 0.3 },
-    settle: { after: 'cold-letter:down', dur: 0.25 },
     stare: { mark: 'letter', offset: 0.3, dur: 0.3 },
     stared: { mark: 'letter', offset: 0.45, dur: 0.3 },
     quote: { mark: 'quote', until: 'such' },
@@ -420,7 +412,6 @@ export const coldLetter: FilmShot = {
             hold(cue('down').end, duration, 'down'),
           ]),
           table(),
-          bottleSetDown(swapOf(setDown), cue('settle').end),
           plateOn('scroll-rolled.png', SCROLL_ROLLED, [214.5, 202], SCROLL_AT, SCROLL, {
             moves: [
               [fall.start, key({ y: -700, alpha: 0 })],
@@ -433,6 +424,7 @@ export const coldLetter: FilmShot = {
             ],
           }),
           scrollLaid(unrolling(unroll.start, unroll.end)),
+          bottleSetDown(swapOf(setDown)),
         ]),
       ],
     };
@@ -481,8 +473,8 @@ export const coldOuch: FilmShot = {
           ),
           table(),
           tableClose(),
-          bottleOnTable(),
           scrollLaid([[0, key({ sy: SCROLL_LIES })]]),
+          bottleOnTable(),
         ]),
       ],
     };

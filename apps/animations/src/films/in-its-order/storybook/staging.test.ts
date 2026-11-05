@@ -24,7 +24,8 @@ import VILLAGER_PALETTE from '../cast/idea-villagers/cast-sheet/palette.json';
 import { CELLS as LEAD_MILK_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-milk/cells.ts';
 import { CELLS as VILLAGER_CELLS } from '../cast/idea-villagers/shot-sheets/iio-milk/cells.ts';
 import { inItsOrder } from './index.ts';
-import { drawScaleOf } from './kit.ts';
+import { drawScaleOf, key, TALL } from './kit.ts';
+import LEAD_PALETTE from '../../../library/cast/lead-feast/cast-sheet/palette.json';
 import { TABLE } from '../plates/plates.ts';
 import { BABY_MOTHER, bottleSetDown, TABLE_TOP_PX } from './shots/cold.ts';
 import { HEAD, TABLE_TOP } from './shots/courtyard.ts';
@@ -58,38 +59,43 @@ const PANEL_POUR = 340;
 /** How far the film's pour may run from the panel's, as a factor either way. */
 const POUR_REACH = 1.3;
 
-/** How long a generated set-down's bottle travels onto the table after the turn, s: cold-letter's `settle`. */
-const SETTLE = 0.25;
+/** How far the bottle's foot may stand from his lowered hand, layer px: under half his round hand across (45 cell px × 0.53), so it reads as set down by that hand. */
+const HAND_REACH = 12;
 
-/** The most the bottle may move between two frames, layer px: about the width of his round hand at the table's scale (60 cell px × 0.53), so the eye follows it from his hand to the table (critique 2, finding 6: a jump of about 350 frame px in one frame). */
-const MAX_STEP = 32;
-
-/** The middle of a drawing's opaque pixels within `reach` (RGB distance) of `hex`, in its px. */
-const middleOf = (
+/**
+ * The lowered hand on the viewer's right of a seated cell: the skin paint's
+ * opaque pixels right of the anchor in the rows from halfway down the
+ * figure (under the face and the neck) to three quarters down (above the
+ * feet), as the middle across and the lowest row of that hand, in its px.
+ */
+const handOf = (
   raw: {
     readonly data: Buffer;
     readonly info: { readonly width: number; readonly height: number };
   },
   hex: string,
-  reach: number,
+  cell: { readonly ax: number; readonly ay: number },
+  tall: number,
 ) => {
   const channel = (at: number) => Number.parseInt(hex.slice(at, at + 2), 16);
-  const { width, height } = raw.info;
-  const sums = { x: 0, y: 0, n: 0 };
-  for (let q = 0; q < width * height; q++) {
+  const { width } = raw.info;
+  const ax = cell.ax;
+  const [from, to] = [Math.round(cell.ay - tall / 2), Math.round(cell.ay - tall / 4)];
+  const sums = { x: 0, n: 0, low: 0 };
+  for (let q = from * width; q < to * width; q++) {
     const i = q * 4;
-    if (raw.data.readUInt8(i + 3) <= 128) continue;
+    if (q % width <= ax || raw.data.readUInt8(i + 3) <= 128) continue;
     const d = Math.hypot(
       raw.data.readUInt8(i) - channel(1),
       raw.data.readUInt8(i + 1) - channel(3),
       raw.data.readUInt8(i + 2) - channel(5),
     );
-    if (d > reach) continue;
+    if (d > 0) continue;
     sums.x += q % width;
-    sums.y += Math.floor(q / width);
     sums.n += 1;
+    sums.low = Math.floor(q / width);
   }
-  return [sums.x / Math.max(1, sums.n), sums.y / Math.max(1, sums.n)] as const;
+  return [sums.x / Math.max(1, sums.n), sums.low] as const;
 };
 
 /** How far (RGB distance) a keyed plate's cream may sit from its sheet's prop paint and still read as the bottle's body: the plate is keyed from a drawing, not snapped to a palette. */
@@ -792,15 +798,15 @@ describe("In Its Order's staging", () => {
       );
       return [
         seed,
-        handOffMisses(held, bottleSetDown(swapOf(setDown), at + dur + SETTLE), times).length,
-        handOffMisses(held, bottleSetDown(at + dur * 0.8, at + dur + SETTLE), times).length > 0,
+        handOffMisses(held, bottleSetDown(swapOf(setDown)), times).length,
+        handOffMisses(held, bottleSetDown(at + dur * 0.8), times).length > 0,
       ];
     });
     expect(misses.filter(([, gaps, late]) => gaps !== 0 || late !== true)).toEqual([]);
   });
 
   it.effect(
-    'carries the bottle from his hand to the table in cold-letter with no jump: from frame to frame the bottle’s cream, read on the drawing that shows it (his cell or the plate), moves at most a hand’s width, and a plate set down with no travel jumps (critique 2, finding 6)',
+    'sets the bottle on the table in cold-letter on the frame his key lowers his hands, under his lowered hand, and never moves it alone: from its first frame shown to the shot’s end the plate holds one place, that first frame is the first his hand is empty, and its foot stands within half a hand of his `down` hand’s middle and lowest row, read on that cell’s skin; a plate that travels from his raised hand fails (critique 3, finding 1)',
     () =>
       Effect.gen(function* () {
         const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
@@ -811,53 +817,56 @@ describe("In Its Order's staging", () => {
           .find(
             (item): item is Plate => item._tag === 'Plate' && item.file.endsWith('/bottle.png'),
           );
-        const prop = (TABLE_RECORD.props ?? []).find((p) => p.name === 'bottle');
-        if (!letter || !lead || !plate?.painting || !prop)
-          return expect([letter?.id, lead?.name, plate?.file, prop?.name]).toEqual([
-            'cold-letter',
-            'lead',
-            '',
-            'bottle',
-          ]);
-        const raw = (file: string) =>
-          Effect.promise(() =>
-            sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
-          );
-        const cells = new Map(
-          yield* Effect.forEach(
-            Object.entries(LEAD_TABLE_CELLS).filter(([cell]) => HOLDING.has(cell)),
-            ([cell, c]) =>
-              Effect.map(
-                raw(c.png),
-                (r) => [cell, { middle: middleOf(r, prop.base, 0), ax: c.ax, ay: c.ay }] as const,
-              ),
-          ),
+        if (!letter || !lead || !plate)
+          return expect([letter?.id, lead?.name, plate?.file]).toEqual(['cold-letter', 'lead', '']);
+        const down = LEAD_TABLE_CELLS.down;
+        const raw = yield* Effect.promise(() =>
+          sharp(down.png).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
         );
-        const onPlate = middleOf(yield* raw(plate.painting.png), prop.base, CREAM_REACH);
+        const skin = LEAD_PALETTE.parts.find((p) => p.role === 'skin')?.base ?? '';
+        const hand = handOf(raw, skin, down, TALL.get('lead-feast/iio-table') ?? 0);
         const s = drawScaleOf(lead.member, lead.sheet, letter.headPx, 1);
-        const bottleAt = (p: Plate, t: number) => {
-          const pose = poseAt(lead, t);
-          const held = cells.get(pose.cell);
-          if (held)
-            return [
-              pose.x + (held.middle[0] - held.ax) * s * pose.sx,
-              pose.y + (held.middle[1] - held.ay) * s * pose.sy * pose.breath,
-            ] as const;
-          if (plateAt(p, t).alpha > 0) return pointOn(p, t, onPlate);
-          return [Number.NaN, Number.NaN] as const;
+        const times = timesOf(letter);
+        const misses = (p: Plate) => {
+          const shown = times.filter((t) => plateAt(p, t).alpha > 0);
+          const first = shown[0] ?? Number.NaN;
+          const empty = times.find((t) => !HOLDING.has(poseAt(lead, t).cell));
+          const places = new Set(
+            shown.map((t) => {
+              const k = plateAt(p, t);
+              return [k.x, k.y, k.sx, k.sy].join();
+            }),
+          );
+          const pose = poseAt(lead, first);
+          const foot = footAt(p, first);
+          const at = [
+            pose.x + (hand[0] - down.ax) * s * pose.sx,
+            pose.y + (hand[1] - down.ay) * s * pose.sy * pose.breath,
+          ];
+          const apart = Math.hypot(
+            (foot.left + foot.right) / 2 - (at[0] ?? 0),
+            foot.y - (at[1] ?? 0),
+          );
+          return [
+            ...[`moves through ${places.size} places`].filter(() => places.size !== 1),
+            ...[`first shown at ${first}, his hand empty at ${empty}`].filter(
+              () => first !== empty,
+            ),
+            ...[`foot ${apart.toFixed(1)} px from his hand`].filter(() => !(apart <= HAND_REACH)),
+          ];
         };
-        const jumps = (p: Plate) => {
-          const times = timesOf(letter);
-          return times.slice(1).flatMap((t, i) => {
-            const [a, b] = [bottleAt(p, times[i] ?? 0), bottleAt(p, t)];
-            const step = Math.hypot(b[0] - a[0], b[1] - a[1]);
-            if (step <= MAX_STEP) return [];
-            return [`frame ${i + 1}: ${step.toFixed(1)} px`];
-          });
+        expect(misses(plate)).toEqual([]);
+        const swap = times.find((t) => !HOLDING.has(poseAt(lead, t).cell)) ?? 0;
+        const travels: Plate = {
+          ...plate,
+          moves: [
+            [0, key({ alpha: 0 })],
+            [swap, key({ alpha: 0 })],
+            [swap, key({ x: 20, y: -110 })],
+            [swap + 0.25, key({})],
+          ],
         };
-        expect(jumps(plate)).toEqual([]);
-        const swap = timesOf(letter).find((t) => !HOLDING.has(poseAt(lead, t).cell)) ?? 0;
-        expect(jumps(bottleSetDown(swap, swap)).length).toBeGreaterThan(0);
+        expect(misses(travels).length).toBeGreaterThan(0);
       }),
   );
 });

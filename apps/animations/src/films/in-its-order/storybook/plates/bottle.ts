@@ -17,8 +17,5 @@ export const BOTTLE = {
 /** The bottle's foot in its own px: the middle of its base, where it stands on the table. */
 export const BOTTLE_FOOT = [147, 668] as const;
 
-/** The middle of the bottle's cream in its own px: what travels from the lead's hand to the table. */
-export const BOTTLE_MIDDLE = [146, 430] as const;
-
 /** The bottle's cream body across, in its own px: what sizes it to the bottle the lead holds. */
 export const BOTTLE_BODY = 237;
