@@ -345,11 +345,21 @@ Silent mode mutes. Nothing leaves the device.
     recall on the disk so Today opens, each stage's look in the
     prototype's colours, and no claim in any frame of a held launch or an
     unread session).
-  - `test:first`: `src/first`, the flow's reducer against its model
+  - `test:first`: `src/first/flow.test.ts` and `src/first/screen.test.tsx`,
+    the flow's reducer against its model
     (`src/test/first-model.ts`) and the first minute in happy-dom over the
     real store on the device (the journey to one seed and Today, the voice
     off, a Next during a reading and a relaunch mid-flow, an unread launch,
     a held launch).
+  - `test:root`: `src/first/root.property.test.tsx`, the root route against
+    a model of the first minute over seeded devices (the disk empty, with
+    skipped records, a foreign key, another verse's or the passage's
+    recall; the switch absent, on or off; healthy, held and unread
+    launches), with the reader's taps, the voice's and the recognizer's
+    endings, refused writes and relaunches. Every frame and settle is
+    checked: the heading, what a sighted reader and the screen reader get
+    of each word, claims and setting words, and the whole disk with its
+    write count.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
