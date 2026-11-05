@@ -192,7 +192,13 @@ function FieldControl({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
-/** Today: the passage the reader is learning, its stage, Say it, and the way to the field. */
+/**
+ * Today: its header (the heading and the way to the field), fixed above a
+ * scroll view of the passage the reader is learning, its stage and Say it.
+ * The way to the field sits outside the scroll view, so however much a
+ * recital adds below, it is on screen without a scroll and clear of the
+ * home indicator.
+ */
 function Today({ onField }: { readonly onField: () => void }) {
   const insets = useSafeAreaInsets();
   const sayIt = AsyncResult.value(useAtomValue(sayItView));
@@ -202,43 +208,49 @@ function Today({ onField }: { readonly onField: () => void }) {
   const onPeek = useAtomSet(peek);
   const onChoose = useAtomSet(choose);
   return (
-    <ScrollView
-      style={look.screen}
-      contentContainerStyle={[
-        look.content,
-        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 },
-      ]}
-    >
-      <Text role="heading" aria-level={1} style={look.title}>
-        Today
-      </Text>
-      <View style={styles.passage}>
-        <Text testID="reference" style={look.reference}>
-          {passage.reference}
-        </Text>
-        <Verse marks={screen.marks} onPeek={onPeek} />
-        <Growing garden={garden} sayIt={sayIt} />
-      </View>
-      {Option.match(screen.result, {
-        onNone: () => false,
-        onSome: (result) => <Grades result={result} onChoose={onChoose} />,
-      })}
-      {Option.match(screen.alert, {
-        onNone: () => false,
-        onSome: (alert) => (
-          <Text role="alert" style={look.alert}>
-            {alert}
+    <View style={look.screen}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.headerRow}>
+          <Text role="heading" aria-level={1} style={look.title}>
+            Today
           </Text>
-        ),
-      })}
-      <BigButton
-        label={screen.button}
-        busy={screen.listening}
-        pressable={screen.pressable}
-        onPress={() => onPress()}
-      />
-      {Option.isSome(garden) && !screen.listening && <FieldControl onPress={onField} />}
-    </ScrollView>
+          {Option.isSome(garden) && !screen.listening && <FieldControl onPress={onField} />}
+        </View>
+      </View>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          look.content,
+          { paddingTop: 16, paddingBottom: insets.bottom + 32 },
+        ]}
+      >
+        <View style={styles.passage}>
+          <Text testID="reference" style={look.reference}>
+            {passage.reference}
+          </Text>
+          <Verse marks={screen.marks} onPeek={onPeek} />
+          <Growing garden={garden} sayIt={sayIt} />
+        </View>
+        {Option.match(screen.result, {
+          onNone: () => false,
+          onSome: (result) => <Grades result={result} onChoose={onChoose} />,
+        })}
+        {Option.match(screen.alert, {
+          onNone: () => false,
+          onSome: (alert) => (
+            <Text role="alert" style={look.alert}>
+              {alert}
+            </Text>
+          ),
+        })}
+        <BigButton
+          label={screen.button}
+          busy={screen.listening}
+          pressable={screen.pressable}
+          onPress={() => onPress()}
+        />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -310,8 +322,16 @@ const styles = StyleSheet.create({
   chosenName: { color: color.ground },
   growing: { gap: 4, marginTop: 4 },
   growth: { fontSize: 15, fontWeight: '600', color: color.ink },
+  header: { paddingHorizontal: 24, paddingBottom: 4 },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    minHeight: 44,
+  },
+  scroll: { flex: 1 },
   toField: {
-    alignSelf: 'center',
     minHeight: 44,
     paddingHorizontal: 20,
     borderRadius: 22,

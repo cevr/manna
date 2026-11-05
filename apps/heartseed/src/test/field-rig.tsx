@@ -9,7 +9,8 @@
  *
  * Every frame (each DOM mutation batch) is held to the rule and each fault
  * kept: `Your field` shows only on Today, only once the garden's read
- * completed and never while Say it listens; a field node only under the
+ * completed, never while Say it listens, and never inside a scroll view
+ * (so it is on screen however much Today holds); a field node only under the
  * field's heading, never beside Today's; the field holds exactly one
  * `Your field` heading and no `Today` heading, whatever its references
  * spell; and every field frame shows the
@@ -71,6 +72,15 @@ const seen = (node: Element) => {
       return false;
   }
   return !/rgba\(.*, 0(\.0+)?\)$|transparent/.test(getComputedStyle(node).color);
+};
+
+/** Whether `node` lies inside a scroll view: an ancestor that scrolls its overflow, so a reader may have to scroll to reach it. */
+export const scrolled = (node: Element) => {
+  for (let at = node.parentElement; at !== null; at = at.parentElement) {
+    const style = getComputedStyle(at);
+    if (/auto|scroll/.test(`${style.overflowY} ${style.overflow}`)) return true;
+  }
+  return false;
 };
 
 /** A count's text when it is one node, seen, and exposed as that text. */
@@ -217,19 +227,25 @@ export const mount = async (read: boolean, held: Promise<void> = Promise.resolve
   const headings = () => [...host.querySelectorAll('[role="heading"]')].map(text);
   const buttons = () =>
     [...host.querySelectorAll('[role="button"]')].map((node) => node.getAttribute('aria-label'));
+  const control = () =>
+    [...host.querySelectorAll('[role="button"]')].find(
+      (node) => node.getAttribute('aria-label') === 'Your field',
+    );
   const frame = () => {
     const shown = headings();
     const on = shown.join('|') || 'no heading';
     const onField = shown.includes('Your field');
-    const control = buttons().includes('Your field');
+    const offered = buttons().includes('Your field');
     const listening = buttons().includes('Listening');
     if (listening) frames.listening += 1;
     if (shown.length === 0) frames.pending += 1;
-    if (control) {
+    if (offered) {
       frames.control += 1;
       if (!shown.includes('Today')) faults.push(`the control on ${on}`);
       if (!read || !state.released) faults.push('the control before a read completed');
       if (listening) faults.push('the control while Say it listens');
+      const node = control();
+      if (node !== undefined && scrolled(node)) faults.push('the control inside a scroll view');
     }
     const nodes = host.querySelector(
       '[data-testid="sown"],[data-testid="harvest"],[data-testid="row"],[data-testid="field-plant"]',
@@ -359,6 +375,7 @@ export const mount = async (read: boolean, held: Promise<void> = Promise.resolve
     frames,
     headings,
     buttons,
+    control,
     until,
     tap,
     say,
