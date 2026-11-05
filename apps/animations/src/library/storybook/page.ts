@@ -3,6 +3,7 @@ import {
   type PaintRequest,
   type PaintScene,
   type Pictures,
+  type Prepared,
   canvasOf,
   paintFrame,
   prepare,
@@ -67,50 +68,105 @@ interface Surface {
   readonly ctx: CanvasRenderingContext2D;
 }
 
-/** A canvas `box.width` × `box.height` for an analysis render, made once and resized as boxes change; none without a 2d context. */
-const analysisSurface = () => {
+/** A canvas made once and resized to each size asked of it, cleared; none without a 2d context. */
+const scratchSurface = () => {
   const canvas = document.createElement('canvas');
   const ctx = Option.fromNullishOr(canvas.getContext('2d'));
-  return (box: Box): Option.Option<Surface> =>
+  return (width: number, height: number): Option.Option<Surface> =>
     Option.map(ctx, (c) => {
-      if (canvas.width !== box.width) canvas.width = box.width;
-      if (canvas.height !== box.height) canvas.height = box.height;
+      if (canvas.width !== width) canvas.width = width;
+      if (canvas.height !== height) canvas.height = height;
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, width, height);
       return { canvas, ctx: c };
     });
+};
+
+/** The part of `box` at or right of and below the frame's origin, in the frame's px: what a canvas at the frame's own transform can paint. */
+const originQuadrantOf = (box: Box): Option.Option<Box> => {
+  const x = Math.max(0, box.x);
+  const y = Math.max(0, box.y);
+  const width = box.x + box.width - x;
+  const height = box.y + box.height - y;
+  if (width <= 0 || height <= 0) return Option.none();
+  return Option.some({ x, y, width, height });
 };
 
 /**
  * The page's renderer for one scene whose pictures are decoded and
  * prepared: each request painted from itself alone (`paintFrame`) over
- * `box`, answered as a PNG data URL, or why not. The whole frame paints on
- * the frame's canvas at the frame's own transform; any other box paints on
- * an analysis canvas of its size, at that transform moved by the box's
- * corner (whole px), so a figure reaching past the frame is painted whole
- * and every pixel inside the frame is the one the frame paints.
+ * `box`, answered as a PNG data URL, or why not.
+ *
+ * The whole frame paints on the frame's canvas at the frame's own
+ * transform. Any other box is an analysis surface. Its part right of and
+ * below the frame's origin paints at that very transform, unmoved, on a
+ * canvas grown to hold it, and is copied in whole px; so every pixel the
+ * frame holds is the frame's own, byte for byte and alpha included, and
+ * nothing past the frame's right and bottom edges differs in sampling
+ * phase. Moving the transform by even a whole px rounds its fractional
+ * camera and anchor terms apart in Chrome's float matrix, so only the part
+ * left of or above the frame, which no unmoved canvas can hold, paints at
+ * the transform moved by the box's corner.
  */
 const rendererOf = (scene: PaintScene, pictures: Pictures, frame: Surface) => {
   const prepared = prepare(scene, pictures);
-  const analysis = analysisSurface();
-  const surfaceOf = (box: Box): Option.Option<Surface> => {
-    if (box.x === 0 && box.y === 0 && box.width === scene.width && box.height === scene.height)
-      return Option.some(frame);
-    return analysis(box);
-  };
+  const grown = scratchSurface();
+  const analysis = scratchSurface();
+  const paintOn = (s: Surface, base: DOMMatrix, p: Prepared, req: PaintRequest) =>
+    paintFrame(s.ctx, base, scene, p, pictures, req);
+  const analysisOf = (req: PaintRequest, box: Box, p: Prepared): string =>
+    Option.match(analysis(box.width, box.height), {
+      onNone: () => 'no 2d context for the analysis canvas',
+      onSome: (out) => {
+        const moved = Option.liftPredicate(box, (b) => b.x < 0 || b.y < 0).pipe(
+          Option.flatMap((b) => paintOn(out, new DOMMatrix([1, 0, 0, 1, -b.x, -b.y]), p, req)),
+        );
+        if (Option.isSome(moved)) return moved.value;
+        const unmoved = Option.flatMap(originQuadrantOf(box), (q) =>
+          Option.match(grown(q.x + q.width, q.y + q.height), {
+            onNone: () => Option.some('no 2d context for the grown canvas'),
+            onSome: (g) =>
+              Option.match(paintOn(g, new DOMMatrix(), p, req), {
+                onSome: (why) => Option.some(why),
+                onNone: () => {
+                  out.ctx.setTransform(1, 0, 0, 1, 0, 0);
+                  out.ctx.globalAlpha = 1;
+                  out.ctx.filter = 'none';
+                  out.ctx.globalCompositeOperation = 'source-over';
+                  out.ctx.imageSmoothingEnabled = false;
+                  const at = { x: q.x - box.x, y: q.y - box.y };
+                  out.ctx.clearRect(at.x, at.y, q.width, q.height);
+                  out.ctx.drawImage(
+                    g.canvas,
+                    q.x,
+                    q.y,
+                    q.width,
+                    q.height,
+                    at.x,
+                    at.y,
+                    q.width,
+                    q.height,
+                  );
+                  return Option.none();
+                },
+              }),
+          }),
+        );
+        return Option.getOrElse(unmoved, () => out.canvas.toDataURL('image/png'));
+      },
+    });
   return (req: PaintRequest, box: Box): string =>
     Option.match(prepared, {
       onNone: () => 'a picture of the scene does not read',
-      onSome: (p) =>
-        Option.match(surfaceOf(box), {
-          onNone: () => 'no 2d context for the analysis canvas',
-          onSome: ({ canvas, ctx }) => {
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const base = new DOMMatrix([1, 0, 0, 1, -box.x, -box.y]);
-            return Option.getOrElse(paintFrame(ctx, base, scene, p, pictures, req), () =>
-              canvas.toDataURL('image/png'),
-            );
-          },
-        }),
+      onSome: (p) => {
+        if (box.x !== 0 || box.y !== 0 || box.width !== scene.width || box.height !== scene.height)
+          return analysisOf(req, box, p);
+        frame.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        frame.ctx.clearRect(0, 0, scene.width, scene.height);
+        return Option.getOrElse(paintOn(frame, new DOMMatrix(), p, req), () =>
+          frame.canvas.toDataURL('image/png'),
+        );
+      },
     });
 };
 
