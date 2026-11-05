@@ -16,9 +16,11 @@ Bun.plugin({
     build.onLoad({ filter: /library\/storybook\/shot\.ts$/ }, async ({ path }) => {
       // oxlint-disable-next-line effect/noAsyncFunction, effect/noGlobals -- the loader reads the module's source through Bun, as the hook it runs in
       const source = await Bun.file(path).text();
-      // oxlint-disable-next-line effect/noThrowStatement, effect/noNewError -- a loader refuses a module by throwing; the run then fails at load
-      if (!source.includes(FROM))
-        throw new Error(`height-growth: ${FROM.trim()} is not in ${path}`);
+      if (!source.includes(FROM)) {
+        const missing = `height-growth: ${FROM.trim()} is not in ${path}`;
+        // oxlint-disable-next-line effect/noThrowStatement, effect/noNewError -- a loader refuses a module by throwing; the run then fails at load
+        throw new Error(missing);
+      }
       return { contents: source.replace(FROM, TO), loader: 'ts' };
     });
   },
