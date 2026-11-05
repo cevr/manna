@@ -56,7 +56,7 @@ import {
   referenceCard,
   referenceStage,
 } from './test/garden-model';
-import { device } from './test/one';
+import { device, type AttemptFault } from './test/one';
 
 const REFERENCES = ['Made 1:1', 'Made 1:10', 'Made 2:3'] as const;
 
@@ -228,20 +228,60 @@ const seedDevice = (next: () => number) => {
   return { model, clock, bad };
 };
 
-type Fault = 'none' | 'open' | 'keys' | 'get';
+/** Where a generated attempt fails: its open, its listing, or the first, a middle or the last record read (the later ones after good reads). */
+type Point = 'open' | 'keys' | 'get-first' | 'get-middle' | 'get-last';
 
-/** A launch's read script: healthy, or failing at the open, the listing or the first record read 1-4 times; the read completes when fewer than three attempts fail. */
+/** The spec's literal: a read makes at most three attempts in all. */
+const ATTEMPTS = 3;
+
+/** A launch's read script: 0-3 failing attempts, each at its own point, often with a good attempt after; the points chosen over the disk's recall keys. */
 const scriptOf = (next: () => number) => {
-  const fault = pickOf(next, [
-    'none',
-    'none',
-    'open',
-    'keys',
-    'get',
-  ] as const satisfies readonly Fault[]);
-  const failures = fault === 'none' ? 0 : 1 + below(next, 4);
-  const read = fault === 'get' && recallKeysOn().length === 0 ? true : failures < 3;
-  return { fault, failures, read };
+  const recallKeys = recallKeysOn().length;
+  const points: [Point, ...Point[]] = ['open', 'keys'];
+  if (recallKeys >= 1) points.push('get-first');
+  if (recallKeys >= 3) points.push('get-middle');
+  if (recallKeys >= 2) points.push('get-last');
+  const failing = pickOf(next, [0, 0, 1, 1, 2, 2, 3, 3] as const);
+  const chosen = Array.from({ length: failing }, () => pickOf(next, points));
+  const reads = chosen.map((point): AttemptFault => {
+    if (point === 'open' || point === 'keys') return { at: point };
+    if (point === 'get-first') return { at: 'get', nth: 1 };
+    if (point === 'get-last') return { at: 'get', nth: recallKeys };
+    return { at: 'get', nth: 2 + below(next, recallKeys - 2) };
+  });
+  return { chosen, reads, ...readOutcome(reads, recallKeys) };
+};
+
+/**
+ * What a read over `reads` must come to, from the device's side: each
+ * attempt opens the store while it is not open, lists once and reads every
+ * recall key, and fails at its scripted point when the attempt reaches it
+ * (an open fault bites only while not open; a record read only when there
+ * are that many). The first attempt that completes is the read; three
+ * failed attempts leave it unread.
+ */
+const readOutcome = (reads: ReadonlyArray<AttemptFault>, recallKeys: number) => {
+  let opened = false;
+  let opens = 0;
+  let listings = 0;
+  let gets = 0;
+  for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
+    const fault = reads[attempt] ?? { at: 'ok' };
+    if (!opened) {
+      opens += 1;
+      if (fault.at === 'open') continue;
+      opened = true;
+    }
+    listings += 1;
+    if (fault.at === 'keys') continue;
+    if (fault.at === 'get' && fault.nth <= recallKeys) {
+      gets += fault.nth;
+      continue;
+    }
+    gets += recallKeys;
+    return { read: true, attempts: attempt + 1, opens, listings, gets };
+  }
+  return { read: false, attempts: ATTEMPTS, opens, listings, gets };
 };
 
 /** The recall of a step: the current recital's peek or grade change, or a new recital. */
@@ -286,28 +326,43 @@ const checkStep = (
   });
 
 describe('the garden over the device', () => {
-  it('certifies a history only from a completed read, and extends it only by writes the device took, over 80 generated devices', () =>
+  it('certifies a history only from a completed read, and extends it only by writes the device took, over 100 generated devices whose read attempts fail at their open, listing or any record read, and recover', () =>
     quietly(
       Effect.gen(function* () {
         const cover = new Map<string, number>();
         const bump = (key: string) => cover.set(key, (cover.get(key) ?? 0) + 1);
-        for (let seed = 1; seed <= 80; seed += 1) {
+        for (let seed = 1; seed <= 100; seed += 1) {
           const next = random(seed * 7919);
           const { model, clock, bad } = seedDevice(next);
           const chimes: Growth[] = [];
           for (let l = 0, launches = 1 + below(next, 3); l < launches; l += 1) {
-            const { fault, failures, read } = scriptOf(next);
             device.launch(device.disk);
-            if (fault !== 'none') device.fail(fault, failures);
+            const { chosen, reads, read, attempts, opens, listings, gets } = scriptOf(next);
+            device.script(reads);
             model.restart(read);
             const logs: Log[] = [];
-            const knowing = read ? 'Read' : 'Unread';
-            const at = { seed, l, fault, failures };
+            const knowing = read ? `Read@${attempts}` : 'Unread';
+            const at = { seed, l, script: chosen.join(',') };
             yield* Effect.scoped(
               Effect.gen(function* () {
                 const { garden, recalls } = yield* launch(chimes, logs);
-                const listings = device.calls.keys;
-                bump(`${knowing}:${fault}`);
+                expect({
+                  ...at,
+                  opens: device.calls.open,
+                  listings: device.calls.keys,
+                  gets: device.calls.get,
+                }).toEqual({ ...at, opens, listings, gets });
+                bump(knowing);
+                for (const [i, point] of chosen.entries()) {
+                  if (i >= attempts) break;
+                  bump(`point:${point}`);
+                  if (
+                    i > 0 &&
+                    point === 'keys' &&
+                    chosen.slice(0, i).some((p) => p.startsWith('get'))
+                  )
+                    bump('keys-after-good-listing');
+                }
                 yield* checkStep(garden, model, chimes, bad, at);
                 if (read)
                   expect({
@@ -334,7 +389,7 @@ describe('the garden over the device', () => {
                     concurrency: 3,
                   });
                   for (const recall of burst) model.keep(recall, mode === 'ok');
-                  bump(`${knowing}:${mode}`);
+                  bump(`${read ? 'Read' : 'Unread'}:${mode}`);
                   yield* checkStep(garden, model, chimes, bad, { ...at, step, mode });
                 }
                 const latest = yield* Stream.runHead(garden.changes);
@@ -353,13 +408,16 @@ describe('the garden over the device', () => {
           }
         }
         for (const key of [
-          'Read:none',
-          'Read:open',
-          'Read:keys',
-          'Read:get',
-          'Unread:open',
-          'Unread:keys',
-          'Unread:get',
+          'Read@1',
+          'Read@2',
+          'Read@3',
+          'Unread',
+          'point:open',
+          'point:keys',
+          'point:get-first',
+          'point:get-middle',
+          'point:get-last',
+          'keys-after-good-listing',
           'Read:ok',
           'Read:set',
           'Read:down',
@@ -404,7 +462,16 @@ describe('the garden over the device', () => {
               0,
             ]);
             yield* TestClock.adjust('1 minute');
-            expect(device.calls).toEqual({ open: 5, keys: 0, get: 0, set: 1, remove: 0, clear: 0 });
+            expect(device.calls).toMatchObject({
+              open: 5,
+              failedOpens: 4,
+              keys: 0,
+              get: 0,
+              set: 1,
+              remove: 0,
+              clear: 0,
+              close: 0,
+            });
           }),
         );
         device.launch(device.disk);
@@ -457,6 +524,30 @@ describe('the garden over the device', () => {
             const { garden } = yield* launch([], []);
             expect((yield* garden.view)._tag).toBe('Unread');
             expect([device.calls.keys, device.calls.get]).toEqual([3, 3]);
+          }),
+        );
+        device.launch(disk).script([{ at: 'get', nth: 3 }, { at: 'keys' }, { at: 'keys' }]);
+        yield* Effect.scoped(
+          Effect.gen(function* () {
+            const { garden } = yield* launch([], []);
+            expect((yield* garden.view)._tag).toBe('Unread');
+            expect([device.calls.keys, device.calls.get]).toEqual([3, 3]);
+          }),
+        );
+        device.launch(disk).script([{ at: 'get', nth: 2 }, { at: 'keys' }, { at: 'get', nth: 3 }]);
+        yield* Effect.scoped(
+          Effect.gen(function* () {
+            const { garden } = yield* launch([], []);
+            expect((yield* garden.view)._tag).toBe('Unread');
+            expect([device.calls.keys, device.calls.get]).toEqual([3, 5]);
+          }),
+        );
+        device.launch(disk).script([{ at: 'get', nth: 3 }, { at: 'keys' }]);
+        yield* Effect.scoped(
+          Effect.gen(function* () {
+            const { garden } = yield* launch([], []);
+            expect(known(yield* garden.view)).toEqual([['Made 2:3', [first, second]]]);
+            expect([device.calls.keys, device.calls.get]).toEqual([3, 6]);
           }),
         );
       }),

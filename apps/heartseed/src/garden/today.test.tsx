@@ -45,6 +45,16 @@ const SOIL = 'rgba(138, 110, 75, 1.00)';
 /** Words that claim a stage, a plant, planting or growth, in any text or attribute (react-native-web's `r-flexGrow` class is no claim, so growth is matched as its own word). */
 const CLAIM = /stage|plant|grew|\bgrow|growth|seed|blade|\bear\b|full corn/iu;
 
+/** An element as drawn, read without a word: its tag, its exact class set and its inline style. */
+const lookOf = (node: Element) =>
+  `${node.tagName} ${[...node.classList].toSorted().join(' ')} | ${node.getAttribute('style') ?? ''}`;
+
+/** Every look drawn inside a read plant, with the stages it was drawn at, over every mount of this file. */
+const PLANT_LOOKS = new Map<string, Set<string>>();
+
+/** Every look in a frame drawn before the garden's read completed or through an unread session, over every mount of this file. */
+const UNREAD_LOOKS = new Set<string>();
+
 /** A recall of the passage at `startedAt`, recalled alone with Good. */
 const recallAt = (startedAt: number, reference = passage.reference): Recall => ({
   reference,
@@ -110,9 +120,22 @@ const mount = async (chimes: Growth[], held: Promise<void> = Promise.resolve()) 
     [...host.querySelectorAll('*')].some((node) =>
       [...node.attributes].some((attribute) => CLAIM.test(attribute.value)),
     );
+  /** Files the frame's looks: a read frame's plant parts under its stage, every look of a frame with no stage line as unread. */
+  const file = () => {
+    const label = host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label');
+    if (label === undefined || label === null) {
+      for (const node of host.querySelectorAll('*')) UNREAD_LOOKS.add(lookOf(node));
+      return;
+    }
+    for (const node of host.querySelectorAll('[data-testid="plant"], [data-testid="plant"] *')) {
+      const look = lookOf(node);
+      PLANT_LOOKS.set(look, (PLANT_LOOKS.get(look) ?? new Set()).add(label));
+    }
+  };
   const watch = new MutationObserver(() => {
     frames.seen += 1;
     if (claims()) frames.claimed += 1;
+    file();
   });
   watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
   const root = createRoot(host);
@@ -329,5 +352,18 @@ describe('Today’s stage over the device’s store', () => {
       (readonly [string, string | null])[]
     >(theirs);
     await today.leave();
+  });
+
+  it('draws no part of a plant, with or without a test id or label, in any frame of the held, pending and unread launches above, though each of the four stages drew its parts once read', () => {
+    const stages = new Set([...PLANT_LOOKS.values()].flatMap((each) => [...each]));
+    expect([...stages].toSorted()).toEqual([
+      'Stage: blade',
+      'Stage: ear',
+      'Stage: full corn',
+      'Stage: seed',
+    ]);
+    expect(PLANT_LOOKS.size).toBeGreaterThanOrEqual(6);
+    expect(UNREAD_LOOKS.size).toBeGreaterThan(10);
+    expect([...PLANT_LOOKS.keys()].filter((look) => UNREAD_LOOKS.has(look))).toEqual([]);
   });
 });
