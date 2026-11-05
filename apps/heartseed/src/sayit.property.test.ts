@@ -7,8 +7,12 @@
  * any index, grades from 0 to 5 and travel to another zone, started seconds
  * before a daylight-saving change or on any day in a zone of any offset, so
  * a recall that takes its zone's offset anywhere but at its press, or with
- * JavaScript's sign, disagrees; over made-up verses whose source either
- * ends by itself (the scripted replay) or never does (an open recognizer).
+ * JavaScript's sign, disagrees; over one to five pieces of made-up verses
+ * (one word, none, or several; references a trailing space, a prefix or a
+ * digit apart), each recital of the piece it names, heard by that piece's
+ * own source, which either ends by itself (the scripted replay) or never
+ * does (an open recognizer), so a recall under another piece's reference or
+ * word count disagrees.
  * After each step the start, the choice, the Dictation view Say it shows,
  * the last view of its `changes`, the ticks, the listens, the finishes and
  * the kept recalls must agree with the model. The passage's own recital,
@@ -46,7 +50,7 @@ import {
   type SayItView,
 } from './sayit';
 import { SIMULATOR_PLAN } from './sayit/source';
-import { SayItModel, type ModelStep } from './test/sayit-model';
+import { SayItModel, type ModelPiece, type ModelStep } from './test/sayit-model';
 import { hostOffset, hostZone, restore, travel, ZONES } from './test/zone';
 
 const random = (seed: number) => {
@@ -141,8 +145,39 @@ const recorded = (inner: Layer.Layer<DictationSource>, endsByItself: boolean, ca
     }),
   ).pipe(Layer.provide(inner));
 
+/**
+ * A source that hears the piece `chosen` names: one scripted replay per
+ * piece, each holding only its own listens, so a recital hears the text of
+ * the piece chosen when it started, and no other.
+ */
+const switched = (
+  sources: readonly Layer.Layer<DictationSource>[],
+  chosen: MutableRef.MutableRef<number>,
+) =>
+  Layer.effect(
+    DictationSource,
+    Effect.gen(function* () {
+      const built = yield* Effect.forEach(sources, (source) =>
+        Effect.map(Layer.build(source), (services) => Context.get(services, DictationSource)),
+      );
+      const now = () => built[MutableRef.get(chosen)] ?? built[0];
+      return DictationSource.of({
+        engines: (locale) => Effect.suspend(() => now()?.engines(locale) ?? Effect.succeed([])),
+        listen: (session, engine, locale, hints) =>
+          Effect.suspend(() => now()?.listen(session, engine, locale, hints) ?? Effect.void),
+        finish: Effect.suspend(() => now()?.finish ?? Effect.void),
+        cancel: Effect.suspend(() => now()?.cancel ?? Effect.void),
+        subscribe: (listener) =>
+          Effect.forEach(built, (source) => source.subscribe(listener), { discard: true }),
+      });
+    }),
+  );
+
 interface RigOptions {
   readonly passage: Passage;
+  /** The pieces a recital may be of, each heard by its own source when `chosen` names it; the passage alone when absent. */
+  readonly pieces?: readonly Passage[];
+  readonly chosen?: MutableRef.MutableRef<number>;
   readonly source: Layer.Layer<DictationSource>;
   readonly endsByItself: boolean;
   readonly tick?: Effect.Effect<void>;
@@ -193,7 +228,9 @@ const rig = (options: RigOptions) =>
       scope,
     );
     const wait = (ms: number) => Effect.provideContext(TestClock.adjust(ms), services);
-    return { scope, services, sayIt, dictation, calls, ticks, kept, latest, wait };
+    const pieces = options.pieces ?? [options.passage];
+    const chosen = options.chosen ?? MutableRef.make(0);
+    return { scope, services, sayIt, dictation, calls, ticks, kept, latest, wait, pieces, chosen };
   });
 
 type Rig = Effect.Success<ReturnType<typeof rig>>;
@@ -203,10 +240,26 @@ const settle = Effect.gen(function* () {
   for (let i = 0; i < 12; i++) yield* Effect.yieldNow;
 });
 
+/** Points the source at the piece a recital starts on; a recital under way keeps the source it started on. */
+const hear = (live: Rig, reference: string) =>
+  Effect.gen(function* () {
+    if ((yield* live.dictation.view).status !== 'idle') return;
+    const index = live.pieces.findIndex((piece) => piece.reference === reference);
+    MutableRef.set(live.chosen, Math.max(0, index));
+  });
+
 const run = (live: Rig, step: ModelStep) =>
   Effect.gen(function* () {
-    if (step.t === 'press') yield* live.sayIt.press;
-    if (step.t === 'recite') yield* live.sayIt.recite({ cue: step.cue, keep: step.keep });
+    if (step.t === 'press') {
+      yield* hear(live, live.pieces[0]?.reference ?? '');
+      yield* live.sayIt.press;
+    }
+    if (step.t === 'recite') {
+      const piece = live.pieces.find((each) => each.reference === step.piece.reference);
+      if (piece === undefined) return yield* Effect.die('a recital of a piece the rig lacks');
+      yield* hear(live, piece.reference);
+      yield* live.sayIt.recite({ cue: step.cue, keep: step.keep }, piece);
+    }
     if (step.t === 'peek') yield* live.sayIt.peek(step.index);
     if (step.t === 'choose') yield* live.sayIt.choose(step.grade as Grade);
     if (step.t === 'wait') yield* live.wait(step.ms);
@@ -214,10 +267,16 @@ const run = (live: Rig, step: ModelStep) =>
     yield* settle;
   });
 
-const generate = (next: () => number, words: number): ModelStep => {
+const generate = (next: () => number, words: number, pieces: readonly ModelPiece[]): ModelStep => {
   const r = next();
   if (r < 0.1) return { t: 'press' };
-  if (r < 0.2) return { t: 'recite', cue: next() < 0.5 ? 'none' : 'initials', keep: next() < 0.5 };
+  if (r < 0.2)
+    return {
+      t: 'recite',
+      cue: next() < 0.5 ? 'none' : 'initials',
+      keep: next() < 0.5,
+      piece: pickOf(next, pieces),
+    };
   if (r < 0.62) return { t: 'wait', ms: 1 + below(next, 6) };
   if (r < 0.74) return { t: 'peek', index: below(next, words + 2) - 1 };
   if (r < 0.86) return { t: 'choose', grade: below(next, 6) };
@@ -267,6 +326,10 @@ const agree = (live: Rig, model: SayItModel, where: string) =>
     expect(MutableRef.get(live.latest), where).toBe(view);
     expect(live.ticks.n, where).toBe(model.ticks);
     expect(live.kept, where).toEqual(model.kept);
+    for (const recall of live.kept) {
+      const piece = live.pieces.find((each) => each.reference === recall.reference);
+      expect(piece === undefined ? -1 : sourceWords(piece.text).length, where).toBe(recall.words);
+    }
     expect(model.cuedGood, where).toBe(0);
     expect(count(live.calls, 'listen'), where).toBe(model.listens);
     const finishes = count(live.calls, 'finish');
@@ -276,35 +339,84 @@ const agree = (live: Rig, model: SayItModel, where: string) =>
 /** The host's zone as the file found it, put back after each history. */
 const host = hostZone();
 
+/**
+ * The references a history's pieces take, the passage's first: some differ
+ * from another only by a trailing space, a prefix or a last digit, so a
+ * recall keyed by a near reference disagrees.
+ */
+const REFERENCES = ['Made 1:1', 'Made 1:10', 'Made 1:1 ', 'XMade 1:1', 'Made 2:1'];
+
+/** The text of a piece after the first: a verse of made-up words, now and then one word or none at all. */
+const textOf = (next: () => number) => {
+  const r = next();
+  if (r < 0.1) return ' — ; ';
+  if (r < 0.25) return pickOf(next, POOL);
+  return verseOf(next);
+};
+
+/**
+ * A history's pieces: the passage (`Made 1:1`, which a press says) and up
+ * to four more, each heard by its own scripted source under the history's
+ * plan, with the words skipped drawn per piece.
+ */
+const piecesOf = (next: () => number) => {
+  const count = 1 + below(next, REFERENCES.length);
+  const pieces = REFERENCES.slice(0, count).map((reference, index): Passage => ({
+    reference,
+    text: index === 0 ? verseOf(next) : textOf(next),
+  }));
+  const every = 1 + below(next, 4);
+  const pace = 2 + below(next, 4);
+  const plans = pieces.map((piece): RecitePlan => ({
+    skip: Array.from({ length: sourceWords(piece.text).length }, (_, i) => i).filter(
+      () => next() < 0.2,
+    ),
+    every,
+    pace,
+  }));
+  return { pieces, plans };
+};
+
+const modelPiece = (piece: Passage): ModelPiece => ({
+  reference: piece.reference,
+  words: sourceWords(piece.text).length,
+});
+
 const runHistory = (seed: number) =>
   Effect.gen(function* () {
     const next = random(seed);
-    const text = verseOf(next);
-    const words = sourceWords(text).length;
-    const plan: RecitePlan = {
-      skip: Array.from({ length: words }, (_, i) => i).filter(() => next() < 0.2),
-      every: 1 + below(next, 4),
-      pace: 2 + below(next, 4),
-    };
+    const { pieces, plans } = piecesOf(next);
+    const words = Math.max(...pieces.map((piece) => sourceWords(piece.text).length));
     const endsByItself = next() < 0.5;
     const start = startOf(next);
     const zone = zoneOf(next);
+    const chosen = MutableRef.make(0);
+    const [passageOf] = pieces;
+    if (passageOf === undefined) return yield* Effect.die('a history with no passage');
     const live = yield* rig({
-      passage: { reference: 'Made 1:1', text },
-      source: scriptedSource(recite(text, plan)),
+      passage: passageOf,
+      pieces,
+      chosen,
+      source: switched(
+        pieces.map((piece, index) =>
+          scriptedSource(recite(piece.text, plans[index] ?? { every: 1, pace: 2 })),
+        ),
+        chosen,
+      ),
       endsByItself,
     });
     yield* Effect.provideContext(TestClock.setTime(start), live.services);
     travel(zone);
     yield* settle;
-    const model = new SayItModel('Made 1:1', endsByItself);
+    const model = new SayItModel(modelPiece(passageOf), endsByItself);
+    const choices = pieces.map(modelPiece);
     const trail = [
-      `seed ${seed} ${JSON.stringify(plan)} endsByItself ${endsByItself} at ${start} in ${zone}`,
+      `seed ${seed} ${JSON.stringify(plans)} ${pieces.length} pieces endsByItself ${endsByItself} at ${start} in ${zone}`,
     ];
     let now = start;
     let moved = 0;
     for (let k = 0; k < 30; k++) {
-      const step = generate(next, words);
+      const step = generate(next, words, choices);
       trail.push(JSON.stringify(step));
       const before = yield* live.dictation.view;
       const kept = model.kept.length;
@@ -315,7 +427,8 @@ const runHistory = (seed: number) =>
       moved += model.kept.slice(kept).filter((recall) => recall.offset !== hostOffset(now)).length;
     }
     yield* Scope.close(live.scope, Exit.void);
-    return { model, moved };
+    const pieced = new Set(model.kept.map((recall) => recall.reference)).size;
+    return { model, moved, pieced };
   }).pipe(Effect.ensuring(Effect.sync(() => restore(host))));
 
 /** A source that hears a whole recital of `text` inside its listen: each word tentative then final, then the end. */
@@ -360,7 +473,7 @@ const sayThrough = (
   how: { readonly cue: 'none' | 'initials'; readonly keep: boolean },
 ) =>
   Effect.gen(function* () {
-    yield* run(live, { t: 'recite', ...how });
+    yield* run(live, { t: 'recite', ...how, piece: modelPiece(live.pieces[0] ?? passage) });
     let elapsed = 0;
     for (const at of timesOf(steps)) {
       yield* run(live, { t: 'wait', ms: at - elapsed });
@@ -413,16 +526,18 @@ describe('Say it', () => {
   it('agrees with its model on 240 seeded histories of 30 steps, over self-ending and open sources, presses and recitals cued or not, kept or not', () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        const reached = { cued: 0, unkept: 0, moved: 0 };
+        const reached = { cued: 0, unkept: 0, moved: 0, pieced: 0 };
         for (let seed = 1; seed <= 240; seed++) {
-          const { model, moved } = yield* runHistory(seed);
+          const { model, moved, pieced } = yield* runHistory(seed);
           reached.cued += model.cuedFinished;
           reached.unkept += model.unkeptFinished;
           reached.moved += moved;
+          if (pieced > 1) reached.pieced += 1;
         }
         expect(reached.cued).toBeGreaterThanOrEqual(40);
         expect(reached.unkept).toBeGreaterThanOrEqual(40);
         expect(reached.moved).toBeGreaterThanOrEqual(30);
+        expect(reached.pieced).toBeGreaterThanOrEqual(20);
       }),
     ));
 

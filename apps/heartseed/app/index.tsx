@@ -375,7 +375,7 @@ function Today({ onField }: { readonly onField: () => void }) {
           label={screen.button}
           busy={screen.listening}
           pressable={screen.pressable}
-          onPress={() => onPress()}
+          onPress={() => onPress(passage)}
         />
       </ScrollView>
     </View>

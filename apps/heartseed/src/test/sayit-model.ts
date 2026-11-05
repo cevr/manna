@@ -8,6 +8,9 @@
  * finishes it asked the source for, the ticks, the start and the choice,
  * and the recalls it kept, in order.
  *
+ * - Each recital is of a piece: a press says the passage, a recital the
+ *   piece it names (hsrun). While idle, a piece with no words starts
+ *   nothing; a recall carries its own piece's reference and word count.
  * - A press is a recital with no cue that is kept (hsfirst). A recital
  *   while listening finishes; while idle it starts one under its cue,
  *   kept or not, which clears the choice and starts at the clock's time;
@@ -62,9 +65,20 @@ export interface ModelRecall {
 
 export type ModelCue = 'none' | 'initials';
 
+/** A piece a recital is said of: its reference and its word count. */
+export interface ModelPiece {
+  readonly reference: string;
+  readonly words: number;
+}
+
 export type ModelStep =
   | { readonly t: 'press' }
-  | { readonly t: 'recite'; readonly cue: ModelCue; readonly keep: boolean }
+  | {
+      readonly t: 'recite';
+      readonly cue: ModelCue;
+      readonly keep: boolean;
+      readonly piece: ModelPiece;
+    }
   | { readonly t: 'wait'; readonly ms: number }
   | { readonly t: 'peek'; readonly index: number }
   | { readonly t: 'choose'; readonly grade: number }
@@ -86,6 +100,7 @@ const asGrade = (grade: number): ModelGrade | null =>
 interface Recital {
   readonly cue: ModelCue;
   readonly keep: boolean;
+  readonly piece: ModelPiece;
   ended: boolean;
   suggested: 1 | 2 | 3 | null;
   kept: string | null;
@@ -112,24 +127,25 @@ export class SayItModel {
   private seen: ReadonlySet<number> = new Set();
   private lastSeenLit = false;
 
+  /** `passage` is the piece a press says; `endsByItself`, whether the source ends a recital on its own. */
   constructor(
-    readonly reference: string,
+    readonly passage: ModelPiece,
     readonly endsByItself: boolean,
   ) {}
 
   step(step: ModelStep, before: ModelDictation, after: ModelDictation, now: number): void {
     const how =
       step.t === 'press'
-        ? { cue: 'none' as const, keep: true }
+        ? { cue: 'none' as const, keep: true, piece: this.passage }
         : step.t === 'recite'
-          ? { cue: step.cue, keep: step.keep }
+          ? { cue: step.cue, keep: step.keep, piece: step.piece }
           : null;
     const finishedByPress = how !== null && before.status === 'listening';
     if (finishedByPress) {
       this.finishes += 1;
       this.finishesAllowed += 1;
     }
-    if (how !== null && before.status === 'idle') {
+    if (how !== null && before.status === 'idle' && how.piece.words > 0) {
       this.listens += 1;
       this.startedAt = now;
       this.offset = hostOffset(now);
@@ -175,12 +191,12 @@ export class SayItModel {
     if (this.offset === null) return;
     const marks = after.matcher.marks;
     const recall: ModelRecall = {
-      reference: this.reference,
+      reference: recital.piece.reference,
       startedAt: this.startedAt,
       offset: this.offset,
       grade: this.choice,
       suggested: recital.suggested,
-      words: marks.length,
+      words: recital.piece.words,
       missed: marks.filter((mark) => mark.status === 'miss' || mark.status === 'peek').length,
       peeked: after.matcher.peekCount,
       extra: after.matcher.extraWordCount,

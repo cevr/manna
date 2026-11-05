@@ -33,7 +33,8 @@ import { sourceWords } from './matcher/words';
 import { layer as sayItLayer, SayIt, TODAY, type Grade, type Haptics, type Recital } from './sayit';
 import { liveHaptics } from './sayit/live';
 import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
-import type { Minutes, Piece } from './session';
+import type { Passage } from './passage';
+import type { Minutes, TextPiece } from './session';
 import { layer as sessionLayer, Session } from './session/service';
 import { store } from './store';
 import { Voice, layer as voiceLayer, type VoiceSource } from './voice';
@@ -64,24 +65,26 @@ export const appSource: Layer.Layer<DictationSource> = Layer.unwrap(
 );
 
 /** The verses the app holds text for, in the order the session offers them: the passage alone, its own group. */
-const PIECES: readonly Piece[] = [
+const PIECES: readonly TextPiece[] = [
   {
     reference: passage.reference,
+    text: passage.text,
     words: sourceWords(passage.text).length,
     group: passage.reference,
   },
 ];
 
-/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the session over the garden, its minutes in the same `store`, and the voice over `voice`, its switch in the same `store`. */
+/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the session over the garden and `pieces` (the app's own, the passage alone, when none are given), its minutes in the same `store`, and the voice over `voice`, its switch in the same `store`. */
 export const appLayer = (parts: {
   readonly source: Layer.Layer<DictationSource>;
   readonly haptics: Layer.Layer<Haptics>;
   readonly store: Layer.Layer<KeyValueStore.KeyValueStore>;
   readonly chime: Layer.Layer<Chime>;
   readonly voice: Layer.Layer<VoiceSource>;
+  readonly pieces?: readonly TextPiece[];
 }) =>
   sayItLayer(passage).pipe(
-    Layer.provideMerge(sessionLayer(PIECES).pipe(Layer.provide(parts.store))),
+    Layer.provideMerge(sessionLayer(parts.pieces ?? PIECES).pipe(Layer.provide(parts.store))),
     Layer.provideMerge(dictationLayer.pipe(Layer.provide(parts.source))),
     Layer.provideMerge(gardenLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.chime)))),
     Layer.provideMerge(voiceLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.voice)))),
@@ -95,6 +98,7 @@ export const runtime = Atom.runtime(
     store,
     chime: liveChime,
     voice: voiceSource,
+    pieces: PIECES,
   }),
 );
 
@@ -134,30 +138,32 @@ export const toggleVoice = runtime.fn(
   { concurrent: true },
 );
 
-/** The cue Today's passage is said under next: the ladder's in a read garden, none in an unread one, which claims no stage. */
-export const todayCue = (view: GardenView): Cue => {
+/** The cue a piece of Today's is said under next: the ladder's in a read garden, none in an unread one, which claims no stage. */
+const todayCue = (view: GardenView, reference: string): Cue => {
   if (view._tag === 'Unread') return TODAY.cue;
-  return cueIn(view, passage.reference);
+  return cueIn(view, reference);
 };
 
 /**
- * Today's Say it: a kept recital under the cue the garden gives once every
- * keep handed to it before the press has landed or failed (a grade changed
- * just before is said after), or the finish of the one under way.
+ * Today's Say it of `piece`: a kept recital under the cue the garden gives
+ * the piece once every keep handed to it before the press has landed or
+ * failed (a grade changed just before is said after), or the finish of the
+ * one under way.
  */
-export const pressToday = Effect.gen(function* () {
-  const sayIt = yield* SayIt;
-  const garden = yield* Garden;
-  const view = yield* garden.settled;
-  yield* sayIt.recite({ cue: todayCue(view), keep: TODAY.keep });
-});
+export const pressToday = (piece: Passage) =>
+  Effect.gen(function* () {
+    const sayIt = yield* SayIt;
+    const garden = yield* Garden;
+    const view = yield* garden.settled;
+    yield* sayIt.recite({ cue: todayCue(view, piece.reference), keep: TODAY.keep }, piece);
+  });
 
-/** A press of Today's button. Each command runs to its end, so a second tap never cuts off the first one's recall. */
-export const press = runtime.fn(() => pressToday, { concurrent: true });
+/** A press of Today's button on `piece`. Each command runs to its end, so a second tap never cuts off the first one's recall. */
+export const press = runtime.fn((piece: Passage) => pressToday(piece), { concurrent: true });
 
-/** A press of the first minute's Say it: a recital under its cue, kept or not. */
+/** A press of the first minute's Say it: a recital of the passage under its cue, kept or not. */
 export const sayAs = runtime.fn(
-  (how: Recital) => Effect.flatMap(SayIt, (sayIt) => sayIt.recite(how)),
+  (how: Recital) => Effect.flatMap(SayIt, (sayIt) => sayIt.recite(how, passage)),
   { concurrent: true },
 );
 

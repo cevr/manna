@@ -33,6 +33,11 @@ export interface Piece {
   readonly group: string;
 }
 
+/** A piece with its text, which Today shows and a recital of it is said against. */
+export interface TextPiece extends Piece {
+  readonly text: string;
+}
+
 /** One verse of a session: a review, or the new piece (`fresh`), with the recalls its plant held when the plan was made and its estimate in seconds. */
 export interface Item {
   readonly reference: string;

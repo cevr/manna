@@ -146,7 +146,9 @@ const launch = (recalls: readonly Recall[], faults: Faults, at = START + DAY) =>
     const sayIt = Context.get(services, SayIt);
     /** Presses Say it, then plays the recital to its end and returns its cue and suggestion. */
     const say = Effect.gen(function* () {
-      const pressing = yield* Effect.forkChild(Effect.provideContext(pressToday, services));
+      const pressing = yield* Effect.forkChild(
+        Effect.provideContext(pressToday(passage), services),
+      );
       yield* TestClock.adjust('1 second');
       yield* Fiber.join(pressing);
       yield* TestClock.adjust('1 second');
@@ -193,7 +195,9 @@ describe('Today’s press', () => {
         faults.hold = Option.some(gate);
         const before = yield* app.sayIt.view;
         const choosing = yield* Effect.forkChild(app.sayIt.choose(1));
-        const pressing = yield* Effect.forkChild(Effect.provideContext(pressToday, app.services));
+        const pressing = yield* Effect.forkChild(
+          Effect.provideContext(pressToday(passage), app.services),
+        );
         yield* TestClock.adjust('1 second');
         const held = yield* app.sayIt.view;
         expect([held.startedAt === before.startedAt, held.cue]).toEqual([true, 'none']);

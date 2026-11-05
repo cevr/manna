@@ -1,10 +1,13 @@
 /**
  * Say it: the app's one recital, run over the app's one `Dictation`. A
- * recital (`recite`) starts one of the passage under a cue, kept or not, or
- * finishes the one under way; it never replaces one. Today's press is a
- * kept recital under the cue the garden's ladder gives the passage (none
- * when the garden is unread, `TODAY`); the first minute's letters recital is
- * cued and keeps nothing. The view carries the cue of the recital shown. Each word the screen newly sees lit gives one soft haptic
+ * recital (`recite`) starts one of a piece under a cue, kept or not, or
+ * finishes the one under way; it never replaces one. The recital carries
+ * its piece: the matcher runs over the piece's text, and its recall is kept
+ * under the piece's reference, so its words are the piece's. A piece with
+ * no words starts nothing. Today's press is a kept recital of the shown
+ * piece under the cue the garden's ladder gives it (none when the garden is
+ * unread, `TODAY`); the first minute's letters recital is of the passage,
+ * cued, and keeps nothing. The view carries the cue of the recital shown. Each word the screen newly sees lit gives one soft haptic
  * tick, and a recital whose last word lights finishes itself. A recital
  * that ends `finished` takes the matcher's suggested grade as the reader's
  * choice, which the reader can change; for a kept recital, each change of
@@ -91,9 +94,9 @@ export const TODAY: Recital = { cue: 'none', keep: true };
 export class SayIt extends Context.Service<
   SayIt,
   {
-    /** Starts a recital the way `how` says, or finishes the one under way. */
-    readonly recite: (how: Recital) => Effect.Effect<void>;
-    /** `recite(TODAY)`. */
+    /** Starts a recital of `piece` the way `how` says, or finishes the one under way. */
+    readonly recite: (how: Recital, piece: Passage) => Effect.Effect<void>;
+    /** `recite(TODAY)` of the layer's passage. */
     readonly press: Effect.Effect<void>;
     readonly peek: (index: number) => Effect.Effect<void>;
     readonly choose: (grade: Grade) => Effect.Effect<void>;
@@ -152,11 +155,12 @@ const sameRecall = (a: Recall, b: Recall) => RECALL_FIELDS.every((field) => a[fi
 
 const isGrade = (grade: number): grade is Grade => GRADES.some((each) => each === grade);
 
-/** How far the current recital has gone: none yet, under way, ended unheard, or finished with its suggestion and the recall last kept; one under way or finished carries its start, the zone's offset at its press, and whether it is kept at all. */
+/** How far the current recital has gone: none yet, under way, ended unheard, or finished with its suggestion and the recall last kept; one under way or finished carries its piece's reference, its start, the zone's offset at its press, and whether it is kept at all. */
 type Progress =
   | { readonly _tag: 'None' }
   | {
       readonly _tag: 'Open';
+      readonly reference: string;
       readonly startedAt: number;
       readonly offset: number;
       readonly keep: boolean;
@@ -164,6 +168,7 @@ type Progress =
   | { readonly _tag: 'Unheard' }
   | {
       readonly _tag: 'Finished';
+      readonly reference: string;
       readonly startedAt: number;
       readonly offset: number;
       readonly keep: boolean;
@@ -187,7 +192,6 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
       const dictation = yield* Dictation;
       const haptics = yield* Haptics;
       const recalls = yield* Recalls;
-      const sayable = sourceWords(passage.text).length > 0;
       const context = yield* Effect.context<never>();
       /** The time of a press on the service's own clock, whoever runs the press. */
       const now = Effect.provideContext(Clock.currentTimeMillis, context);
@@ -218,7 +222,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
         if (recital._tag !== 'Finished' || !recital.keep) return;
         if (view.choice === ABSENT || matcher === ABSENT) return;
         const recall = recallOf(
-          passage.reference,
+          recital.reference,
           recital.startedAt,
           recital.offset,
           view.choice,
@@ -247,6 +251,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
             ...now,
             recital: {
               _tag: 'Finished',
+              reference: recital.reference,
               startedAt: recital.startedAt,
               offset: recital.offset,
               keep: recital.keep,
@@ -301,22 +306,23 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
         startImmediately: true,
       });
 
-      const recite = (how: Recital) =>
+      const recite = (how: Recital, piece: Passage) =>
         Effect.gen(function* () {
           const current = yield* dictation.view;
           if (current.status === 'listening') return yield* dictation.finish;
-          if (current.status === 'finishing' || !sayable) return;
+          if (current.status === 'finishing' || sourceWords(piece.text).length === 0) return;
           yield* close(current);
           const startedAt = yield* now;
           const offset = offsetAt(startedAt);
+          const { reference } = piece;
           yield* update((now) => ({
             ...now,
             started: now.started + 1,
-            recital: { _tag: 'Open', startedAt, offset, keep: how.keep },
+            recital: { _tag: 'Open', reference, startedAt, offset, keep: how.keep },
             shown: ABSENT,
             view: { dictation: current, startedAt, choice: ABSENT, cue: how.cue },
           }));
-          yield* dictation.start(passage.text, how.cue);
+          yield* dictation.start(piece.text, how.cue);
         });
 
       const choose = (grade: Grade) =>
@@ -332,7 +338,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
 
       return SayIt.of({
         recite,
-        press: recite(TODAY),
+        press: recite(TODAY, passage),
         peek: (index) => Effect.andThen(dictation.peek(index), keep),
         choose,
         view: Effect.sync(() => MutableRef.get(held).view),
