@@ -4,7 +4,7 @@ import { describe, expect, it, test } from 'effect-bun-test';
 import sharp from 'sharp';
 import { filmFolder, shotsOf } from '../../../library/storybook/films.ts';
 import { blinkOf, paintsOf } from '../../../library/storybook/sheet.ts';
-import { figuresOf } from '../../../library/storybook/shot.ts';
+import { figuresOf, poseAt, timesOf } from '../../../library/storybook/shot.ts';
 import { SHEET_CELLS } from './cells.ts';
 import { inItsOrder } from './index.ts';
 import { SHEETS } from './sheets.ts';
@@ -45,6 +45,37 @@ const stills = placed.flatMap(({ shot }) =>
   }),
 );
 
+/** Every run of frames in which a guest shows the `stare` cell, by shot and guest: its length (s) and how many blinks it shows (runs of frames whose eyes are another key's). */
+const stares = placed.flatMap(({ shot }) =>
+  figuresOf(shot).flatMap(({ figure: f }) => {
+    if (f.member !== 'feast-guest-man' && f.member !== 'feast-guest-woman') return [];
+    const frames = timesOf(shot).map((t) => ({ t, pose: poseAt(f, t) }));
+    const runs: Array<{ from: number; to: number; blinks: number; shut: boolean }> = [];
+    let open = false;
+    for (const { t, pose } of frames) {
+      if (pose.cell !== 'stare') {
+        open = false;
+        continue;
+      }
+      const shut = pose.eyes !== 'stare';
+      const run = runs.at(-1);
+      if (!open || !run) {
+        runs.push({ from: t, to: t, blinks: Number(shut), shut });
+        open = true;
+        continue;
+      }
+      run.to = t;
+      run.blinks += Number(shut && !run.shut);
+      run.shut = shut;
+    }
+    return runs.map((r) => ({
+      at: `${shot.id} ${f.name} stare ${r.from.toFixed(2)}–${r.to.toFixed(2)} s`,
+      long: r.to - r.from + 1 / shot.fps,
+      blinks: r.blinks,
+    }));
+  }),
+);
+
 /** A cell's pixels as the split stored them. */
 const rasterOf = (png: string) =>
   Effect.map(
@@ -56,6 +87,18 @@ describe("In Its Order's storybook holds", () => {
   test('blinks every hold whose cell has a `<cell>Blink` key on its sheet, but a lidded cell’s, which changes key within 4.6 s (critique 1, item 14; round 3, M1)', () => {
     expect(stills.filter((s) => !LIDDED.has(s.cell)).map((s) => s.at)).toEqual([]);
     expect(stills.filter((s) => LIDDED.has(s.cell) && s.long > ALIVE).map((s) => s.at)).toEqual([]);
+  });
+
+  test('holds each guest stare of 4.6 s or less with no blink, and blinks a longer one once (critique 3, finding 6: the stares blinked the neutral blink’s upturned arcs eight times)', () => {
+    expect(stares.length).toBeGreaterThanOrEqual(6);
+    expect(
+      stares.flatMap((s) => {
+        const want = Number(s.long > ALIVE);
+        if (s.blinks === want) return [];
+        return [`${s.at}: ${s.blinks} blinks, want ${want}`];
+      }),
+    ).toEqual([]);
+    expect(stares.filter((s) => s.long > ALIVE).length).toBeGreaterThanOrEqual(2);
   });
 
   it.effect('refuses a pasted blink on every lidded cell, so none is lidded by choice', () =>

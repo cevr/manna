@@ -1,8 +1,12 @@
 import type { FilmShot } from '../../../../library/storybook/scene.ts';
+import { Option } from 'effect';
 import {
+  BLINK,
   blinkingHold,
+  type Figure,
   hold,
   type Plate,
+  poseAt,
   type Span,
   swapOf,
   turn,
@@ -40,23 +44,75 @@ import {
 /** The guests' run through a shot: `[at, cell]` changes, each a turn of `TURN` s from the cell before; the first cell held from 0 with its blink. */
 const TURN = 0.3;
 
-/** A guest at the table holding `first` (blinking with `neutralBlink`), then turning to each next cell at its time and holding it, blinking with the neutral blink's shut eyes pasted on its own. */
+/** The longest a guest holds one stare with no blink (the act's acceptance, `ALIVE`, the longest one drawing may hold with the same eyes). */
+const ALIVE = 4.6;
+
+/** How finely `blinkStartsOf` reads a figure's blink schedule, in s. */
+const BLINK_STEP = 1 / 240;
+
+/** How long before and after its one blink a long stare's blinking hold runs, in s: past `BLINK_STEP`, and far short of `BLINK_GAP`, so the hold shows that blink alone. */
+const BLINK_MARGIN = 0.05;
+
+/** The starts of the blinks `name`'s seeded schedule (`poseAt` on a blinking hold) shows whole within [`from`, `to`], in s. */
+const blinkStartsOf = (name: string, from: number, to: number): ReadonlyArray<number> => {
+  const probe: Figure = {
+    _tag: 'Figure',
+    name,
+    member: '',
+    sheet: '',
+    at: { x: 0, ground: 0 },
+    spans: [blinkingHold(from, to, 'stare', 'neutralBlink')],
+  };
+  const steps = Math.floor((to - from) / BLINK_STEP);
+  const shut = Array.from({ length: steps + 1 }, (_, i) => {
+    const t = from + i * BLINK_STEP;
+    return { t, shut: poseAt(probe, t).eyes !== 'stare' };
+  });
+  return shut.flatMap(({ t, shut: now }, i) => {
+    if (!now || i === 0 || shut[i - 1]?.shut || t + BLINK > to) return [];
+    return [t];
+  });
+};
+
+/**
+ * A guest holding `cell` from `from` to `to`: blinking with the neutral
+ * blink's shut eyes pasted on its own, but a stare, whose wide eyes the
+ * neutral blink's upturned arcs do not fit (critique 3, finding 6): held
+ * still when it lasts `ALIVE` or less, and else blinking once, at its blink
+ * nearest the hold's middle.
+ */
+const guestHold = (name: string, from: number, to: number, cell: string): ReadonlyArray<Span> => {
+  if (cell !== 'stare') return [blinkingHold(from, to, cell, 'neutralBlink')];
+  if (to - from <= ALIVE) return [hold(from, to, cell)];
+  const middle = (from + to) / 2;
+  const nearest = blinkStartsOf(name, from, to).toSorted(
+    (a, b) => Math.abs(a - middle) - Math.abs(b - middle),
+  );
+  return Option.match(Option.fromUndefinedOr(nearest[0]), {
+    onNone: () => [hold(from, to, cell)],
+    onSome: (start) => [
+      hold(from, start - BLINK_MARGIN, cell),
+      blinkingHold(start - BLINK_MARGIN, start + BLINK + BLINK_MARGIN, cell, 'neutralBlink'),
+      hold(start + BLINK + BLINK_MARGIN, to, cell),
+    ],
+  });
+};
+
+/** A guest at the table, `name`, holding `first` from 0, then turning to each next cell at its time and holding it, each hold as `guestHold` holds it. */
 const guestSpans = (
+  name: string,
   first: string,
   changes: ReadonlyArray<readonly [number, string]>,
   end: number,
 ): readonly [Span, ...ReadonlyArray<Span>] => {
   const cells = [first, ...changes.map(([, c]) => c)];
   const starts = [0, ...changes.map(([at]) => at)];
-  const head = blinkingHold(0, changes[0]?.[0] ?? end, first, 'neutralBlink');
+  const [head = hold(0, end, first), ...held] = guestHold(name, 0, changes[0]?.[0] ?? end, first);
   const rest = changes.flatMap(([at, cell], i): ReadonlyArray<Span> => {
     const to = starts[i + 2] ?? end;
-    return [
-      turn(at, TURN, cells[i] ?? first, cell),
-      blinkingHold(at + TURN, to, cell, 'neutralBlink'),
-    ];
+    return [turn(at, TURN, cells[i] ?? first, cell), ...guestHold(name, at + TURN, to, cell)];
   });
-  return [head, ...rest];
+  return [head, ...held, ...rest];
 };
 
 /** The diners' row on its plane, each holding and blinking; diners 1, 2 and 4 turn to talk over `talks` (diner 3's open mouth is a drawn red the palette lacks, so it never talks). */
@@ -267,6 +323,7 @@ export const coldTable: FilmShot = {
       layer('table', Z.table, [
         ...guests(
           guestSpans(
+            'man',
             'neutral',
             [
               [cue('stare').start, 'stare'],
@@ -275,6 +332,7 @@ export const coldTable: FilmShot = {
             duration,
           ),
           guestSpans(
+            'woman',
             'neutral',
             [
               [cue('stared').start, 'stare'],
@@ -403,8 +461,8 @@ export const coldLetter: FilmShot = {
         dinersLayer(new Map([[4, [cue('talk').start, cue('talk').end]]] as const), duration),
         layer('table', Z.table, [
           ...guests(
-            guestSpans('smile', [[cue('stare').start, 'stare']], duration),
-            guestSpans('smile', [[cue('stared').start, 'stare']], duration),
+            guestSpans('man', 'smile', [[cue('stare').start, 'stare']], duration),
+            guestSpans('woman', 'smile', [[cue('stared').start, 'stare']], duration),
           ),
           leadAt([
             blinkingHold(0, cue('down').start, 'bottle', 'frontBlink'),
@@ -458,7 +516,10 @@ export const coldOuch: FilmShot = {
         ...backdrop(),
         dinersLayer(new Map(), duration, CLOSE.diners),
         layer('table', Z.table, [
-          ...guests(guestSpans('stare', [], duration), guestSpans('stare', [], duration)),
+          ...guests(
+            guestSpans('man', 'stare', [], duration),
+            guestSpans('woman', 'stare', [], duration),
+          ),
           seat(
             { member: 'lead-feast', sheet: 'iio-close', name: 'lead', x: 960, crown },
             { headPx: HEAD, z: Z.table },
