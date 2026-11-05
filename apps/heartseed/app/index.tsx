@@ -317,12 +317,13 @@ function Counts({ garden }: { readonly garden: Option.Option<ReadGarden> }) {
 /**
  * Today: its header (the heading and the way to the field, and under them
  * the reader's choices), fixed above a scroll view of the session's counts
- * line, the passage the reader is learning, its stage and Say it. Its first
- * show with the garden read makes the launch's plan; a later show, after
- * the field, finds it made.
- * The way to the field and the choices sit outside the scroll view, so
- * however much a recital adds below, they are on screen without a scroll
- * and clear of the home indicator.
+ * line, the passage the reader is learning, its stage and the alert, and a
+ * footer fixed under the scroll view: the result's grades and the action
+ * button. Its first show with the garden read makes the launch's plan; a
+ * later show, after the field, finds it made.
+ * Every control but a missed word's mark sits outside the scroll view, so
+ * however long the verse or the result, they are on screen without a
+ * scroll and clear of the home indicator.
  */
 function Today({ onField }: { readonly onField: () => void }) {
   const insets = useSafeAreaInsets();
@@ -346,10 +347,7 @@ function Today({ onField }: { readonly onField: () => void }) {
       </View>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[
-          look.content,
-          { paddingTop: 16, paddingBottom: insets.bottom + 32 },
-        ]}
+        contentContainerStyle={[look.content, { paddingTop: 16, paddingBottom: 16 }]}
       >
         <Counts garden={garden} />
         <View style={styles.passage}>
@@ -359,10 +357,6 @@ function Today({ onField }: { readonly onField: () => void }) {
           <Verse marks={screen.marks} cue={shownCue(garden, sayIt, screen.marks)} onPeek={onPeek} />
           <Growing garden={garden} sayIt={sayIt} />
         </View>
-        {Option.match(screen.result, {
-          onNone: () => false,
-          onSome: (result) => <Grades result={result} onChoose={onChoose} />,
-        })}
         {Option.match(screen.alert, {
           onNone: () => false,
           onSome: (alert) => (
@@ -371,13 +365,19 @@ function Today({ onField }: { readonly onField: () => void }) {
             </Text>
           ),
         })}
+      </ScrollView>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+        {Option.match(screen.result, {
+          onNone: () => false,
+          onSome: (result) => <Grades result={result} onChoose={onChoose} />,
+        })}
         <BigButton
           label={screen.button}
           busy={screen.listening}
           pressable={screen.pressable}
           onPress={() => onPress(passage)}
         />
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -469,6 +469,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   scroll: { flex: 1 },
+  footer: { paddingHorizontal: 24, paddingTop: 12, gap: 12 },
   toField: {
     minHeight: 44,
     paddingHorizontal: 20,

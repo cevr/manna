@@ -15,8 +15,9 @@
  * first-minute frame; on Today the group holds the four radios `2 min`,
  * `5 min`, `10 min` and `20 min` in that order, exactly one checked, beside
  * at most one `Voice` switch; neither lies inside a scroll view, and the
- * scroll view holds no control but the recital's own (Say it's button, a
- * word to peek at, the grades). At most one counts line shows, at the top
+ * scroll view holds no control but a missed word's mark to peek at (the
+ * action button and the grades sit in the footer under it). At most one
+ * counts line shows, at the top
  * of the scroll view above the reference, in the line's form and named as
  * it reads.
  */
@@ -210,12 +211,8 @@ export const scrolled = (node: Element) => scrollerOf(node) !== null;
 
 const CONTROLS = '[role="button"],[role="radio"],[role="switch"],[role="checkbox"],input,a[href]';
 
-/** Whether a control in Today's scroll view is the recital's own: Say it's button, a word to peek at, or a grade. */
-const recitals = (node: Element) =>
-  node.closest('[data-testid^="word-"]') !== null ||
-  node.closest('[role="radiogroup"][aria-label="Grade"]') !== null ||
-  (node.getAttribute('role') === 'button' &&
-    ['Say it', 'Listening'].includes(node.getAttribute('aria-label') ?? ''));
+/** Whether a control in Today's scroll view is the one kind allowed there: a missed word's mark, to peek at. */
+const recitals = (node: Element) => node.closest('[data-testid^="word-"]') !== null;
 
 /** The choices as a frame shows them: the radios' names in order and the one checked, and the switch's state; none for a control not shown. */
 export const choicesOf = (host: Element) => {

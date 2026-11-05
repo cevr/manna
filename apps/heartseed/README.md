@@ -630,7 +630,7 @@ the plan one piece at a time.
     minute) and taps (refused writes, taps while Say it listens, the field
     and back), every frame held to where the choices may show (only under
     Today's heading, outside the scroll view, which holds no control but
-    the recital's own), the first values shown, and the disk; and a
+    a missed word's mark), the first values shown, and the disk; and a
     pending frame with the session's and the voice's views at hand shows
     neither.
   - `test:counts`: `src/session/counts.test.tsx`, Today's counts line
@@ -644,6 +644,13 @@ the plan one piece at a time.
     after every step the line is `src/test/session-model.ts`'s counts of
     the plan it made at Today's first show and at each Minutes tap, over
     the disk's recalls, and an unread launch shows no line in any frame.
+  - `test:run`: `src/run`, Today's run through `src/test/run-rig.tsx`
+    (pieces given to `appLayer`, a recognizer that hears the text a test
+    names, refused recall writes and unread listings; every Today frame
+    held to the footer rule: no control in the scroll view but a missed
+    word's mark, at most one action button): `src/run/footer.test.tsx`,
+    the action button and the grades under the scroll view through a
+    recital, a grade and the field and back.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
