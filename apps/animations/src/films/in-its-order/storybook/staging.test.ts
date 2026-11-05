@@ -31,6 +31,8 @@ import { HEAD, TABLE_TOP } from './shots/courtyard.ts';
 import { CELLS as LEAD_TABLE_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
 import LEAD_TABLE_RECORD from '../../../library/cast/lead-feast/shot-sheets/iio-table/record.json';
 import { MEASURED } from './palettes.ts';
+import { SHEET_CELLS } from './cells.ts';
+import { shareOf } from '../../../library/storybook/sheet.ts';
 import { CUP_MOUTHS, DISSOLVES, GUTTER } from './shots/milk.ts';
 
 /** The lead's table sheet's record, read for its props alone (a sheet drawn before props records none). */
@@ -421,6 +423,33 @@ describe("In Its Order's staging", () => {
     const top = near.place.y + (TABLE_TOP_PX / TABLE.size[1]) * near.place.height;
     const tall = mother.at.ground - BABY_MOTHER.crown;
     expect(top).toBeLessThanOrEqual(mother.at.ground - tall / 5);
+  });
+
+  test('seats cold-baby’s four diners near behind the mother as the panel does: two pairs, one either side of her, each pair shoulder to shoulder, each head on screen at least 0.35 of hers (the panel 0.41; the far row 0.19; the owner, critique 2 finding 8)', () => {
+    const baby = placed.find(({ shot }) => shot.id === 'cold-baby')?.shot;
+    if (!baby) return expect(baby).toBeDefined();
+    const all = figuresOf(baby);
+    const mother = all.find(({ figure }) => figure.name === 'mother');
+    const diners = all.filter(({ figure }) => figure.name.startsWith('diner-'));
+    if (!mother) return expect(mother).toBeDefined();
+    const headOf = ({ layer, figure: f }: (typeof all)[number]) =>
+      (baby.headPx *
+        Option.match(Option.fromUndefinedOr(SHEET_CELLS.get(`${f.member}/${f.sheet}`)), {
+          onNone: () => 1,
+          onSome: (c) => shareOf(c.palette, f.sheet),
+        })) /
+      layer.z;
+    const sides = diners
+      .map(({ figure }) => figure.at.x)
+      .toSorted((a, b) => a - b)
+      .map((x) => Number(x > mother.figure.at.x));
+    expect(sides).toEqual([0, 0, 1, 1]);
+    const xs = diners.map(({ figure }) => figure.at.x).toSorted((a, b) => a - b);
+    expect([(xs[1] ?? 0) - (xs[0] ?? 0), (xs[3] ?? 0) - (xs[2] ?? 0)].every((d) => d <= 200)).toBe(
+      true,
+    );
+    const small = diners.filter((d) => headOf(d) < 0.35 * headOf(mother)).map((d) => d.figure.name);
+    expect(small).toEqual([]);
   });
 
   it.effect(

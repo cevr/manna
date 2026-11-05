@@ -140,8 +140,8 @@ const leadAt = (spans: readonly [Span, ...ReadonlyArray<Span>]) =>
 /** The close of the mother: a grown head on her plane, so the diners behind read at matched scale on theirs, and her whole seated figure (crown to the stool's feet) fits the frame at the shot's start. */
 const BABY_HEAD = 430;
 
-/** The diners' places behind the mother in cold-baby, layer px: either side of her and close to her, as the panel seats them. */
-const BABY_DINERS = [250, 470, 1380, 1600];
+/** The diners behind the mother in cold-baby, as the panel `cold.baby.3` seats them (the owner, critique 2 finding 8): a pair either side of her shoulders, shoulder to shoulder, on a plane near enough that each head is about 0.41 of hers, the panel's share, their crowns and their table where the panel sets them (layer px, at the shot's start the frame's own). */
+const BABY_DINERS = { z: 2, crown: 420, xs: [300, 440, 1460, 1600], table: 680 } as const;
 
 /** The table plate's top edge in its own px: where its wood begins under the bowls. */
 export const TABLE_TOP_PX = 1061;
@@ -171,7 +171,7 @@ export const coldBaby: FilmShot = {
     reply: { mark: 'baby', word: 'nobody', dur: 1 },
   },
   build: ({ duration, cue }) => {
-    const far = { headPx: BABY_HEAD, z: 4.4 };
+    const far = { headPx: BABY_HEAD, z: BABY_DINERS.z };
     const push = 1.06;
     return {
       headPx: BABY_HEAD,
@@ -189,14 +189,14 @@ export const coldBaby: FilmShot = {
         layer('diners', far.z, [
           ...dinersOn(
             far,
-            { crown: 396, xs: BABY_DINERS },
+            { crown: BABY_DINERS.crown, xs: BABY_DINERS.xs },
             new Map([
               [1, [cue('talk').start, cue('talk').end]],
               [4, [cue('reply').start, cue('reply').end]],
             ] as const),
             duration,
           ),
-          plateOn('far-table.png', FAR_TABLE, [960, 110], [960, 590], 1.2),
+          plateOn('far-table.png', FAR_TABLE, [960, 110], [960, BABY_DINERS.table], 1.2),
         ]),
         layer('mother', 1, [
           seat(
