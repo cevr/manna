@@ -2,7 +2,14 @@ import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import sharp from 'sharp';
 import type { Raster } from '@manna/film/tools';
-import { hexOf, medianOf, paintsOf, rgbOfHex } from '../../../library/storybook/sheet.ts';
+import {
+  deltaE,
+  hexOf,
+  medianOf,
+  paintsOf,
+  rgbOfHex,
+  TWIN_PAINT,
+} from '../../../library/storybook/sheet.ts';
 import { CELLS as KEPT } from '../../../library/cast/feast-guest-woman/shot-sheets/feast-courtyard/cells.ts';
 import { CELLS as TABLE } from '../../../library/cast/feast-guest-woman/shot-sheets/iio-table/cells.ts';
 import { PALETTES } from './palettes.ts';
@@ -82,6 +89,66 @@ const INK = [PALETTES.get('feast-guest-woman')].flatMap((palette) => {
   return [hexOf(rgbOfHex(palette.ink))];
 });
 
+/** Her ink's channels, read pixel by pixel as the islands are walked. */
+const INK_RGB = INK.flatMap((hex) => rgbOfHex(hex));
+
+/** Her cloth's paints, by hex: each garment and sash paint, and each other paint within `TWIN_PAINT` of a garment paint (its twin), as her body-cloth rule reads cloth. */
+const CLOTH = [PALETTES.get('feast-guest-woman')].flatMap((palette) => {
+  if (!palette) return [];
+  const paints = paintsOf(palette);
+  const garments = paints.filter((p) => p.role === 'garment');
+  return paints.flatMap((p) => {
+    const twin = p.role === 'other' && garments.some((g) => deltaE(p.rgb, g.rgb) <= TWIN_PAINT);
+    if (p.role !== 'garment' && p.role !== 'sash' && !twin) return [];
+    return [hexOf(p.rgb)];
+  });
+});
+
+/** The hex of a cell's pixel `q`, `clear` where it is transparent. */
+const hexAt = (r: Raster, q: number): string => {
+  if ((r.rgba[q * 4 + 3] ?? 0) === 0) return 'clear';
+  return hexOf([r.rgba[q * 4] ?? 0, r.rgba[q * 4 + 1] ?? 0, r.rgba[q * 4 + 2] ?? 0]);
+};
+
+/** The in-cell 8-neighbours of pixel `q`. */
+const around8 = (r: Raster, q: number): ReadonlyArray<number> => {
+  const [x, y] = [q % r.width, Math.floor(q / r.width)];
+  return [-1, 0, 1].flatMap((dy) =>
+    [-1, 0, 1].flatMap((dx) => {
+      const [u, v] = [x + dx, y + dy];
+      if ((dx === 0 && dy === 0) || u < 0 || v < 0 || u >= r.width || v >= r.height) return [];
+      return [v * r.width + u];
+    }),
+  );
+};
+
+/** The 8-connected islands of ink in a cell's rows from `top` down, each as its pixels. */
+const inkIslandsOf = (r: Raster, top: number): ReadonlyArray<ReadonlyArray<number>> => {
+  const [k0, k1, k2] = INK_RGB;
+  const ink = (q: number) =>
+    q >= top * r.width &&
+    (r.rgba[q * 4 + 3] ?? 0) > 0 &&
+    r.rgba[q * 4] === k0 &&
+    r.rgba[q * 4 + 1] === k1 &&
+    r.rgba[q * 4 + 2] === k2;
+  const seen = new Uint8Array(r.width * r.height);
+  const islands: Array<ReadonlyArray<number>> = [];
+  for (let q0 = 0; q0 < seen.length; q0++) {
+    if (seen[q0] === 1 || !ink(q0)) continue;
+    seen[q0] = 1;
+    const [island, stack] = [[q0], [q0]];
+    while (stack.length > 0)
+      for (const m of around8(r, stack.pop() ?? 0)) {
+        if (seen[m] === 1 || !ink(m)) continue;
+        seen[m] = 1;
+        island.push(m);
+        stack.push(m);
+      }
+    islands.push(island);
+  }
+  return islands;
+};
+
 /** The 8-connected islands of ink of `SPECK_PX` or fewer in a cell's rows below `SPECK_ROWS` of its opaque rows. */
 const inkSpecksOf = (r: Raster): number => {
   const opaque = (q: number) => (r.rgba[q * 4 + 3] ?? 0) > 0;
@@ -90,33 +157,33 @@ const inkSpecksOf = (r: Raster): number => {
     Math.floor(q / r.width),
   );
   const top = (first ?? 0) + Math.floor(((last ?? 0) - (first ?? 0) + 1) * SPECK_ROWS);
-  const ink = (q: number) =>
-    Math.floor(q / r.width) >= top &&
-    opaque(q) &&
-    INK.includes(hexOf([r.rgba[q * 4] ?? 0, r.rgba[q * 4 + 1] ?? 0, r.rgba[q * 4 + 2] ?? 0]));
-  const seen = new Uint8Array(r.width * r.height);
-  return all.filter((q0) => {
-    if (seen[q0] === 1 || !ink(q0)) return false;
-    seen[q0] = 1;
-    const stack = [q0];
-    let size = 0;
-    while (stack.length > 0) {
-      const q = stack.pop() ?? 0;
-      size++;
-      const [x, y] = [q % r.width, Math.floor(q / r.width)];
-      for (let v = Math.max(0, y - 1); v <= Math.min(r.height - 1, y + 1); v++)
-        for (let u = Math.max(0, x - 1); u <= Math.min(r.width - 1, x + 1); u++) {
-          const m = v * r.width + u;
-          if (seen[m] === 1 || !ink(m)) continue;
-          seen[m] = 1;
-          stack.push(m);
-        }
-    }
-    return size <= SPECK_PX;
-  }).length;
+  return inkIslandsOf(r, top).filter((island) => island.length <= SPECK_PX).length;
 };
 
+/** The ink islands of a cell, of any size, whose 8-neighbour rim is all her cloth's paints: ink lying wholly inside her cloth. */
+const inkInClothOf = (r: Raster): ReadonlyArray<ReadonlyArray<number>> =>
+  inkIslandsOf(r, 0).filter((island) => {
+    const inside = new Set(island);
+    const rim = island.flatMap((q) => around8(r, q).filter((m) => !inside.has(m)));
+    return rim.length > 0 && rim.every((m) => CLOTH.includes(hexAt(r, m)));
+  });
+
 describe("In Its Order's guest woman's cloth", () => {
+  it.effect(
+    'leaves no ink island of any size wholly inside her cloth on any table cell, its 8-neighbour rim all garment, sash or twin paint (art check 4b, fault 1: 23–29 islands of 9–115 px a cell scratched her left fold and sleeve top in cold-ouch)',
+    () =>
+      Effect.gen(function* () {
+        const table = yield* Effect.forEach(Object.entries(TABLE), ([cell, c]) =>
+          Effect.map(rasterOf(c.png), (r) => {
+            const islands = inkInClothOf(r);
+            return [cell, islands.length, islands.reduce((n, i) => n + i.length, 0)] as const;
+          }),
+        );
+        expect(CLOTH.length).toBeGreaterThanOrEqual(3);
+        expect(table.filter(([, n]) => n > 0)).toEqual([]);
+      }),
+  );
+
   it.effect(
     'leaves no more ink specks in her body on any table cell than her kept sheet’s most, 38: 8-connected ink islands of 8 px or less below .40 of her opaque rows (critique 4, fault 1: 143–159 a cell dotted her olive mantle edges and neckline)',
     () =>

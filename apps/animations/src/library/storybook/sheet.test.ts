@@ -11,6 +11,7 @@ import {
   figuresIn,
   groundOf,
   hexOf,
+  INK_SPECK_PX,
   largestPiece,
   measuredPaint,
   mendPockets,
@@ -1010,6 +1011,41 @@ describe('tidied under body-cloth', () => {
         return row;
       }),
     );
+  });
+
+  /** Her face over her robe holding two blocks of ink wholly inside it: one of 100 px, one of 130 px, past `INK_SPECK_PX`. */
+  const inked = [
+    ...Array.from({ length: 4 }, () => 'hhhhhhhhhhhhhhhhhhhh'),
+    ...Array.from({ length: 6 }, () => 'hhhhhhaaaaaaaahhhhhh'),
+    ...Array.from({ length: 4 }, () => 'rrrrrrrrrrrrrrrrrrrr'),
+    ...Array.from({ length: 10 }, () => 'rrrrkkkkkkkkkkrrrrrr'),
+    ...Array.from({ length: 4 }, () => 'rrrrrrrrrrrrrrrrrrrr'),
+    ...Array.from({ length: 10 }, () => 'rrkkkkkkkkkkkkkrrrrr'),
+    ...Array.from({ length: 4 }, () => 'rrrrrrrrrrrrrrrrrrrr'),
+  ];
+  const inkedSplit = (bodyCloth: boolean) => {
+    const inkKey = { ...key, k: rgbOfHex(palette.ink) };
+    const drawn = art(inked, inkKey);
+    const paints = paintsOf(palette);
+    const nearest = drawnNearestOf(drawn, paints);
+    return lettersOf(
+      tidied(drawn, snapped(drawn, paints, nearest), paints, nearest, {
+        ...PLAIN_SPLIT,
+        bodyCloth,
+      }),
+      inkKey,
+    );
+  };
+
+  test('gives an ink island of up to INK_SPECK_PX wholly inside the cloth below the face the cloth’s paint and keeps a larger one; a plain split keeps both (art check 4b, fault 1: islands of 9–115 px scratched the guest woman’s fold)', () => {
+    expect(inkedSplit(false)).toEqual(inked);
+    expect(inkedSplit(true)).toEqual(
+      inked.map((row, y) => {
+        if (y >= 14 && y < 24) return row.replaceAll('k', 'r');
+        return row;
+      }),
+    );
+    expect(INK_SPECK_PX).toBe(128);
   });
 });
 
