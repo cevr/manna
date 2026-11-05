@@ -2,7 +2,7 @@ import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import sharp from 'sharp';
 import type { Raster } from '@manna/film/tools';
-import { hexOf, medianOf, paintsOf } from '../../../library/storybook/sheet.ts';
+import { hexOf, medianOf, paintsOf, rgbOfHex } from '../../../library/storybook/sheet.ts';
 import { CELLS as KEPT } from '../../../library/cast/feast-guest-woman/shot-sheets/feast-courtyard/cells.ts';
 import { CELLS as TABLE } from '../../../library/cast/feast-guest-woman/shot-sheets/iio-table/cells.ts';
 import { PALETTES } from './palettes.ts';
@@ -70,7 +70,70 @@ const FEET_PAINTS = [PALETTES.get('feast-guest-woman')]
     return [hexOf(p.rgb)];
   });
 
+/** Where a cell's speck rows start, as a share of its opaque rows from the first: below her head, her body from the shoulders down. */
+const SPECK_ROWS = 0.4;
+
+/** The largest ink island (px, 8-connected) that reads as a speck in a line rather than a line of its own. */
+const SPECK_PX = 8;
+
+/** Her ink, by hex. */
+const INK = [PALETTES.get('feast-guest-woman')].flatMap((palette) => {
+  if (!palette) return [];
+  return [hexOf(rgbOfHex(palette.ink))];
+});
+
+/** The 8-connected islands of ink of `SPECK_PX` or fewer in a cell's rows below `SPECK_ROWS` of its opaque rows. */
+const inkSpecksOf = (r: Raster): number => {
+  const opaque = (q: number) => (r.rgba[q * 4 + 3] ?? 0) > 0;
+  const all = Array.from({ length: r.width * r.height }, (_, q) => q);
+  const [first, last] = [all.find(opaque) ?? 0, all.findLast(opaque) ?? 0].map((q) =>
+    Math.floor(q / r.width),
+  );
+  const top = (first ?? 0) + Math.floor(((last ?? 0) - (first ?? 0) + 1) * SPECK_ROWS);
+  const ink = (q: number) =>
+    Math.floor(q / r.width) >= top &&
+    opaque(q) &&
+    INK.includes(hexOf([r.rgba[q * 4] ?? 0, r.rgba[q * 4 + 1] ?? 0, r.rgba[q * 4 + 2] ?? 0]));
+  const seen = new Uint8Array(r.width * r.height);
+  return all.filter((q0) => {
+    if (seen[q0] === 1 || !ink(q0)) return false;
+    seen[q0] = 1;
+    const stack = [q0];
+    let size = 0;
+    while (stack.length > 0) {
+      const q = stack.pop() ?? 0;
+      size++;
+      const [x, y] = [q % r.width, Math.floor(q / r.width)];
+      for (let v = Math.max(0, y - 1); v <= Math.min(r.height - 1, y + 1); v++)
+        for (let u = Math.max(0, x - 1); u <= Math.min(r.width - 1, x + 1); u++) {
+          const m = v * r.width + u;
+          if (seen[m] === 1 || !ink(m)) continue;
+          seen[m] = 1;
+          stack.push(m);
+        }
+    }
+    return size <= SPECK_PX;
+  }).length;
+};
+
 describe("In Its Order's guest woman's cloth", () => {
+  it.effect(
+    'leaves no more ink specks in her body on any table cell than her kept sheet’s most, 38: 8-connected ink islands of 8 px or less below .40 of her opaque rows (critique 4, fault 1: 143–159 a cell dotted her olive mantle edges and neckline)',
+    () =>
+      Effect.gen(function* () {
+        const kept = yield* Effect.forEach(Object.values(KEPT), (c) =>
+          Effect.map(rasterOf(c.png), inkSpecksOf),
+        );
+        const most = Math.max(...kept);
+        const table = yield* Effect.forEach(Object.entries(TABLE), ([cell, c]) =>
+          Effect.map(rasterOf(c.png), (r) => [cell, inkSpecksOf(r)] as const),
+        );
+        expect(INK).toHaveLength(1);
+        expect(most).toBe(38);
+        expect(table.filter(([, n]) => n > most)).toEqual([]);
+      }),
+  );
+
   it.effect(
     'paints her mantle rows on her table sheet as her kept sheet does, each paint’s share within 2 points of its median there, and her sandals’ and the contact shadow’s paints nowhere between her head and her feet (critique 3, finding 4: her neckline, mantle and sash edges took the sandals’ brown, her sash the contact shadow’s lavender)',
     () =>

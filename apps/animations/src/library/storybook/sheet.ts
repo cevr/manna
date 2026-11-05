@@ -1067,7 +1067,8 @@ export const EDGE_REACH = 6;
  * drawn in the footwear's paint), the stool and its edges (a pixel with
  * more of an other paint, a garment's twin aside, than of cloth or a twin
  * within `EDGE_REACH` px) and a cell
- * that reads no face keep their paints.
+ * that reads no face keep their paints. Below the face, the ink's specks
+ * inside the cloth then take the cloth's paint (`inkSpecksClothed`).
  */
 const bodyClothed = (t: Tidy, map: Int32Array, face: Option.Option<Box>): Int32Array => {
   const garments = t.paints.flatMap((p, i) => {
@@ -1117,9 +1118,70 @@ const bodyClothed = (t: Tidy, map: Int32Array, face: Option.Option<Box>): Int32A
           out[q] = twins.get(index) ?? nearestAmong(labOf(rgbAt(t.drawn, q)), garments, labs);
         }
       }
-      return out;
+      const cloth = (index: number) => {
+        const role = t.paints[index]?.role;
+        return role === 'garment' || role === 'sash' || twins.has(index);
+      };
+      return inkSpecksClothed(out, width, box.y + box.height, cloth);
     },
   });
+};
+
+/** The largest ink island (px, 8-connected) `inkSpecksClothed` reads as grain in a cloth line rather than a line of its own. */
+const INK_SPECK_PX = 8;
+
+/**
+ * The map with the ink's grain inside the cloth's lines in the cloth's
+ * paint (critique 4, fault 1: the drawing's near-black grain in the guest
+ * woman's olive mantle edges split as ink specks): each 8-connected ink
+ * island of `INK_SPECK_PX` or fewer, wholly at or below row `from`, whose
+ * 8-neighbour rim is all `cloth`, takes the paint most of its rim pixels
+ * are (the lower index of equals). An ink pixel touching the outline, at a
+ * corner too, is part of the outline and stays.
+ */
+const inkSpecksClothed = (
+  map: Int32Array,
+  width: number,
+  from: number,
+  cloth: (index: number) => boolean,
+): Int32Array => {
+  const out = map.slice();
+  const height = map.length / width;
+  const seen = new Uint8Array(map.length);
+  for (let q0 = from * width; q0 < map.length; q0++) {
+    if (seen[q0] === 1 || map[q0] !== 0) continue;
+    const island = inkIslandAt(map, width, q0, seen);
+    if (island.length > INK_SPECK_PX) continue;
+    const inside = new Set(island);
+    const rim = [
+      ...new Set(island.flatMap((p) => around8(p, width, height).filter((m) => !inside.has(m)))),
+    ].map((m) => map[m] ?? CLEAR);
+    if (rim.length === 0 || !rim.every(cloth)) continue;
+    const winner = mostOf(rim);
+    for (const p of island) out[p] = winner;
+  }
+  return out;
+};
+
+/** The 8-connected island of ink (index 0) holding pixel `q0` of a cell's map, each of its pixels marked in `seen`. */
+const inkIslandAt = (map: Int32Array, width: number, q0: number, seen: Uint8Array) => {
+  seen[q0] = 1;
+  const [island, stack] = [[q0], [q0]];
+  while (stack.length > 0)
+    for (const m of around8(stack.pop() ?? 0, width, map.length / width)) {
+      if (seen[m] === 1 || map[m] !== 0) continue;
+      seen[m] = 1;
+      island.push(m);
+      stack.push(m);
+    }
+  return island;
+};
+
+/** The index most of `indices` are, the lower of equals; `CLEAR` for none. */
+const mostOf = (indices: ReadonlyArray<number>): number => {
+  const votes = new Map<number, number>();
+  for (const index of indices) votes.set(index, (votes.get(index) ?? 0) + 1);
+  return [...votes].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]?.[0] ?? CLEAR;
 };
 
 /** The pixels of a stored cell's soles' band (`SOLE_BAND`) that hold a hair paint, its paints read exactly. */
@@ -1327,7 +1389,7 @@ export interface Split {
 /** The opt-in split rules by the names a sheet's record gives them. */
 export const SPLIT_RULES = ['unstray', 'feet-low', 'unmottle', 'sash-band', 'body-cloth'] as const;
 
-/** The split's rules a sheet opts into, as its record names them: `unstray`, each stray hair shade its neighbours' paint (`unstrayed`); `feetLow` (`feet-low`), the footwear paint only in the figure's lower half (`feetLowOnly`); `unmottle`, each blotch of skin shade inside the skin its base (`unmottled`); `sashBand` (`sash-band`), each fleck of a sash paint far smaller than its band the paint round it (`sashBanded`); `bodyCloth` (`body-cloth`), the body between the face and the soles in the cloth's paints, no footwear and no garment's twin there (`bodyClothed`). */
+/** The split's rules a sheet opts into, as its record names them: `unstray`, each stray hair shade its neighbours' paint (`unstrayed`); `feetLow` (`feet-low`), the footwear paint only in the figure's lower half (`feetLowOnly`); `unmottle`, each blotch of skin shade inside the skin its base (`unmottled`); `sashBand` (`sash-band`), each fleck of a sash paint far smaller than its band the paint round it (`sashBanded`); `bodyCloth` (`body-cloth`), the body between the face and the soles in the cloth's paints, no footwear, no garment's twin and no ink speck inside the cloth there (`bodyClothed`). */
 export interface SplitRules {
   readonly unstray: boolean;
   readonly feetLow: boolean;

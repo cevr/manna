@@ -25,7 +25,7 @@
         "width": 359,
         "height": 1024
       },
-      "sha256": "7775fdd0f8a111d717d884e8953c1f238751c33ac9103eefbe2607aa0f8f2a75"
+      "sha256": "5bed3750d7c16d7d27ad1a50cce908633d49b2dfeea975c05ef6d8709cc69674"
     },
     {
       "key": "neutralBlink",
@@ -35,7 +35,7 @@
         "width": 379,
         "height": 1024
       },
-      "sha256": "b762de2e3d5fd1dc6368f6905abe8d6a121eeeac3a5dc8bdfb49c0418a594930"
+      "sha256": "685754bc2473c0dbdf5fe821bbedd18cbffc7cf7aa2aea0b808590ac949ef684"
     },
     {
       "key": "stare",
@@ -45,7 +45,7 @@
         "width": 381,
         "height": 1024
       },
-      "sha256": "4c2c10552e6f209efe3c639649811689071fc0eba3b40cdd0a4bc226259f1419"
+      "sha256": "7516c90228a8e8a4e24e6cc2b264e2ad5d566150d0950bc0c0bebf608e5b675c"
     },
     {
       "key": "smile",
@@ -55,7 +55,7 @@
         "width": 359,
         "height": 1024
       },
-      "sha256": "e2259ceffd856f002e6ebb85c234ca086ef2d2f08000146d25d114fed2183457"
+      "sha256": "418229867e1cdbbf76f8511570d30d2717658bb285f02e3e24d38e79a30fe800"
     }
   ],
   "rules": ["unstray", "unmottle", "sash-band", "body-cloth"]
