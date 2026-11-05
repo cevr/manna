@@ -9,6 +9,9 @@
         "test:films",
         "test:library",
         "test:storybook",
+        "test:storybook-height",
+        "test:storybook-height-shrink",
+        "test:storybook-height-phase",
         "test:storybook-lines",
         "test:storybook-lines-split",
         "test:storybook-faces",
@@ -82,7 +85,68 @@
         "!src/library/storybook/lines.test.ts",
         "!src/library/storybook/lines-split.test.ts",
         "!src/library/storybook/faces.test.ts",
+        "!src/library/storybook/verify/height*.test.ts",
         "!src/library/storybook/shots/**/*.test.*"
+      ]
+    },
+    "test:storybook-height": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/**/*.test.*",
+        "!src/library/cutout/**/*.test.*",
+        "!src/library/toon3d/**/*.test.*",
+        "!src/library/cast/**/*.test.*",
+        "!src/library/storybook/*.test.*",
+        "!src/library/storybook/shots/**/*.test.*",
+        "!src/library/storybook/verify/measures.test.ts",
+        "!src/library/storybook/verify/verdict.test.ts",
+        "!src/library/storybook/verify/height-shrink.test.ts",
+        "!src/library/storybook/verify/height-phase.test.ts"
+      ]
+    },
+    "test:storybook-height-phase": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/**/*.test.*",
+        "!src/library/cutout/**/*.test.*",
+        "!src/library/toon3d/**/*.test.*",
+        "!src/library/cast/**/*.test.*",
+        "!src/library/storybook/*.test.*",
+        "!src/library/storybook/shots/**/*.test.*",
+        "!src/library/storybook/verify/measures.test.ts",
+        "!src/library/storybook/verify/verdict.test.ts",
+        "!src/library/storybook/verify/height.test.ts",
+        "!src/library/storybook/verify/height-shrink.test.ts"
+      ]
+    },
+    "test:storybook-height-shrink": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/**/*.test.*",
+        "!src/library/cutout/**/*.test.*",
+        "!src/library/toon3d/**/*.test.*",
+        "!src/library/cast/**/*.test.*",
+        "!src/library/storybook/*.test.*",
+        "!src/library/storybook/shots/**/*.test.*",
+        "!src/library/storybook/verify/measures.test.ts",
+        "!src/library/storybook/verify/verdict.test.ts",
+        "!src/library/storybook/verify/height.test.ts",
+        "!src/library/storybook/verify/height-phase.test.ts"
       ]
     },
     "test:storybook-lines": {

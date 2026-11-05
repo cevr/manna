@@ -529,10 +529,11 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   `multiplane` at its depth, with the engine's backdrop fibre; frames and
   `shot.mp4` go to `out/storybook/<shot>/`.
 - **The verify** renders every frame (every sixth with `--quick`, under
-  `quick/`) twice, colour and each figure alone, and judges the bars in
+  `quick/`) twice, colour, each figure alone, and each unsquashed figure
+  alone on its analysis surface, and judges the bars in
   `verify/bars.ts`: `verdict.md` opens `PASS n/n pass` or `FAIL k/n pass`;
   beside it `verdict.json`, `manifest.json`, `contact.png`, `shot.mp4`,
-  `frames/` and `figures/`. It exits 0 only on PASS n/n. A head (crown to
+  `frames/`, `figures/` and `analysis/`. It exits 0 only on PASS n/n. A head (crown to
   the collar: the first run of clothes in the head column that the face's
   own skin, 4-connected, does not close below, so a jaw line drawn in a
   garment's colour is not the collar; skin below that does not join the
@@ -552,16 +553,31 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   reads cells, not renders: each drawn key's cell (or blink) lit by the
   shot's light, at every change of drawn key in the plan, where every colour
   is the one drawn and no resampling has blended an edge; the `light` bar
-  keeps the renders' colour checked. The `render-height` bar reads the
-  renders' crown-to-soles within each key a figure holds and reports its
-  worst key: two keys of one sheet differ in height by design (a bowed head,
-  a seat), which `scale` and `proportions` hold, so it catches only a figure
-  growing or shrinking while one key holds. A key some frame cuts (a close,
-  a truck past the edge) is read in every frame, whole ones too, off the
-  columns its render shows, down to the soles' row the plan pins
-  (`verify/rows.ts`), so one key is read one way throughout; it is named on
-  an `INFO render-height cut:` line. A figure no frame reads (no column of
-  its upper half shows) is unread, never passed.
+  keeps the renders' colour checked. The `render-height` bar reads each
+  figure's complete crown-to-soles in every unsquashed frame, over its
+  plane's zoom, within each key it holds, and reports its worst key: two
+  keys of one sheet differ in height by design (a bowed head, a seat),
+  which `scale` and `proportions` hold, so it catches only a figure growing
+  or shrinking while one key holds. Every frame is read one way, whole or
+  cut by the view: the page paints the figure alone onto an analysis
+  surface round its whole placed cell (`verify/rows.ts`, `analysisBoxOf`),
+  so no frame edge cuts it. Its part right of and below the frame's origin
+  paints at the frame's own transform, unmoved, so every pixel the frame
+  holds is the figure-alone frame's own, byte for byte; only its part left
+  of or above the frame paints at that transform moved by whole px
+  (`page.ts`). The height render paints the layer without its blur
+  (`PaintRequest.sharp`), at the same transform, breath, zoom and depth: a
+  blur of fixed px moves a curved crown's edge by an amount that depends on
+  the figure's rendered size, so a camera push would read as growth, while
+  the bar protects the drawn size. Its crown (in its head column) and soles are read to a
+  fraction of a px from the coverage across each edge (`observeHeight`),
+  and a figure under `LEAST_HEIGHT` (100 px) reads unread, too small for a
+  3 % change to clear the bar at every sampling phase. The surface only
+  allocates: its height is read off its pixels, never off the plan. A
+  frame the view cuts is named on an `INFO render-height cut:` line, each
+  squashed frame it leaves out on an `INFO render-height squash:` line. A
+  frame whose surface holds none of the figure, or cuts it, or whose crown
+  and soles do not read, leaves the figure unread, never passed.
   The bars stay `orchestrator-proposed`
   until the owner OKs their numbers.
 - **A film's shots** live in `src/films/<film>/storybook/`: its sheet

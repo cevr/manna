@@ -1,9 +1,9 @@
 import { rng } from '@manna/film/core';
 import type { Raster } from '@manna/film/tools';
-import { Option } from 'effect';
+import { Option, Result } from 'effect';
 import { describe, expect, test } from 'effect-bun-test';
 import { deltaE, hexOf, type Lines, type Palette, paintsOf, type Rgb } from '../sheet.ts';
-import { BREATH, type FigureFrame } from '../shot.ts';
+import type { FigureFrame } from '../shot.ts';
 import { BARS } from './bars.ts';
 import {
   colourStep,
@@ -22,7 +22,6 @@ import {
   scaleSamples,
   stepSamples,
 } from './measures.ts';
-import { seenHeight } from './rows.ts';
 import { type Measured, one, unreadAt, verdictOf, verdictText } from './verdict.ts';
 
 /** A run where every check reads one passing value: each test swaps in the check it holds. */
@@ -289,13 +288,17 @@ const readOf = (lines: Lines, whole = true): FigureRead => ({
   litInterior: 10,
 });
 
+/** A frame read whose complete height is its read's lines' crown-to-soles unless named otherwise. */
 const frameRead = (
   r: Partial<FrameRead> & Pick<FrameRead, 'name' | 'frame' | 'read'>,
 ): FrameRead => ({
   cell: 'a',
   zoom: 1,
   squashed: false,
-  seen: Option.none(),
+  height: Option.match(r.read.lines, {
+    onNone: () => Result.fail('no lines read'),
+    onSome: (l) => Result.succeed(l.bottom - l.crown + 1),
+  }),
   ...r,
 });
 
@@ -580,124 +583,62 @@ describe('heightSamples', () => {
     expect(verdictOf(BARS, { ...ALL_PASS, 'render-height': samples }).passed).toBe(BARS.length - 1);
   });
 
-  test('reads a frame that cuts a figure by the height read off the columns it shows, fails the verifier’s cropped key growing 100 → 104 there as it fails a whole one, and names the frames so read (round 3, M3)', () => {
-    const cut = (frame: number, seen: number) =>
+  test('reads a frame the view cuts by its complete height like a whole one: the verifier’s cut key growing 100 → 104 beside a whole sibling fails, and the frames so read are named (round 2, M3)', () => {
+    const cut = (name: string, frame: number, height: number) =>
       frameRead({
-        name: 'lead',
+        name,
         frame,
         read: readOf(linesOfHeight(0, 79, 20), false),
-        seen: Option.some(seen),
+        height: Result.succeed(height),
       });
+    const sibling = frameRead({
+      name: 'lead-sibling',
+      frame: 0,
+      read: readOf(linesOfHeight(0, 99, 20)),
+    });
     const value = (reads: ReadonlyArray<FrameRead>) =>
       heightSamples(reads).map((s) => Option.getOrElse(s.value, () => -1));
-    expect(value([cut(0, 100), cut(1, 100)])).toEqual([0]);
-    expect(value([cut(0, 100), cut(1, 104)])[0]).toBeCloseTo(4 / 104, 9);
+    expect(value([cut('lead', 0, 100), cut('lead', 1, 100)])).toEqual([0]);
+    expect(value([cut('lead', 0, 100), cut('lead', 1, 104), sibling])[0]).toBeCloseTo(4 / 104, 9);
     expect(
-      verdictOf(BARS, { ...ALL_PASS, 'render-height': heightSamples([cut(0, 100), cut(1, 104)]) })
-        .passed,
+      verdictOf(BARS, {
+        ...ALL_PASS,
+        'render-height': heightSamples([cut('lead', 0, 100), cut('lead', 1, 104), sibling]),
+      }).passed,
     ).toBe(BARS.length - 1);
-    expect(heightInfo([cut(0, 100), cut(1, 100)])).toEqual([
-      'render-height cut: lead read in 2 frames off the columns they show',
+    expect(heightInfo([cut('lead', 0, 100), cut('lead', 1, 100)])).toEqual([
+      'render-height cut: lead read whole off its analysis render in 2 frames the view cuts',
     ]);
   });
 
-  test('reads every frame of a key some frame cuts off the columns its render shows, whole frames too, so two reads of one height never count as growth; growth across the cut still fails (milk-row’s baby, round 3)', () => {
-    const frame = (n: number, whole: boolean, lined: number, seen: number) =>
-      frameRead({
-        name: 'baby',
-        frame: n,
-        cell: 'sit',
-        read: readOf(linesOfHeight(0, Math.round(lined) - 1, 20), whole),
-        seen: Option.some(seen),
-      });
-    const baby = [
-      frame(0, true, 357.5, 354.97),
-      frame(1, true, 363, 356.4),
-      frame(2, false, 357.5, 354.94),
-      frame(3, false, 368, 355.25),
-    ];
-    const value = (reads: ReadonlyArray<FrameRead>) =>
-      Option.getOrElse(heightSamples(reads)[0]?.value ?? Option.none(), () => -1);
-    expect(value(baby)).toBeCloseTo((356.4 - 354.94) / 355.25, 9);
-    expect(verdictOf(BARS, { ...ALL_PASS, 'render-height': heightSamples(baby) }).passed).toBe(
-      BARS.length,
-    );
-    const grown = baby.map((f) => ({
-      ...f,
-      seen: Option.map(f.seen, (s) => s * ([1.04, 1][Number(f.read.whole)] ?? 1)),
-    }));
-    expect(value(grown)).toBeGreaterThan(0.02);
-  });
-
-  test('reads as unread a figure no frame reads a height of (every frame cuts it and shows no column it can read): never a pass (round 3, M3)', () => {
-    const blind = frameRead({
+  test('counts the squashed frames it leaves out in verdict.md, and reads a figure every frame of which is squashed as unread', () => {
+    const squashed = frameRead({
       name: 'lead',
       frame: 0,
-      read: readOf(linesOfHeight(0, 79, 20), false),
+      squashed: true,
+      read: readOf(linesOfHeight(0, 79, 20)),
     });
-    expect(heightSamples([blind]).map((s) => [s.at, Option.isNone(s.value)])).toEqual([
-      ['lead: no unsquashed frame reads its height', true],
+    expect(heightInfo([squashed, { ...squashed, frame: 1 }])).toEqual([
+      'render-height squash: lead leaves out 2 squashed frames',
+    ]);
+    expect(heightSamples([squashed]).map((s) => [s.at, Option.isNone(s.value)])).toEqual([
+      ['lead: no unsquashed frame to read its height', true],
     ]);
   });
 
-  test('over generated renders whole, cut at the bottom, cut at the side, cut at the top and trucked from whole to cut within the key, at generated depths, camera zooms, draw scales and breaths: a key holding its size passes and one that grows 3–4 % within its hold fails, whole or cut; a figure cut at the top in every frame reads unread (round 3, M3)', () => {
-    const [cw, ch] = [60, 200];
-    const cell = figureIn({ width: cw + 2, height: ch + 2 }, { x0: 1, y0: 1, w: cw, h: ch });
-    const lines = { ...linesOfHeight(1, ch, 20), centreColumn: 30 };
-    const misses = Array.from({ length: 15 }, (_, i) => {
-      const draw = rng(i + 1);
-      const kind = (['whole', 'bottom', 'side', 'top', 'truck'] as const)[i % 5] ?? 'whole';
-      const z = 1 + draw() * 2;
-      const scale = 0.9 + draw() * 0.4;
-      const push = draw() * 0.8;
-      const zooms = Array.from({ length: 6 }, (_, k) => 1 + (k / 5) * push);
-      const breaths = Array.from({ length: 6 }, () => 1 + draw() * 2 * BREATH);
-      const grow = 1.03 + draw() * 0.01;
-      const read = (growth: number) =>
-        zooms.map((camera, frame) => {
-          const placement = (
-            {
-              whole: 'whole',
-              bottom: 'bottom',
-              side: 'side',
-              top: 'top',
-              truck: (['whole', 'side'] as const)[Number(frame >= 3)] ?? 'side',
-            } as const
-          )[kind];
-          const plane = camera ** (1 / z);
-          const sx = scale * plane;
-          const sy = sx * (breaths[frame] ?? 1) * ([1, growth][Number(frame >= 3)] ?? 1);
-          const [w, h] = [Math.round(cw * sx), Math.round(ch * sy)];
-          const y0 = { whole: 10, bottom: 10, side: 10, top: -Math.round(h * 0.4) }[placement];
-          const width = {
-            whole: w + 20,
-            bottom: w + 20,
-            side: 10 + Math.round(w * 0.4),
-            top: w + 20,
-          }[placement];
-          const tall = [h + 20, 10 + Math.round(h * 0.6)][
-            Number(placement === 'bottom' || placement === 'top')
-          ];
-          const render = figureIn({ width, height: tall ?? h + 20 }, { x0: 10, y0, w, h });
-          const place = { x: 10 + 29.5 * sx, y: y0 + ch * sy, sx, sy };
-          const figure = readFigure(render, PAINTS);
-          return frameRead({
-            name: 'f',
-            frame,
-            zoom: plane,
-            read: figure,
-            seen: seenHeight(cell, lines, place, render),
-          });
-        });
-      const value = (growth: number) =>
-        Option.getOrElse(heightSamples(read(growth))[0]?.value ?? Option.none(), () => -1);
-      return { kind, steady: value(1), grown: value(grow) };
+  test('reads a figure with one unread frame as unread at that frame, though its other frames read a steady height: an unread frame is never dropped (r3 M1)', () => {
+    const steady = (frame: number) =>
+      frameRead({ name: 'lead', frame, read: readOf(linesOfHeight(0, 99, 20)) });
+    const blind = frameRead({
+      name: 'lead',
+      frame: 2,
+      read: readOf(linesOfHeight(0, 79, 20), false),
+      height: Result.fail('its analysis render reaches the surface edge'),
     });
-    const passes = (m: (typeof misses)[number]) => {
-      if (m.kind === 'top') return m.steady === -1 && m.grown === -1;
-      return m.steady >= 0 && m.steady <= 0.02 && m.grown > 0.02;
-    };
-    expect(misses.filter((m) => !passes(m))).toEqual([]);
+    expect(
+      heightSamples([steady(0), steady(1), blind]).map((s) => [s.at, Option.isNone(s.value)]),
+    ).toEqual([['lead frame 2: its analysis render reaches the surface edge', true]]);
+    expect(heightSamples([blind]).map((s) => Option.isNone(s.value))).toEqual([true]);
   });
 });
 

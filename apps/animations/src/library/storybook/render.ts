@@ -3,6 +3,7 @@ import { Base64 } from 'effect/encoding';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import sharp from 'sharp';
 import { type PaintCell, type PaintRequest, type PaintScene, paintSceneOf } from './painter.ts';
+import type { Box } from './sheet.ts';
 import {
   drawnKeyOf,
   drawOrder,
@@ -153,14 +154,30 @@ export const sceneOf = Effect.fn('Storybook.sceneOf')(function* (
   });
 });
 
-/** Renders one request to PNG bytes. */
-export type RenderPng = (req: PaintRequest) => Effect.Effect<Uint8Array, StorybookFailed>;
+/**
+ * Renders one request to PNG bytes: over the whole frame, or over `box`, a
+ * rectangle of the frame's px in whole px that may reach past its edges
+ * (an analysis surface, `analysisBoxOf`), painted at the very transform the
+ * frame paints with, moved by whole px only.
+ */
+export type RenderPng = (
+  req: PaintRequest,
+  box?: Box,
+) => Effect.Effect<Uint8Array, StorybookFailed>;
+
+/** The whole frame of a scene as a box of its own px. */
+export const frameBoxOf = (scene: Pick<PaintScene, 'width' | 'height'>): Box => ({
+  x: 0,
+  y: 0,
+  width: scene.width,
+  height: scene.height,
+});
 
 /**
  * The shot's page in a headless Chrome, closed with the scope: its bundle
  * runs on a blank page, decodes the scene's pictures and leaves
  * `window.storybook.render`, which the returned renderer calls once per
- * request.
+ * request, over the whole frame unless it is given a box.
  */
 export const storybookPage = (
   scene: PaintScene,
@@ -190,9 +207,9 @@ export const storybookPage = (
       catch: failed,
     });
     if (scened !== 'loaded') return yield* StorybookFailed.make({ reason: scened });
-    return (req: PaintRequest) =>
+    return (req: PaintRequest, box: Box = frameBoxOf(scene)) =>
       Effect.tryPromise({
-        try: () => view.evaluate<string>(`window.storybook.render(${jsonOf(req)})`),
+        try: () => view.evaluate<string>(`window.storybook.render(${jsonOf(req)}, ${jsonOf(box)})`),
         catch: failed,
       }).pipe(
         Effect.flatMap((answer) => {
@@ -204,7 +221,7 @@ export const storybookPage = (
       );
   });
 
-/** One render of a frame: `colour` the whole frame, `figure:<name>` that figure alone; each figure draws its drawn key (`drawnKeyOf`), and its stretch up is its squash times its breath. */
+/** One render of a frame: `colour` the whole frame, `figure:<name>` that figure alone, `height:<name>` that figure alone for its analysis surface, painted `sharp` (without its layer's blur); each figure draws its drawn key (`drawnKeyOf`), and its stretch up is its squash times its breath. */
 export const requestOf = (frame: Frame, output: string): PaintRequest => ({
   t: frame.t,
   camera: { x: frame.camera.x, y: frame.camera.y, zoom: frame.camera.zoom },
@@ -217,7 +234,8 @@ export const requestOf = (frame: Frame, output: string): PaintRequest => ({
     sy: sy * breath,
     scale,
   })),
-  only: output.replace(/^figure:/, '').replace(/^colour$/, ''),
+  only: output.replace(/^(figure|height):/, '').replace(/^colour$/, ''),
+  sharp: output.startsWith('height:'),
 });
 
 /** A frame's file name: `f0000.png` for frame 0. */

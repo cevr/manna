@@ -88,12 +88,12 @@ export const BARS: ReadonlyArray<BarRow> = [
   ),
   proposed(
     'render-height',
-    "figure-alone renders with no squash: (max − min) of crown-to-soles ÷ the camera's zoom at the figure's plane, over the median, within each key the figure holds, worst figure and key (the camera's push is not the figure resizing; two keys of one sheet differ in height by design, which scale and proportions hold)",
+    "each unsquashed frame's figure alone on its analysis surface (its frame's own transform without its layer's blur, uncropped by the frame): (max − min) of crown-to-soles ÷ the camera's zoom at the figure's plane, over the median, within each key the figure holds, worst figure and key, each crown and sole read to a fraction of a px; a frame whose complete crown-to-soles does not read, or reads under 100 px, leaves the figure unread (the camera's push is not the figure resizing; two keys of one sheet differ in height by design, which scale and proportions hold)",
     Bar.AtMost({ max: 0.02 }),
   ),
   proposed(
     'determinism',
-    'every render, colour and figure alone, in two page launches: renders whose sha256 differ',
+    'every render, colour, figure alone and analysis surface, in two page launches: renders whose sha256 differ',
     Bar.AtMost({ max: 0 }),
   ),
 ];
