@@ -18,7 +18,11 @@ session whose read failed. Below the passage is the big button, `Say it`
 makes no sound. Beside the header `Today`, fixed above the scrolling
 passage, once the garden's read completes and never while Say it listens,
 is the button `Your field`, which opens the field in place (`field.md`);
-it is on screen without a scroll whatever Today holds.
+it is on screen without a scroll whatever Today holds. Under them, in the
+header's second row, are the radio group `Minutes` (`2 min`, `5 min`,
+`10 min`, `20 min`) and the switch `Voice`, and at the top of the scroll
+view, above the reference, the counts line (`id=session`), such as
+`Nothing to tend now` (`session.md`).
 
 ## Sub-features
 
@@ -59,8 +63,9 @@ under `[application] "Heartseed"`, the text nodes `Today`, `Isaiah 41:10`,
 passage above, with no `¶`, `[`, `]`, `‹` or `›`) and no node holding the
 passage whole, a label starting `Stage: ` (after the first minute,
 `Stage: seed`),
-a node `Say it` and a node `Your field`, with no `Listening` and no grade (`Again`, `Hard`,
-`Good`, `Easy`). A short label can appear on two nodes, so check that the
+a node `Say it` and a node `Your field`, the four `Minutes` radios, the
+switch `Voice` and the counts line, with no `Listening` and no grade
+(`Again`, `Hard`, `Good`, `Easy`). A short label can appear on two nodes, so check that the
 labels are present, not how many nodes carry them.
 Count those nodes, report the counts, then delete the snapshot: it holds
 the passage's words.

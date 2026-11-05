@@ -164,6 +164,10 @@ word's mark and `Your field`, and on the field `Today`. Heartseed has no journey
   blade, ear, full corn), the growth line, the stage kept across a
   restart in the device's store, and the growth sound's native module,
   which logs each play it skips on the simulator.
+- [features/session.md](features/session.md): the daily session on Today:
+  the `Minutes` and `Voice` choices in the header's second row, kept across
+  a relaunch, and the counts line atop the passage, due again after the
+  first minute. Run it from `first.md`'s Today, before `fade.md`.
 - [features/field.md](features/field.md): the field, reached from Today's
   `Your field` and back by `Today`: a row per passage, a plant per verse at
   its stage, the local days sown from 04:00 (each by the zone offset its

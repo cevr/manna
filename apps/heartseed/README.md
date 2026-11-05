@@ -8,7 +8,9 @@ its stage in the garden, and one big button, Say it, which hears the reader
 recite it; the word matcher (`src/matcher.ts`) grades a recall against the
 verse, and the garden (`src/garden.ts`) keeps it and grows the verse's
 plant. Beside Today's heading, `Your field` opens the field (`src/field.ts`, below): a
-row per passage, a plant per verse, the days sown and the harvest.
+row per passage, a plant per verse, the days sown and the harvest. Under
+them, the session's `Minutes` and `Voice` choices sit, and atop the passage
+a counts line says what the day's plan holds (`src/session.ts`, below).
 
 Run it as a reader does with the verify skill,
 `.claude/skills/verify-heartseed`. It drives through `bun run sim`
@@ -424,6 +426,65 @@ them.
   number shows, and nothing moves. Every text is Palette A's ink (the
   counts in Today's summary style), never the muted grey, so each reads at
   WCAG AA's 4.5:1 on the ground and on a card.
+
+## Session
+
+The daily session is the plan of what to tend today: the due reviews, then
+one new piece, within the minutes the reader chose. Today holds its two
+choices in a second row of its fixed header, under `Today` and
+`Your field`, outside the scroll view: the radio group `Minutes` (`2 min`,
+`5 min`, `10 min`, `20 min`) and the switch `Voice` (the voice's
+`heartseed/voice/enabled`, toggled by `Voice.setEnabled`). The row wraps,
+each pill is 44 pt tall, and the chosen one takes the grade pills' style.
+They show once their reads complete, in a read garden and an unread one,
+and stay shown and working while Say it listens; the pending frame and the
+first minute show neither. At the top of the scroll view, above the
+reference, the counts line (`testID="session"`) says what the plan holds.
+Say it stays offered whatever the line reads: `hsrun` will have Today run
+the plan one piece at a time.
+
+- `src/session.ts` is the rule, pure: `planOf` over a `Read` view, the
+  pieces the app holds text for
+  (today one, Today's passage: its reference, its word count and its
+  passage as group), the instant, the zone's offset at it and the minutes.
+  - A plant is due at FSRS's due. While it holds one recall that carries
+    an offset and started from 18:00 to 03:59:59.999 by that offset's local
+    clock, it is due no earlier than the 04:00 that ends that recall's day
+    (`dayOf`, `src/day.ts`): plant at night, recall in the morning, and
+    travel moves no due instant. A record kept before recalls carried an
+    offset keeps FSRS's due.
+  - The new piece is the first piece, in the app's order, with no plant.
+    None is offered when any plant was first recalled today, or when every
+    piece is planted. A plant no piece names is never offered, and a
+    reference in two pieces counts once, as the first.
+  - A recital is estimated at 10 s and half a second a word; the budget is
+    the minutes. The new piece's estimate is reserved first, then the due
+    reviews are taken, earliest due first (ties by reference in code
+    units), while each fits what is left, stopping at the first that does
+    not; the first is always taken. So the plan never outgrows the budget
+    except by its one review, and after any absence the rest wait for later
+    plans, the oldest first: never a pile.
+  - The reviews are mixed: each next is the earliest due of another group
+    than the last placed, else the earliest due. The new piece comes last.
+  - Nothing is rescheduled, written or stored.
+- `countsOf(plan, garden)` is the counts line, of the items not done: an
+  item is done once its plant holds more recalls than when the plan was
+  made (the new piece, once it is planted), derived from the garden, never
+  stored. It reads `<n> to tend`, `1 new` and `about <k> min` (the
+  estimates' sum rounded up to whole minutes) joined by `·`, or
+  `Nothing to tend now`. It names no backlog and no word for late.
+- `src/session/service.ts` is the `Session` service in the app's layer. It
+  reads the minutes once per launch from `heartseed/session/minutes`, the
+  text `2`, `5`, `10` or `20` by a schema of the four literals; a missing
+  key, any other text or a failed read means 5, and nothing is written at
+  launch. A tap on a radio shows the choice at once and writes it; a failed
+  write keeps the choice for the launch, and the next launch reads what is
+  stored. The plan is made from the runtime's `Clock` and `offsetAt` at
+  that instant when Today first shows in a launch with the garden read
+  (after `Continue` in the first launch), and again at each Minutes tap.
+  Nothing else makes it again: time passing, a recital, a grade, Again, a
+  Voice tap, or the field and back. An unread garden has no plan and no
+  counts line.
 
 ## Tests
 
