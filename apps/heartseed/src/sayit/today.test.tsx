@@ -20,7 +20,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
-import Today from '../../app/index';
+import Root from '../../app/index';
 import { appLayer, runtime, sayItView } from '../app';
 import { DictationSource, type DictationEvent } from '../dictation';
 import { recite, scriptedSource } from '../dictation/script';
@@ -193,9 +193,23 @@ function Seen({ into }: { readonly into: MutableRef.MutableRef<Option.Option<Say
   return null;
 }
 
-/** A store over memory that records, in order, each recall the garden writes: each keep Say it hands over that changes the recital's record writes one. */
+/** Another verse's recall, so the launch opens Today and not the first minute, which a store with no recall of any verse opens. */
+const OTHER: Recall = {
+  reference: 'Made 1:1',
+  startedAt: Date.UTC(2026, 0, 5, 9),
+  grade: 3,
+  suggested: 3,
+  words: 4,
+  missed: 0,
+  peeked: 0,
+  extra: 0,
+};
+
+/** A store over memory, holding another verse's recall, that records, in order, each recall the garden writes: each keep Say it hands over that changes the recital's record writes one. */
 const recordingStore = (kept: Recall[]) => {
-  const backing = new Map<string, string>();
+  const backing = new Map<string, string>([
+    [`heartseed/recall/${OTHER.reference}/${OTHER.startedAt}`, JSON.stringify(OTHER)],
+  ]);
   return Layer.succeed(
     KeyValueStore.KeyValueStore,
     KeyValueStore.makeStringOnly({
@@ -237,7 +251,7 @@ const mount = async (source: Layer.Layer<DictationSource>) => {
           {today && (
             <>
               <Seen into={latest} />
-              <Today />
+              <Root />
             </>
           )}
         </RegistryProvider>,

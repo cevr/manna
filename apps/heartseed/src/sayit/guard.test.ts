@@ -168,13 +168,32 @@ describe('Say it aloud', () => {
       (source) =>
         source === 'app/index.tsx' || source === 'src/sayit.ts' || source.startsWith('src/sayit/'),
     );
-    expect(files.length).toBeGreaterThanOrEqual(5);
+    expect(files.length).toBeGreaterThanOrEqual(6);
     const speaking = files.filter((source) =>
       /voice|Voice|SpeechSynthesis|One\.Speech|announceForAccessibility|AccessibilityInfo/.test(
         code(source),
       ),
     );
     expect(speaking).toEqual([]);
+  });
+
+  it('leaves reading aloud to the first minute: only src/first takes the voice’s atoms from src/app.ts, and only src/app.ts builds the voice', () => {
+    const VOICE_ATOMS = ['voiceView', 'listen', 'hush'];
+    const readers = SOURCES.filter((source) =>
+      importsOf(source).some(
+        ({ from, names }) =>
+          /(^|\/)app$/.test(from) && names.some((name) => VOICE_ATOMS.includes(name)),
+      ),
+    );
+    expect(readers).toEqual(['src/first/screen.tsx']);
+    const builders = SOURCES.filter(
+      (source) =>
+        !source.startsWith('src/voice') &&
+        importsOf(source).some(
+          ({ from, names }) => /(^|\/)voice$/.test(from) && names.includes('layer'),
+        ),
+    );
+    expect(builders).toEqual(['src/app.ts']);
   });
 });
 

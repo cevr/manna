@@ -5,7 +5,10 @@
  * in happy-dom (react-native-web) under the app's own layer over the
  * scripted recital (the passage less its 11th word), the app's real store
  * on the device's `One.Database` (`src/test/one.tsx`) and a recording
- * chime. A restart is a new registry over the same disk.
+ * chime. A restart is a new registry over the same disk. A disk with no
+ * recall of any verse opens the first minute (`src/first`), so each launch
+ * here starts with a recall on the disk: the passage's, or, for the passage
+ * not planted, another verse's.
  *
  * The stage line reads `Stage: <stage>`, the plant beside it is hidden from
  * the screen reader and drawn one way per stage in the prototype's
@@ -24,7 +27,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
-import Today from '../../app/index';
+import Root from '../../app/index';
 import { appLayer, runtime } from '../app';
 import { recite, scriptedSource } from '../dictation/script';
 import { NEW_CARD, review } from '../fsrs';
@@ -36,6 +39,9 @@ import { device } from '../test/one';
 import { voiceSource } from '../voice/source';
 
 const PREFIX = 'heartseed/recall/';
+
+/** A verse other than the passage, whose recall on the disk keeps the launch out of the first minute. */
+const OTHER = 'Made 1:1';
 
 /** The prototype's colours, as the browser computes them: the gold of a seed and a ripe ear, the leaf's green, the unripe ear's green, and the soil. */
 const GOLD = 'rgba(212, 166, 64, 1.00)';
@@ -144,7 +150,7 @@ const mount = async (chimes: Growth[], held: Promise<void> = Promise.resolve()) 
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        <Today />
+        <Root />
       </RegistryProvider>,
     ),
   );
@@ -197,7 +203,7 @@ const mount = async (chimes: Growth[], held: Promise<void> = Promise.resolve()) 
 
 describe('Today’s stage over the device’s store', () => {
   it('reads not planted, then a gold seed, grows to a green ear with one chime, becomes a blade at a peek, keeps it through a restart, falls to a seed at Again, and climbs back silently', async () => {
-    device.launch([]);
+    device.launch([recordOf(recallAt(Date.UTC(2026, 0, 5, 9), OTHER))]);
     const chimes: Growth[] = [];
     const today = await mount(chimes);
     expect(await today.until(() => today.stage() !== null)).toBe(true);

@@ -18,10 +18,29 @@
 
 import { Match, Option } from 'effect';
 
+import type { GardenView } from '../garden';
 import type { OrNull } from '../sayit';
 import type { Ending } from '../voice/reading';
 
 const ABSENT: OrNull<never> = Option.getOrNull(Option.none());
+
+/** The screen a launch opens on: none while the garden's read runs, the first minute when the read holds no recall of any verse, else Today (an unread garden cannot know there is no seed, so it opens Today). */
+export type Opening = 'pending' | 'first' | 'today';
+
+export const openingOf = (garden: Option.Option<GardenView>): Opening =>
+  Option.match(garden, {
+    onNone: () => 'pending',
+    onSome: (view) => {
+      if (view._tag === 'Read' && view.plants.size === 0) return 'first';
+      return 'today';
+    },
+  });
+
+/** The screen the root shows: the one decided at the launch's read, or, until then, what the read says now. */
+export const shownOpening = (decided: Opening, read: Opening): Opening => {
+  if (decided !== 'pending') return decided;
+  return read;
+};
 
 export type Phase = 'hear' | 'letters' | 'alone' | 'planted';
 
