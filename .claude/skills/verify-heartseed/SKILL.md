@@ -139,7 +139,7 @@ the hymnal's skill describes; on Today a reader taps `Say it`, a grade and a
 missed word's mark. Heartseed has no journey files yet. The features:
 
 - [features/today.md](features/today.md): Today, its header, reference,
-  passage and its one button.
+  passage, the passage's stage line and its one button.
 - [features/sayit.md](features/sayit.md): Say it on Today, over the scripted
   replay on the simulator: the lit words, the mark and its peek, the count,
   the suggested grade and a changed one.
@@ -149,6 +149,10 @@ missed word's mark. Heartseed has no journey files yet. The features:
   module, built with the app and its prompts, and its scripted replay on
   the development probe (`apps/heartseed/app/probe/dictation.tsx`). Say it
   calls it on Today.
+- [features/grow.md](features/grow.md): the passage's stage on Today (seed,
+  blade, ear, full corn), the growth line, the stage kept across a
+  restart in the device's store, and the growth sound's native module,
+  which logs each play it skips on the simulator.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.

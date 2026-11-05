@@ -8,13 +8,18 @@ reference and the words are made when the app is bundled, from the KJV in
 `@manna/core` (`apps/heartseed/vite/passage.ts`), shown by the display rule
 of `apps/heartseed/src/display.ts`: a leading `¶` and the space after it
 are dropped, and so is every `[`, `]`, `‹` and `›`, the words they enclose
-kept. Below the passage is one button, `Say it` (`sayit.md`);
-until it is pressed the screen asks for no permission and makes no sound.
+kept. Under the words is the passage's stage line, `Stage: not planted`
+until its first recital (`grow.md`); it appears once the garden's read of
+the device's store completes, a moment after launch, and not at all in a
+session whose read failed. Below the passage is one button, `Say it`
+(`sayit.md`); until it is pressed the screen asks for no permission and
+makes no sound.
 
 ## Sub-features
 
 - `today-passage`: on launch, Today shows the header `Today` (role header),
-  the reference `Isaiah 41:10`, one `Say it` button, and its KJV text, exactly
+  the reference `Isaiah 41:10`, its stage line (a label starting `Stage: `),
+  one `Say it` button, and its KJV text, exactly
   `Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee; yea, I will uphold thee with the right hand of my righteousness.`
 
 ## How to get to it (user POV)
@@ -25,16 +30,18 @@ until it is pressed the screen asks for no permission and makes no sound.
 
 After the Launch of `SKILL.md` (`sim boot`, then `sim install`, which
 waits for `label=Isaiah 41:10`), its Drive's two commands are this
-feature's drive:
+feature's drive, the open waiting for the stage line (`id=stage`), which
+shows only once the garden is read:
 
 ```bash
-sim open / --expect "label=Isaiah 41:10"
+sim open / --expect "id=stage"
 sim snapshot today
 ```
 
 → `open` is ok, and the snapshot (`$EVIDENCE/snapshots/today.txt`) lists,
 under `[application] "Heartseed"`, the text nodes `Today`, `Isaiah 41:10`
 and the passage above, whole, with no `¶`, `[`, `]`, `‹` or `›` in it,
+a label starting `Stage: ` (on a fresh install, `Stage: not planted`),
 and a node `Say it`, with no `Listening` and no grade (`Again`, `Hard`,
 `Good`, `Easy`). A short label can appear on two nodes, so check that the
 labels are present, not how many nodes carry them.

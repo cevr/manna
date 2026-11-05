@@ -8,9 +8,10 @@ word shows only a mark, `Missed word <n>`, that a tap reveals (a peek).
 When the recital ends, Today shows `<lit> of <total> words` (and
 `, <n> peeked` once a word was peeked), `Suggested: <grade>`, and the four
 grades `Again`, `Hard`, `Good` and `Easy` as a radio group with the
-suggestion checked; the reader can change it. A recital that could not be
-heard shows one alert and the verse whole, with no grade. Say it reads no
-word aloud.
+suggestion checked; the reader can change it. Each change of a finished
+recital's recall is kept in the garden, and Today's stage line under the
+verse follows it (`grow.md`). A recital that could not be heard shows one
+alert and the verse whole, with no grade. Say it reads no word aloud.
 
 In a development build on the simulator Say it hears the dictation
 module's replay of a scripted recital (the probe's plan: the passage less
@@ -38,8 +39,9 @@ simulator; the unit tests hold it (`src/sayit.property.test.ts`,
 ## Driving it
 
 This feature changes nothing native, so the drive needs no iOS build when
-the installed app has the dictation module (built at d7a904c4b or later)
-and `git diff --stat d7a904c4b HEAD -- apps/heartseed/native
+the installed app has the dictation and growth modules (built at the
+commit that added `apps/heartseed/native/growth` or later) and
+`git diff --stat <that build's commit> HEAD -- apps/heartseed/native
 apps/heartseed/vite apps/heartseed/vite.config.ts
 apps/heartseed/react-native.config.cjs` is empty. Otherwise build first
 (`SKILL.md`, Launch).

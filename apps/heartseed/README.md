@@ -1,9 +1,10 @@
 # Heartseed
 
 Scripture memorization on One (React Native on iOS, react-native-web on the
-web). Today (`app/index.tsx`) shows the passage the reader is learning and
-one button, Say it, which hears the reader recite it; the word matcher
-(`src/matcher.ts`) grades a recall against the verse.
+web). Today (`app/index.tsx`) shows the passage the reader is learning, its
+stage in the garden, and one button, Say it, which hears the reader recite
+it; the word matcher (`src/matcher.ts`) grades a recall against the verse,
+and the garden (`src/garden.ts`) keeps it and grows the verse's plant.
 
 Run it as a reader does with the verify skill,
 `.claude/skills/verify-heartseed`. It drives through `bun run sim`
@@ -29,9 +30,11 @@ word aloud): the hear phase will call `Voice.read`.
   a range lights the words it overlaps, never fewer than are lit. A word is
   one the matcher counts (`src/matcher/words.ts`), found by its UTF-16 span.
 - The switch is kept under `heartseed/voice/enabled` in the app's settings
-  store, `src/store.ts` (One's key-value store, or memory where it cannot
-  open). Only the text `false` turns it off; a failed read or write is
-  logged and never fails the service. `setEnabled` writes the switch while
+  store, `src/store.ts` (One's key-value store; no memory store stands in
+  where it cannot open, below). Only the text `false` turns it off; a
+  failed read or write is logged and never fails the service: a failed
+  read is on, and after a failed write the view keeps the reader's switch
+  for the session, so the next write once the store opens lands. `setEnabled` writes the switch while
   its stop is under way, not after it, one write at a time, each the
   switch the view holds then, so the store ends at the last call's switch
   however the stops settle.
@@ -141,8 +144,8 @@ alert and the verse whole, and keeps nothing. Say it reads no word aloud.
   `Haptics` is the tick.
 - `src/app.ts` is the app's one runtime: one Dictation over the source
   this build hears, Say it over it, `liveHaptics` (One's soft impact) and
-  `loggedRecalls` (counts and the reference logged as `sayit.recall.kept`,
-  stored nowhere until the scheduler takes the seam). Every screen that
+  the garden (below), which takes Say it's recalls over the app's store
+  and sounds the growth chime. Every screen that
   hears the reader takes Dictation from here. The runtime is not kept
   alive: when Today leaves, its scope closes and Dictation cancels a
   recital under way. `press`, `peek` and `choose` run to their ends.
@@ -163,6 +166,90 @@ alert and the verse whole, and keeps nothing. Say it reads no word aloud.
 - `src/sayit/guard.test.ts` holds the source choice, the one Dictation, no
   word aloud and the soft tick to the sources.
 
+## Garden
+
+Every verse the reader has said is a plant: seed, then blade, then ear,
+then full corn (Mark 4:28). Today shows the passage's stage under its
+words (named `Stage: <stage>` for the screen reader), with a small plant
+beside it drawn as the prototype draws it, and, while a finished recital is
+on the screen, how that recital grew it (`Grew to an ear.`). Until the
+garden's read of the store completes, and for the whole session when it
+failed, Today claims nothing: no stage, no plant, no growth, so a planted
+verse never reads as not planted. A growth plays one soft sound, which
+Silent mode mutes. Nothing leaves the device.
+
+- `src/store.ts` is the app's store: One's key-value store named
+  `heartseed` (the SQLite file `one-kv-heartseed.sqlite` on a phone, local
+  storage on the web) under Effect's `KeyValueStore`. It holds the settings
+  and the garden's recalls. It opens at its first call and keeps the handle
+  for the layer's life; a call made while it is not open tries the open
+  first, so an open that throws fails that one call (`KeyValueStoreError`,
+  logged `store.failed` with the method and key) and the next call tries
+  again. Each launch opens anew. A failure is a failure: nothing stands in
+  for the device, no memory store, no cached keys, no write reported done
+  that One's store refused. `src/store.test.ts` holds it to this over the
+  test `one` module's device (`src/test/one.tsx`), and bans the memory,
+  storage and file-system stores from the app's sources.
+- `src/fsrs.ts` is FSRS-6, the scheduler Selah uses: its default weights,
+  90% retention, learning steps of 1 and 10 minutes, a relearning step of
+  10 minutes, short-term stability, no fuzz, intervals up to 36,500 days.
+  `review(card, grade, at)` is pure and equals ts-fsrs 5.4.2's basic
+  scheduler on every field (a devDependency the tests alone import).
+  Elapsed days are UTC calendar days, and a review's time is its recital's
+  `startedAt`.
+- `src/garden.ts` is the `Garden` service (`view` and its `changes`) and
+  the `Recalls` Say it hands its recalls to. Each recall is one record of
+  the store under `heartseed/recall/<reference>/<startedAt>`, whose value is
+  the recall's eight fields as JSON (`reference`, `startedAt`, `grade`,
+  `suggested`, `words`, `missed`, `peeked`, `extra`) and nothing else. A
+  later keep of the same recital writes the same key, so the last one wins.
+  The garden writes no other key and removes none. Nothing else is stored: a
+  plant's card is the fold of its recalls in `startedAt` order from a new
+  card, and its stage is read from the card and its last recall each time.
+- The read: the garden's view is `Read` (every planted verse's plant, maybe
+  none) or `Unread`, never anything between. At start an attempt lists the
+  store's keys once and reads every key under `heartseed/recall/`; any call
+  that throws (the open, the listing or one record's read) fails the
+  attempt whole, and no partial view is published. It tries three times in
+  all (`READ_ATTEMPTS`, 10 ms and then 20 ms apart, each failure logged
+  `garden.read.retry`); past that the garden is `Unread` for the session
+  (`garden.read.failed`) and reads the store no more until the next launch.
+  A value that is no valid recall of its own key, or a listed key with no
+  value, is skipped and logged (`garden.record.skipped`), and the read stays
+  complete.
+- The stage rule (`stageOf`): full corn once the card's stability is at
+  least 21 days; else a seed when the verse was just planted (one recall)
+  or its last recall was Again; else a blade when the last recall had a
+  peek; else an ear (recalled alone, a miss with no peek included).
+  `growthOf(plant, startedAt)` is the recital's growth: the stage over the
+  recalls before it and over those up to it, some only when there were
+  recalls before and the stage rose.
+- A keep runs alone, in call order (one lock over the whole keep). A keep
+  equal to its known record does nothing; a failed write logs
+  `garden.keep.failed` and changes nothing. Once the write lands, the view
+  changes, and a recital that grew its verse logs `garden.grew` and sounds
+  `Chime.grow` once in the launch, at its first keep that grows it:
+  planting never sounds. An `Unread` garden still writes each keep, but its
+  view stays unread and it never sounds, since the history a growth is
+  measured from is unknown; the next launch reads what it wrote.
+- The sound (`src/garden/sound.ts`) is made in code: two soft sine tones a
+  fifth apart, 0.7 s, a 16-bit mono WAV named by the hash of its bytes.
+  `src/garden/chime.ios.ts` hands it once, in the background, to the Swift
+  package `native/growth` (One's prebuild makes it the local pod
+  `OneSwiftPackages/growth`), which writes it under Caches and makes it a
+  system sound; a growth plays it by its id, fire and forget, and one
+  before the load lands plays nothing. System Sound Services are muted by
+  the ring/silent switch and leave the audio session alone, so Silent mode
+  is respected and Dictation's session is never touched. On the simulator
+  the module plays nothing and logs `[growth] play sound=grow
+  skipped=simulator`; each load logs `[growth] load sound=grow`.
+  `src/garden/chime.ts` is every other platform's: silent, logged
+  `garden.chime`. `src/garden/guard.test.ts` holds the Swift file to this,
+  and the module's declaration (`native/growth/Growth.d.swift.ts`) is
+  committed as One writes it.
+- `gardenView` (`src/app.ts`) is the runtime's atom over `Garden.changes`;
+  Today (`app/index.tsx`) reads the passage's plant from it.
+
 ## Tests
 
 - The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as parts, each a
@@ -182,6 +269,17 @@ alert and the verse whole, and keeps nothing. Say it reads no word aloud.
   - `test:sayit`: `src/sayit.property.test.ts` (Say it against its model)
     and `src/sayit` (Today's Say it in happy-dom, the source Say it hears,
     and its guards).
+  - `test:garden`: `src/store.test.ts` (the store over the device),
+    `src/fsrs.property.test.ts` (FSRS-6 against ts-fsrs),
+    `src/garden.property.test.ts` (the stage and growth rules, and the
+    garden against its model over the real store on the device across
+    launches, failed opens, listings, reads and writes), and in
+    `src/garden` the growth sound and the native module's guard.
+  - `test:today`: `src/garden/today.test.tsx`, Today's stage in happy-dom
+    over the real store on the device (the journey from not planted to an
+    ear and back to a seed across a restart, each stage's look in the
+    prototype's colours, and no claim in any frame of a held launch or an
+    unread session).
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
