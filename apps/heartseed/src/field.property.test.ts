@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noTernary -- the property builds generated gardens step by step over plain arrays and maps, and switches the host's time zone through `process.env.TZ`, which Bun reads at run time, restoring it in the same synchronous block. */
+/* oxlint-disable effect/noNullish, effect/noTernary -- the property builds generated gardens step by step over plain arrays and maps. */
 
 /**
  * The field's rule (`fieldOf`) over generated read gardens, against the rule

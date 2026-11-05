@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noTernary -- the helper reads happy-dom's computed styles, whose absent parent is null, from plain branches. */
+/* oxlint-disable effect/noNullish, effect/noTernary -- the helper reads happy-dom's computed styles, whose absent parent is null, from plain branches. */
 
 /** WCAG 2's AA minimum contrast for normal text: the screen tests' one bar for "reads at AA", against `contrastOf`. */
 export const AA = 4.5;
