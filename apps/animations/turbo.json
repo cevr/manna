@@ -20,6 +20,7 @@
         "test:storybook-strays",
         "test:storybook-smears",
         "test:storybook-cloth",
+        "test:storybook-plates",
         "test:storybook-soles",
         "test:storybook-blinks",
         "test:storybook-resources",
@@ -303,6 +304,20 @@
       ]
     },
     "test:storybook-cloth": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/righteousness-by-faith/**/*.test.*",
+        "!src/films/in-its-order/rigs/**/*.test.*",
+        "!src/films/in-its-order/scenes/**/*.test.*",
+        "!src/library/**/*.test.*"
+      ]
+    },
+    "test:storybook-plates": {
       "dependsOn": ["^transit"],
       "outputs": [],
       "inputs": [
