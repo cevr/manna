@@ -10,8 +10,10 @@
  * and no first-minute frame names a stage outside Planted. The letters
  * phase shows each letter in Today's cue ink at AA on its ground, at rest
  * and while listening, and the hear phase's words not yet read, the phase
- * line and the reference keep the mute. It counts words without printing
- * one.
+ * line and the reference keep the mute. Every element of every phase at
+ * rest, of the hear phase while it reads and of the letters while their
+ * recital listens keeps base's look (`BASE_LOOK`), the letters' ink alone
+ * left out. It counts words without printing one.
  */
 
 import { RegistryProvider } from '@effect/atom-react';
@@ -204,6 +206,170 @@ const mutedTexts = (host: Element) =>
       getComputedStyle(node).color === MUTE,
   ).length;
 
+/** The computed styles a look holds, beside each element's role, test id, labels, `aria-*` and text. */
+const LOOK_STYLES = [
+  'color',
+  'backgroundColor',
+  'opacity',
+  'display',
+  'visibility',
+  'fontFamily',
+  'fontSize',
+  'fontWeight',
+  'lineHeight',
+] as const;
+
+/** A text or label as a look holds it: `#` for one of the verse's own, so no word is written down. */
+const shownText = (text: string | null) =>
+  text === null || text === '' ? '' : passage.text.includes(text.trim()) ? '#' : text;
+
+/** The big button's ring while it pulses: its opacity moves with the clock, so a look holds it as moving. */
+const PULSE = 'rgba(184, 137, 47, 0.45)';
+
+/**
+ * A frame's look: every element of `host` as one line (its tag, role, test
+ * id with a word's index dropped, `aria-label`, every other `aria-*`, the
+ * text it holds when it holds no element, and each of `LOOK_STYLES`), each
+ * distinct line with how many elements show it. In the letters phase
+ * (`letters`), the letters' ink is left out: it is the one part of the
+ * first minute's look moved from base's.
+ */
+const lookOf = (host: Element, letters = false) => {
+  const inked = new Set<Element>(letters ? lettersIn(host) : []);
+  const lines = new Map<string, number>();
+  for (const node of host.querySelectorAll('*')) {
+    const style = getComputedStyle(node);
+    const moving = (name: (typeof LOOK_STYLES)[number]) =>
+      name === 'opacity' && style.backgroundColor === PULSE;
+    const aria = [...node.attributes]
+      .filter((attribute) => attribute.name.startsWith('aria-') && attribute.name !== 'aria-label')
+      .map((attribute) => `${attribute.name}=${attribute.value}`)
+      .toSorted();
+    const line = [
+      node.tagName.toLowerCase(),
+      node.getAttribute('role') ?? '',
+      (node.getAttribute('data-testid') ?? '').replace(/^word-\d+$/u, 'word-#'),
+      shownText(node.getAttribute('aria-label')),
+      aria.join(','),
+      node.children.length === 0 ? shownText(node.textContent) : '',
+      ...LOOK_STYLES.map((name) => {
+        if (name === 'color' && inked.has(node)) return 'the letters’ ink';
+        return moving(name) ? 'moving' : style[name];
+      }),
+    ].join('|');
+    lines.set(line, (lines.get(line) ?? 0) + 1);
+  }
+  return [...lines].map(([line, count]) => `${count}× ${line}`).toSorted();
+};
+
+const CLEAR = 'rgba(0, 0, 0, 0.00)';
+const GROUND = 'rgba(238, 232, 225, 1.00)';
+const CARD = 'rgba(247, 243, 238, 1.00)';
+const SOFT = 'rgba(167, 212, 228, 1.00)';
+const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+/** A view's display, visibility and the browser's default font, as a look line ends for a box. */
+const VIEW = 'flex||"Times New Roman"|16px|normal|normal';
+const REFERENCE = `1× div||reference|||Isaiah 41:10|${MUTE}|${CLEAR}||inline||Georgia|17px|600|normal`;
+const RING = `1× div||||aria-hidden=true|||${PULSE}|moving|${VIEW}`;
+const HALO = `1× div||||aria-hidden=true|||${CLEAR}||${VIEW}`;
+const heading = (text: string) =>
+  `1× h1|heading|||aria-level=1|${text}|${INK}|${CLEAR}||inline||${SANS}|34px|700|normal`;
+const button = (label: string, ground: string) =>
+  `1× button|button||${label}||||${ground}||${VIEW}`;
+const pill = (text: string, ink: string) =>
+  `1× div|||||${text}|${ink}|${CLEAR}||inline||${SANS}|17px|600|normal`;
+const phaseLine = (text: string) =>
+  `1× div|||||${text}|${MUTE}|${CLEAR}||inline||${SANS}|13px|normal|normal`;
+const boxes = (count: number, ground: string, opacity = '') =>
+  `${count}× div|||||||${ground}|${opacity}|${VIEW}`;
+const LETTERS_LOOK = [
+  `32× span||||aria-hidden=true|#|${CLEAR}|${CLEAR}||inline||Georgia|24px|normal|36px`,
+  `37× div||word-#|#|||rgba(0, 0, 0, 1.00)|${CLEAR}||inline||Georgia|24px|normal|36px`,
+  `37× span|||||#|the letters’ ink|${CLEAR}||inline||Georgia|24px|normal|36px`,
+  REFERENCE,
+  HALO,
+  RING,
+  phaseLine('First letters stay. Tap the button and say it.'),
+  boxes(1, GROUND),
+  heading('Say it with help'),
+  boxes(2, SOFT, '0.5'),
+  boxes(2, INK, '1'),
+  boxes(4, CLEAR),
+];
+
+/**
+ * The first minute's look on base (`33ebbe21b`), by `lookOf`, in each frame
+ * the look test reaches: every phase at rest, the hear phase with its first
+ * word read, and the letters while their recital listens. Recorded at this
+ * unit's head with the letters put back in the mute, which gives the same
+ * lines: the letters' ink is the one line `lookOf` leaves out.
+ */
+const BASE_LOOK = {
+  hear: [
+    button('Listen', INK),
+    button('Next', CARD),
+    REFERENCE,
+    HALO,
+    RING,
+    pill('Listen', GROUND),
+    pill('Next', INK),
+    phaseLine('The voice reads it. Words light as they are read.'),
+    boxes(1, GROUND),
+    boxes(1, INK, '1'),
+    heading('Hear it'),
+    `37× div||word-#||aria-selected=false|#|${INK}|${CLEAR}||inline||Georgia|24px|normal|36px`,
+    boxes(3, SOFT, '0.5'),
+    boxes(5, CLEAR),
+  ],
+  reading: [
+    button('Next', CARD),
+    REFERENCE,
+    `1× div||word-#||aria-selected=true|#|${INK}|rgba(184, 137, 47, 0.22)||inline||Georgia|24px|normal|36px`,
+    HALO,
+    RING,
+    pill('Next', INK),
+    phaseLine('The voice reads it. Words light as they are read.'),
+    boxes(1, GROUND),
+    boxes(1, INK, '1'),
+    heading('Hear it'),
+    `36× div||word-#||aria-selected=false|#|${MUTE}|${CLEAR}||inline||Georgia|24px|normal|36px`,
+    boxes(3, SOFT, '0.5'),
+    boxes(5, CLEAR),
+  ],
+  letters: [button('Say it', INK), pill('Say it', GROUND), ...LETTERS_LOOK],
+  listening: [button('Listening', INK), pill('Listening', GROUND), ...LETTERS_LOOK],
+  alone: [
+    button('Say it', INK),
+    REFERENCE,
+    HALO,
+    RING,
+    phaseLine('Only the line is left. Say it from memory.'),
+    pill('Say it', GROUND),
+    boxes(1, SOFT, '0.5'),
+    boxes(1, GROUND),
+    heading('Say it alone'),
+    `37× div||word-#||aria-hidden=true|||${CLEAR}||${VIEW}`,
+    `37× div|||||#|${CLEAR}|${CLEAR}||inline||Georgia|24px|normal|30px`,
+    boxes(3, INK, '1'),
+    boxes(4, CLEAR),
+  ],
+  planted: [
+    button('Continue', CARD),
+    `1× div||plant||aria-hidden=true|||${CLEAR}||${VIEW}`,
+    REFERENCE,
+    `1× div||stage|Stage: seed||A seed|${MUTE}|${CLEAR}||inline||${SANS}|15px|normal|normal`,
+    HALO,
+    pill('Continue', INK),
+    phaseLine('Your first promise is a seed.'),
+    boxes(1, 'rgba(138, 110, 75, 1.00)'),
+    boxes(1, 'rgba(212, 166, 64, 1.00)'),
+    boxes(1, GROUND),
+    heading('Planted'),
+    boxes(4, INK, '1'),
+    boxes(6, CLEAR),
+  ],
+} satisfies Readonly<Record<string, readonly string[]>>;
+
 describe('the first minute', () => {
   it('on a fresh install: hears the verse lit word by word, says it with first letters keeping nothing, says it alone and plants one seed, then Continue opens Today at a seed, as does the next launch', async () => {
     device.launch([]);
@@ -290,6 +456,49 @@ describe('the first minute', () => {
     expect([lettersLook(first.host), mutedTexts(first.host)]).toEqual([all, 2]);
     expect(reference === null ? null : getComputedStyle(reference).color).toBe(MUTE);
     await first.leave();
+  });
+
+  it('keeps base’s look element for element in every phase at rest (hear, letters, alone, Planted), while the hear phase reads and while the letters’ recital listens, the letters’ ink alone moved', async () => {
+    const looks: Partial<Record<keyof typeof BASE_LOOK, readonly string[]>> = {};
+    device.launch([]);
+    const held = await mount(
+      Promise.resolve(),
+      scriptedSource([{ at: 600_000, final: false, runs: [] }]),
+    );
+    expect(await held.until(() => held.heading() === 'Hear it')).toBe(true);
+    looks.hear = lookOf(held.host);
+    await held.click('Listen');
+    await held.send({ kind: 'range', location: SPANS[0]?.start ?? 0, length: 1 });
+    expect(await held.until(() => held.inked() === 1)).toBe(true);
+    looks.reading = lookOf(held.host);
+    await held.send({ kind: 'finish', location: 0, length: 0 });
+    expect(await held.until(() => held.heading() === 'Say it with help')).toBe(true);
+    looks.letters = lookOf(held.host, true);
+    await held.click('Say it');
+    expect(await held.until(() => held.buttons().includes('Listening'))).toBe(true);
+    looks.listening = lookOf(held.host, true);
+    await held.leave();
+    device.launch([]);
+    const said = await mount();
+    expect(await said.until(() => said.heading() === 'Hear it')).toBe(true);
+    await said.click('Next');
+    expect(await said.until(() => said.heading() === 'Say it with help')).toBe(true);
+    await said.click('Say it');
+    expect(
+      await said.until(
+        () => said.heading() === 'Say it alone' && said.buttons().includes('Say it'),
+      ),
+    ).toBe(true);
+    looks.alone = lookOf(said.host);
+    await said.click('Say it');
+    expect(await said.until(() => said.heading() === 'Planted')).toBe(true);
+    looks.planted = lookOf(said.host);
+    await said.leave();
+    expect(looks).toEqual(
+      Object.fromEntries(
+        Object.entries(BASE_LOOK).map(([frame, lines]) => [frame, lines.toSorted()]),
+      ),
+    );
   });
 
   it('with the voice off: offers no Listen and never speaks, and Next goes on', async () => {

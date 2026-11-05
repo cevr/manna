@@ -472,7 +472,9 @@ them.
     off, a Next during a reading and a relaunch mid-flow, an unread launch,
     a held launch, and each letter in the cue's ink at AA contrast on its
     ground at rest and while its recital listens, while the hear phase's
-    unread words, the phase line and the reference keep the mute).
+    unread words, the phase line and the reference keep the mute; and every
+    element of every phase at rest, of the hear phase reading and of the
+    letters listening keeps base's look, the letters' ink alone left out).
   - `test:root`: `src/first/root.test.tsx`, the root route on fixed devices
     through `src/test/first-rig.tsx` (the rig: stand-ins for the device's
     store, the voice's source and the recognizer, a model of the first
