@@ -5,17 +5,18 @@ The work, in the owner's words (2026-10-16/17): a hymnal app on One (onestack.de
 Host: claude (laptop) · Units at once: 1 agent (owner, 2026-10-21) · Gate: ~35 s warm (`bun run gate`, 31 tasks) · Reserved: publish, paid calls, force-push (the r2 deploy and copy are the orchestrator's after merge, owner 2026-10-18; the owner deleted S3 `cvr-hymns` 2026-10-18 after all 694 objects matched R2 by size) · Repo: ~/Developer/personal/bible-tools · Base: b27a9471b
 Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>` (rift fails on this repo), branch `hymnapp/<unit>`. Merge = rebase on origin/main, gate, `git push origin HEAD:main` (ff only).
 
-| Unit      | Depends on      | Workspace          | Agents                                                                       | Result                                                        |
-| --------- | --------------- | ------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| topicsdb  | initfresh       |                    |                                                                              | parked (owner: topics follow the films)                       |
-| keyfollow | worship         |                    | owner note: the playing recording follows a key change made in the hymn view | blocked: not reproduced, waits on the owner (Owner questions) |
-| selah     | reader          | .rifts/manna/selah |                                                                              |                                                               |
-| hsfirst   | hsgrow, hsvoice |                    |                                                                              |                                                               |
+| Unit      | Depends on | Workspace          | Agents                                                                       | Result                                                        |
+| --------- | ---------- | ------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| topicsdb  | initfresh  |                    |                                                                              | parked (owner: topics follow the films)                       |
+| keyfollow | worship    |                    | owner note: the playing recording follows a key change made in the hymn view | blocked: not reproduced, waits on the owner (Owner questions) |
+| selah     | reader     | .rifts/manna/selah |                                                                              |                                                               |
+| hsfield   | hsgrow     |                    |                                                                              |                                                               |
 
 Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `inexact` (the 7 MIDI files whose verses do not split: 126 225 262 292 403 453 580), `decks` (syllable splits into feat/hymn-decks, last by the owner's word), `selah` (planned: after reader, see Decisions; macOS stays SwiftUI until react-native-gpui ships a real package).
 
 ## Decisions
 
+- Orchestrator, 2026-11-05, hsfirst decide: only the say-alone recital keeps a recall (one recall is a seed; keeping the letters recital would end the first minute at a blade or an ear). Say it's own denied-microphone alert may name iOS's Settings: the owner's "no setting" means no setting in the app, not hiding the system's way to grant the microphone (r1 M3 rejected; spec Decided 9). Round 3's walk split into parts under 1 s, each asserting its own coverage floors from generated devices only.
 - Orchestrator, 2026-11-05, hsgrow decide: three failed rounds went to a rewrite (diagnosis by the other family; the premise was that successful calls at the garden's store seam proved durable history, while the store masked a failed open with a memory store). The rewrite's spec owns the rule's whole domain in an 18-row table, removes the memory fallback for the garden and the settings, and keeps round 2's option (a): a failed read is retried 3 times, then the garden is unread for the session. The run moved from Claude Code to OpenCode mid-unit; the merge build reused round 1's prebuild (no Swift changed).
 - Orchestrator, 2026-11-04, hssayit decide: round 2's Major repeated round 1's class, so round 3 named the class and the premise both fixes assumed (checking the per-word decision guards what the reader gets, though a style map lies between) and made a property over the rendered output its first deliverable; it was kept, the premise proven by the property. Owner, 2026-11-04 (AskUserQuestion): Heartseed's first phone build as soon as Say it merges; the hymnal's main went to the phone the same day.
 - Orchestrator, 2026-11-04, hsdictate decide: the merge's live drive ran with no iOS build, because the disk was under the 12 GB build bar and nothing native (`native/`, `vite/`, `vite.config.ts`, `package.json`, `bun.lock`) changed after the implementor's build at d7a904c4b, so the installed app held the head's native code; the merge round was format-only (oxfmt does not settle in one pass), checked by the orchestrator instead of a verifier.
@@ -72,6 +73,8 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 - Heartseed dictation model download (hsdictate Decided 3): the first two engines in the chain (SpeechAnalyzer with SpeechTranscriber, then DictationTranscriber) need Apple's on-device speech model, often not yet installed; may Heartseed ask iOS to download it in the background (`AssetInventory`), the recital falling through to the on-device SFSpeechRecognizer meanwhile, against the first release's "no network calls"? Recognition and the reader's voice never leave the phone. Recommended: yes. (hsdictate, asked 2026-11-04) **Answer (owner, 2026-11-04):** "Yes, ask iOS".
 
 ## Follow-ups
+
+- hsfirst (`tmp/orchestrate/hymnapp/hsfirst/`, merged c65e0f162): the committed frame oracle treats "said" as one boolean per phase, so a word drawn whole mid-recital before it is heard passes every committed part (verifier r3 T1, V22): model the heard and peeked indexes per word; the Heartseed matcher part reads about 1.0 s alone on base under load; promote the verifiers' runners (checks.ts, mutations.ts, probes) into shared verifier tooling, and the merge drive's raw-snapshot reader (selected and labelled word nodes) into verify-heartseed.
 
 - hsgrow (`tmp/orchestrate/hymnapp/hsgrow/`, merged d19c8ed2e): promote the verifiers' mutation and receipt runners (`round-*-receipts/`: checks.sh, mutations.ts, restored.sh) into shared verifier tooling, and the lifecycle probes into the owning tests; the acceptance check pins one look per stage but not its colours (Today's own test does); a hung store call and a write of unknown outcome are out of scope until One's store goes async or hssync adds a second writer.
 
@@ -170,6 +173,8 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 - topicsdb (blocked on owner, 2026-10-27; `tmp/orchestrate/hymnapp/topicsdb/blocked.md`): all 40 `content/topics/*.md` are `status: draft` stubs, and the compiler builds only approved pages; the tracked `data/egw-paragraphs.db` stub has 0 rows and an old `content` column, so quote verification cannot run. A rebuild cannot make the missing topic prose. Question for the owner: author the topic pages (a pilot of a few flagship topics, owner-reviewed), or leave Topics empty for now. Recommendation: leave it parked until after Heartseed; `manna wiki topics` still answers from the Nave catalog. (topicsdb)
 
 ## Review later
+
+- hsfirst, on the phone: where the reader turns the voice off (no screen offers the stored switch yet; or iOS's speech settings suffice); a refused first-seed write tells the reader nothing beyond the count; a reader who knows the verse cannot skip letters or alone; the hear phase's lighting and pace with the real voice.
 
 - hsgrow, on the phone: the growth sound's taste and Silent mode; the plant drawings; two recitals within a minute grow seed to ear; evening and morning UTC days; VoiceOver announcing growth; an unread session tells the reader nothing (a quiet "progress unavailable" line would need the owner's wording).
 
