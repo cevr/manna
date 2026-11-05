@@ -25,8 +25,13 @@ it is on screen without a scroll whatever Today holds.
 - `today-passage`: at every launch after the first minute (`first-again`,
   or a `sim relaunch` later), Today shows the header `Today` (role header),
   the reference `Isaiah 41:10`, its stage line (a label starting `Stage: `),
-  one `Say it` button, the button `Your field`, and its KJV text, exactly
+  one `Say it` button, the button `Your field`, and its words under the cue
+  its stage gives (`fade.md`): at a seed, 37 word nodes (`word-<i>`), each
+  labelled with its word's first letter as written. The words come from its
+  KJV text, exactly
   `Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee; yea, I will uphold thee with the right hand of my righteousness.`
+  Today shows that text whole only before the passage is planted, which no
+  live drive reaches.
 
 ## How to get to it (user POV)
 
@@ -49,9 +54,11 @@ sim snapshot today
 ```
 
 → `open` is ok, and the snapshot (`$EVIDENCE/snapshots/today.txt`) lists,
-under `[application] "Heartseed"`, the text nodes `Today`, `Isaiah 41:10`
-and the passage above, whole, with no `¶`, `[`, `]`, `‹` or `›` in it,
-a label starting `Stage: ` (after the first minute, `Stage: seed`),
+under `[application] "Heartseed"`, the text nodes `Today`, `Isaiah 41:10`,
+37 word nodes each labelled one character (the first letters of the
+passage above, with no `¶`, `[`, `]`, `‹` or `›`) and no node holding the
+passage whole, a label starting `Stage: ` (after the first minute,
+`Stage: seed`),
 a node `Say it` and a node `Your field`, with no `Listening` and no grade (`Again`, `Hard`,
 `Good`, `Easy`). A short label can appear on two nodes, so check that the
 labels are present, not how many nodes carry them.

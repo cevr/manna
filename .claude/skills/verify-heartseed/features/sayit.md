@@ -2,8 +2,9 @@
 
 Say it is Today's one button (`apps/heartseed/app/index.tsx`, over
 `apps/heartseed/src/sayit.ts`). A press starts a recital of the passage
-through the app's one Dictation (`apps/heartseed/src/app.ts`): the words
-hide, each word lights as it is said with a soft haptic tick, and a missed
+through the app's one Dictation (`apps/heartseed/src/app.ts`) under the cue
+its stage gives (`fade.md`): each word not yet said shows that cue, each
+word lights as it is said with a soft haptic tick, and a missed
 word shows only a mark, `Missed word <n>`, that a tap reveals (a peek).
 When the recital ends, Today shows `<lit> of <total> words` (and
 `, <n> peeked` once a word was peeked), `Suggested: <grade>`, and the four
@@ -11,7 +12,7 @@ grades `Again`, `Hard`, `Good` and `Easy` as a radio group with the
 suggestion checked; the reader can change it. Each change of a finished
 recital's recall is kept in the garden, and Today's stage line under the
 verse follows it (`grow.md`). A recital that could not be heard shows one
-alert and the verse whole, with no grade. Say it reads no word aloud. The
+alert and the verse as its cue, with no grade. Say it reads no word aloud. The
 first minute's letters and alone phases press the same Say it (`first.md`);
 the rows here are Today's, run from the Today the first minute opens.
 
@@ -58,7 +59,9 @@ steps 1 to 8 (and `grow.md`'s rows, when they run in the same drive):
    that recital's count and grades, so relaunch for a clean one:
    `sim relaunch`.
 2. `sim open / --expect "id=stage"`, then `sim snapshot today`
-   → `today-passage` holds, a node `Say it` exists, no `Listening`, no
+   → `today-passage` holds in the form its stage gives (`today.md`; after
+   `grow.md`'s rows the passage is at a seed, its words in letters), a node
+   `Say it` exists, no `Listening`, no
    radio label. Record the role the snapshot gives the `Today` node.
 3. `sayit-ended`: `sim tap "label=Say it"` → ok. `sim snapshot
    sayit-listening` (record whether `Listening` is present). Wait for the

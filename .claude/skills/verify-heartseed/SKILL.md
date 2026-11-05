@@ -156,6 +156,10 @@ word's mark and `Your field`, and on the field `Today`. Heartseed has no journey
   module, built with the app and its prompts, and its scripted replay on
   the development probe (`apps/heartseed/app/probe/dictation.tsx`). Say it
   calls it on Today.
+- [features/fade.md](features/fade.md): cues that fade by stage on Today:
+  the passage in first letters at a seed, nothing at a blade, and a recital
+  said under that cue; Again brings the letters back. Run it after
+  `first.md`, before `grow.md` and `sayit.md`.
 - [features/grow.md](features/grow.md): the passage's stage on Today (seed,
   blade, ear, full corn), the growth line, the stage kept across a
   restart in the device's store, and the growth sound's native module,

@@ -19,8 +19,11 @@ stage, no plant and no growth line, and plays nothing; Say it still runs and
 its recalls are still written.
 
 The stage: seed when planted (the first recital), blade when the latest
-recital was recalled with help (a peek), ear when recalled alone, seed again
-after Again, and full corn once FSRS stability reaches 21 days.
+recital was recalled with help, ear when recalled alone, seed again after
+Again, and full corn once FSRS stability reaches 21 days. The help is
+derived, never stored: a peek, or the cue the stage before the recital gave
+(first letters at a seed, `fade.md`), so the recital after planting is said
+under letters and grows a blade.
 
 ## Sub-features
 
@@ -31,8 +34,9 @@ which no screen does yet, so it is retired here (`grow-unplanted`) and the
 unit tests own it (`src/garden/today.test.tsx`). Every row below starts
 from the clean Today `first-again` relaunches into, at `Stage: seed`.
 
-- `grow-ear`: a second recital, alone: `Stage: ear`, `Grew to an ear.`,
-  exactly one `[growth] play` line, ending `skipped=simulator`.
+- `grow-blade`: a second recital, under letters: `Stage: blade`,
+  `Grew to a blade.`, exactly one `[growth] play` line, ending
+  `skipped=simulator`.
 - `grow-peek`: a peek at the mark: `Stage: blade`, `Grew to a blade.`, still
   one `[growth] play` line.
 - `grow-restart`: the app restarted: no other stage in the launch frame, then
@@ -62,10 +66,12 @@ With `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them:
    no `[growth] play` line in the log.
 2. (retired: `grow-unplanted`)
 3. (now `first-planted`: `grow-seed`)
-4. `grow-ear`: `sim tap "label=Say it"`, `sim tap "label=36 of 37 words"
-   --timeout 30`, `sim snapshot grow-ear` → `Stage: ear`,
-   `Grew to an ear.`. Then the log (below) holds exactly one
-   `[growth] play` line, and it ends `skipped=simulator`.
+4. `grow-blade`: `sim tap "label=Say it"`, `sim tap "label=36 of 37 words"
+   --timeout 30`, `sim snapshot grow-blade` → `Stage: blade`,
+   `Grew to a blade.`. Then the log (below) holds exactly one
+   `[growth] play` line, and it ends `skipped=simulator`. When `fade.md`
+   ran first in the same drive, count play lines from `GROW_START`, the
+   time this row starts, not `START`.
 5. `grow-peek`: `sim tap "label=Missed word 11"`, `sim snapshot grow-peek` →
    `Stage: blade`, `Grew to a blade.`; the log still holds one play line.
 6. `grow-restart`: `sim relaunch`, then `sim open / --expect

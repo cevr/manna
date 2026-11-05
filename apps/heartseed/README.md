@@ -129,21 +129,23 @@ one runtime (`src/app.ts`, below).
 ## Say it
 
 Today's one button, and the first minute's in letters and alone. A press
-recites the passage: its words hide, each word
-lights as the reader says it, with one soft haptic tick, and a missed word
+recites the passage under the ladder's cue (Garden, below): each word not
+yet said shows that cue (whole and muted, its first letter, or nothing), each
+word lights as the reader says it, with one soft haptic tick, and a missed word
 shows only a mark that a tap reveals (a peek). The recital finishes itself
 when its last word lights, or at a press. When it ends `finished`, Today
 shows the count (`<lit> of <total> words`, and `, <n> peeked` once a word
-was peeked), the matcher's suggested grade, and FSRS's four grades with the
-suggestion chosen; the reader can change it. Any other ending shows one
-alert and the verse whole, and keeps nothing. Say it reads no word aloud.
+was peeked), the matcher's suggested grade (Hard at most under any cue but
+nothing), and FSRS's four grades with the suggestion chosen; the reader can
+change it. Any other ending shows one alert and the verse only as its cue,
+and keeps nothing. Say it reads no word aloud.
 
 - `src/sayit.ts` is the `SayIt` service (Effect) over `Dictation`:
   `recite({ cue, keep })` (start a recital under the matcher's cue, kept
   or not, or finish the one under way; it never replaces one), `press`
-  (`recite(TODAY)`: no cue, kept), `peek`, `choose`, and the `view` Today
-  shows (the latest Dictation view,
-  `startedAt` and the `choice`) with its `changes`. On each of Dictation's
+  (`recite(TODAY)`: no cue, kept, Today's recital in an unread garden),
+  `peek`, `choose`, and the `view` Today shows (the latest Dictation view,
+  `startedAt`, the `choice` and the recital's `cue`) with its `changes`. On each of Dictation's
   `changes` it shows Dictation's view as it is then, and ticks for the
   words lit since the last view it showed of the same recital; the endings
   come from Dictation's `endings`, which loses none, the n-th ending being
@@ -161,7 +163,10 @@ alert and the verse whole, and keeps nothing. Say it reads no word aloud.
   from here. The runtime is not kept alive: when the root leaves, its
   scope closes, Dictation cancels a recital under way and the voice stops
   a reading under way. `press`, `sayAs`, `peek` and `choose` run to their
-  ends.
+  ends. `press` (`pressToday`) reads the garden's `settled` view, behind
+  every keep handed to it before the press, so a grade changed to Again
+  just before is said under the letters it gives back, and recites under
+  `cueIn` of that view (`todayCue`: no cue when the garden is unread).
 - The source: `sourceKind({ dev, simulator })` (`src/sayit/source.ts`)
   answers the module's replay of the probe's plan only when `dev`
   (`__DEV__`, nothing else) and the simulator (One's device info; a read
@@ -170,10 +175,15 @@ alert and the verse whole, and keeps nothing. Say it reads no word aloud.
 - `src/sayit/screen.ts` reads what Today draws from Say it's view, and
   `wordOf` how each word shows (its ink, whether it is hidden, its name);
   `src/sayit/draw.tsx` holds the drawing Today and the first minute share
-  (the word, the large round button, its pulse, the plant mark, the
-  palette), and `app/index.tsx` draws Today with it: one element per word, so each is its own
-  accessibility element (an unsaid or half-heard word hidden from the
-  screen reader, an unsaid one drawn as an empty slot its width, a mark
+  (the word, a word in letters `Initial`, a word not yet said under its cue
+  `Unsaid`, the large round button, its pulse, the plant mark, the
+  palette), and `app/index.tsx` draws Today with it: the verse whole
+  (`passage`) only under the full text with no recital shown, else one
+  element per word (`word-<i>`), so each is its own accessibility element
+  (a word not yet said under its cue: whole in muted ink under the full
+  text, its first letter or number alone and named by it under letters, the
+  rest laid out unseen and hidden; under no cue an empty slot its width,
+  hidden from the screen reader; a half-heard word hidden, a mark
   named `Missed word <n>`, a peeked word `<word>, peeked`), the radio
   group `Grade`, and the button `Say it` or `Listening`. A word lights with
   a short fade and the button pulses while it listens; Reduce Motion stills
@@ -238,7 +248,12 @@ Every verse the reader has said is a plant: seed, then blade, then ear,
 then full corn (Mark 4:28). Today shows the passage's stage under its
 words (named `Stage: <stage>` for the screen reader), with a small plant
 beside it drawn as the prototype draws it, and, while a finished recital is
-on the screen, how that recital grew it (`Grew to an ear.`). Until the
+on the screen, how that recital grew it (`Grew to an ear.`). Cues fade
+across days by stage, the ladder (`cueAt`, `cueIn`): a passage not yet
+planted shows and is said under the full text, a seed under its first
+letters, a blade, an ear and full corn under nothing; Again makes a seed,
+so the letters come back. In an unread garden Today shows the verse whole
+and it is said with nothing, claiming no stage. Until the
 garden's read of the store completes, and for the whole session when it
 failed, Today claims nothing: no stage, no plant, no growth, so a planted
 verse never reads as not planted. A growth plays one soft sound, which
@@ -273,7 +288,7 @@ Silent mode mutes. Nothing leaves the device.
   later keep of the same recital writes the same key, so the last one wins.
   The garden writes no other key and removes none. Nothing else is stored: a
   plant's card is the fold of its recalls in `startedAt` order from a new
-  card, and its stage is read from the card and its last recall each time.
+  card, and its stage is read from its recalls and their cards each time.
 - The read: the garden's view is `Read` (every planted verse's plant, maybe
   none) or `Unread`, never anything between. At start an attempt lists the
   store's keys once and reads every key under `heartseed/recall/`; any call
@@ -285,14 +300,18 @@ Silent mode mutes. Nothing leaves the device.
   A value that is no valid recall of its own key, or a listed key with no
   value, is skipped and logged (`garden.record.skipped`), and the read stays
   complete.
-- The stage rule (`stageOf`): full corn once the card's stability is at
-  least 21 days; else a seed when the verse was just planted (one recall)
-  or its last recall was Again; else a blade when the last recall had a
-  peek; else an ear (recalled alone, a miss with no peek included).
+- The stage rule (`stageOf`), applied after each recall in `startedAt`
+  order: full corn once the card's stability is at least 21 days; else a
+  seed at the first recall or one graded Again; else a blade when the
+  recall was helped, by a peek or by the cue the stage before it gives
+  (first letters at a seed); else an ear (recalled with nothing, a miss
+  with no peek included). The help is derived from the recalls, never
+  stored, so a history said with nothing at a seed reads as a blade.
   `growthOf(plant, startedAt)` is the recital's growth: the stage over the
   recalls before it and over those up to it, some only when there were
   recalls before and the stage rose.
-- A keep runs alone, in call order (one lock over the whole keep). A keep
+- A keep runs alone, in call order (one lock over the whole keep), and
+  `settled` reads the view behind that lock. A keep
   equal to its known record does nothing; a failed write logs
   `garden.keep.failed` and changes nothing. Once the write lands, the view
   changes, and a recital that grew its verse logs `garden.grew` and sounds
@@ -389,17 +408,25 @@ them.
     service against its model) and `src/dictation` (the scripted source,
     the hints and the native module's guards).
   - `test:sayit`: `src/sayit.property.test.ts` (Say it against its model)
-    and `src/sayit` (Today's Say it in happy-dom, the source Say it hears,
-    and its guards).
+    and `src/sayit` but its cue tests (Today's Say it in happy-dom through
+    `src/test/today-rig.tsx`, the source Say it hears, and its guards).
+  - `test:cue`: `src/sayit/cue.test.tsx` and `src/sayit/cue-say.test.tsx`,
+    Today's cue in happy-dom through the same rig: the passage at rest under
+    each stage's cue, a recital under letters and under the full text, a
+    recital not heard, an unread garden, and no run of the verse outside
+    its words.
   - `test:garden`: `src/store.test.ts` (the store over the device),
     `src/fsrs.property.test.ts` (FSRS-6 against ts-fsrs),
     `src/garden.property.test.ts` (the stage and growth rules, and the
     garden against its model over the real store on the device across
-    launches, failed opens, listings, reads and writes), and in
-    `src/garden` the growth sound and the native module's guard.
+    launches, failed opens, listings, reads and writes),
+    `src/ladder.property.test.ts` (stage, cue and growth after every recall
+    of generated histories), `src/press.test.ts` (the cue Today's press
+    recites under, a keep in flight, a refused write, an unread garden), and
+    in `src/garden` the growth sound and the native module's guard.
   - `test:today`: `src/garden/today.test.tsx`, Today's stage in happy-dom
-    over the real store on the device (the journey from not planted to an
-    ear and back to a seed across a restart, reached with another verse's
+    over the real store on the device (the journey from not planted to a
+    blade and an ear and back to a seed across a restart, reached with another verse's
     recall on the disk so Today opens, each stage's look in the
     prototype's colours, and no claim in any frame of a held launch or an
     unread session).

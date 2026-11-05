@@ -29,8 +29,8 @@ then the first minute or Today.
   seed, `1 day sown`, `0 verses at full corn` and a button `Today`, with no
   `Today` heading and no `Say it`.
 - `field-back`: `Today` shows Today as it was.
-- `field-grow`: a recital that grows the passage to an ear shows on the
-  field as `Isaiah 41:10, ear`.
+- `field-grow`: a recital under letters that grows the passage to a blade
+  shows on the field as `Isaiah 41:10, blade`.
 - `field-listening`: while Say it listens, Today offers no `Your field`.
 - `field-again`: Again takes the passage back to a seed and never removes
   a day sown.
@@ -59,9 +59,9 @@ Launch); the JavaScript comes from the dev server.
 4. `field-back`: `sim tap "label=Today"`, `sim open / --expect "id=stage"`,
    `sim snapshot field-back` → the heading `Today`, `Stage: seed`,
    `Your field`.
-5. `field-grow`: `grow.md`'s `grow-ear` (Say it, 36 of 37 words), then
+5. `field-grow`: `grow.md`'s `grow-blade` (Say it, 36 of 37 words), then
    `sim tap "label=Your field"`, `sim snapshot field-grow` →
-   `Isaiah 41:10, ear`, `1 day sown` (or `2 days sown` when 00:00 UTC fell
+   `Isaiah 41:10, blade`, `1 day sown` (or `2 days sown` when 00:00 UTC fell
    between the planting and this recital: compare `START` with the time
    now), `0 verses at full corn`; then `sim tap "label=Today"`.
 6. `field-listening`: `sim tap "label=Say it"` and at once a raw snapshot

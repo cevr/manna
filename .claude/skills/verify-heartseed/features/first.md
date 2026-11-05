@@ -55,7 +55,8 @@ word 11 and the seed is graded Hard.
   Today).
 - `first-again`: a relaunch shows no first-minute heading in its launch
   frame, then a clean `Today` at `Stage: seed`: no grade, no count, and the
-  passage whole (`today-passage`).
+  passage in letters (`today-passage`, `fade.md`'s `fade-letters`), not
+  whole.
 
 ## How to get to it (user POV)
 
@@ -107,10 +108,12 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
    `Say it with help`, `Say it alone` or `Planted`. Then `sim open /
    --expect "id=stage"`, `sim snapshot first-again` → `Today`,
    `Stage: seed`, no first-minute heading, and `today-passage`
-   (`today.md`): the passage whole, `Say it`, no `Listening`, no grade
-   label and no label ending `words`.
-9. From this Today run `grow.md` from `grow-ear` to `grow-again`, then
-   `sayit.md` (its step 1 relaunches for a clean Today), then `sim doctor`
+   (`today.md`): 37 word nodes each labelled one character, no node holding
+   the passage whole, `Say it`, no `Listening`, no grade label and no label
+   ending `words`.
+9. From this Today run `fade.md`'s rows, then after a `sim relaunch`
+   `grow.md` from `grow-blade` to `grow-again`, then `sayit.md` (its step 1
+   relaunches for a clean Today), then `sim doctor`
    (record `head` and `timingsHold`) and `sim down`. A drive of the field
    (`field.md`) branches at `first-today` instead and runs these from a
    relaunched Today at its own step 9.
@@ -119,7 +122,7 @@ The log: `xcrun simctl spawn <udid> log show --start "$START" --style
 compact --predicate '(eventMessage CONTAINS "[voice]" OR eventMessage
 CONTAINS "[growth]") AND process == "Heartseed"'`. It holds
 `[voice] speak utterance=1 skipped=simulator`; every `[voice] speak` line
-ends `skipped=simulator`; no `[growth] play` line before `grow-ear`.
+ends `skipped=simulator`; no `[growth] play` line before `fade-blade`.
 
 Report only counts, booleans, indexes, the labels named above and the
 reference; delete the `snapshots` folder and the raw snapshots.
