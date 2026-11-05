@@ -601,6 +601,34 @@ describe('heightSamples', () => {
     ]);
   });
 
+  test('reads every frame of a key some frame cuts off the columns its render shows, whole frames too, so two reads of one height never count as growth; growth across the cut still fails (milk-row’s baby, round 3)', () => {
+    const frame = (n: number, whole: boolean, lined: number, seen: number) =>
+      frameRead({
+        name: 'baby',
+        frame: n,
+        cell: 'sit',
+        read: readOf(linesOfHeight(0, Math.round(lined) - 1, 20), whole),
+        seen: Option.some(seen),
+      });
+    const baby = [
+      frame(0, true, 357.5, 354.97),
+      frame(1, true, 363, 356.4),
+      frame(2, false, 357.5, 354.94),
+      frame(3, false, 368, 355.25),
+    ];
+    const value = (reads: ReadonlyArray<FrameRead>) =>
+      Option.getOrElse(heightSamples(reads)[0]?.value ?? Option.none(), () => -1);
+    expect(value(baby)).toBeCloseTo((356.4 - 354.94) / 355.25, 9);
+    expect(verdictOf(BARS, { ...ALL_PASS, 'render-height': heightSamples(baby) }).passed).toBe(
+      BARS.length,
+    );
+    const grown = baby.map((f) => ({
+      ...f,
+      seen: Option.map(f.seen, (s) => s * ([1.04, 1][Number(f.read.whole)] ?? 1)),
+    }));
+    expect(value(grown)).toBeGreaterThan(0.02);
+  });
+
   test('reads as unread a figure no frame reads a height of (every frame cuts it and shows no column it can read): never a pass (round 3, M3)', () => {
     const blind = frameRead({
       name: 'lead',
@@ -612,13 +640,13 @@ describe('heightSamples', () => {
     ]);
   });
 
-  test('over generated renders whole, cut at the bottom, cut at the side and cut at the top, at generated depths, camera zooms, draw scales and breaths: a key holding its size passes and one that grows 3–4 % within its hold fails, whole or cut; a figure cut at the top in every frame reads unread (round 3, M3)', () => {
+  test('over generated renders whole, cut at the bottom, cut at the side, cut at the top and trucked from whole to cut within the key, at generated depths, camera zooms, draw scales and breaths: a key holding its size passes and one that grows 3–4 % within its hold fails, whole or cut; a figure cut at the top in every frame reads unread (round 3, M3)', () => {
     const [cw, ch] = [60, 200];
     const cell = figureIn({ width: cw + 2, height: ch + 2 }, { x0: 1, y0: 1, w: cw, h: ch });
     const lines = { ...linesOfHeight(1, ch, 20), centreColumn: 30 };
-    const misses = Array.from({ length: 12 }, (_, i) => {
+    const misses = Array.from({ length: 15 }, (_, i) => {
       const draw = rng(i + 1);
-      const placement = (['whole', 'bottom', 'side', 'top'] as const)[i % 4] ?? 'whole';
+      const kind = (['whole', 'bottom', 'side', 'top', 'truck'] as const)[i % 5] ?? 'whole';
       const z = 1 + draw() * 2;
       const scale = 0.9 + draw() * 0.4;
       const push = draw() * 0.8;
@@ -627,6 +655,15 @@ describe('heightSamples', () => {
       const grow = 1.03 + draw() * 0.01;
       const read = (growth: number) =>
         zooms.map((camera, frame) => {
+          const placement = (
+            {
+              whole: 'whole',
+              bottom: 'bottom',
+              side: 'side',
+              top: 'top',
+              truck: (['whole', 'side'] as const)[Number(frame >= 3)] ?? 'side',
+            } as const
+          )[kind];
           const plane = camera ** (1 / z);
           const sx = scale * plane;
           const sy = sx * (breaths[frame] ?? 1) * ([1, growth][Number(frame >= 3)] ?? 1);
@@ -649,18 +686,15 @@ describe('heightSamples', () => {
             frame,
             zoom: plane,
             read: figure,
-            seen: Option.flatMap(
-              Option.liftPredicate(render, () => !figure.whole),
-              (r) => seenHeight(cell, lines, place, r),
-            ),
+            seen: seenHeight(cell, lines, place, render),
           });
         });
       const value = (growth: number) =>
         Option.getOrElse(heightSamples(read(growth))[0]?.value ?? Option.none(), () => -1);
-      return { placement, steady: value(1), grown: value(grow) };
+      return { kind, steady: value(1), grown: value(grow) };
     });
     const passes = (m: (typeof misses)[number]) => {
-      if (m.placement === 'top') return m.steady === -1 && m.grown === -1;
+      if (m.kind === 'top') return m.steady === -1 && m.grown === -1;
       return m.steady >= 0 && m.steady <= 0.02 && m.grown > 0.02;
     };
     expect(misses.filter((m) => !passes(m))).toEqual([]);

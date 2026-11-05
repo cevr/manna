@@ -205,7 +205,7 @@ export const colourStep = (
   return Option.some(Math.max(...steps)).pipe(Option.filter(() => steps.length > 0));
 };
 
-/** One figure in one rendered frame: its name, cell, plane zoom, whether a turn squashes it, its render's reading, and, where the frame cuts it, its crown-to-soles height read off the columns its render shows (`seenHeight`; none where it is whole or no column shows). */
+/** One figure in one rendered frame: its name, cell, plane zoom, whether a turn squashes it, its render's reading, and its crown-to-soles height read off the columns its render shows (`seenHeight`; none where no column shows), which the height bar reads in every frame of a key some frame cuts. */
 export interface FrameRead {
   readonly frame: number;
   readonly name: string;
@@ -371,11 +371,20 @@ const keySpread = (heights: ReadonlyArray<number>) =>
     spread: (Math.max(...heights) - Math.min(...heights)) / median,
   }));
 
-/** A figure's crown-to-soles height in one frame, in the frame's px: its render's lines where it lies whole, else the height read off the columns its render shows (`FrameRead.seen`). */
-const frameHeightOf = (f: FrameRead): Option.Option<number> => {
-  if (f.read.whole) return Option.map(f.read.lines, heightOf);
-  return f.seen;
-};
+/**
+ * A figure's crown-to-soles height in one frame of a key, in the frame's px:
+ * its render's lines where every frame of the key lies whole, else the
+ * height read off the columns its render shows (`FrameRead.seen`) in every
+ * frame of the key, whole ones too. The two reads of one drawing differ by a
+ * px or two (the crown's soft edge against the median column top), so one
+ * key is read one way throughout and only the drawing's own change spreads.
+ */
+const frameHeightOf =
+  (cut: boolean) =>
+  (f: FrameRead): Option.Option<number> => {
+    if (!cut) return Option.map(f.read.lines, heightOf);
+    return f.seen;
+  };
 
 /**
  * Each figure's crown-to-soles height over its plane zoom, over its
@@ -383,9 +392,9 @@ const frameHeightOf = (f: FrameRead): Option.Option<number> => {
  * median, its worst key. Two keys of one sheet differ in height by design (a
  * bowed head, a seat), which the scale and proportions bars hold across keys;
  * this reads only the figure growing or shrinking while one key holds. A
- * frame that cuts the figure is read off the columns its render shows, down
- * to the soles' row its placement pins (`seenHeight`), so a close is judged
- * on its own frames; a figure no frame reads is unread, never passed.
+ * key some frame cuts is read, in every frame, off the columns its render
+ * shows, down to the soles' row its placement pins (`seenHeight`), so a close
+ * is judged on its own frames; a figure no frame reads is unread, never passed.
  */
 export const heightSamples = (reads: ReadonlyArray<FrameRead>): Samples =>
   [...Map.groupBy(reads, (r) => r.name)].map(([name, frames]) =>
@@ -403,7 +412,11 @@ const keyHeightSample = (name: string, still: ReadonlyArray<FrameRead>): Sample 
     Option.toArray(
       Option.map(
         keySpread(
-          held.flatMap((f) => Option.toArray(Option.map(frameHeightOf(f), (h) => h / f.zoom))),
+          held.flatMap((f) =>
+            Option.toArray(
+              Option.map(frameHeightOf(held.some((h) => !h.read.whole))(f), (h) => h / f.zoom),
+            ),
+          ),
         ),
         (s) => ({ cell, ...s }),
       ),

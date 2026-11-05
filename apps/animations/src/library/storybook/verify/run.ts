@@ -173,10 +173,7 @@ const firstLaunch = Effect.fn('StorybookVerify.firstLaunch')(function* (
         zoom: p.frame.camera.zoom ** (1 / stored.layer.z),
         squashed: posed.sx !== 1 || posed.sy !== 1,
         read,
-        seen: Option.flatMap(
-          Option.liftPredicate(render, () => !read.whole),
-          (r) => seenHeightOf(shot, p.frame, posed, stored, r),
-        ),
+        seen: seenHeightOf(shot, p.frame, posed, stored, render),
       });
     }),
   );
