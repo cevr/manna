@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary -- the model writes the hsfirst spec's rules out as plain branches over the views' nulls, apart from the flow's code, so the two cannot share a mistake. */
+/* oxlint-disable effect/noNullish -- the model writes the hsfirst spec's rules out as plain branches over the views' nulls, apart from the flow's code, so the two cannot share a mistake. */
 
 /**
  * The first minute's flow, modelled from the hsfirst spec's rule table
