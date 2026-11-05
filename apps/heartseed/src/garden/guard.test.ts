@@ -49,8 +49,9 @@ const filesUnder = (dir: string): ReadonlyArray<string> =>
       return [join(dir, entry.name)];
     });
 
+/** The app's sources under `dir`: no tests and no declarations (One's dev server writes `app/routes.d.ts`, git-ignored and unhashed). */
 const sources = (dir: string) =>
-  filesUnder(dir).filter((file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file));
+  filesUnder(dir).filter((file) => /\.tsx?$/.test(file) && !/\.(test|d)\.tsx?$/.test(file));
 
 type Branch = 'simulator' | 'device' | 'other' | 'none';
 

@@ -116,13 +116,13 @@ describe('the app store over the device', () => {
 
 const APP = join(import.meta.dir, '..');
 
-/** The app's sources under `dir`: every `.ts(x)` file but tests and the test stand-ins. */
+/** The app's sources under `dir`: every `.ts(x)` file but tests, declarations (One writes `app/routes.d.ts`, git-ignored) and the test stand-ins, told by name so none of those is touched: the part hashes no other part's tests and no ignored file. */
 const sourcesUnder = (dir: string): ReadonlyArray<string> =>
   readdirSync(join(APP, dir)).flatMap((name) => {
     const path = join(dir, name);
-    if (name === 'test') return [];
+    if (name === 'test' || /\.(test|d)\.tsx?$/.test(name)) return [];
+    if (/\.tsx?$/.test(name)) return [path];
     if (statSync(join(APP, path)).isDirectory()) return sourcesUnder(path);
-    if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)) return [path];
     return [];
   });
 
