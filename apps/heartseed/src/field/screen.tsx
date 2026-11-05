@@ -1,11 +1,13 @@
 /**
  * The field as the reader meets it: the way back to Today, the heading, the
  * days sown and the harvest, one card per row titled by its passage, each
- * verse a plant drawn as Today draws its stage with its verse number muted
+ * verse a plant drawn as Today draws its stage with its verse number small
  * beneath, and a legend of the four stages under Mark 4:28. Each plant is
  * one image to the screen reader, labelled `<reference>, <stage>`; its
- * drawing and number are hidden inside it. It draws a `Field` it is given
- * and holds no state, so every frame shows the field as derived.
+ * drawing and number are hidden inside it. Every text is Palette A's ink, so
+ * each reads at WCAG AA contrast on the ground and on a card. It draws a
+ * `Field` it is given and holds no state, so every frame shows the field as
+ * derived.
  */
 
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -107,7 +109,7 @@ export function FieldScreen({
         <Text testID="sown" style={look.summary}>
           {sownText(field.sown)}
         </Text>
-        <Text testID="harvest" style={styles.harvest}>
+        <Text testID="harvest" style={look.summary}>
           {harvestText(field.harvest)}
         </Text>
       </View>
@@ -124,7 +126,6 @@ const styles = StyleSheet.create({
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
   backText: { fontSize: 17, fontWeight: '600', color: color.ink },
   head: { gap: 6 },
-  harvest: { fontSize: 15, color: color.mute },
   card: {
     gap: 10,
     paddingVertical: 14,
@@ -135,7 +136,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: 'Georgia', fontSize: 15, fontWeight: '600', color: color.ink },
   plots: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   plot: { width: 44, alignItems: 'center', gap: 2 },
-  number: { fontSize: 10, color: color.mute },
+  number: { fontSize: 11, color: color.ink },
   legendPlace: { alignItems: 'center', gap: 6, marginTop: 4 },
   legend: {
     flexDirection: 'row',
@@ -145,6 +146,6 @@ const styles = StyleSheet.create({
     rowGap: 4,
   },
   key: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  keyName: { fontSize: 12, color: color.mute },
-  caption: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, color: color.mute },
+  keyName: { fontSize: 12, color: color.ink },
+  caption: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, color: color.ink },
 });
