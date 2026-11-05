@@ -567,7 +567,20 @@ them.
     minute) and taps (refused writes, taps while Say it listens, the field
     and back), every frame held to where the choices may show (only under
     Today's heading, outside the scroll view, which holds no control but
-    the recital's own), the first values shown, and the disk.
+    the recital's own), the first values shown, and the disk; and a
+    pending frame with the session's and the voice's views at hand shows
+    neither.
+  - `test:counts`: `src/session/counts.test.tsx`, Today's counts line
+    through the same rig: generated devices (fresh installs planted
+    through the first minute in the evening or the day, disks of the
+    passage's history beside verses no piece names), launches in zones
+    that change, at an evening planting's morning, the next 04:00 and the
+    passage's due, unread and held, and commands (recitals heard, missed,
+    unheard, refused or unwritten, Again, Minutes taps while Say it
+    listens and after time passes, Voice taps, time, the field and back);
+    after every step the line is `src/test/session-model.ts`'s counts of
+    the plan it made at Today's first show and at each Minutes tap, over
+    the disk's recalls, and an unread launch shows no line in any frame.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

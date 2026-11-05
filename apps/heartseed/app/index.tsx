@@ -1,12 +1,13 @@
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 import passage from 'virtual:heartseed-passage';
 
 import {
+  beginSession,
   choose,
   chooseMinutes,
   gardenView,
@@ -35,7 +36,7 @@ import { sourceWords } from '../src/matcher/words';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { BigButton, color, look, PlantMark, Unsaid, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
-import { MINUTES } from '../src/session';
+import { countsOf, MINUTES } from '../src/session';
 
 const WORDS = sourceWords(passage.text);
 
@@ -296,9 +297,29 @@ function Choices() {
 }
 
 /**
+ * The session's counts line over the plan made in this launch and the
+ * garden now: what is left to tend, the new piece, and about how long they
+ * take. It claims nothing until a plan is made, and none is made in an
+ * unread garden.
+ */
+function Counts({ garden }: { readonly garden: Option.Option<ReadGarden> }) {
+  const plan = Option.flatMap(AsyncResult.value(useAtomValue(sessionView)), (view) => view.plan);
+  return Option.match(Option.all({ garden, plan }), {
+    onNone: () => false,
+    onSome: (shown) => (
+      <Text testID="session" style={styles.counts}>
+        {countsOf(shown.plan, shown.garden)}
+      </Text>
+    ),
+  });
+}
+
+/**
  * Today: its header (the heading and the way to the field, and under them
- * the reader's choices), fixed above a
- * scroll view of the passage the reader is learning, its stage and Say it.
+ * the reader's choices), fixed above a scroll view of the session's counts
+ * line, the passage the reader is learning, its stage and Say it. Its first
+ * show with the garden read makes the launch's plan; a later show, after
+ * the field, finds it made.
  * The way to the field and the choices sit outside the scroll view, so
  * however much a recital adds below, they are on screen without a scroll
  * and clear of the home indicator.
@@ -311,6 +332,11 @@ function Today({ onField }: { readonly onField: () => void }) {
   const onPress = useAtomSet(press);
   const onPeek = useAtomSet(peek);
   const onChoose = useAtomSet(choose);
+  const onBegin = useAtomSet(beginSession);
+  const read = Option.isSome(garden);
+  useEffect(() => {
+    if (read) onBegin();
+  }, [read, onBegin]);
   return (
     <View style={look.screen}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
@@ -329,6 +355,7 @@ function Today({ onField }: { readonly onField: () => void }) {
           { paddingTop: 16, paddingBottom: insets.bottom + 32 },
         ]}
       >
+        <Counts garden={garden} />
         <View style={styles.passage}>
           <Text testID="reference" style={look.reference}>
             {passage.reference}
@@ -410,6 +437,7 @@ export default function Root() {
 
 const styles = StyleSheet.create({
   passage: { gap: 10 },
+  counts: { fontSize: 15, fontWeight: '600', color: color.ink, marginBottom: 12 },
   words: { fontFamily: 'Georgia', fontSize: 24, lineHeight: 36, color: color.ink },
   result: { gap: 10, padding: 16, borderRadius: 20, backgroundColor: color.card },
   suggested: { fontSize: 15, color: color.mute },

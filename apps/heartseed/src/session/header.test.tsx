@@ -21,8 +21,11 @@
  */
 
 import { describe, expect, it } from 'bun:test';
+import { Option } from 'effect';
+import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import passage from 'virtual:heartseed-passage';
 
+import { sessionView, voiceView } from '../app';
 import type { Recall } from '../sayit';
 import type { Minutes } from '../session';
 import { below, keyOf, pickOf, random } from '../test/garden-model';
@@ -35,6 +38,7 @@ import {
   type Launch,
 } from '../test/session-rig';
 import { ENABLED_KEY } from '../voice';
+import { initial } from '../voice/reading';
 import { MINUTES_KEY } from './service';
 
 const HOUR = 3_600_000;
@@ -351,6 +355,32 @@ const deviceRun = async (next: () => number, d: number) => {
 };
 
 describe('Today’s header holds the minutes and the voice', () => {
+  it('shows no choice and no counts in the pending frame, even with the session’s and the voice’s views at hand', async () => {
+    const seeded = [
+      [
+        sessionView,
+        AsyncResult.success({ minutes: 10, plan: Option.some({ items: [] }) }),
+        { skipInitialRun: true },
+      ],
+      [voiceView, AsyncResult.success(initial(false).view), { skipInitialRun: true }],
+    ] as const;
+    const app = await launch(
+      deviceFor('passage', '10', 'false'),
+      faultsOf({ listing: 'held' }),
+      { now: AT },
+      seeded,
+    );
+    await app.until(() => false, 15);
+    expect({
+      pending: app.frames.pending > 0,
+      today: app.frames.today,
+      shown: app.frames.shown,
+      counts: app.frames.counts,
+      faults: app.faults,
+    }).toEqual({ pending: true, today: 0, shown: 0, counts: 0, faults: [] });
+    await app.leave();
+  });
+
   it('over generated devices, launches and taps, shows and stores the reader’s choices by the rules', async () => {
     const next = random(0x5e55);
     for (let d = 0; d < DEVICES; d += 1) await deviceRun(next, d);

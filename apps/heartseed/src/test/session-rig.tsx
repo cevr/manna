@@ -16,7 +16,9 @@
  * `5 min`, `10 min` and `20 min` in that order, exactly one checked, beside
  * at most one `Voice` switch; neither lies inside a scroll view, and the
  * scroll view holds no control but the recital's own (Say it's button, a
- * word to peek at, the grades).
+ * word to peek at, the grades). At most one counts line shows, at the top
+ * of the scroll view above the reference, in the line's form and named as
+ * it reads.
  */
 
 import { RegistryProvider } from '@effect/atom-react';
@@ -24,6 +26,7 @@ import { expect } from 'bun:test';
 import { Clock, Effect, Layer, MutableRef, Option } from 'effect';
 import type { Duration } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
+import type * as Atom from 'effect/reactivity/Atom';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
@@ -120,18 +123,13 @@ const clockOf = (time: { now: number | null }) => {
   return Layer.succeed(Clock.Clock, clock);
 };
 
-/** How the next recital is heard: open until finished, with the words of `skip` unsaid; or refused at its listen. */
+/** How the next recital is heard: open until finished, with the words of `skip` unsaid; open until the recognizer fails at the finish, unheard (`dropped`); or refused at its listen. */
 export type Hearing =
   | { readonly kind: 'heard'; readonly skip: readonly number[] }
+  | { readonly kind: 'dropped' }
   | { readonly kind: 'refused' };
 
-/** The words a recital leaves unsaid; a refused one says none. */
-const skipOf = (hearing: Hearing): readonly number[] => {
-  if (hearing.kind === 'refused') return [];
-  return hearing.skip;
-};
-
-/** A recognizer that opens each listen and sends nothing more until `finish`, which sends the recital whole (less `skip`) and its end; a refused listen fails. */
+/** A recognizer that opens each listen and sends nothing more until `finish`, which sends the recital whole (less `skip`) and its end, or a dropped recital's failure; a refused listen fails. */
 const recognizerOf = (plan: MutableRef.MutableRef<Hearing>) => {
   const listener = MutableRef.make<Option.Option<(event: DictationEvent) => void>>(Option.none());
   const open = MutableRef.make<Option.Option<number>>(Option.none());
@@ -162,8 +160,12 @@ const recognizerOf = (plan: MutableRef.MutableRef<Hearing>) => {
         const session = MutableRef.get(open);
         MutableRef.set(open, Option.none());
         if (Option.isNone(session)) return;
-        const skip = skipOf(MutableRef.get(plan));
-        for (const step of recite(passage.text, { skip, every: 5, pace: 1 }))
+        const hearing = MutableRef.get(plan);
+        if (hearing.kind !== 'heard') {
+          emit({ ...event(session.value, 'fail'), reason: 'test: dropped' });
+          return;
+        }
+        for (const step of recite(passage.text, { skip: hearing.skip, every: 5, pace: 1 }))
           emit({ ...event(session.value, 'result'), final: step.final, runs: step.runs });
         emit(event(session.value, 'end'));
       }),
@@ -232,6 +234,32 @@ export const choicesOf = (host: Element) => {
   };
 };
 
+/** The counts line's form: what is left to tend, the new piece and the minutes, or nothing left; never a backlog or a word for late. */
+const COUNTS_FORM =
+  /^(Nothing to tend now|(?:[1-9]\d* to tend · )?(?:1 new · )?about [1-9]\d* min)$/;
+
+/** The counts lines a frame shows, each as it reads. */
+export const countsIn = (host: Element) =>
+  [...host.querySelectorAll('[data-testid="session"]')].map(text);
+
+/** What one Today frame shows wrong of the counts line: more than one, another form, named otherwise than it reads, or not at the top of the scroll view above the reference. */
+const countsFaults = (host: Element): string[] => {
+  const nodes = [...host.querySelectorAll('[data-testid="session"]')];
+  if (nodes.length > 1) return [`${nodes.length} counts lines`];
+  const out: string[] = [];
+  const reference = host.querySelector('[data-testid="reference"]');
+  for (const node of nodes) {
+    if (!COUNTS_FORM.test(text(node))) out.push(`the counts read ${text(node)}`);
+    const label = node.getAttribute('aria-label');
+    if (label !== null && label !== text(node)) out.push(`the counts named ${label}`);
+    if (!scrolled(node)) out.push('the counts outside the scroll view');
+    const following = Node.DOCUMENT_POSITION_FOLLOWING;
+    if (reference === null || (node.compareDocumentPosition(reference) & following) !== following)
+      out.push('the counts not above the reference');
+  }
+  return out;
+};
+
 /** What one frame shows wrong of the session's controls. */
 const frameFaults = (host: Element): string[] => {
   const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
@@ -251,6 +279,7 @@ const frameFaults = (host: Element): string[] => {
   if (shown.switches.length > 1) out.push(`${shown.switches.length} switches`);
   if (shown.switches.some((each) => !/^Voice:(true|false)$/.test(each)))
     out.push(`a switch ${shown.switches.join(',')}`);
+  out.push(...countsFaults(host));
   for (const node of host.querySelectorAll(CONTROLS)) {
     if (!scrolled(node) || recitals(node)) continue;
     out.push(`a control in the scroll view: ${node.getAttribute('aria-label') ?? text(node)}`);
@@ -263,11 +292,17 @@ const mounted = new Set<() => Promise<void>>();
 
 /**
  * A launch of the root over `device` with `faults`, at `time.now` on
- * Effect's clock. Every frame is held to the screen's rules; the faults
- * found are kept in `faults`, and `frames` counts the frames seen by what
- * they showed.
+ * Effect's clock, its registry given `seeded` atoms' values beside the
+ * app's layer. Every frame is held to the screen's rules; the faults found
+ * are kept in `faults`, and `frames` counts the frames seen by what they
+ * showed.
  */
-export const launch = async (device: Device, faults: Faults, time: { now: number | null }) => {
+export const launch = async (
+  device: Device,
+  faults: Faults,
+  time: { now: number | null },
+  seeded: readonly (readonly [Atom.Atom<unknown>, unknown, Atom.InitialValueOptions])[] = [],
+) => {
   for (const left of [...mounted]) await left();
   const gate = Promise.withResolvers<void>();
   const hearing = MutableRef.make<Hearing>({ kind: 'heard', skip: [] });
@@ -281,7 +316,7 @@ export const launch = async (device: Device, faults: Faults, time: { now: number
   const host = document.createElement('div');
   document.body.append(host);
   const found: string[] = [];
-  const frames = { pending: 0, today: 0, first: 0, listening: 0, shown: 0 };
+  const frames = { pending: 0, today: 0, first: 0, listening: 0, shown: 0, counts: 0 };
   /** Each change of the checked radio and of the switch over the launch's frames, in order: the first entry is what the first frame showing it showed. */
   const seen = { minutes: [] as string[], voice: [] as string[] };
   const note = (into: string[], value: string | undefined) => {
@@ -297,7 +332,8 @@ export const launch = async (device: Device, faults: Faults, time: { now: number
     else frames.first += 1;
     if (buttonNamed('Listening') !== undefined) frames.listening += 1;
     const choices = choicesOf(host);
-    if (choices.groups > 0) frames.shown += 1;
+    if (choices.groups > 0 || choices.switches.length > 0) frames.shown += 1;
+    if (countsIn(host).length > 0) frames.counts += 1;
     if (choices.checked.length === 1) note(seen.minutes, choices.checked[0] ?? undefined);
     note(seen.voice, choices.switches[0]);
     found.push(...frameFaults(host));
@@ -307,7 +343,7 @@ export const launch = async (device: Device, faults: Faults, time: { now: number
   const root = createRoot(host);
   await act(async () =>
     root.render(
-      <RegistryProvider initialValues={[[runtime.layer, layer]]}>
+      <RegistryProvider initialValues={[[runtime.layer, layer], ...seeded]}>
         <Root />
       </RegistryProvider>,
     ),
@@ -348,6 +384,7 @@ export const launch = async (device: Device, faults: Faults, time: { now: number
     tap,
     has: (label: string) => buttonNamed(label) !== undefined,
     choices: () => choicesOf(host),
+    counts: () => countsIn(host),
     release: () => gate.resolve(),
     leave,
   };
