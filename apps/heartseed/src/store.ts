@@ -7,7 +7,9 @@
  * It opens at its first call and keeps the handle for the layer's life; a
  * call made while it is not open tries the open first, so an open that
  * throws fails that one call and the next call tries again. Each build of
- * the layer opens anew. A failure is a failure: every call answers only
+ * the layer opens anew, and the handle it opened is closed when its scope
+ * closes (one SQLite connection per open, so the close is this layer's
+ * alone). A failure is a failure: every call answers only
  * what One's store answered, and a call that throws (or whose open throws)
  * fails with `KeyValueStoreError`, logged with its method and key. Nothing
  * stands in for the device's store.
@@ -22,10 +24,8 @@ type Database = ReturnType<typeof One.Database.openKeyValue>;
 /** The name of the app's store on the device. */
 const NAME = 'heartseed';
 
-/** One store's calls over a handle opened at the first call that needs it. */
-const storeOnDevice = () => {
-  const held = MutableRef.make(Option.none<Database>());
-
+/** One store's calls over `held`, the handle opened at the first call that needs it. */
+const storeOnDevice = (held: MutableRef.MutableRef<Option.Option<Database>>) => {
   /** The open handle, opening the store when it is not open; throws as the open throws, and holds nothing then. */
   const opened = (): Database =>
     Option.getOrElse(MutableRef.get(held), () => {
@@ -75,8 +75,31 @@ const storeOnDevice = () => {
   });
 };
 
-/** The app's KeyValueStore: One's store named `heartseed`, opened at its first call and retried at each call while it is not open. */
+/** Closes the handle this layer opened, if it opened one, and holds nothing after; a close that throws is logged, never raised. */
+const release = (held: MutableRef.MutableRef<Option.Option<Database>>) =>
+  Option.match(MutableRef.get(held), {
+    onNone: () => Effect.void,
+    onSome: (db) =>
+      Effect.try({
+        try: () => db.close(),
+        catch: (cause) =>
+          new KeyValueStore.KeyValueStoreError({ message: 'close', method: 'close', cause }),
+      }).pipe(
+        Effect.ensuring(Effect.sync(() => MutableRef.set(held, Option.none()))),
+        Effect.catch((error) =>
+          Effect.logWarning('store.close.failed').pipe(
+            Effect.annotateLogs({ cause: String(error.cause) }),
+          ),
+        ),
+      ),
+  });
+
+/** The app's KeyValueStore: One's store named `heartseed`, opened at its first call, retried at each call while it is not open, and closed when the layer's scope closes. */
 export const store: Layer.Layer<KeyValueStore.KeyValueStore> = Layer.effect(
   KeyValueStore.KeyValueStore,
-  Effect.sync(storeOnDevice),
+  Effect.gen(function* () {
+    const held = MutableRef.make(Option.none<Database>());
+    yield* Effect.addFinalizer(() => release(held));
+    return storeOnDevice(held);
+  }),
 );

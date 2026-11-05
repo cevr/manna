@@ -185,7 +185,9 @@ Silent mode mutes. Nothing leaves the device.
   for the layer's life; a call made while it is not open tries the open
   first, so an open that throws fails that one call (`KeyValueStoreError`,
   logged `store.failed` with the method and key) and the next call tries
-  again. Each launch opens anew. A failure is a failure: nothing stands in
+  again. Each launch opens anew, and the handle a layer opened is closed
+  when its scope closes (op-sqlite gives each open its own connection, so
+  the close is that layer's alone). A failure is a failure: nothing stands in
   for the device, no memory store, no cached keys, no write reported done
   that One's store refused. `src/store.test.ts` holds it to this over the
   test `one` module's device (`src/test/one.tsx`), and bans the memory,

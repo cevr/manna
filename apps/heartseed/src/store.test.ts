@@ -5,7 +5,8 @@
  * stand-in): it answers only what the device answered. An open that throws
  * fails that call and the next call opens again; a failed listing, record
  * read or write is a failure, never an empty list, a missing value or a
- * write reported done; each launch opens anew. And no app source makes a
+ * write reported done; each launch opens anew and closes, with its scope,
+ * the handle it opened and no other. And no app source makes a
  * memory store to stand in for the device.
  */
 
@@ -102,6 +103,42 @@ describe('the app store over the device', () => {
           read: '{"a":1}',
         });
         expect(device.calls.open).toBe(1);
+      }),
+    ));
+
+  it('closes the handle it opened when its scope closes, and only that: none for a launch that never opened or whose opens all failed, one after a failed open and a good one', () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const counts = () => [device.calls.open, device.calls.failedOpens, device.calls.close];
+        device.launch([[RECALL, '{}']]);
+        yield* launch(() => Effect.void);
+        expect(counts()).toEqual([0, 0, 0]);
+
+        device.launch().fail('open', 2);
+        const down = yield* launch((kv) => Effect.all([failed(kv.keys), failed(kv.get(RECALL))]));
+        expect([down, counts()]).toEqual([
+          [true, true],
+          [2, 2, 0],
+        ]);
+
+        device.launch().fail('open', 1);
+        const during = yield* launch((kv) =>
+          Effect.gen(function* () {
+            const first = yield* failed(kv.keys);
+            const value = yield* kv.get(RECALL);
+            yield* kv.set(SWITCH, 'false');
+            return [first, value, device.calls.close];
+          }),
+        );
+        expect([during, counts()]).toEqual([
+          [true, '{}', 0],
+          [2, 1, 1],
+        ]);
+
+        device.launch();
+        yield* launch((kv) => kv.keys);
+        yield* launch((kv) => kv.get(SWITCH));
+        expect(counts()).toEqual([2, 0, 2]);
       }),
     ));
 
