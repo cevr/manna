@@ -11,7 +11,10 @@
  * complete (an open, a listing or a record read that failed), reads past
  * three attempts or again after it gave up, publishes or sounds ahead of a
  * write, sounds when unread, stores anything but the recall's own record,
- * or loads a record under another recital's key. It misses what the device
+ * loads a record under another recital's key, takes a record whose
+ * `offset` is not a whole number of minutes within 18 hours of UTC, drops a
+ * recall's offset from its record, or turns away a record kept before
+ * recalls carried one. It misses what the device
  * does with a write after it took it, and the read's real waits (the clock
  * here is a test clock).
  */
@@ -60,13 +63,31 @@ import { device, type AttemptFault } from './test/one';
 
 const REFERENCES = ['Made 1:1', 'Made 1:10', 'Made 2:3'] as const;
 
-/** A recall a reader could leave: a grade as readers give them, sometimes a peek. */
+/** The offsets a record may hold: every side of UTC, part hours, and the bounds. */
+const OFFSETS = [
+  -300, -240, -480, 60, 120, 540, 330, -150, 345, 765, 825, -720, 840, 0, -1080, 1080,
+];
+
+/** Values under `offset` that make a record no recall: a string, a fraction, null, a boolean, a number as text, and one minute past either bound. */
+const BAD_OFFSETS: readonly [unknown, ...unknown[]] = [
+  'east',
+  1.5,
+  null,
+  true,
+  '-300',
+  1081,
+  -1081,
+];
+
+/** A recall a reader could leave: a grade as readers give them, sometimes a peek; most with the zone's offset at its start, some kept before recalls carried one. */
 const recallOf = (next: () => number, reference: string, startedAt: number): Recall => {
   const grade = pickOf(next, [1, 2, 3, 3, 3, 4] as const);
   const peeked = next() < 0.25 ? 1 : 0;
+  const offset = next() < 0.75 ? { offset: pickOf(next, OFFSETS as [number, ...number[]]) } : {};
   return {
     reference,
     startedAt,
+    ...offset,
     grade,
     suggested: grade === 4 ? 3 : grade,
     words: 20,
@@ -228,9 +249,16 @@ const seedDevice = (next: () => number) => {
     ]);
     bad.push(key);
   }
+  const badOffset = next() < 0.5;
+  if (badOffset) {
+    const recall = recallOf(next, pickOf(next, REFERENCES), clock.now + 5);
+    const key = keyOf(recall);
+    disk.push([key, JSON.stringify({ ...recall, offset: pickOf(next, BAD_OFFSETS) })]);
+    bad.push(key);
+  }
   disk.push(['heartseed/voice/enabled', 'false']);
   device.launch(disk.toSorted(() => next() - 0.5));
-  return { model, clock, bad };
+  return { model, clock, bad, badOffset };
 };
 
 /** Where a generated attempt fails: its open, its listing, or the first, a middle or the last record read (the later ones after good reads). */
@@ -338,7 +366,10 @@ describe('the garden over the device', () => {
         const bump = (key: string) => cover.set(key, (cover.get(key) ?? 0) + 1);
         for (let seed = 1; seed <= 100; seed += 1) {
           const next = random(seed * 7919);
-          const { model, clock, bad } = seedDevice(next);
+          const { model, clock, bad, badOffset } = seedDevice(next);
+          if (badOffset) bump('bad offset');
+          for (const recall of model.records.values())
+            bump(recall.offset === undefined ? 'record:old' : 'record:new');
           const chimes: Growth[] = [];
           for (let l = 0, launches = 1 + below(next, 3); l < launches; l += 1) {
             device.launch(device.disk);
@@ -374,8 +405,9 @@ describe('the garden over the device', () => {
                     ...at,
                     skipped: logs
                       .filter((x) => x.message === 'garden.record.skipped')
-                      .map((x) => x.key),
-                  }).toEqual({ ...at, skipped: bad });
+                      .map((x) => String(x.key))
+                      .toSorted(),
+                  }).toEqual({ ...at, skipped: bad.toSorted() });
                 let current: Recall | undefined;
                 for (let step = 0, steps = below(next, 7); step < steps; step += 1) {
                   const mode = pickOf(next, ['ok', 'ok', 'ok', 'set', 'down'] as const);
@@ -429,6 +461,9 @@ describe('the garden over the device', () => {
           'Unread:ok',
           'Unread:set',
           'Unread:down',
+          'bad offset',
+          'record:old',
+          'record:new',
         ])
           expect({ key, covered: (cover.get(key) ?? 0) >= 3 }).toEqual({ key, covered: true });
       }),

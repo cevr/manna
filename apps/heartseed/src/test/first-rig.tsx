@@ -30,7 +30,8 @@
  * the model: the heading, the pending rules, what a sighted reader and the
  * screen reader get of each word, the hear phase's ink and selection, the
  * claims and setting words, the whole disk with every write counted and each
- * kept record's eight fields from the model's own grade rule, the speaks and
+ * kept record's nine fields from the model's own grade rule and the zone's
+ * offset at its start by the wall clock's own fields, the speaks and
  * stops, the recognizer's cancel at a relaunch, and the chime. It counts
  * words without printing one.
  */
@@ -57,6 +58,7 @@ import { sourceWords } from '../matcher/words';
 import { Haptics } from '../sayit';
 import { store } from '../store';
 import { device } from './one';
+import { hostOffset } from './zone';
 import { VoiceSource, VoiceUnavailable, type VoiceEvent, type VoiceInfo } from '../voice';
 
 export const PREFIX = 'heartseed/recall/';
@@ -780,6 +782,7 @@ export const activityOf = (m: Model) => {
 const RECORD_FIELDS = [
   'reference',
   'startedAt',
+  'offset',
   'grade',
   'suggested',
   'words',
@@ -926,8 +929,9 @@ export const session = (count: (key: string) => void) => {
       record.startedAt >= shown.window[0] - 5 && record.startedAt <= shown.window[1] + 5,
       `${where()}: the record started at its recital`,
     ).toBe(true);
-    const { startedAt: _, ...fields } = record;
+    const { startedAt, offset, ...fields } = record;
     expect(fields, `${where()}: the record`).toEqual(shown.record);
+    expect(offset, `${where()}: the record's zone offset at its start`).toBe(hostOffset(startedAt));
     if (shown.key === null) {
       m.recalls += 1;
       m.passage += 1;

@@ -4,7 +4,10 @@
  * Say it against its model (`test/sayit-model.ts`, written from the hssayit
  * spec) under Effect's TestClock, over the app's own Dictation and a
  * recorded scripted source: seeded histories of presses, waits, peeks at
- * any index and grades from 0 to 5, over made-up verses whose source either
+ * any index, grades from 0 to 5 and travel to another zone, started seconds
+ * before a daylight-saving change or on any day in a zone of any offset, so
+ * a recall that takes its zone's offset anywhere but at its press, or with
+ * JavaScript's sign, disagrees; over made-up verses whose source either
  * ends by itself (the scripted replay) or never does (an open recognizer).
  * After each step the start, the choice, the Dictation view Say it shows,
  * the last view of its `changes`, the ticks, the listens, the finishes and
@@ -44,6 +47,7 @@ import {
 } from './sayit';
 import { SIMULATOR_PLAN } from './sayit/source';
 import { SayItModel, type ModelStep } from './test/sayit-model';
+import { hostOffset, hostZone, restore, travel, ZONES } from './test/zone';
 
 const random = (seed: number) => {
   let s = seed >>> 0;
@@ -206,6 +210,7 @@ const run = (live: Rig, step: ModelStep) =>
     if (step.t === 'peek') yield* live.sayIt.peek(step.index);
     if (step.t === 'choose') yield* live.sayIt.choose(step.grade as Grade);
     if (step.t === 'wait') yield* live.wait(step.ms);
+    if (step.t === 'travel') travel(step.zone);
     yield* settle;
   });
 
@@ -215,9 +220,37 @@ const generate = (next: () => number, words: number): ModelStep => {
   if (r < 0.2) return { t: 'recite', cue: next() < 0.5 ? 'none' : 'initials', keep: next() < 0.5 };
   if (r < 0.62) return { t: 'wait', ms: 1 + below(next, 6) };
   if (r < 0.74) return { t: 'peek', index: below(next, words + 2) - 1 };
-  if (r < 0.9) return { t: 'choose', grade: below(next, 6) };
+  if (r < 0.86) return { t: 'choose', grade: below(next, 6) };
+  if (r < 0.92) return { t: 'travel', zone: pickOf(next, ZONES) };
   return { t: 'wait', ms: 1500 };
 };
+
+const HOUR = 3_600_000;
+
+/**
+ * The instants a history starts at: a few seconds before a daylight-saving
+ * change (New York's spring forward and fall back, Lord Howe's half hour,
+ * Sydney's), so a recital can be pressed on one side and kept on the other;
+ * a winter and a summer day; and the epoch.
+ */
+const startOf = (next: () => number) =>
+  pickOf(next, [
+    Date.UTC(2026, 2, 8, 7) - below(next, 4000),
+    Date.UTC(2026, 10, 1, 6) - below(next, 4000),
+    Date.UTC(2026, 3, 4, 15) - below(next, 4000),
+    Date.UTC(2026, 9, 3, 15, 30) - below(next, 4000),
+    Date.UTC(2026, 3, 4, 16) - below(next, 4000),
+    Date.UTC(2026, 9, 3, 16) - below(next, 4000),
+    Date.UTC(2026, 0, 15) + below(next, 24 * HOUR),
+    Date.UTC(2026, 6, 15) + below(next, 24 * HOUR),
+    0,
+  ]);
+
+/** The zone a history starts in: one of New York, Lord Howe and Sydney, whose changes the starts sit at, or any other. */
+const zoneOf = (next: () => number) =>
+  next() < 0.6
+    ? pickOf(next, ['America/New_York', 'Australia/Lord_Howe', 'Australia/Sydney'])
+    : pickOf(next, ZONES);
 
 const count = (calls: readonly string[], call: string) => calls.filter((c) => c === call).length;
 
@@ -240,6 +273,9 @@ const agree = (live: Rig, model: SayItModel, where: string) =>
     expect(finishes >= model.finishes && finishes <= model.finishesAllowed, where).toBe(true);
   });
 
+/** The host's zone as the file found it, put back after each history. */
+const host = hostZone();
+
 const runHistory = (seed: number) =>
   Effect.gen(function* () {
     const next = random(seed);
@@ -251,27 +287,36 @@ const runHistory = (seed: number) =>
       pace: 2 + below(next, 4),
     };
     const endsByItself = next() < 0.5;
+    const start = startOf(next);
+    const zone = zoneOf(next);
     const live = yield* rig({
       passage: { reference: 'Made 1:1', text },
       source: scriptedSource(recite(text, plan)),
       endsByItself,
     });
+    yield* Effect.provideContext(TestClock.setTime(start), live.services);
+    travel(zone);
     yield* settle;
     const model = new SayItModel('Made 1:1', endsByItself);
-    const trail = [`seed ${seed} ${JSON.stringify(plan)} endsByItself ${endsByItself}`];
-    let now = 0;
+    const trail = [
+      `seed ${seed} ${JSON.stringify(plan)} endsByItself ${endsByItself} at ${start} in ${zone}`,
+    ];
+    let now = start;
+    let moved = 0;
     for (let k = 0; k < 30; k++) {
       const step = generate(next, words);
       trail.push(JSON.stringify(step));
       const before = yield* live.dictation.view;
+      const kept = model.kept.length;
       yield* run(live, step);
       if (step.t === 'wait') now += step.ms;
       model.step(step, before, yield* live.dictation.view, now);
       yield* agree(live, model, trail.join(' '));
+      moved += model.kept.slice(kept).filter((recall) => recall.offset !== hostOffset(now)).length;
     }
     yield* Scope.close(live.scope, Exit.void);
-    return model;
-  });
+    return { model, moved };
+  }).pipe(Effect.ensuring(Effect.sync(() => restore(host))));
 
 /** A source that hears a whole recital of `text` inside its listen: each word tentative then final, then the end. */
 const burst = (text: string) =>
@@ -347,10 +392,12 @@ describe('Say it', () => {
       const view = viewOf(next, below(next, 14));
       const grade = pickOf(next, GRADES);
       const suggested = pickOf(next, [1, 2, 3] as const);
+      const offset = pickOf(next, [-300, -240, 0, 330, 345, 765, 840, -720] as const);
       const statuses = view.marks.map((mark) => mark.status);
-      expect(recallOf('Made 4:4', k, grade, suggested, view)).toEqual({
+      expect(recallOf('Made 4:4', k, offset, grade, suggested, view)).toEqual({
         reference: 'Made 4:4',
         startedAt: k,
+        offset,
         grade,
         suggested,
         words: statuses.length,
@@ -366,14 +413,16 @@ describe('Say it', () => {
   it('agrees with its model on 240 seeded histories of 30 steps, over self-ending and open sources, presses and recitals cued or not, kept or not', () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        const reached = { cued: 0, unkept: 0 };
+        const reached = { cued: 0, unkept: 0, moved: 0 };
         for (let seed = 1; seed <= 240; seed++) {
-          const model = yield* runHistory(seed);
+          const { model, moved } = yield* runHistory(seed);
           reached.cued += model.cuedFinished;
           reached.unkept += model.unkeptFinished;
+          reached.moved += moved;
         }
         expect(reached.cued).toBeGreaterThanOrEqual(40);
         expect(reached.unkept).toBeGreaterThanOrEqual(40);
+        expect(reached.moved).toBeGreaterThanOrEqual(30);
       }),
     ));
 

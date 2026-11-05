@@ -9,7 +9,8 @@
  * that ends `finished` takes the matcher's suggested grade as the reader's
  * choice, which the reader can change; for a kept recital, each change of
  * its recall (the first suggestion, a changed grade, a later peek) is
- * handed to `Recalls` once. A recital that is not kept, and every other
+ * handed to `Recalls` once, every one with the start and the zone's offset
+ * read at its press, whatever zone the device is in by then. A recital that is not kept, and every other
  * ending, hands nothing over.
  *
  * Each of `Dictation.changes` has the screen show Dictation's view as it is
@@ -20,6 +21,7 @@
 
 import { Clock, Context, Effect, Layer, MutableRef, Option, PubSub, Stream } from 'effect';
 
+import { offsetAt } from './day';
 import { Dictation, type DictationView } from './dictation';
 import type { Cue, MatcherView, SuggestedGrade } from './matcher';
 import { sourceWords } from './matcher/words';
@@ -48,6 +50,8 @@ export const GRADE_NAMES: Readonly<Record<Grade, string>> = {
 export interface Recall {
   readonly reference: string;
   readonly startedAt: number;
+  /** The device zone's offset at `startedAt`, in minutes east of UTC, taken at the press (`day.ts`); absent only in a record kept before recalls carried it. */
+  readonly offset?: number;
   readonly grade: Grade;
   readonly suggested: SuggestedGrade;
   readonly words: number;
@@ -112,16 +116,18 @@ export const ticksOf = (before: OrNull<MatcherView>, after: OrNull<MatcherView>)
     .length;
 };
 
-/** The recall of a finished recital under `grade`: its words, the words missed (peeked or not), the peeks and the extra words. */
+/** The recall of a finished recital started at `startedAt` in a zone `offset` minutes east of UTC, under `grade`: its words, the words missed (peeked or not), the peeks and the extra words. */
 export const recallOf = (
   reference: string,
   startedAt: number,
+  offset: number,
   grade: Grade,
   suggested: SuggestedGrade,
   view: MatcherView,
 ): Recall => ({
   reference,
   startedAt,
+  offset,
   grade,
   suggested,
   words: view.marks.length,
@@ -133,6 +139,7 @@ export const recallOf = (
 const RECALL_FIELDS: readonly (keyof Recall)[] = [
   'reference',
   'startedAt',
+  'offset',
   'grade',
   'suggested',
   'words',
@@ -145,14 +152,20 @@ const sameRecall = (a: Recall, b: Recall) => RECALL_FIELDS.every((field) => a[fi
 
 const isGrade = (grade: number): grade is Grade => GRADES.some((each) => each === grade);
 
-/** How far the current recital has gone: none yet, under way, ended unheard, or finished with its suggestion and the recall last kept; one under way or finished carries whether it is kept at all. */
+/** How far the current recital has gone: none yet, under way, ended unheard, or finished with its suggestion and the recall last kept; one under way or finished carries its start, the zone's offset at its press, and whether it is kept at all. */
 type Progress =
   | { readonly _tag: 'None' }
-  | { readonly _tag: 'Open'; readonly startedAt: number; readonly keep: boolean }
+  | {
+      readonly _tag: 'Open';
+      readonly startedAt: number;
+      readonly offset: number;
+      readonly keep: boolean;
+    }
   | { readonly _tag: 'Unheard' }
   | {
       readonly _tag: 'Finished';
       readonly startedAt: number;
+      readonly offset: number;
       readonly keep: boolean;
       readonly suggested: SuggestedGrade;
       readonly kept: Option.Option<Recall>;
@@ -207,6 +220,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
         const recall = recallOf(
           passage.reference,
           recital.startedAt,
+          recital.offset,
           view.choice,
           recital.suggested,
           matcher,
@@ -234,6 +248,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
             recital: {
               _tag: 'Finished',
               startedAt: recital.startedAt,
+              offset: recital.offset,
               keep: recital.keep,
               suggested,
               kept: Option.none(),
@@ -293,10 +308,11 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
           if (current.status === 'finishing' || !sayable) return;
           yield* close(current);
           const startedAt = yield* now;
+          const offset = offsetAt(startedAt);
           yield* update((now) => ({
             ...now,
             started: now.started + 1,
-            recital: { _tag: 'Open', startedAt, keep: how.keep },
+            recital: { _tag: 'Open', startedAt, offset, keep: how.keep },
             shown: ABSENT,
             view: { dictation: current, startedAt, choice: ABSENT, cue: how.cue },
           }));

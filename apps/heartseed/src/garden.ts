@@ -4,7 +4,10 @@
  *
  * Each recall is one record of the app's store, under
  * `heartseed/recall/<reference>/<startedAt>`, whose value is the recall's
- * eight fields as JSON and nothing else. A recall kept again for the same
+ * nine fields as JSON and nothing else: a record kept before recalls
+ * carried the zone's `offset` holds the other eight, and reads as a recall
+ * all the same; one whose `offset` is no whole number of minutes within 18
+ * hours of UTC is no recall. A recall kept again for the same
  * recital writes the same key, so the last keep wins, and a restart reads
  * the same plants back. A plant's FSRS card is the fold of its recalls in
  * time order, and its stage is read from its recalls and the cards they fold
@@ -202,11 +205,20 @@ export class Garden extends Context.Service<
 
 const Count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 
-/** A recall's record: its eight fields, as JSON. */
+/** The most a stored offset may lie from UTC, in minutes either way: 18 hours. */
+const OFFSET_BOUND = 1080;
+
+const Offset = Schema.Int.check(
+  Schema.isGreaterThanOrEqualTo(-OFFSET_BOUND),
+  Schema.isLessThanOrEqualTo(OFFSET_BOUND),
+);
+
+/** A recall's record: its nine fields as JSON, `offset` absent from a record kept before recalls carried it. */
 const RecallRecord = Schema.fromJsonString(
   Schema.Struct({
     reference: Schema.String,
     startedAt: Count,
+    offset: Schema.optionalKey(Offset),
     grade: Schema.Literals([1, 2, 3, 4]),
     suggested: Schema.Literals([1, 2, 3]),
     words: Count,
@@ -219,6 +231,7 @@ const RecallRecord = Schema.fromJsonString(
 const RECALL_FIELDS: readonly (keyof Recall)[] = [
   'reference',
   'startedAt',
+  'offset',
   'grade',
   'suggested',
   'words',

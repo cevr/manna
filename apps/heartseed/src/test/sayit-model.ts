@@ -11,7 +11,8 @@
  * - A press is a recital with no cue that is kept (hsfirst). A recital
  *   while listening finishes; while idle it starts one under its cue,
  *   kept or not, which clears the choice and starts at the clock's time;
- *   while finishing it does nothing.
+ *   while finishing it does nothing. The recital's zone offset is the
+ *   host's at that start; travel after it changes no recall of it.
  * - Each word lit in a step's later view and not in the view last seen of
  *   the same recital ticks once; a recital's first view is diffed against
  *   nothing.
@@ -27,6 +28,8 @@
  * - The matcher grades a cued recital as helped, so a finished recital
  *   under a cue is never suggested Good (`cuedGood` counts any that is).
  */
+
+import { hostOffset } from './zone';
 
 export type Status = 'pending' | 'tentative' | 'matched' | 'miss' | 'peek';
 
@@ -48,6 +51,7 @@ export type ModelGrade = 1 | 2 | 3 | 4;
 export interface ModelRecall {
   readonly reference: string;
   readonly startedAt: number;
+  readonly offset: number;
   readonly grade: ModelGrade;
   readonly suggested: 1 | 2 | 3;
   readonly words: number;
@@ -63,7 +67,8 @@ export type ModelStep =
   | { readonly t: 'recite'; readonly cue: ModelCue; readonly keep: boolean }
   | { readonly t: 'wait'; readonly ms: number }
   | { readonly t: 'peek'; readonly index: number }
-  | { readonly t: 'choose'; readonly grade: number };
+  | { readonly t: 'choose'; readonly grade: number }
+  | { readonly t: 'travel'; readonly zone: string };
 
 /** The indices of the words lit in a view. */
 const litIn = (view: ModelDictation): ReadonlySet<number> =>
@@ -94,6 +99,8 @@ export class SayItModel {
   /** The most it may have had. */
   finishesAllowed = 0;
   startedAt: number | null = null;
+  /** The host zone's offset at the press, by the wall clock's own fields: every keep of the recital carries it, wherever the device travels after. */
+  offset: number | null = null;
   choice: ModelGrade | null = null;
   /** Finished recitals under a cue that the matcher suggested Good for: always 0. */
   cuedGood = 0;
@@ -125,6 +132,7 @@ export class SayItModel {
     if (how !== null && before.status === 'idle') {
       this.listens += 1;
       this.startedAt = now;
+      this.offset = hostOffset(now);
       this.choice = null;
       this.recital = { ...how, ended: false, suggested: null, kept: null };
       this.seen = new Set();
@@ -164,10 +172,12 @@ export class SayItModel {
     const recital = this.recital;
     if (!recital?.ended || !recital.keep || recital.suggested === null) return;
     if (this.choice === null || this.startedAt === null || after.matcher === null) return;
+    if (this.offset === null) return;
     const marks = after.matcher.marks;
     const recall: ModelRecall = {
       reference: this.reference,
       startedAt: this.startedAt,
+      offset: this.offset,
       grade: this.choice,
       suggested: recital.suggested,
       words: marks.length,

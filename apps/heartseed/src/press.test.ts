@@ -10,13 +10,27 @@
  * It catches a press that cues its recital from a view a keep still in
  * flight is about to change (a grade changed to Again just before the
  * press), a cue that moves on a refused write, an unread garden that cues a
- * stage it never read, and a passage not planted said under anything but
- * the full text. It misses what the screen draws under the cue, which the
+ * stage it never read, a passage not planted said under anything but
+ * the full text, and a record whose zone offset is not its press's: one
+ * taken at a keep after travel or a daylight-saving change, dropped from a
+ * rewrite, or kept in other than nine fields. It misses what the screen draws under the cue, which the
  * screen tests own.
  */
 
 import { describe, expect, it } from 'bun:test';
-import { Context, Deferred, Effect, Fiber, Layer, Logger, Option, Scope, Stream } from 'effect';
+import {
+  Clock,
+  Context,
+  Deferred,
+  Effect,
+  Exit,
+  Fiber,
+  Layer,
+  Logger,
+  Option,
+  Scope,
+  Stream,
+} from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as TestClock from 'effect/testing/TestClock';
 import passage from 'virtual:heartseed-passage';
@@ -26,10 +40,27 @@ import { recite, scriptedSource } from './dictation/script';
 import { Chime, Garden } from './garden';
 import type { Cue } from './matcher';
 import { Haptics, SayIt, type Recall } from './sayit';
-import { DAY, keyOf } from './test/garden-model';
+import { below, DAY, keyOf, MINUTE, pickOf, random } from './test/garden-model';
+import { hostZone, offsetIn, restore, travel, ZONES } from './test/zone';
 import { voiceSource } from './voice/source';
 
 const START = Date.UTC(2026, 3, 1, 9);
+
+/** A recall's record as the garden writes it from this unit on: nine fields, sorted. */
+const RECORD_FIELDS = [
+  'extra',
+  'grade',
+  'missed',
+  'offset',
+  'peeked',
+  'reference',
+  'startedAt',
+  'suggested',
+  'words',
+];
+
+/** The host's zone as the file found it, put back after a case that travels. */
+const host = hostZone();
 
 /** A recall of `reference` at `startedAt`, said whole with Good. */
 const recallAt = (startedAt: number, reference = passage.reference): Recall => ({
@@ -82,10 +113,10 @@ const memory = (disk: Map<string, string>, faults: Faults) =>
   );
 
 /** The app's services over a store holding `recalls`, a perfect recital played at a word a millisecond, read to its end on the test clock. */
-const launch = (recalls: readonly Recall[], faults: Faults) =>
+const launch = (recalls: readonly Recall[], faults: Faults, at = START + DAY) =>
   Effect.gen(function* () {
     const disk = new Map(recalls.map((recall) => [keyOf(recall), JSON.stringify(recall)]));
-    yield* TestClock.setTime(START + DAY);
+    yield* TestClock.setTime(at);
     const scope = yield* Scope.make();
     const building = yield* Effect.forkChild(
       Layer.buildWithScope(
@@ -111,7 +142,7 @@ const launch = (recalls: readonly Recall[], faults: Faults) =>
       const view = yield* sayIt.view;
       return { cue: view.cue, suggested: view.dictation.matcher?.suggestedGrade };
     });
-    return { services, sayIt, garden: Context.get(services, Garden), disk, say };
+    return { scope, services, sayIt, garden: Context.get(services, Garden), disk, say };
   });
 
 const run = <A, E>(effect: Effect.Effect<A, E, Scope.Scope>) =>
@@ -175,6 +206,57 @@ describe('Today’s press', () => {
         expect(app.disk.size).toBe(2);
         expect(yield* app.say).toEqual(said('none', 3));
       }),
+    ));
+
+  it('stores each recital in nine fields with its press’s zone offset, through a refused write retried at a grade change and Again after travel, over 40 generated presses at daylight-saving and 04:00 edges in zones of every offset', () =>
+    run(
+      Effect.gen(function* () {
+        const next = random(41);
+        const reached = { moved: 0, refused: 0 };
+        for (let k = 0; k < 40; k += 1) {
+          const zone = pickOf(next, ZONES);
+          const elsewhere = pickOf(next, ZONES);
+          const at = pickOf(next, [
+            Date.UTC(2026, 2, 8, 7) - 1500,
+            Date.UTC(2026, 9, 25, 1) - 1500,
+            Date.UTC(2026, 3, 4, 15) - 1500,
+            Date.UTC(2026, 9, 3, 15, 30) - 1500,
+            Date.UTC(2026, 5, 1, 4) - offsetIn(zone, Date.UTC(2026, 5, 1)) * MINUTE - 1,
+            Date.UTC(2026, 0, 1) + below(next, DAY),
+          ] as const);
+          const refused = below(next, 2);
+          const faults = none();
+          const app = yield* launch([], faults, at);
+          const where = { k, zone, elsewhere, at, refused };
+          travel(zone);
+          faults.refuse = refused;
+          yield* app.say;
+          const startedAt = (yield* app.sayIt.view).startedAt ?? -1;
+          const key = keyOf({ reference: passage.reference, startedAt });
+          const stored = () => JSON.parse(app.disk.get(key) ?? '{}');
+          const want = offsetIn(zone, startedAt);
+          expect({ ...where, keys: app.disk.size }).toEqual({ ...where, keys: 1 - refused });
+          travel(elsewhere);
+          if (offsetIn(elsewhere, yield* Clock.currentTimeMillis) !== want) reached.moved += 1;
+          yield* app.sayIt.choose(pickOf(next, [3, 4] as const));
+          expect({
+            ...where,
+            fields: Object.keys(stored()).toSorted(),
+            offset: stored().offset,
+          }).toEqual({ ...where, fields: RECORD_FIELDS, offset: want });
+          yield* app.sayIt.choose(1);
+          expect({
+            ...where,
+            grade: stored().grade,
+            offset: stored().offset,
+            keys: app.disk.size,
+          }).toEqual({ ...where, grade: 1, offset: want, keys: 1 });
+          reached.refused += refused;
+          yield* Scope.close(app.scope, Exit.void);
+        }
+        expect(reached.moved).toBeGreaterThanOrEqual(15);
+        expect(reached.refused).toBeGreaterThanOrEqual(10);
+      }).pipe(Effect.ensuring(Effect.sync(() => restore(host)))),
     ));
 
   it('says it with nothing in an unread garden, a perfect recital suggested Good, and writes it all the same', () =>
