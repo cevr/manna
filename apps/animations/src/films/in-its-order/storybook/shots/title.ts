@@ -93,13 +93,13 @@ export const titleShot: FilmShot = {
           seat(
             {
               member: 'feast-guest-woman',
-              sheet: 'feast-courtyard',
+              sheet: 'iio-table',
               name: 'woman',
               x: X.woman,
               crown: CROWN,
             },
             at,
-            holds([[0, 'turn', 'neutralBlink']], duration),
+            holds([[0, 'smile', 'neutralBlink']], duration),
           ),
           seat(
             {

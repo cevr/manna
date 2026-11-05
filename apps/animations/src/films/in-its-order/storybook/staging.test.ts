@@ -46,6 +46,11 @@ const TABLE_RECORD: {
   }>;
 } = LEAD_TABLE_RECORD;
 
+/** The sheets beyond its own a figure of act 1 may draw from, `<member> <name>` to sheet ids, each by the ruling that drew it: the lead's close (cold-ouch) and his standing milk sheet (milk-row), sheets 2 and 3 of the act's sheet table (iio-b spec). */
+const OTHER_SHEETS: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
+  ['lead-feast lead', ['iio-close', 'iio-milk']],
+]);
+
 /** The lead's table cells that draw the bottle in his hand. */
 const HOLDING = new Set(['lift', 'bottle']);
 
@@ -481,7 +486,24 @@ describe("In Its Order's staging", () => {
         .filter((f) => f.name === name)
         .flatMap((f) => [...new Set(timesOf(title).map((t) => poseAt(f, t).cell))]);
     expect(turned('man')).toEqual(['smile']);
-    expect(turned('woman')).toEqual(['turn']);
+    expect(turned('woman')).toEqual(['smile']);
+  });
+
+  test('draws each figure from one sheet across act 1’s shots, a sheet a ruling names aside (critique 3, finding 7: the title drew the woman from take 5’s sheet, the cold open from her table sheet)', () => {
+    const sheets = new Map<string, Set<string>>();
+    for (const { shot } of placed)
+      for (const { figure: f } of figuresOf(shot)) {
+        const name = `${f.member} ${f.name}`;
+        sheets.set(name, (sheets.get(name) ?? new Set()).add(f.sheet));
+      }
+    expect(
+      [...sheets].flatMap(([name, used]) => {
+        const ruled = OTHER_SHEETS.get(name) ?? [];
+        const extra = [...used].filter((s) => !ruled.includes(s));
+        if (extra.length <= 1) return [];
+        return [`${name}: ${[...used].join(', ')}`];
+      }),
+    ).toEqual([]);
   });
 
   test('has each diner of the title talk in turn, diner-3 too, his mouth his sheet’s own paint (critique 1, item 17)', () => {
