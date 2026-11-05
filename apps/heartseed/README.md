@@ -354,15 +354,28 @@ Silent mode mutes. Nothing leaves the device.
     real store on the device (the journey to one seed and Today, the voice
     off, a Next during a reading and a relaunch mid-flow, an unread launch,
     a held launch).
-  - `test:root`: `src/first/root.property.test.tsx`, the root route against
-    a model of the first minute over seeded devices (the disk empty, with
-    skipped records, a foreign key, another verse's or the passage's
-    recall; the switch absent, on or off; healthy, held and unread
-    launches), with the reader's taps, the voice's and the recognizer's
-    endings, refused writes and relaunches. Every frame and settle is
+  - `test:root`: `src/first/root.test.tsx`, the root route on fixed devices
+    through `src/test/first-rig.tsx` (the rig: stand-ins for the device's
+    store, the voice's source and the recognizer, a model of the first
+    minute, and its frame and settle oracles): the whole first minute, a
+    recital with every word missed, each unheard ending, refused and down
+    writes, Next during a reading, two queued Listen taps, an unread launch
+    that writes, and a relaunch mid-recital. Every frame and settle is
     checked: the heading, what a sighted reader and the screen reader get
-    of each word, claims and setting words, and the whole disk with its
-    write count.
+    of each word, the hear phase's ink and selection, claims and setting
+    words, the speaks and stops, and the whole disk with its write count
+    and each kept record's fields.
+  - `test:walk-letters`, `test:walk-alone`, `test:walk-write`,
+    `test:walk-launch`, `test:walk-disk`, `test:walk-relaunch`,
+    `test:walk-planted`, `test:walk-reading` and `test:walk-taps`: each
+    `src/first/walk-<group>.property.test.tsx`, the same rig over a few
+    generated devices from one seed. The generator draws every input the
+    rule names (any disk, switch and launch read, held or not; a speak that
+    lands or is refused and every kind of voice event; recitals that hear
+    any subset of the words, end every way Dictation ends, or are held open;
+    writes that land, are refused or meet a down device that recovers;
+    queued taps; a relaunch anywhere), steered toward the part's own group
+    of coverage floors, which its generated devices alone must meet.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
@@ -378,4 +391,5 @@ Silent mode mutes. Nothing leaves the device.
   turbo inputs leave out the other parts' test files, never their sources,
   so an edit of one part's test reruns that part, plus `test:rest` and
   `test:infra`: `test:rest` holds `core-import.test.ts`, which reads every
-  `src` file, and `test:infra` holds `parts.test.ts`.
+  `src` file, and `test:infra` holds `parts.test.ts`. The walk parts share
+  one set of inputs, so an edit of one walk file reruns every walk part.

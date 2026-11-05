@@ -7,7 +7,8 @@ one promise in three phases, then the seed:
 
 1. `Hear it`: the verse whole, one node per word (`word-<i>`). `Listen`
    (only while the voice is on and not reading) has the voice
-   (`apps/heartseed/src/voice.ts`) read the passage; the words already
+   (`apps/heartseed/src/voice.ts`) read the passage once (a second tap
+   before the frame that hides `Listen` reads nothing more); the words already
    spoken are in ink and the voice's current word is `selected`. A reading
    that ends finished goes on by itself; one that does not offers `Listen`
    again. `Next` goes on at any time, stopping a reading under way. Nothing
