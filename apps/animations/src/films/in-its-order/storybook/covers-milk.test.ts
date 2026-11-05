@@ -19,8 +19,8 @@ describe("In Its Order's parchment shots", () => {
       [
         'milk-pour',
         [
-          `INFO cover moving: ${dropper} frames 111–115`,
-          `INFO cover moving: ${dropper} frames 127–132`,
+          `INFO cover moving: ${dropper} frames 114–116`,
+          `INFO cover moving: ${dropper} frames 125–131`,
         ],
       ],
       ['milk-row', []],

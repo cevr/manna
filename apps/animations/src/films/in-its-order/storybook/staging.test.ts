@@ -13,6 +13,7 @@ import {
   hold,
   type Plate,
   plateAt,
+  platesOf,
   poseAt,
   revealAt,
   swapOf,
@@ -30,7 +31,7 @@ import { HEAD, TABLE_TOP } from './shots/courtyard.ts';
 import { CELLS as LEAD_TABLE_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
 import LEAD_TABLE_RECORD from '../../../library/cast/lead-feast/shot-sheets/iio-table/record.json';
 import { MEASURED } from './palettes.ts';
-import { CUP_MOUTHS, GUTTER } from './shots/milk.ts';
+import { CUP_MOUTHS, DISSOLVES, GUTTER } from './shots/milk.ts';
 
 /** The lead's table sheet's record, read for its props alone (a sheet drawn before props records none). */
 const TABLE_RECORD: {
@@ -477,6 +478,29 @@ describe("In Its Order's staging", () => {
         expect(Math.abs(body / heldBody - 1)).toBeLessThanOrEqual(0.05);
       }),
   );
+
+  test('shows no plate part-opaque for more than one frame running outside a declared dissolve, so a change is a drawing swapped whole (critique 2, finding 5: milk-cup’s book opened as a five-frame double exposure)', () => {
+    const ghosts = placed.flatMap(({ shot }) =>
+      platesOf(shot).flatMap((plate) => {
+        const name = plate.file.split('/').at(-1) ?? '';
+        if (DISSOLVES.has(name)) return [];
+        const part = timesOf(shot).map((t) => {
+          const a = plateAt(plate, t).alpha;
+          return a > 1e-6 && a < 1 - 1e-6;
+        });
+        const longest = part.reduce(
+          (acc, p) => {
+            const run = Number(p) * (acc.run + 1);
+            return { run, best: Math.max(acc.best, run) };
+          },
+          { run: 0, best: 0 },
+        ).best;
+        if (longest <= 1) return [];
+        return [`${shot.id}: ${name} part-opaque ${longest} frames running`];
+      }),
+    );
+    expect(ghosts).toEqual([]);
+  });
 
   test('keeps every plate standing at a shot’s end where it stood at the next shot’s start, wherever that place is in the next frame, across each cut that keeps its figures where they stood (critique 2, finding 3: cold-ouch dropped the bottle cold-letter set down)', () => {
     const shots = placed.map(({ shot }) => shot);

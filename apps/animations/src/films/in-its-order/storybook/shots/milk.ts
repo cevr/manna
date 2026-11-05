@@ -104,6 +104,7 @@ export const milkCup: FilmShot = {
     const pop = cue('pop');
     const open = cue('open');
     const look = cue('look');
+    const flip = (open.start + open.end) / 2;
     return {
       headPx: VILLAGER.headPx,
       camera: [
@@ -123,14 +124,17 @@ export const milkCup: FilmShot = {
           plateOn('milk-book-shut.png', BOOK_SHUT, [131, 132], [BOOK.x, BOOK.y], BOOK.s, {
             moves: [
               [pop.start, key({ alpha: 0, sx: 0.5, sy: 0.5 })],
+              [pop.start, key({ sx: 0.5, sy: 0.5 })],
               [pop.end, key({})],
               [open.start, key({})],
-              [open.end, key({ alpha: 0, sx: 0.2 })],
+              [flip, key({ sx: 0.2 })],
+              [flip, key({ alpha: 0, sx: 0.2 })],
             ],
           }),
           plateOn('milk-book-open.png', BOOK_OPEN, [215.5, 119.5], [BOOK.x, BOOK.y], BOOK.s, {
             moves: [
-              [open.start, key({ alpha: 0, sx: 0.2 })],
+              [flip, key({ alpha: 0, sx: 0.2 })],
+              [flip, key({ sx: 0.2 })],
               [open.end, key({})],
             ],
           }),
@@ -139,6 +143,12 @@ export const milkCup: FilmShot = {
     };
   },
 };
+
+/** How far above its place the dropper waits and leaves to, layer px: its foot (y 564) above the pushed frame's top (y 29 at zoom 1.1), so it comes in and goes out whole, never fading across his face. */
+const DROPPER_ABOVE = -560;
+
+/** The plates act 1 dissolves on purpose, by file: the milk's arc thinning away as a pour stops, a stream of milk and no drawn prop. Every other plate shows whole or not at all, but for one frame. */
+export const DISSOLVES: ReadonlySet<string> = new Set(['milk-arc.png']);
 
 /** One pour of the milk: its arc laid from the book's gutter over and down into the cup's mouth over `from`..`from + 0.6` s, gone at `stop`. */
 const ribbon = (from: number, stop: number): Plate =>
@@ -229,10 +239,13 @@ export const milkPour: FilmShot = {
           ribbon(again.start, cue('full').start),
           plateOn('milk-dropper.png', DROPPER, [14, 130], [667, 530], 0.9, {
             moves: [
-              [dropper.start, key({ y: -260, alpha: 0 })],
+              [0, key({ y: DROPPER_ABOVE, alpha: 0 })],
+              [dropper.start, key({ y: DROPPER_ABOVE, alpha: 0 })],
+              [dropper.start, key({ y: DROPPER_ABOVE })],
               [dropper.end, key({})],
               [away.start, key({})],
-              [away.end, key({ x: 120, y: -300, alpha: 0 })],
+              [away.end, key({ x: 120, y: DROPPER_ABOVE })],
+              [away.end, key({ x: 120, y: DROPPER_ABOVE, alpha: 0 })],
             ],
           }),
         ]),
