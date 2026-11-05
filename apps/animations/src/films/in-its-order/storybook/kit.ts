@@ -111,7 +111,7 @@ export const layer = (name: string, z: number, items: Layer['items']): Layer => 
  */
 export const TALL: ReadonlyMap<string, number> = new Map([
   ['lead-feast/iio-table', 604],
-  ['lead-feast/iio-close', 888],
+  ['lead-feast/iio-close', 836],
   ['lead-feast/iio-milk', 868],
   ['feast-mother/iio-baby', 922],
   ['feast-guest-man/iio-table', 668],

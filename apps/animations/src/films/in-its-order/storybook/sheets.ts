@@ -41,10 +41,6 @@ const LEAD_CUP =
   'a small plain clay cup painted exactly #7a5236, seen from the side, its rim hiding the milk';
 const VILLAGER_CUP = cup('#7a5236', '#d9cdb8');
 
-/** The lead seated, the bottle set down out of the picture, head bowed: one pose in his table sheet and his close (the table hides his lap, and a cream bottle on it read as his sash). */
-const LEAD_DOWN =
-  'seated on the stool exactly as in the first figure, the head bowed a little, the eyes looking down in front of him, both round hands in their sleeves resting empty on the knees, no bottle, a small sheepish mouth';
-
 /** What the lead's seated sheets ask beyond `seated`: his sash's pale cream on the sash alone, since his tunic's cream is near it and anything else in it read as the sash's top. */
 const SASH_ALONE =
   "The sash's pale cream #eadcc2 is on the sash alone: the tunic, its neckline and anything held, the bottle too, are the tunic's warm cream #f2d8b7 or another paint, never the sash's.";
@@ -84,22 +80,30 @@ const leadTable: SheetDecl = {
   props: BOTTLE_PROPS,
 };
 
-/** What the lead's close asks of his head beyond `seated` (critique 1, item 4: drawn darker, the snap split his hair between its shade and the sandals' brown): the hair, ears and neck as the front reference draws them. */
-const HEAD_AS_FRONT =
-  "His head is drawn exactly as in the front reference image at this larger size: the hair his warm brown #6c432b, its plum shade #57384a only in the small undersides of a few curls; the ears and the neck his skin #f2b27c, never brown; the sandals' brown #7a5236 on the sandals and the stool alone.";
+/** His table sheet, as a reference of his close: its fifth figure is the man the shot before the card leaves on screen (a path from his views folder, since a reference is named from there). */
+const TABLE_SHEET_REF = '../../shot-sheets/iio-table/sheet';
 
-/** The lead close (`cold-ouch`): three keys, so a close stays under the enlargement cap. */
+/** What the lead's close asks of his head and dress beyond `seated` (critique 2, finding 1: a close drawn from his front reference opened his eyes, clumped plum in his fringe, lengthened his face, widened his sash and drew lavender sickles on his robe): the man his table sheet's fifth figure draws, only larger. */
+const CLOSE_AS_TABLE =
+  "The first reference image is his table sheet: every figure here is exactly the man its fifth figure draws, only larger, the same in every line: the same head and face (a little longer than wide, as there, never longer), the same ears and neck in his skin #f2b27c; the same short curls in his warm brown #6c432b, with no darker clumps or patches in them, his plum shade #57384a at most a thin line under a curl or two; the same narrow sash and small knot in the sash's pale cream #eadcc2; the robe in its flat paints as there, its folds a few ink lines only, with no lavender, violet or grey marks, wedges or shading on the folds, the chest or the sleeves; the sandals' brown #7a5236 on the sandals and the stool alone.";
+
+/** The sash's light as his kept front view draws it (a measured paint), a paint his close alone adds: the close draws its sash so near its tunic's cream that the split gave the sash's paint one pixel and the proportions read no sash top; this light, 2.5 from the sash's base, gathers the drawn sash. */
+const CLOSE_SASH = [{ name: 'sash light', base: '#f2dec8', role: 'sash' }] as const;
+
+/** The lead close (`cold-ouch`): three keys, so a close stays under the enlargement cap. His `down` is his table sheet's `down`, lids half down on the scroll, as the shot before the card leaves him. */
 const leadClose: SheetDecl = {
   member: 'lead-feast',
   id: 'iio-close',
   keys: ['down', 'downBlink', 'wince'],
   poses: {
-    down: LEAD_DOWN.replace('exactly as in the first figure', 'facing the viewer'),
+    down: "seated on the low stool facing the viewer, the head held exactly as in the table sheet's fifth figure, the upper lids half down and the eyes looking down at the table in front of him, both round hands in their sleeves resting empty on the knees, no bottle, a small sheepish mouth",
     downBlink: `seated ${blink('first')}`,
-    wince: `seated on the stool exactly as in the first figure, both hands resting empty on the knees, the head bowed the same, wincing: the eyes squeezed shut as two short tight ink lines, the brows drawn together and tilted up at their inner ends, the mouth a short wavy line`,
+    wince:
+      'seated on the stool exactly as in the first figure, both hands resting empty on the knees, the head held the same, wincing: the eyes squeezed shut as two short tight ink lines, the brows drawn together and tilted up at their inner ends, the mouth a short wavy line',
   },
-  refs: ['front', 'heads-1'],
-  rules: [...seated('#7a5236'), SASH_ALONE, HEAD_AS_FRONT],
+  refs: [TABLE_SHEET_REF, 'front'],
+  rules: [...seated('#7a5236'), SASH_ALONE, CLOSE_AS_TABLE],
+  props: CLOSE_SASH,
 };
 
 /** The lead on the parchment (`milk-row`): standing, taking a cup. */

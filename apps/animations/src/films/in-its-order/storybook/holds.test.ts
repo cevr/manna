@@ -25,7 +25,7 @@ const ALIVE = 4.6;
  * changes key within `ALIVE` instead (compaction-3 ruling; a blink never
  * swaps the whole drawing, round 3, M1).
  */
-const LIDDED = new Set(['lead-feast/iio-table down']);
+const LIDDED = new Set(['lead-feast/iio-table down', 'lead-feast/iio-close down']);
 
 /** Every hold of the film that shows no blink though its sheet has a `<cell>Blink` key. */
 const stills = placed.flatMap(({ shot }) =>

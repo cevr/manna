@@ -2,9 +2,12 @@ import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import sharp from 'sharp';
 import type { Raster } from '@manna/film/tools';
-import { hexOf, MOTTLE_PX, paintsOf } from '../../../library/storybook/sheet.ts';
+import { hexOf, medianOf, MOTTLE_PX, paintsOf } from '../../../library/storybook/sheet.ts';
 import { SHEET_CELLS } from './cells.ts';
-import { sheetNamed } from './sheets.ts';
+import { SHEETS, sheetNamed } from './sheets.ts';
+
+/** How far (a share of the hair) a cell's head-band hair shade may lie from its member's first sheet's median: the lead's table, milk and redrawn close sheets read 0.5 to 3.5 %, the close before it 19.6 to 20.3 % (critique 2, finding 1). */
+const SHADE_SPREAD = 0.05;
 
 /** The most of a head band's hair that may be its hair shade (critique 1, item 4): the table and milk sheets read 0.5 to 8.3 %, the close redrawn from his front 20 % (the curls' shaded undersides, larger in a close), the old close 99.6 % (its base drawn in sandal brown). */
 const SHADE_MAX = 0.25;
@@ -66,9 +69,10 @@ const headBandOf = (r: Raster, head: number, paints: (typeof CELLS)[number]['pai
   return counts;
 };
 
-/** The cells of each sheet with props that hold its prop: the lead's bottle in `lift` and `bottle`, the older diner's open mouth in `talk`. */
+/** The cells of each sheet with props that hold its prop: the lead's bottle in `lift` and `bottle`, his close's sash light in every cell, the older diner's open mouth in `talk`. */
 const PROP_CELLS: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
   ['lead-feast/iio-table', ['lift', 'bottle']],
+  ['lead-feast/iio-close', ['down', 'downBlink', 'wince']],
   ['filler-dressed/iio-diner-3', ['talk']],
 ]);
 
@@ -193,6 +197,38 @@ describe("In Its Order's sheet paints", () => {
           }),
         );
         expect(misses.flat()).toEqual([]);
+      }),
+  );
+
+  it.effect(
+    'draws one head across a member’s sheets: each cell’s head-band hair shade within 5 points of the median of the member’s first sheet, so a close is the man the table drew (critique 2, finding 1: the close read 19.6 to 20.3 %, the table 2.3 to 3.5 %)',
+    () =>
+      Effect.gen(function* () {
+        const shares = yield* Effect.forEach(
+          CELLS.filter((c) => Option.isSome(c.head) && c.paints.some((p) => p.role === 'hair')),
+          (c) =>
+            Effect.map(rasterOf(c.png), (r) => {
+              const band = headBandOf(
+                r,
+                Option.getOrElse(c.head, () => 0),
+                c.paints,
+              );
+              return { ...c, share: band.shade / Math.max(1, band.base + band.shade) };
+            }),
+        );
+        const misses = shares.flatMap((c) => {
+          const [member = ''] = c.sheet.split('/');
+          const first = SHEETS.find((s) => s.member === member);
+          const reference = medianOf(
+            shares.filter((o) => o.sheet === `${member}/${first?.id}`).map((o) => o.share),
+          );
+          if (Option.isNone(reference) || Math.abs(c.share - reference.value) <= SHADE_SPREAD)
+            return [];
+          return [
+            `${c.sheet} ${c.cell}: hair shade ${(c.share * 100).toFixed(1)} % against ${(reference.value * 100).toFixed(1)} % on ${member}/${first?.id}`,
+          ];
+        });
+        expect(misses).toEqual([]);
       }),
   );
 });

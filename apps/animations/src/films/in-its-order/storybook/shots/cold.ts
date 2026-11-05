@@ -435,9 +435,9 @@ export const coldOuch: FilmShot = {
             { headPx: HEAD, z: Z.table },
             holds(
               [
-                [0, 'down', 'downBlink'],
+                [0, 'down', 'down'],
                 [cue('wince').start, 'wince', 'wince'],
-                [cue('wince').end, 'down', 'downBlink'],
+                [cue('wince').end, 'down', 'down'],
               ],
               duration,
             ),
