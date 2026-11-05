@@ -70,7 +70,7 @@ export interface SceneSource {
 const blinksOf = (f: Figure): ReadonlyArray<readonly [string, string]> => {
   const keys = new Map<string, readonly [string, string]>();
   for (const s of f.spans)
-    if (s._tag === 'Hold' && s.blink && s.whole !== true)
+    if (s._tag === 'Hold' && s.blink)
       keys.set(drawnKeyOf({ cell: s.cell, eyes: s.blink }), [s.cell, s.blink]);
   return [...keys.values()];
 };

@@ -5,6 +5,8 @@ import { describe, expect, test } from 'effect-bun-test';
 import {
   alphaAt,
   blinkOf,
+  changedOutsideBand,
+  eyeBandOf,
   hexOf,
   inkedFaceMarks,
   type Palette,
@@ -756,5 +758,45 @@ describe('blinkOf on faces of every row count (critique 1, items 13 and 14)', ()
         ),
       ),
     ).toBe(true);
+  });
+});
+
+describe('a blink keeps the body: changedOutsideBand over eyeBandOf (round 3, M1)', () => {
+  const paints = paintsOf(DRESSED);
+
+  test('over generated faces and blink drawings set off from them: blinkOf changes pixels inside the eye band and none outside it, and showing the blink drawing whole in place of the open cell changes the body outside it', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const draw = rng(seed);
+      const open = faceFigure(draw, { closed: false, dx: 0, dy: 0, lower: INK, cheek: false });
+      const shut = faceFigure(rng(seed + 1000), {
+        closed: true,
+        dx: Math.floor(draw() * 9) - 4,
+        dy: 1 + Math.floor(draw() * 2),
+        lower: INK,
+        cheek: false,
+      });
+      const band = Option.getOrThrow(eyeBandOf(open.raster, shut.raster, paints));
+      const built = Result.getOrThrow(blinkOf(open.raster, shut.raster, paints));
+      const inside = { top: 0, bottom: -1 };
+      expect([
+        seed,
+        changedOutsideBand(open.raster, [0, 0], built, [0, 0], band),
+        changedOutsideBand(open.raster, [0, 0], built, [0, 0], inside) > 0,
+        changedOutsideBand(open.raster, [0, 0], shut.raster, [0, 0], band) > 0,
+      ]).toEqual([seed, 0, true, true]);
+    }
+  });
+
+  test('counts a body moved one pixel on its anchor, and none for the same picture set on its own anchor elsewhere', () => {
+    const open = faceFigure(rng(3), { closed: false, dx: 0, dy: 0, lower: INK, cheek: false });
+    const band = { top: 0, bottom: 30 };
+    const moved: Raster = {
+      width: open.raster.width,
+      height: open.raster.height + 1,
+      rgba: new Uint8Array((open.raster.height + 1) * open.raster.width * 4),
+    };
+    moved.rgba.set(open.raster.rgba, open.raster.width * 4);
+    expect(changedOutsideBand(open.raster, [45, 0], moved, [45, 0], band)).toBeGreaterThan(0);
+    expect(changedOutsideBand(open.raster, [45, 0], moved, [45, 1], band)).toBe(0);
   });
 });

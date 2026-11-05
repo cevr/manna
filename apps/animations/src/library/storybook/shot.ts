@@ -39,8 +39,6 @@ export interface Hold<K extends string = string> {
   readonly to: number;
   readonly cell: K;
   readonly blink?: K;
-  /** The blink shows `blink`'s whole cell in place of `cell`, not its eyes pasted over `cell`'s: for a cell whose open eyes are lids, which `blinkOf` cannot paste over, when its blink key is the same pose drawn with the eyes shut. */
-  readonly whole?: boolean;
 }
 
 /** The figure turns from cell `from` to cell `to` over `dur` s from `at` s: the drawn cell swaps at 40 % under a small squash. */
@@ -198,14 +196,6 @@ export const blinkingHold = <const K extends string>(
   blink: K,
 ): Hold<K> => ({ _tag: 'Hold', from, to, cell, blink });
 
-/** A hold that blinks by its blink key's whole cell (`Hold.whole`): `cell` drawn with lids, `blink` the same pose with the eyes shut. */
-export const wholeBlinkingHold = <const K extends string>(
-  from: number,
-  to: number,
-  cell: K,
-  blink: K,
-): Hold<K> => ({ _tag: 'Hold', from, to, cell, blink, whole: true });
-
 export const turn = <const K extends string>(at: number, dur: number, from: K, to: K): Turn<K> => ({
   _tag: 'Turn',
   at,
@@ -325,13 +315,12 @@ const blinkingAt = (name: string, t: number): boolean => {
   return false;
 };
 
-/** A holding figure's pose: its cell, showing its blink key's eyes while it blinks (its blink key's whole cell under `whole`), breathing on from the start of its run of holds (`breathFrom`). */
+/** A holding figure's pose: its cell, showing only its blink key's eyes while it blinks, breathing on from the start of its run of holds (`breathFrom`). The body is always `cell`'s: a blink never swaps the drawing. */
 const holdPose = (f: Figure, s: Hold, t: number): Posed => {
   const shown = [s.cell, s.blink ?? s.cell][Number(blinkingAt(f.name, t))] ?? s.cell;
-  const cell = [s.cell, shown][Number(s.whole === true)] ?? s.cell;
   return {
-    cell,
-    eyes: [shown, cell][Number(s.whole === true)] ?? shown,
+    cell: s.cell,
+    eyes: shown,
     x: f.at.x,
     y: f.at.ground,
     sx: 1,

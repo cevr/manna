@@ -1731,6 +1731,72 @@ export const blinkOf = (
     }),
   );
 
+/** A run of rows of a picture, inclusive. */
+export interface Band {
+  readonly top: number;
+  readonly bottom: number;
+}
+
+/**
+ * The eye band of a blink of `open` by `closed`: the rows of `open`'s eyes,
+ * widened up and down by the tallest eye either face draws, so it holds
+ * every pixel `blinkOf` may paint; none when either face reads no eyes.
+ */
+export const eyeBandOf = (
+  open: Raster,
+  closed: Raster,
+  paints: ReadonlyArray<Paint>,
+): Option.Option<Band> =>
+  Result.getSuccess(
+    Result.flatMap(eyedFaceOf(open, paints, 'open cell'), (o) =>
+      Result.map(eyedFaceOf(closed, paints, 'blink drawing'), (c) => {
+        const opens = o.eyes.map((px) => boxOf(px, open.width));
+        const tallest = Math.max(
+          ...opens.map((b) => b.height),
+          ...c.eyes.map((px) => boxOf(px, closed.width).height),
+        );
+        return {
+          top: Math.min(...opens.map((b) => b.y)) - tallest,
+          bottom: Math.max(...opens.map((b) => b.y + b.height - 1)) + tallest,
+        };
+      }),
+    ),
+  );
+
+/**
+ * How many pixels `shown` draws otherwise than `open` outside `band` (rows of
+ * `open`), each picture set on its own anchor (`[ax, ay]` in its own px) as
+ * the painter sets a cell, so a blink that swapped the whole drawing counts
+ * every body pixel it moved: a blink must count none.
+ */
+export const changedOutsideBand = (
+  open: Raster,
+  openAt: readonly [number, number],
+  shown: Raster,
+  shownAt: readonly [number, number],
+  band: Band,
+): number => {
+  const [ox, oy] = [Math.round(openAt[0]), Math.round(openAt[1])];
+  const [sx, sy] = [Math.round(shownAt[0]), Math.round(shownAt[1])];
+  const pixel = (r: Raster, x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= r.width || y >= r.height) return 0;
+    const at = (y * r.width + x) * 4;
+    const alpha = r.rgba[at + 3] ?? 0;
+    if (alpha === 0) return 0;
+    const [red, green, blue] = [r.rgba[at] ?? 0, r.rgba[at + 1] ?? 0, r.rgba[at + 2] ?? 0];
+    return (((red << 24) | (green << 16) | (blue << 8) | alpha) >>> 0) + 1;
+  };
+  const [left, right] = [Math.min(-ox, -sx), Math.max(open.width - ox, shown.width - sx)];
+  const [top, bottom] = [Math.min(-oy, -sy), Math.max(open.height - oy, shown.height - sy)];
+  let changed = 0;
+  for (let y = top; y < bottom; y++) {
+    if (y + oy >= band.top && y + oy <= band.bottom) continue;
+    for (let x = left; x < right; x++)
+      if (pixel(open, x + ox, y + oy) !== pixel(shown, x + sx, y + sy)) changed += 1;
+  }
+  return changed;
+};
+
 /** A head could not be worn: why. */
 export class HeadRefused extends Schema.TaggedError<HeadRefused>()('HeadRefused', {
   reason: Schema.String,

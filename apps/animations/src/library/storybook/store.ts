@@ -714,7 +714,7 @@ export const drawnCellOf = (f: StoredFigure, key: string): Option.Option<Raster>
 const blinksOf = (f: Figure, cells: ReadonlyMap<string, Raster>, paints: ReadonlyArray<Paint>) =>
   Effect.forEach(
     f.spans.flatMap((s) => {
-      if (s._tag !== 'Hold' || s.whole === true) return [];
+      if (s._tag !== 'Hold') return [];
       return Option.toArray(
         Option.map(Option.fromUndefinedOr(s.blink), (blink) => ({ cell: s.cell, blink })),
       );

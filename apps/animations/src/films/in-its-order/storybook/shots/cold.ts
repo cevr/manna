@@ -6,7 +6,6 @@ import {
   type Span,
   swapOf,
   turn,
-  wholeBlinkingHold,
 } from '../../../../library/storybook/shot.ts';
 import { CELLS as LEAD_TABLE } from '../../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
 import { BOTTLE, BOTTLE_BODY, BOTTLE_FOOT } from '../plates/bottle.ts';
@@ -382,7 +381,7 @@ export const coldLetter: FilmShot = {
           leadAt([
             blinkingHold(0, cue('down').start, 'bottle', 'frontBlink'),
             setDown,
-            wholeBlinkingHold(cue('down').end, duration, 'down', 'downBlink'),
+            hold(cue('down').end, duration, 'down'),
           ]),
           table(),
           bottleSetDown(swapOf(setDown)),

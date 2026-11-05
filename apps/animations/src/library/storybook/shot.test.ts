@@ -8,6 +8,7 @@ import {
   BLINK,
   BLINK_GAP,
   blinkingHold,
+  type Hold,
   BREATH,
   BREATH_PERIOD,
   chromaOf,
@@ -34,7 +35,6 @@ import {
   timesOf,
   turn,
   walk,
-  wholeBlinkingHold,
 } from './shot.ts';
 import { feastCourtyard } from './shots/feast-courtyard.ts';
 
@@ -387,22 +387,20 @@ describe('a hold', () => {
     return runs;
   };
 
-  test('blinks a whole-blinking hold by its blink key’s whole cell, at the same times a pasted blink shows its eyes, breathing on as it does (a cell whose eyes are lids, critique 1, item 6)', () => {
-    const whole = figure(['a', 'b'], {
-      name: 'one',
-      member: 'm',
-      sheet: 's',
-      at: { x: 0, ground: 0 },
-      spans: [wholeBlinkingHold(0, 12, 'a', 'b')],
-    });
-    const shot = shotOf([whole]);
+  test('keeps a blinking hold’s body: every frame draws the hold’s cell, only its eyes show the blink key, and a hold names no body for its blink (round 3, M1)', () => {
+    const shot = shotOf([still('one')]);
     const posed = timesOf(shot).map((t) => frameAt(shot, new Map(), t, ADULTS).figures[0]);
-    const pasted = shotOf([still('one')]);
-    const eyes = timesOf(pasted).map((t) => frameAt(pasted, new Map(), t, ADULTS).figures[0]);
-    expect(posed.map((f) => [f?.cell, f?.eyes, f?.breath])).toEqual(
-      eyes.map((f) => [f?.eyes, f?.eyes, f?.breath]),
-    );
-    expect(posed.filter((f) => f?.cell === 'b').length).toBeGreaterThan(0);
+    expect(new Set(posed.map((f) => f?.cell))).toEqual(new Set(['a']));
+    expect(new Set(posed.map((f) => f?.eyes))).toEqual(new Set(['a', 'b']));
+    const swapped: Hold = {
+      ...blinkingHold(0, 12, 'a', 'b'),
+      // @ts-expect-error -- a hold names no body for its blink: the blink shows its key's eyes alone
+      whole: true,
+    };
+    const typed = shotOf([{ ...still('one'), spans: [swapped] }]);
+    expect(
+      new Set(timesOf(typed).map((t) => frameAt(typed, new Map(), t, ADULTS).figures[0]?.cell)),
+    ).toEqual(new Set(['a']));
   });
 
   test('breathes a full breath and back over its length, the same at every call, each figure at its own pace (critique 1, item 5)', () => {
