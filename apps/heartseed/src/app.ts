@@ -32,6 +32,7 @@ import { liveHaptics } from './sayit/live';
 import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
 import { store } from './store';
 import { Voice, layer as voiceLayer, type VoiceSource } from './voice';
+import { isActive } from './voice/reading';
 import { voiceSource } from './voice/source';
 
 const dev = typeof __DEV__ !== 'undefined' && __DEV__;
@@ -114,10 +115,17 @@ export const choose = runtime.fn(
   { concurrent: true },
 );
 
-/** The hear phase's Listen: the voice reads the passage. */
-export const listen = runtime.fn(() => Effect.flatMap(Voice, (voice) => voice.read(passage.text)), {
-  concurrent: true,
-});
+/** The hear phase's Listen: the voice reads the passage, unless a reading is under way already (a second tap before the frame that hides Listen reads nothing). */
+export const listen = runtime.fn(
+  () =>
+    Effect.flatMap(Voice, (voice) =>
+      Effect.flatMap(voice.view, (view) => {
+        if (isActive(view)) return Effect.void;
+        return voice.read(passage.text);
+      }),
+    ),
+  { concurrent: true },
+);
 
 /** The hear phase's Next while a reading is under way: the voice stops. */
 export const hush = runtime.fn(() => Effect.flatMap(Voice, (voice) => voice.stop), {

@@ -6,7 +6,7 @@
  * kind of tap, reading and recital, and one case for each defect a walk's
  * seed might not reach on its own: an all-missed recital in letters and
  * alone, each unheard ending staying put, refused and down writes before
- * the seed, Next during a reading,
+ * the seed, Next during a reading, two Listen taps queued before a render,
  * an unread launch whose recital lands, and a relaunch mid-recital (the
  * `cancelled` ending: no screen cancels a recital, the runtime closing does).
  */
@@ -119,6 +119,15 @@ describe('the root route on fixed devices', () => {
   it('stops a reading at Next without touching the stored switch', async () => {
     const m = await play(FRESH, [listen, range, range, NEXT]);
     expect([m.screen, m.speaks, m.disk.size]).toEqual(['letters', 1, 0]);
+  });
+
+  it('reads the verse once for two Listen taps queued before a render', async () => {
+    const m = await play(FRESH, [
+      { _tag: 'Batch', labels: ['Listen', 'Listen'], speak: 'lands' },
+      range,
+      { _tag: 'Voice', kind: 'finish', stale: false },
+    ]);
+    expect([m.screen, m.speaks]).toEqual(['letters', 1]);
   });
 
   it('keeps the recital of an unread launch for the next launch, which opens Today at a seed', async () => {
