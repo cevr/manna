@@ -47,6 +47,7 @@ const main = Effect.gen(function* () {
   const shot: Shot = {
     ...original,
     id: BABY_SHOT,
+    from: 0,
     fps: 1,
     duration: 2,
     headPx: (target * stored.head) / (height * share),
