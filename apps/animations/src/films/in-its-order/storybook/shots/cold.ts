@@ -410,7 +410,7 @@ const CLOSE = { zoom: 3.3, crown: 70, diners: ['diner-2', 'diner-3', 'diner-4'] 
  * `cold-ouch`, the card's end to `what`: close on the lead, his head a third
  * of the frame, at the same table as cold-letter leaves it: the guests
  * either side still staring at the scroll, the diners beyond, the scroll
- * open before him. He winces on `ouch` and lowers his eyes again, under a
+ * open before him and the bottle where he set it down. He winces on `ouch` and lowers his eyes again, under a
  * slow push.
  */
 export const coldOuch: FilmShot = {
@@ -443,6 +443,7 @@ export const coldOuch: FilmShot = {
             ),
           ),
           table(),
+          bottleSetDown(0),
           scrollLaid([[0, key({ sy: SCROLL_LIES })]]),
         ]),
       ],

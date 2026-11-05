@@ -3,6 +3,7 @@ import { Effect, Layer, Option } from 'effect';
 import { describe, expect, it, test } from 'effect-bun-test';
 import sharp from 'sharp';
 import { filmFolder, shotsOf } from '../../../library/storybook/films.ts';
+import { planeOf } from '../../../library/storybook/verify/covers.ts';
 import { rng } from '@manna/film/core';
 import {
   cameraAt,
@@ -116,6 +117,13 @@ const pointOn = (plate: Plate, t: number, p: readonly [number, number]) => {
     x + k.x + width / 2 + ((p[0] * width) / w - width / 2) * k.sx,
     y + k.y + height + ((p[1] * height) / h - height) * k.sy,
   ] as const;
+};
+
+/** A plate's middle at `t`, in its layer's px: its box moved by its key and stretched about its foot. */
+const middleAt = (plate: Plate, t: number) => {
+  const foot = footAt(plate, t);
+  const k = plateAt(plate, t);
+  return [(foot.left + foot.right) / 2, foot.y - (plate.place.height * k.sy) / 2] as const;
 };
 
 /** The villager's cup mouths and his cells, by cell. */
@@ -435,6 +443,44 @@ describe("In Its Order's staging", () => {
         expect(Math.abs(body / heldBody - 1)).toBeLessThanOrEqual(0.05);
       }),
   );
+
+  test('keeps every plate standing at a shot’s end where it stood at the next shot’s start, wherever that place is in the next frame, across each cut that keeps its figures where they stood (critique 2, finding 3: cold-ouch dropped the bottle cold-letter set down)', () => {
+    const shots = placed.map(({ shot }) => shot);
+    const pairs = shots.slice(1).flatMap((b, i) => {
+      const a = shots[i];
+      if (!a) return [];
+      const at = (shot: typeof a) =>
+        new Map(figuresOf(shot).map(({ layer, figure: f }) => [f.name, `${layer.name} ${f.at.x}`]));
+      const [was, now] = [at(a), at(b)];
+      const shared = [...was.keys()].filter((name) => now.has(name));
+      if (shared.length === 0 || shared.some((name) => was.get(name) !== now.get(name))) return [];
+      return [[a, b] as const];
+    });
+    expect(pairs.map(([a, b]) => `${a.id}>${b.id}`)).toContain('cold-letter>cold-ouch');
+    const dropped = pairs.flatMap(([a, b]) => {
+      const [end, start] = [timesOf(a).at(-1) ?? 0, timesOf(b)[0] ?? 0];
+      const camera = cameraAt(b.camera, start);
+      return a.layers.flatMap((layer) => {
+        const there = b.layers.find((l) => l.name === layer.name && l.z === layer.z);
+        if (!there) return [];
+        const plane = planeOf(b.size, layer.z, camera);
+        return layer.items.flatMap((item) => {
+          if (item._tag !== 'Plate' || plateAt(item, end).alpha <= 0) return [];
+          const [x, y] = middleAt(item, end);
+          const [sx, sy] = [x * plane.scale + plane.ox, y * plane.scale + plane.oy];
+          if (sx < 0 || sy < 0 || sx > b.size.width || sy > b.size.height) return [];
+          const kept = there.items.some((other) => {
+            if (other._tag !== 'Plate' || other.file !== item.file) return false;
+            const [ox, oy] = middleAt(other, start);
+            return plateAt(other, start).alpha > 0 && Math.hypot(ox - x, oy - y) <= 2;
+          });
+          if (kept) return [];
+          return [`${a.id} > ${b.id}: ${item.file} at ${x.toFixed(0)},${y.toFixed(0)}`];
+        });
+      });
+    });
+    expect(dropped).toEqual([]);
+  });
 
   test('hands the bottle off with no gap and no overlap: at every frame of cold-letter exactly one of his hand and the table’s plate shows it, as at every frame of generated set-downs (start, length, frame phase), and a plate set at 0.8 of the turn leaves a gap (round 3, M4)', () => {
     const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
