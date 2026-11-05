@@ -8,10 +8,21 @@ import {
   turn,
 } from '../../../../library/storybook/shot.ts';
 import { CELLS as LEAD_TABLE } from '../../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
-import { BOTTLE, BOTTLE_BODY, BOTTLE_FOOT } from '../plates/bottle.ts';
+import { BOTTLE, BOTTLE_BODY, BOTTLE_FOOT, BOTTLE_MIDDLE } from '../plates/bottle.ts';
 import { BABY_BACK, FAR_TABLE, TABLE } from '../../plates/plates.ts';
 import { SCROLL_OPEN, SCROLL_ROLLED } from '../../plates/props.ts';
-import { cam, holds, key, layer, plateOf, plateOn, seat, STORY_PLATES } from '../kit.ts';
+import {
+  cam,
+  drawScaleOf,
+  holds,
+  key,
+  layer,
+  plateOf,
+  plateOn,
+  seat,
+  STORY_PLATES,
+  tallOf,
+} from '../kit.ts';
 import { WHAT_DAY, WHAT_DAY_SCALE } from '../plates/what-day.ts';
 import {
   AT_TABLE,
@@ -302,23 +313,46 @@ export const BOTTLE_AT = [1130, TABLE_TOP.y + TABLE_TOP.height / 2] as const;
 /** The cream body across of the bottle the lead holds in his table sheet's `bottle` cell, in its px (196 to 232). */
 const HELD_BODY = 37;
 
-/** The bottle on the table from `at` s (the swap that empties his hand) to the shot's end, its cream body the width of the one he held: his table sheet's draw scale (`HEAD` over that cell's head) times that bottle's body across. */
-export const bottleSetDown = (at: number): Plate =>
-  plateOn(
-    'bottle.png',
-    BOTTLE,
-    BOTTLE_FOOT,
-    BOTTLE_AT,
-    (HEAD / LEAD_TABLE.bottle.head) * (HELD_BODY / BOTTLE_BODY),
-    {
-      dir: STORY_PLATES,
-      moves: [
-        [0, key({ alpha: 0 })],
-        [at, key({ alpha: 0 })],
-        [at, key({})],
-      ],
-    },
-  );
+/** The middle of the cream bottle he holds in his table sheet's `bottle` cell, in its px: where the bottle leaves his hand. */
+const HELD_MIDDLE = [212, 362] as const;
+
+/** The bottle plate's scale: its cream body the width of the one he held, his table sheet's draw scale (`HEAD` over that cell's head) times that bottle's body across. */
+const BOTTLE_SCALE = (HEAD / LEAD_TABLE.bottle.head) * (HELD_BODY / BOTTLE_BODY);
+
+/** How far the bottle plate's middle lies from where his raised hand held it, layer px: the bottle in his `bottle` cell, at his place at the table, less the plate's middle at rest on the table top. */
+const fromHand = (): readonly [number, number] => {
+  const s = drawScaleOf('lead-feast', 'iio-table', HEAD, Z.table);
+  const ground = AT_TABLE.lead.crown + tallOf('lead-feast', 'iio-table', HEAD, Z.table);
+  return [
+    AT_TABLE.lead.x +
+      (HELD_MIDDLE[0] - LEAD_TABLE.bottle.ax) * s -
+      (BOTTLE_AT[0] + (BOTTLE_MIDDLE[0] - BOTTLE_FOOT[0]) * BOTTLE_SCALE),
+    ground +
+      (HELD_MIDDLE[1] - LEAD_TABLE.bottle.ay) * s -
+      (BOTTLE_AT[1] + (BOTTLE_MIDDLE[1] - BOTTLE_FOOT[1]) * BOTTLE_SCALE),
+  ];
+};
+
+/** The bottle on the table, moved by `moves` (at rest when none). */
+const bottleOn = (moves: NonNullable<Plate['moves']>): Plate =>
+  plateOn('bottle.png', BOTTLE, BOTTLE_FOOT, BOTTLE_AT, BOTTLE_SCALE, {
+    dir: STORY_PLATES,
+    moves,
+  });
+
+/** The bottle standing on the table top from a shot's start, where cold-letter sets it down. */
+export const bottleOnTable = (): Plate => bottleOn([[0, key({})]]);
+
+/** The bottle set down from `at` s (the swap that empties his hand) to the shot's end: from where his hand held it, it travels down onto the table top by `settled` s and stands there. */
+export const bottleSetDown = (at: number, settled: number): Plate => {
+  const [x, y] = fromHand();
+  return bottleOn([
+    [0, key({ alpha: 0 })],
+    [at, key({ alpha: 0 })],
+    [at, key({ x, y })],
+    [settled, key({})],
+  ]);
+};
 
 /** The open scroll on the table top, its near roller on the top's front edge, moved by `moves`. */
 export const scrollLaid = (moves: NonNullable<Plate['moves']>): Plate =>
@@ -352,6 +386,7 @@ export const coldLetter: FilmShot = {
     hop: { after: 'cold-letter:fall', dur: 0.24 },
     unroll: { after: 'cold-letter:hop', dur: 1 },
     down: { with: 'cold-letter:unroll', offset: 0.4, dur: 0.3 },
+    settle: { after: 'cold-letter:down', dur: 0.25 },
     stare: { mark: 'letter', offset: 0.3, dur: 0.3 },
     stared: { mark: 'letter', offset: 0.45, dur: 0.3 },
     quote: { mark: 'quote', until: 'such' },
@@ -384,7 +419,7 @@ export const coldLetter: FilmShot = {
             hold(cue('down').end, duration, 'down'),
           ]),
           table(),
-          bottleSetDown(swapOf(setDown)),
+          bottleSetDown(swapOf(setDown), cue('settle').end),
           plateOn('scroll-rolled.png', SCROLL_ROLLED, [214.5, 202], SCROLL_AT, SCROLL, {
             moves: [
               [fall.start, key({ y: -700, alpha: 0 })],
@@ -443,7 +478,7 @@ export const coldOuch: FilmShot = {
             ),
           ),
           table(),
-          bottleSetDown(0),
+          bottleOnTable(),
           scrollLaid([[0, key({ sy: SCROLL_LIES })]]),
         ]),
       ],

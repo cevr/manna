@@ -48,6 +48,40 @@ const HOLDING = new Set(['lift', 'bottle']);
 const handOffMisses = (lead: Figure, plate: Plate, times: ReadonlyArray<number>) =>
   times.filter((t) => HOLDING.has(poseAt(lead, t).cell) === plateAt(plate, t).alpha > 0);
 
+/** How long a generated set-down's bottle travels onto the table after the turn, s: cold-letter's `settle`. */
+const SETTLE = 0.25;
+
+/** The most the bottle may move between two frames, layer px: about the width of his round hand at the table's scale (60 cell px × 0.53), so the eye follows it from his hand to the table (critique 2, finding 6: a jump of about 350 frame px in one frame). */
+const MAX_STEP = 32;
+
+/** The middle of a drawing's opaque pixels within `reach` (RGB distance) of `hex`, in its px. */
+const middleOf = (
+  raw: {
+    readonly data: Buffer;
+    readonly info: { readonly width: number; readonly height: number };
+  },
+  hex: string,
+  reach: number,
+) => {
+  const channel = (at: number) => Number.parseInt(hex.slice(at, at + 2), 16);
+  const { width, height } = raw.info;
+  const sums = { x: 0, y: 0, n: 0 };
+  for (let q = 0; q < width * height; q++) {
+    const i = q * 4;
+    if (raw.data.readUInt8(i + 3) <= 128) continue;
+    const d = Math.hypot(
+      raw.data.readUInt8(i) - channel(1),
+      raw.data.readUInt8(i + 1) - channel(3),
+      raw.data.readUInt8(i + 2) - channel(5),
+    );
+    if (d > reach) continue;
+    sums.x += q % width;
+    sums.y += Math.floor(q / width);
+    sums.n += 1;
+  }
+  return [sums.x / Math.max(1, sums.n), sums.y / Math.max(1, sums.n)] as const;
+};
+
 /** How far (RGB distance) a keyed plate's cream may sit from its sheet's prop paint and still read as the bottle's body: the plate is keyed from a drawing, not snapped to a palette. */
 const CREAM_REACH = 30;
 
@@ -509,10 +543,72 @@ describe("In Its Order's staging", () => {
       );
       return [
         seed,
-        handOffMisses(held, bottleSetDown(swapOf(setDown)), times).length,
-        handOffMisses(held, bottleSetDown(at + dur * 0.8), times).length > 0,
+        handOffMisses(held, bottleSetDown(swapOf(setDown), at + dur + SETTLE), times).length,
+        handOffMisses(held, bottleSetDown(at + dur * 0.8, at + dur + SETTLE), times).length > 0,
       ];
     });
     expect(misses.filter(([, gaps, late]) => gaps !== 0 || late !== true)).toEqual([]);
   });
+
+  it.effect(
+    'carries the bottle from his hand to the table in cold-letter with no jump: from frame to frame the bottle’s cream, read on the drawing that shows it (his cell or the plate), moves at most a hand’s width, and a plate set down with no travel jumps (critique 2, finding 6)',
+    () =>
+      Effect.gen(function* () {
+        const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
+        const lead =
+          letter && figuresOf(letter).find(({ figure }) => figure.name === 'lead')?.figure;
+        const plate = letter?.layers
+          .flatMap((l) => l.items)
+          .find(
+            (item): item is Plate => item._tag === 'Plate' && item.file.endsWith('/bottle.png'),
+          );
+        const prop = (TABLE_RECORD.props ?? []).find((p) => p.name === 'bottle');
+        if (!letter || !lead || !plate?.painting || !prop)
+          return expect([letter?.id, lead?.name, plate?.file, prop?.name]).toEqual([
+            'cold-letter',
+            'lead',
+            '',
+            'bottle',
+          ]);
+        const raw = (file: string) =>
+          Effect.promise(() =>
+            sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+          );
+        const cells = new Map(
+          yield* Effect.forEach(
+            Object.entries(LEAD_TABLE_CELLS).filter(([cell]) => HOLDING.has(cell)),
+            ([cell, c]) =>
+              Effect.map(
+                raw(c.png),
+                (r) => [cell, { middle: middleOf(r, prop.base, 0), ax: c.ax, ay: c.ay }] as const,
+              ),
+          ),
+        );
+        const onPlate = middleOf(yield* raw(plate.painting.png), prop.base, CREAM_REACH);
+        const s = drawScaleOf(lead.member, lead.sheet, letter.headPx, 1);
+        const bottleAt = (p: Plate, t: number) => {
+          const pose = poseAt(lead, t);
+          const held = cells.get(pose.cell);
+          if (held)
+            return [
+              pose.x + (held.middle[0] - held.ax) * s * pose.sx,
+              pose.y + (held.middle[1] - held.ay) * s * pose.sy * pose.breath,
+            ] as const;
+          if (plateAt(p, t).alpha > 0) return pointOn(p, t, onPlate);
+          return [Number.NaN, Number.NaN] as const;
+        };
+        const jumps = (p: Plate) => {
+          const times = timesOf(letter);
+          return times.slice(1).flatMap((t, i) => {
+            const [a, b] = [bottleAt(p, times[i] ?? 0), bottleAt(p, t)];
+            const step = Math.hypot(b[0] - a[0], b[1] - a[1]);
+            if (step <= MAX_STEP) return [];
+            return [`frame ${i + 1}: ${step.toFixed(1)} px`];
+          });
+        };
+        expect(jumps(plate)).toEqual([]);
+        const swap = timesOf(letter).find((t) => !HOLDING.has(poseAt(lead, t).cell)) ?? 0;
+        expect(jumps(bottleSetDown(swap, swap)).length).toBeGreaterThan(0);
+      }),
+  );
 });
