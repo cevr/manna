@@ -531,7 +531,6 @@ describe('render-height in the full verify', () => {
         const steady = yield* run(300, 1, 'left');
         expect(steady?.pass).toBe(true);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
-    // oxlint-disable-next-line film/tests-keep-their-strength -- the case runs five full verifies, each launching headless Chrome twice and ffmpeg once (spawn budget).
     900_000,
   );
 });
