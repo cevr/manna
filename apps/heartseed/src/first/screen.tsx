@@ -26,15 +26,13 @@ import type { GardenView } from '../garden';
 import type { Mark } from '../matcher';
 import { sourceWords } from '../matcher/words';
 import type { OrNull, Recital, SayItView } from '../sayit';
-import { BigButton, color, look, PlantMark, Pulse, Word } from '../sayit/draw';
+import { BigButton, color, Initial, look, PlantMark, Pulse, Word } from '../sayit/draw';
 import { screenOf, wordOf } from '../sayit/screen';
 import type { VoiceView } from '../voice';
 import { isActive } from '../voice/reading';
 import { begin, isOwn, observe, step, type Flow, type Phase } from './flow';
 
 const WORDS = sourceWords(passage.text);
-
-const LETTER = /[\p{L}\p{N}]/u;
 
 /** Each phase's heading and the line under it. */
 const COPY: Readonly<Record<Phase, { readonly heading: string; readonly line: string }>> = {
@@ -79,29 +77,6 @@ function Pill({ label, onPress }: { readonly label: string; readonly onPress: ()
     >
       <Text style={styles.pillText}>{label}</Text>
     </Pressable>
-  );
-}
-
-/** A word in letters before it is said: its first letter or number as written, the rest laid out unseen, and only the letter named to the screen reader. */
-function Cue({ index, word }: { readonly index: number; readonly word: string }) {
-  const at = Math.max(0, word.search(LETTER));
-  const cue = word.slice(at, at + 1);
-  const before = word.slice(0, at);
-  const after = word.slice(at + 1);
-  return (
-    <Text testID={`word-${index}`} aria-label={cue} style={look.word}>
-      {before !== '' && (
-        <Text aria-hidden style={styles.unseen}>
-          {before}
-        </Text>
-      )}
-      <Text style={styles.cue}>{cue}</Text>
-      {after !== '' && (
-        <Text aria-hidden style={styles.unseen}>
-          {after}
-        </Text>
-      )}
-    </Text>
   );
 }
 
@@ -154,7 +129,7 @@ function Recited({
           () => pending(index),
         );
         if (phase === 'letters' && mark.status === 'pending')
-          return <Cue key={index} index={index} word={word} />;
+          return <Initial key={index} index={index} word={word} />;
         return <Word key={index} shown={wordOf(mark, word)} onPeek={onPeek} />;
       })}
     </View>
@@ -362,8 +337,6 @@ const styles = StyleSheet.create({
   reached: { backgroundColor: color.ink, opacity: 1 },
   unread: { color: color.mute },
   current: { backgroundColor: color.hearing, borderRadius: 4 },
-  cue: { color: color.mute },
-  unseen: { color: 'transparent' },
   line: { fontSize: 13, color: color.mute, textAlign: 'center' },
   hearActions: { alignItems: 'center', gap: 16 },
   pill: {

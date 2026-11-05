@@ -12,6 +12,7 @@ import { FieldScreen } from '../src/field/screen';
 import { openingOf, shownOpening, type Opening } from '../src/first/flow';
 import { FirstMinute } from '../src/first/screen';
 import {
+  cueIn,
   growthOf,
   stageOf,
   type GardenView,
@@ -19,10 +20,10 @@ import {
   type ReadGarden,
   type Stage,
 } from '../src/garden';
-import type { Mark } from '../src/matcher';
+import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
-import { BigButton, color, look, PlantMark, Word } from '../src/sayit/draw';
+import { BigButton, color, look, PlantMark, Unsaid, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
 
 const WORDS = sourceWords(passage.text);
@@ -32,29 +33,56 @@ const PASSAGES: readonly FieldPassage[] = [
   { title: passage.reference, verses: [passage.reference] },
 ];
 
-/** The verse whole, or one element per word while a recital is shown, each its own accessibility element. */
+/**
+ * The verse under `cue`: whole under the full text while no recital is
+ * shown; else one element per word, each its own accessibility element, a
+ * word the recital shown has reached as `wordOf` shows it and every other
+ * word as the cue shows it (`Unsaid`): whole and muted, in letters, or an
+ * empty slot.
+ */
 function Verse({
   marks,
+  cue,
   onPeek,
 }: {
   readonly marks: Option.Option<readonly Mark[]>;
+  readonly cue: Cue;
   readonly onPeek: (index: number) => void;
 }) {
-  return Option.match(marks, {
-    onNone: () => (
+  if (Option.isNone(marks) && cue === 'full')
+    return (
       <Text testID="passage" style={styles.words}>
         {passage.text}
       </Text>
-    ),
-    onSome: (shown) => (
-      <View style={look.verse}>
-        {shown.map((mark) => (
-          <Word key={mark.index} shown={wordOf(mark, WORDS[mark.index] ?? '')} onPeek={onPeek} />
-        ))}
-      </View>
-    ),
-  });
+    );
+  return (
+    <View style={look.verse}>
+      {WORDS.map((word, index) => {
+        const mark = Option.flatMap(marks, (all) => Option.fromNullishOr(all[index]));
+        if (Option.isNone(mark) || mark.value.status === 'pending')
+          return <Unsaid key={index} index={index} word={word} cue={cue} onPeek={onPeek} />;
+        return <Word key={index} shown={wordOf(mark.value, word)} onPeek={onPeek} />;
+      })}
+    </View>
+  );
 }
+
+/**
+ * The cue Today shows the passage under: a recital's own while one is shown
+ * (its marks), else the one the garden's ladder gives it now, and the full
+ * text in an unread garden, which shows the verse whole and claims no stage.
+ */
+const shownCue = (
+  garden: Option.Option<ReadGarden>,
+  sayIt: Option.Option<SayItView>,
+  marks: Option.Option<readonly Mark[]>,
+): Cue => {
+  if (Option.isSome(marks) && Option.isSome(sayIt)) return sayIt.value.cue;
+  return Option.match(garden, {
+    onNone: (): Cue => 'full',
+    onSome: (read) => cueIn(read, passage.reference),
+  });
+};
 
 /** The count, the suggestion and the four grades of a finished recital, the chosen one checked. */
 function Grades({
@@ -228,7 +256,7 @@ function Today({ onField }: { readonly onField: () => void }) {
           <Text testID="reference" style={look.reference}>
             {passage.reference}
           </Text>
-          <Verse marks={screen.marks} onPeek={onPeek} />
+          <Verse marks={screen.marks} cue={shownCue(garden, sayIt, screen.marks)} onPeek={onPeek} />
           <Growing garden={garden} sayIt={sayIt} />
         </View>
         {Option.match(screen.result, {

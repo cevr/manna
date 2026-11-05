@@ -1,6 +1,7 @@
 /**
  * What Today and the first minute draw alike: Palette A, a recital's word as
- * `wordOf` shows it, the one large round button, and the plant. Each word is
+ * `wordOf` shows it, a word not yet said under its cue (whole, in letters or
+ * nothing), the one large round button, and the plant. Each word is
  * its own accessibility element; a word or part of one that is not shown is
  * laid out in transparent ink and hidden from the screen reader.
  */
@@ -19,7 +20,8 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import type { PlantStage } from '../field';
-import type { Ink, ShownWord } from './screen';
+import type { Cue, Mark } from '../matcher';
+import { wordOf, type Ink, type ShownWord } from './screen';
 
 /** Palette A (Wada No. 167) over the prototype's tokens. */
 export const color = {
@@ -98,6 +100,70 @@ export function Word({
       );
   }
 }
+
+const LETTER = /[\p{L}\p{N}]/u;
+
+/** A word in letters before it is said: its first letter or number as written, the rest laid out unseen, and only the letter named to the screen reader. */
+export function Initial({ index, word }: { readonly index: number; readonly word: string }) {
+  const at = Math.max(0, word.search(LETTER));
+  const cue = word.slice(at, at + 1);
+  const before = word.slice(0, at);
+  const after = word.slice(at + 1);
+  return (
+    <Text testID={`word-${index}`} aria-label={cue} style={look.word}>
+      {before !== '' && (
+        <Text aria-hidden style={look.unseenPart}>
+          {before}
+        </Text>
+      )}
+      <Text style={look.cue}>{cue}</Text>
+      {after !== '' && (
+        <Text aria-hidden style={look.unseenPart}>
+          {after}
+        </Text>
+      )}
+    </Text>
+  );
+}
+
+/**
+ * A word not yet said, as the cue its recital is said under shows it: whole
+ * in muted ink under the full text, in letters under first letters
+ * (`Initial`), and under no cue an empty slot hidden from the screen reader,
+ * as `wordOf` shows a pending word.
+ */
+export function Unsaid({
+  index,
+  word,
+  cue,
+  onPeek,
+}: {
+  readonly index: number;
+  readonly word: string;
+  readonly cue: Cue;
+  readonly onPeek: (index: number) => void;
+}) {
+  switch (cue) {
+    case 'full':
+      return (
+        <Text testID={`word-${index}`} style={[look.word, look.cue]}>
+          {word}
+        </Text>
+      );
+    case 'initials':
+      return <Initial index={index} word={word} />;
+    case 'none':
+      return <Word shown={wordOf(pendingAt(index), word)} onPeek={onPeek} />;
+  }
+}
+
+/** The mark of a word no recital has reached. */
+export const pendingAt = (index: number): Mark => ({
+  index,
+  status: 'pending',
+  time: Option.getOrNull(Option.none()),
+  revealed: Option.getOrNull(Option.none()),
+});
 
 /** The one button: large, round and ink, with a gentle pulse while it works (held still under Reduce Motion). */
 export function BigButton({
@@ -185,6 +251,8 @@ export const look = StyleSheet.create({
   slot: { height: 30, marginBottom: 6, borderBottomWidth: 2, borderBottomColor: color.soft },
   unsaid: { color: 'transparent', lineHeight: 30 },
   peeked: { color: color.miss },
+  cue: { color: color.mute },
+  unseenPart: { color: 'transparent' },
   mark: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.miss },
   summary: { fontSize: 17, fontWeight: '600', color: color.ink },
