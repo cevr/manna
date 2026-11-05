@@ -85,7 +85,8 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
         "!src/{dictation,garden,sayit,voice}/**/*.test.*",
-        "!src/first/root.property.test.*",
+        "!src/first/{root,walk-*}.test.*",
+        "!src/test/first-rig.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -98,7 +99,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
         "!src/{dictation,garden,sayit,voice}/**/*.test.*",
-        "!src/first/{flow,screen}.test.*",
+        "!src/first/{flow,screen,walk-*}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
