@@ -644,13 +644,23 @@ the plan one piece at a time.
     after every step the line is `src/test/session-model.ts`'s counts of
     the plan it made at Today's first show and at each Minutes tap, over
     the disk's recalls, and an unread launch shows no line in any frame.
-  - `test:run`: `src/run`, Today's run through `src/test/run-rig.tsx`
-    (pieces given to `appLayer`, a recognizer that hears the text a test
-    names, refused recall writes and unread listings; every Today frame
-    held to the footer rule: no control in the scroll view but a missed
-    word's mark, at most one action button): `src/run/footer.test.tsx`,
-    the action button and the grades under the scroll view through a
-    recital, a grade and the field and back.
+  - `test:run`: Today's run through `src/test/run-rig.tsx` (pieces given
+    to `appLayer`, a recognizer that hears the text a test names, refused
+    recall writes and unread listings; every Today frame held to the
+    footer rule: no control in the scroll view but a missed word's mark,
+    at most one action button): `src/run/footer.test.tsx`, the action
+    button and the grades under the scroll view through a recital, a grade
+    and the field and back.
+  - `test:run-walk`, `test:run-hold`, `test:run-edges`: `src/run/run.test.tsx`,
+    `hold.test.tsx` and `edges.test.tsx`, Today's run against
+    `src/test/run-model.ts` (over `src/test/session-model.ts`'s plan) on
+    generated devices through `src/run/walk.ts`, leaning toward whole plans
+    (many pieces and groups, Next, every recital's ending, Again), the
+    hold's moments (a Minutes tap while a recital listens whose plan holds
+    the item first or leaves it out, a tap with a result or after an
+    unheard recital, the field, a relaunch) and the edges (the first
+    minute, the done state, unread launches, zones); each case's floors met
+    by its own devices.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

@@ -68,7 +68,7 @@ export const deviceOf = (entries: Iterable<readonly [string, string]> = []): Dev
 
 /** How a launch's store fails: every listing (`unread`), and whether recall writes are refused now. */
 export interface Faults {
-  readonly unread: boolean;
+  unread: boolean;
   refuse: boolean;
 }
 

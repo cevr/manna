@@ -34,6 +34,8 @@ import {
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as TestClock from 'effect/testing/TestClock';
 
+import { Dictation } from '../dictation';
+import { initial } from '../dictation/attempt';
 import { Chime, Garden, layer as gardenLayer, plantOf, type GardenView } from '../garden';
 import { Recalls, type Grade, type Recall } from '../sayit';
 import { countsOf, MINUTES, type Minutes } from '../session';
@@ -204,16 +206,23 @@ const gardenOf = (field: Field) =>
     changes: Stream.never,
   });
 
+/** Dictation with no recital under way, as at every making of these cases. */
+const idle = Layer.mock(Dictation)({ view: Effect.succeed(initial.view) });
+
+/** The model's pieces as the session takes them; it plans by their counts, never their text. */
+const textless = (pieces: readonly ModelPiece[]) => pieces.map((piece) => ({ ...piece, text: '' }));
+
 /** One launch of the service, at `at`, in its own scope and test clock. */
 const launch = (pieces: readonly ModelPiece[], disk: Disk, field: Field, at: number) =>
   Effect.gen(function* () {
     const scope = yield* Scope.make();
     const services = yield* Layer.buildWithScope(
-      layer(pieces).pipe(
+      layer(textless(pieces)).pipe(
         Layer.provide(
           Layer.mergeAll(
             Layer.succeed(KeyValueStore.KeyValueStore, storeOf(disk)),
             Layer.succeed(Garden, gardenOf(field)),
+            idle,
           ),
         ),
         Layer.provideMerge(Layer.merge(TestClock.layer(), Logger.layer([]))),
@@ -263,12 +272,13 @@ const launchKept = (
   Effect.gen(function* () {
     const scope = yield* Scope.make();
     const services = yield* Layer.buildWithScope(
-      layer(pieces).pipe(
+      layer(textless(pieces)).pipe(
         Layer.provideMerge(
           gardenLayer.pipe(
             Layer.provide(Layer.succeed(Chime, Chime.of({ grow: () => Effect.void }))),
           ),
         ),
+        Layer.provide(idle),
         Layer.provide(Layer.succeed(KeyValueStore.KeyValueStore, keepingStore(map, faults))),
         Layer.provideMerge(Layer.merge(TestClock.layer(), Logger.layer([]))),
       ),

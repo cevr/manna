@@ -189,7 +189,7 @@ export const planOf = (input: {
 };
 
 /** Whether `item` is done in `garden`: its plant holds more recalls than when the plan was made (the new piece, once it is planted). */
-const isDone = (garden: ReadGarden, item: Item) =>
+export const isDone = (garden: ReadGarden, item: Item) =>
   Option.exists(
     Option.fromNullishOr(garden.plants.get(item.reference)),
     (plant) => plant.recalls.length > item.recalls,

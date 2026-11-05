@@ -17,7 +17,7 @@
  * voice stops a reading under way.
  */
 
-import { Duration, Effect, Layer, Stream } from 'effect';
+import { Duration, Effect, Layer, Option, Stream } from 'effect';
 import type * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as Atom from 'effect/reactivity/Atom';
 import { One } from 'one';
@@ -34,7 +34,7 @@ import { layer as sayItLayer, SayIt, TODAY, type Grade, type Haptics, type Recit
 import { liveHaptics } from './sayit/live';
 import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
 import type { Passage } from './passage';
-import type { Minutes, TextPiece } from './session';
+import type { Item, Minutes, TextPiece } from './session';
 import { layer as sessionLayer, Session } from './session/service';
 import { store } from './store';
 import { Voice, layer as voiceLayer, type VoiceSource } from './voice';
@@ -148,18 +148,30 @@ const todayCue = (view: GardenView, reference: string): Cue => {
  * Today's Say it of `piece`: a kept recital under the cue the garden gives
  * the piece once every keep handed to it before the press has landed or
  * failed (a grade changed just before is said after), or the finish of the
- * one under way.
+ * one under way. In a run, `item` is the plan's item shown, held in the same
+ * step as the recital starts, so it stays shown until its `Next`.
  */
-export const pressToday = (piece: Passage) =>
+export const pressToday = (piece: Passage, item: Option.Option<Item> = Option.none()) =>
   Effect.gen(function* () {
     const sayIt = yield* SayIt;
     const garden = yield* Garden;
+    const session = yield* Session;
     const view = yield* garden.settled;
+    if (Option.isSome(item)) yield* session.hold(item.value);
     yield* sayIt.recite({ cue: todayCue(view, piece.reference), keep: TODAY.keep }, piece);
   });
 
-/** A press of Today's button on `piece`. Each command runs to its end, so a second tap never cuts off the first one's recall. */
-export const press = runtime.fn((piece: Passage) => pressToday(piece), { concurrent: true });
+/** A press of Today's button on `piece`, the run's `item` when one is shown. Each command runs to its end, so a second tap never cuts off the first one's recall. */
+export const press = runtime.fn(
+  (shown: { readonly piece: Passage; readonly item: Option.Option<Item> }) =>
+    pressToday(shown.piece, shown.item),
+  { concurrent: true },
+);
+
+/** A tap on Today's Next: the held item is let go. */
+export const next = runtime.fn(() => Effect.flatMap(Session, (session) => session.next), {
+  concurrent: true,
+});
 
 /** A press of the first minute's Say it: a recital of the passage under its cue, kept or not. */
 export const sayAs = runtime.fn(

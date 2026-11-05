@@ -9,6 +9,12 @@
  * garden (`begin`), then again at each Minutes tap. A recital whose keep
  * lands after that step counts as done by its recall. Nothing else makes
  * the plan again in a launch, and an unread garden gets no plan.
+ *
+ * It also holds the run's one piece of state, the item held: a press of
+ * Today's Say it holds the item shown, `next` drops it, and a making of the
+ * plan drops it unless a recital is under way (Dictation listening or
+ * finishing, read in the making's own step), so the item recited stays
+ * shown until its `Next`. Nothing of it is stored.
  */
 
 import {
@@ -27,8 +33,10 @@ import {
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
 import { offsetAt } from '../day';
+import { Dictation } from '../dictation';
+import { isActive } from '../dictation/attempt';
 import { Garden, type GardenView, type ReadGarden } from '../garden';
-import { planOf, type Minutes, type Piece, type Plan } from '../session';
+import { planOf, type Item, type Minutes, type Plan, type TextPiece } from '../session';
 
 /** The store key of the minutes; its text is `2`, `5`, `10` or `20`. */
 export const MINUTES_KEY = 'heartseed/session/minutes';
@@ -48,10 +56,12 @@ const MINUTES_OF = {
 
 const isStored = Schema.is(StoredMinutes);
 
-/** The minutes chosen, and the plan once one is made in this launch. */
+/** The minutes chosen, the plan once one is made in this launch, the pieces it plans over, and the item held while its recital or its result shows. */
 export interface SessionView {
   readonly minutes: Minutes;
   readonly plan: Option.Option<Plan>;
+  readonly pieces: readonly TextPiece[];
+  readonly held: Option.Option<Item>;
 }
 
 /** The session Today runs. */
@@ -62,6 +72,10 @@ export class Session extends Context.Service<
     readonly begin: Effect.Effect<void>;
     /** A Minutes tap: the view takes the choice at once, a made plan is made again, and the choice is written. */
     readonly choose: (minutes: Minutes) => Effect.Effect<void>;
+    /** A press of Say it on `item`, the item Today shows: it stays shown until `next`, or a making with no recital under way. */
+    readonly hold: (item: Item) => Effect.Effect<void>;
+    /** A tap on Next: the held item is let go, and Today shows the plan's first item not done. */
+    readonly next: Effect.Effect<void>;
     readonly view: Effect.Effect<SessionView>;
     readonly changes: Stream.Stream<SessionView>;
   }
@@ -99,16 +113,19 @@ const writeMinutes = (store: KeyValueStore.KeyValueStore, minutes: Minutes) =>
 
 /** The session over the verses the app holds text for, in the app's order. */
 export const layer = (
-  pieces: readonly Piece[],
-): Layer.Layer<Session, never, KeyValueStore.KeyValueStore | Garden> =>
+  pieces: readonly TextPiece[],
+): Layer.Layer<Session, never, KeyValueStore.KeyValueStore | Garden | Dictation> =>
   Layer.effect(
     Session,
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore;
       const garden = yield* Garden;
+      const dictation = yield* Dictation;
       const held = MutableRef.make<SessionView>({
         minutes: yield* readMinutes(store),
         plan: Option.none(),
+        pieces,
+        held: Option.none(),
       });
       const views = yield* PubSub.sliding<SessionView>({ capacity: WINDOW, replay: 1 });
       /** The service's own clock, whoever runs the command. */
@@ -153,22 +170,43 @@ export const layer = (
       const release = (turn: Turn) =>
         Effect.andThen(Deferred.await(turn.before), Deferred.done(turn.mine, Exit.void));
 
+      /** The garden's view and Dictation's, taken together for one making. */
+      const seenNow = Effect.all({ seen: garden.view, recital: dictation.view });
+
+      /** The item a step leaves held: the one held when `keeps` (a recital under way at a making, or no making), else none. */
+      const keptUnsafe = (keeps: boolean) => {
+        if (keeps) return MutableRef.get(held).held;
+        return Option.none<Item>();
+      };
+
       return Session.of({
-        begin: Effect.flatMap(garden.view, (seen) =>
+        begin: Effect.flatMap(seenNow, ({ seen, recital }) =>
           Effect.suspend(() => {
             const now = MutableRef.get(held);
             if (Option.isSome(now.plan) || seen._tag === 'Unread') return Effect.void;
-            MutableRef.set(held, { ...now, plan: Option.some(planUnsafe(seen, now.minutes)) });
+            MutableRef.set(held, {
+              ...now,
+              plan: Option.some(planUnsafe(seen, now.minutes)),
+              held: keptUnsafe(isActive(recital)),
+            });
             return publish;
           }),
         ),
         choose: (minutes: Minutes) =>
           Effect.uninterruptibleMask((restore) =>
-            Effect.flatMap(garden.view, (seen) =>
+            Effect.flatMap(seenNow, ({ seen, recital }) =>
               Effect.flatMap(
                 Effect.sync(() => {
                   const turn = turnUnsafe();
-                  MutableRef.set(held, { minutes, plan: remadeUnsafe(seen, minutes) });
+                  const plan = remadeUnsafe(seen, minutes);
+                  const made = Option.isSome(plan) && seen._tag === 'Read';
+                  const now = MutableRef.get(held);
+                  MutableRef.set(held, {
+                    ...now,
+                    minutes,
+                    plan,
+                    held: keptUnsafe(isActive(recital) || !made),
+                  });
                   return turn;
                 }),
                 (turn) =>
@@ -179,6 +217,15 @@ export const layer = (
               ),
             ),
           ).pipe(Effect.withSpan('Session.choose')),
+        hold: (item: Item) =>
+          Effect.suspend(() => {
+            MutableRef.update(held, (now) => ({ ...now, held: Option.some(item) }));
+            return publish;
+          }),
+        next: Effect.suspend(() => {
+          MutableRef.update(held, (now) => ({ ...now, held: Option.none() }));
+          return publish;
+        }),
         view: Effect.sync(() => MutableRef.get(held)),
         changes: Stream.fromPubSub(views),
       });

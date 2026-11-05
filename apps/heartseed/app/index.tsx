@@ -1,5 +1,5 @@
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
-import { Option } from 'effect';
+import { Match, Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -10,6 +10,7 @@ import {
   choose,
   chooseMinutes,
   gardenView,
+  next,
   peek,
   press,
   sayItView,
@@ -35,10 +36,9 @@ import { sourceWords } from '../src/matcher/words';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { BigButton, color, look, PlantMark, Unsaid, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
-import { countsOf, MINUTES } from '../src/session';
+import { countsOf, MINUTES, type Item, type TextPiece } from '../src/session';
+import { shownOf, type Shown } from '../src/session/run';
 import { useSessionBegunWhenShown } from '../src/session/shown';
-
-const WORDS = sourceWords(passage.text);
 
 /** The passages the field shows first: Today's, a passage of one verse. */
 const PASSAGES: readonly FieldPassage[] = [
@@ -53,10 +53,12 @@ const PASSAGES: readonly FieldPassage[] = [
  * or an empty slot.
  */
 function Verse({
+  text,
   marks,
   cue,
   onPeek,
 }: {
+  readonly text: string;
   readonly marks: Option.Option<readonly Mark[]>;
   readonly cue: Cue;
   readonly onPeek: (index: number) => void;
@@ -64,12 +66,12 @@ function Verse({
   if (Option.isNone(marks) && cue === 'full')
     return (
       <Text testID="passage" style={styles.words}>
-        {passage.text}
+        {text}
       </Text>
     );
   return (
     <View style={look.verse}>
-      {WORDS.map((word, index) => {
+      {sourceWords(text).map((word, index) => {
         const mark = Option.flatMap(marks, (all) => Option.fromNullishOr(all[index]));
         if (Option.isNone(mark) || mark.value.status === 'pending')
           return <Unsaid key={index} index={index} word={word} cue={cue} onPeek={onPeek} />;
@@ -80,11 +82,13 @@ function Verse({
 }
 
 /**
- * The cue Today shows the passage under: a recital's own while one is shown
- * (its marks), else the one the garden's ladder gives it now, and the full
- * text in an unread garden, which shows the verse whole and claims no stage.
+ * The cue Today shows the verse of `reference` under: a recital's own while
+ * one is shown (its marks), else the one the garden's ladder gives it now,
+ * and the full text in an unread garden, which shows the verse whole and
+ * claims no stage.
  */
 const shownCue = (
+  reference: string,
   garden: Option.Option<ReadGarden>,
   sayIt: Option.Option<SayItView>,
   marks: Option.Option<readonly Mark[]>,
@@ -92,7 +96,7 @@ const shownCue = (
   if (Option.isSome(marks) && Option.isSome(sayIt)) return sayIt.value.cue;
   return Option.match(garden, {
     onNone: (): Cue => 'full',
-    onSome: (read) => cueIn(read, passage.reference),
+    onSome: (read) => cueIn(read, reference),
   });
 };
 
@@ -149,10 +153,11 @@ const STAGE_NAMES: Readonly<Record<Stage, { readonly shown: string; readonly gro
 const readOf = (garden: Option.Option<GardenView>): Option.Option<ReadGarden> =>
   Option.filter(garden, (view): view is ReadGarden => view._tag === 'Read');
 
-/** The passage's plant in the garden read, none before its first recital. */
-const plantIn = (garden: ReadGarden) => Option.fromNullishOr(garden.plants.get(passage.reference));
+/** The plant of `reference` in the garden read, none before its first recital. */
+const plantIn = (garden: ReadGarden, reference: string) =>
+  Option.fromNullishOr(garden.plants.get(reference));
 
-/** The stage the finished recital Today shows grew the passage's plant to, none when it grew nothing or none is shown. */
+/** The stage the finished recital Today shows grew the verse's plant to, none when it grew nothing or none is shown. */
 const grownBy = (plant: Option.Option<Plant>, sayIt: Option.Option<SayItView>) =>
   Option.flatMap(plant, (each) =>
     Option.flatMap(sayIt, (view) =>
@@ -167,15 +172,17 @@ const grownBy = (plant: Option.Option<Plant>, sayIt: Option.Option<SayItView>) =
   );
 
 /**
- * The passage's stage, its plant beside it once planted, and how the recital
- * shown grew it. Until a read of the garden completes, and for the session
- * when it failed, it claims nothing: the row holds its place empty, so a
- * planted verse never reads as not planted.
+ * The stage of the verse of `reference`, its plant beside it once planted,
+ * and how the recital shown grew it. Until a read of the garden completes,
+ * and for the session when it failed, it claims nothing: the row holds its
+ * place empty, so a planted verse never reads as not planted.
  */
 function Growing({
+  reference,
   garden,
   sayIt,
 }: {
+  readonly reference: string;
   readonly garden: Option.Option<ReadGarden>;
   readonly sayIt: Option.Option<SayItView>;
 }) {
@@ -185,7 +192,7 @@ function Growing({
         <View style={look.stageRow} />
       </View>
     );
-  const plant = plantIn(garden.value);
+  const plant = plantIn(garden.value, reference);
   const stage = Option.map(plant, stageOf);
   const grown = grownBy(plant, sayIt);
   return (
@@ -314,13 +321,51 @@ function Counts({ garden }: { readonly garden: Option.Option<ReadGarden> }) {
   });
 }
 
+/** The verse Today shows and the item of the run it is, if any, and whether a recital of it shows: always with no plan, else only while it is held. */
+interface Showing {
+  readonly piece: TextPiece;
+  readonly item: Option.Option<Item>;
+  readonly recital: boolean;
+  readonly done: boolean;
+}
+
+/** The verse Today shows of the run, none in the done state (and before the session's view is read). */
+const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
+  Option.flatMap(
+    shown,
+    Match.type<Shown>().pipe(
+      Match.tagsExhaustive({
+        Unplanned: (each): Option.Option<Showing> =>
+          Option.map(each.piece, (piece) => ({
+            piece,
+            item: Option.none(),
+            recital: true,
+            done: false,
+          })),
+        Item: (each): Option.Option<Showing> =>
+          Option.some({
+            piece: each.piece,
+            item: Option.some(each.item),
+            recital: each.held,
+            done: each.done,
+          }),
+        Done: (): Option.Option<Showing> => Option.none(),
+      }),
+    ),
+  );
+
 /**
  * Today: its header (the heading and the way to the field, and under them
  * the reader's choices), fixed above a scroll view of the session's counts
- * line, the passage the reader is learning, its stage and the alert, and a
- * footer fixed under the scroll view: the result's grades and the action
- * button. Its first show with the garden read makes the launch's plan; a
- * later show, after the field, finds it made.
+ * line, the verse the run shows, its stage and the alert, and a footer
+ * fixed under the scroll view: the result's grades and the action button.
+ * Its first show with the garden read makes the launch's plan; a later
+ * show, after the field, finds it made. The run shows one item at a time:
+ * Say it holds it, and once its recall is kept (never at a recital's end
+ * alone) the button reads Next, which lets it go. With every item done and
+ * none held, the scroll holds the counts line alone, and there is no
+ * button. A recital's marks, result and alert show only while its item is
+ * held, or with no plan.
  * Every control but a missed word's mark sits outside the scroll view, so
  * however long the verse or the result, they are on screen without a
  * scroll and clear of the home indicator.
@@ -329,11 +374,22 @@ function Today({ onField }: { readonly onField: () => void }) {
   const insets = useSafeAreaInsets();
   const sayIt = AsyncResult.value(useAtomValue(sayItView));
   const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
+  const session = AsyncResult.value(useAtomValue(sessionView));
   const screen = screenOf(sayIt);
   const onPress = useAtomSet(press);
+  const onNext = useAtomSet(next);
   const onPeek = useAtomSet(peek);
   const onChoose = useAtomSet(choose);
   useSessionBegunWhenShown(Option.isSome(garden));
+  const showing = showingOf(Option.map(session, (view) => shownOf(view, garden)));
+  const recital = Option.exists(showing, (each) => each.recital);
+  const shownSayIt = Option.filter(sayIt, () => recital);
+  const marks = Option.filter(screen.marks, () => recital);
+  const onAction = (each: Showing) => {
+    if (screen.listening) return onPress({ piece: each.piece, item: Option.none() });
+    if (each.done) return onNext();
+    return onPress({ piece: each.piece, item: each.item });
+  };
   return (
     <View style={look.screen}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
@@ -347,40 +403,77 @@ function Today({ onField }: { readonly onField: () => void }) {
       </View>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[look.content, { paddingTop: 16, paddingBottom: 16 }]}
+        contentContainerStyle={[
+          look.content,
+          {
+            paddingTop: 16,
+            paddingBottom: Option.match(showing, {
+              onNone: () => insets.bottom + 16,
+              onSome: () => 16,
+            }),
+          },
+        ]}
       >
         <Counts garden={garden} />
-        <View style={styles.passage}>
-          <Text testID="reference" style={look.reference}>
-            {passage.reference}
-          </Text>
-          <Verse marks={screen.marks} cue={shownCue(garden, sayIt, screen.marks)} onPeek={onPeek} />
-          <Growing garden={garden} sayIt={sayIt} />
-        </View>
-        {Option.match(screen.alert, {
+        {Option.match(showing, {
           onNone: () => false,
-          onSome: (alert) => (
-            <Text role="alert" style={look.alert}>
-              {alert}
-            </Text>
+          onSome: ({ piece }) => (
+            <View style={styles.passage}>
+              <Text testID="reference" style={look.reference}>
+                {piece.reference}
+              </Text>
+              <Verse
+                text={piece.text}
+                marks={marks}
+                cue={shownCue(piece.reference, garden, shownSayIt, marks)}
+                onPeek={onPeek}
+              />
+              <Growing reference={piece.reference} garden={garden} sayIt={shownSayIt} />
+            </View>
           ),
         })}
+        {Option.match(
+          Option.filter(screen.alert, () => recital),
+          {
+            onNone: () => false,
+            onSome: (alert) => (
+              <Text role="alert" style={look.alert}>
+                {alert}
+              </Text>
+            ),
+          },
+        )}
       </ScrollView>
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        {Option.match(screen.result, {
-          onNone: () => false,
-          onSome: (result) => <Grades result={result} onChoose={onChoose} />,
-        })}
-        <BigButton
-          label={screen.button}
-          busy={screen.listening}
-          pressable={screen.pressable}
-          onPress={() => onPress(passage)}
-        />
-      </View>
+      {Option.match(showing, {
+        onNone: () => false,
+        onSome: (each) => (
+          <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+            {Option.match(
+              Option.filter(screen.result, () => recital),
+              {
+                onNone: () => false,
+                onSome: (result) => <Grades result={result} onChoose={onChoose} />,
+              },
+            )}
+            <BigButton
+              label={actionOf(screen.listening, each.done)}
+              busy={screen.listening}
+              pressable={screen.pressable}
+              onPress={() => onAction(each)}
+            />
+          </View>
+        ),
+      })}
     </View>
   );
 }
+
+/** The action button's name: Listening while a recital is under way, else Next once the item shown is done, else Say it. */
+const actionOf = (listening: boolean, done: boolean) => {
+  if (listening) return 'Listening';
+  if (done) return 'Next';
+  return 'Say it';
+};
 
 /** The field over the garden read; nothing until a read completed, so it never claims a history it has not read. */
 function FieldOf({ onToday }: { readonly onToday: () => void }) {
