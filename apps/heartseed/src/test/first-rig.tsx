@@ -540,6 +540,16 @@ const phaseFaults = (
   return out;
 };
 
+/** The session's nodes, which only Today shows: the Minutes group, the Voice switch and the counts line. */
+const SESSION_NODES =
+  '[role="radiogroup"][aria-label="Minutes"],[role="radio"][aria-label$=" min"],[role="switch"][aria-label="Voice"],[data-testid="session"]';
+
+/** A frame other than Today's that shows the session's nodes: the pending frame, the first minute's phases and Planted show none. */
+const sessionFaults = (host: Element, heading: string | undefined): string[] => {
+  if (heading === 'Today' || host.querySelector(SESSION_NODES) === null) return [];
+  return [`frame: the session's choices or counts in ${heading ?? 'the pending frame'}`];
+};
+
 interface Allowed {
   headings: Set<string>;
   pending: boolean;
@@ -555,6 +565,7 @@ const frameFaults = (
 ): string[] => {
   const out: string[] = shown.length > 1 ? [`frame: ${shown.length} headings`] : [];
   const heading = shown[0];
+  out.push(...sessionFaults(host, heading));
   if (heading === undefined) {
     if (!allowed.pending) out.push('frame: no heading after the launch decided');
     if (buttons.length > 0) out.push('frame: a pending frame offers a button');
@@ -1824,7 +1835,7 @@ const offerSay = ({ m, r, pick, choose, add, write, late, marks, todayOn }: Offe
     write: write(),
   }));
   if (marks) add('peek', `peek:${m.screen}:kept`, () => ({ _tag: 'Peek', write: write() }), 2);
-  if (r.host.querySelector('[role="radio"]') !== null)
+  if (r.host.querySelector('[role="radiogroup"][aria-label="Grade"] [role="radio"]') !== null)
     add('grade', `grade:${m.screen}`, () => ({
       _tag: 'Grade',
       grade: pick.pick<1 | 2 | 3 | 4>([1, 2, 3, 4]),

@@ -125,6 +125,15 @@ export const chooseMinutes = runtime.fn(
   { concurrent: true },
 );
 
+/** A tap on Today's Voice switch: the voice turns off when on and on when off, stored by the voice's own write. */
+export const toggleVoice = runtime.fn(
+  () =>
+    Effect.flatMap(Voice, (voice) =>
+      Effect.flatMap(voice.view, (view) => voice.setEnabled(!view.enabled)),
+    ),
+  { concurrent: true },
+);
+
 /** The cue Today's passage is said under next: the ladder's in a read garden, none in an unread one, which claims no stage. */
 export const todayCue = (view: GardenView): Cue => {
   if (view._tag === 'Unread') return TODAY.cue;

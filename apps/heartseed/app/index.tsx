@@ -6,7 +6,17 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 import passage from 'virtual:heartseed-passage';
 
-import { choose, gardenView, peek, press, sayItView } from '../src/app';
+import {
+  choose,
+  chooseMinutes,
+  gardenView,
+  peek,
+  press,
+  sayItView,
+  sessionView,
+  toggleVoice,
+  voiceView,
+} from '../src/app';
 import { fieldOf, type FieldPassage } from '../src/field';
 import { FieldScreen } from '../src/field/screen';
 import { openingOf, shownOpening, type Opening } from '../src/first/flow';
@@ -25,6 +35,7 @@ import { sourceWords } from '../src/matcher/words';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { BigButton, color, look, PlantMark, Unsaid, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
+import { MINUTES } from '../src/session';
 
 const WORDS = sourceWords(passage.text);
 
@@ -220,12 +231,77 @@ function FieldControl({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
+/** A pill of the header's second row: at least 44 pt tall, filled in ink when chosen or on. */
+function Pill({
+  role,
+  label,
+  on,
+  onPress,
+}: {
+  readonly role: 'radio' | 'switch';
+  readonly label: string;
+  readonly on: boolean;
+  readonly onPress: () => void;
+}) {
+  return (
+    <Pressable
+      role={role}
+      aria-label={label}
+      aria-checked={on}
+      onPress={onPress}
+      style={({ pressed }) => [styles.pill, on && styles.chosen, pressed && look.pressed]}
+    >
+      <Text style={[styles.gradeName, on && styles.chosenName]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 /**
- * Today: its header (the heading and the way to the field), fixed above a
+ * The reader's choices, in the header's second row: the session's minutes,
+ * shown once the stored choice is read so the first frame shows the value
+ * read, and the voice's switch for new verses, shown once its switch is
+ * read. Both stay while Say it listens, and in an unread garden.
+ */
+function Choices() {
+  const session = AsyncResult.value(useAtomValue(sessionView));
+  const voice = AsyncResult.value(useAtomValue(voiceView));
+  const onMinutes = useAtomSet(chooseMinutes);
+  const onVoice = useAtomSet(toggleVoice);
+  return (
+    <View style={styles.choices}>
+      {Option.match(session, {
+        onNone: () => false,
+        onSome: ({ minutes }) => (
+          <View role="radiogroup" aria-label="Minutes" style={styles.choices}>
+            {MINUTES.map((each) => (
+              <Pill
+                key={each}
+                role="radio"
+                label={`${each} min`}
+                on={minutes === each}
+                onPress={() => onMinutes(each)}
+              />
+            ))}
+          </View>
+        ),
+      })}
+      {Option.match(voice, {
+        onNone: () => false,
+        onSome: ({ enabled }) => (
+          <Pill role="switch" label="Voice" on={enabled} onPress={() => onVoice()} />
+        ),
+      })}
+    </View>
+  );
+}
+
+/**
+ * Today: its header (the heading and the way to the field, and under them
+ * the reader's choices), fixed above a
  * scroll view of the passage the reader is learning, its stage and Say it.
- * The way to the field sits outside the scroll view, so however much a
- * recital adds below, it is on screen without a scroll and clear of the
- * home indicator.
+ * The way to the field and the choices sit outside the scroll view, so
+ * however much a recital adds below, they are on screen without a scroll
+ * and clear of the home indicator.
  */
 function Today({ onField }: { readonly onField: () => void }) {
   const insets = useSafeAreaInsets();
@@ -244,6 +320,7 @@ function Today({ onField }: { readonly onField: () => void }) {
           </Text>
           {Option.isSome(garden) && !screen.listening && <FieldControl onPress={onField} />}
         </View>
+        <Choices />
       </View>
       <ScrollView
         style={styles.scroll}
@@ -350,7 +427,16 @@ const styles = StyleSheet.create({
   chosenName: { color: color.ground },
   growing: { gap: 4, marginTop: 4 },
   growth: { fontSize: 15, fontWeight: '600', color: color.ink },
-  header: { paddingHorizontal: 24, paddingBottom: 4 },
+  header: { paddingHorizontal: 24, paddingBottom: 4, gap: 8 },
+  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  pill: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.card,
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -561,6 +561,13 @@ them.
     generated launches hold the stored minutes (the four texts, bad texts,
     failed reads, refused writes, nothing written at launch) and the
     plan's moment (Today's first `begin`, each tap) to the same model.
+  - `test:header`: `src/session/header.test.tsx`, Today's header through
+    `src/test/session-rig.tsx`: generated devices and launches (stored
+    minutes and switch, failed reads, unread and held listings, the first
+    minute) and taps (refused writes, taps while Say it listens, the field
+    and back), every frame held to where the choices may show (only under
+    Today's heading, outside the scroll view, which holds no control but
+    the recital's own), the first values shown, and the disk.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

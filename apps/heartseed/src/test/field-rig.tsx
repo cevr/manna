@@ -267,7 +267,9 @@ export const mount = async (read: boolean, held: Promise<void> = Promise.resolve
   const summary = () => text(host.querySelector('[data-testid="summary"]'));
   /** The grade checked on Today, none when no grade shows. */
   const checked = () =>
-    host.querySelector('[role="radio"][aria-checked="true"]')?.getAttribute('aria-label') ?? null;
+    host
+      .querySelector('[role="radiogroup"][aria-label="Grade"] [role="radio"][aria-checked="true"]')
+      ?.getAttribute('aria-label') ?? null;
   const stage = () =>
     host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label') ?? null;
   /** Says the passage to a new summary. */

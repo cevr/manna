@@ -12,8 +12,10 @@
  * - The app builds one Dictation: only `src/app.ts` (and the development
  *   probe) build the service, and Today reaches it only through
  *   `src/app.ts`.
- * - Say it reads no word aloud: Today and Say it name no voice, speech
- *   synthesis or announcement.
+ * - Say it reads no word aloud: Say it names no voice, and Today and Say it
+ *   name no speech synthesis or announcement. Today holds the voice's
+ *   switch alone (`voiceView` and `toggleVoice` from `src/app.ts`) and
+ *   nothing that reads aloud; the first minute is the voice's one reader.
  * - A word lit is felt by a soft tick: the app's one call of One's haptics
  *   is `impact('soft')`, in Say it's live parts.
  *
@@ -163,29 +165,43 @@ describe('the one Dictation', () => {
 });
 
 describe('Say it aloud', () => {
-  it('reads no word aloud: Today and Say it name no voice, speech synthesis or announcement', () => {
+  it('reads no word aloud: Say it names no voice, and Today and Say it name no speech synthesis or announcement', () => {
     const files = SOURCES.filter(
       (source) =>
         source === 'app/index.tsx' || source === 'src/sayit.ts' || source.startsWith('src/sayit/'),
     );
     expect(files.length).toBeGreaterThanOrEqual(6);
     const speaking = files.filter((source) =>
-      /voice|Voice|SpeechSynthesis|One\.Speech|announceForAccessibility|AccessibilityInfo/.test(
-        code(source),
-      ),
+      /SpeechSynthesis|One\.Speech|announceForAccessibility|AccessibilityInfo/.test(code(source)),
     );
     expect(speaking).toEqual([]);
+    const voiced = files.filter(
+      (source) => source !== 'app/index.tsx' && /voice|Voice/.test(code(source)),
+    );
+    expect(voiced).toEqual([]);
   });
 
-  it('leaves reading aloud to the first minute: only src/first takes the voice’s atoms from src/app.ts, and only src/app.ts builds the voice', () => {
-    const VOICE_ATOMS = ['voiceView', 'listen', 'hush'];
-    const readers = SOURCES.filter((source) =>
-      importsOf(source).some(
-        ({ from, names }) =>
-          /(^|\/)app$/.test(from) && names.some((name) => VOICE_ATOMS.includes(name)),
-      ),
-    );
-    expect(readers).toEqual(['src/first/screen.tsx']);
+  it('lets Today hold the voice’s switch alone: it takes only voiceView and toggleVoice of the voice, from src/app.ts, and names no reading', () => {
+    const today = importsOf('app/index.tsx');
+    expect(today.filter(({ from }) => /voice/.test(from))).toEqual([]);
+    const taken = today
+      .filter(({ from }) => /(^|\/)app$/.test(from))
+      .flatMap(({ names }) => names.filter((name) => /voice|Voice|listen|hush/.test(name)));
+    expect(taken.toSorted()).toEqual(['toggleVoice', 'voiceView']);
+    expect(code('app/index.tsx')).not.toMatch(/\.read\(|\blisten\b|\bhush\b|setEnabled/);
+  });
+
+  it('leaves reading aloud to the first minute: only src/first takes the voice’s reading atoms from src/app.ts, only Today takes its switch, and only src/app.ts builds the voice', () => {
+    const takers = (atoms: readonly string[]) =>
+      SOURCES.filter((source) =>
+        importsOf(source).some(
+          ({ from, names }) =>
+            /(^|\/)app$/.test(from) && names.some((name) => atoms.includes(name)),
+        ),
+      );
+    expect(takers(['listen', 'hush'])).toEqual(['src/first/screen.tsx']);
+    expect(takers(['voiceView'])).toEqual(['app/index.tsx', 'src/first/screen.tsx']);
+    expect(takers(['toggleVoice'])).toEqual(['app/index.tsx']);
     const builders = SOURCES.filter(
       (source) =>
         !source.startsWith('src/voice') &&
