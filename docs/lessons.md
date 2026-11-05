@@ -4954,6 +4954,16 @@ The form of an entry, each field on its own line:
 - **Cause:** A latest-state stream was given a queue whose growth nothing bounded.
 - **Guard:** code: `apps/heartseed/src/voice/changes.test.ts` `keeps a bounded window of a 10,000-view burst and ends at the current view`
 
+### store-no-stand-in
+
+- **Date:** 2026-11-04
+- **Kind:** review
+- **Said:** "a store that fails to open is shown as a read, empty garden"
+- **Source:** hymnapp/hsgrow/attempt-1/round-3-findings.md M1
+- **Wrong:** Heartseed's store turned a failed open of One's store into a memory store for the session, so the garden read that empty store as the reader's whole history, grew a plant from the session's recitals and chimed, while the device kept none of them.
+- **Cause:** A fallback written for the settings was kept when the garden began to read the same store: a success-shaped stand-in erased the failure below the seam every check stood on.
+- **Guard:** code: `apps/heartseed/src/store.test.ts` `no app source makes a memory, storage or file-system store`; `apps/heartseed/src/store.test.ts` `fails each call whose open throws, writes nothing in its place, and opens at the next call once the device can`
+
 ### heartseed-dictation-microphone-off-simulator
 
 - **Date:** 2026-11-04
