@@ -565,7 +565,11 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   paints at the frame's own transform, unmoved, so every pixel the frame
   holds is the figure-alone frame's own, byte for byte; only its part left
   of or above the frame paints at that transform moved by whole px
-  (`page.ts`). Its crown (in its head column) and soles are read to a
+  (`page.ts`). The height render paints the layer without its blur
+  (`PaintRequest.sharp`), at the same transform, breath, zoom and depth: a
+  blur of fixed px moves a curved crown's edge by an amount that depends on
+  the figure's rendered size, so a camera push would read as growth, while
+  the bar protects the drawn size. Its crown (in its head column) and soles are read to a
   fraction of a px from the coverage across each edge (`observeHeight`),
   and a figure under `LEAST_HEIGHT` (100 px) reads unread, too small for a
   3 % change to clear the bar at every sampling phase. The surface only

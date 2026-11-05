@@ -221,7 +221,7 @@ export const storybookPage = (
       );
   });
 
-/** One render of a frame: `colour` the whole frame, `figure:<name>` that figure alone, `height:<name>` that figure alone for its analysis surface; each figure draws its drawn key (`drawnKeyOf`), and its stretch up is its squash times its breath. */
+/** One render of a frame: `colour` the whole frame, `figure:<name>` that figure alone, `height:<name>` that figure alone for its analysis surface, painted `sharp` (without its layer's blur); each figure draws its drawn key (`drawnKeyOf`), and its stretch up is its squash times its breath. */
 export const requestOf = (frame: Frame, output: string): PaintRequest => ({
   t: frame.t,
   camera: { x: frame.camera.x, y: frame.camera.y, zoom: frame.camera.zoom },
@@ -235,6 +235,7 @@ export const requestOf = (frame: Frame, output: string): PaintRequest => ({
     scale,
   })),
   only: output.replace(/^(figure|height):/, '').replace(/^colour$/, ''),
+  sharp: output.startsWith('height:'),
 });
 
 /** A frame's file name: `f0000.png` for frame 0. */

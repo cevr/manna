@@ -162,13 +162,17 @@ export interface PaintedFigure {
  * One frame to paint: its time in the shot (the plates' moves read it), its
  * camera, its figures, and `only`: empty for the whole frame on its paper,
  * or a figure's name for that figure alone, through its plane at the
- * frame's camera, on transparent and with no fibre.
+ * frame's camera, on transparent and with no fibre. `sharp` paints every
+ * layer without its blur, at the same transform: the render-height bar
+ * reads the drawn figure's size, which a blur of fixed px spreads by an
+ * amount that depends on the figure's rendered size.
  */
 export interface PaintRequest {
   readonly t: number;
   readonly camera: { readonly x: number; readonly y: number; readonly zoom: number };
   readonly figures: ReadonlyArray<PaintedFigure>;
   readonly only: string;
+  readonly sharp?: boolean;
 }
 
 /** Where the painter reads a picture by its id: its pixels, and a draw of it onto `ctx` at (0, 0) under that context's transform at its own size, `size`. */
@@ -428,7 +432,7 @@ export const paintFrame = (
     layers.map((layer) => ({
       z: layer.z,
       draw: () => {
-        if (layer.blur > 0) ctx.filter = `blur(${layer.blur}px)`;
+        if (layer.blur > 0 && req.sharp !== true) ctx.filter = `blur(${layer.blur}px)`;
         for (const item of layer.items) {
           if (item._tag === 'Plate') {
             if (req.only === '') paintPlate(ctx, item, req.t, pictures);
