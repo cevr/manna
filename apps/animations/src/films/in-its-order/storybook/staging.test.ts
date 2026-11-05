@@ -158,7 +158,7 @@ const PUSH_CAPS: ReadonlyMap<string, number> = new Map([
 /** The dropper's width on milk-pour's screen, outline included (critique 4, fault 2, measured): a frame's step past it draws a row of droppers, not one moving. */
 const DROPPER_WIDTH_PX = 47;
 
-/** How long (s) the dropper rests at the cup before he waves it away, so the drop is seen to go in (critique 4, fault 2). */
+/** The least time (s) the dropper, hovering over the cup, holds still at its resting place (within 2 px, on milk-pour's screen) in one run of frames before he waves it away, so it reads as one dropper stopping and not a blur (critique 4, fault 2). */
 const DROPPER_REST_S = 0.2;
 
 /** Where a plate's foot lies at `t`, in its layer's px: the bottom of its place moved by its key, which stretches it about its foot. */
