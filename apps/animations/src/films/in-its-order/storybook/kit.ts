@@ -136,6 +136,19 @@ const sheetHead = (sheet: SheetCells): number =>
     () => 1,
   );
 
+/** A sheet's head (`sheetHead`) by `<member>/<sheet>`, 1 when act 1 lists no such sheet. */
+const headOfSheet = (name: string): number =>
+  Option.getOrElse(Option.map(Option.fromUndefinedOr(SHEET_CELLS.get(name)), sheetHead), () => 1);
+
+/**
+ * The guest woman's size on her table sheet: its collar reads her robe's
+ * neckline trim, drawn in her mantle's shade a few px above the robe her
+ * kept sheet's collar reads (critique 3, finding 4), so she draws at the
+ * size her kept sheet's head gives her.
+ */
+export const WOMAN_TABLE_SIZE =
+  headOfSheet('feast-guest-woman/iio-table') / headOfSheet('feast-guest-woman/feast-courtyard');
+
 /** The scale a member's figure on `sheet` draws at on its plane, its px to layer px, under a shot whose grown head is `headPx`, on a layer at depth `z`: as the page scales it. */
 export const drawScaleOf = (member: string, sheet: string, headPx: number, z: number): number => {
   const cells = SHEET_CELLS.get(`${member}/${sheet}`);

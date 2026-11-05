@@ -408,6 +408,14 @@ const BEFORE_CARDS: ReadonlyMap<string, string> = new Map([
   ['feast-guest-woman/feast-courtyard', 'drawn and kept in take 5, before CARDS_RULE'],
 ]);
 
+/** Sheets act 1 lists that no shot draws, each with why: a kept sheet another sheet is drawn from and the film's checks read as its member's first. */
+const REFERENCE_ONLY: ReadonlyMap<string, string> = new Map([
+  [
+    'feast-guest-woman/feast-courtyard',
+    'her table sheet’s first reference, and her first sheet in the cross-sheet checks; the title casts her table sheet (critique 3, finding 7)',
+  ],
+]);
+
 /** Each house rule a sheet's record prompt lacks, named: the hand rules for every sheet, the cards rule for each not kept before it. */
 const promptMisses = (sheet: string, prompt: string) =>
   ['no fingers', 'wrist', ...[CARDS_RULE].filter(() => !BEFORE_CARDS.has(sheet))]
@@ -421,7 +429,16 @@ const sheetMisses = Effect.fn('Act1.sheetMisses')(function* (shots: Shots) {
   const named = new Set(shots.shots.flatMap((s) => s.figures.map((f) => `${f.member}/${f.sheet}`)));
   const listed = new Set(shots.sheets.map((s) => `${s.member}/${s.id}`));
   misses.push(...[...named].filter((n) => !listed.has(n)).map((n) => `${n} is not listed`));
-  misses.push(...[...listed].filter((n) => !named.has(n)).map((n) => `${n} is used by no shot`));
+  misses.push(
+    ...[...listed]
+      .filter((n) => !named.has(n) && !REFERENCE_ONLY.has(n))
+      .map((n) => `${n} is used by no shot`),
+  );
+  misses.push(
+    ...[...REFERENCE_ONLY.keys()]
+      .filter((n) => named.has(n) || !listed.has(n))
+      .map((n) => `${n} is listed as a reference only, but a shot draws it or act 1 lists it not`),
+  );
   for (const sheet of shots.sheets) {
     const file = `${APP}/${sheet.dir}/record.json`;
     if (!(yield* fs.exists(file))) {

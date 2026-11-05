@@ -26,6 +26,7 @@ import {
   seat,
   STORY_PLATES,
   tallOf,
+  WOMAN_TABLE_SIZE,
 } from '../kit.ts';
 import { WHAT_DAY, WHAT_DAY_SCALE } from '../plates/what-day.ts';
 import {
@@ -179,7 +180,13 @@ const guests = (man: ReadonlyArray<Span>, woman: ReadonlyArray<Span>) => {
       ...ms,
     ]),
     seat(
-      { member: 'feast-guest-woman', sheet: 'iio-table', name: 'woman', ...AT_TABLE.woman },
+      {
+        member: 'feast-guest-woman',
+        sheet: 'iio-table',
+        name: 'woman',
+        ...AT_TABLE.woman,
+        size: WOMAN_TABLE_SIZE,
+      },
       at,
       [w0 ?? hold(0, 1, 'neutral'), ...ws],
     ),

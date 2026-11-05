@@ -156,8 +156,8 @@ const guest = (member: string, side: 'right' | 'left', seat: string): SheetDecl 
  * The guest woman's take-5 sheet (`feast-courtyard`, the woman the owner chose
  * as the guest), cast as drawn: its pose words as its record holds them, no
  * rules of the film's, since it was drawn before them (`storybook draw`
- * refuses an id drawn already). Her `turn`, toward the viewer's left, is her
- * stare at the lead beside her.
+ * refuses an id drawn already). No shot draws it: it is her table sheet's
+ * first reference, and the sheet the film's checks hold her others to.
  */
 const guestWoman: SheetDecl = {
   member: 'feast-guest-woman',

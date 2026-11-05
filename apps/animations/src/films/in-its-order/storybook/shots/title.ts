@@ -3,7 +3,7 @@ import type { FilmShot, Over } from '../../../../library/storybook/scene.ts';
 import { fonts, palette as P } from '../../palette.ts';
 import { PATH, PATH_BRUSH } from '../../plates/plates.ts';
 import { TITLE } from '../../script.ts';
-import { cam, holds, layer, plateOf, seat } from '../kit.ts';
+import { cam, holds, layer, plateOf, seat, WOMAN_TABLE_SIZE } from '../kit.ts';
 import { backdrop, diner, HEAD, table, Z } from './courtyard.ts';
 
 /** The path's brush in the path plate's own px: the distance plate's brush less where the path is cut from it. */
@@ -97,6 +97,7 @@ export const titleShot: FilmShot = {
               name: 'woman',
               x: X.woman,
               crown: CROWN,
+              size: WOMAN_TABLE_SIZE,
             },
             at,
             holds([[0, 'smile', 'neutralBlink']], duration),
