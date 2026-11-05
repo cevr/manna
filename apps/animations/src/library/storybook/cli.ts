@@ -6,7 +6,7 @@ import { Clock, Console, Effect, FileSystem, Layer, Option, Schema } from 'effec
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
-import { filmCast, filmFolder, filmNamed, filmShot, shotsJsonOf, shotsOf } from './films.ts';
+import { filmCast, filmFolder, filmNamed, filmShot, shotsJsonOf } from './films.ts';
 import { APP, outOf, renderShot, StorybookFailed } from './render.ts';
 import { frameAt, type Shot, timesOf } from './shot.ts';
 import { verdictText } from './verify/verdict.ts';
@@ -34,8 +34,6 @@ interface Named {
   readonly shot: Shot;
   readonly cast: Cast;
   readonly out: string;
-  /** The other shots of its scene, in order: none for a library shot. */
-  readonly siblings: ReadonlyArray<Shot>;
 }
 
 /** A shot by name: a library shot's id, or `<film>/<shot>` for a film's storybook shot made from its scene's cues as laid out. */
@@ -47,7 +45,6 @@ const shotNamed = Effect.fn('Storybook.shotNamed')(function* (name: string) {
         shot,
         cast: CAST,
         out: outOf(shot),
-        siblings: [],
       })),
       () =>
         StorybookFailed.make({
@@ -56,14 +53,10 @@ const shotNamed = Effect.fn('Storybook.shotNamed')(function* (name: string) {
     );
   const story = yield* filmNamed(film);
   const placed = yield* filmShot(story, id);
-  const all = yield* shotsOf(story);
   return {
     shot: placed.shot,
     cast: yield* filmCast(story),
     out: `${APP}/out/storybook/${film}/${id}`,
-    siblings: all
-      .filter((p) => p.scene.spec.id === placed.scene.spec.id && p.shot.id !== placed.shot.id)
-      .map((p) => p.shot),
   } satisfies Named;
 });
 
@@ -180,7 +173,6 @@ const verifyCommand = Command.make(
         dir,
         [1, 6][Number(quick)] ?? 1,
         named.cast,
-        named.siblings,
       );
       yield* Console.log(verdictText(verdict, info));
       const took = ((yield* Clock.currentTimeMillis) - started) / 1000;

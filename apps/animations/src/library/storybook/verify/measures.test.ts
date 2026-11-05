@@ -3,7 +3,7 @@ import type { Raster } from '@manna/film/tools';
 import { Option } from 'effect';
 import { describe, expect, test } from 'effect-bun-test';
 import { deltaE, hexOf, type Lines, type Palette, paintsOf, type Rgb } from '../sheet.ts';
-import type { FigureFrame } from '../shot.ts';
+import { BREATH, type FigureFrame } from '../shot.ts';
 import { BARS } from './bars.ts';
 import {
   colourStep,
@@ -22,6 +22,7 @@ import {
   scaleSamples,
   stepSamples,
 } from './measures.ts';
+import { seenHeight } from './rows.ts';
 import { type Measured, one, unreadAt, verdictOf, verdictText } from './verdict.ts';
 
 /** A run where every check reads one passing value: each test swaps in the check it holds. */
@@ -294,6 +295,7 @@ const frameRead = (
   cell: 'a',
   zoom: 1,
   squashed: false,
+  seen: Option.none(),
   ...r,
 });
 
@@ -578,59 +580,90 @@ describe('heightSamples', () => {
     expect(verdictOf(BARS, { ...ALL_PASS, 'render-height': samples }).passed).toBe(BARS.length - 1);
   });
 
-  test('reads a figure the frame cuts in every frame where the same figure lies whole in another shot of its scene, and as unread with no such shot (critique 1, item 1)', () => {
-    const reads = [
-      frameRead({ name: 'lead', frame: 0, read: readOf(linesOfHeight(0, 80, 20), false) }),
-      frameRead({ name: 'lead', frame: 1, read: readOf(linesOfHeight(0, 81, 20), false) }),
-      frameRead({ name: 'man', frame: 0, read: readOf(linesOfHeight(0, 99, 20)) }),
-      frameRead({ name: 'man', frame: 1, read: readOf(linesOfHeight(0, 99, 20)) }),
-    ];
-    const away = new Map([['lead', 'cold-letter']]);
-    expect(heightSamples(reads, away)).toEqual([
-      { at: 'man/a over 2 frames', value: Option.some(0) },
-    ]);
-    expect(heightInfo(reads, away)).toEqual([
-      'render-height elsewhere: lead cut by the frame in every frame, read whole in cold-letter',
-    ]);
-    expect(heightSamples(reads).map((s) => s.at)).toEqual([
-      'lead: no whole unsquashed frame',
-      'man/a over 2 frames',
-    ]);
-    expect(verdictOf(BARS, { ...ALL_PASS, 'render-height': heightSamples(reads) }).passed).toBe(
-      BARS.length - 1,
-    );
-  });
-
-  test('passes the bar as read elsewhere only when no figure here reads, and judges the figures that do', () => {
-    const cut = [
-      frameRead({ name: 'lead', frame: 0, read: readOf(linesOfHeight(0, 80, 20), false) }),
-    ];
-    const away = new Map([['lead', 'cold-letter']]);
-    const where = new Map([
-      ['render-height', 'every figure cut here, read whole in cold-letter'] as const,
-    ]);
-    const alone = verdictOf(
-      BARS,
-      { ...ALL_PASS, 'render-height': heightSamples(cut, away) },
-      true,
-      where,
-    );
-    expect(alone.checks.find((c) => c.id === 'render-height')).toMatchObject({
-      pass: true,
-      value: 'elsewhere',
-    });
-    expect(verdictOf(BARS, { ...ALL_PASS, 'render-height': heightSamples(cut, away) }).passed).toBe(
-      BARS.length - 1,
-    );
-    const swelling = [
-      ...cut,
-      frameRead({ name: 'man', frame: 0, read: readOf(linesOfHeight(0, 99, 20)) }),
-      frameRead({ name: 'man', frame: 1, read: readOf(linesOfHeight(0, 104, 20)) }),
-    ];
+  test('reads a frame that cuts a figure by the height read off the columns it shows, fails the verifier’s cropped key growing 100 → 104 there as it fails a whole one, and names the frames so read (round 3, M3)', () => {
+    const cut = (frame: number, seen: number) =>
+      frameRead({
+        name: 'lead',
+        frame,
+        read: readOf(linesOfHeight(0, 79, 20), false),
+        seen: Option.some(seen),
+      });
+    const value = (reads: ReadonlyArray<FrameRead>) =>
+      heightSamples(reads).map((s) => Option.getOrElse(s.value, () => -1));
+    expect(value([cut(0, 100), cut(1, 100)])).toEqual([0]);
+    expect(value([cut(0, 100), cut(1, 104)])[0]).toBeCloseTo(4 / 104, 9);
     expect(
-      verdictOf(BARS, { ...ALL_PASS, 'render-height': heightSamples(swelling, away) }, true, where)
+      verdictOf(BARS, { ...ALL_PASS, 'render-height': heightSamples([cut(0, 100), cut(1, 104)]) })
         .passed,
     ).toBe(BARS.length - 1);
+    expect(heightInfo([cut(0, 100), cut(1, 100)])).toEqual([
+      'render-height cut: lead read in 2 frames off the columns they show',
+    ]);
+  });
+
+  test('reads as unread a figure no frame reads a height of (every frame cuts it and shows no column it can read): never a pass (round 3, M3)', () => {
+    const blind = frameRead({
+      name: 'lead',
+      frame: 0,
+      read: readOf(linesOfHeight(0, 79, 20), false),
+    });
+    expect(heightSamples([blind]).map((s) => [s.at, Option.isNone(s.value)])).toEqual([
+      ['lead: no unsquashed frame reads its height', true],
+    ]);
+  });
+
+  test('over generated renders whole, cut at the bottom, cut at the side and cut at the top, at generated depths, camera zooms, draw scales and breaths: a key holding its size passes and one that grows 3–4 % within its hold fails, whole or cut; a figure cut at the top in every frame reads unread (round 3, M3)', () => {
+    const [cw, ch] = [60, 200];
+    const cell = figureIn({ width: cw + 2, height: ch + 2 }, { x0: 1, y0: 1, w: cw, h: ch });
+    const lines = { ...linesOfHeight(1, ch, 20), centreColumn: 30 };
+    const misses = Array.from({ length: 12 }, (_, i) => {
+      const draw = rng(i + 1);
+      const placement = (['whole', 'bottom', 'side', 'top'] as const)[i % 4] ?? 'whole';
+      const z = 1 + draw() * 2;
+      const scale = 0.9 + draw() * 0.4;
+      const push = draw() * 0.8;
+      const zooms = Array.from({ length: 6 }, (_, k) => 1 + (k / 5) * push);
+      const breaths = Array.from({ length: 6 }, () => 1 + draw() * 2 * BREATH);
+      const grow = 1.03 + draw() * 0.01;
+      const read = (growth: number) =>
+        zooms.map((camera, frame) => {
+          const plane = camera ** (1 / z);
+          const sx = scale * plane;
+          const sy = sx * (breaths[frame] ?? 1) * ([1, growth][Number(frame >= 3)] ?? 1);
+          const [w, h] = [Math.round(cw * sx), Math.round(ch * sy)];
+          const y0 = { whole: 10, bottom: 10, side: 10, top: -Math.round(h * 0.4) }[placement];
+          const width = {
+            whole: w + 20,
+            bottom: w + 20,
+            side: 10 + Math.round(w * 0.4),
+            top: w + 20,
+          }[placement];
+          const tall = [h + 20, 10 + Math.round(h * 0.6)][
+            Number(placement === 'bottom' || placement === 'top')
+          ];
+          const render = figureIn({ width, height: tall ?? h + 20 }, { x0: 10, y0, w, h });
+          const place = { x: 10 + 29.5 * sx, y: y0 + ch * sy, sx, sy };
+          const figure = readFigure(render, PAINTS);
+          return frameRead({
+            name: 'f',
+            frame,
+            zoom: plane,
+            read: figure,
+            seen: Option.flatMap(
+              Option.liftPredicate(render, () => !figure.whole),
+              (r) => seenHeight(cell, lines, place, r),
+            ),
+          });
+        });
+      const value = (growth: number) =>
+        Option.getOrElse(heightSamples(read(growth))[0]?.value ?? Option.none(), () => -1);
+      return { placement, steady: value(1), grown: value(grow) };
+    });
+    const passes = (m: (typeof misses)[number]) => {
+      if (m.placement === 'top') return m.steady === -1 && m.grown === -1;
+      return m.steady >= 0 && m.steady <= 0.02 && m.grown > 0.02;
+    };
+    expect(misses.filter((m) => !passes(m))).toEqual([]);
   });
 });
 

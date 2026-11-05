@@ -205,7 +205,7 @@ export const colourStep = (
   return Option.some(Math.max(...steps)).pipe(Option.filter(() => steps.length > 0));
 };
 
-/** One figure in one rendered frame: its name, cell, plane zoom, whether a turn squashes it, and its render's reading. */
+/** One figure in one rendered frame: its name, cell, plane zoom, whether a turn squashes it, its render's reading, and, where the frame cuts it, its crown-to-soles height read off the columns its render shows (`seenHeight`; none where it is whole or no column shows). */
 export interface FrameRead {
   readonly frame: number;
   readonly name: string;
@@ -213,6 +213,7 @@ export interface FrameRead {
   readonly zoom: number;
   readonly squashed: boolean;
   readonly read: FigureRead;
+  readonly seen: Option.Option<number>;
 }
 
 /** A crown-to-soles height from a figure's lines. */
@@ -370,37 +371,39 @@ const keySpread = (heights: ReadonlyArray<number>) =>
     spread: (Math.max(...heights) - Math.min(...heights)) / median,
   }));
 
+/** A figure's crown-to-soles height in one frame, in the frame's px: its render's lines where it lies whole, else the height read off the columns its render shows (`FrameRead.seen`). */
+const frameHeightOf = (f: FrameRead): Option.Option<number> => {
+  if (f.read.whole) return Option.map(f.read.lines, heightOf);
+  return f.seen;
+};
+
 /**
- * Each figure's crown-to-soles height over its plane zoom, over its whole
+ * Each figure's crown-to-soles height over its plane zoom, over its
  * unsquashed frames, spread within each key it holds: (max − min) over the
  * median, its worst key. Two keys of one sheet differ in height by design (a
  * bowed head, a seat), which the scale and proportions bars hold across keys;
  * this reads only the figure growing or shrinking while one key holds. A
- * figure the frame cuts in every frame (a close) is read where the same
- * figure lies whole in another shot of its scene (`elsewhere`, by name):
- * no sample here; with no such shot it is unread.
+ * frame that cuts the figure is read off the columns its render shows, down
+ * to the soles' row its placement pins (`seenHeight`), so a close is judged
+ * on its own frames; a figure no frame reads is unread, never passed.
  */
-export const heightSamples = (
-  reads: ReadonlyArray<FrameRead>,
-  elsewhere: ReadonlyMap<string, string> = new Map(),
-): Samples =>
-  [...Map.groupBy(reads, (r) => r.name)].flatMap(([name, frames]): Samples => {
-    const still = frames.filter((f) => f.read.whole && !f.squashed);
-    if (still.length === 0 && elsewhere.has(name)) return [];
-    return [keyHeightSample(name, still)];
-  });
+export const heightSamples = (reads: ReadonlyArray<FrameRead>): Samples =>
+  [...Map.groupBy(reads, (r) => r.name)].map(([name, frames]) =>
+    keyHeightSample(
+      name,
+      frames.filter((f) => !f.squashed),
+    ),
+  );
 
-/** One figure's worst key spread over its whole unsquashed frames, unread where a frame reads no lines or none is whole. */
+/** One figure's worst key spread over its unsquashed frames, unread where a whole frame reads no lines or no frame reads a height. */
 const keyHeightSample = (name: string, still: ReadonlyArray<FrameRead>): Sample => {
-  const unread = still.find((f) => Option.isNone(f.read.lines));
+  const unread = still.find((f) => f.read.whole && Option.isNone(f.read.lines));
   if (unread) return unreadAt(`${name} frame ${unread.frame}: no lines read`);
   const keys = [...Map.groupBy(still, (f) => f.cell)].flatMap(([cell, held]) =>
     Option.toArray(
       Option.map(
         keySpread(
-          held.flatMap((f) =>
-            Option.toArray(Option.map(f.read.lines, (l) => heightOf(l) / f.zoom)),
-          ),
+          held.flatMap((f) => Option.toArray(Option.map(frameHeightOf(f), (h) => h / f.zoom))),
         ),
         (s) => ({ cell, ...s }),
       ),
@@ -408,28 +411,19 @@ const keyHeightSample = (name: string, still: ReadonlyArray<FrameRead>): Sample 
   );
   const worst = Option.fromUndefinedOr(keys.toSorted((a, b) => b.spread - a.spread)[0]);
   return Option.match(worst, {
-    onNone: () => unreadAt(`${name}: no whole unsquashed frame`),
+    onNone: () => unreadAt(`${name}: no unsquashed frame reads its height`),
     onSome: (k) => one(`${name}/${k.cell} over ${k.frames} frames`, k.spread),
   });
 };
 
-/** The INFO lines verdict.md carries for the height bar: each figure the frame cuts in every frame, and the shot of its scene its member is read whole in. */
-export const heightInfo = (
-  reads: ReadonlyArray<FrameRead>,
-  elsewhere: ReadonlyMap<string, string>,
-): ReadonlyArray<string> =>
-  [...Map.groupBy(reads, (r) => r.name)].flatMap(([name, frames]) =>
-    Option.toArray(
-      Option.map(
-        Option.filter(
-          Option.fromUndefinedOr(elsewhere.get(name)),
-          () => !frames.some((f) => f.read.whole && !f.squashed),
-        ),
-        (shot) =>
-          `render-height elsewhere: ${name} cut by the frame in every frame, read whole in ${shot}`,
-      ),
-    ),
-  );
+/** The INFO lines verdict.md carries for the height bar: each figure some frame cuts, with how many of its unsquashed frames were read off the columns they show. */
+export const heightInfo = (reads: ReadonlyArray<FrameRead>): ReadonlyArray<string> =>
+  [...Map.groupBy(reads, (r) => r.name)].flatMap(([name, frames]) => {
+    const cut = frames.filter((f) => !f.squashed && !f.read.whole && Option.isSome(f.seen)).length;
+    return [`render-height cut: ${name} read in ${cut} frames off the columns they show`].filter(
+      () => cut > 0,
+    );
+  });
 
 /**
  * Each figure's share of interior pixels the one light lit from a palette

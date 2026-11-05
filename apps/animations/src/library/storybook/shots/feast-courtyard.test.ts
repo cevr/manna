@@ -30,7 +30,7 @@ import { CAST, headsOf, loadFigures, sharesOf, type StoredFigure } from '../stor
 import { BARS, meets } from '../verify/bars.ts';
 import { type Coverage, coversOf, picturesOver } from '../verify/covers.ts';
 import { proportionSamples, scaleSamples } from '../verify/measures.ts';
-import { wholeFigures } from '../verify/whole.ts';
+import { placementOf } from '../verify/rows.ts';
 import { feastCourtyard } from './feast-courtyard.ts';
 
 // oxlint-disable-next-line effect/noAsyncFunction -- read once at module evaluation, so no case pays the read inside its time limit (film/no-lazy-test-fixture)
@@ -192,19 +192,40 @@ const inkIn = (r: Raster, rect: Rect, ink: Rgb): number => {
 };
 
 describe('the feast courtyard as drawn', () => {
-  test('finds each figure whole in some frame of the take as the page places it, and the lead not whole in a close on his face that cuts his soles (critique 1, item 1)', () => {
+  test('plans each figure’s crown and soles inside the frame in the take’s first frame, and the lead’s soles below the frame in a close on his face (round 3, M3)', () => {
     const first: Shot = { ...feastCourtyard, duration: 1 / feastCourtyard.fps };
     const shares = sharesOf(figures);
-    expect([...wholeFigures(feastCourtyard, figures, heads, shares)].toSorted()).toEqual(
-      figures.map((f) => f.figure.name).toSorted(),
-    );
+    const rowsIn = (shot: Shot) => {
+      const frame = frameAt(shot, heads, 0, shares);
+      return new Map(
+        figures.flatMap((stored) => {
+          const f = frame.figures.find((g) => g.name === stored.figure.name);
+          const lines = Option.flatten(Option.fromUndefinedOr(stored.lines.get(f?.cell ?? '')));
+          if (!f || Option.isNone(lines)) return [];
+          const place = placementOf(shot, frame, f, stored.layer.z);
+          const { ay } = anchorOf(lines.value);
+          const crown = place.y + (lines.value.crown - ay) * place.sy;
+          return [[stored.figure.name, { crown, soles: place.y }] as const];
+        }),
+      );
+    };
+    const take = rowsIn(first);
+    expect([...take.keys()].toSorted()).toEqual(figures.map((f) => f.figure.name).toSorted());
+    expect(
+      [...take].filter(
+        ([, r]) => r.crown <= 0 || r.soles >= first.size.height || r.soles <= r.crown,
+      ),
+    ).toEqual([]);
     const lead = frameAt(first, heads, 0, shares).figures.find((f) => f.name === 'lead');
-    expect(lead).toBeDefined();
     const close: Shot = {
       ...first,
       camera: [{ t: 0, x: lead?.x ?? 0, y: (lead?.y ?? 0) - 260, zoom: 3 }],
     };
-    expect([...wholeFigures(close, figures, heads, shares)]).not.toContain('lead');
+    const near = rowsIn(close).get('lead');
+    expect([
+      near && near.crown < first.size.height,
+      near && near.soles > first.size.height,
+    ]).toEqual([true, true]);
   });
 
   test("reads every figure against the shot's grown head at its member's share: frame 17's lead in his side cell at 151 of his sheet's 158, the man's neutral at his sheet's 303, his turn frames (head column unread) from crown-to-soles and named so, and every frame within the scale bar", () => {

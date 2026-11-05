@@ -556,11 +556,12 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   renders' crown-to-soles within each key a figure holds and reports its
   worst key: two keys of one sheet differ in height by design (a bowed head,
   a seat), which `scale` and `proportions` hold, so it catches only a figure
-  growing or shrinking while one key holds. A figure a film shot's frame
-  cuts in every frame (a close) is read where the same figure lies whole in
-  another shot of its scene, named on an `INFO render-height elsewhere:`
-  line; the bar passes as `elsewhere` when no figure of the shot is whole,
-  and a figure whole nowhere in its scene is unread. The bars stay `orchestrator-proposed`
+  growing or shrinking while one key holds. A frame whose top or bottom
+  edge cuts a figure (a close) is read from the crown or soles its render
+  shows to the other end where the plan puts it outside the frame
+  (`verify/rows.ts`), named on an `INFO render-height cut:` line; a figure
+  no frame reads (both ends cut in every frame) is unread, never passed.
+  The bars stay `orchestrator-proposed`
   until the owner OKs their numbers.
 - **A film's shots** live in `src/films/<film>/storybook/`: its sheet
   declarations (`sheets.ts`, drawn with `draw <member> <sheet-id> --film

@@ -65,26 +65,18 @@ export const FRAME_CHECKS: ReadonlySet<CheckId> = new Set(['determinism']);
  * Each bar against its measure's worst reading; a measure with no reading,
  * or any place it could not read, fails as unread. In a shot with no figure
  * (`figures` false) a figure bar with no reading passes as `no figure`: no
- * figure can break a figure rule. A bar with no reading whose every figure
- * is read in another shot of its scene (`elsewhere`, by check: where) passes
- * as `elsewhere`.
+ * figure can break a figure rule.
  */
 export const verdictOf = (
   bars: ReadonlyArray<BarRow>,
   measured: Measured,
   figures = true,
-  elsewhere: ReadonlyMap<CheckId, string> = new Map(),
 ): Verdict => {
   const checks = bars.map((row): CheckVerdict => {
     const base = { id: row.id, bar: barText(row.bar), source: row.source };
     const samples = measured[row.id];
     if (!figures && !FRAME_CHECKS.has(row.id) && samples.length === 0)
       return { ...base, pass: true, value: 'no figure', at: 'no figures' };
-    const away = Option.filter(
-      Option.fromUndefinedOr(elsewhere.get(row.id)),
-      () => samples.length === 0,
-    );
-    if (Option.isSome(away)) return { ...base, pass: true, value: 'elsewhere', at: away.value };
     const unread = (at: string): CheckVerdict => ({ ...base, pass: false, value: 'unread', at });
     return Option.match(Option.fromUndefinedOr(samples.find((s) => Option.isNone(s.value))), {
       onSome: (s) => unread(s.at),

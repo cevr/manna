@@ -27,10 +27,7 @@ import {
   CAST,
   type Cast,
   drawnCellOf,
-  headsOf,
-  loadFigures,
   sha256,
-  sharesOf,
   sheetDir,
   sheetPalette,
   splitRulesOf,
@@ -54,7 +51,7 @@ import {
   stepSamples,
 } from './measures.ts';
 import { type Measured, one, type Verdict, verdictOf, verdictText } from './verdict.ts';
-import { wholeFigures } from './whole.ts';
+import { seenHeightOf } from './rows.ts';
 
 /** verdict.json: the verdict as the run judged it, two-space indented. */
 const VerdictJson = Schema.fromJsonString(
@@ -167,13 +164,19 @@ const firstLaunch = Effect.fn('StorybookVerify.firstLaunch')(function* (
       const stored = byName.get(name);
       const posed = p.frame.figures.find((x) => x.name === name);
       if (!stored || !posed) return;
+      const render = yield* decoded(png, `${name} ${file}`);
+      const read = readFigure(render, lit.get(name) ?? []);
       reads.push({
         frame: p.index,
         name,
         cell: posed.cell,
         zoom: p.frame.camera.zoom ** (1 / stored.layer.z),
         squashed: posed.sx !== 1 || posed.sy !== 1,
-        read: readFigure(yield* decoded(png, `${name} ${file}`), lit.get(name) ?? []),
+        read,
+        seen: Option.flatMap(
+          Option.liftPredicate(render, () => !read.whole),
+          (r) => seenHeightOf(shot, p.frame, posed, stored, r),
+        ),
       });
     }),
   );
@@ -377,35 +380,17 @@ const infoOf = (figures: ReadonlyArray<StoredFigure>): ReadonlyArray<string> =>
     }),
   );
 
-/** Each figure that lies whole in some frame of another shot of the scene (`siblings`), by name: the first such shot's id. */
-const wholeInSiblings = Effect.fn('StorybookVerify.wholeInSiblings')(function* (
-  siblings: ReadonlyArray<Shot>,
-  cast: Cast,
-) {
-  const found = yield* Effect.forEach(siblings, (shot) =>
-    Effect.map(loadFigures(cast, shot), (figures) =>
-      [...wholeFigures(shot, figures, headsOf(figures), sharesOf(figures))].map(
-        (name) => [name, shot.id] as const,
-      ),
-    ),
-  );
-  return new Map(found.flat().toReversed());
-});
-
 /**
  * One verify run of `shot`: render every `every`-th frame (colour and each
  * figure alone) in one page launch, again in a second, measure, judge every
  * bar, and write `verdict.md`, `verdict.json`, `manifest.json`,
- * `contact.png`, `shot.mp4`, `frames/` and `figures/` under `out`. A figure
- * the frame cuts in every frame is read for render-height in the first of
- * `siblings` (the other shots of its scene) the same figure lies whole in.
+ * `contact.png`, `shot.mp4`, `frames/` and `figures/` under `out`.
  */
 export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
   shot: Shot,
   out: string,
   every: number,
   cast: Cast = CAST,
-  siblings: ReadonlyArray<Shot> = [],
 ) {
   const fs = yield* FileSystem.FileSystem;
   yield* fs.remove(out, { recursive: true, force: true });
@@ -439,22 +424,10 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
     shot.headPx,
   );
   const drawn = figures.length > 0;
-  const whole = yield* wholeInSiblings(siblings, cast);
-  const elsewhere = new Map(
-    figures.flatMap((f) =>
-      Option.toArray(
-        Option.map(
-          Option.fromUndefinedOr(whole.get(f.figure.name)),
-          (id) => [f.figure.name, id] as const,
-        ),
-      ),
-    ),
-  );
-  const heightCut = heightInfo(first.reads, elsewhere);
   const info = [
     ...infoOf(figures),
     ...scaleInfo(scale),
-    ...heightCut,
+    ...heightInfo(first.reads),
     ...stores.proportions.flatMap(proportionInfo),
     ...[NO_FIGURES].filter(() => !drawn),
   ];
@@ -467,7 +440,7 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
     scale: scale.samples,
     'one-sheet': figureBar(stores.oneSheet),
     light: lightSamples(first.reads),
-    'render-height': heightSamples(first.reads, elsewhere),
+    'render-height': heightSamples(first.reads),
     determinism: [
       one(
         `${first.hashes.length} renders, two launches`,
@@ -475,19 +448,7 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
       ),
     ],
   };
-  const verdict: Verdict = verdictOf(
-    BARS,
-    measured,
-    drawn,
-    new Map(
-      [
-        [
-          'render-height',
-          `every figure cut here, read whole in ${[...new Set(elsewhere.values())].join(', ')}`,
-        ] as const,
-      ].filter(() => heightCut.length > 0),
-    ),
-  );
+  const verdict: Verdict = verdictOf(BARS, measured, drawn);
   const manifest = yield* Schema.encodeEffect(ManifestJson)({
     shot: shot.id,
     head: yield* gitHead,
