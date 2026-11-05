@@ -96,6 +96,10 @@ const TOUR: readonly Command[] = [
   { _tag: 'Next' },
   { _tag: 'Say', said: 'refused', write: 'lands' },
   { _tag: 'Relaunch', launch: 'healthy' },
+  { _tag: 'Batch', order: 'listen-next' },
+  { _tag: 'Relaunch', launch: 'healthy' },
+  { _tag: 'Batch', order: 'next-listen' },
+  { _tag: 'Relaunch', launch: 'healthy' },
   { _tag: 'Listen' },
   { _tag: 'Finish' },
   { _tag: 'Say', said: 'one', write: 'lands' },
@@ -506,7 +510,13 @@ const offers = (model: Model, pick: ReturnType<typeof random>): Command => {
         { _tag: 'Next' },
       ]);
     if (model.voiceOn)
-      return pick.pick<Command>([{ _tag: 'Listen' }, { _tag: 'Listen' }, { _tag: 'Next' }]);
+      return pick.pick<Command>([
+        { _tag: 'Listen' },
+        { _tag: 'Listen' },
+        { _tag: 'Next' },
+        { _tag: 'Batch', order: 'listen-next' },
+        { _tag: 'Batch', order: 'next-listen' },
+      ]);
     return { _tag: 'Next' };
   }
   if (model.screen === 'letters' || model.screen === 'alone') {
@@ -681,13 +691,12 @@ const TAPS: Readonly<
     await rig.click('Next');
   },
   Batch: async (rig, model, command, go) => {
-    model.speaks += 1;
+    const skipFirst = command._tag === 'Batch' && command.order === 'next-listen';
+    if (!skipFirst) model.speaks += 1;
     model.reading = false;
     go('letters');
-    const order =
-      command._tag === 'Batch' && command.order === 'next-listen'
-        ? ['Next', 'Listen']
-        : ['Listen', 'Next'];
+    const order = skipFirst ? ['Next', 'Listen'] : ['Listen', 'Next'];
+    count(`batch:${skipFirst ? 'next-listen' : 'listen-next'}`);
     await act(async () => order.forEach((label) => rig.press(label)));
   },
   Continue: async (rig, _, __, go) => {
@@ -812,6 +821,7 @@ describe('the root route against its model', () => {
       finish: sum(/^cmd:Finish@/u) >= 1,
       interrupt: sum(/^cmd:Interrupt@/u) >= 1,
       nextReading: sum(/^cmd:Next@hear:reading$/u) >= 1,
+      batched: sum(/^batch:listen-next$/u) >= 1 && sum(/^batch:next-listen$/u) >= 1,
       unheardLetters: sum(/^say:letters:(refused|denied|interrupted)$/u) >= 1,
       unheardAlone: sum(/^say:alone:(refused|denied|interrupted)$/u) >= 1,
       refusedWrite: sum(/^say:alone:(whole|one|several):refused$/u) >= 1,
@@ -827,6 +837,7 @@ describe('the root route against its model', () => {
       finish: true,
       interrupt: true,
       nextReading: true,
+      batched: true,
       unheardLetters: true,
       unheardAlone: true,
       refusedWrite: true,

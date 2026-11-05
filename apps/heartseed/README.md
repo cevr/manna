@@ -204,7 +204,10 @@ button and the Georgia verse of the prototype):
    speaks without a tap. While it reads, the words spoken are in ink and
    the voice's current range is `aria-selected`. A reading that ends
    `finished` goes on by itself; any other ending leaves the words whole
-   and offers `Listen` again. `Next` stops a reading under way and goes on.
+   and offers `Listen` again. `Next` stops the voice (`Voice.stop`, which
+   does nothing when no reading is under way, so a reading started a moment
+   before the screen drew it stops too) and goes on; a `Listen` tapped after
+   it reads nothing.
    With the voice's stored switch off there is no `Listen`; the first
    minute never writes the switch.
 2. `Say it with help`: each word's first letter or number alone, the rest

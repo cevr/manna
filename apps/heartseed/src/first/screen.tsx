@@ -16,7 +16,7 @@
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Match, Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 import passage from 'virtual:heartseed-passage';
@@ -198,11 +198,16 @@ export function FirstMinute({ onContinue }: { readonly onContinue: () => void })
   const { phase } = flow;
   const reading = Option.exists(voice, isActive);
   const voiceOn = Option.exists(voice, (view) => view.enabled);
+  /** Set at Next: the skip stops the voice whatever the last frame drew of it, and a Listen tapped after it, before the frame that leaves hear, reads nothing. */
+  const skipped = useRef(false);
   const onNext = () => {
-    if (reading) onHush();
+    skipped.current = true;
+    onHush();
     setHeld((now) => step(now, { _tag: 'Next' }));
   };
-  const onRead = () => onListen();
+  const onRead = () => {
+    if (!skipped.current) onListen();
+  };
   return (
     <ScrollView
       style={look.screen}
