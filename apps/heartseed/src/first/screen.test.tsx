@@ -7,8 +7,10 @@
  * less its 11th word) and a voice source that records its calls and sends
  * the events the test gives it. Every frame (each DOM mutation batch) is
  * read: a frame before the garden's read shows no heading and no button,
- * and no first-minute frame names a stage outside Planted. It counts words
- * without printing one.
+ * and no first-minute frame names a stage outside Planted. The letters
+ * phase shows each letter in Today's cue ink at AA on its ground, at rest
+ * and while listening, and the hear phase's words not yet read keep the
+ * mute. It counts words without printing one.
  */
 
 import { RegistryProvider } from '@effect/atom-react';
@@ -25,6 +27,7 @@ import { Chime, type Growth } from '../garden';
 import { sourceWords } from '../matcher/words';
 import { Haptics } from '../sayit';
 import { store } from '../store';
+import { AA, contrastOf } from '../test/contrast';
 import { device } from '../test/one';
 import { VoiceSource, type VoiceEvent } from '../voice';
 import { wordSpans } from '../voice/reading';
@@ -34,6 +37,10 @@ const SWITCH = 'heartseed/voice/enabled';
 const WORDS = sourceWords(passage.text);
 const SPANS = wordSpans(passage.text);
 const INK = 'rgba(6, 79, 110, 1.00)';
+/** Today's cue ink, `#56656d`: the first minute's letters are seen in it. */
+const CUE = 'rgba(86, 101, 109, 1.00)';
+/** The mute, `#7d8d95`: the hear phase's words not yet read and the reference keep it. */
+const MUTE = 'rgba(125, 141, 149, 1.00)';
 const HEADINGS = ['Hear it', 'Say it with help', 'Say it alone', 'Planted', 'Today'];
 const CLAIM = /\b(seeds?|planted|plants?|grew|growth|stages?)\b/iu;
 
@@ -61,11 +68,14 @@ const voiceStandIn = () => {
 };
 
 /** A launch: the root over the device's disk as it stands, built once `held` resolves. */
-const mount = async (held: Promise<void> = Promise.resolve()) => {
+const mount = async (
+  held: Promise<void> = Promise.resolve(),
+  source = scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 1 })),
+) => {
   const voice = voiceStandIn();
   const chimes: Growth[] = [];
   const layer = appLayer({
-    source: scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 1 })),
+    source,
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
     store: Layer.unwrap(
       Effect.as(
@@ -166,6 +176,24 @@ const mount = async (held: Promise<void> = Promise.resolve()) => {
 
 const recalls = () => [...device.disk.keys()].filter((key) => key.startsWith(PREFIX));
 
+/** Each word's seen letter in the letters phase: the one part of its node not hidden from the screen reader, none when the word is not shown in letters. */
+const lettersIn = (host: Element) =>
+  WORDS.flatMap((_, index) => {
+    const word = host.querySelector(`[data-testid="word-${index}"]`);
+    const seen = [...(word?.children ?? [])].filter((part) => !part.hasAttribute('aria-hidden'));
+    return seen.length === 1 && seen[0] !== undefined ? [seen[0]] : [];
+  });
+
+/** The letters' ink and contrast, counted: how many are seen, in the cue's ink, and at AA on the ground behind them. */
+const lettersLook = (host: Element) => {
+  const letters = lettersIn(host);
+  return {
+    letters: letters.length,
+    cue: letters.filter((letter) => getComputedStyle(letter).color === CUE).length,
+    aa: letters.filter((letter) => contrastOf(letter) >= AA).length,
+  };
+};
+
 describe('the first minute', () => {
   it('on a fresh install: hears the verse lit word by word, says it with first letters keeping nothing, says it alone and plants one seed, then Continue opens Today at a seed, as does the next launch', async () => {
     device.launch([]);
@@ -225,6 +253,32 @@ describe('the first minute', () => {
       1,
     ]);
     await next.leave();
+  });
+
+  it('shows every letter of the letters phase in Today’s cue ink at AA on its ground, at rest and while its recital listens, while the hear phase’s words not yet read and the reference keep the mute', async () => {
+    device.launch([]);
+    const open = scriptedSource([{ at: 600_000, final: false, runs: [] }]);
+    const first = await mount(Promise.resolve(), open);
+    expect(await first.until(() => first.heading() === 'Hear it')).toBe(true);
+    const reference = first.host.querySelector('[data-testid="reference"]');
+    expect(reference === null ? null : getComputedStyle(reference).color).toBe(MUTE);
+    await first.click('Listen');
+    await first.send({ kind: 'range', location: SPANS[0]?.start ?? 0, length: 1 });
+    expect(await first.until(() => first.inked() === 1)).toBe(true);
+    const unread = WORDS.filter((_, index) => {
+      const node = first.word(index);
+      return index > 0 && node !== null && getComputedStyle(node).color === MUTE;
+    }).length;
+    expect(unread).toBe(WORDS.length - 1);
+    await first.send({ kind: 'finish', location: 0, length: 0 });
+    expect(await first.until(() => first.heading() === 'Say it with help')).toBe(true);
+    const all = { letters: WORDS.length, cue: WORDS.length, aa: WORDS.length };
+    expect(lettersLook(first.host)).toEqual(all);
+    await first.click('Say it');
+    expect(await first.until(() => first.buttons().includes('Listening'))).toBe(true);
+    expect(lettersLook(first.host)).toEqual(all);
+    expect(reference === null ? null : getComputedStyle(reference).color).toBe(MUTE);
+    await first.leave();
   });
 
   it('with the voice off: offers no Listen and never speaks, and Next goes on', async () => {

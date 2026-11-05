@@ -8,7 +8,7 @@
 
 import { Option } from 'effect';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View, type TextStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -23,7 +23,7 @@ import type { PlantStage } from '../field';
 import type { Cue, Mark } from '../matcher';
 import { wordOf, type Ink, type ShownWord } from './screen';
 
-/** Palette A (Wada No. 167) over the prototype's tokens; `cue` is the mute darkened so a word Today shows as its cue reads at AA contrast (4.5:1) on the ground. */
+/** Palette A (Wada No. 167) over the prototype's tokens; `cue` is the mute darkened so a word shown as its cue, on Today or in the first minute's letters, reads at AA contrast (4.5:1) on the ground. */
 export const color = {
   ground: '#eee8e1',
   card: '#f7f3ee',
@@ -104,16 +104,8 @@ export function Word({
 
 const LETTER = /[\p{L}\p{N}]/u;
 
-/** A word in letters before it is said: its first letter or number as written, in the first minute's muted ink unless `ink` is given, the rest laid out unseen, and only the letter named to the screen reader. */
-export function Initial({
-  index,
-  word,
-  ink = look.cue,
-}: {
-  readonly index: number;
-  readonly word: string;
-  readonly ink?: TextStyle;
-}) {
+/** A word in letters before it is said: its first letter or number as written, in the cue's ink (AA on the ground), the rest laid out unseen, and only the letter named to the screen reader. */
+export function Initial({ index, word }: { readonly index: number; readonly word: string }) {
   const at = Math.max(0, word.search(LETTER));
   const cue = word.slice(at, at + 1);
   const before = word.slice(0, at);
@@ -125,7 +117,7 @@ export function Initial({
           {before}
         </Text>
       )}
-      <Text style={ink}>{cue}</Text>
+      <Text style={look.cueInk}>{cue}</Text>
       {after !== '' && (
         <Text aria-hidden style={look.unseenPart}>
           {after}
@@ -160,7 +152,7 @@ export function Unsaid({
         </Text>
       );
     case 'initials':
-      return <Initial index={index} word={word} ink={look.cueInk} />;
+      return <Initial index={index} word={word} />;
     case 'none':
       return <Word shown={wordOf(pendingAt(index), word)} onPeek={onPeek} />;
   }
@@ -260,7 +252,6 @@ export const look = StyleSheet.create({
   slot: { height: 30, marginBottom: 6, borderBottomWidth: 2, borderBottomColor: color.soft },
   unsaid: { color: 'transparent', lineHeight: 30 },
   peeked: { color: color.miss },
-  cue: { color: color.mute },
   cueInk: { color: color.cue },
   unseenPart: { color: 'transparent' },
   mark: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },

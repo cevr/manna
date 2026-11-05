@@ -34,6 +34,7 @@ import { Chime } from '../garden';
 import { Haptics, type Recall } from '../sayit';
 import { store } from '../store';
 import { voiceSource } from '../voice/source';
+import { AA, contrastOf } from './contrast';
 import { fieldRule, heldOn, verseNumberRule, type ModelPlantStage } from './field-model';
 import { keyOf, PREFIX } from './garden-model';
 import { device } from './one';
@@ -149,36 +150,6 @@ export const readField = (host: Element) => {
     strays,
     faint: [...new Set(faint)],
   };
-};
-
-/** WCAG 2's AA minimum contrast for normal text. */
-const AA = 4.5;
-
-/** A computed colour's channels and alpha. */
-const channels = (css: string) => {
-  const values = (css.match(/[\d.]+/g) ?? []).map(Number);
-  const [r = 0, g = 0, b = 0, a = values.length >= 3 ? 1 : 0] = values;
-  return { rgb: [r, g, b], a };
-};
-
-/** WCAG 2's relative luminance of sRGB channels 0-255. */
-const luminance = (rgb: readonly number[]) => {
-  const [r = 0, g = 0, b = 0] = rgb.map((channel) => {
-    const c = channel / 255;
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-
-/** The contrast of a text node's computed ink against the nearest opaque background behind it; 0 when it has none. */
-export const contrastOf = (node: Element) => {
-  let ground: Element | null = node;
-  while (ground !== null && channels(getComputedStyle(ground).backgroundColor).a < 1)
-    ground = ground.parentElement;
-  if (ground === null) return 0;
-  const ink = luminance(channels(getComputedStyle(node).color).rgb);
-  const back = luminance(channels(getComputedStyle(ground).backgroundColor).rgb);
-  return (Math.max(ink, back) + 0.05) / (Math.min(ink, back) + 0.05);
 };
 
 /** The field frame the rule gives over the disk as it stands. */
