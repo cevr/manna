@@ -28,6 +28,7 @@ import { drawScaleOf } from './kit.ts';
 import { TABLE } from '../plates/plates.ts';
 import { BABY_MOTHER, bottleSetDown, TABLE_TOP_PX } from './shots/cold.ts';
 import { HEAD, TABLE_TOP } from './shots/courtyard.ts';
+import { TABLE_CLOSE_BOX } from './plates/table-close.ts';
 import { CELLS as LEAD_TABLE_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
 import LEAD_TABLE_RECORD from '../../../library/cast/lead-feast/shot-sheets/iio-table/record.json';
 import { MEASURED } from './palettes.ts';
@@ -596,6 +597,74 @@ describe("In Its Order's staging", () => {
     });
     expect(dropped).toEqual([]);
   });
+
+  test('paints the table cold-ouch shows at 1.5× its own px or less: at every frame the last plate of the table’s plane that covers the whole frame there is enlarged at most 1.5×, as a figure is (owner, critique 2 finding 7: the whole table at the close’s 3.3–3.47× was soft beside the crisp figures and scroll)', () => {
+    const shot = placed.find((p) => p.shot.id === 'cold-ouch')?.shot;
+    const tableLayer = shot?.layers.find((l) => l.name === 'table');
+    const misses = (shot ? timesOf(shot) : []).flatMap((t, frame) => {
+      if (!shot || !tableLayer) return [`frame ${frame}: no table`];
+      const plane = planeOf(shot.size, tableLayer.z, cameraAt(shot.camera, t));
+      const [left, top] = [-plane.ox / plane.scale, -plane.oy / plane.scale];
+      const [right, bottom] = [
+        (shot.size.width - plane.ox) / plane.scale,
+        (shot.size.height - plane.oy) / plane.scale,
+      ];
+      const cover = tableLayer.items.findLast(
+        (item): item is Plate =>
+          item._tag === 'Plate' &&
+          plateAt(item, t).alpha > 0 &&
+          item.place.x <= left &&
+          item.place.y <= top &&
+          item.place.x + item.place.width >= right &&
+          item.place.y + item.place.height >= bottom,
+      );
+      if (!cover) return [`frame ${frame}: no plate covers the frame`];
+      const enlarged = (plane.scale * cover.place.width) / (cover.painting?.size[0] ?? 1);
+      if (enlarged <= 1.5) return [];
+      return [`frame ${frame}: ${cover.file} enlarged ${enlarged.toFixed(2)}×`];
+    });
+    expect(misses).toEqual([]);
+  });
+
+  it.effect(
+    'lays the close’s table plate exactly over the table it paints again: its alpha, brought to the box’s size, agrees with `table.png`’s in the box (overlap over union 0.95 or more) and its mean colour lies within 12 of the box’s, channel by channel',
+    () =>
+      Effect.gen(function* () {
+        const { x, y, width, height } = TABLE_CLOSE_BOX;
+        const read = (input: Promise<Buffer>) =>
+          Effect.promise(() => input.then((b) => sharp(b).ensureAlpha().raw().toBuffer()));
+        const theirs = yield* read(
+          sharp(`${import.meta.dir}/../plates/table.png`)
+            .extract({ left: x, top: y, width, height })
+            .png()
+            .toBuffer(),
+        );
+        const mine = yield* read(
+          sharp(`${import.meta.dir}/plates/table-close.png`)
+            .resize(width, height)
+            .png()
+            .toBuffer(),
+        );
+        const opaque = (b: Buffer, q: number) => (b[q * 4 + 3] ?? 0) > 127;
+        const counts = { both: 0, either: 0 };
+        const sums = { mine: [0, 0, 0], theirs: [0, 0, 0] };
+        for (let q = 0; q < width * height; q++) {
+          const [a, b] = [opaque(mine, q), opaque(theirs, q)];
+          if (a || b) counts.either++;
+          if (!a || !b) continue;
+          counts.both++;
+          for (const c of [0, 1, 2]) {
+            sums.mine[c] = (sums.mine[c] ?? 0) + (mine[q * 4 + c] ?? 0);
+            sums.theirs[c] = (sums.theirs[c] ?? 0) + (theirs[q * 4 + c] ?? 0);
+          }
+        }
+        const apart = [0, 1, 2].map(
+          (c) => Math.abs((sums.mine[c] ?? 0) - (sums.theirs[c] ?? 0)) / Math.max(1, counts.both),
+        );
+        expect(counts.both / Math.max(1, counts.either)).toBeGreaterThanOrEqual(0.95);
+        expect(apart.filter((d) => d > 12)).toEqual([]);
+      }),
+  );
 
   test('hands the bottle off with no gap and no overlap: at every frame of cold-letter exactly one of his hand and the table’s plate shows it, as at every frame of generated set-downs (start, length, frame phase), and a plate set at 0.8 of the turn leaves a gap (round 3, M4)', () => {
     const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;

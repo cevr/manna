@@ -1,6 +1,7 @@
 import type { Figure, Layer } from '../../../../library/storybook/shot.ts';
 import { DISTANCE, FAR_TABLE, NEAR, SKY, TABLE } from '../../plates/plates.ts';
-import { layer, plateOf, seat } from '../kit.ts';
+import { layer, plateOf, seat, STORY_PLATES } from '../kit.ts';
+import { TABLE_CLOSE, TABLE_CLOSE_BOX } from '../plates/table-close.ts';
 
 /**
  * A grown head (crown to collar) on the table's plane in the courtyard's
@@ -22,6 +23,14 @@ export const backdrop = (): ReadonlyArray<Layer> => [
 
 /** The long table in front, on the table's plane: every chin at the table sits above its top (frame y 915 at its highest). */
 export const table = () => plateOf('table.png', TABLE);
+
+/** The long table's middle as cold-ouch's close shows it: `table.png`'s `TABLE_CLOSE_BOX` painted again at 2.4 times its size, laid exactly over that box, so the close enlarges it under 1.5×. */
+export const tableClose = () =>
+  plateOf('table-close.png', TABLE_CLOSE, {
+    at: [TABLE.at[0] + TABLE_CLOSE_BOX.x, TABLE.at[1] + TABLE_CLOSE_BOX.y],
+    scale: TABLE_CLOSE_BOX.width / TABLE_CLOSE.size[0],
+    dir: STORY_PLATES,
+  });
 
 /** The long table's top in its plane's px: its back edge at 961 and its front edge at 985, as `table.png`'s wood reads 100 px up. */
 export const TABLE_TOP = { x: 0, y: 961, width: 1920, height: 24 } as const;
