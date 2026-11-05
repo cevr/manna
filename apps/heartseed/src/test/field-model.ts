@@ -272,11 +272,11 @@ const spacesOf = (next: () => number) =>
 /** A reference spelled as one of the screens' own words (`SCREEN_LABELS`): as it is, or with spaces of any kind before, after, around or within it. */
 export const labelReference = (next: () => number): string => {
   const label = pickOf(next, SCREEN_LABELS);
-  const shape = below(next, 5);
-  if (shape === 0) return label;
-  if (shape === 1) return `${spacesOf(next)}${label}`;
-  if (shape === 2) return `${label}${spacesOf(next)}`;
-  if (shape === 3) return `${spacesOf(next)}${label}${spacesOf(next)}`;
+  const where = below(next, 5);
+  if (where === 0) return label;
+  if (where === 1) return `${spacesOf(next)}${label}`;
+  if (where === 2) return `${label}${spacesOf(next)}`;
+  if (where === 3) return `${spacesOf(next)}${label}${spacesOf(next)}`;
   return label.replaceAll(' ', () => spacesOf(next));
 };
 
