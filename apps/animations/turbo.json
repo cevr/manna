@@ -98,8 +98,9 @@
         "!src/library/cast/**/*.test.*",
         "!src/library/storybook/*.test.*",
         "!src/library/storybook/shots/**/*.test.*",
-        "!src/library/storybook/verify/*.test.*",
-        "src/library/storybook/verify/height.test.ts"
+        "!src/library/storybook/verify/measures.test.ts",
+        "!src/library/storybook/verify/verdict.test.ts",
+        "!src/library/storybook/verify/height-shrink.test.ts"
       ]
     },
     "test:storybook-height-shrink": {
@@ -116,8 +117,9 @@
         "!src/library/cast/**/*.test.*",
         "!src/library/storybook/*.test.*",
         "!src/library/storybook/shots/**/*.test.*",
-        "!src/library/storybook/verify/*.test.*",
-        "src/library/storybook/verify/height-shrink.test.ts"
+        "!src/library/storybook/verify/measures.test.ts",
+        "!src/library/storybook/verify/verdict.test.ts",
+        "!src/library/storybook/verify/height.test.ts"
       ]
     },
     "test:storybook-lines": {
