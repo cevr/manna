@@ -1,13 +1,15 @@
 /**
- * A defect for the height acceptance to catch, preloaded into a verify run
- * (`bun --preload`): cold-ouch's lead breathes 4 % taller from 1.4 s, the
- * render growing while its key holds (verifier round 2, M3). Fails the run
- * at load when the line it changes is gone, so the defect never silently
- * stops being made.
+ * The defects for the height acceptance to catch, preloaded into a verify
+ * run (`bun --preload`), each a render growing or shrinking while its key
+ * holds: cold-ouch's lead breathes 4 % taller from 1.4 s (verifier round 2,
+ * M3), and the `height-baby` shot's baby (`height-baby.verify.ts`) breathes
+ * `HEIGHT_BABY_FACTOR` times as tall from 1 s (verifier round 1, M1). Fails
+ * the run at load when the line it changes is gone, so a defect never
+ * silently stops being made.
  */
 const FROM = '      ...poseAt(f, t),';
 const TO =
-  "      ...poseAt(f, t), breath: poseAt(f, t).breath * (1 + 0.04 * Number(shot.id === 'cold-ouch' && f.name === 'lead' && t > 1.4)),";
+  "      ...poseAt(f, t), breath: poseAt(f, t).breath * (1 + 0.04 * Number(shot.id === 'cold-ouch' && f.name === 'lead' && t > 1.4)) * ([1, Number(process.env.HEIGHT_BABY_FACTOR ?? 1)][Number(shot.id === 'height-baby' && t >= 1)] ?? 1),";
 
 Bun.plugin({
   name: 'height-growth',
