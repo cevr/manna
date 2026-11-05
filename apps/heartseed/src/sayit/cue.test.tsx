@@ -7,7 +7,8 @@
  * planted, its first letters at a seed, nothing at a blade; a recital said
  * under that cue, a recital not heard, and an unread garden (whole, said
  * with nothing). It catches a word that shows more than its cue (letters
- * whole, the verse whole after an unheard recital), a recital said under
+ * whole, the verse whole after an unheard recital, the verse in the pending
+ * frame of a held launch), a recital said under
  * another cue than the screen shows, and a run of the verse outside the
  * word nodes. It misses the stage rule itself (`src/ladder.property.test.ts`).
  */
@@ -17,7 +18,16 @@ import { Option } from 'effect';
 import passage from 'virtual:heartseed-passage';
 
 import { recite, scriptedSource } from '../dictation/script';
-import { BLADE, failing, mount, NOT_PLANTED, passageAt, SEED, WORDS } from '../test/today-rig';
+import {
+  BLADE,
+  failing,
+  heldDisk,
+  mount,
+  NOT_PLANTED,
+  passageAt,
+  SEED,
+  WORDS,
+} from '../test/today-rig';
 
 /** Each stage the passage can be read at on the disk, and the cue Today shows it under. */
 const LADDER = [
@@ -58,6 +68,24 @@ describe('Today’s cue, by the stage the garden reads', () => {
       ]).toEqual([null, WORDS.length, 0, []]);
       await today.leave();
     });
+
+  it('shows no word and no run of the verse in the pending frame of a held launch, then the letters of a seed once the read lands', async () => {
+    const held = heldDisk(SEED);
+    const today = await mount(scriptedSource(recite(passage.text, {})), held.disk, {
+      cue: 'initials',
+    });
+    expect(await today.until(() => today.one('[data-testid="reference"]') !== null)).toBe(true);
+    expect([
+      today.one('[data-testid="passage"]'),
+      today.all('[data-testid^="word-"]').length,
+      today.runsElsewhere(),
+      today.button().length,
+    ]).toEqual([null, 0, 0, 0]);
+    held.release();
+    expect(await today.until(() => (today.unsaid.get('initials') ?? 0) >= WORDS.length)).toBe(true);
+    expect([today.one('[data-testid="passage"]'), today.runsElsewhere()]).toEqual([null, 0]);
+    await today.leave();
+  });
 
   it('shows the verse whole in an unread garden and says it with nothing: a recital whole is suggested Good and written, with no stage', async () => {
     const today = await mount(

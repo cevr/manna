@@ -280,10 +280,11 @@ export const passageAt = (count: number): Recall[] =>
     startedAt: OTHER.startedAt + (n + 1) * 86_400_000,
   }));
 
-/** What a mount's store holds and does: its recalls, and whether every listing fails, leaving the garden unread. */
+/** What a mount's store holds and does: its recalls, whether every listing fails, leaving the garden unread, and a promise each listing waits on first, holding the launch in its pending frame. */
 export interface Disk {
   readonly recalls: readonly Recall[];
   readonly unread: boolean;
+  readonly held?: Promise<void>;
 }
 
 /** Another verse's recall alone: the passage is not planted. */
@@ -313,27 +314,43 @@ const recordingStore = (kept: Recall[], disk: Disk) => {
       remove: (key) => Effect.sync(() => void backing.delete(key)),
       clear: Effect.sync(() => backing.clear()),
       size: Effect.sync(() => backing.size),
-      keys: Effect.suspend(() => {
-        if (disk.unread)
-          return Effect.fail(
-            new KeyValueStore.KeyValueStoreError({ message: 'keys', method: 'keys' }),
-          );
-        return Effect.succeed([...backing.keys()]);
-      }),
+      keys: Effect.andThen(
+        disk.held === undefined
+          ? Effect.void
+          : Effect.promise(() => disk.held ?? Promise.resolve()),
+        Effect.suspend(() => {
+          if (disk.unread)
+            return Effect.fail(
+              new KeyValueStore.KeyValueStoreError({ message: 'keys', method: 'keys' }),
+            );
+          return Effect.succeed([...backing.keys()]);
+        }),
+      ),
     }),
   );
 };
 
+/** `disk` with its listings held until `release`, so the launch shows its pending frame until then. */
+export const heldDisk = (disk: Disk) => {
+  const gate = Promise.withResolvers<void>();
+  return { disk: { ...disk, held: gate.promise }, release: () => gate.resolve() };
+};
+
+/** The leave of each Today still mounted: the next mount leaves any a test failed before leaving. */
+const mounted = new Set<() => Promise<void>>();
+
 /**
  * Today over `source` and `disk`, under a registry that keeps living after
  * Today leaves, as the app's does. `rest.cue` is the cue the test expects
- * Today's words under while no recital is shown.
+ * Today's words under while no recital is shown. It first leaves any Today
+ * a failed test left mounted, so a failure stays a failure of its own test.
  */
 export const mount = async (
   source: Layer.Layer<DictationSource>,
   disk: Disk = NOT_PLANTED,
   rest: { readonly cue: Cue } = { cue: 'full' },
 ) => {
+  for (const left of [...mounted]) await left();
   const ticks = { n: 0 };
   const kept: Recall[] = [];
   const layer = appLayer({
@@ -418,7 +435,11 @@ export const mount = async (
     });
   const radios = () => all('[role="radiogroup"][aria-label="Grade"] [role="radio"]');
   const checked = () => radios().map((radio) => radio.getAttribute('aria-checked'));
-  const leave = () => act(async () => root.unmount());
+  const leave = async () => {
+    if (!mounted.delete(leave)) return;
+    await act(async () => root.unmount());
+  };
+  mounted.add(leave);
   /** The cue of the recital Say it's view holds, none before one. */
   const recitalCue = () =>
     Option.flatMap(MutableRef.get(latest), (view) =>
