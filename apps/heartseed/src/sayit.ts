@@ -2,8 +2,9 @@
  * Say it: the app's one recital, run over the app's one `Dictation`. A
  * recital (`recite`) starts one of the passage under a cue, kept or not, or
  * finishes the one under way; it never replaces one. Today's press is a
- * kept recital with no cue; the first minute's letters recital is cued and
- * keeps nothing. Each word the screen newly sees lit gives one soft haptic
+ * kept recital under the cue the garden's ladder gives the passage (none
+ * when the garden is unread, `TODAY`); the first minute's letters recital is
+ * cued and keeps nothing. The view carries the cue of the recital shown. Each word the screen newly sees lit gives one soft haptic
  * tick, and a recital whose last word lights finishes itself. A recital
  * that ends `finished` takes the matcher's suggested grade as the reader's
  * choice, which the reader can change; for a kept recital, each change of
@@ -66,11 +67,12 @@ export class Haptics extends Context.Service<Haptics, { readonly tick: Effect.Ef
   'heartseed/sayit/Haptics',
 ) {}
 
-/** What Today shows of Say it: the latest Dictation view it has seen, when the recital started, and the grade chosen for it. */
+/** What Today shows of Say it: the latest Dictation view it has seen, when the recital started, the grade chosen for it, and the cue it is said under (`none` before the first recital). */
 export interface SayItView {
   readonly dictation: DictationView;
   readonly startedAt: OrNull<number>;
   readonly choice: OrNull<Grade>;
+  readonly cue: Cue;
 }
 
 /** How a recital is said: the cue the matcher grades it under, and whether its recall is handed to `Recalls`. */
@@ -79,7 +81,7 @@ export interface Recital {
   readonly keep: boolean;
 }
 
-/** Today's recital: no cue, and kept. */
+/** Today's recital when the garden is unread: no cue, and kept. */
 export const TODAY: Recital = { cue: 'none', keep: true };
 
 export class SayIt extends Context.Service<
@@ -177,7 +179,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
       /** The time of a press on the service's own clock, whoever runs the press. */
       const now = Effect.provideContext(Clock.currentTimeMillis, context);
       const held = MutableRef.make<Held>({
-        view: { dictation: yield* dictation.view, startedAt: ABSENT, choice: ABSENT },
+        view: { dictation: yield* dictation.view, startedAt: ABSENT, choice: ABSENT, cue: 'none' },
         recital: { _tag: 'None' },
         started: 0,
         endings: 0,
@@ -296,7 +298,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
             started: now.started + 1,
             recital: { _tag: 'Open', startedAt, keep: how.keep },
             shown: ABSENT,
-            view: { dictation: current, startedAt, choice: ABSENT },
+            view: { dictation: current, startedAt, choice: ABSENT, cue: how.cue },
           }));
           yield* dictation.start(passage.text, how.cue);
         });

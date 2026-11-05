@@ -23,7 +23,9 @@
  * first; only once the write lands does the view change, and then a recital
  * that grows its verse sounds the chime, once in the launch, at its first
  * keep that grows it. Planting never sounds. An unread garden still writes
- * each keep, but its view stays unread and it never sounds.
+ * each keep, but its view stays unread and it never sounds. `settled` reads
+ * the view behind every keep called before it, so a recital cued from it is
+ * cued from the history those keeps leave.
  */
 
 import {
@@ -192,6 +194,8 @@ export class Garden extends Context.Service<
   Garden,
   {
     readonly view: Effect.Effect<GardenView>;
+    /** The view once every keep handed to the garden before it has landed or failed: what a recital about to start is said after. */
+    readonly settled: Effect.Effect<GardenView>;
     readonly changes: Stream.Stream<GardenView>;
   }
 >()('heartseed/garden/Garden') {}
@@ -357,10 +361,13 @@ export const layer: Layer.Layer<Garden | Recalls, never, KeyValueStore.KeyValueS
         yield* sound(after, recall);
       });
 
+      const view = Effect.sync(() => MutableRef.get(held));
+
       return Context.make(
         Garden,
         Garden.of({
-          view: Effect.sync(() => MutableRef.get(held)),
+          view,
+          settled: Semaphore.withPermits(lock, 1)(view),
           changes: Stream.fromPubSub(views),
         }),
       ).pipe(

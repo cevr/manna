@@ -25,9 +25,10 @@ import passage from 'virtual:heartseed-passage';
 import { layer as dictationLayer, type DictationSource } from './dictation';
 import { recite } from './dictation/script';
 import { microphoneSource, replaySource } from './dictation/source';
-import { Garden, layer as gardenLayer, type Chime } from './garden';
+import { cueIn, Garden, layer as gardenLayer, type Chime, type GardenView } from './garden';
 import { liveChime } from './garden/chime';
-import { layer as sayItLayer, SayIt, type Grade, type Haptics, type Recital } from './sayit';
+import type { Cue } from './matcher';
+import { layer as sayItLayer, SayIt, TODAY, type Grade, type Haptics, type Recital } from './sayit';
 import { liveHaptics } from './sayit/live';
 import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
 import { store } from './store';
@@ -94,10 +95,26 @@ export const gardenView = runtime.atom(
 /** What the hear phase shows of the voice: its switch, and the reading under way or the last one's ending. */
 export const voiceView = runtime.atom(Stream.unwrap(Effect.map(Voice, (voice) => voice.changes)));
 
-/** A press of Today's button. Each command runs to its end, so a second tap never cuts off the first one's recall. */
-export const press = runtime.fn(() => Effect.flatMap(SayIt, (sayIt) => sayIt.press), {
-  concurrent: true,
+/** The cue Today's passage is said under next: the ladder's in a read garden, none in an unread one, which claims no stage. */
+export const todayCue = (view: GardenView): Cue => {
+  if (view._tag === 'Unread') return TODAY.cue;
+  return cueIn(view, passage.reference);
+};
+
+/**
+ * Today's Say it: a kept recital under the cue the garden gives once every
+ * keep handed to it before the press has landed or failed (a grade changed
+ * just before is said after), or the finish of the one under way.
+ */
+export const pressToday = Effect.gen(function* () {
+  const sayIt = yield* SayIt;
+  const garden = yield* Garden;
+  const view = yield* garden.settled;
+  yield* sayIt.recite({ cue: todayCue(view), keep: TODAY.keep });
 });
+
+/** A press of Today's button. Each command runs to its end, so a second tap never cuts off the first one's recall. */
+export const press = runtime.fn(() => pressToday, { concurrent: true });
 
 /** A press of the first minute's Say it: a recital under its cue, kept or not. */
 export const sayAs = runtime.fn(

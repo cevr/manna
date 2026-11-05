@@ -12,7 +12,7 @@
     "test:voice": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/voice.property.test.ts ./src/voice",
     "test:dictation": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/dictation.property.test.ts ./src/dictation",
     "test:sayit": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/sayit.property.test.ts ./src/sayit",
-    "test:garden": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/store.test.ts ./src/fsrs.property.test.ts ./src/garden.property.test.ts ./src/ladder.property.test.ts ./src/garden/guard.test.ts ./src/garden/sound.test.ts",
+    "test:garden": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/store.test.ts ./src/fsrs.property.test.ts ./src/garden.property.test.ts ./src/ladder.property.test.ts ./src/press.test.ts ./src/garden/guard.test.ts ./src/garden/sound.test.ts",
     "test:today": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/garden/today.test.tsx",
     "test:first": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/first/flow.test.ts ./src/first/screen.test.tsx",
     "test:root": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/first/root.test.tsx",

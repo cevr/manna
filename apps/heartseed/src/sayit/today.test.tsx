@@ -500,6 +500,7 @@ describe('Today’s Say it', () => {
       dictation: { status: 'finishing', engine: 'analyzer', verse: '', matcher: null, ended: null },
       startedAt: 0,
       choice: null,
+      cue: 'none',
     };
     expect(screenOf(Option.some(finishing))).toMatchObject({
       button: 'Listening',
@@ -515,6 +516,7 @@ describe('Today’s Say it', () => {
       },
       startedAt: 0,
       choice: null,
+      cue: 'none',
     };
     expect(screenOf(Option.some(cancelled))).toMatchObject({
       button: 'Say it',
