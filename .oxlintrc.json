@@ -765,6 +765,12 @@
       }
     },
     {
+      "files": ["**/apps/animations/src/films/in-its-order/storybook/**/*.ts"],
+      "rules": {
+        "effect/noTernary": "error"
+      }
+    },
+    {
       // Over all of packages/film and apps/animations: a variadic logger handed
       // point-free to a callback passed an index prints the index after each
       // line (effect/noPointFreeLog).

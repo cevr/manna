@@ -601,8 +601,10 @@ describe("In Its Order's staging", () => {
   test('paints the table cold-ouch shows at 1.5× its own px or less: at every frame the last plate of the table’s plane that covers the whole frame there is enlarged at most 1.5×, as a figure is (owner, critique 2 finding 7: the whole table at the close’s 3.3–3.47× was soft beside the crisp figures and scroll)', () => {
     const shot = placed.find((p) => p.shot.id === 'cold-ouch')?.shot;
     const tableLayer = shot?.layers.find((l) => l.name === 'table');
-    const misses = (shot ? timesOf(shot) : []).flatMap((t, frame) => {
-      if (!shot || !tableLayer) return [`frame ${frame}: no table`];
+    expect(shot).toBeDefined();
+    if (!shot) return;
+    const misses = timesOf(shot).flatMap((t, frame) => {
+      if (!tableLayer) return [`frame ${frame}: no table`];
       const plane = planeOf(shot.size, tableLayer.z, cameraAt(shot.camera, t));
       const [left, top] = [-plane.ox / plane.scale, -plane.oy / plane.scale];
       const [right, bottom] = [
