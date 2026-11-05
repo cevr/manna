@@ -556,7 +556,11 @@ them.
     written plainly in `src/test/session-model.ts` (ts-fsrs's due dates,
     days by their own arithmetic, zones by `Intl`), over generated gardens,
     pieces, zones, instants, absences and lengths, each case's coverage
-    held to floors.
+    held to floors; and `src/session/service.test.ts`, the session service
+    over a store in memory and a garden set by hand, under a test clock:
+    generated launches hold the stored minutes (the four texts, bad texts,
+    failed reads, refused writes, nothing written at launch) and the
+    plan's moment (Today's first `begin`, each tap) to the same model.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
