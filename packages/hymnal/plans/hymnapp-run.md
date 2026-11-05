@@ -10,7 +10,7 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | topicsdb  | initfresh  |                    |                                                                              | parked (owner: topics follow the films)                       |
 | keyfollow | worship    |                    | owner note: the playing recording follows a key change made in the hymn view | blocked: not reproduced, waits on the owner (Owner questions) |
 | selah     | reader     | .rifts/manna/selah |                                                                              |                                                               |
-| hsdaily   | hsgrow     |                    |                                                                              |                                                               |
+| hslocal   | hsgrow     |                    |                                                                              |                                                               |
 
 Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `inexact` (the 7 MIDI files whose verses do not split: 126 225 262 292 403 453 580), `decks` (syllable splits into feat/hymn-decks, last by the owner's word), `selah` (planned: after reader, see Decisions; macOS stays SwiftUI until react-native-gpui ships a real package).
 
@@ -75,6 +75,8 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 - Heartseed dictation model download (hsdictate Decided 3): the first two engines in the chain (SpeechAnalyzer with SpeechTranscriber, then DictationTranscriber) need Apple's on-device speech model, often not yet installed; may Heartseed ask iOS to download it in the background (`AssetInventory`), the recital falling through to the on-device SFSpeechRecognizer meanwhile, against the first release's "no network calls"? Recognition and the reader's voice never leave the phone. Recommended: yes. (hsdictate, asked 2026-11-04) **Answer (owner, 2026-11-04):** "Yes, ask iOS".
 
 ## Follow-ups
+
+- hsfade (`tmp/orchestrate/hymnapp/hsfade/`, merged 84d0a0c70): the first minute's own first letters are 2.82:1 on the ground (Today's are now 4.96:1): lift them in hslocal or hsdaily; one duplicated contrast helper in the tests; implementors compacted in every property-heavy unit even in five small commits (six times in all): brief one commit per agent; a live "Listening" frame is not caught while the simulator replays a recital.
 
 - hsfield (`tmp/orchestrate/hymnapp/hsfield/`, merged 6c0ea8a6d): in three Heartseed units the committed generator was narrower than the rule in round 1 though the planner's check owned the domain: have the planner hand the implementor the generator's domain as a checklist (orchestrate skill); implementors compacted in four rounds: brief property-heavy units in smaller steps; promote the verifiers' runners into shared tooling; why a tap after a growing recital was lost at the scroll's foot was never measured.
 
@@ -177,6 +179,8 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 - topicsdb (blocked on owner, 2026-10-27; `tmp/orchestrate/hymnapp/topicsdb/blocked.md`): all 40 `content/topics/*.md` are `status: draft` stubs, and the compiler builds only approved pages; the tracked `data/egw-paragraphs.db` stub has 0 rows and an old `content` column, so quote verification cannot run. A rebuild cannot make the missing topic prose. Question for the owner: author the topic pages (a pilot of a few flagship topics, owner-reviewed), or leave Topics empty for now. Recommendation: leave it parked until after Heartseed; `manna wiki topics` still answers from the Nave catalog. (topicsdb)
 
 ## Review later
+
+- hsfade, on the phone: recalls already kept on the test phone are re-read under the new help rule (an ear may read as a blade); whether a seed's letters and a blade's empty Today read well with the real voice and VoiceOver.
 
 - hsfield, on the phone: days sown by UTC day rolls over in the evening in the Americas (owner may prefer local days); the header control at the smallest width and the largest text size; the field's look against the prototype (the "verses growing" heading left out).
 
