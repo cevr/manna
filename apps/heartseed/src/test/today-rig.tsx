@@ -38,8 +38,38 @@ export const WORDS = sourceWords(passage.text);
 const GROUND = 'rgb(238, 232, 225)';
 const INK = 'rgb(6, 79, 110)';
 const MARK = 'rgb(192, 88, 63)';
-/** The muted ink a word not yet said is seen in under the full text or in letters. */
-const MUTE = 'rgb(125, 141, 149)';
+/** The cue's ink a word not yet said is seen in under the full text or in letters. */
+const CUE = 'rgb(86, 101, 109)';
+
+/** WCAG 2's AA minimum contrast for normal text, which a word shown as its cue reads at. */
+const AA = 4.5;
+
+/** A computed colour's channels and alpha. */
+const channels = (css: string) => {
+  const values = (css.match(/[\d.]+/g) ?? []).map(Number);
+  const [r = 0, g = 0, b = 0, a = values.length >= 3 ? 1 : 0] = values;
+  return { rgb: [r, g, b], a };
+};
+
+/** WCAG 2's relative luminance of sRGB channels 0-255. */
+const luminance = (rgb: readonly number[]) => {
+  const [r = 0, g = 0, b = 0] = rgb.map((channel) => {
+    const c = channel / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+/** The contrast of an element's computed text colour against the nearest opaque background painted behind it; 0 when none is. */
+const contrastOf = (node: Element) => {
+  let ground: Element | null = node;
+  while (ground !== null && channels(getComputedStyle(ground).backgroundColor).a < 1)
+    ground = ground.parentElement;
+  if (ground === null) return 0;
+  const ink = luminance(channels(getComputedStyle(node).color).rgb);
+  const back = luminance(channels(getComputedStyle(ground).backgroundColor).rgb);
+  return (Math.max(ink, back) + 0.05) / (Math.min(ink, back) + 0.05);
+};
 
 /** A computed CSS colour as `rgb(r, g, b)`, or null when it is fully transparent. */
 const opaque = (css: string) => {
@@ -133,6 +163,7 @@ const readerOf = (top: Element) => {
     const named = (said: string | null) => {
       if (said === null || said === '') return said;
       if (said === word) return 'the word';
+      if (said === initialOf(word)) return 'its initial';
       if (said === `${word}, peeked`) return 'the word, peeked';
       if (/^Missed word \d+$/.test(said)) return said;
       return `another ${said.length} characters`;
@@ -140,6 +171,9 @@ const readerOf = (top: Element) => {
     return {
       text: named(text),
       seen: seenColour(node),
+      legible: holders(node)
+        .filter(seenHere)
+        .every((holder) => contrastOf(holder) >= AA),
       seenAs: named(seenText(node)),
       hidden: unread,
       name: named(readAs()),
@@ -178,26 +212,23 @@ const initialOf = (word: string) => {
   return word.slice(at, at + 1);
 };
 
-/** How the reader meets a word not yet said under each cue other than none: whole and muted under the full text, its first letter alone in letters, the rest laid out unseen. */
+/**
+ * How the reader meets a word not yet said under each cue other than none,
+ * in the cue's ink at AA contrast on what is painted behind it: whole under
+ * the full text; under letters its exact first letter or number alone seen
+ * and named (the word itself when it is that one character), the rest laid
+ * out unseen.
+ */
 const unsaidRule = (cue: 'full' | 'initials', index: number) => {
   const word = WORDS[index] ?? '';
-  if (cue === 'full')
-    return {
-      text: 'the word',
-      seen: MUTE,
-      seenAs: 'the word',
-      hidden: false,
-      name: 'the word',
-      button: false,
-    };
-  const initial = initialOf(word);
-  const letter = initial === word ? 'the word' : `another ${initial.length} characters`;
+  const shown = cue === 'full' || initialOf(word) === word ? 'the word' : 'its initial';
   return {
     text: 'the word',
-    seen: MUTE,
-    seenAs: letter,
+    seen: CUE,
+    legible: true,
+    seenAs: shown,
     hidden: false,
-    name: letter,
+    name: shown,
     button: false,
   };
 };
@@ -210,6 +241,7 @@ const rule = (status: MarkStatus, index: number, cue: Cue = 'none') => {
       return {
         text: 'the word',
         seen: INK,
+        legible: expect.any(Boolean),
         seenAs: 'the word',
         hidden: false,
         name: 'the word',
@@ -219,6 +251,7 @@ const rule = (status: MarkStatus, index: number, cue: Cue = 'none') => {
       return {
         text: 'the word',
         seen: expect.any(String),
+        legible: expect.any(Boolean),
         seenAs: 'the word',
         hidden: true,
         name: null,
@@ -228,6 +261,7 @@ const rule = (status: MarkStatus, index: number, cue: Cue = 'none') => {
       return {
         text: expect.anything(),
         seen: null,
+        legible: true,
         seenAs: '',
         hidden: true,
         name: null,
@@ -237,6 +271,7 @@ const rule = (status: MarkStatus, index: number, cue: Cue = 'none') => {
       return {
         text: '',
         seen: null,
+        legible: true,
         seenAs: '',
         hidden: false,
         name: `Missed word ${index + 1}`,
@@ -246,6 +281,7 @@ const rule = (status: MarkStatus, index: number, cue: Cue = 'none') => {
       return {
         text: 'the word',
         seen: MARK,
+        legible: expect.any(Boolean),
         seenAs: 'the word',
         hidden: false,
         name: 'the word, peeked',
@@ -330,10 +366,18 @@ const recordingStore = (kept: Recall[], disk: Disk) => {
   );
 };
 
+/** The release of each held disk not yet released: leaving a Today releases them all, so a test that fails while a launch is held leaves no read waiting. */
+const holding = new Set<() => void>();
+
 /** `disk` with its listings held until `release`, so the launch shows its pending frame until then. */
 export const heldDisk = (disk: Disk) => {
   const gate = Promise.withResolvers<void>();
-  return { disk: { ...disk, held: gate.promise }, release: () => gate.resolve() };
+  const release = () => {
+    holding.delete(release);
+    gate.resolve();
+  };
+  holding.add(release);
+  return { disk: { ...disk, held: gate.promise }, release };
 };
 
 /** The leave of each Today still mounted: the next mount leaves any a test failed before leaving. */
@@ -437,6 +481,7 @@ export const mount = async (
   const checked = () => radios().map((radio) => radio.getAttribute('aria-checked'));
   const leave = async () => {
     if (!mounted.delete(leave)) return;
+    for (const release of [...holding]) release();
     await act(async () => root.unmount());
   };
   mounted.add(leave);
@@ -460,9 +505,26 @@ export const mount = async (
       .map((_, at) => WORDS.slice(at, at + 3).join(' '))
       .filter((run) => texts.some((text) => text.includes(run))).length;
   };
+  /** How many of the whole-text node and the word nodes show any of the verse: a text seen in them, or a name the screen reader reads. */
+  const verseShown = () => {
+    const metOf = readerOf(host);
+    return all('[data-testid="passage"], [data-testid^="word-"]').filter((node) => {
+      const met = metOf(node, 0);
+      return (met.seenAs ?? '') !== '' || (met.name ?? '') !== '';
+    }).length;
+  };
+  /** How many of the whole-text node and the word nodes hold text seen at less than AA contrast on what is painted behind it. */
+  const faint = () => {
+    const metOf = readerOf(host);
+    return all('[data-testid="passage"], [data-testid^="word-"]').filter(
+      (node) => !metOf(node, 0).legible,
+    ).length;
+  };
   return {
     host,
     show,
+    verseShown,
+    faint,
     one,
     all,
     word,

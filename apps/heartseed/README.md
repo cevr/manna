@@ -130,7 +130,7 @@ one runtime (`src/app.ts`, below).
 
 Today's one button, and the first minute's in letters and alone. A press
 recites the passage under the ladder's cue (Garden, below): each word not
-yet said shows that cue (whole and muted, its first letter, or nothing), each
+yet said shows that cue (whole, its first letter, or nothing), each
 word lights as the reader says it, with one soft haptic tick, and a missed word
 shows only a mark that a tap reveals (a peek). The recital finishes itself
 when its last word lights, or at a press. When it ends `finished`, Today
@@ -180,9 +180,11 @@ and keeps nothing. Say it reads no word aloud.
   palette), and `app/index.tsx` draws Today with it: the verse whole
   (`passage`) only under the full text with no recital shown, else one
   element per word (`word-<i>`), so each is its own accessibility element
-  (a word not yet said under its cue: whole in muted ink under the full
-  text, its first letter or number alone and named by it under letters, the
-  rest laid out unseen and hidden; under no cue an empty slot its width,
+  (a word not yet said under its cue: whole in the cue's ink under the full
+  text, its first letter or number alone in the same ink and named by it
+  under letters, the rest laid out unseen and hidden, the cue's ink being
+  the palette's mute darkened to AA contrast on the ground, while the first
+  minute keeps its letters in the mute; under no cue an empty slot its width,
   hidden from the screen reader; a half-heard word hidden, a mark
   named `Missed word <n>`, a peeked word `<word>, peeked`), the radio
   group `Grade`, and the button `Say it` or `Listening`. A word lights with
@@ -413,8 +415,9 @@ them.
   - `test:cue`: `src/sayit/cue.test.tsx` and `src/sayit/cue-say.test.tsx`,
     Today's cue in happy-dom through the same rig: the passage at rest under
     each stage's cue, a recital under letters and under the full text, a
-    recital not heard, an unread garden, and no run of the verse outside
-    its words.
+    recital not heard, an unread garden, every pending frame of a held
+    launch at each stage, each cue word's exact first letter and its AA
+    contrast, and no run of the verse outside its words.
   - `test:garden`: `src/store.test.ts` (the store over the device),
     `src/fsrs.property.test.ts` (FSRS-6 against ts-fsrs),
     `src/garden.property.test.ts` (the stage and growth rules, and the

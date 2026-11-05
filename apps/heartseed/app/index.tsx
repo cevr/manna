@@ -37,8 +37,8 @@ const PASSAGES: readonly FieldPassage[] = [
  * The verse under `cue`: whole under the full text while no recital is
  * shown; else one element per word, each its own accessibility element, a
  * word the recital shown has reached as `wordOf` shows it and every other
- * word as the cue shows it (`Unsaid`): whole and muted, in letters, or an
- * empty slot.
+ * word as the cue shows it (`Unsaid`): whole or in letters in the cue's ink,
+ * or an empty slot.
  */
 function Verse({
   marks,
