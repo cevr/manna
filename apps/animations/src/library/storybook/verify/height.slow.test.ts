@@ -26,6 +26,7 @@ import { verifyShot } from './run.ts';
 const CLI = `${import.meta.dir}/../cli.ts`;
 const GROWTH = `${import.meta.dir}/height-growth.preload.ts`;
 const BABY = `${import.meta.dir}/height-baby.verify.ts`;
+const BLURRED = `${import.meta.dir}/height-blur.verify.ts`;
 
 const PALETTE: Palette = {
   ink: '#140a05',
@@ -249,6 +250,168 @@ const castMisses = (read: ReturnType<typeof castRead>, at: string) =>
     return misses;
   });
 
+/** Where a pushed read stands its figure: whole inside the frame, or cut by one edge. */
+const PUSH_VIEWS = ['inside', 'left', 'right', 'top', 'bottom'] as const;
+
+/** One pushed read: the figure's crown-to-soles `height` px at zoom 1, the camera's `zoom`, a fraction of a px `phase`, where it stands (`PUSH_VIEWS`), its stretch up `growth`, and the frame it is. */
+interface Pushed {
+  readonly height: number;
+  readonly zoom: number;
+  readonly phase: number;
+  readonly view: (typeof PUSH_VIEWS)[number];
+  readonly growth: number;
+  readonly frame: number;
+}
+
+/**
+ * One frame's read of `stored` drawing `key` alone in a page of the shot's
+ * scene whose layers stand at depth `z` blurred `blur` px: the camera at
+ * the read's zoom, off the frame's middle by fractions of a px; the figure
+ * placed `phase` px off whole px where its view stands it, so the frame
+ * cuts it at that edge; painted `sharp` over its analysis surface, as the
+ * verify's height render is (`requestOf`), and read at its plane's zoom.
+ */
+const pushedRead =
+  (render: Render, shot: Shot, stored: StoredFigure, key: string, z: number, blur: number) =>
+  (p: Pushed) =>
+    Effect.gen(function* () {
+      const cell = Option.fromUndefinedOr(stored.cells.get(key));
+      const lines = Option.flatten(Option.fromUndefinedOr(stored.lines.get(key)));
+      if (Option.isNone(cell) || Option.isNone(lines)) return Option.none<FrameRead>();
+      const { width: w, height: h } = shot.size;
+      const scale = p.height / (lines.value.bottom - lines.value.crown + 1);
+      const camera = {
+        x: w / 2 + 7.3 + p.phase * 3.1,
+        y: h / 2 - 4.6 + p.phase * 1.7,
+        zoom: p.zoom,
+      };
+      const plane = planeOf(shot.size, z, { t: 0, ...camera });
+      const tall = p.height * p.growth * plane.scale;
+      const middle = w / 2 + 0.5 + p.phase * 0.7;
+      const places: Record<Pushed['view'], readonly [number, number]> = {
+        inside: [middle, h * 0.8 + p.phase],
+        left: [-0.31 + p.phase * 0.73, h * 0.8 + p.phase],
+        right: [w + 0.27 - p.phase * 0.61, h * 0.8 + p.phase],
+        top: [middle, tall * 0.45 + p.phase * 0.91],
+        bottom: [middle, h + tall * 0.25 + p.phase * 0.91],
+      };
+      const [px, py] = places[p.view];
+      const box = analysisBoxOf(
+        { x: px, y: py, sx: scale * plane.scale, sy: scale * p.growth * plane.scale },
+        { width: cell.value.width, height: cell.value.height, ...anchorOf(lines.value) },
+        blur,
+      );
+      const name = stored.figure.name;
+      const raster = yield* decoded(
+        yield* render(
+          {
+            t: p.frame,
+            camera,
+            figures: [
+              {
+                name,
+                cell: key,
+                x: (px - plane.ox) / plane.scale,
+                y: (py - plane.oy) / plane.scale,
+                sx: 1,
+                sy: p.growth,
+                scale,
+              },
+            ],
+            only: name,
+            sharp: true,
+          },
+          box,
+        ),
+      );
+      return Option.some<FrameRead>({
+        frame: p.frame,
+        name,
+        cell: key,
+        zoom: plane.scale,
+        squashed: false,
+        read: readFigure(raster, stored.paints),
+        height: observeHeight(raster),
+      });
+    });
+
+/** One pushed case's result: what it gets wrong, its steady spread, and the least spread of a changed read from a steady one (1 when it reads none). */
+interface PushCase {
+  readonly misses: ReadonlyArray<string>;
+  readonly steady: number;
+  readonly changed: number;
+}
+
+/**
+ * What a figure read by `read` at `height` and `view` gets wrong while the
+ * camera pushes: held steady at zooms 0.85, 1.6 and a drawn one between,
+ * each at a drawn phase, it reads unread or spreads past 0.01; 3 % taller
+ * or shorter at zoom 0.85 or 1.6, its spread from any steady read is at or
+ * under the bar.
+ */
+const pushCase = (
+  read: ReturnType<typeof pushedRead>,
+  at: string,
+  draw: () => number,
+  height: number,
+  view: Pushed['view'],
+): Effect.Effect<PushCase, StorybookFailed> =>
+  Effect.gen(function* () {
+    const frame = (zoom: number, growth: number, n: number) =>
+      read({ height, zoom, phase: draw(), view, growth, frame: n });
+    const steady = (yield* Effect.forEach([0.85, 1.6, 0.85 + draw() * 0.75], (zoom, n) =>
+      frame(zoom, 1, n),
+    )).flatMap(Option.toArray);
+    if (steady.length !== 3 || steady.some((r) => Result.isFailure(r.height)))
+      return { misses: [`${at}: steady unread`], steady: 1, changed: 0 };
+    const misses: Array<string> = [];
+    if (!(spread(steady) <= 0.01)) misses.push(`${at}: steady spreads ${spread(steady)}`);
+    const changed = (yield* Effect.forEach(
+      [1.03, 0.97].flatMap((growth) => [0.85, 1.6].map((zoom) => [growth, zoom] as const)),
+      ([growth, zoom]) =>
+        Effect.map(frame(zoom, growth, 3), (r) =>
+          Option.toArray(r).flatMap((c) =>
+            steady.map((a) => ({
+              value: spread([a, c]),
+              at: `${at} × ${growth} at zoom ${zoom} against plane zoom ${a.zoom.toFixed(3)}`,
+            })),
+          ),
+        ),
+    )).flat();
+    for (const c of changed) if (!(c.value > 0.02)) misses.push(`${c.at}: ${c.value}`);
+    return {
+      misses,
+      steady: spread(steady),
+      changed: Math.min(1, ...changed.map((c) => c.value)),
+    };
+  });
+
+/** Each pushed case of the loaded shot's cast on one page whose layers stand at depth `z` blurred `blur` px: each view crossed with each figure, its key (one of its first two) and height (from `LEAST_HEIGHT` at zoom 0.85 up to 420 px, more of them small) drawn. */
+const pushCases = (
+  loaded: { readonly scene: PaintScene; readonly figures: ReadonlyArray<StoredFigure> },
+  shot: Shot,
+  z: number,
+  blur: number,
+) =>
+  Effect.gen(function* () {
+    const render = yield* storybookPage({
+      ...loaded.scene,
+      layers: loaded.scene.layers.map((l) => ({ ...l, z, blur })),
+    });
+    const draw = rng(100 * z + 10 * blur + 7);
+    const least = (LEAST_HEIGHT * 1.05) / 0.85 ** (1 / z);
+    return yield* Effect.forEach(
+      PUSH_VIEWS.flatMap((view) => loaded.figures.map((stored) => ({ view, stored }))),
+      ({ view, stored }) => {
+        const keys = [...stored.cells.keys()].filter((k) => !k.endsWith('Blink'));
+        const key = keys[Math.floor(draw() * Math.min(2, keys.length))] ?? '';
+        const height = least + (420 - least) * draw() ** 2;
+        const at = `z ${z} blur ${blur} ${view} ${stored.figure.name}/${key} ${height.toFixed(1)} px`;
+        return pushCase(pushedRead(render, shot, stored, key, z, blur), at, draw, height, view);
+      },
+    );
+  });
+
 describe('render-height in Chrome: the analysis surface', () => {
   it.effect(
     'reads a whole render stretched 4 % (200 → 208 px to a fraction of a px; 210 to its faint fringe) as growth, with a steady side-cut frame added and with the growth cut at the top, and a steady whole and side-cut key as steady (round 3 receipts, height-live)',
@@ -421,6 +584,32 @@ describe('render-height in Chrome: the analysis surface', () => {
     // oxlint-disable-next-line film/tests-keep-their-strength -- the case launches headless Chrome once and renders about 2000 frames (spawn budget).
     600_000,
   );
+
+  it.effect(
+    'reads the cast’s cells as steady and 3 % taller or shorter as changed while the camera pushes from zoom 0.85 to 1.6, on layers blurred 0, 1.5 and 3 px at depths 1–3, at generated heights from the least it reads up, fractional phases, whole and cut by each edge (verifier round 2, M1: the blurred lead 3 % shorter passed at 1683e0c07)',
+    () =>
+      Effect.gen(function* () {
+        const film = yield* filmNamed('in-its-order');
+        const { shot } = yield* filmShot(film, 'milk-row');
+        const loaded = yield* loadShot(shot, yield* filmCast(film));
+        const cases = (yield* Effect.forEach(
+          [1, 2, 3].flatMap((z) => [0, 1.5, 3].map((blur) => [z, blur] as const)),
+          ([z, blur]) => pushCases(loaded, shot, z, blur),
+        )).flat();
+        const worstSteady = Math.max(...cases.map((c) => c.steady));
+        const leastChanged = Math.min(...cases.map((c) => c.changed));
+        yield* Effect.log(
+          `render-height push property: ${cases.length} cases, worst steady spread ${worstSteady.toFixed(4)}, least changed spread ${leastChanged.toFixed(4)}`,
+        );
+        expect(cases.length).toBe(9 * PUSH_VIEWS.length * loaded.figures.length);
+        expect(cases.flatMap((c) => c.misses)).toEqual([]);
+      }).pipe(
+        Effect.scoped,
+        Effect.provide([filmFolder.pipe(Layer.provide(BunServices.layer)), BunServices.layer]),
+      ),
+    // oxlint-disable-next-line film/tests-keep-their-strength -- the case launches headless Chrome nine times and renders about 1600 frames (spawn budget).
+    900_000,
+  );
 });
 
 describe('render-height in the full verify', () => {
@@ -508,7 +697,7 @@ describe('render-height in the full verify', () => {
               ChildProcess.make('bun', ['--preload', GROWTH, BABY], {
                 env: {
                   HEIGHT_BABY_PX: String(px),
-                  HEIGHT_BABY_FACTOR: String(factor),
+                  HEIGHT_BREATH_FACTOR: String(factor),
                   HEIGHT_BABY_CUT: cut,
                   HEIGHT_BABY_OUT: out,
                 },
@@ -530,6 +719,54 @@ describe('render-height in the full verify', () => {
           }
         const steady = yield* run(300, 1, 'left');
         expect(steady?.pass).toBe(true);
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+    900_000,
+  );
+
+  it.effect(
+    'fails the real milk-row lead on a layer blurred 3 px shrinking 3 %, whole and cut by the left edge, and growing 3 %, while the camera pushes from zoom 0.856 to 1.512, and fails it unblurred shrinking 3 %; passes it blurred and held steady, whole and cut (verifier round 2, M1: passed at 0.017 and 0.0167 at 1683e0c07)',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+        const tmp = yield* fs.makeTempDirectoryScoped();
+        const run = (blur: number, factor: number, cut: string) =>
+          Effect.gen(function* () {
+            const out = `${tmp}/${blur}-${factor}-${cut}`;
+            const code = yield* spawner.exitCode(
+              ChildProcess.make('bun', ['--preload', GROWTH, BLURRED], {
+                env: {
+                  HEIGHT_BLUR: String(blur),
+                  HEIGHT_BREATH_FACTOR: String(factor),
+                  HEIGHT_BLUR_CUT: cut,
+                  HEIGHT_BLUR_OUT: out,
+                },
+                extendEnv: true,
+                forceKillAfter: '5 seconds',
+              }),
+            );
+            expect(Number(code)).toBe(0);
+            const height = yield* heightCheck(yield* fs.readFileString(`${out}/verdict.json`));
+            return { at: `blur ${blur} × ${factor} ${cut}`, height };
+          });
+        const changed = yield* Effect.forEach(
+          [
+            [3, 0.97, 'whole'],
+            [3, 0.97, 'left'],
+            [3, 1.03, 'whole'],
+            [0, 0.97, 'whole'],
+          ] as const,
+          ([blur, factor, cut]) => run(blur, factor, cut),
+        );
+        const steady = yield* Effect.forEach(['whole', 'left'], (cut) => run(3, 1, cut));
+        expect(
+          changed
+            .filter((r) => r.height?.pass !== false || !(Number(r.height?.value) > 0.02))
+            .map((r) => `${r.at}: ${r.height?.value}`),
+        ).toEqual([]);
+        expect(
+          steady.filter((r) => r.height?.pass !== true).map((r) => `${r.at}: ${r.height?.value}`),
+        ).toEqual([]);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
     900_000,
   );

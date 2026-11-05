@@ -16,7 +16,7 @@ export const BABY_SHOT = 'height-baby';
  * (verifier round 1, M1): drawn `HEIGHT_BABY_PX` tall, whole or cut by the
  * frame's left edge (`HEIGHT_BABY_CUT`), through the full verify into
  * `HEIGHT_BABY_OUT`. Run under `height-growth.preload.ts`, whose
- * `HEIGHT_BABY_FACTOR` stretches its breath from 1 s while its key holds.
+ * `HEIGHT_BREATH_FACTOR` stretches its breath from 1 s while its key holds.
  * At 300 px it stands 0.4 px below a whole px and the camera moves 0.2 px
  * up at 1 s, the receipts' own phases.
  */
