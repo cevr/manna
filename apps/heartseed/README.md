@@ -376,6 +376,11 @@ Silent mode mutes. Nothing leaves the device.
     writes that land, are refused or meet a down device that recovers;
     queued taps; a relaunch anywhere), steered toward the part's own group
     of coverage floors, which its generated devices alone must meet.
+  - `test:field`: `src/field.property.test.ts`, the field's rule over
+    generated read gardens in three time zones against the rule written
+    plainly (`src/test/field-model.ts`), and `src/field/sown.test.ts`, days
+    sown as a model test over the garden on the device across keeps, Again,
+    peeks, refused writes, relaunches and unread sessions.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
