@@ -128,9 +128,14 @@ describe('the stage rule over ts-fsrs', () => {
     expect(stageOf(plantOf([recall, { ...recall, startedAt: DAY, grade: 1, peeked: 0 }]))).toBe(
       'seed',
     );
-    expect(stageOf(plantOf([recall, { ...recall, startedAt: DAY, peeked: 0, missed: 2 }]))).toBe(
-      'ear',
-    );
+    const cued = { ...recall, startedAt: DAY, peeked: 0, missed: 2 };
+    expect(stageOf(plantOf([recall, cued]))).toBe('blade');
+    const alone = { ...recall, startedAt: 2 * DAY, peeked: 0, missed: 0 };
+    expect(stageOf(plantOf([recall, cued, alone]))).toBe('ear');
+    const again = { ...recall, startedAt: 3 * DAY, grade: 1, peeked: 0 } as const;
+    const back = { ...recall, startedAt: 4 * DAY, peeked: 0, missed: 0 };
+    expect(stageOf(plantOf([recall, cued, alone, again]))).toBe('seed');
+    expect(stageOf(plantOf([recall, cued, alone, again, back]))).toBe('blade');
   });
 });
 

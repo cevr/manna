@@ -267,7 +267,7 @@ describe('the field of a read garden', () => {
             [
               [PASSAGE, 'not planted'],
               ['e\u0301:1', 'seed'],
-              ['\u00e9:1', 'ear'],
+              ['\u00e9:1', 'blade'],
               ['A\u030a:2', 'blade'],
               ['\u00c5:2', 'seed'],
               ['s\u0307\u0323:5', 'seed'],

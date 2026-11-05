@@ -7,8 +7,9 @@
  * eight fields as JSON and nothing else. A recall kept again for the same
  * recital writes the same key, so the last keep wins, and a restart reads
  * the same plants back. A plant's FSRS card is the fold of its recalls in
- * time order, and its stage is read from the card and its last recall each
- * time: nothing but the recalls is stored.
+ * time order, and its stage is read from its recalls and the cards they fold
+ * to each time, as is the cue it is said under next (full text, then first
+ * letters, then nothing): nothing but the recalls is stored.
  *
  * The garden claims a history only from a read of the store that completed:
  * at start it lists the store's keys and reads every recall key, and any
@@ -43,6 +44,7 @@ import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as Semaphore from 'effect/Semaphore';
 
 import { NEW_CARD, review, type Card } from './fsrs';
+import type { Cue } from './matcher';
 import { Recalls, type Recall } from './sayit';
 
 export const STAGES = ['seed', 'blade', 'ear', 'full corn'] as const;
@@ -105,18 +107,50 @@ export const plantOf = (recalls: Arr.NonEmptyReadonlyArray<Recall>): Plant => {
 };
 
 /**
- * A plant's stage: full corn once its card's stability reaches 21 days;
- * else a seed when it was just planted (one recall) or its last recall was
- * Again; else a blade when the last recall was helped by a peek; else an
- * ear (recalled alone, a miss with no peek included).
+ * The cue a verse at `stage` is said under next: first letters at a seed,
+ * nothing past it. A verse not yet planted is said under the full text
+ * (`cueIn`).
  */
-export const stageOf = (plant: Plant): Stage => {
-  const last = Arr.lastNonEmpty(plant.recalls);
-  if (plant.card.stability >= FULL_CORN_DAYS) return 'full corn';
-  if (plant.recalls.length === 1 || last.grade === 1) return 'seed';
-  if (last.peeked > 0) return 'blade';
+export const cueAt = (stage: Stage): Cue => {
+  if (stage === 'seed') return 'initials';
+  return 'none';
+};
+
+/** The stage after one more recall, given the stage before it (none for the first) and the card's stability after it. */
+const nextStage = (before: Option.Option<Stage>, recall: Recall, stability: number): Stage => {
+  if (stability >= FULL_CORN_DAYS) return 'full corn';
+  if (Option.isNone(before) || recall.grade === 1) return 'seed';
+  if (recall.peeked > 0 || cueAt(before.value) !== 'none') return 'blade';
   return 'ear';
 };
+
+/**
+ * A plant's stage, the rule applied after each of its recalls in time order:
+ * full corn once the card's stability reaches 21 days; else a seed at the
+ * first recall or one graded Again; else a blade when the recall was helped,
+ * by a peek or by the cue the stage before it gave (first letters at a
+ * seed); else an ear (recalled with nothing, a miss with no peek included).
+ * A recall's help is derived from the recalls before it, never stored. The
+ * last step reads the plant's own card.
+ */
+export const stageOf = (plant: Plant): Stage => {
+  const { recalls } = plant;
+  const folded = Arr.initNonEmpty(recalls).reduce(
+    ({ card, stage }, recall) => {
+      const after = review(card, recall.grade, recall.startedAt);
+      return { card: after, stage: Option.some(nextStage(stage, recall, after.stability)) };
+    },
+    { card: NEW_CARD, stage: Option.none<Stage>() },
+  );
+  return nextStage(folded.stage, Arr.lastNonEmpty(recalls), plant.card.stability);
+};
+
+/** The cue the verse at `reference` is said under next in a read garden: the full text before it is planted, then its stage's cue. */
+export const cueIn = (garden: ReadGarden, reference: string): Cue =>
+  Option.match(Option.fromNullishOr(garden.plants.get(reference)), {
+    onNone: (): Cue => 'full',
+    onSome: (plant) => cueAt(stageOf(plant)),
+  });
 
 const rankOf = (stage: Stage) => STAGES.indexOf(stage);
 

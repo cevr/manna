@@ -7,7 +7,9 @@
  *
  * - `referenceCard`: ts-fsrs's card after a verse's recalls in time order,
  *   in the app's card shape;
- * - `stageRule` and `growthRule`: the stage and growth rules over that card;
+ * - `stageRule`, `cueRule` and `growthRule`: the stage rule over each
+ *   prefix's card, a recall's help derived from the cue the stage before it
+ *   gives, the ladder of cues, and the growth rule;
  * - `GardenModel`: the records the device holds (one per recital, the last
  *   write that landed wins), what a launch knows of them (all of them once
  *   its read completed, nothing when it failed), and the chimes it sounds
@@ -88,23 +90,54 @@ export type ModelStage = 'seed' | 'blade' | 'ear' | 'full corn';
 
 const RANK: Readonly<Record<ModelStage, number>> = { seed: 0, blade: 1, ear: 2, 'full corn': 3 };
 
-/**
- * The stage rule: full corn at a stability of 21 days or more; else a seed
- * when the verse was just planted or its last recall was Again; else a
- * blade when the last recall was helped by a peek; else an ear.
- */
-export const stageRule = (recalls: readonly Recall[], stability: number): ModelStage => {
-  const ordered = inOrder(recalls);
-  const last = ordered.at(-1);
-  if (stability >= 21) return 'full corn';
-  if (last === undefined || ordered.length === 1 || last.grade === 1) return 'seed';
-  if (last.peeked > 0) return 'blade';
-  return 'ear';
+export type ModelCue = 'none' | 'initials' | 'full';
+
+/** The ladder: the cue a verse is said under next, the full text before it is planted (no stage), first letters at a seed, nothing past it. */
+export const cueRule = (stage: ModelStage | undefined): ModelCue => {
+  if (stage === undefined) return 'full';
+  if (stage === 'seed') return 'initials';
+  return 'none';
 };
 
-/** The stage of a verse's recalls by the rule, over ts-fsrs's card. */
-export const referenceStage = (recalls: readonly Recall[]) =>
-  stageRule(recalls, referenceCard(recalls).stability);
+/**
+ * The stage rule, applied after every recall in time order, `stabilities[k]`
+ * the stability after the first k + 1: full corn at a stability of 21 days
+ * or more; else a seed at the first recall or one graded Again; else a blade
+ * when the recall was helped, by a peek or by the cue the stage before it
+ * gives (anything but nothing); else an ear. The stage is the last one,
+ * none for no recall.
+ */
+export const stageRule = (
+  recalls: readonly Recall[],
+  stabilities: readonly number[],
+): ModelStage | undefined => {
+  let stage: ModelStage | undefined;
+  inOrder(recalls).forEach((recall, k) => {
+    const stability = stabilities[k] ?? 0;
+    if (stability >= 21) stage = 'full corn';
+    else if (k === 0 || recall.grade === 1) stage = 'seed';
+    else if (recall.peeked > 0 || cueRule(stage) !== 'none') stage = 'blade';
+    else stage = 'ear';
+  });
+  return stage;
+};
+
+/** ts-fsrs's stability after each of a verse's recalls in time order. */
+export const referenceStabilities = (recalls: readonly Recall[]) => {
+  let card = emptyReference();
+  return inOrder(recalls).map((recall) => {
+    card = referenceNext(card, recall.grade, recall.startedAt);
+    return card.stability;
+  });
+};
+
+/** The stage of a verse's recalls by the rule, over ts-fsrs's cards; a seed for none, which no caller asks of. */
+export const referenceStage = (recalls: readonly Recall[]): ModelStage =>
+  stageRule(recalls, referenceStabilities(recalls)) ?? 'seed';
+
+/** The cue the verse with `recalls` is said under next. */
+export const referenceCue = (recalls: readonly Recall[]): ModelCue =>
+  cueRule(stageRule(recalls, referenceStabilities(recalls)));
 
 export interface ModelGrowth {
   readonly reference: string;
