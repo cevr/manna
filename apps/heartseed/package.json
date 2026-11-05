@@ -12,7 +12,7 @@
     "test:voice": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/voice.property.test.ts ./src/voice",
     "test:dictation": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/dictation.property.test.ts ./src/dictation",
     "test:sayit": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/sayit.property.test.ts ./src/sayit",
-    "test:garden": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/store.test.ts",
+    "test:garden": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/store.test.ts ./src/fsrs.property.test.ts",
     "test:rest": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/core-import.property.test.ts ./src/core-import.test.ts ./src/display.test.ts ./src/matcher.test.ts ./src/today.test.tsx",
     "test:infra": "bun test --no-isolate --parallel=3 --path-ignore-patterns='**/*.slow.test.*' ./scripts ./vite"
   },
@@ -40,6 +40,7 @@
     "@types/react-dom": "19.3.0",
     "effect-bun-test": "catalog:",
     "oxc-parser": "0.153.0",
+    "ts-fsrs": "5.4.2",
     "vite": "8.3.4"
   }
 }
