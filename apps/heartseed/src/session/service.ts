@@ -12,7 +12,9 @@
 import {
   Clock,
   Context,
+  Deferred,
   Effect,
+  Exit,
   Layer,
   MutableRef,
   Option,
@@ -109,7 +111,6 @@ export const layer = (
       });
       const views = yield* PubSub.sliding<SessionView>({ capacity: WINDOW, replay: 1 });
       const planning = yield* Semaphore.make(1);
-      const writes = yield* Semaphore.make(1);
       const context = yield* Effect.context<never>();
       /** The instant on the service's own clock, whoever runs the command. */
       const now = Effect.provideContext(Clock.currentTimeMillis, context);
@@ -136,10 +137,27 @@ export const layer = (
         yield* publish({ ...MutableRef.get(held), plan: Option.some(plan) });
       });
 
-      /** Writes the choice the view holds now, one write at a time, so the store ends at the last tap's choice. */
-      const persist = writes.withPermit(
-        Effect.suspend(() => writeMinutes(store, MutableRef.get(held).minutes)),
-      );
+      /** The turn of the last write handed in; a write starts once the one before it ends. */
+      const lastWrite = MutableRef.make(Deferred.makeUnsafe<void>());
+      Deferred.doneUnsafe(MutableRef.get(lastWrite), Exit.void);
+
+      /** Hands in a write, in the order of the call: the turn it waits on and the turn it ends. */
+      const turnUnsafe = () => {
+        const before = MutableRef.get(lastWrite);
+        const mine = Deferred.makeUnsafe<void>();
+        MutableRef.set(lastWrite, mine);
+        return { before, mine };
+      };
+
+      type Turn = ReturnType<typeof turnUnsafe>;
+
+      /** Writes a tap's own choice in its turn, so the store ends at the last tap whose write landed. */
+      const persist = (turn: Turn, minutes: Minutes) =>
+        Effect.andThen(Deferred.await(turn.before), writeMinutes(store, minutes));
+
+      /** Ends a turn once the one before it ended, however the write went, so the next write never overtakes. */
+      const release = (turn: Turn) =>
+        Effect.andThen(Deferred.await(turn.before), Deferred.done(turn.mine, Exit.void));
 
       return Session.of({
         begin: planning.withPermit(
@@ -148,16 +166,26 @@ export const layer = (
             return make;
           }),
         ),
-        choose: Effect.fn('Session.choose')(function* (minutes: Minutes) {
-          yield* publish({ ...MutableRef.get(held), minutes });
-          yield* planning.withPermit(
-            Effect.suspend(() => {
-              if (Option.isNone(MutableRef.get(held).plan)) return Effect.void;
-              return make;
-            }),
-          );
-          yield* persist;
-        }),
+        choose: (minutes: Minutes) =>
+          Effect.uninterruptibleMask((restore) =>
+            Effect.flatMap(Effect.sync(turnUnsafe), (turn) =>
+              Effect.ensuring(
+                restore(
+                  Effect.gen(function* () {
+                    yield* publish({ ...MutableRef.get(held), minutes });
+                    yield* planning.withPermit(
+                      Effect.suspend(() => {
+                        if (Option.isNone(MutableRef.get(held).plan)) return Effect.void;
+                        return make;
+                      }),
+                    );
+                    yield* persist(turn, minutes);
+                  }),
+                ),
+                release(turn),
+              ),
+            ),
+          ).pipe(Effect.withSpan('Session.choose')),
         view: Effect.sync(() => MutableRef.get(held)),
         changes: Stream.fromPubSub(views),
       });

@@ -66,13 +66,58 @@ interface Disk {
   /** A write to hold until its gate opens. */
   hold: Option.Option<Deferred.Deferred<void>>;
   readonly sets: string[];
+  /** Each value a write was asked to put, in the order the writes began. */
+  readonly values: string[];
+  /** The fault of each write by its order, from the first: held until a gate opens, refused, or both. */
+  readonly script: readonly {
+    readonly gate: Option.Option<Deferred.Deferred<void>>;
+    readonly refuse: boolean;
+  }[];
 }
 
 /** A disk holding `text` under the key, or nothing when it is absent. */
 const diskOf = (text: string | undefined): Disk => {
   const map = new Map<string, string>();
   if (text !== undefined) map.set(MINUTES_KEY, text);
-  return { map, failGet: new Set(), failSet: new Set(), hold: Option.none(), sets: [] };
+  return {
+    map,
+    failGet: new Set(),
+    failSet: new Set(),
+    hold: Option.none(),
+    sets: [],
+    values: [],
+    script: [],
+  };
+};
+
+type WriteFault = 'ok' | 'held' | 'refused' | 'held-refused';
+
+/** A disk holding `text` whose writes, in order, meet `faults`; the gates of the held ones, in order. */
+const faultyDisk = (text: string | undefined, faults: readonly { readonly fault: WriteFault }[]) =>
+  Effect.gen(function* () {
+    const gates: Deferred.Deferred<void>[] = [];
+    const script = [];
+    for (const { fault } of faults) {
+      let gate = Option.none<Deferred.Deferred<void>>();
+      if (fault.startsWith('held')) {
+        const made = yield* Deferred.make<void>();
+        gates.push(made);
+        gate = Option.some(made);
+      }
+      script.push({ gate, refuse: fault.endsWith('refused') });
+    }
+    const disk: Disk = { ...diskOf(text), script };
+    return { disk, gates, values: disk.values };
+  });
+
+/** `list` in an order `next` draws. */
+const shuffled = <A>(next: () => number, list: readonly A[]) => {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = below(next, i + 1);
+    [out[i], out[j]] = [out[j] as A, out[i] as A];
+  }
+  return out;
 };
 
 const storeOf = (disk: Disk) =>
@@ -85,10 +130,15 @@ const storeOf = (disk: Disk) =>
     set: (key, value) =>
       Effect.gen(function* () {
         disk.sets.push(key);
-        const gate = disk.hold;
+        disk.values.push(value);
+        const scripted = disk.script[disk.values.length - 1];
+        const gate = Option.orElse(
+          Option.flatMap(Option.fromNullishOr(scripted), (each) => each.gate),
+          () => disk.hold,
+        );
         disk.hold = Option.none();
         if (Option.isSome(gate)) yield* Deferred.await(gate.value);
-        if (disk.failSet.has(key)) return yield* failure('set');
+        if (disk.failSet.has(key) || scripted?.refuse === true) return yield* failure('set');
         disk.map.set(key, value);
       }),
     remove: (key) => Effect.sync(() => void disk.map.delete(key)),
@@ -495,6 +545,93 @@ describe('the session service', () => {
         expect(disk.map.get(MINUTES_KEY)).toBe('20');
         yield* Scope.close(live.scope, Exit.void);
         const again = yield* launch([], disk, emptyField(), 0);
+        expect((yield* again.session.view).minutes).toBe(20);
+        yield* Scope.close(again.scope, Exit.void);
+      }),
+    ));
+
+  it('ends the store at the last landed tap over 300 generated runs of overlapping taps, held and refused writes', () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const seen = new Map<string, number>();
+        const note = (key: string) => seen.set(key, (seen.get(key) ?? 0) + 1);
+        for (let seed = 1; seed <= 300; seed++) {
+          const next = random(seed * 7919);
+          const start = pickOf(next, STORED);
+          const taps = Array.from({ length: 2 + below(next, 5) }, () => ({
+            minutes: pickOf(next, MINUTES),
+            fault: pickOf<WriteFault>(next, ['ok', 'ok', 'held', 'refused', 'held-refused']),
+            gap: next() < 0.4,
+          }));
+          const where = `seed ${seed}: ${JSON.stringify(start)} ${JSON.stringify(taps)}`;
+          const writes = yield* faultyDisk(start, taps);
+          const live = yield* launch([], writes.disk, emptyField(), 0);
+          const fibers = [];
+          for (const tap of taps) {
+            fibers.push(
+              yield* Effect.forkChild(live.run(live.session.choose(tap.minutes)), {
+                startImmediately: true,
+              }),
+            );
+            if (tap.gap) yield* Effect.yieldNow;
+          }
+          expect(Option.some((yield* live.session.view).minutes), where).toEqual(
+            Option.map(Arr.last(taps), (tap) => tap.minutes),
+          );
+          for (const gate of shuffled(next, writes.gates)) {
+            yield* Deferred.succeed(gate, undefined);
+            if (next() < 0.5) yield* Effect.yieldNow;
+          }
+          yield* Fiber.joinAll(fibers);
+          expect(writes.values, `${where} (each tap's own choice, in tap order)`).toEqual(
+            taps.map((tap) => String(tap.minutes)),
+          );
+          const landed = taps.filter((tap) => tap.fault === 'ok' || tap.fault === 'held');
+          const text = Option.match(Arr.last(landed), {
+            onNone: () => start,
+            onSome: (tap) => String(tap.minutes),
+          });
+          expect(writes.disk.map.get(MINUTES_KEY), where).toBe(text);
+          yield* Scope.close(live.scope, Exit.void);
+          const again = yield* launch([], writes.disk, emptyField(), 0);
+          expect((yield* again.session.view).minutes, `${where} (relaunch)`).toBe(
+            minutesRule(text),
+          );
+          yield* Scope.close(again.scope, Exit.void);
+          if (landed.length === 0) note('none landed');
+          if (taps.at(-1)?.fault.endsWith('refused') === true && landed.length > 0)
+            note('last refused, an earlier landed');
+          if (taps.some((tap, index) => tap.fault.startsWith('held') && index < taps.length - 1))
+            note('an earlier write held');
+        }
+        expect(seen.get('none landed') ?? 0).toBeGreaterThanOrEqual(10);
+        expect(seen.get('last refused, an earlier landed') ?? 0).toBeGreaterThanOrEqual(40);
+        expect(seen.get('an earlier write held') ?? 0).toBeGreaterThanOrEqual(150);
+      }),
+    ));
+
+  it('relaunches at 20 after taps 10, 20 and 2 with the first write held and the third refused', () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const writes = yield* faultyDisk(undefined, [
+          { fault: 'held' },
+          { fault: 'ok' },
+          { fault: 'refused' },
+        ]);
+        const live = yield* launch([], writes.disk, emptyField(), 0);
+        const fibers = [];
+        for (const minutes of [10, 20, 2] as const)
+          fibers.push(
+            yield* Effect.forkChild(live.run(live.session.choose(minutes)), {
+              startImmediately: true,
+            }),
+          );
+        expect((yield* live.session.view).minutes).toBe(2);
+        for (const gate of writes.gates) yield* Deferred.succeed(gate, undefined);
+        yield* Fiber.joinAll(fibers);
+        expect(writes.values).toEqual(['10', '20', '2']);
+        yield* Scope.close(live.scope, Exit.void);
+        const again = yield* launch([], writes.disk, emptyField(), 0);
         expect((yield* again.session.view).minutes).toBe(20);
         yield* Scope.close(again.scope, Exit.void);
       }),
