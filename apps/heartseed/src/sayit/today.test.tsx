@@ -28,6 +28,7 @@ import { Chime } from '../garden';
 import type { MarkStatus } from '../matcher';
 import { sourceWords } from '../matcher/words';
 import { Haptics, type Recall, type SayItView } from '../sayit';
+import { voiceSource } from '../voice/source';
 import { screenOf } from './screen';
 
 const WORDS = sourceWords(passage.text);
@@ -223,6 +224,7 @@ const mount = async (source: Layer.Layer<DictationSource>) => {
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.sync(() => void (ticks.n += 1)) })),
     store: recordingStore(kept),
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
+    voice: voiceSource,
   });
   const host = document.createElement('div');
   document.body.append(host);

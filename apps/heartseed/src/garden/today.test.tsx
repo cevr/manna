@@ -33,6 +33,7 @@ import { Haptics, type Recall } from '../sayit';
 import { store } from '../store';
 import { DAY } from '../test/garden-model';
 import { device } from '../test/one';
+import { voiceSource } from '../voice/source';
 
 const PREFIX = 'heartseed/recall/';
 
@@ -108,6 +109,7 @@ const mount = async (chimes: Growth[], held: Promise<void> = Promise.resolve()) 
       Chime,
       Chime.of({ grow: (growth) => Effect.sync(() => void chimes.push(growth)) }),
     ),
+    voice: voiceSource,
   });
   const host = document.createElement('div');
   document.body.append(host);
@@ -314,7 +316,7 @@ describe('Today’s stage over the device’s store', () => {
     device.launch([recordOf(recallAt(Date.UTC(2026, 0, 5, 9)))]).fail('open', 6);
     const chimes: Growth[] = [];
     const today = await mount(chimes);
-    expect(await today.until(() => device.calls.open === 3)).toBe(true);
+    expect(await today.until(() => device.calls.open === 4)).toBe(true);
     await today.say();
     await today.until(() => false, 20);
     expect([

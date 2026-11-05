@@ -166,12 +166,9 @@ describe('Say it aloud', () => {
   it('reads no word aloud: Today and Say it name no voice, speech synthesis or announcement', () => {
     const files = SOURCES.filter(
       (source) =>
-        source === 'app/index.tsx' ||
-        source === 'src/app.ts' ||
-        source === 'src/sayit.ts' ||
-        source.startsWith('src/sayit/'),
+        source === 'app/index.tsx' || source === 'src/sayit.ts' || source.startsWith('src/sayit/'),
     );
-    expect(files.length).toBeGreaterThanOrEqual(6);
+    expect(files.length).toBeGreaterThanOrEqual(5);
     const speaking = files.filter((source) =>
       /voice|Voice|SpeechSynthesis|One\.Speech|announceForAccessibility|AccessibilityInfo/.test(
         code(source),
