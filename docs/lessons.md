@@ -5113,3 +5113,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The growth sound could play through One's audio, whose `.playback` session ignores the ring/silent switch; take or change the audio session Dictation holds while it listens; play an alert sound that vibrates; or play on the simulator, whose audio reaches the Mac's speaker.
 - **Cause:** Only System Sound Services are muted by the switch and leave the session alone, and no web or simulator run can hear whether a sound respected Silent mode.
 - **Guard:** code: `apps/heartseed/src/garden/guard.test.ts` `plays a system sound once in the source, only on a device, and on the simulator logs the play it skips`; `apps/heartseed/src/garden/guard.test.ts` `names no session, category or activation, player, engine, alert sound, completion play or One audio`; `apps/heartseed/src/garden/guard.test.ts` `imports the Swift file from chime.ios.ts alone`
+
+### heartseed-field-days-sown-utc
+
+- **Date:** 2026-11-05
+- **Kind:** owner
+- **Said:** "Progress is “days sown”, which never resets, and a harvest count of verses at full corn."
+- **Source:** hymnapp/selahone/units.md (Done line for hsfield); hymnapp/hsfield/spec.md rows 7-9, Decided 1 and Risks 1-2
+- **Wrong:** Days sown counted in the device's local days, as recalls, or as a streak, could differ by time zone or fall after travel or a gap, and a harvest kept as history would claim a verse Again took back; a test run only in the host's zone cannot tell a UTC day from a local one when the host is UTC.
+- **Cause:** The records hold `startedAt` alone, so only a UTC day is the same on every launch and device, and both counts are derived each time, never stored.
+- **Guard:** code: `apps/heartseed/src/field.property.test.ts` `shows the passages first, then each other verse in the order first sown, each at its stage, with the UTC days sown and the harvest, over 300 generated gardens in three time zones`; `apps/heartseed/src/field/sown.test.ts` `never fall and always equal the rule’s over the records the device holds, across 80 generated devices of keeps, Again, peeks, refused writes, relaunches and unread sessions`

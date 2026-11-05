@@ -111,7 +111,9 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
    label and no label ending `words`.
 9. From this Today run `grow.md` from `grow-ear` to `grow-again`, then
    `sayit.md` (its step 1 relaunches for a clean Today), then `sim doctor`
-   (record `head` and `timingsHold`) and `sim down`.
+   (record `head` and `timingsHold`) and `sim down`. A drive of the field
+   (`field.md`) branches at `first-today` instead and runs these from a
+   relaunched Today at its own step 9.
 
 The log: `xcrun simctl spawn <udid> log show --start "$START" --style
 compact --predicate '(eventMessage CONTAINS "[voice]" OR eventMessage

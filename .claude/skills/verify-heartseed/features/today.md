@@ -13,16 +13,18 @@ are dropped, and so is every `[`, `]`, `‹` and `›`, the words they enclose
 kept. Under the words is the passage's stage line (`grow.md`): after the
 first minute, `Stage: seed`; it appears once the garden's read of
 the device's store completes, a moment after launch, and not at all in a
-session whose read failed. Below the passage is one button, `Say it`
+session whose read failed. Below the passage is the big button, `Say it`
 (`sayit.md`); until it is pressed the screen asks for no permission and
-makes no sound.
+makes no sound. Under it, once the garden's read completes and never while
+Say it listens, is the button `Your field`, which opens the field in place
+(`field.md`).
 
 ## Sub-features
 
 - `today-passage`: at every launch after the first minute (`first-again`,
   or a `sim relaunch` later), Today shows the header `Today` (role header),
   the reference `Isaiah 41:10`, its stage line (a label starting `Stage: `),
-  one `Say it` button, and its KJV text, exactly
+  one `Say it` button, the button `Your field`, and its KJV text, exactly
   `Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee; yea, I will uphold thee with the right hand of my righteousness.`
 
 ## How to get to it (user POV)
@@ -49,7 +51,7 @@ sim snapshot today
 under `[application] "Heartseed"`, the text nodes `Today`, `Isaiah 41:10`
 and the passage above, whole, with no `¶`, `[`, `]`, `‹` or `›` in it,
 a label starting `Stage: ` (after the first minute, `Stage: seed`),
-and a node `Say it`, with no `Listening` and no grade (`Again`, `Hard`,
+a node `Say it` and a node `Your field`, with no `Listening` and no grade (`Again`, `Hard`,
 `Good`, `Easy`). A short label can appear on two nodes, so check that the
 labels are present, not how many nodes carry them.
 Count those nodes, report the counts, then delete the snapshot: it holds

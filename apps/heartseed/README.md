@@ -4,10 +4,11 @@ Scripture memorization on One (React Native on iOS, react-native-web on the
 web). A fresh install opens the first minute (`src/first`, below): hear
 the passage, say it with first letters, say it alone, and its first seed is
 planted. Today (`app/index.tsx`) shows the passage the reader is learning,
-its stage in the garden, and one button, Say it, which hears the reader
+its stage in the garden, and one big button, Say it, which hears the reader
 recite it; the word matcher (`src/matcher.ts`) grades a recall against the
 verse, and the garden (`src/garden.ts`) keeps it and grows the verse's
-plant.
+plant. Under it, `Your field` opens the field (`src/field.ts`, below): a
+row per passage, a plant per verse, the days sown and the harvest.
 
 Run it as a reader does with the verify skill,
 `.claude/skills/verify-heartseed`. It drives through `bun run sim`
@@ -316,6 +317,54 @@ Silent mode mutes. Nothing leaves the device.
   committed as One writes it.
 - `gardenView` (`src/app.ts`) is the runtime's atom over `Garden.changes`;
   Today (`app/index.tsx`) reads the passage's plant from it.
+
+## Field
+
+The field is the reader's progress: every passage is a row and every verse
+a plant, at the stage the garden derives. Today offers it as the button
+`Your field` once the garden's read completes, and never while Say it
+listens (leaving Today then would leave the microphone open off-screen);
+the field's button `Today` comes back to Today as it was. Both are in place
+in the root route (`app/index.tsx`): no route, no link, no tab. Whether the
+field shows is the root's state for the launch, never stored, so every
+launch opens on the pending frame, then the first minute or Today. Until a
+read completes, and for a session whose read failed, there is no field and
+no control: an unread garden cannot know the days sown, and an unread
+session's recitals are written all the same, so the next launch counts
+them.
+
+- `src/field.ts` is the rule, pure: `fieldOf(garden, passages)` over a
+  `Read` view and the passages taught (today one, Today's passage of one
+  verse; `hspassage` gives passages their verses). The passages come first,
+  each verse a plant at `stageOf` its plant, or `not planted` before its
+  first recall (drawn as bare soil); then each other verse the garden
+  holds, alone, in the order first sown: by its earliest recall's
+  `startedAt`, then by its reference in code units. References match
+  exactly (`Isaiah 41:1`, `Isaiah 41:100` and `Isaiah 41:10 ` are three
+  other verses).
+- Days sown (`1 day sown`, `<n> days sown`) is the number of distinct UTC
+  calendar days (`Math.floor(startedAt / 86_400_000)`) among every recall
+  the read holds, of any verse. A UTC day is a function of the stored
+  `startedAt` alone, as FSRS's elapsed days are, so the same disk shows the
+  same count on every launch and in every time zone, and travel can never
+  lower it; a local day would read the device's zone, which no record
+  holds. The garden writes recalls and never removes one, and a grade
+  change, Again or a peek rewrites the same recital, so the count never
+  falls: it is no streak. The cost: two recitals either side of 00:00 UTC
+  count two days.
+- The harvest (`1 verse at full corn`, `<n> verses at full corn`) is the
+  number of verses whose stage is full corn now (stability of 21 days or
+  more), derived, never stored: Again on a verse at full corn takes it out.
+- Nothing is stored for the field: no key, no value, no setting; it never
+  reads the store and never writes. Every number derives from the garden's
+  view each time the field shows.
+- `src/field/screen.tsx` draws a `Field`: the way back, the heading, the
+  counts, one card per row titled by its passage (a level-2 heading), each
+  plant `PlantMark` (`src/sayit/draw.tsx`, Today's drawing, with bare soil
+  for a verse not planted) over its verse number, one image to the screen
+  reader labelled `<reference>, <stage>`, and a legend of the four stages,
+  hidden from the screen reader, over the caption `Mark 4:28`. No other
+  number shows, and nothing moves.
 
 ## Tests
 
