@@ -25,7 +25,7 @@
         "width": 359,
         "height": 1024
       },
-      "sha256": "f918141c658699083afd3f2fd35c3d57736eda0124b7a62f37deed10e3aaed4d"
+      "sha256": "7775fdd0f8a111d717d884e8953c1f238751c33ac9103eefbe2607aa0f8f2a75"
     },
     {
       "key": "neutralBlink",
@@ -35,7 +35,7 @@
         "width": 379,
         "height": 1024
       },
-      "sha256": "676ad8de2db493edfa36b5aecd54343f6dfc6d1868d5d213078b20ee72e0e67e"
+      "sha256": "b762de2e3d5fd1dc6368f6905abe8d6a121eeeac3a5dc8bdfb49c0418a594930"
     },
     {
       "key": "stare",
@@ -45,7 +45,7 @@
         "width": 381,
         "height": 1024
       },
-      "sha256": "c3ec8f53dbb2cb06bb4e680cb986fafc7ddeb191eb127b1d22e2e9e130147e45"
+      "sha256": "4c2c10552e6f209efe3c639649811689071fc0eba3b40cdd0a4bc226259f1419"
     },
     {
       "key": "smile",
@@ -55,8 +55,8 @@
         "width": 359,
         "height": 1024
       },
-      "sha256": "33139ad27298b27597d8b74d70e089fcc9fa019bb6206379ed57d1b6d8f85251"
+      "sha256": "e2259ceffd856f002e6ebb85c234ca086ef2d2f08000146d25d114fed2183457"
     }
   ],
-  "rules": ["unstray", "unmottle", "sash-band"]
+  "rules": ["unstray", "unmottle", "sash-band", "body-cloth"]
 }

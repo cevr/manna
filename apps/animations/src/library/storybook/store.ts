@@ -89,6 +89,7 @@ export const DRAWN_RULES: SplitRules = {
   feetLow: true,
   unmottle: true,
   sashBand: true,
+  bodyCloth: true,
 };
 
 /** The split rules a stored sheet re-splits under, as its record names them. */
@@ -99,6 +100,7 @@ export const splitRulesOf = (record: SheetRecord): SplitRules => {
     feetLow: named.has('feet-low'),
     unmottle: named.has('unmottle'),
     sashBand: named.has('sash-band'),
+    bodyCloth: named.has('body-cloth'),
   };
 };
 
@@ -111,6 +113,7 @@ const ruleNamesOf = (rules: SplitRules): ReadonlyArray<(typeof SPLIT_RULES)[numb
         'feet-low': rules.feetLow,
         unmottle: rules.unmottle,
         'sash-band': rules.sashBand,
+        'body-cloth': rules.bodyCloth,
       })[name],
   );
 

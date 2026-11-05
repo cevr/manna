@@ -1048,6 +1048,80 @@ const solesShod = (t: Tidy, map: Int32Array): Int32Array => {
   });
 };
 
+/** How near (CIE76) an other paint lies to a garment paint for the split to read it as that cloth wherever the other cannot be: a contact shadow drawn in the robe's shade (the guest woman's #e6d7f0 against her robe's #e7d7ef, 1.4 apart). */
+export const TWIN_PAINT = 3;
+
+/** How far (px, in the square round it) `bodyClothed` reads what a dark line lies on: the cloth or a seat's wood. */
+export const EDGE_REACH = 6;
+
+/**
+ * The map with the body's cloth in the cloth's paints (critique 3, finding
+ * 4: the guest woman's table sheet split her neckline, mantle and sash
+ * edges in her sandals' paint and mottled her sash with the contact
+ * shadow's): below the face, each 4-connected island of a footwear paint
+ * that does not reach the soles' band (`SOLE_BAND`, raised `RIM_PEEL` rows,
+ * as `solesShod` reads it) takes, pixel by pixel, the garment paint nearest
+ * its drawn colour, and each such island of an other paint within
+ * `TWIN_PAINT` of a garment paint takes that garment paint. The sandals and
+ * the contact shadow (islands down at the soles), the head (a darker hair
+ * drawn in the footwear's paint), the stool and its edges (a pixel with
+ * more of an other paint, a garment's twin aside, than of cloth or a twin
+ * within `EDGE_REACH` px) and a cell
+ * that reads no face keep their paints.
+ */
+const bodyClothed = (t: Tidy, map: Int32Array, face: Option.Option<Box>): Int32Array => {
+  const garments = t.paints.flatMap((p, i) => {
+    if (p.role !== 'garment') return [];
+    return [i];
+  });
+  const labs = t.paints.map((p) => p.lab);
+  const twins = new Map(
+    t.paints.flatMap((p, i) => {
+      if (p.role !== 'other' || garments.length === 0) return [];
+      const twin = nearestAmong(p.lab, garments, labs);
+      if (labDistance(p.lab, labs[twin] ?? p.lab) > TWIN_PAINT) return [];
+      return [[i, twin] as const];
+    }),
+  );
+  const loose = (index: number) =>
+    index > 0 &&
+    ((t.paints[index]?.role === 'footwear' && garments.length > 0) || twins.has(index));
+  const width = t.drawn.width;
+  const inBand = soleBandOf(map, width, RIM_PEEL);
+  const height = map.length / width;
+  const byOther = (q: number) => {
+    const [x, y] = [q % width, Math.floor(q / width)];
+    const votes = { other: 0, cloth: 0 };
+    for (let v = Math.max(0, y - EDGE_REACH); v <= Math.min(height - 1, y + EDGE_REACH); v++)
+      for (let u = Math.max(0, x - EDGE_REACH); u <= Math.min(width - 1, x + EDGE_REACH); u++) {
+        const index = map[v * width + u] ?? CLEAR;
+        const role = t.paints[index]?.role;
+        if (role === 'other' && !twins.has(index)) votes.other++;
+        if (role === 'garment' || role === 'sash' || twins.has(index)) votes.cloth++;
+      }
+    return votes.other > votes.cloth;
+  };
+  return Option.match(face, {
+    onNone: () => map,
+    onSome: (box) => {
+      const out = map.slice();
+      const seen = new Uint8Array(map.length);
+      for (let q0 = 0; q0 < map.length; q0++) {
+        const index = map[q0] ?? CLEAR;
+        if (seen[q0] === 1 || !loose(index)) continue;
+        const island = islandAt(map, width, q0, seen);
+        if (island.some(inBand)) continue;
+        for (const q of island) {
+          if (Math.floor(q / width) < box.y + box.height || (!twins.has(index) && byOther(q)))
+            continue;
+          out[q] = twins.get(index) ?? nearestAmong(labOf(rgbAt(t.drawn, q)), garments, labs);
+        }
+      }
+      return out;
+    },
+  });
+};
+
 /** The pixels of a stored cell's soles' band (`SOLE_BAND`) that hold a hair paint, its paints read exactly. */
 export const soleHairOf = (r: Raster, paints: ReadonlyArray<Paint>): number => {
   const map = paintMapOf(r, paints);
@@ -1197,7 +1271,11 @@ export const tidiedReport = (
     if (!rules.sashBand) return m;
     return sashBanded(m, drawn.width, paints);
   };
-  const final = solesShod(t, propsWhole(banded(smooth(skinned)), drawn.width, paints));
+  const clothed = (m: Int32Array) => {
+    if (!rules.bodyCloth) return m;
+    return bodyClothed(t, m, faceBoxOf(snap, paints));
+  };
+  const final = solesShod(t, propsWhole(banded(smooth(clothed(skinned))), drawn.width, paints));
   const rgba = snap.rgba.slice();
   let skinFar = 0;
   for (let q = 0; q < final.length; q++) {
@@ -1247,14 +1325,15 @@ export interface Split {
 }
 
 /** The opt-in split rules by the names a sheet's record gives them. */
-export const SPLIT_RULES = ['unstray', 'feet-low', 'unmottle', 'sash-band'] as const;
+export const SPLIT_RULES = ['unstray', 'feet-low', 'unmottle', 'sash-band', 'body-cloth'] as const;
 
-/** The split's rules a sheet opts into, as its record names them: `unstray`, each stray hair shade its neighbours' paint (`unstrayed`); `feetLow` (`feet-low`), the footwear paint only in the figure's lower half (`feetLowOnly`); `unmottle`, each blotch of skin shade inside the skin its base (`unmottled`); `sashBand` (`sash-band`), each fleck of a sash paint far smaller than its band the paint round it (`sashBanded`). */
+/** The split's rules a sheet opts into, as its record names them: `unstray`, each stray hair shade its neighbours' paint (`unstrayed`); `feetLow` (`feet-low`), the footwear paint only in the figure's lower half (`feetLowOnly`); `unmottle`, each blotch of skin shade inside the skin its base (`unmottled`); `sashBand` (`sash-band`), each fleck of a sash paint far smaller than its band the paint round it (`sashBanded`); `bodyCloth` (`body-cloth`), the body between the face and the soles in the cloth's paints, no footwear and no garment's twin there (`bodyClothed`). */
 export interface SplitRules {
   readonly unstray: boolean;
   readonly feetLow: boolean;
   readonly unmottle: boolean;
   readonly sashBand: boolean;
+  readonly bodyCloth: boolean;
 }
 
 /** The split as sheets drawn before any opt-in rule were split. */
@@ -1263,6 +1342,7 @@ export const PLAIN_SPLIT: SplitRules = {
   feetLow: false,
   unmottle: false,
   sashBand: false,
+  bodyCloth: false,
 };
 
 /** A drawn sheet split into `n` cells: the background cleared, the cells cut, each kept to its largest piece, its pockets mended and its paints snapped to `palette`, each colour to the paint the whole sheet draws it as (`drawnNearestOf`), its drawing's own marks tidied under `rules` (`tidied`), its face's marks inked (`inkedFaceMarks`) and its rim peeled. */

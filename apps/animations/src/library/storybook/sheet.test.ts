@@ -33,6 +33,7 @@ import {
   splitSheet,
   tidied,
   tidiedReport,
+  TWIN_PAINT,
 } from './sheet.ts';
 import { art, FOREIGN, GROUND, INK } from './testing.ts';
 
@@ -947,6 +948,68 @@ describe('tidied under sash-band', () => {
     expect(sashPx(40, true)).toBe(band);
     expect(sashPx(band * SASH_FLECK_SHARE + 2, true)).toBe(band + band * SASH_FLECK_SHARE + 2);
     expect(sashPx(40, false)).toBe(band + 40);
+  });
+});
+
+describe('tidied under body-cloth', () => {
+  const key = {
+    a: rgbOfHex('#fdbd83'),
+    h: rgbOfHex('#6e3f1f'),
+    r: rgbOfHex('#fdf4e2'),
+    s: rgbOfHex('#e7d7ef'),
+    m: rgbOfHex('#686141'),
+    f: rgbOfHex('#553019'),
+    c: rgbOfHex('#e6d7f0'),
+    o: rgbOfHex('#8e4c27'),
+  };
+  const palette: Palette = {
+    ink: '#1b0a01',
+    parts: [
+      { name: 'skin', base: '#fdbd83', role: 'skin' },
+      { name: 'hair', base: '#6e3f1f', role: 'hair' },
+      { name: 'robe', base: '#fdf4e2', shade: '#e7d7ef', role: 'garment' },
+      { name: 'mantle', base: '#80774c', shade: '#686141', role: 'garment' },
+      { name: 'sandals', base: '#553019', role: 'footwear' },
+      { name: 'stool', base: '#8e4c27', role: 'other' },
+      { name: 'contact shadow', base: '#e6d7f0', role: 'other' },
+    ],
+  };
+  /** A seated figure 20 px wide: her hair in the sandals' paint, her face, her robe with a mantle edge drawn in the sandals' paint, a sash band drawn in the contact shadow's paint, a stool's edge in the sandals' paint beside its wood, and her sandals on the contact shadow. */
+  const rows = [
+    ...Array.from({ length: 4 }, () => 'hhhhhhhhhhhhhhhhhhhh'),
+    ...Array.from({ length: 6 }, () => 'hhhhhhaaaaaaaahhhhhh'),
+    ...Array.from({ length: 6 }, () => 'rrrrrrrrrrrrrrrrrrrr'),
+    ...Array.from({ length: 4 }, () => 'rrrffffffffffffrrrrr'),
+    ...Array.from({ length: 6 }, () => 'rrrrrrrrrrrrrrrrrrrr'),
+    ...Array.from({ length: 6 }, () => 'rrrrcccccccccccrrrrr'),
+    ...Array.from({ length: 6 }, () => 'rrrrrrrrrrrr........'),
+    ...Array.from({ length: 10 }, () => 'rrrrrrrrrrrrooooooff'),
+    ...Array.from({ length: 6 }, () => 'rrrrrrrrrrrr........'),
+    ...Array.from({ length: 4 }, () => 'ffffffccccccccffffff'),
+  ];
+  const split = (bodyCloth: boolean) => {
+    const drawn = art(rows, key);
+    const paints = paintsOf(palette);
+    const nearest = drawnNearestOf(drawn, paints);
+    return lettersOf(
+      tidied(drawn, snapped(drawn, paints, nearest), paints, nearest, {
+        ...PLAIN_SPLIT,
+        bodyCloth,
+      }),
+      key,
+    );
+  };
+
+  test('gives a footwear island between the face and the soles the nearest garment paint and a garment’s twin there that garment, and keeps the head, the stool’s edge, the sandals and the contact shadow at the soles; a plain split keeps them all (the guest woman’s mantle and sash, critique 3, finding 4)', () => {
+    expect(TWIN_PAINT).toBeGreaterThanOrEqual(deltaE(key.s, key.c));
+    expect(split(false)).toEqual(rows);
+    expect(split(true)).toEqual(
+      rows.map((row, y) => {
+        if (y >= 16 && y < 20) return row.replaceAll('f', 'm');
+        if (y >= 26 && y < 32) return row.replaceAll('c', 's');
+        return row;
+      }),
+    );
   });
 });
 
