@@ -1,12 +1,15 @@
 /**
- * Say it: Today's one recital, run over the app's one `Dictation`. A press
- * starts a recital of the passage, or finishes the one under way; it never
- * replaces one. Each word the screen newly sees lit gives one soft haptic
+ * Say it: the app's one recital, run over the app's one `Dictation`. A
+ * recital (`recite`) starts one of the passage under a cue, kept or not, or
+ * finishes the one under way; it never replaces one. Today's press is a
+ * kept recital with no cue; the first minute's letters recital is cued and
+ * keeps nothing. Each word the screen newly sees lit gives one soft haptic
  * tick, and a recital whose last word lights finishes itself. A recital
  * that ends `finished` takes the matcher's suggested grade as the reader's
- * choice, which the reader can change; each change of its recall (the
- * first suggestion, a changed grade, a later peek) is handed to `Recalls`
- * once. Every other ending keeps nothing.
+ * choice, which the reader can change; for a kept recital, each change of
+ * its recall (the first suggestion, a changed grade, a later peek) is
+ * handed to `Recalls` once. A recital that is not kept, and every other
+ * ending, hands nothing over.
  *
  * Each of `Dictation.changes` has the screen show Dictation's view as it is
  * then, and tick for the words it lights since the recital's own last view
@@ -17,7 +20,7 @@
 import { Clock, Context, Effect, Layer, MutableRef, Option, PubSub, Stream } from 'effect';
 
 import { Dictation, type DictationView } from './dictation';
-import type { MatcherView, SuggestedGrade } from './matcher';
+import type { Cue, MatcherView, SuggestedGrade } from './matcher';
 import { sourceWords } from './matcher/words';
 import type { Passage } from './passage';
 
@@ -70,9 +73,21 @@ export interface SayItView {
   readonly choice: OrNull<Grade>;
 }
 
+/** How a recital is said: the cue the matcher grades it under, and whether its recall is handed to `Recalls`. */
+export interface Recital {
+  readonly cue: Cue;
+  readonly keep: boolean;
+}
+
+/** Today's recital: no cue, and kept. */
+export const TODAY: Recital = { cue: 'none', keep: true };
+
 export class SayIt extends Context.Service<
   SayIt,
   {
+    /** Starts a recital the way `how` says, or finishes the one under way. */
+    readonly recite: (how: Recital) => Effect.Effect<void>;
+    /** `recite(TODAY)`. */
     readonly press: Effect.Effect<void>;
     readonly peek: (index: number) => Effect.Effect<void>;
     readonly choose: (grade: Grade) => Effect.Effect<void>;
@@ -128,14 +143,15 @@ const sameRecall = (a: Recall, b: Recall) => RECALL_FIELDS.every((field) => a[fi
 
 const isGrade = (grade: number): grade is Grade => GRADES.some((each) => each === grade);
 
-/** How far the current recital has gone: none yet, under way, ended unheard, or finished with its suggestion and the recall last kept. */
-type Recital =
+/** How far the current recital has gone: none yet, under way, ended unheard, or finished with its suggestion and the recall last kept; one under way or finished carries whether it is kept at all. */
+type Progress =
   | { readonly _tag: 'None' }
-  | { readonly _tag: 'Open'; readonly startedAt: number }
+  | { readonly _tag: 'Open'; readonly startedAt: number; readonly keep: boolean }
   | { readonly _tag: 'Unheard' }
   | {
       readonly _tag: 'Finished';
       readonly startedAt: number;
+      readonly keep: boolean;
       readonly suggested: SuggestedGrade;
       readonly kept: Option.Option<Recall>;
     };
@@ -143,7 +159,7 @@ type Recital =
 /** Say it's state: the view, the current recital, the recitals started and the endings read, and the matcher view last shown of the current recital (none before its first). */
 interface Held {
   readonly view: SayItView;
-  readonly recital: Recital;
+  readonly recital: Progress;
   readonly started: number;
   readonly endings: number;
   readonly shown: OrNull<MatcherView>;
@@ -180,11 +196,12 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
           return Effect.asVoid(PubSub.publish(views, next.view));
         });
 
-      /** Hands the finished recital's recall to `Recalls`, unless it is the one last kept for it; once marked kept, the hand-over is never cut off. */
+      /** Hands the finished recital's recall to `Recalls` when the recital is kept, unless it is the one last kept for it; once marked kept, the hand-over is never cut off. */
       const keep = Effect.gen(function* () {
         const { recital, view } = MutableRef.get(held);
         const { matcher } = yield* dictation.view;
-        if (recital._tag !== 'Finished' || view.choice === ABSENT || matcher === ABSENT) return;
+        if (recital._tag !== 'Finished' || !recital.keep) return;
+        if (view.choice === ABSENT || matcher === ABSENT) return;
         const recall = recallOf(
           passage.reference,
           recital.startedAt,
@@ -200,7 +217,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
         yield* Effect.uninterruptible(recalls.keep(recall));
       });
 
-      /** Applies an ending to the recital under way: a finished one takes its suggestion as the choice and is kept; any other keeps nothing. */
+      /** Applies an ending to the recital under way: a finished one takes its suggestion as the choice and is kept if it is a kept recital; any other keeps nothing. */
       const close = (ended: DictationView) =>
         Effect.gen(function* () {
           const { recital } = MutableRef.get(held);
@@ -215,6 +232,7 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
             recital: {
               _tag: 'Finished',
               startedAt: recital.startedAt,
+              keep: recital.keep,
               suggested,
               kept: Option.none(),
             },
@@ -266,21 +284,22 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
         startImmediately: true,
       });
 
-      const press = Effect.gen(function* () {
-        const current = yield* dictation.view;
-        if (current.status === 'listening') return yield* dictation.finish;
-        if (current.status === 'finishing' || !sayable) return;
-        yield* close(current);
-        const startedAt = yield* now;
-        yield* update((now) => ({
-          ...now,
-          started: now.started + 1,
-          recital: { _tag: 'Open', startedAt },
-          shown: ABSENT,
-          view: { dictation: current, startedAt, choice: ABSENT },
-        }));
-        yield* dictation.start(passage.text);
-      });
+      const recite = (how: Recital) =>
+        Effect.gen(function* () {
+          const current = yield* dictation.view;
+          if (current.status === 'listening') return yield* dictation.finish;
+          if (current.status === 'finishing' || !sayable) return;
+          yield* close(current);
+          const startedAt = yield* now;
+          yield* update((now) => ({
+            ...now,
+            started: now.started + 1,
+            recital: { _tag: 'Open', startedAt, keep: how.keep },
+            shown: ABSENT,
+            view: { dictation: current, startedAt, choice: ABSENT },
+          }));
+          yield* dictation.start(passage.text, how.cue);
+        });
 
       const choose = (grade: Grade) =>
         Effect.suspend(() => {
@@ -294,7 +313,8 @@ export const layer = (passage: Passage): Layer.Layer<SayIt, never, Dictation | H
         });
 
       return SayIt.of({
-        press,
+        recite,
+        press: recite(TODAY),
         peek: (index) => Effect.andThen(dictation.peek(index), keep),
         choose,
         view: Effect.sync(() => MutableRef.get(held).view),

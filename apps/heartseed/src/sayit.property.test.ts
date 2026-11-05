@@ -202,6 +202,7 @@ const settle = Effect.gen(function* () {
 const run = (live: Rig, step: ModelStep) =>
   Effect.gen(function* () {
     if (step.t === 'press') yield* live.sayIt.press;
+    if (step.t === 'recite') yield* live.sayIt.recite({ cue: step.cue, keep: step.keep });
     if (step.t === 'peek') yield* live.sayIt.peek(step.index);
     if (step.t === 'choose') yield* live.sayIt.choose(step.grade as Grade);
     if (step.t === 'wait') yield* live.wait(step.ms);
@@ -210,7 +211,8 @@ const run = (live: Rig, step: ModelStep) =>
 
 const generate = (next: () => number, words: number): ModelStep => {
   const r = next();
-  if (r < 0.2) return { t: 'press' };
+  if (r < 0.1) return { t: 'press' };
+  if (r < 0.2) return { t: 'recite', cue: next() < 0.5 ? 'none' : 'initials', keep: next() < 0.5 };
   if (r < 0.62) return { t: 'wait', ms: 1 + below(next, 6) };
   if (r < 0.74) return { t: 'peek', index: below(next, words + 2) - 1 };
   if (r < 0.9) return { t: 'choose', grade: below(next, 6) };
@@ -232,6 +234,7 @@ const agree = (live: Rig, model: SayItModel, where: string) =>
     expect(MutableRef.get(live.latest), where).toBe(view);
     expect(live.ticks.n, where).toBe(model.ticks);
     expect(live.kept, where).toEqual(model.kept);
+    expect(model.cuedGood, where).toBe(0);
     expect(count(live.calls, 'listen'), where).toBe(model.listens);
     const finishes = count(live.calls, 'finish');
     expect(finishes >= model.finishes && finishes <= model.finishesAllowed, where).toBe(true);
@@ -267,6 +270,7 @@ const runHistory = (seed: number) =>
       yield* agree(live, model, trail.join(' '));
     }
     yield* Scope.close(live.scope, Exit.void);
+    return model;
   });
 
 /** A source that hears a whole recital of `text` inside its listen: each word tentative then final, then the end. */
@@ -303,6 +307,23 @@ const burst = (text: string) =>
   });
 
 const timesOf = (steps: readonly DictationStep[]) => [...new Set(steps.map((step) => step.at))];
+
+/** Starts a recital the way `how` says and plays `steps` through to its end, then reads Say it's view. */
+const sayThrough = (
+  live: Rig,
+  steps: readonly DictationStep[],
+  how: { readonly cue: 'none' | 'initials'; readonly keep: boolean },
+) =>
+  Effect.gen(function* () {
+    yield* run(live, { t: 'recite', ...how });
+    let elapsed = 0;
+    for (const at of timesOf(steps)) {
+      yield* run(live, { t: 'wait', ms: at - elapsed });
+      elapsed = at;
+    }
+    yield* run(live, { t: 'wait', ms: 10 });
+    return yield* live.sayIt.view;
+  });
 
 describe('Say it', () => {
   it('ticks once for each word a view lights that the view before it did not, over 4,000 generated pairs', () => {
@@ -342,10 +363,40 @@ describe('Say it', () => {
     expect(GRADES.map((grade) => GRADE_NAMES[grade])).toEqual(['Again', 'Hard', 'Good', 'Easy']);
   });
 
-  it('agrees with its model on 240 seeded histories of 30 steps, over self-ending and open sources', () =>
+  it('agrees with its model on 240 seeded histories of 30 steps, over self-ending and open sources, presses and recitals cued or not, kept or not', () =>
     Effect.runPromise(
       Effect.gen(function* () {
-        for (let seed = 1; seed <= 240; seed++) yield* runHistory(seed);
+        const reached = { cued: 0, unkept: 0 };
+        for (let seed = 1; seed <= 240; seed++) {
+          const model = yield* runHistory(seed);
+          reached.cued += model.cuedFinished;
+          reached.unkept += model.unkeptFinished;
+        }
+        expect(reached.cued).toBeGreaterThanOrEqual(40);
+        expect(reached.unkept).toBeGreaterThanOrEqual(40);
+      }),
+    ));
+
+  it('grades the passage said whole under the first letters as helped and keeps nothing, then keeps the same recital said with no cue as Good', () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const steps = recite(passage.text, { every: 5, pace: 1 });
+        const live = yield* rig({ passage, source: scriptedSource(steps), endsByItself: true });
+        const letters = yield* sayThrough(live, steps, { cue: 'initials', keep: false });
+        expect([letters.dictation.ended, letters.dictation.matcher?.suggestedGrade]).toEqual([
+          'finished',
+          2,
+        ]);
+        expect([letters.choice, live.kept]).toEqual([2, []]);
+        yield* run(live, { t: 'choose', grade: 3 });
+        yield* run(live, { t: 'peek', index: 0 });
+        expect(live.kept).toEqual([]);
+        const alone = yield* sayThrough(live, steps, { cue: 'none', keep: true });
+        expect(alone.dictation.matcher?.suggestedGrade).toBe(3);
+        expect(
+          live.kept.map((recall): readonly unknown[] => [recall.startedAt, recall.grade]),
+        ).toEqual([[alone.startedAt, 3]]);
+        yield* Scope.close(live.scope, Exit.void);
       }),
     ));
 

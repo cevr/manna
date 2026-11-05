@@ -8,9 +8,10 @@
  * finishes it asked the source for, the ticks, the start and the choice,
  * and the recalls it kept, in order.
  *
- * - A press while listening finishes; while idle it starts a recital,
- *   which clears the choice and starts at the clock's time; while
- *   finishing it does nothing.
+ * - A press is a recital with no cue that is kept (hsfirst). A recital
+ *   while listening finishes; while idle it starts one under its cue,
+ *   kept or not, which clears the choice and starts at the clock's time;
+ *   while finishing it does nothing.
  * - Each word lit in a step's later view and not in the view last seen of
  *   the same recital ticks once; a recital's first view is diffed against
  *   nothing.
@@ -21,7 +22,10 @@
  * - A recital that ends `finished` with a suggestion takes it as the
  *   choice; a grade of 1 to 4 then changes the choice, and nothing else
  *   does until the next press.
- * - While the recital is finished, each change of its recall is kept once.
+ * - While a kept recital is finished, each change of its recall is kept
+ *   once; a recital that is not kept hands nothing over, ever.
+ * - The matcher grades a cued recital as helped, so a finished recital
+ *   under a cue is never suggested Good (`cuedGood` counts any that is).
  */
 
 export type Status = 'pending' | 'tentative' | 'matched' | 'miss' | 'peek';
@@ -52,8 +56,11 @@ export interface ModelRecall {
   readonly extra: number;
 }
 
+export type ModelCue = 'none' | 'initials';
+
 export type ModelStep =
   | { readonly t: 'press' }
+  | { readonly t: 'recite'; readonly cue: ModelCue; readonly keep: boolean }
   | { readonly t: 'wait'; readonly ms: number }
   | { readonly t: 'peek'; readonly index: number }
   | { readonly t: 'choose'; readonly grade: number };
@@ -72,6 +79,8 @@ const asGrade = (grade: number): ModelGrade | null =>
   grade === 1 || grade === 2 || grade === 3 || grade === 4 ? grade : null;
 
 interface Recital {
+  readonly cue: ModelCue;
+  readonly keep: boolean;
   ended: boolean;
   suggested: 1 | 2 | 3 | null;
   kept: string | null;
@@ -86,6 +95,11 @@ export class SayItModel {
   finishesAllowed = 0;
   startedAt: number | null = null;
   choice: ModelGrade | null = null;
+  /** Finished recitals under a cue that the matcher suggested Good for: always 0. */
+  cuedGood = 0;
+  /** Finished recitals under a cue, and finished recitals that are not kept: how far a history reached. */
+  cuedFinished = 0;
+  unkeptFinished = 0;
   readonly kept: ModelRecall[] = [];
   private recital: Recital | null = null;
   private seen: ReadonlySet<number> = new Set();
@@ -97,23 +111,29 @@ export class SayItModel {
   ) {}
 
   step(step: ModelStep, before: ModelDictation, after: ModelDictation, now: number): void {
-    const finishedByPress = step.t === 'press' && before.status === 'listening';
+    const how =
+      step.t === 'press'
+        ? { cue: 'none' as const, keep: true }
+        : step.t === 'recite'
+          ? { cue: step.cue, keep: step.keep }
+          : null;
+    const finishedByPress = how !== null && before.status === 'listening';
     if (finishedByPress) {
       this.finishes += 1;
       this.finishesAllowed += 1;
     }
-    if (step.t === 'press' && before.status === 'idle') {
+    if (how !== null && before.status === 'idle') {
       this.listens += 1;
       this.startedAt = now;
       this.choice = null;
-      this.recital = { ended: false, suggested: null, kept: null };
+      this.recital = { ...how, ended: false, suggested: null, kept: null };
       this.seen = new Set();
       this.lastSeenLit = false;
     }
     if (step.t === 'choose' && this.recital?.ended && this.recital.suggested !== null)
       this.choice = asGrade(step.grade) ?? this.choice;
     if (this.recital !== null && !this.recital.ended)
-      this.follow(this.recital, step.t === 'press', before.status === 'listening', after);
+      this.follow(this.recital, how !== null, before.status === 'listening', after);
     this.keep(after);
   }
 
@@ -134,12 +154,15 @@ export class SayItModel {
     if (after.ended !== 'finished' || suggested === null) return;
     recital.suggested = suggested;
     this.choice = suggested;
+    if (recital.cue !== 'none') this.cuedFinished += 1;
+    if (recital.cue !== 'none' && suggested === 3) this.cuedGood += 1;
+    if (!recital.keep) this.unkeptFinished += 1;
   }
 
-  /** Keeps the finished recital's recall when it changed. */
+  /** Keeps the finished recital's recall when it is a kept recital and its recall changed. */
   private keep(after: ModelDictation) {
     const recital = this.recital;
-    if (!recital?.ended || recital.suggested === null) return;
+    if (!recital?.ended || !recital.keep || recital.suggested === null) return;
     if (this.choice === null || this.startedAt === null || after.matcher === null) return;
     const marks = after.matcher.marks;
     const recall: ModelRecall = {
