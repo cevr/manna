@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noTernary -- the property builds generated histories with plain loops and compares the garden's Option-built answers with a model written over undefined. */
+/* oxlint-disable effect/noNullish, effect/noTernary -- the property builds generated histories with plain loops and compares the garden's Option-built answers with a model written over undefined. */
 
 /**
  * The ladder (cues that fade) as a pure rule: the garden's `stageOf`,
