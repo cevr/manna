@@ -4,7 +4,8 @@
  * No field claim before a read completes, through the screen rig
  * (`src/test/field-rig.tsx`), which holds every frame to the field's rules:
  * a held launch offers no field until its read lands; an unread session
- * offers none, though its recital is written and the next launch counts its
+ * offers none, though its recital is written with its zone's offset at its
+ * start, beside an old record that has none, and the next launch counts its
  * day; a fresh install's first minute offers none.
  */
 
@@ -14,6 +15,7 @@ import passage from 'virtual:heartseed-passage';
 import { heldOn, recallOf } from '../test/field-model';
 import { mount, record } from '../test/field-rig';
 import { device } from '../test/one';
+import { hostOffset } from '../test/zone';
 
 describe('the field before a read', () => {
   it('is offered in no frame of a held launch until its read lands, of an unread session (whose recital the next launch counts), or of the first minute', async () => {
@@ -39,6 +41,15 @@ describe('the field before a read', () => {
     const after = await mount(true);
     expect(await after.until(() => after.buttons().includes('Your field'))).toBe(true);
     expect([heldOn(device.disk).length, (await after.field()).sown]).toEqual([2, '2 days sown']);
+    expect(
+      heldOn(device.disk).map((recall) => [
+        Object.hasOwn(recall, 'offset'),
+        recall.offset === hostOffset(recall.startedAt),
+      ]),
+    ).toEqual([
+      [false, false],
+      [true, true],
+    ]);
     await after.back();
     expect(await after.leave()).toEqual([]);
 

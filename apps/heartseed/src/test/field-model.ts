@@ -8,7 +8,9 @@
  * - rows: the passages taught, in order, each verse at its stage or `not
  *   planted`; then each other reference held, alone, in the order first sown
  *   (earliest recall, then the reference by code units);
- * - days sown: the distinct UTC dates (`toISOString`'s date) of every recall;
+ * - days sown: the distinct dates every recall counts for (`sownDate`: its
+ *   own wall clock's date four hours back, or the UTC date of a record with
+ *   no offset), as `toISOString` names them;
  * - harvest: the references whose stage is full corn.
  *
  * It also holds the generators the field's tests share: references of any
@@ -47,7 +49,10 @@ export interface ModelField {
   readonly harvest: number;
 }
 
-/** The recalls a complete read of `disk` keeps: each value under the prefix that is a recall of its own key, every field of its type. */
+/** The spec's bound on a stored offset: 18 hours either side of UTC, in minutes. */
+const OFFSET_LIMIT = 1080;
+
+/** The recalls a complete read of `disk` keeps: each value under the prefix that is a recall of its own key, every field of its type, its `offset` absent or a whole number of minutes within the bound. */
 export const heldOn = (disk: ReadonlyMap<string, string | null>): Recall[] =>
   [...disk].flatMap(([key, text]) => {
     if (!key.startsWith(PREFIX) || text === null) return [];
@@ -60,25 +65,32 @@ export const heldOn = (disk: ReadonlyMap<string, string | null>): Recall[] =>
     }
     if (typeof r !== 'object' || r === null) return [];
     const count = (field: Field) => Number.isInteger(field) && Number(field) >= 0;
+    const hasOffset = 'offset' in r;
+    const offset = r.offset;
     const valid =
       typeof r.reference === 'string' &&
       [r.startedAt, r.words, r.missed, r.peeked, r.extra].every(count) &&
       [1, 2, 3, 4].includes(Number(r.grade)) &&
       [1, 2, 3].includes(Number(r.suggested)) &&
+      (!hasOffset ||
+        (typeof offset === 'number' &&
+          Number.isInteger(offset) &&
+          offset >= -OFFSET_LIMIT &&
+          offset <= OFFSET_LIMIT)) &&
       key === `${PREFIX}${String(r.reference)}/${String(r.startedAt)}`;
     if (!valid) return [];
-    return [
-      {
-        reference: String(r.reference),
-        startedAt: Number(r.startedAt),
-        grade: ([1, 2, 3, 4] as const).find((grade) => grade === r.grade) ?? 1,
-        suggested: ([1, 2, 3] as const).find((grade) => grade === r.suggested) ?? 1,
-        words: Number(r.words),
-        missed: Number(r.missed),
-        peeked: Number(r.peeked),
-        extra: Number(r.extra),
-      },
-    ];
+    const recall: Recall = {
+      reference: String(r.reference),
+      startedAt: Number(r.startedAt),
+      grade: ([1, 2, 3, 4] as const).find((grade) => grade === r.grade) ?? 1,
+      suggested: ([1, 2, 3] as const).find((grade) => grade === r.suggested) ?? 1,
+      words: Number(r.words),
+      missed: Number(r.missed),
+      peeked: Number(r.peeked),
+      extra: Number(r.extra),
+    };
+    if (!hasOffset) return [recall];
+    return [{ ...recall, offset: Number(offset) }];
   });
 
 /** A recall's UTC date, as the ISO calendar names it. */
@@ -86,6 +98,18 @@ export const utcDate = (startedAt: number) => new Date(startedAt).toISOString().
 
 /** A recall's date in the host's time zone. */
 export const localDate = (startedAt: number) => new Date(startedAt).toDateString();
+
+/**
+ * The date a recall counts for, as the hslocal spec states it: a record
+ * with an offset counts for the date its own wall clock read four hours
+ * before its start (so the day runs from 04:00 to 04:00 local); one kept
+ * before offsets were stored counts for its UTC date. Each is an ISO date,
+ * so an old record and a new one on the same date are one day.
+ */
+export const sownDate = (recall: Pick<Recall, 'startedAt' | 'offset'>) =>
+  recall.offset === undefined
+    ? utcDate(recall.startedAt)
+    : utcDate(recall.startedAt + recall.offset * 60_000 - 4 * HOUR);
 
 /** The field the rule gives over `records` (one per recital) and the passages taught. */
 export const fieldRule = (
@@ -125,7 +149,7 @@ export const fieldRule = (
         plants: [{ reference, stage: stage(reference) }],
       })),
     ],
-    sown: new Set(records.map((recall) => utcDate(recall.startedAt))).size,
+    sown: new Set(records.map(sownDate)).size,
     harvest: [...held.keys()].filter((reference) => stage(reference) === 'full corn').length,
   };
 };

@@ -9,15 +9,18 @@
  * order first sown: by its earliest recall, then by its reference in code
  * units. References match exactly.
  *
- * Days sown is the number of distinct UTC calendar days on which any recall
- * of any verse was kept. A UTC day is a function of the stored `startedAt`
- * alone, so the same disk shows the same count in every time zone, and as
- * the garden never removes a recall, the count never falls. The harvest is
- * the number of verses at full corn now.
+ * Days sown is the number of distinct days (`dayOf`: the reader's local day
+ * from 04:00 by each record's own stored offset, or the UTC date of a record
+ * kept before offsets were stored) on which any recall of any verse was
+ * kept. A recall's day is a function of its record alone, so the same disk
+ * shows the same count in every time zone, and as the garden never removes
+ * a recall and a rewrite keeps its start and offset, the count never falls.
+ * The harvest is the number of verses at full corn now.
  */
 
 import { Array as Arr, Option, Order, pipe } from 'effect';
 
+import { dayOf } from './day';
 import { stageOf, type Plant, type ReadGarden, type Stage } from './garden';
 
 /** A verse's stage on the field: the garden's stage, or `not planted` before its first recall. */
@@ -41,16 +44,11 @@ export interface FieldRow {
 
 export interface Field {
   readonly rows: ReadonlyArray<FieldRow>;
-  /** The distinct UTC days on which any recall was kept. */
+  /** The distinct days (`dayOf`) on which any recall was kept. */
   readonly sown: number;
   /** The verses at full corn now. */
   readonly harvest: number;
 }
-
-const DAY_MS = 86_400_000;
-
-/** The UTC calendar day a recall started on, counted from the epoch. */
-export const utcDayOf = (startedAt: number) => Math.floor(startedAt / DAY_MS);
 
 /** The order first sown: by a plant's earliest recall, then by its reference in code units. */
 const firstSown: Order.Order<Plant> = Order.combine(
@@ -72,9 +70,7 @@ export const fieldOf = (garden: ReadGarden, passages: ReadonlyArray<FieldPassage
     Arr.sort(firstSown),
     Arr.map((plant): FieldPassage => ({ title: plant.reference, verses: [plant.reference] })),
   );
-  const days = new Set(
-    plants.flatMap((plant) => plant.recalls.map((recall) => utcDayOf(recall.startedAt))),
-  );
+  const days = new Set(plants.flatMap((plant) => plant.recalls.map(dayOf)));
   return {
     rows: [...passages, ...others].map((passage) => ({
       title: passage.title,

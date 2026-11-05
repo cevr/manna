@@ -14,9 +14,16 @@
  * look-alikes; `test/field-model.ts`), some beside a canonically equivalent
  * twin, sometimes a second passage of several verses; recalls on days
  * shared across verses and at 00:00:00.000, 23:59:59.999, 02:00, 06:00,
- * 22:00 and 23:00 UTC. Each garden is derived under a western, an eastern
- * and a far-eastern zone, so a count by local days fails on any host; a
- * garden that disagrees is shrunk to the fewest references that still do.
+ * 22:00 and 23:00 UTC; old records (no offset) beside new ones stamped in
+ * zones of every offset (`test/zone.ts`: west and east, half and three
+ * quarter hours, ±12-14 h, the bounds ±1080 and 0), and recalls at a local
+ * 04:00 (±1 ms, ±30 min), at each daylight-saving change north and south
+ * (±1 ms, ±hours), twice at one wall time on a fall-back night, old ones at
+ * the UTC midnight, and one set back before a verse's first
+ * (`test/day-model.ts`). Each garden is derived under a western, an eastern
+ * and a far-eastern zone, so a count in the device's zone fails on any
+ * host; a garden that disagrees is shrunk to the fewest references that
+ * still do.
  * It misses the screen (`field/screen.test.tsx`) and the garden's read of
  * the device (`field/sown.test.ts`).
  */
@@ -24,14 +31,7 @@
 import { describe, expect, it } from 'bun:test';
 import { Array as Arr } from 'effect';
 
-import {
-  fieldOf,
-  harvestText,
-  sownText,
-  utcDayOf,
-  verseNumberOf,
-  type FieldPassage,
-} from './field';
+import { fieldOf, harvestText, sownText, verseNumberOf, type FieldPassage } from './field';
 import { plantOf, type Plant, type ReadGarden } from './garden';
 import type { Recall } from './sayit';
 import {
@@ -44,10 +44,13 @@ import {
   recallOf,
   referenceKinds,
   shrunk,
+  sownDate,
   utcDate,
   verseNumberRule,
 } from './test/field-model';
-import { below, DAY, pickOf, random } from './test/garden-model';
+import { edgeMoments, stamped, storedAt } from './test/day-model';
+import { below, DAY, keyOf, pickOf, random } from './test/garden-model';
+import { inZone } from './test/zone';
 
 const PASSAGE = 'Isaiah 41:10';
 const ZONES = ['America/Los_Angeles', 'Asia/Tokyo', 'Pacific/Kiritimati'] as const;
@@ -63,34 +66,25 @@ const gardenOf = (next: () => number, records: readonly Recall[]): ReadGarden =>
   return { _tag: 'Read', plants };
 };
 
-/** `derive` run with the host's zone set to `zone`, the zone restored before it returns. */
-const inZone = <A>(zone: string, derive: () => A): A => {
-  const before = process.env.TZ;
-  process.env.TZ = zone;
-  // oxlint-disable-next-line effect/noTryCatch -- the zone is the host's, shared by every part's tests in this process, so it is restored even when `derive` throws.
-  try {
-    return derive();
-  } finally {
-    if (before === undefined) delete process.env.TZ;
-    else process.env.TZ = before;
-  }
-};
-
-/** The parts of the domain a garden reaches: each stage shown, a harvest, many rows, a local-day count other than the UTC one, a UTC day several verses share, a second passage. */
+/** The parts of the domain a garden reaches: each stage shown, a harvest, many rows, a count the UTC dates or the device's own zone would give otherwise, old records beside new, part-hour offsets, a day several verses share, a second passage, and the edges the garden was built at. */
 const reached = (
   records: readonly Recall[],
   want: ReturnType<typeof fieldRule>,
   passages: readonly FieldPassage[],
+  edges: readonly string[],
 ) => {
   const keys = want.rows.flatMap((row) => row.plants.map((plant) => `stage:${plant.stage}`));
+  keys.push(...edges);
   const local = inZone(ZONES[0], () => new Set(records.map((r) => localDate(r.startedAt))));
+  const utc = new Set(records.map((recall) => utcDate(recall.startedAt)));
   const verses = new Map<string, Set<string>>();
   for (const recall of records)
-    verses.set(
-      utcDate(recall.startedAt),
-      (verses.get(utcDate(recall.startedAt)) ?? new Set()).add(recall.reference),
-    );
-  if (local.size !== want.sown) keys.push('local days differ');
+    verses.set(sownDate(recall), (verses.get(sownDate(recall)) ?? new Set()).add(recall.reference));
+  if (local.size !== want.sown) keys.push('current-zone count differs');
+  if (utc.size !== want.sown) keys.push('utc count differs');
+  const old = records.some((recall) => recall.offset === undefined);
+  if (old && records.some((recall) => recall.offset !== undefined)) keys.push('old and new');
+  if (records.some((recall) => (recall.offset ?? 0) % 60 !== 0)) keys.push('part-hour offset');
   if (want.harvest > 0) keys.push('harvest');
   if (want.rows.length >= 4) keys.push('four rows');
   if (want.rows.length >= 41) keys.push('forty others');
@@ -119,9 +113,34 @@ const generated = (seed: number) => {
   for (const reference of othersOf(next, PASSAGE, seed === 1 ? 40 : countOf(next, 8)))
     references.add(reference);
   const records = [...references].flatMap((reference) =>
-    historyOf(next, reference, pickOf(next, [...days] as [number, ...number[]])),
+    historyOf(next, reference, pickOf(next, [...days] as [number, ...number[]])).map((recall) =>
+      stamped(next, recall),
+    ),
   );
-  return { records, passages };
+  const edges: string[] = [];
+  const keys = new Set(records.map(keyOf));
+  const add = (recall: Recall, kind: string) => {
+    if (keys.has(keyOf(recall))) return;
+    keys.add(keyOf(recall));
+    records.push(recall);
+    edges.push(kind);
+  };
+  const held = [...references];
+  for (let k = held.length === 0 ? 0 : below(next, 5); k > 0; k -= 1) {
+    const reference = pickOf(next, held as [string, ...string[]]);
+    const grade = pickOf(next, [1, 2, 3, 3, 4] as const);
+    for (const moment of edgeMoments(next))
+      add(storedAt(recallOf(reference, 0, grade, 0), moment), moment.kind);
+  }
+  if (held.length > 0 && next() < 0.15) {
+    const reference = pickOf(next, held as [string, ...string[]]);
+    const first = Math.min(
+      ...records.filter((r) => r.reference === reference).map((r) => r.startedAt),
+    );
+    const back = first - (1 + below(next, 40)) * HOUR;
+    add(stamped(next, recallOf(reference, back, pickOf(next, [1, 3] as const), 0)), 'set back');
+  }
+  return { records, passages, edges };
 };
 
 /** Whether `fieldOf` gives the rule's field over `records` in every zone. */
@@ -160,12 +179,12 @@ const counterexample = (
 };
 
 describe('the field of a read garden', () => {
-  it('shows the passages first, then each other verse in the order first sown, each at its stage and verse number, with the UTC days sown and the harvest, over 300 generated gardens of any count of other verses of any reference, canonical twins beside each other, in three time zones', () => {
+  it('shows the passages first, then each other verse in the order first sown, each at its stage and verse number, with the days sown by each record’s own local day from 04:00 (an old record’s UTC date) and the harvest, over 300 generated gardens of any count of other verses of any reference, canonical twins beside each other, old and new records of every offset at 04:00, daylight-saving and UTC-midnight edges, derived in three time zones', () => {
     const cover = new Map<string, number>();
     const bump = (key: string, by = 1) => cover.set(key, (cover.get(key) ?? 0) + by);
     let largest = 0;
     for (let seed = 1; seed <= 300; seed += 1) {
-      const { records, passages } = generated(seed);
+      const { records, passages, edges } = generated(seed);
       const want = fieldRule(records, passages);
       if (!agrees(seed, records, passages)) {
         const found = counterexample(seed, records, passages);
@@ -182,14 +201,21 @@ describe('the field of a read garden', () => {
         numbers: references.map(verseNumberRule),
       });
       largest = Math.max(largest, want.rows.length - passages.length);
-      for (const key of reached(records, want, passages)) bump(key);
+      for (const key of reached(records, want, passages, edges)) bump(key);
     }
     expect(Object.keys(Object.fromEntries(cover)).toSorted()).toEqual([
+      '04:00 edge',
+      'bound offset',
       'canonical twins',
+      'current-zone count differs',
+      'dst edge',
+      'fall-back twice',
       'forty others',
       'four rows',
       'harvest',
-      'local days differ',
+      'old and new',
+      'old at utc midnight',
+      'part-hour offset',
       'past 140',
       'past forty',
       'reference:astral',
@@ -201,6 +227,7 @@ describe('the field of a read garden', () => {
       'reference:no colon',
       'reference:not NFC',
       'reference:space',
+      'set back',
       'shared days',
       'stage:blade',
       'stage:ear',
@@ -208,9 +235,19 @@ describe('the field of a read garden', () => {
       'stage:not planted',
       'stage:seed',
       'two passages',
+      'utc count differs',
     ]);
     const floors = {
-      'local days differ': 30,
+      'current-zone count differs': 120,
+      'utc count differs': 135,
+      'old and new': 170,
+      'part-hour offset': 170,
+      '04:00 edge': 70,
+      'dst edge': 80,
+      'fall-back twice': 170,
+      'old at utc midnight': 70,
+      'bound offset': 70,
+      'set back': 18,
       harvest: 30,
       'four rows': 30,
       'shared days': 30,
@@ -316,7 +353,7 @@ describe('the field of a read garden', () => {
     expect(inZone(ZONES[0], () => localDate(Date.UTC(2026, 0, 2, 2)))).toBe('Thu Jan 01 2026');
   });
 
-  it('counts a day at its UTC edges: 23:59:59.999 and 00:00:00.000 are two days, an evening and a morning in Los Angeles one UTC day each', () => {
+  it('counts a record kept before offsets were stored by its UTC date: 23:59:59.999 and 00:00:00.000 are two days, an evening and a morning in Los Angeles one UTC day each, in every zone the device is in', () => {
     const edge = Date.UTC(2026, 0, 2);
     const records = [
       recallOf(PASSAGE, edge - 1, 3, 0),
@@ -324,15 +361,51 @@ describe('the field of a read garden', () => {
       recallOf('Made 1:1', edge + DAY - 1, 3, 0),
       recallOf('Made 1:2', edge + 2 * HOUR, 3, 0),
     ];
-    const field = inZone(ZONES[0], () =>
-      fieldOf(gardenOf(random(1), records), [{ title: PASSAGE, verses: [PASSAGE] }]),
-    );
-    expect([field.sown, utcDayOf(edge - 1) + 1, utcDayOf(edge + DAY - 1)]).toEqual([
-      2,
-      utcDayOf(edge),
-      utcDayOf(edge),
-    ]);
-    expect(field.rows.map((row) => row.title)).toEqual([PASSAGE, 'Made 1:2', 'Made 1:1']);
+    for (const zone of ZONES) {
+      const field = inZone(zone, () =>
+        fieldOf(gardenOf(random(1), records), [{ title: PASSAGE, verses: [PASSAGE] }]),
+      );
+      expect([zone, field.sown, utcDate(edge - 1), utcDate(edge), utcDate(edge + DAY - 1)]).toEqual(
+        [zone, 2, '2026-01-01', '2026-01-02', '2026-01-02'],
+      );
+      expect(field.rows.map((row) => row.title)).toEqual([PASSAGE, 'Made 1:2', 'Made 1:1']);
+    }
+  });
+
+  it('counts a record with an offset by its own local day from 04:00: 03:59:59.999 the day before, 04:00 the day itself, a fall-back night’s twice-read 01:30 one day, Kathmandu’s 04:00 by its 45 minutes, and the upgrade’s old evening and new morning one day, in every zone the device is in', () => {
+    const at = (offset: number, startedAt: number, reference = PASSAGE): Recall => ({
+      ...recallOf(reference, startedAt, 3, 0),
+      offset,
+    });
+    const four = Date.UTC(2026, 0, 6, 9);
+    const cases: readonly (readonly [string, readonly Recall[], number])[] = [
+      ['03:59:59.999 and 04:00 New York', [at(-300, four - 1), at(-300, four)], 2],
+      ['04:00 and 03:59:59.999 next', [at(-300, four), at(-300, four + DAY - 1)], 1],
+      ['04:00:00.001 and 03:59:59.999 next', [at(-300, four + 1), at(-300, four + DAY - 1)], 1],
+      [
+        'a fall-back night’s 01:30 twice',
+        [at(-240, Date.UTC(2026, 10, 1, 5, 30)), at(-300, Date.UTC(2026, 10, 1, 6, 30))],
+        1,
+      ],
+      [
+        'Kathmandu either side of 04:00',
+        [at(345, Date.UTC(2026, 0, 5, 22, 15) - 1), at(345, Date.UTC(2026, 0, 5, 22, 15))],
+        2,
+      ],
+      [
+        'the upgrade’s old 21:00 and a new 08:00',
+        [recallOf(PASSAGE, Date.UTC(2026, 0, 6, 2), 3, 0), at(-300, Date.UTC(2026, 0, 6, 13))],
+        1,
+      ],
+      ['the bounds', [at(1080, Date.UTC(2026, 0, 6, 0)), at(-1080, Date.UTC(2026, 0, 6, 23))], 1],
+    ];
+    for (const zone of ZONES)
+      for (const [name, records, sown] of cases) {
+        const field = inZone(zone, () =>
+          fieldOf(gardenOf(random(2), records), [{ title: PASSAGE, verses: [PASSAGE] }]),
+        );
+        expect({ zone, name, sown: field.sown }).toEqual({ zone, name, sown });
+      }
   });
 
   it('writes its counts and verse numbers as the field shows them', () => {
