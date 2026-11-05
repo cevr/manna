@@ -56,7 +56,7 @@ const failed = (cause: unknown) => StorybookFailed.make({ reason: String(cause) 
 const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
 /** PNG bytes as a data URL the page decodes. */
-const dataUrlOf = (png: Uint8Array): string => `data:image/png;base64,${Base64.encode(png)}`;
+export const dataUrlOf = (png: Uint8Array): string => `data:image/png;base64,${Base64.encode(png)}`;
 
 /** The page's bundle: `page.ts` and the engine's camera as one script that runs on a blank page. */
 const pageScript = Effect.gen(function* () {

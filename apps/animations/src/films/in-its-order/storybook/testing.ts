@@ -1,14 +1,9 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Layer, Option } from 'effect';
 import { filmCast, filmFolder, shotsOf } from '../../../library/storybook/films.ts';
-import { type PaintScene, paintSceneOf } from '../../../library/storybook/painter.ts';
-import { APP } from '../../../library/storybook/render.ts';
-import {
-  filmSceneOf,
-  PAPER,
-  type SheetDecl,
-  storyPaintings,
-} from '../../../library/storybook/scene.ts';
+import type { PaintScene } from '../../../library/storybook/painter.ts';
+import { APP, dataUrlOf, loadShot } from '../../../library/storybook/render.ts';
+import { filmSceneOf, type SheetDecl, storyPaintings } from '../../../library/storybook/scene.ts';
 import { anchorOf, faceBoxOf, paintsOf } from '../../../library/storybook/sheet.ts';
 import {
   drawnKeyOf,
@@ -25,7 +20,6 @@ import {
   drawnCellOf,
   headsOf,
   loadFigures,
-  memberPalette,
   readRecord,
   sharesOf,
   sheetDir,
@@ -108,7 +102,7 @@ const pictureOf = Effect.fn('Act1Testing.pictureOf')(function* (file: string) {
   return { file: yield* fs.realPath(file), size };
 });
 
-/** What a painted shot reads, comparable path to path: its size, paper and light, then per layer each plate's picture file, size, place, moves and reveal, and each figure's head share, worn heads, blinks and each cell's picture file and size. */
+/** What a painted shot reads, comparable path to path: its size, paper and light, then per layer each plate's picture file, size, place, moves and reveal, and each figure's head share, worn heads, blinks, dress and each cell's picture file, size, anchor (`ax`, `ay`) and head. */
 const resourcesOf = (scene: PaintScene, files: ReadonlyMap<string, string>) => ({
   size: [scene.width, scene.height],
   paper: scene.paper,
@@ -120,7 +114,7 @@ const resourcesOf = (scene: PaintScene, files: ReadonlyMap<string, string>) => (
     items: layer.items.map((item) => {
       if (item._tag === 'Plate')
         return {
-          plate: files.get(item.image) ?? `unread ${item.image}`,
+          plate: files.get(item.image) ?? `unread ${item.image.slice(0, 64)}`,
           size: item.size,
           place: item.place,
           moves: item.moves,
@@ -131,30 +125,41 @@ const resourcesOf = (scene: PaintScene, files: ReadonlyMap<string, string>) => (
         share: item.share,
         worn: item.worn,
         blinks: item.blinks,
+        dress: item.dress,
         cells: Object.entries(item.cells).map(([key, c]) => ({
           key,
-          file: files.get(c.image) ?? `unread ${c.image}`,
+          file: files.get(c.image) ?? `unread ${c.image.slice(0, 64)}`,
           size: c.size,
+          ax: c.ax,
+          ay: c.ay,
+          head: c.head ?? 'none',
         })),
       };
     }),
   })),
 });
 
+/** The film's storybook shots in the four groups the resource check reads, one unit-test task each (each task under its 1 s budget). */
+export const RESOURCE_GROUPS = [
+  ['cold-baby', 'cold-table'],
+  ['cold-letter', 'cold-ouch'],
+  ['cold-what', 'title'],
+  ['milk-cup', 'milk-pour', 'milk-row'],
+] as const;
+
 /**
- * Each storybook shot of the film as the film paints it and as the verify's
- * page paints it, both through `paintSceneOf` and reduced to the files and
- * sizes they read (`resourcesOf`): the film's from its declared sheets
- * (`SHEET_CELLS`) and each picture's painting in its scene's drawing
- * (`storyPaintings`), the verify's from the files its page reads (each
- * plate's file, each cell of the sheet's record, the member's palette).
- * Each cell's anchors and head are held to its PNG by `sheetsMisses`.
+ * Each named storybook shot of the film as the film paints it and as the
+ * verify paints it, reduced to what each reads (`resourcesOf`): the film's
+ * from its declared sheets (`SHEET_CELLS`) and each picture's painting in
+ * its scene's drawing (`storyPaintings`), the verify's the very scene its
+ * loader gives its page (`loadShot`: each cell's anchor and head read off
+ * the stored cell), each picture known by the file whose bytes it holds.
  */
-export const shotResources = () =>
+export const shotResources = (ids: ReadonlyArray<string>) =>
   Effect.runPromise(
     Effect.gen(function* () {
       const cast = yield* filmCast(inItsOrder);
-      const placed = yield* shotsOf(inItsOrder);
+      const placed = (yield* shotsOf(inItsOrder)).filter(({ shot }) => ids.includes(shot.id));
       const films = new Map(
         inItsOrder.stories.flatMap((story) =>
           story.shots.map(
@@ -181,46 +186,22 @@ export const shotResources = () =>
                 ),
             ),
           );
-          const plates = new Map(
-            yield* Effect.forEach(figuresAndPlates(shot).plates, (p) =>
-              Effect.map(pictureOf(`${APP}/${p.file}`), (pic) => [p.file, pic] as const),
-            ),
-          );
-          const figures = new Map(
-            yield* Effect.forEach(figuresAndPlates(shot).figures, (f) =>
+          const { scene: verify } = yield* loadShot(shot, cast);
+          const read = [
+            ...figuresAndPlates(shot).plates.map((p) => `${APP}/${p.file}`),
+            ...(yield* Effect.forEach(figuresAndPlates(shot).figures, (f) =>
+              Effect.map(readRecord(cast, f.member, f.sheet), (record) =>
+                record.cells.map((c) => `${sheetDir(cast, f.member, f.sheet)}/cells/${c.key}.png`),
+              ),
+            )).flat(),
+          ];
+          const verifyFiles = new Map(
+            yield* Effect.forEach(read, (file) =>
               Effect.gen(function* () {
-                const record = yield* readRecord(cast, f.member, f.sheet);
-                const dir = sheetDir(cast, f.member, f.sheet);
-                const cells = yield* Effect.forEach(record.cells, (c) =>
-                  Effect.map(
-                    pictureOf(`${dir}/cells/${c.key}.png`),
-                    (pic) => [c.key, pic] as const,
-                  ),
-                );
-                return [f.name, { palette: yield* memberPalette(cast, f.member), cells }] as const;
+                const fs = yield* FileSystem.FileSystem;
+                return [dataUrlOf(yield* fs.readFile(file)), yield* fs.realPath(file)] as const;
               }),
             ),
-          );
-          const verify = paintSceneOf(shot, PAPER, {
-            plate: (p) => ({
-              image: plates.get(p.file)?.file ?? p.file,
-              size: plates.get(p.file)?.size ?? [0, 0],
-            }),
-            figure: (f) => ({
-              palette: figures.get(f.name)?.palette ?? { ink: '#000000', parts: [] },
-              cells: Object.fromEntries(
-                (figures.get(f.name)?.cells ?? []).map(([key, pic]) => [
-                  key,
-                  { image: pic.file, size: pic.size, ax: 0, ay: 0 },
-                ]),
-              ),
-            }),
-          });
-          const verifyFiles = new Map(
-            [
-              ...plates.values(),
-              ...[...figures.values()].flatMap((f) => f.cells.map(([, p]) => p)),
-            ].map((p) => [p.file, p.file] as const),
           );
           return [shot.id, resourcesOf(film, filmFiles), resourcesOf(verify, verifyFiles)] as const;
         }),
