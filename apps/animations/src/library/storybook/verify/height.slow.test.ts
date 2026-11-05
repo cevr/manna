@@ -295,7 +295,6 @@ describe('render-height in the full verify', () => {
         expect(height?.pass).toBe(false);
         expect(Number(height?.value)).toBeGreaterThan(0.02);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
-    // oxlint-disable-next-line film/tests-keep-their-strength -- the case spawns a quick verify of cold-ouch: bun, headless Chrome twice and ffmpeg (spawn budget).
     900_000,
   );
 });
