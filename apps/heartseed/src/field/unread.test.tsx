@@ -17,7 +17,7 @@ import { device } from '../test/one';
 
 describe('the field before a read', () => {
   it('is offered in no frame of a held launch until its read lands, of an unread session (whose recital the next launch counts), or of the first minute', async () => {
-    device.launch([record(recallOf(passage.reference, Date.UTC(2026, 9, 1, 12), 3, 0))]);
+    device.launch([record(recallOf(passage.reference, Date.UTC(2020, 0, 1, 12), 3, 0))]);
     const gate = Promise.withResolvers<void>();
     const held = await mount(true, gate.promise);
     expect(await held.until(() => false, 20)).toBe(false);
