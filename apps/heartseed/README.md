@@ -551,6 +551,12 @@ them.
     ways back, recitals, Again, peeks and relaunches through
     `src/test/field-walk.ts`, each command's writes modelled apart from the
     app; each file's seeds reach its own floors (relaunches, or Again).
+  - `test:session`: `src/session.property.test.ts`, the daily plan
+    (`planOf`) and Today's counts line (`countsOf`) against the rules
+    written plainly in `src/test/session-model.ts` (ts-fsrs's due dates,
+    days by their own arithmetic, zones by `Intl`), over generated gardens,
+    pieces, zones, instants, absences and lengths, each case's coverage
+    held to floors.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
