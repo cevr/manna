@@ -144,8 +144,8 @@ export const milkCup: FilmShot = {
   },
 };
 
-/** How far above its place the dropper waits and leaves to, layer px: its foot (y 564) above the pushed frame's top (y 29 at zoom 1.1), so it comes in and goes out whole, never fading across his face. */
-const DROPPER_ABOVE = -560;
+/** How far left of its place the dropper waits and leaves to, layer px: its right edge (x 702 at rest) past the pushed frame's left edge (x 7 at zoom 1.1), so it comes in and goes out whole and level, under his face, over his tunic and his cup hand. */
+const DROPPER_LEFT = -730;
 
 /** The plates act 1 dissolves on purpose, by file: the milk's arc thinning away as a pour stops, a stream of milk and no drawn prop. Every other plate shows whole or not at all, but for one frame. */
 export const DISSOLVES: ReadonlySet<string> = new Set(['milk-arc.png']);
@@ -171,7 +171,8 @@ const ribbon = (from: number, stop: number): Plate =>
  * `milk-pour`, the card's end (`thereby`, the word's end in the take, which
  * the card runs until) to `need`: held on the villager and the open
  * book, the milk pours from the book into his cup until `sincere`; on
- * "nothing" a dropper comes over the cup and he waves it away; on `word` he
+ * "nothing" a dropper comes in level from the left to the cup and he waves
+ * it away, back out the way it came; on `word` he
  * looks to the book and it pours again, filling the cup, until `good`, and
  * he drinks. A slow push. Each `cup` hold blinks through `cupBlink`.
  */
@@ -183,8 +184,9 @@ export const milkPour: FilmShot = {
     pour: { after: 'card:milk', dur: 0.3 },
     stop: { mark: 'sincere', dur: 0.25 },
     toCup: { after: 'card:milk', dur: 0.3 },
-    dropper: { mark: 'mixed', word: 'nothing', dur: 0.3 },
-    away: { mark: 'mixed', word: 'nothing', offset: 0.3, dur: 0.7 },
+    dropper: { mark: 'mixed', word: 'nothing', offset: 0.3, dur: 0.8, ends: true },
+    wave: { mark: 'mixed', word: 'nothing', dur: 0.3 },
+    away: { mark: 'mixed', word: 'nothing', offset: 0.3, dur: 0.8 },
     look: { mark: 'word', dur: 0.3 },
     again: { mark: 'word', offset: 0.3, dur: 0.3 },
     back: { after: 'milk-pour:again', dur: 0.3 },
@@ -217,7 +219,7 @@ export const milkPour: FilmShot = {
             ...holds(
               [
                 [toCup.end, 'cup', 'cupBlink'],
-                [dropper.start, 'wave', 'wave'],
+                [cue('wave').start, 'wave', 'wave'],
                 [away.end, 'cup', 'cupBlink'],
               ],
               look.start,
@@ -239,13 +241,13 @@ export const milkPour: FilmShot = {
           ribbon(again.start, cue('full').start),
           plateOn('milk-dropper.png', DROPPER, [14, 130], [667, 530], 0.9, {
             moves: [
-              [0, key({ y: DROPPER_ABOVE, alpha: 0 })],
-              [dropper.start, key({ y: DROPPER_ABOVE, alpha: 0 })],
-              [dropper.start, key({ y: DROPPER_ABOVE })],
+              [0, key({ x: DROPPER_LEFT, alpha: 0 })],
+              [dropper.start, key({ x: DROPPER_LEFT, alpha: 0 })],
+              [dropper.start, key({ x: DROPPER_LEFT })],
               [dropper.end, key({})],
               [away.start, key({})],
-              [away.end, key({ x: 120, y: DROPPER_ABOVE })],
-              [away.end, key({ x: 120, y: DROPPER_ABOVE, alpha: 0 })],
+              [away.end, key({ x: DROPPER_LEFT })],
+              [away.end, key({ x: DROPPER_LEFT, alpha: 0 })],
             ],
           }),
         ]),

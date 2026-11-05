@@ -12,17 +12,10 @@ describe("In Its Order's parchment shots", () => {
     },
   );
 
-  test('names the dropper crossing the villager on its way down to the cup and back as moving, its only pass over a face', () => {
-    const dropper = 'src/films/in-its-order/plates/milk-dropper.png over villager';
+  test('crosses no face with a moving plate: the dropper comes in level from the left to the cup and goes back out under his face (critique 3, finding 2)', () => {
     expect(covers.map(([id, , moving]) => [id, moving])).toEqual([
       ['milk-cup', []],
-      [
-        'milk-pour',
-        [
-          `INFO cover moving: ${dropper} frames 114–116`,
-          `INFO cover moving: ${dropper} frames 125–131`,
-        ],
-      ],
+      ['milk-pour', []],
       ['milk-row', []],
     ]);
   });
