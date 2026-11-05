@@ -1,13 +1,12 @@
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 import passage from 'virtual:heartseed-passage';
 
 import {
-  beginSession,
   choose,
   chooseMinutes,
   gardenView,
@@ -37,6 +36,7 @@ import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { BigButton, color, look, PlantMark, Unsaid, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
 import { countsOf, MINUTES } from '../src/session';
+import { useSessionBegunWhenShown } from '../src/session/shown';
 
 const WORDS = sourceWords(passage.text);
 
@@ -332,11 +332,7 @@ function Today({ onField }: { readonly onField: () => void }) {
   const onPress = useAtomSet(press);
   const onPeek = useAtomSet(peek);
   const onChoose = useAtomSet(choose);
-  const onBegin = useAtomSet(beginSession);
-  const read = Option.isSome(garden);
-  useEffect(() => {
-    if (read) onBegin();
-  }, [read, onBegin]);
+  useSessionBegunWhenShown(Option.isSome(garden));
   return (
     <View style={look.screen}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
