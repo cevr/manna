@@ -11,7 +11,6 @@ import {
   figuresIn,
   groundOf,
   hexOf,
-  INK_SPECK_PX,
   largestPiece,
   measuredPaint,
   mendPockets,
@@ -1013,7 +1012,7 @@ describe('tidied under body-cloth', () => {
     );
   });
 
-  /** Her face over her robe holding two blocks of ink wholly inside it: one of 100 px, one of 130 px, past `INK_SPECK_PX`. */
+  /** Her face over her robe holding two blocks of ink wholly inside it: one of 100 px, one of 130 px, past the 128 px a speck may hold. */
   const inked = [
     ...Array.from({ length: 4 }, () => 'hhhhhhhhhhhhhhhhhhhh'),
     ...Array.from({ length: 6 }, () => 'hhhhhhaaaaaaaahhhhhh'),
@@ -1037,7 +1036,7 @@ describe('tidied under body-cloth', () => {
     );
   };
 
-  test('gives an ink island of up to INK_SPECK_PX wholly inside the cloth below the face the cloth’s paint and keeps a larger one; a plain split keeps both (art check 4b, fault 1: islands of 9–115 px scratched the guest woman’s fold)', () => {
+  test('gives an ink island of up to 128 px wholly inside the cloth below the face the cloth’s paint and keeps a larger one; a plain split keeps both (art check 4b, fault 1: islands of 9–115 px scratched the guest woman’s fold)', () => {
     expect(inkedSplit(false)).toEqual(inked);
     expect(inkedSplit(true)).toEqual(
       inked.map((row, y) => {
@@ -1045,7 +1044,6 @@ describe('tidied under body-cloth', () => {
         return row;
       }),
     );
-    expect(INK_SPECK_PX).toBe(128);
   });
 });
 

@@ -1128,7 +1128,7 @@ const bodyClothed = (t: Tidy, map: Int32Array, face: Option.Option<Box>): Int32A
 };
 
 /** The largest ink island (px, 8-connected) `inkSpecksClothed` reads as grain in a cloth line rather than a line of its own: above the guest woman's largest island wholly inside her cloth, 115 px (art check 4b, fault 1). */
-export const INK_SPECK_PX = 128;
+const INK_SPECK_PX = 128;
 
 /**
  * The map with the ink's grain inside the cloth's lines in the cloth's
