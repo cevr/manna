@@ -4954,6 +4954,46 @@ The form of an entry, each field on its own line:
 - **Cause:** A latest-state stream was given a queue whose growth nothing bounded.
 - **Guard:** code: `apps/heartseed/src/voice/changes.test.ts` `keeps a bounded window of a 10,000-view burst and ends at the current view`
 
+### store-no-stand-in
+
+- **Date:** 2026-11-04
+- **Kind:** review
+- **Said:** "a store that fails to open is shown as a read, empty garden"
+- **Source:** hymnapp/hsgrow/attempt-1/round-3-findings.md M1
+- **Wrong:** Heartseed's store turned a failed open of One's store into a memory store for the session, so the garden read that empty store as the reader's whole history, grew a plant from the session's recitals and chimed, while the device kept none of them.
+- **Cause:** A fallback written for the settings was kept when the garden began to read the same store: a success-shaped stand-in erased the failure below the seam every check stood on.
+- **Guard:** code: `apps/heartseed/src/store.test.ts` `no app source makes a memory, storage or file-system store`; `apps/heartseed/src/store.test.ts` `fails each call whose open throws, writes nothing in its place, and opens at the next call once the device can`
+
+### heartseed-store-closes-its-handle
+
+- **Date:** 2026-11-05
+- **Kind:** review
+- **Said:** "the device handle outlives its owning layer"
+- **Source:** hymnapp/hsgrow/round-1-findings.md M1
+- **Wrong:** Heartseed's store opened One's key-value store lazily and never closed the handle when its layer's scope closed, so each disposed runtime left a SQLite connection open.
+- **Cause:** The lazy open has no acquire step where a release could sit, so the release was left out rather than registered at the layer's own boundary.
+- **Guard:** code: `apps/heartseed/src/store.test.ts` `closes the handle it opened when its scope closes, and only that: none for a launch that never opened or whose opens all failed, one after a failed open and a good one`
+
+### heartseed-garden-read-faults-per-attempt
+
+- **Date:** 2026-11-05
+- **Kind:** review
+- **Said:** "This generator and its fixed case reach only consecutive failures of one method, get always first"
+- **Source:** hymnapp/hsgrow/round-1-findings.md M2 (a repeat of hymnapp/hsgrow/attempt-1 round 3 M1's class)
+- **Wrong:** The garden's own property failed each launch's read the same way on every attempt, with a record read failing only first, so a read that swallowed a later record's failure, or a store that answered a failed listing from the last good one, certified a partial or cached history with every app test green.
+- **Cause:** The test device counted failures per method, not per attempt, so no attempt could fail at its nth record read after good ones, or at its listing after a good listing.
+- **Guard:** code: `apps/heartseed/src/garden.property.test.ts` `certifies a history only from a completed read, and extends it only by writes the device took, over 100 generated devices whose read attempts fail at their open, listing or any record read, and recover`; `apps/heartseed/src/garden.property.test.ts` `reads the whole store again after a record read fails, never a partial history, and skips a listed key with no value`
+
+### heartseed-today-no-plant-part-unread
+
+- **Date:** 2026-11-05
+- **Kind:** review
+- **Said:** "drawings remain outside the committed frame oracle"
+- **Source:** hymnapp/hsgrow/round-1-findings.md M3 (a repeat of hymnapp/hsgrow/attempt-1 round 3 TS2)
+- **Wrong:** Today's frame test looked for the stage, plant and growth nodes and for claiming words, so a seed drawn with no test id and no label in a held or unread frame passed it.
+- **Cause:** A drawing claims a stage by its look alone, which no id, text or attribute check sees.
+- **Guard:** code: `apps/heartseed/src/garden/today.test.tsx` `draws no part of a plant, with or without a test id or label, in any frame of the held, pending and unread launches above, though each of the four stages drew its parts once read`
+
 ### heartseed-dictation-microphone-off-simulator
 
 - **Date:** 2026-11-04
@@ -5063,3 +5103,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** A one-line change to how one kind of recital word is drawn (a lit or peeked word made transparent, a word being heard read by the screen reader, an unsaid word's text shown) passed every test, twice.
 - **Cause:** Each guard checked a decision about the word (first Today's branches, then `wordOf`'s ink), while a second mapping, from the ink to a style and its colour, lies between that decision and what the reader sees.
 - **Guard:** code: `apps/heartseed/src/sayit/today.test.tsx` `reads a whole recital: each lit word by its name, the miss as a numbered mark, the count, the suggestion and the grade, then a changed grade and a peek`; `apps/heartseed/src/sayit/today.test.tsx` `shows a word still being heard softly but hides it from the screen reader, and draws each unsaid word as an empty slot`
+
+### heartseed-growth-silent-off-device
+
+- **Date:** 2026-11-04
+- **Kind:** owner
+- **Said:** "A sound plays only when a verse grows. Silent mode is respected."
+- **Source:** hymnapp/selahone/units.md row 6 (Done lines); hymnapp/hsgrow/spec.md The growth sound, The native module and Risks 6
+- **Wrong:** The growth sound could play through One's audio, whose `.playback` session ignores the ring/silent switch; take or change the audio session Dictation holds while it listens; play an alert sound that vibrates; or play on the simulator, whose audio reaches the Mac's speaker.
+- **Cause:** Only System Sound Services are muted by the switch and leave the session alone, and no web or simulator run can hear whether a sound respected Silent mode.
+- **Guard:** code: `apps/heartseed/src/garden/guard.test.ts` `plays a system sound once in the source, only on a device, and on the simulator logs the play it skips`; `apps/heartseed/src/garden/guard.test.ts` `names no session, category or activation, player, engine, alert sound, completion play or One audio`; `apps/heartseed/src/garden/guard.test.ts` `imports the Swift file from chime.ios.ts alone`
+
+### heartseed-field-days-sown-utc
+
+- **Date:** 2026-11-05
+- **Kind:** owner
+- **Said:** "Progress is “days sown”, which never resets, and a harvest count of verses at full corn."
+- **Source:** hymnapp/selahone/units.md (Done line for hsfield); hymnapp/hsfield/spec.md rows 7-9, Decided 1 and Risks 1-2
+- **Wrong:** Days sown counted in the device's local days, as recalls, or as a streak, could differ by time zone or fall after travel or a gap, and a harvest kept as history would claim a verse Again took back; a test run only in the host's zone cannot tell a UTC day from a local one when the host is UTC.
+- **Cause:** A day counted in the device's zone now moves with the reader, so a recall's day must be a function of its record alone: each record from hslocal on holds the zone's offset at its press, its day is the local day from 04:00 by that offset (owner, 2026-11-05: "local day"), a record without one keeps its UTC date, a key's stamp never changes once stored (a press that reuses a stored start after the clock went back keeps it; the one exception is an unread keep whose read of that stamp fails, written with its press's offset so a finished recital is never lost), and both counts are derived each time, never stored.
+- **Guard:** code: `apps/heartseed/src/field.property.test.ts` `shows the passages first, then each other verse in the order first sown, each at its stage and verse number, with the days sown by each record’s own local day from 04:00 (an old record’s UTC date) and the harvest, over 300 generated gardens of any count of other verses of any reference, canonical twins beside each other, old and new records of every offset at 04:00, daylight-saving and UTC-midnight edges, derived in three time zones`; `apps/heartseed/src/field/sown.test.ts` `never fall and always equal the rule’s over the records the device holds, across 80 generated devices of old and new records, skipped records, travel between launches and while open, keeps at 04:00 and daylight-saving edges, months on or set back, a stored start reused from another zone, Again and grade changes after travel, peeks, refused writes landing at the next keep, relaunches, unread sessions, and stamp reads that fail apart from writes (a keep then written with its press’s offset, the one history excused from never falling)`; `apps/heartseed/src/press.test.ts` `keeps a key’s day when a press reuses its start after the clock went back and the zone changed: Kiritimati, a day back, then the first start again in Pago Pago leaves 2 days sown and the record at +840`

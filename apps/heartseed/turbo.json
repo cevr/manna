@@ -9,8 +9,8 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
-        "!src/{core-import.property,core-import,dictation.property,display,matcher,sayit.property,today,voice.property}.test.*",
-        "!src/{dictation,sayit,voice}/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -21,8 +21,8 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
-        "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,today}.test.*",
-        "!src/{dictation,sayit}/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today}.test.*",
+        "!src/{dictation,first,garden,sayit,field}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -33,8 +33,8 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
-        "!src/{core-import.property,core-import,display,matcher.property,matcher,sayit.property,today,voice.property}.test.*",
-        "!src/{sayit,voice}/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{first,garden,sayit,voice,field}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -45,8 +45,256 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
-        "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,today,voice.property}.test.*",
-        "!src/{dictation,voice}/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,first,garden,voice,field}/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:garden": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,today,voice.property}.test.*",
+        "!src/{dictation,first,sayit,voice,field}/**/*.test.*",
+        "!src/garden/today.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:today": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,first,sayit,voice,field}/**/*.test.*",
+        "!src/garden/{guard,sound}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:first": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,garden,sayit,voice,field}/**/*.test.*",
+        "!src/first/{root,walk-*}.test.*",
+        "!src/test/first-rig.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:cue": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property}.test.*",
+        "!src/{dictation,first,garden,voice,field}/**/*.test.*",
+        "!src/sayit/{guard,screen,source,today}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:root": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,garden,sayit,voice,field}/**/*.test.*",
+        "!src/first/{flow,screen,walk-*}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:walk-letters": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,garden,sayit,voice,field}/**/*.test.*",
+        "!src/first/{flow,screen,root}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:walk-alone": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,garden,sayit,voice,field}/**/*.test.*",
+        "!src/first/{flow,screen,root}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:walk-write": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,garden,sayit,voice,field}/**/*.test.*",
+        "!src/first/{flow,screen,root}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:walk-launch": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,garden,sayit,voice,field}/**/*.test.*",
+        "!src/first/{flow,screen,root}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:walk-disk": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,garden,sayit,voice,field}/**/*.test.*",
+        "!src/first/{flow,screen,root}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:walk-relaunch": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,garden,sayit,voice,field}/**/*.test.*",
+        "!src/first/{flow,screen,root}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:walk-planted": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,garden,sayit,voice,field}/**/*.test.*",
+        "!src/first/{flow,screen,root}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:walk-reading": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,garden,sayit,voice,field}/**/*.test.*",
+        "!src/first/{flow,screen,root}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:walk-taps": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,garden,sayit,voice,field}/**/*.test.*",
+        "!src/first/{flow,screen,root}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:field": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice}/**/*.test.*",
+        "!src/field/{screen,garden,walk,walk-grades,unread-keep}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:field-unread": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice}/**/*.test.*",
+        "!src/field/{sown,unread,reach,screen,garden,walk,walk-grades}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:field-screen": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice}/**/*.test.*",
+        "!src/field/{sown,unread,unread-keep,reach,walk,walk-grades}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:field-walk": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice}/**/*.test.*",
+        "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk-grades}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:field-grades": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice}/**/*.test.*",
+        "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -75,6 +323,25 @@
         "test:voice",
         "test:dictation",
         "test:sayit",
+        "test:cue",
+        "test:garden",
+        "test:today",
+        "test:first",
+        "test:root",
+        "test:walk-letters",
+        "test:walk-alone",
+        "test:walk-write",
+        "test:walk-launch",
+        "test:walk-disk",
+        "test:walk-relaunch",
+        "test:walk-planted",
+        "test:walk-reading",
+        "test:walk-taps",
+        "test:field",
+        "test:field-unread",
+        "test:field-screen",
+        "test:field-walk",
+        "test:field-grades",
         "test:rest",
         "test:infra"
       ]

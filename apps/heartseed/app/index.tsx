@@ -1,119 +1,88 @@
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  Easing,
-  FadeIn,
-  ReduceMotion,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'one';
 import passage from 'virtual:heartseed-passage';
 
-import { choose, peek, press, sayItView } from '../src/app';
-import type { Mark } from '../src/matcher';
+import { choose, gardenView, peek, press, sayItView } from '../src/app';
+import { fieldOf, type FieldPassage } from '../src/field';
+import { FieldScreen } from '../src/field/screen';
+import { openingOf, shownOpening, type Opening } from '../src/first/flow';
+import { FirstMinute } from '../src/first/screen';
+import {
+  cueIn,
+  growthOf,
+  stageOf,
+  type GardenView,
+  type Plant,
+  type ReadGarden,
+  type Stage,
+} from '../src/garden';
+import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
-import { GRADE_NAMES, GRADES, type Grade } from '../src/sayit';
-import { screenOf, wordOf, type Ink, type Result, type ShownWord } from '../src/sayit/screen';
-
-/** Palette A (Wada No. 167) over the prototype's tokens. */
-const color = {
-  ground: '#eee8e1',
-  card: '#f7f3ee',
-  ink: '#064f6e',
-  soft: '#a7d4e4',
-  mute: '#7d8d95',
-  miss: '#c0583f',
-  hearing: 'rgba(184, 137, 47, 0.22)',
-  pulse: 'rgba(184, 137, 47, 0.45)',
-} as const;
+import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
+import { BigButton, color, look, PlantMark, Unsaid, Word } from '../src/sayit/draw';
+import { screenOf, wordOf, type Result } from '../src/sayit/screen';
 
 const WORDS = sourceWords(passage.text);
 
-/** A word lights with a short fade; under Reduce Motion it shows at once. */
-const LIGHT = FadeIn.duration(180).reduceMotion(ReduceMotion.System);
+/** The passages the field shows first: Today's, a passage of one verse. */
+const PASSAGES: readonly FieldPassage[] = [
+  { title: passage.reference, verses: [passage.reference] },
+];
 
-/** One source word drawn as `wordOf` shows it: a mark to peek at, or its text in its ink, an unseen one in a slot its width. */
-function Word({
-  shown,
-  onPeek,
-}: {
-  readonly shown: ShownWord;
-  readonly onPeek: (index: number) => void;
-}) {
-  const id = `word-${shown.index}`;
-  if (shown._tag === 'Mark')
-    return (
-      <Pressable
-        testID={id}
-        role="button"
-        aria-label={shown.label}
-        hitSlop={10}
-        onPress={() => onPeek(shown.index)}
-        style={({ pressed }) => [styles.mark, pressed && styles.pressed]}
-      >
-        <View style={styles.dot} />
-      </Pressable>
-    );
-  const style = [styles.word, INK[shown.ink]];
-  const label = Option.getOrUndefined(shown.label);
-  switch (shown.ink) {
-    case 'unseen':
-      return (
-        <View testID={id} aria-hidden={shown.hidden} aria-label={label} style={styles.slot}>
-          <Text style={style}>{shown.text}</Text>
-        </View>
-      );
-    case 'lit':
-      return (
-        <Animated.Text
-          testID={id}
-          entering={LIGHT}
-          aria-hidden={shown.hidden}
-          aria-label={label}
-          style={style}
-        >
-          {shown.text}
-        </Animated.Text>
-      );
-    case 'hearing':
-    case 'peeked':
-      return (
-        <Text testID={id} aria-hidden={shown.hidden} aria-label={label} style={style}>
-          {shown.text}
-        </Text>
-      );
-  }
-}
-
-/** The verse whole, or one element per word while a recital is shown, each its own accessibility element. */
+/**
+ * The verse under `cue`: whole under the full text while no recital is
+ * shown; else one element per word, each its own accessibility element, a
+ * word the recital shown has reached as `wordOf` shows it and every other
+ * word as the cue shows it (`Unsaid`): whole or in letters in the cue's ink,
+ * or an empty slot.
+ */
 function Verse({
   marks,
+  cue,
   onPeek,
 }: {
   readonly marks: Option.Option<readonly Mark[]>;
+  readonly cue: Cue;
   readonly onPeek: (index: number) => void;
 }) {
-  return Option.match(marks, {
-    onNone: () => (
+  if (Option.isNone(marks) && cue === 'full')
+    return (
       <Text testID="passage" style={styles.words}>
         {passage.text}
       </Text>
-    ),
-    onSome: (shown) => (
-      <View style={styles.verse}>
-        {shown.map((mark) => (
-          <Word key={mark.index} shown={wordOf(mark, WORDS[mark.index] ?? '')} onPeek={onPeek} />
-        ))}
-      </View>
-    ),
-  });
+    );
+  return (
+    <View style={look.verse}>
+      {WORDS.map((word, index) => {
+        const mark = Option.flatMap(marks, (all) => Option.fromNullishOr(all[index]));
+        if (Option.isNone(mark) || mark.value.status === 'pending')
+          return <Unsaid key={index} index={index} word={word} cue={cue} onPeek={onPeek} />;
+        return <Word key={index} shown={wordOf(mark.value, word)} onPeek={onPeek} />;
+      })}
+    </View>
+  );
 }
+
+/**
+ * The cue Today shows the passage under: a recital's own while one is shown
+ * (its marks), else the one the garden's ladder gives it now, and the full
+ * text in an unread garden, which shows the verse whole and claims no stage.
+ */
+const shownCue = (
+  garden: Option.Option<ReadGarden>,
+  sayIt: Option.Option<SayItView>,
+  marks: Option.Option<readonly Mark[]>,
+): Cue => {
+  if (Option.isSome(marks) && Option.isSome(sayIt)) return sayIt.value.cue;
+  return Option.match(garden, {
+    onNone: (): Cue => 'full',
+    onSome: (read) => cueIn(read, passage.reference),
+  });
+};
 
 /** The count, the suggestion and the four grades of a finished recital, the chosen one checked. */
 function Grades({
@@ -125,7 +94,7 @@ function Grades({
 }) {
   return (
     <View style={styles.result}>
-      <Text testID="summary" style={styles.summary}>
+      <Text testID="summary" style={look.summary}>
         {result.summary}
       </Text>
       <Text style={styles.suggested}>{result.suggested}</Text>
@@ -142,7 +111,7 @@ function Grades({
               style={({ pressed }) => [
                 styles.grade,
                 chosen && styles.chosen,
-                pressed && styles.pressed,
+                pressed && look.pressed,
               ]}
             >
               <Text style={[styles.gradeName, chosen && styles.chosenName]}>
@@ -156,122 +125,216 @@ function Grades({
   );
 }
 
-/** The one button: large, round and ink, with a gentle pulse while it listens (held still under Reduce Motion). */
-function SayItButton({
-  label,
-  listening,
-  pressable,
-  onPress,
+/** Each stage as the stage line shows it, and as the growth line names it. */
+const STAGE_NAMES: Readonly<Record<Stage, { readonly shown: string; readonly grown: string }>> = {
+  seed: { shown: 'A seed', grown: 'a seed' },
+  blade: { shown: 'A blade', grown: 'a blade' },
+  ear: { shown: 'An ear', grown: 'an ear' },
+  'full corn': { shown: 'Full corn', grown: 'full corn' },
+};
+
+/** The garden once a read of it completed; none while the read runs, and none for the session when it failed. */
+const readOf = (garden: Option.Option<GardenView>): Option.Option<ReadGarden> =>
+  Option.filter(garden, (view): view is ReadGarden => view._tag === 'Read');
+
+/** The passage's plant in the garden read, none before its first recital. */
+const plantIn = (garden: ReadGarden) => Option.fromNullishOr(garden.plants.get(passage.reference));
+
+/** The stage the finished recital Today shows grew the passage's plant to, none when it grew nothing or none is shown. */
+const grownBy = (plant: Option.Option<Plant>, sayIt: Option.Option<SayItView>) =>
+  Option.flatMap(plant, (each) =>
+    Option.flatMap(sayIt, (view) =>
+      Option.flatMap(
+        Option.all({
+          startedAt: Option.fromNullishOr(view.startedAt),
+          choice: Option.fromNullishOr(view.choice),
+        }),
+        ({ startedAt }) => Option.map(growthOf(each, startedAt), (growth) => growth.to),
+      ),
+    ),
+  );
+
+/**
+ * The passage's stage, its plant beside it once planted, and how the recital
+ * shown grew it. Until a read of the garden completes, and for the session
+ * when it failed, it claims nothing: the row holds its place empty, so a
+ * planted verse never reads as not planted.
+ */
+function Growing({
+  garden,
+  sayIt,
 }: {
-  readonly label: string;
-  readonly listening: boolean;
-  readonly pressable: boolean;
-  readonly onPress: () => void;
+  readonly garden: Option.Option<ReadGarden>;
+  readonly sayIt: Option.Option<SayItView>;
 }) {
-  const pulse = useSharedValue(0);
-  useEffect(() => {
-    pulse.value = 0;
-    if (!listening) return;
-    pulse.value = withRepeat(
-      withTiming(1, {
-        duration: 1200,
-        easing: Easing.out(Easing.quad),
-        reduceMotion: ReduceMotion.System,
-      }),
-      -1,
-      false,
+  if (Option.isNone(garden))
+    return (
+      <View style={styles.growing}>
+        <View style={look.stageRow} />
+      </View>
     );
-  }, [listening, pulse]);
-  const ring = useAnimatedStyle(() => ({
-    opacity: 1 - pulse.value,
-    transform: [{ scale: 1 + pulse.value * 0.4 }],
-  }));
+  const plant = plantIn(garden.value);
+  const stage = Option.map(plant, stageOf);
+  const grown = grownBy(plant, sayIt);
   return (
-    <View style={styles.buttonPlace}>
-      <Animated.View aria-hidden style={[styles.ring, ring]} />
-      <Pressable
-        role="button"
-        aria-label={label}
-        disabled={!pressable}
-        onPress={onPress}
-        style={({ pressed }) => [
-          styles.button,
-          pressed && styles.pressedButton,
-          !pressable && styles.disabled,
-        ]}
-      >
-        <Text style={styles.buttonText}>{label}</Text>
-      </Pressable>
+    <View style={styles.growing}>
+      <View style={look.stageRow}>
+        {Option.match(stage, {
+          onNone: () => false,
+          onSome: (each) => <PlantMark stage={each} />,
+        })}
+        <Text
+          testID="stage"
+          aria-label={`Stage: ${Option.getOrElse(stage, () => 'not planted')}`}
+          style={look.stage}
+        >
+          {Option.match(stage, {
+            onNone: () => 'Not planted yet',
+            onSome: (each) => STAGE_NAMES[each].shown,
+          })}
+        </Text>
+      </View>
+      {Option.match(grown, {
+        onNone: () => false,
+        onSome: (to) => (
+          <Text testID="growth" style={styles.growth}>
+            {`Grew to ${STAGE_NAMES[to].grown}.`}
+          </Text>
+        ),
+      })}
     </View>
   );
 }
 
-/** Today: the passage the reader is learning, and Say it. */
-export default function Today() {
+/** The way to the field: offered once the garden is read, and never while Say it listens, so leaving Today never leaves a recital listening. */
+function FieldControl({ onPress }: { readonly onPress: () => void }) {
+  return (
+    <Pressable
+      role="button"
+      aria-label="Your field"
+      onPress={onPress}
+      style={({ pressed }) => [styles.toField, pressed && look.pressed]}
+    >
+      <Text style={styles.toFieldText}>Your field</Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Today: its header (the heading and the way to the field), fixed above a
+ * scroll view of the passage the reader is learning, its stage and Say it.
+ * The way to the field sits outside the scroll view, so however much a
+ * recital adds below, it is on screen without a scroll and clear of the
+ * home indicator.
+ */
+function Today({ onField }: { readonly onField: () => void }) {
   const insets = useSafeAreaInsets();
-  const screen = screenOf(AsyncResult.value(useAtomValue(sayItView)));
+  const sayIt = AsyncResult.value(useAtomValue(sayItView));
+  const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
+  const screen = screenOf(sayIt);
   const onPress = useAtomSet(press);
   const onPeek = useAtomSet(peek);
   const onChoose = useAtomSet(choose);
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 },
-      ]}
-    >
-      <Text role="heading" aria-level={1} style={styles.title}>
-        Today
-      </Text>
-      <View style={styles.passage}>
-        <Text testID="reference" style={styles.reference}>
-          {passage.reference}
-        </Text>
-        <Verse marks={screen.marks} onPeek={onPeek} />
-      </View>
-      {Option.match(screen.result, {
-        onNone: () => false,
-        onSome: (result) => <Grades result={result} onChoose={onChoose} />,
-      })}
-      {Option.match(screen.alert, {
-        onNone: () => false,
-        onSome: (alert) => (
-          <Text role="alert" style={styles.alert}>
-            {alert}
+    <View style={look.screen}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.headerRow}>
+          <Text role="heading" aria-level={1} style={look.title}>
+            Today
           </Text>
-        ),
-      })}
-      <SayItButton
-        label={screen.button}
-        listening={screen.listening}
-        pressable={screen.pressable}
-        onPress={() => onPress()}
-      />
-    </ScrollView>
+          {Option.isSome(garden) && !screen.listening && <FieldControl onPress={onField} />}
+        </View>
+      </View>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          look.content,
+          { paddingTop: 16, paddingBottom: insets.bottom + 32 },
+        ]}
+      >
+        <View style={styles.passage}>
+          <Text testID="reference" style={look.reference}>
+            {passage.reference}
+          </Text>
+          <Verse marks={screen.marks} cue={shownCue(garden, sayIt, screen.marks)} onPeek={onPeek} />
+          <Growing garden={garden} sayIt={sayIt} />
+        </View>
+        {Option.match(screen.result, {
+          onNone: () => false,
+          onSome: (result) => <Grades result={result} onChoose={onChoose} />,
+        })}
+        {Option.match(screen.alert, {
+          onNone: () => false,
+          onSome: (alert) => (
+            <Text role="alert" style={look.alert}>
+              {alert}
+            </Text>
+          ),
+        })}
+        <BigButton
+          label={screen.button}
+          busy={screen.listening}
+          pressable={screen.pressable}
+          onPress={() => onPress()}
+        />
+      </ScrollView>
+    </View>
   );
 }
 
-const SERIF = 'Georgia';
+/** The field over the garden read; nothing until a read completed, so it never claims a history it has not read. */
+function FieldOf({ onToday }: { readonly onToday: () => void }) {
+  const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
+  return Option.match(garden, {
+    onNone: () => false,
+    onSome: (read) => <FieldScreen field={fieldOf(read, PASSAGES)} onToday={onToday} />,
+  });
+}
+
+/** The frame a launch shows until the garden's read decides the screen: the reference alone, with no heading, button or claim. */
+function Pending() {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[look.screen, look.content, { paddingTop: insets.top + 16 }]}>
+      <Text testID="reference" style={look.reference}>
+        {passage.reference}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * The root: the pending frame until the garden's read completes, then the
+ * first minute when the read holds no recall of any verse, else Today. The
+ * screen is decided once per launch, at the read: planting the seed inside
+ * the first minute keeps Planted on until Continue. From Today the reader
+ * opens the field and comes back, in place: whether it shows is the
+ * launch's state, never stored, so every launch opens as above. The root
+ * holds Say it's view, so Today comes back as it was, and a recital that
+ * starts in the same turn as the tap on the field keeps Today on screen.
+ */
+export default function Root() {
+  const listening = screenOf(AsyncResult.value(useAtomValue(sayItView))).listening;
+  const read = openingOf(AsyncResult.value(useAtomValue(gardenView)));
+  const [decided, setDecided] = useState<Opening>('pending');
+  const [onField, setOnField] = useState(false);
+  if (decided === 'pending' && read !== 'pending') setDecided(read);
+  if (onField && listening) setOnField(false);
+  switch (shownOpening(decided, read)) {
+    case 'pending':
+      return <Pending />;
+    case 'first':
+      return <FirstMinute onContinue={() => setDecided('today')} />;
+    case 'today':
+      if (onField) return <FieldOf onToday={() => setOnField(false)} />;
+      return <Today onField={() => setOnField(true)} />;
+  }
+}
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.ground },
-  content: { paddingHorizontal: 24, gap: 28 },
-  title: { fontSize: 34, fontWeight: '700', color: color.ink },
   passage: { gap: 10 },
-  reference: { fontFamily: SERIF, fontSize: 17, fontWeight: '600', color: color.mute },
-  words: { fontFamily: SERIF, fontSize: 24, lineHeight: 36, color: color.ink },
-  verse: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 7, rowGap: 2 },
-  word: { fontFamily: SERIF, fontSize: 24, lineHeight: 36 },
-  lit: { color: color.ink },
-  hearing: { color: color.mute, backgroundColor: color.hearing, borderRadius: 4 },
-  slot: { height: 30, marginBottom: 6, borderBottomWidth: 2, borderBottomColor: color.soft },
-  unsaid: { color: 'transparent', lineHeight: 30 },
-  peeked: { color: color.miss },
-  mark: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.miss },
+  words: { fontFamily: 'Georgia', fontSize: 24, lineHeight: 36, color: color.ink },
   result: { gap: 10, padding: 16, borderRadius: 20, backgroundColor: color.card },
-  summary: { fontSize: 17, fontWeight: '600', color: color.ink },
   suggested: { fontSize: 15, color: color.mute },
   grades: { flexDirection: 'row', gap: 8, marginTop: 4 },
   grade: {
@@ -285,37 +348,23 @@ const styles = StyleSheet.create({
   chosen: { backgroundColor: color.ink },
   gradeName: { fontSize: 15, fontWeight: '600', color: color.ink },
   chosenName: { color: color.ground },
-  alert: { fontSize: 15, lineHeight: 21, color: color.miss },
-  buttonPlace: { alignSelf: 'center', width: 132, height: 132, marginTop: 8 },
-  ring: {
-    position: 'absolute',
-    width: 132,
-    height: 132,
-    borderRadius: 66,
-    backgroundColor: color.pulse,
-  },
-  button: {
-    width: 132,
-    height: 132,
-    borderRadius: 66,
-    backgroundColor: color.ink,
+  growing: { gap: 4, marginTop: 4 },
+  growth: { fontSize: 15, fontWeight: '600', color: color.ink },
+  header: { paddingHorizontal: 24, paddingBottom: 4 },
+  headerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: color.ink,
-    shadowOpacity: 0.3,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
+    justifyContent: 'space-between',
+    gap: 12,
+    minHeight: 44,
   },
-  pressedButton: { transform: [{ scale: 0.97 }] },
-  pressed: { opacity: 0.7 },
-  disabled: { opacity: 0.6 },
-  buttonText: { color: color.ground, fontSize: 17, fontWeight: '600' },
+  scroll: { flex: 1 },
+  toField: {
+    minHeight: 44,
+    paddingHorizontal: 20,
+    borderRadius: 22,
+    justifyContent: 'center',
+    backgroundColor: color.card,
+  },
+  toFieldText: { fontSize: 15, fontWeight: '600', color: color.ink },
 });
-
-/** Each ink's style: an unseen word is laid out transparent, so only its slot's underline shows. */
-const INK: Readonly<Record<Ink, (typeof styles)[keyof typeof styles]>> = {
-  lit: styles.lit,
-  hearing: styles.hearing,
-  peeked: styles.peeked,
-  unseen: styles.unsaid,
-};

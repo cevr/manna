@@ -2,15 +2,19 @@
 
 Say it is Today's one button (`apps/heartseed/app/index.tsx`, over
 `apps/heartseed/src/sayit.ts`). A press starts a recital of the passage
-through the app's one Dictation (`apps/heartseed/src/app.ts`): the words
-hide, each word lights as it is said with a soft haptic tick, and a missed
+through the app's one Dictation (`apps/heartseed/src/app.ts`) under the cue
+its stage gives (`fade.md`): each word not yet said shows that cue, each
+word lights as it is said with a soft haptic tick, and a missed
 word shows only a mark, `Missed word <n>`, that a tap reveals (a peek).
 When the recital ends, Today shows `<lit> of <total> words` (and
 `, <n> peeked` once a word was peeked), `Suggested: <grade>`, and the four
 grades `Again`, `Hard`, `Good` and `Easy` as a radio group with the
-suggestion checked; the reader can change it. A recital that could not be
-heard shows one alert and the verse whole, with no grade. Say it reads no
-word aloud.
+suggestion checked; the reader can change it. Each change of a finished
+recital's recall is kept in the garden, and Today's stage line under the
+verse follows it (`grow.md`). A recital that could not be heard shows one
+alert and the verse as its cue, with no grade. Say it reads no word aloud. The
+first minute's letters and alone phases press the same Say it (`first.md`);
+the rows here are Today's, run from the Today the first minute opens.
 
 In a development build on the simulator Say it hears the dictation
 module's replay of a scripted recital (the probe's plan: the passage less
@@ -33,24 +37,31 @@ simulator; the unit tests hold it (`src/sayit.property.test.ts`,
 
 ## How to get to it (user POV)
 
-- Open the app on Today and tap `Say it`.
+- Go through the first minute (`first.md`), tap `Continue`, then on Today
+  tap `Say it`. Any later launch opens Today.
 
 ## Driving it
 
 This feature changes nothing native, so the drive needs no iOS build when
-the installed app has the dictation module (built at d7a904c4b or later)
-and `git diff --stat d7a904c4b HEAD -- apps/heartseed/native
+the installed app has the dictation and growth modules (built at the
+commit that added `apps/heartseed/native/growth` or later) and
+`git diff --stat <that build's commit> HEAD -- apps/heartseed/native
 apps/heartseed/vite apps/heartseed/vite.config.ts
 apps/heartseed/react-native.config.cjs` is empty. Otherwise build first
 (`SKILL.md`, Launch).
 
-With `RUN=hssayit-l5`, `EVIDENCE=$PWD/tmp/verify/$RUN` and a free `PORT`
-of 8280-8289:
+With `RUN`, `EVIDENCE` and `PORT` as `first.md` sets them, after its
+steps 1 to 8 (and `grow.md`'s rows, when they run in the same drive):
 
-1. `sim boot --port $PORT --out "$EVIDENCE"` → ok. Then
-   `xcrun simctl privacy <udid> revoke microphone app.heartseed`.
-2. `sim open / --expect "label=Isaiah 41:10"`, then `sim snapshot today`
-   → `today-passage` holds, a node `Say it` exists, no `Listening`, no
+1. The app is booted with the garden holding the passage's seed and the
+   microphone revoked (`first.md` steps 1 to 8). A Today that a recital
+   has ended on (`first-today`, or after `grow.md`'s rows) still shows
+   that recital's count and grades, so relaunch for a clean one:
+   `sim relaunch`.
+2. `sim open / --expect "id=stage"`, then `sim snapshot today`
+   → `today-passage` holds in the form its stage gives (`today.md`; after
+   `grow.md`'s rows the passage is at a seed, its words in letters), a node
+   `Say it` exists, no `Listening`, no
    radio label. Record the role the snapshot gives the `Today` node.
 3. `sayit-ended`: `sim tap "label=Say it"` → ok. `sim snapshot
    sayit-listening` (record whether `Listening` is present). Wait for the

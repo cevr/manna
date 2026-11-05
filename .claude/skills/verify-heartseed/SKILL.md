@@ -82,8 +82,9 @@ tmp/verify-heartseed, one drive at a time per checkout; never point its
    stale" (One's, not the app's). It adds the `heartseed` URL scheme to
    that folder's Heartseed/Info.plist (`detail.schemeAdded`), builds Debug for the simulator (arm64 only, its
    derived data in the `build` folder of the app's `ios`), installs,
-   launches, and waits for `label=Isaiah 41:10`, Today showing its
-   reference (`detail.expect`). The build log is `$EVIDENCE/build.log`; it
+   launches, and waits for `label=Isaiah 41:10`, the reference the
+   launch's pending frame, the first minute and Today all show
+   (`detail.expect`). The build log is `$EVIDENCE/build.log`; it
    ends `** BUILD SUCCEEDED **`, and `detail.buildMs` is the build's time.
    Cold, a build took 397 s on a loaded host; a later one is incremental.
    Lines with `error:` in a successful log are flag and file names, not
@@ -102,7 +103,8 @@ tmp/verify-heartseed, one drive at a time per checkout; never point its
    ```
 
    The revoke stops the running app, and a link that launches the app
-   lands on Today, so a drive's first step after it is `sim open /`.
+   lands on the screen the launch opens (the first minute on a fresh
+   install, else Today), so a drive's first step after it is `sim open /`.
 
 ## Doctor
 
@@ -135,20 +137,37 @@ the target. `sim snapshot <step>` writes the screen's nodes, as
 `[role] "text"`, to `$EVIDENCE/snapshots/<step>.txt`; a feature file says
 which nodes prove it. A target is `label=<accessible name>` or
 `id=<testID>`, matched whole. `sim tap`, `sim scroll` and `sim back` work as
-the hymnal's skill describes; on Today a reader taps `Say it`, a grade and a
-missed word's mark. Heartseed has no journey files yet. The features:
+the hymnal's skill describes; in the first minute a reader taps `Listen`,
+`Next`, `Say it` and `Continue`, on Today `Say it`, a grade, a missed
+word's mark and `Your field`, and on the field `Today`. Heartseed has no journey files yet. The features:
 
+- [features/first.md](features/first.md): the first minute a fresh
+  install opens on: hear it (the voice's lit words, silent on the
+  simulator), say it with first letters, say it alone, Planted, then Today
+  at a seed. Run it first: the other features start from its Today.
 - [features/today.md](features/today.md): Today, its header, reference,
-  passage and its one button.
+  passage, the passage's stage line and its one button.
 - [features/sayit.md](features/sayit.md): Say it on Today, over the scripted
   replay on the simulator: the lit words, the mark and its peek, the count,
   the suggested grade and a changed one.
 - [features/voice.md](features/voice.md): the voice's native module, built
-  with the app (no screen calls it yet).
+  with the app, which the first minute's hear phase calls.
 - [features/dictation.md](features/dictation.md): dictation's native
   module, built with the app and its prompts, and its scripted replay on
   the development probe (`apps/heartseed/app/probe/dictation.tsx`). Say it
   calls it on Today.
+- [features/fade.md](features/fade.md): cues that fade by stage on Today:
+  the passage in first letters at a seed, nothing at a blade, and a recital
+  said under that cue; Again brings the letters back. Run it after
+  `first.md`, before `grow.md` and `sayit.md`.
+- [features/grow.md](features/grow.md): the passage's stage on Today (seed,
+  blade, ear, full corn), the growth line, the stage kept across a
+  restart in the device's store, and the growth sound's native module,
+  which logs each play it skips on the simulator.
+- [features/field.md](features/field.md): the field, reached from Today's
+  `Your field` and back by `Today`: a row per passage, a plant per verse at
+  its stage, the local days sown from 04:00 (each by the zone offset its
+  record holds), which never fall, and the harvest.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.
@@ -156,7 +175,7 @@ app's storage.
 ## Gotchas
 
 - **The first bundle.** The first open after a fresh dev server waits on
-  the bundle: `sim install` waits up to 180 s for Today (`--timeout`)
+  the bundle: `sim install` waits up to 180 s for the reference (`--timeout`)
   before it fails `ReadinessTimedOut`.
 - **The passage comes from the server's bundle**, so a change to the corpus
   or to the display rule shows after the server restarts (`sim down`, then
