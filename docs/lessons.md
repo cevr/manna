@@ -5073,3 +5073,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** A one-line change to how one kind of recital word is drawn (a lit or peeked word made transparent, a word being heard read by the screen reader, an unsaid word's text shown) passed every test, twice.
 - **Cause:** Each guard checked a decision about the word (first Today's branches, then `wordOf`'s ink), while a second mapping, from the ink to a style and its colour, lies between that decision and what the reader sees.
 - **Guard:** code: `apps/heartseed/src/sayit/today.test.tsx` `reads a whole recital: each lit word by its name, the miss as a numbered mark, the count, the suggestion and the grade, then a changed grade and a peek`; `apps/heartseed/src/sayit/today.test.tsx` `shows a word still being heard softly but hides it from the screen reader, and draws each unsaid word as an empty slot`
+
+### heartseed-growth-silent-off-device
+
+- **Date:** 2026-11-04
+- **Kind:** owner
+- **Said:** "A sound plays only when a verse grows. Silent mode is respected."
+- **Source:** hymnapp/selahone/units.md row 6 (Done lines); hymnapp/hsgrow/spec.md The growth sound, The native module and Risks 6
+- **Wrong:** The growth sound could play through One's audio, whose `.playback` session ignores the ring/silent switch; take or change the audio session Dictation holds while it listens; play an alert sound that vibrates; or play on the simulator, whose audio reaches the Mac's speaker.
+- **Cause:** Only System Sound Services are muted by the switch and leave the session alone, and no web or simulator run can hear whether a sound respected Silent mode.
+- **Guard:** code: `apps/heartseed/src/garden/guard.test.ts` `plays a system sound once in the source, only on a device, and on the simulator logs the play it skips`; `apps/heartseed/src/garden/guard.test.ts` `names no session, category or activation, player, engine, alert sound, completion play or One audio`; `apps/heartseed/src/garden/guard.test.ts` `imports the Swift file from chime.ios.ts alone`
