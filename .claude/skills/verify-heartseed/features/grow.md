@@ -1,7 +1,8 @@
 # Grow
 
 Every verse the reader has said is a plant: seed, then blade, then ear, then
-full corn (Mark 4:28). Today (`apps/heartseed/app/index.tsx`) shows the
+full corn (Mark 4:28). The first minute plants the passage's seed
+(`first.md`). Today (`apps/heartseed/app/index.tsx`) shows the
 passage's stage under its words, read from the garden
 (`apps/heartseed/src/garden.ts`), which keeps each recall Say it hands it in
 the app's store on the device (`apps/heartseed/src/store.ts`: One's
@@ -23,9 +24,13 @@ after Again, and full corn once FSRS stability reaches 21 days.
 
 ## Sub-features
 
-- `grow-unplanted`: a fresh install shows `Stage: not planted` and no plant.
-- `grow-seed`: the first recital plants a seed: `Stage: seed`, no `Grew to`
-  line, no `[growth] play` line.
+A fresh install plants its seed in the first minute (`first.md`:
+`first-planted`, which was this feature's `grow-seed`), and `Stage: not
+planted` shows only when another verse is planted and the passage is not,
+which no screen does yet, so it is retired here (`grow-unplanted`) and the
+unit tests own it (`src/garden/today.test.tsx`). Every row below starts
+from the Today `first-today` opens, at `Stage: seed`.
+
 - `grow-ear`: a second recital, alone: `Stage: ear`, `Grew to an ear.`,
   exactly one `[growth] play` line, ending `skipped=simulator`.
 - `grow-peek`: a peek at the mark: `Stage: blade`, `Grew to a blade.`, still
@@ -38,32 +43,27 @@ after Again, and full corn once FSRS stability reaches 21 days.
 
 ## How to get to it (user POV)
 
-- Open the app on Today, tap `Say it`, and read the stage line under the
-  verse.
+- Go through the first minute, tap `Continue`, then on Today tap `Say it`
+  and read the stage line under the verse.
 
 ## Driving it
 
-This feature adds a native module (`apps/heartseed/native/growth`), so the
-drive needs an iOS build of the head (`SKILL.md`, Launch): `sim install
---prebuild` under `lockf -k /tmp/manna-ios-build.lock`, with at least 12 GB
-free on `/System/Volumes/Data` and the 1- and 5-minute loads at most 12.
+The growth sound's module (`apps/heartseed/native/growth`) must be in the
+installed build (`SKILL.md`, Launch; `first.md` says which build serves).
 The garden must start empty: uninstall the app by its udid before the
 install (`xcrun simctl uninstall <udid> app.heartseed`; a reader can delete
 the app, never write its storage), never with `booted` or `all`, and never
 erase.
 
-With `RUN=hsgrow-l6`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
-8280-8289, and `START` the time the drive starts (`date '+%Y-%m-%d %H:%M:%S'`):
+With `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them:
 
-1. `sim boot --port $PORT --out "$EVIDENCE"` → ok. Uninstall as above, then
-   the build and install, then
-   `xcrun simctl privacy <udid> revoke microphone app.heartseed`.
-2. `grow-unplanted`: `sim open / --expect "id=stage"` (the stage line shows
-   only once the garden is read), then `sim snapshot grow-unplanted` → the
-   label `Stage: not planted`, no label starting `Grew to`.
-3. `grow-seed`: `sim tap "label=Say it"`, `sim tap "label=36 of 37 words"
-   --timeout 30`, `sim snapshot grow-seed` → `Stage: seed`, no `Grew to`.
-4. `grow-ear`: the same two taps, `sim snapshot grow-ear` → `Stage: ear`,
+1. `first.md` steps 1 to 8: the first minute plants the seed
+   (`first-planted`) and `first-again` leaves Today at `Stage: seed`, with
+   no `[growth] play` line in the log.
+2. (retired: `grow-unplanted`)
+3. (now `first-planted`: `grow-seed`)
+4. `grow-ear`: `sim tap "label=Say it"`, `sim tap "label=36 of 37 words"
+   --timeout 30`, `sim snapshot grow-ear` → `Stage: ear`,
    `Grew to an ear.`. Then the log (below) holds exactly one
    `[growth] play` line, and it ends `skipped=simulator`.
 5. `grow-peek`: `sim tap "label=Missed word 11"`, `sim snapshot grow-peek` →
@@ -74,11 +74,13 @@ With `RUN=hsgrow-l6`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
    (the launch-frame probe). Then `sim open / --expect "id=stage"`,
    `sim snapshot grow-restart` → `Stage: blade`, no `Grew to`. A store that
    failed to open shows no stage line at all here, and that fails this row.
-7. `grow-again`: the two taps of step 3, `sim snapshot grow-again` →
+7. `grow-again`: the two taps of step 4, `sim snapshot grow-again` →
    `Stage: ear`, `Grew to an ear.`; two play lines. Then `sim tap
    "label=Again"`, `sim snapshot grow-again-graded` → `Stage: seed`, no
    `Grew to`; still two play lines.
-8. `sim doctor` (record `head` and `timingsHold`), then `sim down`.
+8. When `sayit.md` follows in the same drive (`first.md` step 9), run it
+   now; then `sim doctor` (record `head` and `timingsHold`), then
+   `sim down`.
 
 The log: `xcrun simctl spawn <udid> log show --start "$START" --style compact
 --predicate 'eventMessage CONTAINS "[growth]" AND process == "Heartseed"'`.

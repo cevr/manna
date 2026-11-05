@@ -1,10 +1,13 @@
 # Heartseed
 
 Scripture memorization on One (React Native on iOS, react-native-web on the
-web). Today (`app/index.tsx`) shows the passage the reader is learning, its
-stage in the garden, and one button, Say it, which hears the reader recite
-it; the word matcher (`src/matcher.ts`) grades a recall against the verse,
-and the garden (`src/garden.ts`) keeps it and grows the verse's plant.
+web). A fresh install opens the first minute (`src/first`, below): hear
+the passage, say it with first letters, say it alone, and its first seed is
+planted. Today (`app/index.tsx`) shows the passage the reader is learning,
+its stage in the garden, and one button, Say it, which hears the reader
+recite it; the word matcher (`src/matcher.ts`) grades a recall against the
+verse, and the garden (`src/garden.ts`) keeps it and grows the verse's
+plant.
 
 Run it as a reader does with the verify skill,
 `.claude/skills/verify-heartseed`. It drives through `bun run sim`
@@ -15,8 +18,10 @@ simulator, ports 8280-8289, iOS alone).
 ## Voice
 
 The voice reads a verse aloud on the device and lights each word as it is
-spoken; the reader can turn it off. No screen calls it yet (Say it reads no
-word aloud): the hear phase will call `Voice.read`.
+spoken; the reader can turn it off. The first minute's hear phase is the
+one screen that calls it (`Voice.read` at `Listen`, `Voice.stop` at a
+`Next` during a reading), through the app's runtime (`src/app.ts`: the
+atoms `voiceView`, `listen` and `hush`); Say it reads no word aloud.
 
 - `src/voice.ts` is the `Voice` service (Effect): `read`, `pause`,
   `resume`, `stop`, `setEnabled`, and the `view` a screen shows (`status`,
@@ -122,7 +127,8 @@ one runtime (`src/app.ts`, below).
 
 ## Say it
 
-Today's one button. A press recites the passage: its words hide, each word
+Today's one button, and the first minute's in letters and alone. A press
+recites the passage: its words hide, each word
 lights as the reader says it, with one soft haptic tick, and a missed word
 shows only a mark that a tap reveals (a peek). The recital finishes itself
 when its last word lights, or at a press. When it ends `finished`, Today
@@ -131,24 +137,30 @@ was peeked), the matcher's suggested grade, and FSRS's four grades with the
 suggestion chosen; the reader can change it. Any other ending shows one
 alert and the verse whole, and keeps nothing. Say it reads no word aloud.
 
-- `src/sayit.ts` is the `SayIt` service (Effect) over `Dictation`: `press`
-  (start a recital, or finish the one under way; it never replaces one),
-  `peek`, `choose`, and the `view` Today shows (the latest Dictation view,
+- `src/sayit.ts` is the `SayIt` service (Effect) over `Dictation`:
+  `recite({ cue, keep })` (start a recital under the matcher's cue, kept
+  or not, or finish the one under way; it never replaces one), `press`
+  (`recite(TODAY)`: no cue, kept), `peek`, `choose`, and the `view` Today
+  shows (the latest Dictation view,
   `startedAt` and the `choice`) with its `changes`. On each of Dictation's
   `changes` it shows Dictation's view as it is then, and ticks for the
   words lit since the last view it showed of the same recital; the endings
   come from Dictation's `endings`, which loses none, the n-th ending being
-  the n-th recital's. Each change of a finished recital's recall (its first
-  suggestion, a changed grade, a later peek) is handed once to `Recalls`,
-  keyed for the scheduler by `startedAt` on the service's own clock.
-  `Haptics` is the tick.
+  the n-th recital's. Each change of a kept recital's finished recall (its
+  first suggestion, a changed grade, a later peek) is handed once to
+  `Recalls`, keyed for the scheduler by `startedAt` on the service's own
+  clock; a recital that is not kept carries that to its end and hands
+  nothing over. `Haptics` is the tick.
 - `src/app.ts` is the app's one runtime: one Dictation over the source
-  this build hears, Say it over it, `liveHaptics` (One's soft impact) and
-  the garden (below), which takes Say it's recalls over the app's store
-  and sounds the growth chime. Every screen that
-  hears the reader takes Dictation from here. The runtime is not kept
-  alive: when Today leaves, its scope closes and Dictation cancels a
-  recital under way. `press`, `peek` and `choose` run to their ends.
+  this build hears, Say it over it, `liveHaptics` (One's soft impact), the
+  garden (below), which takes Say it's recalls over the app's store and
+  sounds the growth chime, and the voice over `voiceSource`, its switch in
+  the same store (`appLayer`'s parts: `source`, `haptics`, `store`,
+  `chime`, `voice`). Every screen that hears the reader takes Dictation
+  from here. The runtime is not kept alive: when the root leaves, its
+  scope closes, Dictation cancels a recital under way and the voice stops
+  a reading under way. `press`, `sayAs`, `peek` and `choose` run to their
+  ends.
 - The source: `sourceKind({ dev, simulator })` (`src/sayit/source.ts`)
   answers the module's replay of the probe's plan only when `dev`
   (`__DEV__`, nothing else) and the simulator (One's device info; a read
@@ -156,7 +168,9 @@ alert and the verse whole, and keeps nothing. Say it reads no word aloud.
   release build and a development build on a phone hear the microphone.
 - `src/sayit/screen.ts` reads what Today draws from Say it's view, and
   `wordOf` how each word shows (its ink, whether it is hidden, its name);
-  `app/index.tsx` draws it: one element per word, so each is its own
+  `src/sayit/draw.tsx` holds the drawing Today and the first minute share
+  (the word, the large round button, its pulse, the plant mark, the
+  palette), and `app/index.tsx` draws Today with it: one element per word, so each is its own
   accessibility element (an unsaid or half-heard word hidden from the
   screen reader, an unsaid one drawn as an empty slot its width, a mark
   named `Missed word <n>`, a peeked word `<word>, peeked`), the radio
@@ -164,7 +178,55 @@ alert and the verse whole, and keeps nothing. Say it reads no word aloud.
   a short fade and the button pulses while it listens; Reduce Motion stills
   both (Reanimated's `ReduceMotion.System`).
 - `src/sayit/guard.test.ts` holds the source choice, the one Dictation, no
-  word aloud and the soft tick to the sources.
+  word aloud (outside the first minute, the one reader of the voice's
+  atoms) and the soft tick to the sources.
+
+## First minute
+
+One promise, the passage, in three phases, then its seed; no sign-up and
+no setting. The root route (`app/index.tsx`) decides once per launch, at
+the garden's read, what it shows in place (no navigation, no other route):
+
+- While the read runs (a held store, its retries), a pending frame with the
+  reference alone: no heading, no button, no stage and no plant.
+- A read garden holding no recall of any verse (an empty disk, or only
+  records the garden skips) opens the first minute. A read garden holding
+  any verse's recall opens Today, and so does an `Unread` one: a garden
+  that could not be read cannot know there is no seed.
+- Planting the seed does not swap the screen: Planted shows until
+  `Continue`, which opens Today at `Stage: seed`.
+
+The phases (`src/first/screen.tsx`, with the phase bar, the large round
+button and the Georgia verse of the prototype):
+
+1. `Hear it`: the verse whole, one element per word. `Listen`, shown only
+   while the voice is on and not reading, reads it (`Voice.read`); nothing
+   speaks without a tap. While it reads, the words spoken are in ink and
+   the voice's current range is `aria-selected`. A reading that ends
+   `finished` goes on by itself; any other ending leaves the words whole
+   and offers `Listen` again. `Next` stops a reading under way and goes on.
+   With the voice's stored switch off there is no `Listen`; the first
+   minute never writes the switch.
+2. `Say it with help`: each word's first letter or number alone, the rest
+   laid out unseen and hidden from the screen reader. `Say it` recites with
+   the matcher's cue `initials` and keeps nothing (`recite({ cue:
+   'initials', keep: false })`); a finished recital, any words missed, goes
+   on, and one not heard shows Say it's alert and stays.
+3. `Say it alone`: no word shows before it is said; `Say it` recites with
+   no cue and keeps its recall with the suggested grade. Planted shows once
+   the garden's read holds the passage's plant, never at the recital's end,
+   so a refused write shows the count and `Say it` again.
+4. `Planted`: `Stage: seed`, the seed drawn large and `Continue`. Planting
+   never sounds.
+
+The flow's rules are a pure reducer, `src/first/flow.ts`: `openingOf` the
+garden's view decides the opening and `shownOpening` holds it for the
+launch; `step` moves each phase on only at its own input (Next, the
+voice's ending, a recital of the phase's own, the garden's plant), and no
+phase moves back. A recital is the phase's own when Say it's `startedAt`
+differs from the one the phase began with. Nothing of the flow is stored
+but the alone recital's recall, so a relaunch mid-flow starts again at
+`Hear it`, and the runtime's close stops a reading under way.
 
 ## Garden
 
@@ -279,9 +341,15 @@ Silent mode mutes. Nothing leaves the device.
     `src/garden` the growth sound and the native module's guard.
   - `test:today`: `src/garden/today.test.tsx`, Today's stage in happy-dom
     over the real store on the device (the journey from not planted to an
-    ear and back to a seed across a restart, each stage's look in the
+    ear and back to a seed across a restart, reached with another verse's
+    recall on the disk so Today opens, each stage's look in the
     prototype's colours, and no claim in any frame of a held launch or an
     unread session).
+  - `test:first`: `src/first`, the flow's reducer against its model
+    (`src/test/first-model.ts`) and the first minute in happy-dom over the
+    real store on the device (the journey to one seed and Today, the voice
+    off, a Next during a reading and a relaunch mid-flow, an unread launch,
+    a held launch).
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

@@ -11,7 +11,9 @@ grades `Again`, `Hard`, `Good` and `Easy` as a radio group with the
 suggestion checked; the reader can change it. Each change of a finished
 recital's recall is kept in the garden, and Today's stage line under the
 verse follows it (`grow.md`). A recital that could not be heard shows one
-alert and the verse whole, with no grade. Say it reads no word aloud.
+alert and the verse whole, with no grade. Say it reads no word aloud. The
+first minute's letters and alone phases press the same Say it (`first.md`);
+the rows here are Today's, run from the Today the first minute opens.
 
 In a development build on the simulator Say it hears the dictation
 module's replay of a scripted recital (the probe's plan: the passage less
@@ -34,7 +36,8 @@ simulator; the unit tests hold it (`src/sayit.property.test.ts`,
 
 ## How to get to it (user POV)
 
-- Open the app on Today and tap `Say it`.
+- Go through the first minute (`first.md`), tap `Continue`, then on Today
+  tap `Say it`. Any later launch opens Today.
 
 ## Driving it
 
@@ -46,12 +49,12 @@ apps/heartseed/vite apps/heartseed/vite.config.ts
 apps/heartseed/react-native.config.cjs` is empty. Otherwise build first
 (`SKILL.md`, Launch).
 
-With `RUN=hssayit-l5`, `EVIDENCE=$PWD/tmp/verify/$RUN` and a free `PORT`
-of 8280-8289:
+With `RUN`, `EVIDENCE` and `PORT` as `first.md` sets them, after its
+steps 1 to 8 (and `grow.md`'s rows, when they run in the same drive):
 
-1. `sim boot --port $PORT --out "$EVIDENCE"` → ok. Then
-   `xcrun simctl privacy <udid> revoke microphone app.heartseed`.
-2. `sim open / --expect "label=Isaiah 41:10"`, then `sim snapshot today`
+1. The app is booted on Today (`first-today` or `first-again`), with the
+   microphone revoked (`first.md` step 1).
+2. `sim open / --expect "id=stage"`, then `sim snapshot today`
    → `today-passage` holds, a node `Say it` exists, no `Listening`, no
    radio label. Record the role the snapshot gives the `Today` node.
 3. `sayit-ended`: `sim tap "label=Say it"` → ok. `sim snapshot

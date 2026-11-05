@@ -2,9 +2,9 @@
 
 The voice reads a verse aloud on the device and lights each word as it is
 spoken (`apps/heartseed/src/voice.ts`, over the Swift package
-`apps/heartseed/native/voice`). Nothing in the app calls it yet: the hear
-phase will, so this feature has no screen to drive. What can be checked is
-that the app builds with the module.
+`apps/heartseed/native/voice`). The first minute's hear phase calls it at
+`Listen` (`first.md`, `first-hear`, drives it on a screen). What this
+feature checks is that the app builds with the module.
 
 The voice makes no sound on the simulator: there the module never speaks.
 It renders each utterance to audio buffers it drops, logs
