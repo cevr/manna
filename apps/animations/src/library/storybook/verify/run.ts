@@ -4,6 +4,7 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import sharp from 'sharp';
 import {
   encodeClip,
+  frameBoxOf,
   frameName,
   loadShot,
   requestOf,
@@ -11,7 +12,7 @@ import {
   StorybookFailed,
   storybookPage,
 } from '../render.ts';
-import { rgbOfHex, shareOf, splitSheet } from '../sheet.ts';
+import { type Box, rgbOfHex, shareOf, splitSheet } from '../sheet.ts';
 import {
   dressed,
   dressedPaints,
@@ -36,9 +37,11 @@ import {
 import { BARS, type CheckId } from './bars.ts';
 import {
   type FrameRead,
+  type HeightRead,
   heightInfo,
   heightSamples,
   lightSamples,
+  observeHeight,
   paintMedians,
   paletteShare,
   type PlannedFrame,
@@ -51,7 +54,7 @@ import {
   stepSamples,
 } from './measures.ts';
 import { type Measured, one, type Verdict, verdictOf, verdictText } from './verdict.ts';
-import { seenHeightOf } from './rows.ts';
+import { analysisOf } from './rows.ts';
 
 /** verdict.json: the verdict as the run judged it, two-space indented. */
 const VerdictJson = Schema.fromJsonString(
@@ -109,25 +112,73 @@ const decoded = (png: Uint8Array, at: string) =>
     Effect.mapError((e) => StorybookFailed.make({ reason: `${at}: ${e.message}` })),
   );
 
-/** Every render of the run in one page launch: each frame's colour, then each figure alone; answers each render's sha256 in order and hands each to `seen`. */
+/** One render of a planned frame: its output (`requestOf`) and the box of the frame's px it paints over. */
+interface Job {
+  readonly output: string;
+  readonly box: Box;
+}
+
+/**
+ * Each render of a planned frame, in order: its colour, each figure alone
+ * over the frame (the light, colour and parity reads), then each figure
+ * alone over its analysis surface (`analysisOf`, the height bar's), for
+ * each figure the frame poses unsquashed with a surface; with why not for
+ * each posed figure that has none.
+ */
+const jobsOf = (shot: Shot, figures: ReadonlyArray<StoredFigure>) => {
+  const whole = frameBoxOf(shot.size);
+  return (p: PlannedFrame) => {
+    const surfaces = figures.flatMap((f) =>
+      Option.toArray(
+        Option.map(
+          Option.fromUndefinedOr(p.frame.figures.find((x) => x.name === f.figure.name)),
+          (posed) => ({ name: f.figure.name, box: analysisOf(shot, p.frame, posed, f) }),
+        ),
+      ),
+    );
+    const jobs: ReadonlyArray<Job> = [
+      { output: 'colour', box: whole },
+      ...figures.map((f) => ({ output: `figure:${f.figure.name}`, box: whole })),
+      ...surfaces.flatMap((s) =>
+        Option.toArray(
+          Option.map(Result.getSuccess(s.box), (box) => ({ output: `height:${s.name}`, box })),
+        ),
+      ),
+    ];
+    const unread = new Map(
+      surfaces.flatMap((s) =>
+        Option.toArray(Option.map(Result.getFailure(s.box), (why) => [s.name, why] as const)),
+      ),
+    );
+    return { jobs, unread };
+  };
+};
+
+/** Every render of the run in one page launch, each planned frame's jobs in order (`jobsOf`); answers each render's sha256 in order and hands each to `seen`. */
 const launch = <E, R>(
   render: RenderPng,
   planned: ReadonlyArray<PlannedFrame>,
-  figures: ReadonlyArray<StoredFigure>,
+  jobs: (p: PlannedFrame) => { readonly jobs: ReadonlyArray<Job> },
   seen: (p: PlannedFrame, output: string, png: Uint8Array) => Effect.Effect<void, E, R>,
 ) =>
   Effect.gen(function* () {
     const hashes: Array<string> = [];
     for (const p of planned)
-      for (const output of ['colour', ...figures.map((f) => `figure:${f.figure.name}`)]) {
-        const png = yield* render(requestOf(p.frame, output));
+      for (const job of jobs(p).jobs) {
+        const png = yield* render(requestOf(p.frame, job.output), job.box);
         hashes.push(yield* sha256(png));
-        yield* seen(p, output, png);
+        yield* seen(p, job.output, png);
       }
     return hashes;
   });
 
-/** The first launch: every render written under `out` (colour to `frames/`, each figure to `figures/<name>/`) and each figure-alone render read. */
+/**
+ * The first launch: every render written under `out` (colour to `frames/`,
+ * each figure to `figures/<name>/`, each analysis render to
+ * `analysis/<name>/`), each figure-alone render read (`readFigure`) and each
+ * analysis render observed (`observeHeight`). A posed figure with no
+ * analysis render is unread for height, with why.
+ */
 const firstLaunch = Effect.fn('StorybookVerify.firstLaunch')(function* (
   shot: Shot,
   render: RenderPng,
@@ -147,37 +198,50 @@ const firstLaunch = Effect.fn('StorybookVerify.firstLaunch')(function* (
         ] as const,
     ),
   );
-  const reads: Array<FrameRead> = [];
+  const jobs = jobsOf(shot, figures);
+  const reads: Array<Omit<FrameRead, 'height'>> = [];
+  const heights = new Map<string, HeightRead>();
   const colour = new Map<string, string>();
   for (const f of figures)
-    yield* fs.makeDirectory(path.join(out, 'figures', f.figure.name), { recursive: true });
+    for (const dir of ['figures', 'analysis'])
+      yield* fs.makeDirectory(path.join(out, dir, f.figure.name), { recursive: true });
   yield* fs.makeDirectory(path.join(out, 'frames'), { recursive: true });
-  const hashes = yield* launch(render, planned, figures, (p, output, png) =>
+  const hashes = yield* launch(render, planned, jobs, (p, output, png) =>
     Effect.gen(function* () {
       const file = frameName(p.index);
       if (output === 'colour') {
         colour.set(file, yield* sha256(png));
         return yield* fs.writeFile(path.join(out, 'frames', file), png);
       }
-      const name = output.slice('figure:'.length);
-      yield* fs.writeFile(path.join(out, 'figures', name, file), png);
+      const [kind = '', name = ''] = output.split(/:(.*)/);
+      const dir = ['figures', 'analysis'][Number(kind === 'height')] ?? 'figures';
+      yield* fs.writeFile(path.join(out, dir, name, file), png);
       const stored = byName.get(name);
       const posed = p.frame.figures.find((x) => x.name === name);
       if (!stored || !posed) return;
-      const render = yield* decoded(png, `${name} ${file}`);
-      const read = readFigure(render, lit.get(name) ?? []);
+      const raster = yield* decoded(png, `${output} ${file}`);
+      if (kind === 'height') {
+        heights.set(`${p.index}/${name}`, observeHeight(raster, lit.get(name) ?? []));
+        return;
+      }
       reads.push({
         frame: p.index,
         name,
         cell: posed.cell,
         zoom: p.frame.camera.zoom ** (1 / stored.layer.z),
         squashed: posed.sx !== 1 || posed.sy !== 1,
-        read,
-        seen: seenHeightOf(shot, p.frame, posed, stored, render),
+        read: readFigure(raster, lit.get(name) ?? []),
       });
     }),
   );
-  return { hashes, reads, colour };
+  const unread = new Map(planned.map((p) => [p.index, jobs(p).unread] as const));
+  const complete: ReadonlyArray<FrameRead> = reads.map((r) => ({
+    ...r,
+    height:
+      heights.get(`${r.frame}/${r.name}`) ??
+      Result.fail(unread.get(r.frame)?.get(r.name) ?? 'no analysis render'),
+  }));
+  return { hashes, reads: complete, colour };
 });
 
 /** The stored cells each figure draws over the planned frames, by figure name: each cell, and each key whose eyes a blink shows. */
@@ -378,10 +442,11 @@ const infoOf = (figures: ReadonlyArray<StoredFigure>): ReadonlyArray<string> =>
   );
 
 /**
- * One verify run of `shot`: render every `every`-th frame (colour and each
- * figure alone) in one page launch, again in a second, measure, judge every
- * bar, and write `verdict.md`, `verdict.json`, `manifest.json`,
- * `contact.png`, `shot.mp4`, `frames/` and `figures/` under `out`.
+ * One verify run of `shot`: render every `every`-th frame (colour, each
+ * figure alone, and each figure alone on its analysis surface) in one page
+ * launch, again in a second, measure, judge every bar, and write
+ * `verdict.md`, `verdict.json`, `manifest.json`, `contact.png`, `shot.mp4`,
+ * `frames/`, `figures/` and `analysis/` under `out`.
  */
 export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
   shot: Shot,
@@ -404,7 +469,7 @@ export const verifyShot = Effect.fn('StorybookVerify.verifyShot')(function* (
   );
   const second = yield* Effect.scoped(
     Effect.flatMap(storybookPage(scene), (render) =>
-      launch(render, planned, figures, () => Effect.void),
+      launch(render, planned, jobsOf(shot, figures), () => Effect.void),
     ),
   );
   const differing = first.hashes.filter((h, k) => h !== second[k]).length;

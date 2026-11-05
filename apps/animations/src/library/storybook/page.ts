@@ -7,6 +7,7 @@ import {
   paintFrame,
   prepare,
 } from './painter.ts';
+import type { Box } from './sheet.ts';
 
 /** Every picture a scene names: its data URL is its id. */
 const picturesOf = (scene: PaintScene): ReadonlyArray<string> =>
@@ -60,23 +61,56 @@ const picturesFrom = (images: ReadonlyMap<string, HTMLImageElement>): Pictures =
   };
 };
 
-/** The page's renderer for one scene whose pictures are decoded and prepared: each request painted from itself alone (`paintFrame`), answered as a PNG data URL, or why not. */
-const rendererOf = (
-  scene: PaintScene,
-  pictures: Pictures,
-  canvas: HTMLCanvasElement,
-  ctx: CanvasRenderingContext2D,
-) => {
+/** A canvas and its 2d context. */
+interface Surface {
+  readonly canvas: HTMLCanvasElement;
+  readonly ctx: CanvasRenderingContext2D;
+}
+
+/** A canvas `box.width` × `box.height` for an analysis render, made once and resized as boxes change; none without a 2d context. */
+const analysisSurface = () => {
+  const canvas = document.createElement('canvas');
+  const ctx = Option.fromNullishOr(canvas.getContext('2d'));
+  return (box: Box): Option.Option<Surface> =>
+    Option.map(ctx, (c) => {
+      if (canvas.width !== box.width) canvas.width = box.width;
+      if (canvas.height !== box.height) canvas.height = box.height;
+      return { canvas, ctx: c };
+    });
+};
+
+/**
+ * The page's renderer for one scene whose pictures are decoded and
+ * prepared: each request painted from itself alone (`paintFrame`) over
+ * `box`, answered as a PNG data URL, or why not. The whole frame paints on
+ * the frame's canvas at the frame's own transform; any other box paints on
+ * an analysis canvas of its size, at that transform moved by the box's
+ * corner (whole px), so a figure reaching past the frame is painted whole
+ * and every pixel inside the frame is the one the frame paints.
+ */
+const rendererOf = (scene: PaintScene, pictures: Pictures, frame: Surface) => {
   const prepared = prepare(scene, pictures);
-  return (req: PaintRequest): string =>
+  const analysis = analysisSurface();
+  const surfaceOf = (box: Box): Option.Option<Surface> => {
+    if (box.x === 0 && box.y === 0 && box.width === scene.width && box.height === scene.height)
+      return Option.some(frame);
+    return analysis(box);
+  };
+  return (req: PaintRequest, box: Box): string =>
     Option.match(prepared, {
       onNone: () => 'a picture of the scene does not read',
-      onSome: (p) => {
-        ctx.clearRect(0, 0, scene.width, scene.height);
-        return Option.getOrElse(paintFrame(ctx, new DOMMatrix(), scene, p, pictures, req), () =>
-          canvas.toDataURL('image/png'),
-        );
-      },
+      onSome: (p) =>
+        Option.match(surfaceOf(box), {
+          onNone: () => 'no 2d context for the analysis canvas',
+          onSome: ({ canvas, ctx }) => {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const base = new DOMMatrix([1, 0, 0, 1, -box.x, -box.y]);
+            return Option.getOrElse(paintFrame(ctx, base, scene, p, pictures, req), () =>
+              canvas.toDataURL('image/png'),
+            );
+          },
+        }),
     });
 };
 
@@ -95,7 +129,7 @@ const storybook = {
           Reflect.set(
             storybook,
             'render',
-            rendererOf(scene, picturesFrom(new Map(pairs)), canvas, ctx),
+            rendererOf(scene, picturesFrom(new Map(pairs)), { canvas, ctx }),
           );
           return 'loaded';
         }),
