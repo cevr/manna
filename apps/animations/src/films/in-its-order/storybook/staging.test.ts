@@ -163,6 +163,89 @@ const pointOn = (plate: Plate, t: number, p: readonly [number, number]) => {
   ] as const;
 };
 
+/** How far a registration searches each way, in layer px, and the step it reads at (every other px). */
+const REGISTER_REACH = 16;
+const REGISTER_STEP = 2;
+
+/** A plate's luma and alpha at `width`×`height`, read from `part` of its PNG (its own px). */
+const lumaOf = (
+  png: string,
+  part: {
+    readonly left: number;
+    readonly top: number;
+    readonly width: number;
+    readonly height: number;
+  },
+  width: number,
+  height: number,
+) =>
+  Effect.promise(() =>
+    sharp(png)
+      .extract(part)
+      .resize(width, height, { fit: 'fill' })
+      .ensureAlpha()
+      .raw()
+      .toBuffer()
+      .then((b) => {
+        const luma = new Float32Array(width * height);
+        const solid = new Uint8Array(width * height);
+        for (let q = 0; q < width * height; q++) {
+          luma[q] =
+            0.299 * (b[q * 4] ?? 0) + 0.587 * (b[q * 4 + 1] ?? 0) + 0.114 * (b[q * 4 + 2] ?? 0);
+          solid[q] = Number((b[q * 4 + 3] ?? 0) > 127);
+        }
+        return { luma, solid };
+      }),
+  );
+
+/**
+ * The shift, in layer px, that best lays `over` on the `under` plate it
+ * paints again, as the shot lays both: each plate read at half size under
+ * `over`'s box, and the shift of `over` within `REGISTER_REACH` whose
+ * opaque pixels differ least in luma from `under`'s; [0, 0] when `over` sits
+ * exactly where it paints.
+ */
+const registrationOf = (under: Plate, over: Plate) =>
+  Effect.gen(function* () {
+    const width = Math.round(over.place.width / REGISTER_STEP);
+    const height = Math.round(over.place.height / REGISTER_STEP);
+    const [w, h] = under.painting?.size ?? [1, 1];
+    const [sx, sy] = [under.place.width / w, under.place.height / h];
+    const below = yield* lumaOf(
+      under.painting?.png ?? '',
+      {
+        left: Math.round((over.place.x - under.place.x) / sx),
+        top: Math.round((over.place.y - under.place.y) / sy),
+        width: Math.round(over.place.width / sx),
+        height: Math.round(over.place.height / sy),
+      },
+      width,
+      height,
+    );
+    const [ow, oh] = over.painting?.size ?? [1, 1];
+    const above = yield* lumaOf(
+      over.painting?.png ?? '',
+      { left: 0, top: 0, width: ow, height: oh },
+      width,
+      height,
+    );
+    const reach = REGISTER_REACH / REGISTER_STEP;
+    const scores = Array.from({ length: (2 * reach + 1) ** 2 }, (_, i) => {
+      const [dx, dy] = [(i % (2 * reach + 1)) - reach, Math.floor(i / (2 * reach + 1)) - reach];
+      let [sum, n] = [0, 0];
+      for (let y = reach; y < height - reach; y++)
+        for (let x = reach; x < width - reach; x++) {
+          const [a, b] = [y * width + x, (y + dy) * width + x + dx];
+          if (!above.solid[a] || !below.solid[b]) continue;
+          sum += Math.abs((above.luma[a] ?? 0) - (below.luma[b] ?? 0));
+          n++;
+        }
+      return { dx, dy, score: sum / Math.max(1, n) };
+    });
+    const best = scores.toSorted((a, b) => a.score - b.score)[0] ?? { dx: 0, dy: 0 };
+    return [best.dx * REGISTER_STEP, best.dy * REGISTER_STEP] as const;
+  });
+
 /** A plate's middle at `t`, in its layer's px: its box moved by its key and stretched about its foot. */
 const middleAt = (plate: Plate, t: number) => {
   const foot = footAt(plate, t);
@@ -665,6 +748,28 @@ describe("In Its Order's staging", () => {
         );
         expect(counts.both / Math.max(1, counts.either)).toBeGreaterThanOrEqual(0.95);
         expect(apart.filter((d) => d > 12)).toEqual([]);
+      }),
+  );
+
+  it.effect(
+    'places the close’s table plate in cold-ouch where it paints the table: laid as the shot lays it, its pixels agree best with `table.png`’s under it at no shift (within 2 layer px, searched 16 px each way), and the same plate laid 10 px off is found 10 px off (verifier r1: a 10 px shift of `tableClose()` left every staging test green)',
+    () =>
+      Effect.gen(function* () {
+        const ouch = placed.find((p) => p.shot.id === 'cold-ouch')?.shot;
+        const plates = (ouch?.layers.find((l) => l.name === 'table')?.items ?? []).filter(
+          (item): item is Plate => item._tag === 'Plate',
+        );
+        const whole = plates.find((p) => p.file.endsWith('/table.png'));
+        const close = plates.find((p) => p.file.endsWith('/table-close.png'));
+        expect([whole?.moves ?? [], close?.moves ?? []]).toEqual([[], []]);
+        if (!whole?.painting || !close?.painting) return expect(close?.file).toBe('table-close');
+        const registered = yield* registrationOf(whole, close);
+        const shifted = yield* registrationOf(whole, {
+          ...close,
+          place: { ...close.place, x: close.place.x + 10 },
+        });
+        expect(registered.map((d) => Math.abs(d) <= 2)).toEqual([true, true]);
+        expect(shifted.map((d) => Math.round(d))).toEqual([-10, 0]);
       }),
   );
 
