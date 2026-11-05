@@ -15,9 +15,10 @@ first minute, `Stage: seed`; it appears once the garden's read of
 the device's store completes, a moment after launch, and not at all in a
 session whose read failed. Below the passage is the big button, `Say it`
 (`sayit.md`); until it is pressed the screen asks for no permission and
-makes no sound. Under it, once the garden's read completes and never while
-Say it listens, is the button `Your field`, which opens the field in place
-(`field.md`).
+makes no sound. Beside the header `Today`, fixed above the scrolling
+passage, once the garden's read completes and never while Say it listens,
+is the button `Your field`, which opens the field in place (`field.md`);
+it is on screen without a scroll whatever Today holds.
 
 ## Sub-features
 

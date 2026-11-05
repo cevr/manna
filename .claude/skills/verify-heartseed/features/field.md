@@ -6,7 +6,9 @@ verse a plant (Mark 4:28: seed, then blade, then ear, then full corn). It is
 reached from Today by the button `Your field` and left by the button
 `Today`, in place in the root route: no route, no link, no tab. Today offers
 it only once the garden's read of the device's store completes, and never
-while Say it listens. Its heading is `Your field`; under it, the days sown
+while Say it listens. It sits in Today's header beside the heading, outside
+the scroll view, so it is on screen without a scroll whatever Today holds
+(the recap, the grades, the growth line, an alert). Its heading is `Your field`; under it, the days sown
 (`1 day sown`, `<n> days sown`: the distinct UTC days on which any recall
 was kept, so it never falls) and the harvest (`<n> verses at full corn`,
 `1 verse at full corn`: the verses at full corn now, so Again takes a verse
@@ -21,7 +23,8 @@ then the first minute or Today.
 
 ## Sub-features
 
-- `field-control`: Today, read and quiet, offers a button `Your field`.
+- `field-control`: Today, read and quiet, offers a button `Your field` in
+  its header, inside the window and above the home indicator's area.
 - `field-first`: after the first minute, the field shows the passage at a
   seed, `1 day sown`, `0 verses at full corn` and a button `Today`, with no
   `Today` heading and no `Say it`.
@@ -87,3 +90,6 @@ delete the `snapshots` folder and the raw snapshot.
   crosses 00:00 UTC between two recitals sees one more day sown.
 - A row title is plain text, not a heading; the field's one heading is
   `Your field`.
+- `Your field` never needs a `sim scroll`: it is in Today's header, outside
+  the scroll view. Tap it as it is; a scroll just before a tap can leave the
+  scroll view moving, and a tap then may stop the scroll instead of pressing.

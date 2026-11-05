@@ -7,7 +7,7 @@ planted. Today (`app/index.tsx`) shows the passage the reader is learning,
 its stage in the garden, and one big button, Say it, which hears the reader
 recite it; the word matcher (`src/matcher.ts`) grades a recall against the
 verse, and the garden (`src/garden.ts`) keeps it and grows the verse's
-plant. Under it, `Your field` opens the field (`src/field.ts`, below): a
+plant. Beside Today's heading, `Your field` opens the field (`src/field.ts`, below): a
 row per passage, a plant per verse, the days sown and the harvest.
 
 Run it as a reader does with the verify skill,
@@ -323,7 +323,10 @@ Silent mode mutes. Nothing leaves the device.
 The field is the reader's progress: every passage is a row and every verse
 a plant, at the stage the garden derives. Today offers it as the button
 `Your field` once the garden's read completes, and never while Say it
-listens (leaving Today then would leave the microphone open off-screen);
+listens (leaving Today then would leave the microphone open off-screen).
+It sits in Today's header beside the heading, outside the scroll view, so
+however much a recital adds (the recap, the grades, the growth line, an
+alert) it is on screen without a scroll and clear of the home indicator;
 the field's button `Today` comes back to Today as it was. Both are in place
 in the root route (`app/index.tsx`): no route, no link, no tab. Whether the
 field shows is the root's state for the launch, never stored, so every
@@ -436,11 +439,17 @@ them.
     sown as a model test over the garden on the device across keeps, Again,
     peeks, refused writes, relaunches and unread sessions; and
     `src/field/unread.test.tsx`, no field offered in any frame of a held
-    launch, an unread session or the first minute.
+    launch, an unread session or the first minute; and
+    `src/field/reach.test.tsx`, the control outside Today's scroll view
+    before and after a recital that grows the passage, and one view of Say
+    it deciding both the control and the field: with the root's news of
+    Say it held back, a tap in the first frame that offers the control
+    after a growing recital opens the field.
   - `test:field-screen`: `src/field/screen.test.tsx`, the field from Today
     in happy-dom over the real store on the device through
     `src/test/field-rig.tsx` (the rig holds every frame to the field's
-    rules: the control only on a read, quiet Today; each field frame the
+    rules: the control only on a read, quiet Today, never inside a scroll
+    view; each field frame the
     rule's rows, plants, drawings, days sown and harvest as seen and
     exposed, every text at AA contrast; each open and way back leaving the
     whole disk and taking no write, remove or clear): the way there and
