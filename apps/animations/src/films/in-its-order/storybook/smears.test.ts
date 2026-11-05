@@ -9,15 +9,13 @@ import { SHEET_CELLS } from './cells.ts';
 const SMEAR_PX = 40;
 
 /** A cell's pixels as the split stored them. */
-const rasterOf = (png: string) =>
-  Effect.map(
-    Effect.promise(() => sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true })),
-    ({ data, info }): Raster => ({
-      width: info.width,
-      height: info.height,
-      rgba: new Uint8Array(data),
-    }),
+const rasterOf = Effect.fn('Act1Smears.rasterOf')(function* (png: string) {
+  const { data, info } = yield* Effect.promise(() =>
+    sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
   );
+  const raster: Raster = { width: info.width, height: info.height, rgba: new Uint8Array(data) };
+  return raster;
+});
 
 /** Each pixel of a cell marked 1 where it is a skin shade. */
 const shadeMaskOf = (r: Raster, paints: ReturnType<typeof paintsOf>) => {

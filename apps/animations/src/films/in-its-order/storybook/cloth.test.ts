@@ -17,15 +17,13 @@ const CLOTH_SPREAD = 0.02;
 const FEET = 0.25;
 
 /** A cell's pixels as the split stored them. */
-const rasterOf = (png: string) =>
-  Effect.map(
-    Effect.promise(() => sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true })),
-    ({ data, info }): Raster => ({
-      width: info.width,
-      height: info.height,
-      rgba: new Uint8Array(data),
-    }),
+const rasterOf = Effect.fn('Act1Cloth.rasterOf')(function* (png: string) {
+  const { data, info } = yield* Effect.promise(() =>
+    sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
   );
+  const raster: Raster = { width: info.width, height: info.height, rgba: new Uint8Array(data) };
+  return raster;
+});
 
 /** Each paint's share of the opaque pixels in `rows` (shares of the cell's height), by hex. */
 const sharesIn = (r: Raster, rows: readonly [number, number]): ReadonlyMap<string, number> => {

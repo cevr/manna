@@ -23,15 +23,13 @@ const SHARED_FRINGES: ReadonlyMap<string, number> = new Map([
 const LANDSCAPE = new Set(['sky.png', 'distance.png', 'near.png', 'path.png']);
 
 /** A plate's pixels. */
-const rasterOf = (png: string) =>
-  Effect.map(
-    Effect.promise(() => sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true })),
-    ({ data, info }): Raster => ({
-      width: info.width,
-      height: info.height,
-      rgba: new Uint8Array(data),
-    }),
+const rasterOf = Effect.fn('Act1Plates.rasterOf')(function* (png: string) {
+  const { data, info } = yield* Effect.promise(() =>
+    sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
   );
+  const raster: Raster = { width: info.width, height: info.height, rgba: new Uint8Array(data) };
+  return raster;
+});
 
 /** Each act 1 plate's PNG, once, by the shots that draw it. */
 const platePngs = Effect.map(
