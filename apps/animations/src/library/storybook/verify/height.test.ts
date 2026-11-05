@@ -9,7 +9,6 @@ import {
   clipped,
   domainMisses,
   FRAME,
-  PAINTS,
   spreadOf,
   viewOf,
 } from './height.testing.ts';
@@ -59,7 +58,7 @@ describe('the iio-b diagnosis oracle (diagnosis-height.test.ts), on the complete
         zoom: 1,
         squashed: false,
         read: readFigure(render, paints),
-        height: observeHeight(complete, paints),
+        height: observeHeight(complete),
       };
     };
     const a = read(0, 200, 10);
@@ -84,7 +83,6 @@ describe('the iio-b diagnosis oracle (diagnosis-height.test.ts), on the complete
     const value = Result.getSuccess(
       observeHeight(
         analysedOn({ raster: cell, ax: 30.5, ay: 201 }, { x: 40.5, y: 41, sx: 1, sy: 1 }).raster,
-        paints,
       ),
     );
     expect(
@@ -98,9 +96,7 @@ describe('observeHeight', () => {
     const body = { top: 30, bottom: 529, lean: 0, arm: Option.some(18) };
     const cell = bodyCell(body, 44, 560, 22.5, 530);
     expect(
-      Result.getSuccess(
-        observeHeight(analysedOn(cell, { x: 100, y: 600, sx: 1, sy: 1 }).raster, PAINTS),
-      ),
+      Result.getSuccess(observeHeight(analysedOn(cell, { x: 100, y: 600, sx: 1, sy: 1 }).raster)),
     ).toEqual(Option.some(500));
   });
 
@@ -114,12 +110,10 @@ describe('observeHeight', () => {
     );
     const { raster } = analysedOn(cell, { x: 100.3, y: 600.7, sx: 1.2, sy: 1.2 });
     expect(
-      Result.isFailure(
-        observeHeight({ ...raster, rgba: new Uint8Array(raster.rgba.length) }, PAINTS),
-      ),
+      Result.isFailure(observeHeight({ ...raster, rgba: new Uint8Array(raster.rgba.length) })),
     ).toBe(true);
     for (let edge = 0; edge < 4; edge++)
-      expect(Result.getFailure(observeHeight(clipped(raster, edge), PAINTS))).toEqual(
+      expect(Result.getFailure(observeHeight(clipped(raster, edge)))).toEqual(
         Option.some('its analysis render reaches the surface edge'),
       );
   });
@@ -179,7 +173,7 @@ describe('render-height keys, names and the scale bar', () => {
       zoom: 1,
       squashed: false,
       read: { whole: true, lines: Option.none(), interior: 0, litInterior: 0 },
-      height: observeHeight(raster, PAINTS),
+      height: observeHeight(raster),
     };
   };
 

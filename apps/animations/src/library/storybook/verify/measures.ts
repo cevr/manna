@@ -222,37 +222,131 @@ export interface FrameRead {
 /** A crown-to-soles height from a figure's lines. */
 const heightOf = (l: Lines): number => l.bottom - l.crown + 1;
 
-/** The least alpha a resampled pixel holds to count at a crown or a sole: half covered, where a drawn edge lies once the page resamples it. */
+/** The least alpha that finds a crown's or a sole's edge: half covered, where a drawn edge lies once the page resamples it, so a faint fringe alone is never the edge. */
 export const EDGE_ALPHA = 128;
 
-/** The first row of column `x` of `r` at or past `EDGE_ALPHA`, none when it holds none. */
-const edgeTopOf = (r: Raster, x: number): Option.Option<number> => {
-  for (let y = 0; y < r.height; y++)
-    if (alphaAt(r, y * r.width + x) >= EDGE_ALPHA) return Option.some(y);
-  return Option.none();
+/** The least alpha a pixel holds to count as wholly inside the figure, where an edge's ramp of partial coverage ends. */
+export const FULL_ALPHA = 250;
+
+/**
+ * Where an edge lies along a profile of coverage (`at(i)`, 0–255, for
+ * `i` in `0 … n − 1`) that rises from nothing into the figure: the
+ * boundary, in px from index 0's outer side, at which the profile's whole
+ * ramp of partial coverage would be one full step. The ramp runs from the
+ * first half-covered index back over its contiguous fringe to the first
+ * index past it wholly covered (`FULL_ALPHA`), and its summed coverage is
+ * the px the figure fills of it: a resampling filter spreads an edge's
+ * coverage over its ramp without changing that sum, whatever the sampling
+ * phase, so the edge reads to a fraction of a px. None when no index is
+ * half covered, or none past it wholly covered.
+ */
+const edgeAlong = (at: (i: number) => number, n: number): Option.Option<number> => {
+  let half = 0;
+  while (half < n && at(half) < EDGE_ALPHA) half += 1;
+  if (half >= n) return Option.none();
+  let full = half;
+  while (full < n && at(full) < FULL_ALPHA) full += 1;
+  if (full >= n) return Option.none();
+  let start = half;
+  while (start > 0 && at(start - 1) > 0) start -= 1;
+  let filled = 0;
+  for (let i = start; i < full; i++) filled += at(i) / 255;
+  return Option.some(full - filled);
 };
 
-/** The last row of `r` holding a pixel at or past `EDGE_ALPHA`, none when it holds none. */
-const edgeBottomOf = (r: Raster): Option.Option<number> => {
-  for (let y = r.height - 1; y >= 0; y--)
-    for (let x = 0; x < r.width; x++)
-      if (alphaAt(r, y * r.width + x) >= EDGE_ALPHA) return Option.some(y);
-  return Option.none();
+/**
+ * The least crown-to-soles, in frame px, the height bar reads: over the
+ * cast's cells in Chrome, at every sampling phase, a steady figure from
+ * this height up reads within 0.7 px (a spread under 0.006) and one 3 %
+ * taller or shorter over 0.024, clear of the 0.02 bar either way; below it
+ * a 3 % change comes too near the bar to tell, so the frame reads unread.
+ * Act 1 draws no figure under 234 px.
+ */
+export const LEAST_HEIGHT = 100;
+
+/** The share of a figure's height, from its top, whose pixels place its head column (`linesOf`'s). */
+const HEAD_BAND = 0.1;
+
+/** The crown in column `x` of `r`, in px from `r`'s top, to a fraction of a px (`edgeAlong`). */
+const crownEdgeOf = (r: Raster, x: number): Option.Option<number> =>
+  edgeAlong((y) => alphaAt(r, y * r.width + x), r.height);
+
+/** Each row's most covered pixel: the profile `r`'s top and soles are read along. */
+const mostCovered = (r: Raster): Uint8Array => {
+  const most = new Uint8Array(r.height);
+  for (let y = 0; y < r.height; y++)
+    for (let x = 0; x < r.width; x++) most[y] = Math.max(most[y] ?? 0, alphaAt(r, y * r.width + x));
+  return most;
+};
+
+/**
+ * The head column of `r` to a fraction of a px, in px from its left side:
+ * `linesOf`'s, the mean column of the figure's top `HEAD_BAND` of its
+ * height, here weighed by each pixel's coverage over a band from its top
+ * edge (`top`) cut to a fraction of a row, so the column moves with the
+ * drawing and never by a sampling phase. None when the band covers nothing.
+ */
+const headColumnOf = (r: Raster, top: number, height: number): Option.Option<number> => {
+  const end = top + HEAD_BAND * height;
+  let sum = 0;
+  let weight = 0;
+  for (let y = Math.max(0, Math.floor(top)); y < Math.min(r.height, Math.ceil(end)); y++) {
+    const share = Math.min(y + 1, end) - Math.max(y, top);
+    for (let x = 0; x < r.width; x++) {
+      const w = share * alphaAt(r, y * r.width + x);
+      sum += w * (x + 0.5);
+      weight += w;
+    }
+  }
+  return Option.some(sum / weight).pipe(Option.filter(() => weight > 0));
+};
+
+/** The crown at the head column `column`, between the crowns of the two columns whose middles lie either side of it, weighed by how near each lies. */
+const crownAtColumn = (r: Raster, column: number): Option.Option<number> => {
+  const left = Math.min(Math.max(Math.floor(column - 0.5), 0), r.width - 2);
+  const t = Math.min(Math.max(column - 0.5 - left, 0), 1);
+  return Option.map(
+    Option.all([crownEdgeOf(r, left), crownEdgeOf(r, left + 1)]),
+    ([a, b]) => a + (b - a) * t,
+  );
+};
+
+/** A figure's top, crown and soles on `r`, its crop, each to a fraction of a px from its top; none where one reads none. */
+const endpointsOf = (r: Raster) => {
+  const most = mostCovered(r);
+  return Option.flatMap(
+    Option.all([
+      edgeAlong((i) => most[i] ?? 0, r.height),
+      Option.map(
+        edgeAlong((i) => most[r.height - 1 - i] ?? 0, r.height),
+        (fromBottom) => r.height - fromBottom,
+      ),
+    ]),
+    ([top, soles]) =>
+      Option.map(
+        Option.flatMap(headColumnOf(r, top, soles - top), (column) => crownAtColumn(r, column)),
+        (crown) => ({ crown, soles }),
+      ),
+  );
 };
 
 /**
  * A figure's complete crown-to-soles observed on its analysis render: the
  * figure alone at its frame's own transform, painted on a surface round its
  * whole placed cell (`analysisBoxOf`), so no edge of the frame cuts it. Read
- * by the sheet's line semantics (`linesOf`): the crown in its head column,
- * so a raised arm or a separated foot is never the crown, and the soles its
- * lowest row; each endpoint where the resampled edge is half covered
- * (`EDGE_ALPHA`), so a hair's faint fringe never moves it by a sampling
- * phase. Unread where the render holds none of it, where it touches the
- * surface's edge (the surface cut it after all), or where its lines or
- * endpoints read none: a plan never stands in for a pixel.
+ * by the sheet's line semantics (`linesOf`): the crown in its head column
+ * (the mean column of its top tenth), so a raised arm or a separated foot is
+ * never the crown, and the soles its lowest edge. Each is read to a
+ * fraction of a px from the coverage the raster holds: the head column
+ * weighed by coverage, the crown between the two columns about it, and each
+ * edge from its ramp's summed coverage (`edgeAlong`); so neither a sampling
+ * phase nor a hair's faint fringe moves an endpoint by a whole px, and a
+ * crown on a slope stays at the same drawn point. Unread where the render
+ * holds none of it, where it touches the surface's edge (the surface cut it
+ * after all), or where an endpoint reads none: a plan never stands in for a
+ * pixel.
  */
-export const observeHeight = (complete: Raster, lit: ReadonlyArray<Paint>): HeightRead =>
+export const observeHeight = (complete: Raster): HeightRead =>
   Option.match(opaqueBox(complete), {
     onNone: () => Result.fail('its analysis render holds none of it'),
     onSome: (box) => {
@@ -263,14 +357,16 @@ export const observeHeight = (complete: Raster, lit: ReadonlyArray<Paint>): Heig
         box.y + box.height === complete.height
       )
         return Result.fail('its analysis render reaches the surface edge');
-      const r = cropOf(complete, box);
-      return Option.match(linesOf(r, lit), {
-        onNone: () => Result.fail('no lines read on its analysis render'),
-        onSome: (l) =>
-          Option.match(Option.all([edgeTopOf(r, l.headColumn), edgeBottomOf(r)]), {
-            onNone: () => Result.fail('no half-covered crown or soles on its analysis render'),
-            onSome: ([crown, soles]) => Result.succeed(soles - crown + 1),
-          }),
+      return Option.match(endpointsOf(cropOf(complete, box)), {
+        onNone: () =>
+          Result.fail('no crown or soles both half and wholly covered on its analysis render'),
+        onSome: ({ crown, soles }) => {
+          if (soles - crown < LEAST_HEIGHT)
+            return Result.fail(
+              `drawn ${(soles - crown).toFixed(1)} px tall, under the ${LEAST_HEIGHT} px the bar reads to`,
+            );
+          return Result.succeed(soles - crown);
+        },
       });
     },
   });

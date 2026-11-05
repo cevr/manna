@@ -88,7 +88,7 @@ export const BARS: ReadonlyArray<BarRow> = [
   ),
   proposed(
     'render-height',
-    "each unsquashed frame's figure alone on its analysis surface (its frame's own transform, uncropped by the frame): (max − min) of crown-to-soles ÷ the camera's zoom at the figure's plane, over the median, within each key the figure holds, worst figure and key; a frame whose complete crown-to-soles does not read leaves the figure unread (the camera's push is not the figure resizing; two keys of one sheet differ in height by design, which scale and proportions hold)",
+    "each unsquashed frame's figure alone on its analysis surface (its frame's own transform, uncropped by the frame): (max − min) of crown-to-soles ÷ the camera's zoom at the figure's plane, over the median, within each key the figure holds, worst figure and key, each crown and sole read to a fraction of a px; a frame whose complete crown-to-soles does not read, or reads under 100 px, leaves the figure unread (the camera's push is not the figure resizing; two keys of one sheet differ in height by design, which scale and proportions hold)",
     Bar.AtMost({ max: 0.02 }),
   ),
   proposed(

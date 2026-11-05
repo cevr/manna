@@ -559,11 +559,16 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   keys of one sheet differ in height by design (a bowed head, a seat),
   which `scale` and `proportions` hold, so it catches only a figure growing
   or shrinking while one key holds. Every frame is read one way, whole or
-  cut by the view: the page paints the figure alone at the frame's own
-  transform, moved by whole px onto an analysis surface round its whole
-  placed cell (`verify/rows.ts`, `analysisBoxOf`), so no frame edge cuts it,
-  and its crown (in its head column) and soles are read where the
-  resampled edge is half covered (`observeHeight`). The surface only
+  cut by the view: the page paints the figure alone onto an analysis
+  surface round its whole placed cell (`verify/rows.ts`, `analysisBoxOf`),
+  so no frame edge cuts it. Its part right of and below the frame's origin
+  paints at the frame's own transform, unmoved, so every pixel the frame
+  holds is the figure-alone frame's own, byte for byte; only its part left
+  of or above the frame paints at that transform moved by whole px
+  (`page.ts`). Its crown (in its head column) and soles are read to a
+  fraction of a px from the coverage across each edge (`observeHeight`),
+  and a figure under `LEAST_HEIGHT` (100 px) reads unread, too small for a
+  3 % change to clear the bar at every sampling phase. The surface only
   allocates: its height is read off its pixels, never off the plan. A
   frame the view cuts is named on an `INFO render-height cut:` line, each
   squashed frame it leaves out on an `INFO render-height squash:` line. A

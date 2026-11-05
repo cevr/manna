@@ -221,7 +221,7 @@ const firstLaunch = Effect.fn('StorybookVerify.firstLaunch')(function* (
       if (!stored || !posed) return;
       const raster = yield* decoded(png, `${output} ${file}`);
       if (kind === 'height') {
-        heights.set(`${p.index}/${name}`, observeHeight(raster, lit.get(name) ?? []));
+        heights.set(`${p.index}/${name}`, observeHeight(raster));
         return;
       }
       reads.push({

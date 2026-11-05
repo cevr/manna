@@ -81,6 +81,47 @@ export const analysedOn = (cell: Cell, place: Placement) => {
   return { box, raster: paintOn(cell, place, box) };
 };
 
+/**
+ * A figure in figure units (`u` across from its soles' centre, `v` up from
+ * its soles, the top of its head near 1): a head whose crown slants down
+ * to its left over its head column, a body, and two round feet apart.
+ */
+export const slantedFigure = (u: number, v: number): boolean => {
+  const head =
+    ((u - 0.05) / 0.09) ** 2 + ((v - 0.88) / 0.12) ** 2 <= 1 && v <= 0.97 + 0.5 * (u - 0.05);
+  const body = Math.abs(u) <= 0.1 && v >= 0.05 && v <= 0.8;
+  const foot = (c: number) => ((u - c) / 0.05) ** 2 + ((v - 0.03) / 0.03) ** 2 <= 1;
+  return head || body || foot(-0.06) || foot(0.06);
+};
+
+/**
+ * `drawing` drawn `height` px from soles to top, stretched `growth` up, its
+ * soles' centre at (`x`, `y`), as a resampling page draws it: each pixel's
+ * alpha its coverage, by 4 × 4 samples, on a clear surface round it.
+ */
+export const coveredOn = (
+  drawing: (u: number, v: number) => boolean,
+  height: number,
+  growth: number,
+  x: number,
+  y: number,
+): Raster => {
+  const [x0, y0] = [Math.floor(x - 0.25 * height) - 8, Math.floor(y - 1.1 * height * growth) - 8];
+  const [width, rows] = [Math.ceil(0.5 * height) + 16, Math.ceil(1.1 * height * growth) + 16];
+  const rgba = new Uint8Array(width * rows * 4);
+  for (let j = 0; j < rows; j++)
+    for (let i = 0; i < width; i++) {
+      let hits = 0;
+      for (let s = 0; s < 16; s++) {
+        const px = x0 + i + ((s % 4) + 0.5) / 4;
+        const py = y0 + j + (Math.floor(s / 4) + 0.5) / 4;
+        if (drawing((px - x) / height, (y - py) / (height * growth))) hits += 1;
+      }
+      if (hits > 0) rgba.set([...ROBE, Math.round((hits / 16) * 255)], (j * width + i) * 4);
+    }
+  return { width, height: rows, rgba };
+};
+
 /** A standing body in its cell's rows `top` to `bottom`: a head, a robe, two feet apart, leaning `lean` px off the cell's middle, and a raised arm reaching `arm` rows above the crown where it has one. */
 export interface Body {
   readonly top: number;
@@ -271,7 +312,7 @@ export const keyCase = (
         zoom: f.plane,
         squashed: false,
         read,
-        height: observeHeight(surface.raster, PAINTS),
+        height: observeHeight(surface.raster),
       } satisfies FrameRead,
     };
   };
@@ -325,7 +366,7 @@ export const domainMisses = (shrink: boolean): ReadonlyArray<string> =>
           Option.filter(Option.fromUndefinedOr(grown.surfaces[k]), () => k === seed % c.n),
           {
             onNone: () => r,
-            onSome: (s) => ({ ...r, height: observeHeight(clipped(s.raster, seed), PAINTS) }),
+            onSome: (s) => ({ ...r, height: observeHeight(clipped(s.raster, seed)) }),
           },
         ),
       );
