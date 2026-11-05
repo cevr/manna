@@ -6,7 +6,7 @@ import sharp from 'sharp';
 import { filmFolder, shotsOf } from '../../../library/storybook/films.ts';
 import { platesOf } from '../../../library/storybook/shot.ts';
 import { inItsOrder } from './index.ts';
-import { limeEdgeOf, unfringed } from './plates/fringe.ts';
+import { CLOSE_EDGE_PX, limeEdgeOf, unfringed } from './plates/fringe.ts';
 
 /**
  * The plates outside this film's storybook folder, keyed from the same
@@ -63,6 +63,21 @@ describe("In Its Order's act 1 plates", () => {
         );
         expect(fringes.map((f) => f.name)).toContain('table-close.png');
         expect(fringes.filter((f) => f.lime > (SHARED_FRINGES.get(f.name) ?? 0))).toEqual([]);
+      }).pipe(
+        Effect.provide([filmFolder.pipe(Layer.provide(BunServices.layer)), BunServices.layer]),
+      ),
+  );
+
+  it.effect(
+    'shows no lime within 4 px of the close table plate’s edge (critique 4, fault 3: 72 lime px 3–4 px in left a soft rim on its leaf tops)',
+    () =>
+      Effect.gen(function* () {
+        const pngs = yield* platePngs;
+        const close = [...pngs].filter((png) => png.endsWith('/table-close.png'));
+        const lime = yield* Effect.forEach(close, (png) =>
+          Effect.map(rasterOf(png), (plate) => limeEdgeOf(plate, CLOSE_EDGE_PX).length),
+        );
+        expect(lime).toEqual([0]);
       }).pipe(
         Effect.provide([filmFolder.pipe(Layer.provide(BunServices.layer)), BunServices.layer]),
       ),
