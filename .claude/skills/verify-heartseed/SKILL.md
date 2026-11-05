@@ -166,7 +166,8 @@ word's mark and `Your field`, and on the field `Today`. Heartseed has no journey
   which logs each play it skips on the simulator.
 - [features/field.md](features/field.md): the field, reached from Today's
   `Your field` and back by `Today`: a row per passage, a plant per verse at
-  its stage, the UTC days sown, which never fall, and the harvest.
+  its stage, the local days sown from 04:00 (each by the zone offset its
+  record holds), which never fall, and the harvest.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.

@@ -152,8 +152,11 @@ and keeps nothing. Say it reads no word aloud.
   the n-th recital's. Each change of a kept recital's finished recall (its
   first suggestion, a changed grade, a later peek) is handed once to
   `Recalls`, keyed for the scheduler by `startedAt` on the service's own
-  clock; a recital that is not kept carries that to its end and hands
-  nothing over. `Haptics` is the tick.
+  clock, with `offset`: the device zone's offset at that `startedAt`
+  (`offsetAt`, `src/day.ts`), read once at the press from the same clock
+  reading and kept through every rewrite of the recital, whatever zone the
+  device is in by then. A recital that is not kept carries that to its end
+  and hands nothing over. `Haptics` is the tick.
 - `src/app.ts` is the app's one runtime: one Dictation over the source
   this build hears, Say it over it, `liveHaptics` (One's soft impact), the
   garden (below), which takes Say it's recalls over the app's store and
@@ -183,8 +186,8 @@ and keeps nothing. Say it reads no word aloud.
   (a word not yet said under its cue: whole in the cue's ink under the full
   text, its first letter or number alone in the same ink and named by it
   under letters, the rest laid out unseen and hidden, the cue's ink being
-  the palette's mute darkened to AA contrast on the ground, while the first
-  minute keeps its letters in the mute; under no cue an empty slot its width,
+  the palette's mute darkened to AA contrast on the ground, as the first
+  minute's letters are too; under no cue an empty slot its width,
   hidden from the screen reader; a half-heard word hidden, a mark
   named `Missed word <n>`, a peeked word `<word>, peeked`), the radio
   group `Grade`, and the button `Say it` or `Listening`. A word lights with
@@ -281,13 +284,20 @@ Silent mode mutes. Nothing leaves the device.
   `review(card, grade, at)` is pure and equals ts-fsrs 5.4.2's basic
   scheduler on every field (a devDependency the tests alone import).
   Elapsed days are UTC calendar days, and a review's time is its recital's
-  `startedAt`.
+  `startedAt` (the stored `offset` plays no part; only days sown reads it).
 - `src/garden.ts` is the `Garden` service (`view` and its `changes`) and
   the `Recalls` Say it hands its recalls to. Each recall is one record of
   the store under `heartseed/recall/<reference>/<startedAt>`, whose value is
-  the recall's eight fields as JSON (`reference`, `startedAt`, `grade`,
-  `suggested`, `words`, `missed`, `peeked`, `extra`) and nothing else. A
-  later keep of the same recital writes the same key, so the last one wins.
+  the recall's nine fields as JSON (`reference`, `startedAt`, `offset`,
+  `grade`, `suggested`, `words`, `missed`, `peeked`, `extra`) and nothing
+  else. `offset` is the device zone's offset at `startedAt` in whole minutes
+  east of UTC, ISO's sign (New York `-300` in winter, `-240` in summer,
+  Kolkata `330`, Kathmandu `345`), an integer within ±1080. A record kept
+  before hslocal has no `offset` and reads as a recall all the same; it is
+  never rewritten or migrated. A record whose `offset` holds anything else
+  (a string, a fraction, `null`, a boolean, beyond ±1080) is no recall and
+  is skipped whole. A later keep of the same recital writes the same key,
+  start and offset, so the last one wins.
   The garden writes no other key and removes none. Nothing else is stored: a
   plant's card is the fold of its recalls in `startedAt` order from a new
   card, and its stage is read from its recalls and their cards each time.
@@ -366,16 +376,24 @@ them.
   `startedAt`, then by its reference in code units. References match
   exactly (`Isaiah 41:1`, `Isaiah 41:100` and `Isaiah 41:10 ` are three
   other verses).
-- Days sown (`1 day sown`, `<n> days sown`) is the number of distinct UTC
-  calendar days (`Math.floor(startedAt / 86_400_000)`) among every recall
-  the read holds, of any verse. A UTC day is a function of the stored
-  `startedAt` alone, as FSRS's elapsed days are, so the same disk shows the
-  same count on every launch and in every time zone, and travel can never
-  lower it; a local day would read the device's zone, which no record
-  holds. The garden writes recalls and never removes one, and a grade
-  change, Again or a peek rewrites the same recital, so the count never
-  falls: it is no streak. The cost: two recitals either side of 00:00 UTC
-  count two days.
+- Days sown (`1 day sown`, `<n> days sown`) is the number of distinct days
+  (`dayOf`, `src/day.ts`) among every recall the read holds, of any verse.
+  A record with an `offset` counts for the reader's local day by that
+  stored offset, starting at 04:00 (Anki's rollover, the day hsdaily's
+  session uses): `floor((startedAt + offset × 60 000 − 4 h) / 86 400 000)`,
+  so 03:59:59.999 is the day before and 04:00 the day itself, and daylight
+  saving, a part-hour zone and the zone the device is in now change
+  nothing (owner, 2026-11-05: "local day"). A record kept before hslocal
+  keeps the UTC date base counted it on (`floor(startedAt / 86 400 000)`),
+  so the upgrade cannot lower the count. Each day is a function of its
+  record alone; the garden writes recalls and never removes one, and a
+  grade change, Again or a peek rewrites the same recital with the same
+  start and offset, so the count never falls under travel or any clock: it
+  is no streak. The costs: a recital between 00:00 and 04:00 counts for the
+  day before; an old evening record keeps its UTC date, so on the
+  upgrade's day it and a new next-morning recital can share a day; and
+  where the runtime keeps the zone it launched in after the reader changes
+  zone (Hermes may, until a relaunch), a record's day is that old zone's.
 - The harvest (`1 verse at full corn`, `<n> verses at full corn`) is the
   number of verses whose stage is full corn now (stability of 21 days or
   more), derived, never stored: Again on a verse at full corn takes it out.
@@ -422,10 +440,14 @@ them.
     `src/fsrs.property.test.ts` (FSRS-6 against ts-fsrs),
     `src/garden.property.test.ts` (the stage and growth rules, and the
     garden against its model over the real store on the device across
-    launches, failed opens, listings, reads and writes),
+    launches, failed opens, listings, reads and writes, old records with no
+    `offset` beside new ones, and each bad `offset` skipped whole),
     `src/ladder.property.test.ts` (stage, cue and growth after every recall
     of generated histories), `src/press.test.ts` (the cue Today's press
-    recites under, a keep in flight, a refused write, an unread garden), and
+    recites under, a keep in flight, a refused write, an unread garden, and
+    generated presses in zones every side of UTC: each record's nine fields
+    and its press's offset, kept through a refused write, a grade change and
+    Again after the device changed zone), and
     in `src/garden` the growth sound and the native module's guard.
   - `test:today`: `src/garden/today.test.tsx`, Today's stage in happy-dom
     over the real store on the device (the journey from not planted to a
@@ -438,7 +460,9 @@ them.
     (`src/test/first-model.ts`) and the first minute in happy-dom over the
     real store on the device (the journey to one seed and Today, the voice
     off, a Next during a reading and a relaunch mid-flow, an unread launch,
-    a held launch).
+    a held launch, and each letter in the cue's ink at AA contrast on its
+    ground at rest and while its recital listens, while the hear phase's
+    unread words and the reference keep the mute).
   - `test:root`: `src/first/root.test.tsx`, the root route on fixed devices
     through `src/test/first-rig.tsx` (the rig: stand-ins for the device's
     store, the voice's source and the recognizer, a model of the first
@@ -449,7 +473,8 @@ them.
     checked: the heading, what a sighted reader and the screen reader get
     of each word, the hear phase's ink and selection, claims and setting
     words, the speaks and stops, and the whole disk with its write count
-    and each kept record's fields.
+    and each kept record's nine fields, its `offset` the test zone's at its
+    `startedAt`.
   - `test:walk-letters`, `test:walk-alone`, `test:walk-write`,
     `test:walk-launch`, `test:walk-disk`, `test:walk-relaunch`,
     `test:walk-planted`, `test:walk-reading` and `test:walk-taps`: each
@@ -462,12 +487,18 @@ them.
     queued taps; a relaunch anywhere), steered toward the part's own group
     of coverage floors, which its generated devices alone must meet.
   - `test:field`: `src/field.property.test.ts`, the field's rule over
-    generated read gardens in three time zones against the rule written
-    plainly (`src/test/field-model.ts`: references of any non-empty string,
-    canonical twins beside each other, counts with no ceiling, a failing
-    garden shrunk), and `src/field/sown.test.ts`, days
-    sown as a model test over the garden on the device across keeps, Again,
-    peeks, refused writes, relaunches and unread sessions; and
+    generated read gardens, each read in several device zones, against the
+    rule written plainly (`src/test/field-model.ts`: references of any
+    non-empty string, canonical twins beside each other, counts with no
+    ceiling, a failing garden shrunk; a day by the record's own wall clock
+    through `src/test/day-model.ts`, never `src/day.ts`): old and new
+    records, offsets of zones every side of UTC and the bounds ±1080, the
+    04:00 edge to the millisecond, UTC midnight for old records, daylight
+    saving north, south and by half an hour, a clock set back, and bad
+    offsets; and `src/field/sown.test.ts`, days sown as a model test over the
+    garden on the device across keeps, Again, peeks, refused writes then
+    landed, relaunches, unread sessions and zone changes while open and
+    between launches, never falling; and
     `src/field/unread.test.tsx`, no field offered in any frame of a held
     launch, an unread session or the first minute; and
     `src/field/reach.test.tsx`, the control outside Today's scroll view
