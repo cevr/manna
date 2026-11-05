@@ -155,6 +155,12 @@ const PUSH_CAPS: ReadonlyMap<string, number> = new Map([
   ['milk-pour', 1.05],
 ]);
 
+/** The dropper's width on milk-pour's screen, outline included (critique 4, fault 2, measured): a frame's step past it draws a row of droppers, not one moving. */
+const DROPPER_WIDTH_PX = 47;
+
+/** How long (s) the dropper rests at the cup before he waves it away, so the drop is seen to go in (critique 4, fault 2). */
+const DROPPER_REST_S = 0.2;
+
 /** Where a plate's foot lies at `t`, in its layer's px: the bottom of its place moved by its key, which stretches it about its foot. */
 const footAt = (plate: Plate, t: number) => {
   const k = plateAt(plate, t);
@@ -661,6 +667,57 @@ describe("In Its Order's staging", () => {
       }),
     );
     expect(ghosts).toEqual([]);
+  });
+
+  test('moves the dropper in milk-pour no farther a frame than its own width on screen, 47 px, and rests it at the cup at least 0.2 s, its middle within 2 px of its place there (critique 4, fault 2: 0.8 s legs stepped up to 51 px a frame and left the cup the frame it arrived)', () => {
+    const pour = placed.find(({ shot }) => shot.id === 'milk-pour')?.shot;
+    if (!pour) return expect(pour).toBeDefined();
+    const found = pour.layers.flatMap((layer) =>
+      layer.items.flatMap((item) => {
+        if (item._tag !== 'Plate' || !item.file.endsWith('/milk-dropper.png')) return [];
+        return [{ plate: item, z: layer.z }];
+      }),
+    );
+    expect(found).toHaveLength(1);
+    const [dropper] = found;
+    if (!dropper) return;
+    const onScreen = (t: number, middle: readonly [number, number]) => {
+      const plane = planeOf(pour.size, dropper.z, cameraAt(pour.camera, t));
+      return [middle[0] * plane.scale + plane.ox, middle[1] * plane.scale + plane.oy] as const;
+    };
+    const rest = { ...dropper.plate, moves: [] };
+    const frames = timesOf(pour).map((t) => ({
+      shown: plateAt(dropper.plate, t).alpha > 0,
+      at: onScreen(t, middleAt(dropper.plate, t)),
+      place: onScreen(t, middleAt(rest, t)),
+    }));
+    const steps = frames.slice(1).flatMap((f, i) => {
+      const was = frames[i];
+      if (!was?.shown || !f.shown) return [];
+      return [Math.hypot(f.at[0] - was.at[0], f.at[1] - was.at[1])];
+    });
+    const resting = frames.map(
+      (f) => f.shown && Math.hypot(f.at[0] - f.place[0], f.at[1] - f.place[1]) <= 2,
+    );
+    const rested = resting.reduce(
+      (acc, r) => {
+        const run = Number(r) * (acc.run + 1);
+        return { run, best: Math.max(acc.best, run) };
+      },
+      { run: 0, best: 0 },
+    ).best;
+    expect(steps.length).toBeGreaterThan(30);
+    const misses = [
+      ...steps.flatMap((step, i) => {
+        if (step <= DROPPER_WIDTH_PX) return [];
+        return [`step ${i + 1} of the dropper's: ${step.toFixed(1)} px`];
+      }),
+      ...[rested / pour.fps].flatMap((s) => {
+        if (s >= DROPPER_REST_S) return [];
+        return [`rests ${rested} frames (${s.toFixed(2)} s) at the cup`];
+      }),
+    ];
+    expect(misses).toEqual([]);
   });
 
   test('keeps every plate standing at a shot’s end where it stood at the next shot’s start, wherever that place is in the next frame, across each cut that keeps its figures where they stood (critique 2, finding 3: cold-ouch dropped the bottle cold-letter set down)', () => {

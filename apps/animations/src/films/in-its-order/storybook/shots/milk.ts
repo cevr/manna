@@ -171,8 +171,8 @@ const ribbon = (from: number, stop: number): Plate =>
  * `milk-pour`, the card's end (`thereby`, the word's end in the take, which
  * the card runs until) to `need`: held on the villager and the open
  * book, the milk pours from the book into his cup until `sincere`; on
- * "nothing" a dropper comes in level from the left to the cup and he waves
- * it away, back out the way it came; on `word` he
+ * "nothing" a dropper, come in level from the left, rests at the cup and he
+ * waves it away, back out the way it came; on `word` he
  * looks to the book and it pours again, filling the cup, until `good`, and
  * he drinks. A slow push. Each `cup` hold blinks through `cupBlink`.
  */
@@ -184,9 +184,9 @@ export const milkPour: FilmShot = {
     pour: { after: 'card:milk', dur: 0.3 },
     stop: { mark: 'sincere', dur: 0.25 },
     toCup: { after: 'card:milk', dur: 0.3 },
-    dropper: { mark: 'mixed', word: 'nothing', offset: 0.3, dur: 0.8, ends: true },
+    dropper: { mark: 'mixed', word: 'nothing', dur: 1.2, ends: true },
     wave: { mark: 'mixed', word: 'nothing', dur: 0.3 },
-    away: { mark: 'mixed', word: 'nothing', offset: 0.3, dur: 0.8 },
+    away: { mark: 'mixed', word: 'nothing', offset: 0.3, dur: 1.2 },
     look: { mark: 'word', dur: 0.3 },
     again: { mark: 'word', offset: 0.3, dur: 0.3 },
     back: { after: 'milk-pour:again', dur: 0.3 },
