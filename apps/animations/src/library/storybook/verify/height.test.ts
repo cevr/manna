@@ -100,7 +100,7 @@ describe('observeHeight', () => {
     ).toEqual(Option.some(500));
   });
 
-  test('reads unread a render that holds none of the figure, or one its surface cut at any edge', () => {
+  test('reads unread a render that holds none of the figure, one its surface cut at any edge, or one whose edges never reach whole coverage', () => {
     const cell = bodyCell(
       { top: 30, bottom: 529, lean: 0, arm: Option.none() },
       44,
@@ -115,6 +115,15 @@ describe('observeHeight', () => {
     for (let edge = 0; edge < 4; edge++)
       expect(Result.getFailure(observeHeight(clipped(raster, edge)))).toEqual(
         Option.some('its analysis render reaches the surface edge'),
+      );
+    const faint = (alpha: number) => {
+      const rgba = raster.rgba.slice();
+      for (let q = 3; q < rgba.length; q += 4) rgba[q] = Math.min(rgba[q] ?? 0, alpha);
+      return observeHeight({ ...raster, rgba });
+    };
+    for (const alpha of [100, 200])
+      expect(Result.getFailure(faint(alpha))).toEqual(
+        Option.some('no crown or soles both half and wholly covered on its analysis render'),
       );
   });
 });
