@@ -4964,6 +4964,36 @@ The form of an entry, each field on its own line:
 - **Cause:** A fallback written for the settings was kept when the garden began to read the same store: a success-shaped stand-in erased the failure below the seam every check stood on.
 - **Guard:** code: `apps/heartseed/src/store.test.ts` `no app source makes a memory, storage or file-system store`; `apps/heartseed/src/store.test.ts` `fails each call whose open throws, writes nothing in its place, and opens at the next call once the device can`
 
+### heartseed-store-closes-its-handle
+
+- **Date:** 2026-11-05
+- **Kind:** review
+- **Said:** "the device handle outlives its owning layer"
+- **Source:** hymnapp/hsgrow/round-1-findings.md M1
+- **Wrong:** Heartseed's store opened One's key-value store lazily and never closed the handle when its layer's scope closed, so each disposed runtime left a SQLite connection open.
+- **Cause:** The lazy open has no acquire step where a release could sit, so the release was left out rather than registered at the layer's own boundary.
+- **Guard:** code: `apps/heartseed/src/store.test.ts` `closes the handle it opened when its scope closes, and only that: none for a launch that never opened or whose opens all failed, one after a failed open and a good one`
+
+### heartseed-garden-read-faults-per-attempt
+
+- **Date:** 2026-11-05
+- **Kind:** review
+- **Said:** "This generator and its fixed case reach only consecutive failures of one method, get always first"
+- **Source:** hymnapp/hsgrow/round-1-findings.md M2 (a repeat of hymnapp/hsgrow/attempt-1 round 3 M1's class)
+- **Wrong:** The garden's own property failed each launch's read the same way on every attempt, with a record read failing only first, so a read that swallowed a later record's failure, or a store that answered a failed listing from the last good one, certified a partial or cached history with every app test green.
+- **Cause:** The test device counted failures per method, not per attempt, so no attempt could fail at its nth record read after good ones, or at its listing after a good listing.
+- **Guard:** code: `apps/heartseed/src/garden.property.test.ts` `certifies a history only from a completed read, and extends it only by writes the device took, over 100 generated devices whose read attempts fail at their open, listing or any record read, and recover`; `apps/heartseed/src/garden.property.test.ts` `reads the whole store again after a record read fails, never a partial history, and skips a listed key with no value`
+
+### heartseed-today-no-plant-part-unread
+
+- **Date:** 2026-11-05
+- **Kind:** review
+- **Said:** "drawings remain outside the committed frame oracle"
+- **Source:** hymnapp/hsgrow/round-1-findings.md M3 (a repeat of hymnapp/hsgrow/attempt-1 round 3 TS2)
+- **Wrong:** Today's frame test looked for the stage, plant and growth nodes and for claiming words, so a seed drawn with no test id and no label in a held or unread frame passed it.
+- **Cause:** A drawing claims a stage by its look alone, which no id, text or attribute check sees.
+- **Guard:** code: `apps/heartseed/src/garden/today.test.tsx` `draws no part of a plant, with or without a test id or label, in any frame of the held, pending and unread launches above, though each of the four stages drew its parts once read`
+
 ### heartseed-dictation-microphone-off-simulator
 
 - **Date:** 2026-11-04
