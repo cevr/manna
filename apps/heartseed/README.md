@@ -429,7 +429,9 @@ them.
     of coverage floors, which its generated devices alone must meet.
   - `test:field`: `src/field.property.test.ts`, the field's rule over
     generated read gardens in three time zones against the rule written
-    plainly (`src/test/field-model.ts`), and `src/field/sown.test.ts`, days
+    plainly (`src/test/field-model.ts`: references of any non-empty string,
+    canonical twins beside each other, counts with no ceiling, a failing
+    garden shrunk), and `src/field/sown.test.ts`, days
     sown as a model test over the garden on the device across keeps, Again,
     peeks, refused writes, relaunches and unread sessions; and
     `src/field/unread.test.tsx`, no field offered in any frame of a held
@@ -442,8 +444,9 @@ them.
     exposed, every text at AA contrast; each open and way back leaving the
     whole disk and taking no write, remove or clear): the way there and
     back through recitals, Again and a relaunch; and
-    `src/field/garden.test.tsx`, a generated garden past forty other verses
-    of any reference, each verse number the text after its last colon.
+    `src/field/garden.test.tsx`, a generated garden past 140 other verses
+    of any reference, canonical twins each its own plant, each label the
+    exact reference and each verse number the text after its last colon.
   - `test:field-walk` and `test:field-grades`: `src/field/walk.test.tsx`
     and `src/field/walk-grades.test.tsx`, generated sequences of opens,
     ways back, recitals, Again, peeks and relaunches through

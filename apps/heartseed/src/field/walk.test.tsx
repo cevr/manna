@@ -15,7 +15,7 @@ import { walkField } from '../test/field-walk';
 
 describe('the field across generated commands', () => {
   it('writes nothing through any open or way back, across recitals, peeks and relaunches, over 2 generated devices', async () => {
-    const cover = await walkField([5, 10], 6);
+    const cover = await walkField([3, 60], 6);
     expect({
       field: (cover.field ?? 0) >= 3,
       say: (cover.say ?? 0) >= 3,

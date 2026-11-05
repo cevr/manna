@@ -3,29 +3,38 @@
 /**
  * A generated garden past forty other verses on the field, through the
  * screen rig (`src/test/field-rig.tsx`), which holds every frame to the
- * field's rules: references of any shape (repeated colons, every kind of
- * space, other scripts, the passage's look-alikes) in the order first sown,
- * at every stage, each verse number the text after the reference's last
- * colon, and every readout at WCAG AA contrast.
+ * field's rules: any count of other verses past forty (no ceiling), each
+ * any non-empty string (any code unit or code point, combining marks, every
+ * space, colons; `test/field-model.ts`), canonically equivalent twins each
+ * its own row, in the order first sown, at every stage, each label the exact
+ * reference and stage, each verse number the text after the reference's
+ * last colon, and every readout at WCAG AA contrast.
  */
 
 import { describe, expect, it } from 'bun:test';
 import passage from 'virtual:heartseed-passage';
 
-import { historyOf, otherReference } from '../test/field-model';
+import { countOf, historyOf, othersOf, referenceKinds } from '../test/field-model';
 import { mount, record, wantField } from '../test/field-rig';
-import { below, DAY, random } from '../test/garden-model';
+import { DAY, random } from '../test/garden-model';
 import { device } from '../test/one';
 
+const FIXED = ['e\u0301:1', '\u00e9:1', 'Other:group:0', 'a::b: 7 ', 'Ψ:🌾:中'] as const;
+
 describe('a large garden on the field', () => {
-  it('shows a generated garden past forty other verses of any reference, in the order first sown, at every stage, each verse number the text after its reference’s last colon, every readout at AA contrast', async () => {
-    const next = random(97);
+  it('shows a generated garden of any count past forty other verses of any reference, canonical twins apart, in the order first sown, at every stage, each label the exact reference and stage, each verse number the text after its reference’s last colon, every readout at AA contrast', async () => {
+    const next = random(112);
     const start = Date.UTC(2026, 3, 1) / DAY;
-    const references = new Set([passage.reference, 'Other:group:0', 'a::b: 7 ', 'Ψ:🌾:中']);
-    const others = 41 + below(next, 40);
-    while (references.size < others + 1) references.add(otherReference(next, passage.reference));
+    const others = 41 + countOf(next, 32);
+    const references = [
+      passage.reference,
+      ...FIXED,
+      ...othersOf(next, passage.reference, others - FIXED.length).filter(
+        (reference) => !(FIXED as readonly string[]).includes(reference),
+      ),
+    ];
     device.launch(
-      [...references]
+      references
         .flatMap((reference, at) => historyOf(next, reference, start + (at % 9)))
         .map(record),
     );
@@ -33,22 +42,34 @@ describe('a large garden on the field', () => {
     expect(await app.until(() => app.buttons().includes('Your field'))).toBe(true);
     const field = await app.field();
     const labels = field.rows.flatMap((row) => row.plants.map((plant) => plant.label ?? ''));
-    const stages = new Set(labels.map((label) => label.replace(/^.*, /, '')));
-    const counted = (test: (reference: string) => boolean) => [...references].filter(test).length;
+    const stages = new Set(labels.map((label) => label.replace(/^.*, /su, '')));
+    const kinds = new Set(references.flatMap(referenceKinds));
+    const labelled = (reference: string) =>
+      labels.filter((label) => label.startsWith(`${reference}, `)).length;
     expect({
       rows: field.rows.length,
       stages: [...stages].toSorted(),
       field,
-      colons: counted((reference) => reference.split(':').length > 2) >= 3,
-      beyondAscii: counted((reference) => /[^\u0020-\u007e]/u.test(reference)) >= 3,
-      spaces: counted((reference) => /\s/u.test(reference)) >= 3,
+      kinds: [
+        'reference:not NFC',
+        'reference:combining mark',
+        'reference:astral',
+        'reference:space',
+        'reference:colons',
+      ].filter((kind) => kinds.has(kind)),
+      twins: [labelled('e\u0301:1'), labelled('\u00e9:1')],
     }).toEqual({
-      rows: others + 1,
+      rows: references.length,
       stages: ['blade', 'ear', 'full corn', 'seed'],
       field: wantField(),
-      colons: true,
-      beyondAscii: true,
-      spaces: true,
+      kinds: [
+        'reference:not NFC',
+        'reference:combining mark',
+        'reference:astral',
+        'reference:space',
+        'reference:colons',
+      ],
+      twins: [1, 1],
     });
     expect(
       field.rows.flatMap((row) => row.plants).find((plant) => plant.label?.startsWith('Other:'))

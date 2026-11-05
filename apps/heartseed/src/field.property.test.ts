@@ -7,15 +7,18 @@
  * plant's stage, the days sown and the harvest.
  *
  * The gardens span the rule's domain: the passage with no history or any
- * (every grade, peeks, a Good run to full corn and Again after it), 0-8
- * other verses from the passage's look-alikes and any non-empty string
- * (repeated colons, every kind of space, other scripts; `test/field-model.ts`),
- * one garden of forty and twenty of 41-140, sometimes a second passage
- * of several verses; recalls on days shared across verses and at 00:00:00.000,
- * 23:59:59.999, 02:00, 06:00, 22:00 and 23:00 UTC. Each garden is derived
- * under a western, an eastern and a far-eastern zone, so a count by local
- * days fails on any host. It misses the screen (`field/screen.test.tsx`)
- * and the garden's read of the device (`field/sown.test.ts`).
+ * (every grade, peeks, a Good run to full corn and Again after it), any
+ * count of other verses (no ceiling: each doubling as likely as not; one
+ * garden of exactly forty), each any non-empty string (any code unit or
+ * code point, combining marks, every space, colons, the passage's
+ * look-alikes; `test/field-model.ts`), some beside a canonically equivalent
+ * twin, sometimes a second passage of several verses; recalls on days
+ * shared across verses and at 00:00:00.000, 23:59:59.999, 02:00, 06:00,
+ * 22:00 and 23:00 UTC. Each garden is derived under a western, an eastern
+ * and a far-eastern zone, so a count by local days fails on any host; a
+ * garden that disagrees is shrunk to the fewest references that still do.
+ * It misses the screen (`field/screen.test.tsx`) and the garden's read of
+ * the device (`field/sown.test.ts`).
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -32,12 +35,15 @@ import {
 import { plantOf, type Plant, type ReadGarden } from './garden';
 import type { Recall } from './sayit';
 import {
+  countOf,
   fieldRule,
   historyOf,
   HOUR,
   localDate,
-  otherReference,
+  othersOf,
   recallOf,
+  referenceKinds,
+  shrunk,
   utcDate,
   verseNumberRule,
 } from './test/field-model';
@@ -89,23 +95,17 @@ const reached = (
   if (want.rows.length >= 4) keys.push('four rows');
   if (want.rows.length >= 41) keys.push('forty others');
   if (want.rows.length > 41 + passages.length) keys.push('past forty');
+  if (want.rows.length > 140 + passages.length) keys.push('past 140');
   if ([...verses.values()].some((each) => each.size > 1)) keys.push('shared days');
   if (passages.length > 1) keys.push('two passages');
-  for (const row of want.rows)
-    for (const { reference } of row.plants) keys.push(...referenceKeys(reference));
+  const references = want.rows.flatMap((row) => row.plants.map((plant) => plant.reference));
+  const spellings = new Set(references.map((reference) => reference.normalize('NFD')));
+  if (spellings.size < new Set(references).size) keys.push('canonical twins');
+  for (const reference of references) keys.push(...referenceKinds(reference));
   return keys;
 };
 
-/** The kinds of reference one reaches: repeated colons, characters beyond ASCII, whitespace, no colon. */
-const referenceKeys = (reference: string) =>
-  [
-    reference.split(':').length > 2 && 'reference:colons',
-    /[^\u0020-\u007e]/u.test(reference) && 'reference:beyond ascii',
-    /\s/u.test(reference) && 'reference:space',
-    !reference.includes(':') && 'reference:no colon',
-  ].filter((key) => key !== false);
-
-/** A generated garden: its records and the passages taught. */
+/** A generated garden: its records and the passages taught. Its other verses are any count (`countOf`, no ceiling; seed 1 exactly forty) of any references, some beside their canonical twins (`othersOf`). */
 const generated = (seed: number) => {
   const next = random(seed * 7919 + 17);
   const base = 20_500 + below(next, 400);
@@ -115,43 +115,91 @@ const generated = (seed: number) => {
     passages.push({ title: 'Psalm 23', verses: ['Psalm 23:1', 'Psalm 23:2', 'Psalm 23:3'] });
   const references = new Set<string>();
   if (next() < 0.8) references.add(PASSAGE);
-  const others = seed === 1 ? 40 : seed % 15 === 0 ? 41 + below(next, 100) : below(next, 9);
-  while (references.size < others + (references.has(PASSAGE) ? 1 : 0))
-    references.add(next() < 0.1 ? 'Psalm 23:2' : otherReference(next, PASSAGE));
+  if (next() < 0.1) references.add('Psalm 23:2');
+  for (const reference of othersOf(next, PASSAGE, seed === 1 ? 40 : countOf(next, 8)))
+    references.add(reference);
   const records = [...references].flatMap((reference) =>
     historyOf(next, reference, pickOf(next, [...days] as [number, ...number[]])),
   );
-  return { next, records, passages };
+  return { records, passages };
+};
+
+/** Whether `fieldOf` gives the rule's field over `records` in every zone. */
+const agrees = (seed: number, records: readonly Recall[], passages: readonly FieldPassage[]) => {
+  const want = fieldRule(records, passages);
+  const garden = gardenOf(random(seed), records);
+  return ZONES.every((zone) =>
+    Bun.deepEquals(
+      inZone(zone, () => fieldOf(garden, passages)),
+      want,
+    ),
+  );
+};
+
+/** The garden of `records` cut to the fewest references that still disagree with the rule, each zone's field beside the rule's. */
+const counterexample = (
+  seed: number,
+  records: readonly Recall[],
+  passages: readonly FieldPassage[],
+) => {
+  const keep = (references: readonly string[]) => {
+    const kept = new Set(references);
+    return records.filter((recall) => kept.has(recall.reference));
+  };
+  const references = shrunk(
+    [...new Set(records.map((recall) => recall.reference))],
+    (some) => !agrees(seed, keep(some), passages),
+  );
+  const garden = gardenOf(random(seed), keep(references));
+  return ZONES.map((zone) => ({
+    seed,
+    zone,
+    references,
+    field: inZone(zone, () => fieldOf(garden, passages)),
+  }));
 };
 
 describe('the field of a read garden', () => {
-  it('shows the passages first, then each other verse in the order first sown, each at its stage and verse number, with the UTC days sown and the harvest, over 300 generated gardens of up to 140 other verses of any reference, in three time zones', () => {
+  it('shows the passages first, then each other verse in the order first sown, each at its stage and verse number, with the UTC days sown and the harvest, over 300 generated gardens of any count of other verses of any reference, canonical twins beside each other, in three time zones', () => {
     const cover = new Map<string, number>();
     const bump = (key: string, by = 1) => cover.set(key, (cover.get(key) ?? 0) + by);
+    let largest = 0;
     for (let seed = 1; seed <= 300; seed += 1) {
-      const { next, records, passages } = generated(seed);
-      const garden = gardenOf(next, records);
+      const { records, passages } = generated(seed);
       const want = fieldRule(records, passages);
-      for (const zone of ZONES) {
-        const field = inZone(zone, () => fieldOf(garden, passages));
-        expect({ seed, zone, field }).toEqual({ seed, zone, field: want });
+      if (!agrees(seed, records, passages)) {
+        const found = counterexample(seed, records, passages);
+        const kept = new Set(found[0]?.references);
+        const rule = fieldRule(
+          records.filter((recall) => kept.has(recall.reference)),
+          passages,
+        );
+        expect(found).toEqual(found.map((each) => ({ ...each, field: rule })));
       }
       const references = want.rows.flatMap((row) => row.plants.map((plant) => plant.reference));
       expect({ seed, numbers: references.map(verseNumberOf) }).toEqual({
         seed,
         numbers: references.map(verseNumberRule),
       });
+      largest = Math.max(largest, want.rows.length - passages.length);
       for (const key of reached(records, want, passages)) bump(key);
     }
     expect(Object.keys(Object.fromEntries(cover)).toSorted()).toEqual([
+      'canonical twins',
       'forty others',
       'four rows',
       'harvest',
       'local days differ',
+      'past 140',
       'past forty',
+      'reference:astral',
       'reference:beyond ascii',
       'reference:colons',
+      'reference:combining mark',
+      'reference:lone surrogate',
+      'reference:long',
       'reference:no colon',
+      'reference:not NFC',
       'reference:space',
       'shared days',
       'stage:blade',
@@ -168,13 +216,93 @@ describe('the field of a read garden', () => {
       'shared days': 30,
       'forty others': 15,
       'past forty': 15,
-      'reference:colons': 100,
-      'reference:beyond ascii': 100,
-      'reference:space': 100,
-      'reference:no colon': 100,
+      'past 140': 3,
+      'canonical twins': 90,
+      'reference:colons': 400,
+      'reference:beyond ascii': 1800,
+      'reference:space': 2000,
+      'reference:no colon': 700,
+      'reference:not NFC': 800,
+      'reference:combining mark': 800,
+      'reference:lone surrogate': 100,
+      'reference:astral': 500,
+      'reference:long': 800,
     };
     for (const [key, floor] of Object.entries(floors))
-      expect([key, (cover.get(key) ?? 0) >= floor]).toEqual([key, true]);
+      expect([key, cover.get(key) ?? 0, (cover.get(key) ?? 0) >= floor]).toEqual([
+        key,
+        cover.get(key) ?? 0,
+        true,
+      ]);
+    expect(largest).toBeGreaterThan(256);
+  });
+
+  it('keeps canonically equivalent references apart: each spelling its own row, title, stage and verse number, exactly as stored', () => {
+    const at = Date.UTC(2026, 2, 1, 9);
+    const records = [
+      recallOf('e\u0301:1', at, 3, 0),
+      recallOf('\u00e9:1', at + HOUR, 3, 0),
+      recallOf('\u00e9:1', at + DAY + HOUR, 3, 0),
+      recallOf('A\u030a:2', at + 2 * HOUR, 3, 0),
+      recallOf('A\u030a:2', at + DAY + 2 * HOUR, 3, 1),
+      recallOf('\u00c5:2', at + 3 * HOUR, 3, 0),
+      recallOf('s\u0307\u0323:5', at + 4 * HOUR, 3, 0),
+    ];
+    const twins = [
+      ['e\u0301:1', '\u00e9:1'],
+      ['A\u030a:2', '\u00c5:2'],
+    ];
+    expect(twins.map(([a = '', b = '']) => [a === b, a.normalize() === b.normalize()])).toEqual([
+      [false, true],
+      [false, true],
+    ]);
+    for (const zone of ZONES.slice(0, 2)) {
+      const field = inZone(zone, () =>
+        fieldOf(gardenOf(random(18), records), [{ title: PASSAGE, verses: [PASSAGE] }]),
+      );
+      expect({ zone, field }).toEqual({
+        zone,
+        field: {
+          rows: (
+            [
+              [PASSAGE, 'not planted'],
+              ['e\u0301:1', 'seed'],
+              ['\u00e9:1', 'ear'],
+              ['A\u030a:2', 'blade'],
+              ['\u00c5:2', 'seed'],
+              ['s\u0307\u0323:5', 'seed'],
+            ] as const
+          ).map(([title, stage]) => ({ title, plants: [{ reference: title, stage }] })),
+          sown: 2,
+          harvest: 0,
+        },
+      });
+      expect(field.rows.map((row) => verseNumberOf(row.title))).toEqual([
+        '10',
+        '1',
+        '1',
+        '2',
+        '2',
+        '5',
+      ]);
+    }
+  });
+
+  it('shows every other verse of a garden of 1,024, none dropped past any count', () => {
+    const next = random(19);
+    const day = Date.UTC(2026, 4, 1);
+    const records = othersOf(next, PASSAGE, 1024).map((reference, at) =>
+      recallOf(reference, day + at * 60_000, 3, 0),
+    );
+    const passages = [{ title: PASSAGE, verses: [PASSAGE] }];
+    for (const zone of ZONES.slice(0, 2)) {
+      const field = inZone(zone, () => fieldOf(gardenOf(next, records), passages));
+      expect({ zone, rows: field.rows.length, field }).toEqual({
+        zone,
+        rows: 1025,
+        field: fieldRule(records, passages),
+      });
+    }
   });
 
   it('runs each zone it names: the zone changes the host’s local day and never a UTC day', () => {
