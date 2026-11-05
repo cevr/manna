@@ -920,8 +920,8 @@ const heldBy = (
   );
 };
 
-/** The most pixels a 4-connected island of skin shade holds for the split to read it as a blotch of the drawing's grain on the skin, not a shading: the lead's redrawn table sheet draws them up to 74 px across his face, his sheets before it 4 px at most. */
-export const MOTTLE_PX = 80;
+/** The most pixels a 4-connected island of skin shade holds for the split to read it as a blotch of the drawing's grain on the skin, not a shading: the lead's redrawn table and close sheets draw them up to 111 px across his face (under a brow in `wince` and `lift`), his sheets before them 4 px at most. */
+export const MOTTLE_PX = 111;
 
 /**
  * The map with the skin's mottle gone (critique 1, item 16, on the redrawn

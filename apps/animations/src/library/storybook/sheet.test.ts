@@ -894,8 +894,13 @@ describe('tidied under unmottle', () => {
 
   test('gives each blotch of skin shade up to MOTTLE_PX inside the skin the skin’s base, and keeps a larger shading; a plain split keeps both (the redrawn table sheet’s mottled face, critique 1, item 16)', () => {
     expect(shadePx(40, true)).toBe(0);
-    expect(shadePx(MOTTLE_PX + 2, true)).toBe(MOTTLE_PX + 2);
+    const larger = 2 * Math.ceil((MOTTLE_PX + 1) / 2);
+    expect(shadePx(larger, true)).toBe(larger);
     expect(shadePx(40, false)).toBe(40);
+  });
+
+  test('gives a smear of skin shade the size of the lead’s under his brow in `wince` and `lift` (87 to 111 px) the skin’s base (critique 3, finding 3)', () => {
+    expect([shadePx(88, true), shadePx(110, true)]).toEqual([0, 0]);
   });
 });
 

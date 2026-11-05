@@ -35,7 +35,7 @@
         "width": 448,
         "height": 1024
       },
-      "sha256": "bb368f2e519cfee2d1dbfeb0cc714b99ac94ab265b24bcb2496aa3144ce112b5"
+      "sha256": "7a42c91ae678011cc33276b7175d80b2586cee67d40b5a2377e92e6ab832cb01"
     },
     {
       "key": "wince",
@@ -45,7 +45,7 @@
         "width": 382,
         "height": 1024
       },
-      "sha256": "3384038280f9081f9a6e3b7b5b9c21b712bfbed41de0fa6df8c3607fb1946af7"
+      "sha256": "556747e6bcd0c26bab1d220bbc0cc9bfcefae56ef7a9f9ad34dd95fdb3d42f33"
     }
   ],
   "rules": ["unstray", "feet-low", "unmottle", "sash-band"],
