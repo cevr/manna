@@ -233,6 +233,19 @@
         "!{scripts,vite}/**/*.test.*"
       ]
     },
+    "test:field-screen": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice}/**/*.test.*",
+        "!src/field/{sown,unread}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
     "test:rest": {
       "dependsOn": ["^transit"],
       "outputs": [],
@@ -272,6 +285,7 @@
         "test:walk-reading",
         "test:walk-taps",
         "test:field",
+        "test:field-screen",
         "test:rest",
         "test:infra"
       ]

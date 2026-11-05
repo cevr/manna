@@ -18,7 +18,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import type { Stage } from '../garden';
+import type { PlantStage } from '../field';
 import type { Ink, ShownWord } from './screen';
 
 /** Palette A (Wada No. 167) over the prototype's tokens. */
@@ -154,15 +154,16 @@ export function Pulse({ busy }: { readonly busy: boolean }) {
   return <Animated.View aria-hidden style={[look.ring, ring]} />;
 }
 
-/** The plant drawn as the prototype draws it, hidden from the screen reader, which reads the stage line: a gold seed in the soil, a green stem and leaf, a green ear on the stem, a gold ear. */
-export function PlantMark({ stage }: { readonly stage: Stage }) {
-  const grown = stage !== 'seed';
+/** The plant drawn as the prototype draws it, hidden from the screen reader, which reads the stage line or the field's label: bare soil before planting, a gold seed in the soil, a green stem and leaf, a green ear on the stem, a gold ear. */
+export function PlantMark({ stage }: { readonly stage: PlantStage }) {
+  const sown = stage !== 'not planted';
+  const grown = sown && stage !== 'seed';
   const eared = stage === 'ear' || stage === 'full corn';
   const ripe = stage === 'full corn';
   return (
     <View testID="plant" aria-hidden style={look.plant}>
       <View style={look.soil} />
-      {!grown && <View style={look.seed} />}
+      {sown && !grown && <View style={look.seed} />}
       {grown && <View style={[look.stem, eared && look.tallStem]} />}
       {grown && <View style={look.leaf} />}
       {eared && <View style={[look.ear, ripe && look.ripeEar]} />}

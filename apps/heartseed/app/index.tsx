@@ -7,6 +7,8 @@ import { useSafeAreaInsets } from 'one';
 import passage from 'virtual:heartseed-passage';
 
 import { choose, gardenView, peek, press, sayItView } from '../src/app';
+import { fieldOf, type FieldPassage } from '../src/field';
+import { FieldScreen } from '../src/field/screen';
 import { openingOf, shownOpening, type Opening } from '../src/first/flow';
 import { FirstMinute } from '../src/first/screen';
 import {
@@ -24,6 +26,11 @@ import { BigButton, color, look, PlantMark, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
 
 const WORDS = sourceWords(passage.text);
+
+/** The passages the field shows first: Today's, a passage of one verse. */
+const PASSAGES: readonly FieldPassage[] = [
+  { title: passage.reference, verses: [passage.reference] },
+];
 
 /** The verse whole, or one element per word while a recital is shown, each its own accessibility element. */
 function Verse({
@@ -171,8 +178,22 @@ function Growing({
   );
 }
 
-/** Today: the passage the reader is learning, its stage, and Say it. */
-function Today() {
+/** The way to the field: offered once the garden is read, and never while Say it listens, so leaving Today never leaves a recital listening. */
+function FieldControl({ onPress }: { readonly onPress: () => void }) {
+  return (
+    <Pressable
+      role="button"
+      aria-label="Your field"
+      onPress={onPress}
+      style={({ pressed }) => [styles.toField, pressed && look.pressed]}
+    >
+      <Text style={styles.toFieldText}>Your field</Text>
+    </Pressable>
+  );
+}
+
+/** Today: the passage the reader is learning, its stage, Say it, and the way to the field. */
+function Today({ onField }: { readonly onField: () => void }) {
   const insets = useSafeAreaInsets();
   const sayIt = AsyncResult.value(useAtomValue(sayItView));
   const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
@@ -216,8 +237,18 @@ function Today() {
         pressable={screen.pressable}
         onPress={() => onPress()}
       />
+      {Option.isSome(garden) && !screen.listening && <FieldControl onPress={onField} />}
     </ScrollView>
   );
+}
+
+/** The field over the garden read; nothing until a read completed, so it never claims a history it has not read. */
+function FieldOf({ onToday }: { readonly onToday: () => void }) {
+  const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
+  return Option.match(garden, {
+    onNone: () => false,
+    onSome: (read) => <FieldScreen field={fieldOf(read, PASSAGES)} onToday={onToday} />,
+  });
 }
 
 /** The frame a launch shows until the garden's read decides the screen: the reference alone, with no heading, button or claim. */
@@ -236,19 +267,27 @@ function Pending() {
  * The root: the pending frame until the garden's read completes, then the
  * first minute when the read holds no recall of any verse, else Today. The
  * screen is decided once per launch, at the read: planting the seed inside
- * the first minute keeps Planted on until Continue.
+ * the first minute keeps Planted on until Continue. From Today the reader
+ * opens the field and comes back, in place: whether it shows is the
+ * launch's state, never stored, so every launch opens as above. The root
+ * holds Say it's view, so Today comes back as it was, and a recital that
+ * starts in the same turn as the tap on the field keeps Today on screen.
  */
 export default function Root() {
+  const listening = screenOf(AsyncResult.value(useAtomValue(sayItView))).listening;
   const read = openingOf(AsyncResult.value(useAtomValue(gardenView)));
   const [decided, setDecided] = useState<Opening>('pending');
+  const [onField, setOnField] = useState(false);
   if (decided === 'pending' && read !== 'pending') setDecided(read);
+  if (onField && listening) setOnField(false);
   switch (shownOpening(decided, read)) {
     case 'pending':
       return <Pending />;
     case 'first':
       return <FirstMinute onContinue={() => setDecided('today')} />;
     case 'today':
-      return <Today />;
+      if (onField) return <FieldOf onToday={() => setOnField(false)} />;
+      return <Today onField={() => setOnField(true)} />;
   }
 }
 
@@ -271,4 +310,13 @@ const styles = StyleSheet.create({
   chosenName: { color: color.ground },
   growing: { gap: 4, marginTop: 4 },
   growth: { fontSize: 15, fontWeight: '600', color: color.ink },
+  toField: {
+    alignSelf: 'center',
+    minHeight: 44,
+    paddingHorizontal: 20,
+    borderRadius: 22,
+    justifyContent: 'center',
+    backgroundColor: color.card,
+  },
+  toFieldText: { fontSize: 15, fontWeight: '600', color: color.ink },
 });

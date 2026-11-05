@@ -380,7 +380,16 @@ Silent mode mutes. Nothing leaves the device.
     generated read gardens in three time zones against the rule written
     plainly (`src/test/field-model.ts`), and `src/field/sown.test.ts`, days
     sown as a model test over the garden on the device across keeps, Again,
-    peeks, refused writes, relaunches and unread sessions.
+    peeks, refused writes, relaunches and unread sessions; and
+    `src/field/unread.test.tsx`, no field offered in any frame of a held
+    launch, an unread session or the first minute.
+  - `test:field-screen`: `src/field/screen.test.tsx`, the field from Today
+    in happy-dom over the real store on the device through
+    `src/test/field-rig.tsx` (the rig holds every frame to the field's
+    rules: the control only on a read, quiet Today; each field frame the
+    rule's rows, plants, drawings, days sown and harvest as seen and
+    exposed): the way there and back through recitals, Again and a
+    relaunch, writing nothing, and a garden of forty other verses.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
