@@ -85,5 +85,5 @@ delete the `snapshots` folder and the raw snapshot.
 
 - The field counts UTC days, not the simulator's local days: a drive that
   crosses 00:00 UTC between two recitals sees one more day sown.
-- A row title is a level-2 heading; the field's own heading is the one
-  whose text is `Your field`.
+- A row title is plain text, not a heading; the field's one heading is
+  `Your field`.

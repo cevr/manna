@@ -359,7 +359,8 @@ them.
   reads the store and never writes. Every number derives from the garden's
   view each time the field shows.
 - `src/field/screen.tsx` draws a `Field`: the way back, the heading, the
-  counts, one card per row titled by its passage (a level-2 heading), each
+  counts, one card per row titled by its passage (plain text, never a
+  heading, so a reference spelled `Your field` or `Today` adds none), each
   plant `PlantMark` (`src/sayit/draw.tsx`, Today's drawing, with bare soil
   for a verse not planted) over its verse number, one image to the screen
   reader labelled `<reference>, <stage>`, and a legend of the four stages,

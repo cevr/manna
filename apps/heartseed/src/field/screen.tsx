@@ -42,11 +42,15 @@ function Plot({ plant }: { readonly plant: FieldPlant }) {
   );
 }
 
-/** One passage: its title and its verses' plots. */
+/**
+ * One passage: its title and its verses' plots. The title is plain text, seen
+ * and read as stored, never a heading: a reference may spell `Your field` or
+ * `Today`, and the field holds one heading, its own.
+ */
 function Row({ row }: { readonly row: FieldRow }) {
   return (
     <View testID="row" style={styles.card}>
-      <Text testID="row-title" role="heading" aria-level={2} style={styles.title}>
+      <Text testID="row-title" style={styles.title}>
         {row.title}
       </Text>
       <View style={styles.plots}>

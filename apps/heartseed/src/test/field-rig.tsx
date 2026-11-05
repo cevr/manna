@@ -10,7 +10,9 @@
  * Every frame (each DOM mutation batch) is held to the rule and each fault
  * kept: `Your field` shows only on Today, only once the garden's read
  * completed and never while Say it listens; a field node only under the
- * field's heading, never beside Today's; and every field frame shows the
+ * field's heading, never beside Today's; the field holds exactly one
+ * `Your field` heading and no `Today` heading, whatever its references
+ * spell; and every field frame shows the
  * rule's field over the records the disk holds (`field-model.ts`): the
  * rows, each plant's label, its drawing's colours and its verse number and
  * nothing else, the days sown and the harvest as seen and as exposed, and no
@@ -235,6 +237,8 @@ export const mount = async (read: boolean, held: Promise<void> = Promise.resolve
     if (!onField && nodes !== null) faults.push(`a field node on ${on}`);
     if (!onField) return;
     frames.field += 1;
+    const own = shown.filter((heading) => heading === 'Your field').length;
+    if (own !== 1) faults.push(`${own} Your field headings on the field`);
     if (shown.includes('Today')) faults.push('Today and the field at once');
     const got = JSON.stringify(readField(host));
     const want = JSON.stringify(wantField());

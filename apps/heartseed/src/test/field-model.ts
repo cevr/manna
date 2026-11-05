@@ -14,7 +14,8 @@
  * It also holds the generators the field's tests share: references of any
  * non-empty string (any code unit or code point, combining marks, every
  * space, colons, the passage's look-alikes) beside their canonically
- * equivalent twins, counts with no ceiling (`countOf`), and a shrinker for a
+ * equivalent twins, references spelled as the screens' own words with any
+ * spaces (`labelReference`), counts with no ceiling (`countOf`), and a shrinker for a
  * failing garden; and the verse number rule (the text after the last colon).
  */
 
@@ -246,6 +247,37 @@ export const anyReference = (next: () => number, passage: string): string => {
     ]);
   }
   return units();
+};
+
+/** The words Today and the field show as their own: headings, controls, counts and stages. A stored reference may spell any of them. */
+export const SCREEN_LABELS = [
+  'Your field',
+  'Today',
+  'Days sown',
+  'Harvest',
+  'seed',
+  'blade',
+  'ear',
+  'full corn',
+  'not planted',
+  '1 day sown',
+  '1 verse at full corn',
+  'Say it',
+] as const;
+
+/** A run of one to three spaces of any kind `\s` matches. */
+const spacesOf = (next: () => number) =>
+  Array.from({ length: 1 + below(next, 3) }, () => pickOf(next, SPACES)).join('');
+
+/** A reference spelled as one of the screens' own words (`SCREEN_LABELS`): as it is, or with spaces of any kind before, after, around or within it. */
+export const labelReference = (next: () => number): string => {
+  const label = pickOf(next, SCREEN_LABELS);
+  const shape = below(next, 5);
+  if (shape === 0) return label;
+  if (shape === 1) return `${spacesOf(next)}${label}`;
+  if (shape === 2) return `${label}${spacesOf(next)}`;
+  if (shape === 3) return `${spacesOf(next)}${label}${spacesOf(next)}`;
+  return label.replaceAll(' ', () => spacesOf(next));
 };
 
 /** Two references a reader cannot tell apart, canonically equivalent and unequal: one spelling of an `EQUIVALENTS` group and another, put at the same place in `reference`. */
