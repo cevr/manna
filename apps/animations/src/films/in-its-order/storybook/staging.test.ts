@@ -168,7 +168,7 @@ const REGISTER_REACH = 16;
 const REGISTER_STEP = 2;
 
 /** A plate's luma and alpha at `width`×`height`, read from `part` of its PNG (its own px). */
-const lumaOf = (
+const lumaOf = Effect.fn('staging.lumaOf')(function* (
   png: string,
   part: {
     readonly left: number;
@@ -178,25 +178,18 @@ const lumaOf = (
   },
   width: number,
   height: number,
-) =>
-  Effect.promise(() =>
-    sharp(png)
-      .extract(part)
-      .resize(width, height, { fit: 'fill' })
-      .ensureAlpha()
-      .raw()
-      .toBuffer()
-      .then((b) => {
-        const luma = new Float32Array(width * height);
-        const solid = new Uint8Array(width * height);
-        for (let q = 0; q < width * height; q++) {
-          luma[q] =
-            0.299 * (b[q * 4] ?? 0) + 0.587 * (b[q * 4 + 1] ?? 0) + 0.114 * (b[q * 4 + 2] ?? 0);
-          solid[q] = Number((b[q * 4 + 3] ?? 0) > 127);
-        }
-        return { luma, solid };
-      }),
+) {
+  const b = yield* Effect.promise(() =>
+    sharp(png).extract(part).resize(width, height, { fit: 'fill' }).ensureAlpha().raw().toBuffer(),
   );
+  const luma = new Float32Array(width * height);
+  const solid = new Uint8Array(width * height);
+  for (let q = 0; q < width * height; q++) {
+    luma[q] = 0.299 * (b[q * 4] ?? 0) + 0.587 * (b[q * 4 + 1] ?? 0) + 0.114 * (b[q * 4 + 2] ?? 0);
+    solid[q] = Number((b[q * 4 + 3] ?? 0) > 127);
+  }
+  return { luma, solid };
+});
 
 /**
  * The shift, in layer px, that best lays `over` on the `under` plate it
@@ -205,46 +198,45 @@ const lumaOf = (
  * opaque pixels differ least in luma from `under`'s; [0, 0] when `over` sits
  * exactly where it paints.
  */
-const registrationOf = (under: Plate, over: Plate) =>
-  Effect.gen(function* () {
-    const width = Math.round(over.place.width / REGISTER_STEP);
-    const height = Math.round(over.place.height / REGISTER_STEP);
-    const [w, h] = under.painting?.size ?? [1, 1];
-    const [sx, sy] = [under.place.width / w, under.place.height / h];
-    const below = yield* lumaOf(
-      under.painting?.png ?? '',
-      {
-        left: Math.round((over.place.x - under.place.x) / sx),
-        top: Math.round((over.place.y - under.place.y) / sy),
-        width: Math.round(over.place.width / sx),
-        height: Math.round(over.place.height / sy),
-      },
-      width,
-      height,
-    );
-    const [ow, oh] = over.painting?.size ?? [1, 1];
-    const above = yield* lumaOf(
-      over.painting?.png ?? '',
-      { left: 0, top: 0, width: ow, height: oh },
-      width,
-      height,
-    );
-    const reach = REGISTER_REACH / REGISTER_STEP;
-    const scores = Array.from({ length: (2 * reach + 1) ** 2 }, (_, i) => {
-      const [dx, dy] = [(i % (2 * reach + 1)) - reach, Math.floor(i / (2 * reach + 1)) - reach];
-      let [sum, n] = [0, 0];
-      for (let y = reach; y < height - reach; y++)
-        for (let x = reach; x < width - reach; x++) {
-          const [a, b] = [y * width + x, (y + dy) * width + x + dx];
-          if (!above.solid[a] || !below.solid[b]) continue;
-          sum += Math.abs((above.luma[a] ?? 0) - (below.luma[b] ?? 0));
-          n++;
-        }
-      return { dx, dy, score: sum / Math.max(1, n) };
-    });
-    const best = scores.toSorted((a, b) => a.score - b.score)[0] ?? { dx: 0, dy: 0 };
-    return [best.dx * REGISTER_STEP, best.dy * REGISTER_STEP] as const;
+const registrationOf = Effect.fn('staging.registrationOf')(function* (under: Plate, over: Plate) {
+  const width = Math.round(over.place.width / REGISTER_STEP);
+  const height = Math.round(over.place.height / REGISTER_STEP);
+  const [w, h] = under.painting?.size ?? [1, 1];
+  const [sx, sy] = [under.place.width / w, under.place.height / h];
+  const below = yield* lumaOf(
+    under.painting?.png ?? '',
+    {
+      left: Math.round((over.place.x - under.place.x) / sx),
+      top: Math.round((over.place.y - under.place.y) / sy),
+      width: Math.round(over.place.width / sx),
+      height: Math.round(over.place.height / sy),
+    },
+    width,
+    height,
+  );
+  const [ow, oh] = over.painting?.size ?? [1, 1];
+  const above = yield* lumaOf(
+    over.painting?.png ?? '',
+    { left: 0, top: 0, width: ow, height: oh },
+    width,
+    height,
+  );
+  const reach = REGISTER_REACH / REGISTER_STEP;
+  const scores = Array.from({ length: (2 * reach + 1) ** 2 }, (_, i) => {
+    const [dx, dy] = [(i % (2 * reach + 1)) - reach, Math.floor(i / (2 * reach + 1)) - reach];
+    let [sum, n] = [0, 0];
+    for (let y = reach; y < height - reach; y++)
+      for (let x = reach; x < width - reach; x++) {
+        const [a, b] = [y * width + x, (y + dy) * width + x + dx];
+        if (!above.solid[a] || !below.solid[b]) continue;
+        sum += Math.abs((above.luma[a] ?? 0) - (below.luma[b] ?? 0));
+        n++;
+      }
+    return { dx, dy, score: sum / Math.max(1, n) };
   });
+  const best = scores.toSorted((a, b) => a.score - b.score)[0] ?? { dx: 0, dy: 0 };
+  return [best.dx * REGISTER_STEP, best.dy * REGISTER_STEP] as const;
+});
 
 /** A plate's middle at `t`, in its layer's px: its box moved by its key and stretched about its foot. */
 const middleAt = (plate: Plate, t: number) => {
