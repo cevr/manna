@@ -10,6 +10,9 @@
  * launch alone; the plan is made at Today's first `begin` with a read
  * garden, at the clock's instant and the zone's offset there, then again at
  * each tap, and never by time passing, a keep landing or a later `begin`.
+ * Over the app's own garden, a plan made while a keep is under way is made
+ * from the view before it, at the instant of the begin or the tap, and the
+ * keep, once it lands, counts its item done.
  * The oracle is `src/test/session-model.ts` with its own days and `Intl`'s
  * zones, never the service's helpers.
  */
@@ -31,11 +34,19 @@ import {
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as TestClock from 'effect/testing/TestClock';
 
-import { Garden, plantOf, type GardenView } from '../garden';
-import type { Grade, Recall } from '../sayit';
-import { MINUTES, type Minutes } from '../session';
-import { below, pickOf, random } from '../test/garden-model';
-import { DAY, HOUR, MINUTE, planModel, type ModelPiece } from '../test/session-model';
+import { Chime, Garden, layer as gardenLayer, plantOf, type GardenView } from '../garden';
+import { Recalls, type Grade, type Recall } from '../sayit';
+import { countsOf, MINUTES, type Minutes } from '../session';
+import { below, keyOf, pickOf, PREFIX, random } from '../test/garden-model';
+import {
+  countsModel,
+  DAY,
+  dueModel,
+  HOUR,
+  MINUTE,
+  planModel,
+  type ModelPiece,
+} from '../test/session-model';
 import { hostZone, offsetIn, restore, travel, ZONES } from '../test/zone';
 import { layer, MINUTES_KEY, Session } from './service';
 
@@ -208,6 +219,90 @@ const launch = (pieces: readonly ModelPiece[], disk: Disk, field: Field, at: num
   });
 
 type Live = Effect.Success<ReturnType<typeof launch>>;
+
+/** The fault a recall's write meets: held until its gate opens, then landed or refused. */
+interface KeepFault {
+  readonly gate: Deferred.Deferred<void>;
+  readonly refuse: boolean;
+}
+
+/** A store over `map` whose recall writes meet the fault `faults` holds for their key, if any. */
+const keepingStore = (map: Map<string, string>, faults: Map<string, KeepFault>) =>
+  KeyValueStore.makeStringOnly({
+    get: (key) => Effect.sync(() => map.get(key)),
+    set: (key, value) =>
+      Effect.gen(function* () {
+        const fault = faults.get(key);
+        if (fault !== undefined) {
+          yield* Deferred.await(fault.gate);
+          if (fault.refuse) return yield* failure('set');
+        }
+        map.set(key, value);
+      }),
+    remove: (key) => Effect.sync(() => void map.delete(key)),
+    clear: Effect.sync(() => map.clear()),
+    size: Effect.sync(() => map.size),
+    keys: Effect.sync(() => [...map.keys()]),
+  });
+
+/** One launch of the session over the app's own garden, which reads `map` and keeps recalls into it, at `at`. */
+const launchKept = (
+  pieces: readonly ModelPiece[],
+  map: Map<string, string>,
+  faults: Map<string, KeepFault>,
+  at: number,
+) =>
+  Effect.gen(function* () {
+    const scope = yield* Scope.make();
+    const services = yield* Layer.buildWithScope(
+      layer(pieces).pipe(
+        Layer.provideMerge(
+          gardenLayer.pipe(
+            Layer.provide(Layer.succeed(Chime, Chime.of({ grow: () => Effect.void }))),
+          ),
+        ),
+        Layer.provide(Layer.succeed(KeyValueStore.KeyValueStore, keepingStore(map, faults))),
+        Layer.provideMerge(Layer.merge(TestClock.layer(), Logger.layer([]))),
+      ),
+      scope,
+    );
+    const run = <A>(effect: Effect.Effect<A>) => Effect.provideContext(effect, services);
+    yield* run(TestClock.setTime(at));
+    return {
+      scope,
+      run,
+      session: Context.get(services, Session),
+      garden: Context.get(services, Garden),
+      recalls: Context.get(services, Recalls),
+    };
+  });
+
+/** The recalls `map` holds, by reference. */
+const plantsIn = (map: ReadonlyMap<string, string>) => {
+  const plants = new Map<string, Recall[]>();
+  for (const [key, value] of map) {
+    if (!key.startsWith(PREFIX)) continue;
+    const recall: Recall = JSON.parse(value);
+    plants.set(recall.reference, [...(plants.get(recall.reference) ?? []), recall]);
+  }
+  return plants;
+};
+
+/** The service's counts line now, over its plan and the garden's view. */
+const lineOf = (session: Session['Service'], garden: Garden['Service']) =>
+  Effect.gen(function* () {
+    const seen = yield* garden.view;
+    const plan = (yield* session.view).plan;
+    if (seen._tag === 'Unread') return Option.none<string>();
+    return Option.map(plan, (made) => countsOf(made, seen));
+  });
+
+/** The next 04:00 on the host's wall clock after `at`: where one day of the reader's ends. */
+const nextMorning = (zone: string, at: number) => {
+  const wall = at + offsetIn(zone, at) * MINUTE;
+  const morning = Math.floor((wall - 4 * HOUR) / DAY) * DAY + 4 * HOUR + DAY;
+  return morning - offsetIn(zone, morning - offsetIn(zone, at) * MINUTE) * MINUTE;
+};
 
 const recallOf = (
   next: () => number,
@@ -637,7 +732,7 @@ describe('the session service', () => {
       }),
     ));
 
-  it('makes the plan from the garden once a keep under way has landed', () =>
+  it('makes the plan from the garden view at once, not waiting on a keep under way', () =>
     Effect.runPromise(
       zoned(
         Effect.gen(function* () {
@@ -649,15 +744,243 @@ describe('the session service', () => {
           const live = yield* launch(pieces, diskOf(undefined), field, at);
           const begun = yield* Effect.forkChild(live.session.begin, { startImmediately: true });
           for (let turn = 0; turn < 8; turn++) yield* Effect.yieldNow;
-          expect(Option.isNone((yield* live.session.view).plan)).toBe(true);
+          const fresh = Option.some([
+            { reference: 'Book 1:1', fresh: true, recalls: 0, seconds: 20 },
+          ]);
+          const items = Effect.map(live.session.view, (view) =>
+            Option.map(view.plan, (made) => made.items.map(itemOf)),
+          );
+          expect(yield* items).toEqual(fresh);
           field.recalls.set('Book 1:1', [recallOf(random(1), 'Book 1:1', at - MINUTE, 'UTC')]);
           field.pending = Option.none();
           yield* Deferred.succeed(gate, undefined);
           yield* Fiber.join(begun);
-          const plan = (yield* live.session.view).plan;
-          expect(Option.map(plan, (made) => made.items.length)).toEqual(Option.some(0));
+          expect(yield* items).toEqual(fresh);
+          yield* Scope.close(live.scope, Exit.void);
+        }),
+      ),
+    ));
+
+  it('plans from the view before a held keep, at the instant of the begin or the tap, over 250 generated launches', () =>
+    Effect.runPromise(
+      zoned(
+        Effect.gen(function* () {
+          const seen = new Map<string, number>();
+          const note = (key: string) => seen.set(key, (seen.get(key) ?? 0) + 1);
+          for (let seed = 1; seed <= 250; seed++) yield* runKept(seed, note);
+          const low = Object.entries(KEPT_FLOORS).filter(
+            ([key, floor]) => (seen.get(key) ?? 0) < floor,
+          );
+          expect(low.map(([key]) => `${key} ${seen.get(key) ?? 0}`)).toEqual([]);
+        }),
+      ),
+    ));
+
+  it('counts a recall graded Again, held past its due while a tap plans, as done once it lands', () =>
+    Effect.runPromise(
+      zoned(
+        Effect.gen(function* () {
+          travel('UTC');
+          const old: Recall = {
+            ...recallOf(random(3), 'Probe 1:1', Date.UTC(2026, 0, 2, 12), 'UTC'),
+            grade: 3,
+          };
+          const map = new Map([[keyOf(old), JSON.stringify(old)]]);
+          const at = Date.UTC(2026, 0, 5, 12);
+          const pending: Recall = { ...old, startedAt: at - MINUTE + 1, grade: 1 };
+          const gate = yield* Deferred.make<void>();
+          const faults = new Map([[keyOf(pending), { gate, refuse: false }]]);
+          const live = yield* launchKept(
+            [{ reference: 'Probe 1:1', words: 20, group: 'probe' }],
+            map,
+            faults,
+            at,
+          );
+          yield* live.run(live.session.begin);
+          const kept = yield* Effect.forkChild(live.run(live.recalls.keep(pending)), {
+            startImmediately: true,
+          });
+          for (let turn = 0; turn < 8; turn++) yield* Effect.yieldNow;
+          const tap = yield* Effect.forkChild(live.run(live.session.choose(10)), {
+            startImmediately: true,
+          });
+          for (let turn = 0; turn < 8; turn++) yield* Effect.yieldNow;
+          yield* live.run(TestClock.setTime(at + 2));
+          yield* Deferred.succeed(gate, undefined);
+          yield* Fiber.joinAll([kept, tap]);
+          expect(yield* lineOf(live.session, live.garden)).toEqual(
+            Option.some('Nothing to tend now'),
+          );
           yield* Scope.close(live.scope, Exit.void);
         }),
       ),
     ));
 });
+
+type KeptOp = 'begin-held' | 'tap-held' | 'tap' | 'wait' | 'begin';
+
+const KEPT_OPS: readonly [KeptOp, ...KeptOp[]] = [
+  'begin-held',
+  'begin-held',
+  'tap-held',
+  'tap-held',
+  'tap-held',
+  'tap',
+  'wait',
+  'begin',
+];
+
+const KEPT_FLOORS = {
+  'begin-held:made': 40,
+  'tap-held:remade': 120,
+  'held:landed in plan': 60,
+  'held:refused in plan': 20,
+  'instant:its due': 40,
+  'instant:the due before': 30,
+  'instant:the morning': 40,
+  'instant:now': 40,
+  'zone:dst': 20,
+} satisfies Record<string, number>;
+
+/** One generated launch over the app's own garden: keeps held across due instants and mornings, with begins and Minutes taps while they are under way. */
+const runKept = (seed: number, note: (key: string) => void) =>
+  Effect.gen(function* () {
+    const next = random(seed * 104_729);
+    const zone = pickOf(next, ZONES);
+    travel(zone);
+    if (offsetIn(zone, 0) !== offsetIn(zone, 182 * DAY)) note('zone:dst');
+    const pieces = piecesOf(next);
+    let now =
+      Date.UTC(2020 + below(next, 10), below(next, 12), 1 + below(next, 27)) + below(next, DAY);
+    const map = new Map<string, string>();
+    for (const recalls of fieldOf(next, pieces, now, zone).values())
+      for (const recall of recalls) map.set(keyOf(recall), JSON.stringify(recall));
+    const faults = new Map<string, KeepFault>();
+    const live = yield* launchKept(pieces, map, faults, now);
+    let minutes = (yield* live.session.view).minutes;
+    let plan = Option.none<Items>();
+    const trail: string[] = [zone];
+    const where = () => `seed ${seed}: ${trail.join(' ')}`;
+    const planAt = (plants: ReadonlyMap<string, readonly Recall[]>) =>
+      planModel({ plants, pieces, at: now, offset: offsetIn(zone, now), minutes }).items.map(
+        itemOf,
+      );
+    const check = Effect.gen(function* () {
+      const view = yield* live.session.view;
+      expect(view.minutes, where()).toBe(minutes);
+      expect(
+        Option.map(view.plan, (made) => made.items.map(itemOf)),
+        where(),
+      ).toEqual(plan);
+      const plants = plantsIn(map);
+      expect(yield* lineOf(live.session, live.garden), where()).toEqual(
+        Option.map(plan, (items) =>
+          countsModel(items, (reference) => plants.get(reference)?.length ?? 0),
+        ),
+      );
+    });
+    /** Runs `command` while a keep of a recall started a moment ago is held, at an instant by its due, the due before it or the next morning, then lets the keep land or refuses it. */
+    const whileHeld = (command: Effect.Effect<void>, atInstant: () => void) =>
+      Effect.gen(function* () {
+        const reference = pickOf(next, ['Stray 1:1', ...pieces.map((piece) => piece.reference)]);
+        let startedAt = now - pickOf(next, [1, 1000, MINUTE - 1, 5 * MINUTE]);
+        while (map.has(keyOf({ reference, startedAt }))) startedAt -= 1;
+        const recall = recallOf(next, reference, startedAt, zone);
+        const before = plantsIn(map);
+        const refuse = next() < 0.3;
+        const gate = yield* Deferred.make<void>();
+        faults.set(keyOf(recall), { gate, refuse });
+        const kept = yield* Effect.forkChild(live.run(live.recalls.keep(recall)), {
+          startImmediately: true,
+        });
+        for (let turn = 0; turn < 8; turn++) yield* Effect.yieldNow;
+        const prior = before.get(reference) ?? [];
+        const instants: [readonly [string, number], ...(readonly [string, number])[]] = [
+          ['its due', dueModel([...prior, recall])],
+          ['the morning', nextMorning(zone, now)],
+          ['now', now],
+        ];
+        if (prior.length > 0) {
+          instants.push(['the due before', dueModel(prior)], ['the due before', dueModel(prior)]);
+        }
+        const [kind, instant] = pickOf(next, instants);
+        const at = Math.max(now, instant + pickOf(next, [-1, 0, 1]));
+        if (at !== now) note(`instant:${kind}`);
+        else if (kind === 'now') note('instant:now');
+        now = at;
+        yield* live.run(TestClock.setTime(now));
+        trail.push(`held ${reference} ${kind} refuse=${refuse}`);
+        atInstant();
+        const commanded = yield* Effect.forkChild(command, { startImmediately: true });
+        for (let turn = 0; turn < 8; turn++) yield* Effect.yieldNow;
+        const view = yield* live.session.view;
+        const got = Option.map(view.plan, (made) => made.items.map(itemOf));
+        if (next() < 0.4) {
+          now += pickOf(next, [1, MINUTE, HOUR]);
+          yield* live.run(TestClock.setTime(now));
+        }
+        yield* Deferred.succeed(gate, undefined);
+        yield* Fiber.join(kept);
+        yield* Fiber.join(commanded);
+        return { got, shown: view.minutes, reference, refuse };
+      });
+    /** A begin or a Minutes tap while a keep is held: planned from the view before the keep, at the command's instant. */
+    const heldStep = (op: 'begin-held' | 'tap-held') =>
+      Effect.gen(function* () {
+        let tapped: Minutes = minutes;
+        let command = live.run(live.session.begin);
+        if (op === 'tap-held') {
+          tapped = pickOf(next, MINUTES);
+          command = live.run(live.session.choose(tapped));
+        }
+        let expected = plan;
+        const held = yield* whileHeld(command, () => {
+          minutes = tapped;
+          if (op === 'begin-held' && Option.isNone(plan)) {
+            expected = Option.some(planAt(plantsIn(map)));
+            note('begin-held:made');
+          }
+          if (op === 'tap-held' && Option.isSome(plan)) {
+            expected = Option.some(planAt(plantsIn(map)));
+            note('tap-held:remade');
+          }
+        });
+        plan = expected;
+        expect(held.shown, `${where()} (while held)`).toBe(minutes);
+        expect(held.got, `${where()} (while held)`).toEqual(plan);
+        if (Option.isNone(plan) || plan.value.every((item) => item.reference !== held.reference))
+          return;
+        if (held.refuse) note('held:refused in plan');
+        else note('held:landed in plan');
+      });
+    yield* check;
+    for (let step = 0; step < 4; step++) {
+      const op = pickOf(next, KEPT_OPS);
+      trail.push(op);
+      switch (op) {
+        case 'begin-held':
+        case 'tap-held': {
+          yield* heldStep(op);
+          break;
+        }
+        case 'tap': {
+          minutes = pickOf(next, MINUTES);
+          if (Option.isSome(plan)) plan = Option.some(planAt(plantsIn(map)));
+          yield* live.run(live.session.choose(minutes));
+          break;
+        }
+        case 'wait': {
+          now += pickOf(next, [1, MINUTE, HOUR, DAY]);
+          yield* live.run(TestClock.setTime(now));
+          break;
+        }
+        case 'begin': {
+          if (Option.isNone(plan)) plan = Option.some(planAt(plantsIn(map)));
+          yield* live.run(live.session.begin);
+          break;
+        }
+      }
+      yield* check;
+    }
+    yield* Scope.close(live.scope, Exit.void);
+  });

@@ -482,6 +482,8 @@ the plan one piece at a time.
   stored. The plan is made from the runtime's `Clock` and `offsetAt` at
   that instant when Today first shows in a launch with the garden read
   (after `Continue` in the first launch), and again at each Minutes tap.
+  It is made in one step from the garden's view as it is, never waiting on
+  a keep under way, so a recital whose keep lands after it counts as done.
   Nothing else makes it again: time passing, a recital, a grade, Again, a
   Voice tap, or the field and back. An unread garden has no plan and no
   counts line.

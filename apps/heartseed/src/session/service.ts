@@ -2,11 +2,13 @@
  * The daily session's state for a launch: the minutes the reader chose,
  * kept in the app's store, and the plan Today offers. The minutes are read
  * once, as the service starts, so the first frame that shows them shows the
- * value read; only a tap writes them. The plan is made from the garden once
- * every keep before it has landed, at the instant on the service's clock and
- * the zone's offset at that instant: first when Today shows with a read
- * garden (`begin`), then again at each Minutes tap. Nothing else makes it
- * again in a launch, and an unread garden gets no plan.
+ * value read; only a tap writes them, each tap its own choice, in tap
+ * order. The plan is made in one step from the garden's view as it is,
+ * never waiting on a keep under way, at the instant on the service's clock
+ * and the zone's offset at that instant: first when Today shows with a read
+ * garden (`begin`), then again at each Minutes tap. A recital whose keep
+ * lands after that step counts as done by its recall. Nothing else makes
+ * the plan again in a launch, and an unread garden gets no plan.
  */
 
 import {
@@ -20,13 +22,12 @@ import {
   Option,
   PubSub,
   Schema,
-  Semaphore,
   Stream,
 } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
 import { offsetAt } from '../day';
-import { Garden } from '../garden';
+import { Garden, type GardenView, type ReadGarden } from '../garden';
 import { planOf, type Minutes, type Piece, type Plan } from '../session';
 
 /** The store key of the minutes; its text is `2`, `5`, `10` or `20`. */
@@ -110,32 +111,25 @@ export const layer = (
         plan: Option.none(),
       });
       const views = yield* PubSub.sliding<SessionView>({ capacity: WINDOW, replay: 1 });
-      const planning = yield* Semaphore.make(1);
-      const context = yield* Effect.context<never>();
-      /** The instant on the service's own clock, whoever runs the command. */
-      const now = Effect.provideContext(Clock.currentTimeMillis, context);
+      /** The service's own clock, whoever runs the command. */
+      const clock = Context.get(yield* Effect.context<never>(), Clock.Clock);
 
-      const publish = (view: SessionView) =>
-        Effect.andThen(
-          Effect.sync(() => MutableRef.set(held, view)),
-          PubSub.publish(views, view),
-        );
-      yield* PubSub.publish(views, MutableRef.get(held));
+      /** Hands subscribers the view held now, so the last one handed is the latest, however commands interleave. */
+      const publish = Effect.suspend(() => PubSub.publish(views, MutableRef.get(held)));
+      yield* publish;
 
-      /** Makes the plan now from the settled garden; an unread garden gets none. */
-      const make = Effect.gen(function* () {
-        const settled = yield* garden.settled;
-        if (settled._tag === 'Unread') return;
-        const at = yield* now;
-        const plan = planOf({
-          garden: settled,
-          pieces,
-          at,
-          offset: offsetAt(at),
-          minutes: MutableRef.get(held).minutes,
+      /** The plan from `seen`, the garden's view taken in the same step, at the clock's instant and the zone's offset there. */
+      const planUnsafe = (seen: ReadGarden, minutes: Minutes) => {
+        const at = clock.currentTimeMillisUnsafe();
+        return planOf({ garden: seen, pieces, at, offset: offsetAt(at), minutes });
+      };
+
+      /** A made plan made again from `seen` for `minutes`; no plan stays none, and an unread garden keeps what it had. */
+      const remadeUnsafe = (seen: GardenView, minutes: Minutes) =>
+        Option.map(MutableRef.get(held).plan, (plan) => {
+          if (seen._tag === 'Unread') return plan;
+          return planUnsafe(seen, minutes);
         });
-        yield* publish({ ...MutableRef.get(held), plan: Option.some(plan) });
-      });
 
       /** The turn of the last write handed in; a write starts once the one before it ends. */
       const lastWrite = MutableRef.make(Deferred.makeUnsafe<void>());
@@ -160,29 +154,28 @@ export const layer = (
         Effect.andThen(Deferred.await(turn.before), Deferred.done(turn.mine, Exit.void));
 
       return Session.of({
-        begin: planning.withPermit(
+        begin: Effect.flatMap(garden.view, (seen) =>
           Effect.suspend(() => {
-            if (Option.isSome(MutableRef.get(held).plan)) return Effect.void;
-            return make;
+            const now = MutableRef.get(held);
+            if (Option.isSome(now.plan) || seen._tag === 'Unread') return Effect.void;
+            MutableRef.set(held, { ...now, plan: Option.some(planUnsafe(seen, now.minutes)) });
+            return publish;
           }),
         ),
         choose: (minutes: Minutes) =>
           Effect.uninterruptibleMask((restore) =>
-            Effect.flatMap(Effect.sync(turnUnsafe), (turn) =>
-              Effect.ensuring(
-                restore(
-                  Effect.gen(function* () {
-                    yield* publish({ ...MutableRef.get(held), minutes });
-                    yield* planning.withPermit(
-                      Effect.suspend(() => {
-                        if (Option.isNone(MutableRef.get(held).plan)) return Effect.void;
-                        return make;
-                      }),
-                    );
-                    yield* persist(turn, minutes);
-                  }),
-                ),
-                release(turn),
+            Effect.flatMap(garden.view, (seen) =>
+              Effect.flatMap(
+                Effect.sync(() => {
+                  const turn = turnUnsafe();
+                  MutableRef.set(held, { minutes, plan: remadeUnsafe(seen, minutes) });
+                  return turn;
+                }),
+                (turn) =>
+                  Effect.ensuring(
+                    restore(Effect.andThen(publish, persist(turn, minutes))),
+                    release(turn),
+                  ),
               ),
             ),
           ).pipe(Effect.withSpan('Session.choose')),
