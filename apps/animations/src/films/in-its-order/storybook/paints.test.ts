@@ -77,10 +77,12 @@ const CROWDS = ['filler-dressed', 'idea-villagers'];
 
 /**
  * Each part's share of a cell's head band (`BAND` of its head from its
- * first opaque row), by group: `skin`, `hair` (with any footwear paint
- * there: the head band holds no sandals, and a split with no `feet-low` gave
- * the take-5 woman's darker hair her sandals' paint), and each garment by
- * its name; the ink, props and others left out.
+ * first opaque row), by group: `skin`, each hair and footwear paint by its
+ * role and tone apart (the head band holds no sandals, so a footwear paint
+ * there is hair: the take-5 woman's darker hair is split in her sandals'
+ * paint, and a sheet that drew all her hair in the base lost that shade;
+ * verifier r1, M2), and each garment by its name; the ink, props and others
+ * left out.
  */
 const headPartsOf = (
   r: Raster,
@@ -91,7 +93,8 @@ const headPartsOf = (
   const groupOf = new Map(
     paints.flatMap((p) => {
       if (p.role === 'skin') return [[packed(...p.rgb), 'skin'] as const];
-      if (p.role === 'hair' || p.role === 'footwear') return [[packed(...p.rgb), 'hair'] as const];
+      if (p.role === 'hair' || p.role === 'footwear')
+        return [[packed(...p.rgb), `${p.role} ${p.tone}`] as const];
       if (p.role === 'garment') return [[packed(...p.rgb), p.part] as const];
       return [];
     }),
