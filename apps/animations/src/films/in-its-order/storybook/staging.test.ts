@@ -49,6 +49,12 @@ const HOLDING = new Set(['lift', 'bottle']);
 const handOffMisses = (lead: Figure, plate: Plate, times: ReadonlyArray<number>) =>
   times.filter((t) => HOLDING.has(poseAt(lead, t).cell) === plateAt(plate, t).alpha > 0);
 
+/** The pour's length on the panels `milk.newborn.5` and `milk.word.5`, gutter to cup, in px of a 1080-tall frame (critique 2, finding 4). */
+const PANEL_POUR = 340;
+
+/** How far the film's pour may run from the panel's, as a factor either way. */
+const POUR_REACH = 1.3;
+
 /** How long a generated set-down's bottle travels onto the table after the turn, s: cold-letter's `settle`. */
 const SETTLE = 0.25;
 
@@ -298,6 +304,28 @@ describe("In Its Order's staging", () => {
       }),
     );
     expect(misses.slice(0, 5)).toEqual([]);
+  });
+
+  test('pours the milk about the panel’s length in milk-pour: from the gutter to the cup’s mouth, on screen, within 1.3 times the panel’s 340 px either way, wherever a pour shows (critique 2, finding 4; the owner: the book nearer the cup)', () => {
+    const pour = placed.find(({ shot }) => shot.id === 'milk-pour')?.shot;
+    if (!pour) return expect(pour).toBeDefined();
+    const pours = platesOf(pour).filter((p) => p.reveal);
+    expect(pours.length).toBe(2);
+    const off = timesOf(pour).flatMap((t, i) =>
+      pours.flatMap((plate) => {
+        const brush = plate.reveal?.brush ?? [];
+        const [first, last] = [brush[0], brush.at(-1)];
+        if (!first || !last || plateAt(plate, t).alpha <= 0) return [];
+        const [a, b] = [
+          pointOn(plate, t, [first[0], first[1]]),
+          pointOn(plate, t, [last[0], last[1]]),
+        ];
+        const length = Math.hypot(b[0] - a[0], b[1] - a[1]) * cameraAt(pour.camera, t).zoom;
+        if (length >= PANEL_POUR / POUR_REACH && length <= PANEL_POUR * POUR_REACH) return [];
+        return [`frame ${i}: ${length.toFixed(0)} px`];
+      }),
+    );
+    expect(off.slice(0, 3)).toEqual([]);
   });
 
   it.effect(

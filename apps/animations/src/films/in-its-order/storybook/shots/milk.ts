@@ -71,8 +71,8 @@ const cupMouth = (): readonly [number, number] => {
   ];
 };
 
-/** The open book at picture right, as the panel sets it, its centre and its scale: the panel's book is about 480 px across. */
-export const BOOK = { x: 1367, y: 586, s: 1.12 } as const;
+/** The open book beside the villager, as the panels `milk.newborn.5` and `milk.word.5` set it (the owner: the book nearer the cup), its centre and its scale: about the panel's 400 px across, its left edge just clear of his robe (layer x 828), so the milk pours about the panel's 340 px. */
+export const BOOK = { x: 1025, y: 586, s: 0.9 } as const;
 
 /** The gutter of the open book, in its own px: the fold the milk leaves from, its upper half. */
 export const GUTTER = { x: 195, y: 40, width: 41, height: 100 } as const;
@@ -84,7 +84,7 @@ const gutterPour = (): readonly [number, number] => [
 ];
 
 /** The camera at the end of `milk-cup`'s push: on the villager, the book and the milk's arc between them. */
-const PUSHED = { x: 1020, y: 520, zoom: 1.1 } as const;
+const PUSHED = { x: 880, y: 520, zoom: 1.1 } as const;
 
 /**
  * `milk-cup`, the scene's start to the card: the villager on the parchment
