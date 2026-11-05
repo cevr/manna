@@ -69,6 +69,49 @@ const headBandOf = (r: Raster, head: number, paints: (typeof CELLS)[number]['pai
   return counts;
 };
 
+/** How far (a share of the head band) a cell's skin, hair or garment may lie from its member's first sheet's median. */
+const HEAD_SPREAD = 0.05;
+
+/** The members whose sheets each draw another person of the group: the four diners, the grown villager and the baby. */
+const CROWDS = ['filler-dressed', 'idea-villagers'];
+
+/**
+ * Each part's share of a cell's head band (`BAND` of its head from its
+ * first opaque row), by group: `skin`, `hair` (with any footwear paint
+ * there: the head band holds no sandals, and a split with no `feet-low` gave
+ * the take-5 woman's darker hair her sandals' paint), and each garment by
+ * its name; the ink, props and others left out.
+ */
+const headPartsOf = (
+  r: Raster,
+  head: number,
+  paints: (typeof CELLS)[number]['paints'],
+): ReadonlyMap<string, number> => {
+  const packed = (red: number, green: number, blue: number) => (red << 16) | (green << 8) | blue;
+  const groupOf = new Map(
+    paints.flatMap((p) => {
+      if (p.role === 'skin') return [[packed(...p.rgb), 'skin'] as const];
+      if (p.role === 'hair' || p.role === 'footwear') return [[packed(...p.rgb), 'hair'] as const];
+      if (p.role === 'garment') return [[packed(...p.rgb), p.part] as const];
+      return [];
+    }),
+  );
+  let crown = 0;
+  while (crown < r.width * r.height && (r.rgba[crown * 4 + 3] ?? 0) === 0) crown++;
+  const top = Math.floor(crown / r.width);
+  const counts = new Map<string, number>();
+  let opaque = 0;
+  for (let y = top; y < Math.min(r.height, top + head * BAND); y++)
+    for (let x = 0; x < r.width; x++) {
+      const i = (y * r.width + x) * 4;
+      if ((r.rgba[i + 3] ?? 0) === 0) continue;
+      opaque++;
+      const group = groupOf.get(packed(r.rgba[i] ?? 0, r.rgba[i + 1] ?? 0, r.rgba[i + 2] ?? 0));
+      if (group) counts.set(group, (counts.get(group) ?? 0) + 1);
+    }
+  return new Map([...counts].map(([group, n]) => [group, n / Math.max(1, opaque)]));
+};
+
 /** The cells of each sheet with props that hold its prop: the lead's bottle in `lift` and `bottle`, his close's sash light in every cell, the older diner's open mouth in `talk`. */
 const PROP_CELLS: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
   ['lead-feast/iio-table', ['lift', 'bottle']],
@@ -228,6 +271,52 @@ describe("In Its Order's sheet paints", () => {
             `${c.sheet} ${c.cell}: hair shade ${(c.share * 100).toFixed(1)} % against ${(reference.value * 100).toFixed(1)} % on ${member}/${first?.id}`,
           ];
         });
+        expect(misses).toEqual([]);
+      }),
+  );
+
+  it.effect(
+    'draws one face, hair and veil across a member’s sheets: each cell’s head-band share of its skin, its hair and each garment within 5 points of the median of the member’s first sheet (owner, critique 2: the guest woman’s table sheet is the woman her take-5 sheet draws)',
+    () =>
+      Effect.gen(function* () {
+        const several = new Set(
+          SHEETS.filter((s, i) => SHEETS.findIndex((o) => o.member === s.member) !== i).map(
+            (s) => s.member,
+          ),
+        );
+        const one = (sheet: string) => {
+          const member = sheet.split('/')[0] ?? '';
+          return several.has(member) && !CROWDS.includes(member);
+        };
+        const shares = yield* Effect.forEach(
+          CELLS.filter((c) => Option.isSome(c.head) && one(c.sheet)),
+          (c) =>
+            Effect.map(rasterOf(c.png), (r) => ({
+              ...c,
+              parts: headPartsOf(
+                r,
+                Option.getOrElse(c.head, () => 0),
+                c.paints,
+              ),
+            })),
+        );
+        const misses = shares.flatMap((c) => {
+          const [member = ''] = c.sheet.split('/');
+          const first = SHEETS.find((s) => s.member === member);
+          const theirs = shares.filter((o) => o.sheet === `${member}/${first?.id}`);
+          return [
+            ...new Set([...c.parts.keys(), ...theirs.flatMap((o) => [...o.parts.keys()])]),
+          ].flatMap((part) => {
+            const reference = medianOf(theirs.map((o) => o.parts.get(part) ?? 0));
+            const share = c.parts.get(part) ?? 0;
+            if (Option.isNone(reference) || Math.abs(share - reference.value) <= HEAD_SPREAD)
+              return [];
+            return [
+              `${c.sheet} ${c.cell}: ${part} ${(share * 100).toFixed(1)} % against ${(reference.value * 100).toFixed(1)} % on ${member}/${first?.id}`,
+            ];
+          });
+        });
+        expect([...several]).toEqual(['lead-feast', 'feast-guest-woman', ...CROWDS]);
         expect(misses).toEqual([]);
       }),
   );

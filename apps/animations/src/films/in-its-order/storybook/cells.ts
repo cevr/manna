@@ -5,6 +5,7 @@ import { CELLS as FILLER_3 } from '../../../library/cast/filler-dressed/shot-she
 import { CELLS as FILLER_4 } from '../../../library/cast/filler-dressed/shot-sheets/iio-diner-4/cells.ts';
 import { CELLS as GUEST_MAN } from '../../../library/cast/feast-guest-man/shot-sheets/iio-table/cells.ts';
 import { CELLS as GUEST_WOMAN } from '../../../library/cast/feast-guest-woman/shot-sheets/feast-courtyard/cells.ts';
+import { CELLS as GUEST_WOMAN_TABLE } from '../../../library/cast/feast-guest-woman/shot-sheets/iio-table/cells.ts';
 import { CELLS as LEAD_CLOSE } from '../../../library/cast/lead-feast/shot-sheets/iio-close/cells.ts';
 import { CELLS as LEAD_MILK } from '../../../library/cast/lead-feast/shot-sheets/iio-milk/cells.ts';
 import { CELLS as LEAD_TABLE } from '../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
@@ -25,6 +26,7 @@ const CELLS: ReadonlyArray<readonly [string, string, SheetCells['cells']]> = [
   ['feast-mother', 'iio-baby', MOTHER_BABY],
   ['feast-guest-man', 'iio-table', GUEST_MAN],
   ['feast-guest-woman', 'feast-courtyard', GUEST_WOMAN],
+  ['feast-guest-woman', 'iio-table', GUEST_WOMAN_TABLE],
   ['filler-dressed', 'iio-diner-1', FILLER_1],
   ['filler-dressed', 'iio-diner-2', FILLER_2],
   ['filler-dressed', 'iio-diner-3', FILLER_3],

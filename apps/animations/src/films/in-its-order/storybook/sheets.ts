@@ -176,6 +176,20 @@ const guestWoman: SheetDecl = {
   rules: [],
 };
 
+/** Her take-5 sheet, as a reference of her table sheet (a path from her views folder, since a reference is named from there). */
+const COURTYARD_SHEET_REF = '../../shot-sheets/feast-courtyard/sheet';
+
+/** What the guest woman's table sheet asks beyond `seated` (owner, critique 2: she stares as the man does): the woman her take-5 sheet draws, the one the owner chose, the same in every line but the head's turn and the face. */
+const WOMAN_AS_COURTYARD =
+  "The first reference image is her kept feast sheet: every figure here is exactly the woman its first figure draws, at the same size, the same in every line: the same head and face (an upright oval a little taller than wide, ears showing, the same eyes, brows and mouth marks), her skin #fdbd83; the same olive mantle #80774c, its shaded side #686141, drawn over her head as a veil framing the face and open down the front; a little of her dark-brown hair #6e3f1f parted in the middle at the brow; the same cream robe #fdf4e2, its shaded side #e7d7ef, and plain flat sash; the same round hands resting on the knees; the same brown sandals #553019 on bare feet. Only the head's turn, the eyes, the brows and the mouth change from figure to figure.";
+
+/** The guest woman at the table (`cold-table` to `cold-ouch`), drawn from her take-5 sheet so she is the woman the owner chose: the man's four keys, her stare turned toward the lead at the picture's left. */
+const guestWomanTable: SheetDecl = {
+  ...guest('feast-guest-woman', 'left', '#8e4c27'),
+  refs: [COURTYARD_SHEET_REF, 'poses-1'],
+  rules: [...seated('#8e4c27'), HEMMED, WOMAN_AS_COURTYARD],
+};
+
 /** One dressed diner at the long table, the n-th person of `filler-dressed`, turning toward a neighbour at picture `side` to talk. */
 const diner = (n: 1 | 2 | 3 | 4, side: 'right' | 'left'): SheetDecl => ({
   member: 'filler-dressed',
@@ -260,6 +274,7 @@ export const SHEETS: ReadonlyArray<SheetDecl> = [
   motherBaby,
   guest('feast-guest-man', 'right', '#692e18'),
   guestWoman,
+  guestWomanTable,
   diner(1, 'right'),
   diner(2, 'left'),
   diner(3, 'right'),
