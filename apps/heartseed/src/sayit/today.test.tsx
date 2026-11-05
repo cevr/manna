@@ -3,7 +3,8 @@
 /**
  * Today's Say it as a reader and a screen reader meet it: the route mounted
  * in happy-dom (react-native-web) under a registry whose runtime is the
- * app's own layer over a scripted source, recorded ticks and recalls. Every
+ * app's own layer over a scripted source, recorded ticks, and a store in
+ * memory that records each recall the garden writes, in order. Every
  * frame a test waits through holds each word Today draws to the spec's rule
  * for its status in the view it was drawn from: the colour its text is seen
  * in, whether the screen reader reads it, its name and its role. It counts
@@ -13,6 +14,7 @@
 import { RegistryProvider, useAtomValue } from '@effect/atom-react';
 import { describe, expect, it } from 'bun:test';
 import { Effect, Layer, MutableRef, Option } from 'effect';
+import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -22,9 +24,10 @@ import Today from '../../app/index';
 import { appLayer, runtime, sayItView } from '../app';
 import { DictationSource, type DictationEvent } from '../dictation';
 import { recite, scriptedSource } from '../dictation/script';
+import { Chime } from '../garden';
 import type { MarkStatus } from '../matcher';
 import { sourceWords } from '../matcher/words';
-import { Haptics, Recalls, type Recall, type SayItView } from '../sayit';
+import { Haptics, type Recall, type SayItView } from '../sayit';
 import { screenOf } from './screen';
 
 const WORDS = sourceWords(passage.text);
@@ -189,6 +192,28 @@ function Seen({ into }: { readonly into: MutableRef.MutableRef<Option.Option<Say
   return null;
 }
 
+/** A store over memory that records, in order, each recall the garden writes: each keep Say it hands over that changes the recital's record writes one. */
+const recordingStore = (kept: Recall[]) => {
+  const backing = new Map<string, string>();
+  return Layer.succeed(
+    KeyValueStore.KeyValueStore,
+    KeyValueStore.makeStringOnly({
+      get: (key) => Effect.sync(() => backing.get(key)),
+      set: (key, value) =>
+        Effect.sync(() => {
+          backing.set(key, value);
+          if (!key.startsWith('heartseed/recall/')) return;
+          const recall: Recall = JSON.parse(value);
+          kept.push(recall);
+        }),
+      remove: (key) => Effect.sync(() => void backing.delete(key)),
+      clear: Effect.sync(() => backing.clear()),
+      size: Effect.sync(() => backing.size),
+      keys: Effect.sync(() => [...backing.keys()]),
+    }),
+  );
+};
+
 /** Today over `source`, under a registry that keeps living after Today leaves, as the app's does. */
 const mount = async (source: Layer.Layer<DictationSource>) => {
   const ticks = { n: 0 };
@@ -196,10 +221,8 @@ const mount = async (source: Layer.Layer<DictationSource>) => {
   const layer = appLayer({
     source,
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.sync(() => void (ticks.n += 1)) })),
-    recalls: Layer.succeed(
-      Recalls,
-      Recalls.of({ keep: (recall) => Effect.sync(() => void kept.push(recall)) }),
-    ),
+    store: recordingStore(kept),
+    chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
   });
   const host = document.createElement('div');
   document.body.append(host);

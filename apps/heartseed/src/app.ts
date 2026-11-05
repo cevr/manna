@@ -1,8 +1,9 @@
 /**
  * The app's one runtime for the reader's screens: one `Dictation` over the
- * source this build hears, Say it over it, the soft tick and the logged
- * recalls. Every screen that hears the reader takes Dictation from here, so
- * two services never share the module's one channel.
+ * source this build hears, Say it over it, the soft tick, and the garden,
+ * which keeps each of Say it's recalls in the app's store on the device and
+ * sounds the growth chime. Every screen that hears the reader takes
+ * Dictation from here, so two services never share the module's one channel.
  *
  * The source is the module's replay of a scripted recital only in a
  * development build (`__DEV__`) on the simulator, which can never listen;
@@ -12,6 +13,7 @@
  */
 
 import { Duration, Effect, Layer, Stream } from 'effect';
+import type * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as Atom from 'effect/reactivity/Atom';
 import { One } from 'one';
 import passage from 'virtual:heartseed-passage';
@@ -19,9 +21,12 @@ import passage from 'virtual:heartseed-passage';
 import { layer as dictationLayer, type DictationSource } from './dictation';
 import { recite } from './dictation/script';
 import { microphoneSource, replaySource } from './dictation/source';
-import { layer as sayItLayer, SayIt, type Grade, type Haptics, type Recalls } from './sayit';
-import { liveHaptics, loggedRecalls } from './sayit/live';
+import { Garden, layer as gardenLayer, type Chime } from './garden';
+import { liveChime } from './garden/chime';
+import { layer as sayItLayer, SayIt, type Grade, type Haptics } from './sayit';
+import { liveHaptics } from './sayit/live';
 import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
+import { store } from './store';
 
 const dev = typeof __DEV__ !== 'undefined' && __DEV__;
 
@@ -46,23 +51,30 @@ export const appSource: Layer.Layer<DictationSource> = Layer.unwrap(
   }),
 );
 
-/** The app's services over its parts: Say it and the one Dictation it runs over. */
+/** The app's services over its parts: Say it, the one Dictation it runs over, and the garden over `store` its recalls grow, which sounds `chime`. */
 export const appLayer = (parts: {
   readonly source: Layer.Layer<DictationSource>;
   readonly haptics: Layer.Layer<Haptics>;
-  readonly recalls: Layer.Layer<Recalls>;
+  readonly store: Layer.Layer<KeyValueStore.KeyValueStore>;
+  readonly chime: Layer.Layer<Chime>;
 }) =>
   sayItLayer(passage).pipe(
     Layer.provideMerge(dictationLayer.pipe(Layer.provide(parts.source))),
-    Layer.provide(Layer.mergeAll(parts.haptics, parts.recalls)),
+    Layer.provideMerge(gardenLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.chime)))),
+    Layer.provide(parts.haptics),
   );
 
 export const runtime = Atom.runtime(
-  appLayer({ source: appSource, haptics: liveHaptics, recalls: loggedRecalls }),
+  appLayer({ source: appSource, haptics: liveHaptics, store, chime: liveChime }),
 );
 
 /** What Today shows of Say it. */
 export const sayItView = runtime.atom(Stream.unwrap(Effect.map(SayIt, (sayIt) => sayIt.changes)));
+
+/** What the garden knows, of which Today shows the passage's plant. */
+export const gardenView = runtime.atom(
+  Stream.unwrap(Effect.map(Garden, (garden) => garden.changes)),
+);
 
 /** A press of the one button. Each command runs to its end, so a second tap never cuts off the first one's recall. */
 export const press = runtime.fn(() => Effect.flatMap(SayIt, (sayIt) => sayIt.press), {

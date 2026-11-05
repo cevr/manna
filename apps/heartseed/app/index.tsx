@@ -15,10 +15,18 @@ import Animated, {
 import { useSafeAreaInsets } from 'one';
 import passage from 'virtual:heartseed-passage';
 
-import { choose, peek, press, sayItView } from '../src/app';
+import { choose, gardenView, peek, press, sayItView } from '../src/app';
+import {
+  growthOf,
+  stageOf,
+  type GardenView,
+  type Plant,
+  type ReadGarden,
+  type Stage,
+} from '../src/garden';
 import type { Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
-import { GRADE_NAMES, GRADES, type Grade } from '../src/sayit';
+import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { screenOf, wordOf, type Ink, type Result, type ShownWord } from '../src/sayit/screen';
 
 /** Palette A (Wada No. 167) over the prototype's tokens. */
@@ -31,6 +39,14 @@ const color = {
   miss: '#c0583f',
   hearing: 'rgba(184, 137, 47, 0.22)',
   pulse: 'rgba(184, 137, 47, 0.45)',
+} as const;
+
+/** The plant's colours as the prototype draws it: gold, the leaf's green, the unripe ear's green and the soil. */
+const field = {
+  gold: '#d4a640',
+  leaf: '#6f9a4a',
+  greenEar: '#9cbf6a',
+  soil: '#8a6e4b',
 } as const;
 
 const WORDS = sourceWords(passage.text);
@@ -206,10 +222,110 @@ function SayItButton({
   );
 }
 
-/** Today: the passage the reader is learning, and Say it. */
+/** Each stage as the stage line shows it, and as the growth line names it. */
+const STAGE_NAMES: Readonly<Record<Stage, { readonly shown: string; readonly grown: string }>> = {
+  seed: { shown: 'A seed', grown: 'a seed' },
+  blade: { shown: 'A blade', grown: 'a blade' },
+  ear: { shown: 'An ear', grown: 'an ear' },
+  'full corn': { shown: 'Full corn', grown: 'full corn' },
+};
+
+/** The garden once a read of it completed; none while the read runs, and none for the session when it failed. */
+const readOf = (garden: Option.Option<GardenView>): Option.Option<ReadGarden> =>
+  Option.filter(garden, (view): view is ReadGarden => view._tag === 'Read');
+
+/** The passage's plant in the garden read, none before its first recital. */
+const plantIn = (garden: ReadGarden) => Option.fromNullishOr(garden.plants.get(passage.reference));
+
+/** The stage the finished recital Today shows grew the passage's plant to, none when it grew nothing or none is shown. */
+const grownBy = (plant: Option.Option<Plant>, sayIt: Option.Option<SayItView>) =>
+  Option.flatMap(plant, (each) =>
+    Option.flatMap(sayIt, (view) =>
+      Option.flatMap(
+        Option.all({
+          startedAt: Option.fromNullishOr(view.startedAt),
+          choice: Option.fromNullishOr(view.choice),
+        }),
+        ({ startedAt }) => Option.map(growthOf(each, startedAt), (growth) => growth.to),
+      ),
+    ),
+  );
+
+/** The plant drawn small as the prototype draws it, hidden from the screen reader, which reads the stage line: a gold seed in the soil, a green stem and leaf, a green ear on the stem, a gold ear. */
+function PlantMark({ stage }: { readonly stage: Stage }) {
+  const grown = stage !== 'seed';
+  const eared = stage === 'ear' || stage === 'full corn';
+  const ripe = stage === 'full corn';
+  return (
+    <View testID="plant" aria-hidden style={styles.plant}>
+      <View style={styles.soil} />
+      {!grown && <View style={styles.seed} />}
+      {grown && <View style={[styles.stem, eared && styles.tallStem]} />}
+      {grown && <View style={styles.leaf} />}
+      {eared && <View style={[styles.ear, ripe && styles.ripeEar]} />}
+      {ripe && <View style={styles.awn} />}
+    </View>
+  );
+}
+
+/**
+ * The passage's stage, its plant beside it once planted, and how the recital
+ * shown grew it. Until a read of the garden completes, and for the session
+ * when it failed, it claims nothing: the row holds its place empty, so a
+ * planted verse never reads as not planted.
+ */
+function Growing({
+  garden,
+  sayIt,
+}: {
+  readonly garden: Option.Option<ReadGarden>;
+  readonly sayIt: Option.Option<SayItView>;
+}) {
+  if (Option.isNone(garden))
+    return (
+      <View style={styles.growing}>
+        <View style={styles.stageRow} />
+      </View>
+    );
+  const plant = plantIn(garden.value);
+  const stage = Option.map(plant, stageOf);
+  const grown = grownBy(plant, sayIt);
+  return (
+    <View style={styles.growing}>
+      <View style={styles.stageRow}>
+        {Option.match(stage, {
+          onNone: () => false,
+          onSome: (each) => <PlantMark stage={each} />,
+        })}
+        <Text
+          testID="stage"
+          aria-label={`Stage: ${Option.getOrElse(stage, () => 'not planted')}`}
+          style={styles.stage}
+        >
+          {Option.match(stage, {
+            onNone: () => 'Not planted yet',
+            onSome: (each) => STAGE_NAMES[each].shown,
+          })}
+        </Text>
+      </View>
+      {Option.match(grown, {
+        onNone: () => false,
+        onSome: (to) => (
+          <Text testID="growth" style={styles.growth}>
+            {`Grew to ${STAGE_NAMES[to].grown}.`}
+          </Text>
+        ),
+      })}
+    </View>
+  );
+}
+
+/** Today: the passage the reader is learning, its stage, and Say it. */
 export default function Today() {
   const insets = useSafeAreaInsets();
-  const screen = screenOf(AsyncResult.value(useAtomValue(sayItView)));
+  const sayIt = AsyncResult.value(useAtomValue(sayItView));
+  const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
+  const screen = screenOf(sayIt);
   const onPress = useAtomSet(press);
   const onPeek = useAtomSet(peek);
   const onChoose = useAtomSet(choose);
@@ -229,6 +345,7 @@ export default function Today() {
           {passage.reference}
         </Text>
         <Verse marks={screen.marks} onPeek={onPeek} />
+        <Growing garden={garden} sayIt={sayIt} />
       </View>
       {Option.match(screen.result, {
         onNone: () => false,
@@ -286,6 +403,67 @@ const styles = StyleSheet.create({
   gradeName: { fontSize: 15, fontWeight: '600', color: color.ink },
   chosenName: { color: color.ground },
   alert: { fontSize: 15, lineHeight: 21, color: color.miss },
+  growing: { gap: 4, marginTop: 4 },
+  stageRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28 },
+  stage: { fontSize: 15, color: color.mute },
+  growth: { fontSize: 15, fontWeight: '600', color: color.ink },
+  plant: { width: 24, height: 28 },
+  soil: {
+    position: 'absolute',
+    left: 2,
+    right: 2,
+    bottom: 1,
+    height: 2.5,
+    borderRadius: 1.25,
+    backgroundColor: field.soil,
+  },
+  seed: {
+    position: 'absolute',
+    left: 8,
+    bottom: 4,
+    width: 8,
+    height: 6,
+    borderRadius: 4,
+    backgroundColor: field.gold,
+  },
+  stem: {
+    position: 'absolute',
+    left: 11,
+    bottom: 3,
+    width: 2.5,
+    height: 14,
+    borderRadius: 1.25,
+    backgroundColor: field.leaf,
+  },
+  tallStem: { height: 19 },
+  leaf: {
+    position: 'absolute',
+    left: 3,
+    bottom: 8,
+    width: 9,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: field.leaf,
+    transform: [{ rotate: '-35deg' }],
+  },
+  ear: {
+    position: 'absolute',
+    left: 8,
+    top: 1,
+    width: 8,
+    height: 10,
+    borderRadius: 4,
+    backgroundColor: field.greenEar,
+  },
+  ripeEar: { backgroundColor: field.gold },
+  awn: {
+    position: 'absolute',
+    left: 11.25,
+    top: -3,
+    width: 1.5,
+    height: 4,
+    backgroundColor: field.gold,
+  },
   buttonPlace: { alignSelf: 'center', width: 132, height: 132, marginTop: 8 },
   ring: {
     position: 'absolute',
