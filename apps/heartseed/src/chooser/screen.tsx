@@ -1,7 +1,8 @@
 /**
  * The chooser as the reader meets it: the root's third screen, opened from
  * the field's `Add a passage`. A fixed header holds one way back and the
- * step's one heading; the scroll view under it holds the step's list: the
+ * step's one heading; the scroll view under it, a new one for each step so
+ * each opens at its top, holds the step's list: the
  * 66 books of the canon under two plain labels, then a book's chapters,
  * then every verse of a chapter (never a virtualized list, so no verse is
  * hidden from the screen reader). Each verse is a checkbox, checked while
@@ -323,6 +324,7 @@ export function ChooserScreen({ onField }: { readonly onField: () => void }) {
         </Text>
       </View>
       <ScrollView
+        key={head.heading}
         style={styles.scroll}
         contentContainerStyle={[
           styles.list,

@@ -11,7 +11,9 @@
  * testaments, a book's chapters off by one, a verse missing or checked
  * outside the range, a heading or back wrong at any step, a back that keeps
  * the range, a footer's reference or count wrong, its cap missing, `Plant`
- * with no range, and a fixed control inside the scroll view. It misses
+ * with no range, a fixed control inside the scroll view, and a step that
+ * opens at the last step's scroll offset (books to chapters, chapters to
+ * verses, or a back), which hid a chapter's first verses live. It misses
  * `Plant`'s answers: `plant.test.tsx` owns them.
  */
 
@@ -129,6 +131,35 @@ describe('the chooser’s lists', () => {
       await rig.tap('Books');
     }
     expect(wrong).toEqual([]);
+    expect(rig.faults).toEqual([]);
+    await rig.leave();
+  });
+
+  it('opens each step at its top, going in and coming back, wherever the last step was scrolled', async () => {
+    device.launch(new Map());
+    const rig = await mountChooser();
+    const scroller = () =>
+      [...rig.host.querySelectorAll('div')].find((node) => {
+        const style = getComputedStyle(node);
+        return /auto|scroll/.test(`${style.overflowY} ${style.overflow}`);
+      });
+    const steps = [
+      ['Psalms', 'Psalms 119'],
+      ['Psalms 119', 'Psalms 119:176'],
+      ['Chapters', 'Psalms 119'],
+      ['Books', 'Romans'],
+      ['Romans', 'Romans 16'],
+    ] as const;
+    const kept: string[] = [];
+    for (const [label, then] of steps) {
+      const before = scroller();
+      if (before !== undefined) before.scrollTop = 600;
+      await rig.tap(label);
+      await rig.until(() => rig.control(then) !== undefined);
+      const top = scroller()?.scrollTop;
+      if (top !== 0) kept.push(`${label}: ${top}`);
+    }
+    expect(kept).toEqual([]);
     expect(rig.faults).toEqual([]);
     await rig.leave();
   });
