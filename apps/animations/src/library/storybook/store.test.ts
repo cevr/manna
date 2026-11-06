@@ -18,6 +18,7 @@ import {
 import {
   CAST,
   CLOSE_PAINTS,
+  drawPass,
   drawSheet,
   GROUNDS,
   groundFor,
@@ -32,6 +33,7 @@ import {
   sha256,
   sheetDir,
   sheetPalette,
+  splitDrawings,
 } from './store.ts';
 
 /** SHA-256 in hex by Bun's own hasher: the oracle the store's `Digest` hashes are held to. */
@@ -175,6 +177,138 @@ describe('drawSheet', () => {
       expect(refused.message).toContain(`its ground ${hexOf(near)}`);
       expect(yield* fs.exists(`${sheetDir(cast, 'm', 's1')}/record.json`)).toBe(false);
     }).pipe(Effect.scoped, Effect.provide(routeOf(sheetOf(2, near), calls)));
+  });
+});
+
+/** `r` drawn `k` times its size, each pixel a block of k × k: a sheet drawn larger than another. */
+const blownUp = (r: Raster, k: number): Raster => {
+  const [width, height] = [r.width * k, r.height * k];
+  const rgba = new Uint8Array(width * height * 4);
+  for (let q = 0; q < width * height; q++) {
+    const [x, y] = [Math.floor((q % width) / k), Math.floor(Math.floor(q / width) / k)];
+    rgba.set(r.rgba.subarray((y * r.width + x) * 4, (y * r.width + x) * 4 + 4), q * 4);
+  }
+  return { width, height, rgba };
+};
+
+/** The services a draw runs on, its route drawing each of `rasters` in turn and counting its calls. */
+const routeOfEach = (rasters: ReadonlyArray<Raster>, calls: Array<string>) =>
+  ImageRoute.fake((request) => {
+    calls.push(request.prompt);
+    return encodePng(rasters[calls.length - 1] ?? rasters[0] ?? sheetOf(1, PAPER));
+  }).pipe(Layer.provideMerge(Layer.merge(BunServices.layer, BunCrypto.layerDigest)));
+
+/** A cell's crown-to-soles: its opaque rows, first to last. */
+const tallOf = (r: Raster): number => {
+  const rows = Array.from({ length: r.height }, (_, y) =>
+    Array.from({ length: r.width }, (_, x) => r.rgba[(y * r.width + x) * 4 + 3] ?? 0).some(
+      (a) => a > 0,
+    ),
+  );
+  return rows.lastIndexOf(true) - rows.indexOf(true) + 1;
+};
+
+/** A cell's lowest opaque row: its soles. */
+const lowestOf = (r: Raster): number =>
+  Array.from({ length: r.height }, (_, y) =>
+    Array.from({ length: r.width }, (_, x) => r.rgba[(y * r.width + x) * 4 + 3] ?? 0).some(
+      (a) => a > 0,
+    ),
+  ).lastIndexOf(true);
+
+/** `r` with its rows moved up by `rows`, the rows it leaves at the bottom its ground: a figure drawn higher on its paper. */
+const raised = (r: Raster, rows: number): Raster => {
+  const rgba = new Uint8Array(r.rgba.length);
+  for (let y = 0; y < r.height; y++)
+    rgba.set(
+      r.rgba.subarray(
+        Math.min(r.height - 1, y + rows) * r.width * 4,
+        (Math.min(r.height - 1, y + rows) + 1) * r.width * 4,
+      ),
+      y * r.width * 4,
+    );
+  return { ...r, rgba };
+};
+
+describe('drawPass', () => {
+  it.effect(
+    'draws keys a sheet lacks in a pass of their own: the cells drawn before stand byte for byte, the new ones follow them at the sheet’s size with their soles on the sheet’s soles row, though drawn twice as large and higher on their paper, and a re-split holds every cell',
+    () => {
+      const calls: Array<string> = [];
+      const [sheet, pass] = [sheetOf(2, PAPER), raised(blownUp(sheetOf(1, PAPER), 2), 8)];
+      return Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const cast = yield* castWith(PALETTE);
+        const dir = sheetDir(cast, 'm', 's1');
+        const drawn = yield* drawSheet(cast, 'm', 's1', ['side', 'front'], ['front']);
+        const before = yield* Effect.forEach(drawn.cells, (c) =>
+          fs.readFile(`${dir}/cells/${c.key}.png`),
+        );
+        const module = yield* fs.readFileString(`${dir}/cells.ts`);
+        const record = yield* drawPass(cast, 'm', 's1', ['lift'], ['front']);
+        expect(record.cells.slice(0, 2)).toEqual([...drawn.cells]);
+        expect(record.cells.map((c) => c.key)).toEqual(['side', 'front', 'lift']);
+        for (const [i, c] of drawn.cells.entries())
+          expect(yield* fs.readFile(`${dir}/cells/${c.key}.png`)).toEqual(
+            before[i] ?? Uint8Array.of(),
+          );
+        expect(yield* readRecord(cast, 'm', 's1')).toEqual(record);
+        const [p] = record.passes ?? [];
+        expect(p?.file).toBe('sheet-2.png');
+        expect(p?.keys).toEqual(['lift']);
+        expect(p?.prompt).toBe(calls[1] ?? '');
+        expect(p?.sheet).toBe(sha256Of(yield* fs.readFile(`${dir}/sheet-2.png`)));
+        expect(p?.scale).toBeCloseTo(0.5, 1);
+        const [side, lift] = [
+          yield* readCell(cast, 'm', 's1', 'side'),
+          yield* readCell(cast, 'm', 's1', 'lift'),
+        ];
+        expect(Math.abs(tallOf(lift) - tallOf(side))).toBeLessThanOrEqual(1);
+        expect([lift.height, lowestOf(lift)]).toEqual([side.height, lowestOf(side)]);
+        expect([p?.top, p?.height]).toEqual([4, side.height]);
+        expect(
+          (yield* fs.readFileString(`${dir}/cells.ts`)).startsWith(module.split('\n')[0] ?? ''),
+        ).toBe(true);
+        expect(yield* fs.readFileString(`${dir}/cells.ts`)).toContain("'lift': {");
+        const splits = yield* splitDrawings(cast, record);
+        expect(splits.map((s) => s.drawing.keys)).toEqual([['side', 'front'], ['lift']]);
+        for (const [i, c] of splits.flatMap((s) => s.split.cells).entries())
+          expect(sha256Of(encodePng(c.raster))).toBe(record.cells[i]?.sha256 ?? '');
+        expect(yield* resplitSheet(cast, 'm', 's1')).toEqual(record);
+      }).pipe(Effect.scoped, Effect.provide(routeOfEach([sheet, pass], calls)));
+    },
+  );
+
+  it.effect(
+    'refuses a key the sheet holds already, and a sheet not drawn, without calling the route',
+    () => {
+      const calls: Array<string> = [];
+      return Effect.gen(function* () {
+        const cast = yield* castWith(PALETTE);
+        const none = yield* Effect.flip(drawPass(cast, 'm', 's1', ['lift'], ['front']));
+        expect(none.message).toContain('is not drawn');
+        yield* drawSheet(cast, 'm', 's1', ['side', 'front'], ['front']);
+        const held = yield* Effect.flip(drawPass(cast, 'm', 's1', ['lift', 'front'], ['front']));
+        expect(held.message).toContain('holds front already');
+        expect(calls).toHaveLength(1);
+      }).pipe(Effect.scoped, Effect.provide(routeOfEach([sheetOf(2, PAPER)], calls)));
+    },
+  );
+
+  it.effect('refuses a re-split whose pass drawing is not the one its record names', () => {
+    const calls: Array<string> = [];
+    return Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const cast = yield* castWith(PALETTE);
+      yield* drawSheet(cast, 'm', 's1', ['side', 'front'], ['front']);
+      yield* drawPass(cast, 'm', 's1', ['lift'], ['front']);
+      yield* fs.writeFile(`${sheetDir(cast, 'm', 's1')}/sheet-2.png`, encodePng(sheetOf(1, PAPER)));
+      const refused = yield* Effect.flip(resplitSheet(cast, 'm', 's1'));
+      expect(refused.message).toContain('sheet-2.png is not the one its record names');
+    }).pipe(
+      Effect.scoped,
+      Effect.provide(routeOfEach([sheetOf(2, PAPER), blownUp(sheetOf(1, PAPER), 2)], calls)),
+    );
   });
 });
 

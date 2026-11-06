@@ -12,7 +12,7 @@ import {
   StorybookFailed,
   storybookPage,
 } from '../render.ts';
-import { type Box, rgbOfHex, shareOf, splitSheet } from '../sheet.ts';
+import { type Box, rgbOfHex, shareOf } from '../sheet.ts';
 import {
   dressed,
   dressedPaints,
@@ -30,8 +30,7 @@ import {
   drawnCellOf,
   sha256,
   sheetDir,
-  sheetPalette,
-  splitRulesOf,
+  splitDrawings,
   type StoredFigure,
 } from '../store.ts';
 import { BARS, type CheckId } from './bars.ts';
@@ -283,7 +282,7 @@ const litMedians = (
   );
 };
 
-/** Whether a figure draws only cells of its one sheet, and its stored cells are that sheet's split, byte for byte; answers what is wrong, none when nothing is. */
+/** Whether a figure draws only cells of its one sheet, and its stored cells are that sheet's drawings' split (`splitDrawings`: `sheet.png` and each later pass), byte for byte; answers what is wrong, none when nothing is. */
 const sheetFault = Effect.fn('StorybookVerify.sheetFault')(function* (
   f: StoredFigure,
   used: ReadonlySet<string>,
@@ -294,20 +293,18 @@ const sheetFault = Effect.fn('StorybookVerify.sheetFault')(function* (
   const keys = f.record.cells.map((c) => c.key);
   const stray = [...used].find((k) => !keys.includes(k));
   if (stray) return Option.some(`${f.figure.name} draws ${stray}, not a cell of its sheet`);
-  const bytes = yield* fs.readFile(`${dir}/sheet.png`);
-  if ((yield* sha256(bytes)) !== f.record.sheet)
-    return Option.some(`${f.figure.name}'s sheet.png is not the one its record names`);
-  const split = splitSheet(
-    yield* decoded(bytes, `${dir}/sheet.png`),
-    keys.length,
-    yield* sheetPalette(cast, f.record),
-    splitRulesOf(f.record),
-  );
-  if (Result.isFailure(split)) return Option.some(`${f.figure.name}: ${split.failure.reason}`);
+  const splits = yield* Effect.result(splitDrawings(cast, f.record));
+  if (Result.isFailure(splits)) return Option.some(`${f.figure.name}: ${splits.failure.message}`);
+  const cells = splits.success.flatMap((s) => s.split.cells);
+  const order = splits.success.flatMap((s) => s.drawing.keys);
+  if (order.join() !== keys.join())
+    return Option.some(
+      `${f.figure.name}'s drawings hold ${order.join()}, its record ${keys.join()}`,
+    );
   for (const [i, c] of f.record.cells.entries()) {
     const stored = yield* sha256(yield* fs.readFile(`${dir}/cells/${c.key}.png`));
     const fault = Option.some(`${f.figure.name}'s ${c.key} does not re-split byte for byte`);
-    const again = Option.fromUndefinedOr(split.success.cells[i]);
+    const again = Option.fromUndefinedOr(cells[i]);
     if (Option.isNone(again)) return fault;
     const { box, raster } = again.value;
     if (

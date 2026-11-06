@@ -490,6 +490,16 @@ bun run storybook verify <shot> [--quick] [--out <dir>]
   a shot shows only its eyes (below).
   When the split changes, `resplit` cuts a stored sheet again and rewrites
   its cells and its record's cells; the drawing, prompt and refs stand.
+  Keys a kept sheet lacks are drawn in a **later pass** of their own, so its
+  cells stand byte for byte: a film's sheet declaration names them at the
+  end of its `keys` and in `passes` (each pass's keys and refs, the sheet
+  itself first, as `../../shot-sheets/<id>/sheet`), and `draw --film` on a
+  sheet drawn already draws each declared pass its record lacks. The pass's
+  drawing is kept as `sheet-<n>.png` and recorded in the record's `passes`
+  (its prompt, refs, sha256, the `scale` that brings its median head to the
+  sheet's, and the `top` and `height` that stand its soles on the sheet's
+  soles row); its cells follow the sheet's. `resplit` and the verify's
+  one-sheet bar split every drawing so.
 - **The split** (`sheet.ts`) clears the ground joined to the border, cuts the
   sheet at the lowest-occupancy columns, keeps each cell's largest piece,
   mends each pocket by its rim (ground inside a ring of only ink, or of ink

@@ -2,7 +2,7 @@ import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { ImageRoute } from '@manna/film/tools';
-import { Clock, Console, Effect, FileSystem, Layer, Option, Schema } from 'effect';
+import { Clock, Console, Effect, FileSystem, Layer, Option, Result, Schema } from 'effect';
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -15,11 +15,13 @@ import { feastCourtyard } from './shots/feast-courtyard.ts';
 import {
   CAST,
   type Cast,
+  drawPass,
   drawSheet,
   headsOf,
   keepSheet,
   LIBRARY_WORDS,
   loadFigures,
+  readRecord,
   resplitSheet,
   type SheetWords,
   sharesOf,
@@ -274,10 +276,13 @@ const drawAsk = Effect.fn('Storybook.drawAsk')(function* (
       () =>
         StorybookFailed.make({ reason: `${film.value} declares no sheet ${member}/${sheetId}` }),
     );
+    const passes = decl.passes ?? [];
+    const later = new Set(passes.flatMap((p) => p.keys));
     return {
       cast: yield* filmCast(story),
-      keys: decl.keys,
+      keys: decl.keys.filter((k) => !later.has(k)),
       refs: decl.refs,
+      passes,
       words: {
         poses: new Map(Object.entries(decl.poses)),
         rules: decl.rules,
@@ -289,8 +294,37 @@ const drawAsk = Effect.fn('Storybook.drawAsk')(function* (
     cast: CAST,
     keys: listOf(Option.getOrElse(keys, () => '')),
     refs: listOf(Option.getOrElse(refs, () => '')),
+    passes: [],
     words: LIBRARY_WORDS,
   };
+});
+
+/**
+ * A declared sheet drawn: the sheet itself when no record is, then each
+ * declared pass its record lacks (`drawPass`); a sheet drawn already with
+ * no pass left to draw is refused as `drawSheet` refuses it.
+ */
+const drawDeclared = Effect.fn('Storybook.drawDeclared')(function* (
+  member: string,
+  sheetId: string,
+  ask: Effect.Success<ReturnType<typeof drawAsk>>,
+) {
+  const held = yield* Effect.result(readRecord(ask.cast, member, sheetId));
+  const keys = new Set(
+    Result.match(held, { onFailure: () => [], onSuccess: (r) => r.cells.map((c) => c.key) }),
+  );
+  const due = ask.passes.filter((p) => p.keys.every((k) => !keys.has(k)));
+  let record = yield* Result.match(held, {
+    onFailure: () => drawSheet(ask.cast, member, sheetId, ask.keys, ask.refs, ask.words),
+    onSuccess: (stored) => {
+      if (due.length === 0)
+        return drawSheet(ask.cast, member, sheetId, ask.keys, ask.refs, ask.words);
+      return Effect.succeed(stored);
+    },
+  });
+  for (const p of due)
+    record = yield* drawPass(ask.cast, member, sheetId, p.keys, p.refs, ask.words);
+  return record;
 });
 
 const drawCommand = Command.make(
@@ -315,7 +349,7 @@ const drawCommand = Command.make(
   ({ member, sheetId, keys, refs, film }) =>
     Effect.gen(function* () {
       const ask = yield* drawAsk(film, member, sheetId, keys, refs);
-      const record = yield* drawSheet(ask.cast, member, sheetId, ask.keys, ask.refs, ask.words);
+      const record = yield* drawDeclared(member, sheetId, ask);
       yield* Console.log(
         `drew ${member}/shot-sheets/${sheetId}: ${record.cells.map((c) => c.key).join(', ')} on ground ${record.ground}`,
       );

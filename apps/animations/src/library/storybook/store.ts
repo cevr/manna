@@ -12,6 +12,7 @@ import {
   hexOf,
   type Lines,
   linesOf,
+  medianOf,
   type Paint,
   type Palette,
   PaletteJson,
@@ -56,13 +57,37 @@ const BoxJson = Schema.Struct({
   height: Schema.Finite,
 });
 
+const RefJson = Schema.Struct({ file: Schema.String, sha256: Schema.String });
+
+/** A later pass of a sheet: keys its record lacked, drawn in one `okra image` pass of their own after the sheet, so its cells stand byte for byte. Its drawing, `file` beside `sheet.png`, is resized by `scale` before its split, so its figures stand at the sheet's own size; its cells follow the sheet's in the record's `cells`. */
+export const SheetPass = Schema.Struct({
+  /** Its drawing as drawn, `sheet-<n>.png` beside `sheet.png`. */
+  file: Schema.String,
+  keys: Schema.Array(Name),
+  prompt: Schema.String,
+  refs: Schema.Array(RefJson),
+  /** The sha256 of `file`, as drawn. */
+  sheet: Schema.String,
+  size: Schema.String,
+  ground: Schema.String,
+  drawn: Schema.String,
+  /** The factor its drawing is resized by before its split: the sheet's head over the pass's own, as drawn. */
+  scale: Schema.Finite,
+  /** Rows of its ground laid above the resized drawing (fewer than 0 cut from its top), so its figures' soles stand on the sheet's soles row. */
+  top: Schema.Int,
+  /** The resized drawing's height once framed: the sheet's own, so every cell's rows are the sheet's rows. */
+  height: Schema.Int,
+});
+
+export type SheetPass = typeof SheetPass.Type;
+
 /** A shot sheet's record, `cast/<member>/shot-sheets/<id>/record.json`: what was asked, from which refs, what came back, and each cell. */
 export const SheetRecord = Schema.Struct({
   member: Name,
   id: Name,
   prompt: Schema.String,
   /** Each reference image, relative to the member's folder, and its sha256 when drawn. */
-  refs: Schema.Array(Schema.Struct({ file: Schema.String, sha256: Schema.String })),
+  refs: Schema.Array(RefJson),
   /** The sha256 of `sheet.png`, as drawn. */
   sheet: Schema.String,
   size: Schema.String,
@@ -75,6 +100,8 @@ export const SheetRecord = Schema.Struct({
   rules: Schema.optionalKey(Schema.Array(Schema.Literals(SPLIT_RULES))),
   /** Paints this sheet alone adds to its member's palette (a prop the sheet draws, as the lead's bottle on `iio-table`): appended after the member's parts, so every other sheet of the member splits as it did. */
   props: Schema.optionalKey(Schema.Array(PalettePart)),
+  /** Its later passes, in the order drawn (`drawPass`): absent on a sheet drawn in one. */
+  passes: Schema.optionalKey(Schema.Array(SheetPass)),
   /** The owner's keep: absent until he keeps the sheet. */
   kept: Schema.optionalKey(
     Schema.Struct({ date: Schema.String, why: Schema.String, ask: Schema.String }),
@@ -507,16 +534,15 @@ const propsOf = (props: ReadonlyArray<PalettePart>): Pick<SheetRecord, 'props'> 
     },
   );
 
-/** A split's cells stored as `<dir>/cells/<key>.png`, the keys in the cells' order, and the sheet's cells module (`cellsModuleOf`): each key, its box and its PNG's sha256. */
-const storeCells = Effect.fn('Storybook.storeCells')(function* (
+/** A split's cells written as `<dir>/cells/<key>.png`, the keys in the cells' order: each key, its box and its PNG's sha256. */
+const writeCells = Effect.fn('Storybook.writeCells')(function* (
   dir: string,
   keys: ReadonlyArray<string>,
-  split: Split,
-  paints: ReadonlyArray<Paint>,
+  cells: ReadonlyArray<Split['cells'][number]>,
 ) {
   const fs = yield* FileSystem.FileSystem;
   yield* fs.makeDirectory(`${dir}/cells`, { recursive: true });
-  const stored = yield* Effect.forEach(split.cells, (cell, i) =>
+  return yield* Effect.forEach(cells, (cell, i) =>
     Effect.gen(function* () {
       const key = keys[i] ?? `cell-${i}`;
       const png = encodePng(cell.raster);
@@ -528,11 +554,271 @@ const storeCells = Effect.fn('Storybook.storeCells')(function* (
       return { key, box: cell.box, sha256: yield* sha256(png) };
     }),
   );
+});
+
+/** A split's cells stored as `<dir>/cells/<key>.png`, the keys in the cells' order, and the sheet's cells module (`cellsModuleOf`): each key, its box and its PNG's sha256. */
+const storeCells = Effect.fn('Storybook.storeCells')(function* (
+  dir: string,
+  keys: ReadonlyArray<string>,
+  split: Pick<Split, 'cells'>,
+  paints: ReadonlyArray<Paint>,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const stored = yield* writeCells(dir, keys, split.cells);
   yield* fs.writeFileString(
     `${dir}/cells.ts`,
     cellsModuleOf(split.cells.map((c, i) => cellEntryOf(keys[i] ?? `cell-${i}`, c.raster, paints))),
   );
   return stored;
+});
+
+/** Where a resized pass drawing is laid in the sheet's rows: `top` rows of its ground above it (fewer than 0 cut), `height` rows in all. */
+export interface Frame {
+  readonly top: number;
+  readonly height: number;
+}
+
+/** One drawing of a sheet: `sheet.png` or a later pass's, its sha256 as recorded, the keys it holds, the factor it is resized by before its split and the frame it is laid in after (none for `sheet.png`). */
+export interface Drawing {
+  readonly file: string;
+  readonly sheet: string;
+  readonly keys: ReadonlyArray<string>;
+  readonly scale: number;
+  readonly frame: Option.Option<Frame>;
+}
+
+/** Each drawing a record's cells are split from, in the cells' order: `sheet.png` for every key no pass draws, then each pass. */
+export const drawingsOf = (record: SheetRecord): ReadonlyArray<Drawing> => {
+  const passes = record.passes ?? [];
+  const later = new Set(passes.flatMap((p) => p.keys));
+  return [
+    {
+      file: 'sheet.png',
+      sheet: record.sheet,
+      keys: record.cells.map((c) => c.key).filter((k) => !later.has(k)),
+      scale: 1,
+      frame: Option.none(),
+    },
+    ...passes.map((p) => ({
+      file: p.file,
+      sheet: p.sheet,
+      keys: p.keys,
+      scale: p.scale,
+      frame: Option.some({ top: p.top, height: p.height }),
+    })),
+  ];
+};
+
+/** `raster` laid in `frame`: each row y the raster's row y − top, the rows it lacks filled with its ground (`groundOf`). */
+export const framed = (raster: Raster, frame: Frame): Raster => {
+  const ground = groundOf(raster);
+  const { width } = raster;
+  const rgba = new Uint8Array(width * frame.height * 4);
+  for (let y = 0; y < frame.height; y++) {
+    const from = y - frame.top;
+    if (from >= 0 && from < raster.height) {
+      rgba.set(raster.rgba.subarray(from * width * 4, (from + 1) * width * 4), y * width * 4);
+      continue;
+    }
+    for (let x = 0; x < width; x++) rgba.set([...ground, 255], (y * width + x) * 4);
+  }
+  return { width, height: frame.height, rgba };
+};
+
+/** A drawing's raster resized by its scale and laid in its frame, as its split reads it. */
+const preparedOf = (raster: Raster, drawing: Pick<Drawing, 'scale' | 'frame'>, file: string) =>
+  Effect.map(scaledBy(raster, drawing.scale, file), (scaled) =>
+    Option.match(drawing.frame, { onNone: () => scaled, onSome: (f) => framed(scaled, f) }),
+  );
+
+/** `raster` resized by `scale` (bilinear, by libvips), itself when `scale` is 1. */
+const scaledBy = (raster: Raster, scale: number, file: string) => {
+  if (scale === 1) return Effect.succeed(raster);
+  return Effect.tryPromise({
+    try: () =>
+      sharp(raster.rgba, { raw: { width: raster.width, height: raster.height, channels: 4 } })
+        .resize(Math.round(raster.width * scale), Math.round(raster.height * scale), {
+          kernel: 'linear',
+          fit: 'fill',
+        })
+        .raw({ depth: 'uchar' })
+        .toBuffer({ resolveWithObject: true }),
+    catch: (e) => StoreFailed.make({ reason: `${file}: ${String(e)}` }),
+  }).pipe(
+    Effect.map(({ data, info }): Raster => ({
+      width: info.width,
+      height: info.height,
+      rgba: new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
+    })),
+  );
+};
+
+/** One drawing of a stored sheet split as its record names it: its bytes held to their recorded sha256, resized by its scale and cut into one cell per key under the record's rules. */
+const splitDrawing = Effect.fn('Storybook.splitDrawing')(function* (
+  dir: string,
+  drawing: Drawing,
+  palette: Palette,
+  rules: SplitRules,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const file = `${dir}/${drawing.file}`;
+  const bytes = yield* fs.readFile(file);
+  if ((yield* sha256(bytes)) !== drawing.sheet)
+    return yield* StoreFailed.make({
+      reason: `${file} is not the one its record names`,
+    });
+  const raster = yield* preparedOf(yield* pngOf(bytes, file), drawing, file);
+  return yield* Effect.fromResult(splitSheet(raster, drawing.keys.length, palette, rules)).pipe(
+    Effect.mapError((e) => StoreFailed.make({ reason: `${file}: ${e.reason}` })),
+  );
+});
+
+/** Every drawing of a stored sheet split as its record names it (`splitDrawing`), in the cells' order. */
+export const splitDrawings = Effect.fn('Storybook.splitDrawings')(function* (
+  cast: Cast,
+  record: SheetRecord,
+) {
+  const dir = sheetDir(cast, record.member, record.id);
+  const palette = yield* sheetPalette(cast, record);
+  const rules = splitRulesOf(record);
+  return yield* Effect.forEach(drawingsOf(record), (drawing) =>
+    Effect.map(splitDrawing(dir, drawing, palette, rules), (split) => ({ drawing, split })),
+  );
+});
+
+/** A figure's size on its cells, as a pass is matched to its sheet by: the median head over the cells that read one, when both sides read one; else the median crown-to-soles. */
+const sizesOf = (
+  sheet: ReadonlyArray<Raster>,
+  pass: ReadonlyArray<Raster>,
+  paints: ReadonlyArray<Paint>,
+): Option.Option<readonly [number, number]> => {
+  const lines = (cells: ReadonlyArray<Raster>) =>
+    cells.flatMap((c) => Option.toArray(linesOf(c, paints)));
+  const [a, b] = [lines(sheet), lines(pass)];
+  const heads = (ls: ReadonlyArray<Lines>) => ls.flatMap((l) => Option.toArray(l.head));
+  const tall = (ls: ReadonlyArray<Lines>) => ls.map((l) => l.bottom - l.top + 1);
+  const byHead = Option.all([medianOf(heads(a)), medianOf(heads(b))]);
+  if (Option.isSome(byHead)) return byHead;
+  return Option.all([medianOf(tall(a)), medianOf(tall(b))]);
+};
+
+/**
+ * A later pass of a drawn sheet: `keys` its record lacks, drawn in one
+ * `okra image` pass through `ImageRoute` with `refs` (named as `drawSheet`
+ * names them) and the sheet's own palette, checked as `drawSheet` checks a
+ * sheet, resized so its figures' size (`sizesOf`) is the sheet's, and split
+ * under the sheet's rules. Its drawing is stored as `sheet-<n>.png`, its
+ * cells appended to the record's and the cells module; every cell drawn
+ * before is left byte for byte. Refuses a sheet not drawn, a key it holds
+ * or no pose is written for, and a draw `checkDrawn` refuses.
+ */
+export const drawPass = Effect.fn('Storybook.drawPass')(function* (
+  cast: Cast,
+  member: string,
+  id: string,
+  keys: ReadonlyArray<string>,
+  refs: ReadonlyArray<string>,
+  words: SheetWords = LIBRARY_WORDS,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const route = yield* ImageRoute;
+  const dir = sheetDir(cast, member, id);
+  if (!(yield* fs.exists(`${dir}/record.json`)))
+    return yield* DrawRefused.make({ reason: `${member}'s sheet ${id} is not drawn` });
+  const record = yield* readRecord(cast, member, id);
+  const held = Option.fromUndefinedOr(keys.find((k) => record.cells.some((c) => c.key === k)));
+  if (Option.isSome(held))
+    return yield* DrawRefused.make({
+      reason: `${member}'s sheet ${id} holds ${held.value} already`,
+    });
+  const unknown = unknownKey(keys, words.poses);
+  if (Option.isSome(unknown))
+    return yield* DrawRefused.make({
+      reason: `no pose is written for key ${unknown.value} (${[...words.poses.keys()].join(', ')})`,
+    });
+  const palette = yield* sheetPalette(cast, record);
+  const paints = paintsOf(palette);
+  const ground = groundFor(palette);
+  if (Option.isNone(ground))
+    return yield* DrawRefused.make({
+      reason: `no ground lies apart from every paint of ${member}`,
+    });
+  const look = yield* fs.readFileString(`${cast.dirOf(member)}/cast-sheet/look.md`);
+  const refFiles = refs.map((view) => `cast-sheet/views/${view}.png`);
+  const refShas = yield* Effect.forEach(refFiles, (file) =>
+    fs.readFile(`${cast.dirOf(member)}/${file}`).pipe(
+      Effect.flatMap(sha256),
+      Effect.map((hash) => ({ file, sha256: hash })),
+    ),
+  );
+  const prompt = promptOf(look, keys, palette, ground.value, words);
+  const scratch = yield* fs.makeTempDirectory({ prefix: `storybook-${member}-${id}-pass-` });
+  const out = `${scratch}/sheet.png`;
+  yield* route.draw({
+    prompt,
+    refs: refFiles.map((file) => `${cast.dirOf(member)}/${file}`),
+    size: SHEET_SIZE,
+    out,
+  });
+  const bytes = yield* fs.readFile(out);
+  const drawn = yield* pngOf(bytes, out);
+  const first = yield* checkDrawn(drawn, keys, palette).pipe(
+    Effect.mapError((e) => DrawRefused.make({ reason: `${e.reason}; the draw is at ${out}` })),
+  );
+  const before = yield* Effect.forEach(record.cells, (c) => readCell(cast, member, id, c.key));
+  const sizes = sizesOf(
+    before,
+    first.cells.map((c) => c.raster),
+    paints,
+  );
+  if (Option.isNone(sizes))
+    return yield* DrawRefused.make({
+      reason: `no figure's size reads on the sheet or the pass; the draw is at ${out}`,
+    });
+  const scale = sizes.value[0] / sizes.value[1];
+  const splitOf = (raster: Raster) =>
+    Effect.fromResult(splitSheet(raster, keys.length, palette, splitRulesOf(record))).pipe(
+      Effect.mapError((e) => DrawRefused.make({ reason: `${e.reason}; the draw is at ${out}` })),
+    );
+  const scaled = yield* scaledBy(drawn, scale, out);
+  const solesOf = (cells: ReadonlyArray<Raster>) =>
+    medianOf(cells.map((c, i) => cellEntryOf(`${i}`, c, paints).ay));
+  const soles = Option.all([
+    solesOf(before),
+    solesOf((yield* splitOf(scaled)).cells.map((c) => c.raster)),
+  ]);
+  const frame: Frame = {
+    top: Option.match(soles, { onNone: () => 0, onSome: ([a, b]) => Math.round(a - b) }),
+    height: Math.max(...before.map((c) => c.height)),
+  };
+  const split = yield* splitOf(framed(scaled, frame));
+  const file = `sheet-${(record.passes ?? []).length + 2}.png`;
+  yield* fs.writeFile(`${dir}/${file}`, bytes);
+  const pass: SheetPass = {
+    file,
+    keys,
+    prompt,
+    refs: refShas,
+    sheet: yield* sha256(bytes),
+    size: SHEET_SIZE,
+    ground: hexOf(split.ground),
+    drawn: yield* today,
+    scale,
+    ...frame,
+  };
+  const added = yield* writeCells(dir, keys, split.cells);
+  const entries = [
+    ...record.cells.map((c, i) => cellEntryOf(c.key, before[i] ?? drawn, paints)),
+    ...split.cells.map((c, i) => cellEntryOf(keys[i] ?? `cell-${i}`, c.raster, paints)),
+  ];
+  yield* fs.writeFileString(`${dir}/cells.ts`, cellsModuleOf(entries));
+  const again: SheetRecord = {
+    ...record,
+    cells: [...record.cells, ...added],
+    passes: [...(record.passes ?? []), pass],
+  };
+  yield* writeRecord(dir, again);
+  return again;
 });
 
 /** One cell as a film draws it: its key, its size in px, its soles' centre (`anchorOf`) and its head (crown to collar) in px where its lines read one. */
@@ -644,43 +930,49 @@ const writeRecord = Effect.fn('Storybook.writeRecord')(function* (
 });
 
 /**
- * A drawn sheet split again: its stored `sheet.png` split with the member's
- * palette as `storybook split` splits it now, each `cells/<key>.png` and the
- * record's ground and cells rewritten; the prompt, refs, sheet hash, day
- * drawn and keep stand, since the drawing is the same. Refuses a
- * `sheet.png` that is not the one its record names.
+ * A drawn sheet split again: its stored `sheet.png` and each later pass's
+ * drawing split with the member's palette as `storybook split` splits it
+ * now (`splitDrawings`), each `cells/<key>.png` and the record's grounds and
+ * cells rewritten; the prompts, refs, sheet hashes, days drawn and keep
+ * stand, since the drawings are the same. Refuses a drawing that is not the
+ * one its record names.
  */
 export const resplitSheet = Effect.fn('Storybook.resplitSheet')(function* (
   cast: Cast,
   member: string,
   id: string,
 ) {
-  const fs = yield* FileSystem.FileSystem;
   const dir = sheetDir(cast, member, id);
   const record = yield* readRecord(cast, member, id);
-  const bytes = yield* fs.readFile(`${dir}/sheet.png`);
-  if ((yield* sha256(bytes)) !== record.sheet)
-    return yield* StoreFailed.make({
-      reason: `${member}'s sheet ${id}: sheet.png is not the one its record names`,
-    });
   const palette = yield* sheetPalette(cast, record);
-  const split = yield* Effect.fromResult(
-    splitSheet(
-      yield* pngOf(bytes, `${dir}/sheet.png`),
-      record.cells.length,
-      palette,
-      splitRulesOf(record),
-    ),
+  const splits = yield* splitDrawings(cast, record);
+  const [base, ...passes] = splits;
+  const cells = yield* storeCells(
+    dir,
+    splits.flatMap((s) => s.drawing.keys),
+    { cells: splits.flatMap((s) => s.split.cells) },
+    paintsOf(palette),
   );
+  const grounds = Option.match(Option.fromUndefinedOr(record.passes), {
+    onNone: () => ({}),
+    onSome: (ps) => ({
+      passes: ps.map((p, i) => ({
+        ...p,
+        ground: Option.match(Option.fromUndefinedOr(passes[i]), {
+          onNone: () => p.ground,
+          onSome: (s) => hexOf(s.split.ground),
+        }),
+      })),
+    }),
+  });
   const again: SheetRecord = {
     ...record,
-    ground: hexOf(split.ground),
-    cells: yield* storeCells(
-      dir,
-      record.cells.map((c) => c.key),
-      split,
-      paintsOf(palette),
-    ),
+    ground: Option.match(Option.fromUndefinedOr(base), {
+      onNone: () => record.ground,
+      onSome: (s) => hexOf(s.split.ground),
+    }),
+    cells,
+    ...grounds,
   };
   yield* writeRecord(dir, again);
   return again;

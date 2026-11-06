@@ -431,6 +431,11 @@ export interface SheetDecl {
   readonly refs: ReadonlyArray<string>;
   readonly rules: ReadonlyArray<string>;
   readonly props?: ReadonlyArray<PalettePart>;
+  /** Keys at the end of `keys` drawn in a later pass of their own (`drawPass`), each pass with its own refs, so the cells drawn before stand byte for byte. */
+  readonly passes?: ReadonlyArray<{
+    readonly keys: ReadonlyArray<string>;
+    readonly refs: ReadonlyArray<string>;
+  }>;
 }
 
 /** A film drawn in storybook shots: its name, its frame grid, its scenes as the film lays them out, its storybook scenes, its narration's timings file, its sheets declared and drawn. */
