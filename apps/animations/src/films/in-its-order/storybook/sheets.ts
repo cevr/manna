@@ -32,6 +32,16 @@ const BOTTLE_PROPS = [{ name: 'bottle', base: '#fcebb4', role: 'prop' }] as cons
 const BOTTLE =
   "a small plain baby's bottle painted exactly butter cream #f3e3a0, flat in that one colour, with a short rounded teat painted exactly tan #b98a5e";
 
+/** The letter he reads at the table, as every key that holds it names it: a reading size, its parchment the bottle's butter cream and its rollers a brown of his own palette (asked as his hair's, split to his sandals'), so it adds no paint to his table sheet (whose six cells re-split as they are); blank, as the film's props are. */
+const SCROLL =
+  'a small plain open scroll about as tall as his head: one sheet of parchment painted exactly butter cream #f3e3a0, flat in that one colour and blank, with no writing, letters, lines, seal or marks on it, between two short round wooden rollers painted exactly dark brown #6c432b, one at its top and one at its bottom';
+
+/** His table sheet, as a reference of its own later pass and of his close: its first figure is the man the pass draws, its fifth the man the shot before the card leaves on screen (a path from his views folder, since a reference is named from there). */
+const TABLE_SHEET_REF = '../../shot-sheets/iio-table/sheet';
+
+/** The lead reading the letter with the bottle at his mouth (owner, scrawl 0:21: "he holds it with one hand and the bottle in the other and he looks at the scroll while drinking from the milk"): the bottle tipped to the corner of his mouth, as the villagers' baby drinks, so the face's middle and the collar read; the scroll held beside the chest, clear of the sash and below the chin; his head turned a quarter to it, as a guest's stare turns, the eyes open, so a blink pastes on them (two passes that asked the eyes down drew them to the viewer); the sash asked lighter than the tunic by name (a third pass drew them one cream, so the split read no sash). */
+const TABLE_READ = `the same man as the first reference image's figures, at the same size, seated on the low stool, his body facing the viewer; the left hand (on the viewer's right) raised in its sleeve holding ${BOTTLE} tipped up, its teat at the corner of his mouth at the picture's right, drinking, the middle of the face, the chin and the neck clear of the bottle; the right hand (on the viewer's left) raised in its sleeve before the chest at the picture's left holding ${SCROLL}, held up by its top roller and hanging open below the hand, its top below the chin, clear of the sash and its knot; his head a quarter turned toward the viewer's left, to the scroll, reading it: the eyes, nose and mouth shifted well toward the picture's left of the face, the ear on the picture's right showing and the one on the left hidden behind the cheek, the eyes two small dark ovals, open, set low and to the picture's left in the eye line, looking down at the scroll, never at the viewer; the sash and its knot exactly as the first reference image's figures draw them, the sash's pale cool cream #eadcc2 plainly lighter than the tunic's warm cream #f2d8b7 round it, outlined in the ink`;
+
 /** The small clay cup, in the member's footwear brown, milk in its pale paint inside. */
 const cup = (clay: string, milk: string): string =>
   `a small plain clay cup painted exactly ${clay}, milk ${milk} showing at its rim`;
@@ -61,11 +71,11 @@ const TABLE_SASH =
 const TABLE_HEAD =
   "Every figure's head is drawn exactly as in the front reference image and as in the first figure, at the same size: the hair his warm brown #6c432b, its plum shade #57384a only in the small undersides of a few curls, no flecks of it at the hairline, jaw or collar; the ears and the neck his skin #f2b27c; the round hands his skin #f2b27c, never cream. Only the eyes, the mouth and the held arm change from figure to figure.";
 
-/** The lead at the feast table (shots 2, 3 and the title): seated, the bottle up, then set down on the table (a plate), his eyes on it. */
+/** The lead at the feast table (cold-table, cold-letter and the title): seated, the bottle up, then reading the letter with the bottle at his mouth; `down`, his eyes lowered with his hands empty, is the pose his close is drawn to. `read` and its blink are a later pass, drawn from the sheet itself, so the six keys drawn first stand byte for byte. */
 const leadTable: SheetDecl = {
   member: 'lead-feast',
   id: 'iio-table',
-  keys: ['front', 'frontBlink', 'lift', 'bottle', 'down', 'downBlink'],
+  keys: ['front', 'frontBlink', 'lift', 'bottle', 'down', 'downBlink', 'read', 'readBlink'],
   poses: {
     front:
       'seated on the low stool facing the viewer square, both round hands resting on the knees in their sleeves, head and eyes to the viewer, a calm short smile line',
@@ -74,14 +84,14 @@ const leadTable: SheetDecl = {
     bottle: `seated on the stool exactly as in the first figure, the left hand (on the viewer's right) raised in its sleeve beside the head holding up ${BOTTLE}, hopeful, eyes to the viewer, the other hand on the knee`,
     down: TABLE_DOWN,
     downBlink: `seated ${blink('fifth')}`,
+    read: TABLE_READ,
+    readBlink: `seated ${blink('first')}, the bottle and the scroll held the same`,
   },
   refs: ['front', 'threeQuarterRight', 'poses-1'],
   rules: [...seated('#7a5236'), TABLE_SASH, TABLE_HEAD],
   props: BOTTLE_PROPS,
+  passes: [{ keys: ['read', 'readBlink'], refs: [TABLE_SHEET_REF, 'front'] }],
 };
-
-/** His table sheet, as a reference of his close: its fifth figure is the man the shot before the card leaves on screen (a path from his views folder, since a reference is named from there). */
-const TABLE_SHEET_REF = '../../shot-sheets/iio-table/sheet';
 
 /** What the lead's close asks of his head and dress beyond `seated` (critique 2, finding 1: a close drawn from his front reference opened his eyes, clumped plum in his fringe, lengthened his face, widened his sash and drew lavender sickles on his robe): the man his table sheet's fifth figure draws, only larger. */
 const CLOSE_AS_TABLE =

@@ -114,9 +114,9 @@ const headPartsOf = (
   return new Map([...counts].map(([group, n]) => [group, n / Math.max(1, opaque)]));
 };
 
-/** The cells of each sheet with props that hold its prop: the lead's bottle in `lift` and `bottle`, his close's sash light in every cell, the older diner's open mouth in `talk`. */
+/** The cells of each sheet with props that hold its prop: the lead's bottle in `lift`, `bottle` and `read` and its blink (where the letter's parchment is the bottle's cream too), his close's sash light in every cell, the older diner's open mouth in `talk`. */
 const PROP_CELLS: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
-  ['lead-feast/iio-table', ['lift', 'bottle']],
+  ['lead-feast/iio-table', ['lift', 'bottle', 'read', 'readBlink']],
   ['lead-feast/iio-close', ['down', 'downBlink', 'wince']],
   ['filler-dressed/iio-diner-3', ['talk']],
 ]);
