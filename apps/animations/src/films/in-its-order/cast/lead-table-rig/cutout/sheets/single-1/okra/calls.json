@@ -1,0 +1,20 @@
+{
+  "calls": [
+    {
+      "n": 1,
+      "command": [
+        "okra",
+        "image",
+        "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where four pieces were cut away to make a cut-out puppet of this young man seated on a wooden stool: his head (his hair, face and ears), his raised left arm on the viewer's right (its teal-blue sleeve, its round hand and the baby bottle it holds up), his hanging right arm on the viewer's left (its cream sleeve and the round hand resting on his knee), and the hanging end of his cream sash below the knot. Repaint ONLY the magenta areas, as what lies underneath those pieces. Behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline, in exactly the same skin colour and soft shading as his neck below. Under each arm: the side of his body from the shoulder and armpit down to the sash and his lap, closed by the same thick dark outline, in exactly the same colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle over his left shoulder on the viewer's right side), and his lap running on under where his hand rested. Under the sash's hanging end: the teal-blue mantle and the cream tunic of his lap running on exactly as they do on each side of it, the lap's dark outline running straight on across. There is no head, no arms, no bottle and no hanging sash end now: nothing magenta left. Where the magenta lay outside his body, beside his neck, his shoulders and his arms, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same size, position and framing, and every part that is not magenta unchanged.",
+        "--size",
+        "1024x1536",
+        "--ref",
+        "okra/input-3508f691bdba.png",
+        "-o",
+        "okra/answer-1.png"
+      ],
+      "input": "okra/input-3508f691bdba.png",
+      "out": "okra/answer-1.png"
+    }
+  ]
+}
