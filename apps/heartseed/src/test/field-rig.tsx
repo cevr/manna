@@ -22,7 +22,7 @@
 
 import { RegistryProvider } from '@effect/atom-react';
 import { expect } from 'bun:test';
-import { Effect, Layer } from 'effect';
+import { Effect, Layer, Logger } from 'effect';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
@@ -32,8 +32,10 @@ import { appLayer, runtime } from '../app';
 import { recite, scriptedSource } from '../dictation/script';
 import { Chime } from '../garden';
 import { Haptics, type Recall } from '../sayit';
+import { MINUTES_KEY } from '../session/service';
 import { store } from '../store';
 import { voiceSource } from '../voice/source';
+import { clockOf, toDue, type Time } from './clock';
 import { AA, contrastOf } from './contrast';
 import { fieldRule, heldOn, verseNumberRule, type ModelPlantStage } from './field-model';
 import { keyOf, PREFIX } from './garden-model';
@@ -176,7 +178,11 @@ export const wantField = () => {
  * `held` resolves); `read` is whether this launch's read completes. Every
  * frame is held to the field's rules; the faults found are kept.
  */
-export const mount = async (read: boolean, held: Promise<void> = Promise.resolve()) => {
+export const mount = async (
+  read: boolean,
+  held: Promise<void> = Promise.resolve(),
+  time: Time = { now: null },
+) => {
   const layer = appLayer({
     source: scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 3 })),
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
@@ -188,11 +194,12 @@ export const mount = async (read: boolean, held: Promise<void> = Promise.resolve
     ),
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice: voiceSource,
-  });
+  }).pipe(Layer.provide(Layer.merge(clockOf(time), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);
   const faults: string[] = [];
   const fixed = new Map(device.disk);
+  const taps = { minutes: 0 };
   const frames = { control: 0, listening: 0, field: 0, pending: 0 };
   const state = { released: false };
   const headings = () => [...host.querySelectorAll('[role="heading"]')].map(text);
@@ -272,16 +279,45 @@ export const mount = async (read: boolean, held: Promise<void> = Promise.resolve
       ?.getAttribute('aria-label') ?? null;
   const stage = () =>
     host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label') ?? null;
-  /** Says the passage to a new summary. */
+  /** Says the passage to a new summary: in a read launch its recall is kept and the action reads `Next`; an unread one runs no plan, so it reads `Say it` again. */
   const say = async () => {
     const before = host.querySelector('[data-testid="summary"]');
+    const then = read ? 'Next' : 'Say it';
     await tap('Say it');
     expect(
       await until(() => {
         const now = host.querySelector('[data-testid="summary"]');
-        return now !== null && now !== before && button('Say it') !== undefined;
+        return now !== null && now !== before && button(then) !== undefined;
       }),
     ).toBe(true);
+  };
+  /** The passage's recalls on the device's disk. */
+  const passageRecalls = () =>
+    heldOn(device.disk).filter((recall) => recall.reference === passage.reference);
+  /**
+   * A new plan at the passage's due: `Next` when it shows, the clock set to
+   * the due, and a tap on the Minutes radio checked, which makes the plan
+   * again (and writes the minutes it shows); Today then offers Say it on the
+   * passage with no result. Answers the writes it made.
+   */
+  const renew = async () => {
+    const sets = device.calls.set;
+    if (button('Next') !== undefined) await tap('Next');
+    toDue(time, passageRecalls());
+    const checkedMinutes = host
+      .querySelector('[role="radiogroup"][aria-label="Minutes"] [aria-checked="true"]')
+      ?.getAttribute('aria-label');
+    await tap(checkedMinutes ?? '5 min');
+    taps.minutes += 1;
+    expect(
+      await until(
+        () =>
+          button('Say it') !== undefined &&
+          host.querySelector('[data-testid="summary"]') === null &&
+          device.calls.set === sets + 1,
+      ),
+    ).toBe(true);
+    return device.calls.set - sets;
   };
   /** The device's whole disk and its write, remove and clear counts. */
   const stored = () => ({
@@ -305,16 +341,18 @@ export const mount = async (read: boolean, held: Promise<void> = Promise.resolve
   };
   /** Goes back to Today; the device takes no write, remove or clear, and keeps its disk. */
   const back = () => still('Today', 'Today');
-  /** What the disk shows wrong against the launch's: a key removed, a key other than the passage's recalls changed or added, or a passage recall that is not one. */
+  /** What the disk shows wrong against the launch's: a key removed, a key other than the passage's recalls (and the minutes, once a Minutes radio was tapped) changed or added, or a passage recall that is not one. */
   const diskFaults = () => {
     const own = `${PREFIX}${passage.reference}/`;
+    const tapped = (key: string) => key === MINUTES_KEY && taps.minutes > 0;
     const out: string[] = [];
     for (const [key, value] of fixed) {
       if (!device.disk.has(key)) out.push('a key removed');
-      else if (!key.startsWith(own) && device.disk.get(key) !== value) out.push('a key changed');
+      else if (!key.startsWith(own) && !tapped(key) && device.disk.get(key) !== value)
+        out.push('a key changed');
     }
     for (const [key, value] of device.disk) {
-      if (fixed.has(key)) continue;
+      if (fixed.has(key) || tapped(key)) continue;
       const recall = heldOn(new Map([[key, value]]))[0];
       if (!key.startsWith(own) || recall?.reference !== passage.reference)
         out.push('a key added that is no recall of the passage');
@@ -352,6 +390,7 @@ export const mount = async (read: boolean, held: Promise<void> = Promise.resolve
     until,
     tap,
     say,
+    renew,
     field,
     back,
     summary,

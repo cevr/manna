@@ -18,12 +18,17 @@ import type { SayItView } from '../sayit';
 import { BLADE, failing, mount, WORDS } from '../test/today-rig';
 import { screenOf } from './screen';
 
+/** A daytime instant for the clock: the store's other verse was planted long before it. */
+const AT = Date.UTC(2026, 10, 5, 15);
+
 describe('Today’s Say it', () => {
-  // oxlint-disable-next-line film/tests-keep-their-strength -- red under Today's run (a second recital needs a new plan) until hsrun's commit 4 re-cuts it
-  it.skip('reads a whole recital: each lit word by its name, the miss as a numbered mark, the count, the suggestion and the grade, then a changed grade and a peek', async () => {
+  it('reads a whole recital: each lit word by its name, the miss as a numbered mark, the count, the suggestion and the grade, then a changed grade, a peek, Next, and Say it again at the seed’s due', async () => {
     const n = WORDS.length;
     const today = await mount(
       scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 1 })),
+      undefined,
+      undefined,
+      { now: AT },
     );
     expect(await today.until(() => today.label() === 'Say it')).toBe(true);
     expect(today.button()).toHaveLength(1);
@@ -57,7 +62,7 @@ describe('Today’s Say it', () => {
     ]);
     expect(today.checked()).toEqual(['false', 'true', 'false', 'false']);
     expect(today.all('[role="alert"]')).toHaveLength(0);
-    expect(today.label()).toBe('Say it');
+    expect(today.actions()).toEqual(['Next']);
     expect(today.ticks.n).toBe(n - 1);
     expect(today.kept.map((recall) => [recall.grade, recall.missed, recall.peeked])).toEqual([
       [2, 1, 0],
@@ -85,6 +90,27 @@ describe('Today’s Say it', () => {
     expect(today.reached.get('matched') ?? 0).toBeGreaterThanOrEqual(3 * (n - 1));
     expect(today.reached.get('miss') ?? 0).toBeGreaterThanOrEqual(2);
     expect(today.reached.get('peek') ?? 0).toBeGreaterThanOrEqual(1);
+    expect(today.actions()).toEqual(['Next']);
+    expect(await today.renew('initials')).toBe(true);
+    expect([today.actions(), today.radios().length, today.kept.length]).toEqual([['Say it'], 0, 3]);
+    expect(today.all('[data-testid^="word-"]')).toHaveLength(n);
+    expect(today.unsaid.get('initials') ?? 0).toBeGreaterThanOrEqual(n);
+    await today.click(today.button()[0]);
+    expect(await today.until(() => today.one('[data-testid="summary"]') !== null)).toBe(true);
+    expect(today.one('[data-testid="summary"]')?.textContent).toBe(`${n - 1} of ${n} words`);
+    expect(today.word(10)?.getAttribute('aria-label')).toBe('Missed word 11');
+    expect([today.actions(), today.checked(), today.ticks.n]).toEqual([
+      ['Next'],
+      ['false', 'true', 'false', 'false'],
+      2 * (n - 1),
+    ]);
+    expect(today.kept.map((recall) => [recall.grade, recall.peeked])).toEqual([
+      [2, 0],
+      [3, 0],
+      [3, 1],
+      [2, 0],
+    ]);
+    expect(today.kept[3]?.startedAt).toBe(today.time.now ?? 0);
     await today.leave();
   });
 

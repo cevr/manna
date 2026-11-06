@@ -17,7 +17,10 @@
  * key, and a launch writes nothing (S15). The first frame that shows the
  * choices shows the values read, and each later change is a tap's. The
  * choices show and work in an unread garden and while Say it listens, and
- * the field and back keeps them (S10).
+ * the field and back keeps them (S10). A recital where Today offers no Say
+ * it (its item done, or the done state) first makes a new plan at the
+ * passage's due: Next, the clock set to the due, and a tap on the Minutes
+ * radio checked, shown and stored as any tap.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -28,6 +31,7 @@ import passage from 'virtual:heartseed-passage';
 import { sessionView, voiceView } from '../app';
 import type { Recall } from '../sayit';
 import type { Minutes } from '../session';
+import { toDue } from '../test/clock';
 import { below, keyOf, pickOf, random } from '../test/garden-model';
 import {
   deviceOf,
@@ -222,9 +226,33 @@ const tapCommand = async (run: Run, kind: 'minutes' | 'voice') => {
   else cover(`${kind} tap`);
 };
 
-/** A recital held open while the reader taps the choices 0-2 times, each tap shown and stored at once, then finished. */
+/** The passage's recalls on the disk. */
+const passageRecalls = (device: Device) =>
+  [...device.disk]
+    .filter(([key]) => key.startsWith(`heartseed/recall/${passage.reference}/`))
+    .map(([, value]): Recall => JSON.parse(value));
+
+/**
+ * Where Today offers no Say it (its item done, or the done state): `Next`
+ * when it shows, the clock set to the passage's due, and a tap on the
+ * Minutes radio checked, which makes a new plan that offers it, shown and
+ * stored as any tap.
+ */
+const renewCommand = async (run: Run, at: string) => {
+  const { app, device, faults, m } = run;
+  if (app.has('Say it')) return;
+  if (app.has('Next')) await app.tap('Next');
+  toDue(run.time, passageRecalls(device));
+  await tapMinutes(app, faults, m, m.minutes, false);
+  expect({ at, offered: await app.until(() => app.has('Say it')) }).toEqual({ at, offered: true });
+  cover('new plan at the due');
+};
+
+/** A recital held open while the reader taps the choices 0-2 times, each tap shown and stored at once, then finished: its recall kept, the action reads `Next` (`Say it` in an unread garden, which runs no plan). */
 const sayCommand = async (run: Run, at: string) => {
   const { app, device, faults, m, next } = run;
+  await renewCommand(run, at);
+  await settle(app, device, m, `${at} renewed`);
   await app.tap('Say it');
   expect(await app.until(() => app.has('Listening'))).toBe(true);
   const taps = below(next, 3);
@@ -235,7 +263,12 @@ const sayCommand = async (run: Run, at: string) => {
     cover('tap while listening');
   }
   await app.tap('Listening');
-  expect(await app.until(() => app.has('Say it'))).toBe(true);
+  const then = ({ unread: 'Say it', held: 'Next', ok: 'Next' } as const)[run.faults.listing];
+  expect({ at, then, shown: await app.until(() => app.has(then)) }).toEqual({
+    at,
+    then,
+    shown: true,
+  });
   cover('recital');
 };
 
@@ -381,8 +414,7 @@ describe('Today’s header holds the minutes and the voice', () => {
     await app.leave();
   });
 
-  // oxlint-disable-next-line film/tests-keep-their-strength -- red under Today's run (its commands say the verse at the done state) until hsrun's commit 4 re-cuts it
-  it.skip('over generated devices, launches and taps, shows and stores the reader’s choices by the rules', async () => {
+  it('over generated devices, launches and taps, shows and stores the reader’s choices by the rules', async () => {
     const next = random(0x5e55);
     for (let d = 0; d < DEVICES; d += 1) await deviceRun(next, d);
     const floors = {
@@ -401,6 +433,7 @@ describe('Today’s header holds the minutes and the voice', () => {
       'refused voice tap': 1,
       'tap while listening': 2,
       recital: 2,
+      'new plan at the due': 2,
       'field and back': 2,
       wait: 2,
     };

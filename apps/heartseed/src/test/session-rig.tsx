@@ -24,8 +24,7 @@
 
 import { RegistryProvider } from '@effect/atom-react';
 import { expect } from 'bun:test';
-import { Clock, Effect, Layer, MutableRef, Option } from 'effect';
-import type { Duration } from 'effect';
+import { Effect, Layer, MutableRef, Option } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import type * as Atom from 'effect/reactivity/Atom';
 import { act } from 'react';
@@ -40,6 +39,7 @@ import { recite } from '../dictation/script';
 import { Chime } from '../garden';
 import { Haptics } from '../sayit';
 import { VoiceSource, VoiceUnavailable } from '../voice';
+import { clockOf } from './clock';
 
 /** The four radios' names, in the order the group shows them. */
 export const MINUTE_NAMES = ['2 min', '5 min', '10 min', '20 min'] as const;
@@ -107,22 +107,6 @@ const storeOf = (device: Device, faults: Faults, gate: Promise<void>) =>
       ),
     }),
   );
-
-/** Effect's clock with its instant frozen at `time.now` (the host's while it is none); its sleeps are the host's. */
-const clockOf = (time: { now: number | null }) => {
-  const real = Effect.runSync(Clock.clockWith((clock) => Effect.succeed(clock)));
-  const millis = () => time.now ?? real.currentTimeMillisUnsafe();
-  const clock: Clock.Clock = {
-    currentTimeMillisUnsafe: millis,
-    currentTimeMillis: Effect.sync(millis),
-    currentTimeNanosUnsafe: () => BigInt(millis()) * 1_000_000n,
-    currentTimeNanos: Effect.sync(() => BigInt(millis()) * 1_000_000n),
-    monotonicTimeNanosUnsafe: () => real.monotonicTimeNanosUnsafe(),
-    monotonicTimeNanos: real.monotonicTimeNanos,
-    sleep: (duration: Duration.Duration) => real.sleep(duration),
-  };
-  return Layer.succeed(Clock.Clock, clock);
-};
 
 /** How the next recital is heard: open until finished, with the words of `skip` unsaid; open until the recognizer fails at the finish, unheard (`dropped`); or refused at its listen. */
 export type Hearing =
@@ -239,7 +223,7 @@ const COUNTS_FORM =
 export const countsIn = (host: Element) =>
   [...host.querySelectorAll('[data-testid="session"]')].map(text);
 
-/** What one Today frame shows wrong of the counts line: more than one, another form, named otherwise than it reads, or not at the top of the scroll view above the reference. */
+/** What one Today frame shows wrong of the counts line: more than one, another form, named otherwise than it reads, or not at the top of the scroll view above the reference (the done state shows none, and the line alone). */
 const countsFaults = (host: Element): string[] => {
   const nodes = [...host.querySelectorAll('[data-testid="session"]')];
   if (nodes.length > 1) return [`${nodes.length} counts lines`];
@@ -251,7 +235,12 @@ const countsFaults = (host: Element): string[] => {
     if (label !== null && label !== text(node)) out.push(`the counts named ${label}`);
     if (!scrolled(node)) out.push('the counts outside the scroll view');
     const following = Node.DOCUMENT_POSITION_FOLLOWING;
-    if (reference === null || (node.compareDocumentPosition(reference) & following) !== following)
+    if (reference === null) {
+      if (text(node) !== 'Nothing to tend now')
+        out.push('a counts line left to tend with no reference');
+      continue;
+    }
+    if ((node.compareDocumentPosition(reference) & following) !== following)
       out.push('the counts not above the reference');
   }
   return out;

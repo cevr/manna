@@ -16,8 +16,7 @@ import { mount, record, SOIL, wantField } from '../test/field-rig';
 import { device } from '../test/one';
 
 describe('the field from Today', () => {
-  // oxlint-disable-next-line film/tests-keep-their-strength -- red under Today's run (a second recital needs a new plan) until hsrun's commit 4 re-cuts it
-  it.skip('opens from Today and comes back as Today was, through recitals, Again and a relaunch: the passage not planted beside other verses, then a blade (said under its letters), then a seed, the UTC days sown and the harvest as the disk holds them, writing nothing', async () => {
+  it('opens from Today and comes back as Today was, through recitals, Again and a relaunch: the passage not planted beside other verses, then a blade (said under its letters at the seed’s due), then a seed, the UTC days sown and the harvest as the disk holds them, writing nothing', async () => {
     const late = Date.UTC(2026, 9, 1, 23, 59, 59, 999);
     device.launch([
       record(recallOf('Made 1:1', late, 3, 0)),
@@ -26,7 +25,8 @@ describe('the field from Today', () => {
       ['heartseed/recall/Made 2:4/5', null],
       ['heartseed/voice/enabled', 'false'],
     ]);
-    const app = await mount(true);
+    const time = { now: Date.UTC(2026, 10, 5, 15) };
+    const app = await mount(true, undefined, time);
     expect(await app.until(() => app.buttons().includes('Your field'))).toBe(true);
 
     const first = await app.field();
@@ -43,6 +43,7 @@ describe('the field from Today', () => {
     expect(app.stage()).toBe('Stage: not planted');
 
     await app.say();
+    expect(await app.renew()).toBe(1);
     await app.say();
     const shown = app.summary();
     const grown = await app.field();
@@ -63,7 +64,7 @@ describe('the field from Today', () => {
     expect(await app.leave()).toEqual([]);
 
     device.launch();
-    const next = await mount(true);
+    const next = await mount(true, undefined, time);
     expect(await next.until(() => next.buttons().includes('Your field'))).toBe(true);
     expect(next.headings()).toEqual(['Today']);
     expect(await next.field()).toEqual(again);

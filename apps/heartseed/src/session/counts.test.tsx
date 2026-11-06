@@ -15,9 +15,15 @@
  * (after Continue in the first minute) and again at each Minutes tap, and
  * at no other step (S11); after every step the line is the model's counts
  * of that plan over the disk's recalls now (S12, S13), and an unread launch
- * shows no line in any frame (S14). A heard recital adds its recall to the
- * disk; an unheard one, a refused listen and a refused write add none, and
- * Again rewrites the recall it grades.
+ * shows no line in any frame (S14). After every step the action button is
+ * the run's model's (`src/test/run-model.ts`: Say it on the item shown, Next
+ * once it is done, none in the done state; Say it always in an unread
+ * launch): a press holds the item shown, Next lets it go, and a Minutes tap
+ * lets it go unless a recital is under way. A recital where the model
+ * offers no Say it first taps Next, or, in the done state, moves the clock
+ * to the passage's due and taps Minutes. A heard recital adds its recall to
+ * the disk; an unheard one, a refused listen and a refused write add none,
+ * and Again rewrites the recall it grades.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -40,6 +46,7 @@ import {
   planModel,
   type ModelItem,
 } from '../test/session-model';
+import { actionModel, madeModel, nextModel, startedModel } from '../test/run-model';
 import {
   deviceOf,
   faultsOf,
@@ -104,14 +111,23 @@ const plantsOn = (device: Device) => {
   return plants;
 };
 
-/** The model of one device: the stored minutes, the launch's choice, its plan (none until made, and none unread), its zone. */
+/** The model of one device: the stored minutes, the launch's choice, its plan (none until made, and none unread), the item the run holds (`src/test/run-model.ts`), its zone. */
 interface Model {
   stored: string | undefined;
   minutes: Minutes;
   plan: readonly ModelItem[] | null;
+  hold: ModelItem | null;
   zone: string;
   read: boolean;
 }
+
+/** The action Today offers at rest by the run's model: Say it always in an unread launch, which runs no plan; none in the done state. */
+const actionWant = (m: Model, device: Device) => {
+  if (!m.read) return 'Say it';
+  return actionModel({ plan: m.plan, hold: m.hold }, recallsNow(device));
+};
+
+const ACTIONS = ['Say it', 'Listening', 'Next'] as const;
 
 interface Run {
   readonly app: Launch;
@@ -119,6 +135,8 @@ interface Run {
   readonly faults: Faults;
   readonly m: Model;
   readonly next: () => number;
+  /** The generator of the steps the run adds to reach Say it again (`toSay`), apart from `next`, so the commands drawn stay the same as before the run. */
+  readonly aside?: () => number;
   readonly time: { now: number };
   readonly step: string;
 }
@@ -148,8 +166,17 @@ const SETTINGS = [MINUTES_KEY, ENABLED_KEY];
 /** Holds the screen and the disk to the model once the view caught up with the last step, and, after a step that must change nothing (`still`), a moment after it too. */
 const settle = async (run: Run, still = false) => {
   const { app, device, m, step } = run;
-  const want = { counts: wantOf(run), checked: [`${m.minutes} min`] };
-  const shown = () => ({ counts: app.counts(), checked: app.choices().checked });
+  const action = actionWant(m, device);
+  const want = {
+    counts: wantOf(run),
+    checked: [`${m.minutes} min`],
+    actions: action === null ? [] : [action],
+  };
+  const shown = () => ({
+    counts: app.counts(),
+    checked: app.choices().checked,
+    actions: ACTIONS.filter((name) => app.has(name)),
+  });
   await app.until(() => JSON.stringify(shown()) === JSON.stringify(want));
   if (still) await app.until(() => false, 2);
   expect({ step, ...shown() }).toEqual({ step, ...want });
@@ -161,18 +188,24 @@ const settle = async (run: Run, still = false) => {
   const line = want.counts[0];
   if (line === undefined) cover('counts:none');
   else cover(`counts:${line.replace(/\d+/g, 'n')}`);
+  cover(`action:${action ?? 'none'}`);
 };
 
-/** A Minutes tap, refused one time in five: the choice shows, a made plan is made again at the tap's instant, and a landed tap is stored. */
-const minutesCommand = async (run: Run, n: Minutes) => {
+/** A Minutes tap, refused one time in five: the choice shows, a made plan is made again at the tap's instant (letting the held item go unless a recital is `underWay`), and a landed tap is stored. */
+const minutesCommand = async (run: Run, n: Minutes, underWay = false) => {
   const { app, faults, m } = run;
   const refused = run.next() < 0.2;
   if (refused) faults.refuse.add(MINUTES_KEY);
+  else faults.refuse.delete(MINUTES_KEY);
   const before = wantOf(run);
   await app.tap(`${n} min`);
   m.minutes = n;
   if (!refused) m.stored = String(n);
-  if (m.plan !== null) m.plan = planNow(run);
+  if (m.plan !== null) {
+    const made = madeModel({ plan: m.plan, hold: m.hold }, planNow(run), underWay);
+    m.plan = made.plan;
+    m.hold = made.hold;
+  }
   if (refused) cover('minutes tap refused');
   else cover('minutes tap');
   if (JSON.stringify(before) !== JSON.stringify(wantOf(run))) cover('tap changed the line');
@@ -190,27 +223,64 @@ const hearingOf = (how: How): Hearing => {
   return { kind: 'heard', skip: [] };
 };
 
-/** A recital a second on, held open while the reader taps Minutes (`during`), then finished; its recall is on the disk exactly when it was heard and written. */
+/**
+ * Where the run's model offers no Say it: `Next` when the shown item is
+ * done (the hold let go), and in the done state the time moved to the
+ * passage's due and a Minutes tap, which makes the plan again. Answers
+ * whether Say it is offered after.
+ */
+const toSay = async (run: Run) => {
+  const { app, device, m } = run;
+  if (actionWant(m, device) === 'Next') {
+    await app.tap('Next');
+    m.hold = nextModel({ plan: m.plan, hold: m.hold }).hold;
+    cover('next');
+  }
+  if (actionWant(m, device) === null) {
+    const side = { ...run, next: run.aside ?? run.next };
+    await untilDue(side);
+    await minutesCommand(side, pickOf(side.next, MINUTES));
+    cover('done state: a new plan');
+  }
+  await settle(run);
+  return actionWant(m, device) === 'Say it';
+};
+
+/** A recital a second on, held open while the reader taps Minutes (`during`), then finished; its recall is on the disk exactly when it was heard and written. A press holds the item shown; the action after is the run's model's. */
 const sayCommand = async (run: Run, how: How, during: Minutes | null) => {
-  const { app, device, faults, time } = run;
+  const { app, device, faults, m, time } = run;
+  if (!(await toSay(run))) {
+    cover('say:nothing to tend');
+    return;
+  }
   time.now += 1000;
   const key = keyOf({ reference: passage.reference, startedAt: time.now });
   if (how === 'unwritten') faults.refuse.add(key);
   MutableRef.set(app.hearing, hearingOf(how));
   await app.tap('Say it');
+  m.hold = startedModel({ plan: m.plan, hold: m.hold }, recallsNow(device)).hold;
   if (how === 'refused') {
     await app.until(() => false, 3);
   } else {
     expect(await app.until(() => app.has('Listening'))).toBe(true);
     if (during !== null) {
-      await minutesCommand(run, during);
+      await minutesCommand(run, during, true);
       cover('minutes tap while listening');
     }
     await app.tap('Listening');
   }
-  expect(await app.until(() => app.has('Say it'))).toBe(true);
   const written = how === 'heard' || how === 'missed';
   await app.until(() => device.disk.has(key) === written);
+  const then = actionWant(m, device);
+  expect({
+    step: `${run.step} ${how}`,
+    then,
+    shown: await app.until(() => app.has(then ?? '')),
+  }).toEqual({
+    step: `${run.step} ${how}`,
+    then,
+    shown: true,
+  });
   expect({ step: `${run.step} ${how}`, written: device.disk.has(key) }).toEqual({
     step: `${run.step} ${how}`,
     written,
@@ -401,6 +471,7 @@ const launchOnce = async (base: Omit<Run, 'app' | 'faults' | 'step'>, label: str
   if (!recalled) await firstMinute(run);
   expect(await app.until(() => app.headings().includes('Today') && app.has('Voice'))).toBe(true);
   m.plan = null;
+  m.hold = null;
   if (m.read) m.plan = planNow(run);
   else cover('unread');
   await settle(run);
@@ -492,8 +563,9 @@ const deviceRun = async (next: () => number, d: number) => {
   at = disk.at;
   const stored = pickOf(next, STORED);
   const device = deviceOf(stored === undefined ? entries : [...entries, [MINUTES_KEY, stored]]);
-  const m: Model = { stored, minutes: 5, plan: null, zone, read: true };
+  const m: Model = { stored, minutes: 5, plan: null, hold: null, zone, read: true };
   const time = { now: at };
+  const aside = random(0x5a1d + d);
   for (let l = 0; l < 3; l += 1) {
     if (l > 0) {
       const later = laterOf({ device, m, next, time }, true);
@@ -505,13 +577,12 @@ const deviceRun = async (next: () => number, d: number) => {
         cover('zone changed');
       }
     }
-    await launchOnce({ device, m, next, time }, `device ${d} launch ${l}`);
+    await launchOnce({ device, m, next, aside, time }, `device ${d} launch ${l}`);
   }
 };
 
 describe('Today’s counts line', () => {
-  // oxlint-disable-next-line film/tests-keep-their-strength -- red under Today's run (its commands say the verse at the done state) until hsrun's commit 4 re-cuts it
-  it.skip('over generated devices, launches, recitals, taps and time, reads the model’s counts of the plan made at Today’s first show and at each Minutes tap', async () => {
+  it('over generated devices, launches, recitals, taps and time, reads the model’s counts of the plan made at Today’s first show and at each Minutes tap', async () => {
     const zone = hostZone();
     try {
       const next = random(0xc0_ab7);
@@ -552,6 +623,10 @@ describe('Today’s counts line', () => {
       'later:month': 1,
       'later:back': 1,
       'wait:to due': 1,
+      'action:none': 5,
+      'action:Next': 5,
+      next: 1,
+      'done state: a new plan': 3,
     };
     console.log(`coverage ${JSON.stringify(Object.fromEntries(coverage))}`);
     expect(

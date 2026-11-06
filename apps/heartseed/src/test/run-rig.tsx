@@ -19,8 +19,7 @@
  */
 
 import { RegistryProvider } from '@effect/atom-react';
-import { Clock, Effect, Layer, Logger, MutableRef, Option } from 'effect';
-import type { Duration } from 'effect';
+import { Effect, Layer, Logger, MutableRef, Option } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -36,6 +35,7 @@ import { sourceWords } from '../matcher/words';
 import { Haptics } from '../sayit';
 import type { TextPiece } from '../session';
 import { VoiceSource, VoiceUnavailable } from '../voice';
+import { clockOf } from './clock';
 import { PREFIX } from './garden-model';
 
 /** The app's own piece: the passage, its own group. */
@@ -96,21 +96,6 @@ const storeOf = (device: Device, faults: Faults) =>
       }),
     }),
   );
-
-/** Effect's clock with its instant frozen at `time.now`; its sleeps are the host's. */
-const clockOf = (time: { now: number }) => {
-  const real = Effect.runSync(Clock.clockWith((clock) => Effect.succeed(clock)));
-  const clock: Clock.Clock = {
-    currentTimeMillisUnsafe: () => time.now,
-    currentTimeMillis: Effect.sync(() => time.now),
-    currentTimeNanosUnsafe: () => BigInt(time.now) * 1_000_000n,
-    currentTimeNanos: Effect.sync(() => BigInt(time.now) * 1_000_000n),
-    monotonicTimeNanosUnsafe: () => real.monotonicTimeNanosUnsafe(),
-    monotonicTimeNanos: real.monotonicTimeNanos,
-    sleep: (duration: Duration.Duration) => real.sleep(duration),
-  };
-  return Layer.succeed(Clock.Clock, clock);
-};
 
 /** How the next recital is heard at its finish: the words of `text` but `skip`, or not at all. */
 export type Hearing =

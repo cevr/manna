@@ -14,7 +14,7 @@
 
 import { RegistryProvider, useAtomValue } from '@effect/atom-react';
 import { expect } from 'bun:test';
-import { Effect, Layer, MutableRef, Option } from 'effect';
+import { Effect, Layer, Logger, MutableRef, Option } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import { act } from 'react';
@@ -31,6 +31,7 @@ import { Haptics, type Recall, type SayItView } from '../sayit';
 import { pendingAt } from '../sayit/draw';
 import { screenOf } from '../sayit/screen';
 import { voiceSource } from '../voice/source';
+import { clockOf, toDue, type Time } from './clock';
 import { AA, contrastOf } from './contrast';
 
 export const WORDS = sourceWords(passage.text);
@@ -299,14 +300,10 @@ export const NOT_PLANTED: Disk = { recalls: [OTHER], unread: false };
 export const SEED: Disk = { recalls: passageAt(1), unread: false };
 export const BLADE: Disk = { recalls: passageAt(2), unread: false };
 
-/** A store over memory, holding `disk`'s recalls, that records, in order, each recall the garden writes: each keep Say it hands over that changes the recital's record writes one. */
-const recordingStore = (kept: Recall[], disk: Disk) => {
-  const backing = new Map<string, string>(
-    disk.recalls.map((recall) => [
-      `heartseed/recall/${recall.reference}/${recall.startedAt}`,
-      JSON.stringify(recall),
-    ]),
-  );
+/** A store over memory (`backing`, holding `disk`'s recalls at the start) that records, in order, each recall the garden writes: each keep Say it hands over that changes the recital's record writes one. */
+const recordingStore = (kept: Recall[], disk: Disk, backing: Map<string, string>) => {
+  for (const recall of disk.recalls)
+    backing.set(`heartseed/recall/${recall.reference}/${recall.startedAt}`, JSON.stringify(recall));
   return Layer.succeed(
     KeyValueStore.KeyValueStore,
     KeyValueStore.makeStringOnly({
@@ -356,25 +353,31 @@ const mounted = new Set<() => Promise<void>>();
 
 /**
  * Today over `source` and `disk`, under a registry that keeps living after
- * Today leaves, as the app's does. `rest.cue` is the cue the test expects
- * Today's words under while no recital is shown. It first leaves any Today
- * a failed test left mounted, so a failure stays a failure of its own test.
+ * Today leaves, as the app's does, at `time` on Effect's clock (the host's
+ * while it is null). `rest.cue` is the cue the test expects Today's words
+ * under while no recital is shown. A recital's marks show from a press of
+ * Say it until a new plan lets its item go (`renew`). It first leaves any
+ * Today a failed test left mounted, so a failure stays a failure of its own
+ * test.
  */
 export const mount = async (
   source: Layer.Layer<DictationSource>,
   disk: Disk = NOT_PLANTED,
   rest: { readonly cue: Cue } = { cue: 'full' },
+  time: Time = { now: null },
 ) => {
   for (const left of [...mounted]) await left();
   const ticks = { n: 0 };
   const kept: Recall[] = [];
+  const backing = new Map<string, string>();
+  const shown = { recital: false, cue: rest.cue };
   const layer = appLayer({
     source,
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.sync(() => void (ticks.n += 1)) })),
-    store: recordingStore(kept, disk),
+    store: recordingStore(kept, disk, backing),
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice: voiceSource,
-  });
+  }).pipe(Layer.provide(Layer.merge(clockOf(time), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);
@@ -405,8 +408,9 @@ export const mount = async (
     const words = all('[data-testid^="word-"]');
     if (words.length === 0) return;
     const view = MutableRef.get(latest);
-    const { marks, cue } = Option.match(screenOf(view).marks, {
-      onNone: () => ({ marks: WORDS.map((_, index) => pendingAt(index)), cue: rest.cue }),
+    const recital = Option.filter(screenOf(view).marks, () => shown.recital);
+    const { marks, cue } = Option.match(recital, {
+      onNone: () => ({ marks: WORDS.map((_, index) => pendingAt(index)), cue: shown.cue }),
       onSome: (shown) => ({ marks: shown, cue: Option.getOrThrow(view).cue }),
     });
     expect(words.length).toBe(marks.length);
@@ -444,12 +448,39 @@ export const mount = async (
       ['Say it', 'Listening'].includes(node.getAttribute('aria-label') ?? ''),
     );
   const label = () => button()[0]?.getAttribute('aria-label');
+  /** The action buttons shown, by name: Say it, Listening or Next. */
+  const actions = () =>
+    all('[role="button"]')
+      .map((node) => node.getAttribute('aria-label') ?? '')
+      .filter((name) => ['Say it', 'Listening', 'Next'].includes(name));
   const click = (node: Element | null | undefined) =>
     act(async () => {
+      if (node?.getAttribute('aria-label') === 'Say it') shown.recital = true;
       node?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
     });
   const radios = () => all('[role="radiogroup"][aria-label="Grade"] [role="radio"]');
   const checked = () => radios().map((radio) => radio.getAttribute('aria-checked'));
+  /** The passage's recalls the store holds now. */
+  const passageRecalls = () =>
+    [...backing]
+      .filter(([key]) => key.startsWith(`heartseed/recall/${passage.reference}/`))
+      .map(([, value]): Recall => JSON.parse(value));
+  /**
+   * A new plan at the passage's due: `Next` when it shows, the clock set to
+   * the due, and a tap on the Minutes radio checked, which makes the plan
+   * again with no recital under way (the recital's marks and result go);
+   * Today then offers Say it on the passage under `cue`.
+   */
+  const renew = async (cue: Cue) => {
+    await click(all('[role="button"]').find((node) => node.getAttribute('aria-label') === 'Next'));
+    toDue(time, passageRecalls());
+    shown.recital = false;
+    shown.cue = cue;
+    await click(
+      one('[role="radiogroup"][aria-label="Minutes"] [role="radio"][aria-checked="true"]'),
+    );
+    return until(() => label() === 'Say it' && one('[data-testid="summary"]') === null);
+  };
   const leave = async () => {
     if (!mounted.delete(leave)) return;
     for (const release of [...holding]) release();
@@ -501,6 +532,9 @@ export const mount = async (
     word,
     button,
     label,
+    actions,
+    renew,
+    time,
     click,
     radios,
     checked,

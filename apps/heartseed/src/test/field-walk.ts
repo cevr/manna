@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, eslint/no-await-in-loop, effect/noTernary -- each generated device plays its commands one after another through the field's promise-based screen rig. */
+/* oxlint-disable effect/noAsyncFunction, eslint/no-await-in-loop, effect/noTernary, effect/noNullish -- each generated device plays its commands one after another through the field's promise-based screen rig, its launches never held (the rig's default, left undefined). */
 
 /**
  * The field across generated sequences of commands, through the screen rig
@@ -7,7 +7,9 @@
  * verses of any reference, a setting) and plays opens of the field and ways
  * back, recitals, Again, peeks and relaunches in any order. The writes each
  * command may make are modelled apart from the app: a recital adds one
- * record of the passage, Again and a peek each rewrite one (none when Again
+ * record of the passage (and, when Today offers no Say it, first makes a
+ * new plan at the passage's due through a Minutes tap, which writes the
+ * minutes once), Again and a peek each rewrite one (none when Again
  * is already chosen), and an open or a way back writes, removes and clears
  * nothing and leaves the whole disk as it was. Each launch ends with the disk
  * showing no key removed and no key other than the passage's recalls changed
@@ -18,11 +20,12 @@ import { expect } from 'bun:test';
 import passage from 'virtual:heartseed-passage';
 
 import { historyOf, otherReference } from './field-model';
+import type { Time } from './clock';
 import { mount, record } from './field-rig';
 import { below, PREFIX, pickOf, random } from './garden-model';
 import { device } from './one';
 
-export type WalkCommand = 'field' | 'say' | 'again' | 'peek' | 'relaunch';
+export type WalkCommand = 'field' | 'say' | 'again' | 'peek' | 'relaunch' | 'renew';
 
 type App = Awaited<ReturnType<typeof mount>>;
 
@@ -34,32 +37,36 @@ interface Shown {
 
 const NOTHING_SHOWN: Shown = { result: false, peekable: false };
 
+/** The instant each device's first launch starts at on Effect's clock: after every day its disk's histories start on. */
+const START = Date.UTC(2026, 10, 5, 15);
+
 const passageKeys = () =>
   [...device.disk.keys()].filter((key) => key.startsWith(`${PREFIX}${passage.reference}/`)).length;
 
-/** The writes and passage records a command may add, modelled apart from the app; a relaunch counts its writes from the new launch's zero. */
-const allowed = (command: WalkCommand, againChosen: boolean) => {
-  if (command === 'say') return { sets: 1, keys: 1 };
+/** The writes and passage records a command may add, modelled apart from the app; a relaunch counts its writes from the new launch's zero. A recital when Today offers no Say it (its item done, or the done state) first makes a new plan at the passage's due, a Minutes tap that writes the minutes once. */
+const allowed = (command: WalkCommand, againChosen: boolean, offered: boolean) => {
+  if (command === 'say') return { sets: offered ? 1 : 2, keys: 1 };
   if (command === 'peek') return { sets: 1, keys: 0 };
   if (command === 'again') return { sets: againChosen ? 0 : 1, keys: 0 };
   return { sets: 0, keys: 0 };
 };
 
-/** Mounts a launch over the disk as it stands and waits for Today to offer the field. */
-const opened = async () => {
-  const app = await mount(true);
+/** Mounts a launch over the disk as it stands, at `time`, and waits for Today to offer the field. */
+const opened = async (time: Time) => {
+  const app = await mount(true, undefined, time);
   expect(await app.until(() => app.buttons().includes('Your field'))).toBe(true);
   return app;
 };
 
 /** Plays one command on the launch, and answers the launch after it and what Today shows. */
-const play = async (app: App, command: WalkCommand, shown: Shown) => {
+const play = async (app: App, command: WalkCommand, shown: Shown, time: Time) => {
   if (command === 'field') {
     await app.field();
     await app.back();
     return { app, shown };
   }
   if (command === 'say') {
+    if (!app.buttons().includes('Say it')) await app.renew();
     await app.say();
     return { app, shown: { result: true, peekable: true } };
   }
@@ -78,7 +85,7 @@ const play = async (app: App, command: WalkCommand, shown: Shown) => {
   }
   expect({ faults: await app.leave() }).toEqual({ faults: [] });
   device.launch();
-  return { app: await opened(), shown: NOTHING_SHOWN };
+  return { app: await opened(time), shown: NOTHING_SHOWN };
 };
 
 /** Plays one generated device per seed, `steps` commands each, and answers how often each command ran. */
@@ -95,7 +102,8 @@ export const walkField = async (seeds: readonly number[], steps: number) => {
       ...references.flatMap((reference) => historyOf(next, reference, day)).map(record),
       ['heartseed/voice/enabled', 'false'],
     ]);
-    let state = { app: await opened(), shown: NOTHING_SHOWN };
+    const time: Time = { now: START };
+    let state = { app: await opened(time), shown: NOTHING_SHOWN };
     for (let step = 0; step < steps; step += 1) {
       const command = pickOf(next, [
         'field',
@@ -106,12 +114,14 @@ export const walkField = async (seeds: readonly number[], steps: number) => {
         'relaunch',
       ] as const);
       cover.set(command, (cover.get(command) ?? 0) + 1);
-      const may = allowed(command, state.app.checked() === 'Again');
+      const offered = state.app.buttons().includes('Say it');
+      if (command === 'say' && !offered) cover.set('renew', (cover.get('renew') ?? 0) + 1);
+      const may = allowed(command, state.app.checked() === 'Again', offered);
       const before = {
         sets: command === 'relaunch' ? 0 : device.calls.set,
         keys: passageKeys(),
       };
-      state = await play(state.app, command, state.shown);
+      state = await play(state.app, command, state.shown, time);
       const where = { seed, step, command };
       expect({ ...where, sets: device.calls.set, keys: passageKeys() }).toEqual({
         ...where,

@@ -22,7 +22,7 @@
 
 import { RegistryProvider } from '@effect/atom-react';
 import { describe, expect, it } from 'bun:test';
-import { Effect, Layer } from 'effect';
+import { Effect, Layer, Logger } from 'effect';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
@@ -34,6 +34,7 @@ import { NEW_CARD, review } from '../fsrs';
 import { Chime, type Growth } from '../garden';
 import { Haptics, type Recall } from '../sayit';
 import { store } from '../store';
+import { clockOf, toDue, type Time } from '../test/clock';
 import { DAY } from '../test/garden-model';
 import { device } from '../test/one';
 import { voiceSource } from '../voice/source';
@@ -42,6 +43,9 @@ const PREFIX = 'heartseed/recall/';
 
 /** A verse other than the passage, whose recall on the disk keeps the launch out of the first minute. */
 const OTHER = 'Made 1:1';
+
+/** The instant a launch whose clock is set starts at: long after every record these disks hold. */
+const AT = Date.UTC(2026, 10, 5, 15);
 
 /** The prototype's colours, as the browser computes them: the gold of a seed and a ripe ear, the leaf's green, the unripe ear's green, and the soil. */
 const GOLD = 'rgba(212, 166, 64, 1.00)';
@@ -95,13 +99,25 @@ const fullCorn = (reference = passage.reference) => {
 const passageKeys = () =>
   [...device.disk.keys()].filter((key) => key.startsWith(`${PREFIX}${passage.reference}/`));
 
+/** The passage's recalls on the device's disk. */
+const passageRecalls = () =>
+  passageKeys().flatMap((key) => {
+    const value = device.disk.get(key);
+    if (value === undefined || value === null) return [];
+    return [JSON.parse(value) as Recall];
+  });
+
 /**
  * Today over the scripted recital, the app's store on the device (built
  * once `held` resolves, as a slow launch would) and a chime that records
  * into `chimes`; each mount is a fresh registry, a launch. Every frame is
  * read for a claim while the garden is not read.
  */
-const mount = async (chimes: Growth[], held: Promise<void> = Promise.resolve()) => {
+const mount = async (
+  chimes: Growth[],
+  held: Promise<void> = Promise.resolve(),
+  time: Time = { now: null },
+) => {
   const layer = appLayer({
     source: scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 1 })),
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
@@ -116,7 +132,7 @@ const mount = async (chimes: Growth[], held: Promise<void> = Promise.resolve()) 
       Chime.of({ grow: (growth) => Effect.sync(() => void chimes.push(growth)) }),
     ),
     voice: voiceSource,
-  });
+  }).pipe(Layer.provide(Layer.merge(clockOf(time), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);
   const frames = { seen: 0, claimed: 0 };
@@ -177,8 +193,12 @@ const mount = async (chimes: Growth[], held: Promise<void> = Promise.resolve()) 
   /** The plant's parts as drawn, by their colours, read without a word. */
   const drawn = () =>
     [...(plant()?.children ?? [])].map((part) => getComputedStyle(part).backgroundColor);
-  /** Says the passage to its summary. */
-  const say = async () => {
+  const button = (name: string) =>
+    [...host.querySelectorAll('[role="button"]')].find(
+      (node) => node.getAttribute('aria-label') === name,
+    );
+  /** Says the passage to its summary, its recall kept: the action reads `Next` (`then`; `Say it` in an unread garden, which runs no plan). */
+  const say = async (then: 'Next' | 'Say it' = 'Next') => {
     const summary = one('[data-testid="summary"]');
     await click(sayIt());
     expect(
@@ -186,7 +206,7 @@ const mount = async (chimes: Growth[], held: Promise<void> = Promise.resolve()) 
         () =>
           one('[data-testid="summary"]') !== null &&
           one('[data-testid="summary"]') !== summary &&
-          sayIt() !== undefined,
+          button(then) !== undefined,
       ),
     ).toBe(true);
   };
@@ -194,19 +214,30 @@ const mount = async (chimes: Growth[], held: Promise<void> = Promise.resolve()) 
     [...host.querySelectorAll('[role="radiogroup"] [role="radio"]')].find(
       (node) => node.getAttribute('aria-label') === name,
     );
+  /** `Next`, the clock set to the passage's due, and a tap on the Minutes radio checked: a new plan, which offers Say it on the passage again with no result shown. */
+  const renew = async () => {
+    await click(button('Next'));
+    toDue(time, passageRecalls());
+    await click(
+      host.querySelector('[role="radiogroup"][aria-label="Minutes"] [aria-checked="true"]'),
+    );
+    expect(
+      await until(() => sayIt() !== undefined && one('[data-testid="summary"]') === null),
+    ).toBe(true);
+  };
   const leave = async () => {
     watch.disconnect();
     await act(async () => root.unmount());
   };
-  return { one, until, click, stage, growth, plant, drawn, say, radio, frames, leave };
+  return { one, until, click, stage, growth, plant, drawn, say, renew, radio, frames, leave };
 };
 
 describe('Today’s stage over the device’s store', () => {
-  // oxlint-disable-next-line film/tests-keep-their-strength -- red under Today's run (a second recital needs a new plan) until hsrun's commit 4 re-cuts it
-  it.skip('reads not planted, then a gold seed, grows to a blade under its letters and then to a green ear, a chime each, falls back to a blade at a peek, keeps it through a restart, falls to a seed at Again, and climbs back silently', async () => {
+  it('reads not planted, then a gold seed, grows to a blade under its letters and then to a green ear at each due, a chime each, falls back to a blade at a peek, keeps it through a restart, falls to a seed at Again, and climbs back silently', async () => {
     device.launch([recordOf(recallAt(Date.UTC(2026, 0, 5, 9), OTHER))]);
     const chimes: Growth[] = [];
-    const today = await mount(chimes);
+    const time = { now: AT };
+    const today = await mount(chimes, undefined, time);
     expect(await today.until(() => today.stage() !== null)).toBe(true);
     expect([today.stage(), today.growth(), today.plant() !== null]).toEqual([
       'Stage: not planted',
@@ -224,6 +255,8 @@ describe('Today’s stage over the device’s store', () => {
     expect(today.drawn()).toEqual([SOIL, GOLD]);
     expect(passageKeys()).toHaveLength(1);
 
+    await today.renew();
+    expect([today.stage(), today.growth()]).toEqual(['Stage: seed', null]);
     await today.say();
     expect(await today.until(() => today.stage() === 'Stage: blade')).toBe(true);
     expect([today.growth(), today.drawn()]).toEqual(['Grew to a blade.', [SOIL, LEAF, LEAF]]);
@@ -231,6 +264,7 @@ describe('Today’s stage over the device’s store', () => {
       [passage.reference, 'seed', 'blade'],
     ]);
 
+    await today.renew();
     await today.say();
     expect(await today.until(() => today.stage() === 'Stage: ear')).toBe(true);
     expect([today.growth(), today.drawn()]).toEqual([
@@ -252,8 +286,9 @@ describe('Today’s stage over the device’s store', () => {
     ]);
     await today.leave();
 
+    toDue(time, passageRecalls());
     device.launch();
-    const again = await mount(chimes);
+    const again = await mount(chimes, undefined, time);
     expect(await again.until(() => again.stage() === 'Stage: blade')).toBe(true);
     expect([again.growth(), again.plant()?.getAttribute('aria-hidden')]).toEqual([null, 'true']);
 
@@ -303,13 +338,13 @@ describe('Today’s stage over the device’s store', () => {
     await today.leave();
   });
 
-  // oxlint-disable-next-line film/tests-keep-their-strength -- red under Today's run (a second recital needs a new plan) until hsrun's commit 4 re-cuts it
-  it.skip('claims nothing for the session when every listing fails, says it all the same, writes its recital silently, and reads it at the next launch', async () => {
-    device.launch([recordOf(recallAt(Date.now() - DAY))]).fail('keys', 3);
+  it('claims nothing for the session when every listing fails, says it all the same, writes its recital silently, and reads it at the next launch at its due', async () => {
+    device.launch([recordOf(recallAt(AT - DAY))]).fail('keys', 3);
     const chimes: Growth[] = [];
-    const today = await mount(chimes);
+    const time = { now: AT };
+    const today = await mount(chimes, undefined, time);
     expect(await today.until(() => device.calls.keys === 3)).toBe(true);
-    await today.say();
+    await today.say('Say it');
     expect(await today.until(() => passageKeys().length === 2)).toBe(true);
     await today.until(() => false, 20);
     expect([today.stage(), today.growth(), today.plant(), today.frames.claimed, chimes]).toEqual([
@@ -322,8 +357,9 @@ describe('Today’s stage over the device’s store', () => {
     expect(device.calls.keys).toBe(3);
     await today.leave();
 
+    toDue(time, passageRecalls());
     device.launch();
-    const next = await mount(chimes);
+    const next = await mount(chimes, undefined, time);
     expect(await next.until(() => next.stage() === 'Stage: blade')).toBe(true);
     expect([next.growth(), chimes]).toEqual([null, []]);
     await next.leave();
@@ -334,7 +370,7 @@ describe('Today’s stage over the device’s store', () => {
     const chimes: Growth[] = [];
     const today = await mount(chimes);
     expect(await today.until(() => device.calls.open === 5)).toBe(true);
-    await today.say();
+    await today.say('Say it');
     await today.until(() => false, 20);
     expect([
       today.stage(),
@@ -346,13 +382,12 @@ describe('Today’s stage over the device’s store', () => {
     await today.leave();
   });
 
-  // oxlint-disable-next-line film/tests-keep-their-strength -- red under Today's run (a second recital needs a new plan) until hsrun's commit 4 re-cuts it
-  it.skip('reads the passage’s own plant, never another verse’s: with another verse at full corn on the disk, the passage is not planted, then a seed, then grows to a blade and an ear', async () => {
+  it('reads the passage’s own plant, never another verse’s: with another verse at full corn on the disk, the passage is not planted, then a seed, then grows to a blade and an ear at each due', async () => {
     const other = 'Made 1:1';
     const theirs = fullCorn(other);
     device.launch(theirs);
     const chimes: Growth[] = [];
-    const today = await mount(chimes);
+    const today = await mount(chimes, undefined, { now: AT });
     expect(await today.until(() => today.stage() !== null)).toBe(true);
     expect([today.stage(), today.growth(), today.plant() !== null]).toEqual([
       'Stage: not planted',
@@ -362,9 +397,11 @@ describe('Today’s stage over the device’s store', () => {
 
     await today.say();
     expect(await today.until(() => today.stage() === 'Stage: seed')).toBe(true);
+    await today.renew();
     await today.say();
     expect(await today.until(() => today.stage() === 'Stage: blade')).toBe(true);
     expect(today.growth()).toBe('Grew to a blade.');
+    await today.renew();
     await today.say();
     expect(await today.until(() => today.stage() === 'Stage: ear')).toBe(true);
     expect(today.growth()).toBe('Grew to an ear.');
@@ -378,8 +415,7 @@ describe('Today’s stage over the device’s store', () => {
     await today.leave();
   });
 
-  // oxlint-disable-next-line film/tests-keep-their-strength -- red under Today's run (it reads the launches of the tests above) until hsrun's commit 4 re-cuts it
-  it.skip('draws no part of a plant, with or without a test id or label, in any frame of the held, pending and unread launches above, though each of the four stages drew its parts once read', () => {
+  it('draws no part of a plant, with or without a test id or label, in any frame of the held, pending and unread launches above, though each of the four stages drew its parts once read', () => {
     const stages = new Set([...PLANT_LOOKS.values()].flatMap((each) => [...each]));
     expect([...stages].toSorted()).toEqual([
       'Stage: blade',
