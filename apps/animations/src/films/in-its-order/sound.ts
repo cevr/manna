@@ -226,13 +226,19 @@ export const sound: Sound = {
   beds: [
     {
       sound: 'amb.courtyard',
-      level: -16,
+      level: -34,
       from: { scene: 'cold', at: 'start' },
       to: { scene: 'title', at: 'end' },
     },
     {
+      sound: 'amb.dawn',
+      level: -29,
+      from: { scene: 'cold', at: 'start' },
+      to: { scene: 'milk', at: 'end' },
+    },
+    {
       sound: 'room.paper',
-      level: -25,
+      level: -30,
       from: { scene: 'milk', at: 'start' },
       to: { scene: 'milk', at: 'end' },
     },
@@ -241,17 +247,28 @@ export const sound: Sound = {
       level: -22,
       fade: 0.3,
       from: { scene: 'milk', cue: 'milk-pour:pour' },
-      to: { scene: 'milk', cue: 'milk-pour:stop', edge: 'end' },
-    },
-    {
-      sound: 'milk.pour',
-      level: -22,
-      fade: 0.3,
-      from: { scene: 'milk', cue: 'milk-pour:again' },
       to: { scene: 'milk', cue: 'milk-pour:full', edge: 'end' },
     },
   ],
   effects: {
+    murmur: {
+      sound: 'crowd.swell',
+      level: -18,
+      sync: 'onset',
+      at: [{ scene: 'cold', cue: 'cold-baby:reply', edge: 'end' }],
+    },
+    sheepish: {
+      sound: 'cloth.settle',
+      level: -20,
+      sync: 'onset',
+      at: [{ scene: 'cold', cue: 'cold-smile:lower' }],
+    },
+    sip: {
+      sound: 'cloth.lift',
+      level: -22,
+      sync: 'onset',
+      at: [{ scene: 'milk', cue: 'milk-cup:sip' }],
+    },
     drop: {
       sound: 'scroll.drop',
       level: -16,
@@ -268,7 +285,7 @@ export const sound: Sound = {
       sound: 'scroll.unroll',
       level: -20,
       sync: 'onset',
-      at: [{ scene: 'cold', cue: 'cold-letter:unroll' }],
+      at: [{ scene: 'cold', cue: 'cold-letter:take' }],
     },
 
     lower: {

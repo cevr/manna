@@ -1,19 +1,18 @@
-import type { FilmShot } from '../../../../library/storybook/scene.ts';
-import {
-  blinkingHold,
-  hold,
-  type Plate,
-  type Span,
-  turn,
-} from '../../../../library/storybook/shot.ts';
+import { write } from '@manna/film/canvas';
+import type { FilmShot, Over } from '../../../../library/storybook/scene.ts';
+import { fonts, palette } from '../../palette.ts';
+import { hold, type Plate, type Span, turn } from '../../../../library/storybook/shot.ts';
 import { CELLS as VILLAGER_CELLS } from '../../cast/idea-villagers/shot-sheets/iio-milk/cells.ts';
 import { BOOK_OPEN, BOOK_SHUT, DROPPER, PAGE } from '../../plates/milk.ts';
 import {
   cam,
   drawScaleOf,
+  type Framing,
+  framingAt,
   holds,
   key,
   layer,
+  onScreen,
   plateAcross,
   plateOn,
   seat,
@@ -55,10 +54,11 @@ const villager = (spans: readonly [Span, ...ReadonlyArray<Span>]) =>
 const villagerGround = () =>
   VILLAGER.crown + tallOf('idea-villagers', 'iio-milk', VILLAGER.headPx, 1);
 
-/** The milk's face in the villager's cup, in each cell he holds it in while it pours, in that cell's px: the cup's mouth, read on the cells. */
+/** The milk's face in the villager's cup, in each cell he holds it in while it pours (waving the dropper away too, the cup kept in his other hand), in that cell's px: the cup's mouth, read on the cells. */
 export const CUP_MOUTHS = {
   cup: { x: 100, y: 501, width: 42, height: 8 },
   look: { x: 131, y: 501, width: 43, height: 8 },
+  wave: { x: 126, y: 501, width: 42, height: 8 },
 } as const;
 
 /** Where the milk falls into the cup in his `cup` hold, on the figures' plane: the mouth's middle across, 2 px under its rim, so his breath stays inside it. */
@@ -87,14 +87,16 @@ const gutterPour = (): readonly [number, number] => [
 const PUSHED = { x: 880, y: 520, zoom: 1.1 } as const;
 
 /**
- * `milk-cup`, the scene's start to the card: the villager on the parchment
- * holding his cup; on `newborn` the shut book pops in at picture right and
- * he turns to look at it, it opens, and from `peter` the camera pushes in.
+ * `milk-cup`, the scene's start to `desire`: the villager on the parchment
+ * holding his cup; after "Start with the milk." he takes a sip; on
+ * `newborn` the shut book pops in at picture right and he turns to look at
+ * it, it opens, and from `peter` the camera pushes in.
  */
 export const milkCup: FilmShot = {
   id: 'milk-cup',
   span: { at: 'start', until: 'desire' },
   cues: {
+    sip: { mark: 'start', word: 'milk', offset: 0.5, dur: 0.8 },
     pop: { mark: 'newborn', dur: 0.35 },
     look: { mark: 'newborn', offset: 0.15, dur: 0.3 },
     open: { mark: 'newborn', offset: 0.6, dur: 0.25 },
@@ -117,7 +119,14 @@ export const milkCup: FilmShot = {
         layer('figures', 1, [
           shadowAt(VILLAGER.x, villagerGround(), 330),
           villager([
-            blinkingHold(0, look.start, 'cup', 'cupBlink'),
+            ...holds(
+              [
+                [0, 'cup', 'cupBlink'],
+                [cue('sip').start, 'drink', 'drink'],
+                [cue('sip').end, 'cup', 'cupBlink'],
+              ],
+              look.start,
+            ),
             turn(look.start, look.end - look.start, 'cup', 'look'),
             hold(look.end, duration, 'look'),
           ]),
@@ -168,47 +177,82 @@ const ribbon = (from: number, stop: number): Plate =>
   );
 
 /**
- * `milk-pour`, the card's end (`thereby`, the word's end in the take, which
- * the card runs until) to `need`: held on the villager and the open
- * book, the milk pours from the book into his cup until `sincere`; on
- * "nothing" a dropper, come in level from the left, rests at the cup and he
- * waves it away, back out the way it came; on `word` he
- * looks to the book and it pours again, filling the cup, until `good`, and
- * he drinks. A slow push. Each `cup` hold blinks through `cupBlink`.
+ * milk-pour's camera, each move a cue of the shot from one framing to the
+ * next, in order, each starting where the one before ended (layer px): in
+ * onto the open book's pages on `desire`; a slow push while the verse is
+ * lettered on them; back out to the pour after "thereby"; down the stream
+ * to the cup on `sincere`, held while the dropper rests; left with the
+ * dropper as it is waved away; back in toward the stream and the cup on
+ * `word`; and easing out as he drinks. While milk pours it stays at or under
+ * the pour's zoom, so the stream keeps the panel's length on screen.
+ */
+export const POUR_PATH = [
+  ['page', PUSHED, { x: 1025, y: 560, zoom: 2.5 }],
+  ['study', { x: 1025, y: 560, zoom: 2.5 }, { x: 1022, y: 562, zoom: 2.65 }],
+  ['back', { x: 1022, y: 562, zoom: 2.65 }, { x: 905, y: 525, zoom: 1.36 }],
+  ['follow', { x: 905, y: 525, zoom: 1.36 }, { x: 800, y: 560, zoom: 1.4 }],
+  ['leave', { x: 800, y: 560, zoom: 1.4 }, { x: 745, y: 552, zoom: 1.3 }],
+  ['unmixed', { x: 745, y: 552, zoom: 1.3 }, { x: 862, y: 540, zoom: 1.42 }],
+  ['settle', { x: 862, y: 540, zoom: 1.42 }, { x: 830, y: 525, zoom: 1.3 }],
+] as const;
+
+/** The framing milk-pour's camera holds at a frame whose cues have run `at` of their way: the first move not yet done, eased as the shot eases it, or the last move's end. */
+export const pourFramingAt = (at: (cue: string) => number): Framing => {
+  const [moving] = POUR_PATH.filter(([cue]) => at(`milk-pour:${cue}`) < 1);
+  const [cue, from, to] = moving ?? POUR_PATH[POUR_PATH.length - 1] ?? POUR_PATH[0];
+  return framingAt(from, to, at(`milk-pour:${cue}`));
+};
+
+/**
+ * `milk-pour`, `desire` to `need`: the camera goes in onto the open book's
+ * pages, and 1 Pet 2:2 is lettered on them as it is read (`BOOK_QUOTE`).
+ * After "thereby" the camera draws back, the villager turns to his cup, and
+ * on `sincere` one clean white stream pours from the book's gutter into his
+ * cup and keeps pouring: the camera follows it down to the cup; on
+ * "nothing" a dropper of ink comes in level from the left and rests at the
+ * cup, and he waves it away, back out the way it came, the stream unbroken;
+ * on `word` he looks to the book and back while it pours on, and the
+ * camera goes in toward the stream; on `good` the cup is full, the stream
+ * stops and he drinks. Each `cup` hold blinks through `cupBlink`.
  */
 export const milkPour: FilmShot = {
   id: 'milk-pour',
-  span: { after: 'card:milk', until: 'need' },
+  span: { mark: 'desire', until: 'need' },
   cues: {
     thereby: { mark: 'desire', word: 'thereby', offset: 0.56 },
-    pour: { after: 'card:milk', dur: 0.3 },
-    stop: { mark: 'sincere', dur: 0.25 },
-    toCup: { after: 'card:milk', dur: 0.3 },
+    page: { mark: 'desire', dur: 0.9 },
+    study: { after: 'milk-pour:page', until: { cue: 'milk-pour:thereby' } },
+    write: { mark: 'desire', until: { cue: 'milk-pour:thereby' } },
+    back: { after: 'milk-pour:thereby', dur: 0.5 },
+    toCup: { after: 'milk-pour:thereby', dur: 0.3 },
+    pour: { after: 'milk-pour:back', dur: 0.3 },
+    follow: { after: 'milk-pour:back', until: { cue: 'milk-pour:dropper' } },
     dropper: { mark: 'mixed', word: 'nothing', dur: 1.2, ends: true },
     wave: { mark: 'mixed', word: 'nothing', dur: 0.3 },
     away: { mark: 'mixed', word: 'nothing', offset: 0.3, dur: 1.2 },
+    leave: { after: 'milk-pour:wave', until: 'word' },
     look: { mark: 'word', dur: 0.3 },
-    again: { mark: 'word', offset: 0.3, dur: 0.3 },
-    back: { after: 'milk-pour:again', dur: 0.3 },
+    turnBack: { after: 'milk-pour:look', offset: 0.6, dur: 0.3 },
+    unmixed: { mark: 'word', until: 'good' },
     full: { mark: 'good', dur: 0.3 },
     drink: { mark: 'good', offset: 0.3, dur: 1.2 },
+    settle: { mark: 'good', until: 'need' },
   },
   build: ({ duration, cue }) => {
-    const [toCup, dropper, away, look, again, back, drink] = [
+    const [toCup, dropper, away, look, turnBack, drink] = [
       cue('toCup'),
       cue('dropper'),
       cue('away'),
       cue('look'),
-      cue('again'),
-      cue('back'),
+      cue('turnBack'),
       cue('drink'),
     ];
     return {
       headPx: VILLAGER.headPx,
-      camera: [
-        cam(0, PUSHED.x, PUSHED.y, PUSHED.zoom),
-        cam(duration, PUSHED.x - 10, PUSHED.y, PUSHED.zoom * 1.04),
-      ],
+      camera: POUR_PATH.flatMap(([name, from, to]) => [
+        cam(cue(name).start, from.x, from.y, from.zoom),
+        cam(cue(name).end, to.x, to.y, to.zoom),
+      ]),
       layers: [
         page(),
         layer('figures', 1, [
@@ -225,11 +269,11 @@ export const milkPour: FilmShot = {
               look.start,
             ),
             turn(look.start, look.end - look.start, 'cup', 'look'),
-            hold(look.end, again.end, 'look'),
-            turn(back.start, back.end - back.start, 'look', 'cup'),
+            hold(look.end, turnBack.start, 'look'),
+            turn(turnBack.start, turnBack.end - turnBack.start, 'look', 'cup'),
             ...holds(
               [
-                [back.end, 'cup', 'cupBlink'],
+                [turnBack.end, 'cup', 'cupBlink'],
                 [drink.start, 'drink', 'drink'],
                 [drink.end, 'cup', 'cupBlink'],
               ],
@@ -237,8 +281,7 @@ export const milkPour: FilmShot = {
             ),
           ]),
           plateOn('milk-book-open.png', BOOK_OPEN, [215.5, 119.5], [BOOK.x, BOOK.y], BOOK.s),
-          ribbon(cue('pour').start, cue('stop').start),
-          ribbon(again.start, cue('full').start),
+          ribbon(cue('pour').start, cue('full').start),
           plateOn('milk-dropper.png', DROPPER, [14, 130], [667, 530], 0.9, {
             moves: [
               [0, key({ x: DROPPER_LEFT, alpha: 0 })],
@@ -253,6 +296,67 @@ export const milkPour: FilmShot = {
         ]),
       ],
     };
+  },
+};
+
+/** 1 Pet 2:2 as it is lettered on the open book's two pages: each line's page, its centre and baseline in the book plate's own px, and its words. */
+export const BOOK_WORDS = [
+  { x: 120, y: 58, text: '“As newborn babes,' },
+  { x: 120, y: 84, text: 'desire the sincere' },
+  { x: 120, y: 110, text: 'milk of the word,' },
+  { x: 312, y: 58, text: 'that ye may' },
+  { x: 312, y: 84, text: 'grow thereby.”' },
+] as const;
+
+/** The reference under the verse on the right page, in the book plate's px. */
+export const BOOK_CITE = { x: 312, y: 118, text: '1 Peter 2:2' } as const;
+
+/** The verse's type in the book plate's px (drawn at the book's scale times the camera's zoom: about 31 frame px at the push's end), and the reference's. */
+const BOOK_TYPE = {
+  verse: { family: fonts.display, size: 13, weight: 500, color: palette.ink, align: 'center' },
+  cite: { family: fonts.display, size: 8, weight: 600, color: palette.goldShade, align: 'center' },
+} as const;
+
+/** The book plate's own point (its px) the verse is laid from, and where it lies on the figures' plane: the plate as milk-pour lays it. */
+const BOOK_ON = [215.5, 119.5] as const;
+
+/**
+ * 1 Pet 2:2 on the open book's pages in milk-pour, the film's own lettering
+ * in strokes: written line by line from `desire` to the end of "thereby" as
+ * the camera holds in on the pages, and left on them, read as part of the
+ * book, while the milk pours from its gutter. It follows milk-pour's camera
+ * (`pourFramingAt`), the same moves eased the same way.
+ */
+export const BOOK_QUOTE: Over = {
+  shot: 'milk-pour',
+  box: { x: 0, y: 0, w: 1920, h: 1080 },
+  draw: (f) => {
+    const written = f.at('milk-pour:write');
+    if (written <= 0) return;
+    const c = pourFramingAt(f.at);
+    const [x0, y0] = onScreen(c, BOOK.x - BOOK_ON[0] * BOOK.s, BOOK.y - BOOK_ON[1] * BOOK.s);
+    const ctx = f.ctx;
+    ctx.save();
+    ctx.translate(x0, y0);
+    ctx.scale(BOOK.s * c.zoom, BOOK.s * c.zoom);
+    const sizes = BOOK_WORDS.map((l) => l.text.length);
+    const total = sizes.reduce((a, b) => a + b, 0);
+    BOOK_WORDS.forEach((line, i) => {
+      const before = sizes.slice(0, i).reduce((a, b) => a + b, 0) / total;
+      const share = (sizes[i] ?? 0) / total;
+      const progress = Math.min(1, Math.max(0, (written - before) / share));
+      if (progress <= 0) return;
+      write(ctx, line.text, line.x, line.y, BOOK_TYPE.verse, f.hand(`verse-${i}`), {
+        progress,
+        reveal: 'write',
+        boil: 0,
+      });
+    });
+    write(ctx, BOOK_CITE.text, BOOK_CITE.x, BOOK_CITE.y, BOOK_TYPE.cite, f.hand('cite'), {
+      alpha: written,
+      boil: 0,
+    });
+    ctx.restore();
   },
 };
 

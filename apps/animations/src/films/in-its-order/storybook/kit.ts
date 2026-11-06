@@ -5,6 +5,7 @@ import { medianOf, shareOf } from '../../../library/storybook/sheet.ts';
 import {
   blinkingHold,
   type CameraKey,
+  ease,
   hold,
   type Figure,
   figure,
@@ -95,6 +96,35 @@ export const cam = (t: number, x: number, y: number, zoom: number): CameraKey =>
   y,
   zoom,
 });
+
+/** A camera framing: its centre in layer px and its zoom. */
+export interface Framing {
+  readonly x: number;
+  readonly y: number;
+  readonly zoom: number;
+}
+
+/** The framing eased `u` of the way from `a` to `b`, as a shot's camera eases between two keys (`ease`, smoothstep): what a drawing over a shot reads to follow its push. */
+export const framingAt = (a: Framing, b: Framing, u: number): Framing => {
+  const e = ease(u);
+  return {
+    x: a.x + (b.x - a.x) * e,
+    y: a.y + (b.y - a.y) * e,
+    zoom: a.zoom + (b.zoom - a.zoom) * e,
+  };
+};
+
+/** Where a point of a plane at depth 1 lies on a 1920×1080 frame under framing `c`. */
+export const onScreen = (c: Framing, x: number, y: number): readonly [number, number] => [
+  960 + (x - c.x) * c.zoom,
+  540 + (y - c.y) * c.zoom,
+];
+
+/** A hex colour as a CSS colour at `alpha`. */
+export const withAlpha = (hex: string, alpha: number): string => {
+  const channel = (at: number) => Number.parseInt(hex.slice(at, at + 2), 16);
+  return `rgba(${channel(1)}, ${channel(3)}, ${channel(5)}, ${Math.min(1, Math.max(0, alpha))})`;
+};
 
 /** A layer: its name, depth and items, unblurred. */
 export const layer = (name: string, z: number, items: Layer['items']): Layer => ({
