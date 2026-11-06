@@ -341,6 +341,33 @@ const heldLetterOf = Effect.fn('staging.heldLetterOf')(function* () {
   return { read, parchment, roller };
 });
 
+/** The least air, in frame px, between the letter he takes up in cold-letter and the bearded guest beyond him (diner 3)'s skin, from the lift to the card (critique 2, fault 1: the scroll lay on that guest's ear through the read). */
+const LETTER_AIR = 12;
+
+/** Each row of a raw drawing holding an opaque pixel (exactly `hex` when one is named), with that row's leftmost and rightmost such pixel, in its px. */
+const rowEdgesOf = (
+  raw: {
+    readonly data: Buffer;
+    readonly info: { readonly width: number; readonly height: number };
+  },
+  hex = '',
+) => {
+  const want = [1, 3, 5].map((at) => Number.parseInt(hex.slice(at, at + 2), 16));
+  const rows: Array<{ readonly y: number; readonly left: number; readonly right: number }> = [];
+  for (let y = 0; y < raw.info.height; y++) {
+    let [left, right] = [Infinity, -Infinity];
+    for (let x = 0; x < raw.info.width; x++) {
+      const i = (y * raw.info.width + x) * 4;
+      if ((raw.data[i + 3] ?? 0) <= 127) continue;
+      if (hex !== '' && want.some((c, k) => raw.data[i + k] !== c)) continue;
+      left = Math.min(left, x);
+      right = Math.max(right, x + 1);
+    }
+    if (right > left) rows.push({ y, left, right });
+  }
+  return rows;
+};
+
 /** Where a point of a figure's cell (its px) lies in its layer's px at `headPx`, on the figure's place. */
 const onFigure = (
   f: Figure,
@@ -1086,6 +1113,112 @@ describe("In Its Order's staging", () => {
           }),
         );
         expect(covered.flat()).toEqual([]);
+      }),
+  );
+
+  it.effect(
+    'keeps the letter he takes up in cold-letter at least 12 px on screen from the bearded guest beyond him, from his reach to the card: on every screen row they share, the left edge of the rising roll’s opaque pixels and then of his `read` cell’s, each through its own plane and the camera, against the right edge of diner 3’s skin on the cell he shows (critique 2, fault 1: the scroll lay on that guest’s ear through the read, 11 px over it)',
+    () =>
+      Effect.gen(function* () {
+        const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
+        const table = letter?.layers.find((l) => l.name === 'table');
+        const diners = letter?.layers.find((l) => l.name === 'diners');
+        const lead = table?.items.find(
+          (i): i is Figure => i._tag === 'Figure' && i.name === 'lead',
+        );
+        const guest = diners?.items.find(
+          (i): i is Figure => i._tag === 'Figure' && i.name === 'diner-3',
+        );
+        const plate = table?.items.find(
+          (i): i is Plate => i._tag === 'Plate' && i.file.endsWith('/scroll-rolled.png'),
+        );
+        const sheet = SHEET_CELLS.get('filler-dressed/iio-diner-3');
+        if (!letter || !table || !diners || !lead || !guest || !plate?.painting || !sheet)
+          return expect([letter?.id, lead?.name, guest?.name, plate?.file]).toEqual([
+            'cold-letter',
+            'lead',
+            'diner-3',
+            '',
+          ]);
+        const raw = (png: string) =>
+          Effect.promise(() =>
+            sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+          );
+        const skinHex = sheet.palette.parts.find((p) => p.role === 'skin')?.base ?? '';
+        const times = timesOf(letter);
+        const shownCells = [...new Set(times.map((t) => poseAt(guest, t).cell))];
+        const skins = new Map(
+          yield* Effect.forEach(shownCells, (cell) =>
+            Effect.map(
+              raw(sheet.cells[cell]?.png ?? ''),
+              (r) => [cell, rowEdgesOf(r, skinHex)] as const,
+            ),
+          ),
+        );
+        const [roll, reading] = yield* Effect.all([
+          Effect.map(raw(plate.painting.png), (r) => rowEdgesOf(r)),
+          Effect.map(raw(LEAD_TABLE_CELLS.read.png), (r) => rowEdgesOf(r)),
+        ]);
+        const reach = Math.min(
+          ...lead.spans
+            .filter((s): s is Turn => s._tag === 'Turn' && s.to === 'read')
+            .map((s) => s.at),
+        );
+        const leadScale = drawScaleOf(lead.member, lead.sheet, letter.headPx, table.z);
+        const guestScale = drawScaleOf(guest.member, guest.sheet, letter.headPx, diners.z);
+        type Edge = { readonly y: number; readonly left: number; readonly right: number };
+        const onScreen = (
+          rows: ReadonlyArray<Edge>,
+          at: (x: number, y: number) => readonly [number, number],
+          plane: ReturnType<typeof planeOf>,
+        ) =>
+          rows.map((row) => {
+            const [a, b] = [at(row.left, row.y), at(row.right, row.y)];
+            return {
+              y: Math.round(a[1] * plane.scale + plane.oy),
+              left: Math.min(a[0], b[0]) * plane.scale + plane.ox,
+              right: Math.max(a[0], b[0]) * plane.scale + plane.ox,
+            };
+          });
+        const onCell =
+          (f: Figure, t: number, cell: { readonly ax: number; readonly ay: number }, s: number) =>
+          (x: number, y: number) => {
+            const pose = poseAt(f, t);
+            return [
+              pose.x + (x - cell.ax) * s * pose.sx,
+              pose.y + (y - cell.ay) * s * pose.sy * pose.breath,
+            ] as const;
+          };
+        const checked = times.filter((t) => t >= reach);
+        const near = checked.flatMap((t) => {
+          const camera = cameraAt(letter.camera, t);
+          const front = planeOf(letter.size, table.z, camera);
+          const back = planeOf(letter.size, diners.z, camera);
+          const his = [
+            ...onScreen(roll, (x, y) => pointOn(plate, t, [x, y]), front).filter(
+              () => plateAt(plate, t).alpha > 0,
+            ),
+            ...onScreen(reading, onCell(lead, t, LEAD_TABLE_CELLS.read, leadScale), front).filter(
+              () => poseAt(lead, t).cell === 'read',
+            ),
+          ];
+          const pose = poseAt(guest, t);
+          const cell = sheet.cells[pose.cell];
+          const skin = skins.get(pose.cell);
+          if (!cell || !skin) return [`${t.toFixed(2)} s: no skin for ${pose.cell}`];
+          const rights = new Map<number, number>();
+          for (const row of onScreen(skin, onCell(guest, t, cell, guestScale), back))
+            rights.set(row.y, Math.max(rights.get(row.y) ?? -Infinity, row.right));
+          const gap = Math.min(
+            ...his.flatMap((row) =>
+              Option.toArray(Option.fromUndefinedOr(rights.get(row.y))).map((r) => row.left - r),
+            ),
+          );
+          if (gap >= LETTER_AIR) return [];
+          return [`${t.toFixed(2)} s: ${gap.toFixed(1)} px`];
+        });
+        expect(checked.length).toBeGreaterThan(100);
+        expect(near.slice(0, 5)).toEqual([]);
       }),
   );
 

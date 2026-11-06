@@ -416,14 +416,14 @@ const bottleOn = (moves: NonNullable<Plate['moves']>): Plate =>
 /** The bottle standing on the table top from a shot's start, where his lowered hand set it down. */
 export const bottleOnTable = (): Plate => bottleOn([[0, key({})]]);
 
-/** How far the rolled scroll rises from where it lies to his reading hand, layer px: its middle from the table to the middle of the letter his `read` cell holds up, so the open scroll he reads opens where the roll was lifted to, by the shortest way up, clear of the bearded guest's face beside him. */
+/** How far the rolled scroll rises from where it lies to his reading hand, layer px: its middle from the table to the middle of the letter his `read` cell holds up, so the open scroll he reads opens where the roll was lifted to, by the shortest way up. */
 export const LETTER_LIFT = (() => {
   const [x, y] = atTable(LEAD_TABLE.read, READ_LETTER);
   const middle = (SCROLL_ROLLED.size[1] / 2) * LETTER_SCALE;
   return { x: x - LETTER_AT[0], y: y - (LETTER_AT[1] - middle) };
 })();
 
-/** The rolled scroll falling from above the frame onto the table before him over `fall`, hopping once over `hop`, lying there until `lift` starts, his reach, and rising in his hand to his reading hand's place by `lift`'s end, the swap of his key that takes it up: from that frame his hand holds it open, so the plate is gone. */
+/** The rolled scroll falling from above the frame onto the table before him over `fall`, hopping once over `hop`, lying there until `lift` starts, and rising alone, no hand drawn on it, to his reading hand's place by `lift`'s end, the swap of his key that takes it up, so it reads as snatched up: from that frame his hand holds it open, so the plate is gone. */
 export const letterLands = (
   fall: { readonly start: number; readonly end: number },
   hop: { readonly start: number; readonly end: number },
@@ -449,8 +449,8 @@ const LETTER = {
 /**
  * `cold-letter`, `letter` to the card: a rolled scroll falls onto the table
  * before the lead, who still holds the bottle up, and hops; the guests turn
- * to stare at it, and he reaches for it with his free hand, the roll rising
- * from the table to that hand (the owner, scrawl 0:21): from the swap he
+ * to stare at it, and it rises alone from the table to where his free hand
+ * will hold it, a snatch (the owner, scrawl 0:21): from the swap he
  * reads the letter, open in one hand, the bottle's teat at his mouth in the
  * other, his lids half down on the scroll, to the card; a lidded cell takes
  * no pasted blink, and the hold is under `ALIVE`. On `quote` the camera

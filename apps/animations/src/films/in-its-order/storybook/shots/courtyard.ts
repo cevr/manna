@@ -51,11 +51,12 @@ export const AT_TABLE = {
  * right: their crowns high enough that every chin clears the far table's top
  * (840), each seen whole between the three at the table under the table's
  * medium (zoom 1.9 to 1.95): two left of the man, one between him and the
- * lead, one between the lead and the woman, the mother right of her.
+ * lead (clear of the letter the lead reads beside his face in cold-letter),
+ * one between the lead and the woman, the mother right of her.
  */
 export const DINERS_ROW = {
   crown: 700,
-  xs: [470, 590, 820, 1100],
+  xs: [470, 590, 800, 1100],
   mother: { x: 1400, crown: 712 },
 } as const;
 
