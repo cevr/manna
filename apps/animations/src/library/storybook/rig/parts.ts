@@ -61,6 +61,22 @@ export const cellPaintsOf = (
     });
 };
 
+/** How far, in the cell's px, a moving part carries the key's own pixels past its cut: drawn turned and scaled, a part's edge is soft, and the skirt keeps what lies under the cut (okra's outline on the body) from showing through it. */
+const SKIRT = 2;
+
+/** Whether a pixel within `SKIRT` of pixel `i` is owned by part `k`. */
+const nearOwned = (owners: Uint8Array, width: number, k: number, i: number): boolean => {
+  const [x, y] = [i % width, Math.floor(i / width)];
+  const height = owners.length / width;
+  for (let dy = -SKIRT; dy <= SKIRT; dy++)
+    for (let dx = -SKIRT; dx <= SKIRT; dx++) {
+      const [nx, ny] = [x + dx, y + dy];
+      if (nx >= 0 && ny >= 0 && nx < width && ny < height && owners[ny * width + nx] === k)
+        return true;
+    }
+  return false;
+};
+
 /** The paint of `paints` nearest `rgb` in Lab. */
 const snapped = (paints: ReturnType<typeof cellPaintsOf>, rgb: Rgb): Rgb => {
   const lab = labOf(rgb);
@@ -71,7 +87,8 @@ const snapped = (paints: ReturnType<typeof cellPaintsOf>, rgb: Rgb): Rgb => {
 
 /**
  * A drawn key of the cell as the sheet's parts, by name: each moving part
- * the key's own pixels where it owns them, the body the key's own pixels
+ * the key's own pixels where it owns them and on a `SKIRT` past its cut
+ * over the key's other drawn pixels, the body the key's own pixels
  * where it owns them and, under every moving part, the okra paint its PNG
  * holds, each pixel snapped to the nearest of the cell's own paints
  * (`cellPaintsOf` of `open`, the open cell), opaque.
@@ -88,7 +105,9 @@ export const partsOfKey = (
     sheet.parts.map(({ name }, k) => {
       const rgba = new Uint8Array(key.rgba.length);
       for (let i = 0; i < owners.length; i++) {
-        if (owners[i] === k) {
+        const skirt =
+          k !== body && (key.rgba[i * 4 + 3] ?? 0) > 0 && nearOwned(owners, key.width, k, i);
+        if (owners[i] === k || skirt) {
           rgba.set(key.rgba.subarray(i * 4, i * 4 + 4), i * 4);
           continue;
         }

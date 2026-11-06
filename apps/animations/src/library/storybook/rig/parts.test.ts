@@ -77,7 +77,24 @@ describe('a key cut into its parts', () => {
   it('draws each moving part from the key itself, so a blink key keeps its own eyes', () => {
     const head = parts.get('head');
     expect(head && pixel(head, 1)).toEqual([...SKIN]);
-    expect(head && pixel(head, 5)).toEqual([...CLEAR]);
+    expect(head && pixel(head, 0)).toEqual([...CLEAR]);
+  });
+
+  it("carries the key's own pixels 2 px past a moving part's cut, never past the key's edge", () => {
+    const column = rasterOf(1, [SKIN, CLOTH, CLOTH, CLOTH, CLOTH, CLEAR]);
+    const sheet: RigSheet = {
+      ...SHEET,
+      at: [0, 0],
+      parts: [
+        { name: 'head', png: rasterOf(1, [SKIN, CLEAR, CLEAR, CLEAR, CLEAR, CLEAR]) },
+        { name: 'body', png: rasterOf(1, [CLOTH, CLOTH, CLOTH, CLOTH, CLOTH, CLEAR]) },
+      ],
+    };
+    const head = partsOfKey(sheet, column, ownersOf(sheet, 1, 6), PAINTS).get('head');
+    expect([0, 1, 2, 3, 4, 5].map((i) => head && pixel(head, i)[3])).toEqual([
+      255, 255, 255, 0, 0, 0,
+    ]);
+    expect(head && pixel(head, 2)).toEqual([...CLOTH]);
   });
 
   it("lays okra's paint under the moving parts on the body, snapped to the cell's own paints and opaque", () => {
