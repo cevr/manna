@@ -38,9 +38,9 @@ export const TITLE_STORY: StoryScene = {
 
 /**
  * The milk on the parchment: the villager and the book, the pour and the
- * row drinking in turn. No card: 1 Pet 2:2 is lettered on the open book's
- * pages in milk-pour as it is read (`BOOK_QUOTE`), and the milk pours from
- * that book.
+ * row drinking in turn. No card: 1 Pet 2:2 is lettered in ink on the
+ * parchment over the open book in milk-pour as it is read (`BOOK_QUOTE`),
+ * and the milk pours from that book.
  */
 export const MILK_STORY: StoryScene = {
   scene: 'milk',

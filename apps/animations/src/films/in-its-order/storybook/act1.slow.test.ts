@@ -504,7 +504,7 @@ const parityOf = Effect.fn('Act1.parity')(function* (
   return parity(p.data, grained(q.data, frameBox, FILM_GRAIN, t), width, height, overlays);
 });
 
-/** The share of the frame a shot's drawings over it may cover, so the parity reads the rest: a tenth (the title's name), but the two quotes lettered in act 1 (the owner: the quotes off black cards; journal.md), a third each: the dusk band over cold-letter's sky and the book's pages along milk-pour's camera path. */
+/** The share of the frame a shot's drawings over it may cover, so the parity reads the rest: a tenth (the title's name), but the two quotes lettered in act 1 (the owner: the quotes off black cards; journal.md), a third each: the dusk band over cold-letter's sky and the parchment over milk-pour's book. */
 const OVER_SHARES: ReadonlyMap<string, number> = new Map([
   ['cold-letter', 1 / 3],
   ['milk-pour', 1 / 3],

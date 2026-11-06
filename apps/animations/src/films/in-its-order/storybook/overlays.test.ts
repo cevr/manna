@@ -141,7 +141,7 @@ describe("In Its Order's drawings over its shots", () => {
     const wrong = QUOTES.flatMap(({ story, shot, words, cite }) => {
       const over = story.over.find((o) => o.shot === shot);
       if (!over) return [`${shot}: no drawing over it`];
-      const drawn = drawnBy(over, () => 1);
+      const drawn = drawnBy(over, (cue) => Number(cue !== 'milk-pour:clear'));
       const lettered = drawn.glyphs.map((g) => g.ch).join('');
       return [
         ...[`${words}${cite.replace(/\s+/g, '')}`].filter((w) => w !== lettered),
@@ -168,13 +168,18 @@ describe("In Its Order's drawings over its shots", () => {
     expect(early).toEqual([]);
   });
 
-  test('keeps the verse on the book inside its drawing’s box wherever milk-pour’s camera stands on its path', () => {
+  test('keeps the verse over the book inside its drawing’s box wherever milk-pour’s camera stands while it shows, and clears it once the milk pours', () => {
     const over = MILK_STORY.over.find((o) => o.shot === 'milk-pour');
     if (!over) return expect(over).toBeDefined();
-    const off = POUR_PATH.flatMap(([move], k) =>
+    const shown = POUR_PATH.slice(0, 3);
+    const off = shown.flatMap(([move], k) =>
       [0, 0.25, 0.5, 0.75, 1].flatMap((u) => {
         const done = new Set(POUR_PATH.slice(0, k).map(([m]) => `milk-pour:${m}`));
-        const at = (cue: string) => [u, 1][Number(done.has(cue) || cue === 'milk-pour:write')] ?? u;
+        const at = (cue: string) => {
+          if (cue === 'milk-pour:clear') return 0;
+          if (done.has(cue) || cue === 'milk-pour:write') return 1;
+          return u;
+        };
         const drawn = drawnBy(over, at);
         return [
           ...[`${move}@${u}: ${drawn.glyphs.length} glyphs`].filter(
@@ -184,7 +189,8 @@ describe("In Its Order's drawings over its shots", () => {
         ];
       }),
     );
-    expect(off).toEqual([]);
+    const poured = drawnBy(over, () => 1).glyphs.map((g) => `poured: ${g.ch}`);
+    expect([...off, ...poured]).toEqual([]);
   });
 
   test('keeps the title’s drawing under a tenth of the frame, so the parity reads the rest', () => {

@@ -152,7 +152,7 @@ const placed = await Effect.runPromise(
   ),
 );
 
-/** Each shot's push cap its spec row names, as the largest zoom over the smallest across the shot: cold-ouch's "≤ 5 %", and each named push or pull's range; the title's pull starts nearer, at 1.3, by the orchestrator's ruling on critique 1, item 9. The restage (iio-b-restage) lets cold-letter push on toward the letter through the quote to the cut (1.3), holds cold-smile's slow push to 5 %, and sends milk-pour's camera in onto the book's page to read the verse and back out to the pour (2.45). */
+/** Each shot's push cap its spec row names, as the largest zoom over the smallest across the shot: cold-ouch's "≤ 5 %", and each named push or pull's range; the title's pull starts nearer, at 1.3, by the orchestrator's ruling on critique 1, item 9. The restage (iio-b-restage) lets cold-letter push on toward the letter through the quote to the cut (1.3), holds cold-smile's slow push to 5 %, and lets milk-pour's camera rise onto the verse over the book and follow the pour within 6 %, so the villager's drawing stays under the act's 1.5 enlarging cap. */
 const PUSH_CAPS: ReadonlyMap<string, number> = new Map([
   ['cold-baby', 1.06],
   ['cold-smile', 1.05],
@@ -161,7 +161,7 @@ const PUSH_CAPS: ReadonlyMap<string, number> = new Map([
   ['cold-what', 1.08],
   ['title', 1.3],
   ['milk-cup', 1.1],
-  ['milk-pour', 2.45],
+  ['milk-pour', 1.06],
 ]);
 
 /** The dropper's width on milk-pour's screen, outline included (critique 4, fault 2, measured): a frame's step past it draws a row of droppers, not one moving. */

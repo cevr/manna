@@ -178,22 +178,23 @@ const ribbon = (from: number, stop: number): Plate =>
 
 /**
  * milk-pour's camera, each move a cue of the shot from one framing to the
- * next, in order, each starting where the one before ended (layer px): in
- * onto the open book's pages on `desire`; a slow push while the verse is
- * lettered on them; back out to the book and the cup after "thereby";
- * down the stream to the cup as it pours, until the dropper comes; left with the
- * dropper as it is waved away; back in toward the stream and the cup on
- * `word`; and easing out as he drinks. While milk pours it stays at zoom
- * 1.25 or under, so the stream keeps about the panel's length on screen.
+ * next, in order, each starting where the one before ended (layer px): up
+ * and right onto the parchment over the open book on `desire`; a slow push
+ * while the verse is lettered there; down to the book and the cup after
+ * "thereby"; down the stream to the cup as it pours, until the dropper
+ * comes; left with the dropper as it is waved away; back in toward the
+ * stream and the cup on `word`; and easing out as he drinks. It stays at
+ * zoom 1.16 or under throughout, so the villager's drawing (drawn at 1.281)
+ * is never enlarged past the act's 1.5 cap.
  */
 export const POUR_PATH = [
-  ['page', PUSHED, { x: 1025, y: 560, zoom: 2.5 }],
-  ['study', { x: 1025, y: 560, zoom: 2.5 }, { x: 1022, y: 562, zoom: 2.65 }],
-  ['back', { x: 1022, y: 562, zoom: 2.65 }, { x: 905, y: 525, zoom: 1.25 }],
-  ['follow', { x: 905, y: 525, zoom: 1.25 }, { x: 820, y: 555, zoom: 1.25 }],
-  ['leave', { x: 820, y: 555, zoom: 1.25 }, { x: 765, y: 550, zoom: 1.18 }],
-  ['unmixed', { x: 765, y: 550, zoom: 1.18 }, { x: 860, y: 540, zoom: 1.25 }],
-  ['settle', { x: 860, y: 540, zoom: 1.25 }, { x: 830, y: 525, zoom: 1.15 }],
+  ['page', PUSHED, { x: 960, y: 470, zoom: 1.12 }],
+  ['study', { x: 960, y: 470, zoom: 1.12 }, { x: 965, y: 468, zoom: 1.16 }],
+  ['back', { x: 965, y: 468, zoom: 1.16 }, { x: 905, y: 525, zoom: 1.16 }],
+  ['follow', { x: 905, y: 525, zoom: 1.16 }, { x: 820, y: 555, zoom: 1.16 }],
+  ['leave', { x: 820, y: 555, zoom: 1.16 }, { x: 765, y: 550, zoom: 1.16 }],
+  ['unmixed', { x: 765, y: 550, zoom: 1.16 }, { x: 860, y: 540, zoom: 1.16 }],
+  ['settle', { x: 860, y: 540, zoom: 1.16 }, { x: 830, y: 525, zoom: 1.1 }],
 ] as const;
 
 /** The framing milk-pour's camera holds at a frame whose cues have run `at` of their way: the first move not yet done, eased as the shot eases it, or the last move's end. */
@@ -204,9 +205,10 @@ const pourFramingAt = (at: (cue: string) => number): Framing => {
 };
 
 /**
- * `milk-pour`, `desire` to `need`: the camera goes in onto the open book's
- * pages, and 1 Pet 2:2 is lettered on them as it is read (`BOOK_QUOTE`).
- * After "thereby" the camera draws back, the villager turns to his cup, and
+ * `milk-pour`, `desire` to `need`: the camera rises onto the parchment over
+ * the open book, and 1 Pet 2:2 is lettered there in ink as it is read
+ * (`BOOK_QUOTE`). After "thereby" the camera comes down to the book and the
+ * cup, the villager turns to his cup, the verse fades off the parchment, and
  * as it settles, before `sincere`, one clean white stream pours from the
  * book's gutter into his cup and keeps pouring: the camera follows it down
  * to the cup; on
@@ -225,6 +227,7 @@ export const milkPour: FilmShot = {
     study: { after: 'milk-pour:page', until: { cue: 'milk-pour:thereby' } },
     write: { mark: 'desire', until: { cue: 'milk-pour:thereby' } },
     back: { after: 'milk-pour:thereby', dur: 0.5 },
+    clear: { after: 'milk-pour:thereby', offset: 0.3, dur: 0.3 },
     toCup: { after: 'milk-pour:thereby', dur: 0.3 },
     pour: { after: 'milk-pour:back', dur: 0.3 },
     follow: { after: 'milk-pour:back', until: { cue: 'milk-pour:dropper' } },
@@ -300,37 +303,34 @@ export const milkPour: FilmShot = {
   },
 };
 
-/** 1 Pet 2:2 as it is lettered on the open book's two pages: each line's page, its centre and baseline in the book plate's own px, and its words. */
+/** 1 Pet 2:2 as it is lettered on the parchment over the open book: each line's centre and baseline on the figures' plane (layer px), and its words. */
 const BOOK_WORDS = [
-  { x: 127, y: 60, text: '“As newborn babes,' },
-  { x: 127, y: 86, text: 'desire the sincere' },
-  { x: 127, y: 112, text: 'milk of the word,' },
-  { x: 312, y: 58, text: 'that ye may' },
-  { x: 312, y: 84, text: 'grow thereby.”' },
+  { x: 1230, y: 205, text: '“As newborn babes, desire' },
+  { x: 1230, y: 262, text: 'the sincere milk of the word,' },
+  { x: 1230, y: 319, text: 'that ye may grow thereby.”' },
 ] as const;
 
-/** The reference under the verse on the right page, in the book plate's px. */
-export const BOOK_CITE = { x: 312, y: 118, text: '1 Peter 2:2' } as const;
+/** The reference under the verse, on the figures' plane. */
+export const BOOK_CITE = { x: 1230, y: 365, text: '1 Peter 2:2' } as const;
 
-/** The verse's type in the book plate's px (drawn at the book's scale times the camera's zoom: about 31 frame px at the push's end), and the reference's. */
+/** The verse's type on the figures' plane (drawn at the camera's zoom: about 50 frame px while it is written), and the reference's. */
 const BOOK_TYPE = {
-  verse: { family: fonts.display, size: 13, weight: 500, color: palette.ink, align: 'center' },
-  cite: { family: fonts.display, size: 8, weight: 600, color: palette.goldShade, align: 'center' },
+  verse: { family: fonts.display, size: 44, weight: 500, color: palette.ink, align: 'center' },
+  cite: { family: fonts.display, size: 26, weight: 600, color: palette.goldShade, align: 'center' },
 } as const;
 
-/** The book plate's own point (its px) the verse is laid from, and where it lies on the figures' plane: the plate as milk-pour lays it. */
-const BOOK_ON = [215.5, 119.5] as const;
+/** The parchment over the book the verse is lettered on, on the figures' plane: clear of the villager's head (its right edge near layer x 805) and above the book's pages (from layer y 478). */
+const VERSE_AREA = { x0: 880, y0: 140, x1: 1580, y1: 400 } as const;
 
-/** Where a point of the book plate (its px) lies on the frame under framing `c`. */
-const onBook = (c: Framing, x: number, y: number): readonly [number, number] =>
-  onScreen(c, BOOK.x + (x - BOOK_ON[0]) * BOOK.s, BOOK.y + (y - BOOK_ON[1]) * BOOK.s);
+/** The moves of milk-pour's camera the verse shows through: written on `page` and `study`, held and faded through `back` and `clear`. */
+const VERSE_MOVES = new Set(['page', 'study', 'back']);
 
-/** The frame box the book's pages cover at some point of milk-pour's camera path, read at a hundred steps of each move and clipped to the frame: the only place `BOOK_QUOTE` draws. */
+/** The frame box `VERSE_AREA` covers at some point of the moves the verse shows through, read at a hundred steps of each and clipped to the frame: the only place `BOOK_QUOTE` draws. */
 const BOOK_BOX = (() => {
-  const corners = POUR_PATH.flatMap(([, from, to]) =>
+  const corners = POUR_PATH.filter(([move]) => VERSE_MOVES.has(move)).flatMap(([, from, to]) =>
     Array.from({ length: 101 }, (_, i) => framingAt(from, to, i / 100)).flatMap((c) => [
-      onBook(c, 0, 0),
-      onBook(c, BOOK_OPEN.size[0], BOOK_OPEN.size[1]),
+      onScreen(c, VERSE_AREA.x0, VERSE_AREA.y0),
+      onScreen(c, VERSE_AREA.x1, VERSE_AREA.y1),
     ]),
   );
   const xs = corners.map(([x]) => x);
@@ -347,24 +347,29 @@ const BOOK_BOX = (() => {
 })();
 
 /**
- * 1 Pet 2:2 on the open book's pages in milk-pour, the film's own lettering
- * in strokes: written line by line from `desire` to the end of "thereby" as
- * the camera holds in on the pages, and left on them, read as part of the
- * book, while the milk pours from its gutter. It follows milk-pour's camera
- * (`pourFramingAt`), the same moves eased the same way.
+ * 1 Pet 2:2 in ink on the parchment over the open book in milk-pour, the
+ * film's own lettering in strokes: written line by line from `desire` to the
+ * end of "thereby" while the camera holds on it, held whole as the camera
+ * comes down to the book, then faded off on `clear`, so the stream pours
+ * under clean parchment. It follows milk-pour's camera (`pourFramingAt`),
+ * the same moves eased the same way. Not on the book's pages: a page type
+ * that reads at 1080p needs the camera near 2.5, which enlarges the
+ * villager's drawing past the act's 1.5 cap (state.md).
  */
 export const BOOK_QUOTE: Over = {
   shot: 'milk-pour',
   box: BOOK_BOX,
   draw: (f) => {
     const written = f.at('milk-pour:write');
-    if (written <= 0) return;
+    const shown = 1 - f.at('milk-pour:clear');
+    if (written <= 0 || shown <= 0) return;
     const c = pourFramingAt(f.at);
-    const [x0, y0] = onBook(c, 0, 0);
+    const [x0, y0] = onScreen(c, 0, 0);
     const ctx = f.ctx;
     ctx.save();
+    ctx.globalAlpha *= shown;
     ctx.translate(x0, y0);
-    ctx.scale(BOOK.s * c.zoom, BOOK.s * c.zoom);
+    ctx.scale(c.zoom, c.zoom);
     const sizes = BOOK_WORDS.map((l) => l.text.length);
     const total = sizes.reduce((a, b) => a + b, 0);
     BOOK_WORDS.forEach((line, i) => {

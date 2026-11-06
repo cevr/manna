@@ -66,11 +66,12 @@
   act 1 of this film. Its two quotes are lettered in the scene by the film's own hand, at any length
   the quote has: Heb 5:12 in `cold-letter` over a band of dusk above the heads (the scroll his `read`
   cell holds is 47 by 60 px on screen, too small for thirteen legible words, so the words sit over
-  the visible table, not on the scroll), and 1 Pet 2:2 on the open book's pages in `milk-pour`, the
-  camera in on them. CRAFT.md is unchanged, and the prompts keep their `CARDS` sentence: the painted
+  the visible table, not on the scroll), and 1 Pet 2:2 in ink on the parchment over the open book in
+  `milk-pour` (type on the book's pages reads only with the camera near 2.5, which would enlarge the
+  villager's drawing past the act's 1.5 cap). CRAFT.md is unchanged, and the prompts keep their `CARDS` sentence: the painted
   pictures still carry no text. Acts 2 onward keep their cards.
-- The joke on "smile" is a close two-shot (`cold-smile`): the lead and the man, each head about a
-  third of the frame; the man turns from his stare and smiles on the mark, and the lead lowers the
+- The joke on "smile" is a close two-shot (`cold-smile`): the lead and the man, each head over a
+  quarter of the frame (about 0.29, the lead's drawing held under the 1.5 enlarging cap); the man turns from his stare and smiles on the mark, and the lead lowers the
   bottle to his chest a beat after.
 - The milk span moves the whole time: one white stream from the book's gutter into the cup, the ink
   dropper brought in and waved away, the cup full on "good".
