@@ -727,6 +727,23 @@ marks. The alert stays in the scroll.
     per running launch of the app's layer, none once it closes, a wake per
     return) and `src/wake/guard.test.ts` (one host adapter names
     `AppState`).
+  - `test:wake-walk`, `test:wake-quiet`, `test:wake-clocks`: `src/wake/wake.test.tsx`,
+    `quiet.test.tsx` and `clocks.test.tsx`, Today's run walked through
+    `src/test/wake-walk.ts` over `src/test/wake-rig.tsx` (the run rig with the
+    host's state in the test's hands, each state sent taken by the session
+    before the next step) against `src/test/wake-model.ts`, leaning toward
+    returns at every run state (the done state, a review, the new piece,
+    Next pending, after an unheard recital or a refused write, on the
+    field, every minutes choice), toward the returns that change nothing (a
+    recital listening or finishing, the first minute's phases, unread
+    launches, `inactive` alone and a second `active`) and toward the clocks
+    (aways of minutes to a month, many returns, zones, evening plantings);
+    each case's floors met by its own devices.
+  - `test:wake-edges`: `src/wake/edges.test.tsx`, the first minute's phases
+    and Continue's own plan, the pending frame and a subscription read in
+    the background, an unread garden's result, a return while a recital
+    finishes, and 03:50 and 04:10 after a planting at 21:00 in Los Angeles,
+    Kathmandu and Lord Howe.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

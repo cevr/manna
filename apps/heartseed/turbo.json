@@ -438,6 +438,59 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/wake/{wake,quiet,clocks,edges}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:wake-walk": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/wake/{life,service,source,guard,quiet,clocks,edges}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:wake-quiet": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/wake/{life,service,source,guard,wake,clocks,edges}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:wake-clocks": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/wake/{life,service,source,guard,wake,quiet,edges}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:wake-edges": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/wake/{life,service,source,guard,wake,quiet,clocks}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -496,6 +549,10 @@
         "test:run-end",
         "test:run-cells",
         "test:wake",
+        "test:wake-walk",
+        "test:wake-quiet",
+        "test:wake-clocks",
+        "test:wake-edges",
         "test:rest",
         "test:infra"
       ]

@@ -32,6 +32,7 @@ import { appLayer, runtime } from '../app';
 import { Dictation, DictationSource, type DictationEvent } from '../dictation';
 import { CHAIN } from '../dictation/attempt';
 import { recite } from '../dictation/script';
+import type { Foreground } from '../foreground';
 import { Chime } from '../garden';
 import { sourceWords } from '../matcher/words';
 import { Haptics } from '../sayit';
@@ -251,17 +252,28 @@ export const footerFaults = (host: Element): string[] => {
 /** The leave of each launch still mounted: the next launch leaves any a failed test left. */
 const mounted = new Set<() => Promise<unknown>>();
 
+/** What a rig built on this one may give a launch in place of its own: the voice's source (a voice that never speaks when none), the foreground (the host's `AppState` when none), and a wrap of the store over the disk. */
+export interface LaunchParts {
+  readonly voice?: Layer.Layer<VoiceSource>;
+  readonly foreground?: Layer.Layer<Foreground>;
+  readonly store?: (
+    disk: Layer.Layer<KeyValueStore.KeyValueStore>,
+  ) => Layer.Layer<KeyValueStore.KeyValueStore>;
+}
+
 /**
  * A launch of the root over `device` with `faults`, at `time.now` on
  * Effect's clock, with `pieces` given to `appLayer` (the app's own when
- * none). Every frame is held to the footer rule; the faults found are kept
- * in `faults`, and `frames` counts the Today frames seen.
+ * none) and `parts` in place of the rig's own. Every frame is held to the
+ * footer rule; the faults found are kept in `faults`, and `frames` counts
+ * the Today frames seen.
  */
 export const launch = async (
   device: Device,
   faults: Faults,
   time: { now: number },
   pieces: readonly TextPiece[] = [PASSAGE],
+  parts: LaunchParts = {},
 ) => {
   for (const left of [...mounted]) await left();
   const hearing = MutableRef.make<Hearing>({ kind: 'unheard' });
@@ -271,10 +283,11 @@ export const launch = async (
   const layer = appLayer({
     source: recognizerOf(hearing, listens, ending),
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
-    store: storeOf(device, faults),
+    store: (parts.store ?? ((disk) => disk))(storeOf(device, faults)),
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
-    voice: silentVoice,
+    voice: parts.voice ?? silentVoice,
     pieces,
+    foreground: parts.foreground,
   }).pipe(
     Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))),
     Layer.tap((services) =>
