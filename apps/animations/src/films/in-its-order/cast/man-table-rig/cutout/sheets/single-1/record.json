@@ -1,0 +1,243 @@
+{
+  "view": "single-1",
+  "kind": "single",
+  "size": [357, 675],
+  "box": [0, 158, 357, 833],
+  "command": "film concept parts in-its-order man-table-rig --view single-single-1",
+  "parts": [
+    {
+      "name": "head",
+      "kept": 53052,
+      "painted": 0
+    },
+    {
+      "name": "body",
+      "kept": 129700,
+      "painted": 2998
+    }
+  ],
+  "moving": ["head"],
+  "hiddenPx": 53052,
+  "carried": [],
+  "okra": {
+    "route": "subscription (okra image, Codex route; no --model)",
+    "input": "okra/input-f348182a234d.png",
+    "prompt": "okra/prompt.txt",
+    "pad": {
+      "s": 0.4355952143126679,
+      "dx": -47.044283145768134,
+      "dy": 0
+    },
+    "budget": {
+      "calls": 3,
+      "allowance": null,
+      "used": 1
+    },
+    "calls": [
+      {
+        "n": 1,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where one piece was cut away to make a cut-out puppet of this man seated on a wooden stool: his head with his whole linen headcloth and its indigo band, down to just above his shoulders. Repaint ONLY the magenta areas, as what lies underneath that piece. Behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline, in exactly the same skin colour as his neck below. Above each of the two hanging ends of the headcloth on his shoulders: the same pale cloth continued straight up a short way, about the width of a finger, with the same thick dark outline on its outer edge and its colours unchanged, ending in a plain flat top. There is no head and no headcloth above that now: nothing magenta left. Everywhere else the magenta becomes the plain cream paper. Keep every other pixel exactly as it is: the same size, position and framing, and every part that is not magenta unchanged.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-f348182a234d.png",
+          "-o",
+          "okra/answer-1.png"
+        ],
+        "input": "okra/input-f348182a234d.png",
+        "out": "okra/answer-1.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.43607154020524785,
+          "dx": -45.38210159665911,
+          "dy": 2.500438048500996,
+          "score": 33.3421810513351
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 5.45,
+            "pairs": 20
+          },
+          "drift": {
+            "deltaE": 5.12,
+            "px": 129700,
+            "chroma": [
+              {
+                "part": "body",
+                "under": "head",
+                "painted": {
+                  "chroma": 35.71,
+                  "px": 71
+                },
+                "kept": {
+                  "chroma": 36.61,
+                  "px": 71
+                },
+                "cells": 2,
+                "verdict": "within"
+              }
+            ]
+          },
+          "grain": [
+            {
+              "part": "body",
+              "painted": {
+                "robust": 0.66,
+                "plain": 13.7,
+                "n": 2532
+              },
+              "kept": {
+                "robust": 0,
+                "plain": 21.64,
+                "n": 2452
+              },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 240
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 602
+                },
+                "cells": 4
+              },
+              "verdict": "outside"
+            }
+          ],
+          "speck": [
+            {
+              "part": "body",
+              "under": "head",
+              "painted": {
+                "share": 0.001,
+                "px": 2754
+              },
+              "kept": {
+                "share": 0.024,
+                "px": 2931
+              },
+              "verdict": "within"
+            }
+          ],
+          "step": [],
+          "paintUnder": [
+            {
+              "part": "head",
+              "px": 2998
+            }
+          ],
+          "paintedPx": 2998,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": ["drift", "grain"]
+      }
+    ],
+    "chosen": 1,
+    "fit": {
+      "s": 0.43607154020524785,
+      "dx": -45.38210159665911,
+      "dy": 2.500438048500996,
+      "score": 33.3421810513351
+    }
+  },
+  "measures": {
+    "seam": {
+      "deltaE": 5.45,
+      "pairs": 20
+    },
+    "drift": {
+      "deltaE": 5.12,
+      "px": 129700,
+      "chroma": [
+        {
+          "part": "body",
+          "under": "head",
+          "painted": {
+            "chroma": 35.71,
+            "px": 71
+          },
+          "kept": {
+            "chroma": 36.61,
+            "px": 71
+          },
+          "cells": 2,
+          "verdict": "within"
+        }
+      ]
+    },
+    "grain": [
+      {
+        "part": "body",
+        "painted": {
+          "robust": 0.66,
+          "plain": 13.7,
+          "n": 2532
+        },
+        "kept": {
+          "robust": 0,
+          "plain": 21.64,
+          "n": 2452
+        },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 240
+          },
+          "kept": {
+            "share": 0,
+            "px": 602
+          },
+          "cells": 4
+        },
+        "verdict": "outside"
+      }
+    ],
+    "speck": [
+      {
+        "part": "body",
+        "under": "head",
+        "painted": {
+          "share": 0.001,
+          "px": 2754
+        },
+        "kept": {
+          "share": 0.024,
+          "px": 2931
+        },
+        "verdict": "within"
+      }
+    ],
+    "step": [],
+    "paintUnder": [
+      {
+        "part": "head",
+        "px": 2998
+      }
+    ],
+    "paintedPx": 2998,
+    "visibleAtRest": 0,
+    "recomposeByteEqual": true
+  },
+  "bars": {
+    "seamDeltaE": 10,
+    "driftDeltaE": 5,
+    "chromaDrop": 3,
+    "grainWithin": 0.5,
+    "grainCellOver": 0.03,
+    "speckOver": 0.04,
+    "stepWithin": 5,
+    "visibleAtRest": 0,
+    "leastSeamPairs": 20,
+    "leastStepPairs": 8,
+    "leastGrainWindows": 90,
+    "leastRegionPx": 100,
+    "leastCellPx": 40
+  },
+  "missed": ["drift", "grain"],
+  "named": []
+}
