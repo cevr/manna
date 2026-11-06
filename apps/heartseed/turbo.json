@@ -689,7 +689,20 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
-        "!src/chooser/{range.property,lists,walk-plant,reader-*,fixed}.test.*",
+        "!src/chooser/{range.property,lists,walk-plant,walk-leave,reader-*,fixed}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:chooser-leave": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
+        "!src/chooser/{range.property,lists,walk-plant,walk-taps,reader-*}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -754,7 +767,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
-        "!src/chooser/{range.property,lists,walk-*,reader-today,reader-unread,reader-add,reader-add-back}.test.*",
+        "!src/chooser/{range.property,lists,walk-*,reader-today,reader-unread,reader-add,reader-add-back,fixed}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -829,6 +842,7 @@
         "test:chooser-lists",
         "test:chooser-walk",
         "test:chooser-steps",
+        "test:chooser-leave",
         "test:reader-today",
         "test:reader-unread",
         "test:reader-add",

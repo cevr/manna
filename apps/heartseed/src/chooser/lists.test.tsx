@@ -144,9 +144,9 @@ describe('the chooser’s lists', () => {
         return /auto|scroll/.test(`${style.overflowY} ${style.overflow}`);
       });
     const steps = [
-      ['Psalms', 'Psalms 119'],
-      ['Psalms 119', 'Psalms 119:176'],
-      ['Chapters', 'Psalms 119'],
+      ['Psalms', 'Psalms 117'],
+      ['Psalms 117', 'Psalms 117:2'],
+      ['Chapters', 'Psalms 117'],
       ['Books', 'Romans'],
       ['Romans', 'Romans 16'],
     ] as const;

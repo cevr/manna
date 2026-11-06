@@ -9,7 +9,7 @@
  * `Listen`, no new verse on a day a verse was first planted and the first
  * verse new the next morning, a second morning, and a making at each add
  * and Minutes tap. `reader-unread.test.tsx` owns unread passages, removes,
- * reviews and Chatham.
+ * reviews and Chatham, and `reader-add-back.test.tsx` a new verse said.
  *
  * It catches a change that makes no plan, Today's counts or shown verse off
  * the plan over the reader's pieces, a new verse on a planted day, a field

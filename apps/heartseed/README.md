@@ -1017,8 +1017,8 @@ marks. The alert stays in the scroll.
     the corpus, and every verse of Psalms 119 and 117, Isaiah 41 and
     chapters of 20 and 21 verses under each kind of range, with the header,
     the footer and each back, against `src/test/choose-model.ts`.
-  - `test:chooser-walk` and `test:chooser-steps`:
-    `src/chooser/walk-plant.test.tsx`, and `walk-taps.test.tsx` with
+  - `test:chooser-walk`, `test:chooser-steps` and `test:chooser-leave`:
+    `src/chooser/walk-plant.test.tsx`, `walk-taps.test.tsx` and
     `walk-leave.test.tsx`, generated readers
     through `src/test/chooser-walk.ts` over the same rig: stored lists of
     0-3 passages or a garbled value, chapters opened and backed out of,
@@ -1042,7 +1042,7 @@ marks. The alert stays in the scroll.
     `Listen` against the plan made at each making over the reader's
     pieces, the field and the chooser against `src/test/choose-model.ts`,
     and the disk; every frame of every screen held to `barFaults`; each
-    file's floors met by its own devices. `test:reader-remove` also runs
+    file's floors met by its own devices. `test:chooser-leave` also runs
     `src/chooser/fixed.test.tsx`, which keeps every screen's fixed
     controls outside its scroll views in every frame.
   - `test:rest`: the other test files at the root of `src`, named file by

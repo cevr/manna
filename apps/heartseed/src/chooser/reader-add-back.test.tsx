@@ -6,8 +6,9 @@
  * from Today's field, over an empty stored list: a range tapped backward
  * past twenty verses and clipped, a restart, a tap that clears the range,
  * backs to the books and the chapters, Psalms 119, leaving the chooser,
- * and plants of one verse, of twenty and of a whole chapter. Its device
- * alone must reach those cases.
+ * and plants of one verse, of twenty and of a whole chapter, then back on
+ * Today the next morning a passage verse new and said. Its device alone
+ * must reach those cases.
  *
  * It catches a backward range off the rule (not clipped, or clipped from
  * the wrong end), a restart that keeps the old range, an add with no
@@ -34,6 +35,7 @@ it('clips a range tapped backward and restarts one, through the field and the ch
     'planted:one-verse',
     'planted:twenty',
     'planted:whole-chapter',
+    'today:said-new',
   ];
   expect(floors.filter((floor) => !reached.has(floor))).toEqual([]);
 });
