@@ -1,7 +1,7 @@
 import { unprobed } from '@manna/film/canvas';
 import type { FilmShot, Over } from '../../../../library/storybook/scene.ts';
 import { fonts, palette } from '../../palette.ts';
-import { hold, type Plate, type Span, turn } from '../../../../library/storybook/shot.ts';
+import { ease, hold, type Plate, type Span, turn } from '../../../../library/storybook/shot.ts';
 import { BOOK_OPEN, BOOK_SHUT, PAGE } from '../../plates/milk.ts';
 import {
   type Area,
@@ -228,6 +228,15 @@ const POUR_AT = { scale: 1.4, x: -120, y: -330 } as const;
 /** The cup on the table in the pour close: its foot, layer px, and its scale (its height a third of the frame and more). */
 const CUP_AT = { x: 820, y: 1000, s: 0.95 } as const;
 
+/** How the full cup is brought forward to the viewer once the pour stops: stretched this much about its plate's foot and lowered this far, layer px, so it comes nearer. */
+export const PRESENT = { s: 1.3, y: 60 } as const;
+
+/** The cup plate's own foot, layer px: the middle of its bottom edge, which a plate's stretch keeps in place. */
+const CUP_PIVOT = [
+  CUP_AT.x + (CUP_CLOSE.size[0] / 2 - CUP_CLOSE_AT.foot[0]) * CUP_AT.s,
+  CUP_AT.y + (CUP_CLOSE.size[1] - CUP_CLOSE_AT.foot[1]) * CUP_AT.s,
+] as const;
+
 /** Where the milk leaves the tipped book, layer px. */
 export const LIP = [
   POUR_LIP[0] * POUR_AT.scale + POUR_AT.x,
@@ -247,8 +256,8 @@ const CUP_DEPTH = 52;
 
 /** milk-pour's camera: a slight drift in while the stream runs and the dropper comes, then a push in on the cup from `word` to `good`, held on the full cup. */
 export const POUR_PATH: CameraPath = [
-  ['drift', { x: 960, y: 540, zoom: 1 }, { x: 930, y: 556, zoom: 1.03 }],
-  ['push', { x: 930, y: 556, zoom: 1.03 }, { x: 880, y: 600, zoom: 1.1 }],
+  ['drift', { x: 960, y: 540, zoom: 1 }, { x: 930, y: 560, zoom: 1.05 }],
+  ['push', { x: 930, y: 560, zoom: 1.05 }, { x: 880, y: 600, zoom: 1.1 }],
 ];
 
 /** Where the dropper waits off the frame's left and where it hangs over the cup, its tip, layer px; and its scale. */
@@ -266,8 +275,9 @@ const DROPPER = {
  * (`POUR_STREAM`). On `mixed` a large dropper of ink comes in from the
  * left and hangs over the cup, its drop trembling; on "nothing" it shakes
  * and is drawn back out the way it came, the stream unbroken and white. On
- * `word` the camera pushes in on the cup; by `good` it is full to the brim
- * and the stream stops.
+ * `word` the camera pushes in on the cup; on "unmixed" it is full to the
+ * brim and the stream stops, and the full cup is brought forward to the
+ * viewer (`PRESENT`) into "And milk is good".
  */
 export const milkPour: FilmShot = {
   id: 'milk-pour',
@@ -275,15 +285,17 @@ export const milkPour: FilmShot = {
   cues: {
     pour: { mark: 'sincere', dur: 0.4 },
     drift: { mark: 'sincere', until: 'word' },
-    fill: { mark: 'sincere', until: 'good' },
+    fill: { mark: 'sincere', until: { cue: 'milk-pour:full' } },
     dropper: { mark: 'mixed', dur: 0.5 },
     shake: { mark: 'mixed', word: 'nothing', offset: 0.7, dur: 0.6 },
-    away: { after: 'milk-pour:shake', dur: 0.6 },
+    away: { after: 'milk-pour:shake', dur: 0.9 },
     push: { mark: 'word', until: 'good' },
-    full: { mark: 'good', dur: 0.3 },
+    full: { mark: 'word', word: 'unmixed', offset: 0.5, dur: 0.3 },
+    present: { after: 'milk-pour:full', dur: 2 },
   },
   build: ({ cue }) => {
     const [dropper, shake, away] = [cue('dropper'), cue('shake'), cue('away')];
+    const present = cue('present');
     const [dx, dy] = [DROPPER.off[0] - DROPPER.over[0], DROPPER.off[1] - DROPPER.over[1]];
     const step = (shake.end - shake.start) / 4;
     return {
@@ -304,6 +316,10 @@ export const milkPour: FilmShot = {
             CUP_AT.s,
             {
               dir: STORY_PLATES,
+              moves: [
+                [present.start, key({})],
+                [present.end, key({ y: PRESENT.y, sx: PRESENT.s, sy: PRESENT.s })],
+              ],
             },
           ),
           plateOn('milk-dropper-close.png', DROPPER_CLOSE, DROPPER_TIP, DROPPER.over, DROPPER.s, {
@@ -347,13 +363,29 @@ const streamAt = (level: number, u: number): readonly [number, number] => {
 /** The milk's face in the cup at `level`: from `CUP_DEPTH` under the mouth's middle when empty to the mouth's own line when full. */
 const surfaceY = (level: number): number => MOUTH.y + CUP_DEPTH * (1 - level);
 
-/** The area the stream and the cup's milk draw in, layer px. */
-const POUR_AREA: Area = {
-  x0: MOUTH.x - MOUTH.rx - 4,
-  y0: LIP[1] - 24,
-  x1: LIP[0] + 30,
-  y1: MOUTH.y + CUP_DEPTH + MOUTH.ry + 6,
+/** Where a layer point on the cup lies once the cup is `k` of its way brought forward (`PRESENT`), as its plate's stretch about its foot carries it. */
+const presented = (p: readonly [number, number], k: number): readonly [number, number] => {
+  const s = 1 + (PRESENT.s - 1) * k;
+  return [
+    CUP_PIVOT[0] + (p[0] - CUP_PIVOT[0]) * s,
+    CUP_PIVOT[1] + (p[1] - CUP_PIVOT[1]) * s + PRESENT.y * k,
+  ];
 };
+
+/** The area the stream and the cup's milk draw in, layer px: from the book's lip to the cup's mouth, and the mouth brought forward. */
+const POUR_AREA: Area = (() => {
+  const [left, top] = presented([MOUTH.x - MOUTH.rx - 4, MOUTH.y - MOUTH.ry - 4], 1);
+  const [right, bottom] = presented(
+    [MOUTH.x + MOUTH.rx + 4, MOUTH.y + CUP_DEPTH + MOUTH.ry + 6],
+    1,
+  );
+  return {
+    x0: Math.min(MOUTH.x - MOUTH.rx - 4, left),
+    y0: Math.min(LIP[1] - 24, top),
+    x1: Math.max(LIP[0] + 30, right),
+    y1: Math.max(MOUTH.y + CUP_DEPTH + MOUTH.ry + 6, bottom),
+  };
+})();
 
 /**
  * The milk in milk-pour, drawn over the table in its shot's framing: the
@@ -361,7 +393,8 @@ const POUR_AREA: Area = {
  * lip over that cue) to `full`, tapering as it falls, its light streaks
  * running down it all the while; its splash at the milk's face; and the
  * milk itself in the cup's mouth, climbing from the empty cup's floor to
- * the brim over `fill`.
+ * the brim over `fill`, and carried with the cup as it is brought forward
+ * over `present`.
  */
 export const POUR_STREAM: Over = {
   shot: 'milk-pour',
@@ -371,12 +404,19 @@ export const POUR_STREAM: Over = {
     const level = f.at('milk-pour:fill');
     const laid = f.at('milk-pour:pour');
     const stopped = f.at('milk-pour:full');
+    const k = ease(f.at('milk-pour:present'));
+    const s = 1 + (PRESENT.s - 1) * k;
     const ctx = f.ctx;
     const [x0, y0] = onScreen(c, 0, 0);
     ctx.save();
     ctx.translate(x0, y0);
     ctx.scale(c.zoom, c.zoom);
+    ctx.save();
+    ctx.translate(CUP_PIVOT[0], CUP_PIVOT[1] + PRESENT.y * k);
+    ctx.scale(s, s);
+    ctx.translate(-CUP_PIVOT[0], -CUP_PIVOT[1]);
     milkInCup(ctx, level, f.t);
+    ctx.restore();
     if (laid > 0 && stopped < 1) stream(ctx, level, stopped, laid, f.t);
     ctx.restore();
   },

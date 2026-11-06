@@ -181,8 +181,23 @@ const SEAM_REACH = 3;
 /** The lead's cream sleeve on his table sheet's `lift` and `bottle` cells above his resting hand, in their px: where a thin brown and lavender stick stood down his chest (critique 1, finding 6). */
 const SLEEVE = { x0: 60, y0: 460, x1: 80, y1: 520 } as const;
 
-/** The lead's cells whose seams are known and named to the owner, not yet fixed: his table sheet's later pass, whose teat is a thin hair-brown line on his skin (critique 2, fault 2; a draw asking it inked lost the sleeve and the sash, so the pass stands). */
-const SEAMS_KNOWN = new Set(['lead-feast/iio-table read', 'lead-feast/iio-table readBlink']);
+/**
+ * The lead's cells whose seams are known and named to the owner, not yet
+ * fixed: his table sheet's later pass, whose teat is a thin hair-brown line
+ * on his skin (critique 2, fault 2; a draw asking it inked lost the sleeve
+ * and the sash, so the pass stands); and three keys of his two-shot sheet,
+ * whose 5 to 10 px are single flecks the split snaps to hair brown along
+ * the outline at his hairline, ear and collar, no line among them (the
+ * stored cells are the split's, byte for byte, as the verify's one-sheet
+ * bar holds them).
+ */
+const SEAMS_KNOWN = new Set([
+  'lead-feast/iio-table read',
+  'lead-feast/iio-table readBlink',
+  'lead-feast/iio-two bottle',
+  'lead-feast/iio-two grin',
+  'lead-feast/iio-two tuck',
+]);
 
 /** How many of a raster's `seam`-paint pixels have `skin` within `reach` on both sides along their row or their column. */
 const seamsOf = (

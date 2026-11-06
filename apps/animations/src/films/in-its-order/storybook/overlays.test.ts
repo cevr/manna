@@ -3,7 +3,7 @@ import type { Over, PaintingFrame } from '../../../library/storybook/scene.ts';
 import { script } from '../script.ts';
 import { GRID } from './grid.ts';
 import { LETTER_WORDS } from './shots/cold.ts';
-import { BOOK_WORDS } from './shots/milk.ts';
+import { BOOK_WORDS, milkPour, PRESENT } from './shots/milk.ts';
 import { COLD_STORY, MILK_STORY, STORIES, TITLE_STORY } from './stories.ts';
 
 /** One glyph a drawing over a shot put down: its character and its centre on the frame. */
@@ -21,6 +21,17 @@ interface Drawn {
   readonly ellipses: Array<{ readonly x: number; readonly y: number; readonly rx: number }>;
   readonly strokes: Array<ReadonlyArray<readonly [number, number]>>;
 }
+
+/** How far each of milk-pour's cues has run, as a drawing over it reads them: the pour laid, the cup filled, the stream stopped and the cup brought forward. */
+const pourAt =
+  (pour: number, fill: number, full: number, present = 0) =>
+  (cue: string): number =>
+    new Map([
+      ['milk-pour:pour', pour],
+      ['milk-pour:fill', fill],
+      ['milk-pour:full', full],
+      ['milk-pour:present', present],
+    ]).get(cue) ?? 0;
 
 /** The frame's size. */
 const [W, H] = [GRID.size.width, GRID.size.height];
@@ -55,7 +66,8 @@ const recording = (drawn: Drawn) => {
     lineTo: (x: number, y: number) => path.push([x, y]),
     closePath: () => {},
     arc: () => {},
-    ellipse: (x: number, y: number, rx: number) => drawn.ellipses.push({ x, y, rx }),
+    ellipse: (x: number, y: number, rx: number) =>
+      drawn.ellipses.push({ x: m[2] + m[0] * x, y: m[3] + m[1] * y, rx: m[0] * rx }),
     fill: () => {
       drawn.fills.n += 1;
     },
@@ -202,11 +214,23 @@ describe("In Its Order's drawings over its shots", () => {
     expect(off).toEqual([]);
   });
 
-  test('pours milk that moves and fills the cup in milk-pour (critique 1, finding 1): nothing before the pour; once poured, a stream whose light streaks run down it from one frame to the next; the milk in the cup rising from the pour to the brim at `good`, where the stream stops', () => {
+  test('carries the full cup’s milk forward with the cup in milk-pour once the pour stops: the milk’s mouth stretched as the cup’s plate is at its last key (`PRESENT`), and moved (critique 1, finding 1: the full cup brought to the viewer)', () => {
     const over = MILK_STORY.over.find((o) => o.shot === 'milk-pour');
     if (!over) return expect(over).toBeDefined();
-    const at = (pour: number, fill: number, full: number) => (cue: string) =>
-      ({ 'milk-pour:pour': pour, 'milk-pour:fill': fill, 'milk-pour:full': full })[cue] ?? 0;
+    const [still, forward] = [0, 1].map((p) => drawnBy(over, pourAt(1, 1, 1, p)).ellipses[0]);
+    expect((forward?.rx ?? 0) / (still?.rx ?? 1)).toBeCloseTo(PRESENT.s, 6);
+    expect(Math.abs((forward?.y ?? 0) - (still?.y ?? 0))).toBeGreaterThan(10);
+    const cup = milkPour
+      .build({ duration: 10, cue: () => ({ start: 1, end: 2 }) })
+      .layers.flatMap((l) => l.items)
+      .find((i) => i._tag === 'Plate' && i.file.endsWith('/milk-cup-close.png'));
+    expect(cup?._tag === 'Plate' && cup.moves?.at(-1)?.[1].sx).toBe(PRESENT.s);
+  });
+
+  test('pours milk that moves and fills the cup in milk-pour (critique 1, finding 1): nothing before the pour; once poured, a stream whose light streaks run down it from one frame to the next; the milk in the cup rising from the pour to the brim on "unmixed", where the stream stops', () => {
+    const over = MILK_STORY.over.find((o) => o.shot === 'milk-pour');
+    if (!over) return expect(over).toBeDefined();
+    const at = (pour: number, fill: number, full: number) => pourAt(pour, fill, full);
     const before = drawnBy(over, at(0, 0, 0));
     expect(before.ellipses.length + before.strokes.length).toBe(0);
     const pouring = [0.3, 0.32].map((t) => drawnBy(over, at(1, 0.4, 0), t));
