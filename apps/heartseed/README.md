@@ -35,7 +35,7 @@ runtime (`src/app.ts`), and Say it reads no word aloud:
   refused recital. A press of `Say it` stops the voice before the
   recognizer listens. A review, `Next`, the done state and an unread
   garden never show `Listen`; a making of the plan (a Minutes tap, a
-  return) does not stop a reading, and `Voice` off does. Listening is
+  return, an add or a remove of a passage) does not stop a reading, and `Voice` off does. Listening is
   offered, not required, and writes nothing.
 
 - `src/voice.ts` is the `Voice` service (Effect): `read`, `pause`,
@@ -183,7 +183,8 @@ and keeps nothing. Say it reads no word aloud.
   the same store (`appLayer`'s parts: `source`, `haptics`, `store`,
   `chime`, `voice`, and `pieces`, the verses the app holds text for, each
   `{ reference, text, words, group }` in the app's order; the runtime
-  passes the passage alone). Every screen that hears the reader takes
+  passes the passage alone, and the session plans over these, then the
+  reader's passages: Session, below). Every screen that hears the reader takes
   Dictation from here. The runtime is not kept alive: when the root leaves,
   its scope closes, Dictation cancels a recital under way and the voice
   stops a reading under way. `press`, `next`, `sayAs`, `peek` and `choose`
@@ -450,6 +451,73 @@ them.
   counts in Today's summary style), never the muted grey, so each reads at
   WCAG AA's 4.5:1 on the ground and on a card.
 
+## Passages
+
+The reader may learn passages of the KJV beside the app's own promise.
+The free tier holds 3 passages of up to 20 verses each. No screen adds one
+yet: these are the data and the session's seams the chooser builds on.
+
+- **The corpus** is the whole KJV in the bundle, as the virtual module
+  `virtual:heartseed-kjv`: an array of the canon's 1,189 chapters in canon
+  order, each one string of its verses in order joined by a newline, each
+  verse as `displayText` shows it, the display rule applied once, when
+  the app is bundled. `vite/kjv.ts` derives it from `@manna/core`'s KJV
+  through `vite/passage.ts`'s `readVerses` (`readChapters`; `chaptersOf`
+  is the pure derivation) and fails the build with `CorpusMismatch` when the
+  chapters are not the canon's in order, when a chapter's verses skip or
+  repeat a number, or when a verse's shown text holds a newline.
+  `vite/plugin.ts`'s one `passage()` plugin serves both virtual modules
+  (`export default <json>;`), each derived once per process. Measured at
+  4,175,613 B as JSON and 4,158,904 B as `hermesc -O` bytecode, under the
+  4.3 MB the unit allows.
+- **The lazy read.** `src/kjv.ts` is the one product module that imports
+  the corpus, and no product module names `kjv.json` (`src/passages/guard.test.ts`;
+  `docs/lessons.md`, `heartseed-corpus-through-one-module`). Importing it
+  splits no chapter: `versesOf(book, chapter)` splits the one asked for,
+  and answers `[]` for a chapter the canon does not have (book 0 or 67,
+  chapter 0 or past the book, a fraction), so Today's first frame never
+  waits on the corpus.
+- **A passage** (`src/passages.ts`) is a `Range` `{ book, chapter, first,
+  last }` of whole numbers in one chapter, `1 ≤ first ≤ last ≤` the
+  chapter's verse count (`inChapter`). A reader may add one of at most 20
+  verses (`choosable`); a whole chapter of 20 verses or fewer counts. Its
+  reference is the canon's: `John 15:1-5`, or its one verse's
+  (`passageReference`, `verseReference`).
+- **The stored list** is the key `heartseed/passages`, a JSON array of
+  ranges in the order chosen. It is read once, as the `Passages` service
+  starts: one `get`, tried 3 times in all (10 ms, then 20 ms apart, as the
+  garden's read). No key reads as no passages; a list of ranges in their
+  chapters reads whole, of any length and any number (the caps are an
+  add's, so a later tier lifts them without a migration); anything else,
+  or three failed reads, is `Unread`, which claims no list and is never
+  written over. Faults are logged as `passages.read.retry`,
+  `passages.read.failed` and `passages.write.failed`, with the key, the
+  method or reason and a count, never a verse.
+- **An add** answers, in this order: `Unread`, `Invalid` (not choosable),
+  `Full` (3 or more held), else `Added` once the list with the range at
+  its end is written, or `Failed` when the write is refused (the view
+  stays). **A remove** takes out the first passage equal to the range in
+  all four fields: `Unread`, `Absent`, else `Removed` once written, or
+  `Failed`. Each runs in call order, one at a time (a semaphore), so two
+  at once never pass the cap or take one passage twice; a duplicate or an
+  overlap may be added. `changes` streams each view. A remove never
+  touches a recall: a removed passage's plants stay in the garden, its
+  verses leave the pieces, and the field shows them as any plant no piece
+  names.
+- **The pieces** (`piecesOf(own, view)`) are the app's own (`appLayer`'s
+  `pieces`, the promise by default), then each passage's verses in
+  passage and verse order, each with its corpus text, its words counted
+  as the matcher counts them and its passage's reference as its group.
+  Each reference is kept once, at its first place, so a passage over
+  Isaiah 41:10 shares the promise's plant. With the passages unread, the
+  app's own alone.
+- **An add or a remove is a making.** `addPassage(range)` and
+  `removePassage(range)` in `src/app.ts` answer the service's answer, and
+  after `Added` or `Removed` alone run `Session.remake`: a plan made in
+  this launch is made again at that instant over the passages now, with
+  the hold kept only while a recital is under way. Before the first plan,
+  in an unread garden or with the passages unread it makes nothing.
+
 ## Session
 
 The daily session is the plan of what to tend today: the due reviews, then
@@ -508,9 +576,10 @@ without a scroll; the only controls in the scroll view are a missed word's
 marks. The alert stays in the scroll.
 
 - `src/session.ts` is the rule, pure: `planOf` over a `Read` view, the
-  pieces the app holds text for (`appLayer`'s `pieces`; today one,
-  Today's passage: its reference, its word count and its passage as
-  group; `TextPiece` adds its text), the instant, the zone's offset at it
+  pieces the app holds text for (`appLayer`'s `pieces`, by default
+  Today's passage alone, then the reader's passages' verses: Passages,
+  above; each its reference, its word count and its group; `TextPiece`
+  adds its text), the instant, the zone's offset at it
   and the minutes. `isDone` reads an item's done from the garden.
   - A plant is due at FSRS's due. While it holds one recall that carries
     an offset and started from 18:00 to 03:59:59.999 by that offset's local
@@ -546,17 +615,21 @@ marks. The alert stays in the scroll.
   write keeps the choice for the launch, and the next launch reads what is
   stored. The plan is made from the runtime's `Clock` and `offsetAt` at
   that instant when Today first shows in a launch with the garden read
-  (after `Continue` in the first launch), again at each Minutes tap, and
-  at each return to the foreground (`wake`, a no-op with no plan, an
+  (after `Continue` in the first launch), again at each Minutes tap, at
+  each return to the foreground (`wake`, a no-op with no plan, an
   unread garden or a recital under way, read in the same step as the
-  making).
-  It is made in one step from the garden's view as it is, never waiting on
-  a keep under way, so a recital whose keep lands after it counts as done.
-  Nothing else makes it again: time passing, a recital, a grade, Again, a
-  Voice tap, `Listen`, or the field and back. An unread garden has no plan and no
-  counts line. The service also holds the run's one piece of state, the
-  item held (`hold`, `next`), over the pieces it was given (its view's
-  `pieces` and `held`). It needs `Dictation`: a making reads whether a
+  making), and after each `Added` or `Removed` passage (`remake`, a no-op
+  with no plan, an unread garden or unread passages, keeping the hold while a recital is
+  under way).
+  It is made in one step from the garden's view, Dictation's and the
+  passages' as they are, never waiting on a keep under way, so a recital
+  whose keep lands after it counts as done, over the pieces of that step
+  (`piecesOf`). Nothing else makes it again: time passing, a recital, a
+  grade, Again, a Voice tap, `Listen`, an add or a remove answered
+  otherwise, or the field and back. An unread garden or unread passages
+  have no plan and no counts line. The service also holds the run's one
+  piece of state, the item held (`hold`, `next`), over the pieces of the
+  launch's start, then of each making (its view's `pieces` and `held`). It needs `Dictation`: a making reads whether a
   recital is under way in the same synchronous step as the making, and
   keeps the hold only then.
 - `src/foreground.ts` is the return rule, pure (`lifeStep` from `UNSEEN`,
@@ -581,8 +654,8 @@ marks. The alert stays in the scroll.
   depends on, so the gate runs each as its own task and
   `bun run test:budget @manna/heartseed` times each alone (under 1 s). The
   `src` parts run with `src/test/setup.ts` as the preload (react-native-web
-  for `react-native`, the bundled passage for `virtual:heartseed-passage`, a
-  happy-dom document); `test:infra` runs with none.
+  for `react-native`, the bundled passage for `virtual:heartseed-passage`,
+  the corpus for `virtual:heartseed-kjv`, a happy-dom document); `test:infra` runs with none.
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
   - `test:voice`: `src/voice.property.test.ts` (the voice against its model)
@@ -809,7 +882,8 @@ marks. The alert stays in the scroll.
     `src/passages/pieces.property.test.ts`, the pieces over generated lists
     of the app's own pieces and of passages, against the model's.
   - `test:passages-session`: `src/passages/session.test.ts`, generated
-    devices walking adds, removes, Minutes, holds, recitals and returns
+    devices walking adds, removes, adds and removes at once, Minutes,
+    holds, recitals and returns
     through `addPassage` and `removePassage` over a store that yields at
     every call, the plan, the hold, the pieces and the disk judged against
     the models at every step; and a reader's first three days in five zones.

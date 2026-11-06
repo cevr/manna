@@ -3,9 +3,11 @@
  * source this build hears, Say it over it, the soft tick, the garden, which
  * keeps each of Say it's kept recalls in the app's store on the device and
  * sounds the growth chime, and the voice over the source this platform
- * speaks with, whose off switch lives in the same store, and the daily
- * session over the garden, whose minutes live there too, woken at each
- * return to the foreground (`src/foreground.ts`). Every screen that
+ * speaks with, whose off switch lives in the same store, the reader's
+ * passages, kept there too, and the daily session over the garden and the
+ * passages, whose minutes live there too: its plan is made at Today's first
+ * show, each Minutes tap, each return to the foreground
+ * (`src/foreground.ts`) and each add or remove of a passage. Every screen that
  * hears the reader takes Dictation from here, so two services never share
  * the module's one channel; the first minute's hear phase and Today's Listen
  * on a new piece are the two that read aloud.
