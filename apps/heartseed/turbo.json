@@ -10,7 +10,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -22,7 +22,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,field,session,run}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,field,session,run,wake}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -34,7 +34,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{first,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{first,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -46,7 +46,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,first,garden,voice,field,session,run,wake}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -58,7 +58,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,today,voice.property}.test.*",
-        "!src/{dictation,first,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,first,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/garden/{today,today-reads}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -71,7 +71,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,first,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/garden/{guard,sound,today-reads}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -84,7 +84,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,first,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/garden/{guard,sound,today}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -97,7 +97,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/first/{root,walk-*}.test.*",
         "!src/test/first-rig.*",
         "!{scripts,vite}/**/*.test.*"
@@ -111,7 +111,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,first,garden,voice,field,session,run,wake}/**/*.test.*",
         "!src/sayit/{guard,screen,source,today}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -124,7 +124,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/first/{flow,screen,walk-*}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -137,7 +137,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -150,7 +150,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -163,7 +163,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -176,7 +176,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -189,7 +189,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -202,7 +202,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -215,7 +215,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -228,7 +228,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -241,7 +241,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,garden,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/{dictation,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -254,7 +254,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,session,run}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,session,run,wake}/**/*.test.*",
         "!src/field/{screen,garden,walk,walk-grades,unread-keep}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -267,7 +267,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,session,run}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,session,run,wake}/**/*.test.*",
         "!src/field/{sown,unread,reach,screen,garden,walk,walk-grades}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -280,7 +280,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,session,run}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,session,run,wake}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,walk,walk-grades}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -293,7 +293,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,session,run}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,session,run,wake}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk-grades}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -306,7 +306,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,session,run}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,session,run,wake}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -319,7 +319,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,field,run}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,run,wake}/**/*.test.*",
         "!src/session/{header,counts}.test.*",
         "!src/test/session-rig.*",
         "!{scripts,vite}/**/*.test.*"
@@ -333,7 +333,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,field,run}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,run,wake}/**/*.test.*",
         "!src/session/{service,counts}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -346,7 +346,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,field,run}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,run,wake}/**/*.test.*",
         "!src/session/{service,header}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -359,7 +359,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,field,session}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,wake}/**/*.test.*",
         "!src/run/{run,hold,edges,end,cells}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -372,7 +372,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,field,session}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,wake}/**/*.test.*",
         "!src/run/{footer,hold,edges,end,cells}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -385,7 +385,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,field,session}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,wake}/**/*.test.*",
         "!src/run/{footer,run,edges,end,cells}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -398,7 +398,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,field,session}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,wake}/**/*.test.*",
         "!src/run/{footer,run,hold,end,cells}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -411,7 +411,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,field,session}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,wake}/**/*.test.*",
         "!src/run/{footer,run,hold,edges,cells}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -424,8 +424,20 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
-        "!src/{dictation,first,garden,sayit,voice,field,session}/**/*.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,wake}/**/*.test.*",
         "!src/run/{footer,run,hold,edges,end}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:wake": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -483,6 +495,7 @@
         "test:run-edges",
         "test:run-end",
         "test:run-cells",
+        "test:wake",
         "test:rest",
         "test:infra"
       ]

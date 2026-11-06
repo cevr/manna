@@ -5133,3 +5133,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** Say it sat at the scroll view's foot and the grades inside it, so a long verse or a result pushed the reader's next control below the fold; each unit's rig allowed the controls it knew of in the scroll, so a new control there passed unseen.
 - **Cause:** Each rig listed the controls the scroll might hold instead of the one kind it may: a missed word's mark is part of the verse, every other control is the reader's way on and must be on screen without a scroll.
 - **Guard:** code: `apps/heartseed/src/run/footer.test.tsx` `keeps Say it, Listening and the grades outside the scroll view in every frame of a recital, a missed word’s mark the one control inside`
+
+### heartseed-foreground-in-one-host-adapter
+
+- **Date:** 2026-11-06
+- **Kind:** review
+- **Said:** "Feature components and hooks have no `useEffect`: Query for data, an SDK adapter for subscriptions, a named host adapter for DOM sync"
+- **Source:** hymnapp/hsdaily/round-1-findings.md M3 (the feature component performs lifecycle synchronization itself); hymnapp/hswake/spec.md R8d
+- **Wrong:** The return to the foreground could be read in Today with a lifecycle effect over React Native's `AppState`, so the session's plan would follow a component's mounts instead of the app's runtime, and a subscription could outlive its launch.
+- **Cause:** `AppState` is reachable by name from any module, and a component effect is the quickest place to subscribe.
+- **Guard:** code: `apps/heartseed/src/wake/guard.test.ts` `is the one product module that names AppState, a .ts module that imports no React`; `apps/heartseed/src/wake/guard.test.ts` `leaves Today with no lifecycle effect and no AppState`

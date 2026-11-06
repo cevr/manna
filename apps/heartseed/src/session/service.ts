@@ -6,7 +6,9 @@
  * order. The plan is made in one step from the garden's view as it is,
  * never waiting on a keep under way, at the instant on the service's clock
  * and the zone's offset at that instant: first when Today shows with a read
- * garden (`begin`), then again at each Minutes tap. A recital whose keep
+ * garden (`begin`), then again at each Minutes tap and at each return to
+ * the foreground (`wake`), which makes nothing before the first plan, in an
+ * unread garden or while a recital is under way. A recital whose keep
  * lands after that step counts as done by its recall. Nothing else makes
  * the plan again in a launch, and an unread garden gets no plan.
  *
@@ -76,6 +78,8 @@ export class Session extends Context.Service<
     readonly hold: (item: Item) => Effect.Effect<void>;
     /** A tap on Next: the held item is let go, and Today shows the plan's first item not done. */
     readonly next: Effect.Effect<void>;
+    /** A return to the foreground: a plan made in this launch is made again and the hold dropped, unless a recital is under way or the garden is unread. */
+    readonly wake: Effect.Effect<void>;
     readonly view: Effect.Effect<SessionView>;
     readonly changes: Stream.Stream<SessionView>;
   }
@@ -226,6 +230,19 @@ export const layer = (
           MutableRef.update(held, (now) => ({ ...now, held: Option.none() }));
           return publish;
         }),
+        wake: Effect.flatMap(seenNow, ({ seen, recital }) =>
+          Effect.suspend(() => {
+            const now = MutableRef.get(held);
+            if (Option.isNone(now.plan) || seen._tag === 'Unread' || isActive(recital))
+              return Effect.void;
+            MutableRef.set(held, {
+              ...now,
+              plan: Option.some(planUnsafe(seen, now.minutes)),
+              held: Option.none(),
+            });
+            return publish;
+          }),
+        ).pipe(Effect.withSpan('Session.wake')),
         view: Effect.sync(() => MutableRef.get(held)),
         changes: Stream.fromPubSub(views),
       });

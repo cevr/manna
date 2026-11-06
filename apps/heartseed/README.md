@@ -717,6 +717,16 @@ marks. The alert stays in the scroll.
     the recital listens, finishes or after its end, and whether the new
     plan moves the held item or keeps it first, `CELLS`); each case's
     floors met by its own devices.
+  - `test:wake`: `src/wake/life.test.ts` (the return rule over every
+    sequence of up to six host states after each launch state, and long
+    random ones, against `src/test/wake-model.ts`), `src/wake/service.test.ts`
+    (`Session.wake` over generated devices: gardens, holds, every minutes
+    choice, recitals listening, finishing and ended, Minutes taps, time from
+    a minute to a month, an evening planting's 03:50 and 04:10, zones and
+    unread launches), `src/wake/source.test.ts` (one `AppState` listener
+    per running launch of the app's layer, none once it closes, a wake per
+    return) and `src/wake/guard.test.ts` (one host adapter names
+    `AppState`).
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

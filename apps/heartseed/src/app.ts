@@ -4,7 +4,8 @@
  * keeps each of Say it's kept recalls in the app's store on the device and
  * sounds the growth chime, and the voice over the source this platform
  * speaks with, whose off switch lives in the same store, and the daily
- * session over the garden, whose minutes live there too. Every screen that
+ * session over the garden, whose minutes live there too, woken at each
+ * return to the foreground (`src/foreground.ts`). Every screen that
  * hears the reader takes Dictation from here, so two services never share
  * the module's one channel; the first minute's hear phase is the one screen
  * that reads aloud.
@@ -13,8 +14,8 @@
  * development build (`__DEV__`) on the simulator, which can never listen;
  * every other build hears the microphone. A device-info read that fails or
  * hangs counts as a device. The runtime is not kept alive: when the root
- * leaves, its scope closes, Dictation cancels a recital under way and the
- * voice stops a reading under way.
+ * leaves, its scope closes, Dictation cancels a recital under way, the
+ * voice stops a reading under way and the foreground's subscription ends.
  */
 
 import { Duration, Effect, Layer, Option, Stream } from 'effect';
@@ -26,6 +27,8 @@ import passage from 'virtual:heartseed-passage';
 import { layer as dictationLayer, type DictationSource } from './dictation';
 import { recite } from './dictation/script';
 import { microphoneSource, replaySource } from './dictation/source';
+import { type Foreground, wakeLayer } from './foreground';
+import { foregroundSource } from './foreground/source';
 import { cueIn, Garden, layer as gardenLayer, type Chime, type GardenView } from './garden';
 import { liveChime } from './garden/chime';
 import type { Cue } from './matcher';
@@ -74,7 +77,7 @@ const PIECES: readonly TextPiece[] = [
   },
 ];
 
-/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the session over the garden and `pieces` (the app's own, the passage alone, when none are given), its minutes in the same `store`, and the voice over `voice`, its switch in the same `store`. */
+/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the session over the garden and `pieces` (the app's own, the passage alone, when none are given), its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), and the voice over `voice`, its switch in the same `store`. */
 export const appLayer = (parts: {
   readonly source: Layer.Layer<DictationSource>;
   readonly haptics: Layer.Layer<Haptics>;
@@ -82,8 +85,12 @@ export const appLayer = (parts: {
   readonly chime: Layer.Layer<Chime>;
   readonly voice: Layer.Layer<VoiceSource>;
   readonly pieces?: readonly TextPiece[];
+  readonly foreground?: Layer.Layer<Foreground>;
 }) =>
-  sayItLayer(passage).pipe(
+  Layer.merge(
+    sayItLayer(passage),
+    wakeLayer.pipe(Layer.provide(parts.foreground ?? foregroundSource)),
+  ).pipe(
     Layer.provideMerge(sessionLayer(parts.pieces ?? PIECES).pipe(Layer.provide(parts.store))),
     Layer.provideMerge(dictationLayer.pipe(Layer.provide(parts.source))),
     Layer.provideMerge(gardenLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.chime)))),
