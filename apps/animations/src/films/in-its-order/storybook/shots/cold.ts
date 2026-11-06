@@ -82,8 +82,9 @@ const blinkStartsOf = (name: string, from: number, to: number): ReadonlyArray<nu
  * A guest holding `cell` from `from` to `to`: blinking with the neutral
  * blink's shut eyes pasted on its own, but a stare, whose wide eyes the
  * neutral blink's upturned arcs do not fit (critique 3, finding 6): held
- * still when it lasts `ALIVE` or less, and else blinking once, at its blink
- * nearest the hold's middle.
+ * still when it lasts `ALIVE` or less, and else blinking at its blink
+ * nearest the hold's middle, each side held the same way, so no still run
+ * outlasts `ALIVE`.
  */
 const guestHold = (name: string, from: number, to: number, cell: string): ReadonlyArray<Span> => {
   if (cell !== 'stare') return [blinkingHold(from, to, cell, 'neutralBlink')];
@@ -95,9 +96,9 @@ const guestHold = (name: string, from: number, to: number, cell: string): Readon
   return Option.match(Option.fromUndefinedOr(nearest[0]), {
     onNone: () => [hold(from, to, cell)],
     onSome: (start) => [
-      hold(from, start - BLINK_MARGIN, cell),
+      ...guestHold(name, from, start - BLINK_MARGIN, cell),
       blinkingHold(start - BLINK_MARGIN, start + BLINK + BLINK_MARGIN, cell, 'neutralBlink'),
-      hold(start + BLINK + BLINK_MARGIN, to, cell),
+      ...guestHold(name, start + BLINK + BLINK_MARGIN, to, cell),
     ],
   });
 };

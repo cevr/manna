@@ -93,13 +93,14 @@ describe("In Its Order's storybook holds", () => {
     expect(stills.filter((s) => LIDDED.has(s.cell) && s.long > ALIVE).map((s) => s.at)).toEqual([]);
   });
 
-  test('holds each guest stare of 4.6 s or less with no blink, and blinks a longer one once (critique 3, finding 6: the stares blinked the neutral blink’s upturned arcs eight times)', () => {
+  test('holds each guest stare of 4.6 s or less with no blink, and blinks a longer one once per 4.6 s it lasts past the first, rounded up, or fewer (critique 3, finding 6: the stares blinked the neutral blink’s upturned arcs eight times)', () => {
     expect(stares.length).toBeGreaterThanOrEqual(6);
     expect(
       stares.flatMap((s) => {
-        const want = Number(s.long > ALIVE);
-        if (s.blinks === want) return [];
-        return [`${s.at}: ${s.blinks} blinks, want ${want}`];
+        const most = Math.ceil(s.long / ALIVE) - 1;
+        const least = Number(s.long > ALIVE);
+        if (s.blinks >= least && s.blinks <= Math.max(most, least)) return [];
+        return [`${s.at}: ${s.blinks} blinks, want ${least} to ${most}`];
       }),
     ).toEqual([]);
     expect(stares.filter((s) => s.long > ALIVE).length).toBeGreaterThanOrEqual(2);
