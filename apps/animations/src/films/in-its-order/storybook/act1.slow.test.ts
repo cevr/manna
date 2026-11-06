@@ -52,9 +52,6 @@ const UPSCALE = 1.5;
 /** The longest a figure may show one drawing with the same eyes: the longest wait between blinks (4.4 s) and one blink (0.125 s), rounded up. */
 const ALIVE = 4.6;
 
-/** How long after its last word's voiced end a card may hold (CRAFT rule 1: a hard cut out on the last word). */
-const CARD_TAIL = 0.15;
-
 /** The members each shot must cast (it may cast more), and the fewest figures it draws (the kept panels' density). */
 const CASTS: ReadonlyArray<readonly [string, ReadonlyArray<string>, number]> = [
   ['cold-baby', ['feast-mother', 'filler-dressed'], 5],
@@ -63,6 +60,7 @@ const CASTS: ReadonlyArray<readonly [string, ReadonlyArray<string>, number]> = [
     ['lead-feast', 'feast-guest-man', 'feast-guest-woman', 'feast-mother', 'filler-dressed'],
     8,
   ],
+  ['cold-smile', ['lead-feast', 'feast-guest-man', 'feast-guest-woman'], 3],
   [
     'cold-letter',
     ['lead-feast', 'feast-guest-man', 'feast-guest-woman', 'feast-mother', 'filler-dressed'],
@@ -82,33 +80,6 @@ const CASTS: ReadonlyArray<readonly [string, ReadonlyArray<string>, number]> = [
   ['milk-cup', ['idea-villagers'], 1],
   ['milk-pour', ['idea-villagers'], 1],
   ['milk-row', ['idea-villagers', 'villager-toddler', 'villager-child', 'lead-feast'], 5],
-];
-
-/** The two cards of act 1: their scene, their words as KJV sets them (punctuation and case aside), and the payoff. */
-const CARDS: ReadonlyArray<readonly [string, ReadonlyArray<string>, string]> = [
-  [
-    'cold',
-    ['such', 'as', 'have', 'need', 'of', 'milk', 'and', 'not', 'of', 'strong', 'meat'],
-    'meat',
-  ],
-  [
-    'milk',
-    [
-      'desire',
-      'the',
-      'sincere',
-      'milk',
-      'of',
-      'the',
-      'word',
-      'that',
-      'ye',
-      'may',
-      'grow',
-      'thereby',
-    ],
-    'grow',
-  ],
 ];
 
 const Word = Schema.Struct({
@@ -280,26 +251,23 @@ interface Span {
 /** Every span of act 1 in film order, each edge at the mark, word or card edge the narration puts it on. */
 const spansOf = (c: Clock, frame: number): ReadonlyArray<Span> => {
   const at = (t: number): readonly [number, number] => [t - frame, t + frame];
-  const tail = (t: number): readonly [number, number] => [t - frame, t + CARD_TAIL + frame];
   const grown = c.word('cold', 7, 'But', 'start');
+  const smile = c.word('cold', 21, 'We', 'start');
   const letter = c.word('cold', 24, 'And', 'start');
-  const such = c.word('cold', 42, 'such', 'voicedStart');
-  const meat = c.word('cold', 52, 'meat.”', 'voicedEnd');
+  const ouch = c.word('cold', 53, 'Grown', 'start');
   const what = c.word('cold', 58, 'So', 'start');
-  const desire = c.word('milk', 9, 'desire', 'voicedStart');
-  const thereby = c.word('milk', 20, 'thereby.”', 'voicedEnd');
+  const desire = c.word('milk', 9, 'desire', 'start');
   const need = c.word('milk', 42, 'A', 'start');
   return [
     { label: 'shot cold-baby', from: at(c.start('cold')), to: at(grown) },
-    { label: 'shot cold-table', from: at(grown), to: at(letter) },
-    { label: 'shot cold-letter', from: at(letter), to: at(such) },
-    { label: 'card cold', from: at(such), to: tail(meat) },
-    { label: 'shot cold-ouch', from: tail(meat), to: at(what) },
+    { label: 'shot cold-table', from: at(grown), to: at(smile) },
+    { label: 'shot cold-smile', from: at(smile), to: at(letter) },
+    { label: 'shot cold-letter', from: at(letter), to: at(ouch) },
+    { label: 'shot cold-ouch', from: at(ouch), to: at(what) },
     { label: 'shot cold-what', from: at(what), to: at(c.end('cold')) },
     { label: 'shot title', from: at(c.start('title')), to: at(c.end('title')) },
     { label: 'shot milk-cup', from: at(c.start('milk')), to: at(desire) },
-    { label: 'card milk', from: at(desire), to: tail(thereby) },
-    { label: 'shot milk-pour', from: tail(thereby), to: at(need) },
+    { label: 'shot milk-pour', from: at(desire), to: at(need) },
     { label: 'shot milk-row', from: at(need), to: at(c.end('milk')) },
   ];
 };
@@ -333,36 +301,9 @@ const spanMisses = (shots: Shots, clock: Clock) => {
   return misses;
 };
 
-const said = (text: string) => text.toLowerCase().replace(/[^a-z']/g, '');
-
-/** Every way a card's words, payoff or timing differ from the take and the rule, named. */
-const cardMisses = (shots: Shots, timings: Timings) =>
-  CARDS.flatMap(([scene, words, payoff]) => {
-    const card = shots.cards.find((c) => c.scene === scene);
-    if (!card) return [`no card in ${scene}`];
-    const misses = [];
-    if (card.words.map((w) => said(w.text)).join(' ') !== words.join(' '))
-      misses.push(`${scene} card says ${card.words.map((w) => w.text).join(' ')}`);
-    if (card.words.length > 12) misses.push(`${scene} card holds ${card.words.length} words`);
-    if (said(card.payoff) !== payoff) misses.push(`${scene} card payoff ${card.payoff}`);
-    const layout = shots.scenes.find((s) => s.id === scene);
-    const take = timings.scenes[scene]?.words ?? [];
-    for (const w of card.words) {
-      const heard = take.filter(
-        (x) =>
-          said(x.text) === said(w.text) &&
-          Math.abs((layout?.start ?? 0) + (layout?.speechStart ?? 0) + x.voiced.start - w.at) <=
-            1 / shots.fps,
-      );
-      if (heard.length === 0)
-        misses.push(`${scene} card word ${w.text} at ${w.at} is not heard then`);
-    }
-    return misses;
-  });
-
 describe('In Its Order act 1 in style B: the clock', () => {
   it.effect(
-    'lays act 1 out as base did, its shots and two cards tiling it on the narration’s marks and words, the cards verbatim KJV',
+    'lays act 1 out as base did, its shots alone tiling it on the narration’s marks and words, no card among them (the owner, ask a11de5e2b65: the quotes off black cards)',
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
@@ -377,7 +318,9 @@ describe('In Its Order act 1 in style B: the clock', () => {
           expect(Math.abs((got?.dur ?? -9) - want.dur)).toBeLessThanOrEqual(0.02);
         }
         expect(spanMisses(shots, clockOf(shots, timings))).toEqual([]);
-        expect(cardMisses(shots, timings)).toEqual([]);
+        expect(shots.cards.filter((c) => LAYOUT.slice(0, 3).some((s) => s.id === c.scene))).toEqual(
+          [],
+        );
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
     120_000,
   );
@@ -561,6 +504,12 @@ const parityOf = Effect.fn('Act1.parity')(function* (
   return parity(p.data, grained(q.data, frameBox, FILM_GRAIN, t), width, height, overlays);
 });
 
+/** The share of the frame a shot's drawings over it may cover, so the parity reads the rest: a tenth (the title's name), but the two quotes lettered in act 1 (the owner: the quotes off black cards; journal.md), a third each: the dusk band over cold-letter's sky and the book's pages along milk-pour's camera path. */
+const OVER_SHARES: ReadonlyMap<string, number> = new Map([
+  ['cold-letter', 1 / 3],
+  ['milk-pour', 1 / 3],
+]);
+
 /** A still's file name as the film's render writes it (`stillName` in `@manna/film/tools`). */
 const stillName = (t: number): string => `t${t.toFixed(2).padStart(7, '0')}.png`;
 
@@ -618,10 +567,14 @@ describe('In Its Order act 1 in style B: the bars and the film', () => {
           ]),
         ).toBe(0);
         const off: Array<string> = [];
-        expect(shots.shots.filter((s) => s.id !== 'title' && s.overlays.length > 0)).toEqual([]);
+        expect(shots.shots.filter((s) => s.overlays.length > 0).map((s) => s.id)).toEqual([
+          'cold-letter',
+          'title',
+          'milk-pour',
+        ]);
         for (const shot of shots.shots)
           expect(shot.overlays.reduce((sum, o) => sum + o.width * o.height, 0)).toBeLessThanOrEqual(
-            0.1 * shots.width * shots.height,
+            (OVER_SHARES.get(shot.id) ?? 0.1) * shots.width * shots.height,
           );
         for (const [id, t, frame, overlays] of middles) {
           const share = yield* parityOf(

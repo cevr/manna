@@ -125,7 +125,7 @@ describe("In Its Order's storybook holds", () => {
     }),
   );
 
-  test('reads all nine shots', () => {
-    expect(placed.length).toBe(9);
+  test('reads all ten shots', () => {
+    expect(placed.length).toBe(10);
   });
 });

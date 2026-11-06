@@ -54,3 +54,26 @@
   dotted rim and the neck step of the lead's wince head (`PuppetLook` has no alpha choke; the wince
   drawing loads without the un-matte); the front table in the baby close is soft at 2.75 to 3.2 times
   its plate.
+
+## 2026-11-06, act 1 re-staged: CRAFT rule 1 overridden for act 1 (ask a11de5e2b65)
+
+- The owner, on the act-1 review render: "there's a lot about this film that just doesn't seem
+  gravitating, doesn't seem attractive. Maybe it's the way we're rendering. It just doesn't feel like
+  it'll hold any attention." His answer to ask a11de5e2b65: "Both: re-stage act 1 (close two-shot with
+  reactions, a moving milk picture, quotes off black cards, short pauses with room tone) and a 5 s
+  test of the lead cut into parts".
+- The override: CRAFT rule 1 ("Narration is typeset only as a full-screen card") does not hold for
+  act 1 of this film. Its two quotes are lettered in the scene by the film's own hand, at any length
+  the quote has: Heb 5:12 in `cold-letter` over a band of dusk above the heads (the scroll his `read`
+  cell holds is 47 by 60 px on screen, too small for thirteen legible words, so the words sit over
+  the visible table, not on the scroll), and 1 Pet 2:2 on the open book's pages in `milk-pour`, the
+  camera in on them. CRAFT.md is unchanged, and the prompts keep their `CARDS` sentence: the painted
+  pictures still carry no text. Acts 2 onward keep their cards.
+- The joke on "smile" is a close two-shot (`cold-smile`): the lead and the man, each head about a
+  third of the frame; the man turns from his stare and smiles on the mark, and the lead lowers the
+  bottle to his chest a beat after.
+- The milk span moves the whole time: one white stream from the book's gutter into the cup, the ink
+  dropper brought in and waved away, the cup full on "good".
+- The title's voice gap shortens to about 2.95 s (milk's lead 0, its tail 0.6, so no scene moves and
+  the score stays current). The first question cannot start earlier without moving the cold open's
+  length, which re-times the score (a paid score run): it stays at about 26.2 s.

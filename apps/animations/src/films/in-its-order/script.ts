@@ -22,6 +22,8 @@ export const script = defineScript([
   {
     id: 'milk',
     say: "{start}Start with the milk. {/} {peter}Peter writes, {newborn}“As newborn babes, {desire}desire the sincere milk of the word, that ye may {*}grow thereby.” {/} {sincere}Sincere here means pure, {mixed}with {*}nothing mixed in. {/} {word}So the milk is God's word, plain and unmixed. {/} {good}And milk is {*}good. {/} {need}A baby cannot do without it. {/} {began}Every one of us began there, {shame}and there is no shame in a cup of milk.",
+    lead: 0,
+    tail: 0.6,
     cite: [
       '1 Peter 2:2',
       'E. J. Waggoner, The Present Truth, August 17, 1893, 315',

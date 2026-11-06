@@ -53,10 +53,10 @@ const OTHER_SHEETS: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
 ]);
 
 /** The lead's table cells that draw the bottle in his hand. */
-const HOLDING = new Set(['lift', 'bottle', 'read']);
+const HOLDING = new Set(['lift', 'bottle', 'read', 'readBlink']);
 
-/** The lead's table cells that draw the letter in his hand. */
-const READING = new Set(['read']);
+/** The lead's table cells that draw the letter in his hand: reading it, or his eyes shut a moment over the bottle as he drinks. */
+const READING = new Set(['read', 'readBlink']);
 
 /** Each of `times`, from the first at which the letter's plate shows, at which his hand (`poseAt`'s cell) and the plate (`plateAt`'s alpha) both show the letter, or neither does: a take-up shows it exactly once at every frame. */
 const letterOffMisses = (lead: Figure, plate: Plate, times: ReadonlyArray<number>) => {
@@ -152,15 +152,16 @@ const placed = await Effect.runPromise(
   ),
 );
 
-/** Each shot's push cap its spec row names, as the largest zoom over the smallest across the shot: cold-letter's "≤ 15 %", cold-ouch's and milk-pour's "≤ 5 %", and each named push or pull's range; the title's pull starts nearer, at 1.3, by the orchestrator's ruling on critique 1, item 9. */
+/** Each shot's push cap its spec row names, as the largest zoom over the smallest across the shot: cold-ouch's "≤ 5 %", and each named push or pull's range; the title's pull starts nearer, at 1.3, by the orchestrator's ruling on critique 1, item 9. The restage (iio-b-restage) lets cold-letter push on toward the letter through the quote to the cut (1.3), holds cold-smile's slow push to 5 %, and sends milk-pour's camera in onto the book's page to read the verse and back out to the pour (2.45). */
 const PUSH_CAPS: ReadonlyMap<string, number> = new Map([
   ['cold-baby', 1.06],
-  ['cold-letter', 1.15],
+  ['cold-smile', 1.05],
+  ['cold-letter', 1.3],
   ['cold-ouch', 1.05],
   ['cold-what', 1.08],
   ['title', 1.3],
   ['milk-cup', 1.1],
-  ['milk-pour', 1.05],
+  ['milk-pour', 2.45],
 ]);
 
 /** The dropper's width on milk-pour's screen, outline included (critique 4, fault 2, measured): a frame's step past it draws a row of droppers, not one moving. */
@@ -453,7 +454,7 @@ describe("In Its Order's staging", () => {
       if (i._tag !== 'Plate' || !i.reveal) return [];
       return [{ plate: i, reveal: i.reveal }];
     });
-    expect(pours.length).toBe(2);
+    expect(pours.length).toBe(1);
     if (!pour || book?._tag !== 'Plate' || villager?._tag !== 'Figure') return;
     const s = drawScaleOf('idea-villagers', 'iio-milk', pour.headPx, 1);
     const gutter = [
@@ -500,12 +501,13 @@ describe("In Its Order's staging", () => {
     const pour = placed.find(({ shot }) => shot.id === 'milk-pour')?.shot;
     if (!pour) return expect(pour).toBeDefined();
     const pours = platesOf(pour).filter((p) => p.reveal);
-    expect(pours.length).toBe(2);
+    expect(pours.length).toBe(1);
     const off = timesOf(pour).flatMap((t, i) =>
       pours.flatMap((plate) => {
         const brush = plate.reveal?.brush ?? [];
         const [first, last] = [brush[0], brush.at(-1)];
         if (!first || !last || plateAt(plate, t).alpha <= 0) return [];
+        if (!plate.reveal || revealAt(plate.reveal, t).length === 0) return [];
         const [a, b] = [
           pointOn(plate, t, [first[0], first[1]]),
           pointOn(plate, t, [last[0], last[1]]),
@@ -562,6 +564,37 @@ describe("In Its Order's staging", () => {
     expect(
       table?.items.some((i) => i._tag === 'Plate' && i.file.endsWith('/scroll-rolled.png')),
     ).toBe(true);
+  });
+
+  test('cuts in on `smile` to a close two-shot of the lead and the man: each head at least a quarter of the frame’s height at every frame to `letter` (its cell’s head × his sheet’s draw scale × his size × the zoom ÷ the frame’s height), each changing key in it, the man’s smile landing within 0.5 s of the mark (the owner, ask a11de5e2b65: “close two-shot with reactions”)', () => {
+    const smile = placed.find(({ shot }) => shot.id === 'cold-smile');
+    if (!smile) return expect(smile).toBeDefined();
+    const shot = smile.shot;
+    const pair = ['lead', 'man'].flatMap((name) =>
+      figuresOf(shot)
+        .filter(({ figure }) => figure.name === name)
+        .map(({ figure }) => figure),
+    );
+    expect(pair.map((f) => f.member)).toEqual(['lead-feast', 'feast-guest-man']);
+    const headAt = (f: Figure, t: number) => {
+      const cell = SHEET_CELLS.get(`${f.member}/${f.sheet}`)?.cells[poseAt(f, t).cell];
+      const s = drawScaleOf(f.member, f.sheet, shot.headPx, 1);
+      return (
+        ((cell?.head ?? 0) * s * (f.size ?? 1) * cameraAt(shot.camera, t).zoom) / shot.size.height
+      );
+    };
+    const times = timesOf(shot);
+    expect(pair.map((f) => Math.min(...times.map((t) => headAt(f, t))) >= 1 / 4)).toEqual([
+      true,
+      true,
+    ]);
+    const changes = (f: Figure) =>
+      times.filter((t, i) => i > 0 && poseAt(f, t).cell !== poseAt(f, times[i - 1] ?? 0).cell);
+    expect(pair.map((f) => changes(f).length > 0)).toEqual([true, true]);
+    const [, man] = pair;
+    if (!man) return;
+    expect(changes(man)[0]).toBeLessThanOrEqual(0.5);
+    expect(poseAt(man, shot.duration - 1 / shot.fps).cell).toBe('smile');
   });
 
   test('seats the title’s eight in the panel’s groups, shoulders close within each, the man and the woman turned to the lead throughout (critique 1, item 9)', () => {
@@ -686,7 +719,7 @@ describe("In Its Order's staging", () => {
   );
 
   it.effect(
-    'takes the letter up in cold-letter and reads it, the bottle at his mouth, to the card; no shot lays a scroll open, and the rolled scroll on the table is the one he holds, its rollers within a tenth of his held rollers’ length (owner, scrawl 0:21: “this looks a bit stretched … he holds it with one hand and the bottle in the other and he looks at the scroll while drinking”)',
+    'takes the letter up in cold-letter and reads it, from the bottle lowered to his chest, the bottle at his mouth, to the cut; no shot lays a scroll open, and the rolled scroll on the table is the one he holds, its rollers within a tenth of his held rollers’ length (owner, scrawl 0:21: “this looks a bit stretched … he holds it with one hand and the bottle in the other and he looks at the scroll while drinking”)',
     () =>
       Effect.gen(function* () {
         const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
@@ -701,7 +734,7 @@ describe("In Its Order's staging", () => {
         if (!letter || !lead)
           return expect([letter?.id, lead?.name]).toEqual(['cold-letter', 'lead']);
         const end = letter.duration - 1 / letter.fps;
-        expect([poseAt(lead, 0).cell, poseAt(lead, end).cell]).toEqual(['bottle', 'read']);
+        expect([poseAt(lead, 0).cell, poseAt(lead, end).cell]).toEqual(['lift', 'read']);
         const rolled = placed.flatMap(({ shot }) =>
           platesOf(shot).filter((p) => p.file.endsWith('/scroll-rolled.png')),
         );

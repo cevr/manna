@@ -20,11 +20,9 @@ import { SCROLL_ROLLED } from '../../plates/props.ts';
 import {
   cam,
   drawScaleOf,
-  framingAt,
   holds,
   key,
   layer,
-  onScreen,
   plateOf,
   plateOn,
   seat,
@@ -361,7 +359,7 @@ export const coldTable: FilmShot = {
  * it, so here it would show its edge beside the man). Its push ends `push`
  * times in.
  */
-export const TWO_SHOT = { x: 862, y: 862, zoom: 3.1, push: 1.05 } as const;
+const TWO_SHOT = { x: 862, y: 862, zoom: 3.1, push: 1.05 } as const;
 
 /**
  * `cold-smile`, `smile` to `letter`: the close two-shot of the joke. Cut in
@@ -498,9 +496,11 @@ export const LETTER = {
  * table to where his free hand will hold it, a snatch (the owner, scrawl
  * 0:21): from the swap he reads the letter, open in one hand, the bottle's
  * teat at his mouth in the other, his lids half down on the scroll, to the
- * cut; a lidded cell takes no pasted blink. From the take the camera pushes
- * in toward the letter and his face, and on `quote` Heb 5:12 is lettered
- * over the dimmed table (`LETTER_QUOTE`) and held until the cut.
+ * cut; a lidded cell takes no pasted blink, so as the quote begins he
+ * shuts his eyes over the bottle a moment (`readBlink`), savouring it. From
+ * the take the camera pushes in toward the letter and his face, and on
+ * `quote` Heb 5:12 is lettered over a band of dusk above the heads
+ * (`LETTER_QUOTE`) and held until the cut.
  */
 export const coldLetter: FilmShot = {
   id: 'cold-letter',
@@ -512,6 +512,7 @@ export const coldLetter: FilmShot = {
     stare: { mark: 'letter', offset: 0.3, dur: 0.3 },
     stared: { mark: 'letter', offset: 0.45, dur: 0.3 },
     read: { after: 'cold-letter:take', until: 'ouch' },
+    savor: { mark: 'quote', dur: 0.8 },
     dim: { mark: 'quote', dur: 0.4 },
     write: { mark: 'quote', until: 'such' },
     talk: { mark: 'letter', word: 'letters', dur: 1.2 },
@@ -537,7 +538,9 @@ export const coldLetter: FilmShot = {
           leadAt([
             hold(0, cue('take').start, 'lift'),
             take,
-            hold(cue('take').end, duration, 'read'),
+            hold(cue('take').end, cue('savor').start, 'read'),
+            hold(cue('savor').start, cue('savor').end, 'readBlink'),
+            hold(cue('savor').end, duration, 'read'),
           ]),
           table(),
           letterLands(cue('fall'), cue('hop'), { start: take.at, end: swapOf(take) }),
@@ -547,19 +550,13 @@ export const coldLetter: FilmShot = {
   },
 };
 
-/** Where the middle of the letter he reads and of his face lie at the table, layer px: what the light over the quote stays open on. */
-export const LETTER_LIGHT = (() => {
-  const [lx, ly] = atTable(LEAD_TABLE.read, READ_LETTER);
-  return { x: (lx + AT_TABLE.lead.x) / 2, y: (ly + AT_TABLE.lead.crown + HEAD / 2) / 2 };
-})();
-
 /** The words of Heb 5:12 the take reads from `quote`, lettered line by line, and their reference. */
 export const LETTER_WORDS = {
   lines: ['They “are become such as have need of milk,', 'and not of strong meat.”'],
   cite: 'Hebrews 5:12',
 } as const;
 
-/** How the quote over the table is set, frame px: its lines' baselines and type, the reference under them, and the dimming: its darkest share at the frame's edge and the band behind the words, and the clear light's inner and outer radius about the letter and his face, in layer px. */
+/** How the quote over the table is set, frame px: its lines' baselines and type, the reference under them, and the band of dusk behind the words at the frame's top (its height and its darkest share, at the top edge). */
 const LETTER_TYPE = {
   x: 960,
   baselines: [118, 192],
@@ -568,42 +565,27 @@ const LETTER_TYPE = {
     y: 246,
     type: { family: fonts.display, size: 30, weight: 600, color: palette.gold, align: 'center' },
   },
-  edge: 0.55,
-  band: { height: 280, share: 0.45 },
-  light: { inner: 70, outer: 260 },
+  band: { height: 300, share: 0.62 },
 } as const;
 
 /**
  * Heb 5:12 over cold-letter, the film's own lettering in strokes: from
- * `quote` the table dims about the letter and his face (they stay lit, the
- * guests and diners seen through the dimming), and the take's words are
- * written on line by line until `such`, then held whole to the cut. The
- * camera it reads is cold-letter's push, the same keys eased the same way.
+ * `quote` a band of dusk darkens the sky above the heads, the table, the
+ * letter and the faces lit and whole under it, and the take's words are
+ * written on it line by line until `such`, then held whole to the cut. It
+ * draws inside its box, the band alone, so the parity reads the shot below.
  */
 export const LETTER_QUOTE: Over = {
   shot: 'cold-letter',
-  box: { x: 0, y: 0, w: 1920, h: 1080 },
+  box: { x: 0, y: 0, w: 1920, h: LETTER_TYPE.band.height },
   draw: (f) => {
     const dim = f.at('cold-letter:dim');
     if (dim <= 0) return;
-    const c = framingAt(LETTER.held, LETTER.to, f.at('cold-letter:read'));
-    const [lx, ly] = onScreen(c, LETTER_LIGHT.x, LETTER_LIGHT.y);
     const ctx = f.ctx;
     ctx.save();
-    const light = ctx.createRadialGradient(
-      lx,
-      ly,
-      LETTER_TYPE.light.inner * c.zoom,
-      lx,
-      ly,
-      LETTER_TYPE.light.outer * c.zoom,
-    );
-    light.addColorStop(0, withAlpha(palette.night, 0));
-    light.addColorStop(1, withAlpha(palette.night, LETTER_TYPE.edge * dim));
-    ctx.fillStyle = light;
-    ctx.fillRect(0, 0, f.w, f.h);
     const band = ctx.createLinearGradient(0, 0, 0, LETTER_TYPE.band.height);
     band.addColorStop(0, withAlpha(palette.night, LETTER_TYPE.band.share * dim));
+    band.addColorStop(0.7, withAlpha(palette.night, 0.75 * LETTER_TYPE.band.share * dim));
     band.addColorStop(1, withAlpha(palette.night, 0));
     ctx.fillStyle = band;
     ctx.fillRect(0, 0, f.w, LETTER_TYPE.band.height);
