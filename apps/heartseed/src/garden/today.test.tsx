@@ -1,236 +1,44 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noNewPromise, effect/noFixedWaitInTests, eslint/no-await-in-loop -- a React screen test: it mounts Today in happy-dom's document through React's promise-based `act`; the runtime's forked Effect work and the scripted recital run on the host's clock, so each turn is handed over in `act` until the frame the test waits on lands, at most 3 s; it reads nodes whose absent attributes are null and writes the device's records as JSON text. */
+/* oxlint-disable effect/noNullish, effect/noAsyncFunction, effect/noNewPromise, effect/noFixedWaitInTests -- a React screen test: it drives the stage rig's promise-based steps one after another, holds a launch on a promise it resolves, waits a fixed 20 ms through the rig's `until` to see that a held launch draws no claim in that time, and reads nodes whose absent attributes are null. */
 
 /**
- * Today's stage as a reader and a screen reader meet it: the route mounted
- * in happy-dom (react-native-web) under the app's own layer over the
- * scripted recital (the passage less its 11th word), the app's real store
- * on the device's `One.Database` (`src/test/one.tsx`) and a recording
- * chime. A restart is a new registry over the same disk. A disk with no
- * recall of any verse opens the first minute (`src/first`), so each launch
- * here starts with a recall on the disk: the passage's, or, for the passage
- * not planted, another verse's.
+ * Today's stage as a reader and a screen reader meet it, through the stage
+ * rig (`src/test/stage-rig.tsx`): Today in happy-dom under the app's own
+ * layer over the scripted recital, the app's real store on the device and
+ * a recording chime. A disk with no recall of any verse opens the first
+ * minute (`src/first`), so each launch here starts with a recall on the
+ * disk: the passage's, or, for the passage not planted, another verse's.
  *
  * The stage line reads `Stage: <stage>`, the plant beside it is hidden from
  * the screen reader and drawn one way per stage in the prototype's
  * colours, and the growth line shows only while the finished recital it
- * names is on the screen. Every frame (each DOM mutation batch) is watched:
- * until the garden's read completes, and for the whole session when it
- * failed, no frame names a stage, a plant, planting or growth. Another
- * verse's plant never shows as the passage's. It counts words without
- * printing one.
+ * names is on the screen. Every frame is watched: until the garden's read
+ * completes, no frame names a stage, a plant, planting or growth. It counts
+ * words without printing one. The failed reads and another verse's plant
+ * are `src/garden/today-reads.test.tsx`'s.
  */
 
-import { RegistryProvider } from '@effect/atom-react';
 import { describe, expect, it } from 'bun:test';
-import { Effect, Layer, Logger } from 'effect';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
-import Root from '../../app/index';
-import { appLayer, runtime } from '../app';
-import { recite, scriptedSource } from '../dictation/script';
-import { NEW_CARD, review } from '../fsrs';
-import { Chime, type Growth } from '../garden';
-import { Haptics, type Recall } from '../sayit';
-import { store } from '../store';
-import { clockOf, toDue, type Time } from '../test/clock';
-import { DAY } from '../test/garden-model';
+import type { Growth } from '../garden';
+import { toDue } from '../test/clock';
 import { device } from '../test/one';
-import { voiceSource } from '../voice/source';
-
-const PREFIX = 'heartseed/recall/';
-
-/** A verse other than the passage, whose recall on the disk keeps the launch out of the first minute. */
-const OTHER = 'Made 1:1';
-
-/** The instant a launch whose clock is set starts at: long after every record these disks hold. */
-const AT = Date.UTC(2026, 10, 5, 15);
-
-/** The prototype's colours, as the browser computes them: the gold of a seed and a ripe ear, the leaf's green, the unripe ear's green, and the soil. */
-const GOLD = 'rgba(212, 166, 64, 1.00)';
-const LEAF = 'rgba(111, 154, 74, 1.00)';
-const GREEN_EAR = 'rgba(156, 191, 106, 1.00)';
-const SOIL = 'rgba(138, 110, 75, 1.00)';
-
-/** Words that claim a stage, a plant, planting or growth, in any text or attribute (react-native-web's `r-flexGrow` class is no claim, so growth is matched as its own word). */
-const CLAIM = /stage|plant|grew|\bgrow|growth|seed|blade|\bear\b|full corn/iu;
-
-/** An element as drawn, read without a word: its tag, its exact class set and its inline style. */
-const lookOf = (node: Element) =>
-  `${node.tagName} ${[...node.classList].toSorted().join(' ')} | ${node.getAttribute('style') ?? ''}`;
-
-/** Every look drawn inside a read plant, with the stages it was drawn at, over every mount of this file. */
-const PLANT_LOOKS = new Map<string, Set<string>>();
-
-/** Every look in a frame drawn before the garden's read completed or through an unread session, over every mount of this file. */
-const UNREAD_LOOKS = new Set<string>();
-
-/** A recall of the passage at `startedAt`, recalled alone with Good. */
-const recallAt = (startedAt: number, reference = passage.reference): Recall => ({
-  reference,
-  startedAt,
-  grade: 3,
-  suggested: 3,
-  words: 20,
-  missed: 0,
-  peeked: 0,
-  extra: 0,
-});
-
-/** The record of `recall` as the garden writes it. */
-const recordOf = (recall: Recall) =>
-  [`${PREFIX}${recall.reference}/${recall.startedAt}`, JSON.stringify(recall)] as const;
-
-/** The records of a verse said with Good on each due day until its card's stability reaches 21 days. */
-const fullCorn = (reference = passage.reference) => {
-  const records: (readonly [string, string])[] = [];
-  let card = NEW_CARD;
-  let at = Date.UTC(2026, 0, 5, 9);
-  while (card.stability < 21) {
-    card = review(card, 3, at);
-    records.push(recordOf(recallAt(at, reference)));
-    at = Math.max(card.due, at + DAY);
-  }
-  return records;
-};
-
-/** The passage's records on the device's disk. */
-const passageKeys = () =>
-  [...device.disk.keys()].filter((key) => key.startsWith(`${PREFIX}${passage.reference}/`));
-
-/** The passage's recalls on the device's disk. */
-const passageRecalls = () =>
-  passageKeys().flatMap((key) => {
-    const value = device.disk.get(key);
-    if (value === undefined || value === null) return [];
-    return [JSON.parse(value) as Recall];
-  });
-
-/**
- * Today over the scripted recital, the app's store on the device (built
- * once `held` resolves, as a slow launch would) and a chime that records
- * into `chimes`; each mount is a fresh registry, a launch. Every frame is
- * read for a claim while the garden is not read.
- */
-const mount = async (
-  chimes: Growth[],
-  held: Promise<void> = Promise.resolve(),
-  time: Time = { now: null },
-) => {
-  const layer = appLayer({
-    source: scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 1 })),
-    haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
-    store: Layer.unwrap(
-      Effect.as(
-        Effect.promise(() => held),
-        store,
-      ),
-    ),
-    chime: Layer.succeed(
-      Chime,
-      Chime.of({ grow: (growth) => Effect.sync(() => void chimes.push(growth)) }),
-    ),
-    voice: voiceSource,
-  }).pipe(Layer.provide(Layer.merge(clockOf(time), Logger.layer([]))));
-  const host = document.createElement('div');
-  document.body.append(host);
-  const frames = { seen: 0, claimed: 0 };
-  /** Whether the tree claims anything: a pinned node, or a claiming word in any text or attribute. */
-  const claims = () =>
-    host.querySelector('[data-testid="stage"],[data-testid="plant"],[data-testid="growth"]') !==
-      null ||
-    CLAIM.test(host.textContent ?? '') ||
-    [...host.querySelectorAll('*')].some((node) =>
-      [...node.attributes].some((attribute) => CLAIM.test(attribute.value)),
-    );
-  /** Files the frame's looks: a read frame's plant parts under its stage, every look of a frame with no stage line as unread. */
-  const file = () => {
-    const label = host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label');
-    if (label === undefined || label === null) {
-      for (const node of host.querySelectorAll('*')) UNREAD_LOOKS.add(lookOf(node));
-      return;
-    }
-    for (const node of host.querySelectorAll('[data-testid="plant"], [data-testid="plant"] *')) {
-      const look = lookOf(node);
-      PLANT_LOOKS.set(look, (PLANT_LOOKS.get(look) ?? new Set()).add(label));
-    }
-  };
-  const watch = new MutationObserver(() => {
-    frames.seen += 1;
-    if (claims()) frames.claimed += 1;
-    file();
-  });
-  watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
-  const root = createRoot(host);
-  await act(async () =>
-    root.render(
-      <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        <Root />
-      </RegistryProvider>,
-    ),
-  );
-  const one = (selector: string) => host.querySelector(selector);
-  const until = async (holds: () => boolean, ms = 3000) => {
-    const start = Date.now();
-    while (!holds()) {
-      if (Date.now() - start > ms) return false;
-      await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
-    }
-    return true;
-  };
-  const click = (node: Element | null | undefined) =>
-    act(async () => {
-      node?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
-    });
-  const sayIt = () =>
-    [...host.querySelectorAll('[role="button"]')].find(
-      (node) => node.getAttribute('aria-label') === 'Say it',
-    );
-  const stage = () => one('[data-testid="stage"]')?.getAttribute('aria-label') ?? null;
-  const growth = () => one('[data-testid="growth"]')?.textContent ?? null;
-  const plant = () => one('[data-testid="plant"]');
-  /** The plant's parts as drawn, by their colours, read without a word. */
-  const drawn = () =>
-    [...(plant()?.children ?? [])].map((part) => getComputedStyle(part).backgroundColor);
-  const button = (name: string) =>
-    [...host.querySelectorAll('[role="button"]')].find(
-      (node) => node.getAttribute('aria-label') === name,
-    );
-  /** Says the passage to its summary, its recall kept: the action reads `Next` (`then`; `Say it` in an unread garden, which runs no plan). */
-  const say = async (then: 'Next' | 'Say it' = 'Next') => {
-    const summary = one('[data-testid="summary"]');
-    await click(sayIt());
-    expect(
-      await until(
-        () =>
-          one('[data-testid="summary"]') !== null &&
-          one('[data-testid="summary"]') !== summary &&
-          button(then) !== undefined,
-      ),
-    ).toBe(true);
-  };
-  const radio = (name: string) =>
-    [...host.querySelectorAll('[role="radiogroup"] [role="radio"]')].find(
-      (node) => node.getAttribute('aria-label') === name,
-    );
-  /** `Next`, the clock set to the passage's due, and a tap on the Minutes radio checked: a new plan, which offers Say it on the passage again with no result shown. */
-  const renew = async () => {
-    await click(button('Next'));
-    toDue(time, passageRecalls());
-    await click(
-      host.querySelector('[role="radiogroup"][aria-label="Minutes"] [aria-checked="true"]'),
-    );
-    expect(
-      await until(() => sayIt() !== undefined && one('[data-testid="summary"]') === null),
-    ).toBe(true);
-  };
-  const leave = async () => {
-    watch.disconnect();
-    await act(async () => root.unmount());
-  };
-  return { one, until, click, stage, growth, plant, drawn, say, renew, radio, frames, leave };
-};
+import {
+  AT,
+  fullCorn,
+  GOLD,
+  GREEN_EAR,
+  LEAF,
+  mount,
+  OTHER,
+  passageKeys,
+  passageRecalls,
+  PLANT_LOOKS,
+  recallAt,
+  recordOf,
+  SOIL,
+  UNREAD_LOOKS,
+} from '../test/stage-rig';
 
 describe('Today’s stage over the device’s store', () => {
   it('reads not planted, then a gold seed, grows to a blade under its letters and then to a green ear at each due, a chime each, falls back to a blade at a peek, keeps it through a restart, falls to a seed at Again, and climbs back silently', async () => {
@@ -335,83 +143,6 @@ describe('Today’s stage over the device’s store', () => {
       [SOIL, LEAF, LEAF, GOLD, GOLD],
     ]);
     expect(today.frames.claimed).toBeGreaterThan(0);
-    await today.leave();
-  });
-
-  it('claims nothing for the session when every listing fails, says it all the same, writes its recital silently, and reads it at the next launch at its due', async () => {
-    device.launch([recordOf(recallAt(AT - DAY))]).fail('keys', 3);
-    const chimes: Growth[] = [];
-    const time = { now: AT };
-    const today = await mount(chimes, undefined, time);
-    expect(await today.until(() => device.calls.keys === 3)).toBe(true);
-    await today.say('Say it');
-    expect(await today.until(() => passageKeys().length === 2)).toBe(true);
-    await today.until(() => false, 20);
-    expect([today.stage(), today.growth(), today.plant(), today.frames.claimed, chimes]).toEqual([
-      null,
-      null,
-      null,
-      0,
-      [],
-    ]);
-    expect(device.calls.keys).toBe(3);
-    await today.leave();
-
-    toDue(time, passageRecalls());
-    device.launch();
-    const next = await mount(chimes, undefined, time);
-    expect(await next.until(() => next.stage() === 'Stage: blade')).toBe(true);
-    expect([next.growth(), chimes]).toEqual([null, []]);
-    await next.leave();
-  });
-
-  it('claims nothing for the session when the open fails every attempt, and a recital with the device down keeps nothing', async () => {
-    device.launch([recordOf(recallAt(Date.UTC(2026, 0, 5, 9)))]).fail('open', 7);
-    const chimes: Growth[] = [];
-    const today = await mount(chimes);
-    expect(await today.until(() => device.calls.open === 5)).toBe(true);
-    await today.say('Say it');
-    await today.until(() => false, 20);
-    expect([
-      today.stage(),
-      today.plant(),
-      today.frames.claimed,
-      chimes,
-      passageKeys().length,
-    ]).toEqual([null, null, 0, [], 1]);
-    await today.leave();
-  });
-
-  it('reads the passage’s own plant, never another verse’s: with another verse at full corn on the disk, the passage is not planted, then a seed, then grows to a blade and an ear at each due', async () => {
-    const other = 'Made 1:1';
-    const theirs = fullCorn(other);
-    device.launch(theirs);
-    const chimes: Growth[] = [];
-    const today = await mount(chimes, undefined, { now: AT });
-    expect(await today.until(() => today.stage() !== null)).toBe(true);
-    expect([today.stage(), today.growth(), today.plant() !== null]).toEqual([
-      'Stage: not planted',
-      null,
-      false,
-    ]);
-
-    await today.say();
-    expect(await today.until(() => today.stage() === 'Stage: seed')).toBe(true);
-    await today.renew();
-    await today.say();
-    expect(await today.until(() => today.stage() === 'Stage: blade')).toBe(true);
-    expect(today.growth()).toBe('Grew to a blade.');
-    await today.renew();
-    await today.say();
-    expect(await today.until(() => today.stage() === 'Stage: ear')).toBe(true);
-    expect(today.growth()).toBe('Grew to an ear.');
-    expect(chimes.map(({ reference, from, to }) => [reference, from, to])).toEqual([
-      [passage.reference, 'seed', 'blade'],
-      [passage.reference, 'blade', 'ear'],
-    ]);
-    expect([...device.disk].filter(([key]) => key.startsWith(`${PREFIX}${other}/`))).toEqual<
-      (readonly [string, string | null])[]
-    >(theirs);
     await today.leave();
   });
 

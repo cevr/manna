@@ -578,8 +578,12 @@ marks. The alert stays in the scroll.
     over the real store on the device (the journey from not planted to a
     blade and an ear and back to a seed across a restart, reached with another verse's
     recall on the disk so Today opens, each stage's look in the
-    prototype's colours, and no claim in any frame of a held launch or an
-    unread session).
+    prototype's colours, full corn after a held launch, and no claim in
+    any frame of a held launch), through `src/test/stage-rig.tsx`.
+  - `test:today-reads`: `src/garden/today-reads.test.tsx`, the same stage
+    over failed reads (every listing, every open: no claim in any frame
+    of the session, and the recital kept or not) and over another verse's
+    plant at full corn, which never shows as the passage's.
   - `test:first`: `src/first/flow.test.ts` and `src/first/screen.test.tsx`,
     the flow's reducer against its model
     (`src/test/first-model.ts`) and the first minute in happy-dom over the

@@ -59,7 +59,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,today,voice.property}.test.*",
         "!src/{dictation,first,sayit,voice,field,session,run}/**/*.test.*",
-        "!src/garden/today.test.*",
+        "!src/garden/{today,today-reads}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -72,7 +72,20 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,sayit,voice,field,session,run}/**/*.test.*",
-        "!src/garden/{guard,sound}.test.*",
+        "!src/garden/{guard,sound,today-reads}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:today-reads": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,sayit,voice,field,session,run}/**/*.test.*",
+        "!src/garden/{guard,sound,today}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -444,6 +457,7 @@
         "test:cue",
         "test:garden",
         "test:today",
+        "test:today-reads",
         "test:first",
         "test:root",
         "test:walk-letters",
