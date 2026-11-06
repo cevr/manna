@@ -452,24 +452,25 @@ const twoShot = (
 
 /**
  * `cold-ask`, `what` to `why`: back to the two-shot, the letter and the
- * bottle on the table where cold-ouch left them, the man beside him still
- * staring at the letter, and the lead looks up from it
- * to the viewer, brows raised, and asks the film's question with his face
- * (critique 1, finding 4: the question on a face, not on a still life).
+ * bottle on the table where cold-ouch left them, the lead looking up to
+ * the viewer, brows raised, asking the film's question with his face
+ * (critique 1, finding 4: the question on a face, not on a still life);
+ * the man beside him, still staring at the letter, turns to the viewer too
+ * on "milk".
  */
 export const coldAsk: FilmShot = {
   id: 'cold-ask',
   span: { mark: 'what', until: 'why' },
-  cues: {},
-  build: ({ duration }) => {
-    const [m0, ...ms] = guestHold('man', 0, duration, 'stare');
-    return twoShot(
+  cues: {
+    turn: { mark: 'what', word: 'milk', dur: 0.3 },
+  },
+  build: ({ duration, cue }) =>
+    twoShot(
       duration,
-      [m0 ?? hold(0, duration, 'stare'), ...ms],
+      guestSpans('man', 'stare', [[cue('turn').start, 'neutral']], duration),
       [hold(0, duration, 'ask')],
       [letterOn([[0, key({})]]), bottleOnTable()],
-    );
-  },
+    ),
 };
 
 /** The rollers' length across, ink ends and all, of the scroll he holds in his table sheet's `read` cell, in its px: its lower roller's 97 px of his hair's brown (rows 471 to 484, from x 6) and its ink at each end. */

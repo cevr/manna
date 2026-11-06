@@ -499,13 +499,19 @@ describe("In Its Order's staging", () => {
     expect(short).toEqual([]);
   });
 
-  test('asks the film’s question on the lead’s face: from `what` to `why` the two-shot again, his head a third of the frame, his eyes up to the viewer (`ask`), no still life (critique 1, finding 4)', () => {
+  test('asks the film’s question on the lead’s face: from `what` to `why` the two-shot again, his head a third of the frame, his eyes up to the viewer (`ask`), the man turning from the letter to the viewer, no still life (critique 1, finding 4)', () => {
     const ask = placed.find(({ shot }) => shot.id === 'cold-ask')?.shot;
     if (!ask) return expect(ask).toBeDefined();
     const lead = figuresOf(ask).find(({ figure }) => figure.name === 'lead')?.figure;
     if (!lead) return expect(lead).toBeDefined();
     const times = timesOf(ask);
     expect(new Set(times.map((t) => poseAt(lead, t).cell))).toEqual(new Set(['ask']));
+    const man = figuresOf(ask).find(({ figure }) => figure.name === 'man')?.figure;
+    if (!man) return expect(man).toBeDefined();
+    expect(times.map((t) => poseAt(man, t).cell).filter((c, i, all) => c !== all[i - 1])).toEqual([
+      'stare',
+      'neutral',
+    ]);
     expect(
       Math.min(...times.map((t) => (ask.headPx * cameraAt(ask.camera, t).zoom) / ask.size.height)),
     ).toBeGreaterThanOrEqual(1 / 3 - 0.005);
