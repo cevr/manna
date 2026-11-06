@@ -353,8 +353,9 @@ export const coldTable: FilmShot = {
 
 /**
  * The two-shot's framing, layer px: the man and the lead, each head about a
- * third of the frame's height (a grown head of `HEAD` at zoom 3.1 is 0.34 of
- * it), the bottle raised between the lead and the frame's right; the woman's
+ * third of the frame's height (a grown head of `HEAD` at zoom 2.68 is 0.29 of
+ * it; past its push the lead's drawing stays within the 1.5× enlarging cap),
+ * the bottle raised between the lead and the frame's right; the woman's
  * near shoulder at the right edge; the table's top across the frame's foot
  * (the whole table plate: the close's plate covers only the lead's middle of
  * it, so here it would show its edge beside the man). Its push ends `push`
@@ -364,7 +365,7 @@ export const coldTable: FilmShot = {
 const TWO_SHOT = {
   x: 862,
   y: 862,
-  zoom: 3.1,
+  zoom: 2.68,
   push: 1.05,
   diners: ['diner-1', 'diner-2', 'diner-3', 'diner-4'],
 } as const;
