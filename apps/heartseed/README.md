@@ -795,12 +795,19 @@ marks. The alert stays in the scroll.
     taps and their stored switch, and each way a reading ends or goes on
     (its finish or interruption, Say it, Voice off, a relaunch; a Minutes
     tap, a return, the field); each case's floors met by its own devices.
+  - `test:corpus`: `src/passages/corpus.test.ts`, every verse of the KJV
+    through `versesOf` against `test/passages-model.ts`, every book's
+    chapter bounds, and the module's reads in a child process
+    (`test/kjv-lazy-rig.ts`); and `src/passages/guard.test.ts`, `src/kjv.ts`
+    the one product file that names the corpus module, and none that names
+    the source file.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
     (Heartseed's `sim` over a stand-in Drive: its values, the web and a
     port outside 8280-8289 refused before any step, and `install` waiting
-    for Today's reference).
+    for Today's reference) and `vite/kjv.test.ts` (the corpus's derivation
+    and its build faults, and the plugin's two modules).
 
   Run one with `bun run test:<part>` here, or all with `bun run test
   --filter=@manna/heartseed` at the repository root. A new test file at the

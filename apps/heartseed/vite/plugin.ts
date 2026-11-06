@@ -1,29 +1,51 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noNullish, effect/noTernary -- a Vite and rolldown plugin, the bundler's host boundary: it runs the derivation as a child process, and its hooks answer `undefined` for a module that is not theirs, as the plugin API defines. */
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noNullish, effect/noTernary -- a Vite and rolldown plugin, the bundler's host boundary: it runs the derivations as child processes, and its hooks answer `undefined` for a module that is not theirs, as the plugin API defines. */
 
 /**
- * `virtual:heartseed-passage`: Today's passage, made when the app is bundled
- * by `passage.ts`. The web and the native bundle both take it from this
- * plugin (`vite.config.ts` gives it to One's native bundler too), so the
- * phone carries one verse, not the corpus. The derivation runs under Bun:
- * Vite loads this config under Node, which cannot import `@manna/core`'s
- * TypeScript.
+ * The app's two bundle-time modules, each made by its script when the app
+ * is bundled:
+ * - `virtual:heartseed-passage`, Today's passage (`passage.ts`), so the
+ *   promise needs no corpus read;
+ * - `virtual:heartseed-kjv`, the whole KJV as one string per chapter
+ *   (`kjv.ts`), which the app reads through `src/kjv.ts` alone.
+ *
+ * The web and the native bundle both take them from this plugin
+ * (`vite.config.ts` gives it to One's native bundler too), so the phone
+ * carries the derived corpus, never the 7.8 MB source file. Each
+ * derivation runs under Bun, once a process: Vite loads this config under
+ * Node, which cannot import `@manna/core`'s TypeScript.
  */
 
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const MODULE = 'virtual:heartseed-passage';
-const SCRIPT = fileURLToPath(new URL('./passage.ts', import.meta.url));
+/** Each module this plugin serves, and the script that derives it. */
+const SCRIPTS: ReadonlyMap<string, string> = new Map([
+  ['virtual:heartseed-passage', fileURLToPath(new URL('./passage.ts', import.meta.url))],
+  ['virtual:heartseed-kjv', fileURLToPath(new URL('./kjv.ts', import.meta.url))],
+]);
 
-let derived: string | undefined;
+/** The derived corpus is about 4.2 MB of JSON, past the child process's default 1 MB. */
+const MOST_OUTPUT = 16 * 1024 * 1024;
 
-/** A Vite and rolldown plugin: `import passage from 'virtual:heartseed-passage'`. */
+const derived = new Map<string, string>();
+
+/** The module's derivation, run once a process. */
+const derive = (module: string, script: string): string => {
+  const known = derived.get(module);
+  if (known !== undefined) return known;
+  const json = execFileSync('bun', [script], { encoding: 'utf8', maxBuffer: MOST_OUTPUT });
+  derived.set(module, json);
+  return json;
+};
+
+/** A Vite and rolldown plugin: `import passage from 'virtual:heartseed-passage'` and `import chapters from 'virtual:heartseed-kjv'`. */
 export const passage = () => ({
   name: 'heartseed-passage',
-  resolveId: (source: string) => (source === MODULE ? `\0${MODULE}` : undefined),
-  load: (module: string) => {
-    if (module !== `\0${MODULE}`) return undefined;
-    derived ??= execFileSync('bun', [SCRIPT], { encoding: 'utf8' });
-    return `export default ${derived};`;
+  resolveId: (source: string) => (SCRIPTS.has(source) ? `\0${source}` : undefined),
+  load: (id: string) => {
+    const module = id.slice(1);
+    const script = id.startsWith('\0') ? SCRIPTS.get(module) : undefined;
+    if (script === undefined) return undefined;
+    return `export default ${derive(module, script)};`;
   },
 });

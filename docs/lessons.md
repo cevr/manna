@@ -5143,3 +5143,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The return to the foreground could be read in Today with a lifecycle effect over React Native's `AppState`, so the session's plan would follow a component's mounts instead of the app's runtime, and a subscription could outlive its launch.
 - **Cause:** `AppState` is reachable by name from any module, and a component effect is the quickest place to subscribe.
 - **Guard:** code: `apps/heartseed/src/wake/guard.test.ts` `is the one product module that names AppState, a .ts module that imports no React`; `apps/heartseed/src/wake/guard.test.ts` `leaves Today with no lifecycle effect and no AppState`
+
+### heartseed-corpus-through-one-module
+
+- **Date:** 2026-11-06
+- **Kind:** owner
+- **Said:** "corpus data reaches the bundle through a bundle-time virtual module (the hymnal's `vite/hymnal.ts` pattern), never by importing the 7.8 MB `kjv.json` into the app"
+- **Source:** hymnapp/selahone/units.md (Decisions, the corpus line); hymnapp/hskjv/spec.md K3 and Risks 4
+- **Wrong:** With the whole KJV in the bundle as `virtual:heartseed-kjv`, any screen could import the module and split every chapter as it loads, so Today's first frame would wait on a 4 MB decode, or name the 7.8 MB source file and carry it whole.
+- **Cause:** The module and the source file are both reachable by name from any product file, and the plugin serves whoever imports it.
+- **Guard:** code: `apps/heartseed/src/passages/guard.test.ts` `is src/kjv.ts, which imports the module statically, and no other product file names it`; `apps/heartseed/src/passages/guard.test.ts` `never names the source corpus file in product code`
