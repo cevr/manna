@@ -734,6 +734,56 @@ marks. The alert stays in the scroll.
   removed verses, so after `Next` Today never offers one. The view's
   `pieces` and `held` keep their meaning.
 
+## Natural voice
+
+The natural voice reads a piece with Kokoro-82M instead of the system
+voice, and lights each word as it is read. This part holds its
+pronunciation list and the rule from a piece's text to what the model is
+given; the native module that renders and plays, and the switch a reader
+sees, are not here yet.
+
+- `data/kjv-phonemes.json` maps every distinct word key of the KJV (13,756)
+  to its phonemes in Kokoro's symbols: Misaki 0.9.4's English G2P for the
+  key alone (with its espeak-ng fallback), or the key's entry in
+  `data/kjv-phonemes.overrides.json`, which replaces Misaki's guess (empty
+  today; the owner's listening fills it, at most 200 entries, each a KJV
+  key that differs from Misaki's). It holds words and phonemes only, no
+  verse text. Heteronyms (read, lead, wind) take Misaki's default sense,
+  and names its guess.
+- `data/kokoro-vocab.json` is Kokoro's symbol vocabulary, byte for byte the
+  `vocab.json` of Hugging Face `FluidInference/kokoro-82m-coreml` at
+  revision `2568276a60ff6e7f312afce3dc9e3f07521cb48d`.
+- `data/lexicon.py` writes the list. Regenerate it from the repository
+  root with `uv run --no-project --python 3.12 apps/heartseed/data/lexicon.py`
+  after editing the overrides; its inline metadata pins Misaki, spaCy,
+  `en_core_web_sm` and espeak-ng's loader, and only then are uv and the
+  network needed. It writes the keys sorted, one entry a line, so two runs
+  write the same bytes; `src/natural/data.test.ts` holds the list's hash,
+  which a regeneration updates. The tests never run Python. espeak-ng runs
+  only on the dev machine and nothing of it ships.
+- `src/natural/plan.ts` is the rule, pure. `planOf(words, vocab, text)`
+  plans a piece's displayed text, as `src/voice/reading.ts` speaks it. A
+  word is a whitespace run that holds a letter or a number; its key is the
+  run without its leading and trailing characters that are neither, looked
+  up as written. A word speaks the `,.:;?!()` of its edges around its
+  phonemes, other edge characters silent, and words join with one space,
+  counted in code points. A clause ends at a word whose spoken trail holds
+  one of `,.:;?!`; a clause of at most `CHUNK_CAP` (200) symbols stays in
+  one chunk, and a longer one may break between any of its words. Clauses
+  pack greedily into chunks of at most 200 symbols with their joining
+  spaces. Each chunk's ids are BOS 0, the spoken symbols' ids, EOS 0, and
+  each word's mark is the index of its first phoneme, after its spoken
+  lead, with the whole run's location and length in UTF-16 units, as the
+  system voice's word marks give them. An unknown key, a symbol outside the
+  vocab, a word over 200 symbols alone or a text with no word plans none.
+  `startsOf(chunk, durations)` gives each word's start in the chunk's audio
+  from the model's frames per id: `SAMPLES_PER_FRAME` (600) times the
+  frames of the ids before its mark; durations that are not one whole,
+  positive count per id give none.
+- Credits: Misaki (hexgrad/misaki, Apache-2.0) made the list; Kokoro's
+  vocabulary is hexgrad/Kokoro-82M's (Apache-2.0), as FluidInference
+  publishes it.
+
 ## Tests
 
 - The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as parts, each a
@@ -1045,6 +1095,15 @@ marks. The alert stays in the scroll.
     file's floors met by its own devices. `test:chooser-leave` also runs
     `src/chooser/fixed.test.tsx`, which keeps every screen's fixed
     controls outside its scroll views in every frame.
+  - `test:natural`: `src/natural`, the natural voice's plan:
+    `src/natural/plan.property.test.ts`, `planOf` and `startsOf` against a
+    model written in the test over a small hand-built lexicon and vocab
+    (seeded texts, the cap at 200 and 201 for a clause, a word and a packed
+    pair, code points against UTF-16 units, marks after a spoken lead, and
+    durations that do not fit); and `src/natural/data.test.ts`, the
+    committed data: the vocab's pinned hash, the list's bytes as the
+    generator last wrote them, its keys sorted and unique, and every
+    phoneme and override spoken in the vocab.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
