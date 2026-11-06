@@ -121,7 +121,7 @@ export const paintSceneOf = (shot: Shot, paper: string, source: SceneSource): Pa
   })),
 });
 
-/** A figure as the painter draws it: its name, its member's palette, its sheet's head share (`shareOf`), its stored cells by key, the keys it wears another head on, the blinks its holds show (`[cell, blink]`) and the paints it wears in other colours. */
+/** A figure as the painter draws it: its name, its member's palette, its sheet's head share (`shareOf`), its stored cells by key, the keys it wears another head on, the blinks its holds show (`[cell, blink]`) and the paints it wears in other colours; and, where a prototype turns it on, its rig. */
 export interface PaintFigure {
   readonly _tag: 'Figure';
   readonly name: string;
@@ -131,6 +131,34 @@ export interface PaintFigure {
   readonly worn: ReadonlyArray<Worn>;
   readonly blinks: ReadonlyArray<readonly [string, string]>;
   readonly dress: ReadonlyArray<Dress>;
+  readonly rig?: PaintRig;
+}
+
+/**
+ * A figure's drawn keys cut into parts (the parts prototype,
+ * `storybook/rig/`): each part back to front, its picture per drawn key at
+ * the cell's size and place, and the chain of parts whose poses it rides
+ * (its root first, itself last); each part's pivot in the cell's px. No shot
+ * names one, so no shot's frames change.
+ */
+export interface PaintRig {
+  readonly pivots: Readonly<Record<string, readonly [number, number]>>;
+  readonly parts: ReadonlyArray<{
+    readonly name: string;
+    readonly chain: ReadonlyArray<string>;
+    readonly images: Readonly<
+      Record<string, { readonly image: string; readonly size: readonly [number, number] }>
+    >;
+  }>;
+}
+
+/** A part's pose as a frame asks it: turned `angle` degrees about its pivot, stretched `sx`, `sy` about it and moved `dx`, `dy`, cell px. */
+export interface PaintPartPose {
+  readonly angle: number;
+  readonly sx: number;
+  readonly sy: number;
+  readonly dx: number;
+  readonly dy: number;
 }
 
 /** A shot's set and cast as the painter holds them: the frame's size, the paper behind everything, the scene's one light, and each layer's depth, blur and items in drawing order. */
@@ -156,6 +184,8 @@ export interface PaintedFigure {
   readonly sx: number;
   readonly sy: number;
   readonly scale: number;
+  /** Each part's pose, where the figure has a rig with this key: it is drawn as its parts, else as its cell. */
+  readonly parts?: Readonly<Record<string, PaintPartPose>>;
 }
 
 /**
@@ -192,9 +222,10 @@ interface LitCell {
   readonly ay: number;
 }
 
-/** A scene prepared once: each figure's lit drawn keys by `<figure>/<key>`, and its sheet head and head share by name. */
+/** A scene prepared once: each figure's lit drawn keys by `<figure>/<key>`, its rig's lit parts by `<figure>/<key>/<part>`, and its sheet head and head share by name. */
 export interface Prepared {
   readonly cells: ReadonlyMap<string, LitCell>;
+  readonly rigs: ReadonlyMap<string, HTMLCanvasElement>;
   readonly heads: ReadonlyMap<string, number>;
   readonly shares: ReadonlyMap<string, number>;
 }
@@ -290,6 +321,28 @@ const readOf = (d: Drawn, paints: ReadonlyArray<Paint>) => {
   };
 };
 
+/** A figure's rig parts under the scene's light, by `<figure>/<key>/<part>`: none while a part's picture cannot be read, empty when the figure has no rig. */
+const litPartsOf = (
+  item: PaintFigure,
+  pictures: Pictures,
+  light: Light,
+  worn: ReadonlyArray<Paint>,
+): Option.Option<ReadonlyArray<readonly [string, HTMLCanvasElement]>> =>
+  Option.all(
+    (item.rig?.parts ?? []).flatMap((part) =>
+      Object.entries(part.images).map(([key, picture]) =>
+        Option.map(
+          pictures.pixels(picture.image, picture.size),
+          (px) =>
+            [
+              `${item.name}/${key}/${part.name}`,
+              canvasOf(lit(dressed(px, item.dress), light, worn)),
+            ] as const,
+        ),
+      ),
+    ),
+  );
+
 /**
  * A scene prepared from its pictures: each figure's drawn keys (its stored
  * cells, the heads it wears and its blinks) under the scene's light
@@ -299,15 +352,18 @@ const readOf = (d: Drawn, paints: ReadonlyArray<Paint>) => {
  */
 export const prepare = (scene: PaintScene, pictures: Pictures): Option.Option<Prepared> => {
   const cells = new Map<string, LitCell>();
+  const rigs = new Map<string, HTMLCanvasElement>();
   const heads = new Map<string, number>();
   const shares = new Map<string, number>();
   for (const layer of scene.layers)
     for (const item of layer.items) {
       if (item._tag === 'Plate') continue;
       const paints = paintsOf(item.palette);
-      const drawn = drawnOf(item, pictures, paints);
-      if (Option.isNone(drawn)) return Option.none();
       const worn = dressedPaints(paints, item.dress);
+      const drawn = drawnOf(item, pictures, paints);
+      const parts = litPartsOf(item, pictures, scene.light, worn);
+      if (Option.isNone(drawn) || Option.isNone(parts)) return Option.none();
+      parts.value.forEach(([key, canvas]) => rigs.set(key, canvas));
       const read = new Map<string, Option.Option<number>>();
       for (const d of [...drawn.value.cells, ...drawn.value.blinks]) {
         const { anchor, head } = readOf(d, paints);
@@ -323,7 +379,7 @@ export const prepare = (scene: PaintScene, pictures: Pictures): Option.Option<Pr
       );
       shares.set(item.name, item.share);
     }
-  return Option.some({ cells, heads, shares });
+  return Option.some({ cells, rigs, heads, shares });
 };
 
 /** The scene's depth settings: its camera authored, so no drift; the engine's default fibre on the backdrop of the whole frame, none on a figure alone. */
@@ -383,12 +439,63 @@ const paintPlate = (
   ctx.restore();
 };
 
-/** A figure in its frame pose: its lit drawn key at its scale times its stretch, its soles' centre on its place. */
-const paintFigure = (ctx: CanvasRenderingContext2D, cell: LitCell, f: PaintedFigure) => {
+/** One lit part of a rigged key and the poses it rides, its root's first, each with its pivot in the cell's px. */
+interface PosedPart {
+  readonly canvas: HTMLCanvasElement;
+  readonly chain: ReadonlyArray<{
+    readonly pivot: readonly [number, number];
+    readonly pose: PaintPartPose;
+  }>;
+}
+
+/** A figure's rigged key as its parts in its frame pose, back to front; none when the figure has no rig, the frame asks no part poses, or a part has no picture for its drawn key. */
+const posedPartsOf = (
+  item: PaintFigure,
+  f: PaintedFigure,
+  prepared: Prepared,
+): Option.Option<ReadonlyArray<PosedPart>> =>
+  Option.flatMap(
+    Option.all([Option.fromUndefinedOr(item.rig), Option.fromUndefinedOr(f.parts)]),
+    ([rig, poses]) =>
+      Option.all(
+        rig.parts.map((part) =>
+          Option.map(
+            Option.fromUndefinedOr(prepared.rigs.get(`${item.name}/${f.cell}/${part.name}`)),
+            (canvas): PosedPart => ({
+              canvas,
+              chain: part.chain.map((name) => ({
+                pivot: rig.pivots[name] ?? [0, 0],
+                pose: poses[name] ?? { angle: 0, sx: 1, sy: 1, dx: 0, dy: 0 },
+              })),
+            }),
+          ),
+        ),
+      ),
+  );
+
+/** A figure in its frame pose: its lit drawn key, or its posed parts, at its scale times its stretch, its soles' centre on its place. */
+const paintFigure = (
+  ctx: CanvasRenderingContext2D,
+  cell: LitCell,
+  f: PaintedFigure,
+  parts: Option.Option<ReadonlyArray<PosedPart>>,
+) => {
   ctx.save();
   ctx.translate(f.x, f.y);
   ctx.scale(f.scale * f.sx, f.scale * f.sy);
-  ctx.drawImage(cell.canvas, -cell.ax, -cell.ay);
+  if (Option.isNone(parts)) ctx.drawImage(cell.canvas, -cell.ax, -cell.ay);
+  for (const part of Option.getOrElse(parts, () => [])) {
+    ctx.save();
+    ctx.translate(-cell.ax, -cell.ay);
+    for (const { pivot, pose } of part.chain) {
+      ctx.translate(pivot[0] + pose.dx, pivot[1] + pose.dy);
+      ctx.rotate((pose.angle * Math.PI) / 180);
+      ctx.scale(pose.sx, pose.sy);
+      ctx.translate(-pivot[0], -pivot[1]);
+    }
+    ctx.drawImage(part.canvas, 0, 0);
+    ctx.restore();
+  }
   ctx.restore();
 };
 
@@ -440,7 +547,8 @@ export const paintFrame = (
           }
           const f = figures.get(item.name);
           const cell = prepared.cells.get(`${item.name}/${f?.cell ?? ''}`);
-          if (f && cell && (req.only === '' || req.only === item.name)) paintFigure(ctx, cell, f);
+          if (f && cell && (req.only === '' || req.only === item.name))
+            paintFigure(ctx, cell, f, posedPartsOf(item, f, prepared));
         }
         ctx.filter = 'none';
       },

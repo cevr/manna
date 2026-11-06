@@ -14,6 +14,7 @@
         "test:storybook-height-phase",
         "test:storybook-lines",
         "test:storybook-lines-split",
+        "test:storybook-rig",
         "test:storybook-faces",
         "test:storybook-shots",
         "test:storybook-film",
@@ -167,6 +168,23 @@
         "!src/library/storybook/verify/**/*.test.*",
         "!src/library/storybook/lines-split.test.ts",
         "!src/library/storybook/faces.test.ts",
+        "!src/library/storybook/shots/**/*.test.*"
+      ]
+    },
+    "test:storybook-rig": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/**/*.test.*",
+        "!src/library/cutout/**/*.test.*",
+        "!src/library/toon3d/**/*.test.*",
+        "!src/library/cast/**/*.test.*",
+        "!src/library/storybook/*.test.*",
+        "!src/library/storybook/verify/**/*.test.*",
         "!src/library/storybook/shots/**/*.test.*"
       ]
     },

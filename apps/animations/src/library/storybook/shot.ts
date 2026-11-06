@@ -288,9 +288,12 @@ const drawsOf = (name: string): (() => number) => {
 const within = (range: readonly [number, number], u: number): number =>
   range[0] + (range[1] - range[0]) * u;
 
+/** A figure's breath period in s, drawn from its name within `BREATH_PERIOD`. */
+export const breathPeriodOf = (name: string): number => within(BREATH_PERIOD, drawsOf(name)());
+
 /** A holding figure's breath at `t`: from rest at `from` up to 1 + `BREATH` and back, once per its own period. */
 const breathAt = (name: string, from: number, t: number): number => {
-  const period = within(BREATH_PERIOD, drawsOf(name)());
+  const period = breathPeriodOf(name);
   return 1 + (BREATH * (1 - Math.cos((2 * Math.PI * (t - from)) / period))) / 2;
 };
 

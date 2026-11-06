@@ -15,7 +15,10 @@ const picturesOf = (scene: PaintScene): ReadonlyArray<string> =>
   scene.layers.flatMap((l) =>
     l.items.flatMap((i) => {
       if (i._tag === 'Plate') return [i.image];
-      return Object.values(i.cells).map((c) => c.image);
+      return [
+        ...Object.values(i.cells).map((c) => c.image),
+        ...(i.rig?.parts ?? []).flatMap((p) => Object.values(p.images).map((x) => x.image)),
+      ];
     }),
   );
 
