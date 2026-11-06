@@ -12,6 +12,7 @@ import {
   gardenView,
   listenTo,
   next,
+  passagesView,
   peek,
   press,
   readingAloud,
@@ -20,6 +21,7 @@ import {
   toggleVoice,
   voiceView,
 } from '../src/app';
+import { ChooserScreen } from '../src/chooser/screen';
 import { fieldOf, type FieldPassage } from '../src/field';
 import { FieldScreen } from '../src/field/screen';
 import { openingOf, shownOpening, type Opening } from '../src/first/flow';
@@ -38,6 +40,7 @@ import { sourceWords } from '../src/matcher/words';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { BigButton, color, look, PlantMark, Unsaid, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
+import { passageReference, verseReference, type PassagesView, type Range } from '../src/passages';
 import { countsOf, MINUTES, type Item, type TextPiece } from '../src/session';
 import { shownOf, type Shown } from '../src/session/run';
 import { useSessionBegunWhenShown } from '../src/session/shown';
@@ -46,6 +49,21 @@ import { useSessionBegunWhenShown } from '../src/session/shown';
 const PASSAGES: readonly FieldPassage[] = [
   { title: passage.reference, verses: [passage.reference] },
 ];
+
+/** A passage the reader holds as the field shows it: titled by its reference, each verse its own, carrying its range. */
+const heldPassage = (range: Range): FieldPassage => ({
+  title: passageReference(range),
+  verses: Array.from({ length: range.last - range.first + 1 }, (_, index) =>
+    verseReference(range.book, range.chapter, range.first + index),
+  ),
+  range,
+});
+
+/** The passages the field shows: Today's, then each the reader holds, in the order chosen; none of the reader's while unread. */
+const fieldPassagesOf = (view: PassagesView): readonly FieldPassage[] => {
+  if (view._tag === 'Unread') return PASSAGES;
+  return [...PASSAGES, ...view.passages.map(heldPassage)];
+};
 
 /**
  * The verse under `cue`: whole under the full text while no recital is
@@ -493,12 +511,20 @@ const actionOf = (listening: boolean, done: boolean) => {
 const offersListen = (listening: boolean, each: Showing) =>
   !listening && !each.done && Option.exists(each.item, (item) => item.fresh);
 
-/** The field over the garden read; nothing until a read completed, so it never claims a history it has not read. */
-function FieldOf({ onToday }: { readonly onToday: () => void }) {
+/** The field over the garden read and the reader's passages; nothing until both are known, so it never claims a history it has not read, nor shows a frame without the reader's rows. */
+function FieldOf({ onToday, onAdd }: { readonly onToday: () => void; readonly onAdd: () => void }) {
   const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
-  return Option.match(garden, {
+  const passages = AsyncResult.value(useAtomValue(passagesView));
+  return Option.match(Option.all({ garden, passages }), {
     onNone: () => false,
-    onSome: (read) => <FieldScreen field={fieldOf(read, PASSAGES)} onToday={onToday} />,
+    onSome: (known) => (
+      <FieldScreen
+        field={fieldOf(known.garden, fieldPassagesOf(known.passages))}
+        passages={known.passages}
+        onToday={onToday}
+        onAdd={onAdd}
+      />
+    ),
   });
 }
 
@@ -518,27 +544,33 @@ function Pending() {
  * The root: the pending frame until the garden's read completes, then the
  * first minute when the read holds no recall of any verse, else Today. The
  * screen is decided once per launch, at the read: planting the seed inside
- * the first minute keeps Planted on until Continue. From Today the reader
- * opens the field and comes back, in place: whether it shows is the
- * launch's state, never stored, so every launch opens as above. The root
- * holds Say it's view, so Today comes back as it was, and a recital that
- * starts in the same turn as the tap on the field keeps Today on screen.
+ * the first minute keeps Planted on until Continue. After it, the root
+ * shows one of three screens in place: Today, the field (from Today's
+ * `Your field`) and the chooser (from the field's `Add a passage`, back to
+ * the field from its first back or once a passage is added). Which one
+ * shows is the launch's state, never stored and with no route of its own,
+ * so every launch opens as above. Whenever Say it listens the screen is
+ * Today. The root holds Say it's view, so Today comes back as it was, and a
+ * recital that starts in the same turn as the tap on the field keeps Today
+ * on screen.
  */
 export default function Root() {
   const listening = screenOf(AsyncResult.value(useAtomValue(sayItView))).listening;
   const read = openingOf(AsyncResult.value(useAtomValue(gardenView)));
   const [decided, setDecided] = useState<Opening>('pending');
-  const [onField, setOnField] = useState(false);
+  const [screen, setScreen] = useState<'today' | 'field' | 'choose'>('today');
   if (decided === 'pending' && read !== 'pending') setDecided(read);
-  if (onField && listening) setOnField(false);
+  if (screen !== 'today' && listening) setScreen('today');
   switch (shownOpening(decided, read)) {
     case 'pending':
       return <Pending />;
     case 'first':
       return <FirstMinute onContinue={() => setDecided('today')} />;
     case 'today':
-      if (onField) return <FieldOf onToday={() => setOnField(false)} />;
-      return <Today onField={() => setOnField(true)} />;
+      if (screen === 'choose') return <ChooserScreen onField={() => setScreen('field')} />;
+      if (screen === 'field')
+        return <FieldOf onToday={() => setScreen('today')} onAdd={() => setScreen('choose')} />;
+      return <Today onField={() => setScreen('field')} />;
   }
 }
 

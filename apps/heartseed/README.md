@@ -777,6 +777,22 @@ marks. The alert stays in the scroll.
     ways back, recitals, Again, peeks and relaunches through
     `src/test/field-walk.ts`, each command's writes modelled apart from the
     app; each file's seeds reach its own floors (relaunches, or Again).
+  - `test:field-bar` and `test:field-bar-lists`:
+    `src/field/bar-remove.test.tsx` and `bar-twice.test.tsx`, then
+    `bar-lists.test.tsx` and `bar-kinds.test.tsx`, generated readers
+    through `src/test/bar-walk.ts` over `src/test/bar-rig.tsx` (the root
+    over the device's store, whose passages' key alone may fail its reads;
+    every frame held to one heading, no bar control, alert or limit line
+    inside a scroll view, no add beside the limit line or at 3 held,
+    nothing offered over unread passages, every field control disabled
+    while a remove is pending, and every seen text of the field and the
+    chooser at AA): stored lists of 0-5 or more passages with equal ones,
+    garbled values and 1-3 failed reads; a row's `Remove`, then `Keep`,
+    another row, leaving, or the ask's `Remove` landing or refused, once,
+    twice in one turn or with `Today` or `Keep` in the same turn;
+    `Add a passage` left or planted; after every tap the field, the bar
+    and the disk against `src/test/choose-model.ts` and the passages'
+    model; each file's floors met by its own devices.
   - `test:session`: `src/session.property.test.ts`, the daily plan
     (`planOf`) and Today's counts line (`countsOf`) against the rules
     written plainly in `src/test/session-model.ts` (ts-fsrs's due dates,

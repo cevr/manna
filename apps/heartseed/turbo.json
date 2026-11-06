@@ -275,7 +275,7 @@
         "!src/passages/**/*.test.*",
         "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake}/**/*.test.*",
-        "!src/field/{screen,garden,walk,walk-grades,unread-keep}.test.*",
+        "!src/field/{screen,garden,walk,walk-grades,unread-keep,bar-*}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -289,7 +289,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake}/**/*.test.*",
-        "!src/field/{sown,unread,reach,screen,garden,walk,walk-grades}.test.*",
+        "!src/field/{sown,unread,reach,screen,garden,walk,walk-grades,bar-*}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -303,7 +303,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake}/**/*.test.*",
-        "!src/field/{sown,unread,unread-keep,reach,walk,walk-grades}.test.*",
+        "!src/field/{sown,unread,unread-keep,reach,walk,walk-grades,bar-*}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -317,7 +317,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake}/**/*.test.*",
-        "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk-grades}.test.*",
+        "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk-grades,bar-*}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -331,7 +331,35 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake}/**/*.test.*",
-        "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk}.test.*",
+        "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk,bar-*}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:field-bar": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake}/**/*.test.*",
+        "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk,walk-grades,bar-lists,bar-kinds}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:field-bar-lists": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake}/**/*.test.*",
+        "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk,walk-grades,bar-remove,bar-twice}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -683,6 +711,8 @@
         "test:field-screen",
         "test:field-walk",
         "test:field-grades",
+        "test:field-bar",
+        "test:field-bar-lists",
         "test:session",
         "test:header",
         "test:counts",

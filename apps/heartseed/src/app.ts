@@ -203,8 +203,18 @@ export const removePassage = (range: Range) =>
     return answer;
   });
 
+/** What the field shows of the reader's passages: the list held, or `Unread`, which offers no add and no remove. */
+export const passagesView = runtime.atom(
+  Stream.unwrap(Effect.map(Passages, (passages) => passages.changes)),
+);
+
 /** The chooser's Plant: an add of the range (`addPassage`), answered as the passages answer it. The chooser lets one run at a time, so each answer is its own tap's. */
 export const plantPassage = runtime.fn((range: Range) => addPassage(range), { concurrent: true });
+
+/** The field's confirmed Remove: a remove of the range (`removePassage`), answered as the passages answer it. The field lets one run at a time, so each answer is its own tap's. */
+export const uprootPassage = runtime.fn((range: Range) => removePassage(range), {
+  concurrent: true,
+});
 
 /** A tap on Today's Next: the held item is let go. */
 export const next = runtime.fn(() => Effect.flatMap(Session, (session) => session.next), {

@@ -7,7 +7,9 @@
  * the garden derives (`not planted` before its first recall). After them,
  * every other verse the garden holds is a passage of one verse, in the
  * order first sown: by its earliest recall, then by its reference in code
- * units. References match exactly.
+ * units. References match exactly. A passage the reader chose carries its
+ * range to its row, so the row's `Remove` names that range and never finds
+ * it by the row's place.
  *
  * Days sown is the number of distinct days (`dayOf`: the reader's local day
  * from 04:00 by each record's own stored offset, or the UTC date of a record
@@ -22,14 +24,16 @@ import { Array as Arr, Option, Order, pipe } from 'effect';
 
 import { dayOf } from './day';
 import { stageOf, type Plant, type ReadGarden, type Stage } from './garden';
+import type { Range } from './passages';
 
 /** A verse's stage on the field: the garden's stage, or `not planted` before its first recall. */
 export type PlantStage = Stage | 'not planted';
 
-/** A passage the field shows as one row: its title and its verses' references, in order. */
+/** A passage the field shows as one row: its title, its verses' references, in order, and its range when the reader chose it. */
 export interface FieldPassage {
   readonly title: string;
   readonly verses: ReadonlyArray<string>;
+  readonly range?: Range;
 }
 
 export interface FieldPlant {
@@ -40,6 +44,8 @@ export interface FieldPlant {
 export interface FieldRow {
   readonly title: string;
   readonly plants: ReadonlyArray<FieldPlant>;
+  /** The range of the reader's passage the row shows; none on the app's own row and on a verse no passage holds. */
+  readonly range?: Range;
 }
 
 export interface Field {
@@ -75,6 +81,7 @@ export const fieldOf = (garden: ReadGarden, passages: ReadonlyArray<FieldPassage
     rows: [...passages, ...others].map((passage) => ({
       title: passage.title,
       plants: passage.verses.map((reference) => ({ reference, stage: stageAt(reference) })),
+      range: passage.range,
     })),
     sown: days.size,
     harvest: plants.filter((plant) => stageOf(plant) === 'full corn').length,

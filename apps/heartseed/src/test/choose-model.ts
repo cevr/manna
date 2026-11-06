@@ -3,12 +3,22 @@
 /**
  * The independent model of choosing passages, written plainly from the
  * spec's rules (hspassage C1, C3-C8) for the tests to judge the app by.
- * Ranges, references and pieces come from `./passages-model.ts`; nothing
- * here reads `src/chooser.ts`, `src/field.ts`, `src/passages.ts` or a
+ * Ranges, references and pieces come from `./passages-model.ts`, and the
+ * field's rows from `./field-model.ts`; nothing here reads `src/chooser.ts`, `src/field.ts`, `src/passages.ts` or a
  * screen.
  */
 
-import { NAMES, spanRef, verseRef, versesIn, type Corpus } from './passages-model';
+import type { Recall } from '../sayit';
+import { fieldRule } from './field-model';
+import {
+  NAMES,
+  spanRef,
+  verseRef,
+  versesIn,
+  type Corpus,
+  type Held,
+  type Span,
+} from './passages-model';
 
 /** A range of one chapter as the model holds it, or `undefined` for none. */
 export interface Chosen {
@@ -163,6 +173,78 @@ export const chooserWant = (corpus: Corpus, state: Choosing): ChooserSeen => {
       plant: span !== undefined,
     },
     line: state.line,
+  };
+};
+
+/** C5: the ask over `reference`, word for word. */
+export const askText = (reference: string) => `Remove ${reference}? Its plants stay in your field.`;
+
+/** C5: the remove's alert over `reference`. */
+export const notRemoved = (reference: string) => `${reference} was not removed. Try again.`;
+
+/** C5: the field's bar as the model holds it: the passage asked about and the remove's alert, each `undefined` for none. */
+export interface Asking {
+  readonly ask: Span | undefined;
+  readonly alert: string | undefined;
+}
+
+/** The bar with no ask and no alert, as the field opens. */
+export const QUIET: Asking = { ask: undefined, alert: undefined };
+
+/** The field as the reader gets it: each row's title, its plants' labels and the controls inside it; how many `Add a passage` show; the limit line, the ask and the alerts, `undefined` for none. */
+export interface FieldSeen {
+  readonly rows: ReadonlyArray<{
+    readonly title: string;
+    readonly plants: ReadonlyArray<string>;
+    readonly controls: ReadonlyArray<string>;
+  }>;
+  readonly add: number;
+  readonly limit: string | undefined;
+  readonly ask: string | undefined;
+  readonly alert: string | undefined;
+}
+
+/** C4: a passage's verses' references, first to last. */
+const versesOfSpan = (span: Span) =>
+  Array.from({ length: span.last - span.first + 1 }, (_, index) =>
+    verseRef(span.book, span.chapter, span.first + index),
+  );
+
+/**
+ * C3-C5: the field the model wants over the garden's `records`, the
+ * promise's reference, the passages `held` and the bar. The rows are the
+ * promise's, then each held passage's in the order chosen, then every other
+ * plant (hsfield's rule); each held passage's row, and no other, holds one
+ * `Remove <reference>`. With the passages read, the bar holds the ask while
+ * there is one, else `Add a passage` under 3 held, else the limit line;
+ * unread, it holds neither and no row a `Remove`.
+ */
+export const fieldWant = (
+  records: ReadonlyArray<Recall>,
+  promise: string,
+  held: Held,
+  bar: Asking,
+): FieldSeen => {
+  const passages = held.tag === 'Read' ? held.passages : [];
+  const rule = fieldRule(
+    [...records],
+    [
+      { title: promise, verses: [promise] },
+      ...passages.map((span) => ({ title: spanRef(span), verses: versesOfSpan(span) })),
+    ],
+  );
+  const read = held.tag === 'Read';
+  const asking = read ? bar.ask : undefined;
+  return {
+    rows: rule.rows.map((row, index) => ({
+      title: row.title,
+      plants: row.plants.map((plant) => `${plant.reference}, ${plant.stage}`),
+      controls: index >= 1 && index <= passages.length ? [`Remove ${row.title}`] : [],
+    })),
+    add: read && asking === undefined && passages.length < 3 ? 1 : 0,
+    limit: read && asking === undefined && passages.length >= 3 ? LIMIT : undefined,
+    ask: asking === undefined ? undefined : askText(spanRef(asking)),
+    alert: bar.alert,
   };
 };
 
