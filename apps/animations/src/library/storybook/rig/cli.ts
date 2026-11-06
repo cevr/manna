@@ -136,19 +136,50 @@ const holesOf = (r: Raster): Uint8Array => {
   return Uint8Array.from(reached, (m, i) => Number(m === 0 && clearAt(r, i)));
 };
 
-/** How a posed figure alone differs from it at rest: its holes, the holes it has that rest has not, the rest silhouette's pixels it leaves clear, and its see-through pixels (alpha 1 to 254) enclosed in its silhouette. */
+/** How far inside the rest silhouette's edge a cleared pixel counts as inside the figure, frame px: past the breath's and the lean's shift of the outline (about 5 px at the crown). */
+const INSIDE = 6;
+
+/** The pixels of `mask` whose whole square of `r` px about them is in `mask`, by rows then columns. */
+const eroded = (mask: Uint8Array, w: number, h: number, r: number): Uint8Array => {
+  const pass = (
+    src: Uint8Array,
+    along: number,
+    across: number,
+    at: (a: number, b: number) => number,
+  ) => {
+    const out = new Uint8Array(src.length);
+    for (let b = 0; b < across; b++) {
+      let run = 0;
+      const runs = new Uint16Array(along);
+      for (let a = 0; a < along; a++) {
+        run = (run + 1) * (src[at(a, b)] ?? 0);
+        runs[a] = run;
+      }
+      for (let a = r; a < along - r; a++)
+        out[at(a, b)] = Number((runs[Math.min(along - 1, a + r)] ?? 0) >= 2 * r + 1);
+    }
+    return out;
+  };
+  const rows = pass(mask, w, h, (x, y) => y * w + x);
+  return pass(rows, h, w, (y, x) => y * w + x);
+};
+
+/** How a posed figure alone differs from it at rest: its holes, the holes it has that rest has not, the rest silhouette's pixels it leaves clear, those of them `INSIDE` px or more within the rest's edge, and its see-through pixels (alpha 1 to 254) enclosed in its silhouette. */
 const holeCounts = (rest: Raster, posed: Raster) => {
   const [hr, hp] = [holesOf(rest), holesOf(posed)];
-  let [restHoles, holes, fresh, uncovered, seams] = [0, 0, 0, 0, 0];
+  const solid = Uint8Array.from(hr, (_, i) => Number(!clearAt(rest, i)));
+  const deep = eroded(solid, rest.width, rest.height, INSIDE);
+  let [restHoles, holes, fresh, uncovered, inside, seams] = [0, 0, 0, 0, 0, 0];
   for (let i = 0; i < hp.length; i++) {
     restHoles += hr[i] ?? 0;
     holes += hp[i] ?? 0;
     if (hp[i] === 1 && hr[i] === 0) fresh++;
     if (!clearAt(rest, i) && clearAt(posed, i)) uncovered++;
+    if (deep[i] === 1 && clearAt(posed, i)) inside++;
     const a = posed.rgba[i * 4 + 3] ?? 0;
     if (a > 0 && a < 255 && hp[i] === 0) seams++;
   }
-  return { restHoles, holes, fresh, uncovered, seams };
+  return { restHoles, holes, fresh, uncovered, inside, seams };
 };
 
 /** The box of a raster's opaque pixels (alpha 128 up), the far edges exclusive. */
