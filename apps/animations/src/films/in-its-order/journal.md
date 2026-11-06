@@ -64,17 +64,23 @@
   test of the lead cut into parts".
 - The override: CRAFT rule 1 ("Narration is typeset only as a full-screen card") does not hold for
   act 1 of this film. Its two quotes are lettered in the scene by the film's own hand, at any length
-  the quote has: Heb 5:12 in `cold-letter` over a band of dusk above the heads (the scroll his `read`
-  cell holds is 47 by 60 px on screen, too small for thirteen legible words, so the words sit over
-  the visible table, not on the scroll), and 1 Pet 2:2 in ink on the parchment over the open book in
-  `milk-pour` (type on the book's pages reads only with the camera near 2.5, which would enlarge the
-  villager's drawing past the act's 1.5 cap). CRAFT.md is unchanged, and the prompts keep their `CARDS` sentence: the painted
-  pictures still carry no text. Acts 2 onward keep their cards.
-- The joke on "smile" is a close two-shot (`cold-smile`): the lead and the man, each head over a
-  quarter of the frame (about 0.29, the lead's drawing held under the 1.5 enlarging cap); the man turns from his stare and smiles on the mark, and the lead lowers the
-  bottle to his chest a beat after.
-- The milk span moves the whole time: one white stream from the book's gutter into the cup, the ink
-  dropper brought in and waved away, the cup full on "good".
+  the quote has, each on its object in a close insert (the owner's pick: the scroll and the book
+  page): Heb 5:12 in ink on the open scroll he holds (`cold-scroll`, the cut in from `cold-letter`),
+  and 1 Pet 2:2 in ink on the open book's two pages on the feast table (`milk-book`). Each is
+  written from the verse's first word and then stands whole at least a quarter second a word. The
+  inserts are blank painted plates (no prompt names a word of either verse); the words are the
+  film's lettering hand drawn over them. CRAFT.md is unchanged, and the prompts keep their `CARDS`
+  sentence: the painted pictures still carry no text. Acts 2 onward keep their cards.
+- The joke on "smile" is a close two-shot (`cold-smile`) of the lead and the man alone, each head
+  about a third of the frame: the lead on a sheet drawn at his close's size (`iio-two`) so his
+  drawing stays under the 1.5 enlarging cap. The man laughs on the mark (a new `laugh` key on his
+  table sheet) under a chuckle from the store; the lead turns to him with an embarrassed grin, then
+  tucks the bottle to his chest and looks down. On "So what is milk" the two-shot comes back
+  (`cold-ask`) with the lead asking the question to the viewer.
+- The milk span is a close of the feast table: the open book tipped high over a clay cup, a white
+  stream running from it with light streaks flowing down, the milk climbing the cup to the brim by
+  "good"; on "mixed" a large ink dropper comes in over the cup, shakes and is drawn away, the stream
+  unbroken.
 - The title's voice gap shortens to about 2.95 s (milk's lead 0, its tail 0.6, so no scene moves and
   the score stays current). The first question cannot start earlier without moving the cold open's
   length, which re-times the score (a paid score run): it stays at about 26.2 s.
