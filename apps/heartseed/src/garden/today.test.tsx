@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noAsyncFunction, effect/noNewPromise, effect/noFixedWaitInTests -- a React screen test: it drives the stage rig's promise-based steps one after another, holds a launch on a promise it resolves, waits a fixed 20 ms through the rig's `until` to see that a held launch draws no claim in that time, and reads nodes whose absent attributes are null. */
+/* oxlint-disable effect/noNullish, effect/noAsyncFunction, effect/noNewPromise -- a React screen test: it drives the stage rig's promise-based steps one after another, holds a launch on a promise it resolves, and reads nodes whose absent attributes are null. */
 
 /**
  * Today's stage as a reader and a screen reader meet it, through the stage

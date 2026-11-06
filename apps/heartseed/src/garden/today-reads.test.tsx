@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noAsyncFunction, effect/noFixedWaitInTests -- a React screen test: it drives the stage rig's promise-based steps one after another, waits a fixed 20 ms through the rig's `until` to see that a failed read draws no claim in that time, and reads nodes whose absent attributes are null. */
+/* oxlint-disable effect/noNullish, effect/noAsyncFunction -- a React screen test: it drives the stage rig's promise-based steps one after another and reads nodes whose absent attributes are null. */
 
 /**
  * Today's stage over reads that fail and over another verse's plant,
