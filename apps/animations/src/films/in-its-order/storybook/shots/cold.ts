@@ -362,15 +362,16 @@ export const coldTable: FilmShot = {
  * it; the lead drawn on his close sheet, so his drawing stays inside the
  * 1.5× enlarging cap past the push), their crowns near the frame's top, the
  * table's top across its foot. The woman beyond the lead falls outside it,
- * so she is not drawn. Its push ends `push` times in. The diners its frame
- * shows behind them.
+ * so she is not drawn. Its push ends `push` times in. No diner is drawn
+ * behind them, so only the two are in the frame (the orchestrator's round-2
+ * ruling): the far table and the courtyard stand behind.
  */
 export const TWO_SHOT = {
   x: 850,
   y: 900,
   zoom: 3,
   push: 1.05,
-  diners: ['diner-2', 'diner-3', 'diner-4'],
+  diners: [],
 } as const;
 
 /**
@@ -547,11 +548,11 @@ export const letterLands = (
     [lift.end, key({ x: LETTER_LIFT.x, y: LETTER_LIFT.y, alpha: 0 })],
   ]);
 
-/** cold-letter's camera, layer px: where it opens on the table as the scroll falls, where it has eased in to once he holds the letter, and where its push toward the letter and his face ends, at the cut. */
+/** cold-letter's camera, layer px: where it opens on the three at the table as the scroll falls (the guests' faces and the table top in frame, the wide row not: critique 1, finding 2), where it has eased in to once he holds the letter, and where its push toward the letter and his face ends, at the cut. */
 export const LETTER = {
-  from: { x: 960, y: 860, zoom: 1.9 },
-  held: { x: 950, y: 856, zoom: 2.0 },
-  to: { x: 925, y: 848, zoom: 2.45 },
+  from: { x: 955, y: 860, zoom: 2.4 },
+  held: { x: 950, y: 856, zoom: 2.5 },
+  to: { x: 930, y: 850, zoom: 2.75 },
 } as const;
 
 /**

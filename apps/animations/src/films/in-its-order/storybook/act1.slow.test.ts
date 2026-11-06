@@ -60,17 +60,19 @@ const CASTS: ReadonlyArray<readonly [string, ReadonlyArray<string>, number]> = [
     ['lead-feast', 'feast-guest-man', 'feast-guest-woman', 'feast-mother', 'filler-dressed'],
     8,
   ],
-  ['cold-smile', ['lead-feast', 'feast-guest-man', 'feast-guest-woman'], 3],
+  ['cold-smile', ['lead-feast', 'feast-guest-man'], 2],
   [
     'cold-letter',
     ['lead-feast', 'feast-guest-man', 'feast-guest-woman', 'feast-mother', 'filler-dressed'],
     8,
   ],
+  ['cold-scroll', [], 0],
   [
     'cold-ouch',
     ['lead-feast', 'feast-guest-man', 'feast-guest-woman', 'feast-mother', 'filler-dressed'],
     7,
   ],
+  ['cold-ask', ['lead-feast', 'feast-guest-man'], 2],
   ['cold-what', [], 0],
   [
     'title',
@@ -78,7 +80,8 @@ const CASTS: ReadonlyArray<readonly [string, ReadonlyArray<string>, number]> = [
     8,
   ],
   ['milk-cup', ['idea-villagers'], 1],
-  ['milk-pour', ['idea-villagers'], 1],
+  ['milk-book', [], 0],
+  ['milk-pour', [], 0],
   ['milk-row', ['idea-villagers', 'villager-toddler', 'villager-child', 'lead-feast'], 5],
 ];
 
@@ -254,20 +257,26 @@ const spansOf = (c: Clock, frame: number): ReadonlyArray<Span> => {
   const grown = c.word('cold', 7, 'But', 'start');
   const smile = c.word('cold', 21, 'We', 'start');
   const letter = c.word('cold', 24, 'And', 'start');
+  const quote = c.word('cold', 39, 'They', 'start');
   const ouch = c.word('cold', 53, 'Grown', 'start');
   const what = c.word('cold', 58, 'So', 'start');
-  const desire = c.word('milk', 9, 'desire', 'start');
+  const why = c.word('cold', 66, 'And', 'start');
+  const newborn = c.word('milk', 6, '“As', 'start');
+  const sincere = c.word('milk', 21, 'Sincere', 'start');
   const need = c.word('milk', 42, 'A', 'start');
   return [
     { label: 'shot cold-baby', from: at(c.start('cold')), to: at(grown) },
     { label: 'shot cold-table', from: at(grown), to: at(smile) },
     { label: 'shot cold-smile', from: at(smile), to: at(letter) },
-    { label: 'shot cold-letter', from: at(letter), to: at(ouch) },
+    { label: 'shot cold-letter', from: at(letter), to: at(quote) },
+    { label: 'shot cold-scroll', from: at(quote), to: at(ouch) },
     { label: 'shot cold-ouch', from: at(ouch), to: at(what) },
-    { label: 'shot cold-what', from: at(what), to: at(c.end('cold')) },
+    { label: 'shot cold-ask', from: at(what), to: at(why) },
+    { label: 'shot cold-what', from: at(why), to: at(c.end('cold')) },
     { label: 'shot title', from: at(c.start('title')), to: at(c.end('title')) },
-    { label: 'shot milk-cup', from: at(c.start('milk')), to: at(desire) },
-    { label: 'shot milk-pour', from: at(desire), to: at(need) },
+    { label: 'shot milk-cup', from: at(c.start('milk')), to: at(newborn) },
+    { label: 'shot milk-book', from: at(newborn), to: at(sincere) },
+    { label: 'shot milk-pour', from: at(sincere), to: at(need) },
     { label: 'shot milk-row', from: at(need), to: at(c.end('milk')) },
   ];
 };
@@ -504,10 +513,10 @@ const parityOf = Effect.fn('Act1.parity')(function* (
   return parity(p.data, grained(q.data, frameBox, FILM_GRAIN, t), width, height, overlays);
 });
 
-/** The share of the frame a shot's drawings over it may cover, so the parity reads the rest: a tenth (the title's name), but the two quotes lettered in act 1 (the owner: the quotes off black cards; journal.md), a third each: the dusk band over cold-letter's sky and the parchment over milk-pour's book. */
+/** The share of the frame a shot's drawings over it may cover, so the parity reads the rest: a tenth (the title's name, the milk poured in milk-pour), but the two quotes lettered in act 1 (the owner: the quotes off black cards; journal.md), a third each: Heb 5:12 on cold-scroll's parchment and 1 Pet 2:2 on milk-book's pages. */
 const OVER_SHARES: ReadonlyMap<string, number> = new Map([
-  ['cold-letter', 1 / 3],
-  ['milk-pour', 1 / 3],
+  ['cold-scroll', 1 / 3],
+  ['milk-book', 1 / 3],
 ]);
 
 /** A still's file name as the film's render writes it (`stillName` in `@manna/film/tools`). */
@@ -568,8 +577,9 @@ describe('In Its Order act 1 in style B: the bars and the film', () => {
         ).toBe(0);
         const off: Array<string> = [];
         expect(shots.shots.filter((s) => s.overlays.length > 0).map((s) => s.id)).toEqual([
-          'cold-letter',
+          'cold-scroll',
           'title',
+          'milk-book',
           'milk-pour',
         ]);
         for (const shot of shots.shots)

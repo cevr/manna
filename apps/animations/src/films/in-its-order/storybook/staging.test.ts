@@ -474,6 +474,7 @@ describe("In Its Order's staging", () => {
         ?.items.filter((i) => i._tag === 'Figure')
         .map((i) => i.name),
     ).toEqual(['man', 'lead']);
+    expect(figuresOf(shot).map(({ figure }) => figure.name)).toEqual(['man', 'lead']);
   });
 
   test('holds each lettered verse whole on its insert at least 0.25 s a word before the cut (orchestrator ruling, round 2: 1 Pet 2:2 ≥ 3.75 s whole), its writing starting on the verse’s first word', () => {
