@@ -650,7 +650,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
-        "!src/chooser/{lists,walk-*}.test.*",
+        "!src/chooser/{lists,walk-*,reader-*,fixed}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -663,7 +663,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
-        "!src/chooser/{range.property,walk-*}.test.*",
+        "!src/chooser/{range.property,walk-*,reader-*,fixed}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -676,7 +676,46 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
-        "!src/chooser/{range.property,lists}.test.*",
+        "!src/chooser/{range.property,lists,reader-*,fixed}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:reader-today": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
+        "!src/chooser/{range.property,lists,walk-*,reader-add,reader-remove,fixed}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:reader-add": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
+        "!src/chooser/{range.property,lists,walk-*,reader-today,reader-remove,fixed}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:reader-remove": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
+        "!src/chooser/{range.property,lists,walk-*,reader-today,reader-add}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -750,6 +789,9 @@
         "test:chooser",
         "test:chooser-lists",
         "test:chooser-walk",
+        "test:reader-today",
+        "test:reader-add",
+        "test:reader-remove",
         "test:rest",
         "test:infra"
       ]

@@ -42,7 +42,7 @@ import {
 import { CORPUS, countIn, GARBLED } from './passages-rig';
 
 /** The taps a reader makes on a chapter of `count` verses, by pattern, and the pattern's name. */
-const tapsOf = (next: () => number, count: number): readonly [string, number[]] => {
+export const tapsOf = (next: () => number, count: number): readonly [string, number[]] => {
   const a = 1 + below(next, count);
   const roll = below(next, 7);
   if (roll === 0) return ['one', [a]];

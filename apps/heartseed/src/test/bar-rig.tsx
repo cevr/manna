@@ -9,9 +9,12 @@
  * whole while the passages may read as `Unread`.
  *
  * Every frame (each DOM mutation batch) is held to the screens' rules and
- * each fault kept: at most one heading; off Today, no control but a list
- * control (a book, a chapter, a verse, a row's own `Remove`) and no alert or
- * limit line inside a scroll view; never `Add a passage` beside the limit
+ * each fault kept (`barFaults`): at most one heading; on Today, the footer
+ * rule (`footerFaults`: no control but a missed word's mark inside the scroll
+ * view) and no node of the field or the chooser; off Today, no control but a
+ * list control (a book, a chapter, a verse, a row's own `Remove`) and no
+ * alert or limit line inside a scroll view; `Plant` only over a shown
+ * reference of 1-20 verses; never `Add a passage` beside the limit
  * line or with 3 rows' `Remove`s; over unread passages, no add, remove,
  * `Keep`, `Plant` or limit line; while the ask's `Remove` is disabled (a
  * remove pending), every other field control disabled too and no
@@ -34,10 +37,11 @@ import { Haptics } from '../sayit';
 import { store } from '../store';
 import { voiceSource } from '../voice/source';
 import type { FieldSeen } from './choose-model';
-import { faintIn, labelOf, text } from './chooser-rig';
+import { faintIn, labelOf, plantFaults, text } from './chooser-rig';
 import { clockOf } from './clock';
 import { scrolled } from './field-rig';
 import { KEY } from './passages-model';
+import { footerFaults } from './run-rig';
 
 const CONTROL = '[role="button"],[role="radio"],[role="checkbox"],[role="switch"]';
 
@@ -122,7 +126,19 @@ const pendingFaults = (controls: readonly Element[]) => {
   return out;
 };
 
-/** The frame rules: the faults `host` shows now, over passages read or not; `known` keeps each style chain's contrast verdict across frames. */
+/** On Today, no node of the field or the chooser: no row, book, chapter or verse, and no control that adds, removes or plants. */
+const strayOnToday = (host: Element, controls: readonly Element[]) => {
+  const out: string[] = [];
+  const nodes = host.querySelectorAll(
+    '[data-testid="row"],[data-testid="book"],[data-testid="chapter"],[data-testid="verse"],[data-testid="limit"]',
+  );
+  if (nodes.length > 0) out.push(`${nodes.length} field or chooser nodes on Today`);
+  const offered = controls.map(labelOf).find(changes);
+  if (offered !== undefined) out.push(`${offered} on Today`);
+  return out;
+};
+
+/** The frame rules, on every screen: the faults `host` shows now, over passages read or not; `known` keeps each style chain's contrast verdict across frames. */
 export const barFaults = (host: Element, unread: boolean, known: Map<string, boolean>) => {
   const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
   const on = headings[0] ?? '';
@@ -132,9 +148,11 @@ export const barFaults = (host: Element, unread: boolean, known: Map<string, boo
     ...offerFaults(host, on, unread, controls),
     ...pendingFaults(controls),
   ];
+  faults.push(...plantFaults(host));
   if (headings.length > 1) faults.push(`${headings.length} headings`);
   if (on !== 'Today' && controls.some((node) => labelOf(node) === 'Listening'))
     faults.push(`Listening on ${on}`);
+  if (on === 'Today') faults.push(...footerFaults(host), ...strayOnToday(host, controls));
   if (on === 'Today' || on === '') return faults;
   const faint = faintIn(host, known);
   if (faint.length > 0) faults.push(`faint text on ${on}: ${faint.slice(0, 3).join(', ')}`);

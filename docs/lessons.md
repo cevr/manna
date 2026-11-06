@@ -5134,6 +5134,16 @@ The form of an entry, each field on its own line:
 - **Cause:** Each rig listed the controls the scroll might hold instead of the one kind it may: a missed word's mark is part of the verse, every other control is the reader's way on and must be on screen without a scroll.
 - **Guard:** code: `apps/heartseed/src/run/footer.test.tsx` `keeps Say it, Listening and the grades outside the scroll view in every frame of a recital, a missed word’s mark the one control inside`
 
+### heartseed-fixed-controls-outside-scroll-every-screen
+
+- **Date:** 2026-11-06
+- **Kind:** review
+- **Said:** "A guard for this unit's class: add a test that holds every Heartseed screen's fixed controls outside its scroll views on every frame (the field's bar, the chooser's header and footer, beside Today's). Give it a lessons-ledger entry that cites hsfield's lost tap."
+- **Source:** hymnapp/hsrun/round-1-findings.md M3 (the class: a control at the foot of a scroll); hymnapp/hspassage/spec.md (Tests, a guard for this unit's class); hymnapp/hsfield/merge-drive-1.md (the field's `‹ Today` at the foot of its scroll, a tap lost live, recorded unnumbered); hymnapp/hsdaily/state.md (Follow-ups: the controls-outside-the-scroll guard)
+- **Wrong:** The field's `‹ Today` sat at the foot of its scroll view, so on a phone the reader had to scroll to leave the field and a live tap missed it; with the field's bar and the chooser's header and footer added, each new screen could put a back, `Add a passage`, the ask, an alert or `Plant` (under Psalms 119's 176 verses) where a scroll hides it.
+- **Cause:** Today's footer rule covered Today alone, and each new screen's rig held only its own controls, so a control of another screen inside a scroll view passed unseen.
+- **Guard:** code: `apps/heartseed/src/chooser/fixed.test.tsx` `keeps each screen’s fixed controls outside its scroll views in every frame, on Today, the field and the chooser`
+
 ### heartseed-foreground-in-one-host-adapter
 
 - **Date:** 2026-11-06

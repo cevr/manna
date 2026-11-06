@@ -939,6 +939,22 @@ marks. The alert stays in the scroll.
     retry, a verse or leaving; after every tap the screen, the stored
     passages and every other key against the models; each file's floors
     met by its own devices.
+  - `test:reader-today`, `test:reader-add` and `test:reader-remove`:
+    `src/chooser/reader-today.test.tsx`, `reader-add.test.tsx` and
+    `reader-remove.test.tsx`, generated readers through
+    `src/test/reader-walk.ts` over the run's rig (the root over a disk, a
+    recognizer that hears the verse said, a frozen clock, a zone), in UTC,
+    Los Angeles, Kathmandu, Lord Howe and Chatham, through Today (`Say it`
+    then `Next`, Minutes, a relaunch after the next 04:00), the field
+    (`Today`, a remove asked, kept, refused or tapped twice) and the
+    chooser (backs, taps by pattern, `Plant` refused, retried or tapped
+    twice); after every command Today's shown verse, counts line and
+    `Listen` against the plan made at each making over the reader's
+    pieces, the field and the chooser against `src/test/choose-model.ts`,
+    and the disk; every frame of every screen held to `barFaults`; each
+    file's floors met by its own devices. `test:reader-remove` also runs
+    `src/chooser/fixed.test.tsx`, which keeps every screen's fixed
+    controls outside its scroll views in every frame.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

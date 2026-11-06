@@ -115,6 +115,16 @@ export const readChooser = (host: Element): ChooserSeen | 'closed' => {
   };
 };
 
+/** `Plant` only over a shown reference of 1-20 verses: the fault `host` shows now of that rule, if any. */
+export const plantFaults = (host: Element): string[] => {
+  const plant = [...host.querySelectorAll(CONTROL)].find((node) => labelOf(node) === 'Plant');
+  if (plant === undefined) return [];
+  const reference = text(host.querySelector('[data-testid="chosen-reference"]'));
+  const n = Number.parseInt(text(host.querySelector('[data-testid="chosen-count"]')), 10);
+  if (reference === '' || !(n >= 1 && n <= MOST)) return [`Plant over ${reference} of ${n}`];
+  return [];
+};
+
 /** The frame rules: the faults `host` shows now; `known` keeps each style chain's contrast verdict across frames. */
 export const chooserFaults = (host: Element, known = new Map<string, boolean>()): string[] => {
   const faults: string[] = [];
@@ -127,12 +137,7 @@ export const chooserFaults = (host: Element, known = new Map<string, boolean>())
   }
   for (const node of host.querySelectorAll('[role="alert"],[data-testid="limit"]'))
     if (scrolled(node)) faults.push(`the line ${text(node).slice(0, 30)} inside a scroll view`);
-  const plant = [...host.querySelectorAll(CONTROL)].find((node) => labelOf(node) === 'Plant');
-  if (plant !== undefined) {
-    const reference = text(host.querySelector('[data-testid="chosen-reference"]'));
-    const n = Number.parseInt(text(host.querySelector('[data-testid="chosen-count"]')), 10);
-    if (reference === '' || !(n >= 1 && n <= MOST)) faults.push(`Plant over ${reference} of ${n}`);
-  }
+  faults.push(...plantFaults(host));
   const faint = faintIn(host, known);
   if (faint.length > 0) faults.push(`faint text: ${faint.slice(0, 3).join(', ')}`);
   return faults;
