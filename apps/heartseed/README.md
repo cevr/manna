@@ -743,7 +743,17 @@ marks. The alert stays in the scroll.
     and Continue's own plan, the pending frame and a subscription read in
     the background, an unread garden's result, a return while a recital
     finishes, and 03:50 and 04:10 after a planting at 21:00 in Los Angeles,
-    Kathmandu and Lord Howe.
+    Kathmandu and Lord Howe; and `src/wake/listen-edges.test.tsx`, Listen at a
+    90-word new piece after a review (two taps in one turn read once), a
+    refused speak, and Say it stopping the voice before the recognizer
+    listens.
+  - `test:wake-listen`, `test:wake-reading`: `src/wake/listen.test.tsx` and
+    `reading.test.tsx`, the same walk leaning toward Listen with
+    `wake-rig.tsx`'s reading voice: where Listen shows at every settle
+    (`listenModel`) and in every frame, the text each speak reads, Voice
+    taps and their stored switch, and each way a reading ends or goes on
+    (its finish or interruption, Say it, Voice off, a relaunch; a Minutes
+    tap, a return, the field); each case's floors met by its own devices.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

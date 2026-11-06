@@ -45,7 +45,9 @@
     "test:wake-walk": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/wake/wake.test.tsx",
     "test:wake-quiet": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/wake/quiet.test.tsx",
     "test:wake-clocks": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/wake/clocks.test.tsx",
-    "test:wake-edges": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/wake/edges.test.tsx",
+    "test:wake-edges": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/wake/edges.test.tsx ./src/wake/listen-edges.test.tsx",
+    "test:wake-listen": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/wake/listen.test.tsx",
+    "test:wake-reading": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/wake/reading.test.tsx",
     "test:rest": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/core-import.property.test.ts ./src/core-import.test.ts ./src/display.test.ts ./src/matcher.test.ts ./src/today.test.tsx",
     "test:infra": "bun test --no-isolate --parallel=3 --path-ignore-patterns='**/*.slow.test.*' ./scripts ./vite"
   },

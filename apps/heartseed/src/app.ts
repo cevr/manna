@@ -7,8 +7,8 @@
  * session over the garden, whose minutes live there too, woken at each
  * return to the foreground (`src/foreground.ts`). Every screen that
  * hears the reader takes Dictation from here, so two services never share
- * the module's one channel; the first minute's hear phase is the one screen
- * that reads aloud.
+ * the module's one channel; the first minute's hear phase and Today's Listen
+ * on a new piece are the two that read aloud.
  *
  * The source is the module's replay of a scripted recital only in a
  * development build (`__DEV__`) on the simulator, which can never listen;
@@ -40,7 +40,7 @@ import type { Passage } from './passage';
 import type { Item, Minutes, TextPiece } from './session';
 import { layer as sessionLayer, Session } from './session/service';
 import { store } from './store';
-import { Voice, layer as voiceLayer, type VoiceSource } from './voice';
+import { Voice, layer as voiceLayer, type VoiceSource, type VoiceView } from './voice';
 import { isActive } from './voice/reading';
 import { voiceSource } from './voice/source';
 
@@ -117,7 +117,7 @@ export const gardenView = runtime.atom(
   Stream.unwrap(Effect.map(Garden, (garden) => garden.changes)),
 );
 
-/** What the hear phase shows of the voice: its switch, and the reading under way or the last one's ending. */
+/** What the hear phase and Today show of the voice: its switch, and the reading under way or the last one's ending. */
 export const voiceView = runtime.atom(Stream.unwrap(Effect.map(Voice, (voice) => voice.changes)));
 
 /** What Today shows of the session: the minutes chosen, and the plan once it is made. */
@@ -155,14 +155,18 @@ const todayCue = (view: GardenView, reference: string): Cue => {
  * Today's Say it of `piece`: a kept recital under the cue the garden gives
  * the piece once every keep handed to it before the press has landed or
  * failed (a grade changed just before is said after), or the finish of the
- * one under way. In a run, `item` is the plan's item shown, held in the same
- * step as the recital starts, so it stays shown until its `Next`.
+ * one under way. A reading of Listen's under way stops first, so the voice
+ * never reads into the microphone. In a run, `item` is the plan's item
+ * shown, held in the same step as the recital starts, so it stays shown
+ * until its `Next`.
  */
 export const pressToday = (piece: Passage, item: Option.Option<Item> = Option.none()) =>
   Effect.gen(function* () {
     const sayIt = yield* SayIt;
     const garden = yield* Garden;
     const session = yield* Session;
+    const voice = yield* Voice;
+    yield* voice.stop;
     const view = yield* garden.settled;
     if (Option.isSome(item)) yield* session.hold(item.value);
     yield* sayIt.recite({ cue: todayCue(view, piece.reference), keep: TODAY.keep }, piece);
@@ -207,6 +211,21 @@ export const listen = runtime.fn(
     ),
   { concurrent: true },
 );
+
+/** Today's Listen on a new piece: the voice reads `text`, the piece's own, unless a reading is under way already (a second tap before the frame that hides Listen reads nothing). A making of the plan and the field leave the reading alone; Say it, Voice off, its own end and the runtime's close end it. */
+export const listenTo = runtime.fn(
+  (text: string) =>
+    Effect.flatMap(Voice, (voice) =>
+      Effect.flatMap(voice.view, (view) => {
+        if (isActive(view)) return Effect.void;
+        return voice.read(text);
+      }),
+    ),
+  { concurrent: true },
+);
+
+/** Whether the voice's view holds a reading under way (reading or paused), for Today, which offers Listen only when none is. */
+export const readingAloud = (view: VoiceView): boolean => isActive(view);
 
 /** The hear phase's Next while a reading is under way: the voice stops. */
 export const hush = runtime.fn(() => Effect.flatMap(Voice, (voice) => voice.stop), {

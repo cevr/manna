@@ -9,14 +9,19 @@
  * the last one's wake has run). A state sent before the subscription starts
  * (the garden's read held back, the pending frame) is no event: the
  * subscription reads the state it finds, as React Native's `currentState`.
- * The garden's read can be held back until `open`.
+ * The garden's read can be held back until `open`, and the voice's source
+ * can be a reading voice (`readingVoice`), whose readings the test ends.
+ * Every Today frame is also held to Listen's place (`listenFaults`), the
+ * faults kept with the run rig's.
  */
 
-import { Deferred, Effect, Layer, Option, Queue, Stream } from 'effect';
+import { Deferred, Effect, Layer, MutableRef, Option, Queue, Stream } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
+import { act } from 'react';
 
 import { Foreground } from '../foreground';
-import { launch, type Device, type Faults, type Launch, type LaunchParts } from './run-rig';
+import { VoiceSource, VoiceUnavailable, type VoiceEvent } from '../voice';
+import { ACTIONS, launch, scrolled, text, type Device, type Faults, type Launch } from './run-rig';
 
 /** The states iOS reports. */
 export type HostState = 'active' | 'inactive' | 'background';
@@ -66,11 +71,120 @@ const gatedStore =
       ),
     ).pipe(Layer.provide(disk));
 
-/** How a launch starts: the host's state when the subscription starts, and whether the garden's read waits for `open`. */
+/** One call the voice's source took, with the recognizer's listens made before it. */
+export interface VoiceCall {
+  readonly call: 'speak' | 'stop' | 'pause' | 'resume';
+  readonly listens: number;
+}
+
+/**
+ * A voice source with one eligible voice: each speak the voice service
+ * makes is kept (its text and the recognizer's listens before it) and
+ * starts a reading the test ends with `end`, unless `refuse` is set, when
+ * the speak fails. Each other call is kept the same way.
+ */
+export const readingVoice = () => {
+  const listener = MutableRef.make<Option.Option<(event: VoiceEvent) => void>>(Option.none());
+  const utterance = MutableRef.make<Option.Option<number>>(Option.none());
+  const listens = MutableRef.make<() => number>(() => 0);
+  const spoken: string[] = [];
+  const calls: VoiceCall[] = [];
+  const state = { refuse: false };
+  const keep = (call: VoiceCall['call']) =>
+    Effect.sync(() => {
+      calls.push({ call, listens: MutableRef.get(listens)() });
+    });
+  const layer = Layer.succeed(
+    VoiceSource,
+    VoiceSource.of({
+      voices: Effect.succeed([
+        {
+          id: 'test',
+          language: 'en-US',
+          name: 'Test',
+          quality: 2,
+          novelty: false,
+          personal: false,
+        },
+      ]),
+      speak: (id, text) =>
+        Effect.suspend(() => {
+          spoken.push(text);
+          calls.push({ call: 'speak', listens: MutableRef.get(listens)() });
+          if (state.refuse) return Effect.fail(VoiceUnavailable.make({ reason: 'test: refused' }));
+          MutableRef.set(utterance, Option.some(id));
+          return Effect.void;
+        }),
+      pause: keep('pause'),
+      resume: keep('resume'),
+      stop: Effect.andThen(
+        keep('stop'),
+        Effect.sync(() => MutableRef.set(utterance, Option.none())),
+      ),
+      subscribe: (next) =>
+        Effect.asVoid(
+          Effect.acquireRelease(
+            Effect.sync(() => MutableRef.set(listener, Option.some(next))),
+            () => Effect.sync(() => MutableRef.set(listener, Option.none())),
+          ),
+        ),
+    }),
+  );
+  /** Ends the reading under way at its own end: `finish` or `interrupt`. */
+  const end = async (kind: 'finish' | 'interrupt') => {
+    const id = MutableRef.get(utterance);
+    MutableRef.set(utterance, Option.none());
+    await act(async () => {
+      Option.map(Option.all({ id, send: MutableRef.get(listener) }), ({ id: at, send }) =>
+        send({ utterance: at, kind, location: 0, length: 0 }),
+      );
+    });
+  };
+  return {
+    layer,
+    spoken,
+    calls,
+    state,
+    end,
+    /** Whether a speak's reading has not ended, by the test or a stop. */
+    reading: () => Option.isSome(MutableRef.get(utterance)),
+    /** Counts the recognizer's listens from `count`, the launch's own. */
+    bind: (count: () => number) => MutableRef.set(listens, count),
+  };
+};
+
+export type ReadingVoice = ReturnType<typeof readingVoice>;
+
+/** What one Today frame shows wrong of Listen's place: more than one, one beside anything but Say it alone, after Say it in document order, or inside a scroll view. */
+export const listenFaults = (host: Element): string[] => {
+  const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
+  if (!headings.includes('Today')) return [];
+  const buttons = [...host.querySelectorAll('[role="button"]')];
+  const named = (label: string) =>
+    buttons.filter((node) => (node.getAttribute('aria-label') ?? text(node)) === label);
+  const listen = named('Listen');
+  if (listen.length === 0) return [];
+  const out: string[] = [];
+  if (listen.length > 1) out.push(`${listen.length} Listen buttons`);
+  const actions = ACTIONS.flatMap((label) => named(label).map(() => label));
+  if (actions.join('|') !== 'Say it') out.push(`Listen beside ${actions.join('|') || 'nothing'}`);
+  const sayIt = Option.fromNullishOr(named('Say it')[0]);
+  for (const node of listen) {
+    if (scrolled(node)) out.push('Listen in the scroll view');
+    const after = Option.exists(
+      sayIt,
+      (each) => (node.compareDocumentPosition(each) & Node.DOCUMENT_POSITION_FOLLOWING) === 0,
+    );
+    if (after) out.push('Listen after Say it');
+  }
+  return out;
+};
+
+/** How a launch starts: the host's state when the subscription starts, whether the garden's read waits for `open`, and the voice's source (the run rig's silent one when none). */
 export interface WakeStart {
   readonly state?: HostState;
   readonly held?: boolean;
-  readonly voice?: LaunchParts['voice'];
+  readonly voice?: ReadingVoice;
 }
 
 /** A launch of the root as the run rig's, with the host's state in the test's hands. */
@@ -87,8 +201,25 @@ export const wakeLaunch = async (
   const app: Launch = await launch(device, faults, time, pieces, {
     foreground: foregroundOf(host),
     store: gatedStore(gate),
-    voice: start.voice,
+    voice: start.voice?.layer,
   });
+  start.voice?.bind(() => app.listens.n);
+  const frame = () => {
+    for (const fault of listenFaults(app.host))
+      app.faults.push(`${fault} (actions ${app.actions().join('|')})`);
+  };
+  const watch = new MutationObserver(frame);
+  watch.observe(app.host, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    characterData: true,
+  });
+  frame();
+  const leave = async () => {
+    watch.disconnect();
+    return app.leave();
+  };
   /** Whether the subscription has taken every state offered so far and waits for the next. */
   const taken = () => host.pulls === host.offered + 2;
   /** Hands the host each of `states` in turn, once the subscription read its own state, then waits until the session took them all. */
@@ -111,7 +242,7 @@ export const wakeLaunch = async (
     if (!(await app.until(() => Option.isSome(host.live) && taken())))
       throw new Error('the foreground never started');
   };
-  return { ...app, send, open, subscribed: () => Option.isSome(host.live) };
+  return { ...app, leave, send, open, subscribed: () => Option.isSome(host.live) };
 };
 
 export type WakeLaunch = Awaited<ReturnType<typeof wakeLaunch>>;

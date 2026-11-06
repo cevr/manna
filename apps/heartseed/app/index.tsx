@@ -10,9 +10,11 @@ import {
   choose,
   chooseMinutes,
   gardenView,
+  listenTo,
   next,
   peek,
   press,
+  readingAloud,
   sayItView,
   sessionView,
   toggleVoice,
@@ -358,7 +360,8 @@ const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
  * Today: its header (the heading and the way to the field, and under them
  * the reader's choices), fixed above a scroll view of the session's counts
  * line, the verse the run shows, its stage and the alert, and a footer
- * fixed under the scroll view: the result's grades and the action button.
+ * fixed under the scroll view: the result's grades, Listen on the plan's
+ * new piece while the voice is on and reads nothing, and the action button.
  * Its first show with the garden read makes the launch's plan; a later
  * show, after the field, finds it made. The run shows one item at a time:
  * Say it holds it, and once its recall is kept (never at a recital's end
@@ -380,6 +383,9 @@ function Today({ onField }: { readonly onField: () => void }) {
   const onNext = useAtomSet(next);
   const onPeek = useAtomSet(peek);
   const onChoose = useAtomSet(choose);
+  const onListen = useAtomSet(listenTo);
+  const voice = AsyncResult.value(useAtomValue(voiceView));
+  const voiceFree = Option.exists(voice, (view) => view.enabled && !readingAloud(view));
   useSessionBegunWhenShown(Option.isSome(garden));
   const showing = showingOf(Option.map(session, (view) => shownOf(view, garden)));
   const recital = Option.exists(showing, (each) => each.recital);
@@ -455,6 +461,14 @@ function Today({ onField }: { readonly onField: () => void }) {
                 onSome: (result) => <Grades result={result} onChoose={onChoose} />,
               },
             )}
+            {voiceFree && offersListen(screen.listening, each) && (
+              <BigButton
+                label="Listen"
+                busy={false}
+                pressable
+                onPress={() => onListen(each.piece.text)}
+              />
+            )}
             <BigButton
               label={actionOf(screen.listening, each.done)}
               busy={screen.listening}
@@ -474,6 +488,10 @@ const actionOf = (listening: boolean, done: boolean) => {
   if (done) return 'Next';
   return 'Say it';
 };
+
+/** Whether the run's shown item offers Listen, with the voice on and free: only the plan's new piece, while its button reads Say it (never on a review, whose cue a reading would give away, at Next or while a recital is under way). */
+const offersListen = (listening: boolean, each: Showing) =>
+  !listening && !each.done && Option.exists(each.item, (item) => item.fresh);
 
 /** The field over the garden read; nothing until a read completed, so it never claims a history it has not read. */
 function FieldOf({ onToday }: { readonly onToday: () => void }) {

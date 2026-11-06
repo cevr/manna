@@ -18,16 +18,24 @@
  * heard, unheard, refused or cancelled, a recital with a Minutes tap, a
  * return or a sequence that is none while it listens or, its end held
  * back, while it finishes, Next, Again, a Minutes tap, the field with
- * states sent on it, and a wait.
+ * states sent on it, and a wait. Leaning toward Listen, the voice's switch
+ * is stored on or off or not at all, and the walk taps Listen where it
+ * shows (the speak refused now and then) and Voice, and while a reading is
+ * under way ends it (finished or interrupted), presses Say it, turns Voice
+ * off, goes away, taps Minutes, opens the field or waits.
  *
  * The oracle is `src/test/wake-model.ts` (which states are returns, the run
  * after one) over `src/test/run-model.ts`'s run and
  * `src/test/session-model.ts`'s plan: after every step the reference
  * shown, the action, the counts line, the result and alert (none while
- * nothing is held), the done state's text, and the disk (the start's keys
- * unchanged, plus each kept recall's key and the minutes key after a tap;
- * a state sent writes nothing). A no-op is tallied toward its `:differs`
- * floor only where a making would show another screen.
+ * nothing is held), the done state's text, whether Listen shows
+ * (`listenModel`), and the disk (the start's keys unchanged, plus each kept
+ * recall's key, the minutes key after a tap and the voice's key after a
+ * Voice tap; a state sent and a Listen write nothing); every text the
+ * voice's source was given, and whether it reads, against the walk's own;
+ * and every Today frame holds Listen's place (`listenFaults`). A no-op is
+ * tallied toward its `:differs` floor only where a making would show
+ * another screen.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -38,6 +46,7 @@ import { sourceWords } from '../matcher/words';
 import type { Recall } from '../sayit';
 import type { TextPiece } from '../session';
 import { MINUTES_KEY } from '../session/service';
+import { ENABLED_KEY } from '../voice';
 import { below, keyOf, pickOf, PREFIX, random } from './garden-model';
 import {
   actionModel,
@@ -50,12 +59,18 @@ import {
 } from './run-model';
 import { deviceOf, PASSAGE, type Device, type Faults } from './run-rig';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
-import { returnsModel, wakeModel } from './wake-model';
-import { wakeLaunch, type HostState, type WakeLaunch } from './wake-rig';
+import { listenModel, returnsModel, wakeModel } from './wake-model';
+import {
+  readingVoice,
+  wakeLaunch,
+  type HostState,
+  type ReadingVoice,
+  type WakeLaunch,
+} from './wake-rig';
 import { hostZone, offsetIn, restore, travel } from './zone';
 
 /** Which commands a walk leans toward: returns at every run state, the no-ops (recitals under way, unread launches, the first minute, states that are no return), or the clocks (long aways, zones, evening plantings, many returns). */
-export type Steer = 'returns' | 'quiet' | 'clocks';
+export type Steer = 'returns' | 'quiet' | 'clocks' | 'listen';
 
 const T0 = Date.UTC(2026, 4, 4, 13);
 
@@ -184,6 +199,7 @@ const GAPS: Record<Steer, readonly [number, ...number[]]> = {
   returns: [MINUTE, 7 * MINUTE, 2 * HOUR, DAY],
   quiet: [MINUTE, 7 * MINUTE, 3 * HOUR, DAY],
   clocks: [MINUTE, 3 * HOUR, 9 * HOUR, DAY, 2 * DAY, 30 * DAY],
+  listen: [MINUTE, 7 * MINUTE, DAY, DAY],
 };
 
 const gapName = (gap: number) =>
@@ -205,6 +221,7 @@ interface Seen {
   readonly grades: number;
   readonly alerts: number;
   readonly doneText: boolean;
+  readonly listen: boolean;
 }
 
 /** How a recital ends: heard and kept, unheard, heard with its write refused, or cancelled while it listens. */
@@ -233,6 +250,13 @@ class Walk {
   /** The last commands, newest last, for the floors a pattern of them reaches. */
   trail: string[] = [];
   returnsThisLaunch = 0;
+  /** The voice's switch. */
+  voiceOn = true;
+  /** The text Listen's reading under way reads, none when none reads. */
+  reading: string | null = null;
+  /** Every text the voice was given to speak, in order, over the walk's launches of this device. */
+  readonly spoken: string[] = [];
+  voice: ReadingVoice | null = null;
   app: WakeLaunch | null = null;
   readonly expected = new Map<string, string | null>();
 
@@ -272,6 +296,12 @@ class Walk {
 
   /** What the model expects the screen to show at rest, over `run`. */
   expectOf(run: RunModel): Seen {
+    const listen = listenModel(run, this.recallsNow, {
+      unread: this.unread,
+      voiceOn: this.voiceOn,
+      reading: this.reading !== null,
+      underWay: false,
+    });
     if (this.unread) {
       const first = this.pieces[0];
       return {
@@ -281,6 +311,7 @@ class Walk {
         grades: this.result === 'grades' ? 1 : 0,
         alerts: this.result === 'alert' ? 1 : 0,
         doneText: true,
+        listen,
       };
     }
     const shown = shownModel(run, this.recallsNow);
@@ -293,6 +324,7 @@ class Walk {
       grades: held && this.result === 'grades' ? 1 : 0,
       alerts: held && this.result === 'alert' ? 1 : 0,
       doneText: true,
+      listen,
     };
   }
 
@@ -307,7 +339,42 @@ class Walk {
       alerts: app.alerts(),
       doneText:
         shown !== undefined && shown !== null ? true : app.scrollText() === 'Nothing to tend now',
+      listen: app.has('Listen'),
     };
+  }
+
+  /** What the voice's source shows wrong: a text spoken the model did not expect (counted, never printed), or a reading under way the model does not hold, or the reverse. */
+  voiceFaults() {
+    const voice = this.voice;
+    if (voice === null) return [];
+    const out: string[] = [];
+    const same =
+      voice.spoken.length === this.spoken.length &&
+      voice.spoken.every((each, index) => each === this.spoken[index]);
+    if (!same)
+      out.push(`the voice spoke ${voice.spoken.length} texts, expected ${this.spoken.length}`);
+    if (voice.reading() !== (this.reading !== null))
+      out.push(`the voice ${voice.reading() ? 'reads' : 'reads nothing'}`);
+    return out;
+  }
+
+  /** Tallies where Listen stood at a settle, by the screen the model expects. */
+  tallyListen(want: Seen) {
+    if (want.listen) bump(this.coverage, 'listen:offered');
+    const shown = this.unread ? null : shownModel(this.run, this.recallsNow);
+    const state = this.stateName();
+    if (state === 'unread' && this.voiceOn) bump(this.coverage, 'listen:unread');
+    if (state === 'done' && this.voiceOn) bump(this.coverage, 'listen:done');
+    if (shown === null) return;
+    if (!shown.fresh && this.voiceOn && state !== 'next')
+      bump(this.coverage, 'listen:review-voice-on');
+    if (!shown.fresh) return;
+    if (state === 'next' && this.voiceOn) bump(this.coverage, 'listen:next-fresh');
+    if (state === 'next') return;
+    if (!this.voiceOn) bump(this.coverage, 'listen:fresh-voice-off');
+    else if (this.reading !== null) bump(this.coverage, 'listen:fresh-reading');
+    else if (this.ending === 'unheard' || this.ending === 'refused')
+      bump(this.coverage, `listen:after-${this.ending}`);
   }
 
   /** The disk as the model expects it: the start's keys unchanged, each kept recall's key, and the minutes after a tap. */
@@ -332,13 +399,19 @@ class Walk {
   /** Waits for the screen the model expects, then holds it to the model and the disk. */
   async settle(step: string) {
     this.log.push(step);
-    const want = JSON.stringify(this.expectOf(this.run));
-    await this.screen.until(() => JSON.stringify(this.seen()) === want);
+    const expected = this.expectOf(this.run);
+    const want = JSON.stringify(expected);
+    await this.screen.until(
+      () => JSON.stringify(this.seen()) === want && this.diskFaults().length === 0,
+    );
     const seen = JSON.stringify(this.seen());
     if (seen !== want) this.fail(`saw ${seen}, expected ${want}`);
     const disk = this.diskFaults();
     if (disk.length > 0) this.fail(`disk ${disk.join(', ')}`);
     if (this.screen.faults.length > 0) this.fail(`frames ${this.screen.faults.join('; ')}`);
+    const voice = this.voiceFaults();
+    if (voice.length > 0) this.fail(voice.join(', '));
+    this.tallyListen(expected);
   }
 
   /** Where the run stands, as a floor names it. */
@@ -444,6 +517,7 @@ class Walk {
           : quietOf(this.next);
     const returns = returnsModel(this.last, states).some(Boolean);
     if (returns) bump(this.coverage, `wake:gap:${gapName(gap)}`);
+    if (returns && this.reading !== null) bump(this.coverage, 'listen:return-reading');
     await this.states(states, false);
     await this.settle(`away ${gapName(gap)}`);
     this.trail.push(returns ? 'return' : 'quiet');
@@ -467,8 +541,10 @@ class Walk {
     this.faults.refuse = how === 'refused';
     const startedAt = this.time.now;
     if (!this.unread) this.run = startedModel(this.run, this.recallsNow);
+    const stopped = this.stopCheck();
     await app.tap('Say it');
     if (!(await app.until(() => app.has('Listening')))) this.fail('never listened');
+    stopped();
     if (during?.at === 'listening') await this.during(during);
     if (how === 'cancelled') await app.cancel();
     else if (during?.at !== 'finishing') await app.tap('Listening');
@@ -489,6 +565,101 @@ class Walk {
     );
     this.faults.refuse = false;
     this.trail.push('say');
+  }
+
+  /** The voice's stops so far. */
+  stops() {
+    return this.voice?.calls.filter((each) => each.call === 'stop') ?? [];
+  }
+
+  /** R9c, read before a press of Say it and held after it: while Listen's reading is under way, the press stopped the voice once, before the recognizer listened. */
+  stopCheck() {
+    const listens = this.screen.listens.n;
+    const stops = this.stops().length;
+    return () => {
+      if (this.reading === null) return;
+      const calls = this.stops();
+      const stop = calls[stops];
+      if (calls.length !== stops + 1 || stop === undefined)
+        this.fail('Say it never stopped the voice');
+      if (stop.listens !== listens) this.fail('the recognizer listened before the voice stopped');
+      if (this.screen.listens.n !== listens + 1) this.fail('Say it never listened');
+      this.reading = null;
+      bump(this.coverage, 'listen:say-stops');
+    };
+  }
+
+  /** A tap on Listen: the voice speaks the shown piece's own text once, which reads until its end, or the speak is refused. */
+  async listenTap() {
+    const app = this.screen;
+    const voice = this.voice;
+    const shown = shownModel(this.run, this.recallsNow);
+    if (voice === null || shown === null) return;
+    const piece = this.pieceOf(shown.reference);
+    const refused = this.next() < 0.2;
+    voice.state.refuse = refused;
+    await app.tap('Listen');
+    voice.state.refuse = false;
+    this.spoken.push(piece.text);
+    this.reading = refused ? null : piece.text;
+    bump(this.coverage, refused ? 'listen:refused' : 'listen:read');
+    if (this.pieces.includes(PASSAGE) && piece !== PASSAGE)
+      bump(this.coverage, 'listen:not-passage');
+    await this.settle(refused ? 'Listen refused' : 'Listen');
+    this.trail.push('listen');
+  }
+
+  /** The reading under way ends at its own end: finished or interrupted. */
+  async endReading(kind: 'finish' | 'interrupt') {
+    await this.voice?.end(kind);
+    this.reading = null;
+    bump(this.coverage, `listen:end:${kind}`);
+    await this.settle(`the reading's ${kind}`);
+    this.trail.push('end');
+  }
+
+  /** A tap on Voice: the switch turns, stored; turned off, it stops a reading under way. */
+  async voiceTap() {
+    await this.screen.tap('Voice', 'switch');
+    this.voiceOn = !this.voiceOn;
+    this.expected.set(ENABLED_KEY, String(this.voiceOn));
+    bump(this.coverage, 'voice:tap');
+    if (!this.voiceOn && this.reading !== null) {
+      this.reading = null;
+      bump(this.coverage, 'listen:voice-off-reading');
+    }
+    if (this.voiceOn && this.stateName() === 'fresh') bump(this.coverage, 'listen:voice-on-fresh');
+    await this.settle(`Voice ${this.voiceOn ? 'on' : 'off'}`);
+    this.trail.push('voice');
+  }
+
+  /** While a reading is under way: its end, Say it, Voice off, an away, a Minutes tap, the field or a wait. */
+  async whileReading() {
+    const roll = this.next();
+    if (roll < 0.34) return this.endReading(roll < 0.18 ? 'finish' : 'interrupt');
+    if (roll < 0.52 && actionModel(this.run, this.recallsNow) === 'Say it')
+      return this.say(this.next() < 0.5 ? 'heard' : 'unheard');
+    if (roll < 0.66) return this.voiceTap();
+    if (roll < 0.78) return this.away();
+    if (roll < 0.88) return this.minutesTap();
+    if (roll < 0.97) return this.field();
+    return this.wait();
+  }
+
+  /** The Listen walk's own commands, before hsrun's: while a reading is under way most often one of `whileReading`, now and then a Voice tap, and Listen half the time it shows; none (hsrun's commands) otherwise. */
+  listenCommand() {
+    if (this.reading !== null && this.next() < 0.85) return this.whileReading();
+    if (this.next() < 0.08) return this.voiceTap();
+    if (this.expectOf(this.run).listen && this.next() < 0.75) return this.listenTap();
+    const shown = this.unread ? null : shownModel(this.run, this.recallsNow);
+    const state = this.stateName();
+    if (shown?.fresh === true && state !== 'next') {
+      if (!this.voiceOn && this.next() < 0.5) return this.voiceTap();
+      if (this.next() < 0.3) return this.say(this.next() < 0.5 ? 'unheard' : 'refused');
+    }
+    if (state === 'review' && this.next() < 0.6) return this.say('heard');
+    if (state === 'next' && this.next() < 0.6) return this.nextTap();
+    return null;
   }
 
   /** What comes while a recital listens or finishes: a Minutes tap (the plan made, the hold kept), or states sent (nothing made). */
@@ -533,6 +704,7 @@ class Walk {
   }
 
   async minutesTap() {
+    if (this.reading !== null) bump(this.coverage, 'listen:minutes-reading');
     await this.tapMinutes(pickOf(this.next, MINUTES));
     bump(this.coverage, 'minutes');
     await this.settle('minutes');
@@ -577,6 +749,7 @@ class Walk {
     }
     await app.tap('Today');
     bump(this.coverage, 'field');
+    if (this.reading !== null) bump(this.coverage, 'listen:field-reading');
     await this.settle(sends ? 'the field, states sent, and back' : 'the field and back');
     this.trail.push('field');
   }
@@ -598,6 +771,10 @@ class Walk {
 
   /** One command, chosen by the screen the model expects. */
   async command() {
+    if (this.steer === 'listen') {
+      const chosen = this.listenCommand();
+      if (chosen !== null) return chosen;
+    }
     const roll = this.next();
     if (this.unread) {
       if (roll < 0.4) return this.say(this.next() < 0.7 ? 'heard' : 'unheard');
@@ -703,14 +880,19 @@ class Walk {
     this.zone = l === 0 || next() < 0.3 ? pickOf(next, ZONES) : this.zone;
     bump(this.coverage, `zone:${this.zone}`);
     const planted = [...this.device.disk.keys()].some((key) => key.startsWith(PREFIX));
-    this.unread = planted && next() < (this.steer === 'quiet' ? 0.3 : 0.1);
+    this.unread =
+      planted && next() < (this.steer === 'quiet' ? 0.3 : this.steer === 'listen' ? 0.2 : 0.1);
     this.last = next() < 0.15 ? 'background' : 'active';
     this.log.push(`launch ${l}${this.last === 'background' ? ' in the background' : ''}`);
     travel(this.zone);
     this.faults.unread = this.unread;
+    this.voice = readingVoice();
     this.app = await wakeLaunch(this.device, this.faults, this.time, this.pieces, {
       state: this.last,
+      voice: this.voice,
     });
+    this.reading = null;
+    this.spoken.length = 0;
     this.run = NO_RUN;
     this.result = null;
     this.ending = null;
@@ -736,7 +918,16 @@ class Walk {
     this.last = 'active';
     const commands = 5 + below(next, 6);
     for (let c = 0; c < commands; c += 1) await this.command();
+    await this.leave();
+  }
+
+  /** The launch's runtime closes: a reading under way stops at the voice's source. */
+  async leave() {
+    const stops = this.stops().length;
     await this.screen.leave();
+    if (this.reading === null) return;
+    if (this.stops().length !== stops + 1) this.fail('a relaunch left the reading under way');
+    bump(this.coverage, 'listen:relaunch-reading');
   }
 }
 
@@ -771,6 +962,12 @@ const firstRecords = (
   ];
 };
 
+/** The share of devices whose piece at `index` is planted: most, and for Listen the first piece nearly always and the rest seldom, so a new piece other than the first is offered. */
+const plantedShare = (steer: Steer, index: number) => {
+  if (steer !== 'listen') return 0.65;
+  return index === 0 ? 0.9 : 0.3;
+};
+
 /** A device's disk: empty (the first minute) now and then, else most pieces planted 1-60 days back, with now and then an evening planting the day before, a planting minutes before (the next piece left unplanted, so the new piece waits for the day), and a plant no piece names. */
 const recordsOf = (
   next: () => number,
@@ -792,7 +989,7 @@ const recordsOf = (
       continue;
     }
     if (today && index === 1) continue;
-    if (next() > 0.65) continue;
+    if (next() > plantedShare(steer, index)) continue;
     entries.push(...plantOf(next, piece, zone));
   }
   if (entries.length === 0 || next() < 0.3) {
@@ -806,7 +1003,8 @@ const recordsOf = (
 
 /** One device: its pieces and disk, then 2-3 launches. */
 const deviceRun = async (next: () => number, steer: Steer, coverage: Coverage) => {
-  const crowded = steer !== 'quiet' && next() < (steer === 'clocks' ? 0.2 : 0.3);
+  const crowded =
+    steer !== 'quiet' && steer !== 'listen' && next() < (steer === 'clocks' ? 0.2 : 0.3);
   const pieces = crowded ? crowdedOf(next) : piecesOf(next);
   const zone = pickOf(next, ZONES);
   const entries = crowded
@@ -819,9 +1017,13 @@ const deviceRun = async (next: () => number, steer: Steer, coverage: Coverage) =
     ? pickOf(next, ['2', '20'] as const)
     : pickOf(next, [undefined, '2', '5', '10', '20'] as const);
   if (stored !== undefined) entries.push([MINUTES_KEY, stored]);
+  const switched =
+    steer === 'listen' ? pickOf(next, [undefined, 'true', 'false'] as const) : undefined;
+  if (switched !== undefined) entries.push([ENABLED_KEY, switched]);
   const log: string[] = [];
   const walk = new Walk(next, steer, deviceOf(entries), pieces, coverage, log);
   walk.minutes = stored === undefined ? 5 : Number(stored);
+  walk.voiceOn = switched !== 'false';
   walk.zone = zone;
   const before = hostZone();
   try {
@@ -845,6 +1047,7 @@ const LEANS: Record<Steer, string> = {
   returns: 'returns at every run state',
   quiet: 'returns that change nothing',
   clocks: 'long aways across zones and mornings',
+  listen: 'Listen on the new piece, its readings and the Voice switch',
 };
 
 /** The floors of `floors` that `coverage` misses; `zones` asks for at least that many zones. */
