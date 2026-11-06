@@ -4,8 +4,9 @@
  * A piece's natural-voice plan and its word starts against an independent
  * model written here, over a small hand-built lexicon and vocab: seeded
  * texts of its words with edge characters, runs of blanks, unknown words
- * and blank texts, then each rule's edges by hand: the cap at 200 and 201
- * for a clause, a word and a packed pair with its joining space, symbols
+ * (case variants of listed keys among them) and blank texts, then each
+ * rule's edges by hand: the cap at 200 and 201 for a clause, a word and a
+ * packed pair with its joining space, a key looked up as written, symbols
  * counted in code points, marks after a spoken lead and at the whole run in
  * UTF-16, and durations that do not fit a chunk.
  */
@@ -184,6 +185,21 @@ const generator = (seed: number) => {
 const SEED = 2_611;
 const KEYS = [...WORDS.keys()].filter((key) => key !== 'bad');
 const SHORT_KEYS = KEYS.filter((key) => !/^[xy]\d+$/u.test(key));
+/** Keys that differ from a listed key only by case, none of them listed: a key is looked up exactly as written. */
+const CASE_VARIANTS = [
+  'Thee',
+  'THEE',
+  'lord',
+  'Lord',
+  'o',
+  'Big',
+  'BIG',
+  'éli',
+  'ÉLI',
+  'LORD’S',
+  'X12',
+  'Y7',
+];
 const EDGES = [
   '',
   '',
@@ -220,7 +236,15 @@ const generatedTexts = (seed: number, count: number) => {
     const parts = Array.from({ length: words }, () => {
       const roll = random();
       const key =
-        roll < 0.02 ? 'Zzqxv' : roll < 0.03 ? 'bad' : roll < 0.35 ? pick(KEYS) : pick(SHORT_KEYS);
+        roll < 0.02
+          ? 'Zzqxv'
+          : roll < 0.03
+            ? 'bad'
+            : roll < 0.04
+              ? pick(CASE_VARIANTS)
+              : roll < 0.35
+                ? pick(KEYS)
+                : pick(SHORT_KEYS);
       return `${pick(EDGES)}${key}${pick(EDGES)}`;
     });
     return `${random() < 0.2 ? pick(BLANKS) : ''}${parts.join(pick(BLANKS))}${random() < 0.2 ? pick(BLANKS) : ''}`;
@@ -274,6 +298,18 @@ describe('planOf, by hand', () => {
     expect(shown(planOf(WORDS, withoutSymbol('('), 'thee (LORD'))).toBe('None');
     expect(shown(planOf(WORDS, withoutSymbol('?'), 'LORD?'))).toBe('None');
     expect(shown(planOf(WORDS, withoutSymbol('?'), 'LORD;'))).not.toBe('None');
+  });
+
+  it('looks a key up exactly as written: a case variant of a listed key plans none', () => {
+    expect(CASE_VARIANTS.filter((key) => WORDS.has(key))).toEqual([]);
+    expect(
+      CASE_VARIANTS.filter(
+        (key) => !KEYS.some((listed) => listed.toLowerCase() === key.toLowerCase()),
+      ),
+    ).toEqual([]);
+    const none = [...CASE_VARIANTS, 'O lord', 'LORD Thee', '(Thee),', 'thee THEE'];
+    expect(none.map((text) => shown(planOf(WORDS, VOCAB, text)))).toEqual(none.map(() => 'None'));
+    expect(shown(planOf(WORDS, VOCAB, 'O LORD thee'))).not.toBe('None');
   });
 
   it('gives a word of exactly the cap its own chunk', () => {

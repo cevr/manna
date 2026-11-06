@@ -5,7 +5,8 @@
  * pinned revision publishes it, and the KJV pronunciation list and its
  * overrides, each key once and in UTF-16 order, each phoneme string
  * non-empty, unspaced and spoken in the vocab's symbols, and its bytes the
- * generator's last run (`data/lexicon.py`). That the list holds exactly the
+ * generator's last run (`data/lexicon.py`); a word differing from a listed
+ * key only by case plans none over it. That the list holds exactly the
  * KJV's keys, with Misaki's phonemes, is the generator's own work, checked
  * outside the unit tests.
  */
@@ -14,6 +15,10 @@ import { describe, expect, it } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
+import { Option } from 'effect';
+
+import { planOf } from './plan';
 
 const DATA = join(import.meta.dir, '../../data');
 const VOCAB_SHA256 = '8d65b0188b77eafc60751dac42bbac7ab5f5685074af44db91d1877b42dc1d7c';
@@ -60,5 +65,21 @@ describe('the natural voice’s data', () => {
     expect(keys.length).toBeLessThanOrEqual(200);
     expect(keys.filter((key) => !(key in list) || list[key] !== overrides[key])).toEqual([]);
     expect(keys.filter((key) => !spoken(overrides[key] ?? ''))).toEqual([]);
+  });
+
+  it('plans none for a word that differs from a listed key only by case', () => {
+    const words = new Map(Object.entries(list));
+    const variants = {
+      Thee: 'thee',
+      THEE: 'thee',
+      jesus: 'Jesus',
+      israel: 'Israel',
+      SELAH: 'Selah',
+    };
+    expect(Object.keys(variants).filter((key) => key in list)).toEqual([]);
+    expect(Object.values(variants).filter((key) => !(key in list))).toEqual([]);
+    const plans = (text: string) => Option.isSome(planOf(words, vocab, text));
+    expect(Object.keys(variants).map(plans)).toEqual(Object.keys(variants).map(() => false));
+    expect(Object.values(variants).map(plans)).toEqual(Object.values(variants).map(() => true));
   });
 });
