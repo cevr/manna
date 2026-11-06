@@ -676,7 +676,20 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
-        "!src/chooser/{range.property,lists,reader-*,fixed}.test.*",
+        "!src/chooser/{range.property,lists,walk-taps,walk-leave,reader-*,fixed}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:chooser-steps": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
+        "!src/chooser/{range.property,lists,walk-plant,reader-*,fixed}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -689,7 +702,20 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
-        "!src/chooser/{range.property,lists,walk-*,reader-add,reader-remove,fixed}.test.*",
+        "!src/chooser/{range.property,lists,walk-*,reader-unread,reader-add,reader-add-back,reader-remove,fixed}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:reader-unread": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
+        "!src/chooser/{range.property,lists,walk-*,reader-today,reader-add,reader-add-back,reader-remove,fixed}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -702,7 +728,20 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
-        "!src/chooser/{range.property,lists,walk-*,reader-today,reader-remove,fixed}.test.*",
+        "!src/chooser/{range.property,lists,walk-*,reader-today,reader-unread,reader-add-back,reader-remove,fixed}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:reader-add-back": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
+        "!src/chooser/{range.property,lists,walk-*,reader-today,reader-unread,reader-add,reader-remove,fixed}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -715,7 +754,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
-        "!src/chooser/{range.property,lists,walk-*,reader-today,reader-add}.test.*",
+        "!src/chooser/{range.property,lists,walk-*,reader-today,reader-unread,reader-add,reader-add-back}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -789,8 +828,11 @@
         "test:chooser",
         "test:chooser-lists",
         "test:chooser-walk",
+        "test:chooser-steps",
         "test:reader-today",
+        "test:reader-unread",
         "test:reader-add",
+        "test:reader-add-back",
         "test:reader-remove",
         "test:rest",
         "test:infra"

@@ -1,14 +1,15 @@
 /* oxlint-disable effect/noAsyncFunction -- the walk drives the root through React's promise-based `act`, one awaited tap at a time. */
 
 /**
- * The reader's adds through the root (hspassage C1, C6-C9, C12, C13) on
- * generated readers through `test/reader-walk.ts`, leaning toward changes
+ * The reader's adds through the root (hspassage C1, C6-C9, C12, C13) on a
+ * generated reader through `test/reader-walk.ts`, leaning toward changes
  * from Today's field: the chooser opened from the field's bar, a range
- * clipped forward and back, a tap that clears it, a restart, backs to the
- * books and the chapters, Psalms 119, leaving the chooser, and a plant
- * landing, refused, retried and tapped twice in one turn, of one verse, of
- * twenty, of a whole chapter and over the promise's verse. Its devices alone
- * must reach those cases.
+ * clipped forward, a tap that clears it, backs to the books and the
+ * chapters, Psalms 119, leaving the chooser, and a plant landing, refused,
+ * retried and tapped twice in one turn, of one verse, of twenty, of a whole
+ * chapter and over the promise's verse. Its device alone must reach those
+ * cases; `reader-add-back.test.tsx` owns the range clipped back and the
+ * restart.
  *
  * It catches a double tap that writes twice, a refusal that leaves or says
  * nothing, a range off the rule, an add with no making, Today's plan off
@@ -21,7 +22,7 @@ import { expect, it } from 'bun:test';
 import { walkReaders } from '../test/reader-walk';
 
 it('adds the reader’s passages through the field and the chooser, one change at a time', async () => {
-  const { faults, reached } = await walkReaders([63, 38], 16, 'change');
+  const { faults, reached } = await walkReaders([63], 16, 'change');
   expect(faults).toEqual([]);
   const floors = [
     'add:Added',
@@ -29,9 +30,7 @@ it('adds the reader’s passages through the field and the chooser, one change a
     'add:double',
     'add:retried',
     'clip:forward',
-    'clip:back',
     'tap:toggle-off',
-    'tap:restart',
     'back:books',
     'back:chapters',
     'choose:left',

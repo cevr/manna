@@ -121,10 +121,14 @@ must start empty: uninstall by udid as `first.md` says.
    `5 verses`, `Up to 20 verses`, a button `Plant`; a raw snapshot →
    `Plant`'s rect inside the window and above the home indicator's area.
 5. `passage-clip`: `sim tap "label=Chapters"`, `sim tap "label=Books"`,
-   `sim tap "label=Psalms"`, `sim tap "label=Psalms 119"`,
-   `sim tap "label=Psalms 119:1"`, then `sim scroll screen down` until
-   `Psalms 119:30` shows, `sim tap "label=Psalms 119:30"`,
-   `sim snapshot passage-clip` → `Psalms 119:1-20`, `20 verses`, `Plant`.
+   `sim tap "label=Psalms"`, then `sim scroll screen down` until
+   `Psalms 119` shows (a snapshot after each scroll), `sim tap
+   "label=Psalms 119"`, `sim snapshot passage-clip-top` → `Psalms 119:1`
+   the first verse shown, with nothing hidden above it (each step opens at
+   its top, whatever the last step's scroll), `sim tap "label=Psalms
+   119:1"`, then `sim scroll screen down` until `Psalms 119:30` shows,
+   `sim tap "label=Psalms 119:30"`, `sim snapshot passage-clip` →
+   `Psalms 119:1-20`, `20 verses`, `Plant`.
 6. Back to John 15:1-5: `sim tap "label=Chapters"`,
    `sim tap "label=Books"`, then step 4's taps from `John`.
 7. `passage-plant`: `sim tap "label=Plant"`, `sim snapshot passage-plant` →
@@ -132,8 +136,11 @@ must start empty: uninstall by udid as `first.md` says.
    `John 15:1-5`; five nodes `John 15:<n>, not planted` (n 1-5); a button
    `Remove John 15:1-5` and no other `Remove`; `Add a passage`.
 8. `passage-limit`: two more passages through `Add a passage` (for
-   example `Psalms` → `Psalms 23` → `Psalms 23:1`, `Psalms 23:6`, `Plant`;
-   then `Romans` → `Romans 8` → `Romans 8:28`, `Plant`),
+   example `Psalms` → `Psalms 23` → `Psalms 23:1`, then `sim scroll screen
+   down` until `Psalms 23:6` shows clear of the footer (it can sit partly
+   under it), `Psalms 23:6`, `Plant`; then on the books `sim scroll screen
+   down` until `Romans` shows, `Romans` → `Romans 8` → `Romans 8:28`,
+   `Plant`; a snapshot after each scroll, then the tap),
    `sim snapshot passage-limit` → three `Remove` buttons, no
    `Add a passage`, and the limit line's text.
 9. `passage-keep`: `sim tap "label=Remove Psalms 23:1-6"`,
@@ -172,7 +179,11 @@ snapshots.
 
 - The chooser's verses are one scroll view of the whole chapter (176
   verses in Psalms 119), never a virtualized list: a verse below the
-  window needs a `sim scroll`, and `Plant` never does.
+  window needs a `sim scroll`, and `Plant` never does. So do a book past
+  the first screen of the books (`Romans`), a chapter past the first
+  screen of a book's chapters (`Psalms 119`), and a verse partly under the
+  footer (`Psalms 23:6`). Each step opens at its top, so a scroll on one
+  step never carries into the next.
 - A scroll just before a tap can leave the scroll view moving, and the tap
   may then stop the scroll instead of pressing: snapshot after the scroll,
   then tap.

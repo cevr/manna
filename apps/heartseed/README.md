@@ -1017,8 +1017,9 @@ marks. The alert stays in the scroll.
     the corpus, and every verse of Psalms 119 and 117, Isaiah 41 and
     chapters of 20 and 21 verses under each kind of range, with the header,
     the footer and each back, against `src/test/choose-model.ts`.
-  - `test:chooser-walk`: `src/chooser/walk-plant.test.tsx`,
-    `walk-taps.test.tsx` and `walk-leave.test.tsx`, generated readers
+  - `test:chooser-walk` and `test:chooser-steps`:
+    `src/chooser/walk-plant.test.tsx`, and `walk-taps.test.tsx` with
+    `walk-leave.test.tsx`, generated readers
     through `src/test/chooser-walk.ts` over the same rig: stored lists of
     0-3 passages or a garbled value, chapters opened and backed out of,
     taps by pattern, and `Plant` landing, refused, `Full` or `Unread`,
@@ -1026,8 +1027,10 @@ marks. The alert stays in the scroll.
     retry, a verse or leaving; after every tap the screen, the stored
     passages and every other key against the models; each file's floors
     met by its own devices.
-  - `test:reader-today`, `test:reader-add` and `test:reader-remove`:
-    `src/chooser/reader-today.test.tsx`, `reader-add.test.tsx` and
+  - `test:reader-today`, `test:reader-unread`, `test:reader-add`,
+    `test:reader-add-back` and `test:reader-remove`:
+    `src/chooser/reader-today.test.tsx`, `reader-unread.test.tsx`,
+    `reader-add.test.tsx`, `reader-add-back.test.tsx` and
     `reader-remove.test.tsx`, generated readers through
     `src/test/reader-walk.ts` over the run's rig (the root over a disk, a
     recognizer that hears the verse said, a frozen clock, a zone), in UTC,

@@ -56,9 +56,12 @@
     "test:passages-session": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/passages/session.test.ts",
     "test:chooser": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/range.property.test.ts",
     "test:chooser-lists": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/lists.test.tsx",
-    "test:chooser-walk": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/walk-plant.test.tsx ./src/chooser/walk-taps.test.tsx ./src/chooser/walk-leave.test.tsx",
+    "test:chooser-walk": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/walk-plant.test.tsx",
+    "test:chooser-steps": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/walk-taps.test.tsx ./src/chooser/walk-leave.test.tsx",
     "test:reader-today": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/reader-today.test.tsx",
+    "test:reader-unread": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/reader-unread.test.tsx",
     "test:reader-add": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/reader-add.test.tsx",
+    "test:reader-add-back": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/reader-add-back.test.tsx",
     "test:reader-remove": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/reader-remove.test.tsx ./src/chooser/fixed.test.tsx",
     "test:rest": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/core-import.property.test.ts ./src/core-import.test.ts ./src/display.test.ts ./src/matcher.test.ts ./src/today.test.tsx",
     "test:infra": "bun test --no-isolate --parallel=3 --path-ignore-patterns='**/*.slow.test.*' ./scripts ./vite"
