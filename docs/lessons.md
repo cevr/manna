@@ -5127,9 +5127,9 @@ The form of an entry, each field on its own line:
 ### heartseed-today-controls-outside-scroll
 
 - **Date:** 2026-11-05
-- **Kind:** owner
-- **Said:** "R3 (the action button and the Grade group in a fixed footer under the scroll; the session rig's frame rule changes with it)"
-- **Source:** hymnapp/hsrun/split-decision.md (the orchestrator's ruling of R1-R12); hymnapp/hsdaily/state.md (Follow-ups: the controls-outside-the-scroll guard); hymnapp/hsrun/spec.md R3
+- **Kind:** review
+- **Said:** "Cite truthful review provenance with a numbered finding, or an actual owner's correction/choice. Retain the footer guard."
+- **Source:** hymnapp/hsrun/round-1-findings.md M3 (no review file numbers the foot-of-scroll control that lost live taps: hymnapp/hsfield/merge-drive-1.md records it unnumbered); hymnapp/hsdaily/state.md (Follow-ups: the controls-outside-the-scroll guard)
 - **Wrong:** Say it sat at the scroll view's foot and the grades inside it, so a long verse or a result pushed the reader's next control below the fold; each unit's rig allowed the controls it knew of in the scroll, so a new control there passed unseen.
 - **Cause:** Each rig listed the controls the scroll might hold instead of the one kind it may: a missed word's mark is part of the verse, every other control is the reader's way on and must be on screen without a scroll.
 - **Guard:** code: `apps/heartseed/src/run/footer.test.tsx` `keeps Say it, Listening and the grades outside the scroll view in every frame of a recital, a missed word’s mark the one control inside`
