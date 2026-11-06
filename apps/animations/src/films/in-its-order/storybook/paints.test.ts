@@ -173,7 +173,71 @@ const mottleShare = (r: Raster, paints: (typeof CELLS)[number]['paints']): numbe
   return blotched / Math.max(1, opaque);
 };
 
+/** The most hair-brown pixels a lead cell may draw with his skin on both sides within `SEAM_REACH`, along its row or its column: a thin brown seam on bare skin reads as a crack (critique 2, fault 2: `read`'s teat, 97; critique 1, finding 5: round 1's jaw band, 28; his first six keys 0 to 2). */
+const SEAM_MAX = 2;
+const SEAM_REACH = 3;
+
+/** The lead's cells whose seams are known and named to the owner, not yet fixed: his table sheet's later pass, whose teat is a thin hair-brown line on his skin (critique 2, fault 2; a draw asking it inked lost the sleeve and the sash, so the pass stands). */
+const SEAMS_KNOWN = new Set(['lead-feast/iio-table read', 'lead-feast/iio-table readBlink']);
+
+/** How many of a raster's `seam`-paint pixels have `skin` within `reach` on both sides along their row or their column. */
+const seamsOf = (
+  r: Raster,
+  seam: readonly [number, number, number],
+  skin: readonly [number, number, number],
+  reach: number,
+) => {
+  const is = (q: number, rgb: readonly [number, number, number]) =>
+    (r.rgba[q * 4 + 3] ?? 0) > 0 &&
+    r.rgba[q * 4] === rgb[0] &&
+    r.rgba[q * 4 + 1] === rgb[1] &&
+    r.rgba[q * 4 + 2] === rgb[2];
+  const near = (x: number, y: number, dx: number, dy: number) => {
+    for (let k = 1; k <= reach; k++) {
+      const [nx, ny] = [x + dx * k, y + dy * k];
+      if (nx >= 0 && ny >= 0 && nx < r.width && ny < r.height && is(ny * r.width + nx, skin))
+        return true;
+    }
+    return false;
+  };
+  let n = 0;
+  for (let q = 0; q < r.width * r.height; q++) {
+    if (!is(q, seam)) continue;
+    const [x, y] = [q % r.width, Math.floor(q / r.width)];
+    const across = near(x, y, -1, 0) && near(x, y, 1, 0);
+    const down = near(x, y, 0, -1) && near(x, y, 0, 1);
+    if (across || down) n++;
+  }
+  return n;
+};
+
 describe("In Its Order's sheet paints", () => {
+  it.effect(
+    'draws no thin hair-brown seam on the lead’s bare skin: at most 2 hair-brown px of each lead cell with his skin within 3 px on both sides, so no line on his face reads as a crack (critique 2, fault 2: `read`’s teat; critique 1, finding 5: a jaw band)',
+    () =>
+      Effect.gen(function* () {
+        const lead = CELLS.filter((c) => c.sheet.startsWith('lead-feast/'));
+        const counts = yield* Effect.forEach(lead, (c) =>
+          Effect.map(rasterOf(c.png), (r) => {
+            const paint = (role: string) =>
+              c.paints.find((p) => p.role === role && p.tone === 'base')?.rgb ??
+              ([-1, -1, -1] as const);
+            const n = seamsOf(r, paint('hair'), paint('skin'), SEAM_REACH);
+            return { name: `${c.sheet} ${c.cell}`, n };
+          }),
+        );
+        expect(counts.length).toBeGreaterThanOrEqual(6);
+        expect(
+          counts
+            .filter((c) => !SEAMS_KNOWN.has(c.name) && c.n > SEAM_MAX)
+            .map((c) => `${c.name}: ${c.n}`),
+        ).toEqual([]);
+        expect(counts.filter((c) => SEAMS_KNOWN.has(c.name) && c.n > SEAM_MAX).length).toBe(
+          SEAMS_KNOWN.size,
+        );
+      }),
+  );
+
   it.effect(
     'holds the skin’s blotches of shade under 0.5 % of each cell’s opaque pixels, so no face is mottled (the redrawn table sheet split plain; critique 1, item 16)',
     () =>

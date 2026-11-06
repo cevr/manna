@@ -5133,3 +5133,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** In cold-letter the letter fell, hopped and unrolled flat across the whole front of the table, a strip far wider than a letter, and the lead set the bottle down with his hands empty on his knees.
 - **Cause:** The open scroll plate was laid on the table and squashed to lie flat (`sy` 0.35) at a table-wide scale, and the lead's table sheet had no key that held both props, so the staging set them down.
 - **Guard:** code: `apps/animations/src/films/in-its-order/storybook/staging.test.ts` `takes the letter up in cold-letter and reads it`
+
+### iio-letter-clear-of-the-guest
+
+- **Date:** 2026-11-06
+- **Kind:** review
+- **Said:** "The held scroll sits on the bearded guest's ear, from the swap to the card."
+- **Source:** tmp/orchestrate/p5/iio-b-letter/critique-2.md F1 (its fault 1)
+- **Wrong:** In cold-letter the scroll the lead reads covered the ear of the diner seated beyond him through the whole read and the push, and the rising roll crossed it, so the scroll and the guest's face read as one shape.
+- **Cause:** The letter was staged against the lead and the table alone; nothing measured it against the diners' row on its own plane under the camera.
+- **Guard:** code: `apps/animations/src/films/in-its-order/storybook/staging.test.ts` `keeps the letter he takes up in cold-letter at least 12 px on screen from the bearded guest beyond him`
+
+### iio-no-seam-on-skin
+
+- **Date:** 2026-11-06
+- **Kind:** review
+- **Said:** "The teat is a thin brown crack at the corner of his mouth."
+- **Source:** tmp/orchestrate/p5/iio-b-letter/critique-2.md F2 (its fault 2); tmp/orchestrate/p5/iio-b-letter/critique-1.md F5
+- **Wrong:** A drawn line on the lead's bare skin (his jaw in one pass, the teat's outline in the next) split to his hair's brown and read as a crack on his face.
+- **Cause:** The split maps a thin dark outline that is not ink into the nearest palette paint, the hair's brown, and no check read a hair-brown line with skin on both sides.
+- **Guard:** code: `apps/animations/src/films/in-its-order/storybook/paints.test.ts` `draws no thin hair-brown seam on the lead’s bare skin`
