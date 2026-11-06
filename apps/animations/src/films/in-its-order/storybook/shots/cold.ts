@@ -364,8 +364,11 @@ export const coldTable: FilmShot = {
   }),
 };
 
-/** The rollers' length across, ink ends and all, of the scroll he holds in his table sheet's `read` cell, in its px: its lower roller's 79 px of the sandals' brown (rows 581 to 595, from x 7) and its ink at each end. */
-export const HELD_ROLLERS = 85;
+/** The rollers' length across, ink ends and all, of the scroll he holds in his table sheet's `read` cell, in its px: its lower roller's 97 px of his hair's brown (rows 471 to 484, from x 6) and its ink at each end. */
+export const HELD_ROLLERS = 103;
+
+/** The top roller of the scroll his table sheet's `read` cell holds up, in its px: the parchment's middle across (x 20 to 108) and the roller's middle row (rows 331 to 344), under his hand. */
+const READ_ROLLER = [64, 338] as const;
 
 /** The rolled scroll plate's rollers' length across, knobs and all, in its px: its whole width. */
 const ROLLED_ROLLERS = SCROLL_ROLLED.size[0];
@@ -384,18 +387,18 @@ export const letterOn = (moves: NonNullable<Plate['moves']>): Plate =>
 /** The hand his table sheet's `down` cell lowers on the viewer's right (the hand that held the bottle), in its px: its middle across and its lowest drawn row. */
 export const DOWN_HAND = [178, 629] as const;
 
-/** Where the lead's `down` hand reaches at his place at the table, layer px: under its middle, at its lowest row, which lies on the table top. */
-const downHandAt = (): readonly [number, number] => {
+/** Where a point of one of the lead's table cells (its px) lies at his place at the table, layer px. */
+const atTable = (
+  cell: { readonly ax: number; readonly ay: number },
+  point: readonly [number, number],
+): readonly [number, number] => {
   const s = drawScaleOf('lead-feast', 'iio-table', HEAD, Z.table);
   const ground = AT_TABLE.lead.crown + tallOf('lead-feast', 'iio-table', HEAD, Z.table);
-  return [
-    AT_TABLE.lead.x + (DOWN_HAND[0] - LEAD_TABLE.down.ax) * s,
-    ground + (DOWN_HAND[1] - LEAD_TABLE.down.ay) * s,
-  ];
+  return [AT_TABLE.lead.x + (point[0] - cell.ax) * s, ground + (point[1] - cell.ay) * s];
 };
 
-/** Where the bottle stands on the table in cold-ouch, layer px (its foot): where his lowered hand rests, the hand that held it, so it reads as set down by that hand. */
-export const BOTTLE_AT = downHandAt();
+/** Where the bottle stands on the table in cold-ouch, layer px (its foot): where his lowered `down` hand rests (under its middle, at its lowest row, on the table top), the hand that held it, so it reads as set down by that hand. */
+export const BOTTLE_AT = atTable(LEAD_TABLE.down, DOWN_HAND);
 
 /** The cream body across of the bottle the lead holds in his table sheet's `bottle` cell, in its px (196 to 232). */
 const HELD_BODY = 37;
@@ -413,11 +416,18 @@ const bottleOn = (moves: NonNullable<Plate['moves']>): Plate =>
 /** The bottle standing on the table top from a shot's start, where his lowered hand set it down. */
 export const bottleOnTable = (): Plate => bottleOn([[0, key({})]]);
 
-/** The rolled scroll falling from above the frame onto the table before him over `fall`, hopping once over `hop`, and lying there until `taken`, the swap of his key that takes it up: from that frame his hand holds it, so the plate is gone. */
+/** How far the rolled scroll rises from where it lies to his reading hand, layer px: its middle from the table to the top roller his `read` cell holds up, so the open scroll he reads shows where the roll was lifted to. */
+export const LETTER_LIFT = (() => {
+  const [x, y] = atTable(LEAD_TABLE.read, READ_ROLLER);
+  const middle = (SCROLL_ROLLED.size[1] / 2) * LETTER_SCALE;
+  return { x: x - LETTER_AT[0], y: y - (LETTER_AT[1] - middle) };
+})();
+
+/** The rolled scroll falling from above the frame onto the table before him over `fall`, hopping once over `hop`, lying there until `lift` starts, his reach, and rising in his hand to his reading hand's place by `lift`'s end, the swap of his key that takes it up: from that frame his hand holds it open, so the plate is gone. */
 export const letterLands = (
   fall: { readonly start: number; readonly end: number },
   hop: { readonly start: number; readonly end: number },
-  taken: number,
+  lift: { readonly start: number; readonly end: number },
 ): Plate =>
   letterOn([
     [fall.start, key({ y: -700, alpha: 0 })],
@@ -425,8 +435,9 @@ export const letterLands = (
     [fall.end, key({})],
     [hop.start + (hop.end - hop.start) / 2, key({ y: -18 })],
     [hop.end, key({})],
-    [taken, key({})],
-    [taken, key({ alpha: 0 })],
+    [lift.start, key({})],
+    [lift.end, key({ x: LETTER_LIFT.x, y: LETTER_LIFT.y })],
+    [lift.end, key({ x: LETTER_LIFT.x, y: LETTER_LIFT.y, alpha: 0 })],
   ]);
 
 /** Where the push on `quote` eases in to, layer px: between his eyes and the scroll he reads, 15 % in (the spec's cap), the guests either side still in the frame. */
@@ -438,10 +449,12 @@ const LETTER = {
 /**
  * `cold-letter`, `letter` to the card: a rolled scroll falls onto the table
  * before the lead, who still holds the bottle up, and hops; the guests turn
- * to stare at it, and he takes it up in his free hand (the owner, scrawl
- * 0:21): from the swap he reads the letter, open in one hand, the bottle's
- * teat at his mouth in the other, his eyes on the scroll, blinking, to the
- * card. On `quote` the camera eases in toward the letter and his face.
+ * to stare at it, and he reaches for it with his free hand, the roll rising
+ * from the table to that hand (the owner, scrawl 0:21): from the swap he
+ * reads the letter, open in one hand, the bottle's teat at his mouth in the
+ * other, his lids half down on the scroll, to the card; a lidded cell takes
+ * no pasted blink, and the hold is under `ALIVE`. On `quote` the camera
+ * eases in toward the letter and his face.
  */
 export const coldLetter: FilmShot = {
   id: 'cold-letter',
@@ -449,7 +462,7 @@ export const coldLetter: FilmShot = {
   cues: {
     fall: { mark: 'letter', offset: 0.4, dur: 0.45 },
     hop: { after: 'cold-letter:fall', dur: 0.24 },
-    take: { after: 'cold-letter:hop', offset: 0.15, dur: 0.3 },
+    take: { after: 'cold-letter:hop', offset: 0.15, dur: 0.5 },
     stare: { mark: 'letter', offset: 0.3, dur: 0.3 },
     stared: { mark: 'letter', offset: 0.45, dur: 0.3 },
     quote: { mark: 'quote', until: 'such' },
@@ -476,10 +489,10 @@ export const coldLetter: FilmShot = {
           leadAt([
             blinkingHold(0, cue('take').start, 'bottle', 'frontBlink'),
             take,
-            blinkingHold(cue('take').end, duration, 'read', 'readBlink'),
+            hold(cue('take').end, duration, 'read'),
           ]),
           table(),
-          letterLands(cue('fall'), cue('hop'), swapOf(take)),
+          letterLands(cue('fall'), cue('hop'), { start: take.at, end: swapOf(take) }),
         ]),
       ],
     };

@@ -18,6 +18,7 @@ import {
   revealAt,
   swapOf,
   timesOf,
+  type Turn,
   turn,
 } from '../../../library/storybook/shot.ts';
 import VILLAGER_PALETTE from '../cast/idea-villagers/cast-sheet/palette.json';
@@ -290,6 +291,66 @@ const firstInkedRow = (raw: {
       (_, x) => raw.data[(y * raw.info.width + x) * 4 + 3] ?? 0,
     ).some((a) => a > 127),
   ) ?? raw.info.height;
+
+/** The box, in its cell's px, of the pixels exactly `hex` that `keep` admits (by column and row); none when no pixel is. */
+const boxOfPaint = (
+  raw: {
+    readonly data: Buffer;
+    readonly info: { readonly width: number; readonly height: number };
+  },
+  hex: string,
+  keep: (x: number, y: number) => boolean,
+) => {
+  const want = [1, 3, 5].map((at) => Number.parseInt(hex.slice(at, at + 2), 16));
+  const box = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity };
+  for (let q = 0; q < raw.info.width * raw.info.height; q++) {
+    const [x, y] = [q % raw.info.width, Math.floor(q / raw.info.width)];
+    const i = q * 4;
+    if ((raw.data[i + 3] ?? 0) <= 127 || !keep(x, y)) continue;
+    if (want.some((c, k) => raw.data[i + k] !== c)) continue;
+    box.left = Math.min(box.left, x);
+    box.top = Math.min(box.top, y);
+    box.right = Math.max(box.right, x);
+    box.bottom = Math.max(box.bottom, y);
+  }
+  return Option.some(box).pipe(Option.filter((b) => b.right >= b.left));
+};
+
+/** The letter his table sheet's `read` cell holds, in its px: the parchment (the bottle's cream left of his soles' centre, the scroll on the picture's left) and its lower roller (his hair's brown or his sandals' left of that centre, in the 30 rows under the parchment's foot). */
+const heldLetterOf = Effect.fn('staging.heldLetterOf')(function* () {
+  const read = LEAD_TABLE_CELLS.read;
+  const raw = yield* Effect.promise(() =>
+    sharp(read.png).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+  );
+  const cream = (TABLE_RECORD.props ?? []).find((p) => p.name === 'bottle')?.base ?? '';
+  const parchment = boxOfPaint(raw, cream, (x) => x < read.ax);
+  const roller = Option.flatMap(
+    parchment,
+    (p) =>
+      LEAD_PALETTE.parts
+        .filter((part) => part.name === 'hair' || part.name === 'sandals')
+        .map((part) =>
+          boxOfPaint(
+            raw,
+            part.base,
+            (x, y) => x < read.ax && y > p.bottom - 4 && y <= p.bottom + 30,
+          ),
+        )
+        .find(Option.isSome) ?? Option.none(),
+  );
+  return { read, parchment, roller };
+});
+
+/** Where a point of a figure's cell (its px) lies in its layer's px at `headPx`, on the figure's place. */
+const onFigure = (
+  f: Figure,
+  cell: { readonly ax: number; readonly ay: number },
+  headPx: number,
+  p: readonly [number, number],
+) => {
+  const s = drawScaleOf(f.member, f.sheet, headPx, 1) * (f.size ?? 1);
+  return [f.at.x + (p[0] - cell.ax) * s, f.at.ground + (p[1] - cell.ay) * s] as const;
+};
 
 /** A villager paint's hex by part name. */
 const paintOf = (name: string) => VILLAGER_PALETTE.parts.find((p) => p.name === name)?.base ?? '';
@@ -631,9 +692,11 @@ describe("In Its Order's staging", () => {
           ),
           info: { width: raw.info.width, height: (above ?? 0) - (below ?? 0) },
         };
-        const brown = LEAD_PALETTE.parts.find((p) => p.name === 'sandals')?.base ?? '';
+        const browns = LEAD_PALETTE.parts
+          .filter((p) => p.name === 'sandals' || p.name === 'hair')
+          .map((p) => p.base);
         const s = drawScaleOf(lead.member, lead.sheet, letter.headPx, 1);
-        const held = (widestRun(band, brown, 0) + 6) * s;
+        const held = (Math.max(...browns.map((b) => widestRun(band, b, 0))) + 6) * s;
         expect(held).toBeGreaterThan(0);
         expect(rolled.map((p) => Math.abs(p.place.width / held - 1) <= 0.1)).toEqual([true, true]);
       }),
@@ -925,12 +988,103 @@ describe("In Its Order's staging", () => {
       );
       return [
         seed,
-        letterOffMisses(held, letterLands(f, h, swapOf(take)), times).length,
-        letterOffMisses(held, letterLands(f, h, at + dur * 0.8), times).length > 0,
+        letterOffMisses(held, letterLands(f, h, { start: at, end: swapOf(take) }), times).length,
+        letterOffMisses(held, letterLands(f, h, { start: at, end: at + dur * 0.8 }), times).length >
+          0,
       ];
     });
     expect(misses.filter(([, gaps, late]) => gaps !== 0 || late !== true)).toEqual([]);
   });
+
+  it.effect(
+    'lifts the rolled letter from the table to his reading hand before the swap: it rests on the table until he reaches, and at the last frame it shows its middle lies within its own height of the top of the parchment his `read` cell holds, read on that cell (critique 1, finding 4: the roll vanished from the table as the open scroll appeared 180 px higher)',
+    () =>
+      Effect.gen(function* () {
+        const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
+        const lead =
+          letter && figuresOf(letter).find(({ figure }) => figure.name === 'lead')?.figure;
+        const plate = letter && platesOf(letter).find((p) => p.file.endsWith('/scroll-rolled.png'));
+        const held = yield* heldLetterOf();
+        if (!letter || !lead || !plate || Option.isNone(held.parchment))
+          return expect([letter?.id, lead?.name, plate?.file, held.parchment._tag]).toEqual([
+            'cold-letter',
+            'lead',
+            '',
+            'Some',
+          ]);
+        const shown = timesOf(letter).filter((t) => plateAt(plate, t).alpha > 0);
+        const last = shown.at(-1) ?? 0;
+        const p = held.parchment.value;
+        const [tx, ty] = onFigure(lead, held.read, letter.headPx, [(p.left + p.right) / 2, p.top]);
+        const [mx, my] = middleAt(plate, last);
+        expect(Math.hypot(mx - tx, my - ty)).toBeLessThanOrEqual(plate.place.height);
+        const reaches = lead.spans
+          .filter((s): s is Turn => s._tag === 'Turn' && s.to === 'read')
+          .map((s) => s.at);
+        const early = shown.filter((t) => plateAt(plate, t).x !== 0 && t < Math.min(...reaches));
+        expect(reaches.length).toBe(1);
+        expect(early).toEqual([]);
+      }),
+  );
+
+  it.effect(
+    'holds the letter clear of the table from the swap on: no opaque pixel of a plate laid over him in cold-letter lies over the lower roller of the scroll his `read` cell holds, read on that cell and on the plates’ own pixels (critique 1, finding 3: the roller lay in the grapes, the letter read as a card)',
+    () =>
+      Effect.gen(function* () {
+        const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
+        const items = letter?.layers.find((l) => l.name === 'table')?.items ?? [];
+        const at = items.findIndex((item) => item._tag === 'Figure' && item.name === 'lead');
+        const lead = items[at];
+        const held = yield* heldLetterOf();
+        if (!letter || lead?._tag !== 'Figure' || Option.isNone(held.roller))
+          return expect([letter?.id, lead?._tag, held.roller._tag]).toEqual([
+            'cold-letter',
+            'Figure',
+            'Some',
+          ]);
+        const r = held.roller.value;
+        const [left, top] = onFigure(lead, held.read, letter.headPx, [r.left, r.top]);
+        const [right, bottom] = onFigure(lead, held.read, letter.headPx, [
+          r.right + 1,
+          r.bottom + 1,
+        ]);
+        const reading = timesOf(letter).filter((t) => poseAt(lead, t).cell === 'read');
+        expect(reading.length).toBeGreaterThan(0);
+        const over = items
+          .slice(at + 1)
+          .filter(
+            (item): item is Plate =>
+              item._tag === 'Plate' &&
+              !item.file.includes('/scroll-') &&
+              reading.some((t) => plateAt(item, t).alpha > 0),
+          );
+        expect(over.length).toBeGreaterThan(0);
+        const covered = yield* Effect.forEach(over, (plate) =>
+          Effect.gen(function* () {
+            const [w, h] = plate.painting?.size ?? [plate.place.width, plate.place.height];
+            const [sx, sy] = [w / plate.place.width, h / plate.place.height];
+            const part = {
+              left: Math.max(0, Math.floor((left - plate.place.x) * sx)),
+              top: Math.max(0, Math.floor((top - plate.place.y) * sy)),
+            };
+            const size = {
+              width: Math.min(w, Math.ceil((right - plate.place.x) * sx)) - part.left,
+              height: Math.min(h, Math.ceil((bottom - plate.place.y) * sy)) - part.top,
+            };
+            if (size.width <= 0 || size.height <= 0) return [];
+            const { solid } = yield* lumaOf(
+              plate.painting?.png ?? '',
+              { ...part, ...size },
+              size.width,
+              size.height,
+            );
+            const n = solid.reduce((a, v) => a + v, 0);
+            return [`${plate.file}: ${n} opaque px over the roller`].filter(() => n > 0);
+          }),
+        );
+        expect(covered.flat()).toEqual([]);
+      }),
+  );
 
   it.effect(
     'stands the bottle in cold-ouch where his lowered hand set it down, and never moves it: at every frame the plate shows in one place, its foot within half a hand of his table sheet’s `down` hand’s middle and lowest row at his place at the table, read on that cell’s skin; a plate that travels in from his raised hand fails (critique 3, finding 1)',
