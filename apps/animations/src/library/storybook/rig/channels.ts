@@ -102,8 +102,8 @@ export const IDLE: RigNumbers = {
     rise: 4,
     fall: 20,
     body: { before: 5, size: 0.4, anticipate: 0, over: 0 },
-    hand: { before: 3, size: 4, anticipate: 0.8, over: 0.15 },
-    head: { before: 2, size: 3, anticipate: 0.8, over: 0.15 },
+    hand: { before: 4, size: 4, anticipate: 0.8, over: 0.15 },
+    head: { before: 3, size: 3, anticipate: 0.8, over: 0.15 },
   },
 };
 
@@ -162,7 +162,7 @@ export const beatAt = (n: RigNumbers, clock: RigClock, b: Beat, t: number): numb
   const { rise, fall } = n.accent;
   const anticipation = Math.sin(Math.PI * Math.min(1, Math.max(0, (s + rise + 3) / 4.5)));
   const up = ease((s + rise) / rise);
-  const overshoot = Math.sin(Math.PI * Math.min(1, Math.max(0, s / 5)));
+  const overshoot = Math.sin(Math.PI * Math.min(1, Math.max(0, s / 4)));
   const down = ease((s - 3) / fall);
   return b.size * (up * (1 + b.over * overshoot) - down) - b.anticipate * anticipation * (1 - up);
 };

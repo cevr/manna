@@ -112,6 +112,15 @@ describe('the rig channels', () => {
     const [body = 0, hand = 0, head = 0] = [accent('body'), accent('armLeft'), accent('head')].map(
       peakOf,
     );
+    for (const [part, peak] of [
+      ['armLeft', hand],
+      ['head', head],
+    ] as const) {
+      const xs = accent(part);
+      expect((xs[peak] ?? 0) - Math.max(xs[peak - 1] ?? 0, xs[peak + 1] ?? 0)).toBeGreaterThan(
+        0.01,
+      );
+    }
     expect(head).toBeGreaterThanOrEqual(STRESS - 2);
     expect(head).toBeLessThanOrEqual(STRESS);
     expect(hand).toBeGreaterThanOrEqual(STRESS - 2);
