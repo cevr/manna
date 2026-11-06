@@ -823,6 +823,16 @@ marks. The alert stays in the scroll.
     after every step the line is `src/test/session-model.ts`'s counts of
     the plan it made at Today's first show and at each Minutes tap, over
     the disk's recalls, and an unread launch shows no line in any frame.
+  - `test:session-held`: `src/session/held.property.test.ts`, the held
+    verse at the session seam: generated devices holding the promise and
+    one to three passages (one held twice, one over the promise's verse),
+    each round a hold on a new verse, a passage verse's review or the
+    promise's, its recital listening, finishing or finished, then a remove
+    of its passage, of another, of one held twice, or an add, through
+    `addPassage` and `removePassage`, then `Next`; after every step the
+    plan, the pieces and the hold against the models, and `shownOf` the
+    held item with its own piece until `Next`, never a verse that left the
+    pieces after it.
   - `test:run`: Today's run through `src/test/run-rig.tsx` (pieces given
     to `appLayer`, a recognizer that hears the text a test names, at once
     or held back while the recital finishes, Dictation's cancel, refused

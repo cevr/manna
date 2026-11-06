@@ -19,10 +19,14 @@
  * Today's Say it holds the item shown, `next` drops it, and a making of the
  * plan drops it unless a recital is under way (Dictation listening or
  * finishing, read in the making's own step), so the item recited stays
- * shown until its `Next`. Nothing of it is stored.
+ * shown until its `Next`. The hold keeps the item's piece beside it, so a
+ * making that takes the verse out of the pieces (a remove of its passage
+ * while the recital is under way) leaves Today the verse it shows. Nothing
+ * of it is stored.
  */
 
 import {
+  Array as Arr,
   Clock,
   Context,
   Deferred,
@@ -68,6 +72,8 @@ export interface SessionView {
   readonly plan: Option.Option<Plan>;
   readonly pieces: readonly TextPiece[];
   readonly held: Option.Option<Item>;
+  /** The held item's piece as the hold took it, kept and dropped with `held`, so Today shows the verse recited even after a making took it out of `pieces` (a remove of its passage while the recital is under way). */
+  readonly heldPiece: Option.Option<TextPiece>;
 }
 
 /** The session Today runs. */
@@ -143,6 +149,7 @@ export const layer = (
         plan: Option.none(),
         pieces: piecesOf(own, yield* passages.view),
         held: Option.none(),
+        heldPiece: Option.none(),
       });
       const views = yield* PubSub.sliding<SessionView>({ capacity: WINDOW, replay: 1 });
       /** The service's own clock, whoever runs the command. */
@@ -205,6 +212,7 @@ export const layer = (
             }),
           ),
           held: Option.filter(now.held, () => keeps),
+          heldPiece: Option.filter(now.heldPiece, () => keeps),
         };
       };
 
@@ -252,11 +260,19 @@ export const layer = (
           ).pipe(Effect.withSpan('Session.choose')),
         hold: (item: Item) =>
           Effect.suspend(() => {
-            MutableRef.update(held, (now) => ({ ...now, held: Option.some(item) }));
+            MutableRef.update(held, (now) => ({
+              ...now,
+              held: Option.some(item),
+              heldPiece: Arr.findFirst(now.pieces, (piece) => piece.reference === item.reference),
+            }));
             return publish;
           }),
         next: Effect.suspend(() => {
-          MutableRef.update(held, (now) => ({ ...now, held: Option.none() }));
+          MutableRef.update(held, (now) => ({
+            ...now,
+            held: Option.none(),
+            heldPiece: Option.none(),
+          }));
           return publish;
         }),
         wake: Effect.flatMap(seenNow, ({ seen, recital, chosen }) =>

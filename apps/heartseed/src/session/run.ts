@@ -1,8 +1,9 @@
 /**
  * What Today shows of the session's run, a pure function of the session's
  * view and the garden read. With a plan made, Today shows one item: the
- * held one if any, else the plan's first item not done; none is the done
- * state. With no plan (an unread garden, or a read one before its first
+ * held one if any, with the piece the hold took (so a held verse stays
+ * shown, its text with it, after a making took it out of the pieces), else
+ * the plan's first item not done; none is the done state. With no plan (an unread garden, or a read one before its first
  * plan is made), it shows the first piece, as a garden with no run does.
  */
 
@@ -26,7 +27,7 @@ export type Shown =
     }
   | { readonly _tag: 'Done' };
 
-/** The item Today shows over `view` and `garden`, and its piece. */
+/** The item Today shows over `view` and `garden`, and its piece: while an item is held, that item with its held piece, never `Done`. */
 export const shownOf = (view: SessionView, garden: Option.Option<ReadGarden>): Shown => {
   const run = Option.all({ plan: view.plan, garden });
   if (Option.isNone(run)) return { _tag: 'Unplanned', piece: Arr.head(view.pieces) };
@@ -36,7 +37,10 @@ export const shownOf = (view: SessionView, garden: Option.Option<ReadGarden>): S
   );
   const shown = Option.flatMap(item, (each) =>
     Option.map(
-      Arr.findFirst(view.pieces, (piece) => piece.reference === each.reference),
+      Option.orElse(
+        Option.filter(view.heldPiece, (piece) => piece.reference === each.reference),
+        () => Arr.findFirst(view.pieces, (piece) => piece.reference === each.reference),
+      ),
       (piece) => ({ item: each, piece }),
     ),
   );
