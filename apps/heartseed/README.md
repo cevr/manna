@@ -801,6 +801,11 @@ marks. The alert stays in the scroll.
     (`test/kjv-lazy-rig.ts`); and `src/passages/guard.test.ts`, `src/kjv.ts`
     the one product file that names the corpus module, and none that names
     the source file.
+  - `test:passages`: `src/passages/ranges.property.test.ts`, the range rule
+    and the references over every chapter of all 66 books; and
+    `src/passages/service.test.ts`, 300 generated devices of stored values,
+    read faults, adds and removes (`test/passages-rig.tsx`), judged against
+    `test/passages-model.ts` at every step.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

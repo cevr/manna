@@ -37,6 +37,7 @@ import { layer as sayItLayer, SayIt, TODAY, type Grade, type Haptics, type Recit
 import { liveHaptics } from './sayit/live';
 import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
 import type { Passage } from './passage';
+import { layer as passagesLayer } from './passages';
 import type { Item, Minutes, TextPiece } from './session';
 import { layer as sessionLayer, Session } from './session/service';
 import { store } from './store';
@@ -77,7 +78,7 @@ const PIECES: readonly TextPiece[] = [
   },
 ];
 
-/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the session over the garden and `pieces` (the app's own, the passage alone, when none are given), its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), and the voice over `voice`, its switch in the same `store`. */
+/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the reader's passages in the same `store`, the session over the garden and `pieces` (the app's own, the passage alone, when none are given), its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), and the voice over `voice`, its switch in the same `store`. */
 export const appLayer = (parts: {
   readonly source: Layer.Layer<DictationSource>;
   readonly haptics: Layer.Layer<Haptics>;
@@ -94,6 +95,7 @@ export const appLayer = (parts: {
     Layer.provideMerge(sessionLayer(parts.pieces ?? PIECES).pipe(Layer.provide(parts.store))),
     Layer.provideMerge(dictationLayer.pipe(Layer.provide(parts.source))),
     Layer.provideMerge(gardenLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.chime)))),
+    Layer.provideMerge(passagesLayer.pipe(Layer.provide(parts.store))),
     Layer.provideMerge(voiceLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.voice)))),
     Layer.provide(parts.haptics),
   );
