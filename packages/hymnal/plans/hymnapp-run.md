@@ -10,12 +10,13 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | topicsdb  | initfresh  |                    |                                                                              | parked (owner: topics follow the films)                       |
 | keyfollow | worship    |                    | owner note: the playing recording follows a key change made in the hymn view | blocked: not reproduced, waits on the owner (Owner questions) |
 | selah     | reader     | .rifts/manna/selah |                                                                              |                                                               |
-| hsrun     | hsgrow     |                    |                                                                              |                                                               |
+| hswake    | hsrun      |                    |                                                                              |                                                               |
 
 Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `inexact` (the 7 MIDI files whose verses do not split: 126 225 262 292 403 453 580), `decks` (syllable splits into feat/hymn-decks, last by the owner's word), `selah` (planned: after reader, see Decisions; macOS stays SwiftUI until react-native-gpui ships a real package).
 
 ## Decisions
 
+- Orchestrator, 2026-11-05, hsrun split (`tmp/orchestrate/hymnapp/hsrun/split-decision.md`): option A; hsrun runs the session (R1-R7, R10-R12: one piece at a time, Next, the done state, the hold, the fixed footer), hswake takes R8 (a new plan on a return to the foreground) and R9 (a new verse's Listen, offered, not required). Round 3 counted only product failures; the test-strength gaps went to Follow-ups.
 - Orchestrator, 2026-11-05, hsdaily split (`tmp/orchestrate/hymnapp/hsdaily/split-decision.md`): option A twice; hsdaily is the plan, counts and the Minutes/Voice controls, hsrun runs the session; rulings S1-S16 accepted; until hsrun, Today may read `Nothing to tend now` beside a Say it still offered.
 - Orchestrator, 2026-11-05, hslocal decide: a stored recall key's day never changes once stored (a reused key after a clock rollback keeps its stamp); a failed stamp read writes as a first write, the one stated exception to never-falls, since dropping a finished recital is worse (hsgrow's unread-write rule).
 - Owner, 2026-11-05, in chat ("a, a ui element somewhere?, local day"): cues fade across days by stage (a seed is said under first letters, a blade and beyond under nothing, Again brings the letters back); the voice's off switch is a UI element (hsdaily puts it beside the minutes choice in Today's fixed header); days sown counts local days (a new unit, hslocal, after hsfade, keeps "never resets" true under travel). hsdaily is split into hsfade, hslocal, hsdaily and hsphrase (after hspassage).
@@ -77,6 +78,8 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 - Heartseed dictation model download (hsdictate Decided 3): the first two engines in the chain (SpeechAnalyzer with SpeechTranscriber, then DictationTranscriber) need Apple's on-device speech model, often not yet installed; may Heartseed ask iOS to download it in the background (`AssetInventory`), the recital falling through to the on-device SFSpeechRecognizer meanwhile, against the first release's "no network calls"? Recognition and the reader's voice never leave the phone. Recommended: yes. (hsdictate, asked 2026-11-04) **Answer (owner, 2026-11-04):** "Yes, ask iOS".
 
 ## Follow-ups
+
+- hsrun (`tmp/orchestrate/hymnapp/hsrun/`, merged c886947e0): `test:run-cells` meets all 21 cells on 7 of 20 seeds (3 devices), so its guard rests on the committed seed 5 (a floor names any missed cell); a draw-before-read mutant hangs `test:today-reads` rather than failing a named case; the root `CLAUDE.md` Heartseed parts line names example parts only, so new parts are listed in the app's README alone.
 
 - hsdaily (`tmp/orchestrate/hymnapp/hsdaily/`, merged 6f79f6e6f): an oxlint rule against React lifecycle effects in feature code outside named host adapters; a lessons-ledger entry for the guard that keeps Today's controls outside the scroll view; property-heavy units want one implementor per commit; the verifiers' check, replay and mutation runners and my drive scripts should become shared tooling.
 
