@@ -347,7 +347,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session}/**/*.test.*",
-        "!src/run/{run,hold,edges}.test.*",
+        "!src/run/{run,hold,edges,end}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -360,7 +360,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session}/**/*.test.*",
-        "!src/run/{footer,hold,edges}.test.*",
+        "!src/run/{footer,hold,edges,end}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -373,7 +373,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session}/**/*.test.*",
-        "!src/run/{footer,run,edges}.test.*",
+        "!src/run/{footer,run,edges,end}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -386,7 +386,20 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session}/**/*.test.*",
-        "!src/run/{footer,run,hold}.test.*",
+        "!src/run/{footer,run,hold,end}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:run-end": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session}/**/*.test.*",
+        "!src/run/{footer,run,hold,edges}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -441,6 +454,7 @@
         "test:run-walk",
         "test:run-hold",
         "test:run-edges",
+        "test:run-end",
         "test:rest",
         "test:infra"
       ]

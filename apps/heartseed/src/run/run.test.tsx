@@ -8,7 +8,7 @@
 
 import { walkCase } from '../test/run-walk';
 
-walkCase('run', 14, 4, [
+walkCase('run', 13, 4, [
   'next',
   'next:another-group',
   'done:after-next',
@@ -22,6 +22,7 @@ walkCase('run', 14, 4, [
   'pieces:many',
   'pieces:groups',
   'pieces:no-passage-first',
+  'kept:cue:full',
   'kept:cue:initials',
   'kept:cue:none',
   'cue:fresh:full',
@@ -29,4 +30,5 @@ walkCase('run', 14, 4, [
   'cue:review:none',
   'next:review:initials',
   'next:review:none',
+  'say:cancelled',
 ]);

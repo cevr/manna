@@ -38,7 +38,7 @@ import passage from 'virtual:heartseed-passage';
 import { sourceWords } from '../matcher/words';
 import type { Recall } from '../sayit';
 import type { TextPiece } from '../session';
-import { below, keyOf, pickOf, PREFIX, random } from './garden-model';
+import { below, keyOf, pickOf, PREFIX, random, referenceCue } from './garden-model';
 import {
   actionModel,
   madeModel,
@@ -62,8 +62,8 @@ import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
 import { hostZone, offsetIn, restore, travel, ZONES } from './zone';
 import { MINUTES_KEY } from '../session/service';
 
-/** Which commands a walk leans toward: the run through whole plans, the hold's moments, or the edges (the first minute, unread launches, the done state). */
-export type Steer = 'run' | 'hold' | 'edges';
+/** Which commands a walk leans toward: the run through whole plans, the hold's moments, the edges (the first minute, unread launches, the done state), or the recital's endings (cancelled, finishing, and a Minutes tap after one that kept nothing). */
+export type Steer = 'run' | 'hold' | 'edges' | 'end';
 
 const T0 = Date.UTC(2026, 4, 4, 13);
 
@@ -98,7 +98,7 @@ const pieceOf = (next: () => number, reference: string, group: string, words: nu
   return { reference, text, words: sourceWords(text).length, group };
 };
 
-/** A word count: one word 6%, 60-90 words 12% (30% leaning to the hold, so a 2-minute plan leaves an item out), else 2-29. */
+/** A word count: one word 6%, 60-90 words 12% (30% leaning to the hold), else 2-29. */
 const wordsOf = (next: () => number, steer: Steer) => {
   const roll = next();
   if (roll < 0.06) return 1;
@@ -106,8 +106,22 @@ const wordsOf = (next: () => number, steer: Steer) => {
   return 2 + below(next, 28);
 };
 
-/** 1-8 pieces in 1-3 groups with unique references, some a trailing space or a digit apart, the passage first in some devices. */
+/**
+ * A crowded device, leaning to the hold: four pieces of 80-90 words in one
+ * group and one of 60-80 words in another, so once the first is said, the
+ * other group's piece is shown while long pieces of the first group, more
+ * overdue, and a new piece fill a 2-minute plan that leaves it out.
+ */
+const crowdedOf = (next: () => number): TextPiece[] => [
+  ...Array.from({ length: 4 }, (_, at) =>
+    pieceOf(next, `Alder ${1 + at}:${1 + below(next, 9)}`, 'G0', 80 + below(next, 11)),
+  ),
+  pieceOf(next, `Birch 1:${1 + below(next, 9)}`, 'G1', 60 + below(next, 21)),
+];
+
+/** 1-8 pieces in 1-3 groups with unique references, some a trailing space or a digit apart, the passage first in some devices; now and then a crowded device, leaning to the hold. */
 const piecesOf = (next: () => number, steer: Steer): TextPiece[] => {
+  if (steer === 'hold' && next() < 0.4) return crowdedOf(next);
   const count =
     steer === 'edges'
       ? 1 + below(next, 8)
@@ -168,17 +182,12 @@ const plantsOf = (device: Device) => {
 };
 
 /**
- * The cue a piece with `recalls` is said under next, written plainly: the
- * full text before it is planted, first letters at a seed (its one recall,
- * or its latest graded Again: no such card reaches full corn's 21 days),
- * else nothing.
+ * The cue a piece with `recalls` is said under next, by the garden model's
+ * ladder over ts-fsrs's cards (`referenceCue`): the full text before it is
+ * planted, first letters at a seed, else nothing (full corn at a stability
+ * of 21 days, which a card graded Again can keep, included).
  */
-const cueModel = (recalls: readonly Recall[]) => {
-  if (recalls.length === 0) return 'full';
-  const latest = recalls.toSorted((a, b) => a.startedAt - b.startedAt).at(-1);
-  if (recalls.length === 1 || latest?.grade === 1) return 'initials';
-  return 'none';
-};
+const cueModel = (recalls: readonly Recall[]) => referenceCue(recalls);
 
 /** How the verse shows: the full text, first letters, nothing, or a recital's own words (its result shown). */
 type Drawn = 'full' | 'initials' | 'none' | 'recital';
@@ -215,12 +224,12 @@ const verseModel = (piece: TextPiece, drawn: Drawn) => {
 const wordCode = (node: Element | null, word: string, index: number) => {
   if (node === null) return 'X';
   const label = node.getAttribute('aria-label');
-  const seen = seenText(node);
   if (node.getAttribute('role') === 'button')
     return label === `Missed word ${index + 1}` ? 'M' : 'X';
   if (label === `${word}, peeked`) return 'P';
-  if (node.getAttribute('aria-hidden') === 'true') return label === null && seen === '' ? 'H' : 'X';
-  if (label !== null) return label === letterOf(word) && seen === label ? 'I' : 'X';
+  if (node.getAttribute('aria-hidden') === 'true')
+    return label === null && seenText(node) === '' ? 'H' : 'X';
+  if (label !== null) return label === letterOf(word) && seenText(node) === label ? 'I' : 'X';
   return text(node) === word ? 'F' : 'X';
 };
 
@@ -234,6 +243,77 @@ const verseSeen = (host: Element, piece: TextPiece) => {
   if (codes.length > 0 && codes.every((code) => code === 'F' || code === 'M' || code === 'P'))
     return 'R';
   return codes.join('');
+};
+
+/** How a recital ends: heard and kept, unheard, heard with its write refused, or cancelled while it listens. */
+type How = 'heard' | 'unheard' | 'refused' | 'cancelled';
+
+/** A Minutes tap during a recital: while it listens, or while it finishes (its end held back). */
+interface During {
+  readonly at: 'listening' | 'finishing';
+  readonly minutes: number;
+}
+
+/**
+ * How often each command is chosen at Say it, by steer: a recital heard
+ * (now and then refused), unheard, refused, cancelled (now and then after a
+ * Minutes tap while it listens), any of them with a Minutes tap while it
+ * listens or finishes, a Minutes tap, the field, else a wait; and how
+ * often a Minutes tap comes first, right after a recital that kept nothing.
+ */
+const AT_SAY_IT: Record<
+  Steer,
+  {
+    readonly heard: number;
+    readonly unheard: number;
+    readonly refused: number;
+    readonly cancelled: number;
+    readonly during: number;
+    readonly minutes: number;
+    readonly field: number;
+    readonly after: number;
+  }
+> = {
+  run: {
+    heard: 0.6,
+    unheard: 0.1,
+    refused: 0.05,
+    cancelled: 0.04,
+    during: 0.1,
+    minutes: 0.05,
+    field: 0.05,
+    after: 0.25,
+  },
+  hold: {
+    heard: 0.25,
+    unheard: 0.1,
+    refused: 0.05,
+    cancelled: 0.02,
+    during: 0.2,
+    minutes: 0.1,
+    field: 0.1,
+    after: 0.35,
+  },
+  edges: {
+    heard: 0.4,
+    unheard: 0.1,
+    refused: 0.05,
+    cancelled: 0.05,
+    during: 0.08,
+    minutes: 0.05,
+    field: 0.05,
+    after: 0.35,
+  },
+  end: {
+    heard: 0.2,
+    unheard: 0.15,
+    refused: 0.12,
+    cancelled: 0.18,
+    during: 0.25,
+    minutes: 0.03,
+    field: 0.03,
+    after: 0.6,
+  },
 };
 
 /** A walk's tally of the cases it reached. */
@@ -264,6 +344,8 @@ class Walk {
   zone: string = 'UTC';
   /** The last recital's end shown while its item is held: its grades, its alert, or none. */
   result: 'grades' | 'alert' | null = null;
+  /** How the held item's last recital ended when it kept no recall (unheard, refused or cancelled), until a making or Next lets the hold go. */
+  ending: Exclude<How, 'heard'> | null = null;
   app: Launch | null = null;
   readonly expected = new Map<string, string | null>();
 
@@ -372,7 +454,14 @@ class Walk {
   /** Waits for the screen the model expects, then holds it to the model and the disk. */
   async settle(step: string) {
     this.log.push(step);
-    await this.screen.until(() => JSON.stringify(this.seen()) === JSON.stringify(this.expect()));
+    await this.screen.until(() => {
+      const want = this.expect();
+      const app = this.screen;
+      const cheap =
+        JSON.stringify([app.references(), app.actions(), app.counts()]) ===
+        JSON.stringify([want.references, want.actions, want.counts]);
+      return cheap && JSON.stringify(this.seen()) === JSON.stringify(want);
+    });
     const seen = this.seen();
     const expected = this.expect();
     if (JSON.stringify(seen) !== JSON.stringify(expected))
@@ -403,6 +492,7 @@ class Walk {
     this.app = await launch(this.device, this.faults, this.time, this.pieces);
     this.run = NO_RUN;
     this.result = null;
+    this.ending = null;
     const firstMinute =
       this.device.disk.size === 0 ||
       ![...this.device.disk.keys()].some((key) => key.startsWith(PREFIX));
@@ -451,14 +541,14 @@ class Walk {
     await app.until(() => !app.has('Listening'));
   }
 
-  /** A recital of the shown item: heard (a word skipped or not), unheard, or heard with its write refused; with a Minutes tap while it listens when `minutes` is given. */
-  async say(how: 'heard' | 'unheard' | 'refused', minutes?: number) {
+  /** A recital of the shown item: heard (a word skipped or not), unheard, heard with its write refused, or cancelled while it listens; with a Minutes tap while it listens or while it finishes when `during` is given. */
+  async say(how: How, during?: During) {
     const app = this.screen;
     const shown = this.unread ? (this.pieces[0] ?? null) : shownModel(this.run, this.recallsNow);
     if (shown === null) return;
     const piece = this.pieceOf(shown.reference);
     const skip =
-      how !== 'unheard' && this.next() < 0.4 && piece.words > 1
+      (how === 'heard' || how === 'refused') && this.next() < 0.4 && piece.words > 1
         ? [below(this.next, piece.words)]
         : [];
     MutableRef.set(
@@ -469,18 +559,40 @@ class Walk {
     const startedAt = this.time.now;
     const cue = this.cueNow(piece);
     if (!this.unread) this.run = startedModel(this.run, this.recallsNow);
-    await app.tap('Say it');
-    if (!(await app.until(() => app.has('Listening')))) throw new Error('never listened');
-    if (minutes !== undefined) await this.heldMinutes(minutes);
-    await app.tap('Listening');
+    await this.recital(how, during);
     const key = how === 'heard' ? this.expectRecall(piece, startedAt) : null;
-    this.result = how === 'unheard' ? 'alert' : 'grades';
+    this.result = how === 'unheard' ? 'alert' : how === 'cancelled' ? null : 'grades';
+    this.ending = how === 'heard' ? null : how;
     bump(this.coverage, `say:${this.unread ? 'unread' : how}`);
     if (skip.length > 0) bump(this.coverage, 'say:skipped');
     this.tallyShown(piece, 'fresh' in shown && !this.unread ? shown.fresh : null);
-    await this.settle(`say ${how}${minutes === undefined ? '' : ` with ${minutes} min`}`);
+    await this.settle(
+      `say ${how}${during === undefined ? '' : ` with ${during.minutes} min while ${during.at}`}`,
+    );
     this.faults.refuse = false;
     if (key !== null) this.checkRecall(key, piece, skip.length === 0 ? cue : null);
+  }
+
+  /** The taps of one recital: Say it, then a cancel while it listens, or Listening, which finishes it; a Minutes tap while it listens or, its end held back, while it finishes, when `during` says. */
+  async recital(how: How, during: During | undefined) {
+    const app = this.screen;
+    await app.tap('Say it');
+    if (!(await app.until(() => app.has('Listening')))) throw new Error('never listened');
+    if (during?.at === 'listening') await this.heldMinutes(during);
+    if (how === 'cancelled') {
+      await app.cancel();
+      return;
+    }
+    if (during?.at !== 'finishing') {
+      await app.tap('Listening');
+      return;
+    }
+    app.deferEnd();
+    await app.tap('Listening');
+    if (!(await app.until(() => app.status() === 'finishing'))) throw new Error('never finishing');
+    await this.heldMinutes(during);
+    if (app.status() !== 'finishing') throw new Error('finished before its end was sent');
+    await app.release();
   }
 
   /** The cue the model says `piece` is recited under now: its garden's in a read launch, none claimed in an unread one. */
@@ -506,12 +618,13 @@ class Walk {
     bump(this.coverage, `kept:cue:${cue ?? 'any'}`);
   }
 
-  /** A Minutes tap while the held item's recital listens: the plan made again, the hold kept. */
-  async heldMinutes(minutes: number) {
+  /** A Minutes tap while the held item's recital listens or finishes: the plan made again, the hold kept. */
+  async heldMinutes(during: During) {
     const before = this.run.hold;
-    await this.tapMinutes(minutes, true);
+    await this.tapMinutes(during.minutes, true);
     const plan = this.run.plan ?? [];
     bump(this.coverage, 'held:minutes');
+    bump(this.coverage, `held:minutes:${during.at}`);
     if (before === null) return;
     const at = plan.findIndex((item) => item.reference === before.reference);
     bump(
@@ -549,8 +662,10 @@ class Walk {
     if (!underWay && before !== null) {
       bump(this.coverage, 'made:drops-hold');
       if (this.result === 'alert') bump(this.coverage, 'made:drops-hold:unheard');
+      if (this.ending !== null) bump(this.coverage, `minutes:after:${this.ending}`);
       this.result = null;
     }
+    if (!underWay) this.ending = null;
     const shown = shownModel(this.run, this.recallsNow);
     if (shown === null) bump(this.coverage, 'done:after-minutes');
     else if (wasDone) bump(this.coverage, 'minutes:appears');
@@ -567,6 +682,7 @@ class Walk {
     await this.screen.tap('Next');
     this.run = nextModel(this.run);
     this.result = null;
+    this.ending = null;
     bump(this.coverage, 'next');
     const now = shownModel(this.run, this.recallsNow);
     if (now === null) bump(this.coverage, 'done:after-next');
@@ -622,33 +738,63 @@ class Walk {
     return this.atDone(roll);
   }
 
-  /** Leaning to the hold: a 2-minute tap while listening when that plan leaves the shown item out, and a tap after an unheard recital; none otherwise. */
+  /** Leaning to the hold: a recital with a Minutes tap while it listens or finishes, at the fewest minutes whose plan leaves the shown item out, when one does; none otherwise. */
   guided(roll: number) {
     const shown = shownModel(this.run, this.recallsNow);
+    if (shown === null) return null;
     const minutes = this.minutes;
-    this.minutes = 2;
-    const short = this.planNow();
-    this.minutes = minutes;
-    if (shown !== null && !short.some((item) => item.reference === shown.reference)) {
-      bump(this.coverage, 'guide:left-out');
-      if (roll < 0.6) return this.say('heard', 2);
-    }
-    if (this.run.hold !== null && this.result === 'alert' && roll < 0.5) return this.minutesTap();
-    return null;
+    const leaves = MINUTES.find((each) => {
+      this.minutes = each;
+      const plan = this.planNow();
+      this.minutes = minutes;
+      return each !== minutes && !plan.some((item) => item.reference === shown.reference);
+    });
+    if (leaves === undefined) return null;
+    bump(this.coverage, 'guide:left-out');
+    if (roll >= 0.8) return null;
+    return this.say('heard', {
+      at: this.next() < 0.5 ? 'listening' : 'finishing',
+      minutes: leaves,
+    });
   }
 
+  /** A Minutes tap during a recital, at `at`: 2 minutes often (most often leaning to the hold), else any. */
+  during(at: During['at'], steer: Steer): During {
+    const two = this.next() < (steer === 'hold' ? 0.7 : 0.5);
+    return { at, minutes: two ? 2 : pickOf(this.next, MINUTES) };
+  }
+
+  /** A recital cancelled while it listens, after a Minutes tap there now and then. */
+  sayCancelled(steer: Steer) {
+    return this.say('cancelled', this.next() < 0.4 ? this.during('listening', steer) : undefined);
+  }
+
+  /** A recital heard, unheard or refused, with a Minutes tap while it listens or while it finishes. */
+  sayDuring(steer: Steer) {
+    const how = this.next() < 0.6 ? 'heard' : this.next() < 0.5 ? 'unheard' : 'refused';
+    return this.say(how, this.during(this.next() < 0.5 ? 'listening' : 'finishing', steer));
+  }
+
+  /** At Say it: a Minutes tap now and then right after a recital that kept nothing, else a recital of any ending (with a Minutes tap while it listens or finishes, now and then), a Minutes tap, the field or a wait. */
   async atSayIt(steer: Steer, roll: number) {
     const guided = steer === 'hold' ? this.guided(roll) : null;
     if (guided !== null) return guided;
-    const hold = steer === 'hold';
-    const heard = steer === 'run' ? 0.6 : hold ? 0.25 : 0.4;
-    if (roll < heard) return this.say(this.next() < 0.85 ? 'heard' : 'refused');
-    if (roll < heard + 0.1) return this.say('unheard');
-    if (roll < heard + 0.15) return this.say('refused');
-    if (roll < heard + (hold ? 0.45 : 0.25))
-      return this.say('heard', this.next() < (hold ? 0.7 : 0.5) ? 2 : pickOf(this.next, MINUTES));
-    if (roll < heard + (hold ? 0.55 : 0.3)) return this.minutesTap();
-    if (roll < heard + (hold ? 0.65 : 0.35)) return this.field();
+    const weights = AT_SAY_IT[steer];
+    if (this.ending !== null && this.next() < weights.after) return this.minutesTap();
+    let edge = weights.heard;
+    if (roll < edge) return this.say(this.next() < 0.85 ? 'heard' : 'refused');
+    edge += weights.unheard;
+    if (roll < edge) return this.say('unheard');
+    edge += weights.refused;
+    if (roll < edge) return this.say('refused');
+    edge += weights.cancelled;
+    if (roll < edge) return this.sayCancelled(steer);
+    edge += weights.during;
+    if (roll < edge) return this.sayDuring(steer);
+    edge += weights.minutes;
+    if (roll < edge) return this.minutesTap();
+    edge += weights.field;
+    if (roll < edge) return this.field();
     return this.wait();
   }
 
@@ -721,7 +867,7 @@ const recordsOf = (
   if (empty) return [];
   const entries: (readonly [string, string])[] = [];
   for (const piece of pieces)
-    if (next() < (steer === 'hold' ? 0.9 : 0.7)) entries.push(...plantRecords(next, steer, piece));
+    if (next() < (steer === 'hold' ? 0.8 : 0.7)) entries.push(...plantRecords(next, steer, piece));
   if (next() < 0.3) {
     entries.push(recordOf(next, 'Stray 9:9', 4, T0 - 3 * DAY));
     bump(coverage, 'disk:unnamed-plant');
@@ -764,6 +910,14 @@ export const walkRun = async (steer: Steer, seed: number, devices: number) => {
   return coverage;
 };
 
+/** What each steer leans toward, as a walk case names it. */
+const LEANS: Record<Steer, string> = {
+  run: 'whole plans',
+  hold: 'the hold',
+  edges: 'the edges',
+  end: 'the recital’s endings',
+};
+
 /** The floors of `floors` that `coverage` misses; `zones` asks for at least that many zones. */
 const missing = (coverage: Coverage, floors: readonly string[], zones: number) => [
   ...floors.filter((key) => (coverage[key] ?? 0) === 0),
@@ -787,7 +941,7 @@ export const walkCase = (
 ) => {
   const at = Number(process.env['HSRUN_WALK_SEED'] ?? seed);
   const many = Number(process.env['HSRUN_WALK_DEVICES'] ?? devices);
-  describe(`Today’s run on generated devices, leaning toward ${steer === 'run' ? 'whole plans' : steer === 'hold' ? 'the hold' : 'the edges'}`, () => {
+  describe(`Today’s run on generated devices, leaning toward ${LEANS[steer]}`, () => {
     it(`shows, says and moves on as the model does on ${many} devices (seed ${at})`, async () => {
       const coverage = await walkRun(steer, at, many);
       console.log(

@@ -7,7 +7,9 @@
  * a store in memory (a disk that outlives launches) whose listings can fail
  * every attempt (an unread garden) and whose recall writes can be refused,
  * a recognizer that hears the text the test names once the recital is
- * finished (or fails it, unheard), a voice source with no voice, a silent
+ * finished (or fails it, unheard), at once or held back while the recital
+ * finishes until the test releases it, Dictation's own cancel and status
+ * for the test to call and read, a voice source with no voice, a silent
  * chime and haptics, and Effect's `Clock` provided under the app's layer,
  * its instant frozen where the test sets it.
  *
@@ -19,7 +21,7 @@
  */
 
 import { RegistryProvider } from '@effect/atom-react';
-import { Effect, Layer, Logger, MutableRef, Option } from 'effect';
+import { Context, Effect, Layer, Logger, MutableRef, Option } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -27,7 +29,7 @@ import passage from 'virtual:heartseed-passage';
 
 import Root from '../../app/index';
 import { appLayer, runtime } from '../app';
-import { DictationSource, type DictationEvent } from '../dictation';
+import { Dictation, DictationSource, type DictationEvent } from '../dictation';
 import { CHAIN } from '../dictation/attempt';
 import { recite } from '../dictation/script';
 import { Chime } from '../garden';
@@ -102,8 +104,18 @@ export type Hearing =
   | { readonly kind: 'heard'; readonly text: string; readonly skip: readonly number[] }
   | { readonly kind: 'unheard' };
 
-/** A recognizer that opens each listen and sends nothing more until `finish`, which sends the recital `hearing` names, or its failure. */
-const recognizerOf = (hearing: MutableRef.MutableRef<Hearing>, listens: { n: number }) => {
+/** Whether the next finish holds its end back (the recital finishing until `release`), and the end held back. */
+interface Ending {
+  defer: boolean;
+  pending: Option.Option<() => void>;
+}
+
+/** A recognizer that opens each listen and sends nothing more until `finish`, which sends the recital `hearing` names, or its failure, at once or, when `ending` defers it, at its release. */
+const recognizerOf = (
+  hearing: MutableRef.MutableRef<Hearing>,
+  listens: { n: number },
+  ending: Ending,
+) => {
   const listener = MutableRef.make<Option.Option<(event: DictationEvent) => void>>(Option.none());
   const open = MutableRef.make<Option.Option<number>>(Option.none());
   const emit = (event: DictationEvent) => {
@@ -131,13 +143,21 @@ const recognizerOf = (hearing: MutableRef.MutableRef<Hearing>, listens: { n: num
         MutableRef.set(open, Option.none());
         if (Option.isNone(session)) return;
         const heard = MutableRef.get(hearing);
-        if (heard.kind === 'unheard') {
-          emit({ ...event(session.value, 'fail'), reason: 'test: unheard' });
+        const send = () => {
+          if (heard.kind === 'unheard') {
+            emit({ ...event(session.value, 'fail'), reason: 'test: unheard' });
+            return;
+          }
+          for (const step of recite(heard.text, { skip: heard.skip, every: 5, pace: 1 }))
+            emit({ ...event(session.value, 'result'), final: step.final, runs: step.runs });
+          emit(event(session.value, 'end'));
+        };
+        if (!ending.defer) {
+          send();
           return;
         }
-        for (const step of recite(heard.text, { skip: heard.skip, every: 5, pace: 1 }))
-          emit({ ...event(session.value, 'result'), final: step.final, runs: step.runs });
-        emit(event(session.value, 'end'));
+        ending.defer = false;
+        ending.pending = Option.some(send);
       }),
       cancel: Effect.sync(() => MutableRef.set(open, Option.none())),
       subscribe: (next) =>
@@ -246,14 +266,22 @@ export const launch = async (
   for (const left of [...mounted]) await left();
   const hearing = MutableRef.make<Hearing>({ kind: 'unheard' });
   const listens = { n: 0 };
+  const ending: Ending = { defer: false, pending: Option.none() };
+  const dictation = MutableRef.make<Option.Option<Dictation['Service']>>(Option.none());
   const layer = appLayer({
-    source: recognizerOf(hearing, listens),
+    source: recognizerOf(hearing, listens, ending),
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
     store: storeOf(device, faults),
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice: silentVoice,
     pieces,
-  }).pipe(Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))));
+  }).pipe(
+    Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))),
+    Layer.tap((services) =>
+      Effect.sync(() => MutableRef.set(dictation, Option.some(Context.get(services, Dictation)))),
+    ),
+  );
+  const recital = () => Option.getOrThrow(MutableRef.get(dictation));
   const host = document.createElement('div');
   document.body.append(host);
   const found: string[] = [];
@@ -315,6 +343,24 @@ export const launch = async (
     frames,
     hearing,
     listens,
+    /** Holds back the end of the next finish, so the recital stays finishing until `release`. */
+    deferEnd: () => {
+      ending.defer = true;
+    },
+    /** Sends the end held back, if any. */
+    release: async () => {
+      const send = ending.pending;
+      ending.pending = Option.none();
+      await act(async () => {
+        Option.map(send, (each) => each());
+      });
+    },
+    /** Cancels the recital under way through Dictation's own cancel. */
+    cancel: async () => {
+      await act(async () => Effect.runPromise(recital().cancel));
+    },
+    /** The recital's status now: idle, listening or finishing. */
+    status: () => Effect.runSync(recital().view).status,
     headings,
     actions,
     until,

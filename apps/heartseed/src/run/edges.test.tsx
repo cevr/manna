@@ -10,7 +10,7 @@ import { walkCase } from '../test/run-walk';
 
 walkCase(
   'edges',
-  1,
+  2,
   4,
   [
     'first-minute',

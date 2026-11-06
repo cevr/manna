@@ -690,22 +690,26 @@ marks. The alert stays in the scroll.
     the plan it made at Today's first show and at each Minutes tap, over
     the disk's recalls, and an unread launch shows no line in any frame.
   - `test:run`: Today's run through `src/test/run-rig.tsx` (pieces given
-    to `appLayer`, a recognizer that hears the text a test names, refused
+    to `appLayer`, a recognizer that hears the text a test names, at once
+    or held back while the recital finishes, Dictation's cancel, refused
     recall writes and unread listings; every Today frame held to the
     footer rule: no control in the scroll view but a missed word's mark,
     at most one action button): `src/run/footer.test.tsx`, the action
     button and the grades under the scroll view through a recital, a grade
     and the field and back.
-  - `test:run-walk`, `test:run-hold`, `test:run-edges`: `src/run/run.test.tsx`,
-    `hold.test.tsx` and `edges.test.tsx`, Today's run against
-    `src/test/run-model.ts` (over `src/test/session-model.ts`'s plan) on
-    generated devices through `src/run/walk.ts`, leaning toward whole plans
-    (many pieces and groups, Next, every recital's ending, Again), the
-    hold's moments (a Minutes tap while a recital listens whose plan holds
-    the item first or leaves it out, a tap with a result or after an
-    unheard recital, the field, a relaunch) and the edges (the first
-    minute, the done state, unread launches, zones); each case's floors met
-    by its own devices.
+  - `test:run-walk`, `test:run-hold`, `test:run-edges`, `test:run-end`:
+    `src/run/run.test.tsx`, `hold.test.tsx`, `edges.test.tsx` and
+    `end.test.tsx`, Today's run against `src/test/run-model.ts` (over
+    `src/test/session-model.ts`'s plan) on generated devices through
+    `src/test/run-walk.ts`, each shown word held to its piece's cue,
+    leaning toward whole plans (many pieces and groups, Next, every
+    recital's ending, Again), the hold's moments (a Minutes tap while a
+    recital listens or finishes whose plan holds the item first or leaves
+    it out, a tap with a result or after an unheard recital, the field, a
+    relaunch), the edges (the first minute, the done state, unread
+    launches, zones) and the recital's endings (cancelled, finishing, and
+    a Minutes tap after each ending that kept nothing); each case's floors
+    met by its own devices.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
