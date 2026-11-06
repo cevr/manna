@@ -27,8 +27,8 @@ import { inItsOrder } from './index.ts';
 import { drawScaleOf, key, TALL } from './kit.ts';
 import LEAD_PALETTE from '../../../library/cast/lead-feast/cast-sheet/palette.json';
 import { TABLE } from '../plates/plates.ts';
-import { BABY_MOTHER, bottleSetDown, TABLE_TOP_PX } from './shots/cold.ts';
-import { HEAD, TABLE_TOP } from './shots/courtyard.ts';
+import { BABY_MOTHER, letterLands, TABLE_TOP_PX } from './shots/cold.ts';
+import { AT_TABLE, HEAD, TABLE_TOP } from './shots/courtyard.ts';
 import { TABLE_CLOSE_BOX } from './plates/table-close.ts';
 import { CELLS as LEAD_TABLE_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
 import LEAD_TABLE_RECORD from '../../../library/cast/lead-feast/shot-sheets/iio-table/record.json';
@@ -52,11 +52,18 @@ const OTHER_SHEETS: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
 ]);
 
 /** The lead's table cells that draw the bottle in his hand. */
-const HOLDING = new Set(['lift', 'bottle']);
+const HOLDING = new Set(['lift', 'bottle', 'read']);
 
-/** Each of `times` at which his hand (`poseAt`'s cell) and the plate (`plateAt`'s alpha) both show the bottle, or neither does: a hand-off shows it exactly once at every frame. */
-const handOffMisses = (lead: Figure, plate: Plate, times: ReadonlyArray<number>) =>
-  times.filter((t) => HOLDING.has(poseAt(lead, t).cell) === plateAt(plate, t).alpha > 0);
+/** The lead's table cells that draw the letter in his hand. */
+const READING = new Set(['read']);
+
+/** Each of `times`, from the first at which the letter's plate shows, at which his hand (`poseAt`'s cell) and the plate (`plateAt`'s alpha) both show the letter, or neither does: a take-up shows it exactly once at every frame. */
+const letterOffMisses = (lead: Figure, plate: Plate, times: ReadonlyArray<number>) => {
+  const from = times.find((t) => plateAt(plate, t).alpha > 0) ?? Number.POSITIVE_INFINITY;
+  return times.filter(
+    (t) => t >= from && READING.has(poseAt(lead, t).cell) === plateAt(plate, t).alpha > 0,
+  );
+};
 
 /** The pour's length on the panels `milk.newborn.5` and `milk.word.5`, gutter to cup, in px of a 1080-tall frame (critique 2, finding 4). */
 const PANEL_POUR = 340;
@@ -442,7 +449,7 @@ describe("In Its Order's staging", () => {
       }),
   );
 
-  test('frames the lead’s head at a third of the frame’s height or more through cold-ouch, at the table as cold-letter leaves it: the guests staring, the diners’ plane, the scroll laid open (critique 1, item 1)', () => {
+  test('frames the lead’s head at a third of the frame’s height or more through cold-ouch, at the table as cold-letter leaves it: the guests staring, the diners’ plane, the letter lying rolled before him (critique 1, item 1)', () => {
     const ouch = placed.find(({ shot }) => shot.id === 'cold-ouch')?.shot;
     const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
     if (!ouch || !letter)
@@ -465,7 +472,7 @@ describe("In Its Order's staging", () => {
       ['man', 'woman'].flatMap((name) => cellAt(shot, name, t));
     expect(guestsAt(ouch, 0)).toEqual(guestsAt(letter, letter.duration - 1 / letter.fps));
     expect(
-      table?.items.some((i) => i._tag === 'Plate' && i.file.endsWith('/scroll-open.png')),
+      table?.items.some((i) => i._tag === 'Plate' && i.file.endsWith('/scroll-rolled.png')),
     ).toBe(true);
   });
 
@@ -590,22 +597,54 @@ describe("In Its Order's staging", () => {
       }),
   );
 
-  test('draws the open scroll in cold-letter, at rest on the table at the shot’s end', () => {
-    const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
-    const open = letter?.layers
-      .flatMap((l) => l.items)
-      .find((item) => item._tag === 'Plate' && item.file.includes('scroll-open'));
-    expect(open?._tag).toBe('Plate');
-    if (!letter || open?._tag !== 'Plate') return;
-    const end = letter.duration - 1 / letter.fps;
-    expect(footAt(open, end).y).toBe(TABLE_TOP.y + TABLE_TOP.height);
-  });
-
   it.effect(
-    'sets the bottle down on the table top in cold-letter from the frame his hand empties to the shot’s end: his table sheet records its cream bottle as a measured prop, and the plate’s cream body across is the held bottle’s, read on both drawings (critique 1, items 6 and 7)',
+    'takes the letter up in cold-letter and reads it, the bottle at his mouth, to the card; no shot lays a scroll open, and the rolled scroll on the table is the one he holds, its rollers within a tenth of his held rollers’ length (owner, scrawl 0:21: “this looks a bit stretched … he holds it with one hand and the bottle in the other and he looks at the scroll while drinking”)',
     () =>
       Effect.gen(function* () {
         const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
+        const lead =
+          letter && figuresOf(letter).find(({ figure }) => figure.name === 'lead')?.figure;
+        const open = placed.flatMap(({ shot }) =>
+          platesOf(shot)
+            .filter((p) => p.file.endsWith('/scroll-open.png'))
+            .map((p) => `${shot.id} lays ${p.file}`),
+        );
+        expect(open).toEqual([]);
+        if (!letter || !lead)
+          return expect([letter?.id, lead?.name]).toEqual(['cold-letter', 'lead']);
+        const end = letter.duration - 1 / letter.fps;
+        expect([poseAt(lead, 0).cell, poseAt(lead, end).cell]).toEqual(['bottle', 'read']);
+        const rolled = placed.flatMap(({ shot }) =>
+          platesOf(shot).filter((p) => p.file.endsWith('/scroll-rolled.png')),
+        );
+        expect(rolled.length).toBe(2);
+        const read = LEAD_TABLE_CELLS.read;
+        const raw = yield* Effect.promise(() =>
+          sharp(read.png).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+        );
+        const crown = firstInkedRow(raw);
+        const [below, above] = [0.4, 0.7].map((k) => Math.round(crown + k * (read.ay - crown)));
+        const band = {
+          data: raw.data.subarray(
+            (below ?? 0) * raw.info.width * 4,
+            (above ?? 0) * raw.info.width * 4,
+          ),
+          info: { width: raw.info.width, height: (above ?? 0) - (below ?? 0) },
+        };
+        const brown = LEAD_PALETTE.parts.find((p) => p.name === 'sandals')?.base ?? '';
+        const s = drawScaleOf(lead.member, lead.sheet, letter.headPx, 1);
+        const held = (widestRun(band, brown, 0) + 6) * s;
+        expect(held).toBeGreaterThan(0);
+        expect(rolled.map((p) => Math.abs(p.place.width / held - 1) <= 0.1)).toEqual([true, true]);
+      }),
+  );
+
+  it.effect(
+    'keeps the bottle in his hand through cold-letter and stands it on the table top through cold-ouch, after the card: his table sheet records its cream bottle as a measured prop, and the plate’s cream body across is the held bottle’s, read on both drawings (critique 1, items 6 and 7)',
+    () =>
+      Effect.gen(function* () {
+        const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
+        const ouch = placed.find(({ shot }) => shot.id === 'cold-ouch')?.shot;
         const lead =
           letter && figuresOf(letter).find(({ figure }) => figure.name === 'lead')?.figure;
         const prop = (TABLE_RECORD.props ?? []).find((p) => p.name === 'bottle');
@@ -613,11 +652,11 @@ describe("In Its Order's staging", () => {
           (m) =>
             m.member === 'lead-feast' && m.hex === prop?.base && m.source.includes('iio-table'),
         );
-        const bottle = letter?.layers
+        const bottle = ouch?.layers
           .flatMap((l) => l.items)
           .find((item) => item._tag === 'Plate' && item.file.endsWith('/bottle.png'));
         const png = bottle?._tag === 'Plate' && bottle.painting;
-        if (!letter || !lead || !prop || !measured || bottle?._tag !== 'Plate' || !png)
+        if (!letter || !ouch || !lead || !prop || !measured || bottle?._tag !== 'Plate' || !png)
           return expect([letter?.id, lead?.name, prop?.role, measured, bottle?._tag]).toEqual([
             'cold-letter',
             'lead',
@@ -625,12 +664,10 @@ describe("In Its Order's staging", () => {
             true,
             'Plate',
           ]);
-        const times = timesOf(letter);
-        const held = times.filter((t) => ['lift', 'bottle'].includes(poseAt(lead, t).cell));
-        const shown = times.filter((t) => plateAt(bottle, t).alpha > 0);
-        expect([held.length > 0, shown.length > 0]).toEqual([true, true]);
-        expect(shown.some((t) => held.includes(t))).toBe(false);
-        expect(shown.at(-1)).toBe(times.at(-1));
+        expect(platesOf(letter).filter((p) => p.file.endsWith('/bottle.png'))).toEqual([]);
+        expect(timesOf(letter).filter((t) => !HOLDING.has(poseAt(lead, t).cell))).toEqual([]);
+        const times = timesOf(ouch);
+        expect(times.filter((t) => plateAt(bottle, t).alpha <= 0)).toEqual([]);
         const foot = bottle.place.y + bottle.place.height;
         expect(foot).toBeGreaterThanOrEqual(TABLE_TOP.y);
         expect(foot).toBeLessThanOrEqual(TABLE_TOP.y + TABLE_TOP.height);
@@ -850,26 +887,37 @@ describe("In Its Order's staging", () => {
       }),
   );
 
-  test('hands the bottle off with no gap and no overlap: at every frame of cold-letter exactly one of his hand and the table’s plate shows it, as at every frame of generated set-downs (start, length, frame phase), and a plate set at 0.8 of the turn leaves a gap (round 3, M4)', () => {
+  test('hands the letter off with no gap and no overlap: from the frame the rolled scroll first shows, at every frame of cold-letter exactly one of the table’s plate and his reading hand shows it, as at every frame of generated take-ups (fall, hop, take, frame phase), and a plate gone at 0.8 of the turn leaves a gap', () => {
     const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
     const lead = letter && figuresOf(letter).find(({ figure }) => figure.name === 'lead')?.figure;
     const plate = letter?.layers
       .flatMap((l) => l.items)
-      .find((item): item is Plate => item._tag === 'Plate' && item.file.endsWith('/bottle.png'));
+      .find(
+        (item): item is Plate => item._tag === 'Plate' && item.file.endsWith('/scroll-rolled.png'),
+      );
     if (!letter || !lead || !plate)
       return expect([letter?.id, lead?.name, plate?.file]).toEqual(['cold-letter', 'lead', '']);
-    expect(handOffMisses(lead, plate, timesOf(letter))).toEqual([]);
+    expect(timesOf(letter).some((t) => plateAt(plate, t).alpha > 0)).toBe(true);
+    expect(letterOffMisses(lead, plate, timesOf(letter))).toEqual([]);
     const misses = Array.from({ length: 64 }, (_, seed) => {
       const draw = rng(seed + 1);
       const fps = [24, 30, 60][Math.floor(draw() * 3)] ?? 30;
-      const [at, dur, phase] = [0.2 + draw() * 5, 0.25 + draw() * 1.25, draw() / fps];
-      const setDown = turn(at, dur, 'bottle', 'down');
-      const held = figure(['bottle', 'down'], {
+      const [from, falling, hopping, waiting] = [
+        0.2 + draw() * 3,
+        0.2 + draw() * 0.5,
+        0.1 + draw() * 0.3,
+        draw() * 0.5,
+      ];
+      const f = { start: from, end: from + falling };
+      const h = { start: f.end, end: f.end + hopping };
+      const [at, dur, phase] = [h.end + waiting, 0.25 + draw() * 1.25, draw() / fps];
+      const take = turn(at, dur, 'bottle', 'read');
+      const held = figure(['bottle', 'read'], {
         name: 'lead',
         member: 'lead-feast',
         sheet: 'iio-table',
         at: { x: 0, ground: 0 },
-        spans: [hold(0, at, 'bottle'), setDown, hold(at + dur, at + dur + 1, 'down')],
+        spans: [hold(0, at, 'bottle'), take, hold(at + dur, at + dur + 1, 'read')],
       });
       const times = Array.from(
         { length: Math.ceil((at + dur + 1) * fps) },
@@ -877,72 +925,62 @@ describe("In Its Order's staging", () => {
       );
       return [
         seed,
-        handOffMisses(held, bottleSetDown(swapOf(setDown)), times).length,
-        handOffMisses(held, bottleSetDown(at + dur * 0.8), times).length > 0,
+        letterOffMisses(held, letterLands(f, h, swapOf(take)), times).length,
+        letterOffMisses(held, letterLands(f, h, at + dur * 0.8), times).length > 0,
       ];
     });
     expect(misses.filter(([, gaps, late]) => gaps !== 0 || late !== true)).toEqual([]);
   });
 
   it.effect(
-    'sets the bottle on the table in cold-letter on the frame his key lowers his hands, under his lowered hand, and never moves it alone: from its first frame shown to the shot’s end the plate holds one place, that first frame is the first his hand is empty, and its foot stands within half a hand of his `down` hand’s middle and lowest row, read on that cell’s skin; a plate that travels from his raised hand fails (critique 3, finding 1)',
+    'stands the bottle in cold-ouch where his lowered hand set it down, and never moves it: at every frame the plate shows in one place, its foot within half a hand of his table sheet’s `down` hand’s middle and lowest row at his place at the table, read on that cell’s skin; a plate that travels in from his raised hand fails (critique 3, finding 1)',
     () =>
       Effect.gen(function* () {
-        const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
-        const lead =
-          letter && figuresOf(letter).find(({ figure }) => figure.name === 'lead')?.figure;
-        const plate = letter?.layers
+        const ouch = placed.find(({ shot }) => shot.id === 'cold-ouch')?.shot;
+        const plate = ouch?.layers
           .flatMap((l) => l.items)
           .find(
             (item): item is Plate => item._tag === 'Plate' && item.file.endsWith('/bottle.png'),
           );
-        if (!letter || !lead || !plate)
-          return expect([letter?.id, lead?.name, plate?.file]).toEqual(['cold-letter', 'lead', '']);
+        if (!ouch || !plate) return expect([ouch?.id, plate?.file]).toEqual(['cold-ouch', '']);
         const down = LEAD_TABLE_CELLS.down;
         const raw = yield* Effect.promise(() =>
           sharp(down.png).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
         );
         const skin = LEAD_PALETTE.parts.find((p) => p.role === 'skin')?.base ?? '';
-        const hand = handOf(raw, skin, down, TALL.get('lead-feast/iio-table') ?? 0);
-        const s = drawScaleOf(lead.member, lead.sheet, letter.headPx, 1);
-        const times = timesOf(letter);
+        const tall = TALL.get('lead-feast/iio-table') ?? 0;
+        const hand = handOf(raw, skin, down, tall);
+        const s = drawScaleOf('lead-feast', 'iio-table', ouch.headPx, 1);
+        const ground = AT_TABLE.lead.crown + tall * s;
+        const at = [AT_TABLE.lead.x + (hand[0] - down.ax) * s, ground + (hand[1] - down.ay) * s];
+        const times = timesOf(ouch);
         const misses = (p: Plate) => {
           const shown = times.filter((t) => plateAt(p, t).alpha > 0);
-          const first = shown[0] ?? Number.NaN;
-          const empty = times.find((t) => !HOLDING.has(poseAt(lead, t).cell));
           const places = new Set(
             shown.map((t) => {
               const k = plateAt(p, t);
               return [k.x, k.y, k.sx, k.sy].join();
             }),
           );
-          const pose = poseAt(lead, first);
-          const foot = footAt(p, first);
-          const at = [
-            pose.x + (hand[0] - down.ax) * s * pose.sx,
-            pose.y + (hand[1] - down.ay) * s * pose.sy * pose.breath,
-          ];
+          const foot = footAt(p, times[0] ?? 0);
           const apart = Math.hypot(
             (foot.left + foot.right) / 2 - (at[0] ?? 0),
             foot.y - (at[1] ?? 0),
           );
           return [
             ...[`moves through ${places.size} places`].filter(() => places.size !== 1),
-            ...[`first shown at ${first}, his hand empty at ${empty}`].filter(
-              () => first !== empty,
+            ...[`shown ${shown.length} of ${times.length} frames`].filter(
+              () => shown.length !== times.length,
             ),
             ...[`foot ${apart.toFixed(1)} px from his hand`].filter(() => !(apart <= HAND_REACH)),
           ];
         };
         expect(misses(plate)).toEqual([]);
-        const swap = times.find((t) => !HOLDING.has(poseAt(lead, t).cell)) ?? 0;
         const travels: Plate = {
           ...plate,
           moves: [
-            [0, key({ alpha: 0 })],
-            [swap, key({ alpha: 0 })],
-            [swap, key({ x: 20, y: -110 })],
-            [swap + 0.25, key({})],
+            [0, key({ x: 20, y: -110 })],
+            [0.25, key({})],
           ],
         };
         expect(misses(travels).length).toBeGreaterThan(0);

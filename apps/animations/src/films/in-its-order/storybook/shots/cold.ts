@@ -14,7 +14,7 @@ import {
 import { CELLS as LEAD_TABLE } from '../../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
 import { BOTTLE, BOTTLE_BODY, BOTTLE_FOOT } from '../plates/bottle.ts';
 import { BABY_BACK, FAR_TABLE, TABLE } from '../../plates/plates.ts';
-import { SCROLL_OPEN, SCROLL_ROLLED } from '../../plates/props.ts';
+import { SCROLL_ROLLED } from '../../plates/props.ts';
 import {
   cam,
   drawScaleOf,
@@ -364,14 +364,22 @@ export const coldTable: FilmShot = {
   }),
 };
 
-/** The scroll's size on the table, a share of its painted size. */
-const SCROLL = 0.62;
+/** The rollers' length across, ink ends and all, of the scroll he holds in his table sheet's `read` cell, in its px: its lower roller's 79 px of the sandals' brown (rows 581 to 595, from x 7) and its ink at each end. */
+export const HELD_ROLLERS = 85;
 
-/** Where the scroll's near edge lies on the table, layer px: the centre of the table top's front edge. */
-const SCROLL_AT = [960, TABLE_TOP.y + TABLE_TOP.height] as const;
+/** The rolled scroll plate's rollers' length across, knobs and all, in its px: its whole width. */
+const ROLLED_ROLLERS = SCROLL_ROLLED.size[0];
 
-/** How deep the open scroll lies on the table top, a share of its painted height: flat and seen from just above the table, its far roller over the top's back edge. */
-const SCROLL_LIES = 0.35;
+/** The rolled scroll's scale on the table: its rollers as long as the ones he holds, his table sheet's draw scale times their length, so the letter that lands is the letter he reads. */
+export const LETTER_SCALE =
+  drawScaleOf('lead-feast', 'iio-table', HEAD, Z.table) * (HELD_ROLLERS / ROLLED_ROLLERS);
+
+/** Where the rolled scroll lies on the table, layer px (its foot's centre): on the top's front edge before his right hand (the picture's left), the hand that takes it up in cold-letter. */
+export const LETTER_AT = [930, TABLE_TOP.y + TABLE_TOP.height] as const;
+
+/** The rolled scroll on the table, moved by `moves`. */
+export const letterOn = (moves: NonNullable<Plate['moves']>): Plate =>
+  plateOn('scroll-rolled.png', SCROLL_ROLLED, [214.5, 202], LETTER_AT, LETTER_SCALE, { moves });
 
 /** The hand his table sheet's `down` cell lowers on the viewer's right (the hand that held the bottle), in its px: its middle across and its lowest drawn row. */
 export const DOWN_HAND = [178, 629] as const;
@@ -386,7 +394,7 @@ const downHandAt = (): readonly [number, number] => {
   ];
 };
 
-/** Where the bottle stands on the table, layer px (its foot): where his lowered hand rests, so the key that lowers his hands puts it down in the one drawn step. */
+/** Where the bottle stands on the table in cold-ouch, layer px (its foot): where his lowered hand rests, the hand that held it, so it reads as set down by that hand. */
 export const BOTTLE_AT = downHandAt();
 
 /** The cream body across of the bottle the lead holds in his table sheet's `bottle` cell, in its px (196 to 232). */
@@ -402,40 +410,38 @@ const bottleOn = (moves: NonNullable<Plate['moves']>): Plate =>
     moves,
   });
 
-/** The bottle standing on the table top from a shot's start, where cold-letter sets it down. */
+/** The bottle standing on the table top from a shot's start, where his lowered hand set it down. */
 export const bottleOnTable = (): Plate => bottleOn([[0, key({})]]);
 
-/** The bottle on the table from `at` s (the swap of his key that lowers his hands) to the shot's end: it stands under his lowered hand from that frame and never moves alone. */
-export const bottleSetDown = (at: number): Plate =>
-  bottleOn([
-    [0, key({ alpha: 0 })],
-    [at, key({ alpha: 0 })],
-    [at, key({})],
+/** The rolled scroll falling from above the frame onto the table before him over `fall`, hopping once over `hop`, and lying there until `taken`, the swap of his key that takes it up: from that frame his hand holds it, so the plate is gone. */
+export const letterLands = (
+  fall: { readonly start: number; readonly end: number },
+  hop: { readonly start: number; readonly end: number },
+  taken: number,
+): Plate =>
+  letterOn([
+    [fall.start, key({ y: -700, alpha: 0 })],
+    [fall.start, key({ y: -700 })],
+    [fall.end, key({})],
+    [hop.start + (hop.end - hop.start) / 2, key({ y: -18 })],
+    [hop.end, key({})],
+    [taken, key({})],
+    [taken, key({ alpha: 0 })],
   ]);
 
-/** The open scroll on the table top, its near roller on the top's front edge, moved by `moves`. */
-export const scrollLaid = (moves: NonNullable<Plate['moves']>): Plate =>
-  plateOn('scroll-open.png', SCROLL_OPEN, [225, 368], SCROLL_AT, SCROLL, { moves });
-
-/** The scroll unrolling flat away from the viewer over `start`..`end`, from a sliver at its near roller to lying open. */
-const unrolling = (start: number, end: number): NonNullable<Plate['moves']> => [
-  [start, key({ sy: 0.08, alpha: 0 })],
-  [start, key({ sy: 0.08 })],
-  [end, key({ sy: SCROLL_LIES })],
-];
-
-/** The push into the scroll's seal on `quote`: from the table's framing to 15 % in (the spec's cap), toward the seal. */
+/** Where the push on `quote` eases in to, layer px: between his eyes and the scroll he reads, 15 % in (the spec's cap), the guests either side still in the frame. */
 const LETTER = {
   from: { x: 960, y: 860, zoom: 1.9 },
-  to: { x: 980, y: 900, zoom: 1.9 * 1.15 },
+  to: { x: 940, y: 850, zoom: 1.9 * 1.15 },
 } as const;
 
 /**
  * `cold-letter`, `letter` to the card: a rolled scroll falls onto the table
- * before the lead, hops and unrolls flat across the table top away from the
- * viewer; the guests turn to stare at it, the lead lowers the bottle and
- * looks down at it as it unrolls, and on `quote` the camera eases in toward
- * its seal until the card.
+ * before the lead, who still holds the bottle up, and hops; the guests turn
+ * to stare at it, and he takes it up in his free hand (the owner, scrawl
+ * 0:21): from the swap he reads the letter, open in one hand, the bottle's
+ * teat at his mouth in the other, his eyes on the scroll, blinking, to the
+ * card. On `quote` the camera eases in toward the letter and his face.
  */
 export const coldLetter: FilmShot = {
   id: 'cold-letter',
@@ -443,19 +449,15 @@ export const coldLetter: FilmShot = {
   cues: {
     fall: { mark: 'letter', offset: 0.4, dur: 0.45 },
     hop: { after: 'cold-letter:fall', dur: 0.24 },
-    unroll: { after: 'cold-letter:hop', dur: 1 },
-    down: { with: 'cold-letter:unroll', offset: 0.4, dur: 0.3 },
+    take: { after: 'cold-letter:hop', offset: 0.15, dur: 0.3 },
     stare: { mark: 'letter', offset: 0.3, dur: 0.3 },
     stared: { mark: 'letter', offset: 0.45, dur: 0.3 },
     quote: { mark: 'quote', until: 'such' },
     talk: { mark: 'letter', word: 'letters', dur: 1.2 },
   },
   build: ({ duration, cue }) => {
-    const fall = cue('fall');
-    const hop = cue('hop');
-    const unroll = cue('unroll');
     const { from, to } = LETTER;
-    const setDown = turn(cue('down').start, cue('down').end - cue('down').start, 'bottle', 'down');
+    const take = turn(cue('take').start, cue('take').end - cue('take').start, 'bottle', 'read');
     return {
       headPx: HEAD,
       camera: [
@@ -472,40 +474,30 @@ export const coldLetter: FilmShot = {
             guestSpans('woman', 'smile', [[cue('stared').start, 'stare']], duration),
           ),
           leadAt([
-            blinkingHold(0, cue('down').start, 'bottle', 'frontBlink'),
-            setDown,
-            hold(cue('down').end, duration, 'down'),
+            blinkingHold(0, cue('take').start, 'bottle', 'frontBlink'),
+            take,
+            blinkingHold(cue('take').end, duration, 'read', 'readBlink'),
           ]),
           table(),
-          plateOn('scroll-rolled.png', SCROLL_ROLLED, [214.5, 202], SCROLL_AT, SCROLL, {
-            moves: [
-              [fall.start, key({ y: -700, alpha: 0 })],
-              [fall.start, key({ y: -700 })],
-              [fall.end, key({})],
-              [hop.start + (hop.end - hop.start) / 2, key({ y: -18 })],
-              [hop.end, key({})],
-              [unroll.start, key({})],
-              [unroll.start, key({ alpha: 0 })],
-            ],
-          }),
-          scrollLaid(unrolling(unroll.start, unroll.end)),
-          bottleSetDown(swapOf(setDown)),
+          letterLands(cue('fall'), cue('hop'), swapOf(take)),
         ]),
       ],
     };
   },
 };
 
-/** The lead's close: his head a third of the frame's height (its crown at frame y 70), the guests either side and the scroll on the table before him; his soles below the frame, his whole figure read in cold-table. The diners its frame shows: diner 1, at the row's left end, falls outside it. */
+/** The lead's close: his head a third of the frame's height (its crown at frame y 70), the guests either side and the letter on the table before him; his soles below the frame, his whole figure read in cold-table. The diners its frame shows: diner 1, at the row's left end, falls outside it. */
 const CLOSE = { zoom: 3.3, crown: 70, diners: ['diner-2', 'diner-3', 'diner-4'] } as const;
 
 /**
  * `cold-ouch`, the card's end to `what`: close on the lead, his head a third
  * of the frame, at the same table as cold-letter leaves it: the guests
- * either side still staring at the scroll, the diners beyond, the scroll
- * open before him and the bottle where he set it down, the table's middle
- * from its plate painted for the close. He winces on `ouch` and lowers his
- * eyes again, under a slow push.
+ * either side still staring, the diners beyond. The card between has
+ * covered his setting down what he held: the letter lies rolled on the
+ * table before him where it landed, the bottle stands where his lowered
+ * hand rests, and his hands are empty on his knees, his eyes lowered to the
+ * letter, the table's middle from its plate painted for the close. He
+ * winces on `ouch` and lowers his eyes again, under a slow push.
  */
 export const coldOuch: FilmShot = {
   id: 'cold-ouch',
@@ -541,7 +533,7 @@ export const coldOuch: FilmShot = {
           ),
           table(),
           tableClose(),
-          scrollLaid([[0, key({ sy: SCROLL_LIES })]]),
+          letterOn([[0, key({})]]),
           bottleOnTable(),
         ]),
       ],
