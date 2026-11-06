@@ -20,6 +20,7 @@ import * as TestClock from 'effect/testing/TestClock';
 import { Dictation } from '../dictation';
 import { initial } from '../dictation/attempt';
 import { Garden, plantOf, type GardenView } from '../garden';
+import { layer as passagesLayer } from '../passages';
 import type { Grade, Recall } from '../sayit';
 import { MINUTES, type Minutes } from '../session';
 import { layer, MINUTES_KEY, Session } from '../session/service';
@@ -202,6 +203,7 @@ const launchOf = (device: Device) =>
     const scope = yield* Scope.make();
     const services = yield* Layer.buildWithScope(
       layer(device.pieces.map((piece) => ({ ...piece, text: '' }))).pipe(
+        Layer.provide(passagesLayer),
         Layer.provide(
           Layer.mergeAll(
             Layer.succeed(

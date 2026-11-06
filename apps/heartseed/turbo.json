@@ -569,7 +569,7 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
-        "!src/passages/{ranges.property,service}.test.*",
+        "!src/passages/{ranges.property,service,pieces.property,session}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -582,7 +582,20 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
-        "!src/passages/{corpus,guard}.test.*",
+        "!src/passages/{corpus,guard,session}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:passages-session": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
+        "!src/passages/{corpus,guard,ranges.property,service,pieces.property}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -649,6 +662,7 @@
         "test:wake-reading",
         "test:corpus",
         "test:passages",
+        "test:passages-session",
         "test:rest",
         "test:infra"
       ]

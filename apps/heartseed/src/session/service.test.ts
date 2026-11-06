@@ -37,6 +37,7 @@ import * as TestClock from 'effect/testing/TestClock';
 import { Dictation } from '../dictation';
 import { initial } from '../dictation/attempt';
 import { Chime, Garden, layer as gardenLayer, plantOf, type GardenView } from '../garden';
+import { layer as passagesLayer } from '../passages';
 import { Recalls, type Grade, type Recall } from '../sayit';
 import { countsOf, MINUTES, type Minutes } from '../session';
 import { below, keyOf, pickOf, PREFIX, random } from '../test/garden-model';
@@ -218,6 +219,7 @@ const launch = (pieces: readonly ModelPiece[], disk: Disk, field: Field, at: num
     const scope = yield* Scope.make();
     const services = yield* Layer.buildWithScope(
       layer(textless(pieces)).pipe(
+        Layer.provide(passagesLayer),
         Layer.provide(
           Layer.mergeAll(
             Layer.succeed(KeyValueStore.KeyValueStore, storeOf(disk)),
@@ -273,6 +275,7 @@ const launchKept = (
     const scope = yield* Scope.make();
     const services = yield* Layer.buildWithScope(
       layer(textless(pieces)).pipe(
+        Layer.provide(passagesLayer),
         Layer.provideMerge(
           gardenLayer.pipe(
             Layer.provide(Layer.succeed(Chime, Chime.of({ grow: () => Effect.void }))),

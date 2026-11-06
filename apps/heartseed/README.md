@@ -805,7 +805,14 @@ marks. The alert stays in the scroll.
     and the references over every chapter of all 66 books; and
     `src/passages/service.test.ts`, 300 generated devices of stored values,
     read faults, adds and removes (`test/passages-rig.tsx`), judged against
-    `test/passages-model.ts` at every step.
+    `test/passages-model.ts` at every step; and
+    `src/passages/pieces.property.test.ts`, the pieces over generated lists
+    of the app's own pieces and of passages, against the model's.
+  - `test:passages-session`: `src/passages/session.test.ts`, generated
+    devices walking adds, removes, Minutes, holds, recitals and returns
+    through `addPassage` and `removePassage` over a store that yields at
+    every call, the plan, the hold, the pieces and the disk judged against
+    the models at every step; and a reader's first three days in five zones.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

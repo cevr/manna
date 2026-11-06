@@ -11,7 +11,8 @@
  * claims no list and is never written over. Each add and each remove runs
  * in call order, one at a time, and changes the view only once its write
  * has landed. A remove never touches a recall: a removed passage's plants
- * stay in the garden.
+ * stay in the garden. The session plans over the app's own pieces, then
+ * each passage's verses (`piecesOf`).
  */
 
 import { formatBibleReference, Reference } from '@manna/core/bible';
@@ -30,6 +31,8 @@ import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as Semaphore from 'effect/Semaphore';
 
 import { versesOf } from './kjv';
+import { sourceWords } from './matcher/words';
+import type { TextPiece } from './session';
 
 /** The store key of the passages; its text is a JSON array of ranges, in the order chosen. */
 export const PASSAGES_KEY = 'heartseed/passages';
@@ -84,6 +87,40 @@ export type AddAnswer = 'Added' | 'Full' | 'Invalid' | 'Unread' | 'Failed';
 
 /** A remove's answer, in the order a remove judges them: `Unread`, `Absent`, then `Removed` or `Failed` by its write. */
 export type RemoveAnswer = 'Removed' | 'Absent' | 'Unread' | 'Failed';
+
+/** A passage's verses as pieces: each its verse's reference and corpus text, its words counted as the matcher counts them, and its passage's reference as its group. */
+const piecesIn = (range: Range): readonly TextPiece[] => {
+  const group = passageReference(range);
+  return versesOf(range.book, range.chapter)
+    .slice(range.first - 1, range.last)
+    .map((text, index) => ({
+      reference: verseReference(range.book, range.chapter, range.first + index),
+      text,
+      words: sourceWords(text).length,
+      group,
+    }));
+};
+
+/** The verses of the passages held, in passage order and verse order; none when unread. */
+const heldPieces = (view: PassagesView): readonly TextPiece[] => {
+  if (view._tag === 'Unread') return [];
+  return view.passages.flatMap(piecesIn);
+};
+
+/**
+ * The pieces the session plans over: the app's own first, then each held
+ * passage's verses, each reference kept once, at its first place, so a
+ * passage over one of the app's own verses shares its plant. With the
+ * passages unread, the app's own alone.
+ */
+export const piecesOf = (own: readonly TextPiece[], view: PassagesView): readonly TextPiece[] => {
+  const seen = new Set<string>();
+  return [...own, ...heldPieces(view)].filter((piece) => {
+    if (seen.has(piece.reference)) return false;
+    seen.add(piece.reference);
+    return true;
+  });
+};
 
 /** The reader's passages, and each change of them (a new subscriber starts at the current view). */
 export class Passages extends Context.Service<

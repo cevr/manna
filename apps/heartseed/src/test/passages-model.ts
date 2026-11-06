@@ -162,6 +162,45 @@ export const addRule = (
   return { outcome: 'Added', held: { tag: 'Read', passages: [...held.passages, copy] } };
 };
 
+/** A piece as the model holds it: a verse the session plans over. */
+export interface ModelTextPiece {
+  readonly reference: string;
+  readonly text: string;
+  readonly words: number;
+  readonly group: string;
+}
+
+/** P6: the app's own pieces, then each held passage's verses in passage and verse order, each reference kept at its first place only; `words` counts a verse's words as the matcher does. */
+export const piecesRule = (
+  corpus: Corpus,
+  own: ReadonlyArray<ModelTextPiece>,
+  held: Held,
+  words: (text: string) => number,
+): ModelTextPiece[] => {
+  const all: ModelTextPiece[] = [...own];
+  if (held.tag === 'Read')
+    for (const span of held.passages) {
+      const verses = versesIn(corpus, span.book, span.chapter);
+      for (let verse = span.first; verse <= span.last; verse++) {
+        const text = verses[verse - 1] as string;
+        all.push({
+          reference: verseRef(span.book, span.chapter, verse),
+          text,
+          words: words(text),
+          group: spanRef(span),
+        });
+      }
+    }
+  const out: ModelTextPiece[] = [];
+  const named = new Set<string>();
+  for (const piece of all) {
+    if (named.has(piece.reference)) continue;
+    named.add(piece.reference);
+    out.push(piece);
+  }
+  return out;
+};
+
 const equal = (a: Span, b: Span) =>
   a.book === b.book && a.chapter === b.chapter && a.first === b.first && a.last === b.last;
 

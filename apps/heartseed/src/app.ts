@@ -37,7 +37,7 @@ import { layer as sayItLayer, SayIt, TODAY, type Grade, type Haptics, type Recit
 import { liveHaptics } from './sayit/live';
 import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
 import type { Passage } from './passage';
-import { layer as passagesLayer } from './passages';
+import { layer as passagesLayer, Passages, type Range } from './passages';
 import type { Item, Minutes, TextPiece } from './session';
 import { layer as sessionLayer, Session } from './session/service';
 import { store } from './store';
@@ -68,7 +68,7 @@ export const appSource: Layer.Layer<DictationSource> = Layer.unwrap(
   }),
 );
 
-/** The verses the app holds text for, in the order the session offers them: the passage alone, its own group. */
+/** The app's own pieces, before the reader's passages: the promise alone, its own group. */
 const PIECES: readonly TextPiece[] = [
   {
     reference: passage.reference,
@@ -78,7 +78,7 @@ const PIECES: readonly TextPiece[] = [
   },
 ];
 
-/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the reader's passages in the same `store`, the session over the garden and `pieces` (the app's own, the passage alone, when none are given), its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), and the voice over `voice`, its switch in the same `store`. */
+/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the reader's passages in the same `store`, the session over the garden, `pieces` (the app's own, the promise alone, when none are given) and then the passages' verses, its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), and the voice over `voice`, its switch in the same `store`. */
 export const appLayer = (parts: {
   readonly source: Layer.Layer<DictationSource>;
   readonly haptics: Layer.Layer<Haptics>;
@@ -180,6 +180,26 @@ export const press = runtime.fn(
     pressToday(shown.piece, shown.item),
   { concurrent: true },
 );
+
+/** An add of `range` to the reader's passages, answered as the passages answer it; once `Added`, a plan made in this launch is made again over the passages now. */
+export const addPassage = (range: Range) =>
+  Effect.gen(function* () {
+    const passages = yield* Passages;
+    const session = yield* Session;
+    const answer = yield* passages.add(range);
+    if (answer === 'Added') yield* session.remake;
+    return answer;
+  });
+
+/** A remove of the first passage equal to `range`, answered as the passages answer it; once `Removed`, a plan made in this launch is made again without its verses, its plants kept. */
+export const removePassage = (range: Range) =>
+  Effect.gen(function* () {
+    const passages = yield* Passages;
+    const session = yield* Session;
+    const answer = yield* passages.remove(range);
+    if (answer === 'Removed') yield* session.remake;
+    return answer;
+  });
 
 /** A tap on Today's Next: the held item is let go. */
 export const next = runtime.fn(() => Effect.flatMap(Session, (session) => session.next), {
