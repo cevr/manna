@@ -887,6 +887,13 @@ marks. The alert stays in the scroll.
     through `addPassage` and `removePassage` over a store that yields at
     every call, the plan, the hold, the pieces and the disk judged against
     the models at every step; and a reader's first three days in five zones.
+  - `test:chooser`: `src/chooser/range.property.test.ts`, the range a
+    reader taps (`tapVerse`) against `test/choose-model.ts`'s rule written
+    plainly: every range of 1-20 verses and every tap from 0 to one past
+    the end in chapters of 1, 2, 3, 5, 19-22, 39-41 and 176 verses, with
+    fractions, a negative and NaN; 20,000 generated taps over chapters of
+    1-176 verses; and long tap sequences folded against the rule, every
+    answer choosable.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
