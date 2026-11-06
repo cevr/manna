@@ -395,20 +395,27 @@ listens (leaving Today then would leave the microphone open off-screen).
 It sits in Today's header beside the heading, outside the scroll view, so
 however much a recital adds (the recap, the grades, the growth line, an
 alert) it is on screen without a scroll and clear of the home indicator;
-the field's button `Today` comes back to Today as it was. Both are in place
-in the root route (`app/index.tsx`): no route, no link, no tab. Whether the
-field shows is the root's state for the launch, never stored, so every
-launch opens on the pending frame, then the first minute or Today. Until a
+the field's button `Today` (shown `‹ Today`), in the bar fixed above the
+field's scroll view, comes back to Today as it was. The field and the
+chooser (Choosing a passage, below) are in place in the root route
+(`app/index.tsx`): no route, no link, no tab. Which of Today, the field
+and the chooser shows is the root's state for the launch, never stored, so
+every launch opens on the pending frame, then the first minute or Today,
+and whenever Say it listens the screen is Today. Until a
 read completes, and for a session whose read failed, there is no field and
 no control: an unread garden cannot know the days sown, and an unread
 session's recitals are written all the same, so the next launch counts
 them.
 
 - `src/field.ts` is the rule, pure: `fieldOf(garden, passages)` over a
-  `Read` view and the passages taught (today one, Today's passage of one
-  verse; `hspassage` gives passages their verses). The passages come first,
+  `Read` view and the passages taught: the promise's, a passage of one
+  verse, then each the reader holds, in the order chosen, carrying its
+  range (the root maps them, `app/index.tsx`; with the reader's passages
+  unread, the promise's alone). The field shows once both the garden's and
+  the passages' views are known. The passages come first,
   each verse a plant at `stageOf` its plant, or `not planted` before its
-  first recall (drawn as bare soil); then each other verse the garden
+  first recall (drawn as bare soil); a verse is one plant wherever it
+  shows; then each other verse the garden
   holds, alone, in the order first sown: by its earliest recall's
   `startedAt`, then by its reference in code units. References match
   exactly (`Isaiah 41:1`, `Isaiah 41:100` and `Isaiah 41:10 ` are three
@@ -437,10 +444,12 @@ them.
 - The harvest (`1 verse at full corn`, `<n> verses at full corn`) is the
   number of verses whose stage is full corn now (stability of 21 days or
   more), derived, never stored: Again on a verse at full corn takes it out.
-- Nothing is stored for the field: no key, no value, no setting; it never
-  reads the store and never writes. Every number derives from the garden's
-  view each time the field shows.
-- `src/field/screen.tsx` draws a `Field`: the way back, the heading, the
+- Nothing is stored for the field itself: no key, no value, no setting;
+  it reads only the garden's and the passages' views, and writes only
+  through a landed remove (Choosing a passage, below). Every number
+  derives from the garden's view each time the field shows.
+- `src/field/screen.tsx` draws a `Field`: the bar (the way back, then
+  `Add a passage`, the limit line or the ask), the heading, the
   counts, one card per row titled by its passage (plain text, never a
   heading, so a reference spelled `Your field` or `Today` adds none), each
   plant `PlantMark` (`src/sayit/draw.tsx`, Today's drawing, with bare soil
@@ -454,8 +463,9 @@ them.
 ## Passages
 
 The reader may learn passages of the KJV beside the app's own promise.
-The free tier holds 3 passages of up to 20 verses each. No screen adds one
-yet: these are the data and the session's seams the chooser builds on.
+The free tier holds 3 passages of up to 20 verses each. These are the data
+and the session's seams; Choosing a passage, below, is how the reader adds
+and removes one.
 
 - **The corpus** is the whole KJV in the bundle, as the virtual module
   `virtual:heartseed-kjv`: an array of the canon's 1,189 chapters in canon
@@ -517,6 +527,76 @@ yet: these are the data and the session's seams the chooser builds on.
   this launch is made again at that instant over the passages now, with
   the hold kept only while a recital is under way. Before the first plan,
   in an unread garden or with the passages unread it makes nothing.
+
+## Choosing a passage
+
+The reader adds and removes passages from the field, and chooses one on
+the chooser, the root's third screen, in place like the field. Nothing a
+reader must reach sits where a scroll can hide it: the field's bar, the
+chooser's header and its footer are fixed outside the scroll views.
+
+- **The field's bar** holds `‹ Today` (named `Today`), then, with the
+  passages read, `Add a passage` while fewer than 3 are held, else the
+  limit line "3 passages, the most for now. Remove one to add another."
+  (testID `limit`), which a stored list of 4 or more shows too, so the bar
+  never offers an add the service would refuse. With the passages unread
+  it offers neither and no row offers `Remove`: the app never writes over
+  what it could not read.
+- **The rows** are the promise's, then each passage held, in the order
+  chosen, titled by its reference, then every other plant as a passage of
+  one verse (Field, above). Each passage row, and no other, holds
+  `Remove <its reference>`, which finds its passage by the row's range,
+  never by its place. The promise is not the reader's choice and has none.
+- **Remove asks once**, in the bar in place of `Add a passage` or the limit
+  line: "Remove <reference>? Its plants stay in your field." (testID
+  `ask`), with `Remove` and `Keep`. `Keep` closes it. `Remove` runs
+  `removePassage` (`uprootPassage`, `src/app.ts`); the service takes out
+  the first equal passage, so with equal rows either row's `Remove` takes
+  one. On `Removed` the row leaves and its plants stay, a planted verse
+  then a row of its own; on any other answer the row stays and the bar
+  says "<reference> was not removed. Try again." (`role="alert"`). Another
+  row's `Remove` moves the ask; leaving the field drops the ask and the
+  alert, and the next tap of a field control clears the alert.
+- **The chooser** (`src/chooser/screen.tsx`) opens at the books, with no
+  range. Its fixed header holds one way back and the step's one heading:
+  `‹ Your field` over `Add a passage` (the plain labels `Old Testament`
+  and `New Testament`, then the 66 books in canon order, from
+  `@manna/core/bible`'s `BIBLE_BOOKS`), `‹ Books` over the book (one
+  button per chapter, named `<Book> <c>`), and `‹ Chapters` over
+  `<Book> <chapter>`: every verse of the chapter (`versesOf`), never a
+  virtualized list, each a checkbox named by its reference, checked while
+  inside the range. A back to the chapters or the books clears the range.
+  The step and the range are one value, under one reducer.
+- **The range rule** is `tapVerse(chosen, verse, count)` (`src/chooser.ts`),
+  pure and total: a tap outside `1..count` or on a fraction changes
+  nothing; with no range, or a range of more than one verse, a tap gives
+  that verse alone; with one verse chosen, a tap on it clears the range, a
+  tap after it gives the range to that verse and a tap before it the range
+  from that verse, each clipped to 20 verses counted from the verse first
+  chosen. Every range it gives is choosable.
+- **The footer**, fixed under the verses, holds the range's reference
+  (testID `chosen-reference`) and count (`chosen-count`: `1 verse`,
+  `<n> verses`), the cap `Up to 20 verses` always, `Plant` while a range is
+  chosen, and the plant's line. `Plant` runs `addPassage`
+  (`plantPassage`): on `Added` the field shows with the new row last among
+  the passages; on `Full` the footer shows the limit line, and on any other
+  answer "<reference> was not planted. Try again." (`role="alert"`). The
+  range stays either way, so a retry is one tap, and the next tap on the
+  chooser clears the line.
+- **One change at a time.** From a tap of `Plant`, or of the ask's
+  `Remove`, until its answer, a tap of `Plant`, the ask's `Remove` or
+  `Keep`, `Add a passage`, a row's `Remove`, a verse or a back changes
+  nothing, and each shows as disabled. A ref, set in the tap's own turn,
+  holds it, so two taps in one turn make one change: a double tap never
+  stores a passage twice or removes two.
+- **Today after a change.** A landed add or remove is a making (Passages,
+  above), so back on Today the run shows the new plan: its reference, the
+  counts line and `Listen` on a new verse. On a day a verse was first
+  planted (the first minute's day among them) no new verse shows; after the
+  next 04:00 local, the first verse no plant names is new.
+- Nothing else is stored: opening, stepping, tapping verses, backing out,
+  `Keep` and unread passages write nothing, and there is no route or key
+  of the chooser's own.
 
 ## Session
 
@@ -645,7 +725,14 @@ marks. The alert stays in the scroll.
   service.
 - `src/session/run.ts` is `shownOf(view, garden)`, what Today shows of the
   run, pure: `Unplanned` (no plan: the first piece), the `Item` with its
-  piece, whether it is held and whether it is done, or `Done`.
+  piece, whether it is held and whether it is done, or `Done`. A held item
+  shows with the piece it was held with (the view's `heldPiece`, kept
+  beside the hold and dropped with it), never `Done`, even when a making
+  took its verse out of the pieces: a remove of its passage while its
+  recital is under way keeps the verse, its marks, `Listening` and then
+  its result on Today until `Next`. The plan made then holds none of the
+  removed verses, so after `Next` Today never offers one. The view's
+  `pieces` and `held` keep their meaning.
 
 ## Tests
 

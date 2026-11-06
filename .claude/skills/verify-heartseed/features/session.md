@@ -15,8 +15,9 @@ At the top of the scroll view, above the reference, the counts line
 (`id=session`) says what the session holds: `<n> to tend`, `1 new`,
 `about <k> min`, joined by `·`, or `Nothing to tend now`. It never counts
 the backlog. The plan is made when Today first shows in a launch, again
-at each Minutes tap, and at each return to the foreground with no recital
-under way (`wake.md`). An item is done once its verse holds a new recall.
+at each Minutes tap, at each return to the foreground with no recital
+under way (`wake.md`), and at each landed add or remove of a passage
+(`passage.md`). An item is done once its verse holds a new recall.
 Today runs the plan one verse at a time (`run.md`): when the line reads
 `Nothing to tend now`, Today shows the done state, with no `Say it`.
 

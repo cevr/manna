@@ -22,8 +22,8 @@ the new plan's first item, and an earlier result is gone. A tap made while
 a recital listens keeps that verse on screen until its `Next`. Nothing of
 the run is stored. A relaunch makes a new plan.
 
-The app holds one verse (Isaiah 41:10), so a live plan holds at most one
-item. After the first minute's alone recital (the replay suggests Hard),
+Until the reader chooses a passage (`passage.md`), the app holds one verse
+(Isaiah 41:10), so this drive's plan holds at most one item. After the first minute's alone recital (the replay suggests Hard),
 the passage is due again 6 minutes later. That is FSRS's step. A planting
 after 18:00 local is due at 04:00 the next morning.
 

@@ -140,7 +140,11 @@ which nodes prove it. A target is `label=<accessible name>` or
 the hymnal's skill describes; in the first minute a reader taps `Listen`,
 `Next`, `Say it` and `Continue`, on Today `Listen` (on a new verse),
 `Say it`, a grade, a missed
-word's mark, `Next`, a `Minutes` radio and `Your field`, and on the field `Today`. Heartseed has no journey files yet. The features:
+word's mark, `Next`, a `Minutes` radio and `Your field`; on the field, in
+its bar, `Today`, `Add a passage`, and the ask's `Remove` and `Keep`, and
+in a row `Remove <reference>`; and on the chooser a book, a chapter, a
+verse, `Plant` and the backs (`Your field`, `Books`, `Chapters`).
+Heartseed has no journey files yet. The features:
 
 - [features/first.md](features/first.md): the first minute a fresh
   install opens on: hear it (the voice's lit words, silent on the
@@ -177,13 +181,19 @@ word's mark, `Next`, a `Minutes` radio and `Your field`, and on the field `Today
   a relaunch, and the counts line atop the scroll view. Run it from
   `first.md`'s Today, before `run.md` step 3.
 - [features/field.md](features/field.md): the field, reached from Today's
-  `Your field` and back by `Today`: a row per passage, a plant per verse at
-  its stage, the local days sown from 04:00 (each by the zone offset its
-  record holds), which never fall, and the harvest.
+  `Your field` and back by its bar's `Today`: a row per passage, a plant
+  per verse at its stage, the local days sown from 04:00 (each by the zone
+  offset its record holds), which never fall, and the harvest.
+- [features/passage.md](features/passage.md): choosing passages: the
+  field's fixed bar with `Add a passage` or the limit line, the chooser
+  (books, chapters, a chapter's verses, the range clipped to 20, `Plant`
+  in a fixed footer), a row's `Remove` and its one ask, and Today over the
+  passages chosen, the first day and after the next 04:00. Run it from
+  `first.md`'s Today; its second session comes after the next 04:00.
 - [features/wake.md](features/wake.md): a return to the foreground makes
   Today's plan again with no tap (a due verse shows, a shown result goes),
   and changes nothing while a recital is under way; a new verse's `Listen`
-  beside `Say it` (tests only until more verses ship). Run it from
+  beside `Say it` (live in `passage.md`'s `passage-new`). Run it from
   `first.md`'s Today, in place of `run.md` step 6.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the

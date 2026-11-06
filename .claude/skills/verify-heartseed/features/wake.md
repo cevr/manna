@@ -24,9 +24,9 @@ reads, `Listen` is gone, and `Say it` stops the voice before it listens.
 Listening is offered, not required. With `Voice` off, only `Say it` shows.
 A review, `Next`, the done state and an unread garden never show `Listen`.
 
-The app holds one verse (Isaiah 41:10), and the first minute plants it.
-So no new verse shows live until `hspassage` adds more: `Listen` on Today
-is tests only for now.
+The first minute plants the app's one verse (Isaiah 41:10), so a new verse
+shows live only once the reader has chosen a passage: `passage.md`'s
+`passage-new` drives `Listen` on the second day.
 
 ## Sub-features
 
@@ -52,7 +52,7 @@ a different pid means the app was relaunched, and the row proves nothing.
   and `Next` showing), **away** and back → the done state: `Nothing to tend
   now`, no `Grade` group, no summary, no `Next`, no `Say it`, with the same
   pid. Red on base: base keeps the result and `Next`.
-- `wake-listen` (tests only until `hspassage`): `Listen` before `Say it` in
+- `wake-listen` (live in `passage.md`'s `passage-new`): `Listen` before `Say it` in
   the footer on a new verse while `Voice` is on; the voice reads that
   verse; no `Listen` while it reads, on a review, at `Next`, in the done
   state or with `Voice` off; `Say it` stops the voice first. Owned by

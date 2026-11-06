@@ -4,7 +4,8 @@ The field is the reader's progress (`apps/heartseed/src/field/screen.tsx`,
 its rule `apps/heartseed/src/field.ts`): every passage is a row and every
 verse a plant (Mark 4:28: seed, then blade, then ear, then full corn). It is
 reached from Today by the button `Your field` and left by the button
-`Today`, in place in the root route: no route, no link, no tab. Today offers
+`Today` (shown `‹ Today`) in its bar, fixed above its scroll view, in place
+in the root route: no route, no link, no tab. Today offers
 it only once the garden's read of the device's store completes, and never
 while Say it listens. It sits in Today's header beside the heading, outside
 the scroll view, so it is on screen without a scroll whatever Today holds
@@ -14,14 +15,16 @@ on which any recall was kept, each record's day read by the zone offset it
 stores, a record kept before offsets by its UTC date, so it never falls)
 and the harvest (`<n> verses at full corn`,
 `1 verse at full corn`: the verses at full corn now, so Again takes a verse
-out). Then one card per row: Today's passage first (`Isaiah 41:10`, shown
-even before its first recall, as bare soil), then each other verse the
+out). Then one card per row: the promise's first (`Isaiah 41:10`, shown
+even before its first recall, as bare soil), then each passage the reader
+chose, in the order chosen (`passage.md`), then each other verse the
 garden holds, in the order first sown. Each plant is one image to the
 screen reader, labelled `<reference>, <stage>` (`seed`, `blade`, `ear`,
 `full corn` or `not planted`), its drawing and verse number hidden inside
 it. A legend of the four stages and the caption `Mark 4:28` close the
-screen. Nothing is stored for it: every launch opens on the pending frame,
-then the first minute or Today.
+screen. The bar also holds `Add a passage` or the limit line, and a
+passage row's `Remove` (`passage.md`). Which screen shows is never stored:
+every launch opens on the pending frame, then the first minute or Today.
 
 ## Sub-features
 
@@ -117,3 +120,4 @@ delete the `snapshots` folder and the raw snapshot.
 - `Your field` never needs a `sim scroll`: it is in Today's header, outside
   the scroll view. Tap it as it is; a scroll just before a tap can leave the
   scroll view moving, and a tap then may stop the scroll instead of pressing.
+  The field's `Today` likewise sits in its bar, above the scroll view.
