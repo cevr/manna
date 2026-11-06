@@ -11,7 +11,7 @@
  * with 1 to 4 failed reads of the key, an unread garden, the value garbled
  * between launches, or no `begin`: the first minute), and run adds, invalid
  * adds, removes of passages held twice, absent ones, refused writes, adds
- * at once, Minutes taps, holds, recitals listening and finishing, waits
+ * at once, two removes or a remove and an add at once, Minutes taps, holds, recitals listening and finishing, waits
  * with a return and keeps. After every step the walk holds the service to
  * the model (`test/passages-model.ts` for the passages and the pieces,
  * `test/session-model.ts` for the plan): the passages' view, the whole
@@ -22,7 +22,8 @@
  * after `Full`, `Invalid`, `Absent`, `Unread` or `Failed`, the hold kept
  * with no recital or dropped while one is listening or finishing, pieces
  * read once at the build or not set at a making, the passages read in
- * another step than the garden's, two adds at once past the cap, a remove
+ * another step than the garden's, two adds at once past the cap, two
+ * removes at once out of call order (one passage taken twice), a remove
  * of any equal passage but the first, a recall dropped by a remove, and a
  * write of any key but the start's, the recalls kept, the minutes and the
  * passages. The clocks case holds the new verse to the day: none on the
@@ -232,6 +233,12 @@ interface ItemText {
   readonly fresh: boolean;
   readonly recalls: number;
   readonly seconds: number;
+}
+
+/** One call of the app's started beside others. */
+interface Call {
+  readonly kind: 'add' | 'remove';
+  readonly range: Span;
 }
 
 /** One device's walk: the device, the live launch and the model beside it. */
@@ -463,28 +470,46 @@ class Walk {
     await this.check(`remove ${json(range)}${refused ? ' refused' : ''} = ${answer}`);
   }
 
-  async atOnce(ranges: readonly Span[]) {
+  /** Adds and removes started at once, answered and applied in call order. */
+  async atOnce(calls: readonly Call[]) {
     this.madeBy = null;
     const answers = await this.running.run(
-      Effect.forEach(ranges, (range) => addPassage(range), { concurrency: ranges.length }),
+      Effect.forEach(
+        calls,
+        (call): Effect.Effect<string, never, Session | Passages> =>
+          call.kind === 'add' ? addPassage(call.range) : removePassage(call.range),
+        { concurrency: calls.length },
+      ),
     );
     const wanted: string[] = [];
     let changed = false;
-    for (const range of ranges) {
-      const want = addRule(CORPUS, this.held, range, false);
-      wanted.push(want.outcome);
+    for (const call of calls) {
+      const want =
+        call.kind === 'add'
+          ? addRule(CORPUS, this.held, call.range, false)
+          : removeRule(this.held, call.range, false);
+      wanted.push(`${call.kind}:${want.outcome}`);
       this.held = want.held;
-      if (want.outcome === 'Added') changed = true;
+      if (want.outcome === 'Added' || want.outcome === 'Removed') changed = true;
     }
+    const removesOnly = calls.every((call) => call.kind === 'remove');
     this.bump(`at once:${wanted.join(',')}`);
-    if (wanted.includes('Full') && wanted.includes('Added')) this.bump('at once:the cap met');
-    if (json(answers) !== json(wanted))
-      this.fail(`adds at once: ${json(answers)}, model ${json(wanted)}`);
+    if (wanted.includes('add:Full') && wanted.includes('add:Added'))
+      this.bump('at once:the cap met');
+    if (removesOnly && wanted.every((each) => each === 'remove:Removed'))
+      this.bump('at once:two removes landed');
+    if (removesOnly && json(calls[0]?.range) === json(calls[1]?.range))
+      this.bump(`at once:the same remove twice:${wanted[1]}`);
+    if (!removesOnly && wanted.includes('remove:Removed'))
+      this.bump('at once:a remove beside an add');
+    const said = answers.map((answer, index) => `${calls[index]?.kind}:${answer}`);
+    if (json(said) !== json(wanted))
+      this.fail(`calls at once: ${json(said)}, model ${json(wanted)}`);
     if (changed) {
       this.disk.set(KEY, storedText(this.held.tag === 'Read' ? this.held.passages : []));
-      this.again('add');
+      this.again(calls.some((call) => call.kind === 'add') ? 'add' : 'remove');
     }
-    await this.check(`at once ${json(ranges)} = ${json(answers)}`);
+    await this.check(`at once ${json(calls)} = ${json(said)}`);
   }
 
   async choose(minutes: Minutes) {
@@ -623,6 +648,7 @@ const COMMANDS = [
   'remove held',
   'remove absent',
   'at once',
+  'removes at once',
   'minutes',
   'hold',
   'hold',
@@ -669,8 +695,22 @@ const STEPS: Record<(typeof COMMANDS)[number], (walk: Walk, next: () => number) 
     },
     'at once': (walk, next) =>
       walk.atOnce(
-        Array.from({ length: 2 + below(next, 2) }, () => choosableOf(next, heldBy(walk))[1]),
+        Array.from({ length: 2 + below(next, 2) }, () => ({
+          kind: 'add' as const,
+          range: choosableOf(next, heldBy(walk))[1],
+        })),
       ),
+    'removes at once': (walk, next) => {
+      const held = heldBy(walk);
+      const removal = (): Call => ({
+        kind: 'remove',
+        range: heldPick(next, held) ?? choosableOf(next, [])[1],
+      });
+      const roll = below(next, 3);
+      if (roll === 0) return walk.atOnce([removal(), removal()]);
+      const addition: Call = { kind: 'add', range: choosableOf(next, held)[1] };
+      return walk.atOnce(roll === 1 ? [removal(), addition] : [addition, removal()]);
+    },
     minutes: (walk, next) => walk.choose(pickOf(next, [2, 5, 10, 20] as const)),
     hold: (walk) => walk.hold(),
     recital: (walk, next) =>
@@ -748,6 +788,10 @@ const FLOORS: ReadonlyArray<readonly [string, number]> = [
   ['return:unread passages', 3],
   ['return:recital under way', 5],
   ['at once:the cap met', 3],
+  ['at once:two removes landed', 10],
+  ['at once:the same remove twice:remove:Removed', 3],
+  ['at once:the same remove twice:remove:Absent', 5],
+  ['at once:a remove beside an add', 30],
   ['launch:Unread', 10],
   ['read:faults:1', 3],
   ['read:faults:3', 3],
