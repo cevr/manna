@@ -697,9 +697,9 @@ marks. The alert stays in the scroll.
     at most one action button): `src/run/footer.test.tsx`, the action
     button and the grades under the scroll view through a recital, a grade
     and the field and back.
-  - `test:run-walk`, `test:run-hold`, `test:run-edges`, `test:run-end`:
-    `src/run/run.test.tsx`, `hold.test.tsx`, `edges.test.tsx` and
-    `end.test.tsx`, Today's run against `src/test/run-model.ts` (over
+  - `test:run-walk`, `test:run-hold`, `test:run-edges`, `test:run-end`,
+    `test:run-cells`: `src/run/run.test.tsx`, `hold.test.tsx`,
+    `edges.test.tsx`, `end.test.tsx` and `cells.test.tsx`, Today's run against `src/test/run-model.ts` (over
     `src/test/session-model.ts`'s plan) on generated devices through
     `src/test/run-walk.ts`, each shown word held to its piece's cue,
     leaning toward whole plans (many pieces and groups, Next, every
@@ -708,8 +708,11 @@ marks. The alert stays in the scroll.
     it out, a tap with a result or after an unheard recital, the field, a
     relaunch), the edges (the first minute, the done state, unread
     launches, zones) and the recital's endings (cancelled, finishing, and
-    a Minutes tap after each ending that kept nothing); each case's floors
-    met by its own devices.
+    a Minutes tap after each ending that kept nothing) and a Minutes tap
+    around each ending (every cell of the ending, the tap's moment while
+    the recital listens, finishes or after its end, and whether the new
+    plan moves the held item or keeps it first, `CELLS`); each case's
+    floors met by its own devices.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

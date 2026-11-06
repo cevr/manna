@@ -62,8 +62,14 @@ import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
 import { hostZone, offsetIn, restore, travel, ZONES } from './zone';
 import { MINUTES_KEY } from '../session/service';
 
-/** Which commands a walk leans toward: the run through whole plans, the hold's moments, the edges (the first minute, unread launches, the done state), or the recital's endings (cancelled, finishing, and a Minutes tap after one that kept nothing). */
-export type Steer = 'run' | 'hold' | 'edges' | 'end';
+/** Which commands a walk leans toward: the run through whole plans, the hold's moments, the edges (the first minute, unread launches, the done state), the recital's endings (cancelled, finishing, and a Minutes tap after one that kept nothing), or the cells (a Minutes tap aimed at each ending, moment and placing of the held item, `CELLS`). */
+export type Steer = 'run' | 'hold' | 'edges' | 'end' | 'cells';
+
+/** Whether a steer leans to the hold: more pieces in more groups, long pieces, now and then a crowded device. */
+const crowds = (steer: Steer) => steer === 'hold';
+
+/** Whether a steer's plants are all due, 20 to 60 days back: the hold's, and the cells'. */
+const allDue = (steer: Steer) => steer === 'hold' || steer === 'cells';
 
 const T0 = Date.UTC(2026, 4, 4, 13);
 
@@ -102,7 +108,7 @@ const pieceOf = (next: () => number, reference: string, group: string, words: nu
 const wordsOf = (next: () => number, steer: Steer) => {
   const roll = next();
   if (roll < 0.06) return 1;
-  if (roll < (steer === 'hold' ? 0.36 : 0.18)) return 60 + below(next, 31);
+  if (roll < (crowds(steer) ? 0.36 : 0.18)) return 60 + below(next, 31);
   return 2 + below(next, 28);
 };
 
@@ -119,16 +125,34 @@ const crowdedOf = (next: () => number): TextPiece[] => [
   pieceOf(next, `Birch 1:${1 + below(next, 9)}`, 'G1', 60 + below(next, 21)),
 ];
 
+/**
+ * A device leaning to the cells: 4-6 short pieces in two groups, most in
+ * the first and one at least in the second, so the plan's mix shows a piece of the other group second
+ * while an earlier due piece of the first group waits behind it; once the
+ * first is said, a plan made with the second held shows that earlier piece
+ * first (the held item moved), and a plan made at the first keeps it first.
+ */
+const interleavedOf = (next: () => number): TextPiece[] =>
+  Array.from({ length: 4 + below(next, 3) }, (_, at) =>
+    pieceOf(
+      next,
+      `Alder ${1 + at}:${1 + below(next, 9)}`,
+      at === 1 || next() < 0.25 ? 'G1' : 'G0',
+      2 + below(next, 11),
+    ),
+  );
+
 /** 1-8 pieces in 1-3 groups with unique references, some a trailing space or a digit apart, the passage first in some devices; now and then a crowded device, leaning to the hold. */
 const piecesOf = (next: () => number, steer: Steer): TextPiece[] => {
-  if (steer === 'hold' && next() < 0.4) return crowdedOf(next);
+  if (steer === 'cells') return interleavedOf(next);
+  if (crowds(steer) && next() < 0.4) return crowdedOf(next);
   const count =
     steer === 'edges'
       ? 1 + below(next, 8)
-      : steer === 'hold'
+      : crowds(steer)
         ? 5 + below(next, 4)
         : 3 + below(next, 6);
-  const groups = steer === 'hold' ? 2 + below(next, 2) : 1 + below(next, 3);
+  const groups = crowds(steer) ? 2 + below(next, 2) : 1 + below(next, 3);
   const pieces: TextPiece[] = [];
   if (next() < 0.4) pieces.push(PASSAGE);
   while (pieces.length < count) {
@@ -254,6 +278,49 @@ interface During {
   readonly minutes: number;
 }
 
+/** When a Minutes tap comes around a recital: while it listens, while it finishes, or after it ended, its item still held. */
+type Moment = 'listening' | 'finishing' | 'after';
+
+/** Whether the plan a Minutes tap makes shows another item first than the held one (`moved`, the done state included) or the held one (`kept`). */
+type Placed = 'moved' | 'kept';
+
+/** One cell of a Minutes tap around a recital: how the recital ended, when the tap came, and where the new plan puts the held item. */
+interface Cell {
+  readonly key: string;
+  readonly how: How;
+  readonly moment: Moment;
+  readonly placed: Placed;
+}
+
+const cellKey = (moment: Moment, how: How, placed: Placed) => `cell:${moment}:${how}:${placed}`;
+
+/** The order a walk aims at open cells in: a tap during a recital that keeps nothing first (the item stays shown, its cells open still), then any other (the item's hold let go or its recall kept, the walk moves on). */
+const rankOf = (cell: Cell) => (cell.how === 'heard' || cell.moment === 'after' ? 1 : 0);
+
+/**
+ * Every cell of (ending × moment × placed) a walk reaches, each a floor of
+ * the endings' part. A cancel comes while a recital listens, so a cancelled
+ * recital has no finishing moment; a recall just kept is not due at its own
+ * instant, so a plan made right after a heard recital never shows its item
+ * first again.
+ */
+export const CELLS: readonly Cell[] = (['heard', 'unheard', 'refused', 'cancelled'] as const)
+  .flatMap((how) =>
+    (['listening', 'finishing', 'after'] as const).flatMap((moment) =>
+      (['moved', 'kept'] as const).map((placed) => ({
+        key: cellKey(moment, how, placed),
+        how,
+        moment,
+        placed,
+      })),
+    ),
+  )
+  .filter(
+    (cell) =>
+      !(cell.how === 'cancelled' && cell.moment === 'finishing') &&
+      !(cell.how === 'heard' && cell.moment === 'after' && cell.placed === 'kept'),
+  );
+
 /**
  * How often each command is chosen at Say it, by steer: a recital heard
  * (now and then refused), unheard, refused, cancelled (now and then after a
@@ -314,6 +381,16 @@ const AT_SAY_IT: Record<
     field: 0.03,
     after: 0.6,
   },
+  cells: {
+    heard: 0.3,
+    unheard: 0.15,
+    refused: 0.1,
+    cancelled: 0.1,
+    during: 0.15,
+    minutes: 0.05,
+    field: 0.05,
+    after: 0.3,
+  },
 };
 
 /** A walk's tally of the cases it reached. */
@@ -346,6 +423,10 @@ class Walk {
   result: 'grades' | 'alert' | null = null;
   /** How the held item's last recital ended when it kept no recall (unheard, refused or cancelled), until a making or Next lets the hold go. */
   ending: Exclude<How, 'heard'> | null = null;
+  /** How the held item's last recital ended, any ending, until a making or Next lets the hold go. */
+  heldEnd: How | null = null;
+  /** Where the plan made by a Minutes tap during the recital under way put its held item. */
+  placedDuring: Placed | null = null;
   app: Launch | null = null;
   readonly expected = new Map<string, string | null>();
 
@@ -493,6 +574,7 @@ class Walk {
     this.run = NO_RUN;
     this.result = null;
     this.ending = null;
+    this.heldEnd = null;
     const firstMinute =
       this.device.disk.size === 0 ||
       ![...this.device.disk.keys()].some((key) => key.startsWith(PREFIX));
@@ -559,10 +641,12 @@ class Walk {
     const startedAt = this.time.now;
     const cue = this.cueNow(piece);
     if (!this.unread) this.run = startedModel(this.run, this.recallsNow);
+    this.placedDuring = null;
     await this.recital(how, during);
     const key = how === 'heard' ? this.expectRecall(piece, startedAt) : null;
     this.result = how === 'unheard' ? 'alert' : how === 'cancelled' ? null : 'grades';
     this.ending = how === 'heard' ? null : how;
+    this.endedHeld(how, during);
     bump(this.coverage, `say:${this.unread ? 'unread' : how}`);
     if (skip.length > 0) bump(this.coverage, 'say:skipped');
     this.tallyShown(piece, 'fresh' in shown && !this.unread ? shown.fresh : null);
@@ -571,6 +655,13 @@ class Walk {
     );
     this.faults.refuse = false;
     if (key !== null) this.checkRecall(key, piece, skip.length === 0 ? cue : null);
+  }
+
+  /** Notes how the held item's recital ended, and tallies the cell a Minutes tap during it reached. */
+  endedHeld(how: How, during: During | undefined) {
+    this.heldEnd = this.unread ? null : how;
+    if (during !== undefined && this.placedDuring !== null)
+      bump(this.coverage, cellKey(during.at, how, this.placedDuring));
   }
 
   /** The taps of one recital: Say it, then a cancel while it listens, or Listening, which finishes it; a Minutes tap while it listens or, its end held back, while it finishes, when `during` says. */
@@ -632,6 +723,7 @@ class Walk {
       at < 0 ? 'held:minutes:left-out' : at === 0 ? 'held:minutes:first' : 'held:minutes:later',
     );
     const first = shownModel({ ...this.run, hold: null }, this.recallsNow);
+    this.placedDuring = first?.reference === before.reference ? 'kept' : 'moved';
     if (first?.reference !== before.reference) bump(this.coverage, 'made:held-not-first');
   }
 
@@ -663,9 +755,17 @@ class Walk {
       bump(this.coverage, 'made:drops-hold');
       if (this.result === 'alert') bump(this.coverage, 'made:drops-hold:unheard');
       if (this.ending !== null) bump(this.coverage, `minutes:after:${this.ending}`);
+      if (this.heldEnd !== null) {
+        const placed =
+          shownModel(this.run, this.recallsNow)?.reference === before.reference ? 'kept' : 'moved';
+        bump(this.coverage, cellKey('after', this.heldEnd, placed));
+      }
       this.result = null;
     }
-    if (!underWay) this.ending = null;
+    if (!underWay) {
+      this.ending = null;
+      this.heldEnd = null;
+    }
     const shown = shownModel(this.run, this.recallsNow);
     if (shown === null) bump(this.coverage, 'done:after-minutes');
     else if (wasDone) bump(this.coverage, 'minutes:appears');
@@ -683,6 +783,7 @@ class Walk {
     this.run = nextModel(this.run);
     this.result = null;
     this.ending = null;
+    this.heldEnd = null;
     bump(this.coverage, 'next');
     const now = shownModel(this.run, this.recallsNow);
     if (now === null) bump(this.coverage, 'done:after-next');
@@ -758,9 +859,69 @@ class Walk {
     });
   }
 
+  /** Where the plan a Minutes tap at `minutes` makes now puts `shown`: first again (`kept`) or not (`moved`), the plants and the clock as they are. */
+  placedAt(shown: { readonly reference: string }, minutes: number): Placed {
+    const was = this.minutes;
+    this.minutes = minutes;
+    const plan = this.planNow();
+    this.minutes = was;
+    return shownModel({ plan, hold: null }, this.recallsNow)?.reference === shown.reference
+      ? 'kept'
+      : 'moved';
+  }
+
+  /**
+   * Leaning to the endings: a recital aimed at a cell no tap has reached
+   * yet, with the minutes whose plan places the shown item as the cell asks
+   * (a heard recital's tap after its end is moved whatever the minutes, its
+   * recall just kept); none when no open cell is reachable here. The cell
+   * tallied is the one the tap reached, read from the model at the tap.
+   */
+  aimed() {
+    const shown = shownModel(this.run, this.recallsNow);
+    if (shown === null) return null;
+    const reach = CELLS.flatMap((cell) => {
+      if ((this.coverage[cell.key] ?? 0) > 0) return [];
+      const minutes = MINUTES.filter(
+        (each) =>
+          (cell.how === 'heard' && cell.moment === 'after') ||
+          this.placedAt(shown, each) === cell.placed,
+      );
+      return minutes.length === 0 ? [] : [{ cell, minutes, rank: rankOf(cell) }];
+    });
+    const moved = reach.filter(
+      (each) =>
+        each.cell.placed === 'moved' &&
+        !(each.cell.how === 'heard' && each.cell.moment === 'after'),
+    );
+    const open = moved.length > 0 ? moved : this.next() < 0.5 ? reach : [];
+    const first = Math.min(...open.map((each) => each.rank));
+    const ranked = open.filter((each) => each.rank === first);
+    const aim = ranked[below(this.next, ranked.length)];
+    if (aim === undefined) return null;
+    const minutes = aim.minutes[below(this.next, aim.minutes.length)] ?? this.minutes;
+    bump(this.coverage, 'aim');
+    if (aim.cell.moment === 'after') return this.sayThenMinutes(aim.cell.how, minutes);
+    return this.say(aim.cell.how, { at: aim.cell.moment, minutes });
+  }
+
+  /** Whether a walk leaning to the cells has met every cell, its commands done. */
+  cellsMet(steer: Steer) {
+    return steer === 'cells' && CELLS.every((cell) => (this.coverage[cell.key] ?? 0) > 0);
+  }
+
+  /** A recital ended `how`, then a Minutes tap at `minutes` while its item is still held. */
+  async sayThenMinutes(how: How, minutes: number) {
+    await this.say(how);
+    if (this.run.hold === null) return;
+    await this.tapMinutes(minutes);
+    bump(this.coverage, 'minutes');
+    await this.settle(`minutes ${minutes}`);
+  }
+
   /** A Minutes tap during a recital, at `at`: 2 minutes often (most often leaning to the hold), else any. */
   during(at: During['at'], steer: Steer): During {
-    const two = this.next() < (steer === 'hold' ? 0.7 : 0.5);
+    const two = this.next() < (crowds(steer) ? 0.7 : 0.5);
     return { at, minutes: two ? 2 : pickOf(this.next, MINUTES) };
   }
 
@@ -779,6 +940,7 @@ class Walk {
   async atSayIt(steer: Steer, roll: number) {
     const guided = steer === 'hold' ? this.guided(roll) : null;
     if (guided !== null) return guided;
+    if (steer === 'cells') return this.aimed() ?? this.say('heard');
     const weights = AT_SAY_IT[steer];
     if (this.ending !== null && this.next() < weights.after) return this.minutesTap();
     let edge = weights.heard;
@@ -799,7 +961,7 @@ class Walk {
   }
 
   async atNext(steer: Steer, roll: number) {
-    const next = steer === 'hold' ? 0.55 : 0.65;
+    const next = steer === 'cells' ? 0.9 : crowds(steer) ? 0.55 : 0.65;
     if (roll < next) return this.nextTap();
     if (roll < next + 0.08) return this.again();
     if (roll < next + 0.14) return this.peekTap();
@@ -826,12 +988,13 @@ class Walk {
     this.zone = l === 0 || next() < 0.3 ? pickOf(next, ZONES) : this.zone;
     bump(this.coverage, `zone:${this.zone}`);
     this.unread =
+      steer !== 'cells' &&
       (steer === 'edges' ? next() < 0.35 : next() < 0.1) &&
       [...this.device.disk.keys()].some((key) => key.startsWith(PREFIX));
     this.log.push(`launch ${l}`);
     await this.launchNow();
-    const commands = 4 + below(next, 6);
-    for (let c = 0; c < commands; c += 1) await this.command(steer);
+    const commands = (steer === 'cells' ? 10 : 4) + below(next, 6);
+    for (let c = 0; c < commands && !this.cellsMet(steer); c += 1) await this.command(steer);
     await this.screen.leave();
   }
 
@@ -845,9 +1008,9 @@ class Walk {
   }
 }
 
-/** The recalls of one planted piece, in time order: 1-4 over 1-60 days back (1-2 over 20-60 days, all due, leaning to the hold). */
+/** The recalls of one planted piece, in time order: 1-4 over 1-60 days back (1-2 over 20-60 days, all due, leaning to the hold or the cells). */
 const plantRecords = (next: () => number, steer: Steer, piece: TextPiece) => {
-  const crowded = steer === 'hold';
+  const crowded = allDue(steer);
   const recalls = crowded ? 1 + below(next, 2) : 1 + below(next, 4);
   const starts = Array.from(
     { length: recalls },
@@ -856,18 +1019,19 @@ const plantRecords = (next: () => number, steer: Steer, piece: TextPiece) => {
   return starts.map((startedAt) => recordOf(next, piece.reference, piece.words, startedAt));
 };
 
-/** A device's recall records: none for an empty disk (the first minute), else most pieces planted and, now and then, a plant no piece names. */
+/** A device's recall records: none for an empty disk (the first minute), else most pieces planted and, now and then, a plant no piece names; every piece planted, leaning to the cells. */
 const recordsOf = (
   next: () => number,
   steer: Steer,
   pieces: readonly TextPiece[],
   coverage: Coverage,
 ) => {
+  if (steer === 'cells') return pieces.flatMap((piece) => plantRecords(next, steer, piece));
   const empty = steer === 'edges' ? next() < 0.4 : next() < 0.1;
   if (empty) return [];
   const entries: (readonly [string, string])[] = [];
   for (const piece of pieces)
-    if (next() < (steer === 'hold' ? 0.8 : 0.7)) entries.push(...plantRecords(next, steer, piece));
+    if (next() < (crowds(steer) ? 0.8 : 0.7)) entries.push(...plantRecords(next, steer, piece));
   if (next() < 0.3) {
     entries.push(recordOf(next, 'Stray 9:9', 4, T0 - 3 * DAY));
     bump(coverage, 'disk:unnamed-plant');
@@ -880,10 +1044,9 @@ const recordsOf = (
 const deviceRun = async (next: () => number, steer: Steer, coverage: Coverage) => {
   const pieces = piecesOf(next, steer);
   const entries = recordsOf(next, steer, pieces, coverage);
-  const stored =
-    steer === 'hold'
-      ? pickOf(next, ['10', '20'] as const)
-      : pickOf(next, [undefined, '2', '5', '10', '20'] as const);
+  const stored = allDue(steer)
+    ? pickOf(next, ['10', '20'] as const)
+    : pickOf(next, [undefined, '2', '5', '10', '20'] as const);
   if (stored !== undefined) entries.push([MINUTES_KEY, stored]);
   const device = deviceOf(entries);
   const log: string[] = [];
@@ -916,6 +1079,7 @@ const LEANS: Record<Steer, string> = {
   hold: 'the hold',
   edges: 'the edges',
   end: 'the recital’s endings',
+  cells: 'a Minutes tap around each ending, the held item moved or kept',
 };
 
 /** The floors of `floors` that `coverage` misses; `zones` asks for at least that many zones. */
