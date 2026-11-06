@@ -24,7 +24,9 @@
  *   screen asks for (a recital is cut off only by the runtime closing);
  * - the reader: Listen, Next, Say it, Listening, a peek, a grade, Continue,
  *   two taps queued before a render, and a relaunch in every phase and
- *   activity, the pending frame included.
+ *   activity, the pending frame included; on Today, Next after a kept
+ *   recall and a new plan at the passage's due (the device's clock moved
+ *   there, then a tap on the Minutes radio checked).
  *
  * Every frame (each DOM mutation batch) and every settle is read against
  * the model: the heading, the pending rules, what a sighted reader and the
@@ -32,13 +34,15 @@
  * claims and setting words, the whole disk with every write counted and each
  * kept record's nine fields from the model's own grade rule and the zone's
  * offset at its start by the wall clock's own fields, the speaks and
- * stops, the recognizer's cancel at a relaunch, and the chime. It counts
+ * stops, the recognizer's cancel at a relaunch, the chime, and Today's run:
+ * its one action (Say it, Listening or Next, never Next unread) and its done
+ * state, the counts line alone, by hsdaily's plan model. It counts
  * words without printing one.
  */
 
 import { RegistryProvider } from '@effect/atom-react';
 import { describe, expect, it } from 'bun:test';
-import { Effect, Layer, MutableRef } from 'effect';
+import { Effect, Layer, Logger, MutableRef } from 'effect';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
@@ -55,9 +59,12 @@ import {
 } from '../dictation';
 import { Chime, type Growth } from '../garden';
 import { sourceWords } from '../matcher/words';
-import { Haptics } from '../sayit';
+import { Haptics, type Recall } from '../sayit';
+import { MINUTES_KEY } from '../session/service';
 import { store } from '../store';
+import { clockAt } from './clock';
 import { device } from './one';
+import { dueModel, MINUTE, planModel } from './session-model';
 import { hostOffset } from './zone';
 import { VoiceSource, VoiceUnavailable, type VoiceEvent, type VoiceInfo } from '../voice';
 
@@ -155,6 +162,8 @@ export type Command =
   | { readonly _tag: 'Grade'; readonly grade: 1 | 2 | 3 | 4; readonly write: Write }
   | { readonly _tag: 'Recover' }
   | { readonly _tag: 'Continue' }
+  /** On Today: the device's clock moved to the passage's due, then a tap on the Minutes radio checked, which makes the plan again. */
+  | { readonly _tag: 'Renew' }
   | { readonly _tag: 'Relaunch'; readonly launch: LaunchKind };
 
 export interface DeviceStart {
@@ -589,8 +598,18 @@ const frameFaults = (
   return [...out, ...wordFaults(host, heading, phase.said)];
 };
 
-/** A launch: the root over the device's disk as it stands, built once `gate` resolves. */
-const mount = async (allowed: Allowed, voices: 0 | 1, count: (key: string) => void) => {
+/** The device's clock: the host's moved on by `by` milliseconds, which a new plan at the passage's due sets. */
+interface Shift {
+  by: number;
+}
+
+/** A launch: the root over the device's disk as it stands, on the device's clock, built once `gate` resolves. */
+const mount = async (
+  allowed: Allowed,
+  voices: 0 | 1,
+  count: (key: string) => void,
+  shift: Shift,
+) => {
   const voice = voiceStandIn(voices);
   const dictation = recognizer();
   const chimes: Growth[] = [];
@@ -609,7 +628,14 @@ const mount = async (allowed: Allowed, voices: 0 | 1, count: (key: string) => vo
       Chime.of({ grow: (growth) => Effect.sync(() => void chimes.push(growth)) }),
     ),
     voice: voice.layer,
-  });
+  }).pipe(
+    Layer.provide(
+      Layer.merge(
+        clockAt((host) => host + shift.by),
+        Logger.layer([]),
+      ),
+    ),
+  );
   const host = document.createElement('div');
   document.body.append(host);
   const headings = () =>
@@ -675,6 +701,35 @@ const mount = async (allowed: Allowed, voices: 0 | 1, count: (key: string) => vo
 
 type Rig = Awaited<ReturnType<typeof mount>>;
 
+/** The counts line of Today's done state. */
+const DONE = 'Nothing to tend now';
+
+/** Today's action buttons shown, by name: Say it, Listening or Next. */
+const actionsOf = (r: Rig) =>
+  r
+    .buttons()
+    .filter(
+      (name): name is string => name !== null && ['Say it', 'Listening', 'Next'].includes(name),
+    );
+
+/** Whether a read Today is ready in the done state (the counts line alone) or under Next (with its result), with `sets` writes reached; not yet while no stage shows; none for Say it's own checks. */
+const runReady = (r: Rig, run: 'say' | 'next' | 'done', sets: number): boolean | null => {
+  const written = device.calls.set >= sets;
+  if (run === 'done')
+    return (
+      r.host.querySelector('[data-testid="session"]')?.textContent === DONE &&
+      actionsOf(r).length === 0 &&
+      written
+    );
+  if (r.host.querySelector('[data-testid="stage"]') === null) return false;
+  if (run === 'say') return null;
+  return (
+    actionsOf(r).join() === 'Next' &&
+    r.host.querySelector('[data-testid="summary"]') !== null &&
+    written
+  );
+};
+
 /** A finished recital Say it shows: its record as the model expects it, and whether it is kept. */
 interface Shown {
   readonly keep: boolean;
@@ -731,13 +786,55 @@ export interface Model {
   shown: Shown | null;
   /** A Today write landed in this launch with the passage grown past a seed: a growth line and a chime may show. */
   grew: boolean;
+  /** Today's plan made last in this launch: whether it holds the passage, and the passage's recalls then; none before Today's first show. */
+  plan: { readonly passage: boolean; readonly recalls: number } | null;
+  /** Today holds the passage: from a press of Say it until Next or a making with no recital under way. */
+  held: boolean;
+  /** The recital last pressed was said under a cue: on a read Today, the full text before the passage is planted and first letters at a seed. */
+  cued: boolean;
 }
 
-/** The grade the matcher suggests for a finished recital with no cue: Again when nothing or over a tenth is missed, Hard when any is missed, an extra word is said or a word was peeked, else Good. */
-export const gradeOf = (hits: number, extras: number, peeks: number) => {
+/** Today's run in a read launch (`plan` made): the passage shown under Say it until a kept recall, then under Next, and the done state once it is neither held nor planned and not done. */
+const runOf = (m: Model): 'say' | 'next' | 'done' => {
+  const plan = m.plan;
+  if (plan === null) return 'say';
+  const done = m.passage > plan.recalls;
+  if (!m.held && (!plan.passage || done)) return 'done';
+  return done ? 'next' : 'say';
+};
+
+/** The valid recalls of each verse on `disk`, as the garden reads them: a key that names its record's reference and start. */
+const plantsOf = (disk: ReadonlyMap<string, string | null>) => {
+  const plants = new Map<string, Recall[]>();
+  for (const [key, value] of disk) {
+    if (!key.startsWith(PREFIX) || value === null) continue;
+    let record: Recall | null = null;
+    try {
+      record = JSON.parse(value);
+    } catch {
+      continue;
+    }
+    if (record === null || key !== `${PREFIX}${record.reference}/${record.startedAt}`) continue;
+    plants.set(record.reference, [...(plants.get(record.reference) ?? []), record]);
+  }
+  return plants;
+};
+
+/** Whether hsdaily's model plans the passage over `disk` at `at` with the default five minutes. */
+const plansPassage = (disk: ReadonlyMap<string, string | null>, at: number) =>
+  planModel({
+    plants: plantsOf(disk),
+    pieces: [{ reference: passage.reference, words: N, group: passage.reference }],
+    at,
+    offset: hostOffset(at),
+    minutes: 5,
+  }).items.some((item) => item.reference === passage.reference);
+
+/** The grade the matcher suggests for a finished recital: Again when nothing or over a tenth is missed, Hard when any is missed, an extra word is said, a word was peeked or the recital was said under a cue (`helped`), else Good. */
+export const gradeOf = (hits: number, extras: number, peeks: number, helped = false) => {
   const missing = N - hits;
   if (hits === 0 || missing * 10 > N) return 1;
-  if (missing > 0 || extras > 0 || peeks > 0) return 2;
+  if (missing > 0 || extras > 0 || peeks > 0 || helped) return 2;
   return 3;
 };
 
@@ -785,6 +882,7 @@ export const activityOf = (m: Model) => {
   if (m.said === 'open') return `${m.screen}:listening`;
   if (m.said === 'unheard') return `${m.screen}:alert`;
   if (m.refused) return `${m.screen}:refused`;
+  if (m.screen === 'today' && runOf(m) === 'done') return 'today:done';
   if (m.shown !== null && (m.screen === 'today' || m.screen === 'unread'))
     return `${m.screen}:recap`;
   return `${m.screen}:idle`;
@@ -884,14 +982,32 @@ export const session = (count: (key: string) => void) => {
     open: null,
     shown: null,
     grew: false,
+    plan: null,
+    held: false,
+    cued: false,
   };
   const trace: string[] = [];
   const where = () => trace.join(' > ');
   const rig = (): Rig => at.rig ?? expect.unreachable('no launch');
+  const shift: Shift = { by: 0 };
+  /** The device's instant now, as its app's clock reads it. */
+  const now = () => Date.now() + shift.by;
 
   const opening = (): Screen => {
     if (m.unread) return 'unread';
     return m.recalls > 0 ? 'today' : 'hear';
+  };
+
+  /** A making of Today's plan: one with no recital under way lets the held passage go, its recital's result with it. */
+  const make = () => {
+    if (m.said !== 'open') {
+      m.held = false;
+      m.said = 'none';
+      m.refused = false;
+      m.shown = null;
+    }
+    m.plan = { passage: plansPassage(m.disk, now()), recalls: m.passage };
+    count(`made:${m.plan.passage ? 'passage' : 'empty'}${m.held ? ':held' : ''}`);
   };
 
   const go = (before: Screen, screen: Screen) => {
@@ -899,6 +1015,7 @@ export const session = (count: (key: string) => void) => {
       [HEADING[before], HEADING[screen]].filter((each): each is string => each !== null),
     );
     m.screen = screen;
+    if (screen === 'today' && before !== 'today') make();
   };
 
   /** The screen is ready for the model's oracles. */
@@ -909,8 +1026,10 @@ export const session = (count: (key: string) => void) => {
     if (m.screen === 'pending') return true;
     if (m.screen === 'hear') return r.buttons().includes('Listen') === (m.voiceOn && !m.reading);
     if (m.screen === 'planted') return true;
-    if (m.screen === 'today' && r.host.querySelector('[data-testid="stage"]') === null)
-      return false;
+    if (m.screen === 'today') {
+      const run = runReady(r, runOf(m), m.sets);
+      if (run !== null) return run;
+    }
     if (m.said === 'open')
       return r.buttons().includes('Listening') && r.dictation.state.rest !== undefined;
     if (m.said === 'unheard') return r.host.querySelector('[role="alert"]') !== null;
@@ -996,7 +1115,7 @@ export const session = (count: (key: string) => void) => {
     const hits = outcome.finals.filter((index) => index >= 0).length;
     const extras = outcome.finals.length - hits;
     count(`missed:${before}:${hits === N ? 'none' : hits === 0 ? 'all' : 'some'}`);
-    const grade = gradeOf(hits, extras, peeks);
+    const grade = gradeOf(hits, extras, peeks, m.cued);
     m.shown = {
       keep,
       window,
@@ -1070,8 +1189,31 @@ export const session = (count: (key: string) => void) => {
       return;
     }
     if (m.screen === 'hear') checkHear(r, here);
+    checkRun(r, here);
     checkRecital(r, here);
     checkClaims(r, here);
+  };
+
+  /** Today's run: the action the model's run offers (Listening while a recital is open, none in the done state, never Next on an unread Today), and the done state's counts line alone, with no verse, stage, grade or result. */
+  const checkRun = (r: Rig, here: string) => {
+    if (m.screen !== 'today' && m.screen !== 'unread') return;
+    const run = m.screen === 'today' ? runOf(m) : 'say';
+    count(`run:${m.screen}:${run}`);
+    const want = { say: ['Say it'], next: ['Next'], done: [] }[run];
+    expect(actionsOf(r), `${here}: Today's action`).toEqual(
+      m.said === 'open' ? ['Listening'] : want,
+    );
+    if (run !== 'done') return;
+    expect(
+      {
+        counts: r.host.querySelector('[data-testid="session"]')?.textContent ?? null,
+        verse: r.host.querySelector('[data-testid="reference"],[data-testid^="word-"]') !== null,
+        stage: r.host.querySelector('[data-testid="stage"]') !== null,
+        grade: r.host.querySelector('[role="radiogroup"][aria-label="Grade"]') !== null,
+        result: r.host.querySelector('[data-testid="summary"],[role="alert"]') !== null,
+      },
+      `${here}: the done state`,
+    ).toEqual({ counts: DONE, verse: false, stage: false, grade: false, result: false });
   };
 
   /** Hear at rest: Listen iff the voice is on and idle, Next, the inked words the model's lit ones and the selected ones its current range. */
@@ -1140,7 +1282,7 @@ export const session = (count: (key: string) => void) => {
         `${here}: unread claims`,
       ).toEqual([null, false, null]);
     if (m.screen === 'planted') expect(stage, `${here}: Planted's stage`).toBe('Stage: seed');
-    if (m.screen !== 'today') return;
+    if (m.screen !== 'today' || runOf(m) === 'done') return;
     const want = ['Stage: not planted', 'Stage: seed'][m.passage] ?? 'Stage: planted';
     const planted = stage !== null && (STAGES.includes(stage) || stage === 'Stage: seed');
     const got = m.passage >= 2 && planted ? 'Stage: planted' : stage;
@@ -1168,9 +1310,12 @@ export const session = (count: (key: string) => void) => {
       shown: null,
       grew: false,
       screen: 'pending',
+      plan: null,
+      held: false,
+      cued: false,
     } satisfies Partial<Model>);
     at.allowed = { headings: new Set(), pending: true };
-    at.rig = await mount(at.allowed, kind.voices, count);
+    at.rig = await mount(at.allowed, kind.voices, count, shift);
     if (kind.held) {
       await rig().until(() => false, 5);
       await settle();
@@ -1193,6 +1338,7 @@ export const session = (count: (key: string) => void) => {
     rig().phase.voiceOn = m.voiceOn;
     const screen = opening();
     m.screen = screen;
+    if (screen === 'today') make();
     at.allowed.headings = new Set([HEADING[screen] ?? '']);
     rig().gate.resolve();
     await settle();
@@ -1221,7 +1367,10 @@ export const session = (count: (key: string) => void) => {
     const keep = before !== 'letters';
     r.dictation.state.plan = plan;
     r.phase.said = true;
-    const start = Date.now();
+    if (before === 'today') m.held = true;
+    const stage = r.host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label');
+    m.cued = before === 'today' && (m.passage <= 1 || stage === 'Stage: seed');
+    const start = now();
     let outcome = UNWRITTEN;
     const window = [start, start] as [number, number];
     if (twice) {
@@ -1246,7 +1395,7 @@ export const session = (count: (key: string) => void) => {
       outcome = ended(before, outcomeOf(plan, 'close'), keep, window, 0, mode);
       await r.click('Say it');
     }
-    window[1] = Date.now();
+    window[1] = now();
     await settleWrite(outcome);
   };
 
@@ -1298,6 +1447,27 @@ export const session = (count: (key: string) => void) => {
     }
     await r.click(label);
     await settleWrite(outcome);
+  };
+
+  /** A new plan at the passage's due: the device's clock moved there (a minute on at least), and a tap on the Minutes radio checked, which writes the minutes and makes the plan again. */
+  const renew = async () => {
+    const r = rig();
+    const recalls = plantsOf(m.disk).get(passage.reference) ?? [];
+    const due = recalls.length > 0 ? dueModel(recalls) + 1 : 0;
+    shift.by += Math.max(MINUTE, due - now());
+    count(`renew:${activityOf(m)}`);
+    m.sets += 1;
+    m.opened = true;
+    make();
+    const radio = r.host.querySelector(
+      '[role="radiogroup"][aria-label="Minutes"] [role="radio"][aria-checked="true"]',
+    );
+    expect(radio === null, `${where()}: the Minutes radio checked`).toBe(false);
+    await act(async () => {
+      radio?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    });
+    await r.until(() => device.calls.set >= m.sets);
+    m.disk.set(MINUTES_KEY, '5');
   };
 
   const grade = async (to: 1 | 2 | 3 | 4, mode: Write) => {
@@ -1426,6 +1596,15 @@ export const session = (count: (key: string) => void) => {
         await voiceEvent(command.kind, command.stale);
         break;
       case 'Next':
+        if (before === 'today') {
+          m.held = false;
+          m.said = 'none';
+          m.refused = false;
+          m.shown = null;
+          go(before, before);
+          await r.click('Next');
+          break;
+        }
         if (m.reading) count('next:while-reading');
         m.reading = false;
         go(before, 'letters');
@@ -1459,6 +1638,9 @@ export const session = (count: (key: string) => void) => {
       case 'Continue':
         go(before, 'today');
         await r.click('Continue');
+        break;
+      case 'Renew':
+        await renew();
         break;
     }
     await settle();
@@ -1812,17 +1994,20 @@ const onwardOf = (screen: Screen, todayOn: readonly string[]): readonly string[]
   return todayOn;
 };
 
-/** A recital held open: the rest of it said, the reader's finish, a peek, and a late event. */
-const offerOpen = ({ m, add, write, late, marks, todayOn }: Offering) => {
+/** A recital held open: the rest of it said, the reader's finish, a peek, a late event, and on Today a new plan while it listens. */
+const offerOpen = (offering: Offering) => {
+  const { m, add, write, late, marks, todayOn } = offering;
   const ends = onwardOf(m.screen, todayOn);
   add('more', ends, () => ({ _tag: 'More', write: write() }), 2);
   add('finish', ends, () => ({ _tag: 'Finish', write: write() }), 2);
   if (marks) add('peek', `peek:${m.screen}:listening`, () => ({ _tag: 'Peek', write: write() }));
   late();
+  renewal(offering);
 };
 
-/** A recital's screen at rest: Say it once or twice before a render, a peek, a grade, and a late event. */
-const offerSay = ({ m, r, pick, choose, add, write, late, marks, todayOn }: Offering) => {
+/** A recital's screen at rest: Say it once or twice before a render, a peek, a grade, a late event, and on Today a new plan at the passage's due. */
+const offerSay = (offering: Offering) => {
+  const { m, pick, choose, add, write, todayOn } = offering;
   add(
     'say',
     onwardOf(m.screen, todayOn),
@@ -1834,6 +2019,12 @@ const offerSay = ({ m, r, pick, choose, add, write, late, marks, todayOn }: Offe
     plan: planOf(pick, choose, m.screen),
     write: write(),
   }));
+  offerResult(offering);
+  renewal(offering);
+};
+
+/** A result's own taps: a peek, a grade, and a late event. */
+const offerResult = ({ m, r, pick, add, write, late, marks }: Offering) => {
   if (marks) add('peek', `peek:${m.screen}:kept`, () => ({ _tag: 'Peek', write: write() }), 2);
   if (r.host.querySelector('[role="radiogroup"][aria-label="Grade"] [role="radio"]') !== null)
     add('grade', `grade:${m.screen}`, () => ({
@@ -1844,11 +2035,31 @@ const offerSay = ({ m, r, pick, choose, add, write, late, marks, todayOn }: Offe
   late();
 };
 
+/** On a read Today with the device up: a new plan at the passage's due, `times` weighed. */
+const renewal = ({ m, add, todayOn }: Offering, times = 1) => {
+  if (m.screen === 'today' && !m.down) add('renew', todayOn, () => ({ _tag: 'Renew' }), times);
+};
+
+/** Today's kept recall under Next: Next, a peek, a grade, a new plan at the passage's due, and a late event. */
+const offerNext = (offering: Offering) => {
+  offering.add('next', offering.todayOn, () => ({ _tag: 'Next' }), 3);
+  offerResult(offering);
+  renewal(offering);
+};
+
+/** Today's done state: a new plan at the passage's due, most often, and a late event. */
+const offerDone = (offering: Offering) => {
+  renewal(offering, 3);
+  offering.late();
+};
+
 /** The offer of the model's screen and activity. */
 const offerOf = (m: Model) => {
   if (m.screen === 'hear') return m.reading ? offerReading : offerHear;
   if (m.screen === 'planted') return offerPlanted;
   if (m.said === 'open') return offerOpen;
+  if (m.screen === 'today' && runOf(m) === 'done') return offerDone;
+  if (m.screen === 'today' && runOf(m) === 'next') return offerNext;
   return offerSay;
 };
 
@@ -1971,7 +2182,8 @@ const startOf = (pick: Random, choose: Choose): DeviceStart => {
  * stays under its budget; together they are every floor: each ending in
  * letters and alone, missed words none, some and all, each write fault,
  * each launch, read and disk, each relaunch activity, each voice event and
- * tap batch. Every part draws from the whole generator; its group only
+ * tap batch, and Today's run (Next, the done state, a new plan at the
+ * passage's due). Every part draws from the whole generator; its group only
  * steers which unmet values come first, and is what it asserts.
  */
 export const FLOORS = {
@@ -1996,6 +2208,10 @@ export const FLOORS = {
     /^ending:(today|unread):finished$/u,
     /^write:unread:lands$/u,
     /^write:today:lands$/u,
+    /^run:today:next$/u,
+    /^cmd:Next@today:/u,
+    /^run:today:done$/u,
+    /^renew:today:done$/u,
   ],
   launch: [
     /^launch:ok$/u,
@@ -2088,9 +2304,6 @@ export const missing = (group: Group, coverage: Readonly<Record<string, number>>
     .filter((floor) => !Object.keys(coverage).some((key) => floor.test(key)))
     .map(String);
 
-/** The walk parts whose Today commands after Continue meet Today's run (the done state, Next), skipped until hsrun's commit 5 re-cuts the rig's Today commands. */
-const RECUT_IN_COMMIT_5: ReadonlySet<Group> = new Set<Group>(['alone', 'write', 'planted']);
-
 /**
  * One walk part: `devices` generated devices from `seed`, steered toward
  * `group`'s floors, each floor met by those devices alone. The environment's
@@ -2100,21 +2313,17 @@ const RECUT_IN_COMMIT_5: ReadonlySet<Group> = new Set<Group>(['alone', 'write', 
 export const walkPart = (group: Group, seed: number, devices: number, commands = 12) => {
   const at = Number(process.env['HSFIRST_WALK_SEED'] ?? seed);
   const many = Number(process.env['HSFIRST_WALK_DEVICES'] ?? devices);
-  const walks = RECUT_IN_COMMIT_5.has(group) ? it.skip : it;
   describe(`the root route on generated devices, steered to the ${group} floors`, () => {
-    walks(
-      `agrees with the first minute's model on ${many} devices of ${commands} commands (seed ${at})`,
-      async () => {
-        const coverage = await walk(group, at, many, commands);
-        console.log(
-          `walk ${group} coverage ${Object.entries(coverage)
-            .toSorted(([a], [b]) => a.localeCompare(b))
-            .map(([key, value]) => `${key}=${value}`)
-            .join(' ')}`,
-        );
-        expect(missing(group, coverage)).toEqual([]);
-      },
-    );
+    it(`agrees with the first minute's model on ${many} devices of ${commands} commands (seed ${at})`, async () => {
+      const coverage = await walk(group, at, many, commands);
+      console.log(
+        `walk ${group} coverage ${Object.entries(coverage)
+          .toSorted(([a], [b]) => a.localeCompare(b))
+          .map(([key, value]) => `${key}=${value}`)
+          .join(' ')}`,
+      );
+      expect(missing(group, coverage)).toEqual([]);
+    });
   });
 };
 

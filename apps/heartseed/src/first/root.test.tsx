@@ -44,12 +44,12 @@ const say = (recital: Plan, write: 'lands' | 'refused' | 'down' = 'lands'): Comm
 });
 const relaunch = (launch: LaunchKind = OK): Command => ({ _tag: 'Relaunch', launch });
 const NEXT: Command = { _tag: 'Next' };
+const RENEW: Command = { _tag: 'Renew' };
 const listen: Command = { _tag: 'Listen', speak: 'lands' };
 const range: Command = { _tag: 'Range', kind: 'next', step: 0 };
 
 describe('the root route on fixed devices', () => {
-  // oxlint-disable-next-line film/tests-keep-their-strength -- red under Today's run (the done state after Continue) until hsrun's commit 5 re-cuts it
-  it.skip('walks the whole first minute: an interrupted reading, a skip, queued taps, each recital, the seed, Continue and an unread launch', async () => {
+  it('walks the whole first minute: an interrupted reading, a skip, queued taps, each recital, the seed, Continue and an unread launch', async () => {
     const m = await play(FRESH, [
       listen,
       range,
@@ -135,13 +135,12 @@ describe('the root route on fixed devices', () => {
     expect([m.screen, m.speaks]).toEqual(['letters', 1]);
   });
 
-  // oxlint-disable-next-line film/tests-keep-their-strength -- red under Today's run (the done state after Continue) until hsrun's commit 5 re-cuts it
-  it.skip('keeps the recital of an unread launch for the next launch, which opens Today at a seed', async () => {
-    const m = await play({ ...FRESH, launch: { read: 'unread', held: false, voices: 0 } }, [
-      say(plan({ skip: [2] })),
-      relaunch(),
-    ]);
-    expect([m.screen, m.passage]).toEqual(['today', 1]);
+  it('keeps the recital of an unread launch for the next launch, which opens Today in the done state, and at a seed once the seed is due and a new plan is made', async () => {
+    const unread: DeviceStart = { ...FRESH, launch: { read: 'unread', held: false, voices: 0 } };
+    const next = await play(unread, [say(plan({ skip: [2] })), relaunch()]);
+    expect([next.screen, next.passage, next.plan?.passage]).toEqual(['today', 1, false]);
+    const due = await play(unread, [say(plan({ skip: [2] })), relaunch(), RENEW]);
+    expect([due.screen, due.passage, due.plan?.passage]).toEqual(['today', 1, true]);
   });
 
   it('cancels a recital held open when the app relaunches, in letters and in alone, and starts again at hear', async () => {

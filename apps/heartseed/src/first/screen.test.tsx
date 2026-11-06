@@ -30,6 +30,7 @@ import { Chime, type Growth } from '../garden';
 import { sourceWords } from '../matcher/words';
 import { Haptics } from '../sayit';
 import { store } from '../store';
+import { clockOf, toDue, type Time } from '../test/clock';
 import { AA, contrastOf } from '../test/contrast';
 import { device } from '../test/one';
 import { VoiceSource, type VoiceEvent } from '../voice';
@@ -74,6 +75,7 @@ const voiceStandIn = () => {
 const mount = async (
   held: Promise<void> = Promise.resolve(),
   source = scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 1 })),
+  time: Time = { now: null },
 ) => {
   const voice = voiceStandIn();
   const chimes: Growth[] = [];
@@ -91,7 +93,7 @@ const mount = async (
       Chime.of({ grow: (growth) => Effect.sync(() => void chimes.push(growth)) }),
     ),
     voice: voice.layer,
-  });
+  }).pipe(Layer.provide(clockOf(time)));
   const host = document.createElement('div');
   document.body.append(host);
   const headings = () =>
@@ -155,6 +157,11 @@ const mount = async (
   const heading = () => headings().find((text) => HEADINGS.includes(text)) ?? null;
   const stage = () =>
     host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label') ?? null;
+  /** Today's counts line, none before Today shows it. */
+  const counts = () => host.querySelector('[data-testid="session"]')?.textContent ?? null;
+  /** Today's action buttons shown, by name: Say it, Listening or Next. */
+  const actions = () =>
+    buttons().filter((name) => name === 'Say it' || name === 'Listening' || name === 'Next');
   const leave = async () => {
     watch.disconnect();
     await act(async () => root.unmount());
@@ -173,6 +180,8 @@ const mount = async (
     heading,
     buttons,
     stage,
+    counts,
+    actions,
     leave,
   };
 };
@@ -371,8 +380,7 @@ const BASE_LOOK = {
 } satisfies Readonly<Record<string, readonly string[]>>;
 
 describe('the first minute', () => {
-  // oxlint-disable-next-line film/tests-keep-their-strength -- red under Today's run (the done state after Continue) until hsrun's commit 5 re-cuts it
-  it.skip('on a fresh install: hears the verse lit word by word, says it with first letters keeping nothing, says it alone and plants one seed, then Continue opens Today at a seed, as does the next launch', async () => {
+  it('on a fresh install: hears the verse lit word by word, says it with first letters keeping nothing, says it alone and plants one seed, then Continue opens Today in the done state, and the next launch at the seed’s due opens Today at a seed', async () => {
     device.launch([]);
     const first = await mount();
     expect(await first.until(() => first.heading() === 'Hear it')).toBe(true);
@@ -412,16 +420,22 @@ describe('the first minute', () => {
     const kept = JSON.parse(device.disk.get(recalls()[0] ?? '') ?? 'null');
     expect([kept.grade, kept.suggested, kept.words, kept.missed]).toEqual([2, 2, WORDS.length, 1]);
     await first.click('Continue');
-    expect(await first.until(() => first.heading() === 'Today' && first.stage() !== null)).toBe(
+    expect(await first.until(() => first.heading() === 'Today' && first.counts() !== null)).toBe(
       true,
     );
-    expect(first.stage()).toBe('Stage: seed');
+    expect([first.counts(), first.stage(), first.actions()]).toEqual([
+      'Nothing to tend now',
+      null,
+      [],
+    ]);
     expect(first.host.querySelector('[data-testid="growth"]')).toBe(null);
     expect(first.frames).toMatchObject({ pendingOffers: 0, claims: 0, many: 0 });
     await first.leave();
 
+    const time: Time = { now: null };
+    toDue(time, [kept]);
     device.launch();
-    const next = await mount();
+    const next = await mount(undefined, undefined, time);
     expect(await next.until(() => next.stage() !== null)).toBe(true);
     expect([next.heading(), next.stage(), next.frames.claims, recalls().length]).toEqual([
       'Today',
@@ -429,6 +443,7 @@ describe('the first minute', () => {
       0,
       1,
     ]);
+    expect(next.actions()).toEqual(['Say it']);
     await next.leave();
   });
 
