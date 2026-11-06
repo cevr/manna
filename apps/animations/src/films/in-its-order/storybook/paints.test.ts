@@ -114,9 +114,10 @@ const headPartsOf = (
   return new Map([...counts].map(([group, n]) => [group, n / Math.max(1, opaque)]));
 };
 
-/** The cells of each sheet with props that hold its prop: the lead's bottle in `lift`, `bottle` and `read` and its blink (where the letter's parchment is the bottle's cream too), his close's sash light in every cell, the older diner's open mouth in `talk`. */
+/** The cells of each sheet with props that hold its prop: the lead's bottle in `lift`, `bottle` and `read` and its blink (where the letter's parchment is the bottle's cream too), his two-shot's bottle in `bottle`, `grin` and `tuck` (`ask` has empty hands), his close's sash light in every cell, the older diner's open mouth in `talk`. */
 const PROP_CELLS: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
   ['lead-feast/iio-table', ['lift', 'bottle', 'read', 'readBlink']],
+  ['lead-feast/iio-two', ['bottle', 'grin', 'tuck']],
   ['lead-feast/iio-close', ['down', 'downBlink', 'wince']],
   ['filler-dressed/iio-diner-3', ['talk']],
 ]);
@@ -176,6 +177,9 @@ const mottleShare = (r: Raster, paints: (typeof CELLS)[number]['paints']): numbe
 /** The most hair-brown pixels a lead cell may draw with his skin on both sides within `SEAM_REACH`, along its row or its column: a thin brown seam on bare skin reads as a crack (critique 2, fault 2: `read`'s teat, 97; critique 1, finding 5: round 1's jaw band, 28; his first six keys 0 to 2). */
 const SEAM_MAX = 2;
 const SEAM_REACH = 3;
+
+/** The lead's cream sleeve on his table sheet's `lift` and `bottle` cells above his resting hand, in their px: where a thin brown and lavender stick stood down his chest (critique 1, finding 6). */
+const SLEEVE = { x0: 60, y0: 460, x1: 80, y1: 520 } as const;
 
 /** The lead's cells whose seams are known and named to the owner, not yet fixed: his table sheet's later pass, whose teat is a thin hair-brown line on his skin (critique 2, fault 2; a draw asking it inked lost the sleeve and the sash, so the pass stands). */
 const SEAMS_KNOWN = new Set(['lead-feast/iio-table read', 'lead-feast/iio-table readBlink']);
@@ -384,6 +388,35 @@ describe("In Its Order's sheet paints", () => {
         });
         expect([...several]).toEqual(['lead-feast', 'feast-guest-woman', ...CROWDS]);
         expect(misses).toEqual([]);
+      }),
+  );
+
+  it.effect(
+    'paints the lead’s cream sleeve above his resting hand plain tunic in his table sheet’s `lift` and `bottle`, so no stray stick stands on his chest when cold-letter enlarges him (critique 1, finding 6)',
+    () =>
+      Effect.gen(function* () {
+        const sheet = SHEET_CELLS.get('lead-feast/iio-table');
+        const tunic = CELLS.find((c) => c.sheet === 'lead-feast/iio-table')?.paints.find(
+          (p) => p.part === 'tunic' && p.tone === 'base',
+        )?.rgb;
+        const marks = yield* Effect.forEach(['lift', 'bottle'], (cell) =>
+          Effect.map(rasterOf(sheet?.cells[cell]?.png ?? ''), (r) => {
+            let n = 0;
+            for (let y = SLEEVE.y0; y < SLEEVE.y1; y++)
+              for (let x = SLEEVE.x0; x < SLEEVE.x1; x++) {
+                const q = (y * r.width + x) * 4;
+                if ((r.rgba[q + 3] ?? 0) === 0) continue;
+                if (
+                  hexOf([r.rgba[q] ?? 0, r.rgba[q + 1] ?? 0, r.rgba[q + 2] ?? 0]) !==
+                  hexOf(tunic ?? [0, 0, 0])
+                )
+                  n++;
+              }
+            return `${cell}: ${n}`;
+          }),
+        );
+        expect(tunic).toBeDefined();
+        expect(marks).toEqual(['lift: 0', 'bottle: 0']);
       }),
   );
 });

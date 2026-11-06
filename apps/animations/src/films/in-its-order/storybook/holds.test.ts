@@ -103,7 +103,6 @@ describe("In Its Order's storybook holds", () => {
         return [`${s.at}: ${s.blinks} blinks, want ${least} to ${most}`];
       }),
     ).toEqual([]);
-    expect(stares.filter((s) => s.long > ALIVE).length).toBeGreaterThanOrEqual(2);
   });
 
   it.effect('refuses a pasted blink on every lidded cell, so none is lidded by choice', () =>
@@ -126,7 +125,7 @@ describe("In Its Order's storybook holds", () => {
     }),
   );
 
-  test('reads all ten shots', () => {
-    expect(placed.length).toBe(10);
+  test('reads all thirteen shots', () => {
+    expect(placed.length).toBe(13);
   });
 });

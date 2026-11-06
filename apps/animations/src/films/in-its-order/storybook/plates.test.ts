@@ -22,6 +22,9 @@ const SHARED_FRINGES: ReadonlyMap<string, number> = new Map([
 /** The courtyard's landscape planes, painted whole with their grass and leaves and keyed from no green ground, so their greens are no fringe. */
 const LANDSCAPE = new Set(['sky.png', 'distance.png', 'near.png', 'path.png']);
 
+/** The close plates cut from a green ground and laid over a scene: the feast table close and the milk insert's cup and dropper. */
+const CLOSE_KEYED = new Set(['table-close.png', 'milk-cup-close.png', 'milk-dropper-close.png']);
+
 /** A plate's pixels. */
 const rasterOf = Effect.fn('Act1Plates.rasterOf')(function* (png: string) {
   const { data, info } = yield* Effect.promise(() =>
@@ -69,15 +72,15 @@ describe("In Its Order's act 1 plates", () => {
   );
 
   it.effect(
-    'shows no lime within 4 px of the close table plate’s edge (critique 4, fault 3: 72 lime px 3–4 px in left a soft rim on its leaf tops)',
+    'shows no lime within 4 px of the edge of a close plate keyed from green: the table, the milk cup and the dropper (critique 4, fault 3: 72 lime px 3–4 px in left a soft rim on its leaf tops)',
     () =>
       Effect.gen(function* () {
         const pngs = yield* platePngs;
-        const close = [...pngs].filter((png) => png.endsWith('/table-close.png'));
+        const close = [...pngs].filter((png) => CLOSE_KEYED.has(png.split('/').at(-1) ?? png));
         const lime = yield* Effect.forEach(close, (png) =>
           Effect.map(rasterOf(png), (plate) => limeEdgeOf(plate, CLOSE_EDGE_PX).length),
         );
-        expect(lime).toEqual([0]);
+        expect(lime).toEqual([0, 0, 0]);
       }).pipe(
         Effect.provide([filmFolder.pipe(Layer.provide(BunServices.layer)), BunServices.layer]),
       ),
