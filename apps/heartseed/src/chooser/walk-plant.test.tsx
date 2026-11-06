@@ -9,7 +9,8 @@
  *
  * It catches a plant whose failure leaves the chooser or says nothing, a
  * range lost after a refusal, an alert a tap does not clear, a double tap
- * that plants twice, a back taken while a plant is pending, an add written
+ * that plants twice, a back taken while a plant is pending, a `Plant`, verse
+ * or back not shown disabled while it is pending, an add written
  * before it lands, and a next open that keeps the last range.
  */
 
@@ -31,6 +32,9 @@ it('plants a range once its write lands, and keeps it with the alert when the wr
     'plant:then-back:Added',
     'plant:then-back:Failed',
     'opened again',
+    'pending:once',
+    'pending:twice',
+    'pending:then-back',
   ];
   expect(floors.filter((floor) => !reached.has(floor))).toEqual([]);
 });

@@ -12,8 +12,9 @@
  * pattern (one; forward or back up to 40 on; the one verse twice; a
  * restart; first to last; exactly 20), then leaves and opens again, or taps
  * `Plant`: its write landing or refused, two taps in one turn, or `Plant`
- * and a back in one turn; after a refusal it retries, taps a verse, or
- * leaves. After every tap the screen is the rule's, the stored passages are
+ * and a back in one turn; a plant that writes has its write held until the
+ * screen shows it pending (`plantHeld`); after a refusal it retries, taps a
+ * verse, or leaves. After every tap the screen is the rule's, the stored passages are
  * the start's until an add lands and the model's list after, no other key
  * is written, and every frame kept the screen's rules.
  */
@@ -54,6 +55,10 @@ export const tapsOf = (next: () => number, count: number): readonly [string, num
   const first = 1 + below(next, Math.max(1, count - 19));
   return ['twenty', [first, Math.min(count, first + 19)]];
 };
+
+/** How a reader taps `Plant`: twice in one turn, with the back in one turn, or once (three times in five). */
+const HOWS = ['twice', 'then-back', 'once', 'once', 'once'] as const;
+type How = (typeof HOWS)[number];
 
 /** A device's stored value and its kind. */
 const storedOf = (next: () => number): readonly [string, string | undefined] => {
@@ -163,19 +168,26 @@ export const walkChooser = async (seed: number, steps: number) => {
       await settle(`verse ${verse}`);
     }
   };
+  /** Taps `Plant` as `how` says; a plant whose answer is a write has the write held until the screen shows it pending. */
+  const tapPlant = async (how: How, outcome: string) => {
+    if (outcome !== 'Added' && outcome !== 'Failed') {
+      if (how === 'then-back') await rig.tapBoth('Plant', 'Chapters');
+      else await rig.tap('Plant', how === 'twice');
+      return;
+    }
+    if (await rig.plantHeld(how, 'Chapters')) reached.add(`pending:${how}`);
+    else faults.push(`plant ${outcome}: no write came while it was pending`);
+  };
   const plant = async (target: { book: number; chapter: number }) => {
     if (state?.chosen === undefined) return;
     const span: Span = { ...target, first: state.chosen.first, last: state.chosen.last };
     const refused = below(next, 4) === 0;
-    const how = below(next, 5);
+    const how = HOWS[below(next, 5)] ?? 'once';
     device.fail('set', refused ? 1 : 0);
-    if (how === 0) await rig.tap('Plant', true);
-    else if (how === 1) await rig.tapBoth('Plant', 'Chapters');
-    else await rig.tap('Plant');
     const answer = addRule(CORPUS, held, span, refused);
+    await tapPlant(how, answer.outcome);
     reached.add(`plant:${answer.outcome}`);
-    if (how === 0) reached.add(`plant:twice:${answer.outcome}`);
-    if (how === 1) reached.add(`plant:then-back:${answer.outcome}`);
+    if (how !== 'once') reached.add(`plant:${how}:${answer.outcome}`);
     if (answer.outcome === 'Added') {
       reached.add(`added:from-${held.tag === 'Read' ? held.passages.length : 0}`);
       held = answer.held;

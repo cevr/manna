@@ -11,11 +11,14 @@
  * Every frame (each DOM mutation batch) is held to the screen's rules and
  * each fault kept: at most one heading; no back, `Plant`, alert or limit
  * line inside a scroll view; `Plant` only over a shown reference of 1-20
- * verses; and every seen text at WCAG AA against what lies behind it.
+ * verses; while a plant the rig tapped (`plantHeld`, which holds its write)
+ * has not answered, `Plant`, every verse and the back shown as disabled; and
+ * every seen text at WCAG AA against what lies behind it.
  */
 
 import { RegistryProvider } from '@effect/atom-react';
 import { Effect, Layer, Logger } from 'effect';
+import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import { act, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Pressable, Text } from 'react-native';
@@ -33,7 +36,7 @@ import { CAP, MOST, type ChooserSeen } from './choose-model';
 import { clockOf, type Time } from './clock';
 import { AA, contrastOf } from './contrast';
 import { scrolled } from './field-rig';
-import { NAMES } from './passages-model';
+import { KEY, NAMES } from './passages-model';
 import { CORPUS, countIn } from './passages-rig';
 
 /** The first chapter of the canon whose verse count is `count`, in the model's corpus. */
@@ -125,9 +128,27 @@ export const plantFaults = (host: Element): string[] => {
   return [];
 };
 
-/** The frame rules: the faults `host` shows now; `known` keeps each style chain's contrast verdict across frames. */
-export const chooserFaults = (host: Element, known = new Map<string, boolean>()): string[] => {
+/** While a plant the rig tapped has not answered: `Plant`, every verse and the back each shown as disabled. */
+const pendingFaults = (host: Element): string[] =>
+  [...host.querySelectorAll(CONTROL)]
+    .filter(
+      (node) =>
+        labelOf(node) === 'Plant' ||
+        node.getAttribute('data-testid') === 'verse' ||
+        /^‹ /.test(text(node)),
+    )
+    .filter((node) => node.getAttribute('aria-disabled') !== 'true')
+    .slice(0, 1)
+    .map((node) => `${labelOf(node)} live while a plant is pending`);
+
+/** The frame rules: the faults `host` shows now, `pending` whether a plant the rig tapped has not answered; `known` keeps each style chain's contrast verdict across frames. */
+export const chooserFaults = (
+  host: Element,
+  known = new Map<string, boolean>(),
+  pending = false,
+): string[] => {
   const faults: string[] = [];
+  if (pending) faults.push(...pendingFaults(host));
   const headings = host.querySelectorAll('[role="heading"]');
   if (headings.length > 1) faults.push(`${headings.length} headings`);
   for (const node of host.querySelectorAll(CONTROL)) {
@@ -187,12 +208,34 @@ function Stage({ onLeft }: { readonly onLeft: () => void }) {
   );
 }
 
+/** A plant's write held by the rig: while `armed`, a write of the passages' key waits in `waiting` until the rig lets it go. */
+type Hold = { armed: boolean; planting: boolean; readonly waiting: Array<() => void> };
+
+/** The app's store, whose writes of the passages' key wait while `hold` is armed; every other call is the store's own. */
+const storeHeld = (hold: Hold) =>
+  Layer.effect(
+    KeyValueStore.KeyValueStore,
+    Effect.map(KeyValueStore.KeyValueStore, (real) =>
+      KeyValueStore.KeyValueStore.of({
+        ...real,
+        set: (key, value) =>
+          Effect.suspend(() => {
+            if (key !== KEY || !hold.armed) return real.set(key, value);
+            return Effect.promise(
+              () => new Promise<void>((resolve) => hold.waiting.push(resolve)),
+            ).pipe(Effect.andThen(real.set(key, value)));
+          }),
+      }),
+    ),
+  ).pipe(Layer.provide(store));
+
 /** The chooser over the device's disk as it stands; every frame is held to the rules and the faults kept. */
 export const mountChooser = async (time: Time = { now: null }) => {
+  const hold: Hold = { armed: false, planting: false, waiting: [] };
   const layer = appLayer({
     source: scriptedSource(recite(passage.text, { skip: [], every: 5, pace: 3 })),
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
-    store,
+    store: storeHeld(hold),
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice: voiceSource,
   }).pipe(Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))));
@@ -202,7 +245,8 @@ export const mountChooser = async (time: Time = { now: null }) => {
   const left = { count: 0 };
   const known = new Map<string, boolean>();
   const watch = new MutationObserver(() => {
-    for (const fault of chooserFaults(host, known)) if (faults.length < 8) faults.push(fault);
+    for (const fault of chooserFaults(host, known, hold.planting))
+      if (faults.length < 8) faults.push(fault);
   });
   watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
   const root = createRoot(host);
@@ -251,6 +295,31 @@ export const mountChooser = async (time: Time = { now: null }) => {
     });
     return true;
   };
+  /**
+   * Taps `Plant` (twice, or then the back `back`, in one turn) and holds its
+   * write until the screen shows the plant pending; every frame until the
+   * write is let go is held to the pending rule, and so is the frame the hold
+   * shows. Answers whether a write came to the hold within 3 s.
+   */
+  const plantHeld = async (how: 'once' | 'twice' | 'then-back', back: string) => {
+    const plant = control('Plant');
+    const other = how === 'then-back' ? control(back) : plant;
+    if (plant === undefined || other === undefined) return false;
+    hold.armed = true;
+    hold.planting = true;
+    await act(async () => {
+      click(plant);
+      if (how !== 'once') click(other);
+    });
+    const came = await until(() => hold.waiting.length > 0);
+    for (const fault of chooserFaults(host, known, true)) if (faults.length < 8) faults.push(fault);
+    hold.planting = false;
+    hold.armed = false;
+    await act(async () => {
+      for (const resolve of hold.waiting.splice(0)) resolve();
+    });
+    return came;
+  };
   /** Taps verse `verse` (1-based) of the chapter shown; answers whether it showed. */
   const tapVerseAt = async (verse: number) => {
     const node = host.querySelectorAll('[data-testid="verse"]')[verse - 1];
@@ -269,5 +338,5 @@ export const mountChooser = async (time: Time = { now: null }) => {
     await act(async () => root.unmount());
     host.remove();
   };
-  return { host, faults, left, until, control, tap, tapBoth, tapVerseAt, settle, leave };
+  return { host, faults, left, until, control, tap, tapBoth, plantHeld, tapVerseAt, settle, leave };
 };
