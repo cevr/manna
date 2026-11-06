@@ -1,4 +1,3 @@
-import { write } from '@manna/film/canvas';
 import type { FilmShot, Over } from '../../../../library/storybook/scene.ts';
 import { Option } from 'effect';
 import { fonts, palette } from '../../palette.ts';
@@ -18,19 +17,24 @@ import { BOTTLE, BOTTLE_BODY, BOTTLE_FOOT } from '../plates/bottle.ts';
 import { BABY_BACK, FAR_TABLE, TABLE } from '../../plates/plates.ts';
 import { SCROLL_ROLLED } from '../../plates/props.ts';
 import {
+  boxOver,
   cam,
+  type CameraPath,
+  camerasOf,
   drawScaleOf,
   holds,
+  inkLines,
   key,
   layer,
+  pathFramingAt,
   plateOf,
   plateOn,
   seat,
   STORY_PLATES,
   tallOf,
   WOMAN_TABLE_SIZE,
-  withAlpha,
 } from '../kit.ts';
+import { INSERT_FACES, INSERT_SCALE, SCROLL_CLOSE } from '../plates/inserts.ts';
 import { WHAT_DAY, WHAT_DAY_SCALE } from '../plates/what-day.ts';
 import {
   AT_TABLE,
@@ -353,70 +357,117 @@ export const coldTable: FilmShot = {
 };
 
 /**
- * The two-shot's framing, layer px: the man and the lead, each head about a
- * third of the frame's height (a grown head of `HEAD` at zoom 2.68 is 0.29 of
- * it; past its push the lead's drawing stays within the 1.5× enlarging cap),
- * the bottle raised between the lead and the frame's right; the woman's
- * near shoulder at the right edge; the table's top across the frame's foot
- * (the whole table plate: the close's plate covers only the lead's middle of
- * it, so here it would show its edge beside the man). Its push ends `push`
- * times in. The diners its frame shows: the row, the mother at its right end
- * falling outside it.
+ * The two-shot's framing, layer px: the man and the lead alone, each head a
+ * third of the frame's height (a grown head of `HEAD` at zoom 3 is 0.33 of
+ * it; the lead drawn on his close sheet, so his drawing stays inside the
+ * 1.5× enlarging cap past the push), their crowns near the frame's top, the
+ * table's top across its foot. The woman beyond the lead falls outside it,
+ * so she is not drawn. Its push ends `push` times in. The diners its frame
+ * shows behind them.
  */
-const TWO_SHOT = {
-  x: 862,
-  y: 862,
-  zoom: 2.68,
+export const TWO_SHOT = {
+  x: 850,
+  y: 900,
+  zoom: 3,
   push: 1.05,
-  diners: ['diner-1', 'diner-2', 'diner-3', 'diner-4'],
+  diners: ['diner-2', 'diner-3', 'diner-4'],
 } as const;
 
 /**
- * `cold-smile`, `smile` to `letter`: the close two-shot of the joke. Cut in
- * on `smile` to the man and the lead, his bottle still held up; the man,
- * staring, turns to the lead and smiles on the mark (the woman at the edge a
- * beat after), and the lead, caught, lowers the bottle sheepishly to his
- * chest in the beat after the stressed "smile", his sleeve's rustle heard in
- * the pause. A slow push holds them.
+ * `cold-smile`, `smile` to `letter`: the close two-shot of the joke, the
+ * man and the lead alone. Cut in on `smile`, the lead's bottle still held
+ * up beside his head and the man still staring at it: the man laughs on the
+ * mark, warmly, and the table murmurs; the lead, caught, turns his eyes to
+ * him with an embarrassed grin, then tucks the bottle against his chest and
+ * looks down, sheepish, in the beat after the stressed "smile". A slow push
+ * holds them.
  */
 export const coldSmile: FilmShot = {
   id: 'cold-smile',
   span: { mark: 'smile', until: 'letter' },
   cues: {
-    smile: { mark: 'smile', dur: 0.3 },
-    smiled: { mark: 'smile', offset: 0.15, dur: 0.3 },
+    laugh: { mark: 'smile', dur: 0.25 },
+    grin: { mark: 'smile', offset: 0.3, dur: 0.2 },
     lower: { mark: 'smile', word: 'smile', offset: 0.6, dur: 0.3 },
-    reply: { mark: 'smile', word: 'smile', dur: 1 },
   },
   build: ({ duration, cue }) => {
-    const lower = cue('lower');
-    return {
-      headPx: HEAD,
-      camera: [
-        cam(0, TWO_SHOT.x, TWO_SHOT.y, TWO_SHOT.zoom),
-        cam(duration, TWO_SHOT.x + 8, TWO_SHOT.y - 4, TWO_SHOT.zoom * TWO_SHOT.push),
+    const [laugh, grin, lower] = [cue('laugh'), cue('grin'), cue('lower')];
+    return twoShot(
+      duration,
+      [
+        hold(0, laugh.start, 'stare'),
+        turn(laugh.start, laugh.end - laugh.start, 'stare', 'laugh'),
+        hold(laugh.end, duration, 'laugh'),
       ],
-      layers: [
-        ...backdrop(),
-        dinersLayer(
-          new Map([[2, [cue('reply').start, cue('reply').end]]] as const),
-          duration,
-          TWO_SHOT.diners,
-        ),
-        layer('table', Z.table, [
-          ...guests(
-            guestSpans('man', 'stare', [[cue('smile').start, 'smile']], duration),
-            guestSpans('woman', 'stare', [[cue('smiled').start, 'smile']], duration),
-          ),
-          leadAt([
-            blinkingHold(0, lower.start, 'bottle', 'frontBlink'),
-            turn(lower.start, lower.end - lower.start, 'bottle', 'lift'),
-            hold(lower.end, duration, 'lift'),
-          ]),
-          table(),
-        ]),
+      [
+        hold(0, grin.start, 'bottle'),
+        turn(grin.start, grin.end - grin.start, 'bottle', 'grin'),
+        hold(grin.end, lower.start, 'grin'),
+        turn(lower.start, lower.end - lower.start, 'grin', 'tuck'),
+        hold(lower.end, duration, 'tuck'),
       ],
-    };
+    );
+  },
+};
+
+/** The two-shot's plan over `duration`: the man on his table sheet and the lead on his two-shot sheet (`iio-two`), each by its spans, before the backdrop and the diners its frame shows, under its slow push. */
+const twoShot = (
+  duration: number,
+  man: readonly [Span, ...ReadonlyArray<Span>],
+  lead: readonly [Span, ...ReadonlyArray<Span>],
+  props: ReadonlyArray<Plate> = [],
+) => ({
+  headPx: HEAD,
+  camera: [
+    cam(0, TWO_SHOT.x, TWO_SHOT.y, TWO_SHOT.zoom),
+    cam(duration, TWO_SHOT.x + 6, TWO_SHOT.y - 6, TWO_SHOT.zoom * TWO_SHOT.push),
+  ],
+  layers: [
+    ...backdrop(),
+    dinersLayer(new Map(), duration, TWO_SHOT.diners),
+    layer('table', Z.table, [
+      seat(
+        { member: 'feast-guest-man', sheet: 'iio-table', name: 'man', ...AT_TABLE.man },
+        { headPx: HEAD, z: Z.table },
+        man,
+      ),
+      seat(
+        {
+          member: 'lead-feast',
+          sheet: 'iio-two',
+          name: 'lead',
+          x: AT_TABLE.lead.x,
+          crown: AT_TABLE.lead.crown,
+        },
+        { headPx: HEAD, z: Z.table },
+        lead,
+      ),
+      table(),
+      tableClose(),
+      ...props,
+    ]),
+  ],
+});
+
+/**
+ * `cold-ask`, `what` to `why`: back to the two-shot, the letter and the
+ * bottle on the table where cold-ouch left them, the man beside him still
+ * staring at the letter, and the lead looks up from it
+ * to the viewer, brows raised, and asks the film's question with his face
+ * (critique 1, finding 4: the question on a face, not on a still life).
+ */
+export const coldAsk: FilmShot = {
+  id: 'cold-ask',
+  span: { mark: 'what', until: 'why' },
+  cues: {},
+  build: ({ duration }) => {
+    const [m0, ...ms] = guestHold('man', 0, duration, 'stare');
+    return twoShot(
+      duration,
+      [m0 ?? hold(0, duration, 'stare'), ...ms],
+      [hold(0, duration, 'ask')],
+      [letterOn([[0, key({})]]), bottleOnTable()],
+    );
   },
 };
 
@@ -504,31 +555,25 @@ export const LETTER = {
 } as const;
 
 /**
- * `cold-letter`, `letter` to `ouch`: a rolled scroll falls onto the table
- * before the lead, who holds the bottle at his chest where he lowered it,
+ * `cold-letter`, `letter` to `quote`: a rolled scroll falls onto the table
+ * before the lead, who holds the bottle at his chest where he tucked it,
  * and hops; the guests turn to stare at it, and it rises alone from the
  * table to where his free hand will hold it, a snatch (the owner, scrawl
  * 0:21): from the swap he reads the letter, open in one hand, the bottle's
  * teat at his mouth in the other, his lids half down on the scroll, to the
- * cut; a lidded cell takes no pasted blink, so as the quote begins he
- * shuts his eyes over the bottle a moment (`readBlink`), savouring it. From
- * the take the camera pushes in toward the letter and his face, and on
- * `quote` Heb 5:12 is lettered over a band of dusk above the heads
- * (`LETTER_QUOTE`) and held until the cut.
+ * cut to the letter itself (`cold-scroll`). From the take the camera pushes
+ * in toward the letter and his face.
  */
 export const coldLetter: FilmShot = {
   id: 'cold-letter',
-  span: { mark: 'letter', until: 'ouch' },
+  span: { mark: 'letter', until: 'quote' },
   cues: {
     fall: { mark: 'letter', offset: 0.4, dur: 0.45 },
     hop: { after: 'cold-letter:fall', dur: 0.24 },
     take: { after: 'cold-letter:hop', offset: 0.15, dur: 0.5 },
     stare: { mark: 'letter', offset: 0.3, dur: 0.3 },
     stared: { mark: 'letter', offset: 0.45, dur: 0.3 },
-    read: { after: 'cold-letter:take', until: 'ouch' },
-    savor: { mark: 'quote', dur: 0.8 },
-    dim: { mark: 'quote', dur: 0.4 },
-    write: { mark: 'quote', until: 'such' },
+    read: { after: 'cold-letter:take', until: 'quote' },
     talk: { mark: 'letter', word: 'letters', dur: 1.2 },
   },
   build: ({ duration, cue }) => {
@@ -552,9 +597,7 @@ export const coldLetter: FilmShot = {
           leadAt([
             hold(0, cue('take').start, 'lift'),
             take,
-            hold(cue('take').end, cue('savor').start, 'read'),
-            hold(cue('savor').start, cue('savor').end, 'readBlink'),
-            hold(cue('savor').end, duration, 'read'),
+            hold(cue('take').end, duration, 'read'),
           ]),
           table(),
           letterLands(cue('fall'), cue('hop'), { start: take.at, end: swapOf(take) }),
@@ -564,77 +607,76 @@ export const coldLetter: FilmShot = {
   },
 };
 
-/** The words of Heb 5:12 the take reads from `quote`, lettered line by line, and their reference. */
-export const LETTER_WORDS = {
-  lines: ['They “are become such as have need of milk,', 'and not of strong meat.”'],
-  cite: 'Hebrews 5:12',
+/** Heb 5:12 as it is lettered on the open scroll in cold-scroll, line by line down its parchment, layer px, its reference under it. */
+export const LETTER_WORDS = [
+  { x: 962, y: 330, text: 'They “are become' },
+  { x: 962, y: 430, text: 'such as have need' },
+  { x: 962, y: 530, text: 'of milk, and not' },
+  { x: 962, y: 630, text: 'of strong meat.”' },
+  { x: 962, y: 760, text: 'Hebrews 5:12' },
+] as const;
+
+/** The scroll's parchment the verse is lettered on, layer px: its face in the insert, laid as `WHAT_DAY` is. */
+const PARCHMENT_AREA = {
+  x0: INSERT_FACES.parchment.x0 * INSERT_SCALE,
+  y0: INSERT_FACES.parchment.y0 * INSERT_SCALE - 100,
+  x1: INSERT_FACES.parchment.x1 * INSERT_SCALE,
+  y1: INSERT_FACES.parchment.y1 * INSERT_SCALE - 100,
 } as const;
 
-/** How the quote over the table is set, frame px: its lines' baselines and type, the reference under them, and the band of dusk behind the words at the frame's top (its height and its darkest share, at the top edge). */
-const LETTER_TYPE = {
-  x: 960,
-  baselines: [118, 192],
-  type: { family: fonts.display, size: 60, weight: 500, color: palette.cream, align: 'center' },
-  cite: {
-    y: 246,
-    type: { family: fonts.display, size: 30, weight: 600, color: palette.gold, align: 'center' },
-  },
-  band: { height: 300, share: 0.62 },
-} as const;
+/** cold-scroll's camera: one slow push in on the parchment, from `quote` to the cut. */
+export const SCROLL_PATH: CameraPath = [
+  ['push', { x: 960, y: 540, zoom: 1 }, { x: 962, y: 548, zoom: 1.08 }],
+];
 
 /**
- * Heb 5:12 over cold-letter, the film's own lettering in strokes: from
- * `quote` a band of dusk darkens the sky above the heads, the table, the
- * letter and the faces lit and whole under it, and the take's words are
- * written on it line by line until `such`, then held whole to the cut. It
- * draws inside its box, the band alone, so the parity reads the shot below.
+ * `cold-scroll`, `quote` to `ouch`: cut in to the letter he reads, held up
+ * open in his hand before the feast (critique 1, finding 3: the words on
+ * the scroll, not over the sky), and Heb 5:12 lettered on its parchment in
+ * the film's own inked hand from the quote's first word, quickly, so it
+ * stands whole for longer than its words take to read (`SCROLL_QUOTE`),
+ * under a slow push.
  */
-export const LETTER_QUOTE: Over = {
-  shot: 'cold-letter',
-  box: { x: 0, y: 0, w: 1920, h: LETTER_TYPE.band.height },
-  draw: (f) => {
-    const dim = f.at('cold-letter:dim');
-    if (dim <= 0) return;
-    const ctx = f.ctx;
-    ctx.save();
-    const band = ctx.createLinearGradient(0, 0, 0, LETTER_TYPE.band.height);
-    band.addColorStop(0, withAlpha(palette.night, LETTER_TYPE.band.share * dim));
-    band.addColorStop(0.7, withAlpha(palette.night, 0.75 * LETTER_TYPE.band.share * dim));
-    band.addColorStop(1, withAlpha(palette.night, 0));
-    ctx.fillStyle = band;
-    ctx.fillRect(0, 0, f.w, LETTER_TYPE.band.height);
-    const written = f.at('cold-letter:write');
-    const sizes = LETTER_WORDS.lines.map((l) => l.length);
-    const total = sizes.reduce((a, b) => a + b, 0);
-    LETTER_WORDS.lines.forEach((line, i) => {
-      const before = sizes.slice(0, i).reduce((a, b) => a + b, 0) / total;
-      const share = (sizes[i] ?? 0) / total;
-      const progress = Math.min(1, Math.max(0, (written - before) / share));
-      if (progress <= 0) return;
-      write(
-        ctx,
-        line,
-        LETTER_TYPE.x,
-        LETTER_TYPE.baselines[i] ?? 0,
-        LETTER_TYPE.type,
-        f.hand(`quote-${i}`),
-        { progress, reveal: 'write', boil: 0 },
-      );
-    });
-    write(
-      ctx,
-      LETTER_WORDS.cite,
-      LETTER_TYPE.x,
-      LETTER_TYPE.cite.y,
-      LETTER_TYPE.cite.type,
-      f.hand('cite'),
-      {
-        alpha: written,
-        boil: 0,
-      },
-    );
-    ctx.restore();
+export const coldScroll: FilmShot = {
+  id: 'cold-scroll',
+  span: { mark: 'quote', until: 'ouch' },
+  cues: {
+    write: { mark: 'quote', dur: 1.15 },
+    push: { mark: 'quote', until: 'ouch' },
   },
+  build: ({ cue }) => ({
+    headPx: HEAD,
+    camera: camerasOf(SCROLL_PATH, cue),
+    layers: [
+      layer('scroll', 1, [
+        plateOf('cold-scroll.png', SCROLL_CLOSE, { scale: INSERT_SCALE, dir: STORY_PLATES }),
+      ]),
+    ],
+  }),
+};
+
+/** The verse's ink on the parchment: the hand's face, at its size on the scroll's plane. */
+const SCROLL_INK = {
+  family: fonts.hand,
+  size: 84,
+  weight: 700,
+  color: palette.ink,
+  align: 'center',
+} as const;
+
+/** Heb 5:12 in ink on the scroll's parchment in cold-scroll, the film's own lettering in strokes: written from the quote's first word over `write`, then held whole to the cut. It follows cold-scroll's push, inside the parchment's frame box. */
+export const LETTER_QUOTE: Over = {
+  shot: 'cold-scroll',
+  box: boxOver(SCROLL_PATH, PARCHMENT_AREA),
+  draw: (f) =>
+    inkLines(
+      f,
+      pathFramingAt('cold-scroll', SCROLL_PATH, f.at),
+      LETTER_WORDS,
+      SCROLL_INK,
+      f.at('cold-scroll:write'),
+      'quote',
+    ),
 };
 
 /** The lead's close: his head a third of the frame's height (its crown at frame y 70), the guests either side and the letter on the table before him; his soles below the frame, his whole figure read in cold-table. The diners its frame shows: diner 1, at the row's left end, falls outside it. */
@@ -696,14 +738,14 @@ export const coldOuch: FilmShot = {
   },
 };
 
-/** `cold-what`, `what` to the scene's end: the cup and the loaf on the table by day, the feast beyond (owner O1); the camera lifts and pushes in toward them. No figure. */
+/** `cold-what`, `why` to the scene's end: the cup and the loaf on the table by day, the feast beyond (owner O1); the camera lifts and pushes in on them, the question's two foods. No figure. */
 export const coldWhat: FilmShot = {
   id: 'cold-what',
-  span: { mark: 'what', until: { at: 'end' } },
+  span: { mark: 'why', until: { at: 'end' } },
   cues: {},
   build: ({ duration }) => ({
     headPx: HEAD,
-    camera: [cam(0, 960, 540, 1), cam(duration, 960, 500, 1.08)],
+    camera: [cam(0, 960, 540, 1), cam(duration, 960, 520, 1.16)],
     layers: [
       layer('what', 1, [
         plateOf('cold-what-day.png', WHAT_DAY, { scale: WHAT_DAY_SCALE, dir: STORY_PLATES }),

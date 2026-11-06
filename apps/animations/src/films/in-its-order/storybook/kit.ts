@@ -1,6 +1,6 @@
-import type { PaintingSpec } from '@manna/film/canvas';
+import { type PaintingSpec, type TextStyle, write } from '@manna/film/canvas';
 import { Option } from 'effect';
-import type { SheetCells } from '../../../library/storybook/scene.ts';
+import type { PaintingFrame, SheetCells } from '../../../library/storybook/scene.ts';
 import { medianOf, shareOf } from '../../../library/storybook/sheet.ts';
 import {
   blinkingHold,
@@ -120,6 +120,105 @@ export const onScreen = (c: Framing, x: number, y: number): readonly [number, nu
   540 + (y - c.y) * c.zoom,
 ];
 
+/** One move of a shot's camera: the cue (its name in the shot) it runs over, and the framings it starts and ends at. */
+export type Move = readonly [cue: string, from: Framing, to: Framing];
+
+/** A shot's camera as moves in order, each starting where the one before ended. */
+export type CameraPath = readonly [Move, ...ReadonlyArray<Move>];
+
+/** The camera keys a path lays: each move from its cue's start to its end. */
+export const camerasOf = (
+  path: CameraPath,
+  cue: (name: string) => { readonly start: number; readonly end: number },
+): ReadonlyArray<CameraKey> =>
+  path.flatMap(([name, from, to]) => [
+    cam(cue(name).start, from.x, from.y, from.zoom),
+    cam(cue(name).end, to.x, to.y, to.zoom),
+  ]);
+
+/** The framing shot `shot`'s path holds at a frame whose cues have run `at` of their way: the first move not yet done, eased as the shot eases it, or the last move's end. */
+export const pathFramingAt = (
+  shot: string,
+  path: CameraPath,
+  at: (cue: string) => number,
+): Framing => {
+  const [moving] = path.filter(([cue]) => at(`${shot}:${cue}`) < 1);
+  const [cue, from, to] = moving ?? path[path.length - 1] ?? path[0];
+  return framingAt(from, to, at(`${shot}:${cue}`));
+};
+
+/** An area of a depth-1 plane, layer px. */
+export interface Area {
+  readonly x0: number;
+  readonly y0: number;
+  readonly x1: number;
+  readonly y1: number;
+}
+
+/** The frame box `area` covers at some point of `path`'s moves, read at a hundred steps of each and clipped to the frame: the only place a drawing over the shot that follows the path draws. */
+export const boxOver = (path: CameraPath, area: Area) => {
+  const corners = path.flatMap(([, from, to]) =>
+    Array.from({ length: 101 }, (_, i) => framingAt(from, to, i / 100)).flatMap((c) => [
+      onScreen(c, area.x0, area.y0),
+      onScreen(c, area.x1, area.y1),
+    ]),
+  );
+  const xs = corners.map(([x]) => x);
+  const ys = corners.map(([, y]) => y);
+  const [x0, y0] = [
+    Math.max(0, Math.floor(Math.min(...xs))),
+    Math.max(0, Math.floor(Math.min(...ys))),
+  ];
+  const [x1, y1] = [
+    Math.min(1920, Math.ceil(Math.max(...xs))),
+    Math.min(1080, Math.ceil(Math.max(...ys))),
+  ];
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+};
+
+/** One line of lettering on a depth-1 plane: its centre and baseline, layer px, and its words. */
+export interface InkLine {
+  readonly x: number;
+  readonly y: number;
+  readonly text: string;
+}
+
+/**
+ * Lines lettered in ink by the film's own hand on a depth-1 plane under
+ * framing `c`: written stroke by stroke in order, `written` of the way
+ * through all their letters (each line's share its letters'), each line's
+ * hand `<name>-<i>`.
+ */
+export const inkLines = (
+  f: PaintingFrame,
+  c: Framing,
+  lines: ReadonlyArray<InkLine>,
+  type: TextStyle,
+  written: number,
+  name: string,
+) => {
+  if (written <= 0) return;
+  const ctx = f.ctx;
+  const [x0, y0] = onScreen(c, 0, 0);
+  ctx.save();
+  ctx.translate(x0, y0);
+  ctx.scale(c.zoom, c.zoom);
+  const sizes = lines.map((l) => l.text.length);
+  const total = sizes.reduce((a, b) => a + b, 0);
+  lines.forEach((line, i) => {
+    const before = sizes.slice(0, i).reduce((a, b) => a + b, 0) / total;
+    const share = (sizes[i] ?? 0) / total;
+    const progress = Math.min(1, Math.max(0, (written - before) / share));
+    if (progress <= 0) return;
+    write(ctx, line.text, line.x, line.y, type, f.hand(`${name}-${i}`), {
+      progress,
+      reveal: 'write',
+      boil: 0,
+    });
+  });
+  ctx.restore();
+};
+
 /** A hex colour as a CSS colour at `alpha`. */
 export const withAlpha = (hex: string, alpha: number): string => {
   const channel = (at: number) => Number.parseInt(hex.slice(at, at + 2), 16);
@@ -142,6 +241,7 @@ export const layer = (name: string, z: number, items: Layer['items']): Layer => 
 export const TALL: ReadonlyMap<string, number> = new Map([
   ['lead-feast/iio-table', 604],
   ['lead-feast/iio-close', 836],
+  ['lead-feast/iio-two', 728],
   ['lead-feast/iio-milk', 868],
   ['feast-mother/iio-baby', 922],
   ['feast-guest-man/iio-table', 668],

@@ -13,7 +13,7 @@ describe('In Its Order act 1: the feast table’s sheets as the film draws them'
     'holds each sheet’s cells module to its record and declaration: its keys in order, each PNG the recorded one, each entry as the store reads the cell',
     () =>
       Effect.gen(function* () {
-        expect(TABLE.length).toBe(6);
+        expect(TABLE.length).toBe(7);
         expect(yield* sheetsMisses(TABLE)).toEqual([]);
       }).pipe(Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerDigest))),
   );

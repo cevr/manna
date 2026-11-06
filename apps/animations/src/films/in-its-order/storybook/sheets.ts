@@ -116,6 +116,38 @@ const leadClose: SheetDecl = {
   props: CLOSE_SASH,
 };
 
+/** His close sheet, as a reference of his two-shot sheet: the size and the face it draws him at (a path from his views folder). */
+const CLOSE_SHEET_REF = '../../shot-sheets/iio-close/sheet';
+
+/** What the lead's two-shot sheet asks of his head and dress beyond `seated`: the man his table and close sheets draw, at the close's size. */
+const TWO_AS_CLOSE =
+  "The first reference image is his table sheet and the second his close sheet: every figure here is exactly the man they draw, at the close sheet's size, the same in every line: the same head and face (a little longer than wide, never longer), the same ears and neck in his skin #f2b27c; the same short curls in his warm brown #6c432b, with no darker clumps or patches in them; the same narrow sash and small knot; the robe in its flat paints, its folds a few ink lines only, with no lavender, violet or grey marks on the folds, the chest or the sleeves; the sandals' brown #7a5236 on the sandals and the stool alone.";
+
+/**
+ * The lead's two-shot (`cold-smile`) and his question (`cold-ouch`), drawn
+ * at his close's size so the two-shot's faces reach a third of the frame
+ * under the enlargement cap (critique 1, findings 2, 4 and 6): the bottle
+ * held up as his table sheet holds it, his embarrassed grin to the man at
+ * his right, the bottle tucked to his chest with his eyes down, and his
+ * question to the viewer with empty hands. A sheet of its own, with his
+ * table sheet's bottle and sash paints: his close sheet's palette has no
+ * bottle, and a pass on it re-splits its first keys otherwise.
+ */
+const leadTwo: SheetDecl = {
+  member: 'lead-feast',
+  id: 'iio-two',
+  keys: ['bottle', 'grin', 'tuck', 'ask'],
+  poses: {
+    bottle: `seated on the low stool facing the viewer, the left hand (on the viewer's right) raised in its sleeve beside the head holding up ${BOTTLE}, exactly as the first reference image's fourth figure holds it, the other round hand resting on the knee in its sleeve, hopeful, head and eyes to the viewer, a calm short smile line`,
+    grin: `seated exactly as in the first figure, the bottle still held up the same beside the head, caught out: the head a quarter turned toward the viewer's left, the eyes looking at someone at the picture's left, an embarrassed lopsided grin, the brows tilted up at their inner ends`,
+    tuck: `seated exactly as in the first figure, sheepish: the left hand (on the viewer's right) lowered in its sleeve to the chest, holding the same bottle upright against the chest above the sash, half tucked away, the other round hand on the knee, the head bowed a little, the upper lids half down and the eyes looking down, a small embarrassed grin`,
+    ask: `seated on the low stool as in the first figure but with both round hands resting empty on the knees in their sleeves and no bottle, the head up facing the viewer, the eyes open looking straight at the viewer, the brows raised, wondering, asking a question, the mouth a small closed line`,
+  },
+  refs: [TABLE_SHEET_REF, CLOSE_SHEET_REF],
+  rules: [...seated('#7a5236'), TABLE_SASH, TWO_AS_CLOSE],
+  props: BOTTLE_PROPS,
+};
+
 /** The lead on the parchment (`milk-row`): standing, taking a cup. */
 const leadMilk: SheetDecl = {
   member: 'lead-feast',
@@ -161,6 +193,29 @@ const guest = (member: string, side: 'right' | 'left', seat: string): SheetDecl 
   refs: ['poses-1', 'poses-2', 'poses-3'],
   rules: seated(seat),
 });
+
+/** A guest's table sheet, as a reference of its own later pass (a path from his views folder). */
+const GUEST_TABLE_REF = '../../shot-sheets/iio-table/sheet';
+
+/**
+ * The guest man at the table (`cold-table` to `cold-ouch`): the guests' four
+ * keys, and his laugh in the two-shot, a later pass drawn from the sheet
+ * itself (critique 1, finding 2: his closed smile read faint at phone
+ * size), so the four keys drawn first stand byte for byte.
+ */
+const guestManTable: SheetDecl = (() => {
+  const base = guest('feast-guest-man', 'right', '#692e18');
+  return {
+    ...base,
+    keys: [...base.keys, 'laugh'],
+    poses: {
+      ...base.poses,
+      laugh:
+        "seated on the low stool exactly as the first reference image's fourth figure, the same man at the same size, both round hands resting on the knees, the head a quarter turned toward the viewer's right as there, laughing warmly at someone at the picture's right: a broad beaming grin, the mouth a wide upturned closed curve, the eyes crinkled into two upward-curved ink lines, the cheeks high, the head tipped back a little",
+    },
+    passes: [{ keys: ['laugh'], refs: [GUEST_TABLE_REF, 'poses-1'] }],
+  };
+})();
 
 /**
  * The guest woman's take-5 sheet (`feast-courtyard`, the woman the owner chose
@@ -280,9 +335,10 @@ const small = (member: string, refs: ReadonlyArray<string>, who: string): SheetD
 export const SHEETS: ReadonlyArray<SheetDecl> = [
   leadTable,
   leadClose,
+  leadTwo,
   leadMilk,
   motherBaby,
-  guest('feast-guest-man', 'right', '#692e18'),
+  guestManTable,
   guestWoman,
   guestWomanTable,
   diner(1, 'right'),

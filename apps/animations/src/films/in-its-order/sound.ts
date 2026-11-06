@@ -269,11 +269,17 @@ export const sound: Sound = {
       sync: 'onset',
       at: [{ scene: 'milk', cue: 'milk-cup:sip' }],
     },
-    toCup: {
+    page: {
       sound: 'cloth.lift',
       level: -16,
       sync: 'onset',
-      at: [{ scene: 'milk', cue: 'milk-pour:toCup' }],
+      at: [{ scene: 'milk', cue: 'milk-book:write' }],
+    },
+    chuckle: {
+      sound: 'crowd.swell',
+      level: -22,
+      sync: 'onset',
+      at: [{ scene: 'cold', cue: 'cold-smile:laugh' }],
     },
     drop: {
       sound: 'scroll.drop',

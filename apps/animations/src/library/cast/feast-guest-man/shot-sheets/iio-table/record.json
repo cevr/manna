@@ -60,6 +60,40 @@
         "height": 1024
       },
       "sha256": "bff220182fa7ef1b5d296d4cb511a1d576dcc1d9efa5e7f7616fb8167ecf010d"
+    },
+    {
+      "key": "laugh",
+      "box": {
+        "x": 582,
+        "y": 0,
+        "width": 372,
+        "height": 1024
+      },
+      "sha256": "6588f3f5ac7a857ddf42f98c29ae802d73063c17a52ed097c33655d47132da14"
+    }
+  ],
+  "passes": [
+    {
+      "file": "sheet-2.png",
+      "keys": ["laugh"],
+      "prompt": "One shot sheet for an animated film: the one person in the reference images drawn 1 times in one row, left to right, in exactly this order:\n1. seated on the low stool exactly as the first reference image's fourth figure, the same man at the same size, both round hands resting on the knees, the head a quarter turned toward the viewer's right as there, laughing warmly at someone at the picture's right: a broad beaming grin, the mouth a wide upturned closed curve, the eyes crinkled into two upward-curved ink lines, the cheeks high, the head tipped back a little.\nThe person, as described: The man is the feast's seated male guest, a plain, never-named grown man of the Bible's own time built on the base filler cast's grown man (`filler-bases`, view poses-1) with two house parts over him (in-its-order item 3), drawn in the house look: a painted storybook cartoon of flat colour shapes, one bold warm-dark outline of even weight round the figure, shading with colour only. He sits on the house's low wooden stool facing the viewer square, both round hands resting on the knees, three times in one row: neutral (head and eyes to the viewer, a calm short smile line), turn (head a quarter toward the viewer's right, surprised: brows raised, eyes open, a small round open mouth) and smile (the same turn, a kind closed smile). He sits picture-left at the feast and turns toward the viewer's right, toward the lead beside him. Seated, he is 2.876 of his own heads from the headcloth's top to the soles. His head is the base's upright oval with ears showing and the base's three-mark face; a little of his short dark-brown hair (#422017 as drawn) shows below the band at the temples; he is clean-shaven. Over the base's cream robe and plain flat sash he wears a linen headcloth falling behind the ears to the shoulders, tied round the brow with a plain indigo band (#3d4c73 as drawn, asked #4b566b), and a walnut mantle open down the front to the lap (#bd825c as drawn, its shaded side #b47954, asked #ab8163); brown sandals (#692e18) on bare feet; the stool's wood #a7592d, its far side #914928; a soft lavender contact shadow (#cebfeb) under the stool. The kept sheet draws the skin and the cloth paler than the look asks: skin #febe90 as drawn against the base's #fdb577, the robe #fdf4e2 (its shaded side turned toward lavender #ebdadb) against #f9e7cf, and the headcloth almost white (#fef6e3, its shade #e3cabf) against linen #d1c6b4; tint them at the cut if a scene needs the house palette. His round hands are drawn about 20 % too big, so the seated frames shrink each hand's skin disc to 0.82 about its centre at the cut (`../cutout/seated/frames/record.json`). His eyes sit lower on the figure than the seated lead's; set his scale in the scene against the lead, not from the sheet alone. Where the description names an order of figures, the order above holds.\nContinuity: this is one person drawn 1 times in one pass, so every figure has the same face, the same head size, the same body proportions, the same colours, the same line weight and the same shading; only the turn and the pose change. All figures stand on one baseline at one size, the soles of every figure on the same line.\nHouse rules: each hand is a plain round circle of skin at the end of its sleeve, no thumb and no fingers. Sleeves run to the wrist in every figure, the raised arm too: no bare arm or forearm ever shows. One bold warm-dark outline of even weight round each figure. One flat shade per colour: no gradient, no texture, no airbrush, no highlight.\nClothes: every part of the clothes is outlined in the same ink #130601 as the figure; a fold on cloth is a line in that cloth's own shade; no rose, pink or skin colour anywhere on the clothes, skin colour only on the face, neck, hands and feet.\nPaint with exactly these colours: the outline ink #130601; skin #febe90, drawn flat in that one colour; hair #422017, drawn flat in that one colour; robe #fdf4e2 with its shaded side #ebdadb; headcloth #fef6e3 with its shaded side #e3cabf; band #3d4c73, drawn flat in that one colour; mantle #bd825c with its shaded side #b47954; sandals #692e18, drawn flat in that one colour; stool #a7592d with its shaded side #914928; contact shadow #cebfeb, drawn flat in that one colour.\nClose colours: the robe #fdf4e2 and the headcloth #fef6e3 lie close, so the bold ink #130601 outline runs between them wherever they meet, and each is painted exactly its own hex; the headcloth reads apart from the robe by that outline.\nThe ground: one flat colour, #a6dcae, everywhere behind and between the figures, with wide clear ground between each figure and the next (a reaching or raised hand too) so no figure touches or nears another; no glow, halo or soft light round any figure; no floor, no cast shadow, no text, no frame.\nThe narration's words appear only as full-screen cards: nothing in the picture carries lettering.\nA held prop is named in the pose words and is the same prop, the same size and the same colours in every figure that holds it. No prop carries text, letters, numbers or marks.\nWhere a pose turns the head, it turns exactly as the pose words say, toward the viewer's left or right as written, whatever way the description or the reference images face.\nThe seat is one low plain wooden stool painted exactly #692e18, flat, with no shade of its own.\nEach seated figure is drawn whole, from the top of the head to the soles of both feet resting flat on the ground line: no table, bench or anything else in front of the figure hides any part of it.",
+      "refs": [
+        {
+          "file": "cast-sheet/views/../../shot-sheets/iio-table/sheet.png",
+          "sha256": "d1ce09266fe7e20362e06144156144096080835829f1c9403f2a74803e9d3cbc"
+        },
+        {
+          "file": "cast-sheet/views/poses-1.png",
+          "sha256": "bd574e3d38ee242984ba9bd890a492bb1430a96e2d461eb81e7a7b0d49ad217a"
+        }
+      ],
+      "sheet": "1839a5f4c497bb9c772856524b4eea0b32aadb9f4edc672fb32aae538e2ec5fc",
+      "size": "1536x1024",
+      "ground": "#98dba7",
+      "drawn": "2026-11-06",
+      "scale": 1,
+      "top": -4,
+      "height": 1024
     }
   ]
 }

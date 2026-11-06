@@ -3,7 +3,7 @@ import type { Over, PaintingFrame } from '../../../library/storybook/scene.ts';
 import { script } from '../script.ts';
 import { GRID } from './grid.ts';
 import { LETTER_WORDS } from './shots/cold.ts';
-import { BOOK_CITE, POUR_PATH } from './shots/milk.ts';
+import { BOOK_WORDS } from './shots/milk.ts';
 import { COLD_STORY, MILK_STORY, STORIES, TITLE_STORY } from './stories.ts';
 
 /** One glyph a drawing over a shot put down: its character and its centre on the frame. */
@@ -18,6 +18,8 @@ interface Drawn {
   readonly glyphs: Array<Glyph>;
   readonly hands: Array<string>;
   readonly fills: { n: number };
+  readonly ellipses: Array<{ readonly x: number; readonly y: number; readonly rx: number }>;
+  readonly strokes: Array<ReadonlyArray<readonly [number, number]>>;
 }
 
 /** The frame's size. */
@@ -32,6 +34,7 @@ const recording = (drawn: Drawn) => {
   const stack: Array<readonly [number, number, number, number]> = [];
   let m: readonly [number, number, number, number] = [1, 1, 0, 0];
   let font = '';
+  let path: Array<readonly [number, number]> = [];
   const sizeOf = () => Number(/(\d+(?:\.\d+)?)px/.exec(font)?.[1] ?? 0);
   return {
     save: () => stack.push(m),
@@ -45,7 +48,18 @@ const recording = (drawn: Drawn) => {
       m = [m[0] * sx, m[1] * sy, m[2], m[3]];
     },
     rotate: () => {},
-    beginPath: () => {},
+    beginPath: () => {
+      path = [];
+    },
+    moveTo: (x: number, y: number) => path.push([x, y]),
+    lineTo: (x: number, y: number) => path.push([x, y]),
+    closePath: () => {},
+    arc: () => {},
+    ellipse: (x: number, y: number, rx: number) => drawn.ellipses.push({ x, y, rx }),
+    fill: () => {
+      drawn.fills.n += 1;
+    },
+    stroke: () => drawn.strokes.push(path),
     rect: () => {},
     clip: () => {},
     fillRect: () => {
@@ -74,16 +88,17 @@ const recording = (drawn: Drawn) => {
     textAlign: '',
     lineWidth: 1,
     lineJoin: '',
+    lineCap: '',
     direction: '',
   } as unknown as CanvasRenderingContext2D;
 };
 
 /** What `over` draws on a frame whose cues have run as `at` gives them. */
-const drawnBy = (over: Over, at: (cue: string) => number): Drawn => {
-  const drawn: Drawn = { glyphs: [], hands: [], fills: { n: 0 } };
+const drawnBy = (over: Over, at: (cue: string) => number, t = 0): Drawn => {
+  const drawn: Drawn = { glyphs: [], hands: [], fills: { n: 0 }, ellipses: [], strokes: [] };
   const f: PaintingFrame = {
     ctx: recording(drawn),
-    t: 0,
+    t,
     w: W,
     h: H,
     at,
@@ -121,15 +136,22 @@ const strays = (over: Over, drawn: Drawn) =>
       g.y > Math.min(H, over.box.y + over.box.h),
   );
 
-/** The act's two lettered quotations: their scene, shot, the words the take speaks for them, and the reference lettered after them. */
+/** The act's two lettered quotations: their scene, the insert they are lettered on, the words the take speaks for them, the reference lettered after them, the cue that writes them and the cue that cuts away from them. */
 const QUOTES = [
   {
     story: COLD_STORY,
-    shot: 'cold-letter',
+    shot: 'cold-scroll',
     words: spoken('cold', 'quote'),
-    cite: LETTER_WORDS.cite,
+    cite: 'Hebrews 5:12',
+    lines: LETTER_WORDS,
   },
-  { story: MILK_STORY, shot: 'milk-pour', words: spoken('milk', 'newborn'), cite: BOOK_CITE.text },
+  {
+    story: MILK_STORY,
+    shot: 'milk-book',
+    words: spoken('milk', 'newborn'),
+    cite: '1 Peter 2:2',
+    lines: BOOK_WORDS,
+  },
 ] as const;
 
 describe("In Its Order's drawings over its shots", () => {
@@ -141,7 +163,7 @@ describe("In Its Order's drawings over its shots", () => {
     const wrong = QUOTES.flatMap(({ story, shot, words, cite }) => {
       const over = story.over.find((o) => o.shot === shot);
       if (!over) return [`${shot}: no drawing over it`];
-      const drawn = drawnBy(over, (cue) => Number(cue !== 'milk-pour:clear'));
+      const drawn = drawnBy(over, () => 1);
       const lettered = drawn.glyphs.map((g) => g.ch).join('');
       return [
         ...[`${words}${cite.replace(/\s+/g, '')}`].filter((w) => w !== lettered),
@@ -157,7 +179,7 @@ describe("In Its Order's drawings over its shots", () => {
     expect(wrong).toEqual([]);
   });
 
-  test('draws nothing over cold-letter or milk-pour before its quote begins', () => {
+  test('draws nothing over cold-scroll or milk-book before its quote begins', () => {
     const early = QUOTES.flatMap(({ story, shot }) =>
       story.over
         .filter((o) => o.shot === shot)
@@ -168,29 +190,35 @@ describe("In Its Order's drawings over its shots", () => {
     expect(early).toEqual([]);
   });
 
-  test('keeps the verse over the book inside its drawing’s box wherever milk-pour’s camera stands while it shows, and clears it once the milk pours', () => {
+  test('keeps each verse inside its drawing’s box wherever its insert’s push stands', () => {
+    const off = QUOTES.flatMap(({ story, shot }) => {
+      const over = story.over.find((o) => o.shot === shot);
+      if (!over) return [`${shot}: no drawing over it`];
+      return [0, 0.25, 0.5, 0.75, 1].flatMap((u) => {
+        const drawn = drawnBy(over, (cue) => Number(cue.endsWith(':write')) || u);
+        return strays(over, drawn).map((g) => `${shot}@${u}: ${g.ch} at ${g.x.toFixed(0)}`);
+      });
+    });
+    expect(off).toEqual([]);
+  });
+
+  test('pours milk that moves and fills the cup in milk-pour (critique 1, finding 1): nothing before the pour; once poured, a stream whose light streaks run down it from one frame to the next; the milk in the cup rising from the pour to the brim at `good`, where the stream stops', () => {
     const over = MILK_STORY.over.find((o) => o.shot === 'milk-pour');
     if (!over) return expect(over).toBeDefined();
-    const shown = POUR_PATH.slice(0, 3);
-    const off = shown.flatMap(([move], k) =>
-      [0, 0.25, 0.5, 0.75, 1].flatMap((u) => {
-        const done = new Set(POUR_PATH.slice(0, k).map(([m]) => `milk-pour:${m}`));
-        const at = (cue: string) => {
-          if (cue === 'milk-pour:clear') return 0;
-          if (done.has(cue) || cue === 'milk-pour:write') return 1;
-          return u;
-        };
-        const drawn = drawnBy(over, at);
-        return [
-          ...[`${move}@${u}: ${drawn.glyphs.length} glyphs`].filter(
-            () => drawn.glyphs.length === 0,
-          ),
-          ...strays(over, drawn).map((g) => `${move}@${u}: ${g.ch} at ${g.x.toFixed(0)}`),
-        ];
-      }),
-    );
-    const poured = drawnBy(over, () => 1).glyphs.map((g) => `poured: ${g.ch}`);
-    expect([...off, ...poured]).toEqual([]);
+    const at = (pour: number, fill: number, full: number) => (cue: string) =>
+      ({ 'milk-pour:pour': pour, 'milk-pour:fill': fill, 'milk-pour:full': full })[cue] ?? 0;
+    const before = drawnBy(over, at(0, 0, 0));
+    expect(before.ellipses.length + before.strokes.length).toBe(0);
+    const pouring = [0.3, 0.32].map((t) => drawnBy(over, at(1, 0.4, 0), t));
+    expect(pouring.map((d) => d.strokes.length > 0)).toEqual([true, true]);
+    expect(pouring[0]?.strokes).not.toEqual(pouring[1]?.strokes);
+    const face = (fill: number) => drawnBy(over, at(1, fill, 0)).ellipses[1];
+    const [low, high] = [face(0.2), face(1)];
+    expect((high?.y ?? 0) < (low?.y ?? 0) && (high?.rx ?? 0) > (low?.rx ?? 0)).toBe(true);
+    const mouth = drawnBy(over, at(1, 1, 1)).ellipses[0];
+    expect(high?.rx).toBeCloseTo(mouth?.rx ?? 0, 6);
+    expect(high?.y).toBeCloseTo(mouth?.y ?? 0, 6);
+    expect(drawnBy(over, at(1, 1, 1)).strokes.length).toBeLessThanOrEqual(1);
   });
 
   test('keeps the title’s drawing under a tenth of the frame, so the parity reads the rest', () => {

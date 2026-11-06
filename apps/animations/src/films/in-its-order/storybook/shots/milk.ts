@@ -1,25 +1,39 @@
-import { write } from '@manna/film/canvas';
+import { unprobed } from '@manna/film/canvas';
 import type { FilmShot, Over } from '../../../../library/storybook/scene.ts';
 import { fonts, palette } from '../../palette.ts';
 import { hold, type Plate, type Span, turn } from '../../../../library/storybook/shot.ts';
-import { CELLS as VILLAGER_CELLS } from '../../cast/idea-villagers/shot-sheets/iio-milk/cells.ts';
-import { BOOK_OPEN, BOOK_SHUT, DROPPER, PAGE } from '../../plates/milk.ts';
+import { BOOK_OPEN, BOOK_SHUT, PAGE } from '../../plates/milk.ts';
 import {
+  type Area,
+  boxOver,
   cam,
-  drawScaleOf,
+  type CameraPath,
+  camerasOf,
   type Framing,
-  framingAt,
   holds,
+  inkLines,
   key,
   layer,
   onScreen,
-  plateAcross,
+  pathFramingAt,
+  plateOf,
   plateOn,
   seat,
   STORY_PLATES,
   tallOf,
+  withAlpha,
 } from '../kit.ts';
-import { MILK_ARC, MILK_ARC_BRUSH, MILK_ARC_ENDS } from '../plates/milk-arc.ts';
+import {
+  BOOK_CLOSE,
+  CUP_CLOSE,
+  CUP_CLOSE_AT,
+  DROPPER_CLOSE,
+  DROPPER_TIP,
+  INSERT_FACES,
+  INSERT_SCALE,
+  POUR_CLOSE,
+  POUR_LIP,
+} from '../plates/inserts.ts';
 import { SHADOW } from '../plates/shadow.ts';
 
 /** How far the parchment page stands behind the figures, as a camera's divisor: a truck shows them standing off it. */
@@ -54,53 +68,27 @@ const villager = (spans: readonly [Span, ...ReadonlyArray<Span>]) =>
 const villagerGround = () =>
   VILLAGER.crown + tallOf('idea-villagers', 'iio-milk', VILLAGER.headPx, 1);
 
-/** The milk's face in the villager's cup, in each cell he holds it in while it pours (waving the dropper away too, the cup kept in his other hand), in that cell's px: the cup's mouth, read on the cells. */
-export const CUP_MOUTHS = {
-  cup: { x: 100, y: 501, width: 42, height: 8 },
-  look: { x: 131, y: 501, width: 43, height: 8 },
-  wave: { x: 126, y: 501, width: 42, height: 8 },
-} as const;
-
-/** Where the milk falls into the cup in his `cup` hold, on the figures' plane: the mouth's middle across, 2 px under its rim, so his breath stays inside it. */
-const cupMouth = (): readonly [number, number] => {
-  const s = drawScaleOf('idea-villagers', 'iio-milk', VILLAGER.headPx, 1);
-  const m = CUP_MOUTHS.cup;
-  return [
-    VILLAGER.x + (m.x + m.width / 2 - VILLAGER_CELLS.cup.ax) * s,
-    villagerGround() + (m.y + 2 - VILLAGER_CELLS.cup.ay) * s,
-  ];
-};
-
-/** The open book beside the villager, as the panels `milk.newborn.5` and `milk.word.5` set it (the owner: the book nearer the cup), its centre and its scale: about the panel's 400 px across, its left edge just clear of his robe (layer x 828), so the milk pours about the panel's 340 px. */
+/** The open book beside the villager, as the panels `milk.newborn.5` and `milk.word.5` set it (the owner: the book nearer the cup), its centre and its scale: about the panel's 400 px across, its left edge just clear of his robe (layer x 828). */
 export const BOOK = { x: 1025, y: 586, s: 0.9 } as const;
 
-/** The gutter of the open book, in its own px: the fold the milk leaves from, its upper half. */
-export const GUTTER = { x: 195, y: 40, width: 41, height: 100 } as const;
-
-/** The point in the gutter the milk leaves from, on the figures' plane. */
-const gutterPour = (): readonly [number, number] => [
-  BOOK.x + (GUTTER.x + GUTTER.width / 2 - BOOK_OPEN.size[0] / 2) * BOOK.s,
-  BOOK.y + (GUTTER.y + GUTTER.height / 2 - BOOK_OPEN.size[1] / 2) * BOOK.s,
-];
-
-/** The camera at the end of `milk-cup`'s push: on the villager, the book and the milk's arc between them. */
+/** The camera at the end of `milk-cup`'s push: on the villager and the book beside him. */
 const PUSHED = { x: 880, y: 520, zoom: 1.1 } as const;
 
 /**
- * `milk-cup`, the scene's start to `desire`: the villager on the parchment
- * holding his cup; after "Start with the milk." he takes a sip; on
- * `newborn` the shut book pops in at picture right and he turns to look at
- * it, it opens, and from `peter` the camera pushes in.
+ * `milk-cup`, the scene's start to `newborn`: the villager on the parchment
+ * holding his cup; after "Start with the milk." he takes a sip; on `peter`
+ * the shut book pops in at picture right and he turns to look at it, it
+ * opens before "As newborn babes", and the camera pushes in toward it.
  */
 export const milkCup: FilmShot = {
   id: 'milk-cup',
-  span: { at: 'start', until: 'desire' },
+  span: { at: 'start', until: 'newborn' },
   cues: {
     sip: { mark: 'start', word: 'milk', offset: 0.5, dur: 0.8 },
-    pop: { mark: 'newborn', dur: 0.35 },
-    look: { mark: 'newborn', offset: 0.15, dur: 0.3 },
-    open: { mark: 'newborn', offset: 0.6, dur: 0.25 },
-    push: { mark: 'peter', until: 'desire' },
+    pop: { mark: 'peter', dur: 0.35 },
+    look: { mark: 'peter', offset: 0.15, dur: 0.3 },
+    open: { mark: 'peter', offset: 0.6, dur: 0.25 },
+    push: { mark: 'peter', until: 'newborn' },
   },
   build: ({ duration, cue }) => {
     const pop = cue('pop');
@@ -153,148 +141,186 @@ export const milkCup: FilmShot = {
   },
 };
 
-/** How far left of its place the dropper waits and leaves to, layer px: its right edge (x 702 at rest) past the pushed frame's left edge (x 7 at zoom 1.1), so it comes in and goes out whole and level, under his face, over his tunic and his cup hand. */
-const DROPPER_LEFT = -730;
+/** The plates act 1 dissolves on purpose, by file: none; every plate shows whole or not at all, but for one frame. */
+export const DISSOLVES: ReadonlySet<string> = new Set<string>();
 
-/** The plates act 1 dissolves on purpose, by file: the milk's arc thinning away as a pour stops, a stream of milk and no drawn prop. Every other plate shows whole or not at all, but for one frame. */
-export const DISSOLVES: ReadonlySet<string> = new Set(['milk-arc.png']);
+/** An insert's face (its own px) on the plane it is laid on as `WHAT_DAY` is (`INSERT_SCALE`, 100 px above the frame's top), layer px. */
+const insertArea = (face: Area): Area => ({
+  x0: face.x0 * INSERT_SCALE,
+  y0: face.y0 * INSERT_SCALE - 100,
+  x1: face.x1 * INSERT_SCALE,
+  y1: face.y1 * INSERT_SCALE - 100,
+});
 
-/** One pour of the milk: its arc laid from the book's gutter over and down into the cup's mouth over `from`..`from + 0.6` s, gone at `stop`. */
-const ribbon = (from: number, stop: number): Plate =>
-  plateAcross(
-    'milk-arc.png',
-    MILK_ARC,
-    [MILK_ARC_ENDS.source, MILK_ARC_ENDS.mouth],
-    [gutterPour(), cupMouth()],
-    {
-      dir: STORY_PLATES,
-      reveal: { brush: MILK_ARC_BRUSH, from, to: from + 0.6 },
-      moves: [
-        [stop, key({})],
-        [stop + 0.25, key({ alpha: 0 })],
-      ],
-    },
-  );
+/** milk-book's camera: one slow push in toward the verse on the pages, from `newborn` to the cut. */
+export const BOOK_PATH: CameraPath = [
+  ['push', { x: 960, y: 540, zoom: 1 }, { x: 960, y: 560, zoom: 1.07 }],
+];
 
 /**
- * milk-pour's camera, each move a cue of the shot from one framing to the
- * next, in order, each starting where the one before ended (layer px): up
- * and right onto the parchment over the open book on `desire`; a slow push
- * while the verse is lettered there; down to the book and the cup after
- * "thereby"; down the stream to the cup as it pours, until the dropper
- * comes; left with the dropper as it is waved away; back in toward the
- * stream and the cup on `word`; and easing out as he drinks. It stays at
- * zoom 1.16 or under throughout, so the villager's drawing (drawn at 1.281)
- * is never enlarged past the act's 1.5 cap.
+ * `milk-book`, `newborn` to `sincere`: cut in to the open book on the feast
+ * table, close, and 1 Pet 2:2 lettered on its two pages in the film's own
+ * inked hand from the verse's first word, quickly, so it stands whole on
+ * the page for longer than its words take to read (`BOOK_QUOTE`), under a
+ * slow push.
  */
-export const POUR_PATH = [
-  ['page', PUSHED, { x: 960, y: 470, zoom: 1.12 }],
-  ['study', { x: 960, y: 470, zoom: 1.12 }, { x: 965, y: 468, zoom: 1.16 }],
-  ['back', { x: 965, y: 468, zoom: 1.16 }, { x: 905, y: 525, zoom: 1.16 }],
-  ['follow', { x: 905, y: 525, zoom: 1.16 }, { x: 820, y: 555, zoom: 1.16 }],
-  ['leave', { x: 820, y: 555, zoom: 1.16 }, { x: 765, y: 550, zoom: 1.16 }],
-  ['unmixed', { x: 765, y: 550, zoom: 1.16 }, { x: 860, y: 540, zoom: 1.16 }],
-  ['settle', { x: 860, y: 540, zoom: 1.16 }, { x: 830, y: 525, zoom: 1.1 }],
-] as const;
-
-/** The framing milk-pour's camera holds at a frame whose cues have run `at` of their way: the first move not yet done, eased as the shot eases it, or the last move's end. */
-const pourFramingAt = (at: (cue: string) => number): Framing => {
-  const [moving] = POUR_PATH.filter(([cue]) => at(`milk-pour:${cue}`) < 1);
-  const [cue, from, to] = moving ?? POUR_PATH[POUR_PATH.length - 1] ?? POUR_PATH[0];
-  return framingAt(from, to, at(`milk-pour:${cue}`));
+export const milkBook: FilmShot = {
+  id: 'milk-book',
+  span: { mark: 'newborn', until: 'sincere' },
+  cues: {
+    write: { mark: 'newborn', dur: 2.1 },
+    push: { mark: 'newborn', until: 'sincere' },
+  },
+  build: ({ cue }) => ({
+    headPx: VILLAGER.headPx,
+    camera: camerasOf(BOOK_PATH, cue),
+    layers: [
+      layer('book', 1, [
+        plateOf('milk-book-close.png', BOOK_CLOSE, { scale: INSERT_SCALE, dir: STORY_PLATES }),
+      ]),
+    ],
+  }),
 };
 
+/** The verse's ink on the pages: the hand's face, at its size on the pages' plane. */
+export const INK = {
+  family: fonts.hand,
+  size: 70,
+  weight: 700,
+  color: palette.ink,
+  align: 'center',
+} as const;
+
+/** 1 Pet 2:2 as it is lettered on the two pages, left then right, layer px, and its reference under the right page's lines. */
+export const BOOK_WORDS = [
+  { x: 594, y: 400, text: '“As newborn babes,' },
+  { x: 594, y: 510, text: 'desire the sincere' },
+  { x: 594, y: 620, text: 'milk of the word,' },
+  { x: 1337, y: 400, text: 'that ye may' },
+  { x: 1337, y: 510, text: 'grow thereby.”' },
+  { x: 1337, y: 650, text: '1 Peter 2:2' },
+] as const;
+
+/** Where the verse is lettered on the two pages, layer px: across both pages' faces, from above its first line's letters to below its reference's. */
+const PAGES: Area = (() => {
+  const [l, r] = [insertArea(INSERT_FACES.left), insertArea(INSERT_FACES.right)];
+  return { x0: l.x0 - 20, y0: 320, x1: r.x1 + 20, y1: 690 };
+})();
+
+/** 1 Pet 2:2 in ink on the open book's pages in milk-book, the film's own lettering in strokes: written from the verse's first word over `write`, then held whole to the cut. It follows milk-book's push, inside the pages' frame box. */
+export const BOOK_QUOTE: Over = {
+  shot: 'milk-book',
+  box: boxOver(BOOK_PATH, PAGES),
+  draw: (f) =>
+    inkLines(
+      f,
+      pathFramingAt('milk-book', BOOK_PATH, f.at),
+      BOOK_WORDS,
+      INK,
+      f.at('milk-book:write'),
+      'verse',
+    ),
+};
+
+/** The pour close laid on its plane: scaled up past the inserts' scale and raised, so its tipped book stands high over the table, layer px. */
+const POUR_AT = { scale: 1.4, x: -120, y: -330 } as const;
+
+/** The cup on the table in the pour close: its foot, layer px, and its scale (its height a third of the frame and more). */
+const CUP_AT = { x: 820, y: 1000, s: 0.95 } as const;
+
+/** Where the milk leaves the tipped book, layer px. */
+export const LIP = [
+  POUR_LIP[0] * POUR_AT.scale + POUR_AT.x,
+  POUR_LIP[1] * POUR_AT.scale + POUR_AT.y,
+] as const;
+
+/** The inside of the cup's mouth, layer px: its centre and radii. */
+export const MOUTH = {
+  x: CUP_AT.x + (CUP_CLOSE_AT.mouth.x - CUP_CLOSE_AT.foot[0]) * CUP_AT.s,
+  y: CUP_AT.y + (CUP_CLOSE_AT.mouth.y - CUP_CLOSE_AT.foot[1]) * CUP_AT.s,
+  rx: CUP_CLOSE_AT.mouth.rx * CUP_AT.s,
+  ry: CUP_CLOSE_AT.mouth.ry * CUP_AT.s,
+} as const;
+
+/** How far below the mouth's middle the milk's face starts in the empty cup, layer px: the inside's depth the mouth shows. */
+const CUP_DEPTH = 52;
+
+/** milk-pour's camera: a slight drift in while the stream runs and the dropper comes, then a push in on the cup from `word` to `good`, held on the full cup. */
+export const POUR_PATH: CameraPath = [
+  ['drift', { x: 960, y: 540, zoom: 1 }, { x: 930, y: 556, zoom: 1.03 }],
+  ['push', { x: 930, y: 556, zoom: 1.03 }, { x: 880, y: 600, zoom: 1.1 }],
+];
+
+/** Where the dropper waits off the frame's left and where it hangs over the cup, its tip, layer px; and its scale. */
+const DROPPER = {
+  off: [-320, MOUTH.y - 60],
+  over: [MOUTH.x - MOUTH.rx * 0.35, MOUTH.y - 60],
+  s: 0.8,
+} as const;
+
 /**
- * `milk-pour`, `desire` to `need`: the camera rises onto the parchment over
- * the open book, and 1 Pet 2:2 is lettered there in ink as it is read
- * (`BOOK_QUOTE`). After "thereby" the camera comes down to the book and the
- * cup, the villager turns to his cup, the verse fades off the parchment, and
- * as it settles, before `sincere`, one clean white stream pours from the
- * book's gutter into his cup and keeps pouring: the camera follows it down
- * to the cup; on
- * "nothing" a dropper of ink comes in level from the left and rests at the
- * cup, and he waves it away, back out the way it came, the stream unbroken;
- * on `word` he looks to the book and back while it pours on, and the
- * camera goes in toward the stream; on `good` the cup is full, the stream
- * stops and he drinks. Each `cup` hold blinks through `cupBlink`.
+ * `milk-pour`, `sincere` to `need`: cut to the feast table, close, the
+ * clay cup on it and the open book tipped high over it. On `sincere` a
+ * clean white stream runs from the book's lower corner down into the cup
+ * and keeps running, its surface flowing, while the milk climbs the cup
+ * (`POUR_STREAM`). On `mixed` a large dropper of ink comes in from the
+ * left and hangs over the cup, its drop trembling; on "nothing" it shakes
+ * and is drawn back out the way it came, the stream unbroken and white. On
+ * `word` the camera pushes in on the cup; by `good` it is full to the brim
+ * and the stream stops.
  */
 export const milkPour: FilmShot = {
   id: 'milk-pour',
-  span: { mark: 'desire', until: 'need' },
+  span: { mark: 'sincere', until: 'need' },
   cues: {
-    thereby: { mark: 'desire', word: 'thereby', offset: 0.56 },
-    page: { mark: 'desire', dur: 0.9 },
-    study: { after: 'milk-pour:page', until: { cue: 'milk-pour:thereby' } },
-    write: { mark: 'desire', until: { cue: 'milk-pour:thereby' } },
-    back: { after: 'milk-pour:thereby', dur: 0.5 },
-    clear: { after: 'milk-pour:thereby', offset: 0.3, dur: 0.3 },
-    toCup: { after: 'milk-pour:thereby', dur: 0.3 },
-    pour: { after: 'milk-pour:back', dur: 0.3 },
-    follow: { after: 'milk-pour:back', until: { cue: 'milk-pour:dropper' } },
-    dropper: { mark: 'mixed', word: 'nothing', dur: 1.2, ends: true },
-    wave: { mark: 'mixed', word: 'nothing', dur: 0.3 },
-    away: { mark: 'mixed', word: 'nothing', offset: 0.3, dur: 1.2 },
-    leave: { after: 'milk-pour:wave', until: 'word' },
-    look: { mark: 'word', dur: 0.3 },
-    turnBack: { after: 'milk-pour:look', offset: 0.6, dur: 0.3 },
-    unmixed: { mark: 'word', until: 'good' },
+    pour: { mark: 'sincere', dur: 0.4 },
+    drift: { mark: 'sincere', until: 'word' },
+    fill: { mark: 'sincere', until: 'good' },
+    dropper: { mark: 'mixed', dur: 0.5 },
+    shake: { mark: 'mixed', word: 'nothing', offset: 0.7, dur: 0.6 },
+    away: { after: 'milk-pour:shake', dur: 0.6 },
+    push: { mark: 'word', until: 'good' },
     full: { mark: 'good', dur: 0.3 },
-    drink: { mark: 'good', offset: 0.3, dur: 1.2 },
-    settle: { mark: 'good', until: 'need' },
   },
-  build: ({ duration, cue }) => {
-    const [toCup, dropper, away, look, turnBack, drink] = [
-      cue('toCup'),
-      cue('dropper'),
-      cue('away'),
-      cue('look'),
-      cue('turnBack'),
-      cue('drink'),
-    ];
+  build: ({ cue }) => {
+    const [dropper, shake, away] = [cue('dropper'), cue('shake'), cue('away')];
+    const [dx, dy] = [DROPPER.off[0] - DROPPER.over[0], DROPPER.off[1] - DROPPER.over[1]];
+    const step = (shake.end - shake.start) / 4;
     return {
       headPx: VILLAGER.headPx,
-      camera: POUR_PATH.flatMap(([name, from, to]) => [
-        cam(cue(name).start, from.x, from.y, from.zoom),
-        cam(cue(name).end, to.x, to.y, to.zoom),
-      ]),
+      camera: camerasOf(POUR_PATH, cue),
       layers: [
-        page(),
-        layer('figures', 1, [
-          shadowAt(VILLAGER.x, villagerGround(), 330),
-          villager([
-            hold(0, toCup.start, 'look'),
-            turn(toCup.start, toCup.end - toCup.start, 'look', 'cup'),
-            ...holds(
-              [
-                [toCup.end, 'cup', 'cupBlink'],
-                [cue('wave').start, 'wave', 'wave'],
-                [away.end, 'cup', 'cupBlink'],
-              ],
-              look.start,
-            ),
-            turn(look.start, look.end - look.start, 'cup', 'look'),
-            hold(look.end, turnBack.start, 'look'),
-            turn(turnBack.start, turnBack.end - turnBack.start, 'look', 'cup'),
-            ...holds(
-              [
-                [turnBack.end, 'cup', 'cupBlink'],
-                [drink.start, 'drink', 'drink'],
-                [drink.end, 'cup', 'cupBlink'],
-              ],
-              duration,
-            ),
-          ]),
-          plateOn('milk-book-open.png', BOOK_OPEN, [215.5, 119.5], [BOOK.x, BOOK.y], BOOK.s),
-          ribbon(cue('pour').start, cue('full').start),
-          plateOn('milk-dropper.png', DROPPER, [14, 130], [667, 530], 0.9, {
+        layer('table', 1, [
+          plateOf('milk-pour-close.png', POUR_CLOSE, {
+            at: [POUR_AT.x, POUR_AT.y],
+            scale: POUR_AT.scale,
+            dir: STORY_PLATES,
+          }),
+          plateOn(
+            'milk-cup-close.png',
+            CUP_CLOSE,
+            CUP_CLOSE_AT.foot,
+            [CUP_AT.x, CUP_AT.y],
+            CUP_AT.s,
+            {
+              dir: STORY_PLATES,
+            },
+          ),
+          plateOn('milk-dropper-close.png', DROPPER_CLOSE, DROPPER_TIP, DROPPER.over, DROPPER.s, {
+            dir: STORY_PLATES,
             moves: [
-              [0, key({ x: DROPPER_LEFT, alpha: 0 })],
-              [dropper.start, key({ x: DROPPER_LEFT, alpha: 0 })],
-              [dropper.start, key({ x: DROPPER_LEFT })],
+              [0, key({ x: dx, y: dy, alpha: 0 })],
+              [dropper.start, key({ x: dx, y: dy, alpha: 0 })],
+              [dropper.start, key({ x: dx, y: dy })],
               [dropper.end, key({})],
-              [away.start, key({})],
-              [away.end, key({ x: DROPPER_LEFT })],
-              [away.end, key({ x: DROPPER_LEFT, alpha: 0 })],
+              [shake.start, key({})],
+              [shake.start + step, key({ x: -24, y: -6 })],
+              [shake.start + 2 * step, key({ x: 18 })],
+              [shake.start + 3 * step, key({ x: -24, y: -6 })],
+              [shake.end, key({ y: -10 })],
+              [away.start, key({ y: -10 })],
+              [away.end, key({ x: dx, y: dy })],
+              [away.end, key({ x: dx, y: dy, alpha: 0 })],
             ],
           }),
         ]),
@@ -303,92 +329,171 @@ export const milkPour: FilmShot = {
   },
 };
 
-/** 1 Pet 2:2 as it is lettered on the parchment over the open book: each line's centre and baseline on the figures' plane (layer px), and its words. */
-const BOOK_WORDS = [
-  { x: 1230, y: 205, text: '“As newborn babes, desire' },
-  { x: 1230, y: 262, text: 'the sincere milk of the word,' },
-  { x: 1230, y: 319, text: 'that ye may grow thereby.”' },
-] as const;
+/** How the stream is drawn, layer px: its width at the book's lip and at the cup, how many light streaks run down it, and how fast (its lengths a second). */
+const STREAM = { lip: 46, cup: 24, streaks: 7, speed: 1.6 } as const;
 
-/** The reference under the verse, on the figures' plane. */
-export const BOOK_CITE = { x: 1230, y: 365, text: '1 Peter 2:2' } as const;
-
-/** The verse's type on the figures' plane (drawn at the camera's zoom: about 50 frame px while it is written), and the reference's. */
-const BOOK_TYPE = {
-  verse: { family: fonts.display, size: 44, weight: 500, color: palette.ink, align: 'center' },
-  cite: { family: fonts.display, size: 26, weight: 600, color: palette.goldShade, align: 'center' },
-} as const;
-
-/** The parchment over the book the verse is lettered on, on the figures' plane: clear of the villager's head (its right edge near layer x 805) and above the book's pages (from layer y 478). */
-const VERSE_AREA = { x0: 880, y0: 140, x1: 1580, y1: 400 } as const;
-
-/** The moves of milk-pour's camera the verse shows through: written on `page` and `study`, held and faded through `back` and `clear`. */
-const VERSE_MOVES = new Set(['page', 'study', 'back']);
-
-/** The frame box `VERSE_AREA` covers at some point of the moves the verse shows through, read at a hundred steps of each and clipped to the frame: the only place `BOOK_QUOTE` draws. */
-const BOOK_BOX = (() => {
-  const corners = POUR_PATH.filter(([move]) => VERSE_MOVES.has(move)).flatMap(([, from, to]) =>
-    Array.from({ length: 101 }, (_, i) => framingAt(from, to, i / 100)).flatMap((c) => [
-      onScreen(c, VERSE_AREA.x0, VERSE_AREA.y0),
-      onScreen(c, VERSE_AREA.x1, VERSE_AREA.y1),
-    ]),
-  );
-  const xs = corners.map(([x]) => x);
-  const ys = corners.map(([, y]) => y);
-  const [x0, y0] = [
-    Math.max(0, Math.floor(Math.min(...xs))),
-    Math.max(0, Math.floor(Math.min(...ys))),
+/** The stream's middle line from the lip to the milk's face at `level` (0 empty, 1 full): it leaves the book's corner a little outward and falls into the cup's mouth right of its middle. */
+const streamAt = (level: number, u: number): readonly [number, number] => {
+  const end = [MOUTH.x + MOUTH.rx * 0.42, surfaceY(level)] as const;
+  const c1 = [LIP[0] - 40, LIP[1] + 10] as const;
+  const c2 = [end[0] + 6, LIP[1] + (end[1] - LIP[1]) * 0.45] as const;
+  const v = 1 - u;
+  return [
+    v ** 3 * LIP[0] + 3 * v * v * u * c1[0] + 3 * v * u * u * c2[0] + u ** 3 * end[0],
+    v ** 3 * LIP[1] + 3 * v * v * u * c1[1] + 3 * v * u * u * c2[1] + u ** 3 * end[1],
   ];
-  const [x1, y1] = [
-    Math.min(1920, Math.ceil(Math.max(...xs))),
-    Math.min(1080, Math.ceil(Math.max(...ys))),
-  ];
-  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
-})();
+};
+
+/** The milk's face in the cup at `level`: from `CUP_DEPTH` under the mouth's middle when empty to the mouth's own line when full. */
+const surfaceY = (level: number): number => MOUTH.y + CUP_DEPTH * (1 - level);
+
+/** The area the stream and the cup's milk draw in, layer px. */
+const POUR_AREA: Area = {
+  x0: MOUTH.x - MOUTH.rx - 4,
+  y0: LIP[1] - 24,
+  x1: LIP[0] + 30,
+  y1: MOUTH.y + CUP_DEPTH + MOUTH.ry + 6,
+};
 
 /**
- * 1 Pet 2:2 in ink on the parchment over the open book in milk-pour, the
- * film's own lettering in strokes: written line by line from `desire` to the
- * end of "thereby" while the camera holds on it, held whole as the camera
- * comes down to the book, then faded off on `clear`, so the stream pours
- * under clean parchment. It follows milk-pour's camera (`pourFramingAt`),
- * the same moves eased the same way. Not on the book's pages: a page type
- * that reads at 1080p needs the camera near 2.5, which enlarges the
- * villager's drawing past the act's 1.5 cap (state.md).
+ * The milk in milk-pour, drawn over the table in its shot's framing: the
+ * stream from the book's lip into the cup from `pour` (laid down from the
+ * lip over that cue) to `full`, tapering as it falls, its light streaks
+ * running down it all the while; its splash at the milk's face; and the
+ * milk itself in the cup's mouth, climbing from the empty cup's floor to
+ * the brim over `fill`.
  */
-export const BOOK_QUOTE: Over = {
+export const POUR_STREAM: Over = {
   shot: 'milk-pour',
-  box: BOOK_BOX,
+  box: boxOver(POUR_PATH, POUR_AREA),
   draw: (f) => {
-    const written = f.at('milk-pour:write');
-    const shown = 1 - f.at('milk-pour:clear');
-    if (written <= 0 || shown <= 0) return;
-    const c = pourFramingAt(f.at);
-    const [x0, y0] = onScreen(c, 0, 0);
+    const c: Framing = pathFramingAt('milk-pour', POUR_PATH, f.at);
+    const level = f.at('milk-pour:fill');
+    const laid = f.at('milk-pour:pour');
+    const stopped = f.at('milk-pour:full');
     const ctx = f.ctx;
+    const [x0, y0] = onScreen(c, 0, 0);
     ctx.save();
-    ctx.globalAlpha *= shown;
     ctx.translate(x0, y0);
     ctx.scale(c.zoom, c.zoom);
-    const sizes = BOOK_WORDS.map((l) => l.text.length);
-    const total = sizes.reduce((a, b) => a + b, 0);
-    BOOK_WORDS.forEach((line, i) => {
-      const before = sizes.slice(0, i).reduce((a, b) => a + b, 0) / total;
-      const share = (sizes[i] ?? 0) / total;
-      const progress = Math.min(1, Math.max(0, (written - before) / share));
-      if (progress <= 0) return;
-      write(ctx, line.text, line.x, line.y, BOOK_TYPE.verse, f.hand(`verse-${i}`), {
-        progress,
-        reveal: 'write',
-        boil: 0,
-      });
-    });
-    write(ctx, BOOK_CITE.text, BOOK_CITE.x, BOOK_CITE.y, BOOK_TYPE.cite, f.hand('cite'), {
-      alpha: written,
-      boil: 0,
-    });
+    milkInCup(ctx, level, f.t);
+    if (laid > 0 && stopped < 1) stream(ctx, level, stopped, laid, f.t);
     ctx.restore();
   },
+};
+
+/** The milk in the cup's mouth at `level`, clipped to the mouth's inside, rippling at time `t`. */
+const milkInCup = (ctx: CanvasRenderingContext2D, level: number, t: number) => {
+  if (level <= 0) return;
+  const y = surfaceY(level);
+  const spread = 0.62 + 0.38 * level;
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(MOUTH.x, MOUTH.y, MOUTH.rx, MOUTH.ry, 0, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = '#f7f1e3';
+  ctx.beginPath();
+  ctx.ellipse(MOUTH.x, y, MOUTH.rx * spread, MOUTH.ry * spread, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = withAlpha('#c9bde0', 0.55);
+  ctx.beginPath();
+  ctx.ellipse(
+    MOUTH.x + MOUTH.rx * 0.12,
+    y + MOUTH.ry * 0.2,
+    MOUTH.rx * spread * 0.85,
+    MOUTH.ry * spread * 0.6,
+    0,
+    0,
+    Math.PI,
+  );
+  ctx.fill();
+  ctx.strokeStyle = withAlpha('#ffffff', 0.8);
+  ctx.lineWidth = 3;
+  const ring = (t * 1.3) % 1;
+  ctx.beginPath();
+  ctx.ellipse(
+    MOUTH.x + MOUTH.rx * 0.42,
+    y,
+    10 + 46 * ring,
+    (10 + 46 * ring) * 0.25,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  ctx.globalAlpha *= 1 - ring;
+  unprobed(ctx, () => ctx.stroke());
+  ctx.restore();
+};
+
+/** The stream into the cup at `level`: laid `laid` of its length from the lip, its top lifted `stopped` of the way to the cup as it stops; tapering, shaded on its right, light streaks running down it at time `t`. */
+const stream = (
+  ctx: CanvasRenderingContext2D,
+  level: number,
+  stopped: number,
+  laid: number,
+  t: number,
+) => {
+  const n = 40;
+  const [from, to] = [stopped, laid];
+  const points = Array.from({ length: n + 1 }, (_, i) => {
+    const u = from + ((to - from) * i) / n;
+    const [x, y] = streamAt(level, u);
+    const [ax, ay] = streamAt(level, Math.max(0, u - 0.01));
+    const [bx, by] = streamAt(level, Math.min(1, u + 0.01));
+    const [tx, ty] = [bx - ax, by - ay];
+    const len = Math.hypot(tx, ty) || 1;
+    const wobble = Math.sin(t * 19 + u * 13) * 1.2;
+    const w = (STREAM.lip + (STREAM.cup - STREAM.lip) * u) / 2;
+    return {
+      u,
+      x: x + (-ty / len) * wobble,
+      y: y + (tx / len) * wobble,
+      nx: -ty / len,
+      ny: tx / len,
+      w,
+    };
+  });
+  const edge = (side: number, share: number) =>
+    points.map((p) => [p.x + p.nx * p.w * side * share, p.y + p.ny * p.w * side * share] as const);
+  const band = (
+    a: ReadonlyArray<readonly [number, number]>,
+    b: ReadonlyArray<readonly [number, number]>,
+    fill: string,
+  ) => {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    a.forEach(([x, y]) => ctx.lineTo(x, y));
+    b.toReversed().forEach(([x, y]) => ctx.lineTo(x, y));
+    ctx.closePath();
+    ctx.fill();
+  };
+  ctx.save();
+  band(edge(-1, 1.18), edge(1, 1.18), palette.ink);
+  band(edge(-1, 1), edge(1, 1), '#fbf7ee');
+  band(edge(1, 0.25), edge(1, 1), withAlpha('#c9bde0', 0.8));
+  ctx.strokeStyle = withAlpha('#ffffff', 0.95);
+  ctx.lineCap = 'round';
+  Array.from({ length: STREAM.streaks }, (_, k) => {
+    const head = (k / STREAM.streaks + t * STREAM.speed) % 1;
+    const span = points.filter((p) => p.u >= head - 0.07 && p.u <= head);
+    if (span.length < 2) return;
+    ctx.lineWidth = 2 + 2 * (1 - head);
+    ctx.beginPath();
+    span.forEach((p) => ctx.lineTo(p.x - p.nx * p.w * 0.35, p.y - p.ny * p.w * 0.35));
+    unprobed(ctx, () => ctx.stroke());
+  });
+  if (stopped <= 0 && laid >= 1) {
+    const [ex, ey] = streamAt(level, 1);
+    ctx.fillStyle = '#fbf7ee';
+    [0, 1, 2].forEach((d) => {
+      const phase = (t * 2.2 + d / 3) % 1;
+      const r = 4 + 2 * (1 - phase);
+      ctx.beginPath();
+      ctx.arc(ex + (d - 1) * 16 * phase, ey - 18 * Math.sin(Math.PI * phase), r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+  ctx.restore();
 };
 
 /** The row's ground line and its grown head on the figures' plane, at the whole row's framing. */

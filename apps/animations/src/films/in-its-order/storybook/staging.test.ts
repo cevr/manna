@@ -15,20 +15,18 @@ import {
   plateAt,
   platesOf,
   poseAt,
-  revealAt,
   swapOf,
   timesOf,
   type Turn,
   turn,
 } from '../../../library/storybook/shot.ts';
-import VILLAGER_PALETTE from '../cast/idea-villagers/cast-sheet/palette.json';
 import { CELLS as LEAD_MILK_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-milk/cells.ts';
 import { CELLS as VILLAGER_CELLS } from '../cast/idea-villagers/shot-sheets/iio-milk/cells.ts';
 import { inItsOrder } from './index.ts';
 import { drawScaleOf, key, TALL } from './kit.ts';
 import LEAD_PALETTE from '../../../library/cast/lead-feast/cast-sheet/palette.json';
 import { TABLE } from '../plates/plates.ts';
-import { BABY_MOTHER, letterLands, TABLE_TOP_PX } from './shots/cold.ts';
+import { BABY_MOTHER, letterLands, TABLE_TOP_PX, coldScroll, LETTER_WORDS } from './shots/cold.ts';
 import { AT_TABLE, HEAD, TABLE_TOP } from './shots/courtyard.ts';
 import { TABLE_CLOSE_BOX } from './plates/table-close.ts';
 import { CELLS as LEAD_TABLE_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
@@ -36,7 +34,7 @@ import LEAD_TABLE_RECORD from '../../../library/cast/lead-feast/shot-sheets/iio-
 import { MEASURED } from './palettes.ts';
 import { SHEET_CELLS } from './cells.ts';
 import { shareOf } from '../../../library/storybook/sheet.ts';
-import { CUP_MOUTHS, DISSOLVES, GUTTER } from './shots/milk.ts';
+import { BOOK_WORDS, DISSOLVES, milkBook } from './shots/milk.ts';
 
 /** The lead's table sheet's record, read for its props alone (a sheet drawn before props records none). */
 const TABLE_RECORD: {
@@ -47,9 +45,9 @@ const TABLE_RECORD: {
   }>;
 } = LEAD_TABLE_RECORD;
 
-/** The sheets beyond its own a figure of act 1 may draw from, `<member> <name>` to sheet ids, each by the ruling that drew it: the lead's close (cold-ouch) and his standing milk sheet (milk-row), sheets 2 and 3 of the act's sheet table (iio-b spec). */
+/** The sheets beyond its own a figure of act 1 may draw from, `<member> <name>` to sheet ids, each by the ruling that drew it: the lead's close (cold-ouch) and his standing milk sheet (milk-row), sheets 2 and 3 of the act's sheet table (iio-b spec), and his two-shot sheet (cold-smile, cold-ask; the orchestrator's round-2 ruling: the lead redrawn at the close size). */
 const OTHER_SHEETS: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
-  ['lead-feast lead', ['iio-close', 'iio-milk']],
+  ['lead-feast lead', ['iio-close', 'iio-milk', 'iio-two']],
 ]);
 
 /** The lead's table cells that draw the bottle in his hand. */
@@ -65,12 +63,6 @@ const letterOffMisses = (lead: Figure, plate: Plate, times: ReadonlyArray<number
     (t) => t >= from && READING.has(poseAt(lead, t).cell) === plateAt(plate, t).alpha > 0,
   );
 };
-
-/** The pour's length on the panels `milk.newborn.5` and `milk.word.5`, gutter to cup, in px of a 1080-tall frame (critique 2, finding 4). */
-const PANEL_POUR = 340;
-
-/** How far the film's pour may run from the panel's, as a factor either way. */
-const POUR_REACH = 1.3;
 
 /** How far the bottle's foot may stand from his lowered hand, layer px: under half his round hand across (45 cell px × 0.53), so it reads as set down by that hand. */
 const HAND_REACH = 12;
@@ -152,23 +144,26 @@ const placed = await Effect.runPromise(
   ),
 );
 
-/** Each shot's push cap its spec row names, as the largest zoom over the smallest across the shot: cold-ouch's "≤ 5 %", and each named push or pull's range; the title's pull starts nearer, at 1.3, by the orchestrator's ruling on critique 1, item 9. The restage (iio-b-restage) lets cold-letter push on toward the letter through the quote to the cut (1.3), holds cold-smile's slow push to 5 %, and lets milk-pour's camera rise onto the verse over the book and follow the pour within 6 %, so the villager's drawing stays under the act's 1.5 enlarging cap. */
+/** Each shot's push cap its spec row names, as the largest zoom over the smallest across the shot: cold-ouch's "≤ 5 %", and each named push or pull's range; the title's pull starts nearer, at 1.3, by the orchestrator's ruling on critique 1, item 9. The restage (iio-b-restage) lets cold-letter push on toward the letter to the cut (1.3), holds the two-shot's slow push (cold-smile, cold-ask) to 5 %, pushes each insert slowly toward its words (cold-scroll 8 %, milk-book 7 %), pushes milk-pour in on the cup (10 %) and cold-what in on the question's two foods (16 %). */
 const PUSH_CAPS: ReadonlyMap<string, number> = new Map([
   ['cold-baby', 1.06],
   ['cold-smile', 1.05],
   ['cold-letter', 1.3],
+  ['cold-scroll', 1.08],
   ['cold-ouch', 1.05],
-  ['cold-what', 1.08],
+  ['cold-ask', 1.05],
+  ['cold-what', 1.16],
   ['title', 1.3],
   ['milk-cup', 1.1],
-  ['milk-pour', 1.06],
+  ['milk-book', 1.07],
+  ['milk-pour', 1.1],
 ]);
-
-/** The dropper's width on milk-pour's screen, outline included (critique 4, fault 2, measured): a frame's step past it draws a row of droppers, not one moving. */
-const DROPPER_WIDTH_PX = 47;
 
 /** The least time (s) the dropper, hovering over the cup, holds still at its resting place (within 2 px, on milk-pour's screen) in one run of frames before he waves it away, so it reads as one dropper stopping and not a blur (critique 4, fault 2). */
 const DROPPER_REST_S = 0.2;
+
+/** The plates that paint, finer, part of a plate a wider shot still shows whole (the table's middle painted for the closes), so a cut out to that shot keeps the thing they paint. */
+const FINER = ['/table-close.png'] as const;
 
 /** Where a plate's foot lies at `t`, in its layer's px: the bottom of its place moved by its key, which stretches it about its foot. */
 const footAt = (plate: Plate, t: number) => {
@@ -270,10 +265,6 @@ const middleAt = (plate: Plate, t: number) => {
   const k = plateAt(plate, t);
   return [(foot.left + foot.right) / 2, foot.y - (plate.place.height * k.sy) / 2] as const;
 };
-
-/** The villager's cup mouths and his cells, by cell. */
-const MOUTHS = new Map(Object.entries(CUP_MOUTHS));
-const CELL_OF = new Map(Object.entries(VILLAGER_CELLS));
 
 /** milk-row's two grown men's cells, by `<member>/<cell>`. */
 const ROW_CELLS = new Map<string, { readonly png: string; readonly ay: number }>([
@@ -380,35 +371,6 @@ const onFigure = (
   return [f.at.x + (p[0] - cell.ax) * s, f.at.ground + (p[1] - cell.ay) * s] as const;
 };
 
-/** A villager paint's hex by part name. */
-const paintOf = (name: string) => VILLAGER_PALETTE.parts.find((p) => p.name === name)?.base ?? '';
-
-/** Where a cup mouth box does not read as the cup's mouth on its cell's pixels: the milk (the tunic's paint, which it snaps to) across the middle half of its middle row, the milk ended within 8 px past each side, and the cup's paint (the sandals') there on one side. */
-const mouthMisses = (
-  name: string,
-  m: (typeof CUP_MOUTHS)[keyof typeof CUP_MOUTHS],
-  raw: { readonly data: Buffer; readonly info: { readonly width: number } },
-): ReadonlyArray<string> => {
-  const [milk, cup] = [paintOf('tunic'), paintOf('sandals')];
-  const at = (x: number, y: number) => {
-    const i = (y * raw.info.width + x) * 4;
-    return `#${[raw.data[i], raw.data[i + 1], raw.data[i + 2]].map((v) => (v ?? 0).toString(16).padStart(2, '0')).join('')}`;
-  };
-  const row = Math.round(m.y + m.height / 2);
-  const middle = Array.from({ length: Math.round(m.width / 2) }, (_, k) =>
-    at(Math.round(m.x + m.width / 4) + k, row),
-  );
-  const side = (from: number, step: number) =>
-    Array.from({ length: 8 }, (_, k) => at(from + step * k, row));
-  const [left, right] = [side(m.x - 1, -1), side(m.x + m.width, 1)];
-  const ok =
-    middle.every((c) => c === milk) &&
-    [left, right].every((s) => s.some((c) => c !== milk)) &&
-    [...left, ...right].includes(cup);
-  if (ok) return [];
-  return [`${name}: ${middle.join(' ')} | ${left.join(' ')} | ${right.join(' ')}`];
-};
-
 describe("In Its Order's staging", () => {
   test('pushes each shot no further than its spec row’s cap (critique 1, item 5)', () => {
     const over = placed.flatMap(({ shot }) => {
@@ -444,100 +406,6 @@ describe("In Its Order's staging", () => {
     );
     expect(off).toEqual([]);
   });
-
-  test('pours the milk from the open book’s gutter into the villager’s cup in milk-pour: its brush’s first point inside the gutter wherever it shows, its last inside the cup’s mouth once laid (critique 1, item 3)', () => {
-    const pour = placed.find(({ shot }) => shot.id === 'milk-pour')?.shot;
-    const items = pour?.layers.flatMap((l) => l.items) ?? [];
-    const book = items.find((i) => i._tag === 'Plate' && i.file.endsWith('/milk-book-open.png'));
-    const villager = items.find((i) => i._tag === 'Figure' && i.name === 'villager');
-    const pours = items.flatMap((i) => {
-      if (i._tag !== 'Plate' || !i.reveal) return [];
-      return [{ plate: i, reveal: i.reveal }];
-    });
-    expect(pours.length).toBe(1);
-    if (!pour || book?._tag !== 'Plate' || villager?._tag !== 'Figure') return;
-    const s = drawScaleOf('idea-villagers', 'iio-milk', pour.headPx, 1);
-    const gutter = [
-      pointOn(book, 0, [GUTTER.x, GUTTER.y]),
-      pointOn(book, 0, [GUTTER.x + GUTTER.width, GUTTER.y + GUTTER.height]),
-    ] as const;
-    const misses = timesOf(pour).flatMap((t, i) =>
-      pours.flatMap(({ plate, reveal }) => {
-        const [first, last] = [reveal.brush[0], reveal.brush[reveal.brush.length - 1]];
-        if (!first || !last || plateAt(plate, t).alpha <= 0) return [];
-        const laid = revealAt(reveal, t);
-        const reached = laid[laid.length - 1];
-        if (!reached) return [];
-        const landed = reached[0] === last[0] && reached[1] === last[1];
-        const pose = poseAt(villager, t);
-        const source = pointOn(plate, t, [first[0], first[1]]);
-        const end = pointOn(plate, t, [last[0], last[1]]);
-        const placed = Option.all([
-          Option.fromUndefinedOr(MOUTHS.get(pose.cell)),
-          Option.fromUndefinedOr(CELL_OF.get(pose.cell)),
-        ]);
-        const inMouth = Option.exists(placed, ([m, c]) => {
-          const x0 = pose.x + (m.x - c.ax) * s * pose.sx;
-          const x1 = pose.x + (m.x + m.width - c.ax) * s * pose.sx;
-          const y0 = pose.y + (m.y - c.ay) * s * pose.sy * pose.breath;
-          const y1 = pose.y + (m.y + m.height - c.ay) * s * pose.sy * pose.breath;
-          return end[0] >= x0 && end[0] <= x1 && end[1] >= y0 && end[1] <= y1;
-        });
-        const inGutter =
-          source[0] >= gutter[0][0] &&
-          source[0] <= gutter[1][0] &&
-          source[1] >= gutter[0][1] &&
-          source[1] <= gutter[1][1];
-        if ((inMouth || !landed) && inGutter) return [];
-        return [
-          `frame ${i} (${pose.cell}): source ${source.map((v) => v.toFixed(0))} in gutter ${inGutter}, end ${end.map((v) => v.toFixed(0))} in mouth ${inMouth}`,
-        ];
-      }),
-    );
-    expect(misses.slice(0, 5)).toEqual([]);
-  });
-
-  test('pours the milk about the panel’s length in milk-pour: from the gutter to the cup’s mouth, on screen, within 1.3 times the panel’s 340 px either way, wherever a pour shows (critique 2, finding 4; the owner: the book nearer the cup)', () => {
-    const pour = placed.find(({ shot }) => shot.id === 'milk-pour')?.shot;
-    if (!pour) return expect(pour).toBeDefined();
-    const pours = platesOf(pour).filter((p) => p.reveal);
-    expect(pours.length).toBe(1);
-    const off = timesOf(pour).flatMap((t, i) =>
-      pours.flatMap((plate) => {
-        const brush = plate.reveal?.brush ?? [];
-        const [first, last] = [brush[0], brush.at(-1)];
-        if (!first || !last || plateAt(plate, t).alpha <= 0) return [];
-        if (!plate.reveal || revealAt(plate.reveal, t).length === 0) return [];
-        const [a, b] = [
-          pointOn(plate, t, [first[0], first[1]]),
-          pointOn(plate, t, [last[0], last[1]]),
-        ];
-        const length = Math.hypot(b[0] - a[0], b[1] - a[1]) * cameraAt(pour.camera, t).zoom;
-        if (length >= PANEL_POUR / POUR_REACH && length <= PANEL_POUR * POUR_REACH) return [];
-        return [`frame ${i}: ${length.toFixed(0)} px`];
-      }),
-    );
-    expect(off.slice(0, 3)).toEqual([]);
-  });
-
-  it.effect(
-    'reads each cup mouth it pours into on its cell: milk paint across the box’s middle row, ended within 8 px past each side, the cup’s paint past one',
-    () =>
-      Effect.gen(function* () {
-        const wrong = yield* Effect.forEach([...MOUTHS], ([name, m]) =>
-          Effect.map(
-            Effect.promise(() =>
-              sharp(CELL_OF.get(name)?.png ?? '')
-                .ensureAlpha()
-                .raw()
-                .toBuffer({ resolveWithObject: true }),
-            ),
-            (raw) => mouthMisses(name, m, raw),
-          ),
-        );
-        expect(wrong.flat()).toEqual([]);
-      }),
-  );
 
   test('frames the lead’s head at a third of the frame’s height or more through cold-ouch, at the table as cold-letter leaves it: the guests staring, the diners’ plane, the letter lying rolled before him (critique 1, item 1)', () => {
     const ouch = placed.find(({ shot }) => shot.id === 'cold-ouch')?.shot;
@@ -584,17 +452,62 @@ describe("In Its Order's staging", () => {
       );
     };
     const times = timesOf(shot);
-    expect(pair.map((f) => Math.min(...times.map((t) => headAt(f, t))) >= 1 / 4)).toEqual([
+    expect(pair.map((f) => Math.min(...times.map((t) => headAt(f, t))) >= 1 / 3 - 0.005)).toEqual([
       true,
       true,
     ]);
     const changes = (f: Figure) =>
       times.filter((t, i) => i > 0 && poseAt(f, t).cell !== poseAt(f, times[i - 1] ?? 0).cell);
     expect(pair.map((f) => changes(f).length > 0)).toEqual([true, true]);
-    const [, man] = pair;
-    if (!man) return;
+    const [lead, man] = pair;
+    if (!man || !lead) return;
     expect(changes(man)[0]).toBeLessThanOrEqual(0.5);
-    expect(poseAt(man, shot.duration - 1 / shot.fps).cell).toBe('smile');
+    expect(poseAt(man, shot.duration - 1 / shot.fps).cell).toBe('laugh');
+    expect(times.map((t) => poseAt(lead, t).cell).filter((c, i, all) => c !== all[i - 1])).toEqual([
+      'bottle',
+      'grin',
+      'tuck',
+    ]);
+    expect(
+      shot.layers
+        .find((l) => l.name === 'table')
+        ?.items.filter((i) => i._tag === 'Figure')
+        .map((i) => i.name),
+    ).toEqual(['man', 'lead']);
+  });
+
+  test('holds each lettered verse whole on its insert at least 0.25 s a word before the cut (orchestrator ruling, round 2: 1 Pet 2:2 ≥ 3.75 s whole), its writing starting on the verse’s first word', () => {
+    const short = [
+      { shot: coldScroll, lines: LETTER_WORDS },
+      { shot: milkBook, lines: BOOK_WORDS },
+    ].flatMap(({ shot, lines }) => {
+      const own = placed.find((p) => p.shot.id === shot.id)?.shot;
+      const write = shot.cues['write'];
+      if (!own || !write || !('dur' in write) || !('mark' in write))
+        return [`${shot.id}: no write cue`];
+      const words = lines
+        .slice(0, -1)
+        .flatMap((l) => l.text.split(/\s+/))
+        .filter((w) => w !== '').length;
+      const whole = own.duration - (write.dur ?? 0) - (write.offset ?? 0);
+      if (!('mark' in shot.span) || write.mark !== shot.span.mark)
+        return [`${shot.id}: writing starts on ${write.mark}`];
+      if (whole >= 0.25 * words) return [];
+      return [`${shot.id}: whole ${whole.toFixed(2)} s for ${words} words`];
+    });
+    expect(short).toEqual([]);
+  });
+
+  test('asks the film’s question on the lead’s face: from `what` to `why` the two-shot again, his head a third of the frame, his eyes up to the viewer (`ask`), no still life (critique 1, finding 4)', () => {
+    const ask = placed.find(({ shot }) => shot.id === 'cold-ask')?.shot;
+    if (!ask) return expect(ask).toBeDefined();
+    const lead = figuresOf(ask).find(({ figure }) => figure.name === 'lead')?.figure;
+    if (!lead) return expect(lead).toBeDefined();
+    const times = timesOf(ask);
+    expect(new Set(times.map((t) => poseAt(lead, t).cell))).toEqual(new Set(['ask']));
+    expect(
+      Math.min(...times.map((t) => (ask.headPx * cameraAt(ask.camera, t).zoom) / ask.size.height)),
+    ).toBeGreaterThanOrEqual(1 / 3 - 0.005);
   });
 
   test('seats the title’s eight in the panel’s groups, shoulders close within each, the man and the woman turned to the lead throughout (critique 1, item 9)', () => {
@@ -738,7 +651,7 @@ describe("In Its Order's staging", () => {
         const rolled = placed.flatMap(({ shot }) =>
           platesOf(shot).filter((p) => p.file.endsWith('/scroll-rolled.png')),
         );
-        expect(rolled.length).toBe(2);
+        expect(rolled.length).toBe(3);
         const read = LEAD_TABLE_CELLS.read;
         const raw = yield* Effect.promise(() =>
           sharp(read.png).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
@@ -758,7 +671,11 @@ describe("In Its Order's staging", () => {
         const s = drawScaleOf(lead.member, lead.sheet, letter.headPx, 1);
         const held = (Math.max(...browns.map((b) => widestRun(band, b, 0))) + 6) * s;
         expect(held).toBeGreaterThan(0);
-        expect(rolled.map((p) => Math.abs(p.place.width / held - 1) <= 0.1)).toEqual([true, true]);
+        expect(rolled.map((p) => Math.abs(p.place.width / held - 1) <= 0.1)).toEqual([
+          true,
+          true,
+          true,
+        ]);
       }),
   );
 
@@ -829,18 +746,20 @@ describe("In Its Order's staging", () => {
     expect(ghosts).toEqual([]);
   });
 
-  test('moves the dropper in milk-pour no farther a frame than its own width on screen, 47 px, and rests it at the cup at least 0.2 s, its middle within 2 px of its place there (critique 4, fault 2: 0.8 s legs stepped up to 51 px a frame and left the cup the frame it arrived)', () => {
+  test('moves the dropper in milk-pour no farther a frame than its own width on screen, and rests it at the cup at least 0.2 s, its middle within 2 px of its place there, large: a third of the frame’s height or more (critique 4, fault 2: 0.8 s legs stepped up to 51 px a frame and left the cup the frame it arrived; critique 1, finding 1: a speck at phone size)', () => {
     const pour = placed.find(({ shot }) => shot.id === 'milk-pour')?.shot;
     if (!pour) return expect(pour).toBeDefined();
     const found = pour.layers.flatMap((layer) =>
       layer.items.flatMap((item) => {
-        if (item._tag !== 'Plate' || !item.file.endsWith('/milk-dropper.png')) return [];
+        if (item._tag !== 'Plate' || !item.file.endsWith('/milk-dropper-close.png')) return [];
         return [{ plate: item, z: layer.z }];
       }),
     );
     expect(found).toHaveLength(1);
     const [dropper] = found;
     if (!dropper) return;
+    expect(dropper.plate.place.height / pour.size.height).toBeGreaterThanOrEqual(1 / 3);
+    const DROPPER_WIDTH_PX = dropper.plate.place.width;
     const onScreen = (t: number, middle: readonly [number, number]) => {
       const plane = planeOf(pour.size, dropper.z, cameraAt(pour.camera, t));
       return [middle[0] * plane.scale + plane.ox, middle[1] * plane.scale + plane.oy] as const;
@@ -892,7 +811,7 @@ describe("In Its Order's staging", () => {
       if (shared.length === 0 || shared.some((name) => was.get(name) !== now.get(name))) return [];
       return [[a, b] as const];
     });
-    expect(pairs.map(([a, b]) => `${a.id}>${b.id}`)).toContain('cold-letter>cold-ouch');
+    expect(pairs.map(([a, b]) => `${a.id}>${b.id}`)).toContain('cold-smile>cold-letter');
     const dropped = pairs.flatMap(([a, b]) => {
       const [end, start] = [timesOf(a).at(-1) ?? 0, timesOf(b)[0] ?? 0];
       const camera = cameraAt(b.camera, start);
@@ -902,6 +821,7 @@ describe("In Its Order's staging", () => {
         const plane = planeOf(b.size, layer.z, camera);
         return layer.items.flatMap((item) => {
           if (item._tag !== 'Plate' || plateAt(item, end).alpha <= 0) return [];
+          if (FINER.some((f) => item.file.endsWith(f))) return [];
           const [x, y] = middleAt(item, end);
           const [sx, sy] = [x * plane.scale + plane.ox, y * plane.scale + plane.oy];
           if (sx < 0 || sy < 0 || sx > b.size.width || sy > b.size.height) return [];
