@@ -158,16 +158,17 @@ const motherOn = (at: { readonly headPx: number; readonly z: number }, end: numb
     holds([[0, 'cup', 'cupBlink']], end),
   );
 
-/** The diners' plane of the courtyard at the table: the row (those of it `seen`, all four unless named), the mother, and the far table before them. */
+/** The diners' plane of the courtyard at the table: the row and the mother (those of them `seen`, all five unless named), and the far table before them. */
 const dinersLayer = (
   talks: ReadonlyMap<1 | 2 | 4, readonly [number, number]>,
   end: number,
-  seen: ReadonlyArray<string> = ['diner-1', 'diner-2', 'diner-3', 'diner-4'],
+  seen: ReadonlyArray<string> = ['diner-1', 'diner-2', 'diner-3', 'diner-4', 'mother'],
 ) => {
   const at = { headPx: HEAD, z: Z.diners };
   return layer('diners', Z.diners, [
-    ...dinersOn(at, DINERS_ROW, talks, end).filter((d) => seen.includes(d.name)),
-    motherOn(at, end),
+    ...[...dinersOn(at, DINERS_ROW, talks, end), motherOn(at, end)].filter((d) =>
+      seen.includes(d.name),
+    ),
     farTable(),
   ]);
 };
@@ -357,9 +358,16 @@ export const coldTable: FilmShot = {
  * near shoulder at the right edge; the table's top across the frame's foot
  * (the whole table plate: the close's plate covers only the lead's middle of
  * it, so here it would show its edge beside the man). Its push ends `push`
- * times in.
+ * times in. The diners its frame shows: the row, the mother at its right end
+ * falling outside it.
  */
-const TWO_SHOT = { x: 862, y: 862, zoom: 3.1, push: 1.05 } as const;
+const TWO_SHOT = {
+  x: 862,
+  y: 862,
+  zoom: 3.1,
+  push: 1.05,
+  diners: ['diner-1', 'diner-2', 'diner-3', 'diner-4'],
+} as const;
 
 /**
  * `cold-smile`, `smile` to `letter`: the close two-shot of the joke. Cut in
@@ -388,7 +396,11 @@ export const coldSmile: FilmShot = {
       ],
       layers: [
         ...backdrop(),
-        dinersLayer(new Map([[2, [cue('reply').start, cue('reply').end]]] as const), duration),
+        dinersLayer(
+          new Map([[2, [cue('reply').start, cue('reply').end]]] as const),
+          duration,
+          TWO_SHOT.diners,
+        ),
         layer('table', Z.table, [
           ...guests(
             guestSpans('man', 'stare', [[cue('smile').start, 'smile']], duration),
@@ -624,7 +636,11 @@ export const LETTER_QUOTE: Over = {
 };
 
 /** The lead's close: his head a third of the frame's height (its crown at frame y 70), the guests either side and the letter on the table before him; his soles below the frame, his whole figure read in cold-table. The diners its frame shows: diner 1, at the row's left end, falls outside it. */
-const CLOSE = { zoom: 3.3, crown: 70, diners: ['diner-2', 'diner-3', 'diner-4'] } as const;
+const CLOSE = {
+  zoom: 3.3,
+  crown: 70,
+  diners: ['diner-2', 'diner-3', 'diner-4', 'mother'],
+} as const;
 
 /**
  * `cold-ouch`, `ouch` to `what`: cut in close on the lead, his head a third

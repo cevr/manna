@@ -265,9 +265,15 @@ export const sound: Sound = {
     },
     sip: {
       sound: 'cloth.lift',
-      level: -22,
+      level: -16,
       sync: 'onset',
       at: [{ scene: 'milk', cue: 'milk-cup:sip' }],
+    },
+    toCup: {
+      sound: 'cloth.lift',
+      level: -16,
+      sync: 'onset',
+      at: [{ scene: 'milk', cue: 'milk-pour:toCup' }],
     },
     drop: {
       sound: 'scroll.drop',
@@ -296,7 +302,7 @@ export const sound: Sound = {
     },
     lift: {
       sound: 'paper.whoosh',
-      level: -24,
+      level: -18,
       sync: 'hit',
       at: [{ scene: 'milk', cue: 'milk-pour:away', edge: 'end' }],
     },
