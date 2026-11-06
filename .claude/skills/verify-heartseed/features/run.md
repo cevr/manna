@@ -112,5 +112,6 @@ snapshots.
   - the unread garden;
   - Again on a kept recall;
   - a second recital in one sitting (`apps/heartseed/src/sayit/today.test.tsx`).
-- The plan is not made again when the app returns to the foreground. That
-  is `hswake`'s. A relaunch (`sim relaunch`) or a `Minutes` tap makes it.
+- A return to the foreground makes the plan again too, and drops a shown
+  result: `wake.md` drives it (`wake-due`, `wake-result`). A relaunch
+  (`sim relaunch`) or a `Minutes` tap also makes it.

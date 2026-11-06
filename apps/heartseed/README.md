@@ -21,10 +21,22 @@ simulator, ports 8280-8289, iOS alone).
 ## Voice
 
 The voice reads a verse aloud on the device and lights each word as it is
-spoken; the reader can turn it off. The first minute's hear phase is the
-one screen that calls it (`Voice.read` at `Listen`, `Voice.stop` at a
-`Next` during a reading), through the app's runtime (`src/app.ts`: the
-atoms `voiceView`, `listen` and `hush`); Say it reads no word aloud.
+spoken; the reader can turn it off. Two screens call it, through the app's
+runtime (`src/app.ts`), and Say it reads no word aloud:
+
+- the first minute's hear phase (`Voice.read` at `Listen`, `Voice.stop` at
+  a `Next` during a reading: the atoms `voiceView`, `listen` and `hush`);
+- Today, on the plan's new piece: while the `Voice` switch is on, no
+  reading is under way and the action button reads `Say it`, a `Listen`
+  button sits in the fixed footer before it (`listenTo`, which reads the
+  shown piece's own text once, and `readingAloud(voiceView)`). While the
+  voice reads, `Listen` is gone; it comes back at the reading's end
+  (finished, failed or interrupted) and after an unheard, cancelled or
+  refused recital. A press of `Say it` stops the voice before the
+  recognizer listens. A review, `Next`, the done state and an unread
+  garden never show `Listen`; a making of the plan (a Minutes tap, a
+  return) does not stop a reading, and `Voice` off does. Listening is
+  offered, not required, and writes nothing.
 
 - `src/voice.ts` is the `Voice` service (Effect): `read`, `pause`,
   `resume`, `stop`, `setEnabled`, and the `view` a screen shows (`status`,
@@ -475,6 +487,21 @@ the run is stored, so a relaunch makes a new plan with nothing held. With
 no plan (an unread garden) Today shows the first piece whole with a
 working `Say it`, and never `Next`, a done state or a hold.
 
+A return to the foreground makes the plan again, so a reader who leaves
+the app open overnight finds the morning's verses. A return is React
+Native's `AppState` turning `active` after a `background` since the last
+`active`; the launch's `currentState` is the first state seen. `inactive`
+alone (the notification center, Control Center, a system prompt such as
+the microphone's, a call banner) is no return, nor is a second `active`;
+`inactive → background → inactive → active` is one. At a return with a
+plan made in this launch, a read garden and no recital under way, the plan
+is made at that instant with the minutes chosen now, the hold is dropped
+(a shown result, its grades and `Next` go), and the run starts at the new
+plan's first item not done. A return while a recital listens or finishes,
+in the pending frame, in the first minute or in an unread garden changes
+nothing: no plan is made, the hold and the screen stay, and nothing is
+written. The next return, Minutes tap or relaunch makes the plan.
+
 The action button and the `Grade` group lie in a fixed footer under the
 scroll view, so however long the verse or the result, they are on screen
 without a scroll; the only controls in the scroll view are a missed word's
@@ -519,16 +546,30 @@ marks. The alert stays in the scroll.
   write keeps the choice for the launch, and the next launch reads what is
   stored. The plan is made from the runtime's `Clock` and `offsetAt` at
   that instant when Today first shows in a launch with the garden read
-  (after `Continue` in the first launch), and again at each Minutes tap.
+  (after `Continue` in the first launch), again at each Minutes tap, and
+  at each return to the foreground (`wake`, a no-op with no plan, an
+  unread garden or a recital under way, read in the same step as the
+  making).
   It is made in one step from the garden's view as it is, never waiting on
   a keep under way, so a recital whose keep lands after it counts as done.
   Nothing else makes it again: time passing, a recital, a grade, Again, a
-  Voice tap, or the field and back. An unread garden has no plan and no
+  Voice tap, `Listen`, or the field and back. An unread garden has no plan and no
   counts line. The service also holds the run's one piece of state, the
   item held (`hold`, `next`), over the pieces it was given (its view's
   `pieces` and `held`). It needs `Dictation`: a making reads whether a
   recital is under way in the same synchronous step as the making, and
   keeps the hold only then.
+- `src/foreground.ts` is the return rule, pure (`lifeStep` from `UNSEEN`,
+  and `returnsOf` over a stream of states), the `Foreground` service (its
+  `states`: the state at subscription first, then each change) and
+  `wakeLayer`, which runs `Session.wake` at each return for the runtime's
+  life (`Effect.forkScoped`). `src/foreground/source.ts` is its live
+  source, the one module that names `AppState`: it reads `currentState`
+  and adds the `change` listener in one step, and removes the listener
+  when the runtime's scope closes (on react-native-web, where
+  `addEventListener` may return nothing, it removes nothing). `appLayer`
+  builds it by default; its `foreground` part lets a rig stand in at the
+  service.
 - `src/session/run.ts` is `shownOf(view, garden)`, what Today shows of the
   run, pure: `Unplanned` (no plan: the first piece), the `Item` with its
   piece, whether it is held and whether it is done, or `Done`.

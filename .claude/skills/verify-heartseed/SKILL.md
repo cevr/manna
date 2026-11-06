@@ -138,7 +138,8 @@ the target. `sim snapshot <step>` writes the screen's nodes, as
 which nodes prove it. A target is `label=<accessible name>` or
 `id=<testID>`, matched whole. `sim tap`, `sim scroll` and `sim back` work as
 the hymnal's skill describes; in the first minute a reader taps `Listen`,
-`Next`, `Say it` and `Continue`, on Today `Say it`, a grade, a missed
+`Next`, `Say it` and `Continue`, on Today `Listen` (on a new verse),
+`Say it`, a grade, a missed
 word's mark, `Next`, a `Minutes` radio and `Your field`, and on the field `Today`. Heartseed has no journey files yet. The features:
 
 - [features/first.md](features/first.md): the first minute a fresh
@@ -179,6 +180,11 @@ word's mark, `Next`, a `Minutes` radio and `Your field`, and on the field `Today
   `Your field` and back by `Today`: a row per passage, a plant per verse at
   its stage, the local days sown from 04:00 (each by the zone offset its
   record holds), which never fall, and the harvest.
+- [features/wake.md](features/wake.md): a return to the foreground makes
+  Today's plan again with no tap (a due verse shows, a shown result goes),
+  and changes nothing while a recital is under way; a new verse's `Listen`
+  beside `Say it` (tests only until more verses ship). Run it from
+  `first.md`'s Today, in place of `run.md` step 6.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.
