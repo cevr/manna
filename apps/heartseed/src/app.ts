@@ -3,7 +3,8 @@
  * source this build hears, Say it over it, the soft tick, the garden, which
  * keeps each of Say it's kept recalls in the app's store on the device and
  * sounds the growth chime, and the voice over the source this platform
- * speaks with, whose off switch lives in the same store. Every screen that
+ * speaks with, whose off switch lives in the same store, and the daily
+ * session over the garden, whose minutes live there too. Every screen that
  * hears the reader takes Dictation from here, so two services never share
  * the module's one channel; the first minute's hear phase is the one screen
  * that reads aloud.
@@ -28,9 +29,12 @@ import { microphoneSource, replaySource } from './dictation/source';
 import { cueIn, Garden, layer as gardenLayer, type Chime, type GardenView } from './garden';
 import { liveChime } from './garden/chime';
 import type { Cue } from './matcher';
+import { sourceWords } from './matcher/words';
 import { layer as sayItLayer, SayIt, TODAY, type Grade, type Haptics, type Recital } from './sayit';
 import { liveHaptics } from './sayit/live';
 import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
+import type { Minutes, Piece } from './session';
+import { layer as sessionLayer, Session } from './session/service';
 import { store } from './store';
 import { Voice, layer as voiceLayer, type VoiceSource } from './voice';
 import { isActive } from './voice/reading';
@@ -59,7 +63,16 @@ export const appSource: Layer.Layer<DictationSource> = Layer.unwrap(
   }),
 );
 
-/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, and the voice over `voice`, its switch in the same `store`. */
+/** The verses the app holds text for, in the order the session offers them: the passage alone, its own group. */
+const PIECES: readonly Piece[] = [
+  {
+    reference: passage.reference,
+    words: sourceWords(passage.text).length,
+    group: passage.reference,
+  },
+];
+
+/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the session over the garden, its minutes in the same `store`, and the voice over `voice`, its switch in the same `store`. */
 export const appLayer = (parts: {
   readonly source: Layer.Layer<DictationSource>;
   readonly haptics: Layer.Layer<Haptics>;
@@ -68,6 +81,7 @@ export const appLayer = (parts: {
   readonly voice: Layer.Layer<VoiceSource>;
 }) =>
   sayItLayer(passage).pipe(
+    Layer.provideMerge(sessionLayer(PIECES).pipe(Layer.provide(parts.store))),
     Layer.provideMerge(dictationLayer.pipe(Layer.provide(parts.source))),
     Layer.provideMerge(gardenLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.chime)))),
     Layer.provideMerge(voiceLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.voice)))),
@@ -94,6 +108,31 @@ export const gardenView = runtime.atom(
 
 /** What the hear phase shows of the voice: its switch, and the reading under way or the last one's ending. */
 export const voiceView = runtime.atom(Stream.unwrap(Effect.map(Voice, (voice) => voice.changes)));
+
+/** What Today shows of the session: the minutes chosen, and the plan once it is made. */
+export const sessionView = runtime.atom(
+  Stream.unwrap(Effect.map(Session, (session) => session.changes)),
+);
+
+/** Today shown: the session's plan is made, once in the launch, when the garden is read. */
+export const beginSession = runtime.fn(() => Effect.flatMap(Session, (session) => session.begin), {
+  concurrent: true,
+});
+
+/** A Minutes tap: the choice shows at once, the plan is made again, and the choice is stored. */
+export const chooseMinutes = runtime.fn(
+  (minutes: Minutes) => Effect.flatMap(Session, (session) => session.choose(minutes)),
+  { concurrent: true },
+);
+
+/** A tap on Today's Voice switch: the voice turns off when on and on when off, stored by the voice's own write. */
+export const toggleVoice = runtime.fn(
+  () =>
+    Effect.flatMap(Voice, (voice) =>
+      Effect.flatMap(voice.view, (view) => voice.setEnabled(!view.enabled)),
+    ),
+  { concurrent: true },
+);
 
 /** The cue Today's passage is said under next: the ladder's in a read garden, none in an unread one, which claims no stage. */
 export const todayCue = (view: GardenView): Cue => {
