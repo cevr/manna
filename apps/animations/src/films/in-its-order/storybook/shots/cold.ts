@@ -367,8 +367,8 @@ export const coldTable: FilmShot = {
 /** The rollers' length across, ink ends and all, of the scroll he holds in his table sheet's `read` cell, in its px: its lower roller's 97 px of his hair's brown (rows 471 to 484, from x 6) and its ink at each end. */
 export const HELD_ROLLERS = 103;
 
-/** The top roller of the scroll his table sheet's `read` cell holds up, in its px: the parchment's middle across (x 20 to 108) and the roller's middle row (rows 331 to 344), under his hand. */
-const READ_ROLLER = [64, 338] as const;
+/** The middle of the letter his table sheet's `read` cell holds up, in its px: its parchment's middle (x 20 to 108, rows 350 to 464). */
+const READ_LETTER = [64, 407] as const;
 
 /** The rolled scroll plate's rollers' length across, knobs and all, in its px: its whole width. */
 const ROLLED_ROLLERS = SCROLL_ROLLED.size[0];
@@ -416,9 +416,9 @@ const bottleOn = (moves: NonNullable<Plate['moves']>): Plate =>
 /** The bottle standing on the table top from a shot's start, where his lowered hand set it down. */
 export const bottleOnTable = (): Plate => bottleOn([[0, key({})]]);
 
-/** How far the rolled scroll rises from where it lies to his reading hand, layer px: its middle from the table to the top roller his `read` cell holds up, so the open scroll he reads shows where the roll was lifted to. */
+/** How far the rolled scroll rises from where it lies to his reading hand, layer px: its middle from the table to the middle of the letter his `read` cell holds up, so the open scroll he reads opens where the roll was lifted to, by the shortest way up, clear of the bearded guest's face beside him. */
 export const LETTER_LIFT = (() => {
-  const [x, y] = atTable(LEAD_TABLE.read, READ_ROLLER);
+  const [x, y] = atTable(LEAD_TABLE.read, READ_LETTER);
   const middle = (SCROLL_ROLLED.size[1] / 2) * LETTER_SCALE;
   return { x: x - LETTER_AT[0], y: y - (LETTER_AT[1] - middle) };
 })();

@@ -997,7 +997,7 @@ describe("In Its Order's staging", () => {
   });
 
   it.effect(
-    'lifts the rolled letter from the table to his reading hand before the swap: it rests on the table until he reaches, and at the last frame it shows its middle lies within its own height of the top of the parchment his `read` cell holds, read on that cell (critique 1, finding 4: the roll vanished from the table as the open scroll appeared 180 px higher)',
+    'lifts the rolled letter from the table to his reading hand before the swap: it rests on the table until he reaches, and at the last frame it shows its middle lies within its own height of the middle of the parchment his `read` cell holds, read on that cell (critique 1, finding 4: the roll vanished from the table as the open scroll appeared 180 px higher)',
     () =>
       Effect.gen(function* () {
         const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
@@ -1015,7 +1015,10 @@ describe("In Its Order's staging", () => {
         const shown = timesOf(letter).filter((t) => plateAt(plate, t).alpha > 0);
         const last = shown.at(-1) ?? 0;
         const p = held.parchment.value;
-        const [tx, ty] = onFigure(lead, held.read, letter.headPx, [(p.left + p.right) / 2, p.top]);
+        const [tx, ty] = onFigure(lead, held.read, letter.headPx, [
+          (p.left + p.right) / 2,
+          (p.top + p.bottom) / 2,
+        ]);
         const [mx, my] = middleAt(plate, last);
         expect(Math.hypot(mx - tx, my - ty)).toBeLessThanOrEqual(plate.place.height);
         const reaches = lead.spans
