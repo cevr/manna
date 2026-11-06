@@ -894,6 +894,25 @@ marks. The alert stays in the scroll.
     fractions, a negative and NaN; 20,000 generated taps over chapters of
     1-176 verses; and long tap sequences folded against the rule, every
     answer choosable.
+  - `test:chooser-lists`: `src/chooser/lists.test.tsx`, the chooser in
+    happy-dom through `src/test/chooser-rig.tsx` (`ChooserScreen` over the
+    app's layer and the device's store, beside a stand-in field that opens
+    it again; every frame held to one heading, no back, `Plant`, alert or
+    limit line inside the scroll view, `Plant` only over a reference of
+    1-20 verses, and every seen text at AA): the 66 books in canon order
+    under the two testaments' labels, a sample of books' chapters against
+    the corpus, and every verse of Psalms 119 and 117, Isaiah 41 and
+    chapters of 20 and 21 verses under each kind of range, with the header,
+    the footer and each back, against `src/test/choose-model.ts`.
+  - `test:chooser-walk`: `src/chooser/walk-plant.test.tsx`,
+    `walk-taps.test.tsx` and `walk-leave.test.tsx`, generated readers
+    through `src/test/chooser-walk.ts` over the same rig: stored lists of
+    0-3 passages or a garbled value, chapters opened and backed out of,
+    taps by pattern, and `Plant` landing, refused, `Full` or `Unread`,
+    tapped twice in one turn or with a back in the same turn, then a
+    retry, a verse or leaving; after every tap the screen, the stored
+    passages and every other key against the models; each file's floors
+    met by its own devices.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`

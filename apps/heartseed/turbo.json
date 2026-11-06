@@ -608,6 +608,33 @@
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
+        "!src/chooser/{lists,walk-*}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:chooser-lists": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
+        "!src/chooser/{range.property,walk-*}.test.*",
+        "!{scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:chooser-walk": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages}/**/*.test.*",
+        "!src/chooser/{range.property,lists}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },
@@ -676,6 +703,8 @@
         "test:passages",
         "test:passages-session",
         "test:chooser",
+        "test:chooser-lists",
+        "test:chooser-walk",
         "test:rest",
         "test:infra"
       ]

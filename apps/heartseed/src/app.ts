@@ -203,6 +203,9 @@ export const removePassage = (range: Range) =>
     return answer;
   });
 
+/** The chooser's Plant: an add of the range (`addPassage`), answered as the passages answer it. The chooser lets one run at a time, so each answer is its own tap's. */
+export const plantPassage = runtime.fn((range: Range) => addPassage(range), { concurrent: true });
+
 /** A tap on Today's Next: the held item is let go. */
 export const next = runtime.fn(() => Effect.flatMap(Session, (session) => session.next), {
   concurrent: true,
