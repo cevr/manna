@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import {
   beatAt,
+  blinkAt,
   IDLE,
   idleOnly,
   RIG_PARTS,
@@ -9,6 +10,8 @@ import {
   type RigNumbers,
   type RigPart,
   rigPoseAt,
+  STARE_TURN,
+  turnAt,
 } from './channels.ts';
 
 /** cold-table's clock as the prototype reads it: 30 fps, "bottle" at 3.84 s, the lead's own breath period from 0. */
@@ -143,5 +146,57 @@ describe('the rig channels', () => {
 
   it('leave the hand on his knee still', () => {
     expect(span(angles('armRight'))).toBe(0);
+  });
+
+  it('lift his shoulders 3 frames or more before the head turns, and blink on the head’s rise', () => {
+    const lift = poses.map((p) => -p.body.dy);
+    const head = anglesOf(IDLE, 'head', true).map(
+      (x, i) => x - (anglesOf(IDLE, 'head', false)[i] ?? 0),
+    );
+    const halfOf = (xs: ReadonlyArray<number>) => xs.findIndex((x) => x >= Math.max(...xs) / 2);
+    expect(Math.max(...lift)).toBeGreaterThan(4);
+    expect(halfOf(head) - halfOf(lift)).toBeGreaterThanOrEqual(3);
+    expect(peakOf(head) - peakOf(lift)).toBeGreaterThanOrEqual(3);
+    const shut = TIMES.flatMap((t, i) => [i].filter(() => blinkAt(IDLE, CLOCK, t)));
+    expect(shut.length).toBe(IDLE.accent.blink.frames);
+    const wound = head.findIndex((x) => x < -0.1);
+    expect(Math.min(...shut)).toBeGreaterThanOrEqual(wound);
+    expect(Math.max(...shut)).toBeLessThanOrEqual(peakOf(head));
+    expect(TIMES.some((t) => blinkAt(idleOnly(IDLE), CLOCK, t))).toBe(false);
+  });
+});
+
+describe("the man's turn", () => {
+  const AT = 3.84;
+  const frames = Array.from({ length: 14 }, (_, k) =>
+    turnAt(STARE_TURN, 30, AT, AT + (k - 2) / 30),
+  );
+
+  it('draws nothing before it and today’s span after it', () => {
+    expect(frames.map((f) => f.drawn)).toEqual(
+      Array.from({ length: 14 }, (_, k) => k >= 2 && k < 2 + STARE_TURN.span),
+    );
+  });
+
+  it('turns his head on its pivot before the swap, then draws the new cell whole', () => {
+    const angles = frames.map((f) => f.head.angle);
+    const swap = frames.findIndex((f) => f.cell === 'to');
+    expect(angles.slice(2, swap).every((a) => a > 0)).toBe(true);
+    expect(Math.max(...angles)).toBe(STARE_TURN.angle);
+    expect(angles.slice(swap)).toEqual(angles.slice(swap).map(() => 0));
+  });
+
+  it('swaps the drawing inside a blink, its eyes open on the new cell 4 to 6 frames from the first move', () => {
+    const swap = frames.findIndex((f) => f.cell === 'to');
+    expect(frames[swap - 1]?.shut).toBe(true);
+    expect(frames[swap]?.shut).toBe(true);
+    const open = frames.findIndex((f, k) => k >= swap && !f.shut);
+    const moved = frames.findIndex((f) => f.head.angle > 0);
+    expect(open - moved + 1).toBeGreaterThanOrEqual(4);
+    expect(open - moved + 1).toBeLessThanOrEqual(6);
+  });
+
+  it('is a pure function of the time', () => {
+    expect(turnAt(STARE_TURN, 30, AT, AT + 0.05)).toEqual(turnAt(STARE_TURN, 30, AT, AT + 0.05));
   });
 });

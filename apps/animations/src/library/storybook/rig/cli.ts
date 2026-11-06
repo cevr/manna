@@ -5,7 +5,9 @@ import { Console, Effect, FileSystem, Layer, Option, Path, Result, Schema } from
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import sharp from 'sharp';
 import { CELLS as LEAD_TABLE } from '../../cast/lead-feast/shot-sheets/iio-table/cells.ts';
+import { CELLS as MAN_TABLE } from '../../cast/feast-guest-man/shot-sheets/iio-table/cells.ts';
 import { CUTS } from '../../../films/in-its-order/cast/lead-table-rig/cutout/cut.ts';
+import { CUTS as MAN_CUTS } from '../../../films/in-its-order/cast/man-table-rig/cutout/cut.ts';
 import { filmCast, filmFolder, filmNamed, filmShot } from '../films.ts';
 import type { PaintRig, PaintScene } from '../painter.ts';
 import {
@@ -18,17 +20,25 @@ import {
   StorybookFailed,
 } from '../render.ts';
 import { breathPeriodOf, drawnKeyOf, frameAt, type Shot, startOf, timesOf } from '../shot.ts';
-import { drawnCellOf } from '../store.ts';
+import { drawnCellOf, type StoredFigure } from '../store.ts';
 import {
+  blinkAt,
   IDLE,
   idleOnly,
+  MAN_PARENTS,
+  type ManPart,
   PARENTS,
+  type PartPose,
   RIG_PARTS,
   RIG_REST,
   type RigClock,
   type RigPart,
   type RigPose,
   rigPoseAt,
+  STARE_TURN,
+  STILL,
+  turnAt,
+  type TurnPose,
 } from './channels.ts';
 import { loadRigSheet, paintRigOf } from './load.ts';
 import { chainOf, type RigSheet } from './parts.ts';
@@ -49,17 +59,32 @@ const PROTO = {
   stress: 'stare',
 } as const;
 
+/** The guest man whose stare the rig turns: his figure, the turn's first and last cells, the key whose shut eyes he blinks with, and his part sheet. */
+const MAN = {
+  figure: 'man',
+  from: 'neutral',
+  to: 'stare',
+  blink: 'neutralBlink',
+  reach: 12,
+  sheet: 'man-table-rig/cutout/sheets/single-1',
+} as const;
+
 /** The phone's width, pt: every clip is also written at it (`clips/phone/`), each picture of a side-by-side at it. */
 const PHONE = 393;
 
-/** The points whose moves the accent is read by: his crown (the head part's topmost pixel) and the bottle's tip (the raised arm's topmost pixel). */
-const TRACKS = [
-  { name: 'crown', part: 'head' },
-  { name: 'bottle', part: 'armLeft' },
-] as const satisfies ReadonlyArray<{ readonly name: string; readonly part: RigPart }>;
+/** The points whose moves the accent is read by, each on a part: his crown (the head part's topmost pixel), the bottle's tip (the raised arm's topmost pixel) and his shoulder under the bottle (the raised arm's pivot, on the torso). */
+const TRACKS: ReadonlyArray<{
+  readonly name: string;
+  readonly part: RigPart;
+  readonly at: (sheet: RigSheet) => Pt;
+}> = [
+  { name: 'crown', part: 'head', at: (sheet) => topOf(sheet, 'head') },
+  { name: 'bottle', part: 'armLeft', at: (sheet) => topOf(sheet, 'armLeft') },
+  { name: 'shoulder', part: 'body', at: (sheet) => sheet.pivots.armLeft },
+];
 
 /** The topmost opaque pixel of a sheet's part, in the cell's px. */
-const topOf = (sheet: RigSheet, part: RigPart): Pt => {
+const topOf = <P extends string>(sheet: RigSheet<P>, part: P): Pt => {
   const png = sheet.parts.find((p) => p.name === part)?.png;
   const w = png?.width ?? 1;
   const i = Array.from({ length: (png?.rgba.length ?? 0) / 4 }, (_, k) => k).find(
@@ -69,8 +94,14 @@ const topOf = (sheet: RigSheet, part: RigPart): Pt => {
 };
 
 /** Where cell point `p` of `part` lies in pose `pose`, cell px: carried through its chain of poses about each pivot, itself first, as the painter draws it. */
-const placeOf = (sheet: RigSheet, pose: RigPose, part: RigPart, p: Pt): Pt =>
-  chainOf(part)
+const placeOf = <P extends string>(
+  sheet: RigSheet<P>,
+  parents: Readonly<Record<P, P | 'none'>>,
+  pose: Readonly<Record<P, PartPose>>,
+  part: P,
+  p: Pt,
+): Pt =>
+  chainOf(parents, part)
     .toReversed()
     .reduce<Pt>((q, name) => {
       const { angle, sx, sy, dx, dy } = pose[name];
@@ -86,10 +117,10 @@ const placeOf = (sheet: RigSheet, pose: RigPose, part: RigPart, p: Pt): Pt =>
 /** Each tracked point's move from rest in each of `poses`, frame px (`k` frame px to a cell px), and where it lies at rest, cell px. */
 const tracksOf = (sheet: RigSheet, poses: ReadonlyArray<RigPose>, k: number) =>
   Object.fromEntries(
-    TRACKS.map(({ name, part }) => {
-      const at = topOf(sheet, part);
+    TRACKS.map(({ name, part, at: pointOf }) => {
+      const at = pointOf(sheet);
       const moves = poses.map((pose) => {
-        const q = placeOf(sheet, pose, part, at);
+        const q = placeOf(sheet, PARENTS, pose, part, at);
         return [(q[0] - at[0]) * k, (q[1] - at[1]) * k] as const;
       });
       return [name, { part, at, dx: moves.map(([x]) => x), dy: moves.map(([, y]) => y) }] as const;
@@ -114,6 +145,7 @@ const channelsOf = (
     fps: clock.fps,
     ...read,
     clock,
+    blink: times.map((t) => Number(blinkAt(IDLE, clock, t))),
     tracks: tracksOf(sheet, poses, k),
     parts: Object.fromEntries(
       RIG_PARTS.map((part) => [
@@ -152,17 +184,191 @@ const cropAt = (png: Uint8Array, at: readonly [number, number], file: string) =>
     catch: (e) => StorybookFailed.make({ reason: `crop ${file}: ${String(e)}` }),
   });
 
-/** `scene` with the prototype's figure drawn by `rig`. */
-const withRig = (scene: PaintScene, rig: PaintRig): PaintScene => ({
+/** A figure the prototype draws by a rig: its name, its rig, and the blinks (`[cell, blink]`) it shows beyond its holds'. */
+interface Rigged {
+  readonly figure: string;
+  readonly rig: PaintRig;
+  readonly blinks: ReadonlyArray<readonly [string, string]>;
+}
+
+/** `scene` with each of `rigs`' figures drawn by its rig, holding its added blinks. */
+const withRigs = (scene: PaintScene, rigs: ReadonlyArray<Rigged>): PaintScene => ({
   ...scene,
   layers: scene.layers.map((l) => ({
     ...l,
     items: l.items.map((i) => {
-      if (i._tag === 'Figure' && i.name === PROTO.figure) return { ...i, rig };
-      return i;
+      const found = rigs.find((r) => i._tag === 'Figure' && i.name === r.figure);
+      if (i._tag !== 'Figure' || !found) return i;
+      const held = new Set(i.blinks.map(([c, b]) => `${c}~${b}`));
+      const added = found.blinks.filter(([c, b]) => !held.has(`${c}~${b}`));
+      return { ...i, rig: found.rig, blinks: [...i.blinks, ...added] };
     }),
   })),
 });
+
+/** The man as the rig turns him: when his turn to his stare starts (shot s), and his first cell's drawn keys he turns on, open then shut, cut by his sheet. */
+const manOf = Effect.fn('Storybook.rig.manOf')(function* (
+  shot: Shot,
+  figures: ReadonlyArray<StoredFigure>,
+) {
+  const failed = (reason: string) => StorybookFailed.make({ reason: `${MAN.figure}: ${reason}` });
+  const figure = shot.layers
+    .flatMap((l) => l.items)
+    .find((i) => i._tag === 'Figure' && i.name === MAN.figure);
+  if (figure?._tag !== 'Figure') return yield* failed(`not in ${shot.id}`);
+  const turn = figure.spans.find((s) => s._tag === 'Turn' && s.to === MAN.to);
+  if (turn?._tag !== 'Turn') return yield* failed(`no turn to ${MAN.to}`);
+  const stored = figures.find((f) => f.figure.name === MAN.figure);
+  if (!stored) return yield* failed('not loaded');
+  const keys = [MAN.from, drawnKeyOf({ cell: MAN.from, eyes: MAN.blink })].flatMap((key) =>
+    Option.toArray(Option.map(drawnCellOf(stored, key), (r) => [key, r] as const)),
+  );
+  if (keys.length !== 2) return yield* failed(`has no ${MAN.from} or its blink`);
+  return { at: turn.at, dur: turn.dur, keys };
+});
+
+/** The share of today's turn at which its whole-cell drawing swaps (`shot.ts`). */
+const SWAP_SHARE = 0.4;
+
+/** The man's neutral cell's figure box, its px (x0, y0; `films/in-its-order/cast/man-table-rig/cutout/frames.ts`), and its width: what a frame's px are read against. */
+const MAN_CELL_BOX = [2, 161] as const;
+const MAN_CELL_WIDTH = 351;
+
+/** The man's painted figure in his turn's pose: the drawing it names, open or shut, unsquashed, his first cell drawn from its parts. */
+const manPainted = <F extends { readonly cell: string; readonly sx: number; readonly sy: number }>(
+  f: F,
+  turn: TurnPose,
+): F & { readonly parts?: Readonly<Record<string, PartPose>> } => {
+  const cell = [MAN.from, MAN.to][Number(turn.cell === 'to')] ?? MAN.from;
+  const key = drawnKeyOf({ cell, eyes: [cell, MAN.blink][Number(turn.shut)] ?? cell });
+  const posed = { ...f, cell: key, sx: 1, sy: 1 };
+  if (turn.cell === 'to') return posed;
+  return { ...posed, parts: { head: turn.head, body: turn.body } };
+};
+
+/** A frame's picture, `i` its index and `only` what it draws (`'colour'` or `figure:<name>`). */
+type PictureAt = (i: number, only: string) => Effect.Effect<Uint8Array, StorybookFailed>;
+
+/**
+ * The man's turn's evidence, from the frames his turn draws (`turns`, the
+ * window's): his parts at rest and his whole cell, each alone
+ * (`stills/rest-man-{rig,today}.png`); his head's joint at its fullest
+ * (`stills/joint-manHead-<frame>.png`); his head at 1:1 over the turn and a
+ * frame either side, today and the rig (`stills/man-turn-{today,rig}.png`);
+ * the holes his head leaves at its fullest; and his channels as the rig
+ * draws them, the crown's move in frame px.
+ */
+const manEvidenceOf = Effect.fn('Storybook.rig.manEvidence')(function* (ev: {
+  readonly stills: string;
+  readonly sheet: RigSheet<ManPart>;
+  readonly dur: number;
+  readonly fps: number;
+  readonly turns: ReadonlyArray<TurnPose>;
+  readonly todayAt: PictureAt;
+  readonly rigAt: (
+    i: number,
+    only: string,
+    turn: TurnPose,
+  ) => Effect.Effect<Uint8Array, StorybookFailed>;
+  readonly colourAt: (i: number) => Effect.Effect<Uint8Array, StorybookFailed>;
+}) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const atRest: TurnPose = { drawn: true, cell: 'from', shut: false, head: STILL, body: STILL };
+  const first = ev.turns.findIndex((p) => p.drawn);
+  const alone = `figure:${MAN.figure}`;
+  const restRig = yield* ev.rigAt(first - 1, alone, atRest);
+  yield* fs.writeFile(
+    path.join(ev.stills, 'rest-man-today.png'),
+    yield* ev.todayAt(first - 1, alone),
+  );
+  yield* fs.writeFile(path.join(ev.stills, 'rest-man-rig.png'), restRig);
+  const box = opaqueBox(yield* rasterOf(restRig));
+  const k = (box.x1 - box.x0) / MAN_CELL_WIDTH;
+  const toFrame = (p: Pt) =>
+    [box.x0 + (p[0] - MAN_CELL_BOX[0]) * k, box.y0 + (p[1] - MAN_CELL_BOX[1]) * k] as const;
+  const fullest = first + STARE_TURN.swap - 1;
+  const peak = { ...(ev.turns[fullest] ?? atRest), shut: false };
+  yield* cropAt(
+    yield* ev.colourAt(fullest),
+    toFrame(ev.sheet.pivots.head),
+    path.join(ev.stills, `joint-manHead-${fullest}.png`),
+  );
+  const holes = holeCounts(
+    yield* rasterOf(yield* ev.rigAt(fullest, alone, { ...peak, head: STILL })),
+    yield* rasterOf(yield* ev.rigAt(fullest, alone, peak)),
+  );
+  const head = {
+    left: Math.max(0, Math.round(box.x0 - 20)),
+    top: Math.max(0, Math.round(box.y0 - 20)),
+    width: Math.round(box.x1 - box.x0 + 40),
+    height: Math.round((box.y1 - box.y0) * 0.45 + 40),
+  };
+  const strip = Array.from({ length: STARE_TURN.span + 3 }, (_, j) => first - 2 + j);
+  const pictures = { today: (i: number) => ev.todayAt(i, 'colour'), rig: ev.colourAt };
+  for (const name of ['today', 'rig'] as const) {
+    const tiles = yield* Effect.forEach(strip, (i) =>
+      Effect.flatMap(pictures[name](i), (png) =>
+        Effect.tryPromise({
+          try: () => sharp(png).extract(head).png().toBuffer(),
+          catch: (e) => StorybookFailed.make({ reason: `man strip: ${String(e)}` }),
+        }),
+      ),
+    );
+    yield* Effect.tryPromise({
+      try: () =>
+        sharp({
+          create: {
+            width: head.width * tiles.length,
+            height: head.height,
+            channels: 3,
+            background: '#fdf7e5',
+          },
+        })
+          .composite(tiles.map((input, j) => ({ input, left: j * head.width, top: 0 })))
+          .png()
+          .toFile(path.join(ev.stills, `man-turn-${name}.png`)),
+      catch: (e) => StorybookFailed.make({ reason: `man strip: ${String(e)}` }),
+    });
+  }
+  const top = topOf(ev.sheet, 'head');
+  const on = (p: TurnPose) => Number(p.drawn && p.cell === 'from');
+  const crown = ev.turns.map((p) => {
+    const q = placeOf(ev.sheet, MAN_PARENTS, { head: p.head, body: p.body }, 'head', top);
+    return [(q[0] - top[0]) * k * on(p), (q[1] - top[1]) * k * on(p)] as const;
+  });
+  return {
+    holes: { frame: fullest, ...holes },
+    mapping: { box, k },
+    channels: {
+      figure: MAN.figure,
+      turn: first,
+      numbers: STARE_TURN,
+      today: {
+        frames: Math.round(ev.dur * ev.fps),
+        swap: Math.ceil(ev.dur * ev.fps * SWAP_SHARE),
+      },
+      k,
+      pivot: ev.sheet.pivots.head,
+      drawn: ev.turns.map((p) => Number(p.drawn)),
+      cell: ev.turns.map((p) => [MAN.from, MAN.to][Number(p.drawn && p.cell === 'to')]),
+      shut: ev.turns.map((p) => Number(p.drawn && p.shut)),
+      angle: ev.turns.map((p) => p.head.angle * on(p)),
+      crown: { at: top, dx: crown.map(([x]) => x), dy: crown.map(([, y]) => y) },
+    },
+  };
+});
+
+/** The lead's painted figure in `pose`, showing his blink key (the first of `blinks`) while the accent shuts his eyes. */
+const leadPainted = <F extends { readonly cell: string }>(
+  f: F,
+  pose: RigPose,
+  shut: boolean,
+  blinks: ReadonlyArray<string>,
+): F & { readonly parts: RigPose } => {
+  const cell = [f.cell, blinks[0] ?? f.cell][Number(shut)] ?? f.cell;
+  return { ...f, cell, parts: pose };
+};
 
 /** How many pixels of two same-sized rasters differ by more than 8 in a channel. */
 const differing = (a: Raster, b: Raster): number => {
@@ -211,6 +417,7 @@ const CHANNELS: ReadonlyArray<{
 }> = [
   { name: 'body-breath', part: 'body', from: (p) => p.body.sy - 1 },
   { name: 'body-lean', part: 'body', from: (p) => p.body.angle },
+  { name: 'body-lift', part: 'body', from: (p) => p.body.dy },
   { name: 'head', part: 'head', from: (p) => p.head.angle },
   { name: 'hand', part: 'armLeft', from: (p) => p.armLeft.angle },
   { name: 'cloth', part: 'clothSleeve', from: (p) => p.clothSleeve.angle },
@@ -225,6 +432,7 @@ const allAtOnce = (poses: ReadonlyArray<RigPose>): RigPose => {
       ...RIG_REST.body,
       angle: most((p) => p.body.angle),
       sy: 1 + most((p) => p.body.sy - 1),
+      dy: most((p) => p.body.dy),
     },
     lap: RIG_REST.lap,
     head: {
@@ -407,26 +615,51 @@ const run = Effect.fn('Storybook.rig.run')(function* (out: string, scratch: stri
     Option.toArray(Option.map(drawnCellOf(stored, key), (r) => [key, r] as const)),
   );
   const cell = LEAD_TABLE[PROTO.cell];
-  const sheet = yield* loadRigSheet(SHEET, CUTS['single-1'], [cell.ax, cell.ay]);
+  const sheet = yield* loadRigSheet(SHEET, CUTS['single-1'], [cell.ax, cell.ay], PARENTS);
+  const man = yield* manOf(placed.shot, figures);
+  const manCell = MAN_TABLE[MAN.from];
+  const manSheet = yield* loadRigSheet(
+    `${APP}/src/films/in-its-order/cast/${MAN.sheet}`,
+    MAN_CUTS['single-1'],
+    [manCell.ax, manCell.ay],
+    MAN_PARENTS,
+  );
   const today = yield* storybookPage(scene);
-  const rigged = yield* storybookPage(withRig(scene, paintRigOf(sheet, keys)));
+  const rigged = yield* storybookPage(
+    withRigs(scene, [
+      { figure: PROTO.figure, rig: paintRigOf(sheet, PARENTS, keys), blinks: [] },
+      {
+        figure: MAN.figure,
+        rig: paintRigOf(manSheet, MAN_PARENTS, man.keys, MAN.reach),
+        blinks: [[MAN.to, MAN.blink]],
+      },
+    ]),
+  );
   const times = timesOf(shot);
   const frames = times.map((t) => frameAt(shot, heads, t, shares));
   const poses = times.map((t) => rigPoseAt(clock, t));
+  const turns = times.map((t) => turnAt(STARE_TURN, shot.fps, man.at, t));
   const drawsRig = (i: number) =>
     frames[i]?.figures.some(
       (f) => f.name === PROTO.figure && keys.some(([key]) => key === drawnKeyOf(f)),
     ) ?? false;
   const drawn = times.flatMap((_, i) => [i].filter(drawsRig));
   const first = drawn[0] ?? 0;
-  const posedReq = (i: number, pose: RigPose, only: string) => {
+  const posedReq = (
+    i: number,
+    pose: RigPose,
+    only: string,
+    turn: TurnPose = turns[i] ?? turnAt(STARE_TURN, shot.fps, man.at, 0),
+  ) => {
     const frame = frames[i] ?? frameAt(shot, heads, 0, shares);
     const req = requestOf(frame, only);
+    const shut = blinkAt(IDLE, clock, times[i] ?? 0);
     return {
       ...req,
       figures: req.figures.map((f) => {
+        if (f.name === MAN.figure && turn.drawn) return manPainted(f, turn);
         if (f.name !== PROTO.figure || !drawsRig(i)) return f;
-        return { ...f, parts: pose };
+        return leadPainted(f, pose, shut, blinks);
       }),
     };
   };
@@ -532,10 +765,23 @@ const run = Effect.fn('Storybook.rig.run')(function* (out: string, scratch: stri
     drawn: [first, Math.min(length - 1, drawn.at(-1) ?? first)],
     ptPerPx: PHONE / restAlone.width,
   });
-  yield* fs.writeFileString(path.join(out, 'channels.json'), `${jsonOf(channels)}\n`);
+  const turned = yield* manEvidenceOf({
+    stills: dirs.stills,
+    sheet: manSheet,
+    dur: man.dur,
+    fps: shot.fps,
+    turns: turns.slice(0, length),
+    todayAt: (i, only) => today(requestOf(frames[i] ?? frameAt(shot, heads, 0, shares), only)),
+    rigAt: (i, only, turn) => rigged(posedReq(i, RIG_REST, only, turn)),
+    colourAt: (i) => rigged(posedReq(i, poses[i] ?? RIG_REST, 'colour')),
+  });
+  yield* fs.writeFileString(
+    path.join(out, 'channels.json'),
+    `${jsonOf({ ...channels, man: turned.channels })}\n`,
+  );
   yield* fs.writeFileString(
     path.join(out, 'holes.json'),
-    `${jsonOf({ extremes: extremes.map(({ from: _, ...e }) => e), holes, cloth: { frame: clothAt, ...cloth }, mapping: { box, k } })}\n`,
+    `${jsonOf({ extremes: extremes.map(({ from: _, ...e }) => e), holes, cloth: { frame: clothAt, ...cloth }, man: turned.holes, mapping: { box, k, man: turned.mapping } })}\n`,
   );
   const voice = placed.scene.voice.file ?? '';
   const audio = path.join(path.dirname(story.timings), voice);

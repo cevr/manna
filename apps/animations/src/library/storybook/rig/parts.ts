@@ -1,6 +1,6 @@
 import { labOf } from '@manna/film/core';
 import type { Raster } from '@manna/film/tools';
-import { PARENTS, type RigPart } from './channels.ts';
+import type { RigPart } from './channels.ts';
 
 type Pt = readonly [number, number];
 type Rgb = readonly [number, number, number];
@@ -10,10 +10,10 @@ type Rgb = readonly [number, number, number];
  * one still part, last), each its PNG at the sheet's size; where the sheet's
  * top-left lies in the cell's px; and each part's pivot in the cell's px.
  */
-export interface RigSheet {
-  readonly parts: ReadonlyArray<{ readonly name: RigPart; readonly png: Raster }>;
+export interface RigSheet<P extends string = RigPart> {
+  readonly parts: ReadonlyArray<{ readonly name: P; readonly png: Raster }>;
   readonly at: Pt;
-  readonly pivots: Readonly<Record<RigPart, Pt>>;
+  readonly pivots: Readonly<Record<P, Pt>>;
 }
 
 /** The least pixels a colour of the cell is held by to be one of its paints (`cellPaintsOf`). */
@@ -23,14 +23,23 @@ const LEAST_PAINT = 40;
 const PAINT_ALPHA = 128;
 
 /** A pixel's alpha in a sheet's PNG at the cell's (`x`, `y`), 0 off the sheet. */
-const alphaOn = (sheet: RigSheet, png: Raster, x: number, y: number): number => {
+const alphaOn = <P extends string>(
+  sheet: RigSheet<P>,
+  png: Raster,
+  x: number,
+  y: number,
+): number => {
   const [sx, sy] = [x - sheet.at[0], y - sheet.at[1]];
   if (sx < 0 || sy < 0 || sx >= png.width || sy >= png.height) return 0;
   return png.rgba[(sy * png.width + sx) * 4 + 3] ?? 0;
 };
 
 /** Each cell pixel's owner, an index into the sheet's parts: the first moving part (front to back) whose PNG holds it, else the body. */
-export const ownersOf = (sheet: RigSheet, width: number, height: number): Uint8Array => {
+export const ownersOf = <P extends string>(
+  sheet: RigSheet<P>,
+  width: number,
+  height: number,
+): Uint8Array => {
   const body = sheet.parts.length - 1;
   const moving = sheet.parts.slice(0, body);
   return Uint8Array.from({ length: width * height }, (_, i) => {
@@ -64,14 +73,23 @@ export const cellPaintsOf = (
 /** How far, in the cell's px, a moving part carries the key's own pixels past its cut: drawn turned and scaled, a part's edge is soft, and the skirt keeps what lies under the cut (okra's outline on the body) from showing through it. */
 const SKIRT = 2;
 
-/** Whether a pixel within `SKIRT` of pixel `i` is owned by part `k`. */
-const nearOwned = (owners: Uint8Array, width: number, k: number, i: number): boolean => {
+/** Whether a pixel within `r` px of pixel `i` is owned by part `k` (and, given `drawn`, drawn in it: alpha above 0). */
+const nearOwned = (
+  owners: Uint8Array,
+  width: number,
+  k: number,
+  i: number,
+  r: number,
+  drawn: Uint8Array = new Uint8Array(0),
+): boolean => {
   const [x, y] = [i % width, Math.floor(i / width)];
   const height = owners.length / width;
-  for (let dy = -SKIRT; dy <= SKIRT; dy++)
-    for (let dx = -SKIRT; dx <= SKIRT; dx++) {
+  const seen = (j: number) => drawn.length === 0 || (drawn[j * 4 + 3] ?? 0) > 0;
+  for (let dy = -r; dy <= r; dy++)
+    for (let dx = -r; dx <= r; dx++) {
       const [nx, ny] = [x + dx, y + dy];
-      if (nx >= 0 && ny >= 0 && nx < width && ny < height && owners[ny * width + nx] === k)
+      const j = ny * width + nx;
+      if (nx >= 0 && ny >= 0 && nx < width && ny < height && owners[j] === k && seen(j))
         return true;
     }
   return false;
@@ -91,28 +109,37 @@ const snapped = (paints: ReturnType<typeof cellPaintsOf>, rgb: Rgb): Rgb => {
  * over the key's other drawn pixels, the body the key's own pixels
  * where it owns them and, under every moving part, the okra paint its PNG
  * holds, each pixel snapped to the nearest of the cell's own paints
- * (`cellPaintsOf` of `open`, the open cell), opaque.
+ * (`cellPaintsOf` of `open`, the open cell), opaque. Where okra left no
+ * paint, the body carries the key's own pixels `reach` px past its cut into
+ * a moving part (0, none, by default): cloth the cut runs across goes on
+ * under the part that lifts off it.
  */
-export const partsOfKey = (
-  sheet: RigSheet,
+export const partsOfKey = <P extends string>(
+  sheet: RigSheet<P>,
   key: Raster,
   owners: Uint8Array,
   paints: ReturnType<typeof cellPaintsOf>,
-): ReadonlyMap<RigPart, Raster> => {
+  reach = 0,
+): ReadonlyMap<P, Raster> => {
   const body = sheet.parts.length - 1;
   const bodyPng = sheet.parts[body]?.png ?? key;
   return new Map(
     sheet.parts.map(({ name }, k) => {
       const rgba = new Uint8Array(key.rgba.length);
       for (let i = 0; i < owners.length; i++) {
-        const skirt =
-          k !== body && (key.rgba[i * 4 + 3] ?? 0) > 0 && nearOwned(owners, key.width, k, i);
+        const drawn = (key.rgba[i * 4 + 3] ?? 0) > 0;
+        const skirt = k !== body && drawn && nearOwned(owners, key.width, k, i, SKIRT);
         if (owners[i] === k || skirt) {
           rgba.set(key.rgba.subarray(i * 4, i * 4 + 4), i * 4);
           continue;
         }
+        if (k !== body) continue;
         const [x, y] = [i % key.width, Math.floor(i / key.width)];
-        if (k !== body || alphaOn(sheet, bodyPng, x, y) < PAINT_ALPHA) continue;
+        if (alphaOn(sheet, bodyPng, x, y) < PAINT_ALPHA) {
+          if (reach > 0 && drawn && nearOwned(owners, key.width, body, i, reach, key.rgba))
+            rgba.set(key.rgba.subarray(i * 4, i * 4 + 4), i * 4);
+          continue;
+        }
         const s = ((y - sheet.at[1]) * bodyPng.width + (x - sheet.at[0])) * 4;
         const rgb: Rgb = [bodyPng.rgba[s] ?? 0, bodyPng.rgba[s + 1] ?? 0, bodyPng.rgba[s + 2] ?? 0];
         rgba.set([...snapped(paints, rgb), 255], i * 4);
@@ -122,9 +149,13 @@ export const partsOfKey = (
   );
 };
 
-/** A part's chain of poses, its root's first and itself last. */
-export const chainOf = (part: RigPart): ReadonlyArray<RigPart> => {
-  const parent = PARENTS[part];
-  if (parent === 'none') return [part];
-  return [...chainOf(parent), part];
+/** A part's chain of poses by its rig's `parents`, its root's first and itself last. */
+export const chainOf = <P extends string>(
+  parents: Readonly<Record<P, P | 'none'>>,
+  part: P,
+): ReadonlyArray<P> => {
+  const parent = parents[part];
+  const isPart = (p: P | 'none'): p is P => p !== 'none';
+  if (!isPart(parent)) return [part];
+  return [...chainOf(parents, parent), part];
 };

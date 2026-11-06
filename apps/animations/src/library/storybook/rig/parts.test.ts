@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { Raster } from '@manna/film/tools';
+import { PARENTS } from './channels.ts';
 import { cellPaintsOf, chainOf, ownersOf, partsOfKey, type RigSheet } from './parts.ts';
 
 /** A raster `width` wide of RGBA pixels, row by row. */
@@ -98,6 +99,26 @@ describe('a key cut into its parts', () => {
     expect(head && pixel(head, 2)).toEqual([...CLOTH]);
   });
 
+  it("carries the key's own pixels `reach` px up into a moving part where okra left no paint, from the body's drawn pixels only", () => {
+    const column = rasterOf(1, [CLEAR, SKIN, SKIN, SKIN, SKIN, CLOTH, CLOTH]);
+    const sheet: RigSheet = {
+      ...SHEET,
+      at: [0, 0],
+      parts: [
+        { name: 'head', png: rasterOf(1, [CLEAR, SKIN, SKIN, SKIN, SKIN, CLEAR, CLEAR]) },
+        { name: 'body', png: rasterOf(1, [CLEAR, CLEAR, CLEAR, CLEAR, CLEAR, CLOTH, CLOTH]) },
+      ],
+    };
+    const owners = ownersOf(sheet, 1, 7);
+    const alphas = (reach: number) => {
+      const body = partsOfKey(sheet, column, owners, PAINTS, reach).get('body');
+      return [0, 1, 2, 3, 4, 5, 6].map((i) => body && pixel(body, i)[3]);
+    };
+    expect(alphas(0)).toEqual([0, 0, 0, 0, 0, 255, 255]);
+    expect(alphas(2)).toEqual([0, 0, 0, 255, 255, 255, 255]);
+    expect(alphas(6)).toEqual([0, 255, 255, 255, 255, 255, 255]);
+  });
+
   it("lays okra's paint under the moving parts on the body, snapped to the cell's own paints and opaque", () => {
     const body = parts.get('body');
     expect(body && pixel(body, 1)).toEqual([90, 120, 120, 255]);
@@ -113,9 +134,9 @@ describe('a key cut into its parts', () => {
   });
 
   it('chains a part to its parent, the body first', () => {
-    expect(chainOf('head')).toEqual(['body', 'head']);
-    expect(chainOf('body')).toEqual(['body']);
-    expect(chainOf('clothSleeve')).toEqual(['body', 'armLeft', 'clothSleeve']);
-    expect(chainOf('lap')).toEqual(['lap']);
+    expect(chainOf(PARENTS, 'head')).toEqual(['body', 'head']);
+    expect(chainOf(PARENTS, 'body')).toEqual(['body']);
+    expect(chainOf(PARENTS, 'clothSleeve')).toEqual(['body', 'armLeft', 'clothSleeve']);
+    expect(chainOf(PARENTS, 'lap')).toEqual(['lap']);
   });
 });
