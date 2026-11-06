@@ -1,6 +1,6 @@
 /**
  * Today's run against its model on generated devices, leaning toward its
- * edges (`src/run/walk.ts`): the first minute and the done state after
+ * edges (`src/test/run-walk.ts`): the first minute and the done state after
  * Continue, a done state at the first show, after a Minutes tap and after
  * the field, a verse that comes due at a Minutes tap, unread launches whose
  * recitals of the first piece are all written, and three or more zones.
@@ -21,6 +21,7 @@ walkCase(
     'launch:unread',
     'say:unread',
     'wait',
+    'kept:cue:full',
   ],
   3,
 );

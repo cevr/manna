@@ -1,6 +1,6 @@
 /**
  * Today's run against its model on generated devices, leaning toward the
- * hold's moments (`src/run/walk.ts`): a Minutes tap while a recital
+ * hold's moments (`src/test/run-walk.ts`): a Minutes tap while a recital
  * listens, whose new plan holds the item first, later or not at all (2
  * minutes over long pieces), a Minutes tap with a result shown or after an
  * unheard recital, the field and back with a hold and with none, and a
@@ -22,4 +22,6 @@ walkCase('hold', 34, 3, [
   'say:unheard',
   'say:refused',
   'shown:long',
+  'kept:cue:full',
+  'kept:cue:none',
 ]);

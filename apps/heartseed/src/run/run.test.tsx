@@ -1,6 +1,6 @@
 /**
  * Today's run against its model on generated devices, leaning toward whole
- * plans run item by item (`src/run/walk.ts`): many pieces in their mixed
+ * plans run item by item (`src/test/run-walk.ts`): many pieces in their mixed
  * order, Next to another group and to the done state, every recital's
  * ending, Again and peeks before Next.
  */
@@ -21,4 +21,6 @@ walkCase('run', 14, 4, [
   'pieces:many',
   'pieces:groups',
   'pieces:no-passage-first',
+  'kept:cue:initials',
+  'kept:cue:none',
 ]);

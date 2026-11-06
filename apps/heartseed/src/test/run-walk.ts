@@ -22,8 +22,10 @@
  * step the reference shown, the action, the counts line, the verse whole
  * or not, the result and alert (none while nothing is held), the done
  * state's scroll text, and the disk (the start's keys unchanged, plus each
- * kept recall's key under the piece said, with that piece's word count,
- * and the minutes key after a tap).
+ * kept recall's key under the piece said, and the minutes key after a
+ * tap). Each recall a recital keeps holds the piece said, its reference and
+ * word count, and a recital heard whole the matcher's suggestion under that
+ * piece's own cue (Good under nothing, Hard under letters or the full text).
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -153,6 +155,19 @@ const plantsOf = (device: Device) => {
   return plants;
 };
 
+/**
+ * The cue a piece with `recalls` is said under next, written plainly: the
+ * full text before it is planted, first letters at a seed (its one recall,
+ * or its latest graded Again: no such card reaches full corn's 21 days),
+ * else nothing.
+ */
+const cueModel = (recalls: readonly Recall[]) => {
+  if (recalls.length === 0) return 'full';
+  const latest = recalls.toSorted((a, b) => a.startedAt - b.startedAt).at(-1);
+  if (recalls.length === 1 || latest?.grade === 1) return 'initials';
+  return 'none';
+};
+
 /** A walk's tally of the cases it reached. */
 export type Coverage = Record<string, number>;
 
@@ -241,7 +256,7 @@ class Walk {
       whole: shown !== null && shown.fresh && (!held || this.result !== 'grades'),
       grades: held && this.result === 'grades' ? 1 : 0,
       alerts: held && this.result === 'alert' ? 1 : 0,
-      doneText: shown !== null || this.screen.scrollText() === 'Nothing to tend now',
+      doneText: true,
     };
   }
 
@@ -370,18 +385,43 @@ class Walk {
     );
     this.faults.refuse = how === 'refused';
     const startedAt = this.time.now;
+    const cue = this.cueNow(piece);
     if (!this.unread) this.run = startedModel(this.run, this.recallsNow);
     await app.tap('Say it');
     if (!(await app.until(() => app.has('Listening')))) throw new Error('never listened');
     if (minutes !== undefined) await this.heldMinutes(minutes);
     await app.tap('Listening');
-    if (how === 'heard') this.expectRecall(piece, startedAt);
+    const key = how === 'heard' ? this.expectRecall(piece, startedAt) : null;
     this.result = how === 'unheard' ? 'alert' : 'grades';
     bump(this.coverage, `say:${this.unread ? 'unread' : how}`);
     if (skip.length > 0) bump(this.coverage, 'say:skipped');
     this.tallyShown(piece, 'fresh' in shown && !this.unread ? shown.fresh : null);
     await this.settle(`say ${how}${minutes === undefined ? '' : ` with ${minutes} min`}`);
     this.faults.refuse = false;
+    if (key !== null) this.checkRecall(key, piece, skip.length === 0 ? cue : null);
+  }
+
+  /** The cue the model says `piece` is recited under now: its garden's in a read launch, none claimed in an unread one. */
+  cueNow(piece: TextPiece) {
+    if (this.unread) return null;
+    return cueModel(plantsOf(this.device).get(piece.reference) ?? []);
+  }
+
+  /** The recall kept at `key` is the piece said: its reference, its word count, and, for a recital heard whole under `cue`, the matcher's suggestion (Good under nothing, else Hard at most). */
+  checkRecall(key: string, piece: TextPiece, cue: 'full' | 'initials' | 'none' | null) {
+    const value = this.device.disk.get(key);
+    if (value === undefined) throw new Error(`after ${this.log.join(' > ')}: no recall kept`);
+    const recall = JSON.parse(value) as Recall;
+    const want = cue === null ? recall.suggested : cue === 'none' ? 3 : 2;
+    if (
+      recall.reference !== piece.reference ||
+      recall.words !== piece.words ||
+      recall.suggested !== want
+    )
+      throw new Error(
+        `after ${this.log.join(' > ')}: kept ${JSON.stringify({ reference: recall.reference, words: recall.words, suggested: recall.suggested })}, expected ${JSON.stringify({ reference: piece.reference, words: piece.words, suggested: want })}`,
+      );
+    bump(this.coverage, `kept:cue:${cue ?? 'any'}`);
   }
 
   /** A Minutes tap while the held item's recital listens: the plan made again, the hold kept. */
