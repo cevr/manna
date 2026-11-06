@@ -51,7 +51,8 @@ export const AT_TABLE = {
  * right: their crowns high enough that every chin clears the far table's top
  * (840), each seen whole between the three at the table under the table's
  * medium (zoom 1.9 to 1.95): two left of the man, one between him and the
- * lead (clear of the letter the lead reads beside his face in cold-letter),
+ * lead (his face clear of the letter the lead reads beside his face in
+ * cold-letter, his veil under it),
  * one between the lead and the woman, the mother right of her.
  */
 export const DINERS_ROW = {
