@@ -188,7 +188,7 @@ const scrollersIn = (host: Element) =>
   [...host.querySelectorAll('*')].filter((node) => scrolls(node) && !scrolled(node));
 
 /** Text as a reader sees it in `node`, of the elements drawn (no hidden node's text). */
-const seenText = (node: Element): string => {
+export const seenText = (node: Element): string => {
   const parts: string[] = [];
   const walk = (at: Node) => {
     if (at.nodeType === Node.TEXT_NODE) {

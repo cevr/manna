@@ -19,8 +19,11 @@
  *
  * The oracle is `src/test/run-model.ts` over `src/test/session-model.ts`'s
  * plan, made at Today's first show and at each Minutes tap: after every
- * step the reference shown, the action, the counts line, the verse whole
- * or not, the result and alert (none while nothing is held), the done
+ * step the reference shown, the action, the counts line, each word of the
+ * verse as its cue draws it, shown and named (the new piece whole, a
+ * review's first letters or empty slots by the ladder, a held recital's own
+ * words while its result shows, never a stale mark on an item newly
+ * shown), the result and alert (none while nothing is held), the done
  * state's scroll text, and the disk (the start's keys unchanged, plus each
  * kept recall's key under the piece said, and the minutes key after a
  * tap). Each recall a recital keeps holds the piece said, its reference and
@@ -45,7 +48,16 @@ import {
   startedModel,
   type RunModel,
 } from './run-model';
-import { deviceOf, launch, PASSAGE, type Device, type Faults, type Launch } from './run-rig';
+import {
+  deviceOf,
+  launch,
+  PASSAGE,
+  seenText,
+  text,
+  type Device,
+  type Faults,
+  type Launch,
+} from './run-rig';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
 import { hostZone, offsetIn, restore, travel, ZONES } from './zone';
 import { MINUTES_KEY } from '../session/service';
@@ -168,6 +180,62 @@ const cueModel = (recalls: readonly Recall[]) => {
   return 'none';
 };
 
+/** How the verse shows: the full text, first letters, nothing, or a recital's own words (its result shown). */
+type Drawn = 'full' | 'initials' | 'none' | 'recital';
+
+const LETTER = /[\p{L}\p{N}]/u;
+
+/** A word's first letter or number as written; its first character when it has none. */
+const letterOf = (word: string) => {
+  const at = word.search(LETTER);
+  const from = at < 0 ? 0 : at;
+  return word.slice(from, from + 1);
+};
+
+/**
+ * The verse of `piece` as the model expects it drawn under `drawn`, in
+ * codes that print no word: `W` the full text whole, `R` a recital's own
+ * words, else one code per word, `I` under first letters (its first letter
+ * shown and named, the rest unseen) and `H` under nothing (an empty slot,
+ * nothing shown or named).
+ */
+const verseModel = (piece: TextPiece, drawn: Drawn) => {
+  if (drawn === 'full') return 'W';
+  if (drawn === 'recital') return 'R';
+  return (drawn === 'initials' ? 'I' : 'H').repeat(piece.words);
+};
+
+/**
+ * One drawn word, coded against the word it stands for: `M` a miss's mark,
+ * `P` a peeked word, `H` an empty slot hidden from the screen reader, `I`
+ * its first letter alone, shown and named, `F` the word whole, named by
+ * its text (a lit word's fade keeps it unseen in happy-dom), `X` anything
+ * else (no node, a stray name or text).
+ */
+const wordCode = (node: Element | null, word: string, index: number) => {
+  if (node === null) return 'X';
+  const label = node.getAttribute('aria-label');
+  const seen = seenText(node);
+  if (node.getAttribute('role') === 'button')
+    return label === `Missed word ${index + 1}` ? 'M' : 'X';
+  if (label === `${word}, peeked`) return 'P';
+  if (node.getAttribute('aria-hidden') === 'true') return label === null && seen === '' ? 'H' : 'X';
+  if (label !== null) return label === letterOf(word) && seen === label ? 'I' : 'X';
+  return text(node) === word ? 'F' : 'X';
+};
+
+/** The verse of `piece` as Today draws it, in `verseModel`'s codes: words all whole, marks or peeks read `R`, a recital's own. */
+const verseSeen = (host: Element, piece: TextPiece) => {
+  const whole = host.querySelector('[data-testid="passage"]');
+  if (whole !== null) return (whole.textContent ?? '') === piece.text ? 'W' : 'X';
+  const codes = sourceWords(piece.text).map((word, index) =>
+    wordCode(host.querySelector(`[data-testid="word-${index}"]`), word, index),
+  );
+  if (codes.length > 0 && codes.every((code) => code === 'F' || code === 'M' || code === 'P'))
+    return 'R';
+  return codes.join('');
+};
+
 /** A walk's tally of the cases it reached. */
 export type Coverage = Record<string, number>;
 
@@ -180,7 +248,7 @@ interface Seen {
   readonly references: readonly string[];
   readonly actions: readonly string[];
   readonly counts: readonly string[];
-  readonly whole: boolean;
+  readonly verse: string;
   readonly grades: number;
   readonly alerts: number;
   readonly doneText: boolean;
@@ -234,18 +302,7 @@ class Walk {
 
   /** What the model expects the screen to show at rest. */
   expect(): Seen {
-    if (this.unread) {
-      const first = this.pieces[0];
-      return {
-        references: first === undefined ? [] : [first.reference.trim()],
-        actions: first === undefined ? [] : ['Say it'],
-        counts: [],
-        whole: first !== undefined && this.result !== 'grades',
-        grades: this.result === 'grades' ? 1 : 0,
-        alerts: this.result === 'alert' ? 1 : 0,
-        doneText: true,
-      };
-    }
+    if (this.unread) return this.expectUnread();
     const shown = shownModel(this.run, this.recallsNow);
     const action = actionModel(this.run, this.recallsNow);
     const held = this.run.hold !== null;
@@ -253,16 +310,36 @@ class Walk {
       references: shown === null ? [] : [shown.reference.trim()],
       actions: action === null ? [] : [action],
       counts: this.run.plan === null ? [] : [countsModel(this.run.plan, this.recallsNow)],
-      whole: shown !== null && shown.fresh && (!held || this.result !== 'grades'),
+      verse: shown === null ? '' : verseModel(this.pieceOf(shown.reference), this.drawnNow(shown)),
       grades: held && this.result === 'grades' ? 1 : 0,
       alerts: held && this.result === 'alert' ? 1 : 0,
       doneText: true,
     };
   }
 
+  /** What the model expects of an unread launch (R10): the first piece whole but while its last recital's result shows, Say it, no counts line. */
+  expectUnread(): Seen {
+    const first = this.pieces[0];
+    return {
+      references: first === undefined ? [] : [first.reference.trim()],
+      actions: first === undefined ? [] : ['Say it'],
+      counts: [],
+      verse:
+        first === undefined ? '' : verseModel(first, this.result === 'grades' ? 'recital' : 'full'),
+      grades: this.result === 'grades' ? 1 : 0,
+      alerts: this.result === 'alert' ? 1 : 0,
+      doneText: true,
+    };
+  }
+
+  /** How the model draws the shown item's verse in a read launch: a held recital's own words while its result shows, else the item's cue now (`cueModel`: the full text for the new piece, the ladder's for a review). */
+  drawnNow(shown: { readonly reference: string }): Drawn {
+    if (this.run.hold !== null && this.result === 'grades') return 'recital';
+    return cueModel(plantsOf(this.device).get(shown.reference) ?? []);
+  }
+
   seen(): Seen {
     const app = this.screen;
-    const whole = app.host.querySelector('[data-testid="passage"]');
     const item = this.unread ? this.pieces[0] : shownModel(this.run, this.recallsNow);
     const shown = item?.reference.trim();
     const piece = this.pieces.find((each) => each.reference === item?.reference);
@@ -270,7 +347,7 @@ class Walk {
       references: app.references(),
       actions: app.actions(),
       counts: app.counts(),
-      whole: whole !== null && piece !== undefined && (whole.textContent ?? '') === piece.text,
+      verse: piece === undefined ? '' : verseSeen(app.host, piece),
       grades: app.grades().length,
       alerts: app.alerts(),
       doneText: shown !== undefined || app.scrollText() === 'Nothing to tend now',
@@ -306,6 +383,11 @@ class Walk {
     if (disk.length > 0) throw new Error(`after ${this.log.join(' > ')}: disk ${disk.join(', ')}`);
     if (this.screen.faults.length > 0)
       throw new Error(`after ${this.log.join(' > ')}: frames ${this.screen.faults.join('; ')}`);
+    const shown = this.unread ? null : shownModel(this.run, this.recallsNow);
+    if (shown === null) return;
+    const drawn = this.drawnNow(shown);
+    if (drawn !== 'recital')
+      bump(this.coverage, `cue:${shown.fresh ? 'fresh' : 'review'}:${drawn}`);
   }
 
   /** A recall the reader's press keeps under `piece`, by its key and its word count. */
@@ -490,6 +572,7 @@ class Walk {
     if (now === null) bump(this.coverage, 'done:after-next');
     else if (was !== null && now.group !== was.group) bump(this.coverage, 'next:another-group');
     await this.settle('Next');
+    if (now !== null && !now.fresh) bump(this.coverage, `next:review:${this.drawnNow(now)}`);
   }
 
   async again() {

@@ -22,6 +22,8 @@ walkCase(
     'say:unread',
     'wait',
     'kept:cue:full',
+    'cue:fresh:full',
+    'cue:review:initials',
   ],
   3,
 );

@@ -24,4 +24,8 @@ walkCase('hold', 34, 3, [
   'shown:long',
   'kept:cue:full',
   'kept:cue:none',
+  'cue:review:initials',
+  'cue:review:none',
+  'next:review:initials',
+  'next:review:none',
 ]);
