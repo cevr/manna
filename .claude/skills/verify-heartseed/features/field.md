@@ -31,11 +31,14 @@ then the first minute or Today.
   seed, `1 day sown`, `0 verses at full corn` and a button `Today`, with no
   `Today` heading and no `Say it`.
 - `field-back`: `Today` shows Today as it was.
-- `field-grow`: a recital under letters that grows the passage to a blade
-  shows on the field as `Isaiah 41:10, blade`.
-- `field-listening`: while Say it listens, Today offers no `Your field`.
-- `field-again`: Again takes the passage back to a seed and never removes
-  a day sown.
+- `field-grow` (live at the first wait, `run.md`'s `run-recite` and
+  `run-held-field`): a recital under letters that grows the passage to a
+  blade shows on the field as `Isaiah 41:10, blade`.
+- `field-listening` (live at `run.md`'s `run-listening`): while Say it
+  listens, Today offers no `Your field`.
+- `field-again` (tests only: `src/field/walk-grades.test.tsx`, unless the
+  second wait, `run.md`'s `run-second`, runs): Again takes the passage back
+  to a seed and never removes a day sown.
 - `field-relaunch`: a relaunch opens Today, never the field, and its first
   frame claims no count; the field then shows as before.
 - `field-record`: every recall record the app wrote holds an integer
@@ -55,32 +58,34 @@ Launch); the JavaScript comes from the dev server.
 
 1. `first.md` steps 1-7: boot, uninstall, install, revoke the microphone,
    and the first minute to `first-today`.
-2. `field-control`: in `first-today`'s snapshot, a button `Your field`.
+2. `field-control`: in `first-today`'s snapshot (Today's done state), a
+   button `Your field`.
 3. `field-first`: `sim tap "label=Your field"`, `sim snapshot field-first`
    → the heading `Your field`; the text `Isaiah 41:10`; a node labelled
    `Isaiah 41:10, seed`; `1 day sown`; `0 verses at full corn`; a button
    `Today`; no `Today` heading, no `Say it`, no label starting `Stage:`.
-4. `field-back`: `sim tap "label=Today"`, `sim open / --expect "id=stage"`,
-   `sim snapshot field-back` → the heading `Today`, `Stage: seed`,
-   `Your field`.
-5. `field-grow`: `grow.md`'s `grow-blade` (Say it, 36 of 37 words), then
+4. `field-back`: `sim tap "label=Today"`, `sim open / --expect "id=session"`,
+   `sim snapshot field-back` → the heading `Today`, `Nothing to tend now`
+   (the done state, as it was), `Your field`.
+5. `field-listening` and `field-grow`, at the first wait: `run.md` steps
+   3-4. `run-listening`'s raw snapshot → `Listening` present and no
+   `Your field` (keep only booleans). After `run-recite`,
    `sim tap "label=Your field"`, `sim snapshot field-grow` →
    `Isaiah 41:10, blade`, `1 day sown` (or `2 days sown` when 04:00 local
    fell between the planting and this recital: compare `START` with the
-   time now, local), `0 verses at full corn`; then `sim tap "label=Today"`.
-6. `field-listening`: `sim tap "label=Say it"` and at once a raw snapshot
-   (`agent-device snapshot --json --raw --observe-only --force-full
-   --session verify-heartseed`, in the drive's HOME) → `Listening` present
-   and no `Your field`; wait for the recital's count (`sim tap "label=36 of
-   37 words" --timeout 30`). Keep only booleans.
-7. `field-again`: `sim tap "label=Again"`, then `sim tap "label=Your
-   field"`, `sim snapshot field-again` → `Isaiah 41:10, seed`, the same
-   days sown as step 5; then `sim tap "label=Today"`.
+   time now, local), `0 verses at full corn`; then `sim tap "label=Today"`
+   is `run.md` step 5 (`run-held-field`).
+6. (`field-listening` is in step 5.)
+7. `field-again`, only when `run.md` step 7 (`run-second`) runs: before its
+   `Next`, `sim tap "label=Again"`, then `sim tap "label=Your field"`,
+   `sim snapshot field-again` → `Isaiah 41:10, seed`, the same days sown as
+   step 5; then `sim tap "label=Today"`. Otherwise the tests own it.
 8. `field-relaunch`: `sim relaunch`, `sim open / --expect "label=Isaiah
-   41:10"` and at once `sim snapshot field-relaunch-launch` → no
-   `Your field` heading, no label ending `sown` or `full corn`; then
-   `sim open / --expect "id=stage"`, `sim tap "label=Your field"`,
-   `sim snapshot field-relaunch` → the same as step 7.
+   41:10"` (the pending frame) and at once
+   `sim snapshot field-relaunch-launch` → no `Your field` heading, no label
+   ending `sown` or `full corn`; then `sim open / --expect "id=session"`,
+   `sim tap "label=Your field"`, `sim snapshot field-relaunch` → the same
+   as step 7 (step 5 when step 7 did not run).
 9. `field-record`: `C=$(xcrun simctl get_app_container verify-heartseed
    app.heartseed data)`; find `one-kv-heartseed.sqlite` and its `-wal` and
    `-shm` under `$C` with `find`, and copy them into `$EVIDENCE/store/`;
@@ -89,12 +94,11 @@ Launch); the JavaScript comes from the dev server.
    sum(json_type(value,'$.offset') = 'integer') FROM one_kv WHERE key LIKE
    'heartseed/recall/%'`, where `<M>` is the host's offset now in minutes
    east (`date +%z`: `-0500` → `-300`) → three equal counts, one per recital
-   the drive kept (3 after steps 1-8: the first minute's and each Today
-   recital). Report only the counts; delete the copy. Red on base, which
-   writes no `offset`: the second and third counts are 0.
-10. From a relaunched Today, run `grow.md` and `sayit.md` as `first.md`
-    step 9 says (their counts follow from this drive's extra recitals), then
-    `sim doctor` (record `head` and `timingsHold`) and `sim down`.
+   the drive kept (2 after steps 1-8: the first minute's and `run-recite`'s;
+   3 when `run-second` ran). Report only the counts; delete the copy. Red
+   on a build before hslocal, which writes no `offset`: the second and
+   third counts are 0.
+10. Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
 
 Report only counts, booleans, the labels named above and the reference;
 delete the `snapshots` folder and the raw snapshot.

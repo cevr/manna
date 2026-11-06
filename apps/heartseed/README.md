@@ -130,8 +130,12 @@ one runtime (`src/app.ts`, below).
 
 ## Say it
 
-Today's one button, and the first minute's in letters and alone. A press
-recites the passage under the ladder's cue (Garden, below): each word not
+Today's action button while the verse shown is not done (Session, below),
+and the first minute's in letters and alone. A recital carries its piece,
+its reference and its text: the matcher's words, the marks, the summary,
+and the recall's `reference` and `words` are that piece's. A press on
+Today recites the verse the run shows under the ladder's cue (Garden,
+below): each word not
 yet said shows that cue (whole, its first letter, or nothing), each
 word lights as the reader says it, with one soft haptic tick, and a missed word
 shows only a mark that a tap reveals (a peek). The recital finishes itself
@@ -143,9 +147,10 @@ change it. Any other ending shows one alert and the verse only as its cue,
 and keeps nothing. Say it reads no word aloud.
 
 - `src/sayit.ts` is the `SayIt` service (Effect) over `Dictation`:
-  `recite({ cue, keep })` (start a recital under the matcher's cue, kept
-  or not, or finish the one under way; it never replaces one), `press`
-  (`recite(TODAY)`: no cue, kept, Today's recital in an unread garden),
+  `recite({ cue, keep }, piece)` (start a recital of `piece` under the
+  matcher's cue, kept or not, or finish the one under way; it never
+  replaces one, and a piece with no words starts nothing), `press`
+  (`recite(TODAY, passage)`: no cue, kept, the layer's passage),
   `peek`, `choose`, and the `view` Today shows (the latest Dictation view,
   `startedAt`, the `choice` and the recital's `cue`) with its `changes`. On each of Dictation's
   `changes` it shows Dictation's view as it is then, and ticks for the
@@ -164,14 +169,19 @@ and keeps nothing. Say it reads no word aloud.
   garden (below), which takes Say it's recalls over the app's store and
   sounds the growth chime, and the voice over `voiceSource`, its switch in
   the same store (`appLayer`'s parts: `source`, `haptics`, `store`,
-  `chime`, `voice`). Every screen that hears the reader takes Dictation
-  from here. The runtime is not kept alive: when the root leaves, its
-  scope closes, Dictation cancels a recital under way and the voice stops
-  a reading under way. `press`, `sayAs`, `peek` and `choose` run to their
-  ends. `press` (`pressToday`) reads the garden's `settled` view, behind
-  every keep handed to it before the press, so a grade changed to Again
-  just before is said under the letters it gives back, and recites under
-  `cueIn` of that view (`todayCue`: no cue when the garden is unread).
+  `chime`, `voice`, and `pieces`, the verses the app holds text for, each
+  `{ reference, text, words, group }` in the app's order; the runtime
+  passes the passage alone). Every screen that hears the reader takes
+  Dictation from here. The runtime is not kept alive: when the root leaves,
+  its scope closes, Dictation cancels a recital under way and the voice
+  stops a reading under way. `press`, `next`, `sayAs`, `peek` and `choose`
+  run to their ends. `press({ piece, item })` (`pressToday(piece, item)`)
+  reads the garden's `settled` view, behind every keep handed to it before
+  the press, so a grade changed to Again just before is said under the
+  letters it gives back, holds `item` in the session (Session, below), and
+  recites `piece` under `cueIn` of that view for its reference (no cue when
+  the garden is unread). `sayAs(how)` recites the passage, as the first
+  minute does.
 - The source: `sourceKind({ dev, simulator })` (`src/sayit/source.ts`)
   answers the module's replay of the probe's plan only when `dev`
   (`__DEV__`, nothing else) and the simulator (One's device info; a read
@@ -192,7 +202,8 @@ and keeps nothing. Say it reads no word aloud.
   minute's letters are too; under no cue an empty slot its width,
   hidden from the screen reader; a half-heard word hidden, a mark
   named `Missed word <n>`, a peeked word `<word>, peeked`), the radio
-  group `Grade`, and the button `Say it` or `Listening`. A word lights with
+  group `Grade`, and the action button `Say it`, `Listening` or `Next`
+  (Session, below). A word lights with
   a short fade and the button pulses while it listens; Reduce Motion stills
   both (Reanimated's `ReduceMotion.System`).
 - `src/sayit/guard.test.ts` holds the source choice, the one Dictation, no
@@ -440,13 +451,40 @@ They show once their reads complete, in a read garden and an unread one,
 and stay shown and working while Say it listens; the pending frame and the
 first minute show neither. At the top of the scroll view, above the
 reference, the counts line (`testID="session"`) says what the plan holds.
-Say it stays offered whatever the line reads: `hsrun` will have Today run
-the plan one piece at a time.
+
+Today runs the plan one verse at a time. In a read garden with a plan it
+shows one item: the held one if any, else the plan's first item not done.
+It shows the item's reference (`testID="reference"`), its words under its
+cue (the full text for the new piece, `cueIn` for a review), its stage
+line, and the action button. A press of `Say it` recites that item's own
+piece and holds the item. Once the item is done (its plant holds a recall
+more than at the plan's making, read from the garden, never from the
+recital's end, so a refused write never moves on), the result and the
+`Grade` group stay, a grade can still change, and the button reads `Next`;
+a recital that is unheard, cancelled or refused leaves `Say it` on the
+same item. `Next` drops the hold. With no item left (every item done and
+none held, or a plan with no items) Today shows the done state: the
+scroll view holds the counts line alone, `Nothing to tend now`, with no
+reference, verse, stage, grade, summary or button. A making of the plan
+with no recital under way drops the hold, and an earlier result with it;
+a making while a recital listens or finishes keeps the hold, so the verse
+recited stays shown until its `Next`, even when the new plan leaves it
+out. While nothing is held Today shows no recital's marks, summary,
+result, grades or alert. The hold survives the field and back; nothing of
+the run is stored, so a relaunch makes a new plan with nothing held. With
+no plan (an unread garden) Today shows the first piece whole with a
+working `Say it`, and never `Next`, a done state or a hold.
+
+The action button and the `Grade` group lie in a fixed footer under the
+scroll view, so however long the verse or the result, they are on screen
+without a scroll; the only controls in the scroll view are a missed word's
+marks. The alert stays in the scroll.
 
 - `src/session.ts` is the rule, pure: `planOf` over a `Read` view, the
-  pieces the app holds text for
-  (today one, Today's passage: its reference, its word count and its
-  passage as group), the instant, the zone's offset at it and the minutes.
+  pieces the app holds text for (`appLayer`'s `pieces`; today one,
+  Today's passage: its reference, its word count and its passage as
+  group; `TextPiece` adds its text), the instant, the zone's offset at it
+  and the minutes. `isDone` reads an item's done from the garden.
   - A plant is due at FSRS's due. While it holds one recall that carries
     an offset and started from 18:00 to 03:59:59.999 by that offset's local
     clock, it is due no earlier than the 04:00 that ends that recall's day
@@ -486,7 +524,14 @@ the plan one piece at a time.
   a keep under way, so a recital whose keep lands after it counts as done.
   Nothing else makes it again: time passing, a recital, a grade, Again, a
   Voice tap, or the field and back. An unread garden has no plan and no
-  counts line.
+  counts line. The service also holds the run's one piece of state, the
+  item held (`hold`, `next`), over the pieces it was given (its view's
+  `pieces` and `held`). It needs `Dictation`: a making reads whether a
+  recital is under way in the same synchronous step as the making, and
+  keeps the hold only then.
+- `src/session/run.ts` is `shownOf(view, garden)`, what Today shows of the
+  run, pure: `Unplanned` (no plan: the first piece), the `Item` with its
+  piece, whether it is held and whether it is done, or `Done`.
 
 ## Tests
 

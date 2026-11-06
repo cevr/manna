@@ -31,24 +31,30 @@ A fresh install plants its seed in the first minute (`first.md`:
 `first-planted`, which was this feature's `grow-seed`), and `Stage: not
 planted` shows only when another verse is planted and the passage is not,
 which no screen does yet, so it is retired here (`grow-unplanted`) and the
-unit tests own it (`src/garden/today.test.tsx`). Every row below starts
-from the clean Today `first-again` relaunches into, at `Stage: seed`.
+unit tests own it (`src/garden/today.test.tsx`). Today runs the plan
+(`run.md`), so a live recital after the first minute waits for the
+passage's due: every row below starts from `run.md`'s `run-due`, at
+`Stage: seed`.
 
-- `grow-blade`: a second recital, under letters: `Stage: blade`,
-  `Grew to a blade.`, exactly one `[growth] play` line, ending
-  `skipped=simulator`.
-- `grow-peek`: a peek at the mark: `Stage: blade`, `Grew to a blade.`, still
-  one `[growth] play` line.
-- `grow-restart`: the app restarted: no other stage in the launch frame, then
-  `Stage: blade`, no `Grew to` line.
-- `grow-again`: a third recital: `Stage: ear`, `Grew to an ear.`, two
+- `grow-blade` (live at `run-recite`): a second recital, under letters:
+  `Stage: blade`, `Grew to a blade.`, exactly one `[growth] play` line,
+  ending `skipped=simulator`.
+- `grow-peek` (live at `run-recite`, a peek on the mark before `Next`):
+  `Stage: blade`, `Grew to a blade.`, still one `[growth] play` line.
+- `grow-restart`: the app restarted while `Next` is pending: no other stage
+  than the store's (`blade`) in the launch frame, no `Grew to` line, then
+  the done state, or the passage at `Stage: blade` with `Say it` when the
+  new plan holds it.
+- `grow-again`: a third recital (live at `run-second`, the second wait,
+  only when the drive started before 16:00 local; else tests only:
+  `src/garden/today.test.tsx`): `Stage: ear`, `Grew to an ear.`, two
   `[growth] play` lines; then `Again`: `Stage: seed`, no `Grew to` line,
   still two.
 
 ## How to get to it (user POV)
 
-- Go through the first minute, tap `Continue`, then on Today tap `Say it`
-  and read the stage line under the verse.
+- Go through the first minute, tap `Continue`, come back once the verse is
+  due, then on Today tap `Say it` and read the stage line under the verse.
 
 ## Driving it
 
@@ -61,29 +67,32 @@ erase.
 
 With `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them:
 
-1. `first.md` steps 1 to 8: the first minute plants the seed
-   (`first-planted`) and `first-again` leaves Today at `Stage: seed`, with
-   no `[growth] play` line in the log.
+1. `run.md`, Driving it, steps 1-3: the first minute plants the seed
+   (`first-planted`), and `run-due` shows Today at `Stage: seed`, with no
+   `[growth] play` line in the log.
 2. (retired: `grow-unplanted`)
 3. (now `first-planted`: `grow-seed`)
-4. `grow-blade`: `sim tap "label=Say it"`, `sim tap "label=36 of 37 words"
-   --timeout 30`, `sim snapshot grow-blade` → `Stage: blade`,
+4. `grow-blade`: `run.md` step 4 (`run-recite`) → `Stage: blade`,
    `Grew to a blade.`. Then the log (below) holds exactly one
-   `[growth] play` line, and it ends `skipped=simulator`. When `fade.md`
-   ran first in the same drive, count play lines from `GROW_START`, the
-   time this row starts, not `START`.
-5. `grow-peek`: `sim tap "label=Missed word 11"`, `sim snapshot grow-peek` →
-   `Stage: blade`, `Grew to a blade.`; the log still holds one play line.
-6. `grow-restart`: `sim relaunch`, then `sim open / --expect
-   "label=Isaiah 41:10"` and at once `sim snapshot grow-restart-launch` →
-   no `Stage: not planted` and no `Stage:` other than `blade` in that frame
-   (the launch-frame probe). Then `sim open / --expect "id=stage"`,
-   `sim snapshot grow-restart` → `Stage: blade`, no `Grew to`. A store that
-   failed to open shows no stage line at all here, and that fails this row.
-7. `grow-again`: the two taps of step 4, `sim snapshot grow-again` →
-   `Stage: ear`, `Grew to an ear.`; two play lines. Then `sim tap
+   `[growth] play` line, and it ends `skipped=simulator`.
+5. `grow-peek`, before `run.md` step 5: `sim tap "label=Missed word 11"`,
+   `sim snapshot grow-peek` → `Stage: blade`, `Grew to a blade.`, `Next`;
+   the log still holds one play line.
+6. `grow-restart`, after `run.md` step 7 (or step 6 when the second wait
+   does not run), or in a drive of its own with `Next` pending:
+   `sim relaunch`, then `sim open / --expect "label=Isaiah 41:10"` (the
+   pending frame shows the reference) and at once
+   `sim snapshot grow-restart-launch` → no `Stage: not planted` and no
+   `Stage:` other than the store's in that frame (the launch-frame probe),
+   no `Grew to`. Then `sim open / --expect "id=session"`,
+   `sim snapshot grow-restart` → no `Grew to`, no grade, and the done state,
+   or the passage's stage line and `Say it` when the counts line reads
+   `1 to tend`. A store that failed to open shows no counts line at all
+   here, and that fails this row.
+7. `grow-again`: `run.md` step 7 (`run-second`) → `Stage: ear`,
+   `Grew to an ear.`; two play lines. Then, before its `Next`, `sim tap
    "label=Again"`, `sim snapshot grow-again-graded` → `Stage: seed`, no
-   `Grew to`; still two play lines.
+   `Grew to`, `Next`; still two play lines.
 8. When `sayit.md` follows in the same drive (`first.md` step 9), run it
    now; then `sim doctor` (record `head` and `timingsHold`), then
    `sim down`.

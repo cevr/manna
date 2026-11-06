@@ -139,14 +139,21 @@ which nodes prove it. A target is `label=<accessible name>` or
 `id=<testID>`, matched whole. `sim tap`, `sim scroll` and `sim back` work as
 the hymnal's skill describes; in the first minute a reader taps `Listen`,
 `Next`, `Say it` and `Continue`, on Today `Say it`, a grade, a missed
-word's mark and `Your field`, and on the field `Today`. Heartseed has no journey files yet. The features:
+word's mark, `Next`, a `Minutes` radio and `Your field`, and on the field `Today`. Heartseed has no journey files yet. The features:
 
 - [features/first.md](features/first.md): the first minute a fresh
   install opens on: hear it (the voice's lit words, silent on the
   simulator), say it with first letters, say it alone, Planted, then Today
-  at a seed. Run it first: the other features start from its Today.
+  in the done state. Run it first: the other features start from its Today.
+- [features/run.md](features/run.md): Today runs the session's plan one
+  verse at a time: the verse under its cue, `Say it`, the result, `Next`,
+  and the done state with no `Say it`; the action button and the grades in
+  a fixed footer; the verse due again after the first minute, through a
+  `Minutes` tap. Run it from `first.md`'s Today: `fade.md`, `grow.md`,
+  `sayit.md` and `session.md` name the steps of it that are theirs.
 - [features/today.md](features/today.md): Today, its header, reference,
-  passage, the passage's stage line and its one button.
+  passage, the passage's stage line and its one action button, in the
+  footer.
 - [features/sayit.md](features/sayit.md): Say it on Today, over the scripted
   replay on the simulator: the lit words, the mark and its peek, the count,
   the suggested grade and a changed one.
@@ -158,16 +165,16 @@ word's mark and `Your field`, and on the field `Today`. Heartseed has no journey
   calls it on Today.
 - [features/fade.md](features/fade.md): cues that fade by stage on Today:
   the passage in first letters at a seed, nothing at a blade, and a recital
-  said under that cue; Again brings the letters back. Run it after
-  `first.md`, before `grow.md` and `sayit.md`.
+  said under that cue; Again brings the letters back. Its rows are steps
+  of `run.md`'s drive.
 - [features/grow.md](features/grow.md): the passage's stage on Today (seed,
   blade, ear, full corn), the growth line, the stage kept across a
   restart in the device's store, and the growth sound's native module,
   which logs each play it skips on the simulator.
 - [features/session.md](features/session.md): the daily session on Today:
   the `Minutes` and `Voice` choices in the header's second row, kept across
-  a relaunch, and the counts line atop the passage, due again after the
-  first minute. Run it from `first.md`'s Today, before `fade.md`.
+  a relaunch, and the counts line atop the scroll view. Run it from
+  `first.md`'s Today, before `run.md` step 3.
 - [features/field.md](features/field.md): the field, reached from Today's
   `Your field` and back by `Today`: a row per passage, a plant per verse at
   its stage, the local days sown from 04:00 (each by the zone offset its

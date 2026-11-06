@@ -47,16 +47,17 @@ word 11 and the seed is graded Hard.
   `Stage:`; its recital plants the seed.
 - `first-planted`: `Planted`, `Stage: seed`, `Continue`; no `[growth] play`
   line (planting never sounds).
-- `first-today`: `Continue` opens `Today` at `Stage: seed`, with no label
-  starting `Grew to`, and `Say it`. Today keeps the alone recital on the
-  screen, as Say it keeps any finished recital: its count
-  `36 of 37 words`, the mark `Missed word 11`, `Suggested: Hard` and the
-  four grades with `Hard` checked (a grade changed here is kept, as on
-  Today).
+- `first-today`: `Continue` opens `Today` in the done state (`run.md`'s
+  `run-done-first`): the counts line `Nothing to tend now` alone under the
+  header, with no `Isaiah 41:10`, no label starting `Stage:` or `Grew to`,
+  no recap, no grade, and no `Say it` or `Next`. The seed was just planted,
+  so the plan holds nothing to tend.
 - `first-again`: a relaunch shows no first-minute heading in its launch
-  frame, then a clean `Today` at `Stage: seed`: no grade, no count, and the
-  passage in letters (`today-passage`, `fade.md`'s `fade-letters`), not
-  whole.
+  frame, then `Today` in the done state until the passage is due. Once it
+  is due (7 minutes after a daytime planting; `run.md`'s `run-due`), a
+  relaunch or a Minutes tap shows a clean `Today` at `Stage: seed`: no
+  grade, no count, and the passage in letters (`today-passage`,
+  `fade.md`'s `fade-letters`), not whole.
 
 ## How to get to it (user POV)
 
@@ -100,23 +101,22 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
 6. `first-planted`: `sim snapshot first-planted` → `Planted`,
    `Stage: seed`, `Continue`; the log holds no `[growth] play` line.
 7. `first-today`: `sim tap "label=Continue"`, `sim open / --expect
-   "id=stage"`, `sim snapshot first-today` → `Today`, `Stage: seed`, no
-   label starting `Grew to`, `Say it`; the recap `36 of 37 words`,
-   `Missed word 11`, `Suggested: Hard`, and every `Hard` line `[checked]`.
+   "id=session"`, `sim snapshot first-today` → `Today`,
+   `Nothing to tend now`, `Your field`; no `Isaiah 41:10`, no label
+   starting `Stage:` or `Grew to`, no label ending `words`, no grade label,
+   no `Say it` and no `Next` (the done state, `run.md`'s
+   `run-done-first`).
 8. `first-again`: `sim relaunch`, `sim open / --expect "label=Isaiah
-   41:10"` and at once `sim snapshot first-again-launch` → no `Hear it`,
-   `Say it with help`, `Say it alone` or `Planted`. Then `sim open /
-   --expect "id=stage"`, `sim snapshot first-again` → `Today`,
-   `Stage: seed`, no first-minute heading, and `today-passage`
-   (`today.md`): 37 word nodes each labelled one character, no node holding
-   the passage whole, `Say it`, no `Listening`, no grade label and no label
-   ending `words`.
-9. From this Today run `fade.md`'s rows, then after a `sim relaunch`
-   `grow.md` from `grow-blade` to `grow-again`, then `sayit.md` (its step 1
-   relaunches for a clean Today), then `sim doctor`
-   (record `head` and `timingsHold`) and `sim down`. A drive of the field
-   (`field.md`) branches at `first-today` instead and runs these from a
-   relaunched Today at its own step 9.
+   41:10"` (the pending frame) and at once `sim snapshot
+   first-again-launch` → no `Hear it`, `Say it with help`, `Say it alone`
+   or `Planted`. Then `sim open / --expect "id=session"`,
+   `sim snapshot first-again` → `Today`, no first-minute heading, and the
+   done state, as in step 7. Once the passage is due, `run.md`'s `run-due`
+   shows `today-passage` (`today.md`).
+9. From this Today run `run.md`, Driving it, from step 2: `fade.md`,
+   `grow.md` and `sayit.md` name the steps of it that are theirs. Then
+   `sim doctor` (record `head` and `timingsHold`) and `sim down`. A drive
+   of the field (`field.md`) branches at `first-today` instead.
 
 The log: `xcrun simctl spawn <udid> log show --start "$START" --style
 compact --predicate '(eventMessage CONTAINS "[voice]" OR eventMessage

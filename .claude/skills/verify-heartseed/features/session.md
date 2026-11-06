@@ -16,8 +16,8 @@ At the top of the scroll view, above the reference, the counts line
 `about <k> min`, joined by `·`, or `Nothing to tend now`. It never counts
 the backlog. The plan is made when Today first shows in a launch, and again
 at each Minutes tap. An item is done once its verse holds a new recall.
-Say it stays offered when the line reads `Nothing to tend now`: until
-`hsrun` merges, Today still recites the passage at any time.
+Today runs the plan one verse at a time (`run.md`): when the line reads
+`Nothing to tend now`, Today shows the done state, with no `Say it`.
 
 A verse planted in the evening (18:00 to 03:59 local) is not due before
 04:00 the next morning. Otherwise FSRS's due date rules, so after the first
@@ -35,23 +35,23 @@ of `first-planted`.
   snapshot of the first minute (`first-launch` to `first-planted`) holds
   `Minutes`, `Voice`, `to tend` or `Nothing to tend`.
 - `session-header`: in a raw snapshot of `first-today`, each radio and the
-  switch lies wholly inside the window, above the node `Isaiah 41:10`, and
-  clear of the bottom safe area. A tap on `10 min` with no scroll, made
-  while the recap and the grade row show, checks it.
+  switch lies wholly inside the window, above the counts line (`id=session`;
+  Today is the done state, so no `Isaiah 41:10` shows), and clear of the
+  bottom safe area. A tap on `10 min` with no scroll checks it. The same
+  tap while the recap and the grade row show is `run.md`'s `run-recite`
+  state.
 - `session-choose`: after `Voice` is tapped off and `20 min` is picked, a
   relaunch shows `20 min` checked and `Voice` not checked.
-- `session-listening`: a raw snapshot taken at once after `Say it` shows
-  `Listening`, the four radios and the switch.
-- `session-due`: once 7 minutes have passed since `PLANTED`, a relaunch
-  shows `1 to tend · about 1 min` when `PLANTED` was between 04:00 and
-  17:59 local. When it was in the evening, the relaunch shows
-  `Nothing to tend now`, and only a relaunch from 04:00 the next morning
-  shows `1 to tend · about 1 min`.
-- `session-tend` (daytime only): from `1 to tend · about 1 min`, a recital
-  (`Say it`, `36 of 37 words`) leaves `Nothing to tend now`, and `Say it`
-  is still offered.
+- `session-listening`: moved into `run.md`'s `run-listening`, after the
+  wait.
+- `session-due`: replaced by `run.md`'s `run-due`: 7 minutes after
+  `PLANTED`, a Minutes tap makes the plan, with no relaunch needed (a
+  relaunch still works). The evening rule stays: a planting from 18:00 to
+  03:59 local shows `Nothing to tend now` until 04:00 the next morning.
+- `session-tend`: replaced by `run.md`'s `run-recite` and `run-next`: the
+  recital leaves `Next`, and `Next` the done state, never `Say it`.
 - `session-field`: `Your field`, then `Today`, leaves the counts line as it
-  was.
+  was, and the done state with it.
 
 ## How to get to it (user POV)
 
@@ -75,27 +75,21 @@ sets them.
    - check the snapshot for the nodes above;
    - take a raw snapshot (`agent-device snapshot --json --raw --observe-only
      --force-full --session verify-heartseed`) and read the rects of the
-     radios, the switch, `Isaiah 41:10` and the window, keeping only
-     numbers;
+     radios, the switch, the counts line (`id=session`) and the window,
+     keeping only numbers;
    - `sim tap "label=10 min"`, then `sim snapshot session-header` →
      `10 min` checked.
 3. `session-choose`: `sim tap "label=Voice"`, `sim tap "label=20 min"`,
    `sim relaunch`, `sim open / --expect "id=session"`,
    `sim snapshot session-choose` → `20 min` checked, `Voice` not checked,
-   `Nothing to tend now`. Turn the voice back on with `sim tap "label=Voice"`.
-4. `session-listening`: `sim tap "label=Say it"`, then at once a raw
-   snapshot → `Listening`, four radios, `Voice`. Then
-   `sim tap "label=36 of 37 words" --timeout 30`.
+   `Nothing to tend now`. Turn the voice back on with `sim tap "label=Voice"`,
+   and pick `5 min` again (`run.md`'s `run-due` taps the checked `5 min`).
+4. (`session-listening` is `run.md`'s `run-listening`.)
 5. `session-field`: `sim tap "label=Your field"`, `sim tap "label=Today"`,
-   `sim snapshot session-field` → the counts line as in step 3.
-6. `session-due`: wait until 7 minutes after `PLANTED`, then `sim relaunch`,
-   `sim open / --expect "id=session"`, `sim snapshot session-due` → as the
-   row says for `PLANTED`'s hour.
-7. `session-tend`, when step 6 showed `1 to tend`: `sim tap "label=Say it"`,
-   `sim tap "label=36 of 37 words" --timeout 30`, `sim snapshot
-   session-tend` → `Nothing to tend now`, `Say it`.
-8. Then `fade.md`, `grow.md` and `sayit.md` from a relaunched Today, as
-   `first.md` step 9 says.
+   `sim snapshot session-field` → the counts line as in step 3, and no
+   `Say it`.
+6. `session-due` and `session-tend` are `run.md`'s `run-due`, `run-recite`
+   and `run-next`: go on with `run.md`, Driving it, from step 3.
 
 Report only counts, booleans, rect numbers, the labels named, the counts
 line and the reference. Delete the `snapshots` folder and the raw
@@ -117,4 +111,4 @@ snapshots.
   on Today).
 - The voice reads only in the first minute's hear phase, which a reader
   meets once. So live, the switch's effect is only its state across a
-  relaunch. hsrun's new-piece hear phase is where it is heard.
+  relaunch. hswake's new-piece Listen is where it is heard.

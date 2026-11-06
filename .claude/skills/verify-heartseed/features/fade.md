@@ -19,22 +19,27 @@ claiming no stage.
 
 ## Sub-features
 
-Every row runs from the Today `first.md`'s `first-again` relaunches into.
-The replay always misses word 11, so every recital ends `36 of 37 words`,
-`Suggested: Hard`.
+Today runs the plan (`run.md`), so a live recital waits for the passage's
+due: every row runs from `run.md`'s `run-due`, the first wait after the
+first minute. The replay always misses word 11, so every recital ends
+`36 of 37 words`, `Suggested: Hard`.
 
-- `fade-letters`: at a seed, 37 `word-<i>` nodes, each label exactly one
-  character, and no node holding the passage whole.
-- `fade-cued`: while the recital under letters listens, every word node not
-  yet lit is labelled with one character.
-- `fade-blade`: that recital gives `Stage: blade`, `Grew to a blade.`,
-  `Suggested: Hard`, and one `[growth] play` line.
-- `fade-nothing`: relaunched at a blade, no word node has a label and no
+- `fade-letters` (live at `run-due`): at a seed, 37 `word-<i>` nodes, each
+  label exactly one character, and no node holding the passage whole.
+- `fade-cued` (live at `run-listening`): while the recital under letters
+  listens, every word node not yet lit is labelled with one character.
+- `fade-blade` (live at `run-recite`): that recital gives `Stage: blade`,
+  `Grew to a blade.`, `Suggested: Hard`, and one `[growth] play` line.
+- `fade-nothing` (live at `run-second`, the second wait, only when the drive
+  started before 16:00 local; else tests only: `src/sayit/cue.test.tsx`,
+  `src/garden/today.test.tsx`): at a blade, no word node has a label and no
   node holds any of the passage's words.
-- `fade-ear`: a recital with nothing gives `Stage: ear`, `Grew to an ear.`;
-  two play lines.
-- `fade-again`: `Again`, then a relaunch: `Stage: seed`, 37 word nodes each
-  labelled one character.
+- `fade-ear` (as `fade-nothing`): a recital with nothing gives
+  `Stage: ear`, `Grew to an ear.`; two play lines.
+- `fade-again` (tests only: `src/garden/today.test.tsx`, Again, then a new
+  plan at the seed's due): `Stage: seed`, 37 word nodes each labelled one
+  character. A second recital in one sitting needs the seed's due, which
+  no live drive waits for.
 
 ## How to get to it (user POV)
 
@@ -48,29 +53,22 @@ Nothing native changes: an incremental `sim install` of the head under
 `--app` with a build of `c65e0f162` or later (the JS comes from the dev
 server). With `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them:
 
-1. `first.md` steps 1 to 8.
-2. `fade-letters`: `first-again`'s snapshot → `Stage: seed`; 37 `word-<i>`
+1. `run.md`, Driving it, steps 1-3 (the first minute, then `run-due`).
+2. `fade-letters`: `run-due`'s snapshot → `Stage: seed`; 37 `word-<i>`
    nodes, each label exactly one character; no node holding the passage
    whole.
-3. `fade-cued`: `sim tap "label=Say it"`, then at once a raw snapshot
-   (`agent-device snapshot --json --raw --observe-only --force-full
-   --session verify-heartseed`) → `Listening`; every word node not yet lit
-   labelled with one character. Keep only counts and booleans.
-4. `fade-blade`: `sim tap "label=36 of 37 words" --timeout 30`,
-   `sim snapshot fade-blade` → `Stage: blade`, `Grew to a blade.`,
-   `Suggested: Hard`; the log holds exactly one `[growth] play` line since
-   `START`, ending `skipped=simulator`.
-5. `fade-nothing`: `sim relaunch`, `sim open / --expect "id=stage"`,
-   `sim snapshot fade-nothing` → `Stage: blade`; no word node with a label;
-   no node holding any of the passage's words; `Say it`.
-6. `fade-ear`: `sim tap "label=Say it"`, `sim tap "label=36 of 37 words"
-   --timeout 30`, `sim snapshot fade-ear` → `Stage: ear`, `Grew to an
-   ear.`; two play lines.
-7. `fade-again`: `sim tap "label=Again"`, `sim relaunch`, `sim open /
-   --expect "id=stage"`, `sim snapshot fade-again` → `Stage: seed`; 37 word
-   nodes each labelled one character.
-8. Then `grow.md` from `grow-blade` after a `sim relaunch` (its play lines
-   counted from `GROW_START`, the time it starts), and `sayit.md`.
+3. `fade-cued`: `run-listening`'s raw snapshot (`run.md` step 4) →
+   `Listening`; every word node not yet lit labelled with one character.
+   Keep only counts and booleans.
+4. `fade-blade`: `run-recite`'s snapshot → `Stage: blade`,
+   `Grew to a blade.`, `Suggested: Hard`; the log holds exactly one
+   `[growth] play` line since `START`, ending `skipped=simulator`.
+5. `fade-nothing` and `fade-ear`, only when the drive started before 16:00
+   local: `run.md` step 7. `run-second-due`'s snapshot → `Stage: blade`;
+   no word node with a label; no node holding any of the passage's words;
+   `Say it`. `run-second`'s → `Stage: ear`, `Grew to an ear.`; two play
+   lines.
+6. `fade-again`: tests only (above).
 
 The log is `grow.md`'s. Report only counts, booleans, labels of one
 character as counts, the reference, the stage and grade names. Delete the
