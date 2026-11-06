@@ -52,7 +52,7 @@ const SheetRecordJson = Schema.fromJsonString(
 /** Whether `name` is a part of the rig. */
 const isRigPart = (name: string): name is RigPart => name in PARENTS;
 
-/** A committed part sheet read as the rig reads it (`RigSheet`): `dir` its folder, `cut` its cut (each moving part's pivot in the sheet's px), `soles` the body's pivot in the cell's px (the cell's soles' centre, where today's breath stretches it from). */
+/** A committed part sheet read as the rig reads it (`RigSheet`): `dir` its folder, `cut` its cut (each part's pivot in the sheet's px), `soles` the pivot of a part the cut gives none (the cell's soles' centre, in the cell's px). */
 export const loadRigSheet = Effect.fn('Storybook.rig.loadSheet')(function* (
   dir: string,
   cut: PartCut,
@@ -74,10 +74,11 @@ export const loadRigSheet = Effect.fn('Storybook.rig.loadSheet')(function* (
   };
   const pivots: Readonly<Record<RigPart, Pt>> = {
     body: pivotOf('body'),
+    lap: pivotOf('lap'),
     head: pivotOf('head'),
     armLeft: pivotOf('armLeft'),
     armRight: pivotOf('armRight'),
-    clothSash: pivotOf('clothSash'),
+    clothSleeve: pivotOf('clothSleeve'),
   };
   const parts = yield* Effect.forEach(known, (name) =>
     Effect.gen(function* () {

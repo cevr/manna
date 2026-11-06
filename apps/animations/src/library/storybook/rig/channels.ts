@@ -1,7 +1,7 @@
 import { ease } from '../shot.ts';
 
 /** The lead's table key cut into parts (`films/in-its-order/cast/lead-table-rig/cutout/cut.ts`), by name. */
-export const RIG_PARTS = ['body', 'head', 'armLeft', 'armRight', 'clothSash'] as const;
+export const RIG_PARTS = ['body', 'lap', 'head', 'armLeft', 'armRight', 'clothSleeve'] as const;
 
 /** A part of the rig. */
 export type RigPart = (typeof RIG_PARTS)[number];
@@ -24,41 +24,94 @@ export type RigPose = Readonly<Record<RigPart, PartPose>>;
 /** The rig at rest: every channel 0, so it draws its cell as the cell is. */
 export const RIG_REST: RigPose = {
   body: STILL,
+  lap: STILL,
   head: STILL,
   armLeft: STILL,
   armRight: STILL,
-  clothSash: STILL,
+  clothSleeve: STILL,
 };
 
-/** Each part's parent: the body is the root, every other part rides it. */
+/** Each part's parent: the torso (`body`) and the lap are roots, the head and the arms ride the torso, the sleeve's hanging curve rides the raised arm. */
 export const PARENTS: Readonly<Record<RigPart, RigPart | 'none'>> = {
   body: 'none',
+  lap: 'none',
   head: 'body',
   armLeft: 'body',
   armRight: 'body',
-  clothSash: 'body',
+  clothSleeve: 'armLeft',
 };
 
+/** A follower's numbers: `lag` frames behind what it follows, `size` degrees at its fullest, and `over`, the share of `size` it swings past each turn of the breath before it settles. */
+export interface Follow {
+  readonly lag: number;
+  readonly size: number;
+  readonly over: number;
+}
+
+/** The accent's numbers for one part: its pose peaks `before` frames before the stressed word's onset at `size` degrees, after an anticipation of `anticipate` degrees the other way; it overshoots by the share `over` and settles. */
+export interface Beat {
+  readonly before: number;
+  readonly size: number;
+  readonly anticipate: number;
+  readonly over: number;
+}
+
 /**
- * The layered idle's numbers. The body breathes (stretches up about his
- * soles by `breath` at its fullest) and leans back `lean` degrees with it;
- * his head follows the lean `head.lag` frames late, `head.follow` degrees
- * at its fullest; the raised bottle hand sways `hand.sway` degrees on its
- * elbow `hand.lag` frames behind; the sash's hanging end swings
- * `cloth.swing` degrees on the knot `cloth.lag` frames behind. The accent on
- * the stressed word tilts his head `accent.head` degrees toward the bottle
- * and turns the bottle hand out `accent.hand` degrees and up `accent.lift`
- * px: a rise of `accent.rise` frames that peaks `accent.before` frames
- * before the word's onset, then a settle of `accent.settle` frames.
+ * The rig's numbers. The torso breathes: it stretches up about his belt by
+ * `breath` at its fullest (so his shoulders lift and his lap, stool and feet
+ * stay) and leans back `lean` degrees with it, on a breath with a shape: a
+ * quick inhale over `inhale` of its period, a slower exhale over `exhale`,
+ * and a rest at the bottom. His head follows the lean (`head`), the raised
+ * bottle arm sways on his shoulder a quarter breath or more behind (`hand`),
+ * each overshooting each turn and settling within `settle` frames; the
+ * sleeve's hanging curve trails the arm `cloth.lag` frames late, swinging
+ * on past it by `cloth.size` of its turn. The accent on the stressed word
+ * (`accent`): the torso leans toward the bottle first, then the bottle arm
+ * turns out, then the head tilts to it, each with an anticipation, a rise
+ * of `rise` frames, an overshoot and a settle of `fall` frames.
  */
-export const IDLE = {
-  breath: 0.008,
-  lean: 0.3,
-  head: { lag: 4, follow: 1.2 },
-  hand: { lag: 10, sway: 0.9 },
-  cloth: { lag: 7, swing: 0.9 },
-  accent: { rise: 6, before: 1, settle: 24, head: 2, hand: 1.6, lift: 3 },
-} as const;
+export interface RigNumbers {
+  readonly breath: number;
+  readonly lean: number;
+  readonly inhale: number;
+  readonly exhale: number;
+  readonly settle: number;
+  readonly head: Follow;
+  readonly hand: Follow;
+  readonly cloth: { readonly lag: number; readonly size: number };
+  readonly accent: {
+    readonly rise: number;
+    readonly fall: number;
+    readonly body: Beat;
+    readonly hand: Beat;
+    readonly head: Beat;
+  };
+}
+
+/** The rig's numbers as the prototype draws them. */
+export const IDLE: RigNumbers = {
+  breath: 0.018,
+  lean: 0.4,
+  inhale: 0.35,
+  exhale: 0.5,
+  settle: 8,
+  head: { lag: 5, size: 1, over: 0.4 },
+  hand: { lag: 30, size: 1.2, over: 0.4 },
+  cloth: { lag: 7, size: 0.6 },
+  accent: {
+    rise: 4,
+    fall: 20,
+    body: { before: 5, size: 0.4, anticipate: 0, over: 0 },
+    hand: { before: 3, size: 4, anticipate: 0.8, over: 0.15 },
+    head: { before: 2, size: 3, anticipate: 0.8, over: 0.15 },
+  },
+};
+
+/** The rig's numbers with no accent: its idle alone. */
+export const idleOnly = (n: RigNumbers): RigNumbers => {
+  const none: Beat = { before: 0, size: 0, anticipate: 0, over: 0 };
+  return { ...n, accent: { ...n.accent, body: none, hand: none, head: none } };
+};
 
 /** What the channels are read on: the film's frame rate, the stressed word's onset (shot s), and the figure's own breath, its period and its start (shot s), as its hold breathes (`shot.ts`, `breathPeriodOf`). */
 export interface RigClock {
@@ -68,39 +121,73 @@ export interface RigClock {
   readonly from: number;
 }
 
-/** The breath's fill at `t`: 0 at rest, 1 at its fullest, the hold's own phase. */
-const fillAt = (clock: RigClock, t: number): number =>
-  (1 - Math.cos((2 * Math.PI * (t - clock.from)) / clock.period)) / 2;
+/** The breath's fill at phase `u` of one breath (0 to 1): a quick inhale, a slower exhale, then rest. */
+const curveAt = (n: RigNumbers, u: number): number => {
+  if (u < n.inhale) return (1 - Math.cos((Math.PI * u) / n.inhale)) / 2;
+  return (1 + Math.cos(Math.PI * Math.min(1, (u - n.inhale) / n.exhale))) / 2;
+};
 
-/** The accent at `t`, 0 to 1: up over its rise to its peak before the stressed word, then settled back. */
-export const accentAt = (clock: RigClock, t: number): number => {
-  const { rise, before, settle } = IDLE.accent;
-  const peak = clock.stress - before / clock.fps;
-  const up = ease((t - (peak - rise / clock.fps)) / (rise / clock.fps));
-  const down = ease((t - peak) / (settle / clock.fps));
-  return up - down;
+/** The breath's fill at `t` (s): 0 at rest, 1 at its fullest, on the hold's own period and start. */
+export const fillAt = (n: RigNumbers, clock: RigClock, t: number): number => {
+  const cycles = (t - clock.from) / clock.period;
+  return curveAt(n, cycles - Math.floor(cycles));
+};
+
+/** A swing past a turn `s` frames after it, settling: 0 at the turn, out to about 0.6 and back within half of `settle`, then a smaller swing back. */
+const swingAfter = (n: RigNumbers, s: number): number => {
+  if (s <= 0) return 0;
+  return Math.exp(-(2 * s) / n.settle) * Math.sin((Math.PI * s) / (n.settle * 0.75));
+};
+
+/** The swings past the breath's two turns (its top, outward; its bottom, back) at `t` s, as a follower that turns with the breath sees them. */
+const overAt = (n: RigNumbers, clock: RigClock, t: number): number => {
+  const cycles = (t - clock.from) / clock.period;
+  const first = Math.floor(cycles) - 1;
+  return [first, first + 1].reduce((sum, c) => {
+    const top = (c + n.inhale - cycles) * clock.period * clock.fps;
+    const bottom = (c + n.inhale + n.exhale - cycles) * clock.period * clock.fps;
+    return sum + swingAfter(n, -top) - swingAfter(n, -bottom);
+  }, 0);
+};
+
+/** A follower's angle at `t` s: the breath `lag` frames late, `size` degrees at its fullest (back, so negative), with its swing past each turn. */
+const followAt = (n: RigNumbers, clock: RigClock, f: Follow, t: number): number => {
+  const late = t - f.lag / clock.fps;
+  return -f.size * (fillAt(n, clock, late) + f.over * overAt(n, clock, late));
+};
+
+/** A beat's pose at `t` s, in degrees: still, a small turn the other way, a rise of `rise` frames to `size` past which it overshoots by `over`, then the settle over `fall` frames back to 0. */
+export const beatAt = (n: RigNumbers, clock: RigClock, b: Beat, t: number): number => {
+  const s = (t - clock.stress) * clock.fps + b.before;
+  const { rise, fall } = n.accent;
+  const anticipation = Math.sin(Math.PI * Math.min(1, Math.max(0, (s + rise + 3) / 4.5)));
+  const up = ease((s + rise) / rise);
+  const overshoot = Math.sin(Math.PI * Math.min(1, Math.max(0, s / 5)));
+  const down = ease((s - 3) / fall);
+  return b.size * (up * (1 + b.over * overshoot) - down) - b.anticipate * anticipation * (1 - up);
 };
 
 /**
  * Every part's pose at `t`, a pure function of the time and the clock: the
- * body's breath and lean, the head's follow and nod, the bottle hand's sway
- * and lift, the sash's swing; the hand resting on his knee stays still.
+ * torso's breath and lean about his belt; the head's follow and its beat,
+ * carried up the torso unstretched; the bottle arm's sway and its beat, also
+ * unstretched; the sleeve's curve trailing the arm; the hand on his knee and
+ * his lap still.
  */
-export const rigPoseAt = (clock: RigClock, t: number): RigPose => {
-  const late = (frames: number) => fillAt(clock, t - frames / clock.fps);
-  const accent = accentAt(clock, t);
+export const rigPoseAt = (clock: RigClock, t: number, n: RigNumbers = IDLE): RigPose => {
+  const fill = fillAt(n, clock, t);
+  const breath = 1 + n.breath * fill;
+  const arm = (at: number) => followAt(n, clock, n.hand, at) + beatAt(n, clock, n.accent.hand, at);
   return {
-    body: { ...STILL, angle: -IDLE.lean * late(0), sy: 1 + IDLE.breath * late(0) },
+    body: { ...STILL, angle: -n.lean * fill + beatAt(n, clock, n.accent.body, t), sy: breath },
+    lap: STILL,
     head: {
       ...STILL,
-      angle: -IDLE.head.follow * late(IDLE.head.lag) + IDLE.accent.head * accent,
+      angle: followAt(n, clock, n.head, t) + beatAt(n, clock, n.accent.head, t),
+      sy: 1 / breath,
     },
-    armLeft: {
-      ...STILL,
-      angle: -IDLE.hand.sway * late(IDLE.hand.lag) + IDLE.accent.hand * accent,
-      dy: -IDLE.accent.lift * accent,
-    },
+    armLeft: { ...STILL, angle: arm(t), sy: 1 / breath },
     armRight: STILL,
-    clothSash: { ...STILL, angle: -IDLE.cloth.swing * late(IDLE.cloth.lag) },
+    clothSleeve: { ...STILL, angle: n.cloth.size * arm(t - n.cloth.lag / clock.fps) },
   };
 };

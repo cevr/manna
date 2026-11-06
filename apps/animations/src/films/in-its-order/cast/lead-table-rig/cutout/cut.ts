@@ -6,18 +6,40 @@ import { FRAMES } from './frames.ts';
 
 export { FRAMES };
 
+/** The kept view's row (its px) just under his belt's lower outline: his torso above it breathes about it, his lap below it stays. */
+const WAIST = 346;
+
 /**
- * The lead's seated `bottle` key at the table cut into five parts, front to
+ * The lead's seated `bottle` key at the table cut into six parts, front to
  * back, in the kept view's px (the cell's px less 15 across and 210 down):
- * his raised left arm (the viewer's right: the sleeve, the round hand and
- * the bottle) on its elbow at the sleeve's foot; his hanging right arm (the
- * viewer's left, its hand on his knee) on its shoulder; the sash's hanging
- * end on the knot; his head (hair, face, ears and the chin's ink) on his
- * neck under the chin; and his body, the rest (the neck, the tunic and
- * mantle, his lap, the stool and his feet).
+ * the raised sleeve's hanging lower curve below its elbow, on the sleeve; his
+ * raised left arm (the viewer's right: the sleeve, the round hand and the
+ * bottle) on his shoulder, its cut run on the mantle left of the sleeve's
+ * inner outline so the whole outline and its junction with the shoulder ride
+ * the arm; his hanging right arm (the viewer's left, its hand on his knee) on
+ * its shoulder; his head (hair, face, ears and the chin's ink) on his neck
+ * under the chin; his lap below his belt (the hanging sash, his knees, the
+ * stool and his feet); and his torso, the rest (the neck, the tunic and the
+ * mantle down to his belt), on his belt's middle.
  */
 const SINGLE_1: PartCut = {
   parts: [
+    {
+      name: 'clothSleeve',
+      take: [
+        {
+          polygon: [
+            [165, 258],
+            [FAR, 258],
+            [FAR, 310],
+            [174, 310],
+            [174, 290],
+            [165, 284],
+          ],
+        },
+      ],
+      pivot: [200, 258],
+    },
     {
       name: 'armLeft',
       take: [
@@ -29,14 +51,14 @@ const SINGLE_1: PartCut = {
             [179, 150],
             [170, 172],
             [166, 190],
-            [172.5, 200],
-            [172.5, 306],
-            [FAR, 306],
+            [165, 200],
+            [165, 258],
+            [FAR, 258],
             [FAR, 78],
           ],
         },
       ],
-      pivot: [200, 295],
+      pivot: [175, 212],
     },
     {
       name: 'armRight',
@@ -56,23 +78,6 @@ const SINGLE_1: PartCut = {
         { disc: { c: [48, 401], r: 32 } },
       ],
       pivot: [40, 230],
-    },
-    {
-      name: 'clothSash',
-      take: [
-        {
-          polygon: [
-            [87, 347],
-            [132, 347],
-            [132, 432],
-            [130, 516],
-            [93, 516],
-            [91, 432],
-            [87, 390],
-          ],
-        },
-      ],
-      pivot: [108, 346],
     },
     {
       name: 'head',
@@ -97,15 +102,16 @@ const SINGLE_1: PartCut = {
       ],
       pivot: [105, 194],
     },
-    { name: 'body', take: [box(-1, -1, FAR, FAR)] },
+    { name: 'lap', take: [box(-1, WAIST, FAR, FAR)] },
+    { name: 'body', take: [box(-1, -1, FAR, FAR)], pivot: [108, WAIST] },
   ],
 };
 
-/** What the four moving parts hide, as okra repaints it under them into his body. */
+/** What the three moving parts hide, as okra repaints it under them into his torso. */
 const HIDDEN_ENTRIES = {
   'single-1': {
-    moving: ['armLeft', 'armRight', 'clothSash', 'head'],
-    prompt: `${CUT_AWAY} four pieces were cut away to make a cut-out puppet of this young man seated on a wooden stool: his head (his hair, face and ears), his raised left arm on the viewer's right (its teal-blue sleeve, its round hand and the baby bottle it holds up), his hanging right arm on the viewer's left (its cream sleeve and the round hand resting on his knee), and the hanging end of his cream sash below the knot. Repaint ONLY the magenta areas, as what lies underneath those pieces. Behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline, in exactly the same skin colour and soft shading as his neck below. Under each arm: the side of his body from the shoulder and armpit down to the sash and his lap, closed by the same thick dark outline, in exactly the same colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle over his left shoulder on the viewer's right side), and his lap running on under where his hand rested. Under the sash's hanging end: the teal-blue mantle and the cream tunic of his lap running on exactly as they do on each side of it, the lap's dark outline running straight on across. There is no head, no arms, no bottle and no hanging sash end now: nothing magenta left. Where the magenta lay outside his body, beside his neck, his shoulders and his arms, it becomes the plain cream paper. ${KEEP_REST}`,
+    moving: ['clothSleeve', 'armLeft', 'head'],
+    prompt: `${CUT_AWAY} two pieces were cut away to make a cut-out puppet of this young man seated on a wooden stool: his head (his hair, face and ears), and his raised left arm on the viewer's right (its whole teal-blue sleeve from the shoulder down to the elbow's lower curve, its round hand and the baby bottle it holds up). Repaint ONLY the magenta areas, as what lies underneath those pieces. Behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline, in exactly the same skin colour and soft shading as his neck below. Under the raised arm: the side of his body from the shoulder and armpit down to his belt, closed by the same thick dark outline, in exactly the same teal-blue of the mantle over his left shoulder and its soft shading. There is no head, no raised arm and no bottle now: nothing magenta left. Where the magenta lay outside his body, beside his neck, his shoulder and his raised arm, it becomes the plain cream paper. ${KEEP_REST}`,
   },
 } as const satisfies Readonly<Record<keyof typeof FRAMES, HiddenEntry>>;
 

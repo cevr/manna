@@ -36,10 +36,11 @@ const SHEET: RigSheet = {
   at: [1, 0],
   pivots: {
     body: [2, 2],
+    lap: [0, 0],
     head: [2, 1],
     armLeft: [0, 0],
     armRight: [0, 0],
-    clothSash: [0, 0],
+    clothSleeve: [0, 0],
   },
   parts: [
     { name: 'head', png: rasterOf(3, [SKIN, SKIN, INK, CLEAR, CLEAR, CLEAR]) },
@@ -114,5 +115,7 @@ describe('a key cut into its parts', () => {
   it('chains a part to its parent, the body first', () => {
     expect(chainOf('head')).toEqual(['body', 'head']);
     expect(chainOf('body')).toEqual(['body']);
+    expect(chainOf('clothSleeve')).toEqual(['body', 'armLeft', 'clothSleeve']);
+    expect(chainOf('lap')).toEqual(['lap']);
   });
 });

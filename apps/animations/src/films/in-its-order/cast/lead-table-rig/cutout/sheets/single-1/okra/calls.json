@@ -15,6 +15,22 @@
       ],
       "input": "okra/input-3508f691bdba.png",
       "out": "okra/answer-1.png"
+    },
+    {
+      "n": 2,
+      "command": [
+        "okra",
+        "image",
+        "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where two pieces were cut away to make a cut-out puppet of this young man seated on a wooden stool: his head (his hair, face and ears), and his raised left arm on the viewer's right (its whole teal-blue sleeve from the shoulder down to the elbow's lower curve, its round hand and the baby bottle it holds up). Repaint ONLY the magenta areas, as what lies underneath those pieces. Behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline, in exactly the same skin colour and soft shading as his neck below. Under the raised arm: the side of his body from the shoulder and armpit down to his belt, closed by the same thick dark outline, in exactly the same teal-blue of the mantle over his left shoulder and its soft shading. There is no head, no raised arm and no bottle now: nothing magenta left. Where the magenta lay outside his body, beside his neck, his shoulder and his raised arm, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same size, position and framing, and every part that is not magenta unchanged.",
+        "--size",
+        "1024x1536",
+        "--ref",
+        "okra/input-fd426420aff4.png",
+        "-o",
+        "okra/answer-2.png"
+      ],
+      "input": "okra/input-fd426420aff4.png",
+      "out": "okra/answer-2.png"
     }
   ]
 }

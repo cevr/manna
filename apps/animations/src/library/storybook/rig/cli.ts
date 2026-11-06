@@ -7,7 +7,7 @@ import sharp from 'sharp';
 import { CELLS as LEAD_TABLE } from '../../cast/lead-feast/shot-sheets/iio-table/cells.ts';
 import { CUTS } from '../../../films/in-its-order/cast/lead-table-rig/cutout/cut.ts';
 import { filmCast, filmFolder, filmNamed, filmShot } from '../films.ts';
-import type { PaintScene } from '../painter.ts';
+import type { PaintRig, PaintScene } from '../painter.ts';
 import {
   APP,
   encodeClip,
@@ -20,6 +20,8 @@ import {
 import { breathPeriodOf, drawnKeyOf, frameAt, type Shot, startOf, timesOf } from '../shot.ts';
 import { drawnCellOf } from '../store.ts';
 import {
+  IDLE,
+  idleOnly,
   PARENTS,
   RIG_PARTS,
   RIG_REST,
@@ -29,19 +31,174 @@ import {
   rigPoseAt,
 } from './channels.ts';
 import { loadRigSheet, paintRigOf } from './load.ts';
+import { chainOf, type RigSheet } from './parts.ts';
+
+type Pt = readonly [number, number];
 
 /** JSON as the rig's records are written: two-space indented. */
 const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown, { space: 2 }));
 
-/** The film, the shot, the figure the rig draws, its rigged cell and the window: in-its-order's cold-table, from its start (`grown`) for 5 s. */
+/** The film, the shot, the figure the rig draws, its rigged cell and the windows: in-its-order's cold-table from its start (`grown`) for 5 s, and 5 s from frame `second` (the bottle key's first frame, "…his bottle. We would smile."). */
 const PROTO = {
   film: 'in-its-order',
   shot: 'cold-table',
   figure: 'lead',
   cell: 'bottle',
   seconds: 5,
+  second: 86,
   stress: 'stare',
 } as const;
+
+/** The phone's width, pt: every clip is also written at it (`clips/phone/`), each picture of a side-by-side at it. */
+const PHONE = 393;
+
+/** The points whose moves the accent is read by: his crown (the head part's topmost pixel) and the bottle's tip (the raised arm's topmost pixel). */
+const TRACKS = [
+  { name: 'crown', part: 'head' },
+  { name: 'bottle', part: 'armLeft' },
+] as const satisfies ReadonlyArray<{ readonly name: string; readonly part: RigPart }>;
+
+/** The topmost opaque pixel of a sheet's part, in the cell's px. */
+const topOf = (sheet: RigSheet, part: RigPart): Pt => {
+  const png = sheet.parts.find((p) => p.name === part)?.png;
+  const w = png?.width ?? 1;
+  const i = Array.from({ length: (png?.rgba.length ?? 0) / 4 }, (_, k) => k).find(
+    (k) => (png?.rgba[k * 4 + 3] ?? 0) >= 128,
+  );
+  return [((i ?? 0) % w) + sheet.at[0], Math.floor((i ?? 0) / w) + sheet.at[1]];
+};
+
+/** Where cell point `p` of `part` lies in pose `pose`, cell px: carried through its chain of poses about each pivot, itself first, as the painter draws it. */
+const placeOf = (sheet: RigSheet, pose: RigPose, part: RigPart, p: Pt): Pt =>
+  chainOf(part)
+    .toReversed()
+    .reduce<Pt>((q, name) => {
+      const { angle, sx, sy, dx, dy } = pose[name];
+      const pivot = sheet.pivots[name];
+      const [x, y] = [(q[0] - pivot[0]) * sx, (q[1] - pivot[1]) * sy];
+      const r = (angle * Math.PI) / 180;
+      return [
+        pivot[0] + dx + x * Math.cos(r) - y * Math.sin(r),
+        pivot[1] + dy + x * Math.sin(r) + y * Math.cos(r),
+      ];
+    }, p);
+
+/** Each tracked point's move from rest in each of `poses`, frame px (`k` frame px to a cell px), and where it lies at rest, cell px. */
+const tracksOf = (sheet: RigSheet, poses: ReadonlyArray<RigPose>, k: number) =>
+  Object.fromEntries(
+    TRACKS.map(({ name, part }) => {
+      const at = topOf(sheet, part);
+      const moves = poses.map((pose) => {
+        const q = placeOf(sheet, pose, part, at);
+        return [(q[0] - at[0]) * k, (q[1] - at[1]) * k] as const;
+      });
+      return [name, { part, at, dx: moves.map(([x]) => x), dy: moves.map(([, y]) => y) }] as const;
+    }),
+  );
+
+/** The rig's channels over the window `times` (`accept.py`'s format), from the functions it draws with: each part's pose per frame and its idle alone, and the tracked points' moves (`tracksOf`). */
+const channelsOf = (
+  sheet: RigSheet,
+  clock: RigClock,
+  times: ReadonlyArray<number>,
+  k: number,
+  read: {
+    readonly stress: number;
+    readonly drawn: readonly [number, number];
+    readonly ptPerPx: number;
+  },
+) => {
+  const poses = times.map((t) => rigPoseAt(clock, t));
+  const idle = times.map((t) => rigPoseAt(clock, t, idleOnly(IDLE)));
+  return {
+    fps: clock.fps,
+    ...read,
+    clock,
+    tracks: tracksOf(sheet, poses, k),
+    parts: Object.fromEntries(
+      RIG_PARTS.map((part) => [
+        part,
+        {
+          parent: PARENTS[part],
+          pivot: sheet.pivots[part],
+          angle: poses.map((p) => p[part].angle),
+          scale: poses.map((p) => p[part].sy),
+          dx: poses.map((p) => p[part].dx),
+          dy: poses.map((p) => p[part].dy),
+          idle: idle.map((p) => p[part].angle),
+          idleScale: idle.map((p) => p[part].sy),
+        },
+      ]),
+    ),
+  };
+};
+
+/** Half a joint crop's side, frame px: each crop is 160 px square at 1:1. */
+const JOINT = 80;
+
+/** A 1:1 crop of the frame `png` about the frame point `at`, written to `file`. */
+const cropAt = (png: Uint8Array, at: readonly [number, number], file: string) =>
+  Effect.tryPromise({
+    try: () =>
+      sharp(png)
+        .extract({
+          left: Math.max(0, Math.round(at[0] - JOINT)),
+          top: Math.max(0, Math.round(at[1] - JOINT)),
+          width: JOINT * 2,
+          height: JOINT * 2,
+        })
+        .png()
+        .toFile(file),
+    catch: (e) => StorybookFailed.make({ reason: `crop ${file}: ${String(e)}` }),
+  });
+
+/** `scene` with the prototype's figure drawn by `rig`. */
+const withRig = (scene: PaintScene, rig: PaintRig): PaintScene => ({
+  ...scene,
+  layers: scene.layers.map((l) => ({
+    ...l,
+    items: l.items.map((i) => {
+      if (i._tag === 'Figure' && i.name === PROTO.figure) return { ...i, rig };
+      return i;
+    }),
+  })),
+});
+
+/** How many pixels of two same-sized rasters differ by more than 8 in a channel. */
+const differing = (a: Raster, b: Raster): number => {
+  let n = 0;
+  for (let i = 0; i < a.width * a.height; i++)
+    for (let c = 0; c < 4; c++)
+      if (Math.abs((a.rgba[i * 4 + c] ?? 0) - (b.rgba[i * 4 + c] ?? 0)) > 8) {
+        n++;
+        break;
+      }
+  return n;
+};
+
+/** How far the sleeve is pushed past its pose to see how much of it shows in the open, degrees. */
+const CLOTH_PROBE = 8;
+
+/** How much of the sleeve shows in the open in `pose`: the pixels the frame changes by when the sleeve turns `CLOTH_PROBE` degrees further (`open`), over those the lead alone changes by (`alone`). */
+const clothSeen = Effect.fn('Storybook.rig.clothSeen')(function* (
+  draw: (pose: RigPose, only: string) => Effect.Effect<Uint8Array, StorybookFailed>,
+  pose: RigPose,
+) {
+  const pushed: RigPose = {
+    ...pose,
+    clothSleeve: { ...pose.clothSleeve, angle: pose.clothSleeve.angle + CLOTH_PROBE },
+  };
+  const [open = 0, alone = 0] = yield* Effect.forEach(
+    ['colour', `figure:${PROTO.figure}`],
+    (only) =>
+      Effect.gen(function* () {
+        const a = yield* rasterOf(yield* draw(pose, only));
+        const b = yield* rasterOf(yield* draw(pushed, only));
+        return differing(a, b);
+      }),
+  );
+  return { probe: CLOTH_PROBE, open, alone, share: open / Math.max(1, alone) };
+});
 
 /** The lead's table part sheet, cut by `concept parts` (`films/in-its-order/cast/lead-table-rig/cutout/sheets/single-1/`). */
 const SHEET = `${APP}/src/films/in-its-order/cast/lead-table-rig/cutout/sheets/single-1`;
@@ -56,8 +213,7 @@ const CHANNELS: ReadonlyArray<{
   { name: 'body-lean', part: 'body', from: (p) => p.body.angle },
   { name: 'head', part: 'head', from: (p) => p.head.angle },
   { name: 'hand', part: 'armLeft', from: (p) => p.armLeft.angle },
-  { name: 'hand-lift', part: 'armLeft', from: (p) => p.armLeft.dy },
-  { name: 'cloth', part: 'clothSash', from: (p) => p.clothSash.angle },
+  { name: 'cloth', part: 'clothSleeve', from: (p) => p.clothSleeve.angle },
 ];
 
 /** The rig with every channel at its own largest excursion over the window at once. */
@@ -70,14 +226,19 @@ const allAtOnce = (poses: ReadonlyArray<RigPose>): RigPose => {
       angle: most((p) => p.body.angle),
       sy: 1 + most((p) => p.body.sy - 1),
     },
-    head: { ...RIG_REST.head, angle: most((p) => p.head.angle) },
+    lap: RIG_REST.lap,
+    head: {
+      ...RIG_REST.head,
+      angle: most((p) => p.head.angle),
+      sy: most((p) => p.head.sy - 1) + 1,
+    },
     armLeft: {
       ...RIG_REST.armLeft,
       angle: most((p) => p.armLeft.angle),
-      dy: most((p) => p.armLeft.dy),
+      sy: most((p) => p.armLeft.sy - 1) + 1,
     },
     armRight: RIG_REST.armRight,
-    clothSash: { ...RIG_REST.clothSash, angle: most((p) => p.clothSash.angle) },
+    clothSleeve: { ...RIG_REST.clothSleeve, angle: most((p) => p.clothSleeve.angle) },
   };
 };
 
@@ -213,7 +374,15 @@ const run = Effect.fn('Storybook.rig.run')(function* (out: string, scratch: stri
   const story = yield* filmNamed(PROTO.film);
   const placed = yield* filmShot(story, PROTO.shot);
   const cast = yield* filmCast(story);
-  const shot: Shot = { ...placed.shot, duration: PROTO.seconds };
+  const shot: Shot = {
+    ...placed.shot,
+    duration: PROTO.second / placed.shot.fps + PROTO.seconds,
+  };
+  const length = PROTO.seconds * shot.fps;
+  const windows = [
+    { name: '', from: 0 },
+    { name: '-2', from: PROTO.second },
+  ] as const;
   const figure = placed.shot.layers
     .flatMap((l) => l.items)
     .find((i) => i._tag === 'Figure' && i.name === PROTO.figure);
@@ -239,19 +408,8 @@ const run = Effect.fn('Storybook.rig.run')(function* (out: string, scratch: stri
   );
   const cell = LEAD_TABLE[PROTO.cell];
   const sheet = yield* loadRigSheet(SHEET, CUTS['single-1'], [cell.ax, cell.ay]);
-  const rig = paintRigOf(sheet, keys);
-  const rigScene: PaintScene = {
-    ...scene,
-    layers: scene.layers.map((l) => ({
-      ...l,
-      items: l.items.map((i) => {
-        if (i._tag === 'Figure' && i.name === PROTO.figure) return { ...i, rig };
-        return i;
-      }),
-    })),
-  };
   const today = yield* storybookPage(scene);
-  const rigged = yield* storybookPage(rigScene);
+  const rigged = yield* storybookPage(withRig(scene, paintRigOf(sheet, keys)));
   const times = timesOf(shot);
   const frames = times.map((t) => frameAt(shot, heads, t, shares));
   const poses = times.map((t) => rigPoseAt(clock, t));
@@ -273,24 +431,30 @@ const run = Effect.fn('Storybook.rig.run')(function* (out: string, scratch: stri
     };
   };
   const dirs = {
-    today: path.join(scratch, 'today'),
-    rig: path.join(scratch, 'rig'),
     clips: path.join(out, 'clips'),
+    phone: path.join(out, 'clips', 'phone'),
     stills: path.join(out, 'stills'),
   };
-  for (const d of Object.values(dirs)) {
+  const frameDir = (name: string, w: string) => path.join(scratch, `${name}${w}`);
+  const fresh = [
+    ...Object.values(dirs),
+    ...windows.flatMap((w) => [frameDir('today', w.name), frameDir('rig', w.name)]),
+  ];
+  for (const d of fresh) {
     yield* fs.remove(d, { recursive: true, force: true });
     yield* fs.makeDirectory(d, { recursive: true });
   }
   for (const [i] of times.entries()) {
-    yield* fs.writeFile(
-      path.join(dirs.today, frameName(i)),
-      yield* today(requestOf(frames[i] ?? frameAt(shot, heads, 0, shares), 'colour')),
-    );
-    yield* fs.writeFile(
-      path.join(dirs.rig, frameName(i)),
-      yield* rigged(posedReq(i, poses[i] ?? RIG_REST, 'colour')),
-    );
+    const pictures = {
+      today: yield* today(requestOf(frames[i] ?? frameAt(shot, heads, 0, shares), 'colour')),
+      rig: yield* rigged(posedReq(i, poses[i] ?? RIG_REST, 'colour')),
+    };
+    for (const w of windows.filter((w) => i >= w.from && i < w.from + length))
+      for (const name of ['today', 'rig'] as const)
+        yield* fs.writeFile(
+          path.join(frameDir(name, w.name), frameName(i - w.from)),
+          pictures[name],
+        );
   }
   yield* Console.log(
     `rig: ${times.length} frames each, the rig drawn on ${first}..${drawn.at(-1)}`,
@@ -332,7 +496,6 @@ const run = Effect.fn('Storybook.rig.run')(function* (out: string, scratch: stri
     })),
     { name: 'all', part: 'body' satisfies RigPart, at: first, pose: all },
   ];
-  const JOINT = 80;
   const holes = [];
   for (const s of shots) {
     const png = yield* rigged(posedReq(s.at, s.pose, 'colour'));
@@ -340,52 +503,39 @@ const run = Effect.fn('Storybook.rig.run')(function* (out: string, scratch: stri
     const alone = yield* rasterOf(yield* rigged(posedReq(s.at, s.pose, `figure:${PROTO.figure}`)));
     const rest = yield* rasterOf(yield* rigged(posedReq(s.at, RIG_REST, `figure:${PROTO.figure}`)));
     holes.push({ still: `extreme-${s.name}.png`, frame: s.at, ...holeCounts(rest, alone) });
-    const joints = RIG_PARTS.filter((p) => p !== 'body' && p !== 'armRight').filter(
+    const joints = RIG_PARTS.filter((p) => p !== 'armRight' && p !== 'lap').filter(
       (p) => s.name === 'all' || p === s.part,
     );
-    for (const part of joints) {
-      const [x, y] = toFrame(sheet.pivots[part]);
-      const left = Math.max(0, Math.round(x - JOINT));
-      const top = Math.max(0, Math.round(y - JOINT));
-      yield* Effect.tryPromise({
-        try: () =>
-          sharp(png)
-            .extract({ left, top, width: JOINT * 2, height: JOINT * 2 })
-            .png()
-            .toFile(
-              path.join(
-                dirs.stills,
-                `joint-${part}-${[String(s.at), 'all'][Number(s.name === 'all')]}.png`,
-              ),
-            ),
-        catch: (e) => StorybookFailed.make({ reason: `crop ${part}: ${String(e)}` }),
-      });
-    }
+    yield* Effect.forEach(joints, (part) =>
+      cropAt(
+        png,
+        toFrame(sheet.pivots[part]),
+        path.join(
+          dirs.stills,
+          `joint-${part}-${[String(s.at), 'all'][Number(s.name === 'all')]}.png`,
+        ),
+      ),
+    );
   }
-  const stressFrame = times.findIndex((t) => t >= clock.stress - 1e-6);
-  const channels = {
-    fps: shot.fps,
+  const clothAt = extremes.find((e) => e.part === 'clothSleeve')?.at ?? first;
+  const cloth = yield* clothSeen(
+    (pose, only) => rigged(posedReq(clothAt, pose, only)),
+    poses[clothAt] ?? RIG_REST,
+  );
+  yield* Console.log(
+    `rig: the sleeve shows in the open on ${cloth.open} of ${cloth.alone} px it moves (frame ${clothAt})`,
+  );
+  const window = times.slice(0, length);
+  const stressFrame = window.findIndex((t) => t >= clock.stress - 1e-6);
+  const channels = channelsOf(sheet, clock, window, k, {
     stress: stressFrame,
-    drawn: [first, drawn.at(-1) ?? first],
-    clock,
-    parts: Object.fromEntries(
-      RIG_PARTS.map((part) => [
-        part,
-        {
-          parent: PARENTS[part],
-          pivot: sheet.pivots[part],
-          angle: poses.map((p) => p[part].angle),
-          scale: poses.map((p) => p[part].sy),
-          dx: poses.map((p) => p[part].dx),
-          dy: poses.map((p) => p[part].dy),
-        },
-      ]),
-    ),
-  };
+    drawn: [first, Math.min(length - 1, drawn.at(-1) ?? first)],
+    ptPerPx: PHONE / restAlone.width,
+  });
   yield* fs.writeFileString(path.join(out, 'channels.json'), `${jsonOf(channels)}\n`);
   yield* fs.writeFileString(
     path.join(out, 'holes.json'),
-    `${jsonOf({ extremes: extremes.map(({ from: _, ...e }) => e), holes, mapping: { box, k } })}\n`,
+    `${jsonOf({ extremes: extremes.map(({ from: _, ...e }) => e), holes, cloth: { frame: clothAt, ...cloth }, mapping: { box, k } })}\n`,
   );
   const voice = placed.scene.voice.file ?? '';
   const audio = path.join(path.dirname(story.timings), voice);
@@ -393,9 +543,30 @@ const run = Effect.fn('Storybook.rig.run')(function* (out: string, scratch: stri
   yield* Console.log(
     `rig: sound ${voice} from ${offset.toFixed(3)} s; stress at frame ${stressFrame}`,
   );
+  const labels = path.join(scratch, 'labels');
+  yield* fs.makeDirectory(labels, { recursive: true });
+  for (const name of ['today', 'rig'] as const)
+    yield* fs.writeFile(path.join(labels, `${name}.png`), yield* labelPng(name));
+  for (const w of windows)
+    yield* clipsOf(dirs, frameDir, labels, audio, shot.fps, w, offset + w.from / shot.fps);
+  yield* Console.log(`rig: wrote ${out}`);
+});
+
+/** A window's clips: today and the rig with the take's sound from `offset` s, the two side by side, each again at the phone's width. */
+const clipsOf = Effect.fn('Storybook.rig.clips')(function* (
+  dirs: { readonly clips: string; readonly phone: string },
+  frameDir: (name: string, w: string) => string,
+  labels: string,
+  audio: string,
+  fps: number,
+  w: { readonly name: string },
+  offset: number,
+) {
+  const path = yield* Path.Path;
+  const clip = (name: string) => path.join(dirs.clips, `${name}${w.name}.mp4`);
   for (const name of ['today', 'rig'] as const) {
-    const silent = path.join(scratch, `${name}.mp4`);
-    yield* encodeClip(dirs[name], shot.fps, silent);
+    const silent = path.join(path.dirname(frameDir(name, w.name)), `${name}${w.name}.mp4`);
+    yield* encodeClip(frameDir(name, w.name), fps, silent);
     yield* ffmpeg([
       '-i',
       silent,
@@ -416,18 +587,14 @@ const run = Effect.fn('Storybook.rig.run')(function* (out: string, scratch: stri
       '-b:a',
       '192k',
       '-shortest',
-      path.join(dirs.clips, `${name}.mp4`),
+      clip(name),
     ]);
   }
-  const labels = path.join(scratch, 'labels');
-  yield* fs.makeDirectory(labels, { recursive: true });
-  for (const name of ['today', 'rig'] as const)
-    yield* fs.writeFile(path.join(labels, `${name}.png`), yield* labelPng(name));
   yield* ffmpeg([
     '-i',
-    path.join(dirs.clips, 'today.mp4'),
+    clip('today'),
     '-i',
-    path.join(dirs.clips, 'rig.mp4'),
+    clip('rig'),
     '-i',
     path.join(labels, 'today.png'),
     '-i',
@@ -446,9 +613,28 @@ const run = Effect.fn('Storybook.rig.run')(function* (out: string, scratch: stri
     'yuv420p',
     '-c:a',
     'copy',
-    path.join(dirs.clips, 'side-by-side.mp4'),
+    clip('side-by-side'),
   ]);
-  yield* Console.log(`rig: wrote ${out}`);
+  for (const [name, width] of [
+    ['today', PHONE],
+    ['rig', PHONE],
+    ['side-by-side', PHONE * 2],
+  ] as const)
+    yield* ffmpeg([
+      '-i',
+      clip(name),
+      '-vf',
+      `scale=${width}:-2:flags=area,pad=ceil(iw/2)*2:ih:0:0:0xfdf7e5`,
+      '-c:v',
+      'libx264',
+      '-crf',
+      '16',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'copy',
+      path.join(dirs.phone, `${name}${w.name}.mp4`),
+    ]);
 });
 
 // oxlint-disable-next-line effect/noGlobals -- the prototype's command line: the unit dir it writes and the scratch dir for its frames
