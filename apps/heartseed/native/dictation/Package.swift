@@ -10,6 +10,6 @@ import PackageDescription
 
 let package = Package(
   name: "dictation",
-  platforms: [.iOS(.v17)],
+  platforms: [.iOS("18.0")],
   targets: [.target(name: "dictation", path: ".", exclude: ["Package.swift"])]
 )
