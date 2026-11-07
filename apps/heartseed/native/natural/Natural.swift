@@ -95,6 +95,8 @@ struct NaturalFailure: LocalizedError {
   private var listener: ((NaturalEvent) -> Void)?
   private var installListener: ((NaturalInstallEvent) -> Void)?
   private let crashed: Bool
+  private var installTask: Task<Void, Never>?
+  private var installToken = 0
 
   init() {
     let marker = NaturalFolder.marker
@@ -106,31 +108,69 @@ struct NaturalFailure: LocalizedError {
   }
 
   func status(_ revision: String, _ files: [NaturalFile]) async -> NaturalStatus {
-    let manager = FileManager.default
-    let present = files.filter { file in
-      let url = NaturalFolder.file(revision, file.path)
-      let size = (try? manager.attributesOfItem(atPath: url.path)[.size] as? Int) ?? nil
-      return size == file.bytes
-    }
+    let present = files.filter { NaturalInstall.present(revision, $0) }
     let excluded =
       (try? NaturalFolder.root.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup)
       ?? nil
     let memory = NaturalMemory.read()
     return NaturalStatus(
       revision: revision, files: present.count, bytes: NaturalFolder.bytes(), excluded: excluded ?? false,
-      crashed: crashed, loaded: false, installing: false, footprint: memory.footprint, peak: memory.peak)
+      crashed: crashed, loaded: false, installing: installTask != nil, footprint: memory.footprint, peak: memory.peak)
   }
 
+  /// Starts the pinned download and returns; a call while one runs does
+  /// nothing. Its steps arrive through `onInstall`.
   func install(_ base: String, _ revision: String, _ files: [NaturalFile]) {
-    NSLog("%@", "[natural] install not yet")
+    guard installTask == nil else { return }
+    installToken += 1
+    let token = installToken
+    let emit: @Sendable (NaturalInstallEvent) -> Void = { [weak self] event in
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated { self?.emitInstall(token, event) }
+      }
+    }
+    let total = files.reduce(0) { $0 + $1.bytes }
+    installTask = Task.detached { [weak self] in
+      let failure = await NaturalInstall.run(base: base, revision: revision, files: files, emit: emit)
+      NSLog("%@", failure.map { "[natural] install failed reason=\($0.rawValue)" } ?? "[natural] install done")
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated { self?.installEnded(token, failure, total) }
+      }
+    }
   }
 
   func cancelInstall() {
-    NSLog("%@", "[natural] cancelInstall not yet")
+    installTask?.cancel()
   }
 
+  /// Cancels a download, waits for it to let go of its files, and deletes
+  /// the natural folder whole.
   func remove() async throws {
-    throw NaturalFailure(message: "not yet")
+    if let task = installTask {
+      task.cancel()
+      await task.value
+    }
+    let manager = FileManager.default
+    guard manager.fileExists(atPath: NaturalFolder.root.path) else { return }
+    do {
+      try manager.removeItem(at: NaturalFolder.root)
+    } catch {
+      throw NaturalFailure(message: "remove failed: \(error.localizedDescription)")
+    }
+  }
+
+  private func emitInstall(_ token: Int, _ event: NaturalInstallEvent) {
+    guard token == installToken, installTask != nil else { return }
+    installListener?(event)
+  }
+
+  private func installEnded(_ token: Int, _ failure: NaturalInstallFailure?, _ total: Int) {
+    guard token == installToken else { return }
+    installTask = nil
+    let event =
+      failure.map { NaturalInstallEvent(kind: .failed, bytes: 0, total: total, reason: $0.rawValue) }
+      ?? NaturalInstallEvent(kind: .done, bytes: total, total: total, reason: "")
+    installListener?(event)
   }
 
   func load(_ revision: String, _ files: [NaturalFile]) async throws -> Double {
