@@ -168,6 +168,12 @@ Heartseed has no journey files yet. The features:
   module, built with the app and its prompts, and its scripted replay on
   the development probe (`apps/heartseed/app/probe/dictation.tsx`). Say it
   calls it on Today.
+- [features/natural.md](features/natural.md): the natural voice's native
+  module (Kokoro-82M), built for iOS 18, on its development probe
+  (`apps/heartseed/app/probe/natural.tsx`) over the local model server:
+  the checked download, a corrupt file and a lost server, a read's lit
+  words (silent on the simulator), the crash marker and the remove. No
+  screen a reader sees calls it yet.
 - [features/fade.md](features/fade.md): cues that fade by stage on Today:
   the passage in first letters at a seed, nothing at a blade, and a recital
   said under that cue; Again brings the letters back. Its rows are steps
@@ -255,5 +261,7 @@ and Heartseed's values and refusals in `apps/heartseed/scripts/sim.test.ts`.
 ## Hosts
 
 - **The laptop** (macOS): iOS. This skill uses ports 8280-8289 only; the
-  hymnal's are 8270-8279 and the owner's previews hold 8191 and 8095.
+  hymnal's are 8270-8279 and the owner's previews hold 8191 and 8095. The
+  natural voice's model server (`natural:serve`,
+  [features/natural.md](features/natural.md)) takes another free port of 8280-8289 than the dev server's.
 - **The Workbox** (Linux): no iOS simulator, so no drive there.
