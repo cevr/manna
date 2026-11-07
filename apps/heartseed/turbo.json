@@ -793,7 +793,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
-        "!src/natural/{data,guard,lexicon,manifest,plan.property}.test.*",
+        "!src/natural/{data,guard,lexicon,manifest,plan.property,probe}.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
     },

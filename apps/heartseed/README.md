@@ -1103,8 +1103,12 @@ sees, are not here yet.
     durations that do not fit); and `src/natural/data.test.ts`, the
     committed data: the vocab's pinned hash, the list's bytes as the
     generator last wrote them, its keys sorted and unique, and every
-    phoneme and override spoken in the vocab. It leaves out
-    `src/natural/voice.test.ts`, which is its own part.
+    phoneme and override spoken in the vocab; and
+    `src/natural/probe.test.ts`, the probe's lines, a read's tally over
+    seeded views (order ok only for each word lit once, in order, to a
+    finish), the soak's count and tally, and one soaked verse over a
+    stand-in module. It leaves out `src/natural/voice.test.ts`, which is
+    its own part.
   - `test:natural-voice`: `src/natural/voice.test.ts`, the natural voice's
     `VoiceSource` against a model written in the test, over 300 seeded
     histories of a stand-in module that answers each load and render when
@@ -1117,8 +1121,11 @@ sees, are not here yet.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
     (Heartseed's `sim` over a stand-in Drive: its values, the web and a
     port outside 8280-8289 refused before any step, and `install` waiting
-    for Today's reference) and `vite/kjv.test.ts` (the corpus's derivation
-    and its build faults, and the plugin's two modules).
+    for Today's reference), `scripts/natural-serve.test.ts` (the model
+    server over a fake cache on a port the system picks, with no network:
+    the fill, `GET`, `HEAD`, 404 and `--corrupt`) and `vite/kjv.test.ts`
+    (the corpus's derivation and its build faults, and the plugin's two
+    modules).
 
   Run one with `bun run test:<part>` here, or all with `bun run test
   --filter=@manna/heartseed` at the repository root. A new test file at the
