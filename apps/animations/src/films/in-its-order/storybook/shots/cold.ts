@@ -1,6 +1,6 @@
 import type { FilmShot, Over } from '../../../../library/storybook/scene.ts';
 import { Option } from 'effect';
-import { fonts, palette } from '../../palette.ts';
+import { palette } from '../../palette.ts';
 import {
   BLINK,
   blinkingHold,
@@ -23,6 +23,7 @@ import {
   camerasOf,
   drawScaleOf,
   holds,
+  type Ink,
   inkLines,
   key,
   layer,
@@ -450,27 +451,40 @@ const twoShot = (
   ],
 });
 
+/** Where cold-ask's push ends, layer px: in on the lead's face, the man still whole at the frame's left, the enlarging cap kept (his two-shot sheet at 0.44 × 3.36 is under 1.5). */
+export const ASK_PUSH = { x: 905, y: 880, zoom: TWO_SHOT.zoom * 1.12 } as const;
+
 /**
  * `cold-ask`, `what` to `why`: back to the two-shot, the letter and the
  * bottle on the table where cold-ouch left them, the lead looking up to
- * the viewer, brows raised, asking the film's question with his face
- * (critique 1, finding 4: the question on a face, not on a still life);
- * the man beside him, still staring at the letter, turns to the viewer too
- * on "milk".
+ * the viewer, asking the film's question with his face (critique 1,
+ * finding 4: the question on a face, not on a still life); the man beside
+ * him keeps his puzzled stare, brows raised, on the letter, never a smile
+ * on the question (critique 2, finding 3). The camera pushes in on the
+ * lead's face through the whole shot.
  */
 export const coldAsk: FilmShot = {
   id: 'cold-ask',
   span: { mark: 'what', until: 'why' },
   cues: {
-    turn: { mark: 'what', word: 'milk', dur: 0.3 },
+    push: { mark: 'what', until: 'why' },
   },
-  build: ({ duration, cue }) =>
-    twoShot(
+  build: ({ duration, cue }) => {
+    const body = twoShot(
       duration,
-      guestSpans('man', 'stare', [[cue('turn').start, 'neutral']], duration),
+      [hold(0, duration, 'stare')],
       [hold(0, duration, 'ask')],
       [letterOn([[0, key({})]]), bottleOnTable()],
-    ),
+    );
+    const push = cue('push');
+    return {
+      ...body,
+      camera: [
+        cam(push.start, TWO_SHOT.x, TWO_SHOT.y, TWO_SHOT.zoom),
+        cam(push.end, ASK_PUSH.x, ASK_PUSH.y, ASK_PUSH.zoom),
+      ],
+    };
+  },
 };
 
 /** The rollers' length across, ink ends and all, of the scroll he holds in his table sheet's `read` cell, in its px: its lower roller's 97 px of his hair's brown (rows 471 to 484, from x 6) and its ink at each end. */
@@ -532,36 +546,34 @@ export const LETTER_LIFT = (() => {
   return { x: x - LETTER_AT[0], y: y - (LETTER_AT[1] - middle) };
 })();
 
-/** The rolled scroll falling from above the frame onto the table before him over `fall`, hopping once over `hop`, lying there until `lift` starts, and rising alone, no hand drawn on it, to his reading hand's place by `lift`'s end, the swap of his key that takes it up, so it reads as snatched up: from that frame his hand holds it open, so the plate is gone. */
-export const letterLands = (
-  fall: { readonly start: number; readonly end: number },
-  hop: { readonly start: number; readonly end: number },
-  lift: { readonly start: number; readonly end: number },
-): Plate =>
+/** How far below where it lies on the table the rolled scroll starts its rise, layer px: its whole height and a margin, so the table before him hides it until it comes up. */
+const RISE_FROM = SCROLL_ROLLED.size[1] * LETTER_SCALE + 12;
+
+/** The rolled scroll brought up from his lap behind the table's edge over `lift`, no hand drawn on it, to his reading hand's place by `lift`'s end, the swap of his key that takes it up: from that frame his hand holds it open, so the plate is gone. Before `lift` it shows nowhere, so one scroll is in the shot at every frame it shows. */
+export const letterRises = (lift: { readonly start: number; readonly end: number }): Plate =>
   letterOn([
-    [fall.start, key({ y: -700, alpha: 0 })],
-    [fall.start, key({ y: -700 })],
-    [fall.end, key({})],
-    [hop.start + (hop.end - hop.start) / 2, key({ y: -18 })],
-    [hop.end, key({})],
-    [lift.start, key({})],
+    [lift.start, key({ y: RISE_FROM, alpha: 0 })],
+    [lift.start, key({ y: RISE_FROM })],
     [lift.end, key({ x: LETTER_LIFT.x, y: LETTER_LIFT.y })],
     [lift.end, key({ x: LETTER_LIFT.x, y: LETTER_LIFT.y, alpha: 0 })],
   ]);
 
-/** cold-letter's camera, layer px: where it opens on the three at the table as the scroll falls (the guests' faces and the table top in frame, the wide row not: critique 1, finding 2), where it has eased in to once he holds the letter, and where its push toward the letter and his face ends, at the cut. */
+/** cold-letter's camera, layer px: the three at the table and the old man between them behind (the guests' faces, his and the table top in frame; the wide row not: critique 2, finding 2), where it has eased in to once he holds the letter, and where its push toward the letter and his face ends, at the cut; its zoom held so his table sheet stays inside the 1.5× enlarging cap. */
 export const LETTER = {
-  from: { x: 955, y: 860, zoom: 2.4 },
-  held: { x: 950, y: 856, zoom: 2.5 },
-  to: { x: 930, y: 850, zoom: 2.75 },
+  from: { x: 948, y: 872, zoom: 2.6 },
+  held: { x: 945, y: 870, zoom: 2.66 },
+  to: { x: 936, y: 864, zoom: 2.8 },
 } as const;
 
+/** The diners cold-letter shows behind the three at the table: the old man (diner 3) alone, between the man and the lead, so the row does not come back after the two-shot (critique 2, finding 2). */
+export const LETTER_DINERS = ['diner-3'] as const;
+
 /**
- * `cold-letter`, `letter` to `quote`: a rolled scroll falls onto the table
- * before the lead, who holds the bottle at his chest where he tucked it,
- * and hops; the guests turn to stare at it, and it rises alone from the
- * table to where his free hand will hold it, a snatch (the owner, scrawl
- * 0:21): from the swap he reads the letter, open in one hand, the bottle's
+ * `cold-letter`, `letter` to `quote`: the three at the table, the lead
+ * holding the bottle at his chest where he tucked it; on "letters" he
+ * brings a rolled scroll up from his lap behind the table's edge into his
+ * free hand (the one scroll of the scene), and the guests turn to stare at
+ * it: from the swap he reads the letter, open in one hand, the bottle's
  * teat at his mouth in the other, his lids half down on the scroll, to the
  * cut to the letter itself (`cold-scroll`). From the take the camera pushes
  * in toward the letter and his face.
@@ -570,13 +582,10 @@ export const coldLetter: FilmShot = {
   id: 'cold-letter',
   span: { mark: 'letter', until: 'quote' },
   cues: {
-    fall: { mark: 'letter', offset: 0.4, dur: 0.45 },
-    hop: { after: 'cold-letter:fall', dur: 0.24 },
-    take: { after: 'cold-letter:hop', offset: 0.15, dur: 0.5 },
-    stare: { mark: 'letter', offset: 0.3, dur: 0.3 },
-    stared: { mark: 'letter', offset: 0.45, dur: 0.3 },
+    take: { mark: 'letter', word: 'letters', dur: 0.8 },
+    stare: { mark: 'letter', word: 'letters', offset: 0.1, dur: 0.3 },
+    stared: { mark: 'letter', word: 'letters', offset: 0.25, dur: 0.3 },
     read: { after: 'cold-letter:take', until: 'quote' },
-    talk: { mark: 'letter', word: 'letters', dur: 1.2 },
   },
   build: ({ duration, cue }) => {
     const { from, held, to } = LETTER;
@@ -590,7 +599,7 @@ export const coldLetter: FilmShot = {
       ],
       layers: [
         ...backdrop(),
-        dinersLayer(new Map([[4, [cue('talk').start, cue('talk').end]]] as const), duration),
+        dinersLayer(new Map(), duration, LETTER_DINERS),
         layer('table', Z.table, [
           ...guests(
             guestSpans('man', 'smile', [[cue('stare').start, 'stare']], duration),
@@ -601,8 +610,8 @@ export const coldLetter: FilmShot = {
             take,
             hold(cue('take').end, duration, 'read'),
           ]),
+          letterRises({ start: take.at, end: swapOf(take) }),
           table(),
-          letterLands(cue('fall'), cue('hop'), { start: take.at, end: swapOf(take) }),
         ]),
       ],
     };
@@ -657,14 +666,13 @@ export const coldScroll: FilmShot = {
   }),
 };
 
-/** The verse's ink on the parchment: the hand's face, at its size on the scroll's plane. */
-const SCROLL_INK = {
-  family: fonts.hand,
+/** The verse's ink on the parchment: the hand's size on the scroll's plane (`inkLines` sets its face). */
+const SCROLL_INK: Ink = {
   size: 84,
   weight: 700,
   color: palette.ink,
   align: 'center',
-} as const;
+};
 
 /** Heb 5:12 in ink on the scroll's parchment in cold-scroll, the film's own lettering in strokes: written from the quote's first word over `write`, then held whole to the cut. It follows cold-scroll's push, inside the parchment's frame box. */
 export const LETTER_QUOTE: Over = {

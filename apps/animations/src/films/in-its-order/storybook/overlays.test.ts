@@ -1,16 +1,25 @@
+import * as BunServices from '@effect/platform-bun/BunServices';
+import { clamp, ease } from '@manna/film/core';
+import { Effect, Layer } from 'effect';
 import { describe, expect, test } from 'effect-bun-test';
+import { filmFolder, type PlacedShot, shotsOf } from '../../../library/storybook/films.ts';
 import type { Over, PaintingFrame } from '../../../library/storybook/scene.ts';
+import { timesOf } from '../../../library/storybook/shot.ts';
+import { fonts } from '../palette.ts';
 import { script } from '../script.ts';
 import { GRID } from './grid.ts';
+import { inItsOrder } from './index.ts';
 import { LETTER_WORDS } from './shots/cold.ts';
 import { BOOK_WORDS, milkPour, PRESENT } from './shots/milk.ts';
 import { COLD_STORY, MILK_STORY, STORIES, TITLE_STORY } from './stories.ts';
 
-/** One glyph a drawing over a shot put down: its character and its centre on the frame. */
+/** One glyph a drawing over a shot put down: its character, its centre on the frame, how much of it the pen has written (its write clip's share of its width, 1 when unclipped), and the font it is set in. */
 interface Glyph {
   readonly ch: string;
   readonly x: number;
   readonly y: number;
+  readonly shown: number;
+  readonly font: string;
 }
 
 /** What a drawing over a shot did on one frame: the glyphs it lettered, the hands it lettered them with, and the fills it laid. */
@@ -38,13 +47,16 @@ const [W, H] = [GRID.size.width, GRID.size.height];
 
 /**
  * A context that draws nothing and records each glyph `write` lays (its
- * centre: the translate it lays it at), tracking translate and scale; a
- * glyph's width is half its type's size.
+ * centre: the translate it lays it at; the share of its width its write
+ * clip shows, the clip `write` lays from half its width and 4 px left of
+ * its centre; and its font), tracking translate and scale; a glyph's width
+ * is half its type's size.
  */
 const recording = (drawn: Drawn) => {
   const stack: Array<readonly [number, number, number, number]> = [];
   let m: readonly [number, number, number, number] = [1, 1, 0, 0];
   let font = '';
+  let shown = 1;
   let path: Array<readonly [number, number]> = [];
   const sizeOf = () => Number(/(\d+(?:\.\d+)?)px/.exec(font)?.[1] ?? 0);
   return {
@@ -72,7 +84,9 @@ const recording = (drawn: Drawn) => {
       drawn.fills.n += 1;
     },
     stroke: () => drawn.strokes.push(path),
-    rect: () => {},
+    rect: (x: number, _y: number, w: number) => {
+      shown = [1, w / (-2 * x)][Number(x < 0)] ?? 1;
+    },
     clip: () => {},
     fillRect: () => {
       drawn.fills.n += 1;
@@ -84,7 +98,8 @@ const recording = (drawn: Drawn) => {
       actualBoundingBoxDescent: sizeOf() * 0.2,
     }),
     fillText: (ch: string) => {
-      drawn.glyphs.push({ ch, x: m[2], y: m[3] });
+      drawn.glyphs.push({ ch, x: m[2], y: m[3], shown, font });
+      shown = 1;
     },
     strokeText: () => {},
     get font() {
@@ -166,7 +181,74 @@ const QUOTES = [
   },
 ] as const;
 
+// oxlint-disable-next-line effect/noAsyncFunction -- read once at module evaluation, so no case pays the read inside its time limit (film/no-lazy-test-fixture)
+const placed = await Effect.runPromise(
+  shotsOf(inItsOrder).pipe(
+    Effect.provide([filmFolder.pipe(Layer.provide(BunServices.layer)), BunServices.layer]),
+  ),
+);
+
+/** How far each cue of a laid-out shot's scene has run at the shot's own time `t`, eased as the film's frame eases it (`cueProgress`): what the film hands a drawing over the shot as `f.at`. */
+const cuesAt =
+  (p: PlacedShot, t: number) =>
+  (name: string): number => {
+    const c = p.scene.cues.get(name);
+    if (!c) return 0;
+    const now = (p.shot.from ?? 0) + t;
+    if (c.dur <= 0) return Number(now >= c.start);
+    return ease[c.ease](clamp((now - c.start) / c.dur));
+  };
+
+/** What `over` draws at each frame of its laid-out shot, as the film draws it there: each frame's time and the glyphs it lettered. */
+const framesOf = (over: Over, p: PlacedShot) =>
+  timesOf(p.shot).map((t) => ({ t, glyphs: drawnBy(over, cuesAt(p, t), t).glyphs }));
+
 describe("In Its Order's drawings over its shots", () => {
+  test('holds each lettered verse whole on its insert at least 0.25 s a word before the cut, read on the drawing at every frame of its laid-out shot (every glyph down and wholly written), its writing starting on the verse’s first word, the shot’s first frame (orchestrator ruling, round 2: 1 Pet 2:2 ≥ 3.75 s whole; verifier r2, M1)', () => {
+    const short = QUOTES.flatMap(({ story, shot, lines }) => {
+      const over = story.over.find((o) => o.shot === shot);
+      const p = placed.find((q) => q.shot.id === shot);
+      if (!over || !p) return [`${shot}: no drawing over it, or no shot`];
+      const all = drawnBy(over, () => 1).glyphs.length;
+      const frames = framesOf(over, p).map(({ t, glyphs }) => ({
+        t,
+        some: glyphs.length > 0,
+        whole: glyphs.length === all && glyphs.every((g) => g.shown >= 1),
+      }));
+      const firstInk = frames.find((f) => f.some)?.t ?? Number.POSITIVE_INFINITY;
+      const whole = frames.findLastIndex((f) => !f.whole);
+      const from = frames[whole + 1]?.t ?? p.shot.duration;
+      const words = lines
+        .slice(0, -1)
+        .flatMap((l) => l.text.split(/\s+/))
+        .filter((w) => w !== '').length;
+      const held = p.shot.duration - from;
+      return [
+        ...[`${shot}: first ink at ${firstInk.toFixed(2)} s`].filter(
+          () => firstInk > 1 / p.shot.fps + 1e-6,
+        ),
+        ...[`${shot}: whole ${held.toFixed(2)} s for ${words} words`].filter(
+          () => held < 0.25 * words,
+        ),
+      ];
+    });
+    expect(short).toEqual([]);
+  });
+
+  test('sets every glyph of both verses in the film’s inked hand, never the cards’ serif, at every frame of its laid-out shot (the orchestrator’s round-2 ruling: “lettered in an inked hand (not the cards’ serif)”; verifier r2, M2)', () => {
+    const wrong = QUOTES.flatMap(({ story, shot }) => {
+      const over = story.over.find((o) => o.shot === shot);
+      const p = placed.find((q) => q.shot.id === shot);
+      if (!over || !p) return [`${shot}: no drawing over it, or no shot`];
+      const faces = new Set(framesOf(over, p).flatMap(({ glyphs }) => glyphs.map((g) => g.font)));
+      return [
+        ...[`${shot}: no glyph`].filter(() => faces.size === 0),
+        ...[...faces].filter((f) => !f.includes(`"${fonts.hand}"`)).map((f) => `${shot}: ${f}`),
+      ];
+    });
+    expect(wrong).toEqual([]);
+  });
+
   test('lays no card in act 1: the quotes come off the black cards (the owner, ask a11de5e2b65)', () => {
     expect(STORIES.map((s) => s.cards.length)).toEqual([0, 0, 0]);
   });

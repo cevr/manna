@@ -1,6 +1,6 @@
 import { unprobed } from '@manna/film/canvas';
 import type { FilmShot, Over } from '../../../../library/storybook/scene.ts';
-import { fonts, palette } from '../../palette.ts';
+import { palette } from '../../palette.ts';
 import { ease, hold, type Plate, type Span, turn } from '../../../../library/storybook/shot.ts';
 import { BOOK_OPEN, BOOK_SHUT, PAGE } from '../../plates/milk.ts';
 import {
@@ -11,6 +11,7 @@ import {
   camerasOf,
   type Framing,
   holds,
+  type Ink,
   inkLines,
   key,
   layer,
@@ -182,14 +183,13 @@ export const milkBook: FilmShot = {
   }),
 };
 
-/** The verse's ink on the pages: the hand's face, at its size on the pages' plane. */
-export const INK = {
-  family: fonts.hand,
+/** The verse's ink on the pages: the hand's size on the pages' plane (`inkLines` sets its face). */
+export const INK: Ink = {
   size: 70,
   weight: 700,
   color: palette.ink,
   align: 'center',
-} as const;
+};
 
 /** 1 Pet 2:2 as it is lettered on the two pages, left then right, layer px, and its reference under the right page's lines. */
 export const BOOK_WORDS = [
@@ -256,28 +256,50 @@ const CUP_DEPTH = 52;
 
 /** milk-pour's camera: a slight drift in while the stream runs and the dropper comes, then a push in on the cup from `word` to `good`, held on the full cup. */
 export const POUR_PATH: CameraPath = [
-  ['drift', { x: 960, y: 540, zoom: 1 }, { x: 930, y: 560, zoom: 1.05 }],
-  ['push', { x: 930, y: 560, zoom: 1.05 }, { x: 880, y: 600, zoom: 1.1 }],
+  ['drift', { x: 960, y: 540, zoom: 1 }, { x: 915, y: 566, zoom: 1.06 }],
+  ['push', { x: 915, y: 566, zoom: 1.06 }, { x: 880, y: 600, zoom: 1.1 }],
 ];
 
-/** Where the dropper waits off the frame's left and where it hangs over the cup, its tip, layer px; and its scale. */
+/** Where the dropper waits off the frame's left and where it hangs over the cup, the middle of the drop its drawing hangs under its tip (`DROPPER_TIP`, never shown: `DROPPER_DRY`), layer px; and its scale. Its dry glass tip stands about 60 px higher, over the rim. */
 const DROPPER = {
-  off: [-320, MOUTH.y - 60],
-  over: [MOUTH.x - MOUTH.rx * 0.35, MOUTH.y - 60],
+  off: [-320, MOUTH.y - 10],
+  over: [MOUTH.x - MOUTH.rx * 0.35, MOUTH.y - 10],
   s: 0.8,
 } as const;
+
+/**
+ * The dropper plate's glass and bulb alone, its own px: discs over every
+ * row above its glass tip's foot (row 566), so the drop of ink its drawing
+ * hangs under the tip (rows 568 to 663) is never shown and no drop forms
+ * over the milk (critique 2, finding 1: the drop read as ink going in on
+ * "with nothing mixed in").
+ */
+export const DROPPER_DRY = {
+  tip: 566,
+  brush: [
+    [170, 150, 200],
+    [100, 330, 200],
+    [75, 500, 60],
+    [40, 540, 26],
+    [62, 540, 26],
+    ...Array.from({ length: 9 }, (_, i) => [28 + 6 * i, 558, 8] as const),
+  ],
+} as const;
+
+/** Where the dropper's exit runs through on its way out, as a share of the way from the cup to off the frame (and lifted, layer px), and when, as a share of `away`: it is jerked back and up first, then slides out. */
+const RECOIL = { way: 0.35, lift: -70, at: 0.25 } as const;
 
 /**
  * `milk-pour`, `sincere` to `need`: cut to the feast table, close, the
  * clay cup on it and the open book tipped high over it. On `sincere` a
  * clean white stream runs from the book's lower corner down into the cup
  * and keeps running, its surface flowing, while the milk climbs the cup
- * (`POUR_STREAM`). On `mixed` a large dropper of ink comes in from the
- * left and hangs over the cup, its drop trembling; on "nothing" it shakes
- * and is drawn back out the way it came, the stream unbroken and white. On
- * `word` the camera pushes in on the cup; on "unmixed" it is full to the
- * brim and the stream stops, and the full cup is brought forward to the
- * viewer (`PRESENT`) into "And milk is good".
+ * (`POUR_STREAM`). Toward "with" a large dropper of ink comes in from the
+ * left over the cup, dry at its tip; on "nothing" it is jerked back and
+ * slides out the way it came, no drop let fall, the stream unbroken and
+ * white. On `word` the camera pushes in on the cup; on "unmixed" it is
+ * full to the brim and the stream stops, and the full cup is brought
+ * forward to the viewer (`PRESENT`) into "And milk is good".
  */
 export const milkPour: FilmShot = {
   id: 'milk-pour',
@@ -286,18 +308,17 @@ export const milkPour: FilmShot = {
     pour: { mark: 'sincere', dur: 0.4 },
     drift: { mark: 'sincere', until: 'word' },
     fill: { mark: 'sincere', until: { cue: 'milk-pour:full' } },
-    dropper: { mark: 'mixed', dur: 0.5 },
-    shake: { mark: 'mixed', word: 'nothing', offset: 0.7, dur: 0.6 },
-    away: { after: 'milk-pour:shake', dur: 0.9 },
+    dropper: { mark: 'mixed', offset: -0.3, dur: 0.4 },
+    away: { mark: 'mixed', word: 'nothing', offset: 0.05, dur: 2.2 },
     push: { mark: 'word', until: 'good' },
     full: { mark: 'word', word: 'unmixed', offset: 0.5, dur: 0.3 },
     present: { after: 'milk-pour:full', dur: 2 },
   },
   build: ({ cue }) => {
-    const [dropper, shake, away] = [cue('dropper'), cue('shake'), cue('away')];
+    const [dropper, away] = [cue('dropper'), cue('away')];
     const present = cue('present');
     const [dx, dy] = [DROPPER.off[0] - DROPPER.over[0], DROPPER.off[1] - DROPPER.over[1]];
-    const step = (shake.end - shake.start) / 4;
+    const recoil = away.start + (away.end - away.start) * RECOIL.at;
     return {
       headPx: VILLAGER.headPx,
       camera: camerasOf(POUR_PATH, cue),
@@ -324,17 +345,14 @@ export const milkPour: FilmShot = {
           ),
           plateOn('milk-dropper-close.png', DROPPER_CLOSE, DROPPER_TIP, DROPPER.over, DROPPER.s, {
             dir: STORY_PLATES,
+            reveal: { brush: DROPPER_DRY.brush, from: -1, to: -1 },
             moves: [
               [0, key({ x: dx, y: dy, alpha: 0 })],
               [dropper.start, key({ x: dx, y: dy, alpha: 0 })],
               [dropper.start, key({ x: dx, y: dy })],
               [dropper.end, key({})],
-              [shake.start, key({})],
-              [shake.start + step, key({ x: -24, y: -6 })],
-              [shake.start + 2 * step, key({ x: 18 })],
-              [shake.start + 3 * step, key({ x: -24, y: -6 })],
-              [shake.end, key({ y: -10 })],
-              [away.start, key({ y: -10 })],
+              [away.start, key({})],
+              [recoil, key({ x: dx * RECOIL.way, y: RECOIL.lift })],
               [away.end, key({ x: dx, y: dy })],
               [away.end, key({ x: dx, y: dy, alpha: 0 })],
             ],

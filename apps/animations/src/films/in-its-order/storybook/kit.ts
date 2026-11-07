@@ -15,6 +15,7 @@ import {
   type PlateKey,
   type Span,
 } from '../../../library/storybook/shot.ts';
+import { fonts } from '../palette.ts';
 import { SHEET_CELLS } from './cells.ts';
 import { sheetNamed } from './sheets.ts';
 
@@ -183,9 +184,13 @@ export interface InkLine {
   readonly text: string;
 }
 
+/** How a lettered verse is inked: everything of its type but the face, which is always the film's hand (`fonts.hand`), never the cards' serif. */
+export type Ink = Omit<TextStyle, 'family'>;
+
 /**
  * Lines lettered in ink by the film's own hand on a depth-1 plane under
- * framing `c`: written stroke by stroke in order, `written` of the way
+ * framing `c`, in the hand's face (`fonts.hand`) at `ink`'s size, weight
+ * and colour: written stroke by stroke in order, `written` of the way
  * through all their letters (each line's share its letters'), each line's
  * hand `<name>-<i>`.
  */
@@ -193,10 +198,11 @@ export const inkLines = (
   f: PaintingFrame,
   c: Framing,
   lines: ReadonlyArray<InkLine>,
-  type: TextStyle,
+  ink: Ink,
   written: number,
   name: string,
 ) => {
+  const type: TextStyle = { ...ink, family: fonts.hand };
   if (written <= 0) return;
   const ctx = f.ctx;
   const [x0, y0] = onScreen(c, 0, 0);
