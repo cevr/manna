@@ -21,6 +21,8 @@
         "test:storybook-paints",
         "test:storybook-measured",
         "test:storybook-strays",
+        "test:storybook-strays-lead",
+        "test:storybook-overlays",
         "test:storybook-smears",
         "test:storybook-cloth",
         "test:storybook-plates",
@@ -250,7 +252,36 @@
         "!src/films/in-its-order/storybook/mother.test.ts",
         "!src/films/in-its-order/storybook/measured.test.ts",
         "!src/films/in-its-order/storybook/strays.test.ts",
+        "!src/films/in-its-order/storybook/overlays.test.ts",
         "!src/films/in-its-order/storybook/covers-*.test.ts",
+        "!src/library/**/*.test.*"
+      ]
+    },
+    "test:storybook-overlays": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/righteousness-by-faith/**/*.test.*",
+        "!src/films/in-its-order/rigs/**/*.test.*",
+        "!src/films/in-its-order/scenes/**/*.test.*",
+        "!src/library/**/*.test.*"
+      ]
+    },
+    "test:storybook-strays-lead": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "!*.test.*",
+        "!src/films/righteousness-by-faith/**/*.test.*",
+        "!src/films/in-its-order/rigs/**/*.test.*",
+        "!src/films/in-its-order/scenes/**/*.test.*",
         "!src/library/**/*.test.*"
       ]
     },
