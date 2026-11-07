@@ -277,7 +277,7 @@ export const sound: Sound = {
     },
     chuckle: {
       sound: 'crowd.swell',
-      level: -12,
+      level: -9,
       sync: 'onset',
       at: [{ scene: 'cold', cue: 'cold-smile:laugh' }],
     },
