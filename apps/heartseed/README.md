@@ -1103,7 +1103,15 @@ sees, are not here yet.
     durations that do not fit); and `src/natural/data.test.ts`, the
     committed data: the vocab's pinned hash, the list's bytes as the
     generator last wrote them, its keys sorted and unique, and every
-    phoneme and override spoken in the vocab.
+    phoneme and override spoken in the vocab. It leaves out
+    `src/natural/voice.test.ts`, which is its own part.
+  - `test:natural-voice`: `src/natural/voice.test.ts`, the natural voice's
+    `VoiceSource` against a model written in the test, over 300 seeded
+    histories of a stand-in module that answers each load and render when
+    the history says (speaks of one to three chunks and of a text no plan
+    takes, malformed renders, a refused play, events of the held utterance
+    and of others, a reload): its module calls, the events it forwards and
+    each speak's state after every step.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
