@@ -2,6 +2,7 @@ import AVFoundation
 import CoreML
 import CryptoKit
 import Foundation
+import UIKit
 
 /// One file of the pinned download: its path under the revision, size and SHA-256.
 struct NaturalFile: Codable {
@@ -91,12 +92,31 @@ struct NaturalFailure: LocalizedError {
 /// behind when the module starts means the last process ended during a
 /// reading: `status` reports `crashed` for this process, and the marker is
 /// deleted.
+///
+/// The module holds at most one reading. Its events are matched by an
+/// internal generation, not the JS id, since a JS reload reuses ids from 1:
+/// a reading stopped or replaced emits nothing more, and a terminal event
+/// (finish or interrupt) lets go of it. An audio interruption or an engine
+/// configuration change (a route change) ends it with `interrupt`. The
+/// module leaves the audio session as it finds it.
 @MainActor final class Natural: PeachModule {
   private var listener: ((NaturalEvent) -> Void)?
   private var installListener: ((NaturalInstallEvent) -> Void)?
   private let crashed: Bool
   private var installTask: Task<Void, Never>?
   private var installToken = 0
+  private let store = KokoroAneModelStore()
+  private var loadedRevision: String?
+  private var voicePack: KokoroAneVoicePack?
+  private var loading: (revision: String, task: Task<(Double, KokoroAneVoicePack), Error>)?
+  private var unloading: Task<Void, Never>?
+  private var loadToken = 0
+  private var renderChain: Task<(KokoroAneSynthesisResult, Double), Error>?
+  private var held: NaturalReading?
+  private var generation = 0
+  private let output = NaturalOutput()
+  private var ticker: Task<Void, Never>?
+  private var observers: [NSObjectProtocol] = []
 
   init() {
     let marker = NaturalFolder.marker
@@ -105,6 +125,28 @@ struct NaturalFailure: LocalizedError {
       try? FileManager.default.removeItem(at: marker)
       NSLog("%@", "[natural] start crashed=true")
     }
+    let center = NotificationCenter.default
+    observers.append(
+      center.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) {
+        [weak self] note in
+        let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+        guard raw == AVAudioSession.InterruptionType.began.rawValue else { return }
+        MainActor.assumeIsolated { self?.interrupted("interruption") }
+      })
+    observers.append(
+      center.addObserver(forName: .AVAudioEngineConfigurationChange, object: nil, queue: .main) {
+        [weak self] note in
+        let source = (note.object as AnyObject?).map(ObjectIdentifier.init)
+        MainActor.assumeIsolated {
+          guard let self, self.output.owns(source) else { return }
+          self.interrupted("route")
+        }
+      })
+    observers.append(
+      center.addObserver(forName: UIApplication.didReceiveMemoryWarningNotification, object: nil, queue: .main) {
+        [weak self] _ in
+        MainActor.assumeIsolated { self?.memoryWarning() }
+      })
   }
 
   func status(_ revision: String, _ files: [NaturalFile]) async -> NaturalStatus {
@@ -115,7 +157,7 @@ struct NaturalFailure: LocalizedError {
     let memory = NaturalMemory.read()
     return NaturalStatus(
       revision: revision, files: present.count, bytes: NaturalFolder.bytes(), excluded: excluded ?? false,
-      crashed: crashed, loaded: false, installing: installTask != nil, footprint: memory.footprint, peak: memory.peak)
+      crashed: crashed, loaded: loadedRevision == revision, installing: installTask != nil, footprint: memory.footprint, peak: memory.peak)
   }
 
   /// Starts the pinned download and returns; a call while one runs does
@@ -143,13 +185,16 @@ struct NaturalFailure: LocalizedError {
     installTask?.cancel()
   }
 
-  /// Cancels a download, waits for it to let go of its files, and deletes
-  /// the natural folder whole.
+  /// Cancels a download and waits for it to let go of its files, halts the
+  /// reading, unloads, and deletes the natural folder whole.
   func remove() async throws {
     if let task = installTask {
       task.cancel()
       await task.value
     }
+    halt()
+    unload()
+    await unloading?.value
     let manager = FileManager.default
     guard manager.fileExists(atPath: NaturalFolder.root.path) else { return }
     do {
@@ -173,36 +218,282 @@ struct NaturalFailure: LocalizedError {
     installListener?(event)
   }
 
+  /// Checks every file of `revision` by its SHA-256, then loads the seven
+  /// stages with this device's routing and the `af_heart` voice pack, and
+  /// returns the time it took in milliseconds; 0 when already loaded. A
+  /// missing file throws `missing`; a file that fails its check is deleted
+  /// and throws `check`.
   func load(_ revision: String, _ files: [NaturalFile]) async throws -> Double {
-    throw NaturalFailure(message: "not yet")
+    if loadedRevision == revision { return 0 }
+    if let loading, loading.revision == revision { return try await loading.task.value.0 }
+    if loadedRevision != nil {
+      halt()
+      unload()
+    }
+    let pending = unloading
+    let store = store
+    let routing = NaturalRouting.current
+    let token = loadToken
+    let task = Task.detached { () async throws -> (Double, KokoroAneVoicePack) in
+      await pending?.value
+      let clock = ContinuousClock()
+      let began = clock.now
+      try NaturalModels.verify(revision, files)
+      let folder = NaturalFolder.root.appendingPathComponent(revision, isDirectory: true)
+      do {
+        try await store.load(from: folder, routing: routing)
+        let pack = try KokoroAneVoicePack.load(from: folder.appendingPathComponent("af_heart.bin"))
+        let spent = began.duration(to: clock.now).components
+        return (Double(spent.seconds) * 1_000 + Double(spent.attoseconds) / 1e15, pack)
+      } catch {
+        await store.unload()
+        throw NaturalFailure(message: "load failed: \(error.localizedDescription)")
+      }
+    }
+    loading = (revision, task)
+    defer { if loadToken == token, loading?.revision == revision { loading = nil } }
+    let (millis, pack) = try await task.value
+    guard loadToken == token else { throw NaturalFailure(message: "removed") }
+    loadedRevision = revision
+    voicePack = pack
+    NSLog("%@", "[natural] load ms=\(Int(millis.rounded())) units=\(routing.rawValue)")
+    return millis
   }
 
+  /// Renders chunk `chunk` of reading `utterance` from its token ids (BOS
+  /// and EOS included, 3 to 512) and keeps its audio for `play`. Chunk 0
+  /// starts a new reading: the one held is halted, and the reading marker
+  /// is written. A later chunk of a reading not held throws `stale`.
+  /// Renders run one at a time, off the main actor; one that ends for a
+  /// reading no longer held keeps nothing, and a failed one ends the
+  /// reading.
   func render(_ utterance: Int, _ chunk: Int, _ ids: [Int]) async throws -> NaturalRender {
-    throw NaturalFailure(message: "not yet")
+    guard loadedRevision != nil, let pack = voicePack else { throw NaturalFailure(message: "not loaded") }
+    guard ids.count >= 3, ids.count <= KokoroAneConstants.maxInputTokens else {
+      throw NaturalFailure(message: "ids \(ids.count) outside 3...\(KokoroAneConstants.maxInputTokens)")
+    }
+    let reading: NaturalReading
+    if chunk == 0 {
+      halt()
+      generation += 1
+      reading = NaturalReading(generation: generation, utterance: utterance)
+      held = reading
+      NaturalFolder.mark()
+    } else {
+      guard let current = held, current.utterance == utterance, chunk >= current.nextChunk else {
+        throw NaturalFailure(message: "stale")
+      }
+      reading = current
+    }
+    let style = pack.slice(for: ids.count - 2)
+    let input = ids.map { Int32(clamping: $0) }
+    let store = store
+    let previous = renderChain
+    let work = Task.detached { () async throws -> (KokoroAneSynthesisResult, Double) in
+      _ = await previous?.result
+      try Task.checkCancellation()
+      let clock = ContinuousClock()
+      let began = clock.now
+      let result = try await KokoroAneSynthesizer.synthesize(
+        inputIds: input, styleS: style.styleS, styleTimbre: style.styleTimbre, store: store)
+      guard result.samples.allSatisfy({ $0.isFinite }) else {
+        throw KokoroAneError.nonFiniteModelOutput(stage: KokoroAneStage.tail.rawValue, output: "audio")
+      }
+      let spent = began.duration(to: clock.now).components
+      return (result, Double(spent.seconds) * 1_000 + Double(spent.attoseconds) / 1e15)
+    }
+    renderChain = work
+    reading.rendering = work
+    do {
+      let (result, millis) = try await work.value
+      let frames = result.predictedDurations.map { Int($0) }
+      let total = frames.reduce(0, +)
+      NSLog(
+        "%@",
+        "[natural] render utterance=\(utterance) chunk=\(chunk) ids=\(ids.count) frames=\(total) "
+          + "samples=\(result.samples.count) ms=\(Int(millis.rounded()))")
+      if held === reading { reading.rendered[chunk] = (result.samples, total) }
+      return NaturalRender(frames: frames, samples: result.samples.count, millis: millis)
+    } catch {
+      if held === reading { halt() }
+      if case KokoroAneError.nonFiniteModelOutput = error {
+        NSLog("%@", "[natural] render utterance=\(utterance) chunk=\(chunk) failed=nonfinite")
+        throw NaturalFailure(message: "nonfinite")
+      }
+      NSLog("%@", "[natural] render utterance=\(utterance) chunk=\(chunk) failed=error")
+      throw NaturalFailure(message: "render failed: \(error.localizedDescription)")
+    }
   }
 
+  /// Schedules the held reading's chunk `chunk`, rendered and not yet
+  /// played, right after the one before it, and drops its audio. `starts`
+  /// are its words' start samples within the chunk; each sends a `range`
+  /// when the clock reaches it. `last` marks the reading's final chunk,
+  /// after whose last sample `finish` is sent. A chunk that comes after the
+  /// clock has passed the one before plays as soon as it can, its words
+  /// shifted with it. A play while paused is scheduled and stays paused.
   func play(_ utterance: Int, _ chunk: Int, _ starts: [NaturalStart], _ last: Bool) throws {
-    throw NaturalFailure(message: "not yet")
+    guard let reading = held, reading.utterance == utterance else { throw NaturalFailure(message: "stale") }
+    guard chunk == reading.nextChunk, reading.end == nil, let audio = reading.rendered.removeValue(forKey: chunk)
+    else { throw NaturalFailure(message: "chunk \(chunk) not rendered") }
+    var at = reading.scheduledEnd
+    if chunk > 0, let now = output.now(), now >= at { at = now + Self.lead }
+    do {
+      try output.schedule(audio.pcm, at: at, paused: reading.paused)
+    } catch {
+      halt()
+      throw error
+    }
+    NSLog(
+      "%@",
+      "[natural] play utterance=\(utterance) chunk=\(chunk) frames=\(audio.frames) samples=\(audio.pcm.count)"
+        + NaturalOutput.note)
+    if chunk == 0 { reading.begin = at }
+    reading.marks += starts.map { NaturalStart(sample: at + $0.sample, location: $0.location, length: $0.length) }
+    reading.nextChunk += 1
+    reading.scheduledEnd = at + audio.pcm.count
+    if last { reading.end = reading.scheduledEnd }
+    if !reading.paused { startTicking() }
   }
 
+  /// Stops the held reading's clock and audio where they are.
   func pause() {
-    NSLog("%@", "[natural] pause not yet")
+    guard let reading = held, !reading.paused else { return }
+    reading.paused = true
+    stopTicking()
+    output.pause()
   }
 
+  /// Goes on with a paused reading.
   func resume() {
-    NSLog("%@", "[natural] resume not yet")
+    guard let reading = held, reading.paused else { return }
+    reading.paused = false
+    guard reading.nextChunk > 0 else { return }
+    do {
+      try output.resume()
+    } catch {
+      interrupted("resume")
+      return
+    }
+    startTicking()
   }
 
+  /// Halts the held reading and removes its marker; it emits nothing more.
   func stop() {
-    NSLog("%@", "[natural] stop not yet")
+    halt()
   }
 
+  /// Sends each event of the held reading to `listener`, the last one
+  /// subscribed.
   func onEvent(_ listener: @escaping (NaturalEvent) -> Void) {
     self.listener = listener
   }
 
   func onInstall(_ listener: @escaping (NaturalInstallEvent) -> Void) {
     self.installListener = listener
+  }
+
+  /// The wait given a chunk scheduled after the clock has passed its place,
+  /// in samples (100 ms), so its first samples are not lost.
+  private static let lead = 2_400
+
+  /// Lets go of the held reading first, so nothing it sends after is
+  /// emitted, then cancels its render, stops the clock and the audio, and
+  /// removes the marker.
+  private func halt() {
+    let reading = held
+    held = nil
+    reading?.rendering?.cancel()
+    reading?.rendered = [:]
+    stopTicking()
+    output.halt()
+    if reading != nil { NaturalFolder.unmark() }
+  }
+
+  private func unload() {
+    loadToken += 1
+    loading?.task.cancel()
+    loading = nil
+    loadedRevision = nil
+    voicePack = nil
+    let store = store
+    unloading = Task.detached { await store.unload() }
+  }
+
+  private func memoryWarning() {
+    guard held == nil, loading == nil, loadedRevision != nil else { return }
+    NSLog("%@", "[natural] unload reason=memory")
+    unload()
+  }
+
+  private func interrupted(_ cause: String) {
+    guard let reading = held else { return }
+    NSLog("%@", "[natural] interrupt utterance=\(reading.utterance) cause=\(cause)")
+    emit(reading.generation, .interrupt, 0, 0)
+  }
+
+  private func startTicking() {
+    guard ticker == nil else { return }
+    ticker = Task { @MainActor [weak self] in
+      while !Task.isCancelled {
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        self?.tick()
+      }
+    }
+  }
+
+  private func stopTicking() {
+    ticker?.cancel()
+    ticker = nil
+  }
+
+  /// Reads the clock and sends what it has reached: `start` once the first
+  /// chunk begins, each word's `range`, and `finish` after the last sample.
+  private func tick() {
+    guard let reading = held, !reading.paused, let now = output.now() else { return }
+    let generation = reading.generation
+    if !reading.started, now >= reading.begin {
+      reading.started = true
+      emit(generation, .start, 0, 0)
+    }
+    while held === reading, reading.started, reading.nextMark < reading.marks.count,
+      reading.marks[reading.nextMark].sample <= now
+    {
+      let mark = reading.marks[reading.nextMark]
+      reading.nextMark += 1
+      emit(generation, .range, mark.location, mark.length)
+    }
+    if held === reading, let end = reading.end, now >= end, reading.nextMark >= reading.marks.count {
+      emit(generation, .finish, 0, 0)
+    }
+  }
+
+  /// Emits an event of reading `generation` only while it is held; a
+  /// terminal event halts it first.
+  private func emit(_ generation: Int, _ kind: NaturalEventKind, _ location: Int, _ length: Int) {
+    guard let reading = held, reading.generation == generation else { return }
+    if kind == .finish || kind == .cancel || kind == .interrupt { halt() }
+    listener?(NaturalEvent(utterance: reading.utterance, kind: kind, location: location, length: length))
+  }
+}
+
+/// The check `load` makes before it trusts the files: each present at its
+/// size and its SHA-256 as pinned.
+enum NaturalModels {
+  static func verify(_ revision: String, _ files: [NaturalFile]) throws {
+    for (index, file) in files.enumerated() {
+      guard NaturalInstall.present(revision, file) else {
+        NSLog("%@", "[natural] load missing index=\(index)")
+        throw NaturalFailure(message: "missing")
+      }
+      let url = NaturalFolder.file(revision, file.path)
+      let hash = (try? NaturalInstall.sha256(url)) ?? ""
+      guard hash == file.sha256 else {
+        try? FileManager.default.removeItem(at: url)
+        NSLog("%@", "[natural] load check index=\(index) checked=false")
+        throw NaturalFailure(message: "check")
+      }
+    }
   }
 }
 
@@ -216,6 +507,17 @@ enum NaturalFolder {
   }
 
   static var marker: URL { root.appendingPathComponent("reading", isDirectory: false) }
+
+  /// Writes the marker of a natural reading in progress.
+  static func mark() {
+    try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    FileManager.default.createFile(atPath: marker.path, contents: Data())
+  }
+
+  /// Removes the marker once the reading ends.
+  static func unmark() {
+    try? FileManager.default.removeItem(at: marker)
+  }
 
   static func file(_ revision: String, _ path: String) -> URL {
     root.appendingPathComponent(revision, isDirectory: true).appendingPathComponent(path, isDirectory: false)
