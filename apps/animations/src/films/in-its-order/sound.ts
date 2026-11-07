@@ -277,21 +277,9 @@ export const sound: Sound = {
     },
     chuckle: {
       sound: 'crowd.swell',
-      level: -22,
+      level: -12,
       sync: 'onset',
       at: [{ scene: 'cold', cue: 'cold-smile:laugh' }],
-    },
-    drop: {
-      sound: 'scroll.drop',
-      level: -16,
-      sync: 'hit',
-      at: [{ scene: 'cold', cue: 'cold-letter:fall', edge: 'end' }],
-    },
-    hop: {
-      sound: 'scroll.drop',
-      level: -23,
-      sync: 'hit',
-      at: [{ scene: 'cold', cue: 'cold-letter:hop', edge: 'end' }],
     },
     unroll: {
       sound: 'scroll.unroll',

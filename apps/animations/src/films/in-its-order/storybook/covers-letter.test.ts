@@ -12,10 +12,7 @@ describe("In Its Order's letter shot", () => {
     },
   );
 
-  test('crosses faces with the falling scroll alone, its fall the only moving pass over a face (the orchestrator’s ruling: a falling letter reads as motion); the bottle stays in his hand and crosses none (critique 3, finding 1)', () => {
-    const scroll = 'INFO cover moving: src/films/in-its-order/plates/scroll-rolled.png over';
-    expect(covers.map(([id, , moving]) => [id, moving])).toEqual([
-      ['cold-letter', [`${scroll} lead frames 20–21`]],
-    ]);
+  test('crosses no face with a moving plate: the scroll comes up from behind the table into his hand below his face, and the bottle stays in his hand (critique 2, finding 2: the falling scroll flashed over his head; critique 3, finding 1)', () => {
+    expect(covers.map(([id, , moving]) => [id, moving])).toEqual([['cold-letter', []]]);
   });
 });

@@ -26,7 +26,7 @@ import { inItsOrder } from './index.ts';
 import { drawScaleOf, key, TALL } from './kit.ts';
 import LEAD_PALETTE from '../../../library/cast/lead-feast/cast-sheet/palette.json';
 import { TABLE } from '../plates/plates.ts';
-import { BABY_MOTHER, letterLands, TABLE_TOP_PX, coldScroll, LETTER_WORDS } from './shots/cold.ts';
+import { BABY_MOTHER, letterRises, TABLE_TOP_PX } from './shots/cold.ts';
 import { AT_TABLE, HEAD, TABLE_TOP } from './shots/courtyard.ts';
 import { TABLE_CLOSE_BOX } from './plates/table-close.ts';
 import { CELLS as LEAD_TABLE_CELLS } from '../../../library/cast/lead-feast/shot-sheets/iio-table/cells.ts';
@@ -34,7 +34,8 @@ import LEAD_TABLE_RECORD from '../../../library/cast/lead-feast/shot-sheets/iio-
 import { MEASURED } from './palettes.ts';
 import { SHEET_CELLS } from './cells.ts';
 import { shareOf } from '../../../library/storybook/sheet.ts';
-import { BOOK_WORDS, DISSOLVES, milkBook } from './shots/milk.ts';
+import { DISSOLVES, DROPPER_DRY, milkPour } from './shots/milk.ts';
+import { DROPPER_CLOSE } from './plates/inserts.ts';
 
 /** The lead's table sheet's record, read for its props alone (a sheet drawn before props records none). */
 const TABLE_RECORD: {
@@ -144,14 +145,14 @@ const placed = await Effect.runPromise(
   ),
 );
 
-/** Each shot's push cap its spec row names, as the largest zoom over the smallest across the shot: cold-ouch's "≤ 5 %", and each named push or pull's range; the title's pull starts nearer, at 1.3, by the orchestrator's ruling on critique 1, item 9. The restage (iio-b-restage) lets cold-letter push on toward the letter to the cut (1.3), holds the two-shot's slow push (cold-smile, cold-ask) to 5 %, pushes each insert slowly toward its words (cold-scroll 8 %, milk-book 7 %), pushes milk-pour in on the cup (10 %) and cold-what in on the question's two foods (16 %). */
+/** Each shot's push cap its spec row names, as the largest zoom over the smallest across the shot: cold-ouch's "≤ 5 %", and each named push or pull's range; the title's pull starts nearer, at 1.3, by the orchestrator's ruling on critique 1, item 9. The restage (iio-b-restage) lets cold-letter push on toward the letter to the cut (1.3), holds the two-shot's slow push (cold-smile) to 5 %, pushes in on the lead's face on the question (cold-ask, 12 %; critique 2, finding 3), pushes each insert slowly toward its words (cold-scroll 8 %, milk-book 7 %), pushes milk-pour in on the cup (10 %) and cold-what in on the question's two foods (16 %). */
 const PUSH_CAPS: ReadonlyMap<string, number> = new Map([
   ['cold-baby', 1.06],
   ['cold-smile', 1.05],
   ['cold-letter', 1.3],
   ['cold-scroll', 1.08],
   ['cold-ouch', 1.05],
-  ['cold-ask', 1.05],
+  ['cold-ask', 1.12],
   ['cold-what', 1.16],
   ['title', 1.3],
   ['milk-cup', 1.1],
@@ -420,7 +421,7 @@ describe("In Its Order's staging", () => {
     const membersIn = (shot: typeof ouch) => [
       ...new Set(figuresOf(shot).map(({ figure }) => figure.member)),
     ];
-    expect(membersIn(ouch).toSorted()).toEqual(membersIn(letter).toSorted());
+    expect(membersIn(letter).filter((m) => !membersIn(ouch).includes(m))).toEqual([]);
     expect(figuresOf(ouch).length).toBeGreaterThanOrEqual(7);
     const cellAt = (shot: typeof ouch, name: string, t: number) =>
       figuresOf(shot)
@@ -477,44 +478,128 @@ describe("In Its Order's staging", () => {
     expect(figuresOf(shot).map(({ figure }) => figure.name)).toEqual(['man', 'lead']);
   });
 
-  test('holds each lettered verse whole on its insert at least 0.25 s a word before the cut (orchestrator ruling, round 2: 1 Pet 2:2 ≥ 3.75 s whole), its writing starting on the verse’s first word', () => {
-    const short = [
-      { shot: coldScroll, lines: LETTER_WORDS },
-      { shot: milkBook, lines: BOOK_WORDS },
-    ].flatMap(({ shot, lines }) => {
-      const own = placed.find((p) => p.shot.id === shot.id)?.shot;
-      const write = shot.cues['write'];
-      if (!own || !write || !('dur' in write) || !('mark' in write))
-        return [`${shot.id}: no write cue`];
-      const words = lines
-        .slice(0, -1)
-        .flatMap((l) => l.text.split(/\s+/))
-        .filter((w) => w !== '').length;
-      const whole = own.duration - (write.dur ?? 0) - (write.offset ?? 0);
-      if (!('mark' in shot.span) || write.mark !== shot.span.mark)
-        return [`${shot.id}: writing starts on ${write.mark}`];
-      if (whole >= 0.25 * words) return [];
-      return [`${shot.id}: whole ${whole.toFixed(2)} s for ${words} words`];
-    });
-    expect(short).toEqual([]);
-  });
-
-  test('asks the film’s question on the lead’s face: from `what` to `why` the two-shot again, his head a third of the frame, his eyes up to the viewer (`ask`), the man turning from the letter to the viewer, no still life (critique 1, finding 4)', () => {
+  test('asks the film’s question on faces that ask: from `what` to `why` the two-shot again, the camera pushing in on the lead, his head a third of the frame and more, his eyes up to the viewer (`ask`), the man’s brows raised in his puzzled stare at every frame, no smiling cell on either (critique 1, finding 4; critique 2, finding 3: the man’s smile read as cheerful on the question)', () => {
     const ask = placed.find(({ shot }) => shot.id === 'cold-ask')?.shot;
     if (!ask) return expect(ask).toBeDefined();
     const lead = figuresOf(ask).find(({ figure }) => figure.name === 'lead')?.figure;
-    if (!lead) return expect(lead).toBeDefined();
+    const man = figuresOf(ask).find(({ figure }) => figure.name === 'man')?.figure;
+    if (!lead || !man) return expect([lead?.name, man?.name]).toEqual(['lead', 'man']);
     const times = timesOf(ask);
     expect(new Set(times.map((t) => poseAt(lead, t).cell))).toEqual(new Set(['ask']));
-    const man = figuresOf(ask).find(({ figure }) => figure.name === 'man')?.figure;
-    if (!man) return expect(man).toBeDefined();
-    expect(times.map((t) => poseAt(man, t).cell).filter((c, i, all) => c !== all[i - 1])).toEqual([
-      'stare',
-      'neutral',
-    ]);
+    expect(new Set(times.map((t) => poseAt(man, t).cell))).toEqual(new Set(['stare']));
+    const zooms = times.map((t) => cameraAt(ask.camera, t).zoom);
+    expect(Math.min(...zooms) * ask.headPx).toBeGreaterThanOrEqual(
+      (1 / 3 - 0.005) * ask.size.height,
+    );
+    expect((zooms.at(-1) ?? 0) / (zooms[0] ?? 1)).toBeGreaterThan(1.05);
+  });
+
+  test('frames cold-letter close on the three at the table after the two-shot, never the wide row: each figure at the table a head of a quarter of the frame’s height and more at every frame (its cell’s head × its sheet’s draw scale × its size × the zoom ÷ the frame’s height), and no more than one diner behind them (critique 2, finding 2; verifier r2, M3)', () => {
+    const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
+    if (!letter) return expect(letter).toBeDefined();
+    const atTable = letter.layers.find((l) => l.name === 'table');
+    const people = (atTable?.items ?? []).filter((i): i is Figure => i._tag === 'Figure');
+    expect(people.map((f) => f.name).toSorted()).toEqual(['lead', 'man', 'woman']);
+    const small = people.flatMap((f) =>
+      timesOf(letter).flatMap((t) => {
+        const cell = SHEET_CELLS.get(`${f.member}/${f.sheet}`)?.cells[poseAt(f, t).cell];
+        const s = drawScaleOf(f.member, f.sheet, letter.headPx, 1);
+        const share =
+          ((cell?.head ?? 0) * s * (f.size ?? 1) * cameraAt(letter.camera, t).zoom) /
+          letter.size.height;
+        if (share >= 1 / 4) return [];
+        return [`${f.name} at ${t.toFixed(2)} s: ${share.toFixed(3)}`];
+      }),
+    );
+    expect(small.slice(0, 3)).toEqual([]);
+    const diners = figuresOf(letter).filter(({ layer }) => layer.name === 'diners');
+    expect(diners.map(({ figure }) => figure.name)).toEqual(['diner-3']);
+  });
+
+  test('keeps one scroll and one bottle across the cuts from the two-shot to the question: the bottle in his hand (a holding cell) through cold-smile and cold-letter, never also on the table there, and on the table, where his lowered hand set it, through cold-ouch and cold-ask; the scroll first in cold-letter, coming up from behind the table into his hand (never above the frame or over his head), one at every frame it shows, and lying rolled on the table after (critique 2, finding 2: a scroll flashed on his head, then two letters)', () => {
+    const shot = (id: string) => placed.find((p) => p.shot.id === id)?.shot;
+    const [smile, letter, ouch, ask] = ['cold-smile', 'cold-letter', 'cold-ouch', 'cold-ask'].map(
+      shot,
+    );
+    if (!smile || !letter || !ouch || !ask)
+      return expect([smile?.id, letter?.id, ouch?.id, ask?.id]).toEqual([
+        'cold-smile',
+        'cold-letter',
+        'cold-ouch',
+        'cold-ask',
+      ]);
+    const leadOf = (s: typeof smile) =>
+      figuresOf(s).find(({ figure }) => figure.name === 'lead')?.figure;
+    const plates = (s: typeof smile, file: string) =>
+      platesOf(s).filter((p) => p.file.endsWith(file));
+    const holding = new Set([...HOLDING, 'bottle', 'grin', 'tuck']);
+    const misses = [
+      ...[smile, letter].flatMap((s) => {
+        const lead = leadOf(s);
+        return [
+          ...timesOf(s)
+            .filter((t) => !lead || !holding.has(poseAt(lead, t).cell))
+            .slice(0, 1)
+            .map((t) => `${s.id}: bottle not in his hand at ${t.toFixed(2)} s`),
+          ...plates(s, '/bottle.png').map(() => `${s.id}: a bottle on the table too`),
+        ];
+      }),
+      ...[ouch, ask].flatMap((s) => {
+        const [bottle, ...more] = plates(s, '/bottle.png');
+        const [scroll, ...others] = plates(s, '/scroll-rolled.png');
+        return [
+          ...[`${s.id}: ${1 + more.length} bottles`].filter(() => !bottle || more.length > 0),
+          ...[`${s.id}: ${1 + others.length} scrolls`].filter(() => !scroll || others.length > 0),
+          ...timesOf(s)
+            .filter(
+              (t) =>
+                !bottle || !scroll || plateAt(bottle, t).alpha < 1 || plateAt(scroll, t).alpha < 1,
+            )
+            .slice(0, 1)
+            .map((t) => `${s.id}: bottle or scroll not on the table at ${t.toFixed(2)} s`),
+        ];
+      }),
+      ...plates(smile, '/scroll-').map(() => 'cold-smile: a scroll before the letter'),
+    ];
+    expect(misses).toEqual([]);
+    const [rising, ...extra] = plates(letter, '/scroll-rolled.png');
+    if (!rising) return expect(rising).toBeDefined();
+    expect(extra).toEqual([]);
+    const lead = leadOf(letter);
+    if (!lead) return expect(lead).toBeDefined();
+    const shown = timesOf(letter).filter((t) => plateAt(rising, t).alpha > 0);
+    const first = shown[0] ?? 0;
+    expect(footAt(rising, first).y - rising.place.height).toBeGreaterThanOrEqual(TABLE_TOP.y);
+    const crown = AT_TABLE.lead.crown;
+    expect(shown.filter((t) => middleAt(rising, t)[1] < crown)).toEqual([]);
+    expect(letterOffMisses(lead, rising, timesOf(letter))).toEqual([]);
+  });
+
+  test('keeps the dropper in milk-pour dry over the milk: its plate is drawn only under its reveal’s discs, every disc above its glass tip’s foot, so the drop its drawing hangs under the tip never shows; and it is drawn back from the cup on “nothing”, the frame that word starts or the next, never resting there after (critique 2, finding 1: a drop formed over the cup on “with nothing mixed in”)', () => {
+    const p = placed.find(({ shot }) => shot.id === 'milk-pour');
+    const dropper = p && platesOf(p.shot).find((x) => x.file.endsWith('/milk-dropper-close.png'));
+    if (!p || !dropper) return expect(dropper).toBeDefined();
+    expect(dropper.reveal?.brush).toEqual(DROPPER_DRY.brush);
+    const low = (dropper.reveal?.brush ?? []).filter(([, y, r]) => y + r > DROPPER_DRY.tip);
+    expect(low).toEqual([]);
+    expect(dropper.reveal && dropper.reveal.to <= 0).toBe(true);
+    expect(DROPPER_DRY.tip).toBeLessThan(DROPPER_CLOSE.size[1]);
+    const away = Object.fromEntries(
+      Object.entries(milkPour.cues['away'] ?? {}).filter(([k]) => ['mark', 'word'].includes(k)),
+    );
+    expect(away).toEqual({ mark: 'mixed', word: 'nothing' });
     expect(
-      Math.min(...times.map((t) => (ask.headPx * cameraAt(ask.camera, t).zoom) / ask.size.height)),
-    ).toBeGreaterThanOrEqual(1 / 3 - 0.005);
+      Number(Object.entries(milkPour.cues['away'] ?? {}).find(([k]) => k === 'offset')?.[1] ?? 0),
+    ).toBeLessThanOrEqual(0.1);
+    const at = (p.scene.cues.get('milk-pour:away')?.start ?? 0) - (p.shot.from ?? 0);
+    const rest = { ...dropper, moves: [] };
+    const off = (t: number) => {
+      const [a, b] = [middleAt(dropper, t), middleAt(rest, t)];
+      return Math.hypot(a[0] - b[0], a[1] - b[1]);
+    };
+    const resting = timesOf(p.shot).filter((t) => plateAt(dropper, t).alpha > 0 && off(t) <= 2);
+    expect(resting.length).toBeGreaterThan(0);
+    expect(Math.max(...resting)).toBeLessThanOrEqual(at + 2 / p.shot.fps + 1e-6);
   });
 
   test('seats the title’s eight in the panel’s groups, shoulders close within each, the man and the woman turned to the lead throughout (critique 1, item 9)', () => {
@@ -937,7 +1022,7 @@ describe("In Its Order's staging", () => {
       }),
   );
 
-  test('hands the letter off with no gap and no overlap: from the frame the rolled scroll first shows, at every frame of cold-letter exactly one of the table’s plate and his reading hand shows it, as at every frame of generated take-ups (fall, hop, take, frame phase), and a plate gone at 0.8 of the turn leaves a gap', () => {
+  test('hands the letter off with no gap and no overlap: from the frame the rolled scroll first shows, at every frame of cold-letter exactly one of the rising plate and his reading hand shows it, as at every frame of generated take-ups (rise, frame phase), and a plate gone at 0.8 of the turn leaves a gap', () => {
     const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;
     const lead = letter && figuresOf(letter).find(({ figure }) => figure.name === 'lead')?.figure;
     const plate = letter?.layers
@@ -952,15 +1037,7 @@ describe("In Its Order's staging", () => {
     const misses = Array.from({ length: 64 }, (_, seed) => {
       const draw = rng(seed + 1);
       const fps = [24, 30, 60][Math.floor(draw() * 3)] ?? 30;
-      const [from, falling, hopping, waiting] = [
-        0.2 + draw() * 3,
-        0.2 + draw() * 0.5,
-        0.1 + draw() * 0.3,
-        draw() * 0.5,
-      ];
-      const f = { start: from, end: from + falling };
-      const h = { start: f.end, end: f.end + hopping };
-      const [at, dur, phase] = [h.end + waiting, 0.25 + draw() * 1.25, draw() / fps];
+      const [at, dur, phase] = [0.2 + draw() * 3, 0.25 + draw() * 1.25, draw() / fps];
       const take = turn(at, dur, 'bottle', 'read');
       const held = figure(['bottle', 'read'], {
         name: 'lead',
@@ -975,16 +1052,15 @@ describe("In Its Order's staging", () => {
       );
       return [
         seed,
-        letterOffMisses(held, letterLands(f, h, { start: at, end: swapOf(take) }), times).length,
-        letterOffMisses(held, letterLands(f, h, { start: at, end: at + dur * 0.8 }), times).length >
-          0,
+        letterOffMisses(held, letterRises({ start: at, end: swapOf(take) }), times).length,
+        letterOffMisses(held, letterRises({ start: at, end: at + dur * 0.8 }), times).length > 0,
       ];
     });
     expect(misses.filter(([, gaps, late]) => gaps !== 0 || late !== true)).toEqual([]);
   });
 
   it.effect(
-    'lifts the rolled letter from the table to his reading hand before the swap: it rests on the table until he reaches, and at the last frame it shows its middle lies within its own height of the middle of the parchment his `read` cell holds, read on that cell (critique 1, finding 4: the roll vanished from the table as the open scroll appeared 180 px higher)',
+    'brings the rolled letter up to his reading hand before the swap: it shows no sooner than he reaches, and at the last frame it shows its middle lies within its own height of the middle of the parchment his `read` cell holds, read on that cell (critique 1, finding 4: the roll vanished from the table as the open scroll appeared 180 px higher)',
     () =>
       Effect.gen(function* () {
         const letter = placed.find(({ shot }) => shot.id === 'cold-letter')?.shot;

@@ -75,12 +75,16 @@
   about a third of the frame: the lead on a sheet drawn at his close's size (`iio-two`) so his
   drawing stays under the 1.5 enlarging cap. The man laughs on the mark (a new `laugh` key on his
   table sheet) under a chuckle from the store; the lead turns to him with an embarrassed grin, then
-  tucks the bottle to his chest and looks down. On "So what is milk" the two-shot comes back
-  (`cold-ask`) with the lead asking the question to the viewer.
+  tucks the bottle to his chest and looks down. The letter shot after it (`cold-letter`) holds the
+  three at the table close, the old man alone behind them, not the diners' row; on "letters" the
+  lead brings the one scroll up from behind the table's edge into his hand. On "So what is milk"
+  the two-shot comes back (`cold-ask`) and pushes in on the lead asking the question to the viewer,
+  the man's brows raised in his puzzled stare, no smile on the question.
 - The milk span is a close of the feast table: the open book tipped high over a clay cup, a white
   stream running from it with light streaks flowing down, the milk climbing the cup to the brim by
-  "good"; on "mixed" a large ink dropper comes in over the cup, shakes and is drawn away, the stream
-  unbroken.
+  "good"; just before "with" a large ink dropper comes in over the cup, dry at its tip (its drawn
+  drop never shown), and on "nothing" it is jerked back and drawn away, no drop let fall, the
+  stream unbroken.
 - The title's voice gap shortens to about 2.95 s (milk's lead 0, its tail 0.6, so no scene moves and
   the score stays current). The first question cannot start earlier without moving the cold open's
   length, which re-times the score (a paid score run): it stays at about 26.2 s.

@@ -61,11 +61,7 @@ const CASTS: ReadonlyArray<readonly [string, ReadonlyArray<string>, number]> = [
     8,
   ],
   ['cold-smile', ['lead-feast', 'feast-guest-man'], 2],
-  [
-    'cold-letter',
-    ['lead-feast', 'feast-guest-man', 'feast-guest-woman', 'feast-mother', 'filler-dressed'],
-    8,
-  ],
+  ['cold-letter', ['lead-feast', 'feast-guest-man', 'feast-guest-woman', 'filler-dressed'], 4],
   ['cold-scroll', [], 0],
   [
     'cold-ouch',
