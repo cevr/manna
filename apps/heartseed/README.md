@@ -510,8 +510,14 @@ way back, `Your field` (shown `‹ Your field`), which returns to the field;
 in the scroll view the one heading `About`, the natural voice's credits
 (`CREDITS`, one paragraph, `about-credits`) and the Apache License 2.0
 whole (`about-licence`), which the bundle owes for the natural voice's
-vendored code. Every text is Palette A's ink, at WCAG AA on the ground.
-It reads and writes nothing in the store.
+vendored code. Every text is the scheme's ink, at WCAG AA on the ground.
+A foot fixed under the scroll view holds the reader's appearance
+(`src/appearance/choice.tsx`, `AppearanceChoice`, Look): the radio group
+`Appearance`, `System`, `Light` and `Dark`, on screen with no scroll and
+clear of the home indicator. About writes the store only at a tap of one
+of them. The control sits here until the home's redesign moves it, with
+Voice and Minutes, into its Settings sheet: it carries its own state and
+rules, so the move is one line and its test's route.
 
 - The licence is `native/natural/kokoro/LICENSE` byte for byte, never
   trimmed or reflowed, served as the virtual module
@@ -1307,16 +1313,46 @@ and both launch screens' artwork are drawn from it by `bun run icon`
 ## Look
 
 Every screen is drawn in brand C's roles (`src/theme.ts`), in light or
-dark as the system's appearance says, and every text in SF Rounded
-(`face`, `ui-rounded`), the verse's among them.
+dark as the reader's appearance and the system's say, and every text in SF
+Rounded (`face`, `ui-rounded`), the verse's among them.
 
+- **The reader's appearance.** `System`, `Light` or `Dark`, System by
+  default (`src/appearance.ts`): stored under `heartseed/appearance`, its
+  text exactly `system`, `light` or `dark`. The `Appearance` service reads
+  it once, at the launch of the app's layer, through the layer's own
+  store, and writes nothing then; a missing key, a failed read (logged
+  `appearance.store.failed`, method `get`) and every other text (`Dark`,
+  ` dark`, `"dark"`, `sepia`, empty) read as System (`appearanceOf`). A
+  tap on About shows its scheme at once and writes the word; writes go
+  one at a time, so the store ends at the last tap's word whatever order
+  they settle in; a refused write is logged (method `set`), the choice
+  shown stays the one tapped for this launch, and the next launch reads
+  what the store holds. It is never asked and never in the first minute:
+  a reader who never chooses follows the phone.
 - **The scheme.** `useScheme()` (`src/look.tsx`) is the one place it is
-  decided: dark when React Native's `Appearance` says `dark`, light for
-  `light`, none or anything else (`schemeOf`). One listener to the
-  system's appearance, held from the module's load, tells every mounted
-  screen of a change, so the shown screen repaints in its next frame with
-  no tap. A reader's own choice of System, Light or Dark enters here and
-  nowhere else.
+  decided: `schemeOf(choice, system)` (`src/appearance.ts`), Light and
+  Dark their own, System dark when React Native's `Appearance` says
+  `dark` and light for `light`, none or anything else. The root holds the
+  launch's pending frame until the appearance is read as well as the
+  garden, then shows it to every screen (`useAppearanceShown`,
+  `src/appearance/shown.ts`) in the commit that first draws it, so no
+  headed frame is drawn under another; until then, and after the root
+  leaves, the choice counts as System. One listener to the system's
+  appearance, held from the module's load, tells every mounted screen of
+  a change, so under System the shown screen repaints in its next frame
+  with no tap; under Light or Dark a flip of the system changes nothing.
+- **The interface style.** On iOS the app's windows follow the choice
+  (`src/appearance/host.ios.ts`: `Appearance.setColorScheme('light' |
+  'dark')`, `'unspecified'` for System), so the status bar, alerts and the
+  system's own controls match; in the tests and on the web it is a no-op
+  (`host.ts`; react-native-web has no `setColorScheme`). Under a set
+  style React Native reports that style and hears no change of the
+  system, so the scheme comes from the choice, never from the hook alone.
+  `userInterfaceStyle` in the native manifest stays the system's: no
+  phone build carries the choice.
+- **The launch screen** is drawn by iOS before any JavaScript, in the
+  system's appearance: a reader who chose Light on a dark phone sees the
+  dark launch screen, then the light app. Accepted.
 - **The styles.** Each screen builds its styles once per scheme at module
   load (`themed((roles, face) => StyleSheet.create(…))`, giving
   `{ light, dark }`) and picks one by the scheme now (`useThemed`); no
@@ -1345,8 +1381,9 @@ dark as the system's appearance says, and every text in SF Rounded
   clipping), the status bar's legibility in each scheme and the colours
   themselves are the owner's look on his phone. `app/probe/theme.tsx`
   (`heartseed://probe/theme`, development builds only) prints the
-  system's appearance, the scheme, its ground and the face for the live
-  check (`.claude/skills/verify-heartseed/features/appearance.md`).
+  system's own appearance, the stored appearance's text, the interface
+  style React Native reports, the scheme, its ground and the face for the
+  live check (`.claude/skills/verify-heartseed/features/appearance.md`).
 
 ## Tests
 
@@ -1510,8 +1547,11 @@ dark as the system's appearance says, and every text in SF Rounded
     from Today to the field, its `About` outside every scroll view and
     44 pt tall, About's one heading, the credits word for word, the licence
     equal to the file, every text at AA, the way back, nothing written and
-    a relaunch on Today; `About` disabled in every frame of a pending
-    remove; a recital started while About shows brings Today; and the
+    a relaunch on Today; the foot's `Appearance` radios outside every
+    scroll view, each 44 pt tall, the stored word checked (System for a
+    near miss), at AA, nothing written with no tap and a tap writing its
+    word under the appearance's key alone; `About` disabled in every frame
+    of a pending remove; a recital started while About shows brings Today; and the
     plugin serving `virtual:heartseed-licence` as `vite/licence.ts` prints
     it.
   - `test:session`: `src/session.property.test.ts`, the daily plan
@@ -1819,6 +1859,20 @@ dark as the system's appearance says, and every text in SF Rounded
     scheme's styles built once; and the guard: no product file in `src`
     or `app` (less tests, rigs, probes, prototypes and `src/theme.ts`)
     names a colour literal or a font family.
+  - `test:appearance`: `src/appearance.property.test.ts`, the read rule
+    over the three words, 30 near misses and 400 generated texts, the
+    scheme over every appearance and system name, and the `Appearance`
+    service against its model over the store on the device across seeded
+    histories (launches over any stored text, a missing key and a failed
+    read; chooses, a refused write, bursts in one turn and with every write
+    held and let go in any order; relaunches): the view, its latest change,
+    the disk and the log after each command, nothing written at launch.
+  - `test:appearance-walk`: `src/appearance/walk.test.tsx`, the root
+    through the bar rig as generated readers (launches over each stored
+    text class and either system; a choice on About, landed or refused, a
+    flip of the system, a relaunch, the field), every frame held to the
+    frame oracle for the model's scheme, About's radios and the disk to
+    the model.
   - `test:dark-today`: `src/look/today.test.tsx`, Today in dark and across
     flips of the system through the run rig, as generated walks (Say it
     heard, with a word missed or unheard, a flip while it listens, a peek,

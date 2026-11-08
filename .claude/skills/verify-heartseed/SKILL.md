@@ -145,7 +145,8 @@ or `Him` in a raw snapshot) and `Your field` and `When I need…`; on When I nee
 reference and its bar's `Today`; on the field, in its bar,
 `Today`, `Add a passage`, and the ask's `Remove` and `Keep`, in a row
 `Remove <reference>`, and in its foot `About`; on About its bar's
-`Your field`; and on the chooser a book, a chapter, a verse, `Plant` and
+`Your field` and in its foot an `Appearance` radio (`System`, `Light`,
+`Dark`); and on the chooser a book, a chapter, a verse, `Plant` and
 the backs (`Your field`, `Books`, `Chapters`).
 Heartseed has no journey files yet. The features:
 
@@ -196,7 +197,8 @@ Heartseed has no journey files yet. The features:
   offset its record holds), which never fall, and the harvest.
 - [features/about.md](features/about.md): the About screen, from the
   field's fixed foot `About`: the natural voice's credits and the Apache
-  License 2.0 whole, and the way back to the field.
+  License 2.0 whole, the way back to the field, and the reader's
+  appearance (System, Light, Dark) in its fixed foot.
 - [features/passage.md](features/passage.md): choosing passages: the
   field's fixed bar with `Add a passage` or the limit line, the chooser
   (books, chapters, a chapter's verses, the range clipped to 20, `Plant`
@@ -228,9 +230,12 @@ Heartseed has no journey files yet. The features:
   colours, read from the build's asset catalog and Info.plist, never from
   a screenshot.
 - [features/appearance.md](features/appearance.md): every screen in brand
-  C's light or dark as the system's appearance says, in SF Rounded, on the
+  C's light or dark as the reader's appearance (System, Light or Dark,
+  chosen on About) and the system's say, in SF Rounded, on the
   development probe (`apps/heartseed/app/probe/theme.tsx`): the system,
-  the scheme, its ground and the face, light and then dark with no tap.
+  the stored appearance, the interface style, the scheme, its ground and
+  the face; light and then dark with no tap, a choice of Light over a
+  dark system, kept across a relaunch, and System again.
   Run it from `first.md`'s Today.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the

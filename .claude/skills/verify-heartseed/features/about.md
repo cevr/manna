@@ -11,8 +11,11 @@ and About is never shown while Say it listens. In its scroll view, the one
 heading `About`, the credits paragraph (`id=about-credits`) and the
 licence (`id=about-licence`), the text of
 `apps/heartseed/native/natural/kokoro/LICENSE` byte for byte, served as
-the bundle-time module `virtual:heartseed-licence`. It reads and writes
-nothing in the store, and a launch never opens on it.
+the bundle-time module `virtual:heartseed-licence`. A foot fixed under its
+scroll view holds the radio group `Appearance`: `System`, `Light` and
+`Dark` in that order, the stored one checked (`appearance.md` drives
+them). About writes the store only at a tap of one of them, and a
+launch never opens on it.
 
 ## Sub-features
 
@@ -22,8 +25,10 @@ nothing in the store, and a launch never opens on it.
   credits (`CREDITS` in `apps/heartseed/src/about/screen.tsx`), a node
   whose raw label starts `Apache License` and ends
   `limitations under the License.`, and a button `Your field`, with no
-  `Voice`; `Your field` shows the field (the heading `Your field`); a
-  relaunch from About opens Today.
+  `Voice`, and three radios `System`, `Light` and `Dark` whose rects lie
+  wholly inside the window and above the bottom safe area with no scroll;
+  `Your field` shows the field (the heading `Your field`); a relaunch from
+  About opens Today.
 
 ## How to get to it (user POV)
 
@@ -45,7 +50,9 @@ JavaScript comes from the dev server.
 3. `sim tap "label=About"`, `sim snapshot about` and a raw snapshot → the
    heading `About`, the button `Your field`, no `Voice`; from the raw
    snapshot, three booleans: a label equal to `CREDITS`, a label starting
-   `Apache License`, a label ending `limitations under the License.`.
+   `Apache License`, a label ending `limitations under the License.`; and
+   the radios `System`, `Light`, `Dark`, their rects and the window's,
+   keeping only numbers.
 4. `sim tap "label=Your field"` → the heading `Your field`. Then
    `sim tap "label=About"`, `sim relaunch`,
    `sim open / --expect "id=session"` → Today.
@@ -57,7 +64,8 @@ Report only booleans, rect numbers and the labels named above; delete the
 ## Gotchas
 
 - `About` never needs a `sim scroll`: it is in the field's foot, outside
-  the scroll view, and `Your field` sits in About's bar. The licence is
+  the scroll view, `Your field` sits in About's bar and the appearance
+  radios in About's foot. The licence is
   long; reading it from the raw snapshot needs no scroll either, since
   the node holds the whole text.
 - Its contrast, its one heading, its being disabled while a remove is
