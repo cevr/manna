@@ -20,6 +20,7 @@ import {
   cycleVoice,
   sessionView,
   taughtView,
+  visitPromise,
   voiceView,
 } from '../src/app';
 import { AboutScreen } from '../src/about/screen';
@@ -39,6 +40,9 @@ import {
 } from '../src/garden';
 import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
+import { needOf, type NeedCard } from '../src/need';
+import { NeedScreen } from '../src/need/screen';
+import type { Range } from '../src/passages';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { BigButton, color, look, PlantMark, Unsaid, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
@@ -246,6 +250,20 @@ function FieldControl({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
+/** The way to When I need…: offered once a plan is made in this launch, and never while Say it listens. */
+function NeedControl({ onPress }: { readonly onPress: () => void }) {
+  return (
+    <Pressable
+      role="button"
+      aria-label="When I need…"
+      onPress={onPress}
+      style={({ pressed }) => [styles.toField, pressed && look.pressed]}
+    >
+      <Text style={styles.toFieldText}>When I need…</Text>
+    </Pressable>
+  );
+}
+
 /** A Minutes radio of the header's second row: at least 44 pt tall, filled in ink when chosen. */
 function Pill({
   label,
@@ -388,8 +406,9 @@ const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
   );
 
 /**
- * Today: its header (the heading and the way to the field, and under them
- * the reader's choices), fixed above a scroll view of the session's counts
+ * Today: its header (the heading, the way to the field and, once a plan is
+ * made, the way to When I need…, wrapping under the heading when the text
+ * is large, and under them the reader's choices), fixed above a scroll view of the session's counts
  * line, the verse the run shows, its stage and the alert, and a footer
  * fixed under the scroll view: the result's grades, Listen on the plan's
  * new piece while the voice is on and reads nothing, and the action button.
@@ -404,7 +423,7 @@ const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
  * however long the verse or the result, they are on screen without a
  * scroll and clear of the home indicator.
  */
-function Today({ onField }: { readonly onField: () => void }) {
+function Today({ onField, onNeed }: { readonly onField: () => void; readonly onNeed: () => void }) {
   const insets = useSafeAreaInsets();
   const sayIt = AsyncResult.value(useAtomValue(sayItView));
   const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
@@ -422,6 +441,7 @@ function Today({ onField }: { readonly onField: () => void }) {
   const recital = Option.exists(showing, (each) => each.recital);
   const shownSayIt = Option.filter(sayIt, () => recital);
   const marks = Option.filter(screen.marks, () => recital);
+  const planned = Option.exists(session, (view) => Option.isSome(view.plan));
   const onAction = (each: Showing) => {
     if (screen.listening) return onPress({ piece: each.piece, item: Option.none() });
     if (each.done) return onNext();
@@ -434,7 +454,12 @@ function Today({ onField }: { readonly onField: () => void }) {
           <Text role="heading" aria-level={1} style={look.title}>
             Today
           </Text>
-          {Option.isSome(garden) && !screen.listening && <FieldControl onPress={onField} />}
+          {!screen.listening && (
+            <View style={styles.ways}>
+              {Option.isSome(garden) && <FieldControl onPress={onField} />}
+              {planned && <NeedControl onPress={onNeed} />}
+            </View>
+          )}
         </View>
         <Choices />
       </View>
@@ -551,6 +576,34 @@ function FieldOf({
   });
 }
 
+/**
+ * When I need… over the garden read and the collections the app's layer
+ * teaches; nothing until both are known. A tap on a known promise makes
+ * its verses the session's visit, then shows Today once the visit is made
+ * (or failed), so Today never shows the plan's item first.
+ */
+function NeedOf({ onToday }: { readonly onToday: () => void }) {
+  const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
+  const taught = AsyncResult.value(useAtomValue(taughtView));
+  const visit = useAtomSet(visitPromise, { mode: 'promise' });
+  const onVisit = (card: NeedCard, promise: Range) => {
+    void visit({ collection: { id: card.id, title: card.title }, promise }).then(onToday, onToday);
+  };
+  return Option.match(Option.all({ garden, taught }), {
+    onNone: () => false,
+    onSome: (known) => (
+      <NeedScreen
+        cards={needOf(
+          known.garden,
+          known.taught.map((collection) => collection.id),
+        )}
+        onToday={onToday}
+        onVisit={onVisit}
+      />
+    ),
+  });
+}
+
 /** The frame a launch shows until the garden's read decides the screen: the reference alone, with no heading, button or claim. */
 function Pending() {
   const insets = useSafeAreaInsets();
@@ -568,10 +621,12 @@ function Pending() {
  * first minute when the read holds no recall of any verse, else Today. The
  * screen is decided once per launch, at the read: planting the seed inside
  * the first minute keeps Planted on until Continue. After it, the root
- * shows one of four screens in place: Today, the field (from Today's
+ * shows one of five screens in place: Today, the field (from Today's
  * `Your field`), the chooser (from the field's `Add a passage`, back to
- * the field from its first back or once a passage is added) and About
- * (from the field's `About`, back to the field). Which one
+ * the field from its first back or once a passage is added), About
+ * (from the field's `About`, back to the field) and When I need… (from
+ * Today's `When I need…`, back to Today from its bar or once a promise
+ * tapped is made the visit). Which one
  * shows is the launch's state, never stored and with no route of its own,
  * so every launch opens as above. Whenever Say it listens the screen is
  * Today. The root holds Say it's view, so Today comes back as it was, and a
@@ -582,7 +637,7 @@ export default function Root() {
   const listening = screenOf(AsyncResult.value(useAtomValue(sayItView))).listening;
   const read = openingOf(AsyncResult.value(useAtomValue(gardenView)));
   const [decided, setDecided] = useState<Opening>('pending');
-  const [screen, setScreen] = useState<'today' | 'field' | 'choose' | 'about'>('today');
+  const [screen, setScreen] = useState<'today' | 'field' | 'choose' | 'about' | 'need'>('today');
   if (decided === 'pending' && read !== 'pending') setDecided(read);
   if (screen !== 'today' && listening) setScreen('today');
   switch (shownOpening(decided, read)) {
@@ -601,7 +656,8 @@ export default function Root() {
             onAbout={() => setScreen('about')}
           />
         );
-      return <Today onField={() => setScreen('field')} />;
+      if (screen === 'need') return <NeedOf onToday={() => setScreen('today')} />;
+      return <Today onField={() => setScreen('field')} onNeed={() => setScreen('need')} />;
   }
 }
 
@@ -637,11 +693,13 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
     minHeight: 44,
   },
+  ways: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   scroll: { flex: 1 },
   footer: { paddingHorizontal: 24, paddingTop: 12, gap: 12 },
   toField: {

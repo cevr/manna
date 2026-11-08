@@ -1403,6 +1403,25 @@ GETs (Class B) when the edge does not serve them.
     sets of none, one, several and all in any order, each case's floors
     met; then every card in the situations' order, an empty garden, and the
     first minute's promise under Strength.
+  - `test:need-screen`: `src/need/screen.test.tsx`, When I need… through
+    the root over `src/test/need-rig.tsx`, which holds every frame to the
+    screens' rules (one heading, `When I need…` only on Today and outside
+    its scroll view, on When I need… no control in the scroll view but a
+    promise, every control at least 44 tall and every text at AA): the
+    header's `When I need…` beside `Your field` in a row that wraps, the
+    cards after the first minute with and without the `promises` part, and
+    a visit of another collection's promise kept over the bar's `Today`
+    and the field, said, then the done state, its recall the one write.
+  - `test:need-offer`: `src/need/offer.test.tsx`, no `When I need…` in the
+    first minute, an unread garden or over unread passages, and none while
+    Say it listens.
+  - `test:need-walk-a`, `test:need-walk-b`, `test:need-walk-c`:
+    `src/need/walk-{a,b,c}.test.tsx`, When I need… and a visit walked
+    through the root (`src/test/need-walk.ts`), two generated devices each
+    (seeds 3, 4 and 6), held after every command to `shownModel`,
+    `countsModel` over `planModel`, `needModel` and `fieldPassagesModel`,
+    and to the disk's rule (no key added but the recalls said and the
+    minutes after a tap), each part's floors met.
   - `test:natural`: `src/natural`, the natural voice's plan, seam and probe:
     `src/natural/plan.property.test.ts`, `planOf` and `startsOf` against a
     model written in the test over a small hand-built lexicon and vocab
