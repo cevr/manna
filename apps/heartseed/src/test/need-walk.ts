@@ -21,7 +21,8 @@
  * The oracle, apart from the app's code: after every command Today's
  * reference is `shownModel`'s over the hold, the visit (`visitModel`, each
  * baseline the count at the tap) and the plan (`planModel` at each making
- * over `piecesModel`'s pieces), its counts line `countsModel`'s over the
+ * over `piecesModel`'s pieces with their phrases, expanded by
+ * `phrase-model.ts`'s `expandRule`), its counts line `countsModel`'s over the
  * plan alone, its action `Say it`, `Next` or none, no `Listen` on a review,
  * and `When I need…` exactly with a plan made; When I need…'s cards are
  * `needModel`'s over the disk; the field's rows are titled as
@@ -52,6 +53,7 @@ import {
   visitModel,
   type ModelVisitVerse,
 } from './promise-model';
+import { expandRule, verseOfRule, withPhrasesRule } from './phrase-model';
 import { countsModel, DAY, HOUR, MINUTE, planModel, type ModelItem } from './session-model';
 import { hostOffset } from './zone';
 
@@ -223,10 +225,11 @@ class Walk {
       this.plan = [];
       return;
     }
-    const pieces = piecesModel(CORPUS, OWN, this.held, TAUGHT_IDS, words);
+    const pieces = piecesModel(CORPUS, OWN, this.held, TAUGHT_IDS, words, withPhrasesRule);
+    const plants = plantsOf(this.device.disk);
     this.plan = planModel({
-      plants: plantsOf(this.device.disk),
-      pieces,
+      plants,
+      pieces: expandRule(pieces, plants),
       at: this.time.now ?? 0,
       offset: hostOffset(this.time.now ?? 0),
       minutes: this.minutes,
@@ -385,8 +388,9 @@ class Walk {
       return { said: shown.reference, before, after: this.recallsNow(shown.reference) };
     this.bump('today:said');
     if (visiting) this.bump('visit:said');
-    if (FEAR?.promises.some((range) => promiseVerses(range).includes(shown.reference)))
-      this.bump('today:shown-fear');
+    const verse = verseOfRule(shown.reference);
+    if (FEAR?.promises.some((range) => promiseVerses(range).includes(verse)))
+      this.bump(verse === shown.reference ? 'today:shown-fear' : 'today:shown-fear-phrase');
     if (below(this.next, 10) < 3) {
       this.bump('today:held');
       return null;

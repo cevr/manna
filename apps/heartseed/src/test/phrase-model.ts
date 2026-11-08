@@ -10,13 +10,18 @@
  *   partition, for short verses;
  * - H2 the reference form `<verse> [<first>-<last>]` and its strict reader;
  * - H3 a phrase's text, from its first word's run to the next phrase's,
- *   and a verse piece with its phrases (`withPhrasesRule`).
+ *   and a verse piece with its phrases (`withPhrasesRule`);
+ * - H4 the pieces a plan is made over (`expandRule`), whose plan is
+ *   `src/test/session-model.ts`'s;
+ * - H6 the cue of a join (`joinCueRule`).
  *
  * Words are found one code point at a time here, where the app uses
  * regular expressions over whitespace runs; nothing here reads
  * `src/phrase.ts`.
  */
 
+import type { Recall } from '../sayit';
+import { referenceCue, referenceStage, type ModelCue } from './garden-model';
 import type { ModelTextPiece } from './passages-model';
 
 const SPLIT_WORD = /\s/u;
@@ -184,6 +189,83 @@ export const withPhrasesRule = (piece: ModelTextPiece): ModelTextPiece => {
     group: piece.group,
     phrases,
   };
+};
+
+/** A piece as the plan rule sees it, with the phrases H3 gave it. */
+interface ModelPhrased {
+  readonly reference: string;
+  readonly phrases?: readonly ModelPhrased[];
+}
+
+/** H4: whether the plant of `recalls` is at an ear or full corn, by the stage rule over ts-fsrs. */
+const ripeRule = (recalls: readonly Recall[] | undefined) => {
+  if (recalls === undefined || recalls.length === 0) return false;
+  const stage = referenceStage(recalls);
+  return stage === 'ear' || stage === 'full corn';
+};
+
+/**
+ * H4: the pieces the plan is made over, each reference at its first place
+ * first, then in order: a piece planted, or with no phrases, is itself;
+ * else its phrases, then the piece itself only when every phrase's plant
+ * is at an ear or full corn.
+ */
+export const expandRule = <P extends ModelPhrased>(
+  pieces: readonly P[],
+  plants: ReadonlyMap<string, readonly Recall[]>,
+): P[] => {
+  const firsts: P[] = [];
+  for (const piece of pieces)
+    if (firsts.every((each) => each.reference !== piece.reference)) firsts.push(piece);
+  const out: P[] = [];
+  for (const piece of firsts) {
+    const phrases = (piece.phrases ?? []) as readonly P[];
+    if (plants.has(piece.reference) || phrases.length === 0) {
+      out.push(piece);
+      continue;
+    }
+    out.push(...phrases);
+    let ripe = true;
+    for (const phrase of phrases) if (!ripeRule(plants.get(phrase.reference))) ripe = false;
+    if (ripe) out.push(piece);
+  }
+  return out;
+};
+
+/** The piece named `reference` among `pieces`, else among their phrases: a phrase item's piece is its phrase. */
+export const pieceRule = <P extends ModelPhrased>(
+  pieces: readonly P[],
+  reference: string,
+): P | undefined => {
+  for (const piece of pieces) if (piece.reference === reference) return piece;
+  for (const piece of pieces)
+    for (const phrase of (piece.phrases ?? []) as readonly P[])
+      if (phrase.reference === reference) return phrase;
+  return undefined;
+};
+
+/** Every reference `pieces` name: each piece's, then its phrases'. */
+export const referencesRule = (pieces: readonly ModelPhrased[]): string[] => {
+  const out: string[] = [];
+  for (const piece of pieces) {
+    out.push(piece.reference);
+    for (const phrase of piece.phrases ?? []) out.push(phrase.reference);
+  }
+  return out;
+};
+
+/** The verse a reference belongs to: a phrase's verse, else itself. */
+export const verseOfRule = (reference: string) => phraseOfRule(reference)?.verse ?? reference;
+
+/** H6: the cue `reference` is said under next: its own ladder once planted; else first letters when any plant is a phrase of it, else the full text. */
+export const joinCueRule = (
+  plants: ReadonlyMap<string, readonly Recall[]>,
+  reference: string,
+): ModelCue => {
+  const own = plants.get(reference);
+  if (own !== undefined && own.length > 0) return referenceCue(own);
+  for (const key of plants.keys()) if (phraseOfRule(key)?.verse === reference) return 'initials';
+  return 'full';
 };
 
 const DIGITS = '0123456789';

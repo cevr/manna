@@ -55,7 +55,7 @@ import { isActive } from '../dictation/attempt';
 import { Garden, type GardenView, type ReadGarden } from '../garden';
 import { collectionPieces, Passages, piecesOf, type PassagesView, type Range } from '../passages';
 import type { Collection } from '../promises';
-import { planOf, type Item, type Minutes, type Plan, type TextPiece } from '../session';
+import { pieceAt, planOf, type Item, type Minutes, type Plan, type TextPiece } from '../session';
 
 /** The store key of the minutes; its text is `2`, `5`, `10` or `20`. */
 export const MINUTES_KEY = 'heartseed/session/minutes';
@@ -300,7 +300,7 @@ export const layer = (
                       Arr.findFirst(now.visit, (each) => each.piece.reference === item.reference),
                       (each) => each.piece,
                     ),
-                    () => Arr.findFirst(now.pieces, (piece) => piece.reference === item.reference),
+                    () => pieceAt(now.pieces, item.reference),
                   ),
               ),
             }));

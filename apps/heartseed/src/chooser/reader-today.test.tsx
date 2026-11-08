@@ -28,6 +28,7 @@ it('shows Today the plan made at each change, over the passages chosen, morning 
     'today:said',
     'today:listen',
     'today:fresh-passage-verse',
+    'today:fresh-phrase',
     'today:no-new-on-a-planted-day',
     'day:new-after-a-planted-day',
     'day:next-morning',

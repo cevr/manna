@@ -40,9 +40,9 @@ import { below, keyOf, pickOf, random } from '../test/garden-model';
 import { device } from '../test/one';
 import { verseRef, type Held, type ModelTextPiece, type Span } from '../test/passages-model';
 import { CORPUS, choosableOf } from '../test/passages-rig';
-import { withPhrasesRule } from '../test/phrase-model';
+import { expandRule, phraseOfRule, withPhrasesRule } from '../test/phrase-model';
 import { piecesModel } from '../test/promise-model';
-import { DAY, HOUR, MINUTE, planModel } from '../test/session-model';
+import { DAY, estimate, HOUR, MINUTE, planModel } from '../test/session-model';
 import { hostOffset } from '../test/zone';
 import { collectionsOf } from './taught';
 
@@ -142,12 +142,26 @@ const launchOf = (next: () => number) => {
   const disk = new Map<string, string | null>();
   if (unread) disk.set('heartseed/passages', '[{"book":1}');
   else if (passages.length > 0) disk.set('heartseed/passages', JSON.stringify(passages));
+  const sown = (reference: string, back: number) => {
+    for (const recall of recallsOf(next, reference, now, back))
+      disk.set(keyOf(recall), JSON.stringify(recall));
+  };
   want.slice(0, planted).forEach((piece, index) => {
     let back = 1 + below(next, 30);
     if (firstDay && index === 0) back = 0;
-    for (const recall of recallsOf(next, piece.reference, now, back))
-      disk.set(keyOf(recall), JSON.stringify(recall));
+    sown(piece.reference, back);
   });
+  const ripening = want[planted]?.phrases ?? [];
+  const roll = below(next, 3);
+  if (planted > 0 && roll === 1)
+    for (const phrase of ripening.slice(0, below(next, ripening.length + 1)))
+      sown(phrase.reference, 1 + below(next, 30));
+  if (planted > 0 && roll === 2)
+    for (const phrase of ripening)
+      for (const back of [12, 7, 2]) {
+        const recall = recallOf(phrase.reference, now - back * DAY, 3, 0);
+        disk.set(keyOf(recall), JSON.stringify(recall));
+      }
   return { kind, ids, held, want, now, planted, firstDay, disk };
 };
 
@@ -179,6 +193,11 @@ const planKinds = (plan: ReturnType<typeof planModel>): string[] => {
   if (fresh === undefined) kinds.push(`fresh:${plan.fresh}`);
   else if (fresh.group === FEAR?.title) kinds.push('fresh:collection');
   else if (fresh.reference !== PROMISE.reference) kinds.push('fresh:passage');
+  if (fresh !== undefined && fresh.reference !== PROMISE.reference) {
+    const isPhrase = phraseOfRule(fresh.reference) !== undefined;
+    if (isPhrase) kinds.push('fresh:phrase');
+    else if (fresh.seconds > estimate(12)) kinds.push('fresh:join');
+  }
   const titled = plan.items
     .filter((item) => !item.fresh)
     .map((item) => COLLECTIONS.some((collection) => collection.title === item.group));
@@ -200,7 +219,7 @@ const judge = (launch: Launch, view: SessionView) => {
     plants.set(recall.reference, [...(plants.get(recall.reference) ?? []), recall]);
   const plan = planModel({
     plants,
-    pieces: launch.want,
+    pieces: expandRule(launch.want, plants),
     at: launch.now,
     offset: hostOffset(launch.now),
     minutes: 5,
@@ -336,7 +355,7 @@ describe('the pieces with collections taught', () => {
     ]).toEqual([1 + 16 + 14 - 4, 1, 'Psalms 91:1-16', 'Isaiah 41:10', 'Protection & Fear']);
   });
 
-  it('through the app’s layer: the session plans over them after begin, the new piece a passage verse first, then a Fear verse, then none, by the daily rule', async () => {
+  it('through the app’s layer: the session plans over them after begin, the new piece a passage phrase or verse first, then a Fear phrase or verse, a join once its phrases ripen, then none, by the daily rule', async () => {
     const next = random(31_7);
     const tally = new Map<string, number>();
     const bump = (kind: string) => tally.set(kind, (tally.get(kind) ?? 0) + 1);
@@ -359,6 +378,8 @@ describe('the pieces with collections taught', () => {
       'fresh:passage',
       'fresh:collection',
       'fresh:planted today',
+      'fresh:phrase',
+      'fresh:join',
       'mixed',
       'taught:left-out',
       'taught:one',

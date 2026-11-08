@@ -29,14 +29,14 @@ import { readPassage } from '../../vite/passage';
 import { addPassage, removePassage } from '../app';
 import { Dictation } from '../dictation';
 import { initial, type Status } from '../dictation/attempt';
-import { Chime, Garden, layer as gardenLayer } from '../garden';
+import { Chime, cueIn, Garden, layer as gardenLayer } from '../garden';
 import { sourceWords } from '../matcher/words';
 import { layer as passagesLayer, type Passages, type Range } from '../passages';
 import { COLLECTIONS, type Collection } from '../promises';
 import { collectionsOf } from '../promises/taught';
 import { Recalls, type Grade, type Recall } from '../sayit';
 import { countsOf, MINUTES, type Minutes } from '../session';
-import { below, keyOf, pickOf, PREFIX, random } from '../test/garden-model';
+import { below, keyOf, pickOf, PREFIX, random, referenceCue } from '../test/garden-model';
 import {
   addRule,
   type Held,
@@ -56,6 +56,7 @@ import {
   visitModel,
   type ModelVisitVerse,
 } from '../test/promise-model';
+import { expandRule, verseOfRule, withPhrasesRule } from '../test/phrase-model';
 import { countsModel, DAY, HOUR, MINUTE, planModel, type ModelItem } from '../test/session-model';
 import { hostZone, offsetIn, restore, travel } from '../test/zone';
 import { shownOf, type Shown } from './run';
@@ -95,6 +96,13 @@ const FEAR = COLLECTIONS.filter((collection) => collection.id === 'protection');
 const OTHERS = COLLECTIONS.filter((collection) => collection.id !== 'protection');
 
 const json = <A>(value: A) => JSON.stringify(value);
+
+/** Each Fear verse's phrase references, by verse, by the model's cut. */
+const FEAR_PHRASES = new Map(
+  piecesModel(CORPUS, [], { tag: 'Read', passages: [] }, TAUGHT_IDS, words, withPhrasesRule).map(
+    (piece) => [piece.reference, (piece.phrases ?? []).map((phrase) => phrase.reference)],
+  ),
+);
 
 /** The device: its disk, Dictation's status, whether the store refuses a recall's write, and the clock's instant. */
 interface Device {
@@ -189,15 +197,24 @@ const plant = (
   }
 };
 
+/** Fear's verses planted at a share, and a third of them with their phrases planted before. */
+const plantFear = (next: () => number, disk: Map<string, string>, now: number, zone: string) => {
+  const share = pickOf(next, [0, 0.3, 0.7, 1]);
+  for (const range of FEAR[0]?.promises ?? [])
+    for (const reference of promiseVerses(range)) {
+      if (next() < share) plant(next, disk, reference, now, 1 + below(next, 30), zone);
+      if (below(next, 3) > 0) continue;
+      for (const phrase of FEAR_PHRASES.get(reference) ?? [])
+        plant(next, disk, phrase, now, 31 + below(next, 30), zone);
+    }
+};
+
 /** A device's first disk: the promise, Fear's verses at a share, other collections' promises whole, sometimes one verse alone, and the passages. */
 const diskOf = (next: () => number, now: number, zone: string, tally: Map<string, number>) => {
   const disk = new Map<string, string>();
   const bump = (kind: string) => tally.set(kind, (tally.get(kind) ?? 0) + 1);
   plant(next, disk, PROMISE.reference, now, pickOf(next, [1, 2, 6, 20]), zone);
-  const share = pickOf(next, [0, 0.3, 0.7, 1]);
-  for (const range of FEAR[0]?.promises ?? [])
-    for (const reference of promiseVerses(range))
-      if (next() < share) plant(next, disk, reference, now, 1 + below(next, 30), zone);
+  plantFear(next, disk, now, zone);
   for (let n = 1 + below(next, 3); n > 0; n--) {
     const collection = OTHERS[below(next, OTHERS.length)] as Collection;
     const multi = collection.promises.filter((range) => range.last > range.first);
@@ -270,7 +287,7 @@ class Walk {
     this.device = device;
     this.services = services;
     this.passages = { tag: 'Read', passages: stored };
-    this.pieces = piecesModel(CORPUS, OWN, this.passages, TAUGHT_IDS, words);
+    this.pieces = piecesModel(CORPUS, OWN, this.passages, TAUGHT_IDS, words, withPhrasesRule);
     this.plan = this.modelPlan();
     this.trail.push(`launch(${zone},${new Date(device.now).toISOString()},${json(stored)})`);
   }
@@ -298,9 +315,10 @@ class Walk {
   }
 
   modelPlan(): readonly ModelItem[] {
+    const plants = plantsOf(this.device.disk);
     return planModel({
-      plants: plantsOf(this.device.disk),
-      pieces: this.pieces,
+      plants,
+      pieces: expandRule(this.pieces, plants),
       at: this.device.now,
       offset: offsetIn(this.zone, this.device.now),
       minutes: this.minutes,
@@ -375,6 +393,16 @@ class Walk {
     const want = this.shownNow();
     if (textOf(seen.shown) !== want)
       this.fail(`${step}: Today shows ${textOf(seen.shown)}, model ${want}`);
+    const plants = plantsOf(this.device.disk);
+    for (const verse of view.visit) {
+      const own = plants.get(verse.item.reference);
+      const ladder = own === undefined ? 'full' : referenceCue(own);
+      const cue = cueIn(seen.garden, verse.item.reference);
+      if (cue !== ladder)
+        this.fail(
+          `${step}: visit verse ${verse.item.reference} cued ${cue}, its own ladder ${ladder}`,
+        );
+    }
     if (seen.shown._tag === 'Item' && seen.shown.held !== (this.held !== null))
       this.fail(`${step}: shown held ${seen.shown.held}, model ${this.held}`);
     const counts = Option.match(view.plan, {
@@ -410,6 +438,13 @@ class Walk {
     if (verses.some((reference) => this.pieces.every((piece) => piece.reference !== reference)))
       this.bump('visit:verse in no piece');
     if (card.id !== 'protection') this.bump('visit:other collection');
+    const planted = plantsOf(this.device.disk);
+    if (
+      verses.some((verse) =>
+        [...planted.keys()].some((key) => verseOfRule(key) === verse && key !== verse),
+      )
+    )
+      this.bump('visit:known verse with phrase plants');
     await this.run(this.session.visit({ id: card.id, title: card.title }, range));
     this.visit = visitModel(range, (reference) => this.recallsNow(reference));
     this.visitGroup = card.title;
@@ -491,7 +526,7 @@ class Walk {
     const landed = want.outcome === 'Added' || want.outcome === 'Removed';
     if (landed) {
       this.passages = want.held;
-      this.pieces = piecesModel(CORPUS, OWN, this.passages, TAUGHT_IDS, words);
+      this.pieces = piecesModel(CORPUS, OWN, this.passages, TAUGHT_IDS, words, withPhrasesRule);
     }
     return landed;
   }
@@ -586,6 +621,7 @@ const FLOORS: ReadonlyArray<readonly [string, number]> = [
   ['visit:verse in the plan', 20],
   ['visit:verse in no piece', 50],
   ['visit:other collection', 60],
+  ['visit:known verse with phrase plants', 5],
   ['say:visit kept', 30],
   ['say:visit refused', 6],
   ['say:visit under way', 14],

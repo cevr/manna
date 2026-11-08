@@ -12,7 +12,7 @@
 import { Array as Arr, Option } from 'effect';
 
 import type { ReadGarden } from '../garden';
-import { isDone, type Item, type TextPiece } from '../session';
+import { isDone, pieceAt, type Item, type TextPiece } from '../session';
 import type { SessionView } from './service';
 
 /** Today's run as shown: no plan yet (the first piece, if any), an item of the plan or the visit with its piece, or the done state. */
@@ -53,7 +53,7 @@ export const shownOf = (view: SessionView, garden: Option.Option<ReadGarden>): S
               Arr.findFirst(view.visit, (verse) => verse.piece.reference === each.reference),
               (verse) => verse.piece,
             ),
-            () => Arr.findFirst(view.pieces, (piece) => piece.reference === each.reference),
+            () => pieceAt(view.pieces, each.reference),
           ),
       ),
       (piece) => ({ item: each, piece }),

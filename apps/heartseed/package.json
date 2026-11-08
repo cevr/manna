@@ -38,7 +38,7 @@
     "test:field-grades": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/walk-grades.test.tsx",
     "test:field-bar": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/bar-remove.test.tsx ./src/field/bar-twice.test.tsx",
     "test:field-bar-lists": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/bar-lists.test.tsx ./src/field/bar-kinds.test.tsx",
-    "test:session": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/session.property.test.ts ./src/session/service.test.ts",
+    "test:session": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/session.property.test.ts ./src/session/service.test.ts ./src/session/phrases.property.test.ts",
     "test:header": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/session/header.test.tsx",
     "test:counts": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/session/counts.test.tsx",
     "test:session-held": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/session/held.property.test.ts",

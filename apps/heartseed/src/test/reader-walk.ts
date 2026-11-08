@@ -78,6 +78,7 @@ import {
 import { CORPUS, countIn, storedOf } from './passages-rig';
 import { actionModel, madeModel, NO_RUN, nextModel, shownModel, startedModel } from './run-model';
 import { deviceOf, launch, PASSAGE, type Launch } from './run-rig';
+import { expandRule, pieceRule, verseOfRule, withPhrasesRule } from './phrase-model';
 import { countsModel, DAY, localDay, MINUTE, planModel } from './session-model';
 import { listenModel } from './wake-model';
 import { wallAt } from './wake-walk';
@@ -233,12 +234,13 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   let mornings = 0;
   let addedOnPlantedDay = false;
 
-  const pieces = () => piecesRule(CORPUS, [PASSAGE], held, (text) => sourceWords(text).length);
+  const pieces = () =>
+    piecesRule(CORPUS, [PASSAGE], held, (text) => sourceWords(text).length, withPhrasesRule);
   const recallsNow = (reference: string) => plantsIn(device.disk).get(reference)?.length ?? 0;
   const planOf = () =>
     planModel({
       plants: plantsIn(device.disk),
-      pieces: pieces(),
+      pieces: expandRule(pieces(), plantsIn(device.disk)),
       at: time.now,
       offset: offsetIn(zone, time.now),
       minutes,
@@ -246,7 +248,7 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   const planNow = () => planOf().items;
   const passages = () => (held.tag === 'Read' ? held.passages : []);
   const isPassageVerse = (reference: string) =>
-    passages().some((span) => versesOf(span).includes(reference));
+    passages().some((span) => versesOf(span).includes(verseOfRule(reference)));
 
   const todayWant = () => {
     if (held.tag === 'Unread')
@@ -348,6 +350,8 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     const shown = shownModel(run, recallsNow);
     if (shown === null || shown.reference === PROMISE || !isPassageVerse(shown.reference)) return;
     reached.add(shown.fresh ? 'today:fresh-passage-verse' : 'today:review-passage-verse');
+    if (shown.reference !== verseOfRule(shown.reference))
+      reached.add(shown.fresh ? 'today:fresh-phrase' : 'today:review-phrase');
     if (shown.fresh && mornings > 0 && addedOnPlantedDay)
       reached.add('day:new-after-a-planted-day');
   };
@@ -391,7 +395,7 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   const say = async () => {
     const shown = shownModel(run, recallsNow);
     if (shown === null) return field();
-    const piece = pieces().find((each) => each.reference === shown.reference);
+    const piece = pieceRule(pieces(), shown.reference);
     if (piece === undefined) {
       faults.push(`an item of no piece: ${shown.reference}`);
       return;

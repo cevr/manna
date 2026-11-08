@@ -66,6 +66,7 @@ import {
   INVALID,
   unchoosableOf,
 } from '../test/passages-rig';
+import { expandRule, withPhrasesRule } from '../test/phrase-model';
 import { DAY, HOUR, localDay, MINUTE, planModel } from '../test/session-model';
 import { hostZone, offsetIn, restore, travel } from '../test/zone';
 
@@ -297,9 +298,10 @@ class Walk {
   }
 
   modelPlan(): ItemText[] {
+    const plants = plantsOf(this.disk);
     return planModel({
-      plants: plantsOf(this.disk),
-      pieces: this.pieces,
+      plants,
+      pieces: expandRule(this.pieces, plants),
       at: this.device.now,
       offset: offsetIn(this.zone, this.device.now),
       minutes: this.minutes(),
@@ -313,7 +315,7 @@ class Walk {
 
   /** A making in the model: the pieces over the passages now, the plan at this instant, the hold kept only when `keeps`. */
   made(keeps: boolean, why: string) {
-    this.pieces = piecesRule(CORPUS, this.own, this.held, words);
+    this.pieces = piecesRule(CORPUS, this.own, this.held, words, withPhrasesRule);
     this.plan = this.modelPlan();
     this.makings += 1;
     if (this.holding !== null) {
@@ -360,12 +362,17 @@ class Walk {
         : null;
     if (json(plan) !== json(this.plan))
       this.fail(`${step}: plan ${json(plan)}, model ${json(this.plan)}`);
-    const pieces = session.pieces.map((piece) => ({
+    const fields = (piece: ModelTextPiece) => ({
       reference: piece.reference,
       text: piece.text,
       words: piece.words,
       group: piece.group,
-    }));
+    });
+    const pieces = session.pieces.map((piece) =>
+      piece.phrases === undefined
+        ? fields(piece)
+        : { ...fields(piece), phrases: piece.phrases.map(fields) },
+    );
     if (json(pieces) !== json(this.pieces))
       this.fail(
         `${step}: pieces ${json(pieces.map((p) => [p.reference, p.group]))}, model ${json(this.pieces.map((p) => [p.reference, p.group]))}`,
@@ -387,7 +394,7 @@ class Walk {
     this.plan = null;
     this.holding = null;
     this.makings = 0;
-    this.pieces = piecesRule(CORPUS, this.own, this.held, words);
+    this.pieces = piecesRule(CORPUS, this.own, this.held, words, withPhrasesRule);
     this.bump(`launch:${this.held.tag}`);
     if (failGets > 0) this.bump(`read:faults:${Math.min(failGets, 3)}`);
     if (gardenUnread) this.bump('launch:unread garden');
@@ -829,7 +836,7 @@ describe('the session over the reader’s passages', () => {
     expect(short).toEqual([]);
   });
 
-  it('offers no new verse on the first minute’s day, the passage’s first the next morning after 04:00 local, its second the day after, in five zones', async () => {
+  it('offers nothing new on the first minute’s day, the passage’s first piece the next morning after 04:00 local (its first verse’s first phrase when that verse is long), its next the day after, in five zones', async () => {
     const failures: string[] = [];
     await zoneKept(async () => {
       for (const where of [
@@ -890,8 +897,13 @@ const playDays = async (zone: string, seed: number) => {
   if (json(fresh()) !== '[]') say(`the first minute's day offers ${json(fresh())}`);
   await walk.add(range, false, 'a passage');
   if (json(fresh()) !== '[]') say(`an add on the first minute's day offers ${json(fresh())}`);
-  const firstVerse = verseRef(range.book, range.chapter, range.first);
-  const secondVerse = verseRef(range.book, range.chapter, range.first + 1);
+  const [firstVerse = '', secondVerse = ''] = piecesRule(
+    CORPUS,
+    [],
+    { tag: 'Read', passages: [range] },
+    words,
+    withPhrasesRule,
+  ).flatMap((piece) => (piece.phrases ?? [piece]).map((each) => each.reference));
   await walk.wake(nextMorning(zone, device.now) + below(next, 5 * 60) * MINUTE - device.now);
   if (json(fresh()) !== json([firstVerse]))
     say(`the next morning offers ${json(fresh())}, not ${firstVerse}`);
