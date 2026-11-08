@@ -19,6 +19,7 @@
     "packages/hymnal/data/sdah-1985/*.json",
     "packages/hymnal/data/playback/*.json",
     "packages/hymnal/data/source-text.json",
-    "**/*.d.swift.ts"
+    "**/*.d.swift.ts",
+    ".claude/skills/argent-*/**"
   ]
 }
