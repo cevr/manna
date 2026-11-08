@@ -5250,3 +5250,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `dispatch` in `apps/heartseed/src/dictation.ts` and `src/voice.ts` wrote the state and published the view in separate fiber steps, so a native event delivered while a command's fiber yielded between them published its newer view first, and `changes` replayed the command's older one.
 - **Cause:** The run loop may yield before any step of a command's fiber, and a service whose native listener runs an effect synchronously had no property that lands a native event at each of the command's yield points; each test that had one kept its own copy of the scheduler.
 - **Guard:** code: `apps/heartseed/src/yield-points.test.ts` `each service a native listener writes has a yield-point property, through the one shared scheduler`
+
+### film-av-sync-sees-a-frame-of-priming
+
+- **Date:** 2026-11-08
+- **Kind:** review
+- **Said:** "C1 cannot see a 23 ms sound shift in footage."
+- **Source:** hymnapp/depsup-media/round-1-findings.md C1
+- **Wrong:** `packages/film/e2e/tools/av-sync.test.ts` let the flash and the click sit a whole 30 fps frame (33 ms) apart, so the sync clip's sound fed a frame of AAC priming early stayed green on every case.
+- **Cause:** The bound was one frame, wider than a frame of AAC priming (1024 samples, 21 ms at 48 kHz), where the cases on main sit at most 8.3 ms apart.
+- **Guard:** code: `packages/film/e2e/tools/av-sync.test.ts` `the flash and the click are within 10 ms in the mezzanine and the voice`

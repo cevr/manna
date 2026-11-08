@@ -127,10 +127,17 @@ const CLIPS: ReadonlyArray<readonly [string, SyncClip]> = [
   ],
 ];
 
+/**
+ * How far apart the flash and the click may sit, in seconds: the 5 ms click,
+ * read inside it, and the 24 fps picture's place on the 30 fps mezzanine,
+ * under a frame of AAC priming (1024 samples, 21 ms at 48 kHz).
+ */
+const IN_SYNC = 0.01;
+
 describe('a take keeps its picture and its voice together', () => {
   for (const [what, clip] of CLIPS)
     it.live(
-      `the flash and the click are within one frame in the mezzanine and the voice: ${what}`,
+      `the flash and the click are within 10 ms in the mezzanine and the voice: ${what}`,
       () =>
         Effect.scoped(
           Effect.gen(function* () {
@@ -138,7 +145,7 @@ describe('a take keeps its picture and its voice together', () => {
             expect(made.probe.picture.variable).toBe(clip.variable);
             expect(made.probe.picture.codec).toBe(CODECS[clip.camera]);
             expect(made.upright).toBe(clip.camera === 'iphone');
-            expect(Math.abs(made.click - made.flash)).toBeLessThanOrEqual(1 / 30);
+            expect(Math.abs(made.click - made.flash)).toBeLessThanOrEqual(IN_SYNC);
             expect(new Set(made.mezzanine.map((p) => p.length.toFixed(5)))).toEqual(
               new Set([(1 / FOOTAGE_RECIPES.mezzanine.fps).toFixed(5)]),
             );
