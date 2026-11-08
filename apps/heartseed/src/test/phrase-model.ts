@@ -9,12 +9,15 @@
  *   squared sizes, then the earliest cuts; and a brute force over every
  *   partition, for short verses;
  * - H2 the reference form `<verse> [<first>-<last>]` and its strict reader;
- * - H3 a phrase's text, from its first word's run to the next phrase's.
+ * - H3 a phrase's text, from its first word's run to the next phrase's,
+ *   and a verse piece with its phrases (`withPhrasesRule`).
  *
  * Words are found one code point at a time here, where the app uses
  * regular expressions over whitespace runs; nothing here reads
  * `src/phrase.ts`.
  */
+
+import type { ModelTextPiece } from './passages-model';
 
 const SPLIT_WORD = /\s/u;
 const WORDY = /[\p{L}\p{N}]/u;
@@ -164,6 +167,24 @@ export const cutRule = (text: string): ModelPhrase[] => {
 /** H2: a phrase's reference. */
 export const phraseRefRule = (verse: string, first: number, last: number): string =>
   `${verse} [${first}-${last}]`;
+
+/** H3: `piece` with its phrases when its text is long, each its reference, text, word count and the piece's group, with none of its own; else `piece` as it is. */
+export const withPhrasesRule = (piece: ModelTextPiece): ModelTextPiece => {
+  const phrases: ModelTextPiece[] = cutRule(piece.text).map((phrase) => ({
+    reference: phraseRefRule(piece.reference, phrase.first, phrase.last),
+    text: phrase.text,
+    words: phrase.last - phrase.first + 1,
+    group: piece.group,
+  }));
+  if (phrases.length === 0) return piece;
+  return {
+    reference: piece.reference,
+    text: piece.text,
+    words: piece.words,
+    group: piece.group,
+    phrases,
+  };
+};
 
 const DIGITS = '0123456789';
 

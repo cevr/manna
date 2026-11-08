@@ -10,8 +10,10 @@
  *
  * It catches the app's own not first, a passage's verses out of order or one
  * off, a verse's group as its own reference, its words or its text from
- * another verse, a reference kept twice or kept at its later place, and
- * unread passages giving any verse. It misses when the session takes the
+ * another verse, a reference kept twice or kept at its later place,
+ * unread passages giving any verse, and a long passage verse without its
+ * phrases (hsphrase H3, `withPhrasesRule`), with phrases on the app's own,
+ * or with a phrase's group not its verse's. It misses when the session takes the
  * pieces: that is `session.test.ts`'s.
  */
 
@@ -30,6 +32,7 @@ import {
   type Span,
 } from '../test/passages-model';
 import { CORPUS, chapterOf, choosableOf, countIn } from '../test/passages-rig';
+import { withPhrasesRule } from '../test/phrase-model';
 
 const PROMISE_TEXT = readPassage();
 
@@ -89,6 +92,14 @@ const viewOf = (held: Held): PassagesView => {
   return { _tag: 'Read', passages: held.passages };
 };
 
+/** Tallies each passage verse as long (with phrases) or short. */
+const tallyLengths = (verses: readonly ModelTextPiece[], bump: (kind: string) => void) => {
+  for (const piece of verses) {
+    if (piece.phrases === undefined) bump('a short verse');
+    else bump('a long verse');
+  }
+};
+
 describe('the pieces over the reader’s passages', () => {
   it('are the app’s own, then each passage’s verses in order, each reference once at its first place, as the rule makes them', () => {
     const next = random(15_1);
@@ -104,7 +115,8 @@ describe('the pieces over the reader’s passages', () => {
       bump(`passages:${held.tag}`);
       if (held.tag === 'Read') for (const kind of kinds) bump(kind);
       const got = piecesOf(own, viewOf(held));
-      const want = piecesRule(CORPUS, own, held, words);
+      const want = piecesRule(CORPUS, own, held, words, withPhrasesRule);
+      tallyLengths(want.slice(own.length), bump);
       const all = own.length + passages.reduce((sum, span) => sum + span.last - span.first + 1, 0);
       if (held.tag === 'Read' && want.length < all) bump('a reference shared');
       if (held.tag === 'Read' && own.length > 0 && want.length === all) bump('nothing shared');
@@ -128,6 +140,8 @@ describe('the pieces over the reader’s passages', () => {
       'one verse',
       'a reference shared',
       'nothing shared',
+      'a short verse',
+      'a long verse',
     ])
       expect(tally.get(kind) ?? 0, kind).toBeGreaterThanOrEqual(20);
   });
@@ -154,6 +168,21 @@ describe('the pieces over the reader’s passages', () => {
     ]);
     expect(pieces[0]).toEqual(PROMISE);
     expect(pieces[1]?.words).toBeGreaterThan(0);
+    expect(withPhrasesRule(PROMISE).phrases?.length).toBeGreaterThan(0);
+    expect(
+      pieces.filter((piece) => piece.phrases !== undefined).map((piece) => piece.reference),
+    ).toEqual(
+      pieces
+        .slice(1)
+        .filter((piece) => withPhrasesRule(piece).phrases !== undefined)
+        .map((piece) => piece.reference),
+    );
+    expect(
+      pieces
+        .filter((piece) => piece.phrases !== undefined)
+        .flatMap((piece) => piece.phrases ?? [])
+        .every((phrase) => phrase.group === 'Isaiah 41:9-11' || phrase.group === spanRef(john)),
+    ).toBe(true);
     expect(piecesOf([PROMISE], { _tag: 'Unread' })).toEqual([PROMISE]);
     expect(piecesOf([], { _tag: 'Read', passages: [{ ...john, first: 3, last: 3 }] })).toHaveLength(
       1,

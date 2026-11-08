@@ -168,14 +168,17 @@ export interface ModelTextPiece {
   readonly text: string;
   readonly words: number;
   readonly group: string;
+  /** A long verse's phrases (hsphrase H3), absent when it has none. */
+  readonly phrases?: readonly ModelTextPiece[];
 }
 
-/** P6: the app's own pieces, then each held passage's verses in passage and verse order, each reference kept at its first place only; `words` counts a verse's words as the matcher does. */
+/** P6: the app's own pieces, then each held passage's verses in passage and verse order, each reference kept at its first place only; `words` counts a verse's words as the matcher does, and `phrased` gives a passage verse its phrases (none by default). */
 export const piecesRule = (
   corpus: Corpus,
   own: ReadonlyArray<ModelTextPiece>,
   held: Held,
   words: (text: string) => number,
+  phrased: (piece: ModelTextPiece) => ModelTextPiece = (piece) => piece,
 ): ModelTextPiece[] => {
   const all: ModelTextPiece[] = [...own];
   if (held.tag === 'Read')
@@ -183,12 +186,14 @@ export const piecesRule = (
       const verses = versesIn(corpus, span.book, span.chapter);
       for (let verse = span.first; verse <= span.last; verse++) {
         const text = verses[verse - 1] as string;
-        all.push({
-          reference: verseRef(span.book, span.chapter, verse),
-          text,
-          words: words(text),
-          group: spanRef(span),
-        });
+        all.push(
+          phrased({
+            reference: verseRef(span.book, span.chapter, verse),
+            text,
+            words: words(text),
+            group: spanRef(span),
+          }),
+        );
       }
     }
   const out: ModelTextPiece[] = [];

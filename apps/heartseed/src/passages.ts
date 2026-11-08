@@ -12,7 +12,8 @@
  * in call order, one at a time, and changes the view only once its write
  * has landed. A remove never touches a recall: a removed passage's plants
  * stay in the garden. The session plans over the app's own pieces, then
- * each passage's verses, then the taught collections' verses (`piecesOf`).
+ * each passage's verses, then the taught collections' verses (`piecesOf`);
+ * each long verse after the app's own carries its phrases (`src/phrase.ts`).
  */
 
 import { formatBibleReference, Reference } from '@manna/core/bible';
@@ -32,6 +33,7 @@ import * as Semaphore from 'effect/Semaphore';
 
 import { versesOf } from './kjv';
 import { sourceWords } from './matcher/words';
+import { cutOf, phraseReference } from './phrase';
 import type { Collection } from './promises';
 import type { TextPiece } from './session';
 
@@ -89,17 +91,37 @@ export type AddAnswer = 'Added' | 'Full' | 'Invalid' | 'Unread' | 'Failed';
 /** A remove's answer, in the order a remove judges them: `Unread`, `Absent`, then `Removed` or `Failed` by its write. */
 export type RemoveAnswer = 'Removed' | 'Absent' | 'Unread' | 'Failed';
 
-/** A passage's verses as pieces: each its verse's reference and corpus text, its words counted as the matcher counts them, and its passage's reference as its group. */
+/** `piece` and its phrases under `group`. */
+const groupedAs = (piece: TextPiece, group: string): TextPiece => {
+  const { phrases, ...verse } = piece;
+  const regrouped = { ...verse, group };
+  return Option.match(Option.fromUndefinedOr(phrases), {
+    onNone: () => regrouped,
+    onSome: (each) => ({ ...regrouped, phrases: each.map((phrase) => ({ ...phrase, group })) }),
+  });
+};
+
+/** A verse as a piece: its reference, text and words, its group, and its phrases when it is long (`cutOf`), each of the verse's group. */
+const verseAsPiece = (reference: string, text: string, group: string): TextPiece => {
+  const piece = { reference, text, words: sourceWords(text).length, group };
+  const phrases = cutOf(text).map((phrase) => ({
+    reference: phraseReference(reference, phrase),
+    text: phrase.text,
+    words: phrase.last - phrase.first + 1,
+    group,
+  }));
+  if (phrases.length === 0) return piece;
+  return { ...piece, phrases };
+};
+
+/** A passage's verses as pieces: each its verse's reference and corpus text, its words counted as the matcher counts them, its passage's reference as its group, and a long verse's phrases. */
 const piecesIn = (range: Range): readonly TextPiece[] => {
   const group = passageReference(range);
   return versesOf(range.book, range.chapter)
     .slice(range.first - 1, range.last)
-    .map((text, index) => ({
-      reference: verseReference(range.book, range.chapter, range.first + index),
-      text,
-      words: sourceWords(text).length,
-      group,
-    }));
+    .map((text, index) =>
+      verseAsPiece(verseReference(range.book, range.chapter, range.first + index), text, group),
+    );
 };
 
 /** The verses of the passages held, in passage order and verse order; none when unread. */
@@ -108,11 +130,11 @@ const heldPieces = (view: PassagesView): readonly TextPiece[] => {
   return view.passages.flatMap(piecesIn);
 };
 
-/** The verses of `collections` as pieces, collection by collection, promise by promise and verse by verse, each grouped by its collection's title. */
+/** The verses of `collections` as pieces, collection by collection, promise by promise and verse by verse, each and its phrases grouped by its collection's title. */
 export const collectionPieces = (collections: readonly Collection[]): readonly TextPiece[] =>
   collections.flatMap((collection) =>
     collection.promises.flatMap((range) =>
-      piecesIn(range).map((piece) => ({ ...piece, group: collection.title })),
+      piecesIn(range).map((piece) => groupedAs(piece, collection.title)),
     ),
   );
 

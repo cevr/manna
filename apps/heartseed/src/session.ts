@@ -31,11 +31,14 @@ export interface Piece {
   readonly reference: string;
   readonly words: number;
   readonly group: string;
+  /** A long verse's phrases (`src/phrase.ts`), in order, each a piece of the verse's group with none of its own; absent on a verse learned whole. */
+  readonly phrases?: readonly Piece[];
 }
 
 /** A piece with its text, which Today shows and a recital of it is said against. */
 export interface TextPiece extends Piece {
   readonly text: string;
+  readonly phrases?: readonly TextPiece[];
 }
 
 /** One verse of a session: a review, or the new piece (`fresh`), with the recalls its plant held when the plan was made and its estimate in seconds. */

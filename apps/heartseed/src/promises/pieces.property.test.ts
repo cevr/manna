@@ -14,7 +14,9 @@
  *
  * It catches the collection before the passages, a verse kept twice, a
  * collection's verse grouped as its promise, the ids' order ignored, taught
- * verses with the passages unread, and a layer that ignores its `promises`
+ * verses with the passages unread, a taught verse without its phrases or
+ * with them left under a passage's reference (hsphrase H9), Fear's cut off
+ * the table, and a layer that ignores its `promises`
  * part or teaches without it.
  */
 
@@ -38,6 +40,7 @@ import { below, keyOf, pickOf, random } from '../test/garden-model';
 import { device } from '../test/one';
 import { verseRef, type Held, type ModelTextPiece, type Span } from '../test/passages-model';
 import { CORPUS, choosableOf } from '../test/passages-rig';
+import { withPhrasesRule } from '../test/phrase-model';
 import { piecesModel } from '../test/promise-model';
 import { DAY, HOUR, MINUTE, planModel } from '../test/session-model';
 import { hostOffset } from '../test/zone';
@@ -63,6 +66,8 @@ const OVER: readonly [Span, ...Span[]] = [
 const IDS = COLLECTIONS.map((collection) => collection.id);
 
 const FEAR = COLLECTIONS.find((collection) => collection.id === 'protection');
+
+const TITLES = new Set(COLLECTIONS.map((collection) => collection.title));
 
 /** `list` in an order `next` draws. */
 const shuffled = <A>(next: () => number, list: readonly A[]) => {
@@ -130,7 +135,7 @@ const launchOf = (next: () => number) => {
   const passages = heldOf(next);
   let held: Held = { tag: 'Read', passages };
   if (unread) held = { tag: 'Unread' };
-  const want = piecesModel(CORPUS, [PROMISE], held, ids ?? [], words);
+  const want = piecesModel(CORPUS, [PROMISE], held, ids ?? [], words, withPhrasesRule);
   const now = Date.UTC(2026, 2, 1) + below(next, 200) * DAY + (6 + below(next, 15)) * HOUR;
   const planted = pickOf(next, [1, 1, below(next, want.length + 1), want.length] as const);
   const firstDay = below(next, 4) === 0;
@@ -211,6 +216,14 @@ const judge = (launch: Launch, view: SessionView) => {
   return { wrong: [], kinds };
 };
 
+/** Tallies each piece with phrases as a taught verse's (grouped by a collection's title) or a passage verse's. */
+const tallyPhrased = (pieces: readonly ModelTextPiece[], bump: (kind: string) => void) => {
+  for (const piece of pieces) {
+    if ((piece.phrases ?? []).length === 0) continue;
+    bump(TITLES.has(piece.group) ? 'taught-phrased' : 'passage-phrased');
+  }
+};
+
 describe('the pieces with collections taught', () => {
   it('are the app’s own, then the passages’ verses, then each taught collection’s, each reference once at its first place, as the rule makes them', () => {
     const next = random(12_3);
@@ -229,13 +242,14 @@ describe('the pieces with collections taught', () => {
         ids === undefined
           ? piecesOf(own, view)
           : piecesOf(own, view, collectionPieces(collectionsOf(ids)));
-      const want = piecesModel(CORPUS, own, held, ids ?? [], words);
+      const want = piecesModel(CORPUS, own, held, ids ?? [], words, withPhrasesRule);
       if (
         held.tag === 'Read' &&
         (ids ?? []).includes('protection') &&
         held.passages.flatMap(versesOfSpan).some((reference) => fearVerses.has(reference))
       )
         bump('fear-verse-in-passage');
+      tallyPhrased(want, bump);
       if (JSON.stringify(got) !== JSON.stringify(want))
         wrong.push(`${kind} ${JSON.stringify(ids)} ${JSON.stringify(held)}`);
     }
@@ -248,8 +262,62 @@ describe('the pieces with collections taught', () => {
       'taught:unknown',
       'passages:Unread',
       'fear-verse-in-passage',
+      'taught-phrased',
+      'passage-phrased',
     ])
       expect(tally.get(kind) ?? 0, kind).toBeGreaterThanOrEqual(20);
+  });
+
+  it('cut Fear’s verses into the table’s phrases under its title, Psalms 56:3 whole, and a Fear verse inside a held passage under the passage’s reference', () => {
+    const rangesOf = (piece: { phrases?: readonly { reference: string }[] }) =>
+      (piece.phrases ?? []).map((phrase) => phrase.reference.slice(phrase.reference.indexOf('[')));
+    const taught = piecesOf(
+      [PROMISE],
+      { _tag: 'Read', passages: [] },
+      collectionPieces(collectionsOf(TAUGHT)),
+    );
+    expect(
+      Object.fromEntries(
+        taught.slice(1).map((piece) => [piece.reference, rangesOf(piece).join(' ')]),
+      ),
+    ).toEqual({
+      'Psalms 91:1': '[1-9] [10-19]',
+      'Psalms 91:2': '[1-6] [7-13] [14-20]',
+      'Psalms 91:4': '[1-7] [8-14] [15-22]',
+      'Psalms 91:11': '[1-9] [10-16]',
+      'Isaiah 43:2': '[1-11] [12-20] [21-31] [32-38]',
+      '2 Timothy 1:7': '[1-10] [11-21]',
+      'Psalms 34:7': '[1-7] [8-15]',
+      'Isaiah 54:17': '[1-11] [12-22] [23-32] [33-41]',
+      'Psalms 121:7': '[1-8] [9-13]',
+      'Psalms 121:8': '[1-9] [10-19]',
+      'Deuteronomy 31:6': '[1-9] [10-19] [20-27] [28-35]',
+      'Proverbs 18:10': '[1-9] [10-17]',
+      'Psalms 56:3': '',
+      'Isaiah 41:13': '[1-11] [12-20]',
+    });
+    expect(taught[0]).toEqual(PROMISE);
+    expect(
+      new Set(
+        taught
+          .slice(1)
+          .flatMap((piece) => [
+            piece.group,
+            ...(piece.phrases ?? []).map((phrase) => phrase.group),
+          ]),
+      ),
+    ).toEqual(new Set(['Protection & Fear']));
+    const held = piecesOf(
+      [PROMISE],
+      { _tag: 'Read', passages: [{ book: 19, chapter: 91, first: 1, last: 4 }] },
+      collectionPieces(collectionsOf(TAUGHT)),
+    );
+    const first = held.find((piece) => piece.reference === 'Psalms 91:1');
+    expect([first?.group, ...(first?.phrases ?? []).map((phrase) => phrase.group)]).toEqual([
+      'Psalms 91:1-4',
+      'Psalms 91:1-4',
+      'Psalms 91:1-4',
+    ]);
   });
 
   it('give Psalms 91:1-16 its own group, then Fear’s other verses grouped by its title, Psalms 91:1 once', () => {
