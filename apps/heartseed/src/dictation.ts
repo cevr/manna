@@ -15,7 +15,18 @@
  * recital itself and cancels the source.
  */
 
-import { Context, Effect, Layer, Match, MutableRef, Option, PubSub, Schema, Stream } from 'effect';
+import {
+  Context,
+  Effect,
+  Layer,
+  Match,
+  MutableRef,
+  Option,
+  PubSub,
+  Scheduler,
+  Schema,
+  Stream,
+} from 'effect';
 import type { Scope } from 'effect';
 
 import {
@@ -107,7 +118,10 @@ export const layer: Layer.Layer<Dictation, never, DictationSource> = Layer.effec
      * Applies one input, publishes a changed view (and the view at an
      * ending, to `endings`, which keeps every one), and answers the call it
      * asks for. Neither publish suspends: `views` slides, dropping a held
-     * subscriber's oldest view, and `endings` is unbounded.
+     * subscriber's oldest view, and `endings` is unbounded. It runs as one
+     * step: its fiber never yields to the scheduler between the state write
+     * and the publishes, so a native event's listener, which runs at such a
+     * yield, never publishes its newer view before this older one.
      */
     const dispatch = (input: Input): Effect.Effect<Option.Option<Call>> =>
       Effect.gen(function* () {
@@ -118,7 +132,7 @@ export const layer: Layer.Layer<Dictation, never, DictationSource> = Layer.effec
         if (view !== before.view) yield* PubSub.publish(views, view);
         if (isActive(before.view) && !isActive(view)) yield* PubSub.publish(endings, view);
         return next.call;
-      });
+      }).pipe(Effect.provideService(Scheduler.PreventSchedulerYield, true));
 
     const run = (input: Input): Effect.Effect<void> =>
       Effect.flatMap(dispatch(input), Option.match({ onNone: () => Effect.void, onSome: perform }));
