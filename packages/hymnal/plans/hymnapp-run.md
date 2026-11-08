@@ -89,11 +89,12 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 
 ## Follow-ups
 
+- hsguards (merged cbb988596) closed the docs-anchor, copy dry-run and ledger-title guards; hsnatural's stale `src/sayit/guard.test.ts` title is renamed with its Guard line when hsnatural lands.
 - hspromise (`tmp/orchestrate/hymnapp/hspromise/`, merged 29bfbb137): `promise-new` live row unproven until the next 04:00; the visit's baseline read before a pending keep lands survives the committed tests (unreachable); hsphrase rebases its check on this merge.
 
-- hsmirror (`tmp/orchestrate/hymnapp/hsmirror/`, merged 3bea3a4bc): no committed test holds `copy.ts`'s `--dry-run` choice (only the live K9 does; a `command.test.ts` as the hymnal's); a shared `@manna/r2` for the hymnal's and Heartseed's R2 code (D8); the deploy and the copy wait on the owner's word (q15).
+- hsmirror (`tmp/orchestrate/hymnapp/hsmirror/`, merged 3bea3a4bc): a shared `@manna/r2` for the hymnal's and Heartseed's R2 code (D8); the deploy and the copy wait on the owner's word (q15).
 
-- Batch voice-1 (`tmp/orchestrate/hymnapp/hskokoro/`, merged 5791df7e0 and 73ee3573f): `guard: check` the docs test judges a whole anchor under a git-ignored output folder (`apps/<app>/ios/...`) by whether the folder happens to exist (a tooling unit); `Natural.swift` loads `af_heart.bin` by name, so hsnatural (or hsmirror) passes the voice file as data for Her/Him; `test:budget @manna/heartseed` never ran at a quiet load in the batch (natural parts measured alone at 0.29 s and 0.49 s; many older parts over 1 s at loads 5-13); the phone check (ANE routing, latency, RTF, memory, the 31,102-verse soak, the owner's listening) is the orchestrator's before hsnatural; `CLAUDE.md` lists Heartseed parts incompletely.
+- Batch voice-1 (`tmp/orchestrate/hymnapp/hskokoro/`, merged 5791df7e0 and 73ee3573f): `Natural.swift` loads `af_heart.bin` by name, so hsnatural (or hsmirror) passes the voice file as data for Her/Him; `test:budget @manna/heartseed` never ran at a quiet load in the batch (natural parts measured alone at 0.29 s and 0.49 s; many older parts over 1 s at loads 5-13); the phone check (ANE routing, latency, RTF, memory, the 31,102-verse soak, the owner's listening) is the orchestrator's before hsnatural; `CLAUDE.md` lists Heartseed parts incompletely.
 
 - hspassage (`tmp/orchestrate/hymnapp/hspassage/`, merged 9e29bdb55): the field's wait for the passages' view is unreachable in any harness (the runtime is built after the key is read); no test catches a key that remounts the verse list on each verse tap (the head does not); `sim scroll screen` stops moving the chooser's verse list once its footer shows, while a raw `agent-device swipe` scrolls it (a `@manna/sim` gap, also at 01cba8729); the voice handover after `Listen` and Hermes's corpus timing still want a phone check; `@manna/film#test:tools` (the GPU launcher) is red on main on this host.
 
