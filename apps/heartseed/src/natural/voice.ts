@@ -106,7 +106,7 @@ export const naturalVoiceSource = (
       /** Loads the model and plays the first chunk; the rest go on in the source's scope. */
       const read = (reading: Reading, first: Chunk) =>
         Effect.gen(function* () {
-          const loaded = yield* Effect.result(module.load(REVISION, FILES));
+          const loaded = yield* Effect.result(module.load(REVISION, FILES, 'af_heart.bin'));
           if (!holds(reading)) return;
           if (Result.isFailure(loaded)) {
             drop();

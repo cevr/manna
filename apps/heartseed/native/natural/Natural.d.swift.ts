@@ -20,7 +20,7 @@ export declare const Natural: {
   install(base: string, revision: string, files: NaturalFile[]): Promise<void>
   cancelInstall(): Promise<void>
   remove(): Promise<void>
-  load(revision: string, files: NaturalFile[]): Promise<number>
+  load(revision: string, files: NaturalFile[], voice: string): Promise<number>
   render(utterance: number, chunk: number, ids: number[]): Promise<NaturalRender>
   play(utterance: number, chunk: number, starts: NaturalStart[], last: boolean): Promise<void>
   pause(): Promise<void>

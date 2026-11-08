@@ -108,7 +108,10 @@ struct NaturalFailure: LocalizedError {
   private let store = KokoroAneModelStore()
   private var loadedRevision: String?
   private var voicePack: KokoroAneVoicePack?
-  private var loading: (revision: String, task: Task<(Double, KokoroAneVoicePack), Error>)?
+  private var voicePath: String?
+  private var packs: [String: KokoroAneVoicePack] = [:]
+  private var lastLoad: Task<Double, Error>?
+  private var loading: (revision: String, task: Task<Void, Error>)?
   private var unloading: Task<Void, Never>?
   private var loadToken = 0
   private var renderChain: Task<(KokoroAneSynthesisResult, Double), Error>?
@@ -218,14 +221,59 @@ struct NaturalFailure: LocalizedError {
     installListener?(event)
   }
 
-  /// Checks every file of `revision` by its SHA-256, then loads the seven
-  /// stages with this device's routing and the `af_heart` voice pack, and
-  /// returns the time it took in milliseconds; 0 when already loaded. A
+  /// Makes `voice`, the path of one of `files` ending `.bin`, the pack every
+  /// later `render` reads, and returns the call's time in milliseconds; any
+  /// other `voice` throws `voice`. The first load of `revision` in this
+  /// process checks every file by its SHA-256 and loads the seven stages
+  /// with this device's routing; a later one keeps the stages and reads the
+  /// pack from disk, or from the packs already read, re-hashing nothing. A
   /// missing file throws `missing`; a file that fails its check is deleted
-  /// and throws `check`.
-  func load(_ revision: String, _ files: [NaturalFile]) async throws -> Double {
-    if loadedRevision == revision { return 0 }
-    if let loading, loading.revision == revision { return try await loading.task.value.0 }
+  /// and throws `check`. Loads run in the order they are called, so the
+  /// last one called leaves its voice current, and a voice change halts
+  /// the reading held.
+  func load(_ revision: String, _ files: [NaturalFile], _ voice: String) async throws -> Double {
+    guard voice.hasSuffix(".bin"), let file = files.first(where: { $0.path == voice }) else {
+      throw NaturalFailure(message: "voice")
+    }
+    let previous = lastLoad
+    let task = Task { () async throws -> Double in
+      _ = await previous?.result
+      return try await self.loadVoice(revision, files, file)
+    }
+    lastLoad = task
+    return try await task.value
+  }
+
+  private func loadVoice(_ revision: String, _ files: [NaturalFile], _ file: NaturalFile) async throws -> Double {
+    let clock = ContinuousClock()
+    let began = clock.now
+    let stages = loadedRevision == revision ? "kept" : "loaded"
+    if loadedRevision != revision { try await loadStages(revision, files) }
+    let token = loadToken
+    let pack = try await packOf(revision, file)
+    guard loadToken == token, loadedRevision == revision else { throw NaturalFailure(message: "removed") }
+    if voicePath != file.path, held != nil { halt() }
+    voicePath = file.path
+    voicePack = pack
+    let spent = began.duration(to: clock.now).components
+    let millis = Double(spent.seconds) * 1_000 + Double(spent.attoseconds) / 1e15
+    NSLog(
+      "%@",
+      "[natural] load ms=\(Int(millis.rounded())) units=\(NaturalRouting.current.rawValue) "
+        + "voice=\(file.path) stages=\(stages)")
+    return millis
+  }
+
+  /// Checks every file of `revision` and loads the seven stages, or joins
+  /// the stage load already in flight for it.
+  private func loadStages(_ revision: String, _ files: [NaturalFile]) async throws {
+    if let loading, loading.revision == revision {
+      let token = loadToken
+      try await loading.task.value
+      guard loadToken == token else { throw NaturalFailure(message: "removed") }
+      loadedRevision = revision
+      return
+    }
     if loadedRevision != nil {
       halt()
       unload()
@@ -234,17 +282,12 @@ struct NaturalFailure: LocalizedError {
     let store = store
     let routing = NaturalRouting.current
     let token = loadToken
-    let task = Task.detached { () async throws -> (Double, KokoroAneVoicePack) in
+    let task = Task.detached { () async throws in
       await pending?.value
-      let clock = ContinuousClock()
-      let began = clock.now
       try NaturalModels.verify(revision, files)
       let folder = NaturalFolder.root.appendingPathComponent(revision, isDirectory: true)
       do {
         try await store.load(from: folder, routing: routing)
-        let pack = try KokoroAneVoicePack.load(from: folder.appendingPathComponent("af_heart.bin"))
-        let spent = began.duration(to: clock.now).components
-        return (Double(spent.seconds) * 1_000 + Double(spent.attoseconds) / 1e15, pack)
       } catch {
         await store.unload()
         throw NaturalFailure(message: "load failed: \(error.localizedDescription)")
@@ -252,12 +295,29 @@ struct NaturalFailure: LocalizedError {
     }
     loading = (revision, task)
     defer { if loadToken == token, loading?.revision == revision { loading = nil } }
-    let (millis, pack) = try await task.value
+    try await task.value
     guard loadToken == token else { throw NaturalFailure(message: "removed") }
     loadedRevision = revision
-    voicePack = pack
-    NSLog("%@", "[natural] load ms=\(Int(millis.rounded())) units=\(routing.rawValue)")
-    return millis
+  }
+
+  /// The pack of `file`, read once from disk and kept by its path until the
+  /// stages unload.
+  private func packOf(_ revision: String, _ file: NaturalFile) async throws -> KokoroAneVoicePack {
+    if let pack = packs[file.path] { return pack }
+    guard NaturalInstall.present(revision, file) else {
+      NSLog("%@", "[natural] load missing voice=\(file.path)")
+      throw NaturalFailure(message: "missing")
+    }
+    let url = NaturalFolder.file(revision, file.path)
+    let token = loadToken
+    let pack: KokoroAneVoicePack
+    do {
+      pack = try await Task.detached { try KokoroAneVoicePack.load(from: url) }.value
+    } catch {
+      throw NaturalFailure(message: "load failed: \(error.localizedDescription)")
+    }
+    if loadToken == token { packs[file.path] = pack }
+    return pack
   }
 
   /// Renders chunk `chunk` of reading `utterance` from its token ids (BOS
@@ -416,6 +476,8 @@ struct NaturalFailure: LocalizedError {
     loading = nil
     loadedRevision = nil
     voicePack = nil
+    voicePath = nil
+    packs = [:]
     let store = store
     unloading = Task.detached { await store.unload() }
   }

@@ -112,7 +112,7 @@ const install = (show: Show, base: Option.Option<string>) =>
 const load = (show: Show) =>
   Effect.gen(function* () {
     const module = yield* NaturalModule;
-    const outcome = yield* module.load(REVISION, FILES).pipe(
+    const outcome = yield* module.load(REVISION, FILES, 'af_heart.bin').pipe(
       Effect.map((millis) => ({ _tag: 'Loaded' as const, millis })),
       Effect.catchTag('NaturalUnavailable', (error) =>
         Effect.succeed({ _tag: 'Refused' as const, reason: error.reason }),
@@ -171,7 +171,7 @@ const soak = (show: Show, asked: number) =>
   Effect.gen(function* () {
     const module = yield* NaturalModule;
     show((view) => ({ ...view, soak: soakBegun(asked) }));
-    yield* module.load(REVISION, FILES).pipe(
+    yield* module.load(REVISION, FILES, 'af_heart.bin').pipe(
       Effect.catchTag('NaturalUnavailable', (error) =>
         Effect.sync(() =>
           show((view) => ({

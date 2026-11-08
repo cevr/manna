@@ -79,6 +79,7 @@ export class NaturalModule extends Context.Service<
     readonly load: (
       revision: string,
       files: ReadonlyArray<ModelFile>,
+      voice: string,
     ) => Effect.Effect<number, NaturalUnavailable>;
     readonly render: (
       utterance: number,
