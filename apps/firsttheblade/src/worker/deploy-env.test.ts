@@ -4,10 +4,10 @@ import { Effect, FileSystem, Path } from 'effect';
 
 /**
  * The names the stack may read from the deployer's environment: the films
- * lab's address (`kit/`), and prod's contact inbox and its switch
- * (`./domain.ts`). Every secret is a store secret (`./store-secret.ts`).
+ * lab's address (`kit/`) alone. Every secret, the contact inbox among them,
+ * is a store secret (`./store-secret.ts`).
  */
-const ALLOWED = ['FILM_LAB_URL', 'MAIL_FORWARD_TO', 'MAIL_FORWARD_VERIFIED'];
+const ALLOWED = ['FILM_LAB_URL'];
 
 /** A `Config` constructor called with a name; its combinators take a default or a text, not a name. */
 const CONFIG_CALL =
@@ -163,6 +163,7 @@ describe('the deploy reads from the environment', () => {
     Effect.gen(function* () {
       const graph = yield* graphOf('alchemy.run.ts');
       expect(graph.map(({ file }) => file)).toContain('src/worker/store-secret.ts');
+      expect(graph.map(({ file }) => file)).toContain('src/mail/contact.ts');
       const outside = graph.flatMap(({ file, code }) =>
         readsIn(code, file)
           .filter((name) => !ALLOWED.includes(name))
