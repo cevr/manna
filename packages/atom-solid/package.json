@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@manna/url-state": "workspace:*",
-    "@playwright/test": "1.64.0",
+    "@playwright/test": "1.65.0",
     "@solidjs/compiler": "catalog:"
   }
 }
