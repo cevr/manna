@@ -175,6 +175,12 @@ const fieldProblems = (entry: Entry): ReadonlyArray<string> => {
   ];
 };
 
+/**
+ * The ledger's rule for quoted words a file no longer holds: a rename moves
+ * them, and the commit that renames them renames them in the Guard.
+ */
+const RENAMED = '; renamed, its new words replace these in this Guard, in the same commit';
+
 /** What is wrong with one claim of a guard, given the rules on and a reader of the repo's files. */
 const claimProblems = (
   claim: Claim,
@@ -204,7 +210,10 @@ const claimProblems = (
     Option.match(text, {
       onNone: () => [`no file ${claim.file}`],
       onSome: (t) =>
-        unless(holdsIn(claim.file, t, claim.holds), `${claim.file} does not hold "${claim.holds}"`),
+        unless(
+          holdsIn(claim.file, t, claim.holds),
+          `${claim.file} does not hold "${claim.holds}"${RENAMED}`,
+        ),
     }),
   );
 };

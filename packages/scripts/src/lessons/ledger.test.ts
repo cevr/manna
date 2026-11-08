@@ -52,6 +52,10 @@ const repoWith = (ledger: string) =>
     return root;
   });
 
+/** The problem of entry `id` whose guard quotes `words` that `file` no longer holds, with the rename rule. */
+const notHeld = (id: string, file: string, words: string) =>
+  `${id}: ${file} does not hold "${words}"; renamed, its new words replace these in this Guard, in the same commit`;
+
 /** The problems the ledger check finds in a scratch repo whose ledger holds `entries`. */
 const problemsOf = (...entries: ReadonlyArray<string>) =>
   Effect.gen(function* () {
@@ -155,11 +159,11 @@ describe('the lessons ledger', () => {
       ).toEqual([
         'lint-off: eqeqeq is not on at error in .oxlintrc.json',
         'lint-unproved: a lint guard names its rule and its proof: lint:<rule>, proof `file` `name`',
-        'lint-proof-lost: src/thing.ts does not hold "refuses another"',
+        notHeld('lint-proof-lost', 'src/thing.ts', 'refuses another'),
         'judged-warns: judged/warns does not gate: a rule that warns guards nothing',
         'judged-other-corpus: judged/warns.json is not the corpus of gates',
-        'skill-reworded: skills/SKILL.md does not hold "Say what it does."',
-        'code-in-comment: src/thing.ts does not hold "unheld"',
+        notHeld('skill-reworded', 'skills/SKILL.md', 'Say what it does.'),
+        notHeld('code-in-comment', 'src/thing.ts', 'unheld'),
         'code-no-file: no file src/gone.ts',
         'unclassed: the guard is none of lint:, judged:, skill:, code: or none:',
         'none-empty: the guard is none of lint:, judged:, skill:, code: or none:',
@@ -311,11 +315,37 @@ describe('the lessons ledger', () => {
           entry('proof-lost', 'lint:no-console, proof `src/thing.ts` `refuses a thing`, `unheld`'),
         ),
       ).toEqual([
-        'second-lost: src/thing.ts does not hold "refuses another"',
+        notHeld('second-lost', 'src/thing.ts', 'refuses another'),
         'second-lost: no file src/gone.ts',
-        'proof-lost: src/thing.ts does not hold "unheld"',
+        notHeld('proof-lost', 'src/thing.ts', 'unheld'),
       ]);
     }),
+  );
+
+  it.effect(
+    'refuses a renamed title its Guard still quotes, naming the rule that the Guard takes the new words in the same commit, and holds the Guard that took them',
+    () =>
+      Effect.gen(function* () {
+        const before = 'code: `src/thing.ts` `refuses a thing`';
+        const after = 'code: `src/thing.ts` `refuses a stale thing`';
+        const renamed = (guard: string) =>
+          Effect.gen(function* () {
+            const root = yield* repoWith(
+              `# Lessons\n\n## A section\n\n${entry('a-rename', guard)}`,
+            );
+            const fs = yield* FileSystem.FileSystem;
+            const path = yield* Path.Path;
+            yield* fs.writeFileString(
+              path.join(root, 'src/thing.ts'),
+              "test('refuses a stale thing', () => {});\n",
+            );
+            return (yield* ledgerProblems(root)).problems;
+          }).pipe(Effect.scoped, Effect.provide(BunServices.layer));
+        expect(yield* renamed(before)).toEqual([
+          notHeld('a-rename', 'src/thing.ts', 'refuses a thing'),
+        ]);
+        expect(yield* renamed(after)).toEqual([]);
+      }),
   );
 
   it.effect('refuses a field given twice, since its reader keeps only the last', () =>

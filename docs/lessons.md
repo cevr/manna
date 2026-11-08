@@ -46,6 +46,13 @@ finding `routed`, `declined` or `unrouted`, and fails on an unrouted one.
 every guard to what its file holds, in `bun run gate` and at each commit's
 pre-commit.
 
+The words a Guard quotes (a test's title, a name, a skill's line) move with
+their file: the commit that renames them renames them in the Guard too, in
+the same commit, so a title always says what its test checks. Only the
+Guard field changes; the Date, Said, Source, Wrong and Cause stay as
+recorded, and a unit may make that one edit even where the ledger is
+otherwise outside its work.
+
 The form of an entry, each field on its own line:
 
 - **Date:** the day it was said (YYYY-MM-DD).
