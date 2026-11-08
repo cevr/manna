@@ -328,10 +328,10 @@ The words a talk is made in:
 - **media pool**: every original a film may draw on: the footage library.
 
 Preflights: `film doctor` checks headless Chrome (a page opened and closed
-in Bun.WebView's Chrome: `BUN_CHROME_PATH`, else the Chrome Bun finds, else
-Playwright's cached Chromium; `BrowserMissing` names `BUN_CHROME_PATH`; on
-macOS the renderer's Chrome runs its GPU, through the GPU launcher, see
-"Encoders"), the `elevenlabs` CLI and its
+in the Chrome `openView` launches on puppeteer-core: `BUN_CHROME_PATH`, else
+the Chrome Bun 1.4.4 would find, else Playwright's cached Chromium;
+`BrowserMissing` names `BUN_CHROME_PATH`; on macOS the renderer's Chrome runs
+its GPU, see "Encoders"), the `elevenlabs` CLI and its
 login (`auth status`, free), the H.264 encoder a render would use (a page
 chooses it as a render does; the line says `hardware` or `software`, the
 default pages and the encoder budget), reports each, and fails if any is
@@ -829,22 +829,34 @@ therefore stops loudly instead of rendering a different look in software.
 `film doctor` runs the same choice, and still prints its other lines when the
 player server will not start (the encoder line then says so).
 
-The Mac's hardware encoder lives in Chrome's GPU process, which Bun 1.4.3
-turns off: it spawns every Chrome with `--disable-gpu`, hard-coded, which no
-later flag undoes (the GPU process then runs with `--use-gl=disabled`, which
-holds no hardware encoder). So on macOS a
-Chrome whose flags ask for the GPU (`GPU_FLAG`, `--enable-gpu`) is spawned
-through the GPU launcher (`tools/chrome-gpu.ts`, `gpuLauncher`): a shell script
-written into the process's Chrome profile, which Bun spawns as its Chrome; it
-drops `--disable-gpu`, keeps every other argument in order, and execs the real
-Chrome in its own process, so Bun's DevTools pipe and its kill reach Chrome.
-The real Chrome is `BUN_CHROME_PATH`, else the one Bun 1.4.3 would find,
-searched here as Bun searches (`bunSearch`: the browsers it names on `$PATH`,
-then its app bundles in `/Applications` and `~/Applications`, then
-Playwright's headless shell), else Playwright's cached Chromium. Every later
-view names the same launcher and profile, so a Chrome Bun spawns again after
-the first one died runs its GPU too, in the same profile. The renderer asks
-for it (`launchArgs`), so `render`, `doctor` and the lab's `look` and
+The Mac's hardware encoder lives in Chrome's GPU process, which
+`--disable-gpu` turns off, and no later flag undoes it (the GPU process then
+runs with `--use-gl=disabled`, which holds no hardware encoder).
+
+Every Chrome is launched by `openView` (`tools/chrome.ts`) through
+puppeteer-core's `launch`, one per process, over a pipe
+(`--remote-debugging-pipe`), with its whole command line stated
+(`chromeFlags`; puppeteer's own defaults are off): `--user-data-dir` (the
+process's profile, below), the pipe, Bun 1.4.4's list as Bun spawned it
+(`--headless`, `--no-first-run`, `--no-default-browser-check`,
+`--disable-extensions`, `--disable-background-networking`, the three
+background-throttling flags, `--disable-ipc-flooding-protection`,
+`--no-startup-window`), `--disable-gpu` unless the caller asks for the GPU
+on macOS (`GPU_FLAG`, `--enable-gpu`; `tools/chrome-gpu.ts`, `drawsOnGpu`),
+`--mute-audio`, `--disable-audio-output`, `--disable-component-update`
+(Chrome downloads no components, about 130 MB, into a new profile), then the
+caller's flags in their order. Its executable is `BUN_CHROME_PATH`, else the
+one Bun 1.4.4 would find, searched here as Bun searches (`chromeSearch`: the
+browsers it names on `$PATH`, then its app bundles in `/Applications` and
+`~/Applications`, then Playwright's headless shell), else Playwright's
+cached Chromium. A Chrome launched again after the first one died has the
+same executable, command line and profile, so it runs its GPU too. Each
+process's profile is `$TMPDIR/bible-film-chrome/<pid>` (or under
+`FILM_CHROME_PROFILES`): the exit handler kills the Chrome's process group,
+then removes the folder, and every launch first removes the folders of
+processes that no longer run (a killed process, or a `bun test` worker,
+leaves its own). A Chrome whose parent was killed exits as its pipe closes.
+The renderer asks for the GPU (`launchArgs`), so `render`, `doctor` and the lab's `look` and
 look-book draw in one such Chrome; the browser tests do not. That Chrome
 draws on the Mac's GPU: WebGL on Metal
 (`--use-angle=metal`) and the 2D canvas accelerated, which renders RBF's
@@ -852,12 +864,15 @@ draws on the Mac's GPU: WebGL on Metal
 judged the same (2026-10-25; under 1 level on average, most on the
 anti-aliased edges of ink and text). Films render on the owner's Macs only.
 `e2e/tools/renderer-chrome.dom.test.ts` reads the renderer's Chrome from `ps`
-on macOS: no `--disable-gpu`, exec'd by the launcher, and spawned again the
-same way.
+on macOS: no `--disable-gpu`, `--disable-component-update`, and launched
+again the same way in the same profile. `e2e/tools/chrome-launcher.dom.test.ts`
+drives the launcher through generated sequences (open, close, a killed
+Chrome, an exit, a killed process) and checks one Chrome per process, its
+flags and its profile after each step.
 
 |                  | Hardware (the default)                                         | Software (`--encoder software`)                                    |
 | ---------------- | -------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Chromium flags   | `--enable-gpu --use-angle=metal`, through the GPU launcher     | the same (`launchArgs`, `tools/browser.ts`)                        |
+| Chromium flags   | `--enable-gpu --use-angle=metal`, no `--disable-gpu`           | the same (`launchArgs`, `tools/browser.ts`)                        |
 | master           | quantizer 16 (~37 Mbps)                                        | 37 Mbps variable, 2-frame pre-roll (13.4 Mbps, 765 MB for 7.6 min) |
 | share            | quantizer 26, in the page (~160 MB); alone with `--share-only` | none (`--share`, `--share-only` refused)                           |
 | encoders at once | 14 (past it the encoder hangs)                                 | one per core                                                       |
@@ -1196,7 +1211,7 @@ bundler resolves a workspace package's subpaths by the `exports` maps the
 process read at start, so the lab reads every workspace `package.json`'s
 `exports` as it starts and every 3 s after (`tools/exports-watch.ts`): once
 one changes (a merge adds a subpath), the lab closes its servers and its
-pages, ends their Chrome (`Bun.WebView.closeAll()`), and starts itself again
+pages, kills their Chrome's process group (`endChrome`, `tools/chrome-profile.ts`, as the exit handler does), and starts itself again
 in the same process with the same command line (`relaunchOnExportsChange`,
 `tools/relaunch-bun.ts`). An ask page does not reload itself (an answer in
 hand is not lost); its next load is the new code. A page that does not
@@ -1806,7 +1821,7 @@ writing render fails), and the page's clock the test's
 (`lab/fixtures/clock.ts`): a retry or a loop's playback is moved
 on with `page.clock`, not waited out, and `canvas.toBlob` encodes at once
 (Chromium's waits for idle time a busy page may not leave, up to 5 s). The
-page is a tab (`lab/fixtures/tab.ts`) of the one Chrome Bun.WebView spawns
+page is a tab (`lab/fixtures/tab.ts`) of the one Chrome `openView` launches
 per test process (`lab/fixtures/browsers.ts`, with `tools/chrome.ts`). A
 case's tab is a view lent from a pool and given back when the case ends, so
 a case pays for a page load, not for a new renderer process and a cold
@@ -3981,7 +3996,7 @@ inputs leave out the other parts' test files, never their sources (an engine
 file may import a tool), so an edit of one part's test reruns that part
 alone; no unit test reads another part's test files, and the checks that
 read every film source are lint (`film/media-in-process`,
-`film/webview-through-chrome`), which reads every file on every gate. The root `test` and
+`film/chrome-through-open-view`), which reads every file on every gate. The root `test` and
 `gate`, including the CI gate, run this browser-free suite. Each part writes
 its files' times to its own timings file in the package's installed modules
 (the script's `--timings` and `--update-timings`), and the next run starts
@@ -4264,8 +4279,8 @@ the checks stay ours.
   size, each primed with the rig at rest before its first real frame, so no
   buffer is sized by the frames before. A page with no WebGL 2 fails the
   `webgl2` load, naming why. The browser tests draw WebGL 2 on SwiftShader
-  (`--enable-unsafe-swiftshader`, `lab/fixtures/browsers.ts`), which Bun
-  spawns with `--disable-gpu`; the renderer's Chrome on macOS draws it on
+  (`--enable-unsafe-swiftshader`, `lab/fixtures/browsers.ts`), whose Chrome
+  `openView` launches with `--disable-gpu`; the renderer's Chrome on macOS draws it on
   Metal (`--use-angle=metal`, "Encoders").
 - **In Bun** nothing is drawn (`paints: false`): the rig is posed for real and
   its face node declared to the probe (`probeFace`), so `check --draw` finds

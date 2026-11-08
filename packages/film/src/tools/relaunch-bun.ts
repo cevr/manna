@@ -1,4 +1,5 @@
 import { Effect, Layer, Option } from 'effect';
+import { endChrome } from './chrome-profile.ts';
 import { Relaunch } from './exports-watch.ts';
 
 export const RelaunchBun = Layer.succeed(
@@ -12,7 +13,7 @@ export const RelaunchBun = Layer.succeed(
             onNone: () => Effect.die('this runtime cannot start itself again (no execve)'),
             onSome: (execve) =>
               Effect.sync(() => {
-                Bun.WebView.closeAll();
+                endChrome();
                 execve(process.execPath, [
                   process.execPath,
                   ...process.execArgv,

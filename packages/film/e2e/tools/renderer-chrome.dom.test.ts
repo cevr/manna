@@ -17,7 +17,7 @@ const flagsOf = (line: string) => line.split(/\s+/).filter((word) => word.starts
 
 describe("the renderer's Chrome on macOS", () => {
   it.effect.layer(BunServices.layer)(
-    "runs its GPU, exec'd by the launcher, and a Chrome spawned again after it died does too, in the same profile",
+    'runs its GPU without component updates, and a Chrome launched again after it died does too, in the same profile',
     () =>
       Effect.gen(function* () {
         if (process.platform !== 'darwin') return;
@@ -37,6 +37,7 @@ describe("the renderer's Chrome on macOS", () => {
           const flags = flagsOf(chromes[0] ?? '');
           expect(flags).not.toContain('--disable-gpu');
           expect(flags).toContain('--use-angle=metal');
+          expect(flags).toContain('--disable-component-update');
         }
         /** The profile folder a Chrome was spawned with. */
         const dataDir = (chromes: ReadonlyArray<string>) =>

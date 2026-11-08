@@ -1,16 +1,42 @@
 // oxlint-disable-next-line effect/noNodeBuiltinImport -- the exit handler's delete: an exiting process runs no effect, only synchronous calls
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { Effect, FileSystem, Path } from 'effect';
+import { Effect, FileSystem, Option, Path } from 'effect';
 import { BrowserFailed } from './errors.ts';
 
 /**
  * Where every process's Chrome keeps its profile, a folder per process id,
  * unless `FILM_CHROME_PROFILES` names another. `bun test` runs no exit
- * handler (Bun 1.4.3), so the e2e runner (`lab/fixtures/run-suite.ts`) names
+ * handler (Bun 1.4.4), so the e2e runner (`lab/fixtures/run-suite.ts`) names
  * a folder of its run's own, released once its workers have exited.
  */
 export const PROFILE_ROOT = `${tmpdir()}/bible-film-chrome`;
+
+/** The process group of this process's Chrome while one runs: its leader's pid, as its launch started it. */
+let group: Option.Option<number> = Option.none();
+
+/** This process's Chrome is now the group `leader` leads (`tools/chrome.ts`, on each launch). */
+export const holdChrome = (leader: number): void => {
+  group = Option.some(leader);
+};
+
+/** The group `leader` led is gone (its Chrome closed the pipe): it is not signalled again. */
+export const releaseChrome = (leader: number): void => {
+  group = Option.filter(group, (held) => held !== leader);
+};
+
+/**
+ * Ends this process's Chrome at once, synchronously: SIGKILL to the process
+ * group its launch started, and nothing else. The exit handler calls it
+ * before it removes the profile, and the lab's relaunch before it replaces
+ * this process.
+ */
+export const endChrome = (): void => {
+  Option.map(group, (leader) =>
+    Effect.runSync(Effect.ignore(Effect.try(() => process.kill(-leader, 'SIGKILL')))),
+  );
+  group = Option.none();
+};
 
 /** Whether process `pid` still runs (`EPERM`: it runs, as another user). */
 const alive = (pid: number) =>
@@ -50,7 +76,7 @@ export const profileFolder = (root: string) =>
     const folder = path.join(root, String(process.pid));
     yield* fs.makeDirectory(folder, { recursive: true });
     process.once('exit', () => {
-      Bun.WebView.closeAll();
+      endChrome();
       rmSync(folder, { recursive: true, force: true });
     });
     return folder;
