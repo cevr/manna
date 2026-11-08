@@ -17,6 +17,7 @@ import {
   MutableRef,
   Option,
   PubSub,
+  Scheduler,
   Schema,
   Semaphore,
   Stream,
@@ -185,7 +186,10 @@ export const layer: Layer.Layer<Voice, never, VoiceSource | KeyValueStore.KeyVal
       /**
        * Applies one input, publishes a changed view, and answers the call it
        * asks for. The publish never suspends: the sliding strategy drops a
-       * held subscriber's oldest view.
+       * held subscriber's oldest view. It runs as one step: its fiber never
+       * yields to the scheduler between the state write and the publish, so
+       * a native event's listener, which runs at such a yield, never
+       * publishes its newer view before this older one.
        */
       const dispatch = (input: Input): Effect.Effect<Option.Option<Call>> =>
         Effect.gen(function* () {
@@ -194,7 +198,7 @@ export const layer: Layer.Layer<Voice, never, VoiceSource | KeyValueStore.KeyVal
           MutableRef.set(state, next.reading);
           if (next.reading.view !== before.view) yield* PubSub.publish(views, next.reading.view);
           return next.call;
-        });
+        }).pipe(Effect.provideService(Scheduler.PreventSchedulerYield, true));
 
       /** A speak whose failure ends its own reading, if that reading is still the current one. */
       const speak = (utterance: number, text: string) =>
