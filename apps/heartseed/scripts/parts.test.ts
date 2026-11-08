@@ -4,7 +4,7 @@
  * The app's unit tests run as parts, each a turbo task the gate runs: the
  * `test:<part>` scripts the commandless `test` of `turbo.json` depends on.
  * Together the parts run every unit-test file once: each `*.test.ts(x)`
- * under `src`, `scripts` and `vite` that is not a `*.slow.test.*` file,
+ * under `src`, `scripts`, `vite` and `infra` that is not a `*.slow.test.*` file,
  * `src` under the test preload and the rest with none. No part takes a file
  * outside that set, and each ignores every slow file and names none.
  *
@@ -22,7 +22,7 @@ import { join } from 'node:path';
 const APP = join(import.meta.dir, '..');
 const PRELOAD = './src/test/setup.ts';
 /** The folders that hold unit tests. */
-const ROOTS = ['src', 'scripts', 'vite'] as const;
+const ROOTS = ['src', 'scripts', 'vite', 'infra'] as const;
 
 /** A name bun's runner takes for a test file. */
 const TEST_NAME = /(?:\.test|_test|\.spec|_spec)\.[cm]?[jt]sx?$/;

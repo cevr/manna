@@ -213,6 +213,17 @@ export const FILES: ReadonlyArray<ModelFile> = [
   },
 ];
 
+/**
+ * The second voice's pack, `am_michael`: on the mirror beside `FILES`,
+ * converted from the revision's `voices/am_michael.json` (its rows as
+ * little-endian fp32), and not fetched by the download.
+ */
+export const AM_MICHAEL: ModelFile = {
+  path: 'am_michael.bin',
+  bytes: 522_240,
+  sha256: '1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1',
+};
+
 /** The sum of the files' sizes: what a full download fetches. */
 export const TOTAL_BYTES = 82_810_273;
 

@@ -13,7 +13,15 @@ import { describe, expect, it } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { Option } from 'effect';
 
-import { baseFor, FILES, MIRROR, REVISION, SOURCE_REVISION, TOTAL_BYTES } from './manifest';
+import {
+  AM_MICHAEL,
+  baseFor,
+  FILES,
+  MIRROR,
+  REVISION,
+  SOURCE_REVISION,
+  TOTAL_BYTES,
+} from './manifest';
 
 /** The SHA-256 of the pinned manifest's 38 `path:bytes:sha256` lines, joined by newlines, read from the manifest itself. */
 const MANIFEST_DIGEST = '93ac5abb823438b2e1d451cdff47aa2a3776cb7a36c8a38a2a9ab15e4374f293';
@@ -64,6 +72,15 @@ describe('the pinned files', () => {
     expect(SOURCE_REVISION).toMatch(/^[0-9a-f]{40}$/);
     expect(REVISION).toBe(SOURCE_REVISION.slice(0, 12));
     expect(MIRROR).toBe(`https://models.heartseed.app/kokoro/${REVISION}/`);
+  });
+
+  it('pins the second voice’s pack, am_michael.bin, beside the download and not in it', () => {
+    expect(AM_MICHAEL).toEqual({
+      path: 'am_michael.bin',
+      bytes: 522_240,
+      sha256: '1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1',
+    });
+    expect(FILES.some((file) => file.path === AM_MICHAEL.path)).toBe(false);
   });
 });
 

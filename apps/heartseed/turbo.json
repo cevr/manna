@@ -12,7 +12,8 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:voice": {
@@ -25,7 +26,8 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,field,session,run,wake,natural}/**/*.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:dictation": {
@@ -38,7 +40,8 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,first,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:sayit": {
@@ -51,7 +54,8 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,voice,field,session,run,wake,natural}/**/*.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:garden": {
@@ -65,7 +69,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,today,voice.property}.test.*",
         "!src/{chooser,dictation,first,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/garden/{today,today-reads}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:today": {
@@ -79,7 +84,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/garden/{guard,sound,today-reads}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:today-reads": {
@@ -93,7 +99,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/garden/{guard,sound,today}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:first": {
@@ -108,7 +115,8 @@
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/first/{root,walk-*}.test.*",
         "!src/test/first-rig.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:cue": {
@@ -122,7 +130,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/sayit/{guard,screen,source,today}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:root": {
@@ -136,7 +145,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/first/{flow,screen,walk-*}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:walk-letters": {
@@ -150,7 +160,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:walk-alone": {
@@ -164,7 +175,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:walk-write": {
@@ -178,7 +190,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:walk-launch": {
@@ -192,7 +205,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:walk-disk": {
@@ -206,7 +220,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:walk-relaunch": {
@@ -220,7 +235,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:walk-planted": {
@@ -234,7 +250,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:walk-reading": {
@@ -248,7 +265,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:walk-taps": {
@@ -262,7 +280,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:field": {
@@ -276,7 +295,8 @@
         "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural}/**/*.test.*",
         "!src/field/{screen,garden,walk,walk-grades,unread-keep,bar-*}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:field-unread": {
@@ -290,7 +310,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural}/**/*.test.*",
         "!src/field/{sown,unread,reach,screen,garden,walk,walk-grades,bar-*}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:field-screen": {
@@ -304,7 +325,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,walk,walk-grades,bar-*}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:field-walk": {
@@ -318,7 +340,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk-grades,bar-*}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:field-grades": {
@@ -332,7 +355,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk,bar-*}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:field-bar": {
@@ -346,7 +370,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk,walk-grades,bar-lists,bar-kinds}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:field-bar-lists": {
@@ -360,7 +385,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk,walk-grades,bar-remove,bar-twice}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:session": {
@@ -375,7 +401,8 @@
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural}/**/*.test.*",
         "!src/session/{header,counts,held.property}.test.*",
         "!src/test/session-rig.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:header": {
@@ -389,7 +416,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural}/**/*.test.*",
         "!src/session/{service,counts,held.property}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:counts": {
@@ -403,7 +431,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural}/**/*.test.*",
         "!src/session/{service,header,held.property}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:session-held": {
@@ -417,7 +446,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural}/**/*.test.*",
         "!src/session/{service,header,counts}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:run": {
@@ -431,7 +461,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,wake,natural}/**/*.test.*",
         "!src/run/{run,hold,edges,end,cells}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:run-walk": {
@@ -445,7 +476,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,wake,natural}/**/*.test.*",
         "!src/run/{footer,hold,edges,end,cells}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:run-hold": {
@@ -459,7 +491,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,wake,natural}/**/*.test.*",
         "!src/run/{footer,run,edges,end,cells}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:run-edges": {
@@ -473,7 +506,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,wake,natural}/**/*.test.*",
         "!src/run/{footer,run,hold,end,cells}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:run-end": {
@@ -487,7 +521,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,wake,natural}/**/*.test.*",
         "!src/run/{footer,run,hold,edges,cells}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:run-cells": {
@@ -501,7 +536,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,wake,natural}/**/*.test.*",
         "!src/run/{footer,run,hold,edges,end}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:wake": {
@@ -515,7 +551,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural}/**/*.test.*",
         "!src/wake/{wake,quiet,clocks,edges,listen-edges,listen,reading}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:wake-walk": {
@@ -529,7 +566,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural}/**/*.test.*",
         "!src/wake/{life,service,source,guard,quiet,clocks,edges,listen-edges,listen,reading}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:wake-quiet": {
@@ -543,7 +581,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural}/**/*.test.*",
         "!src/wake/{life,service,source,guard,wake,clocks,edges,listen-edges,listen,reading}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:wake-clocks": {
@@ -557,7 +596,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural}/**/*.test.*",
         "!src/wake/{life,service,source,guard,wake,quiet,edges,listen-edges,listen,reading}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:wake-edges": {
@@ -571,7 +611,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural}/**/*.test.*",
         "!src/wake/{life,service,source,guard,wake,quiet,clocks,listen,reading}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:wake-listen": {
@@ -585,7 +626,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural}/**/*.test.*",
         "!src/wake/{life,service,source,guard,wake,quiet,clocks,edges,listen-edges,reading}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:wake-reading": {
@@ -599,7 +641,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural}/**/*.test.*",
         "!src/wake/{life,service,source,guard,wake,quiet,clocks,edges,listen-edges,listen}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:corpus": {
@@ -612,7 +655,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/passages/{ranges.property,service,pieces.property,session}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:passages": {
@@ -625,7 +669,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/passages/{corpus,guard,session}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:passages-session": {
@@ -638,7 +683,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
         "!src/passages/{corpus,guard,ranges.property,service,pieces.property}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:chooser": {
@@ -651,7 +697,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural}/**/*.test.*",
         "!src/chooser/{lists,walk-*,reader-*,fixed}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:chooser-lists": {
@@ -664,7 +711,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural}/**/*.test.*",
         "!src/chooser/{range.property,walk-*,reader-*,fixed}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:chooser-walk": {
@@ -677,7 +725,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-taps,walk-leave,reader-*,fixed}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:chooser-steps": {
@@ -690,7 +739,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-plant,walk-leave,reader-*,fixed}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:chooser-leave": {
@@ -703,7 +753,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-plant,walk-taps,reader-*}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:reader-today": {
@@ -716,7 +767,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-*,reader-unread,reader-add,reader-add-back,reader-remove,fixed}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:reader-unread": {
@@ -729,7 +781,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-*,reader-today,reader-add,reader-add-back,reader-remove,fixed}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:reader-add": {
@@ -742,7 +795,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-*,reader-today,reader-unread,reader-add-back,reader-remove,fixed}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:reader-add-back": {
@@ -755,7 +809,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-*,reader-today,reader-unread,reader-add,reader-remove,fixed}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:reader-remove": {
@@ -768,7 +823,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-*,reader-today,reader-unread,reader-add,reader-add-back,fixed}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:natural": {
@@ -781,7 +837,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/natural/voice.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:natural-voice": {
@@ -794,7 +851,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake}/**/*.test.*",
         "!src/natural/{data,guard,lexicon,manifest,plan.property,probe}.test.*",
-        "!{scripts,vite}/**/*.test.*"
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
       ]
     },
     "test:rest": {
@@ -803,7 +861,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
-        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!infra/**/*.test.*"
       ]
     },
     "test:infra": {
@@ -812,7 +871,18 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
-        "$TURBO_ROOT$/packages/core/assets/kjv.json"
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:mirror": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*"
       ]
     },
     "test": {
@@ -877,7 +947,8 @@
         "test:natural",
         "test:natural-voice",
         "test:rest",
-        "test:infra"
+        "test:infra",
+        "test:mirror"
       ]
     }
   }
