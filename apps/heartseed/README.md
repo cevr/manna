@@ -1543,7 +1543,22 @@ GETs (Class B) when the edge does not serve them.
     `src/phrase/census.test.ts`, the cut over all 31,102 verses: 28,417
     phrased into 85,244 phrases, 8,041 cuts at a plain gap and 31,282 at a
     comma, each phrase 4-12 words holding its own words, and the pinned
-    digest of every phrased verse's ranges.
+    digest of every phrased verse's ranges; `src/phrase/voice.test.ts`, the
+    natural voice's `planOf` over a seeded sample of 700 verses' phrases,
+    each phrase planned whenever its verse is, one mark per word at its
+    UTF-16 run within the phrase's text.
+  - `test:phrase-walk-a`, `test:phrase-walk-b`, `test:phrase-walk-c`:
+    `src/phrase/walk-{a,b,c}.test.tsx`, Today over four days with long
+    verses learned as phrases, walked through the root
+    (`src/test/phrase-rig.tsx`), two generated devices each (0-5, devices 2
+    and 5 teaching Fear), each starting with its verses' phrases sown none,
+    some, ripe or joined: Listen reads the piece's own text and lights each
+    of its words by its UTF-16 span, Say it's summary and record carry the
+    piece's word count under its own reference, a held phrase survives a
+    Minutes tap while its recital listens, and Next goes on, held after
+    every step to `shownModel`, `countsModel` and `joinCueRule` over
+    `planModel` of the expanded pieces, and to the disk's rule, each part's
+    floors met.
   - `test:natural`: `src/natural`, the natural voice's plan, seam and probe:
     `src/natural/plan.property.test.ts`, `planOf` and `startsOf` against a
     model written in the test over a small hand-built lexicon and vocab

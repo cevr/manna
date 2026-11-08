@@ -1176,6 +1176,55 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need}/**/*.test.*",
+        "!src/phrase/walk-*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:phrase-walk-a": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need}/**/*.test.*",
+        "!src/phrase.property.test.*",
+        "!src/phrase/{census,voice,walk-b,walk-c}.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:phrase-walk-b": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need}/**/*.test.*",
+        "!src/phrase.property.test.*",
+        "!src/phrase/{census,voice,walk-a,walk-c}.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:phrase-walk-c": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need}/**/*.test.*",
+        "!src/phrase.property.test.*",
+        "!src/phrase/{census,voice,walk-a,walk-b}.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1314,6 +1363,9 @@
         "test:need-walk-b",
         "test:need-walk-c",
         "test:phrase",
+        "test:phrase-walk-a",
+        "test:phrase-walk-b",
+        "test:phrase-walk-c",
         "test:natural",
         "test:natural-voice",
         "test:rest",
