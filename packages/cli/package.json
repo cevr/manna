@@ -20,12 +20,12 @@
   "dependencies": {
     "@effect/platform-bun": "catalog:",
     "@manna/core": "workspace:*",
-    "ai": "^7.0.137",
+    "ai": "^7.0.165",
     "cheerio": "^1.2.0",
     "date-fns": "^4.4.0",
     "effect": "catalog:",
     "gray-matter": "^4.0.3",
-    "match-sorter": "^8.3.0"
+    "match-sorter": "^8.3.1"
   },
   "devDependencies": {
     "effect-bun-test": "catalog:",

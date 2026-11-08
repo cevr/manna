@@ -53,13 +53,13 @@
     "@manna/film": "workspace:*",
     "@manna/screening": "workspace:*",
     "effect": "catalog:",
-    "sharp": "0.35.4",
-    "three": "0.186.1"
+    "sharp": "0.35.5",
+    "three": "0.187.0"
   },
   "devDependencies": {
     "@alchemy.run/cloudflare": "2.0.0-beta.85",
     "@effect/platform-node": "catalog:",
-    "@types/three": "0.186.0",
+    "@types/three": "0.187.0",
     "alchemy": "2.0.0-beta.85",
     "effect-bun-test": "catalog:"
   }
