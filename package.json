@@ -87,6 +87,6 @@
   },
   "patchedDependencies": {
     "@alchemy.run/domain@2.0.0-beta.85": "patches/@alchemy.run%2Fdomain@2.0.0-beta.85.patch",
-    "one@2.11.1": "patches/one@2.11.1.patch"
+    "one@2.15.1": "patches/one@2.15.1.patch"
   }
 }

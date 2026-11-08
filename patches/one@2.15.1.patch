@@ -1,5 +1,5 @@
 diff --git a/android/src/main/java/com/margelo/nitro/one/HybridOneAudio.kt b/android/src/main/java/com/margelo/nitro/one/HybridOneAudio.kt
-index 16bd182f35685f7a320dac60b910ebe53f2b8501..e4822d942dddad0055b2d52bbedee1650fbc3da7 100644
+index bc13bef26cffc8d5655d7ca965bc4fe871245341..ae24155b6efa03c540cd163d794a36f9ad4a96ba 100644
 --- a/android/src/main/java/com/margelo/nitro/one/HybridOneAudio.kt
 +++ b/android/src/main/java/com/margelo/nitro/one/HybridOneAudio.kt
 @@ -46,6 +46,8 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
@@ -11,27 +11,31 @@ index 16bd182f35685f7a320dac60b910ebe53f2b8501..e4822d942dddad0055b2d52bbedee165
      private var seekGeneration = 0
  
      private var recorder: MediaRecorder? = null
-@@ -202,6 +204,7 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
-                 fresh.setOnPreparedListener { mp ->
-                     playerPrepared = true
-                     mp.start()
-+                    applyPlaybackRate(mp)
-                     startServiceIfBackground()
+@@ -221,7 +223,10 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
+                         return@setOnPreparedListener
+                     }
+                     // a pause while loading holds; resume starts it later.
+-                    if (!playbackPaused) mp.start()
++                    if (!playbackPaused) {
++                        mp.start()
++                        applyPlaybackRate(mp)
++                    }
+                     syncService()
                      syncNowPlaying()
                  }
-@@ -267,7 +270,10 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
-                     playbackEnded = false
+@@ -296,7 +301,10 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
                  }
                  playbackPaused = false
--                if (playerPrepared) current.start()
-+                if (playerPrepared) {
+                 // a prepared load starts itself once its seek lands.
+-                if (playerPrepared && pendingLoad == null) current.start()
++                if (playerPrepared && pendingLoad == null) {
 +                    current.start()
 +                    applyPlaybackRate(current)
 +                }
-                 startServiceIfBackground()
+                 syncService()
                  syncNowPlaying()
                  promise.resolve(playbackStatus())
-@@ -311,6 +317,36 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
+@@ -340,6 +348,36 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
          return promise
      }
  
@@ -44,11 +48,11 @@ index 16bd182f35685f7a320dac60b910ebe53f2b8501..e4822d942dddad0055b2d52bbedee165
 +            }
 +            playbackRate = rate
 +            val current = player
-+            // playbackParams starts a paused MediaPlayer, so a paused one takes the rate on its next start.
-+            if (current != null && playerPrepared && !playbackPaused && !playbackEnded) {
++            // playbackParams starts a paused MediaPlayer, so a paused one, or a prepared load before its seek lands, takes the rate on its next start.
++            if (current != null && playerPrepared && pendingLoad == null && !playbackPaused && !playbackEnded) {
 +                applyPlaybackRate(current)
 +            }
-+            syncNowPlaying()
++            if (nowPlayingOwner == NowPlayingOwner.Global) syncNowPlaying()
 +            promise.resolve(playbackStatus())
 +        }
 +        return promise
@@ -68,49 +72,61 @@ index 16bd182f35685f7a320dac60b910ebe53f2b8501..e4822d942dddad0055b2d52bbedee165
      override fun stop(): Promise<Unit> {
          val promise = Promise<Unit>()
          main.post {
-@@ -980,7 +1016,10 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
-                             playbackEnded = false
-                         }
-                         playbackPaused = false
--                        if (playerPrepared) current.start()
-+                        if (playerPrepared) {
-+                            current.start()
-+                            applyPlaybackRate(current)
-+                        }
-                         startServiceIfBackground()
-                     } catch (e: Exception) {
-                         return@post
-@@ -1111,7 +1150,7 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
+@@ -770,7 +808,10 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
+                 pendingLoad = null
+                 playbackEnded = false
+                 if (!playbackPaused) {
+-                    try { mp.start() } catch (e: Exception) { }
++                    try {
++                        mp.start()
++                        applyPlaybackRate(mp)
++                    } catch (e: Exception) { }
+                 }
+                 syncService()
+                 syncNowPlaying()
+@@ -1129,7 +1170,10 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
+                                     playbackEnded = false
+                                 }
+                                 playbackPaused = false
+-                                if (playerPrepared && pendingLoad == null) current.start()
++                                if (playerPrepared && pendingLoad == null) {
++                                    current.start()
++                                    applyPlaybackRate(current)
++                                }
+                             } catch (e: Exception) {
+                                 return@post
+                             }
+@@ -1284,7 +1328,7 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
                  .setState(
                      if (playing) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED,
                      position,
 -                    if (playing) 1.0f else 0.0f
-+                    if (playing) playbackRate.toFloat() else 0.0f
++                    if (!playing) 0.0f else if (nowPlayingOwner == NowPlayingOwner.Global) playbackRate.toFloat() else 1.0f
                  )
                  .build()
          )
 diff --git a/dist/cjs/platform/audio/index.cjs b/dist/cjs/platform/audio/index.cjs
-index dd4ce0838bd0bb4adb71fc42b4cabeae3e3fa768..9bc4454d9eedccfd270e364f9d44165e4559b9a0 100644
+index b7667a0715cc48566a7edb1ceb332904f316996f..ebbbcfb7be45593a1c4bde7e20318f299dc9a325 100644
 --- a/dist/cjs/platform/audio/index.cjs
 +++ b/dist/cjs/platform/audio/index.cjs
-@@ -25,6 +25,7 @@ var import_unavailable = require("./unavailable.cjs");
- var import_validateCallback = require("../validateCallback.cjs");
+@@ -26,6 +26,7 @@ var import_validateCallback = require("../validateCallback.cjs");
+ var import_nowPlaying = require("./nowPlaying.cjs");
  var import_player = require("./player.cjs");
  let player;
 +let playbackRate = 1;
+ let pendingLoad;
  let playbackError;
  let permission = "undetermined";
- let openingRecording = false;
-@@ -194,6 +195,8 @@ const Audio = Object.freeze({
- 		].includes(url.protocol)) throw new Error("Audio.play: invalid browser audio URI");
+@@ -189,6 +190,8 @@ const Audio = Object.freeze({
+ 		if (typeof positionMs !== "number" || !Number.isFinite(positionMs) || positionMs < 0) throw new Error("Audio.play: position must be finite and nonnegative");
  		clearPlayer();
  		const audio = new window.Audio(url.href);
 +		audio.preservesPitch = true;
 +		audio.playbackRate = playbackRate;
  		player = audio;
- 		for (const event of [
- 			"play",
-@@ -258,6 +261,13 @@ const Audio = Object.freeze({
+ 		audio.addEventListener("error", () => {
+ 			if (player === audio) playbackError = audio.error?.message ?? "Audio.play: decoding failed";
+@@ -276,6 +279,13 @@ const Audio = Object.freeze({
  		});
  		return playbackStatus();
  	},
@@ -125,7 +141,7 @@ index dd4ce0838bd0bb4adb71fc42b4cabeae3e3fa768..9bc4454d9eedccfd270e364f9d44165e
  		clearPlayer();
  	},
 diff --git a/dist/cjs/platform/audio/index.native.cjs b/dist/cjs/platform/audio/index.native.cjs
-index d413bd44c7707e92815f5590dfaf94375105d912..c63af294f3123e1f3128d6479a79b6b8e4c39899 100644
+index e3d7a4eb3ebd294c88ad64082dc6baee930514ad..77b01523663eda3f68b2a155ba9e6f3b163e5023 100644
 --- a/dist/cjs/platform/audio/index.native.cjs
 +++ b/dist/cjs/platform/audio/index.native.cjs
 @@ -49,6 +49,9 @@ var Audio = Object.freeze({
@@ -139,7 +155,7 @@ index d413bd44c7707e92815f5590dfaf94375105d912..c63af294f3123e1f3128d6479a79b6b8
  		return (0, import_hybrid.audioNative)().stop().catch(import_nativeError.rethrowNativeError);
  	},
 diff --git a/dist/cjs/platform/audio/index.native.js b/dist/cjs/platform/audio/index.native.js
-index 849183eae3e02c029f981bc31f5ba84540240cd6..16c7ee50cf8d35f664f2b0487515f0c3e1d7af71 100644
+index 3de637567e1524c1dcf52bcb697d0d3e94e91196..0cd0976e1d8a1511ca5114873986bc045f423680 100644
 --- a/dist/cjs/platform/audio/index.native.js
 +++ b/dist/cjs/platform/audio/index.native.js
 @@ -49,6 +49,9 @@ var Audio = Object.freeze({
@@ -153,7 +169,7 @@ index 849183eae3e02c029f981bc31f5ba84540240cd6..16c7ee50cf8d35f664f2b0487515f0c3
  		return (0, import_hybrid.audioNative)().stop().catch(import_nativeError.rethrowNativeError);
  	},
 diff --git a/dist/cjs/platform/audio/unavailable.cjs b/dist/cjs/platform/audio/unavailable.cjs
-index 2fb7f630244033b695a8349145816d5a93ae7070..e63edd3fc09e250a29cd46620248de3f4d034e62 100644
+index 64415a5505066ffe8ab8ea47c4d05b4fd49cf0a1..c74338962b4faacce8f7c28d178c74e92b6677b0 100644
 --- a/dist/cjs/platform/audio/unavailable.cjs
 +++ b/dist/cjs/platform/audio/unavailable.cjs
 @@ -43,6 +43,7 @@ const Audio = Object.freeze({
@@ -165,7 +181,7 @@ index 2fb7f630244033b695a8349145816d5a93ae7070..e63edd3fc09e250a29cd46620248de3f
  	startRecording: () => Promise.reject((0, import_nativeError.missingNativeBuild)("Audio.startRecording")),
  	getRecordingStatus: () => Promise.resolve({
 diff --git a/dist/cjs/platform/audio/unavailable.native.cjs b/dist/cjs/platform/audio/unavailable.native.cjs
-index 88ec38d0e7aac03647a2ea741dadef928e30b3be..5626de7be1cc34d8a466c4e71bb3496cd0186280 100644
+index df7e98e16dc5e647d5b30a11830be4297f6d6ace..e23296b461c1332e9ab25ac73495d35be3e8c88e 100644
 --- a/dist/cjs/platform/audio/unavailable.native.cjs
 +++ b/dist/cjs/platform/audio/unavailable.native.cjs
 @@ -59,6 +59,9 @@ var Audio = Object.freeze({
@@ -179,7 +195,7 @@ index 88ec38d0e7aac03647a2ea741dadef928e30b3be..5626de7be1cc34d8a466c4e71bb3496c
  		return Promise.resolve();
  	},
 diff --git a/dist/cjs/platform/audio/unavailable.native.js b/dist/cjs/platform/audio/unavailable.native.js
-index 08ded78071140b01c9db2ec252c3cd728f6a244d..28d6548815b334a952903cf6a3ecf6dd3348cb2e 100644
+index e87d471ef648a01acb016200c19ba90791479187..1223d6fbe8ba643c192ccccf7f384ae1b5be84d6 100644
 --- a/dist/cjs/platform/audio/unavailable.native.js
 +++ b/dist/cjs/platform/audio/unavailable.native.js
 @@ -59,6 +59,9 @@ var Audio = Object.freeze({
@@ -192,81 +208,28 @@ index 08ded78071140b01c9db2ec252c3cd728f6a244d..28d6548815b334a952903cf6a3ecf6dd
  	stop: function stop() {
  		return Promise.resolve();
  	},
-diff --git a/dist/cjs/router/utils/getNativeStackReplaceAction.cjs b/dist/cjs/router/utils/getNativeStackReplaceAction.cjs
-index 137f9f69ef71ac8fb859e63fed0c3a39a203130b..2b79798e4515e0c763b19dfc2a0ab3a2779f5064 100644
---- a/dist/cjs/router/utils/getNativeStackReplaceAction.cjs
-+++ b/dist/cjs/router/utils/getNativeStackReplaceAction.cjs
-@@ -31,8 +31,8 @@ function getNativeStackReplaceAction(actionState, navigationState) {
- 		if (currentRoute.name !== targetRoute.name && ((0, import_matchers.matchGroupName)(currentRoute.name) || (0, import_matchers.matchGroupName)(targetRoute.name))) {
- 			return null;
- 		}
--		const dynamicMatch = (0, import_matchers.matchDynamicName)(targetRoute.name);
--		const changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatch && currentRoute.params?.[dynamicMatch.name] !== targetRoute.params?.[dynamicMatch.name];
-+		const dynamicMatches = targetRoute.name.split("/").flatMap((segment) => (0, import_matchers.matchDynamicName)(segment) ?? []);
-+		const changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatches.some((dynamicMatch) => currentRoute.params?.[dynamicMatch.name] !== targetRoute.params?.[dynamicMatch.name]);
- 		if (!currentRoute.state || !targetRoute.state || changesDynamicScreen) {
- 			if ((currentRoute.name !== targetRoute.name || changesDynamicScreen) && navigationState.type === "stack" && navigationState.routeNames.includes(targetRoute.name)) {
- 				const { payload } = (0, import_getNavigateAction.getNavigateAction)(actionState, navigationState, "REPLACE");
-diff --git a/dist/cjs/router/utils/getNativeStackReplaceAction.native.cjs b/dist/cjs/router/utils/getNativeStackReplaceAction.native.cjs
-index b0b5d6282f549795b815138c962f7e4118056d92..b6cfb21c9a54adb06cefabae5534bc34c29fb406 100644
---- a/dist/cjs/router/utils/getNativeStackReplaceAction.native.cjs
-+++ b/dist/cjs/router/utils/getNativeStackReplaceAction.native.cjs
-@@ -35,8 +35,12 @@ function getNativeStackReplaceAction(actionState, navigationState) {
- 		if (currentRoute.name !== targetRoute.name && ((0, import_matchers.matchGroupName)(currentRoute.name) || (0, import_matchers.matchGroupName)(targetRoute.name))) {
- 			return null;
- 		}
--		var dynamicMatch = (0, import_matchers.matchDynamicName)(targetRoute.name);
--		var changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatch && ((_currentRoute_params = currentRoute.params) === null || _currentRoute_params === void 0 ? void 0 : _currentRoute_params[dynamicMatch.name]) !== ((_targetRoute_params = targetRoute.params) === null || _targetRoute_params === void 0 ? void 0 : _targetRoute_params[dynamicMatch.name]);
-+		var dynamicMatches = targetRoute.name.split("/").map(function(segment) {
-+			return (0, import_matchers.matchDynamicName)(segment);
-+		}).filter(Boolean);
-+		var changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatches.some(function(dynamicMatch) {
-+			return ((_currentRoute_params = currentRoute.params) === null || _currentRoute_params === void 0 ? void 0 : _currentRoute_params[dynamicMatch.name]) !== ((_targetRoute_params = targetRoute.params) === null || _targetRoute_params === void 0 ? void 0 : _targetRoute_params[dynamicMatch.name]);
-+		});
- 		if (!currentRoute.state || !targetRoute.state || changesDynamicScreen) {
- 			if ((currentRoute.name !== targetRoute.name || changesDynamicScreen) && navigationState.type === "stack" && navigationState.routeNames.includes(targetRoute.name)) {
- 				var { payload } = (0, import_getNavigateAction.getNavigateAction)(actionState, navigationState, "REPLACE");
-diff --git a/dist/cjs/router/utils/getNativeStackReplaceAction.native.js b/dist/cjs/router/utils/getNativeStackReplaceAction.native.js
-index 55479ff564e4283dc950952636c22a7542b15eb3..31b3a5197969ba03e210830c62fdd82674911d2d 100644
---- a/dist/cjs/router/utils/getNativeStackReplaceAction.native.js
-+++ b/dist/cjs/router/utils/getNativeStackReplaceAction.native.js
-@@ -35,8 +35,12 @@ function getNativeStackReplaceAction(actionState, navigationState) {
- 		if (currentRoute.name !== targetRoute.name && ((0, import_matchers.matchGroupName)(currentRoute.name) || (0, import_matchers.matchGroupName)(targetRoute.name))) {
- 			return null;
- 		}
--		var dynamicMatch = (0, import_matchers.matchDynamicName)(targetRoute.name);
--		var changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatch && ((_currentRoute_params = currentRoute.params) === null || _currentRoute_params === void 0 ? void 0 : _currentRoute_params[dynamicMatch.name]) !== ((_targetRoute_params = targetRoute.params) === null || _targetRoute_params === void 0 ? void 0 : _targetRoute_params[dynamicMatch.name]);
-+		var dynamicMatches = targetRoute.name.split("/").map(function(segment) {
-+			return (0, import_matchers.matchDynamicName)(segment);
-+		}).filter(Boolean);
-+		var changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatches.some(function(dynamicMatch) {
-+			return ((_currentRoute_params = currentRoute.params) === null || _currentRoute_params === void 0 ? void 0 : _currentRoute_params[dynamicMatch.name]) !== ((_targetRoute_params = targetRoute.params) === null || _targetRoute_params === void 0 ? void 0 : _targetRoute_params[dynamicMatch.name]);
-+		});
- 		if (!currentRoute.state || !targetRoute.state || changesDynamicScreen) {
- 			if ((currentRoute.name !== targetRoute.name || changesDynamicScreen) && navigationState.type === "stack" && navigationState.routeNames.includes(targetRoute.name)) {
- 				var { payload } = (0, import_getNavigateAction.getNavigateAction)(actionState, navigationState, "REPLACE");
 diff --git a/dist/esm/platform/audio/index.mjs b/dist/esm/platform/audio/index.mjs
-index 793b07914e58e9a76cdf0665c8f25c4483b5fcc1..5188fea9d2a05f8d0f45315720222149d65e4f4d 100644
+index 23b662b5ede2bc5c0927ba875d991f72a231c902..131954d616b0d328c6f561822dcf0e822311edfc 100644
 --- a/dist/esm/platform/audio/index.mjs
 +++ b/dist/esm/platform/audio/index.mjs
-@@ -3,6 +3,7 @@ import { validateCallback } from "../validateCallback.mjs";
+@@ -4,6 +4,7 @@ import { addRemoteListener, claimNowPlaying, releaseNowPlaying } from "./nowPlay
  import { AudioPlayer, createPlayer } from "./player.mjs";
  
  let player;
 +let playbackRate = 1;
+ let pendingLoad;
  let playbackError;
  let permission = "undetermined";
- let openingRecording = false;
-@@ -172,6 +173,8 @@ const Audio = Object.freeze({
- 		].includes(url.protocol)) throw new Error("Audio.play: invalid browser audio URI");
+@@ -167,6 +168,8 @@ const Audio = Object.freeze({
+ 		if (typeof positionMs !== "number" || !Number.isFinite(positionMs) || positionMs < 0) throw new Error("Audio.play: position must be finite and nonnegative");
  		clearPlayer();
  		const audio = new window.Audio(url.href);
 +		audio.preservesPitch = true;
 +		audio.playbackRate = playbackRate;
  		player = audio;
- 		for (const event of [
- 			"play",
-@@ -236,6 +239,13 @@ const Audio = Object.freeze({
+ 		audio.addEventListener("error", () => {
+ 			if (player === audio) playbackError = audio.error?.message ?? "Audio.play: decoding failed";
+@@ -254,6 +257,13 @@ const Audio = Object.freeze({
  		});
  		return playbackStatus();
  	},
@@ -281,7 +244,7 @@ index 793b07914e58e9a76cdf0665c8f25c4483b5fcc1..5188fea9d2a05f8d0f45315720222149
  		clearPlayer();
  	},
 diff --git a/dist/esm/platform/audio/index.native.js b/dist/esm/platform/audio/index.native.js
-index 11662d9bae2a355604ce9cc19e44308e95267f58..a24ba3213e1f6ef73e941daf05a93e0fd02deeb3 100644
+index 0461574bb9caf518d96cc9d219eb92f60a3e2a18..276eb7feee6c37c31cdea63c796d0590a20fb786 100644
 --- a/dist/esm/platform/audio/index.native.js
 +++ b/dist/esm/platform/audio/index.native.js
 @@ -25,6 +25,9 @@ var Audio = Object.freeze({
@@ -295,7 +258,7 @@ index 11662d9bae2a355604ce9cc19e44308e95267f58..a24ba3213e1f6ef73e941daf05a93e0f
  		return audioNative().stop().catch(rethrowNativeError);
  	},
 diff --git a/dist/esm/platform/audio/unavailable.mjs b/dist/esm/platform/audio/unavailable.mjs
-index 0c961b2340103f18814770647d6e36cdb0919d4f..3b01adf219b8c4c02ba8270909fb0c622c068c37 100644
+index 729b4717253f4129c5796914017a02938500e538..43cd16780927bebffba7fd9cda15b465cb677e12 100644
 --- a/dist/esm/platform/audio/unavailable.mjs
 +++ b/dist/esm/platform/audio/unavailable.mjs
 @@ -21,6 +21,7 @@ const Audio = Object.freeze({
@@ -307,7 +270,7 @@ index 0c961b2340103f18814770647d6e36cdb0919d4f..3b01adf219b8c4c02ba8270909fb0c62
  	startRecording: () => Promise.reject(missingNativeBuild("Audio.startRecording")),
  	getRecordingStatus: () => Promise.resolve({
 diff --git a/dist/esm/platform/audio/unavailable.native.js b/dist/esm/platform/audio/unavailable.native.js
-index 2125c16f1d1bff40d2da9568b4fdb8ce44e10473..72abd4f6e1529bb837389276f2ddddfaa1fd61da 100644
+index 7893ef191af9d668652df5898e485f95ae8ac8bb..d75024550b9219758ebee03d8a797d3d79b49940 100644
 --- a/dist/esm/platform/audio/unavailable.native.js
 +++ b/dist/esm/platform/audio/unavailable.native.js
 @@ -35,6 +35,9 @@ var Audio = Object.freeze({
@@ -320,45 +283,11 @@ index 2125c16f1d1bff40d2da9568b4fdb8ce44e10473..72abd4f6e1529bb837389276f2ddddfa
  	stop: function stop() {
  		return Promise.resolve();
  	},
-diff --git a/dist/esm/router/utils/getNativeStackReplaceAction.mjs b/dist/esm/router/utils/getNativeStackReplaceAction.mjs
-index fb2a3e07d5e6cae94f0f99d332f62582c1c7a409..a8eb2153a2b72d7154161d85092458c657b46441 100644
---- a/dist/esm/router/utils/getNativeStackReplaceAction.mjs
-+++ b/dist/esm/router/utils/getNativeStackReplaceAction.mjs
-@@ -9,8 +9,8 @@ function getNativeStackReplaceAction(actionState, navigationState) {
- 		if (currentRoute.name !== targetRoute.name && (matchGroupName(currentRoute.name) || matchGroupName(targetRoute.name))) {
- 			return null;
- 		}
--		const dynamicMatch = matchDynamicName(targetRoute.name);
--		const changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatch && currentRoute.params?.[dynamicMatch.name] !== targetRoute.params?.[dynamicMatch.name];
-+		const dynamicMatches = targetRoute.name.split("/").flatMap((segment) => matchDynamicName(segment) ?? []);
-+		const changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatches.some((dynamicMatch) => currentRoute.params?.[dynamicMatch.name] !== targetRoute.params?.[dynamicMatch.name]);
- 		if (!currentRoute.state || !targetRoute.state || changesDynamicScreen) {
- 			if ((currentRoute.name !== targetRoute.name || changesDynamicScreen) && navigationState.type === "stack" && navigationState.routeNames.includes(targetRoute.name)) {
- 				const { payload } = getNavigateAction(actionState, navigationState, "REPLACE");
-diff --git a/dist/esm/router/utils/getNativeStackReplaceAction.native.js b/dist/esm/router/utils/getNativeStackReplaceAction.native.js
-index cb935f63f415073cda0b3da0f36b30e9c2ac8974..451513a0c03e195c625022f831de49f9382f6dbc 100644
---- a/dist/esm/router/utils/getNativeStackReplaceAction.native.js
-+++ b/dist/esm/router/utils/getNativeStackReplaceAction.native.js
-@@ -11,8 +11,12 @@ function getNativeStackReplaceAction(actionState, navigationState) {
- 		if (currentRoute.name !== targetRoute.name && (matchGroupName(currentRoute.name) || matchGroupName(targetRoute.name))) {
- 			return null;
- 		}
--		var dynamicMatch = matchDynamicName(targetRoute.name);
--		var changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatch && ((_currentRoute_params = currentRoute.params) === null || _currentRoute_params === void 0 ? void 0 : _currentRoute_params[dynamicMatch.name]) !== ((_targetRoute_params = targetRoute.params) === null || _targetRoute_params === void 0 ? void 0 : _targetRoute_params[dynamicMatch.name]);
-+		var dynamicMatches = targetRoute.name.split("/").map(function(segment) {
-+			return matchDynamicName(segment);
-+		}).filter(Boolean);
-+		var changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatches.some(function(dynamicMatch) {
-+			return ((_currentRoute_params = currentRoute.params) === null || _currentRoute_params === void 0 ? void 0 : _currentRoute_params[dynamicMatch.name]) !== ((_targetRoute_params = targetRoute.params) === null || _targetRoute_params === void 0 ? void 0 : _targetRoute_params[dynamicMatch.name]);
-+		});
- 		if (!currentRoute.state || !targetRoute.state || changesDynamicScreen) {
- 			if ((currentRoute.name !== targetRoute.name || changesDynamicScreen) && navigationState.type === "stack" && navigationState.routeNames.includes(targetRoute.name)) {
- 				var { payload } = getNavigateAction(actionState, navigationState, "REPLACE");
 diff --git a/ios/Nitro/HybridOneAudio.swift b/ios/Nitro/HybridOneAudio.swift
-index 045ce7503aa2664127f39a05104830f05861e80b..cf209d032a5d0c081f82b4dcf7bb9e660e8b9b68 100644
+index cf3d425dcb33d6c4cf0eddf9bea435f9727a71ad..d5bcc8ea90685f5da5731ba144fadd0ff6d2949d 100644
 --- a/ios/Nitro/HybridOneAudio.swift
 +++ b/ios/Nitro/HybridOneAudio.swift
-@@ -41,6 +41,8 @@ final class HybridOneAudio: HybridOneAudioSpec {
+@@ -43,6 +43,8 @@ final class HybridOneAudio: HybridOneAudioSpec {
    private var playerURI: String?
    private var playbackPaused = false
    private var playbackEnded = false
@@ -367,18 +296,18 @@ index 045ce7503aa2664127f39a05104830f05861e80b..cf209d032a5d0c081f82b4dcf7bb9e66
    private var endObserver: NSObjectProtocol?
    private var playerStatusObservation: NSKeyValueObservation?
    private var itemStatusObservation: NSKeyValueObservation?
-@@ -133,7 +135,10 @@ final class HybridOneAudio: HybridOneAudioSpec {
-       try session.setActive(true)
-       self.clearPlayer()
-       let item = AVPlayerItem(url: url)
-+      item.audioTimePitchAlgorithm = .spectral
-       let player = AVPlayer(playerItem: item)
-+      // play(), resume and the remote play all start at defaultRate.
-+      player.defaultRate = Float(self.playbackRate)
-       self.player = player
-       self.playerStatusObservation = player.observe(\.timeControlStatus, options: [.new]) {
-         [weak self] _, _ in
-@@ -184,6 +189,21 @@ final class HybridOneAudio: HybridOneAudioSpec {
+@@ -179,7 +181,10 @@ final class HybridOneAudio: HybridOneAudioSpec {
+     try session.setActive(true)
+     self.clearPlayer()
+     let item = AVPlayerItem(url: url)
++    item.audioTimePitchAlgorithm = .spectral
+     let player = AVPlayer(playerItem: item)
++    // play(), a prepared load's play after its seek, resume and the remote play all start at defaultRate.
++    player.defaultRate = Float(self.playbackRate)
+     self.player = player
+     self.playerStatusObservation = player.observe(\.timeControlStatus, options: [.new]) {
+       [weak self] _, _ in
+@@ -275,6 +280,21 @@ final class HybridOneAudio: HybridOneAudioSpec {
      }
    }
  
@@ -388,11 +317,11 @@ index 045ce7503aa2664127f39a05104830f05861e80b..cf209d032a5d0c081f82b4dcf7bb9e66
 +      self.playbackRate = rate
 +      if let player = self.player {
 +        player.defaultRate = Float(rate)
-+        // A paused player stays paused; its next play starts at defaultRate.
++        // A paused player, or a prepared load before its seek lands, stays paused; its next play starts at defaultRate.
 +        if player.timeControlStatus != .paused { player.rate = Float(rate) }
 +      }
 +      // KVO on timeControlStatus does not fire for a turn while playing.
-+      self.syncNowPlaying()
++      if self.nowPlayingOwner == .global { self.syncNowPlaying() }
 +      return self.playbackStatus()
 +    }
 +  }
@@ -400,20 +329,20 @@ index 045ce7503aa2664127f39a05104830f05861e80b..cf209d032a5d0c081f82b4dcf7bb9e66
    func seek(positionMs: Double) throws -> Promise<AudioPlaybackStatus> {
      let promise = Promise<AudioPlaybackStatus>()
      DispatchQueue.main.async {
-@@ -736,7 +756,7 @@ final class HybridOneAudio: HybridOneAudioSpec {
+@@ -941,7 +961,7 @@ final class HybridOneAudio: HybridOneAudioSpec {
        MPNowPlayingInfoPropertyElapsedPlaybackTime: position.isFinite ? max(0, position) : 0,
        MPNowPlayingInfoPropertyPlaybackRate:
-         !playbackEnded && player.timeControlStatus == .playing ? player.rate : 0.0,
+         !ownerEnded() && player.timeControlStatus == .playing ? player.rate : 0.0,
 -      MPNowPlayingInfoPropertyDefaultPlaybackRate: 1.0,
-+      MPNowPlayingInfoPropertyDefaultPlaybackRate: playbackRate,
++      MPNowPlayingInfoPropertyDefaultPlaybackRate: nowPlayingOwner == .global ? playbackRate : 1.0,
      ]
      if let artist = info.artist { metadata[MPMediaItemPropertyArtist] = artist }
      if let albumTitle = info.albumTitle { metadata[MPMediaItemPropertyAlbumTitle] = albumTitle }
 diff --git a/nitrogen/generated/android/c++/JHybridOneAudioSpec.cpp b/nitrogen/generated/android/c++/JHybridOneAudioSpec.cpp
-index f4995e83d819c86e3deae3641504862ad5356d9d..c21ece4a272f0587c311d3f16cb3ee0c42d4c947 100644
+index 0f4cc85d8ad20dadb785179136d2740d1d702677..c6701df54f61096e79f51365a6724681ead1c327 100644
 --- a/nitrogen/generated/android/c++/JHybridOneAudioSpec.cpp
 +++ b/nitrogen/generated/android/c++/JHybridOneAudioSpec.cpp
-@@ -217,6 +217,22 @@ namespace margelo::nitro::one {
+@@ -221,6 +221,22 @@ namespace margelo::nitro::one {
        return __promise;
      }();
    }
@@ -437,7 +366,7 @@ index f4995e83d819c86e3deae3641504862ad5356d9d..c21ece4a272f0587c311d3f16cb3ee0c
      static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>()>("stop");
      auto __result = method(_javaPart);
 diff --git a/nitrogen/generated/android/c++/JHybridOneAudioSpec.hpp b/nitrogen/generated/android/c++/JHybridOneAudioSpec.hpp
-index e173e81c9b9754ed765caeb5e37cf6e35b77e895..18733e5502bd27c63f2b7b7a3e00477508865e78 100644
+index 8ca3e1765551305b6c9a5cb16b2bb613ef67d539..3f56687b4f70f71a37ea5f6b2392d4963367c4e7 100644
 --- a/nitrogen/generated/android/c++/JHybridOneAudioSpec.hpp
 +++ b/nitrogen/generated/android/c++/JHybridOneAudioSpec.hpp
 @@ -61,6 +61,7 @@ namespace margelo::nitro::one {
@@ -449,13 +378,13 @@ index e173e81c9b9754ed765caeb5e37cf6e35b77e895..18733e5502bd27c63f2b7b7a3e004775
      std::shared_ptr<Promise<AudioRecordingStatus>> startRecording() override;
      std::shared_ptr<Promise<AudioRecordingStatus>> getRecordingStatus() override;
 diff --git a/nitrogen/generated/android/kotlin/com/margelo/nitro/one/HybridOneAudioSpec.kt b/nitrogen/generated/android/kotlin/com/margelo/nitro/one/HybridOneAudioSpec.kt
-index f07e04736e946004e560ba0e25945ea5121847eb..825bad386ae5b3c9f1d2342bd3b8b92ba28d6f53 100644
+index 4a149da9fd66beb23c87ed235c6728a24bf482fb..561ffa92b1a9a516cb811d706e5a39ad62c3ad13 100644
 --- a/nitrogen/generated/android/kotlin/com/margelo/nitro/one/HybridOneAudioSpec.kt
 +++ b/nitrogen/generated/android/kotlin/com/margelo/nitro/one/HybridOneAudioSpec.kt
 @@ -58,6 +58,10 @@ abstract class HybridOneAudioSpec: HybridObject() {
    @Keep
    abstract fun seek(positionMs: Double): Promise<AudioPlaybackStatus>
-   
+ 
 +  @DoNotStrip
 +  @Keep
 +  abstract fun setPlaybackRate(rate: Double): Promise<AudioPlaybackStatus>
@@ -464,10 +393,10 @@ index f07e04736e946004e560ba0e25945ea5121847eb..825bad386ae5b3c9f1d2342bd3b8b92b
    @Keep
    abstract fun stop(): Promise<Unit>
 diff --git a/nitrogen/generated/ios/c++/HybridOneAudioSpecSwift.hpp b/nitrogen/generated/ios/c++/HybridOneAudioSpecSwift.hpp
-index d8b5dd14044ffebb471bc1c9b372747c6dbd77cf..5a46ec28b54c92e4e3c2cf6baef69d0c589f6000 100644
+index 4bfbeb1e9b4a9954675cb463671461dd99f42d91..789baaacb9fcafe5fca63dce4fa9acb02d0527fa 100644
 --- a/nitrogen/generated/ios/c++/HybridOneAudioSpecSwift.hpp
 +++ b/nitrogen/generated/ios/c++/HybridOneAudioSpecSwift.hpp
-@@ -164,6 +164,14 @@ namespace margelo::nitro::one {
+@@ -167,6 +167,14 @@ namespace margelo::nitro::one {
        auto __value = std::move(__result.value());
        return __value;
      }
@@ -483,7 +412,7 @@ index d8b5dd14044ffebb471bc1c9b372747c6dbd77cf..5a46ec28b54c92e4e3c2cf6baef69d0c
        auto __result = _swiftPart.stop();
        if (__result.hasError()) [[unlikely]] {
 diff --git a/nitrogen/generated/ios/swift/HybridOneAudioSpec.swift b/nitrogen/generated/ios/swift/HybridOneAudioSpec.swift
-index f4a925d2a67756a9618c36a88d524fba7b01047c..b474f3556422ef481ec4f32d7916b8b1944bffb4 100644
+index 7cbdb99a97b68975d196915717d5f4bb050ed24c..eaf1fe34835d729154c7550de1a42906809e5dd9 100644
 --- a/nitrogen/generated/ios/swift/HybridOneAudioSpec.swift
 +++ b/nitrogen/generated/ios/swift/HybridOneAudioSpec.swift
 @@ -20,6 +20,7 @@ public protocol HybridOneAudioSpec_protocol: HybridObject {
@@ -495,13 +424,13 @@ index f4a925d2a67756a9618c36a88d524fba7b01047c..b474f3556422ef481ec4f32d7916b8b1
    func startRecording() throws -> Promise<AudioRecordingStatus>
    func getRecordingStatus() throws -> Promise<AudioRecordingStatus>
 diff --git a/nitrogen/generated/ios/swift/HybridOneAudioSpec_cxx.swift b/nitrogen/generated/ios/swift/HybridOneAudioSpec_cxx.swift
-index 432772ca515cac59bc84892861305fa350db3693..3e0cf45f141e46f3f4fb61f66c8924101089ccd3 100644
+index 24feeb7892765904c39f4e235d43af141e9c0154..ce1c7af95a951e02217dae095ccd7d6e446959b2 100644
 --- a/nitrogen/generated/ios/swift/HybridOneAudioSpec_cxx.swift
 +++ b/nitrogen/generated/ios/swift/HybridOneAudioSpec_cxx.swift
 @@ -257,6 +257,25 @@ open class HybridOneAudioSpec_cxx {
      }
    }
-   
+ 
 +  @inline(__always)
 +  public final func setPlaybackRate(rate: Double) -> bridge.Result_std__shared_ptr_Promise_AudioPlaybackStatus___ {
 +    do {
@@ -525,7 +454,7 @@ index 432772ca515cac59bc84892861305fa350db3693..3e0cf45f141e46f3f4fb61f66c892410
    public final func stop() -> bridge.Result_std__shared_ptr_Promise_void___ {
      do {
 diff --git a/nitrogen/generated/shared/c++/HybridOneAudioSpec.cpp b/nitrogen/generated/shared/c++/HybridOneAudioSpec.cpp
-index 8572b8ada433914cad59e014194e0d248679ceb4..fd6c8938378c76ed2d76dcd5c6e90d0c74fca40c 100644
+index 0e89e8672b93e6c98955760ba4a819681f685dcb..eaf2af82364f7a83d14a38f36aebc94a97acab55 100644
 --- a/nitrogen/generated/shared/c++/HybridOneAudioSpec.cpp
 +++ b/nitrogen/generated/shared/c++/HybridOneAudioSpec.cpp
 @@ -21,6 +21,7 @@ namespace margelo::nitro::one {
@@ -537,10 +466,10 @@ index 8572b8ada433914cad59e014194e0d248679ceb4..fd6c8938378c76ed2d76dcd5c6e90d0c
        prototype.registerHybridMethod("startRecording", &HybridOneAudioSpec::startRecording);
        prototype.registerHybridMethod("getRecordingStatus", &HybridOneAudioSpec::getRecordingStatus);
 diff --git a/nitrogen/generated/shared/c++/HybridOneAudioSpec.hpp b/nitrogen/generated/shared/c++/HybridOneAudioSpec.hpp
-index d8beb5a12f76a40d1f435fac2fe40be3723380a7..9c1a22b4932aa8d9d17fd305a3cfb35bc8aff058 100644
+index 6c6ddb8e7e4ab91fab3bac5c9ffbe375dec5c72c..825783e1f1dc6a196a504635b0350ade07cfe2e2 100644
 --- a/nitrogen/generated/shared/c++/HybridOneAudioSpec.hpp
 +++ b/nitrogen/generated/shared/c++/HybridOneAudioSpec.hpp
-@@ -85,6 +85,7 @@ namespace margelo::nitro::one {
+@@ -88,6 +88,7 @@ namespace margelo::nitro::one {
        virtual std::shared_ptr<Promise<AudioPlaybackStatus>> pause() = 0;
        virtual std::shared_ptr<Promise<AudioPlaybackStatus>> resume() = 0;
        virtual std::shared_ptr<Promise<AudioPlaybackStatus>> seek(double positionMs) = 0;
@@ -549,10 +478,10 @@ index d8beb5a12f76a40d1f435fac2fe40be3723380a7..9c1a22b4932aa8d9d17fd305a3cfb35b
        virtual std::shared_ptr<Promise<AudioRecordingStatus>> startRecording() = 0;
        virtual std::shared_ptr<Promise<AudioRecordingStatus>> getRecordingStatus() = 0;
 diff --git a/src/platform/audio/index.native.ts b/src/platform/audio/index.native.ts
-index bf550a2740168a0dcf81b4d9cdbbb4fbe561005c..ac991dde5171ec4fbdd75bf1a9a7d93ace664e11 100644
+index 4bef3591b27bc5665b5b6fe1d80ad8699bf737e7..9f12de4cca1cca587776f35c336391f5a9fef824 100644
 --- a/src/platform/audio/index.native.ts
 +++ b/src/platform/audio/index.native.ts
-@@ -41,6 +41,8 @@ export const Audio = Object.freeze({
+@@ -43,6 +43,8 @@ export const Audio = Object.freeze({
    resume: (): Promise<AudioPlaybackStatus> => native().resume().catch(rethrowNativeError),
    seek: (positionMs: number): Promise<AudioPlaybackStatus> =>
      native().seek(positionMs).catch(rethrowNativeError),
@@ -562,28 +491,28 @@ index bf550a2740168a0dcf81b4d9cdbbb4fbe561005c..ac991dde5171ec4fbdd75bf1a9a7d93a
    startRecording: (): Promise<AudioRecordingStatus> =>
      native().startRecording().catch(rethrowNativeError),
 diff --git a/src/platform/audio/index.ts b/src/platform/audio/index.ts
-index bfa2353e4a19fc30575d87147796b2aa80d2f71d..b36ee1d9bfc3e3c9faf9225dcec4a97355d4869f 100644
+index ff4d221411b8bd54d0300ad3ad731f66ebee7445..4ff5718b07b7ea4797f3ff49b46efe3e4b384e89 100644
 --- a/src/platform/audio/index.ts
 +++ b/src/platform/audio/index.ts
-@@ -13,6 +13,8 @@ export type { PitchCorrectionQuality } from '../specs/OneAudio.nitro'
+@@ -15,6 +15,8 @@ export type { PitchCorrectionQuality } from '../specs/OneAudio.nitro'
  export type * from './types'
  export type * from './unavailable'
  let player: HTMLAudioElement | undefined
 +// the shared player's rate, pitch kept; it outlives a stop, so the next play keeps it.
 +let playbackRate = 1
- let playbackError: string | undefined
- let permission: AudioRecordingPermission = 'undetermined'
- let openingRecording = false
-@@ -208,6 +210,8 @@ export const Audio = Object.freeze({
-       throw new Error('Audio.play: invalid browser audio URI')
+ // a play with a position or paused flag, between creation and the landed
+ // seek. paused is the intent pause and resume update while it loads.
+ let pendingLoad:
+@@ -218,6 +220,8 @@ export const Audio = Object.freeze({
+       throw new Error('Audio.play: position must be finite and nonnegative')
      clearPlayer()
      const audio = new window.Audio(url.href)
 +    audio.preservesPitch = true
 +    audio.playbackRate = playbackRate
      player = audio
-     for (const event of ['play', 'pause', 'ended'])
-       audio.addEventListener(event, syncNowPlaying)
-@@ -277,6 +281,14 @@ export const Audio = Object.freeze({
+     audio.addEventListener('error', () => {
+       if (player === audio)
+@@ -313,6 +317,14 @@ export const Audio = Object.freeze({
      })
      return playbackStatus()
    },
@@ -599,10 +528,10 @@ index bfa2353e4a19fc30575d87147796b2aa80d2f71d..b36ee1d9bfc3e3c9faf9225dcec4a973
      clearPlayer()
    },
 diff --git a/src/platform/audio/unavailable.ts b/src/platform/audio/unavailable.ts
-index 77a656d2a723bb6d79ed222edb4cc71a040452d5..64eb92eeb7bd3bd4c1f6971944f6ba2ec17e6ab2 100644
+index 7cf69a442c16ebac54f42cd85095534cc89abae4..19ff93a3da67e109e8dd611e80ac706037e20a07 100644
 --- a/src/platform/audio/unavailable.ts
 +++ b/src/platform/audio/unavailable.ts
-@@ -39,6 +39,8 @@ export const Audio = Object.freeze({
+@@ -41,6 +41,8 @@ export const Audio = Object.freeze({
      Promise.resolve({ state: 'idle', positionMs: 0 }),
    seek: (_positionMs: number): Promise<AudioPlaybackStatus> =>
      Promise.resolve({ state: 'idle', positionMs: 0 }),
@@ -612,10 +541,10 @@ index 77a656d2a723bb6d79ed222edb4cc71a040452d5..64eb92eeb7bd3bd4c1f6971944f6ba2e
    startRecording: (): Promise<AudioRecordingStatus> =>
      Promise.reject(missingNativeBuild('Audio.startRecording')),
 diff --git a/src/platform/specs/OneAudio.nitro.ts b/src/platform/specs/OneAudio.nitro.ts
-index 8fd0c6ad8d9fadee244f108c5b6e696a9368a242..065a9464ce1ae797f7d9317521f79966c2000fe0 100644
+index 7b7279859f959826b7c42aac764daa13ccccc0a4..b80d486c9bc4ff58dae5922b1b50ecdce7cb9936 100644
 --- a/src/platform/specs/OneAudio.nitro.ts
 +++ b/src/platform/specs/OneAudio.nitro.ts
-@@ -71,6 +71,7 @@ export interface OneAudio extends HybridObject<{ ios: 'swift'; android: 'kotlin'
+@@ -80,6 +80,7 @@ export interface OneAudio extends HybridObject<{ ios: 'swift'; android: 'kotlin'
    pause(): Promise<AudioPlaybackStatus>
    resume(): Promise<AudioPlaybackStatus>
    seek(positionMs: number): Promise<AudioPlaybackStatus>
@@ -623,32 +552,8 @@ index 8fd0c6ad8d9fadee244f108c5b6e696a9368a242..065a9464ce1ae797f7d9317521f79966
    stop(): Promise<void>
    startRecording(): Promise<AudioRecordingStatus>
    getRecordingStatus(): Promise<AudioRecordingStatus>
-diff --git a/src/router/utils/getNativeStackReplaceAction.ts b/src/router/utils/getNativeStackReplaceAction.ts
-index 1901301c872a4dd9b688071cdf44b713f7f169f4..a82b98dcc67f1d5655231ea7724a61fefbe82a18 100644
---- a/src/router/utils/getNativeStackReplaceAction.ts
-+++ b/src/router/utils/getNativeStackReplaceAction.ts
-@@ -20,11 +20,16 @@ export function getNativeStackReplaceAction(
-       return null
-     }
- 
--    const dynamicMatch = matchDynamicName(targetRoute.name)
-+    // a route named by its file path (`hymns/[number]`) holds its params in any of its segments.
-+    const dynamicMatches = targetRoute.name
-+      .split('/')
-+      .flatMap((segment) => matchDynamicName(segment) ?? [])
-     const changesDynamicScreen =
-       currentRoute.name === targetRoute.name &&
--      dynamicMatch &&
--      currentRoute.params?.[dynamicMatch.name] !== targetRoute.params?.[dynamicMatch.name]
-+      dynamicMatches.some(
-+        (dynamicMatch) =>
-+          currentRoute.params?.[dynamicMatch.name] !== targetRoute.params?.[dynamicMatch.name]
-+      )
- 
-     // a new dynamic screen instance can own a nested navigator of its own.
-     if (!currentRoute.state || !targetRoute.state || changesDynamicScreen) {
 diff --git a/types/platform/audio/index.d.ts b/types/platform/audio/index.d.ts
-index c60d69b34a4ce3b789658de09d8c8bb9a3eb7616..5f7e85e748cd47664623015508eba8815cdff65a 100644
+index 770253a89c853baffc37091ccd962e4d8abd2395..743af3537e3c855d0c47d499194d5a0d21c80a3d 100644
 --- a/types/platform/audio/index.d.ts
 +++ b/types/platform/audio/index.d.ts
 @@ -13,6 +13,7 @@ export declare const Audio: Readonly<{
@@ -660,7 +565,7 @@ index c60d69b34a4ce3b789658de09d8c8bb9a3eb7616..5f7e85e748cd47664623015508eba881
      startRecording: () => Promise<AudioRecordingStatus>;
      getRecordingStatus: () => Promise<AudioRecordingStatus>;
 diff --git a/types/platform/audio/index.native.d.ts b/types/platform/audio/index.native.d.ts
-index f6784d01ded3a45e07b012876ab8edf450ff5b9c..7d59444caad9ea8db57d8e40a026da1a1a262c20 100644
+index 3de9560fff80303bcf699e6577fe19678879f8fe..ee9fe69181bce091604419671160cc89fbac5a59 100644
 --- a/types/platform/audio/index.native.d.ts
 +++ b/types/platform/audio/index.native.d.ts
 @@ -10,6 +10,7 @@ export declare const Audio: Readonly<{
@@ -672,7 +577,7 @@ index f6784d01ded3a45e07b012876ab8edf450ff5b9c..7d59444caad9ea8db57d8e40a026da1a
      startRecording: () => Promise<AudioRecordingStatus>;
      getRecordingStatus: () => Promise<AudioRecordingStatus>;
 diff --git a/types/platform/audio/unavailable.d.ts b/types/platform/audio/unavailable.d.ts
-index b81f7eaf1c5736acd4750c9064e648e222fbb536..7eaf9b8201efe9e16f1bd9216bbb34641cdc38b4 100644
+index a8eb112496f2d520699f18d8fd2b93870ca58eb3..099bc51446a2300d4acdee036502f5cdc7969f43 100644
 --- a/types/platform/audio/unavailable.d.ts
 +++ b/types/platform/audio/unavailable.d.ts
 @@ -8,6 +8,7 @@ export declare const Audio: Readonly<{
@@ -684,10 +589,10 @@ index b81f7eaf1c5736acd4750c9064e648e222fbb536..7eaf9b8201efe9e16f1bd9216bbb3464
      startRecording: () => Promise<AudioRecordingStatus>;
      getRecordingStatus: () => Promise<AudioRecordingStatus>;
 diff --git a/types/platform/specs/OneAudio.nitro.d.ts b/types/platform/specs/OneAudio.nitro.d.ts
-index 1e982c6e8362befd66273dd8bbc86675976c65d1..b2cbde8af2cc9f65a122cb32635f78142aaba7bf 100644
+index 6ce06ee04e18b371b17638e5c4dcef019f933e2f..53f1cd4a8bb2c9bb7ba9dfc71a2e284a57c7abfb 100644
 --- a/types/platform/specs/OneAudio.nitro.d.ts
 +++ b/types/platform/specs/OneAudio.nitro.d.ts
-@@ -62,6 +62,7 @@ export interface OneAudio extends HybridObject<{
+@@ -67,6 +67,7 @@ export interface OneAudio extends HybridObject<{
      pause(): Promise<AudioPlaybackStatus>;
      resume(): Promise<AudioPlaybackStatus>;
      seek(positionMs: number): Promise<AudioPlaybackStatus>;
