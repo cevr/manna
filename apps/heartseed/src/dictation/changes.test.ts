@@ -18,6 +18,7 @@ import {
   type DictationEvent,
   type DictationView,
 } from '../dictation';
+import { yieldingAt } from '../test/yielding';
 
 const BURST = 10_000;
 
@@ -45,41 +46,6 @@ const listened = () => {
     for (const listener of listeners) listener(event);
   };
   return { source, send };
-};
-
-/**
- * A scheduler that yields a fiber at its `at`-th yield check alone. The
- * task that resumes the fiber after that yield first calls `deliver`, as a
- * native event lands while the fiber waits. `counted` holds the checks so
- * far and whether the event landed.
- */
-const yieldingAt = (at: number, deliver: () => void) => {
-  const base = new Scheduler.MixedScheduler();
-  const counted = { checks: 0, delivered: false, pending: false };
-  const scheduler: Scheduler.Scheduler = {
-    executionMode: 'async',
-    shouldYield: () => {
-      counted.checks++;
-      counted.pending = counted.checks === at;
-      return counted.pending;
-    },
-    makeDispatcher: () => {
-      const dispatcher = base.makeDispatcher();
-      return {
-        scheduleTask: (task, priority) => {
-          if (!counted.pending) return dispatcher.scheduleTask(task, priority);
-          counted.pending = false;
-          dispatcher.scheduleTask(() => {
-            counted.delivered = true;
-            deliver();
-            task();
-          }, priority);
-        },
-        flush: () => dispatcher.flush(),
-      };
-    },
-  };
-  return { counted, scheduler };
 };
 
 /** One trial: a start, on its own fiber, that yields at its `at`-th check while the native end of its session lands. */

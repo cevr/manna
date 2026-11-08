@@ -5240,3 +5240,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** First the Blade's Contact rule could hand its mail to the Worker's name written down instead of the Site's `workerName` output, losing the order that makes the rule follow the Worker's update, and every committed test and the acceptance stayed green on that mutant.
 - **Cause:** `mailDomain` and `contact` in `apps/firsttheblade/src/worker/domain.ts` took `Input<string>`, which a plain string satisfies, and no check read what the stack passed or what the rule's worker action named.
 - **Guard:** code: `apps/firsttheblade/src/worker/deploy-env.test.ts` `takes the Site Worker by its workerName output, in the stack and in every rule`, `refuses the Worker name written down, by type`
+
+### heartseed-yield-points-for-every-listened-service
+
+- **Date:** 2026-11-08
+- **Kind:** review
+- **Said:** "a command's view can be published after a native event's newer view, so `changes` ends on a stale view."
+- **Source:** hymnapp/hsguards2/round-1-findings.md M1
+- **Wrong:** `dispatch` in `apps/heartseed/src/dictation.ts` and `src/voice.ts` wrote the state and published the view in separate fiber steps, so a native event delivered while a command's fiber yielded between them published its newer view first, and `changes` replayed the command's older one.
+- **Cause:** The run loop may yield before any step of a command's fiber, and a service whose native listener runs an effect synchronously had no property that lands a native event at each of the command's yield points; each test that had one kept its own copy of the scheduler.
+- **Guard:** code: `apps/heartseed/src/yield-points.test.ts` `each service a native listener writes has a yield-point property, through the one shared scheduler`
