@@ -11,6 +11,9 @@
  * - `MailQueue`: the queue a film's send is put on, delivered one batch at a
  *   time (`DELIVERY`).
  * - `SignupLimit`: the sign-up limit (`SIGNUPS`), a Rate Limiting binding.
+ * - `MAIL_TOKEN_KEY` and `MAIL_ADMIN_TOKEN`: secrets of the account's
+ *   Secrets Store, bound by name (`./store-secret.ts`), each read at its
+ *   first use and kept once read.
  *
  * The bindings' clients answer only in a running Worker or Durable Object
  * (`RuntimeContext`), as does the request's `waitUntil`, which keeps a
@@ -23,7 +26,7 @@
 import { RuntimeContext } from 'alchemy';
 import * as Cloudflare from '@alchemy.run/cloudflare';
 import * as DomainCloudflare from '@alchemy.run/cloudflare/Domain';
-import { Config, Effect, Layer, Option, Schema } from 'effect';
+import { Effect, Layer, Option, Schema } from 'effect';
 
 import { Background } from '../mail/background.ts';
 import { layerSite } from '../mail/films.ts';
@@ -34,6 +37,7 @@ import { FilmQueue, QueueError } from '../mail/queue.ts';
 import { AdminToken } from '../mail/routes.ts';
 import { layerD1 } from '../mail/sql-d1.ts';
 import { layerWebCrypto } from './crypto.ts';
+import { memoSuccess, storeSecret } from './store-secret.ts';
 import { SIGNUPS, Throttle } from '../mail/throttle.ts';
 import { layer as tokensLayer } from '../mail/tokens.ts';
 
@@ -101,8 +105,8 @@ export const layerCloudflare = Layer.unwrap(
     const writeQueue = yield* Cloudflare.Queues.WriteQueue(MailQueue);
     const limit = yield* SignupLimit;
     const exec = yield* Cloudflare.WorkerExecutionContext;
-    const tokenKey = yield* Config.Redacted('MAIL_TOKEN_KEY');
-    const adminToken = yield* Config.Redacted('MAIL_ADMIN_TOKEN');
+    const tokenKey = yield* storeSecret('MAIL_TOKEN_KEY');
+    const adminToken = yield* memoSuccess(inRuntime(yield* storeSecret('MAIL_ADMIN_TOKEN')));
 
     const mailer = Mailer.of({
       send: (letter) =>
@@ -140,7 +144,7 @@ export const layerCloudflare = Layer.unwrap(
 
     const services = Layer.mergeAll(
       layerD1(inRuntime(db.raw)),
-      tokensLayer(tokenKey),
+      tokensLayer(inRuntime(tokenKey)),
       Layer.succeed(Mailer, mailer),
     );
     return Layer.mergeAll(

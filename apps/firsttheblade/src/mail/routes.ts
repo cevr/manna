@@ -50,10 +50,14 @@ import type { Sql, SqlError } from './sql.ts';
 import { Throttle } from './throttle.ts';
 import { type Token, Tokens } from './tokens.ts';
 
-/** The secret `bun run mail:send` sends as its bearer token. */
-export class AdminToken extends Context.Service<AdminToken, Redacted.Redacted<string>>()(
-  'firsttheblade/AdminToken',
-) {}
+/**
+ * The secret `bun run mail:send` sends as its bearer token, read by the
+ * admin routes alone, when a request asks one.
+ */
+export class AdminToken extends Context.Service<
+  AdminToken,
+  Effect.Effect<Redacted.Redacted<string>>
+>()('firsttheblade/AdminToken') {}
 
 /** Everything the routes need from their host. */
 export type MailServices =
@@ -275,7 +279,7 @@ const BEARER = /^Bearer (.+)$/;
 
 /** Whether a request carries the admin token. */
 const isAdmin = Effect.fn('Mail.isAdmin')(function* (request: HttpServerRequest.HttpServerRequest) {
-  const held = yield* AdminToken;
+  const held = yield* yield* AdminToken;
   const given = Option.getOrElse(
     Option.flatMap(Headers.get(request.headers, 'authorization'), (header) =>
       Option.fromNullishOr(BEARER.exec(header)?.[1]),

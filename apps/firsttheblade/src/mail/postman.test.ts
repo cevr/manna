@@ -61,6 +61,7 @@ const fixture = (sign: Tokens['Service']['sign'], send: Mailer['Service']['send'
           sign,
           idOf: () => Effect.die('unexpected idOf'),
           read: () => Effect.die('unexpected read'),
+          fingerprint: Effect.die('unexpected fingerprint'),
         }),
       ),
       Layer.succeed(Mailer, Mailer.of({ send })),
