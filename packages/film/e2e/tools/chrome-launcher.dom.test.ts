@@ -28,9 +28,15 @@ const Step = Schema.fromJsonString(
 );
 type Step = typeof Step.Type;
 
-/** A step in the middle of a sequence. */
-const Middle = Schema.Literals(['open:gpu', 'open:soft', 'close', 'killChrome']);
-type Middle = typeof Middle.Type;
+/** A step in the middle of a generated sequence. */
+const Generated = Schema.Literals(['open:gpu', 'open:soft', 'close', 'killChrome']);
+
+/**
+ * A step in the middle of a sequence: a generated one, or Chrome killed
+ * (`killOpen` by `endChrome`, `crashOpen` from outside the launcher) and a
+ * view opened at once, before the launcher reads Chrome's pipe as closed.
+ */
+type Middle = typeof Generated.Type | 'killOpen' | 'crashOpen';
 
 /** How a sequence ends: the fixture exits, or the test kills it. */
 const End = Schema.Literals(['exit', 'sigkill']);
@@ -54,6 +60,8 @@ interface Transition {
 const stepOf = (model: Model, command: Middle): Transition => {
   if (command === 'close')
     return { next: { ...model, views: Math.max(0, model.views - 1) }, result: 'ok' };
+  if (command === 'killOpen' || command === 'crashOpen')
+    return stepOf(stepOf(model, 'killChrome').next, 'open:gpu');
   if (command === 'killChrome') {
     if (model.chrome === 'running') return { next: { ...model, chrome: 'dead' }, result: 'ok' };
     return { next: model, result: 'ok' };
@@ -135,18 +143,24 @@ const runFixture = (root: string, steps: ReadonlyArray<string>) =>
     }),
   );
 
-/** Six generated sequences, and one that opens again in the profile of a Chrome it killed. */
+/** How many times a sequence kills its Chrome and opens a view again at once. */
+const REOPENS = 8;
+
+/** Six generated sequences, one that opens again in the profile of a Chrome it killed, and two that kill and open again `REOPENS` times. */
 const SEQUENCES: ReadonlyArray<readonly [ReadonlyArray<Middle>, typeof End.Type]> = [
   ...Effect.runSync(
     Arbitrary.sampleEffect(
       Arbitrary.all([
-        Arbitrary.array(Arbitrary.schema(Middle), { minLength: 1, maxLength: 7 }),
+        Arbitrary.array(Arbitrary.schema(Generated), { minLength: 1, maxLength: 7 }),
         Arbitrary.schema(End),
       ]),
       { count: 6, seed: 17 },
     ),
   ),
   [['open:gpu', 'killChrome', 'open:gpu', 'close', 'open:gpu'], 'sigkill'],
+  ...(['killOpen', 'crashOpen'] as const).map(
+    (reopen) => [['open:gpu', ...Array.from({ length: REOPENS }, () => reopen)], 'exit'] as const,
+  ),
 ];
 
 describe('the Chrome launcher, against its model', () => {

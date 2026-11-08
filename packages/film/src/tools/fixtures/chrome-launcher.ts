@@ -24,24 +24,69 @@ import { collect } from '../process.ts';
 const FLAGS = { 'open:gpu': launchArgs, 'open:soft': ['--disable-gpu-vsync'] } as const;
 
 /** One step of a sequence, as the test names it. */
-const Command = Schema.Literals(['open:gpu', 'open:soft', 'close', 'killChrome', 'exit', 'hold']);
+const Command = Schema.Literals([
+  'open:gpu',
+  'open:soft',
+  'close',
+  'killChrome',
+  'killOpen',
+  'crashOpen',
+  'exit',
+  'hold',
+]);
 
-/** The flags of each Chrome this process launched (their parent is this process). */
-const ours = Effect.gen(function* () {
-  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-  const ps = yield* collect(
-    spawner,
-    ChildProcess.make('ps', ['-axo', 'pid=,ppid=,args='], { forceKillAfter: '5 seconds' }),
-  );
-  return ps.stdout
+/** Each Chrome in `ps`'s listing that this process launched (its parent is this process): its pid and its flags. */
+const chromesIn = (listing: string) =>
+  listing
     .split('\n')
     .map((line) => line.trim().split(/\s+/))
     .filter(
       ([, ppid, ...args]) =>
         ppid === String(process.pid) && args.includes('--remote-debugging-pipe'),
     )
-    .map(([, , ...args]) => args.filter((arg) => arg.startsWith('--')).join(' '));
+    .map(([pid, , ...args]) => ({
+      pid: Number(pid),
+      flags: args.filter((arg) => arg.startsWith('--')).join(' '),
+    }));
+
+/** The flags of each Chrome this process launched. */
+const ours = Effect.gen(function* () {
+  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+  const ps = yield* collect(
+    spawner,
+    ChildProcess.make('ps', ['-axo', 'pid=,ppid=,args='], { forceKillAfter: '5 seconds' }),
+  );
+  return chromesIn(ps.stdout).map((chrome) => chrome.flags);
 });
+
+/**
+ * Each Chrome this process launched, read from `ps` synchronously: the
+ * event loop takes no turn, so the launcher has not yet read the pipe of a
+ * Chrome that just died as closed.
+ */
+const chromesNow = () =>
+  chromesIn(
+    // oxlint-disable-next-line effect/noGlobals -- a synchronous ps: the ChildProcess service turns the event loop, and the launcher would read the closed pipe first
+    Bun.spawnSync(['ps', '-axo', 'pid=,ppid=,args='], { stdout: 'pipe' }).stdout.toString(),
+  );
+
+/** SIGKILL to the process group of each Chrome this process launched (its own children, each a group leader), as a crash would, with no `endChrome`. */
+const crash = () =>
+  Effect.forEach(
+    chromesNow(),
+    (chrome) => Effect.ignore(Effect.try(() => process.kill(-chrome.pid, 'SIGKILL'))),
+    { discard: true },
+  );
+
+/** `kill`, then `ps` read again (no turn of the event loop) until it lists none of this process's Chromes, at most 250 times. */
+const killedAtOnce = (kill: Effect.Effect<void>) =>
+  Effect.andThen(
+    kill,
+    Effect.sync(() => {
+      let reads = 0;
+      while (reads < 250 && chromesNow().length > 0) reads += 1;
+    }),
+  );
 
 /** A step's report, as the test reads it. */
 const Step = Schema.fromJsonString(
@@ -81,6 +126,18 @@ Effect.gen(function* () {
   const steps = yield* Config.String('FILM_LAUNCHER_STEPS').pipe(Effect.orDie);
   const commands = yield* Schema.decodeUnknownEffect(Schema.Array(Command))(steps.split(','));
   const views: Array<Scope.Closeable> = [];
+  const open = (flags: ReadonlyArray<string>) =>
+    Effect.gen(function* () {
+      const scope = yield* Scope.make();
+      const opened = yield* Effect.exit(
+        openView(flags, { width: 320, height: 240 }).pipe(
+          Effect.tap((view) => Effect.promise(() => view.navigate('about:blank'))),
+          Scope.provide(scope),
+        ),
+      );
+      if (Exit.isSuccess(opened)) views.push(scope);
+      return endOf(opened);
+    });
   for (const command of commands)
     yield* Match.value(command).pipe(
       Match.when('exit', () => report(command, 'exiting')),
@@ -103,18 +160,18 @@ Effect.gen(function* () {
           ),
         ),
       ),
-      Match.orElse((open) =>
-        Effect.gen(function* () {
-          const scope = yield* Scope.make();
-          const opened = yield* Effect.exit(
-            openView(FLAGS[open], { width: 320, height: 240 }).pipe(
-              Effect.tap((view) => Effect.promise(() => view.navigate('about:blank'))),
-              Scope.provide(scope),
-            ),
-          );
-          if (Exit.isSuccess(opened)) views.push(scope);
-          yield* report(command, endOf(opened));
-        }),
+      Match.when('killOpen', () =>
+        Effect.andThen(killedAtOnce(Effect.sync(endChrome)), open(FLAGS['open:gpu'])).pipe(
+          Effect.flatMap((result) => report(command, result)),
+        ),
+      ),
+      Match.when('crashOpen', () =>
+        Effect.andThen(killedAtOnce(Effect.suspend(crash)), open(FLAGS['open:gpu'])).pipe(
+          Effect.flatMap((result) => report(command, result)),
+        ),
+      ),
+      Match.orElse((flags) =>
+        Effect.flatMap(open(FLAGS[flags]), (result) => report(command, result)),
       ),
     );
 }).pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);

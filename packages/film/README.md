@@ -850,7 +850,10 @@ one Bun 1.4.4 would find, searched here as Bun searches (`chromeSearch`: the
 browsers it names on `$PATH`, then its app bundles in `/Applications` and
 `~/Applications`, then Playwright's headless shell), else Playwright's
 cached Chromium. A Chrome launched again after the first one died has the
-same executable, command line and profile, so it runs its GPU too. Each
+same executable, command line and profile, so it runs its GPU too. Chrome
+counts as dead once its pipe closes or its process exits; one that died
+before this process saw either fails a new view's first call, and that view
+then opens once more, in Chrome launched again. Each
 process's profile is `$TMPDIR/bible-film-chrome/<pid>` (or under
 `FILM_CHROME_PROFILES`): the exit handler kills the Chrome's process group,
 then removes the folder, and every launch first removes the folders of
@@ -867,8 +870,9 @@ anti-aliased edges of ink and text). Films render on the owner's Macs only.
 on macOS: no `--disable-gpu`, `--disable-component-update`, and launched
 again the same way in the same profile. `e2e/tools/chrome-launcher.dom.test.ts`
 drives the launcher through generated sequences (open, close, a killed
-Chrome, an exit, a killed process) and checks one Chrome per process, its
-flags and its profile after each step.
+Chrome, an exit, a killed process), and through two that kill Chrome (by
+`endChrome`, and from outside) and open a view at once, eight times each,
+and checks one Chrome per process, its flags and its profile after each step.
 
 |                  | Hardware (the default)                                         | Software (`--encoder software`)                                    |
 | ---------------- | -------------------------------------------------------------- | ------------------------------------------------------------------ |

@@ -125,6 +125,12 @@ interface Running {
   readonly browser: Puppeteer;
   readonly session: CDPSession;
   readonly root: Wire;
+  /**
+   * Whether it still runs, as far as this process has seen: its pipe open
+   * and its process not exited. Both are read only some time after Chrome
+   * is gone, so a dead Chrome can still pass (`viewOf` then opens again).
+   */
+  readonly runs: () => boolean;
 }
 
 /** How this process's Chrome is launched, once its first view opened. */
@@ -361,15 +367,25 @@ const launchChrome = (launch: Launch) =>
           return [];
         }),
     });
-    browser.once('disconnected', () => {
+    const gone = () => {
       Option.map(leader, releaseChrome);
       running = Option.filter(running, (now) => now.browser !== browser);
-    });
+    };
+    browser.once('disconnected', gone);
+    Option.map(child, (chrome) => chrome.once('exit', gone));
+    const exited = () =>
+      Option.exists(
+        child,
+        (chrome) =>
+          Option.isSome(Option.fromNullishOr(chrome.exitCode)) ||
+          Option.isSome(Option.fromNullishOr(chrome.signalCode)),
+      );
+    const runs = () => browser.connected && !exited();
     const session = yield* Effect.tryPromise({
       try: () => browser.target().createCDPSession(),
       catch: failed,
     });
-    const chrome: Running = { browser, session, root: wireOf(session) };
+    const chrome: Running = { browser, session, root: wireOf(session), runs };
     running = Option.some(chrome);
     return chrome;
   });
@@ -377,11 +393,25 @@ const launchChrome = (launch: Launch) =>
 /** This process's Chrome as `launch` says: the one that runs, else launched again. */
 const chromeOf = (launch: Launch) =>
   Option.match(
-    Option.filter(running, (chrome) => chrome.browser.connected),
+    Option.filter(running, (chrome) => chrome.runs()),
     {
       onSome: Effect.succeed,
       onNone: () => launchChrome(launch),
     },
+  );
+
+/**
+ * A view of this process's Chrome as `launch` and `options` say. A Chrome
+ * that died before this process saw it (killed from outside, its pipe not
+ * yet read as closed) fails the view's first call; the view is then opened
+ * once more, in Chrome launched again.
+ */
+const viewOf = (launch: Launch, options: ViewOptions) =>
+  Effect.flatMap(chromeOf(launch), (chrome) =>
+    Effect.catch(viewIn(chrome, options), (error) => {
+      if (chrome.runs()) return Effect.fail(error);
+      return Effect.flatMap(chromeOf(launch), (again) => viewIn(again, options));
+    }),
   );
 
 /** A call on `wire`, its failure the browser's. */
@@ -634,8 +664,7 @@ export const openView = (
             return Effect.succeed(launch);
           },
         }).pipe(
-          Effect.flatMap(chromeOf),
-          Effect.flatMap((chrome) => viewIn(chrome, options)),
+          Effect.flatMap((launch: Launch) => viewOf(launch, options)),
           held,
         ),
       ),
