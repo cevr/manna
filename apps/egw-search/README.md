@@ -30,9 +30,20 @@ adopted and retained, so a teardown removes only its Worker. They were loaded
 once from `egw-paragraphs.db` and `vectors.bvi`. Every Sunday at 09:00 UTC the
 `egw-corpus-sync` Workflow (`server/cloudflare/Sync.ts`) installs the books the
 library has added into D1 and their vectors into Vectorize. Only `prod` writes;
-any other stage's Workflow plans and stops. A deploy reads `EGW_CLIENT_ID` and
-`EGW_CLIENT_SECRET` from the environment (CI takes them from the environment's
-secrets). To add vectors for books already installed, start an instance with
+any other stage's Workflow plans and stops. The library's credentials,
+`EGW_CLIENT_ID` and `EGW_CLIENT_SECRET`, are secrets of the account's
+Cloudflare Secrets Store, which the sync Worker binds by name
+(`server/cloudflare/store-secret.ts`) and reads inside its steps, so a deploy
+(a machine's or CI's) needs only the Cloudflare login. The owner puts each
+value in once, in a terminal, at a prompt that hides it (the store's ID from
+`bunx wrangler secrets-store store list --remote`):
+
+```sh
+bunx wrangler secrets-store secret create <store ID> --name EGW_CLIENT_ID --scopes workers --remote
+bunx wrangler secrets-store secret create <store ID> --name EGW_CLIENT_SECRET --scopes workers --remote
+```
+
+To add vectors for books already installed, start an instance with
 `{"mode":"sync","reembed":[<book id>, ...]}`.
 
 The URL is the search state. `src/url-state.ts` declares the workspace as a
