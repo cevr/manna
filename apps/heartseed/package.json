@@ -42,6 +42,7 @@
     "test:header": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/session/header.test.tsx",
     "test:counts": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/session/counts.test.tsx",
     "test:session-held": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/session/held.property.test.ts",
+    "test:session-visit": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/session/visit.property.test.ts",
     "test:pill": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/session/pill.test.tsx",
     "test:about": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/about",
     "test:run": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/run/footer.test.tsx",

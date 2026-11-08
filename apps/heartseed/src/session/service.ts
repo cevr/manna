@@ -22,8 +22,15 @@
  * finishing, read in the making's own step), so the item recited stays
  * shown until its `Next`. The hold keeps the item's piece beside it, so a
  * making that takes the verse out of the pieces (a remove of its passage
- * while the recital is under way) leaves Today the verse it shows. Nothing
- * of it is stored.
+ * while the recital is under way) leaves Today the verse it shows.
+ *
+ * Beside the hold it keeps a visit: a tap on a known promise (`visit`)
+ * makes that promise's verses, in order, the visit Today shows ahead of
+ * the plan, each a review whose baseline is its plant's recalls at the tap
+ * (read behind every keep handed in before it), so a verse is done once it
+ * holds more. A new visit replaces the one before and never drops the
+ * hold. The visit lives as the hold lives: a making drops both unless a
+ * recital is under way, and `next` keeps it. Nothing of either is stored.
  */
 
 import {
@@ -46,7 +53,7 @@ import { offsetAt } from '../day';
 import { Dictation } from '../dictation';
 import { isActive } from '../dictation/attempt';
 import { Garden, type GardenView, type ReadGarden } from '../garden';
-import { collectionPieces, Passages, piecesOf, type PassagesView } from '../passages';
+import { collectionPieces, Passages, piecesOf, type PassagesView, type Range } from '../passages';
 import type { Collection } from '../promises';
 import { planOf, type Item, type Minutes, type Plan, type TextPiece } from '../session';
 
@@ -76,7 +83,18 @@ export interface SessionView {
   readonly held: Option.Option<Item>;
   /** The held item's piece as the hold took it, kept and dropped with `held`, so Today shows the verse recited even after a making took it out of `pieces` (a remove of its passage while the recital is under way). */
   readonly heldPiece: Option.Option<TextPiece>;
+  /** The visit Today shows ahead of the plan, in the promise's verse order; empty when none. */
+  readonly visit: readonly VisitVerse[];
 }
+
+/** One verse of a visit: a review (`fresh: false`) whose `recalls` are its plant's at the tap, and its piece, grouped by the promise's collection. */
+export interface VisitVerse {
+  readonly item: Item;
+  readonly piece: TextPiece;
+}
+
+/** The estimate of one recital of `words` words, in seconds, as the plan estimates its items. */
+const secondsOf = (words: number) => 10 + words / 2;
 
 /** The session Today runs. */
 export class Session extends Context.Service<
@@ -88,8 +106,13 @@ export class Session extends Context.Service<
     readonly choose: (minutes: Minutes) => Effect.Effect<void>;
     /** A press of Say it on `item`, the item Today shows: it stays shown until `next`, or a making with no recital under way. */
     readonly hold: (item: Item) => Effect.Effect<void>;
-    /** A tap on Next: the held item is let go, and Today shows the plan's first item not done. */
+    /** A tap on Next: the held item is let go, and Today shows the visit's first item not done, else the plan's. */
     readonly next: Effect.Effect<void>;
+    /** A tap on `promise`, a known promise of `collection`: its verses become the visit, replacing any before and keeping the hold; nothing before the first plan or with the garden unread. */
+    readonly visit: (
+      collection: Pick<Collection, 'id' | 'title'>,
+      promise: Range,
+    ) => Effect.Effect<void>;
     /** A return to the foreground: a plan made in this launch is made again and the hold dropped, unless a recital is under way or the garden or the passages are unread. */
     readonly wake: Effect.Effect<void>;
     /** An add or a remove of a passage landed: a plan made in this launch is made again over the passages now, unless the garden or the passages are unread, and the hold dropped unless a recital is under way. */
@@ -154,6 +177,7 @@ export const layer = (
         pieces: piecesOf(own, yield* passages.view, taught),
         held: Option.none(),
         heldPiece: Option.none(),
+        visit: [],
       });
       const views = yield* PubSub.sliding<SessionView>({ capacity: WINDOW, replay: 1 });
       /** The service's own clock, whoever runs the command. */
@@ -198,7 +222,7 @@ export const layer = (
         return Option.some({ garden: seen, pieces: piecesOf(own, chosen, taught) });
       };
 
-      /** The view after a making over `ground` for `minutes`, at the clock's instant and the zone's offset there: its plan, the pieces it planned over, and the item held kept only when `keeps`. */
+      /** The view after a making over `ground` for `minutes`, at the clock's instant and the zone's offset there: its plan, the pieces it planned over, and the item held and the visit kept only when `keeps`. */
       const madeUnsafe = (ground: Ground, minutes: Minutes, keeps: boolean): SessionView => {
         const now = MutableRef.get(held);
         const at = clock.currentTimeMillisUnsafe();
@@ -217,6 +241,7 @@ export const layer = (
           ),
           held: Option.filter(now.held, () => keeps),
           heldPiece: Option.filter(now.heldPiece, () => keeps),
+          visit: Arr.filter(now.visit, () => keeps),
         };
       };
 
@@ -267,10 +292,42 @@ export const layer = (
             MutableRef.update(held, (now) => ({
               ...now,
               held: Option.some(item),
-              heldPiece: Arr.findFirst(now.pieces, (piece) => piece.reference === item.reference),
+              heldPiece: Option.orElse(
+                Option.filter(now.heldPiece, (piece) => piece.reference === item.reference),
+                () =>
+                  Option.orElse(
+                    Option.map(
+                      Arr.findFirst(now.visit, (each) => each.piece.reference === item.reference),
+                      (each) => each.piece,
+                    ),
+                    () => Arr.findFirst(now.pieces, (piece) => piece.reference === item.reference),
+                  ),
+              ),
             }));
             return publish;
           }),
+        visit: (collection, promise) =>
+          Effect.flatMap(garden.settled, (seen) =>
+            Effect.suspend(() => {
+              if (seen._tag === 'Unread' || Option.isNone(MutableRef.get(held).plan))
+                return Effect.void;
+              const pieces = collectionPieces([{ ...collection, promises: [promise] }]);
+              const visit = pieces.map((piece): VisitVerse => ({
+                item: {
+                  reference: piece.reference,
+                  fresh: false,
+                  recalls: Option.match(Option.fromUndefinedOr(seen.plants.get(piece.reference)), {
+                    onNone: () => 0,
+                    onSome: (plant) => plant.recalls.length,
+                  }),
+                  seconds: secondsOf(piece.words),
+                },
+                piece,
+              }));
+              MutableRef.update(held, (now) => ({ ...now, visit }));
+              return publish;
+            }),
+          ).pipe(Effect.withSpan('Session.visit')),
         next: Effect.suspend(() => {
           MutableRef.update(held, (now) => ({
             ...now,

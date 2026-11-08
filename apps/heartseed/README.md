@@ -1241,6 +1241,18 @@ GETs (Class B) when the edge does not serve them.
     plan, the pieces and the hold against the models, and `shownOf` the
     held item with its own piece until `Next`, never a verse that left the
     pieces after it.
+  - `test:session-visit`: `src/session/visit.property.test.ts`, a visit at
+    the session seam: generated devices teaching Fear, with its verses
+    planted at a share, promises of other collections known whole (one,
+    two or three verses) or one verse alone, and held passages, in five
+    zones, each walking taps on a known promise (over an open visit or a
+    held result), Say it on the item shown (kept, refused by the store or
+    under way), `Next`, a Minutes tap, a return, an add or a remove (with
+    and without a recital under way) and time; after every step the plan,
+    the pieces, the hold, the visit (each baseline its recall count at the
+    tap) and the counts line against the models, and `shownOf` the held
+    item, else the visit's first not done, else the plan's
+    (`src/test/promise-model.ts`).
   - `test:run`: Today's run through `src/test/run-rig.tsx` (pieces given
     to `appLayer`, a recognizer that hears the text a test names, at once
     or held back while the recital finishes, Dictation's cancel, refused

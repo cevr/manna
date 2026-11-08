@@ -425,7 +425,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural,about}/**/*.test.*",
-        "!src/session/{header,counts,held.property,pill}.test.*",
+        "!src/session/{header,counts,held.property,visit.property,pill}.test.*",
         "!src/test/session-rig.*",
         "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
@@ -442,7 +442,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural,about}/**/*.test.*",
-        "!src/session/{service,counts,held.property,pill}.test.*",
+        "!src/session/{service,counts,held.property,visit.property,pill}.test.*",
         "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
@@ -458,7 +458,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural,about}/**/*.test.*",
-        "!src/session/{service,header,held.property,pill}.test.*",
+        "!src/session/{service,header,held.property,visit.property,pill}.test.*",
         "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
@@ -474,7 +474,23 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural,about}/**/*.test.*",
-        "!src/session/{service,header,counts,pill}.test.*",
+        "!src/session/{service,header,counts,visit.property,pill}.test.*",
+        "!src/{promises,need}/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:session-visit": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural,about}/**/*.test.*",
+        "!src/session/{service,header,counts,held.property,pill}.test.*",
         "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
@@ -490,7 +506,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural,about}/**/*.test.*",
-        "!src/session/{service,header,counts,held.property}.test.*",
+        "!src/session/{service,header,counts,held.property,visit.property}.test.*",
         "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
@@ -1035,6 +1051,7 @@
         "test:header",
         "test:counts",
         "test:session-held",
+        "test:session-visit",
         "test:pill",
         "test:about",
         "test:run",

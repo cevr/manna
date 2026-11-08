@@ -21,6 +21,11 @@
  * - F1 the field's passages: the app's own row, each held passage (none
  *   while unread), then each taught collection as one row of its verses
  *   in order, each once.
+ * - V1 a visit: the promise's verses in order, each its recall count at
+ *   the tap as its baseline.
+ * - V2 what Today shows: the held verse if any; else the visit's first
+ *   verse whose recalls are not past its baseline; else the plan's first
+ *   item not done; else the done state.
  */
 
 import type { Range } from '../passages';
@@ -123,6 +128,33 @@ export const piecesModel = (
   for (const piece of all)
     if (out.every((each) => each.reference !== piece.reference)) out.push(piece);
   return out;
+};
+
+/** A verse of a visit or a plan as the model holds it: its reference and the recalls it must pass to be done. */
+export interface ModelVisitVerse {
+  readonly reference: string;
+  readonly recalls: number;
+}
+
+/** V1: the visit a tap on `range` makes, over each reference's recall count at the tap. */
+export const visitModel = (
+  range: Range,
+  recallsAt: (reference: string) => number,
+): ModelVisitVerse[] =>
+  promiseVerses(range).map((reference) => ({ reference, recalls: recallsAt(reference) }));
+
+/** V2: the reference Today shows, or `Done`, over the verse held (null when none), the visit, the plan's items and each reference's recall count now. */
+export const shownModel = (
+  held: string | null,
+  visit: readonly ModelVisitVerse[],
+  plan: readonly ModelVisitVerse[],
+  recallsNow: (reference: string) => number,
+): string => {
+  if (held !== null) return held;
+  for (const verse of visit)
+    if (recallsNow(verse.reference) <= verse.recalls) return verse.reference;
+  for (const item of plan) if (recallsNow(item.reference) <= item.recalls) return item.reference;
+  return 'Done';
 };
 
 /** F1: the passages the field shows over the app's `own` row, the passages `held` and the collections `taught`. */
