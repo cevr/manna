@@ -10,14 +10,15 @@
  * Each case is the app's own long verse (never phrased) and one to four
  * verses of made-up text (three in four long, cut by the model's H1), one
  * sometimes twice under another group, each with one history: none,
- * some phrases, a gap among them, every phrase ripe (some with a fresh
- * Again on one), joined (its phrases' records kept), whole, or a stale
+ * some phrases, a gap among them, every phrase ripe (each at an ear or
+ * full corn, some with a fresh Again on one), joined (its phrases' records kept), whole, or a stale
  * `[1-3]`; with a stray phrase of a verse in no piece, phrases first
  * recalled today or one evening, in fifteen zones, at every minutes
  * choice.
  *
  * It catches a join offered before every phrase is at an ear (or at a
- * blade), kept once a phrase falls back, or offered with its phrases;
+ * blade) or held back until every phrase is at full corn, kept once a
+ * phrase falls back, or offered with its phrases;
  * phrases kept after the join, offered out of order or more than one a day;
  * a phrase planted today that does not hold back the day's new piece; a
  * join cued with the full text or nothing, or a planted verse cued as a
@@ -111,10 +112,12 @@ const sowerOf = (next: () => number, zone: string, at: number, plants: Map<strin
       when += (1 + below(next, 5)) * DAY;
     }
   };
-  /** Three clean recalls days apart: a seed, a blade under first letters, then an ear or full corn; the first two alone for a `blade`. */
+  /** Three clean recalls days apart: a seed, a blade under first letters, then an ear (one or two days apart) or full corn (four, then five); the first two alone for a `blade`. */
   const ripe = (reference: string, blade = false) => {
     const back = 12 + below(next, 90);
-    const days = blade ? [back, back - 4] : [back, back - 4, back - 9];
+    const [first, second] =
+      below(next, 3) === 0 ? [1 + below(next, 2), 1 + below(next, 2)] : [4, 5];
+    const days = blade ? [back, back - first] : [back, back - first, back - first - second];
     for (const day of days) sow(reference, at - day * DAY, 3);
   };
   /** One recall today, or one last evening (held to the morning). */
@@ -224,7 +227,12 @@ const tallyJoin = (
   const phrases = piece.phrases ?? [];
   if (phrases.length === 0) return;
   const fresh = items.items.find((item) => item.fresh);
-  if (fresh?.reference === piece.reference) bump(tally, 'plan:join');
+  if (fresh?.reference === piece.reference) {
+    bump(tally, 'plan:join');
+    const stages = phrases.map((phrase) => referenceStage(each.plants.get(phrase.reference) ?? []));
+    if (stages.includes('ear')) bump(tally, 'plan:join-with-a-phrase-at-ear');
+    if (stages.every((stage) => stage === 'full corn')) bump(tally, 'plan:join-at-full-corn');
+  }
   if (items.items.some((item) => !item.fresh && item.reference === piece.reference))
     bump(tally, 'plan:joined-review');
   const due = phrases.some((phrase) => {
@@ -263,6 +271,25 @@ const tallyPlan = (each: Case, items: ReturnType<typeof planModel>, tally: Tally
     if (localDay(first.startedAt, first.offset) === today && items.fresh === 'planted today')
       bump(tally, 'plan:phrase-planted-today');
   }
+};
+
+/** The kinds a reference's cue reaches, by the model: a join under first letters (with a phrase at an ear, or over a stale phrase only), a joined verse's own cue. */
+const tallyCue = (
+  each: Case,
+  reference: string,
+  wanted: ReturnType<typeof joinCueRule>,
+  tally: Tally,
+) => {
+  const phrased = [...each.plants].filter(
+    ([key]) => key !== reference && verseOfRule(key) === reference,
+  );
+  if (!each.plants.has(reference) && wanted === 'initials') {
+    bump(tally, 'cue:join-letters');
+    if (phrased.some(([, recalls]) => referenceStage(recalls) === 'ear'))
+      bump(tally, 'cue:join-letters-at-ear');
+    if (phrased.every(([key]) => key.endsWith('[1-3]'))) bump(tally, 'cue:stale-letters');
+  }
+  if (each.plants.has(reference) && phrased.length > 0) bump(tally, `cue:joined-${wanted}`);
 };
 
 const FEAR = COLLECTIONS.find((collection) => collection.id === 'protection');
@@ -365,20 +392,7 @@ describe('phrases first, then the join, then the verse alone', () => {
         const wanted = joinCueRule(each.plants, reference);
         if (cue !== wanted)
           wrong.push(`case ${n} cue of ${reference}: ${cue} where H6 has ${wanted}`);
-        if (!each.plants.has(reference) && wanted === 'initials') {
-          bump(tally, 'cue:join-letters');
-          if (
-            [...each.plants.keys()].every(
-              (key) => verseOfRule(key) !== reference || key.endsWith('[1-3]'),
-            )
-          )
-            bump(tally, 'cue:stale-letters');
-        }
-        if (
-          each.plants.has(reference) &&
-          [...each.plants.keys()].some((key) => key !== reference && verseOfRule(key) === reference)
-        )
-          bump(tally, `cue:joined-${wanted}`);
+        tallyCue(each, reference, wanted, tally);
       }
     }
     expect(wrong).toEqual([]);
@@ -386,6 +400,8 @@ describe('phrases first, then the join, then the verse alone', () => {
       ['plan:phrase-new', 150],
       ['plan:phrase-review', 150],
       ['plan:join', 30],
+      ['plan:join-with-a-phrase-at-ear', 25],
+      ['plan:join-at-full-corn', 10],
       ['plan:joined-review', 30],
       ['plan:join-waits', 30],
       ['plan:phrases-left', 50],
@@ -395,6 +411,7 @@ describe('phrases first, then the join, then the verse alone', () => {
       ['gen:ripe-but-one-blade', 20],
       ['gen:a piece twice', 20],
       ['cue:join-letters', 100],
+      ['cue:join-letters-at-ear', 90],
       ['cue:stale-letters', 10],
       ['cue:joined-initials', 10],
       ['cue:joined-none', 10],
@@ -428,7 +445,10 @@ describe('phrases first, then the join, then the verse alone', () => {
         (item) => `${item.reference}${item.fresh ? ' new' : ''}`,
       );
     expect(phrases.length).toBeGreaterThan(1);
-    for (const phrase of phrases) for (const days of [30, 26, 21]) sow(phrase.reference, days, 3);
+    for (const phrase of phrases) for (const days of [30, 29, 28]) sow(phrase.reference, days, 3);
+    expect(phrases.map((phrase) => referenceStage(plants.get(phrase.reference) ?? []))).toEqual(
+      phrases.map(() => 'ear'),
+    );
     expect(plan().at(-1)).toBe(`${verse.reference} new`);
     expect(cueIn(gardenOf(plants), verse.reference)).toBe('initials');
     sow((phrases[0] as ModelTextPiece).reference, 2, 1);
