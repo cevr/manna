@@ -22,6 +22,11 @@ revoked, and no drive grants speech recognition or the microphone.
   declares the two prompts.
 - `dictation-script`: the probe's replay of the passage ends finished,
   every word but the skipped one matched at the script's time.
+- `dictation-hear`: the replay with each archaic word said as a
+  recognizer writes its sound (its first hearing, `src/matcher/hearings.ts`)
+  grades as the exact one.
+- `dictation-modern`: the replay with each archaic word modernized keeps
+  those words missed and grades Again.
 
 ## Driving it
 
@@ -54,7 +59,7 @@ sim open probe/dictation --expect "label=ended finished"
 sim snapshot dictation
 ```
 
-→ the snapshot has the text nodes `matched 36`, `missed 1`,
+→ the snapshot has the text nodes `script exact`, `said 0`, `matched 36`, `missed 1`,
 `tentative 0`, `pending 0`, `extra 0`, `grade 2` and `timed 36` (the
 passage has 37 words), and one node each starting `analyzer `,
 `dictation ` and `recognizer ` with a status (`ready`, `missing` or
@@ -68,6 +73,28 @@ xcrun simctl spawn <udid> log show --last 10m --style compact --predicate 'event
 ```
 
 Report counts only, then delete the snapshot.
+
+`dictation-hear`, the same way (microphone revoked, Today first):
+
+```bash
+sim open / --expect "label=Isaiah 41:10"
+sim open "probe/dictation?script=hear" --expect "label=ended finished"
+sim snapshot dictation-hear
+```
+
+→ the text nodes `script hear`, `said 7`, `matched 36`, `missed 1`,
+`tentative 0`, `pending 0`, `extra 0`, `grade 2` and `timed 36`: the
+seven archaic words said as their hearings light as said exactly.
+
+`dictation-modern`: the same with `script=modern` and
+`sim snapshot dictation-modern` → `script modern`, `said 8`,
+`matched 28`, `missed 9`, `extra 8`, `grade 1` and `timed 28`: a
+modernized word is another word, never a hearing.
+
+The simulator cannot show which words Apple's engines write for the
+archaic words on a phone; the hearings themselves are the matcher's
+tests' (`src/matcher/hearings.property.test.ts`). Report counts only,
+then delete the snapshots.
 
 ## Gotchas
 
