@@ -22,7 +22,7 @@
 import { chromium, type Browser, type Locator, type Page } from '@playwright/test';
 import { Cause, Clock, Effect, Exit, FileSystem, Option, Ref, Schedule, Schema } from 'effect';
 
-import { MAIL_PAGES, MAIL_ROUTES } from '../../src/mail/paths.ts';
+import { MAIL_PAGES, MAIL_ROUTES, SIGNUP_LABEL } from '../../src/mail/paths.ts';
 import { NOTICE_TITLES } from '../../src/pages.ts';
 import { CHANNEL } from '../../src/site.ts';
 import { doctorRoot } from './doctor.ts';
@@ -43,8 +43,6 @@ const SHOW_WITHIN = 5000;
 
 /** The least time `src/confirm.ts` holds the skeleton (`HOLD`), less a frame or two of slack. */
 const LEAST_HOLD_MS = 550;
-
-const SIGNUP_LABEL = 'Or have each one sent to you by email';
 
 /** Where `markHold` keeps its marks on the page's window. */
 const HOLD_MARKS = '__verifyHold';

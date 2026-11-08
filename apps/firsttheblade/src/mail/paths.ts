@@ -37,5 +37,8 @@ export const SIGNUP_FIELDS = {
   honeypot: 'website',
 } as const;
 
+/** The sign-up field's label, as the page shows it and the verify drive finds it. */
+export const SIGNUP_LABEL = 'Or get them by email';
+
 /** The confirm page's form, which the browser's entry (`../client.tsx`) submits as the page opens. */
 export const CONFIRM_FORM_ID = 'confirm';

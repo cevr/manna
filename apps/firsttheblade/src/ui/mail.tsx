@@ -8,7 +8,7 @@
 import { For } from '@solidjs/web';
 import type { JSX } from '@solidjs/web';
 
-import { CONFIRM_FORM_ID, MAIL_ROUTES, SIGNUP_FIELDS } from '../mail/paths.ts';
+import { CONFIRM_FORM_ID, MAIL_ROUTES, SIGNUP_FIELDS, SIGNUP_LABEL } from '../mail/paths.ts';
 import { PROMISE } from '../mail/promise.ts';
 import { NOTICE_TITLES, type NoticeId, PRIVACY_PATH } from '../pages.ts';
 import { Wheat } from './brand.tsx';
@@ -22,7 +22,7 @@ const SIGNUP_HREF = `/#${SIGNUP_ID}`;
 export const SignUp = () => (
   <form class="signup" id={SIGNUP_ID} method="post" action={MAIL_ROUTES.subscribe}>
     <label class="signup-label" for="signup-email">
-      Or get them by email
+      {SIGNUP_LABEL}
     </label>
     <div class="signup-row">
       <input
