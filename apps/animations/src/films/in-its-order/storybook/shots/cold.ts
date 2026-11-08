@@ -83,16 +83,19 @@ const blinkStartsOf = (name: string, from: number, to: number): ReadonlyArray<nu
   });
 };
 
+/** The guests' cells drawn with wide round eyes, which the neutral blink's upturned arcs do not fit: the stare, and the man's wondering look. */
+const WIDE_EYED: ReadonlySet<string> = new Set(['stare', 'wonder']);
+
 /**
  * A guest holding `cell` from `from` to `to`: blinking with the neutral
- * blink's shut eyes pasted on its own, but a stare, whose wide eyes the
- * neutral blink's upturned arcs do not fit (critique 3, finding 6): held
- * still when it lasts `ALIVE` or less, and else blinking at its blink
- * nearest the hold's middle, each side held the same way, so no still run
- * outlasts `ALIVE`.
+ * blink's shut eyes pasted on its own, but a wide-eyed cell (`WIDE_EYED`),
+ * whose eyes the neutral blink's upturned arcs do not fit (critique 3,
+ * finding 6): held still when it lasts `ALIVE` or less, and else blinking
+ * at its blink nearest the hold's middle, each side held the same way, so
+ * no still run outlasts `ALIVE`.
  */
 const guestHold = (name: string, from: number, to: number, cell: string): ReadonlyArray<Span> => {
-  if (cell !== 'stare') return [blinkingHold(from, to, cell, 'neutralBlink')];
+  if (!WIDE_EYED.has(cell)) return [blinkingHold(from, to, cell, 'neutralBlink')];
   if (to - from <= ALIVE) return [hold(from, to, cell)];
   const middle = (from + to) / 2;
   const nearest = blinkStartsOf(name, from, to).toSorted(
@@ -459,20 +462,22 @@ export const ASK_PUSH = { x: 905, y: 880, zoom: TWO_SHOT.zoom * 1.12 } as const;
  * bottle on the table where cold-ouch left them, the lead looking up to
  * the viewer, asking the film's question with his face (critique 1,
  * finding 4: the question on a face, not on a still life); the man beside
- * him keeps his puzzled stare, brows raised, on the letter, never a smile
- * on the question (critique 2, finding 3). The camera pushes in on the
- * lead's face through the whole shot.
+ * him holds his puzzled stare on the letter, then on "milk" turns to the
+ * viewer in his `wonder` key, head tilted, brows raised, mouth a small
+ * open oval: never a smile on the question (critique 2, finding 3). The
+ * camera pushes in on the lead's face through the whole shot.
  */
 export const coldAsk: FilmShot = {
   id: 'cold-ask',
   span: { mark: 'what', until: 'why' },
   cues: {
     push: { mark: 'what', until: 'why' },
+    turn: { mark: 'what', word: 'milk', dur: 0.3 },
   },
   build: ({ duration, cue }) => {
     const body = twoShot(
       duration,
-      [hold(0, duration, 'stare')],
+      guestSpans('man', 'stare', [[cue('turn').start, 'wonder']], duration),
       [hold(0, duration, 'ask')],
       [letterOn([[0, key({})]]), bottleOnTable()],
     );

@@ -478,7 +478,7 @@ describe("In Its Order's staging", () => {
     expect(figuresOf(shot).map(({ figure }) => figure.name)).toEqual(['man', 'lead']);
   });
 
-  test('asks the film’s question on faces that ask: from `what` to `why` the two-shot again, the camera pushing in on the lead, his head a third of the frame and more, his eyes up to the viewer (`ask`), the man’s brows raised in his puzzled stare at every frame, no smiling cell on either (critique 1, finding 4; critique 2, finding 3: the man’s smile read as cheerful on the question)', () => {
+  test('asks the film’s question on faces that ask: from `what` to `why` the two-shot again, the camera pushing in on the lead, his head a third of the frame and more, his eyes up to the viewer (`ask`), the man’s brows raised in his puzzled stare, then turning to the viewer in his wondering look (`wonder`), no smiling cell on either (critique 1, finding 4; critique 2, finding 3: the man’s smile read as cheerful on the question)', () => {
     const ask = placed.find(({ shot }) => shot.id === 'cold-ask')?.shot;
     if (!ask) return expect(ask).toBeDefined();
     const lead = figuresOf(ask).find(({ figure }) => figure.name === 'lead')?.figure;
@@ -486,7 +486,10 @@ describe("In Its Order's staging", () => {
     if (!lead || !man) return expect([lead?.name, man?.name]).toEqual(['lead', 'man']);
     const times = timesOf(ask);
     expect(new Set(times.map((t) => poseAt(lead, t).cell))).toEqual(new Set(['ask']));
-    expect(new Set(times.map((t) => poseAt(man, t).cell))).toEqual(new Set(['stare']));
+    const manCells = times.map((t) => poseAt(man, t).cell);
+    expect(manCells[0]).toBe('stare');
+    expect(manCells.at(-1)).toBe('wonder');
+    expect(new Set(manCells)).toEqual(new Set(['stare', 'wonder']));
     const zooms = times.map((t) => cameraAt(ask.camera, t).zoom);
     expect(Math.min(...zooms) * ask.headPx).toBeGreaterThanOrEqual(
       (1 / 3 - 0.005) * ask.size.height,
