@@ -1731,23 +1731,28 @@
       }
     },
     {
-      // Every Chrome the film tools and their browser tests spawn is
-      // spawned by openView, which mutes it
-      // (packages/film/lint/webview-through-chrome.ts).
+      // Every Chrome the film tools, their browser tests and the films'
+      // renders launch is launched by openView, which mutes it and removes
+      // its profile (packages/film/lint/chrome-through-open-view.ts).
       "files": [
-        "**/packages/film/src/**/*.ts",
-        "**/packages/film/src/**/*.tsx",
-        "**/packages/film/e2e/**/*.ts",
-        "**/packages/film/e2e/**/*.tsx"
+        "**/packages/film/**/*.ts",
+        "**/packages/film/**/*.tsx",
+        "**/apps/animations/**/*.ts",
+        "**/apps/animations/**/*.tsx"
       ],
       "rules": {
-        "film/webview-through-chrome": "error"
+        "film/chrome-through-open-view": "error"
       }
     },
     {
-      "files": ["**/packages/film/src/tools/chrome.ts"],
+      // The launcher itself, and the rule's own source and fixture.
+      "files": [
+        "**/packages/film/src/tools/chrome.ts",
+        "**/packages/film/lint/chrome-through-open-view.ts",
+        "**/packages/film/lint/fixtures/chrome-through-open-view.ts"
+      ],
       "rules": {
-        "film/webview-through-chrome": "off"
+        "film/chrome-through-open-view": "off"
       }
     },
     {

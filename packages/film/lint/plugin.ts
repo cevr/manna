@@ -1,5 +1,6 @@
 import { Plugin } from 'oxlint-plugin-effect/rule-bindings';
 import { booleansThroughPressed } from './booleans-through-pressed.ts';
+import { chromeThroughOpenView } from './chrome-through-open-view.ts';
 import { drawingLiteral } from './drawing-literal.ts';
 import { focusThroughFocusFor } from './focus-through-focus-for.ts';
 import { framingIsAKnob } from './framing-is-a-knob.ts';
@@ -27,12 +28,12 @@ import { synthOwnMath } from './synth-own-math.ts';
 import { testsKeepTheirStrength } from './tests-keep-their-strength.ts';
 import { toldAfterAnswer } from './told-after-answer.ts';
 import { touchesSerial } from './touches-serial.ts';
-import { webviewThroughChrome } from './webview-through-chrome.ts';
 
 export default Plugin.define({
   name: 'film',
   rules: {
     'booleans-through-pressed': booleansThroughPressed,
+    'chrome-through-open-view': chromeThroughOpenView,
     'drawing-literal': drawingLiteral,
     'focus-through-focus-for': focusThroughFocusFor,
     'framing-is-a-knob': framingIsAKnob,
@@ -60,6 +61,5 @@ export default Plugin.define({
     'tests-keep-their-strength': testsKeepTheirStrength,
     'told-after-answer': toldAfterAnswer,
     'touches-serial': touchesSerial,
-    'webview-through-chrome': webviewThroughChrome,
   },
 });
