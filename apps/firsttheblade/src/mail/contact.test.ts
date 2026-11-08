@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'effect-bun-test';
 import { Cause, Effect, Exit, Logger, Option, Redacted, Ref } from 'effect';
 
-import { memoSuccess } from '../worker/store-secret.ts';
+/**
+ * The Worker's inbox reader in small: a success kept, a failure read again.
+ * The real one, `memoSuccess` (`../worker/store-secret.ts`), is held to its
+ * own model by `store-secret.test.ts`; importing it here would load the
+ * Cloudflare provider and cost the test task 0.2 s.
+ */
+const keptOnSuccess = <A>(read: Effect.Effect<A>) =>
+  Effect.map(Ref.make(Option.none<A>()), (kept) =>
+    Effect.flatMap(
+      Ref.get(kept),
+      Option.match({
+        onSome: (value) => Effect.succeed(value),
+        onNone: () => Effect.tap(read, (value) => Ref.set(kept, Option.some(value))),
+      }),
+    ),
+  );
 import { forwardContact } from './contact.ts';
 
 type Message = { readonly readOk: boolean; readonly forwardOk: boolean };
@@ -56,8 +71,8 @@ const errorOf = Exit.match<void, Refused, Option.Option<Refused>, Option.Option<
 });
 
 /**
- * One program against the model `{ kept, reads }`: the inbox reader is the
- * Worker's (`memoSuccess` over a store read that dies when the store fails),
+ * One program against the model `{ kept, reads }`: the inbox reader keeps a
+ * success over a store read that dies when the store fails, as the Worker's,
  * and each message is checked for its outcome, its forward target, the
  * reads after it, and, at the end, a log that names no inbox.
  */
@@ -72,7 +87,7 @@ const run = (seed: number, messages: ReadonlyArray<Message>) =>
       if (!readOk) return yield* Effect.die(new Error('the store read failed'));
       return Redacted.make(inboxOf(seed, n));
     });
-    const handle = forwardContact(yield* memoSuccess(read));
+    const handle = forwardContact(yield* keptOnSuccess(read));
     expect(yield* Ref.get(reads)).toBe(0);
 
     const model = { kept: Option.none<string>(), reads: 0, forwarded: 0 };
