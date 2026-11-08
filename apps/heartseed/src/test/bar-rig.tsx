@@ -17,7 +17,8 @@
  * reference of 1-20 verses; never `Add a passage` beside the limit
  * line or with 3 rows' `Remove`s; over unread passages, no add, remove,
  * `Keep`, `Plant` or limit line; while the ask's `Remove` is disabled (a
- * remove pending), every other field control disabled too and no
+ * remove pending), every other field control (`Today`, `Keep`, a row's
+ * `Remove`, the foot's `About`) disabled too and no
  * `Add a passage`; `Listening` only on Today; and every seen text of the
  * field and the chooser at WCAG AA against what lies behind it.
  */
@@ -25,7 +26,7 @@
 import { RegistryProvider } from '@effect/atom-react';
 import { Effect, Layer, Logger } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
-import { act } from 'react';
+import { act, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
@@ -118,7 +119,7 @@ const pendingFaults = (controls: readonly Element[]) => {
   const live = controls.filter(
     (node) =>
       !disabled(node) &&
-      (['Today', 'Keep'].includes(labelOf(node)) || labelOf(node).startsWith('Remove ')),
+      (['Today', 'Keep', 'About'].includes(labelOf(node)) || labelOf(node).startsWith('Remove ')),
   );
   const out = live.map((node) => `${labelOf(node)} live while a remove is pending`);
   if (controls.some((node) => labelOf(node) === 'Add a passage'))
@@ -179,8 +180,8 @@ const storeFailing = (passageReads: number) =>
     }),
   ).pipe(Layer.provide(store));
 
-/** The root over the device's disk as it stands, its passages' key failing `passageReads` reads; `unread` is whether the model reads the passages as `Unread`. Every frame is held to the rules and the faults kept. */
-export const mountBar = async (passageReads: number, unread: boolean) => {
+/** The root over the device's disk as it stands, its passages' key failing `passageReads` reads; `unread` is whether the model reads the passages as `Unread`; `beside` renders next to the root under the same registry. Every frame is held to the rules and the faults kept. */
+export const mountBar = async (passageReads: number, unread: boolean, beside: ReactNode = null) => {
   const layer = appLayer({
     source: scriptedSource(recite(passage.text, { skip: [], every: 5, pace: 3 })),
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
@@ -201,6 +202,7 @@ export const mountBar = async (passageReads: number, unread: boolean) => {
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
         <Root />
+        {beside}
       </RegistryProvider>,
     ),
   );

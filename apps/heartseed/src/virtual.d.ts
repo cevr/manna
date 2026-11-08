@@ -18,3 +18,9 @@ declare module 'virtual:heartseed-lexicon' {
   };
   export default lexicon;
 }
+
+declare module 'virtual:heartseed-licence' {
+  /** The Apache License 2.0 the natural voice's vendored code carries, `native/natural/kokoro/LICENSE` byte for byte, read when the app is bundled (`vite/licence.ts`); shown by `src/about/screen.tsx` alone. */
+  const licence: string;
+  export default licence;
+}

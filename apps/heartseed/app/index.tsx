@@ -21,6 +21,7 @@ import {
   sessionView,
   voiceView,
 } from '../src/app';
+import { AboutScreen } from '../src/about/screen';
 import { ChooserScreen } from '../src/chooser/screen';
 import { fieldOf, type FieldPassage } from '../src/field';
 import { FieldScreen } from '../src/field/screen';
@@ -538,7 +539,15 @@ const offersListen = (listening: boolean, each: Showing) =>
   !listening && !each.done && Option.exists(each.item, (item) => item.fresh);
 
 /** The field over the garden read and the reader's passages; nothing until both are known, so it never claims a history it has not read, nor shows a frame without the reader's rows. */
-function FieldOf({ onToday, onAdd }: { readonly onToday: () => void; readonly onAdd: () => void }) {
+function FieldOf({
+  onToday,
+  onAdd,
+  onAbout,
+}: {
+  readonly onToday: () => void;
+  readonly onAdd: () => void;
+  readonly onAbout: () => void;
+}) {
   const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
   const passages = AsyncResult.value(useAtomValue(passagesView));
   return Option.match(Option.all({ garden, passages }), {
@@ -549,6 +558,7 @@ function FieldOf({ onToday, onAdd }: { readonly onToday: () => void; readonly on
         passages={known.passages}
         onToday={onToday}
         onAdd={onAdd}
+        onAbout={onAbout}
       />
     ),
   });
@@ -571,9 +581,10 @@ function Pending() {
  * first minute when the read holds no recall of any verse, else Today. The
  * screen is decided once per launch, at the read: planting the seed inside
  * the first minute keeps Planted on until Continue. After it, the root
- * shows one of three screens in place: Today, the field (from Today's
- * `Your field`) and the chooser (from the field's `Add a passage`, back to
- * the field from its first back or once a passage is added). Which one
+ * shows one of four screens in place: Today, the field (from Today's
+ * `Your field`), the chooser (from the field's `Add a passage`, back to
+ * the field from its first back or once a passage is added) and About
+ * (from the field's `About`, back to the field). Which one
  * shows is the launch's state, never stored and with no route of its own,
  * so every launch opens as above. Whenever Say it listens the screen is
  * Today. The root holds Say it's view, so Today comes back as it was, and a
@@ -584,7 +595,7 @@ export default function Root() {
   const listening = screenOf(AsyncResult.value(useAtomValue(sayItView))).listening;
   const read = openingOf(AsyncResult.value(useAtomValue(gardenView)));
   const [decided, setDecided] = useState<Opening>('pending');
-  const [screen, setScreen] = useState<'today' | 'field' | 'choose'>('today');
+  const [screen, setScreen] = useState<'today' | 'field' | 'choose' | 'about'>('today');
   if (decided === 'pending' && read !== 'pending') setDecided(read);
   if (screen !== 'today' && listening) setScreen('today');
   switch (shownOpening(decided, read)) {
@@ -593,9 +604,16 @@ export default function Root() {
     case 'first':
       return <FirstMinute onContinue={() => setDecided('today')} />;
     case 'today':
+      if (screen === 'about') return <AboutScreen onField={() => setScreen('field')} />;
       if (screen === 'choose') return <ChooserScreen onField={() => setScreen('field')} />;
       if (screen === 'field')
-        return <FieldOf onToday={() => setScreen('today')} onAdd={() => setScreen('choose')} />;
+        return (
+          <FieldOf
+            onToday={() => setScreen('today')}
+            onAdd={() => setScreen('choose')}
+            onAbout={() => setScreen('about')}
+          />
+        );
       return <Today onField={() => setScreen('field')} />;
   }
 }

@@ -4,7 +4,9 @@
  * passage` while fewer than 3 are held, else the limit line; a row's
  * `Remove` puts its ask there instead, with `Remove` and `Keep`, and a
  * remove that does not land leaves an alert there. So however long the
- * field, they are on screen without a scroll. Under the bar scroll the
+ * field, they are on screen without a scroll; a foot fixed under the
+ * scroll view holds `About`, the way to the About screen, clear of the
+ * home indicator, so it too shows without a scroll. Under the bar scroll the
  * heading, the days sown and the harvest, one card per row titled by its
  * passage, each verse a plant drawn as Today draws its stage with its verse
  * number small beneath, and a legend of the four stages under Mark 4:28.
@@ -204,18 +206,21 @@ function Offer({
 
 /**
  * The field screen over `field` and the reader's `passages`, with the way
- * back to Today and, over passages read, the way to the chooser (`onAdd`).
+ * back to Today, over passages read the way to the chooser (`onAdd`), and
+ * in its foot the way to About (`onAbout`).
  */
 export function FieldScreen({
   field,
   passages,
   onToday,
   onAdd,
+  onAbout,
 }: {
   readonly field: Field;
   readonly passages: PassagesView;
   readonly onToday: () => void;
   readonly onAdd: () => void;
+  readonly onAbout: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const [bar, setBar] = useState<Bar>(IDLE);
@@ -272,11 +277,7 @@ export function FieldScreen({
       </View>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[
-          look.content,
-          styles.content,
-          { paddingTop: 8, paddingBottom: insets.bottom + 32 },
-        ]}
+        contentContainerStyle={[look.content, styles.content, { paddingTop: 8, paddingBottom: 24 }]}
       >
         <View style={styles.head}>
           <Text role="heading" aria-level={1} style={look.title}>
@@ -294,6 +295,14 @@ export function FieldScreen({
         ))}
         <Legend />
       </ScrollView>
+      <View style={[styles.foot, { paddingBottom: insets.bottom + 8 }]}>
+        <Control
+          label="About"
+          shown="About"
+          pending={bar.pending}
+          onPress={() => tapped(onAbout)}
+        />
+      </View>
     </View>
   );
 }
@@ -302,6 +311,7 @@ const styles = StyleSheet.create({
   bar: { paddingHorizontal: 24, paddingBottom: 8, gap: 8 },
   scroll: { flex: 1 },
   content: { gap: 16 },
+  foot: { paddingHorizontal: 24, paddingTop: 8 },
   back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
   backText: { fontSize: 17, fontWeight: '600', color: color.ink },
   pill: {
