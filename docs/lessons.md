@@ -5190,3 +5190,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** With the whole KJV in the bundle as `virtual:heartseed-kjv`, any screen could import the module and split every chapter as it loads, so Today's first frame would wait on a 4 MB decode, or name the 7.8 MB source file and carry it whole.
 - **Cause:** The module and the source file are both reachable by name from any product file, and the plugin serves whoever imports it.
 - **Guard:** code: `apps/heartseed/src/passages/guard.test.ts` `is src/kjv.ts, which imports the module statically, and no other product file names it`; `apps/heartseed/src/passages/guard.test.ts` `never names the source corpus file in product code`
+
+### heartseed-colours-only-from-the-theme
+
+- **Date:** 2026-11-08
+- **Kind:** owner
+- **Said:** "Dark mode, light mode, default system"
+- **Source:** hymnapp/hsbrand/spec-theme.md (The rule: the styles); hymnapp/hsbrand/accept-theme-base-theme.log (20 literal lines on base)
+- **Wrong:** Heartseed's screens painted Palette A and Georgia from literals spread across six files (`src/sayit/draw.tsx`'s exported `color` and `look`, and each screen's own), so a screen could keep a light colour or a serif in dark, unseen by any test of the other screens.
+- **Cause:** A colour or a face was quickest to write where it was used, and nothing held a product file to the theme's roles.
+- **Guard:** code: `apps/heartseed/src/look.test.tsx` `holds every product file in src and app, less tests, rigs, probes, prototypes and src/theme.ts, to no colour literal or font family`
