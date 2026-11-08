@@ -50,10 +50,11 @@ session is left alone.
 - `today-off`: Off across a relaunch shows no line and downloads nothing.
 - `today-download`: the first tap onto Her downloads from the stored base,
   saying its percent, then getting ready, then nothing.
-- `today-read`: Listen once ready reads in `af_heart`.
-- `today-him`: Him reads in `am_michael`.
-- `today-fail`: a server gone mid-download fails it, and `Try again`
-  finishes it.
+- `today-read`: the first minute's Listen once ready reads in `af_heart`.
+- `today-him`: a tap to Him shows no line (Him reads in `am_michael`; the
+  router's tests hear it).
+- `today-fail`: a server gone mid-download waits; a failed download says
+  so, and `Try again` finishes it with only the missing files.
 - `today-corrupt`: a file served wrong fails the check, with `Try again`.
 - `today-fuse`: an app ended mid-reading says so once and reads by the
   system voice until the next `Voice` tap.
@@ -203,10 +204,17 @@ is the phone check's.
 
 ## Today's rows
 
-Driven in this order on one container, with the model server running as
+Driven in this order on two containers, with the model server running as
 above. Read Today's line from `sim snapshot <step>`: the `natural-status`
-node's text, and the `Try again` button beside it. The line's words, one
-state each:
+node's text, and the `Try again` button beside it. Today offers `Listen`
+only for a new verse after the next 04:00 (`wake.md`), and the promise's
+row has no `Remove`, so the reading a drive can hear is the first minute's
+`Listen` (`first.md`), on a container whose garden is still empty: the
+first container walks the first minute to Today for the line's rows, the
+second keeps the first minute for the readings. The app's own JavaScript
+logs (`natural.install`, `natural.fallback`) reach neither `log show` nor
+the dev server's log on the simulator; the module's `[natural]` lines and
+the system's network log do. The line's words, one state each:
 
 - `Natural voice: downloading, <p>%` (p rounded down);
 - `Natural voice: waiting for a connection`;
@@ -222,15 +230,19 @@ container's store (as `field.md`'s `field-record` does) and run
 `sqlite3 -readonly <copy> "SELECT key, value FROM one_kv WHERE key LIKE 'heartseed/natural/%' OR key = 'heartseed/voice/choice'"`.
 
 `today-mirror`: a fresh container (uninstall by udid, install, revoke the
-microphone), then `sim open / --expect "label=Isaiah 41:10"`, snapshots
-for 60 s, and `sim tap "label=Listen"`:
+microphone), then `sim open / --expect "label=Hear it"`, the first
+minute's `Listen`, and `first.md`'s steps 3-7 to Today; snapshots for
+60 s:
 
 → the line is `Natural voice: waiting for a connection`, or
 `Natural voice could not download.` with one `Try again` (record which:
-the mirror is not deployed); the app's log holds the install's
-`natural.install` line with `base=https://models.heartseed.app/kokoro/2568276a60ff/`
-(`log show` as above, the predicate `eventMessage CONTAINS "natural.install"`),
-and Listen logs no `[natural] render`.
+the mirror is not deployed; on the laptop it waits); the module's log
+holds `[natural] install revision=2568276a60ff missing=39`; the system's
+network log of the app names
+`https://models.heartseed.app/kokoro/2568276a60ff/` (`log show --info
+--debug`, the predicate `eventMessage CONTAINS "models.heartseed.app" AND
+process == "Heartseed"`); and the first minute's Listen logs a
+`[voice] speak` and no `[natural] render`.
 
 Store the base: `sim open "probe/natural?base=http://localhost:$MPORT/" --expect "label=Install"`,
 tapping nothing in the probe → the store copy holds
@@ -243,60 +255,77 @@ the base key (`BASE_KEY`) = `http://localhost:$MPORT/`.
 relaunch; the choice key (`CHOICE_KEY`) = `off`.
 
 `today-download`: one `sim tap "label=Voice"` (Her); snapshots while it
-downloads; `sim tap "label=Listen"` while the line shows; snapshots until
-no line shows:
+downloads, until no line shows:
 
 → `Natural voice: downloading, <p>%` with p rising, then
-`Natural voice: getting ready`, then no line; the Listen during it logs
-no `[natural] render`; `serve.log` has 39 `GET`s ending `200`.
+`Natural voice: getting ready`, then no line (from the local server the
+download takes about a second, so a snapshot may catch only
+`getting ready`); the module's `install done` and
+`load … voice=af_heart.bin stages=loaded`; `serve.log` has 39 `GET`s
+ending `200`.
 
-`today-read`: `sim tap "label=Listen"` once no line shows; the log;
-snapshot at the end:
+`today-him`: `sim tap "label=Voice"` (`Voice: Him`):
 
-→ `[natural] load … voice=af_heart.bin`, and per chunk a
-`[natural] render` and a `play … skipped=simulator` line; every word lit,
-the reading finished.
+→ no line; the choice key = `him`. Today offers no `Listen` on the first
+day, so a Him reading is not heard here: the router's tests own it.
 
-`today-him`: `sim tap "label=Voice"` (`Voice: Him`), then Listen:
+`today-fail`: tap `Voice` to Off, then Her; the probe's `Remove`; start
+the server so that it stops after some `GET`s (a server lost
+mid-download); `sim relaunch` (the launch starts the download);
+snapshots; start the server again:
 
-→ `[natural] load … voice=am_michael.bin stages=kept`, then render and
-play lines; no line shown.
-
-`today-fail`: tap `Voice` to Off, then Her; the probe's `Remove`;
-`sim relaunch` (the launch starts the download); stop the server by its
-handle while the line shows `downloading`; snapshot; start it again;
-`sim tap "label=Try again"`; snapshots until no line shows:
-
-→ `Natural voice could not download.` with one `Try again`; after the
-tap, `downloading`, `getting ready`, then no line; the new `serve.log`
-holds only the missing paths. Then `Remove`, stop the server, relaunch,
-snapshot after 30 s, and start the server again: with no server before
-any transfer the line is `Natural voice: waiting for a connection` or
-the could-not-download line (record which).
+→ on the simulator the module waits for a connection when the local
+server refuses it: `Natural voice: waiting for a connection`, no
+`Try again`, and no new `GET` once the server is back (record it). For the
+failed download, store a base the server answers 404 for (the probe's
+link with `base=http://localhost:$MPORT/missing/`), `sim relaunch`,
+snapshots, then store the good base again and `sim tap "label=Try again"`;
+snapshots until no line shows: `Natural voice could not download.` with
+one `Try again` (the module's `install status=404` and
+`install failed reason=network`); after the tap, `install … missing=<n>`
+with only the files the lost server never sent, `install done`, then no
+line.
 
 `today-corrupt`: `Remove`; restart the server with
 `--corrupt KokoroTail_v2.mlmodelc/weights/weight.bin`; relaunch;
-snapshots:
+snapshots; then restart it without `--corrupt` and `Try again`:
 
-→ `Natural voice could not be checked.` with one `Try again`.
+→ `Natural voice could not be checked.` with one `Try again`; after the
+tap, `install … missing=11` (the 28 files before it kept), `install done`,
+no line.
 
-`today-fuse`: restart the server without `--corrupt`; `Try again` until no
-line shows; Listen, and while the log shows `[natural] render`,
-`xcrun simctl terminate <udid> app.heartseed`; `sim open /`; snapshot;
-store copy; Listen; the log. Then `sim tap "label=Voice"` twice (Him,
-Off) and once more (Her); snapshot; store copy; Listen; the log;
-`sim relaunch`; snapshot:
+The second container (uninstall, install, revoke; `sim open / --expect
+"label=Hear it"`; store the base as above; `sim relaunch`; `sim open /
+--expect "label=Hear it"`): the launch downloads and loads, the module
+logging `install done` and `load … voice=af_heart.bin stages=loaded`.
 
-→ after the crash, the line
+`today-read`: the first minute's `sim tap "label=Listen"`, then
+`sim tap "label=Say it with help" --timeout 60`; the log:
+
+→ `[natural] load … voice=af_heart.bin stages=kept`, and per chunk a
+`[natural] render` and a `play … skipped=simulator` line, no
+`[voice] speak`; the reading finished (the first minute goes on by
+itself).
+
+`today-fuse`: `sim relaunch`, `sim open / --expect "label=Hear it"`,
+Listen, and at once `xcrun simctl terminate <udid> app.heartseed`;
+`sim open /`; store copy; Listen; the log. Then `first.md`'s steps 3-7 to
+Today; snapshot; `sim tap "label=Voice"` (Him), snapshot, store copy;
+twice more (Off, Her), snapshot, store copy; `sim relaunch`; snapshot:
+
+→ after the crash, `[natural] start crashed=true`, the fuse key
+(`FUSE_KEY`) = `blown`, and Listen logs a `[voice] speak` and no
+`[natural] render`; on Today in that launch the line
 `The natural voice stopped unexpectedly, so the system voice reads for now.`,
-the fuse key (`FUSE_KEY`) = `blown`, and Listen logs no `[natural] render`;
-after the taps, no line, the fuse `clear`, and Listen logs
-`[natural] render`; after the relaunch, no line.
+no `Try again`; after each tap, no line and the fuse `clear`; after the
+relaunch, no line. A natural reading after the clearing tap is not heard
+here (the garden is planted by then): the router's tests own it.
 
 The simulator cannot show the sound, the latency, `Failed space` or
-`Failed load` (the tests own both), Low Data Mode, or a release build
+`Failed load` (the tests own both), Low Data Mode, a release build
 (`today-mirror` stands in: a development build with no base stored reads
-the same mirror).
+the same mirror), or a Today reading by the natural voice (Today's
+`Listen` waits for the next day).
 
 ## Gotchas
 
