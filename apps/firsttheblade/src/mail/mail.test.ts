@@ -525,6 +525,32 @@ describe('sending a film', () => {
       expect(yield* Ref.get(reads)).toBe(0);
       expect((yield* asAdmin(admin(`{"film":"${FILM}","dryRun":true}`))).status).toBe(200);
       expect(yield* Ref.get(reads)).toBe(1);
+      const key = yield* asAdmin(
+        call('/mail/key', { headers: { authorization: `Bearer ${TEST_ADMIN_TOKEN}` } }),
+      );
+      expect(key.status).toBe(200);
+      expect(yield* Ref.get(reads)).toBe(2);
+    }));
+
+  test('answers GET /mail/key with the key fingerprint for the admin, and 401 for anyone else', () =>
+    Effect.gen(function* () {
+      const fingerprint = yield* (yield* Tokens).fingerprint;
+      expect(fingerprint).toMatch(/^[0-9a-f]{16}$/);
+      const asked = yield* call('/mail/key', {
+        headers: { authorization: `Bearer ${TEST_ADMIN_TOKEN}` },
+      });
+      expect(asked.status).toBe(200);
+      expect(yield* Effect.promise(() => answerOf(asked))).toEqual({ fingerprint });
+      const others: ReadonlyArray<Record<string, string>> = [
+        {},
+        { authorization: 'Bearer wrong' },
+        { authorization: TEST_ADMIN_TOKEN },
+      ];
+      for (const headers of others) {
+        const refused = HttpServerResponse.toWeb(yield* call('/mail/key', { headers }));
+        expect(refused.status).toBe(401);
+        expect(yield* Effect.promise(() => refused.text())).not.toContain(fingerprint);
+      }
     }));
 
   test('answers a send 500 and queues nothing when the admin token cannot be read', () =>

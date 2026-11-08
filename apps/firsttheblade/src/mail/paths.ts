@@ -8,6 +8,8 @@ export const MAIL_ROUTES = {
   unsubscribe: '/unsubscribe',
   /** POST, with the admin token: send a film to the list (`bun run mail:send`). */
   send: '/mail/send',
+  /** GET, with the admin token: the token key's fingerprint (`bun run mail:key-check`). */
+  key: '/mail/key',
 } as const;
 
 /** The pages the routes answer with, each written by the prerender. */

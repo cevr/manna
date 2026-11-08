@@ -1,6 +1,7 @@
 /**
- * What `bun run mail:send` (`../../scripts/mail-send.ts`) and the Worker's
- * admin route (`./routes.ts`) say to each other: one contract, read on both
+ * What `bun run mail:send` (`../../scripts/mail-send.ts`) and
+ * `bun run mail:key-check` (`../../scripts/mail-key.ts`) and the Worker's
+ * admin routes (`./routes.ts`) say to each other: one contract, read on both
  * sides.
  */
 import { Schema } from 'effect';
@@ -29,3 +30,9 @@ export const SendRefusal = Schema.Struct({ error: Schema.String });
 
 export const SendAnswer = Schema.Union([SendCounts, SendRefusal]);
 export type SendAnswer = typeof SendAnswer.Type;
+
+/** The token key's fingerprint, 16 lowercase hex digits (`bun run mail:key-check`). */
+export const KeyFingerprint = Schema.Struct({ fingerprint: Schema.String });
+
+export const KeyAnswer = Schema.Union([KeyFingerprint, SendRefusal]);
+export type KeyAnswer = typeof KeyAnswer.Type;
