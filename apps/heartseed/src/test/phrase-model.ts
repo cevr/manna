@@ -87,13 +87,14 @@ type Price = [number, number, number, number];
 const priceOf = (sizes: readonly number[], gaps: readonly ModelGap[]): Price => {
   const price: Price = [0, sizes.length, 0, 0];
   let end = 0;
-  sizes.forEach((size, index) => {
+  for (let index = 0; index < sizes.length; index += 1) {
+    const size = sizes[index]!;
     end += size;
     price[3] += size * size;
-    if (index === sizes.length - 1) return;
+    if (index === sizes.length - 1) break;
     if (gaps[end - 1] === 'plain') price[0] += 1;
     if (gaps[end - 1] === 'comma') price[2] += 1;
-  });
+  }
   return price;
 };
 
@@ -114,12 +115,12 @@ export const sizesRule = (count: number, gaps: readonly ModelGap[]): number[] =>
     if (at === count) return [];
     if (memo.has(at)) return memo.get(at)!;
     let best: number[] | null = null;
+    const suffixGaps = gaps.slice(at);
     for (let size = 4; size <= 12; size += 1) {
       if (at + size > count) break;
       const rest = bestFrom(at + size);
       if (rest === null) continue;
       const sizes = [size, ...rest];
-      const suffixGaps = gaps.slice(at);
       if (best === null || before(sizes, best, suffixGaps)) best = sizes;
     }
     memo.set(at, best);
@@ -175,9 +176,20 @@ export const cutRule = (text: string): ModelPhrase[] => {
 export const phraseRefRule = (verse: string, first: number, last: number): string =>
   `${verse} [${first}-${last}]`;
 
+/** Each text's cut, kept once it is found: the walks and properties ask for the same corpus verses many times over. */
+const cuts = new Map<string, readonly ModelPhrase[]>();
+
+const cutOnce = (text: string): readonly ModelPhrase[] => {
+  const kept = cuts.get(text);
+  if (kept !== undefined) return kept;
+  const cut = cutRule(text);
+  cuts.set(text, cut);
+  return cut;
+};
+
 /** H3: `piece` with its phrases when its text is long, each its reference, text, word count and the piece's group, with none of its own; else `piece` as it is. */
 export const withPhrasesRule = (piece: ModelTextPiece): ModelTextPiece => {
-  const phrases: ModelTextPiece[] = cutRule(piece.text).map((phrase) => ({
+  const phrases: ModelTextPiece[] = cutOnce(piece.text).map((phrase) => ({
     reference: phraseRefRule(piece.reference, phrase.first, phrase.last),
     text: phrase.text,
     words: phrase.last - phrase.first + 1,
@@ -228,7 +240,11 @@ export const expandRule = <P extends ModelPhrased>(
     }
     out.push(...phrases);
     let ripe = true;
-    for (const phrase of phrases) if (!ripeRule(plants.get(phrase.reference))) ripe = false;
+    for (const phrase of phrases) {
+      if (ripeRule(plants.get(phrase.reference))) continue;
+      ripe = false;
+      break;
+    }
     if (ripe) out.push(piece);
   }
   return out;

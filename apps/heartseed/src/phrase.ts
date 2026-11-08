@@ -13,8 +13,12 @@ const LONGEST_WHOLE = 12;
 const FEWEST = 4;
 const MOST = 12;
 
-const WORDLIKE = /[\p{L}\p{N}]/u;
-const UP_TO_LAST_WORDLIKE = /^[\s\S]*[\p{L}\p{N}]/u;
+/**
+ * A word's whitespace run: the marks before its first letter or number, the
+ * span from that to its last letter or number, then the marks after. A run
+ * with no letter or number never matches, and no match starts inside a run.
+ */
+const WORD_RUN = /(\S*?)([\p{L}\p{N}](?:\S*[\p{L}\p{N}])?)\S*/gu;
 const STRONG = /[.;:?!]/u;
 const REFERENCE = /^([^[\]]+) \[([1-9]\d*)-([1-9]\d*)\]$/u;
 
@@ -32,15 +36,6 @@ export interface PhraseRef {
   readonly last: number;
 }
 
-/** A cut's price, compared in order: cuts at a plain gap, phrases, cuts at a comma gap, the sum of the squared sizes. */
-type Cost = readonly [number, number, number, number];
-
-/** The cheapest way to cut the words from some word to the end: its cost and its first phrase's size. */
-interface Step {
-  readonly cost: Cost;
-  readonly size: number;
-}
-
 /** A gap's price as a cut: [at a plain gap, at a comma gap]. */
 type GapCost = readonly [number, number];
 
@@ -48,33 +43,86 @@ const STRONG_GAP: GapCost = [0, 0];
 const COMMA_GAP: GapCost = [0, 1];
 const PLAIN_GAP: GapCost = [1, 0];
 
-const UNREACHED: Step = { cost: [Infinity, Infinity, Infinity, Infinity], size: 0 };
+/** One word of a text (UTF-16): where its whitespace run starts, where its first letter or number sits, and the index just past its last. */
+interface Word {
+  readonly start: number;
+  readonly wordyStart: number;
+  readonly wordyEnd: number;
+}
 
-/** Where each word's whitespace run starts in the text (UTF-16). */
-const startsOf = (text: string): ReadonlyArray<number> =>
-  Array.from(text.matchAll(/\S+/gu))
-    .filter((match) => WORDLIKE.test(match[0]))
-    .map((match) => match.index);
+/** The text's words: each whitespace run that holds a letter or a number. */
+const wordsOf = (text: string): ReadonlyArray<Word> =>
+  Array.from(text.matchAll(WORD_RUN), (match) => {
+    const [, lead = '', wordy = ''] = match;
+    const wordyStart = match.index + lead.length;
+    return { start: match.index, wordyStart, wordyEnd: wordyStart + wordy.length };
+  });
 
 /**
- * The price of a cut between the words that start at `before` and `after`:
- * the text after the first's last letter or number and before the second's
- * first, punctuation-only runs between them included.
+ * The price of a cut between the words `before` and `after`: the text after
+ * the first's last letter or number and before the second's first,
+ * punctuation-only runs between them included.
  */
-const gapCostOf = (text: string, before: number, after: number): GapCost => {
-  const lead = text.slice(after).search(WORDLIKE);
-  const between = text.slice(before, after + lead).replace(UP_TO_LAST_WORDLIKE, '');
+const gapCostOf = (text: string, before: Word, after: Word): GapCost => {
+  const between = text.slice(before.wordyEnd, after.wordyStart);
   if (STRONG.test(between)) return STRONG_GAP;
   if (between.includes(',')) return COMMA_GAP;
   return PLAIN_GAP;
 };
 
-const cheaper = (a: Cost, b: Cost): boolean => {
-  for (const [index, value] of a.entries()) {
-    const other = b[index] ?? Infinity;
-    if (value !== other) return value < other;
+/**
+ * The cheapest cuts of every suffix of the words, one array per part of a
+ * cut's price, compared in order: cuts at a plain gap, phrases, cuts at a
+ * comma gap, the sum of the squared sizes; and each suffix's first phrase
+ * size (0 where no cut of 4-12 reaches the end).
+ */
+interface Table {
+  readonly plain: Float64Array;
+  readonly phrases: Float64Array;
+  readonly comma: Float64Array;
+  readonly squares: Float64Array;
+  readonly size: Uint8Array;
+}
+
+const tableOf = (count: number): Table => {
+  const table: Table = {
+    plain: new Float64Array(count + 1).fill(Infinity),
+    phrases: new Float64Array(count + 1),
+    comma: new Float64Array(count + 1),
+    squares: new Float64Array(count + 1),
+    size: new Uint8Array(count + 1),
+  };
+  table.plain[count] = 0;
+  return table;
+};
+
+/** Whether a cut of the words from `start` whose first phrase ends at `end` is cheaper than the table's best for `start` so far. */
+const cheaperAt = (table: Table, start: number, end: number, gap: GapCost): boolean => {
+  const plain = (table.plain[end] ?? Infinity) + gap[0];
+  const best = table.plain[start] ?? Infinity;
+  if (plain !== best) return plain < best;
+  const phrases = (table.phrases[end] ?? 0) + 1;
+  const bestPhrases = table.phrases[start] ?? 0;
+  if (phrases !== bestPhrases) return phrases < bestPhrases;
+  const comma = (table.comma[end] ?? 0) + gap[1];
+  const bestComma = table.comma[start] ?? 0;
+  if (comma !== bestComma) return comma < bestComma;
+  const size = end - start;
+  return (table.squares[end] ?? 0) + size * size < (table.squares[start] ?? 0);
+};
+
+/** Fills the table's entry for the words from `start` on, from the entries after it. */
+const fill = (table: Table, gaps: ReadonlyArray<GapCost>, start: number, count: number) => {
+  for (let size = FEWEST; size <= MOST && start + size <= count; size += 1) {
+    const end = start + size;
+    const gap = gaps[end - 1] ?? STRONG_GAP;
+    if (!cheaperAt(table, start, end, gap)) continue;
+    table.plain[start] = (table.plain[end] ?? Infinity) + gap[0];
+    table.phrases[start] = (table.phrases[end] ?? 0) + 1;
+    table.comma[start] = (table.comma[end] ?? 0) + gap[1];
+    table.squares[start] = (table.squares[end] ?? 0) + size * size;
+    table.size[start] = size;
   }
-  return false;
 };
 
 /**
@@ -84,19 +132,10 @@ const cheaper = (a: Cost, b: Cost): boolean => {
  */
 const sizesOf = (gaps: ReadonlyArray<GapCost>): ReadonlyArray<number> => {
   const count = gaps.length + 1;
-  const best: Array<Step> = Array.from({ length: count + 1 }, () => UNREACHED);
-  best[count] = { cost: [0, 0, 0, 0], size: 0 };
-  for (let start = count - 1; start >= 0; start -= 1) {
-    for (let size = FEWEST; size <= MOST && start + size <= count; size += 1) {
-      const end = start + size;
-      const rest = (best[end] ?? UNREACHED).cost;
-      const [plain, comma] = gaps[end - 1] ?? STRONG_GAP;
-      const cost: Cost = [rest[0] + plain, rest[1] + 1, rest[2] + comma, rest[3] + size * size];
-      if (cheaper(cost, (best[start] ?? UNREACHED).cost)) best[start] = { cost, size };
-    }
-  }
+  const table = tableOf(count);
+  for (let start = count - 1; start >= 0; start -= 1) fill(table, gaps, start, count);
   const sizes: Array<number> = [];
-  for (let at = 0, size = best[0]?.size ?? 0; size > 0; size = best[at]?.size ?? 0) {
+  for (let at = 0, size = table.size[0] ?? 0; size > 0; size = table.size[at] ?? 0) {
     sizes.push(size);
     at += size;
   }
@@ -113,15 +152,15 @@ const sizesOf = (gaps: ReadonlyArray<GapCost>): ReadonlyArray<number> => {
  * text's end, for the last), trimmed, so punctuation stays before the cut.
  */
 export const cutOf = (text: string): ReadonlyArray<Phrase> => {
-  const starts = startsOf(text);
-  if (starts.length <= LONGEST_WHOLE) return [];
-  const gaps = starts.slice(1).map((start, index) => gapCostOf(text, starts[index] ?? 0, start));
+  const words = wordsOf(text);
+  if (words.length <= LONGEST_WHOLE) return [];
+  const gaps = words.slice(1).map((word, index) => gapCostOf(text, words[index] ?? word, word));
   const phrases: Array<Phrase> = [];
   let first = 1;
   let from = 0;
   for (const size of sizesOf(gaps)) {
     const last = first + size - 1;
-    const to = starts[last] ?? text.length;
+    const to = words[last]?.start ?? text.length;
     phrases.push({ first, last, text: text.slice(from, to).trim() });
     first = last + 1;
     from = to;

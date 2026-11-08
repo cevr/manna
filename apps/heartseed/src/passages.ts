@@ -33,7 +33,7 @@ import * as Semaphore from 'effect/Semaphore';
 
 import { versesOf } from './kjv';
 import { sourceWords } from './matcher/words';
-import { cutOf, phraseReference } from './phrase';
+import { cutOf, phraseReference, type Phrase } from './phrase';
 import type { Collection } from './promises';
 import type { TextPiece } from './session';
 
@@ -101,10 +101,21 @@ const groupedAs = (piece: TextPiece, group: string): TextPiece => {
   });
 };
 
+/** Each verse text's cut, kept once made: the corpus never changes, and every making builds its passages' pieces again. */
+const cuts = new Map<string, ReadonlyArray<Phrase>>();
+
+/** The cut of `text`, made once per text. */
+const cutOnce = (text: string): ReadonlyArray<Phrase> =>
+  Option.getOrElse(Option.fromUndefinedOr(cuts.get(text)), () => {
+    const cut = cutOf(text);
+    cuts.set(text, cut);
+    return cut;
+  });
+
 /** A verse as a piece: its reference, text and words, its group, and its phrases when it is long (`cutOf`), each of the verse's group. */
 const verseAsPiece = (reference: string, text: string, group: string): TextPiece => {
   const piece = { reference, text, words: sourceWords(text).length, group };
-  const phrases = cutOf(text).map((phrase) => ({
+  const phrases = cutOnce(text).map((phrase) => ({
     reference: phraseReference(reference, phrase),
     text: phrase.text,
     words: phrase.last - phrase.first + 1,
