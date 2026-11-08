@@ -9,7 +9,8 @@
 import { Effect, Fiber, Layer, MutableRef, Option } from 'effect';
 
 import { DictationSource } from '../dictation';
-import { sourceWords } from '../matcher/words';
+import { hearingsOf, modernOf } from '../matcher/hearings';
+import { sourceWords, wordKey } from '../matcher/words';
 import { CHAIN, type DictationEvent } from './attempt';
 import type { DictationRun } from './words';
 
@@ -20,25 +21,50 @@ export interface DictationStep {
   readonly runs: readonly DictationRun[];
 }
 
-/** Which source words a recital leaves out (by index), how many words a final takes, and the milliseconds each word takes. */
+/** How a recital says an archaic word: as a recognizer writes its sound (its first hearing), or modernized (its first modern form). */
+export type Saying = 'hearing' | 'modern';
+
+/**
+ * Which source words a recital leaves out (by index), how many words a
+ * final takes, the milliseconds each word takes, and how it says an
+ * archaic word, when not as written.
+ */
 export interface RecitePlan {
   readonly skip?: readonly number[];
   readonly every?: number;
   readonly pace?: number;
+  readonly say?: Saying;
 }
+
+const WRITTEN = (): readonly string[] => [];
+
+const SAYINGS: Readonly<Record<Saying | 'written', (key: string) => readonly string[]>> = {
+  hearing: hearingsOf,
+  modern: modernOf,
+  written: WRITTEN,
+};
+
+/** A source word as the plan says it: its first hearing or modern form, else as written. */
+const sayingOf =
+  (say: Saying | 'written') =>
+  (text: string): string =>
+    SAYINGS[say](wordKey(text))[0] ?? text;
 
 /**
  * A recital of `verse` as a recognizer reports it: its source words but
  * the skipped, spoken word n from n·pace to n·pace + pace/2. After each
  * word a tentative result holds the tail so far; when the tail reaches
  * `every` words, or at the last word, a final result holds it and the tail
- * empties.
+ * empties. With `say`, a word with a first hearing (or modern form) is
+ * said as that phrase in its own slot, a two-word phrase as one run.
  */
 export const recite = (verse: string, plan: RecitePlan = {}): readonly DictationStep[] => {
   const skip = new Set(plan.skip ?? []);
   const every = plan.every ?? 5;
   const pace = plan.pace ?? 150;
-  const spoken = sourceWords(verse).filter((_, index) => !skip.has(index));
+  const spoken = sourceWords(verse)
+    .filter((_, index) => !skip.has(index))
+    .map(sayingOf(plan.say ?? 'written'));
   const steps: DictationStep[] = [];
   let tail: readonly DictationRun[] = [];
   spoken.forEach((text, n) => {

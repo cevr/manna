@@ -16,6 +16,7 @@ import * as TestClock from 'effect/testing/TestClock';
 import { Dictation, DictationSource, layer, type DictationEvent } from '../dictation';
 import { sourceWords } from '../matcher/words';
 import { recite, scriptedSource, type DictationStep } from './script';
+import { wordsOf } from './words';
 
 const VERSE = 'Alpha beta, gamma; delta — epsilon zeta: eta.';
 
@@ -86,6 +87,56 @@ describe('recite', () => {
       expect(done.flatMap((step) => step.runs.map((run) => run.text))).toEqual(spoken);
       for (const step of got) expect(step.runs.at(-1)?.end).toBe(step.at);
     }
+  });
+});
+
+/** Each step's time, finality and run times: everything but the words said. */
+const slots = (steps: readonly DictationStep[]) =>
+  steps.map((step) => [step.at, step.final, step.runs.map((run) => [run.start, run.end])]);
+
+const finalTexts = (steps: readonly DictationStep[]) =>
+  steps.filter((step) => step.final).flatMap((step) => step.runs.map((run) => run.text));
+
+describe('recite, saying archaic words otherwise', () => {
+  it('says a word as its first hearing or modern form in its own slot, a two-word phrase as one run', () => {
+    const verse = 'Alpha, wherefore; thy beta.';
+    const plan = { every: 2, pace: 100 };
+    const plain = recite(verse, plan);
+    const heard = recite(verse, { ...plan, say: 'hearing' });
+    const modern = recite(verse, { ...plan, say: 'modern' });
+    expect(slots(heard)).toEqual(slots(plain));
+    expect(slots(modern)).toEqual(slots(plain));
+    expect(finalTexts(heard)).toEqual(['Alpha,', 'ware for', 'thigh', 'beta.']);
+    expect(finalTexts(modern)).toEqual(['Alpha,', 'why', 'your', 'beta.']);
+    const second = heard.find((step) => step.final)?.runs.slice(1) ?? [];
+    expect(second).toEqual([{ text: 'ware for', start: 100, end: 150 }]);
+    expect(wordsOf(second, 0)).toEqual([
+      { text: 'ware', start: 100, end: 125 },
+      { text: 'for', start: 125, end: 150 },
+    ]);
+  });
+
+  it('keeps the skips beside a said word, and finalizes at `every` words as written', () => {
+    const verse = 'one thee two yea three hence';
+    for (const every of [1, 2, 3, 5]) {
+      const plan = { skip: [0, 3], every, pace: 40 };
+      const plain = recite(verse, plan);
+      const heard = recite(verse, { ...plan, say: 'hearing' });
+      const modern = recite(verse, { ...plan, say: 'modern' });
+      expect(slots(heard), `every ${every}`).toEqual(slots(plain));
+      expect(slots(modern), `every ${every}`).toEqual(slots(plain));
+      expect(finalTexts(heard), `every ${every}`).toEqual(['the', 'two', 'three', 'hence']);
+      expect(finalTexts(modern), `every ${every}`).toEqual(['you', 'two', 'three', 'from here']);
+      expect(heard.filter((step) => step.final).map((step) => step.runs.length)).toEqual(
+        plain.filter((step) => step.final).map((step) => step.runs.length),
+      );
+    }
+  });
+
+  it('says a verse with no archaic word exactly as written', () => {
+    const verse = 'Alpha beta, gamma; delta.';
+    expect(recite(verse, { say: 'hearing' })).toEqual(recite(verse));
+    expect(recite(verse, { say: 'modern', skip: [1] })).toEqual(recite(verse, { skip: [1] }));
   });
 });
 
