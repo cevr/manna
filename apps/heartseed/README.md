@@ -1367,6 +1367,11 @@ GETs (Class B) when the edge does not serve them.
     file's floors met by its own devices. `test:chooser-leave` also runs
     `src/chooser/fixed.test.tsx`, which keeps every screen's fixed
     controls outside its scroll views in every frame.
+  - `test:promises`: `src/promises/content.test.ts`, the fourteen promise
+    collections through the app's corpus: Selah's ids and titles in its
+    order, 10-12 promises each, 158 over 188 verses, each 1-3 verses of
+    its chapter with text and at most 70 words, none twice, and the Fear
+    collection alone taught.
   - `test:natural`: `src/natural`, the natural voice's plan, seam and probe:
     `src/natural/plan.property.test.ts`, `planOf` and `startsOf` against a
     model written in the test over a small hand-built lexicon and vocab

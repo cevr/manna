@@ -12,6 +12,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -26,6 +27,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,field,session,run,wake,natural,about}/**/*.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -40,6 +42,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,first,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -54,6 +57,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,voice,field,session,run,wake,natural,about}/**/*.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -69,6 +73,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,today,voice.property}.test.*",
         "!src/{chooser,dictation,first,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/garden/{today,today-reads}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -84,6 +89,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/garden/{guard,sound,today-reads}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -99,6 +105,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/garden/{guard,sound,today}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -115,6 +122,7 @@
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/first/{root,walk-*}.test.*",
         "!src/test/first-rig.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -130,6 +138,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/sayit/{guard,screen,source,today}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -145,6 +154,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/first/{flow,screen,walk-*}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -160,6 +170,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -175,6 +186,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -190,6 +202,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -205,6 +218,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -220,6 +234,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -235,6 +250,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -250,6 +266,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -265,6 +282,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -280,6 +298,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/first/{flow,screen,root}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -295,6 +314,7 @@
         "!src/{core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural,about}/**/*.test.*",
         "!src/field/{screen,garden,walk,walk-grades,unread-keep,bar-*}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -310,6 +330,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural,about}/**/*.test.*",
         "!src/field/{sown,unread,reach,screen,garden,walk,walk-grades,bar-*}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -325,6 +346,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural,about}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,walk,walk-grades,bar-*}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -340,6 +362,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural,about}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk-grades,bar-*}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -355,6 +378,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural,about}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk,bar-*}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -370,6 +394,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural,about}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk,walk-grades,bar-lists,bar-kinds}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -385,6 +410,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,session,run,wake,natural,about}/**/*.test.*",
         "!src/field/{sown,unread,unread-keep,reach,screen,garden,walk,walk-grades,bar-remove,bar-twice}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -401,6 +427,7 @@
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural,about}/**/*.test.*",
         "!src/session/{header,counts,held.property,pill}.test.*",
         "!src/test/session-rig.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -416,6 +443,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural,about}/**/*.test.*",
         "!src/session/{service,counts,held.property,pill}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -431,6 +459,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural,about}/**/*.test.*",
         "!src/session/{service,header,held.property,pill}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -446,6 +475,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural,about}/**/*.test.*",
         "!src/session/{service,header,counts,pill}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -461,6 +491,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,run,wake,natural,about}/**/*.test.*",
         "!src/session/{service,header,counts,held.property}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -475,6 +506,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural}/**/*.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -490,6 +522,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,wake,natural,about}/**/*.test.*",
         "!src/run/{run,hold,edges,end,cells}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -505,6 +538,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,wake,natural,about}/**/*.test.*",
         "!src/run/{footer,hold,edges,end,cells}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -520,6 +554,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,wake,natural,about}/**/*.test.*",
         "!src/run/{footer,run,edges,end,cells}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -535,6 +570,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,wake,natural,about}/**/*.test.*",
         "!src/run/{footer,run,hold,end,cells}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -550,6 +586,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,wake,natural,about}/**/*.test.*",
         "!src/run/{footer,run,hold,edges,cells}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -565,6 +602,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,wake,natural,about}/**/*.test.*",
         "!src/run/{footer,run,hold,edges,end}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -580,6 +618,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural,about}/**/*.test.*",
         "!src/wake/{wake,quiet,clocks,edges,listen-edges,listen,reading}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -595,6 +634,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural,about}/**/*.test.*",
         "!src/wake/{life,service,source,guard,quiet,clocks,edges,listen-edges,listen,reading}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -610,6 +650,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural,about}/**/*.test.*",
         "!src/wake/{life,service,source,guard,wake,clocks,edges,listen-edges,listen,reading}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -625,6 +666,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural,about}/**/*.test.*",
         "!src/wake/{life,service,source,guard,wake,quiet,edges,listen-edges,listen,reading}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -640,6 +682,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural,about}/**/*.test.*",
         "!src/wake/{life,service,source,guard,wake,quiet,clocks,listen,reading}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -655,6 +698,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural,about}/**/*.test.*",
         "!src/wake/{life,service,source,guard,wake,quiet,clocks,edges,listen-edges,reading}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -670,6 +714,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,natural,about}/**/*.test.*",
         "!src/wake/{life,service,source,guard,wake,quiet,clocks,edges,listen-edges,listen}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -684,6 +729,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/passages/{ranges.property,service,pieces.property,session}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -698,6 +744,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/passages/{corpus,guard,session}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -712,6 +759,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
         "!src/passages/{corpus,guard,ranges.property,service,pieces.property}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -726,6 +774,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural,about}/**/*.test.*",
         "!src/chooser/{lists,walk-*,reader-*,fixed}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -740,6 +789,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural,about}/**/*.test.*",
         "!src/chooser/{range.property,walk-*,reader-*,fixed}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -754,6 +804,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural,about}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-taps,walk-leave,reader-*,fixed}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -768,6 +819,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural,about}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-plant,walk-leave,reader-*,fixed}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -782,6 +834,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural,about}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-plant,walk-taps,reader-*}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -796,6 +849,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural,about}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-*,reader-unread,reader-add,reader-add-back,reader-remove,fixed}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -810,6 +864,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural,about}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-*,reader-today,reader-add,reader-add-back,reader-remove,fixed}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -824,6 +879,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural,about}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-*,reader-today,reader-unread,reader-add-back,reader-remove,fixed}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -838,6 +894,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural,about}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-*,reader-today,reader-unread,reader-add,reader-remove,fixed}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -852,6 +909,21 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{dictation,first,garden,sayit,voice,field,session,run,wake,passages,natural,about}/**/*.test.*",
         "!src/chooser/{range.property,lists,walk-*,reader-today,reader-unread,reader-add,reader-add-back,fixed}.test.*",
+        "!src/{promises,need}/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:promises": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -866,6 +938,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,about}/**/*.test.*",
         "!src/natural/voice.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -880,6 +953,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,about}/**/*.test.*",
         "!src/natural/{data,guard,lexicon,manifest,plan.property,probe}.test.*",
+        "!src/{promises,need}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -975,6 +1049,7 @@
         "test:reader-add",
         "test:reader-add-back",
         "test:reader-remove",
+        "test:promises",
         "test:natural",
         "test:natural-voice",
         "test:rest",
