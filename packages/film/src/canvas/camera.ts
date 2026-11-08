@@ -249,11 +249,8 @@ const shoot = (
  * reads that pair as a camera's target and gives it a reticle, so a framing
  * moves like any other knob.
  */
-export const knobCamera = (
-  [x, y]: readonly [number, number],
-  zoom: number,
-  rot?: number,
-): Camera => (rot === undefined ? { x, y, zoom } : { x, y, zoom, rot });
+export const knobCamera = ([x, y]: readonly [number, number], zoom: number, rot?: number): Camera =>
+  rot === undefined ? { x, y, zoom } : { x, y, zoom, rot };
 
 /**
  * A held framing that keeps pushing in while it is on screen: `cam`, its zoom
