@@ -40,6 +40,7 @@ import { VoiceSource, VoiceUnavailable } from '../voice';
 import { clockOf, type Time } from './clock';
 import { AA, contrastOf } from './contrast';
 import { keyOf } from './garden-model';
+import { lookFaults } from './look';
 
 const CONTROLS = '[role="button"],[role="radio"],[role="switch"],[role="checkbox"],input,a[href]';
 
@@ -207,6 +208,7 @@ export const launchNeed = async (
   const faults: string[] = [];
   const frames = { need: 0, today: 0, listening: 0, offer: 0 };
   const headings = () => [...host.querySelectorAll('[role="heading"]')].map(textOf);
+  const looks = new Map<string, readonly string[]>();
   const frame = () => {
     const shown = headings();
     const names = [...host.querySelectorAll(CONTROLS)].map(nameOf);
@@ -214,7 +216,7 @@ export const launchNeed = async (
     if (shown.includes('Today')) frames.today += 1;
     if (names.includes('Listening')) frames.listening += 1;
     if (names.includes(NEED)) frames.offer += 1;
-    for (const fault of needFaults(host))
+    for (const fault of [...needFaults(host), ...lookFaults(host, undefined, looks)])
       if (faults.length < 8) faults.push(`${fault} (on ${shown.join('|')})`);
   };
   const watch = new MutationObserver(frame);

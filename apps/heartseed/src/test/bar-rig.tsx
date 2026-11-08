@@ -41,6 +41,7 @@ import type { FieldSeen } from './choose-model';
 import { faintIn, labelOf, plantFaults, text } from './chooser-rig';
 import { clockOf } from './clock';
 import { scrolled } from './field-rig';
+import { lookFaults } from './look';
 import { KEY } from './passages-model';
 import { footerFaults } from './run-rig';
 
@@ -193,8 +194,10 @@ export const mountBar = async (passageReads: number, unread: boolean, beside: Re
   document.body.append(host);
   const faults: string[] = [];
   const known = new Map<string, boolean>();
+  const looks = new Map<string, readonly string[]>();
   const watch = new MutationObserver(() => {
-    for (const fault of barFaults(host, unread, known)) if (faults.length < 8) faults.push(fault);
+    for (const fault of [...barFaults(host, unread, known), ...lookFaults(host, undefined, looks)])
+      if (faults.length < 8) faults.push(fault);
   });
   watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
   const root = createRoot(host);

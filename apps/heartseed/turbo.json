@@ -1526,6 +1526,48 @@
         "!infra/**/*.test.*"
       ]
     },
+    "test:dark-today": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/{first,screens}.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
+        "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:dark-first": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/{today,screens}.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
+        "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:dark-screens": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/{today,first}.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
+        "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
     "test:rest": {
       "dependsOn": ["^transit"],
       "outputs": [],
@@ -1654,6 +1696,9 @@
         "test:natural-voice",
         "test:theme",
         "test:look",
+        "test:dark-today",
+        "test:dark-first",
+        "test:dark-screens",
         "test:rest",
         "test:infra",
         "test:icon",

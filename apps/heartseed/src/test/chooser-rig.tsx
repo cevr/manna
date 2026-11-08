@@ -36,6 +36,7 @@ import { CAP, MOST, type ChooserSeen } from './choose-model';
 import { clockOf, type Time } from './clock';
 import { AA, contrastOf } from './contrast';
 import { scrolled } from './field-rig';
+import { lookFaults } from './look';
 import { KEY, NAMES } from './passages-model';
 import { CORPUS, countIn } from './passages-rig';
 
@@ -251,8 +252,12 @@ export const mountChooser = async (time: Time = { now: null }) => {
   const faults: string[] = [];
   const left = { count: 0 };
   const known = new Map<string, boolean>();
+  const looks = new Map<string, readonly string[]>();
   const watch = new MutationObserver(() => {
-    for (const fault of chooserFaults(host, known, hold.planting))
+    for (const fault of [
+      ...chooserFaults(host, known, hold.planting),
+      ...lookFaults(host, undefined, looks),
+    ])
       if (faults.length < 8) faults.push(fault);
   });
   watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });

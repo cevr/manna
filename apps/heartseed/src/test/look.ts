@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noTernary -- the oracle reads happy-dom's computed styles and walks parents, whose absent ends are null, from plain branches. */
+/* oxlint-disable effect/noNullish, effect/noTernary, effect/noAsyncFunction, eslint/no-await-in-loop -- the oracle reads happy-dom's computed styles and walks parents, whose absent ends are null, from plain branches; it holds each control pressed in turn through React's promise-based `act`. */
 
 /**
  * The frame oracle: what a frame of `host` paints, held to the scheme it
@@ -12,6 +12,7 @@
  * (`setSystem`), which react-native-web's `Appearance` reads.
  */
 
+import { act } from 'react';
 import { Appearance } from 'react-native';
 
 import { schemeOf } from '../look';
@@ -83,13 +84,87 @@ export const setSystem = (scheme: Scheme) => {
   window.dispatchEvent(new Event('resize'));
 };
 
-/** The faults the frame `host` shows now against `scheme` (the system's by default), each once, at most `limit`. */
-export const lookFaults = (host: Element, scheme: Scheme = systemScheme(), limit = 6) => {
-  const faults = [
-    ...groundFaults(host, scheme),
-    ...[...host.querySelectorAll('*')].flatMap((node) => nodeFaults(node, scheme)),
-  ];
-  return [...new Set(faults)].slice(0, limit);
+/** A node's styles as drawn: its classes, inline style and own text's presence, and each ancestor's classes and style, which decide its paint and what lies behind it. */
+const chainOf = (node: Element) => {
+  const parts = [String(ownText(node)), node.getAttribute('aria-disabled') ?? ''];
+  for (let at: Element | null = node; at !== null; at = at.parentElement)
+    parts.push(`${at.getAttribute('class') ?? ''}/${at.getAttribute('style') ?? ''}`);
+  return parts.join('>');
+};
+
+/**
+ * The faults the frame `host` shows now against `scheme` (the system's by
+ * default), each once, at most six; `known` keeps each style chain's
+ * faults across the frames of one mount, so a frame computes only the
+ * styles it has not seen.
+ */
+export const lookFaults = (
+  host: Element,
+  scheme: Scheme = systemScheme(),
+  known = new Map<string, readonly string[]>(),
+) => {
+  const faults = [...groundFaults(host, scheme)];
+  for (const node of host.querySelectorAll('*')) {
+    const chain = `${scheme}|${chainOf(node)}`;
+    const found = known.get(chain) ?? nodeFaults(node, scheme);
+    known.set(chain, found);
+    faults.push(...found);
+  }
+  return [...new Set(faults)].slice(0, 6);
+};
+
+/**
+ * Holds every frame of `host` (each DOM mutation batch) from now on to the
+ * oracle, against the scheme `scheme` names at that frame (a test's model
+ * of the system), and keeps the first eight faults with the heading shown.
+ */
+export const watchLook = (host: Element, scheme: () => Scheme) => {
+  const faults: string[] = [];
+  const looks = new Map<string, readonly string[]>();
+  const frames = { seen: 0 };
+  const check = () => {
+    frames.seen += 1;
+    const on = host.querySelector('[role="heading"]')?.textContent ?? 'no heading';
+    for (const fault of lookFaults(host, scheme(), looks))
+      if (faults.length < 8) faults.push(`${fault} on ${on}`);
+  };
+  const watch = new MutationObserver(check);
+  watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
+  check();
+  return { faults, frames, check, stop: () => watch.disconnect() };
+};
+
+const CONTROLS = '[role="button"],[role="radio"],[role="checkbox"]';
+
+/**
+ * Each control of `host` held pressed in turn, one per distinct style
+ * chain, and the faults the oracle finds in it while pressed: a pressed
+ * control draws its text under its pressed opacity, which `seenContrast`
+ * composes. The press is react-native-web's keyboard press, which shows at
+ * once: a space down on the control, then an Enter up on the page, which
+ * react-native-web takes as the press's end (a space ends it only on a
+ * button) and, its target not the control, as no tap. A disabled control is left out, as WCAG
+ * leaves it; `pressed` counts the controls seen under an opacity.
+ */
+export const pressedFaults = async (
+  host: Element,
+  scheme: Scheme = systemScheme(),
+  seen = { pressed: 0 },
+) => {
+  const chains = new Set<string>();
+  const faults: string[] = [];
+  const key = (node: Element, type: string, name: string) =>
+    node.dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, key: name }));
+  for (const node of host.querySelectorAll(CONTROLS)) {
+    const chain = chainOf(node);
+    if (node.getAttribute('aria-disabled') === 'true' || chains.has(chain)) continue;
+    chains.add(chain);
+    await act(async () => key(node, 'keydown', ' '));
+    if (opacityOf(node) < 1) seen.pressed += 1;
+    faults.push(...lookFaults(node, scheme).map((fault) => `${fault} pressed`));
+    await act(async () => key(document.body, 'keyup', 'Enter'));
+  }
+  return [...new Set(faults)].slice(0, 6);
 };
 
 /** The screen's ground behind its heading, or behind the reference when no heading shows, when it is not the scheme's `ground`. */
@@ -121,6 +196,79 @@ const nodeFaults = (node: Element, scheme: Scheme) => {
   if (!texts.has(ink.hex)) faults.push(`${scheme} text ${ink.hex} at ${at}`);
   if (!/ui-rounded/u.test(style.fontFamily))
     faults.push(`${scheme} face ${style.fontFamily.slice(0, 24)} at ${at}`);
-  if (contrastOf(node) < AA) faults.push(`${scheme} faint ${ink.hex} at ${at}`);
+  if (node.closest('[aria-disabled="true"]') === null && seenContrast(node) < AA)
+    faults.push(`${scheme} faint ${ink.hex} at ${at}`);
   return faults;
+};
+
+type Rgb = readonly [number, number, number];
+
+const rgbOf = (css: string): Rgb => {
+  const { hex } = paintOf(css);
+  const channel = (at: number) => Number.parseInt(hex.slice(at, at + 2), 16) || 0;
+  return [channel(1), channel(3), channel(5)];
+};
+
+/** `top` drawn at `alpha` over `under`. */
+const blend = (top: Rgb, under: Rgb, alpha: number): Rgb => {
+  const mix = (at: 0 | 1 | 2) => alpha * top[at] + (1 - alpha) * under[at];
+  return [mix(0), mix(1), mix(2)];
+};
+
+const opacityOf = (node: Element) => {
+  const value = getComputedStyle(node).opacity;
+  return value === '' ? 1 : Number(value);
+};
+
+const filled = (node: Element) => paintOf(getComputedStyle(node).backgroundColor).alpha === 1;
+
+/** The nearest opaque fill strictly above `node`, white when none is. */
+const backdropOf = (node: Element): Rgb => {
+  for (let at = node.parentElement; at !== null; at = at.parentElement)
+    if (filled(at)) return rgbOf(getComputedStyle(at).backgroundColor);
+  return [255, 255, 255];
+};
+
+/**
+ * A text's contrast as it is seen, its opacities composed: the text's ink
+ * over the nearest opaque fill behind it, each element's opacity between
+ * them laid over that fill, and each opacity at or above the fill laid over
+ * the backdrop behind it, both the ink and the fill. `contrastOf` reads the
+ * ink and the fill alone; the pressed and disabled states draw text under an
+ * opacity, which this reads as the reader sees it.
+ */
+export const seenContrast = (node: Element) => {
+  let ink = rgbOf(getComputedStyle(node).color);
+  let alpha = 1;
+  let at: Element | null = node;
+  while (at !== null && !filled(at)) {
+    alpha *= opacityOf(at);
+    at = at.parentElement;
+  }
+  if (at === null) return contrastOf(node);
+  let ground = rgbOf(getComputedStyle(at).backgroundColor);
+  ink = blend(ink, ground, alpha);
+  for (let above: Element | null = at; above !== null; above = above.parentElement) {
+    const opacity = opacityOf(above);
+    if (opacity >= 1) continue;
+    const back = backdropOf(above);
+    ink = blend(ink, back, opacity);
+    ground = blend(ground, back, opacity);
+  }
+  return ratio(ink, ground);
+};
+
+/** WCAG 2's relative luminance of sRGB channels 0-255. */
+const luminance = (rgb: Rgb) => {
+  const [r = 0, g = 0, b = 0] = rgb.map((channel) => {
+    const c = channel / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+/** WCAG 2's contrast ratio of two colours. */
+const ratio = (a: Rgb, b: Rgb) => {
+  const [x, y] = [luminance(a), luminance(b)];
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 };

@@ -324,7 +324,7 @@ const looks = themed((color, face) =>
       shadowOffset: { width: 0, height: 10 },
     },
     pressedButton: { transform: [{ scale: 0.97 }] },
-    pressed: { opacity: 0.7 },
+    pressed: { opacity: 0.8 },
     disabled: { opacity: 0.6 },
     buttonText: { fontFamily: face, color: color.onInk, fontSize: 17, fontWeight: '600' },
   }),
