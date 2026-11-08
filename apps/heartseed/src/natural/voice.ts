@@ -1,6 +1,8 @@
 /**
  * The natural voice as a `VoiceSource`: it plans a verse with `planOf`,
- * loads the pinned model, then renders and plays it chunk by chunk, one
+ * loads the pinned model in the voice the speak names (one of `VOICES`; any
+ * other name fails the speak once its stop is sent), then renders and plays
+ * it chunk by chunk, one
  * render in flight, and forwards the module's events for the reading it
  * holds. A speak succeeds once its first chunk plays, or at once when its
  * reading is let go (stopped, replaced, or ended by a forwarded terminal
@@ -13,7 +15,7 @@ import { Deferred, Effect, Exit, Layer, Option, Result } from 'effect';
 
 import { VoiceSource, VoiceUnavailable, type VoiceEvent } from '../voice';
 import type { Lexicon } from './lexicon';
-import { FILES, REVISION } from './manifest';
+import { FILES, REVISION, VOICES, type NaturalVoice } from './manifest';
 import { NaturalModule, type Rendered } from './module';
 import { planOf, SAMPLES_PER_FRAME, startsOf, type Chunk, type WordStart } from './plan';
 
@@ -36,6 +38,9 @@ const startsFor = (chunk: Chunk, rendered: Rendered): Option.Option<ReadonlyArra
     () =>
       rendered.samples === SAMPLES_PER_FRAME * rendered.frames.reduce((sum, each) => sum + each, 0),
   );
+
+/** Whether `voice` names a voice of the download. */
+const isNatural = (voice: string): voice is NaturalVoice => VOICES.some((each) => each === voice);
 
 export const naturalVoiceSource = (
   lexicon: Lexicon,
@@ -103,10 +108,10 @@ export const naturalVoiceSource = (
           }
         });
 
-      /** Loads the model and plays the first chunk; the rest go on in the source's scope. */
-      const read = (reading: Reading, first: Chunk) =>
+      /** Loads the model in `voice` and plays the first chunk; the rest go on in the source's scope. */
+      const read = (reading: Reading, first: Chunk, voice: NaturalVoice) =>
         Effect.gen(function* () {
-          const loaded = yield* Effect.result(module.load(REVISION, FILES, 'af_heart.bin'));
+          const loaded = yield* Effect.result(module.load(REVISION, FILES, `${voice}.bin`));
           if (!holds(reading)) return;
           if (Result.isFailure(loaded)) {
             drop();
@@ -125,10 +130,15 @@ export const naturalVoiceSource = (
 
       return VoiceSource.of({
         voices: Effect.succeed([]),
-        speak: (utterance, text) =>
+        speak: (utterance, text, voice) =>
           Effect.gen(function* () {
             yield* module.stop;
             letGo();
+            if (!isNatural(voice)) {
+              return yield* VoiceUnavailable.make({
+                reason: 'the natural voice has no such voice',
+              });
+            }
             const chunks = Option.map(
               planOf(lexicon.words, lexicon.vocab, text),
               (plan) => plan.chunks,
@@ -146,7 +156,7 @@ export const naturalVoiceSource = (
             };
             held = Option.some(reading);
             return yield* Effect.raceFirst(
-              read(reading, first.value),
+              read(reading, first.value, voice),
               Deferred.await(reading.letGo),
             );
           }),

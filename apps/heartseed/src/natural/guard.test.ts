@@ -76,6 +76,12 @@ const branches = (
   });
 };
 
+/** A Kokoro voice's name: a language letter, `f` or `m`, an underscore and a name (`af_heart`, `am_michael`, `bf_emma`). */
+const VOICE_NAME = /\b[a-z][fm]_[a-z]+/;
+
+/** A quoted file name ending `.bin`: a voice pack's path written out. */
+const PACK_LITERAL = /['"`][\w.-]*\.bin['"`]/;
+
 const STARTS_OR_PLAYS = /\b\w*(engine|player|node)\w*\.(start|play)\(/i;
 
 describe('the natural voice on the simulator', () => {
@@ -176,6 +182,25 @@ describe('the natural voice’s seams', () => {
       'onInstall',
     ])
       expect(expected).toContain(`  ${method}(`);
+  });
+});
+
+describe('the natural voice’s voices', () => {
+  it('names no voice in the module’s own Swift: the voice is a load’s argument', () => {
+    expect(own).toContain(SWIFT);
+    const named = own.filter((file) => VOICE_NAME.test(readFileSync(file, 'utf8')));
+    expect(named.map((file) => relative(APP, file))).toEqual([]);
+  });
+
+  it('names a voice’s pack in manifest.ts alone', () => {
+    const files = filesUnder(join(APP, 'src', 'natural')).filter(
+      (file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file),
+    );
+    expect(files).toContain(join(APP, 'src', 'natural', 'voice.ts'));
+    const naming = files
+      .filter((file) => PACK_LITERAL.test(readFileSync(file, 'utf8')))
+      .map((file) => relative(APP, file));
+    expect(naming).toEqual(['src/natural/manifest.ts']);
   });
 });
 

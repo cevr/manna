@@ -3,7 +3,9 @@
 /**
  * The natural voice source against its own model, over seeded histories of
  * one source: speaks of one-, two- and three-chunk texts and of a text no
- * plan takes; stop, pause and resume; a load or a render answered ok, with
+ * plan takes, each in a voice drawn from `VOICES` or from names that miss
+ * one (another voice, a case, a pack path, a trailing space, a name the
+ * reader sees); stop, pause and resume; a load or a render answered ok, with
  * a failure, or malformed (an id with no frame, a frame list short or long,
  * NaN, a fraction, the audio a frame off); a refused play; the module's
  * events for the held utterance (and for one a failure let go of) and for
@@ -18,7 +20,10 @@
  * `planOf` (hslexicon's rule); the model computes each word's start sample
  * and a render's fit itself.
  *
- * It catches a source that forwards another utterance's event, keeps a
+ * It catches a source that loads a voice other than the speak's own (a
+ * fixed one, the first it was given, a name with no `.bin`), reads a name
+ * not in `VOICES` (or reads it as a default), refuses one before its stop,
+ * or loads a list other than `FILES`; and one that forwards another utterance's event, keeps a
  * reading past a terminal event or a failure, keeps a listener past its
  * scope, plays or renders after a stop, marks the
  * wrong chunk last, fails a later chunk silently or a first one as success,
@@ -33,7 +38,7 @@ import { Context, Deferred, Effect, Exit, Fiber, Layer, Option, Scope } from 'ef
 
 import { VoiceSource, type VoiceEvent } from '../voice';
 import type { Lexicon } from './lexicon';
-import { FILES, REVISION } from './manifest';
+import { FILES, REVISION, VOICES } from './manifest';
 import { NaturalModule, NaturalUnavailable, type Rendered, type WordStart } from './module';
 import { planOf, type Chunk } from './plan';
 import { naturalVoiceSource } from './voice';
@@ -84,6 +89,27 @@ const textOf = (clauses: number) =>
 /** Texts of one, two and three chunks, and one with a word the lexicon lacks. */
 const TEXTS: ReadonlyArray<string> = [textOf(1), textOf(3), textOf(5), 'bel zor.'];
 
+/** Names that miss a voice of `VOICES`: another Kokoro voice, none, a case, a pack path, the reader's names, a trailing space, a word. */
+const NEAR_MISSES: ReadonlyArray<string> = [
+  'af_bella',
+  '',
+  'AF_HEART',
+  'af_heart.bin',
+  'am_michael.bin',
+  'her',
+  'him',
+  'am_michael ',
+  'voice',
+];
+
+const known = (voice: string) => VOICES.some((each) => each === voice);
+
+/** A load's file list as one line per file, so a call compares as a string. */
+const listOf = (files: ReadonlyArray<{ path: string; bytes: number; sha256: string }>) =>
+  files.map((file) => `${file.path}:${file.bytes}:${file.sha256}`).join('\n');
+
+const PINNED = listOf(FILES);
+
 const chunksOf = (text: string): Option.Option<ReadonlyArray<Chunk>> =>
   Option.map(planOf(LEXICON.words, LEXICON.vocab, text), (plan) => plan.chunks);
 
@@ -91,7 +117,12 @@ type Call =
   | { readonly _tag: 'stop' }
   | { readonly _tag: 'pause' }
   | { readonly _tag: 'resume' }
-  | { readonly _tag: 'load'; readonly revision: string; readonly files: number }
+  | {
+      readonly _tag: 'load';
+      readonly revision: string;
+      readonly files: string;
+      readonly voice: string;
+    }
   | {
       readonly _tag: 'render';
       readonly u: number;
@@ -130,9 +161,9 @@ const makeModule = () => {
       install: () => Effect.die('the voice source never installs'),
       cancelInstall: Effect.die('the voice source never cancels an install'),
       remove: Effect.die('the voice source never removes'),
-      load: (revision, files) =>
+      load: (revision, files, voice) =>
         Effect.suspend(() => {
-          state.calls.push({ _tag: 'load', revision, files: files.length });
+          state.calls.push({ _tag: 'load', revision, files: listOf(files), voice });
           const done = Deferred.makeUnsafe<number, NaturalUnavailable>();
           state.loads.push(done);
           return Deferred.await(done);
@@ -210,7 +241,13 @@ class Model {
     malformed: 0,
     lastPlayed: 0,
     afterFailure: 0,
+    her: 0,
+    him: 0,
+    nearMisses: 0,
+    switches: 0,
   };
+  /** The voice the last load asked for, to count switches. */
+  private loadedVoice: string | undefined;
 
   private answer(u: number, outcome: 'success' | 'failure') {
     if (this.outcomes.get(u) === 'pending') this.outcomes.set(u, outcome);
@@ -222,20 +259,29 @@ class Model {
     this.held = undefined;
   }
 
-  speak(u: number, text: string) {
+  speak(u: number, text: string, voice: string) {
     this.calls.push({ _tag: 'stop' });
     if (this.held !== undefined && this.outcomes.get(this.held.u) === 'pending')
       this.tally.replaced++;
     this.letGo();
     this.dropped = undefined;
     this.outcomes.set(u, 'pending');
+    if (!known(voice)) {
+      this.tally.nearMisses++;
+      this.answer(u, 'failure');
+      return;
+    }
     const chunks = chunksOf(text);
     if (Option.isNone(chunks)) {
       this.answer(u, 'failure');
       return;
     }
+    if (voice === 'af_heart') this.tally.her++;
+    else this.tally.him++;
+    if (this.loadedVoice !== undefined && this.loadedVoice !== voice) this.tally.switches++;
+    this.loadedVoice = voice;
     this.held = { u, chunks: chunks.value, waiting: 'load' };
-    this.calls.push({ _tag: 'load', revision: REVISION, files: FILES.length });
+    this.calls.push({ _tag: 'load', revision: REVISION, files: PINNED, voice: `${voice}.bin` });
     this.loads.push(u);
   }
 
@@ -403,6 +449,10 @@ const totals = {
   malformed: 0,
   lastPlayed: 0,
   afterFailure: 0,
+  her: 0,
+  him: 0,
+  nearMisses: 0,
+  switches: 0,
   reloads: 0,
   finished: 0,
   heardAfterLeaving: 0,
@@ -469,9 +519,14 @@ const makeHistory = (seed: number) => {
       Option.map(chunksOf(text), (each) => each.length),
       () => 0,
     );
-    trail.push(`#${utterance}/${chunks}`);
-    model.speak(utterance, text);
-    fibers.set(utterance, yield* Effect.forkChild(live().speak(utterance, text, 'ignored')));
+    const roll = next();
+    const voice =
+      roll < 0.8
+        ? (VOICES[Math.floor((roll / 0.8) * VOICES.length)] ?? 'af_heart')
+        : (NEAR_MISSES[Math.floor(((roll - 0.8) / 0.2) * NEAR_MISSES.length)] ?? '');
+    trail.push(`#${utterance}/${chunks}/[${voice}]`);
+    model.speak(utterance, text, voice);
+    fibers.set(utterance, yield* Effect.forkChild(live().speak(utterance, text, voice)));
   });
 
   const load = (ok: boolean) =>
@@ -637,7 +692,7 @@ describe('the natural voice source', () => {
     ).toEqual([1, 2, 3, 0]);
   });
 
-  it('offers no voices of its own', () =>
+  it('offers no voices of its own: the voice passed to speak names the natural voice', () =>
     Effect.runPromise(
       Effect.gen(function* () {
         const source = yield* VoiceSource;
@@ -658,6 +713,10 @@ describe('the natural voice source', () => {
         expect(totals.reloads).toBeGreaterThanOrEqual(15);
         expect(totals.afterFailure).toBeGreaterThanOrEqual(50);
         expect(totals.heardAfterLeaving).toBeGreaterThanOrEqual(25);
+        expect(totals.her).toBeGreaterThanOrEqual(200);
+        expect(totals.him).toBeGreaterThanOrEqual(200);
+        expect(totals.nearMisses).toBeGreaterThanOrEqual(100);
+        expect(totals.switches).toBeGreaterThanOrEqual(150);
       }),
     ));
 });
