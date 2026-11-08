@@ -77,9 +77,7 @@ tmp/verify-heartseed, one drive at a time per checkout; never point its
 
    It runs `prebuild:native` (`one prebuild`, which writes the app's
    git-ignored `ios` folder and runs pod install) when that folder holds no
-   Heartseed.xcworkspace, or with `--prebuild`. One warning is known and
-   harmless: the vxrn patch "matched nothing in RCTTurboModule.mm - it is
-   stale" (One's, not the app's). It adds the `heartseed` URL scheme to
+   Heartseed.xcworkspace, or with `--prebuild`. It adds the `heartseed` URL scheme to
    that folder's Heartseed/Info.plist (`detail.schemeAdded`), builds Debug for the simulator (arm64 only, its
    derived data in the `build` folder of the app's `ios`), installs,
    launches, and waits for `label=Isaiah 41:10`, the reference the

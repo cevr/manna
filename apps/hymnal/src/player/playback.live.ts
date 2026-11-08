@@ -5,7 +5,7 @@
  * Session). Each call's failure is a `PlaybackError` naming the call.
  *
  * The recording plays at the hymn's tempo with its pitch kept (One's
- * `setPlaybackRate`, from `patches/one@2.11.1.patch`). One's session keeps
+ * `setPlaybackRate`, from `patches/one@2.15.1.patch`). One's session keeps
  * its rate across plays and stops, so each play tells it the play's rate
  * first (1 when the play names none), and a tempo turned while it holds the
  * recording tells it again (`setRate`).

@@ -20,7 +20,7 @@
  * the same hymn (`NAVIGATE`); no stack here holds either.
  *
  * The modules are One's native build (`dist/esm/**.native.js`), the files
- * Metro bundles for iOS, so the repo's patch of One (`patches/one@2.11.1.patch`)
+ * Metro bundles for iOS, so the repo's patch of One (`patches/one@2.15.1.patch`)
  * is what runs here. Numbers only: no hymn's words are read.
  */
 
