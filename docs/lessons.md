@@ -5230,3 +5230,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** A commit moved the sign-up label's words from `apps/firsttheblade/src/ui/mail.tsx` to `src/mail/paths.ts`, and five promise census cases that seed their mutants by finding those words in `mail.tsx` went stale, so `test:slow` was red and the five mutants proved nothing.
 - **Cause:** The census held its cases in a script that runs on import and builds the app for each case, so only `test:slow` read them, and the round's gate did not rerun it after the commit.
 - **Guard:** code: `apps/firsttheblade/scripts/promise-cases.test.ts` `finds each case's words in its file exactly once, and each new file not there yet`
+
+### ftb-contact-rule-takes-the-site-output
+
+- **Date:** 2026-11-08
+- **Kind:** review
+- **Said:** "no check holds Risk 3. The rule given the literal worker name instead of `site.workerName` passes the acceptance and every committed test (V7, `mutants.log`)."
+- **Source:** hymnapp/cfsecrets/round-2-findings.md V7
+- **Wrong:** First the Blade's Contact rule could hand its mail to the Worker's name written down instead of the Site's `workerName` output, losing the order that makes the rule follow the Worker's update, and every committed test and the acceptance stayed green on that mutant.
+- **Cause:** `mailDomain` and `contact` in `apps/firsttheblade/src/worker/domain.ts` took `Input<string>`, which a plain string satisfies, and no check read what the stack passed or what the rule's worker action named.
+- **Guard:** code: `apps/firsttheblade/src/worker/deploy-env.test.ts` `takes the Site Worker by its workerName output, in the stack and in every rule`, `refuses the Worker name written down, by type`

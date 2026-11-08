@@ -19,7 +19,7 @@
  *   stack: Cloudflare forwards only to a verified destination.
  */
 import * as Alchemy from 'alchemy';
-import type { Input } from 'alchemy/Input';
+import type { Output } from 'alchemy/Output';
 import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Stage } from 'alchemy/Stage';
 import { Effect } from 'effect';
@@ -27,7 +27,7 @@ import { Effect } from 'effect';
 import { CONTACT, DOMAIN } from '../site.ts';
 
 /** The contact address handed to the Site Worker `workerName`: prod's alone. */
-const contact = (workerName: Input<string>) =>
+const contact = (workerName: Output<string>) =>
   Effect.gen(function* () {
     const routing = yield* Cloudflare.Email.Routing('MailRouting', { zone: DOMAIN });
     yield* Cloudflare.Email.Rule('Contact', {
@@ -39,7 +39,7 @@ const contact = (workerName: Input<string>) =>
   });
 
 /** The domain's mail, its contact rule handing mail to the Site Worker `workerName`. */
-export const mailDomain = (workerName: Input<string>) =>
+export const mailDomain = (workerName: Output<string>) =>
   Effect.gen(function* () {
     const zone = yield* Cloudflare.Zone.Zone('Zone', { name: DOMAIN }).pipe(
       Alchemy.AdoptPolicy.adopt(true),

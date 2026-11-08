@@ -2,6 +2,9 @@ import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Path } from 'effect';
 
+import { WORKER_NAME } from '../site.ts';
+import type * as Domain from './domain.ts';
+
 /**
  * The names the stack may read from the deployer's environment: the films
  * lab's address (`kit/`) alone. Every secret, the contact inbox among them,
@@ -178,6 +181,93 @@ describe('the deploy reads from the environment', () => {
       for (let seed = 1; seed <= 100; seed += 1) {
         const { source, want } = sourceOf(seed);
         expect({ seed, source, found: readsIn(source) }).toEqual({ seed, source, found: want });
+      }
+    }),
+  );
+});
+
+/** The Site Worker's name written down, handed to `mailDomain`: a type error that `typecheck` holds, never run (the module loads Alchemy). */
+const writtenDown = (mailDomain: typeof Domain.mailDomain) =>
+  // @ts-expect-error -- the Contact rule takes the Site's output, never the Worker's name written down
+  mailDomain(WORKER_NAME);
+
+/** Code as Bun runs it, types and comments gone. */
+const codeOf = (source: string) =>
+  new Bun.Transpiler({ loader: 'ts', trimUnusedImports: false }).transformSync(source);
+
+/** The value of every worker action of an Email rule, as Bun's output writes it. */
+const WORKER_ACTION = /type:\s*"worker",\s*value:\s*\[([^\]]*)\]/g;
+
+/** What is wrong with a module's Email rules: a worker action naming anything but the parameter `workerName`, or a rule with no worker action. */
+const ruleProblems = (source: string): ReadonlyArray<string> => {
+  const code = codeOf(source);
+  const values = Array.from(code.matchAll(WORKER_ACTION), ([, value = '']) => value.trim());
+  const rules = code.split('Email.Rule(').length - 1;
+  const wrong = values.filter((value) => value !== 'workerName').map((value) => `worker ${value}`);
+  if (values.length === rules) return wrong;
+  return [...wrong, `${rules} rule(s), ${values.length} worker action(s)`];
+};
+
+/** Worker values other than the parameter: the name, written or as a literal, another name, a list of two, and the Site's output read where the rule is made. */
+const WRONG_WORKERS = [
+  'WORKER_NAME',
+  "'firsttheblade'",
+  '"firsttheblade"',
+  '`firsttheblade`',
+  'NAME',
+  'workerName, WORKER_NAME',
+  'site.workerName',
+];
+
+/** A generated module of Email rules, some with a wrong worker in a line comment, and whether each worker action names the parameter alone. */
+const rulesOf = (seed: number) => {
+  const next = random(seed);
+  const lines = [
+    "import * as Cloudflare from '@alchemy.run/cloudflare';",
+    'export const rules = (workerName: string) => [',
+  ];
+  let right = true;
+  for (let n = 0; n < 1 + Math.floor(next() * 3); n += 1) {
+    const value = pick(next, [...WRONG_WORKERS.map(() => 'workerName'), ...WRONG_WORKERS]);
+    right &&= value === 'workerName';
+    if (next() < 0.3) lines.push(`  // value: [${pick(next, WRONG_WORKERS)}] was the worker once`);
+    lines.push(
+      `  Cloudflare.Email.Rule('R${n}', { name: 'R${n}', actions: [{ type: 'worker', value: [${value}] }] }),`,
+    );
+  }
+  lines.push('];');
+  return { source: lines.join('\n'), right };
+};
+
+describe('the Contact rule', () => {
+  it.effect('takes the Site Worker by its workerName output, in the stack and in every rule', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const root = path.resolve(import.meta.dir, '../..');
+      const stack = codeOf(yield* fs.readFileString(path.join(root, 'alchemy.run.ts')));
+      expect(stack).toMatch(/const site = yield\* Site;/);
+      expect(stack).toMatch(/mailDomain\(site\.workerName\)/);
+      const domain = yield* fs.readFileString(path.join(root, 'src/worker/domain.ts'));
+      expect(ruleProblems(domain)).toEqual([]);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('refuses the Worker name written down, by type', () =>
+    Effect.sync(() => {
+      expect(writtenDown).toBeTypeOf('function');
+    }),
+  );
+
+  it.effect('the reader finds exactly the generated wrong worker actions, over 100 modules', () =>
+    Effect.sync(() => {
+      for (let seed = 1; seed <= 100; seed += 1) {
+        const { source, right } = rulesOf(seed);
+        expect({ seed, source, right: ruleProblems(source).length === 0 }).toEqual({
+          seed,
+          source,
+          right,
+        });
       }
     }),
   );
