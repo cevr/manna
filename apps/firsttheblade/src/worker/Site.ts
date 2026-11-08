@@ -16,8 +16,9 @@
  * Queue and a Rate Limit, with the list's model on Durable Objects
  * (`./mail.ts`). Its two secrets, `MAIL_TOKEN_KEY` (the key its ids and links
  * are hashed with) and `MAIL_ADMIN_TOKEN` (what `bun run mail:send` must
- * show), are read from the deployer's environment and bound as Worker
- * secrets; they are never in the repository. The Worker is also the queue's
+ * show), are secrets of the account's Secrets Store, bound by name and read
+ * at their first use (`./store-secret.ts`); no deploy reads them, and they
+ * are never in the repository. The Worker is also the queue's
  * consumer: each batch of a film's send is delivered here
  * (`../mail/deliver.ts`). A sign-up never confirmed runs out on its own
  * schedule, in the model (`../list/SignUpExpiry.policy.ts`).

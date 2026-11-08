@@ -3,8 +3,9 @@
  * (`src/worker/Site.ts`), with the list's D1 database, queue, rate limit and
  * Email Sending binding (`src/worker/mail.ts`), and the domain's mail: the
  * sending domain and, in prod, the contact address (`src/worker/domain.ts`).
- * Deploying needs the list's two secrets in `.env`, and prod the contact's
- * inbox too (README, The email list).
+ * The list's two secrets are bound by name from the account's Secrets Store
+ * (`src/worker/store-secret.ts`), so a deploy reads none; prod reads the
+ * contact's inbox and its switch from `.env` (README, The email list).
  * On stage `prod` the stack first runs the prod state check
  * (`scripts/prod-state.ts` `prodStateGate`): it refuses a run whose Alchemy
  * state does not record the live Worker, D1 and queue, so a checkout without
