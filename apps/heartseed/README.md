@@ -796,10 +796,13 @@ here.
   no SwiftPM dependency. `ModelStore.swift` loads the seven compiled stages
   from one folder; `Natural.swift` is the module, whose declaration
   (`Natural.d.swift.ts`) is committed as One writes it.
-- **The download.** `src/natural/manifest.ts` pins the 38 files of Hugging
-  Face `FluidInference/kokoro-82m-coreml`, folder `ANE/`, at revision
-  `2568276a60ff6e7f312afce3dc9e3f07521cb48d` (82,810,273 bytes, each with
-  its SHA-256), and the mirror `https://models.heartseed.app/kokoro/2568276a60ff/`.
+- **The download.** `src/natural/manifest.ts` pins the 39 files of the
+  download (`FILES`, in path order): 38 of Hugging Face
+  `FluidInference/kokoro-82m-coreml`, folder `ANE/`, at revision
+  `2568276a60ff6e7f312afce3dc9e3f07521cb48d`, and `am_michael.bin`
+  (`AM_MICHAEL`, converted from the same revision's rows, The mirror,
+  below); 83,332,513 bytes, each with its SHA-256, and the mirror
+  `https://models.heartseed.app/kokoro/2568276a60ff/`.
   `install` keeps them in `Application Support/Heartseed/natural/<revision>`,
   a folder marked out of backups before its first byte, one file at a time
   in the manifest's order: a file is fetched into `natural/.partial`,
@@ -808,11 +811,22 @@ here.
   the missing bytes plus 50 MB free (`space`), waits for a network in Low
   Data Mode (`waiting`), fails `network` on any status but 200 or a lost
   connection, and fails `cancelled` at `cancelInstall`; a second `install`
-  fetches only what is missing. `load` hashes every file again first.
-  `baseFor(dev, asked)` gives the base: a release build always the mirror,
-  a development build a plain `http(s)://host[:port]/folder/` it is asked
-  for. The mirror also holds `am_michael.bin`, the second voice's pack
-  (`AM_MICHAEL`), which the download does not fetch (The mirror, below).
+  fetches only what is missing, so a 38-file install fetches only
+  `am_michael.bin`. `baseFor(dev, asked)` gives the base: a release build
+  always the mirror, a development build a plain
+  `http(s)://host[:port]/folder/` it is asked for.
+- **The voices.** `VOICES` (`manifest.ts`) is `af_heart` and `am_michael`;
+  a voice's pack is the file `<voice>.bin` of `FILES`. No other file of
+  `src/natural` names a pack path, and the Swift module outside `kokoro/`
+  names no voice: the voice is data.
+- **Loading.** `load(revision, files, voice)` takes the voice as a pack
+  path of `files`, or throws `voice`. The first load of a revision in a
+  process hashes every file again and loads the seven stages; a later one
+  keeps the stages and reads only the voice's pack (from disk, or a cache
+  by path), hashing nothing. Loads apply in call order, so the last one
+  called leaves its voice current; a voice change halts a held reading,
+  and a memory warning drops the packs with the stages. It logs
+  `[natural] load ms=<n> units=<u> voice=<path> stages=<loaded|kept>`.
 - **Routing.** On the simulator every stage runs on the CPU. On a device,
   iOS 27 and later run the noise and tail stages on the CPU and the rest on
   the Neural Engine; earlier ones run the noise and tail on the GPU.
@@ -836,13 +850,16 @@ here.
   is every other platform's, which holds nothing and refuses each call.
 - `src/natural/voice.ts`, `naturalVoiceSource(lexicon)`, is a `VoiceSource`
   over the module, so `src/voice.ts` reads with it unchanged: a speak stops
-  the module, plans the text, loads, then renders and plays chunk by chunk
+  the module, fails `VoiceUnavailable` for a voice not in `VOICES`, else
+  plans the text, loads the speak's voice (`<voice>.bin`), then renders and
+  plays chunk by chunk
   (the next chunk renders while one plays). Chunk 0's failure fails the
   speak; a later chunk's stops the module and sends `interrupt`. A speak
   let go (stopped, replaced or ended) returns at once.
-- **The probe.** `app/probe/natural.tsx` (`heartseed://probe/natural?base=…&soak=…`)
+- **The probe.** `app/probe/natural.tsx` (`heartseed://probe/natural?base=…&voice=…&soak=…`)
   is a development probe that renders and starts nothing in a release
-  build. `Install`, `Cancel`, `Load`, `Read` (Today's passage through the
+  build. It reads in the link's `voice`, one of `VOICES` (else
+  `af_heart`), and shows it as `voice <name>`. `Install`, `Cancel`, `Load`, `Read` (Today's passage through the
   voice over the natural source), `Stop`, `Remove` and `Soak` (each verse
   rendered in canon order, no play) show counts only, never a word
   (`src/natural/probe.ts`). `.claude/skills/verify-heartseed/features/natural.md`
@@ -850,7 +867,8 @@ here.
 - **The model server.** `bun run natural:serve -- --port <p> --cache <dir>
   [--host 127.0.0.1|0.0.0.0] [--corrupt <path>]` (`scripts/natural-serve.ts`)
   fills the cache from Hugging Face at the pinned revision, checking each
-  file, and serves `GET` and `HEAD` of the 38 paths, so the simulator and a
+  file and converting `am_michael.bin` from its rows (`fillPinned`), and
+  serves `GET` and `HEAD` of the 39 paths, so the simulator and a
   development phone install with no mirror; `--corrupt` flips the middle
   byte of one file as served. It never ships.
 - Credits: Misaki (hexgrad/misaki, Apache-2.0) made the list; Kokoro's
@@ -885,9 +903,8 @@ stack.
 
 ### The files and their keys
 
-- The mirror's list is `MIRROR_FILES` (`infra/models/plan.ts`): the 38
-  pinned files of `FILES` plus `AM_MICHAEL`, in path order, 39 files and
-  83,332,513 bytes. Each is stored under `kokoro/2568276a60ff/<path>`
+- The mirror's list is `MIRROR_FILES` (`infra/models/plan.ts`): the
+  download, `FILES`, in path order, 39 files and 83,332,513 bytes. Each is stored under `kokoro/2568276a60ff/<path>`
   (`keyOf`), so `MIRROR + path` is the file's URL. A new revision is a new
   folder.
 - `am_michael.bin` is the second voice, `am_michael`. FluidInference ships
@@ -913,7 +930,8 @@ bucket. The cache is the one `natural:serve` uses, `tmp/natural-models/` at
 the repository root, so files fetched by one are kept by the other.
 
 - **The fill** (`fillWith` in `scripts/natural-serve.ts`, over
-  `fetchPinned` in `infra/models/source.ts`): in list order, a cached file
+  `fetchPinned` in `infra/models/source.ts`, which the model server's
+  `fillPinned` uses too): in list order, a cached file
   at its size and SHA-256 is kept and never fetched; any other is fetched
   from `resolve/2568276a60ff6e7f312afce3dc9e3f07521cb48d/ANE/<path>` (for
   `am_michael.bin`, `voices/am_michael.json`, converted), checked, written
@@ -1297,7 +1315,7 @@ GETs (Class B) when the edge does not serve them.
     committed data: the vocab's pinned hash, the list's bytes as the
     generator last wrote them, its keys sorted and unique, and every
     phoneme and override spoken in the vocab; `src/natural/manifest.test.ts`,
-    the 38 pinned files and `baseFor` over seeded asks;
+    the 39 pinned files, the voices and `baseFor` over seeded asks;
     `src/natural/guard.test.ts`, the native module's guards (its committed
     declaration equals One's, the simulator branch never starts the engine
     and logs its skip, no file sets the audio session, only
