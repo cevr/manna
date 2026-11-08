@@ -54,7 +54,7 @@
     "mediabunny": "1.61.3",
     "mpg123-decoder": "1.0.3",
     "node-av": "6.1.1",
-    "oxc-parser": "0.153.0",
+    "oxc-parser": "0.157.0",
     "puppeteer-core": "25.16.0",
     "solid-js": "catalog:"
   },

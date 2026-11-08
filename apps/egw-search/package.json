@@ -36,7 +36,7 @@
     "@distilled.cloud/cloudflare": "1.0.0-rc.18",
     "@playwright/test": "1.64.0",
     "alchemy": "2.0.0-beta.85",
-    "concurrently": "^10.0.6",
+    "concurrently": "^10.0.7",
     "vite": "^8.3.4",
     "vite-plugin-solid": "catalog:"
   }
