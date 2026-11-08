@@ -14,20 +14,26 @@
  *
  * The email list's routes run in the same Worker, over D1, Email Sending, a
  * Queue and a Rate Limit, with the list's model on Durable Objects
- * (`./mail.ts`). Its two secrets, `MAIL_TOKEN_KEY` (the key its ids and links
- * are hashed with) and `MAIL_ADMIN_TOKEN` (what `bun run mail:send` must
- * show), are secrets of the account's Secrets Store, bound by name and read
- * at their first use (`./store-secret.ts`); no deploy reads them, and they
- * are never in the repository. The Worker is also the queue's
- * consumer: each batch of a film's send is delivered here
- * (`../mail/deliver.ts`). A sign-up never confirmed runs out on its own
- * schedule, in the model (`../list/SignUpExpiry.policy.ts`).
+ * (`./mail.ts`). Its secrets, `MAIL_TOKEN_KEY` (the key its ids and links
+ * are hashed with), `MAIL_ADMIN_TOKEN` (what `bun run mail:send` must show)
+ * and `MAIL_FORWARD_TO` (the owner's inbox), are secrets of the account's
+ * Secrets Store, bound by name and read at their first use
+ * (`./store-secret.ts`); no deploy reads them, and they are never in the
+ * repository. The Worker is also the queue's consumer: each batch of a
+ * film's send is delivered here (`../mail/deliver.ts`). And it handles the
+ * contact address's mail, which prod's Email Routing rule hands it
+ * (`./domain.ts`): it subscribes with no zone, so it declares no routing of
+ * its own, and forwards each message to the inbox (`../mail/contact.ts`),
+ * letting a failure reach the sender as a retry. A sign-up never confirmed
+ * runs out on its own schedule, in the model
+ * (`../list/SignUpExpiry.policy.ts`).
  */
 import { Stage } from 'alchemy/Stage';
 import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Context, Effect, Layer, Option, Schema, Stream } from 'effect';
 import { HttpServerRequest } from 'effect/http';
 
+import { ContactInbox, forwardContact } from '../mail/contact.ts';
 import { deliver } from '../mail/deliver.ts';
 import { warnMail } from '../mail/log.ts';
 import type { Mailer } from '../mail/mailer.ts';
@@ -102,6 +108,9 @@ export default class Site extends Cloudflare.Worker<Site>()(
     });
     const queue = yield* MailQueue;
     const mail = yield* Effect.context<Exclude<MailServices, Assets> | Mailer>();
+
+    const contact = forwardContact(yield* ContactInbox);
+    yield* Cloudflare.email().subscribe((message) => contact(message).pipe(withServices(mail)));
 
     yield* Cloudflare.Queues.consumeQueueMessages(queue, DELIVERY, (messages) =>
       Effect.gen(function* () {

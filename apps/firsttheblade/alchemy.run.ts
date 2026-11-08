@@ -2,10 +2,12 @@
  * The stack: one Cloudflare Worker serving the built site and its email list
  * (`src/worker/Site.ts`), with the list's D1 database, queue, rate limit and
  * Email Sending binding (`src/worker/mail.ts`), and the domain's mail: the
- * sending domain and, in prod, the contact address (`src/worker/domain.ts`).
- * The list's two secrets are bound by name from the account's Secrets Store
- * (`src/worker/store-secret.ts`), so a deploy reads none; prod reads the
- * contact's inbox and its switch from `.env` (README, The email list).
+ * sending domain and, in prod, the contact address (`src/worker/domain.ts`),
+ * whose rule hands its mail to the Site Worker: the Site is declared first
+ * and the rule takes its `workerName` output, so the rule follows the
+ * Worker's update. The Worker's three secrets (the list's two and the
+ * contact's inbox) are bound by name from the account's Secrets Store
+ * (`src/worker/store-secret.ts`), so a deploy reads none.
  * On stage `prod` the stack first runs the prod state check
  * (`scripts/prod-state.ts` `prodStateGate`): it refuses a run whose Alchemy
  * state does not record the live Worker, D1 and queue, so a checkout without
@@ -24,7 +26,7 @@ import { Effect } from 'effect';
 
 import { prodGate } from './kit/shippable.ts';
 import { prodStateGate } from './scripts/prod-state.ts';
-import { MailDomain } from './src/worker/domain.ts';
+import { mailDomain } from './src/worker/domain.ts';
 import Site from './src/worker/Site.ts';
 
 export default Alchemy.Stack(
@@ -36,8 +38,8 @@ export default Alchemy.Stack(
   Effect.gen(function* () {
     yield* prodStateGate().pipe(Effect.orDie);
     yield* prodGate(import.meta.dir).pipe(Effect.orDie);
-    const mail = yield* MailDomain;
     const site = yield* Site;
+    const mail = yield* mailDomain(site.workerName);
     return { url: site.url, urls: site.urls, sending: mail.sending };
   }),
 );

@@ -11,17 +11,18 @@
  * - `MailQueue`: the queue a film's send is put on, delivered one batch at a
  *   time (`DELIVERY`).
  * - `SignupLimit`: the sign-up limit (`SIGNUPS`), a Rate Limiting binding.
- * - `MAIL_TOKEN_KEY` and `MAIL_ADMIN_TOKEN`: secrets of the account's
- *   Secrets Store, bound by name (`./store-secret.ts`), each read at its
- *   first use and kept once read.
+ * - `MAIL_TOKEN_KEY`, `MAIL_ADMIN_TOKEN` and `MAIL_FORWARD_TO` (the inbox
+ *   the contact address forwards to, `ContactInbox`): secrets of the
+ *   account's Secrets Store, bound by name (`./store-secret.ts`), each read
+ *   at its first use and kept once read.
  *
  * The bindings' clients answer only in a running Worker or Durable Object
  * (`RuntimeContext`), as does the request's `waitUntil`, which keeps a
  * sign-up's work running while its answer goes without waiting for it
  * (`../mail/background.ts`). `layerCloudflare` is built once, as the Worker
  * starts, and each call of its services finds the runtime it runs in
- * (`inRuntime`): a request's, a queue batch's, or a Durable Object's, where
- * the model's policies and projections run.
+ * (`inRuntime`): a request's, a queue batch's, an email's, or a Durable
+ * Object's, where the model's policies and projections run.
  */
 import { RuntimeContext } from 'alchemy';
 import * as Cloudflare from '@alchemy.run/cloudflare';
@@ -29,6 +30,7 @@ import * as DomainCloudflare from '@alchemy.run/cloudflare/Domain';
 import { Effect, Layer, Option, Schema } from 'effect';
 
 import { Background } from '../mail/background.ts';
+import { ContactInbox } from '../mail/contact.ts';
 import { layerSite } from '../mail/films.ts';
 import { logMail } from '../mail/log.ts';
 import { failureOf, FROM, Mailer } from '../mail/mailer.ts';
@@ -107,6 +109,7 @@ export const layerCloudflare = Layer.unwrap(
     const exec = yield* Cloudflare.WorkerExecutionContext;
     const tokenKey = yield* storeSecret('MAIL_TOKEN_KEY');
     const adminToken = yield* memoSuccess(inRuntime(yield* storeSecret('MAIL_ADMIN_TOKEN')));
+    const contactInbox = yield* memoSuccess(inRuntime(yield* storeSecret('MAIL_FORWARD_TO')));
 
     const mailer = Mailer.of({
       send: (letter) =>
@@ -153,6 +156,7 @@ export const layerCloudflare = Layer.unwrap(
       Layer.succeed(Throttle, throttle),
       Layer.succeed(Background, background),
       Layer.succeed(AdminToken, adminToken),
+      Layer.succeed(ContactInbox, contactInbox),
       layerWebCrypto,
       layerSite,
     ).pipe(Layer.provideMerge(layerTables), Layer.provideMerge(services));
@@ -165,5 +169,6 @@ export const MailBindings = Layer.mergeAll(
   Cloudflare.Email.SendBinding,
   Cloudflare.Queues.WriteQueueBinding,
   Cloudflare.Queues.EventSourceLive,
+  Cloudflare.EmailEventSourceLive,
   Cloudflare.Workers.RateLimitBinding,
 );
