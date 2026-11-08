@@ -10,7 +10,6 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | topicsdb  | initfresh  |                    |                                                                              | parked (owner: topics follow the films)                       |
 | keyfollow | worship    |                    | owner note: the playing recording follows a key change made in the hymn view | blocked: not reproduced, waits on the owner (Owner questions) |
 | selah     | reader     | .rifts/manna/selah |                                                                              |                                                               |
-| hsmirror  | hskokoro   |                    | split from hskokoro: the R2 stack and copy script (both voices)              |                                                               |
 | hsnatural | hsmirror   |                    | after the phone check                                                        |                                                               |
 
 Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `inexact` (the 7 MIDI files whose verses do not split: 126 225 262 292 403 453 580), `decks` (syllable splits into feat/hymn-decks, last by the owner's word), `selah` (planned: after reader, see Decisions; macOS stays SwiftUI until react-native-gpui ships a real package).
@@ -87,6 +86,8 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 - Heartseed dictation model download (hsdictate Decided 3): the first two engines in the chain (SpeechAnalyzer with SpeechTranscriber, then DictationTranscriber) need Apple's on-device speech model, often not yet installed; may Heartseed ask iOS to download it in the background (`AssetInventory`), the recital falling through to the on-device SFSpeechRecognizer meanwhile, against the first release's "no network calls"? Recognition and the reader's voice never leave the phone. Recommended: yes. (hsdictate, asked 2026-11-04) **Answer (owner, 2026-11-04):** "Yes, ask iOS".
 
 ## Follow-ups
+
+- hsmirror (`tmp/orchestrate/hymnapp/hsmirror/`, merged 3bea3a4bc): no committed test holds `copy.ts`'s `--dry-run` choice (only the live K9 does; a `command.test.ts` as the hymnal's); a shared `@manna/r2` for the hymnal's and Heartseed's R2 code (D8); the deploy and the copy wait on the owner's word (q15).
 
 - Batch voice-1 (`tmp/orchestrate/hymnapp/hskokoro/`, merged 5791df7e0 and 73ee3573f): `guard: check` the docs test judges a whole anchor under a git-ignored output folder (`apps/<app>/ios/...`) by whether the folder happens to exist (a tooling unit); `Natural.swift` loads `af_heart.bin` by name, so hsnatural (or hsmirror) passes the voice file as data for Her/Him; `test:budget @manna/heartseed` never ran at a quiet load in the batch (natural parts measured alone at 0.29 s and 0.49 s; many older parts over 1 s at loads 5-13); the phone check (ANE routing, latency, RTF, memory, the 31,102-verse soak, the owner's listening) is the orchestrator's before hsnatural; `CLAUDE.md` lists Heartseed parts incompletely.
 
