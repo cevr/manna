@@ -1076,7 +1076,8 @@ stack.
 
 `bun run models:copy -- --cache <dir> [--dry-run]` (`infra/models/copy.ts`,
 the job in `infra/models/job.ts`) fills a cache and copies it into the
-bucket. The cache is the one `natural:serve` uses, `tmp/natural-models/` at
+bucket. `modelsCopy` takes its two jobs and its R2 writes as parts, so
+`infra/models/copy.test.ts` runs the command's own handler over fakes. The cache is the one `natural:serve` uses, `tmp/natural-models/` at
 the repository root, so files fetched by one are kept by the other.
 
 - **The fill** (`fillWith` in `scripts/natural-serve.ts`, over
@@ -1576,8 +1577,10 @@ GETs (Class B) when the edge does not serve them.
     (seeded packs, -0, the extremes, the ignored keys and every refusal),
     `infra/models/r2.test.ts` (the R2 adapter over a recording client:
     literal slashes, the listing's cursor, retries and denials on the test
-    clock, the put timeout) and `infra/models/job.test.ts` (the copy and
-    the dry run over a fake Hugging Face, a fake bucket and a temp cache).
+    clock, the put timeout), `infra/models/job.test.ts` (the copy and
+    the dry run over a fake Hugging Face, a fake bucket and a temp cache)
+    and `infra/models/copy.test.ts` (which job and which layers
+    `--dry-run` selects, the cache passed through, and the refused flags).
 
   Run one with `bun run test:<part>` here, or all with `bun run test
   --filter=@manna/heartseed` at the repository root. A new test file at the
