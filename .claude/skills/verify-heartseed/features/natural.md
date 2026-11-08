@@ -71,8 +71,9 @@ The probe's lines, read with `sim snapshot <step>`: `installed <n>/38`,
 
 → `sim install --prebuild` is ok, and each of these holds:
 `grep -F "platform :ios, '18.0'" apps/heartseed/ios/Podfile`; every
-`IPHONEOS_DEPLOYMENT_TARGET` in
-`apps/heartseed/ios/Heartseed.xcodeproj/project.pbxproj` is `18.0`;
+deployment target is `18.0`, so
+`grep IPHONEOS_DEPLOYMENT_TARGET apps/heartseed/ios/Heartseed.xcodeproj/project.pbxproj | grep -vc "= 18.0;"`
+prints `0`;
 `grep -F OneSwiftPackages/natural apps/heartseed/ios/Podfile.lock`; and
 `$EVIDENCE/build.log` ends `** BUILD SUCCEEDED **`.
 
