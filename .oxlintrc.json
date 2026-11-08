@@ -240,7 +240,7 @@
   "ignorePatterns": [
     "**/dist/**",
     "**/node_modules/**",
-    "**/*.d.ts",
+    "packages/**/*.d.ts",
     "**/*.d.swift.ts",
     "**/*.d.kt.ts",
     "**/outputs/**",
@@ -250,7 +250,8 @@
     "apps/hymnal/dist/**",
     "apps/hymnal/react-native.config.cjs",
     "apps/heartseed/dist/**",
-    "apps/heartseed/react-native.config.cjs"
+    "apps/heartseed/react-native.config.cjs",
+    "apps/*/app/routes.d.ts"
   ],
   "overrides": [
     {
@@ -2420,6 +2421,23 @@
                 "message": "Use declared package dependencies and public exports across package boundaries."
               }
             ]
+          }
+        ]
+      }
+    },
+    {
+      // An app's ambient declaration (`declare module 'virtual:…'`) names
+      // its types by `import('./x').T`: a top-level import would make the
+      // file a module and end the ambient declaration, and a relative import
+      // inside the block is refused (TS2439).
+      "files": ["**/apps/**/*.d.ts"],
+      "rules": {
+        "typescript/consistent-type-imports": [
+          "error",
+          {
+            "prefer": "type-imports",
+            "fixStyle": "separate-type-imports",
+            "disallowTypeAnnotations": false
           }
         ]
       }

@@ -5210,3 +5210,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `apps/heartseed/src/appearance.ts` published each view through `Effect.runSyncWith(yield* Effect.context<never>())`, a nested runner inside the layer's own Effect and inside `choose`'s `Effect.sync`, where `yield* PubSub.publish` does the same work; `src/voice.ts` and `src/dictation.ts` held the same layer-level runner.
 - **Cause:** A sliding PubSub never suspends, so a sync run was the quickest way to publish from plain code, and no rule told a boundary from a helper.
 - **Guard:** lint:no-restricted-properties, proof `apps/heartseed/src/runner.slow.test.ts` `refuses every form of a sync runner in Heartseed product code, and nothing else, over 240 generated files`
+
+### app-declarations-unlinted
+
+- **Date:** 2026-11-08
+- **Kind:** review
+- **Said:** "That is false at 2.15.1: the declaration has the constructor."
+- **Source:** hymnapp/oneup/round-1-findings.md M1
+- **Wrong:** `apps/hymnal/src/offline/foundation.d.ts` kept a `//` line saying One 2.15.1's declaration omits `NSURL.initString`, which it has, so the file and its untrue comment stayed when the spec said the file goes.
+- **Cause:** `.oxlintrc.json` ignored every `*.d.ts`, so `effect/noComments` never read an app's declaration files and their line comments went unchecked.
+- **Guard:** lint:effect/noComments, proof `packages/scripts/src/guard/files.test.ts` `under the repo's own config, lint an app's declarations and still ignore a package's, the typegen forms, One's route types, node_modules and dist`

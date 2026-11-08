@@ -117,6 +117,40 @@ describe("the gate's files", () => {
     ),
   );
 
+  it.live(
+    "under the repo's own config, lint an app's declarations and still ignore a package's, the typegen forms, One's route types, node_modules and dist",
+    () =>
+      withFs(
+        Effect.gen(function* () {
+          const path = yield* Path.Path;
+          const ignored = yield* lintIgnored(path.resolve(import.meta.dir, '../../../..'));
+          const linted = [
+            'apps/hymnal/src/virtual.d.ts',
+            'apps/heartseed/src/virtual.d.ts',
+            'apps/hymnal/assets/meaning/meaning.d.ts',
+            'apps/egw-search/src/vite-env.d.ts',
+            'apps/firsttheblade/src/deep/er/types.d.ts',
+          ];
+          const left = [
+            'packages/core/src/types.d.ts',
+            'packages/film/src/deep/x.d.ts',
+            'apps/hymnal/src/offline/Foundation.d.swift.ts',
+            'apps/heartseed/modules/speech.d.kt.ts',
+            'apps/hymnal/app/routes.d.ts',
+            'packages/sim/src/a.d.swift.ts',
+            'apps/hymnal/node_modules/one/index.d.ts',
+            'node_modules/effect/dist/index.d.ts',
+            'apps/heartseed/dist/index.d.ts',
+            'packages/ui/dist/a.d.ts',
+          ];
+          expect({
+            linted: linted.filter((file) => ignored(file)),
+            left: left.filter((file) => !ignored(file)),
+          }).toEqual({ linted: [], left: [] });
+        }),
+      ),
+  );
+
   it.live('fail, tagged, when the lint config is not JSONC', () =>
     withFs(
       Effect.gen(function* () {
