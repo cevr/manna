@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noNodeBuiltinImport -- a React screen test: it drives the root in happy-dom through React's promise-based `act` over the device's disk, reads the vendored licence from disk to hold the screen to it, and reads a node's absent attributes as null. */
+/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noNodeBuiltinImport, eslint/no-await-in-loop -- a React screen test: it drives the root in happy-dom through React's promise-based `act` over the device's disk, one launch after another, reads the vendored licence from disk to hold the screen to it, and reads a node's absent attributes as null. */
 
 /**
  * About as a reader and a screen reader meet it, through the field bar's
@@ -12,7 +12,11 @@
  * heading `About`, the credits word for word, the licence equal to
  * `native/natural/kokoro/LICENSE` byte for byte, one `Your field` button
  * outside the scroll view and no `Voice`, each text at AA; the way back
- * shows the field, and a relaunch opens Today; nothing is written. While a
+ * shows the field, and a relaunch opens Today; nothing is written. Its foot,
+ * outside every scroll view, holds the radio group `Appearance`: System,
+ * Light and Dark, each at least 44 tall, the stored word checked (System
+ * for a near miss), each text at AA; a tap stores its word under the
+ * appearance's key alone, and nothing is written with no tap. While a
  * remove is pending, `About` is disabled and a tap of it in the same turn
  * takes the reader nowhere. A recital that starts while About shows brings
  * Today back. The bundle's module serves the licence as `vite/licence.ts`
@@ -29,6 +33,7 @@ import passage from 'virtual:heartseed-passage';
 import { readLicence } from '../../vite/licence';
 import { passage as plugin } from '../../vite/plugin';
 import { press } from '../app';
+import { APPEARANCE_KEY } from '../appearance';
 import { mountBar } from '../test/bar-rig';
 import { labelOf, text } from '../test/chooser-rig';
 import { AA, contrastOf } from '../test/contrast';
@@ -176,6 +181,72 @@ describe('About', () => {
       seen: seen.pending > 0 && seen.aboutDisabled === seen.pending,
       faults: rig.faults,
     }).toEqual({ headings: ['Your field'], about: [null], seen: true, faults: [] });
+    await rig.leave();
+  });
+
+  it('holds the reader’s appearance in a foot outside every scroll view: System, Light, Dark, each 44 tall, the stored one checked, at AA, written only at a tap', async () => {
+    const seen: unknown[] = [];
+    for (const stored of [[], [[APPEARANCE_KEY, 'light']], [[APPEARANCE_KEY, 'Dark']]] as const) {
+      launchWith(stored);
+      const start = new Map(device.disk);
+      const rig = await mountBar(0, false);
+      await toField(rig);
+      await rig.tap('About');
+      expect(await rig.until(() => headings(rig).join('|') === 'About')).toBe(true);
+      const groups = [...rig.host.querySelectorAll('[role="radiogroup"]')];
+      seen.push({
+        stored,
+        groups: groups.map((group) => ({
+          name: labelOf(group),
+          scrolled: scrolled(group),
+          radios: [...group.querySelectorAll('[role="radio"]')].map((node) => ({
+            words: text(node),
+            label: labelOf(node),
+            checked: node.getAttribute('aria-checked'),
+            tall: parseFloat(getComputedStyle(node).minHeight) >= 44,
+          })),
+        })),
+        faint: faint(rig.host),
+        written: JSON.stringify([...device.disk]) !== JSON.stringify([...start]),
+      });
+      await rig.leave();
+    }
+    const radio = (words: string, checked: boolean) => ({
+      words,
+      label: words,
+      checked: String(checked),
+      tall: true,
+    });
+    const group = (checked: string) => [
+      {
+        name: 'Appearance',
+        scrolled: false,
+        radios: ['System', 'Light', 'Dark'].map((words) => radio(words, words === checked)),
+      },
+    ];
+    expect(seen).toEqual([
+      { stored: [], groups: group('System'), faint: [], written: false },
+      { stored: [[APPEARANCE_KEY, 'light']], groups: group('Light'), faint: [], written: false },
+      { stored: [[APPEARANCE_KEY, 'Dark']], groups: group('System'), faint: [], written: false },
+    ]);
+  });
+
+  it('stores the word a tap of a radio names, and only that key', async () => {
+    launchWith();
+    const start = new Map(device.disk);
+    const rig = await mountBar(0, false);
+    await toField(rig);
+    await rig.tap('About');
+    expect(await rig.until(() => headings(rig).join('|') === 'About')).toBe(true);
+    await rig.tap('Dark');
+    expect(
+      await rig.until(() => named(rig, 'Dark')[0]?.getAttribute('aria-checked') === 'true'),
+    ).toBe(true);
+    const changed = [...device.disk].filter(([key, value]) => start.get(key) !== value);
+    expect({ changed, faults: rig.faults }).toEqual({
+      changed: [[APPEARANCE_KEY, 'dark']],
+      faults: [],
+    });
     await rig.leave();
   });
 
