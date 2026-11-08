@@ -79,14 +79,14 @@ export const layer: Layer.Layer<Appearance, never, KeyValueStore.KeyValueStore> 
     const state = MutableRef.make<Choice>(yield* readChoice(store));
     const views = yield* PubSub.sliding<Choice>({ capacity: WINDOW, replay: 1 });
     const writes = yield* Semaphore.make(1);
-    const runSync = Effect.runSyncWith(yield* Effect.context<never>());
 
     /** Shows `choice` at once: the sliding strategy drops a held subscriber's oldest view and never suspends. */
-    const show = (choice: Choice) => {
-      MutableRef.set(state, choice);
-      runSync(PubSub.publish(views, choice));
-    };
-    runSync(PubSub.publish(views, MutableRef.get(state)));
+    const show = (choice: Choice) =>
+      Effect.andThen(
+        Effect.sync(() => MutableRef.set(state, choice)),
+        PubSub.publish(views, choice),
+      );
+    yield* PubSub.publish(views, MutableRef.get(state));
 
     /** Writes the appearance shown now, one write at a time: the last write to start begins after every choice's show, so the store ends at the last choice. */
     const persist = writes.withPermit(
@@ -97,7 +97,7 @@ export const layer: Layer.Layer<Appearance, never, KeyValueStore.KeyValueStore> 
       view: Effect.sync(() => MutableRef.get(state)),
       changes: Stream.fromPubSub(views),
       choose: Effect.fn('Appearance.choose')(function* (choice: Choice) {
-        yield* Effect.sync(() => show(choice));
+        yield* show(choice);
         yield* persist;
       }),
     });
