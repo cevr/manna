@@ -3,25 +3,22 @@
  * with each file, decided from the file's cached bytes and R2's listing and
  * nothing else: no store is called here.
  *
- * The mirror carries the download's pinned files and the second voice's pack
- * (`AM_MICHAEL`), one list in path order, each under
- * `kokoro/<revision>/<path>`, so `MIRROR + path` is always its public URL.
+ * The mirror holds the download: the pinned files of `FILES`, both voices'
+ * packs among them, in path order, each under `kokoro/<revision>/<path>`,
+ * so `MIRROR + path` is always its public URL.
  *
  * A key is never replaced: R2 holding it with the file's size and MD5 is
  * kept, R2 lacking it is uploaded, and R2 holding other bytes is a conflict,
  * never put. That is what makes the `immutable` cache header true: a new
  * revision is a new folder.
  */
-import { Array as Arr, Data, Option, Order } from 'effect';
+import { Data, Option } from 'effect';
 
-import { AM_MICHAEL, FILES, REVISION } from '../../src/natural/manifest.ts';
+import { FILES, REVISION } from '../../src/natural/manifest.ts';
 import type { ModelFile } from '../../src/natural/module.ts';
 
-/** The 39 files the mirror holds: the download's 38 and `am_michael.bin`, in path order. */
-export const MIRROR_FILES: ReadonlyArray<ModelFile> = Arr.sort(
-  [...FILES, AM_MICHAEL],
-  Order.mapInput(Order.String, (file: ModelFile) => file.path),
-);
+/** The 39 files the mirror holds: the download itself, in path order. */
+export const MIRROR_FILES: ReadonlyArray<ModelFile> = FILES;
 
 /** Where the revision's files live in the bucket. */
 export const PREFIX = `kokoro/${REVISION}/`;

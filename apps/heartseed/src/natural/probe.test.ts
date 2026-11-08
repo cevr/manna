@@ -95,7 +95,7 @@ const withRead = (read: ReadTally): ProbeView => ({ ...probeBegun(10), read });
 describe('the probe lines', () => {
   it('shows an empty probe', () => {
     expect(linesOf(probeBegun(SOAK_VERSES))).toEqual([
-      'installed 0/38',
+      'installed 0/39',
       'bytes 0',
       'excluded false',
       'crashed false',
@@ -123,8 +123,8 @@ describe('the probe lines', () => {
     const view: ProbeView = {
       status: {
         revision: '2568276a60ff',
-        files: 38,
-        bytes: 82_810_273,
+        files: 39,
+        bytes: 83_332_513,
         excluded: true,
         crashed: true,
         loaded: true,
@@ -132,19 +132,19 @@ describe('the probe lines', () => {
         footprint: 1,
         peak: 300 * 1_048_576,
       },
-      install: Option.some({ kind: 'done', bytes: 82_810_273, total: 82_810_273, reason: '' }),
+      install: Option.some({ kind: 'done', bytes: 83_332_513, total: 83_332_513, reason: '' }),
       load: Option.some({ _tag: 'Loaded', millis: 1234.4 }),
       read,
       soak: { asked: 200, done: 200, unplanned: 3, failed: 2, nonfinite: 1 },
     };
     const lines = linesOf(view);
     expect(lines).toEqual([
-      'installed 38/38',
-      'bytes 82810273',
+      'installed 39/39',
+      'bytes 83332513',
       'excluded true',
       'crashed true',
       'loaded true',
-      'install done 82810273/82810273',
+      'install done 83332513/83332513',
       'load 1234',
       'read finished',
       'lit 3/3',
@@ -162,10 +162,10 @@ describe('the probe lines', () => {
   it('shows a failed install and a refused load with their reasons', () => {
     const lines = linesOf({
       ...probeBegun(1),
-      install: Option.some({ kind: 'failed', bytes: 0, total: 82_810_273, reason: 'check' }),
+      install: Option.some({ kind: 'failed', bytes: 0, total: 83_332_513, reason: 'check' }),
       load: Option.some({ _tag: 'Refused', reason: 'missing' }),
     });
-    expect(lineOf(lines, 'install')).toBe('install failed 0/82810273 check');
+    expect(lineOf(lines, 'install')).toBe('install failed 0/83332513 check');
     expect(lineOf(lines, 'load')).toBe('load failed missing');
   });
 });

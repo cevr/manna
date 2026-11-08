@@ -1,9 +1,10 @@
 /* oxlint-disable effect/noTernary, effect/noGlobals, effect/noNodeBuiltinImport -- the generator and the hand-written base reader write their choices as plain branches, a failing ask is named by its JSON, and the pinned list is hashed plainly, as data.test.ts hashes its files. */
 
 /**
- * The pinned download: 38 files of the seven Kokoro stages, the voice and
- * the vocab, each with a size and a SHA-256, summing to the total; the
- * revision's short name and the mirror's folder. Then the base a download
+ * The pinned download: 39 files of the seven Kokoro stages, the two voices
+ * and the vocab, each with a size and a SHA-256, summing to the total; the
+ * voices and their packs; the revision's short name and the mirror's
+ * folder. Then the base a download
  * reads from, as a property over seeded asks against a reader of the rule
  * written by hand here: a release build always reads the mirror, and a
  * development build reads a plain http(s) folder it was asked for.
@@ -21,10 +22,11 @@ import {
   REVISION,
   SOURCE_REVISION,
   TOTAL_BYTES,
+  VOICES,
 } from './manifest';
 
-/** The SHA-256 of the pinned manifest's 38 `path:bytes:sha256` lines, joined by newlines, read from the manifest itself. */
-const MANIFEST_DIGEST = '93ac5abb823438b2e1d451cdff47aa2a3776cb7a36c8a38a2a9ab15e4374f293';
+/** The SHA-256 of the 39 `path:bytes:sha256` lines, joined by newlines: hsnatural's kokoro-manifest.json's 38 and the am_michael.bin pin, in path order. */
+const MANIFEST_DIGEST = '0dd22032e5adc1bf49e1f048cedd4ea19e9349df293a699ecb57f94307348e66';
 
 const STAGES = [
   'KokoroAlbert',
@@ -37,19 +39,19 @@ const STAGES = [
 ];
 
 describe('the pinned files', () => {
-  it('lists 38 distinct files, each with a positive size and a SHA-256, summing to the total', () => {
-    expect(FILES.length).toBe(38);
-    expect(new Set(FILES.map((file) => file.path)).size).toBe(38);
+  it('lists 39 distinct files, each with a positive size and a SHA-256, summing to the total', () => {
+    expect(FILES.length).toBe(39);
+    expect(new Set(FILES.map((file) => file.path)).size).toBe(39);
     for (const file of FILES) {
       expect(Number.isSafeInteger(file.bytes) && file.bytes > 0, file.path).toBe(true);
       expect(file.sha256, file.path).toMatch(/^[0-9a-f]{64}$/);
       expect(file.path, file.path).toMatch(/^(?!\/)(?!.*\.\.)[A-Za-z0-9_./]+$/);
     }
     expect(FILES.reduce((sum, file) => sum + file.bytes, 0)).toBe(TOTAL_BYTES);
-    expect(TOTAL_BYTES).toBe(82_810_273);
+    expect(TOTAL_BYTES).toBe(83_332_513);
   });
 
-  it('holds each of the seven stages compiled, the af_heart voice and the vocab, in path order', () => {
+  it('holds each of the seven stages compiled, both voices and the vocab, in path order', () => {
     const paths = FILES.map((file) => file.path);
     for (const stage of STAGES)
       for (const part of ['coremldata.bin', 'model.mil', 'weights/weight.bin'])
@@ -58,12 +60,13 @@ describe('the pinned files', () => {
       'LICENSE',
       'README.md',
       'af_heart.bin',
+      'am_michael.bin',
       'vocab.json',
     ]);
     expect(paths).toEqual([...paths].sort());
   });
 
-  it('is exactly the list in hsnatural’s kokoro-manifest.json: its `path:bytes:sha256` lines hash to that list’s digest', () => {
+  it('is exactly hsnatural’s kokoro-manifest.json and the am_michael.bin pin: its `path:bytes:sha256` lines hash to that list’s digest', () => {
     const lines = FILES.map((file) => `${file.path}:${file.bytes}:${file.sha256}`).join('\n');
     expect(createHash('sha256').update(lines).digest('hex')).toBe(MANIFEST_DIGEST);
   });
@@ -74,13 +77,24 @@ describe('the pinned files', () => {
     expect(MIRROR).toBe(`https://models.heartseed.app/kokoro/${REVISION}/`);
   });
 
-  it('pins the second voice’s pack, am_michael.bin, beside the download and not in it', () => {
+  it('pins the second voice’s pack, am_michael.bin, in the download between af_heart.bin and the vocab', () => {
     expect(AM_MICHAEL).toEqual({
       path: 'am_michael.bin',
       bytes: 522_240,
       sha256: '1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1',
     });
-    expect(FILES.some((file) => file.path === AM_MICHAEL.path)).toBe(false);
+    expect(FILES[37]).toEqual(AM_MICHAEL);
+    expect(FILES.filter((file) => file.path === AM_MICHAEL.path)).toHaveLength(1);
+  });
+
+  it('names the two voices, Her and Him, each with its pack in the download', () => {
+    expect([...VOICES]).toEqual(['af_heart', 'am_michael']);
+    for (const voice of VOICES) {
+      expect(
+        FILES.filter((file) => file.path === `${voice}.bin`),
+        voice,
+      ).toHaveLength(1);
+    }
   });
 });
 

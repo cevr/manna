@@ -1,7 +1,8 @@
 /**
  * The natural voice's download, pinned: Kokoro-82M's seven Core ML stages
  * and the `af_heart` voice from FluidInference `kokoro-82m-coreml`, folder
- * `ANE/`, at one revision. The app fetches exactly these files and checks
+ * `ANE/`, at one revision, and the `am_michael` voice converted from the
+ * same revision's rows. The app fetches exactly these files and checks
  * each one's SHA-256, so a wrong or tampered file is refused whoever
  * serves it.
  */
@@ -19,7 +20,24 @@ export const REVISION = '2568276a60ff';
 /** Heartseed's own mirror of the pinned files. */
 export const MIRROR = `https://models.heartseed.app/kokoro/${REVISION}/`;
 
-/** The 38 files, in the order they are fetched, each with its size and SHA-256. */
+/**
+ * The second voice's pack, `am_michael`: converted from the revision's
+ * `voices/am_michael.json` (its rows as little-endian fp32), since the
+ * revision's `ANE/` folder ships only `af_heart.bin`.
+ */
+export const AM_MICHAEL: ModelFile = {
+  path: 'am_michael.bin',
+  bytes: 522_240,
+  sha256: '1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1',
+};
+
+/** The voices the download holds; a voice's pack is the file `<voice>.bin` of `FILES`. */
+export const VOICES = ['af_heart', 'am_michael'] as const;
+
+/** A voice the natural module reads with. */
+export type NaturalVoice = (typeof VOICES)[number];
+
+/** The 39 files, in path order, the order they are fetched, each with its size and SHA-256. */
 export const FILES: ReadonlyArray<ModelFile> = [
   {
     path: 'KokoroAlbert.mlmodelc/analytics/coremldata.bin',
@@ -206,6 +224,7 @@ export const FILES: ReadonlyArray<ModelFile> = [
     bytes: 522_240,
     sha256: 'd583ccff3cdca2f7fae535cb998ac07e9fcb90f09737b9a41fa2734ec44a8f0b',
   },
+  AM_MICHAEL,
   {
     path: 'vocab.json',
     bytes: 1_416,
@@ -213,19 +232,8 @@ export const FILES: ReadonlyArray<ModelFile> = [
   },
 ];
 
-/**
- * The second voice's pack, `am_michael`: on the mirror beside `FILES`,
- * converted from the revision's `voices/am_michael.json` (its rows as
- * little-endian fp32), and not fetched by the download.
- */
-export const AM_MICHAEL: ModelFile = {
-  path: 'am_michael.bin',
-  bytes: 522_240,
-  sha256: '1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1',
-};
-
 /** The sum of the files' sizes: what a full download fetches. */
-export const TOTAL_BYTES = 82_810_273;
+export const TOTAL_BYTES = 83_332_513;
 
 /** An http(s) origin with an optional port, then a path of plain segments ending in `/`, and nothing else. */
 const LOCAL_BASE = /^https?:\/\/[A-Za-z0-9.-]+(?::[0-9]{1,5})?\/(?:[A-Za-z0-9._~-]+\/)*$/;

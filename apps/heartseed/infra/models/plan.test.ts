@@ -19,13 +19,15 @@ import {
 } from './plan.ts';
 
 describe('the mirror’s list', () => {
-  it('is the download’s 38 files and am_michael.bin, 39 in path order, summing to 83,332,513 bytes', () => {
-    expect(FILES.length).toBe(38);
-    expect(TOTAL_BYTES).toBe(82_810_273);
+  it('is the download’s 39 files, both voices among them, in path order, each once, summing to 83,332,513 bytes', () => {
+    expect(TOTAL_BYTES).toBe(83_332_513);
+    expect([...MIRROR_FILES]).toEqual([...FILES]);
     expect(MIRROR_FILES.length).toBe(39);
     expect(MIRROR_FILES.reduce((sum, file) => sum + file.bytes, 0)).toBe(83_332_513);
-    expect(MIRROR_FILES.filter((file) => file !== AM_MICHAEL)).toEqual([...FILES]);
     const paths = MIRROR_FILES.map((file) => file.path);
+    expect(new Set(paths).size).toBe(39);
+    expect(paths.filter((path) => path === AM_MICHAEL.path)).toHaveLength(1);
+    expect(paths).toEqual([...paths].sort());
     expect(paths.slice(-4)).toEqual(['README.md', 'af_heart.bin', 'am_michael.bin', 'vocab.json']);
     expect(paths.slice(0, 2)).toEqual([
       'KokoroAlbert.mlmodelc/analytics/coremldata.bin',
