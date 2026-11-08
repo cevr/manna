@@ -49,27 +49,25 @@ const isChecked = Effect.fn('NaturalServe.isChecked')(function* (at: string, fil
 });
 
 /**
- * Fills `cache` with `files`, in order: a file already checked is kept;
- * any other is fetched from `sourceFor(path)`, checked, written beside its
- * place and moved in. A file that fails its check is never kept. Answers
- * the paths it fetched.
+ * Fills `cache` with `files`, in order: a file already checked is kept and
+ * never fetched; any other is fetched by `fetchOf`, checked, written beside
+ * its place as `<path>.partial` and moved in. The first failure stops the
+ * fill, and a file that fails its check is never kept. Answers the paths it
+ * fetched. The copy to the mirror (`infra/models/job.ts`) fills the same way.
  */
-export const fill = Effect.fn('NaturalServe.fill')(function* (
+export const fillWith = Effect.fn('NaturalServe.fillWith')(function* <E, R>(
   cache: string,
   files: ReadonlyArray<ModelFile>,
-  sourceFor: (path: string) => string,
+  fetchOf: (file: ModelFile) => Effect.Effect<Uint8Array, E, R>,
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const digest = yield* Digest.Digest;
-  const client = HttpClient.filterStatusOk(yield* HttpClient.HttpClient);
   const fetched: Array<string> = [];
   for (const file of files) {
     const at = path.join(cache, file.path);
     if (yield* isChecked(at, file)) continue;
-    yield* Console.log(`[serve] fetch ${file.path}`);
-    const response = yield* client.get(sourceFor(file.path));
-    const bytes = new Uint8Array(yield* response.arrayBuffer);
+    const bytes = yield* fetchOf(file);
     const sum = yield* digest.digestHex(Digest.sha256, bytes);
     if (bytes.byteLength !== file.bytes || sum !== file.sha256) {
       return yield* FileMismatch.make({ path: file.path });
@@ -80,6 +78,22 @@ export const fill = Effect.fn('NaturalServe.fill')(function* (
     fetched.push(file.path);
   }
   return fetched;
+});
+
+/** `fillWith` over a plain GET of `sourceFor(path)`. */
+export const fill = Effect.fn('NaturalServe.fill')(function* (
+  cache: string,
+  files: ReadonlyArray<ModelFile>,
+  sourceFor: (path: string) => string,
+) {
+  const client = HttpClient.filterStatusOk(yield* HttpClient.HttpClient);
+  return yield* fillWith(cache, files, (file) =>
+    Effect.gen(function* () {
+      yield* Console.log(`[serve] fetch ${file.path}`);
+      const response = yield* client.get(sourceFor(file.path));
+      return new Uint8Array(yield* response.arrayBuffer);
+    }),
+  );
 });
 
 /** The bytes with the middle one flipped. */

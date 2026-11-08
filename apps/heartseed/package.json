@@ -10,6 +10,7 @@
     "natural:serve": "bun scripts/natural-serve.ts",
     "plan": "alchemy plan alchemy.run.ts --stage prod",
     "deploy": "turbo run typecheck test --filter=@manna/heartseed && alchemy deploy alchemy.run.ts --stage prod",
+    "models:copy": "bun infra/models/copy.ts",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/app.tsbuildinfo && tsc --noEmit -p tsconfig.test.json --incremental --tsBuildInfoFile node_modules/.cache/tsc/test.tsbuildinfo && tsc --noEmit -p tsconfig.infra.json --incremental --tsBuildInfoFile node_modules/.cache/tsc/infra.tsbuildinfo",
     "test:matcher": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/matcher.property.test.ts",
     "test:voice": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/voice.property.test.ts ./src/voice",
