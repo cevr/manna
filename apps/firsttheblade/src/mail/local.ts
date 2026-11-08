@@ -43,7 +43,7 @@ const freshKey = Effect.gen(function* () {
   return Redacted.make(Hex.encode(yield* crypto.randomBytes(32)));
 }).pipe(Effect.orDie);
 
-const freshTokens = Layer.unwrap(Effect.map(freshKey, tokensLayer));
+const freshTokens = Layer.unwrap(Effect.map(freshKey, (key) => tokensLayer(Effect.succeed(key))));
 
 /** Runs what waits in the tests: a sign-up's work, then everything the model has to deliver or has come due. */
 export class Settle extends Context.Service<Settle, { readonly settle: Effect.Effect<void> }>()(
@@ -112,7 +112,7 @@ export const layerTest = <E, R>(films: Layer.Layer<Films, E, R>) =>
     layerModelTest,
     queueMemory,
     throttleMemory,
-    Layer.succeed(AdminToken, Redacted.make(TEST_ADMIN_TOKEN)),
+    Layer.succeed(AdminToken, Effect.succeed(Redacted.make(TEST_ADMIN_TOKEN))),
   ).pipe(
     Layer.provideMerge(Layer.mergeAll(layerTables, freshTokens, mailerMemory, layerHeld)),
     Layer.provideMerge(layerSqlite),
@@ -134,7 +134,10 @@ export const layerPreview = (outbox: string) => {
     Effect.gen(function* () {
       const fallback = yield* freshKey;
       return yield* Config.Redacted('MAIL_ADMIN_TOKEN').pipe(Config.withDefault(fallback));
-    }).pipe(Effect.orDie),
+    }).pipe(
+      Effect.orDie,
+      Effect.map((token) => Effect.succeed(token)),
+    ),
   );
   return Layer.mergeAll(layerInlineQueue, throttleMemory, layerInline, admin).pipe(
     Layer.provideMerge(layerModelPreview),

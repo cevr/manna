@@ -11,6 +11,8 @@ import {
   Layer,
   Logger,
   Option,
+  Redacted,
+  Ref,
   Scope,
 } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -38,6 +40,7 @@ import { layerModel, layerTables } from './model.ts';
 import { MAIL_PAGES, SIGNUP_FIELDS } from './paths.ts';
 import { Queued } from './queue.ts';
 import { RosterTable } from './roster.ts';
+import { AdminToken } from './routes.ts';
 import { layerSqlite } from './sql-sqlite.ts';
 import { SIGNUPS } from './throttle.ts';
 import { Tokens } from './tokens.ts';
@@ -496,6 +499,43 @@ describe('sending a film', () => {
       expect((yield* admin(`{"film":"${FILM}"}`, 'wrong')).status).toBe(401);
       const bare = yield* call('/mail/send', { method: 'POST', body: '{}' });
       expect(bare.status).toBe(401);
+    }));
+
+  test('reads the admin token for a send alone, not for a page, a sign-up, a confirm or a leave', () =>
+    Effect.gen(function* () {
+      const reads = yield* Ref.make(0);
+      const counted = Ref.update(reads, (n) => n + 1).pipe(
+        Effect.as(Redacted.make(TEST_ADMIN_TOKEN)),
+      );
+      const asAdmin = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+        Effect.provideService(effect, AdminToken, counted);
+      yield* asAdmin(call(MAIL_PAGES.check));
+      yield* asAdmin(signUp({ email: 'dee@example.com' }));
+      const letter = (yield* letters).at(-1)?.text ?? '';
+      expect(header(yield* asAdmin(pressConfirm(confirmLinkIn(letter))), 'location')).toBe(
+        MAIL_PAGES.confirmed,
+      );
+      const tokens = yield* Tokens;
+      const subscriber = yield* tokens.idOf(Address.make('dee@example.com'));
+      const leave = yield* tokens.sign({ _tag: 'Unsubscribe', subscriber });
+      const left = yield* asAdmin(
+        call(`/unsubscribe?token=${encodeURIComponent(leave)}`, { method: 'POST' }),
+      );
+      expect(left.status).toBe(200);
+      expect(yield* Ref.get(reads)).toBe(0);
+      expect((yield* asAdmin(admin(`{"film":"${FILM}","dryRun":true}`))).status).toBe(200);
+      expect(yield* Ref.get(reads)).toBe(1);
+    }));
+
+  test('answers a send 500 and queues nothing when the admin token cannot be read', () =>
+    Effect.gen(function* () {
+      yield* joined('eve@example.com');
+      const queued = yield* Queued;
+      const before = (yield* queued.deliveries).length;
+      const unread = Effect.die(new Error('the store secret MAIL_ADMIN_TOKEN could not be read'));
+      const answer = yield* Effect.provideService(admin(`{"film":"${FILM}"}`), AdminToken, unread);
+      expect(answer.status).toBe(500);
+      expect(yield* queued.deliveries).toHaveLength(before);
     }));
 
   test('refuses a body that does not read, and a film the site does not list', () =>

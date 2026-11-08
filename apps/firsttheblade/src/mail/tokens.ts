@@ -1,7 +1,7 @@
 /**
  * The list's keyed hashes, under a key only the Worker holds
- * (`MAIL_TOKEN_KEY`, a Worker secret), each an HMAC-SHA-256 (WebCrypto, in
- * Bun and on Workers alike):
+ * (`MAIL_TOKEN_KEY`, a secret in the account's Secrets Store), each an
+ * HMAC-SHA-256 (WebCrypto, in Bun and on Workers alike):
  *
  * - A subscriber's id is the hash of its address (`idOf`): one address is
  *   always one subscriber, and the model's event log, which keeps it for
@@ -21,6 +21,7 @@ import { Context, Effect, Layer, Option, Redacted, Result } from 'effect';
 import { Base64Url, Hex } from 'effect/encoding';
 
 import { SubscriberId } from '../list/Subscriber.id.ts';
+import { memoSuccess } from '../worker/store-secret.ts';
 import type { Address } from './address.ts';
 
 export type Token =
@@ -39,12 +40,24 @@ const ID_CONTEXT = 'firsttheblade-subscriber-v1';
 /** An id's length in bytes: 128 bits of the hash, 22 characters of base64url. */
 const ID_BYTES = 16;
 
+/** The text the key's fingerprint is the hash of, which no token or id is. */
+const CHECK_CONTEXT = 'firsttheblade-key-check-v1';
+
+/** A fingerprint's length in bytes: 64 bits of the hash, 16 hex digits. */
+const CHECK_BYTES = 8;
+
 export interface TokensService {
   /** The subscriber an address is. */
   readonly idOf: (address: Address) => Effect.Effect<SubscriberId>;
   readonly sign: (token: Token) => Effect.Effect<string>;
   /** The token a text carries, when its signature is good; none for anything else. */
   readonly read: (text: string) => Effect.Effect<Option.Option<Token>>;
+  /**
+   * The key's fingerprint, 16 lowercase hex digits: two copies of one key
+   * give the same, and it tells nothing usable about the key
+   * (`bun run mail:key-check`).
+   */
+  readonly fingerprint: Effect.Effect<string>;
 }
 
 export class Tokens extends Context.Service<Tokens, TokensService>()('firsttheblade/Tokens') {}
@@ -76,7 +89,7 @@ const tokenOf = (payload: string): Option.Option<Token> => {
 
 const bytes = (text: string, context = CONTEXT) => new TextEncoder().encode(`${context}:${text}`);
 
-/** The key, from its hex text; a Worker given a short or malformed one cannot start. */
+/** The key, from its hex text; a short or malformed one is a defect of the use that reads it. */
 const importKey = (key: Redacted.Redacted<string>) =>
   Effect.gen(function* () {
     const raw = Hex.decode(Redacted.value(key).trim());
@@ -94,22 +107,27 @@ const importKey = (key: Redacted.Redacted<string>) =>
     );
   });
 
-export const layer = (key: Redacted.Redacted<string>) =>
+/**
+ * The tokens under the key `key` reads. Building reads nothing: the first
+ * use reads the key and imports it, and the imported key is kept, so the key
+ * is read once (`memoSuccess`); a read that fails is not kept.
+ */
+export const layer = (key: Effect.Effect<Redacted.Redacted<string>>) =>
   Layer.effect(
     Tokens,
     Effect.gen(function* () {
-      const cryptoKey = yield* importKey(key);
-      const idOf = Effect.fn('Tokens.idOf')(function* (address: Address) {
-        const hash = yield* Effect.promise(() =>
-          crypto.subtle.sign('HMAC', cryptoKey, bytes(address, ID_CONTEXT)),
+      const cryptoKey = yield* memoSuccess(Effect.flatMap(key, importKey));
+      const mac = (data: Uint8Array<ArrayBuffer>) =>
+        Effect.flatMap(cryptoKey, (held) =>
+          Effect.promise(() => crypto.subtle.sign('HMAC', held, data)),
         );
+      const idOf = Effect.fn('Tokens.idOf')(function* (address: Address) {
+        const hash = yield* mac(bytes(address, ID_CONTEXT));
         return SubscriberId.make(Base64Url.encode(new Uint8Array(hash).slice(0, ID_BYTES)));
       });
       const sign = Effect.fn('Tokens.sign')(function* (token: Token) {
         const payload = payloadOf(token);
-        const signature = yield* Effect.promise(() =>
-          crypto.subtle.sign('HMAC', cryptoKey, bytes(payload)),
-        );
+        const signature = yield* mac(bytes(payload));
         return `${payload}.${Base64Url.encode(new Uint8Array(signature))}`;
       });
       const read = Effect.fn('Tokens.read')(function* (text: string) {
@@ -121,12 +139,16 @@ export const layer = (key: Redacted.Redacted<string>) =>
         if (cut < 0 || Option.isNone(token) || Result.isFailure(signature)) return Option.none();
         const signed = new Uint8Array(signature.success);
         if (Base64Url.encode(signed) !== written) return Option.none();
+        const held = yield* cryptoKey;
         const good = yield* Effect.promise(() =>
-          crypto.subtle.verify('HMAC', cryptoKey, signed, bytes(payload)),
+          crypto.subtle.verify('HMAC', held, signed, bytes(payload)),
         );
         if (!good) return Option.none();
         return token;
       });
-      return Tokens.of({ idOf, sign, read });
+      const fingerprint = Effect.map(mac(new TextEncoder().encode(CHECK_CONTEXT)), (hash) =>
+        Hex.encode(new Uint8Array(hash).slice(0, CHECK_BYTES)),
+      );
+      return Tokens.of({ idOf, sign, read, fingerprint });
     }),
   );
