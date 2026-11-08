@@ -11,11 +11,14 @@ picks another) under `A day's tending`, and the button `Voice` under
 (`Her` until the reader taps it; a reader whose old switch was off opens
 on `Off`). The button shows `Voice: Off`, `Voice: Her` or `Voice: Him`;
 its label stays `Voice` and its accessibility value is the word (a raw
-snapshot's `value`). Until the natural voice routes them, Her and Him both
-read with the system voice. Both are kept in the device's store across
-launches (their keys: `apps/heartseed/README.md`, Session). Neither shows
-in the first minute, and Today's header holds neither: no frame of Today
-has a `Minutes` radio or `Voice`.
+snapshot's `value`). Until the natural voice is ready, Her and Him both
+read with the system voice; while `Voice` is not Off, the line under the
+pill (`id=natural-status`) says the natural voice's state, with
+`Try again` after a failure (`natural.md`). Both choices are kept in the
+device's store across launches (their keys: `apps/heartseed/README.md`,
+Session). Neither shows in the first minute, and Today's header holds
+neither: no frame of Today has a `Minutes` radio, `Voice` or the natural
+voice's line.
 
 At the top of Today's scroll view, above the reference, the counts line
 (`id=session`) says what the session holds: `<n> to tend`, `1 new`,
@@ -191,7 +194,9 @@ values, never a recall); delete the store copies.
   relaunch. hswake's new-piece Listen is where it is heard.
 - VoiceOver's spoken words are not on the simulator; the raw snapshot's
   `value` is what it reads. Her and Him sound the same until the natural
-  voice routes them. A rollback build reading the old key is the tests'
+  voice is ready; the simulator is silent either way, and the natural
+  voice's packs show in its log (`natural.md`, `today-read` and
+  `today-him`). A rollback build reading the old key is the tests'
   (`apps/heartseed/src/voice/choice.test.ts`,
   `apps/heartseed/src/session/pill.test.tsx`): the old key is never
   written.

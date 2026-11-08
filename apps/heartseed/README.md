@@ -27,9 +27,12 @@ simulator, ports 8280-8289, iOS alone).
 ## Voice
 
 The voice reads a verse aloud on the device and lights each word as it is
-spoken; the reader chooses Off, Her or Him. Her and Him both read with the
-system's best voice until the natural voice routes them. Two screens call it, through the app's
-runtime (`src/app.ts`), and Say it reads no word aloud:
+spoken; the reader chooses Off, Her or Him. Once the natural voice is
+ready, Her reads in its `af_heart` and Him in its `am_michael`; until then,
+while its crash fuse is blown, and for a reading whose natural start fails,
+both read with the system's best voice (Natural voice, below). Two screens
+call it, through the app's runtime (`src/app.ts`), and Say it reads no word
+aloud:
 
 - the first minute's hear phase (`Voice.read` at `Listen`, `Voice.stop` at
   a `Next` during a reading: the atoms `voiceView`, `listen` and `hush`);
@@ -945,9 +948,13 @@ changing at the call, so two quick taps cycle twice); it shows
 accessibility value is the word, so VoiceOver reads "Voice, Her, button".
 Each pill is 44 pt tall, and the chosen minutes and a
 `Voice` not Off take the grade pills' style.
+Under `Voice` in the sheet, the natural voice's line
+(`testID="natural-status"`) says its download's state while `Voice` is not
+Off, with a `Try again` button beside it after a failure (Natural voice,
+below).
 They show once their reads complete. Today's fixed header holds `Today`
 and `Your field` alone: no frame of Today holds a `Minutes` group, a
-`<n> min` radio or `Voice` (idle, held, while Say it listens, done, or on
+`<n> min` radio, `Voice` or the natural voice's line (idle, held, while Say it listens, done, or on
 an unread garden, which has no home and so no Settings; its stored
 choices still rule its Listen). At the top of Today's scroll view, above the
 reference, the counts line (`testID="session"`) says what the plan holds.
@@ -1312,10 +1319,59 @@ session (verify-heartseed, `features/home.md`).
 The natural voice reads a piece with Kokoro-82M instead of the system
 voice, and lights each word as it is read. It holds its pronunciation
 list, the rule from a piece's text to what the model is given, the native
-module that downloads, renders and plays, and a `VoiceSource` over it; no
-screen a reader sees calls it yet. The reader's choice of Off, Her or Him
-is the `Voice` cycle hsspeaker built (`cycleVoice`, Voice and Session
-above); hsnatural routes Her and Him to this voice.
+module that downloads, renders and plays, a `VoiceSource` over it, and the
+router that sends each reading to it or to the system voice. The reader's
+choice of Off, Her or Him is the `Voice` cycle (`cycleVoice`, Voice and
+Session above); Her reads in `af_heart` and Him in `am_michael`
+(`naturalOf`, `src/voice.ts`).
+
+- **The router.** `src/natural/route.ts`, `naturalVoices`, builds the
+  `Voice` service the app runs (`appLayer`, `src/app.ts`) over a routed
+  `VoiceSource`: a speak goes to the natural voice while it reads (the
+  download `Ready` and the fuse clear), else to the system voice; a natural
+  speak that fails before its first audio logs `natural.fallback` and the
+  system voice reads the same utterance. Only the active voice's events
+  reach the reading; a stop goes to both voices and returns after both, so
+  Say it's recognizer starts after the natural engine halts; a pause or a
+  resume goes to the active voice alone. A tap of `Voice` runs `tapVoice`:
+  the natural voice takes the choice, then the voice does. Every speak
+  names both voices (`Speaking`: the system voice's id and the choice's
+  natural pack).
+- **The download's states.** `src/natural/state.ts` is the rule, a pure
+  reducer; `src/natural/service.ts`, the `Natural` service, runs it over
+  the module and the store, the one owner of the module's install and load
+  in the app. The download starts by itself at most once a launch: at the
+  launch when the stored choice is not Off, or at the first tap of `Voice`
+  that lands on Her or Him. With all 39 files present it loads the
+  choice's pack, else it installs; a load that finds a file missing or
+  failing its check installs again once, then fails `check`. After that
+  only `Try again` starts it: a failed load loads again, any other failure
+  installs again. Off cancels and removes nothing, and the app never
+  removes the files ("No removal in the app").
+- **The line.** While `Voice` is not Off, Today's line under the choices
+  says the first that holds:
+  `The natural voice stopped unexpectedly, so the system voice reads for now.`;
+  `Natural voice could not download.`,
+  `Natural voice could not be checked.`,
+  `Not enough space for the natural voice (83 MB).` or `Natural voice could not start.`, each with a
+  `Try again` button (a sibling of the line, 44 pt tall);
+  `Natural voice: waiting for a connection`;
+  `Natural voice: downloading, <p>%` (p rounded down, 0 to 100);
+  `Natural voice: getting ready`. A ready voice, a
+  download not begun and a platform with no natural voice show no line.
+- **The crash fuse.** The first launch after a crash mid-reading (the
+  module's marker) stores `heartseed/natural/fuse` = `blown` and shows the
+  crash line in that launch alone; while the fuse is blown, in every
+  launch, the system voice reads. Any tap of `Voice` clears the line and
+  stores `clear`, and the natural voice reads from the next reading. The
+  service writes no other key.
+- **The base.** A release build installs from `MIRROR`
+  (`https://models.heartseed.app/kokoro/2568276a60ff/`) and never reads
+  `heartseed/natural/base`; until the mirror is deployed its download waits
+  or fails `network`, and the system voice reads. A development build
+  installs from the base the probe stored under `heartseed/natural/base`,
+  through `baseFor`, else `MIRROR`. Each install logs `natural.install`
+  with its `base`.
 
 - `data/kjv-phonemes.json` maps every distinct word key of the KJV (13,756)
   to its phonemes in Kokoro's symbols: Misaki 0.9.4's English G2P for the
@@ -1431,8 +1487,10 @@ above); hsnatural routes Her and Him to this voice.
   speak; a later chunk's stops the module and sends `interrupt`. A speak
   let go (stopped, replaced or ended) returns at once.
 - **The probe.** `app/probe/natural.tsx` (`heartseed://probe/natural?base=…&voice=…&soak=…`)
-  is a development probe that renders and starts nothing in a release
-  build. It reads in the link's `voice`, one of `VOICES` (else
+  is a development probe that renders, starts and writes nothing in a
+  release build. When its link names `base`, it first writes that base
+  under `heartseed/natural/base` in the app's store, once per open, never
+  removed, for Today's download. It reads in the link's `voice`, one of `VOICES` (else
   `af_heart`), and shows it as `voice <name>`. `Install`, `Cancel`, `Load`, `Read` (Today's passage through the
   voice over the natural source), `Stop`, `Remove` and `Soak` (each verse
   rendered in canon order, no play) show counts only, never a word
@@ -2506,8 +2564,25 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     and `src/natural/probe.test.ts`, the probe's lines, a read's tally over
     seeded views (order ok only for each word lit once, in order, to a
     finish), the soak's count and tally, and one soaked verse over a
-    stand-in module. It leaves out `src/natural/voice.test.ts`, which is
-    its own part.
+    stand-in module; and `src/natural/state.test.ts`, the download's
+    reducer: the line over its whole domain (every state, generated byte
+    counts and totals, the fuse, the crash line and the choice) and every
+    input from every state. It leaves out `src/natural/voice.test.ts`,
+    `src/natural/route.test.ts` and `src/natural/status.test.tsx`, each its
+    own part.
+  - `test:route`: `src/natural/route.test.ts`, the router, the download and
+    the fuse against a reference written in the test, over 200 seeded
+    histories of 30 steps (launches with and without a crash, install
+    events, load answers, taps of `Voice`, readings, stops, pauses,
+    `Try again`, stray events and broken first renders), with floors on
+    each kind; the fallback's `natural.fallback` log; and a stop that
+    returns only after both voices stopped.
+  - `test:status`: `src/natural/status.test.tsx`, Today's natural voice
+    line rendered under `appLayer` with a stand-in module: the download's
+    walk, each failure's words and `Try again`, Off, the crash line said
+    once and the fuse stored, the platform with no natural voice; the line
+    after `Voice`, outside the scroll view, at AA contrast, and
+    `Try again` never inside it.
   - `test:natural-voice`: `src/natural/voice.test.ts`, the natural voice's
     `VoiceSource` against a model written in the test, over 300 seeded
     histories of a stand-in module that answers each load and render when

@@ -197,8 +197,9 @@ Heartseed has no journey files yet. The features:
   module (Kokoro-82M), built for iOS 18, on its development probe
   (`apps/heartseed/app/probe/natural.tsx`) over the local model server:
   the checked download, a corrupt file and a lost server, a read's lit
-  words (silent on the simulator), the crash marker and the remove. No
-  screen a reader sees calls it yet.
+  words (silent on the simulator), the crash marker and the remove; and
+  Today reading by it (`today-*`): the download's line and `Try again`,
+  Her and Him's packs, and the crash fuse.
 - [features/fade.md](features/fade.md): cues that fade by stage on Today:
   the passage in first letters at a seed, nothing at a blade, and a recital
   said under that cue; Again brings the letters back. Its rows are steps
