@@ -138,7 +138,10 @@ function TodayTab({
 }
 
 function FieldTab({ home }: { readonly home: Home }) {
-  const total = home.groups.reduce((sum, group) => sum + group.plants.length, 0);
+  const total = home.groups.reduce(
+    (sum, group) => sum + group.plants.filter((each) => each.stage !== 'new').length,
+    0,
+  );
   const ripe = home.groups.reduce((sum, group) => sum + ripeIn(group), 0);
   return (
     <>

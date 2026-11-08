@@ -198,7 +198,7 @@ export function OneHome({
         {Option.match(current, {
           onNone: () => (
             <Pill
-              label="Add verses"
+              label="Seed packets"
               shown="+ Seed packets"
               strong={false}
               onPress={() => setOpen('packets')}
@@ -237,7 +237,10 @@ export function OneHome({
                 label="Say it"
                 busy={false}
                 pressable
-                onPress={() => dispatch({ _tag: 'Begun', key: Option.some(shown.key) })}
+                onPress={() => {
+                  setAt(0);
+                  dispatch({ _tag: 'Begun', key: Option.some(shown.key) });
+                }}
               />
               <View style={styles.row}>
                 <Pill
@@ -247,7 +250,7 @@ export function OneHome({
                   onPress={() => dispatch({ _tag: 'Skipped', key: shown.key })}
                 />
                 <Pill
-                  label="Add verses"
+                  label="Seed packets"
                   shown="+ Seed packets"
                   strong={false}
                   onPress={() => setOpen('packets')}

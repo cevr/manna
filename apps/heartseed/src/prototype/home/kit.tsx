@@ -345,7 +345,7 @@ const cued = (each: Plant) => {
       .split(' ')
       .map((word) => word.replace(/^(\W*\w)\w*/u, '$1'))
       .join(' ');
-  return '';
+  return 'From memory: no cue.';
 };
 
 /** The run's end: what grew today, each plant growing in turn. */
@@ -489,7 +489,7 @@ export const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   sheetTitle: { fontFamily: 'Georgia', fontSize: 24, fontWeight: '600', color: color.ink },
-  sheetBody: { paddingHorizontal: 24, paddingBottom: 16, gap: 12 },
+  sheetBody: { paddingHorizontal: 24, paddingBottom: 72, gap: 12 },
   settings: { gap: 10 },
   label: { fontSize: 13, fontWeight: '600', color: color.cue, marginTop: 6 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

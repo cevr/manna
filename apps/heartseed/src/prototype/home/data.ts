@@ -60,6 +60,7 @@ export interface Home {
   readonly order: readonly string[];
   readonly tended: readonly string[];
   readonly grown: readonly string[];
+  readonly planted: readonly string[];
   readonly voice: VoiceChoice;
   readonly minutes: Minutes;
   readonly run: Option.Option<number>;
@@ -119,7 +120,7 @@ const GARDEN: readonly Group[] = [
     kind: 'proverbs',
     plants: [
       plant(20, 3, 5, 'ear', false),
-      plant(20, 3, 6, 'blade', true),
+      plant(20, 3, 6, 'blade', false),
       plant(20, 3, 7, 'new', false),
     ],
   },
@@ -215,6 +216,7 @@ export const START: Home = {
   order: readyKeys(GARDEN),
   tended: [],
   grown: [],
+  planted: [],
   voice: 'her',
   minutes: 5,
   run: Option.none(),
@@ -228,10 +230,19 @@ export const groupOf = (home: Home, key: string): Option.Option<Group> =>
     home.groups.find((group) => group.plants.some((each) => each.key === key)),
   );
 
-/** Today's queue in the reader's order: what fits the minutes chosen, never fewer than 1. */
+/** Today's queue in the reader's order: what fits the minutes chosen, never fewer than 1, the first new piece always keeping a place (the last one, when it would not fit). */
 export const todayOf = (home: Home): readonly Plant[] => {
   const fits = Math.max(1, Math.floor((home.minutes * 60) / SECONDS_EACH));
-  return home.order.slice(0, fits).flatMap((key) => Option.toArray(plantOf(home, key)));
+  const queue = home.order.flatMap((key) => Option.toArray(plantOf(home, key)));
+  const shown = queue.slice(0, fits);
+  const isFresh = (each: Plant) => each.stage === 'new' || home.planted.includes(each.key);
+  return Option.match(Option.fromUndefinedOr(queue.find(isFresh)), {
+    onNone: () => shown,
+    onSome: (fresh) => {
+      if (shown.includes(fresh)) return shown;
+      return [...shown.slice(0, fits - 1), fresh];
+    },
+  });
 };
 
 /** The queue still to tend. */
@@ -245,13 +256,12 @@ export const summaryOf = (home: Home) => {
   const fresh = left.filter((each) => each.stage === 'new').length;
   const reviews = left.length - fresh;
   const minutes = Math.max(1, Math.round((left.length * SECONDS_EACH) / 60));
-  const parts = [`${reviews} to tend`];
-  if (fresh > 0) parts.push(`${fresh} new`);
+  const parts = [`${reviews} to tend`, `${fresh} new`].filter((part) => !part.startsWith('0 '));
   return `${parts.join(' · ')} · about ${minutes} min`;
 };
 
 export const STAGE_WORDS: Readonly<Record<Stage, string>> = {
-  new: 'ready to plant',
+  new: 'not planted yet',
   seed: 'a seed',
   blade: 'a blade',
   ear: 'an ear',
@@ -293,11 +303,14 @@ const moved = (order: readonly string[], key: string, by: -1 | 1) => {
 
 /** Plants a library passage as a new list of seeds-to-be, its first verse ready today. */
 const added = (home: Home, shelf: Shelf, each: Offer): Home => {
-  if (home.groups.some((group) => group.id === each.id)) return home;
+  if (held(home, each) || home.groups.some((group) => group.id === each.id)) return home;
   const { book, chapter, first, last } = each.range;
+  const growing = new Set(allPlants(home.groups).map((one) => one.key));
   const plants = Array.from({ length: last - first + 1 }, (_, index) =>
-    plant(book, chapter, first + index, 'new', index === 0),
-  );
+    plant(book, chapter, first + index, 'new', false),
+  )
+    .filter((one) => !growing.has(one.key))
+    .map((one, index) => ({ ...one, due: index === 0 }));
   const group: Group = { id: each.id, title: offerReference(each), kind: shelf.kind, plants };
   const firstKey = plants[0]?.key ?? '';
   return {
@@ -342,6 +355,12 @@ export const reduce = (home: Home, action: Action): Home =>
         groups: grow(home.groups, each.key),
         tended: [...home.tended, each.key],
         grown: [...home.grown, each.key],
+        planted: [
+          ...home.planted,
+          ...Option.toArray(plantOf(home, each.key))
+            .filter((one) => one.stage === 'new')
+            .map((one) => one.key),
+        ],
         run: nextIndex(home, each.key),
       }),
       Passed: (each): Home => ({ ...home, order: toEnd(home.order, each.key) }),
@@ -359,5 +378,11 @@ export const reduce = (home: Home, action: Action): Home =>
 export const ripeIn = (group: Group) =>
   group.plants.filter((each) => each.stage === 'full corn').length;
 
-/** Whether `group` is in the garden already. */
-export const held = (home: Home, each: Offer) => home.groups.some((group) => group.id === each.id);
+/** Whether every verse of `each` grows in the garden already, in any list. */
+export const held = (home: Home, each: Offer) => {
+  const keys = new Set(allPlants(home.groups).map((one) => one.key));
+  const { book, chapter, first, last } = each.range;
+  return Array.from({ length: last - first + 1 }, (_, index) => first + index).every((verse) =>
+    keys.has(`${book}.${chapter}.${verse}`),
+  );
+};
