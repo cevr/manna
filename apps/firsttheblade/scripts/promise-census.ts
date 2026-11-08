@@ -38,7 +38,8 @@ interface Case {
 }
 
 const CONFIRMED = 'Thank you. We will send you ${PROMISE}.';
-const LABEL = '      Or get them by email\n';
+const LABEL = "export const SIGNUP_LABEL = 'Or get them by email';";
+const LABEL_JSX = '      {SIGNUP_LABEL}\n';
 const LEAVE_ANY_TIME = "'You can leave at any time, from the link in any of our emails.'";
 const NOTICE_WORDS = '<For each={notice.words}>{(words) => <p>{words}</p>}</For>';
 const BUTTON =
@@ -56,6 +57,15 @@ const confirmedSays = (name: string, sentence: string): Case => ({
   find: `\`${CONFIRMED}\``,
   put: `\`${CONFIRMED} ${sentence}\``,
   said: [`dist/subscribe/confirmed.html: unheld: ${sentence}`],
+});
+
+/** A case that rewords the sign-up label where the page and the verify drive read it (`src/mail/paths.ts`). */
+const labelSays = (name: string, label: string): Case => ({
+  name,
+  file: 'src/mail/paths.ts',
+  find: LABEL,
+  put: `export const SIGNUP_LABEL = '${label}';`,
+  said: [`dist/index.html: unheld: ${label}`],
 });
 
 /** A case whose markup every notice page prints as it is, after its words; the lines are the confirmed page's. */
@@ -112,31 +122,13 @@ const CASES: ReadonlyArray<Case> = [
       'dist/subscribe/confirmed.html: unheld: A note every week.',
     ],
   },
-  {
-    name: 'r4-F1 "Emails: weekly"',
-    file: 'src/ui/mail.tsx',
-    find: LABEL,
-    put: '      Emails: weekly\n',
-    said: ['dist/index.html: unheld: Emails: weekly'],
-  },
-  {
-    name: 'r4-F1 "EMAIL WEEKLY"',
-    file: 'src/ui/mail.tsx',
-    find: LABEL,
-    put: '      EMAIL WEEKLY\n',
-    said: ['dist/index.html: unheld: EMAIL WEEKLY'],
-  },
-  {
-    name: 'r4-F1 "Email · weekly"',
-    file: 'src/ui/mail.tsx',
-    find: LABEL,
-    put: '      Email · weekly\n',
-    said: ['dist/index.html: unheld: Email · weekly'],
-  },
+  labelSays('r4-F1 "Emails: weekly"', 'Emails: weekly'),
+  labelSays('r4-F1 "EMAIL WEEKLY"', 'EMAIL WEEKLY'),
+  labelSays('r4-F1 "Email · weekly"', 'Email · weekly'),
   {
     name: 'r4-F1 a cadence split by a JSX expression',
     file: 'src/ui/mail.tsx',
-    find: LABEL,
+    find: LABEL_JSX,
     put: '      Email {"weekly"}\n',
     said: ['dist/index.html: unheld: Email weekly'],
   },
@@ -199,7 +191,7 @@ const CASES: ReadonlyArray<Case> = [
   {
     name: 'rw-r1-F2 the sign-up label splits "weekly" with <u>',
     file: 'src/ui/mail.tsx',
-    find: LABEL,
+    find: LABEL_JSX,
     put: '      Or get them <u>wee</u>kly\n',
     said: ['dist/index.html: unheld: Or get them weekly'],
   },
