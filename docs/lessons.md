@@ -5199,4 +5199,4 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/hsbrand/spec-theme.md (The rule: the styles); hymnapp/hsbrand/accept-theme-base-theme.log (20 literal lines on base)
 - **Wrong:** Heartseed's screens painted Palette A and Georgia from literals spread across six files (`src/sayit/draw.tsx`'s exported `color` and `look`, and each screen's own), so a screen could keep a light colour or a serif in dark, unseen by any test of the other screens.
 - **Cause:** A colour or a face was quickest to write where it was used, and nothing held a product file to the theme's roles.
-- **Guard:** code: `apps/heartseed/src/look.test.tsx` `holds every product file in src and app, less tests, rigs, probes, prototypes and src/theme.ts, to no colour literal or font family`
+- **Guard:** code: `apps/heartseed/src/look.test.tsx` `holds every product file in src, app, vite, scripts, infra and the root, less tests, declarations, rigs, probes, prototypes and src/theme.ts, to no colour value or font family`; `apps/heartseed/scripts/icon.test.ts` `draws each opaque icon at 1024 px as its ground, its mark or a blend, the mark at 0.72 of the side`
