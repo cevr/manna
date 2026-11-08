@@ -8,7 +8,7 @@
  * library and the corpus and writes nothing. Deploying needs only the
  * Cloudflare login: the library's credentials are store secrets the sync
  * Worker binds (`server/cloudflare/store-secret.ts`), put once by the owner
- * with `bunx wrangler secrets-store secret create` (README, Deploy).
+ * with `cf secrets-store secrets create` (README, Deploy).
  *
  * Outside Bun's test pattern on purpose, so the gate never deploys. Run it with
  * `bun run test:deploy` (it builds first) before handing off a change to the

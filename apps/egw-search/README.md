@@ -34,13 +34,21 @@ any other stage's Workflow plans and stops. The library's credentials,
 `EGW_CLIENT_ID` and `EGW_CLIENT_SECRET`, are secrets of the account's
 Cloudflare Secrets Store, which the sync Worker binds by name
 (`server/cloudflare/store-secret.ts`) and reads inside its steps, so a deploy
-(a machine's or CI's) needs only the Cloudflare login. The owner puts each
-value in once, in a terminal, at a prompt that hides it (the store's ID from
-`bunx wrangler secrets-store store list --remote`):
+(a machine's or CI's) needs only the Cloudflare login. The owner manages them
+with the cf CLI, in a terminal, where `read -rs` takes the value at a hidden
+prompt, so it lands in neither the shell history nor the repository. The
+store's ID comes from `cf secrets-store stores list`. To create
+`EGW_CLIENT_ID` (and `EGW_CLIENT_SECRET` alike):
 
 ```sh
-bunx wrangler secrets-store secret create <store ID> --name EGW_CLIENT_ID --scopes workers --remote
-bunx wrangler secrets-store secret create <store ID> --name EGW_CLIENT_SECRET --scopes workers --remote
+read -rs 'v?EGW_CLIENT_ID: ' && cf secrets-store secrets create <store id> --body "$(jq -nc --arg v "$v" '[{name:"EGW_CLIENT_ID",value:$v,scopes:["workers"]}]')"; unset v
+```
+
+To change one, find its ID with
+`cf secrets-store secrets list --store-id <store id>`, then:
+
+```sh
+read -rs 'v?EGW_CLIENT_ID: ' && cf secrets-store secrets edit <secret id> --store-id <store id> --scopes workers --value "$v"; unset v
 ```
 
 To add vectors for books already installed, start an instance with

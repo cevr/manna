@@ -109,40 +109,45 @@ where they can be deleted.
   off, and the letters carry none. Every stage takes the domain as it is and
   never deletes it, since prod and a throwaway stage send from it alike.
 - **Contact:** `hello@firsttheblade.com` (`CONTACT` in `src/site.ts`, named on
-  the privacy page) is forwarded to the owner's inbox by Cloudflare Email
-  Routing, which the prod stack sets up: Email Routing on the zone, the
-  inbox as a destination, and one rule. Cloudflare takes a forwarding rule
-  only to a verified destination, so the rule is declared once `.env` says
-  the inbox is verified (`MAIL_FORWARD_VERIFIED=true`), on the deploy after
-  the owner opens Cloudflare's verification link.
-  The flag stays set: a prod deploy without it removes the rule.
+  the privacy page) is handed by Cloudflare Email Routing's rule, which the
+  prod stack sets up (`src/worker/domain.ts`), to the Site Worker, which
+  forwards it to the owner's inbox: the store secret `MAIL_FORWARD_TO`
+  (`src/mail/contact.ts`). A failed read or forward is a temporary failure
+  the sender retries, so no message is accepted and lost.
+  Cloudflare forwards only to a verified destination, so a new inbox is
+  added and verified as a destination address in the dashboard (Email
+  Routing, Destination addresses) before its address goes in the store.
 - **No postal address yet** (owner, 2026-10-20). A letter that asks for
   support is commercial email, which must carry one, so the P.O. box goes
   into `POSTAL_ADDRESS` (`src/mail/letters.ts`) before the first letter
   mentions Patreon: `src/mail/letters.test.ts` fails while any letter does
   and none is set. Once set, it is at the foot of every letter.
 
-Two secrets sign the links and guard the send route: `MAIL_TOKEN_KEY` and
-`MAIL_ADMIN_TOKEN`. They live in the account's Cloudflare Secrets Store, and
-the Worker binds each by name (`src/worker/store-secret.ts`) and reads it at
-its first use; no deploy reads or holds their values. The owner puts each
-value in once, in a terminal, at a prompt that hides it (the store's ID from
-`bunx wrangler secrets-store store list --remote`):
+The Site Worker's three secrets live in the account's Cloudflare Secrets
+Store: `MAIL_TOKEN_KEY` signs the links, `MAIL_ADMIN_TOKEN` guards the send
+route, and `MAIL_FORWARD_TO` is the inbox the contact address is forwarded
+to. The Worker binds each by name (`src/worker/store-secret.ts`) and reads it
+at its first use; no deploy reads or holds their values. The owner manages
+them with the cf CLI, in a terminal, where `read -rs` takes the value at a
+hidden prompt, so it lands in neither the shell history nor the repository.
+The store's ID comes from `cf secrets-store stores list`. To create a secret:
 
 ```bash
-bunx wrangler secrets-store secret create <store ID> --name MAIL_TOKEN_KEY --scopes workers --remote     # openssl rand -hex 32
-bunx wrangler secrets-store secret create <store ID> --name MAIL_ADMIN_TOKEN --scopes workers --remote   # openssl rand -hex 32
+read -rs 'v?<NAME>: ' && cf secrets-store secrets create <store id> --body "$(jq -nc --arg v "$v" '[{name:"<NAME>",value:$v,scopes:["workers"]}]')"; unset v
 ```
 
-`apps/firsttheblade/.env` (gitignored) keeps the admin token, which
-`bun run mail:send` and `bun run mail:key-check` show the Worker, and prod's
-two deploy inputs, the inbox the contact address is forwarded to and its
-switch:
+To change one, find its ID with
+`cf secrets-store secrets list --store-id <store id>`, then:
+
+```bash
+read -rs 'v?<NAME>: ' && cf secrets-store secrets edit <secret id> --store-id <store id> --scopes workers --value "$v"; unset v
+```
+
+`apps/firsttheblade/.env` (gitignored) keeps the admin token alone, which
+`bun run mail:send` and `bun run mail:key-check` show the Worker:
 
 ```bash
 MAIL_ADMIN_TOKEN=<the store's value>
-MAIL_FORWARD_TO=<the owner's inbox, prod only>
-MAIL_FORWARD_VERIFIED=true   # once the inbox's verification link is opened
 ```
 
 Changing `MAIL_TOKEN_KEY` in the store breaks every link already sent, and
@@ -150,12 +155,8 @@ gives every address a new subscriber id, so the list would start empty. So
 after the first deploy that reads the key from the store, run
 `bun run mail:key-check` with the old key still in `.env`: on `same`, the
 key's line leaves `.env`; on `DIFFERENT`, put the `.env` value in the store
-(`bunx wrangler secrets-store secret update`) and deploy again before anyone
-signs up. The first prod
-deploy adds `MAIL_FORWARD_TO` as an Email Routing destination, and
-Cloudflare sends it a verification email. Once the owner opens its link,
-`MAIL_FORWARD_VERIFIED=true` and one more prod deploy add the rule that
-forwards `hello@firsttheblade.com` to it. Under
+with the `secrets edit` form above and deploy again before anyone signs up.
+Under
 `bun run preview` the list runs in memory: each email is written to
 `tmp/outbox/<n>.txt` instead of being sent, so a sign-up can be confirmed and
 left from a laptop.

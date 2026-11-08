@@ -2209,7 +2209,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-mail-2/review-1.md F1
 - **Wrong:** The prod stack declared the rule forwarding hello@firsttheblade.com in the same deploy that registered the owner's inbox, while Email Routing takes a forward only to a verified destination and Alchemy's Address does not wait for the verification.
 - **Cause:** The resources were wired by their props, and the provider contract (verified first, a human click between) was not read for its order.
-- **Guard:** skill: the verification is a click in the owner's inbox that only Cloudflare sees, so no local test reaches it. Carried by `apps/firsttheblade/README.md`: "only to a verified destination, so the rule is declared once `.env` says"
+- **Guard:** skill: the verification is a click in the owner's inbox that only Cloudflare sees, so no local test reaches it. Carried by `apps/firsttheblade/README.md`: "Cloudflare forwards only to a verified destination, so a new inbox is"
 
 ### stage-isolation-names-shared-resources
 
