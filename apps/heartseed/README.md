@@ -961,7 +961,7 @@ first result that differs:
 
 1. `bun run plan`: one create, the bucket `heartseed-models` with the
    domain `models.heartseed.app`, and nothing else.
-2. `bun run deploy` (the package's typecheck and tests first).
+2. `bun run deploy` (the package's typecheck, tests and `test:slow` first).
 3. `bun run models:copy -- --cache $PWD/../../tmp/natural-models --dry-run`.
 4. `bun run models:copy -- --cache $PWD/../../tmp/natural-models`, then
    again: the second run keeps 39 and uploads 0, `verified 39/39`.
