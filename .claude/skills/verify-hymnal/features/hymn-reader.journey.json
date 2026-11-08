@@ -54,38 +54,52 @@
       "expect": [{ "shows": "role=link label=3, God Himself Is With Us" }]
     },
     {
+      "name": "past-recent",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "down",
+      "expect": [{ "hides": "label=Recent, see all" }]
+    },
+    {
+      "name": "to-row",
+      "action": "scroll",
+      "target": "role=link label=33, Sing A New Song to the Lord",
+      "direction": "down",
+      "expect": [{ "shows": "role=link label=33, Sing A New Song to the Lord" }]
+    },
+    {
       "name": "from-list",
       "action": "tap",
-      "target": "role=link label=3, God Himself Is With Us",
-      "expect": [{ "shows": "label=Play hymn 3" }]
+      "target": "role=link label=33, Sing A New Song to the Lord",
+      "expect": [{ "shows": "label=Play hymn 33" }]
     },
     {
       "name": "swipe-next",
       "action": "scroll",
       "target": "screen",
       "direction": "right",
-      "expect": [{ "shows": "label=Play hymn 4" }]
+      "expect": [{ "shows": "label=Play hymn 34" }]
     },
     {
       "name": "swipe-back",
       "action": "scroll",
       "target": "screen",
       "direction": "left",
-      "expect": [{ "shows": "label=Play hymn 3" }]
+      "expect": [{ "shows": "label=Play hymn 33" }]
     },
     {
       "name": "reader-back",
       "action": "back",
       "expect": [
-        { "shows": "role=link label=3, God Himself Is With Us" },
-        { "hides": "label=Play hymn 3" }
+        { "shows": "role=link label=33, Sing A New Song to the Lord" },
+        { "hides": "label=Play hymn 33" }
       ]
     },
     {
       "name": "from-list-again",
       "action": "tap",
-      "target": "role=link label=3, God Himself Is With Us",
-      "expect": [{ "shows": "label=Play hymn 3" }]
+      "target": "role=link label=33, Sing A New Song to the Lord",
+      "expect": [{ "shows": "label=Play hymn 33" }]
     },
     {
       "name": "left-edge",
@@ -94,7 +108,7 @@
       "dx": 200,
       "dy": 0,
       "ms": 300,
-      "expect": [{ "shows": "role=link label=3, God Himself Is With Us" }]
+      "expect": [{ "shows": "role=link label=33, Sing A New Song to the Lord" }]
     },
     {
       "name": "reader-syllables",

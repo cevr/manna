@@ -36,14 +36,14 @@ later rows sit one indent right of its first.
 - **States:** default. Focus-visible, open, loading, empty and error are n/a.
 - **Regression:** `apps/hymnal/src/reader/reader.slow.test.tsx`; the pager and its left edge in `apps/hymnal/src/reader/pager.slow.test.ts`; the header on every way in, `apps/hymnal/src/reader/header.test.ts`; back on the web, `apps/hymnal/src/reader/back.test.tsx`; the reading sheet, the page's text, the hanging indent and keep-awake in `apps/hymnal/src/reader/reading.slow.test.tsx`.
 
-**The journey:** `sim journey hymn-reader`. Hymn 100 by deep link (`hymn-reader`), a scroll to `Stanza 3` and back, the player sheet (`reading`) scrolled down to its reading settings (`reading-controls`) and closed by its grabber (`reading-close`), a relaunch to the list (`list`), hymn 3 from the list, a swipe to 4 and back to 3 (`sim scroll screen right` and `left`), `sim back` to the list (`reader-back`), hymn 3 again and a pan from the left edge back to the list (`left-edge`), then hymn 100's syllables (`reader-syllables`).
+**The journey:** `sim journey hymn-reader`. Hymn 100 by deep link (`hymn-reader`), a scroll to `Stanza 3` and back, the player sheet (`reading`) scrolled down to its reading settings (`reading-controls`) and closed by its grabber (`reading-close`), a relaunch to the list (`list`), the list scrolled past Recent (`past-recent`: a hymn on the Recent shelf has two rows of one name, which a tap cannot tell apart) and down to hymn 33 (`to-row`), hymn 33 from the list, a swipe to 34 and back to 33 (`sim scroll screen right` and `left`), `sim back` to the list at its place (`reader-back`), hymn 33 again and a pan from the left edge back to the list (`left-edge`), then hymn 100's syllables (`reader-syllables`).
 
 Read in the receipts:
 
 - `hymn-reader`: `100`, `Great Is Thy Faithfulness`, `Stanza 1`, `Refrain`; on iOS the open line's `detail.prompts` is 0 or 1.
 - `reading-controls`: the group `Reading`: `Text size` `100%`, `Font` (`System` checked), `Line spacing` (`Normal` checked), `Keep screen on` off.
-- `swipe-next`: the header title and `id=hymn-number` read 4.
-- `reader-back` and `left-edge`: the Hymns list at its place, not hymn 3 or 4.
+- `swipe-next`: the header title and `id=hymn-number` read 34.
+- `reader-back` and `left-edge`: the Hymns list at its place, not hymn 33 or 34.
 - `reader-syllables`: `id=syllable-1-1-1` beneath a `line` (each word one text named by its first syllable); the shot shows muted hyphens inside words and no word split across rows.
 
 By hand:

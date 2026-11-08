@@ -85,11 +85,25 @@
       "expect": [{ "shows": "id=find-search" }, { "hides": "id=find-cancel" }]
     },
     {
+      "name": "search-past-recent",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "down",
+      "expect": [{ "hides": "label=Recent, see all" }]
+    },
+    {
+      "name": "search-to-row",
+      "action": "scroll",
+      "target": "role=link label=36, O Thou in Whose Presence",
+      "direction": "down",
+      "expect": [{ "shows": "role=link label=36, O Thou in Whose Presence" }]
+    },
+    {
       "name": "search-in-hymn",
       "action": "tap",
-      "target": "role=link label=1, Praise to the Lord",
+      "target": "role=link label=36, O Thou in Whose Presence",
       "expect": [
-        { "shows": "label=Play hymn 1" },
+        { "shows": "label=Play hymn 36" },
         { "shows": "id=find-bar" },
         { "shows": "id=find-search" },
         { "shows": "id=find-number" },
@@ -118,7 +132,7 @@
       "action": "tap",
       "target": "id=find-cancel",
       "expect": [
-        { "shows": "label=Play hymn 1" },
+        { "shows": "label=Play hymn 36" },
         { "shows": "id=find-search" },
         { "shows": "id=key-button" },
         { "hides": "id=find-cancel" }
@@ -175,7 +189,7 @@
       "name": "search-in-hymn-back",
       "action": "back",
       "expect": [
-        { "shows": "role=link label=1, Praise to the Lord" },
+        { "shows": "role=link label=36, O Thou in Whose Presence" },
         { "hides": "id=key-button" },
         { "hides": "id=find-box" },
         { "hides": "id=find-cancel" }
@@ -184,9 +198,9 @@
     {
       "name": "search-in-hymn-folded",
       "action": "tap",
-      "target": "role=link label=1, Praise to the Lord",
+      "target": "role=link label=36, O Thou in Whose Presence",
       "expect": [
-        { "shows": "label=Play hymn 1" },
+        { "shows": "label=Play hymn 36" },
         { "shows": "id=find-search" },
         { "hides": "id=find-box" }
       ]
@@ -202,7 +216,7 @@
       "action": "tap",
       "target": "id=find-open",
       "expect": [
-        { "shows": "label=Play hymn 1" },
+        { "shows": "label=Play hymn 36" },
         { "shows": "id=key-button" },
         { "hides": "id=find-drums" }
       ]
@@ -211,7 +225,7 @@
       "name": "search-in-hymn-number-back",
       "action": "back",
       "expect": [
-        { "shows": "role=link label=1, Praise to the Lord" },
+        { "shows": "role=link label=36, O Thou in Whose Presence" },
         { "hides": "id=key-button" },
         { "hides": "id=find-drums" }
       ]

@@ -76,6 +76,13 @@
       "expect": [{ "hides": "label=Hundreds" }]
     },
     {
+      "name": "past-recent",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "down",
+      "expect": [{ "hides": "label=Recent, see all" }]
+    },
+    {
       "name": "drums-outside",
       "action": "tap",
       "target": "label=Find a hymn by number",
