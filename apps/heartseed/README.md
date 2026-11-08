@@ -779,8 +779,9 @@ The natural voice reads a piece with Kokoro-82M instead of the system
 voice, and lights each word as it is read. It holds its pronunciation
 list, the rule from a piece's text to what the model is given, the native
 module that downloads, renders and plays, and a `VoiceSource` over it; no
-screen a reader sees calls it yet, and the switch a reader sees is not
-here.
+screen a reader sees calls it yet. The reader's choice of Off, Her or Him
+is the `Voice` cycle hsspeaker built (`cycleVoice`, Voice and Session
+above); hsnatural routes Her and Him to this voice.
 
 - `data/kjv-phonemes.json` maps every distinct word key of the KJV (13,756)
   to its phonemes in Kokoro's symbols: Misaki 0.9.4's English G2P for the
