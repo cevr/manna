@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noNullish, effect/noGlobals -- the model and the generator are plain branches over plain records, and a failing history is named as JSON text. */
+/* oxlint-disable effect/noTernary, effect/noNullish -- the model and the generator are plain branches over plain records. */
 
 /**
  * The natural voice source against its own model, over seeded histories of
@@ -6,18 +6,21 @@
  * plan takes; stop, pause and resume; a load or a render answered ok, with
  * a failure, or malformed (an id with no frame, a frame list short or long,
  * NaN, a fraction, the audio a frame off); a refused play; the module's
- * events for the held utterance and for any other; and a reload (the scope
- * closed, a new source, utterance ids from 1 again). After every step the
- * module's calls, the events the source's listener heard and each speak's
- * state (pending, succeeded, failed) equal the model's, the source holds
- * one module subscription, and a closed source's listener hears nothing.
+ * events for the held utterance (and for one a failure let go of) and for
+ * any other; a listener subscribed in a child of the source's scope, and
+ * that child closed; and a reload (the scope closed, a new source,
+ * utterance ids from 1 again). After every step the module's calls, the
+ * events each listener heard and each speak's state (pending, succeeded,
+ * failed) equal the model's, the source holds one module subscription, and
+ * a listener whose scope closed, or a closed source's, hears nothing more.
  *
  * The texts are made-up words over a lexicon written here, planned with
  * `planOf` (hslexicon's rule); the model computes each word's start sample
  * and a render's fit itself.
  *
  * It catches a source that forwards another utterance's event, keeps a
- * reading past a terminal event, plays or renders after a stop, marks the
+ * reading past a terminal event or a failure, keeps a listener past its
+ * scope, plays or renders after a stop, marks the
  * wrong chunk last, fails a later chunk silently or a first one as success,
  * skips the stop that starts a speak or a build, reads only the first
  * chunk, trusts a render whose audio is not its frames long, or holds a
@@ -198,7 +201,16 @@ class Model {
   held:
     | { readonly u: number; readonly chunks: ReadonlyArray<Chunk>; waiting: 'load' | number }
     | undefined;
-  tally = { midFailures: 0, firstFailures: 0, replaced: 0, malformed: 0, lastPlayed: 0 };
+  /** The utterance a load, render or play failure last let go of, until the next speak. */
+  dropped: number | undefined;
+  tally = {
+    midFailures: 0,
+    firstFailures: 0,
+    replaced: 0,
+    malformed: 0,
+    lastPlayed: 0,
+    afterFailure: 0,
+  };
 
   private answer(u: number, outcome: 'success' | 'failure') {
     if (this.outcomes.get(u) === 'pending') this.outcomes.set(u, outcome);
@@ -215,6 +227,7 @@ class Model {
     if (this.held !== undefined && this.outcomes.get(this.held.u) === 'pending')
       this.tally.replaced++;
     this.letGo();
+    this.dropped = undefined;
     this.outcomes.set(u, 'pending');
     const chunks = chunksOf(text);
     if (Option.isNone(chunks)) {
@@ -252,11 +265,13 @@ class Model {
     if (this.held === undefined || this.held.u !== u || this.held.waiting !== 'load') return;
     if (ok) return this.render(0);
     this.held = undefined;
+    this.dropped = u;
     this.answer(u, 'failure');
   }
 
   private failed(u: number, k: number) {
     this.held = undefined;
+    this.dropped = u;
     if (k === 0) {
       this.tally.firstFailures++;
       this.answer(u, 'failure');
@@ -296,7 +311,9 @@ class Model {
     this.render(asked.k + 1);
   }
 
+  /** Forwards an event for the held reading; a reading a failure let go of is held no more, so its events are dropped. */
   native(event: VoiceEvent) {
+    if (this.dropped === event.utterance) this.tally.afterFailure++;
     if (this.held?.u !== event.utterance) return;
     this.events.push(event);
     if (event.kind === 'finish' || event.kind === 'cancel' || event.kind === 'interrupt')
@@ -317,6 +334,8 @@ type Action =
   | 'refuse-play'
   | 'event-held'
   | 'event-other'
+  | 'subscribe'
+  | 'unsubscribe'
   | 'reload';
 
 const WEIGHTS: ReadonlyArray<readonly [Action, number]> = [
@@ -332,6 +351,8 @@ const WEIGHTS: ReadonlyArray<readonly [Action, number]> = [
   ['refuse-play', 0.3],
   ['event-held', 2],
   ['event-other', 0.5],
+  ['subscribe', 0.5],
+  ['unsubscribe', 0.4],
   ['reload', 0.15],
 ];
 
@@ -381,8 +402,10 @@ const totals = {
   replaced: 0,
   malformed: 0,
   lastPlayed: 0,
+  afterFailure: 0,
   reloads: 0,
   finished: 0,
+  heardAfterLeaving: 0,
 };
 
 const TOTAL_WEIGHT = WEIGHTS.reduce((sum, [, weight]) => sum + weight, 0);
@@ -396,6 +419,13 @@ const makeHistory = (seed: number) => {
   let model = new Model();
   let scope = Scope.makeUnsafe();
   let heard: Array<VoiceEvent> = [];
+  /** Listeners subscribed in a child of the source's scope: each hears the model's events from `from` until its scope closes at `to`. */
+  let extras: Array<{
+    readonly scope: Scope.Closeable;
+    readonly heard: Array<VoiceEvent>;
+    readonly from: number;
+    to: number | undefined;
+  }> = [];
   let fibers = new Map<number, Fiber.Fiber<void, unknown>>();
   let utterance = 0;
   let source: Option.Option<VoiceSource['Service']> = Option.none();
@@ -484,10 +514,30 @@ const makeHistory = (seed: number) => {
       module.emit(sent);
     });
 
+  const subscribe = Effect.gen(function* () {
+    const child = Scope.forkUnsafe(scope);
+    const mine: Array<VoiceEvent> = [];
+    yield* live()
+      .subscribe((each) => mine.push({ ...each }))
+      .pipe(Effect.provideService(Scope.Scope, child));
+    extras.push({ scope: child, heard: mine, from: model.events.length, to: undefined });
+  });
+
+  const unsubscribe = Effect.gen(function* () {
+    const open = extras.filter((extra) => extra.to === undefined);
+    const extra = open[Math.floor(next() * open.length)];
+    if (extra === undefined) return;
+    yield* Scope.close(extra.scope, Exit.void);
+    extra.to = model.events.length;
+  });
+
   const close = Effect.gen(function* () {
     for (const fiber of fibers.values()) yield* Fiber.interrupt(fiber);
     yield* Scope.close(scope, Exit.void);
     expect(module.state.listeners.size, `seed ${seed} (a subscription outlived its scope)`).toBe(0);
+    for (const extra of extras) {
+      if (extra.to !== undefined) totals.heardAfterLeaving += model.events.length - extra.to;
+    }
     tallyUp();
   });
 
@@ -495,6 +545,8 @@ const makeHistory = (seed: number) => {
     totals.reloads++;
     yield* close;
     closed.push({ heard, length: heard.length });
+    for (const extra of extras) closed.push({ heard: extra.heard, length: extra.heard.length });
+    extras = [];
     module.state.calls = [];
     module.state.loads = [];
     module.state.renders = [];
@@ -529,6 +581,8 @@ const makeHistory = (seed: number) => {
       }),
     'event-held': () => event(true),
     'event-other': () => event(false),
+    subscribe: () => subscribe,
+    unsubscribe: () => unsubscribe,
     reload: () => reload,
   };
 
@@ -536,6 +590,12 @@ const makeHistory = (seed: number) => {
     const where = `seed ${seed}: ${trail.join(' ')}`;
     expect(module.state.calls, `${where} (calls)`).toEqual(model.calls);
     expect(heard, `${where} (events)`).toEqual(model.events);
+    for (const [index, extra] of extras.entries()) {
+      expect(
+        extra.heard,
+        `${where} (listener ${index}, from ${extra.from} to ${extra.to})`,
+      ).toEqual(model.events.slice(extra.from, extra.to));
+    }
     for (const [id, fiber] of fibers) {
       expect(outcomeOf(fiber), `${where} (speak ${id})`).toBe(model.outcomes.get(id) ?? 'pending');
     }
@@ -596,6 +656,8 @@ describe('the natural voice source', () => {
         expect(totals.replaced).toBeGreaterThanOrEqual(30);
         expect(totals.malformed).toBeGreaterThanOrEqual(40);
         expect(totals.reloads).toBeGreaterThanOrEqual(15);
+        expect(totals.afterFailure).toBeGreaterThanOrEqual(50);
+        expect(totals.heardAfterLeaving).toBeGreaterThanOrEqual(25);
       }),
     ));
 });

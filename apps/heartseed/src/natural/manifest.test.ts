@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noTernary, effect/noGlobals -- the generator and the hand-written base reader write their choices as plain branches, and a failing ask is named by its JSON. */
+/* oxlint-disable effect/noTernary, effect/noGlobals, effect/noNodeBuiltinImport -- the generator and the hand-written base reader write their choices as plain branches, a failing ask is named by its JSON, and the pinned list is hashed plainly, as data.test.ts hashes its files. */
 
 /**
  * The pinned download: 38 files of the seven Kokoro stages, the voice and
@@ -10,9 +10,13 @@
  */
 
 import { describe, expect, it } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { Option } from 'effect';
 
 import { baseFor, FILES, MIRROR, REVISION, SOURCE_REVISION, TOTAL_BYTES } from './manifest';
+
+/** The SHA-256 of the pinned manifest's 38 `path:bytes:sha256` lines, joined by newlines, read from the manifest itself. */
+const MANIFEST_DIGEST = '93ac5abb823438b2e1d451cdff47aa2a3776cb7a36c8a38a2a9ab15e4374f293';
 
 const STAGES = [
   'KokoroAlbert',
@@ -49,6 +53,11 @@ describe('the pinned files', () => {
       'vocab.json',
     ]);
     expect(paths).toEqual([...paths].sort());
+  });
+
+  it('is exactly the list in hsnatural’s kokoro-manifest.json: its `path:bytes:sha256` lines hash to that list’s digest', () => {
+    const lines = FILES.map((file) => `${file.path}:${file.bytes}:${file.sha256}`).join('\n');
+    expect(createHash('sha256').update(lines).digest('hex')).toBe(MANIFEST_DIGEST);
   });
 
   it('names the revision it was taken at, its short name and the mirror’s folder for it', () => {

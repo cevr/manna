@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noInlineProvide, effect/noTernary -- the stand-in Hugging Face answers with a web Response; each case provides its own stand-in or server, the boundary under test; a byte comparison is a plain branch. */
+/* oxlint-disable effect/noInlineProvide, effect/noTernary -- each case provides its own stand-in or server, the boundary under test; a byte comparison is a plain branch. */
 
 /**
  * The development model server (`natural-serve.ts`) over a fake cache of
