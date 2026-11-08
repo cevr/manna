@@ -1533,6 +1533,17 @@ GETs (Class B) when the edge does not serve them.
     `countsModel` over `planModel`, `needModel` and `fieldPassagesModel`,
     and to the disk's rule (no key added but the recalls said and the
     minutes after a tap), each part's floors met.
+  - `test:phrase`: the phrase cut and its reference form (`src/phrase.ts`).
+    `src/phrase.property.test.ts`, `cutOf` against `src/test/phrase-model.ts`
+    and its brute force over every partition for 13-22 words, for generated
+    texts of 0-90 words (five scripts, astral letters, combining marks,
+    numbers, every mark before and after a word, mark-only runs between
+    words, every kind of whitespace), and `phraseReference` with `phraseOf`
+    over round trips, near misses and generated strings;
+    `src/phrase/census.test.ts`, the cut over all 31,102 verses: 28,417
+    phrased into 85,244 phrases, 8,041 cuts at a plain gap and 31,282 at a
+    comma, each phrase 4-12 words holding its own words, and the pinned
+    digest of every phrased verse's ranges.
   - `test:natural`: `src/natural`, the natural voice's plan, seam and probe:
     `src/natural/plan.property.test.ts`, `planOf` and `startsOf` against a
     model written in the test over a small hand-built lexicon and vocab
