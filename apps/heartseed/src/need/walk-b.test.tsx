@@ -15,7 +15,7 @@ import { walkNeed } from '../test/need-walk';
 
 describe('When I need…, walked (b)', () => {
   it('shows the cards, the visit and the plan as the models give them', async () => {
-    const { failure, cover } = await walkNeed(4, 2, 10);
+    const { failure, cover } = await walkNeed(4, [0, 1], 10);
     expect(failure).toBeNull();
     expect({
       firstDay: (cover['gen:first-minute-day'] ?? 0) >= 1,

@@ -1405,7 +1405,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     order and in bursts, and the native module's guards).
   - `test:dictation`: `src/dictation.property.test.ts` (the dictation
     service against its model) and `src/dictation` (the scripted source,
-    the hints and the native module's guards).
+    the hints, the native module's guards, and a held consumer of
+    `changes` through a 10,000-input burst keeping at most the window and
+    ending at the current view).
   - `test:sayit`: `src/sayit.property.test.ts` (Say it against its model)
     and `src/sayit` but its cue tests (Today's Say it in happy-dom through
     `src/test/today-rig.tsx`, the source Say it hears, and its guards).
@@ -1522,11 +1524,14 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `src/field/garden.test.tsx`, a generated garden past 140 other verses
     of any reference, canonical twins each its own plant, each label the
     exact reference and each verse number the text after its last colon.
-  - `test:field-walk` and `test:field-grades`: `src/field/walk.test.tsx`
-    and `src/field/walk-grades.test.tsx`, generated sequences of opens,
-    ways back, recitals, Again, peeks and relaunches through
-    `src/test/field-walk.ts`, each command's writes modelled apart from the
-    app; each file's seeds reach its own floors (relaunches, or Again).
+  - `test:field-walk`, `test:field-relaunch`, `test:field-grades` and
+    `test:field-again`: `src/field/walk.test.tsx`,
+    `walk-relaunch.test.tsx`, `walk-grades.test.tsx` and
+    `walk-again.test.tsx`, one generated device each (seeds 3, 60, 12 and
+    31), generated sequences of opens, ways back, recitals, Again, peeks
+    and relaunches through `src/test/field-walk.ts`, each command's writes
+    modelled apart from the app; each file's device reaches its own floors
+    (relaunches, or Again).
   - `test:field-bar` and `test:field-bar-lists`:
     `src/field/bar-remove.test.tsx` and `bar-twice.test.tsx`, then
     `bar-lists.test.tsx` and `bar-kinds.test.tsx`, generated readers
@@ -1786,10 +1791,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:need-offer`: `src/need/offer.test.tsx`, no `When I need…` in the
     first minute, an unread garden or over unread passages, and none while
     Say it listens.
-  - `test:need-walk-a`, `test:need-walk-b`, `test:need-walk-c`:
-    `src/need/walk-{a,b,c}.test.tsx`, When I need… and a visit walked
-    through the root (`src/test/need-walk.ts`), two generated devices each
-    (seeds 3, 4 and 6), held after every command to `shownModel`,
+  - `test:need-walk-a`, `test:need-walk-a-visit`, `test:need-walk-b`,
+    `test:need-walk-c`: `src/need/walk-{a,a-visit,b,c}.test.tsx`, When I
+    need… and a visit walked through the root (`src/test/need-walk.ts`):
+    seed 3's device 0 in `walk-a` and its device 1 in `walk-a-visit`, and
+    two generated devices each of seeds 4 and 6, held after every command
+    to `shownModel`,
     `countsModel` over `planModel`, `needModel` and `fieldPassagesModel`,
     and to the disk's rule (no key added but the recalls said and the
     minutes after a tap), each part's floors met.
@@ -1856,9 +1863,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:look`: `src/look.test.tsx`, the scheme and the themed styles
     (`src/look.tsx`): every value React Native can name read as dark or
     light, a probe following each flip of the system with no tap, each
-    scheme's styles built once; and the guard: no product file in `src`
-    or `app` (less tests, rigs, probes, prototypes and `src/theme.ts`)
-    names a colour literal or a font family.
+    scheme's styles built once; and the guard: no product file in `src`,
+    `app`, `vite`, `scripts`, `infra` or the root (less tests,
+    declarations, rigs, probes, prototypes and `src/theme.ts`) holds a
+    string React Native 0.88 reads as a colour (`src/test/colours.ts`,
+    `transparent` excepted) or names a font family, the reader held to
+    400 generated sources and every named colour.
   - `test:appearance`: `src/appearance.property.test.ts`, the read rule
     over the three words, 30 near misses and 400 generated texts, the
     scheme over every appearance and system name, and the `Appearance`

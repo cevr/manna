@@ -461,10 +461,10 @@ class Walk {
   }
 }
 
-/** Walks `devices` generated devices from `seed`, `steps` commands each; answers the first failure (none when all held) and the coverage. */
-export const walkNeed = async (seed: number, devices: number, steps: number) => {
+/** Walks the listed generated devices of `seed` (device `n` is `random(seed * 1000 + n)`), `steps` commands each; answers the first failure (none when all held) and the coverage. */
+export const walkNeed = async (seed: number, devices: ReadonlyArray<number>, steps: number) => {
   const cover: Coverage = {};
-  for (let n = 0; n < devices; n++) {
+  for (const n of devices) {
     const walk = new Walk(random(seed * 1000 + n), cover);
     await walk.launch();
     const first = await walk.settleToday();

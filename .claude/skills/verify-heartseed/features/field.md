@@ -46,7 +46,7 @@ every launch opens on the pending frame, then the first minute or Today.
   blade shows on the field as `Isaiah 41:10, blade`.
 - `field-listening` (live at `run.md`'s `run-listening`): while Say it
   listens, Today offers no `Your field`.
-- `field-again` (tests only: `src/field/walk-grades.test.tsx`, unless the
+- `field-again` (tests only: `src/field/walk-again.test.tsx`, unless the
   second wait, `run.md`'s `run-second`, runs): Again takes the passage back
   to a seed and never removes a day sown.
 - `field-relaunch`: a relaunch opens Today, never the field, and its first

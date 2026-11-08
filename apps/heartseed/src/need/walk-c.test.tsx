@@ -15,7 +15,7 @@ import { walkNeed } from '../test/need-walk';
 
 describe('When I need…, walked (c)', () => {
   it('shows the cards, the visit and the plan as the models give them', async () => {
-    const { failure, cover } = await walkNeed(6, 2, 8);
+    const { failure, cover } = await walkNeed(6, [0, 1], 8);
     expect(failure).toBeNull();
     expect({
       nextVerse: (cover['visit:next-verse'] ?? 0) >= 1,
