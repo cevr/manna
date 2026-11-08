@@ -129,8 +129,11 @@ does (`sqlite3 -readonly` on the copy, never the container): `SELECT key,
 value FROM one_kv WHERE key LIKE 'heartseed/voice/%'`.
 
 1. Base half, from B (`sim boot` there): `first.md` steps 1-7 to
-   `first-today`; `sim tap "label=Voice"` (the old switch, off); a store
-   copy → the old switch row `false` and no choice row; `sim down`.
+   `first-today`; tap the old switch off with `agent-device press
+   'role=switch label="Voice"' --settle --session verify-heartseed` in the
+   drive's HOME (there `sim tap "label=Voice"` fails `AMBIGUOUS_MATCH`:
+   the switch's text node is labelled `Voice` too); a store copy → the old
+   switch row `false` and no choice row; `sim down`.
 2. `voice-migrate`, from the head: `sim boot`, `sim relaunch`,
    `sim open / --expect "id=session"`; a raw snapshot and a store copy →
    `Voice` valued `Off`, no choice row. `sim tap "label=Voice"`; a raw
