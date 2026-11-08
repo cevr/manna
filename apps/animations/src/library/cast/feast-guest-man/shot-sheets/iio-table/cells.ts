@@ -12,5 +12,5 @@ export const CELLS = {
   stare: { png: cell2, size: [384, 1024], ax: 192.5, ay: 829, head: 282 },
   smile: { png: cell3, size: [371, 1024], ax: 193.5, ay: 829, head: 282 },
   laugh: { png: cell4, size: [372, 1024], ax: 186.5, ay: 829, head: 282 },
-  wonder: { png: cell5, size: [400, 1024], ax: 200.5, ay: 829, head: 282 },
+  wonder: { png: cell5, size: [377, 1024], ax: 188.5, ay: 829, head: 265 },
 } as const;

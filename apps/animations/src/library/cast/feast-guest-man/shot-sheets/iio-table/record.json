@@ -74,12 +74,12 @@
     {
       "key": "wonder",
       "box": {
-        "x": 474,
+        "x": 445,
         "y": 0,
-        "width": 400,
+        "width": 377,
         "height": 1024
       },
-      "sha256": "380663091227487fef3bf1c4e7836a3fc700e875923e1635c07afce21672a67f"
+      "sha256": "9a211df447dc2528a1055114f76b7a71390176fbaad6aee3aa30cecae6b69df5"
     }
   ],
   "passes": [
@@ -123,8 +123,8 @@
       "size": "1536x1024",
       "ground": "#98daa6",
       "drawn": "2026-11-08",
-      "scale": 0.8785046728971962,
-      "top": 15,
+      "scale": 0.825794,
+      "top": 64,
       "height": 1024
     }
   ]
