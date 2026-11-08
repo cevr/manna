@@ -164,13 +164,13 @@ const sourcesUnder = (dir: string): ReadonlyArray<string> =>
   });
 
 describe('nothing stands in for the device store', () => {
-  it('no app source makes a memory, storage or file-system store', () => {
+  it('no app source makes a memory, storage or file-system store but the natural voice’s development probe’s memory store', () => {
     const found = [...sourcesUnder('src'), ...sourcesUnder('app')].flatMap((file) => {
       const text = readFileSync(join(APP, file), 'utf8');
       return ['layerMemory', 'makeMemory', 'layerStorage', 'layerFileSystem']
         .filter((name) => text.includes(name))
         .map((name) => `${file}: ${name}`);
     });
-    expect(found).toEqual([]);
+    expect(found).toEqual(['app/probe/natural.tsx: layerMemory']);
   });
 });
