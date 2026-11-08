@@ -928,6 +928,20 @@
         "!infra/**/*.test.*"
       ]
     },
+    "test:need": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises}/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
     "test:natural": {
       "dependsOn": ["^transit"],
       "outputs": [],
@@ -1050,6 +1064,7 @@
         "test:reader-add-back",
         "test:reader-remove",
         "test:promises",
+        "test:need",
         "test:natural",
         "test:natural-voice",
         "test:rest",

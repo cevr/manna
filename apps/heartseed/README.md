@@ -1372,6 +1372,14 @@ GETs (Class B) when the edge does not serve them.
     order, 10-12 promises each, 158 over 188 verses, each 1-3 verses of
     its chapter with text and at most 70 words, none twice, and the Fear
     collection alone taught.
+  - `test:need`: `src/need/need.property.test.ts`, When I need…'s cards
+    (`needOf`) against the rule written plainly in
+    `src/test/promise-model.ts`: every subset of the Fear collection's 14
+    verses with Fear taught, 3,000 generated gardens over all 188 promise
+    verses with near misses and one verse alone of a longer promise, taught
+    sets of none, one, several and all in any order, each case's floors
+    met; then every card in the situations' order, an empty garden, and the
+    first minute's promise under Strength.
   - `test:natural`: `src/natural`, the natural voice's plan, seam and probe:
     `src/natural/plan.property.test.ts`, `planOf` and `startsOf` against a
     model written in the test over a small hand-built lexicon and vocab

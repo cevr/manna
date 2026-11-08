@@ -71,6 +71,7 @@
     "test:reader-add-back": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/reader-add-back.test.tsx",
     "test:reader-remove": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/reader-remove.test.tsx",
     "test:promises": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/promises",
+    "test:need": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/need.property.test.ts",
     "test:natural": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' --path-ignore-patterns=src/natural/voice.test.ts ./src/natural",
     "test:natural-voice": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/natural/voice.test.ts",
     "test:rest": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/core-import.property.test.ts ./src/core-import.test.ts ./src/display.test.ts ./src/matcher.test.ts ./src/today.test.tsx",
