@@ -115,6 +115,9 @@ export const layer = (
           Fuse: ({ fuse }) => writeFuse(store, fuse),
           Install: () =>
             base.pipe(
+              Effect.tap((from) =>
+                Effect.logInfo('natural.install').pipe(Effect.annotateLogs({ base: from })),
+              ),
               Effect.flatMap((from) => module.install(from, REVISION, FILES)),
               Effect.catchTag('NaturalUnavailable', () =>
                 Effect.sync(() => dispatch({ _tag: 'Refused' })),
