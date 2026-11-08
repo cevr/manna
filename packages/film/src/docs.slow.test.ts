@@ -1,9 +1,9 @@
-import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
-import * as BunPath from '@effect/platform-bun/BunPath';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Layer, Option, Path, Predicate, Schema } from 'effect';
+import { Effect, FileSystem, Option, Path, Predicate, Schema, Stream } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
+import * as ChildProcess from 'effect/process/ChildProcess';
+import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { JSONC, TOML } from 'bun';
 import { type Node, type Program, Visitor, parseSync } from 'oxc-parser';
 import { LabHttpApi, pageAt } from './core/api.ts';
@@ -258,7 +258,7 @@ interface Found {
   readonly ours: boolean;
   readonly file: Option.Option<string>;
   readonly text: Option.Option<string>;
-  /** The ignored top folder (`tmp`) it lies under when no `.gitignore` and no script names it: a mistyped output. */
+  /** The shallowest ignored folder from the root (`tmp`, `apps/heartseed/ios`) it lies under when no `.gitignore` and no script names it: output no checkout can judge. */
   readonly stray: Option.Option<string>;
 }
 
@@ -424,6 +424,73 @@ const ignoredPaths = (gitignore: string, dir: string): ReadonlyArray<string> =>
     .filter((line) => /^[\w.-]+(?:\/[\w.-]+)*$/.test(line))
     .map((line) => [dir, line].filter((part) => part !== '').join('/'));
 
+/** A path's folders from the root, shallowest first, and the path: `a/b/c` gives `a`, `a/b` and `a/b/c`. */
+const foldersOf = (at: string) => {
+  const parts = at.split('/').filter((part) => part !== '');
+  return parts.map((_, i) => parts.slice(0, i + 1).join('/'));
+};
+
+/**
+ * For each path from the root, the shallowest of it and its folders that the
+ * tree's own `.gitignore` files ignore, by git's matcher (negations
+ * included), in one `git check-ignore`. Git reads the tree through an empty
+ * git dir of its own, whose config sets no excludes file and with no global
+ * or system config, so a machine's excludes (`core.excludesFile`, its
+ * default `~/.config/git/ignore`, `.git/info/exclude`) never count. Each folder is
+ * asked with its trailing slash, and the path both ways, so a folder-only
+ * pattern (`.build/`) matches it whether a build made it or not.
+ */
+const ignoredUnder = Effect.fn('test.docs.ignoredUnder')(function* (
+  root: string,
+  paths: ReadonlyArray<string>,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const asked = Array.from(
+    new Set(
+      paths.flatMap((at) => {
+        const folders = foldersOf(at);
+        return [...folders.map((folder) => `${folder}/`), ...folders.slice(-1)];
+      }),
+    ),
+  );
+  if (asked.length === 0) return new Map<string, Option.Option<string>>();
+  const gitDir = yield* fs.makeTempDirectoryScoped({ prefix: 'docs-ignores-' });
+  yield* fs.makeDirectory(path.join(gitDir, 'objects'));
+  yield* fs.makeDirectory(path.join(gitDir, 'refs'));
+  yield* fs.writeFileString(path.join(gitDir, 'HEAD'), 'ref: refs/heads/main\n');
+  yield* fs.writeFileString(path.join(gitDir, 'config'), '[core]\n\texcludesFile = /dev/null\n');
+  const child = yield* (yield* ChildProcessSpawner).spawn(
+    ChildProcess.make(
+      'git',
+      [`--git-dir=${gitDir}`, `--work-tree=${root}`, 'check-ignore', '--no-index', '--stdin', '-z'],
+      {
+        cwd: root,
+        env: { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' },
+        extendEnv: true,
+        stdin: Stream.make(new TextEncoder().encode(asked.join('\0'))),
+        forceKillAfter: '5 seconds',
+      },
+    ),
+  );
+  const [out, code] = yield* Effect.all(
+    [Stream.mkString(Stream.decodeText(child.stdout)), child.exitCode],
+    { concurrency: 2 },
+  );
+  if (Number(code) > 1) return yield* Effect.die(new Error(`git check-ignore exited ${code}`));
+  const ignored = new Set(
+    out
+      .split('\0')
+      .filter((at) => at !== '')
+      .map((at) => at.replace(/\/$/, '')),
+  );
+  return new Map(
+    paths.map(
+      (at) => [at, Option.fromUndefinedOr(foldersOf(at).find((f) => ignored.has(f)))] as const,
+    ),
+  );
+}, Effect.scoped);
+
 /**
  * What a doc's anchors name that the tree lacks: a path that is gone, a
  * symbol its file no longer declares, or a `path:line` (a line moves under
@@ -460,18 +527,19 @@ const anchorDrift = (
  * first directory reads it. Under none, it is another tree's path, unless the
  * doc is whole and it is neither a package's (`@manna/url-state`, an
  * installed `effect/Schema`) nor a rule (`film/no-read-once`, by `rulesIn`
- * over every line, as a whole doc's `ruleDrift` reads it). A path that is,
- * from one of its bases, one a `.gitignore` of the root or of that base
- * names whole (`ignoredPaths`) is output: never the tree's. A path under
- * that one is the tree's still, so a typo inside ignored output (`ios/Podz`)
- * fails.
+ * over every line, as a whole doc's `ruleDrift` reads it).
  *
- * A path whose first directory the root's `.gitignore` ignores (`tmp/logs`)
- * is read in every doc, whole or not: it is output only when a `.gitignore`
- * names it whole, or a script or the lint config names it or a folder it
- * lies in (`tmp/logs` in `agent-tail run --log-dir tmp/logs`, `tmp/judged`).
- * Named by none, it is a mistyped output (`tmp/<typo>`). An installed
- * package's path (`node_modules/effect`) is looked up like the tree's.
+ * A path is output when git, reading the tree's own `.gitignore` files
+ * alone (`ignoredUnder`), ignores it or a folder above it from one of its
+ * bases, and no base that git does not ignore has it on disk. Output is
+ * judged by names alone, never by what a build left on the disk, so every
+ * checkout says the same, in every doc, whole or not: it passes when it is
+ * the ignored path itself (`ios/`, `data/built.db`), or when a script or the
+ * lint config names it or a folder between it and the ignored one, from its
+ * base or from the root (`tmp/logs` in `agent-tail run --log-dir tmp/logs`,
+ * `ios/build`). Named by none, it lies under ignored output no checkout can
+ * judge (`tmp/<typo>`, `ios/Podz`). An installed package's path
+ * (`node_modules/effect`) is looked up like the tree's.
  */
 const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, doc: Doc) {
   const fs = yield* FileSystem.FileSystem;
@@ -481,7 +549,6 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
       Effect.option(fs.stat(path.join(root, at))),
       Option.exists((info) => info.type === 'Directory'),
     );
-  const ignored = ignoredDirectories(yield* fs.readFileString(path.join(root, '.gitignore')));
   const outputs = new Set(
     (yield* Effect.forEach(Array.from(new Set(['', ...doc.bases])), (dir) =>
       Effect.map(Effect.option(fs.readFileString(path.join(root, dir, '.gitignore'))), (text) =>
@@ -489,8 +556,6 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
       ),
     )).flat(),
   );
-  const isOutput = (anchor: Anchor) =>
-    doc.bases.some((base) => outputs.has(path.join(base, anchor.path).replace(/\/$/, '')));
   const namers = yield* outputNamers(root);
   const rules = new Set(rulesIn(linesOf(markdownOf(doc.text))).map((rule) => `film/${rule}`));
   const elsewhere = (anchor: Anchor, first: string) =>
@@ -498,7 +563,27 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
       isDirectory(path.join('node_modules', first)),
       (installed) => installed || PACKAGE_NAME.test(anchor.path) || rules.has(anchor.path),
     );
-  return yield* Effect.forEach(anchorsIn(doc), (anchor) =>
+  const anchors = anchorsIn(doc);
+  const candidatesOf = (anchor: Anchor) =>
+    doc.bases.map((base) => ({ base, at: path.join(base, anchor.path).replace(/\/$/, '') }));
+  const under = yield* ignoredUnder(
+    root,
+    anchors
+      .filter((a) => !a.link && a.path.split('/')[0] !== 'node_modules')
+      .flatMap((a) => candidatesOf(a).map((c) => c.at))
+      .filter((at) => !at.startsWith('..') && !path.isAbsolute(at)),
+  );
+  /** Whether a script or the lint config names a path between `at` and the ignored `folder` it lies under, from its base or from the root. */
+  const namedUnder = (base: string, at: string, folder: string) => {
+    const parts = at.split('/');
+    const depth = folder.split('/').length;
+    return parts
+      .slice(depth)
+      .map((_, i) => parts.slice(0, depth + i + 1).join('/'))
+      .flatMap((prefix) => [prefix, path.relative(base, prefix)])
+      .some((written) => namers.some((text) => namesWhole(text, written)));
+  };
+  return yield* Effect.forEach(anchors, (anchor) =>
     Effect.gen(function* () {
       if (anchor.link) {
         const at = path.join(path.dirname(doc.path), anchor.path);
@@ -511,37 +596,39 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
           stray: Option.none(),
         } satisfies Found;
       }
-      const parts = anchor.path.split('/');
-      const first = parts[0] ?? '';
-      if (ignored.has(first) && first !== 'node_modules') {
-        const named =
-          parts.length === 1 ||
-          isOutput(anchor) ||
-          parts
-            .slice(1)
-            .map((_, i) => parts.slice(0, i + 2).join('/'))
-            .some((output) => namers.some((text) => namesWhole(text, output)));
+      const first = anchor.path.split('/')[0] ?? '';
+      const candidates = candidatesOf(anchor).map((c) => ({
+        ...c,
+        output: Option.flatten(Option.fromUndefinedOr(under.get(c.at))),
+      }));
+      const tree = candidates.filter((c) => Option.isNone(c.output)).map((c) => c.base);
+      const bases = yield* Effect.filter(tree, (base) => isDirectory(path.join(base, first)));
+      const found = yield* Effect.filter(bases, (base) =>
+        fs.exists(path.join(root, base, anchor.path)),
+      );
+      const ignored = candidates.flatMap((c) =>
+        Option.toArray(Option.map(c.output, (folder) => ({ ...c, folder }))),
+      );
+      if (found.length === 0 && ignored.length > 0) {
+        const named = ignored.some(
+          ({ base, at, folder }) =>
+            at === folder || outputs.has(at) || namedUnder(base, at, folder),
+        );
         return {
           anchor,
           ours: !named,
           file: Option.none(),
           text: Option.none(),
-          stray: Option.liftPredicate(first, () => !named),
+          stray: Option.liftPredicate(ignored[0]?.folder ?? first, () => !named),
         } satisfies Found;
       }
-      const bases = yield* Effect.filter(doc.bases, (base) => isDirectory(path.join(base, first)));
-      const under = yield* Effect.filter(bases, (base) =>
-        fs.exists(path.join(root, base, anchor.path)),
-      );
-      const file = Option.map(Option.fromUndefinedOr(under[0]), (base) =>
+      const file = Option.map(Option.fromUndefinedOr(found[0]), (base) =>
         path.join(base, anchor.path),
       );
       const read = Option.filter(file, () => anchor.symbols.length > 0);
       return {
         anchor,
-        ours:
-          !isOutput(anchor) &&
-          (bases.length > 0 || (doc.whole && !(yield* elsewhere(anchor, first)))),
+        ours: bases.length > 0 || (doc.whole && !(yield* elsewhere(anchor, first))),
         file,
         text: yield* Option.match(read, {
           onNone: () => Effect.succeed(Option.none<string>()),
@@ -1089,6 +1176,157 @@ const anchorsDrift = (root: string, docs: ReadonlyArray<Doc>) =>
     (each) => each.flat(),
   );
 
+/** The timeout of a test that runs `git`: a cold start's time is the machine's. */
+const SPAWNS_MS = 30_000;
+
+/** A seeded generator, so a red run names its seed. */
+const seeded = (seed: number) => {
+  let state = seed >>> 0;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 2 ** 32;
+  };
+};
+
+/** One ignored output of a scratch tree: the folder or file from the root, and how a doc writes it whole from a base (a folder with its trailing slash). */
+interface IgnoredOutput {
+  readonly from: string;
+  readonly written: ReadonlyArray<{ readonly base: string; readonly whole: string }>;
+}
+
+/**
+ * A scratch tree's ignored outputs, one of each form a `.gitignore` takes: an
+ * app's anchored folder (`/ios`), an app's folder at any depth (`.build/`),
+ * the root's folder at any depth (`dist/`, `out`), the root's whole file
+ * (`data/built.db`), a file pattern (`*.log`), and the root's `tmp/`.
+ */
+const IGNORED_OUTPUTS: ReadonlyArray<IgnoredOutput> = [
+  {
+    from: 'apps/app/ios',
+    written: [
+      { base: 'apps/app', whole: 'ios/' },
+      { base: '', whole: 'apps/app/ios/' },
+    ],
+  },
+  { from: 'apps/app/.build', written: [{ base: '', whole: 'apps/app/.build/' }] },
+  { from: 'dist', written: [{ base: '', whole: 'dist/' }] },
+  { from: 'apps/app/dist', written: [{ base: '', whole: 'apps/app/dist/' }] },
+  { from: 'out', written: [{ base: '', whole: 'out/' }] },
+  { from: 'tmp', written: [{ base: '', whole: 'tmp/' }] },
+  { from: 'data/built.db', written: [{ base: '', whole: 'data/built.db' }] },
+  { from: 'notes/run.log', written: [{ base: '', whole: 'notes/run.log' }] },
+];
+
+const OUTPUT_FOLDERS = ['Podz', 'Heartseed.xcodeproj', 'gen', 'cache', 'x1', 'Pods', 'latest2'];
+const OUTPUT_FILES = ['project.pbxproj', 'Podfile.lock', 'index.js', 'a.json', 'App.swift'];
+
+/** A path a generated doc writes, what a built tree makes for it, and what the docs test says of it in every tree. */
+interface OutputCase {
+  readonly written: string;
+  readonly creates: ReadonlyArray<string>;
+  readonly expected: ReadonlyArray<string>;
+}
+
+const underIgnored = (written: string, folder: string) =>
+  `whole.md: path ${written} lies under the ignored ${folder}/, and no .gitignore or script names it`;
+
+/** The cases of a seed: each output whole, paths one and two folders under it, two a script names, and the tree's own paths. */
+const outputCases = (seed: number): ReadonlyArray<OutputCase> => {
+  const next = seeded(seed);
+  const pick = (from: ReadonlyArray<string>) => from[Math.floor(next() * from.length)] ?? '';
+  return [
+    ...IGNORED_OUTPUTS.flatMap((output) =>
+      output.written.flatMap(({ base, whole }) => {
+        const wholeCase = { written: whole, creates: [output.from], expected: [] };
+        if (!whole.endsWith('/')) return [wholeCase];
+        return [
+          wholeCase,
+          ...[0, 1, 2].flatMap(() => {
+            const one = `${whole}${pick(OUTPUT_FOLDERS)}`;
+            const two = `${one}/${pick(OUTPUT_FILES)}`;
+            return [one, two].map((written) => ({
+              written,
+              creates: [[base, written].filter((part) => part !== '').join('/')],
+              expected: [underIgnored(written, output.from)],
+            }));
+          }),
+        ];
+      }),
+    ),
+    { written: 'tmp/logs/latest', creates: ['tmp/logs/latest'], expected: [] },
+    { written: 'ios/build/App.app', creates: ['apps/app/ios/build/App.app'], expected: [] },
+    { written: 'src/kept.ts', creates: [], expected: [] },
+    { written: 'src/main.ts', creates: [], expected: [] },
+    { written: 'notes/keep.log', creates: [], expected: [] },
+    {
+      written: 'src/gone.ts',
+      creates: [],
+      expected: ['whole.md: path src/gone.ts does not exist'],
+    },
+    {
+      written: 'data/gone.db',
+      creates: [],
+      expected: ['whole.md: path data/gone.db does not exist'],
+    },
+  ];
+};
+
+/**
+ * A scratch git repo holding a generated tree's sources, `.gitignore` files
+ * and scripts; `built` makes every output its cases name too, and `hostile`
+ * adds a machine's own excludes that ignore the tree's sources: the repo's
+ * `.git/info/exclude`, and a `core.excludesFile` its `.git/config` names.
+ */
+const outputTree = (cases: ReadonlyArray<OutputCase>, built: boolean, hostile: boolean) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const root = yield* fs.makeTempDirectoryScoped({ prefix: 'docs-output-' });
+    const write = (file: string, text: string) =>
+      Effect.andThen(
+        fs.makeDirectory(path.dirname(path.join(root, file)), { recursive: true }),
+        fs.writeFileString(path.join(root, file), text),
+      );
+    yield* (yield* ChildProcessSpawner).exitCode(
+      ChildProcess.make('git', ['init', '-q', root], {
+        env: { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' },
+        extendEnv: true,
+        forceKillAfter: '5 seconds',
+      }),
+    );
+    yield* write('.gitignore', 'tmp/\nout\ndist/\ndata/built.db\n*.log\n!notes/keep.log\n');
+    yield* write('apps/app/.gitignore', '/ios\n.build/\n');
+    yield* write(
+      'package.json',
+      '{ "name": "root", "scripts": { "logs": "agent-tail tail --log-dir tmp/logs -n 200" } }',
+    );
+    yield* write(
+      'apps/app/package.json',
+      '{ "name": "app", "scripts": { "ios:build": "xcodebuild -derivedDataPath ios/build" } }',
+    );
+    yield* write('src/kept.ts', 'export const kept = 1;\n');
+    yield* write('apps/app/src/main.ts', 'export const main = 1;\n');
+    yield* write('notes/keep.log', 'kept\n');
+    yield* write('data/readme.md', 'data\n');
+    const made = cases.flatMap((c) => c.creates).filter(() => built);
+    const isFile = (at: string) => /\.\w+$/.test(at) && !/\.(?:xcodeproj|app|build)$/.test(at);
+    yield* Effect.forEach(made.filter(isFile), (at) => write(at, 'built\n'), { discard: true });
+    yield* Effect.forEach(
+      made.filter((at) => !isFile(at)),
+      (at) => fs.makeDirectory(path.join(root, at), { recursive: true }),
+      { discard: true },
+    );
+    if (hostile) {
+      yield* write('.git/info/exclude', 'src/\nnotes/\n');
+      yield* write('.machine/excludes', 'apps/app/src/\n*.ts\nkeep.log\n');
+      yield* write(
+        '.git/config',
+        `${yield* fs.readFileString(path.join(root, '.git/config'))}[core]\n\texcludesFile = ${root}/.machine/excludes\n`,
+      );
+    }
+    return root;
+  });
+
 const ROOT = Effect.map(Path.Path, (path) => path.join(import.meta.dir, '..', '..', '..'));
 
 /** Every doc the test reads, listed as the file loads: a test each. */
@@ -1487,7 +1725,7 @@ describe('the docs', () => {
   );
 
   it.effect.layer(BunServices.layer)(
-    "read a path a .gitignore names, the root's or a base's own, as output, and a path under it as the tree's; under an ignored top folder, output only what a .gitignore or a script names",
+    "read a path a .gitignore names, the root's or a base's own, as output; under an ignored folder at any depth, output only what a .gitignore or a script names, and refused otherwise",
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
@@ -1516,7 +1754,7 @@ describe('the docs', () => {
         expect(yield* anchorsDrift(root, [doc])).toEqual([
           'whole.md: path src/gone.ts does not exist',
           'whole.md: path data/gone.db does not exist',
-          'whole.md: path ios/Podz does not exist',
+          'whole.md: path ios/Podz lies under the ignored app/ios/, and no .gitignore or script names it',
           'whole.md: path tmp/lgos/latest lies under the ignored tmp/, and no .gitignore or script names it',
           'whole.md: path tmp/logs2 lies under the ignored tmp/, and no .gitignore or script names it',
           'whole.md: path tmp/log lies under the ignored tmp/, and no .gitignore or script names it',
@@ -1529,6 +1767,43 @@ describe('the docs', () => {
           'whole.md: path tmp/log lies under the ignored tmp/, and no .gitignore or script names it',
         ]);
       }).pipe(Effect.scoped),
+    SPAWNS_MS,
+  );
+
+  it.effect.layer(BunServices.layer)(
+    "judges a path in ignored output by the tree's own .gitignore files and scripts alone, the same with the output absent, built, or under a machine's own excludes, over generated trees",
+    () =>
+      Effect.forEach(
+        [1, 2, 3, 4, 5, 6, 7, 8],
+        (seed) =>
+          Effect.gen(function* () {
+            const cases = outputCases(seed);
+            const doc: Doc = {
+              path: 'whole.md',
+              bases: ['', 'apps/app'],
+              whole: true,
+              text: cases.map((c) => `It names \`${c.written}\`.`).join('\n'),
+            };
+            const said = yield* Effect.forEach(
+              [
+                ['absent', false, false],
+                ['built', true, false],
+                ['hostile', true, true],
+              ] as const,
+              ([tree, built, hostile]) =>
+                Effect.gen(function* () {
+                  const root = yield* outputTree(cases, built, hostile);
+                  return { seed, tree, drift: yield* anchorsDrift(root, [doc]) };
+                }),
+            );
+            const expected = cases.flatMap((c) => c.expected);
+            expect(said.map(({ tree, drift }) => ({ seed, tree, drift }))).toEqual(
+              said.map(({ tree }) => ({ seed, tree, drift: expected })),
+            );
+          }),
+        { discard: true },
+      ).pipe(Effect.scoped),
+    SPAWNS_MS,
   );
 
   it.effect.layer(BunServices.layer)(
@@ -1560,236 +1835,240 @@ describe('the docs', () => {
           'whole.md: rule film/no-such-fenced-rule is not registered',
         ]);
       }),
+    SPAWNS_MS,
   );
 
-  it.effect.layer(BunServices.layer)('fail a doc that names what the code no longer has', () =>
-    Effect.gen(function* () {
-      const root = yield* ROOT;
-      const code = yield* repoCode;
-      const stale: Doc = {
-        path: 'stale.md',
-        bases: ['', FILM_SRC],
-        whole: false,
-        text: [
-          '| `GET /index.json` | the old index |',
-          'Mute a take with `film/no-such-rule`, then `bun run nothing`.',
-          'See `packages/film/src/tools/gone.ts`.',
-          'bun run render <film> --tag p7   # render a tagged variant',
-          'bun run check <film>             # warns VoiceLevel, SeamLong',
-          'Its frame is `/review/frame`; say it with `POST /review/project/<film>/say`.',
-          'Hand him `/films/<film>/project` or `/sets/<folder>`, never `/asks/<ask>` nor `/films/<film>/export?build=<kept>` nor `/films/<film>/narration/<file>`.',
-          'Served beside the pages: `/films/in-its-order/narration/full.wav`, `/films/in-its-order/board.json`, `/films/in-its-order/board/open.start.1.png`.',
-          'Every page a Place (`packages/film/src/core/api.ts` `Places`, `pageHrefs`).',
-          'The review is read by `tools/review.ts` `Review.write`, the bar at `lab/page-shell.tsx:346`.',
-          'A request is made in `lab/api.ts` `uniqueId`, which it imports and calls.',
-          'Mistyped (`pacakges/film/src/core/time.ts` `frameAtOrAfter`), in a doc that is not whole.',
-          'Gone with its links (`player/lookbook.ts` deleted, `packages/ui/src/tabs/TabsRoot.tsx:101` at `4a471dae`).',
-          '| `cgwire/kitsu` | its routes in `packages/kitsu/src/router.js` |',
-          'Mute it with `film/frobnicate`, after `bun run --cwd apps/animations nothing-here`.',
-          '`film check <film> --frobnicate --json`  # the film bin, as `bun run --cwd apps/animations lab` runs it',
-          'After a mix, `bun run check <film> --sound` adds `NoSuchFinding`.',
-          'See [the gone tool](tools/gone.ts), [a gone reference](reference/none.md#its-part),',
-          'and [the README](packages/film/README.md#the-lab), [a site](https://example.com), [here](#here).',
-          'Then `bun run --watch nothing-bin`, and read `xs[0](y)` in [the gone guide](guide/gone.md).',
-          '```sh',
-          'film check <film> --frob-fence',
-          '```',
-          '$ film check <film> --frob-prompt',
-          '- film check <film> --frob-item',
-          '````md',
-          '```ts',
-          'handlers[i](event);',
-          '```',
-          '````',
-          'Read [the gone page](guide/gone-too.md) after the block.',
-          '',
-          '> film check <film> --frob-quote',
-          '',
-          '1) film check <film> --frob-paren',
-          '',
-          '```sh',
-          'cd apps/animations && film check <film> --frob-cd',
-          '```',
-          '',
-          '- Run:',
-          '  ```sh',
-          '  film check <film> --frob-listed',
-          '  ```',
-          '',
-          '> ```sh',
-          '> $ film check <film> --frob-quoted',
-          '> ```',
-          '',
-          '````sh',
-          'film check <film> --frob-4',
-          '````',
-          '',
-          '| `x` | [the gone table](guide/gone-table.md) | `y(z)` |',
-          '| --- | --- | --- |',
-          '',
-          '~~~md',
-          '```',
-          'x',
-          '```',
-          '~~~',
-          'Read [the gone tilde](guide/gone-tilde.md).',
-          '',
-          '```',
-          'Write the rule in `packages/film/src/gone-fenced.ts`.',
-          '```',
-          '',
-          '```sh',
-          'bun run lint',
-          '```',
-          '',
-          '```sh',
-          'bun run nothing-fenced',
-          '```',
-          '',
-          '## Test',
-          '',
-          '```sh',
-          'bun run nothing-headed',
-          'bun run nothing-next',
-          '```',
-        ].join('\n'),
-      };
-      expect(drift(stale, code)).toEqual([
-        'stale.md: route GET /index.json is declared by no API',
-        'stale.md: path /review/frame is no route of the API',
-        'stale.md: route POST /review/project/:film/say is declared by no API',
-        'stale.md: page /films/<film>/project is no page of the lab',
-        'stale.md: page /sets/<folder> is no page of the lab',
-        'stale.md: rule film/no-such-rule is not registered',
-        'stale.md: rule film/frobnicate is not registered',
-        'stale.md: bun run nothing: no such script',
-        'stale.md: bun run nothing-here: no such script',
-        'stale.md: bun run nothing-bin: no such script',
-        'stale.md: bun run nothing-fenced: no such script',
-        'stale.md: bun run nothing-headed: no such script',
-        'stale.md: bun run nothing-next: no such script',
-        'stale.md: bun run render --tag: no command declares the flag',
-        'stale.md: VoiceLevel is no finding',
-        'stale.md: film check --frobnicate: no command declares the flag',
-        'stale.md: NoSuchFinding is no finding',
-        'stale.md: film check --frob-fence: no command declares the flag',
-        'stale.md: film check --frob-prompt: no command declares the flag',
-        'stale.md: film check --frob-item: no command declares the flag',
-        'stale.md: film check --frob-quote: no command declares the flag',
-        'stale.md: film check --frob-paren: no command declares the flag',
-        'stale.md: film check --frob-cd: no command declares the flag',
-        'stale.md: film check --frob-listed: no command declares the flag',
-        'stale.md: film check --frob-quoted: no command declares the flag',
-        'stale.md: film check --frob-4: no command declares the flag',
-        'stale.md: `pageHrefs`: the code writes no pageHrefs',
-        'stale.md: `NoSuchFinding`: the code writes no NoSuchFinding',
-      ]);
-      expect(yield* anchorsDrift(root, [stale])).toEqual([
-        'stale.md: path packages/film/src/tools/gone.ts does not exist',
-        'stale.md: packages/film/src/core/api.ts has no pageHrefs',
-        'stale.md: packages/film/src/tools/review.ts has no Review.write',
-        'stale.md: lab/page-shell.tsx:346: name a symbol, not a line',
-        'stale.md: packages/film/src/lab/api.ts has no uniqueId',
-        'stale.md: path packages/film/src/gone-fenced.ts does not exist',
-        'stale.md: path tools/gone.ts does not exist',
-        'stale.md: path reference/none.md does not exist',
-        'stale.md: path guide/gone.md does not exist',
-        'stale.md: path guide/gone-too.md does not exist',
-        'stale.md: path guide/gone-table.md does not exist',
-        'stale.md: path guide/gone-tilde.md does not exist',
-      ]);
-      const correct: Doc = {
-        path: 'correct.md',
-        bases: ['', FILM_SRC],
-        whole: false,
-        text: [
-          'The rules live in `film/lint`, the lab in `film/lab`.',
-          'Build with `bun run --bun vite build`.',
-          'Watch it: `bun run --watch cli.ts lab`.',
-          '```ts',
-          'handlers[i](event);',
-          '```',
-          'Index it with `xs[0](y)`.',
-          'After `bun run check <film>`, the `PageShell` shows `DeadAir`.',
-          '`film check <film>` reports each finding as a `TaggedError`.',
-          'The film render pass has no bearing on --fix, which belongs to oxlint.',
-          '```ts',
-          '// the film render pass ignores --fix; oxlint owns it',
-          '```',
-          '````md',
-          '```ts',
-          'handlers[i](event);',
-          '```',
-          '````',
-          'After `film check <film>`, `UrlAtom` exposes the selected route.',
-          '`bun run --cwd . lint` lints the repo.',
-          'A film check run with --frob is not a command here.',
-          'film check reads `--static` from its flags.',
-          '`bun run lint -- --fix` fixes what it can; run `bun run --filter @manna/film test` first.',
-          '',
-          '- film render writes stills; Vite takes --host, not the CLI.',
-          '- film render writes stills, and Vite takes --host, not the CLI.',
-          '',
-          '```sh',
-          'bun run check <film>  # warns; film check --frob is wrong',
-          '```',
-          '',
-          '> ```ts',
-          '> handlers[i](event);',
-          '> ```',
-          '',
-          '- ```ts',
-          '  handlers[i](event);',
-          '  ```',
-          '',
-          '| `film check <film> --static` | the static checks |',
-          '| --- | --- |',
-          '',
-          '<!-- See [the draft](guide/draft.md). -->',
-          '',
-          '```ts',
-          'a',
-          '```ts',
-          'Read [the gone guide](guide/gone.md).',
-        ].join('\n'),
-      };
-      expect(drift(correct, code)).toEqual([]);
-      expect(yield* anchorsDrift(root, [correct])).toEqual([]);
-      expect(
-        [
-          ['const run = () => {\n  frobnicate(1);\n};\n', 'frobnicate'],
-          ['use({ frobnicate: 1 });\n', 'frobnicate'],
-          ['export const api = { read: 1 };\nuse({ write: 2 });\n', 'api.write'],
-          ['const { frobnicate } = use();\n', 'frobnicate'],
-          ['export class Review {\n  static read() {}\n}\n', 'Review.read'],
-          ['interface Api {\n  readonly read: number;\n}\n', 'Api.read'],
-          ['export const api = { read: 1, write };\n', 'api.write'],
-          ['export const Store = Schema.Struct({ mtime: Schema.Number });\n', 'Store.mtime'],
+  it.effect.layer(BunServices.layer)(
+    'fail a doc that names what the code no longer has',
+    () =>
+      Effect.gen(function* () {
+        const root = yield* ROOT;
+        const code = yield* repoCode;
+        const stale: Doc = {
+          path: 'stale.md',
+          bases: ['', FILM_SRC],
+          whole: false,
+          text: [
+            '| `GET /index.json` | the old index |',
+            'Mute a take with `film/no-such-rule`, then `bun run nothing`.',
+            'See `packages/film/src/tools/gone.ts`.',
+            'bun run render <film> --tag p7   # render a tagged variant',
+            'bun run check <film>             # warns VoiceLevel, SeamLong',
+            'Its frame is `/review/frame`; say it with `POST /review/project/<film>/say`.',
+            'Hand him `/films/<film>/project` or `/sets/<folder>`, never `/asks/<ask>` nor `/films/<film>/export?build=<kept>` nor `/films/<film>/narration/<file>`.',
+            'Served beside the pages: `/films/in-its-order/narration/full.wav`, `/films/in-its-order/board.json`, `/films/in-its-order/board/open.start.1.png`.',
+            'Every page a Place (`packages/film/src/core/api.ts` `Places`, `pageHrefs`).',
+            'The review is read by `tools/review.ts` `Review.write`, the bar at `lab/page-shell.tsx:346`.',
+            'A request is made in `lab/api.ts` `uniqueId`, which it imports and calls.',
+            'Mistyped (`pacakges/film/src/core/time.ts` `frameAtOrAfter`), in a doc that is not whole.',
+            'Gone with its links (`player/lookbook.ts` deleted, `packages/ui/src/tabs/TabsRoot.tsx:101` at `4a471dae`).',
+            '| `cgwire/kitsu` | its routes in `packages/kitsu/src/router.js` |',
+            'Mute it with `film/frobnicate`, after `bun run --cwd apps/animations nothing-here`.',
+            '`film check <film> --frobnicate --json`  # the film bin, as `bun run --cwd apps/animations lab` runs it',
+            'After a mix, `bun run check <film> --sound` adds `NoSuchFinding`.',
+            'See [the gone tool](tools/gone.ts), [a gone reference](reference/none.md#its-part),',
+            'and [the README](packages/film/README.md#the-lab), [a site](https://example.com), [here](#here).',
+            'Then `bun run --watch nothing-bin`, and read `xs[0](y)` in [the gone guide](guide/gone.md).',
+            '```sh',
+            'film check <film> --frob-fence',
+            '```',
+            '$ film check <film> --frob-prompt',
+            '- film check <film> --frob-item',
+            '````md',
+            '```ts',
+            'handlers[i](event);',
+            '```',
+            '````',
+            'Read [the gone page](guide/gone-too.md) after the block.',
+            '',
+            '> film check <film> --frob-quote',
+            '',
+            '1) film check <film> --frob-paren',
+            '',
+            '```sh',
+            'cd apps/animations && film check <film> --frob-cd',
+            '```',
+            '',
+            '- Run:',
+            '  ```sh',
+            '  film check <film> --frob-listed',
+            '  ```',
+            '',
+            '> ```sh',
+            '> $ film check <film> --frob-quoted',
+            '> ```',
+            '',
+            '````sh',
+            'film check <film> --frob-4',
+            '````',
+            '',
+            '| `x` | [the gone table](guide/gone-table.md) | `y(z)` |',
+            '| --- | --- | --- |',
+            '',
+            '~~~md',
+            '```',
+            'x',
+            '```',
+            '~~~',
+            'Read [the gone tilde](guide/gone-tilde.md).',
+            '',
+            '```',
+            'Write the rule in `packages/film/src/gone-fenced.ts`.',
+            '```',
+            '',
+            '```sh',
+            'bun run lint',
+            '```',
+            '',
+            '```sh',
+            'bun run nothing-fenced',
+            '```',
+            '',
+            '## Test',
+            '',
+            '```sh',
+            'bun run nothing-headed',
+            'bun run nothing-next',
+            '```',
+          ].join('\n'),
+        };
+        expect(drift(stale, code)).toEqual([
+          'stale.md: route GET /index.json is declared by no API',
+          'stale.md: path /review/frame is no route of the API',
+          'stale.md: route POST /review/project/:film/say is declared by no API',
+          'stale.md: page /films/<film>/project is no page of the lab',
+          'stale.md: page /sets/<folder> is no page of the lab',
+          'stale.md: rule film/no-such-rule is not registered',
+          'stale.md: rule film/frobnicate is not registered',
+          'stale.md: bun run nothing: no such script',
+          'stale.md: bun run nothing-here: no such script',
+          'stale.md: bun run nothing-bin: no such script',
+          'stale.md: bun run nothing-fenced: no such script',
+          'stale.md: bun run nothing-headed: no such script',
+          'stale.md: bun run nothing-next: no such script',
+          'stale.md: bun run render --tag: no command declares the flag',
+          'stale.md: VoiceLevel is no finding',
+          'stale.md: film check --frobnicate: no command declares the flag',
+          'stale.md: NoSuchFinding is no finding',
+          'stale.md: film check --frob-fence: no command declares the flag',
+          'stale.md: film check --frob-prompt: no command declares the flag',
+          'stale.md: film check --frob-item: no command declares the flag',
+          'stale.md: film check --frob-quote: no command declares the flag',
+          'stale.md: film check --frob-paren: no command declares the flag',
+          'stale.md: film check --frob-cd: no command declares the flag',
+          'stale.md: film check --frob-listed: no command declares the flag',
+          'stale.md: film check --frob-quoted: no command declares the flag',
+          'stale.md: film check --frob-4: no command declares the flag',
+          'stale.md: `pageHrefs`: the code writes no pageHrefs',
+          'stale.md: `NoSuchFinding`: the code writes no NoSuchFinding',
+        ]);
+        expect(yield* anchorsDrift(root, [stale])).toEqual([
+          'stale.md: path packages/film/src/tools/gone.ts does not exist',
+          'stale.md: packages/film/src/core/api.ts has no pageHrefs',
+          'stale.md: packages/film/src/tools/review.ts has no Review.write',
+          'stale.md: lab/page-shell.tsx:346: name a symbol, not a line',
+          'stale.md: packages/film/src/lab/api.ts has no uniqueId',
+          'stale.md: path packages/film/src/gone-fenced.ts does not exist',
+          'stale.md: path tools/gone.ts does not exist',
+          'stale.md: path reference/none.md does not exist',
+          'stale.md: path guide/gone.md does not exist',
+          'stale.md: path guide/gone-too.md does not exist',
+          'stale.md: path guide/gone-table.md does not exist',
+          'stale.md: path guide/gone-tilde.md does not exist',
+        ]);
+        const correct: Doc = {
+          path: 'correct.md',
+          bases: ['', FILM_SRC],
+          whole: false,
+          text: [
+            'The rules live in `film/lint`, the lab in `film/lab`.',
+            'Build with `bun run --bun vite build`.',
+            'Watch it: `bun run --watch cli.ts lab`.',
+            '```ts',
+            'handlers[i](event);',
+            '```',
+            'Index it with `xs[0](y)`.',
+            'After `bun run check <film>`, the `PageShell` shows `DeadAir`.',
+            '`film check <film>` reports each finding as a `TaggedError`.',
+            'The film render pass has no bearing on --fix, which belongs to oxlint.',
+            '```ts',
+            '// the film render pass ignores --fix; oxlint owns it',
+            '```',
+            '````md',
+            '```ts',
+            'handlers[i](event);',
+            '```',
+            '````',
+            'After `film check <film>`, `UrlAtom` exposes the selected route.',
+            '`bun run --cwd . lint` lints the repo.',
+            'A film check run with --frob is not a command here.',
+            'film check reads `--static` from its flags.',
+            '`bun run lint -- --fix` fixes what it can; run `bun run --filter @manna/film test` first.',
+            '',
+            '- film render writes stills; Vite takes --host, not the CLI.',
+            '- film render writes stills, and Vite takes --host, not the CLI.',
+            '',
+            '```sh',
+            'bun run check <film>  # warns; film check --frob is wrong',
+            '```',
+            '',
+            '> ```ts',
+            '> handlers[i](event);',
+            '> ```',
+            '',
+            '- ```ts',
+            '  handlers[i](event);',
+            '  ```',
+            '',
+            '| `film check <film> --static` | the static checks |',
+            '| --- | --- |',
+            '',
+            '<!-- See [the draft](guide/draft.md). -->',
+            '',
+            '```ts',
+            'a',
+            '```ts',
+            'Read [the gone guide](guide/gone.md).',
+          ].join('\n'),
+        };
+        expect(drift(correct, code)).toEqual([]);
+        expect(yield* anchorsDrift(root, [correct])).toEqual([]);
+        expect(
           [
-            'interface Deps {\n  readonly Review: unknown;\n}\nexport class Review {\n  static read() {}\n}\n',
-            'Review.read',
-          ],
-          [
-            'const f = () => {\n  const Review = 1;\n};\nexport class Review {\n  static read() {}\n}\n',
-            'Review.read',
-          ],
-          [
-            'interface Deps {\n  readonly Review: { read: 1 };\n}\nexport class Review {}\n',
-            'Review.read',
-          ],
-          ['use({ Review: { read: 1 } });\n', 'Review.read'],
-        ].map(([text = '', symbol = '']) => declares(text, symbol)),
-      ).toEqual([false, false, false, true, true, true, true, true, true, true, false, false]);
-      const whole: Doc = {
-        path: 'whole.md',
-        bases: ['', FILM_SRC],
-        whole: true,
-        text: 'Its time (`pacakges/film/src/core/time.ts` `frameAtOrAfter`), through `@manna/url-state`, `effect/Schema` and `tmp/logs/latest`.',
-      };
-      expect(yield* anchorsDrift(root, [whole])).toEqual([
-        'whole.md: path pacakges/film/src/core/time.ts does not exist',
-      ]);
-    }),
+            ['const run = () => {\n  frobnicate(1);\n};\n', 'frobnicate'],
+            ['use({ frobnicate: 1 });\n', 'frobnicate'],
+            ['export const api = { read: 1 };\nuse({ write: 2 });\n', 'api.write'],
+            ['const { frobnicate } = use();\n', 'frobnicate'],
+            ['export class Review {\n  static read() {}\n}\n', 'Review.read'],
+            ['interface Api {\n  readonly read: number;\n}\n', 'Api.read'],
+            ['export const api = { read: 1, write };\n', 'api.write'],
+            ['export const Store = Schema.Struct({ mtime: Schema.Number });\n', 'Store.mtime'],
+            [
+              'interface Deps {\n  readonly Review: unknown;\n}\nexport class Review {\n  static read() {}\n}\n',
+              'Review.read',
+            ],
+            [
+              'const f = () => {\n  const Review = 1;\n};\nexport class Review {\n  static read() {}\n}\n',
+              'Review.read',
+            ],
+            [
+              'interface Deps {\n  readonly Review: { read: 1 };\n}\nexport class Review {}\n',
+              'Review.read',
+            ],
+            ['use({ Review: { read: 1 } });\n', 'Review.read'],
+          ].map(([text = '', symbol = '']) => declares(text, symbol)),
+        ).toEqual([false, false, false, true, true, true, true, true, true, true, false, false]);
+        const whole: Doc = {
+          path: 'whole.md',
+          bases: ['', FILM_SRC],
+          whole: true,
+          text: 'Its time (`pacakges/film/src/core/time.ts` `frameAtOrAfter`), through `@manna/url-state`, `effect/Schema` and `tmp/logs/latest`.',
+        };
+        expect(yield* anchorsDrift(root, [whole])).toEqual([
+          'whole.md: path pacakges/film/src/core/time.ts does not exist',
+        ]);
+      }),
+    SPAWNS_MS,
   );
 
   it.effect('read the names code writes as a rename reads them, and a bare name against them', () =>
@@ -1947,11 +2226,9 @@ const NAMES_DRIFT: Record<DocPlace['role'], (doc: Doc, code: Code) => ReadonlyAr
   },
 };
 
-const DOC_SERVICES = Layer.merge(BunFileSystem.layer, BunPath.layer);
-
 describe.concurrent('each doc', () => {
   for (const place of PLACES) {
-    it.effect.layer(DOC_SERVICES)(
+    it.effect.layer(BunServices.layer)(
       `${place.path}: name only routes, rules, scripts, paths, symbols, flags and findings the code has`,
       () =>
         Effect.gen(function* () {
@@ -1962,6 +2239,7 @@ describe.concurrent('each doc', () => {
             ...(yield* anchorsDrift(root, [doc])),
           ]).toEqual([]);
         }),
+      SPAWNS_MS,
     );
   }
 });

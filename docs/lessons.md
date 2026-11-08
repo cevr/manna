@@ -65,6 +65,16 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### docs-test-judges-ignored-output-by-the-commit
+
+- **Date:** 2026-11-07
+- **Kind:** review
+- **Said:** "green where the output exists, red where it does not"
+- **Source:** hymnapp/hskokoro/round-2-findings.md M1
+- **Wrong:** The docs test read a path under a git-ignored, build-made folder (`apps/heartseed/ios/Heartseed.xcodeproj/project.pbxproj`) against the disk, so it passed where a prebuild had made `ios/` and failed on a fresh checkout.
+- **Cause:** `findAnchors` judged by names only a path whose first folder the root's `.gitignore` ignores (`tmp/`); a path under an app's ignored folder was looked up as the tree's.
+- **Guard:** code: `packages/film/src/docs.slow.test.ts` `judges a path in ignored output by the tree's own .gitignore files and scripts alone, the same with the output absent, built, or under a machine's own excludes, over generated trees`
+
 ### http-refusals-keep-their-declared-status
 
 - **Date:** 2026-11-02
