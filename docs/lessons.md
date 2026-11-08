@@ -2819,7 +2819,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/round-2-findings.md F1 (the review's M1)
 - **Wrong:** The plain-copy rewrite cut the confirmed page to "We will email you when each new film is out." It and the confirm letter no longer said one email per film and nothing else, the list's promise that every other page states.
 - **Cause:** The rewrite read each sentence for its voice, and nothing held the list's promise to every sentence that says how often we email.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `STATED`; `apps/firsttheblade/scripts/promise-census.ts` `r2-M1 the confirmed page drops "and nothing else"`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `STATED`; `apps/firsttheblade/scripts/promise-cases.ts` `r2-M1 the confirmed page drops "and nothing else"`
 
 ### email-promise-found-by-phrase
 
@@ -2829,7 +2829,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/round-3-findings.md F1 (repeat of round-2 M1)
 - **Wrong:** The guard for the email list's promise checked only the strings that held "each new film" or "each time a new film". "Thank you. We will email you when a new film is out." or "We send one email per film." dropped a limit and passed.
 - **Cause:** The guard assumed a sentence about how often we email can be found by its phrases. A rewording leaves the phrases, and the guard with them.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `PROMISE_SENTENCES`; `apps/firsttheblade/scripts/promise-census.ts` `r3-F1 the confirmed page drops "each new film"`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `PROMISE_SENTENCES`; `apps/firsttheblade/scripts/promise-cases.ts` `r3-F1 the confirmed page drops "each new film"`
 
 ### copy-check-verse-field-order
 
@@ -2919,7 +2919,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/round-4-findings.md F1 (repeat of round-3 F1)
 - **Wrong:** The promise's census read the site's source strings and took those with a mail word in a sentence, so "We will be in touch every week.", "EMAIL WEEKLY", `Email {"weekly"}` and a cadence on a thumbnail in `kit/draw.ts` passed.
 - **Cause:** The guard read the sources, where a sentence is split, spelled and placed as its code is, and not what a reader gets; each repair widened the net over the sources, and each review found a sentence the sources hid.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `NET`; `apps/firsttheblade/scripts/promise-census.ts` `r4-F1 a cadence split by a JSX expression`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `NET`; `apps/firsttheblade/scripts/promise-cases.ts` `r4-F1 a cadence split by a JSX expression`
 
 ### email-promise-checked-by-spelling
 
@@ -2929,7 +2929,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/round-4-findings.md F2 (repeat of round-3 F1)
 - **Wrong:** A page that bound its own `const PROMISE = 'a note every week'` kept the spelling `${PROMISE}`, so the census passed while every promise on the page said "a note every week".
 - **Cause:** The census held the source's spelling of the promise, not the words the page printed.
-- **Guard:** code: `apps/firsttheblade/scripts/promise-census.ts` `r4-F2 the form binds a PROMISE of its own`
+- **Guard:** code: `apps/firsttheblade/scripts/promise-cases.ts` `r4-F2 the form binds a PROMISE of its own`
 
 ### copy-check-verse-any-book
 
@@ -2999,7 +2999,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-1-findings.md F1 (repeat of round-4 F1)
 - **Wrong:** The promise check's net took a word of how often only whole, so "Expect a new film from us biweekly.", "Plus a bimonthly roundup.", "Look for us quarterly.", "Expect a film from us nightly.", "A new film lands in your box on weekends.", "Expect us tonight and tomorrow." and "And our seasonal roundup." passed.
 - **Cause:** The net listed whole words of how often, and a word of time is built into longer words (bi-, semi-, -ly, -s, to-).
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `NET`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r1-F1 "biweekly"`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `NET`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r1-F1 "biweekly"`
 
 ### email-promise-tags-split-words
 
@@ -3009,7 +3009,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-1-findings.md F2
 - **Wrong:** The promise check read a page as a list of tags, each tag it did not list a break and `a` a space, so `<u>wee</u>kly` and `<a href=/x>wee</a>kly`, which a browser shows as "weekly", passed as fragments the net missed.
 - **Cause:** The page was read with patterns over its tags, not parsed as a browser parses it, and an element the list missed broke the words around it.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `markupWords`, `layoutProblems`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r1-F2 the sign-up label splits "weekly" with <u>`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `markupWords`, `layoutProblems`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r1-F2 the sign-up label splits "weekly" with <u>`
 
 ### email-promise-unread-attributes
 
@@ -3019,7 +3019,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-1-findings.md F3
 - **Wrong:** Words a reader sees or hears in an `<input type="submit" value>`, an `aria-description`, a single-quoted `alt` and a stylesheet's `content:` passed the promise check unread.
 - **Cause:** The check named the attributes it read in one quote style, and did not read stylesheets.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `SEEN_ATTRIBUTES`, `cssWords`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r1-F3 the sign-up button as <input type=submit value>`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `SEEN_ATTRIBUTES`, `cssWords`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r1-F3 the sign-up button as <input type=submit value>`
 
 ### email-promise-held-anywhere
 
@@ -3029,7 +3029,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-1-findings.md F4
 - **Wrong:** "We will not send another one for an hour.", held for the check page, passed on the confirmed page, where it reads as a cadence.
 - **Cause:** The held sentences were one list for every artefact.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `HELD`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r1-F4 "for an hour" said on the confirmed page`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `HELD`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r1-F4 "for an hour" said on the confirmed page`
 
 ### email-promise-stale-dist
 
@@ -3059,7 +3059,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-2-findings.md F1 (repeat of rw-round-1 F2)
 - **Wrong:** `<p>Expect us wee&shy;kly.</p>`, the same with a zero-width space or a zero-width joiner, and a full-width "ｗｅｅｋｌｙ" each passed the promise check, though a reader sees "weekly".
 - **Cause:** The check matched the net against the characters as decoded, and a format character or a full-width letter is a different character from the one the reader takes it for.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `fold`, `SEEN_CHARACTERS`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r2-F1 a soft hyphen inside "weekly"`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `fold`, `SEEN_CHARACTERS`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r2-F1 a soft hyphen inside "weekly"`
 
 ### email-promise-generated-content
 
@@ -3069,7 +3069,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-2-findings.md F2 (repeat of rw-round-1 F3)
 - **Wrong:** `.button-label::after{content:" and our news"}` made the sign-up button read "Email me new films and our news", and the check passed it as the held "Email me new films"; `content:"kly"` after "wee" drew "weekly".
 - **Cause:** The check read each stylesheet string as its own run of words, and does not resolve which element a selector draws it beside.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `GENERATED`, `CSS_STRINGS`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r2-F2 generated content after the sign-up button`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `GENERATED`, `CSS_STRINGS`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r2-F2 generated content after the sign-up button`
 
 ### email-promise-join-checked-by-net
 
@@ -3079,7 +3079,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-2-findings.md F3
 - **Wrong:** `<label>Or get them by email</label><div style="display:inline"> and our news too</div>` passed: a reader sees "Or get them by email and our news too", which breaks "and nothing else".
 - **Cause:** At a break, the check asked only whether the joined words held a net word that neither side held, so a join beside a held sentence that already held one was never read as a sentence.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `joinsOf`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r2-F3 an inline <div> after the sign-up label`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `joinsOf`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r2-F3 an inline <div> after the sign-up label`
 
 ### email-promise-letter-sender
 
@@ -3089,7 +3089,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-2-findings.md F4
 - **Wrong:** `FROM` (`apps/firsttheblade/src/mail/mailer.ts`), which every inbox shows beside each letter, was not read, so "First the Blade Weekly" or `weekly@firsttheblade.com` would have passed.
 - **Cause:** The check read the letters as their builders return them, and the sender is set where the Worker sends them.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `blocks: [FROM.name, FROM.email]`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r2-F4 the letters are from "First the Blade Weekly"`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `blocks: [FROM.name, FROM.email]`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r2-F4 the letters are from "First the Blade Weekly"`
 
 ### email-promise-unknown-meta
 
@@ -3099,7 +3099,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-2-findings.md F5
 - **Wrong:** `<meta name="application-name" content="First the Blade Weekly">`, a name some systems show for a pinned site, passed unread.
 - **Cause:** The check read the meta tags a pattern named and dropped every other one.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `UNSEEN_META`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r2-F5 <meta name="application-name">`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `UNSEEN_META`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r2-F5 <meta name="application-name">`
 
 ### email-promise-what-we-send
 
@@ -3119,7 +3119,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-2-findings.md F7
 - **Wrong:** On a cache miss, the gate's `promise` step built the app again after turbo's `build`, about 2 s of work done twice.
 - **Cause:** The step built fresh so it never read a stale `dist/`, rather than checking the one turbo built; a check by file times would refuse a cached build after a source is saved unchanged, so the build stamps the hash of its sources and of each file it wrote.
-- **Guard:** code: `apps/firsttheblade/package.json` `"test:slow": "bun scripts/promise.ts && bun run promise:census`; `apps/firsttheblade/scripts/built.ts` `sourcesHash`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r2-F7 a source changed after the build`
+- **Guard:** code: `apps/firsttheblade/package.json` `"test:slow": "bun scripts/promise.ts && bun run promise:census`; `apps/firsttheblade/scripts/built.ts` `sourcesHash`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r2-F7 a source changed after the build`
 
 ### email-promise-download-name
 
@@ -3129,7 +3129,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-2-findings.md F8
 - **Wrong:** `<a download="weekly-digest.pdf">` passed, and the browser shows the name in its save dialog.
 - **Cause:** The check's list of attributes a reader sees left `download` out, and an attribute in no list was dropped.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `SEEN_ATTRIBUTES`, `UNSEEN_ATTRIBUTES`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r2-F8 a download file name`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `SEEN_ATTRIBUTES`, `UNSEEN_ATTRIBUTES`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r2-F8 a download file name`
 
 ### email-promise-fails-closed
 
@@ -3139,7 +3139,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-2-findings.md F1; ftb-copy/rw-round-2-findings.md F2; ftb-copy/rw-round-2-findings.md F5
 - **Wrong:** Rounds 1 and 2 of the rewrite each closed the ways the review found text to reach a reader (words split by tags, attributes, stylesheets, then invisible characters, generated content, joins, the sender, meta tags), and each review found one more.
 - **Cause:** The check rested on "it can rebuild what a reader sees by understanding every way text reaches the page", and a source it did not understand was dropped, not failed.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `HTML_ELEMENTS`, `UNSEEN_ATTRIBUTES`, `UNSEEN_META`, `LETTER_HEADERS`, `WORDLESS`; `apps/firsttheblade/scripts/promise-census.ts` `fail-closed an element the check does not read`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `HTML_ELEMENTS`, `UNSEEN_ATTRIBUTES`, `UNSEEN_META`, `LETTER_HEADERS`, `WORDLESS`; `apps/firsttheblade/scripts/promise-cases.ts` `fail-closed an element the check does not read`
 
 ### email-promise-joins-in-document-order
 
@@ -3159,7 +3159,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-3-findings.md F6
 - **Wrong:** A refused sentence printed only its words, so each ordinary edit of the site's copy (a page's first words, a new page, the first talk of a series) left the owner or an agent to work out which list of `HELD` holds it and how to write it there.
 - **Cause:** The check was written to refuse, not to say how to hold what it refuses; the owner kept it and asked for its errors to print a ready-to-paste exception (ask a3e589137f5, ship-keep).
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `entriesOf`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r3-F6 a refused sentence, held by the entry it prints`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `entriesOf`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r3-F6 a refused sentence, held by the entry it prints`
 
 ### email-promise-css-escape
 
@@ -3169,7 +3169,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-3-findings.md F4
 - **Wrong:** `c\6f ntent:\61ttr(data-count)` in a stylesheet the build does not minify (one copied from `public/`, or a letter's `<style>`) passed the promise check, and a browser reads it as `content:attr(data-count)`.
 - **Cause:** The check matches `content:` and `attr()` by name, and an escape spells the name with other characters.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `unread: CSS escape`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r3-F4 an escaped content: and attr() in a stylesheet no minifier reads`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `unread: CSS escape`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r3-F4 an escaped content: and attr() in a stylesheet no minifier reads`
 
 ### email-promise-link-card-picture
 
@@ -3179,7 +3179,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-copy/rw-round-3-findings.md F5
 - **Wrong:** `<meta property="og:image" content="https://example.com/weekly-news.jpg">` passed the promise check, and a link card draws that picture, with any words in it, where no policy of the site's applies.
 - **Cause:** `og:image` and `twitter:image` were in the list of meta tags whose content no reader sees as words, and the picture they name is read by none of the check's readers.
-- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `LINK_CARD_PICTURES`, `isDrawnLinkCard`; `apps/firsttheblade/scripts/promise-census.ts` `rw-r3-F5 a link card picture from elsewhere`
+- **Guard:** code: `apps/firsttheblade/scripts/promise.ts` `LINK_CARD_PICTURES`, `isDrawnLinkCard`; `apps/firsttheblade/scripts/promise-cases.ts` `rw-r3-F5 a link card picture from elsewhere`
 
 ### email-promise-hidden-text
 
@@ -5220,3 +5220,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `apps/hymnal/src/offline/foundation.d.ts` kept a `//` line saying One 2.15.1's declaration omits `NSURL.initString`, which it has, so the file and its untrue comment stayed when the spec said the file goes.
 - **Cause:** `.oxlintrc.json` ignored every `*.d.ts`, so `effect/noComments` never read an app's declaration files and their line comments went unchecked.
 - **Guard:** lint:effect/noComments, proof `packages/scripts/src/guard/files.test.ts` `under the repo's own config, lint an app's declarations and still ignore a package's, the typegen forms, One's route types, node_modules and dist`
+
+### ftb-census-cases-held-in-the-gate
+
+- **Date:** 2026-11-08
+- **Kind:** review
+- **Said:** "Commit 3 makes First the Blade's `test:slow` red: the promise census goes stale."
+- **Source:** hymnapp/depsup-web/round-1-findings.md B1
+- **Wrong:** A commit moved the sign-up label's words from `apps/firsttheblade/src/ui/mail.tsx` to `src/mail/paths.ts`, and five promise census cases that seed their mutants by finding those words in `mail.tsx` went stale, so `test:slow` was red and the five mutants proved nothing.
+- **Cause:** The census held its cases in a script that runs on import and builds the app for each case, so only `test:slow` read them, and the round's gate did not rerun it after the commit.
+- **Guard:** code: `apps/firsttheblade/scripts/promise-cases.test.ts` `finds each case's words in its file exactly once, and each new file not there yet`
