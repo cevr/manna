@@ -734,6 +734,130 @@ marks. The alert stays in the scroll.
   removed verses, so after `Next` Today never offers one. The view's
   `pieces` and `held` keep their meaning.
 
+## Natural voice
+
+The natural voice reads a piece with Kokoro-82M instead of the system
+voice, and lights each word as it is read. It holds its pronunciation
+list, the rule from a piece's text to what the model is given, the native
+module that downloads, renders and plays, and a `VoiceSource` over it; no
+screen a reader sees calls it yet, and the switch a reader sees is not
+here.
+
+- `data/kjv-phonemes.json` maps every distinct word key of the KJV (13,756)
+  to its phonemes in Kokoro's symbols: Misaki 0.9.4's English G2P for the
+  key alone (with its espeak-ng fallback), or the key's entry in
+  `data/kjv-phonemes.overrides.json`, which replaces Misaki's guess (empty
+  today; the owner's listening fills it, at most 200 entries, each a KJV
+  key that differs from Misaki's). It holds words and phonemes only, no
+  verse text. Heteronyms (read, lead, wind) take Misaki's default sense,
+  and names its guess.
+- `data/kokoro-vocab.json` is Kokoro's symbol vocabulary, byte for byte the
+  `vocab.json` of Hugging Face `FluidInference/kokoro-82m-coreml` at
+  revision `2568276a60ff6e7f312afce3dc9e3f07521cb48d`.
+- `data/lexicon.py` writes the list. Regenerate it from the repository
+  root with `uv run --no-project --python 3.12 apps/heartseed/data/lexicon.py`
+  after editing the overrides; its inline metadata pins Misaki, spaCy,
+  `en_core_web_sm` and espeak-ng's loader, and only then are uv and the
+  network needed. It writes the keys sorted, one entry a line, so two runs
+  write the same bytes; `src/natural/data.test.ts` holds the list's hash,
+  which a regeneration updates. The tests never run Python. espeak-ng runs
+  only on the dev machine and nothing of it ships.
+- `src/natural/plan.ts` is the rule, pure. `planOf(words, vocab, text)`
+  plans a piece's displayed text, as `src/voice/reading.ts` speaks it. A
+  word is a whitespace run that holds a letter or a number; its key is the
+  run without its leading and trailing characters that are neither, looked
+  up as written. A word speaks the `,.:;?!()` of its edges around its
+  phonemes, other edge characters silent, and words join with one space,
+  counted in code points. A clause ends at a word whose spoken trail holds
+  one of `,.:;?!`; a clause of at most `CHUNK_CAP` (200) symbols stays in
+  one chunk, and a longer one may break between any of its words. Clauses
+  pack greedily into chunks of at most 200 symbols with their joining
+  spaces. Each chunk's ids are BOS 0, the spoken symbols' ids, EOS 0, and
+  each word's mark is the index of its first phoneme, after its spoken
+  lead, with the whole run's location and length in UTF-16 units, as the
+  system voice's word marks give them. An unknown key, a symbol outside the
+  vocab, a word over 200 symbols alone or a text with no word plans none.
+  `startsOf(chunk, durations)` gives each word's start in the chunk's audio
+  from the model's frames per id: `SAMPLES_PER_FRAME` (600) times the
+  frames of the ids before its mark; durations that are not one whole,
+  positive count per id give none.
+- `src/natural/lexicon.ts` carries the list and the vocab into the bundle:
+  `lexicon()` builds the two maps once, from `virtual:heartseed-lexicon`,
+  which `vite/plugin.ts` serves as `vite/lexicon.ts` prints it. Nothing in
+  `src/app.ts`'s graph reaches it yet.
+- `native/natural` is the Swift package (module `Natural`, the local pod
+  `OneSwiftPackages/natural`), for iOS 18 and later like the app. Its
+  `kokoro` folder vendors FluidAudio's seven-stage Core ML chain for
+  Kokoro (six files at commit `ee78635d23d52379117554ba72358b65a0612447`,
+  with FluidAudio's LICENSE byte for byte); each file's header names its
+  upstream path and what changed for Heartseed (the `#if TTS` wrapper,
+  and the constants trimmed to the English chain), and `kokoro/README.md`
+  lists them. It is vendored, not a dependency, since One's prebuild takes
+  no SwiftPM dependency. `ModelStore.swift` loads the seven compiled stages
+  from one folder; `Natural.swift` is the module, whose declaration
+  (`Natural.d.swift.ts`) is committed as One writes it.
+- **The download.** `src/natural/manifest.ts` pins the 38 files of Hugging
+  Face `FluidInference/kokoro-82m-coreml`, folder `ANE/`, at revision
+  `2568276a60ff6e7f312afce3dc9e3f07521cb48d` (82,810,273 bytes, each with
+  its SHA-256), and the mirror `https://models.heartseed.app/kokoro/2568276a60ff/`.
+  `install` keeps them in `Application Support/Heartseed/natural/<revision>`,
+  a folder marked out of backups before its first byte, one file at a time
+  in the manifest's order: a file is fetched into `natural/.partial`,
+  hashed with CryptoKit and moved into place only when its hash matches; a
+  mismatch is fetched again at most twice, then fails `check`. It asks for
+  the missing bytes plus 50 MB free (`space`), waits for a network in Low
+  Data Mode (`waiting`), fails `network` on any status but 200 or a lost
+  connection, and fails `cancelled` at `cancelInstall`; a second `install`
+  fetches only what is missing. `load` hashes every file again first.
+  `baseFor(dev, asked)` gives the base: a release build always the mirror,
+  a development build a plain `http(s)://host[:port]/folder/` it is asked
+  for.
+- **Routing.** On the simulator every stage runs on the CPU. On a device,
+  iOS 27 and later run the noise and tail stages on the CPU and the rest on
+  the Neural Engine; earlier ones run the noise and tail on the GPU.
+- **Rendering and playing.** `render(utterance, chunk, ids)` runs the chain
+  on a chunk's ids, one render at a time off the main actor, and returns
+  each id's frames and the sample count; JS checks `samples = 600 × Σframes`
+  and gives `play` each word's start sample (`startsOf`). On a device,
+  `play` schedules the chunks gapless on one `AVAudioEngine` player at
+  24 kHz and sends `start`, a `range` at each word's start sample and
+  `finish`; on the simulator it plays nothing, logs
+  `[natural] play … skipped=simulator`, and sends the same events by a wall
+  clock. Events go only to the held reading, matched by generation, so a JS
+  reload's reused ids cannot collide; an interruption or an engine
+  configuration change (a route change) ends it as `interrupt`. The module
+  never sets the audio session. A render of chunk 0 writes the marker
+  `natural/reading`, removed when the reading ends; a marker found at
+  start says `crashed` once.
+- `src/natural/module.ts` is the module's seam (`NaturalModule`, a
+  `Context.Service`); `src/natural/source.ios.ts` is it over the Swift
+  module, the only importer of `Natural.swift`, and `src/natural/source.ts`
+  is every other platform's, which holds nothing and refuses each call.
+- `src/natural/voice.ts`, `naturalVoiceSource(lexicon)`, is a `VoiceSource`
+  over the module, so `src/voice.ts` reads with it unchanged: a speak stops
+  the module, plans the text, loads, then renders and plays chunk by chunk
+  (the next chunk renders while one plays). Chunk 0's failure fails the
+  speak; a later chunk's stops the module and sends `interrupt`. A speak
+  let go (stopped, replaced or ended) returns at once.
+- **The probe.** `app/probe/natural.tsx` (`heartseed://probe/natural?base=…&soak=…`)
+  is a development probe that renders and starts nothing in a release
+  build. `Install`, `Cancel`, `Load`, `Read` (Today's passage through the
+  voice over the natural source), `Stop`, `Remove` and `Soak` (each verse
+  rendered in canon order, no play) show counts only, never a word
+  (`src/natural/probe.ts`). `.claude/skills/verify-heartseed/features/natural.md`
+  drives it.
+- **The model server.** `bun run natural:serve -- --port <p> --cache <dir>
+  [--host 127.0.0.1|0.0.0.0] [--corrupt <path>]` (`scripts/natural-serve.ts`)
+  fills the cache from Hugging Face at the pinned revision, checking each
+  file, and serves `GET` and `HEAD` of the 38 paths, so the simulator and a
+  development phone install with no mirror; `--corrupt` flips the middle
+  byte of one file as served. It never ships.
+- Credits: Misaki (hexgrad/misaki, Apache-2.0) made the list; Kokoro's
+  vocabulary is hexgrad/Kokoro-82M's (Apache-2.0), as FluidInference
+  publishes it. The model is Kokoro-82M (hexgrad, Apache-2.0), in the Core
+  ML conversion of laishere/kokoro-coreml (Apache-2.0, per its LICENSE),
+  run by code from FluidAudio (Apache-2.0).
+
 ## Tests
 
 - The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as parts, each a
@@ -1045,13 +1169,44 @@ marks. The alert stays in the scroll.
     file's floors met by its own devices. `test:chooser-leave` also runs
     `src/chooser/fixed.test.tsx`, which keeps every screen's fixed
     controls outside its scroll views in every frame.
+  - `test:natural`: `src/natural`, the natural voice's plan, seam and probe:
+    `src/natural/plan.property.test.ts`, `planOf` and `startsOf` against a
+    model written in the test over a small hand-built lexicon and vocab
+    (seeded texts, the cap at 200 and 201 for a clause, a word and a packed
+    pair, code points against UTF-16 units, marks after a spoken lead, and
+    durations that do not fit); and `src/natural/data.test.ts`, the
+    committed data: the vocab's pinned hash, the list's bytes as the
+    generator last wrote them, its keys sorted and unique, and every
+    phoneme and override spoken in the vocab; `src/natural/manifest.test.ts`,
+    the 38 pinned files and `baseFor` over seeded asks;
+    `src/natural/guard.test.ts`, the native module's guards (its committed
+    declaration equals One's, the simulator branch never starts the engine
+    and logs its skip, no file sets the audio session, only
+    `source.ios.ts` names the Swift file, the vendored headers and
+    LICENSE); `src/natural/lexicon.test.ts`, the bundled list and vocab;
+    and `src/natural/probe.test.ts`, the probe's lines, a read's tally over
+    seeded views (order ok only for each word lit once, in order, to a
+    finish), the soak's count and tally, and one soaked verse over a
+    stand-in module. It leaves out `src/natural/voice.test.ts`, which is
+    its own part.
+  - `test:natural-voice`: `src/natural/voice.test.ts`, the natural voice's
+    `VoiceSource` against a model written in the test, over 300 seeded
+    histories of a stand-in module that answers each load and render when
+    the history says (speaks of one to three chunks and of a text no plan
+    takes, malformed renders, a refused play, events of the held utterance
+    and of others, a reload): its module calls, the events it forwards and
+    each speak's state after every step.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
     (Heartseed's `sim` over a stand-in Drive: its values, the web and a
     port outside 8280-8289 refused before any step, and `install` waiting
-    for Today's reference) and `vite/kjv.test.ts` (the corpus's derivation
-    and its build faults, and the plugin's two modules).
+    for Today's reference), `scripts/natural-serve.test.ts` (the model
+    server over a fake cache on a port the system picks, with no network:
+    the fill, `GET`, `HEAD`, 404 and `--corrupt`), `vite/kjv.test.ts`
+    (the corpus's derivation and its build faults, and the plugin's two
+    modules) and `vite/lexicon.test.ts` (the pronunciation list as the
+    plugin serves it).
 
   Run one with `bun run test:<part>` here, or all with `bun run test
   --filter=@manna/heartseed` at the repository root. A new test file at the

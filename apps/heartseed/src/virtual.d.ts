@@ -9,3 +9,12 @@ declare module 'virtual:heartseed-kjv' {
   const chapters: ReadonlyArray<string>;
   export default chapters;
 }
+
+declare module 'virtual:heartseed-lexicon' {
+  /** The natural voice's KJV pronunciation list (word key → phonemes) and Kokoro's vocab (symbol → id), carried from `data/` when the app is bundled (`vite/lexicon.ts`); read through `src/natural/lexicon.ts` alone. */
+  const lexicon: {
+    readonly words: { readonly [word: string]: string };
+    readonly vocab: { readonly [symbol: string]: number };
+  };
+  export default lexicon;
+}

@@ -8,7 +8,9 @@
  * - `react-native` is react-native-web, as on the web;
  * - `virtual:heartseed-passage` is the passage the bundler plugin derives,
  *   by the same script (`vite/passage.ts`), and `virtual:heartseed-kjv` the
- *   corpus, by `vite/kjv.ts`, derived only when a test imports it;
+ *   corpus, by `vite/kjv.ts`, and `virtual:heartseed-lexicon` the natural
+ *   voice's list, by `vite/lexicon.ts`, each derived only when a test
+ *   imports it;
  * - `one` is `src/test/one.tsx`: a phone's safe area with no insets, its
  *   haptics felt by nothing, and device info that reads a phone.
  */
@@ -17,6 +19,7 @@ import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { plugin } from 'bun';
 
 import { readChapters } from '../../vite/kjv';
+import { readLexicon } from '../../vite/lexicon';
 import { readPassage } from '../../vite/passage';
 
 GlobalRegistrator.register({ url: 'http://localhost/' });
@@ -41,6 +44,10 @@ plugin({
     }));
     build.module('virtual:heartseed-kjv', () => ({
       contents: `export default ${JSON.stringify(readChapters())};`,
+      loader: 'js',
+    }));
+    build.module('virtual:heartseed-lexicon', () => ({
+      contents: `export default ${JSON.stringify(readLexicon())};`,
       loader: 'js',
     }));
   },

@@ -17,7 +17,8 @@
  *   switch and Listen alone (`voiceView`, `toggleVoice`, `listenTo` and
  *   `readingAloud` from `src/app.ts`) and reads aloud only through
  *   `listenTo`; the first minute's hear phase and Today's Listen are the
- *   voice's two readers.
+ *   voice's two readers. Only `src/app.ts` and the natural voice's
+ *   development probe (`app/probe/natural.tsx`) build the voice.
  * - A word lit is felt by a soft tick: the app's one call of One's haptics
  *   is `impact('soft')`, in Say it's live parts.
  *
@@ -197,7 +198,7 @@ describe('Say it aloud', () => {
     expect(code('app/index.tsx')).toContain('useAtomSet(listenTo)');
   });
 
-  it('leaves reading aloud to the first minute’s hear phase and Today’s Listen: only src/first takes the hear phase’s reading atoms from src/app.ts, only Today takes Listen and the switch, and only src/app.ts builds the voice', () => {
+  it('leaves reading aloud to the first minute’s hear phase and Today’s Listen: only src/first takes the hear phase’s reading atoms from src/app.ts, only Today takes Listen and the switch, and only src/app.ts and the natural voice’s development probe build the voice', () => {
     const takers = (atoms: readonly string[]) =>
       SOURCES.filter((source) =>
         importsOf(source).some(
@@ -216,7 +217,7 @@ describe('Say it aloud', () => {
           ({ from, names }) => /(^|\/)voice$/.test(from) && names.includes('layer'),
         ),
     );
-    expect(builders).toEqual(['src/app.ts']);
+    expect(builders).toEqual(['app/probe/natural.tsx', 'src/app.ts']);
   });
 });
 

@@ -1,12 +1,15 @@
 /* oxlint-disable effect/noNodeBuiltinImport, effect/noNullish, effect/noTernary -- a Vite and rolldown plugin, the bundler's host boundary: it runs the derivations as child processes, and its hooks answer `undefined` for a module that is not theirs, as the plugin API defines. */
 
 /**
- * The app's two bundle-time modules, each made by its script when the app
+ * The app's three bundle-time modules, each made by its script when the app
  * is bundled:
  * - `virtual:heartseed-passage`, Today's passage (`passage.ts`), so the
  *   promise needs no corpus read;
  * - `virtual:heartseed-kjv`, the whole KJV as one string per chapter
- *   (`kjv.ts`), which the app reads through `src/kjv.ts` alone.
+ *   (`kjv.ts`), which the app reads through `src/kjv.ts` alone;
+ * - `virtual:heartseed-lexicon`, the natural voice's pronunciation list
+ *   and Kokoro's vocab (`lexicon.ts`), read through `src/natural/lexicon.ts`
+ *   alone.
  *
  * The web and the native bundle both take them from this plugin
  * (`vite.config.ts` gives it to One's native bundler too), so the phone
@@ -22,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 const SCRIPTS: ReadonlyMap<string, string> = new Map([
   ['virtual:heartseed-passage', fileURLToPath(new URL('./passage.ts', import.meta.url))],
   ['virtual:heartseed-kjv', fileURLToPath(new URL('./kjv.ts', import.meta.url))],
+  ['virtual:heartseed-lexicon', fileURLToPath(new URL('./lexicon.ts', import.meta.url))],
 ]);
 
 /** The derived corpus is about 4.2 MB of JSON, past the child process's default 1 MB. */
@@ -38,7 +42,7 @@ const derive = (module: string, script: string): string => {
   return json;
 };
 
-/** A Vite and rolldown plugin: `import passage from 'virtual:heartseed-passage'` and `import chapters from 'virtual:heartseed-kjv'`. */
+/** A Vite and rolldown plugin: `import passage from 'virtual:heartseed-passage'`, `import chapters from 'virtual:heartseed-kjv'` and `import lexicon from 'virtual:heartseed-lexicon'`. */
 export const passage = () => ({
   name: 'heartseed-passage',
   resolveId: (source: string) => (SCRIPTS.has(source) ? `\0${source}` : undefined),

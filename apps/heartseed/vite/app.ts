@@ -9,7 +9,7 @@ import type { NativeAppManifest } from 'one/native';
 
 export const app = {
   name: 'Heartseed',
-  ios: { bundleId: 'app.heartseed', deploymentTarget: '17.0' },
+  ios: { bundleId: 'app.heartseed', deploymentTarget: '18.0' },
   android: { applicationId: 'app.heartseed' },
   speech: {
     recognition:

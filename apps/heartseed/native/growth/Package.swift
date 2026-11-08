@@ -10,6 +10,6 @@ import PackageDescription
 
 let package = Package(
   name: "growth",
-  platforms: [.iOS(.v17)],
+  platforms: [.iOS("18.0")],
   targets: [.target(name: "growth", path: ".", exclude: ["Package.swift"])]
 )
