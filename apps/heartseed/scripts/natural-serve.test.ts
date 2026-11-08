@@ -7,7 +7,9 @@
  * a missing file whose bytes check, and keeps no file whose bytes do not;
  * it converts `am_michael.bin` from its rows, as the copy to the mirror
  * does, and keeps nothing from rows that do not convert; unless given a
- * list it fills the whole download, and the ready line counts all of it.
+ * list it fills the whole download, all 39 files in path order with the
+ * second voice's rows at 37 (over a stand-in file system and digest, each
+ * file zeros of its size), and the ready line counts all of it.
  * The server answers `GET` with a file's bytes and length and `HEAD` with
  * its length alone, 404 for any path not in the list or another method,
  * and `--corrupt` flips the middle byte of that file alone.
@@ -65,6 +67,17 @@ const rowsOf = (values: Float32Array, drop: number) => {
   }
   return new TextEncoder().encode(`{${entries.join(',')}}`);
 };
+
+/** Zeros of `file`'s size, its index in the first four bytes: a stand-in for its bytes. */
+const markedOf = (file: { readonly bytes: number }, at: number) => {
+  const bytes = new Uint8Array(file.bytes);
+  new DataView(bytes.buffer).setUint32(0, at, true);
+  return bytes;
+};
+
+/** What the stand-in digest knows bytes by: their size and their first four bytes. */
+const keyOf = (bytes: Uint8Array) =>
+  `${bytes.byteLength}:${new DataView(bytes.buffer, bytes.byteOffset, 4).getUint32(0, true)}`;
 
 /** The fake cache's files, as the manifest lists them. */
 const filesOf = Effect.gen(function* () {
@@ -200,15 +213,46 @@ describe('fill', () => {
 
   it.effect('fills the whole download, both voices, unless given a list', () =>
     Effect.gen(function* () {
-      const cache = yield* cacheOf;
-      const asked: Array<string> = [];
-      yield* fillPinned(cache).pipe(
-        Effect.provide(hubOf(asked, () => new Uint8Array())),
-        Effect.flip,
+      const pack = packOf(VALUES);
+      const pins = new Map(
+        FILES.flatMap((file, at) =>
+          file === AM_MICHAEL ? [] : [[keyOf(markedOf(file, at)), file]],
+        ),
       );
-      expect(asked).toEqual([sourceOf(FILES[0]?.path ?? '')]);
-      expect(FILES.map((file) => file.path)).toContain(AM_MICHAEL.path);
-    }).pipe(Effect.scoped, Effect.provide(platform)),
+      pins.set(keyOf(pack), AM_MICHAEL);
+      const asked: Array<string> = [];
+      const written: Array<string> = [];
+      const fetched = yield* fillPinned('/nonexistent/natural-serve-cache').pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            hubOf(asked, (url) => {
+              if (url === VOICE_ROWS) return rowsOf(VALUES, 0);
+              const at = FILES.findIndex((file) => sourceOf(file.path) === url);
+              return Option.match(Option.fromUndefinedOr(FILES[at]), {
+                onNone: () => new Uint8Array(),
+                onSome: (file) => markedOf(file, at),
+              });
+            }),
+            FileSystem.layerNoop({
+              makeDirectory: () => Effect.void,
+              writeFile: () => Effect.void,
+              rename: (_, to) => Effect.sync(() => written.push(to)),
+            }),
+            Layer.succeed(Digest.Digest, {
+              digest: () => Effect.succeed(new Uint8Array()),
+              digestHex: (_, bytes) => Effect.succeed(pins.get(keyOf(bytes))?.sha256 ?? ''),
+            }),
+          ),
+        ),
+      );
+      expect(fetched).toEqual(FILES.map((file) => file.path));
+      expect(fetched).toHaveLength(39);
+      expect(asked).toEqual(
+        FILES.map((file) => (file === AM_MICHAEL ? VOICE_ROWS : sourceOf(file.path))),
+      );
+      expect(asked.indexOf(VOICE_ROWS)).toBe(37);
+      expect(written).toEqual(FILES.map((file) => `/nonexistent/natural-serve-cache/${file.path}`));
+    }).pipe(Effect.provide(BunServices.layer)),
   );
 });
 
