@@ -1747,7 +1747,16 @@ GETs (Class B) when the edge does not serve them.
     the fill, `GET`, `HEAD`, 404 and `--corrupt`), `vite/kjv.test.ts`
     (the corpus's derivation and its build faults, and the plugin's two
     modules) and `vite/lexicon.test.ts` (the pronunciation list as the
-    plugin serves it).
+    plugin serves it). It leaves `scripts/icon.test.ts` to `test:icon`.
+  - `test:icon`: `scripts/icon.test.ts`, with no preload: the icon script
+    draws exactly the files the test holds; each opaque icon (light, dark,
+    tinted) 1024 px with three channels, every pixel its ground, its mark
+    or a blend in `src/theme.ts`'s icon colours, the mark's box at 0.72 of
+    the side; each layer (Android's foreground and monochrome, both launch
+    screens' artwork) 1024 px with alpha, every seen pixel its mark's
+    colour, Android's inside the 33/108 safe circle and the launch ones'
+    box at 0.72; and every committed PNG byte for byte what `bun run icon`
+    draws from `assets/icon/heartseed.svg` now.
   - `test:mirror`: `infra`, the mirror's stack, with no preload:
     `infra/models/plan.test.ts` (the list, the keys, the headers and the
     plan's keep, upload and conflict), `infra/models/voice-pack.test.ts`

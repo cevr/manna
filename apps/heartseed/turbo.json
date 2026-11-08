@@ -1385,6 +1385,18 @@
         "!infra/**/*.test.*"
       ]
     },
+    "test:icon": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/**/*.test.*",
+        "!vite/**/*.test.*",
+        "!scripts/{natural-serve,parts,sim}.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
     "test:mirror": {
       "dependsOn": ["^transit"],
       "outputs": [],
@@ -1474,6 +1486,7 @@
         "test:theme",
         "test:rest",
         "test:infra",
+        "test:icon",
         "test:mirror"
       ]
     }

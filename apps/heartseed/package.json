@@ -88,7 +88,8 @@
     "test:natural-voice": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/natural/voice.test.ts",
     "test:theme": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/theme.test.ts",
     "test:rest": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/core-import.property.test.ts ./src/core-import.test.ts ./src/display.test.ts ./src/matcher.test.ts ./src/today.test.tsx",
-    "test:infra": "bun test --no-isolate --parallel=3 --path-ignore-patterns='**/*.slow.test.*' ./scripts ./vite",
+    "test:infra": "bun test --no-isolate --parallel=3 --path-ignore-patterns='**/*.slow.test.*' --path-ignore-patterns=scripts/icon.test.ts ./scripts ./vite",
+    "test:icon": "bun test --no-isolate --parallel=3 --path-ignore-patterns='**/*.slow.test.*' ./scripts/icon.test.ts",
     "test:mirror": "bun test --no-isolate --parallel=3 --path-ignore-patterns='**/*.slow.test.*' ./infra",
     "test:slow": "bun run typecheck && bun test --pass-with-no-tests .slow.test."
   },
