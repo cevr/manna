@@ -22,6 +22,9 @@ import { Digest } from 'effect/crypto';
  * - `POST /mail/send`, with `Authorization: Bearer <MAIL_ADMIN_TOKEN>`: puts
  *   a film's send on the queue (`./deliver.ts`), for each subscriber the
  *   roster says still waits for it, or with `dryRun` counts it.
+ * - `GET /mail/key`, with the same token: the token key's fingerprint
+ *   (`Tokens.fingerprint`), which `bun run mail:key-check` compares with
+ *   the key it holds.
  *
  * Every answer is a redirect, a page or a short text, and the logs name
  * ids, counts and codes, never an address or a token.
@@ -39,7 +42,7 @@ import { CONFIRM_FOR } from '../list/timing.ts';
 import { Assets, pageRequest } from '../worker/assets.ts';
 import { type Address, addressOf } from './address.ts';
 import { Addresses } from './addresses.ts';
-import { type SendAnswer, SendRequest } from './admin.ts';
+import { type KeyAnswer, type SendAnswer, SendRequest } from './admin.ts';
 import { Background } from './background.ts';
 import { Films } from './films.ts';
 import { logMail, reasonOf, warnMail } from './log.ts';
@@ -78,7 +81,8 @@ const see = (path: string) => HttpServerResponse.redirect(path, { status: 303 })
 
 const text = (body: string, status: number) => HttpServerResponse.text(body, { status });
 
-const json = (body: SendAnswer, status: number) => HttpServerResponse.jsonUnsafe(body, { status });
+const json = (body: SendAnswer | KeyAnswer, status: number) =>
+  HttpServerResponse.jsonUnsafe(body, { status });
 
 /** A page the prerender wrote, as this route's answer. */
 const page = Effect.fn('Mail.page')(function* (
@@ -323,6 +327,17 @@ const send = Effect.fn('Mail.send')(function* (request: HttpServerRequest.HttpSe
   return json({ film: ref, ...counts, queued }, 202);
 });
 
+/** The token key's fingerprint, for the admin alone: the key check after a deploy. */
+const key = Effect.fn('Mail.key')(function* (request: HttpServerRequest.HttpServerRequest) {
+  if (!(yield* isAdmin(request))) {
+    yield* warnMail('key.unauthorized');
+    return json({ error: 'unauthorized' }, 401);
+  }
+  const fingerprint = yield* (yield* Tokens).fingerprint;
+  yield* logMail('key.checked');
+  return json({ fingerprint }, 200);
+});
+
 type Handler = (
   request: HttpServerRequest.HttpServerRequest,
 ) => Effect.Effect<HttpServerResponse.HttpServerResponse, SqlError | QueueError, MailServices>;
@@ -345,6 +360,7 @@ const ROUTES = new Map<string, ReadonlyMap<string, Handler>>([
     ]),
   ],
   [MAIL_ROUTES.send, new Map([['POST', send]])],
+  [MAIL_ROUTES.key, new Map([['GET', key]])],
 ]);
 
 /**
