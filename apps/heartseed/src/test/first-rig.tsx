@@ -63,7 +63,9 @@ import { sourceWords } from '../matcher/words';
 import { Haptics, type Recall } from '../sayit';
 import { MINUTES_KEY } from '../session/service';
 import { store } from '../store';
+import { theme } from '../theme';
 import { clockAt } from './clock';
+import { paintOf, systemScheme } from './look';
 import { device } from './one';
 import { dueModel, MINUTE, planModel } from './session-model';
 import { hostOffset } from './zone';
@@ -380,9 +382,12 @@ const alphaOf = (color: string) => {
   return parts.length === 4 ? (parts[3] ?? 1) : 1;
 };
 
-/** Whether `color` is the hear phase's ink for a spoken word, `#064f6e`. */
-const isInk = (color: string) =>
-  /^#064f6e$/iu.test(color) || /^rgba?\(\s*6,\s*79,\s*110(?:,\s*1(?:\.0+)?)?\s*\)$/u.test(color);
+/** Whether `color` is the hear phase's ink for a spoken word: the ink of the scheme the system names (`src/theme.ts`). */
+const isInk = (color: string) => {
+  const ink = paintOf(theme[systemScheme()].ink);
+  const seen = paintOf(color);
+  return seen.hex === ink.hex && seen.alpha === 1;
+};
 
 interface Sight {
   readonly text: Map<number, string>;

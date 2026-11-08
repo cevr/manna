@@ -1,9 +1,10 @@
 /**
- * What Today and the first minute draw alike: Palette A, a recital's word as
- * `wordOf` shows it, a word not yet said under its cue (whole, in letters or
- * nothing), the one large round button, and the plant. Each word is
- * its own accessibility element; a word or part of one that is not shown is
- * laid out in transparent ink and hidden from the screen reader.
+ * What Today and the first minute draw alike, in the scheme now's roles
+ * (`../look`): a recital's word as `wordOf` shows it, a word not yet said
+ * under its cue (whole, in letters or nothing), the one large round button,
+ * and the plant, with the styles every screen shares (`useLook`). Each word
+ * is its own accessibility element; a word or part of one that is not shown
+ * is laid out in transparent ink and hidden from the screen reader.
  */
 
 import { Option } from 'effect';
@@ -20,31 +21,9 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import type { PlantStage } from '../field';
+import { themed, useThemed } from '../look';
 import type { Cue, Mark } from '../matcher';
 import { wordOf, type Ink, type ShownWord } from './screen';
-
-/** Palette A (Wada No. 167) over the prototype's tokens; `cue` is the mute darkened so a word shown as its cue, on Today or in the first minute's letters, reads at AA contrast (4.5:1) on the ground. */
-export const color = {
-  ground: '#eee8e1',
-  card: '#f7f3ee',
-  ink: '#064f6e',
-  soft: '#a7d4e4',
-  mute: '#7d8d95',
-  cue: '#56656d',
-  miss: '#c0583f',
-  hearing: 'rgba(184, 137, 47, 0.22)',
-  pulse: 'rgba(184, 137, 47, 0.45)',
-} as const;
-
-/** The plant's colours as the prototype draws it: gold, the leaf's green, the unripe ear's green and the soil. */
-const field = {
-  gold: '#d4a640',
-  leaf: '#6f9a4a',
-  greenEar: '#9cbf6a',
-  soil: '#8a6e4b',
-} as const;
-
-const SERIF = 'Georgia';
 
 /** A word lights with a short fade; under Reduce Motion it shows at once. */
 const LIGHT = FadeIn.duration(180).reduceMotion(ReduceMotion.System);
@@ -57,6 +36,7 @@ export function Word({
   readonly shown: ShownWord;
   readonly onPeek: (index: number) => void;
 }) {
+  const look = useLook();
   const id = `word-${shown.index}`;
   if (shown._tag === 'Mark')
     return (
@@ -71,7 +51,7 @@ export function Word({
         <View style={look.dot} />
       </Pressable>
     );
-  const style = [look.word, INK[shown.ink]];
+  const style = [look.word, look[INK[shown.ink]]];
   const label = Option.getOrUndefined(shown.label);
   switch (shown.ink) {
     case 'unseen':
@@ -106,6 +86,7 @@ const LETTER = /[\p{L}\p{N}]/u;
 
 /** A word in letters before it is said: its first letter or number as written, in the cue's ink (AA on the ground), the rest laid out unseen, and only the letter named to the screen reader. */
 export function Initial({ index, word }: { readonly index: number; readonly word: string }) {
+  const look = useLook();
   const at = Math.max(0, word.search(LETTER));
   const cue = word.slice(at, at + 1);
   const before = word.slice(0, at);
@@ -144,6 +125,7 @@ export function Unsaid({
   readonly cue: Cue;
   readonly onPeek: (index: number) => void;
 }) {
+  const look = useLook();
   switch (cue) {
     case 'full':
       return (
@@ -178,6 +160,7 @@ export function BigButton({
   readonly pressable: boolean;
   readonly onPress: () => void;
 }) {
+  const look = useLook();
   return (
     <View style={look.buttonPlace}>
       <Pulse busy={busy} />
@@ -200,6 +183,7 @@ export function BigButton({
 
 /** The ring behind the big button, which pulses while `busy` (held still under Reduce Motion); it holds the button's place when no button shows. */
 export function Pulse({ busy }: { readonly busy: boolean }) {
+  const look = useLook();
   const pulse = useSharedValue(0);
   useEffect(() => {
     pulse.value = 0;
@@ -223,6 +207,7 @@ export function Pulse({ busy }: { readonly busy: boolean }) {
 
 /** The plant drawn as the prototype draws it, hidden from the screen reader, which reads the stage line or the field's label: bare soil before planting, a gold seed in the soil, a green stem and leaf, a green ear on the stem, a gold ear. */
 export function PlantMark({ stage }: { readonly stage: PlantStage }) {
+  const look = useLook();
   const sown = stage !== 'not planted';
   const grown = sown && stage !== 'seed';
   const eared = stage === 'ear' || stage === 'full corn';
@@ -239,114 +224,119 @@ export function PlantMark({ stage }: { readonly stage: PlantStage }) {
   );
 }
 
-/** The styles both screens share. */
-export const look = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.ground },
-  content: { paddingHorizontal: 24, gap: 28 },
-  title: { fontSize: 34, fontWeight: '700', color: color.ink },
-  reference: { fontFamily: SERIF, fontSize: 17, fontWeight: '600', color: color.mute },
-  verse: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 7, rowGap: 2 },
-  word: { fontFamily: SERIF, fontSize: 24, lineHeight: 36 },
-  lit: { color: color.ink },
-  hearing: { color: color.mute, backgroundColor: color.hearing, borderRadius: 4 },
-  slot: { height: 30, marginBottom: 6, borderBottomWidth: 2, borderBottomColor: color.soft },
-  unsaid: { color: 'transparent', lineHeight: 30 },
-  peeked: { color: color.miss },
-  cueInk: { color: color.cue },
-  unseenPart: { color: 'transparent' },
-  mark: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.miss },
-  summary: { fontSize: 17, fontWeight: '600', color: color.ink },
-  alert: { fontSize: 15, lineHeight: 21, color: color.miss },
-  stageRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28 },
-  stage: { fontSize: 15, color: color.mute },
-  plant: { width: 24, height: 28 },
-  soil: {
-    position: 'absolute',
-    left: 2,
-    right: 2,
-    bottom: 1,
-    height: 2.5,
-    borderRadius: 1.25,
-    backgroundColor: field.soil,
-  },
-  seed: {
-    position: 'absolute',
-    left: 8,
-    bottom: 4,
-    width: 8,
-    height: 6,
-    borderRadius: 4,
-    backgroundColor: field.gold,
-  },
-  stem: {
-    position: 'absolute',
-    left: 11,
-    bottom: 3,
-    width: 2.5,
-    height: 14,
-    borderRadius: 1.25,
-    backgroundColor: field.leaf,
-  },
-  tallStem: { height: 19 },
-  leaf: {
-    position: 'absolute',
-    left: 3,
-    bottom: 8,
-    width: 9,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: field.leaf,
-    transform: [{ rotate: '-35deg' }],
-  },
-  ear: {
-    position: 'absolute',
-    left: 8,
-    top: 1,
-    width: 8,
-    height: 10,
-    borderRadius: 4,
-    backgroundColor: field.greenEar,
-  },
-  ripeEar: { backgroundColor: field.gold },
-  awn: {
-    position: 'absolute',
-    left: 11.25,
-    top: -3,
-    width: 1.5,
-    height: 4,
-    backgroundColor: field.gold,
-  },
-  buttonPlace: { alignSelf: 'center', width: 132, height: 132, marginTop: 8 },
-  ring: {
-    position: 'absolute',
-    width: 132,
-    height: 132,
-    borderRadius: 66,
-    backgroundColor: color.pulse,
-  },
-  button: {
-    width: 132,
-    height: 132,
-    borderRadius: 66,
-    backgroundColor: color.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: color.ink,
-    shadowOpacity: 0.3,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-  },
-  pressedButton: { transform: [{ scale: 0.97 }] },
-  pressed: { opacity: 0.7 },
-  disabled: { opacity: 0.6 },
-  buttonText: { color: color.ground, fontSize: 17, fontWeight: '600' },
-});
+/** The styles every screen shares, in each scheme. */
+const looks = themed((color, face) =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: color.ground },
+    content: { paddingHorizontal: 24, gap: 28 },
+    title: { fontFamily: face, fontSize: 34, fontWeight: '700', color: color.ink },
+    reference: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.quiet },
+    verse: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 7, rowGap: 2 },
+    word: { fontFamily: face, fontSize: 24, lineHeight: 36 },
+    lit: { color: color.ink },
+    hearing: { color: color.quiet, backgroundColor: color.hearing, borderRadius: 4 },
+    slot: { height: 30, marginBottom: 6, borderBottomWidth: 2, borderBottomColor: color.soft },
+    unsaid: { color: 'transparent', lineHeight: 30 },
+    peeked: { color: color.miss },
+    cueInk: { color: color.quiet },
+    unseenPart: { color: 'transparent' },
+    mark: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
+    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.miss },
+    summary: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
+    alert: { fontFamily: face, fontSize: 15, lineHeight: 21, color: color.miss },
+    stageRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28 },
+    stage: { fontFamily: face, fontSize: 15, color: color.quiet },
+    plant: { width: 24, height: 28 },
+    soil: {
+      position: 'absolute',
+      left: 2,
+      right: 2,
+      bottom: 1,
+      height: 2.5,
+      borderRadius: 1.25,
+      backgroundColor: color.soil,
+    },
+    seed: {
+      position: 'absolute',
+      left: 8,
+      bottom: 4,
+      width: 8,
+      height: 6,
+      borderRadius: 4,
+      backgroundColor: color.gold,
+    },
+    stem: {
+      position: 'absolute',
+      left: 11,
+      bottom: 3,
+      width: 2.5,
+      height: 14,
+      borderRadius: 1.25,
+      backgroundColor: color.leaf,
+    },
+    tallStem: { height: 19 },
+    leaf: {
+      position: 'absolute',
+      left: 3,
+      bottom: 8,
+      width: 9,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: color.leaf,
+      transform: [{ rotate: '-35deg' }],
+    },
+    ear: {
+      position: 'absolute',
+      left: 8,
+      top: 1,
+      width: 8,
+      height: 10,
+      borderRadius: 4,
+      backgroundColor: color.greenEar,
+    },
+    ripeEar: { backgroundColor: color.gold },
+    awn: {
+      position: 'absolute',
+      left: 11.25,
+      top: -3,
+      width: 1.5,
+      height: 4,
+      backgroundColor: color.gold,
+    },
+    buttonPlace: { alignSelf: 'center', width: 132, height: 132, marginTop: 8 },
+    ring: {
+      position: 'absolute',
+      width: 132,
+      height: 132,
+      borderRadius: 66,
+      backgroundColor: color.pulse,
+    },
+    button: {
+      width: 132,
+      height: 132,
+      borderRadius: 66,
+      backgroundColor: color.ink,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: color.shadow,
+      shadowOpacity: 0.3,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 10 },
+    },
+    pressedButton: { transform: [{ scale: 0.97 }] },
+    pressed: { opacity: 0.7 },
+    disabled: { opacity: 0.6 },
+    buttonText: { fontFamily: face, color: color.onInk, fontSize: 17, fontWeight: '600' },
+  }),
+);
+
+/** The styles every screen shares, in the scheme now. */
+export const useLook = () => useThemed(looks);
 
 /** Each ink's style: an unseen word is laid out transparent, so only its slot's underline shows. */
-const INK: Readonly<Record<Ink, (typeof look)[keyof typeof look]>> = {
-  lit: look.lit,
-  hearing: look.hearing,
-  peeked: look.peeked,
-  unseen: look.unsaid,
-};
+const INK = {
+  lit: 'lit',
+  hearing: 'hearing',
+  peeked: 'peeked',
+  unseen: 'unsaid',
+} as const satisfies Readonly<Record<Ink, string>>;

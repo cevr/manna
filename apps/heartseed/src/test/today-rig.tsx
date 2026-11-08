@@ -30,18 +30,22 @@ import { sourceWords } from '../matcher/words';
 import { Haptics, type Recall, type SayItView } from '../sayit';
 import { pendingAt } from '../sayit/draw';
 import { screenOf } from '../sayit/screen';
+import { theme } from '../theme';
 import { voiceSource } from '../voice/source';
 import { clockOf, toDue, type Time } from './clock';
 import { AA, contrastOf } from './contrast';
+import { computed, systemScheme } from './look';
 
 export const WORDS = sourceWords(passage.text);
 
-/** The spec's tokens (Today → Look and feel): the ground, the ink of a lit word, and the colour of the mark and of a peeked word. */
-const GROUND = 'rgb(238, 232, 225)';
-const INK = 'rgb(6, 79, 110)';
-const MARK = 'rgb(192, 88, 63)';
-/** The cue's ink a word not yet said is seen in under the full text or in letters. */
-const CUE = 'rgb(86, 101, 109)';
+/**
+ * A role of the scheme the system names (`src/theme.ts`) as `opaque` reads
+ * a computed colour: the ground, the ink of a lit word (`ink`), the colour
+ * of the mark and of a peeked word (`miss`), and the cue's ink a word not
+ * yet said is seen in under the full text or in letters (`quiet`).
+ */
+const token = (role: 'ground' | 'ink' | 'miss' | 'quiet') =>
+  opaque(computed(theme[systemScheme()][role]));
 
 /** A computed CSS colour as `rgb(r, g, b)`, or null when it is fully transparent. */
 const opaque = (css: string) => {
@@ -105,7 +109,7 @@ const readerOf = (top: Element) => {
   };
   const seenHere = (holder: Element) => {
     const colour = opaque(getComputedStyle(holder).color);
-    return colour !== null && colour !== GROUND && shown(holder);
+    return colour !== null && colour !== token('ground') && shown(holder);
   };
   const seenColour = (node: Element) => {
     for (const holder of holders(node)) {
@@ -196,7 +200,7 @@ const unsaidRule = (cue: 'full' | 'initials', index: number) => {
   const shown = cue === 'full' || initialOf(word) === word ? 'the word' : 'its initial';
   return {
     text: 'the word',
-    seen: CUE,
+    seen: token('quiet'),
     legible: true,
     seenAs: shown,
     hidden: false,
@@ -212,7 +216,7 @@ const rule = (status: MarkStatus, index: number, cue: Cue = 'none') => {
     case 'matched':
       return {
         text: 'the word',
-        seen: INK,
+        seen: token('ink'),
         legible: expect.any(Boolean),
         seenAs: 'the word',
         hidden: false,
@@ -252,7 +256,7 @@ const rule = (status: MarkStatus, index: number, cue: Cue = 'none') => {
     case 'peek':
       return {
         text: 'the word',
-        seen: MARK,
+        seen: token('miss'),
         legible: expect.any(Boolean),
         seenAs: 'the word',
         hidden: false,

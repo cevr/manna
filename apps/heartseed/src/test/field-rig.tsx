@@ -34,28 +34,35 @@ import { Chime } from '../garden';
 import { Haptics, type Recall } from '../sayit';
 import { MINUTES_KEY } from '../session/service';
 import { store } from '../store';
+import { theme, type Scheme } from '../theme';
 import { voiceSource } from '../voice/source';
 import { clockOf, toDue, type Time } from './clock';
 import { AA, contrastOf } from './contrast';
+import { computed, systemScheme } from './look';
 import { fieldRule, heldOn, verseNumberRule, type ModelPlantStage } from './field-model';
 import { keyOf, PREFIX } from './garden-model';
 import { device } from './one';
 
 const PASSAGES = [{ title: passage.reference, verses: [passage.reference] }];
 
-/** The plant's parts as the browser computes their colours. */
-export const SOIL = 'rgba(138, 110, 75, 1.00)';
-const GOLD = 'rgba(212, 166, 64, 1.00)';
-const LEAF = 'rgba(111, 154, 74, 1.00)';
-const GREEN_EAR = 'rgba(156, 191, 106, 1.00)';
+/** The soil in the light scheme (`src/theme.ts`), as the browser computes it. */
+export const SOIL = computed(theme.light.soil);
 
-/** Each stage as Today draws it, part by part; a verse not planted is the soil alone. */
-const LOOK: Readonly<Record<ModelPlantStage, readonly string[]>> = {
-  'not planted': [SOIL],
-  seed: [SOIL, GOLD],
-  blade: [SOIL, LEAF, LEAF],
-  ear: [SOIL, LEAF, LEAF, GREEN_EAR],
-  'full corn': [SOIL, LEAF, LEAF, GOLD, GOLD],
+/** Each stage as Today draws it in `scheme`, part by part, as the browser computes their colours; a verse not planted is the soil alone. */
+const drawnOf = (stage: ModelPlantStage, scheme: Scheme): readonly string[] => {
+  const roles = theme[scheme];
+  const soil = computed(roles.soil);
+  const gold = computed(roles.gold);
+  const leaf = computed(roles.leaf);
+  const ear = computed(roles.greenEar);
+  const look: Readonly<Record<ModelPlantStage, readonly string[]>> = {
+    'not planted': [soil],
+    seed: [soil, gold],
+    blade: [soil, leaf, leaf],
+    ear: [soil, leaf, leaf, ear],
+    'full corn': [soil, leaf, leaf, gold, gold],
+  };
+  return look[stage];
 };
 
 /** The record of `recall` as the garden writes it. */
@@ -164,7 +171,7 @@ export const wantField = () => {
       title: row.title.replace(/\s+/g, ' ').trim(),
       plants: row.plants.map((plant) => ({
         label: `${plant.reference}, ${plant.stage}`,
-        drawn: [...LOOK[plant.stage]],
+        drawn: [...drawnOf(plant.stage, systemScheme())],
         shown: verseNumberRule(plant.reference).replace(/\s+/g, ' ').trim(),
       })),
     })),

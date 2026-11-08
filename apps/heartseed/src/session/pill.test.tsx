@@ -20,9 +20,9 @@ import { describe, expect, it } from 'bun:test';
 import { act } from 'react';
 
 import type { Recall } from '../sayit';
-import { color } from '../sayit/draw';
 import { keyOf } from '../test/garden-model';
 import { deviceOf, faultsOf, launch, type Device, type Launch } from '../test/session-rig';
+import { theme } from '../theme';
 import { CHOICE_KEY, ENABLED_KEY, nextChoice, type Choice } from '../voice';
 
 const AT = Date.UTC(2026, 10, 5, 15);
@@ -84,7 +84,7 @@ const shownOf = (app: Launch) => {
   const style = getComputedStyle(node);
   return {
     voices: app.choices().voices,
-    filled: rgb(style.backgroundColor) === rgb(color.ink),
+    filled: rgb(style.backgroundColor) === rgb(theme.light.ink),
     tall: parseFloat(style.minHeight) >= 44,
   };
 };

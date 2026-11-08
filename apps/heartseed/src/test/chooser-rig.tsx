@@ -28,8 +28,8 @@ import { appLayer, runtime } from '../app';
 import { ChooserScreen } from '../chooser/screen';
 import { recite, scriptedSource } from '../dictation/script';
 import { Chime } from '../garden';
+import { themed, useThemed } from '../look';
 import { Haptics } from '../sayit';
-import { color } from '../sayit/draw';
 import { store } from '../store';
 import { voiceSource } from '../voice/source';
 import { CAP, MOST, type ChooserSeen } from './choose-model';
@@ -184,8 +184,15 @@ export const faintIn = (host: Element, known = new Map<string, boolean>()): stri
     })
     .map((node) => text(node).slice(0, 12));
 
+/** The stand-in field's look, in the scheme's roles as the screens draw them. */
+const standIn = themed((color, face) => ({
+  ground: { backgroundColor: color.ground },
+  ink: { color: color.ink, fontFamily: face },
+}));
+
 /** The chooser beside a stand-in field, which offers `Add a passage` while the chooser has handed the reader back. */
 function Stage({ onLeft }: { readonly onLeft: () => void }) {
+  const look = useThemed(standIn);
   const [open, setOpen] = useState(true);
   if (open)
     return (
@@ -201,9 +208,9 @@ function Stage({ onLeft }: { readonly onLeft: () => void }) {
       role="button"
       aria-label="Add a passage"
       onPress={() => setOpen(true)}
-      style={{ backgroundColor: color.ground }}
+      style={look.ground}
     >
-      <Text style={{ color: color.ink }}>Add a passage</Text>
+      <Text style={look.ink}>Add a passage</Text>
     </Pressable>
   );
 }

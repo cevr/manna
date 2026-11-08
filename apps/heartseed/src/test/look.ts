@@ -36,6 +36,13 @@ export const paintOf = (css: string) => {
   };
 };
 
+/** A role's colour as happy-dom computes it, `rgba(r, g, b, a)` with the alpha to two places, for a test that compares a computed style. */
+export const computed = (css: string) => {
+  const { hex, alpha } = paintOf(css);
+  const [r, g, b] = [1, 3, 5].map((at) => Number.parseInt(hex.slice(at, at + 2), 16));
+  return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(2)})`;
+};
+
 const ownText = (node: Element) =>
   [...node.childNodes].some(
     (child) => child.nodeType === 3 && (child.textContent ?? '').trim() !== '',

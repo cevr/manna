@@ -29,9 +29,11 @@ import { NEW_CARD, review } from '../fsrs';
 import { Chime, type Growth } from '../garden';
 import { Haptics, type Recall } from '../sayit';
 import { store } from '../store';
+import { theme } from '../theme';
 import { voiceSource } from '../voice/source';
 import { clockOf, toDue, type Time } from './clock';
 import { DAY } from './garden-model';
+import { computed } from './look';
 import { device } from './one';
 
 export const PREFIX = 'heartseed/recall/';
@@ -42,11 +44,11 @@ export const OTHER = 'Made 1:1';
 /** The instant a launch whose clock is set starts at: long after every record these disks hold. */
 export const AT = Date.UTC(2026, 10, 5, 15);
 
-/** The prototype's colours, as the browser computes them: the gold of a seed and a ripe ear, the leaf's green, the unripe ear's green, and the soil. */
-export const GOLD = 'rgba(212, 166, 64, 1.00)';
-export const LEAF = 'rgba(111, 154, 74, 1.00)';
-export const GREEN_EAR = 'rgba(156, 191, 106, 1.00)';
-export const SOIL = 'rgba(138, 110, 75, 1.00)';
+/** The plant's colours in the light scheme (`src/theme.ts`), as the browser computes them: the gold of a seed and a ripe ear, the leaf's green, the unripe ear's green, and the soil. */
+export const GOLD = computed(theme.light.gold);
+export const LEAF = computed(theme.light.leaf);
+export const GREEN_EAR = computed(theme.light.greenEar);
+export const SOIL = computed(theme.light.soil);
 
 /** Words that claim a stage, a plant, planting or growth, in any text or attribute (react-native-web's `r-flexGrow` class is no claim, so growth is matched as its own word). */
 const CLAIM = /stage|plant|grew|\bgrow|growth|seed|blade|\bear\b|full corn/iu;

@@ -13,7 +13,7 @@
  * Each plant is one image to the screen reader, labelled `<reference>,
  * <stage>`; its drawing and number are hidden inside it. Each row of a
  * passage the reader chose, and no other, holds its own `Remove`. Every
- * text is Palette A's ink, so each reads at WCAG AA contrast on the ground
+ * text is the scheme's ink, so each reads at WCAG AA contrast on the ground
  * and on a card.
  *
  * The field it draws is derived from what it is given; the ask and the
@@ -41,10 +41,12 @@ import {
 } from '../field';
 import { STAGES } from '../garden';
 import { MOST_PASSAGES, passageReference, type PassagesView, type Range } from '../passages';
-import { color, look, PlantMark } from '../sayit/draw';
+import { themed, useThemed } from '../look';
+import { PlantMark, useLook } from '../sayit/draw';
 
 /** One verse: its plant over its number, one labelled image. */
 function Plot({ plant }: { readonly plant: FieldPlant }) {
+  const styles = useThemed(sheets);
   return (
     <View
       testID="field-plant"
@@ -75,6 +77,7 @@ function Row({
   readonly pending: boolean;
   readonly onRemove: (range: Range) => void;
 }) {
+  const styles = useThemed(sheets);
   return (
     <View testID="row" style={styles.card}>
       <View style={styles.rowHead}>
@@ -104,6 +107,7 @@ function Row({
 
 /** The four stages as the plants draw them, named, hidden from the screen reader as one more image would be. */
 function Legend() {
+  const styles = useThemed(sheets);
   return (
     <View style={styles.legendPlace}>
       <View aria-hidden style={styles.legend}>
@@ -131,6 +135,8 @@ function Control({
   readonly pending: boolean;
   readonly onPress: () => void;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   return (
     <Pressable
       role="button"
@@ -173,6 +179,7 @@ function Offer({
   readonly onConfirm: (range: Range) => void;
   readonly onKeep: () => void;
 }) {
+  const styles = useThemed(sheets);
   return Option.match(bar.ask, {
     onSome: (range) => (
       <View style={styles.ask}>
@@ -222,6 +229,8 @@ export function FieldScreen({
   readonly onAdd: () => void;
   readonly onAbout: () => void;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
   const [bar, setBar] = useState<Bar>(IDLE);
   const busy = useRef(false);
@@ -307,53 +316,55 @@ export function FieldScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  bar: { paddingHorizontal: 24, paddingBottom: 8, gap: 8 },
-  scroll: { flex: 1 },
-  content: { gap: 16 },
-  foot: { paddingHorizontal: 24, paddingTop: 8 },
-  back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
-  backText: { fontSize: 17, fontWeight: '600', color: color.ink },
-  pill: {
-    alignSelf: 'flex-start',
-    minHeight: 44,
-    paddingHorizontal: 18,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: color.ink,
-    justifyContent: 'center',
-  },
-  pillText: { fontSize: 15, fontWeight: '600', color: color.ink },
-  line: { fontSize: 15, lineHeight: 21, fontWeight: '600', color: color.ink },
-  ask: { gap: 8 },
-  answers: { flexDirection: 'row', gap: 8 },
-  rowHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  head: { gap: 6 },
-  card: {
-    gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: color.card,
-  },
-  title: { fontFamily: 'Georgia', fontSize: 15, fontWeight: '600', color: color.ink },
-  plots: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  plot: { width: 44, alignItems: 'center', gap: 2 },
-  number: { fontSize: 11, color: color.ink },
-  legendPlace: { alignItems: 'center', gap: 6, marginTop: 4 },
-  legend: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    columnGap: 12,
-    rowGap: 4,
-  },
-  key: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  keyName: { fontSize: 12, color: color.ink },
-  caption: { fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 13, color: color.ink },
-});
+const sheets = themed((color, face) =>
+  StyleSheet.create({
+    bar: { paddingHorizontal: 24, paddingBottom: 8, gap: 8 },
+    scroll: { flex: 1 },
+    content: { gap: 16 },
+    foot: { paddingHorizontal: 24, paddingTop: 8 },
+    back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+    backText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
+    pill: {
+      alignSelf: 'flex-start',
+      minHeight: 44,
+      paddingHorizontal: 18,
+      borderRadius: 22,
+      borderWidth: 1.5,
+      borderColor: color.ink,
+      justifyContent: 'center',
+    },
+    pillText: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
+    line: { fontFamily: face, fontSize: 15, lineHeight: 21, fontWeight: '600', color: color.ink },
+    ask: { gap: 8 },
+    answers: { flexDirection: 'row', gap: 8 },
+    rowHead: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    head: { gap: 6 },
+    card: {
+      gap: 10,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderRadius: 20,
+      backgroundColor: color.card,
+    },
+    title: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
+    plots: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+    plot: { width: 44, alignItems: 'center', gap: 2 },
+    number: { fontFamily: face, fontSize: 11, color: color.ink },
+    legendPlace: { alignItems: 'center', gap: 6, marginTop: 4 },
+    legend: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      columnGap: 12,
+      rowGap: 4,
+    },
+    key: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+    keyName: { fontFamily: face, fontSize: 12, color: color.ink },
+    caption: { fontFamily: face, fontStyle: 'italic', fontSize: 13, color: color.ink },
+  }),
+);

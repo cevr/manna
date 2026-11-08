@@ -6,7 +6,7 @@
  * order: the collection's title as plain text (never a heading), each
  * promise the reader knows as a button named by its reference, and on a
  * taught card the count of its promises still to learn. A tap on a promise
- * hands it to `onVisit`. Every text is Palette A's ink, on the ground or on
+ * hands it to `onVisit`. Every text is the scheme's ink, on the ground or on
  * a card, so each reads at WCAG AA; every control is at least 44 pt. It
  * reads and writes nothing in the store.
  */
@@ -16,7 +16,8 @@ import { useSafeAreaInsets } from 'one';
 
 import type { NeedCard } from '../need';
 import { passageReference, type Range } from '../passages';
-import { color, look } from '../sayit/draw';
+import { themed, useThemed } from '../look';
+import { useLook } from '../sayit/draw';
 
 /** A taught card's line of the promises it holds that the reader does not know yet. */
 const toLearnText = (count: number) => `${count} still to learn`;
@@ -29,6 +30,8 @@ function Card({
   readonly card: NeedCard;
   readonly onVisit: (card: NeedCard, promise: Range) => void;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   return (
     <View testID="need-card" style={styles.card}>
       <Text testID="need-title" style={styles.title}>
@@ -72,6 +75,8 @@ export function NeedScreen({
   readonly onToday: () => void;
   readonly onVisit: (card: NeedCard, promise: Range) => void;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
   return (
     <View style={look.screen}>
@@ -105,29 +110,31 @@ export function NeedScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  bar: { paddingHorizontal: 24, paddingBottom: 8 },
-  scroll: { flex: 1 },
-  content: { gap: 16 },
-  back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
-  backText: { fontSize: 17, fontWeight: '600', color: color.ink },
-  card: {
-    gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: color.card,
-  },
-  title: { fontFamily: 'Georgia', fontSize: 17, fontWeight: '600', color: color.ink },
-  promises: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  promise: {
-    minHeight: 44,
-    paddingHorizontal: 16,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: color.ink,
-    justifyContent: 'center',
-  },
-  promiseText: { fontSize: 15, fontWeight: '600', color: color.ink },
-  toLearn: { fontSize: 15, color: color.ink },
-});
+const sheets = themed((color, face) =>
+  StyleSheet.create({
+    bar: { paddingHorizontal: 24, paddingBottom: 8 },
+    scroll: { flex: 1 },
+    content: { gap: 16 },
+    back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+    backText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
+    card: {
+      gap: 10,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderRadius: 20,
+      backgroundColor: color.card,
+    },
+    title: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
+    promises: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    promise: {
+      minHeight: 44,
+      paddingHorizontal: 16,
+      borderRadius: 22,
+      borderWidth: 1.5,
+      borderColor: color.ink,
+      justifyContent: 'center',
+    },
+    promiseText: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
+    toLearn: { fontFamily: face, fontSize: 15, color: color.ink },
+  }),
+);

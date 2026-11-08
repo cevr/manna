@@ -4,16 +4,17 @@
  * `‹ Your field`, so it is on screen without a scroll; the scroll view
  * holds the one heading, the natural voice's credits (`CREDITS`) and the
  * Apache License 2.0 its vendored code carries, whole, as the bundle reads
- * it (`virtual:heartseed-licence`, never a copy here). Every text is Palette
- * A's ink, so each reads at WCAG AA contrast on the ground. It reads and
- * writes nothing in the store.
+ * it (`virtual:heartseed-licence`, never a copy here). Every text is the
+ * scheme's ink, so each reads at WCAG AA contrast on the ground. It reads
+ * and writes nothing in the store.
  */
 
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 import licence from 'virtual:heartseed-licence';
 
-import { color, look } from '../sayit/draw';
+import { themed, useThemed } from '../look';
+import { useLook } from '../sayit/draw';
 
 /** The natural voice's credits, word for word: its model, its voices, its conversion and packaging, and its pronunciations, each with its licence. */
 export const CREDITS =
@@ -21,6 +22,8 @@ export const CREDITS =
 
 /** The About screen, with the way back to the field (`onField`). */
 export function AboutScreen({ onField }: { readonly onField: () => void }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
   return (
     <View style={look.screen}>
@@ -57,12 +60,14 @@ export function AboutScreen({ onField }: { readonly onField: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  bar: { paddingHorizontal: 24, paddingBottom: 8 },
-  scroll: { flex: 1 },
-  content: { gap: 16 },
-  back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
-  backText: { fontSize: 17, fontWeight: '600', color: color.ink },
-  credits: { fontSize: 15, lineHeight: 22, color: color.ink },
-  licence: { fontSize: 13, lineHeight: 19, color: color.ink },
-});
+const sheets = themed((color, face) =>
+  StyleSheet.create({
+    bar: { paddingHorizontal: 24, paddingBottom: 8 },
+    scroll: { flex: 1 },
+    content: { gap: 16 },
+    back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+    backText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
+    credits: { fontFamily: face, fontSize: 15, lineHeight: 22, color: color.ink },
+    licence: { fontFamily: face, fontSize: 13, lineHeight: 19, color: color.ink },
+  }),
+);

@@ -10,7 +10,9 @@
  * and no first-minute frame names a stage outside Planted. The letters
  * phase shows each letter in Today's cue ink at AA on its ground, at rest
  * and while listening, and the hear phase's words not yet read, the phase
- * line and the reference keep the mute. Every element of every phase at
+ * line and the reference keep the mute; the cue ink and the mute are one
+ * colour, the light scheme's `quiet`, so the letters count among the muted
+ * texts. Every element of every phase at
  * rest, of the hear phase while it reads and of the letters while their
  * recital listens keeps base's look (`BASE_LOOK`), the letters' ink alone
  * left out. It counts words without printing one.
@@ -32,7 +34,9 @@ import { Haptics } from '../sayit';
 import { store } from '../store';
 import { clockOf, toDue, type Time } from '../test/clock';
 import { AA, contrastOf } from '../test/contrast';
+import { computed } from '../test/look';
 import { device } from '../test/one';
+import { face, theme } from '../theme';
 import { VoiceSource, type VoiceEvent } from '../voice';
 import { wordSpans } from '../voice/reading';
 
@@ -40,11 +44,11 @@ const PREFIX = 'heartseed/recall/';
 const SWITCH = 'heartseed/voice/enabled';
 const WORDS = sourceWords(passage.text);
 const SPANS = wordSpans(passage.text);
-const INK = 'rgba(6, 79, 110, 1.00)';
-/** Today's cue ink, `#56656d`: the first minute's letters are seen in it. */
-const CUE = 'rgba(86, 101, 109, 1.00)';
-/** The mute, `#7d8d95`: the hear phase's words not yet read, the phase line and the reference keep it. */
-const MUTE = 'rgba(125, 141, 149, 1.00)';
+const INK = computed(theme.light.ink);
+/** Today's cue ink, the light scheme's `quiet`: the first minute's letters are seen in it. */
+const CUE = computed(theme.light.quiet);
+/** The light scheme's `quiet`, as the mute: the hear phase's words not yet read, the phase line and the reference keep it. */
+const MUTE = computed(theme.light.quiet);
 const HEADINGS = ['Hear it', 'Say it with help', 'Say it alone', 'Planted', 'Today'];
 const CLAIM = /\b(seeds?|planted|plants?|grew|growth|stages?)\b/iu;
 
@@ -206,7 +210,7 @@ const lettersLook = (host: Element) => {
   };
 };
 
-/** How many texts are seen in the mute: each element that holds text and no other element, painted `#7d8d95`. */
+/** How many texts are seen in the mute: each element that holds text and no other element, painted the light scheme's `quiet`. */
 const mutedTexts = (host: Element) =>
   [...host.querySelectorAll('*')].filter(
     (node) =>
@@ -233,7 +237,7 @@ const shownText = (text: string | null) =>
   text === null || text === '' ? '' : passage.text.includes(text.trim()) ? '#' : text;
 
 /** The big button's ring while it pulses: its opacity moves with the clock, so a look holds it as moving. */
-const PULSE = 'rgba(184, 137, 47, 0.45)';
+const PULSE = computed(theme.light.pulse);
 
 /**
  * A frame's look: every element of `host` as one line (its tag, role, test
@@ -272,29 +276,29 @@ const lookOf = (host: Element, letters = false) => {
 };
 
 const CLEAR = 'rgba(0, 0, 0, 0.00)';
-const GROUND = 'rgba(238, 232, 225, 1.00)';
-const CARD = 'rgba(247, 243, 238, 1.00)';
-const SOFT = 'rgba(167, 212, 228, 1.00)';
-const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+const GROUND = computed(theme.light.ground);
+const CARD = computed(theme.light.card);
+const SOFT = computed(theme.light.soft);
+const ON_INK = computed(theme.light.onInk);
 /** A view's display, visibility and the browser's default font, as a look line ends for a box. */
 const VIEW = 'flex||"Times New Roman"|16px|normal|normal';
-const REFERENCE = `1× div||reference|||Isaiah 41:10|${MUTE}|${CLEAR}||inline||Georgia|17px|600|normal`;
+const REFERENCE = `1× div||reference|||Isaiah 41:10|${MUTE}|${CLEAR}||inline||${face}|17px|600|normal`;
 const RING = `1× div||||aria-hidden=true|||${PULSE}|moving|${VIEW}`;
 const HALO = `1× div||||aria-hidden=true|||${CLEAR}||${VIEW}`;
 const heading = (text: string) =>
-  `1× h1|heading|||aria-level=1|${text}|${INK}|${CLEAR}||inline||${SANS}|34px|700|normal`;
+  `1× h1|heading|||aria-level=1|${text}|${INK}|${CLEAR}||inline||${face}|34px|700|normal`;
 const button = (label: string, ground: string) =>
   `1× button|button||${label}||||${ground}||${VIEW}`;
 const pill = (text: string, ink: string) =>
-  `1× div|||||${text}|${ink}|${CLEAR}||inline||${SANS}|17px|600|normal`;
+  `1× div|||||${text}|${ink}|${CLEAR}||inline||${face}|17px|600|normal`;
 const phaseLine = (text: string) =>
-  `1× div|||||${text}|${MUTE}|${CLEAR}||inline||${SANS}|13px|normal|normal`;
+  `1× div|||||${text}|${MUTE}|${CLEAR}||inline||${face}|13px|normal|normal`;
 const boxes = (count: number, ground: string, opacity = '') =>
   `${count}× div|||||||${ground}|${opacity}|${VIEW}`;
 const LETTERS_LOOK = [
-  `32× span||||aria-hidden=true|#|${CLEAR}|${CLEAR}||inline||Georgia|24px|normal|36px`,
-  `37× div||word-#|#|||rgba(0, 0, 0, 1.00)|${CLEAR}||inline||Georgia|24px|normal|36px`,
-  `37× span|||||#|the letters’ ink|${CLEAR}||inline||Georgia|24px|normal|36px`,
+  `32× span||||aria-hidden=true|#|${CLEAR}|${CLEAR}||inline||${face}|24px|normal|36px`,
+  `37× div||word-#|#|||rgba(0, 0, 0, 1.00)|${CLEAR}||inline||${face}|24px|normal|36px`,
+  `37× span|||||#|the letters’ ink|${CLEAR}||inline||${face}|24px|normal|36px`,
   REFERENCE,
   HALO,
   RING,
@@ -320,20 +324,20 @@ const BASE_LOOK = {
     REFERENCE,
     HALO,
     RING,
-    pill('Listen', GROUND),
+    pill('Listen', ON_INK),
     pill('Next', INK),
     phaseLine('The voice reads it. Words light as they are read.'),
     boxes(1, GROUND),
     boxes(1, INK, '1'),
     heading('Hear it'),
-    `37× div||word-#||aria-selected=false|#|${INK}|${CLEAR}||inline||Georgia|24px|normal|36px`,
+    `37× div||word-#||aria-selected=false|#|${INK}|${CLEAR}||inline||${face}|24px|normal|36px`,
     boxes(3, SOFT, '0.5'),
     boxes(5, CLEAR),
   ],
   reading: [
     button('Next', CARD),
     REFERENCE,
-    `1× div||word-#||aria-selected=true|#|${INK}|rgba(184, 137, 47, 0.22)||inline||Georgia|24px|normal|36px`,
+    `1× div||word-#||aria-selected=true|#|${INK}|${computed(theme.light.hearing)}||inline||${face}|24px|normal|36px`,
     HALO,
     RING,
     pill('Next', INK),
@@ -341,24 +345,24 @@ const BASE_LOOK = {
     boxes(1, GROUND),
     boxes(1, INK, '1'),
     heading('Hear it'),
-    `36× div||word-#||aria-selected=false|#|${MUTE}|${CLEAR}||inline||Georgia|24px|normal|36px`,
+    `36× div||word-#||aria-selected=false|#|${MUTE}|${CLEAR}||inline||${face}|24px|normal|36px`,
     boxes(3, SOFT, '0.5'),
     boxes(5, CLEAR),
   ],
-  letters: [button('Say it', INK), pill('Say it', GROUND), ...LETTERS_LOOK],
-  listening: [button('Listening', INK), pill('Listening', GROUND), ...LETTERS_LOOK],
+  letters: [button('Say it', INK), pill('Say it', ON_INK), ...LETTERS_LOOK],
+  listening: [button('Listening', INK), pill('Listening', ON_INK), ...LETTERS_LOOK],
   alone: [
     button('Say it', INK),
     REFERENCE,
     HALO,
     RING,
     phaseLine('Only the line is left. Say it from memory.'),
-    pill('Say it', GROUND),
+    pill('Say it', ON_INK),
     boxes(1, SOFT, '0.5'),
     boxes(1, GROUND),
     heading('Say it alone'),
     `37× div||word-#||aria-hidden=true|||${CLEAR}||${VIEW}`,
-    `37× div|||||#|${CLEAR}|${CLEAR}||inline||Georgia|24px|normal|30px`,
+    `37× div|||||#|${CLEAR}|${CLEAR}||inline||${face}|24px|normal|30px`,
     boxes(3, INK, '1'),
     boxes(4, CLEAR),
   ],
@@ -366,12 +370,12 @@ const BASE_LOOK = {
     button('Continue', CARD),
     `1× div||plant||aria-hidden=true|||${CLEAR}||${VIEW}`,
     REFERENCE,
-    `1× div||stage|Stage: seed||A seed|${MUTE}|${CLEAR}||inline||${SANS}|15px|normal|normal`,
+    `1× div||stage|Stage: seed||A seed|${MUTE}|${CLEAR}||inline||${face}|15px|normal|normal`,
     HALO,
     pill('Continue', INK),
     phaseLine('Your first promise is a seed.'),
-    boxes(1, 'rgba(138, 110, 75, 1.00)'),
-    boxes(1, 'rgba(212, 166, 64, 1.00)'),
+    boxes(1, computed(theme.light.soil)),
+    boxes(1, computed(theme.light.gold)),
     boxes(1, GROUND),
     heading('Planted'),
     boxes(4, INK, '1'),
@@ -466,10 +470,10 @@ describe('the first minute', () => {
     await first.send({ kind: 'finish', location: 0, length: 0 });
     expect(await first.until(() => first.heading() === 'Say it with help')).toBe(true);
     const all = { letters: WORDS.length, cue: WORDS.length, aa: WORDS.length };
-    expect([lettersLook(first.host), mutedTexts(first.host)]).toEqual([all, 2]);
+    expect([lettersLook(first.host), mutedTexts(first.host)]).toEqual([all, 2 + WORDS.length]);
     await first.click('Say it');
     expect(await first.until(() => first.buttons().includes('Listening'))).toBe(true);
-    expect([lettersLook(first.host), mutedTexts(first.host)]).toEqual([all, 2]);
+    expect([lettersLook(first.host), mutedTexts(first.host)]).toEqual([all, 2 + WORDS.length]);
     expect(reference === null ? null : getComputedStyle(reference).color).toBe(MUTE);
     await first.leave();
   });

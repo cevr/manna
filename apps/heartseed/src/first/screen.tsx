@@ -26,7 +26,8 @@ import type { GardenView } from '../garden';
 import type { Mark } from '../matcher';
 import { sourceWords } from '../matcher/words';
 import type { OrNull, Recital, SayItView } from '../sayit';
-import { BigButton, color, Initial, look, PlantMark, Pulse, Word } from '../sayit/draw';
+import { themed, useThemed } from '../look';
+import { BigButton, Initial, PlantMark, Pulse, useLook, Word } from '../sayit/draw';
 import { screenOf, wordOf } from '../sayit/screen';
 import type { VoiceView } from '../voice';
 import { isActive } from '../voice/reading';
@@ -56,6 +57,7 @@ const pending = (index: number): Mark => ({
 
 /** The four segments of the phase bar, those reached in ink; hidden from the screen reader, which reads the heading. */
 function PhaseBar({ phase }: { readonly phase: Phase }) {
+  const styles = useThemed(sheets);
   const at = PHASES.indexOf(phase);
   return (
     <View aria-hidden style={styles.phases}>
@@ -68,6 +70,8 @@ function PhaseBar({ phase }: { readonly phase: Phase }) {
 
 /** A small round-cornered button, for Next and Continue. */
 function Pill({ label, onPress }: { readonly label: string; readonly onPress: () => void }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   return (
     <Pressable
       role="button"
@@ -82,6 +86,8 @@ function Pill({ label, onPress }: { readonly label: string; readonly onPress: ()
 
 /** The verse as hear shows it: every word whole; while a reading is under way, the words spoken in ink, the rest muted, and the voice's current words selected. */
 function Heard({ voice }: { readonly voice: Option.Option<VoiceView> }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   const reading = Option.filter(voice, isActive);
   return (
     <View style={look.verse}>
@@ -121,6 +127,7 @@ function Recited({
   readonly marks: Option.Option<readonly Mark[]>;
   readonly onPeek: (index: number) => void;
 }) {
+  const look = useLook();
   return (
     <View style={look.verse}>
       {WORDS.map((word, index) => {
@@ -158,6 +165,8 @@ const seenOf = (
 
 /** The first minute; `onContinue` leaves it for Today. */
 export function FirstMinute({ onContinue }: { readonly onContinue: () => void }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
   const voice = AsyncResult.value(useAtomValue(voiceView));
   const sayIt = AsyncResult.value(useAtomValue(sayItView));
@@ -245,6 +254,8 @@ function Hear({
   readonly onListen: () => void;
   readonly onNext: () => void;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   return (
     <>
       <Heard voice={voice} />
@@ -278,6 +289,8 @@ function Say({
   readonly onSay: () => void;
   readonly onPeek: (index: number) => void;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   const screen = screenOf(sayIt);
   const mine = <A,>(shown: Option.Option<A>) => Option.filter(shown, () => own);
   return (
@@ -312,6 +325,8 @@ function Say({
 
 /** Planted: the seed drawn large, its stage line, and Continue. */
 function Planted({ onContinue }: { readonly onContinue: () => void }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   return (
     <View style={styles.planted}>
       <View style={styles.bigPlant}>
@@ -330,26 +345,28 @@ function Planted({ onContinue }: { readonly onContinue: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  head: { gap: 6 },
-  phases: { flexDirection: 'row', gap: 6 },
-  segment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: color.soft, opacity: 0.5 },
-  reached: { backgroundColor: color.ink, opacity: 1 },
-  unread: { color: color.mute },
-  current: { backgroundColor: color.hearing, borderRadius: 4 },
-  line: { fontSize: 13, color: color.mute, textAlign: 'center' },
-  hearActions: { alignItems: 'center', gap: 16 },
-  pill: {
-    minHeight: 44,
-    paddingHorizontal: 22,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    backgroundColor: color.card,
-  },
-  pillText: { fontSize: 17, fontWeight: '600', color: color.ink },
-  planted: { alignItems: 'center', gap: 16, paddingTop: 24 },
-  bigPlant: { width: 120, height: 120, alignItems: 'center', justifyContent: 'center' },
-  scaled: { transform: [{ scale: 4 }] },
-});
+const sheets = themed((color, face) =>
+  StyleSheet.create({
+    head: { gap: 6 },
+    phases: { flexDirection: 'row', gap: 6 },
+    segment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: color.soft, opacity: 0.5 },
+    reached: { backgroundColor: color.ink, opacity: 1 },
+    unread: { color: color.quiet },
+    current: { backgroundColor: color.hearing, borderRadius: 4 },
+    line: { fontFamily: face, fontSize: 13, color: color.quiet, textAlign: 'center' },
+    hearActions: { alignItems: 'center', gap: 16 },
+    pill: {
+      minHeight: 44,
+      paddingHorizontal: 22,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: 'center',
+      backgroundColor: color.card,
+    },
+    pillText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
+    planted: { alignItems: 'center', gap: 16, paddingTop: 24 },
+    bigPlant: { width: 120, height: 120, alignItems: 'center', justifyContent: 'center' },
+    scaled: { transform: [{ scale: 4 }] },
+  }),
+);

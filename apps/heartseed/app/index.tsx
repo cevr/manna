@@ -28,6 +28,7 @@ import { ChooserScreen } from '../src/chooser/screen';
 import { fieldOf, type FieldPassage } from '../src/field';
 import { FieldScreen } from '../src/field/screen';
 import { openingOf, shownOpening, type Opening } from '../src/first/flow';
+import { themed, useThemed } from '../src/look';
 import { FirstMinute } from '../src/first/screen';
 import {
   cueIn,
@@ -44,7 +45,7 @@ import { needOf, type NeedCard } from '../src/need';
 import { NeedScreen } from '../src/need/screen';
 import type { Range } from '../src/passages';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
-import { BigButton, color, look, PlantMark, Unsaid, Word } from '../src/sayit/draw';
+import { BigButton, PlantMark, Unsaid, useLook, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
 import { fieldPassagesOf } from '../src/promises/taught';
 import { countsOf, MINUTES, type Item, type TextPiece } from '../src/session';
@@ -74,6 +75,8 @@ function Verse({
   readonly cue: Cue;
   readonly onPeek: (index: number) => void;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   if (Option.isNone(marks) && cue === 'full')
     return (
       <Text testID="passage" style={styles.words}>
@@ -119,6 +122,8 @@ function Grades({
   readonly result: Result;
   readonly onChoose: (grade: Grade) => void;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   return (
     <View style={styles.result}>
       <Text testID="summary" style={look.summary}>
@@ -197,6 +202,8 @@ function Growing({
   readonly garden: Option.Option<ReadGarden>;
   readonly sayIt: Option.Option<SayItView>;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   if (Option.isNone(garden))
     return (
       <View style={styles.growing}>
@@ -238,6 +245,8 @@ function Growing({
 
 /** The way to the field: offered once the garden is read, and never while Say it listens, so leaving Today never leaves a recital listening. */
 function FieldControl({ onPress }: { readonly onPress: () => void }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   return (
     <Pressable
       role="button"
@@ -252,6 +261,8 @@ function FieldControl({ onPress }: { readonly onPress: () => void }) {
 
 /** The way to When I need…: offered once a plan is made in this launch, and never while Say it listens. */
 function NeedControl({ onPress }: { readonly onPress: () => void }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   return (
     <Pressable
       role="button"
@@ -274,6 +285,8 @@ function Pill({
   readonly on: boolean;
   readonly onPress: () => void;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   return (
     <Pressable
       role="radio"
@@ -302,6 +315,8 @@ function VoicePill({
   readonly choice: keyof typeof CHOICE_WORDS;
   readonly onPress: () => void;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   const on = choice !== 'off';
   return (
     <Pressable
@@ -325,6 +340,7 @@ function VoicePill({
  * Both stay while Say it listens, and in an unread garden.
  */
 function Choices() {
+  const styles = useThemed(sheets);
   const session = AsyncResult.value(useAtomValue(sessionView));
   const voice = AsyncResult.value(useAtomValue(voiceView));
   const onMinutes = useAtomSet(chooseMinutes);
@@ -361,6 +377,7 @@ function Choices() {
  * unread garden.
  */
 function Counts({ garden }: { readonly garden: Option.Option<ReadGarden> }) {
+  const styles = useThemed(sheets);
   const plan = Option.flatMap(AsyncResult.value(useAtomValue(sessionView)), (view) => view.plan);
   return Option.match(Option.all({ garden, plan }), {
     onNone: () => false,
@@ -424,6 +441,8 @@ const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
  * scroll and clear of the home indicator.
  */
 function Today({ onField, onNeed }: { readonly onField: () => void; readonly onNeed: () => void }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
   const sayIt = AsyncResult.value(useAtomValue(sayItView));
   const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
@@ -606,6 +625,7 @@ function NeedOf({ onToday }: { readonly onToday: () => void }) {
 
 /** The frame a launch shows until the garden's read decides the screen: the reference alone, with no heading, button or claim. */
 function Pending() {
+  const look = useLook();
   const insets = useSafeAreaInsets();
   return (
     <View style={[look.screen, look.content, { paddingTop: insets.top + 16 }]}>
@@ -661,53 +681,61 @@ export default function Root() {
   }
 }
 
-const styles = StyleSheet.create({
-  passage: { gap: 10 },
-  counts: { fontSize: 15, fontWeight: '600', color: color.ink, marginBottom: 12 },
-  words: { fontFamily: 'Georgia', fontSize: 24, lineHeight: 36, color: color.ink },
-  result: { gap: 10, padding: 16, borderRadius: 20, backgroundColor: color.card },
-  suggested: { fontSize: 15, color: color.mute },
-  grades: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  grade: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: color.ground,
-  },
-  chosen: { backgroundColor: color.ink },
-  gradeName: { fontSize: 15, fontWeight: '600', color: color.ink },
-  chosenName: { color: color.ground },
-  growing: { gap: 4, marginTop: 4 },
-  growth: { fontSize: 15, fontWeight: '600', color: color.ink },
-  header: { paddingHorizontal: 24, paddingBottom: 4, gap: 8 },
-  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: {
-    minHeight: 44,
-    paddingHorizontal: 14,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: color.card,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    minHeight: 44,
-  },
-  ways: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  scroll: { flex: 1 },
-  footer: { paddingHorizontal: 24, paddingTop: 12, gap: 12 },
-  toField: {
-    minHeight: 44,
-    paddingHorizontal: 20,
-    borderRadius: 22,
-    justifyContent: 'center',
-    backgroundColor: color.card,
-  },
-  toFieldText: { fontSize: 15, fontWeight: '600', color: color.ink },
-});
+const sheets = themed((color, face) =>
+  StyleSheet.create({
+    passage: { gap: 10 },
+    counts: {
+      fontFamily: face,
+      fontSize: 15,
+      fontWeight: '600',
+      color: color.ink,
+      marginBottom: 12,
+    },
+    words: { fontFamily: face, fontSize: 24, lineHeight: 36, color: color.ink },
+    result: { gap: 10, padding: 16, borderRadius: 20, backgroundColor: color.card },
+    suggested: { fontFamily: face, fontSize: 15, color: color.quiet },
+    grades: { flexDirection: 'row', gap: 8, marginTop: 4 },
+    grade: {
+      flex: 1,
+      minHeight: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: color.ground,
+    },
+    chosen: { backgroundColor: color.ink },
+    gradeName: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
+    chosenName: { color: color.onInk },
+    growing: { gap: 4, marginTop: 4 },
+    growth: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
+    header: { paddingHorizontal: 24, paddingBottom: 4, gap: 8 },
+    choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    pill: {
+      minHeight: 44,
+      paddingHorizontal: 14,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: color.card,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      minHeight: 44,
+    },
+    ways: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    scroll: { flex: 1 },
+    footer: { paddingHorizontal: 24, paddingTop: 12, gap: 12 },
+    toField: {
+      minHeight: 44,
+      paddingHorizontal: 20,
+      borderRadius: 22,
+      justifyContent: 'center',
+      backgroundColor: color.card,
+    },
+    toFieldText: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
+  }),
+);

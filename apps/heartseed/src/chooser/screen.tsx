@@ -31,7 +31,8 @@ import { plantPassage } from '../app';
 import { LIMIT_LINE, tapVerse, type Verses } from '../chooser';
 import { versesOf } from '../kjv';
 import { MOST_VERSES, passageReference, verseReference, type Range } from '../passages';
-import { color, look } from '../sayit/draw';
+import { themed, useThemed } from '../look';
+import { useLook } from '../sayit/draw';
 
 /** Where the reader is in the chooser: the books, a book's chapters, or a chapter's verses with the range tapped so far. */
 type Place =
@@ -161,6 +162,8 @@ function Pick({
   readonly shown: string;
   readonly onPress: () => void;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   return (
     <Pressable
       testID={id}
@@ -190,6 +193,8 @@ const VerseBox = memo(function VerseBox({
   readonly pending: boolean;
   readonly onMove: (move: Move) => void;
 }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   return (
     <Pressable
       testID="verse"
@@ -218,6 +223,7 @@ function List({
   readonly pending: boolean;
   readonly onMove: (move: Move) => void;
 }) {
+  const styles = useThemed(sheets);
   return Match.value(place).pipe(
     Match.tagsExhaustive({
       Books: () =>
@@ -271,6 +277,8 @@ function List({
 
 /** The chooser screen; `onField` brings the reader back to the field, from its first back or after `Added`. */
 export function ChooserScreen({ onField }: { readonly onField: () => void }) {
+  const look = useLook();
+  const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
   const [state, dispatch] = useReducer(moved, START);
   const [pending, setPending] = useState(false);
@@ -381,51 +389,53 @@ export function ChooserScreen({ onField }: { readonly onField: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  header: { paddingHorizontal: 24, paddingBottom: 8, gap: 4 },
-  back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
-  backText: { fontSize: 17, fontWeight: '600', color: color.ink },
-  title: { fontSize: 34, fontWeight: '700', color: color.ink },
-  scroll: { flex: 1 },
-  list: { paddingHorizontal: 24, paddingTop: 8, gap: 16 },
-  group: { gap: 8 },
-  label: { fontSize: 15, fontWeight: '600', color: color.ink },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pick: {
-    minHeight: 44,
-    minWidth: 44,
-    paddingHorizontal: 14,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: color.card,
-  },
-  pickText: { fontSize: 15, fontWeight: '600', color: color.ink },
-  verse: {
-    minHeight: 44,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    justifyContent: 'center',
-  },
-  on: { backgroundColor: color.card, borderColor: color.ink },
-  verseText: { fontFamily: 'Georgia', fontSize: 17, lineHeight: 26, color: color.ink },
-  verseNumber: { fontSize: 13, fontWeight: '700', color: color.ink },
-  footer: { paddingHorizontal: 24, paddingTop: 12, gap: 6 },
-  chosen: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  reference: { fontFamily: 'Georgia', fontSize: 17, fontWeight: '600', color: color.ink },
-  count: { fontSize: 15, fontWeight: '600', color: color.ink },
-  cap: { fontSize: 15, color: color.ink },
-  line: { fontSize: 15, lineHeight: 21, fontWeight: '600', color: color.ink },
-  plant: {
-    minHeight: 56,
-    marginTop: 6,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: color.ink,
-  },
-  plantText: { fontSize: 17, fontWeight: '700', color: color.ground },
-});
+const sheets = themed((color, face) =>
+  StyleSheet.create({
+    header: { paddingHorizontal: 24, paddingBottom: 8, gap: 4 },
+    back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+    backText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
+    title: { fontFamily: face, fontSize: 34, fontWeight: '700', color: color.ink },
+    scroll: { flex: 1 },
+    list: { paddingHorizontal: 24, paddingTop: 8, gap: 16 },
+    group: { gap: 8 },
+    label: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    pick: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: 14,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: color.card,
+    },
+    pickText: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
+    verse: {
+      minHeight: 44,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: 'transparent',
+      justifyContent: 'center',
+    },
+    on: { backgroundColor: color.card, borderColor: color.ink },
+    verseText: { fontFamily: face, fontSize: 17, lineHeight: 26, color: color.ink },
+    verseNumber: { fontFamily: face, fontSize: 13, fontWeight: '700', color: color.ink },
+    footer: { paddingHorizontal: 24, paddingTop: 12, gap: 6 },
+    chosen: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+    reference: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
+    count: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
+    cap: { fontFamily: face, fontSize: 15, color: color.ink },
+    line: { fontFamily: face, fontSize: 15, lineHeight: 21, fontWeight: '600', color: color.ink },
+    plant: {
+      minHeight: 56,
+      marginTop: 6,
+      borderRadius: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: color.ink,
+    },
+    plantText: { fontFamily: face, fontSize: 17, fontWeight: '700', color: color.onInk },
+  }),
+);
