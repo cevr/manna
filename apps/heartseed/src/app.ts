@@ -4,8 +4,9 @@
  * keeps each of Say it's kept recalls in the app's store on the device and
  * sounds the growth chime, and the voice over the source this platform
  * speaks with, whose choice (Off, Her or Him) lives in the same store, the reader's
- * passages, kept there too, and the daily session over the garden and the
- * passages, whose minutes live there too: its plan is made at Today's first
+ * passages, kept there too, the collections taught (`TAUGHT`), and the
+ * daily session over the garden, the passages and the taught collections'
+ * verses, whose minutes live there too: its plan is made at Today's first
  * show, each Minutes tap, each return to the foreground
  * (`src/foreground.ts`) and each add or remove of a passage. Every screen that
  * hears the reader takes Dictation from here, so two services never share
@@ -40,6 +41,8 @@ import { liveHaptics } from './sayit/live';
 import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
 import type { Passage } from './passage';
 import { layer as passagesLayer, Passages, type Range } from './passages';
+import { TAUGHT } from './promises';
+import { collectionsOf, layer as taughtLayer, Taught } from './promises/taught';
 import type { Item, Minutes, TextPiece } from './session';
 import { layer as sessionLayer, Session } from './session/service';
 import { store } from './store';
@@ -80,7 +83,7 @@ const PIECES: readonly TextPiece[] = [
   },
 ];
 
-/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the reader's passages in the same `store`, the session over the garden, `pieces` (the app's own, the promise alone, when none are given) and then the passages' verses, its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), and the voice over `voice`, its choice in the same `store`. */
+/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the reader's passages in the same `store`, the collections of `promises` taught (none when left out), the session over the garden, `pieces` (the app's own, the promise alone, when none are given), then the passages' verses, then the taught collections' verses, its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), and the voice over `voice`, its choice in the same `store`. */
 export const appLayer = (parts: {
   readonly source: Layer.Layer<DictationSource>;
   readonly haptics: Layer.Layer<Haptics>;
@@ -89,12 +92,18 @@ export const appLayer = (parts: {
   readonly voice: Layer.Layer<VoiceSource>;
   readonly pieces?: readonly TextPiece[];
   readonly foreground?: Layer.Layer<Foreground>;
+  readonly promises?: readonly string[];
 }) =>
   Layer.merge(
     sayItLayer(passage),
     wakeLayer.pipe(Layer.provide(parts.foreground ?? foregroundSource)),
   ).pipe(
-    Layer.provideMerge(sessionLayer(parts.pieces ?? PIECES).pipe(Layer.provide(parts.store))),
+    Layer.provideMerge(
+      sessionLayer(parts.pieces ?? PIECES, collectionsOf(parts.promises ?? [])).pipe(
+        Layer.provide(parts.store),
+      ),
+    ),
+    Layer.provideMerge(taughtLayer(parts.promises ?? [])),
     Layer.provideMerge(dictationLayer.pipe(Layer.provide(parts.source))),
     Layer.provideMerge(gardenLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.chime)))),
     Layer.provideMerge(passagesLayer.pipe(Layer.provide(parts.store))),
@@ -110,8 +119,12 @@ export const runtime = Atom.runtime(
     chime: liveChime,
     voice: voiceSource,
     pieces: PIECES,
+    promises: TAUGHT,
   }),
 );
+
+/** The collections the app's layer teaches, for the field's taught rows. */
+export const taughtView = runtime.atom(Effect.map(Taught, (taught) => taught.collections));
 
 /** What a screen shows of Say it. */
 export const sayItView = runtime.atom(Stream.unwrap(Effect.map(SayIt, (sayIt) => sayIt.changes)));

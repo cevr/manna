@@ -6,7 +6,7 @@
  * Swift file (the acceptance check holds the parity with it).
  *
  * It catches a promise dropped or added, a range past its chapter or one
- * verse too long or short, a book name the canon lacks, a verse with no
+ * verse too long or short, a book number the canon lacks, a verse with no
  * text, a promise listed twice, a collection out of its size, an id twice,
  * a title changed, a promise too long to say at once, and a taught set
  * other than the Fear collection. It misses a promise moved to another

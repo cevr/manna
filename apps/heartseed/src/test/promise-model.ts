@@ -13,11 +13,27 @@
  * - N4 a card: its known promises in the collection's order, a promise
  *   known when each of its verses is a key of the garden; a taught card's
  *   count of the promises not known, 0 on any other.
+ * - T1 the pieces: the app's own, then each held passage's verses (group:
+ *   the passage's reference), then each taught collection's verses in the
+ *   order the ids are given, promise by promise (group: its title), each
+ *   reference kept at its first place; with the passages unread, the app's
+ *   own alone.
+ * - F1 the field's passages: the app's own row, each held passage (none
+ *   while unread), then each taught collection as one row of its verses
+ *   in order, each once.
  */
 
 import type { Range } from '../passages';
 import { COLLECTIONS } from '../promises';
-import { verseRef } from './passages-model';
+import type { ModelPassage } from './field-model';
+import {
+  spanRef,
+  verseRef,
+  versesIn,
+  type Corpus,
+  type Held,
+  type ModelTextPiece,
+} from './passages-model';
 
 /** The brief's situations, each the collection it names. */
 const BRIEF: readonly (readonly [situation: string, id: string])[] = [
@@ -76,4 +92,61 @@ export const needModel = (planted: ReadonlySet<string>, taught: readonly string[
     });
   }
   return cards;
+};
+
+/** T1: the pieces over the app's `own`, the passages `held` and the collections `taught`, each verse's text from `corpus` and its words by `words`. */
+export const piecesModel = (
+  corpus: Corpus,
+  own: readonly ModelTextPiece[],
+  held: Held,
+  taught: readonly string[],
+  words: (text: string) => number,
+): ModelTextPiece[] => {
+  const all: ModelTextPiece[] = [...own];
+  const push = (book: number, chapter: number, verse: number, group: string) => {
+    const text = versesIn(corpus, book, chapter)[verse - 1] ?? '';
+    all.push({ reference: verseRef(book, chapter, verse), text, words: words(text), group });
+  };
+  if (held.tag === 'Read') {
+    for (const span of held.passages)
+      for (let verse = span.first; verse <= span.last; verse++)
+        push(span.book, span.chapter, verse, spanRef(span));
+    for (const id of taught) {
+      const collection = COLLECTIONS.find((each) => each.id === id);
+      if (collection === undefined) continue;
+      for (const range of collection.promises)
+        for (let verse = range.first; verse <= range.last; verse++)
+          push(range.book, range.chapter, verse, collection.title);
+    }
+  }
+  const out: ModelTextPiece[] = [];
+  for (const piece of all)
+    if (out.every((each) => each.reference !== piece.reference)) out.push(piece);
+  return out;
+};
+
+/** F1: the passages the field shows over the app's `own` row, the passages `held` and the collections `taught`. */
+export const fieldPassagesModel = (
+  own: readonly ModelPassage[],
+  held: Held,
+  taught: readonly string[],
+): ModelPassage[] => {
+  const out: ModelPassage[] = [...own];
+  if (held.tag === 'Read')
+    for (const span of held.passages) {
+      const verses: string[] = [];
+      for (let verse = span.first; verse <= span.last; verse++)
+        verses.push(verseRef(span.book, span.chapter, verse));
+      out.push({ title: spanRef(span), verses });
+    }
+  for (const id of taught) {
+    const collection = COLLECTIONS.find((each) => each.id === id);
+    if (collection === undefined) continue;
+    const verses: string[] = [];
+    for (const range of collection.promises)
+      for (const reference of promiseVerses(range))
+        if (!verses.includes(reference)) verses.push(reference);
+    out.push({ title: collection.title, verses });
+  }
+  return out;
 };

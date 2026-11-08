@@ -19,6 +19,7 @@ import {
   sayItView,
   cycleVoice,
   sessionView,
+  taughtView,
   voiceView,
 } from '../src/app';
 import { AboutScreen } from '../src/about/screen';
@@ -41,7 +42,7 @@ import { sourceWords } from '../src/matcher/words';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { BigButton, color, look, PlantMark, Unsaid, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
-import { passageReference, verseReference, type PassagesView, type Range } from '../src/passages';
+import { fieldPassagesOf } from '../src/promises/taught';
 import { countsOf, MINUTES, type Item, type TextPiece } from '../src/session';
 import { shownOf, type Shown } from '../src/session/run';
 import { useSessionBegunWhenShown } from '../src/session/shown';
@@ -50,21 +51,6 @@ import { useSessionBegunWhenShown } from '../src/session/shown';
 const PASSAGES: readonly FieldPassage[] = [
   { title: passage.reference, verses: [passage.reference] },
 ];
-
-/** A passage the reader holds as the field shows it: titled by its reference, each verse its own, carrying its range. */
-const heldPassage = (range: Range): FieldPassage => ({
-  title: passageReference(range),
-  verses: Array.from({ length: range.last - range.first + 1 }, (_, index) =>
-    verseReference(range.book, range.chapter, range.first + index),
-  ),
-  range,
-});
-
-/** The passages the field shows: Today's, then each the reader holds, in the order chosen; none of the reader's while unread. */
-const fieldPassagesOf = (view: PassagesView): readonly FieldPassage[] => {
-  if (view._tag === 'Unread') return PASSAGES;
-  return [...PASSAGES, ...view.passages.map(heldPassage)];
-};
 
 /**
  * The verse under `cue`: whole under the full text while no recital is
@@ -550,11 +536,12 @@ function FieldOf({
 }) {
   const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
   const passages = AsyncResult.value(useAtomValue(passagesView));
-  return Option.match(Option.all({ garden, passages }), {
+  const taught = AsyncResult.value(useAtomValue(taughtView));
+  return Option.match(Option.all({ garden, passages, taught }), {
     onNone: () => false,
     onSome: (known) => (
       <FieldScreen
-        field={fieldOf(known.garden, fieldPassagesOf(known.passages))}
+        field={fieldOf(known.garden, fieldPassagesOf(PASSAGES, known.passages, known.taught))}
         passages={known.passages}
         onToday={onToday}
         onAdd={onAdd}

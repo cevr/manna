@@ -12,7 +12,7 @@
  * in call order, one at a time, and changes the view only once its write
  * has landed. A remove never touches a recall: a removed passage's plants
  * stay in the garden. The session plans over the app's own pieces, then
- * each passage's verses (`piecesOf`).
+ * each passage's verses, then the taught collections' verses (`piecesOf`).
  */
 
 import { formatBibleReference, Reference } from '@manna/core/bible';
@@ -32,6 +32,7 @@ import * as Semaphore from 'effect/Semaphore';
 
 import { versesOf } from './kjv';
 import { sourceWords } from './matcher/words';
+import type { Collection } from './promises';
 import type { TextPiece } from './session';
 
 /** The store key of the passages; its text is a JSON array of ranges, in the order chosen. */
@@ -107,15 +108,30 @@ const heldPieces = (view: PassagesView): readonly TextPiece[] => {
   return view.passages.flatMap(piecesIn);
 };
 
+/** The verses of `collections` as pieces, collection by collection, promise by promise and verse by verse, each grouped by its collection's title. */
+export const collectionPieces = (collections: readonly Collection[]): readonly TextPiece[] =>
+  collections.flatMap((collection) =>
+    collection.promises.flatMap((range) =>
+      piecesIn(range).map((piece) => ({ ...piece, group: collection.title })),
+    ),
+  );
+
 /**
  * The pieces the session plans over: the app's own first, then each held
- * passage's verses, each reference kept once, at its first place, so a
- * passage over one of the app's own verses shares its plant. With the
- * passages unread, the app's own alone.
+ * passage's verses, then `taught`, the taught collections' verses, each
+ * reference kept once, at its first place, so a passage over one of the
+ * app's own verses or a taught one shares its plant. With the passages
+ * unread, the app's own alone.
  */
-export const piecesOf = (own: readonly TextPiece[], view: PassagesView): readonly TextPiece[] => {
+export const piecesOf = (
+  own: readonly TextPiece[],
+  view: PassagesView,
+  taught: readonly TextPiece[] = [],
+): readonly TextPiece[] => {
   const seen = new Set<string>();
-  return [...own, ...heldPieces(view)].filter((piece) => {
+  const after = [...heldPieces(view)];
+  if (view._tag === 'Read') after.push(...taught);
+  return [...own, ...after].filter((piece) => {
     if (seen.has(piece.reference)) return false;
     seen.add(piece.reference);
     return true;

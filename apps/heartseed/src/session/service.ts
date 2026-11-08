@@ -6,7 +6,8 @@
  * order. The plan is made in one step from the garden's view and the
  * reader's passages as they are, never waiting on a keep under way, at the
  * instant on the service's clock and the zone's offset at that instant,
- * over the pieces of that step: the app's own, then the passages' verses.
+ * over the pieces of that step: the app's own, then the passages' verses,
+ * then the taught collections' verses (`piecesOf`).
  * It is made first when Today shows with a read garden (`begin`), then
  * again at each Minutes tap, at each return to the foreground (`wake`),
  * which makes nothing while a recital is under way, and after each add or
@@ -45,7 +46,8 @@ import { offsetAt } from '../day';
 import { Dictation } from '../dictation';
 import { isActive } from '../dictation/attempt';
 import { Garden, type GardenView, type ReadGarden } from '../garden';
-import { Passages, piecesOf, type PassagesView } from '../passages';
+import { collectionPieces, Passages, piecesOf, type PassagesView } from '../passages';
+import type { Collection } from '../promises';
 import { planOf, type Item, type Minutes, type Plan, type TextPiece } from '../session';
 
 /** The store key of the minutes; its text is `2`, `5`, `10` or `20`. */
@@ -133,13 +135,15 @@ interface Ground {
   readonly pieces: readonly TextPiece[];
 }
 
-/** The session over the app's own pieces, in the app's order, then the reader's passages. */
+/** The session over the app's own pieces, in the app's order, then the reader's passages, then the verses of `collections`, the ones it teaches (none when left out), made pieces once as the layer builds. */
 export const layer = (
   own: readonly TextPiece[],
+  collections: readonly Collection[] = [],
 ): Layer.Layer<Session, never, KeyValueStore.KeyValueStore | Garden | Dictation | Passages> =>
   Layer.effect(
     Session,
     Effect.gen(function* () {
+      const taught = collectionPieces(collections);
       const store = yield* KeyValueStore.KeyValueStore;
       const garden = yield* Garden;
       const dictation = yield* Dictation;
@@ -147,7 +151,7 @@ export const layer = (
       const held = MutableRef.make<SessionView>({
         minutes: yield* readMinutes(store),
         plan: Option.none(),
-        pieces: piecesOf(own, yield* passages.view),
+        pieces: piecesOf(own, yield* passages.view, taught),
         held: Option.none(),
         heldPiece: Option.none(),
       });
@@ -191,7 +195,7 @@ export const layer = (
       /** What a making plans from in the step that took `seen` and `chosen`, or none when the garden or the passages are unread. */
       const groundOf = (seen: GardenView, chosen: PassagesView): Option.Option<Ground> => {
         if (seen._tag === 'Unread' || chosen._tag === 'Unread') return Option.none();
-        return Option.some({ garden: seen, pieces: piecesOf(own, chosen) });
+        return Option.some({ garden: seen, pieces: piecesOf(own, chosen, taught) });
       };
 
       /** The view after a making over `ground` for `minutes`, at the clock's instant and the zone's offset there: its plan, the pieces it planned over, and the item held kept only when `keeps`. */

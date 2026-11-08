@@ -1367,11 +1367,22 @@ GETs (Class B) when the edge does not serve them.
     file's floors met by its own devices. `test:chooser-leave` also runs
     `src/chooser/fixed.test.tsx`, which keeps every screen's fixed
     controls outside its scroll views in every frame.
-  - `test:promises`: `src/promises/content.test.ts`, the fourteen promise
-    collections through the app's corpus: Selah's ids and titles in its
-    order, 10-12 promises each, 158 over 188 verses, each 1-3 verses of
-    its chapter with text and at most 70 words, none twice, and the Fear
-    collection alone taught.
+  - `test:promises`: `src/promises`. `content.test.ts`, the fourteen
+    promise collections through the app's corpus: Selah's ids and titles
+    in its order, 10-12 promises each, 158 over 188 verses, each 1-3
+    verses of its chapter with text and at most 70 words, none twice, and
+    the Fear collection alone taught. `pieces.property.test.ts`, the
+    pieces with collections taught (`piecesOf` over `collectionPieces`)
+    against `src/test/promise-model.ts` for generated passages over Fear's
+    verses and the promise, unread ones, and taught ids left out, empty,
+    one, several or unknown, then 36 launches of the app's layer whose
+    session's pieces and plan after `begin` meet the model and
+    `planModel`. `field.property.test.ts`, the field's rows over
+    `fieldPassagesOf` against `fieldRule`, a Fear verse in a held passage
+    in both rows and a removed passage's Fear verse kept in the Fear row;
+    `field.test.tsx`, the root's field with the Fear row after the held
+    passage and no `Remove` on it, and no taught row with the part left
+    out.
   - `test:need`: `src/need/need.property.test.ts`, When I need…'s cards
     (`needOf`) against the rule written plainly in
     `src/test/promise-model.ts`: every subset of the Fear collection's 14
