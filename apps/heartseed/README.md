@@ -1730,6 +1730,13 @@ GETs (Class B) when the edge does not serve them.
     takes, malformed renders, a refused play, events of the held utterance
     and of others, a reload): its module calls, the events it forwards and
     each speak's state after every step.
+  - `test:theme`: `src/theme.test.ts`, the brand's colours (`src/theme.ts`):
+    every role of brand C in light and dark, the icon's colours and the
+    face pinned; `ink`, `quiet` and `miss` on the ground, a card and the
+    heard word, and `onInk` on the ink, each at least 4.5:1 unrounded in
+    both schemes, as are the icon's mark on its ground and the launch
+    screen's ink on its ground; and the heard word the ground moved 22 %
+    (light) or 25 % (dark) toward the glow.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
