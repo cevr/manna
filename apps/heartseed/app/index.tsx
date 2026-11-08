@@ -6,7 +6,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 import passage from 'virtual:heartseed-passage';
 
+import type { Choice as AppearanceChoice } from '../src/appearance';
+import { useAppearanceShown } from '../src/appearance/shown';
 import {
+  appearanceView,
   choose,
   chooseMinutes,
   gardenView,
@@ -637,7 +640,8 @@ function Pending() {
 }
 
 /**
- * The root: the pending frame until the garden's read completes, then the
+ * The root: the pending frame until the reader's appearance and the
+ * garden's read complete, then the
  * first minute when the read holds no recall of any verse, else Today. The
  * screen is decided once per launch, at the read: planting the seed inside
  * the first minute keeps Planted on until Continue. After it, the root
@@ -655,9 +659,12 @@ function Pending() {
  */
 export default function Root() {
   const listening = screenOf(AsyncResult.value(useAtomValue(sayItView))).listening;
-  const read = openingOf(AsyncResult.value(useAtomValue(gardenView)));
+  const appearance = AsyncResult.value(useAtomValue(appearanceView));
+  const garden = openingOf(AsyncResult.value(useAtomValue(gardenView)));
+  const read = Option.match(appearance, { onNone: (): Opening => 'pending', onSome: () => garden });
   const [decided, setDecided] = useState<Opening>('pending');
   const [screen, setScreen] = useState<'today' | 'field' | 'choose' | 'about' | 'need'>('today');
+  useAppearanceShown(Option.getOrElse(appearance, (): AppearanceChoice => 'system'));
   if (decided === 'pending' && read !== 'pending') setDecided(read);
   if (screen !== 'today' && listening) setScreen('today');
   switch (shownOpening(decided, read)) {

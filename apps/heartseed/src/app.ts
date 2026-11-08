@@ -8,7 +8,8 @@
  * daily session over the garden, the passages and the taught collections'
  * verses, whose minutes live there too: its plan is made at Today's first
  * show, each Minutes tap, each return to the foreground
- * (`src/foreground.ts`) and each add or remove of a passage. Every screen that
+ * (`src/foreground.ts`) and each add or remove of a passage, and the
+ * reader's appearance (System, Light or Dark), kept there too. Every screen that
  * hears the reader takes Dictation from here, so two services never share
  * the module's one channel; the first minute's hear phase and Today's Listen
  * on a new piece are the two that read aloud.
@@ -27,6 +28,11 @@ import * as Atom from 'effect/reactivity/Atom';
 import { One } from 'one';
 import passage from 'virtual:heartseed-passage';
 
+import {
+  Appearance,
+  layer as appearanceLayer,
+  type Choice as AppearanceChoice,
+} from './appearance';
 import { layer as dictationLayer, type DictationSource } from './dictation';
 import { recite } from './dictation/script';
 import { microphoneSource, replaySource } from './dictation/source';
@@ -83,7 +89,7 @@ const PIECES: readonly TextPiece[] = [
   },
 ];
 
-/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the reader's passages in the same `store`, the collections of `promises` taught (none when left out), the session over the garden, `pieces` (the app's own, the promise alone, when none are given), then the passages' verses, then the taught collections' verses, its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), and the voice over `voice`, its choice in the same `store`. */
+/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the reader's passages in the same `store`, the collections of `promises` taught (none when left out), the session over the garden, `pieces` (the app's own, the promise alone, when none are given), then the passages' verses, then the taught collections' verses, its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), the voice over `voice`, its choice in the same `store`, and the reader's appearance, read first, in the same `store`. */
 export const appLayer = (parts: {
   readonly source: Layer.Layer<DictationSource>;
   readonly haptics: Layer.Layer<Haptics>;
@@ -108,6 +114,7 @@ export const appLayer = (parts: {
     Layer.provideMerge(gardenLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.chime)))),
     Layer.provideMerge(passagesLayer.pipe(Layer.provide(parts.store))),
     Layer.provideMerge(voiceLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.voice)))),
+    Layer.provideMerge(appearanceLayer.pipe(Layer.provide(parts.store))),
     Layer.provide(parts.haptics),
   );
 
@@ -136,6 +143,18 @@ export const gardenView = runtime.atom(
 
 /** What the hear phase and Today show of the voice: its choice, and the reading under way or the last one's ending. */
 export const voiceView = runtime.atom(Stream.unwrap(Effect.map(Voice, (voice) => voice.changes)));
+
+/** The reader's appearance, read once at the layer's launch: what the root paints and About's radios check. */
+export const appearanceView = runtime.atom(
+  Stream.unwrap(Effect.map(Appearance, (appearance) => appearance.changes)),
+);
+
+/** A tap on one of About's appearance radios: it shows at once, then is stored by the appearance's own write. */
+export const chooseAppearance = runtime.fn(
+  (choice: AppearanceChoice) =>
+    Effect.flatMap(Appearance, (appearance) => appearance.choose(choice)),
+  { concurrent: true },
+);
 
 /** What Today shows of the session: the minutes chosen, and the plan once it is made. */
 export const sessionView = runtime.atom(
