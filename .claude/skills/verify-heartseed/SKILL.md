@@ -227,6 +227,11 @@ Heartseed has no journey files yet. The features:
   tinted), its name and both launch screens, from one mark in brand C's
   colours, read from the build's asset catalog and Info.plist, never from
   a screenshot.
+- [features/appearance.md](features/appearance.md): every screen in brand
+  C's light or dark as the system's appearance says, in SF Rounded, on the
+  development probe (`apps/heartseed/app/probe/theme.tsx`): the system,
+  the scheme, its ground and the face, light and then dark with no tap.
+  Run it from `first.md`'s Today.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.

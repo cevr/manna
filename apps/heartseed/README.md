@@ -1304,6 +1304,50 @@ and both launch screens' artwork are drawn from it by `bun run icon`
   reads the build's asset catalog and Info.plist; the icon on a home screen
   is the owner's look on his phone.
 
+## Look
+
+Every screen is drawn in brand C's roles (`src/theme.ts`), in light or
+dark as the system's appearance says, and every text in SF Rounded
+(`face`, `ui-rounded`), the verse's among them.
+
+- **The scheme.** `useScheme()` (`src/look.tsx`) is the one place it is
+  decided: dark when React Native's `Appearance` says `dark`, light for
+  `light`, none or anything else (`schemeOf`). One listener to the
+  system's appearance, held from the module's load, tells every mounted
+  screen of a change, so the shown screen repaints in its next frame with
+  no tap. A reader's own choice of System, Light or Dark enters here and
+  nowhere else.
+- **The styles.** Each screen builds its styles once per scheme at module
+  load (`themed((roles, face) => StyleSheet.create(…))`, giving
+  `{ light, dark }`) and picks one by the scheme now (`useThemed`); no
+  style is built per render. No product file outside `src/theme.ts` names
+  a colour literal or a font family (`test:look`'s guard); the dev probes
+  under `app/probe/` are left out of it.
+- **The roles.** Every fill is a role of the scheme (`ground`, `card`,
+  `soft`, the opaque `hearing`, the field's `gold`, `leaf`, `greenEar`,
+  `soil`) and the one translucent fill is `pulse`; every text is `ink`,
+  `quiet`, `miss` or `onInk` (on an ink fill: the big button, a chosen
+  pill or grade, `Plant`), at WCAG AA on what lies behind it.
+- **Text under an opacity.** A pressed control (`useLook().pressed` from
+  `src/sayit/draw.tsx`: the missed word's mark, the pills and radios, the
+  bars' backs, the field's and Today's links, the chooser's picks and
+  verses, `Plant`, When I need…'s promises) draws at opacity 0.8, which
+  keeps light `ink` at AA on what lies behind it (0.7 fell to about 4.0:1). A
+  disabled control (`look.disabled`, 0.6: the big button while it cannot
+  be pressed, a pill or `Plant` while a remove or a plant is pending) is
+  left out of AA, as WCAG leaves it. The big button's press scales it
+  (`look.pressedButton`) and changes no colour. `src/test/look.ts`'s
+  `seenContrast` composes these opacities and `pressedFaults` holds each
+  control pressed in turn (`test:dark-screens`).
+- **What the tests cannot see.** happy-dom lays out nothing and draws no
+  glyph: SF Rounded's metrics (a verse of 90 words, a long reference,
+  `When I need…` beside `Your field`, the chooser's rows wrapping, not
+  clipping), the status bar's legibility in each scheme and the colours
+  themselves are the owner's look on his phone. `app/probe/theme.tsx`
+  (`heartseed://probe/theme`, development builds only) prints the
+  system's appearance, the scheme, its ground and the face for the live
+  check (`.claude/skills/verify-heartseed/features/appearance.md`).
+
 ## Tests
 
 - The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as parts, each a
@@ -1769,6 +1813,29 @@ and both launch screens' artwork are drawn from it by `bun run icon`
     both schemes, as are the icon's mark on its ground and the launch
     screen's ink on its ground; and the heard word the ground moved 22 %
     (light) or 25 % (dark) toward the glow.
+  - `test:look`: `src/look.test.tsx`, the scheme and the themed styles
+    (`src/look.tsx`): every value React Native can name read as dark or
+    light, a probe following each flip of the system with no tap, each
+    scheme's styles built once; and the guard: no product file in `src`
+    or `app` (less tests, rigs, probes, prototypes and `src/theme.ts`)
+    names a colour literal or a font family.
+  - `test:dark-today`: `src/look/today.test.tsx`, Today in dark and across
+    flips of the system through the run rig, as generated walks (Say it
+    heard, with a word missed or unheard, a flip while it listens, a peek,
+    a grade, Next to the done state, Minutes, the field and back, a flip
+    between any two steps), every frame held to the frame oracle
+    (`src/test/look.ts`) for the system's last value.
+  - `test:dark-first`: `src/look/first.test.tsx`, the first minute's
+    phases (hear while the voice reads, letters while their recital
+    listens, alone, Planted, then Today) in dark, each flipped to light and
+    back, every frame held to the oracle.
+  - `test:dark-screens`: `src/look/screens.test.tsx`, the field (every
+    plant stage, a remove asked and pending), About, the chooser (books, a
+    chapter, a verse chosen, `Plant`) and When I need…'s cards in light
+    and in dark through the bar and need rigs, each flipped and back, each
+    control held pressed in turn with its opacity composed. The bar, need,
+    field and chooser rigs hold every frame to the oracle beside their own
+    rules.
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
