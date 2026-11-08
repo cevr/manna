@@ -16,6 +16,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 ## Decisions
 
+- Owner, 2026-11-07/08: "Not yet" to deploying `models.heartseed.app` and publishing the voice files (q15); after a crash turns the natural voice off, "Your next tap on Voice brings it back (Recommended)" (q16).
+- Orchestrator, 2026-11-08: hsnatural part 3 split (option A, `tmp/orchestrate/hymnapp/hsnatural/part3/split-decision.md`): `hsvoices` (both voices in the download, the native load by voice name) and `hsspeaker` (Voice cycles Off, Her, Him; About with the credits) in parallel, then `hsnatural` (the router, the download's states, the status line, Try again, the crash fuse), held at ready until the phone check passes.
 - Owner, 2026-11-07 (asked async, q6-q14): the natural voice downloads from "Our own Cloudflare R2 bucket (Recommended)", on "Any, but wait in Low Data Mode (Recommended)", starting "The first time Voice is on (Recommended)"; "Yes: a crash mid-reading turns it off, said once (Recommended)"; a failed download: "Say so, with Try again; system voice keeps reading (Recommended)". Differing from the recommendations: "lets just make natural voice the only" (no Natural voice switch; the system voice fills in until it lands), "No removal in the app", and "Both, with a picker" (af_heart and am_michael), the picker "Tap Voice to cycle Off, Her, Him (Recommended)".
 - Orchestrator, 2026-11-06/07: hsnatural split (option A) into hslexicon → hskokoro → hsmirror → phone check → hsnatural (`tmp/orchestrate/hymnapp/hsnatural/split-decision.md`, `hskokoro/split-decision.md`); the R2 deploy and the model copy wait on the owner's word. From batch voice-1 the run follows the batch machine: land, then one verifier on the merged head, fixes forward.
 - Owner, 2026-11-06 (asked in chat): Heartseed's natural voice is Kokoro-82M (FluidAudio's CoreML `KokoroAne`, a KJV pronunciation list made ahead of time), downloaded on first use behind a "Natural voice" switch, the first release's one network call ("Download on first use, behind a 'Natural voice' switch (Recommended)"); Heartseed's minimum goes from iOS 17 to iOS 18 ("Yes, iOS 18 minimum (Recommended)"). Unit `hsnatural`, after hspassage; its planner proposes where the model is hosted (a mirror we control) and whether it downloads on Wi-Fi only.
@@ -86,6 +88,8 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 - Heartseed dictation model download (hsdictate Decided 3): the first two engines in the chain (SpeechAnalyzer with SpeechTranscriber, then DictationTranscriber) need Apple's on-device speech model, often not yet installed; may Heartseed ask iOS to download it in the background (`AssetInventory`), the recital falling through to the on-device SFSpeechRecognizer meanwhile, against the first release's "no network calls"? Recognition and the reader's voice never leave the phone. Recommended: yes. (hsdictate, asked 2026-11-04) **Answer (owner, 2026-11-04):** "Yes, ask iOS".
 
 ## Follow-ups
+
+- hsspeaker round 2 (`8934f6cbf`, test-only) is judged by the next batch's verifier; `test:budget` passed in batch speaker-1 (slowest Heartseed part 0.88 s).
 
 - hsmirror (`tmp/orchestrate/hymnapp/hsmirror/`, merged 3bea3a4bc): no committed test holds `copy.ts`'s `--dry-run` choice (only the live K9 does; a `command.test.ts` as the hymnal's); a shared `@manna/r2` for the hymnal's and Heartseed's R2 code (D8); the deploy and the copy wait on the owner's word (q15).
 
