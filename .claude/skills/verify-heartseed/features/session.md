@@ -155,8 +155,9 @@ values, never a recall); delete the store copies.
   `Nothing to tend now` until 04:00. Tests alone own the evening rule's
   edges, other zones, months away, a pile of due verses, the cap, the mixed
   order, a new piece beside planted verses, unread and refused stores, and
-  every minutes value's effect on a plan. The app holds one passage, so a
-  live plan holds at most one item, and the minutes never change its count
+  every minutes value's effect on a plan. On the first minute's day no
+  new verse is offered, so a live plan that day holds at most one item
+  (Isaiah 41:10), and the minutes never change its count
   (`apps/heartseed/src/session.property.test.ts` for the plan and the
   counts line, `apps/heartseed/src/session/service.test.ts` for the stored
   minutes, `apps/heartseed/src/session/header.test.tsx` for the header's

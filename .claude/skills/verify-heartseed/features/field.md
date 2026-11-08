@@ -17,8 +17,10 @@ and the harvest (`<n> verses at full corn`,
 `1 verse at full corn`: the verses at full corn now, so Again takes a verse
 out). Then one card per row: the promise's first (`Isaiah 41:10`, shown
 even before its first recall, as bare soil), then each passage the reader
-chose, in the order chosen (`passage.md`), then each other verse the
-garden holds, in the order first sown. Each plant is one image to the
+chose, in the order chosen (`passage.md`), then the taught collection's
+row `Protection & Fear`, its 14 verses in order, with no `Remove`
+(`promise.md`), then each other verse the garden holds, in the order
+first sown. Each plant is one image to the
 screen reader, labelled `<reference>, <stage>` (`seed`, `blade`, `ear`,
 `full corn` or `not planted`), its drawing and verse number hidden inside
 it. A legend of the four stages and the caption `Mark 4:28` close the
@@ -33,7 +35,8 @@ every launch opens on the pending frame, then the first minute or Today.
 - `field-control`: Today, read and quiet, offers a button `Your field` in
   its header, inside the window and above the home indicator's area.
 - `field-first`: after the first minute, the field shows the passage at a
-  seed, `1 day sown`, `0 verses at full corn` and a button `Today`, with no
+  seed, then the row `Protection & Fear` with no plant planted,
+  `1 day sown`, `0 verses at full corn` and a button `Today`, with no
   `Today` heading and no `Say it`.
 - `field-back`: `Today` shows Today as it was.
 - `field-grow` (live at the first wait, `run.md`'s `run-recite` and
@@ -67,7 +70,9 @@ Launch); the JavaScript comes from the dev server.
    button `Your field`.
 3. `field-first`: `sim tap "label=Your field"`, `sim snapshot field-first`
    → the heading `Your field`; the text `Isaiah 41:10`; a node labelled
-   `Isaiah 41:10, seed`; `1 day sown`; `0 verses at full corn`; a button
+   `Isaiah 41:10, seed`; the text `Protection & Fear` and 14 nodes ending
+   `, not planted` (`promise.md`'s `promise-field`); `1 day sown`;
+   `0 verses at full corn`; a button
    `Today`; no `Today` heading, no `Say it`, no label starting `Stage:`.
 4. `field-back`: `sim tap "label=Today"`, `sim open / --expect "id=session"`,
    `sim snapshot field-back` → the heading `Today`, `Nothing to tend now`

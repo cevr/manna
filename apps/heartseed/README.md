@@ -8,9 +8,12 @@ its stage in the garden, and one big button, Say it, which hears the reader
 recite it; the word matcher (`src/matcher.ts`) grades a recall against the
 verse, and the garden (`src/garden.ts`) keeps it and grows the verse's
 plant. Beside Today's heading, `Your field` opens the field (`src/field.ts`, below): a
-row per passage, a plant per verse, the days sown and the harvest. Under
-them, the session's `Minutes` and `Voice` choices sit, and atop the passage
-a counts line says what the day's plan holds (`src/session.ts`, below).
+row per passage, a plant per verse, the days sown and the harvest; once a
+plan is made, `When I need…` beside it lists the promises the reader
+knows by situation, and a tap on one says it now (`src/need.ts`, below).
+Under them, the session's `Minutes` and `Voice` choices sit, and atop the
+passage a counts line says what the day's plan holds (`src/session.ts`,
+below).
 
 Run it as a reader does with the verify skill,
 `.claude/skills/verify-heartseed`. It drives through `bun run sim`
@@ -408,9 +411,10 @@ however much a recital adds (the recap, the grades, the growth line, an
 alert) it is on screen without a scroll and clear of the home indicator;
 the field's button `Today` (shown `‹ Today`), in the bar fixed above the
 field's scroll view, comes back to Today as it was. The field, the
-chooser (Choosing a passage, below) and About (below) are in place in the
-root route (`app/index.tsx`): no route, no link, no tab. Which of Today,
-the field, the chooser and About shows is the root's state for the launch, never stored, so
+chooser (Choosing a passage, below), About (below) and When I need…
+(below) are in place in the root route (`app/index.tsx`): no route, no
+link, no tab. Which of these five screens shows is the root's state for
+the launch, never stored, so
 every launch opens on the pending frame, then the first minute or Today,
 and whenever Say it listens the screen is Today. Until a
 read completes, and for a session whose read failed, there is no field and
@@ -421,9 +425,12 @@ them.
 - `src/field.ts` is the rule, pure: `fieldOf(garden, passages)` over a
   `Read` view and the passages taught: the promise's, a passage of one
   verse, then each the reader holds, in the order chosen, carrying its
-  range (the root maps them, `app/index.tsx`; with the reader's passages
-  unread, the promise's alone). The field shows once both the garden's and
-  the passages' views are known. The passages come first,
+  range, then each taught collection, titled by its title, its verses in
+  order, with no range (`fieldPassagesOf`, `src/promises/taught.ts`, over
+  the app's layer's taught part, mapped in `app/index.tsx`; with the
+  reader's passages unread, the promise's and the taught ones). The field
+  shows once the garden's and the passages' views and the taught part are
+  known. The passages come first,
   each verse a plant at `stageOf` its plant, or `not planted` before its
   first recall (drawn as bare soil); a verse is one plant wherever it
   shows; then each other verse the garden
@@ -548,11 +555,12 @@ and removes one.
   touches a recall: a removed passage's plants stay in the garden, its
   verses leave the pieces, and the field shows them as any plant no piece
   names.
-- **The pieces** (`piecesOf(own, view)`) are the app's own (`appLayer`'s
-  `pieces`, the promise by default), then each passage's verses in
-  passage and verse order, each with its corpus text, its words counted
-  as the matcher counts them and its passage's reference as its group.
-  Each reference is kept once, at its first place, so a passage over
+- **The pieces** (`piecesOf(own, view, taught)`) are the app's own
+  (`appLayer`'s `pieces`, the promise by default), then each passage's
+  verses in passage and verse order, each with its corpus text, its words
+  counted as the matcher counts them and its passage's reference as its
+  group, then the taught collections' verses (Promises, below). Each
+  reference is kept once, at its first place, so a passage over
   Isaiah 41:10 shares the promise's plant. With the passages unread, the
   app's own alone.
 - **An add or a remove is a making.** `addPassage(range)` and
@@ -577,10 +585,12 @@ chooser's header and its footer are fixed outside the scroll views.
   it offers neither and no row offers `Remove`: the app never writes over
   what it could not read.
 - **The rows** are the promise's, then each passage held, in the order
-  chosen, titled by its reference, then every other plant as a passage of
-  one verse (Field, above). Each passage row, and no other, holds
+  chosen, titled by its reference, then each taught collection's
+  (`Protection & Fear`), then every other plant as a passage of one verse
+  (Field, above). Each passage row, and no other, holds
   `Remove <its reference>`, which finds its passage by the row's range,
-  never by its place. The promise is not the reader's choice and has none.
+  never by its place. The promise and the taught collections are not the
+  reader's choice and have none.
 - **Remove asks once**, in the bar in place of `Add a passage` or the limit
   line: "Remove <reference>? Its plants stay in your field." (testID
   `ask`), with `Remove` and `Keep`. `Keep` closes it. `Remove` runs
@@ -632,6 +642,48 @@ chooser's header and its footer are fixed outside the scroll views.
   `Keep` and unread passages write nothing, and there is no route or key
   of the chooser's own.
 
+## Promises
+
+The app holds Selah's fourteen promise collections (its
+`Promises.swift`), as references only, and teaches one of them, the Fear
+collection, free, after the reader's own passages.
+
+- **The content** is `src/promises.ts`, one plain module of data:
+  `COLLECTIONS`, the fourteen in Selah's order, each its `id`, its `title`
+  as Selah writes it (`Christ’s Return` with U+2019) and its promises in
+  order, each a `Range` of 1-3 verses of one chapter, 158 in all over 188
+  verses. Each book is its canon number, so no product source names a
+  verse; no verse text is held, and each verse is read from the corpus
+  (`versesOf`, `src/kjv.ts`), so the display rule holds everywhere.
+  `src/promises/content.test.ts` resolves every promise through the
+  corpus (each verse with text, the promise at most 70 words as the
+  matcher counts them), and checks the counts, the ids and that no
+  promise appears twice. No committed test reads `apps/selah`; the parity
+  with the Swift file is the unit's acceptance check's.
+- **Taught** is `TAUGHT`, `['protection']` (`Protection & Fear`, 12
+  promises over 14 verses). `appLayer`'s part `promises` (ids; none when
+  left out) is the one source: the runtime passes `TAUGHT`, and the
+  session, the field's taught rows and When I need…'s taught card read
+  that part through the layer (the `Taught` service,
+  `src/promises/taught.ts`, and the session's layer), never the constant,
+  so a rig that leaves it out plans and renders as before the
+  collections. An id no collection has teaches nothing.
+- **The pieces' order.** The session plans over the app's own piece, then
+  each held passage's verses, then each taught collection's verses,
+  promise by promise and verse by verse, each grouped by its collection's
+  title (`collectionPieces`, `src/passages.ts`, built once as the layer
+  builds), each reference kept once at its first place. With the passages
+  unread, the app's own alone. The new piece stays the first piece no
+  plant names, so a reader with passages to learn learns them first, and
+  Fear's verses fill the days after them (from the second day for a
+  reader with none); the reviews mix across passages and the collection
+  by their groups.
+- **The field's row.** Each taught collection is a row titled by its
+  title, its plants its verses in order, after the passages held and
+  before the other plants, with no `Remove`. A verse is one plant
+  wherever it shows: a Fear verse in a held passage shows in both rows,
+  and a removed passage's Fear verse stays in the Fear row.
+
 ## Session
 
 The daily session is the plan of what to tend today: the due reviews, then
@@ -652,7 +704,8 @@ first minute show neither. At the top of the scroll view, above the
 reference, the counts line (`testID="session"`) says what the plan holds.
 
 Today runs the plan one verse at a time. In a read garden with a plan it
-shows one item: the held one if any, else the plan's first item not done.
+shows one item: the held one if any, else the visit's first item not
+done (When I need…, below), else the plan's first item not done.
 It shows the item's reference (`testID="reference"`), its words under its
 cue (the full text for the new piece, `cueIn` for a review), its stage
 line, and the action button. A press of `Say it` recites that item's own
@@ -696,8 +749,8 @@ marks. The alert stays in the scroll.
 
 - `src/session.ts` is the rule, pure: `planOf` over a `Read` view, the
   pieces the app holds text for (`appLayer`'s `pieces`, by default
-  Today's passage alone, then the reader's passages' verses: Passages,
-  above; each its reference, its word count and its group; `TextPiece`
+  Today's passage alone, then the reader's passages' verses, then the
+  taught collections': Passages and Promises, above; each its reference, its word count and its group; `TextPiece`
   adds its text), the instant, the zone's offset at it
   and the minutes. `isDone` reads an item's done from the garden.
   - A plant is due at FSRS's due. While it holds one recall that carries
@@ -748,9 +801,11 @@ marks. The alert stays in the scroll.
   otherwise, or the field and back. An unread garden or unread passages
   have no plan and no counts line. The service also holds the run's one
   piece of state, the item held (`hold`, `next`), over the pieces of the
-  launch's start, then of each making (its view's `pieces` and `held`). It needs `Dictation`: a making reads whether a
+  launch's start, then of each making (its view's `pieces` and `held`),
+  and beside it the visit (`visit`, When I need…, below), which lives as
+  the hold lives. It needs `Dictation`: a making reads whether a
   recital is under way in the same synchronous step as the making, and
-  keeps the hold only then.
+  keeps the hold and the visit only then.
 - `src/foreground.ts` is the return rule, pure (`lifeStep` from `UNSEEN`,
   and `returnsOf` over a stream of states), the `Foreground` service (its
   `states`: the state at subscription first, then each change) and
@@ -764,7 +819,8 @@ marks. The alert stays in the scroll.
   service.
 - `src/session/run.ts` is `shownOf(view, garden)`, what Today shows of the
   run, pure: `Unplanned` (no plan: the first piece), the `Item` with its
-  piece, whether it is held and whether it is done, or `Done`. A held item
+  piece, whether it is held and whether it is done, or `Done`: the held
+  item, else the visit's first not done, else the plan's. A held item
   shows with the piece it was held with (the view's `heldPiece`, kept
   beside the hold and dropped with it), never `Done`, even when a making
   took its verse out of the pieces: a remove of its passage while its
@@ -772,6 +828,60 @@ marks. The alert stays in the scroll.
   its result on Today until `Next`. The plan made then holds none of the
   removed verses, so after `Next` Today never offers one. The view's
   `pieces` and `held` keep their meaning.
+
+## When I need…
+
+The promises the reader already knows, by situation; a tap on one says
+it now, and the saying counts as a review.
+
+- **The entry.** Today's fixed header offers the button `When I need…`
+  beside `Your field`, outside the scroll view, at least 44 pt, exactly
+  when the session has a plan made in this launch (the garden and the
+  passages read) and Say it is not listening: never in the pending frame,
+  the first minute, an unread garden or over unread passages. The
+  header's row wraps, so both buttons stay 44 pt at the largest text.
+- **The screen** (`src/need/screen.tsx`, `NeedScreen({ cards, onToday,
+  onVisit })`) is the root's fifth screen, in place: a bar fixed above
+  its scroll view holds `‹ Today` (named `Today`), which returns to Today
+  as it was; in the scroll view the one heading `When I need…`, then the
+  cards. Every text is Palette A's ink, at WCAG AA on the ground and on a
+  card; nothing but a promise is a control inside the scroll view. It
+  reads and writes nothing in the store.
+- **The cards** are `needOf(garden, taught)` (`src/need.ts`), pure, in
+  the situations' order: `protection`, `victory`, `peace`, `healing`,
+  `forgiveness`, `guidance`, `provision`, `comfort` (the brief's fear,
+  temptation, worry, sickness, guilt, guidance, need and grief), then
+  `strength`, `spirit`, `salvation`, `return`, `prayer`, `rest` (Selah's
+  order). A promise is known when every verse of it has a plant in the
+  read garden, at any stage; references match exactly. A taught card
+  always shows; any other only once one of its promises is known (the
+  first minute's Isaiah 41:10 shows under `Strength`). A card (testID
+  `need-card`) shows its title (`need-title`, plain text, never a
+  heading), then each known promise in the collection's order as a
+  button (testID `promise`) named by its reference (`Psalms 91:1-2`); a
+  taught card with promises not known adds `<n> still to learn` (testID
+  `to-learn`). No other number, no lock and no word of a paid tier.
+- **A visit.** A tap on a known promise runs `visitPromise`
+  (`src/app.ts`, `Session.visit`): the promise's verses, in order, become
+  the visit, each a review (`fresh: false`) whose baseline is its plant's
+  recalls at the tap (read behind every keep handed in before it), its
+  piece the corpus text grouped by the collection's title; then the
+  screen is Today. A new visit replaces the one before; nothing is made
+  before the first plan or in an unread garden.
+- **Today over a visit** shows the held item if any (a visit never drops
+  a held result), else the visit's first verse not done (done: its plant
+  holds more recalls than its baseline), else the plan's first item not
+  done. `Say it` recites the verse under the ladder's cue for its stage
+  and keeps the recall as any of Today's, so FSRS schedules from it; it
+  offers no `Listen`. Its result, grades and `Next` are Today's, and
+  `Next` shows the visit's next verse. A visit verse that is also a plan
+  item is done in the plan too. The counts line is the plan's alone.
+- **A visit lives as the hold lives:** a making with no recital under way
+  (a Minutes tap, a return to the foreground, a landed add or remove)
+  drops it with the hold; a making while a recital is under way keeps
+  both. The field, About and When I need… and back keep it; a relaunch
+  has none. Nothing of it is stored: the only writes are the recalls
+  said.
 
 ## Natural voice
 

@@ -21,8 +21,9 @@ state, the counts line alone. The action button, `Say it` (`sayit.md`) or
 once a recital ends; until `Say it` is pressed the screen asks for no permission and
 makes no sound. Beside the header `Today`, fixed above the scrolling
 passage, once the garden's read completes and never while Say it listens,
-is the button `Your field`, which opens the field in place (`field.md`);
-it is on screen without a scroll whatever Today holds. Under them, in the
+is the button `Your field`, which opens the field in place (`field.md`),
+and beside it, once a plan is made, `When I need…` (`promise.md`); each
+is on screen without a scroll whatever Today holds. Under them, in the
 header's second row, are the radio group `Minutes` (`2 min`, `5 min`,
 `10 min`, `20 min`) and the button `Voice` (valued `Off`, `Her` or `Him`,
 each tap the next), and at the top of the scroll

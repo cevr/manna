@@ -26,9 +26,10 @@ it go on. Listening is offered, not required. With `Voice` at `Off`, only
 `Say it` shows.
 A review, `Next`, the done state and an unread garden never show `Listen`.
 
-The first minute plants the app's one verse (Isaiah 41:10), so a new verse
-shows live only once the reader has chosen a passage: `passage.md`'s
-`passage-new` drives `Listen` on the second day.
+The first minute plants Isaiah 41:10, and no new verse is offered on its
+day, so a new verse shows live only on the second day: `passage.md`'s
+`passage-new` (a passage's first verse) and `promise.md`'s `promise-new`
+(the Fear collection's first) drive `Listen` then.
 
 ## Sub-features
 

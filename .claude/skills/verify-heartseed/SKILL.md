@@ -141,7 +141,8 @@ the hymnal's skill describes; in the first minute a reader taps `Listen`,
 `Next`, `Say it` and `Continue`, on Today `Listen` (on a new verse),
 `Say it`, a grade, a missed
 word's mark, `Next`, a `Minutes` radio, `Voice` (its value `Off`, `Her`
-or `Him` in a raw snapshot) and `Your field`; on the field, in its bar,
+or `Him` in a raw snapshot) and `Your field` and `When I need…`; on When I need… a promise by its
+reference and its bar's `Today`; on the field, in its bar,
 `Today`, `Add a passage`, and the ask's `Remove` and `Keep`, in a row
 `Remove <reference>`, and in its foot `About`; on About its bar's
 `Your field`; and on the chooser a book, a chapter, a verse, `Plant` and
@@ -207,6 +208,14 @@ Heartseed has no journey files yet. The features:
   and changes nothing while a recital is under way; a new verse's `Listen`
   beside `Say it` (live in `passage.md`'s `passage-new`). Run it from
   `first.md`'s Today, in place of `run.md` step 6.
+- [features/promise.md](features/promise.md): the promise collections
+  and When I need…: the Fear collection's row on the field, Today's
+  `When I need…` in its fixed header, the cards of the promises the
+  reader knows (`Protection & Fear` with its count still to learn,
+  `Strength` with the first minute's promise), a tap on a promise said on
+  Today as a review, and the first Fear verse after the next 04:00. Run
+  it from `first.md`'s Today; its second session comes after the next
+  04:00.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.

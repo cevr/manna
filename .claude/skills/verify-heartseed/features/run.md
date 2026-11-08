@@ -1,8 +1,9 @@
 # The run: Today one verse at a time
 
 Today (`apps/heartseed/app/index.tsx`) runs the session's plan
-(`session.md`) one verse at a time. It shows the first item that is
-not done: its reference, its words under its cue (the full text for a new
+(`session.md`) one verse at a time. It shows the held item if any, else
+the first verse not done of a visit (a promise tapped on When I need…,
+`promise.md`), else the plan's first item that is not done: its reference, its words under its cue (the full text for a new
 verse, first letters at a seed, nothing from a blade on), its stage line,
 and `Say it`. Once the recital's recall is kept, the result and the grades
 stay, and the button reads `Next`. `Next` moves on to the next item. After
@@ -22,8 +23,10 @@ the new plan's first item, and an earlier result is gone. A tap made while
 a recital listens keeps that verse on screen until its `Next`. Nothing of
 the run is stored. A relaunch makes a new plan.
 
-Until the reader chooses a passage (`passage.md`), the app holds one verse
-(Isaiah 41:10), so this drive's plan holds at most one item. After the first minute's alone recital (the replay suggests Hard),
+The app holds Isaiah 41:10, then the reader's passages (`passage.md`),
+then the Fear collection's verses (`promise.md`). On the first minute's
+day no new verse is offered, so this drive's plan holds at most one
+item: Isaiah 41:10. After the first minute's alone recital (the replay suggests Hard),
 the passage is due again 6 minutes later. That is FSRS's step. A planting
 after 18:00 local is due at 04:00 the next morning.
 
@@ -33,8 +36,8 @@ Every row runs from `first.md`'s `first-today`. `PLANTED` is the local time
 of `first-planted`.
 
 - `run-done-first`: Today after the first minute is the done state: the
-  counts line `Nothing to tend now`, the header (`Today`, `Your field`, the
-  four `Minutes` radios, `Voice`), and no `Say it`, `Next`, `Grade` or
+  counts line `Nothing to tend now`, the header (`Today`, `Your field`,
+  `When I need…`, the four `Minutes` radios, `Voice`), and no `Say it`, `Next`, `Grade` or
   `Isaiah 41:10` node on Today.
 - `run-due` (daytime only, when `PLANTED` was between 04:00 and 17:52
   local): 7 minutes after `PLANTED`, a tap on the checked `5 min` makes a
