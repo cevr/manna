@@ -65,7 +65,6 @@ import { Stage } from 'alchemy/Stage';
 import * as D1Client from '@effect/sql-d1/D1Client';
 import {
   Cause,
-  Config,
   ConfigProvider,
   DateTime,
   Duration,
@@ -108,6 +107,7 @@ import {
 } from './book-vectors.ts';
 import { D1Atomic } from './d1-atomic.ts';
 import { Corpus, SyncReports, Vectors } from './resources.ts';
+import { storeSecret } from './store-secret.ts';
 import { DOMAIN } from './site.ts';
 import { reportKey, reportPage, reportPageKey } from './sync-pages.ts';
 import { MAIL_LIMIT, SyncOutcome, syncMail } from './sync-mail.ts';
@@ -260,6 +260,8 @@ export default class Sync extends Cloudflare.Worker<Sync>()(
     const ai = yield* Cloudflare.Workers.AI();
     const mailer = yield* Cloudflare.Email.Send(SyncMailer);
     const reports = yield* Cloudflare.R2.WriteBucket(yield* SyncReports);
+    const clientId = yield* storeSecret('EGW_CLIENT_ID');
+    const clientSecret = yield* storeSecret('EGW_CLIENT_SECRET');
     const embed = workersAiDocuments((inputs) =>
       ai.run(EMBEDDING_MODEL, inputs).pipe(Effect.provide(RuntimeContext.phantom)),
     );
@@ -267,10 +269,7 @@ export default class Sync extends Cloudflare.Worker<Sync>()(
     yield* Cloudflare.Workflow(
       'CorpusSync',
       yield* workflowProps,
-      Effect.gen(function* () {
-        const clientId = yield* Config.Redacted('EGW_CLIENT_ID');
-        const clientSecret = yield* Config.Redacted('EGW_CLIENT_SECRET');
-
+      Effect.sync(() => {
         /** The corpus in D1, written through batches (`D1Atomic`). */
         const corpusLayer = Layer.unwrap(
           Effect.map(corpus.raw, (db) =>
@@ -280,17 +279,26 @@ export default class Sync extends Cloudflare.Worker<Sync>()(
             ),
           ),
         );
-        /** The library, with a token held for the step's life. */
-        const library = EGWApiClient.Live.pipe(
-          Layer.provide(
-            EGWAuth.Live.pipe(
-              Layer.provide(EGWTokenStore.layerMemory()),
+        /**
+         * The library, with a token held for the step's life. Its
+         * credentials are read from the store as the step builds it, inside
+         * the step: never as the Workflow is built, which also runs while
+         * the stack plans.
+         */
+        const library = Layer.unwrap(
+          Effect.map(Effect.all([clientId, clientSecret]), ([id, secret]) =>
+            EGWApiClient.Live.pipe(
               Layer.provide(
-                ConfigProvider.layer(
-                  ConfigProvider.fromUnknown({
-                    EGW_CLIENT_ID: Redacted.value(clientId),
-                    EGW_CLIENT_SECRET: Redacted.value(clientSecret),
-                  }),
+                EGWAuth.Live.pipe(
+                  Layer.provide(EGWTokenStore.layerMemory()),
+                  Layer.provide(
+                    ConfigProvider.layer(
+                      ConfigProvider.fromUnknown({
+                        EGW_CLIENT_ID: Redacted.value(id),
+                        EGW_CLIENT_SECRET: Redacted.value(secret),
+                      }),
+                    ),
+                  ),
                 ),
               ),
             ),

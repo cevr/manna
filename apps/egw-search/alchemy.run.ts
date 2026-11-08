@@ -14,8 +14,10 @@
  * State lives in the Cloudflare state store, so every machine and CI see the
  * same resources.
  *
- * Deploying reads `EGW_CLIENT_ID` and `EGW_CLIENT_SECRET` from the
- * environment and binds them to the sync's Worker as secrets.
+ * Deploying needs only the Cloudflare login: the library's credentials,
+ * `EGW_CLIENT_ID` and `EGW_CLIENT_SECRET`, are store secrets the sync's
+ * Worker binds by name (`server/cloudflare/store-secret.ts`), put in the
+ * store once by the owner (README, Deploy).
  */
 import * as Alchemy from 'alchemy';
 import * as Cloudflare from '@alchemy.run/cloudflare';

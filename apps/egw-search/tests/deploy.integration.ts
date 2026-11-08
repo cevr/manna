@@ -5,8 +5,10 @@
  *
  * The sync is run too, as an instance of the stage's Workflow. A stage other
  * than `prod` only plans (`server/cloudflare/Sync.ts`), so the run reads the
- * library and the corpus and writes nothing. Deploying needs `EGW_CLIENT_ID`
- * and `EGW_CLIENT_SECRET` in the environment.
+ * library and the corpus and writes nothing. Deploying needs only the
+ * Cloudflare login: the library's credentials are store secrets the sync
+ * Worker binds (`server/cloudflare/store-secret.ts`), put once by the owner
+ * with `bunx wrangler secrets-store secret create` (README, Deploy).
  *
  * Outside Bun's test pattern on purpose, so the gate never deploys. Run it with
  * `bun run test:deploy` (it builds first) before handing off a change to the
