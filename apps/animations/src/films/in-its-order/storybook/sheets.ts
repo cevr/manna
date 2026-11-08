@@ -198,22 +198,29 @@ const guest = (member: string, side: 'right' | 'left', seat: string): SheetDecl 
 const GUEST_TABLE_REF = '../../shot-sheets/iio-table/sheet';
 
 /**
- * The guest man at the table (`cold-table` to `cold-ouch`): the guests' four
- * keys, and his laugh in the two-shot, a later pass drawn from the sheet
- * itself (critique 1, finding 2: his closed smile read faint at phone
- * size), so the four keys drawn first stand byte for byte.
+ * The guest man at the table (`cold-table` to `cold-ask`): the guests' four
+ * keys; his laugh in the two-shot, a later pass drawn from the sheet itself
+ * (critique 1, finding 2: his closed smile read faint at phone size); and
+ * his wondering look to the viewer on the question, a pass after it
+ * (critique 2, finding 3: his smile read cheerful on "So what is milk"),
+ * so the keys drawn before each pass stand byte for byte.
  */
 const guestManTable: SheetDecl = (() => {
   const base = guest('feast-guest-man', 'right', '#692e18');
   return {
     ...base,
-    keys: [...base.keys, 'laugh'],
+    keys: [...base.keys, 'laugh', 'wonder'],
     poses: {
       ...base.poses,
       laugh:
         "seated on the low stool exactly as the first reference image's fourth figure, the same man at the same size, both round hands resting on the knees, the head a quarter turned toward the viewer's right as there, laughing warmly at someone at the picture's right: a broad beaming grin, the mouth a wide upturned closed curve, the eyes crinkled into two upward-curved ink lines, the cheeks high, the head tipped back a little",
+      wonder:
+        "seated on the low stool exactly as the first reference image's first figure, the same man at the same size, both round hands resting on the knees, the head tilted a little to one side and the eyes to the viewer, wondering, asking a question: the brows raised high and arched, the eyes wide and round, the mouth a small open oval, no smile",
     },
-    passes: [{ keys: ['laugh'], refs: [GUEST_TABLE_REF, 'poses-1'] }],
+    passes: [
+      { keys: ['laugh'], refs: [GUEST_TABLE_REF, 'poses-1'] },
+      { keys: ['wonder'], refs: [GUEST_TABLE_REF, 'poses-1'] },
+    ],
   };
 })();
 
