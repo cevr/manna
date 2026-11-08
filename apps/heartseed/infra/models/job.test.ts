@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noInlineProvide, effect/noNodeBuiltinImport -- each case provides its own hub and bucket stand-ins, the boundary under test; the stand-ins and the oracle hash with node's crypto, apart from the Digest the job uses. */
+/* oxlint-disable effect/noNodeBuiltinImport -- the stand-ins and the oracle hash with node's crypto, apart from the Digest the job uses. */
 
 /**
  * The copy job over a real temporary cache, a Hugging Face stand-in that
