@@ -1,9 +1,10 @@
 /**
  * `bun run --cwd apps/heartseed natural:serve -- --port <p> --cache <dir> [--host 127.0.0.1|0.0.0.0] [--corrupt <path>]`:
  * the natural voice's model files for a development build, with no mirror
- * deployed. It fills `--cache` with the 38 pinned files from Hugging Face
- * at the pinned revision (`src/natural/manifest.ts`), checking each
- * SHA-256 and fetching none already checked, then serves `GET` and `HEAD`
+ * deployed. It fills `--cache` with the 39 pinned files from Hugging Face
+ * at the pinned revision (`src/natural/manifest.ts`), both voices among
+ * them (`am_michael.bin` converted from its rows, `infra/models/source.ts`),
+ * checking each SHA-256 and fetching none already checked, then serves `GET` and `HEAD`
  * of `/<path>` for those paths alone (404 for any other) on `--host`
  * (default 127.0.0.1). `--corrupt <path>` flips the middle byte of that file
  * as served, so the app's check can be seen to refuse it. It prints one
@@ -14,25 +15,11 @@ import { BunCrypto, BunHttpServer, BunRuntime, BunServices } from '@effect/platf
 import { Console, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { Command, Flag } from 'effect/cli';
 import { Digest } from 'effect/crypto';
-import {
-  FetchHttpClient,
-  HttpClient,
-  HttpServer,
-  HttpServerRequest,
-  HttpServerResponse,
-} from 'effect/http';
+import { FetchHttpClient, HttpServer, HttpServerRequest, HttpServerResponse } from 'effect/http';
 
-import { FILES, SOURCE_REVISION } from '../src/natural/manifest.ts';
+import { FileMismatch, fetchPinned } from '../infra/models/source.ts';
+import { FILES } from '../src/natural/manifest.ts';
 import type { ModelFile } from '../src/natural/module.ts';
-
-/** Where Hugging Face keeps a pinned file. */
-export const sourceOf = (path: string): string =>
-  `https://huggingface.co/FluidInference/kokoro-82m-coreml/resolve/${SOURCE_REVISION}/ANE/${path}`;
-
-/** A fetched file was not the pinned one: its size or SHA-256 differs. */
-export class FileMismatch extends Schema.TaggedError<FileMismatch>()('FileMismatch', {
-  path: Schema.String,
-}) {}
 
 /** `--corrupt` named a path that is not one of the files served. */
 export class UnknownFile extends Schema.TaggedError<UnknownFile>()('UnknownFile', {
@@ -80,21 +67,16 @@ export const fillWith = Effect.fn('NaturalServe.fillWith')(function* <E, R>(
   return fetched;
 });
 
-/** `fillWith` over a plain GET of `sourceFor(path)`. */
-export const fill = Effect.fn('NaturalServe.fill')(function* (
-  cache: string,
-  files: ReadonlyArray<ModelFile>,
-  sourceFor: (path: string) => string,
-) {
-  const client = HttpClient.filterStatusOk(yield* HttpClient.HttpClient);
-  return yield* fillWith(cache, files, (file) =>
-    Effect.gen(function* () {
-      yield* Console.log(`[serve] fetch ${file.path}`);
-      const response = yield* client.get(sourceFor(file.path));
-      return new Uint8Array(yield* response.arrayBuffer);
-    }),
+/**
+ * `cache` filled with `files` (every file of the download unless named),
+ * both voices among them, each fetched as the copy to the mirror fetches it
+ * (`fetchPinned`): `am_michael.bin` converted from its rows. Answers the
+ * paths it fetched.
+ */
+export const fillPinned = (cache: string, files: ReadonlyArray<ModelFile> = FILES) =>
+  fillWith(cache, files, (file) =>
+    Console.log(`[serve] fetch ${file.path}`).pipe(Effect.andThen(fetchPinned(file))),
   );
-});
 
 /** The bytes with the middle one flipped. */
 export const corrupted = (bytes: Uint8Array): Uint8Array<ArrayBuffer> => {
@@ -168,6 +150,22 @@ const Ready = Schema.Struct({
   corrupt: Schema.String,
 });
 
+/** The JSON line printed once the server at `url` listens: every file of the download served, `fetched` of them fetched by this run. */
+export const readyLine = (
+  url: string,
+  fetched: number,
+  cache: string,
+  corrupt: Option.Option<string>,
+) =>
+  Schema.encodeEffect(Schema.fromJsonString(Ready))({
+    ready: true,
+    url,
+    files: FILES.length,
+    fetched,
+    cache,
+    corrupt: Option.getOrElse(corrupt, () => ''),
+  });
+
 /** Fills the cache, then serves it until stopped, after one JSON line naming its address. */
 const serveFor = Effect.fn('NaturalServe.serve')(function* (
   cache: string,
@@ -177,16 +175,9 @@ const serveFor = Effect.fn('NaturalServe.serve')(function* (
   if (Option.isSome(corrupt) && !FILES.some((file) => file.path === corrupt.value)) {
     return yield* UnknownFile.make({ path: corrupt.value });
   }
-  const fetched = yield* fill(cache, FILES, sourceOf);
+  const fetched = yield* fillPinned(cache);
   const ready = HttpServer.addressFormattedWith((url) =>
-    Schema.encodeEffect(Schema.fromJsonString(Ready))({
-      ready: true,
-      url,
-      files: FILES.length,
-      fetched: fetched.length,
-      cache,
-      corrupt: Option.getOrElse(corrupt, () => ''),
-    }).pipe(Effect.flatMap(Console.log)),
+    readyLine(url, fetched.length, cache, corrupt).pipe(Effect.flatMap(Console.log)),
   );
   return yield* Layer.launch(
     Layer.effectDiscard(ready).pipe(Layer.provideMerge(layerServe(cache, FILES, corrupt, listen))),

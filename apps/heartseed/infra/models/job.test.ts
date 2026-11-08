@@ -20,13 +20,12 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Console, Effect, FileSystem, Layer, Option, Path, Result } from 'effect';
 import { HttpClient, HttpClientResponse } from 'effect/http';
 
-import { sourceOf } from '../../scripts/natural-serve.ts';
 import { AM_MICHAEL } from '../../src/natural/manifest.ts';
 import type { ModelFile } from '../../src/natural/module.ts';
 import { dryRun, run } from './job.ts';
 import { CACHE_CONTROL, CONTENT_TYPE, PREFIX, keyOf } from './plan.ts';
 import type { MirrorObject } from './plan.ts';
-import { VOICE_ROWS } from './source.ts';
+import { VOICE_ROWS, sourceOf } from './source.ts';
 import { StoreFailed, Target } from './stores.ts';
 
 const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');

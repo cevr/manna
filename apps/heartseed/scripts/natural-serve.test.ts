@@ -5,19 +5,23 @@
  * three made-up files, on a port the system picks, with no network: the
  * fill keeps files already checked and asks the network for nothing, takes
  * a missing file whose bytes check, and keeps no file whose bytes do not;
- * the server answers `GET` with a file's bytes and length and `HEAD` with
+ * it converts `am_michael.bin` from its rows, as the copy to the mirror
+ * does, and keeps nothing from rows that do not convert; unless given a
+ * list it fills the whole download, and the ready line counts all of it.
+ * The server answers `GET` with a file's bytes and length and `HEAD` with
  * its length alone, 404 for any path not in the list or another method,
  * and `--corrupt` flips the middle byte of that file alone.
  *
  * It catches a fill that refetches what it holds or keeps a bad file, a
- * server that serves a path outside the list, and a corruption that
- * changes more than one byte or the wrong file. It misses Hugging Face's
- * own answers and the 83 MB.
+ * fill that asks for the second voice's pack by its own path (Hugging Face
+ * holds only its rows), a server that serves a path outside the list, and a
+ * corruption that changes more than one byte or the wrong file. It misses
+ * Hugging Face's own answers and the 83 MB.
  */
 
 import { BunCrypto, BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Layer, Option, Path } from 'effect';
+import { Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { Digest } from 'effect/crypto';
 import {
   FetchHttpClient,
@@ -27,7 +31,9 @@ import {
   HttpServer,
 } from 'effect/http';
 
-import { corrupted, fill, layerServe, sourceOf } from './natural-serve.ts';
+import { VOICE_ROWS, sourceOf } from '../infra/models/source.ts';
+import { AM_MICHAEL, FILES } from '../src/natural/manifest.ts';
+import { corrupted, fillPinned, layerServe, readyLine } from './natural-serve.ts';
 
 const bytesOf = (size: number, seed: number) =>
   Uint8Array.from({ length: size }, (_, at) => (at * 31 + seed) % 251);
@@ -35,6 +41,30 @@ const bytesOf = (size: number, seed: number) =>
 const A = bytesOf(1000, 7);
 const B = bytesOf(7, 3);
 const C = bytesOf(301, 11);
+
+const ROWS = 510;
+const COLUMNS = 256;
+
+/** Small values, each exactly an fp32, so the rows are short text. */
+const VALUES = Float32Array.from({ length: ROWS * COLUMNS }, (_, at) => (((at * 5) % 29) - 14) / 4);
+
+/** The pack of `values`: little-endian fp32, row after row. */
+const packOf = (values: Float32Array) => {
+  const out = new Uint8Array(values.length * 4);
+  const view = new DataView(out.buffer);
+  values.forEach((value, at) => view.setFloat32(at * 4, value, true));
+  return out;
+};
+
+/** The rows as `voices/<name>.json` holds them, `drop` left out (0 drops none). */
+const rowsOf = (values: Float32Array, drop: number) => {
+  const entries: Array<string> = [];
+  for (let row = 1; row <= ROWS; row++) {
+    if (row === drop) continue;
+    entries.push(`"${row}":[${values.subarray((row - 1) * COLUMNS, row * COLUMNS).join(',')}]`);
+  }
+  return new TextEncoder().encode(`{${entries.join(',')}}`);
+};
 
 /** The fake cache's files, as the manifest lists them. */
 const filesOf = Effect.gen(function* () {
@@ -81,9 +111,7 @@ describe('fill', () => {
       const files = yield* filesOf;
       const cache = yield* cacheOf;
       const asked: Array<string> = [];
-      const fetched = yield* fill(cache, files, sourceOf).pipe(
-        Effect.provide(hubOf(asked, () => C)),
-      );
+      const fetched = yield* fillPinned(cache, files).pipe(Effect.provide(hubOf(asked, () => C)));
       expect(fetched).toEqual(['w/c/c.bin']);
       expect(asked).toEqual([sourceOf('w/c/c.bin')]);
       expect(sourceOf('w/c/c.bin')).toBe(
@@ -91,9 +119,9 @@ describe('fill', () => {
       );
       expect(yield* fs.readFile(path.join(cache, 'w/c/c.bin'))).toEqual(C);
       const again: Array<string> = [];
-      expect(
-        yield* fill(cache, files, sourceOf).pipe(Effect.provide(hubOf(again, () => C))),
-      ).toEqual([]);
+      expect(yield* fillPinned(cache, files).pipe(Effect.provide(hubOf(again, () => C)))).toEqual(
+        [],
+      );
       expect(again).toEqual([]);
     }).pipe(Effect.scoped, Effect.provide(platform)),
   );
@@ -108,14 +136,14 @@ describe('fill', () => {
         const cache = yield* cacheOf;
         yield* fs.writeFile(path.join(cache, 'a.bin'), corrupted(A));
         const asked: Array<string> = [];
-        const failed = yield* fill(cache, files, sourceOf).pipe(
+        const failed = yield* fillPinned(cache, files).pipe(
           Effect.provide(hubOf(asked, () => corrupted(A))),
           Effect.flip,
         );
         expect(failed._tag).toBe('FileMismatch');
         expect(asked).toEqual([sourceOf('a.bin')]);
         expect(yield* fs.exists(path.join(cache, 'a.bin.partial'))).toBe(false);
-        const healed = yield* fill(cache, files, sourceOf).pipe(
+        const healed = yield* fillPinned(cache, files).pipe(
           Effect.provide(
             hubOf([], (url) => {
               if (url.endsWith('a.bin')) return A;
@@ -125,6 +153,83 @@ describe('fill', () => {
         );
         expect(healed).toEqual(['a.bin', 'w/c/c.bin']);
       }).pipe(Effect.scoped, Effect.provide(platform)),
+  );
+
+  it.effect(
+    'converts the second voice from its rows, and keeps nothing from rows missing one',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const digest = yield* Digest.Digest;
+        const pack = packOf(VALUES);
+        const files = [
+          ...(yield* filesOf),
+          {
+            path: AM_MICHAEL.path,
+            bytes: pack.byteLength,
+            sha256: yield* digest.digestHex(Digest.sha256, pack),
+          },
+        ];
+        const answers = (rows: Uint8Array<ArrayBuffer>) => (url: string) => {
+          if (url === VOICE_ROWS) return rows;
+          if (url === sourceOf('w/c/c.bin')) return C;
+          return new Uint8Array();
+        };
+        const broken = yield* cacheOf;
+        const refusedAsked: Array<string> = [];
+        const refused = yield* fillPinned(broken, files).pipe(
+          Effect.provide(hubOf(refusedAsked, answers(rowsOf(VALUES, 17)))),
+          Effect.flip,
+        );
+        expect(refused).toMatchObject({ _tag: 'FileMismatch', path: AM_MICHAEL.path });
+        expect(refusedAsked).toEqual([sourceOf('w/c/c.bin'), VOICE_ROWS]);
+        expect(yield* fs.exists(path.join(broken, AM_MICHAEL.path))).toBe(false);
+        expect(yield* fs.exists(path.join(broken, `${AM_MICHAEL.path}.partial`))).toBe(false);
+
+        const cache = yield* cacheOf;
+        const asked: Array<string> = [];
+        const fetched = yield* fillPinned(cache, files).pipe(
+          Effect.provide(hubOf(asked, answers(rowsOf(VALUES, 0)))),
+        );
+        expect(fetched).toEqual(['w/c/c.bin', AM_MICHAEL.path]);
+        expect(asked).toEqual([sourceOf('w/c/c.bin'), VOICE_ROWS]);
+        expect(yield* fs.readFile(path.join(cache, AM_MICHAEL.path))).toEqual(pack);
+      }).pipe(Effect.scoped, Effect.provide(platform)),
+  );
+
+  it.effect('fills the whole download, both voices, unless given a list', () =>
+    Effect.gen(function* () {
+      const cache = yield* cacheOf;
+      const asked: Array<string> = [];
+      yield* fillPinned(cache).pipe(
+        Effect.provide(hubOf(asked, () => new Uint8Array())),
+        Effect.flip,
+      );
+      expect(asked).toEqual([sourceOf(FILES[0]?.path ?? '')]);
+      expect(FILES.map((file) => file.path)).toContain(AM_MICHAEL.path);
+    }).pipe(Effect.scoped, Effect.provide(platform)),
+  );
+});
+
+describe('the ready line', () => {
+  it.effect('counts every file of the download, both voices, and what this run fetched', () =>
+    Effect.gen(function* () {
+      const line = yield* readyLine(
+        'http://127.0.0.1:8281',
+        1,
+        '/nonexistent/cache',
+        Option.none(),
+      );
+      expect(yield* Schema.decodeEffect(Schema.fromJsonString(Schema.Unknown))(line)).toEqual({
+        ready: true,
+        url: 'http://127.0.0.1:8281',
+        files: 39,
+        fetched: 1,
+        cache: '/nonexistent/cache',
+        corrupt: '',
+      });
+    }),
   );
 });
 
