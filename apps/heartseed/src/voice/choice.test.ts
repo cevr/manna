@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noGlobals -- the store answers a missing key as undefined, and the cases name it so; a failing case and each log line's annotations are named as JSON text. */
+/* oxlint-disable effect/noGlobals -- a failing case and each log line's annotations are named as JSON text. */
 
 /**
  * The voice's launch read over both keys' texts: the choice key's text when
