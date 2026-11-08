@@ -1,6 +1,7 @@
 /**
  * The app icon and the launch screens' artwork, held to their one mark and
- * their colours: every pixel of every icon is its ground, its mark or a
+ * their colours: the native manifest names the files drawn here, on the
+ * icon's grounds and the app's, and One validates it; every pixel of every icon is its ground, its mark or a
  * blend of the two; the mark sits at its layout's size; the Android layers
  * stay inside the launcher's safe circle; and every committed file is, byte
  * for byte, what `bun run icon` draws from `assets/icon/heartseed.svg` now.
@@ -12,9 +13,11 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option } from 'effect';
+import { validateNativeApp } from 'one/native';
 import sharp from 'sharp';
 
 import { icon, theme } from '../src/theme.ts';
+import { app } from '../vite/app.ts';
 import { draw, icons, markOf } from './icon.ts';
 
 const test = it.effect.layer(BunServices.layer);
@@ -113,6 +116,36 @@ const boxShare = (box: { readonly width: number; readonly height: number }) =>
   Math.max(box.width, box.height) / SIDE;
 
 describe('the app icon', () => {
+  test('names the app Heartseed, passes One for iOS and Android, and leaves the appearance to the system', () =>
+    Effect.sync(() => {
+      expect(() => validateNativeApp(app, 'ios')).not.toThrow();
+      expect(() => validateNativeApp(app, 'android')).not.toThrow();
+      expect(app.name).toBe('Heartseed');
+      expect(Object.hasOwn(app, 'userInterfaceStyle')).toBe(false);
+    }));
+
+  test('names the files drawn here, in the icon’s colours, and the launch screens on the app’s ground', () =>
+    Effect.sync(() => {
+      const { splash, android } = app;
+      expect({
+        icon: [app.icon.source, app.icon.backgroundColor],
+        dark: [app.icon.dark.source, app.icon.dark.backgroundColor],
+        tinted: [app.icon.tinted.source, app.icon.tinted.backgroundColor],
+        foreground: [android.adaptiveIcon.foreground, android.adaptiveIcon.backgroundColor],
+        monochrome: android.adaptiveIcon.monochrome,
+        splash: [splash.source, splash.backgroundColor, splash.width],
+        splashDark: [splash.dark.source, splash.dark.backgroundColor],
+      }).toEqual({
+        icon: ['./assets/icon/ios-light.png', icon.light.ground],
+        dark: ['./assets/icon/ios-dark.png', icon.dark.ground],
+        tinted: ['./assets/icon/ios-tinted.png', '#000000'],
+        foreground: ['./assets/icon/android-foreground.png', icon.light.ground],
+        monochrome: './assets/icon/android-monochrome.png',
+        splash: ['./assets/icon/splash.png', theme.light.ground, 224],
+        splashDark: ['./assets/icon/splash-dark.png', theme.dark.ground],
+      });
+    }));
+
   test('the script draws exactly the files held here', () =>
     Effect.sync(() => {
       expect(icons.map((row) => row.file).toSorted()).toEqual(

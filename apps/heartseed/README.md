@@ -1748,8 +1748,11 @@ GETs (Class B) when the edge does not serve them.
     (the corpus's derivation and its build faults, and the plugin's two
     modules) and `vite/lexicon.test.ts` (the pronunciation list as the
     plugin serves it). It leaves `scripts/icon.test.ts` to `test:icon`.
-  - `test:icon`: `scripts/icon.test.ts`, with no preload: the icon script
-    draws exactly the files the test holds; each opaque icon (light, dark,
+  - `test:icon`: `scripts/icon.test.ts`, with no preload: the native
+    manifest (`vite/app.ts`) named Heartseed, valid to One for iOS and
+    Android, with no `userInterfaceStyle`, naming the icons on the icon's
+    grounds and the launch screens (224 wide) on the app's grounds from
+    `src/theme.ts`; the icon script draws exactly the files the test holds; each opaque icon (light, dark,
     tinted) 1024 px with three channels, every pixel its ground, its mark
     or a blend in `src/theme.ts`'s icon colours, the mark's box at 0.72 of
     the side; each layer (Android's foreground and monochrome, both launch
