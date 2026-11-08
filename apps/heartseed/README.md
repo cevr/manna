@@ -1871,8 +1871,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     through the bar rig as generated readers (launches over each stored
     text class and either system; a choice on About, landed or refused, a
     flip of the system, a relaunch, the field), every frame held to the
-    frame oracle for the model's scheme, About's radios and the disk to
-    the model.
+    frame oracle for the model's scheme, every commit that holds a new
+    appearance (the launch's and each choice's) drawing the screens in the
+    model's scheme in its layout phase, before it is seen, About's radios
+    and the disk to the model.
   - `test:dark-today`: `src/look/today.test.tsx`, Today in dark and across
     flips of the system through the run rig, as generated walks (Say it
     heard, with a word missed or unheard, a flip while it listens, a peek,

@@ -9,17 +9,25 @@
  * The model is the stored text, the choice read or made and the system;
  * every frame (each DOM mutation batch) holds the frame oracle
  * (`src/test/look.ts`) for the scheme the model names (System's until the
- * launch's read shows a heading), and after each command the screen holds
+ * launch's read shows a heading), every commit that holds a new appearance
+ * draws the screens in the model's scheme in its layout phase, before it
+ * is seen (`commitProbe`), and after each command the screen holds
  * it, About's radios are System, Light and Dark with the model's alone
  * checked, the disk's key is the model's, and the bar rig saw no fault.
  * The part's own seeds reach each command kind, each stored text class and
  * both systems.
  */
 
+import { useAtomValue } from '@effect/atom-react';
 import { describe, expect, it } from 'bun:test';
-import { act } from 'react';
+import { Option } from 'effect';
+import * as AsyncResult from 'effect/reactivity/AsyncResult';
+import { act, useLayoutEffect } from 'react';
+import { Appearance } from 'react-native';
 
+import { appearanceView } from '../app';
 import { APPEARANCE_KEY, APPEARANCES, appearanceOf, schemeOf, type Choice } from '../appearance';
+import { schemeOf as screensOf } from '../look';
 import { mountBar } from '../test/bar-rig';
 import { labelOf, text } from '../test/chooser-rig';
 import { recallOf } from '../test/field-model';
@@ -83,9 +91,39 @@ const shownOf = (walk: Walk) => (): Scheme =>
     ? schemeOf('system', walk.model.system)
     : schemeOf(walk.model.choice, walk.model.system);
 
-/** Mounts the root over the disk as it stands, every frame held to the model, and waits for Today. */
+/** What a commit probe reads and reports to. */
+type Watched = Pick<Walk, 'seed' | 'model' | 'report' | 'reached'>;
+
+/**
+ * Beside the root under its registry: in the layout phase of each commit
+ * that holds a new appearance (after the root's own layout effects, before
+ * any passive effect and so before that frame is seen), the scheme every
+ * screen reads is held to the one the model names. The launch's first
+ * appearance and each later one (a tap) are reached apart.
+ */
+const commitProbe = (watched: Watched) => {
+  let launched = false;
+  const Committed = () => {
+    const choice = Option.getOrUndefined(AsyncResult.value(useAtomValue(appearanceView)));
+    useLayoutEffect(() => {
+      if (choice === undefined) return;
+      watched.reached.add(launched ? 'commit chosen' : 'commit launch');
+      launched = true;
+      const screens = screensOf(Appearance.getColorScheme());
+      const want = schemeOf(choice, watched.model.system);
+      if (screens !== want)
+        watched.report.push(
+          `seed ${watched.seed} commit ${choice}: screens ${screens}, want ${want}`,
+        );
+    }, [choice]);
+    return null;
+  };
+  return <Committed />;
+};
+
+/** Mounts the root over the disk as it stands, every frame and every commit held to the model, and waits for Today. */
 const mount = async (walk: Walk) => {
-  walk.rig = await mountBar(0, false);
+  walk.rig = await mountBar(0, false, commitProbe(walk));
   walk.frames = watchLook(walk.rig.host, shownOf(walk));
   await walk.rig.until(() => headingOf(walk.rig) === 'Today');
 };
@@ -182,16 +220,14 @@ const walkOf = async (seed: number, steps: number, reached: Set<string>) => {
   reached.add(`system ${system}`);
   launchOver(start.text);
   setSystem(system);
-  const rig = await mountBar(0, false);
-  const walk: Walk = {
+  const watched: Watched = {
     seed,
-    next,
     model: { stored: start.text, system, choice: appearanceOf(start.text) },
-    rig,
-    frames: watchLook(rig.host, () => system),
     report: [],
     reached,
   };
+  const rig = await mountBar(0, false, commitProbe(watched));
+  const walk: Walk = { ...watched, next, rig, frames: watchLook(rig.host, () => system) };
   walk.frames.stop();
   walk.frames = watchLook(rig.host, shownOf(walk));
   await rig.until(() => headingOf(rig) === 'Today');
@@ -216,6 +252,8 @@ describe('the reader’s appearance, walked', () => {
       report: [],
       reached: [
         'choose',
+        'commit chosen',
+        'commit launch',
         'field',
         'refused',
         'relaunch',
