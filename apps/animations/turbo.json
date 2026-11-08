@@ -252,6 +252,7 @@
         "!src/films/in-its-order/storybook/mother.test.ts",
         "!src/films/in-its-order/storybook/measured.test.ts",
         "!src/films/in-its-order/storybook/strays.test.ts",
+        "!src/films/in-its-order/storybook/strays-lead.test.ts",
         "!src/films/in-its-order/storybook/overlays.test.ts",
         "!src/films/in-its-order/storybook/covers-*.test.ts",
         "!src/library/**/*.test.*"

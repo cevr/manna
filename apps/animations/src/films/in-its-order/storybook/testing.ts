@@ -1,10 +1,16 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Layer, Option } from 'effect';
+import sharp from 'sharp';
 import { filmCast, filmFolder, shotsOf } from '../../../library/storybook/films.ts';
 import type { PaintScene } from '../../../library/storybook/painter.ts';
 import { APP, dataUrlOf, loadShot } from '../../../library/storybook/render.ts';
 import { filmSceneOf, type SheetDecl, storyPaintings } from '../../../library/storybook/scene.ts';
-import { anchorOf, faceBoxOf, paintsOf } from '../../../library/storybook/sheet.ts';
+import {
+  anchorOf,
+  faceBoxOf,
+  paintsOf,
+  strayShadeShare,
+} from '../../../library/storybook/sheet.ts';
 import {
   drawnKeyOf,
   type Figure,
@@ -299,3 +305,38 @@ export const sheetsMisses = Effect.fn('Act1Testing.sheetsMisses')(function* (
   );
   return misses.flat();
 });
+
+/** The most of a cell's opaque pixels that may be a stray hair shade (critique 1, item 16; take 5's lead reads 1.25 %, so the bar holds this film's sheets). */
+const STRAY_MAX = 0.005;
+
+/** The lead's sheets, by their `<member>/` prefix: `strays-lead.test.ts` walks them and `strays.test.ts` the rest, each its own unit-test task, so each walk stays under its 1 s budget (verifier r2, M4). */
+export const LEAD_SHEETS = 'lead-feast/';
+
+/** A cell's pixels as the split stored them. */
+const rasterOf = (png: string) =>
+  Effect.map(
+    Effect.promise(() => sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true })),
+    ({ data, info }) => ({ width: info.width, height: info.height, rgba: new Uint8Array(data) }),
+  );
+
+/** How many cells of the act's sheets `keep` admits (by `<member>/<sheet>`), and each whose stray hair shade is over `STRAY_MAX` of its opaque pixels, with its share. */
+export const straysOver = (keep: (sheet: string) => boolean) =>
+  Effect.gen(function* () {
+    const cells = [...SHEET_CELLS]
+      .filter(([sheet]) => keep(sheet))
+      .flatMap(([sheet, s]) =>
+        Object.entries(s.cells).map(([cell, c]) => ({
+          at: `${sheet} ${cell}`,
+          png: c.png,
+          paints: paintsOf(s.palette),
+        })),
+      );
+    const over = yield* Effect.forEach(cells, (c) =>
+      Effect.map(rasterOf(c.png), (r) => {
+        const share = strayShadeShare(r, c.paints);
+        if (share <= STRAY_MAX) return [];
+        return [`${c.at}: ${(share * 100).toFixed(2)} %`];
+      }),
+    );
+    return { cells: cells.length, over: over.flat() };
+  });
