@@ -31,8 +31,10 @@ import {
   type ProbeView,
   type ReadTally,
 } from '../../src/natural/probe';
+import { BASE_KEY } from '../../src/natural/service';
 import { naturalModule } from '../../src/natural/source';
 import { naturalVoiceSource } from '../../src/natural/voice';
+import { store } from '../../src/store';
 import { layer as voiceLayer, Voice } from '../../src/voice';
 
 const dev = typeof __DEV__ !== 'undefined' && __DEV__;
@@ -219,6 +221,13 @@ const remove = (show: Show) =>
     yield* refresh(show);
   });
 
+/** Writes the link's base under `BASE_KEY` in the app's own store, for Today's download to install from; a failed write is the store's to log. */
+const storeBase = (base: string) =>
+  KeyValueStore.KeyValueStore.use((kv) => kv.set(BASE_KEY, base)).pipe(
+    Effect.catchTag('KeyValueStoreError', () => Effect.void),
+    Effect.provide(store),
+  );
+
 const BUTTONS = ['Install', 'Cancel', 'Load', 'Read', 'Stop', 'Remove', 'Soak'] as const;
 
 type Button = (typeof BUTTONS)[number];
@@ -229,8 +238,11 @@ type Button = (typeof BUTTONS)[number];
  * files from the link's `base` (D7's `baseFor`), loads them, reads Today's
  * passage through the voice over the natural source, and soaks the KJV
  * verse by verse (`soak`, a count), each in the link's `voice` (one of
- * `VOICES`, else `af_heart`). It shows counts only, never a word. A release
- * build renders nothing and starts nothing.
+ * `VOICES`, else `af_heart`). When the link names `base`, it first writes
+ * that base under `BASE_KEY` in the app's own store, once per open and never
+ * removed, so Today's download in a development build installs from it. It
+ * shows counts only, never a word. A release build renders nothing, starts
+ * nothing and writes nothing.
  */
 export default function NaturalProbe() {
   const params = useParams<{
@@ -244,6 +256,10 @@ export default function NaturalProbe() {
   const [view, setView] = useState<ProbeView>(() => probeBegun(asked, voice));
   const [runtime, setRuntime] = useState<Option.Option<Runtime>>(Option.none());
   const [busy, setBusy] = useState<Option.Option<Fiber.Fiber<void>>>(Option.none());
+  useEffect(() => {
+    if (!dev || Option.isNone(base)) return;
+    Effect.runFork(storeBase(base.value));
+  }, []);
   useEffect(() => {
     if (!dev) return;
     setView((shown) => ({ ...shown, voice }));
