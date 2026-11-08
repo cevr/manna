@@ -811,7 +811,8 @@ here.
   fetches only what is missing. `load` hashes every file again first.
   `baseFor(dev, asked)` gives the base: a release build always the mirror,
   a development build a plain `http(s)://host[:port]/folder/` it is asked
-  for.
+  for. The mirror also holds `am_michael.bin`, the second voice's pack
+  (`AM_MICHAEL`), which the download does not fetch (The mirror, below).
 - **Routing.** On the simulator every stage runs on the CPU. On a device,
   iOS 27 and later run the noise and tail stages on the CPU and the rest on
   the Neural Engine; earlier ones run the noise and tail on the GPU.
@@ -858,6 +859,124 @@ here.
   ML conversion of laishere/kokoro-coreml (Apache-2.0, per its LICENSE),
   run by code from FluidAudio (Apache-2.0).
 
+## The mirror
+
+The mirror serves the natural voice's model files at
+`https://models.heartseed.app/kokoro/2568276a60ff/<path>` (`MIRROR` in
+`src/natural/manifest.ts`). It is an R2 bucket, `heartseed-models`, filled
+by a copy job from Hugging Face. Nothing in the app imports `infra/`.
+
+### The stack
+
+`alchemy.run.ts` declares one resource, the bucket (`infra/bucket.ts`):
+
+- The bucket `heartseed-models` is served publicly at the custom domain
+  `models.heartseed.app` (`new URL(MIRROR).host`); the heartseed.app zone
+  is on Cloudflare. The `r2.dev` host stays off.
+- It has no CORS (only the native app reads it), no lifecycle rules and no
+  locks.
+- The bucket is adopted when it exists and retained on destroy, with no
+  `forceDestroy`, so a deploy never deletes the files.
+- Only the stage `prod` exists; the stack refuses any other stage, since a
+  second one would take the same bucket and domain.
+
+State lives in the Cloudflare state store. No CI workflow deploys this
+stack.
+
+### The files and their keys
+
+- The mirror's list is `MIRROR_FILES` (`infra/models/plan.ts`): the 38
+  pinned files of `FILES` plus `AM_MICHAEL`, in path order, 39 files and
+  83,332,513 bytes. Each is stored under `kokoro/2568276a60ff/<path>`
+  (`keyOf`), so `MIRROR + path` is the file's URL. A new revision is a new
+  folder.
+- `am_michael.bin` is the second voice, `am_michael`. FluidInference ships
+  only `ANE/af_heart.bin`, so the copy converts `voices/am_michael.json` of
+  the same repository and revision (`infra/models/voice-pack.ts`,
+  `voicePackOf`): its keys `"1"` to `"510"` in numeric order, each a row of
+  256 numbers, each written as a little-endian fp32, every other key
+  ignored; 522,240 bytes, pinned by SHA-256 in `AM_MICHAEL`. Any JSON that
+  breaks the rule (a missing row, a row of another length, a value that is
+  not exactly an fp32) is refused. The same rule turns
+  `voices/af_heart.json` into the pinned `af_heart.bin` byte for byte.
+- Every object is stored with `Content-Type: application/octet-stream` and
+  `Cache-Control: public, max-age=31536000, immutable`. A key is never
+  replaced, so immutable holds, and one non-text type keeps the edge from
+  compressing the `.json`, `.md` and `.mil` files, so the bytes the phone
+  hashes are the stored ones.
+
+### The copy job
+
+`bun run models:copy -- --cache <dir> [--dry-run]` (`infra/models/copy.ts`,
+the job in `infra/models/job.ts`) fills a cache and copies it into the
+bucket. The cache is the one `natural:serve` uses, `tmp/natural-models/` at
+the repository root, so files fetched by one are kept by the other.
+
+- **The fill** (`fillWith` in `scripts/natural-serve.ts`, over
+  `fetchPinned` in `infra/models/source.ts`): in list order, a cached file
+  at its size and SHA-256 is kept and never fetched; any other is fetched
+  from `resolve/2568276a60ff6e7f312afce3dc9e3f07521cb48d/ANE/<path>` (for
+  `am_michael.bin`, `voices/am_michael.json`, converted), checked, written
+  to `<path>.partial` and renamed into place. The first failure stops the
+  fill and fails the run before any R2 call. There is no retry: a rerun
+  resumes.
+- **The plan:** the job lists `kokoro/2568276a60ff/` once and compares each
+  file's cached MD5 and size with the key's: the same → kept; no key →
+  uploaded; other bytes → conflict, never put and never replaced (the fix
+  is a new revision folder). Keys outside the list are never touched, and
+  nothing is ever deleted.
+- **The upload:** four at a time, through the R2 REST object endpoint with
+  the key's slashes literal (`infra/models/r2.ts`, the hymnal's adapter).
+  R2's answer must carry the file's MD5 and size, or the file is failed; a
+  failed put fails that file alone. Each upload may take 10 minutes and the
+  listing 3, retries included.
+- **The check:** the job lists the prefix again; verified counts the files
+  R2 holds with their size and MD5. The run succeeds only at 39 verified
+  with no conflict and no failure, and a rerun puts only what R2 lacks.
+
+A real run ends with
+
+```
+models-copy run files=39 bytes=83332513 fetched=0 target=kept 0 uploaded 39 conflict 0 failed 0 verified 39/39
+```
+
+and exits non-zero (`CopyIncomplete`) when any count falls short.
+`--dry-run` fills and checks the cache alone: it reads Hugging Face, builds
+no Cloudflare layer, reads no profile and touches no R2, and ends with
+
+```
+models-copy dry-run files=39 bytes=83332513 fetched=<n> target=unread
+```
+
+`bun run test:mirror` runs the stack's tests over a fake Hugging Face, a
+fake bucket and a recording HTTP client; none uses the network.
+
+### Deploying and copying
+
+The orchestrator runs these, with the owner's yes, from
+`apps/heartseed` on main, with the owner's default Alchemy profile. Its
+token needs R2 bucket and object write on the account, and Zone and DNS
+write on heartseed.app, which must be in the same account. Stop at the
+first result that differs:
+
+1. `bun run plan`: one create, the bucket `heartseed-models` with the
+   domain `models.heartseed.app`, and nothing else.
+2. `bun run deploy` (the package's typecheck and tests first).
+3. `bun run models:copy -- --cache $PWD/../../tmp/natural-models --dry-run`.
+4. `bun run models:copy -- --cache $PWD/../../tmp/natural-models`, then
+   again: the second run keeps 39 and uploads 0, `verified 39/39`.
+5. `curl -sI https://models.heartseed.app/kokoro/2568276a60ff/am_michael.bin`
+   answers 200 with `content-length: 522240` and both headers above.
+
+### Cost
+
+The 39 files are 83.3 MB, about 0.08 GB-month. R2's free tier is 10
+GB-month, 1 million Class A and 10 million Class B operations a month,
+account-wide, with free egress. If the account's hymn recordings already
+pass 10 GB, the mirror adds at most one billed GB-month, $0.015 a month. A
+copy is 39 PUTs and 2 listings (Class A), once; an install is at most 39
+GETs (Class B) when the edge does not serve them.
+
 ## Tests
 
 - The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as parts, each a
@@ -866,7 +985,7 @@ here.
   `bun run test:budget @manna/heartseed` times each alone (under 1 s). The
   `src` parts run with `src/test/setup.ts` as the preload (react-native-web
   for `react-native`, the bundled passage for `virtual:heartseed-passage`,
-  the corpus for `virtual:heartseed-kjv`, a happy-dom document); `test:infra` runs with none.
+  the corpus for `virtual:heartseed-kjv`, a happy-dom document); `test:infra` and `test:mirror` run with none.
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
   - `test:voice`: `src/voice.property.test.ts` (the voice against its model)
@@ -1207,6 +1326,14 @@ here.
     (the corpus's derivation and its build faults, and the plugin's two
     modules) and `vite/lexicon.test.ts` (the pronunciation list as the
     plugin serves it).
+  - `test:mirror`: `infra`, the mirror's stack, with no preload:
+    `infra/models/plan.test.ts` (the list, the keys, the headers and the
+    plan's keep, upload and conflict), `infra/models/voice-pack.test.ts`
+    (seeded packs, -0, the extremes, the ignored keys and every refusal),
+    `infra/models/r2.test.ts` (the R2 adapter over a recording client:
+    literal slashes, the listing's cursor, retries and denials on the test
+    clock, the put timeout) and `infra/models/job.test.ts` (the copy and
+    the dry run over a fake Hugging Face, a fake bucket and a temp cache).
 
   Run one with `bun run test:<part>` here, or all with `bun run test
   --filter=@manna/heartseed` at the repository root. A new test file at the
