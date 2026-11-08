@@ -6,8 +6,9 @@
  * (spec rows 1-15), each a generated value read from the services' own
  * types:
  * - a device: its disk (empty, records the garden skips, a foreign key,
- *   another verse's recall, the passage's), the voice's switch (absent, on,
- *   off, other text), the voices it offers, and its store (healthy, a write
+ *   another verse's recall, the passage's), the voice's old switch (absent,
+ *   on, off, other text) and its choice (absent, `off`, `her`, `him`, or a
+ *   near miss), the voices it offers, and its store (healthy, a write
  *   refused once, or down until it recovers);
  * - a launch: read at once, after one or two failed listings, or unread
  *   (every attempt failed, or the store down), held before its read or not;
@@ -70,6 +71,7 @@ import { VoiceSource, VoiceUnavailable, type VoiceEvent, type VoiceInfo } from '
 
 export const PREFIX = 'heartseed/recall/';
 export const SWITCH = 'heartseed/voice/enabled';
+const CHOICE = 'heartseed/voice/choice';
 const OTHER = 'Made 1:1';
 const LETTER = /[\p{L}\p{N}]/u;
 export const WORDS = sourceWords(passage.text);
@@ -136,6 +138,17 @@ export type VoiceKind = 'finish' | 'interrupt' | 'cancel' | 'start';
 export type Read = 'ok' | 'retry1' | 'retry2' | 'unread';
 export type Part = 'junk' | 'blank' | 'misfiled' | 'foreign' | 'other' | 'passage';
 export type Switch = 'absent' | 'true' | 'false' | 'other';
+/** The choice key's text as the device starts: absent, one of the three choices, or a near miss the voice reads past to the old switch. */
+export type Chosen = 'absent' | 'off' | 'her' | 'him' | 'Her' | 'on' | ' off';
+const CHOSEN: readonly Chosen[] = ['absent', 'off', 'her', 'him', 'Her', 'on', ' off'];
+
+/** Whether a device starting with `start`'s keys reads the voice on: the choice when it is exactly one of the three, else the old switch, off only for its text `false`. */
+const voiceOnOf = (start: Pick<DeviceStart, 'voice' | 'choice'>) => {
+  const chosen = start.choice ?? 'absent';
+  if (chosen === 'off') return false;
+  if (chosen === 'her' || chosen === 'him') return true;
+  return start.voice !== 'false';
+};
 
 export interface LaunchKind {
   readonly read: Read;
@@ -169,6 +182,8 @@ export type Command =
 export interface DeviceStart {
   readonly parts: readonly Part[];
   readonly voice: Switch;
+  /** The choice key's text; absent when not given. */
+  readonly choice?: Chosen;
   readonly launch: LaunchKind;
 }
 
@@ -764,11 +779,11 @@ export interface Model {
   /** Valid recalls of the passage on the disk. */
   passage: number;
   down: boolean;
-  /** The stored switch reads on: anything but the text `false`. */
+  /** The stored keys read the voice on (`voiceOnOf`). */
   stored: boolean;
   /** Since the last Recover: a landed write is one after the device came back. */
   recovered: boolean;
-  /** The voice's switch as this launch read it: the stored one, or on when the store was down. */
+  /** The voice as this launch read it: the stored keys', or on (Her) when the store was down. */
   voiceOn: boolean;
   /** The launch's store is open: its read opened it, or a call since the device came back. */
   opened: boolean;
@@ -915,7 +930,7 @@ const recallRecord = (reference: string, startedAt: number) =>
     }),
   ] as const;
 
-/** The disk a device starts with, from its parts and its switch. */
+/** The disk a device starts with, from its parts, its old switch and its choice. */
 export const diskOf = (start: DeviceStart): (readonly [string, string | null])[] => {
   const at = Date.UTC(2026, 0, 5, 9);
   const parts: Readonly<Record<Part, readonly [string, string | null]>> = {
@@ -930,6 +945,7 @@ export const diskOf = (start: DeviceStart): (readonly [string, string | null])[]
   if (start.voice === 'true') disk.push([SWITCH, 'true']);
   if (start.voice === 'false') disk.push([SWITCH, 'false']);
   if (start.voice === 'other') disk.push([SWITCH, 'yes']);
+  if (start.choice !== undefined && start.choice !== 'absent') disk.push([CHOICE, start.choice]);
   return disk;
 };
 
@@ -1654,12 +1670,17 @@ export const session = (count: (key: string) => void) => {
     m.disk = new Map(disk);
     m.recalls = begin.parts.filter((part) => part === 'other' || part === 'passage').length;
     m.passage = begin.parts.filter((part) => part === 'passage').length;
-    m.stored = begin.voice !== 'false';
+    m.stored = voiceOnOf(begin);
     m.down = false;
     begin.parts.forEach((part) => count(`disk:${part}`));
     if (begin.parts.length === 0) count('disk:empty');
     count(`switch:${begin.voice}`);
-    trace.push(`device ${begin.parts.join('+') || 'empty'} voice=${begin.voice}`);
+    count(`choice:${encodeURIComponent(begin.choice ?? 'absent')}`);
+    if (begin.voice === 'false' && m.stored) count('choice:over-off');
+    if (begin.voice !== 'false' && !m.stored) count('choice:off-over-on');
+    trace.push(
+      `device ${begin.parts.join('+') || 'empty'} voice=${begin.voice} choice=${JSON.stringify(begin.choice ?? 'absent')}`,
+    );
     await launch(begin.launch);
   };
 
@@ -2131,8 +2152,23 @@ const offer = (m: Model, r: Rig, pick: Random, choose: Choose): Command | undefi
 
 const PARTS: readonly Part[] = ['junk', 'blank', 'misfiled', 'foreign', 'other', 'passage'];
 
-/** A generated device's start: any set of disk parts (none most often, so the first minute is met), a switch and a first launch. */
-const startOf = (pick: Random, choose: Choose): DeviceStart => {
+const SWITCHES: readonly Switch[] = ['absent', 'true', 'false', 'other'];
+/** A device's voice keys that read the voice `on` or off: any choice key's text that may, then any old switch that does with it. */
+const keysOf = (aside: Random, on: boolean) => {
+  const reads = (choice: Chosen) => (voice: Switch) => voiceOnOf({ voice, choice }) === on;
+  const choice = aside.pick(CHOSEN.filter((each) => SWITCHES.some(reads(each))));
+  return { choice, voice: aside.pick(SWITCHES.filter(reads(choice))) };
+};
+
+/**
+ * A generated device's start: any set of disk parts (none most often, so the
+ * first minute is met), its voice keys and a first launch. The steered draw
+ * picks whether the voice reads off (the old switch `false`) or on; `aside`
+ * then picks any pair of the old switch and the choice key that reads so
+ * (`voiceOnOf`), so `pick`'s stream and the walk run as before the choice
+ * key was drawn.
+ */
+const startOf = (pick: Random, choose: Choose, aside: Random): DeviceStart => {
   const kind = choose(
     'disk',
     ['empty', 'empty', 'empty', 'empty', 'skipped', 'skipped', 'foreign', 'other', 'passage'],
@@ -2160,11 +2196,13 @@ const startOf = (pick: Random, choose: Choose): DeviceStart => {
   if (kind === 'other') parts.push('other');
   if (kind === 'passage') parts.push('passage');
   if (pick.next() < 0.2) parts.push('foreign');
+  const on =
+    choose('switch', SWITCHES, String, (each) =>
+      each === 'false' ? 'launch:voice-off' : ['speak:refused', ...READING_ON],
+    ) !== 'false';
   return {
     parts: [...new Set(parts)],
-    voice: choose('switch', ['absent', 'true', 'false', 'other'] as const, String, (each) =>
-      each === 'false' ? 'launch:voice-off' : ['speak:refused', ...READING_ON],
-    ),
+    ...keysOf(aside, on),
     launch: {
       ...launchOf(pick, choose),
       read: choose('first-read', ['ok', 'ok', 'ok', 'retry1', 'unread'] as const, String, (each) =>
@@ -2274,10 +2312,13 @@ export const walk = async (group: Group, seed: number, devices: number, commands
   const count = (key: string) => void (coverage[key] = (coverage[key] ?? 0) + 1);
   const pick = random(seed);
   const choose = chooser(pick, coverage, FLOORS[group]);
+  const aside = random(
+    [...group].reduce((hash, char) => Math.imul(hash ^ char.charCodeAt(0), 0x01000193), seed),
+  );
   for (let n = 0; n < devices; n += 1) {
     const run = session(count);
     run.trace.push(`seed ${seed} device ${n}`);
-    const begin = startOf(pick, choose);
+    const begin = startOf(pick, choose, aside);
     const played: Command[] = [];
     try {
       await run.start(begin);
