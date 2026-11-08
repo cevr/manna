@@ -8,6 +8,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -26,6 +28,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property,theme}.test.*",
@@ -43,6 +47,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -61,6 +67,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -79,6 +87,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -97,6 +107,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -116,6 +128,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -135,6 +149,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -154,6 +170,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -174,6 +192,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -193,6 +213,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -212,6 +234,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -231,6 +255,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -250,6 +276,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -269,6 +297,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -288,6 +318,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -307,6 +339,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -326,6 +360,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -345,6 +381,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -364,6 +402,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -383,6 +423,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -402,6 +444,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -421,6 +465,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -440,6 +486,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -459,6 +507,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -478,6 +528,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -497,6 +549,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -516,6 +570,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -536,6 +592,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -555,6 +613,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -574,6 +634,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -593,6 +655,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -612,6 +676,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -631,6 +697,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -649,6 +717,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -668,6 +738,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -687,6 +759,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -706,6 +780,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -725,6 +801,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -744,6 +822,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -763,6 +843,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -782,6 +864,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -801,6 +885,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -820,6 +906,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -839,6 +927,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -858,6 +948,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -877,6 +969,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -896,6 +990,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -914,6 +1010,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -932,6 +1030,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -950,6 +1050,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -968,6 +1070,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -986,6 +1090,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -1004,6 +1110,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -1022,6 +1130,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -1040,6 +1150,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -1058,6 +1170,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -1076,6 +1190,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -1094,6 +1210,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -1112,6 +1230,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -1130,6 +1250,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -1147,6 +1269,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -1165,6 +1289,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -1183,6 +1309,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -1201,6 +1329,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -1219,6 +1349,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -1237,6 +1369,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -1255,6 +1389,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -1271,6 +1407,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -1288,6 +1426,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -1305,6 +1445,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
@@ -1322,6 +1464,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -1340,6 +1484,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "!src/matcher/**/*.test.*",
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
@@ -1358,9 +1504,24 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property}.test.*",
         "!src/*/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:look": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
+        "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1371,6 +1532,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!infra/**/*.test.*"
       ]
@@ -1381,6 +1544,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
         "!infra/**/*.test.*"
       ]
@@ -1391,6 +1556,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "!src/**/*.test.*",
         "!vite/**/*.test.*",
         "!scripts/{natural-serve,parts,sim}.test.*",
@@ -1403,6 +1570,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
         "!src/**/*.test.*",
         "!{scripts,vite}/**/*.test.*"
       ]
@@ -1484,6 +1653,7 @@
         "test:natural",
         "test:natural-voice",
         "test:theme",
+        "test:look",
         "test:rest",
         "test:infra",
         "test:icon",
