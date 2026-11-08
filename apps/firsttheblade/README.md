@@ -122,20 +122,36 @@ where they can be deleted.
   mentions Patreon: `src/mail/letters.test.ts` fails while any letter does
   and none is set. Once set, it is at the foot of every letter.
 
-Two secrets sign the links and guard the send route, and prod needs the
-inbox the contact address is forwarded to. They live in
-`apps/firsttheblade/.env` (gitignored), which `bun run deploy` and
-`bun run mail:send` both read; the deploy binds the secrets to the Worker:
+Two secrets sign the links and guard the send route: `MAIL_TOKEN_KEY` and
+`MAIL_ADMIN_TOKEN`. They live in the account's Cloudflare Secrets Store, and
+the Worker binds each by name (`src/worker/store-secret.ts`) and reads it at
+its first use; no deploy reads or holds their values. The owner puts each
+value in once, in a terminal, at a prompt that hides it (the store's ID from
+`bunx wrangler secrets-store store list --remote`):
 
 ```bash
-MAIL_TOKEN_KEY=<openssl rand -hex 32>
-MAIL_ADMIN_TOKEN=<openssl rand -hex 32>
+bunx wrangler secrets-store secret create <store ID> --name MAIL_TOKEN_KEY --scopes workers --remote     # openssl rand -hex 32
+bunx wrangler secrets-store secret create <store ID> --name MAIL_ADMIN_TOKEN --scopes workers --remote   # openssl rand -hex 32
+```
+
+`apps/firsttheblade/.env` (gitignored) keeps the admin token, which
+`bun run mail:send` and `bun run mail:key-check` show the Worker, and prod's
+two deploy inputs, the inbox the contact address is forwarded to and its
+switch:
+
+```bash
+MAIL_ADMIN_TOKEN=<the store's value>
 MAIL_FORWARD_TO=<the owner's inbox, prod only>
 MAIL_FORWARD_VERIFIED=true   # once the inbox's verification link is opened
 ```
 
-Changing `MAIL_TOKEN_KEY` breaks every link already sent, and gives every
-address a new subscriber id, so the list would start empty. The first prod
+Changing `MAIL_TOKEN_KEY` in the store breaks every link already sent, and
+gives every address a new subscriber id, so the list would start empty. So
+after the first deploy that reads the key from the store, run
+`bun run mail:key-check` with the old key still in `.env`: on `same`, the
+key's line leaves `.env`; on `DIFFERENT`, put the `.env` value in the store
+(`bunx wrangler secrets-store secret update`) and deploy again before anyone
+signs up. The first prod
 deploy adds `MAIL_FORWARD_TO` as an Email Routing destination, and
 Cloudflare sends it a verification email. Once the owner opens its link,
 `MAIL_FORWARD_VERIFIED=true` and one more prod deploy add the rule that
@@ -154,6 +170,7 @@ bun run typecheck
 bun run plan       # the prod state check, the stills gate (build, walk dist/), then show what `prod` would change
 bun run deploy     # the prod state check, test:slow, then the stills gate (build, walk dist/) and deploy `prod`; the stack runs both checks first on stage prod
 bun run mail:send <series>/<no> [--dry-run] [--origin <url>]   # send a film to the email list
+bun run mail:key-check [--origin <url>]   # whether the Worker's MAIL_TOKEN_KEY is this .env's, by fingerprint
 bun run verify:drive confirm --root <dir> --port <p> --evidence <dir>   # drive the site as a visitor (verify:launch, :doctor, :outbox, :stop, :stage too)
 ```
 
