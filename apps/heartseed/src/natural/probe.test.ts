@@ -1,7 +1,8 @@
 /* oxlint-disable effect/noNullish, effect/noTernary -- a view's absent range and ending are null in the voice's view contract, and the generator's branches are plain. */
 
 /**
- * The natural voice probe's pure parts: its lines for an empty and a full
+ * The natural voice probe's pure parts: the link's voice and the source
+ * that speaks in it, its lines for an empty and a full
  * view, a read's tally over the voice's views (order ok only for each word
  * current once, in order, to a finish; broken for a skip, a repeat, a
  * reversal or an early end; the replayed view before the reading skipped),
@@ -14,14 +15,17 @@
 import { describe, expect, it } from 'bun:test';
 import { Effect, Layer, Option } from 'effect';
 
-import type { VoiceView } from '../voice';
+import { VoiceSource, type VoiceView } from '../voice';
 import type { Lexicon } from './lexicon';
+import { VOICES } from './manifest';
 import { NaturalModule, NaturalUnavailable, type Rendered } from './module';
 import { planOf } from './plan';
 import {
   framesHold,
   linesOf,
   probeBegun,
+  probeVoice,
+  speakingIn,
   readBegun,
   readRendered,
   readSeen,
@@ -90,11 +94,12 @@ const cleanViews = (words: number) => [
 const lineOf = (lines: ReadonlyArray<string>, key: string) =>
   lines.find((line) => line.startsWith(`${key} `)) ?? '';
 
-const withRead = (read: ReadTally): ProbeView => ({ ...probeBegun(10), read });
+const withRead = (read: ReadTally): ProbeView => ({ ...probeBegun(10, 'af_heart'), read });
 
 describe('the probe lines', () => {
   it('shows an empty probe', () => {
-    expect(linesOf(probeBegun(SOAK_VERSES))).toEqual([
+    expect(linesOf(probeBegun(SOAK_VERSES, 'af_heart'))).toEqual([
+      'voice af_heart',
       'installed 0/39',
       'bytes 0',
       'excluded false',
@@ -121,6 +126,7 @@ describe('the probe lines', () => {
     ];
     const read = renders.reduce(readRendered, tallyOf(cleanViews(3)));
     const view: ProbeView = {
+      voice: 'am_michael',
       status: {
         revision: '2568276a60ff',
         files: 39,
@@ -139,6 +145,7 @@ describe('the probe lines', () => {
     };
     const lines = linesOf(view);
     expect(lines).toEqual([
+      'voice am_michael',
       'installed 39/39',
       'bytes 83332513',
       'excluded true',
@@ -161,12 +168,63 @@ describe('the probe lines', () => {
 
   it('shows a failed install and a refused load with their reasons', () => {
     const lines = linesOf({
-      ...probeBegun(1),
+      ...probeBegun(1, 'af_heart'),
       install: Option.some({ kind: 'failed', bytes: 0, total: 83_332_513, reason: 'check' }),
       load: Option.some({ _tag: 'Refused', reason: 'missing' }),
     });
     expect(lineOf(lines, 'install')).toBe('install failed 0/83332513 check');
     expect(lineOf(lines, 'load')).toBe('load failed missing');
+  });
+});
+
+describe('the voice', () => {
+  it("takes the link's voice when it is one of VOICES, else af_heart", () => {
+    for (const voice of VOICES) expect(probeVoice(Option.some(voice))).toBe(voice);
+    for (const asked of ['', 'AF_HEART', 'am_michael ', 'am_michael.bin', 'af_bella', 'him']) {
+      expect(probeVoice(Option.some(asked))).toBe('af_heart');
+    }
+    expect(probeVoice(Option.none())).toBe('af_heart');
+  });
+
+  it('speaks every utterance in its voice, whatever voice the speak names, and passes the rest through', () => {
+    for (const voice of VOICES) {
+      const calls: Array<string> = [];
+      const under = Layer.succeed(
+        VoiceSource,
+        VoiceSource.of({
+          voices: Effect.succeed([]),
+          speak: (utterance, text, named) =>
+            Effect.sync(() => {
+              calls.push(`speak ${utterance} ${text} ${named}`);
+            }),
+          pause: Effect.sync(() => {
+            calls.push('pause');
+          }),
+          resume: Effect.die('resume'),
+          stop: Effect.sync(() => {
+            calls.push('stop');
+          }),
+          subscribe: () => Effect.die('subscribe'),
+        }),
+      );
+      Effect.runSync(
+        Effect.gen(function* () {
+          const source = yield* VoiceSource;
+          yield* source.speak(1, 'bel', '');
+          yield* source.speak(2, 'cor', 'af_heart');
+          yield* source.speak(3, 'bel', 'am_michael');
+          yield* source.pause;
+          yield* source.stop;
+        }).pipe(Effect.provide(speakingIn(voice).pipe(Layer.provide(under)))),
+      );
+      expect(calls).toEqual([
+        `speak 1 bel ${voice}`,
+        `speak 2 cor ${voice}`,
+        `speak 3 bel ${voice}`,
+        'pause',
+        'stop',
+      ]);
+    }
   });
 });
 

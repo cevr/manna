@@ -1,14 +1,16 @@
 /**
- * The natural voice probe's pure parts (`app/probe/natural.tsx`): the tally
- * of one `Read` from the voice's views and the module's renders, the tally
- * of a `Soak`, and the lines the probe shows. Counts only, never a word.
+ * The natural voice probe's pure parts (`app/probe/natural.tsx`): the voice
+ * its link names, the source that reads every speak in that voice, the
+ * tally of one `Read` from the voice's views and the module's renders, the
+ * tally of a `Soak`, and the lines the probe shows. Counts only, never a
+ * word.
  */
 
-import { Effect, Match, Option } from 'effect';
+import { Effect, Layer, Match, Option } from 'effect';
 
-import type { VoiceView } from '../voice';
+import { VoiceSource, type VoiceView } from '../voice';
 import type { Lexicon } from './lexicon';
-import { FILES, REVISION } from './manifest';
+import { FILES, REVISION, VOICES, type NaturalVoice } from './manifest';
 import {
   NaturalModule,
   NaturalUnavailable,
@@ -20,6 +22,30 @@ import { planOf, SAMPLES_PER_FRAME, startsOf, type Chunk } from './plan';
 
 /** Kokoro's output rate, samples a second. */
 const RATE = 24_000;
+
+/** The voice from the link's `voice`: one of `VOICES`, else `af_heart`. */
+export const probeVoice = (asked: Option.Option<string>): NaturalVoice =>
+  Option.getOrElse(
+    Option.flatMap(asked, (text) => Option.fromNullishOr(VOICES.find((voice) => voice === text))),
+    (): NaturalVoice => 'af_heart',
+  );
+
+/**
+ * The source under it with every speak carrying `voice`, whatever voice the
+ * speak names: the `Voice` service names `bestVoice` of the natural
+ * source's `[]` voices, which is `''`, never a natural voice.
+ */
+export const speakingIn = (voice: NaturalVoice): Layer.Layer<VoiceSource, never, VoiceSource> =>
+  Layer.effect(
+    VoiceSource,
+    Effect.gen(function* () {
+      const source = yield* VoiceSource;
+      return VoiceSource.of({
+        ...source,
+        speak: (utterance, text) => source.speak(utterance, text, voice),
+      });
+    }),
+  );
 
 /** Where a `Read` is: waiting for its reading's first view, reading, or ended with the voice's ending. */
 export type ReadPhase =
@@ -198,6 +224,7 @@ export type LoadOutcome =
 
 /** Everything the probe shows. */
 export interface ProbeView {
+  readonly voice: NaturalVoice;
   readonly status: NaturalStatus;
   readonly install: Option.Option<InstallEvent>;
   readonly load: Option.Option<LoadOutcome>;
@@ -221,8 +248,9 @@ export const soakAsked = (asked: Option.Option<string>): number =>
     () => SOAK_VERSES,
   );
 
-/** The probe before anything has been asked: nothing held, nothing read, a soak of `asked` not begun. */
-export const probeBegun = (asked: number): ProbeView => ({
+/** The probe in `voice` before anything has been asked: nothing held, nothing read, a soak of `asked` not begun. */
+export const probeBegun = (asked: number, voice: NaturalVoice): ProbeView => ({
+  voice,
   status: {
     revision: REVISION,
     files: 0,
@@ -276,13 +304,15 @@ const orderOf = (read: ReadTally) => {
 };
 
 /**
- * The probe's lines, one fact each and keyed by the first word: what the
- * phone holds, the last download event, the load, the read and the soak.
+ * The probe's lines, one fact each and keyed by the first word: the voice,
+ * what the phone holds, the last download event, the load, the read and the
+ * soak.
  */
 export const linesOf = (view: ProbeView): ReadonlyArray<string> => {
   const { status, read, soak } = view;
   const held = read.renders.filter(framesHold).length;
   return [
+    `voice ${view.voice}`,
     `installed ${status.files}/${FILES.length}`,
     `bytes ${status.bytes}`,
     `excluded ${status.excluded}`,

@@ -8,11 +8,18 @@ import passage from 'virtual:heartseed-passage';
 
 import { versesOf } from '../../src/kjv';
 import { lexicon } from '../../src/natural/lexicon';
-import { baseFor, FILES, REVISION, TOTAL_BYTES } from '../../src/natural/manifest';
+import {
+  baseFor,
+  FILES,
+  REVISION,
+  TOTAL_BYTES,
+  type NaturalVoice,
+} from '../../src/natural/manifest';
 import { NaturalModule, type InstallEvent, type Rendered } from '../../src/natural/module';
 import {
   linesOf,
   probeBegun,
+  probeVoice,
   readBegun,
   readRendered,
   readSeen,
@@ -20,6 +27,7 @@ import {
   soakBegun,
   soakCounted,
   soakVerse,
+  speakingIn,
   type ProbeView,
   type ReadTally,
 } from '../../src/natural/probe';
@@ -47,15 +55,20 @@ const recording = (record: (rendered: Rendered) => void) =>
     }),
   ).pipe(Layer.provide(naturalModule));
 
-/** The probe's runtime: the module itself, and the voice over the natural source over the recording module, with a memory store. */
-const runtimeOf = (show: Show) =>
+/**
+ * The probe's runtime: the module itself, and the voice over the natural
+ * source, every speak in `voice`, over the recording module, with a memory
+ * store.
+ */
+const runtimeOf = (show: Show, voice: NaturalVoice) =>
   ManagedRuntime.make(
     Layer.merge(
       naturalModule,
       voiceLayer.pipe(
         Layer.provide(
           Layer.merge(
-            naturalVoiceSource(lexicon()).pipe(
+            speakingIn(voice).pipe(
+              Layer.provide(naturalVoiceSource(lexicon())),
               Layer.provide(
                 recording((rendered) =>
                   show((view) => ({ ...view, read: readRendered(view.read, rendered) })),
@@ -109,10 +122,10 @@ const install = (show: Show, base: Option.Option<string>) =>
     );
   });
 
-const load = (show: Show) =>
+const load = (show: Show, voice: NaturalVoice) =>
   Effect.gen(function* () {
     const module = yield* NaturalModule;
-    const outcome = yield* module.load(REVISION, FILES, 'af_heart.bin').pipe(
+    const outcome = yield* module.load(REVISION, FILES, `${voice}.bin`).pipe(
       Effect.map((millis) => ({ _tag: 'Loaded' as const, millis })),
       Effect.catchTag('NaturalUnavailable', (error) =>
         Effect.succeed({ _tag: 'Refused' as const, reason: error.reason }),
@@ -166,12 +179,12 @@ function* versesInOrder(asked: number) {
   }
 }
 
-/** Renders every chunk of the first `asked` verses through the module, no play, and counts. */
-const soak = (show: Show, asked: number) =>
+/** Renders every chunk of the first `asked` verses in `voice` through the module, no play, and counts. */
+const soak = (show: Show, asked: number, voice: NaturalVoice) =>
   Effect.gen(function* () {
     const module = yield* NaturalModule;
     show((view) => ({ ...view, soak: soakBegun(asked) }));
-    yield* module.load(REVISION, FILES, 'af_heart.bin').pipe(
+    yield* module.load(REVISION, FILES, `${voice}.bin`).pipe(
       Effect.catchTag('NaturalUnavailable', (error) =>
         Effect.sync(() =>
           show((view) => ({
@@ -215,19 +228,26 @@ type Button = (typeof BUTTONS)[number];
  * (verify-heartseed, `features/natural.md`): it installs the pinned model
  * files from the link's `base` (D7's `baseFor`), loads them, reads Today's
  * passage through the voice over the natural source, and soaks the KJV
- * verse by verse (`soak`, a count). It shows counts only, never a word. A
- * release build renders nothing and starts nothing.
+ * verse by verse (`soak`, a count), each in the link's `voice` (one of
+ * `VOICES`, else `af_heart`). It shows counts only, never a word. A release
+ * build renders nothing and starts nothing.
  */
 export default function NaturalProbe() {
-  const params = useParams<{ readonly base?: string; readonly soak?: string }>();
+  const params = useParams<{
+    readonly base?: string;
+    readonly soak?: string;
+    readonly voice?: string;
+  }>();
   const asked = soakAsked(Option.fromNullishOr(params.soak));
   const base = Option.fromNullishOr(params.base);
-  const [view, setView] = useState<ProbeView>(() => probeBegun(asked));
+  const voice = probeVoice(Option.fromNullishOr(params.voice));
+  const [view, setView] = useState<ProbeView>(() => probeBegun(asked, voice));
   const [runtime, setRuntime] = useState<Option.Option<Runtime>>(Option.none());
   const [busy, setBusy] = useState<Option.Option<Fiber.Fiber<void>>>(Option.none());
   useEffect(() => {
     if (!dev) return;
-    const made = runtimeOf(setView);
+    setView((shown) => ({ ...shown, voice }));
+    const made = runtimeOf(setView, voice);
     setRuntime(Option.some(made));
     const ended = () => {
       made.runFork(refresh(setView));
@@ -236,7 +256,7 @@ export default function NaturalProbe() {
     return () => {
       Effect.runFork(made.disposeEffect);
     };
-  }, []);
+  }, [voice]);
   if (!dev) return;
 
   const tap = (button: Button) =>
@@ -251,7 +271,7 @@ export default function NaturalProbe() {
             made.runFork(NaturalModule.use((module) => module.cancelInstall));
             return;
           case 'Load':
-            made.runFork(load(setView));
+            made.runFork(load(setView, voice));
             return;
           case 'Read':
             setBusy(Option.some(made.runFork(read(setView))));
@@ -269,7 +289,7 @@ export default function NaturalProbe() {
             made.runFork(remove(setView));
             return;
           case 'Soak':
-            setBusy(Option.some(made.runFork(soak(setView, asked))));
+            setBusy(Option.some(made.runFork(soak(setView, asked, voice))));
             return;
         }
       },
