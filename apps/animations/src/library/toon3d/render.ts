@@ -1,5 +1,5 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { openView } from '@manna/film/tools';
+import { openView } from '@manna/film/tools/chrome';
 import { Effect, Schema, type Scope } from 'effect';
 import { Base64 } from 'effect/encoding';
 import type { RenderRequest } from './page.ts';

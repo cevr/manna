@@ -1,5 +1,6 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { encodePng, openView } from '@manna/film/tools';
+import { encodePng } from '@manna/film/tools';
+import { openView } from '@manna/film/tools/chrome';
 import { Effect, FileSystem, Option, Path, Schema, type Scope } from 'effect';
 import { Base64 } from 'effect/encoding';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';

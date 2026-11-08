@@ -20,7 +20,6 @@ export * from './preview-server.ts';
 export * from './narration-route.ts';
 export { type FootageRoot, footageHandler } from './footage-route.ts';
 export * from './browser.ts';
-export { type View, type ViewOptions, openView } from './chrome.ts';
 export * from './pages.ts';
 export * from './render-plan.ts';
 export * from './renderer.ts';
