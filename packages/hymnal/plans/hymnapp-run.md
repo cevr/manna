@@ -89,7 +89,7 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 
 ## Follow-ups
 
-- hsspeaker round 2 (`8934f6cbf`, test-only) is judged by the next batch's verifier; `test:budget` passed in batch speaker-1 (slowest Heartseed part 0.88 s).
+- hspromise (`tmp/orchestrate/hymnapp/hspromise/`, merged 29bfbb137): `promise-new` live row unproven until the next 04:00; the visit's baseline read before a pending keep lands survives the committed tests (unreachable); hsphrase rebases its check on this merge.
 
 - hsmirror (`tmp/orchestrate/hymnapp/hsmirror/`, merged 3bea3a4bc): no committed test holds `copy.ts`'s `--dry-run` choice (only the live K9 does; a `command.test.ts` as the hymnal's); a shared `@manna/r2` for the hymnal's and Heartseed's R2 code (D8); the deploy and the copy wait on the owner's word (q15).
 
