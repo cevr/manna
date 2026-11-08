@@ -21,8 +21,9 @@ At the top of the scroll view, above the reference, the counts line
 the backlog. The plan is made when Today first shows in a launch, again
 at each Minutes tap, at each return to the foreground with no recital
 under way (`wake.md`), and at each landed add or remove of a passage
-(`passage.md`). An item is done once its verse holds a new recall.
-Today runs the plan one verse at a time (`run.md`): when the line reads
+(`passage.md`). An item is done once its piece (a verse or a phrase,
+`phrase.md`) holds a new recall.
+Today runs the plan one piece at a time (`run.md`): when the line reads
 `Nothing to tend now`, Today shows the done state, with no `Say it`.
 
 A verse planted in the evening (18:00 to 03:59 local) is not due before
@@ -156,7 +157,7 @@ values, never a recall); delete the store copies.
   edges, other zones, months away, a pile of due verses, the cap, the mixed
   order, a new piece beside planted verses, unread and refused stores, and
   every minutes value's effect on a plan. On the first minute's day no
-  new verse is offered, so a live plan that day holds at most one item
+  new piece is offered, so a live plan that day holds at most one item
   (Isaiah 41:10), and the minutes never change its count
   (`apps/heartseed/src/session.property.test.ts` for the plan and the
   counts line, `apps/heartseed/src/session/service.test.ts` for the stored

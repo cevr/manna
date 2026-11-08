@@ -3,7 +3,8 @@
 The app holds Selah's fourteen promise collections as references only
 (`apps/heartseed/src/promises.ts`) and teaches one, `Protection & Fear`,
 free, after the reader's passages: its 14 verses are pieces of the session
-after every passage held, and the field shows its row. Today's header
+after every passage held, each long one learned as phrases first, then
+joined (`phrase.md`), and the field shows its row. Today's header
 offers `When I need…` (`apps/heartseed/src/need/screen.tsx`, its rule
 `apps/heartseed/src/need.ts`): the promises the reader knows, by situation.
 A tap on one brings Today with its verses ahead of the plan (a visit), each
@@ -21,7 +22,8 @@ said as a review (`apps/heartseed/README.md`, When I need…).
   `<n> still to learn` (`to-learn`). The taught card always shows; any
   other only once one of its promises is known. No lock, no price.
 - **A visit**: a tap on a known promise shows Today with the promise's
-  first verse not said since the tap, under the cue of its stage, with
+  first verse not said since the tap, whole (never its phrases), under the
+  cue of its own stage, with
   `Say it` and no `Listen`. Its result, grades and `Next` are Today's;
   `Next` shows the visit's next verse, then the plan's item or the done
   state. The counts line stays the plan's. A held result stays held when
@@ -53,8 +55,9 @@ said as a review (`apps/heartseed/README.md`, When I need…).
 - `promise-relaunch`: a relaunch opens Today; `When I need…` still lists
   `Isaiah 41:10`, and no visit shows.
 - `promise-new` (the second session, after the next 04:00 local, no
-  passage held, no uninstall): Today offers `Psalms 91:1` as `1 new` with
-  `Listen` and `Say it` (after the promise's review, if due).
+  passage held, no uninstall): Today offers `Psalms 91:1 [1-9]` (the
+  first phrase of Psalms 91:1, 9 words) as `1 new` with `Listen` and
+  `Say it` (after the promise's review, if due).
 - `promise-tests-only` (tests only): the whole need rule
   (`apps/heartseed/src/need/need.property.test.ts`), unread passages, a
   multi-verse visit, a visit dropped by a Minutes tap or a return, a held
@@ -120,8 +123,8 @@ must start empty: uninstall by udid as `first.md` says.
    `sim open / --expect "id=session"`, `sim snapshot promise-new` → the
    counts line holds `1 new`; when the reference is `Isaiah 41:10` (its
    review due), run it through `Say it` and `Next` first, then snapshot
-   again → the reference `Psalms 91:1`, `Listen` before `Say it`. Then
-   `sim doctor` and `sim down`.
+   again → the reference `Psalms 91:1 [1-9]`, nine `word-<i>` nodes,
+   `Listen` before `Say it`. Then `sim doctor` and `sim down`.
 
 Report only counts, booleans, rect numbers, the labels named above, the
 counts line and the references; delete the `snapshots` folder and the raw
@@ -139,5 +142,7 @@ snapshots.
   visits, other collections and every zone are the tests' (`promise-tests-only`).
 - The simulator's clock cannot be set: the second day is `promise-new`,
   after the next 04:00 local.
-- Before the first minute's day is over no new verse shows, so the Fear
-  verses appear on Today only from `promise-new` on.
+- Before the first minute's day is over no new piece shows, so the Fear
+  phrases appear on Today only from `promise-new` on, one a day; no Fear
+  verse is known in a drive the clock cannot move (Fear's joins and a
+  visit of a long verse are the tests': `phrase.md`).

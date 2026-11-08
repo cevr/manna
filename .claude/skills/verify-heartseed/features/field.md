@@ -14,13 +14,15 @@ the scroll view, so it is on screen without a scroll whatever Today holds
 on which any recall was kept, each record's day read by the zone offset it
 stores, a record kept before offsets by its UTC date, so it never falls)
 and the harvest (`<n> verses at full corn`,
-`1 verse at full corn`: the verses at full corn now, so Again takes a verse
-out). Then one card per row: the promise's first (`Isaiah 41:10`, shown
+`1 verse at full corn`: the verses at full corn now, never a phrase, so
+Again takes a verse out). Then one card per row: the promise's first (`Isaiah 41:10`, shown
 even before its first recall, as bare soil), then each passage the reader
 chose, in the order chosen (`passage.md`), then the taught collection's
 row `Protection & Fear`, its 14 verses in order, with no `Remove`
 (`promise.md`), then each other verse the garden holds, in the order
-first sown. Each plant is one image to the
+first sown. A phrase is never a row or a plant: a verse with only its
+phrases planted shows `seed`, and a removed passage's phrases make one
+row for their verse (`phrase.md`). Each plant is one image to the
 screen reader, labelled `<reference>, <stage>` (`seed`, `blade`, `ear`,
 `full corn` or `not planted`), its drawing and verse number hidden inside
 it. A legend of the four stages and the caption `Mark 4:28` close the

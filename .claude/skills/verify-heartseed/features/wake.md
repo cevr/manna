@@ -17,19 +17,21 @@ Nothing else changes at a return:
   A pull of the notification center or Control Center (`inactive` with no
   `background`) is not a return.
 
-A new verse (one the plan offers to plant, shown under its full text) also
+A new piece (a verse or a phrase the plan offers to plant, shown under its
+full text, or a join under first letters, `phrase.md`) also
 offers `Listen` while `Voice` is not `Off` (`Her` or `Him`). It sits in the fixed footer
-before `Say it`. `Listen` has the voice read that verse. While the voice
+before `Say it`. `Listen` has the voice read that piece's own text. While the voice
 reads, `Listen` is gone, and `Say it` stops the voice before it listens; a
 tap of `Voice` onto `Off` stops it too, and a tap from `Her` to `Him` lets
 it go on. Listening is offered, not required. With `Voice` at `Off`, only
 `Say it` shows.
 A review, `Next`, the done state and an unread garden never show `Listen`.
 
-The first minute plants Isaiah 41:10, and no new verse is offered on its
-day, so a new verse shows live only on the second day: `passage.md`'s
-`passage-new` (a passage's first verse) and `promise.md`'s `promise-new`
-(the Fear collection's first) drive `Listen` then.
+The first minute plants Isaiah 41:10, and no new piece is offered on its
+day, so a new piece shows live only on the second day: `passage.md`'s
+`passage-new` (a passage's first verse), `promise.md`'s `promise-new`
+(the Fear collection's first phrase) and `phrase.md`'s `phrase-say`
+drive `Listen` then.
 
 ## Sub-features
 

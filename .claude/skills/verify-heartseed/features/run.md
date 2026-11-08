@@ -1,10 +1,11 @@
-# The run: Today one verse at a time
+# The run: Today one piece at a time
 
 Today (`apps/heartseed/app/index.tsx`) runs the session's plan
-(`session.md`) one verse at a time. It shows the held item if any, else
+(`session.md`) one piece at a time: a verse, or a phrase of a long verse
+(`phrase.md`). It shows the held item if any, else
 the first verse not done of a visit (a promise tapped on When I need…,
 `promise.md`), else the plan's first item that is not done: its reference, its words under its cue (the full text for a new
-verse, first letters at a seed, nothing from a blade on), its stage line,
+piece, first letters for a join or at a seed, nothing from a blade on), its stage line,
 and `Say it`. Once the recital's recall is kept, the result and the grades
 stay, and the button reads `Next`. `Next` moves on to the next item. After
 the last item, and whenever the plan holds nothing to tend, Today shows the
@@ -24,8 +25,9 @@ a recital listens keeps that verse on screen until its `Next`. Nothing of
 the run is stored. A relaunch makes a new plan.
 
 The app holds Isaiah 41:10, then the reader's passages (`passage.md`),
-then the Fear collection's verses (`promise.md`). On the first minute's
-day no new verse is offered, so this drive's plan holds at most one
+then the Fear collection's verses (`promise.md`), each long verse as its
+phrases, then its join (`phrase.md`). On the first minute's
+day no new piece is offered, so this drive's plan holds at most one
 item: Isaiah 41:10. After the first minute's alone recital (the replay suggests Hard),
 the passage is due again 6 minutes later. That is FSRS's step. A planting
 after 18:00 local is due at 04:00 the next morning.
@@ -110,6 +112,8 @@ snapshots.
   passage's due time. Tests alone own:
   - many verses in one run, the mixed order, and a new verse under its full
     text (`apps/heartseed/src/run/*.test.tsx`);
+  - phrases over days, a join under first letters and a held phrase
+    (`apps/heartseed/src/phrase/walk-*.test.tsx`);
   - the hold across a Minutes tap while a recital listens;
   - unheard and refused recitals;
   - the unread garden;

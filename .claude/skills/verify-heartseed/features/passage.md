@@ -13,7 +13,7 @@ up to 20 verses each, from the whole KJV in the bundle.
 - **The rows**: the promise's (`Isaiah 41:10`), then each passage held in
   the order chosen, titled by its reference, each verse a plant labelled
   `<verse reference>, <stage>`, then every other plant, one verse each, in
-  the order first sown. Each passage row, and no other, holds
+  the order first sown; a phrase folds into its verse (`phrase.md`). Each passage row, and no other, holds
   `Remove <its reference>`.
 - **Remove asks once**, in the bar: "Remove <reference>? Its plants stay in
   your field." (testID `ask`) with `Remove` and `Keep`. A remove that does
@@ -38,9 +38,10 @@ up to 20 verses each, from the whole KJV in the bundle.
 - **One change at a time**: from a tap of `Plant` or of the ask's `Remove`
   until its answer, the other controls do nothing and show as disabled.
 - **Today** makes its plan again at each landed add or remove: on a day a
-  verse was first planted (the first minute's day among them) no new verse
-  shows; after the next 04:00 local the first verse no plant names is new,
-  with `Listen` and `Say it`. A verse whose recital is under way when its
+  verse was first planted (the first minute's day among them) no new piece
+  shows; after the next 04:00 local the first piece no plant names is new,
+  with `Listen` and `Say it`: a short verse whole, a long verse's first
+  phrase (`phrase.md`). A verse whose recital is under way when its
   passage is removed stays on Today until `Next`.
 - Nothing is stored but the reader's passages, at a landed add or remove
   (their key: `apps/heartseed/README.md`, Passages).
@@ -68,8 +69,9 @@ up to 20 verses each, from the whole KJV in the bundle.
 - `passage-relaunch`: a relaunch opens Today, and the field shows the
   passages kept.
 - `passage-new` (the second session, after the next 04:00 local, with no
-  uninstall): Today offers `John 15:1` (after the promise's review, if
-  due) with `1 new`, `Listen` and `Say it`. This is `wake.md`'s
+  uninstall): Today offers `John 15:1` whole (11 words, so never cut into
+  phrases; after the promise's review, if due) with `1 new`, `Listen` and
+  `Say it`. This is `wake.md`'s
   `wake-listen` live, and its phone follow-up (the voice handing over to
   the recognizer after `Listen`).
 - `passage-launch-time`: the time from launch to the pending frame

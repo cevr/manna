@@ -154,7 +154,7 @@ Heartseed has no journey files yet. The features:
   simulator), say it with first letters, say it alone, Planted, then Today
   in the done state. Run it first: the other features start from its Today.
 - [features/run.md](features/run.md): Today runs the session's plan one
-  verse at a time: the verse under its cue, `Say it`, the result, `Next`,
+  piece (a verse or a phrase) at a time: the verse under its cue, `Say it`, the result, `Next`,
   and the done state with no `Say it`; the action button and the grades in
   a fixed footer; the verse due again after the first minute, through a
   `Minutes` tap. Run it from `first.md`'s Today: `fade.md`, `grow.md`,
@@ -213,9 +213,16 @@ Heartseed has no journey files yet. The features:
   `When I need…` in its fixed header, the cards of the promises the
   reader knows (`Protection & Fear` with its count still to learn,
   `Strength` with the first minute's promise), a tap on a promise said on
-  Today as a review, and the first Fear verse after the next 04:00. Run
+  Today as a review, and the first Fear phrase after the next 04:00. Run
   it from `first.md`'s Today; its second session comes after the next
   04:00.
+- [features/phrase.md](features/phrase.md): long verses learned as
+  phrases first, then joined: John 3:16 planted as a passage, its first
+  phrase `John 3:16 [1-6]` new after the next 04:00 with `Listen` and
+  `Say it` over its six words, and the field folding the phrase into
+  `John 3:16, seed`. Run it from `first.md`'s Today; its second session
+  comes after the next 04:00 (`passage.md`'s `passage-new` with John 3:16
+  in place of John 15:1-5).
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.

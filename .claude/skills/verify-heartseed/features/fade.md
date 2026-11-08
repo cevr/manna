@@ -2,7 +2,9 @@
 
 Today (`apps/heartseed/app/index.tsx`) shows and recites the passage under
 the cue its stage gives, the ladder of `apps/heartseed/src/garden.ts`
-(`cueAt`, `cueIn`): the full text before the passage is planted, its first
+(`cueAt`, `cueIn`): the full text before the passage is planted (first
+letters before a long verse is planted once a phrase of it is: its join,
+`phrase.md`), its first
 letters at a seed, nothing at a blade, an ear or full corn. Again makes a
 seed, so the letters come back. The cue fades across days, by stage, never
 inside one sitting. Nothing new is stored: a recall was helped when it had a
