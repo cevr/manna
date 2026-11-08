@@ -3,7 +3,10 @@
 The voice reads a verse aloud on the device and lights each word as it is
 spoken (`apps/heartseed/src/voice.ts`, over the Swift package
 `apps/heartseed/native/voice`). The first minute's hear phase calls it at
-`Listen` (`first.md`, `first-hear`, drives it on a screen). What this
+`Listen` (`first.md`, `first-hear`, drives it on a screen). The reader's
+choice, Off, Her or Him, is Today's `Voice` button (`session.md`,
+`voice-cycle` and `voice-migrate`); Her and Him read with the same system
+voice until the natural voice routes them. What this
 feature checks is that the app builds with the module.
 
 The voice makes no sound on the simulator: there the module never speaks.

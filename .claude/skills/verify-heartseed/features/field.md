@@ -23,7 +23,9 @@ screen reader, labelled `<reference>, <stage>` (`seed`, `blade`, `ear`,
 `full corn` or `not planted`), its drawing and verse number hidden inside
 it. A legend of the four stages and the caption `Mark 4:28` close the
 screen. The bar also holds `Add a passage` or the limit line, and a
-passage row's `Remove` (`passage.md`). Which screen shows is never stored:
+passage row's `Remove` (`passage.md`). Under the scroll view, a fixed foot
+holds one button, `About`, which opens the About screen (`about.md`); like
+every field control it is disabled while a remove is pending. Which screen shows is never stored:
 every launch opens on the pending frame, then the first minute or Today.
 
 ## Sub-features

@@ -18,10 +18,12 @@ Nothing else changes at a return:
   `background`) is not a return.
 
 A new verse (one the plan offers to plant, shown under its full text) also
-offers `Listen` while the `Voice` switch is on. It sits in the fixed footer
+offers `Listen` while `Voice` is not `Off` (`Her` or `Him`). It sits in the fixed footer
 before `Say it`. `Listen` has the voice read that verse. While the voice
-reads, `Listen` is gone, and `Say it` stops the voice before it listens.
-Listening is offered, not required. With `Voice` off, only `Say it` shows.
+reads, `Listen` is gone, and `Say it` stops the voice before it listens; a
+tap of `Voice` onto `Off` stops it too, and a tap from `Her` to `Him` lets
+it go on. Listening is offered, not required. With `Voice` at `Off`, only
+`Say it` shows.
 A review, `Next`, the done state and an unread garden never show `Listen`.
 
 The first minute plants the app's one verse (Isaiah 41:10), so a new verse
@@ -53,9 +55,9 @@ a different pid means the app was relaunched, and the row proves nothing.
   now`, no `Grade` group, no summary, no `Next`, no `Say it`, with the same
   pid. Red on base: base keeps the result and `Next`.
 - `wake-listen` (live in `passage.md`'s `passage-new`): `Listen` before `Say it` in
-  the footer on a new verse while `Voice` is on; the voice reads that
+  the footer on a new verse while `Voice` is not `Off`; the voice reads that
   verse; no `Listen` while it reads, on a review, at `Next`, in the done
-  state or with `Voice` off; `Say it` stops the voice first. Owned by
+  state or with `Voice` at `Off`; `Say it` stops the voice first. Owned by
   `apps/heartseed/src/wake/listen.test.tsx`, `reading.test.tsx` and
   `listen-edges.test.tsx`, and the acceptance check's L1-L8.
 

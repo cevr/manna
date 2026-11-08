@@ -140,10 +140,12 @@ which nodes prove it. A target is `label=<accessible name>` or
 the hymnal's skill describes; in the first minute a reader taps `Listen`,
 `Next`, `Say it` and `Continue`, on Today `Listen` (on a new verse),
 `Say it`, a grade, a missed
-word's mark, `Next`, a `Minutes` radio and `Your field`; on the field, in
-its bar, `Today`, `Add a passage`, and the ask's `Remove` and `Keep`, and
-in a row `Remove <reference>`; and on the chooser a book, a chapter, a
-verse, `Plant` and the backs (`Your field`, `Books`, `Chapters`).
+word's mark, `Next`, a `Minutes` radio, `Voice` (its value `Off`, `Her`
+or `Him` in a raw snapshot) and `Your field`; on the field, in its bar,
+`Today`, `Add a passage`, and the ask's `Remove` and `Keep`, in a row
+`Remove <reference>`, and in its foot `About`; on About its bar's
+`Your field`; and on the chooser a book, a chapter, a verse, `Plant` and
+the backs (`Your field`, `Books`, `Chapters`).
 Heartseed has no journey files yet. The features:
 
 - [features/first.md](features/first.md): the first minute a fresh
@@ -183,13 +185,17 @@ Heartseed has no journey files yet. The features:
   restart in the device's store, and the growth sound's native module,
   which logs each play it skips on the simulator.
 - [features/session.md](features/session.md): the daily session on Today:
-  the `Minutes` and `Voice` choices in the header's second row, kept across
-  a relaunch, and the counts line atop the scroll view. Run it from
-  `first.md`'s Today, before `run.md` step 3.
+  the `Minutes` radios and the `Voice` button (Off, Her, Him, a tap the
+  next) in the header's second row, kept across a relaunch, the old
+  switch's Off carried over, and the counts line atop the scroll view. Run
+  it from `first.md`'s Today, before `run.md` step 3.
 - [features/field.md](features/field.md): the field, reached from Today's
   `Your field` and back by its bar's `Today`: a row per passage, a plant
   per verse at its stage, the local days sown from 04:00 (each by the zone
   offset its record holds), which never fall, and the harvest.
+- [features/about.md](features/about.md): the About screen, from the
+  field's fixed foot `About`: the natural voice's credits and the Apache
+  License 2.0 whole, and the way back to the field.
 - [features/passage.md](features/passage.md): choosing passages: the
   field's fixed bar with `Add a passage` or the limit line, the chooser
   (books, chapters, a chapter's verses, the range clipped to 20, `Plant`

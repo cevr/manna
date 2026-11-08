@@ -6,7 +6,7 @@ place by the root route `apps/heartseed/app/index.tsx`), not Today. It is
 one promise in three phases, then the seed:
 
 1. `Hear it`: the verse whole, one node per word (`word-<i>`). `Listen`
-   (only while the voice is on and not reading) has the voice
+   (only while the voice's choice is not Off and it is not reading) has the voice
    (`apps/heartseed/src/voice.ts`) read the passage once (a second tap
    before the frame that hides `Listen` reads nothing more); the words already
    spoken are in ink and the voice's current word is `selected`. A reading
@@ -136,4 +136,4 @@ reference; delete the `snapshots` folder and the raw snapshots.
   stage).
 - No relaunch mid-flow is driven live: the unit tests own it
   (`src/first/screen.test.tsx`), and the voice-off hear phase, since no
-  screen sets the switch.
+  screen of the first minute sets the voice's choice.

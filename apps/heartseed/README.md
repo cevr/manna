@@ -21,12 +21,13 @@ simulator, ports 8280-8289, iOS alone).
 ## Voice
 
 The voice reads a verse aloud on the device and lights each word as it is
-spoken; the reader can turn it off. Two screens call it, through the app's
+spoken; the reader chooses Off, Her or Him. Her and Him both read with the
+system's best voice until the natural voice routes them. Two screens call it, through the app's
 runtime (`src/app.ts`), and Say it reads no word aloud:
 
 - the first minute's hear phase (`Voice.read` at `Listen`, `Voice.stop` at
   a `Next` during a reading: the atoms `voiceView`, `listen` and `hush`);
-- Today, on the plan's new piece: while the `Voice` switch is on, no
+- Today, on the plan's new piece: while `Voice` is not Off, no
   reading is under way and the action button reads `Say it`, a `Listen`
   button sits in the fixed footer before it (`listenTo`, which reads the
   shown piece's own text once, and `readingAloud(voiceView)`). While the
@@ -35,11 +36,13 @@ runtime (`src/app.ts`), and Say it reads no word aloud:
   refused recital. A press of `Say it` stops the voice before the
   recognizer listens. A review, `Next`, the done state and an unread
   garden never show `Listen`; a making of the plan (a Minutes tap, a
-  return, an add or a remove of a passage) does not stop a reading, and `Voice` off does. Listening is
+  return, an add or a remove of a passage) does not stop a reading, and a
+  tap of `Voice` onto Off does; a tap from Her to Him lets it go on. Listening is
   offered, not required, and writes nothing.
 
 - `src/voice.ts` is the `Voice` service (Effect): `read`, `pause`,
-  `resume`, `stop`, `setEnabled`, and the `view` a screen shows (`status`,
+  `resume`, `stop`, `choose`, and the `view` a screen shows (`choice`,
+  `enabled` (not Off), `status`,
   the `verse`, its `words`, how many are `lit`, the `current` word range and
   how the reading `ended`), with its `changes`: a new subscriber starts at
   the current view, and one held up keeps only the last 16, so it always
@@ -49,15 +52,23 @@ runtime (`src/app.ts`), and Say it reads no word aloud:
   the view only for the current utterance while a reading is under way, and
   a range lights the words it overlaps, never fewer than are lit. A word is
   one the matcher counts (`src/matcher/words.ts`), found by its UTF-16 span.
-- The switch is kept under `heartseed/voice/enabled` in the app's settings
-  store, `src/store.ts` (One's key-value store; no memory store stands in
-  where it cannot open, below). Only the text `false` turns it off; a
-  failed read or write is logged and never fails the service: a failed
-  read is on, and after a failed write the view keeps the reader's switch
-  for the session, so the next write once the store opens lands. `setEnabled` writes the switch while
+- The choice is one list, `CHOICES` (`off`, `her`, `him`), and
+  `nextChoice` steps it, wrapping. It is kept under `heartseed/voice/choice`
+  in the app's settings store, `src/store.ts` (One's key-value store; no
+  memory store stands in where it cannot open, below), as the text `off`,
+  `her` or `him`. A launch reads that key when its text is exactly one of
+  the three; otherwise (missing, any other text, a failed read) it reads
+  the old switch, `heartseed/voice/enabled`, whose text exactly `false` is
+  Off and anything else Her, so a reader who turned the voice off stays
+  Off. A launch writes nothing, and the old key is never written, removed
+  or cleared, so a rollback build still reads it. A failed read or write
+  is logged (`voice.store.failed`) and never fails the service; after a
+  failed write the view keeps the reader's choice for the session, so the
+  next write once the store opens lands. `choose` writes the new key while
   its stop is under way, not after it, one write at a time, each the
-  switch the view holds then, so the store ends at the last call's switch
-  however the stops settle.
+  choice the view holds then, so the store ends at the last call's choice
+  however the stops settle. Choosing Off stops a reading under way, ending
+  it `off`; choosing Her or Him changes the view only.
 - `src/voice/source.ios.ts` is the source on iOS: the Swift package
   `native/voice` over AVSpeechSynthesizer, which One's prebuild makes the
   local pod `OneSwiftPackages/voice`. Its voices and its events cross as the
@@ -179,7 +190,7 @@ and keeps nothing. Say it reads no word aloud.
 - `src/app.ts` is the app's one runtime: one Dictation over the source
   this build hears, Say it over it, `liveHaptics` (One's soft impact), the
   garden (below), which takes Say it's recalls over the app's store and
-  sounds the growth chime, and the voice over `voiceSource`, its switch in
+  sounds the growth chime, and the voice over `voiceSource`, its choice in
   the same store (`appLayer`'s parts: `source`, `haptics`, `store`,
   `chime`, `voice`, and `pieces`, the verses the app holds text for, each
   `{ reference, text, words, group }` in the app's order; the runtime
@@ -250,8 +261,8 @@ button and the Georgia verse of the prototype):
    does nothing when no reading is under way, so a reading started a moment
    before the screen drew it stops too) and goes on; a `Listen` tapped after
    it reads nothing.
-   With the voice's stored switch off there is no `Listen`; the first
-   minute never writes the switch.
+   With the voice's stored choice Off there is no `Listen`; the first
+   minute never writes the choice.
 2. `Say it with help`: each word's first letter or number alone, the rest
    laid out unseen and hidden from the screen reader. `Say it` recites with
    the matcher's cue `initials` and keeps nothing (`recite({ cue:
@@ -396,10 +407,10 @@ It sits in Today's header beside the heading, outside the scroll view, so
 however much a recital adds (the recap, the grades, the growth line, an
 alert) it is on screen without a scroll and clear of the home indicator;
 the field's button `Today` (shown `‹ Today`), in the bar fixed above the
-field's scroll view, comes back to Today as it was. The field and the
-chooser (Choosing a passage, below) are in place in the root route
-(`app/index.tsx`): no route, no link, no tab. Which of Today, the field
-and the chooser shows is the root's state for the launch, never stored, so
+field's scroll view, comes back to Today as it was. The field, the
+chooser (Choosing a passage, below) and About (below) are in place in the
+root route (`app/index.tsx`): no route, no link, no tab. Which of Today,
+the field, the chooser and About shows is the root's state for the launch, never stored, so
 every launch opens on the pending frame, then the first minute or Today,
 and whenever Say it listens the screen is Today. Until a
 read completes, and for a session whose read failed, there is no field and
@@ -458,7 +469,30 @@ them.
   hidden from the screen reader, over the caption `Mark 4:28`. No other
   number shows, and nothing moves. Every text is Palette A's ink (the
   counts in Today's summary style), never the muted grey, so each reads at
-  WCAG AA's 4.5:1 on the ground and on a card.
+  WCAG AA's 4.5:1 on the ground and on a card. Under the scroll view a
+  fixed foot holds one control, `About`, in the field's outlined pill
+  style, at least 44 pt tall and clear of the home indicator; like every
+  field control it is disabled while a remove is pending.
+
+## About
+
+`About` on the field opens the About screen (`src/about/screen.tsx`,
+`AboutScreen({ onField })`): a bar fixed above a scroll view holding the
+way back, `Your field` (shown `‹ Your field`), which returns to the field;
+in the scroll view the one heading `About`, the natural voice's credits
+(`CREDITS`, one paragraph, `about-credits`) and the Apache License 2.0
+whole (`about-licence`), which the bundle owes for the natural voice's
+vendored code. Every text is Palette A's ink, at WCAG AA on the ground.
+It reads and writes nothing in the store.
+
+- The licence is `native/natural/kokoro/LICENSE` byte for byte, never
+  trimmed or reflowed, served as the virtual module
+  `virtual:heartseed-licence` (its default export the text):
+  `vite/licence.ts`'s `readLicence()` reads the file and, run as a script,
+  prints it as JSON, and `vite/plugin.ts` serves it as it does the other
+  bundle-time modules. `src/virtual.d.ts` declares it and
+  `src/test/setup.ts` stands it in from `readLicence()`; no file under
+  `src` or `app` holds a copy of the text.
 
 ## Passages
 
@@ -604,9 +638,14 @@ The daily session is the plan of what to tend today: the due reviews, then
 one new piece, within the minutes the reader chose. Today holds its two
 choices in a second row of its fixed header, under `Today` and
 `Your field`, outside the scroll view: the radio group `Minutes` (`2 min`,
-`5 min`, `10 min`, `20 min`) and the switch `Voice` (the voice's
-`heartseed/voice/enabled`, toggled by `Voice.setEnabled`). The row wraps,
-each pill is 44 pt tall, and the chosen one takes the grade pills' style.
+`5 min`, `10 min`, `20 min`) and the button `Voice` (the voice's choice,
+`heartseed/voice/choice`). A tap of `Voice` cycles Off → Her → Him → Off
+(`cycleVoice`, `src/app.ts`: `Voice.choose(nextChoice(choice))`, the view
+changing at the call, so two quick taps cycle twice); it shows
+`Voice: Off`, `Voice: Her` or `Voice: Him`, its label stays `Voice` and its
+accessibility value is the word, so VoiceOver reads "Voice, Her, button".
+The row wraps, each pill is 44 pt tall, and the chosen minutes and a
+`Voice` not Off take the grade pills' style.
 They show once their reads complete, in a read garden and an unread one,
 and stay shown and working while Say it listens; the pending frame and the
 first minute show neither. At the top of the scroll view, above the
@@ -1003,11 +1042,14 @@ GETs (Class B) when the edge does not serve them.
   `bun run test:budget @manna/heartseed` times each alone (under 1 s). The
   `src` parts run with `src/test/setup.ts` as the preload (react-native-web
   for `react-native`, the bundled passage for `virtual:heartseed-passage`,
-  the corpus for `virtual:heartseed-kjv`, a happy-dom document); `test:infra` and `test:mirror` run with none.
+  the corpus for `virtual:heartseed-kjv`, the licence for
+  `virtual:heartseed-licence`, a happy-dom document); `test:infra` and `test:mirror` run with none.
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
-  - `test:voice`: `src/voice.property.test.ts` (the voice against its model)
-    and `src/voice` (the native module's guards).
+  - `test:voice`: `src/voice.property.test.ts` (the voice against its model,
+    the choice over both keys) and `src/voice` (the read rule of the choice
+    over every text of both keys and failed reads, `choose` in command
+    order and in bursts, and the native module's guards).
   - `test:dictation`: `src/dictation.property.test.ts` (the dictation
     service against its model) and `src/dictation` (the scripted source,
     the hints and the native module's guards).
@@ -1073,7 +1115,8 @@ GETs (Class B) when the edge does not serve them.
     `test:walk-planted`, `test:walk-reading` and `test:walk-taps`: each
     `src/first/walk-<group>.property.test.tsx`, the same rig over a few
     generated devices from one seed. The generator draws every input the
-    rule names (any disk, switch and launch read, held or not; a speak that
+    rule names (any disk, the voice's choice and its old switch, and launch
+    read, held or not; a speak that
     lands or is refused and every kind of voice event; recitals that hear
     any subset of the words, end every way Dictation ends, or are held open;
     writes that land, are refused or meet a down device that recovers;
@@ -1132,8 +1175,8 @@ GETs (Class B) when the edge does not serve them.
     over the device's store, whose passages' key alone may fail its reads;
     every frame held to one heading, no bar control, alert or limit line
     inside a scroll view, no add beside the limit line or at 3 held,
-    nothing offered over unread passages, every field control disabled
-    while a remove is pending, and every seen text of the field and the
+    nothing offered over unread passages, every field control, `About`
+    among them, disabled while a remove is pending, and every seen text of the field and the
     chooser at AA): stored lists of 0-5 or more passages with equal ones,
     garbled values and 1-3 failed reads; a row's `Remove`, then `Keep`,
     another row, leaving, or the ask's `Remove` landing or refused, once,
@@ -1141,6 +1184,14 @@ GETs (Class B) when the edge does not serve them.
     `Add a passage` left or planted; after every tap the field, the bar
     and the disk against `src/test/choose-model.ts` and the passages'
     model; each file's floors met by its own devices.
+  - `test:about`: `src/about/screen.test.tsx`, About through the bar rig:
+    from Today to the field, its `About` outside every scroll view and
+    44 pt tall, About's one heading, the credits word for word, the licence
+    equal to the file, every text at AA, the way back, nothing written and
+    a relaunch on Today; `About` disabled in every frame of a pending
+    remove; a recital started while About shows brings Today; and the
+    plugin serving `virtual:heartseed-licence` as `vite/licence.ts` prints
+    it.
   - `test:session`: `src/session.property.test.ts`, the daily plan
     (`planOf`) and Today's counts line (`countsOf`) against the rules
     written plainly in `src/test/session-model.ts` (ts-fsrs's due dates,
@@ -1153,13 +1204,21 @@ GETs (Class B) when the edge does not serve them.
     plan's moment (Today's first `begin`, each tap) to the same model.
   - `test:header`: `src/session/header.test.tsx`, Today's header through
     `src/test/session-rig.tsx`: generated devices and launches (stored
-    minutes and switch, failed reads, unread and held listings, the first
-    minute) and taps (refused writes, taps while Say it listens, the field
-    and back), every frame held to where the choices may show (only under
-    Today's heading, outside the scroll view, which holds no control but
-    a missed word's mark), the first values shown, and the disk; and a
-    pending frame with the session's and the voice's views at hand shows
-    neither.
+    minutes, the voice's choice and its old switch, failed reads, unread
+    and held listings, the first minute) and taps (Voice stepping the
+    cycle, refused writes, taps while Say it listens, the field and back),
+    every frame held to where the choices may show (only under Today's
+    heading, outside the scroll view, which holds no control but a missed
+    word's mark), the first values shown, and the disk (the old switch
+    never written); and a pending frame with the session's and the voice's
+    views at hand shows neither.
+  - `test:pill`: `src/session/pill.test.tsx`, the `Voice` button through
+    the same rig: from each start (the choice `her`, `him` or `off`, only
+    the old switch `false` or `true`, junk over `false`, nothing), at
+    launch and after each of four taps, one button labelled `Voice`, its
+    word and value, its fill and its height, each tap's stored choice and
+    the old key unchanged, and a relaunch showing the last; two taps in one
+    turn cycle twice; a refused write then a relaunch.
   - `test:counts`: `src/session/counts.test.tsx`, Today's counts line
     through the same rig: generated devices (fresh installs planted
     through the first minute in the evening or the day, disks of the
@@ -1239,9 +1298,10 @@ GETs (Class B) when the edge does not serve them.
     `reading.test.tsx`, the same walk leaning toward Listen with
     `wake-rig.tsx`'s reading voice: where Listen shows at every settle
     (`listenModel`) and in every frame, the text each speak reads, Voice
-    taps and their stored switch, and each way a reading ends or goes on
-    (its finish or interruption, Say it, Voice off, a relaunch; a Minutes
-    tap, a return, the field); each case's floors met by its own devices.
+    taps and their stored choice, and each way a reading ends or goes on
+    (its finish or interruption, Say it, a tap onto Off, a relaunch; a
+    Minutes tap, a return, the field, a tap from Her to Him); each case's
+    floors met by its own devices.
   - `test:corpus`: `src/passages/corpus.test.ts`, every verse of the KJV
     through `versesOf` against `test/passages-model.ts`, every book's
     chapter bounds, and the module's reads in a child process
