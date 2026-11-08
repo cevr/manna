@@ -244,6 +244,7 @@ describe('which source word each spoken word lights', () => {
     ]);
     for (const [verse, spoken] of [
       ['thy', 'the'],
+      ['the', 'thee'],
       ['thou', 'you'],
       ['thee', 'you'],
       ['restoreth', 'restored'],
@@ -285,6 +286,22 @@ describe('the closed spelling table', () => {
     ]);
     const spoken = matcherView(play('namesake', [snapshot(0, "name's sake")]));
     expect(spoken.marks[0]?.time).toEqual({ start: 0, end: 180 });
+  });
+});
+
+describe('the sounds-alike table', () => {
+  it('hears an archaic word in the modern word that sounds the same, one way', () => {
+    expect(finished('thee', 'the').suggestedGrade).toBe(3);
+    expect(finished('the', 'thee').marks[0]?.status).toBe('miss');
+  });
+
+  it('times a word heard as two words by both', () => {
+    const view = matcherView(play('wherefore art', [snapshot(0, 'where for art')]));
+    expect(view.marks.map((mark) => [mark.status, mark.time])).toEqual([
+      ['matched', { start: 0, end: 180 }],
+      ['matched', { start: 200, end: 280 }],
+    ]);
+    expect(view.extraWordCount).toBe(0);
   });
 });
 

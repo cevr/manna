@@ -5,8 +5,13 @@
  * accepted transcript, aligned by trying every monotone matching of short
  * word lists. It shares no code with the matcher. Its equivalences are
  * given to it as phrase pairs (the closed spelling table, written out here,
- * and numeric phrases spelled from known values), never parsed.
+ * and numeric phrases spelled from known values), never parsed, each
+ * matching both ways; and the hearings as directed pairs, read from the
+ * sounds-alike table's JSON itself, each matching from the source word to
+ * the spoken words only.
  */
+
+import table from '../../data/kjv-hearings.json';
 
 export type ModelCue = 'none' | 'initials' | 'full';
 export type ModelWord = { text: string; start: number; end: number };
@@ -55,31 +60,65 @@ export const SPELLING_PAIRS: readonly Pair[] = [
   ["name's sake", 'namesake'],
 ];
 
+/** The table's words as the file holds them, apart from the matcher's decoding. */
+type HearingTable = {
+  archaic: Record<string, { modern: string[]; hearings: Record<string, string> }>;
+  pronouns: string[];
+  extra: Record<string, Record<string, string>>;
+};
+const TABLE: HearingTable = table;
+
+/** Every hearing as a directed pair, the archaic word first: the dictionary's and the extras'. */
+export const HEARING_PAIRS: readonly Pair[] = Object.entries(TABLE.archaic).flatMap(
+  ([word, entry]) => [
+    ...Object.keys(entry.hearings).map((hearing): Pair => [word, hearing]),
+    ...Object.keys(TABLE.extra[word] ?? {}).map((hearing): Pair => [word, hearing]),
+  ],
+);
+
+/** Each archaic word's modern forms, in the table's order. */
+export const MODERN_FORMS: ReadonlyMap<string, readonly string[]> = new Map(
+  Object.entries(TABLE.archaic).map(([word, entry]) => [word, entry.modern]),
+);
+
+/** The pronouns, never a hearing of any word. */
+export const PRONOUNS: readonly string[] = TABLE.pronouns;
+
 const hasWord = (text: string) => /[\p{L}\p{N}]/u.test(text);
 const runs = (text: string) => text.split(/\s+/u).filter(hasWord);
 const fold = (text: string) => text.toLocaleLowerCase('und').replace(/[^\p{L}\p{N}]/gu, '');
 const phrase = (words: readonly string[]) => words.map(fold).join('|');
 
 type Link = { source: number[]; spoken: number[] };
-type Best = { links: Link[]; hits: number; used: number; order: number[] };
+/** A best matching: its links, source words matched, spoken words used, and its order key. */
+export type Best = { links: Link[]; hits: number; used: number; order: number[] };
 
 const before = (a: readonly number[], b: readonly number[]) => {
   const index = a.findIndex((value, at) => value !== b[at]);
   return index !== -1 && (a[index] ?? 0) < (b[index] ?? 0);
 };
 
-/** Tries every monotone chain of links and keeps the best by the spec's three keys. */
-const bestMatching = (
-  source: readonly string[],
-  spoken: readonly string[],
+/** Which source phrase equals which spoken one: `pairs` both ways, `heard` from its first phrase in the source to its second in the spoken words only. */
+export type Equalities = ReadonlySet<string>;
+
+export const equalities = (
   pairs: readonly Pair[],
-): Best => {
-  const equal = new Set(
-    pairs.flatMap(([a, b]) => [
+  heard: readonly Pair[] = HEARING_PAIRS,
+): Equalities =>
+  new Set([
+    ...pairs.flatMap(([a, b]) => [
       `${phrase(runs(a))}=${phrase(runs(b))}`,
       `${phrase(runs(b))}=${phrase(runs(a))}`,
     ]),
-  );
+    ...heard.map(([a, b]) => `${phrase(runs(a))}=${phrase(runs(b))}`),
+  ]);
+
+/** Tries every monotone chain of links and keeps the best by the spec's three keys. */
+export const bestMatching = (
+  source: readonly string[],
+  spoken: readonly string[],
+  equal: Equalities,
+): Best => {
   const links: Link[] = [];
   for (let s0 = 0; s0 < source.length; s0++) {
     for (let s1 = s0 + 1; s1 <= source.length; s1++) {
@@ -142,20 +181,23 @@ export class MatcherModel {
   private revision = -1;
   private done = false;
   private readonly helped: number[] = [];
+  private readonly equal: Equalities;
 
   constructor(
     verse: string,
     private readonly cue: ModelCue = 'none',
-    private readonly pairs: readonly Pair[] = SPELLING_PAIRS,
+    pairs: readonly Pair[] = SPELLING_PAIRS,
+    heard: readonly Pair[] = HEARING_PAIRS,
   ) {
     this.words = runs(verse);
+    this.equal = equalities(pairs, heard);
   }
 
   view(): ModelView {
     const final = bestMatching(
       this.words,
       this.final.map((w) => w.text),
-      this.pairs,
+      this.equal,
     );
     const finalAt = new Map(
       final.links.flatMap((link) => link.source.map((i) => [i, link] as const)),
@@ -165,7 +207,7 @@ export class MatcherModel {
     const guess = bestMatching(
       rest,
       this.tentative.map((w) => w.text),
-      this.pairs,
+      this.equal,
     );
     const guessAt = new Map(
       guess.links.flatMap((link) => link.source.map((i) => [i + reached, link] as const)),

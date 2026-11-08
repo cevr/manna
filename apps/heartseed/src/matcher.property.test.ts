@@ -1,8 +1,9 @@
 /**
  * The word matcher against its independent model (`test/matcher-model.ts`)
  * over seeded command histories: every view after every command, in every
- * cue mode. The words mix exact words, the spelling table's pairs and the
- * forms of forty-two, with the verse's case and punctuation varied; the
+ * cue mode. The words mix exact words, the spelling table's pairs, the
+ * sounds-alike table's hearings (the real table, read by the model from its
+ * JSON) and the forms of forty-two, with the verse's case and punctuation varied; the
  * commands mix growing finals, replaced tails, stale and corrupt
  * snapshots, peeks and finish. Built recalls beside them reach each help a
  * clean recall's grade turns on: none, either cue, and a peek the later
@@ -17,6 +18,7 @@ import { Formatter } from 'effect';
 
 import { createMatcher, matcherView, updateMatcher, type Command, type Cue } from './matcher';
 import {
+  HEARING_PAIRS,
   MatcherModel,
   said,
   SPELLING_PAIRS,
@@ -35,9 +37,22 @@ const PAIRS: readonly Pair[] = [
   ...FORTY_TWO.flatMap((a) => FORTY_TWO.map((b): Pair => [a, b])),
 ];
 
-const SOURCE = ['fear', 'thou', 'not', 'for', 'ever', 'more', 'forever', 'evermore', 'shew', 'o'];
+const SOURCE = [
+  'fear',
+  'thou',
+  'not',
+  'for',
+  'ever',
+  'more',
+  'forever',
+  'evermore',
+  'shew',
+  'o',
+  'thy',
+  'wherefore',
+];
 const NUMBER = ['forty', 'two', 'and', '42'];
-const SPOKEN = [...SOURCE, ...NUMBER, 'show', 'oh', 'thee'];
+const SPOKEN = [...SOURCE, ...NUMBER, 'show', 'oh', 'thee', 'thigh', 'where', 'your'];
 const DRESS = [
   (w: string) => w,
   (w: string) => w.toUpperCase(),
@@ -180,6 +195,17 @@ const RECALLS = Array.from({ length: 60 }, (_, i) =>
 );
 const HISTORIES = [...MIXED, ...RECALLS];
 
+/** The first spoken word of every hearing. */
+const HEARING_STARTS = new Set(HEARING_PAIRS.map(([, hearing]) => hearing.split(' ')[0]));
+
+/** Whether a matched mark takes its time from a final word that begins a hearing. */
+const heardIn = (finals: readonly ModelWord[], view: ModelView) =>
+  view.marks.some(
+    (mark) =>
+      mark.status === 'matched' &&
+      finals.some((word) => word.start === mark.time?.start && HEARING_STARTS.has(word.text)),
+  );
+
 /** How a finished view was earned: its cue, whether a peek helped, and its grade. */
 const helpOf = (cue: Cue, view: ModelView) => {
   const clean =
@@ -203,7 +229,7 @@ describe('the matcher follows its model', () => {
       if (c.type !== 'recognition') return [];
       return c.finalWords.map((w) => w.text);
     });
-    for (const word of ['forty', '42', 'forever', 'evermore', 'show', 'oh', 'ever']) {
+    for (const word of ['forty', '42', 'forever', 'evermore', 'show', 'oh', 'ever', 'thigh']) {
       expect(spoken).toContain(word);
     }
     expect(HISTORIES.some((h) => /[A-Z;[\]¶]/u.test(h.verse))).toBe(true);
@@ -212,9 +238,10 @@ describe('the matcher follows its model', () => {
   it(`shows the model’s view after every command of ${HISTORIES.length} histories, reaching every help a clean recall's grade turns on`, () => {
     let peeks = 0;
     let numeric = 0;
+    let heard = 0;
     const helps = new Set<string>();
     for (const { verse, cue, commands } of HISTORIES) {
-      const model = new MatcherModel(verse, cue, PAIRS);
+      const model = new MatcherModel(verse, cue, PAIRS, HEARING_PAIRS);
       let state = createMatcher(verse, cue);
       expect(matcherView(state)).toEqual(model.view());
       for (const [i, command] of commands.entries()) {
@@ -228,6 +255,7 @@ describe('the matcher follows its model', () => {
         ).toEqual(expected);
         expect(matcherView(previous)).toEqual(before);
         if (expected.marks.some((m) => m.status === 'peek')) peeks += 1;
+        if (command.type === 'recognition' && heardIn(command.finalWords, expected)) heard += 1;
       }
       if (/42|forty/u.test(verse) && matcherView(state).marks.some((m) => m.status === 'matched'))
         numeric += 1;
@@ -235,6 +263,7 @@ describe('the matcher follows its model', () => {
     }
     expect(peeks).toBeGreaterThan(20);
     expect(numeric).toBeGreaterThan(5);
+    expect(heard).toBeGreaterThan(20);
     for (const help of [
       'none unpeeked 3',
       'initials unpeeked 2',
@@ -271,7 +300,7 @@ describe('the matcher follows its model', () => {
       ] satisfies Command[];
       const end = (commands: readonly Command[]) =>
         matcherView(commands.reduce(updateMatcher, createMatcher(verse)));
-      const model = new MatcherModel(verse, 'none', PAIRS);
+      const model = new MatcherModel(verse, 'none', PAIRS, HEARING_PAIRS);
       for (const command of whole) model.step(command);
       expect(end(whole), verse).toEqual(model.view());
       expect(end(split), `${verse} / cut ${cut}`).toEqual(model.view());

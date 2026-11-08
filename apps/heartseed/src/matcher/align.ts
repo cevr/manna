@@ -1,7 +1,11 @@
 import { Option } from 'effect';
 
+import { HEARD, hearingsOf, LONGEST_HEARING } from './hearings';
 import { isNumberWord, numberValue } from './numbers';
 import { LONGEST_SPELLING, SPELLING_MATCHES } from './words';
+
+/** The longest span in words that a spelling or a hearing can match. */
+const LONGEST_SPAN = Math.max(LONGEST_SPELLING, LONGEST_HEARING);
 
 /** A run of words, `start` inclusive and `end` exclusive. */
 type Span = Readonly<{ start: number; end: number }>;
@@ -29,17 +33,35 @@ const spellingTags = (words: readonly string[], wants: boolean): readonly string
   return [`~${key}`];
 };
 
-/** A span's tags: its key when it is one word, its spellings, and its numeric value. */
+/**
+ * The hearing tags of a span, one way only: a source word (`wants`) wants
+ * each of its hearings, and a spoken span offers its own key when it is a
+ * hearing. A spoken word never wants, so a spoken archaic word never
+ * matches its hearing in the verse, and a hearing meets only its own word.
+ */
+const hearingTags = (words: readonly string[], wants: boolean): readonly string[] => {
+  const key = words.join(' ');
+  if (wants) {
+    if (words.length !== 1) return [];
+    return hearingsOf(key).map((hearing) => `^${hearing}`);
+  }
+  if (HEARD.has(key)) return [`^${key}`];
+  return [];
+};
+
+/** A span's tags: its key when it is one word, its spellings, its hearings, and its numeric value. */
 const tagsOf = (words: readonly string[], wants: boolean): readonly string[] => [
   ...lexicalTags(words),
   ...spellingTags(words, wants),
+  ...hearingTags(words, wants),
   ...Option.toArray(Option.map(numberValue(words), (value) => `#${value}`)),
 ];
 
 /**
  * Every span of `keys` that can match, with its tags: a single word by its
- * key, a spelling by the keys it matches (`wants`) or its own (offers), and
- * a numeric phrase by its value.
+ * key, a spelling by the keys it matches (`wants`) or its own (offers), an
+ * archaic word by its hearings (`wants`) or a hearing by its own key
+ * (offers), and a numeric phrase by its value.
  */
 const spans = (keys: readonly string[], wants: boolean): readonly Tagged[] => {
   const found: Tagged[] = [];
@@ -50,7 +72,7 @@ const spans = (keys: readonly string[], wants: boolean): readonly Tagged[] => {
       numeric = numeric && isNumberWord(words.at(-1) ?? '');
       const tags = tagsOf(words, wants);
       if (tags.length > 0) found.push({ span: { start, end }, tags });
-      if (!numeric && end - start >= LONGEST_SPELLING) break;
+      if (!numeric && end - start >= LONGEST_SPAN) break;
     }
   }
   return found;

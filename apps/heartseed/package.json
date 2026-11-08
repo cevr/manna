@@ -13,6 +13,7 @@
     "models:copy": "bun infra/models/copy.ts",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/app.tsbuildinfo && tsc --noEmit -p tsconfig.test.json --incremental --tsBuildInfoFile node_modules/.cache/tsc/test.tsbuildinfo && tsc --noEmit -p tsconfig.infra.json --incremental --tsBuildInfoFile node_modules/.cache/tsc/infra.tsbuildinfo",
     "test:matcher": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/matcher.property.test.ts",
+    "test:hear": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/matcher",
     "test:voice": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/voice.property.test.ts ./src/voice",
     "test:dictation": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/dictation.property.test.ts ./src/dictation",
     "test:sayit": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' --path-ignore-patterns=src/sayit/cue.test.tsx --path-ignore-patterns=src/sayit/cue-say.test.tsx ./src/sayit.property.test.ts ./src/sayit",
