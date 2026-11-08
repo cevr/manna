@@ -104,8 +104,17 @@ const sourceOf = () => {
     VoiceSource,
     VoiceSource.of({
       voices: Effect.succeed(VOICES),
-      speak: (utterance, text, voice) =>
-        Effect.sync(() => void calls.push({ type: 'speak', utterance, text, voice })),
+      speak: (utterance, text, speaking) =>
+        Effect.sync(
+          () =>
+            void calls.push({
+              type: 'speak',
+              utterance,
+              text,
+              voice: speaking.system,
+              natural: speaking.natural,
+            }),
+        ),
       pause: Effect.sync(() => void calls.push({ type: 'pause' })),
       resume: Effect.sync(() => void calls.push({ type: 'resume' })),
       stop: Effect.sync(() => void calls.push({ type: 'stop' })),

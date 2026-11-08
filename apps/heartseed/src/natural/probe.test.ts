@@ -197,7 +197,7 @@ describe('the voice', () => {
           voices: Effect.succeed([]),
           speak: (utterance, text, named) =>
             Effect.sync(() => {
-              calls.push(`speak ${utterance} ${text} ${named}`);
+              calls.push(`speak ${utterance} ${text} ${named.system} ${named.natural}`);
             }),
           pause: Effect.sync(() => {
             calls.push('pause');
@@ -212,17 +212,17 @@ describe('the voice', () => {
       Effect.runSync(
         Effect.gen(function* () {
           const source = yield* VoiceSource;
-          yield* source.speak(1, 'bel', '');
-          yield* source.speak(2, 'cor', 'af_heart');
-          yield* source.speak(3, 'bel', 'am_michael');
+          yield* source.speak(1, 'bel', { system: '', natural: 'af_heart' });
+          yield* source.speak(2, 'cor', { system: 'com.apple.x', natural: 'af_heart' });
+          yield* source.speak(3, 'bel', { system: '', natural: 'am_michael' });
           yield* source.pause;
           yield* source.stop;
         }).pipe(Effect.provide(speakingIn(voice).pipe(Layer.provide(under)))),
       );
       expect(calls).toEqual([
-        `speak 1 bel ${voice}`,
-        `speak 2 cor ${voice}`,
-        `speak 3 bel ${voice}`,
+        `speak 1 bel  ${voice}`,
+        `speak 2 cor com.apple.x ${voice}`,
+        `speak 3 bel  ${voice}`,
         'pause',
         'stop',
       ]);

@@ -3,9 +3,9 @@
 /**
  * The natural voice source against its own model, over seeded histories of
  * one source: speaks of one-, two- and three-chunk texts and of a text no
- * plan takes, each in a voice drawn from `VOICES` or from names that miss
- * one (another voice, a case, a pack path, a trailing space, a name the
- * reader sees); stop, pause and resume; a load or a render answered ok, with
+ * plan takes, each naming a system voice and a natural voice drawn from
+ * `VOICES` or from names that miss one (another voice, a case, a pack path,
+ * a trailing space, a name the reader sees); stop, pause and resume; a load or a render answered ok, with
  * a failure, or malformed (an id with no frame, a frame list short or long,
  * NaN, a fraction, the audio a frame off); a refused play; the module's
  * events for the held utterance (and for one a failure let go of) and for
@@ -20,8 +20,9 @@
  * `planOf` (hslexicon's rule); the model computes each word's start sample
  * and a render's fit itself.
  *
- * It catches a source that loads a voice other than the speak's own (a
- * fixed one, the first it was given, a name with no `.bin`), reads a name
+ * It catches a source that loads a voice other than the speak's natural
+ * voice (a fixed one, the first it was given, the system voice, a name with
+ * no `.bin`), reads a name
  * not in `VOICES` (or reads it as a default), refuses one before its stop,
  * or loads a list other than `FILES`; and one that forwards another utterance's event, keeps a
  * reading past a terminal event or a failure, keeps a listener past its
@@ -38,7 +39,7 @@ import { Context, Deferred, Effect, Exit, Fiber, Layer, Option, Scope } from 'ef
 
 import { VoiceSource, type VoiceEvent } from '../voice';
 import type { Lexicon } from './lexicon';
-import { FILES, REVISION, VOICES } from './manifest';
+import { FILES, REVISION, VOICES, type NaturalVoice } from './manifest';
 import { NaturalModule, NaturalUnavailable, type Rendered, type WordStart } from './module';
 import { planOf, type Chunk } from './plan';
 import { naturalVoiceSource } from './voice';
@@ -46,6 +47,9 @@ import { naturalVoiceSource } from './voice';
 const SEED = 52_031;
 const HISTORIES = 300;
 const STEPS = 40;
+
+/** The system voice every speak also names: the natural source never reads it. */
+const SYSTEM_VOICE = 'com.apple.voice.premium.en-US.Zoe';
 
 /** A seeded generator in [0, 1) (mulberry32). */
 const random = (seed: number) => {
@@ -526,7 +530,8 @@ const makeHistory = (seed: number) => {
         : (NEAR_MISSES[Math.floor(((roll - 0.8) / 0.2) * NEAR_MISSES.length)] ?? '');
     trail.push(`#${utterance}/${chunks}/[${voice}]`);
     model.speak(utterance, text, voice);
-    fibers.set(utterance, yield* Effect.forkChild(live().speak(utterance, text, voice)));
+    const speaking = { system: SYSTEM_VOICE, natural: voice as NaturalVoice };
+    fibers.set(utterance, yield* Effect.forkChild(live().speak(utterance, text, speaking)));
   });
 
   const load = (ok: boolean) =>

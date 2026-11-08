@@ -53,9 +53,9 @@ export const voiceSource: Layer.Layer<VoiceSource> = Layer.succeed(
         ),
       ),
     ),
-    speak: (utterance, text, voice) =>
+    speak: (utterance, text, speaking) =>
       Effect.tryPromise({
-        try: () => Native.speak(utterance, text, voice),
+        try: () => Native.speak(utterance, text, speaking.system),
         catch: (cause) => VoiceUnavailable.make({ reason: String(cause) }),
       }),
     pause: quiet('pause', () => Native.pause()),

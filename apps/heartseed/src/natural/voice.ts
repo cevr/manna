@@ -1,9 +1,9 @@
 /**
  * The natural voice as a `VoiceSource`: it plans a verse with `planOf`,
- * loads the pinned model in the voice the speak names (one of `VOICES`; any
- * other name fails the speak once its stop is sent), then renders and plays
- * it chunk by chunk, one
- * render in flight, and forwards the module's events for the reading it
+ * loads the pinned model in the natural voice the speak names
+ * (`Speaking.natural`, one of `VOICES`; any other name fails the speak once
+ * its stop is sent), then renders and plays it chunk by chunk, one render in
+ * flight, and forwards the module's events for the reading it
  * holds. A speak succeeds once its first chunk plays, or at once when its
  * reading is let go (stopped, replaced, or ended by a forwarded terminal
  * event); a late answer for a reading let go is ignored. A first chunk that
@@ -130,8 +130,9 @@ export const naturalVoiceSource = (
 
       return VoiceSource.of({
         voices: Effect.succeed([]),
-        speak: (utterance, text, voice) =>
+        speak: (utterance, text, speaking) =>
           Effect.gen(function* () {
+            const voice = speaking.natural;
             yield* module.stop;
             letGo();
             if (!isNatural(voice)) {

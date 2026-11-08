@@ -8,7 +8,8 @@
  * store (both keys seeded, the old one never written), a speak that fails;
  * and an adversarial source that sends any event
  * of a past, the current or a future utterance at any step, ranges of every
- * form. After each step the view, the source's calls, the stored choice
+ * form. After each step the view, the source's calls (each speak naming the
+ * best system voice and the natural voice of the choice), the stored choice
  * and the one live subscription must agree with the model, and the
  * invariants hold on the service's own view. A held `speak` is tested
  * apart: a later command never waits on it, and its late failure ends only
@@ -195,9 +196,15 @@ const scripted = (voices: ReadonlyArray<ModelVoice>) => {
   const fail = { next: false };
   const source = VoiceSource.of({
     voices: Effect.succeed(voices),
-    speak: (utterance, text, voice) =>
+    speak: (utterance, text, speaking) =>
       Effect.suspend(() => {
-        calls.push({ type: 'speak', utterance, text, voice });
+        calls.push({
+          type: 'speak',
+          utterance,
+          text,
+          voice: speaking.system,
+          natural: speaking.natural,
+        });
         if (!fail.next) return Effect.void;
         fail.next = false;
         return Effect.fail(VoiceUnavailable.make({ reason: 'scripted' }));

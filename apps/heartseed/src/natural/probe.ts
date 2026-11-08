@@ -31,9 +31,9 @@ export const probeVoice = (asked: Option.Option<string>): NaturalVoice =>
   );
 
 /**
- * The source under it with every speak carrying `voice`, whatever voice the
- * speak names: the `Voice` service names `bestVoice` of the natural
- * source's `[]` voices, which is `''`, never a natural voice.
+ * The source under it with every speak's natural voice `voice`, whatever
+ * the speak names: the `Voice` service names the voice of its choice, and
+ * the probe reads in the voice its link names.
  */
 export const speakingIn = (voice: NaturalVoice): Layer.Layer<VoiceSource, never, VoiceSource> =>
   Layer.effect(
@@ -42,7 +42,8 @@ export const speakingIn = (voice: NaturalVoice): Layer.Layer<VoiceSource, never,
       const source = yield* VoiceSource;
       return VoiceSource.of({
         ...source,
-        speak: (utterance, text) => source.speak(utterance, text, voice),
+        speak: (utterance, text, speaking) =>
+          source.speak(utterance, text, { ...speaking, natural: voice }),
       });
     }),
   );

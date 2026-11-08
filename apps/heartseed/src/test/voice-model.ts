@@ -31,6 +31,7 @@ export type ModelCall =
       readonly utterance: number;
       readonly text: string;
       readonly voice: string;
+      readonly natural: string;
     }
   | { readonly type: 'pause' }
   | { readonly type: 'resume' }
@@ -161,6 +162,7 @@ export class VoiceModel {
       utterance: this.utterance,
       text: verse,
       voice: pickVoice(this.voices)?.id ?? '',
+      natural: this.view.choice === 'him' ? 'am_michael' : 'af_heart',
     });
     if (fails) this.finish('failed');
   }
@@ -179,6 +181,7 @@ export class VoiceModel {
       utterance: this.utterance,
       text: verse.slice(start),
       voice: pickVoice(this.voices)?.id ?? '',
+      natural: this.view.choice === 'him' ? 'am_michael' : 'af_heart',
     });
     if (fails) this.finish('failed');
   }

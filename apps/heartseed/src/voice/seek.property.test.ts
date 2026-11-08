@@ -74,9 +74,15 @@ const scripted = () => {
   const fail = { next: false };
   const source = VoiceSource.of({
     voices: Effect.succeed(VOICES),
-    speak: (utterance, text, voice) =>
+    speak: (utterance, text, speaking) =>
       Effect.suspend(() => {
-        calls.push({ type: 'speak', utterance, text, voice });
+        calls.push({
+          type: 'speak',
+          utterance,
+          text,
+          voice: speaking.system,
+          natural: speaking.natural,
+        });
         if (!fail.next) return Effect.void;
         fail.next = false;
         return Effect.fail(VoiceUnavailable.make({ reason: 'scripted' }));
@@ -296,6 +302,7 @@ describe('the seek against the model', () => {
             utterance: 2,
             text: 'bc de',
             voice: 'test.en-US',
+            natural: 'af_heart',
           });
           expect(yield* voice.view).toMatchObject({ lit: 1, current: null, status: 'reading' });
           send({ utterance: 2, kind: 'range', location: 3, length: 2 });

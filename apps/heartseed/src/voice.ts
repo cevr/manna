@@ -39,6 +39,7 @@ import {
   type VoiceEvent,
   type VoiceView,
 } from './voice/reading';
+import type { NaturalVoice } from './natural/manifest';
 
 export type { VoiceEvent, VoiceView } from './voice/reading';
 export { CHOICES, nextChoice, type Choice } from './voice/reading';
@@ -58,7 +59,23 @@ export class VoiceUnavailable extends Schema.TaggedError<VoiceUnavailable>()('Vo
   reason: Schema.String,
 }) {}
 
-/** The native speech synthesizer, as the service drives it. */
+/** The voices a speak names: the system voice's id (empty for the system's default) and the natural voice's pack. */
+export interface Speaking {
+  readonly system: string;
+  readonly natural: NaturalVoice;
+}
+
+/** The natural voice a choice reads with: Him is `am_michael`, every other choice `af_heart`. */
+export const naturalOf = (choice: Choice): NaturalVoice => {
+  if (choice === 'him') return 'am_michael';
+  return 'af_heart';
+};
+
+/**
+ * A source that reads a verse aloud and reports each spoken range: the
+ * system speech synthesizer, which reads `Speaking.system`, or the natural
+ * voice, which reads `Speaking.natural`.
+ */
 export class VoiceSource extends Context.Service<
   VoiceSource,
   {
@@ -66,7 +83,7 @@ export class VoiceSource extends Context.Service<
     readonly speak: (
       utterance: number,
       text: string,
-      voice: string,
+      speaking: Speaking,
     ) => Effect.Effect<void, VoiceUnavailable>;
     readonly pause: Effect.Effect<void>;
     readonly resume: Effect.Effect<void>;
@@ -207,7 +224,10 @@ export const layer: Layer.Layer<Voice, never, VoiceSource | KeyValueStore.KeyVal
       /** A speak whose failure ends its own reading, if that reading is still the current one. */
       const speak = (utterance: number, text: string) =>
         source
-          .speak(utterance, text, voice)
+          .speak(utterance, text, {
+            system: voice,
+            natural: naturalOf(MutableRef.get(state).view.choice),
+          })
           .pipe(
             Effect.catchTag('VoiceUnavailable', (error) =>
               Effect.logWarning('voice.speak.failed').pipe(
