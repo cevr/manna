@@ -18,11 +18,13 @@
  * heard, unheard, refused or cancelled, a recital with a Minutes tap, a
  * return or a sequence that is none while it listens or, its end held
  * back, while it finishes, Next, Again, a Minutes tap, the field with
- * states sent on it, and a wait. Leaning toward Listen, the voice's switch
- * is stored on or off or not at all, and the walk taps Listen where it
- * shows (the speak refused now and then) and Voice, and while a reading is
- * under way ends it (finished or interrupted), presses Say it, turns Voice
- * off, goes away, taps Minutes, opens the field or waits.
+ * states sent on it, and a wait. Leaning toward Listen, the voice's old
+ * switch is stored on or off or not at all (read as Her or Off), and the
+ * walk taps Listen where it shows (the speak refused now and then) and
+ * Voice, which cycles Off, Her, Him, and while a reading is under way ends
+ * it (finished or interrupted), presses Say it, taps Voice (Off stops the
+ * reading, Her to Him lets it go on), goes away, taps Minutes, opens the
+ * field or waits.
  *
  * The oracle is `src/test/wake-model.ts` (which states are returns, the run
  * after one) over `src/test/run-model.ts`'s run and
@@ -46,7 +48,7 @@ import { sourceWords } from '../matcher/words';
 import type { Recall } from '../sayit';
 import type { TextPiece } from '../session';
 import { MINUTES_KEY } from '../session/service';
-import { CHOICE_KEY, ENABLED_KEY } from '../voice';
+import { CHOICE_KEY, ENABLED_KEY, nextChoice, type Choice } from '../voice';
 import { below, keyOf, pickOf, PREFIX, random } from './garden-model';
 import {
   actionModel,
@@ -250,8 +252,13 @@ class Walk {
   /** The last commands, newest last, for the floors a pattern of them reaches. */
   trail: string[] = [];
   returnsThisLaunch = 0;
-  /** The voice's switch. */
-  voiceOn = true;
+  /** The voice's choice, Off, Her or Him. */
+  choice: Choice = 'her';
+
+  /** Whether the voice reads: any choice but Off. */
+  get voiceOn() {
+    return this.choice !== 'off';
+  }
   /** The text Listen's reading under way reads, none when none reads. */
   reading: string | null = null;
   /** Every text the voice was given to speak, in order, over the walk's launches of this device. */
@@ -262,6 +269,7 @@ class Walk {
 
   constructor(
     readonly next: () => number,
+    readonly aside: () => number,
     readonly steer: Steer,
     readonly device: Device,
     readonly pieces: readonly TextPiece[],
@@ -618,18 +626,37 @@ class Walk {
     this.trail.push('end');
   }
 
-  /** A tap on Voice: the switch turns, stored under the choice's key as Her or Off; turned off, it stops a reading under way. */
-  async voiceTap() {
-    await this.screen.tap('Voice', 'switch');
-    this.voiceOn = !this.voiceOn;
-    this.expected.set(CHOICE_KEY, this.voiceOn ? 'her' : 'off');
+  /** One tap on Voice: the next choice of the cycle Off, Her, Him, stored under the choice's key; landing on Off stops a reading under way, and Her to Him lets it go on. */
+  async cycleTap() {
+    await this.screen.tap('Voice', 'button');
+    const was = this.choice;
+    this.choice = nextChoice(was);
+    this.expected.set(CHOICE_KEY, this.choice);
     bump(this.coverage, 'voice:tap');
-    if (!this.voiceOn && this.reading !== null) {
-      this.reading = null;
-      bump(this.coverage, 'listen:voice-off-reading');
+    if (this.reading !== null) {
+      if (!this.voiceOn) this.reading = null;
+      if (!this.voiceOn) bump(this.coverage, 'listen:voice-off-reading');
+      if (was !== 'off' && this.voiceOn) bump(this.coverage, 'listen:her-him-reading');
     }
-    if (this.voiceOn && this.stateName() === 'fresh') bump(this.coverage, 'listen:voice-on-fresh');
-    await this.settle(`Voice ${this.voiceOn ? 'on' : 'off'}`);
+    if (was === 'off' && this.stateName() === 'fresh') bump(this.coverage, 'listen:voice-on-fresh');
+    await this.settle(`Voice ${this.choice}`);
+  }
+
+  /**
+   * Voice turned on or off by its taps: from Off one tap to Her, and now and
+   * then a second to Him; from Her or Him the taps through to Off (Her by
+   * Him, the reading under way going on through it). Whether a second tap
+   * goes on to Him is drawn from `aside`, so the walk's own draws run as
+   * they do with the voice turned on and off alone.
+   */
+  async voiceTap() {
+    if (this.choice === 'off') {
+      await this.cycleTap();
+      if (this.aside() < 0.25) await this.cycleTap();
+    } else {
+      do await this.cycleTap();
+      while (this.voiceOn);
+    }
     this.trail.push('voice');
   }
 
@@ -1001,8 +1028,13 @@ const recordsOf = (
   return entries;
 };
 
-/** One device: its pieces and disk, then 2-3 launches. */
-const deviceRun = async (next: () => number, steer: Steer, coverage: Coverage) => {
+/** One device: its pieces and disk, then 2-3 launches; `aside` draws how far a Voice tap goes. */
+const deviceRun = async (
+  next: () => number,
+  aside: () => number,
+  steer: Steer,
+  coverage: Coverage,
+) => {
   const crowded =
     steer !== 'quiet' && steer !== 'listen' && next() < (steer === 'clocks' ? 0.2 : 0.3);
   const pieces = crowded ? crowdedOf(next) : piecesOf(next);
@@ -1021,9 +1053,9 @@ const deviceRun = async (next: () => number, steer: Steer, coverage: Coverage) =
     steer === 'listen' ? pickOf(next, [undefined, 'true', 'false'] as const) : undefined;
   if (switched !== undefined) entries.push([ENABLED_KEY, switched]);
   const log: string[] = [];
-  const walk = new Walk(next, steer, deviceOf(entries), pieces, coverage, log);
+  const walk = new Walk(next, aside, steer, deviceOf(entries), pieces, coverage, log);
   walk.minutes = stored === undefined ? 5 : Number(stored);
-  walk.voiceOn = switched !== 'false';
+  walk.choice = switched === 'false' ? 'off' : 'her';
   walk.zone = zone;
   const before = hostZone();
   try {
@@ -1047,7 +1079,12 @@ const LEANS: Record<Steer, string> = {
   returns: 'returns at every run state',
   quiet: 'returns that change nothing',
   clocks: 'long aways across zones and mornings',
-  listen: 'Listen on the new piece, its readings and the Voice switch',
+  listen: 'Listen on the new piece, its readings and the Voice button',
+};
+
+/** The floors every walk case of a steer meets beside its own: leaning toward Listen, a Voice tap from Her to Him while a reading is under way, which goes on. */
+const STEER_FLOORS: Partial<Record<Steer, readonly string[]>> = {
+  listen: ['listen:her-him-reading'],
 };
 
 /** The floors of `floors` that `coverage` misses; `zones` asks for at least that many zones. */
@@ -1077,14 +1114,15 @@ export const wakeCase = (
     it(`shows, says and makes the plan again as the model does on ${many} devices (seed ${at})`, async () => {
       const next = random(at);
       const coverage: Coverage = {};
-      for (let d = 0; d < many; d += 1) await deviceRun(next, steer, coverage);
+      const aside = random(at + 1);
+      for (let d = 0; d < many; d += 1) await deviceRun(next, aside, steer, coverage);
       console.log(
         `wake ${steer} coverage ${Object.entries(coverage)
           .toSorted(([a], [b]) => a.localeCompare(b))
           .map(([key, value]) => `${key}=${value}`)
           .join(' ')}`,
       );
-      expect(missing(coverage, floors, zones)).toEqual([]);
+      expect(missing(coverage, [...floors, ...(STEER_FLOORS[steer] ?? [])], zones)).toEqual([]);
     });
   });
 };

@@ -555,7 +555,7 @@ const phaseFaults = (
     out.push(`frame: a stage node in ${heading}`);
   if (
     host.querySelector(
-      'input,textarea,select,a[href],[role="switch"],[role="checkbox"],[role="slider"]',
+      'input,textarea,select,a[href],[role="switch"],[role="checkbox"],[role="slider"],[aria-label="Voice"]',
     )
   )
     out.push(`frame: a control in ${heading}`);
@@ -564,9 +564,9 @@ const phaseFaults = (
   return out;
 };
 
-/** The session's nodes, which only Today shows: the Minutes group, the Voice switch and the counts line. */
+/** The session's nodes, which only Today shows: the Minutes group, the Voice button and the counts line. */
 const SESSION_NODES =
-  '[role="radiogroup"][aria-label="Minutes"],[role="radio"][aria-label$=" min"],[role="switch"][aria-label="Voice"],[data-testid="session"]';
+  '[role="radiogroup"][aria-label="Minutes"],[role="radio"][aria-label$=" min"],[aria-label="Voice"],[data-testid="session"]';
 
 /** A frame other than Today's that shows the session's nodes: the pending frame, the first minute's phases and Planted show none. */
 const sessionFaults = (host: Element, heading: string | undefined): string[] => {

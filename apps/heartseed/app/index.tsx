@@ -17,8 +17,8 @@ import {
   press,
   readingAloud,
   sayItView,
+  cycleVoice,
   sessionView,
-  toggleVoice,
   voiceView,
 } from '../src/app';
 import { ChooserScreen } from '../src/chooser/screen';
@@ -259,21 +259,19 @@ function FieldControl({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
-/** A pill of the header's second row: at least 44 pt tall, filled in ink when chosen or on. */
+/** A Minutes radio of the header's second row: at least 44 pt tall, filled in ink when chosen. */
 function Pill({
-  role,
   label,
   on,
   onPress,
 }: {
-  readonly role: 'radio' | 'switch';
   readonly label: string;
   readonly on: boolean;
   readonly onPress: () => void;
 }) {
   return (
     <Pressable
-      role={role}
+      role="radio"
       aria-label={label}
       aria-checked={on}
       onPress={onPress}
@@ -284,17 +282,48 @@ function Pill({
   );
 }
 
+/** Each of the voice's choices as the Voice pill says it, in its text and as its accessibility value; a choice with no word here fails the typecheck at the pill. */
+const CHOICE_WORDS = { off: 'Off', her: 'Her', him: 'Him' } as const;
+
+/**
+ * The voice's pill: a button labelled `Voice` whose value and text say the
+ * choice (`Voice: Her`), filled in ink unless the choice is Off; a tap takes
+ * the next choice of the cycle Off, Her, Him.
+ */
+function VoicePill({
+  choice,
+  onPress,
+}: {
+  readonly choice: keyof typeof CHOICE_WORDS;
+  readonly onPress: () => void;
+}) {
+  const on = choice !== 'off';
+  return (
+    <Pressable
+      role="button"
+      aria-label="Voice"
+      aria-valuetext={CHOICE_WORDS[choice]}
+      onPress={onPress}
+      style={({ pressed }) => [styles.pill, on && styles.chosen, pressed && look.pressed]}
+    >
+      <Text style={[styles.gradeName, on && styles.chosenName]}>
+        {`Voice: ${CHOICE_WORDS[choice]}`}
+      </Text>
+    </Pressable>
+  );
+}
+
 /**
  * The reader's choices, in the header's second row: the session's minutes,
  * shown once the stored choice is read so the first frame shows the value
- * read, and the voice's switch for new verses, shown once its switch is
- * read. Both stay while Say it listens, and in an unread garden.
+ * read, and the voice's pill for new verses, shown once its choice is read.
+ * Both stay while Say it listens, and in an unread garden.
  */
 function Choices() {
   const session = AsyncResult.value(useAtomValue(sessionView));
   const voice = AsyncResult.value(useAtomValue(voiceView));
   const onMinutes = useAtomSet(chooseMinutes);
-  const onVoice = useAtomSet(toggleVoice);
+  const onVoice = useAtomSet(cycleVoice);
   return (
     <View style={styles.choices}>
       {Option.match(session, {
@@ -304,7 +333,6 @@ function Choices() {
             {MINUTES.map((each) => (
               <Pill
                 key={each}
-                role="radio"
                 label={`${each} min`}
                 on={minutes === each}
                 onPress={() => onMinutes(each)}
@@ -315,9 +343,7 @@ function Choices() {
       })}
       {Option.match(voice, {
         onNone: () => false,
-        onSome: ({ enabled }) => (
-          <Pill role="switch" label="Voice" on={enabled} onPress={() => onVoice()} />
-        ),
+        onSome: ({ choice }) => <VoicePill choice={choice} onPress={() => onVoice()} />,
       })}
     </View>
   );

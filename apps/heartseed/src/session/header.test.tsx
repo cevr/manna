@@ -6,14 +6,15 @@
  * (`src/test/session-rig.tsx`), which holds every frame to the screen's
  * rules (the choices only under Today's heading, never in a pending or a
  * first-minute frame, outside the scroll view, the four radios in order,
- * one checked, one switch).
+ * one checked, one Voice button valued Off, Her or Him).
  *
  * The oracle is the rules written plainly here: the minutes read as the
  * stored text when it is one of `2` `5` `10` `20`, else 5, and 5 when the
  * read fails (S8); the voice's choice the choice key's text when it reads
  * as `off`, `her` or `him`, else Off only for the old switch's text `false`
  * and Her otherwise, a failed read of either key read as missing (hsspeaker
- * D2), the switch on unless the choice is Off; every tap shows at once, and its write lands
+ * D2), the button valued by the choice, and each tap the next choice of the
+ * cycle Off, Her, Him; every tap shows at once, and its write lands
  * unless the store refuses it, in which case the choice holds for the
  * launch and the next launch reads the disk; nothing else writes either
  * key, and a launch writes nothing (S15). The first frame that shows the
@@ -43,7 +44,7 @@ import {
   type Faults,
   type Launch,
 } from '../test/session-rig';
-import { CHOICE_KEY, ENABLED_KEY, type Choice } from '../voice';
+import { CHOICE_KEY, ENABLED_KEY, nextChoice, type Choice } from '../voice';
 import { initial } from '../voice/reading';
 import { MINUTES_KEY } from './service';
 
@@ -101,14 +102,8 @@ const voiceRule = (
   return 'her';
 };
 
-/** The choice after a tap on the two-state switch: Her from Off, else Off. */
-const toggled = (choice: Choice): Choice => {
-  if (choice === 'off') return 'her';
-  return 'off';
-};
-
-/** What the two-state switch shows of a choice. */
-const shownOf = (choice: Choice) => `Voice:${choice !== 'off'}`;
+/** What the Voice button says of a choice, as the rig reads it: its value, the choice's word. */
+const shownOf = (choice: Choice) => `Voice:${{ off: 'Off', her: 'Her', him: 'Him' }[choice]}`;
 
 const recallOf = (reference: string, startedAt: number): Recall => ({
   reference,
@@ -163,15 +158,15 @@ const cover = (name: string) => coverage.set(name, (coverage.get(name) ?? 0) + 1
 
 /** Holds the screen and the disk to the model once the view caught up with the last step. */
 const settle = async (app: Launch, device: Device, m: Model, step: string) => {
-  const want = { checked: [`${m.minutes} min`], switches: [shownOf(m.voice)] };
+  const want = { checked: [`${m.minutes} min`], voices: [shownOf(m.voice)] };
   await app.until(() => {
     const shown = app.choices();
     return (
-      JSON.stringify({ checked: shown.checked, switches: shown.switches }) === JSON.stringify(want)
+      JSON.stringify({ checked: shown.checked, voices: shown.voices }) === JSON.stringify(want)
     );
   });
   const shown = app.choices();
-  expect({ step, checked: shown.checked, switches: shown.switches }).toEqual({ step, ...want });
+  expect({ step, checked: shown.checked, voices: shown.voices }).toEqual({ step, ...want });
   expect({
     step,
     minutes: device.disk.get(MINUTES_KEY),
@@ -205,8 +200,9 @@ const tapMinutes = async (app: Launch, faults: Faults, m: Model, n: Minutes, ref
 const tapVoice = async (app: Launch, faults: Faults, m: Model, refused: boolean) => {
   if (refused) faults.refuse.add(CHOICE_KEY);
   await app.tap('Voice');
-  m.voice = toggled(m.voice);
+  m.voice = nextChoice(m.voice);
   m.shown.voice.push(shownOf(m.voice));
+  cover(`voice tap to ${m.voice}`);
   if (!refused) {
     m.disk.voice = m.voice;
     m.settingsWrites += 1;
@@ -259,7 +255,7 @@ const listingOf = (roll: number, history: History): Faults['listing'] => {
   return 'ok';
 };
 
-/** A tap on a Minutes radio or the switch, refused by the store one time in five. */
+/** A tap on a Minutes radio or the Voice button, refused by the store one time in five. */
 const tapCommand = async (run: Run, kind: 'minutes' | 'voice') => {
   const refused = run.next() < 0.2;
   if (kind === 'minutes')
@@ -480,6 +476,9 @@ describe('Today’s header holds the minutes and the voice', () => {
       'minutes tap': 6,
       'refused minutes tap': 1,
       'voice tap': 3,
+      'voice tap to off': 1,
+      'voice tap to her': 1,
+      'voice tap to him': 1,
       'refused voice tap': 1,
       'tap while listening': 2,
       recital: 2,

@@ -10,11 +10,13 @@
  * instant frozen where the test sets it (its sleeps are the host's).
  *
  * Every frame (each DOM mutation batch) is held to the screen's rules and
- * each fault kept: the Minutes group, its radios, the Voice switch and the
+ * each fault kept: the Minutes group, its radios, the Voice button and the
  * counts line show only under Today's heading, never in a pending or a
  * first-minute frame; on Today the group holds the four radios `2 min`,
  * `5 min`, `10 min` and `20 min` in that order, exactly one checked, beside
- * at most one `Voice` switch; neither lies inside a scroll view, and the
+ * at most one node labelled `Voice`, a button valued `Off`, `Her` or `Him`
+ * that reads `Voice: <value>` and is never checked or pressed; neither lies
+ * inside a scroll view, and the
  * scroll view holds no control but a missed word's mark to peek at (the
  * action button and the grades sit in the footer under it). At most one
  * counts line shows, at the top
@@ -46,7 +48,7 @@ export const MINUTE_NAMES = ['2 min', '5 min', '10 min', '20 min'] as const;
 
 /** The session's nodes, which only Today shows. */
 const SESSION_NODES =
-  '[role="radiogroup"][aria-label="Minutes"],[role="radio"][aria-label$=" min"],[role="switch"],[data-testid="session"]';
+  '[role="radiogroup"][aria-label="Minutes"],[role="radio"][aria-label$=" min"],[aria-label="Voice"],[data-testid="session"]';
 
 /** The device's disk, which outlives every launch, and each write it took, in order. */
 export interface Device {
@@ -198,20 +200,28 @@ const CONTROLS = '[role="button"],[role="radio"],[role="switch"],[role="checkbox
 /** Whether a control in Today's scroll view is the one kind allowed there: a missed word's mark, to peek at. */
 const recitals = (node: Element) => node.closest('[data-testid^="word-"]') !== null;
 
-/** The choices as a frame shows them: the radios' names in order and the one checked, and the switch's state; none for a control not shown. */
+/** What a node labelled `Voice` says of itself: its value, and anything that breaks the pill's form (another role, a checked or pressed state, a text other than `Voice: <value>`). */
+const voiceOf = (node: Element) => {
+  const value = node.getAttribute('aria-valuetext');
+  const breaks: string[] = [];
+  if (node.getAttribute('role') !== 'button') breaks.push(`role=${node.getAttribute('role')}`);
+  if (node.hasAttribute('aria-checked')) breaks.push('checked');
+  if (node.hasAttribute('aria-pressed')) breaks.push('pressed');
+  if (text(node) !== `Voice: ${value}`) breaks.push(`text=${text(node)}`);
+  return [`Voice:${value}`, ...breaks].join('!');
+};
+
+/** The choices as a frame shows them: the radios' names in order and the one checked, and each Voice node as `Voice:<value>` (with `!<fault>` for each break of the pill's form); none for a control not shown. */
 export const choicesOf = (host: Element) => {
   const groups = host.querySelectorAll('[role="radiogroup"][aria-label="Minutes"]');
   const radios = [...(groups[0]?.querySelectorAll('[role="radio"]') ?? [])];
-  const switches = [...host.querySelectorAll('[role="switch"]')];
   return {
     groups: groups.length,
     names: radios.map((radio) => radio.getAttribute('aria-label')),
     checked: radios
       .filter((radio) => radio.getAttribute('aria-checked') === 'true')
       .map((radio) => radio.getAttribute('aria-label')),
-    switches: switches.map(
-      (each) => `${each.getAttribute('aria-label')}:${each.getAttribute('aria-checked')}`,
-    ),
+    voices: [...host.querySelectorAll('[aria-label="Voice"]')].map(voiceOf),
   };
 };
 
@@ -262,9 +272,9 @@ const frameFaults = (host: Element): string[] => {
       out.push(`radios ${shown.names.join(',')}`);
     if (shown.checked.length !== 1) out.push(`${shown.checked.length} minutes checked`);
   }
-  if (shown.switches.length > 1) out.push(`${shown.switches.length} switches`);
-  if (shown.switches.some((each) => !/^Voice:(true|false)$/.test(each)))
-    out.push(`a switch ${shown.switches.join(',')}`);
+  if (shown.voices.length > 1) out.push(`${shown.voices.length} Voice nodes`);
+  if (shown.voices.some((each) => !/^Voice:(Off|Her|Him)$/.test(each)))
+    out.push(`a Voice node ${shown.voices.join(',')}`);
   out.push(...countsFaults(host));
   for (const node of host.querySelectorAll(CONTROLS)) {
     if (!scrolled(node) || recitals(node)) continue;
@@ -303,7 +313,7 @@ export const launch = async (
   document.body.append(host);
   const found: string[] = [];
   const frames = { pending: 0, today: 0, first: 0, listening: 0, shown: 0, counts: 0 };
-  /** Each change of the checked radio and of the switch over the launch's frames, in order: the first entry is what the first frame showing it showed. */
+  /** Each change of the checked radio and of the Voice pill over the launch's frames, in order: the first entry is what the first frame showing it showed. */
   const seen = { minutes: [] as string[], voice: [] as string[] };
   const note = (into: string[], value: string | undefined) => {
     if (value !== undefined && into.at(-1) !== value) into.push(value);
@@ -318,10 +328,10 @@ export const launch = async (
     else frames.first += 1;
     if (buttonNamed('Listening') !== undefined) frames.listening += 1;
     const choices = choicesOf(host);
-    if (choices.groups > 0 || choices.switches.length > 0) frames.shown += 1;
+    if (choices.groups > 0 || choices.voices.length > 0) frames.shown += 1;
     if (countsIn(host).length > 0) frames.counts += 1;
     if (choices.checked.length === 1) note(seen.minutes, choices.checked[0] ?? undefined);
-    note(seen.voice, choices.switches[0]);
+    note(seen.voice, choices.voices[0]);
     found.push(...frameFaults(host));
   };
   const watch = new MutationObserver(frame);

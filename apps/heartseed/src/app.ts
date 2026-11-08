@@ -43,7 +43,7 @@ import { layer as passagesLayer, Passages, type Range } from './passages';
 import type { Item, Minutes, TextPiece } from './session';
 import { layer as sessionLayer, Session } from './session/service';
 import { store } from './store';
-import { Voice, layer as voiceLayer, type VoiceSource, type VoiceView } from './voice';
+import { nextChoice, Voice, layer as voiceLayer, type VoiceSource, type VoiceView } from './voice';
 import { isActive } from './voice/reading';
 import { voiceSource } from './voice/source';
 
@@ -140,14 +140,11 @@ export const chooseMinutes = runtime.fn(
   { concurrent: true },
 );
 
-/** A tap on Today's Voice switch: the voice turns Off when it reads and Her when Off, stored by the voice's own write. */
-export const toggleVoice = runtime.fn(
+/** A tap on Today's Voice pill: the voice takes the next choice in the cycle Off, Her, Him, stored by the voice's own write; the view changes at the call, so two quick taps cycle twice. */
+export const cycleVoice = runtime.fn(
   () =>
     Effect.flatMap(Voice, (voice) =>
-      Effect.flatMap(voice.view, (view) => {
-        if (view.choice === 'off') return voice.choose('her');
-        return voice.choose('off');
-      }),
+      Effect.flatMap(voice.view, (view) => voice.choose(nextChoice(view.choice))),
     ),
   { concurrent: true },
 );
