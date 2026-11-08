@@ -46,7 +46,7 @@ import { sourceWords } from '../matcher/words';
 import type { Recall } from '../sayit';
 import type { TextPiece } from '../session';
 import { MINUTES_KEY } from '../session/service';
-import { ENABLED_KEY } from '../voice';
+import { CHOICE_KEY, ENABLED_KEY } from '../voice';
 import { below, keyOf, pickOf, PREFIX, random } from './garden-model';
 import {
   actionModel,
@@ -618,11 +618,11 @@ class Walk {
     this.trail.push('end');
   }
 
-  /** A tap on Voice: the switch turns, stored; turned off, it stops a reading under way. */
+  /** A tap on Voice: the switch turns, stored under the choice's key as Her or Off; turned off, it stops a reading under way. */
   async voiceTap() {
     await this.screen.tap('Voice', 'switch');
     this.voiceOn = !this.voiceOn;
-    this.expected.set(ENABLED_KEY, String(this.voiceOn));
+    this.expected.set(CHOICE_KEY, this.voiceOn ? 'her' : 'off');
     bump(this.coverage, 'voice:tap');
     if (!this.voiceOn && this.reading !== null) {
       this.reading = null;

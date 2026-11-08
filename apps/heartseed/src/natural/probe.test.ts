@@ -55,6 +55,7 @@ const random = (seed: number) => {
 
 const idle: VoiceView = {
   enabled: true,
+  choice: 'her',
   status: 'idle',
   verse: null,
   words: 0,
@@ -66,6 +67,7 @@ const idle: VoiceView = {
 /** The view while word `index` (or none) of `words` is lit. */
 const reading = (words: number, lit: number, index: number | null): VoiceView => ({
   enabled: true,
+  choice: 'her',
   status: 'reading',
   verse: 'bel cor dun',
   words,

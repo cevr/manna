@@ -9,7 +9,7 @@ import { describe, expect, it } from 'bun:test';
 import { Context, Deferred, Effect, Fiber, Layer, Stream } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
-import { layer, Voice, VoiceSource, type VoiceView } from '../voice';
+import { CHOICES, layer, Voice, VoiceSource, type VoiceView } from '../voice';
 
 const BURST = 10_000;
 
@@ -52,8 +52,9 @@ describe('the changes of a held consumer', () => {
             ),
           );
           yield* Deferred.await(entered);
-          for (let index = 0; index < BURST; index++) yield* voice.setEnabled(index % 2 === 0);
-          yield* voice.setEnabled(true);
+          for (let index = 0; index < BURST; index++)
+            yield* voice.choose(CHOICES[index % CHOICES.length] ?? 'off');
+          yield* voice.choose('him');
           yield* voice.read('Jesus wept.');
           const latest = yield* voice.view;
           expect(seen).toHaveLength(1);

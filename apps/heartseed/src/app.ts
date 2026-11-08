@@ -3,7 +3,7 @@
  * source this build hears, Say it over it, the soft tick, the garden, which
  * keeps each of Say it's kept recalls in the app's store on the device and
  * sounds the growth chime, and the voice over the source this platform
- * speaks with, whose off switch lives in the same store, the reader's
+ * speaks with, whose choice (Off, Her or Him) lives in the same store, the reader's
  * passages, kept there too, and the daily session over the garden and the
  * passages, whose minutes live there too: its plan is made at Today's first
  * show, each Minutes tap, each return to the foreground
@@ -80,7 +80,7 @@ const PIECES: readonly TextPiece[] = [
   },
 ];
 
-/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the reader's passages in the same `store`, the session over the garden, `pieces` (the app's own, the promise alone, when none are given) and then the passages' verses, its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), and the voice over `voice`, its switch in the same `store`. */
+/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the reader's passages in the same `store`, the session over the garden, `pieces` (the app's own, the promise alone, when none are given) and then the passages' verses, its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), and the voice over `voice`, its choice in the same `store`. */
 export const appLayer = (parts: {
   readonly source: Layer.Layer<DictationSource>;
   readonly haptics: Layer.Layer<Haptics>;
@@ -121,7 +121,7 @@ export const gardenView = runtime.atom(
   Stream.unwrap(Effect.map(Garden, (garden) => garden.changes)),
 );
 
-/** What the hear phase and Today show of the voice: its switch, and the reading under way or the last one's ending. */
+/** What the hear phase and Today show of the voice: its choice, and the reading under way or the last one's ending. */
 export const voiceView = runtime.atom(Stream.unwrap(Effect.map(Voice, (voice) => voice.changes)));
 
 /** What Today shows of the session: the minutes chosen, and the plan once it is made. */
@@ -140,11 +140,14 @@ export const chooseMinutes = runtime.fn(
   { concurrent: true },
 );
 
-/** A tap on Today's Voice switch: the voice turns off when on and on when off, stored by the voice's own write. */
+/** A tap on Today's Voice switch: the voice turns Off when it reads and Her when Off, stored by the voice's own write. */
 export const toggleVoice = runtime.fn(
   () =>
     Effect.flatMap(Voice, (voice) =>
-      Effect.flatMap(voice.view, (view) => voice.setEnabled(!view.enabled)),
+      Effect.flatMap(voice.view, (view) => {
+        if (view.choice === 'off') return voice.choose('her');
+        return voice.choose('off');
+      }),
     ),
   { concurrent: true },
 );

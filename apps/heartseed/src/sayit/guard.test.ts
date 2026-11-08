@@ -193,7 +193,7 @@ describe('Say it aloud', () => {
         names.filter((name) => /voice|Voice|listen|hush|read|Read/.test(name)),
       );
     expect(taken.toSorted()).toEqual(['listenTo', 'readingAloud', 'toggleVoice', 'voiceView']);
-    expect(code('app/index.tsx')).not.toMatch(/\.read\(|\blisten\b|\bhush\b|setEnabled/);
+    expect(code('app/index.tsx')).not.toMatch(/\.read\(|\blisten\b|\bhush\b|\.choose\(/);
     expect([...code('app/index.tsx').matchAll(/\blistenTo\b/g)].length).toBe(2);
     expect(code('app/index.tsx')).toContain('useAtomSet(listenTo)');
   });

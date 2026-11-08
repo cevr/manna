@@ -4,10 +4,11 @@
  * The Voice service against its own model (`test/voice-model.ts`, written
  * from the hsvoice spec) over seeded step histories: reads of verses with
  * astral letters, a combining mark, a no-break space and a wordless verse;
- * pause, resume, stop, the switch off and on, a restart over the same
- * store, a speak that fails; and an adversarial source that sends any event
+ * pause, resume, stop, a choose of Off, Her or Him, a restart over the same
+ * store (both keys seeded, the old one never written), a speak that fails;
+ * and an adversarial source that sends any event
  * of a past, the current or a future utterance at any step, ranges of every
- * form. After each step the view, the source's calls, the stored switch
+ * form. After each step the view, the source's calls, the stored choice
  * and the one live subscription must agree with the model, and the
  * invariants hold on the service's own view. A held `speak` is tested
  * apart: a later command never waits on it, and its late failure ends only
@@ -33,14 +34,17 @@ import { sourceWords } from './matcher/words';
 import {
   agreesWithMatcher,
   KEY,
+  OLD_KEY,
   pickVoice,
   spansOf,
   VoiceModel,
   type ModelCall,
+  type ModelChoice,
   type ModelVoice,
 } from './test/voice-model';
 import {
   bestVoice,
+  CHOICE_KEY,
   ENABLED_KEY,
   layer,
   Voice,
@@ -103,7 +107,8 @@ const pickOf = <A>(next: () => number, list: ReadonlyArray<A>): A => {
 
 type Step =
   | { readonly t: 'read'; readonly verse: string }
-  | { readonly t: 'pause' | 'resume' | 'stop' | 'off' | 'on' | 'restart' | 'fail' }
+  | { readonly t: 'pause' | 'resume' | 'stop' | 'restart' | 'fail' }
+  | { readonly t: 'choose'; readonly choice: ModelChoice }
   | {
       readonly t: 'event';
       readonly id: 'past' | 'current' | 'future';
@@ -149,14 +154,13 @@ const eventOf = (model: VoiceModel, step: Extract<Step, { t: 'event' }>): VoiceE
 const generate = (next: () => number): Step => {
   const r = next();
   if (r < 0.15) return { t: 'read', verse: pickOf(next, VERSES) };
+  if (r < 0.2) return { t: 'choose', choice: pickOf(next, ['off', 'her', 'him'] as const) };
   if (r < 0.42) {
     return {
       t: pickOf(next, [
         'pause',
         'resume',
         'stop',
-        'off',
-        'on',
         'restart',
         'fail',
         'pause',
@@ -245,9 +249,11 @@ const runHistory = (seed: number) =>
   Effect.gen(function* () {
     const next = random(seed);
     const voices = next() < 0.5 ? VOICES : VOICES.slice(0, Math.floor(next() * 3));
-    const stored = pickOf(next, [undefined, 'true', 'false', 'nonsense', '"false"']);
+    const stored = pickOf(next, [undefined, 'off', 'her', 'him', 'Her', 'true', ' off']);
+    const old = pickOf(next, [undefined, 'true', 'false', 'nonsense', '"false"']);
     const backing = new Map<string, string>();
     if (stored !== undefined) backing.set(KEY, stored);
+    if (old !== undefined) backing.set(OLD_KEY, old);
     const model = new VoiceModel(new Map(backing), voices);
     const fake = scripted(voices);
     const deps = Layer.mergeAll(
@@ -281,10 +287,9 @@ const runHistory = (seed: number) =>
           model.stop();
           yield* live.voice.stop;
           break;
-        case 'off':
-        case 'on':
-          model.setEnabled(step.t === 'on');
-          yield* live.voice.setEnabled(step.t === 'on');
+        case 'choose':
+          model.choose(step.choice);
+          yield* live.voice.choose(step.choice);
           break;
         case 'restart':
           model.restart();
@@ -307,7 +312,8 @@ const runHistory = (seed: number) =>
       const where = `seed ${seed}: ${trail.join(' ')}`;
       expect(after, where).toEqual(model.view);
       expect(fake.calls, where).toEqual(model.calls);
-      expect(backing.get(ENABLED_KEY), where).toBe(model.store.get(KEY));
+      expect(backing.get(CHOICE_KEY), where).toBe(model.store.get(KEY));
+      expect(backing.get(ENABLED_KEY), where).toBe(old);
       expect(fake.listeners.size, where).toBe(1);
       invariants(before, after, step);
       before = after;

@@ -16,6 +16,15 @@ export type Status = 'idle' | 'reading' | 'paused';
 
 export type Ending = 'finished' | 'stopped' | 'off' | 'interrupted' | 'failed';
 
+/** The voice's setting, in the order a tap on Voice cycles it. */
+export const CHOICES = ['off', 'her', 'him'] as const;
+
+export type Choice = (typeof CHOICES)[number];
+
+/** The choice after `choice` in `CHOICES`, wrapping from the last to the first. */
+export const nextChoice = (choice: Choice): Choice =>
+  CHOICES[(CHOICES.indexOf(choice) + 1) % CHOICES.length] ?? 'off';
+
 export interface VoiceEvent {
   readonly utterance: number;
   readonly kind: 'start' | 'range' | 'finish' | 'cancel' | 'interrupt';
@@ -24,6 +33,8 @@ export interface VoiceEvent {
 }
 
 export interface VoiceView {
+  readonly choice: Choice;
+  /** Whether the voice reads at all: `choice !== 'off'`. */
   readonly enabled: boolean;
   readonly status: Status;
   readonly verse: OrNull<string>;
@@ -44,7 +55,7 @@ export type Input =
   | { readonly _tag: 'Pause' }
   | { readonly _tag: 'Resume' }
   | { readonly _tag: 'Stop' }
-  | { readonly _tag: 'SetEnabled'; readonly on: boolean }
+  | { readonly _tag: 'Choose'; readonly choice: Choice }
   | { readonly _tag: 'Failed'; readonly utterance: number }
   | { readonly _tag: 'Event'; readonly event: VoiceEvent };
 
@@ -73,9 +84,10 @@ export const wordSpans = (verse: string): ReadonlyArray<Span> =>
     .filter((run) => WORD.test(run[0]))
     .map((run) => ({ start: run.index, end: run.index + run[0].length }));
 
-export const initial = (enabled: boolean): Reading => ({
+export const initial = (choice: Choice): Reading => ({
   view: {
-    enabled,
+    choice,
+    enabled: choice !== 'off',
     status: 'idle',
     verse: ABSENT,
     words: 0,
@@ -177,9 +189,10 @@ const onRead = (reading: Reading, verse: string): Step => {
   };
 };
 
-const onSetEnabled = (reading: Reading, on: boolean): Step => {
-  const next = { ...reading.view, enabled: on };
-  if (on || !isActive(reading.view)) return to(reading, next, Option.none());
+/** A choice changes the view only, but Off ends a reading under way and asks to stop it. */
+const onChoose = (reading: Reading, choice: Choice): Step => {
+  const next = { ...reading.view, choice, enabled: choice !== 'off' };
+  if (choice !== 'off' || !isActive(reading.view)) return to(reading, next, Option.none());
   return to(reading, ended(next, 'off'), Option.some({ _tag: 'Stop' }));
 };
 
@@ -201,7 +214,7 @@ export const step = (reading: Reading, input: Input): Step => {
         if (!isActive(view)) return stay(reading);
         return to(reading, ended(view, 'stopped'), Option.some({ _tag: 'Stop' }));
       },
-      SetEnabled: ({ on }) => onSetEnabled(reading, on),
+      Choose: ({ choice }) => onChoose(reading, choice),
       Failed: ({ utterance }) => {
         if (!isActive(view) || utterance !== reading.lastId) return stay(reading);
         return to(reading, ended(view, 'failed'), Option.none());

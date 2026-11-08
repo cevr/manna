@@ -4,7 +4,7 @@
  * A model of the Voice service written from the hsvoice spec's rules
  * ("VoiceView and its rules"), not from `src/voice.ts`: the property test
  * runs the same steps against both and compares the view, the source calls
- * and the stored switch after each. The words are counted from the
+ * and the stored choice after each. The words are counted from the
  * spans found by walking the verse one UTF-16 unit at a time, held to the
  * matcher's own `sourceWords` count, so the model shares no word code with
  * the service.
@@ -12,7 +12,10 @@
 
 import { sourceWords } from '../matcher/words';
 
+export type ModelChoice = 'off' | 'her' | 'him';
+
 export interface ModelView {
+  choice: ModelChoice;
   enabled: boolean;
   status: 'idle' | 'reading' | 'paused';
   verse: string | null;
@@ -42,7 +45,23 @@ export interface ModelVoice {
   readonly personal: boolean;
 }
 
-export const KEY = 'heartseed/voice/enabled';
+/** The old two-state switch's key, read when the choice's key holds no choice, never written. */
+export const OLD_KEY = 'heartseed/voice/enabled';
+
+/** The choice's key, the only one a choose writes. */
+export const KEY = 'heartseed/voice/choice';
+
+/** The spec's read rule (hsspeaker D2): the choice key's text when it is exactly `off`, `her` or `him`; else Off only for the old key's text `false`, and Her otherwise. A key the store fails to read is `undefined` here. */
+export const choiceOf = (
+  choiceText: string | undefined,
+  oldText: string | undefined,
+): ModelChoice => {
+  if (choiceText === 'off') return 'off';
+  if (choiceText === 'her') return 'her';
+  if (choiceText === 'him') return 'him';
+  if (oldText === 'false') return 'off';
+  return 'her';
+};
 
 const SPACE = /\s/u;
 
@@ -90,11 +109,20 @@ export class VoiceModel {
     readonly store: Map<string, string>,
     readonly voices: ReadonlyArray<ModelVoice>,
   ) {
-    this.view = VoiceModel.fresh(store.get(KEY) !== 'false');
+    this.view = VoiceModel.fresh(choiceOf(store.get(KEY), store.get(OLD_KEY)));
   }
 
-  static fresh(enabled: boolean): ModelView {
-    return { enabled, status: 'idle', verse: null, words: 0, lit: 0, current: null, ended: null };
+  static fresh(choice: ModelChoice): ModelView {
+    return {
+      choice,
+      enabled: choice !== 'off',
+      status: 'idle',
+      verse: null,
+      words: 0,
+      lit: 0,
+      current: null,
+      ended: null,
+    };
   }
 
   get active(): boolean {
@@ -155,11 +183,12 @@ export class VoiceModel {
     }
   }
 
-  setEnabled(on: boolean) {
-    this.store.set(KEY, String(on));
+  /** A choose: stored under the choice's key; Off ends a reading under way and stops it, Her and Him leave it going. */
+  choose(choice: ModelChoice) {
+    this.store.set(KEY, choice);
     const wasActive = this.active;
-    this.view = { ...this.view, enabled: on };
-    if (!on && wasActive) {
+    this.view = { ...this.view, choice, enabled: choice !== 'off' };
+    if (choice === 'off' && wasActive) {
       this.finish('off');
       this.calls.push({ type: 'stop' });
     }
@@ -168,7 +197,7 @@ export class VoiceModel {
   restart() {
     if (this.active) this.calls.push({ type: 'stop' });
     this.utterance = 0;
-    this.view = VoiceModel.fresh(this.store.get(KEY) !== 'false');
+    this.view = VoiceModel.fresh(choiceOf(this.store.get(KEY), this.store.get(OLD_KEY)));
   }
 
   event(utterance: number, kind: string, location: number, length: number) {

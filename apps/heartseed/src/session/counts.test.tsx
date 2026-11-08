@@ -57,7 +57,7 @@ import {
   type Launch,
 } from '../test/session-rig';
 import { hostZone, offsetIn, restore, travel, ZONES } from '../test/zone';
-import { ENABLED_KEY } from '../voice';
+import { CHOICE_KEY } from '../voice';
 import { MINUTES_KEY } from './service';
 
 const PIECE = {
@@ -161,7 +161,7 @@ const wantOf = (run: Run) => {
   return [countsModel(run.m.plan, recallsNow(run.device))];
 };
 
-const SETTINGS = [MINUTES_KEY, ENABLED_KEY];
+const SETTINGS = [MINUTES_KEY, CHOICE_KEY];
 
 /** Holds the screen and the disk to the model once the view caught up with the last step, and, after a step that must change nothing (`still`), a moment after it too. */
 const settle = async (run: Run, still = false) => {
@@ -307,7 +307,7 @@ const fieldCommand = async (run: Run) => {
 };
 
 const voiceCommand = async (run: Run) => {
-  if (run.next() < 0.2) run.faults.refuse.add(ENABLED_KEY);
+  if (run.next() < 0.2) run.faults.refuse.add(CHOICE_KEY);
   await run.app.tap('Voice');
   cover('voice tap');
 };

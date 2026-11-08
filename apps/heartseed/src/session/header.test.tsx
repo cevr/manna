@@ -10,8 +10,10 @@
  *
  * The oracle is the rules written plainly here: the minutes read as the
  * stored text when it is one of `2` `5` `10` `20`, else 5, and 5 when the
- * read fails (S8); the switch on unless the stored text is `false`, and on
- * when its read fails (S9); every tap shows at once, and its write lands
+ * read fails (S8); the voice's choice the choice key's text when it reads
+ * as `off`, `her` or `him`, else Off only for the old switch's text `false`
+ * and Her otherwise, a failed read of either key read as missing (hsspeaker
+ * D2), the switch on unless the choice is Off; every tap shows at once, and its write lands
  * unless the store refuses it, in which case the choice holds for the
  * launch and the next launch reads the disk; nothing else writes either
  * key, and a launch writes nothing (S15). The first frame that shows the
@@ -41,7 +43,7 @@ import {
   type Faults,
   type Launch,
 } from '../test/session-rig';
-import { ENABLED_KEY } from '../voice';
+import { CHOICE_KEY, ENABLED_KEY, type Choice } from '../voice';
 import { initial } from '../voice/reading';
 import { MINUTES_KEY } from './service';
 
@@ -64,11 +66,21 @@ const STORED: readonly [string | undefined, ...(string | undefined)[]] = [
   'ten',
   '20 ',
 ];
-const VOICES: readonly [string | undefined, ...(string | undefined)[]] = [
+/** The texts a disk may hold under the old switch's key. */
+const OLD_VOICES: readonly [string | undefined, ...(string | undefined)[]] = [
   undefined,
   'true',
   'false',
   'off',
+];
+/** The texts a disk may hold under the choice's key. */
+const VOICES: readonly [string | undefined, ...(string | undefined)[]] = [
+  undefined,
+  undefined,
+  'off',
+  'her',
+  'him',
+  'Her',
 ];
 const MINUTES: readonly [Minutes, ...Minutes[]] = [2, 5, 10, 20];
 
@@ -76,7 +88,27 @@ const minutesRule = (text: string | undefined, failed: boolean): Minutes => {
   if (failed) return 5;
   return MINUTES.find((each) => String(each) === text) ?? 5;
 };
-const voiceRule = (text: string | undefined, failed: boolean) => failed || text !== 'false';
+
+/** The choice's text when the read succeeded and it is one of the three, else Off only for an old switch read as `false`, else Her. */
+const voiceRule = (
+  text: string | undefined,
+  failed: boolean,
+  old: string | undefined,
+  oldFailed: boolean,
+): Choice => {
+  if (!failed && (text === 'off' || text === 'her' || text === 'him')) return text;
+  if (!oldFailed && old === 'false') return 'off';
+  return 'her';
+};
+
+/** The choice after a tap on the two-state switch: Her from Off, else Off. */
+const toggled = (choice: Choice): Choice => {
+  if (choice === 'off') return 'her';
+  return 'off';
+};
+
+/** What the two-state switch shows of a choice. */
+const shownOf = (choice: Choice) => `Voice:${choice !== 'off'}`;
 
 const recallOf = (reference: string, startedAt: number): Recall => ({
   reference,
@@ -93,10 +125,16 @@ const recallOf = (reference: string, startedAt: number): Recall => ({
 /** What a reader planted before: the passage, another verse only, or nothing (the first minute opens). */
 type History = 'passage' | 'other' | 'none';
 
-const deviceFor = (history: History, minutes: string | undefined, voice: string | undefined) => {
+const deviceFor = (
+  history: History,
+  minutes: string | undefined,
+  voice: string | undefined,
+  old: string | undefined,
+) => {
   const entries: (readonly [string, string])[] = [];
   if (minutes !== undefined) entries.push([MINUTES_KEY, minutes]);
-  if (voice !== undefined) entries.push([ENABLED_KEY, voice]);
+  if (voice !== undefined) entries.push([CHOICE_KEY, voice]);
+  if (old !== undefined) entries.push([ENABLED_KEY, old]);
   const planted = { passage: passage.reference, other: 'Made 1:1', none: null }[history];
   if (planted !== null) {
     const recall = recallOf(planted, AT - 3 * DAY);
@@ -105,24 +143,27 @@ const deviceFor = (history: History, minutes: string | undefined, voice: string 
   return deviceOf(entries);
 };
 
-const SETTINGS = [MINUTES_KEY, ENABLED_KEY];
+const SETTINGS = [MINUTES_KEY, CHOICE_KEY, ENABLED_KEY];
 
 /** The model of one device: what its disk holds under each key, and what the launch under way shows. */
 interface Model {
-  disk: { minutes: string | undefined; voice: string | undefined };
+  disk: { minutes: string | undefined; voice: string | undefined; old: string | undefined };
   minutes: Minutes;
-  voice: boolean;
+  voice: Choice;
   /** Each value the launch showed, in order. */
   shown: { minutes: string[]; voice: string[] };
   settingsWrites: number;
 }
+
+/** A second generator for the old switch's draws, so the commands' generator runs as it did before the old key was drawn. */
+const aside = random(0x01d5);
 
 const coverage = new Map<string, number>();
 const cover = (name: string) => coverage.set(name, (coverage.get(name) ?? 0) + 1);
 
 /** Holds the screen and the disk to the model once the view caught up with the last step. */
 const settle = async (app: Launch, device: Device, m: Model, step: string) => {
-  const want = { checked: [`${m.minutes} min`], switches: [`Voice:${m.voice}`] };
+  const want = { checked: [`${m.minutes} min`], switches: [shownOf(m.voice)] };
   await app.until(() => {
     const shown = app.choices();
     return (
@@ -134,7 +175,8 @@ const settle = async (app: Launch, device: Device, m: Model, step: string) => {
   expect({
     step,
     minutes: device.disk.get(MINUTES_KEY),
-    voice: device.disk.get(ENABLED_KEY),
+    voice: device.disk.get(CHOICE_KEY),
+    old: device.disk.get(ENABLED_KEY),
     writes: device.writes.filter((key) => SETTINGS.includes(key)).length,
     others: device.writes.filter(
       (key) => !SETTINGS.includes(key) && !key.startsWith('heartseed/recall/'),
@@ -143,6 +185,7 @@ const settle = async (app: Launch, device: Device, m: Model, step: string) => {
     step,
     minutes: m.disk.minutes,
     voice: m.disk.voice,
+    old: m.disk.old,
     writes: m.settingsWrites,
     others: [],
   });
@@ -160,12 +203,12 @@ const tapMinutes = async (app: Launch, faults: Faults, m: Model, n: Minutes, ref
 };
 
 const tapVoice = async (app: Launch, faults: Faults, m: Model, refused: boolean) => {
-  if (refused) faults.refuse.add(ENABLED_KEY);
+  if (refused) faults.refuse.add(CHOICE_KEY);
   await app.tap('Voice');
-  m.voice = !m.voice;
-  m.shown.voice.push(`Voice:${m.voice}`);
+  m.voice = toggled(m.voice);
+  m.shown.voice.push(shownOf(m.voice));
   if (!refused) {
-    m.disk.voice = String(m.voice);
+    m.disk.voice = m.voice;
     m.settingsWrites += 1;
   }
 };
@@ -333,10 +376,11 @@ const faultsFor = (next: () => number, history: History) => {
   const listing = listingOf(next(), history);
   const failGet = new Set<string>();
   if (next() < 0.2) failGet.add(MINUTES_KEY);
-  if (next() < 0.12) failGet.add(ENABLED_KEY);
+  if (next() < 0.12) failGet.add(CHOICE_KEY);
+  if (aside() < 0.12) failGet.add(ENABLED_KEY);
   if (listing === 'unread') cover('unread');
   if (failGet.has(MINUTES_KEY)) cover('failed minutes read');
-  if (failGet.has(ENABLED_KEY)) cover('failed voice read');
+  if (failGet.has(CHOICE_KEY) || failGet.has(ENABLED_KEY)) cover('failed voice read');
   return faultsOf({ listing, failGet });
 };
 
@@ -347,8 +391,13 @@ const launchOnce = async (run: Omit<Run, 'app'>, l: number) => {
   if (faults.listing === 'held') await holdThenRelease(app, run.step);
   if (l > 0 && m.settingsWrites > 0) cover('relaunch after a landed tap');
   m.minutes = minutesRule(m.disk.minutes, faults.failGet.has(MINUTES_KEY));
-  m.voice = voiceRule(m.disk.voice, faults.failGet.has(ENABLED_KEY));
-  m.shown = { minutes: [`${m.minutes} min`], voice: [`Voice:${m.voice}`] };
+  m.voice = voiceRule(
+    m.disk.voice,
+    faults.failGet.has(CHOICE_KEY),
+    m.disk.old,
+    faults.failGet.has(ENABLED_KEY),
+  );
+  m.shown = { minutes: [`${m.minutes} min`], voice: [shownOf(m.voice)] };
   expect(await app.until(() => app.headings().includes('Today') && app.has('Voice'))).toBe(true);
   await settle(app, device, m, `${run.step} at launch`);
   const commands = 2 + below(run.next, 3);
@@ -366,12 +415,13 @@ const deviceRun = async (next: () => number, d: number) => {
   const history = historyFor(next, d);
   const stored = storedFor(next, d);
   const voiced = pickOf(next, VOICES);
+  const old = pickOf(aside, OLD_VOICES);
   cover(`stored:${storedKind(stored)}`);
-  const device = deviceFor(history, stored, voiced);
+  const device = deviceFor(history, stored, voiced, old);
   const m: Model = {
-    disk: { minutes: stored, voice: voiced },
+    disk: { minutes: stored, voice: voiced, old },
     minutes: 5,
-    voice: true,
+    voice: 'her',
     shown: { minutes: [], voice: [] },
     settingsWrites: 0,
   };
@@ -395,10 +445,10 @@ describe('Today’s header holds the minutes and the voice', () => {
         AsyncResult.success({ minutes: 10, plan: Option.some({ items: [] }) }),
         { skipInitialRun: true },
       ],
-      [voiceView, AsyncResult.success(initial(false).view), { skipInitialRun: true }],
+      [voiceView, AsyncResult.success(initial('off').view), { skipInitialRun: true }],
     ] as const;
     const app = await launch(
-      deviceFor('passage', '10', 'false'),
+      deviceFor('passage', '10', 'off', 'false'),
       faultsOf({ listing: 'held' }),
       { now: AT },
       seeded,
