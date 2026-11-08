@@ -351,8 +351,8 @@ the containers in-process, and MP3 decodes through mpg123 (WASM), gapless, so
 a take measures what it plays (`duration`). `join` writes a film: its H.264
 segments' packets copied in order (never re-encoded; segments encoded unlike
 the first fail), and its track encoded to AAC beside them through
-`@mediabunny/aac-encoder` (FFmpeg's encoder built to WASM), one frame of
-priming early so the MP4's edit list starts it on the first frame, into a
+`@mediabunny/aac-encoder` (FFmpeg's encoder built to WASM), which stamps its
+first packet a frame of priming before zero for the MP4's edit list to skip, into a
 partial beside the film renamed over it once whole. Every byte
 moves through the FileSystem service but the joined film's, which mediabunny's
 `FilePathTarget` writes by position on Bun's file system (Effect's file handle

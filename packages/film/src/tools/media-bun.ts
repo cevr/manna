@@ -83,9 +83,8 @@ const AAC_BITRATE = 192_000;
 /** An AAC packet carries this many frames. */
 const AAC_FRAME = 1024;
 /**
- * The AAC encoder delays its output by one frame of priming yet stamps its
- * first packet 0, so the track would play 23 ms late. Its samples go in that
- * much early instead; the MP4's edit list skips the priming.
+ * The AAC encoder's one frame of priming, which it stamps before zero itself;
+ * the MP4's edit list skips it. It counts the track's packets.
  */
 const AAC_PRIMING = 1024;
 
@@ -364,8 +363,8 @@ const TAKE = 'take.flac';
 
 /**
  * `pcm` through the AAC encoder into a muxer that keeps nothing, its packets
- * kept as they come out. The samples go in `AAC_PRIMING` frames early, so the
- * first packet is stamped before zero and the MP4's edit list skips it.
+ * kept as they come out. The samples go in from zero; the encoder stamps its
+ * first packet a frame of priming before zero, and the MP4's edit list skips it.
  */
 const encodeTrack = (pcm: Pcm) =>
   Effect.gen(function* () {
@@ -387,7 +386,7 @@ const encodeTrack = (pcm: Pcm) =>
       yield* attempt('encode', TRACK, () => output.start());
       for (let written = 0; written < pcm.frames; written += WRITE_BLOCK) {
         const frames = Math.min(WRITE_BLOCK, pcm.frames - written);
-        const at = (written - AAC_PRIMING) / pcm.rate;
+        const at = written / pcm.rate;
         yield* Effect.acquireUseRelease(
           attemptSync('encode', TRACK, () => block(pcm, written, frames, at)),
           (sample) => attempt('encode', TRACK, () => source.add(sample)),

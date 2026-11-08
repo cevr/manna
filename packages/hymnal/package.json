@@ -44,6 +44,6 @@
     "@manna/core": "workspace:*",
     "@manna/film": "workspace:*",
     "effect-bun-test": "catalog:",
-    "node-av": "6.1.1"
+    "node-av": "6.2.0"
   }
 }

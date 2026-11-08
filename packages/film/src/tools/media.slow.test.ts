@@ -90,8 +90,8 @@ const rms = (pcm: Pcm) => {
 
 /**
  * `pcm` as an M4A: AAC in an MP4, as a phone's recorder saves it. Its
- * samples go in a frame of priming early, so the encoder's first packet sits
- * before zero, where the edit list skips it (as `Media.encodeAac` does).
+ * samples go in from zero; the encoder stamps its first packet a frame of
+ * priming before zero, where the edit list skips it (as `Media.encodeAac` does).
  */
 const m4a = (pcm: Pcm) =>
   Effect.gen(function* () {
@@ -107,7 +107,7 @@ const m4a = (pcm: Pcm) =>
       format: 'f32-planar',
       numberOfChannels: pcm.channels.length,
       sampleRate: pcm.rate,
-      timestamp: -1024 / pcm.rate,
+      timestamp: 0,
     });
     yield* Effect.promise(() => source.add(sample));
     sample.close();
@@ -227,6 +227,49 @@ const lumas = Effect.fn('test.lumas')(function* (file: string, { width, height }
 const psnr = (a: Uint8Array, b: Uint8Array) => {
   const squared = a.reduce((sum, v, i) => sum + (v - (b[i] ?? 0)) ** 2, 0) / a.length;
   return 10 * Math.log10((255 * 255) / Math.max(squared, 1e-9));
+};
+
+/** A sound of digital silence with one click: its rate, its channels, its length and the click's sample. */
+interface Click {
+  readonly rate: number;
+  readonly channels: number;
+  readonly frames: number;
+  readonly at: number;
+}
+
+/** `count` clicks drawn from `seed`, the rates taken in turn: mono or stereo, 0.3 s to 2.5 s long, the click anywhere before the last frame. */
+const drawnClicks = (count: number, seed: number) => {
+  let state = seed;
+  const next = () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 2 ** 32;
+  };
+  return Arr.makeBy(count, (k): Click => {
+    const rate = [44100, 48000][k % 2] ?? 44100;
+    const frames = Math.round(rate * (0.3 + next() * 2.2));
+    const channels = 1 + Math.floor(next() * 2);
+    return { rate, channels, frames, at: Math.floor(next() * (frames - 1024)) };
+  });
+};
+
+/**
+ * The sounds a film's track must encode, join and read back: the click on the
+ * first sample, after 12000 and 30000 samples of silence (a click after a long
+ * silence never finishes in `@mediabunny/aac-encoder` 1.65.x), on the last
+ * whole frame, and eight drawn from a fixed seed.
+ */
+const clicks: ReadonlyArray<Click> = [
+  { rate: 44100, channels: 2, frames: 44100, at: 0 },
+  { rate: 48000, channels: 1, frames: 48000, at: 12000 },
+  { rate: 48000, channels: 1, frames: 48000, at: 30000 },
+  { rate: 44100, channels: 1, frames: 44100, at: 44100 - 1024 },
+  ...drawnClicks(8, 20261108),
+];
+
+/** The sample `samples` is loudest at. */
+const loudest = (samples: Float32Array) => {
+  const peak = samples.reduce((top, s) => Math.max(top, Math.abs(s)), 0);
+  return samples.findIndex((s) => Math.abs(s) === peak);
 };
 
 /** A directory that is gone once the scope closes. */
@@ -406,6 +449,40 @@ describe('Media', () => {
         }),
       ),
   );
+
+  for (const click of clicks)
+    it.effect.layer(MediaOnDisk)(
+      `a sound with one click after any run of silence encodes, joins and reads back with its click on its sample: ${click.rate} Hz, ${click.channels} channel(s), ${click.frames} frames, the click at ${click.at}`,
+      () =>
+        Effect.scoped(
+          Effect.gen(function* () {
+            const media = yield* Media;
+            const plane = new Float32Array(click.frames);
+            plane[click.at] = 0.9;
+            const channels = Arr.makeBy(click.channels, () => plane.slice());
+            const track = yield* media.encodeAac({
+              rate: click.rate,
+              frames: click.frames,
+              channels,
+            });
+            const out = `${yield* tempDir}/film.mp4`;
+            yield* media.join({
+              out,
+              segments: [
+                { file: fixture('segment-a.mp4'), at: 0 },
+                { file: fixture('segment-b.mp4'), at: 0.5 },
+              ],
+              frames: 30,
+              audio: Option.some(track),
+            });
+            const [, audio] = yield* readBack(out);
+            expect(audio?.times[0]).toBeCloseTo(-1024 / click.rate, 6);
+            const back = yield* media.load(out, click.rate);
+            const at = loudest(back.channels[0] ?? new Float32Array());
+            expect(Math.abs(at - click.at)).toBeLessThanOrEqual(3);
+          }),
+        ),
+    );
 
   it.effect.layer(MediaOnDisk)(
     "a phone copy re-muxes with a new track: x264's reordered frames and the track reach the file side by side",

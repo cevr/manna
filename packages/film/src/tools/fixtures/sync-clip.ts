@@ -87,7 +87,7 @@ export const syncClip = (clip: SyncClip): Effect.Effect<Uint8Array> =>
     output.addAudioTrack(audio);
     yield* Effect.promise(() => output.start());
     const seconds = frameTime(clip, clip.frames) + 0.2;
-    const samples = sound(clip, seconds + 1024 / RATE);
+    const samples = sound(clip, seconds);
     yield* Effect.acquireUseRelease(
       Effect.sync(
         () =>
@@ -96,7 +96,7 @@ export const syncClip = (clip: SyncClip): Effect.Effect<Uint8Array> =>
             format: 'f32-planar',
             numberOfChannels: 1,
             sampleRate: RATE,
-            timestamp: -1024 / RATE,
+            timestamp: 0,
           }),
       ),
       (sample) => Effect.promise(() => audio.add(sample)),
