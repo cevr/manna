@@ -119,9 +119,23 @@ one runtime (`src/app.ts`, below).
   other is the whole tail. So every snapshot the matcher gets is one it
   accepts. A listen hints the verse's distinct word keys (`hintsOf`, at
   most 100), so the recognizer expects its archaic words.
+- The matcher hears an archaic word in the modern words that sound the
+  same, the recognizer's usual stumble (`thee` written `the`, `thy`
+  written `thigh`, `wherefore` written `where for`): the sounds-alike
+  table, `data/kjv-hearings.json`, read by `src/matcher/hearings.ts`. A
+  hearing counts only for its own word and only one way: `thee` said
+  where the verse has `the` is a miss, and a word's modern form (`you` for
+  `thee`) or a pronoun never counts. `data/hearings.py` writes the table
+  from Misaki 0.9.4's dictionary (`us_gold.json`) and the KJV's words, run
+  from the repo root with
+  `uv run --no-project --python 3.12 apps/heartseed/data/hearings.py`; its
+  extras (`thai`, `yeah`) are the hearings the dictionary misses, each with
+  its why.
 - `src/dictation/script.ts` is the scripted word source: `recite` writes a
   recital as a recognizer reports it, and `scriptedSource` plays it on
-  Effect's clock with no microphone, for tests.
+  Effect's clock with no microphone, for tests. With `say: 'hearing'` (or
+  `'modern'`) it says each archaic word as its first hearing (or modern
+  form) in the word's own slot.
 - `src/dictation/source.ios.ts` is the source on iOS: the Swift package
   `native/dictation`, which One's prebuild makes the local pod
   `OneSwiftPackages/dictation`. `microphoneSource` listens; `replaySource`
@@ -152,7 +166,8 @@ one runtime (`src/app.ts`, below).
 - `app/probe/dictation.tsx` is a development probe for the live check
   (`.claude/skills/verify-heartseed/features/dictation.md`): it recites
   Today's passage, less its 11th word, through the module's replay and
-  shows counts only. A release build renders nothing.
+  shows counts only; the link's `script=hear` (or `script=modern`) says its
+  archaic words as heard (or modernized). A release build renders nothing.
 
 ## Say it
 
@@ -1269,6 +1284,8 @@ GETs (Class B) when the edge does not serve them.
   `virtual:heartseed-licence`, a happy-dom document); `test:infra` and `test:mirror` run with none.
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
+  - `test:hear`: `src/matcher` (the sounds-alike table's bounds, and each
+    hearing in its word's place and nowhere else, against the model).
   - `test:voice`: `src/voice.property.test.ts` (the voice against its model,
     the choice over both keys) and `src/voice` (the read rule of the choice
     over every text of both keys and failed reads, `choose` in command
