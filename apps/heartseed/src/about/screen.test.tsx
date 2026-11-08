@@ -38,6 +38,10 @@ import { device } from '../test/one';
 import { KEY, storedText } from '../test/passages-model';
 import { CREDITS } from './screen';
 
+/** The credits as the owner wrote them, held here so that a changed or dropped sentence on the screen fails. */
+const PARAGRAPH =
+  'Natural voice: Kokoro-82M by hexgrad (Apache-2.0), with its voices af_heart and am_michael. Core ML conversion by laishere (kokoro-coreml, Apache-2.0), packaged by FluidInference (FluidAudio, Apache-2.0). Pronunciations from Misaki by hexgrad (Apache-2.0).';
+
 const LICENCE = readFileSync(
   new URL('../../native/natural/kokoro/LICENSE', import.meta.url),
   'utf8',
@@ -105,7 +109,8 @@ describe('About', () => {
     const licences = [...rig.host.querySelectorAll('[data-testid="about-licence"]')];
     expect({
       headings: headings(rig),
-      credits: credits.map((node) => node.textContent === CREDITS),
+      credits: credits.map((node) => node.textContent),
+      exported: CREDITS,
       licence: licences.map((node) => node.textContent === LICENCE),
       length: licences.map((node) => (node.textContent ?? '').length),
       back: named(rig, 'Your field').map((node) => ({
@@ -117,7 +122,8 @@ describe('About', () => {
       faint: faint(rig.host),
     }).toEqual({
       headings: ['About'],
-      credits: [true],
+      credits: [PARAGRAPH],
+      exported: PARAGRAPH,
       licence: [true],
       length: [11_357],
       back: [{ role: 'button', scrolled: false, words: '‹ Your field' }],
