@@ -59,13 +59,13 @@ const decode = (file: string) =>
 const opaque: ReadonlyArray<readonly [string, string, string]> = [
   ['assets/icon/ios-light.png', icon.light.ground, icon.light.mark],
   ['assets/icon/ios-dark.png', icon.dark.ground, icon.dark.mark],
-  ['assets/icon/ios-tinted.png', '#000000', '#ffffff'],
+  ['assets/icon/ios-tinted.png', icon.tinted.ground, icon.tinted.mark],
 ];
 
 /** Each groundless layer's file, mark, and whether it must sit inside Android's safe circle. */
 const layers: ReadonlyArray<readonly [string, string, boolean]> = [
   ['assets/icon/android-foreground.png', icon.light.mark, true],
-  ['assets/icon/android-monochrome.png', '#ffffff', true],
+  ['assets/icon/android-monochrome.png', icon.tinted.mark, true],
   ['assets/icon/splash.png', theme.light.ink, false],
   ['assets/icon/splash-dark.png', theme.dark.ink, false],
 ];
@@ -138,7 +138,7 @@ describe('the app icon', () => {
       }).toEqual({
         icon: ['./assets/icon/ios-light.png', icon.light.ground],
         dark: ['./assets/icon/ios-dark.png', icon.dark.ground],
-        tinted: ['./assets/icon/ios-tinted.png', '#000000'],
+        tinted: ['./assets/icon/ios-tinted.png', icon.tinted.ground],
         foreground: ['./assets/icon/android-foreground.png', icon.light.ground],
         monochrome: './assets/icon/android-monochrome.png',
         splash: ['./assets/icon/splash.png', theme.light.ground, 224],

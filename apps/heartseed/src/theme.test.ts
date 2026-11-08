@@ -63,6 +63,10 @@ describe('every text reads at WCAG AA', () => {
       expect(contrast(theme[scheme].ink, theme[scheme].ground)).toBeGreaterThanOrEqual(AA);
     });
   }
+
+  test("tinted: the icon's mark on its ground is at least 4.5:1", () => {
+    expect(contrast(icon.tinted.mark, icon.tinted.ground)).toBeGreaterThanOrEqual(AA);
+  });
 });
 
 test('the heard word is the ground moved toward the glow, 22 % by day and 25 % by night', () => {
@@ -121,6 +125,7 @@ test('the roles are brand C, Two leaves', () => {
   expect(icon).toEqual({
     light: { ground: '#dfe8cf', mark: '#2c4542' },
     dark: { ground: '#142420', mark: '#dfe8cf' },
+    tinted: { ground: '#000000', mark: '#ffffff' },
   });
   expect(face).toBe('ui-rounded');
 });

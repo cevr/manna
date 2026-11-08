@@ -22,7 +22,7 @@ export const app = {
     source: './assets/icon/ios-light.png',
     backgroundColor: icon.light.ground,
     dark: { source: './assets/icon/ios-dark.png', backgroundColor: icon.dark.ground },
-    tinted: { source: './assets/icon/ios-tinted.png', backgroundColor: '#000000' },
+    tinted: { source: './assets/icon/ios-tinted.png', backgroundColor: icon.tinted.ground },
   },
   splash: {
     source: './assets/icon/splash.png',

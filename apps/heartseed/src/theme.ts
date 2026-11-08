@@ -99,20 +99,24 @@ export interface IconColours {
   readonly mark: string;
 }
 
-/** The icon's colours in each scheme. */
+/** The icon's colours in each scheme, and in the tinted style iOS draws in one hue. */
 export interface IconPalette {
   readonly light: IconColours;
   readonly dark: IconColours;
+  readonly tinted: IconColours;
 }
 
 /**
  * The app icon's colours, apart from the app's: by day the garden ink on a
  * paler sage than the page, by night a pale sage (not the dark ink) on the
- * night garden, as the brand's prototype draws them.
+ * night garden, as the brand's prototype draws them. The tinted icon is a
+ * white mark on black, the grey scale iOS reads and tints in the reader's
+ * hue; Android's monochrome layer takes the same white mark.
  */
 export const icon: IconPalette = {
   light: { ground: '#dfe8cf', mark: '#2c4542' },
   dark: { ground: '#142420', mark: '#dfe8cf' },
+  tinted: { ground: '#000000', mark: '#ffffff' },
 };
 
 /** The face of every text, the verse's among them: SF Rounded on iOS, which React Native maps from `ui-rounded`. */

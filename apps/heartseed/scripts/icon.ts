@@ -41,9 +41,6 @@ export interface Icon {
   readonly ground: Option.Option<string>;
 }
 
-const white = '#ffffff';
-const black = '#000000';
-
 const on = (ground: string) => Option.some(ground);
 const clear = Option.none<string>();
 
@@ -66,8 +63,8 @@ export const icons: ReadonlyArray<Icon> = [
     file: 'assets/icon/ios-tinted.png',
     size: 1024,
     layout: 'full',
-    mark: white,
-    ground: on(black),
+    mark: iconColours.tinted.mark,
+    ground: on(iconColours.tinted.ground),
   },
   {
     file: 'assets/icon/android-foreground.png',
@@ -80,7 +77,7 @@ export const icons: ReadonlyArray<Icon> = [
     file: 'assets/icon/android-monochrome.png',
     size: 1024,
     layout: 'adaptive',
-    mark: white,
+    mark: iconColours.tinted.mark,
     ground: clear,
   },
   {
