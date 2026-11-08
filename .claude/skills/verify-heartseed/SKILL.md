@@ -223,6 +223,10 @@ Heartseed has no journey files yet. The features:
   `John 3:16, seed`. Run it from `first.md`'s Today; its second session
   comes after the next 04:00 (`passage.md`'s `passage-new` with John 3:16
   in place of John 15:1-5).
+- [features/app-icon.md](features/app-icon.md): the app icon (light, dark,
+  tinted), its name and both launch screens, from one mark in brand C's
+  colours, read from the build's asset catalog and Info.plist, never from
+  a screenshot.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.

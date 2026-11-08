@@ -1272,6 +1272,38 @@ pass 10 GB, the mirror adds at most one billed GB-month, $0.015 a month. A
 copy is 39 PUTs and 2 listings (Class A), once; an install is at most 39
 GETs (Class B) when the edge does not serve them.
 
+## App icon and launch screen
+
+Heartseed's mark is brand C, "Two leaves" (the owner's pick, 2026-11-08):
+a seedling whose two first leaves open into a heart. Its one master is
+`assets/icon/heartseed.svg`, a single path in a tight `viewBox`; every icon
+and both launch screens' artwork are drawn from it by `bun run icon`
+(`scripts/icon.ts`), and nothing is drawn by hand.
+
+- **Colours.** Each comes from `src/theme.ts`, which the script and the
+  native manifest (`vite/app.ts`) both read. The iOS icon is the ink
+  `#2c4542` on a pale sage `#dfe8cf` in light, the pale sage on the night
+  garden `#142420` in dark, and a white mark on black for the tinted style
+  (`ios-light.png`, `ios-dark.png`, `ios-tinted.png`, opaque, the mark's
+  box at 0.72 of the side). Android's adaptive icon is the ink's mark
+  (`android-foreground.png`) on the pale sage, with a white monochrome
+  layer (`android-monochrome.png`), both inside the launcher's safe circle.
+  The launch screen is the mark in the app's ink on the app's ground,
+  224 pt wide: `splash.png` in `#2c4542` on `#f1f0e6`, `splash-dark.png`
+  in `#e6eedb` on `#142420`. The icon's ground is not the app's ground, on
+  purpose, and the dark icon's pale sage is not the dark ink.
+- **Appearance.** The manifest sets no `userInterfaceStyle`, so the app,
+  its icon and its launch screen follow the system's appearance.
+- **Changing it.** Edit the master or a colour in `src/theme.ts`, run
+  `bun run icon`, commit the PNGs, then `bun run prebuild:native` (or
+  `sim install --prebuild`) so a build copies them in. `test:icon` holds
+  every committed PNG byte for byte to what `bun run icon` draws now, so a
+  master or colour edited without a redraw is red; the PNGs are drawn by
+  the declared `sharp`, whose version a redraw must keep.
+- **Checking a build.** `.claude/skills/verify-heartseed/features/app-icon.md`
+  reads the build's asset catalog and Info.plist; the icon on a home screen
+  is the owner's look on his phone.
+
 ## Tests
 
 - The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as parts, each a
