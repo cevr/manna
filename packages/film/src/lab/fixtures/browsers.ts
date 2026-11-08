@@ -11,7 +11,7 @@ import {
   Scope,
   Semaphore,
 } from 'effect';
-import { openView, thrownBy } from '../../tools/chrome.ts';
+import { type View as ChromeView, openView, thrownBy } from '../../tools/chrome.ts';
 import { BrowserFailed } from '../../tools/errors.ts';
 import { HOST_REACH, failureOf, mapOf, toldOf } from './host-reach.ts';
 import { type Ask, fromIdle, lease } from './lease.ts';
@@ -102,7 +102,7 @@ interface Lease {
  * if one is, and whether it is retired (`View.retire`): closed when given back.
  */
 interface Slot {
-  readonly view: Bun.WebView;
+  readonly view: ChromeView;
   readonly lent: View;
   readonly held: { lease: Option.Option<Lease>; retired: boolean };
 }
@@ -130,8 +130,8 @@ export const chromeCommandLine: Effect.Effect<string> = Effect.gen(function* () 
 /**
  * Calls that run one at a time, in order, however their callers fare: run
  * apart from the caller, so a caller interrupted leaves its call out and the
- * next starts once it ends (a view takes one protocol call and one script at
- * a time; Bun refuses a second while one is out).
+ * next starts once it ends (a view's protocol calls, and its scripts, each
+ * run in the order they were asked for, one at a time).
  */
 const inTurn = () => {
   const one = Semaphore.makeUnsafe(1);

@@ -1,3 +1,5 @@
+import * as BunServices from '@effect/platform-bun/BunServices';
+import { openView } from '@manna/film/tools';
 import { Effect, Schema, type Scope } from 'effect';
 import { Base64 } from 'effect/encoding';
 import type { RenderRequest } from './page.ts';
@@ -27,15 +29,22 @@ export type ViewName = keyof typeof YAWS;
 export const HEAD_PX = 189;
 
 /**
- * Chrome's flags: WebGL through SwiftShader on the CPU, since Bun spawns
- * Chrome with the GPU off (the film's GPU launcher is private to
- * `@manna/film`), and a software rasterizer gives the same bytes every run.
+ * Chrome's flags: WebGL through SwiftShader on the CPU, since `openView`
+ * launches Chrome with the GPU off (only a Mac's caller that asks for the
+ * GPU gets it), and a software rasterizer gives the same bytes every run.
  */
 const SOFTWARE_GL = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--mute-audio'];
 
 const PAGE = `${import.meta.dir}/page.ts`;
 
 const failed = (cause: unknown) => Toon3dFailed.make({ reason: String(cause) });
+
+/** A tab of this process's Chrome (`openView`) with the software-GL flags, `width` × `height`, closed with the scope. */
+const softwareView = (width: number, height: number) =>
+  openView(SOFTWARE_GL, { width, height }).pipe(
+    Effect.mapError(failed),
+    Effect.provide(BunServices.layer),
+  );
 
 const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
@@ -81,17 +90,7 @@ export const toon3dPage = (
 ): Effect.Effect<RenderPng, Toon3dFailed, Scope.Scope> =>
   Effect.gen(function* () {
     const script = yield* pageScript;
-    const view = yield* Effect.acquireRelease(
-      Effect.try({
-        try: () =>
-          new Bun.WebView({
-            ...size,
-            backend: { type: 'chrome', url: false, argv: [...SOFTWARE_GL] },
-          }),
-        catch: failed,
-      }),
-      (v) => Effect.sync(() => v.close()),
-    );
+    const view = yield* softwareView(size.width, size.height);
     yield* Effect.tryPromise({ try: () => view.navigate('about:blank'), catch: failed });
     const loaded = yield* Effect.tryPromise({
       try: () => view.evaluate<string>(loadScript(script)),

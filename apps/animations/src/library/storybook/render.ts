@@ -1,4 +1,5 @@
-import { encodePng } from '@manna/film/tools';
+import * as BunServices from '@effect/platform-bun/BunServices';
+import { encodePng, openView } from '@manna/film/tools';
 import { Effect, FileSystem, Option, Path, Schema, type Scope } from 'effect';
 import { Base64 } from 'effect/encoding';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
@@ -26,14 +27,22 @@ export const outOf = (shot: Shot): string => `${APP}/out/storybook/${shot.id}`;
 const PAPER = '#fdf7e5';
 
 /**
- * Chrome's flags: rendering on the CPU (Bun spawns Chrome with the GPU off),
- * so a software rasterizer gives the same bytes every launch.
+ * Chrome's flags: rendering on the CPU (`openView` launches Chrome with the
+ * GPU off unless a Mac's caller asks for it), so a software rasterizer gives
+ * the same bytes every launch.
  */
 const SOFTWARE_GL = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--mute-audio'];
 
 const PAGE = `${import.meta.dir}/page.ts`;
 
 const failed = (cause: unknown) => StorybookFailed.make({ reason: String(cause) });
+
+/** A tab of this process's Chrome (`openView`) with the software-GL flags, `width` × `height`, closed with the scope. */
+const softwareView = (width: number, height: number) =>
+  openView(SOFTWARE_GL, { width, height }).pipe(
+    Effect.mapError(failed),
+    Effect.provide(BunServices.layer),
+  );
 
 const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
@@ -146,18 +155,7 @@ export const storybookPage = (
 ): Effect.Effect<RenderPng, StorybookFailed, Scope.Scope> =>
   Effect.gen(function* () {
     const script = yield* pageScript;
-    const view = yield* Effect.acquireRelease(
-      Effect.try({
-        try: () =>
-          new Bun.WebView({
-            width: scene.width,
-            height: scene.height,
-            backend: { type: 'chrome', url: false, argv: [...SOFTWARE_GL] },
-          }),
-        catch: failed,
-      }),
-      (v) => Effect.sync(() => v.close()),
-    );
+    const view = yield* softwareView(scene.width, scene.height);
     yield* Effect.tryPromise({ try: () => view.navigate('about:blank'), catch: failed });
     const loaded = yield* Effect.tryPromise({
       try: () => view.evaluate<string>(`(${bootPage.toString()})(${jsonOf(script)})`),

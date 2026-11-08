@@ -4802,7 +4802,17 @@ The form of an entry, each field on its own line:
 - **Source:** film-split/round-1-review.md M1
 - **Wrong:** `chrome.test.ts` in test:tools read every source under `src` and `e2e` for a Chrome spawned past `openView`, so a spawn added to an engine or lab file reran another part, and test:tools passed from its cache.
 - **Cause:** The same whole-package sweep inside one cached part. The check is now a rule of the film plugin, which oxlint runs over every file on every gate.
-- **Guard:** lint:film/webview-through-chrome, proof `packages/film/lint/fixtures/webview-through-chrome.ts` `RED film/webview-through-chrome`
+- **Guard:** lint:film/chrome-through-open-view, proof `packages/film/lint/fixtures/chrome-through-open-view.ts` `RED film/chrome-through-open-view`
+
+### every-chrome-through-open-view-apps-too
+
+- **Date:** 2026-11-08
+- **Kind:** owner
+- **Said:** "ask manna, whatever uses Bun WebView most, to just switch to Puppeteer, because it's ridiculous how fast that eats our space."
+- **Source:** `tmp/orchestrate/p5/puppeteer/spec.md` Goal (relayed from the dotfiles session)
+- **Wrong:** The storybook and toon3d renders (`apps/animations/src/library/storybook/render.ts`, `toon3d/render.ts`) built `new Bun.WebView` themselves, past `openView`, with no profile folder. Bun then made a `$TMPDIR/.<hex>-00000000.bun-chrome` profile per process and never removed it: 142 of them held about 19 GB, with 5.3 GiB left on the disk.
+- **Cause:** The rule that keeps every Chrome to `openView` covered `packages/film` alone, so the apps' renders went around the launcher that removes its profile. Chrome is now launched by `openView` alone, on puppeteer-core, and the rule covers `apps/animations` and bans importing puppeteer-core anywhere else.
+- **Guard:** lint:film/chrome-through-open-view, proof `packages/film/lint/fixtures/chrome-through-open-view.ts` `RED film/chrome-through-open-view`
 
 ### hymnal-follow-lights-every-line-with-note-times
 

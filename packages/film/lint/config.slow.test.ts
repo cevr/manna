@@ -597,6 +597,41 @@ describe('the lint config', () => {
   );
 
   it.effect.layer(BunServices.layer)(
+    "holds every Chrome to openView in the film's and the films' sources, the launcher alone exempt",
+    () =>
+      Effect.gen(function* () {
+        const config = yield* readJson('.oxlintrc.json', Config);
+        const matches = (globs: ReadonlyArray<string>, file: string) =>
+          globs.some((glob) => new Glob(glob).match(file));
+        const effective = (file: string) =>
+          Option.getOrElse(
+            Option.firstSomeOf(
+              config.overrides
+                .filter((o) => matches(o.files, file) && !matches(o.excludeFiles ?? [], file))
+                .map((o) => ruleIn(o, 'film/chrome-through-open-view'))
+                .toReversed(),
+            ),
+            () => 'off',
+          );
+        const held = [
+          'packages/film/src/tools/browser.ts',
+          'packages/film/src/lab/fixtures/browsers.ts',
+          'packages/film/src/painting/fixtures/page.tsx',
+          'packages/film/e2e/tools/renderer-chrome.dom.test.ts',
+          'packages/film/test/perf/a.ts',
+          'apps/animations/src/library/storybook/render.ts',
+          'apps/animations/src/library/toon3d/render.ts',
+          'apps/animations/cli.ts',
+          'apps/animations/src/films/a/b.tsx',
+        ];
+        expect(held.map((file) => [file, effective(file)])).toEqual(
+          held.map((file) => [file, 'error']),
+        );
+        expect(effective('packages/film/src/tools/chrome.ts')).toBe('off');
+      }),
+  );
+
+  it.effect.layer(BunServices.layer)(
     "refuses @effect/platform-bun's index in every film source and passes a module by its own path",
     () =>
       Effect.gen(function* () {

@@ -11,7 +11,7 @@ import {
   type Scope,
   Semaphore,
 } from 'effect';
-import { openView, thrownBy } from './chrome.ts';
+import { type View, openView, thrownBy } from './chrome.ts';
 import { GPU_FLAG } from './chrome-gpu.ts';
 import {
   type CallAnswers,
@@ -205,9 +205,9 @@ const SETTLE = Duration.seconds(1);
 
 /**
  * Chrome's flags for a render. Films render on the owner's Macs only
- * (owner, 2026-10-25), so Chrome draws on the Mac's GPU: the GPU process runs (`GPU_FLAG`: `tools/chrome.ts` spawns
- * Chrome through the GPU launcher, `tools/chrome-gpu.ts`, which drops the
- * `--disable-gpu` Bun spawns every Chrome with), WebGL runs on Metal
+ * (owner, 2026-10-25), so Chrome draws on the Mac's GPU: the GPU process runs (`GPU_FLAG`: on macOS
+ * `tools/chrome.ts` launches this Chrome without the `--disable-gpu` every
+ * other Chrome gets, `chromeFlags`), WebGL runs on Metal
  * (`--use-angle=metal`) and the 2D canvas is accelerated. It holds the
  * hardware H.264 encoder too. Measured on RBF's `cold` and `title` (M4 Pro,
  * 2026-10-25): 101 fps at 4 pages against 84 fps drawn in software, the draw
@@ -234,7 +234,7 @@ const HANDLE = `new Promise((done) => {
 /** Any value as JSON text, to write into a script the page runs. */
 const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
-const openPage = (view: Bun.WebView, url: string) =>
+const openPage = (view: View, url: string) =>
   Effect.gen(function* () {
     const broken = yield* Deferred.make<never, PageError | PageCrashed>();
     const loadFailed = (cause: unknown) => PageLoadFailed.make({ url, reason: String(cause) });

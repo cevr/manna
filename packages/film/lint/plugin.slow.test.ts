@@ -140,8 +140,8 @@ const MESSAGES = {
     "a default timeout over bun's 5 s, or of 0 (none), raises every test after it: make the slow tests fast, and give a test that spawns its own spawn budget.",
   'media-in-process.ts:10 film/media-in-process':
     "a string names FFmpeg's command-line tool: the film reads and writes media in-process (mediabunny, and FFmpeg's libraries through NodeAV), never through a process.",
-  'webview-through-chrome.ts:6 film/webview-through-chrome':
-    'a Chrome spawned past openView: open it through openView (packages/film/src/tools/chrome.ts), which mutes its audio whatever flags the caller asks for.',
+  'chrome-through-open-view.ts:9 film/chrome-through-open-view':
+    'a Chrome launched past openView: open it through openView (packages/film/src/tools/chrome.ts), which launches one Chrome per process on puppeteer-core, mutes it and removes its profile, whatever flags the caller asks for.',
 } as const satisfies Readonly<Record<string, string>>;
 
 /** oxlint over the fixtures with the fixtures' config: what it reported, and its exit code. */
