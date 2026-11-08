@@ -1526,6 +1526,19 @@
         "!infra/**/*.test.*"
       ]
     },
+    "test:appearance": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
+        "!src/*/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
     "test:dark-today": {
       "dependsOn": ["^transit"],
       "outputs": [],
@@ -1692,6 +1705,7 @@
         "test:natural-voice",
         "test:theme",
         "test:look",
+        "test:appearance",
         "test:dark-today",
         "test:dark-first",
         "test:dark-screens",
