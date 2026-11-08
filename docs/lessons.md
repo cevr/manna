@@ -5200,3 +5200,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** Heartseed's screens painted Palette A and Georgia from literals spread across six files (`src/sayit/draw.tsx`'s exported `color` and `look`, and each screen's own), so a screen could keep a light colour or a serif in dark, unseen by any test of the other screens.
 - **Cause:** A colour or a face was quickest to write where it was used, and nothing held a product file to the theme's roles.
 - **Guard:** code: `apps/heartseed/src/look.test.tsx` `holds every product file in src, app, vite, scripts, infra and the root, less tests, declarations, rigs, probes, prototypes and src/theme.ts, to no colour value or font family`; `apps/heartseed/scripts/icon.test.ts` `draws each opaque icon at 1024 px as its ground, its mark or a blend, the mark at 0.72 of the side`
+
+### heartseed-no-sync-runner-in-product
+
+- **Date:** 2026-11-08
+- **Kind:** review
+- **Said:** "Effect.runFork and equivalent runners are valid only at application or runtime integration boundaries."
+- **Source:** hymnapp/hsappearance/round-1-findings.md M2
+- **Wrong:** `apps/heartseed/src/appearance.ts` published each view through `Effect.runSyncWith(yield* Effect.context<never>())`, a nested runner inside the layer's own Effect and inside `choose`'s `Effect.sync`, where `yield* PubSub.publish` does the same work; `src/voice.ts` and `src/dictation.ts` held the same layer-level runner.
+- **Cause:** A sliding PubSub never suspends, so a sync run was the quickest way to publish from plain code, and no rule told a boundary from a helper.
+- **Guard:** lint:no-restricted-properties, proof `apps/heartseed/src/runner.slow.test.ts` `refuses every form of a sync runner in Heartseed product code, and nothing else, over 240 generated files`

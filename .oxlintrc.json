@@ -2369,6 +2369,60 @@
       "rules": {
         "no-restricted-globals": "off"
       }
+    },
+    {
+      // Heartseed's product code runs an Effect only at an integration
+      // boundary, inside the Effect that owns it: a sync runner at a layer
+      // or in a helper runs a second runtime beside the one the app built.
+      // The one boundary that must run at once is a native listener, which
+      // disables the rule on its line with its reason. The block repeats
+      // the root's restricted imports, which an override replaces whole.
+      "files": [
+        "**/apps/heartseed/src/**/*.ts",
+        "**/apps/heartseed/src/**/*.tsx",
+        "**/apps/heartseed/app/**/*.ts",
+        "**/apps/heartseed/app/**/*.tsx"
+      ],
+      "excludeFiles": ["**/*.test.ts", "**/*.test.tsx", "**/apps/heartseed/src/test/**"],
+      "rules": {
+        "no-restricted-properties": [
+          "error",
+          {
+            "property": "runSync",
+            "message": "Effect.runFork and equivalent runners are valid only at application or runtime integration boundaries: yield* the Effect inside the Effect that owns it."
+          },
+          {
+            "property": "runSyncExit",
+            "message": "Effect.runFork and equivalent runners are valid only at application or runtime integration boundaries: yield* the Effect inside the Effect that owns it."
+          },
+          {
+            "property": "runSyncWith",
+            "message": "Effect.runFork and equivalent runners are valid only at application or runtime integration boundaries: yield* the Effect inside the Effect that owns it."
+          },
+          {
+            "property": "runSyncExitWith",
+            "message": "Effect.runFork and equivalent runners are valid only at application or runtime integration boundaries: yield* the Effect inside the Effect that owns it."
+          }
+        ],
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "effect/Effect",
+                "importNames": ["runSync", "runSyncExit", "runSyncWith", "runSyncExitWith"],
+                "message": "Effect.runFork and equivalent runners are valid only at application or runtime integration boundaries: yield* the Effect inside the Effect that owns it."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

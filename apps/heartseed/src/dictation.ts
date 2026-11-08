@@ -100,29 +100,28 @@ export const layer: Layer.Layer<Dictation, never, DictationSource> = Layer.effec
     const views = yield* PubSub.sliding<DictationView>({ capacity: WINDOW, replay: 1 });
     const endings = yield* PubSub.unbounded<DictationView>();
     const context = yield* Effect.context<never>();
-    const runSync = Effect.runSyncWith(context);
     const runFork = Effect.runForkWith(context);
-    runSync(PubSub.publish(views, initial.view));
+    yield* PubSub.publish(views, initial.view);
 
     /**
-     * Applies one input at once, publishes a changed view (and the view at
-     * an ending, to `endings`, which keeps every one), and answers the call
-     * it asks for.
+     * Applies one input, publishes a changed view (and the view at an
+     * ending, to `endings`, which keeps every one), and answers the call it
+     * asks for. Neither publish suspends: `views` slides, dropping a held
+     * subscriber's oldest view, and `endings` is unbounded.
      */
-    const dispatch = (input: Input): Option.Option<Call> => {
-      const before = MutableRef.get(state);
-      const next = step(before, input);
-      MutableRef.set(state, next.attempt);
-      const view = next.attempt.view;
-      if (view !== before.view) runSync(PubSub.publish(views, view));
-      if (isActive(before.view) && !isActive(view)) runSync(PubSub.publish(endings, view));
-      return next.call;
-    };
+    const dispatch = (input: Input): Effect.Effect<Option.Option<Call>> =>
+      Effect.gen(function* () {
+        const before = MutableRef.get(state);
+        const next = step(before, input);
+        MutableRef.set(state, next.attempt);
+        const view = next.attempt.view;
+        if (view !== before.view) yield* PubSub.publish(views, view);
+        if (isActive(before.view) && !isActive(view)) yield* PubSub.publish(endings, view);
+        return next.call;
+      });
 
     const run = (input: Input): Effect.Effect<void> =>
-      Effect.suspend(() =>
-        Option.match(dispatch(input), { onNone: () => Effect.void, onSome: perform }),
-      );
+      Effect.flatMap(dispatch(input), Option.match({ onNone: () => Effect.void, onSome: perform }));
 
     /** A listen whose refusal counts as that session's `unavailable`. */
     const listen = (call: Extract<Call, { _tag: 'Listen' }>) =>
@@ -158,7 +157,9 @@ export const layer: Layer.Layer<Dictation, never, DictationSource> = Layer.effec
     );
 
     yield* source.subscribe((event) => {
-      Option.map(dispatch({ _tag: 'Event', event }), (call) => runFork(perform(call)));
+      // oxlint-disable-next-line no-restricted-properties -- a native listener: the view publishes before the event returns
+      const call = Effect.runSyncWith(context)(dispatch({ _tag: 'Event', event }));
+      Option.map(call, (asked) => runFork(perform(asked)));
     });
     yield* Effect.addFinalizer(() =>
       Effect.suspend(() => {

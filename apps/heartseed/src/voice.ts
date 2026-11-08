@@ -179,22 +179,22 @@ export const layer: Layer.Layer<Voice, never, VoiceSource | KeyValueStore.KeyVal
       const state = MutableRef.make<Reading>(initial(choice));
       const views = yield* PubSub.sliding<VoiceView>({ capacity: WINDOW, replay: 1 });
       const writes = yield* Semaphore.make(1);
-      const runSync = Effect.runSyncWith(yield* Effect.context<never>());
+      const context = yield* Effect.context<never>();
+      yield* PubSub.publish(views, state.current.view);
 
-      /** Publishes a view at once: the sliding strategy drops a held subscriber's oldest view and never suspends. */
-      const publish = (view: VoiceView) => {
-        runSync(PubSub.publish(views, view));
-      };
-      publish(state.current.view);
-
-      /** Applies one input at once, publishes a changed view, and answers the call it asks for. */
-      const dispatch = (input: Input): Option.Option<Call> => {
-        const before = MutableRef.get(state);
-        const next = step(before, input);
-        MutableRef.set(state, next.reading);
-        if (next.reading.view !== before.view) publish(next.reading.view);
-        return next.call;
-      };
+      /**
+       * Applies one input, publishes a changed view, and answers the call it
+       * asks for. The publish never suspends: the sliding strategy drops a
+       * held subscriber's oldest view.
+       */
+      const dispatch = (input: Input): Effect.Effect<Option.Option<Call>> =>
+        Effect.gen(function* () {
+          const before = MutableRef.get(state);
+          const next = step(before, input);
+          MutableRef.set(state, next.reading);
+          if (next.reading.view !== before.view) yield* PubSub.publish(views, next.reading.view);
+          return next.call;
+        });
 
       /** A speak whose failure ends its own reading, if that reading is still the current one. */
       const speak = (utterance: number, text: string) =>
@@ -204,7 +204,7 @@ export const layer: Layer.Layer<Voice, never, VoiceSource | KeyValueStore.KeyVal
             Effect.catchTag('VoiceUnavailable', (error) =>
               Effect.logWarning('voice.speak.failed').pipe(
                 Effect.annotateLogs({ utterance, reason: error.reason }),
-                Effect.andThen(Effect.sync(() => dispatch({ _tag: 'Failed', utterance }))),
+                Effect.andThen(Effect.asVoid(dispatch({ _tag: 'Failed', utterance }))),
               ),
             ),
           );
@@ -219,8 +219,9 @@ export const layer: Layer.Layer<Voice, never, VoiceSource | KeyValueStore.KeyVal
       );
 
       const run = (input: Input) =>
-        Effect.suspend(() =>
-          Option.match(dispatch(input), { onNone: () => Effect.void, onSome: perform }),
+        Effect.flatMap(
+          dispatch(input),
+          Option.match({ onNone: () => Effect.void, onSome: perform }),
         );
 
       /**
@@ -234,7 +235,8 @@ export const layer: Layer.Layer<Voice, never, VoiceSource | KeyValueStore.KeyVal
       );
 
       yield* source.subscribe((event) => {
-        dispatch({ _tag: 'Event', event });
+        // oxlint-disable-next-line no-restricted-properties -- a native listener: the view publishes before the event returns
+        Effect.runSyncWith(context)(dispatch({ _tag: 'Event', event }));
       });
       yield* Effect.addFinalizer(() =>
         Effect.suspend(() => {
