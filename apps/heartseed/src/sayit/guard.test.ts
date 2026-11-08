@@ -211,7 +211,7 @@ describe('Say it aloud', () => {
     expect(code('app/index.tsx')).toContain('useAtomSet(listenTo)');
   });
 
-  it('leaves reading aloud to the first minute’s hear phase, Today’s Listen and the light probe: only src/first takes the hear phase’s reading atoms from src/app.ts, only Today and the light probe take Listen, only the choices take the pill’s cycle, and only src/app.ts and the natural voice’s development probe build the voice', () => {
+  it('leaves reading aloud to the first minute’s hear phase, Today’s Listen and the light probe: only src/first takes the hear phase’s reading atoms from src/app.ts, only Today and the light probe take Listen, only the choices take the pill’s cycle, and only src/app.ts, the natural voice’s router and its development probe build the voice', () => {
     const takers = (atoms: readonly string[]) =>
       SOURCES.filter((source) =>
         importsOf(source).some(
@@ -235,7 +235,7 @@ describe('Say it aloud', () => {
           ({ from, names }) => /(^|\/)voice$/.test(from) && names.includes('layer'),
         ),
     );
-    expect(builders).toEqual(['app/probe/natural.tsx', 'src/app.ts']);
+    expect(builders).toEqual(['app/probe/natural.tsx', 'src/app.ts', 'src/natural/route.ts']);
   });
 
   it('grows Today’s voice atoms by the hold’s seekTo, holdReading and letGo, from src/app.ts alone: only Today, the first minute’s hear phase and the light probe take them (the reading view is handed them), and no other source seeks, pauses or resumes the voice', () => {

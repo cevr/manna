@@ -229,7 +229,7 @@ const loadFailed = (machine: Machine, reason: string): Stepped => {
   return install({ ...machine, again: true, complete: false });
 };
 
-/** The next machine after one input, and the calls the service performs for it. */
+/** A download's failure: network, check or space is said with `Try again`; any other reason (a cancel) leaves it idle. */
 const installFailed = (machine: Machine, reason: string): Stepped => {
   if (isFailure(reason)) return stay(toDownload(machine, { _tag: 'Failed', reason }));
   return stay(toDownload(machine, { _tag: 'Idle' }));
