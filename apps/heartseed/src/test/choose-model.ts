@@ -4,12 +4,11 @@
  * The independent model of choosing passages, written plainly from the
  * spec's rules (hspassage C1, C3-C8) for the tests to judge the app by.
  * Ranges, references and pieces come from `./passages-model.ts`, and the
- * field's rows from `./field-model.ts`; nothing here reads `src/chooser.ts`, `src/field.ts`, `src/passages.ts` or a
+ * field's rows from `./phrase-model.ts`'s fold; nothing here reads `src/chooser.ts`, `src/field.ts`, `src/passages.ts` or a
  * screen.
  */
 
 import type { Recall } from '../sayit';
-import { fieldRule } from './field-model';
 import {
   NAMES,
   spanRef,
@@ -19,6 +18,7 @@ import {
   type Held,
   type Span,
 } from './passages-model';
+import { fieldFoldRule } from './phrase-model';
 
 /** A range of one chapter as the model holds it, or `undefined` for none. */
 export interface Chosen {
@@ -214,7 +214,7 @@ const versesOfSpan = (span: Span) =>
  * C3-C5: the field the model wants over the garden's `records`, the
  * promise's reference, the passages `held` and the bar. The rows are the
  * promise's, then each held passage's in the order chosen, then every other
- * plant (hsfield's rule); each held passage's row, and no other, holds one
+ * plant (hsfield's rule), each phrase folded into its verse (H7); each held passage's row, and no other, holds one
  * `Remove <reference>`. With the passages read, the bar holds the ask while
  * there is one, else `Add a passage` under 3 held, else the limit line;
  * unread, it holds neither and no row a `Remove`.
@@ -226,7 +226,7 @@ export const fieldWant = (
   bar: Asking,
 ): FieldSeen => {
   const passages = held.tag === 'Read' ? held.passages : [];
-  const rule = fieldRule(
+  const rule = fieldFoldRule(
     [...records],
     [
       { title: promise, verses: [promise] },

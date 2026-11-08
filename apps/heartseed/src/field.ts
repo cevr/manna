@@ -11,13 +11,20 @@
  * range to its row, so the row's `Remove` names that range and never finds
  * it by the row's place.
  *
+ * Phrases fold into their verse: a phrase is never a row or a plant here. A
+ * verse with no plant of its own but a plant of a phrase of it shows `seed`;
+ * a phrase plant whose verse no passage holds makes a row for that verse
+ * among the other plants, first sown by the earliest recall of the verse and
+ * its phrases.
+ *
  * Days sown is the number of distinct days (`dayOf`: the reader's local day
  * from 04:00 by each record's own stored offset, or the UTC date of a record
- * kept before offsets were stored) on which any recall of any verse was
- * kept. A recall's day is a function of its record alone, so the same disk
- * shows the same count in every time zone, and as the garden never removes
- * a recall and a rewrite keeps its start and offset, the count never falls.
- * The harvest is the number of verses at full corn now.
+ * kept before offsets were stored) on which any recall of any verse or
+ * phrase was kept. A recall's day is a function of its record alone, so the
+ * same disk shows the same count in every time zone, and as the garden never
+ * removes a recall and a rewrite keeps its start and offset, the count never
+ * falls. The harvest is the number of verses (never phrases) at full corn
+ * now.
  */
 
 import { Array as Arr, Option, Order, pipe } from 'effect';
@@ -25,6 +32,7 @@ import { Array as Arr, Option, Order, pipe } from 'effect';
 import { dayOf } from './day';
 import { stageOf, type Plant, type ReadGarden, type Stage } from './garden';
 import type { Range } from './passages';
+import { phraseOf } from './phrase';
 
 /** A verse's stage on the field: the garden's stage, or `not planted` before its first recall. */
 export type PlantStage = Stage | 'not planted';
@@ -56,35 +64,66 @@ export interface Field {
   readonly harvest: number;
 }
 
-/** The order first sown: by a plant's earliest recall, then by its reference in code units. */
-const firstSown: Order.Order<Plant> = Order.combine(
-  Order.mapInput(Order.Number, (plant: Plant) => Arr.headNonEmpty(plant.recalls).startedAt),
-  Order.mapInput(Order.String, (plant: Plant) => plant.reference),
+/** A verse the field shows outside the passages, and its earliest recall among its own plant and its phrases'. */
+interface Sown {
+  readonly verse: string;
+  readonly first: number;
+}
+
+/** The order first sown: by the earliest recall, then by the verse's reference in code units. */
+const firstSown: Order.Order<Sown> = Order.combine(
+  Order.mapInput(Order.Number, (sown: Sown) => sown.first),
+  Order.mapInput(Order.String, (sown: Sown) => sown.verse),
 );
 
-/** The field of a read garden over the passages the app teaches. */
+/** The verse a plant's reference belongs to: a phrase's verse, else the reference itself. */
+const verseOf = (reference: string) =>
+  Option.match(phraseOf(reference), {
+    onNone: () => reference,
+    onSome: (phrase) => phrase.verse,
+  });
+
+const isPhrase = (plant: Plant) => Option.isSome(phraseOf(plant.reference));
+
+/** Each verse no passage holds, with its earliest recall: phrase plants fold into their verse. */
+const othersOf = (plants: ReadonlyArray<Plant>, taught: ReadonlySet<string>) => {
+  const firsts = new Map<string, number>();
+  for (const plant of plants) {
+    const verse = verseOf(plant.reference);
+    if (taught.has(verse)) continue;
+    const first = Arr.headNonEmpty(plant.recalls).startedAt;
+    firsts.set(verse, Math.min(firsts.get(verse) ?? first, first));
+  }
+  return pipe(
+    [...firsts].map(([verse, first]): Sown => ({ verse, first })),
+    Arr.sort(firstSown),
+    Arr.map((sown): FieldPassage => ({ title: sown.verse, verses: [sown.verse] })),
+  );
+};
+
+/** The field of a read garden over the passages the app teaches, each phrase folded into its verse. */
 export const fieldOf = (garden: ReadGarden, passages: ReadonlyArray<FieldPassage>): Field => {
   const plants = [...garden.plants.values()];
   const taught = new Set(passages.flatMap((passage) => passage.verses));
+  const inPhrases = new Set(plants.filter(isPhrase).map((plant) => verseOf(plant.reference)));
+  const unplanted = (reference: string): PlantStage => {
+    if (inPhrases.has(reference)) return 'seed';
+    return 'not planted';
+  };
   const stageAt = (reference: string): PlantStage =>
     Option.match(Option.fromNullishOr(garden.plants.get(reference)), {
-      onNone: () => 'not planted',
+      onNone: () => unplanted(reference),
       onSome: stageOf,
     });
-  const others = pipe(
-    plants.filter((plant) => !taught.has(plant.reference)),
-    Arr.sort(firstSown),
-    Arr.map((plant): FieldPassage => ({ title: plant.reference, verses: [plant.reference] })),
-  );
   const days = new Set(plants.flatMap((plant) => plant.recalls.map(dayOf)));
   return {
-    rows: [...passages, ...others].map((passage) => ({
+    rows: [...passages, ...othersOf(plants, taught)].map((passage) => ({
       title: passage.title,
       plants: passage.verses.map((reference) => ({ reference, stage: stageAt(reference) })),
       range: passage.range,
     })),
     sown: days.size,
-    harvest: plants.filter((plant) => stageOf(plant) === 'full corn').length,
+    harvest: plants.filter((plant) => !isPhrase(plant) && stageOf(plant) === 'full corn').length,
   };
 };
 

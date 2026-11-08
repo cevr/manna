@@ -13,7 +13,8 @@
  *   and a verse piece with its phrases (`withPhrasesRule`);
  * - H4 the pieces a plan is made over (`expandRule`), whose plan is
  *   `src/test/session-model.ts`'s;
- * - H6 the cue of a join (`joinCueRule`).
+ * - H6 the cue of a join (`joinCueRule`);
+ * - H7 the field, each phrase folded into its verse (`fieldFoldRule`).
  *
  * Words are found one code point at a time here, where the app uses
  * regular expressions over whitespace runs; nothing here reads
@@ -21,6 +22,7 @@
  */
 
 import type { Recall } from '../sayit';
+import { sownDate, type ModelField, type ModelPassage, type ModelPlantStage } from './field-model';
 import { referenceCue, referenceStage, type ModelCue } from './garden-model';
 import type { ModelTextPiece } from './passages-model';
 
@@ -266,6 +268,65 @@ export const joinCueRule = (
   if (own !== undefined && own.length > 0) return referenceCue(own);
   for (const key of plants.keys()) if (phraseOfRule(key)?.verse === reference) return 'initials';
   return 'full';
+};
+
+/**
+ * H7: the field over `records` (one per recital) and the passages taught,
+ * each phrase folded into its verse. A verse with a plant of its own shows
+ * its stage; else `seed` when a phrase of it is planted, else `not planted`.
+ * Every other verse a plant names (a phrase's verse for a phrase) is a row of
+ * its own, by its earliest recall among its plants, then its reference in
+ * code units. Days sown count every recall; the harvest counts verses' own
+ * plants at full corn, never a phrase's.
+ */
+export const fieldFoldRule = (
+  records: readonly Recall[],
+  passages: readonly ModelPassage[],
+): ModelField => {
+  const held = new Map<string, Recall[]>();
+  for (const recall of records) {
+    const list = held.get(recall.reference) ?? [];
+    list.push(recall);
+    held.set(recall.reference, list);
+  }
+  const stage = (verse: string): ModelPlantStage => {
+    const own = held.get(verse);
+    if (own !== undefined) return referenceStage(own);
+    for (const reference of held.keys())
+      if (phraseOfRule(reference)?.verse === verse) return 'seed';
+    return 'not planted';
+  };
+  const taught = passages.flatMap((passage) => passage.verses);
+  const firsts = new Map<string, number>();
+  for (const recall of records) {
+    const verse = verseOfRule(recall.reference);
+    if (taught.includes(verse)) continue;
+    const first = firsts.get(verse);
+    if (first === undefined || recall.startedAt < first) firsts.set(verse, recall.startedAt);
+  }
+  const others = [...firsts.entries()].toSorted((a, b) => {
+    if (a[1] !== b[1]) return a[1] - b[1];
+    if (a[0] === b[0]) return 0;
+    return a[0] < b[0] ? -1 : 1;
+  });
+  let harvest = 0;
+  for (const [reference, recalls] of held)
+    if (phraseOfRule(reference) === undefined && referenceStage(recalls) === 'full corn')
+      harvest += 1;
+  return {
+    rows: [
+      ...passages.map((passage) => ({
+        title: passage.title,
+        plants: passage.verses.map((reference) => ({ reference, stage: stage(reference) })),
+      })),
+      ...others.map(([verse]) => ({
+        title: verse,
+        plants: [{ reference: verse, stage: stage(verse) }],
+      })),
+    ],
+    sown: new Set(records.map(sownDate)).size,
+    harvest,
+  };
 };
 
 const DIGITS = '0123456789';

@@ -31,7 +31,7 @@
     "test:walk-planted": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/first/walk-planted.property.test.tsx",
     "test:walk-reading": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/first/walk-reading.property.test.tsx",
     "test:walk-taps": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/first/walk-taps.property.test.tsx",
-    "test:field": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field.property.test.ts ./src/field/sown.test.ts ./src/field/unread.test.tsx ./src/field/reach.test.tsx",
+    "test:field": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field.property.test.ts ./src/field/sown.test.ts ./src/field/unread.test.tsx ./src/field/reach.test.tsx ./src/field/phrases.test.ts",
     "test:field-unread": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/unread-keep.test.tsx",
     "test:field-screen": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/screen.test.tsx ./src/field/garden.test.tsx",
     "test:field-walk": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/walk.test.tsx",
