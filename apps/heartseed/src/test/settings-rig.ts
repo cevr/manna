@@ -121,6 +121,44 @@ const drawn = (modal: Element) => {
   return true;
 };
 
+/** A node's styles as drawn: its own and each ancestor's classes and inline style, which decide its computed size, overflow and opacity. */
+const chainOf = (node: Element) => {
+  const parts: string[] = [];
+  for (let at: Element | null = node; at !== null; at = at.parentElement)
+    parts.push(`${at.getAttribute('class') ?? ''}/${at.getAttribute('style') ?? ''}`);
+  return parts.join('>');
+};
+
+/** `holds` of `node`, kept in `known` by what it asks and the node's style chain, so a frame computes styles only for chains it has not seen. */
+const remembered = (
+  known: Map<string, readonly string[]>,
+  asked: string,
+  node: Element,
+  holds: (node: Element) => boolean,
+) => {
+  const key = `${asked}|${chainOf(node)}`;
+  const kept = known.get(key);
+  if (kept !== undefined) return kept.length > 0;
+  const found = holds(node);
+  known.set(
+    key,
+    [asked].filter(() => found),
+  );
+  return found;
+};
+
+const tall = (node: Element) => parseFloat(getComputedStyle(node).minHeight) >= 44;
+
+/** The sheet root's look faults against `scheme`, kept in `known` by the root's whole markup and its ancestors' styles, so a frame that draws a sheet already seen computes nothing. */
+const lookOf = (root: Element, scheme: Scheme, known: Map<string, readonly string[]>) => {
+  const key = `look|${scheme}|${chainOf(root)}|${root.outerHTML}`;
+  const kept = known.get(key);
+  if (kept !== undefined) return kept;
+  const found = lookFaults(root, scheme, known).map((fault) => `${fault} in the sheet`);
+  known.set(key, found);
+  return found;
+};
+
 /** What the open sheet shows wrong, `modal` being the one modal. */
 const openFaults = (modal: Element, scheme: Scheme, known: Map<string, readonly string[]>) => {
   const roots = modal.querySelectorAll('[data-testid="settings"]');
@@ -131,7 +169,7 @@ const openFaults = (modal: Element, scheme: Scheme, known: Map<string, readonly 
   if (headings.join('|') !== 'Settings') out.push(`the sheet's headings ${headings.join('|')}`);
   const done = sheetControl('Done');
   if (done === undefined) out.push('no Done');
-  else if (scrolled(done)) out.push('Done inside the scroll view');
+  else if (remembered(known, 'scrolled', done, scrolled)) out.push('Done inside the scroll view');
   out.push(
     ...groupFaults(modal, 'Minutes', MINUTE_NAMES),
     ...groupFaults(modal, 'Appearance', APPEARANCE_NAMES),
@@ -142,10 +180,9 @@ const openFaults = (modal: Element, scheme: Scheme, known: Map<string, readonly 
     out.push(`a Voice node ${voices.join(',')}`);
   out.push(...orderFaults(modal, root));
   for (const node of root.querySelectorAll(CONTROLS))
-    if (!(parseFloat(getComputedStyle(node).minHeight) >= 44))
+    if (!remembered(known, 'tall', node, tall))
       out.push(`${nameOf(node)} under 44 tall in the sheet`);
-  if (drawn(modal))
-    out.push(...lookFaults(root, scheme, known).map((fault) => `${fault} in the sheet`));
+  if (remembered(known, 'drawn', modal, drawn)) out.push(...lookOf(root, scheme, known));
   for (const id of HOME_NODES)
     if (modal.querySelector(`[data-testid="${id}"]`) !== null)
       out.push(`home's ${id} in the sheet`);

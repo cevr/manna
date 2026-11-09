@@ -1236,7 +1236,7 @@
         "!src/handbook/**/*.test.*",
         "!src/{lists.property,home.property,shelves.property}.test.*",
         "!src/home/**/*.test.*",
-        "!src/settings/{ways,ways-b}.test.*",
+        "!src/settings/{ways,ways-b,walk-a,walk-b,walk-c}.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1260,7 +1260,7 @@
         "!src/handbook/**/*.test.*",
         "!src/{lists.property,home.property,shelves.property}.test.*",
         "!src/home/**/*.test.*",
-        "!src/settings/{sheet,rule,ways-b}.test.*",
+        "!src/settings/{sheet,rule,ways-b,walk-a,walk-b,walk-c}.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1284,7 +1284,79 @@
         "!src/handbook/**/*.test.*",
         "!src/{lists.property,home.property,shelves.property}.test.*",
         "!src/home/**/*.test.*",
-        "!src/settings/{sheet,rule,ways}.test.*",
+        "!src/settings/{sheet,rule,ways,walk-a,walk-b,walk-c}.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:settings-walk-a": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/matcher/**/*.test.*",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme,appearance.property}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,appearance}/**/*.test.*",
+        "!src/{promises,need}/**/*.test.*",
+        "!src/phrase.property.test.*",
+        "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
+        "!src/settings/{sheet,rule,ways,ways-b,walk-b,walk-c}.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:settings-walk-b": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/matcher/**/*.test.*",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme,appearance.property}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,appearance}/**/*.test.*",
+        "!src/{promises,need}/**/*.test.*",
+        "!src/phrase.property.test.*",
+        "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
+        "!src/settings/{sheet,rule,ways,ways-b,walk-a,walk-c}.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:settings-walk-c": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/matcher/**/*.test.*",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme,appearance.property}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,appearance}/**/*.test.*",
+        "!src/{promises,need}/**/*.test.*",
+        "!src/phrase.property.test.*",
+        "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
+        "!src/settings/{sheet,rule,ways,ways-b,walk-a,walk-b}.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -3116,6 +3188,9 @@
         "test:settings",
         "test:settings-ways",
         "test:settings-ways-b",
+        "test:settings-walk-a",
+        "test:settings-walk-b",
+        "test:settings-walk-c",
         "test:run",
         "test:run-walk",
         "test:run-hold",
