@@ -88,8 +88,8 @@ At the reading's end the passage is whole again.
   the view only for the current utterance while a reading is under way, and
   a range lights the words it overlaps, never fewer than are lit. A word is
   one the matcher counts (`src/matcher/words.ts`), found by its UTF-16 span.
-- `Voice.seek(word)` acts only while a reading is under way (reading or
-  paused) and only for a whole `word` of the verse: it speaks the verse
+- `Voice.seek` (`seek(word)`) acts only while a reading is under way
+  (reading or paused) and only for a whole `word` of the verse: it speaks the verse
   from that word's run as a new utterance, through the same call as
   `read`, with the words before it lit and the status `reading`; any other
   seek does nothing. The reducer keeps the utterance's `offset` in the
