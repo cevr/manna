@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noTernary, effect/noTryCatch, eslint/no-await-in-loop -- a React screen walk: it drives launches of the root in happy-dom through React's promise-based `act`, one step after another, over a disk, faults, a clock and a zone kept in plain values the steps change (the generator's choices as plain branches), the zone in `process.env.TZ`, put back in a `finally` even when a step throws; its coverage is one walk's state, set afresh at each walk. */
+/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noTernary, effect/noTryCatch, effect/noThrowStatement, effect/noNewError, eslint/no-await-in-loop -- a React screen walk: it drives launches of the root in happy-dom through React's promise-based `act`, one step after another, over a disk, faults, a clock and a zone kept in plain values the steps change (the generator's choices as plain branches), the zone in `process.env.TZ`, put back in a `finally` even when a step throws, and stops its case with the step's fault when a trip's screen is not the model's; its coverage is one walk's state, set afresh at each walk. */
 
 /**
  * Today's counts line as a reader meets it, for the counts parts:
@@ -7,28 +7,39 @@
  * no piece names), each launched three times over the disk the last launch
  * left, in zones that change, through the session rig
  * (`src/test/session-rig.tsx`), which holds every frame to the root's
- * frame rule and the screen's rules (the session's nodes only under
- * Today's heading, the counts line in its form at the top of the scroll
- * view).
+ * frame rule and the screen's rules (no Minutes and no Voice under the
+ * host, the counts line in its form at the top of the scroll view), and
+ * the sheet's rig (`src/test/settings-rig.ts`), which holds every frame of
+ * each trip's sheet.
  *
  * The oracle is `src/test/session-model.ts`: the plan is the model's over
  * the disk's recalls at the instant home first shows with the garden read
  * (at a read launch, and after Continue in the first minute) and again at
- * each Minutes tap, and at no other step (S11). Home then shows the model's
- * counts of that plan and `Begin` exactly when the run's model
- * (`src/test/run-model.ts`) shows an item: `Begin` leads to Today, and in
- * the done state the launch ends on home with no Today frame. After every
- * step on Today the line is the model's counts of that plan over the
+ * each Minutes tap in the sheet, and at no other step (S11). Home then
+ * shows the model's counts of that plan and `Begin` exactly when the run's
+ * model (`src/test/run-model.ts`) shows an item: `Begin` leads to Today,
+ * and in the done state the launch ends on home with no Today frame. After
+ * every step on Today the line is the model's counts of that plan over the
  * disk's recalls now (S12, S13), and an unread launch, which opens Today,
- * shows no line in any frame (S14). After every step the action button is
- * the run's model's (Say it on the item shown, Next once it is done, none
- * in the done state; Say it always in an unread launch): a press holds the
- * item shown, Next lets it go, and a Minutes tap lets it go unless a
- * recital is under way. A recital where the model offers no Say it first
- * taps Next, or, in the done state, moves the clock to the passage's due
- * and taps Minutes. A heard recital adds its recall to the disk; an
- * unheard one, a refused listen and a refused write add none, and Again
- * rewrites the recall it grades.
+ * shows no line in any frame (S14) and offers no Minutes, Voice, Settings
+ * or Your field. After every step the action button is the run's model's
+ * (Say it on the item shown, Next once it is done, none in the done state;
+ * Say it always in an unread launch): a press holds the item shown, Next
+ * lets it go, and a Minutes tap lets it go.
+ *
+ * Every Minutes and Voice choice is the reader's trip: `Your field` to
+ * home, held to the model as it stands; the gear, the sheet's Minutes
+ * radio checked at the launch's minutes; the radio (the plan made at that
+ * tap, the radio checked and home's counts under the sheet the new plan's)
+ * or `Voice` (the pill the cycle's next); `Done`, the sheet's frames
+ * faultless; then `Begin` and Today when the model shows an item, else
+ * home's done state, which ends the launch. The commands: recitals; a
+ * recital then a Minutes trip (`held`); Again; Minutes trips now and after
+ * time passes; Voice trips; time; the field and back. A recital where the
+ * model offers no Say it first taps Next, or, in the done state, moves the
+ * clock to the passage's due and takes a Minutes trip. A heard recital
+ * adds its recall to the disk; an unheard one, a refused listen and a
+ * refused write add none, and Again rewrites the recall it grades.
  */
 
 import { expect, it } from 'bun:test';
@@ -56,6 +67,7 @@ import {
   type ModelItem,
 } from './session-model';
 import {
+  choicesOf,
   deviceOf,
   faultsOf,
   launch,
@@ -64,6 +76,7 @@ import {
   type Hearing,
   type Launch,
 } from './session-rig';
+import { closeSettings, modalOf, openSettings, tapInSheet, watchSheet } from './settings-rig';
 import { hostZone, offsetIn, restore, travel, ZONES } from './zone';
 
 const PIECE = {
@@ -177,12 +190,10 @@ const settle = async (run: Run, still = false) => {
   const action = actionWant(m, device);
   const want = {
     counts: wantOf(run),
-    checked: [`${m.minutes} min`],
     actions: action === null ? [] : [action],
   };
   const shown = () => ({
     counts: app.counts(),
-    checked: app.choices().checked,
     actions: ACTIONS.filter((name) => app.has(name)),
   });
   await app.until(() => JSON.stringify(shown()) === JSON.stringify(want));
@@ -199,24 +210,148 @@ const settle = async (run: Run, still = false) => {
   cover(`action:${action ?? 'none'}`);
 };
 
-/** A Minutes tap, refused one time in five: the choice shows, a made plan is made again at the tap's instant (letting the held item go unless a recital is `underWay`), and a landed tap is stored. */
-const minutesCommand = async (run: Run, n: Minutes, underWay = false) => {
-  const { app, faults, m } = run;
+const fail = (message: string): never => {
+  throw new Error(message);
+};
+
+/** In an unread launch, in place of a trip: no Settings, no Your field, no Voice, no `<n> min` radio and no Minutes group show, and nothing is written. */
+const noChoices = (run: Run, floor: string) => {
+  const { app, step } = run;
+  const shown =
+    app.has('Settings') ||
+    app.has('Your field') ||
+    app.has('Voice') ||
+    MINUTES.some((each) => app.has(`${each} min`)) ||
+    app.host.querySelector('[role="radiogroup"][aria-label="Minutes"]') !== null;
+  if (shown) fail(`${step}: a Minutes, Voice or Settings on an unread garden`);
+  cover(floor);
+};
+
+/** The Minutes radio the open sheet shows checked. */
+const sheetChecked = () => choicesOf(modalOf() ?? document.createElement('div')).checked;
+
+/**
+ * A trip's way out from Today: `Your field` to home, held to the model as
+ * it stands (the one heading, the counts of the plan, `Begin` exactly when
+ * the run's model shows an item), then the sheet opened under a watch of
+ * its frames, its Minutes radio checked at the launch's minutes.
+ */
+const openTrip = async (run: Run) => {
+  const { app, device, m, step } = run;
+  await app.tap('Your field');
+  const want = {
+    headings: ['Your field'],
+    counts: wantOf(run),
+    begin: actionWant(m, device) !== null,
+  };
+  const shown = () => ({
+    headings: app.headings(),
+    counts: app.homeCounts(),
+    begin: app.has('Begin'),
+  });
+  const same = () => JSON.stringify(shown()) === JSON.stringify(want);
+  await app.until(same);
+  if (!want.begin) await app.until(() => false, 10);
+  if (!same())
+    fail(`${step}: home showed ${JSON.stringify(shown())}, expected ${JSON.stringify(want)}`);
+  if (!want.begin) {
+    expect({ step, root: rootFaults(app.host, 'read') }).toEqual({ step, root: [] });
+    cover('field, done');
+  }
+  const watch = watchSheet();
+  try {
+    await openSettings(app);
+  } catch (error) {
+    watch.stop();
+    fail(`${step}: ${String(error)}`);
+  }
+  const minutes = JSON.stringify([`${m.minutes} min`]);
+  if (!(await app.until(() => JSON.stringify(sheetChecked()) === minutes))) {
+    watch.stop();
+    fail(`${step}: the sheet showed ${JSON.stringify(sheetChecked())}, expected ${m.minutes} min`);
+  }
+  return watch;
+};
+
+/**
+ * A trip's way back: `Done`, the sheet's frames faultless with its look
+ * checked, then `Begin` and Today when the run's model shows an item; else
+ * home stays with no `Begin` and the root's frame rule, and the launch ends
+ * there (true).
+ */
+const closeTrip = async (run: Run, watch: ReturnType<typeof watchSheet>) => {
+  const { app, device, m, step } = run;
+  const closed = await closeSettings(app, 'Done');
+  watch.stop();
+  if (!closed) fail(`${step}: the sheet stayed after Done`);
+  if (watch.faults.length > 0 || watch.frames.looked === 0)
+    fail(
+      `${step}: sheet ${watch.faults.join('; ') || 'faultless'}, its look checked on ${watch.frames.looked} frames`,
+    );
+  if (actionWant(m, device) !== null) {
+    await app.tap('Begin');
+    if (!(await app.until(() => app.headings().includes('Today') && ACTIONS.some(app.has))))
+      fail(`${step}: no Today after Begin, at ${app.headings().join('|')}`);
+    return false;
+  }
+  await app.until(() => false, 10);
+  expect({ step, begin: app.has('Begin'), root: rootFaults(app.host, 'read') }).toEqual({
+    step,
+    begin: false,
+    root: [],
+  });
+  cover('trip ended on home');
+  return true;
+};
+
+/**
+ * A Minutes choice the reader's way (R2): from Today, `Your field`, the
+ * gear, the radio `<n> min` (its write refused one time in five), the plan
+ * made at that tap with the held item let go, the radio checked and home's
+ * counts line under the sheet the new plan's, `Done`, then `Begin` and
+ * Today, or home's done state, which ends the launch (true). An unread
+ * launch offers no choices.
+ */
+const minutesTrip = async (run: Run, n: Minutes) => {
+  const { app, faults, m, step } = run;
+  if (!m.read) {
+    noChoices(run, 'minutes:none-unread');
+    return false;
+  }
   const refused = run.next() < 0.2;
   if (refused) faults.refuse.add(MINUTES_KEY);
   else faults.refuse.delete(MINUTES_KEY);
   const before = wantOf(run);
-  await app.tap(`${n} min`);
+  const watch = await openTrip(run);
+  if (!(await tapInSheet(`${n} min`))) {
+    watch.stop();
+    fail(`${step}: no ${n} min in the sheet`);
+  }
   m.minutes = n;
   if (!refused) m.stored = String(n);
   if (m.plan !== null) {
-    const made = madeModel({ plan: m.plan, hold: m.hold }, planNow(run), underWay);
+    const made = madeModel({ plan: m.plan, hold: m.hold }, planNow(run), false);
     m.plan = made.plan;
     m.hold = made.hold;
   }
+  const want = JSON.stringify(wantOf(run));
+  const radio = JSON.stringify([`${n} min`]);
+  if (
+    !(await app.until(
+      () => JSON.stringify(sheetChecked()) === radio && JSON.stringify(app.homeCounts()) === want,
+    ))
+  ) {
+    watch.stop();
+    fail(
+      `${step}: ${n} min not checked with the plan's counts, home showed ${JSON.stringify(app.homeCounts())} under ${JSON.stringify(sheetChecked())}, expected ${want}`,
+    );
+  }
   if (refused) cover('minutes tap refused');
   else cover('minutes tap');
-  if (JSON.stringify(before) !== JSON.stringify(wantOf(run))) cover('tap changed the line');
+  if (JSON.stringify(before) !== want) cover('tap changed the line');
+  const ended = await closeTrip(run, watch);
+  cover('settings:minutes');
+  return ended;
 };
 
 /** How a recital goes: heard, heard with words missed, unheard, refused at its listen, or heard and its write refused. */
@@ -234,8 +369,9 @@ const hearingOf = (how: How): Hearing => {
 /**
  * Where the run's model offers no Say it: `Next` when the shown item is
  * done (the hold let go), and in the done state the time moved to the
- * passage's due and a Minutes tap, which makes the plan again. Answers
- * whether Say it is offered after.
+ * passage's due and a Minutes trip, which makes the plan again. Answers
+ * `say` when Say it is offered after, `none` when not, and `ended` when
+ * the trip ended the launch on home.
  */
 const toSay = async (run: Run) => {
   const { app, device, m } = run;
@@ -245,21 +381,26 @@ const toSay = async (run: Run) => {
     cover('next');
   }
   if (actionWant(m, device) === null) {
+    await settle(run);
     const side = { ...run, next: run.aside ?? run.next };
     await untilDue(side);
-    await minutesCommand(side, pickOf(side.next, MINUTES));
+    const ended = await minutesTrip(side, pickOf(side.next, MINUTES));
     cover('done state: a new plan');
+    if (ended) return 'ended';
   }
   await settle(run);
-  return actionWant(m, device) === 'Say it';
+  if (actionWant(m, device) === 'Say it') return 'say';
+  return 'none';
 };
 
-/** A recital a second on, held open while the reader taps Minutes (`during`), then finished; its recall is on the disk exactly when it was heard and written. A press holds the item shown; the action after is the run's model's. */
-const sayCommand = async (run: Run, how: How, during: Minutes | null) => {
+/** A recital a second on, held open and then finished; its recall is on the disk exactly when it was heard and written. A press holds the item shown; the action after is the run's model's. Answers `said` after a recital, `none` when no Say it was offered, and `ended` when the way to Say it ended the launch on home. */
+const sayCommand = async (run: Run, how: How) => {
   const { app, device, faults, m, time } = run;
-  if (!(await toSay(run))) {
+  const ready = await toSay(run);
+  if (ready === 'ended') return ready;
+  if (ready === 'none') {
     cover('say:nothing to tend');
-    return;
+    return ready;
   }
   time.now += 1000;
   const key = keyOf({ reference: passage.reference, startedAt: time.now });
@@ -271,10 +412,6 @@ const sayCommand = async (run: Run, how: How, during: Minutes | null) => {
     await app.until(() => false, 3);
   } else {
     expect(await app.until(() => app.has('Listening'))).toBe(true);
-    if (during !== null) {
-      await minutesCommand(run, during, true);
-      cover('minutes tap while listening');
-    }
     await app.tap('Listening');
   }
   const written = how === 'heard' || how === 'missed';
@@ -295,6 +432,7 @@ const sayCommand = async (run: Run, how: How, during: Minutes | null) => {
   });
   MutableRef.set(app.hearing, hearingOf('heard'));
   cover(`say:${how}${run.m.read ? '' : ':unread'}`);
+  return 'said';
 };
 
 /** Again on the recital shown, when its grades show: the recall is rewritten and the counts stay. */
@@ -331,10 +469,43 @@ const fieldCommand = async (run: Run) => {
   return false;
 };
 
-const voiceCommand = async (run: Run) => {
-  if (run.next() < 0.2) run.faults.refuse.add(CHOICE_KEY);
-  await run.app.tap('Voice');
+/** The voice's cycle Off, Her, Him, by the words its pill shows: the next after `shown`, none for a value off the cycle. */
+const CYCLE = ['Voice:Off', 'Voice:Her', 'Voice:Him'] as const;
+const cycledFrom = (shown: string | undefined) => {
+  const at = CYCLE.findIndex((each) => each === shown);
+  if (at < 0) return 'a voice on the cycle';
+  return CYCLE[(at + 1) % CYCLE.length];
+};
+
+/**
+ * A Voice choice the reader's way (R5): its write refused one time in
+ * five, then from Today `Your field`, the gear, `Voice`, the sheet's pill
+ * showing the cycle's next after its value at the open, `Done`, then
+ * `Begin` and Today, or home's done state, which ends the launch (true).
+ * The plan stays. An unread launch offers no choices.
+ */
+const voiceTrip = async (run: Run) => {
+  const { app, faults, m, step } = run;
+  if (!m.read) {
+    noChoices(run, 'voice:none-unread');
+    return false;
+  }
+  if (run.next() < 0.2) faults.refuse.add(CHOICE_KEY);
+  const watch = await openTrip(run);
+  const voices = () => choicesOf(modalOf() ?? document.createElement('div')).voices;
+  const want = JSON.stringify([cycledFrom(voices()[0])]);
+  if (!(await tapInSheet('Voice'))) {
+    watch.stop();
+    fail(`${step}: no Voice in the sheet`);
+  }
+  if (!(await app.until(() => JSON.stringify(voices()) === want))) {
+    watch.stop();
+    fail(`${step}: Voice: the sheet showed ${JSON.stringify(voices())}, expected ${want}`);
+  }
   cover('voice tap');
+  const ended = await closeTrip(run, watch);
+  cover('settings:voice');
+  return ended;
 };
 
 /** The passage's one recall, when it is a single evening planting by its own offset: the morning it waits for. */
@@ -413,22 +584,25 @@ const command = async (run: Run, c: number) => {
   const step = `${run.step} command ${c}`;
   const at = { ...run, step };
   const kind = pickOf(run.next, COMMANDS);
-  if (kind === 'say') await sayCommand(at, pickOf(run.next, HOWS), null);
-  if (kind === 'held')
-    await sayCommand(
-      at,
-      pickOf(run.next, ['heard', 'heard', 'unheard']),
-      pickOf(run.next, MINUTES),
-    );
-  if (kind === 'again') await againCommand(at);
-  if (kind === 'minutes') await minutesCommand(at, pickOf(run.next, MINUTES));
-  if (kind === 'later minutes') {
-    await untilDue(at);
-    await minutesCommand(at, pickOf(run.next, MINUTES));
+  let ended = false;
+  if (kind === 'say') ended = (await sayCommand(at, pickOf(run.next, HOWS))) === 'ended';
+  if (kind === 'held') {
+    const how = pickOf(run.next, ['heard', 'heard', 'unheard'] as const);
+    const n = pickOf(run.next, MINUTES);
+    const said = await sayCommand(at, how);
+    ended = said === 'ended' || (await minutesTrip(at, n));
+    if (said === 'said' && run.m.read) cover('say:then-minutes');
   }
-  if (kind === 'voice') await voiceCommand(at);
+  if (kind === 'again') await againCommand(at);
+  if (kind === 'minutes') ended = await minutesTrip(at, pickOf(run.next, MINUTES));
+  if (kind === 'later minutes') {
+    if (run.m.read) await untilDue(at);
+    ended = await minutesTrip(at, pickOf(run.next, MINUTES));
+  }
+  if (kind === 'voice') ended = await voiceTrip(at);
   if (kind === 'wait') await waitCommand(at);
-  if (kind === 'field' && (await fieldCommand(at))) {
+  if (kind === 'field') ended = await fieldCommand(at);
+  if (ended) {
     run.faults.refuse.clear();
     return true;
   }
@@ -492,7 +666,9 @@ const fromHome = async (run: Run) => {
   }
   await app.tap('Begin');
   cover('home:begin');
-  expect(await app.until(() => app.headings().includes('Today') && app.has('Voice'))).toBe(true);
+  expect(await app.until(() => app.headings().includes('Today') && ACTIONS.some(app.has))).toBe(
+    true,
+  );
   await settle(run);
   return false;
 };
@@ -520,7 +696,7 @@ const launchOnce = async (base: Omit<Run, 'app' | 'faults' | 'step'>, label: str
   const faults = faultsFor(next, recalled);
   const step = `${label} (${m.zone}, ${faults.listing}${faults.failGet.size > 0 ? ', minutes unread' : ''})`;
   travel(m.zone);
-  const app = await launch(device, faults, time);
+  const app = await launch(device, faults, time, [], { choicesOnToday: false });
   const run: Run = { ...base, app, faults, step };
   if (faults.listing === 'held') {
     await app.until(() => false, 10);
@@ -545,7 +721,9 @@ const launchOnce = async (base: Omit<Run, 'app' | 'faults' | 'step'>, label: str
   if (!recalled) await firstMinute(run);
   const ended = m.read && (await fromHome(run));
   if (!m.read) {
-    expect(await app.until(() => app.headings().includes('Today') && app.has('Voice'))).toBe(true);
+    expect(await app.until(() => app.headings().includes('Today') && ACTIONS.some(app.has))).toBe(
+      true,
+    );
     cover('unread');
     await settle(run);
   }

@@ -2121,21 +2121,35 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     refused write then a relaunch. Each launch closes the sheet by `Done`
     and takes `Begin` to Today, which shows no `Voice`, with no fault in
     the launch or the sheet.
-  - `test:counts`, `test:counts-b` and `test:counts-c`:
-    `src/session/counts.test.tsx`, `counts-b.test.tsx` and
-    `counts-c.test.tsx`, each its own seed and devices of
-    `src/test/counts-walk.ts`, Today's counts line through the same rig,
+  - `test:counts`, `test:counts-d`, `test:counts-b`, `test:counts-e`,
+    `test:counts-c` and `test:counts-f`: `src/session/counts.test.tsx`
+    (devices 0-1), `counts-d.test.tsx` (2-3), `counts-b.test.tsx` (2-3),
+    `counts-e.test.tsx` (4-5), `counts-c.test.tsx` (2-3) and
+    `counts-f.test.tsx` (4-5), each its own seed of
+    `src/test/counts-walk.ts` and its share of its pair's floors (a pair
+    is cut by devices to keep each part under its budget; `bun run seeds`
+    finds a part's seeds), Today's counts line through the same rig,
     home's line held to the same counts at each launch: generated devices
     (fresh installs planted
     through the first minute in the evening or the day, disks of the
     passage's history beside verses no piece names), launches in zones
     that change, at an evening planting's morning, the next 04:00 and the
     passage's due, unread and held, and commands (recitals heard, missed,
-    unheard, refused or unwritten, Again, Minutes taps while Say it
-    listens and after time passes, Voice taps, time, the field and back);
-    after every step the line is `src/test/session-model.ts`'s counts of
-    the plan it made at home's first show and at each Minutes tap, over
-    the disk's recalls, and an unread launch shows no line in any frame.
+    unheard, refused or unwritten, a recital then a Minutes choice, Again,
+    Minutes choices now and after time passes, Voice choices, time, the
+    field and back); after every step the line is
+    `src/test/session-model.ts`'s counts of the plan it made at home's
+    first show and at each Minutes tap, over the disk's recalls, and an
+    unread launch shows no line in any frame. Every Minutes and `Voice`
+    choice is the reader's trip through home's Settings sheet (the sheet's
+    rig holding its frames): `Your field` to home held to the model, the
+    sheet's Minutes radio checked at the launch's minutes, the tap (the
+    plan made at it, the radio checked and home's counts under the sheet
+    the new plan's; or the pill the cycle's next), `Done`, then `Begin`
+    when the model shows an item, else home's done state ends the launch.
+    An unread launch offers no Minutes, `Voice`, Settings or `Your field`.
+    A Minutes choice while Say it listens is no reader's, and
+    `test:session-cells` floors it.
   - `test:session-held`: `src/session/held.property.test.ts`, the held
     verse at the session seam: generated devices holding the promise and
     one to three passages (one held twice, one over the promise's verse),
