@@ -302,16 +302,18 @@ const mounted = new Set<() => Promise<void>>();
  * app's layer. Every frame is held to the root's frame rule and the
  * screen's rules; the faults found are kept in `faults`, and `frames`
  * counts the frames seen by their screen (pending, Today, home, the first
- * minute, any other) and by what they showed. The root mounts through the
- * choices seam (`src/test/choices-seam.tsx`, Today showing its choices)
- * unless `seam.choicesOnToday` is false.
+ * minute, any other) and by what they showed. The root mounts as the app's
+ * `<Root />`, unless `seam.choicesOnToday` is true: then it mounts through
+ * the choices seam (`src/test/choices-seam.tsx`, Today showing its
+ * choices). `header-walk` alone passes `{ choicesOnToday: true }`, until
+ * S5b deletes the parameter.
  */
 export const launch = async (
   device: Device,
   faults: Faults,
   time: { now: number | null },
   seeded: readonly (readonly [Atom.Atom<unknown>, unknown, Atom.InitialValueOptions])[] = [],
-  seam: { readonly choicesOnToday: boolean } = { choicesOnToday: true },
+  seam: { readonly choicesOnToday: boolean } = { choicesOnToday: false },
 ) => {
   for (const left of [...mounted]) await left();
   const gate = Promise.withResolvers<void>();

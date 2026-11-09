@@ -1795,10 +1795,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   The seam: `src/test/choices-seam.tsx`'s `rootWithChoicesOnToday(host)`
   is the root with Today's row of choices shown (`ChoicesOnToday`,
   `src/settings/choices.tsx`, which the app never provides), for the one
-  rig that still taps Today's `Minutes` and `Voice`: `session-rig.tsx`
-  (its `launch` seamed unless passed `{ choicesOnToday: false }`). It
+  walk that still taps Today's `Minutes` and `Voice`: `header-walk.ts`,
+  whose two launches pass `session-rig`'s `launch` `{ choicesOnToday: true }`.
+  `session-rig` mounts `<Root />` otherwise, so the counts walk, the pill
+  test and the settings walks hold the root's rule strictly. The seam
   registers the host with `rootFaults`' choices rule, which allows the
-  choices on Today under that host alone. When `session-rig` moves its
+  choices on Today under that host alone. When `header-walk` moves its
   taps to the Settings sheet, the seam, `Choices` and Today's
   `<Choices />` go. `today-rig.tsx`, `stage-rig.tsx`, `field-rig.tsx`,
   `first-rig.tsx` and `need-rig.tsx` mount `<Root />` and make their plan
@@ -2068,7 +2070,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:settings-walk-a`, `test:settings-walk-b` and
     `test:settings-walk-c`: `src/settings/walk-a.test.tsx`, `walk-b` and
     `walk-c`, generated readers against `src/test/settings-model.ts`
-    through `session-rig`'s `launch` unseamed (`{ choicesOnToday: false }`):
+    through `session-rig`'s `launch`, which mounts `<Root />`:
     devices storing a passage of Psalm 119 with every verse planted and
     stored texts drawn from each key's classes, commands opening and
     closing the sheet (`Done`, Escape), Minutes, Voice and appearance taps

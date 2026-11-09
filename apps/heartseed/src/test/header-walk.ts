@@ -480,7 +480,7 @@ const fromHome = async (app: Launch, run: Omit<Run, 'app'>) => {
 /** One launch of a device with a recall: on a read garden home first, and `Begin` or the launch's end there; then the values read shown first, then 2-4 commands, every frame held to the rig's rules. */
 const launchOnce = async (run: Omit<Run, 'app'>, l: number) => {
   const { device, faults, m } = run;
-  const app = await launch(device, faults, run.time);
+  const app = await launch(device, faults, run.time, [], { choicesOnToday: true });
   if (faults.listing === 'held') await holdThenRelease(app, run.step);
   if (l > 0 && m.settingsWrites > 0) cover('relaunch after a landed tap');
   m.minutes = minutesRule(m.disk.minutes, faults.failGet.has(MINUTES_KEY));
@@ -528,7 +528,7 @@ const deviceRun = async (next: () => number, d: number) => {
     const time = { now: AT + l * DAY };
     const step = `device ${d} launch ${l} (${history}, ${faults.listing}, ${[...faults.failGet].join(' ')})`;
     if (history === 'none') {
-      await firstMinute(await launch(device, faults, time), step);
+      await firstMinute(await launch(device, faults, time, [], { choicesOnToday: true }), step);
       return;
     }
     await launchOnce({ device, faults, m, next, time, step }, l);

@@ -543,7 +543,7 @@ const launchOver = async (walk: Walk, start: Start | null) => {
     `stored:voice:${voiceClass(m.disk.voice, failed(CHOICE_KEY), m.disk.old, failed(ENABLED_KEY))}`,
   );
   cover(walk, `stored:appearance:${lookClass(m.disk.look)}`);
-  walk.app = await launch(walk.device, walk.faults, walk.time, [], { choicesOnToday: false });
+  walk.app = await launch(walk.device, walk.faults, walk.time);
   expect(
     await walk.app.until(
       () => walk.app.headings().includes('Your field') && walk.app.homeCounts().length > 0,

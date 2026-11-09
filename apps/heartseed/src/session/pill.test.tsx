@@ -119,7 +119,7 @@ type Sheet = ReturnType<typeof watchSheet>;
 
 /** A launch of `device` that lands on home with `Begin` (the passage, unplanted beside another verse, is the plan's new piece), no pill and no fault, then opens the Settings sheet under a watch of its frames. */
 const open = async (device: Device, faults = faultsOf()) => {
-  const app = await launch(device, faults, { now: AT }, [], { choicesOnToday: false });
+  const app = await launch(device, faults, { now: AT });
   await app.until(() => app.headings().includes('Your field') && app.has('Begin'));
   expect({
     headings: app.headings(),

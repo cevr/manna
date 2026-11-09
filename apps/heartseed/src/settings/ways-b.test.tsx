@@ -96,8 +96,7 @@ describe('Settings, more ways', () => {
     await rig.leave();
 
     const at = { now: Date.UTC(2026, 10, 5, 15) };
-    const unseamed = { choicesOnToday: false };
-    const first = await launch(deviceOf(), faultsOf(), at, [], unseamed);
+    const first = await launch(deviceOf(), faultsOf(), at);
     expect(await first.until(() => first.frames.first > 0)).toBe(true);
     const firstSeen = { settings: first.has('Settings'), faults: [...first.faults] };
     await first.leave();
@@ -105,8 +104,6 @@ describe('Settings, more ways', () => {
       deviceOf([record(recallOf('Made 1:1', at.now - 3 * 86_400_000, 3, 0))]),
       faultsOf({ listing: 'unread' }),
       at,
-      [],
-      unseamed,
     );
     expect(await unread.until(() => unread.headings().includes('Today'))).toBe(true);
     const unreadSeen = {

@@ -696,7 +696,7 @@ const launchOnce = async (base: Omit<Run, 'app' | 'faults' | 'step'>, label: str
   const faults = faultsFor(next, recalled);
   const step = `${label} (${m.zone}, ${faults.listing}${faults.failGet.size > 0 ? ', minutes unread' : ''})`;
   travel(m.zone);
-  const app = await launch(device, faults, time, [], { choicesOnToday: false });
+  const app = await launch(device, faults, time);
   const run: Run = { ...base, app, faults, step };
   if (faults.listing === 'held') {
     await app.until(() => false, 10);
