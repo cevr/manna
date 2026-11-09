@@ -58,6 +58,7 @@ import {
   type Faults,
   type Launch,
 } from './run-rig';
+import { rootFaults } from './root-rule';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
 import { hostZone, offsetIn, restore, travel, ZONES } from './zone';
 import { MINUTES_KEY } from '../session/service';
@@ -828,7 +829,7 @@ class Walk {
     await this.settle('the field and back');
   }
 
-  /** Home in the done state: the model's counts line and no `Begin`; the launch ends on it, and the next launch follows at the same instant, drawing nothing. */
+  /** Home in the done state: the model's counts line, no `Begin`, and the root's frame rule (`rootFaults`) kept; the launch ends on it, and the next launch follows at the same instant, drawing nothing. */
   async homeDone() {
     const app = this.screen;
     this.log.push('the field, done');
@@ -838,6 +839,9 @@ class Walk {
       throw new Error(
         `after ${this.log.join(' > ')}: home showed ${JSON.stringify(counts)}${app.has('Begin') ? ' and Begin' : ''}, expected ${JSON.stringify(want)}`,
       );
+    const root = rootFaults(app.host, this.unread ? 'unread' : 'read');
+    if (root.length > 0)
+      throw new Error(`after ${this.log.join(' > ')}: on home, ${root.join(', ')}`);
     await app.leave();
     this.log.push('relaunch from home');
     await this.launchNow();

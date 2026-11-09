@@ -60,6 +60,7 @@ import {
   type RunModel,
 } from './run-model';
 import { deviceOf, PASSAGE, type Device, type Faults } from './run-rig';
+import { rootFaults } from './root-rule';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
 import { listenModel, returnsModel, wakeModel } from './wake-model';
 import {
@@ -794,7 +795,7 @@ class Walk {
     this.trail.push('field');
   }
 
-  /** Home in the done state: the model's counts line and no `Begin`; the launch ends on it, and the next launch follows at the same instant, active, drawing nothing. */
+  /** Home in the done state: the model's counts line, no `Begin`, and the root's frame rule (`rootFaults`) kept; the launch ends on it, and the next launch follows at the same instant, active, drawing nothing. */
   async homeDone() {
     const app = this.screen;
     this.log.push('the field, done');
@@ -806,6 +807,9 @@ class Walk {
       );
     const voice = this.voiceFaults();
     if (voice.length > 0) this.fail(`on home: ${voice.join(', ')}`);
+    const root = rootFaults(app.host, this.unread ? 'unread' : 'read');
+    if (root.length > 0) this.fail(`on home: ${root.join(', ')}`);
+    bump(this.coverage, 'done:field');
     if (this.reading !== null) bump(this.coverage, 'listen:field-reading');
     await this.leave();
     this.log.push('relaunch from home');
