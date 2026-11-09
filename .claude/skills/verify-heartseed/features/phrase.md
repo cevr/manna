@@ -23,9 +23,10 @@ leave the session (`apps/heartseed/README.md`, Phrases).
 
 ## Sub-features
 
-- `phrase-day-one`: after the first minute, `Your field` → `Add a passage`
+- `phrase-day-one`: after the first minute, `Your field` → `Add verses`
   → `John` → `John 3` → `John 3:16` → `Plant`. The field shows the row
-  `John 3:16` with `John 3:16, not planted` and no node naming `[`. Back
+  `John 3:16` with the plant button `John 3:16, not planted` and no node
+  naming `[`. Back
   on Today: no `1 new`, no `Listen`. (Holds on base too: a guard row.)
 - `phrase-new` (the second session, after the next 04:00 local, with no
   uninstall): Today shows `1 new`; after the promise's review if it is
@@ -55,7 +56,7 @@ leave the session (`apps/heartseed/README.md`, Phrases).
 
 ## How to get to it (user POV)
 
-- From Today, `Your field` → `Add a passage` → a long verse (`John 3:16`)
+- From Today, `Your field` → `Add verses` → a long verse (`John 3:16`)
   → `Plant`; its first phrase is new on Today after the next 04:00 local.
 
 ## Driving it
@@ -70,11 +71,11 @@ must start empty: uninstall by udid as `first.md` says.
 1. `first.md` steps 1-7: boot, uninstall, install, revoke the microphone,
    and the first minute to `first-today`.
 2. `phrase-day-one`: `sim tap "label=Your field"`,
-   `sim tap "label=Add a passage"`, `sim tap "label=John"`,
+   `sim tap "id=add-verses"`, `sim tap "label=John"`,
    `sim tap "label=John 3"`, then `sim scroll screen down` until
    `John 3:16` shows clear of the footer (a snapshot after each scroll),
    `sim tap "label=John 3:16"`, `sim tap "label=Plant"`, `sim snapshot phrase-day-one-field` → the row
-   titles `Isaiah 41:10`, `John 3:16`, `Protection & Fear`; the node
+   titles `Isaiah 41:10`, `John 3:16`, `Protection & Fear`; the button
    `John 3:16, not planted`; no node whose label holds `[`. Then
    `sim tap "label=Today"`, `sim open / --expect "id=session"`,
    `sim snapshot phrase-day-one` → the counts line holds no `1 new`, no
@@ -98,7 +99,7 @@ must start empty: uninstall by udid as `first.md` says.
    then `sim tap "label=Next"`.
 6. `phrase-field`: `sim tap "label=Your field"`, `sim snapshot
    phrase-field` → `John 3:16, seed` in the row `John 3:16`; no row title
-   or plant label holding `[`; 14 `<reference>, not planted` nodes in the
+   or plant label holding `[`; 14 `<reference>, not planted` buttons in the
    row `Protection & Fear` (count them); `1 day sown` or more. Then
    `sim tap "label=Today"`.
 7. `phrase-need`: `sim tap "label=When I need…"`, `sim snapshot

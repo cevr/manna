@@ -33,7 +33,8 @@ said as a review (`apps/heartseed/README.md`, When I need…).
   it; the field, About and When I need… and back keep it; a relaunch has
   none.
 - **The field's row**: `Protection & Fear` after the passages held and
-  before the other plants, its 14 verses as plants, with no `Remove`.
+  before the other plants, its 14 verses as plant buttons, with no
+  `Remove`.
 - Nothing is stored but the recalls said (and the minutes after a tap):
   no new key.
 
@@ -105,10 +106,11 @@ must start empty: uninstall by udid as `first.md` says.
    group with one radio checked, `Next`, no `Say it`. Then
    `sim tap "label=Next"`, `sim snapshot promise-next` → the done state
    (`Nothing to tend now`, no reference) or the plan's item. Then
-   `sim tap "label=Your field"` → the node `Isaiah 41:10, <stage>` at the
-   stage `promise-said` showed.
+   `sim tap "label=Your field"` → a button whose label starts
+   `Isaiah 41:10, <stage>`, at the stage `promise-said` showed
+   (`, ready today` follows while a plan item on it is open).
 6. `promise-field`: on the field, `sim snapshot promise-field` → the row
-   titles `Isaiah 41:10` then `Protection & Fear`; 14 nodes
+   titles `Isaiah 41:10` then `Protection & Fear`; 14 buttons
    `<reference>, not planted` in that row (`Psalms 91:1` first,
    `Isaiah 41:13` last; count them); `Remove` nowhere. Then
    `sim tap "label=Today"`.

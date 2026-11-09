@@ -15,21 +15,28 @@ on which any recall was kept, each record's day read by the zone offset it
 stores, a record kept before offsets by its UTC date, so it never falls)
 and the harvest (`<n> verses at full corn`,
 `1 verse at full corn`: the verses at full corn now, never a phrase, so
-Again takes a verse out). Then one card per row: the promise's first (`Isaiah 41:10`, shown
+Again takes a verse out). Above them, the greeting by the hour (`home.md`);
+after them a hint, then one furrow per row, each with its icon, title and
+ripe count (`<k> of <n> ripe`): the promise's first (`Isaiah 41:10`, shown
 even before its first recall, as bare soil), then each passage the reader
 chose, in the order chosen (`passage.md`), then the taught collection's
 row `Protection & Fear`, its 14 verses in order, with no `Remove`
 (`promise.md`), then each other verse the garden holds, in the order
 first sown. A phrase is never a row or a plant: a verse with only its
 phrases planted shows `seed`, and a removed passage's phrases make one
-row for their verse (`phrase.md`). Each plant is one image to the
-screen reader, labelled `<reference>, <stage>` (`seed`, `blade`, `ear`,
-`full corn` or `not planted`), its drawing and verse number hidden inside
-it. A legend of the four stages and the caption `Mark 4:28` close the
-screen. The bar also holds `Add a passage` or the limit line, and a
-passage row's `Remove` (`passage.md`). Under the scroll view, a fixed foot
-holds one button, `About`, which opens the About screen (`about.md`); like
-every field control it is disabled while a remove is pending. Which screen shows is never stored:
+row for their verse (`phrase.md`). Each plant is one button, labelled
+`<reference>, <stage>` (`seed`, `blade`, `ear`, `full corn` or
+`not planted`), then `, ready today` when a plan item not done is on it,
+its gold dot, drawing and verse number hidden inside it; a tap chooses its
+verse (`home.md`). The dashed row `Add verses` (`id=add-row`), a legend
+of the four stages and the caption `Mark 4:28` close the scroll view. The
+bar also holds `Add verses` (`id=add-verses`) or the limit line, and a
+passage furrow's `Remove` (`passage.md`). Under the scroll view, a fixed
+foot holds the Begin card (the counts line and `Begin`) or, with a verse
+chosen, the chosen card (`<reference> · <stage words>` and
+`Start here with <reference>`), then `About`, which opens the About
+screen (`about.md`); like every field control each is disabled while a
+remove is pending. Which screen shows is never stored:
 every launch opens on the pending frame, then the first minute or Today.
 
 ## Sub-features
@@ -37,9 +44,9 @@ every launch opens on the pending frame, then the first minute or Today.
 - `field-control`: Today, read and quiet, offers a button `Your field` in
   its header, inside the window and above the home indicator's area.
 - `field-first`: after the first minute, the field shows the passage at a
-  seed, then the row `Protection & Fear` with no plant planted,
-  `1 day sown`, `0 verses at full corn` and a button `Today`, with no
-  `Today` heading and no `Say it`.
+  seed as a plant button, then the row `Protection & Fear` with no plant
+  planted, `1 day sown`, `0 verses at full corn` and a button `Today`,
+  with no `Today` heading and no `Say it`.
 - `field-back`: `Today` shows Today as it was.
 - `field-grow` (live at the first wait, `run.md`'s `run-recite` and
   `run-held-field`): a recital under letters that grows the passage to a
@@ -71,8 +78,8 @@ Launch); the JavaScript comes from the dev server.
 2. `field-control`: in `first-today`'s snapshot (Today's done state), a
    button `Your field`.
 3. `field-first`: `sim tap "label=Your field"`, `sim snapshot field-first`
-   → the heading `Your field`; the text `Isaiah 41:10`; a node labelled
-   `Isaiah 41:10, seed`; the text `Protection & Fear` and 14 nodes ending
+   → the heading `Your field`; the text `Isaiah 41:10`; a button
+   `Isaiah 41:10, seed`; the text `Protection & Fear` and 14 buttons ending
    `, not planted` (`promise.md`'s `promise-field`); `1 day sown`;
    `0 verses at full corn`; a button
    `Today`; no `Today` heading, no `Say it`, no label starting `Stage:`.
@@ -90,7 +97,9 @@ Launch); the JavaScript comes from the dev server.
 6. (`field-listening` is in step 5.)
 7. `field-again`, only when `run.md` step 7 (`run-second`) runs: before its
    `Next`, `sim tap "label=Again"`, then `sim tap "label=Your field"`,
-   `sim snapshot field-again` → `Isaiah 41:10, seed`, the same days sown as
+   `sim snapshot field-again` → a button whose label starts
+   `Isaiah 41:10, seed` (`, ready today` follows while its item is open),
+   the same days sown as
    step 5; then `sim tap "label=Today"`. Otherwise the tests own it.
 8. `field-relaunch`: `sim relaunch`, `sim open / --expect "label=Isaiah
    41:10"` (the pending frame) and at once
@@ -125,7 +134,10 @@ delete the `snapshots` folder and the raw snapshot.
   and bad offsets are the tests' (`test:field`, `test:garden`), never the
   drive's.
 - A row title is plain text, not a heading; the field's one heading is
-  `Your field`.
+  `Your field`. The greeting is plain text too.
+- After a `Minutes` tap a ready plant's label ends `, ready today`, so
+  `label=Isaiah 41:10, seed` no longer matches it: tap it by its full
+  label.
 - `Your field` never needs a `sim scroll`: it is in Today's header, outside
   the scroll view. Tap it as it is; a scroll just before a tap can leave the
   scroll view moving, and a tap then may stop the scroll instead of pressing.

@@ -141,8 +141,11 @@ the hymnal's skill describes; in the first minute a reader taps `Listen`,
 word's mark, `Next`, a `Minutes` radio, `Voice` (its value `Off`, `Her`
 or `Him` in a raw snapshot) and `Your field` and `When I need…`; on When I need… a promise by its
 reference and its bar's `Today`; on the field, in its bar,
-`Today`, `Add a passage`, and the ask's `Remove` and `Keep`, in a row
-`Remove <reference>`, and in its foot `About`; on About its bar's
+`Today`, `Add verses` (`id=add-verses`: the dashed row at the field's end
+is `Add verses` too, `id=add-row`), and the ask's `Remove` and `Keep`, in
+a furrow `Remove <reference>` and its plants (`<reference>, <stage>`,
+then `, ready today` when ready), and in its foot `Begin`,
+`Start here with <reference>` and `About`; on About its bar's
 `Your field` and in its foot an `Appearance` radio (`System`, `Light`,
 `Dark`); on the chooser a book, a chapter, a verse, `Plant` and
 the backs (`Your field`, `Books`, `Chapters`); and on the home's
@@ -193,15 +196,15 @@ Heartseed has no journey files yet. The features:
   switch's Off carried over, and the counts line atop the scroll view. Run
   it from `first.md`'s Today, before `run.md` step 3.
 - [features/field.md](features/field.md): the field, reached from Today's
-  `Your field` and back by its bar's `Today`: a row per passage, a plant
-  per verse at its stage, the local days sown from 04:00 (each by the zone
+  `Your field` and back by its bar's `Today`: a furrow per passage, a
+  plant button per verse at its stage, the local days sown from 04:00 (each by the zone
   offset its record holds), which never fall, and the harvest.
 - [features/about.md](features/about.md): the About screen, from the
   field's fixed foot `About`: the natural voice's credits and the Apache
   License 2.0 whole, the way back to the field, and the reader's
   appearance (System, Light, Dark) in its fixed foot.
 - [features/passage.md](features/passage.md): choosing passages: the
-  field's fixed bar with `Add a passage` or the limit line, the chooser
+  field's fixed bar with `Add verses` or the limit line, the chooser
   (books, chapters, a chapter's verses, the range clipped to 20, `Plant`
   in a fixed footer), a row's `Remove` and its one ask, and Today over the
   passages chosen, the first day and after the next 04:00. Run it from
@@ -248,9 +251,11 @@ Heartseed has no journey files yet. The features:
   the furrows with their kinds, icons, ripe counts and ready marks, the
   lists, the shelves Add verses will offer, and Start here at the
   session) on the development probe (`apps/heartseed/app/probe/home.tsx`)
-  over the live garden, and the row `home-icons`: the home's 22 icon PNGs
-  loaded on the device; no screen a reader sees draws them yet. Run it
-  from `first.md`'s Today.
+  over the live garden, the row `home-icons` (the home's 22 icon PNGs
+  loaded on the device), and the field in home A's layout: the greeting,
+  furrows of plant buttons with their ripe counts, a choice and
+  `Start here`, `Begin` in the foot, `Add verses` in two places and the
+  gold dot on a ready plant. Run it from `first.md`'s Today.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.

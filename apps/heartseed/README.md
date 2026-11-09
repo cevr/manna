@@ -488,20 +488,48 @@ them.
   it reads only the garden's and the passages' views, and writes only
   through a landed remove (Choosing a passage, below). Every number
   derives from the garden's view each time the field shows.
-- `src/field/screen.tsx` draws a `Field`: the bar (the way back, then
-  `Add a passage`, the limit line or the ask), the heading, the
-  counts, one card per row titled by its passage (plain text, never a
-  heading, so a reference spelled `Your field` or `Today` adds none), each
-  plant `PlantMark` (`src/sayit/draw.tsx`, Today's drawing, with bare soil
-  for a verse not planted) over its verse number, one image to the screen
-  reader labelled `<reference>, <stage>`, and a legend of the four stages,
-  hidden from the screen reader, over the caption `Mark 4:28`. No other
-  number shows, and nothing moves. Every text is Palette A's ink (the
-  counts in Today's summary style), never the muted grey, so each reads at
-  WCAG AA's 4.5:1 on the ground and on a card. Under the scroll view a
-  fixed foot holds one control, `About`, in the field's outlined pill
-  style, at least 44 pt tall and clear of the home indicator; like every
-  field control it is disabled while a remove is pending.
+- `src/field/screen.tsx` draws a `Field` in home A's layout (Home,
+  below), its furrows and legend in `src/field/plot.tsx` and its foot in
+  `src/field/foot.tsx`. The bar, fixed above the scroll view, holds the
+  way back, then `Add verses` (testID `add-verses`), the limit line or the
+  ask. In the scroll view: the greeting (testID `greeting`, the sun or the
+  moon, then its words in `sun`, plain text), the heading `Your field`,
+  the days sown and the harvest, the hint `A gold dot marks a plant ready
+  today. Tap one to start there.`, one furrow per row (`furrowsOf`; testID
+  `row`), the dashed `Add verses` row (testID `add-row`, at least 56 pt
+  tall) whenever the bar offers `Add verses`, and a legend of the four
+  stages, hidden from the screen reader, over the caption `Mark 4:28`. A
+  furrow's head holds its icon (`furrow-icon`), its title (plain text,
+  never a heading, so a reference spelled `Your field` or `Today` adds
+  none), its ripe count (`<k> of <n> ripe`, testID `ripe`) and, for a held
+  passage, `Remove <reference>`; then its plants, then a soil line. Each
+  plant (testID `field-plant`) is one button at least 44 × 44 pt named
+  `<reference>, <stage>`, then `, ready today` for a verse of the plan's
+  open items, with `aria-selected` while its verse is chosen; inside it,
+  hidden, the gold dot (testID `dot`, filled `sun`, at least 3:1 on the
+  ground and on a chosen plant's card) when ready, the stage's image
+  (`seed`, `blade`, `ear` or `corn` from `ICON_IMAGES`, of the scheme
+  now) or bare soil (`plant-soil`) for a verse not planted, and its verse
+  number. Every icon is hidden from the screen reader; nothing moves.
+  Every text is in a text role at WCAG AA on what lies behind it. The foot
+  (testID `foot`), fixed under the scroll view and clear of the home
+  indicator, holds one card, then `About`: with no verse chosen, once a
+  plan is made, the Begin card (`begin-card`: the counts line, testID
+  `counts`, and `Begin` while the run shows an item), which opens Today
+  and writes nothing; with a verse chosen, the chosen card (`chosen`:
+  `<reference> · a seed`, `a blade`, `an ear`, `full corn` or `not
+  planted yet`, and `Start here`, named `Start here with <reference>`,
+  while `startOf` starts something), which runs `startHere` and opens
+  Today once it settles. Like every field control, the plants, `Begin`
+  and `Start here` are disabled while a remove is pending.
+- **The choice** is a verse, never a cell: a tap on a plant chooses its
+  verse (every cell of it shows selected), a tap on a plant of the chosen
+  verse lets it go, and a tap on another moves it. It is the screen's own
+  state, never stored, dropped when the field closes or when no furrow
+  holds the verse any more.
+- **The greeting** reads the runtime's `Clock` when the field opens
+  (`greetingNow`, `src/app.ts`, over `greetingAt`), in the reader's zone,
+  so a field left open across 12:00 keeps its greeting until reopened.
 
 ## About
 
@@ -607,10 +635,12 @@ reader must reach sits where a scroll can hide it: the field's bar, the
 chooser's header and its footer are fixed outside the scroll views.
 
 - **The field's bar** holds `‹ Today` (named `Today`), then, with the
-  passages read, `Add a passage` while fewer than 3 are held, else the
-  limit line "3 passages, the most for now. Remove one to add another."
-  (testID `limit`), which a stored list of 4 or more shows too, so the bar
-  never offers an add the service would refuse. With the passages unread
+  passages read, `Add verses` (testID `add-verses`) while fewer than 3
+  are held, else the limit line "3 passages, the most for now. Remove one
+  to add another." (testID `limit`), which a stored list of 4 or more
+  shows too, so the bar never offers an add the service would refuse. The
+  dashed row `Add verses` at the field's end (testID `add-row`) shows
+  exactly when the bar's does and does the same; both open the chooser. With the passages unread
   it offers neither and no row offers `Remove`: the app never writes over
   what it could not read.
 - **The rows** are the promise's, then each passage held, in the order
@@ -620,7 +650,7 @@ chooser's header and its footer are fixed outside the scroll views.
   `Remove <its reference>`, which finds its passage by the row's range,
   never by its place. The promise and the taught collections are not the
   reader's choice and have none.
-- **Remove asks once**, in the bar in place of `Add a passage` or the limit
+- **Remove asks once**, in the bar in place of `Add verses` or the limit
   line: "Remove <reference>? Its plants stay in your field." (testID
   `ask`), with `Remove` and `Keep`. `Keep` closes it. `Remove` runs
   `removePassage` (`uprootPassage`, `src/app.ts`); the service takes out
@@ -658,8 +688,9 @@ chooser's header and its footer are fixed outside the scroll views.
   chooser clears the line.
 - **One change at a time.** From a tap of `Plant`, or of the ask's
   `Remove`, until its answer, a tap of `Plant`, the ask's `Remove` or
-  `Keep`, `Add a passage`, a row's `Remove`, a verse or a back changes
-  nothing, and each shows as disabled. A ref, set in the tap's own turn,
+  `Keep`, `Add verses`, a row's `Remove`, a plant, `Begin`, `Start here`,
+  a verse or a back changes nothing, and each shows as disabled (no
+  `Add verses` shows while the ask holds the bar). A ref, set in the tap's own turn,
   holds it, so two taps in one turn make one change: a double tap never
   stores a passage twice or removes two.
 - **Today after a change.** A landed add or remove is a making (Passages,
@@ -1085,8 +1116,9 @@ counts only.
 ## Home
 
 The home is the field as the reader's first screen (home A, the owner's
-pick). Its rules are pure code and one session command; no screen a
-reader sees draws them yet (hshomefield onward). The development probe
+pick). Its rules are pure code and one session command; the field
+(Field, above), still opened from Today's `Your field`, draws them in
+A's layout, and the root opens on it later (hshomeroot). The development probe
 `app/probe/home.tsx` shows them as text over the live garden, passages and
 session (verify-heartseed, `features/home.md`).
 
@@ -1124,7 +1156,9 @@ session (verify-heartseed, `features/home.md`).
   typed `number` by the `.d.png.ts` beside it; a name added without its
   two PNGs fails the typecheck. They are 144 px, so a screen draws them at
   48 pt or less. The probe shows all 22 and how many loaded
-  (`home-icons`); no screen a reader sees draws one yet (hshomefield).
+  (`home-icons`); the field draws the furrows', the plants', the legend's,
+  the greeting's and `Add verses`' icons; Today's stage line and the first
+  minute keep `PlantMark` (`src/sayit/draw.tsx`).
 - **Ready** (`readyOf(plan, garden)`, `src/home.ts`): the verses (a
   phrase's folded in) of the plan's items not done; none before a plan, and
   a visit marks nothing.
@@ -1675,8 +1709,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `src/test/field-rig.tsx` (the rig holds every frame to the field's
     rules: the control only on a read, quiet Today, never inside a scroll
     view; each field frame the
-    rule's rows, plants, drawings, days sown and harvest as seen and
-    exposed, every text at AA contrast; each open and way back leaving the
+    rule's rows with their icons and ripe counts, plants as buttons with
+    their drawings (each image's source of the scheme now), days sown and
+    harvest as seen and exposed, every text at AA contrast, and home A's
+    frame rules, `homeFaults`; each open and way back leaving the
     whole disk and taking no write, remove or clear): the way there and
     back through recitals, Again and a relaunch; and
     `src/field/garden.test.tsx`, a generated garden past 140 other verses
@@ -1703,7 +1739,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     garbled values and 1-3 failed reads; a row's `Remove`, then `Keep`,
     another row, leaving, or the ask's `Remove` landing or refused, once,
     twice in one turn or with `Today` or `Keep` in the same turn;
-    `Add a passage` left or planted; after every tap the field, the bar
+    the bar's or the row's `Add verses` left or planted (each shown
+    exactly when the other is); after every tap the field, the bar
     and the disk against `src/test/choose-model.ts` and the passages'
     model; each file's floors met by its own devices.
   - `test:about`: `src/about/screen.test.tsx`, About through the bar rig:
@@ -1988,6 +2025,30 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     (`src/test/promise-model.ts`), its piece, `shownOf`, the counts and the
     disk, byte for byte the same across every `start`; each verse class's
     floor met, and a start before `begin` and over an unread garden.
+  - `test:home-screen`: `src/home/screen.test.tsx`, the field in home A's
+    layout through `src/test/bar-rig.tsx` (every frame also held to
+    `homeFaults`), in light and in dark, its expected values written out:
+    the bar, the scroll view and the foot and what each holds, the
+    furrows' icons of the scheme, a verse in two furrows chosen, let go and
+    moved, `Start here with <reference>` only where a start is offered and
+    Today showing that verse after it, `Begin` then on to Today, nothing
+    written; and no add, remove or limit line over unread passages.
+  - `test:home-clock`: `src/home/clock.test.tsx`, the field by the
+    runtime's clock in light and in dark: a seed at its due after a
+    Minutes tap marked with a dot filled `sun` at 3:1 against its plant
+    chosen or not, `gold` nowhere, the counts line and `Begin` leading to
+    Today writing nothing; and the greeting at each open at 11:59, 12:00
+    and 18:00, and in Asia/Kolkata at 10:00Z (afternoon there).
+  - `test:home-walk-a`, `test:home-walk-b`, `test:home-walk-c`,
+    `test:home-walk-d`: `src/home/walk-{a,b,c,d}.test.tsx`, the field
+    walked through the root (`src/test/home-walk.ts`, a `need-walk` `Walk`
+    with the field's commands: open, a tap on a plant of each class, a tap
+    again, `Start here`, `Begin`, `Today`, a landed remove), one device
+    each of seeds 30, 10, 69 and 74, held after every command to
+    `furrowsModel` and `readyModel` (full labels with `, ready today`),
+    `countsModel`, `startModel` and `greetingModel`, Today to `need-walk`'s
+    oracle and the disk to its rule; every field frame to `homeFaults`;
+    each part's floors met, all sixteen across the four.
   - `test:phrase`: the phrase cut and its reference form (`src/phrase.ts`).
     `src/phrase.property.test.ts`, `cutOf` against `src/test/phrase-model.ts`
     and its brute force over every partition for 13-22 words, for generated

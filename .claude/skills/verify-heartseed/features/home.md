@@ -4,8 +4,22 @@ The home's rules (`apps/heartseed/README.md`, Home): the greeting by the
 reader's local hour, the furrows (one per row of the field, each its list's
 kind, icon and ripe count, each plant's stage and ready mark), the lists
 the field holds, the shelves Add verses will offer, and Start here, a tap on
-a verse that makes it the session's visit. No screen a reader sees draws
-them yet (hshomefield onward). The development probe
+a verse that makes it the session's visit. The field
+(`apps/heartseed/src/field/screen.tsx`, `field.md`), still reached from
+Today's `Your field`, draws them in home A's layout: in a bar fixed above
+the scroll view `Today` and `Add verses` (`id=add-verses`); in the scroll
+view the greeting (`Good morning`, `Good afternoon` or `Good evening`,
+with a sun or a moon), the heading `Your field`, the days sown and the
+harvest, the hint, one furrow per row (its icon, title, ripe count
+`<k> of <n> ripe`, a held passage's `Remove`, and its plants as buttons
+named `<reference>, <stage>`, then `, ready today` with a gold dot when a
+plan item not done is on the verse), the dashed row `Add verses`
+(`id=add-row`) and the legend; in a foot fixed under it the Begin card
+(the counts line and `Begin`, which opens Today as the run stands) or,
+with a plant chosen, `<reference> · <stage words>` and
+`Start here with <reference>`, which makes the verse the visit and opens
+Today on it; then `About`. A tap on a plant chooses its verse, a second
+tap lets it go. The development probe
 (`apps/heartseed/app/probe/home.tsx`, in a development build only) shows them as text over the live garden, passages and session,
 one line each, then the home's icons as images with a count of those
 loaded, and begins the session once the garden is read, as Today
@@ -22,15 +36,30 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
 - `home-icons`: the same probe loads every one of the home's icons
   (`src/home/icons.ts`, 11 names in light and dark, 22 PNGs) through One's
   asset registry, and says how many loaded.
+- `home-furrows`: the field shows the greeting by the hour, the own
+  furrow `Isaiah 41:10` (`0 of 1 ripe`) with the plant button
+  `Isaiah 41:10, seed`, the `Protection & Fear` furrow (`0 of 14 ripe`)
+  with 14 plant buttons not planted, `Nothing to tend now` and `About` in
+  the foot with no `Begin`, and `Add verses` in the bar and as a row.
+- `home-choose`: a tap on a plant chooses it (`Isaiah 41:10 · a seed`
+  and `Start here with Isaiah 41:10`), a second tap lets it go, and a
+  verse not planted offers no `Start here` on the day of a planting.
+- `home-start`: `Start here with Isaiah 41:10` opens Today on that verse.
+- `home-begin`: with the started visit open the foot offers `Begin`,
+  which opens Today on it.
+- `home-add-places`: the bar's `Add verses` opens the chooser.
+- `home-dot`: a seed at its due after a `Minutes` tap shows on the field
+  as `Isaiah 41:10, seed, ready today`, with `1 to tend · about 1 min` and
+  `Begin`, and starts there.
 - Planned, not yet drivable (the later units of the home, split.md):
-  `home-furrows`, `home-dot`, `home-start`, `home-begin`, `home-open`,
-  `home-back`, `home-need`, `home-relaunch`, `home-settings`, `home-add`,
-  `home-end`.
+  `home-open`, `home-back`, `home-need`, `home-relaunch`, `home-settings`,
+  `home-add`, `home-end`.
 
 ## How to get to it (user POV)
 
 - None: a reader never sees the probe. A drive opens it by its link
   (Driving it, step 2).
+- The field: from Today, tap `Your field`; tap `Today` to come back.
 
 ## Driving it
 
@@ -97,6 +126,66 @@ Red on base: `sim open probe/home --expect "label=Home probe"` times out
 `--expect "label=icons loaded 22 of 22"` times out on a base whose probe has
 no icon lines.
 
+### The field in home A's layout
+
+On an install of its own (the probe's `Start with` leaves a visit, which
+puts `Begin` in the field's foot), with the same variables:
+
+1. `first.md` steps 1-7, to `first-today`; note `PLANTED` (`date`) and
+   `date +%H%M`.
+2. `home-furrows`: `sim tap "label=Your field"`,
+   `sim snapshot home-furrows` → the heading `Your field`; the text
+   `Good morning` (0400-1159 by `date +%H%M`), `Good afternoon`
+   (1200-1759) or `Good evening` (take `date` again when within a minute
+   of an edge); the text `A gold dot marks a plant ready today. Tap one to
+   start there.`; the text `Isaiah 41:10` and the text `0 of 1 ripe`; a
+   button `Isaiah 41:10, seed`; the text `Protection & Fear`, the text
+   `0 of 14 ripe` and 14 buttons ending `, not planted`; `1 day sown`;
+   `0 verses at full corn`; in the foot `Nothing to tend now`, no `Begin`,
+   and `About`; the buttons `Today` and two `Add verses`; no `Today`
+   heading, no `Say it`, no label starting `Stage:`.
+3. `home-choose`: `sim tap "label=Isaiah 41:10, seed"`,
+   `sim snapshot home-choose` → the text `Isaiah 41:10 · a seed`, the
+   button `Start here with Isaiah 41:10`, no `Begin` (record how the
+   snapshot shows the plant's selection: `selected` or nothing). Then
+   `sim tap "label=Isaiah 41:10, seed"` again, `sim snapshot
+   home-choose-letgo` → `Nothing to tend now` back and no label starting
+   `Start here`. Then `sim tap "label=Psalms 91:1, not planted"`,
+   `sim snapshot home-choose-unplanted` → the text
+   `Psalms 91:1 · not planted yet` and no label starting `Start here` (no
+   new piece on the day of a planting).
+4. `home-start`: `sim tap "label=Isaiah 41:10, seed"` (the choice moves),
+   `sim tap "label=Start here with Isaiah 41:10"`,
+   `sim snapshot home-start` → the heading `Today`, the reference
+   `Isaiah 41:10`, `Say it`, `Stage: seed`.
+5. `home-begin`: `sim tap "label=Your field"`, `sim snapshot home-begin` →
+   `Nothing to tend now` and `Begin` in the foot (the started visit is
+   open); `sim tap "label=Begin"`, `sim snapshot home-begin-today` → the
+   heading `Today`, `Isaiah 41:10`, `Say it`.
+6. `home-add-places`: `sim tap "label=Your field"`,
+   `sim tap "id=add-verses"` → the heading `Add a passage`;
+   `sim tap "label=Your field"` → the heading `Your field` again.
+7. `home-dot`, only when `PLANTED` was 0400-1759 local (an evening
+   planting is due the next morning; otherwise record
+   `Nothing to tend now` and skip, as `run.md` step 3 does):
+   `sim tap "label=Today"`, wait until 7 minutes after `PLANTED`,
+   `sim tap "label=5 min"` (the plan made again; the idle visit dropped),
+   `sim tap "label=Your field"`, `sim snapshot home-dot` → the button
+   `Isaiah 41:10, seed, ready today`, `1 to tend · about 1 min` and
+   `Begin` in the foot; `sim tap "label=Isaiah 41:10, seed, ready today"`,
+   `sim tap "label=Start here with Isaiah 41:10"`, `sim snapshot
+   home-dot-start` → the heading `Today`, `Isaiah 41:10` and `Say it`.
+8. Regression on the same install: `field.md`'s `field-first` and
+   `field-back` (the plants as buttons), and `about.md`'s way to About
+   from the foot. Then `sim doctor` (record `head` and `timingsHold`) and
+   `sim down`.
+
+Red on base: no `0 of 1 ripe`, no `Add verses` and the plant an image,
+not a button (`home-furrows`); the plant's tap opens nothing
+(`home-choose`); `sim tap "label=Start here with Isaiah 41:10"` not found
+(`home-start`); no `Begin` (`home-begin`); no `id=add-verses`
+(`home-add-places`); no label ending `, ready today` (`home-dot`).
+
 Report only the lines named above and the reference; delete the
 `snapshots` folder.
 
@@ -114,8 +203,15 @@ Report only the lines named above and the reference; delete the
   image reloads, so a count short of 22 that never moves is a PNG One's
   asset registry did not serve; an `icons failed` line names it. A dev
   bundle that fails to load at all (before hsdevbundle) shows neither.
+- Two nodes are named `Add verses` (the bar's and the row's): tap the
+  bar's by `id=add-verses`, never `label=Add verses`.
 - What the simulator cannot show, the tests own: the greeting at other
-  hours and in other zones, a phrase start, Start here landing on Today,
-  the shelves sheet and `Plant`, the end of a run, and how each icon looks:
-  its colours and contrast as drawn (`test:home-pixels`, `test:theme`), the
-  dark set under a dark system and its sharpness at 48 pt on a 3× screen.
+  hours and in other zones (`test:home-clock`), a phrase start
+  (`test:home-walk-a`), a remove's effect on the furrows (`passage.md`
+  covers the remove), the 3-held limit (`passage.md`), the shelves sheet
+  and `Plant`, the end of a run, how VoiceOver speaks the selection, and
+  how each icon looks: its colours and contrast as drawn
+  (`test:home-pixels`, `test:theme`), the dot's colour and its 3:1
+  (`test:home-clock`), the dark set under a dark system, whether furrow
+  heads and long titles fit (the 14-plant wrap), and the icons' sharpness
+  at 48 pt on a 3× screen.
