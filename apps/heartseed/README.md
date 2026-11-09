@@ -2467,6 +2467,13 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     against `shelvesModel` (the collections derived as those not taught,
     every pick and promise choosable, ids unique, no paid words) and
     `offerStateOf` against `offerModel` over generated fields and passages.
+  - `test:shelves`: `src/shelves/sheet.test.tsx`, the Add verses sheet
+    (`src/shelves/sheet.tsx`) beside a stand-in home
+    (`src/test/shelves-rig.tsx`, every frame of the document held to
+    `addSheetFaults`) against `sheetWant` (`src/test/shelves-model.ts`):
+    each offer's state over generated passages and fields, `Full` by stale
+    props as the limit line, a pending plant blocking every control and the
+    close, and no paid word or verse text on any shelf.
   - `test:home-start`: `src/home/start.property.test.ts`, Start here at the
     session seam, walked as `test:session-visit` walks a visit: after every
     step the plan, the hold, the visit against `startModel`
