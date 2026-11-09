@@ -24,17 +24,17 @@ import type { Ending } from '../voice/reading';
 
 const ABSENT: OrNull<never> = Option.getOrNull(Option.none());
 
-/** The screen a launch opens on: none while the garden's read runs, the first minute when the read holds no recall of any verse, home or Today after it, and Today in an unread garden, which cannot know there is no seed and shows no field. */
+/** The screen a launch opens on: none while the garden's read runs, the first minute when the read holds no recall of any verse, home when it holds one, and Today in an unread garden, which cannot know there is no seed and shows no field. */
 export type Opening = 'pending' | 'first' | 'home' | 'today';
 
-/** The screen a launch on `garden` opens on, a read garden with a plant opening on `opening`. */
-export const openingOf = (garden: Option.Option<GardenView>, opening: 'home' | 'today'): Opening =>
+/** The screen a launch on `garden` opens on: home for a read garden with a plant. */
+export const openingOf = (garden: Option.Option<GardenView>): Opening =>
   Option.match(garden, {
     onNone: (): Opening => 'pending',
     onSome: (view): Opening => {
       if (view._tag !== 'Read') return 'today';
       if (view.plants.size === 0) return 'first';
-      return opening;
+      return 'home';
     },
   });
 

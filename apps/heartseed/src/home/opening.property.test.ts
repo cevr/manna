@@ -3,8 +3,8 @@
 /**
  * The opening (R1 of hshomeroot) at its pure seam: `openingOf` over
  * generated garden views (none, `Unread`, and `Read` with 0 to 5 plants of
- * generated references) and both `opening` values, against R1's table
- * written out here apart from the code; and `shownOpening` over every pair
+ * generated references), against R1's table written out here apart from
+ * the code, each of its rows met; and `shownOpening` over every pair
  * of openings, the decided one kept once decided.
  */
 
@@ -38,46 +38,42 @@ const viewOf = (next: () => number): Option.Option<GardenView> => {
   return Option.some({ _tag: 'Read', plants });
 };
 
-/** R1's table: pending while the read runs, Today on an unread garden, the first minute on a read one with no plant, else the prop's screen. */
-const R1 = (garden: Option.Option<GardenView>, opening: 'home' | 'today'): Opening => {
+/** R1's table: pending while the read runs, Today on an unread garden, the first minute on a read one with no plant, else home. */
+const R1 = (garden: Option.Option<GardenView>): Opening => {
   if (Option.isNone(garden)) return 'pending';
   if (garden.value._tag === 'Unread') return 'today';
-  return garden.value.plants.size === 0 ? 'first' : opening;
+  return garden.value.plants.size === 0 ? 'first' : 'home';
 };
 
 const OPENINGS: readonly Opening[] = ['pending', 'first', 'home', 'today'];
 
 describe('the opening', () => {
-  it('is R1 of the garden read and the prop over generated launches', () => {
+  it('is R1 of the garden read over generated launches', () => {
     const next = random(4_101);
     const tally: Tally = new Map();
     const wrong: string[] = [];
     for (let run = 0; run < 400 && wrong.length < 3; run++) {
       const garden = viewOf(next);
-      const opening = pickOf(next, ['home', 'today'] as const);
-      const got = openingOf(garden, opening);
-      const want = R1(garden, opening);
+      const got = openingOf(garden);
+      const want = R1(garden);
       if (got !== want)
         wrong.push(
-          `run ${run}: ${got} where R1 has ${want} (${opening}, ${JSON.stringify(
+          `run ${run}: ${got} where R1 has ${want} (${JSON.stringify(
             Option.map(garden, (view) =>
               view._tag === 'Read' ? [...view.plants.keys()] : view._tag,
             ),
           )})`,
         );
-      bump(tally, `${want}:${opening}`);
+      bump(tally, want);
       if (Option.exists(garden, (view) => view._tag === 'Read' && view.plants.size > 1))
         bump(tally, 'many plants');
     }
     expect(wrong).toEqual([]);
     for (const [kind, floor] of [
-      ['pending:home', 20],
-      ['pending:today', 20],
-      ['today:home', 20],
-      ['today:today', 20],
-      ['first:home', 5],
-      ['first:today', 5],
-      ['home:home', 60],
+      ['pending', 40],
+      ['today', 40],
+      ['first', 10],
+      ['home', 120],
       ['many plants', 60],
     ] as const)
       expect(tally.get(kind) ?? 0, kind).toBeGreaterThanOrEqual(floor);

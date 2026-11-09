@@ -676,12 +676,12 @@ function Pending() {
   );
 }
 
-/** The root's screens after the opening: home is `field`. */
+/** The root's screens once the launch has opened, home being `field`. */
 type Screen = 'today' | 'field' | 'choose' | 'about' | 'need';
 
 /** The screen an opening shows first: home for `home`, else Today. */
-const screenAt = (opening: Opening): Screen => {
-  if (opening === 'home') return 'field';
+const screenAt = (shown: Opening): Screen => {
+  if (shown === 'home') return 'field';
   return 'today';
 };
 
@@ -702,15 +702,11 @@ const screenAt = (opening: Opening): Screen => {
  * screen is Today. The root holds Say it's view, so Today comes back as it
  * was, and a recital that starts in the same turn as the tap on
  * `Your field` keeps Today on screen.
- *
- * `opening` is the screen a launch on a read garden with a plant, and
- * Continue, show: home unless given. It is a seam for the tests whose
- * launches start on Today, and goes once their rigs start from home.
  */
-export default function Root({ opening = 'home' }: { readonly opening?: 'home' | 'today' }) {
+export default function Root() {
   const listening = screenOf(AsyncResult.value(useAtomValue(sayItView))).listening;
   const appearance = AsyncResult.value(useAtomValue(appearanceView));
-  const garden = openingOf(AsyncResult.value(useAtomValue(gardenView)), opening);
+  const garden = openingOf(AsyncResult.value(useAtomValue(gardenView)));
   const read = Option.match(appearance, { onNone: (): Opening => 'pending', onSome: () => garden });
   const [decided, setDecided] = useState<Opening>('pending');
   const [screen, setScreen] = useState<Screen>('field');
@@ -721,8 +717,8 @@ export default function Root({ opening = 'home' }: { readonly opening?: 'home' |
   }
   if (screen !== 'today' && listening) setScreen('today');
   const onContinue = () => {
-    setDecided(opening);
-    setScreen(screenAt(opening));
+    setDecided('home');
+    setScreen(screenAt('home'));
   };
   switch (shownOpening(decided, read)) {
     case 'pending':
