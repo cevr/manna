@@ -38,7 +38,7 @@ const planted = () => {
 /** A launch on home at `time.now`, held to the root's rule, the host's state sent by the test. */
 const launchHome = async (time: { now: number }) => {
   const launched = await watchedLaunch('read', () =>
-    wakeLaunch(planted(), { unread: false, refuse: false }, time, [PASSAGE], { opening: 'home' }),
+    wakeLaunch(planted(), { unread: false, refuse: false }, time, [PASSAGE]),
   );
   expect(await launched.app.until(launched.home)).toBe(true);
   return launched;

@@ -12,7 +12,15 @@
  * an empty one (the first minute, with states sent in each of its phases),
  * and its stored minutes. It is launched 2 or 3 times, in zones that
  * change, minutes to a month apart, some launches unread, some starting in
- * the background, and each launch runs commands chosen by the screen the
+ * the background (sent `active` on the screen the launch lands on). A read
+ * launch and the first minute's Continue land on home, whose first show
+ * makes the plan: with an item shown, home shows the model's counts line
+ * and `Begin`, which the walk takes to Today; with none (and after the
+ * field in the done state), home shows the done state's counts line and no
+ * `Begin`, and stays the screen, with commands of its own: an away (states
+ * sent while home shows, a return making the plan again, and `Begin` taken
+ * once it shows an item), a wait, and the launch's end. On Today each
+ * launch runs commands chosen by the screen the
  * model expects: an away (a wait of a minute to a month, then a return or
  * a sequence that is none: `inactive` alone, a second `active`), a recital
  * heard, unheard, refused or cancelled, a recital with a Minutes tap, a
@@ -28,14 +36,17 @@
  *
  * The oracle is `src/test/wake-model.ts` (which states are returns, the run
  * after one) over `src/test/run-model.ts`'s run and
- * `src/test/session-model.ts`'s plan: after every step the reference
+ * `src/test/session-model.ts`'s plan, made at home's first show, at each
+ * return and at each Minutes tap: on home its heading, counts line and
+ * `Begin`, and on Today after every step the reference
  * shown, the action, the counts line, the result and alert (none while
  * nothing is held), the done state's text, whether Listen shows
  * (`listenModel`), and the disk (the start's keys unchanged, plus each kept
  * recall's key, the minutes key after a tap and the voice's key after a
  * Voice tap; a state sent and a Listen write nothing); every text the
  * voice's source was given, and whether it reads, against the walk's own;
- * and every Today frame holds Listen's place (`listenFaults`). A no-op is
+ * every frame holds the root's frame rule (`rootFaults`), and every Today
+ * frame Listen's place (`listenFaults`). A no-op is
  * tallied toward its `:differs` floor only where a making would show
  * another screen.
  */
@@ -270,6 +281,10 @@ class Walk {
   readonly spoken: string[] = [];
   voice: ReadingVoice | null = null;
   app: WakeLaunch | null = null;
+  /** Whether home shows in the done state, the screen the next command acts on. */
+  home = false;
+  /** Whether the launch under way ended on home. */
+  ended = false;
   readonly expected = new Map<string, string | null>();
 
   constructor(
@@ -760,7 +775,7 @@ class Walk {
     this.trail.push('again');
   }
 
-  /** The field and back by `Begin`, a return or a sequence that is none sent on it now and then; the states are sent only when the run they leave still shows an item, else the launch ends on home in the done state. */
+  /** The field and back by `Begin`, a return or a sequence that is none sent on it now and then; when the run shows no item after them, home is left in its done state (`homeDone`) and the launch goes on there. */
   async field() {
     const app = this.screen;
     await app.tap('Your field');
@@ -768,6 +783,7 @@ class Walk {
       !(await app.until(() => app.headings().includes('Your field') && homeCounts(app).length > 0))
     )
       this.fail('no field');
+    if (this.reading !== null) bump(this.coverage, 'listen:field-reading');
     const sends = this.next() < 0.7;
     if (sends) {
       this.time.now += pickOf(this.next, GAPS[this.steer]);
@@ -775,11 +791,6 @@ class Walk {
       const differs =
         JSON.stringify(this.expectOf(madeModel(this.run, this.planNow(), false))) !==
         JSON.stringify(this.expectOf(this.run));
-      const after =
-        returnsModel(this.last, states).some(Boolean) && this.run.plan !== null
-          ? wakeModel(this.run, () => this.planNow(), { unread: this.unread, underWay: false })
-          : this.run;
-      if (shownModel(after, this.recallsNow) === null) return this.homeDone();
       const returns = await this.states(states, false);
       if (!app.headings().includes('Your field')) this.fail('a state sent left the field');
       if (returns > 0 && !this.unread && this.run.plan !== null) {
@@ -787,46 +798,120 @@ class Walk {
         if (differs) bump(this.coverage, 'wake:field:differs');
       }
     }
-    if (shownModel(this.run, this.recallsNow) === null) return this.homeDone();
+    if (shownModel(this.run, this.recallsNow) === null) {
+      bump(this.coverage, 'done:field');
+      return this.homeDone(sends ? 'the field, states sent' : 'the field');
+    }
     if (!(await app.tap('Begin'))) this.fail('no Begin');
     bump(this.coverage, 'field');
-    if (this.reading !== null) bump(this.coverage, 'listen:field-reading');
     await this.settle(sends ? 'the field, states sent, and back' : 'the field and back');
     this.trail.push('field');
   }
 
-  /** Home in the done state: the model's counts line, no `Begin`, and the root's frame rule (`rootFaults`) kept; the launch ends on it, and the next launch follows at the same instant, active, drawing nothing. */
-  async homeDone() {
+  /** Waits for home as the model expects it (`onHome`), the counts line and `Begin` given a few frames to follow a making. */
+  async homeSettled(begin: boolean) {
     const app = this.screen;
-    this.log.push('the field, done');
-    const counts = homeCounts(app);
-    const want = this.expectOf(this.run).counts;
-    if (JSON.stringify(counts) !== JSON.stringify(want) || app.has('Begin'))
-      this.fail(
-        `home showed ${JSON.stringify(counts)}${app.has('Begin') ? ' and Begin' : ''}, expected ${JSON.stringify(want)}`,
-      );
-    const voice = this.voiceFaults();
-    if (voice.length > 0) this.fail(`on home: ${voice.join(', ')}`);
-    const root = rootFaults(app.host, this.unread ? 'unread' : 'read');
-    if (root.length > 0) this.fail(`on home: ${root.join(', ')}`);
-    bump(this.coverage, 'done:field');
-    if (this.reading !== null) bump(this.coverage, 'listen:field-reading');
-    await this.leave();
-    this.log.push('relaunch from home');
-    this.last = 'active';
-    this.voice = readingVoice();
-    this.app = await wakeLaunch(this.device, this.faults, this.time, this.pieces, {
-      state: this.last,
-      voice: this.voice,
-    });
-    this.reading = null;
-    this.spoken.length = 0;
-    this.result = null;
-    this.ending = null;
-    this.trail = [];
-    this.returnsThisLaunch = 0;
-    this.run = madeModel(NO_RUN, this.planNow(), false);
-    await this.settle('launch');
+    const want = JSON.stringify(this.expectOf(this.run).counts);
+    await app.until(() => JSON.stringify(homeCounts(app)) === want && app.has('Begin') === begin);
+    this.onHome(begin);
+  }
+
+  /** Home as the model expects it: one heading, `Your field`; the model's counts line; `Begin` exactly when `begin`; the disk; and no fault of the root's frame rule, the rig's frames or the voice. */
+  onHome(begin: boolean) {
+    const app = this.screen;
+    const seen = { headings: app.headings(), counts: homeCounts(app), begin: app.has('Begin') };
+    const expected = { headings: ['Your field'], counts: this.expectOf(this.run).counts, begin };
+    if (JSON.stringify(seen) !== JSON.stringify(expected))
+      this.fail(`home showed ${JSON.stringify(seen)}, expected ${JSON.stringify(expected)}`);
+    const faults = [
+      ...rootFaults(app.host, this.unread ? 'unread' : 'read'),
+      ...app.faults,
+      ...this.voiceFaults(),
+      ...this.diskFaults(),
+    ];
+    if (faults.length > 0) this.fail(`on home, ${faults.join(', ')}`);
+  }
+
+  /**
+   * Home's first show, which makes the plan; a launch in the background is
+   * sent `active` there first. With an item shown, `Begin` and Today's first
+   * show; with none, home's done state (`homeDone`).
+   */
+  async fromHome(step: string, background: boolean) {
+    const app = this.screen;
+    if (
+      !(await app.until(
+        () => app.headings().join('|') === 'Your field' && homeCounts(app).length > 0,
+      ))
+    )
+      this.fail(`${step}: no home, saw ${app.headings().join('|') || 'pending'}`);
+    this.run = madeModel(this.run, this.planNow(), false);
+    this.log.push(`${step} on home`);
+    if (background) {
+      await this.states(['active'], false);
+      this.log.push('active from the background');
+    }
+    if (shownModel(this.run, this.recallsNow) === null) return this.homeDone(step);
+    await this.homeSettled(true);
+    await this.begin('home:begin');
+  }
+
+  /** Home's `Begin`, then Today as the model expects it; `floor` names the way home was reached. */
+  async begin(floor: string) {
+    if (!(await this.screen.tap('Begin'))) this.fail('no Begin');
+    this.home = false;
+    bump(this.coverage, floor);
+    await this.settle('Begin');
+    this.trail.push('begin');
+  }
+
+  /** Home in the done state, reached by `step`: the model's counts line, no `Begin`, and the root's frame rule kept; home stays the screen, with its own commands (`homeCommand`). */
+  async homeDone(step: string) {
+    this.log.push(`${step}, done`);
+    await this.homeSettled(false);
+    this.home = true;
+    bump(this.coverage, 'home:done');
+  }
+
+  /** On home in the done state: the launch's end now and then, a wait, or an away. */
+  async homeCommand() {
+    const roll = this.next();
+    if (roll < 0.2) {
+      this.ended = true;
+      this.log.push('the end on home');
+      bump(this.coverage, 'home:end');
+      return;
+    }
+    if (roll < 0.35) return this.homeWait();
+    return this.homeAway();
+  }
+
+  /** A wait on home: the clock moves and home stays as it was, with no `Begin`. */
+  async homeWait() {
+    this.time.now += pickOf(this.next, [MINUTE, 7 * MINUTE, 2 * HOUR, 9 * HOUR] as const);
+    this.log.push('a wait on home');
+    await this.screen.until(() => false, 5);
+    this.onHome(false);
+    bump(this.coverage, 'home:wait');
+  }
+
+  /** An away while home shows the done state: a wait, then states sent; a return makes the plan again, and when it shows an item home shows `Begin`, which the walk takes. */
+  async homeAway() {
+    const gap = pickOf(this.next, GAPS[this.steer]);
+    this.time.now += gap;
+    const roll = this.next();
+    const states =
+      roll < 0.75 ? returnOf(this.next) : roll < 0.85 ? anyOf(this.next) : quietOf(this.next);
+    const returns = returnsModel(this.last, states).some(Boolean);
+    if (returns) bump(this.coverage, `wake:gap:${gapName(gap)}`);
+    if (returns && this.reading !== null) bump(this.coverage, 'listen:return-reading');
+    await this.states(states, false);
+    this.log.push(`away ${gapName(gap)} on home`);
+    bump(this.coverage, 'home:away');
+    this.trail.push(returns ? 'return' : 'quiet');
+    if (shownModel(this.run, this.recallsNow) === null) return this.homeSettled(false);
+    await this.homeSettled(true);
+    await this.begin('home:away-to-begin');
   }
 
   async wait() {
@@ -846,6 +931,7 @@ class Walk {
 
   /** One command, chosen by the screen the model expects. */
   async command() {
+    if (this.home) return this.homeCommand();
     if (this.steer === 'listen') {
       const chosen = this.listenCommand();
       if (chosen !== null) return chosen;
@@ -920,9 +1006,8 @@ class Walk {
     await this.phase('Planted');
     this.time.now += MINUTE;
     await app.tap('Continue');
-    this.run = madeModel(this.run, this.planNow(), false);
     bump(this.coverage, 'first-minute');
-    await this.settle('the first minute');
+    await this.fromHome('the first minute', false);
   }
 
   async recite() {
@@ -973,26 +1058,28 @@ class Walk {
     this.ending = null;
     this.trail = [];
     this.returnsThisLaunch = 0;
-    if (this.last === 'background') {
+    this.home = false;
+    this.ended = false;
+    const background = this.last === 'background';
+    if (background) {
       if (!planted) await this.screen.send(['active']);
       bump(this.coverage, 'launch:background');
     }
     if (this.unread) {
       bump(this.coverage, 'launch:unread');
       await this.settle('launch unread');
+      if (background) {
+        await this.states(['active'], false);
+        await this.settle('active from the background');
+      }
     } else if (!planted) await this.firstMinute();
     else {
       this.tallyPlan();
-      this.run = madeModel(this.run, this.planNow(), false);
-      await this.settle('launch');
-    }
-    if (this.last === 'background' && planted) {
-      await this.states(['active'], false);
-      await this.settle('active from the background');
+      await this.fromHome('launch', background);
     }
     this.last = 'active';
     const commands = 5 + below(next, 6);
-    for (let c = 0; c < commands; c += 1) await this.command();
+    for (let c = 0; c < commands && !this.ended; c += 1) await this.command();
     await this.leave();
   }
 
@@ -1143,6 +1230,15 @@ const missing = (coverage: Coverage, floors: readonly string[], zones: number) =
     : []),
 ];
 
+/** The tally of `devices` generated devices from `seed` leaning toward `steer`, walked one after another. */
+export const wakeRun = async (steer: Steer, seed: number, devices: number) => {
+  const next = random(seed);
+  const coverage: Coverage = {};
+  const aside = random(seed + 1);
+  for (let d = 0; d < devices; d += 1) await deviceRun(next, aside, steer, coverage);
+  return coverage;
+};
+
 /**
  * One walk case: `devices` generated devices from `seed` leaning toward
  * `steer`, each of `floors` met by those devices alone. The environment's
@@ -1160,10 +1256,7 @@ export const wakeCase = (
   const many = Number(process.env['HSWAKE_WALK_DEVICES'] ?? devices);
   describe(`Today’s run on generated devices, the host’s state sent, leaning toward ${LEANS[steer]}`, () => {
     it(`shows, says and makes the plan again as the model does on ${many} devices (seed ${at})`, async () => {
-      const next = random(at);
-      const coverage: Coverage = {};
-      const aside = random(at + 1);
-      for (let d = 0; d < many; d += 1) await deviceRun(next, aside, steer, coverage);
+      const coverage = await wakeRun(steer, at, many);
       console.log(
         `wake ${steer} coverage ${Object.entries(coverage)
           .toSorted(([a], [b]) => a.localeCompare(b))

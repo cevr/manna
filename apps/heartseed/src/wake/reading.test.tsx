@@ -4,8 +4,8 @@
  * reads; it ends at its finish or an interruption (Listen back), at Say it
  * (the voice stopped once, before the recognizer listens), at Voice off
  * (Listen gone) and at a relaunch (the voice stopped), and goes on through
- * a Minutes tap, a return and the field, as the voice's source shows; the
- * field in the done state ends a launch on home (`done:field`).
+ * a Minutes tap, a return and the field, as the voice's source shows
+ * (`src/wake/wake.test.tsx` walks the field in the done state).
  */
 
 import { wakeCase } from '../test/wake-walk';
@@ -21,5 +21,4 @@ wakeCase('listen', 88, 4, [
   'listen:return-reading',
   'listen:field-reading',
   'listen:relaunch-reading',
-  'done:field',
 ]);

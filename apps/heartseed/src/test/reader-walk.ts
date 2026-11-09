@@ -5,7 +5,7 @@
  * reader's parts (`src/chooser/reader-*.test.tsx`), over the run's rig
  * (`run-rig.tsx`: the root over a disk, a recognizer that hears the text the
  * walk names, Effect's clock frozen where the walk sets it), each launch
- * opening on home (`opening: 'home'`), judged after every command against
+ * opening on home (the root's own opening), judged after every command against
  * the models: Today by `run-model.ts` over `session-model.ts`'s plan of
  * hskjv's pieces (`passages-model.ts`), made at each making (home's first
  * show, a landed add or remove, a Minutes tap); home by `choose-model.ts`'s
@@ -298,7 +298,6 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   const opened = async () => {
     app = await launch(device, { unread: false, refuse: false }, time, [PASSAGE], {
       store: keyFailing(keyFaults),
-      opening: 'home',
     });
     const host = app.host;
     watch = new MutationObserver(() => {

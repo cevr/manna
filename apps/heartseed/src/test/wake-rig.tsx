@@ -11,8 +11,10 @@
  * subscription reads the state it finds, as React Native's `currentState`.
  * The garden's read can be held back until `open`, and the voice's source
  * can be a reading voice (`readingVoice`), whose readings the test ends.
- * Every Today frame is also held to Listen's place (`listenFaults`), the
- * faults kept with the run rig's.
+ * A read launch with a plant opens on home, as the root opens it. Every
+ * frame is held to the run rig's rules (the root's frame rule on every
+ * frame, the footer rule on Today's), and every Today frame also to
+ * Listen's place (`listenFaults`), the faults kept with the run rig's.
  */
 
 import { Deferred, Effect, Layer, MutableRef, Option, Queue, Stream } from 'effect';
@@ -180,9 +182,8 @@ export const listenFaults = (host: Element): string[] => {
   return out;
 };
 
-/** How a launch starts: the host's state when the subscription starts, whether the garden's read waits for `open`, the voice's source (the run rig's silent one when none), and the screen a read launch with a plant opens on (Today when none). */
+/** How a launch starts: the host's state when the subscription starts, whether the garden's read waits for `open`, and the voice's source (the run rig's silent one when none). */
 export interface WakeStart {
-  readonly opening?: 'home' | 'today';
   readonly state?: HostState;
   readonly held?: boolean;
   readonly voice?: ReadingVoice;
@@ -203,7 +204,6 @@ export const wakeLaunch = async (
     foreground: foregroundOf(host),
     store: gatedStore(gate),
     voice: start.voice?.layer,
-    opening: start.opening ?? 'today',
   });
   start.voice?.bind(() => app.listens.n);
   const frame = () => {

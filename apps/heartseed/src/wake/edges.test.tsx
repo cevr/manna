@@ -1,17 +1,20 @@
 /* oxlint-disable effect/noGlobals, effect/noAsyncFunction, effect/noTryCatch, eslint/no-await-in-loop -- a React screen test: it mounts the root in happy-dom through the wake rig's promise-based steps over a disk and a clock kept in plain values, each case in its zone through `process.env.TZ`, put back in a `finally` even when a step throws. */
 
 /**
- * The foreground's edges on Today, each a case the walk reaches by chance
- * at most: states sent in every phase of the first minute change nothing,
- * and Continue makes the plan at its own instant; states sent in the
- * pending frame are no event, and the subscription reads the state it
- * starts in, so an `active` after a launch read in the background is a
- * return; a return in an unread garden keeps its first piece, its result
- * and Say it, with no counts line; a return while a recital finishes (its
- * end held back) makes no plan, so its item stays held until Next and the
- * old plan's next item follows; and a verse planted at 21:00 is not due at
- * a return at 03:50 the next morning and is due at one at 04:10, in Los
- * Angeles, Kathmandu and Lord Howe.
+ * The foreground's edges on home and Today, each a case the walk reaches by
+ * chance at most: states sent in every phase of the first minute change
+ * nothing, and Continue leads to home, whose first show makes the plan at
+ * Continue's instant; states sent in the pending frame are no event, and
+ * the subscription reads the state it starts in, so an `active` after a
+ * launch read in the background is a return, which turns home's done state
+ * to `Begin`; a return in an unread garden keeps its first piece, its
+ * result and Say it, with no counts line; a return while a recital finishes
+ * (its end held back) makes no plan, so its item stays held until Next and
+ * the old plan's next item follows; and a verse planted at 21:00 is not due
+ * at a return to home at 03:50 the next morning and is due at one at 04:10,
+ * in Los Angeles, Kathmandu and Lord Howe. A read launch lands on home,
+ * held to its counts line and `Begin` (shown exactly when the plan holds an
+ * item, and taken to reach Today) with no frame fault.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -22,7 +25,7 @@ import { sourceWords } from '../matcher/words';
 import type { Recall } from '../sayit';
 import type { TextPiece } from '../session';
 import { keyOf, PREFIX } from '../test/garden-model';
-import { deviceOf, PASSAGE, type Device, type Faults } from '../test/run-rig';
+import { deviceOf, PASSAGE, text, type Device, type Faults } from '../test/run-rig';
 import { countsModel, DAY, dueModel, HOUR, MINUTE, planModel } from '../test/session-model';
 import { wakeLaunch, type WakeLaunch } from '../test/wake-rig';
 import { wallAt } from '../test/wake-walk';
@@ -98,6 +101,22 @@ const shows = async (app: WakeLaunch, references: readonly string[], counts: str
   expect(app.faults).toEqual([]);
 };
 
+/** What home shows: its headings, its counts line, and whether `Begin` shows. */
+const homeOf = (app: WakeLaunch) => [
+  app.headings(),
+  [...app.host.querySelectorAll('[data-testid="counts"]')].map(text),
+  app.has('Begin'),
+];
+
+/** Waits for home to show the counts line `counts` and `Begin` exactly when `begin`, holds it there with no frame fault, then takes `Begin` when it shows. */
+const atHome = async (app: WakeLaunch, counts: string, begin: boolean) => {
+  const want = [['Your field'], [counts], begin];
+  await app.until(() => JSON.stringify(homeOf(app)) === JSON.stringify(want));
+  expect(homeOf(app)).toEqual(want);
+  expect(app.faults).toEqual([]);
+  if (begin) expect(await app.tap('Begin')).toBe(true);
+};
+
 const faultsOf = (): Faults => ({ unread: false, refuse: false });
 
 describe('the foreground at Today’s edges', () => {
@@ -141,6 +160,7 @@ describe('the foreground at Today’s edges', () => {
       const recalls = recallsOn(device);
       const first = plan.find((item) => recalls(item.reference) <= item.recalls);
       expect(plan.some((item) => item.reference === other.reference && item.fresh)).toBe(true);
+      await atHome(app, countsModel(plan, recalls), true);
       await shows(app, [first?.reference ?? ''], countsModel(plan, recalls));
       expect(device.writes.filter((key) => key.startsWith(PREFIX))).toHaveLength(1);
       expect(await app.leave()).toEqual([]);
@@ -158,13 +178,14 @@ describe('the foreground at Today’s edges', () => {
       await app.send(['inactive', 'background', 'active', 'background']);
       expect(app.subscribed()).toBe(false);
       await app.open();
-      await shows(app, [], 'Nothing to tend now');
+      await atHome(app, 'Nothing to tend now', false);
       time.now = due + MINUTE;
       await app.send(['inactive']);
       await app.until(() => false, 5);
-      expect(app.references()).toEqual([]);
+      await atHome(app, 'Nothing to tend now', false);
       await app.send(['active']);
       const plan = planAt(device, [piece], time.now, 'America/Los_Angeles');
+      await atHome(app, countsModel(plan, recallsOn(device)), true);
       await shows(app, [piece.reference], countsModel(plan, recallsOn(device)));
       expect(await app.leave()).toEqual([]);
     }));
@@ -226,6 +247,7 @@ describe('the foreground at Today’s edges', () => {
       const app = await wakeLaunch(device, faultsOf(), time, pieces);
       const old = planAt(device, pieces, time.now, 'UTC');
       expect(old.map((item) => item.reference)).toEqual([a.reference, b.reference]);
+      await atHome(app, countsModel(old, recallsOn(device)), true);
       await shows(app, [a.reference], countsModel(old, recallsOn(device)));
       MutableRef.set(app.hearing, { kind: 'heard', text: a.text, skip: [] });
       await app.tap('Say it');
@@ -253,16 +275,17 @@ describe('the foreground at Today’s edges', () => {
         const device = diskOf([recallOf(piece, wallAt(zone, T0, 1, 21), zone)]);
         const time = { now: wallAt(zone, T0, 1, 22) };
         const app = await wakeLaunch(device, faultsOf(), time, [piece]);
-        await shows(app, [], 'Nothing to tend now');
+        await atHome(app, 'Nothing to tend now', false);
         time.now = wallAt(zone, T0, 0, 3 + 50 / 60);
         await app.send(['inactive', 'background', 'active']);
         await app.until(() => false, 5);
         expect(planAt(device, [piece], time.now, zone)).toEqual([]);
-        await shows(app, [], 'Nothing to tend now');
+        await atHome(app, 'Nothing to tend now', false);
         time.now = wallAt(zone, T0, 0, 4 + 10 / 60);
         await app.send(['background', 'active']);
         const plan = planAt(device, [piece], time.now, zone);
         expect(plan.map((item) => item.reference)).toEqual([piece.reference]);
+        await atHome(app, countsModel(plan, recallsOn(device)), true);
         await shows(app, [piece.reference], countsModel(plan, recallsOn(device)));
         expect(app.actions()).toEqual(['Say it']);
         expect(device.writes).toEqual([]);

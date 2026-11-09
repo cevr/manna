@@ -17,7 +17,8 @@ import passage from 'virtual:heartseed-passage';
 import { recallOf } from '../test/field-model';
 import { keyOf } from '../test/garden-model';
 import { screensOf, watchedLaunch } from '../test/root-rule';
-import { deviceOf, launch, text } from '../test/run-rig';
+import { deviceOf, launch, PASSAGE, text } from '../test/run-rig';
+import { wakeLaunch } from '../test/wake-rig';
 
 const T0 = Date.UTC(2026, 3, 1, 9);
 
@@ -86,6 +87,14 @@ const throughHome = async (watched: Watched, until: Until, step: () => Promise<u
 describe('every rig of Today’s run launches through home', () => {
   it('run-rig’s launch shows home, then Today by Begin', async () => {
     const w = await watchedLaunch('read', () => launch(deviceOf([DUE]), READ, { now: T0 }));
+    await throughHome(w, w.app.until, async () => expect(await w.app.tap('Begin')).toBe(true));
+    expect(await w.end()).toEqual([]);
+  });
+
+  it('wake-rig’s launch shows home, then Today by Begin', async () => {
+    const w = await watchedLaunch('read', () =>
+      wakeLaunch(deviceOf([DUE]), READ, { now: T0 }, [PASSAGE]),
+    );
     await throughHome(w, w.app.until, async () => expect(await w.app.tap('Begin')).toBe(true));
     expect(await w.end()).toEqual([]);
   });

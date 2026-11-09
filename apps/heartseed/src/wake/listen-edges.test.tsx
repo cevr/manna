@@ -6,7 +6,8 @@
  * Say it and outside the scroll view, and two taps in one turn read its own
  * text once; a refused speak leaves Listen and Say it with no alert and
  * nothing written; and Say it while Listen reads stops the voice before the
- * recognizer listens.
+ * recognizer listens. Each launch lands on home, whose `Begin` (the device
+ * due) leads to Today.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -62,6 +63,15 @@ const recordOf = (reference: string, words: number): readonly [string, string] =
 
 const faultsOf = (): Faults => ({ unread: false, refuse: false });
 
+/** Waits for home, which the launch lands on, to show `Begin` (the device is due), holds it with no frame fault, and takes it to Today. */
+const begin = async (app: WakeLaunch) => {
+  expect(await app.until(() => app.headings().join('|') === 'Your field' && app.has('Begin'))).toBe(
+    true,
+  );
+  expect(app.faults).toEqual([]);
+  expect(await app.tap('Begin')).toBe(true);
+};
+
 /** The node of the button named `label`; the test fails when none shows. */
 const button = (app: WakeLaunch, label: string) =>
   Option.getOrThrow(
@@ -79,6 +89,7 @@ describe('Listen at Today’s edges', () => {
       const device = deviceOf([recordOf(PASSAGE.reference, PASSAGE.words), [MINUTES_KEY, '20']]);
       const voice = readingVoice();
       const app = await wakeLaunch(device, faultsOf(), { now: T0 }, [PASSAGE, fresh], { voice });
+      await begin(app);
       expect(await app.until(() => app.references()[0] === PASSAGE.reference)).toBe(true);
       expect(app.has('Listen')).toBe(false);
       MutableRef.set(app.hearing, { kind: 'heard', text: passage.text, skip: [] });
@@ -117,6 +128,7 @@ describe('Listen at Today’s edges', () => {
       const device = deviceOf([recordOf('Stray 9:9', 4)]);
       const voice = readingVoice();
       const app = await wakeLaunch(device, faultsOf(), { now: T0 }, [fresh], { voice });
+      await begin(app);
       expect(await app.until(() => app.has('Listen'))).toBe(true);
       voice.state.refuse = true;
       await app.tap('Listen');
