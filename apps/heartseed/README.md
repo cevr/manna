@@ -1516,8 +1516,10 @@ Session above); Her reads in `af_heart` and Him in `bm_george`
   Kokoro (six files at commit `ee78635d23d52379117554ba72358b65a0612447`,
   with FluidAudio's LICENSE byte for byte); each file's header names its
   upstream path and what changed for Heartseed (the `#if TTS` wrapper,
-  and the constants trimmed to the English chain), and `kokoro/README.md`
-  lists them. It is vendored, not a dependency, since One's prebuild takes
+  the constants trimmed to the English chain, and `synthesize` split at
+  Prosody's pitch curve into `prosody`, stages 1-4, and `vocode`, stages
+  5-7 on a curve the caller gives of the same point count, `synthesize`
+  kept as the two in turn), and `kokoro/README.md` lists them. It is vendored, not a dependency, since One's prebuild takes
   no SwiftPM dependency. `ModelStore.swift` loads the seven compiled stages
   from one folder; `Natural.swift` is the module, whose declaration
   (`Natural.d.swift.ts`) is committed as One writes it.
@@ -1556,11 +1558,47 @@ Session above); Her reads in `af_heart` and Him in `bm_george`
 - **Routing.** On the simulator every stage runs on the CPU. On a device,
   iOS 27 and later run the noise and tail stages on the CPU and the rest on
   the Neural Engine; earlier ones run the noise and tail on the GPU.
-- **Rendering and playing.** `render(utterance, chunk, ids, speed)` runs
-  the chain on a chunk's ids at the voice's speed, one render at a time off
-  the main actor, and returns each id's frames, the sample count and the
+- **Prosody.** `prosody(utterance, chunk, ids, speed)` runs a chunk's ids
+  at the voice's speed through the chain's first four stages and returns
+  each id's frames and Prosody's pitch curve (`f0`, Hz, two points a
+  25 ms frame, 12.5 ms a point) with its ms; it keeps what the last three
+  stages read for that chunk in the module, and logs
+  `[natural] prosody utterance= chunk= ids= frames=<Σ> points=<2Σ> ms= speed=`.
+  A non-finite curve throws `nonfinite` and ends the reading. The frames
+  are fixed here, a stage before the curve, so no curve sent can change
+  the audio's length.
+- **The Gentle fall.** `src/natural/fall.ts`, `fallOf(f0)`, is the rule,
+  pure: the owner's Gentle fall, each phrase's last ~450 ms gliding to
+  2 semitones under its middle, any final rise held level first. A point
+  is voiced above `VOICED_HZ` (10 Hz, the vocoder's own threshold); the
+  middle is the median of the voiced points; a point is pitched when it is
+  voiced and at most `PITCH_FLOOR` (6) semitones under the middle, which
+  leaves out Kokoro's consonant dips, ramps and Him's creak. The window is
+  the pitched points within `FALL_WINDOW` (36 points, 450 ms) of the last
+  pitched one, and each of its points becomes the lower of the running
+  minimum of the curve over the window and a glide even in semitones from
+  the window's first point to the target, `FALL_DROP` (2) semitones under
+  the middle. Every other point stays, no point rises, the length is kept,
+  and a curve with no voiced point is given back as it came. There is no
+  smoothing, and the rule is not idempotent (the middle moves).
+  `fallMeasure` and `hasFallen` measure how a curve sent ends against the
+  prosody's own (the probe's `fall` line). `data/kokoro-curves.json` holds
+  32 of Prosody's real curves (Her and Him, Isaiah 41:10 and Psalm 23:1-3,
+  numbers only, 0.1 Hz), which the rule's test falls to 2 semitones or
+  more under their middles; on them the planner's Mac runs ended between
+  −2.0 and −5.9 semitones, and the vocoder followed the curve sent to a
+  median of about 0.2 semitones.
+- **Rendering and playing.** `render(utterance, chunk, f0)` runs the
+  chain's last three stages on the curve it is sent, in place of
+  Prosody's own, one render at a time off the main actor, on the one chain
+  prosodies run on, and returns each id's frames, the sample count and the
   first and last audible sample (`abs(x) > 0.01`; `samples` and `-1` when
-  none); it logs `[natural] render … speed=<s>`. JS checks
+  none). A chunk's prosody is used once: a chunk with none held (never run,
+  another reading's, or dropped by a halt, a stop or a voice change) throws
+  `stale`, and a curve not exactly as long as Prosody's or with a point
+  not finite throws `curve` and ends the reading. It logs
+  `[natural] render … speed=<s> points=<n> lowered=<l> raised=<r>`, the
+  points sent more than 0.01 Hz below and above Prosody's own. JS checks
   `samples = 600 × Σframes` and `0 ≤ first ≤ samples`, `-1 ≤ last < samples`
   (whole numbers), else the render's frames do not fit, and gives `play`
   each word's start moved into the cut (`startsWithin`), the cut's `from`
@@ -1577,7 +1615,7 @@ Session above); Her reads in `af_heart` and Him in `bm_george`
   clock. Events go only to the held reading, matched by generation, so a JS
   reload's reused ids cannot collide; an interruption or an engine
   configuration change (a route change) ends it as `interrupt`. The module
-  never sets the audio session. A render of chunk 0 writes the marker
+  never sets the audio session. A prosody of chunk 0 writes the marker
   `natural/reading`, removed when the reading ends; a marker found at
   start says `crashed` once.
 - `src/natural/module.ts` is the module's seam (`NaturalModule`, a
@@ -1587,9 +1625,15 @@ Session above); Her reads in `af_heart` and Him in `bm_george`
 - `src/natural/voice.ts`, `naturalVoiceSource(lexicon)`, is a `VoiceSource`
   over the module, so `src/voice.ts` reads with it unchanged: a speak stops
   the module, fails `VoiceUnavailable` for a voice not in `VOICES`, else
-  plans the text, loads the speak's voice (`<voice>.bin`), then renders and
-  plays chunk by chunk
-  (the next chunk renders while one plays). Chunk 0's failure fails the
+  plans the text, loads the speak's voice (`<voice>.bin`), then runs each
+  chunk's prosody, renders it and plays it, chunk by chunk
+  (the next chunk renders while one plays). `curveFor(chunk, last, prosody)`
+  gives the curve a chunk renders on: none when the prosody does not fit
+  (its frames fail `startsOf`, or its curve is not exactly two finite points
+  a frame), `fallOf` of it when the chunk ends a phrase or the reading
+  (`chunk.rest > 0` or the last chunk), else Prosody's own, unchanged, for a
+  chunk inside a phrase over `CHUNK_CAP`. A failed prosody, a curve that
+  does not fit or a failed render ends the chunk: chunk 0's fails the
   speak; a later chunk's stops the module and sends `interrupt`. A speak
   let go (stopped, replaced or ended) returns at once.
 - **The probe.** `app/probe/natural.tsx` (`heartseed://probe/natural?base=…&voice=…&soak=…`)
@@ -1599,8 +1643,14 @@ Session above); Her reads in `af_heart` and Him in `bm_george`
   removed, for Today's download. It reads in the link's `voice`, one of `VOICES` (else
   `af_heart`), and shows it as `voice <name>`. `Install`, `Cancel`, `Load`, `Read` (Today's passage through the
   voice over the natural source), `Stop`, `Remove` and `Soak` (each verse
-  rendered in canon order, no play) show counts only, never a word
-  (`src/natural/probe.ts`). `.claude/skills/verify-heartseed/features/natural.md`
+  rendered in canon order through `curveFor`, as the source renders, no
+  play) show counts only, never a word
+  (`src/natural/probe.ts`). Its `recording` module sees each chunk's
+  prosody and the curve sent; the read's `fall <f>/<k> raised <r>` line
+  counts the chunks with a voiced point (`k`), those sent a curve ending
+  2 semitones or more under their prosody's middle (`f`), and the points
+  sent above Prosody's own (`r`), and its `rtf` adds the prosody's ms to
+  the render's. `.claude/skills/verify-heartseed/features/natural.md`
   drives it.
 - **The model server.** `bun run natural:serve -- --port <p> --cache <dir>
   [--host 127.0.0.1|0.0.0.0] [--corrupt <path>]` (`scripts/natural-serve.ts`)
@@ -2785,7 +2835,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     sent as `.`, the cap at 200 and 201 for a phrase and a word, code points
     against UTF-16 units, marks after a spoken lead, durations that do not
     fit, and seeded cuts silent, at the front, the back, inside and
-    clamped); and `src/natural/data.test.ts`, the
+    clamped); `src/natural/fall.property.test.ts`, `fallOf` against a model
+    written in the test over 1,500 generated curves (lengths 0-700,
+    unvoiced runs near 0, points of exactly 10 Hz, flats, ramps, dips,
+    creak, final rises, falls and tops, a floor on every kind) and its
+    invariants (the length kept, no point raised, nothing outside the window
+    changed, the window non-increasing and ending at or under the target),
+    hand edges (a final rise of 6 semitones, a gentle and a steep fall, the
+    empty curve, no voiced point, a one-point window), `fallMeasure` and
+    `hasFallen`, and the 32 real curves of `data/kokoro-curves.json` each
+    ending 2 semitones or more under its middle with no climb; and
+    `src/natural/data.test.ts`, the
     committed data: the vocab's pinned hash, the list's bytes as the
     generator last wrote them, its keys sorted and unique, and every
     phoneme and override spoken in the vocab; `src/natural/manifest.test.ts`,
@@ -2793,13 +2853,16 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `src/natural/guard.test.ts`, the native module's guards (its committed
     declaration equals One's, the simulator branch never starts the engine
     and logs its skip, no file sets the audio session, only
-    `source.ios.ts` names the Swift file, the render passes the speed it
-    is sent and names none, the audible floor 0.01 and the play line's
+    `source.ios.ts` names the Swift file, the chain split at its pitch curve
+    (`prosody` then `vocode`, never `synthesize`), the prosody passing the
+    speed it is sent and naming none, the audible floor 0.01 and the play line's
     cut, rest and `at`, the vendored headers and LICENSE); `src/natural/lexicon.test.ts`, the bundled list and vocab;
     and `src/natural/probe.test.ts`, the probe's lines, a read's tally over
     seeded views (order ok only for each word lit once, in order, to a
-    finish), the soak's count and tally, and one soaked verse over a
-    stand-in module; and `src/natural/state.test.ts`, the download's
+    finish), the `fall` line and the `recording` module that feeds it, the
+    soak's count and tally, and soaked verses over a stand-in module (the
+    curve sent fallen at a phrase's end and as given inside one, and each
+    prosody that does not fit failing `curve` with no render); and `src/natural/state.test.ts`, the download's
     reducer: the line over its whole domain (every state, generated byte
     counts and totals, the fuse, the crash line and the choice) and every
     input from every state; and `src/natural/changes.test.ts`, the
@@ -2826,13 +2889,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     inside it, and the sheet's own rule (`sheetFaults`) holding.
   - `test:natural-voice`: `src/natural/voice.test.ts`, the natural voice's
     `VoiceSource` against a model written in the test, over 300 seeded
-    histories of a stand-in module that answers each load and render when
-    the history says (speaks of one to three phrases and of a text no plan
-    takes, renders with and without audible samples, malformed frames and
-    spans, a refused play, events of the held utterance and of others, a
-    reload): its module calls (each render at the voice's speed, each play
-    with its starts moved into the cut, the cut and the chunk's rest), the
-    events it forwards and each speak's state after every step.
+    histories of a stand-in module that answers each load, prosody and
+    render when the history says (speaks of one to three phrases, of a
+    phrase over `CHUNK_CAP` that breaks mid-phrase and of a text no plan
+    takes, prosodies whose frames or curve do not fit, renders with and
+    without audible samples, malformed frames and spans, a refused play,
+    events of the held utterance and of others, a reload): its module calls
+    (each prosody at the voice's speed, each render on `fallOf` of its
+    prosody's curve at a phrase's or the reading's end and on the curve as
+    given inside a phrase, no render after a prosody that does not fit, each
+    play with its starts moved into the cut, the cut and the chunk's rest),
+    the events it forwards and each speak's state after every step.
   - `test:theme`: `src/theme.test.ts`, the brand's colours (`src/theme.ts`):
     every role of brand C in light and dark, the icon's colours, the home
     icons' `masters` and `kept` and the face pinned; every role given a use

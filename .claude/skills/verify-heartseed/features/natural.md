@@ -31,7 +31,14 @@ read as a full stop), each phrase trimmed to 20 ms of its audible
 samples (`from`, `to`) and followed by its rest (`rest`, samples at
 24 kHz: a comma 7200, `;` or `:` 13200, a sentence 19200, a line break
 26400, the last chunk 0); `at` is the timeline sample it was scheduled at.
-Her renders at speed 0.85 and Him at 0.9 (`SPEEDS`).
+Her renders at speed 0.85 and Him at 0.9 (`SPEEDS`). Each chunk runs in
+two module calls: `prosody` (the chain's first four stages: the frames and
+Kokoro's pitch curve) and `render` (the last three, on the curve JS
+sends). A chunk that ends a phrase or the reading is sent its curve
+fallen (`fallOf`, `apps/heartseed/src/natural/fall.ts`, the owner's
+Gentle fall: its last ~450 ms gliding to 2 semitones under its middle, no
+point raised), a chunk inside a phrase its own; the frames, and so the
+samples, do not change.
 
 ## Sub-features
 
@@ -45,6 +52,10 @@ Her renders at speed 0.85 and Him at 0.9 (`SPEEDS`).
 - `natural-read`: `Load` then `Read` lights all 37 words in order, one
   chunk a phrase (9), each chunk's samples 600 times its frames, rendered
   at 0.85 and played with its phrase's rest.
+- `natural-fall`: the same Her reading sends each chunk a curve that ends
+  2 semitones or more under its middle, lowers points on every chunk and
+  raises none, with a prosody line before each render.
+- `natural-fall-him`: the same in `bm_george` at 0.9.
 - `natural-rests`: each chunk plays after the one before it and that
   one's rest, and the reading finishes after the last chunk's audio, not
   after a rest.
@@ -98,7 +109,10 @@ The probe's lines, read with `sim snapshot <step>`: `voice <name>`,
 `install <kind> <bytes>/<total> <reason>`, `load <ms>`,
 `read <finished|stopped|off|interrupted|failed|none>`, `lit <lit>/<words>`,
 `order <ok|broken>`, `chunks <k>`, `frames ok <j>/<k>`,
-`first-word <ms>`, `rtf <x.xx>`, `peak <MB>` and
+`fall <f>/<k> raised <r>` (of the read's chunks with a voiced point, `k`,
+those sent a curve ending 2 semitones or more under their prosody's
+middle, `f`, and the points sent above the prosody's own, `r`),
+`first-word <ms>`, `rtf <x.xx>` (prosody and render ms over the audio's), `peak <MB>` and
 `soak <done>/<n> unplanned <u> failed <f> nonfinite <m>`.
 
 `natural-build`:
@@ -163,7 +177,9 @@ log holds
 `[natural] load ms=<n> units=cpuOnly voice=af_heart.bin stages=loaded`
 (the first load of the process; a later one says `stages=kept`), and,
 per chunk, one
-`[natural] render utterance=<u> chunk=<c> ids=<n> frames=<Σ> samples=<s> ms=<m> speed=0.85`
+`[natural] prosody utterance=<u> chunk=<c> ids=<n> frames=<Σ> points=<2Σ> ms=<m> speed=0.85`,
+then one
+`[natural] render utterance=<u> chunk=<c> ids=<n> frames=<Σ> samples=<s> ms=<m> speed=0.85 points=<2Σ> lowered=<l> raised=0`
 and one `[natural] play … skipped=simulator` line, each with
 `s = 600 × Σ` and `to − from ≤ s`. The nine play lines' `rest=` are, in
 order, `13200,13200,13200,13200,13200,7200,13200,7200,0`. No sound plays.
@@ -174,6 +190,18 @@ order, `13200,13200,13200,13200,13200,7200,13200,7200,0`. No sound plays.
 `rest`, or later (a render that comes late plays at the clock plus
 2400); and the probe's `read finished` follows the last chunk's
 `at + to − from`, not a rest after it.
+
+`natural-fall`: in the same reading (Her, Isaiah 41:10),
+
+→ the `natural-read` snapshot has `fall 9/9 raised 0` beside
+`frames ok 9/9`, `read finished`, `lit 37/37` and `order ok`. The
+module's log holds, per chunk, one `[natural] prosody … speed=0.85` line
+with `points = 2 × frames`, followed by that chunk's
+`[natural] render … speed=0.85 points=<2Σ> lowered=<l> raised=0` with the
+same `frames`, `samples = 600 × frames`, and `lowered > 0` on each of the
+9 (the planner's Mac CPU run lowered 14, 28, 32, 31, 24, 27, 20, 27 and 18
+points; the simulator's CPU should be close). Report every `lowered`.
+Base has no `prosody` line and no `fall` line.
 
 `natural-voices`: after `natural-read`, open the probe with the second
 voice and read, then open it without and read again:
@@ -192,12 +220,20 @@ sim snapshot natural-voices-her
 `voice af_heart`). The module's log, after the `natural-read` load, holds
 one `[natural] load … voice=bm_george.bin stages=kept` and then one
 `[natural] load … voice=af_heart.bin stages=kept`, and no second
-`stages=loaded`; Him's `render` lines say `speed=0.9` and Her's
-`speed=0.85`. `serve.log`'s ready line says `"files":39`, the cache
+`stages=loaded`; Him's `prosody` and `render` lines say `speed=0.9` and
+Her's `speed=0.85`, a `prosody` line before each `render`. `serve.log`'s ready line says `"files":39`, the cache
 holding `bm_george.bin` converted from the revision's rows. Sum each
 reading's `render` lines' `frames`: the two
 readings of the same verse give different totals (a pack that never
 switched gives equal ones).
+
+`natural-fall-him`: in the `natural-voices-him` reading (`voice=bm_george`),
+
+→ the snapshot has `fall 9/9 raised 0` and `frames ok 9/9`; each of its 9
+chunks logs a `[natural] prosody … points=<2Σ> … speed=0.9` line, then
+its `[natural] render … speed=0.9 points=<2Σ> lowered=<l> raised=0`, with
+`lowered > 0` on each (the planner's Mac CPU run: 11, 21, 29, 22, 26, 12,
+21, 12 and 27). Report every `lowered`. Base: red, as for `natural-fall`.
 
 `natural-crash`: tap `Read`, and while `read` is still `none`,
 `xcrun simctl terminate <udid> app.heartseed`; then `sim open /` and
@@ -219,7 +255,9 @@ sim snapshot natural-remove
 A soak on the simulator proves only the tally: open the probe with
 `soak=200` added to the link (and `voice=bm_george` for the second
 voice), tap `Soak`, and wait for `soak 200/200 …`; report its four
-counts. The full soak (31,102 verses)
+counts, which should read `unplanned 0 failed 0 nonfinite 0` (each chunk
+runs prosody, the fit, the fall and render as a reading does, so a curve
+that does not fit counts as failed). The full soak (31,102 verses)
 is the phone check's.
 
 ## Today's rows
@@ -348,7 +386,10 @@ no `Try again`; after each tap, no line and the fuse `clear`; after the
 relaunch, no line. A natural reading after the clearing tap is not heard
 here (the garden is planted by then): the router's tests own it.
 
-The simulator cannot show the sound, the latency, `Failed space` or
+The simulator cannot show the sound (so not the pitch heard, nor whether
+the fall sounds gentle: the counts above show only the curve sent), the
+Neural Engine's fp16 vocoder, the latency (the extra JS hop between
+`prosody` and `render` included), `Failed space` or
 `Failed load` (the tests own both), Low Data Mode, a release build
 (`today-mirror` stands in: a development build with no base stored reads
 the same mirror), or a Today reading by the natural voice (Today's
