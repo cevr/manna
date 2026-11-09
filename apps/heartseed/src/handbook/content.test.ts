@@ -71,7 +71,7 @@ describe('the Bible Handbook in the app', () => {
     expect(HANDBOOK_LISTS).toEqual(HANDBOOK.flatMap((section) => section.lists));
   });
 
-  it('holds the teaching sections: 25 sections, 131 lists, 2,529 ranges over 3,542 verses, 15 skipped', () => {
+  it('holds the teaching sections: 25 sections, 130 lists, 2,528 ranges over 3,542 verses, 15 skipped', () => {
     expect({
       sections: HANDBOOK.length,
       lists: HANDBOOK_LISTS.length,
@@ -84,8 +84,8 @@ describe('the Bible Handbook in the app', () => {
       ),
     }).toEqual({
       sections: 25,
-      lists: 131,
-      ranges: 2529,
+      lists: 130,
+      ranges: 2528,
       verses: 3542,
       skipped: 15,
       byReason: [3, 9, 3, 0],

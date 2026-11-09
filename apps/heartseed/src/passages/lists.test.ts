@@ -128,7 +128,7 @@ const BAD_SPANS: readonly Span[] = [
   { book: 19, chapter: 46, first: 3, last: 1 },
 ];
 /** A few of the build's lists, so a walk meets a held one often. */
-const IDS = [KNOWN_IDS[0], KNOWN_IDS[1], KNOWN_IDS[2], KNOWN_IDS[60], KNOWN_IDS[130]] as string[];
+const IDS = [KNOWN_IDS[0], KNOWN_IDS[1], KNOWN_IDS[2], KNOWN_IDS[60], KNOWN_IDS[129]] as string[];
 const UNKNOWN = ['no-such-list', '', 'bhb-0', 'BHB-30', ' bhb-30'];
 const GARBLED_LISTS: readonly (readonly [string, string])[] = [
   ['not JSON', '{'],
@@ -576,7 +576,7 @@ const FLOORS = {
 
 describe('what a reader holds, passages and lists, over generated devices', () => {
   it('reads both keys, and adds, removes, plants and uproots as the rules do, through faults, at every step', async () => {
-    expect(KNOWN_IDS.length).toBe(131);
+    expect(KNOWN_IDS.length).toBe(130);
     const coverage: Coverage = new Map();
     const failures: string[] = [];
     for (let seed = 1; seed <= DEVICES && failures.length === 0; seed++)

@@ -12,7 +12,7 @@
  * - C3: over generated views (unread, or read with 0-4 passages and 0-4
  *   lists held) and fields that hold all, some or none of a list's verses
  *   (through the list's own row, a passage, the own row or loose rows),
- *   every one of the 131 lists judged at least once: `offerStateOf` is
+ *   every one of the 130 lists judged at least once: `offerStateOf` is
  *   `offerModel`.
  *
  * It catches a section dropped, moved or renamed, a list off its shelf, a
@@ -167,7 +167,7 @@ describe('a Handbook offer', () => {
       if (want === 'in field' && !lists.includes(target)) bump('in field by other rows');
     }
     expect(wrong).toEqual([]);
-    expect(covered.size).toBe(131);
+    expect(covered.size).toBe(130);
     const floors: readonly (readonly [string, number])[] = [
       ['unread', 30],
       ['in field', 30],

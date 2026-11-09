@@ -1,6 +1,7 @@
 /**
  * R8: what the generator writes and when it refuses. A small book in an
- * in-memory database (two lists of one title in one section, a section left
+ * in-memory database (two headings of one title in one section, written as
+ * one list under the first, a section left
  * out, a section with no sub-heading, a long range, a past-chapter part, an
  * unlinked reference, a row of another book) is written to the exact text
  * below, one list per line, and twice to the same bytes. A contents
@@ -77,7 +78,14 @@ const ROWS: readonly (readonly [
     978,
     '978.21',
     'p',
-    [text('• '), link('Daniel 2:1', 'Daniel 2'), text('; '), link('Jude 1:21', 'Jude 21-23')],
+    [
+      text('• '),
+      link('Daniel 2:1', 'Daniel 2'),
+      text('; '),
+      link('Jude 1:21', 'Jude 21-23'),
+      text('; '),
+      link('Daniel 2:44', 'Daniel 2:44'),
+    ],
   ],
   [
     978,
@@ -120,8 +128,7 @@ const EXPECTED = [
   '"source":{"title":"Bible Handbook","author":"Stephen N. Haskell","year":1919,"code":"BHB","contents":"https://text.egwwritings.org/book/b978"},',
   '"sections":[',
   '{"id":"bhb-10","title":"Prophecy","lists":[',
-  '{"id":"bhb-12","title":"Second Chapter of Daniel","ranges":[[27,2,44,44],[23,9,6,6],[23,9,7,7]]},',
-  '{"id":"bhb-20","title":"Second Chapter of Daniel","ranges":[[65,1,21,23],[45,3,20,20]]}',
+  '{"id":"bhb-12","title":"Second Chapter of Daniel","ranges":[[27,2,44,44],[23,9,6,6],[23,9,7,7],[65,1,21,23],[45,3,20,20]]}',
   ']},',
   '{"id":"bhb-40","title":"Nature of Man","lists":[',
   '{"id":"bhb-40","title":"Nature of Man","ranges":[[21,9,5,5],[21,9,6,6]]}',
@@ -262,7 +269,7 @@ describe('the committed files', () => {
         const held = yield* Schema.decodeEffect(Committed)(written);
         expect(handbookText(held)).toBe(written);
         expect(totalsLine(held)).toBe(
-          'handbook sections=25 lists=131 ranges=2529 verses=3542 skipped=15',
+          'handbook sections=25 lists=130 ranges=2528 verses=3542 skipped=15',
         );
       }).pipe(Effect.provide(BunServices.layer)),
   );

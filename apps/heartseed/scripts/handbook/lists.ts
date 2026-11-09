@@ -152,7 +152,25 @@ const sectionTitles = (entries: readonly Entry[]): ReadonlyMap<number, string> =
   return titles;
 };
 
-/** The ranges each entry's lines give, by the entry's para, and each reference left out, in book order. */
+/**
+ * Each entry's home, by para: the first entry of its section, in contents
+ * order, that has its title. Lists of one title in one section are one list
+ * under the first (owner, 2026-11-09, q60 (b)): one plant per verse, and no
+ * two controls of a shelf share a name.
+ */
+const homesOf = (entries: readonly Entry[]): ReadonlyMap<number, number> => {
+  const homes = new Map<number, number>();
+  let firsts = new Map<string, number>();
+  for (const entry of entries) {
+    if (entry.level === 1) firsts = new Map();
+    const home = firsts.get(entry.title) ?? entry.para;
+    firsts.set(entry.title, home);
+    homes.set(entry.para, home);
+  }
+  return homes;
+};
+
+/** The ranges each entry's lines give, by its home's para, and each reference left out, in book order. */
 interface Read {
   readonly ranges: Map<number, Range[]>;
   readonly skipped: Skip[];
@@ -195,6 +213,7 @@ const readRows = (
   const sectionOf = sectionTitles(entries);
   const dropped = new Set(leftOut);
   const owner = ownerOf(entries);
+  const homes = homesOf(entries);
   const read: Read = { ranges: new Map(), skipped: [] };
   for (const row of [...rows].sort((a, b) => a.para - b.para)) {
     const kept = owner(row.para).pipe(
@@ -208,14 +227,15 @@ const readRows = (
       if (!read.skipped.some((each) => sameSkip(each, entry))) read.skipped.push(entry);
     }
     if (line._tag !== 'Lead') continue;
-    const list = read.ranges.get(kept.value.para) ?? [];
-    read.ranges.set(kept.value.para, list);
+    const home = homes.get(kept.value.para) ?? kept.value.para;
+    const list = read.ranges.get(home) ?? [];
+    read.ranges.set(home, list);
     readLead(read, para, line.links, list, bookOf, count);
   }
   return read;
 };
 
-/** R7: each level-1 entry with its own list, then its sub-headings' in contents order; empty lists and sections left out. */
+/** R7: each level-1 entry with its own list, then its sub-headings' in contents order; a title's later lists in a section held by its first, empty lists and sections left out. */
 const sectionsOf = (
   entries: readonly Entry[],
   ranges: ReadonlyMap<number, readonly Range[]>,

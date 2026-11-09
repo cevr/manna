@@ -5,7 +5,7 @@
  * R7, R8, R11), judged against `test/handbook-model.ts`, which reads
  * `data/handbook.json` itself.
  *
- * - C1: every one of the 131 lists as `plantedListOf` gives it: its id,
+ * - C1: every one of the 130 lists as `plantedListOf` gives it: its id,
  *   its title (` (n)` on a title's n-th use), its verses distinct in
  *   Haskell's order, a `Handbook` source and no range; ids and titles
  *   unique, and no title a collection's or one of the first 17 shelves'
@@ -156,14 +156,15 @@ describe('a Handbook list', () => {
       source: { tag: 'Handbook', id: list.id },
     }));
     expect(got).toEqual(want);
-    expect(got.length).toBe(131);
+    expect(got.length).toBe(130);
     const titles = want.map((list) => list.title);
-    expect(new Set(titles).size).toBe(131);
-    expect(new Set(want.map((list) => list.id)).size).toBe(131);
-    expect(titles.filter((title) => title.startsWith('Second Chapter of Daniel'))).toEqual([
-      'Second Chapter of Daniel',
-      'Second Chapter of Daniel (2)',
-    ]);
+    expect(new Set(titles).size).toBe(130);
+    expect(new Set(want.map((list) => list.id)).size).toBe(130);
+    expect(
+      want
+        .filter((list) => list.title.startsWith('Second Chapter of Daniel'))
+        .map((list) => [list.id, list.title, list.verses.length]),
+    ).toEqual([['bhb-1695', 'Second Chapter of Daniel', 102]]);
     const others = new Set([
       ...COLLECTIONS.map((collection) => collection.title),
       ...shelvesModel()
@@ -177,7 +178,7 @@ describe('a Handbook list', () => {
 
 describe('the field and the session over held lists', () => {
   it('give the own rows, the passages, the lists in stored order, then the taught collections, and the pieces in that order, each reference once at its first place', () => {
-    const next = random(21_76);
+    const next = random(22_05);
     const tally = new Map<string, number>();
     const bump = (kind: string) => tally.set(kind, (tally.get(kind) ?? 0) + 1);
     const covered = new Set<string>();
@@ -212,7 +213,7 @@ describe('the field and the session over held lists', () => {
         bump('a list verse kept at an earlier place');
     }
     expect(wrong.slice(0, 3)).toEqual([]);
-    expect(covered.size).toBe(131);
+    expect(covered.size).toBe(130);
     for (const [kind, floor] of [
       ['unread', 10],
       ['lists:1', 30],

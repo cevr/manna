@@ -12,7 +12,9 @@
  * is built, never by reading the rows again.
  *
  * It catches a reference taken from a line's note, a 40-character label
- * refused or a 41-character one taken, two lists of one title merged, an
+ * refused or a 41-character one taken, two lists of one title in one
+ * section kept apart (owner, q60 (b): one list under the first) or two of
+ * one title in two sections merged, an
  * empty section or list kept, a row given to the wrong entry, a duplicate
  * range kept, a skipped record lost or repeated, and a left-out section's
  * rows read. Chapters are 30 verses here (`count`); R4 and R5 over their
@@ -286,7 +288,7 @@ const bookCase = (seed: number) => {
     entries.push(head);
     para = rowsOf(next, built, para, head.para, counted);
     const subs: Entry[] = [];
-    const shared = chance(next, 0.3);
+    const shared = chance(next, 0.6);
     for (let sub = 0; sub < below(next, 4); sub += 1) {
       const entry: Entry = {
         para,
@@ -307,17 +309,41 @@ const bookCase = (seed: number) => {
   return { entries, rows, built };
 };
 
-/** What the model says a book gives: each section in contents order with its own list first, then its sub-headings'. */
+/** Each section's entries in contents order: its head first, then its sub-headings. */
+const groupsOf = (entries: readonly Entry[]): Entry[][] => {
+  const groups: Entry[][] = [];
+  for (const entry of entries)
+    if (entry.level === 1) groups.push([entry]);
+    else groups.at(-1)?.push(entry);
+  return groups;
+};
+
+/** One title's ranges in a section: each of its entries' in para order, a range again left out. */
+const titleRanges = (group: readonly Entry[], title: string, built: Built): Range[] => {
+  const held: Range[] = [];
+  const paras = group
+    .filter((entry) => entry.title === title)
+    .map((entry) => entry.para)
+    .sort((a, b) => a - b);
+  for (const para of paras)
+    for (const range of built.ranges.get(para) ?? []) expectRange(held, range);
+  return held;
+};
+
+/** What the model says a book gives: each section in contents order with its own list first, then its sub-headings', a title's lists in a section one list under its first. */
 const expectedOf = (entries: readonly Entry[], built: Built): Lists => {
   const sections: { id: string; title: string; lists: List[] }[] = [];
-  for (const entry of entries) {
-    if (entry.level === 1)
-      sections.push({ id: `bhb-${entry.para}`, title: entry.title, lists: [] });
-    const ranges = built.ranges.get(entry.para) ?? [];
-    if (ranges.length > 0)
-      sections.at(-1)!.lists.push({ id: `bhb-${entry.para}`, title: entry.title, ranges });
+  for (const group of groupsOf(entries)) {
+    const head = group[0]!;
+    const lists: List[] = [];
+    for (const [at, entry] of group.entries()) {
+      if (group.findIndex((each) => each.title === entry.title) !== at) continue;
+      const ranges = titleRanges(group, entry.title, built);
+      if (ranges.length > 0) lists.push({ id: `bhb-${entry.para}`, title: entry.title, ranges });
+    }
+    if (lists.length > 0) sections.push({ id: `bhb-${head.para}`, title: head.title, lists });
   }
-  return { sections: sections.filter((each) => each.lists.length > 0), skipped: built.skipped };
+  return { sections, skipped: built.skipped };
 };
 
 const CASES = Array.from({ length: 600 }, (_, index) => bookCase(31337 + index * 7919));
@@ -348,6 +374,18 @@ describe('the rows read as lists under their headings (R2, R3, R6, R7)', () => {
       );
       if (titles.length > new Set(titles).size)
         tally.set('shared titles', (tally.get('shared titles') ?? 0) + 1);
+      const merged = groupsOf(entries).some((group) =>
+        group.some((entry, at) =>
+          group.some(
+            (other, later) =>
+              later > at &&
+              other.title === entry.title &&
+              (built.ranges.get(entry.para)?.length ?? 0) > 0 &&
+              (built.ranges.get(other.para)?.length ?? 0) > 0,
+          ),
+        ),
+      );
+      if (merged) tally.set('merged titles', (tally.get('merged titles') ?? 0) + 1);
       if (
         entries.some(
           (entry) =>
@@ -371,6 +409,7 @@ describe('the rows read as lists under their headings (R2, R3, R6, R7)', () => {
       'out of para order': 50,
       'line at its entry’s para': 300,
       'shared titles': 50,
+      'merged titles': 50,
       'empty section': 50,
     };
     const short = Object.entries(floors).filter(([key, floor]) => (tally.get(key) ?? 0) < floor);
