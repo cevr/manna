@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noThrowStatement, effect/noNewError -- the Settings sheet's rig: it reads happy-dom's whole document, whose absent nodes and attributes are null, drives the sheet through React's promise-based `act`, and stops a case whose sheet never became active. */
+/* oxlint-disable effect/noNullish, effect/noAsyncFunction, effect/noThrowStatement, effect/noNewError -- the Settings sheet's rig: it reads happy-dom's whole document, whose absent nodes and attributes are null, drives the sheet through React's promise-based `act`, and stops a case whose sheet never became active. */
 
 /**
  * Home's Settings sheet as a reader and a screen reader meet it, for any

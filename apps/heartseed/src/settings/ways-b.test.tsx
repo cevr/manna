@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction -- a React screen test: it drives the root in happy-dom through React's promise-based `act` over the device's disk, one launch after another, and reads a node's absent attributes as null. */
+/* oxlint-disable effect/noNullish, effect/noAsyncFunction -- a React screen test: it drives the root in happy-dom through React's promise-based `act` over the device's disk, one launch after another, and reads a node's absent attributes as null. */
 
 /**
  * More ways of home's Settings sheet (the rest are `ways.test.tsx`'s),

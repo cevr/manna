@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noNodeBuiltinImport, eslint/no-await-in-loop -- a React screen test: it drives the root in happy-dom through React's promise-based `act` over the device's disk, one launch after another, reads the vendored licence from disk to hold the screen to it, and reads a node's absent attributes as null. */
+/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noNodeBuiltinImport -- a React screen test: it drives the root in happy-dom through React's promise-based `act` over the device's disk, one launch after another, reads the vendored licence from disk to hold the screen to it, and reads a node's absent attributes as null. */
 
 /**
  * About as a reader and a screen reader meet it, through the field bar's
