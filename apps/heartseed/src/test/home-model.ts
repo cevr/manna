@@ -24,6 +24,13 @@
  *   plant holds no more recalls than the item's baseline.
  * - H5 the greeting by the local hour and minute: morning 04:00-11:59,
  *   afternoon 12:00-17:59, evening else.
+ * - H9 what grew: in plan order, the verse (a phrase's verse for a phrase)
+ *   of each done item whose stage over all its recalls ranks above its
+ *   stage over its first `recalls` recalls (none ranking below a seed),
+ *   each verse once, with the verse's stage on the field now.
+ *
+ * It also holds the generators the home's tests share: plans `planModel`
+ * makes over pieces of made-up text with histories.
  */
 
 import type { Recall } from '../sayit';
@@ -32,12 +39,22 @@ import {
   countOf,
   historyOf,
   othersOf,
+  recallOf,
   type ModelPassage,
   type ModelPlantStage,
 } from './field-model';
-import { below, pickOf } from './garden-model';
-import { spanRef, verseRef, versesIn, type Corpus, type Held, type Span } from './passages-model';
-import { fieldFoldRule, verseOfRule } from './phrase-model';
+import { below, inOrder, pickOf, referenceStage, type ModelStage } from './garden-model';
+import {
+  spanRef,
+  verseRef,
+  versesIn,
+  type Corpus,
+  type Held,
+  type ModelTextPiece,
+  type Span,
+} from './passages-model';
+import { expandRule, fieldFoldRule, verseOfRule, withPhrasesRule } from './phrase-model';
+import { DAY, planModel } from './session-model';
 
 /** A verse's place as the model holds it. */
 export interface ModelPlace {
@@ -310,4 +327,120 @@ export const greetingModel = (zone: string, at: number) => greetingRule(clockIn(
 export const minuteModel = (at: number, offset: number) => {
   const wall = new Date(at + offset * 60_000);
   return wall.getUTCHours() * 60 + wall.getUTCMinutes();
+};
+
+/** A made-up verse text of `count` words, a comma, a stop or nothing after each. */
+const textOf = (next: () => number, count: number) =>
+  Array.from(
+    { length: count },
+    (_, n) => `w${n + 1}${pickOf(next, ['', '', '', ',', '.'] as const)}`,
+  ).join(' ');
+
+/** A verse of made-up text, two in three long enough to be cut into phrases. */
+const pieceOf = (next: () => number, k: number): ModelTextPiece => {
+  const words = below(next, 3) > 0 ? 13 + below(next, 30) : 1 + below(next, 12);
+  return withPhrasesRule({
+    reference: `Psalms ${k}:${1 + below(next, 9)}`,
+    text: textOf(next, words),
+    words,
+    group: pickOf(next, ['a', 'b', 'c'] as const),
+  });
+};
+
+/** A garden's records being sown before `at`, each start its own. */
+const sowerOf = (at: number) => {
+  const records: Recall[] = [];
+  let tick = 0;
+  const sow = (reference: string, when: number, grade: Recall['grade']) => {
+    tick += 1;
+    records.push(recallOf(reference, Math.min(when, at - 1) - tick, grade, 0));
+  };
+  return { records, sow };
+};
+
+/** Sows `piece`'s history before `at`: none, some of its phrases, every phrase ripe, or the verse whole (a verse with no phrases is whole or none). */
+const sowPiece = (
+  next: () => number,
+  sow: ReturnType<typeof sowerOf>['sow'],
+  at: number,
+  piece: ModelTextPiece,
+) => {
+  const phrases = piece.phrases ?? [];
+  const history = pickOf(next, ['none', 'phrases', 'ripe', 'whole'] as const);
+  if (history === 'none') return;
+  if (history === 'whole' || phrases.length === 0) {
+    for (let n = 1 + below(next, 3); n > 0; n--)
+      sow(piece.reference, at - n * 3 * DAY, pickOf(next, [1, 3, 3, 4] as const));
+    return;
+  }
+  if (history === 'phrases')
+    for (const phrase of phrases.slice(0, 1 + below(next, phrases.length)))
+      sow(phrase.reference, at - (1 + below(next, 20)) * DAY, pickOf(next, [1, 3, 3] as const));
+  if (history === 'ripe')
+    for (const phrase of phrases)
+      for (const back of [30, 26, 21]) sow(phrase.reference, at - back * DAY, 3);
+};
+
+/** An item of a plan as the home's rules read it. */
+export interface ModelPlanItem {
+  readonly reference: string;
+  readonly fresh: boolean;
+  readonly recalls: number;
+  readonly seconds: number;
+}
+
+/**
+ * A plan case before any recital: one to four pieces of made-up text
+ * (phrased or not), each with a history (none, some phrases, every phrase
+ * ripe, the verse whole) sown before `at`, and the plan `planModel` makes
+ * over them at `at` (phrases, joins, the new piece).
+ */
+export const plannedOf = (next: () => number) => {
+  const at = Date.UTC(2026, below(next, 12), 1 + below(next, 28), below(next, 24));
+  const { records, sow } = sowerOf(at);
+  const pieces: ModelTextPiece[] = [];
+  for (let k = 1 + below(next, 4); k > 0; k--) {
+    const piece = pieceOf(next, k);
+    pieces.push(piece);
+    sowPiece(next, sow, at, piece);
+  }
+  const plants = new Map<string, Recall[]>();
+  for (const recall of records)
+    plants.set(recall.reference, [...(plants.get(recall.reference) ?? []), recall]);
+  const plan = planModel({
+    plants,
+    pieces: expandRule(pieces, plants),
+    at,
+    offset: 0,
+    minutes: pickOf(next, [2, 5, 10, 20] as const),
+  });
+  const items: ModelPlanItem[] = plan.items.map(({ reference, fresh, recalls, seconds }) => ({
+    reference,
+    fresh,
+    recalls,
+    seconds,
+  }));
+  return { at, records, items };
+};
+
+const RANK: Readonly<Record<ModelStage, number>> = { seed: 0, blade: 1, ear: 2, 'full corn': 3 };
+
+/** H9: what grew over `records` (one per recital) for a plan of `items`. */
+export const grownModel = (
+  items: readonly ModelPlanItem[],
+  records: readonly Recall[],
+): { reference: string; stage: ModelStage }[] => {
+  const out: { reference: string; stage: ModelStage }[] = [];
+  for (const item of items) {
+    const recalls = inOrder(records.filter((recall) => recall.reference === item.reference));
+    if (recalls.length <= item.recalls) continue;
+    const before = recalls.slice(0, item.recalls);
+    const was = before.length === 0 ? -1 : RANK[referenceStage(before)];
+    if (RANK[referenceStage(recalls)] <= was) continue;
+    const verse = verseOfRule(item.reference);
+    if (out.some((grown) => grown.reference === verse)) continue;
+    const own = records.filter((recall) => recall.reference === verse);
+    out.push({ reference: verse, stage: own.length === 0 ? 'seed' : referenceStage(own) });
+  }
+  return out;
 };

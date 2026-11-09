@@ -45,7 +45,7 @@ import { listsOf, type ListSource } from './lists';
 import type { PassagesView } from './passages';
 import { collectionsOf } from './promises/taught';
 import type { Recall } from './sayit';
-import { MINUTES, type Item } from './session';
+import type { Item } from './session';
 import { CHANGES, stamped } from './test/day-model';
 import { recallOf, type ModelPassage } from './test/field-model';
 import { below, pickOf, random } from './test/garden-model';
@@ -57,16 +57,17 @@ import {
   kindRule,
   listsModel,
   minuteModel,
+  plannedOf,
   readyModel,
   recordsOf,
   taughtOf,
   type ModelFurrow,
   type ModelSource,
 } from './test/home-model';
-import type { Held, ModelTextPiece } from './test/passages-model';
+import type { Held } from './test/passages-model';
 import { choosableOf } from './test/passages-rig';
-import { expandRule, verseOfRule, withPhrasesRule } from './test/phrase-model';
-import { DAY, HOUR, MINUTE, planModel } from './test/session-model';
+import { verseOfRule } from './test/phrase-model';
+import { HOUR, MINUTE } from './test/session-model';
 import { inZone, ZONES } from './test/zone';
 
 const OWN_VERSE = 'Isaiah 41:10';
@@ -215,84 +216,9 @@ describe('the furrows', () => {
   });
 });
 
-/** A made-up verse text of `count` words, a comma, a stop or nothing after each. */
-const textOf = (next: () => number, count: number) =>
-  Array.from(
-    { length: count },
-    (_, n) => `w${n + 1}${pickOf(next, ['', '', '', ',', '.'] as const)}`,
-  ).join(' ');
-
-/** A verse of made-up text, two in three long enough to be cut into phrases. */
-const pieceOf = (next: () => number, k: number): ModelTextPiece => {
-  const words = below(next, 3) > 0 ? 13 + below(next, 30) : 1 + below(next, 12);
-  return withPhrasesRule({
-    reference: `Psalms ${k}:${1 + below(next, 9)}`,
-    text: textOf(next, words),
-    words,
-    group: pickOf(next, ['a', 'b', 'c'] as const),
-  });
-};
-
-/** A garden's records being sown before `at`, each start its own. */
-const sowerOf = (at: number) => {
-  const records: Recall[] = [];
-  let tick = 0;
-  const sow = (reference: string, when: number, grade: Recall['grade']) => {
-    tick += 1;
-    records.push(recallOf(reference, Math.min(when, at - 1) - tick, grade, 0));
-  };
-  return { records, sow };
-};
-
-/** Sows `piece`'s history before `at`: none, some of its phrases, every phrase ripe, or the verse whole (a verse with no phrases is whole or none). */
-const sowPiece = (
-  next: () => number,
-  sow: ReturnType<typeof sowerOf>['sow'],
-  at: number,
-  piece: ModelTextPiece,
-) => {
-  const phrases = piece.phrases ?? [];
-  const history = pickOf(next, ['none', 'phrases', 'ripe', 'whole'] as const);
-  if (history === 'none') return;
-  if (history === 'whole' || phrases.length === 0) {
-    for (let n = 1 + below(next, 3); n > 0; n--)
-      sow(piece.reference, at - n * 3 * DAY, pickOf(next, [1, 3, 3, 4] as const));
-    return;
-  }
-  if (history === 'phrases')
-    for (const phrase of phrases.slice(0, 1 + below(next, phrases.length)))
-      sow(phrase.reference, at - (1 + below(next, 20)) * DAY, pickOf(next, [1, 3, 3] as const));
-  if (history === 'ripe')
-    for (const phrase of phrases)
-      for (const back of [30, 26, 21]) sow(phrase.reference, at - back * DAY, 3);
-};
-
-/** A plan case: pieces with histories (none, some phrases, every phrase ripe, the verse whole), the plan `planModel` makes over them, then some of its items recited. */
+/** A plan case: the plan `planModel` makes over pieces with histories (`plannedOf`), then some of its items recited. */
 const planCaseOf = (next: () => number, tally: Tally) => {
-  const at = Date.UTC(2026, below(next, 12), 1 + below(next, 28), below(next, 24));
-  const { records, sow } = sowerOf(at);
-  const pieces: ModelTextPiece[] = [];
-  for (let k = 1 + below(next, 4); k > 0; k--) {
-    const piece = pieceOf(next, k);
-    pieces.push(piece);
-    sowPiece(next, sow, at, piece);
-  }
-  const plants = new Map<string, Recall[]>();
-  for (const recall of records)
-    plants.set(recall.reference, [...(plants.get(recall.reference) ?? []), recall]);
-  const plan = planModel({
-    plants,
-    pieces: expandRule(pieces, plants),
-    at,
-    offset: 0,
-    minutes: pickOf(next, [...MINUTES]),
-  });
-  const items: Item[] = plan.items.map(({ reference, fresh, recalls, seconds }) => ({
-    reference,
-    fresh,
-    recalls,
-    seconds,
-  }));
+  const { at, records, items } = plannedOf(next);
   const after = [...records];
   items.forEach((item, index) => {
     if (below(next, 2) === 0) return;
