@@ -88,6 +88,7 @@ import { clockAt, clockOf, type Time } from './clock';
 import { computed, paintOf, systemScheme } from './look';
 import { gestureOf } from './gesture';
 import { device } from './one';
+import { voiceOverFaults } from './voiceover';
 import { watchRoot } from './root-rule';
 import { countsModel, dueModel, MINUTE, planModel, type ModelItem } from './session-model';
 import { hostOffset } from './zone';
@@ -593,7 +594,7 @@ const scrolls = (element: Element | null) => {
   return false;
 };
 
-/** What a frame of hear shows wrong: a word node missing or not whole, a word node outside the reading view while it shows, the inked words not a prefix, the selected ones not one run inside it; while a finger holds the word `held`, no reading view, the held word not the read point or not the one selected, or a screen that scrolls; else one that does not. */
+/** What a frame of hear shows wrong: a word node missing or not whole, a word node outside the reading view while it shows or merged into one VoiceOver element or hidden from it (`./voiceover`), the inked words not a prefix, the selected ones not one run inside it; while a finger holds the word `held`, no reading view, the held word not the read point or not the one selected, or a screen that scrolls; else one that does not. */
 const hearFaults = (host: Element, held: number | null): string[] => {
   const hear = hearOf(host);
   const out: string[] = [];
@@ -608,6 +609,7 @@ const hearFaults = (host: Element, held: number | null): string[] => {
     )
   )
     out.push('frame: a hear word outside the reading view');
+  if (view !== null) out.push(...voiceOverFaults(host).map((fault) => `frame: ${fault}`));
   const still = !scrolls(host.querySelector('[role="heading"]'));
   if (still !== (held !== null))
     out.push(`frame: hear ${still ? 'still' : 'scrolls'} while ${held === null ? 'not ' : ''}held`);

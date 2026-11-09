@@ -27,7 +27,9 @@
  * VoiceOver (L8): each word, itself and not a wrapper, offers one action,
  * `Read from here`, read from the props React holds since react-native-web
  * draws no DOM for it; performing it asks for one seek to that word, and
- * any other action asks for nothing.
+ * any other action asks for nothing. Each word stays its own element:
+ * nothing from `reading` down to it is `accessible` or hides its children
+ * (`src/test/voiceover.ts`).
  *
  * It catches the ink off by one, a selection or ground left on a word out
  * of the range, a word nested in a wrapper, a word's text cut at its
@@ -46,6 +48,7 @@ import { View } from 'react-native';
 import { gestureOf, type PanConfig } from '../test/gesture';
 import { below, random } from '../test/garden-model';
 import { computed } from '../test/look';
+import { type Fiber, fiberProps, rootFiberOf, voiceOverFaults } from '../test/voiceover';
 import { theme } from '../theme';
 import type { VoiceView } from '../voice';
 import { wordSpans } from '../voice/reading';
@@ -345,20 +348,6 @@ const holdWalk = async (seed: number, tally: Tally): Promise<string[]> => {
   return faults;
 };
 
-/** A fiber as React keeps it: the props it was drawn with, its first child, its next sibling and its host node. */
-interface Fiber {
-  readonly memoizedProps?: Record<string, unknown> | null;
-  readonly child?: Fiber | null;
-  readonly sibling?: Fiber | null;
-  readonly stateNode?: unknown;
-}
-
-/** The value `node` keeps under the React key starting with `prefix`. */
-const keyed = (node: Node, prefix: string): Fiber | undefined => {
-  const key = Object.keys(node).find((name) => name.startsWith(prefix));
-  return key === undefined ? undefined : (node as unknown as Record<string, Fiber>)[key];
-};
-
 /**
  * The nearest props at or above `element` holding `name`, read from the
  * root's current fiber tree, where react-native-web draws no DOM for them
@@ -366,10 +355,7 @@ const keyed = (node: Node, prefix: string): Fiber | undefined => {
  * so the walk starts at the root's current fiber.
  */
 const propsOf = (element: Element, name: string): Record<string, unknown> => {
-  let root: Fiber | undefined;
-  for (let node: Node | null = element; node !== null && root === undefined; node = node.parentNode)
-    root = (keyed(node, '__reactContainer$')?.stateNode as { readonly current?: Fiber } | undefined)
-      ?.current;
+  const root = rootFiberOf(element);
   const path: Fiber[] = [];
   const visit = (fiber: Fiber | null | undefined): boolean => {
     for (let each = fiber; each; each = each.sibling) {
@@ -381,7 +367,10 @@ const propsOf = (element: Element, name: string): Record<string, unknown> => {
   };
   visit(root);
   return (
-    path.toReversed().find((fiber) => name in (fiber.memoizedProps ?? {}))?.memoizedProps ?? {}
+    path
+      .map(fiberProps)
+      .toReversed()
+      .find((each) => name in each) ?? {}
   );
 };
 
@@ -430,6 +419,7 @@ describe('the reading view', () => {
       const hold: Hold = { ...IDLE, onSeek: (word) => void asks.push(`seek ${word}`) };
       await act(async () => root.render(<ReadingView text={text} view={view} hold={hold} />));
       const words = [...(host.querySelector('[data-testid="reading"]')?.children ?? [])];
+      faults.push(...voiceOverFaults(host).map((fault) => `step ${step} ${fault}`));
       for (const [index, node] of words.entries()) {
         const at = `step ${step} word-${index}`;
         const props = propsOf(node, 'accessibilityActions');

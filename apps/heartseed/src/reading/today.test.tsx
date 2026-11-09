@@ -11,13 +11,14 @@
  * a release seeks to the held word once, a cancel resumes, a swipe and a
  * late end call nothing); one tick per hold; the reading view exactly
  * while the model reads the piece, with no `passage` beside it, the held
- * word as the read point and the selection while held; the passage whole
+ * word as the read point and the selection while held, each word its own
+ * VoiceOver element (`src/test/voiceover.ts`); the passage whole
  * otherwise; and Today's scroll view still exactly while held.
  *
  * It catches a hold with no tick or no pause, a scroll view that scrolls
  * under a held finger or stays still after it, a seek at both ends of a
- * release, a hold kept past the reading's end, and the reading view shown
- * at rest.
+ * release, a hold kept past the reading's end, the reading view shown at
+ * rest, and its words merged into one VoiceOver element or hidden.
  */
 
 import { RegistryProvider } from '@effect/atom-react';
@@ -39,6 +40,7 @@ import { below, random } from '../test/garden-model';
 import { gestureOf, type PanConfig } from '../test/gesture';
 import { computed } from '../test/look';
 import { KEY, spansOf, VoiceModel, type ModelCall, type ModelVoice } from '../test/voice-model';
+import { voiceOverFaults } from '../test/voiceover';
 import { theme } from '../theme';
 import { VoiceSource, type VoiceEvent } from '../voice';
 import { type Box, shownWordsOf, wordAt } from './words';
@@ -258,6 +260,7 @@ const frameFaults = (
   return [
     ...(passage === null ? [] : [`${at}: the passage beside the reading view`]),
     ...wordFaults(reading, text, held ?? model.view.lit, selected, at),
+    ...voiceOverFaults(host).map((fault) => `${at}: ${fault}`),
     ...(still === (held !== null)
       ? []
       : [
