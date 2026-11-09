@@ -13,7 +13,11 @@
  * then lives four days, launched each morning after 04:00 local at an hour
  * up to 22:00, tending up to six items a day, and on half its days
  * launched again one to three hours later to tend up to two more (no new
- * piece on a day one was said, a phrase's included).
+ * piece on a day one was said, a phrase's included). Each launch lands on
+ * home, whose first show makes the plan: with an item shown, home shows
+ * the model's counts line and `Begin`, which the walk takes to Today; with
+ * none, home shows the done state's counts line and no `Begin`, no other
+ * screen follows, and the launch ends there.
  *
  * Each item: `Listen` on a new piece in eight of ten, where the voice must be
  * asked for exactly the piece's text and each word the walk then names by
@@ -30,6 +34,8 @@
  * `promise-model.ts`'s, phrased and expanded by `phrase-model.ts`), each
  * cue `joinCueRule`'s, held after every step; the disk keeps every start
  * key but the minutes after a tap, and gains only each recital's record.
+ * Every frame of every launch holds to the root's frame rule (`watchRoot`,
+ * the garden read), checked after every step and at each launch's leave.
  */
 
 import { RegistryProvider } from '@effect/atom-react';
@@ -73,6 +79,7 @@ import {
 import { piecesModel } from './promise-model';
 import { actionModel, madeModel, NO_RUN, nextModel, shownModel, startedModel } from './run-model';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
+import { watchRoot } from './root-rule';
 import { listenModel } from './wake-model';
 import { wallAt } from './wake-walk';
 import { hostZone, offsetIn, restore, travel } from './zone';
@@ -279,8 +286,8 @@ const verseIn = (host: Element): SeenVerse => {
   };
 };
 
-/** A mounted root over `disk` at `time.now`, the layer teaching `taught` (the part left out when empty). */
-const mount = async (
+/** A mounted root over `disk` at `time.now`, the layer teaching `taught` (the part left out when empty), every frame held to the root's rule from before the first render. */
+export const mount = async (
   disk: Disk,
   time: { now: number },
   taught: readonly string[],
@@ -305,11 +312,12 @@ const mount = async (
   );
   const host = document.createElement('div');
   document.body.append(host);
+  const rule = watchRoot(host, 'read');
   const root = createRoot(host);
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        <Root opening="today" />
+        <Root />
       </RegistryProvider>,
     ),
   );
@@ -344,7 +352,15 @@ const mount = async (
       verse,
     };
   };
+  const headings = () => [...host.querySelectorAll('[role="heading"]')].map(textOf);
+  /** Home as the walk compares it: its headings, its counts line, and whether `Begin` shows. */
+  const home = () => ({
+    headings: headings(),
+    counts: [...host.querySelectorAll('[data-testid="counts"]')].map(textOf),
+    begin: named('Begin', 'button') !== undefined,
+  });
   const leave = async () => {
+    rule.stop();
     await act(async () => root.unmount());
     host.remove();
   };
@@ -353,6 +369,10 @@ const mount = async (
     until,
     tap,
     today,
+    headings,
+    home,
+    /** Every fault of the root's rule over the frames so far, each once with its frame. */
+    rooted: (): readonly string[] => rule.faults,
     leave,
     voice,
     /** The voice service's view now. */
@@ -558,19 +578,69 @@ class PhraseWalk {
       );
       return false;
     }
-    const disk = this.diskFaults();
-    if (disk.length > 0) this.fail(`${step}: ${disk.join(', ')}`);
+    const faults = [...this.mounted.rooted(), ...this.diskFaults()];
+    if (faults.length > 0) this.fail(`${step}: ${faults.join(', ')}`);
     return this.failure === null;
   }
 
+  /** The launch under way left, its frames' root faults failing the walk first. */
+  async leave() {
+    if (this.app === null) return;
+    const root = this.app.rooted();
+    if (root.length > 0) this.fail(`at the leave: ${root.join(', ')}`);
+    await this.app.leave();
+    this.app = null;
+  }
+
+  /**
+   * A launch named `day`: home's first show makes the plan; with an item,
+   * home's heading, the model's counts line and `Begin`, then `Begin` and
+   * Today's first show; with none, home's done state (`homeDone`). Answers
+   * whether the launch goes on to its items.
+   */
   async launch(day: string) {
-    if (this.app !== null) await this.app.leave();
+    await this.leave();
+    if (this.failure !== null) return false;
     this.app = await mount(this.store, this.time, this.taught, this.hearing);
-    await this.mounted.until(
-      () => this.mounted.host.querySelector('[data-testid="session"]') !== null,
-    );
+    const app = this.mounted;
+    const step = `day ${day} at ${new Date(this.time.now).toISOString()}`;
+    this.trail.push(step);
+    const landed = () => {
+      const home = app.home();
+      return home.headings.join('|') === 'Your field' && home.counts.length > 0;
+    };
+    if (!(await app.until(landed)))
+      return this.fail(`${step}: no home, saw ${app.headings().join('|') || 'pending'}`);
     this.run = madeModel(NO_RUN, this.planNow(), false);
-    return this.settle(`day ${day} at ${new Date(this.time.now).toISOString()}`);
+    const begin = shownModel(this.run, this.recallsNow) !== null;
+    if (!this.onHome(step, begin)) return false;
+    if (!begin) return this.homeDone(step);
+    if (!(await app.tap('Begin'))) return this.fail(`${step}: no Begin`);
+    bump(this.cover, 'home:begin');
+    return this.settle(`${step}, Begin`);
+  }
+
+  /** Home as the model has it: one heading, `Your field`; the model's counts line; `Begin` exactly when `begin`; no fault of the root's rule or the disk's. */
+  onHome(step: string, begin: boolean) {
+    const seen = this.mounted.home();
+    const expected = { headings: ['Your field'], counts: this.want().counts, begin };
+    if (JSON.stringify(seen) !== JSON.stringify(expected))
+      return this.fail(
+        `${step}: home showed ${JSON.stringify(seen)}, expected ${JSON.stringify(expected)}`,
+      );
+    const faults = [...this.mounted.rooted(), ...this.diskFaults()];
+    if (faults.length > 0) return this.fail(`${step}: on home, ${faults.join(', ')}`);
+    return true;
+  }
+
+  /** Home's done state at `step`'s launch: no other screen follows it, and the launch ends there. */
+  async homeDone(step: string): Promise<false> {
+    const app = this.mounted;
+    await app.until(() => app.headings().join('|') !== 'Your field', 10);
+    if (app.headings().join('|') !== 'Your field')
+      return this.fail(`${step}: home left for ${app.headings().join('|') || 'pending'}`);
+    bump(this.cover, 'home:done');
+    return false;
   }
 
   /** H8: Listen reads the piece's own text, and each word named by its UTF-16 span within it lights alone, in order. */
@@ -736,7 +806,7 @@ class PhraseWalk {
       }
       await this.day(day);
     }
-    if (this.app !== null) await this.app.leave();
+    await this.leave();
   }
 }
 

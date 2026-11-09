@@ -73,7 +73,7 @@ const PIECE = {
 };
 const WORDS = PIECE.words;
 const MINUTES: readonly [Minutes, ...Minutes[]] = [2, 5, 10, 20];
-const OTHERS: readonly [string, ...string[]] = ['Psalm 23:1', 'Isaiah 41:1', 'John 3:16 '];
+const OTHERS: readonly [string, ...string[]] = ['Psalm 23:1', 'Jeremiah 41:1', 'John 3:16 '];
 const BASE = Date.UTC(2026, 10, 2);
 
 /** The walk under way's coverage. */

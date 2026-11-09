@@ -5,8 +5,10 @@
  * text of the passage the bundler derives (`virtual:heartseed-passage`,
  * here the same derivation through the test preload). The app holds neither
  * the reference nor the words itself: they reach it from the corpus. The
- * device holds another verse's recall, so the launch opens Today, not the
- * first minute.
+ * device holds another verse's recall, so the launch opens home, not the
+ * first minute, and the passage, unplanted, is the plan's new piece: home
+ * shows `Begin`, which leads to Today. Every frame holds to the root's
+ * frame rule.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -16,6 +18,7 @@ import { createRoot } from 'react-dom/client';
 
 import Root from '../app/index';
 import { device } from './test/one';
+import { watchRoot } from './test/root-rule';
 
 const REFERENCE = 'Isaiah 41:10';
 const WORDS =
@@ -36,23 +39,46 @@ const OTHER = {
 describe('Today', () => {
   const host = document.createElement('div');
   document.body.append(host);
+  const rule = watchRoot(host, 'read');
   const headings = () =>
     [...host.querySelectorAll('[role="heading"]')].map((node) => node.textContent);
+  /** The buttons named `Begin`, by label or text. */
+  const begins = () =>
+    [...host.querySelectorAll('[role="button"]')].filter(
+      (node) => node.getAttribute('aria-label') === 'Begin' || node.textContent === 'Begin',
+    );
+  /** Waits until `holds`, at most 3 s. */
+  const until = async (holds: () => boolean) => {
+    const start = Date.now();
+    while (!holds() && Date.now() - start < 3000)
+      await act(() => new Promise((resolve) => setTimeout(resolve, 2)));
+  };
+  const home = { headings: [''], begins: 0 };
 
-  /** The launch, once its first heading shows (at most 3 s). */
+  /** The launch: home once it shows `Begin`, then `Begin`, then Today once its heading shows. */
   const shown = (async () => {
     device.launch([
       [`heartseed/recall/${OTHER.reference}/${OTHER.startedAt}`, JSON.stringify(OTHER)],
     ]);
-    await act(async () => createRoot(host).render(<Root opening="today" />));
-    const start = Date.now();
-    while (headings().length === 0 && Date.now() - start < 3000)
-      await act(() => new Promise((resolve) => setTimeout(resolve, 2)));
+    await act(async () => createRoot(host).render(<Root />));
+    await until(() => headings().join('|') === 'Your field' && begins().length > 0);
+    home.headings = headings().map(String);
+    const taps = begins();
+    home.begins = taps.length;
+    await act(async () => {
+      for (const tap of taps.slice(0, 1))
+        tap.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    });
+    await until(() => headings().includes('Today'));
   })();
 
-  it('shows the header Today', async () => {
+  it('opens on home with Begin, which shows the header Today', async () => {
     await shown;
-    expect(headings()).toEqual(['Today']);
+    expect({ home, today: headings(), faults: rule.faults }).toEqual({
+      home: { headings: ['Your field'], begins: 1 },
+      today: ['Today'],
+      faults: [],
+    });
   });
 
   it('shows Isaiah 41:10 and its KJV text, word for word', async () => {

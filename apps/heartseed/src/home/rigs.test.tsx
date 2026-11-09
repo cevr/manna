@@ -19,6 +19,7 @@ import { recallOf } from '../test/field-model';
 import * as first from '../test/first-rig';
 import { keyOf } from '../test/garden-model';
 import { device } from '../test/one';
+import { mount as phraseMount } from '../test/phrase-rig';
 import { screensOf, watchedLaunch } from '../test/root-rule';
 import { deviceOf, launch, PASSAGE, text } from '../test/run-rig';
 import * as session from '../test/session-rig';
@@ -134,6 +135,15 @@ describe('every rig of Today’s run launches through home', () => {
     );
     await throughHome(w, w.app.until, async () => expect(await w.app.tap('Begin')).toBe(true));
     expect(await w.end()).toEqual([]);
+  });
+
+  it('phrase-rig’s mount shows home, then Today by Begin', async () => {
+    const w = await watchedLaunch('read', () =>
+      phraseMount({ map: new Map([DUE]), writes: 0 }, { now: T0 }, [], { text: '', skip: [] }),
+    );
+    await throughHome(w, w.app.until, async () => expect(await w.app.tap('Begin')).toBe(true));
+    expect(w.app.rooted()).toEqual([]);
+    await w.end();
   });
 
   it('first-rig’s play shows home with Begin, then Today by Begin', async () => {
