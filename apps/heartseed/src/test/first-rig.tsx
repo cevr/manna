@@ -47,6 +47,11 @@
  * state, the counts line alone, by hsdaily's plan model; home's counts line
  * by the same model, and `Begin` exactly when the plan shows an item. It counts
  * words without printing one.
+ *
+ * It also gives the first minute's screen cases their launch
+ * (`screenLaunch`): the root over the disk as it stands, a scripted
+ * recital, a voice that records its calls, and every frame held to the
+ * root's rule.
  */
 
 import { RegistryProvider } from '@effect/atom-react';
@@ -72,8 +77,9 @@ import { Haptics, type Recall } from '../sayit';
 import { MINUTES_KEY } from '../session/service';
 import { store } from '../store';
 import { theme } from '../theme';
-import { clockAt } from './clock';
-import { paintOf, systemScheme } from './look';
+import { recite, scriptedSource } from '../dictation/script';
+import { clockAt, clockOf, type Time } from './clock';
+import { computed, paintOf, systemScheme } from './look';
 import { device } from './one';
 import { watchRoot } from './root-rule';
 import { countsModel, dueModel, MINUTE, planModel, type ModelItem } from './session-model';
@@ -2552,4 +2558,163 @@ export const play = async (begin: DeviceStart, commands: readonly Command[]) => 
     await run.end();
   }
   return run.m;
+};
+
+/** The first minute's claim words, as the screen cases read them. */
+const SCREEN_CLAIM = /\b(seeds?|planted|plants?|grew|growth|stages?)\b/iu;
+
+/** The voice's native source: it records each speak and stop, and lets the test send its events. */
+const recordingVoice = () => {
+  const calls = { speaks: 0, stops: 0 };
+  const listener = MutableRef.make<(event: VoiceEvent) => void>(() => {});
+  const layer = Layer.succeed(
+    VoiceSource,
+    VoiceSource.of({
+      voices: Effect.succeed([]),
+      speak: () => Effect.sync(() => void (calls.speaks += 1)),
+      pause: Effect.void,
+      resume: Effect.void,
+      stop: Effect.sync(() => void (calls.stops += 1)),
+      subscribe: (next) =>
+        Effect.acquireRelease(
+          Effect.sync(() => MutableRef.set(listener, next)),
+          () => Effect.sync(() => MutableRef.set(listener, () => {})),
+        ),
+    }),
+  );
+  const emit = (event: VoiceEvent) => MutableRef.get(listener)(event);
+  return { layer, calls, emit };
+};
+
+/** The passage's recall keys on the device's disk. */
+export const recallKeys = () => [...device.disk.keys()].filter((key) => key.startsWith(PREFIX));
+
+/** A launch for the first minute's screen cases: the root over the device's disk as it stands, built once `held` resolves; every frame from before the first render held to the root's rule for `garden`, the launch's read. */
+export const screenLaunch = async (
+  held: Promise<void> = Promise.resolve(),
+  source = scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 1 })),
+  time: Time = { now: null },
+  garden: 'read' | 'unread' = 'read',
+) => {
+  const voice = recordingVoice();
+  const chimes: Growth[] = [];
+  const layer = appLayer({
+    source,
+    haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
+    store: Layer.unwrap(
+      Effect.as(
+        Effect.promise(() => held),
+        store,
+      ),
+    ),
+    chime: Layer.succeed(
+      Chime,
+      Chime.of({ grow: (growth) => Effect.sync(() => void chimes.push(growth)) }),
+    ),
+    voice: voice.layer,
+  }).pipe(Layer.provide(clockOf(time)));
+  const host = document.createElement('div');
+  document.body.append(host);
+  const headings = () =>
+    [...host.querySelectorAll('[role="heading"]')].map((node) => (node.textContent ?? '').trim());
+  const buttons = () =>
+    [...host.querySelectorAll('[role="button"]')].map((node) => node.getAttribute('aria-label'));
+  const frames = { pending: 0, pendingOffers: 0, claims: 0, many: 0 };
+  const watch = new MutationObserver(() => {
+    const shown = headings().filter((text) => HEADINGS.includes(text));
+    if (shown.length > 1) frames.many += 1;
+    if (shown.length === 0) {
+      frames.pending += 1;
+      if (buttons().length > 0) frames.pendingOffers += 1;
+    }
+    const firstMinute = shown.some(
+      (text) => text !== 'Planted' && text !== 'Today' && text !== 'Your field',
+    );
+    if (
+      firstMinute &&
+      (SCREEN_CLAIM.test(host.textContent ?? '') ||
+        host.querySelector('[data-testid="stage"],[data-testid="plant"]') !== null)
+    )
+      frames.claims += 1;
+  });
+  watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
+  const rule = watchRoot(host, garden);
+  const root = createRoot(host);
+  await act(async () =>
+    root.render(
+      <RegistryProvider initialValues={[[runtime.layer, layer]]}>
+        <Root />
+      </RegistryProvider>,
+    ),
+  );
+  const until = async (holds: () => boolean, ms = 3000) => {
+    const start = Date.now();
+    while (!holds()) {
+      if (Date.now() - start > ms) return false;
+      await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
+    }
+    return true;
+  };
+  const click = async (label: string) => {
+    const node = [...host.querySelectorAll('[role="button"]')].find(
+      (each) => each.getAttribute('aria-label') === label,
+    );
+    expect(node === undefined, `button ${label}`).toBe(false);
+    await act(async () => {
+      node?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    });
+  };
+  const send = (event: Omit<VoiceEvent, 'utterance'>) =>
+    act(async () => voice.emit({ utterance: 1, ...event }));
+  const word = (index: number) => host.querySelector(`[data-testid="word-${index}"]`);
+  const ink = computed(theme.light.ink);
+  const inked = () =>
+    WORDS.filter((_, index) => {
+      const node = word(index);
+      return node !== null && getComputedStyle(node).color === ink;
+    }).length;
+  const selected = () =>
+    WORDS.flatMap((_, index) =>
+      word(index)?.getAttribute('aria-selected') === 'true' ? [index] : [],
+    );
+  const heading = () => headings().find((text) => HEADINGS.includes(text)) ?? null;
+  const stage = () =>
+    host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label') ?? null;
+  /** Today's action buttons shown, by name: Say it, Listening or Next. */
+  const actions = () =>
+    buttons().filter((name) => name === 'Say it' || name === 'Listening' || name === 'Next');
+  /** Home as it shows: its counts line (none before a plan) and whether it offers `Begin`. */
+  const home = () => ({
+    counts: (host.querySelector('[data-testid="counts"]')?.textContent ?? '').trim(),
+    begin: buttons().includes('Begin'),
+  });
+  /** Holds every frame of the launch to the root's rule: no fault, and on an unread garden no `Your field` heading in any frame. */
+  const leave = async () => {
+    rule.stop();
+    watch.disconnect();
+    await act(async () => root.unmount());
+    expect({
+      faults: rule.faults,
+      field:
+        garden === 'unread' && rule.frames.some((frame) => frame.headings.includes('Your field')),
+    }).toEqual({ faults: [], field: false });
+  };
+  return {
+    home,
+    host,
+    voice,
+    chimes,
+    frames,
+    until,
+    click,
+    send,
+    word,
+    inked,
+    selected,
+    heading,
+    buttons,
+    stage,
+    actions,
+    leave,
+  };
 };
