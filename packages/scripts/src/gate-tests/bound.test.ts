@@ -4,17 +4,10 @@ import { Array as Arr, Clock, Duration, Effect, Fiber, Option, Schedule } from '
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
-import {
-  type Ended,
-  type Held,
-  type Row,
-  HUNG,
-  parseRows,
-  runBounded,
-  share,
-  step,
-  TASK_BOUND_MS,
-} from './bound.ts';
+import { runBounded, share, TASK_BOUND_MS } from './bound.ts';
+import { type Ended, type Held, HUNG, parseRows, step } from './poll.ts';
+
+type Row = ReturnType<typeof parseRows>[number];
 
 /** A seeded generator of numbers in [0, 1). */
 const random = (seed: number) => {

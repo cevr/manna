@@ -1,5 +1,6 @@
 import { Array as Arr, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { type ModuleRecord, type Resolve, type Workspace, recordOf } from './graph.js';
+import { RUNS_SHELL, shellRuns } from './shell.js';
 
 /** A package's name and the files its `exports`, `main` and `bin` name. */
 const PackageJson = Schema.fromJsonString(
@@ -20,6 +21,8 @@ interface Package {
   readonly entries: ReadonlyMap<string, string>;
   /** The TypeScript files its `bin` and `scripts` run, relative to the root. */
   readonly runs: ReadonlyArray<string>;
+  /** The shell files its `scripts` run with `sh` or `bash`, relative to the root. */
+  readonly shells: ReadonlyArray<string>;
   /** Where `~/` points inside the package, from its tsconfig `paths` (`~/*` → `./app/*`): `packages/cli/`. */
   readonly home: Option.Option<string>;
 }
@@ -73,7 +76,6 @@ const RUN_BY_NAME: ReadonlyMap<string, string> = new Map([
     'packages/film/src/tools/cast-build/chain-fit.ts',
     'the process packages/film/src/tools/cast-build/chain.ts spawns for each fit job',
   ],
-  ['packages/scripts/src/lint-gate.ts', 'the lint packages/scripts/src/gate.sh runs'],
   ['packages/scripts/src/precommit-typecheck.ts', 'the pre-commit typecheck lefthook.yml runs'],
 ]);
 
@@ -107,14 +109,43 @@ const readPackage = (root: string, dir: string) =>
         [...command.matchAll(RUNS_FILE)].flatMap((m) => Option.toArray(Option.fromNullishOr(m[1]))),
       );
       const bins = Object.values(Option.getOrElse(Option.fromUndefinedOr(pkg.bin), () => ({})));
+      const shells = commands.flatMap((command) =>
+        [...command.matchAll(RUNS_SHELL)].flatMap((m) =>
+          Option.toArray(Option.fromNullishOr(m[1])),
+        ),
+      );
       return {
         dir,
         home,
         runs: [...scripted, ...bins].map((file) => path.join(dir, file)),
+        shells: shells.map((file) => path.join(dir, file)),
         name: Option.fromUndefinedOr(pkg.name),
         entries: new Map(named.map(([key, file]) => [key, path.join(dir, file)])),
       };
     });
+  });
+
+/**
+ * The workspace's TypeScript files that shell file `shell`, run by the
+ * package in `dir`, runs with `bun`: each path read from the root (the
+ * repository's shell files `cd` there), else from the package, and kept
+ * only when the workspace holds it. None for a file that cannot be read.
+ */
+const shellFiles = (
+  root: string,
+  dir: string,
+  shell: string,
+  records: ReadonlyMap<string, ModuleRecord>,
+) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const text = yield* Effect.orElseSucceed(fs.readFileString(path.join(root, shell)), () => '');
+    return shellRuns(text).flatMap((file) =>
+      Option.toArray(
+        Arr.findFirst([path.normalize(file), path.join(dir, file)], (each) => records.has(each)),
+      ),
+    );
   });
 
 /** Every module under `dir`, as `dir/relative/path`, with the parser's reading of it. */
@@ -198,6 +229,8 @@ export const readWorkspace = (root: string) =>
         byDir.set(dir, found);
         for (const name of Option.toArray(found.name)) packages.set(name, found);
         for (const file of found.runs) runs.add(file);
+        for (const shell of found.shells)
+          for (const file of yield* shellFiles(root, dir, shell, records)) runs.add(file);
       }
     }
     const roots = new Set(

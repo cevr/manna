@@ -5330,3 +5330,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `test:need-walk-b`, `test:phrase-walk-c` and `test:passages-session` timed out at bun's 5 s inside the turbo gate at load 15-24, and each passed alone.
 - **Cause:** The gate ran turbo at its default of 10 tasks at once, and each heartseed part runs 3 bun workers, so the gate alone ran about 30 workers on 12 cores.
 - **Guard:** code: `packages/scripts/src/gate.test.ts` `runs the unit tests through gate-tests.ts: turbo at a third of the cores' count of tasks, under the 60 s watchdog`
+
+### dead-exports-reads-what-the-gate-runs
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "`dead-exports` lacks `gate-tests.ts` in `RUN_BY_NAME`"
+- **Source:** hymnapp/batch-g4-1-findings.md o2 (On base, its second item)
+- **Wrong:** `bun run dead-exports` named 11 of `gate-tests/bound.ts`'s exports dead, since the files the gate runs through `gate.sh` were roots only when a hand list named them, and it named `lint-gate.ts` but not `gate-tests.ts`.
+- **Cause:** The check read the TypeScript files a package script runs, but not those a shell file a script runs (`sh packages/scripts/src/gate.sh`) runs, so each such file needed a line kept by hand.
+- **Guard:** code: `packages/scripts/src/dead-exports/shell.test.ts` `over 300 generated shell texts, the runs are exactly the files of the bun lines, in order, and no comment line names one`
