@@ -271,10 +271,8 @@ the garden's read, what it shows in place (no navigation, no other route):
 - Planting the seed does not swap the screen: Planted shows until
   `Continue`, which opens home, its plan made with the new seed in it (in
   the done state, `Nothing to tend now`).
-- `Root`'s optional `opening` prop (`home` unless given) names the screen
-  a read launch with a plant, and `Continue`, open on; the tests whose
-  launches start on Today render `<Root opening="today" />`, a seam that
-  goes once their rigs start from home.
+- `Root` takes no props: the garden's read alone decides the opening, in
+  the tests as on the device, so no test opens Today on a read garden.
 
 The phases (`src/first/screen.tsx`, with the phase bar, the large round
 button and the Georgia verse of the prototype):
@@ -303,8 +301,8 @@ button and the Georgia verse of the prototype):
    never sounds.
 
 The flow's rules are a pure reducer, `src/first/flow.ts`: `openingOf` the
-garden's view and the `opening` prop decides the opening (`pending`,
-`first`, `home` or `today`) and `shownOpening` holds it for the launch; `step` moves each phase on only at its own input (Next, the
+garden's view decides the opening (`pending`, `first`, `home` or
+`today`) and `shownOpening` holds it for the launch; `step` moves each phase on only at its own input (Next, the
 voice's ending, a recital of the phase's own, the garden's plant), and no
 phase moves back. A recital is the phase's own when Say it's `startedAt`
 differs from the one the phase began with. Nothing of the flow is stored
@@ -1627,12 +1625,24 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   `virtual:heartseed-licence`, a happy-dom document); `test:infra`, `test:handbook-build`, `test:icon`, `test:home-icons`, `test:home-pixels` and `test:mirror` run with none.
   The rigs of Today's run (`src/test/today-rig.tsx`, `stage-rig.tsx`,
   `session-rig.tsx`, `first-rig.tsx`, `phrase-rig.tsx`, `run-rig.tsx` and
-  `wake-rig.tsx`, whose launches take `opening`, `today` unless given)
-  launch on Today through `<Root opening="today" />`; a
-  detour of theirs to home comes back by `Begin` when Today showed
-  `Say it` or `Next`, and in the done state checks home and ends the
-  launch. Every other rig that mounts the root launches on home, as a
-  reader does.
+  `wake-rig.tsx`) render `<Root />` as every other rig does, so a read
+  launch with a plant lands on home, as a reader's does. There the rig's
+  model alone picks the step: `Begin` exactly when the model shows an
+  item, after the rig has held home to its heading, `Begin`, the model's
+  counts line and `rootFaults`; in the done state, home's
+  `Nothing to tend now` with no `Begin`, then the walk's own way on (a
+  generated walk ends the launch; `wake-walk` keeps home as a screen with
+  an away, a wait and the launch's end; `first-rig` offers `Later` (the
+  clock moved to the passage's due, then a relaunch), a relaunch and the
+  late voice events; a fixed
+  case names its way and asserts it). Every frame of these rigs is held to
+  `rootFaults` (`src/test/root-rule.ts`), and an unread garden still opens
+  Today with no `Your field` in any frame. `test:home-rigs`
+  (`src/home/rigs.test.tsx`) holds each rig's entry to that: one read
+  launch with the passage due per rig (screens `Your field` then `Today`,
+  `Begin` shown before the step, no root fault, Today's passage with
+  `Say it`), a done-state launch (no `Begin`, no Today frame) and an
+  unread launch (Today alone).
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
   - `test:hear`: `src/matcher` (the sounds-alike table's bounds, and each
@@ -1649,12 +1659,15 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:sayit`: `src/sayit.property.test.ts` (Say it against its model)
     and `src/sayit` but its cue tests (Today's Say it in happy-dom through
     `src/test/today-rig.tsx`, the source Say it hears, and its guards).
-  - `test:cue`: `src/sayit/cue.test.tsx` and `src/sayit/cue-say.test.tsx`,
-    Today's cue in happy-dom through the same rig: the passage at rest under
+  - `test:cue`: `src/sayit/cue.test.tsx`, `src/sayit/cue-say.test.tsx` and
+    `src/sayit/cue-say-letters.test.tsx`, Today's cue in happy-dom through
+    the same rig, reached from home by `Begin`: the passage at rest under
     each stage's cue, a recital under letters and under the full text, a
-    recital not heard, an unread garden, every pending frame of a held
-    launch at each stage, each cue word's exact first letter and its AA
-    contrast, and no run of the verse outside its words.
+    recital not heard, an unread garden, each cue word's exact first letter
+    and its AA contrast, and no run of the verse outside its words.
+  - `test:cue-held`: `src/sayit/cue-held.test.tsx`, every pending frame of
+    a held launch at each stage, then home and `Begin` after the release
+    (Today directly on an unread disk).
   - `test:garden`: `src/store.test.ts` (the store over the device),
     `src/fsrs.property.test.ts` (FSRS-6 against ts-fsrs),
     `src/garden.property.test.ts` (the stage and growth rules, and the
@@ -1674,24 +1687,29 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:today`: `src/garden/today.test.tsx`, Today's stage in happy-dom
     over the real store on the device (the journey from not planted to a
     blade and an ear and back to a seed across a restart, reached with another verse's
-    recall on the disk so Today opens, each stage's look in the
+    recall on the disk so the launch opens home, whose `Begin` leads to
+    Today, each stage's look in the
     prototype's colours, full corn after a held launch, and no claim in
     any frame of a held launch), through `src/test/stage-rig.tsx`.
   - `test:today-reads`: `src/garden/today-reads.test.tsx`, the same stage
     over failed reads (every listing, every open: no claim in any frame
     of the session, and the recital kept or not) and over another verse's
     plant at full corn, which never shows as the passage's.
-  - `test:first`: `src/first/flow.test.ts` and `src/first/screen.test.tsx`,
-    the flow's reducer against its model
-    (`src/test/first-model.ts`) and the first minute in happy-dom over the
-    real store on the device (the journey to one seed and Today, the voice
-    off, a Next during a reading and a relaunch mid-flow, an unread launch,
-    a held launch, and each letter in the cue's ink at AA contrast on its
+  - `test:first`: `src/first/flow.test.ts`, `src/first/screen.test.tsx`
+    and `src/first/screen-b.test.tsx`, the flow's reducer against its
+    model (`src/test/first-model.ts`) and the first minute in happy-dom
+    over the real store on the device, launched by `first-rig.tsx`'s
+    `screenLaunch` (the journey to one seed, `Continue` to home in its done
+    state and, at the next due, `Begin` to Today at a seed; the voice off,
+    a Next during a reading and a relaunch mid-flow, an unread launch, a
+    held launch, and each letter in the cue's ink at AA contrast on its
     ground at rest and while its recital listens, while the hear phase's
     unread words, the phase line and the reference keep the mute; and every
     element of every phase at rest, of the hear phase reading and of the
-    letters listening keeps base's look, the letters' ink alone left out).
-  - `test:root`: `src/first/root.test.tsx`, the root route on fixed devices
+    letters listening keeps base's look, the letters' ink alone left out),
+    every frame held to `rootFaults`.
+  - `test:root`: `src/first/root.test.tsx` and `root-b.test.tsx`, the root
+    route on fixed devices
     through `src/test/first-rig.tsx` (the rig: stand-ins for the device's
     store, the voice's source and the recognizer, a model of the first
     minute, and its frame and settle oracles): the whole first minute, a
@@ -1705,16 +1723,19 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `startedAt`.
   - `test:walk-letters`, `test:walk-alone`, `test:walk-write`,
     `test:walk-launch`, `test:walk-disk`, `test:walk-relaunch`,
-    `test:walk-planted`, `test:walk-reading` and `test:walk-taps`: each
-    `src/first/walk-<group>.property.test.tsx`, the same rig over a few
-    generated devices from one seed. The generator draws every input the
-    rule names (any disk, the voice's choice and its old switch, and launch
-    read, held or not; a speak that
+    `test:walk-planted`, `test:walk-reading`, `test:walk-taps` and
+    `test:walk-today`: each `src/first/walk-<group>.property.test.tsx`,
+    the same rig over a few generated devices from one seed. The generator
+    draws every input the rule names (any disk, the voice's choice and its
+    old switch, and launch read, held or not; a speak that
     lands or is refused and every kind of voice event; recitals that hear
     any subset of the words, end every way Dictation ends, or are held open;
     writes that land, are refused or meet a down device that recovers;
-    queued taps; a relaunch anywhere), steered toward the part's own group
-    of coverage floors, which its generated devices alone must meet.
+    queued taps; a relaunch anywhere; on home `Begin` when the model shows
+    an item, else `Later` or a relaunch), steered toward the part's own
+    group of coverage floors, which its generated devices alone must meet
+    (`walk-today` holds Today's run after `Begin`: Next, the done state,
+    Renew and a write landing on Today).
   - `test:field`: `src/field.property.test.ts`, the field's rule over
     generated read gardens, each read in several device zones, against the
     rule written plainly (`src/test/field-model.ts`: references of any
@@ -1839,8 +1860,13 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     twice, fifteen zones, morning and evening plantings, every minutes
     value), and `needOf` over phrase-planted promises against
     `needModel`.
-  - `test:header`: `src/session/header.test.tsx`, Today's header through
-    `src/test/session-rig.tsx`: generated devices and launches (stored
+  - `test:header` and `test:header-b`: `src/session/header.test.tsx` and
+    `header-b.test.tsx`, each its own seed and devices of
+    `src/test/header-walk.ts`, Today's header through
+    `src/test/session-rig.tsx` (every frame held to `rootFaults`; a read
+    launch lands on home, held to the model's counts and `Begin`, then
+    `Begin`, or in the done state no Today frame and the launch's end):
+    generated devices and launches (stored
     minutes, the voice's choice and its old switch, failed reads, unread
     and held listings, the first minute) and taps (Voice stepping the
     cycle, refused writes, taps while Say it listens, the field and back),
@@ -1856,8 +1882,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     word and value, its fill and its height, each tap's stored choice and
     the old key unchanged, and a relaunch showing the last; two taps in one
     turn cycle twice; a refused write then a relaunch.
-  - `test:counts`: `src/session/counts.test.tsx`, Today's counts line
-    through the same rig: generated devices (fresh installs planted
+  - `test:counts`, `test:counts-b` and `test:counts-c`:
+    `src/session/counts.test.tsx`, `counts-b.test.tsx` and
+    `counts-c.test.tsx`, each its own seed and devices of
+    `src/test/counts-walk.ts`, Today's counts line through the same rig,
+    home's line held to the same counts at each launch: generated devices
+    (fresh installs planted
     through the first minute in the evening or the day, disks of the
     passage's history beside verses no piece names), launches in zones
     that change, at an evening planting's morning, the next 04:00 and the
@@ -1865,7 +1895,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     unheard, refused or unwritten, Again, Minutes taps while Say it
     listens and after time passes, Voice taps, time, the field and back);
     after every step the line is `src/test/session-model.ts`'s counts of
-    the plan it made at Today's first show and at each Minutes tap, over
+    the plan it made at home's first show and at each Minutes tap, over
     the disk's recalls, and an unread launch shows no line in any frame.
   - `test:session-held`: `src/session/held.property.test.ts`, the held
     verse at the session seam: generated devices holding the promise and
@@ -1892,16 +1922,22 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:run`: Today's run through `src/test/run-rig.tsx` (pieces given
     to `appLayer`, a recognizer that hears the text a test names, at once
     or held back while the recital finishes, Dictation's cancel, refused
-    recall writes and unread listings; every Today frame held to the
-    footer rule: no control in the scroll view but a missed word's mark,
-    at most one action button): `src/run/footer.test.tsx`, the action
-    button and the grades under the scroll view through a recital, a grade
-    and the field and back.
-  - `test:run-walk`, `test:run-hold`, `test:run-edges`, `test:run-end`,
-    `test:run-cells`: `src/run/run.test.tsx`, `hold.test.tsx`,
-    `edges.test.tsx`, `end.test.tsx` and `cells.test.tsx`, Today's run against `src/test/run-model.ts` (over
+    recall writes and unread listings; every frame held to `rootFaults`,
+    and every Today frame to the footer rule: no control in the scroll
+    view but a missed word's mark, at most one action button):
+    `src/run/footer.test.tsx`, home's `Begin` on a due device, then the
+    action button and the grades under the scroll view through a recital,
+    a grade and the field and back.
+  - `test:run-walk`, `test:run-cues`, `test:run-hold`,
+    `test:run-relaunch`, `test:run-edges`, `test:run-done`, `test:run-end`,
+    `test:run-cells`: `src/run/run.test.tsx`, `cues.test.tsx`,
+    `hold.test.tsx`, `relaunch.test.tsx`, `edges.test.tsx`,
+    `done.test.tsx`, `end.test.tsx` and `cells.test.tsx`, Today's run
+    against `src/test/run-model.ts` (over
     `src/test/session-model.ts`'s plan) on generated devices through
-    `src/test/run-walk.ts`, each shown word held to its piece's cue,
+    `src/test/run-walk.ts` (each read launch on home, held to the model's
+    counts and `Begin`, then `Begin` when the model shows an item, else
+    the launch's end), each shown word held to its piece's cue,
     leaning toward whole plans (many pieces and groups, Next, every
     recital's ending, Again), the hold's moments (a Minutes tap while a
     recital listens or finishes whose plan holds the item first or leaves
@@ -1923,11 +1959,15 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     per running launch of the app's layer, none once it closes, a wake per
     return) and `src/wake/guard.test.ts` (one host adapter names
     `AppState`).
-  - `test:wake-walk`, `test:wake-quiet`, `test:wake-clocks`: `src/wake/wake.test.tsx`,
+  - `test:wake-walk`, `test:wake-returns`, `test:wake-quiet`,
+    `test:wake-clocks`: `src/wake/wake.test.tsx`, `returns.test.tsx`,
     `quiet.test.tsx` and `clocks.test.tsx`, Today's run walked through
     `src/test/wake-walk.ts` over `src/test/wake-rig.tsx` (the run rig with the
     host's state in the test's hands, each state sent taken by the session
-    before the next step) against `src/test/wake-model.ts`, leaning toward
+    before the next step) against `src/test/wake-model.ts`, each read
+    launch on home (`Begin` when the model shows an item; in the done state
+    home stays the screen, with an away, a wait or the launch's end, and
+    `Begin` once a return makes an item), leaning toward
     returns at every run state (the done state, a review, the new piece,
     Next pending, after an unheard recital or a refused write, on the
     field, every minutes choice), toward the returns that change nothing (a
@@ -1936,7 +1976,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     (aways of minutes to a month, many returns, zones, evening plantings);
     each case's floors met by its own devices.
   - `test:wake-edges`: `src/wake/edges.test.tsx`, the first minute's phases
-    and Continue's own plan, the pending frame and a subscription read in
+    and Continue's own plan on home, the pending frame and a subscription read in
     the background, an unread garden's result, a return while a recital
     finishes, and 03:50 and 04:10 after a planting at 21:00 in Los Angeles,
     Kathmandu and Lord Howe; and `src/wake/listen-edges.test.tsx`, Listen at a
@@ -2002,8 +2042,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:reader-today`, `test:reader-unread`, `test:reader-add`,
     `test:reader-add-back` and `test:reader-remove`:
     `src/chooser/reader-today.test.tsx`, `reader-unread.test.tsx`,
-    `reader-add.test.tsx`, `reader-add-back.test.tsx` and
-    `reader-remove.test.tsx`, generated readers through
+    `reader-add.test.tsx`, `reader-add-back.test.tsx`, and
+    `reader-remove.test.tsx` with `reader-remove-b.test.tsx`, generated
+    readers through
     `src/test/reader-walk.ts` over the run's rig (the root over a disk, a
     recognizer that hears the verse said, a frozen clock, a zone, launched
     on home), in UTC, Los Angeles, Kathmandu, Lord Howe and Chatham,
@@ -2065,17 +2106,19 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     recall the one write.
   - `test:need-offer`: `src/need/offer.test.tsx`, no `When I need…` in the
     first minute, an unread garden or over unread passages (home with
-    `Begin` alone), none on Today, and none while Say it listens, home
-    offering it again after the result.
+    `Begin` alone); and `src/need/offer-b.test.tsx`, none on Today, and
+    none while Say it listens, home offering it again after the result.
   - `test:need-walk-a`, `test:need-walk-a-visit`, `test:need-walk-b`,
     `test:need-walk-c`, `test:need-walk-d`, `test:need-walk-e`:
-    `src/need/walk-{a,a-visit,b,c,d,e}.test.tsx`, When I need… and a
+    `src/need/walk-{a,a-visit,b,b2,c,d,e}.test.tsx` (`walk-b` and `walk-b2`
+    both in `test:need-walk-b`), When I need… and a
     visit walked through the root (`src/test/need-walk.ts`, each launch on
     home, each command drawn from those the model's screen allows: on home
     `When I need…`, `Begin` or a relaunch; on Today `Say it`, Minutes,
     `Your field` or a relaunch; on When I need… a promise or `Your field`):
-    seed 3's device 0 in `walk-a` and its device 1 in `walk-a-visit`, two
-    generated devices each of seeds 4 and 6, device 0 of seed 512 in
+    seed 3's device 0 in `walk-a` and its device 1 in `walk-a-visit`,
+    device 2 of seed 18 in `walk-b` and of seed 10 in `walk-b2`, two
+    generated devices of seed 6 in `walk-c`, device 0 of seed 524 in
     `walk-d` and of seed 729 in `walk-e`, settled after every command on
     the screen the model names and held there to `shownModel`,
     `countsModel` over `planModel`, `needModel` and `fieldPassagesModel`,
@@ -2121,9 +2164,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     12:00 and 18:00, and in Asia/Kolkata at 10:00Z (afternoon there).
   - `test:home-root` and `test:home-root-say`: the root's opening and its
     screens. `src/home/opening.property.test.ts`, `openingOf` over
-    generated garden views (none, `Unread`, `Read` with 0-5 plants) and
-    both openings against the opening's table written in the test, and
-    `shownOpening` over every pair. `src/home/root.test.tsx`, fixed
+    generated garden views (none, `Unread`, `Read` with 0-5 plants)
+    against the opening's table written in the test, each row of the
+    table met, and `shownOpening` over every pair. `src/home/root.test.tsx`, fixed
     launches through `src/test/field-rig.tsx` rendering `<Root />` with no
     prop, every frame held to `rootFaults` (and screened by
     `watchedLaunch`, `src/test/root-rule.ts`): a read launch with the
@@ -2139,6 +2182,15 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     first minute through `Continue` to home in the done state (no `Begin`,
     `When I need…` there, no Today frame after `Continue`), and Today
     with no `Your field` while Say it listens, then `Your field` to home.
+  - `test:home-rigs`: `src/home/rigs.test.tsx`, the rig contract: each
+    rig of Today's run (`today-rig`'s and `stage-rig`'s `mount`,
+    `session-rig`'s and `run-rig`'s `launch`, `wake-rig`'s `wakeLaunch`,
+    `phrase-rig`'s `mount`, `first-rig`'s `play`) launched on a read
+    garden with the passage due under `watchedLaunch`: the screens
+    `Your field` then `Today`, `Begin` shown before the step, no root
+    fault, and Today's passage with `Say it`; a passage planted now (home's
+    `Nothing to tend now`, no `Begin`, no Today frame); and an unread
+    launch (Today alone, no `Your field` in any frame).
   - `test:home-wake`: `src/home/wake.test.tsx`, the greeting through
     `src/test/wake-rig.tsx` launched on home, every frame held to
     `rootFaults`: read at home's mount, kept as the clock passes 12:00
@@ -2179,10 +2231,13 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     each phrase planned whenever its verse is, one mark per word at its
     UTF-16 run within the phrase's text.
   - `test:phrase-walk-a`, `test:phrase-walk-b`, `test:phrase-walk-c`:
-    `src/phrase/walk-{a,b,c}.test.tsx`, Today over four days with long
-    verses learned as phrases, walked through the root
-    (`src/test/phrase-rig.tsx`), two generated devices each (0-5, devices 2
-    and 5 teaching Fear), each starting with its verses' phrases sown none,
+    `src/phrase/walk-a.test.tsx`, `walk-b.test.tsx` with
+    `walk-b2.test.tsx`, and `walk-c.test.tsx` with `walk-c2.test.tsx`,
+    Today over four days (seven for `walk-b2`) with long verses learned
+    as phrases, walked through the root (`src/test/phrase-rig.tsx`, each
+    launch on home, held to the model's counts and `Begin`, then `Begin`),
+    one generated device per file (devices 1-5, devices 2 and 5 teaching
+    Fear), each starting with its verses' phrases sown none,
     some, ripe or joined: Listen reads the piece's own text and lights each
     of its words by its UTF-16 span, Say it's summary and record carry the
     piece's word count under its own reference, a held phrase survives a
@@ -2255,15 +2310,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     model's scheme in its layout phase, before it is seen, About's radios
     and the disk to the model.
   - `test:dark-today`: `src/look/today.test.tsx`, Today in dark and across
-    flips of the system through the run rig, as generated walks (Say it
+    flips of the system through the run rig, reached from home by `Begin`,
+    as generated walks (Say it
     heard, with a word missed or unheard, a flip while it listens, a peek,
     a grade, Next to the done state, Minutes, the field and back, a flip
     between any two steps), every frame held to the frame oracle
     (`src/test/look.ts`) for the system's last value.
   - `test:dark-first`: `src/look/first.test.tsx`, the first minute's
     phases (hear while the voice reads, letters while their recital
-    listens, alone, Planted, then Today) in dark, each flipped to light and
-    back, every frame held to the oracle.
+    listens, alone, Planted, then home in its done state) in dark, each
+    flipped to light and back, every frame held to the oracle and to
+    `rootFaults`.
   - `test:dark-screens` and `test:dark-screens-dark`:
     `src/look/screens.test.tsx` (light) and `screens-dark.test.tsx`
     (dark), each a walk of `src/test/screens-walk.ts`: the field (every
