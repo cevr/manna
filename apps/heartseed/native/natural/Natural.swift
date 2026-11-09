@@ -52,6 +52,15 @@ struct NaturalStart: Codable {
   let length: Int
 }
 
+/// A chunk's first four stages: each id's frame count, Prosody's pitch
+/// curve in Hz (two points a frame), and the call's wall time in
+/// milliseconds.
+struct NaturalProsody: Codable {
+  let frames: [Int]
+  let f0: [Double]
+  let millis: Double
+}
+
 /// A rendered chunk: each id's frame count, the sample count, the render's
 /// wall time in milliseconds, and the index of its first and last audible
 /// sample (`samples` and `-1` when none is).
@@ -89,7 +98,9 @@ struct NaturalFailure: LocalizedError {
 /// The natural voice's native side: Kokoro-82M's pinned files, downloaded
 /// into `Application Support/Heartseed/natural/` and kept out of backups,
 /// loaded into the seven-stage chain, and a reading rendered chunk by chunk
-/// from the token ids JS plans.
+/// from the token ids JS plans: `prosody` runs the first four stages and
+/// returns the pitch curve, and `render` runs the last three on the curve
+/// JS shapes from it.
 ///
 /// A file `natural/reading` marks a natural reading in progress. One left
 /// behind when the module starts means the last process ended during a
@@ -117,8 +128,12 @@ struct NaturalFailure: LocalizedError {
   private var loading: (revision: String, task: Task<Void, Error>)?
   private var unloading: Task<Void, Never>?
   private var loadToken = 0
-  private var renderChain: Task<(KokoroAneSynthesisResult, Double), Error>?
+  private var renderChain: Task<Void, Never>?
   private var held: NaturalReading?
+  /// The held reading's chunks whose prosody ran and whose render has not:
+  /// what the last three stages read, the style's timbre and the speed.
+  private var prosodies: [Int: (prosody: KokoroAneProsody, timbre: [Float], speed: Double)] = [:]
+  private var prosodying: Task<(KokoroAneProsody, Double), Error>?
   private var generation = 0
   private let output = NaturalOutput()
   private var ticker: Task<Void, Never>?
@@ -225,7 +240,7 @@ struct NaturalFailure: LocalizedError {
   }
 
   /// Makes `voice`, the path of one of `files` ending `.bin`, the pack every
-  /// later `render` reads, and returns the call's time in milliseconds; any
+  /// later `prosody` reads, and returns the call's time in milliseconds; any
   /// other `voice` throws `voice`. The first load of `revision` in this
   /// process checks every file by its SHA-256 and loads the seven stages
   /// with this device's routing; a later one keeps the stages and reads the
@@ -323,15 +338,17 @@ struct NaturalFailure: LocalizedError {
     return pack
   }
 
-  /// Renders chunk `chunk` of reading `utterance` from its token ids (BOS
-  /// and EOS included, 3 to 512) at `speed`, the voice's duration scale
-  /// the app sends, and keeps its audio for `play`. Chunk 0
-  /// starts a new reading: the one held is halted, and the reading marker
-  /// is written. A later chunk of a reading not held throws `stale`.
-  /// Renders run one at a time, off the main actor; one that ends for a
-  /// reading no longer held keeps nothing, and a failed one ends the
-  /// reading.
-  func render(_ utterance: Int, _ chunk: Int, _ ids: [Int], _ speed: Double) async throws -> NaturalRender {
+  /// Runs chunk `chunk` of reading `utterance` from its token ids (BOS and
+  /// EOS included, 3 to 512) at `speed`, the voice's duration scale the app
+  /// sends, through the chain's first four stages, keeps what the last
+  /// three read for `render`, and returns the frames each id takes and
+  /// Prosody's pitch curve. Chunk 0 starts a new reading: the one held is
+  /// halted, and the reading marker is written. A later chunk of a reading
+  /// not held throws `stale`. It runs on the one chain renders run on, off
+  /// the main actor; one that ends for a reading no longer held keeps
+  /// nothing, a curve not finite throws `nonfinite`, and a failed one ends
+  /// the reading.
+  func prosody(_ utterance: Int, _ chunk: Int, _ ids: [Int], _ speed: Double) async throws -> NaturalProsody {
     guard loadedRevision != nil, let pack = voicePack else { throw NaturalFailure(message: "not loaded") }
     guard ids.count >= 3, ids.count <= KokoroAneConstants.maxInputTokens else {
       throw NaturalFailure(message: "ids \(ids.count) outside 3...\(KokoroAneConstants.maxInputTokens)")
@@ -353,20 +370,79 @@ struct NaturalFailure: LocalizedError {
     let input = ids.map { Int32(clamping: $0) }
     let store = store
     let previous = renderChain
-    let work = Task.detached { () async throws -> (KokoroAneSynthesisResult, Double) in
-      _ = await previous?.result
+    let work = Task.detached { () async throws -> (KokoroAneProsody, Double) in
+      _ = await previous?.value
       try Task.checkCancellation()
       let clock = ContinuousClock()
       let began = clock.now
-      let result = try await KokoroAneSynthesizer.synthesize(
-        inputIds: input, styleS: style.styleS, styleTimbre: style.styleTimbre, speed: Float(speed), store: store)
+      let found = try await KokoroAneSynthesizer.prosody(inputIds: input, styleS: style.styleS, speed: Float(speed), store: store)
+      let spent = began.duration(to: clock.now).components
+      return (found, Double(spent.seconds) * 1_000 + Double(spent.attoseconds) / 1e15)
+    }
+    renderChain = Task.detached { _ = await work.result }
+    prosodying = work
+    do {
+      let (found, millis) = try await work.value
+      let frames = found.predictedDurations.map { Int($0) }
+      let total = frames.reduce(0, +)
+      NSLog(
+        "%@",
+        "[natural] prosody utterance=\(utterance) chunk=\(chunk) ids=\(ids.count) frames=\(total) "
+          + "points=\(found.f0.count) ms=\(Int(millis.rounded())) speed=\(speed)")
+      if held === reading { prosodies[chunk] = (found, style.styleTimbre, speed) }
+      return NaturalProsody(frames: frames, f0: found.f0.map { Double($0) }, millis: millis)
+    } catch {
+      if held === reading { halt() }
+      if case KokoroAneError.nonFiniteModelOutput = error {
+        NSLog("%@", "[natural] prosody utterance=\(utterance) chunk=\(chunk) failed=nonfinite")
+        throw NaturalFailure(message: "nonfinite")
+      }
+      NSLog("%@", "[natural] prosody utterance=\(utterance) chunk=\(chunk) failed=error")
+      throw NaturalFailure(message: "prosody failed: \(error.localizedDescription)")
+    }
+  }
+
+  /// Renders chunk `chunk` of the held reading through the chain's last
+  /// three stages on `f0`, the curve JS sends in place of Prosody's own,
+  /// and keeps its audio for `play`. The chunk's prosody is used once: a
+  /// chunk with none held (never run, another reading's, or dropped by a
+  /// halt) throws `stale`, and a curve not exactly as long as Prosody's or
+  /// with a point not finite throws `curve` and ends the reading. Renders
+  /// run one at a time, off the main actor; one that ends for a reading no
+  /// longer held keeps nothing, and a failed one ends the reading. Its log
+  /// counts the points sent more than 0.01 Hz below (`lowered`) and above
+  /// (`raised`) Prosody's own.
+  func render(_ utterance: Int, _ chunk: Int, _ f0: [Double]) async throws -> NaturalRender {
+    guard loadedRevision != nil else { throw NaturalFailure(message: "not loaded") }
+    guard let reading = held, reading.utterance == utterance, let kept = prosodies[chunk] else {
+      throw NaturalFailure(message: "stale")
+    }
+    prosodies[chunk] = nil
+    let own = kept.prosody.f0
+    guard f0.count == own.count, f0.allSatisfy({ $0.isFinite }) else {
+      NSLog("%@", "[natural] render failed=curve utterance=\(utterance) chunk=\(chunk) points=\(f0.count) wanted=\(own.count)")
+      halt()
+      throw NaturalFailure(message: "curve")
+    }
+    let lowered = zip(f0, own).filter { $0.0 < Double($0.1) - 0.01 }.count
+    let raised = zip(f0, own).filter { $0.0 > Double($0.1) + 0.01 }.count
+    let curve = f0.map { Float($0) }
+    let speed = kept.speed
+    let store = store
+    let previous = renderChain
+    let work = Task.detached { () async throws -> (KokoroAneSynthesisResult, Double) in
+      _ = await previous?.value
+      try Task.checkCancellation()
+      let clock = ContinuousClock()
+      let began = clock.now
+      let result = try await KokoroAneSynthesizer.vocode(kept.prosody, f0: curve, styleTimbre: kept.timbre, store: store)
       guard result.samples.allSatisfy({ $0.isFinite }) else {
         throw KokoroAneError.nonFiniteModelOutput(stage: KokoroAneStage.tail.rawValue, output: "audio")
       }
       let spent = began.duration(to: clock.now).components
       return (result, Double(spent.seconds) * 1_000 + Double(spent.attoseconds) / 1e15)
     }
-    renderChain = work
+    renderChain = Task.detached { _ = await work.result }
     reading.rendering = work
     do {
       let (result, millis) = try await work.value
@@ -374,8 +450,9 @@ struct NaturalFailure: LocalizedError {
       let total = frames.reduce(0, +)
       NSLog(
         "%@",
-        "[natural] render utterance=\(utterance) chunk=\(chunk) ids=\(ids.count) frames=\(total) "
-          + "samples=\(result.samples.count) ms=\(Int(millis.rounded())) speed=\(speed)")
+        "[natural] render utterance=\(utterance) chunk=\(chunk) ids=\(frames.count) frames=\(total) "
+          + "samples=\(result.samples.count) ms=\(Int(millis.rounded())) speed=\(speed) "
+          + "points=\(f0.count) lowered=\(lowered) raised=\(raised)")
       if held === reading { reading.rendered[chunk] = (result.samples, total) }
       let first = result.samples.firstIndex { abs($0) > Self.audible } ?? result.samples.count
       let last = result.samples.lastIndex { abs($0) > Self.audible } ?? -1
@@ -480,11 +557,14 @@ struct NaturalFailure: LocalizedError {
   private static let audible: Float = 0.01
 
   /// Lets go of the held reading first, so nothing it sends after is
-  /// emitted, then cancels its render, stops the clock and the audio, and
-  /// removes the marker.
+  /// emitted, then cancels its prosody and render, drops every prosody
+  /// held, stops the clock and the audio, and removes the marker.
   private func halt() {
     let reading = held
     held = nil
+    prosodies = [:]
+    prosodying?.cancel()
+    prosodying = nil
     reading?.rendering?.cancel()
     reading?.rendered = [:]
     stopTicking()

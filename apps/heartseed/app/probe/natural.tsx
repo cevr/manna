@@ -49,9 +49,9 @@ const recording = (record: (rendered: Rendered) => void) =>
       const module = yield* NaturalModule;
       return NaturalModule.of({
         ...module,
-        render: (utterance, chunk, ids, speed) =>
+        render: (utterance, chunk, curve) =>
           module
-            .render(utterance, chunk, ids, speed)
+            .render(utterance, chunk, curve)
             .pipe(Effect.tap((rendered) => Effect.sync(() => record(rendered)))),
       });
     }),

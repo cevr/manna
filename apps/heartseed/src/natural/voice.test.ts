@@ -2,14 +2,18 @@
 
 /**
  * The natural voice source against its own model, over seeded histories of
- * one source: speaks of one-, two- and three-chunk texts and of a text no
+ * one source: speaks of one-, two- and three-chunk texts, of a phrase long
+ * enough to break mid-phrase, of one with no end mark and of a text no
  * plan takes, each naming a system voice and a natural voice drawn from
  * `VOICES` or from names that miss one (another voice, a case, a pack path,
  * a trailing space, a name the reader sees); stop, pause and resume; a load
- * or a render answered ok (its audible span anywhere in the audio, or none),
- * with a failure, or malformed (an id with no frame, a frame list short or
- * long, NaN, a fraction, the audio a frame off, a span outside the audio or
- * not whole); a refused play; the module's
+ * answered ok or with a failure; the module call held longest, a chunk's
+ * prosody or its render, answered ok (a prosody's curve with a final rise
+ * or a fall, and unvoiced points; a render's audible span anywhere in the
+ * audio, or none), with a failure, or malformed (a prosody's id with no
+ * frame, a frame list short or long, NaN, a fraction, its curve a point
+ * short or over, a point NaN or infinite; a render's frames off, the audio
+ * a frame off, a span outside the audio or not whole); a refused play; the module's
  * events for the held utterance (and for one a failure let go of) and for
  * any other; a listener subscribed in a child of the source's scope, and
  * that child closed; and a reload (the scope closed, a new source,
@@ -20,11 +24,15 @@
  *
  * The texts are made-up words over a lexicon written here, planned with
  * `planOf` (hslexicon's rule); the model computes each word's start sample
- * and a render's fit itself.
+ * and a prosody's and a render's fit itself, and falls a curve with
+ * `fallOf`, whose rule `fall.property.test.ts` holds.
  *
  * It catches a source that loads a voice other than the speak's natural
  * voice (a fixed one, the first it was given, the system voice, a name with
- * no `.bin`), renders at a speed other than its voice's, reads a name
+ * no `.bin`), runs a prosody at a speed other than its voice's, renders
+ * on a curve other than the fallen one (`fallOf`) for a chunk that ends a
+ * phrase or the reading, or other than Prosody's own inside a phrase,
+ * renders on a prosody that does not fit its chunk, reads a name
  * not in `VOICES` (or reads it as a default), refuses one before its stop,
  * or loads a list other than `FILES`; and one that forwards another utterance's event, keeps a
  * reading past a terminal event or a failure, keeps a listener past its
@@ -44,13 +52,20 @@ import { Context, Deferred, Effect, Exit, Fiber, Layer, Option, Scope } from 'ef
 import { VoiceSource, type VoiceEvent } from '../voice';
 import type { Lexicon } from './lexicon';
 import { FILES, REVISION, VOICES, type NaturalVoice } from './manifest';
-import { NaturalModule, NaturalUnavailable, type Rendered, type WordStart } from './module';
+import { fallOf } from './fall';
+import {
+  NaturalModule,
+  NaturalUnavailable,
+  type Prosody,
+  type Rendered,
+  type WordStart,
+} from './module';
 import { planOf, type Chunk } from './plan';
 import { naturalVoiceSource } from './voice';
 
 const SEED = 52_031;
 const HISTORIES = 300;
-const STEPS = 40;
+const STEPS = 72;
 
 /** The system voice every speak also names: the natural source never reads it. */
 const SYSTEM_VOICE = 'com.apple.voice.premium.en-US.Zoe';
@@ -94,8 +109,23 @@ const textOf = (clauses: number) =>
     return `${words}${at === clauses - 1 ? '.' : ','}`;
   }).join(' ');
 
-/** Texts of one, two and three chunks, and one with a word the lexicon lacks. */
-const TEXTS: ReadonlyArray<string> = [textOf(1), textOf(2), textOf(3), 'bel zor.'];
+/** One phrase of eight words, 248 symbols with no mark inside: over `CHUNK_CAP`, so it breaks into two chunks mid-phrase. */
+const LONG_PHRASE = 'bel cor dun fam gil hob bel cor.';
+
+/** A phrase with no mark at its end: the reading's last chunk, with no rest after it. */
+const UNMARKED = 'bel cor dun fam';
+
+/** Texts of one, two and three chunks (the last two drawn twice as often), a phrase that breaks mid-phrase, one with no end mark, and one with a word the lexicon lacks. */
+const TEXTS: ReadonlyArray<string> = [
+  textOf(1),
+  textOf(2),
+  textOf(2),
+  textOf(3),
+  textOf(3),
+  LONG_PHRASE,
+  UNMARKED,
+  'bel zor.',
+];
 
 /** Names that miss a voice of `VOICES`: other Kokoro voices (Him's former one among them), none, a case, a pack path, the reader's names, a trailing space, a word. */
 const NEAR_MISSES: ReadonlyArray<string> = [
@@ -139,11 +169,17 @@ type Call =
       readonly voice: string;
     }
   | {
-      readonly _tag: 'render';
+      readonly _tag: 'prosody';
       readonly u: number;
       readonly k: number;
       readonly ids: ReadonlyArray<number>;
       readonly speed: number;
+    }
+  | {
+      readonly _tag: 'render';
+      readonly u: number;
+      readonly k: number;
+      readonly curve: ReadonlyArray<number>;
     }
   | {
       readonly _tag: 'play';
@@ -161,15 +197,24 @@ type Outcome = 'pending' | 'success' | 'failure';
 /** What a render answers with: a result, or a failure. */
 type Answer = Rendered | 'failed';
 
-/** The module the source drives: it records each call and holds each load and render until the history answers it. */
+/** The module the source drives: it records each call and holds each load, prosody and render until the history answers it. */
 const makeModule = () => {
   const state = {
     calls: [] as Array<Call>,
     loads: [] as Array<Deferred.Deferred<number, NaturalUnavailable>>,
-    renders: [] as Array<{
+    prosodies: [] as Array<{
+      readonly u: number;
+      readonly k: number;
       readonly ids: ReadonlyArray<number>;
+      readonly done: Deferred.Deferred<Prosody, NaturalUnavailable>;
+    }>,
+    renders: [] as Array<{
+      readonly u: number;
+      readonly k: number;
       readonly done: Deferred.Deferred<Rendered, NaturalUnavailable>;
     }>,
+    /** Which kind each held prosody and render is, in the order they were asked. */
+    order: [] as Array<'prosody' | 'render'>,
     refuse: false,
     listeners: new Set<(event: VoiceEvent) => void>(),
   };
@@ -187,11 +232,20 @@ const makeModule = () => {
           state.loads.push(done);
           return Deferred.await(done);
         }),
-      render: (u, k, ids, speed) =>
+      prosody: (u, k, ids, speed) =>
         Effect.suspend(() => {
-          state.calls.push({ _tag: 'render', u, k, ids: [...ids], speed });
+          state.calls.push({ _tag: 'prosody', u, k, ids: [...ids], speed });
+          const done = Deferred.makeUnsafe<Prosody, NaturalUnavailable>();
+          state.prosodies.push({ u, k, ids: [...ids], done });
+          state.order.push('prosody');
+          return Deferred.await(done);
+        }),
+      render: (u, k, curve) =>
+        Effect.suspend(() => {
+          state.calls.push({ _tag: 'render', u, k, curve: [...curve] });
           const done = Deferred.makeUnsafe<Rendered, NaturalUnavailable>();
-          state.renders.push({ ids: [...ids], done });
+          state.renders.push({ u, k, done });
+          state.order.push('render');
           return Deferred.await(done);
         }),
       play: (u, k, starts, last, from, to, rest) =>
@@ -249,6 +303,24 @@ const fits = (chunk: Chunk, answer: Rendered) =>
   answer.last >= -1 &&
   answer.last < answer.samples;
 
+/** A prosody fits its chunk: a whole frame or more per id, and exactly two finite points a frame. */
+const prosodyFits = (chunk: Chunk, answer: Prosody) =>
+  answer.frames.length === chunk.ids.length &&
+  answer.frames.every((each) => Number.isInteger(each) && each >= 1) &&
+  answer.f0.length === 2 * answer.frames.reduce((sum, each) => sum + each, 0) &&
+  answer.f0.every((hz) => Number.isFinite(hz));
+
+/** Where the held reading is: its load (chunk -1), chunk `k`'s prosody or render asked, or every chunk played. */
+interface Waiting {
+  readonly k: number;
+  readonly stage: 'load' | 'prosody' | 'render' | 'done';
+}
+
+const LOADING: Waiting = { k: -1, stage: 'load' };
+
+const waits = (waiting: Waiting, k: number, stage: Waiting['stage']) =>
+  waiting.k === k && waiting.stage === stage;
+
 /** The samples that play: 480 (20 ms) beyond the audible span each side, inside the audio; all of it when nothing is audible. */
 const cutIn = (answer: Rendered) =>
   answer.first > answer.last
@@ -264,15 +336,16 @@ class Model {
   events: Array<VoiceEvent> = [];
   outcomes = new Map<number, Outcome>();
   refuse = false;
-  /** The utterance each held load and render was asked for, in the order the module holds them. */
+  /** The utterance each held load, prosody and render was asked for, in the order the module holds them. */
   loads: Array<number> = [];
+  prosodies: Array<{ readonly u: number; readonly k: number }> = [];
   renders: Array<{ readonly u: number; readonly k: number }> = [];
   held:
     | {
         readonly u: number;
         readonly chunks: ReadonlyArray<Chunk>;
         readonly speed: number;
-        waiting: 'load' | number;
+        waiting: Waiting;
       }
     | undefined;
   /** The utterance a load, render or play failure last let go of, until the next speak. */
@@ -291,6 +364,10 @@ class Model {
     clamped: 0,
     silent: 0,
     rested: 0,
+    fell: 0,
+    midPhrase: 0,
+    lastFell: 0,
+    prosodyFailures: 0,
   };
   /** The voice the last load asked for, to count switches. */
   private loadedVoice: string | undefined;
@@ -326,7 +403,12 @@ class Model {
     else this.tally.him++;
     if (this.loadedVoice !== undefined && this.loadedVoice !== voice) this.tally.switches++;
     this.loadedVoice = voice;
-    this.held = { u, chunks: chunks.value, speed: SPEED.get(voice) ?? Number.NaN, waiting: 'load' };
+    this.held = {
+      u,
+      chunks: chunks.value,
+      speed: SPEED.get(voice) ?? Number.NaN,
+      waiting: LOADING,
+    };
     this.calls.push({ _tag: 'load', revision: REVISION, files: PINNED, voice: `${voice}.bin` });
     this.loads.push(u);
   }
@@ -340,23 +422,23 @@ class Model {
     this.calls.push({ _tag: tag });
   }
 
-  private render(k: number) {
+  private prosody(k: number) {
     if (this.held === undefined) return;
-    this.held.waiting = k;
+    this.held.waiting = { k, stage: 'prosody' };
     this.calls.push({
-      _tag: 'render',
+      _tag: 'prosody',
       u: this.held.u,
       k,
       ids: [...(this.held.chunks[k]?.ids ?? [])],
       speed: this.held.speed,
     });
-    this.renders.push({ u: this.held.u, k });
+    this.prosodies.push({ u: this.held.u, k });
   }
 
   loaded(ok: boolean) {
     const u = this.loads.shift();
-    if (this.held === undefined || this.held.u !== u || this.held.waiting !== 'load') return;
-    if (ok) return this.render(0);
+    if (this.held === undefined || this.held.u !== u || this.held.waiting.stage !== 'load') return;
+    if (ok) return this.prosody(0);
     this.held = undefined;
     this.dropped = u;
     this.answer(u, 'failure');
@@ -375,11 +457,38 @@ class Model {
     this.events.push({ utterance: u, kind: 'interrupt', location: 0, length: 0 });
   }
 
+  /**
+   * A chunk's prosody answered: one that fails or does not fit fails the
+   * chunk; else the chunk renders on its curve, fallen when it ends a
+   * phrase or the reading, and Prosody's own inside a phrase.
+   */
+  prosodied(answer: Prosody | 'failed') {
+    const asked = this.prosodies.shift();
+    const held = this.held;
+    if (asked === undefined || held === undefined) return;
+    if (held.u !== asked.u || !waits(held.waiting, asked.k, 'prosody')) return;
+    const chunk = held.chunks[asked.k];
+    if (chunk === undefined) return;
+    if (answer === 'failed' || !prosodyFits(chunk, answer)) {
+      this.tally.prosodyFailures++;
+      return this.failed(asked.u, asked.k);
+    }
+    const last = asked.k === held.chunks.length - 1;
+    const ends = chunk.rest > 0 || last;
+    const curve = ends ? fallOf(answer.f0) : [...answer.f0];
+    if (ends && curve.some((hz, at) => hz !== answer.f0[at])) this.tally.fell++;
+    if (ends && last && chunk.rest === 0) this.tally.lastFell++;
+    if (!ends) this.tally.midPhrase++;
+    held.waiting = { k: asked.k, stage: 'render' };
+    this.calls.push({ _tag: 'render', u: asked.u, k: asked.k, curve: [...curve] });
+    this.renders.push({ u: asked.u, k: asked.k });
+  }
+
   rendered(answer: Answer) {
     const asked = this.renders.shift();
     const held = this.held;
     if (asked === undefined || held === undefined) return;
-    if (held.u !== asked.u || held.waiting !== asked.k) return;
+    if (held.u !== asked.u || !waits(held.waiting, asked.k, 'render')) return;
     const chunk = held.chunks[asked.k];
     if (chunk === undefined) return;
     if (answer === 'failed' || !fits(chunk, answer)) return this.failed(asked.u, asked.k);
@@ -409,10 +518,10 @@ class Model {
     if (asked.k === 0) this.answer(asked.u, 'success');
     if (last) {
       if (held.chunks.length > 1) this.tally.lastPlayed++;
-      held.waiting = -1;
+      held.waiting = { k: asked.k, stage: 'done' };
       return;
     }
-    this.render(asked.k + 1);
+    this.prosody(asked.k + 1);
   }
 
   /** Forwards an event for the held reading; a reading a failure let go of is held no more, so its events are dropped. */
@@ -432,9 +541,9 @@ type Action =
   | 'resume'
   | 'load-ok'
   | 'load-fail'
-  | 'render-ok'
-  | 'render-fail'
-  | 'render-bad'
+  | 'answer-ok'
+  | 'answer-fail'
+  | 'answer-bad'
   | 'refuse-play'
   | 'event-held'
   | 'event-other'
@@ -443,17 +552,17 @@ type Action =
   | 'reload';
 
 const WEIGHTS: ReadonlyArray<readonly [Action, number]> = [
-  ['speak', 2],
+  ['speak', 1.2],
   ['stop', 0.5],
   ['pause', 0.3],
   ['resume', 0.3],
   ['load-ok', 2.5],
   ['load-fail', 0.3],
-  ['render-ok', 6],
-  ['render-fail', 0.5],
-  ['render-bad', 1.2],
+  ['answer-ok', 9],
+  ['answer-fail', 0.4],
+  ['answer-bad', 1.4],
   ['refuse-play', 0.3],
-  ['event-held', 2],
+  ['event-held', 1.2],
   ['event-other', 0.5],
   ['subscribe', 0.5],
   ['unsubscribe', 0.4],
@@ -481,16 +590,57 @@ const outcomeOf = (fiber: Fiber.Fiber<unknown, unknown>): Outcome => {
 };
 
 /**
- * A render's answer for `ids`: its audible span anywhere in the audio, or
- * nothing audible (`samples` and -1); or malformed in one of ten ways (the
- * frames or the audio off, or the span outside the audio or not whole).
+ * A pitch curve of `points` points: a voice near a base pitch, a point in
+ * twelve unvoiced (0), and over its last 30 % a final rise of 3-9
+ * semitones, or a fall of up to 4.
  */
-const answerFor = (
+const curveFor = (points: number, next: () => number): Array<number> => {
+  const base = 100 + next() * 150;
+  const end = next() < 0.6 ? 3 + next() * 6 : -next() * 4;
+  return Array.from({ length: points }, (_, at) => {
+    if (next() < 0.08) return 0;
+    const tail = Math.max(0, (at - points * 0.7) / (points * 0.3));
+    return base * 2 ** ((end * tail + next() - 0.5) / 12);
+  });
+};
+
+/**
+ * A prosody's answer for `ids`: 1-25 frames an id and two points a frame;
+ * or malformed in one of nine ways (an id with no frame, a frame list
+ * short or long, a frame NaN or a fraction, a point short or over, a point
+ * NaN or infinite).
+ */
+const prosodyFor = (
   ids: ReadonlyArray<number>,
   next: () => number,
   malformed: boolean,
-): Rendered => {
-  const frames = ids.map(() => 1 + Math.floor(next() * 25));
+): Prosody => {
+  const frames = ids.map(() => 1 + Math.floor(next() * 6));
+  const f0 = curveFor(2 * frames.reduce((sum, each) => sum + each, 0), next);
+  const answer = { frames, f0, millis: 20 };
+  if (!malformed) return answer;
+  const at = (length: number) => Math.floor(next() * length);
+  const ways: ReadonlyArray<() => Prosody> = [
+    () => ({ ...answer, frames: frames.with(at(frames.length), 0) }),
+    () => ({ ...answer, frames: frames.slice(0, -1) }),
+    () => ({ ...answer, frames: [...frames, 4] }),
+    () => ({ ...answer, frames: frames.with(0, Number.NaN) }),
+    () => ({ ...answer, frames: frames.with(-1, 2.5) }),
+    () => ({ ...answer, f0: f0.slice(0, -1) }),
+    () => ({ ...answer, f0: [...f0, 140] }),
+    () => ({ ...answer, f0: f0.with(at(f0.length), Number.NaN) }),
+    () => ({ ...answer, f0: f0.with(at(f0.length), Number.POSITIVE_INFINITY) }),
+  ];
+  return ways[at(ways.length)]?.() ?? answer;
+};
+
+/**
+ * A render's answer on `frames`, its prosody's: its audible span anywhere
+ * in the audio, or nothing audible (`samples` and -1); or malformed in one
+ * of ten ways (the frames or the audio off, or the span outside the audio
+ * or not whole).
+ */
+const answerFor = (frames: Array<number>, next: () => number, malformed: boolean): Rendered => {
   const samples = frames.reduce((sum, each) => sum + each, 0) * 600;
   const silent = next() < 0.15;
   const first = silent ? samples : Math.floor(next() * samples);
@@ -534,6 +684,11 @@ const totals = {
   clamped: 0,
   silent: 0,
   rested: 0,
+  fell: 0,
+  midPhrase: 0,
+  lastFell: 0,
+  prosodyFailures: 0,
+  prosodyMalformed: 0,
   reloads: 0,
   finished: 0,
   heardAfterLeaving: 0,
@@ -558,8 +713,12 @@ const makeHistory = (seed: number) => {
     to: number | undefined;
   }> = [];
   let fibers = new Map<number, Fiber.Fiber<void, unknown>>();
+  /** The calls already held equal to the model's: each call is a copy, never changed once recorded, so a check compares the new ones. */
+  let checked = 0;
   let utterance = 0;
   let source: Option.Option<VoiceSource['Service']> = Option.none();
+  /** Each chunk's frames as its prosody answered them, by `utterance/chunk`, for its render's answer. */
+  let framesOf = new Map<string, Array<number>>();
 
   const pick = (): Action => {
     let roll = next() * TOTAL_WEIGHT;
@@ -567,7 +726,7 @@ const makeHistory = (seed: number) => {
       roll -= weight;
       if (roll < 0) return action;
     }
-    return 'render-ok';
+    return 'answer-ok';
   };
 
   const live = () => Option.getOrThrow(source);
@@ -620,6 +779,22 @@ const makeHistory = (seed: number) => {
       else yield* Deferred.fail(done, NaturalUnavailable.make({ reason: 'missing' }));
     });
 
+  const prosody = (how: 'ok' | 'fail' | 'bad') =>
+    Effect.gen(function* () {
+      const asked = module.state.prosodies.shift();
+      if (asked === undefined) return;
+      if (how === 'fail') {
+        model.prosodied('failed');
+        yield* Deferred.fail(asked.done, NaturalUnavailable.make({ reason: 'nonfinite' }));
+        return;
+      }
+      if (how === 'bad') totals.prosodyMalformed++;
+      const answer = prosodyFor(asked.ids, next, how === 'bad');
+      framesOf.set(`${asked.u}/${asked.k}`, [...answer.frames]);
+      model.prosodied(answer);
+      yield* Deferred.succeed(asked.done, answer);
+    });
+
   const render = (how: 'ok' | 'fail' | 'bad') =>
     Effect.gen(function* () {
       const asked = module.state.renders.shift();
@@ -630,10 +805,18 @@ const makeHistory = (seed: number) => {
         return;
       }
       if (how === 'bad') totals.malformed++;
-      const answer = answerFor(asked.ids, next, how === 'bad');
+      const answer = answerFor(framesOf.get(`${asked.u}/${asked.k}`) ?? [], next, how === 'bad');
       model.rendered(answer);
       yield* Deferred.succeed(asked.done, answer);
     });
+
+  /** Answers the module call held longest, a prosody or a render. */
+  const answer = (how: 'ok' | 'fail' | 'bad') => {
+    const kind = module.state.order.shift();
+    if (kind === 'prosody') return prosody(how);
+    if (kind === 'render') return render(how);
+    return Effect.void;
+  };
 
   const event = (held: boolean) =>
     Effect.sync(() => {
@@ -686,9 +869,13 @@ const makeHistory = (seed: number) => {
     extras = [];
     module.state.calls = [];
     module.state.loads = [];
+    module.state.prosodies = [];
     module.state.renders = [];
+    module.state.order = [];
+    framesOf = new Map();
     module.state.refuse = false;
     model = new Model();
+    checked = 0;
     fibers = new Map();
     utterance = 0;
     scope = Scope.makeUnsafe();
@@ -708,9 +895,9 @@ const makeHistory = (seed: number) => {
       ),
     'load-ok': () => load(true),
     'load-fail': () => load(false),
-    'render-ok': () => render('ok'),
-    'render-fail': () => render('fail'),
-    'render-bad': () => render('bad'),
+    'answer-ok': () => answer('ok'),
+    'answer-fail': () => answer('fail'),
+    'answer-bad': () => answer('bad'),
     'refuse-play': () =>
       Effect.sync(() => {
         model.refuse = true;
@@ -725,7 +912,10 @@ const makeHistory = (seed: number) => {
 
   const check = () => {
     const where = `seed ${seed}: ${trail.join(' ')}`;
-    expect(module.state.calls, `${where} (calls)`).toEqual(model.calls);
+    expect(module.state.calls.slice(checked), `${where} (calls from ${checked})`).toEqual(
+      model.calls.slice(checked),
+    );
+    checked = model.calls.length;
     expect(heard, `${where} (events)`).toEqual(model.events);
     for (const [index, extra] of extras.entries()) {
       expect(
@@ -763,7 +953,7 @@ const history = (seed: number) =>
   });
 
 describe('the natural voice source', () => {
-  it('plans the test texts in one, two and three chunks, and refuses the last', () => {
+  it('plans the test texts in one, two and three chunks, a long phrase in two, an unmarked one with no rest, and refuses the last', () => {
     expect(
       TEXTS.map((text) =>
         Option.getOrElse(
@@ -771,7 +961,9 @@ describe('the natural voice source', () => {
           () => 0,
         ),
       ),
-    ).toEqual([1, 2, 3, 0]);
+    ).toEqual([1, 2, 2, 3, 3, 2, 1, 0]);
+    expect(Option.getOrThrow(chunksOf(LONG_PHRASE))[0]?.rest).toBe(0);
+    expect(Option.getOrThrow(chunksOf(UNMARKED))[0]?.rest).toBe(0);
   });
 
   it('offers no voices of its own: the voice passed to speak names the natural voice', () =>
@@ -802,6 +994,11 @@ describe('the natural voice source', () => {
         expect(totals.clamped).toBeGreaterThanOrEqual(150);
         expect(totals.silent).toBeGreaterThanOrEqual(12);
         expect(totals.rested).toBeGreaterThanOrEqual(50);
+        expect(totals.fell).toBeGreaterThanOrEqual(150);
+        expect(totals.midPhrase).toBeGreaterThanOrEqual(25);
+        expect(totals.lastFell).toBeGreaterThanOrEqual(60);
+        expect(totals.prosodyFailures).toBeGreaterThanOrEqual(30);
+        expect(totals.prosodyMalformed).toBeGreaterThanOrEqual(30);
       }),
     ));
 });

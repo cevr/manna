@@ -352,12 +352,17 @@ const LEXICON: Lexicon = {
   ]),
 };
 
-/** A stand-in module whose render answers by `answer` and whose calls are logged; any other call dies. */
+/**
+ * A stand-in module whose prosody gives two frames and four points of a
+ * flat curve an id, whose render answers by `answer` for the ids of the
+ * prosody before it, and whose calls are logged; any other call dies.
+ */
 const moduleOf = (
   calls: Array<string>,
   answer: (ids: ReadonlyArray<number>) => Effect.Effect<Rendered, NaturalUnavailable>,
-) =>
-  Layer.succeed(
+) => {
+  let asked: ReadonlyArray<number> = [];
+  return Layer.succeed(
     NaturalModule,
     NaturalModule.of({
       status: () => Effect.die('status'),
@@ -365,10 +370,20 @@ const moduleOf = (
       cancelInstall: Effect.die('cancelInstall'),
       remove: Effect.die('remove'),
       load: () => Effect.die('load'),
-      render: (utterance, chunk, ids, speed) =>
+      prosody: (utterance, chunk, ids, speed) =>
+        Effect.sync(() => {
+          calls.push(`prosody ${utterance} ${chunk} ${ids.length} ${speed}`);
+          asked = ids;
+          return {
+            frames: ids.map(() => 2),
+            f0: ids.flatMap(() => [150, 150, 150, 150]),
+            millis: 3,
+          };
+        }),
+      render: (utterance, chunk, curve) =>
         Effect.suspend(() => {
-          calls.push(`render ${utterance} ${chunk} ${ids.length} ${speed}`);
-          return answer(ids);
+          calls.push(`render ${utterance} ${chunk} ${curve.length}`);
+          return answer(asked);
         }),
       play: () => Effect.die('play'),
       pause: Effect.die('pause'),
@@ -380,6 +395,7 @@ const moduleOf = (
       subscribeInstall: () => Effect.die('subscribeInstall'),
     }),
   );
+};
 
 const soaked = (
   text: string,
@@ -407,14 +423,14 @@ describe('a soaked verse', () => {
     expect(soaked('bel zed.', fit)).toEqual({ outcome: { _tag: 'Unplanned' }, calls: ['stop'] });
   });
 
-  it('renders every chunk of its plan in order at its voice’s speed, then stops', () => {
+  it('runs and renders every chunk of its plan in order at its voice’s speed, then stops', () => {
     expect(soaked('bel cor.', fit)).toEqual({
       outcome: { _tag: 'Rendered' },
-      calls: ['render 7 0 9 0.85', 'stop'],
+      calls: ['prosody 7 0 9 0.85', 'render 7 0 36', 'stop'],
     });
     expect(soaked('bel cor.', fit, 'bm_george')).toEqual({
       outcome: { _tag: 'Rendered' },
-      calls: ['render 7 0 9 0.9', 'stop'],
+      calls: ['prosody 7 0 9 0.9', 'render 7 0 36', 'stop'],
     });
     const long = `${Array.from({ length: 30 }, () => 'bel cor bel,').join(' ')} cor.`;
     const plan = Option.getOrThrow(planOf(LEXICON.words, LEXICON.vocab, long));
@@ -422,7 +438,10 @@ describe('a soaked verse', () => {
     expect(soaked(long, fit)).toEqual({
       outcome: { _tag: 'Rendered' },
       calls: [
-        ...plan.chunks.map((chunk, index) => `render 7 ${index} ${chunk.ids.length} 0.85`),
+        ...plan.chunks.flatMap((chunk, index) => [
+          `prosody 7 ${index} ${chunk.ids.length} 0.85`,
+          `render 7 ${index} ${chunk.ids.length * 4}`,
+        ]),
         'stop',
       ],
     });
@@ -462,7 +481,7 @@ describe('a soaked verse', () => {
     for (const answer of [off, short]) {
       expect(soaked('bel cor.', answer)).toEqual({
         outcome: { _tag: 'Failed', reason: 'frames' },
-        calls: ['render 7 0 9 0.85', 'stop'],
+        calls: ['prosody 7 0 9 0.85', 'render 7 0 36', 'stop'],
       });
     }
   });
@@ -471,7 +490,7 @@ describe('a soaked verse', () => {
     const refused = () => Effect.fail(NaturalUnavailable.make({ reason: 'nonfinite' }));
     expect(soaked('bel cor.', refused)).toEqual({
       outcome: { _tag: 'Failed', reason: 'nonfinite' },
-      calls: ['render 7 0 9 0.85', 'stop'],
+      calls: ['prosody 7 0 9 0.85', 'render 7 0 36', 'stop'],
     });
   });
 });

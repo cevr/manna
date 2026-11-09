@@ -188,8 +188,8 @@ const listening = <A>(listeners: Set<(event: A) => void>, listener: (event: A) =
     ),
   );
 
-/** A render: the first chunk records the pack it rendered in, and holds the reading (the crash marker set) unless it is set to break. */
-const renderOf = (device: Device, utterance: number, chunk: number, ids: ReadonlyArray<number>) =>
+/** A chunk's prosody: the first chunk records the pack it rendered in, and holds the reading (the crash marker set) unless it is set to break. */
+const prosodyOf = (device: Device, utterance: number, chunk: number, ids: ReadonlyArray<number>) =>
   Effect.suspend(() => {
     if (!device.loaded) return refused('not loaded');
     if (chunk === 0) {
@@ -203,10 +203,22 @@ const renderOf = (device: Device, utterance: number, chunk: number, ids: Readonl
     } else if (device.holding !== utterance) return refused('stale');
     return Effect.succeed({
       frames: ids.map(() => 2),
-      samples: 1200 * ids.length,
+      f0: ids.flatMap(() => [150, 150, 150, 150]),
+      millis: 1,
+    });
+  });
+
+/** A render of the held reading: two frames an id, four points of the curve an id. */
+const renderOf = (device: Device, utterance: number, curve: ReadonlyArray<number>) =>
+  Effect.suspend(() => {
+    if (device.holding !== utterance) return refused('stale');
+    const ids = curve.length / 4;
+    return Effect.succeed({
+      frames: Array.from({ length: ids }, () => 2),
+      samples: 1200 * ids,
       millis: 1,
       first: 0,
-      last: 1200 * ids.length - 1,
+      last: 1200 * ids - 1,
     });
   });
 
@@ -246,7 +258,8 @@ const moduleOf = (device: Device) =>
     cancelInstall: Effect.sync(() => void (device.forbidden += 1)),
     remove: Effect.sync(() => void (device.forbidden += 1)),
     load: (_revision, _files, pack) => loadOf(device, pack),
-    render: (utterance, chunk, ids) => renderOf(device, utterance, chunk, ids),
+    prosody: (utterance, chunk, ids) => prosodyOf(device, utterance, chunk, ids),
+    render: (utterance, _chunk, curve) => renderOf(device, utterance, curve),
     play: (utterance) => (device.holding === utterance ? Effect.void : refused('stale')),
     pause: Effect.sync(() => void (device.module.pauses += 1)),
     resume: Effect.sync(() => void (device.module.resumes += 1)),

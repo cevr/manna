@@ -31,6 +31,7 @@ export const naturalModule: Layer.Layer<NaturalModule> = Layer.succeed(
     cancelInstall: Effect.void,
     remove: unavailable,
     load: () => unavailable,
+    prosody: () => unavailable,
     render: () => unavailable,
     play: () => unavailable,
     pause: Effect.void,

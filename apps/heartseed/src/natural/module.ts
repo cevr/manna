@@ -1,10 +1,12 @@
 /**
  * The natural voice's native module, as the app drives it: Kokoro-82M on
- * the phone, which downloads its pinned files once, loads them, renders a
- * chunk of token ids at a speed to audio and the frames each id took, and plays a
- * cut of the audio, then a rest of silence, while it sends the voice's own
- * events at each word's start sample.
- * JS plans the ids and the word starts (`plan.ts`); the module owns the
+ * the phone, which downloads its pinned files once, loads them, runs a
+ * chunk of token ids at a speed to the frames each id took and its pitch
+ * curve (`prosody`), renders that chunk to audio on the curve it is given
+ * (`render`), and plays a cut of the audio, then a rest of silence, while it
+ * sends the voice's own events at each word's start sample.
+ * JS plans the ids and the word starts (`plan.ts`) and shapes the curve
+ * (`fall.ts`); the module owns the
  * clock. On iOS it is `native/natural` (`source.ios.ts`); elsewhere there
  * is none (`source.ts`).
  */
@@ -62,6 +64,18 @@ export interface Rendered {
   readonly last: number;
 }
 
+/**
+ * A chunk's first four stages: the frames each id took, Prosody's pitch
+ * curve (Hz, two points a frame, 12.5 ms a point) and the call's time. The
+ * frames are fixed here, so the curve `render` is given cannot change the
+ * audio's length.
+ */
+export interface Prosody {
+  readonly frames: ReadonlyArray<number>;
+  readonly f0: ReadonlyArray<number>;
+  readonly millis: number;
+}
+
 /** The natural voice could not do what was asked: no module here, or the module refused. */
 export class NaturalUnavailable extends Schema.TaggedError<NaturalUnavailable>()(
   'NaturalUnavailable',
@@ -88,11 +102,16 @@ export class NaturalModule extends Context.Service<
       files: ReadonlyArray<ModelFile>,
       voice: string,
     ) => Effect.Effect<number, NaturalUnavailable>;
-    readonly render: (
+    readonly prosody: (
       utterance: number,
       chunk: number,
       ids: ReadonlyArray<number>,
       speed: number,
+    ) => Effect.Effect<Prosody, NaturalUnavailable>;
+    readonly render: (
+      utterance: number,
+      chunk: number,
+      curve: ReadonlyArray<number>,
     ) => Effect.Effect<Rendered, NaturalUnavailable>;
     readonly play: (
       utterance: number,

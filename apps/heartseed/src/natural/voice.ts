@@ -6,11 +6,16 @@
  * plays it chunk by chunk, one render in flight, each chunk's edge silence
  * cut to `EDGE_KEEP` (`cutOf`, its word starts moved by `startsWithin`) and
  * its rest after it, and forwards the module's events for the reading it
- * holds. A speak succeeds once its first chunk plays, or at once when its
- * reading is let go (stopped, replaced, or ended by a forwarded terminal
- * event); a late answer for a reading let go is ignored. A first chunk that
- * does not render, fit its render (frames, samples and audible span) or
- * play fails the speak; a later one stops the module and
+ * holds. Each chunk runs in two module calls: `prosody` gives its frames
+ * and pitch curve, and `render` voices it on a curve the source sends,
+ * fallen with `fallOf` (the Gentle fall) when the chunk ends a phrase or
+ * the reading, and Prosody's own inside a phrase, so the audio's length is
+ * the prosody's. A speak succeeds once its first chunk plays, or at once
+ * when its reading is let go (stopped, replaced, or ended by a forwarded
+ * terminal event); a late answer for a reading let go is ignored. A first
+ * chunk whose prosody fails or does not fit (frames, two finite points a
+ * frame), or that does not render, fit its render (frames, samples and
+ * audible span) or play, fails the speak; a later one stops the module and
  * ends the reading with an `interrupt` of its own.
  */
 
@@ -19,7 +24,8 @@ import { Deferred, Effect, Exit, Layer, Option, Result } from 'effect';
 import { VoiceSource, VoiceUnavailable, type VoiceEvent } from '../voice';
 import type { Lexicon } from './lexicon';
 import { FILES, REVISION, SPEEDS, VOICES, type NaturalVoice } from './manifest';
-import { NaturalModule, type Rendered } from './module';
+import { fallOf } from './fall';
+import { NaturalModule, type Prosody, type Rendered } from './module';
 import {
   cutOf,
   planOf,
@@ -76,6 +82,19 @@ const playOf = (
     },
   );
 
+/** Whether a prosody fits its chunk: a whole frame or more per id, and two finite points a frame. */
+const curveFits = (chunk: Chunk, prosody: Prosody) =>
+  Option.isSome(startsOf(chunk, prosody.frames)) &&
+  prosody.f0.length === 2 * prosody.frames.reduce((sum, each) => sum + each, 0) &&
+  prosody.f0.every(Number.isFinite);
+
+/** The curve a chunk renders on: fallen (`fallOf`) when it ends a phrase or the reading, else Prosody's own. */
+const curveSent = (chunk: Chunk, last: boolean, prosody: Prosody) => {
+  const ends = chunk.rest > 0 || last;
+  if (ends) return fallOf(prosody.f0);
+  return prosody.f0;
+};
+
 /** Whether `voice` names a voice of the download. */
 const isNatural = (voice: string): voice is NaturalVoice => VOICES.some((each) => each === voice);
 
@@ -112,18 +131,23 @@ export const naturalVoiceSource = (
         if (TERMINAL.has(event.kind)) letGo();
       });
 
-      /** Renders chunk `k` of `reading` and plays it when the render fits. */
+      /** Runs chunk `k` of `reading`'s prosody, renders it on its curve when the prosody fits, and plays it when the render fits. */
       const chunkOf = (reading: Reading, k: number, chunk: Chunk) =>
         Effect.gen(function* () {
-          const rendered = yield* Effect.result(
-            module.render(reading.utterance, k, chunk.ids, reading.speed),
+          const found = yield* Effect.result(
+            module.prosody(reading.utterance, k, chunk.ids, reading.speed),
           );
+          if (!holds(reading)) return 'gone' satisfies Played;
+          if (Result.isFailure(found)) return 'failed' satisfies Played;
+          if (!curveFits(chunk, found.success)) return 'failed' satisfies Played;
+          const last = k === reading.chunks.length - 1;
+          const curve = curveSent(chunk, last, found.success);
+          const rendered = yield* Effect.result(module.render(reading.utterance, k, curve));
           if (!holds(reading)) return 'gone' satisfies Played;
           if (Result.isFailure(rendered)) return 'failed' satisfies Played;
           const planned = playOf(chunk, rendered.success);
           if (Option.isNone(planned)) return 'failed' satisfies Played;
           const { starts, cut } = planned.value;
-          const last = k === reading.chunks.length - 1;
           const played = yield* Effect.result(
             module.play(reading.utterance, k, starts, last, cut.from, cut.to, chunk.rest),
           );

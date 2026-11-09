@@ -183,11 +183,12 @@ export const soakCounted = (tally: SoakTally, outcome: SoakOutcome): SoakTally =
   )(outcome);
 };
 
-/** Renders one chunk; a render whose frames do not fit its chunk or its samples fails with `frames`. */
+/** Runs one chunk's prosody and renders it on that curve; a render whose frames do not fit its chunk or its samples fails with `frames`. */
 const soakChunk = (utterance: number, chunk: Chunk, index: number, speed: number) =>
   Effect.gen(function* () {
     const module = yield* NaturalModule;
-    const rendered = yield* module.render(utterance, index, chunk.ids, speed);
+    const found = yield* module.prosody(utterance, index, chunk.ids, speed);
+    const rendered = yield* module.render(utterance, index, found.f0);
     if (framesHold(rendered) && Option.isSome(startsOf(chunk, rendered.frames))) return;
     return yield* NaturalUnavailable.make({ reason: 'frames' });
   });

@@ -120,6 +120,7 @@ const moduleOf = (present: number, crashed: boolean) => {
         loads.push(answer);
         return Deferred.await(answer);
       }),
+    prosody: () => Effect.fail(NaturalUnavailable.make({ reason: 'test' })),
     render: () => Effect.fail(NaturalUnavailable.make({ reason: 'test' })),
     play: () => Effect.void,
     pause: Effect.void,

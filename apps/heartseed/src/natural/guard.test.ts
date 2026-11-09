@@ -173,6 +173,7 @@ describe('the natural voice’s seams', () => {
       'cancelInstall',
       'remove',
       'load',
+      'prosody',
       'render',
       'play',
       'pause',
@@ -203,9 +204,13 @@ describe('the natural voice’s voices', () => {
     expect(naming).toEqual(['src/natural/manifest.ts']);
   });
 
-  it('renders at the speed it is sent, logs it, and names no speed of its own', () => {
+  it('runs the chain split at its pitch curve, at the speed it is sent, logs it, and names no speed of its own', () => {
     const swift = readFileSync(SWIFT, 'utf8');
-    const call = swift.slice(swift.indexOf('KokoroAneSynthesizer.synthesize('));
+    expect(swift).not.toContain('KokoroAneSynthesizer.synthesize(');
+    expect(swift).toContain('KokoroAneSynthesizer.vocode(');
+    const at = swift.indexOf('KokoroAneSynthesizer.prosody(');
+    expect(at).toBeGreaterThan(0);
+    const call = swift.slice(at);
     expect(call.slice(0, call.indexOf(')\n'))).toMatch(/\bspeed: Float\(speed\)/);
     expect(swift).toContain('speed=\\(speed)');
     const numbered = own.filter((file) =>

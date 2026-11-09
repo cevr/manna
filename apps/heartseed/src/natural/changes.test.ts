@@ -34,6 +34,7 @@ const moduleOf = (listeners: Set<(event: InstallEvent) => void>) =>
     cancelInstall: Effect.void,
     remove: Effect.void,
     load: () => Effect.fail(NaturalUnavailable.make({ reason: 'test' })),
+    prosody: () => Effect.fail(NaturalUnavailable.make({ reason: 'test' })),
     render: () => Effect.fail(NaturalUnavailable.make({ reason: 'test' })),
     play: () => Effect.void,
     pause: Effect.void,
