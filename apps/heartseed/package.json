@@ -82,6 +82,8 @@
     "test:home": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/lists.property.test.ts ./src/home.property.test.ts ./src/home/grown.property.test.ts",
     "test:home-shelves": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/shelves.property.test.ts",
     "test:home-start": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/start.property.test.ts",
+    "test:home-screen": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/screen.test.tsx",
+    "test:home-clock": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/clock.test.tsx",
     "test:need": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/need.property.test.ts",
     "test:need-screen": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/screen.test.tsx",
     "test:need-offer": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/need/offer.test.tsx",

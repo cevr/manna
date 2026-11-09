@@ -74,7 +74,7 @@ const nameParts = (label: string) => {
 const ICON = /\/assets\/home\/([a-z]+)-(light|dark)\.png$/u;
 
 /** A home icon's name from an image's source when it is of the scheme now, else what it is instead. */
-const iconOf = (image: Element | undefined) => {
+export const iconOf = (image: Element | null | undefined) => {
   const found = ICON.exec(image?.getAttribute('src') ?? '');
   if (found === null) return '<no home icon>';
   return found[2] === systemScheme() ? (found[1] ?? '') : `<${found[1]} of the ${found[2]} set>`;
@@ -92,7 +92,7 @@ const oneIcon = (node: Element) => {
 export const record = (recall: Recall) => [keyOf(recall), JSON.stringify(recall)] as const;
 
 /** Text as a reader sees it: whitespace collapsed. */
-const text = (node: Element | null | undefined) =>
+export const text = (node: Element | null | undefined) =>
   (node?.textContent ?? '').replace(/\s+/g, ' ').trim();
 
 const hidden = (node: Element) => node.closest('[aria-hidden="true"]') !== null;
@@ -218,9 +218,25 @@ export const wantField = () => {
 const CONTROLS = '[role="button"],[role="radio"],[role="checkbox"],[role="link"]';
 
 /** A control's name: its label, else its text. */
-const nameOf = (node: Element) => node.getAttribute('aria-label') ?? text(node);
+export const nameOf = (node: Element) => node.getAttribute('aria-label') ?? text(node);
 
 const idOf = (node: Element) => node.getAttribute('data-testid') ?? '';
+
+/** The plants shown selected, by name. */
+export const selectedPlants = (host: Element) =>
+  [...host.querySelectorAll('[data-testid="field-plant"][aria-selected="true"]')].map(nameOf);
+
+/** The foot's one card as a reader reads it: which card, its line (the counts, or the chosen verse and its stage), and its controls' names. */
+export const footOf = (host: Element) => {
+  const card = host.querySelector(
+    '[data-testid="foot"] [data-testid="begin-card"],[data-testid="foot"] [data-testid="chosen"]',
+  );
+  return {
+    card: card?.getAttribute('data-testid') ?? '<none>',
+    line: text(card?.querySelector('[data-testid="counts"]') ?? card?.firstElementChild),
+    controls: [...(card?.querySelectorAll(CONTROLS) ?? [])].map(nameOf),
+  };
+};
 
 /** Whether a reader may have to scroll to `node`: a plant, a furrow's `Remove …` and the `Add verses` row. */
 const listed = (node: Element) =>
@@ -350,7 +366,7 @@ export const mount = async (
     ),
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice: voiceSource,
-  }).pipe(Layer.provide(Layer.merge(clockOf(time), Logger.layer([]))));
+  }).pipe(Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);
   const faults: string[] = [];

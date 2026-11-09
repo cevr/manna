@@ -41,7 +41,7 @@ import { store } from '../store';
 import { voiceSource } from '../voice/source';
 import type { FieldSeen } from './choose-model';
 import { faintIn, labelOf, plantFaults, text } from './chooser-rig';
-import { clockOf } from './clock';
+import { clockOf, type Time } from './clock';
 import { homeFaults, scrolled } from './field-rig';
 import { lookFaults } from './look';
 import { KEY } from './passages-model';
@@ -206,15 +206,20 @@ const storeFailing = (passageReads: number) =>
     }),
   ).pipe(Layer.provide(store));
 
-/** The root over the device's disk as it stands, its passages' key failing `passageReads` reads; `unread` is whether the model reads the passages as `Unread`; `beside` renders next to the root under the same registry. Every frame is held to the rules and the faults kept. */
-export const mountBar = async (passageReads: number, unread: boolean, beside: ReactNode = null) => {
+/** The root over the device's disk as it stands, its passages' key failing `passageReads` reads; `unread` is whether the model reads the passages as `Unread`; `beside` renders next to the root under the same registry; the runtime's clock reads `time` (the host's while `time.now` is null). Every frame is held to the rules and the faults kept. */
+export const mountBar = async (
+  passageReads: number,
+  unread: boolean,
+  beside: ReactNode = null,
+  time: Time = { now: null },
+) => {
   const layer = appLayer({
     source: scriptedSource(recite(passage.text, { skip: [], every: 5, pace: 3 })),
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
     store: storeFailing(passageReads),
     chime: Layer.succeed(Chime, Chime.of({ grow: () => Effect.void })),
     voice: voiceSource,
-  }).pipe(Layer.provideMerge(Layer.merge(clockOf({ now: null }), Logger.layer([]))));
+  }).pipe(Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);
   const faults: string[] = [];
