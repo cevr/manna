@@ -852,11 +852,12 @@ class Walk {
     this.ending = null;
   }
 
-  /** States sent while the sheet is open on home: a return makes the plan again under it, and the sheet stays. */
+  /** States sent while the sheet is open on home: a return makes the plan again under it, and the sheet stays; a return whose plan moves home's counts is noted (`wake:sheet-return-differs`). */
   async sheetAway() {
     const app = this.screen;
     this.time.now += pickOf(this.next, GAPS[this.steer]);
     const states = this.next() < 0.75 ? returnOf(this.next) : quietOf(this.next);
+    const before = JSON.stringify(this.expectOf(this.run).counts);
     const returns = await this.states(states, false);
     const counts = JSON.stringify(this.expectOf(this.run).counts);
     if (!(await app.until(() => modalOf() !== null && JSON.stringify(homeCounts(app)) === counts)))
@@ -864,6 +865,7 @@ class Walk {
         `states ${states.join(',')} with the sheet open: sheet ${modalOf() !== null}, home showed ${JSON.stringify(homeCounts(app))}, expected ${counts}`,
       );
     bump(this.coverage, returns > 0 ? 'wake:sheet-return' : 'wake:sheet-quiet');
+    if (returns > 0 && counts !== before) bump(this.coverage, 'wake:sheet-return-differs');
   }
 
   /** A Minutes trip the reader's way: `Your field`, the gear, now and then states sent with the sheet open, `<n> min`, `Done`, then `Begin` and Today, or home's done state. */

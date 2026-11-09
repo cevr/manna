@@ -2267,7 +2267,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     under it checked before `Done`; one trip in five sends host states
     with the sheet open (a return that makes the plan again under the
     sheet, or a sequence that is none), the sheet still shown and home's
-    counts line under it the model's. A recital listening or finishing is
+    counts line under it the model's; `returns.test.tsx` floors a return
+    under the open sheet whose new plan moves home's counts
+    (`wake:sheet-return-differs`). A recital listening or finishing is
     followed by the trip once it ends: a Minutes making under a recital,
     which no reader reaches, is `test:session-cells`'. An unread launch
     offers no `Settings`, `Voice` or Minutes, and every tap of an absent
