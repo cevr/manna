@@ -209,7 +209,7 @@ export type Resolve = (user: string, from: string) => Option.Option<string>;
 export interface Workspace {
   readonly records: ReadonlyMap<string, ModuleRecord>;
   readonly resolve: Resolve;
-  /** Whether `file` is code that uses its imports for real (not a test, a fixture or a lint rule). */
+  /** Whether `file` is code that uses its imports for real: product code or a lint plugin, not a test, a fixture or a type check. */
   readonly consumes: (file: string) => boolean;
   /** Whether `file`'s exports are checked. */
   readonly checked: (file: string) => boolean;
