@@ -15,7 +15,8 @@
  * outside the scroll view, then each line over its choice (the minutes
  * read, the voice read, the appearance read) and `About`; the sheet holds
  * its look after a flip of the system, `Done` closes it, and nothing is
- * written. A failed read of a key is the walk's (`walk-*.test.tsx`), whose
+ * written. In the first launch the sheet's `About` then shows About with
+ * no radio group and no foot of its own, and its way back shows home. A failed read of a key is the walk's (`walk-*.test.tsx`), whose
  * store fails a key's read.
  */
 
@@ -36,6 +37,7 @@ import {
   modalOf,
   openSettings,
   sheetFaults,
+  tapInSheet,
   watchSheet,
 } from '../test/settings-rig';
 import type { Scheme } from '../theme';
@@ -235,6 +237,22 @@ describe('Settings', () => {
 
       expect(await closeSettings(rig, 'Done')).toBe(true);
       expect(sheetOf()).toBe('closed');
+      if (row === ROWS[0]) {
+        await openSettings(rig);
+        expect(await tapInSheet('About')).toBe(true);
+        expect(
+          await rig.until(() => text(rig.host.querySelector('[role="heading"]')) === 'About'),
+        ).toBe(true);
+        expect({
+          groups: rig.host.querySelectorAll('[role="radiogroup"]').length,
+          aboutFoot: document.querySelectorAll('[data-testid="about-foot"]').length,
+          sheet: sheetOf(),
+        }).toEqual({ groups: 0, aboutFoot: 0, sheet: 'closed' });
+        await rig.tap('Your field');
+        expect(
+          await rig.until(() => text(rig.host.querySelector('[role="heading"]')) === 'Your field'),
+        ).toBe(true);
+      }
       sheet.stop();
       expect({
         rig: rig.faults,
