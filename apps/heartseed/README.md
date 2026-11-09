@@ -1114,7 +1114,17 @@ session (verify-heartseed, `features/home.md`).
   collection, a harp for a psalm, a lamp for a proverb, else a scroll), its
   ripe count (`<k> of <n> ripe`, its plants at full corn) and each plant's
   stage, ready mark and label (`<reference>, <stage>`, then
-  `, ready today`). `HomeIcon` names the icons hshomeicons draws.
+  `, ready today`). `HomeIcon` names the icons the home draws.
+- **Icons** (`src/home/icons.ts`, `assets/home/`). Each `HomeIcon` (add,
+  blade, bow, corn, ear, harp, lamp, moon, scroll, seed, sun) is a
+  hand-drawn 48 × 48 master, `assets/home/<name>.svg` (the ten of the
+  Sideshow's set and a moon in their manner), drawn for each scheme as
+  `<name>-light.png` and `<name>-dark.png` (App icon and launch screen).
+  `ICON_IMAGES[name][scheme]` is the PNG's import, an asset id under One,
+  typed `number` by the `.d.png.ts` beside it; a name added without its
+  two PNGs fails the typecheck. They are 144 px, so a screen draws them at
+  48 pt or less. The probe shows all 22 and how many loaded
+  (`home-icons`); no screen a reader sees draws one yet (hshomefield).
 - **Ready** (`readyOf(plan, garden)`, `src/home.ts`): the verses (a
   phrase's folded in) of the plan's items not done; none before a plan, and
   a visit marks nothing.
@@ -1434,6 +1444,20 @@ and both launch screens' artwork are drawn from it by `bun run icon`
 - **Checking a build.** `.claude/skills/verify-heartseed/features/app-icon.md`
   reads the build's asset catalog and Info.plist; the icon on a home screen
   is the owner's look on his phone.
+- **The home's icons** are drawn the same way, by `bun run home-icons`
+  (`scripts/home-icons.ts`), with no react-native-svg. Each master in
+  `assets/home/` is written in Palette A's hexes; `masters` in
+  `src/theme.ts` maps each to the role it is drawn as, `kept` names the
+  gold family's two shades drawn as written, and any other colour token
+  fails the draw (`UnmappedColour`). Each scheme's recoloured master
+  becomes a 144 × 144 PNG on a transparent ground (`density: 216`), with
+  its `.d.png.ts` beside it. Redraw after editing a master, `masters`,
+  `kept` or a role the masters use, and commit the PNGs: `test:home-icons`
+  holds every one byte for byte to what the script draws now. A new name
+  needs its master, a `HomeIcon` and a line of `ICON_IMAGES`. The dev
+  server serves the PNGs through One's asset registry, so no native
+  rebuild is needed for them; whether a release build bundles them is
+  hsship's to prove.
 
 ## Look
 
@@ -1486,9 +1510,18 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   under `app/probe/` are left out of it.
 - **The roles.** Every fill is a role of the scheme (`ground`, `card`,
   `soft`, the opaque `hearing`, the field's `gold`, `leaf`, `greenEar`,
-  `soil`) and the one translucent fill is `pulse`; every text is `ink`,
-  `quiet`, `miss` or `onInk` (on an ink fill: the big button, a chosen
-  pill or grade, `Plant`), at WCAG AA on what lies behind it.
+  `soil`, `furrow`, and `sun`) and the one translucent fill is `pulse`;
+  every text is `ink`, `quiet`, `miss`, `sun` (the day's gold ink, on the
+  ground or a card) or `onInk` (on an ink fill: the big button, a chosen
+  pill or grade, `Plant`), at WCAG AA on what lies behind it. `furrow` is
+  the soil's second line (the field's dashed row, the icons' bodies), 45 %
+  of the way from the ground to `soil`. `sun` is the home's greeting and
+  its ready dot: `gold` measures 1.97:1 on the light ground, under the
+  3:1 a meaningful mark needs, and the prototype's gold 3.75:1, under
+  text's 4.5:1, so the light `sun` is a darker gold (4.88:1) and the dark
+  one is `gold` itself. `src/theme.test.ts` gives every role a use (a
+  text on its grounds, a ground, or decoration and why), so a role added
+  with none is red.
 - **Text under an opacity.** A pressed control (`useLook().pressed` from
   `src/sayit/draw.tsx`: the missed word's mark, the pills and radios, the
   bars' backs, the field's and Today's links, the chooser's picks and
@@ -1519,7 +1552,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   `src` parts run with `src/test/setup.ts` as the preload (react-native-web
   for `react-native`, the bundled passage for `virtual:heartseed-passage`,
   the corpus for `virtual:heartseed-kjv`, the licence for
-  `virtual:heartseed-licence`, a happy-dom document); `test:infra`, `test:handbook-build` and `test:mirror` run with none.
+  `virtual:heartseed-licence`, a happy-dom document); `test:infra`, `test:handbook-build`, `test:icon`, `test:home-icons`, `test:home-pixels` and `test:mirror` run with none.
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
   - `test:hear`: `src/matcher` (the sounds-alike table's bounds, and each
@@ -2009,12 +2042,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     and of others, a reload): its module calls, the events it forwards and
     each speak's state after every step.
   - `test:theme`: `src/theme.test.ts`, the brand's colours (`src/theme.ts`):
-    every role of brand C in light and dark, the icon's colours and the
-    face pinned; `ink`, `quiet` and `miss` on the ground, a card and the
-    heard word, and `onInk` on the ink, each at least 4.5:1 unrounded in
-    both schemes, as are the icon's mark on its ground and the launch
-    screen's ink on its ground; and the heard word the ground moved 22 %
-    (light) or 25 % (dark) toward the glow.
+    every role of brand C in light and dark, the icon's colours, the home
+    icons' `masters` and `kept` and the face pinned; every role given a use
+    (text on its grounds, a ground, or decoration and why), the table's
+    roles exactly each scheme's and its text roles exactly `TEXT_ROLES`;
+    each text role on each of its grounds (`ink`, `quiet` and `miss` on the
+    ground, a card and the heard word, `sun` on the ground and a card,
+    `onInk` on the ink) at least 4.5:1 unrounded in both schemes, as are the
+    icon's mark on its ground and the launch screen's ink on its ground;
+    `furrow` the ground moved 45 % toward `soil`; `masters`' keys lower-case
+    hexes of roles and none in `kept`; and the heard word the ground moved
+    22 % (light) or 25 % (dark) toward the glow.
   - `test:look`: `src/look.test.tsx`, the scheme and the themed styles
     (`src/look.tsx`): every value React Native can name read as dark or
     light, a probe following each flip of the system with no tap, each
@@ -2068,6 +2106,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     (the corpus's derivation and its build faults, and the plugin's two
     modules) and `vite/lexicon.test.ts` (the pronunciation list as the
     plugin serves it). It leaves `scripts/icon.test.ts` to `test:icon`,
+    `scripts/home-icons.test.ts` to `test:home-icons`,
+    `scripts/home-pixels.test.ts` to `test:home-pixels`,
     `vite/devbundle.test.ts` to `test:devbundle` and `scripts/handbook`
     to `test:handbook-build`.
   - `test:handbook-build`: `scripts/handbook`, with no preload: the
@@ -2105,6 +2145,23 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `vite/devbundle.slow.test.ts` in `test:slow`, starts `one dev` on a
     free port of 8280-8289 and asks it for a Debug build's iOS bundle,
     which must answer 200 with Hermes bytecode.
+  - `test:home-icons`: `scripts/home-icons.test.ts`, with no preload:
+    `assets/home` holds exactly each `ICON_IMAGES` name's master, two PNGs
+    and two declarations; each master 48 × 48 on no fill with every colour
+    mapped or kept; `recolour` against a rule written in the test over 400
+    seeded texts (each master hex in any case, the kept ones, random
+    six-digit hexes, three-, four- and eight-digit tokens, a bare `#`,
+    filler; both schemes, floors on clean and unmapped texts); the table
+    naming each PNG; each declaration the script's `DECLARATION`; each PNG
+    144 × 144 with four channels; and every committed PNG byte for byte
+    what `bun run home-icons` draws now.
+  - `test:home-pixels`: `scripts/home-pixels.test.ts`, with no preload, an
+    oracle apart from the script: each PNG's colours are its master's
+    tokens through `src/theme.ts`'s `masters`, `kept` and its scheme's
+    roles. Each is at least 40 % transparent, shows each expected colour
+    exactly in at least 40 opaque pixels, has at most 12 seen pixels more
+    than 3 from every blend of two expected colours, and fails the exact
+    floor against the other scheme's colours.
   - `test:mirror`: `infra`, the mirror's stack, with no preload:
     `infra/models/plan.test.ts` (the list, the keys, the headers and the
     plan's keep, upload and conflict), `infra/models/voice-pack.test.ts`

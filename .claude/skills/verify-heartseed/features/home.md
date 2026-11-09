@@ -7,7 +7,8 @@ the field holds, the shelves Add verses will offer, and Start here, a tap on
 a verse that makes it the session's visit. No screen a reader sees draws
 them yet (hshomefield onward). The development probe
 (`apps/heartseed/app/probe/home.tsx`, in a development build only) shows them as text over the live garden, passages and session,
-one line each, and begins the session once the garden is read, as Today
+one line each, then the home's icons as images with a count of those
+loaded, and begins the session once the garden is read, as Today
 does. Its one button, `Start with <reference>`, starts the first plant (in
 furrow order) that `startOf` offers. Nothing it does writes the store.
 
@@ -18,10 +19,13 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   their kinds, icons and ripe counts, each plant's label, the counts of
   the plan, the lists and the shelves; `Start with Isaiah 41:10` makes the
   verse the visit, and Today would show it.
+- `home-icons`: the same probe loads every one of the home's icons
+  (`src/home/icons.ts`, 11 names in light and dark, 22 PNGs) through One's
+  asset registry, and says how many loaded.
 - Planned, not yet drivable (the later units of the home, split.md):
   `home-furrows`, `home-dot`, `home-start`, `home-begin`, `home-open`,
   `home-back`, `home-need`, `home-relaunch`, `home-settings`, `home-add`,
-  `home-end`, `home-icons`.
+  `home-end`.
 
 ## How to get to it (user POV)
 
@@ -71,12 +75,27 @@ JavaScript comes from the dev server.
 
    → `visit Isaiah 41:10 fresh false` and `today shows Isaiah 41:10`.
 
-4. Regression: `field.md`'s `field-first` and `field-back` on the same
+4. `home-icons`:
+
+   ```bash
+   sim open probe/home --expect "label=icons loaded 22 of 22"
+   sim snapshot home-icons
+   ```
+
+   → the text `icons loaded 22 of 22`, no node starting `icons failed`,
+   and 22 nodes named `icon <name> <scheme>`, one for each of add, blade,
+   bow, corn, ear, harp, lamp, moon, scroll, seed and sun in `light` and in
+   `dark` (record the role the snapshot gives them, expected `image`); the
+   `home-probe` lines of step 2 still as listed there.
+
+5. Regression: `field.md`'s `field-first` and `field-back` on the same
    install pass unchanged.
-5. Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
+6. Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
 
 Red on base: `sim open probe/home --expect "label=Home probe"` times out
-(`ReadinessTimedOut`): base has no such route.
+(`ReadinessTimedOut`): base has no such route. For `home-icons`, the
+`--expect "label=icons loaded 22 of 22"` times out on a base whose probe has
+no icon lines.
 
 Report only the lines named above and the reference; delete the
 `snapshots` folder.
@@ -91,6 +110,12 @@ Report only the lines named above and the reference; delete the
 - On the day of a planting there is no new piece, so the started visit's
   `fresh` is false whether it came from the plan's review item (the seed
   due) or from a review of the plant's recalls (nothing open).
+- `icons loaded` counts each `<name> <scheme>` once, however often its
+  image reloads, so a count short of 22 that never moves is a PNG One's
+  asset registry did not serve; an `icons failed` line names it. A dev
+  bundle that fails to load at all (before hsdevbundle) shows neither.
 - What the simulator cannot show, the tests own: the greeting at other
   hours and in other zones, a phrase start, Start here landing on Today,
-  the shelves sheet and `Plant`, the end of a run, and every icon.
+  the shelves sheet and `Plant`, the end of a run, and how each icon looks:
+  its colours and contrast as drawn (`test:home-pixels`, `test:theme`), the
+  dark set under a dark system and its sharpness at 48 pt on a 3× screen.
