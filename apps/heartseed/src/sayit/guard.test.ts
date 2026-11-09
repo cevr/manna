@@ -17,13 +17,14 @@
  *   pill and Listen alone (`voiceView`, `cycleVoice`, `listenTo` and
  *   `readingAloud` from `src/app.ts`) and reads aloud only through
  *   `listenTo`; the first minute's hear phase and Today's Listen are the
- *   voice's two readers. Only `src/app.ts` and the natural voice's
+ *   voice's two readers, beside the light probe (`app/probe/light.tsx`),
+ *   a development probe. Only `src/app.ts` and the natural voice's
  *   development probe (`app/probe/natural.tsx`) build the voice.
  * - Today's hold on the words of a reading under way grows its voice atoms
  *   by `seekTo`, `holdReading` and `letGo`, which come only from
- *   `src/app.ts`: only Today takes them, and hands them to its reading
- *   view (`src/reading/view.tsx`), and no other source seeks, pauses or
- *   resumes the voice itself.
+ *   `src/app.ts`: only Today and the light probe take them, and hand them
+ *   to the reading view (`src/reading/view.tsx`), and no other source
+ *   seeks, pauses or resumes the voice itself.
  * - A word lit is felt by a soft tick: the app's one call of One's haptics
  *   is `impact('soft')`, in Say it's live parts.
  *
@@ -208,7 +209,7 @@ describe('Say it aloud', () => {
     expect(code('app/index.tsx')).toContain('useAtomSet(listenTo)');
   });
 
-  it('leaves reading aloud to the first minute’s hear phase and Today’s Listen: only src/first takes the hear phase’s reading atoms from src/app.ts, only Today takes Listen and the pill, and only src/app.ts and the natural voice’s development probe build the voice', () => {
+  it('leaves reading aloud to the first minute’s hear phase, Today’s Listen and the light probe: only src/first takes the hear phase’s reading atoms from src/app.ts, only Today and the light probe take Listen, only Today takes the pill, and only src/app.ts and the natural voice’s development probe build the voice', () => {
     const takers = (atoms: readonly string[]) =>
       SOURCES.filter((source) =>
         importsOf(source).some(
@@ -217,9 +218,13 @@ describe('Say it aloud', () => {
         ),
       );
     expect(takers(['listen', 'hush'])).toEqual(['src/first/screen.tsx']);
-    expect(takers(['voiceView'])).toEqual(['app/index.tsx', 'src/first/screen.tsx']);
+    expect(takers(['voiceView'])).toEqual([
+      'app/index.tsx',
+      'app/probe/light.tsx',
+      'src/first/screen.tsx',
+    ]);
     expect(takers(['cycleVoice'])).toEqual(['app/index.tsx']);
-    expect(takers(['listenTo', 'readingAloud'])).toEqual(['app/index.tsx']);
+    expect(takers(['listenTo', 'readingAloud'])).toEqual(['app/index.tsx', 'app/probe/light.tsx']);
     const builders = SOURCES.filter(
       (source) =>
         !source.startsWith('src/voice') &&
@@ -230,7 +235,7 @@ describe('Say it aloud', () => {
     expect(builders).toEqual(['app/probe/natural.tsx', 'src/app.ts']);
   });
 
-  it('grows Today’s voice atoms by the hold’s seekTo, holdReading and letGo, from src/app.ts alone: only Today takes them (its reading view is handed them), and no other source seeks, pauses or resumes the voice', () => {
+  it('grows Today’s voice atoms by the hold’s seekTo, holdReading and letGo, from src/app.ts alone: only Today and the light probe take them (the reading view is handed them), and no other source seeks, pauses or resumes the voice', () => {
     const app = code('src/app.ts');
     expect(HOLD.filter((name) => app.includes(`export const ${name} = runtime.fn(`))).toEqual(HOLD);
     const takers = SOURCES.filter((source) =>
@@ -238,11 +243,13 @@ describe('Say it aloud', () => {
         ({ from, names }) => /(^|\/)app$/.test(from) && names.some((name) => HOLD.includes(name)),
       ),
     );
-    expect(takers).toEqual(['app/index.tsx']);
-    const today = importsOf('app/index.tsx')
-      .filter(({ from }) => /(^|\/)app$/.test(from))
-      .flatMap(({ names }) => names.filter((name) => HOLD.includes(name)));
-    expect(today.toSorted()).toEqual(HOLD.toSorted());
+    expect(takers).toEqual(['app/index.tsx', 'app/probe/light.tsx']);
+    for (const taker of takers) {
+      const taken = importsOf(taker)
+        .filter(({ from }) => /(^|\/)app$/.test(from))
+        .flatMap(({ names }) => names.filter((name) => HOLD.includes(name)));
+      expect(taken.toSorted()).toEqual(HOLD.toSorted());
+    }
     const voiceOwners = (source: string) =>
       source === 'src/app.ts' ||
       source === 'src/voice.ts' ||
