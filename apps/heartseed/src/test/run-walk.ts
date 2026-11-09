@@ -18,12 +18,18 @@
  * does when the field is taken in the done state. On Today each launch runs
  * commands chosen by the screen the model expects: at Say
  * it a heard recital (a word skipped or not), an unheard one, a refused
- * write, a Minutes tap while a recital listens, a Minutes tap, the field
- * and back, a wait; at Next, Next, Again, a peek, a Minutes tap, the field
- * and a wait; at the done state a wait, a Minutes tap and the field.
+ * write, a cancelled one, a recital then a Minutes trip with its item still
+ * held, a Minutes trip, the field and back, a wait; at Next, Next, Again, a
+ * peek, a Minutes trip, the field and a wait; at the done state a wait, a
+ * Minutes trip and the field. A Minutes trip is the reader's: `Your field`,
+ * home's Settings sheet, `<n> min` there, `Done`, then `Begin` when home
+ * offers it, else the launch ends on home's done state. An unread launch
+ * offers no Minutes and no Settings, which the walk checks in place of a
+ * trip. The making while a recital listens or finishes, which no reader can
+ * reach, is `src/session/cells.property.test.ts`'s.
  *
  * The oracle is `src/test/run-model.ts` over `src/test/session-model.ts`'s
- * plan, made at home's first show and at each Minutes tap: after every
+ * plan, made at home's first show and at each trip's `<n> min` tap: after every
  * step the reference shown, the action, the counts line, each word of the
  * verse as its cue draws it, shown and named (the new piece whole, a
  * review's first letters or empty slots by the ladder, a held recital's own
@@ -64,11 +70,12 @@ import {
   type Launch,
 } from './run-rig';
 import { rootFaults } from './root-rule';
+import { closeSettings, modalOf, openSettings, tapInSheet, watchSheet } from './settings-rig';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
 import { hostZone, offsetIn, restore, travel, ZONES } from './zone';
 import { MINUTES_KEY } from '../session/service';
 
-/** Which commands a walk leans toward: the run through whole plans, the hold's moments, the edges (the first minute, unread launches, the done state), the recital's endings (cancelled, finishing, and a Minutes tap after one that kept nothing), or the cells (a Minutes tap aimed at each ending, moment and placing of the held item, `CELLS`). */
+/** Which commands a walk leans toward: the run through whole plans, the hold, the edges (the first minute, unread launches, the done state), the recital's endings (cancelled, and a Minutes trip after one that kept nothing), or the cells (a Minutes trip aimed at each ending and placing of the held item after its recital, `CELLS`). */
 export type Steer = 'run' | 'hold' | 'edges' | 'end' | 'cells';
 
 /** Whether a steer leans to the hold: more pieces in more groups, long pieces, now and then a crowded device. */
@@ -278,61 +285,38 @@ const verseSeen = (host: Element, piece: TextPiece) => {
 /** How a recital ends: heard and kept, unheard, heard with its write refused, or cancelled while it listens. */
 type How = 'heard' | 'unheard' | 'refused' | 'cancelled';
 
-/** A Minutes tap during a recital: while it listens, or while it finishes (its end held back). */
-interface During {
-  readonly at: 'listening' | 'finishing';
-  readonly minutes: number;
-}
-
-/** When a Minutes tap comes around a recital: while it listens, while it finishes, or after it ended, its item still held. */
-type Moment = 'listening' | 'finishing' | 'after';
-
-/** Whether the plan a Minutes tap makes shows another item first than the held one (`moved`, the done state included) or the held one (`kept`). */
+/** Whether the plan a Minutes trip makes shows another item first than the held one (`moved`, the done state included) or the held one (`kept`). */
 type Placed = 'moved' | 'kept';
 
-/** One cell of a Minutes tap around a recital: how the recital ended, when the tap came, and where the new plan puts the held item. */
+/** One cell of a Minutes trip after a recital, its item still held: how the recital ended, and where the new plan puts the held item. */
 interface Cell {
   readonly key: string;
   readonly how: How;
-  readonly moment: Moment;
   readonly placed: Placed;
 }
 
-const cellKey = (moment: Moment, how: How, placed: Placed) => `cell:${moment}:${how}:${placed}`;
-
-/** The order a walk aims at open cells in: a tap during a recital that keeps nothing first (the item stays shown, its cells open still), then any other (the item's hold let go or its recall kept, the walk moves on). */
-const rankOf = (cell: Cell) => (cell.how === 'heard' || cell.moment === 'after' ? 1 : 0);
+const cellKey = (how: How, placed: Placed) => `cell:after:${how}:${placed}`;
 
 /**
- * Every cell of (ending × moment × placed) a walk reaches, each a floor of
- * the endings' part. A cancel comes while a recital listens, so a cancelled
- * recital has no finishing moment; a recall just kept is not due at its own
+ * Every cell of (ending × placed) a walk reaches after a recital, each a
+ * floor of the cells' part. A recall just kept is not due at its own
  * instant, so a plan made right after a heard recital never shows its item
- * first again.
+ * first again. The cells of a making while a recital listens or finishes
+ * are `src/session/cells.property.test.ts`'s.
  */
 export const CELLS: readonly Cell[] = (['heard', 'unheard', 'refused', 'cancelled'] as const)
   .flatMap((how) =>
-    (['listening', 'finishing', 'after'] as const).flatMap((moment) =>
-      (['moved', 'kept'] as const).map((placed) => ({
-        key: cellKey(moment, how, placed),
-        how,
-        moment,
-        placed,
-      })),
-    ),
+    (['moved', 'kept'] as const).map((placed) => ({ key: cellKey(how, placed), how, placed })),
   )
-  .filter(
-    (cell) =>
-      !(cell.how === 'cancelled' && cell.moment === 'finishing') &&
-      !(cell.how === 'heard' && cell.moment === 'after' && cell.placed === 'kept'),
-  );
+  .filter((cell) => !(cell.how === 'heard' && cell.placed === 'kept'));
 
 /**
  * How often each command is chosen at Say it, by steer: a recital heard
- * (now and then refused), unheard, refused, cancelled (now and then after a
- * Minutes tap while it listens), any of them with a Minutes tap while it
- * listens or finishes, a Minutes tap, the field, else a wait; and how
- * often a Minutes tap comes first, right after a recital that kept nothing.
+ * (now and then refused), unheard, refused, cancelled (now and then
+ * followed by a Minutes trip), a recital of any ending followed by a
+ * Minutes trip with its item still held (`during`), a Minutes trip, the
+ * field, else a wait; and how often a Minutes trip comes first, right after
+ * a recital that kept nothing.
  */
 const AT_SAY_IT: Record<
   Steer,
@@ -434,8 +418,6 @@ class Walk {
   ending: Exclude<How, 'heard'> | null = null;
   /** How the held item's last recital ended, any ending, until a making or Next lets the hold go. */
   heldEnd: How | null = null;
-  /** Where the plan made by a Minutes tap during the recital under way put its held item. */
-  placedDuring: Placed | null = null;
   app: Launch | null = null;
   /** Whether the launch under way ended on home's done state. */
   ended = false;
@@ -677,8 +659,8 @@ class Walk {
     await app.until(() => !app.has('Listening'));
   }
 
-  /** A recital of the shown item: heard (a word skipped or not), unheard, heard with its write refused, or cancelled while it listens; with a Minutes tap while it listens or while it finishes when `during` is given. */
-  async say(how: How, during?: During) {
+  /** A recital of the shown item: heard (a word skipped or not), unheard, heard with its write refused, or cancelled while it listens. */
+  async say(how: How) {
     const app = this.screen;
     const shown = this.unread ? (this.pieces[0] ?? null) : shownModel(this.run, this.recallsNow);
     if (shown === null) return;
@@ -695,49 +677,29 @@ class Walk {
     const startedAt = this.time.now;
     const cue = this.cueNow(piece);
     if (!this.unread) this.run = startedModel(this.run, this.recallsNow);
-    this.placedDuring = null;
-    await this.recital(how, during);
+    await this.recital(how);
     const key = how === 'heard' ? this.expectRecall(piece, startedAt) : null;
     this.result = how === 'unheard' ? 'alert' : how === 'cancelled' ? null : 'grades';
     this.ending = how === 'heard' ? null : how;
-    this.endedHeld(how, during);
+    this.heldEnd = this.unread ? null : how;
     bump(this.coverage, `say:${this.unread ? 'unread' : how}`);
     if (skip.length > 0) bump(this.coverage, 'say:skipped');
     this.tallyShown(piece, 'fresh' in shown && !this.unread ? shown.fresh : null);
-    await this.settle(
-      `say ${how}${during === undefined ? '' : ` with ${during.minutes} min while ${during.at}`}`,
-    );
+    await this.settle(`say ${how}`);
     this.faults.refuse = false;
     if (key !== null) this.checkRecall(key, piece, skip.length === 0 ? cue : null);
   }
 
-  /** Notes how the held item's recital ended, and tallies the cell a Minutes tap during it reached. */
-  endedHeld(how: How, during: During | undefined) {
-    this.heldEnd = this.unread ? null : how;
-    if (during !== undefined && this.placedDuring !== null)
-      bump(this.coverage, cellKey(during.at, how, this.placedDuring));
-  }
-
-  /** The taps of one recital: Say it, then a cancel while it listens, or Listening, which finishes it; a Minutes tap while it listens or, its end held back, while it finishes, when `during` says. */
-  async recital(how: How, during: During | undefined) {
+  /** The taps of one recital: Say it, then a cancel while it listens, or Listening, which finishes it. */
+  async recital(how: How) {
     const app = this.screen;
     await app.tap('Say it');
     if (!(await app.until(() => app.has('Listening')))) throw new Error('never listened');
-    if (during?.at === 'listening') await this.heldMinutes(during);
     if (how === 'cancelled') {
       await app.cancel();
       return;
     }
-    if (during?.at !== 'finishing') {
-      await app.tap('Listening');
-      return;
-    }
-    app.deferEnd();
     await app.tap('Listening');
-    if (!(await app.until(() => app.status() === 'finishing'))) throw new Error('never finishing');
-    await this.heldMinutes(during);
-    if (app.status() !== 'finishing') throw new Error('finished before its end was sent');
-    await app.release();
   }
 
   /** The cue the model says `piece` is recited under now: its garden's in a read launch, none claimed in an unread one. */
@@ -763,24 +725,6 @@ class Walk {
     bump(this.coverage, `kept:cue:${cue ?? 'any'}`);
   }
 
-  /** A Minutes tap while the held item's recital listens or finishes: the plan made again, the hold kept. */
-  async heldMinutes(during: During) {
-    const before = this.run.hold;
-    await this.tapMinutes(during.minutes, true);
-    const plan = this.run.plan ?? [];
-    bump(this.coverage, 'held:minutes');
-    bump(this.coverage, `held:minutes:${during.at}`);
-    if (before === null) return;
-    const at = plan.findIndex((item) => item.reference === before.reference);
-    bump(
-      this.coverage,
-      at < 0 ? 'held:minutes:left-out' : at === 0 ? 'held:minutes:first' : 'held:minutes:later',
-    );
-    const first = shownModel({ ...this.run, hold: null }, this.recallsNow);
-    this.placedDuring = first?.reference === before.reference ? 'kept' : 'moved';
-    if (first?.reference !== before.reference) bump(this.coverage, 'made:held-not-first');
-  }
-
   /** Tallies the piece said: long or one word, and the new piece or a review. */
   tallyShown(piece: TextPiece, fresh: boolean | null) {
     if (piece.words >= 60) bump(this.coverage, 'shown:long');
@@ -788,47 +732,118 @@ class Walk {
     if (fresh !== null) bump(this.coverage, fresh ? 'shown:fresh' : 'shown:review');
   }
 
-  async tapMinutes(minutes: number, underWay = false) {
+  /**
+   * A Minutes trip the reader's way, from Today: `Your field`, home held to
+   * the plan as it was, the gear, `<n> min` in the sheet (the making, at
+   * that tap, with no recital under way), the radio checked and home's
+   * counts line under the sheet the new plan's, `Done`, home held to the
+   * new plan, then `Begin` when the model shows an item. Every frame of the
+   * sheet is held by `watchSheet`. Answers whether Today shows again; when
+   * not, the launch is left on home's done state for the caller to end.
+   */
+  async tapMinutes(minutes: number) {
     const before = this.run.hold;
     const wasDone = this.run.plan !== null && shownModel(this.run, this.recallsNow) === null;
     const app = this.screen;
-    await app.tap(`${minutes} min`, 'radio');
-    this.minutes = minutes;
-    this.expected.set(MINUTES_KEY, String(minutes));
-    if (!this.unread && this.run.plan !== null)
-      this.run = madeModel(this.run, this.planNow(), underWay);
-    const counts = this.expect().counts;
-    const checked = () =>
-      app.host
-        .querySelector(`[role="radio"][aria-label="${minutes} min"]`)
-        ?.getAttribute('aria-checked') === 'true';
-    await app.until(() => checked() && JSON.stringify(app.counts()) === JSON.stringify(counts));
-    await app.until(() => false, 5);
-    if (this.unread) return;
-    if (!underWay && before !== null) {
+    const step = `${minutes} min`;
+    if (!(await app.tap('Your field')))
+      throw new Error(`after ${this.log.join(' > ')} > ${step}: no Your field`);
+    if (
+      !(await app.until(
+        () =>
+          app.headings().join('|') === 'Your field' &&
+          homeCounts(app).length > 0 &&
+          app.has('Settings'),
+      ))
+    )
+      throw new Error(
+        `after ${this.log.join(' > ')} > ${step}: no home with Settings, saw ${app.headings().join('|') || 'pending'}`,
+      );
+    this.onHome(shownModel(this.run, this.recallsNow) !== null);
+    const watch = watchSheet();
+    try {
+      await openSettings(app);
+      if (!(await tapInSheet(step))) throw new Error(`no ${step} in the sheet`);
+      this.minutes = minutes;
+      this.expected.set(MINUTES_KEY, String(minutes));
+      if (this.run.plan !== null) this.run = madeModel(this.run, this.planNow(), false);
+      const counts = JSON.stringify(this.expect().counts);
+      const checked = () =>
+        modalOf()
+          ?.querySelector(`[role="radio"][aria-label="${step}"]`)
+          ?.getAttribute('aria-checked') === 'true';
+      if (!(await app.until(() => checked() && JSON.stringify(homeCounts(app)) === counts)))
+        throw new Error(
+          `${step} not checked with the plan's counts, home showed ${JSON.stringify(homeCounts(app))}, expected ${counts}`,
+        );
+      if (!(await closeSettings(app, 'Done'))) throw new Error('the sheet stayed after Done');
+    } catch (error) {
+      watch.stop();
+      throw new Error(`after ${this.log.join(' > ')} > ${step}: ${String(error)}`, {
+        cause: error,
+      });
+    }
+    watch.stop();
+    if (watch.faults.length > 0 || watch.frames.looked === 0)
+      throw new Error(
+        `after ${this.log.join(' > ')} > ${step}: sheet ${watch.faults.join('; ') || 'faultless'}, its look checked on ${watch.frames.looked} frames`,
+      );
+    bump(this.coverage, 'settings:minutes');
+    this.tallyMade(before, wasDone);
+    const offers = shownModel(this.run, this.recallsNow) !== null;
+    this.log.push(`${step}, Done`);
+    this.onHome(offers);
+    if (!offers) return false;
+    if (!(await app.tap('Begin'))) throw new Error(`after ${this.log.join(' > ')}: no Begin`);
+    return true;
+  }
+
+  /** Tallies a making by a Minutes trip: the hold it let go (after which ending, and where the new plan put the held item), and the done state it reached or left. */
+  tallyMade(before: RunModel['hold'], wasDone: boolean) {
+    if (before !== null) {
       bump(this.coverage, 'made:drops-hold');
       if (this.result === 'alert') bump(this.coverage, 'made:drops-hold:unheard');
       if (this.ending !== null) bump(this.coverage, `minutes:after:${this.ending}`);
       if (this.heldEnd !== null) {
         const placed =
           shownModel(this.run, this.recallsNow)?.reference === before.reference ? 'kept' : 'moved';
-        bump(this.coverage, cellKey('after', this.heldEnd, placed));
+        bump(this.coverage, cellKey(this.heldEnd, placed));
       }
       this.result = null;
     }
-    if (!underWay) {
-      this.ending = null;
-      this.heldEnd = null;
-    }
+    this.ending = null;
+    this.heldEnd = null;
     const shown = shownModel(this.run, this.recallsNow);
     if (shown === null) bump(this.coverage, 'done:after-minutes');
     else if (wasDone) bump(this.coverage, 'minutes:appears');
   }
 
-  async minutesTap() {
-    await this.tapMinutes(pickOf(this.next, MINUTES));
+  /** A Minutes trip at `minutes`, then Today settled, or home's done state, which ends the launch. */
+  async minutesTrip(minutes: number, step: string) {
+    const today = await this.tapMinutes(minutes);
     bump(this.coverage, 'minutes');
-    await this.settle('minutes');
+    if (!today) return this.homeDone(step);
+    await this.settle(step);
+  }
+
+  async minutesTap() {
+    await this.minutesTrip(pickOf(this.next, MINUTES), 'minutes');
+  }
+
+  /** In an unread launch, in place of a trip: no Settings, no `<n> min` radio and no Minutes group show (sq4 a). */
+  async minutesNone() {
+    const app = this.screen;
+    const found = MINUTES.map((each) => `${each} min`).filter(
+      (label) => app.has(label) || app.has(label, 'radio'),
+    );
+    if (
+      app.has('Settings') ||
+      found.length > 0 ||
+      app.host.querySelector('[role="radiogroup"][aria-label="Minutes"]') !== null
+    )
+      throw new Error(`after ${this.log.join(' > ')}: a Minutes or Settings on an unread garden`);
+    bump(this.coverage, 'minutes:none-unread');
+    await this.settle('no minutes, unread');
   }
 
   async nextTap() {
@@ -902,7 +917,7 @@ class Walk {
     const roll = this.next();
     if (this.unread) {
       if (roll < 0.7) return this.say(this.next() < 0.8 ? 'heard' : 'unheard');
-      return this.minutesTap();
+      return this.minutesNone();
     }
     const action = actionModel(this.run, this.recallsNow);
     if (action === 'Say it') return this.atSayIt(steer, roll);
@@ -910,7 +925,7 @@ class Walk {
     return this.atDone(roll);
   }
 
-  /** Leaning to the hold: a recital with a Minutes tap while it listens or finishes, at the fewest minutes whose plan leaves the shown item out, when one does; none otherwise. */
+  /** Leaning to the hold: a heard recital, then a Minutes trip with its item still held at the fewest minutes whose plan leaves the shown item out, when one does; none otherwise. */
   guided(roll: number) {
     const shown = shownModel(this.run, this.recallsNow);
     if (shown === null) return null;
@@ -924,13 +939,10 @@ class Walk {
     if (leaves === undefined) return null;
     bump(this.coverage, 'guide:left-out');
     if (roll >= 0.8) return null;
-    return this.say('heard', {
-      at: this.next() < 0.5 ? 'listening' : 'finishing',
-      minutes: leaves,
-    });
+    return this.sayThenMinutes('heard', leaves);
   }
 
-  /** Where the plan a Minutes tap at `minutes` makes now puts `shown`: first again (`kept`) or not (`moved`), the plants and the clock as they are. */
+  /** Where the plan a Minutes trip at `minutes` makes now puts `shown`: first again (`kept`) or not (`moved`), the plants and the clock as they are. */
   placedAt(shown: { readonly reference: string }, minutes: number): Placed {
     const was = this.minutes;
     this.minutes = minutes;
@@ -942,11 +954,12 @@ class Walk {
   }
 
   /**
-   * Leaning to the endings: a recital aimed at a cell no tap has reached
-   * yet, with the minutes whose plan places the shown item as the cell asks
-   * (a heard recital's tap after its end is moved whatever the minutes, its
-   * recall just kept); none when no open cell is reachable here. The cell
-   * tallied is the one the tap reached, read from the model at the tap.
+   * Leaning to the endings: a recital aimed at a cell no trip has reached
+   * yet, then a Minutes trip at the minutes whose plan places the shown
+   * item as the cell asks (a heard recital's trip is moved whatever the
+   * minutes, its recall just kept); none when no open cell is reachable
+   * here, `moved` cells first. The cell tallied is the one the trip
+   * reached, read from the model at its tap.
    */
   aimed() {
     const shown = shownModel(this.run, this.recallsNow);
@@ -954,26 +967,17 @@ class Walk {
     const reach = CELLS.flatMap((cell) => {
       if ((this.coverage[cell.key] ?? 0) > 0) return [];
       const minutes = MINUTES.filter(
-        (each) =>
-          (cell.how === 'heard' && cell.moment === 'after') ||
-          this.placedAt(shown, each) === cell.placed,
+        (each) => cell.how === 'heard' || this.placedAt(shown, each) === cell.placed,
       );
-      return minutes.length === 0 ? [] : [{ cell, minutes, rank: rankOf(cell) }];
+      return minutes.length === 0 ? [] : [{ cell, minutes }];
     });
-    const moved = reach.filter(
-      (each) =>
-        each.cell.placed === 'moved' &&
-        !(each.cell.how === 'heard' && each.cell.moment === 'after'),
-    );
+    const moved = reach.filter((each) => each.cell.placed === 'moved' && each.cell.how !== 'heard');
     const open = moved.length > 0 ? moved : this.next() < 0.5 ? reach : [];
-    const first = Math.min(...open.map((each) => each.rank));
-    const ranked = open.filter((each) => each.rank === first);
-    const aim = ranked[below(this.next, ranked.length)];
+    const aim = open[below(this.next, open.length)];
     if (aim === undefined) return null;
     const minutes = aim.minutes[below(this.next, aim.minutes.length)] ?? this.minutes;
     bump(this.coverage, 'aim');
-    if (aim.cell.moment === 'after') return this.sayThenMinutes(aim.cell.how, minutes);
-    return this.say(aim.cell.how, { at: aim.cell.moment, minutes });
+    return this.sayThenMinutes(aim.cell.how, minutes);
   }
 
   /** Whether a walk leaning to the cells has met every cell, its commands done. */
@@ -981,33 +985,32 @@ class Walk {
     return steer === 'cells' && CELLS.every((cell) => (this.coverage[cell.key] ?? 0) > 0);
   }
 
-  /** A recital ended `how`, then a Minutes tap at `minutes` while its item is still held. */
+  /** A recital ended `how`, then a Minutes trip at `minutes` while its item is still held. */
   async sayThenMinutes(how: How, minutes: number) {
     await this.say(how);
     if (this.run.hold === null) return;
-    await this.tapMinutes(minutes);
-    bump(this.coverage, 'minutes');
-    await this.settle(`minutes ${minutes}`);
+    await this.minutesTrip(minutes, `minutes ${minutes}`);
   }
 
-  /** A Minutes tap during a recital, at `at`: 2 minutes often (most often leaning to the hold), else any. */
-  during(at: During['at'], steer: Steer): During {
+  /** The minutes of a trip right after a recital: 2 minutes often (most often leaning to the hold), else any. */
+  heldMinutesOf(steer: Steer) {
     const two = this.next() < (crowds(steer) ? 0.7 : 0.5);
-    return { at, minutes: two ? 2 : pickOf(this.next, MINUTES) };
+    return two ? 2 : pickOf(this.next, MINUTES);
   }
 
-  /** A recital cancelled while it listens, after a Minutes tap there now and then. */
+  /** A recital cancelled while it listens, followed now and then by a Minutes trip with its item still held. */
   sayCancelled(steer: Steer) {
-    return this.say('cancelled', this.next() < 0.4 ? this.during('listening', steer) : undefined);
+    if (this.next() < 0.4) return this.sayThenMinutes('cancelled', this.heldMinutesOf(steer));
+    return this.say('cancelled');
   }
 
-  /** A recital heard, unheard or refused, with a Minutes tap while it listens or while it finishes. */
+  /** A recital heard, unheard or refused, then a Minutes trip with its item still held. */
   sayDuring(steer: Steer) {
     const how = this.next() < 0.6 ? 'heard' : this.next() < 0.5 ? 'unheard' : 'refused';
-    return this.say(how, this.during(this.next() < 0.5 ? 'listening' : 'finishing', steer));
+    return this.sayThenMinutes(how, this.heldMinutesOf(steer));
   }
 
-  /** At Say it: a Minutes tap now and then right after a recital that kept nothing, else a recital of any ending (with a Minutes tap while it listens or finishes, now and then), a Minutes tap, the field or a wait. */
+  /** At Say it: a Minutes trip now and then right after a recital that kept nothing, else a recital of any ending (followed by a Minutes trip with its item still held, now and then), a Minutes trip, the field or a wait. */
   async atSayIt(steer: Steer, roll: number) {
     const guided = steer === 'hold' ? this.guided(roll) : null;
     if (guided !== null) return guided;
@@ -1151,7 +1154,7 @@ const LEANS: Record<Steer, string> = {
   hold: 'the hold',
   edges: 'the edges',
   end: 'the recital’s endings',
-  cells: 'a Minutes tap around each ending, the held item moved or kept',
+  cells: 'a Minutes trip after each ending, the held item moved or kept',
 };
 
 /** The floors of `floors` that `coverage` misses; `zones` asks for at least that many zones. */

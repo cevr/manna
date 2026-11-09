@@ -204,6 +204,7 @@ export const wakeLaunch = async (
     foreground: foregroundOf(host),
     store: gatedStore(gate),
     voice: start.voice?.layer,
+    choicesOnToday: true,
   });
   start.voice?.bind(() => app.listens.n);
   const frame = () => {

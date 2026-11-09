@@ -3,21 +3,20 @@
  * hold's moments (`src/test/run-walk.ts`): the field and back with a hold
  * and with none, a relaunch with a hold, unheard and refused recitals, long
  * pieces, and reviews under first letters and empty slots, at the first
- * show and after Next.
+ * show and after Next. This part runs the walk's first device,
+ * `src/run/relaunch-b.test.tsx` its second.
  */
 
 import { walkCase } from '../test/run-walk';
 
-walkCase('hold', 25, 2, [
+walkCase('hold', 27, 1, [
   'field:held',
   'field:none',
   'relaunch:held',
   'say:unheard',
-  'say:refused',
   'shown:long',
   'kept:cue:none',
   'cue:review:initials',
   'cue:review:none',
-  'next:review:initials',
   'next:review:none',
 ]);
