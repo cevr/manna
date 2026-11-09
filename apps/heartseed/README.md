@@ -2086,6 +2086,21 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     tap) and the counts line against the models, and `shownOf` the held
     item, else the visit's first not done, else the plan's
     (`src/test/promise-model.ts`).
+  - `test:session-cells`: `src/session/cells.property.test.ts`, a Minutes
+    making while the held item's recital listens or finishes, which no
+    reader reaches from the screen (the Settings sheet is on home alone):
+    generated devices over `appLayer` (four to six short pieces in two
+    groups, or a crowded garden, planted weeks back, 10 or 20 minutes
+    stored, in a zone of `ZONES`), each round Say it through `pressToday`
+    over the real Dictation and SayIt and a scripted recognizer, a
+    `Session.choose` while it listens or finishes, the recital ended heard,
+    unheard, refused by the store or cancelled, then `Next`; after every
+    step the plan (`planModel` at the making), the hold (kept under way,
+    `src/test/run-model.ts`) and `shownOf` the held item with its own
+    piece, else the model's first open item, else `Done`, and a recall
+    kept exactly when heard. Its floors are the 14 cells of moment, ending
+    and placing (`moved` or `kept` by the new plan with no hold), and the
+    making's place for the held item (first, left out, not first).
   - `test:run`: Today's run through `src/test/run-rig.tsx` (pieces given
     to `appLayer`, a recognizer that hears the text a test names, at once
     or held back while the recital finishes, Dictation's cancel, refused
