@@ -38,8 +38,8 @@ paints are the unit tests' (`apps/heartseed/src/look/`,
   shows `system light`, `scheme light`, `ground #f1f0e6` and
   `face ui-rounded`; with the probe shown, the appearance set to dark
   shows `system dark`, `scheme dark` and `ground #142420` with no tap.
-- `appearance-choice`: with the simulator's appearance dark, from Today
-  `Your field`, `About`: a raw snapshot shows the radio group's three
+- `appearance-choice`: with the simulator's appearance dark, from home
+  `About`: a raw snapshot shows the radio group's three
   radios `System`, `Light`, `Dark` with `System` checked; a tap of `Light`
   → `Light` checked, and the probe shows `system dark`, `stored light`,
   `native light`, `scheme light` and `ground #f1f0e6`.
@@ -50,7 +50,7 @@ paints are the unit tests' (`apps/heartseed/src/look/`,
 ## How to get to it (user POV)
 
 - A reader who never chooses follows the phone's appearance, set in
-  Settings (or Control Centre). From Today, `Your field`, `About`, then
+  Settings (or Control Centre). From home, `About`, then
   `System`, `Light` or `Dark` in About's foot. The probe is a developer's
   link, not a reader's.
 
@@ -62,12 +62,12 @@ Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them, and
 build of the head's native code serves; the JavaScript comes from the dev
 server.
 
-1. `first.md` steps 1-7, to `first-today`.
+1. `first.md` steps 1-7, to `first-home`.
 2. `appearance-system`, light:
 
    ```bash
    xcrun simctl ui <udid> appearance light
-   sim open / --expect "id=session"
+   sim open / --expect "id=counts"
    sim open probe/theme --expect "label=scheme light"
    sim snapshot appearance-light
    ```
@@ -89,8 +89,7 @@ server.
 4. `appearance-choice`, the simulator still dark:
 
    ```bash
-   sim open / --expect "id=session"
-   sim tap "label=Your field"
+   sim open / --expect "id=counts"
    sim tap "label=About"
    agent-device snapshot --json --raw --observe-only --force-full --session verify-heartseed
    sim tap "label=Light"
@@ -108,10 +107,9 @@ server.
 
    ```bash
    sim relaunch
-   sim open / --expect "id=session"
+   sim open / --expect "id=counts"
    sim open probe/theme --expect "label=scheme light"
-   sim open / --expect "id=session"
-   sim tap "label=Your field"
+   sim open / --expect "id=counts"
    sim tap "label=About"
    sim tap "label=System"
    sim open probe/theme --expect "label=scheme dark"
@@ -129,7 +127,7 @@ delete the `snapshots` folder and the raw snapshots.
 
 ## Gotchas
 
-- **A link that launches the app lands on Today** (`dictation.md`,
+- **A link that launches the app lands on home** (`dictation.md`,
   Gotchas): open `/` first, then the probe.
 - `xcrun simctl ui <udid> appearance` changes the whole simulator's
   appearance, which outlives the drive: always put it back to light.

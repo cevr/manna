@@ -18,7 +18,8 @@ listens.
 At the top of the scroll view, above the reference, the counts line
 (`id=session`) says what the session holds: `<n> to tend`, `1 new`,
 `about <k> min`, joined by `·`, or `Nothing to tend now`. It never counts
-the backlog. The plan is made when Today first shows in a launch, again
+the backlog; home's foot shows the same line (`id=counts`). The plan is
+made when home or Today first shows in a launch, again
 at each Minutes tap, at each return to the foreground with no recital
 under way (`wake.md`), and at each landed add or remove of a passage
 (`passage.md`). An item is done once its piece (a verse or a phrase,
@@ -33,17 +34,20 @@ minute's alone recital (the replay suggests Hard), the passage is due again
 
 ## Sub-features
 
-Every row runs from `first.md`'s `first-today`. `PLANTED` is the local time
-of `first-planted`.
+Every row runs from `first.md`'s `first-home`. `PLANTED` is the local time
+of `first-planted`. After the first minute home offers no `Begin` (the
+done state), so these rows reach Today by `Start here with Isaiah 41:10`
+(tap `Isaiah 41:10, seed` first), whose visit leaves the counts line the
+plan's.
 
 - `session-first`: Today after the first minute shows the group `Minutes`
   with four radios `2 min`, `5 min`, `10 min` and `20 min`, `5 min` alone
   checked, the button `Voice` valued `Her`, and `Nothing to tend now`. No
   snapshot of the first minute (`first-launch` to `first-planted`) holds
   `Minutes`, `Voice`, `to tend` or `Nothing to tend`.
-- `session-header`: in a raw snapshot of `first-today`, each radio and the
-  `Voice` button lies wholly inside the window, above the counts line (`id=session`;
-  Today is the done state, so no `Isaiah 41:10` shows), and clear of the
+- `session-header`: in a raw snapshot of that Today, each radio and the
+  `Voice` button lies wholly inside the window, above the counts line
+  (`id=session`, above the visit's `Isaiah 41:10`), and clear of the
   bottom safe area. A tap on `10 min` with no scroll checks it. The same
   tap while the recap and the grade row show is `run.md`'s `run-recite`
   state.
@@ -68,17 +72,18 @@ Voice): the choice row's key ends in `choice`, the old switch row's in
 - `session-listening`: moved into `run.md`'s `run-listening`, after the
   wait.
 - `session-due`: replaced by `run.md`'s `run-due`: 7 minutes after
-  `PLANTED`, a Minutes tap makes the plan, with no relaunch needed (a
-  relaunch still works). The evening rule stays: a planting from 18:00 to
+  `PLANTED`, a relaunch makes the plan and home offers `Begin` (a Minutes
+  tap on Today works too). The evening rule stays: a planting from 18:00 to
   03:59 local shows `Nothing to tend now` until 04:00 the next morning.
 - `session-tend`: replaced by `run.md`'s `run-recite` and `run-next`: the
   recital leaves `Next`, and `Next` the done state, never `Say it`.
-- `session-field`: `Your field`, then `Today`, leaves the counts line as it
-  was, and the done state with it.
+- `session-field`: Today's `Your field` shows home's foot with the same
+  counts line, and no `Begin` in the done state.
 
 ## How to get to it (user POV)
 
-- Go through the first minute and tap `Continue`. The header shows the
+- Go through the first minute and tap `Continue`, then a plant and
+  `Start here` (or `Begin` once a verse is due). Today's header shows the
   minutes and the voice, and the line under it shows what to tend.
 
 ## Driving it
@@ -93,8 +98,10 @@ sets them.
 1. `first.md` steps 1-6. Before each of `first-launch`, `first-letters`,
    `first-alone` and `first-planted`, check the snapshot for
    `session-first`'s absences. Note `PLANTED` (`date`).
-2. `session-first` and `session-header`: `first.md` step 7 (`first-today`),
-   then:
+2. `session-first` and `session-header`: `first.md` step 7 (`first-home`),
+   then `sim tap "label=Isaiah 41:10, seed"`,
+   `sim tap "label=Start here with Isaiah 41:10"`,
+   `sim open / --expect "id=session"`, `sim snapshot session-first`, and:
    - check the snapshot for the nodes above;
    - take a raw snapshot (`agent-device snapshot --json --raw --observe-only
      --force-full --session verify-heartseed`) and read the rects of the
@@ -103,15 +110,18 @@ sets them.
    - `sim tap "label=10 min"`, then `sim snapshot session-header` →
      `10 min` checked.
 3. `session-choose`: two `sim tap "label=Voice"` (Her → Him → Off),
-   `sim tap "label=20 min"`, `sim relaunch`, `sim open / --expect "id=session"`,
+   `sim tap "label=20 min"`, `sim relaunch`, `sim open / --expect "id=counts"`
+   (home), `sim tap "label=Isaiah 41:10, seed"`,
+   `sim tap "label=Start here with Isaiah 41:10"`,
+   `sim open / --expect "id=session"`,
    `sim snapshot session-choose` and a raw snapshot → `20 min` checked,
    `Voice` valued `Off`, `Nothing to tend now`. Turn the voice back to
-   `Her` with one `sim tap "label=Voice"`, and pick `5 min` again
-   (`run.md`'s `run-due` taps the checked `5 min`).
+   `Her` with one `sim tap "label=Voice"`, and pick `5 min` again (the
+   tap drops the visit: Today's done state).
 4. (`session-listening` is `run.md`'s `run-listening`.)
-5. `session-field`: `sim tap "label=Your field"`, `sim tap "label=Today"`,
-   `sim snapshot session-field` → the counts line as in step 3, and no
-   `Say it`.
+5. `session-field`: `sim tap "label=Your field"`,
+   `sim snapshot session-field` → the heading `Your field`, the foot's
+   counts line as in step 3, and no `Begin`.
 6. `session-due` and `session-tend` are `run.md`'s `run-due`, `run-recite`
    and `run-next`: go on with `run.md`, Driving it, from step 3.
 
@@ -129,20 +139,23 @@ its `value`), and the store from a copy, as `field.md`'s `field-record`
 does (`sqlite3 -readonly` on the copy, never the container): `SELECT key,
 value FROM one_kv WHERE key LIKE 'heartseed/voice/%'`.
 
-1. Base half, from B (`sim boot` there): `first.md` steps 1-7 to
-   `first-today`; tap the old switch off with `agent-device press
+1. Base half, from B (`sim boot` there): B's `first.md` steps 1-7, whose
+   `Continue` opens Today there; tap the old switch off with `agent-device press
    'role=switch label="Voice"' --settle --session verify-heartseed` in the
    drive's HOME (there `sim tap "label=Voice"` fails `AMBIGUOUS_MATCH`:
    the switch's text node is labelled `Voice` too); a store copy → the old
    switch row `false` and no choice row; `sim down`.
 2. `voice-migrate`, from the head: `sim boot`, `sim relaunch`,
+   `sim open / --expect "id=counts"` (home), `sim tap "label=Isaiah 41:10,
+   seed"` (by its full label once it ends `, ready today`),
+   `sim tap "label=Start here with Isaiah 41:10"`,
    `sim open / --expect "id=session"`; a raw snapshot and a store copy →
    `Voice` valued `Off`, no choice row. `sim tap "label=Voice"`; a raw
    snapshot and a store copy → `Her`, the choice row `her`, the old switch
    row still `false`.
 3. `voice-cycle`: three `sim tap "label=Voice"`, a raw snapshot after each
-   → `Him`, `Off`, `Her`; one more tap, `sim relaunch`,
-   `sim open / --expect "id=session"`, a raw snapshot and a store copy →
+   → `Him`, `Off`, `Her`; one more tap, `sim relaunch`, and Today again
+   as in step 2, a raw snapshot and a store copy →
    `Him`, the choice row `him`. Two taps bring it back to `Her`.
 4. Then `session-choose` (step 3 above) runs from here.
 

@@ -5,9 +5,11 @@ reader's local hour, the furrows (one per row of the field, each its list's
 kind, icon and ripe count, each plant's stage and ready mark), the lists
 the field holds, the shelves Add verses will offer, and Start here, a tap on
 a verse that makes it the session's visit. The field
-(`apps/heartseed/src/field/screen.tsx`, `field.md`), still reached from
-Today's `Your field`, draws them in home A's layout: in a bar fixed above
-the scroll view `Today` and `Add verses` (`id=add-verses`); in the scroll
+(`apps/heartseed/src/field/screen.tsx`, `field.md`) is the app's home:
+every launch on a read garden opens it, and so does the first minute's
+`Continue`; Today's `Your field` leads back to it. It draws them in home
+A's layout: in a bar fixed above the scroll view `When I need…` (once a
+plan is made in this launch) and `Add verses` (`id=add-verses`); in the scroll
 view the greeting (`Good morning`, `Good afternoon` or `Good evening`,
 with a sun or a moon), the heading `Your field`, the days sown and the
 harvest, the hint, one furrow per row (its icon, title, ripe count
@@ -36,30 +38,42 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
 - `home-icons`: the same probe loads every one of the home's icons
   (`src/home/icons.ts`, 11 names in light and dark, 22 PNGs) through One's
   asset registry, and says how many loaded.
+- `home-open`: the first minute's `Continue` opens home in the done
+  state: the heading `Your field`, the greeting, `Nothing to tend now`
+  with no `Begin`, `When I need…` and `Add verses` in the bar; no Today.
 - `home-furrows`: the field shows the greeting by the hour, the own
   furrow `Isaiah 41:10` (`0 of 1 ripe`) with the plant button
   `Isaiah 41:10, seed`, the `Protection & Fear` furrow (`0 of 14 ripe`)
   with 14 plant buttons not planted, `Nothing to tend now` and `About` in
-  the foot with no `Begin`, and `Add verses` in the bar and as a row.
+  the foot with no `Begin`, `When I need…` in the bar, and `Add verses`
+  in the bar and as a row.
 - `home-choose`: a tap on a plant chooses it (`Isaiah 41:10 · a seed`
   and `Start here with Isaiah 41:10`), a second tap lets it go, and a
   verse not planted offers no `Start here` on the day of a planting.
 - `home-start`: `Start here with Isaiah 41:10` opens Today on that verse.
+- `home-back`: Today's `Your field` (shown `‹ Your field`) leads to home,
+  the choice gone and `Begin` in the foot while the visit is open; Today
+  holds no `When I need…`.
 - `home-begin`: with the started visit open the foot offers `Begin`,
   which opens Today on it.
-- `home-add-places`: the bar's `Add verses` opens the chooser.
+- `home-need`: the bar's `When I need…` opens When I need…, whose
+  `Your field` leads back to home; a known promise there opens Today on
+  it.
+- `home-add-places`: the bar's `Add verses` opens the chooser, whose
+  `Your field` leads back to home.
 - `home-dot`: a seed at its due after a `Minutes` tap shows on the field
   as `Isaiah 41:10, seed, ready today`, with `1 to tend · about 1 min` and
   `Begin`, and starts there.
+- `home-relaunch`: a relaunch opens home, with the greeting and the
+  foot's counts line, never Today.
 - Planned, not yet drivable (the later units of the home, split.md):
-  `home-open`, `home-back`, `home-need`, `home-relaunch`, `home-settings`,
-  `home-add`, `home-end`.
+  `home-settings`, `home-add`, `home-end`.
 
 ## How to get to it (user POV)
 
 - None: a reader never sees the probe. A drive opens it by its link
   (Driving it, step 2).
-- The field: from Today, tap `Your field`; tap `Today` to come back.
+- The field: every launch opens on it; from Today, tap `Your field`.
 
 ## Driving it
 
@@ -68,7 +82,7 @@ Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them, and
 home's rules: `--app` with a build of the head's native code serves; the
 JavaScript comes from the dev server.
 
-1. `first.md` steps 1-7, to `first-today`.
+1. `first.md` steps 1-7, to `first-home`.
 2. `home-probe`:
 
    ```bash
@@ -131,9 +145,16 @@ no icon lines.
 On an install of its own (the probe's `Start with` leaves a visit, which
 puts `Begin` in the field's foot), with the same variables:
 
-1. `first.md` steps 1-7, to `first-today`; note `PLANTED` (`date`) and
+1. `first.md` steps 1-6, to `first-planted`; note `PLANTED` (`date`) and
    `date +%H%M`.
-2. `home-furrows`: `sim tap "label=Your field"`,
+2. `home-open`: `sim tap "label=Continue"`,
+   `sim open / --expect "id=counts"`, `sim snapshot home-open` → the
+   heading `Your field`; the greeting by `date +%H%M`, as `home-furrows`
+   takes it; in the foot `Nothing to tend now`, no `Begin`, and `About`;
+   the buttons `When I need…` and two `Add verses`, and the button
+   `Isaiah 41:10, seed`; no heading `Today`, no button `Today`, no
+   `Say it`, no label starting `Stage:`.
+3. `home-furrows`: on the same screen,
    `sim snapshot home-furrows` → the heading `Your field`; the text
    `Good morning` (0400-1159 by `date +%H%M`), `Good afternoon`
    (1200-1759) or `Good evening` (take `date` again when within a minute
@@ -142,9 +163,10 @@ puts `Begin` in the field's foot), with the same variables:
    button `Isaiah 41:10, seed`; the text `Protection & Fear`, the text
    `0 of 14 ripe` and 14 buttons ending `, not planted`; `1 day sown`;
    `0 verses at full corn`; in the foot `Nothing to tend now`, no `Begin`,
-   and `About`; the buttons `Today` and two `Add verses`; no `Today`
-   heading, no `Say it`, no label starting `Stage:`.
-3. `home-choose`: `sim tap "label=Isaiah 41:10, seed"`,
+   and `About`; the buttons `When I need…` and two `Add verses`; no
+   `Today` heading, no button `Today`, no `Say it`, no label starting
+   `Stage:`.
+4. `home-choose`: `sim tap "label=Isaiah 41:10, seed"`,
    `sim snapshot home-choose` → the text `Isaiah 41:10 · a seed`, the
    button `Start here with Isaiah 41:10`, no `Begin` (record how the
    snapshot shows the plant's selection: `selected` or nothing). Then
@@ -154,37 +176,56 @@ puts `Begin` in the field's foot), with the same variables:
    `sim snapshot home-choose-unplanted` → the text
    `Psalms 91:1 · not planted yet` and no label starting `Start here` (no
    new piece on the day of a planting).
-4. `home-start`: `sim tap "label=Isaiah 41:10, seed"` (the choice moves),
-   `sim tap "label=Start here with Isaiah 41:10"`,
-   `sim snapshot home-start` → the heading `Today`, the reference
-   `Isaiah 41:10`, `Say it`, `Stage: seed`.
-5. `home-begin`: `sim tap "label=Your field"`, `sim snapshot home-begin` →
-   `Nothing to tend now` and `Begin` in the foot (the started visit is
-   open); `sim tap "label=Begin"`, `sim snapshot home-begin-today` → the
-   heading `Today`, `Isaiah 41:10`, `Say it`.
-6. `home-add-places`: `sim tap "label=Your field"`,
+5. `home-start` and `home-back`: `sim tap "label=Isaiah 41:10, seed"`
+   (the choice moves), `sim tap "label=Start here with Isaiah 41:10"`,
+   `sim snapshot home-back-today` → the heading `Today`, the reference
+   `Isaiah 41:10`, `Say it`, `Stage: seed`, a button `Your field`, and no
+   `When I need…`. Then `sim tap "label=Your field"`,
+   `sim snapshot home-back` → the heading `Your field`, no text
+   `Isaiah 41:10 · a seed` (the choice gone), and `Nothing to tend now`
+   and `Begin` in the foot (the started visit is open).
+6. `home-begin`: `sim tap "label=Begin"`, `sim snapshot home-begin-today`
+   → the heading `Today`, `Isaiah 41:10`, `Say it`.
+7. `home-need`: `sim tap "label=Your field"`, `sim tap "label=When I need…"`,
+   `sim snapshot home-need` → the heading `When I need…`, a button
+   `Your field`, a button `Isaiah 41:10`, and no button `Today`. Then
+   `sim tap "label=Your field"` → the heading `Your field`. Then
+   `sim tap "label=When I need…"`, `sim tap "label=Isaiah 41:10"`,
+   `sim snapshot home-need-visit` → the heading `Today`, `Isaiah 41:10`
+   and `Say it`.
+8. `home-add-places`: `sim tap "label=Your field"`,
    `sim tap "id=add-verses"` → the heading `Add a passage`;
    `sim tap "label=Your field"` → the heading `Your field` again.
-7. `home-dot`, only when `PLANTED` was 0400-1759 local (an evening
+9. `home-dot`, only when `PLANTED` was 0400-1759 local (an evening
    planting is due the next morning; otherwise record
-   `Nothing to tend now` and skip, as `run.md` step 3 does):
-   `sim tap "label=Today"`, wait until 7 minutes after `PLANTED`,
-   `sim tap "label=5 min"` (the plan made again; the idle visit dropped),
-   `sim tap "label=Your field"`, `sim snapshot home-dot` → the button
+   `Nothing to tend now` and skip, as `run.md` step 3 does): wait until 7
+   minutes after `PLANTED`, `sim tap "label=Isaiah 41:10, seed"`,
+   `sim tap "label=Start here with Isaiah 41:10"` (Today, where the
+   Minutes radios are), `sim tap "label=5 min"` (the plan made again; the
+   idle visit dropped), `sim tap "label=Your field"`,
+   `sim snapshot home-dot` → the button
    `Isaiah 41:10, seed, ready today`, `1 to tend · about 1 min` and
    `Begin` in the foot; `sim tap "label=Isaiah 41:10, seed, ready today"`,
    `sim tap "label=Start here with Isaiah 41:10"`, `sim snapshot
    home-dot-start` → the heading `Today`, `Isaiah 41:10` and `Say it`.
-8. Regression on the same install: `field.md`'s `field-first` and
-   `field-back` (the plants as buttons), and `about.md`'s way to About
-   from the foot. Then `sim doctor` (record `head` and `timingsHold`) and
-   `sim down`.
+10. `home-relaunch`: `sim relaunch`, `sim open / --expect "id=counts"`,
+    `sim snapshot home-relaunch` → the heading `Your field`, the greeting,
+    the foot's counts line, and no heading `Today`.
+11. Regression on the same install: `field.md`'s `field-first`,
+    `field-control` and `field-back` (the plants as buttons), and
+    `about.md`'s way to About from the foot. Then `sim doctor` (record
+    `head` and `timingsHold`) and `sim down`.
 
-Red on base: no `0 of 1 ripe`, no `Add verses` and the plant an image,
-not a button (`home-furrows`); the plant's tap opens nothing
-(`home-choose`); `sim tap "label=Start here with Isaiah 41:10"` not found
-(`home-start`); no `Begin` (`home-begin`); no `id=add-verses`
-(`home-add-places`); no label ending `, ready today` (`home-dot`).
+Red on base (`81f8866ad`, before the app opened on home): `Continue`
+opens Today (`id=session`), and `--expect "id=counts"` times out
+(`home-open`, `home-relaunch`); Today offers `When I need…`
+(`home-back`); the field's bar has no `When I need…`, and When I need…'s
+back is `Today` (`home-need`). Red before the field took home A's layout:
+no `0 of 1 ripe`, no `Add verses` and the plant an image, not a button
+(`home-furrows`); the plant's tap opens nothing (`home-choose`);
+`sim tap "label=Start here with Isaiah 41:10"` not found (`home-start`);
+no `Begin` (`home-begin`); no `id=add-verses` (`home-add-places`); no
+label ending `, ready today` (`home-dot`).
 
 Report only the lines named above and the reference; delete the
 `snapshots` folder.

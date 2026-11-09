@@ -26,7 +26,7 @@ prints six lines, counts only, never a word of a verse: `sections <n>`,
   `ranges 2529`, `verses 3542`, `resolved 3542` and `missing 0`.
 - `handbook-quiet` (live, regression): the field's rows are unchanged
   (`promise.md`'s `promise-field`: `Protection & Fear` with 14 verses), no
-  row titled by a Handbook list, and Today unchanged.
+  row titled by a Handbook list, and home unchanged.
 - `handbook-tests-only` (tests only): the generator's rules and the app's
   view of the data (`test:handbook-build`, `test:handbook`;
   `apps/heartseed/README.md`, The Handbook lists).
@@ -43,11 +43,11 @@ Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them, and
 installed Debug build of `verify-heartseed`, or `--app` with a build of the
 head's native code, serves; the JavaScript comes from the dev server.
 
-1. `first.md` steps 1-7, to `first-today`.
+1. `first.md` steps 1-7, to `first-home`.
 2. `handbook-probe`:
 
    ```bash
-   sim open / --expect "id=session"
+   sim open / --expect "id=counts"
    sim open probe/handbook --expect "label=resolved 3542"
    sim snapshot handbook-probe
    ```
@@ -58,13 +58,11 @@ head's native code, serves; the JavaScript comes from the dev server.
 3. `handbook-quiet`:
 
    ```bash
-   sim open / --expect "id=session"
-   sim snapshot handbook-today
-   sim tap "label=Your field"
+   sim open / --expect "id=counts"
    sim snapshot handbook-field
    ```
 
-   → Today as `first.md`'s `first-today`; the field's rows titled
+   → home as `first.md`'s `first-home`; the field's rows titled
    `Isaiah 41:10` then `Protection & Fear`, 14 nodes
    `<reference>, not planted` in the second, and no other row.
 
@@ -75,7 +73,7 @@ Report the probe's lines, the rows' titles and the counts only; delete the
 
 ## Gotchas
 
-- **A link that launches the app lands on Today** (`dictation.md`,
+- **A link that launches the app lands on home** (`dictation.md`,
   Gotchas): open `/` first, then the probe.
 - The probe reads every chapter its verses name once, on the device; it
   shows after the bundle loads, with no wait of its own.

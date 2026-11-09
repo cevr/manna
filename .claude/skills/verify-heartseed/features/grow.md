@@ -54,7 +54,8 @@ passage's due: every row below starts from `run.md`'s `run-due`, at
 ## How to get to it (user POV)
 
 - Go through the first minute, tap `Continue`, come back once the verse is
-  due, then on Today tap `Say it` and read the stage line under the verse.
+  due, tap home's `Begin`, then on Today tap `Say it` and read the stage
+  line under the verse.
 
 ## Driving it
 
@@ -84,11 +85,13 @@ With `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them:
    pending frame shows the reference) and at once
    `sim snapshot grow-restart-launch` → no `Stage: not planted` and no
    `Stage:` other than the store's in that frame (the launch-frame probe),
-   no `Grew to`. Then `sim open / --expect "id=session"`,
-   `sim snapshot grow-restart` → no `Grew to`, no grade, and the done state,
-   or the passage's stage line and `Say it` when the counts line reads
-   `1 to tend`. A store that failed to open shows no counts line at all
-   here, and that fails this row.
+   no `Grew to`. Then `sim open / --expect "id=counts"`,
+   `sim snapshot grow-restart` → home: no `Grew to`, no grade, and the
+   done state (no `Begin`), or `Begin` when the counts line reads
+   `1 to tend`; then `sim tap "label=Begin"`,
+   `sim snapshot grow-restart-today` → the passage's stage line and
+   `Say it`. A store that failed to open opens Today with no counts line
+   at all, so the open times out, and that fails this row.
 7. `grow-again`: `run.md` step 7 (`run-second`) → `Stage: ear`,
    `Grew to an ear.`; two play lines. Then, before its `Next`, `sim tap
    "label=Again"`, `sim snapshot grow-again-graded` → `Stage: seed`, no

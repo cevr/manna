@@ -19,10 +19,12 @@ one promise in three phases, then the seed:
 3. `Say it alone`: no word shows, and none is in the accessibility tree,
    before it is said. Its finished recital is kept in the garden.
 4. `Planted`, once the garden's read holds that recall: `Stage: seed`, the
-   seed drawn large, and `Continue`, which opens Today at a seed.
+   seed drawn large, and `Continue`, which opens home (the field) in the
+   done state.
 
 Until the read completes the launch shows only the reference: no heading,
-no button. An unread garden, or one holding any verse's recall, opens Today.
+no button. A garden holding any verse's recall opens home; an unread
+garden opens Today, with no `Your field`.
 A relaunch mid-flow starts again at `Hear it`: nothing of the flow is stored
 but the one recall. There is no sign-up and no setting.
 
@@ -47,17 +49,17 @@ word 11 and the seed is graded Hard.
   `Stage:`; its recital plants the seed.
 - `first-planted`: `Planted`, `Stage: seed`, `Continue`; no `[growth] play`
   line (planting never sounds).
-- `first-today`: `Continue` opens `Today` in the done state (`run.md`'s
-  `run-done-first`): the counts line `Nothing to tend now` alone under the
-  header, with no `Isaiah 41:10`, no label starting `Stage:` or `Grew to`,
-  no recap, no grade, and no `Say it` or `Next`. The seed was just planted,
-  so the plan holds nothing to tend.
+- `first-home`: `Continue` opens home in the done state (`home.md`'s
+  `home-open`): the heading `Your field`, in the foot the counts line
+  `Nothing to tend now` with no `Begin`, and no heading `Today`, no label
+  starting `Stage:` or `Grew to`, no grade, and no `Say it` or `Next`. The
+  seed was just planted, so the plan holds nothing to tend.
 - `first-again`: a relaunch shows no first-minute heading in its launch
-  frame, then `Today` in the done state until the passage is due. Once it
+  frame, then home in the done state until the passage is due. Once it
   is due (7 minutes after a daytime planting; `run.md`'s `run-due`), a
-  relaunch or a Minutes tap shows a clean `Today` at `Stage: seed`: no
-  grade, no count, and the passage in letters (`today-passage`,
-  `fade.md`'s `fade-letters`), not whole.
+  relaunch shows home with `Begin`, and `Begin` a clean `Today` at
+  `Stage: seed`: no grade, no count, and the passage in letters
+  (`today-passage`, `fade.md`'s `fade-letters`), not whole.
 
 ## How to get to it (user POV)
 
@@ -100,23 +102,24 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
    "label=Planted" --timeout 30`.
 6. `first-planted`: `sim snapshot first-planted` → `Planted`,
    `Stage: seed`, `Continue`; the log holds no `[growth] play` line.
-7. `first-today`: `sim tap "label=Continue"`, `sim open / --expect
-   "id=session"`, `sim snapshot first-today` → `Today`,
-   `Nothing to tend now`, `Your field`; no `Isaiah 41:10`, no label
-   starting `Stage:` or `Grew to`, no label ending `words`, no grade label,
-   no `Say it` and no `Next` (the done state, `run.md`'s
-   `run-done-first`).
+7. `first-home`: `sim tap "label=Continue"`, `sim open / --expect
+   "id=counts"`, `sim snapshot first-home` → the heading `Your field`;
+   in the foot `Nothing to tend now`, no `Begin`, and `About`; the button
+   `When I need…`; no heading `Today`, no button `Today`, no label
+   starting `Stage:` or `Grew to`, no label ending `words`, no grade
+   label, no `Say it` and no `Next` (the done state).
 8. `first-again`: `sim relaunch`, `sim open / --expect "label=Isaiah
    41:10"` (the pending frame) and at once `sim snapshot
    first-again-launch` → no `Hear it`, `Say it with help`, `Say it alone`
-   or `Planted`. Then `sim open / --expect "id=session"`,
-   `sim snapshot first-again` → `Today`, no first-minute heading, and the
-   done state, as in step 7. Once the passage is due, `run.md`'s `run-due`
-   shows `today-passage` (`today.md`).
-9. From this Today run `run.md`, Driving it, from step 2: `fade.md`,
+   or `Planted`. Then `sim open / --expect "id=counts"`,
+   `sim snapshot first-again` → the heading `Your field`, no first-minute
+   heading, and the done state, as in step 7. Once the passage is due,
+   `run.md`'s `run-due` shows `today-passage` (`today.md`).
+9. From this home run `run.md`, Driving it, from step 2: `fade.md`,
    `grow.md` and `sayit.md` name the steps of it that are theirs. Then
    `sim doctor` (record `head` and `timingsHold`) and `sim down`. A drive
-   of the field (`field.md`) branches at `first-today` instead.
+   of the field (`field.md`) or of home (`home.md`) branches at
+   `first-home` instead.
 
 The log: `xcrun simctl spawn <udid> log show --start "$START" --style
 compact --predicate '(eventMessage CONTAINS "[voice]" OR eventMessage
@@ -131,9 +134,9 @@ reference; delete the `snapshots` folder and the raw snapshots.
 
 - No screenshot, no recording and no sound; never grant the microphone or
   speech recognition, and never write the app's storage to reset it.
-- A `Today` on a fresh install means the app was not uninstalled first, or
-  the garden's read failed (an unread garden opens Today, claiming no
-  stage).
+- A `Your field` heading on a fresh install means the app was not
+  uninstalled first; a `Today` means the garden's read failed (an unread
+  garden opens Today, claiming no stage).
 - No relaunch mid-flow is driven live: the unit tests own it
   (`src/first/screen.test.tsx`), and the voice-off hear phase, since no
   screen of the first minute sets the voice's choice.

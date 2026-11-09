@@ -3,13 +3,16 @@
 The field is the reader's progress (`apps/heartseed/src/field/screen.tsx`,
 its rule `apps/heartseed/src/field.ts`): every passage is a row and every
 verse a plant (Mark 4:28: seed, then blade, then ear, then full corn). It is
-reached from Today by the button `Your field` and left by the button
-`Today` (shown `‹ Today`) in its bar, fixed above its scroll view, in place
-in the root route: no route, no link, no tab. Today offers
-it only once the garden's read of the device's store completes, and never
-while Say it listens. It sits in Today's header beside the heading, outside
-the scroll view, so it is on screen without a scroll whatever Today holds
-(the recap, the grades, the growth line, an alert). Its heading is `Your field`; under it, the days sown
+the app's home: every launch on a read garden opens it, and so does the
+first minute's `Continue`, in place in the root route: no route, no link,
+no tab. Today is reached from it by `Begin`, `Start here with <reference>`
+or a promise of When I need…, and left by the button `Your field` (shown
+`‹ Your field`), which leads back to home. Today offers it only once the
+garden's read of the device's store completes, and never while Say it
+listens. It sits in Today's header beside the heading, outside the scroll
+view, so it is on screen without a scroll whatever Today holds (the
+recap, the grades, the growth line, an alert). The field has no control
+named `Today`. Its heading is `Your field`; under it, the days sown
 (`1 day sown`, `<n> days sown`: the distinct local days, each from 04:00,
 on which any recall was kept, each record's day read by the zone offset it
 stores, a record kept before offsets by its UTC date, so it never falls)
@@ -30,24 +33,28 @@ row for their verse (`phrase.md`). Each plant is one button, labelled
 its gold dot, drawing and verse number hidden inside it; a tap chooses its
 verse (`home.md`). The dashed row `Add verses` (`id=add-row`), a legend
 of the four stages and the caption `Mark 4:28` close the scroll view. The
-bar also holds `Add verses` (`id=add-verses`) or the limit line, and a
-passage furrow's `Remove` (`passage.md`). Under the scroll view, a fixed
+bar holds first `When I need…` (`promise.md`) once a plan is made, then
+`Add verses` (`id=add-verses`) or the limit line, and a passage furrow's
+`Remove` (`passage.md`). Under the scroll view, a fixed
 foot holds the Begin card (the counts line and `Begin`) or, with a verse
 chosen, the chosen card (`<reference> · <stage words>` and
 `Start here with <reference>`), then `About`, which opens the About
 screen (`about.md`); like every field control each is disabled while a
 remove is pending. Which screen shows is never stored:
-every launch opens on the pending frame, then the first minute or Today.
+every launch opens on the pending frame, then the first minute or home
+(Today on an unread garden).
 
 ## Sub-features
 
 - `field-control`: Today, read and quiet, offers a button `Your field` in
   its header, inside the window and above the home indicator's area.
-- `field-first`: after the first minute, the field shows the passage at a
-  seed as a plant button, then the row `Protection & Fear` with no plant
-  planted, `1 day sown`, `0 verses at full corn` and a button `Today`,
-  with no `Today` heading and no `Say it`.
-- `field-back`: `Today` shows Today as it was.
+- `field-first`: after the first minute, `Continue` opens the field: the
+  passage at a seed as a plant button, then the row `Protection & Fear`
+  with no plant planted, `1 day sown`, `0 verses at full corn` and a
+  button `When I need…`, with no `Today` heading, no button `Today` and
+  no `Say it`.
+- `field-back`: Today's `Your field` shows the field, and `Begin` (when
+  the field offers it) shows Today as it was.
 - `field-grow` (live at the first wait, `run.md`'s `run-recite` and
   `run-held-field`): a recital under letters that grows the passage to a
   blade shows on the field as `Isaiah 41:10, blade`.
@@ -56,14 +63,15 @@ every launch opens on the pending frame, then the first minute or Today.
 - `field-again` (tests only: `src/field/walk-again.test.tsx`, unless the
   second wait, `run.md`'s `run-second`, runs): Again takes the passage back
   to a seed and never removes a day sown.
-- `field-relaunch`: a relaunch opens Today, never the field, and its first
-  frame claims no count; the field then shows as before.
+- `field-relaunch`: a relaunch opens home, and its first frame claims no
+  count; the field then shows as before.
 - `field-record`: every recall record the app wrote holds an integer
   `offset`, the host's offset in minutes east of UTC.
 
 ## How to get to it (user POV)
 
-- From Today, tap `Your field`; tap `Today` to come back.
+- Open the app: home is the field. From Today, tap `Your field`; tap
+  `Begin` (or `Start here with <reference>`) to go to Today.
 
 ## Driving it
 
@@ -74,25 +82,29 @@ field, so an install of a build of `c65e0f162` or later serves (`SKILL.md`,
 Launch); the JavaScript comes from the dev server.
 
 1. `first.md` steps 1-7: boot, uninstall, install, revoke the microphone,
-   and the first minute to `first-today`.
-2. `field-control`: in `first-today`'s snapshot (Today's done state), a
-   button `Your field`.
-3. `field-first`: `sim tap "label=Your field"`, `sim snapshot field-first`
-   → the heading `Your field`; the text `Isaiah 41:10`; a button
-   `Isaiah 41:10, seed`; the text `Protection & Fear` and 14 buttons ending
-   `, not planted` (`promise.md`'s `promise-field`); `1 day sown`;
-   `0 verses at full corn`; a button
-   `Today`; no `Today` heading, no `Say it`, no label starting `Stage:`.
-4. `field-back`: `sim tap "label=Today"`, `sim open / --expect "id=session"`,
-   `sim snapshot field-back` → the heading `Today`, `Nothing to tend now`
-   (the done state, as it was), `Your field`.
+   and the first minute to `first-home`.
+2. `field-first`: in `first-home`'s snapshot, the heading `Your field`;
+   the text `Isaiah 41:10`; a button `Isaiah 41:10, seed`; the text
+   `Protection & Fear` and 14 buttons ending `, not planted`
+   (`promise.md`'s `promise-field`); `1 day sown`;
+   `0 verses at full corn`; a button `When I need…`; no `Today` heading,
+   no button `Today`, no `Say it`, no label starting `Stage:`.
+3. `field-control`: `sim tap "label=Isaiah 41:10, seed"`,
+   `sim tap "label=Start here with Isaiah 41:10"`,
+   `sim open / --expect "id=session"`, `sim snapshot field-control` → the
+   heading `Today`, `Isaiah 41:10`, `Say it` and a button `Your field`.
+4. `field-back`: `sim tap "label=Your field"`, `sim snapshot field-back-home`
+   → the heading `Your field` and `Begin` in the foot (the visit open);
+   `sim tap "label=Begin"`, `sim open / --expect "id=session"`,
+   `sim snapshot field-back` → the heading `Today`, `Isaiah 41:10` and
+   `Say it` (as it was), `Your field`.
 5. `field-listening` and `field-grow`, at the first wait: `run.md` steps
    3-4. `run-listening`'s raw snapshot → `Listening` present and no
    `Your field` (keep only booleans). After `run-recite`,
    `sim tap "label=Your field"`, `sim snapshot field-grow` →
    `Isaiah 41:10, blade`, `1 day sown` (or `2 days sown` when 04:00 local
    fell between the planting and this recital: compare `START` with the
-   time now, local), `0 verses at full corn`; then `sim tap "label=Today"`
+   time now, local), `0 verses at full corn`; then `sim tap "label=Begin"`
    is `run.md` step 5 (`run-held-field`).
 6. (`field-listening` is in step 5.)
 7. `field-again`, only when `run.md` step 7 (`run-second`) runs: before its
@@ -100,13 +112,15 @@ Launch); the JavaScript comes from the dev server.
    `sim snapshot field-again` → a button whose label starts
    `Isaiah 41:10, seed` (`, ready today` follows while its item is open),
    the same days sown as
-   step 5; then `sim tap "label=Today"`. Otherwise the tests own it.
+   step 5; then `sim tap "label=Begin"` (the result held, with `Next`).
+   Otherwise the tests own it.
 8. `field-relaunch`: `sim relaunch`, `sim open / --expect "label=Isaiah
    41:10"` (the pending frame) and at once
    `sim snapshot field-relaunch-launch` → no `Your field` heading, no label
-   ending `sown` or `full corn`; then `sim open / --expect "id=session"`,
-   `sim tap "label=Your field"`, `sim snapshot field-relaunch` → the same
-   as step 7 (step 5 when step 7 did not run).
+   ending `sown` or `full corn`; then `sim open / --expect "id=counts"`,
+   `sim snapshot field-relaunch` → the heading `Your field`, no heading
+   `Today`, and the same plants and days as step 7 (step 5 when step 7
+   did not run).
 9. `field-record`: `C=$(xcrun simctl get_app_container verify-heartseed
    app.heartseed data)`; find `one-kv-heartseed.sqlite` and its `-wal` and
    `-shm` under `$C` with `find`, and copy them into `$EVIDENCE/store/`;
@@ -141,4 +155,5 @@ delete the `snapshots` folder and the raw snapshot.
 - `Your field` never needs a `sim scroll`: it is in Today's header, outside
   the scroll view. Tap it as it is; a scroll just before a tap can leave the
   scroll view moving, and a tap then may stop the scroll instead of pressing.
-  The field's `Today` likewise sits in its bar, above the scroll view.
+  The field's `When I need…` likewise sits in its bar, above the scroll
+  view.

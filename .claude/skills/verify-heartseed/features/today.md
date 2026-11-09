@@ -1,8 +1,10 @@
 # Today
 
-Today is the screen Heartseed opens on once the garden holds a recall
-(`apps/heartseed/app/index.tsx`); a fresh install opens the first minute
-first (`first.md`), whose `Continue` opens Today. It shows the passage the
+Today is the run (`apps/heartseed/app/index.tsx`), reached from home
+(`home.md`, the screen Heartseed opens on once the garden holds a recall)
+by `Begin`, `Start here with <reference>` or a promise of When I need…; a
+fresh install opens the first minute first (`first.md`), whose `Continue`
+opens home. An unread garden opens Today, with no `Your field`. It shows the passage the
 reader is learning: the header `Today`, then the
 passage's reference, then its words in the King James Version. In this
 first build the passage is Isaiah 41:10, the brief's first promise. The
@@ -21,9 +23,10 @@ state, the counts line alone. The action button, `Say it` (`sayit.md`) or
 once a recital ends; until `Say it` is pressed the screen asks for no permission and
 makes no sound. Beside the header `Today`, fixed above the scrolling
 passage, once the garden's read completes and never while Say it listens,
-is the button `Your field`, which opens the field in place (`field.md`),
-and beside it, once a plan is made, `When I need…` (`promise.md`); each
-is on screen without a scroll whatever Today holds. Under them, in the
+is the button `Your field` (shown `‹ Your field`), which leads back to
+home, the field, in place (`field.md`); it is on screen without a scroll
+whatever Today holds, and Today holds no `When I need…` (`promise.md`:
+it is on home's bar). Under them, in the
 header's second row, are the radio group `Minutes` (`2 min`, `5 min`,
 `10 min`, `20 min`) and the button `Voice` (valued `Off`, `Her` or `Him`,
 each tap the next), and at the top of the scroll
@@ -33,8 +36,8 @@ view, above the reference, the counts line (`id=session`), such as
 ## Sub-features
 
 - `today-passage`: whenever Today's run shows the passage (`run.md`: after
-  the first minute Today is the done state, `run-done-first`; once the
-  passage is due and a plan is made, `run-due`), Today shows the header
+  the first minute home is the done state, `run-done-first`; once the
+  passage is due and a plan is made, home's `Begin`, `run-due`), Today shows the header
   `Today` (role header), the reference `Isaiah 41:10`, its stage line (a
   label starting `Stage: `), one `Say it` button in the fixed footer under
   the scroll view, the button `Your field`, and its words under the cue
@@ -47,15 +50,16 @@ view, above the reference, the counts line (`id=session`), such as
 
 ## How to get to it (user POV)
 
-- On a fresh install, go through the first minute and tap `Continue`; any
-  later launch opens Today. The verse shows once it is due.
+- On a fresh install, go through the first minute and tap `Continue`; it
+  and any later launch open home. Once the verse is due, home offers
+  `Begin`, which opens Today on it.
 
 ## Driving it
 
 After the Launch of `SKILL.md` (`sim boot`, then `sim install`, which
 waits for `label=Isaiah 41:10`) and `run.md` through `run-due` (the
-Today `Continue` opens at `first-today` is the done state, so it is not
-this row's start), its Drive's two commands are this feature's drive, the
+home `Continue` opens at `first-home` is the done state, with no
+`Begin`, so it is not this row's start), its Drive's two commands are this feature's drive, the
 open waiting for the stage line (`id=stage`), which shows only once the
 garden is read and the run shows the passage:
 

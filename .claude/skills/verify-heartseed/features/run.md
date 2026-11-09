@@ -18,8 +18,10 @@ in a fixed footer under the scroll view, so a reader never scrolls to reach
 them. A recital that is not heard, or whose write is refused, leaves
 `Say it` on the same verse.
 
-A plan is made when Today first shows in a launch, and again at each
-`Minutes` tap. A tap made with no recital under way starts the run again at
+A plan is made when home or Today first shows in a launch, and again at
+each `Minutes` tap. Today is reached from home by `Begin` (shown exactly
+when the plan or a visit holds an item), `Start here with <reference>`
+or a promise of When I need…, and left by `Your field`. A tap made with no recital under way starts the run again at
 the new plan's first item, and an earlier result is gone. A tap made while
 a recital listens keeps that verse on screen until its `Next`. Nothing of
 the run is stored. A relaunch makes a new plan.
@@ -34,16 +36,17 @@ after 18:00 local is due at 04:00 the next morning.
 
 ## Sub-features
 
-Every row runs from `first.md`'s `first-today`. `PLANTED` is the local time
+Every row runs from `first.md`'s `first-home`. `PLANTED` is the local time
 of `first-planted`.
 
-- `run-done-first`: Today after the first minute is the done state: the
-  counts line `Nothing to tend now`, the header (`Today`, `Your field`,
-  `When I need…`, the four `Minutes` radios, `Voice`), and no `Say it`, `Next`, `Grade` or
-  `Isaiah 41:10` node on Today.
+- `run-done-first`: home after the first minute is the done state: the
+  heading `Your field`, the foot's counts line `Nothing to tend now` with
+  no `Begin`, `When I need…` in the bar, and no heading `Today`, no
+  `Say it`, `Next` or `Grade`.
 - `run-due` (daytime only, when `PLANTED` was between 04:00 and 17:52
-  local): 7 minutes after `PLANTED`, a tap on the checked `5 min` makes a
-  new plan. Today then shows `1 to tend · about 1 min`, the reference
+  local): 7 minutes after `PLANTED`, a relaunch makes a new plan. Home
+  then offers `Begin` with `1 to tend · about 1 min`, and `Begin` shows
+  Today with `1 to tend · about 1 min`, the reference
   `Isaiah 41:10`, 37 `word-<i>` nodes in first letters (a seed), and
   `Say it`. In a raw snapshot, `Say it` lies wholly inside the window,
   below the last word node and clear of the bottom safe area.
@@ -52,11 +55,14 @@ of `first-planted`.
   checked, and a button `Next` where `Say it` was, with no `Say it`. In a
   raw snapshot, `Next` and the four grade radios lie wholly inside the
   window, with no scroll.
-- `run-held-field`: `Your field`, then `Today`: the same result and `Next`.
-- `run-next`: `Next` gives the done state again (as `run-done-first`).
+- `run-held-field`: `Your field`, then `Begin`: the same result and
+  `Next`.
+- `run-next`: `Next` gives Today's done state: the counts line
+  `Nothing to tend now` alone under the header, and no `Say it`, `Next`,
+  `Grade` or `Isaiah 41:10` node.
 - `run-listening`: during `run-recite`'s recital, a raw snapshot taken at
   once after `Say it` shows `Listening`, the four `Minutes` radios and
-  `Voice` in the header.
+  `Voice` in the header, and no `Your field`.
 - `run-second` (only when the drive started before 16:00 local): once the
   passage is due again after `run-recite` (wait 15 minutes, then tap the
   checked `5 min`), Today shows `1 to tend`, no word node labelled (nothing
@@ -65,9 +71,9 @@ of `first-planted`.
 
 ## How to get to it (user POV)
 
-- Go through the first minute and tap `Continue`: Today has nothing to tend
-  yet. Come back once the verse is due: Today shows it, and `Say it`. Say
-  it, then tap `Next`.
+- Go through the first minute and tap `Continue`: home has nothing to
+  tend yet. Come back once the verse is due: home offers `Begin`, and
+  Today shows the verse and `Say it`. Say it, then tap `Next`.
 
 ## Driving it
 
@@ -81,10 +87,12 @@ sets them.
 1. `first.md` steps 1-7. Note `PLANTED` (`date`).
 2. `run-done-first`: `sim snapshot run-done-first` → the nodes above. Then
    `session.md`'s `session-first`, `session-header` and `session-choose`
-   (steps 2-3) and `session-field` (step 5). Each now shows the done state
-   under the header.
-3. `run-due`: wait until 7 minutes after `PLANTED`, then
-   `sim tap "label=5 min"` and `sim snapshot run-due`, plus a raw snapshot
+   (steps 2-3) and `session-field` (step 5), on the Today that
+   `Start here with Isaiah 41:10` opens.
+3. `run-due`: wait until 7 minutes after `PLANTED`, then `sim relaunch`,
+   `sim open / --expect "id=counts"` → home's `1 to tend · about 1 min`
+   and `Begin`; `sim tap "label=Begin"`, `sim open / --expect
+   "id=session"`, and `sim snapshot run-due`, plus a raw snapshot
    (`agent-device snapshot --json --raw --observe-only --force-full
    --session verify-heartseed`) for the rects. When `PLANTED` was in the
    evening, record `Nothing to tend now` and stop here: only tests reach the
@@ -92,7 +100,7 @@ sets them.
 4. `run-listening` and `run-recite`: `sim tap "label=Say it"`, a raw
    snapshot at once, then `sim tap "label=36 of 37 words" --timeout 30`,
    `sim snapshot run-recite`, and a raw snapshot for the rects.
-5. `run-held-field`: `sim tap "label=Your field"`, `sim tap "label=Today"`,
+5. `run-held-field`: `sim tap "label=Your field"`, `sim tap "label=Begin"`,
    `sim snapshot run-held-field`.
 6. `run-next`: `sim tap "label=Next"`, `sim snapshot run-next`.
 7. `run-second`, only when the drive started before 16:00 local: wait 15

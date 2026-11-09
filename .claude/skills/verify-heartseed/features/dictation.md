@@ -50,7 +50,7 @@ plutil -extract NSSpeechRecognitionUsageDescription raw apps/heartseed/ios/Heart
 
 `dictation-script`, with the microphone revoked
 (`xcrun simctl privacy <udid> revoke microphone app.heartseed` before the
-opens). The revoke stops the app, so open Today first: it launches the app
+opens). The revoke stops the app, so open the root first: it launches the app
 afresh, and a link opened into a running app reaches its route (Gotchas):
 
 ```bash
@@ -74,7 +74,7 @@ xcrun simctl spawn <udid> log show --last 10m --style compact --predicate 'event
 
 Report counts only, then delete the snapshot.
 
-`dictation-hear`, the same way (microphone revoked, Today first):
+`dictation-hear`, the same way (microphone revoked, the root first):
 
 ```bash
 sim open / --expect "label=Isaiah 41:10"
@@ -98,8 +98,9 @@ then delete the snapshots.
 
 ## Gotchas
 
-- **A link that launches the app lands on Today.** `sim open probe/dictation`
-  into a stopped app shows Today, and so does its one retry, which stops
+- **A link that launches the app lands on the root's screen** (home, or
+  the first minute on a fresh install). `sim open probe/dictation`
+  into a stopped app shows that screen, and so does its one retry, which stops
   the app again; into the running app it shows the probe. One reads a
   launch link with a 150 ms limit (`getInitialURL` in its native linking),
   the likely cause. Revoking a permission stops the app. Open `/` first,

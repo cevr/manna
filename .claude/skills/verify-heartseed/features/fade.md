@@ -45,8 +45,8 @@ first minute. The replay always misses word 11, so every recital ends
 
 ## How to get to it (user POV)
 
-- Go through the first minute, tap `Continue`, relaunch, and read Today's
-  verse; tap `Say it` and say it.
+- Go through the first minute, tap `Continue`, relaunch once the verse is
+  due, tap home's `Begin`, and read Today's verse; tap `Say it` and say it.
 
 ## Driving it
 

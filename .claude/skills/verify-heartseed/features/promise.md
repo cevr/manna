@@ -4,18 +4,19 @@ The app holds Selah's fourteen promise collections as references only
 (`apps/heartseed/src/promises.ts`) and teaches one, `Protection & Fear`,
 free, after the reader's passages: its 14 verses are pieces of the session
 after every passage held, each long one learned as phrases first, then
-joined (`phrase.md`), and the field shows its row. Today's header
+joined (`phrase.md`), and the field shows its row. Home's bar
 offers `When I need…` (`apps/heartseed/src/need/screen.tsx`, its rule
 `apps/heartseed/src/need.ts`): the promises the reader knows, by situation.
 A tap on one brings Today with its verses ahead of the plan (a visit), each
 said as a review (`apps/heartseed/README.md`, When I need…).
 
-- **The entry**: `When I need…` sits in Today's fixed header beside
-  `Your field`, outside the scroll view, once a plan is made in this
-  launch and never while Say it listens; never in the pending frame, the
-  first minute or over unread passages.
-- **The screen**: a bar fixed above the scroll view holding `‹ Today`
-  (accessible name `Today`), then the one heading `When I need…` and the
+- **The entry**: `When I need…` comes first in home's bar, fixed above
+  the scroll view, once a plan is made in this launch, and is disabled
+  while a remove is pending; never in the pending frame, the first minute,
+  over unread passages or on Today.
+- **The screen**: a bar fixed above the scroll view holding `‹ Your field`
+  (accessible name `Your field`), which leads to home, then the one
+  heading `When I need…` and the
   cards in the situations' order. A card (`need-card`) shows its title
   as plain text (`need-title`), each promise the reader knows as a button
   named by its reference (`promise`), and on the taught card
@@ -40,10 +41,10 @@ said as a review (`apps/heartseed/README.md`, When I need…).
 
 ## Sub-features
 
-- `promise-entry`: on Today after the first minute, `When I need…` sits
-  in the header beside `Your field`, inside the window without a scroll.
+- `promise-entry`: on home after the first minute, `When I need…` sits
+  first in the bar, inside the window without a scroll; Today holds none.
 - `promise-need`: `When I need…` shows the heading `When I need…`,
-  `‹ Today` in the bar, the card `Protection & Fear` with
+  `‹ Your field` in the bar, the card `Protection & Fear` with
   `12 still to learn`, and the card `Strength` with the button
   `Isaiah 41:10` (the first minute's promise); no other card.
 - `promise-visit`: a tap on `Isaiah 41:10` shows Today with the reference
@@ -53,7 +54,7 @@ said as a review (`apps/heartseed/README.md`, When I need…).
   `Isaiah 41:10` plant holds the new recall's stage.
 - `promise-field`: the field shows the row `Protection & Fear` with 14
   `<reference>, not planted` plants and no `Remove`.
-- `promise-relaunch`: a relaunch opens Today; `When I need…` still lists
+- `promise-relaunch`: a relaunch opens home; `When I need…` still lists
   `Isaiah 41:10`, and no visit shows.
 - `promise-new` (the second session, after the next 04:00 local, no
   passage held, no uninstall): Today offers `Psalms 91:1 [1-9]` (the
@@ -69,9 +70,9 @@ said as a review (`apps/heartseed/README.md`, When I need…).
 
 ## How to get to it (user POV)
 
-- From Today, tap `When I need…`; tap a promise to say it now, or `Today`
-  in the bar to go back.
-- From Today, tap `Your field`: the row `Protection & Fear`.
+- From home, tap `When I need…`; tap a promise to say it now, or
+  `Your field` in the bar to go back.
+- On home: the row `Protection & Fear`.
 
 ## Driving it
 
@@ -83,23 +84,23 @@ promises, so an install of a build of `1064d4138` or later serves
 must start empty: uninstall by udid as `first.md` says.
 
 1. `first.md` steps 1-7: boot, uninstall, install, revoke the microphone,
-   and the first minute to `first-today`.
-2. `promise-entry`: `sim snapshot promise-entry` → the heading `Today`,
-   the buttons `Your field` and `When I need…`; then a raw snapshot
-   (`agent-device snapshot --json --raw --observe-only --force-full
-   --session verify-heartseed`) → `When I need…`'s rect inside the window,
-   above the counts line, at least 44 pt tall, with no `sim scroll`
-   before.
+   and the first minute to `first-home`.
+2. `promise-entry`: `sim snapshot promise-entry` → the heading
+   `Your field`, the button `When I need…`, no heading `Today`; then a raw
+   snapshot (`agent-device snapshot --json --raw --observe-only
+   --force-full --session verify-heartseed`) → `When I need…`'s rect
+   inside the window, above the heading `Your field`, at least 44 pt tall,
+   with no `sim scroll` before.
 3. `promise-need`: `sim tap "label=When I need…"`,
    `sim snapshot promise-need` → the heading `When I need…`, the button
-   `Today` showing `‹ Today`, the texts `Protection & Fear`,
+   `Your field` showing `‹ Your field`, the texts `Protection & Fear`,
    `12 still to learn` and `Strength`, the button `Isaiah 41:10`; no other
-   card title, no other promise button, no `Your field`, no `Say it`.
+   card title, no other promise button, no button `Today`, no `Say it`.
 4. `promise-visit`: `sim tap "label=Isaiah 41:10"`,
    `sim open / --expect "id=session"`, `sim snapshot promise-visit` → the
-   heading `Today`, the reference `Isaiah 41:10`, `Say it`, no `Listen`;
-   the counts line as in `first-today` (`Nothing to tend now`, unless the
-   promise came due).
+   heading `Today`, the reference `Isaiah 41:10`, `Say it`, no `Listen`,
+   no `When I need…`; the counts line as in `first-home`
+   (`Nothing to tend now`, unless the promise came due).
 5. `promise-said`: `sim tap "label=Say it"`, then
    `sim tap "label=36 of 37 words" --timeout 30` (or the count the replay
    gives), `sim snapshot promise-said` → the stage line, the `Grade`
@@ -112,16 +113,18 @@ must start empty: uninstall by udid as `first.md` says.
 6. `promise-field`: on the field, `sim snapshot promise-field` → the row
    titles `Isaiah 41:10` then `Protection & Fear`; 14 buttons
    `<reference>, not planted` in that row (`Psalms 91:1` first,
-   `Isaiah 41:13` last; count them); `Remove` nowhere. Then
-   `sim tap "label=Today"`.
-7. `promise-relaunch`: `sim relaunch`, `sim open / --expect "id=session"`,
-   `sim snapshot promise-relaunch` → no reference shown unless the plan's
-   (the done state on the first day); `sim tap "label=When I need…"`
-   → the button `Isaiah 41:10`; then `sim tap "label=Today"`.
+   `Isaiah 41:13` last; count them); `Remove` nowhere.
+7. `promise-relaunch`: `sim relaunch`, `sim open / --expect "id=counts"`,
+   `sim snapshot promise-relaunch` → the heading `Your field`, no heading
+   `Today`, and no `Begin` unless the plan holds an item (the done state
+   on the first day: `Nothing to tend now`); `sim tap "label=When I need…"`
+   → the button `Isaiah 41:10`; then `sim tap "label=Your field"`.
 8. `sim doctor` (record `head` and `timingsHold`) and `sim down`, keeping
    the install.
 9. `promise-new`, the second session, after the next 04:00 local, with no
    passage added and no uninstall: `sim boot`, then
+   `sim open / --expect "id=counts"` → home's counts line holds `1 new`,
+   with `Begin`; `sim tap "label=Begin"`,
    `sim open / --expect "id=session"`, `sim snapshot promise-new` → the
    counts line holds `1 new`; when the reference is `Isaiah 41:10` (its
    review due), run it through `Say it` and `Next` first, then snapshot
@@ -134,7 +137,7 @@ snapshots.
 
 ## Gotchas
 
-- `When I need…` and the bar's `Today` never need a `sim scroll`: each is
+- `When I need…` and its bar's `Your field` never need a `sim scroll`: each is
   outside its screen's scroll view. A promise button is inside it; with
   only the first minute's promise known, it is on the first screen.
 - The label has a single ellipsis character (U+2026), not three dots:

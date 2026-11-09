@@ -5,8 +5,8 @@ the range rule `apps/heartseed/src/chooser.ts`, the field's bar
 `apps/heartseed/src/field/screen.tsx`). The free tier holds 3 passages of
 up to 20 verses each, from the whole KJV in the bundle.
 
-- **The field's bar** sits above the field's scroll view: `‹ Today`
-  (accessible name `Today`), then `Add verses` (`id=add-verses`) while
+- **The field's bar** sits above the field's scroll view: `When I need…`
+  once a plan is made (`promise.md`), then `Add verses` (`id=add-verses`) while
   fewer than 3 passages are held, else the line "3 passages, the most for
   now. Remove one to add another." (testID `limit`). The dashed row
   `Add verses` at the field's end (`id=add-row`) shows exactly when the
@@ -50,8 +50,8 @@ up to 20 verses each, from the whole KJV in the bundle.
 
 ## Sub-features
 
-- `passage-bar`: on the field, `Today` and `Add verses` sit in the bar,
-  inside the window, without a scroll.
+- `passage-bar`: on the field, `When I need…` and `Add verses` sit in the
+  bar, inside the window, without a scroll.
 - `passage-books`: the bar's `Add verses` shows the heading `Add a passage`,
   `‹ Your field`, `Old Testament`, `New Testament` and the books.
 - `passage-range`: `John` → `John 15` → taps on 1 and 5 show
@@ -67,9 +67,10 @@ up to 20 verses each, from the whole KJV in the bundle.
 - `passage-remove`: a row's `Remove` → the ask → `Remove`: the row leaves,
   and both `Add verses` come back.
 - `passage-keep`: `Remove` → `Keep` changes nothing.
-- `passage-day-one`: back on Today, on the first minute's day, no `1 new`
-  and no `Listen`.
-- `passage-relaunch`: a relaunch opens Today, and the field shows the
+- `passage-day-one`: back on home, on the first minute's day, the foot's
+  counts line holds no `1 new`, and Today, if `Begin` opens it, no
+  `Listen`.
+- `passage-relaunch`: a relaunch opens home, and the field shows the
   passages kept.
 - `passage-new` (the second session, after the next 04:00 local, with no
   uninstall): Today offers `John 15:1` whole (11 words, so never cut into
@@ -94,7 +95,7 @@ up to 20 verses each, from the whole KJV in the bundle.
 
 ## How to get to it (user POV)
 
-- From Today, tap `Your field`, then `Add verses`: a book, a chapter,
+- On home (the field), tap `Add verses`: a book, a chapter,
   the first verse and the last, then `Plant`.
 - On the field, a passage row's `Remove`, then `Remove` or `Keep` in the
   bar.
@@ -109,12 +110,13 @@ passages, so an install of a build of `69d70a02d` or later serves
 must start empty: uninstall by udid as `first.md` says.
 
 1. `first.md` steps 1-7: boot, uninstall, install, revoke the microphone,
-   and the first minute to `first-today`.
-2. `passage-bar`: `sim tap "label=Your field"`, `sim snapshot passage-bar`
-   → the buttons `Today` and two `Add verses` (the bar's and the row's),
-   the heading `Your field`, the row `Isaiah 41:10` and no `Remove`; then
+   and the first minute to `first-home`.
+2. `passage-bar`: on home, `sim snapshot passage-bar`
+   → the buttons `When I need…` and two `Add verses` (the bar's and the
+   row's), the heading `Your field`, the row `Isaiah 41:10` and no
+   `Remove`, no button `Today`; then
    a raw snapshot (`agent-device snapshot --json --raw --observe-only
-   --force-full --session verify-heartseed`) → the rects of `Today` and of
+   --force-full --session verify-heartseed`) → the rects of `When I need…` and of
    `id=add-verses` inside the window, above the heading, with no
    `sim scroll` before.
 3. `passage-books`: `sim tap "id=add-verses"`,
@@ -155,13 +157,14 @@ must start empty: uninstall by udid as `first.md` says.
 10. `passage-remove`: `sim tap "label=Remove Romans 8:28"`,
     `sim tap "label=Remove"`, `sim snapshot passage-remove` → no row
     `Romans 8:28`, two `Remove` buttons, two `Add verses`.
-11. `passage-day-one`: `sim tap "label=Today"`,
-    `sim open / --expect "id=session"`, `sim snapshot passage-day-one` →
-    the counts line holds no `1 new`, no `Listen`.
-12. `passage-relaunch`: `sim relaunch`, `sim open / --expect "id=session"`,
-    `sim tap "label=Your field"`, `sim snapshot passage-relaunch` → the rows
-    `Isaiah 41:10`, `John 15:1-5`, `Psalms 23:1-6`, in that order. Then
-    `sim tap "label=Today"`.
+11. `passage-day-one`: on home, `sim snapshot passage-day-one` → the
+    foot's counts line holds no `1 new`. When the foot offers `Begin`
+    (the promise's review due), `sim tap "label=Begin"`,
+    `sim open / --expect "id=session"`, `sim snapshot passage-day-one-today`
+    → no `Listen`; then `sim tap "label=Your field"`.
+12. `passage-relaunch`: `sim relaunch`, `sim open / --expect "id=counts"`,
+    `sim snapshot passage-relaunch` → the heading `Your field` and the rows
+    `Isaiah 41:10`, `John 15:1-5`, `Psalms 23:1-6`, in that order.
 13. `passage-launch-time`: three times, `sim relaunch` then
     `sim open / --expect "label=Isaiah 41:10"`, recording each line's `ms`,
     with `sim doctor`'s `timingsHold`; then the same three on a worktree of
@@ -169,7 +172,9 @@ must start empty: uninstall by udid as `first.md` says.
 14. `sim doctor` (record `head` and `timingsHold`) and `sim down`, keeping
     the install.
 15. `passage-new`, the second session, after the next 04:00 local, with no
-    uninstall: `sim boot`, then `sim open / --expect "id=session"`,
+    uninstall: `sim boot`, then `sim open / --expect "id=counts"` → home's
+    counts line holds `1 new`, with `Begin`; `sim tap "label=Begin"`,
+    `sim open / --expect "id=session"`,
     `sim snapshot passage-new` → the counts line holds `1 new`; when the
     reference is `Isaiah 41:10` (its review due), run it through `Say it`
     and `Next` first, then snapshot again → the reference `John 15:1`,

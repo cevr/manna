@@ -81,7 +81,8 @@ tmp/verify-heartseed, one drive at a time per checkout; never point its
    that folder's Heartseed/Info.plist (`detail.schemeAdded`), builds Debug for the simulator (arm64 only, its
    derived data in the `build` folder of the app's `ios`), installs,
    launches, and waits for `label=Isaiah 41:10`, the reference the
-   launch's pending frame, the first minute and Today all show
+   launch's pending frame, the first minute, home (its furrow's title)
+   and Today all show
    (`detail.expect`). The build log is `$EVIDENCE/build.log`; it
    ends `** BUILD SUCCEEDED **`, and `detail.buildMs` is the build's time.
    Cold, a build took 397 s on a loaded host; a later one is incremental.
@@ -102,7 +103,7 @@ tmp/verify-heartseed, one drive at a time per checkout; never point its
 
    The revoke stops the running app, and a link that launches the app
    lands on the screen the launch opens (the first minute on a fresh
-   install, else Today), so a drive's first step after it is `sim open /`.
+   install, else home), so a drive's first step after it is `sim open /`.
 
 ## Doctor
 
@@ -131,7 +132,11 @@ bun run --cwd apps/heartseed sim snapshot today
 
 `sim open <link> --expect <target>` opens `heartseed://<link>`, answers the
 "Open in “Heartseed”?" prompt with Open (`detail.prompts`), and waits for
-the target. `sim snapshot <step>` writes the screen's nodes, as
+the target. Into the running app already on `/`, it is a wait: the root
+keeps the screen it shows (home, Today, When I need…), so a feature file
+writes `sim open / --expect "id=session"` after a tap that opens Today
+and `--expect "id=counts"` for home; a wait for Today that lands on home
+is a finding to record, not a step to retry. `sim snapshot <step>` writes the screen's nodes, as
 `[role] "text"`, to `$EVIDENCE/snapshots/<step>.txt`; a feature file says
 which nodes prove it. A target is `label=<accessible name>` or
 `id=<testID>`, matched whole. `sim tap`, `sim scroll` and `sim back` work as
@@ -139,9 +144,11 @@ the hymnal's skill describes; in the first minute a reader taps `Listen`,
 `Next`, `Say it` and `Continue`, on Today `Listen` (on a new verse),
 `Say it`, a grade, a missed
 word's mark, `Next`, a `Minutes` radio, `Voice` (its value `Off`, `Her`
-or `Him` in a raw snapshot) and `Your field` and `When I need…`; on When I need… a promise by its
-reference and its bar's `Today`; on the field, in its bar,
-`Today`, `Add verses` (`id=add-verses`: the dashed row at the field's end
+or `Him` in a raw snapshot) and `Your field` (back to home); on When I
+need… a promise by its reference and its bar's `Your field`; on the
+field, which is home, every launch's screen after the first minute (its
+counts line `id=counts`, as Today's is `id=session`), in its bar
+`When I need…`, `Add verses` (`id=add-verses`: the dashed row at the field's end
 is `Add verses` too, `id=add-row`), and the ask's `Remove` and `Keep`, in
 a furrow `Remove <reference>` and its plants (`<reference>, <stage>`,
 then `, ready today` when ready), and in its foot `Begin`,
@@ -156,13 +163,16 @@ Heartseed has no journey files yet. The features:
 
 - [features/first.md](features/first.md): the first minute a fresh
   install opens on: hear it (the voice's lit words, silent on the
-  simulator), say it with first letters, say it alone, Planted, then Today
-  in the done state. Run it first: the other features start from its Today.
+  simulator), say it with first letters, say it alone, Planted, then home
+  in the done state (`first-home`). Run it first: the other features
+  start from its `first-home`. Today is reached from home by `Begin` once
+  a verse is due (after a `sim relaunch`), else by a plant and
+  `Start here with Isaiah 41:10`.
 - [features/run.md](features/run.md): Today runs the session's plan one
   piece (a verse or a phrase) at a time: the verse under its cue, `Say it`, the result, `Next`,
   and the done state with no `Say it`; the action button and the grades in
   a fixed footer; the verse due again after the first minute, through a
-  `Minutes` tap. Run it from `first.md`'s Today: `fade.md`, `grow.md`,
+  `Minutes` tap. Run it from `first.md`'s `first-home`: `fade.md`, `grow.md`,
   `sayit.md` and `session.md` name the steps of it that are theirs.
 - [features/today.md](features/today.md): Today, its header, reference,
   passage, the passage's stage line and its one action button, in the
@@ -194,9 +204,10 @@ Heartseed has no journey files yet. The features:
   the `Minutes` radios and the `Voice` button (Off, Her, Him, a tap the
   next) in the header's second row, kept across a relaunch, the old
   switch's Off carried over, and the counts line atop the scroll view. Run
-  it from `first.md`'s Today, before `run.md` step 3.
-- [features/field.md](features/field.md): the field, reached from Today's
-  `Your field` and back by its bar's `Today`: a furrow per passage, a
+  it from `first.md`'s `first-home`, before `run.md` step 3.
+- [features/field.md](features/field.md): the field, the app's home,
+  which every launch opens and Today's `Your field` leads back to, with
+  `Begin` to Today: a furrow per passage, a
   plant button per verse at its stage, the local days sown from 04:00 (each by the zone
   offset its record holds), which never fall, and the harvest.
 - [features/about.md](features/about.md): the About screen, from the
@@ -208,25 +219,25 @@ Heartseed has no journey files yet. The features:
   (books, chapters, a chapter's verses, the range clipped to 20, `Plant`
   in a fixed footer), a row's `Remove` and its one ask, and Today over the
   passages chosen, the first day and after the next 04:00. Run it from
-  `first.md`'s Today; its second session comes after the next 04:00.
+  `first.md`'s `first-home`; its second session comes after the next 04:00.
 - [features/wake.md](features/wake.md): a return to the foreground makes
-  Today's plan again with no tap (a due verse shows, a shown result goes),
+  the plan again with no tap (a due verse offers `Begin`, a shown result goes),
   and changes nothing while a recital is under way; a new verse's `Listen`
   beside `Say it` (live in `passage.md`'s `passage-new`). Run it from
-  `first.md`'s Today, in place of `run.md` step 6.
+  `first.md`'s `first-home`, in place of `run.md` step 6.
 - [features/promise.md](features/promise.md): the promise collections
-  and When I need…: the Fear collection's row on the field, Today's
-  `When I need…` in its fixed header, the cards of the promises the
+  and When I need…: the Fear collection's row on the field, home's
+  `When I need…` in its fixed bar, the cards of the promises the
   reader knows (`Protection & Fear` with its count still to learn,
   `Strength` with the first minute's promise), a tap on a promise said on
   Today as a review, and the first Fear phrase after the next 04:00. Run
-  it from `first.md`'s Today; its second session comes after the next
-  04:00.
+  it from `first.md`'s `first-home`; its second session comes after the
+  next 04:00.
 - [features/phrase.md](features/phrase.md): long verses learned as
   phrases first, then joined: John 3:16 planted as a passage, its first
   phrase `John 3:16 [1-6]` new after the next 04:00 with `Listen` and
   `Say it` over its six words, and the field folding the phrase into
-  `John 3:16, seed`. Run it from `first.md`'s Today; its second session
+  `John 3:16, seed`. Run it from `first.md`'s `first-home`; its second session
   comes after the next 04:00 (`passage.md`'s `passage-new` with John 3:16
   in place of John 15:1-5).
 - [features/app-icon.md](features/app-icon.md): the app icon (light, dark,
@@ -240,13 +251,13 @@ Heartseed has no journey files yet. The features:
   the stored appearance, the interface style, the scheme, its ground and
   the face; light and then dark with no tap, a choice of Light over a
   dark system, kept across a relaunch, and System again.
-  Run it from `first.md`'s Today.
+  Run it from `first.md`'s `first-home`.
 - [features/handbook.md](features/handbook.md): Haskell's Bible Handbook
   as lists of references, on its development probe
   (`apps/heartseed/app/probe/handbook.tsx`): the sections, lists, ranges
   and verses, every verse resolved in the device's corpus; the field
   unchanged. No screen a reader sees shows the lists yet. Run it from
-  `first.md`'s Today.
+  `first.md`'s `first-home`.
 - [features/home.md](features/home.md): the home's rules (the greeting,
   the furrows with their kinds, icons, ripe counts and ready marks, the
   lists, the shelves Add verses will offer, and Start here at the
@@ -255,7 +266,10 @@ Heartseed has no journey files yet. The features:
   loaded on the device), and the field in home A's layout: the greeting,
   furrows of plant buttons with their ripe counts, a choice and
   `Start here`, `Begin` in the foot, `Add verses` in two places and the
-  gold dot on a ready plant. Run it from `first.md`'s Today.
+  gold dot on a ready plant; and home as the root: `Continue` and every
+  relaunch open it, Today's `Your field` leads back to it, and its bar's
+  `When I need…`. Run it from `first.md` (`first-planted` or
+  `first-home`).
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.

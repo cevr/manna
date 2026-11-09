@@ -28,12 +28,11 @@ launch never opens on it.
   `Voice`, and three radios `System`, `Light` and `Dark` whose rects lie
   wholly inside the window and above the bottom safe area with no scroll;
   `Your field` shows the field (the heading `Your field`); a relaunch from
-  About opens Today.
+  About opens home.
 
 ## How to get to it (user POV)
 
-- From Today, tap `Your field`, then `About`; tap `Your field` to come
-  back.
+- From home, tap `About` in its foot; tap `Your field` to come back.
 
 ## Driving it
 
@@ -42,8 +41,8 @@ Set `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them, and
 About: `--app` with a build of the head's native code serves; the
 JavaScript comes from the dev server.
 
-1. `first.md` steps 1-7, to `first-today`.
-2. `about-credits`: `sim tap "label=Your field"`, `sim snapshot about-field`
+1. `first.md` steps 1-7, to `first-home`.
+2. `about-credits`: on home, `sim snapshot about-field`
    and a raw snapshot (`agent-device snapshot --json --raw --observe-only
    --force-full --session verify-heartseed`) → a button `About`; from the
    raw snapshot, its rect and the window's, keeping only numbers.
@@ -55,7 +54,8 @@ JavaScript comes from the dev server.
    keeping only numbers.
 4. `sim tap "label=Your field"` → the heading `Your field`. Then
    `sim tap "label=About"`, `sim relaunch`,
-   `sim open / --expect "id=session"` → Today.
+   `sim open / --expect "id=counts"` → the heading `Your field` (home),
+   no heading `About`.
 5. Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
 
 Report only booleans, rect numbers and the labels named above; delete the
