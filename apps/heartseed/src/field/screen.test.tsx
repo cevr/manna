@@ -12,7 +12,7 @@ import { describe, expect, it } from 'bun:test';
 import passage from 'virtual:heartseed-passage';
 
 import { recallOf } from '../test/field-model';
-import { mount, record, SOIL, wantField } from '../test/field-rig';
+import { mount, record, wantField } from '../test/field-rig';
 import { device } from '../test/one';
 
 describe('the field from Today', () => {
@@ -37,7 +37,12 @@ describe('the field from Today', () => {
       [passage.reference, 'Made 1:1', 'Made 1:1'],
     ]);
     expect(first.rows[0]?.plants).toEqual([
-      { label: `${passage.reference}, not planted`, drawn: [SOIL], shown: '10' },
+      { label: `${passage.reference}, not planted`, drawn: 'soil', shown: '10' },
+    ]);
+    expect(first.rows.map((row) => [row.icon, row.ripe])).toEqual([
+      ['bow', '0 of 1 ripe'],
+      ['scroll', '0 of 1 ripe'],
+      ['scroll', '0 of 1 ripe'],
     ]);
     await app.back();
     expect(app.stage()).toBe('Stage: not planted');

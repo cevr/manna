@@ -31,7 +31,7 @@ const DRAWN: Readonly<Record<Stage, HomeIcon>> = {
   'full corn': 'corn',
 };
 
-/** One of the home's icons in the scheme now, `size` points square, hidden from the screen reader. */
+/** One of the home's icons in the scheme now, `size` points square, hidden from the screen reader; its own source stands in while it loads, so no frame draws it blank. */
 export function Icon({
   name,
   size,
@@ -42,11 +42,13 @@ export function Icon({
   readonly testID?: string;
 }) {
   const scheme = useScheme();
+  const source = ICON_IMAGES[name][scheme];
   return (
     <Image
       testID={testID}
       aria-hidden
-      source={ICON_IMAGES[name][scheme]}
+      source={source}
+      defaultSource={source}
       style={{ width: size, height: size }}
     />
   );

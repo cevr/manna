@@ -19,13 +19,32 @@ const luminance = (rgb: readonly number[]) => {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
 
-/** The contrast of an element's computed text colour against the nearest opaque background painted behind it; 0 when none is. */
-export const contrastOf = (node: Element) => {
-  let ground: Element | null = node;
+/** The nearest element from `node` up whose background is opaque, null when none is. */
+const groundOf = (node: Element | null) => {
+  let ground = node;
   while (ground !== null && channels(getComputedStyle(ground).backgroundColor).a < 1)
     ground = ground.parentElement;
+  return ground;
+};
+
+/** WCAG 2's contrast ratio of two luminances. */
+const ratio = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+
+/** The contrast of an element's computed text colour against the nearest opaque background painted behind it; 0 when none is. */
+export const contrastOf = (node: Element) => {
+  const ground = groundOf(node);
   if (ground === null) return 0;
   const ink = luminance(channels(getComputedStyle(node).color).rgb);
-  const back = luminance(channels(getComputedStyle(ground).backgroundColor).rgb);
-  return (Math.max(ink, back) + 0.05) / (Math.min(ink, back) + 0.05);
+  return ratio(ink, luminance(channels(getComputedStyle(ground).backgroundColor).rgb));
+};
+
+/** The contrast of an element's own fill against the nearest opaque background painted behind it (a mark's 3:1, WCAG 1.4.11); 0 when the element or what lies behind it has no opaque fill. */
+export const fillContrastOf = (node: Element) => {
+  const ground = groundOf(node.parentElement);
+  const fill = channels(getComputedStyle(node).backgroundColor);
+  if (ground === null || fill.a < 1) return 0;
+  return ratio(
+    luminance(fill.rgb),
+    luminance(channels(getComputedStyle(ground).backgroundColor).rgb),
+  );
 };
