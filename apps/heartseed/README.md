@@ -1773,8 +1773,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     open and way back leaving the
     whole disk and taking no write, remove or clear; `Begin` back only when
     Today showed `Say it` or `Next`, which it shows again): the way there
-    and back through recitals, Again and a relaunch; and
-    `src/field/garden.test.tsx`, a generated garden past 140 other verses
+    and back through recitals, Again and a relaunch.
+  - `test:field-garden`: `src/field/garden.test.tsx`, a generated garden past 140 other verses
     of any reference, canonical twins each its own plant, each label the
     exact reference and each verse number the text after its last colon.
   - `test:field-walk`, `test:field-relaunch`, `test:field-grades` and
