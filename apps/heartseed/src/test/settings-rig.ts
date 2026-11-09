@@ -22,6 +22,10 @@
  * ignored); `openSettings` plays that end (`animationend` on the node its
  * `ModalAnimation` draws) and fails loudly when the dialog does not become
  * active.
+ *
+ * `renewBySettings` is the trip a rig takes to make its plan again from
+ * Today, where no Minutes choice shows: `Your field`, the sheet's Minutes
+ * radio, `Done`, and `Begin` when home offers it, the sheet held throughout.
  */
 
 import { act } from 'react';
@@ -334,6 +338,68 @@ export const minutesBySettings = async (rig: Rig, minutes: number) => {
   await openSettings(rig);
   const tapped = await tapInSheet(`${minutes} min`);
   return tapped && (await closeSettings(rig, 'Done'));
+};
+
+/** The control named `label` under `rig`'s host, if it shows. */
+const hostControl = (rig: Rig, label: string) =>
+  [...rig.host.querySelectorAll(CONTROLS)].find((node) => nameOf(node) === label);
+
+/** The headings under `rig`'s host, joined by `|`. */
+const headingsOf = (rig: Rig) =>
+  [...rig.host.querySelectorAll('[role="heading"]')].map(text).join('|');
+
+/**
+ * A new plan from Today the way a reader makes one: `Your field` back to
+ * home, the gear, in the sheet the radio `${minutes} min` (or, with no
+ * `minutes`, the Minutes radio checked, which makes the plan again), `Done`,
+ * then `Begin` when home offers it. Every frame of the trip's sheet is held
+ * by a `watchSheet` against `scheme`. Answers the screen it ends on by its
+ * headings (`Today` after `Begin`, else `Your field`), the sheet's faults,
+ * and its look-checked frames; only the radio's tap writes. Fails `no Your
+ * field on Today`, `no <label> in the sheet`, or `the sheet stayed after
+ * Done`.
+ */
+export const renewBySettings = async (
+  rig: Rig,
+  minutes?: number,
+  scheme: () => Scheme = systemScheme,
+) => {
+  const back = hostControl(rig, 'Your field');
+  if (back === undefined) throw new Error('no Your field on Today');
+  await act(async () => {
+    click(back);
+  });
+  if (
+    !(await rig.until(
+      () => headingsOf(rig) === 'Your field' && hostControl(rig, 'Settings') !== undefined,
+    ))
+  )
+    throw new Error(`no home with Settings after Your field, at ${headingsOf(rig)}`);
+  const watch = watchSheet(scheme);
+  const fail = (fault: string) => {
+    watch.stop();
+    return new Error(fault);
+  };
+  await openSettings(rig).catch((error: unknown) => {
+    throw fail(String(error));
+  });
+  const checked = modalOf()?.querySelector(
+    '[role="radiogroup"][aria-label="Minutes"] [role="radio"][aria-checked="true"]',
+  );
+  let label = 'checked Minutes radio';
+  if (checked !== null && checked !== undefined) label = nameOf(checked);
+  if (minutes !== undefined) label = `${minutes} min`;
+  if (!(await tapInSheet(label))) throw fail(`no ${label} in the sheet`);
+  if (!(await closeSettings(rig, 'Done'))) throw fail('the sheet stayed after Done');
+  const begin = hostControl(rig, 'Begin');
+  if (begin !== undefined) {
+    await act(async () => {
+      click(begin);
+    });
+    await rig.until(() => headingsOf(rig) === 'Today');
+  }
+  watch.stop();
+  return { at: headingsOf(rig), sheet: [...watch.faults], looked: watch.frames.looked };
 };
 
 /** Takes the voice's next choice in the sheet: open, `Voice`, `Done`; answers whether each step showed. */

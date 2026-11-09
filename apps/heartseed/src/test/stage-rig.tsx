@@ -30,7 +30,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
-import { rootWithChoicesOnToday } from './choices-seam';
+import Root from '../../app/index';
 import { appLayer, runtime } from '../app';
 import { recite, scriptedSource } from '../dictation/script';
 import { NEW_CARD, review } from '../fsrs';
@@ -44,6 +44,7 @@ import { DAY } from './garden-model';
 import { computed } from './look';
 import { device } from './one';
 import { watchRoot } from './root-rule';
+import { renewBySettings } from './settings-rig';
 
 export const PREFIX = 'heartseed/recall/';
 
@@ -187,7 +188,7 @@ export const mount = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        {rootWithChoicesOnToday(host)}
+        <Root />
       </RegistryProvider>,
     ),
   );
@@ -235,13 +236,16 @@ export const mount = async (
     [...host.querySelectorAll('[role="radiogroup"] [role="radio"]')].find(
       (node) => node.getAttribute('aria-label') === name,
     );
-  /** `Next`, the clock set to the passage's due, and a tap on the Minutes radio checked: a new plan, which offers Say it on the passage again with no result shown. */
+  /** `Next`, the clock set to the passage's due, and the reader's trip through the Settings sheet (`renewBySettings`: `Your field`, the Minutes radio checked, `Done`, `Begin`), ending on Today with the sheet held and its look checked: a new plan, which offers Say it on the passage again with no result shown. */
   const renew = async () => {
     await click(button('Next'));
     toDue(time, passageRecalls());
-    await click(
-      host.querySelector('[role="radiogroup"][aria-label="Minutes"] [aria-checked="true"]'),
-    );
+    const trip = await renewBySettings({ host, until });
+    expect({ at: trip.at, sheet: trip.sheet, looked: trip.looked > 0 }, 'the trip').toEqual({
+      at: 'Today',
+      sheet: [],
+      looked: true,
+    });
     expect(
       await until(() => sayIt() !== undefined && one('[data-testid="summary"]') === null),
     ).toBe(true);

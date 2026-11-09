@@ -28,7 +28,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
-import { rootWithChoicesOnToday } from './choices-seam';
+import Root from '../../app/index';
 import { appLayer, runtime, sayItView } from '../app';
 import { DictationSource, type DictationEvent } from '../dictation';
 import { recite, scriptedSource } from '../dictation/script';
@@ -44,6 +44,7 @@ import { clockOf, toDue, type Time } from './clock';
 import { AA, contrastOf } from './contrast';
 import { computed, systemScheme } from './look';
 import { watchRoot } from './root-rule';
+import { renewBySettings } from './settings-rig';
 
 export const WORDS = sourceWords(passage.text);
 
@@ -405,7 +406,7 @@ export const mount = async (
           {today && (
             <>
               <Seen into={latest} />
-              {rootWithChoicesOnToday(host)}
+              <Root />
             </>
           )}
         </RegistryProvider>,
@@ -492,18 +493,23 @@ export const mount = async (
       .map(([, value]): Recall => JSON.parse(value));
   /**
    * A new plan at the passage's due: `Next` when it shows, the clock set to
-   * the due, and a tap on the Minutes radio checked, which makes the plan
-   * again with no recital under way (the recital's marks and result go);
-   * Today then offers Say it on the passage under `cue`.
+   * the due, and the reader's trip through the Settings sheet
+   * (`renewBySettings`: `Your field`, the Minutes radio checked, `Done`,
+   * `Begin`), which makes the plan again with no recital under way (the
+   * recital's marks and result go) and ends on Today, the sheet held and
+   * its look checked; Today then offers Say it on the passage under `cue`.
    */
   const renew = async (cue: Cue) => {
     await click(all('[role="button"]').find((node) => node.getAttribute('aria-label') === 'Next'));
     toDue(time, passageRecalls());
     shown.recital = false;
     shown.cue = cue;
-    await click(
-      one('[role="radiogroup"][aria-label="Minutes"] [role="radio"][aria-checked="true"]'),
-    );
+    const trip = await renewBySettings({ host, until });
+    expect({ at: trip.at, sheet: trip.sheet, looked: trip.looked > 0 }, 'the trip').toEqual({
+      at: 'Today',
+      sheet: [],
+      looked: true,
+    });
     return until(() => label() === 'Say it' && one('[data-testid="summary"]') === null);
   };
   const leave = async () => {
