@@ -2461,7 +2461,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     read; chooses, a refused write, bursts in one turn and with every write
     held and let go in any order; relaunches): the view, its latest change,
     the disk and the log after each command, nothing written at launch.
-  - `test:appearance-walk`: `src/appearance/walk.test.tsx`, the root
+  - `test:appearance-walk` and `test:appearance-walk-b`:
+    `src/appearance/walk.test.tsx` (seeds 1-4) and `walk-b.test.tsx`
+    (seeds 5-8), each part's seeds reaching every floor, walks of
+    `src/test/appearance-walk.tsx`: the root
     through the bar rig as generated readers (launches over each stored
     text class and either system; a choice in home's Settings sheet,
     landed or refused, a flip of the system, a relaunch, the field), every
