@@ -63,7 +63,7 @@ const random = (seed: number) => {
   };
 };
 
-/** Six made-up words, each 30 phonemes long, so a clause of three is 93 symbols and two clauses fill a chunk. */
+/** Six made-up words, each 30 phonemes long, so a phrase of three is 93 symbols and is one chunk. */
 const LEXICON: Lexicon = (() => {
   const symbols = 'abcdefghij';
   const vocab = new Map<string, number>([
@@ -82,7 +82,7 @@ const LEXICON: Lexicon = (() => {
   return { words, vocab };
 })();
 
-/** `clauses` clauses of three words each, ending with a comma and the last with a stop. */
+/** `clauses` phrases of three words each, ending with a comma and the last with a stop. */
 const textOf = (clauses: number) =>
   Array.from({ length: clauses }, (_, at) => {
     const keys = [...LEXICON.words.keys()];
@@ -91,7 +91,7 @@ const textOf = (clauses: number) =>
   }).join(' ');
 
 /** Texts of one, two and three chunks, and one with a word the lexicon lacks. */
-const TEXTS: ReadonlyArray<string> = [textOf(1), textOf(3), textOf(5), 'bel zor.'];
+const TEXTS: ReadonlyArray<string> = [textOf(1), textOf(2), textOf(3), 'bel zor.'];
 
 /** Names that miss a voice of `VOICES`: other Kokoro voices (Him's former one among them), none, a case, a pack path, the reader's names, a trailing space, a word. */
 const NEAR_MISSES: ReadonlyArray<string> = [

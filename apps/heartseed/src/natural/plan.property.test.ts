@@ -4,17 +4,19 @@
  * A piece's natural-voice plan and its word starts against an independent
  * model written here, over a small hand-built lexicon and vocab: seeded
  * texts of its words with edge characters, runs of blanks, unknown words
- * (case variants of listed keys among them) and blank texts, then each
- * rule's edges by hand: the cap at 200 and 201 for a clause, a word and a
- * packed pair with its joining space, a key looked up as written, symbols
- * counted in code points, marks after a spoken lead and at the whole run in
- * UTF-16, and durations that do not fit a chunk.
+ * (case variants of listed keys among them), line breaks and blank texts,
+ * with floors on every rest and on breaks inside a phrase; then each rule's
+ * edges by hand: one phrase a chunk however short, the cap at 200 and 201
+ * for a phrase and a word, ";" and ":" sent as ".", each rest by its
+ * ending and 0 after the last chunk or inside a phrase, a key looked up as
+ * written, symbols counted in code points, marks after a spoken lead and at
+ * the whole run in UTF-16, and durations that do not fit a chunk.
  */
 
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
-import { CHUNK_CAP, planOf, SAMPLES_PER_FRAME, startsOf, type Chunk } from './plan';
+import { CHUNK_CAP, planOf, RESTS, SAMPLES_PER_FRAME, startsOf, type Chunk } from './plan';
 
 const SYMBOLS = [' ', ...',.:;?!()', ...'abdefghiklmnoprstuvwz', ...'ðˈɔɹOɛAəɪɡθʌ', '𝔹'];
 const VOCAB: ReadonlyMap<string, number> = new Map(
@@ -44,14 +46,20 @@ const WORDS: ReadonlyMap<string, string> = new Map([
 ]);
 
 const SPOKEN_EDGE = ',.:;?!()';
-const CLAUSE_END = ',.:;?!';
+const PHRASE_END = ',.:;?!';
+/** The rests the owner chose, in ms, at 24 samples a ms. */
+const REST = { comma: 300 * 24, clause: 550 * 24, sentence: 800 * 24, verse: 1100 * 24 };
+/** A spoken edge character as it is sent: `;` and `:` as a full stop. */
+const sent = (char: string) => (char === ';' || char === ':' ? '.' : char);
 
 interface ModelWord {
   readonly location: number;
   readonly length: number;
+  readonly end: number;
   readonly lead: ReadonlyArray<string>;
   readonly body: ReadonlyArray<string>;
   readonly trail: ReadonlyArray<string>;
+  readonly mark: string | undefined;
 }
 
 const isWordChar = (char: string) => /^[\p{L}\p{N}]$/u.test(char);
@@ -78,12 +86,12 @@ type Modelled =
   | { readonly _tag: 'Some'; readonly chunks: ReadonlyArray<Chunk> };
 const NONE: Modelled = { _tag: 'None' };
 
-/** The rule, modelled: words, spoken symbols, clauses, units, greedy chunks, ids and marks. */
-const modelPlan = (
+/** The text's words as spoken, modelled, or none when one is unknown, speaks a symbol not in `vocab`, or speaks over 200. */
+const modelWords = (
   words: ReadonlyMap<string, string>,
   vocab: ReadonlyMap<string, number>,
   text: string,
-): Modelled => {
+): Array<ModelWord> | undefined => {
   const said: Array<ModelWord> = [];
   for (const [start, end] of runsOf(text)) {
     const points = Array.from(text.slice(start, end));
@@ -91,42 +99,74 @@ const modelPlan = (
     if (first < 0) continue;
     const last = points.findLastIndex(isWordChar);
     const phonemes = words.get(points.slice(first, last + 1).join(''));
-    if (phonemes === undefined) return NONE;
+    if (phonemes === undefined) return undefined;
+    const trail = points.slice(last + 1);
     const word = {
       location: start,
       length: end - start,
-      lead: points.slice(0, first).filter((char) => SPOKEN_EDGE.includes(char)),
+      end,
+      lead: points
+        .slice(0, first)
+        .filter((char) => SPOKEN_EDGE.includes(char))
+        .map(sent),
       body: Array.from(phonemes),
-      trail: points.slice(last + 1).filter((char) => SPOKEN_EDGE.includes(char)),
+      trail: trail.filter((char) => SPOKEN_EDGE.includes(char)).map(sent),
+      mark: trail.filter((char) => PHRASE_END.includes(char)).at(-1),
     };
     const symbols = [...word.lead, ...word.body, ...word.trail];
-    if (symbols.some((symbol) => !vocab.has(symbol))) return NONE;
-    if (symbols.length > 200) return NONE;
+    if (symbols.some((symbol) => !vocab.has(symbol))) return undefined;
+    if (symbols.length > 200) return undefined;
     said.push(word);
   }
+  return said;
+};
+
+/** The rule, modelled: words, spoken symbols, phrases, greedy chunks within a phrase, ids, marks and rests. */
+const modelPlan = (
+  words: ReadonlyMap<string, string>,
+  vocab: ReadonlyMap<string, number>,
+  text: string,
+): Modelled => {
+  const said = modelWords(words, vocab, text) ?? [];
   if (said.length === 0) return NONE;
   const sizeOfWord = (word: ModelWord) => word.lead.length + word.body.length + word.trail.length;
   const sizeOfAll = (group: ReadonlyArray<ModelWord>) =>
     group.map(sizeOfWord).reduce((a, b) => a + b + 1, 0) - 1;
-  const clauses: Array<Array<ModelWord>> = [[]];
-  for (const word of said) {
-    clauses.at(-1)?.push(word);
-    if (word.trail.some((char) => CLAUSE_END.includes(char))) clauses.push([]);
+  const lineAfter = (index: number) => {
+    const next = said[index + 1];
+    return next !== undefined && text.slice(said[index]?.end, next.location).includes('\n');
+  };
+  const restAfter = (index: number) => {
+    if (index === said.length - 1) return 0;
+    if (lineAfter(index)) return REST.verse;
+    const mark = said[index]?.mark;
+    if (mark === undefined) return 0;
+    if (mark === ',') return REST.comma;
+    if (mark === ';' || mark === ':') return REST.clause;
+    return REST.sentence;
+  };
+  const phrases: Array<Array<number>> = [[]];
+  for (const [index, word] of said.entries()) {
+    phrases.at(-1)?.push(index);
+    if (word.mark !== undefined || lineAfter(index)) phrases.push([]);
   }
-  const units = clauses
-    .filter((clause) => clause.length > 0)
-    .flatMap((clause) => (sizeOfAll(clause) > 200 ? clause.map((word) => [word]) : [clause]));
-  const groups: Array<Array<ModelWord>> = [];
-  let openSize = 0;
-  for (const unit of units) {
-    const unitSize = sizeOfAll(unit);
-    const open = groups.at(-1);
-    if (open !== undefined && openSize + 1 + unitSize <= 200) {
-      open.push(...unit);
-      openSize += 1 + unitSize;
-    } else {
-      groups.push([...unit]);
-      openSize = unitSize;
+  const groups: Array<{ readonly words: Array<ModelWord>; rest: number }> = [];
+  for (const phrase of phrases.filter((each) => each.length > 0)) {
+    const own: Array<Array<number>> = [[]];
+    for (const index of phrase) {
+      const open = own.at(-1) ?? [];
+      if (
+        open.length === 0 ||
+        sizeOfAll([...open, index].map((at) => said[at] as ModelWord)) <= 200
+      )
+        open.push(index);
+      else own.push([index]);
+    }
+    for (const [at, group] of own.entries()) {
+      groups.push({
+        words: group.map((index) => said[index] as ModelWord),
+        rest: at === own.length - 1 ? restAfter(group.at(-1) ?? -1) : 0,
+      });
     }
   }
   const idOf = (symbol: string) => vocab.get(symbol) ?? Number.NaN;
@@ -134,7 +174,7 @@ const modelPlan = (
     _tag: 'Some',
     chunks: groups.map((group) => {
       const ids = [0];
-      const marks = group.map((word, index) => {
+      const marks = group.words.map((word, index) => {
         if (index > 0) ids.push(idOf(' '));
         ids.push(...word.lead.map(idOf));
         const mark = { token: ids.length, location: word.location, length: word.length };
@@ -142,7 +182,7 @@ const modelPlan = (
         return mark;
       });
       ids.push(0);
-      return { ids, marks };
+      return { ids, marks, rest: group.rest };
     }),
   };
 };
@@ -168,7 +208,9 @@ const modelShown = (modelled: Modelled): string =>
 const chunksOf = (text: string, vocab = VOCAB): ReadonlyArray<Chunk> =>
   Option.match(planOf(WORDS, vocab, text), { onNone: () => [], onSome: (plan) => plan.chunks });
 /** The text's first chunk, or an empty one when it plans none, so the expectations below name the miss. */
-const firstChunk = (text: string): Chunk => chunksOf(text)[0] ?? { ids: [], marks: [] };
+const firstChunk = (text: string): Chunk => chunksOf(text)[0] ?? { ids: [], marks: [], rest: -1 };
+const restsOf = (text: string, vocab = VOCAB) => chunksOf(text, vocab).map((chunk) => chunk.rest);
+const sizesOf = (text: string) => chunksOf(text).map((chunk) => chunk.marks.length);
 
 /** mulberry32, seeded, so a red run names its seed. */
 const generator = (seed: number) => {
@@ -260,10 +302,21 @@ describe('planOf, against the model', () => {
     const planned = texts.map((text) => modelPlan(WORDS, VOCAB, text));
     const some = planned.filter((each) => each._tag === 'Some');
     const multi = some.filter((each) => each._tag === 'Some' && each.chunks.length > 1).length;
+    const rests = new Map<number, number>();
+    let inner = 0;
+    for (const each of some) {
+      if (each._tag !== 'Some') continue;
+      for (const chunk of each.chunks) rests.set(chunk.rest, (rests.get(chunk.rest) ?? 0) + 1);
+      inner += each.chunks.slice(0, -1).filter((chunk) => chunk.rest === 0).length;
+    }
     expect({ seed: SEED, wrong: wrong.slice(0, 3) }).toEqual({ seed: SEED, wrong: [] });
     expect(some.length).toBeGreaterThan(texts.length / 3);
     expect(some.length).toBeLessThan(texts.length);
     expect(multi).toBeGreaterThan(50);
+    expect([...Object.values(REST), 0].map((rest) => rests.get(rest) ?? 0)).toSatisfy((counts) =>
+      counts.every((count) => count > 20),
+    );
+    expect(inner).toBeGreaterThan(5);
   });
 
   it('plans seeded texts as the model does under a vocab without a spoken edge', () => {
@@ -277,8 +330,9 @@ describe('planOf, against the model', () => {
 });
 
 describe('planOf, by hand', () => {
-  it('fixes the cap at 200 symbols and the frame at 600 samples', () => {
+  it('fixes the cap at 200 symbols, the frame at 600 samples and the rests the owner chose', () => {
     expect([CHUNK_CAP, SAMPLES_PER_FRAME]).toEqual([200, 600]);
+    expect(REST).toEqual({ ...RESTS });
   });
 
   it('answers none for no words, an unknown key, an out-of-vocab symbol and a word over the cap', () => {
@@ -298,6 +352,47 @@ describe('planOf, by hand', () => {
     expect(shown(planOf(WORDS, withoutSymbol('('), 'thee (LORD'))).toBe('None');
     expect(shown(planOf(WORDS, withoutSymbol('?'), 'LORD?'))).toBe('None');
     expect(shown(planOf(WORDS, withoutSymbol('?'), 'LORD;'))).not.toBe('None');
+    expect(shown(planOf(WORDS, withoutSymbol('.'), 'LORD;'))).toBe('None');
+    expect(shown(planOf(WORDS, withoutSymbol('.'), ':LORD'))).toBe('None');
+  });
+
+  it('sends a spoken ";" or ":", lead or trail, as the id of "."', () => {
+    const stop = VOCAB.get('.') ?? -1;
+    for (const text of ['O;', 'O:', ':O', ';O.', 'O.']) {
+      expect(firstChunk(text).ids.filter((id) => id === stop).length).toBeGreaterThan(0);
+      expect(firstChunk(text).ids).not.toContain(VOCAB.get(';'));
+      expect(firstChunk(text).ids).not.toContain(VOCAB.get(':'));
+    }
+    expect(shown(planOf(WORDS, withoutSymbol(';'), 'O; thee'))).toBe(
+      shown(planOf(WORDS, VOCAB, 'O. thee')).replace('"rest":19200', '"rest":13200'),
+    );
+  });
+
+  it('rests after a phrase by its ending: comma, ";" or ":", a sentence, a line break', () => {
+    expect(restsOf('x1, x2; x3: x4. x5? x6! x7')).toEqual([
+      REST.comma,
+      REST.clause,
+      REST.clause,
+      REST.sentence,
+      REST.sentence,
+      REST.sentence,
+      0,
+    ]);
+    expect(restsOf('x1\nx2')).toEqual([REST.verse, 0]);
+    expect(restsOf('x1, \n x2')).toEqual([REST.verse, 0]);
+    expect(restsOf('x1 — \n¶ x2')).toEqual([REST.verse, 0]);
+    expect(restsOf('x1;) x2')).toEqual([REST.clause, 0]);
+    expect(restsOf('x1,: x2')).toEqual([REST.clause, 0]);
+    expect(restsOf('x1:, x2')).toEqual([REST.comma, 0]);
+    expect(restsOf('(x1) x2')).toEqual([0]);
+    expect(restsOf('x1 — x2 ¶ x3')).toEqual([0]);
+  });
+
+  it('rests 0 after the text’s last chunk and inside a phrase over the cap', () => {
+    expect(restsOf('x1.')).toEqual([0]);
+    expect(restsOf('x1.\n')).toEqual([0]);
+    expect(restsOf('x1, x2,')).toEqual([REST.comma, 0]);
+    expect(restsOf('x150 x60, x199. x1')).toEqual([0, REST.comma, REST.sentence, 0]);
   });
 
   it('looks a key up exactly as written: a case variant of a listed key plans none', () => {
@@ -318,31 +413,34 @@ describe('planOf, by hand', () => {
   });
 
   it('speaks a word’s parentheses and marks it at its first phoneme, after the lead', () => {
-    const chunk = firstChunk('thee (LORD), O');
-    const spoken = ['ð', 'ˈ', 'i', ' ', '(', 'l', 'ˈ', 'ɔ', 'ɹ', 'd', ')', ',', ' ', 'ˈ', 'O'];
-    expect(chunk.ids).toEqual([0, ...spoken.map((symbol) => VOCAB.get(symbol) ?? -1), 0]);
-    expect(chunk.marks).toEqual([
+    const [chunk, after] = chunksOf('thee (LORD), O');
+    const spoken = ['ð', 'ˈ', 'i', ' ', '(', 'l', 'ˈ', 'ɔ', 'ɹ', 'd', ')', ','];
+    expect(chunk?.ids).toEqual([0, ...spoken.map((symbol) => VOCAB.get(symbol) ?? -1), 0]);
+    expect(chunk?.marks).toEqual([
       { token: 1, location: 0, length: 4 },
       { token: 6, location: 5, length: 7 },
-      { token: 14, location: 13, length: 1 },
     ]);
+    expect(after?.ids).toEqual([0, VOCAB.get('ˈ') ?? -1, VOCAB.get('O') ?? -1, 0]);
+    expect(after?.marks).toEqual([{ token: 1, location: 13, length: 1 }]);
   });
 
   it('marks the whole run, edges included, in UTF-16 units past astral and curly characters', () => {
     const text = '😀 “𝔸men,” ’Lord’s’ big';
-    const chunk = firstChunk(text);
-    expect(
-      chunk.marks.map((mark) => text.slice(mark.location, mark.location + mark.length)),
-    ).toEqual(['“𝔸men,”', '’Lord’s’', 'big']);
-    expect(chunk.marks.map((mark) => mark.location)).toEqual([3, 12, 21]);
-    expect(chunk.marks.map((mark) => mark.token)).toEqual([1, 8, 15]);
+    const marks = chunksOf(text).flatMap((chunk) => chunk.marks);
+    expect(marks.map((mark) => text.slice(mark.location, mark.location + mark.length))).toEqual([
+      '“𝔸men,”',
+      '’Lord’s’',
+      'big',
+    ]);
+    expect(marks.map((mark) => mark.location)).toEqual([3, 12, 21]);
+    expect(marks.map((mark) => mark.token)).toEqual([1, 1, 8]);
   });
 
-  it('keeps a clause of exactly 200 symbols whole, and splits one of 201 between its words', () => {
-    expect(chunksOf('x100 x99').map((chunk) => chunk.marks.length)).toEqual([2]);
-    expect(chunksOf('x100 x100').map((chunk) => chunk.marks.length)).toEqual([1, 1]);
-    expect(chunksOf('x100 x50 x60').map((chunk) => chunk.marks.length)).toEqual([2, 1]);
-    expect(chunksOf('x20, x100 x50 x60').map((chunk) => chunk.marks.length)).toEqual([3, 1]);
+  it('keeps a phrase of exactly 200 symbols whole, and splits one of 201 between its words', () => {
+    expect(sizesOf('x100 x99')).toEqual([2]);
+    expect(sizesOf('x100 x100')).toEqual([1, 1]);
+    expect(sizesOf('x100 x50 x60')).toEqual([2, 1]);
+    expect(sizesOf('x20, x100 x50 x60')).toEqual([1, 2, 1]);
   });
 
   it('counts symbols in code points, not UTF-16 units', () => {
@@ -352,17 +450,19 @@ describe('planOf, by hand', () => {
     expect(chunksOf('y200').map((chunk) => chunk.ids.length)).toEqual([202]);
   });
 
-  it('packs clauses while they and the joining space stay within 200: at 199, 200 and 201', () => {
-    expect(chunksOf('x50, x146.').map((chunk) => chunk.marks.length)).toEqual([2]);
-    expect(chunksOf('x50, x147.').map((chunk) => chunk.marks.length)).toEqual([2]);
-    expect(chunksOf('x50, x148.').map((chunk) => chunk.marks.length)).toEqual([1, 1]);
-    expect(chunksOf('x50, x100 x47').map((chunk) => chunk.marks.length)).toEqual([3]);
+  it('never joins two phrases in a chunk, however short', () => {
+    expect(sizesOf('x50, x146.')).toEqual([1, 1]);
+    expect(sizesOf('x1, x1; x1: x1. x1')).toEqual([1, 1, 1, 1, 1]);
+    expect(sizesOf('x50, x100 x47')).toEqual([1, 2]);
+    expect(sizesOf('x1\nx1 x1')).toEqual([1, 2]);
   });
 
-  it('ends a clause at a comma, so the next clause starts a chunk rather than filling the last', () => {
-    expect(chunksOf('x100, x60 x60').map((chunk) => chunk.marks.length)).toEqual([1, 2]);
-    expect(chunksOf('x100; x60 x60').map((chunk) => chunk.marks.length)).toEqual([1, 2]);
-    expect(chunksOf('(x100) x60 x60').map((chunk) => chunk.marks.length)).toEqual([2, 1]);
+  it('ends a phrase at a mark or a line break, not at a parenthesis or a dash', () => {
+    expect(sizesOf('x100, x60 x60')).toEqual([1, 2]);
+    expect(sizesOf('x100; x60 x60')).toEqual([1, 2]);
+    expect(sizesOf('(x100) x60 x60')).toEqual([2, 1]);
+    expect(sizesOf('x1 — x2 ¶ x3')).toEqual([3]);
+    expect(sizesOf('x1 \n x2 x3')).toEqual([1, 2]);
   });
 });
 
@@ -391,8 +491,8 @@ describe('startsOf', () => {
   });
 
   it('answers none for durations that do not fit the chunk', () => {
-    const chunk = firstChunk('thee (LORD), O');
-    expect(chunk.ids.length).toBe(17);
+    const chunk = firstChunk('thee (LORD) O');
+    expect(chunk.ids.length).toBe(16);
     const fit = chunk.ids.map(() => 2);
     const at = (index: number, frames: number) => fit.with(index, frames);
     const misfits = [
