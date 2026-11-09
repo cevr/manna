@@ -2017,7 +2017,7 @@
         "!src/look/**/*.test.*",
         "!src/**/*.test.*",
         "!vite/**/*.test.*",
-        "!scripts/{natural-serve,parts,sim,home-icons}.test.*",
+        "!scripts/{natural-serve,parts,sim,home-icons,home-pixels}.test.*",
         "!infra/**/*.test.*"
       ]
     },
@@ -2031,7 +2031,21 @@
         "!src/look/**/*.test.*",
         "!src/**/*.test.*",
         "!vite/**/*.test.*",
-        "!scripts/{natural-serve,parts,sim,icon}.test.*",
+        "!scripts/{natural-serve,parts,sim,icon,home-pixels}.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:home-pixels": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
+        "!src/**/*.test.*",
+        "!vite/**/*.test.*",
+        "!scripts/{natural-serve,parts,sim,icon,home-icons}.test.*",
         "!infra/**/*.test.*"
       ]
     },
@@ -2059,7 +2073,7 @@
         "!src/look/**/*.test.*",
         "!src/**/*.test.*",
         "!vite/**/*.test.*",
-        "!scripts/{natural-serve,parts,sim,icon,home-icons}.test.*",
+        "!scripts/{natural-serve,parts,sim,icon,home-icons,home-pixels}.test.*",
         "!infra/**/*.test.*"
       ]
     },
@@ -2170,6 +2184,7 @@
         "test:icon",
         "test:devbundle",
         "test:home-icons",
+        "test:home-pixels",
         "test:handbook-build",
         "test:mirror"
       ]
