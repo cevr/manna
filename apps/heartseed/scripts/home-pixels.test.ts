@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noTernary -- the pixel walk reads raw bytes in plain loops and keeps its best distance in a plain branch. */
+/* oxlint-disable effect/noNullish, effect/noTernary -- the pixel walk reads raw bytes in plain loops and keeps its best distance in a plain branch. */
 
 /**
  * The home's icons, drawn in their scheme's colours: an oracle apart from
