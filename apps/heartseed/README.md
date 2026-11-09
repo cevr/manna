@@ -1566,7 +1566,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   left out of AA, as WCAG leaves it. The big button's press scales it
   (`look.pressedButton`) and changes no colour. `src/test/look.ts`'s
   `seenContrast` composes these opacities and `pressedFaults` holds each
-  control pressed in turn (`test:dark-screens`).
+  control pressed in turn (`test:dark-screens`, `test:dark-screens-dark`).
 - **What the tests cannot see.** happy-dom lays out nothing and draws no
   glyph: SF Rounded's metrics (a verse of 90 words, a long reference,
   `When I need…` beside `Your field`, the chooser's rows wrapping, not
@@ -1726,9 +1726,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     and relaunches through `src/test/field-walk.ts`, each command's writes
     modelled apart from the app; each file's device reaches its own floors
     (relaunches, or Again).
-  - `test:field-bar` and `test:field-bar-lists`:
+  - `test:field-bar`, `test:field-bar-lists` and `test:field-bar-kinds`:
     `src/field/bar-remove.test.tsx` and `bar-twice.test.tsx`, then
-    `bar-lists.test.tsx` and `bar-kinds.test.tsx`, generated readers
+    `bar-lists.test.tsx`, then `bar-kinds.test.tsx`, generated readers
     through `src/test/bar-walk.ts` over `src/test/bar-rig.tsx` (the root
     over the device's store, whose passages' key alone may fail its reads;
     every frame held to one heading, no bar control, alert or limit line
@@ -2151,10 +2151,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     phases (hear while the voice reads, letters while their recital
     listens, alone, Planted, then Today) in dark, each flipped to light and
     back, every frame held to the oracle.
-  - `test:dark-screens`: `src/look/screens.test.tsx`, the field (every
+  - `test:dark-screens` and `test:dark-screens-dark`:
+    `src/look/screens.test.tsx` (light) and `screens-dark.test.tsx`
+    (dark), each a walk of `src/test/screens-walk.ts`: the field (every
     plant stage, a remove asked and pending), About, the chooser (books, a
-    chapter, a verse chosen, `Plant`) and When I need…'s cards in light
-    and in dark through the bar and need rigs, each flipped and back, each
+    chapter, a verse chosen, `Plant`) and When I need…'s cards
+    through the bar and need rigs, each flipped and back, each
     control held pressed in turn with its opacity composed. The bar, need,
     field and chooser rigs hold every frame to the oracle beside their own
     rules.
