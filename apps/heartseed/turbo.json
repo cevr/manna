@@ -18,6 +18,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -37,6 +38,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -57,6 +59,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -77,6 +80,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -97,6 +101,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -118,6 +123,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -139,6 +145,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -160,6 +167,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -182,6 +190,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -203,6 +212,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -224,6 +234,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -245,6 +256,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -266,6 +278,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -287,6 +300,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -308,6 +322,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -329,6 +344,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -350,6 +366,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -371,6 +388,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -392,6 +410,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -413,6 +432,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -434,6 +454,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -455,6 +476,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -476,6 +498,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -497,6 +520,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -518,6 +542,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -539,6 +564,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -560,6 +586,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -581,6 +608,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -602,6 +630,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -624,6 +653,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -645,6 +675,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -666,6 +697,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -687,6 +719,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -708,6 +741,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -729,6 +763,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -749,6 +784,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -770,6 +806,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -791,6 +828,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -812,6 +850,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -833,6 +872,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -854,6 +894,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -875,6 +916,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -896,6 +938,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -917,6 +960,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -938,6 +982,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -959,6 +1004,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -980,6 +1026,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1001,6 +1048,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1022,6 +1070,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1042,6 +1091,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1062,6 +1112,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1082,6 +1133,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1102,6 +1154,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1122,6 +1175,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1142,6 +1196,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1162,6 +1217,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1182,6 +1238,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1202,6 +1259,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1222,6 +1280,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1242,6 +1301,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1262,6 +1322,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1282,6 +1343,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1299,6 +1361,26 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,need}/**/*.test.*",
+        "!src/phrase.property.test.*",
+        "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:handbook": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/matcher/**/*.test.*",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
@@ -1321,6 +1403,7 @@
         "!src/need/{screen,offer,walk-a,walk-a-visit,walk-b,walk-c}.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1341,6 +1424,7 @@
         "!src/need/{need.property,offer,walk-a,walk-a-visit,walk-b,walk-c}.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1361,6 +1445,7 @@
         "!src/need/{need.property,screen,walk-a,walk-a-visit,walk-b,walk-c}.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1381,6 +1466,7 @@
         "!src/need/{need.property,screen,offer,walk-a-visit,walk-b,walk-c}.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1401,6 +1487,7 @@
         "!src/need/{need.property,screen,offer,walk-a,walk-b,walk-c}.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1421,6 +1508,7 @@
         "!src/need/{need.property,screen,offer,walk-a,walk-a-visit,walk-c}.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1441,6 +1529,7 @@
         "!src/need/{need.property,screen,offer,walk-a,walk-a-visit,walk-b}.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1459,6 +1548,7 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need}/**/*.test.*",
         "!src/phrase/walk-*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1478,6 +1568,7 @@
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/{census,voice,walk-b,walk-c}.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1497,6 +1588,7 @@
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/{census,voice,walk-a,walk-c}.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1516,6 +1608,7 @@
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/{census,voice,walk-a,walk-b}.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1536,6 +1629,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1556,6 +1650,7 @@
         "!src/{promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1584,6 +1679,7 @@
         "!src/look/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
         "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1611,6 +1707,7 @@
         "!src/look/**/*.test.*",
         "!src/{appearance.property,field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
         "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1625,6 +1722,7 @@
         "!src/look/{first,screens}.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
         "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1639,6 +1737,7 @@
         "!src/look/{today,screens}.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
         "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1653,6 +1752,7 @@
         "!src/look/{today,first}.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
         "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1783,6 +1883,7 @@
         "test:reader-add-back",
         "test:reader-remove",
         "test:promises",
+        "test:handbook",
         "test:need",
         "test:need-screen",
         "test:need-offer",
