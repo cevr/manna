@@ -728,10 +728,12 @@ and removes one.
 
 ## Choosing a passage
 
-The reader adds and removes passages from the field, and chooses one on
-the chooser, the root's third screen, in place like the field. Nothing a
-reader must reach sits where a scroll can hide it: the field's bar, the
-chooser's header and its footer are fixed outside the scroll views.
+The reader adds and removes passages from the field, plants a list from
+the Add verses sheet over home, and chooses any passage on the chooser,
+the root's third screen, in place like the field. Nothing a reader must
+reach sits where a scroll can hide it: the field's bar, the sheet's header
+and foot, the chooser's header and its footer are fixed outside the
+scroll views.
 
 - **The field's bar** holds `When I need…` once a plan is made, then,
   with the passages read, `Add verses` (testID `add-verses`) while fewer than 3
@@ -739,7 +741,8 @@ chooser's header and its footer are fixed outside the scroll views.
   to add another." (testID `limit`), which a stored list of 4 or more
   shows too, so the bar never offers an add the service would refuse. The
   dashed row `Add verses` at the field's end (testID `add-row`) shows
-  exactly when the bar's does and does the same; both open the chooser. With the passages unread
+  exactly when the bar's does and does the same; both open the Add verses
+  sheet over home, and a tap of either clears the remove's alert. With the passages unread
   it offers neither and no row offers `Remove`: the app never writes over
   what it could not read.
 - **The rows** are the promise's, then each passage held, in the order
@@ -759,9 +762,26 @@ chooser's header and its footer are fixed outside the scroll views.
   says "<reference> was not removed. Try again." (`role="alert"`). Another
   row's `Remove` moves the ask; leaving the field drops the ask and the
   alert, and the next tap of a field control clears the alert.
+- **The Add verses sheet** (`src/shelves/sheet.tsx`, `AddSheet`) is a
+  system `Modal` page sheet over home, as the Settings sheet is: the root's
+  `add` screen keeps home in place under it. Its fixed header holds the one
+  heading `Add verses` and `Done`; its scroll view holds a shelf head per
+  `SHELVES` entry (`src/shelves.ts`), each at least 56 pt tall with its
+  icon, title and note. `Any passage` opens the chooser. A shelf of lists
+  opens in place (`aria-expanded`), closing any other, and lists one offer
+  per list: its reference, its count, and `Plant <reference>` or
+  `In your field` by `offerStateOf` over home's field, so a list whose
+  every verse a furrow holds is never planted again. `Plant` runs
+  `plantPassage`: on `Added` home shows, the new row last among the
+  passages; on `Full` the foot shows the limit line, on any other answer
+  "<reference> was not planted. Try again." (`role="alert"`), the shelf
+  still open, and the next tap clears it. From a tap of `Plant` until its
+  answer no tap in the sheet, Escape or the swipe-down changes anything.
+  `Done`, Escape and the swipe-down close it.
 - **The chooser** (`src/chooser/screen.tsx`) opens at the books, with no
   range. Its fixed header holds one way back and the step's one heading:
-  `‹ Your field` over `Add a passage` (the plain labels `Old Testament`
+  `‹ Add verses` (named `Add verses`, back to the sheet, every shelf
+  closed) over `Add a passage` (the plain labels `Old Testament`
   and `New Testament`, then the 66 books in canon order, from
   `@manna/core/bible`'s `BIBLE_BOOKS`), `‹ Books` over the book (one
   button per chapter, named `<Book> <c>`), and `‹ Chapters` over
@@ -798,9 +818,10 @@ chooser's header and its footer are fixed outside the scroll views.
   was first planted (the first minute's day among them) no new piece
   shows; after the next 04:00 local, the first piece no plant names is
   new: a long verse's first phrase (Phrases, below), a short verse whole.
-- Nothing else is stored: opening, stepping, tapping verses, backing out,
-  `Keep` and unread passages write nothing, and there is no route or key
-  of the chooser's own.
+- Nothing else is stored: opening and closing the sheet, its shelves,
+  `Any passage`, stepping, tapping verses, backing out, `Keep` and unread
+  passages write nothing, and there is no route or key of the sheet's or
+  the chooser's own.
 
 ## Phrases
 
@@ -1750,7 +1771,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   left out of AA, as WCAG leaves it. The big button's press scales it
   (`look.pressedButton`) and changes no colour. `src/test/look.ts`'s
   `seenContrast` composes these opacities and `pressedFaults` holds each
-  control pressed in turn (`test:dark-screens`, `test:dark-screens-dark`).
+  control pressed in turn (`test:dark-screens`, `test:dark-screens-b`,
+  `test:dark-screens-dark`, `test:dark-screens-dark-b`).
 - **What the tests cannot see.** happy-dom lays out nothing and draws no
   glyph: SF Rounded's metrics (a verse of 90 words, a long reference,
   `When I need…` beside `Your field`, the chooser's rows wrapping, not
@@ -2026,8 +2048,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `Your field`; a row's `Remove`, then `Keep`, another row, leaving, or
     the ask's `Remove` landing or refused, once, twice in one turn or with
     `When I need…` or `Keep` in the same turn;
-    the bar's or the row's `Add verses` left or planted (each shown
-    exactly when the other is); after every tap the field, the bar
+    the bar's or the row's `Add verses` (each shown exactly when the other
+    is) to the Add verses sheet and its `Any passage`, then left by
+    `‹ Add verses` and the sheet's `Done`, or planted; after every tap the
+    sheet against `sheetWant` (every shelf closed) or closed, the field, the bar
     and the disk against `src/test/choose-model.ts` and the passages'
     model; each file's floors met by its own devices.
   - `test:about`: `src/about/screen.test.tsx`, About through the bar rig:
@@ -2351,12 +2375,15 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     taps by pattern, and `Plant` landing, refused, `Full` or `Unread`,
     tapped twice in one turn or with a back in the same turn, then a
     retry, a verse or leaving; after every tap the screen, the stored
-    passages and every other key against the models; each file's floors
-    met by its own devices.
+    passages and every other key against the models, and the stand-in's
+    count of leaves by the first back (`onBack`) and by an add (`onAdded`)
+    each against the walk's own; each file's floors met by its own devices.
   - `test:reader-today`, `test:reader-unread`, `test:reader-add`,
-    `test:reader-add-back` and `test:reader-remove`:
+    `test:reader-add-b`, `test:reader-add-back` and `test:reader-remove`:
     `src/chooser/reader-today.test.tsx`, `reader-unread.test.tsx`,
-    `reader-add.test.tsx`, `reader-add-back.test.tsx`, and
+    `reader-add.test.tsx` with `reader-add-b.test.tsx` (one device each,
+    which together meet the floors one device met before the sheet came),
+    `reader-add-back.test.tsx`, and
     `reader-remove.test.tsx` with `reader-remove-b.test.tsx`, generated
     readers through
     `src/test/reader-walk.ts` over the run's rig (the root over a disk, a
@@ -2367,8 +2394,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     (`Say it` then `Next`, Minutes by the trip through home's Settings
     sheet: `Your field`, `Settings`, `<n> min`, `Done`, home held to the
     new plan, then Today again; `Your field`, a relaunch after the next
-    04:00) and the chooser (backs, taps by pattern, `Plant` refused,
-    retried or tapped twice); a tap of a control the screen does not show
+    04:00) and the chooser (reached by `Add verses` and the sheet's
+    `Any passage`, left from the books by `‹ Add verses` and the sheet's
+    `Done`; backs, taps by pattern, `Plant` refused,
+    retried or tapped twice); the sheet against `sheetWant` with every
+    shelf closed while it shows and closed otherwise; a tap of a control the screen does not show
     is a fault; every sheet held to `sheetFaults`, its look checked at
     least once; after every command Today's shown verse,
     counts line and `Listen` against the plan made at each making over the
@@ -2710,12 +2740,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     listens, alone, Planted, then home in its done state) in dark, each
     flipped to light and back, every frame held to the oracle and to
     `rootFaults`.
-  - `test:dark-screens` and `test:dark-screens-dark`:
-    `src/look/screens.test.tsx` (light) and `screens-dark.test.tsx`
+  - `test:dark-screens`, `test:dark-screens-b`, `test:dark-screens-dark`
+    and `test:dark-screens-dark-b`:
+    `src/look/screens.test.tsx` and `screens-b.test.tsx` (light),
+    `screens-dark.test.tsx` and `screens-dark-b.test.tsx`
     (dark), each a walk of `src/test/screens-walk.ts`: the field (every
     plant stage, a remove asked and pending), About (by `Settings`, the
-    sheet's frames held to `sheetFaults`), the chooser (books, a
-    chapter, a verse chosen, `Plant`) and When I need…'s cards
+    sheet's frames held to `sheetFaults`) and When I need…'s cards in the
+    first of each scheme; the Add verses sheet with `Psalms` open (held to
+    `addSheetFaults` in the scheme shown), then the chooser by
+    `Any passage` (books, a chapter, a verse chosen, `Plant`) in the `-b`
+    part
     through the bar and need rigs, each flipped and back, each
     control held pressed in turn with its opacity composed. The bar, need,
     field and chooser rigs hold every frame to the oracle beside their own

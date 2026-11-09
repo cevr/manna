@@ -6,7 +6,8 @@
  * app's own layer over the app's real store on the device's `One.Database`
  * (`one.tsx`), beside a stand-in of the field: a button `Add verses`
  * that opens the chooser again, shown while the chooser has handed the
- * reader back (its `onField`).
+ * reader back, by its first back (`onBack`, counted in `left.backs`) or by
+ * an add (`onAdded`, counted in `left.adds`).
  *
  * Every frame (each DOM mutation batch) is held to the screen's rules and
  * each fault kept: at most one heading; no back, `Plant`, alert or limit
@@ -191,15 +192,19 @@ const standIn = themed((color, face) => ({
   ink: { color: color.ink, fontFamily: face },
 }));
 
-/** The chooser beside a stand-in field, which offers `Add verses` while the chooser has handed the reader back. */
-function Stage({ onLeft }: { readonly onLeft: () => void }) {
+/** The chooser beside a stand-in field, which offers `Add verses` while the chooser has handed the reader back; `onLeft` hears how it left, by its first back or by an add. */
+function Stage({ onLeft }: { readonly onLeft: (how: 'back' | 'added') => void }) {
   const look = useThemed(standIn);
   const [open, setOpen] = useState(true);
   if (open)
     return (
       <ChooserScreen
-        onField={() => {
-          onLeft();
+        onBack={() => {
+          onLeft('back');
+          setOpen(false);
+        }}
+        onAdded={() => {
+          onLeft('added');
           setOpen(false);
         }}
       />
@@ -250,7 +255,7 @@ export const mountChooser = async (time: Time = { now: null }) => {
   const host = document.createElement('div');
   document.body.append(host);
   const faults: string[] = [];
-  const left = { count: 0 };
+  const left = { backs: 0, adds: 0 };
   const known = new Map<string, boolean>();
   const looks = new Map<string, readonly string[]>();
   const watch = new MutationObserver(() => {
@@ -266,8 +271,9 @@ export const mountChooser = async (time: Time = { now: null }) => {
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
         <Stage
-          onLeft={() => {
-            left.count += 1;
+          onLeft={(how) => {
+            if (how === 'back') left.backs += 1;
+            else left.adds += 1;
           }}
         />
       </RegistryProvider>,

@@ -51,6 +51,7 @@ import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
 import { needOf, type NeedCard } from '../src/need';
 import { NeedScreen } from '../src/need/screen';
+import { AddSheet } from '../src/shelves/sheet';
 import type { PassagesView, Range } from '../src/passages';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { BigButton, PlantMark, Unsaid, useLook, Word } from '../src/sayit/draw';
@@ -505,17 +506,25 @@ const beginsOf = (shown: Shown, passages: PassagesView) =>
  * `Begin` (`beginsOf`) opens Today, writing nothing; `Start here` on a verse
  * makes what `startOf` starts the session's visit, then shows Today once it
  * is made (or failed), so Today never shows the plan's item first; `When I
- * need…` shows once a plan is made.
+ * need…` shows once a plan is made. While `adding`, the Add verses sheet
+ * shows over it on the same field, in the same place in the tree, so
+ * home's own state stays while the sheet opens and closes.
  */
 function FieldOf({
+  adding,
   onToday,
   onNeed,
   onAdd,
+  onAddDone,
+  onAny,
   onAbout,
 }: {
+  readonly adding: boolean;
   readonly onToday: () => void;
   readonly onNeed: () => void;
   readonly onAdd: () => void;
+  readonly onAddDone: () => void;
+  readonly onAny: () => void;
   readonly onAbout: () => void;
 }) {
   const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
@@ -536,22 +545,34 @@ function FieldOf({
     onNone: () => <Pending />,
     onSome: (known) => {
       const lists = fieldPassagesOf(PASSAGES, known.passages, known.taught);
+      const field = fieldOf(known.garden, lists);
       return (
-        <FieldScreen
-          field={fieldOf(known.garden, lists)}
-          furrows={furrowsOf(known.garden, lists, readyOf(known.session.plan, known.garden))}
-          passages={known.passages}
-          greeting={known.greeting}
-          counts={Option.map(known.session.plan, (plan) => countsOf(plan, known.garden))}
-          begin={beginsOf(shownOf(known.session, Option.some(known.garden)), known.passages)}
-          need={Option.isSome(known.session.plan)}
-          startable={(verse) => Option.isSome(startOf(known.session, known.garden, verse))}
-          onToday={onToday}
-          onNeed={onNeed}
-          onStart={onStart}
-          onAdd={onAdd}
-          onAbout={onAbout}
-        />
+        <>
+          <FieldScreen
+            field={field}
+            furrows={furrowsOf(known.garden, lists, readyOf(known.session.plan, known.garden))}
+            passages={known.passages}
+            greeting={known.greeting}
+            counts={Option.map(known.session.plan, (plan) => countsOf(plan, known.garden))}
+            begin={beginsOf(shownOf(known.session, Option.some(known.garden)), known.passages)}
+            need={Option.isSome(known.session.plan)}
+            startable={(verse) => Option.isSome(startOf(known.session, known.garden, verse))}
+            onToday={onToday}
+            onNeed={onNeed}
+            onStart={onStart}
+            onAdd={onAdd}
+            onAbout={onAbout}
+          />
+          {adding && (
+            <AddSheet
+              field={field}
+              passages={known.passages}
+              onDone={onAddDone}
+              onAny={onAny}
+              onAdded={onAddDone}
+            />
+          )}
+        </>
       );
     },
   });
@@ -605,8 +626,8 @@ function Pending() {
   );
 }
 
-/** The root's screens once the launch has opened, home being `field`. */
-type Screen = 'today' | 'field' | 'choose' | 'about' | 'need';
+/** The root's screens once the launch has opened, home being `field`, and `add` home with the Add verses sheet open. */
+type Screen = 'today' | 'field' | 'add' | 'choose' | 'about' | 'need';
 
 /** The screen an opening shows first: home for `home`, else Today. */
 const screenAt = (shown: Opening): Screen => {
@@ -621,10 +642,12 @@ const screenAt = (shown: Opening): Screen => {
  * garden. The opening is decided once per launch, at the read: planting the
  * seed inside the first minute keeps Planted on until Continue, which shows
  * home. After it, the root shows one of five screens in place: home (back
- * from Today's and When I need…'s `Your field`), Today (from home's
+ * from Today's and When I need…'s `Your field`), with the Add verses sheet
+ * over it from either of home's `Add verses` until the sheet's `Done` or a
+ * landed plant, Today (from home's
  * `Begin` or `Start here`, or once a promise tapped in When I need… is made
- * the visit), the chooser (from either of home's `Add verses`, back to home
- * from its first back or once a passage is added), About (from the `About`
+ * the visit), the chooser (from the sheet's `Any passage`, back to the sheet
+ * from its first back, home once a passage is added), About (from the `About`
  * of home's Settings sheet, back to home) and When I need… (from home's
  * `When I need…`).
  * Which one shows is the launch's state, never stored and with no route of
@@ -658,13 +681,17 @@ export default function Root() {
     case 'home':
     case 'today':
       if (screen === 'about') return <AboutScreen onField={() => setScreen('field')} />;
-      if (screen === 'choose') return <ChooserScreen onField={() => setScreen('field')} />;
-      if (screen === 'field')
+      if (screen === 'choose')
+        return <ChooserScreen onBack={() => setScreen('add')} onAdded={() => setScreen('field')} />;
+      if (screen === 'field' || screen === 'add')
         return (
           <FieldOf
+            adding={screen === 'add'}
             onToday={() => setScreen('today')}
             onNeed={() => setScreen('need')}
-            onAdd={() => setScreen('choose')}
+            onAdd={() => setScreen('add')}
+            onAddDone={() => setScreen('field')}
+            onAny={() => setScreen('choose')}
             onAbout={() => setScreen('about')}
           />
         );

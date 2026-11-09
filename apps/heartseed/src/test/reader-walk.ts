@@ -26,13 +26,17 @@
  * then home's way to Today), or a relaunch after the next 04:00 local. A
  * tap of a control that does not show is a fault. Home: `Begin` (a
  * relaunch after the next 04:00 local when home offers none), a remove (`Keep`, the ask moved, or the ask's `Remove` landing or refused,
- * once or twice in one turn), or an add (the bar's `Add verses`): a target chapter (Psalms 119 and
+ * once or twice in one turn), or an add (the bar's `Add verses`, the
+ * Add verses sheet over home with every shelf closed, then its
+ * `Any passage`): a target chapter (Psalms 119 and
  * 117, the promise's chapter, John 15, one of 20 verses, one of 21, or any), a back to
  * the books or the chapters and in again, 1-4 verse taps by pattern, then
- * leaving or `Plant` (refused or twice in one turn), retried after a refusal
+ * leaving (from the books, the back `Add verses` to the sheet, then its
+ * `Done`) or `Plant` (refused or twice in one turn), retried after a refusal
  * in half.
  *
- * After every command the settled screen is the model's, and the disk holds
+ * After every command the settled screen is the model's, the sheet open
+ * (`sheetWant`) exactly while the model has it, and the disk holds
  * the start's keys unchanged but the passages and the minutes, the passages
  * the launch's value until a change lands and the model's list after, the
  * minutes only after a tap, and no other new key but each recital's recall.
@@ -65,6 +69,8 @@ import {
 } from './choose-model';
 import { bookName, labelOf, readChooser, TARGETS } from './chooser-rig';
 import { tapsOf } from './chooser-walk';
+import { opened as sheetOpened, sheetWant } from './shelves-model';
+import { activateSheet, readSheet, tapSheet } from './shelves-rig';
 import { heldOn, recallOf } from './field-model';
 import { below, keyOf, random } from './garden-model';
 import {
@@ -171,8 +177,8 @@ const plantsIn = (disk: ReadonlyMap<string, string>) => {
   return plants;
 };
 
-/** The screens the root shows, as the model holds them. */
-type Screen = 'home' | 'Today' | 'chooser';
+/** The screens the root shows, as the model holds them, `sheet` being home with the Add verses sheet over it. */
+type Screen = 'home' | 'sheet' | 'Today' | 'chooser';
 
 /** One generated reader's walk from `seed`, `steps` commands long; answers its faults and the cases it reached. */
 export const walkReader = async (seed: number, steps: number, lean: Lean) => {
@@ -288,11 +294,16 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     counts: held.tag === 'Read' && run.plan !== null ? [countsModel(run.plan, recallsNow)] : [],
     begin: offersBegin(),
   });
-  const want = () => {
+  const wantOn = () => {
     if (screen === 'Today') return todayWant();
-    if (screen === 'home') return homeWant();
+    if (screen === 'home' || screen === 'sheet') return homeWant();
     return chooserWant(CORPUS, choosing);
   };
+  /** The screen the model wants, with the Add verses sheet over home (every shelf closed) exactly while the model has it open. */
+  const want = () => ({
+    on: wantOn(),
+    sheet: screen === 'sheet' ? sheetWant(sheetOpened(held), []) : 'closed',
+  });
 
   let app: Launch | undefined;
   const known = new Map<string, boolean>();
@@ -313,7 +324,8 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
     return app;
   };
-  const screenOf = () => {
+  const screenOf = () => ({ on: screenOn(), sheet: readSheet() });
+  const screenOn = () => {
     const at = app as Launch;
     if (screen === 'Today')
       return {
@@ -323,7 +335,7 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
         counts: at.counts(),
         listen: at.has('Listen'),
       };
-    if (screen === 'home')
+    if (screen === 'home' || screen === 'sheet')
       return {
         field: readBar(at.host),
         counts: [...at.host.querySelectorAll('[data-testid="counts"]')].map(
@@ -564,10 +576,23 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   const backOnce = async (step: string) => {
     await tap(chooserWant(CORPUS, choosing).back);
     const after = backRule(choosing);
-    if (after === undefined) {
-      screen = 'home';
-      bar = QUIET;
-    } else choosing = after;
+    if (after !== undefined) {
+      choosing = after;
+      await settle(step);
+      return;
+    }
+    await toSheet(step);
+    if (!(await tapSheet('Done')))
+      faults.push(`no Done in the sheet after ${log.slice(-6).join(' > ')}`);
+    screen = 'home';
+    bar = QUIET;
+    await settle(`${step}: Done`);
+  };
+  /** The Add verses sheet made active after the tap that opens it, then settled with every shelf closed. */
+  const toSheet = async (step: string) => {
+    if (!(await activateSheet((app as Launch).until)))
+      faults.push(`no Add verses sheet after ${log.slice(-6).join(' > ')}`);
+    screen = 'sheet';
     await settle(step);
   };
   const plant = async (span: Span): Promise<void> => {
@@ -636,9 +661,13 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   };
   const add = async () => {
     await click((app as Launch).host.querySelector('[data-testid="add-verses"]') ?? undefined);
+    bar = QUIET;
+    await toSheet('Add verses');
+    if (!(await tapSheet('Any passage')))
+      faults.push(`no Any passage in the sheet after ${log.slice(-6).join(' > ')}`);
     screen = 'chooser';
     choosing = OPENED;
-    await settle('Add verses');
+    await settle('Any passage');
     const book = CORPUS.books[below(next, 66)] ?? 1;
     const aim = AIMS[below(next, AIMS.length + 1)] ?? {
       book,

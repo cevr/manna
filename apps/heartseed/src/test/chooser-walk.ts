@@ -92,7 +92,8 @@ export const walkChooser = async (seed: number, steps: number) => {
   const start = new Map(device.disk);
   let held: Held = readRule(CORPUS, raw, 0);
   let written = false;
-  let left = 0;
+  let backs = 0;
+  let adds = 0;
   let state: Choosing | undefined = OPENED;
   const reached = new Set<string>([`stored:${kind}`]);
   const faults: string[] = [];
@@ -113,15 +114,17 @@ export const walkChooser = async (seed: number, steps: number) => {
       faults.push(`${step}: the stored passages ${stored} where the rule has ${expected}`);
     for (const [key, value] of device.disk)
       if (key !== KEY && start.get(key) !== value) faults.push(`${step}: the key ${key} written`);
-    if (rig.left.count !== left)
-      faults.push(`${step}: left the chooser ${rig.left.count} times, not ${left}`);
+    if (rig.left.backs !== backs)
+      faults.push(`${step}: left the chooser by its back ${rig.left.backs} times, not ${backs}`);
+    if (rig.left.adds !== adds)
+      faults.push(`${step}: left the chooser by an add ${rig.left.adds} times, not ${adds}`);
     faults.push(...rig.faults.splice(0).map((fault) => `${step}: ${fault}`));
   };
   const back = async (step: string) => {
     if (state === undefined) return;
     await rig.tap(chooserWant(CORPUS, state).back);
     state = backRule(state);
-    if (state === undefined) left += 1;
+    if (state === undefined) backs += 1;
     await settle(step);
   };
   const leave = async () => {
@@ -192,7 +195,7 @@ export const walkChooser = async (seed: number, steps: number) => {
       reached.add(`added:from-${held.tag === 'Read' ? held.passages.length : 0}`);
       held = answer.held;
       written = true;
-      left += 1;
+      adds += 1;
       state = undefined;
       await settle('planted');
       device.fail('set', 0);

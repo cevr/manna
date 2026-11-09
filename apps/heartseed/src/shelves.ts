@@ -1,6 +1,6 @@
 /**
- * The shelves Add verses offers (hshomebase H8), as data no screen draws yet
- * (hsshelves): the whole Bible through the chooser, a few picks from the
+ * The shelves Add verses offers, as data the Add verses sheet draws
+ * (`src/shelves/sheet.tsx`): the whole Bible through the chooser, a few picks from the
  * Psalms, the Proverbs and the Gospel of John, and each promise collection
  * the session does not teach. Every pick and every promise is a `Passage`
  * list, held as canon numbers, so no source here names a verse

@@ -128,7 +128,7 @@ export const chooserWant = (corpus: Corpus, state: Choosing): ChooserSeen => {
     const books = booksOf(corpus);
     return {
       heading: 'Add a passage',
-      back: 'Your field',
+      back: 'Add verses',
       labels: ['Old Testament', 'New Testament'],
       items: [...books.old, ...books.new],
       verses: [],

@@ -236,6 +236,39 @@ export const readSheet = (): SheetSeen => {
   };
 };
 
+const click = (node: Element) =>
+  node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+
+/** A rig's wait: answers whether `holds` came true within `ms`, a turn handed over at a time. */
+type Until = (holds: () => boolean, ms?: number) => Promise<boolean>;
+
+/** Waits for the Add verses sheet and plays the end of its slide-in as a browser would (one bubbling `animationend` on the modal's grandparent), so its dialog becomes active; answers whether it did. */
+export const activateSheet = async (until: Until) => {
+  if (!(await until(() => sheetOf() !== null))) return false;
+  const animated = sheetOf()?.parentElement?.parentElement;
+  await act(async () => {
+    animated?.dispatchEvent(new Event('animationend', { bubbles: true }));
+  });
+  return sheetOf()?.getAttribute('role') === 'dialog';
+};
+
+/** Waits for the sheet `want`; answers the sheet read when it never came. */
+export const settleSheet = async (until: Until, want: SheetSeen) => {
+  const goal = JSON.stringify(want);
+  if (await until(() => JSON.stringify(readSheet()) === goal)) return undefined;
+  return readSheet();
+};
+
+/** Taps the control named `label` in the open sheet; answers whether it showed. */
+export const tapSheet = async (label: string) => {
+  const node = sheetControl(label);
+  if (node === undefined) return false;
+  await act(async () => {
+    click(node);
+  });
+  return true;
+};
+
 /** The sheet's props a test gives in place of the stand-in's own. */
 export interface SheetProps {
   readonly field: Field;
@@ -322,9 +355,6 @@ const storeHeld = (hold: Hold) =>
     ),
   ).pipe(Layer.provide(store));
 
-const click = (node: Element) =>
-  node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
-
 /**
  * The sheet over the device's disk as it stands, open, beside the stand-in
  * home; `scheme` is the scheme its look is held to (the system's by
@@ -409,15 +439,7 @@ export const mountShelves = async (
     }
     return true;
   };
-  /** Waits for the sheet and plays the end of its slide-in, so its dialog becomes active; answers whether it did. */
-  const activate = async () => {
-    if (!(await until(() => sheetOf() !== null))) return false;
-    const animated = sheetOf()?.parentElement?.parentElement;
-    await act(async () => {
-      animated?.dispatchEvent(new Event('animationend', { bubbles: true }));
-    });
-    return sheetOf()?.getAttribute('role') === 'dialog';
-  };
+  const activate = () => activateSheet(until);
   /** Gives the sheet `given` as its props in place of the stand-in's own (none: its own again). */
   const show = async (given: SheetProps | null) => {
     await act(async () => root.render(tree(given)));
@@ -490,12 +512,7 @@ export const mountShelves = async (
     });
     return came;
   };
-  /** Waits for the sheet `want`; answers the sheet read when it never came. */
-  const settle = async (want: SheetSeen) => {
-    const goal = JSON.stringify(want);
-    if (await until(() => JSON.stringify(readSheet()) === goal)) return undefined;
-    return readSheet();
-  };
+  const settle = (want: SheetSeen) => settleSheet(until, want);
   const leave = async () => {
     ended();
     watch.disconnect();

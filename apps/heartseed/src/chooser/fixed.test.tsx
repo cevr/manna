@@ -8,7 +8,8 @@
  * can hide on: Today by `Begin` and a recital (`Say it`, `Listening`, the
  * grades and `Next` in the footer, Today's `Your field`), home's bar
  * (`When I need…`, `Add verses`, the ask and its `Remove` and `Keep`), the
- * chooser's header (each step's back) and footer (`Up to 20 verses` and
+ * Add verses sheet's `Done`, the chooser's header (each step's back, the
+ * first `‹ Add verses` back to the sheet) and footer (`Up to 20 verses` and
  * `Plant` under Psalms 119's 176 verses), and When I need…'s `Your field`.
  *
  * It catches any of those controls, an alert or the limit line moved into a
@@ -20,11 +21,13 @@ import { expect, it } from 'bun:test';
 import passage from 'virtual:heartseed-passage';
 
 import { mountBar } from '../test/bar-rig';
-import { record } from '../test/field-rig';
+import { record, scrolled } from '../test/field-rig';
 import { recallOf } from '../test/field-model';
 import { DAY } from '../test/garden-model';
 import { device } from '../test/one';
 import { KEY, storedText } from '../test/passages-model';
+import { sheetControl } from '../test/settings-rig';
+import { activateSheet, tapSheet } from '../test/shelves-rig';
 
 it('keeps each screen’s fixed controls outside its scroll views in every frame, on Today, the field and the chooser', async () => {
   const disk = new Map<string, string | null>([
@@ -48,18 +51,28 @@ it('keeps each screen’s fixed controls outside its scroll views in every frame
   await step('Remove John 15:1-5', 'Keep');
   await step('Keep', 'Add verses');
   expect(await rig.tapId('add-verses')).toBe(true);
-  expect(await rig.until(() => rig.control('Psalms') !== undefined)).toBe(true);
+  expect(await activateSheet(rig.until)).toBe(true);
   seen.push('Add verses');
+  const done = sheetControl('Done');
+  expect(done !== undefined && !scrolled(done)).toBe(true);
+  expect(await tapSheet('Any passage')).toBe(true);
+  expect(await rig.until(() => rig.control('Psalms') !== undefined)).toBe(true);
+  seen.push('Any passage');
   await step('Psalms', 'Psalms 119');
   await step('Psalms 119', 'Psalms 119:20');
   await step('Psalms 119:1', 'Plant');
   await step('Psalms 119:20', 'Plant');
   await step('Chapters', 'Psalms 119');
   await step('Books', 'Psalms');
-  await step('Your field', 'When I need…');
+  expect(await rig.tap('Add verses')).toBe(true);
+  expect(await activateSheet(rig.until)).toBe(true);
+  seen.push('Add verses back');
+  expect(await tapSheet('Done')).toBe(true);
+  expect(await rig.until(() => rig.control('When I need…') !== undefined)).toBe(true);
+  seen.push('Done');
   await step('When I need…', 'Your field');
   await step('Your field', 'When I need…');
   await rig.leave();
-  expect(seen).toHaveLength(17);
+  expect(seen).toHaveLength(19);
   expect(rig.faults).toEqual([]);
 });

@@ -15,11 +15,14 @@
  * (any of equal rows), then `Keep`, another row's `Remove`, leaving, or the
  * ask's `Remove` (its write landing or refused; once, twice in one turn, or
  * with `When I need…` or `Keep` in the same turn; a refusal retried in
- * half); a round trip; or `Add verses` (the bar's or the row's), then back
- * to the field or a verse planted. Over unread passages, a round trip. A
+ * half); a round trip; or `Add verses` (the bar's or the row's), the
+ * Add verses sheet over the field with every shelf closed, then
+ * `Any passage`, then back to the sheet by `Add verses` and to the field by
+ * `Done`, or a verse planted. Over unread passages, a round trip. A
  * round trip leaves by `Begin` when home offers it, Today then showing
  * `Say it` or `Next`, else by `When I need…`, and comes back by
  * `Your field`; over unread passages `Begin` is owed. After every tap the screen is the model's,
+ * the sheet open (`sheetWant`) exactly while the model has it,
  * the stored passages are the start's until a change lands and the model's
  * list after, no other key is written, and every frame kept the rules.
  */
@@ -45,6 +48,8 @@ import {
   type Span,
 } from './passages-model';
 import { CORPUS, countIn, storedOf } from './passages-rig';
+import { opened, sheetWant } from './shelves-model';
+import { activateSheet, settleSheet, tapSheet } from './shelves-rig';
 
 const PROMISE = passage.reference;
 
@@ -134,13 +139,13 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
   let held: Held = readRule(CORPUS, raw, reads);
   let written = false;
   let bar: Asking = QUIET;
-  let screen: 'field' | 'Today' | typeof NEED | 'Add a passage' = 'field';
+  let screen: 'field' | 'sheet' | 'Today' | typeof NEED | 'Add a passage' = 'field';
   const reached = launchCases(drawn, held);
   const faults: string[] = [];
   const log: string[] = [];
   const rig = await mountBar(reads, held.tag === 'Unread');
   const want = () => {
-    if (screen !== 'field') return screen;
+    if (screen !== 'field' && screen !== 'sheet') return screen;
     return fieldWant(heldOn(device.disk), PROMISE, held, bar);
   };
   const settle = async (step: string) => {
@@ -151,6 +156,12 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
     if (got !== undefined)
       faults.push(
         `${step} after ${log.slice(-6, -1).join(' > ')}: ${JSON.stringify(got).slice(0, 300)} where the model has ${JSON.stringify(goal).slice(0, 300)}`,
+      );
+    const sheet = screen === 'sheet' ? sheetWant(opened(held), []) : 'closed';
+    const seen = await settleSheet(rig.until, sheet);
+    if (seen !== undefined)
+      faults.push(
+        `${step}: the sheet ${JSON.stringify(seen).slice(0, 200)} where the model has ${JSON.stringify(sheet).slice(0, 200)}`,
       );
     const stored = device.disk.get(KEY);
     const expected = written && held.tag === 'Read' ? storedText(held.passages) : raw;
@@ -263,12 +274,20 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
     const where = below(next, 2) === 0 ? 'add-verses' : 'add-row';
     reached.add(`add:by ${where}`);
     await rig.tapId(where);
-    screen = 'Add a passage';
+    if (!(await activateSheet(rig.until))) faults.push(`add verses by ${where}: no sheet came`);
+    screen = 'sheet';
     bar = QUIET;
     await settle(`add verses by ${where}`);
+    await tapSheet('Any passage');
+    screen = 'Add a passage';
+    await settle('any passage');
     if (below(next, 2) === 0) {
       reached.add('add:left');
-      await rig.tap('Your field');
+      await rig.tap('Add verses');
+      if (!(await activateSheet(rig.until))) faults.push('back to the sheet: no sheet came');
+      screen = 'sheet';
+      await settle('back to the sheet');
+      await tapSheet('Done');
       screen = 'field';
       await settle('back to the field');
       return;

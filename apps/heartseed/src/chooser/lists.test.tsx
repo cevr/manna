@@ -78,9 +78,9 @@ describe('the chooser’s lists', () => {
     }
     expect(wrong).toEqual([]);
     expect(rig.faults).toEqual([]);
-    await rig.tap('Your field');
+    await rig.tap('Add verses');
     expect(await rig.settle('closed')).toBeUndefined();
-    expect(rig.left.count).toBe(1);
+    expect(rig.left).toEqual({ backs: 1, adds: 0 });
     await rig.leave();
   });
 

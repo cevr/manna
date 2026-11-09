@@ -24,6 +24,7 @@ import { record } from '../test/field-rig';
 import { device } from '../test/one';
 import { choicesOf, deviceOf, faultsOf, launch } from '../test/session-rig';
 import { closeSettings, modalOf, openSettings, tapInSheet, watchSheet } from '../test/settings-rig';
+import { activateSheet } from '../test/shelves-rig';
 
 const CONTROL = '[role="button"],[role="radio"],[role="checkbox"],[role="switch"]';
 
@@ -74,16 +75,28 @@ describe('Settings, more ways', () => {
     launchWith();
     const rig = await mountBar(0, false);
     const seen: Record<string, number> = {};
-    const visit = async (way: () => Promise<boolean>, heading: string) => {
+    const visit = async (
+      way: () => Promise<boolean>,
+      heading: string,
+      back: () => Promise<boolean> = () => rig.tap('Your field'),
+    ) => {
       await toField(rig);
       expect(await way()).toBe(true);
       expect(await rig.until(() => headings(rig).join('|') === heading)).toBe(true);
       seen[heading] = named(rig, 'Settings').length;
-      await rig.tap('Your field');
+      expect(await back()).toBe(true);
     };
     await visit(() => rig.tap('Begin'), 'Today');
     await visit(() => rig.tap('When I need…'), 'When I need…');
-    await visit(() => rig.tapId('add-verses'), 'Add a passage');
+    await visit(
+      async () =>
+        (await rig.tapId('add-verses')) &&
+        (await activateSheet(rig.until)) &&
+        tapInSheet('Any passage'),
+      'Add a passage',
+      async () =>
+        (await rig.tap('Add verses')) && (await activateSheet(rig.until)) && tapInSheet('Done'),
+    );
     await visit(async () => {
       await openSettings(rig);
       return tapInSheet('About');

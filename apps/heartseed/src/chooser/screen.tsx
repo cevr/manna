@@ -1,6 +1,7 @@
 /**
  * The chooser as the reader meets it: the root's third screen, opened from
- * the field's `Add verses`. A fixed header holds one way back and the
+ * the Add verses sheet's `Any passage`, its first back (`‹ Add verses`)
+ * showing that sheet again. A fixed header holds one way back and the
  * step's one heading; the scroll view under it, a new one for each step so
  * each opens at its top, holds the step's list: the
  * 66 books of the canon under two plain labels, then a book's chapters,
@@ -113,7 +114,7 @@ const rangeOf = (place: Place): Option.Option<Range> => {
 const headOf = (place: Place): { readonly back: string; readonly heading: string } =>
   Match.value(place).pipe(
     Match.tagsExhaustive({
-      Books: () => ({ back: 'Your field', heading: 'Add a passage' }),
+      Books: () => ({ back: 'Add verses', heading: 'Add a passage' }),
       Chapters: ({ book }) => ({ back: 'Books', heading: book.name }),
       Verses: ({ book, chapter }) => ({ back: 'Chapters', heading: `${book.name} ${chapter}` }),
     }),
@@ -275,8 +276,14 @@ function List({
   );
 }
 
-/** The chooser screen; `onField` brings the reader back to the field, from its first back or after `Added`. */
-export function ChooserScreen({ onField }: { readonly onField: () => void }) {
+/** The chooser screen; its first back, `Add verses`, calls `onBack`, and a landed `Added` calls `onAdded`. */
+export function ChooserScreen({
+  onBack: onLeave,
+  onAdded,
+}: {
+  readonly onBack: () => void;
+  readonly onAdded: () => void;
+}) {
   const look = useLook();
   const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
@@ -292,13 +299,13 @@ export function ChooserScreen({ onField }: { readonly onField: () => void }) {
   }, []);
   const onBack = () => {
     if (busy.current) return;
-    if (state.place._tag === 'Books') return onField();
+    if (state.place._tag === 'Books') return onLeave();
     dispatch({ _tag: 'Back' });
   };
   const settle = (each: Range, answer: string) => {
     busy.current = false;
     setPending(false);
-    if (answer === 'Added') return onField();
+    if (answer === 'Added') return onAdded();
     if (answer === 'Full') return dispatch({ _tag: 'Line', line: { _tag: 'Limit' } });
     dispatch({
       _tag: 'Line',

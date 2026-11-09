@@ -2,10 +2,14 @@
 
 /**
  * The walks `src/look/screens.test.tsx` (light) and
- * `src/look/screens-dark.test.tsx` (dark) run, one scheme each, so each
+ * `src/look/screens-dark.test.tsx` (dark) run, with the add's half in
+ * `screens-b.test.tsx` and `screens-dark-b.test.tsx`, one scheme each, so each
  * part stays inside its time budget: the field (the launch's home), Today
  * by `Begin` and home again by `Your field`, About (by home's `Settings`
- * and the sheet's `About`, the sheet's frames held to `sheetFaults`), the chooser and
+ * and the sheet's `About`, the sheet's frames held to `sheetFaults`), the
+ * Add verses sheet with `Psalms` open (held to `addSheetFaults` in the
+ * scheme shown, each of its controls pressed in turn), the chooser by its
+ * `Any passage`, and
  * When I need… in the scheme, and across a flip of the system on each,
  * through the bar rig and the need rig, which hold every frame (each DOM
  * mutation batch) to the frame oracle (`look.ts`) for the system's scheme
@@ -25,6 +29,7 @@ import { launchNeed, needDevice, recordOf } from './need-rig';
 import { device } from './one';
 import { KEY, storedText } from './passages-model';
 import { openSettings, tapInSheet, watchSheet } from './settings-rig';
+import { activateSheet, addSheetFaults, tapSheet } from './shelves-rig';
 
 const NOW = Date.UTC(2026, 4, 12, 15);
 const NEED = 'When I need…';
@@ -35,13 +40,14 @@ type Bar = Awaited<ReturnType<typeof mountBar>>;
 const headingOf = (host: Element) =>
   host.querySelector('[role="heading"]')?.textContent?.trim() ?? '';
 
-/** The screen shown, held to the oracle in `scheme` with each control pressed in turn (counted in `presses`), then after a flip of the system, then flipped back. */
+/** The screen shown, held to the oracle in `scheme` with each control pressed in turn (counted in `presses`), then after a flip of the system, then flipped back; `also` adds a rule's faults in the scheme shown. */
 const held = async (
   rig: { readonly host: Element; readonly until: Bar['until'] },
   scheme: Scheme,
   where: string,
   report: string[],
   presses: { pressed: number },
+  also: (shown: Scheme) => readonly string[] = () => [],
 ) => {
   for (const [shown, press] of [
     [scheme, true],
@@ -52,6 +58,7 @@ const held = async (
     await rig.until(() => lookFaults(rig.host, shown).length === 0, 300);
     const faults = [
       ...lookFaults(rig.host, shown),
+      ...also(shown),
       ...(press ? await pressedFaults(rig.host, shown, presses) : []),
     ];
     if (faults.length > 0) report.push(`${where} [${shown}]: ${faults.join('; ')}`);
@@ -69,16 +76,20 @@ export const FIELD_PLACES = [
   'a remove pending',
   'About',
   'the field again',
+];
+
+/** The places the add walk must reach in each scheme. */
+export const ADD_PLACES = [
+  'the field',
+  'the sheet',
   'the books',
   'a book',
   'a chapter',
   'verses chosen',
 ];
 
-/** The field (every stage, a remove asked and pending), About and the chooser (books, a chapter, verses chosen, Plant) in `scheme`: the faults found, the places reached and how many controls were seen pressed. */
-export const walkFieldScreens = async (scheme: Scheme) => {
-  const report: string[] = [];
-  const reached: string[] = [];
+/** The root over a disk with one passage held, in `scheme`, and its step: a tap, then the heading `want`, then the screen held to the oracle and its place reached. */
+const launchScreens = async (scheme: Scheme, report: string[], reached: string[]) => {
   const presses = { pressed: 0 };
   device.launch([
     record(recallOf('Made 1:1', Date.UTC(2026, 9, 1), 3, 0)),
@@ -94,6 +105,14 @@ export const walkFieldScreens = async (scheme: Scheme) => {
     await held(rig, scheme, where, report, presses);
   };
   if (await rig.until(() => headingOf(rig.host) === 'Your field')) reached.push('the field');
+  return { rig, presses, step };
+};
+
+/** The field (every stage, a remove asked and pending) and About in `scheme`: the faults found, the places reached and how many controls were seen pressed. */
+export const walkFieldScreens = async (scheme: Scheme) => {
+  const report: string[] = [];
+  const reached: string[] = [];
+  const { rig, presses, step } = await launchScreens(scheme, report, reached);
   await held(rig, scheme, 'the field', report, presses);
   await step('Begin', 'Today', 'Today');
   await step('Your field', 'Your field', 'home from Today');
@@ -124,7 +143,33 @@ export const walkFieldScreens = async (scheme: Scheme) => {
   if (sheet.frames.open === 0) report.push('About reached with no sheet open');
   if (sheet.faults.length > 0) report.push(`sheet: ${sheet.faults.join(' | ')}`);
   await step('Your field', 'Your field', 'the field again');
-  await step('Add verses', 'Add a passage', 'the books', () => rig.tapId('add-verses'));
+  if (rig.faults.length > 0) report.push(`rig: ${rig.faults.join(' | ')}`);
+  await rig.leave();
+  setSystem('light');
+  return { report, reached, pressed: presses.pressed };
+};
+
+/** The Add verses sheet with `Psalms` open (held to the sheet's rule in the scheme shown) and the chooser (books, a chapter, verses chosen, Plant) in `scheme`: the faults found, the places reached and how many controls were seen pressed. */
+export const walkAddScreens = async (scheme: Scheme) => {
+  const report: string[] = [];
+  const reached: string[] = [];
+  const { rig, presses, step } = await launchScreens(scheme, report, reached);
+  await rig.tapId('add-verses');
+  await activateSheet(rig.until);
+  await tapSheet('Psalms');
+  const open = () =>
+    document.querySelectorAll('[data-testid="add-sheet"] [aria-expanded="true"]').length > 0 &&
+    document.querySelectorAll('[data-testid="offer"]').length > 0;
+  const shown = await rig.until(open);
+  for (const sheet of document.querySelectorAll('[data-testid="add-sheet"]')) {
+    if (!shown) break;
+    reached.push('the sheet');
+    const known = new Map<string, readonly string[]>();
+    await held({ host: sheet, until: rig.until }, scheme, 'the sheet', report, presses, (shown) =>
+      addSheetFaults(document, shown, known),
+    );
+  }
+  await step('Any passage', 'Add a passage', 'the books', () => tapSheet('Any passage'));
   await step('Psalms', 'Psalms', 'a book');
   await step('Psalms 117', 'Psalms 117', 'a chapter');
   for (const verse of [...rig.host.querySelectorAll('[data-testid="verse"]')].slice(0, 1)) {
