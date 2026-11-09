@@ -1736,19 +1736,26 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   The seam: `src/test/choices-seam.tsx`'s `rootWithChoicesOnToday(host)`
   is the root with Today's row of choices shown (`ChoicesOnToday`,
   `src/settings/choices.tsx`, which the app never provides), for the rigs
-  that still tap Today's `Minutes` and `Voice`: `run-rig.tsx`,
-  `phrase-rig.tsx` and `session-rig.tsx` (its `launch` seamed unless
-  passed `{ choicesOnToday: false }`). It registers the host with
-  `rootFaults`' choices rule, which allows the choices on Today under that
-  host alone. Each rig moves its taps to the Settings sheet and drops its
-  seam line; the last such move deletes the seam, `Choices` and Today's
-  `<Choices />`. `today-rig.tsx`, `stage-rig.tsx`, `field-rig.tsx`,
-  `first-rig.tsx` and `need-rig.tsx` mount `<Root />` unseamed and make
-  their plan as a reader does (`renewBySettings`,
+  that still tap Today's `Minutes` and `Voice`: `phrase-rig.tsx`,
+  `session-rig.tsx` (its `launch` seamed unless passed
+  `{ choicesOnToday: false }`) and `run-rig.tsx` for `wake-rig.tsx` alone
+  (`run-rig`'s `launch` mounts `<Root />` unless passed
+  `{ choicesOnToday: true }`, which `wake-rig` alone passes). It registers
+  the host with `rootFaults`' choices rule, which allows the choices on
+  Today under that host alone. Each rig moves its taps to the Settings
+  sheet and drops its seam line; the last such move deletes the seam,
+  `Choices` and Today's `<Choices />`. `today-rig.tsx`, `stage-rig.tsx`,
+  `field-rig.tsx`, `first-rig.tsx` and `need-rig.tsx` mount `<Root />`
+  unseamed and make their plan as a reader does (`renewBySettings`,
   `src/test/settings-rig.ts`): Today's `Your field`, home's `Settings`, a
   `Minutes` radio (the one checked when no minutes are named), `Done`,
   then `Begin` when home offers it, every sheet shown held to
-  `sheetFaults` and its look checked at least once.
+  `sheetFaults` and its look checked at least once. Every other user of
+  `run-rig` (`footer.test.tsx`, `home/rigs.test.tsx` and three walks)
+  mounts `<Root />` too, and the walks make their plan by the same trip
+  through the sheet: the run walk (`src/test/run-walk.ts`), the reader
+  walk (`src/test/reader-walk.ts`) and the dark Today walk
+  (`src/look/today.test.tsx`).
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
   - `test:hear`: `src/matcher` (the sounds-alike table's bounds, and each
@@ -2110,27 +2117,40 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `src/run/footer.test.tsx`, home's `Begin` on a due device, then the
     action button and the grades under the scroll view through a recital,
     a grade and the field and back.
-  - `test:run-walk`, `test:run-cues`, `test:run-hold`,
-    `test:run-relaunch`, `test:run-edges`, `test:run-done`, `test:run-end`,
-    `test:run-cells`: `src/run/run.test.tsx`, `cues.test.tsx`,
-    `hold.test.tsx`, `relaunch.test.tsx`, `edges.test.tsx`,
-    `done.test.tsx`, `end.test.tsx` and `cells.test.tsx`, Today's run
-    against `src/test/run-model.ts` (over
+  - `test:run-walk`, `test:run-cues`, `test:run-cues-b`, `test:run-hold`,
+    `test:run-hold-b`, `test:run-relaunch`, `test:run-relaunch-b`,
+    `test:run-edges`, `test:run-done`, `test:run-end`, `test:run-end-b`,
+    `test:run-end-c`, `test:run-cells`, `test:run-cells-b`,
+    `test:run-cells-c`: `src/run/run.test.tsx`, `cues.test.tsx`,
+    `cues-b.test.tsx`, `hold.test.tsx`, `hold-b.test.tsx`,
+    `relaunch.test.tsx`, `relaunch-b.test.tsx`, `edges.test.tsx`,
+    `done.test.tsx`, `end.test.tsx`, `end-b.test.tsx`, `end-c.test.tsx`,
+    `cells.test.tsx`, `cells-b.test.tsx` and `cells-c.test.tsx` (each
+    `-b` or `-c` file one or more whole devices cut from its parent's case,
+    the parent's floors split so that each is met in one of them), Today's
+    run against `src/test/run-model.ts` (over
     `src/test/session-model.ts`'s plan) on generated devices through
     `src/test/run-walk.ts` (each read launch on home, held to the model's
     counts and `Begin`, then `Begin` when the model shows an item, else
     the launch's end), each shown word held to its piece's cue,
     leaning toward whole plans (many pieces and groups, Next, every
-    recital's ending, Again), the hold's moments (a Minutes tap while a
-    recital listens or finishes whose plan holds the item first or leaves
-    it out, a tap with a result or after an unheard recital, home and
-    back, a relaunch), the edges (the first minute, the done state, unread
-    launches, zones) and the recital's endings (cancelled, finishing, and
-    a Minutes tap after each ending that kept nothing) and a Minutes tap
-    around each ending (every cell of the ending, the tap's moment while
-    the recital listens, finishes or after its end, and whether the new
-    plan moves the held item or keeps it first, `CELLS`); each case's
-    floors met by its own devices.
+    recital's ending, Again). A Minutes command is the reader's trip:
+    `Your field`, home held to the model, the Settings sheet, the
+    `<n> min` radio (the model's plan made at that tap, the minutes key
+    written), the radio checked and home's counts under the sheet equal to
+    the model's, `Done`, home held again, then `Begin` when the model
+    shows an item, else the launch ends on home's done state; every sheet
+    held to `sheetFaults`, its look checked at least once. An unread
+    launch shows no `Settings` and no Minutes. The cases lean toward the
+    hold's moments (a recital, then the trip with its item still held,
+    whose plan holds the item first or leaves it out, a trip after an
+    unheard recital, home and back, a relaunch), the edges (the first
+    minute, the done state, unread launches, zones), the recital's endings
+    (cancelled, finishing, and a trip after each ending that kept nothing)
+    and a trip after each ending (every ending and whether the new plan
+    moves the held item or keeps it first, `CELLS`); each case's floors
+    met by its own devices. A Minutes making while the recital listens or
+    finishes, which no reader reaches, is `test:session-cells`'.
   - `test:wake`: `src/wake/life.test.ts` (the return rule over every
     sequence of up to six host states after each launch state, and long
     random ones, against `src/test/wake-model.ts`), `src/wake/service.test.ts`
@@ -2232,9 +2252,13 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     on home), in UTC, Los Angeles, Kathmandu, Lord Howe and Chatham,
     through home (`Begin` when it offers it, else a relaunch the next
     morning, a remove asked, kept, refused or tapped twice), Today
-    (`Say it` then `Next`, Minutes, `Your field`, a relaunch after the next
+    (`Say it` then `Next`, Minutes by the trip through home's Settings
+    sheet: `Your field`, `Settings`, `<n> min`, `Done`, home held to the
+    new plan, then Today again; `Your field`, a relaunch after the next
     04:00) and the chooser (backs, taps by pattern, `Plant` refused,
-    retried or tapped twice); after every command Today's shown verse,
+    retried or tapped twice); a tap of a control the screen does not show
+    is a fault; every sheet held to `sheetFaults`, its look checked at
+    least once; after every command Today's shown verse,
     counts line and `Listen` against the plan made at each making over the
     reader's pieces, home's counts and `Begin` against the same plan, the
     field and the chooser against `src/test/choose-model.ts`, and the
@@ -2513,9 +2537,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     flips of the system through the run rig, reached from home by `Begin`,
     as generated walks (Say it
     heard, with a word missed or unheard, a flip while it listens, a peek,
-    a grade, Next to the done state, Minutes, the field and back, a flip
-    between any two steps), every frame held to the frame oracle
-    (`src/test/look.ts`) for the system's last value.
+    a grade, Next to the done state, Minutes by the trip through home's
+    Settings sheet, the field and back, a flip between any two steps),
+    every frame held to the frame oracle (`src/test/look.ts`) for the
+    system's last value, and each trip's sheet to `sheetFaults` for that
+    value, its look checked at least once, ending on Today when the
+    walk's verse shows.
   - `test:dark-first`: `src/look/first.test.tsx`, the first minute's
     phases (hear while the voice reads, letters while their recital
     listens, alone, Planted, then home in its done state) in dark, each

@@ -22,9 +22,12 @@ A plan is made when home or Today first shows in a launch, and again at
 each `Minutes` tap (in home's Settings sheet). Today is reached from home by `Begin` (shown exactly
 when the plan or a visit holds an item), `Start here with <reference>`
 or a promise of When I need…, and left by `Your field`. A tap made with no recital under way starts the run again at
-the new plan's first item, and an earlier result is gone. A tap made while
-a recital listens keeps that verse on screen until its `Next`. Nothing of
-the run is stored. A relaunch makes a new plan.
+the new plan's first item, and an earlier result is gone. A reader cannot
+make a `Minutes` tap while a recital listens, since the sheet is on home
+alone and Today shows no `Your field` then; the session keeps the verse
+for such a making (`apps/heartseed/src/session/cells.property.test.ts`),
+and a return to the foreground while it listens keeps the verse
+(`wake.md`). Nothing of the run is stored. A relaunch makes a new plan.
 
 The app holds Isaiah 41:10, then the reader's passages (`passage.md`),
 then the Fear collection's verses (`promise.md`), each long verse as its
@@ -62,12 +65,21 @@ of `first-planted`.
   `Grade` or `Isaiah 41:10` node.
 - `run-listening`: during `run-recite`'s recital, a raw snapshot taken at
   once after `Say it` shows `Listening`, and no `Minutes` radio, no
-  `Voice` and no `Your field`.
+  `Voice`, no `Your field` and no `Settings`: no making of the plan can be
+  reached while a recital listens.
 - `run-second` (only when the drive started before 16:00 local): once the
   passage is due again after `run-recite` (wait 15 minutes, then
   `Your field`, `Settings`, the checked `5 min`, `Done`, `Begin`), Today shows `1 to tend`, no word node labelled (nothing
   is cued at a blade), and `Say it`. A recital gives `Stage: ear` and
   `Grew to an ear.`, then `Next` and the done state.
+- `run-held-settings` (only when the drive started before 16:00 local,
+  after `run-second`'s recital, in place of its `Next`): `Your field`
+  shows home with the heading `Your field` and `Begin` (the verse just
+  said is still held), and no heading `Settings`. In the sheet `5 min`
+  alone is selected; a tap of `5 min`, then `Done`, gives home with no
+  heading `Settings`, the counts line `Nothing to tend now` and no
+  `Begin`: a making with no recital under way drops the hold, and the
+  verse just kept is not due.
 
 ## How to get to it (user POV)
 
@@ -109,7 +121,16 @@ sets them.
    `sim tap "label=Done"`, `sim tap "label=Begin"`, `sim snapshot
    run-second-due`, `sim tap "label=Say it"`, `sim tap "label=37 of 37
    words" --timeout 30` (or the count the replay gives), `sim snapshot
-   run-second`, `sim tap "label=Next"`.
+   run-second`, `sim tap "label=Next"` (or step 8 in its place).
+8. `run-held-settings`, only when the drive started before 16:00 local,
+   in place of step 7's `Next`: `sim tap "label=Your field"`,
+   `sim snapshot run-held-home` → the heading `Your field`, `Begin`, no
+   heading `Settings`; record the counts line as shown. Then
+   `sim tap "label=Settings"`, a raw snapshot → `5 min` alone selected;
+   `sim tap "label=5 min"`, `sim tap "label=Done"`, `sim snapshot
+   run-held-settings` → no heading `Settings`, the counts line
+   `Nothing to tend now`, no `Begin`. `run-second`'s last claim (`Next`
+   and the done state) is `run-next`'s already.
 
 Report only counts, booleans, rect numbers, the labels named, the counts
 line and the reference. Delete the `snapshots` folder and the raw
@@ -124,7 +145,16 @@ snapshots.
     text (`apps/heartseed/src/run/*.test.tsx`);
   - phrases over days, a join under first letters and a held phrase
     (`apps/heartseed/src/phrase/walk-*.test.tsx`);
-  - the hold across a Minutes tap while a recital listens;
+  - the hold across a Minutes making while a recital listens or finishes,
+    which no reader can make from the screen
+    (`apps/heartseed/src/session/cells.property.test.ts`);
+  - unheard, refused and cancelled endings around a making;
+  - the moved and kept placings over many pieces and groups
+    (`apps/heartseed/src/run/cells.test.tsx`);
+  - the sheet's look in dark on each trip
+    (`apps/heartseed/src/look/today.test.tsx`), and the reader walk's
+    Minutes trip between chooser changes
+    (`apps/heartseed/src/chooser/reader-today.test.tsx`);
   - unheard and refused recitals;
   - the unread garden;
   - Again on a kept recall;
