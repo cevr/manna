@@ -22,7 +22,8 @@
  *   development probe (`app/probe/natural.tsx`) build the voice.
  * - Today's hold on the words of a reading under way grows its voice atoms
  *   by `seekTo`, `holdReading` and `letGo`, which come only from
- *   `src/app.ts`: only Today and the light probe take them, and hand them
+ *   `src/app.ts`: only Today, the first minute's hear phase and the light
+ *   probe take them, and hand them
  *   to the reading view (`src/reading/view.tsx`), and no other source
  *   seeks, pauses or resumes the voice itself.
  * - A word lit is felt by a soft tick: the app's one call of One's haptics
@@ -59,7 +60,7 @@ const sourcesUnder = (folder: string): ReadonlyArray<string> =>
 
 const SOURCES = [...sourcesUnder('app'), ...sourcesUnder('src')];
 
-/** The reading view's hold atoms of `src/app.ts`, which Today takes beside the voice's pill and Listen. */
+/** The reading view's hold atoms of `src/app.ts`, which Today takes beside the voice's pill and Listen, and the first minute beside its own reading. */
 const HOLD = ['seekTo', 'holdReading', 'letGo'];
 
 const read = (path: string) => readFileSync(join(APP, path), 'utf8');
@@ -235,7 +236,7 @@ describe('Say it aloud', () => {
     expect(builders).toEqual(['app/probe/natural.tsx', 'src/app.ts']);
   });
 
-  it('grows Today’s voice atoms by the hold’s seekTo, holdReading and letGo, from src/app.ts alone: only Today and the light probe take them (the reading view is handed them), and no other source seeks, pauses or resumes the voice', () => {
+  it('grows Today’s voice atoms by the hold’s seekTo, holdReading and letGo, from src/app.ts alone: only Today, the first minute’s hear phase and the light probe take them (the reading view is handed them), and no other source seeks, pauses or resumes the voice', () => {
     const app = code('src/app.ts');
     expect(HOLD.filter((name) => app.includes(`export const ${name} = runtime.fn(`))).toEqual(HOLD);
     const takers = SOURCES.filter((source) =>
@@ -243,7 +244,7 @@ describe('Say it aloud', () => {
         ({ from, names }) => /(^|\/)app$/.test(from) && names.some((name) => HOLD.includes(name)),
       ),
     );
-    expect(takers).toEqual(['app/index.tsx', 'app/probe/light.tsx']);
+    expect(takers).toEqual(['app/index.tsx', 'app/probe/light.tsx', 'src/first/screen.tsx']);
     for (const taker of takers) {
       const taken = importsOf(taker)
         .filter(({ from }) => /(^|\/)app$/.test(from))

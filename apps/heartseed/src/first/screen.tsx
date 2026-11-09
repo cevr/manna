@@ -1,7 +1,8 @@
 /**
  * The first minute: the passage in three phases, then the seed. Hear it
- * (the voice reads it at Listen and lights each word it speaks; Next goes on
- * at any time), say it with its first letters (a cued recital that keeps
+ * (the voice reads it at Listen and lights each word it speaks in the
+ * reading view, whose hold seeks the reading as Today's does, the screen's
+ * scroll still while held; Next goes on at any time), say it with its first letters (a cued recital that keeps
  * nothing), say it alone (the recital that plants it), then Planted, once
  * the garden's read holds the passage's recall. The phase is the screen's,
  * kept by the reducer `./flow`; nothing of it is stored.
@@ -21,10 +22,22 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 import passage from 'virtual:heartseed-passage';
 
-import { gardenView, hush, listen, peek, sayAs, sayItView, voiceView } from '../app';
+import {
+  gardenView,
+  holdReading,
+  hush,
+  letGo,
+  listen,
+  peek,
+  sayAs,
+  sayItView,
+  seekTo,
+  voiceView,
+} from '../app';
 import type { GardenView } from '../garden';
 import type { Mark } from '../matcher';
 import { sourceWords } from '../matcher/words';
+import { ReadingView, type Hold } from '../reading/view';
 import type { OrNull, Recital, SayItView } from '../sayit';
 import { themed, useThemed } from '../look';
 import { BigButton, Initial, PlantMark, Pulse, useLook, Word } from '../sayit/draw';
@@ -84,11 +97,13 @@ function Pill({ label, onPress }: { readonly label: string; readonly onPress: ()
   );
 }
 
-/** The verse as hear shows it: every word whole; while a reading is under way, the words spoken in ink, the rest muted, and the voice's current words selected. */
-function Heard({ voice }: { readonly voice: Option.Option<VoiceView> }) {
+/** The verse as hear shows it: every word whole; while the voice reads the passage, the reading view under the first minute's hold (the words spoken in ink, the rest muted, the voice's current words or the held word selected). */
+function Heard({ voice, hold }: { readonly voice: Option.Option<VoiceView>; readonly hold: Hold }) {
   const look = useLook();
   const styles = useThemed(sheets);
   const reading = Option.filter(voice, isActive);
+  const own = Option.filter(reading, (view) => view.verse === passage.text);
+  if (Option.isSome(own)) return <ReadingView text={passage.text} view={own.value} hold={hold} />;
   return (
     <View style={look.verse}>
       {WORDS.map((word, index) => {
@@ -192,8 +207,27 @@ export function FirstMinute({ onContinue }: { readonly onContinue: () => void })
   const onRead = () => {
     if (!skipped.current) onListen();
   };
+  const [heldWord, setHeldWord] = useState<Option.Option<number>>(Option.none());
+  const heldNow = Option.filter(heldWord, () => reading && phase === 'hear');
+  const onHold = useAtomSet(holdReading);
+  const onSeekTo = useAtomSet(seekTo);
+  const onLetGo = useAtomSet(letGo);
+  const hold: Hold = {
+    held: heldNow,
+    onHeld: setHeldWord,
+    onHold: () => {
+      if (!skipped.current) onHold();
+    },
+    onSeek: (word) => {
+      if (!skipped.current) onSeekTo(word);
+    },
+    onLetGo: () => {
+      if (!skipped.current) onLetGo();
+    },
+  };
   return (
     <ScrollView
+      scrollEnabled={Option.isNone(heldNow)}
       style={look.screen}
       contentContainerStyle={[
         look.content,
@@ -213,6 +247,7 @@ export function FirstMinute({ onContinue }: { readonly onContinue: () => void })
         Match.when('hear', () => (
           <Hear
             voice={voice}
+            hold={hold}
             reading={reading}
             voiceOn={voiceOn}
             onListen={onRead}
@@ -240,15 +275,17 @@ const HOW: Readonly<Record<'letters' | 'alone', Recital>> = {
   alone: { cue: 'none', keep: true },
 };
 
-/** Hear: the verse whole, Listen while the voice is on and idle (a pulse while it reads), and Next. */
+/** Hear: the verse whole (lit and held while read), Listen while the voice is on and idle (a pulse while it reads), and Next. */
 function Hear({
   voice,
+  hold,
   reading,
   voiceOn,
   onListen,
   onNext,
 }: {
   readonly voice: Option.Option<VoiceView>;
+  readonly hold: Hold;
   readonly reading: boolean;
   readonly voiceOn: boolean;
   readonly onListen: () => void;
@@ -258,7 +295,7 @@ function Hear({
   const styles = useThemed(sheets);
   return (
     <>
-      <Heard voice={voice} />
+      <Heard voice={voice} hold={hold} />
       <View style={styles.hearActions}>
         {voiceOn && !reading && (
           <BigButton label="Listen" busy={false} pressable onPress={onListen} />

@@ -23,7 +23,10 @@
  *   `error` or `unavailable`, or answering the reader's finish with an end
  *   or an error: so every `Ending` Dictation gives but `cancelled`, which no
  *   screen asks for (a recital is cut off only by the runtime closing);
- * - the reader: Listen, Next, Say it, Listening, a peek, a grade, Continue,
+ * - the reader: Listen, a finger's hold on the reading view while the voice
+ *   reads (moved across words, then lifted, canceled, or still down while
+ *   the reading finishes or Next is tapped), Next, Say it, Listening, a
+ *   peek, a grade, Continue,
  *   two taps queued before a render, and a relaunch in every phase and
  *   activity, the pending frame included; on home, `Begin` when the model
  *   shows an item, and in its done state `Later` (the device's clock moved
@@ -41,8 +44,11 @@
  * screen reader get of each word, the hear phase's ink and selection, the
  * claims and setting words, the whole disk with every write counted and each
  * kept record's nine fields from the model's own grade rule and the zone's
- * offset at its start by the wall clock's own fields, the speaks and
- * stops, the recognizer's cancel at a relaunch, the chime, and Today's run:
+ * offset at its start by the wall clock's own fields, the speaks (each the
+ * passage from its start: a hold's release reads on from the held word),
+ * pauses, resumes and stops, the reading view exactly while the voice
+ * reads, the held word and the screen held still while a finger holds,
+ * one tick a hold, the recognizer's cancel at a relaunch, the chime, and Today's run:
  * its one action (Say it, Listening or Next, never Next unread) and its done
  * state, the counts line alone, by hsdaily's plan model; home's counts line
  * by the same model, and `Begin` exactly when the plan shows an item. It counts
@@ -80,6 +86,7 @@ import { theme } from '../theme';
 import { recite, scriptedSource } from '../dictation/script';
 import { clockAt, clockOf, type Time } from './clock';
 import { computed, paintOf, systemScheme } from './look';
+import { gestureOf } from './gesture';
 import { device } from './one';
 import { watchRoot } from './root-rule';
 import { countsModel, dueModel, MINUTE, planModel, type ModelItem } from './session-model';
@@ -114,6 +121,13 @@ const CLAIM = /\b(seeds?|blades?|ears?|corn|planted|plants?|grew|grow|growth|sta
 const SETTING =
   /\b(sign ?up|sign ?in|log ?in|account|settings?|password|e-?mail|notifications?|remind(?:er)?s?)\b/iu;
 const STAGES = ['Stage: blade', 'Stage: ear', 'Stage: full corn'];
+/** Word `index`'s box in the reading view as the rig lays it out: five words a line, 60 pt wide and 70 apart, lines 40 apart. */
+const boxOf = (index: number) => ({
+  x: (index % 5) * 70,
+  y: Math.floor(index / 5) * 40,
+  width: 60,
+  height: 36,
+});
 
 export type Screen =
   | 'pending'
@@ -182,8 +196,18 @@ export interface LaunchKind {
   readonly voices: 0 | 1;
 }
 
+/** How a finger's hold on the hear phase's reading view ends: lifted (a seek to the held word), canceled (a resume), or still down while the reading finishes or Next is tapped, its end coming late. */
+export type HoldEnd = 'release' | 'cancel' | 'finish' | 'next';
+
 export type Command =
   | { readonly _tag: 'Resolve' }
+  | {
+      readonly _tag: 'Hold';
+      /** The word the finger lands on, then the words it moves across. */
+      readonly word: number;
+      readonly moves: readonly number[];
+      readonly end: HoldEnd;
+    }
   | { readonly _tag: 'Listen'; readonly speak: 'lands' | 'refused' }
   | { readonly _tag: 'Range'; readonly kind: RangeKind; readonly step: number }
   | { readonly _tag: 'Voice'; readonly kind: VoiceKind; readonly stale: boolean }
@@ -358,11 +382,13 @@ const VOICE: VoiceInfo = {
   personal: false,
 };
 
-/** The voice's native source: it records each speak and stop and whether a speak is still sounding, refuses a speak when told to, and lets the test send its events. */
+/** The voice's native source: it records each speak, pause, resume and stop and whether a speak is still sounding, refuses a speak when told to, and lets the test send its events. */
 const voiceStandIn = (voices: 0 | 1) => {
   const calls = {
     speaks: 0,
     stops: 0,
+    pauses: 0,
+    resumes: 0,
     texts: [] as string[],
     sounding: false,
     utterance: 0,
@@ -382,8 +408,8 @@ const voiceStandIn = (voices: 0 | 1) => {
           calls.utterance = utterance;
           return Effect.void;
         }),
-      pause: Effect.void,
-      resume: Effect.void,
+      pause: Effect.sync(() => void (calls.pauses += 1)),
+      resume: Effect.sync(() => void (calls.resumes += 1)),
       stop: Effect.sync(() => {
         calls.stops += 1;
         calls.sounding = false;
@@ -558,13 +584,39 @@ const hearOf = (host: Element) => {
   };
 };
 
-/** What a frame of hear shows wrong: a word node missing or not whole, the inked words not a prefix, the selected ones not one run inside it. */
-const hearFaults = (host: Element): string[] => {
+/** Whether `element` sits in a scroll view that scrolls now. */
+const scrolls = (element: Element | null) => {
+  for (let up = element?.parentElement ?? null; up !== null; up = up.parentElement) {
+    const overflow = getComputedStyle(up).overflowY;
+    if (overflow === 'auto' || overflow === 'scroll') return true;
+  }
+  return false;
+};
+
+/** What a frame of hear shows wrong: a word node missing or not whole, a word node outside the reading view while it shows, the inked words not a prefix, the selected ones not one run inside it; while a finger holds the word `held`, no reading view, the held word not the read point or not the one selected, or a screen that scrolls; else one that does not. */
+const hearFaults = (host: Element, held: number | null): string[] => {
   const hear = hearOf(host);
   const out: string[] = [];
   if (hear.nodes !== N) out.push(`frame: hear shows ${hear.nodes} of ${N} word nodes`);
   if (!hear.whole) out.push('frame: a hear word is not seen whole');
   if (!hear.prefix) out.push('frame: hear inks a word after an unlit one');
+  const view = host.querySelector('[data-testid="reading"]');
+  if (
+    view !== null &&
+    WORDS.some(
+      (_, index) => host.querySelector(`[data-testid="word-${index}"]`)?.parentElement !== view,
+    )
+  )
+    out.push('frame: a hear word outside the reading view');
+  const still = !scrolls(host.querySelector('[role="heading"]'));
+  if (still !== (held !== null))
+    out.push(`frame: hear ${still ? 'still' : 'scrolls'} while ${held === null ? 'not ' : ''}held`);
+  if (held !== null) {
+    if (view === null) out.push('frame: a held word with no reading view');
+    if (hear.inked !== held || hear.selected.join() !== `${held}`)
+      out.push('frame: the held word not the read point and the one selected');
+    return out;
+  }
   const run = hear.selected.every(
     (index, at) => at === 0 || index === (hear.selected[at - 1] ?? 0) + 1,
   );
@@ -618,7 +670,7 @@ const frameFaults = (
   shown: readonly string[],
   buttons: readonly (string | null)[],
   allowed: Allowed,
-  phase: { readonly said: boolean; readonly voiceOn: boolean },
+  phase: { readonly said: boolean; readonly voiceOn: boolean; readonly held: number | null },
 ): string[] => {
   const out: string[] = shown.length > 1 ? [`frame: ${shown.length} headings`] : [];
   const heading = shown[0];
@@ -642,7 +694,7 @@ const frameFaults = (
   }
   if (heading === 'Today' || heading === 'Planted' || heading === 'Your field') return out;
   out.push(...phaseFaults(host, heading, buttons, phase.voiceOn));
-  if (heading === 'Hear it') return [...out, ...hearFaults(host)];
+  if (heading === 'Hear it') return [...out, ...hearFaults(host, phase.held)];
   return [...out, ...wordFaults(host, heading, phase.said)];
 };
 
@@ -662,10 +714,14 @@ const mount = async (
   const voice = voiceStandIn(voices);
   const dictation = recognizer();
   const chimes: Growth[] = [];
+  const felt = { ticks: 0 };
   const gate = Promise.withResolvers<void>();
   const layer = appLayer({
     source: dictation.layer,
-    haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
+    haptics: Layer.succeed(
+      Haptics,
+      Haptics.of({ tick: Effect.sync(() => void (felt.ticks += 1)) }),
+    ),
     store: Layer.unwrap(
       Effect.as(
         Effect.promise(() => gate.promise),
@@ -694,7 +750,7 @@ const mount = async (
   const buttons = () =>
     [...host.querySelectorAll('[role="button"]')].map((node) => node.getAttribute('aria-label'));
   const faults: string[] = [];
-  const phase = { said: false, voiceOn: true };
+  const phase = { said: false, voiceOn: true, held: null as number | null };
   const rooted = { garden, rule: watchRoot(host, garden), taken: 0, field: false };
   /** Moves the root rule's new faults into the rig's list, and a `Your field` heading on an unread launch once. */
   const takeRoot = () => {
@@ -764,6 +820,7 @@ const mount = async (
     readAs,
     home,
     voice,
+    felt,
     dictation,
     chimes,
     faults,
@@ -859,6 +916,13 @@ export interface Model {
   lit: number;
   current: { first: number; last: number } | null;
   speaks: number;
+  /** Where each speak of this launch starts in the passage: 0 for Listen, the sought word's start for a hold's release. */
+  starts: number[];
+  /** Where the current utterance's text starts in the passage. */
+  offset: number;
+  /** The source's pauses and resumes in this launch. */
+  pauses: number;
+  resumes: number;
   sets: number;
   said: 'none' | 'open' | 'heard' | 'unheard';
   refused: boolean;
@@ -1062,6 +1126,10 @@ export const session = (count: (key: string) => void) => {
     lit: 0,
     current: null,
     speaks: 0,
+    starts: [],
+    offset: 0,
+    pauses: 0,
+    resumes: 0,
     sets: 0,
     said: 'none',
     refused: false,
@@ -1272,9 +1340,13 @@ export const session = (count: (key: string) => void) => {
     expect(device.calls.remove + device.calls.clear, `${here}: removals`).toBe(0);
     expect(r.voice.calls.speaks, `${here}: the speaks`).toBe(m.speaks);
     expect(
-      r.voice.calls.texts.every((text) => text === passage.text),
-      `${here}: each speak is the passage`,
-    ).toBe(true);
+      r.voice.calls.texts.map((text, index) => text === passage.text.slice(m.starts[index] ?? 0)),
+      `${here}: each speak is the passage from its start`,
+    ).toEqual(m.starts.map(() => true));
+    expect(
+      [r.voice.calls.pauses, r.voice.calls.resumes],
+      `${here}: the pauses and resumes`,
+    ).toEqual([m.pauses, m.resumes]);
     if (!m.grew) expect(r.chimes.length, `${here}: no chime`).toBe(0);
     if (m.screen !== 'hear')
       expect(r.voice.calls.sounding, `${here}: a reading left outside hear`).toBe(false);
@@ -1323,7 +1395,7 @@ export const session = (count: (key: string) => void) => {
     });
   };
 
-  /** Hear at rest: Listen iff the voice is on and idle, Next, the inked words the model's lit ones and the selected ones its current range. */
+  /** Hear at rest: Listen iff the voice is on and idle, Next, the reading view iff the voice reads, the inked words the model's lit ones and the selected ones its current range. */
   const checkHear = (r: Rig, here: string) => {
     const hear = hearOf(r.host);
     const current = m.reading ? m.current : null;
@@ -1331,6 +1403,7 @@ export const session = (count: (key: string) => void) => {
       {
         listen: r.buttons().includes('Listen'),
         next: r.buttons().includes('Next'),
+        view: r.host.querySelector('[data-testid="reading"]') !== null,
         inked: hear.inked,
         selected: hear.selected,
       },
@@ -1338,6 +1411,7 @@ export const session = (count: (key: string) => void) => {
     ).toEqual({
       listen: m.voiceOn && !m.reading,
       next: true,
+      view: m.reading,
       inked: m.reading ? m.lit : N,
       selected: WORDS.flatMap((_, index) =>
         current !== null && index >= current.first && index <= current.last ? [index] : [],
@@ -1413,6 +1487,10 @@ export const session = (count: (key: string) => void) => {
       lit: 0,
       current: null,
       speaks: 0,
+      starts: [],
+      offset: 0,
+      pauses: 0,
+      resumes: 0,
       sets: 0,
       said: 'none',
       refused: false,
@@ -1620,7 +1698,9 @@ export const session = (count: (key: string) => void) => {
       if (kind === 'stale') return { ...span(lit, lit), utterance: m.utterance - 1 };
       return { location: passage.text.length, length: 1, utterance: m.utterance };
     })();
-    const valid = kind !== 'stale' && kind !== 'outside' && m.reading;
+    const offset = m.offset;
+    const valid = kind !== 'stale' && kind !== 'outside' && m.reading && event.location >= offset;
+    if (offset > 0 && m.reading) count(`range:sought:${kind}`);
     if (valid) {
       const hit = SPANS.flatMap((each, index) =>
         each.start < event.location + event.length && event.location < each.end ? [index] : [],
@@ -1634,7 +1714,9 @@ export const session = (count: (key: string) => void) => {
     }
     count(`range:${kind}${m.reading ? '' : ':idle'}`);
     go(m.screen, m.screen);
-    await act(async () => r.voice.send({ ...event, kind: 'range' }));
+    await act(async () =>
+      r.voice.send({ ...event, location: event.location - offset, kind: 'range' }),
+    );
   };
 
   const voiceEvent = async (kind: VoiceKind, stale: boolean) => {
@@ -1656,6 +1738,8 @@ export const session = (count: (key: string) => void) => {
   /** A press of Listen: a speak that lands starts a reading; a refused one ends it at once. */
   const listen = (speak: 'lands' | 'refused') => {
     m.speaks += 1;
+    m.starts.push(0);
+    m.offset = 0;
     m.utterance += 1;
     m.lit = 0;
     m.current = null;
@@ -1703,6 +1787,63 @@ export const session = (count: (key: string) => void) => {
     await rig().click('Next');
   };
 
+  /** A finger on the reading view: it lands on `word` (the reading pauses with one tick), moves across `moves`, and ends by `end`; each frame while it is down holds the held word as the read point and the one selected, and the screen still. A release reads on from the held word as a new utterance; a cancel resumes; a finger still down while the reading finishes or Next is tapped ends late and asks nothing. */
+  const hold = async (word: number, moves: readonly number[], end: HoldEnd) => {
+    const r = rig();
+    count(`hold:${end}`);
+    await act(async () =>
+      WORDS.forEach((_, index) => {
+        const node = r.host.querySelector(`[data-testid="word-${index}"]`) as
+          | (Element & {
+              __reactLayoutHandler?: (event: {
+                readonly nativeEvent: { readonly layout: ReturnType<typeof boxOf> };
+                readonly timeStamp: number;
+              }) => void;
+            })
+          | null;
+        node?.__reactLayoutHandler?.({ nativeEvent: { layout: boxOf(index) }, timeStamp: 0 });
+      }),
+    );
+    const touch = (index: number) => {
+      const box = boxOf(index);
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    };
+    const pan = gestureOf('reading-hold');
+    r.phase.held = word;
+    m.pauses += 1;
+    const ticks = r.felt.ticks;
+    await act(async () => {
+      pan.onBegin?.(touch(word));
+      pan.onActivate?.(touch(word));
+    });
+    await r.until(() => r.felt.ticks !== ticks, 500);
+    let held = word;
+    for (const to of moves) {
+      r.phase.held = to;
+      held = to;
+      await act(async () => pan.onUpdate?.(touch(to)));
+    }
+    const lift = (canceled: boolean) =>
+      act(async () => {
+        pan.onDeactivate?.({ ...touch(held), canceled });
+        pan.onFinalize?.({ ...touch(held), canceled });
+      });
+    r.phase.held = null;
+    go(m.screen, m.screen);
+    if (end === 'release') {
+      m.speaks += 1;
+      m.offset = SPANS[held]?.start ?? 0;
+      m.starts.push(m.offset);
+      m.utterance += 1;
+      m.lit = held;
+      m.current = null;
+    } else if (end === 'cancel') m.resumes += 1;
+    else if (end === 'finish') await voiceEvent('finish', false);
+    else await next();
+    await lift(end === 'cancel');
+    expect(r.felt.ticks - ticks, `${where()}: one tick for the hold`).toBe(1);
+  };
+
   /** The device comes back up: a write that lands after it counts as recovered. */
   const recover = () => {
     if (m.down) m.recovered = true;
@@ -1735,6 +1876,9 @@ export const session = (count: (key: string) => void) => {
         break;
       case 'Range':
         await range(command.kind, command.step);
+        break;
+      case 'Hold':
+        await hold(command.word, command.moves, command.end);
         break;
       case 'Voice':
         await voiceEvent(command.kind, command.stale);
@@ -1831,6 +1975,8 @@ export const nameOf = (command: Command) => {
       return `Batch:${command.labels.join('-')}:${command.speak}`;
     case 'Range':
       return `Range:${command.kind}:${command.step}`;
+    case 'Hold':
+      return `Hold:${[command.word, ...command.moves].join('>')}:${command.end}`;
     case 'Voice':
       return `Voice:${command.kind}${command.stale ? ':stale' : ''}`;
     case 'Listen':
@@ -1890,6 +2036,10 @@ const LETTERS_ON = [
   ...MISSED.map((missed) => `missed:letters:${missed}`),
   ...ALONE_ON,
 ];
+/** Each way a hold on the reading view ends. */
+const HOLD_ENDS: readonly HoldEnd[] = ['release', 'cancel', 'finish', 'next'];
+/** The coverage keys of a sought reading's ranges the light floors name: the next word in the tail's own text, and one before the sought word or past the tail. */
+const SOUGHT = ['range:sought:next', 'range:sought:behind', 'range:sought:outside'];
 /** The coverage keys only a reading meets. */
 const READING_ON = [
   ...['next', 'two', 'ahead', 'behind', 'stale', 'outside'].map((kind) => `range:${kind}`),
@@ -1899,6 +2049,7 @@ const READING_ON = [
   'voice:finish:stale@hear',
   'next:while-reading',
   'relaunch:hear:reading',
+  ...HOLD_ENDS.map((end) => `hold:${end}`),
 ];
 
 /**
@@ -2055,18 +2206,18 @@ interface Offering {
   readonly todayOn: readonly string[];
 }
 
-/** A reading under way: the voice's ranges and ends, Next, and two Next taps. */
-const offerReading = ({ pick, choose, add }: Offering) => {
+/** A reading under way: the voice's ranges and ends, Next, two Next taps, and a finger's hold on the words. */
+const offerReading = ({ m, pick, choose, add }: Offering) => {
   add(
     'range',
-    READING_ON.filter((key) => key.startsWith('range:')),
+    [...READING_ON.filter((key) => key.startsWith('range:')), ...(m.offset > 0 ? SOUGHT : [])],
     () => ({
       _tag: 'Range',
       kind: choose(
         'range',
         ['next', 'next', 'next', 'two', 'ahead', 'behind', 'stale', 'outside'] as const,
         String,
-        (each) => `range:${each}`,
+        (each) => [`range:${each}`, ...(m.offset > 0 ? [`range:sought:${each}`] : [])],
       ),
       step: pick.int(0, 3),
     }),
@@ -2090,6 +2241,17 @@ const offerReading = ({ pick, choose, add }: Offering) => {
   );
   add('next', 'next:while-reading', () => ({ _tag: 'Next' }));
   add('next-next', '', () => ({ _tag: 'Batch', labels: ['Next', 'Next'], speak: 'lands' }));
+  add('hold', [...HOLD_ENDS.map((end) => `hold:${end}`), ...SOUGHT], () => ({
+    _tag: 'Hold',
+    word: pick.int(0, N - 1),
+    moves: Array.from({ length: pick.int(0, 3) }, () => pick.int(0, N - 1)),
+    end: choose(
+      'hold',
+      ['release', 'release', 'cancel', 'finish', 'next'] as const,
+      String,
+      (each) => (each === 'release' ? ['hold:release', ...SOUGHT] : `hold:${each}`),
+    ),
+  }));
 };
 
 /** Hear at rest: Listen (a speak that lands or is refused) and every queued order of two taps with the voice on, Next, and a late event. */
@@ -2459,6 +2621,11 @@ export const FLOORS = {
     /^batch:Listen-Next@hear$/u,
     /^batch:Next-Listen@hear$/u,
     /^batch:Listen-Listen@hear$/u,
+  ],
+  light: [
+    ...HOLD_ENDS.map((end) => new RegExp(`^hold:${end}$`, 'u')),
+    /^range:sought:next$/u,
+    /^range:sought:(behind|outside)$/u,
   ],
 } as const satisfies Readonly<Record<string, readonly RegExp[]>>;
 

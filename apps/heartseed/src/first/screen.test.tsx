@@ -159,7 +159,9 @@ const LETTERS_LOOK = [
  * the look test reaches: every phase at rest, the hear phase with its first
  * word read, and the letters while their recital listens. Recorded at this
  * unit's head with the letters put back in the mute, which gives the same
- * lines: the letters' ink is the one line `lookOf` leaves out.
+ * lines: the letters' ink is the one line `lookOf` leaves out. The hear
+ * phase's words while read sit in the reading view, whose box alone gains
+ * its `reading` test id; every other line is base's.
  */
 const BASE_LOOK = {
   hear: [
@@ -191,7 +193,8 @@ const BASE_LOOK = {
     heading('Hear it'),
     `36× div||word-#||aria-selected=false|#|${MUTE}|${CLEAR}||inline||${face}|24px|normal|36px`,
     boxes(3, SOFT, '0.5'),
-    boxes(5, CLEAR),
+    `1× div||reading|||||${CLEAR}||${VIEW}`,
+    boxes(4, CLEAR),
   ],
   letters: [button('Say it', INK), pill('Say it', ON_INK), ...LETTERS_LOOK],
   listening: [button('Listening', INK), pill('Listening', ON_INK), ...LETTERS_LOOK],

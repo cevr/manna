@@ -523,6 +523,30 @@
         "!infra/**/*.test.*"
       ]
     },
+    "test:walk-light": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/matcher/**/*.test.*",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,store,today,voice.property,session.property,theme}.test.*",
+        "!src/{chooser,dictation,garden,sayit,voice,field,session,run,wake,natural,about}/**/*.test.*",
+        "!src/first/{flow,screen,screen-b,root,root-b}.test.*",
+        "!src/{promises,need,reading}/**/*.test.*",
+        "!src/phrase.property.test.*",
+        "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
     "test:walk-today": {
       "dependsOn": ["^transit"],
       "outputs": [],
@@ -2875,6 +2899,7 @@
         "test:walk-reading",
         "test:walk-taps",
         "test:walk-today",
+        "test:walk-light",
         "test:field",
         "test:field-reach",
         "test:field-unread",

@@ -54,7 +54,11 @@ it), each a direct child of `reading` with its own layout and its own
 accessibility element. The words before the read point are in ink and the
 rest quiet; the selected words (`aria-selected`, the `hearing` ground) are
 the held word while held, else the voice's current range. Nothing animates.
-At the reading's end the passage is whole again.
+At the reading's end the passage is whole again. The first minute's hear
+phase (`src/first/screen.tsx`) shows the same view, under the same hold and
+VoiceOver action, while the voice reads the passage, its own `ScrollView`
+still while held; at rest its words are whole and all in ink, as before.
+A sought reading that finishes ends hear as Listen's own does.
 
 - **The hold.** The reading view carries a gesture-handler pan
   (`reading-hold`, `app/_layout.tsx` wraps every route in
@@ -1756,7 +1760,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     ground at rest and while its recital listens, while the hear phase's
     unread words, the phase line and the reference keep the mute; and every
     element of every phase at rest, of the hear phase reading and of the
-    letters listening keeps base's look, the letters' ink alone left out),
+    letters listening keeps base's look, the letters' ink alone left out
+    and the hear phase's words read in the `reading` view),
     every frame held to `rootFaults`.
   - `test:root`: `src/first/root.test.tsx` and `root-b.test.tsx`, the root
     route on fixed devices
@@ -1773,19 +1778,28 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `startedAt`.
   - `test:walk-letters`, `test:walk-alone`, `test:walk-write`,
     `test:walk-launch`, `test:walk-disk`, `test:walk-relaunch`,
-    `test:walk-planted`, `test:walk-reading`, `test:walk-taps` and
-    `test:walk-today`: each `src/first/walk-<group>.property.test.tsx`,
+    `test:walk-planted`, `test:walk-reading`, `test:walk-taps`,
+    `test:walk-today` and `test:walk-light`: each
+    `src/first/walk-<group>.property.test.tsx`,
     the same rig over a few generated devices from one seed. The generator
     draws every input the rule names (any disk, the voice's choice and its
     old switch, and launch read, held or not; a speak that
-    lands or is refused and every kind of voice event; recitals that hear
+    lands or is refused and every kind of voice event; a finger's hold on
+    the hear phase's reading view, moved across words and lifted, canceled,
+    or still down while the reading finishes or Next is tapped; recitals that hear
     any subset of the words, end every way Dictation ends, or are held open;
     writes that land, are refused or meet a down device that recovers;
     queued taps; a relaunch anywhere; on home `Begin` when the model shows
     an item, else `Later` or a relaunch), steered toward the part's own
     group of coverage floors, which its generated devices alone must meet
     (`walk-today` holds Today's run after `Begin`: Next, the done state,
-    Renew and a write landing on Today).
+    Renew and a write landing on Today; `walk-light` each end of a hold,
+    and a sought reading's ranges in its own text). Every hear frame
+    shows the reading view exactly while the voice reads, each word its
+    direct child, and while a finger holds a word, that word as the read
+    point and the one selected and the screen still; every settle holds
+    the speaks (each the passage from its start), pauses and resumes to
+    the model, and each hold to one tick.
   - `test:field`: `src/field.property.test.ts`, the field's rule over
     generated read gardens, each read in several device zones, against the
     rule written plainly (`src/test/field-model.ts`: references of any
