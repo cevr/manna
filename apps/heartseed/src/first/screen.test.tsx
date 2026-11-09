@@ -7,7 +7,9 @@
  * less its 11th word) and a voice source that records its calls and sends
  * the events the test gives it. Every frame (each DOM mutation batch) is
  * read: a frame before the garden's read shows no heading and no button,
- * and no first-minute frame names a stage outside Planted. The letters
+ * no first-minute frame names a stage outside Planted, and every frame holds
+ * the root's frame rule (`rootFaults`). Continue, and a later launch with a
+ * plant, show home; `Begin` there opens Today. The letters
  * phase shows each letter in Today's cue ink at AA on its ground, at rest
  * and while listening, and the hear phase's words not yet read, the phase
  * line and the reference keep the mute; the cue ink and the mute are one
@@ -36,6 +38,7 @@ import { clockOf, toDue, type Time } from '../test/clock';
 import { AA, contrastOf } from '../test/contrast';
 import { computed } from '../test/look';
 import { device } from '../test/one';
+import { watchRoot } from '../test/root-rule';
 import { face, theme } from '../theme';
 import { VoiceSource, type VoiceEvent } from '../voice';
 import { wordSpans } from '../voice/reading';
@@ -49,7 +52,7 @@ const INK = computed(theme.light.ink);
 const CUE = computed(theme.light.quiet);
 /** The light scheme's `quiet`, as the mute: the hear phase's words not yet read, the phase line and the reference keep it. */
 const MUTE = computed(theme.light.quiet);
-const HEADINGS = ['Hear it', 'Say it with help', 'Say it alone', 'Planted', 'Today'];
+const HEADINGS = ['Hear it', 'Say it with help', 'Say it alone', 'Planted', 'Your field', 'Today'];
 const CLAIM = /\b(seeds?|planted|plants?|grew|growth|stages?)\b/iu;
 
 /** The voice's native source: it records each speak and stop, and lets the test send its events. */
@@ -75,11 +78,12 @@ const voiceStandIn = () => {
   return { layer, calls, emit };
 };
 
-/** A launch: the root over the device's disk as it stands, built once `held` resolves. */
+/** A launch: the root over the device's disk as it stands, built once `held` resolves; every frame from before the first render held to the root's rule for `garden`, the launch's read. */
 const mount = async (
   held: Promise<void> = Promise.resolve(),
   source = scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 1 })),
   time: Time = { now: null },
+  garden: 'read' | 'unread' = 'read',
 ) => {
   const voice = voiceStandIn();
   const chimes: Growth[] = [];
@@ -112,7 +116,9 @@ const mount = async (
       frames.pending += 1;
       if (buttons().length > 0) frames.pendingOffers += 1;
     }
-    const firstMinute = shown.some((text) => text !== 'Planted' && text !== 'Today');
+    const firstMinute = shown.some(
+      (text) => text !== 'Planted' && text !== 'Today' && text !== 'Your field',
+    );
     if (
       firstMinute &&
       (CLAIM.test(host.textContent ?? '') ||
@@ -121,11 +127,12 @@ const mount = async (
       frames.claims += 1;
   });
   watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
+  const rule = watchRoot(host, garden);
   const root = createRoot(host);
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        <Root opening="today" />
+        <Root />
       </RegistryProvider>,
     ),
   );
@@ -161,16 +168,27 @@ const mount = async (
   const heading = () => headings().find((text) => HEADINGS.includes(text)) ?? null;
   const stage = () =>
     host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label') ?? null;
-  /** Today's counts line, none before Today shows it. */
-  const counts = () => host.querySelector('[data-testid="session"]')?.textContent ?? null;
   /** Today's action buttons shown, by name: Say it, Listening or Next. */
   const actions = () =>
     buttons().filter((name) => name === 'Say it' || name === 'Listening' || name === 'Next');
+  /** Home as it shows: its counts line (none before a plan) and whether it offers `Begin`. */
+  const home = () => ({
+    counts: (host.querySelector('[data-testid="counts"]')?.textContent ?? '').trim(),
+    begin: buttons().includes('Begin'),
+  });
+  /** Holds every frame of the launch to the root's rule: no fault, and on an unread garden no `Your field` heading in any frame. */
   const leave = async () => {
+    rule.stop();
     watch.disconnect();
     await act(async () => root.unmount());
+    expect({
+      faults: rule.faults,
+      field:
+        garden === 'unread' && rule.frames.some((frame) => frame.headings.includes('Your field')),
+    }).toEqual({ faults: [], field: false });
   };
   return {
+    home,
     host,
     voice,
     chimes,
@@ -184,7 +202,6 @@ const mount = async (
     heading,
     buttons,
     stage,
-    counts,
     actions,
     leave,
   };
@@ -384,7 +401,7 @@ const BASE_LOOK = {
 } satisfies Readonly<Record<string, readonly string[]>>;
 
 describe('the first minute', () => {
-  it('on a fresh install: hears the verse lit word by word, says it with first letters keeping nothing, says it alone and plants one seed, then Continue opens Today in the done state, and the next launch at the seed’s due opens Today at a seed', async () => {
+  it('on a fresh install: hears the verse lit word by word, says it with first letters keeping nothing, says it alone and plants one seed, then Continue opens home in its done state, and the next launch at the seed’s due opens home, whose Begin opens Today at a seed', async () => {
     device.launch([]);
     const first = await mount();
     expect(await first.until(() => first.heading() === 'Hear it')).toBe(true);
@@ -424,11 +441,13 @@ describe('the first minute', () => {
     const kept = JSON.parse(device.disk.get(recalls()[0] ?? '') ?? 'null');
     expect([kept.grade, kept.suggested, kept.words, kept.missed]).toEqual([2, 2, WORDS.length, 1]);
     await first.click('Continue');
-    expect(await first.until(() => first.heading() === 'Today' && first.counts() !== null)).toBe(
-      true,
-    );
-    expect([first.counts(), first.stage(), first.actions()]).toEqual([
-      'Nothing to tend now',
+    expect(
+      await first.until(() => first.heading() === 'Your field' && first.home().counts !== ''),
+    ).toBe(true);
+    await first.until(() => first.heading() !== 'Your field', 20);
+    expect([first.heading(), first.home(), first.stage(), first.actions()]).toEqual([
+      'Your field',
+      { counts: 'Nothing to tend now', begin: false },
       null,
       [],
     ]);
@@ -440,6 +459,9 @@ describe('the first minute', () => {
     toDue(time, [kept]);
     device.launch();
     const next = await mount(undefined, undefined, time);
+    expect(await next.until(() => next.home().begin)).toBe(true);
+    expect(next.heading()).toBe('Your field');
+    await next.click('Begin');
     expect(await next.until(() => next.stage() !== null)).toBe(true);
     expect([next.heading(), next.stage(), next.frames.claims, recalls().length]).toEqual([
       'Today',
@@ -552,7 +574,7 @@ describe('the first minute', () => {
 
   it('never opens on a garden it could not read: Today, claiming no stage', async () => {
     device.launch([]).fail('keys', 3);
-    const today = await mount();
+    const today = await mount(undefined, undefined, undefined, 'unread');
     expect(await today.until(() => today.heading() !== null && device.calls.keys === 3)).toBe(true);
     await today.until(() => false, 20);
     expect([today.heading(), today.stage(), today.frames.claims]).toEqual(['Today', null, 0]);

@@ -16,6 +16,7 @@ import passage from 'virtual:heartseed-passage';
 
 import { recite, scriptedSource } from '../dictation/script';
 import { recallOf } from '../test/field-model';
+import * as first from '../test/first-rig';
 import { keyOf } from '../test/garden-model';
 import { device } from '../test/one';
 import { screensOf, watchedLaunch } from '../test/root-rule';
@@ -40,6 +41,9 @@ const DUE = recordAt(Date.UTC(2020, 0, 1, 12));
 const FRESH = recordAt(T0);
 
 const READ = { unread: false, refuse: false };
+
+/** first-rig's launch read at once, not held, with a voice. */
+const FIRST_OK: first.LaunchKind = { read: 'ok', held: false, voices: 1 };
 
 /** A launch watched by the root's rule, as `watchedLaunch` answers it. */
 interface Watched {
@@ -130,6 +134,22 @@ describe('every rig of Today’s run launches through home', () => {
     );
     await throughHome(w, w.app.until, async () => expect(await w.app.tap('Begin')).toBe(true));
     expect(await w.end()).toEqual([]);
+  });
+
+  it('first-rig’s play shows home with Begin, then Today by Begin', async () => {
+    const w = await watchedLaunch('read', async () => {
+      const m = await first.play({ parts: ['passage'], voice: 'absent', launch: FIRST_OK }, [
+        { _tag: 'Begin' },
+      ]);
+      return { m, leave: async () => {} };
+    });
+    expect({
+      screen: w.app.m.screen,
+      said: w.app.m.said,
+      screens: screensOf(w.watch.frames).filter((each) => each !== 'pending'),
+      faults: w.watch.faults,
+    }).toEqual({ screen: 'today', said: 'none', screens: ['Your field', 'Today'], faults: [] });
+    await w.end();
   });
 
   it('a passage planted at the launch shows home’s done state, and no Today follows', async () => {

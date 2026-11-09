@@ -25,11 +25,18 @@
  *   screen asks for (a recital is cut off only by the runtime closing);
  * - the reader: Listen, Next, Say it, Listening, a peek, a grade, Continue,
  *   two taps queued before a render, and a relaunch in every phase and
- *   activity, the pending frame included; on Today, Next after a kept
+ *   activity, the pending frame included; on home, `Begin` when the model
+ *   shows an item, and in its done state `Later` (the device's clock moved
+ *   to the passage's due, then a relaunch); on Today, Next after a kept
  *   recall and a new plan at the passage's due (the device's clock moved
  *   there, then a tap on the Minutes radio checked).
  *
- * Every frame (each DOM mutation batch) and every settle is read against
+ * A read launch with a plant of any verse, and Continue, show home, whose
+ * first show makes Today's plan; `Begin` shows that plan on Today. Every
+ * frame, from before the root's first render, is held to the root's frame
+ * rule (`rootFaults` through `watchRoot`, the garden the launch's read), and
+ * an unread launch shows no `Your field` in any frame. Every frame (each DOM
+ * mutation batch) and every settle is read against
  * the model: the heading, the pending rules, what a sighted reader and the
  * screen reader get of each word, the hear phase's ink and selection, the
  * claims and setting words, the whole disk with every write counted and each
@@ -37,7 +44,8 @@
  * offset at its start by the wall clock's own fields, the speaks and
  * stops, the recognizer's cancel at a relaunch, the chime, and Today's run:
  * its one action (Say it, Listening or Next, never Next unread) and its done
- * state, the counts line alone, by hsdaily's plan model. It counts
+ * state, the counts line alone, by hsdaily's plan model; home's counts line
+ * by the same model, and `Begin` exactly when the plan shows an item. It counts
  * words without printing one.
  */
 
@@ -67,7 +75,8 @@ import { theme } from '../theme';
 import { clockAt } from './clock';
 import { paintOf, systemScheme } from './look';
 import { device } from './one';
-import { dueModel, MINUTE, planModel } from './session-model';
+import { watchRoot } from './root-rule';
+import { countsModel, dueModel, MINUTE, planModel, type ModelItem } from './session-model';
 import { hostOffset } from './zone';
 import { VoiceSource, VoiceUnavailable, type VoiceEvent, type VoiceInfo } from '../voice';
 
@@ -94,19 +103,28 @@ const GRAMS = new Set(
 );
 /** A word the verse does not hold, said as an extra word. */
 export const EXTRA = 'zebra';
-const HEADINGS = ['Hear it', 'Say it with help', 'Say it alone', 'Planted', 'Today'];
+const HEADINGS = ['Hear it', 'Say it with help', 'Say it alone', 'Planted', 'Your field', 'Today'];
 const CLAIM = /\b(seeds?|blades?|ears?|corn|planted|plants?|grew|grow|growth|stages?)\b/iu;
 const SETTING =
   /\b(sign ?up|sign ?in|log ?in|account|settings?|password|e-?mail|notifications?|remind(?:er)?s?)\b/iu;
 const STAGES = ['Stage: blade', 'Stage: ear', 'Stage: full corn'];
 
-export type Screen = 'pending' | 'hear' | 'letters' | 'alone' | 'planted' | 'today' | 'unread';
+export type Screen =
+  | 'pending'
+  | 'hear'
+  | 'letters'
+  | 'alone'
+  | 'planted'
+  | 'home'
+  | 'today'
+  | 'unread';
 const HEADING: Readonly<Record<Screen, string | null>> = {
   pending: null,
   hear: 'Hear it',
   letters: 'Say it with help',
   alone: 'Say it alone',
   planted: 'Planted',
+  home: 'Your field',
   today: 'Today',
   unread: 'Today',
 };
@@ -179,6 +197,10 @@ export type Command =
   | { readonly _tag: 'Continue' }
   /** On Today: the device's clock moved to the passage's due, then a tap on the Minutes radio checked, which makes the plan again. */
   | { readonly _tag: 'Renew' }
+  /** On home with an item: the step to Today, which shows the plan home's first show made. */
+  | { readonly _tag: 'Begin' }
+  /** On home's done state: the device's clock moved to the passage's due, as Renew moves it, then a relaunch of `launch`. */
+  | { readonly _tag: 'Later'; readonly launch: LaunchKind }
   | { readonly _tag: 'Relaunch'; readonly launch: LaunchKind };
 
 export interface DeviceStart {
@@ -612,7 +634,7 @@ const frameFaults = (
     if (stage !== 'Stage: seed' || plant?.getAttribute('aria-hidden') !== 'true')
       out.push('frame: Planted without its hidden seed');
   }
-  if (heading === 'Today' || heading === 'Planted') return out;
+  if (heading === 'Today' || heading === 'Planted' || heading === 'Your field') return out;
   out.push(...phaseFaults(host, heading, buttons, phase.voiceOn));
   if (heading === 'Hear it') return [...out, ...hearFaults(host)];
   return [...out, ...wordFaults(host, heading, phase.said)];
@@ -623,12 +645,13 @@ interface Shift {
   by: number;
 }
 
-/** A launch: the root over the device's disk as it stands, on the device's clock, built once `gate` resolves. */
+/** A launch: the root over the device's disk as it stands, on the device's clock, built once `gate` resolves; every frame from before the first render held to the root's rule for `garden`, the launch's read as it stands. */
 const mount = async (
   allowed: Allowed,
   voices: 0 | 1,
   count: (key: string) => void,
   shift: Shift,
+  garden: 'read' | 'unread',
 ) => {
   const voice = voiceStandIn(voices);
   const dictation = recognizer();
@@ -666,6 +689,27 @@ const mount = async (
     [...host.querySelectorAll('[role="button"]')].map((node) => node.getAttribute('aria-label'));
   const faults: string[] = [];
   const phase = { said: false, voiceOn: true };
+  const rooted = { garden, rule: watchRoot(host, garden), taken: 0, field: false };
+  /** Moves the root rule's new faults into the rig's list, and a `Your field` heading on an unread launch once. */
+  const takeRoot = () => {
+    faults.push(...rooted.rule.faults.slice(rooted.taken));
+    rooted.taken = rooted.rule.faults.length;
+    if (
+      rooted.garden === 'unread' &&
+      !rooted.field &&
+      rooted.rule.frames.some((each) => each.headings.includes('Your field'))
+    ) {
+      rooted.field = true;
+      faults.push('frame: Your field on an unread launch');
+    }
+  };
+  /** The garden the launch's read decides, while only pending frames have shown: the rule watches on for it. */
+  const readAs = (read: 'read' | 'unread') => {
+    if (read === rooted.garden) return;
+    takeRoot();
+    rooted.rule.stop();
+    Object.assign(rooted, { garden: read, rule: watchRoot(host, read), taken: 0 });
+  };
   const watch = new MutationObserver(() => {
     count('frames');
     faults.push(...frameFaults(host, headings(), buttons(), allowed, phase));
@@ -675,7 +719,7 @@ const mount = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        <Root opening="today" />
+        <Root />
       </RegistryProvider>,
     ),
   );
@@ -697,12 +741,22 @@ const mount = async (
   };
   const click = (label: string) => act(async () => press(node(label), label));
   const leave = async () => {
+    takeRoot();
+    rooted.rule.stop();
     watch.disconnect();
     await act(async () => root.unmount());
     host.remove();
   };
+  /** Home as it shows: its counts line (none before a plan) and whether it offers `Begin`. */
+  const home = () => ({
+    counts: (host.querySelector('[data-testid="counts"]')?.textContent ?? '').trim(),
+    begin: node('Begin') !== undefined,
+  });
   return {
     host,
+    takeRoot,
+    readAs,
+    home,
     voice,
     dictation,
     chimes,
@@ -806,8 +860,12 @@ export interface Model {
   shown: Shown | null;
   /** A Today write landed in this launch with the passage grown past a seed: a growth line and a chime may show. */
   grew: boolean;
-  /** Today's plan made last in this launch: whether it holds the passage, and the passage's recalls then; none before Today's first show. */
-  plan: { readonly passage: boolean; readonly recalls: number } | null;
+  /** Today's plan made last in this launch: its items, whether it holds the passage, and the passage's recalls then; none before home's first show (or an unread Today's). */
+  plan: {
+    readonly items: readonly ModelItem[];
+    readonly passage: boolean;
+    readonly recalls: number;
+  } | null;
   /** Today holds the passage: from a press of Say it until Next or a making with no recital under way. */
   held: boolean;
   /** The recital last pressed was said under a cue: on a read Today, the full text before the passage is planted and first letters at a seed. */
@@ -840,15 +898,15 @@ const plantsOf = (disk: ReadonlyMap<string, string | null>) => {
   return plants;
 };
 
-/** Whether hsdaily's model plans the passage over `disk` at `at` with the default five minutes. */
-const plansPassage = (disk: ReadonlyMap<string, string | null>, at: number) =>
+/** The items of hsdaily's model's plan over `disk` at `at` with the default five minutes. */
+const planOver = (disk: ReadonlyMap<string, string | null>, at: number) =>
   planModel({
     plants: plantsOf(disk),
     pieces: [{ reference: passage.reference, words: N, group: passage.reference }],
     at,
     offset: hostOffset(at),
     minutes: 5,
-  }).items.some((item) => item.reference === passage.reference);
+  }).items;
 
 /** The grade the matcher suggests for a finished recital: Again when nothing or over a tenth is missed, Hard when any is missed, an extra word is said, a word was peeked or the recital was said under a cue (`helped`), else Good. */
 export const gradeOf = (hits: number, extras: number, peeks: number, helped = false) => {
@@ -899,6 +957,7 @@ const isHeld = (plan: Plan) => plan.fallbacks.length < 3 && plan.cut < stepsOf(p
 
 export const activityOf = (m: Model) => {
   if (m.reading) return `${m.screen}:reading`;
+  if (m.screen === 'home') return runOf(m) === 'done' ? 'home:done' : 'home:idle';
   if (m.said === 'open') return `${m.screen}:listening`;
   if (m.said === 'unheard') return `${m.screen}:alert`;
   if (m.refused) return `${m.screen}:refused`;
@@ -1016,7 +1075,7 @@ export const session = (count: (key: string) => void) => {
 
   const opening = (): Screen => {
     if (m.unread) return 'unread';
-    return m.recalls > 0 ? 'today' : 'hear';
+    return m.recalls > 0 ? 'home' : 'hear';
   };
 
   /** A making of Today's plan: one with no recital under way lets the held passage go, its recital's result with it. */
@@ -1027,16 +1086,22 @@ export const session = (count: (key: string) => void) => {
       m.refused = false;
       m.shown = null;
     }
-    m.plan = { passage: plansPassage(m.disk, now()), recalls: m.passage };
+    const items = planOver(m.disk, now());
+    m.plan = {
+      items,
+      passage: items.some((item) => item.reference === passage.reference),
+      recalls: m.passage,
+    };
     count(`made:${m.plan.passage ? 'passage' : 'empty'}${m.held ? ':held' : ''}`);
   };
 
+  /** The screen moves from `before` to `screen`, the frames between allowed the two headings; home's first show makes the plan. */
   const go = (before: Screen, screen: Screen) => {
     at.allowed.headings = new Set(
       [HEADING[before], HEADING[screen]].filter((each): each is string => each !== null),
     );
     m.screen = screen;
-    if (screen === 'today' && before !== 'today') make();
+    if (screen === 'home' && before !== 'home') make();
   };
 
   /** The screen is ready for the model's oracles. */
@@ -1047,6 +1112,7 @@ export const session = (count: (key: string) => void) => {
     if (m.screen === 'pending') return true;
     if (m.screen === 'hear') return r.buttons().includes('Listen') === (m.voiceOn && !m.reading);
     if (m.screen === 'planted') return true;
+    if (m.screen === 'home') return r.home().counts !== '';
     if (m.screen === 'today') {
       const run = runReady(r, runOf(m), m.sets);
       if (run !== null) return run;
@@ -1192,6 +1258,7 @@ export const session = (count: (key: string) => void) => {
     await r.until(ready);
     await act(async () => {});
     const here = where();
+    r.takeRoot();
     expect(r.faults, here).toEqual([]);
     expect(r.heading(), here).toBe(HEADING[m.screen]);
     expect([...device.disk].toSorted(), `${here}: the disk`).toEqual([...m.disk].toSorted());
@@ -1210,6 +1277,7 @@ export const session = (count: (key: string) => void) => {
       return;
     }
     if (m.screen === 'hear') checkHear(r, here);
+    checkHome(r, here);
     checkRun(r, here);
     checkRecital(r, here);
     checkClaims(r, here);
@@ -1235,6 +1303,18 @@ export const session = (count: (key: string) => void) => {
       },
       `${here}: the done state`,
     ).toEqual({ counts: DONE, verse: false, stage: false, grade: false, result: false });
+  };
+
+  /** Home at rest: the counts line the plan made at its first show gives (`Nothing to tend now` in its done state), and `Begin` exactly when that plan shows an item. */
+  const checkHome = (r: Rig, here: string) => {
+    if (m.screen !== 'home') return;
+    const run = runOf(m);
+    count(`run:home:${run}`);
+    const recalls = plantsOf(m.disk);
+    expect(r.home(), `${here}: home`).toEqual({
+      counts: countsModel(m.plan?.items ?? [], (reference) => recalls.get(reference)?.length ?? 0),
+      begin: run !== 'done',
+    });
   };
 
   /** Hear at rest: Listen iff the voice is on and idle, Next, the inked words the model's lit ones and the selected ones its current range. */
@@ -1311,6 +1391,9 @@ export const session = (count: (key: string) => void) => {
     if (!m.grew) expect(growth, `${here}: no growth line`).toBe(false);
   };
 
+  /** The garden a launch of `kind` reads as the device stands: unread when the device is down or every listing fails. */
+  const gardenOf = (kind: LaunchKind) => (m.down || kind.read === 'unread' ? 'unread' : 'read');
+
   /** A launch of `kind` over the device's disk as it stands. */
   const launch = async (kind: LaunchKind) => {
     device.launch();
@@ -1336,7 +1419,7 @@ export const session = (count: (key: string) => void) => {
       cued: false,
     } satisfies Partial<Model>);
     at.allowed = { headings: new Set(), pending: true };
-    at.rig = await mount(at.allowed, kind.voices, count, shift);
+    at.rig = await mount(at.allowed, kind.voices, count, shift, gardenOf(kind));
     if (kind.held) {
       await rig().until(() => false, 5);
       await settle();
@@ -1357,9 +1440,10 @@ export const session = (count: (key: string) => void) => {
     m.opened = !m.down;
     if (!m.voiceOn) count('launch:voice-off');
     rig().phase.voiceOn = m.voiceOn;
+    rig().readAs(m.unread ? 'unread' : 'read');
     const screen = opening();
     m.screen = screen;
-    if (screen === 'today') make();
+    if (screen === 'home') make();
     at.allowed.headings = new Set([HEADING[screen] ?? '']);
     rig().gate.resolve();
     await settle();
@@ -1371,6 +1455,7 @@ export const session = (count: (key: string) => void) => {
     const r = rig();
     const open = m.said === 'open';
     await r.leave();
+    expect(r.faults, `${where()}: the frames before the launch left`).toEqual([]);
     expect(await r.until(() => !r.voice.calls.sounding), `${where()}: the reading stopped`).toBe(
       true,
     );
@@ -1470,12 +1555,17 @@ export const session = (count: (key: string) => void) => {
     await settleWrite(outcome);
   };
 
-  /** A new plan at the passage's due: the device's clock moved there (a minute on at least), and a tap on the Minutes radio checked, which writes the minutes and makes the plan again. */
-  const renew = async () => {
-    const r = rig();
+  /** The device's clock moved to the passage's due, a minute on at least. */
+  const toDue = () => {
     const recalls = plantsOf(m.disk).get(passage.reference) ?? [];
     const due = recalls.length > 0 ? dueModel(recalls) + 1 : 0;
     shift.by += Math.max(MINUTE, due - now());
+  };
+
+  /** A new plan at the passage's due: the device's clock moved there (a minute on at least), and a tap on the Minutes radio checked, which writes the minutes and makes the plan again. */
+  const renew = async () => {
+    const r = rig();
+    toDue();
     count(`renew:${activityOf(m)}`);
     m.sets += 1;
     m.opened = true;
@@ -1579,13 +1669,40 @@ export const session = (count: (key: string) => void) => {
         m.reading = false;
         screen = 'letters';
       } else if (label === 'Listen' && !skipped && !m.reading) listen(speak);
-      else if (label === 'Continue') screen = 'today';
+      else if (label === 'Continue') screen = 'home';
     }
     count(`batch:${labels.join('-')}@${before}`);
+    if (screen === 'home') count('home:after-continue');
     go(before, screen);
     r.voice.calls.refuse = speak === 'refused';
     const nodes = labels.map((label) => r.node(label));
     await act(async () => labels.forEach((label, index) => r.press(nodes[index], label)));
+  };
+
+  /** A press of Next: on Today it lets the held passage go with its result; in hear it stops a reading under way and goes on to letters. */
+  const next = async () => {
+    const before = m.screen;
+    if (before === 'today') {
+      m.held = false;
+      m.said = 'none';
+      m.refused = false;
+      m.shown = null;
+      go(before, before);
+      await rig().click('Next');
+      return;
+    }
+    if (m.reading) count('next:while-reading');
+    m.reading = false;
+    go(before, 'letters');
+    await rig().click('Next');
+  };
+
+  /** The device comes back up: a write that lands after it counts as recovered. */
+  const recover = () => {
+    if (m.down) m.recovered = true;
+    m.down = false;
+    setDown(false);
+    go(m.screen, m.screen);
   };
 
   /** One command to the app and the model, then the settle's oracles. */
@@ -1617,19 +1734,7 @@ export const session = (count: (key: string) => void) => {
         await voiceEvent(command.kind, command.stale);
         break;
       case 'Next':
-        if (before === 'today') {
-          m.held = false;
-          m.said = 'none';
-          m.refused = false;
-          m.shown = null;
-          go(before, before);
-          await r.click('Next');
-          break;
-        }
-        if (m.reading) count('next:while-reading');
-        m.reading = false;
-        go(before, 'letters');
-        await r.click('Next');
+        await next();
         break;
       case 'Batch':
         await batch(command.labels, command.speak);
@@ -1651,18 +1756,25 @@ export const session = (count: (key: string) => void) => {
         await grade(command.grade, command.write);
         break;
       case 'Recover':
-        if (m.down) m.recovered = true;
-        m.down = false;
-        setDown(false);
-        go(before, before);
+        recover();
         break;
       case 'Continue':
-        go(before, 'today');
+        count('home:after-continue');
+        go(before, 'home');
         await r.click('Continue');
         break;
       case 'Renew':
         await renew();
         break;
+      case 'Begin':
+        go(before, 'today');
+        await r.click('Begin');
+        break;
+      case 'Later':
+        toDue();
+        await leave();
+        await launch(command.launch);
+        return;
     }
     await settle();
     r.phase.said = m.said !== 'none' || m.refused;
@@ -1707,7 +1819,8 @@ export const nameOf = (command: Command) => {
       return `${command._tag}[fb=${plan.fallbacks.join('/')} skip=${skip} extra=${plan.extras.join('/')} every=${plan.every} cut=${plan.cut} close=${plan.close} finish=${plan.onFinish}]:${command.write}`;
     }
     case 'Relaunch':
-      return `Relaunch:${command.launch.read}${command.launch.held ? ':held' : ''}:v${command.launch.voices}`;
+    case 'Later':
+      return `${command._tag}:${command.launch.read}${command.launch.held ? ':held' : ''}:v${command.launch.voices}`;
     case 'Batch':
       return `Batch:${command.labels.join('-')}:${command.speak}`;
     case 'Range':
@@ -2004,7 +2117,12 @@ const offerHear = ({ m, choose, add, late }: Offering) => {
 
 /** Planted: Continue, two Continue taps, and a late event. */
 const offerPlanted = ({ add, late }: Offering) => {
-  add('continue', 'cmd:Continue@planted:idle', () => ({ _tag: 'Continue' }), 3);
+  add(
+    'continue',
+    ['cmd:Continue@planted:idle', 'home:after-continue', 'cmd:Later@home:done'],
+    () => ({ _tag: 'Continue' }),
+    3,
+  );
   add('continue-twice', 'batch:Continue-Continue@planted', () => ({
     _tag: 'Batch',
     labels: ['Continue', 'Continue'],
@@ -2079,10 +2197,30 @@ const offerDone = (offering: Offering) => {
   offering.late();
 };
 
+/** Home: `Begin` when the plan shows an item, else `Later` (the clock to the passage's due, then a relaunch); and a late event. */
+const offerHome = ({ m, pick, choose, add, late }: Offering) => {
+  if (runOf(m) === 'done')
+    add(
+      'later',
+      ['cmd:Later@home:done', 'cmd:Begin@home:idle'],
+      () => ({ _tag: 'Later', launch: launchOf(pick, choose) }),
+      3,
+    );
+  else
+    add(
+      'begin',
+      ['cmd:Begin@home:idle', 'run:today:next', 'write:today:lands', 'relaunch:today:idle'],
+      () => ({ _tag: 'Begin' }),
+      4,
+    );
+  late();
+};
+
 /** The offer of the model's screen and activity. */
 const offerOf = (m: Model) => {
   if (m.screen === 'hear') return m.reading ? offerReading : offerHear;
   if (m.screen === 'planted') return offerPlanted;
+  if (m.screen === 'home') return offerHome;
   if (m.said === 'open') return offerOpen;
   if (m.screen === 'today' && runOf(m) === 'done') return offerDone;
   if (m.screen === 'today' && runOf(m) === 'next') return offerNext;
@@ -2183,7 +2321,9 @@ const startOf = (pick: Random, choose: Choose, aside: Random): DeviceStart => {
       if (each === 'other' || each === 'passage')
         return [
           key,
-          'open:today',
+          'open:home',
+          'cmd:Begin@home:idle',
+          'relaunch:home:idle',
           'relaunch:today:idle',
           'write:today:lands',
           'ending:today:finished',
@@ -2225,8 +2365,9 @@ const startOf = (pick: Random, choose: Choose, aside: Random): DeviceStart => {
  * stays under its budget; together they are every floor: each ending in
  * letters and alone, missed words none, some and all, each write fault,
  * each launch, read and disk, each relaunch activity, each voice event and
- * tap batch, and Today's run (Next, the done state, a new plan at the
- * passage's due). Every part draws from the whole generator; its group only
+ * tap batch, home (opened at a launch and after Continue, `Begin`, `Later`
+ * and a relaunch from it), and Today's run (Next, the done state, a new
+ * plan at the passage's due). Every part draws from the whole generator; its group only
  * steers which unmet values come first, and is what it asserts.
  */
 export const FLOORS = {
@@ -2240,6 +2381,8 @@ export const FLOORS = {
     /^peek:alone:/u,
     /^batch:say-twice/u,
     /^cmd:Continue@planted:idle$/u,
+    /^home:after-continue$/u,
+    /^cmd:Later@home:/u,
   ],
   write: [
     /^write:alone:lands$/u,
@@ -2250,6 +2393,9 @@ export const FLOORS = {
     /^launch:down$/u,
     /^ending:(today|unread):finished$/u,
     /^write:unread:lands$/u,
+  ],
+  today: [
+    /^cmd:Begin@home:/u,
     /^write:today:lands$/u,
     /^run:today:next$/u,
     /^cmd:Next@today:/u,
@@ -2264,7 +2410,7 @@ export const FLOORS = {
     /^launch:held$/u,
     /^launch:voice-off$/u,
     /^open:hear$/u,
-    /^open:today$/u,
+    /^open:home$/u,
     /^open:unread$/u,
   ],
   disk: [
@@ -2281,6 +2427,7 @@ export const FLOORS = {
     /^relaunch:letters:idle$/u,
     /^relaunch:letters:alert$/u,
     /^relaunch:letters:listening$/u,
+    /^relaunch:home:/u,
     /^relaunch:today:/u,
     /^relaunch:unread:/u,
   ],
@@ -2372,6 +2519,28 @@ export const walkPart = (group: Group, seed: number, devices: number, commands =
     });
   });
 };
+
+/** A fixed device's launch: read at once, not held, with a voice. */
+export const LAUNCH_OK: LaunchKind = { read: 'ok', held: false, voices: 1 };
+
+/** A fixed recital: every word heard by the first engine, three to a final result, ending `end`; `over` replaces any of it. */
+export const recital = (over: Partial<Plan> = {}): Plan => ({
+  fallbacks: [],
+  skip: [],
+  extras: [],
+  every: 3,
+  cut: Number.MAX_SAFE_INTEGER,
+  close: 'end',
+  onFinish: 'end',
+  ...over,
+});
+
+/** A press of Say it for `plan`, its write `write`. */
+export const sayOf = (plan: Plan, write: Write = 'lands'): Command => ({
+  _tag: 'Say',
+  plan,
+  write,
+});
 
 /** Plays one fixed device: its start and its commands, through the same runner and oracles. */
 export const play = async (begin: DeviceStart, commands: readonly Command[]) => {
