@@ -7,27 +7,33 @@
  * unread garden or with Voice off; again after an unheard recital or a
  * refused write, and when Voice comes back on), and every Today frame holds
  * it before Say it alone, outside the scroll view. A tap reads the shown
- * piece's own text once, the passage another piece; a refused speak leaves
- * Listen and Say it. The disk holds the voice's switch after a Voice tap,
- * and nothing more for a Listen. `src/wake/reading.test.tsx` walks the
- * readings' ends.
+ * piece's own text once, the passage another piece. Voice is chosen in the
+ * Settings sheet, each tap's value shown there and its key on the disk,
+ * and an unread launch offers no Voice. `src/wake/listen-b.test.tsx` walks
+ * the refused speak, Next and the done state; `reading.test.tsx` and
+ * `reading-b.test.tsx` the readings' ends.
  */
 
 import { wakeCase } from '../test/wake-walk';
 
-wakeCase('listen', 46, 4, [
+wakeCase('listen', 11, 2, [
   'listen:offered',
   'listen:read',
-  'listen:refused',
   'listen:not-passage',
   'listen:voice-on-fresh',
   'listen:fresh-voice-off',
   'listen:review-voice-on',
-  'listen:next-fresh',
   'listen:after-unheard',
   'listen:after-refused',
-  'listen:done',
   'listen:unread',
   'voice:tap',
   'wake:made',
+  'listen:fresh-reading',
+  'listen:end:interrupt',
+  'listen:say-stops',
+  'listen:voice-off-reading',
+  'listen:minutes-reading',
+  'listen:relaunch-reading',
+  'settings:minutes',
+  'voice:none-unread',
 ]);

@@ -23,32 +23,45 @@
  * launch runs commands chosen by the screen the
  * model expects: an away (a wait of a minute to a month, then a return or
  * a sequence that is none: `inactive` alone, a second `active`), a recital
- * heard, unheard, refused or cancelled, a recital with a Minutes tap, a
- * return or a sequence that is none while it listens or, its end held
- * back, while it finishes, Next, Again, a Minutes tap, the field with
- * states sent on it, and a wait. Leaning toward Listen, the voice's old
- * switch is stored on or off or not at all (read as Her or Off), and the
- * walk taps Listen where it shows (the speak refused now and then) and
- * Voice, which cycles Off, Her, Him, and while a reading is under way ends
- * it (finished or interrupted), presses Say it, taps Voice (Off stops the
- * reading, Her to Him lets it go on), goes away, taps Minutes, opens the
- * field or waits.
+ * heard, unheard, refused or cancelled, a recital then a Minutes trip with
+ * its item held, a return or a sequence that is none while it listens or,
+ * its end held back, while it finishes, Next, Again, a Minutes trip, the
+ * field with states sent on it, and a wait. A Minutes trip is the
+ * reader's: `Your field`, home's `Settings`, now and then states sent with
+ * the sheet open (a return makes the plan again under it, and the sheet
+ * stays), the `<n> min` radio, `Done`, then `Begin` and Today, or home's
+ * done state. No Minutes is chosen while a recital listens or finishes: no
+ * reader reaches one (Today shows no `Your field` then), and
+ * `test:session-cells` makes that making at the session seam. Leaning
+ * toward Listen, the voice's old switch is stored on or off or not at all
+ * (read as Her or Off), and the walk taps Listen where it shows (the speak
+ * refused now and then) and takes a Voice trip, the same way to the sheet,
+ * whose `Voice` cycles Off, Her, Him; while a reading is under way it ends
+ * it (finished or interrupted), presses Say it, takes a Voice trip (Off
+ * stops the reading, Her to Him lets it go on through the trip), goes
+ * away, takes a Minutes trip (the reading goes on), opens the field or
+ * waits. An unread launch offers no choices: in place of a trip, no
+ * `Settings`, `Voice`, `<n> min` radio or Minutes group shows.
  *
  * The oracle is `src/test/wake-model.ts` (which states are returns, the run
  * after one) over `src/test/run-model.ts`'s run and
  * `src/test/session-model.ts`'s plan, made at home's first show, at each
- * return and at each Minutes tap: on home its heading, counts line and
- * `Begin`, and on Today after every step the reference
+ * return and at each `<n> min` tap in the sheet: on home its heading,
+ * counts line and `Begin`, before and after each trip, and the counts line
+ * under the open sheet after each tap and each state sent there; in the
+ * sheet the radio checked and the `Voice` value the model's choice after
+ * each tap; and on Today after every step the reference
  * shown, the action, the counts line, the result and alert (none while
  * nothing is held), the done state's text, whether Listen shows
  * (`listenModel`), and the disk (the start's keys unchanged, plus each kept
- * recall's key, the minutes key after a tap and the voice's key after a
- * Voice tap; a state sent and a Listen write nothing); every text the
+ * recall's key, the minutes key after a Minutes trip and the voice's key
+ * after each Voice tap; a state sent and a Listen write nothing); every text the
  * voice's source was given, and whether it reads, against the walk's own;
- * every frame holds the root's frame rule (`rootFaults`), and every Today
- * frame Listen's place (`listenFaults`). A no-op is
- * tallied toward its `:differs` floor only where a making would show
- * another screen.
+ * every frame holds the root's frame rule (`rootFaults`), every Today
+ * frame Listen's place (`listenFaults`), and every frame of a trip the
+ * sheet's (`watchSheet`). Every tap fails when its control is absent. A
+ * no-op is tallied toward its `:differs` floor only where a making would
+ * show another screen.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -73,6 +86,8 @@ import {
 import { deviceOf, PASSAGE, type Device, type Faults } from './run-rig';
 import { rootFaults } from './root-rule';
 import { countsModel, DAY, HOUR, MINUTE, planModel } from './session-model';
+import { choicesOf } from './session-rig';
+import { closeSettings, modalOf, openSettings, tapInSheet, watchSheet } from './settings-rig';
 import { listenModel, returnsModel, wakeModel } from './wake-model';
 import {
   readingVoice,
@@ -241,9 +256,9 @@ interface Seen {
 /** How a recital ends: heard and kept, unheard, heard with its write refused, or cancelled while it listens. */
 type How = 'heard' | 'unheard' | 'refused' | 'cancelled';
 
-/** What comes during a recital: a Minutes tap, a return, or a sequence that is no return; while it listens or while it finishes. */
+/** What comes during a recital: a return, or a sequence that is no return; while it listens or while it finishes. */
 interface During {
-  readonly what: 'minutes' | 'return' | 'quiet';
+  readonly what: 'return' | 'quiet';
   readonly at: 'listening' | 'finishing';
 }
 
@@ -424,6 +439,12 @@ class Walk {
     throw new Error(`after ${this.log.join(' > ')}: ${what}`);
   }
 
+  /** Taps `label` on the screen; fails `no <label> to tap after …` when it shows no such control, so no step passes on a tap that did nothing. */
+  async press(label: string, role = 'button') {
+    if (!(await this.screen.tap(label, role)))
+      throw new Error(`no ${label} to tap after ${this.log.join(' > ')}`);
+  }
+
   /** Waits for the screen the model expects, then holds it to the model and the disk. */
   async settle(step: string) {
     this.log.push(step);
@@ -532,7 +553,10 @@ class Walk {
 
   /** An away: a wait, then a return or a sequence that is none, and the screen the model gives. */
   async away() {
-    if (this.steer !== 'quiet' && this.next() < 0.3) await this.minutesTap();
+    if (this.steer !== 'quiet' && this.next() < 0.3) {
+      await this.minutesTap();
+      if (this.home) return this.homeAway();
+    }
     const gap = pickOf(this.next, GAPS[this.steer]);
     this.time.now += gap;
     const roll = this.next();
@@ -570,15 +594,15 @@ class Walk {
     const startedAt = this.time.now;
     if (!this.unread) this.run = startedModel(this.run, this.recallsNow);
     const stopped = this.stopCheck();
-    await app.tap('Say it');
+    await this.press('Say it');
     if (!(await app.until(() => app.has('Listening')))) this.fail('never listened');
     stopped();
     if (during?.at === 'listening') await this.during(during);
     if (how === 'cancelled') await app.cancel();
-    else if (during?.at !== 'finishing') await app.tap('Listening');
+    else if (during?.at !== 'finishing') await this.press('Listening');
     else {
       app.deferEnd();
-      await app.tap('Listening');
+      await this.press('Listening');
       if (!(await app.until(() => app.status() === 'finishing'))) this.fail('never finishing');
       await this.during(during);
       if (app.status() !== 'finishing') this.fail('finished before its end was sent');
@@ -619,14 +643,13 @@ class Walk {
 
   /** A tap on Listen: the voice speaks the shown piece's own text once, which reads until its end, or the speak is refused. */
   async listenTap() {
-    const app = this.screen;
     const voice = this.voice;
     const shown = shownModel(this.run, this.recallsNow);
     if (voice === null || shown === null) return;
     const piece = this.pieceOf(shown.reference);
     const refused = this.next() < 0.2;
     voice.state.refuse = refused;
-    await app.tap('Listen');
+    await this.press('Listen');
     voice.state.refuse = false;
     this.spoken.push(piece.text);
     this.reading = refused ? null : piece.text;
@@ -648,7 +671,7 @@ class Walk {
 
   /** One tap on Voice: the next choice of the cycle Off, Her, Him, stored under the choice's key; landing on Off stops a reading under way, and Her to Him lets it go on. */
   async cycleTap() {
-    await this.screen.tap('Voice', 'button');
+    if (!(await tapInSheet('Voice'))) throw new Error('no Voice in the sheet');
     const was = this.choice;
     this.choice = nextChoice(was);
     this.expected.set(CHOICE_KEY, this.choice);
@@ -659,28 +682,110 @@ class Walk {
       if (was !== 'off' && this.voiceOn) bump(this.coverage, 'listen:her-him-reading');
     }
     if (was === 'off' && this.stateName() === 'fresh') bump(this.coverage, 'listen:voice-on-fresh');
-    await this.settle(`Voice ${this.choice}`);
+    const want = `Voice:${this.choice[0]?.toUpperCase()}${this.choice.slice(1)}`;
+    const seen = () => JSON.stringify(choicesOf(modalOf() ?? document.body).voices);
+    if (
+      !(await this.screen.until(
+        () =>
+          seen() === JSON.stringify([want]) &&
+          this.diskFaults().length === 0 &&
+          this.voiceFaults().length === 0,
+      ))
+    )
+      throw new Error(
+        `Voice ${this.choice}: the sheet showed ${seen()}, disk ${this.diskFaults().join(', ')}, ${this.voiceFaults().join(', ')}`,
+      );
+  }
+
+  /** Home with its gear, reached from Today by `Your field` and held to the model as it stands. */
+  async toHome(step: string) {
+    const app = this.screen;
+    await this.press('Your field');
+    if (
+      !(await app.until(
+        () =>
+          app.headings().join('|') === 'Your field' &&
+          homeCounts(app).length > 0 &&
+          app.has('Settings'),
+      ))
+    )
+      this.fail(`${step}: no home with Settings, saw ${app.headings().join('|') || 'pending'}`);
+    this.onHome(shownModel(this.run, this.recallsNow) !== null);
+  }
+
+  /** `act` inside the open sheet, every frame held by `watchSheet`, then `Done`; fails on a thrown step, a sheet fault or a sheet whose look was never checked. */
+  async inSheet(step: string, act: () => Promise<void>) {
+    const app = this.screen;
+    const watch = watchSheet();
+    try {
+      await openSettings(app);
+      await act();
+      if (!(await closeSettings(app, 'Done'))) throw new Error('the sheet stayed after Done');
+    } catch (error) {
+      watch.stop();
+      this.fail(`${step}: ${String(error)}`);
+    }
+    watch.stop();
+    if (watch.faults.length > 0 || watch.frames.looked === 0)
+      this.fail(
+        `${step}: sheet ${watch.faults.join('; ') || 'faultless'}, its look checked on ${watch.frames.looked} frames`,
+      );
+  }
+
+  /** After a trip's `Done`: home held to the model, then `Begin` and Today when the model shows an item, else home's done state; answers whether Today shows. */
+  async back(step: string) {
+    const begin = shownModel(this.run, this.recallsNow) !== null;
+    this.log.push(`${step}, Done`);
+    this.onHome(begin);
+    if (!begin) {
+      await this.homeDone(step);
+      return false;
+    }
+    if (!(await this.screen.tap('Begin'))) this.fail('no Begin');
+    return true;
+  }
+
+  /** In an unread launch, in place of a trip: no Settings, no Voice, no `<n> min` radio and no Minutes group show (sq4 a). */
+  async noChoices(floor: string) {
+    const app = this.screen;
+    if (
+      app.has('Settings') ||
+      app.has('Voice') ||
+      MINUTES.some((each) => app.has(`${each} min`, 'radio')) ||
+      app.host.querySelector('[role="radiogroup"][aria-label="Minutes"]') !== null
+    )
+      this.fail('a Minutes, Voice or Settings on an unread garden');
+    bump(this.coverage, floor);
+    await this.settle('no choices, unread');
   }
 
   /**
-   * Voice turned on or off by its taps: from Off one tap to Her, and now and
-   * then a second to Him; from Her or Him the taps through to Off (Her by
-   * Him, the reading under way going on through it). Whether a second tap
-   * goes on to Him is drawn from `aside`, so the walk's own draws run as
-   * they do with the voice turned on and off alone.
+   * Voice turned on or off in the Settings sheet, reached from Today by
+   * `Your field` and home's gear: from Off one tap to Her, and now and then
+   * a second to Him; from Her or Him the taps through to Off (Her by Him,
+   * the reading under way going on through it); then `Done`, and `Begin`
+   * and Today, or home's done state. Whether a second tap goes on to Him is
+   * drawn from `aside`, so the walk's own draws run as they do with the
+   * voice turned on and off alone. An unread launch offers no choices.
    */
   async voiceTap() {
-    if (this.choice === 'off') {
-      await this.cycleTap();
-      if (this.aside() < 0.25) await this.cycleTap();
-    } else {
-      do await this.cycleTap();
-      while (this.voiceOn);
-    }
+    if (this.unread) return this.noChoices('voice:none-unread');
+    await this.toHome('Voice');
+    await this.inSheet('Voice', async () => {
+      if (this.choice === 'off') {
+        await this.cycleTap();
+        if (this.aside() < 0.25) await this.cycleTap();
+      } else {
+        do await this.cycleTap();
+        while (this.voiceOn);
+      }
+    });
+    bump(this.coverage, 'settings:voice');
     this.trail.push('voice');
+    if (await this.back(`Voice ${this.choice}`)) await this.settle(`Voice ${this.choice}`);
   }
 
-  /** While a reading is under way: its end, Say it, Voice off, an away, a Minutes tap, the field or a wait. */
+  /** While a reading is under way: its end, Say it, a Voice trip, an away, a Minutes trip, the field or a wait. */
   async whileReading() {
     const roll = this.next();
     if (roll < 0.34) return this.endReading(roll < 0.18 ? 'finish' : 'interrupt');
@@ -709,15 +814,10 @@ class Walk {
     return null;
   }
 
-  /** What comes while a recital listens or finishes: a Minutes tap (the plan made, the hold kept), or states sent (nothing made). */
+  /** What comes while a recital listens or finishes: states sent (nothing made). */
   async during(during: During) {
     const app = this.screen;
     const status = app.status();
-    if (during.what === 'minutes') {
-      await this.tapMinutes(pickOf(this.next, MINUTES), true);
-      bump(this.coverage, `held:minutes:${during.at}`);
-      return;
-    }
     if (during.what === 'return') {
       this.time.now += pickOf(this.next, [MINUTE, 2 * HOUR, DAY, 3 * DAY] as const);
       await this.states(returnOf(this.next), true);
@@ -730,36 +830,67 @@ class Walk {
       this.fail(`a recital ${status} became ${app.status()} at a state sent`);
   }
 
-  async tapMinutes(minutes: number, underWay = false) {
+  /** In the open sheet: `<n> min`, the plan made at that tap with nothing under way, the radio checked and home's counts line under the sheet the new plan's. */
+  async tapMinutes(minutes: number) {
     const before = this.run.hold;
     const app = this.screen;
-    await app.tap(`${minutes} min`, 'radio');
+    const step = `${minutes} min`;
+    if (!(await tapInSheet(step))) throw new Error(`no ${step} in the sheet`);
     this.minutes = minutes;
     this.expected.set(MINUTES_KEY, String(minutes));
-    if (!this.unread && this.run.plan !== null)
-      this.run = madeModel(this.run, this.planNow(), underWay);
-    const counts = this.expectOf(this.run).counts;
+    if (this.run.plan !== null) this.run = madeModel(this.run, this.planNow(), false);
+    const counts = JSON.stringify(this.expectOf(this.run).counts);
     const checked = () =>
-      app.host
-        .querySelector(`[role="radio"][aria-label="${minutes} min"]`)
+      modalOf()
+        ?.querySelector(`[role="radio"][aria-label="${step}"]`)
         ?.getAttribute('aria-checked') === 'true';
-    await app.until(() => checked() && JSON.stringify(app.counts()) === JSON.stringify(counts));
-    await app.until(() => false, 5);
-    if (this.unread || underWay) return;
+    if (!(await app.until(() => checked() && JSON.stringify(homeCounts(app)) === counts)))
+      throw new Error(
+        `${step} not checked with the plan's counts, home showed ${JSON.stringify(homeCounts(app))}, expected ${counts}`,
+      );
     if (before !== null) this.result = null;
     this.ending = null;
   }
 
+  /** States sent while the sheet is open on home: a return makes the plan again under it, and the sheet stays. */
+  async sheetAway() {
+    const app = this.screen;
+    this.time.now += pickOf(this.next, GAPS[this.steer]);
+    const states = this.next() < 0.75 ? returnOf(this.next) : quietOf(this.next);
+    const returns = await this.states(states, false);
+    const counts = JSON.stringify(this.expectOf(this.run).counts);
+    if (!(await app.until(() => modalOf() !== null && JSON.stringify(homeCounts(app)) === counts)))
+      throw new Error(
+        `states ${states.join(',')} with the sheet open: sheet ${modalOf() !== null}, home showed ${JSON.stringify(homeCounts(app))}, expected ${counts}`,
+      );
+    bump(this.coverage, returns > 0 ? 'wake:sheet-return' : 'wake:sheet-quiet');
+  }
+
+  /** A Minutes trip the reader's way: `Your field`, the gear, now and then states sent with the sheet open, `<n> min`, `Done`, then `Begin` and Today, or home's done state. */
   async minutesTap() {
+    const minutes = pickOf(this.next, MINUTES);
+    if (this.unread) return this.noChoices('minutes:none-unread');
     if (this.reading !== null) bump(this.coverage, 'listen:minutes-reading');
-    await this.tapMinutes(pickOf(this.next, MINUTES));
+    await this.toHome(`${minutes} min`);
+    await this.inSheet(`${minutes} min`, async () => {
+      if (this.next() < 0.2) await this.sheetAway();
+      await this.tapMinutes(minutes);
+    });
+    bump(this.coverage, 'settings:minutes');
     bump(this.coverage, 'minutes');
-    await this.settle('minutes');
+    const today = await this.back(`${minutes} min`);
+    if (today) await this.settle('minutes');
     this.trail.push('minutes');
   }
 
+  /** A recital, then a Minutes trip with its item still held. */
+  async sayThenMinutes(how: How) {
+    await this.say(how);
+    if (!this.home) await this.minutesTap();
+  }
+
   async nextTap() {
-    await this.screen.tap('Next');
+    await this.press('Next');
     this.run = nextModel(this.run);
     this.result = null;
     this.ending = null;
@@ -769,7 +900,7 @@ class Walk {
   }
 
   async again() {
-    await this.screen.tap('Again', 'radio');
+    await this.press('Again', 'radio');
     bump(this.coverage, 'again');
     await this.settle('Again');
     this.trail.push('again');
@@ -778,7 +909,7 @@ class Walk {
   /** The field and back by `Begin`, a return or a sequence that is none sent on it now and then; when the run shows no item after them, home is left in its done state (`homeDone`) and the launch goes on there. */
   async field() {
     const app = this.screen;
-    await app.tap('Your field');
+    await this.press('Your field');
     if (
       !(await app.until(() => app.headings().includes('Your field') && homeCounts(app).length > 0))
     )
@@ -921,11 +1052,12 @@ class Walk {
     this.trail.push('wait');
   }
 
-  /** A recital with something coming during it: more often, leaning to the no-ops. */
+  /** A recital with something coming during it, more often, leaning to the no-ops; in place of a Minutes choice during it, which no reader reaches, a recital then a Minutes trip. */
   sayDuring() {
     const what = pickOf(this.next, ['return', 'return', 'quiet', 'quiet', 'minutes'] as const);
     const at = this.next() < 0.5 ? 'listening' : 'finishing';
     const how = this.next() < 0.6 ? 'heard' : this.next() < 0.5 ? 'unheard' : 'refused';
+    if (what === 'minutes') return this.sayThenMinutes(how);
     return this.say(how, { what, at });
   }
 
@@ -951,7 +1083,7 @@ class Walk {
     return this.wait();
   }
 
-  /** At Say it: leaning to returns, an away half the time on the new piece or after a recital that kept nothing; else a recital of any ending, one with something during it (most often leaning to the no-ops), an away, the field, a Minutes tap or a wait. */
+  /** At Say it: leaning to returns, an away half the time on the new piece or after a recital that kept nothing; else a recital of any ending, one with something during it (most often leaning to the no-ops, or a recital then a Minutes trip), an away, the field, a Minutes trip or a wait. */
   async atSayIt(roll: number) {
     const aimed = this.ending !== null || this.stateName() === 'fresh';
     if (this.steer === 'returns' && aimed && this.next() < 0.5) return this.away();
@@ -965,7 +1097,7 @@ class Walk {
     return this.wait();
   }
 
-  /** At Next: leaning to returns, the field or Again a third of the time; else Next, Again, an away, the field, a Minutes tap or a wait. */
+  /** At Next: leaning to returns, the field or Again a third of the time; else Next, Again, an away, the field, a Minutes trip or a wait. */
   async atNext(roll: number) {
     if (this.steer === 'returns' && this.next() < 0.3)
       return this.next() < 0.5 ? this.field() : this.again();
@@ -996,7 +1128,7 @@ class Walk {
     const app = this.screen;
     MutableRef.set(app.hearing, { kind: 'heard', text: passage.text, skip: [] });
     await this.phase('Hear it');
-    await app.tap('Next');
+    await this.press('Next');
     await this.phase('Say it with help');
     await this.recite();
     await this.phase('Say it alone');
@@ -1005,16 +1137,16 @@ class Walk {
     await this.recite();
     await this.phase('Planted');
     this.time.now += MINUTE;
-    await app.tap('Continue');
+    await this.press('Continue');
     bump(this.coverage, 'first-minute');
     await this.fromHome('the first minute', false);
   }
 
   async recite() {
     const app = this.screen;
-    await app.tap('Say it');
+    await this.press('Say it');
     if (!(await app.until(() => app.has('Listening')))) this.fail('never listened');
-    await app.tap('Listening');
+    await this.press('Listening');
     await app.until(() => !app.has('Listening'));
   }
 
@@ -1217,9 +1349,9 @@ const LEANS: Record<Steer, string> = {
   listen: 'Listen on the new piece, its readings and the Voice button',
 };
 
-/** The floors every walk case of a steer meets beside its own: leaning toward Listen, a Voice tap from Her to Him while a reading is under way, which goes on. */
+/** The floors every walk case of a steer meets beside its own: leaning toward Listen, a Voice tap from Her to Him while a reading is under way, which goes on, and a Voice trip through the Settings sheet. */
 const STEER_FLOORS: Partial<Record<Steer, readonly string[]>> = {
-  listen: ['listen:her-him-reading'],
+  listen: ['listen:her-him-reading', 'settings:voice'],
 };
 
 /** The floors of `floors` that `coverage` misses; `zones` asks for at least that many zones. */

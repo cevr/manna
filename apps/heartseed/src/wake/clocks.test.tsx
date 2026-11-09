@@ -1,20 +1,21 @@
 /**
  * Today's run against its model on generated devices with the host's state
- * sent, leaning toward the clocks (`src/wake/walk.ts`): returns minutes,
+ * sent, leaning toward the clocks (`src/test/wake-walk.ts`): returns minutes,
  * hours, a day, days and a month apart, many returns in one launch, a
- * return, a Minutes tap and a return again, zones every side of UTC (Lord
- * Howe's half-hour daylight saving among them), a plan the minutes chosen
- * change, verses planted the evening before and minutes before (the new
- * piece held back for the day), and a garden with nothing due, whose home
- * shows the done state until an away's return brings an item and `Begin`.
+ * return, a Minutes trip through the Settings sheet and a return again, a
+ * return sent with the sheet open, zones every side of UTC (Lord Howe's
+ * half-hour daylight saving among them), a plan the minutes chosen change,
+ * a verse planted the evening before, and home in the done state until an
+ * away's return brings an item and `Begin`. `src/wake/clocks-b.test.tsx`
+ * walks the rest.
  */
 
 import { wakeCase } from '../test/wake-walk';
 
 wakeCase(
   'clocks',
-  100,
-  3,
+  16,
+  2,
   [
     'wake:gap:minutes',
     'wake:gap:hours',
@@ -27,14 +28,12 @@ wakeCase(
     'wake:made:differs',
     'wake:done-to-item',
     'disk:first-evening',
-    'disk:planted-today',
-    'plan:nothing-due',
-    'plan:fresh:planted today',
     'home:begin',
     'home:done',
     'home:away',
     'home:away-to-begin',
-    'home:end',
+    'settings:minutes',
+    'wake:sheet-return',
   ],
   3,
 );
