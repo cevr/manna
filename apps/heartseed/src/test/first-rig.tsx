@@ -32,7 +32,8 @@
  *   shows an item, and in its done state `Later` (the device's clock moved
  *   to the passage's due, then a relaunch); on Today, Next after a kept
  *   recall and a new plan at the passage's due (the device's clock moved
- *   there, then a tap on the Minutes radio checked).
+ *   there, then `Your field`, home's Settings sheet and its Minutes radio
+ *   checked, `Done`, and `Begin` when the plan shows an item).
  *
  * A read launch with a plant of any verse, and Continue, show home, whose
  * first show makes Today's plan; `Begin` shows that plan on Today. Every
@@ -67,7 +68,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
-import { rootWithChoicesOnToday } from './choices-seam';
+import Root from '../../app/index';
 import { appLayer, runtime } from '../app';
 import {
   CHAIN,
@@ -90,6 +91,7 @@ import { gestureOf } from './gesture';
 import { device } from './one';
 import { voiceOverFaults } from './voiceover';
 import { watchRoot } from './root-rule';
+import { renewBySettings } from './settings-rig';
 import { countsModel, dueModel, MINUTE, planModel, type ModelItem } from './session-model';
 import { hostOffset } from './zone';
 import { VoiceSource, VoiceUnavailable, type VoiceEvent, type VoiceInfo } from '../voice';
@@ -226,7 +228,7 @@ export type Command =
   | { readonly _tag: 'Grade'; readonly grade: 1 | 2 | 3 | 4; readonly write: Write }
   | { readonly _tag: 'Recover' }
   | { readonly _tag: 'Continue' }
-  /** On Today: the device's clock moved to the passage's due, then a tap on the Minutes radio checked, which makes the plan again. */
+  /** On Today: the device's clock moved to the passage's due, then home's Settings sheet and its Minutes radio checked, which makes the plan again. */
   | { readonly _tag: 'Renew' }
   /** On home with an item: the step to Today, which shows the plan home's first show made. */
   | { readonly _tag: 'Begin' }
@@ -783,7 +785,7 @@ const mount = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        {rootWithChoicesOnToday(host)}
+        <Root />
       </RegistryProvider>,
     ),
   );
@@ -1648,7 +1650,14 @@ export const session = (count: (key: string) => void) => {
     shift.by += Math.max(MINUTE, due - now());
   };
 
-  /** A new plan at the passage's due: the device's clock moved there (a minute on at least), and a tap on the Minutes radio checked, which writes the minutes and makes the plan again. */
+  /**
+   * A new plan at the passage's due: the device's clock moved there (a minute
+   * on at least), then the trip through home's Settings sheet
+   * (`renewBySettings`: `Your field`, the Minutes radio checked, which writes
+   * the minutes and makes the plan again at its tap, `Done`, and `Begin` when
+   * the plan shows an item). Arriving on home makes nothing; the trip ends on
+   * Today when the plan shows an item, else on home's done state.
+   */
   const renew = async () => {
     const r = rig();
     toDue();
@@ -1656,12 +1665,16 @@ export const session = (count: (key: string) => void) => {
     m.sets += 1;
     m.opened = true;
     make();
-    const radio = r.host.querySelector(
-      '[role="radiogroup"][aria-label="Minutes"] [role="radio"][aria-checked="true"]',
-    );
-    expect(radio === null, `${where()}: the Minutes radio checked`).toBe(false);
-    await act(async () => {
-      radio?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    at.allowed.headings = new Set(['Today', 'Your field']);
+    const trip = await renewBySettings(r);
+    m.screen = runOf(m) === 'done' ? 'home' : 'today';
+    expect(
+      { at: trip.at, sheet: trip.sheet, looked: trip.looked > 0 },
+      `${where()}: the trip`,
+    ).toEqual({
+      at: HEADING[m.screen] ?? 'no heading',
+      sheet: [],
+      looked: true,
     });
     await r.until(() => device.calls.set >= m.sets);
     m.disk.set(MINUTES_KEY, '5');
@@ -2349,9 +2362,10 @@ const offerResult = ({ m, r, pick, add, write, late, marks }: Offering) => {
   late();
 };
 
-/** On a read Today with the device up: a new plan at the passage's due, `times` weighed. */
+/** On a read Today with the device up, no recital listening (Today then offers no `Your field`) and no reading under way (a making mid-reading is `wake-walk`'s): a new plan at the passage's due, `times` weighed. */
 const renewal = ({ m, add, todayOn }: Offering, times = 1) => {
-  if (m.screen === 'today' && !m.down) add('renew', todayOn, () => ({ _tag: 'Renew' }), times);
+  if (m.screen === 'today' && !m.down && m.said !== 'open' && !m.reading)
+    add('renew', todayOn, () => ({ _tag: 'Renew' }), times);
 };
 
 /** Today's kept recall under Next: Next, a peek, a grade, a new plan at the passage's due, and a late event. */
@@ -2812,7 +2826,7 @@ export const screenLaunch = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        {rootWithChoicesOnToday(host)}
+        <Root />
       </RegistryProvider>,
     ),
   );
