@@ -12,6 +12,7 @@
  */
 
 import { act } from 'react';
+import passage from 'virtual:heartseed-passage';
 
 import type { Scheme } from '../theme';
 import { mountBar } from './bar-rig';
@@ -135,7 +136,7 @@ export const walkNeedScreen = async (scheme: Scheme) => {
   const presses = { pressed: 0 };
   setSystem(scheme);
   const need = needDevice([
-    recordOf('Isaiah 41:10', NOW - 3 * 60_000),
+    recordOf(passage.reference, NOW - 3 * 60_000),
     recordOf('Psalms 56:3', NOW - 2 * 60_000),
   ]);
   const rig = await launchNeed(need, { now: NOW });
