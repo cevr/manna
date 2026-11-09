@@ -36,7 +36,8 @@ of the four stages and the caption `Mark 4:28` close the scroll view. The
 bar holds first `When I need…` (`promise.md`) once a plan is made and the
 gear `Settings` (`home.md`: the Settings sheet, with the `Minutes`
 radios, `Voice`, the appearance and `About`, which opens the About screen,
-`about.md`), then `Add verses` (`id=add-verses`) or the limit line, and a
+`about.md`), then `Add verses` (`id=add-verses`; it and the dashed row
+open the Add verses sheet over home, `home.md`) or the limit line, and a
 passage furrow's `Remove` (`passage.md`). Under the scroll view, a fixed
 foot holds the Begin card (the counts line and `Begin`) or, with a verse
 chosen, the chosen card (`<reference> · <stage words>` and

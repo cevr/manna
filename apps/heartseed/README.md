@@ -549,13 +549,14 @@ launch counts them.
   its first row `When I need…` (at least 44 pt, exactly when a plan is
   made in this launch: When I need…, below) leading and the gear
   `Settings` trailing (on every home frame; Settings, below), then under
-  that row `Add verses` (testID `add-verses`), the limit line or the ask.
+  that row `Add verses` (testID `add-verses`, which opens the Add verses
+  sheet over home: Choosing a passage), the limit line or the ask.
   It holds no way back: home is the root. In the scroll view: the greeting (testID `greeting`, the sun or the
   moon, then its words in `sun`, plain text), the heading `Your field`,
   the days sown and the harvest, the hint `A gold dot marks a plant ready
   today. Tap one to start there.`, one furrow per row (`furrowsOf`; testID
   `row`), the dashed `Add verses` row (testID `add-row`, at least 56 pt
-  tall) whenever the bar offers `Add verses`, and a legend of the four
+  tall, opening the same sheet) whenever the bar offers `Add verses`, and a legend of the four
   stages, hidden from the screen reader, over the caption `Mark 4:28`. A
   furrow's head holds its icon (`furrow-icon`), its title (plain text,
   never a heading, so a reference spelled `Your field` or `Today` adds
@@ -1181,8 +1182,9 @@ it now, and the saying counts as a review.
 
 Stephen N. Haskell's _Bible Handbook_ (1919) is data the app holds as
 lists of references, each named by Haskell's own heading, grouped under
-his sections. No screen shows them yet: the shelves in Add verses and
-planting a list are a later unit, and only the development probe
+his sections. No screen shows them yet: the Add verses sheet draws no
+Handbook shelf, since a list planted whole needs the reader's lists
+stored, a later unit; only the development probe
 (`app/probe/handbook.tsx`, `heartseed://probe/handbook`) reads them,
 counts only.
 
@@ -1324,12 +1326,12 @@ session (verify-heartseed, `features/home.md`).
   session's or the corpus text; else nothing (a verse not planted yet). The
   session makes it the visit, replacing any visit and keeping the hold,
   the plan and the minutes; it lives as a visit lives. Nothing is stored.
-- **Shelves** (`SHELVES`, `offerStateOf`, `src/shelves.ts`): what Add
-  verses will offer (hsshelves): any passage (the chooser), the Psalms, the
-  Proverbs and John's picks, then each collection the session does not
-  teach, each pick and promise a `Passage` list. `offerStateOf` says
-  `unread`, `in field` (every verse already on the field), `full` (3
-  passages held) or `plant`.
+- **Shelves** (`SHELVES`, `offerStateOf`, `src/shelves.ts`): what the Add
+  verses sheet offers (Choosing a passage): any passage (the chooser), the
+  Psalms, the Proverbs and John's picks, then each collection the session
+  does not teach, each pick and promise a `Passage` list. `offerStateOf`
+  says `unread`, `in field` (every verse already on the field), `full` (3
+  passages held) or `plant`, and the sheet draws each offer by it.
 - **What grew** (`grownOf`, `src/home/grown.ts`): the verses of a run's
   done items whose stage now ranks above their stage at the plan's making,
   each once, in plan order (hshomejoy draws it).

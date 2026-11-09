@@ -3,7 +3,7 @@
 The home's rules (`apps/heartseed/README.md`, Home): the greeting by the
 reader's local hour, the furrows (one per row of the field, each its list's
 kind, icon and ripe count, each plant's stage and ready mark), the lists
-the field holds, the shelves Add verses will offer, and Start here, a tap on
+the field holds, the shelves the Add verses sheet offers, and Start here, a tap on
 a verse that makes it the session's visit. The field
 (`apps/heartseed/src/field/screen.tsx`, `field.md`) is the app's home:
 every launch on a read garden opens it, and so does the first minute's
@@ -25,7 +25,14 @@ Today on it. A tap on a plant chooses its verse, a second tap lets it go.
 `Settings` opens the Settings sheet (`apps/heartseed/src/settings/sheet.tsx`):
 the heading `Settings` and `Done`, then the `Minutes` radios, `Voice`,
 the `Appearance` radios and `About`; Today holds no `Minutes` and no
-`Voice`. The development probe
+`Voice`. Both `Add verses` open the Add verses sheet
+(`apps/heartseed/src/shelves/sheet.tsx`) over home: the heading
+`Add verses` and `Done`, then a shelf head per shelf (`Any passage`, which
+opens the chooser, whose first back `‹ Add verses` returns to the sheet;
+then the Psalms, Proverbs and John picks and each collection the session
+does not teach, each opening its offers in place, one shelf at a time),
+each offer its reference, its count and `Plant <reference>` or
+`In your field`. The development probe
 (`apps/heartseed/app/probe/home.tsx`, in a development build only) shows them as text over the live garden, passages and session,
 one line each, then the home's icons as images with a count of those
 loaded, and begins the session once the garden is read, as Today
@@ -63,8 +70,15 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
 - `home-need`: the bar's `When I need…` opens When I need…, whose
   `Your field` leads back to home; a known promise there opens Today on
   it.
-- `home-add-places`: the bar's `Add verses` opens the chooser, whose
-  `Your field` leads back to home.
+- `home-add-places`: the bar's `Add verses` and the row's each open the
+  Add verses sheet, whose `Done` leads back to home.
+- `home-add`: the sheet lists the 17 shelves in order; `Proverbs` lists
+  its five picks, `Proverbs 18:10` (taught in `Protection & Fear`) as
+  `In your field`, the rest with `Plant`; `Plant Psalms 46:1-3` leads home
+  with `Psalms 46:1-3` the furrow after `Isaiah 41:10`.
+- `home-add-any`: the sheet's `Any passage` opens `Add a passage`, whose
+  one back `‹ Add verses` returns to the sheet, all shelves closed; its
+  `Done` leads home.
 - `home-dot`: a seed at its due after a `Minutes` tap in Settings on home
   shows on the field as `Isaiah 41:10, seed, ready today`, with
   `1 to tend · about 1 min` and `Begin`, and starts there.
@@ -87,7 +101,7 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   with no `Minutes` radio, `Voice` or `Settings` (the trip the test rigs
   take to renew the plan).
 - Planned, not yet drivable (the later units of the home, split.md):
-  `home-add`, `home-end`.
+  `home-end`.
 
 ## How to get to it (user POV)
 
@@ -216,8 +230,10 @@ puts `Begin` in the field's foot), with the same variables:
    `sim snapshot home-need-visit` → the heading `Today`, `Isaiah 41:10`
    and `Say it`.
 8. `home-add-places`: `sim tap "label=Your field"`,
-   `sim tap "id=add-verses"` → the heading `Add a passage`;
-   `sim tap "label=Your field"` → the heading `Your field` again.
+   `sim tap "id=add-verses"` → the heading `Add verses`;
+   `sim tap "label=Done"` → the heading `Your field` again. Then
+   `sim scroll` to `id=add-row`, `sim tap "id=add-row"` → the same sheet,
+   the heading `Add verses`; `sim tap "label=Done"` → `Your field`.
 9. `home-dot`, only when `PLANTED` was 0400-1759 local (an evening
    planting is due the next morning; otherwise record
    `Nothing to tend now` and skip, as `run.md` step 3 does): wait until 7
@@ -308,6 +324,52 @@ no `0 of 1 ripe`, no `Add verses` and the plant an image, not a button
 no `Begin` (`home-begin`); no `id=add-verses` (`home-add-places`); no
 label ending `, ready today` (`home-dot`).
 
+### The Add verses sheet
+
+On a fresh install of its own, from `first.md` steps 1-7 to `first-home`
+(the first minute done, the own furrow and `Protection & Fear` on home),
+with the same variables:
+
+1. `home-add`: `sim tap "id=add-verses"`, `sim snapshot home-add-sheet`
+   → the heading `Add verses` and a button `Done`; the buttons
+   `Any passage`, `Psalms`, `Proverbs`, `The Gospel of John`,
+   `Forgiveness`, `Peace in Anxiety`, `Strength`, `Provision`,
+   `Guidance & Wisdom`, `Temptation & Victory`, `The Holy Spirit`,
+   `Healing`, `Comfort in Grief`, `Salvation & Assurance`,
+   `Christ’s Return`, `Prayer Answered`, `Rest`, in that order (`sim
+   scroll` as needed; record how the tree shows `aria-expanded`). Record
+   whether home's nodes show in the same snapshot (the modality as the
+   tree holds it).
+2. `sim tap "label=Proverbs"`, `sim snapshot home-add-proverbs` →
+   `Proverbs 4:23`, `Proverbs 15:1`, `Proverbs 16:3`, `Proverbs 18:10` and
+   `Proverbs 22:6`, each with `1 verse`; the buttons
+   `Plant Proverbs 4:23`, `Plant Proverbs 15:1`, `Plant Proverbs 16:3` and
+   `Plant Proverbs 22:6`; the text `In your field` and no
+   `Plant Proverbs 18:10` (it is in `Protection & Fear`, taught on the
+   device).
+3. `sim tap "label=Psalms"`, `sim tap "label=Plant Psalms 46:1-3"`,
+   `sim open / --expect "id=counts" --no-relaunch`, `sim snapshot
+   home-add-planted` → the heading `Your field` and no heading
+   `Add verses`; the furrow titles in order `Isaiah 41:10`,
+   `Psalms 46:1-3`, `Protection & Fear`; the text `0 of 3 ripe`, and the
+   buttons `Psalms 46:1, not planted`, `Psalms 46:2, not planted` and
+   `Psalms 46:3, not planted`; a button with `id=add-verses` still.
+4. `home-add-any`: `sim tap "id=add-verses"`, `sim tap "label=Any
+   passage"`, `sim snapshot home-add-any` → the heading `Add a passage`
+   and a button `Add verses` showing `‹ Add verses`, with no button
+   `Your field`. `sim tap "label=Add verses"` → the heading `Add verses`
+   again, with `Psalms` not expanded. `sim tap "label=Done"` → the heading
+   `Your field`.
+5. `home-add-places`: step 8 of the field drive above.
+6. Regressions on the same install: `passage.md`'s `passage-books`,
+   `passage-range` and `passage-plant`, through `Any passage`; this file's
+   `home-settings` and `home-settings-today`. Then `sim doctor` (record
+   `head` and `timingsHold`) and `sim down`.
+
+Red on base (before the sheet): `id=add-verses` opens `Add a passage`
+with `‹ Your field`; `sim tap "label=Any passage"` finds no element, and
+so does `sim tap "label=Plant Psalms 46:1-3"`.
+
 ### A wait that stays
 
 `home-wait-stays`: a wait in the running app fails where it is, and never
@@ -345,12 +407,21 @@ Report only the lines named above and the reference; delete the
   asset registry did not serve; an `icons failed` line names it. A dev
   bundle that fails to load at all (before hsdevbundle) shows neither.
 - Two nodes are named `Add verses` (the bar's and the row's): tap the
-  bar's by `id=add-verses`, never `label=Add verses`.
+  bar's by `id=add-verses`, never `label=Add verses`. On the chooser's
+  `Add a passage`, `label=Add verses` is its one back, to the sheet.
+- An offer's title is text, as a furrow's title on home under the modal
+  is: target an offer by its button `Plant <reference>`.
+- What the simulator cannot show of the Add verses sheet, the tests own:
+  the limit line and the plant's alert in the sheet, `Full`, a double tap
+  and the pending state, Escape and the swipe-down close, unread passages
+  (`test:shelves`, `test:shelves-walk-*`, the acceptance file), the slide,
+  the sheet in dark and its contrast (`test:dark-screens-b`,
+  `test:dark-screens-dark-b`), the icons' look, whether a long title fits,
+  and what VoiceOver says of the modal beyond the snapshot.
 - What the simulator cannot show, the tests own: the greeting at other
   hours and in other zones (`test:home-clock`), a phrase start
   (`test:home-walk-a`), a remove's effect on the furrows (`passage.md`
-  covers the remove), the 3-held limit (`passage.md`), the shelves sheet
-  and `Plant`, the end of a run, how VoiceOver speaks the selection, and
+  covers the remove), the 3-held limit (`passage.md`), the end of a run, how VoiceOver speaks the selection, and
   how each icon looks: its colours and contrast as drawn
   (`test:home-pixels`, `test:theme`), the dot's colour and its 3:1
   (`test:home-clock`), the dark set under a dark system, whether furrow

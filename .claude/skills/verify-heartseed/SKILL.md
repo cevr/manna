@@ -159,8 +159,10 @@ then `, ready today` when ready), and in its foot `Begin` and
 `Start here with <reference>`; in the Settings sheet `Done`, a `Minutes`
 radio (`2 min` … `20 min`), `Voice` (its value `Off`, `Her` or `Him` in a
 raw snapshot), an `Appearance` radio (`System`, `Light`, `Dark`) and
-`About`; on About its bar's `Your field`; on the chooser a book, a chapter, a verse, `Plant` and
-the backs (`Your field`, `Books`, `Chapters`); and on the home's
+`About`; in the Add verses sheet (both `Add verses` open it) `Done`, a
+shelf head by its title (`Any passage`, `Psalms`, …) and an offer's
+`Plant <reference>`; on About its bar's `Your field`; on the chooser a book, a chapter, a verse, `Plant` and
+the backs (`Add verses`, shown `‹ Add verses`, back to the sheet, `Books`, `Chapters`); and on the home's
 development probe (`sim open probe/home --expect "label=Home probe"`,
 `apps/heartseed/app/probe/home.tsx`) its one button
 `Start with <reference>`; and on the light probe (`sim open probe/light

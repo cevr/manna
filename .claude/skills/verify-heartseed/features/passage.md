@@ -10,7 +10,8 @@ up to 20 verses each, from the whole KJV in the bundle.
   fewer than 3 passages are held, else the line "3 passages, the most for
   now. Remove one to add another." (testID `limit`). The dashed row
   `Add verses` at the field's end (`id=add-row`) shows exactly when the
-  bar's does and opens the chooser too. With the reader's passages unread
+  bar's does. Both open the Add verses sheet over home (`home.md`), whose
+  `Any passage` opens the chooser. With the reader's passages unread
   it offers neither, and no row offers `Remove`.
 - **The rows**: the promise's (`Isaiah 41:10`), then each passage held in
   the order chosen, titled by its reference, each verse a plant button
@@ -22,7 +23,7 @@ up to 20 verses each, from the whole KJV in the bundle.
   not land leaves the alert "<reference> was not removed. Try again."
 - **The chooser** is the root's third screen, in place, opened at its
   books step. Its fixed header holds one way back and the step's one
-  heading: `‹ Your field` over `Add a passage` (the labels `Old Testament`
+  heading: `‹ Add verses` (back to the sheet) over `Add a passage` (the labels `Old Testament`
   and `New Testament`, then the 66 books), `‹ Books` over the book (its
   chapters), `‹ Chapters` over `<Book> <chapter>` (every verse, each a
   checkbox named by its reference). A back to the chapters or the books
@@ -52,8 +53,9 @@ up to 20 verses each, from the whole KJV in the bundle.
 
 - `passage-bar`: on the field, `When I need…` and `Add verses` sit in the
   bar, inside the window, without a scroll.
-- `passage-books`: the bar's `Add verses` shows the heading `Add a passage`,
-  `‹ Your field`, `Old Testament`, `New Testament` and the books.
+- `passage-books`: the bar's `Add verses`, then the sheet's `Any passage`,
+  shows the heading `Add a passage`, `‹ Add verses`, `Old Testament`,
+  `New Testament` and the books.
 - `passage-range`: `John` → `John 15` → taps on 1 and 5 show
   `John 15:1-5`, `5 verses`, `Up to 20 verses` and `Plant`, with `Plant`
   above the home indicator.
@@ -95,7 +97,7 @@ up to 20 verses each, from the whole KJV in the bundle.
 
 ## How to get to it (user POV)
 
-- On home (the field), tap `Add verses`: a book, a chapter,
+- On home (the field), tap `Add verses`, then `Any passage`: a book, a chapter,
   the first verse and the last, then `Plant`.
 - On the field, a passage row's `Remove`, then `Remove` or `Keep` in the
   bar.
@@ -119,9 +121,9 @@ must start empty: uninstall by udid as `first.md` says.
    --force-full --session verify-heartseed`) → the rects of `When I need…` and of
    `id=add-verses` inside the window, above the heading, with no
    `sim scroll` before.
-3. `passage-books`: `sim tap "id=add-verses"`,
-   `sim snapshot passage-books` → the heading `Add a passage`, the button
-   `Your field` showing `‹ Your field`, the texts `Old Testament` and
+3. `passage-books`: `sim tap "id=add-verses"`, `sim tap "label=Any
+   passage"`, `sim snapshot passage-books` → the heading `Add a passage`,
+   the button `Add verses` showing `‹ Add verses`, no button `Your field`, the texts `Old Testament` and
    `New Testament`, and the buttons `Genesis` and `Revelation`.
 4. `passage-range`: `sim tap "label=John"`, `sim tap "label=John 15"`,
    `sim tap "label=John 15:1"`, `sim tap "label=John 15:5"`,
@@ -143,8 +145,8 @@ must start empty: uninstall by udid as `first.md` says.
    the heading `Your field`; the row titles `Isaiah 41:10` then
    `John 15:1-5`; five buttons `John 15:<n>, not planted` (n 1-5); a button
    `Remove John 15:1-5` and no other `Remove`; two `Add verses`.
-8. `passage-limit`: two more passages through `sim tap "id=add-verses"` (for
-   example `Psalms` → `Psalms 23` → `Psalms 23:1`, then `sim scroll screen
+8. `passage-limit`: two more passages through `sim tap "id=add-verses"`
+   and `sim tap "label=Any passage"` (for example `Psalms` → `Psalms 23` → `Psalms 23:1`, then `sim scroll screen
    down` until `Psalms 23:6` shows clear of the footer (it can sit partly
    under it), `Psalms 23:6`, `Plant`; then on the books `sim scroll screen
    down` until `Romans` shows, `Romans` → `Romans 8` → `Romans 8:28`,

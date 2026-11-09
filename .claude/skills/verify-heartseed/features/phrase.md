@@ -24,7 +24,7 @@ leave the session (`apps/heartseed/README.md`, Phrases).
 ## Sub-features
 
 - `phrase-day-one`: after the first minute, home's `Add verses`
-  → `John` → `John 3` → `John 3:16` → `Plant`. The field shows the row
+  → `Any passage` → `John` → `John 3` → `John 3:16` → `Plant`. The field shows the row
   `John 3:16` with the plant button `John 3:16, not planted` and no node
   naming `[`, and its counts line no `1 new` (so Today, if `Begin` opens
   it, no `Listen`). (Holds on base too: a guard row.)
@@ -59,7 +59,7 @@ leave the session (`apps/heartseed/README.md`, Phrases).
 
 ## How to get to it (user POV)
 
-- From home, `Add verses` → a long verse (`John 3:16`)
+- From home, `Add verses` → `Any passage` → a long verse (`John 3:16`)
   → `Plant`; its first phrase is new on Today after the next 04:00 local.
 
 ## Driving it
@@ -74,7 +74,8 @@ must start empty: uninstall by udid as `first.md` says.
 1. `first.md` steps 1-7: boot, uninstall, install, revoke the microphone,
    and the first minute to `first-home`.
 2. `phrase-day-one`: on home,
-   `sim tap "id=add-verses"`, `sim tap "label=John"`,
+   `sim tap "id=add-verses"`, `sim tap "label=Any passage"`,
+   `sim tap "label=John"`,
    `sim tap "label=John 3"`, then `sim scroll screen down` until
    `John 3:16` shows clear of the footer (a snapshot after each scroll),
    `sim tap "label=John 3:16"`, `sim tap "label=Plant"`, `sim snapshot phrase-day-one-field` → the row
