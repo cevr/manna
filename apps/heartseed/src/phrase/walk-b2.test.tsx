@@ -5,7 +5,8 @@
  * root (`test/phrase-rig.tsx`), part b, file two: generated device 3,
  * seven days, each launch through home's `Begin`, held to the walk's
  * oracle after every step. Its floors: Listen on a phrase, a making while
- * a phrase's recital listens, a launch later on a day a new phrase was
+ * a phrase's recital listens (at the session seam), a launch later on a
+ * day a new phrase was
  * said (no second new piece), six days after the first, and `Begin` taken
  * from home.
  */

@@ -1736,7 +1736,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   The seam: `src/test/choices-seam.tsx`'s `rootWithChoicesOnToday(host)`
   is the root with Today's row of choices shown (`ChoicesOnToday`,
   `src/settings/choices.tsx`, which the app never provides), for the rigs
-  that still tap Today's `Minutes` and `Voice`: `phrase-rig.tsx`,
+  that still tap Today's `Minutes` and `Voice`:
   `session-rig.tsx` (its `launch` seamed unless passed
   `{ choicesOnToday: false }`) and `run-rig.tsx` for `wake-rig.tsx` alone
   (`run-rig`'s `launch` mounts `<Root />` unless passed
@@ -1755,7 +1755,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   mounts `<Root />` too, and the walks make their plan by the same trip
   through the sheet: the run walk (`src/test/run-walk.ts`), the reader
   walk (`src/test/reader-walk.ts`) and the dark Today walk
-  (`src/look/today.test.tsx`).
+  (`src/look/today.test.tsx`). `phrase-rig.tsx` mounts `<Root />` too,
+  and makes its one Minutes making, while a phrase's recital listens, at
+  the session seam (`Session.choose` on the mounted layer's session), since
+  no reader reaches the sheet then.
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
   - `test:hear`: `src/matcher` (the sounds-alike table's bounds, and each
@@ -2461,7 +2464,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     some, ripe or joined: Listen reads the piece's own text and lights each
     of its words by its UTF-16 span, Say it's summary and record carry the
     piece's word count under its own reference, a held phrase survives a
-    Minutes tap while its recital listens, and Next goes on, held after
+    Minutes making while its recital listens (made at the session seam,
+    `Session.choose`, the effect the Settings sheet's radio runs, since no
+    reader reaches the sheet while a recital listens; the screen still
+    checked after it), each tap of an absent control fails the walk, and
+    Next goes on, held after
     every step to `shownModel`, `countsModel` and `joinCueRule` over
     `planModel` of the expanded pieces, and to the disk's rule, each part's
     floors met.

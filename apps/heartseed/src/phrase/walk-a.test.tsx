@@ -7,9 +7,9 @@
  * every step (home's counts line and `Begin`; Today's item, counts,
  * action, Listen and cue; the voice's text and lit words; the summary; the
  * record; the disk; the root's frame rule). Its floors: new and reviewed
- * phrases, Listen on a phrase, a making while a phrase's recital listens,
- * a join under first letters, a launch later on a day a new phrase was
- * said, Chatham, and `Begin` taken from home.
+ * phrases, Listen on a phrase, a making while a phrase's recital listens
+ * (at the session seam), a join under first letters, a launch later on a
+ * day a new phrase was said, Chatham, and `Begin` taken from home.
  */
 
 import { describe, expect, it } from 'bun:test';

@@ -5,7 +5,8 @@
  * root (`test/phrase-rig.tsx`), part c, file two: generated device 5 (its
  * layer teaching Fear), four days, each launch through home's `Begin`,
  * held to the walk's oracle after every step. Its floors: Fear's phrases
- * reviewed, a making while a phrase's recital listens, the phrases'
+ * reviewed, a making while a phrase's recital listens (at the session
+ * seam), the phrases'
  * records, and `Begin` taken from home.
  */
 

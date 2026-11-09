@@ -22,11 +22,15 @@
  * Each item: `Listen` on a new piece in eight of ten, where the voice must be
  * asked for exactly the piece's text and each word the walk then names by
  * its UTF-16 span within that text lights alone, in order, before the
- * reading finishes; `Say it`, with a Minutes tap while it listens in a
- * quarter (a making that keeps the item held); the recital heard with a
+ * reading finishes; `Say it`, with a Minutes making while it listens in a
+ * quarter (a making that keeps the item held, made at the session seam,
+ * `Session.choose`, the effect the Settings sheet's radio runs, since no
+ * reader reaches it: the sheet is on home, and Today shows no `Your
+ * field` while a recital listens); the recital heard with a
  * word skipped in three of ten; the summary reading `<heard> of <n> words`
  * over the piece's n; a grade in half; the record under the item's own
- * reference with its word count and the grade; then `Next`.
+ * reference with its word count and the grade; then `Next`. A tap of a
+ * control the step names fails the walk when the control is absent.
  *
  * The oracle, apart from the app's code: Today's reference, counts line,
  * action, `Listen` and the words under the cue are `run-model.ts`'s run
@@ -45,7 +49,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
-import { rootWithChoicesOnToday } from './choices-seam';
+import Root from '../../app/index';
 import { appLayer, runtime } from '../app';
 import { DictationSource, type DictationEvent } from '../dictation';
 import { CHAIN } from '../dictation/attempt';
@@ -55,7 +59,7 @@ import { sourceWords } from '../matcher/words';
 import { COLLECTIONS, TAUGHT } from '../promises';
 import { Haptics, type Recall } from '../sayit';
 import { MINUTES, type Minutes } from '../session';
-import { MINUTES_KEY } from '../session/service';
+import { MINUTES_KEY, Session } from '../session/service';
 import { Voice, VoiceSource, type VoiceEvent, type VoiceView } from '../voice';
 import { clockOf } from './clock';
 import { below, keyOf, pickOf, PREFIX, random } from './garden-model';
@@ -295,6 +299,7 @@ export const mount = async (
 ) => {
   const voice = speakingVoice();
   const service = MutableRef.make<Option.Option<Voice['Service']>>(Option.none());
+  const session = MutableRef.make<Option.Option<Session['Service']>>(Option.none());
   const parts = {
     source: recognizerOf(hearing),
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
@@ -307,7 +312,10 @@ export const mount = async (
   ).pipe(
     Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))),
     Layer.tap((services) =>
-      Effect.sync(() => MutableRef.set(service, Option.some(Context.get(services, Voice)))),
+      Effect.sync(() => {
+        MutableRef.set(service, Option.some(Context.get(services, Voice)));
+        MutableRef.set(session, Option.some(Context.get(services, Session)));
+      }),
     ),
   );
   const host = document.createElement('div');
@@ -317,7 +325,7 @@ export const mount = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        {rootWithChoicesOnToday(host)}
+        <Root />
       </RegistryProvider>,
     ),
   );
@@ -377,6 +385,12 @@ export const mount = async (
     voice,
     /** The voice service's view now. */
     view: (): VoiceView => Effect.runSync(Option.getOrThrow(MutableRef.get(service)).view),
+    /** `Session.choose` on the mounted layer's own session, inside `act`: the effect the Settings sheet's radio runs (`chooseMinutes`), for a making no reader reaches. */
+    choose: async (minutes: Minutes) => {
+      await act(async () =>
+        Effect.runPromise(Option.getOrThrow(MutableRef.get(session)).choose(minutes)),
+      );
+    },
     summary: () => textOf(host.querySelector('[data-testid="summary"]')),
   };
 };
@@ -709,7 +723,7 @@ class PhraseWalk {
     if (!(await app.until(() => app.today().action.includes('Listening'))))
       return this.fail(`${shown.reference} never listened`);
     if (below(this.next, 4) === 0) await this.makeWhileListening(phrase);
-    await app.tap('Listening');
+    if (!(await app.tap('Listening'))) return this.fail(`no Listening on ${shown.reference}`);
     if (!(await app.until(() => app.summary() !== '' && app.today().action.includes('Next'))))
       return this.fail(`${shown.reference}: no result`);
     const summary = app.summary();
@@ -717,38 +731,45 @@ class PhraseWalk {
       return this.fail(
         `${shown.reference}: the summary reads ${summary.replace(/[^\d ofwrds]/g, '')} over ${n} words, ${skip.length} unheard`,
       );
-    let grade: number | null = null;
-    if (below(this.next, 2) === 0) {
-      const name = pickOf(this.next, GRADES);
-      grade = GRADES.indexOf(name) + 1;
-      await app.tap(name, 'radio');
-    }
-    const kept = await app.until(() => {
-      const raw = this.disk.get(key);
-      return raw !== undefined && (grade === null || (JSON.parse(raw) as Recall).grade === grade);
-    });
-    if (!kept) return this.fail(`${shown.reference}: no record under its own reference`);
-    const record = JSON.parse(this.disk.get(key) as string) as Recall;
-    if (record.reference !== shown.reference || record.words !== n)
-      return this.fail(
-        `${shown.reference}: the record holds ${record.words} words of ${record.reference}, not ${n}`,
-      );
+    if (!(await this.keep(shown.reference, key, n))) return false;
     bump(this.cover, phrase ? 'record:phrase' : 'record:verse');
     if (shown.fresh) this.sownFresh = phrase;
     if (!(await this.settle(`said ${shown.reference}`))) return false;
-    await app.tap('Next');
+    if (!(await app.tap('Next'))) return this.fail(`no Next on ${shown.reference}`);
     this.run = nextModel(this.run);
     if (phrase) bump(this.cover, 'next:after-phrase');
     return this.settle(`next after ${shown.reference}`);
   }
 
-  /** A Minutes tap while the held item's recital listens: the plan made again, the item still held and shown. */
+  /** A grade tapped in half, then the record under `reference`'s own `key` with its `n` words and the grade. */
+  async keep(reference: string, key: string, n: number) {
+    const app = this.mounted;
+    let grade: number | null = null;
+    if (below(this.next, 2) === 0) {
+      const name = pickOf(this.next, GRADES);
+      grade = GRADES.indexOf(name) + 1;
+      if (!(await app.tap(name, 'radio'))) return this.fail(`no ${name} on ${reference}`);
+    }
+    const kept = await app.until(() => {
+      const raw = this.disk.get(key);
+      return raw !== undefined && (grade === null || (JSON.parse(raw) as Recall).grade === grade);
+    });
+    if (!kept) return this.fail(`${reference}: no record under its own reference`);
+    const record = JSON.parse(this.disk.get(key) as string) as Recall;
+    if (record.reference !== reference || record.words !== n)
+      return this.fail(
+        `${reference}: the record holds ${record.words} words of ${record.reference}, not ${n}`,
+      );
+    return true;
+  }
+
+  /** A Minutes making while the held item's recital listens, at the session seam (no reader reaches it: the sheet is on home, and Today shows no `Your field` while a recital listens): the plan made again, the item still held and shown. */
   async makeWhileListening(phrase: boolean) {
     const choice = pickOf(
       this.next,
       MINUTES.filter((each) => each !== this.minutes) as unknown as [Minutes, ...Minutes[]],
     );
-    await this.mounted.tap(`${choice} min`, 'radio');
+    await this.mounted.choose(choice);
     this.minutes = choice;
     this.minutesTapped = true;
     this.run = madeModel(this.run, this.planNow(), true);
