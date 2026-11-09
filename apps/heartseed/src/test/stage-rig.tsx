@@ -11,8 +11,16 @@
  * Every frame (each DOM mutation batch) is watched: each counts as a claim
  * when it names a stage, a plant, planting or growth, and each files its
  * looks, a read plant's parts under its stage and every look of a frame
- * with no stage line as unread, over every mount of the test file's
- * process.
+ * with no stage line and no home heading as unread, over every mount of
+ * the test file's process. Home's frames are neither: home draws plants of
+ * its own, read, under no stage line.
+ *
+ * The root opens as it opens for a reader: a read launch lands on home,
+ * where `begin` takes `Begin` to Today, and an unread one (every listing
+ * or open failing) opens Today with no `Your field` in any frame. Every
+ * frame, from before the root's first render, is also held to the root's
+ * frame rule (`rootFaults` through `watchRoot`), its faults failing the
+ * case at `begin` and at `leave`.
  */
 
 import { RegistryProvider } from '@effect/atom-react';
@@ -35,6 +43,7 @@ import { clockOf, toDue, type Time } from './clock';
 import { DAY } from './garden-model';
 import { computed } from './look';
 import { device } from './one';
+import { watchRoot } from './root-rule';
 
 export const PREFIX = 'heartseed/recall/';
 
@@ -108,19 +117,23 @@ export const passageRecalls = () =>
  * Today over the scripted recital, the app's store on the device (built
  * once `held` resolves, as a slow launch would) and a chime that records
  * into `chimes`; each mount is a fresh registry, a launch. Every frame is
- * read for a claim and filed by its looks.
+ * read for a claim and filed by its looks. `garden` is whether the launch's
+ * read completes; a read launch not held is taken from home to Today by
+ * `begin` before the mount answers, a held one is the test's to take once
+ * released.
  */
 export const mount = async (
   chimes: Growth[],
-  held: Promise<void> = Promise.resolve(),
+  held?: Promise<void>,
   time: Time = { now: null },
+  garden: 'read' | 'unread' = 'read',
 ) => {
   const layer = appLayer({
     source: scriptedSource(recite(passage.text, { skip: [10], every: 5, pace: 1 })),
     haptics: Layer.succeed(Haptics, Haptics.of({ tick: Effect.void })),
     store: Layer.unwrap(
       Effect.as(
-        Effect.promise(() => held),
+        Effect.promise(() => held ?? Promise.resolve()),
         store,
       ),
     ),
@@ -141,10 +154,13 @@ export const mount = async (
     [...host.querySelectorAll('*')].some((node) =>
       [...node.attributes].some((attribute) => CLAIM.test(attribute.value)),
     );
-  /** Files the frame's looks: a read frame's plant parts under its stage, every look of a frame with no stage line as unread. */
+  const headings = () =>
+    [...host.querySelectorAll('[role="heading"]')].map((node) => node.textContent ?? '');
+  /** Files the frame's looks: a read frame's plant parts under its stage, every look of a frame with no stage line and no home heading as unread. */
   const file = () => {
     const label = host.querySelector('[data-testid="stage"]')?.getAttribute('aria-label');
     if (label === undefined || label === null) {
+      if (headings().includes('Your field')) return;
       for (const node of host.querySelectorAll('*')) UNREAD_LOOKS.add(lookOf(node));
       return;
     }
@@ -159,11 +175,19 @@ export const mount = async (
     file();
   });
   watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
+  const rootRule = watchRoot(host, garden);
+  /** Holds every frame so far to the root's rule: no fault, and on an unread launch no `Your field` heading in any frame. */
+  const rooted = () =>
+    expect({
+      faults: rootRule.faults,
+      field:
+        garden === 'unread' && rootRule.frames.some((each) => each.headings.includes('Your field')),
+    }).toEqual({ faults: [], field: false });
   const root = createRoot(host);
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        <Root opening="today" />
+        <Root />
       </RegistryProvider>,
     ),
   );
@@ -224,7 +248,39 @@ export const mount = async (
   };
   const leave = async () => {
     watch.disconnect();
+    rootRule.stop();
     await act(async () => root.unmount());
+    rooted();
   };
-  return { one, until, click, stage, growth, plant, drawn, say, renew, radio, frames, leave };
+  /**
+   * The step from home to Today on a read launch: home shows with its
+   * heading alone and `Begin`, no frame faulting the root's rule, and
+   * `Begin` taken lands on Today with Say it.
+   */
+  const begin = async () => {
+    expect(await until(() => headings().join('|') === 'Your field')).toBe(true);
+    expect({
+      headings: headings(),
+      begin: button('Begin') !== undefined,
+      faults: rootRule.faults,
+    }).toEqual({ headings: ['Your field'], begin: true, faults: [] });
+    await click(button('Begin'));
+    expect(await until(() => headings().join('|') === 'Today' && sayIt() !== undefined)).toBe(true);
+  };
+  if (garden === 'read' && held === undefined) await begin();
+  return {
+    one,
+    until,
+    click,
+    stage,
+    growth,
+    plant,
+    drawn,
+    say,
+    renew,
+    radio,
+    frames,
+    begin,
+    leave,
+  };
 };

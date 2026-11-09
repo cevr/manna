@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction -- a React screen test: it drives a rig's promise-based launch and waits one after another, over a disk whose recall is written as the garden writes it (JSON); a parsed node's absent label is null. */
+/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noNewPromise -- a React screen test: it drives a rig's promise-based launch and waits one after another, over a disk whose recall is written as the garden writes it (JSON), and holds the stage rig's launch on a promise already resolved so its step is the test's; a parsed node's absent label is null. */
 
 /**
  * The rig contract (hshomerigs R2, R3), for every rig of Today's run: a
@@ -14,11 +14,15 @@
 import { describe, expect, it } from 'bun:test';
 import passage from 'virtual:heartseed-passage';
 
+import { recite, scriptedSource } from '../dictation/script';
 import { recallOf } from '../test/field-model';
 import { keyOf } from '../test/garden-model';
+import { device } from '../test/one';
 import { screensOf, watchedLaunch } from '../test/root-rule';
 import { deviceOf, launch, PASSAGE, text } from '../test/run-rig';
 import * as session from '../test/session-rig';
+import { AT, mount as stageMount, recallAt, recordOf } from '../test/stage-rig';
+import { heldDisk, mount as todayMount, SEED } from '../test/today-rig';
 import { wakeLaunch } from '../test/wake-rig';
 
 const T0 = Date.UTC(2026, 3, 1, 9);
@@ -86,6 +90,25 @@ const throughHome = async (watched: Watched, until: Until, step: () => Promise<u
 };
 
 describe('every rig of Today’s run launches through home', () => {
+  it('today-rig’s mount shows home, then Today by Begin', async () => {
+    const held = heldDisk(SEED);
+    const w = await watchedLaunch('read', () =>
+      todayMount(scriptedSource(recite(passage.text, { every: 5, pace: 1 })), held.disk, {
+        cue: 'initials',
+      }),
+    );
+    held.release();
+    await throughHome(w, w.app.until, () => w.app.begin());
+    await w.end();
+  });
+
+  it('stage-rig’s mount shows home, then Today by Begin', async () => {
+    device.launch([recordOf(recallAt(Date.UTC(2026, 0, 5, 9)))]);
+    const w = await watchedLaunch('read', () => stageMount([], Promise.resolve(), { now: AT }));
+    await throughHome(w, w.app.until, () => w.app.begin());
+    await w.end();
+  });
+
   it('run-rig’s launch shows home, then Today by Begin', async () => {
     const w = await watchedLaunch('read', () => launch(deviceOf([DUE]), READ, { now: T0 }));
     await throughHome(w, w.app.until, async () => expect(await w.app.tap('Begin')).toBe(true));

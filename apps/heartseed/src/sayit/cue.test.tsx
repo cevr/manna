@@ -7,12 +7,12 @@
  * planted, its first letters at a seed, nothing at a blade; a recital said
  * under that cue, a recital not heard, and an unread garden (whole, said
  * with nothing). It catches a word that shows more than its cue (letters
- * whole, the verse whole after an unheard recital, the verse seen or named
- * in the whole-text node or a word node of a held launch's pending frame),
- * a letter Today names or shows other than the word's own first letter, a
- * cue whose ink reads under AA contrast on the ground, a recital said under
- * another cue than the screen shows, and a run of the verse outside the
- * word nodes. It misses the stage rule itself (`src/ladder.property.test.ts`).
+ * whole, the verse whole after an unheard recital), a letter Today names or
+ * shows other than the word's own first letter, a cue whose ink reads under
+ * AA contrast on the ground, a recital said under another cue than the
+ * screen shows, and a run of the verse outside the word nodes. It misses
+ * the stage rule itself (`src/ladder.property.test.ts`); a held launch's
+ * pending frames are `cue-held.test.tsx`'s.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -20,16 +20,7 @@ import { Option } from 'effect';
 import passage from 'virtual:heartseed-passage';
 
 import { recite, scriptedSource } from '../dictation/script';
-import {
-  BLADE,
-  failing,
-  heldDisk,
-  mount,
-  NOT_PLANTED,
-  passageAt,
-  SEED,
-  WORDS,
-} from '../test/today-rig';
+import { BLADE, failing, mount, NOT_PLANTED, passageAt, SEED, WORDS } from '../test/today-rig';
 
 /** Each stage the passage can be read at on the disk, and the cue Today shows it under. */
 const LADDER = [
@@ -69,27 +60,6 @@ describe('Today’s cue, by the stage the garden reads', () => {
         today.runsElsewhere(),
         today.kept,
       ]).toEqual([null, WORDS.length, 0, []]);
-      await today.leave();
-    });
-
-  for (const [stage, disk, cue] of [
-    ...LADDER,
-    ['unread', { recalls: passageAt(1), unread: true }, 'full'],
-  ] as const)
-    it(`shows no word of the verse, seen or named, in the whole-text node or a word node, and no run of it anywhere, in every pending frame of a held launch (${stage}), then its cue (${cue}) once the read lands`, async () => {
-      const held = heldDisk(disk);
-      const today = await mount(scriptedSource(recite(passage.text, {})), held.disk, { cue });
-      const pending: (readonly number[])[] = [];
-      expect(
-        await today.until(() => {
-          pending.push([today.verseShown(), today.runsElsewhere(), today.button().length]);
-          return pending.length >= 4 && today.one('[data-testid="reference"]') !== null;
-        }),
-      ).toBe(true);
-      expect(pending.filter((each) => each.some((n) => n !== 0))).toEqual([]);
-      held.release();
-      expect(await today.until(() => today.label() === 'Say it')).toBe(true);
-      expect([today.verseShown() > 0, today.runsElsewhere()]).toEqual([cue !== 'none', 0]);
       await today.leave();
     });
 

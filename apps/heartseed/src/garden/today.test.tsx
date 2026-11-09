@@ -136,6 +136,7 @@ describe('Today’s stage over the device’s store', () => {
     ]).toEqual([true, true, 0, 0]);
 
     gate.resolve();
+    await today.begin();
     expect(await today.until(() => today.stage() === 'Stage: full corn')).toBe(true);
     expect([today.plant()?.getAttribute('aria-hidden'), today.growth(), today.drawn()]).toEqual([
       'true',

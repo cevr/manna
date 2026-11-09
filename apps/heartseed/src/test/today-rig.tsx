@@ -10,6 +10,13 @@
  * status in the view it was drawn from, a word not yet said to the cue it
  * shows under: the colour its text is seen in, whether the screen reader
  * reads it, its name and its role. It counts words without printing one.
+ *
+ * The root opens as it opens for a reader: a read disk lands on home, where
+ * `begin` takes `Begin` to Today (each disk here holds the passage due or
+ * not yet planted, so home offers it), and an unread disk opens Today with
+ * no `Your field` in any frame. Every frame, from before the root's first
+ * render, is also held to the root's frame rule (`rootFaults` through
+ * `watchRoot`, the garden the disk's read).
  */
 
 import { RegistryProvider, useAtomValue } from '@effect/atom-react';
@@ -24,6 +31,7 @@ import passage from 'virtual:heartseed-passage';
 import Root from '../../app/index';
 import { appLayer, runtime, sayItView } from '../app';
 import { DictationSource, type DictationEvent } from '../dictation';
+import { recite, scriptedSource } from '../dictation/script';
 import { Chime } from '../garden';
 import type { Cue, MarkStatus } from '../matcher';
 import { sourceWords } from '../matcher/words';
@@ -35,6 +43,7 @@ import { voiceSource } from '../voice/source';
 import { clockOf, toDue, type Time } from './clock';
 import { AA, contrastOf } from './contrast';
 import { computed, systemScheme } from './look';
+import { watchRoot } from './root-rule';
 
 export const WORDS = sourceWords(passage.text);
 
@@ -360,9 +369,10 @@ const mounted = new Set<() => Promise<void>>();
  * Today leaves, as the app's does, at `time` on Effect's clock (the host's
  * while it is null). `rest.cue` is the cue the test expects Today's words
  * under while no recital is shown. A recital's marks show from a press of
- * Say it until a new plan lets its item go (`renew`). It first leaves any
- * Today a failed test left mounted, so a failure stays a failure of its own
- * test.
+ * Say it until a new plan lets its item go (`renew`). A read disk not held
+ * is taken from home to Today by `begin` before the mount answers; a held
+ * one is the test's to take once released. It first leaves any Today a
+ * failed test left mounted, so a failure stays a failure of its own test.
  */
 export const mount = async (
   source: Layer.Layer<DictationSource>,
@@ -384,6 +394,8 @@ export const mount = async (
   }).pipe(Layer.provide(Layer.merge(clockOf(time), Logger.layer([]))));
   const host = document.createElement('div');
   document.body.append(host);
+  const garden = disk.unread ? 'unread' : 'read';
+  const rootRule = watchRoot(host, garden);
   const root = createRoot(host);
   const latest = MutableRef.make(Option.none<SayItView>());
   const show = (today: boolean) =>
@@ -393,7 +405,7 @@ export const mount = async (
           {today && (
             <>
               <Seen into={latest} />
-              <Root opening="today" />
+              <Root />
             </>
           )}
         </RegistryProvider>,
@@ -406,8 +418,17 @@ export const mount = async (
   const reached = new Map<MarkStatus, number>();
   const unsaid = new Map<Cue, number>();
   const played = new WeakSet<Element>();
+  const headings = () => all('[role="heading"]').map((node) => node.textContent ?? '');
+  /** Holds every frame so far to the root's rule: no fault, and on an unread disk no `Your field` heading in any frame. */
+  const rooted = () =>
+    expect({
+      faults: rootRule.faults,
+      field:
+        garden === 'unread' && rootRule.frames.some((each) => each.headings.includes('Your field')),
+    }).toEqual({ faults: [], field: false });
   /** Holds every word Today draws now, its fades run, to the rule for its status in the view it was drawn from (a word not yet said under the recital's cue, or the rest cue while none is shown), and counts the statuses met. */
   const frame = () => {
+    rooted();
     runFades(host, played);
     const words = all('[data-testid^="word-"]');
     if (words.length === 0) return;
@@ -488,9 +509,32 @@ export const mount = async (
   const leave = async () => {
     if (!mounted.delete(leave)) return;
     for (const release of [...holding]) release();
+    rooted();
+    rootRule.stop();
     await act(async () => root.unmount());
   };
   mounted.add(leave);
+  /**
+   * The step from home to Today on a read disk: home shows with its heading
+   * alone and `Begin`, no frame faulting the root's rule, and `Begin` taken
+   * lands on Today with its action.
+   */
+  const begin = async () => {
+    expect(await until(() => headings().join('|') === 'Your field')).toBe(true);
+    const offered = all('[role="button"]').find(
+      (node) => (node.getAttribute('aria-label') ?? node.textContent) === 'Begin',
+    );
+    expect({ headings: headings(), begin: offered !== undefined, faults: rootRule.faults }).toEqual(
+      {
+        headings: ['Your field'],
+        begin: true,
+        faults: [],
+      },
+    );
+    await click(offered);
+    expect(await until(() => headings().join('|') === 'Today' && button().length === 1)).toBe(true);
+  };
+  if (garden === 'read' && disk.held === undefined) await begin();
   /** The cue of the recital Say it's view holds, none before one. */
   const recitalCue = () =>
     Option.flatMap(MutableRef.get(latest), (view) =>
@@ -538,6 +582,7 @@ export const mount = async (
     label,
     actions,
     renew,
+    begin,
     time,
     click,
     radios,
@@ -552,6 +597,32 @@ export const mount = async (
     recitalCue,
     runsElsewhere,
   };
+};
+
+/**
+ * One recital said on `disk` under `cue`, the cue its stage gives
+ * (`cue-say` and `cue-say-letters`): every unsaid word shows that cue while
+ * it listens, the recital's own cue is `cue`, and a recital whole is
+ * suggested Hard and kept with no miss, no run of the verse elsewhere.
+ */
+export const saysUnderCue = async (disk: Disk, cue: 'full' | 'initials') => {
+  const n = WORDS.length;
+  const today = await mount(scriptedSource(recite(passage.text, { every: 5, pace: 4 })), disk, {
+    cue,
+  });
+  expect(await today.until(() => today.label() === 'Say it')).toBe(true);
+  const atRest = today.unsaid.get(cue) ?? 0;
+  await today.click(today.button()[0]);
+  expect(await today.until(() => today.label() === 'Listening')).toBe(true);
+  expect(today.recitalCue()).toEqual(Option.some(cue));
+  expect(await today.until(() => today.one('[data-testid="summary"]') !== null)).toBe(true);
+  expect((today.unsaid.get(cue) ?? 0) - atRest).toBeGreaterThan(n - 5);
+  expect([today.host.textContent?.includes('Suggested: Hard'), today.runsElsewhere()]).toEqual([
+    true,
+    0,
+  ]);
+  expect(today.kept.map((recall) => [recall.grade, recall.missed])).toEqual([[2, 0]]);
+  await today.leave();
 };
 
 /** A source that ends each listen with a failure of `reason`. */
