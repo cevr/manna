@@ -113,6 +113,22 @@ const slowBeforeAlchemy = (name: string, script: string) => {
   return andChained(script) && slow > -1 && alchemy > slow;
 };
 
+/**
+ * Each `` `@manna/<x>`'s … `` segment of `CLAUDE.md`'s gate bullet, up to
+ * its `;` or `)`: the workspace, the `test:` names it gives, and whether it
+ * names the workspace's README.
+ */
+const gateSegments = (claude: string) => {
+  const bullet = claude.split('\n').find((line) => line.startsWith('- **`bun run gate`**')) ?? '';
+  return [...bullet.matchAll(/`(@manna\/[\w-]+)`'s ([^;)]*)/gu)].map(
+    ([, name = '', text = '']) => ({
+      name,
+      named: [...text.matchAll(/`(test:[\w-]+)`/gu)].map(([, part = '']) => part).toSorted(),
+      text,
+    }),
+  );
+};
+
 /** Whether a line takes a lock (`flock`, `lockf`). */
 const locks = (line: string) => /\b(flock|lockf)\b/.test(line) && !line.startsWith('#');
 
@@ -164,6 +180,38 @@ describe('the gate', () => {
       expect(test?.inputs).toContain('$TURBO_DEFAULT$');
       expect(turbo.tasks['transit']?.dependsOn).toEqual(['^transit']);
     }),
+  );
+
+  it.effect(
+    "CLAUDE.md's gate bullet names each workspace's parts whole or none, and names its README when none",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const root = path.resolve(import.meta.dir, '../../..');
+        const { packages } = yield* laid;
+        const segments = gateSegments(yield* fs.readFileString(path.join(root, 'CLAUDE.md')));
+        expect(segments.map(({ name }) => name)).toEqual(
+          expect.arrayContaining(['@manna/film', '@manna/sim', '@manna/heartseed']),
+        );
+        for (const { name, named, text } of segments) {
+          const dir =
+            packages.find(({ manifest }) => Option.getOrUndefined(manifest)?.name === name)?.dir ??
+            '';
+          const turbo = yield* Schema.decodeUnknownEffect(Turbo)(
+            JSONC.parse(yield* fs.readFileString(path.join(root, dir, 'turbo.json'))),
+          );
+          const parts = (turbo.tasks['test']?.dependsOn ?? [])
+            .filter((task) => task.startsWith('test:'))
+            .toSorted();
+          expect([name, dir]).not.toEqual([name, '']);
+          if (named.length === 0) {
+            expect([name, text.includes(`${dir}/README.md`)]).toEqual([name, true]);
+          } else {
+            expect([name, named]).toEqual([name, parts]);
+          }
+        }
+      }).pipe(Effect.provide(BunServices.layer)),
   );
 });
 

@@ -11,6 +11,7 @@
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/package.json",
         "$TURBO_ROOT$/turbo.json",
+        "$TURBO_ROOT$/CLAUDE.md",
         "$TURBO_ROOT$/.oxlintrc.json",
         "$TURBO_ROOT$/lefthook.yml",
         "$TURBO_ROOT$/apps/*/package.json",

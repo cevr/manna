@@ -5340,3 +5340,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `bun run dead-exports` named 11 of `gate-tests/bound.ts`'s exports dead, since the files the gate runs through `gate.sh` were roots only when a hand list named them, and it named `lint-gate.ts` but not `gate-tests.ts`.
 - **Cause:** The check read the TypeScript files a package script runs, but not those a shell file a script runs (`sh packages/scripts/src/gate.sh`) runs, so each such file needed a line kept by hand.
 - **Guard:** code: `packages/scripts/src/dead-exports/shell.test.ts` `over 300 generated shell texts, the runs are exactly the files of the bun lines, in order, and no comment line names one`
+
+### claude-md-names-a-workspaces-parts-whole-or-none
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "`CLAUDE.md`'s gate bullet lists only some of the heartseed parts"
+- **Source:** hymnapp/batch-g4-1-findings.md o3 (On base, its third item)
+- **Wrong:** The gate bullet named 37 of `@manna/heartseed`'s 140 parts as if it named them all, so a reader took the gate's heartseed tests to be those 37.
+- **Cause:** The bullet copied each workspace's part list by hand, and each new part landed in the workspace's `turbo.json` and README with nothing holding the copy to them.
+- **Guard:** code: `packages/scripts/src/gate.test.ts` `CLAUDE.md's gate bullet names each workspace's parts whole or none, and names its README when none`
