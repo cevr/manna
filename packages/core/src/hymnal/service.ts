@@ -136,7 +136,7 @@ interface HymnalServiceApi {
 }
 
 /** What `HymnalService.Test` answers the index methods from, keyed by name. */
-export interface HymnalTestIndexes {
+interface HymnalTestIndexes {
   readonly hymns?: readonly HymnIndexes[];
   readonly topics?: Readonly<Record<string, readonly IndexRef[]>>;
   readonly tunes?: Readonly<Record<string, readonly IndexRef[]>>;

@@ -14,7 +14,7 @@ import { Schema } from 'effect';
 
 import { IndexFile, IndexName, type Indexes, type Passage, Rulings } from './indexes.js';
 
-export const INDEX_TABLES = `
+const INDEX_TABLES = `
 CREATE TABLE index_files (name TEXT PRIMARY KEY, title TEXT NOT NULL, note TEXT) STRICT;
 CREATE TABLE index_pages (
   name TEXT NOT NULL REFERENCES index_files(name), ordinal INTEGER NOT NULL,

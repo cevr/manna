@@ -2,7 +2,7 @@
 export const RECORDING_SET = 'warm-1';
 
 /** A set the app plays from: its name and the hymns it holds. */
-export interface RecordingSet {
+interface RecordingSet {
   readonly name: string;
   /** `every` for the first set (hymns 1 to 695); a later set holds exactly these hymns. */
   readonly hymns: 'every' | ReadonlyArray<number>;
@@ -19,7 +19,7 @@ export const RECORDING_SETS: ReadonlyArray<RecordingSet> = [
 ];
 
 /** Whether `set` holds `hymn`: the first set holds every hymn. */
-export const holdsHymn = (set: RecordingSet, hymn: number) =>
+const holdsHymn = (set: RecordingSet, hymn: number) =>
   set.hymns === 'every' || set.hymns.includes(hymn);
 
 /** Whether the app plays from a set named `name`. */

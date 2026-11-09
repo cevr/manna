@@ -106,7 +106,7 @@ const WorshipAids = Schema.Struct({
   ...header('worship-aids'),
   entries: Schema.Array(Schema.Struct({ passage: Passage, reading: Positive, page: Positive })),
 });
-export type WorshipAids = typeof WorshipAids.Type;
+type WorshipAids = typeof WorshipAids.Type;
 
 /** SCRIPTURAL ALLUSIONS IN HYMNS, indexed by Scripture reference: one entry per hymn a reference lists. */
 const Scriptural = Schema.Struct({
@@ -152,21 +152,21 @@ const Sentences = Schema.Struct({
     }),
   ),
 });
-export type Sentences = typeof Sentences.Type;
+type Sentences = typeof Sentences.Type;
 
 /** CANONS (OR ROUNDS), and the hymns that may be sung as canons: each group as printed. */
 const Canons = Schema.Struct({
   ...header('canons'),
   groups: Schema.Array(Schema.Struct({ name: Schema.String, hymns: Schema.Array(Ref) })),
 });
-export type Canons = typeof Canons.Type;
+type Canons = typeof Canons.Type;
 
 /** HYMNS SUITABLE FOR YOUNG WORSHIPERS: each hymn, starred where the page marks it with an asterisk. */
 const Young = Schema.Struct({
   ...header('young'),
   hymns: Schema.Array(Schema.Struct({ number: Positive, starred: Schema.Boolean, page: Positive })),
 });
-export type Young = typeof Young.Type;
+type Young = typeof Young.Type;
 
 const People = Schema.Array(
   Schema.Struct({
@@ -181,11 +181,11 @@ const People = Schema.Array(
 
 /** AUTHORS, TRANSLATORS, AND SOURCES OF TEXTS. */
 const Authors = Schema.Struct({ ...header('authors'), people: People });
-export type Authors = typeof Authors.Type;
+type Authors = typeof Authors.Type;
 
 /** COMPOSERS, ARRANGERS, AND SOURCES OF TUNES. */
 const Composers = Schema.Struct({ ...header('composers'), people: People });
-export type Composers = typeof Composers.Type;
+type Composers = typeof Composers.Type;
 
 /** ALPHABETICAL INDEX OF TUNES: an indented name (`alias`) is another name of the tune at that number. */
 const Tunes = Schema.Struct({
