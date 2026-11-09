@@ -6,8 +6,8 @@
  * its heading (or behind the reference when no heading shows) is the
  * scheme's `ground`; every opaque fill is one of its roles; every
  * translucent fill is `pulse`; every seen text (a node holding text of its
- * own, in ink not transparent) is drawn in `ink`, `quiet`, `miss` or
- * `onInk`, in SF Rounded (`ui-rounded`), at WCAG AA on what lies behind it.
+ * own, in ink not transparent) is drawn in `ink`, `quiet`, `miss`,
+ * `onInk` or `sun`, in SF Rounded (`ui-rounded`), at WCAG AA on what lies behind it.
  * The tests' system appearance is happy-dom's `prefersColorScheme`
  * (`setSystem`), which react-native-web's `Appearance` reads.
  */
@@ -20,7 +20,7 @@ import { theme, type Roles, type Scheme } from '../theme';
 import { AA, contrastOf } from './contrast';
 
 /** The roles a text may be drawn in. */
-export const TEXT_ROLES: readonly (keyof Roles)[] = ['ink', 'quiet', 'miss', 'onInk'];
+export const TEXT_ROLES: readonly (keyof Roles)[] = ['ink', 'quiet', 'miss', 'onInk', 'sun'];
 
 /** A computed or written colour as a lower-case hex and its alpha. */
 export const paintOf = (css: string) => {

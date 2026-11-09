@@ -33,6 +33,10 @@ export interface Roles {
   readonly greenEar: string;
   /** The plant's soil line. */
   readonly soil: string;
+  /** The soil's second line, the harp's arch, the lamp's and scroll's bodies and the field's dashed row: the ground moved 45 % toward `soil`; decorative, never under text. */
+  readonly furrow: string;
+  /** The day's gold ink: the greeting's words and the ready dot, at 4.5:1 on `ground` and `card`, so the dot clears the 3:1 a meaningful mark needs (WCAG 1.4.11), which `gold` (1.97:1 on the light ground) does not. */
+  readonly sun: string;
 }
 
 /** The roles in each scheme. */
@@ -73,6 +77,8 @@ export const theme: Palette = {
     leaf: '#6f9a4a',
     greenEar: '#9cbf6a',
     soil: '#8a6e4b',
+    furrow: '#c3b6a0',
+    sun: '#80641f',
   },
   dark: {
     ground: '#142420',
@@ -90,8 +96,34 @@ export const theme: Palette = {
     leaf: '#86b862',
     greenEar: '#a9cd78',
     soil: '#a88a62',
+    furrow: '#57523e',
+    sun: '#d4a640',
   },
 };
+
+/** A drawing's hexes, each lower-case, mapped to the role it is drawn as. */
+export interface HexRoles {
+  readonly [hex: string]: keyof Roles;
+}
+
+/**
+ * The home icons' masters (`assets/home/*.svg`) are drawn in the
+ * prototype's Palette A; each of its hexes, lower-case, maps to the role
+ * `scripts/home-icons.ts` draws it as in each scheme.
+ */
+export const masters: HexRoles = {
+  '#064f6e': 'ink',
+  '#a7d4e4': 'soft',
+  '#c2ae93': 'furrow',
+  '#f7f3ee': 'card',
+  '#8a6e4b': 'soil',
+  '#6f9a4a': 'leaf',
+  '#9cbf6a': 'greenEar',
+  '#d4a640': 'gold',
+};
+
+/** The gold family's two shades the masters draw (corn's stem and leaf, seed's line), kept as written in both schemes, as `gold` is the same in both. */
+export const kept: readonly string[] = ['#b8892f', '#c9a24a'];
 
 /** One icon's square: its ground and the mark drawn on it. */
 export interface IconColours {
