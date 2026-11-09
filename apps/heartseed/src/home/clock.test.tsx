@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noGlobals, effect/noNullish, effect/noTryCatch -- a React screen test: it plays devices through the field rig's promise-based taps, reads happy-dom nodes whose absent attributes are null, and sets the host's zone through `process.env.TZ`, put back even when a case throws (to UTC, bun test's own zone, when it was unset: an unset `TZ` would leave the cases after it in the host machine's zone). */
+/* oxlint-disable effect/noAsyncFunction, effect/noNullish, effect/noTryCatch -- a React screen test: it plays devices through the field rig's promise-based taps, reads happy-dom nodes whose absent attributes are null, and sets the host's zone through `process.env.TZ`, put back even when a case throws (to UTC, bun test's own zone, when it was unset: an unset `TZ` would leave the cases after it in the host machine's zone). */
 
 /**
  * The parts of home A's field that turn on the clock, in light and in dark,
