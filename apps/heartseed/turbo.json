@@ -68,6 +68,7 @@
         "!src/handbook/**/*.test.*",
         "!src/{lists.property,home.property,shelves.property}.test.*",
         "!src/home/**/*.test.*",
+        "!src/settings/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -91,6 +92,7 @@
         "!src/handbook/**/*.test.*",
         "!src/{lists.property,home.property,shelves.property}.test.*",
         "!src/home/**/*.test.*",
+        "!src/settings/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -538,6 +540,7 @@
         "!src/handbook/**/*.test.*",
         "!src/{lists.property,home.property,shelves.property}.test.*",
         "!src/home/**/*.test.*",
+        "!src/settings/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1230,7 +1233,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme,appearance.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,appearance}/**/*.test.*",
-        "!src/{promises,need}/**/*.test.*",
+        "!src/{promises,need,reading}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
@@ -1254,7 +1257,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme,appearance.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,appearance}/**/*.test.*",
-        "!src/{promises,need}/**/*.test.*",
+        "!src/{promises,need,reading}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
@@ -1278,7 +1281,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme,appearance.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,appearance}/**/*.test.*",
-        "!src/{promises,need}/**/*.test.*",
+        "!src/{promises,need,reading}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
@@ -1302,7 +1305,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme,appearance.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,appearance}/**/*.test.*",
-        "!src/{promises,need}/**/*.test.*",
+        "!src/{promises,need,reading}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
@@ -1326,7 +1329,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme,appearance.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,appearance}/**/*.test.*",
-        "!src/{promises,need}/**/*.test.*",
+        "!src/{promises,need,reading}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
@@ -1350,7 +1353,7 @@
         "!src/passages/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme,appearance.property}.test.*",
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,appearance}/**/*.test.*",
-        "!src/{promises,need}/**/*.test.*",
+        "!src/{promises,need,reading}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
