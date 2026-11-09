@@ -32,7 +32,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
-import { rootWithChoicesOnToday } from './choices-seam';
+import Root from '../../app/index';
 import { appLayer, runtime } from '../app';
 import { recite, scriptedSource } from '../dictation/script';
 import { Chime } from '../garden';
@@ -48,6 +48,7 @@ import { fieldRule, heldOn, verseNumberRule, type ModelPlantStage } from './fiel
 import { keyOf, PREFIX } from './garden-model';
 import { device } from './one';
 import { rootFaults } from './root-rule';
+import { renewBySettings } from './settings-rig';
 
 const PASSAGES = [{ title: passage.reference, verses: [passage.reference] }];
 
@@ -477,7 +478,7 @@ export const mount = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        {rootWithChoicesOnToday(host)}
+        <Root />
       </RegistryProvider>,
     ),
   );
@@ -528,19 +529,25 @@ export const mount = async (
     heldOn(device.disk).filter((recall) => recall.reference === passage.reference);
   /**
    * A new plan at the passage's due: `Next` when it shows, the clock set to
-   * the due, and a tap on the Minutes radio checked, which makes the plan
-   * again (and writes the minutes it shows); Today then offers Say it on the
-   * passage with no result. Answers the writes it made.
+   * the due, and the reader's trip through the Settings sheet
+   * (`renewBySettings`: `Your field`, the Minutes radio checked, `Done`,
+   * `Begin`), whose radio makes the plan again (and writes the minutes it
+   * shows); every home frame on the way is held to the field's rules, the
+   * sheet's frames to its own with its look checked, and the trip ends on
+   * Today, which offers Say it on the passage with no result. Answers the
+   * writes it made.
    */
   const renew = async () => {
     const sets = device.calls.set;
     if (button('Next') !== undefined) await tap('Next');
     toDue(time, passageRecalls());
-    const checkedMinutes = host
-      .querySelector('[role="radiogroup"][aria-label="Minutes"] [aria-checked="true"]')
-      ?.getAttribute('aria-label');
-    await tap(checkedMinutes ?? '5 min');
     taps.minutes += 1;
+    const trip = await renewBySettings({ host, until });
+    expect({ at: trip.at, sheet: trip.sheet, looked: trip.looked > 0 }, 'the trip').toEqual({
+      at: 'Today',
+      sheet: [],
+      looked: true,
+    });
     expect(
       await until(
         () =>

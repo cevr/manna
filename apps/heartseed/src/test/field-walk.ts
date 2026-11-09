@@ -10,8 +10,8 @@
  * relaunches in any order. The writes each
  * command may make are modelled apart from the app: a recital adds one
  * record of the passage (and, when Today offers no Say it, first makes a
- * new plan at the passage's due through a Minutes tap, which writes the
- * minutes once), Again and a peek each rewrite one (none when Again
+ * new plan at the passage's due through the Settings sheet's Minutes radio,
+ * by home and back, which writes the minutes once), Again and a peek each rewrite one (none when Again
  * is already chosen), and an open or a way back writes, removes and clears
  * nothing and leaves the whole disk as it was. Each launch ends with the disk
  * showing no key removed and no key other than the passage's recalls changed
@@ -45,7 +45,7 @@ const START = Date.UTC(2026, 10, 5, 15);
 const passageKeys = () =>
   [...device.disk.keys()].filter((key) => key.startsWith(`${PREFIX}${passage.reference}/`)).length;
 
-/** The writes and passage records a command may add, modelled apart from the app; a relaunch counts its writes from the new launch's zero. A recital when Today offers no Say it (its item done, or the done state) first makes a new plan at the passage's due, a Minutes tap that writes the minutes once. */
+/** The writes and passage records a command may add, modelled apart from the app; a relaunch counts its writes from the new launch's zero. A recital when Today offers no Say it (its item done, or the done state) first makes a new plan at the passage's due, the Settings sheet's Minutes radio that writes the minutes once. */
 const allowed = (command: WalkCommand, againChosen: boolean, offered: boolean) => {
   if (command === 'say') return { sets: offered ? 1 : 2, keys: 1 };
   if (command === 'peek') return { sets: 1, keys: 0 };
@@ -60,7 +60,7 @@ const begins = (app: App) => app.buttons().includes('Begin');
  * Mounts a launch over the disk as it stands, at `time`, on home, and goes
  * to Today by `Begin`. When home offers no `Begin` (the done state), that
  * launch ends writing nothing, and a relaunch at the passage's due (as a
- * Minutes tap makes the plan there) offers it.
+ * Minutes radio in the Settings sheet makes the plan there) offers it.
  */
 const opened = async (time: Time) => {
   let app = await mount(true, undefined, time);

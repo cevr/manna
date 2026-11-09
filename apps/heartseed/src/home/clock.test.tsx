@@ -5,8 +5,9 @@
  * through the field rig (`src/test/field-rig.tsx`), which holds every frame
  * to home A's rules (`homeFaults`) and to the rule's field over the disk.
  * Each case names its expected values written out: the gold dot on a seed
- * at its due once a Minutes tap on Today (reached by `Start here`) makes
- * the plan again and on no plant before, filled `sun` at 3:1 against its plant's backdrop chosen or not,
+ * at its due once the Minutes radio in the Settings sheet (from Today,
+ * reached by `Start here`, by `Your field`) makes the plan again and on no
+ * plant before, filled `sun` at 3:1 against its plant's backdrop chosen or not,
  * and `gold` nowhere on the field; the Begin card's counts and `Begin`
  * leading to Today as the run stands, writing nothing; and the greeting by
  * the runtime's clock at each mount of home, in the reader's own zone. The layout
