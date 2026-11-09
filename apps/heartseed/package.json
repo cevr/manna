@@ -89,6 +89,7 @@
     "test:home-clock": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/clock.test.tsx",
     "test:home-root": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/root.test.tsx ./src/home/opening.property.test.ts",
     "test:home-root-say": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/root-say.test.tsx",
+    "test:home-wake": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/wake.test.tsx",
     "test:home-walk-a": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/walk-a.test.tsx",
     "test:home-walk-b": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/walk-b.test.tsx",
     "test:home-walk-c": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/home/walk-c.test.tsx",
