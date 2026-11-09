@@ -57,7 +57,7 @@ import { expandRule, verseOfRule, withPhrasesRule } from './phrase-model';
 import { countsModel, DAY, HOUR, MINUTE, planModel, type ModelItem } from './session-model';
 import { hostOffset } from './zone';
 
-const TAUGHT_IDS = ['protection'];
+export const TAUGHT_IDS = ['protection'];
 const FEAR = COLLECTIONS.find((collection) => collection.id === 'protection');
 const OTHERS = COLLECTIONS.filter((collection) => collection.id !== 'protection');
 const words = (text: string) => sourceWords(text).length;
@@ -69,7 +69,7 @@ const OWN = [
     group: passage.reference,
   },
 ];
-const OWN_ROW = [{ title: passage.reference, verses: [passage.reference] }];
+export const OWN_ROW = [{ title: passage.reference, verses: [passage.reference] }];
 
 /** Passages over Fear's verses and over the promise. */
 const OVER: readonly [Span, ...Span[]] = [
@@ -95,7 +95,7 @@ const recallOf = (next: () => number, reference: string, startedAt: number): Rec
   extra: 0,
 });
 
-const plantsOf = (disk: ReadonlyMap<string, string>) => {
+export const plantsOf = (disk: ReadonlyMap<string, string>) => {
   const plants = new Map<string, Recall[]>();
   for (const [key, value] of disk)
     if (key.startsWith(PREFIX)) {
@@ -154,7 +154,7 @@ const storePassages = (next: () => number, disk: Map<string, string>) => {
 };
 
 /** One rendered device's walk and its model. */
-class Walk {
+export class Walk {
   readonly device: NeedDevice;
   readonly time: Time;
   readonly start: ReadonlyMap<string, string>;

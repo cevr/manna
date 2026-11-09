@@ -19,7 +19,9 @@
  *   every control at least 44 tall, every text at AA on what lies behind
  *   it;
  * - on Today: `When I need…` never inside the scroll view, at least 44
- *   tall, and no node of When I need….
+ *   tall, and no node of When I need…;
+ * - any check the launch is given (the home walk's `homeFaults` on the
+ *   field).
  * Each fault is kept with the frame's heading.
  */
 
@@ -185,12 +187,13 @@ const onTodayFaults = (host: Element, controls: readonly Element[]) => {
 /** The leave of each launch still mounted: the next launch leaves any a failed test left. */
 const mounted = new Set<() => Promise<unknown>>();
 
-/** A launch of the root over `device` at `time.now` on Effect's clock, the layer teaching `promises` (the part left out when null), the recital's words `pace` ms apart. */
+/** A launch of the root over `device` at `time.now` on Effect's clock, the layer teaching `promises` (the part left out when null), the recital's words `pace` ms apart, every frame also held to `check` (none by default). */
 export const launchNeed = async (
   device: NeedDevice,
   time: Time,
   promises: readonly string[] | null = TAUGHT,
   pace = 1,
+  check: (host: Element) => readonly string[] = () => [],
 ) => {
   for (const left of [...mounted]) await left();
   const parts = {
@@ -216,7 +219,11 @@ export const launchNeed = async (
     if (shown.includes('Today')) frames.today += 1;
     if (names.includes('Listening')) frames.listening += 1;
     if (names.includes(NEED)) frames.offer += 1;
-    for (const fault of [...needFaults(host), ...lookFaults(host, undefined, looks)])
+    for (const fault of [
+      ...needFaults(host),
+      ...lookFaults(host, undefined, looks),
+      ...check(host),
+    ])
       if (faults.length < 8) faults.push(`${fault} (on ${shown.join('|')})`);
   };
   const watch = new MutationObserver(frame);
