@@ -1015,6 +1015,72 @@ it now, and the saying counts as a review.
   has none. Nothing of it is stored: the only writes are the recalls
   said.
 
+## The Handbook lists
+
+Stephen N. Haskell's _Bible Handbook_ (1919) is data the app holds as
+lists of references, each named by Haskell's own heading, grouped under
+his sections. No screen shows them yet: the shelves in Add verses and
+planting a list are a later unit, and only the development probe
+(`app/probe/handbook.tsx`, `heartseed://probe/handbook`) reads them,
+counts only.
+
+- **The source.** The references come from the repo's EGW paragraph
+  database (book `BHB`, book id 978, each reference a structured
+  `ScriptureRef` node); the headings come from the book's public contents
+  page (`https://text.egwwritings.org/book/b978`), whose titles and
+  paragraph ids are committed as `data/handbook-contents.json` (211
+  entries), so a regeneration needs no network. The database keys
+  paragraphs on their page, so it lost most of the book's headings; the
+  contents page is the only full list of them.
+- **Copyright.** The book was published in 1919 and Haskell died in 1922:
+  public domain. The data takes only facts (which verses Haskell listed,
+  the paragraph ids) and his own short headings, never a sentence of his
+  notes, an EGW quotation or a verse's text; it carries its source (title,
+  author, year, the contents page). Every verse's text comes from the
+  bundled KJV (`versesOf`).
+- **The rules** (`scripts/handbook/reference.ts`,
+  `scripts/handbook/lists.ts`). A row belongs to the contents entry with
+  the greatest paragraph id at most its own. A bullet line (`•`, with an
+  optional label such as `Sinner.` of at most 40 characters before it)
+  gives the references of its lead, the links before Haskell's note; a
+  reference in the note is never read. A link reads as ranges of the
+  chapter its title names: `C:V, V-W` in that chapter, the verses of a
+  one-chapter book (`Jude 21-23`), or a whole chapter. `Romans 5:8, 6`
+  reads as Romans 5:6, which may be Haskell's chapter 6: an accepted
+  ambiguity of his notation. A range past its chapter's end, or of more
+  than 20 verses (the passage cap), is left out and recorded; so is a
+  link read no other way and a plain reference with no link. Each
+  sub-heading is a list, and a section written without sub-headings is
+  one list; ids are `bhb-<para>`. Two lists may share a title (a section
+  and its one list, or `Second Chapter of Daniel` twice); ids tell them
+  apart. No word is added to a title.
+- **Teaching sections only** (owner, 2026-11-09). `LEFT_OUT_SECTIONS`
+  leaves out eight practical sections whole (`Health and Temperance`,
+  `Dress`, `Diet and Dress`, `Business Principles`, `School of the
+  Prophets`, `Bible Etiquette`, `City Work`, `Organization of Local
+  Churches Officers`); the generator refuses to run when one of those
+  titles is missing from the contents, so a renamed title fails loudly.
+- **The data** is `data/handbook.json`: its source, 25 sections, 131
+  lists, 2,529 ranges over 3,542 distinct verses, each list 4 to 183
+  verses, one list per line so a diff reads list by list; and its 15
+  skipped records (3 past the chapter, such as `Romans 3:20, 77`; 9 over
+  20 verses; 3 unread, such as `Genesis 7-11, 12`). Ten more sections
+  give no list, written as prose, a table or with no linked reference in
+  a line's lead (`Introduction`, `The Two Covenants`, `The Earth`, …).
+  `src/handbook.ts` decodes it once and exports `HANDBOOK_SOURCE`,
+  `HANDBOOK` (each section its lists, each list a `Collection` of
+  `Range`s) and `HANDBOOK_LISTS`; nothing in `src/app.ts`'s graph imports
+  it.
+- **Regenerating.** Copy the database and its `-wal` into a scratch
+  folder (never open the owner's file in place), then
+  `bun run handbook -- --db <copy>`; it opens the copy read-only, writes
+  the same bytes for the same inputs and prints
+  `handbook sections=25 lists=131 ranges=2529 verses=3542 skipped=15`.
+  `bun run handbook -- --db <copy> --refresh-contents` fetches the
+  contents page once and rewrites the snapshot first. It exits non-zero
+  on a contents entry whose paragraph id is not a whole number, two
+  entries with one id, or a database with no row of book 978.
+
 ## Natural voice
 
 The natural voice reads a piece with Kokoro-82M instead of the system
@@ -1394,7 +1460,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   `src` parts run with `src/test/setup.ts` as the preload (react-native-web
   for `react-native`, the bundled passage for `virtual:heartseed-passage`,
   the corpus for `virtual:heartseed-kjv`, the licence for
-  `virtual:heartseed-licence`, a happy-dom document); `test:infra` and `test:mirror` run with none.
+  `virtual:heartseed-licence`, a happy-dom document); `test:infra`, `test:handbook-build` and `test:mirror` run with none.
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
   - `test:hear`: `src/matcher` (the sounds-alike table's bounds, and each
@@ -1771,6 +1837,15 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `field.test.tsx`, the root's field with the Fear row after the held
     passage and no `Remove` on it, and no taught row with the part left
     out.
+  - `test:handbook`: `src/handbook`. `content.test.ts`, the Handbook lists
+    (`src/handbook.ts`) over the committed data through the app's corpus:
+    `HANDBOOK` equal to `data/handbook.json`, the totals pinned (25
+    sections, 131 lists, 2,529 ranges, 3,542 verses, 15 skipped by reason),
+    none of the eight left-out sections, no empty section or list, every
+    range 1-20 verses of its chapter with text, ids unique as
+    `bhb-<para>` and none a promise collection's, the source and no title
+    holding "doctrine", each list's pieces and field row, and no When I
+    need… card for a Handbook id.
   - `test:need`: `src/need/need.property.test.ts`, When I need…'s cards
     (`needOf`) against the rule written plainly in
     `src/test/promise-model.ts`: every subset of the Fear collection's 14
@@ -1912,7 +1987,21 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     the fill, `GET`, `HEAD`, 404 and `--corrupt`), `vite/kjv.test.ts`
     (the corpus's derivation and its build faults, and the plugin's two
     modules) and `vite/lexicon.test.ts` (the pronunciation list as the
-    plugin serves it). It leaves `scripts/icon.test.ts` to `test:icon`.
+    plugin serves it). It leaves `scripts/icon.test.ts` to `test:icon`
+    and `scripts/handbook` to `test:handbook-build`.
+  - `test:handbook-build`: `scripts/handbook`, with no preload: the
+    Handbook generator's rules. `reference.property.test.ts`, how a link
+    reads and places as ranges against a model written in the test, over
+    generated links in all 66 books (Haskell's names and the canon's),
+    one-chapter books, other chapters, reversed and past-chapter ranges,
+    20 and 21 verses, `;` and junk words, each class held to a floor;
+    `lists.property.test.ts`, rows' membership, lines and leads, labels
+    at and past 40 characters, notes, unlinked references, lists and
+    sections over generated books against a plain model, and the eight
+    left-out titles in the real snapshot; `output.test.ts`, the writer's
+    exact text and bytes twice over an in-memory book, its refusals
+    (a repeated or broken paragraph id, no row of book 978, a left-out
+    title missing), and `data/handbook.json` as the writer writes it.
   - `test:icon`: `scripts/icon.test.ts`, with no preload: the native
     manifest (`vite/app.ts`) named Heartseed, valid to One for iOS and
     Android, with no `userInterfaceStyle`, naming the icons on the icon's
