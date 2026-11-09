@@ -5420,3 +5420,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** A doc comment could name a prop `Root` does not take with plural `props`, an `or`-joined list, `` without an `x` ``, or an `It` sentence after the one naming the root, and `root-props.test.ts` passed it.
 - **Cause:** The test read only four single-name forms, each in a sentence that itself held the word `root`.
 - **Guard:** code: `apps/heartseed/scripts/root-props.test.ts` `over 300 generated comments, the faults are exactly the camelCase names that a sentence about the root, or an It sentence chained to one, gives in any form and Root does not declare`
+
+### heartseed-walk-seeds-found-in-one-command
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "A future change to the walk's draws needs a new seed search"
+- **Source:** hymnapp/batch-s2-1-findings.md o2 (On base, its second item)
+- **Wrong:** Each walk part's seed was found by a one-off script of its own (need-walk-b's 141 at 1 seed in 600), so a change to a walk's draws had no way back to a passing seed but another such script.
+- **Cause:** No tool ran a part with its walk's seed pinned and let the part's own expectations judge it.
+- **Guard:** code: `apps/heartseed/scripts/seed-search.test.ts` `runs each seed once, never more than its jobs at once, and answers the meeting seeds ascending`

@@ -2595,9 +2595,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     the fill, `GET`, `HEAD`, 404 and `--corrupt`), `vite/kjv.test.ts`
     (the corpus's derivation and its build faults, and the plugin's two
     modules), `vite/lexicon.test.ts` (the pronunciation list as the
-    plugin serves it) and `scripts/root-props.test.ts` (each prop a doc
+    plugin serves it), `scripts/root-props.test.ts` (each prop a doc
     comment gives the root, in a sentence naming it or an `It` sentence
-    right after one, held to `Root`'s declaration). It leaves `scripts/icon.test.ts` to `test:icon`,
+    right after one, held to `Root`'s declaration) and
+    `scripts/seed-search.test.ts` (the seed search's pure parts: the seed
+    parameter found by name, the pin, the part's files, the search over a
+    fake runner and the decision of which call to pin). It leaves `scripts/icon.test.ts` to `test:icon`,
     `scripts/home-icons.test.ts` to `test:home-icons`,
     `scripts/home-pixels.test.ts` to `test:home-pixels`,
     `vite/devbundle.test.ts` to `test:devbundle` and `scripts/handbook`
@@ -2675,3 +2678,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   `test:infra`: `test:rest` holds `core-import.test.ts`, which reads every
   `src` file, and `test:infra` holds `parts.test.ts`. The walk parts share
   one set of inputs, so an edit of one walk file reruns every walk part.
+
+  A walk part holds its seed in its test file, found once by hand. When a
+  change to a walk's draws leaves a part short of a floor, `bun run seeds
+  <part> [--from 1] [--to 200] [--jobs 3]` (`scripts/seed-search.ts`) finds
+  the seeds at which it passes again. It runs the part's files once as
+  committed, then once for each seed, with the seed of the walk the files
+  import pinned by `scripts/seed-pin.ts`, a preload no part loads: a
+  parameter named `seed` is pinned to the seed, and one named `seeds` to
+  the window of its length from it. The part's own expectations judge each
+  seed; no floor is copied. It prints `seed <n> meets|misses <ms> ms` per
+  seed, then `seeds <part>: <seeds|none> of <from>-<to> (<k> meet),
+  committed <seed>`. It refuses with exit 2 a part that names a folder or a
+  file outside `src`, a committed run that fails, and one whose files call
+  no walk with such a parameter, or several (`--call <k>` picks one).

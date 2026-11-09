@@ -11,6 +11,7 @@
     "home-icons": "bun scripts/home-icons.ts",
     "handbook": "bun scripts/handbook.ts",
     "natural:serve": "bun scripts/natural-serve.ts",
+    "seeds": "bun scripts/seed-search.ts",
     "plan": "alchemy plan alchemy.run.ts --stage prod",
     "deploy": "turbo run typecheck test --filter=@manna/heartseed && turbo run test:slow --filter=@manna/heartseed && alchemy deploy alchemy.run.ts --stage prod",
     "models:copy": "bun infra/models/copy.ts",
