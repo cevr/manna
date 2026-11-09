@@ -19,6 +19,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -39,6 +41,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -60,6 +64,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -81,6 +87,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -102,6 +110,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -124,6 +134,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -146,6 +158,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -168,6 +182,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -191,6 +207,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -213,6 +231,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -235,6 +255,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -257,6 +279,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -279,6 +303,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -301,6 +327,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -323,6 +351,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -345,6 +375,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -367,6 +399,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -389,6 +423,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -411,6 +447,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -433,6 +471,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -455,6 +495,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -477,6 +519,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -499,6 +543,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -521,6 +567,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -543,6 +591,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -565,6 +615,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -587,6 +639,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -609,6 +663,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -631,6 +687,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -654,6 +712,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -676,6 +736,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -698,6 +760,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -720,6 +784,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -742,6 +808,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -764,6 +832,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -785,6 +855,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -807,6 +879,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -829,6 +903,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -851,6 +927,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -873,6 +951,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -895,6 +975,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -917,6 +999,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -939,6 +1023,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -961,6 +1047,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -983,6 +1071,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1005,6 +1095,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1027,6 +1119,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1049,6 +1143,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1071,6 +1167,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1092,6 +1190,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1113,6 +1213,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1134,6 +1236,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1155,6 +1259,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1176,6 +1282,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1197,6 +1305,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1218,6 +1328,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1239,6 +1351,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1260,6 +1374,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1281,6 +1397,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1302,6 +1420,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1323,6 +1443,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1344,6 +1466,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1364,6 +1488,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1383,6 +1509,8 @@
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1423,6 +1551,7 @@
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,need,promises,appearance,home}/**/*.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1443,6 +1572,7 @@
         "!src/home/grown.property.test.*",
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1464,6 +1594,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1485,6 +1617,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1506,6 +1640,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1527,6 +1663,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1548,6 +1686,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1569,6 +1709,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1590,6 +1732,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1609,6 +1753,8 @@
         "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need}/**/*.test.*",
         "!src/phrase/walk-*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1629,6 +1775,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/{census,voice,walk-b,walk-c}.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1649,6 +1797,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/{census,voice,walk-a,walk-c}.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1669,6 +1819,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/{census,voice,walk-a,walk-b}.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1690,6 +1842,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1711,6 +1865,8 @@
         "!src/phrase.property.test.*",
         "!src/phrase/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1726,6 +1882,8 @@
         "!src/matcher/**/*.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property}.test.*",
         "!src/*/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1740,6 +1898,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
         "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1753,6 +1913,8 @@
         "!src/look.test.*",
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
         "!src/*/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1768,6 +1930,8 @@
         "!src/{appearance.property,field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
         "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1783,6 +1947,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
         "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1798,6 +1964,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
         "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1813,6 +1981,8 @@
         "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,phrase.property,theme}.test.*",
         "!src/{matcher,passages,chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,promises,need,phrase}/**/*.test.*",
         "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]

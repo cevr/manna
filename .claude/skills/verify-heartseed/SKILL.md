@@ -144,8 +144,11 @@ reference and its bar's `Today`; on the field, in its bar,
 `Today`, `Add a passage`, and the ask's `Remove` and `Keep`, in a row
 `Remove <reference>`, and in its foot `About`; on About its bar's
 `Your field` and in its foot an `Appearance` radio (`System`, `Light`,
-`Dark`); and on the chooser a book, a chapter, a verse, `Plant` and
-the backs (`Your field`, `Books`, `Chapters`).
+`Dark`); on the chooser a book, a chapter, a verse, `Plant` and
+the backs (`Your field`, `Books`, `Chapters`); and on the home's
+development probe (`sim open probe/home --expect "label=Home probe"`,
+`apps/heartseed/app/probe/home.tsx`) its one button
+`Start with <reference>`.
 Heartseed has no journey files yet. The features:
 
 - [features/first.md](features/first.md): the first minute a fresh
@@ -241,6 +244,12 @@ Heartseed has no journey files yet. The features:
   and verses, every verse resolved in the device's corpus; the field
   unchanged. No screen a reader sees shows the lists yet. Run it from
   `first.md`'s Today.
+- [features/home.md](features/home.md): the home's rules (the greeting,
+  the furrows with their kinds, icons, ripe counts and ready marks, the
+  lists, the shelves Add verses will offer, and Start here at the
+  session) on the development probe (`apps/heartseed/app/probe/home.tsx`)
+  over the live garden; no screen a reader sees draws them yet. Run it
+  from `first.md`'s Today.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.

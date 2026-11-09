@@ -444,7 +444,8 @@ them.
   range, then each taught collection, titled by its title, its verses in
   order, with no range (`fieldPassagesOf`, `src/promises/taught.ts`, over
   the app's layer's taught part, mapped in `app/index.tsx`; with the
-  reader's passages unread, the promise's and the taught ones). The field
+  reader's passages unread, the promise's and the taught ones). Each row's
+  passage is a `List` (`listsOf`, `src/lists.ts`; Home, below). The field
   shows once the garden's and the passages' views and the taught part are
   known. The passages come first,
   each verse a plant at `stageOf` its plant, `seed` while it has no plant
@@ -927,8 +928,8 @@ marks. The alert stays in the scroll.
   have no plan and no counts line. The service also holds the run's one
   piece of state, the item held (`hold`, `next`), over the pieces of the
   launch's start, then of each making (its view's `pieces` and `held`),
-  and beside it the visit (`visit`, When I need…, below), which lives as
-  the hold lives. It needs `Dictation`: a making reads whether a
+  and beside it the visit (`visit`, When I need…, below, and `start`, a
+  verse of the home, Home, below), which lives as the hold lives. It needs `Dictation`: a making reads whether a
   recital is under way in the same synchronous step as the making, and
   keeps the hold and the visit only then.
 - `src/foreground.ts` is the return rule, pure (`lifeStep` from `UNSEEN`,
@@ -1080,6 +1081,64 @@ counts only.
   contents page once and rewrites the snapshot first. It exits non-zero
   on a contents entry whose paragraph id is not a whole number, two
   entries with one id, or a database with no row of book 978.
+
+## Home
+
+The home is the field as the reader's first screen (home A, the owner's
+pick). Its rules are pure code and one session command; no screen a
+reader sees draws them yet (hshomefield onward). The development probe
+`app/probe/home.tsx` shows them as text over the live garden, passages and
+session (verify-heartseed, `features/home.md`).
+
+- **Verses and lists** (`src/lists.ts`; owner, 2026-11-09: one Verse type
+  and one List type). A verse is its reference as `verseReference` writes
+  it, and its plant is the garden's plant at that key; a phrase's plant
+  folds into its verse's. No list owns a plant or is stored beside one, so
+  a verse in several lists shows one stage and one ready mark in each.
+  `placeOf(reference)` gives the verse's book, chapter and verse only for a
+  canon verse that round-trips exactly (no phrase, no trailing space, no
+  abbreviation, no verse 0 or past the chapter's end). A `List` is a
+  `FieldPassage` with an `id` and a `source`: `Own` (the app's own row,
+  `own:<title>`), `Passage` (a range in one chapter, carrying its `range`,
+  `passage:<index>:<book>.<chapter>.<first>-<last>` by its place in the
+  stored list), `Collection` (`collection:<id>`) or `Loose` (a verse no list
+  names, `verse:<reference>`). `listsOf(own, view, collections)` gives the
+  own rows, then each held range in stored order (none while unread), then
+  each taught collection; `fieldPassagesOf` returns it, so the field's rows
+  are as before. It is a read model over today's keys: nothing migrates,
+  and no key is added.
+- **Furrows** (`src/home.ts`). `furrowsOf(garden, lists, ready)` gives one
+  furrow per row of `fieldOf`, in row order, each with its list's id,
+  title and source, later rows `Loose`; its kind (`kindOf`: own, held,
+  taught, other), its icon (`iconOf`: a bow for the own row and a
+  collection, a harp for a psalm, a lamp for a proverb, else a scroll), its
+  ripe count (`<k> of <n> ripe`, its plants at full corn) and each plant's
+  stage, ready mark and label (`<reference>, <stage>`, then
+  `, ready today`). `HomeIcon` names the icons hshomeicons draws.
+- **Ready** (`readyOf(plan, garden)`, `src/home.ts`): the verses (a
+  phrase's folded in) of the plan's items not done; none before a plan, and
+  a visit marks nothing.
+- **The greeting** (`greetingAt(at)`, `src/home.ts`): by the local minute
+  (`minuteOf`, the zone's offset at the instant), `Good morning` from
+  04:00 and `Good afternoon` from 12:00 with the sun, `Good evening` from
+  18:00 to 03:59 with the moon.
+- **Start here** (`startOf`, `src/home/start.ts`; `Session.start`,
+  `startHere` in `src/app.ts`). A tap on a verse starts, in order: nothing
+  before a plan; the plan's earliest open item on the verse, exactly as
+  planned (a phrase starts its phrase, the new piece stays fresh); a
+  review of a planted canon verse from its recalls now, its piece the
+  session's or the corpus text; else nothing (a verse not planted yet). The
+  session makes it the visit, replacing any visit and keeping the hold,
+  the plan and the minutes; it lives as a visit lives. Nothing is stored.
+- **Shelves** (`SHELVES`, `offerStateOf`, `src/shelves.ts`): what Add
+  verses will offer (hsshelves): any passage (the chooser), the Psalms, the
+  Proverbs and John's picks, then each collection the session does not
+  teach, each pick and promise a `Passage` list. `offerStateOf` says
+  `unread`, `in field` (every verse already on the field), `full` (3
+  passages held) or `plant`.
+- **What grew** (`grownOf`, `src/home/grown.ts`): the verses of a run's
+  done items whose stage now ranks above their stage at the plan's making,
+  each once, in plan order (hshomejoy draws it).
 
 ## Natural voice
 
@@ -1875,6 +1934,27 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `countsModel` over `planModel`, `needModel` and `fieldPassagesModel`,
     and to the disk's rule (no key added but the recalls said and the
     minutes after a tap), each part's floors met.
+  - `test:home`: the home's pure rules against the plain model
+    `src/test/home-model.ts`. `src/lists.property.test.ts`: `placeOf` over
+    the first and last verse of every chapter and near misses, `listsOf`
+    against `listsModel`, `fieldPassagesOf`'s rows as before, and one plant
+    per verse across overlapping lists. `src/home.property.test.ts`: the
+    furrows over generated gardens against `furrowsModel` (on
+    `fieldFoldRule`), `iconOf` over all 66 books, `readyOf` over plans and
+    arbitrary items, and the greeting at every minute in the 15 zones of
+    `src/test/zone.ts` read through `Intl`, the daylight-saving days and the
+    edges. `src/home/grown.property.test.ts`: `grownOf` against
+    `grownModel` over generated histories, Again included.
+  - `test:home-shelves`: `src/shelves.property.test.ts`, the shelves
+    against `shelvesModel` (the collections derived as those not taught,
+    every pick and promise choosable, ids unique, no paid words) and
+    `offerStateOf` against `offerModel` over generated fields and passages.
+  - `test:home-start`: `src/home/start.property.test.ts`, Start here at the
+    session seam, walked as `test:session-visit` walks a visit: after every
+    step the plan, the hold, the visit against `startModel`
+    (`src/test/promise-model.ts`), its piece, `shownOf`, the counts and the
+    disk, byte for byte the same across every `start`; each verse class's
+    floor met, and a start before `begin` and over an unread garden.
   - `test:phrase`: the phrase cut and its reference form (`src/phrase.ts`).
     `src/phrase.property.test.ts`, `cutOf` against `src/test/phrase-model.ts`
     and its brute force over every partition for 13-22 words, for generated
