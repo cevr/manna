@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish -- the property tallies its kinds in plain maps and names a wrong case by its references as JSON text. */
+/* oxlint-disable effect/noGlobals -- the property tallies its kinds in plain maps and names a wrong case by its references as JSON text. */
 
 /**
  * What grew in a run (hshomebase H9) at its pure seam, against
