@@ -174,7 +174,14 @@ describe('the Bible Handbook in the app', () => {
           id: list.id,
           verses,
           groups: [list.title],
-          field: [{ title: list.title, verses }],
+          field: [
+            {
+              id: `collection:${list.id}`,
+              source: { _tag: 'Collection', id: list.id },
+              title: list.title,
+              verses,
+            },
+          ],
         };
       }),
     );
