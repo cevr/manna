@@ -60,10 +60,10 @@ describe('Today’s stage over failed reads and another verse’s plant', () => 
   });
 
   it('claims nothing for the session when the open fails every attempt, and a recital with the device down keeps nothing', async () => {
-    device.launch([recordOf(recallAt(Date.UTC(2026, 0, 5, 9)))]).fail('open', 13);
+    device.launch([recordOf(recallAt(Date.UTC(2026, 0, 5, 9)))]).fail('open', 16);
     const chimes: Growth[] = [];
     const today = await mount(chimes, undefined, undefined, 'unread');
-    expect(await today.until(() => device.calls.open === 11)).toBe(true);
+    expect(await today.until(() => device.calls.open === 14)).toBe(true);
     await today.say('Say it');
     await today.until(() => false, 20);
     expect([

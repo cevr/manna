@@ -77,7 +77,7 @@ describe('the Add verses sheet', () => {
       const rows = [[passage.reference]];
       await rig.show({
         field: fieldOf(rows),
-        passages: { _tag: 'Read', passages: three.slice(0, 2) },
+        passages: { _tag: 'Read', passages: three.slice(0, 2), lists: [] },
       });
       expect(await rig.tap('Psalms')).toBe(true);
       expect(await rig.tap('Plant Psalms 46:1-3')).toBe(true);

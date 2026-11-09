@@ -133,7 +133,7 @@ const ownOf = (next: () => number): readonly ModelPassage[] => {
 };
 
 const viewOf = (held: Held): PassagesView =>
-  held.tag === 'Read' ? { _tag: 'Read', passages: held.passages } : { _tag: 'Unread' };
+  held.tag === 'Read' ? { _tag: 'Read', passages: held.passages, lists: [] } : { _tag: 'Unread' };
 
 /** The kinds a case's furrows reach, by the model. */
 const tallyFurrows = (want: readonly ModelFurrow[], records: readonly Recall[], tally: Tally) => {

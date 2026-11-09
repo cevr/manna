@@ -2371,6 +2371,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     of the app's own pieces and of passages, against the model's, each
     long passage verse with its phrases (`withPhrasesRule`,
     `src/test/phrase-model.ts`) and the app's own with none.
+  - `test:passages-lists`: `src/passages/lists.test.ts`, 700 generated
+    devices of both stored texts (the passages' and the lists'), read faults
+    per key, adds, removes, plants and uproots, alone and at once, with
+    refused writes and relaunches, judged against `test/handbook-model.ts`
+    at every step: the answer, the view, both stored texts, the writes each
+    key took and no read after the launch.
   - `test:passages-session`: `src/passages/session.test.ts`, generated
     devices walking adds, removes, adds and removes at once, Minutes,
     holds, recitals and returns

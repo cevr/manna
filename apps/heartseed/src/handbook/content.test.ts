@@ -164,7 +164,7 @@ describe('the Bible Handbook in the app', () => {
         id: list.id,
         verses: [...new Set(pieces.map((piece) => piece.reference))],
         groups: [...new Set(pieces.map((piece) => piece.group))],
-        field: fieldPassagesOf([], { _tag: 'Read', passages: [] }, [list]),
+        field: fieldPassagesOf([], { _tag: 'Read', passages: [], lists: [] }, [list]),
       };
     });
     expect(read).toEqual(

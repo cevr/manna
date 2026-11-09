@@ -101,7 +101,7 @@ const heldOf = (next: () => number): Span[] => {
 
 const viewOf = (held: Held): PassagesView => {
   if (held.tag === 'Unread') return { _tag: 'Unread' };
-  return { _tag: 'Read', passages: held.passages };
+  return { _tag: 'Read', passages: held.passages, lists: [] };
 };
 
 /** Each verse of `span`, by reference. */
@@ -292,7 +292,7 @@ describe('the pieces with collections taught', () => {
       (piece.phrases ?? []).map((phrase) => phrase.reference.slice(phrase.reference.indexOf('[')));
     const taught = piecesOf(
       [PROMISE],
-      { _tag: 'Read', passages: [] },
+      { _tag: 'Read', passages: [], lists: [] },
       collectionPieces(collectionsOf(TAUGHT)),
     );
     expect(
@@ -328,7 +328,7 @@ describe('the pieces with collections taught', () => {
     ).toEqual(new Set(['Protection & Fear']));
     const held = piecesOf(
       [PROMISE],
-      { _tag: 'Read', passages: [{ book: 19, chapter: 91, first: 1, last: 4 }] },
+      { _tag: 'Read', passages: [{ book: 19, chapter: 91, first: 1, last: 4 }], lists: [] },
       collectionPieces(collectionsOf(TAUGHT)),
     );
     const first = held.find((piece) => piece.reference === 'Psalms 91:1');
@@ -342,7 +342,7 @@ describe('the pieces with collections taught', () => {
   it('give Psalms 91:1-16 its own group, then Fear’s other verses grouped by its title, Psalms 91:1 once', () => {
     const pieces = piecesOf(
       [PROMISE],
-      { _tag: 'Read', passages: [{ book: 19, chapter: 91, first: 1, last: 16 }] },
+      { _tag: 'Read', passages: [{ book: 19, chapter: 91, first: 1, last: 16 }], lists: [] },
       collectionPieces(collectionsOf(TAUGHT)),
     );
     const groups = new Map(pieces.map((piece) => [piece.reference, piece.group]));

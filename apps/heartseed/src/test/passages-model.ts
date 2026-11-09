@@ -73,10 +73,18 @@ export interface Span {
   readonly last: number;
 }
 
-/** The passages as the model holds them. */
+/** The passages as the model holds them, with the lists held beside them (hshandbook R2; absent is none). */
 export type Held =
-  | { readonly tag: 'Read'; readonly passages: ReadonlyArray<Span> }
+  | {
+      readonly tag: 'Read';
+      readonly passages: ReadonlyArray<Span>;
+      readonly lists?: ReadonlyArray<string>;
+    }
   | { readonly tag: 'Unread' };
+
+/** hshandbook R3: the passages and the lists held, counted together. */
+const countHeld = (held: Held & { readonly tag: 'Read' }) =>
+  held.passages.length + (held.lists === undefined ? 0 : held.lists.length);
 
 const whole = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value);
@@ -147,7 +155,7 @@ export const storedText = (passages: ReadonlyArray<Span>) =>
 export type AddOutcome = 'Added' | 'Full' | 'Invalid' | 'Unread' | 'Failed';
 export type RemoveOutcome = 'Removed' | 'Absent' | 'Unread' | 'Failed';
 
-/** P4: an add's answer and the view after it, `refused` when its write fails. */
+/** P4, with hshandbook R3: an add's answer and the view after it, `refused` when its write fails; the cap counts the lists held too, and they stay as held. */
 export const addRule = (
   corpus: Corpus,
   held: Held,
@@ -156,10 +164,10 @@ export const addRule = (
 ): { outcome: AddOutcome; held: Held } => {
   if (held.tag === 'Unread') return { outcome: 'Unread', held };
   if (!addable(corpus, span)) return { outcome: 'Invalid', held };
-  if (held.passages.length >= CAP_PASSAGES) return { outcome: 'Full', held };
+  if (countHeld(held) >= CAP_PASSAGES) return { outcome: 'Full', held };
   if (refused) return { outcome: 'Failed', held };
   const copy = { book: span.book, chapter: span.chapter, first: span.first, last: span.last };
-  return { outcome: 'Added', held: { tag: 'Read', passages: [...held.passages, copy] } };
+  return { outcome: 'Added', held: { ...held, passages: [...held.passages, copy] } };
 };
 
 /** A piece as the model holds it: a verse the session plans over. */
@@ -224,7 +232,7 @@ export const removeRule = (
   return {
     outcome: 'Removed',
     held: {
-      tag: 'Read',
+      ...held,
       passages: [...held.passages.slice(0, at), ...held.passages.slice(at + 1)],
     },
   };

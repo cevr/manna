@@ -1,19 +1,24 @@
 /**
- * The reader's passages: the ranges of the KJV the reader chose to learn,
- * kept in the app's store under one key, in the order chosen.
+ * The reader's passages and lists: the ranges of the KJV the reader chose
+ * to learn, kept in the app's store under one key in the order chosen, and
+ * the Handbook lists the reader planted whole, kept by id under another.
  *
- * A passage is a range of whole verses in one chapter of the canon. A
- * reader may add one of at most 20 verses while fewer than 3 are held; the
- * caps are an add's alone, so a stored list past them (a later tier's)
- * reads whole. The list is read once, as the service starts, tried three
- * times as the garden's read is: no key reads as no passages, and a value
- * that does not decode, or three failed reads, read as `Unread`, which
- * claims no list and is never written over. Each add and each remove runs
- * in call order, one at a time, and changes the view only once its write
- * has landed. A remove never touches a recall: a removed passage's plants
- * stay in the garden. The session plans over the app's own pieces, then
- * each passage's verses, then the taught collections' verses (`piecesOf`);
- * each long verse after the app's own carries its phrases (`src/phrase.ts`).
+ * A passage is a range of whole verses in one chapter of the canon. Held
+ * passages and lists count together: a reader may add a passage of at most
+ * 20 verses, or plant a list whole, while fewer than 3 are held; the caps
+ * are a change's alone, so a stored value past them (a later tier's) reads
+ * whole. Both keys are read once, as the service starts, each tried three
+ * times as the garden's read is: no key reads as none, and a value that
+ * does not decode, or three failed reads, of either key read the whole view
+ * as `Unread`, which claims nothing and is never written over. A stored
+ * list id this build does not know is neither shown nor counted, and every
+ * write keeps it in place. Each add, remove, plant and uproot runs in call
+ * order, one at a time under one lock, writes its own key alone, and
+ * changes the view only once its write has landed. No change touches a
+ * recall: a removed passage's or list's plants stay in the garden. The
+ * session plans over the app's own pieces, then each passage's verses,
+ * then the taught collections' verses (`piecesOf`); each long verse after
+ * the app's own carries its phrases (`src/phrase.ts`).
  */
 
 import { formatBibleReference, Reference } from '@manna/core/bible';
@@ -31,6 +36,7 @@ import {
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as Semaphore from 'effect/Semaphore';
 
+import { HANDBOOK_LISTS } from './handbook';
 import { versesOf } from './kjv';
 import { sourceWords } from './matcher/words';
 import { cutOf, phraseReference, type Phrase } from './phrase';
@@ -40,7 +46,10 @@ import type { TextPiece } from './session';
 /** The store key of the passages; its text is a JSON array of ranges, in the order chosen. */
 export const PASSAGES_KEY = 'heartseed/passages';
 
-/** The most passages a reader may hold when adding one. */
+/** The store key of the lists planted; its text is a JSON array of list ids, in the order planted. */
+export const LISTS_KEY = 'heartseed/lists';
+
+/** The most passages and lists a reader may hold together when adding either. */
 export const MOST_PASSAGES = 3;
 
 /** The most verses a passage may span when it is added. */
@@ -80,16 +89,29 @@ export const passageReference = (range: Range): string => {
   );
 };
 
-/** The passages held, or `Unread` when the stored list could not be read. */
+/** The passages and lists held, or `Unread` when either stored key could not be read; `lists` holds each stored id this build knows, once, in stored order. */
 export type PassagesView =
-  | { readonly _tag: 'Read'; readonly passages: ReadonlyArray<Range> }
+  | {
+      readonly _tag: 'Read';
+      readonly passages: ReadonlyArray<Range>;
+      readonly lists: ReadonlyArray<string>;
+    }
   | { readonly _tag: 'Unread' };
+
+/** How many passages and lists `view` holds together; none when unread. */
+export const heldCount = (view: PassagesView): number => {
+  if (view._tag === 'Unread') return 0;
+  return view.passages.length + view.lists.length;
+};
 
 /** An add's answer, in the order an add judges them: `Unread`, `Invalid`, `Full`, then `Added` or `Failed` by its write. */
 export type AddAnswer = 'Added' | 'Full' | 'Invalid' | 'Unread' | 'Failed';
 
 /** A remove's answer, in the order a remove judges them: `Unread`, `Absent`, then `Removed` or `Failed` by its write. */
 export type RemoveAnswer = 'Removed' | 'Absent' | 'Unread' | 'Failed';
+
+/** A plant's answer, in the order a plant judges them: `Unread`, `Invalid`, `Held`, `Full`, then `Added` or `Failed` by its write. */
+export type PlantAnswer = 'Added' | 'Held' | 'Full' | 'Invalid' | 'Unread' | 'Failed';
 
 /** `piece` and its phrases under `group`. */
 const groupedAs = (piece: TextPiece, group: string): TextPiece => {
@@ -171,16 +193,20 @@ export const piecesOf = (
   });
 };
 
-/** The reader's passages, and each change of them (a new subscriber starts at the current view). */
+/** The reader's passages and lists, and each change of them (a new subscriber starts at the current view). */
 export class Passages extends Context.Service<
   Passages,
   {
     readonly view: Effect.Effect<PassagesView>;
     readonly changes: Stream.Stream<PassagesView>;
-    /** Adds `range` at the end, when the passages are read, `range` is choosable and fewer than 3 are held; the view changes once the write lands. */
+    /** Adds `range` at the end, when the view is read, `range` is choosable and fewer than 3 passages and lists are held; the view changes once the write lands. */
     readonly add: (range: Range) => Effect.Effect<AddAnswer>;
     /** Removes the first passage equal to `range`; the view changes once the write lands. */
     readonly remove: (range: Range) => Effect.Effect<RemoveAnswer>;
+    /** Plants the Handbook list `id` whole, stored at the end, when the view is read, the id is known and not held, and fewer than 3 passages and lists are held; the view changes once the write lands. */
+    readonly plant: (id: string) => Effect.Effect<PlantAnswer>;
+    /** Uproots the held list `id`: every stored entry equal to it goes, every other stays in place; the view changes once the write lands. */
+    readonly uproot: (id: string) => Effect.Effect<RemoveAnswer>;
   }
 >()('heartseed/passages/Passages') {}
 
@@ -197,8 +223,19 @@ const StoredRange = Schema.Struct({
   }),
 );
 
-/** The stored text: a JSON array of ranges. */
+/** The passages' stored text: a JSON array of ranges. */
 const Stored = Schema.fromJsonString(Schema.Array(StoredRange));
+
+/** The lists' stored text: a JSON array of ids, unknown and repeated ones kept as stored. */
+const StoredLists = Schema.fromJsonString(Schema.Array(Schema.String));
+
+/** The ids of the lists this build knows: every Handbook list. */
+const KNOWN_LISTS: ReadonlySet<string> = new Set(HANDBOOK_LISTS.map((list) => list.id));
+
+/** The lists held of the `stored` ids: each this build knows, once, in stored order. */
+const listsHeld = (stored: ReadonlyArray<string>): ReadonlyArray<string> => [
+  ...new Set(stored.filter((id) => KNOWN_LISTS.has(id))),
+];
 
 /** How many attempts in all the read makes, as the garden's. */
 const READ_ATTEMPTS = 3;
@@ -222,95 +259,162 @@ const rangeOf = (range: Range): Range => ({
 const sameRange = (a: Range, b: Range) =>
   a.book === b.book && a.chapter === b.chapter && a.first === b.first && a.last === b.last;
 
-/** The view a launch starts at: one `get` of the key, tried three times in all; no key is no passages, and a value that does not decode or three failed reads are `Unread`. */
-const readPassages = (store: KeyValueStore.KeyValueStore) =>
-  store.get(PASSAGES_KEY).pipe(
+/** One key's stored value as a launch reads it: one `get`, tried three times in all; no key is `none`, and a value that does not decode or three failed reads are no value at all. */
+const readKey = <A>(
+  store: KeyValueStore.KeyValueStore,
+  key: string,
+  schema: Schema.Codec<A, string>,
+  none: A,
+): Effect.Effect<Option.Option<A>> =>
+  store.get(key).pipe(
     Effect.tapError((error) =>
       Effect.logWarning('passages.read.retry').pipe(
-        Effect.annotateLogs({ key: PASSAGES_KEY, method: error.method }),
+        Effect.annotateLogs({ key, method: error.method }),
       ),
     ),
     Effect.retry({ times: READ_ATTEMPTS - 1, schedule: READ_WAITS }),
     Effect.flatMap((raw) =>
       Option.match(Option.fromUndefinedOr(raw), {
-        onNone: () => Effect.succeed<ReadonlyArray<Range>>([]),
-        onSome: (text) => Schema.decodeEffect(Stored)(text),
+        onNone: () => Effect.succeed(none),
+        onSome: (text) => Schema.decodeEffect(schema)(text),
       }),
     ),
-    Effect.map((passages): PassagesView => ({ _tag: 'Read', passages })),
+    Effect.asSome,
     Effect.catch((error) =>
       Effect.as(
         Effect.logWarning('passages.read.failed').pipe(
-          Effect.annotateLogs({ key: PASSAGES_KEY, reason: error._tag }),
+          Effect.annotateLogs({ key, reason: error._tag }),
         ),
-        UNREAD,
+        Option.none<A>(),
       ),
     ),
   );
 
-/** Writes `passages` as the stored list: true once the write lands; a failed write is logged and answers false. */
-const writePassages = (store: KeyValueStore.KeyValueStore, passages: ReadonlyArray<Range>) =>
-  Schema.encodeEffect(Stored)(passages).pipe(
-    Effect.flatMap((text) => store.set(PASSAGES_KEY, text)),
+/** Writes `value` under `key`: true once the write lands; a failed write is logged and answers false. */
+const writeKey = <A>(
+  store: KeyValueStore.KeyValueStore,
+  key: string,
+  schema: Schema.Codec<A, string>,
+  value: A,
+) =>
+  Schema.encodeEffect(schema)(value).pipe(
+    Effect.flatMap((text) => store.set(key, text)),
     Effect.as(true),
     Effect.catch((error) =>
       Effect.as(
         Effect.logWarning('passages.write.failed').pipe(
-          Effect.annotateLogs({ key: PASSAGES_KEY, passages: passages.length, reason: error._tag }),
+          Effect.annotateLogs({ key, reason: error._tag }),
         ),
         false,
       ),
     ),
   );
 
+/** What the service holds: the view, and the lists' stored ids as stored (unknown and repeated ones kept), none when unread. */
+interface Holding {
+  readonly view: PassagesView;
+  readonly stored: ReadonlyArray<string>;
+}
+
+/** The holding of `passages` and the stored ids `stored`. */
+const holdingOf = (passages: ReadonlyArray<Range>, stored: ReadonlyArray<string>): Holding => ({
+  view: { _tag: 'Read', passages, lists: listsHeld(stored) },
+  stored,
+});
+
 /** The passages over the app's store. Its build includes the read, so its view is `Read` or `Unread` from the start. */
 export const layer: Layer.Layer<Passages, never, KeyValueStore.KeyValueStore> = Layer.effect(
   Passages,
   Effect.gen(function* () {
     const store = yield* KeyValueStore.KeyValueStore;
-    const held = MutableRef.make(yield* readPassages(store));
+    const passages = yield* readKey<ReadonlyArray<Range>>(store, PASSAGES_KEY, Stored, []);
+    const lists = yield* readKey<ReadonlyArray<string>>(store, LISTS_KEY, StoredLists, []);
+    const start = Option.match(Option.all([passages, lists]), {
+      onNone: (): Holding => ({ view: UNREAD, stored: [] }),
+      onSome: ([read, stored]) => holdingOf(read, stored),
+    });
+    const held = MutableRef.make(start);
     const views = yield* PubSub.sliding<PassagesView>({ capacity: WINDOW, replay: 1 });
-    yield* PubSub.publish(views, MutableRef.get(held));
+    yield* PubSub.publish(views, start.view);
     const lock = yield* Semaphore.make(1);
 
-    /** Writes `after`, and once it lands makes it the view: `landed` when it did, `failed` when not. */
-    const settle = <A>(after: ReadonlyArray<Range>, landed: A, failed: A) =>
-      Effect.flatMap(writePassages(store, after), (written) => {
+    /** Runs `write`, and once it lands makes `after` the holding: `landed` when it did, `failed` when not. */
+    const settle = <A>(write: Effect.Effect<boolean>, after: Holding, landed: A, failed: A) =>
+      Effect.flatMap(write, (written) => {
         if (!written) return Effect.succeed(failed);
-        const view: PassagesView = { _tag: 'Read', passages: after };
-        MutableRef.set(held, view);
-        return Effect.as(PubSub.publish(views, view), landed);
+        MutableRef.set(held, after);
+        return Effect.as(PubSub.publish(views, after.view), landed);
       });
 
     const add = (range: Range): Effect.Effect<AddAnswer> =>
       Effect.suspend(() => {
-        const now = MutableRef.get(held);
-        if (now._tag === 'Unread') return Effect.succeed<AddAnswer>('Unread');
+        const { view, stored } = MutableRef.get(held);
+        if (view._tag === 'Unread') return Effect.succeed<AddAnswer>('Unread');
         if (!choosable(range)) return Effect.succeed<AddAnswer>('Invalid');
-        if (now.passages.length >= MOST_PASSAGES) return Effect.succeed<AddAnswer>('Full');
-        return settle<AddAnswer>([...now.passages, rangeOf(range)], 'Added', 'Failed');
+        if (heldCount(view) >= MOST_PASSAGES) return Effect.succeed<AddAnswer>('Full');
+        const after = [...view.passages, rangeOf(range)];
+        return settle<AddAnswer>(
+          writeKey(store, PASSAGES_KEY, Stored, after),
+          holdingOf(after, stored),
+          'Added',
+          'Failed',
+        );
       });
 
     const remove = (range: Range): Effect.Effect<RemoveAnswer> =>
       Effect.suspend(() => {
-        const now = MutableRef.get(held);
-        if (now._tag === 'Unread') return Effect.succeed<RemoveAnswer>('Unread');
-        const at = now.passages.findIndex((each) => sameRange(each, range));
+        const { view, stored } = MutableRef.get(held);
+        if (view._tag === 'Unread') return Effect.succeed<RemoveAnswer>('Unread');
+        const at = view.passages.findIndex((each) => sameRange(each, range));
         if (at < 0) return Effect.succeed<RemoveAnswer>('Absent');
+        const after = view.passages.filter((_, index) => index !== at);
         return settle<RemoveAnswer>(
-          now.passages.filter((_, index) => index !== at),
+          writeKey(store, PASSAGES_KEY, Stored, after),
+          holdingOf(after, stored),
           'Removed',
           'Failed',
         );
       });
 
+    const plant = (id: string): Effect.Effect<PlantAnswer> =>
+      Effect.suspend(() => {
+        const { view, stored } = MutableRef.get(held);
+        if (view._tag === 'Unread') return Effect.succeed<PlantAnswer>('Unread');
+        if (!KNOWN_LISTS.has(id)) return Effect.succeed<PlantAnswer>('Invalid');
+        if (view.lists.includes(id)) return Effect.succeed<PlantAnswer>('Held');
+        if (heldCount(view) >= MOST_PASSAGES) return Effect.succeed<PlantAnswer>('Full');
+        const after = [...stored, id];
+        return settle<PlantAnswer>(
+          writeKey(store, LISTS_KEY, StoredLists, after),
+          holdingOf(view.passages, after),
+          'Added',
+          'Failed',
+        );
+      });
+
+    const uproot = (id: string): Effect.Effect<RemoveAnswer> =>
+      Effect.suspend(() => {
+        const { view, stored } = MutableRef.get(held);
+        if (view._tag === 'Unread') return Effect.succeed<RemoveAnswer>('Unread');
+        if (!view.lists.includes(id)) return Effect.succeed<RemoveAnswer>('Absent');
+        const after = stored.filter((each) => each !== id);
+        return settle<RemoveAnswer>(
+          writeKey(store, LISTS_KEY, StoredLists, after),
+          holdingOf(view.passages, after),
+          'Removed',
+          'Failed',
+        );
+      });
+
+    const one = Semaphore.withPermits(lock, 1);
+
     return Passages.of({
-      view: Effect.sync(() => MutableRef.get(held)),
+      view: Effect.sync(() => MutableRef.get(held).view),
       changes: Stream.fromPubSub(views),
-      add: (range) =>
-        Semaphore.withPermits(lock, 1)(add(range)).pipe(Effect.withSpan('Passages.add')),
-      remove: (range) =>
-        Semaphore.withPermits(lock, 1)(remove(range)).pipe(Effect.withSpan('Passages.remove')),
+      add: (range) => one(add(range)).pipe(Effect.withSpan('Passages.add')),
+      remove: (range) => one(remove(range)).pipe(Effect.withSpan('Passages.remove')),
+      plant: (id) => one(plant(id)).pipe(Effect.withSpan('Passages.plant')),
+      uproot: (id) => one(uproot(id)).pipe(Effect.withSpan('Passages.uproot')),
     });
   }),
 );

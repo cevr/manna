@@ -232,7 +232,9 @@ describe('what a shelf row offers', () => {
       const [rangeKind, span] = rangeOf(next, held.tag === 'Read' ? held.passages : []);
       const [rowsKind, rows] = rowsOf(next, span);
       const view: PassagesView =
-        held.tag === 'Read' ? { _tag: 'Read', passages: held.passages } : { _tag: 'Unread' };
+        held.tag === 'Read'
+          ? { _tag: 'Read', passages: held.passages, lists: [] }
+          : { _tag: 'Unread' };
       const got = offerStateOf(span, view, fieldOf(next, rows));
       const want = offerModel(span, held, rows);
       if (got !== want) wrong.push(`${JSON.stringify(span)} ${JSON.stringify(rows)} ${got}`);

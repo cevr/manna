@@ -229,7 +229,9 @@ describe('the lists the field holds', () => {
       const held = heldOf(next);
       const [taughtKind, taught] = taughtOf(next);
       const view: PassagesView =
-        held.tag === 'Read' ? { _tag: 'Read', passages: held.passages } : { _tag: 'Unread' };
+        held.tag === 'Read'
+          ? { _tag: 'Read', passages: held.passages, lists: [] }
+          : { _tag: 'Unread' };
       const got = listsOf(own, view, collectionsOf(taught));
       const want = listsModel(own, held, taught);
       const ids = got.map((list) => list.id);
@@ -282,7 +284,7 @@ describe('the lists the field holds', () => {
 
   it('give two equal held ranges two ids, and keep the own row while the passages are unread', () => {
     const psalm: Span = { book: 19, chapter: 23, first: 1, last: 6 };
-    const read = listsOf(OWN, { _tag: 'Read', passages: [psalm, { ...psalm }] }, []);
+    const read = listsOf(OWN, { _tag: 'Read', passages: [psalm, { ...psalm }], lists: [] }, []);
     expect(read.map((list) => list.id)).toEqual([
       'own:Isaiah 41:10',
       'passage:0:19.23.1-6',
@@ -362,7 +364,9 @@ describe('one plant, shared', () => {
       const held = heldOf(next);
       const [, taught] = taughtOf(next);
       const view: PassagesView =
-        held.tag === 'Read' ? { _tag: 'Read', passages: held.passages } : { _tag: 'Unread' };
+        held.tag === 'Read'
+          ? { _tag: 'Read', passages: held.passages, lists: [] }
+          : { _tag: 'Unread' };
       const lists = listsOf(own, view, collectionsOf(taught));
       const records = recordsOf(next, listsModel(own, held, taught), 'Isaiah 41:10');
       const garden = gardenOf(records);

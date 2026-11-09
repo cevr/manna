@@ -108,6 +108,7 @@
     "test:wake-reading-b": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/wake/reading-b.test.tsx",
     "test:corpus": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/passages/corpus.test.ts ./src/passages/guard.test.ts",
     "test:passages": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/passages/ranges.property.test.ts ./src/passages/service.test.ts ./src/passages/pieces.property.test.ts",
+    "test:passages-lists": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/passages/lists.test.ts",
     "test:passages-session": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/passages/session.test.ts",
     "test:chooser": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/range.property.test.ts",
     "test:chooser-lists": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/lists.test.tsx",

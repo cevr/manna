@@ -76,7 +76,9 @@ const caseOf = (next: () => number) => {
     if (row.length > 0) rows.push(row);
   }
   const heldModel: Held = unread ? { tag: 'Unread' } : { tag: 'Read', passages: held };
-  const view: PassagesView = unread ? { _tag: 'Unread' } : { _tag: 'Read', passages: held };
+  const view: PassagesView = unread
+    ? { _tag: 'Unread' }
+    : { _tag: 'Read', passages: held, lists: [] };
   const shelves = [
     PICK_SHELVES[below(next, PICK_SHELVES.length)] ?? 'Psalms',
     COLLECTION_SHELVES[below(next, COLLECTION_SHELVES.length)] ?? 'Rest',
