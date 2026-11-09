@@ -1691,6 +1691,20 @@
         "!infra/**/*.test.*"
       ]
     },
+    "test:handbook-build": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
+        "!src/**/*.test.*",
+        "!vite/**/*.test.*",
+        "!scripts/{natural-serve,parts,sim,icon}.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
     "test:mirror": {
       "dependsOn": ["^transit"],
       "outputs": [],
@@ -1792,6 +1806,7 @@
         "test:rest",
         "test:infra",
         "test:icon",
+        "test:handbook-build",
         "test:mirror"
       ]
     }
