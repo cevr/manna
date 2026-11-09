@@ -1,19 +1,19 @@
 /**
- * The reader's choices of the session's minutes and the voice, as the
- * Settings sheet shows each under its line (Today's row, `Choices`, shows
- * them only under the rigs' `ChoicesOnToday`): the radio group `Minutes` (`MinutesChoice`),
- * shown once the stored choice is read so its first frame shows the value
- * read, and the voice's pill (`VoiceChoice`), shown once its choice is
- * read, with the natural voice's status line under it and its `Try again`
- * after a failure. Each control is at least 44 pt tall and
- * filled in ink when on. A tap goes through `chooseMinutes` or
- * `cycleVoice`, so the choice shows at once and is stored.
+ * The reader's choices of the session's minutes and the voice, each under
+ * its line, as the Settings sheet shows them: the sheet is the one place
+ * they show. The radio group `Minutes` (`MinutesChoice`) is shown once the
+ * stored choice is read, so its first frame shows the value read, and the
+ * voice's pill (`VoiceChoice`) once its choice is read, with the natural
+ * voice's status line under it and its `Try again` after a failure. Each
+ * control is at least 44 pt tall and filled in ink when on. A tap goes
+ * through `chooseMinutes` or `cycleVoice`, so the choice shows at once and
+ * is stored.
  */
 
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
-import { createContext, use, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -85,35 +85,26 @@ function VoicePill({
   );
 }
 
-/** A choice under its `line` when one is given (as the Settings sheet shows each), else the choice alone (as Today's row does). */
-function Lined({
-  line,
-  children,
-}: {
-  readonly line: Option.Option<string>;
-  readonly children: ReactNode;
-}) {
+/** A choice under its `line`, as the Settings sheet shows each. */
+function Lined({ line, children }: { readonly line: string; readonly children: ReactNode }) {
   const styles = useThemed(sheets);
-  return Option.match(line, {
-    onNone: () => children,
-    onSome: (words) => (
-      <View style={styles.lined}>
-        <Text style={styles.line}>{words}</Text>
-        {children}
-      </View>
-    ),
-  });
+  return (
+    <View style={styles.lined}>
+      <Text style={styles.line}>{line}</Text>
+      {children}
+    </View>
+  );
 }
 
-/** The radio group `Minutes` over the session's minutes, the chosen one checked, under `line` when given; nothing until the session's view is read. */
-export function MinutesChoice({ line }: { readonly line?: string }) {
+/** The radio group `Minutes` over the session's minutes, the chosen one checked, under `line`; nothing until the session's view is read. */
+export function MinutesChoice({ line }: { readonly line: string }) {
   const styles = useThemed(sheets);
   const session = AsyncResult.value(useAtomValue(sessionView));
   const onMinutes = useAtomSet(chooseMinutes);
   return Option.match(session, {
     onNone: () => false,
     onSome: ({ minutes }) => (
-      <Lined line={Option.fromUndefinedOr(line)}>
+      <Lined line={line}>
         <View role="radiogroup" aria-label="Minutes" style={styles.choices}>
           {MINUTES.map((each) => (
             <Pill
@@ -163,40 +154,19 @@ function NaturalLine() {
   });
 }
 
-/** The voice's pill over the voice's choice, and under it the natural voice's status line, under `line` when given; nothing until the choice is read. */
-export function VoiceChoice({ line }: { readonly line?: string }) {
+/** The voice's pill over the voice's choice, and under it the natural voice's status line, under `line`; nothing until the choice is read. */
+export function VoiceChoice({ line }: { readonly line: string }) {
   const voice = AsyncResult.value(useAtomValue(voiceView));
   const onVoice = useAtomSet(cycleVoice);
   return Option.match(voice, {
     onNone: () => false,
     onSome: ({ choice }) => (
-      <Lined line={Option.fromUndefinedOr(line)}>
+      <Lined line={line}>
         <VoicePill choice={choice} onPress={() => onVoice()} />
         <NaturalLine />
       </Lined>
     ),
   });
-}
-
-/**
- * Whether Today's row of choices (`Choices`) shows. The app never provides
- * it, so Today shows no `Minutes` and no `Voice`: the Settings sheet is the
- * only place a reader chooses them. The test rigs that still tap Today's
- * choices provide it, through `src/test/choices-seam.tsx`; S5 deletes it
- * with `Choices`.
- */
-export const ChoicesOnToday = createContext(false);
-
-/** Today's row of the reader's choices, the minutes then the voice's pill, shown only under `ChoicesOnToday`; nothing otherwise. */
-export function Choices() {
-  const styles = useThemed(sheets);
-  if (!use(ChoicesOnToday)) return false;
-  return (
-    <View style={styles.choices}>
-      <MinutesChoice />
-      <VoiceChoice />
-    </View>
-  );
 }
 
 const sheets = themed((color, face) =>

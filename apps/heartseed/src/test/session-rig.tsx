@@ -14,19 +14,17 @@
  * garden. Every frame (each DOM mutation batch), from before the root's
  * first render, is held to the root's frame rule (`rootFaults`, through
  * `watchRoot`, the garden read unless the launch's listings fail) and to
- * the screen's rules, and each fault kept: the Minutes group, its radios,
- * the Voice button and Today's counts line show only under Today's
- * heading, never in a pending, a home or a first-minute frame; on Today
- * the group holds the four radios `2 min`,
- * `5 min`, `10 min` and `20 min` in that order, exactly one checked, beside
- * at most one node labelled `Voice`, a button valued `Off`, `Her` or `Him`
- * that reads `Voice: <value>` and is never checked or pressed; neither lies
- * inside a scroll view, and the
- * scroll view holds no control but a missed word's mark to peek at (the
- * action button and the grades sit in the footer under it). At most one
- * counts line shows, at the top
- * of the scroll view above the reference, in the line's form and named as
- * it reads.
+ * the screen's rules, and each fault kept. The root's rule faults a
+ * `Minutes` group, an `<n> min` radio or a `Voice` under the host on every
+ * screen: the reader's choices show only in the Settings sheet, whose form
+ * the sheet rule holds (`settings-rig.ts`). Today's counts line shows only
+ * under Today's heading, never in a pending, a home or a first-minute
+ * frame. On Today the scroll view holds no control but a missed word's
+ * mark to peek at (the action button and the grades sit in the footer
+ * under it). At most one counts line shows, at the top of the scroll view
+ * above the reference, in the line's form and named as it reads. Each
+ * launch also notes, on every mutation of the document, the open sheet's
+ * checked Minutes radio and its Voice pill (`seen`).
  */
 
 import { RegistryProvider } from '@effect/atom-react';
@@ -39,7 +37,6 @@ import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
 import Root from '../../app/index';
-import { rootWithChoicesOnToday } from './choices-seam';
 import { appLayer, runtime } from '../app';
 import { DictationSource, DictationUnavailable } from '../dictation';
 import { CHAIN, type DictationEvent } from '../dictation/attempt';
@@ -275,16 +272,6 @@ const frameFaults = (host: Element): string[] => {
     return [];
   }
   const out: string[] = [];
-  const shown = choicesOf(host);
-  if (shown.groups > 1) out.push(`${shown.groups} Minutes groups`);
-  if (shown.groups === 1) {
-    if (JSON.stringify(shown.names) !== JSON.stringify(MINUTE_NAMES))
-      out.push(`radios ${shown.names.join(',')}`);
-    if (shown.checked.length !== 1) out.push(`${shown.checked.length} minutes checked`);
-  }
-  if (shown.voices.length > 1) out.push(`${shown.voices.length} Voice nodes`);
-  if (shown.voices.some((each) => !/^Voice:(Off|Her|Him)$/.test(each)))
-    out.push(`a Voice node ${shown.voices.join(',')}`);
   out.push(...countsFaults(host));
   for (const node of host.querySelectorAll(CONTROLS)) {
     if (!scrolled(node) || recitals(node)) continue;
@@ -303,17 +290,13 @@ const mounted = new Set<() => Promise<void>>();
  * screen's rules; the faults found are kept in `faults`, and `frames`
  * counts the frames seen by their screen (pending, Today, home, the first
  * minute, any other) and by what they showed. The root mounts as the app's
- * `<Root />`, unless `seam.choicesOnToday` is true: then it mounts through
- * the choices seam (`src/test/choices-seam.tsx`, Today showing its
- * choices). `header-walk` alone passes `{ choicesOnToday: true }`, until
- * S5b deletes the parameter.
+ * `<Root />`, and `seen` notes the open Settings sheet's choices.
  */
 export const launch = async (
   device: Device,
   faults: Faults,
   time: { now: number | null },
   seeded: readonly (readonly [Atom.Atom<unknown>, unknown, Atom.InitialValueOptions])[] = [],
-  seam: { readonly choicesOnToday: boolean } = { choicesOnToday: false },
 ) => {
   for (const left of [...mounted]) await left();
   const gate = Promise.withResolvers<void>();
@@ -390,8 +373,7 @@ export const launch = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer], ...seeded]}>
-        {seam.choicesOnToday && rootWithChoicesOnToday(host)}
-        {!seam.choicesOnToday && <Root />}
+        <Root />
       </RegistryProvider>,
     ),
   );

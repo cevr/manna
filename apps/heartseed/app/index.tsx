@@ -60,7 +60,6 @@ import { countsOf, type Item, type TextPiece } from '../src/session';
 import { shownOf, type Shown } from '../src/session/run';
 import { useSessionBegunWhenShown } from '../src/session/shown';
 import { ReadingView, type Hold } from '../src/reading/view';
-import { Choices } from '../src/settings/choices';
 
 /** The voice's view as `src/app.ts` gives it: Today names no voice module itself. */
 type VoiceView = Parameters<typeof readingAloud>[0];
@@ -397,7 +396,6 @@ function Today({ onField }: { readonly onField: () => void }) {
             </View>
           )}
         </View>
-        <Choices />
       </View>
       <ScrollView
         scrollEnabled={Option.isNone(held)}

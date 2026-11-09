@@ -7,7 +7,8 @@
  * no white shows in dark. Its root (`settings`) holds a header fixed above
  * the scroll view, the one heading `Settings` and `Done`, wrapping under
  * large text; then, in the scroll view, each choice under its line: the
- * session's minutes (`MinutesChoice`), the voice (`VoiceChoice`) and the
+ * session's minutes (`MinutesChoice`), the voice (`VoiceChoice`, with the
+ * natural voice's status line and its `Try again` under the pill) and the
  * appearance (`AppearanceChoice`), each with its line once its stored
  * choice is read, and last `About`. A tap of a choice goes through the
  * app's own atoms, so it shows at once, here and under the sheet, and is

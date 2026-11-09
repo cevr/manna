@@ -652,10 +652,9 @@ verses, About, a recital that brings Today) or a relaunch closes it.
   re-themes every screen, the sheet included. Opening or closing the sheet
   writes nothing; `Done`, the swipe down and Escape leave home as it was,
   the chosen plant, the ask and the plan kept.
-- `src/settings/choices.tsx` holds the minutes' and the voice's controls
-  (`MinutesChoice`, `VoiceChoice`), shared with Today's row `Choices`,
-  which Today renders but which shows nothing in the app: the sheet is the
-  only place a reader chooses the minutes and the voice (Tests: the seam).
+- `src/settings/choices.tsx` holds the two controls the sheet shows, each
+  under its line (`MinutesChoice`, `VoiceChoice`): the sheet is the only
+  place a reader chooses the minutes and the voice.
 
 ## Passages
 
@@ -1792,24 +1791,15 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   `Begin` shown before the step, no root fault, Today's passage with
   `Say it`), a done-state launch (no `Begin`, no Today frame) and an
   unread launch (Today alone).
-  The seam: `src/test/choices-seam.tsx`'s `rootWithChoicesOnToday(host)`
-  is the root with Today's row of choices shown (`ChoicesOnToday`,
-  `src/settings/choices.tsx`, which the app never provides), for the one
-  walk that still taps Today's `Minutes` and `Voice`: `header-walk.ts`,
-  whose two launches pass `session-rig`'s `launch` `{ choicesOnToday: true }`.
-  `session-rig` mounts `<Root />` otherwise, so the counts walk, the pill
-  test and the settings walks hold the root's rule strictly. The seam
-  registers the host with `rootFaults`' choices rule, which allows the
-  choices on Today under that host alone. When `header-walk` moves its
-  taps to the Settings sheet, the seam, `Choices` and Today's
-  `<Choices />` go. `today-rig.tsx`, `stage-rig.tsx`, `field-rig.tsx`,
+  `session-rig` mounts `<Root />` for every launch, and no rig shows
+  Today's choices. `today-rig.tsx`, `stage-rig.tsx`, `field-rig.tsx`,
   `first-rig.tsx` and `need-rig.tsx` mount `<Root />` and make their plan
   as a reader does (`renewBySettings`, `src/test/settings-rig.ts`):
   Today's `Your field`, home's `Settings`, a `Minutes` radio (the one
   checked when no minutes are named), `Done`, then `Begin` when home
   offers it, every sheet shown held to `sheetFaults` and its look checked
   at least once. `run-rig.tsx`'s `launch` mounts `<Root />` for every
-  launch (it takes no seam option), so every user of it does too:
+  launch, so every user of it does too:
   `footer.test.tsx`, `home/rigs.test.tsx`, `wake-rig.tsx` and the walks,
   which make their plan by the same trip through the sheet: the run walk
   (`src/test/run-walk.ts`), the reader walk (`src/test/reader-walk.ts`),
@@ -1985,7 +1975,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `Listening` only under Today, no control named `Today`, `When I need…`
     only on home, exactly one `Settings` on home outside every scroll view
     and none elsewhere, no `Minutes` group, `<n> min` or `Voice` on any
-    screen (Today under a seamed host excepted), and home's and Today's nodes only under their headings;
+    screen, and home's and Today's nodes only under their headings;
     and to the field's rules: the way back taken only after a read
     completed, and each field frame the
     rule's rows with their icons and ripe counts, plants as buttons with
@@ -2054,9 +2044,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     by the read rules, every control 44 pt tall, every text at AA, its look
     again after a flip of the system; `Done`; nothing written; About and
     home's foot as `test:about` holds them. Then the choices rule's table:
-    every screen heading, the pending frame, seamed or not, each of the six
-    kinds (`Minutes`, `2 min` … `20 min`, `Voice`) alone and together,
-    and the same kinds outside the host.
+    every screen heading and the pending frame, each of the six kinds
+    (`Minutes`, `2 min` … `20 min`, `Voice`) alone and together, each a
+    fault under the host on every screen, and the same kinds outside the
+    host no fault.
   - `test:settings-ways` and `test:settings-ways-b`:
     `src/settings/ways.test.tsx` and `ways-b.test.tsx`, fixed cases: the
     gear disabled through a pending remove and two taps in one turn opening

@@ -93,19 +93,10 @@ const settingsFaults = (on: string, gears: readonly Element[]) => {
   return out;
 };
 
-/** The hosts mounted through the choices seam (`src/test/choices-seam.tsx`), whose Today may show its choices. */
-const CHOICES_ON_TODAY = new WeakSet<Element>();
-
-/** Registers `host` as mounted through the choices seam; `rootWithChoicesOnToday` is its one caller. */
-export const allowChoicesOnToday = (host: Element) => {
-  CHOICES_ON_TODAY.add(host);
-};
-
 const CHOICE_NAME = /^(\d+ min|Voice)$/;
 
-/** What the reader's choices show wrong on the screen `on`: a `Minutes` group, an `<n> min` control or a `Voice` control under the host, but on Today under a host the seam registered. */
+/** What the reader's choices show wrong on the screen `on`: a `Minutes` group, an `<n> min` control or a `Voice` control under the host, on every screen. */
 const choicesFaults = (on: string, host: Element, controls: readonly Element[]) => {
-  if (on === 'Today' && CHOICES_ON_TODAY.has(host)) return [];
   const groups = [...host.querySelectorAll('[role="radiogroup"][aria-label="Minutes"]')];
   const choices = controls.filter((node) => CHOICE_NAME.test(nameOf(node)));
   return [...groups, ...choices].map((node) => `${nameOf(node)} on ${on}`);
@@ -124,8 +115,7 @@ const choicesFaults = (on: string, host: Element, controls: readonly Element[]) 
  * own), home's nodes only on home, `When I need…` only on home outside the
  * scroll view, exactly one `Settings` on home outside the scroll view and
  * none elsewhere (`settingsFaults`), no `Minutes` group, `<n> min` or
- * `Voice` on any screen but Today under a host mounted through the choices
- * seam (`choicesFaults`), and no screen has a control named `Today`. The
+ * `Voice` on any screen (`choicesFaults`), and no screen has a control named `Today`. The
  * Settings sheet lies outside the host, so its nodes are the sheet rule's
  * (`settings-rig.ts`).
  */

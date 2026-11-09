@@ -3,12 +3,11 @@
 /**
  * The root's choices rule (`choicesFaults` in `src/test/root-rule.ts`), whole
  * over its domain, with no app: every screen a root frame shows by its
- * heading, and the pending frame, × a host registered by the choices seam or
- * not × each kind of choice (the `Minutes` group, each `<n> min` radio, the
- * `Voice` button) alone and all together. A kind under the host is the fault
- * `<name> on <screen>` exactly when the cell is not Today under a registered
- * host; the pending frame keeps its own rule. The same kinds outside the
- * host, where the Settings sheet lies, are no fault.
+ * heading, and the pending frame, × each kind of choice (the `Minutes`
+ * group, each `<n> min` radio, the `Voice` button) alone and all together.
+ * A kind under the host is the fault `<name> on <screen>` in every cell, on
+ * every screen; the pending frame keeps its own rule. The same kinds
+ * outside the host, where the Settings sheet lies, are no fault.
  *
  * The Settings sheet's look floor (`watchSheet` in `src/test/settings-rig.ts`),
  * with no app: a modal built by hand under an ancestor at opacity 0 has no
@@ -20,7 +19,7 @@
 import { describe, expect, it } from 'bun:test';
 import { act } from 'react';
 
-import { allowChoicesOnToday, rootFaults } from '../test/root-rule';
+import { rootFaults } from '../test/root-rule';
 import { watchSheet } from '../test/settings-rig';
 
 const SCREENS = [
@@ -53,11 +52,6 @@ const ALL: readonly Kind[] = ['group', '2 min', '5 min', '10 min', '20 min', 'Vo
 
 const KINDS: readonly (readonly Kind[])[] = [...ALL.map((kind) => [kind]), ALL];
 
-const SEAMS = [
-  { seamed: false, word: 'unseamed' },
-  { seamed: true, word: 'seamed' },
-] as const;
-
 /** The faults the rule's words name for `kinds` on `screen`, sorted. */
 const wanted = (kinds: readonly Kind[], screen: string) =>
   kinds.map((kind) => `${NAMES[kind]} on ${screen}`).toSorted();
@@ -84,70 +78,63 @@ const kindsNode = (kinds: readonly Kind[]) => {
   return node;
 };
 
-/** A frame of `screen` by its one heading, added to the document, registered by the seam when `seamed`. */
-const screenFrame = (screen: string, seamed: boolean) => {
+/** A frame of `screen` by its one heading, added to the document. */
+const screenFrame = (screen: string) => {
   const host = document.createElement('div');
   host.append(element('heading', screen, screen));
   document.body.append(host);
-  if (seamed) allowChoicesOnToday(host);
   return host;
 };
 
-/** The pending frame: its reference alone, added to the document, registered by the seam when `seamed`. */
-const pendingFrame = (seamed: boolean) => {
+/** The pending frame: its reference alone, added to the document. */
+const pendingFrame = () => {
   const host = document.createElement('div');
   const reference = document.createElement('div');
   reference.setAttribute('data-testid', 'reference');
   reference.textContent = 'Isaiah 41:10';
   host.append(reference);
   document.body.append(host);
-  if (seamed) allowChoicesOnToday(host);
   return host;
 };
 
 /** One cell of the table: the faults `kinds` add to the frame's own, and whether the frame's own stayed as they were. */
-const cellOf = (screen: string, seam: (typeof SEAMS)[number], kinds: readonly Kind[]) => {
-  const host = screenFrame(screen, seam.seamed);
+const cellOf = (screen: string, kinds: readonly Kind[]) => {
+  const host = screenFrame(screen);
   const bare = rootFaults(host, 'read');
   host.append(kindsNode(kinds));
   const all = rootFaults(host, 'read');
   host.remove();
-  const exempt = screen === 'Today' && seam.seamed;
   return {
-    cell: `${screen} ${seam.word} ${kinds.join('+')}`,
+    cell: `${screen} ${kinds.join('+')}`,
     kept: all.slice(0, bare.length).join('\n') === bare.join('\n'),
     added: all.slice(bare.length).toSorted(),
-    wanted: wanted(kinds, screen).filter(() => !exempt),
+    wanted: wanted(kinds, screen),
   };
 };
 
 describe("the root's choices rule", () => {
-  it('names each choice under the host on every screen but Today under a seamed host', () => {
-    const cells = SCREENS.flatMap((screen) =>
-      SEAMS.flatMap((seam) => KINDS.map((kinds) => cellOf(screen, seam, kinds))),
-    );
+  it('names each choice under the host on every screen', () => {
+    const cells = SCREENS.flatMap((screen) => KINDS.map((kinds) => cellOf(screen, kinds)));
     expect(
       cells.filter(
         (each) => !each.kept || JSON.stringify(each.added) !== JSON.stringify(each.wanted),
       ),
     ).toEqual([]);
-    expect(cells.length).toBe(SCREENS.length * 2 * KINDS.length);
+    expect(cells.length).toBe(SCREENS.length * KINDS.length);
   });
 
-  it('leaves the pending frame to its own rule, seamed or not', () => {
-    const seen = SEAMS.flatMap((seam) =>
-      KINDS.map((kinds) => {
-        const host = pendingFrame(seam.seamed);
-        host.append(kindsNode(kinds));
-        const faults = rootFaults(host, 'read');
-        host.remove();
-        return {
-          cell: `${seam.word} ${kinds.join('+')}`,
-          controls: kinds.some((kind) => kind !== 'group'),
-          faults,
-        };
-      }),
-    );
+  it('leaves the pending frame to its own rule', () => {
+    const seen = KINDS.map((kinds) => {
+      const host = pendingFrame();
+      host.append(kindsNode(kinds));
+      const faults = rootFaults(host, 'read');
+      host.remove();
+      return {
+        cell: kinds.join('+'),
+        controls: kinds.some((kind) => kind !== 'group'),
+        faults,
+      };
+    });
     expect(
       seen.filter(
         ({ controls, faults }) =>
@@ -158,19 +145,17 @@ describe("the root's choices rule", () => {
   });
 
   it('counts no choice outside the host, where the Settings sheet lies', () => {
-    const added = ['Your field', 'Today', 'About'].flatMap((screen) =>
-      SEAMS.map((seam) => {
-        const host = screenFrame(screen, seam.seamed);
-        const bare = rootFaults(host, 'read');
-        const sheet = kindsNode(ALL);
-        document.body.append(sheet);
-        const faults = rootFaults(host, 'read').filter((fault) => !bare.includes(fault));
-        sheet.remove();
-        host.remove();
-        return faults;
-      }),
-    );
-    expect(added).toEqual([[], [], [], [], [], []]);
+    const added = ['Your field', 'Today', 'About'].map((screen) => {
+      const host = screenFrame(screen);
+      const bare = rootFaults(host, 'read');
+      const sheet = kindsNode(ALL);
+      document.body.append(sheet);
+      const faults = rootFaults(host, 'read').filter((fault) => !bare.includes(fault));
+      sheet.remove();
+      host.remove();
+      return faults;
+    });
+    expect(added).toEqual([[], [], []]);
   });
 });
 
