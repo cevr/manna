@@ -5,8 +5,8 @@ each word at the sample the model gives it (`apps/heartseed/src/natural`,
 over the Swift package `apps/heartseed/native/natural`). Today reads by it:
 `Voice` set to Her reads in `af_heart` and Him in `am_michael` once its
 download is ready and its crash fuse clear, and the system voice reads
-until then; a line under Today's choices says the download's state, with
-`Try again` after a failure (`apps/heartseed/README.md`, Natural voice).
+until then; a line under the `Voice` pill of home's Settings sheet says
+the download's state, with `Try again` after a failure (`apps/heartseed/README.md`, Natural voice).
 The `today-*` rows below drive that. A development probe,
 `app/probe/natural.tsx`, drives the module alone. It downloads the 39 pinned model files from the link's `base`,
 loads them, reads Today's passage (Isaiah 41:10, 37 words) through the
@@ -44,7 +44,7 @@ session is left alone.
   slices.
 - `natural-crash`: an app ended during a reading says `crashed true` once.
 - `natural-remove`: `Remove` leaves nothing on the phone.
-- `today-mirror`: with no base stored, Today's download goes to
+- `today-mirror`: with no base stored, the app's download goes to
   `models.heartseed.app` (what a release reader sees) and the system voice
   reads.
 - `today-off`: Off across a relaunch shows no line and downloads nothing.
@@ -205,13 +205,18 @@ is the phone check's.
 ## Today's rows
 
 Driven in this order on two containers, with the model server running as
-above. Read Today's line from `sim snapshot <step>`: the `natural-status`
-node's text, and the `Try again` button beside it. Today offers `Listen`
+above. The line and `Voice` live in home's Settings sheet: from Today
+`sim tap "label=Your field"`, then the gear, `sim tap "label=Settings"`;
+read the line from `sim snapshot <step>`: the `natural-status` node's
+text under `Voice`, and the `Try again` button beside it; `Done` closes
+the sheet. Every tap of `Voice` and `Try again` below is in the open
+sheet. Today offers `Listen`
 only for a new verse after the next 04:00 (`wake.md`), and the promise's
 row has no `Remove`, so the reading a drive can hear is the first minute's
 `Listen` (`first.md`), on a container whose garden is still empty: the
 first container walks the first minute to Today for the line's rows, the
-second keeps the first minute for the readings. The app's own JavaScript
+second keeps the first minute for the readings. The first minute shows
+no `Voice`, so the second container's choice is the stored one. The app's own JavaScript
 logs (`natural.install`, `natural.fallback`) reach neither `log show` nor
 the dev server's log on the simulator; the module's `[natural]` lines and
 the system's network log do. The line's words, one state each:
@@ -231,8 +236,8 @@ container's store (as `field.md`'s `field-record` does) and run
 
 `today-mirror`: a fresh container (uninstall by udid, install, revoke the
 microphone), then `sim open / --expect "label=Hear it"`, the first
-minute's `Listen`, and `first.md`'s steps 3-7 to Today; snapshots for
-60 s:
+minute's `Listen`, and `first.md`'s steps 3-7 to Today, then home's
+Settings sheet; snapshots for 60 s:
 
 → the line is `Natural voice: waiting for a connection`, or
 `Natural voice could not download.` with one `Try again` (record which:
@@ -248,8 +253,9 @@ Store the base: `sim open "probe/natural?base=http://localhost:$MPORT/" --expect
 tapping nothing in the probe → the store copy holds
 the base key (`BASE_KEY`) = `http://localhost:$MPORT/`.
 
-`today-off`: `sim open /`, tap `Voice` until `Voice: Off`, `sim relaunch`,
-`sim open / --expect "id=session"`, snapshot:
+`today-off`: `sim open /`, the sheet, tap `Voice` until `Voice: Off`,
+`sim relaunch`, `sim open / --expect "label=Settings"`, the sheet,
+snapshot:
 
 → no `natural-status` node; no `[natural] install` in the log since the
 relaunch; the choice key (`CHOICE_KEY`) = `off`.
@@ -310,12 +316,13 @@ itself).
 `today-fuse`: `sim relaunch`, `sim open / --expect "label=Hear it"`,
 Listen, and at once `xcrun simctl terminate <udid> app.heartseed`;
 `sim open /`; store copy; Listen; the log. Then `first.md`'s steps 3-7 to
-Today; snapshot; `sim tap "label=Voice"` (Him), snapshot, store copy;
-twice more (Off, Her), snapshot, store copy; `sim relaunch`; snapshot:
+Today and home's Settings sheet; snapshot; `sim tap "label=Voice"` (Him),
+snapshot, store copy; twice more (Off, Her), snapshot, store copy;
+`sim relaunch`; the sheet; snapshot:
 
 → after the crash, `[natural] start crashed=true`, the fuse key
 (`FUSE_KEY`) = `blown`, and Listen logs a `[voice] speak` and no
-`[natural] render`; on Today in that launch the line
+`[natural] render`; in the sheet in that launch the line
 `The natural voice stopped unexpectedly, so the system voice reads for now.`,
 no `Try again`; after each tap, no line and the fuse `clear`; after the
 relaunch, no line. A natural reading after the clearing tap is not heard

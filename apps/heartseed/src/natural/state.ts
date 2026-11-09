@@ -1,6 +1,6 @@
 /**
  * The natural voice's download, load and crash fuse, as one pure reducer,
- * and the status line Today shows for it. `step` takes the machine and one
+ * and the status line the Settings sheet shows for it under `Voice`. `step` takes the machine and one
  * input (the launch, a Voice tap, `Try again`, an install event, a load's
  * answer) and returns the next machine and the calls to perform: an
  * install, a load, or a write of the fuse. It performs none; the `Natural`
@@ -29,7 +29,7 @@ export type Download =
 /** `blown` after a crash mid-reading, until the next Voice tap: the system voice reads meanwhile. */
 export type Fuse = 'clear' | 'blown';
 
-/** What Today shows of the natural voice: the download, the fuse, whether the crash line is owed, and the Voice choice. */
+/** What the status line shows of the natural voice: the download, the fuse, whether the crash line is owed, and the Voice choice. */
 export interface NaturalView {
   readonly download: Download;
   readonly fuse: Fuse;

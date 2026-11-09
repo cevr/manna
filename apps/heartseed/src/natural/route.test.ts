@@ -9,7 +9,8 @@
  * loads, corrupted files and stray events run against a reference written
  * here; after every step the view, the line, the voice's status, the
  * installs and their bases, the store, and each reading's route must match
- * it. Two walks then pin the fallback's log and a stop held in both voices.
+ * it. Three walks then pin the fallback's log, a stop held in both voices,
+ * and a natural reading's lit words, a seek included.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -966,6 +967,59 @@ describe('the router between the system voice and the natural voice', () => {
         expect({ holding, after }).toEqual({
           holding: 1,
           after: { inflight: 0, system: 1, natural: 1, holding: undefined, status: 'idle' },
+        });
+      }).pipe(Effect.provide(keptLogs(() => undefined))),
+    ));
+
+  it('lights each word of a natural reading from the module’s ranges, and a seek reads on in the natural voice from the word sought, the words before it lit', () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const { device, scope, voice } = yield* ready;
+        const text = 'and the light was good and the earth was';
+        const spans = [...text.matchAll(/\S+/gu)].map((word) => ({
+          location: word.index,
+          length: word[0].length,
+        }));
+        const emit = (
+          utterance: number,
+          kind: VoiceEvent['kind'],
+          at = { location: 0, length: 0 },
+        ) =>
+          Effect.sync(() => {
+            for (const listener of device.moduleListeners) listener({ utterance, kind, ...at });
+          });
+        const lit = Effect.map(voice.view, (view) => view.lit);
+        yield* voice.read(text);
+        yield* settle;
+        const reading: number[] = [];
+        for (const span of spans.slice(0, 3)) {
+          yield* emit(1, 'range', span);
+          reading.push(yield* lit);
+        }
+        const offset = spans[6]?.location ?? 0;
+        yield* voice.seek(6);
+        yield* settle;
+        const sought = yield* lit;
+        const next = spans[7] ?? { location: 0, length: 0 };
+        yield* emit(2, 'range', { location: next.location - offset, length: next.length });
+        const after = yield* lit;
+        yield* emit(2, 'finish');
+        const end = yield* voice.view;
+        yield* Scope.close(scope, Exit.void);
+        expect({
+          reading,
+          sought,
+          after,
+          end: [end.ended, end.lit],
+          packs: [device.rendered.get(1), device.rendered.get(2)],
+          system: device.system.speaks.size,
+        }).toEqual({
+          reading: [1, 2, 3],
+          sought: 6,
+          after: 8,
+          end: ['finished', 9],
+          packs: ['af_heart.bin', 'af_heart.bin'],
+          system: 0,
         });
       }).pipe(Effect.provide(keptLogs(() => undefined))),
     ));

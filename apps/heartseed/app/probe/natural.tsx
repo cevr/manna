@@ -221,7 +221,7 @@ const remove = (show: Show) =>
     yield* refresh(show);
   });
 
-/** Writes the link's base under `BASE_KEY` in the app's own store, for Today's download to install from; a failed write is the store's to log. */
+/** Writes the link's base under `BASE_KEY` in the app's own store, for the app's download to install from; a failed write is the store's to log. */
 const storeBase = (base: string) =>
   KeyValueStore.KeyValueStore.use((kv) => kv.set(BASE_KEY, base)).pipe(
     Effect.catchTag('KeyValueStoreError', () => Effect.void),
@@ -240,7 +240,7 @@ type Button = (typeof BUTTONS)[number];
  * verse by verse (`soak`, a count), each in the link's `voice` (one of
  * `VOICES`, else `af_heart`). When the link names `base`, it first writes
  * that base under `BASE_KEY` in the app's own store, once per open and never
- * removed, so Today's download in a development build installs from it. It
+ * removed, so the app's download in a development build installs from it. It
  * shows counts only, never a word. A release build renders nothing, starts
  * nothing and writes nothing.
  */

@@ -10,7 +10,17 @@
  * or removes the download.
  */
 
-import { Context, Effect, Layer, Match, MutableRef, Option, PubSub, Stream } from 'effect';
+import {
+  Context,
+  Effect,
+  Layer,
+  Match,
+  MutableRef,
+  Option,
+  PubSub,
+  Scheduler,
+  Stream,
+} from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 
 import { naturalOf, type Choice } from '../voice';
@@ -28,7 +38,7 @@ import {
   type NaturalView,
 } from './state';
 
-/** The natural voice's state for Today and the router: the view, its changes, whether it reads, and the reader's commands. */
+/** The natural voice's state for the Settings sheet's status line and the router: the view, its changes, whether it reads, and the reader's commands. */
 export class Natural extends Context.Service<
   Natural,
   {
@@ -97,7 +107,8 @@ export const layer = (
       const module = yield* NaturalModule;
       const store = yield* KeyValueStore.KeyValueStore;
       const scope = yield* Effect.scope;
-      const runSync = Effect.runSyncWith(yield* Effect.context<never>());
+      const context = yield* Effect.context<never>();
+      const runFork = Effect.runForkWith(context);
       const views = yield* PubSub.sliding<NaturalView>({ capacity: WINDOW, replay: 1 });
       const state = MutableRef.make<Machine>(closed);
 
@@ -119,34 +130,50 @@ export const layer = (
                 Effect.logInfo('natural.install').pipe(Effect.annotateLogs({ base: from })),
               ),
               Effect.flatMap((from) => module.install(from, REVISION, FILES)),
-              Effect.catchTag('NaturalUnavailable', () =>
-                Effect.sync(() => dispatch({ _tag: 'Refused' })),
-              ),
+              Effect.catchTag('NaturalUnavailable', () => run({ _tag: 'Refused' })),
             ),
           Load: ({ choice }) =>
             module.load(REVISION, FILES, `${naturalOf(choice)}.bin`).pipe(
-              Effect.match({
-                onFailure: (error) => dispatch({ _tag: 'LoadFailed', reason: error.reason }),
-                onSuccess: () => dispatch({ _tag: 'Loaded' }),
+              Effect.matchEffect({
+                onFailure: (error) => run({ _tag: 'LoadFailed', reason: error.reason }),
+                onSuccess: () => run({ _tag: 'Loaded' }),
               }),
             ),
         }),
       );
 
-      /** Applies one input at once, publishes a changed view, and forks each call the step asks for, in order. */
-      const dispatch = (input: Input) => {
-        const before = MutableRef.get(state);
-        const next = step(before, input);
-        MutableRef.set(state, next.machine);
-        if (next.machine.view !== before.view) runSync(PubSub.publish(views, next.machine.view));
-        for (const call of next.calls) runSync(Effect.forkIn(perform(call), scope));
-      };
+      /**
+       * Applies one input, publishes a changed view, and answers the calls it
+       * asks for. The publish never suspends: the sliding strategy drops a
+       * held subscriber's oldest view. It runs as one step: its fiber never
+       * yields to the scheduler between the state write and the publish, so
+       * a download event's listener, which runs at such a yield, never
+       * publishes its newer view before this older one.
+       */
+      const dispatch = (input: Input): Effect.Effect<ReadonlyArray<Call>> =>
+        Effect.gen(function* () {
+          const before = MutableRef.get(state);
+          const next = step(before, input);
+          MutableRef.set(state, next.machine);
+          if (next.machine.view !== before.view) yield* PubSub.publish(views, next.machine.view);
+          return next.calls;
+        }).pipe(Effect.provideService(Scheduler.PreventSchedulerYield, true));
+
+      /** Forks each call into the layer's scope, in order. */
+      const performAll = (calls: ReadonlyArray<Call>) =>
+        Effect.forEach(calls, (call) => Effect.forkIn(perform(call), scope), { discard: true });
+
+      /** Applies one input, then forks each call it asks for, in order. */
+      const run = (input: Input): Effect.Effect<void> =>
+        Effect.flatMap(dispatch(input), performAll);
 
       yield* module.subscribeInstall((event) => {
-        dispatch(installInput(event));
+        // oxlint-disable-next-line no-restricted-properties -- a native listener: the view publishes before the event returns
+        const calls = Effect.runSyncWith(context)(dispatch(installInput(event)));
+        if (calls.length > 0) runFork(performAll(calls));
       });
 
-      dispatch({
+      yield* run({
         _tag: 'Opened',
         complete: status.files === FILES.length,
         crashed: status.crashed,
@@ -157,9 +184,9 @@ export const layer = (
         view: Effect.sync(() => MutableRef.get(state).view),
         changes: Stream.fromPubSub(views),
         reads: Effect.sync(() => reads(MutableRef.get(state).view)),
-        begin: (choice) => Effect.sync(() => dispatch({ _tag: 'Begin', choice })),
-        chosen: (choice) => Effect.sync(() => dispatch({ _tag: 'Chosen', choice })),
-        retry: Effect.sync(() => dispatch({ _tag: 'Retry' })),
+        begin: (choice) => run({ _tag: 'Begin', choice }),
+        chosen: (choice) => run({ _tag: 'Chosen', choice }),
+        retry: run({ _tag: 'Retry' }),
       });
     }),
   );
