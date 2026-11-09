@@ -202,6 +202,29 @@ describe('the natural voice’s voices', () => {
       .map((file) => relative(APP, file));
     expect(naming).toEqual(['src/natural/manifest.ts']);
   });
+
+  it('renders at the speed it is sent, logs it, and names no speed of its own', () => {
+    const swift = readFileSync(SWIFT, 'utf8');
+    const call = swift.slice(swift.indexOf('KokoroAneSynthesizer.synthesize('));
+    expect(call.slice(0, call.indexOf(')\n'))).toMatch(/\bspeed: Float\(speed\)/);
+    expect(swift).toContain('speed=\\(speed)');
+    const numbered = own.filter((file) =>
+      /\bspeed\s*[:=]\s*(Float\(|Double\()?\s*\d/.test(readFileSync(file, 'utf8')),
+    );
+    expect(numbered.map((file) => relative(APP, file))).toEqual([]);
+  });
+});
+
+describe('the natural voice’s cut', () => {
+  it('finds the audible span above 0.01 and logs each play’s cut, rest and timeline sample', () => {
+    const swift = readFileSync(SWIFT, 'utf8');
+    expect(swift).toMatch(/static let audible: Float = 0\.01\b/);
+    const play = swift.slice(swift.indexOf('"[natural] play utterance='));
+    const line = play.slice(0, play.indexOf('\n'));
+    for (const field of ['from=\\(from)', 'to=\\(to)', 'rest=\\(rest)', 'at=\\(at)'])
+      expect(line).toContain(field);
+    expect(swift).toContain('Array(audio.pcm[from..<to])');
+  });
 });
 
 describe('the vendored chain', () => {

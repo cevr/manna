@@ -2678,8 +2678,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `src/natural/guard.test.ts`, the native module's guards (its committed
     declaration equals One's, the simulator branch never starts the engine
     and logs its skip, no file sets the audio session, only
-    `source.ios.ts` names the Swift file, the vendored headers and
-    LICENSE); `src/natural/lexicon.test.ts`, the bundled list and vocab;
+    `source.ios.ts` names the Swift file, the render passes the speed it
+    is sent and names none, the audible floor 0.01 and the play line's
+    cut, rest and `at`, the vendored headers and LICENSE); `src/natural/lexicon.test.ts`, the bundled list and vocab;
     and `src/natural/probe.test.ts`, the probe's lines, a read's tally over
     seeded views (order ok only for each word lit once, in order, to a
     finish), the soak's count and tally, and one soaked verse over a
