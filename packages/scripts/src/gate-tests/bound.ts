@@ -121,7 +121,7 @@ interface Bounded {
 }
 
 /** How a bounded run ended: the command's exit code, or 124 and every process past the bound. */
-interface Ended {
+export interface Ended {
   readonly code: number;
   readonly over: Option.Option<string>;
 }

@@ -5,6 +5,7 @@ import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
 import {
+  type Ended,
   type Held,
   type Row,
   HUNG,
@@ -209,13 +210,21 @@ const table = Effect.flatMap(ChildProcessSpawner, (spawner) =>
   ),
 ).pipe(Effect.map(parseRows));
 
-/** The pids holding `marker` in their arguments, once at least `count` are up. */
+/** The pids holding `marker` in their arguments, once at least `count` are up, else none after about 1 s. */
 const awaitPids = (marker: string, count: number) =>
   table.pipe(
     Effect.map((rows) => rows.filter((row) => row.args.includes(marker)).map((row) => row.pid)),
     Effect.filterOrFail((pids) => pids.length >= count),
     Effect.retry({ times: 100, schedule: Schedule.spaced(Duration.millis(10)) }),
+    Effect.orElseSucceed((): ReadonlyArray<number> => []),
   );
+
+/** A run's end, or none after 4 s: code -1, so a run the watchdog never ends fails its case rather than the file. */
+const within = <E, R>(run: Effect.Effect<Ended, E, R>) =>
+  Effect.timeoutOrElse(run, {
+    duration: Duration.seconds(4),
+    orElse: () => Effect.succeed<Ended>({ code: -1, over: Option.none() }),
+  });
 
 /** Which of `pids` are still in the table. */
 const leftOf = (pids: ReadonlyArray<number>) =>
@@ -226,6 +235,64 @@ const leftOf = (pids: ReadonlyArray<number>) =>
 
 /** A unique `sleep` duration, so its processes are found by their arguments. */
 const markerOf = (tag: number) => `29.${process.pid}${tag}`;
+
+/** A task that idles under `marker`, in a shell that waits on it. */
+const idles = (marker: string): readonly [string, ...string[]] => [
+  '/bin/sh',
+  '-c',
+  `sleep ${marker}; true`,
+];
+
+/**
+ * A run whose task outlives a 200 ms bound: how it ended, how long it took
+ * and which of its processes, found by its marker while it ran, are left.
+ */
+const hangs = Effect.gen(function* () {
+  const marker = markerOf(1);
+  const started = yield* Clock.currentTimeMillis;
+  const run = yield* Effect.forkChild(
+    runBounded({ command: idles(marker), cwd: import.meta.dir, boundMs: 200, pollMs: 25 }),
+  );
+  const pids = yield* awaitPids(marker, 2);
+  const ended = yield* within(Fiber.join(run));
+  const took = (yield* Clock.currentTimeMillis) - started;
+  return { marker, ended, took, left: yield* leftOf(pids) };
+});
+
+/** A run interrupted while its task idles: which of its processes are left. */
+const interrupts = Effect.gen(function* () {
+  const marker = markerOf(2);
+  const run = yield* Effect.forkChild(
+    runBounded({
+      command: idles(marker),
+      cwd: import.meta.dir,
+      boundMs: TASK_BOUND_MS,
+      pollMs: 25,
+    }),
+  );
+  const pids = yield* awaitPids(marker, 2);
+  yield* Fiber.interrupt(run);
+  return yield* leftOf(pids);
+});
+
+// oxlint-disable-next-line effect/noAsyncFunction -- the three real-process runs run together once at module evaluation, so their waits overlap within the task's 1 s budget and no case pays them inside its time limit (film/no-lazy-test-fixture)
+const realRuns = await Effect.runPromise(
+  Effect.all(
+    {
+      hung: hangs,
+      exited: within(
+        runBounded({
+          command: ['/bin/sh', '-c', 'sleep 0.1; exit 3'],
+          cwd: import.meta.dir,
+          boundMs: 200,
+          pollMs: 25,
+        }),
+      ),
+      interrupted: interrupts,
+    },
+    { concurrency: 'unbounded' },
+  ).pipe(Effect.provide(BunServices.layer)),
+);
 
 describe('the gate tests share', () => {
   it.effect(
@@ -269,56 +336,27 @@ describe('the gate tests watchdog', () => {
       }),
   );
 
-  it.live(
+  it.effect(
     'ends a run whose task outlives the bound with 124, naming it, and leaves none of it',
     () =>
-      Effect.gen(function* () {
-        const marker = markerOf(1);
-        const started = yield* Clock.currentTimeMillis;
-        const run = yield* Effect.forkChild(
-          runBounded({
-            command: ['/bin/sh', '-c', `sleep ${marker}; true`],
-            cwd: import.meta.dir,
-            boundMs: 200,
-            pollMs: 25,
-          }),
-        );
-        const pids = yield* awaitPids(marker, 2);
-        const ended = yield* Fiber.join(run);
-        const took = (yield* Clock.currentTimeMillis) - started;
-        expect(ended.code).toBe(HUNG);
-        expect(Option.getOrElse(ended.over, () => '')).toContain(`sleep ${marker}`);
-        expect(took).toBeLessThan(2_000);
-        expect(yield* leftOf(pids)).toEqual([]);
-      }).pipe(Effect.provide(BunServices.layer)),
+      Effect.sync(() => {
+        const { hung } = realRuns;
+        expect(hung.ended.code).toBe(HUNG);
+        expect(Option.getOrElse(hung.ended.over, () => '')).toContain(`sleep ${hung.marker}`);
+        expect(hung.took).toBeLessThan(2_000);
+        expect(hung.left).toEqual([]);
+      }),
   );
 
-  it.live('passes on the exit code of a command that ends inside the bound, its child too', () =>
-    Effect.gen(function* () {
-      const ended = yield* runBounded({
-        command: ['/bin/sh', '-c', 'sleep 0.1; exit 3'],
-        cwd: import.meta.dir,
-        boundMs: 200,
-        pollMs: 25,
-      });
-      expect(ended).toEqual({ code: 3, over: Option.none() });
-    }).pipe(Effect.provide(BunServices.layer)),
+  it.effect('passes on the exit code of a command that ends inside the bound, its child too', () =>
+    Effect.sync(() => {
+      expect(realRuns.exited).toEqual({ code: 3, over: Option.none() });
+    }),
   );
 
-  it.live('leaves no process of the run when it is interrupted', () =>
-    Effect.gen(function* () {
-      const marker = markerOf(2);
-      const run = yield* Effect.forkChild(
-        runBounded({
-          command: ['/bin/sh', '-c', `sleep ${marker}; true`],
-          cwd: import.meta.dir,
-          boundMs: TASK_BOUND_MS,
-          pollMs: 25,
-        }),
-      );
-      const pids = yield* awaitPids(marker, 2);
-      yield* Fiber.interrupt(run);
-      expect(yield* leftOf(pids)).toEqual([]);
-    }).pipe(Effect.provide(BunServices.layer)),
+  it.effect('leaves no process of the run when it is interrupted', () =>
+    Effect.sync(() => {
+      expect(realRuns.interrupted).toEqual([]);
+    }),
   );
 });
