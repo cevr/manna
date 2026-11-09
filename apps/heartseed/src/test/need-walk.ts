@@ -12,24 +12,39 @@
  * promise's or none, or (one in eight) a garbled passages key, which
  * leaves the passages unread; a stored minutes choice in a quarter.
  *
- * Its commands: `When I need…` then a known promise (half of them of more
- * than one verse when one is known) or the bar's `Today`; `Say it`, then
- * `Next` or (three in ten) the result left held; a Minutes tap; the field
- * and back; a relaunch the next morning after 04:00. While a visit is
- * open, half the commands are `Say it`.
+ * A device of the unread class (`garden: 'unread'`, the same draws) fails
+ * every listing, so its garden is never read.
  *
- * The oracle, apart from the app's code: after every command Today's
- * reference is `shownModel`'s over the hold, the visit (`visitModel`, each
- * baseline the count at the tap) and the plan (`planModel` at each making
- * over `piecesModel`'s pieces with their phrases, expanded by
- * `phrase-model.ts`'s `expandRule`), its counts line `countsModel`'s over the
- * plan alone, its action `Say it`, `Next` or none, no `Listen` on a review,
- * and `When I need…` exactly with a plan made; When I need…'s cards are
- * `needModel`'s over the disk; the field's rows are titled as
- * `fieldPassagesModel` gives them. Then the disk: no start key changed or
- * gone but the minutes, no key added but a recall of the verse said or
- * the minutes after a tap, the passages key never written. Every frame is
- * held to the rig's screen rules.
+ * The walk keeps the screen the root shows, `home`, `today` or `need`, and
+ * draws each command from those that screen offers:
+ * - on home (where every launch on a read garden lands): `When I need…`
+ *   with a plan made, `Begin` exactly when the model shows a verse, a
+ *   relaunch the next morning after 04:00;
+ * - on Today: `Say it`, then `Next` or (three in ten) the result left held;
+ *   a Minutes tap; `Your field` (none on an unread garden); a relaunch.
+ *   While a visit is open, half the commands are `Say it`;
+ * - on When I need…: a known promise (half of them of more than one verse
+ *   when one is known), or the bar's `Your field`.
+ *
+ * The oracle, apart from the app's code, on the screen the model names
+ * after every command:
+ * - Today: its reference is `shownModel`'s over the hold, the visit
+ *   (`visitModel`, each baseline the count at the tap) and the plan
+ *   (`planModel` at each making over `piecesModel`'s pieces with their
+ *   phrases, expanded by `phrase-model.ts`'s `expandRule`), its counts line
+ *   `countsModel`'s over the plan alone, its action `Say it`, `Next` or
+ *   none, no `Listen` on a review, no `When I need…`, and `Your field`
+ *   exactly on a read garden;
+ * - home: the counts line with a plan made, `Begin` exactly with a verse
+ *   shown (over unread passages the app's own, rq1 (a)), `When I need…`
+ *   exactly with a plan made; the rows titled as `fieldPassagesModel`
+ *   gives them after `Your field`;
+ * - When I need…: its cards `needModel`'s over the disk.
+ *
+ * Then the disk: no start key changed or gone but the minutes, no key
+ * added but a recall of the verse said or the minutes after a tap, the
+ * passages key never written. Every frame is held to the rig's screen
+ * rules and the root's frame rule.
  */
 
 import passage from 'virtual:heartseed-passage';
@@ -82,6 +97,17 @@ const OVER: readonly [Span, ...Span[]] = [
 const GARBLED = '[{"book":43,"chapter":15,"first":1}]';
 
 export type Coverage = Record<string, number>;
+
+/** The screen the root shows, as the walk's model names it. */
+export type Screen = 'home' | 'today' | 'need';
+
+const NEED = 'When I need…';
+
+/** A screen settled: what it shows and what the walk's model wants of it, compared as JSON. */
+export interface Settled {
+  readonly seen: unknown;
+  readonly want: unknown;
+}
 
 const recallOf = (next: () => number, reference: string, startedAt: number): Recall => ({
   reference,
@@ -167,11 +193,13 @@ export class Walk {
   minutesTapped = false;
   said = new Set<string>();
   rig: NeedLaunch | null = null;
+  screen: Screen = 'home';
   readonly trail: string[] = [];
 
   constructor(
     readonly next: () => number,
     readonly cover: Coverage,
+    garden: 'read' | 'unread' = 'read',
   ) {
     const now = new Date(
       2026,
@@ -198,7 +226,7 @@ export class Walk {
       disk.set(MINUTES_KEY, String(this.minutes));
     }
     this.held = readRule(CORPUS, disk.get(KEY), 0);
-    this.device = { disk, unread: false };
+    this.device = { disk, unread: garden === 'unread' };
     this.start = new Map(disk);
   }
 
@@ -213,8 +241,9 @@ export class Walk {
 
   recallsNow = (reference: string) => plantsOf(this.device.disk).get(reference)?.length ?? 0;
 
+  /** Whether this launch makes a plan: the garden and the passages read. */
   planned() {
-    return this.held.tag === 'Read';
+    return !this.device.unread && this.held.tag === 'Read';
   }
 
   /** The plan made now over the disk, as `planModel` makes it. */
@@ -248,7 +277,7 @@ export class Walk {
     return this.visit.some((each) => each.reference === verse.reference);
   }
 
-  /** What Today must show settled: the reference, counts line, action and the way to When I need…. */
+  /** What Today must show settled: the reference, counts line, action, no way to When I need…, and the back `Your field` on a read garden. */
   wantToday() {
     const shown = this.shown();
     const done = shown !== null && this.recallsNow(shown.reference) > shown.recalls;
@@ -257,7 +286,8 @@ export class Walk {
       references: shown === null ? [] : [shown.reference],
       counts: this.planned() ? [countsModel(this.plan, this.recallsNow)] : [],
       action: shown === null ? null : this.hold !== null && done ? 'Next' : 'Say it',
-      need: this.planned(),
+      need: false,
+      field: !this.device.unread,
     };
   }
 
@@ -269,8 +299,81 @@ export class Walk {
       references: rig.references(),
       counts: rig.counts(),
       action: names.includes('Next') ? 'Next' : names.includes('Say it') ? 'Say it' : null,
-      need: names.includes('When I need…'),
+      need: names.includes(NEED),
+      field: names.includes('Your field'),
     };
+  }
+
+  /** R3: home offers `Begin` exactly when the model shows a verse. */
+  offersBegin() {
+    return this.shown() !== null;
+  }
+
+  /** What home must show settled: its counts line with a plan made, `Begin` and `When I need…`. */
+  wantHome() {
+    return {
+      headings: ['Your field'],
+      counts: this.planned() ? [countsModel(this.plan, this.recallsNow)] : [],
+      begin: this.offersBegin(),
+      need: this.planned(),
+    };
+  }
+
+  seenHome() {
+    const rig = this.launched;
+    const names = rig.names();
+    return {
+      headings: rig.headings(),
+      counts: [...rig.host.querySelectorAll('[data-testid="counts"]')].map((node) =>
+        (node.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      ),
+      begin: names.includes('Begin'),
+      need: names.includes(NEED),
+    };
+  }
+
+  /** When I need…'s cards as `needModel` gives them over the disk. */
+  wantNeed() {
+    const planted = new Set(plantsOf(this.device.disk).keys());
+    return {
+      headings: [NEED],
+      cards: needModel(planted, TAUGHT_IDS).map((card) => ({
+        title: card.title,
+        heading: false,
+        promises: card.known.map((range) => spanRef(range)),
+        toLearn: card.toLearn > 0 ? [`${card.toLearn} still to learn`] : [],
+      })),
+    };
+  }
+
+  seenNeed() {
+    return { headings: this.launched.headings(), cards: this.launched.cards() };
+  }
+
+  /** What a screen shows once it settles to `want`, at most the rig's wait. */
+  async settled<T>(seen: () => T, want: () => T) {
+    const json = JSON.stringify(want());
+    await this.launched.until(() => JSON.stringify(seen()) === json);
+    return { seen: seen(), want: want() };
+  }
+
+  /** The screen the model names, settled: what it shows and what the model wants. */
+  async settle(): Promise<Settled> {
+    if (this.screen === 'today') return this.settleToday();
+    if (this.screen === 'home')
+      return this.settled(
+        () => this.seenHome(),
+        () => this.wantHome(),
+      );
+    return this.settled(
+      () => this.seenNeed(),
+      () => this.wantNeed(),
+    );
+  }
+
+  /** What the walk counts at each arrival on home. */
+  atHome() {
+    if (this.planned() && !this.offersBegin()) this.bump('root:no-begin');
   }
 
   async settleToday() {
@@ -306,32 +409,58 @@ export class Walk {
     return out;
   }
 
-  async launch() {
-    if (this.rig !== null) await this.rig.leave();
-    this.rig = await launchNeed(this.device, this.time);
-    this.make();
-    this.bump('made:launch');
-    await this.launched.until(() => this.launched.headings().includes('Today'));
+  /** Every frame's further check: none beyond the rig's rules. */
+  checks(_host: Element): readonly string[] {
+    return [];
   }
 
-  /** When I need…, its cards against the model, then a known promise or the bar's `Today`. */
+  /** A launch: home on a read garden (R1), Today on an unread one. */
+  async launch() {
+    if (this.rig !== null) await this.rig.leave();
+    this.rig = await launchNeed(this.device, this.time, undefined, 1, (host) => this.checks(host));
+    this.make();
+    this.bump('made:launch');
+    this.screen = this.device.unread ? 'today' : 'home';
+    if (this.device.unread) this.bump('root:launch-unread');
+    else this.bump('root:launch-home');
+    if (!this.device.unread && this.held.tag !== 'Read') this.bump('root:launch-passages-unread');
+    const heading = this.device.unread ? 'Today' : 'Your field';
+    await this.launched.until(() => this.launched.headings().includes(heading));
+    if (this.screen === 'home') this.atHome();
+  }
+
+  /** `Begin` on home: Today on the verse the model shows, the hold and the visit kept. */
+  async begin(): Promise<unknown> {
+    const rig = this.launched;
+    this.trail.push('begin');
+    if (!(await rig.tap('Begin'))) return 'no Begin';
+    this.bump('root:begin');
+    if (!this.planned()) this.bump('root:begin-unread-passages');
+    const shown = this.shown();
+    if (this.hold !== null && shown !== null && this.recallsNow(shown.reference) > shown.recalls)
+      this.bump('root:back-held');
+    this.screen = 'today';
+    await rig.until(() => rig.headings().includes('Today'));
+    return null;
+  }
+
+  /** `When I need…` on home: its screen. */
   async need(): Promise<unknown> {
     const rig = this.launched;
-    if (!(await rig.tap('When I need…'))) return 'no When I need…';
-    await rig.until(() => rig.headings().includes('When I need…'));
+    this.trail.push('need');
+    if (!(await rig.tap(NEED))) return `no ${NEED}`;
+    this.screen = 'need';
     this.bump('need:opened');
+    this.bump('root:need-from-home');
+    await rig.until(() => rig.headings().includes(NEED));
+    return null;
+  }
+
+  /** On When I need…: a known promise, which shows Today on its visit, or the bar's `Your field`. */
+  async choose(): Promise<unknown> {
+    const rig = this.launched;
     const planted = new Set(plantsOf(this.device.disk).keys());
     const cards = needModel(planted, TAUGHT_IDS);
-    const want = cards.map((card) => ({
-      title: card.title,
-      heading: false,
-      promises: card.known.map((range) => spanRef(range)),
-      toLearn: card.toLearn > 0 ? [`${card.toLearn} still to learn`] : [],
-    }));
-    const json = JSON.stringify(want);
-    await rig.until(() => JSON.stringify(rig.cards()) === json);
-    if (JSON.stringify(rig.cards()) !== json)
-      return { cards: rig.cards(), want, headings: rig.headings() };
     const fear = cards.find((card) => card.id === 'protection');
     if (fear !== undefined && fear.known.length > 0) this.bump('need:fear-known');
     if (fear !== undefined && fear.known.length === 0) this.bump('need:fear-none-known');
@@ -343,7 +472,11 @@ export class Walk {
     if (pool.length === 0 || below(this.next, 6) === 0) {
       this.trail.push('need:back');
       this.bump('need:back');
-      await rig.tap('Today');
+      this.bump('root:need-back');
+      if (!(await rig.tap('Your field'))) return 'no Your field on When I need…';
+      this.screen = 'home';
+      await rig.until(() => rig.headings().includes('Your field'));
+      this.atHome();
       return null;
     }
     const { card, range } = pool[below(this.next, pool.length)] as (typeof pool)[number];
@@ -353,10 +486,12 @@ export class Walk {
     if (range.last > range.first) this.bump('visit:multi-verse');
     if (card.id !== 'protection') this.bump('visit:other-collection');
     this.bump('visit:started');
+    this.bump('root:need-visit');
     this.visit = visitModel(range, this.recallsNow);
     if (this.visit.some((verse) => this.plan.some((item) => item.reference === verse.reference)))
       this.bump('visit:plan-item');
-    await rig.tap(spanRef(range));
+    if (!(await rig.tap(spanRef(range)))) return `no promise ${spanRef(range)}`;
+    this.screen = 'today';
     await rig.until(() => rig.headings().includes('Today'));
     return null;
   }
@@ -380,6 +515,9 @@ export class Walk {
     if (!(await rig.tap('Say it'))) return 'no Say it';
     if (!this.planned()) {
       await rig.until(() => this.recallsNow(shown.reference) > before);
+      if (this.recallsNow(shown.reference) !== before + 1)
+        return { said: shown.reference, before, after: this.recallsNow(shown.reference) };
+      this.bump('today:said-unplanned');
       return null;
     }
     this.hold = shown;
@@ -416,10 +554,12 @@ export class Walk {
     return null;
   }
 
+  /** Today's `Your field`: home, its rows titled as the model gives them, the visit and the hold kept for `Begin`. */
   async field(): Promise<unknown> {
     const rig = this.launched;
     this.trail.push('field');
     if (!(await rig.tap('Your field'))) return 'no Your field';
+    this.screen = 'home';
     await rig.until(() => rig.headings().includes('Your field'));
     const want = fieldPassagesModel(OWN_ROW, this.held, TAUGHT_IDS).map((row) => row.title);
     const titles = () =>
@@ -428,9 +568,9 @@ export class Walk {
     const seen = titles().slice(0, want.length);
     if (JSON.stringify(seen) !== JSON.stringify(want)) return { rows: seen, want };
     this.bump('field:opened');
+    this.bump('root:back');
     if (this.visit.length > 0) this.bump('visit:kept-over-field');
-    await rig.tap('Today');
-    await rig.until(() => rig.headings().includes('Today'));
+    this.atHome();
     return null;
   }
 
@@ -444,43 +584,77 @@ export class Walk {
     if (this.visit.length > 0) this.bump('visit:dropped-by-relaunch');
     this.bump('day:next-morning');
     await this.launch();
+    if (this.screen === 'home') this.bump('root:relaunch-home');
     return null;
   }
 
-  /** One generated command; a visit open makes half of them `Say it`. */
-  async step(): Promise<unknown> {
+  /** One generated command on home: `When I need…` with a plan made, `Begin` when offered, or a relaunch. */
+  async homeStep(): Promise<unknown> {
+    const roll = below(this.next, 20);
+    if (roll < 14 && this.planned()) return this.need();
+    if (roll < 18 && this.offersBegin()) return this.begin();
+    return this.relaunch();
+  }
+
+  /** The command `roll` draws on Today with no plan: `Say it`, a Minutes tap, `Your field` (none on an unread garden) or a relaunch. */
+  unplannedStep(roll: number): Promise<unknown> {
+    if (roll < 10) return this.say();
+    if (roll < 14 || (this.device.unread && roll < 16)) return this.minutesTap();
+    if (roll < 18 && !this.device.unread) return this.field();
+    return this.relaunch();
+  }
+
+  /** One generated command on Today; a visit open makes half of them `Say it`. */
+  async todayStep(): Promise<unknown> {
     const open = this.visit.some((verse) => this.recallsNow(verse.reference) <= verse.recalls);
     if (open && below(this.next, 2) === 0) return this.say();
     const roll = below(this.next, 20);
-    if (!this.planned()) return roll < 10 ? this.say() : this.minutesTap();
-    if (roll < 7) return this.need();
+    if (!this.planned()) return this.unplannedStep(roll);
+    if (roll < 7) return this.field();
     if (roll < 13) return this.say();
     if (roll < 15) return this.minutesTap();
     if (roll < 18) return this.field();
     return this.relaunch();
   }
+
+  /** One generated command, drawn from those the screen the model names offers. */
+  async step(): Promise<unknown> {
+    if (this.screen === 'need') return this.choose();
+    if (this.screen === 'home') return this.homeStep();
+    return this.todayStep();
+  }
 }
 
-/** Walks the listed generated devices of `seed` (device `n` is `random(seed * 1000 + n)`), `steps` commands each; answers the first failure (none when all held) and the coverage. */
-export const walkNeed = async (seed: number, devices: ReadonlyArray<number>, steps: number) => {
+/** Plays `walk` `steps` commands from its launch, each settled on the screen the model names; answers the first failure, or null. */
+export const play = async (walk: Walk, n: number, steps: number): Promise<unknown> => {
+  await walk.launch();
+  const first = await walk.settle();
+  if (JSON.stringify(first.seen) !== JSON.stringify(first.want))
+    return { device: n, at: 'launch', ...first };
+  for (let s = 0; s < steps; s++) {
+    const wrong = await walk.step();
+    if (wrong !== null) return { device: n, trail: walk.trail, wrong };
+    const shown = await walk.settle();
+    const disk = walk.diskFaults();
+    if (JSON.stringify(shown.seen) !== JSON.stringify(shown.want) || disk.length > 0)
+      return { device: n, trail: walk.trail, screen: walk.screen, ...shown, disk };
+  }
+  const faults = [...walk.launched.faults];
+  await walk.launched.leave();
+  return faults.length > 0 ? { device: n, faults } : null;
+};
+
+/** Walks the listed generated devices of `seed` (device `n` is `random(seed * 1000 + n)`) over a garden read or not, `steps` commands each; answers the first failure (none when all held) and the coverage. */
+export const walkNeed = async (
+  seed: number,
+  devices: ReadonlyArray<number>,
+  steps: number,
+  garden: 'read' | 'unread' = 'read',
+) => {
   const cover: Coverage = {};
   for (const n of devices) {
-    const walk = new Walk(random(seed * 1000 + n), cover);
-    await walk.launch();
-    const first = await walk.settleToday();
-    if (JSON.stringify(first.seen) !== JSON.stringify(first.want))
-      return { failure: { device: n, at: 'launch', ...first }, cover };
-    for (let s = 0; s < steps; s++) {
-      const wrong = await walk.step();
-      if (wrong !== null) return { failure: { device: n, trail: walk.trail, wrong }, cover };
-      const today = await walk.settleToday();
-      const disk = walk.diskFaults();
-      if (JSON.stringify(today.seen) !== JSON.stringify(today.want) || disk.length > 0)
-        return { failure: { device: n, trail: walk.trail, ...today, disk }, cover };
-    }
-    const faults = [...walk.launched.faults];
-    await walk.launched.leave();
-    if (faults.length > 0) return { failure: { device: n, faults }, cover };
+    const failure = await play(new Walk(random(seed * 1000 + n), cover, garden), n, steps);
+    if (failure !== null) return { failure, cover };
   }
   return { failure: null, cover };
 };

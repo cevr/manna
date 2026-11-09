@@ -1,8 +1,9 @@
 /* oxlint-disable effect/noGlobals, effect/noNullish, effect/noTernary, effect/noAsyncFunction, effect/noNewPromise, effect/noFixedWaitInTests, eslint/no-await-in-loop -- When I need…'s screen rig: it mounts the root route in happy-dom's document through React's promise-based `act`, handing each turn over until the frame a test waits on lands, at most 3 s; the disk is a plain map a test reads between steps, and a parsed node's absent attributes are null. */
 
 /**
- * When I need… and Today as a reader and a screen reader meet them, for
- * the tests of `src/need`: the root route mounted in happy-dom
+ * When I need…, home and Today as a reader and a screen reader meet them,
+ * for the tests of `src/need` and the home walk: the root route (no
+ * `opening`, so a launch on a read garden opens home) mounted in happy-dom
  * (react-native-web) under the app's own layer teaching `promises`
  * (`TAUGHT` unless the test leaves the part out), over a disk in a plain
  * map that outlives launches and whose listings can fail every attempt (an

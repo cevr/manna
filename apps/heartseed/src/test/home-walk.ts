@@ -5,27 +5,35 @@
  * (`test/need-rig.tsx`) over `need-walk.ts`'s generated devices, the layer
  * teaching Fear, every frame of the field also held to `homeFaults`.
  *
- * Its commands, beside `need-walk`'s (`Say it`, `Next`, a Minutes tap,
- * When I need…, a relaunch the next morning): open the field from Today;
- * on the field, a tap on a plant drawn from each class the field holds (a
- * ready review, today's new piece, a verse whose open item is a phrase, a
- * planted verse whose item is done, a planted verse not in the plan, a
- * verse not planted, a loose verse), a tap on the chosen plant again,
- * `Start here`, `Begin`, the bar's `Today`, and, with nothing held, a
- * landed `Remove <reference>` then `Remove`.
+ * The walk keeps `need-walk`'s screen model: every launch on a read garden
+ * lands on home, and an unread garden's on Today with no `Your field`.
+ * Its commands by screen:
+ * - on home: a tap on a plant drawn from each class the field holds (a
+ *   ready review, today's new piece, a verse whose open item is a phrase,
+ *   a planted verse whose item is done, a planted verse not in the plan, a
+ *   verse not planted, a loose verse), a tap on the chosen plant again,
+ *   `Start here`, `Begin` (exactly when the model shows a verse, R3),
+ *   `When I need…` (with a plan made), with nothing held a landed
+ *   `Remove <reference>` then `Remove`, a relaunch the next morning;
+ * - on Today: `Your field` a quarter of the time on a read garden, else
+ *   one of `need-walk`'s (`Say it`, `Next`, a Minutes tap, `Your field`, a
+ *   relaunch);
+ * - on When I need…: `need-walk`'s, a known promise or `Your field`.
  *
  * The oracle, apart from the app's code: the walk's plan, hold and visit
  * as `need-walk` keeps them; the chosen verse; the furrows as
  * `furrowsModel` gives them over `listsModel`'s lists and the disk's
  * recalls, ready by `readyModel` over the plan; the foot's card by
- * `countsModel` and the walk's shown verse (`Begin` exactly with one shown),
- * or the chosen line and `Start here with <reference>` exactly when
- * `startModel` starts something (the canon by `placesOf`); the greeting by
- * `greetingModel` in the host's zone at the clock's now. A `Start here`
- * makes the visit the one verse `startModel` gives and keeps the hold; a
- * remove drops its span and makes the plan again. After every command the
- * field or Today is held to the model, and the disk to `need-walk`'s rule
- * (the passages key only as the removes leave it).
+ * `countsModel` and the walk's shown verse (`Begin` exactly with one shown;
+ * over unread passages `Begin` alone, with no counts line), or the chosen
+ * line and `Start here with <reference>` exactly when `startModel` starts
+ * something (the canon by `placesOf`); `When I need…` exactly with a plan
+ * made; the greeting by `greetingModel` in the host's zone at the clock's
+ * now. A `Start here` makes the visit the one verse `startModel` gives and
+ * keeps the hold; a remove drops its span and makes the plan again. After
+ * every command the screen the model names is held to the model (Today
+ * and When I need… as `need-walk` holds them), and the disk to
+ * `need-walk`'s rule (the passages key only as the removes leave it).
  */
 
 import type { ModelPlantStage } from './field-model';
@@ -39,8 +47,15 @@ import {
   readyModel,
   type ModelFurrow,
 } from './home-model';
-import { launchNeed } from './need-rig';
-import { OWN_ROW, plantsOf, TAUGHT_IDS, Walk, type Coverage } from './need-walk';
+import {
+  OWN_ROW,
+  plantsOf,
+  play,
+  TAUGHT_IDS,
+  Walk,
+  type Coverage,
+  type Settled,
+} from './need-walk';
 import { KEY, readRule, spanRef, type Held } from './passages-model';
 import { CORPUS } from './passages-rig';
 import { verseOfRule } from './phrase-model';
@@ -69,20 +84,30 @@ const onField = (host: Element) =>
 class HomeWalk extends Walk {
   declare held: Held;
   chosen: string | null = null;
-  shownField = false;
   removed = false;
   /** The visit the last `Start here` made, while it is the visit. */
   started: readonly ModelVisitVerse[] | null = null;
 
-  /** The launch with home A's rules held on the field's frames. */
+  /** Home A's rules on every frame of the field. */
+  override checks(host: Element) {
+    return onField(host);
+  }
+
+  /** The launch, no plant chosen. */
   override async launch() {
-    if (this.rig !== null) await this.rig.leave();
-    this.rig = await launchNeed(this.device, this.time, undefined, 1, onField);
-    this.shownField = false;
     this.chosen = null;
-    this.make();
-    this.bump('made:launch');
-    await this.launched.until(() => this.launched.headings().includes('Today'));
+    await super.launch();
+  }
+
+  /** What the walk counts at each arrival on home: the dots, `Begin` or none, and the greeting. */
+  override atHome() {
+    super.atHome();
+    const plants = this.furrows().flatMap((furrow) => furrow.plants);
+    if (plants.some((plant) => plant.ready)) this.bump('home:dot');
+    if (plants.some((plant) => !plant.ready && plant.stage !== 'not planted'))
+      this.bump('home:no-dot');
+    if (this.planned()) this.bump(this.shown() === null ? 'home:no-begin' : 'home:begin');
+    this.bump(`greeting:${this.wantField().greeting.split(' ')[1] ?? ''}`);
   }
 
   records() {
@@ -115,7 +140,7 @@ class HomeWalk extends Walk {
     const furrows = this.furrows();
     const plants = furrows.flatMap((furrow) => furrow.plants);
     const chosen = plants.find((plant) => plant.reference === this.chosen);
-    const begin = this.planned() && this.shown() !== null;
+    const begin = this.offersBegin();
     const foot =
       chosen !== undefined
         ? {
@@ -126,10 +151,10 @@ class HomeWalk extends Walk {
                 ? []
                 : [`Start here with ${chosen.reference}`],
           }
-        : this.planned()
+        : this.planned() || begin
           ? {
               card: 'begin-card',
-              line: countsModel(this.plan, this.recallsNow),
+              line: this.planned() ? countsModel(this.plan, this.recallsNow) : '',
               controls: begin ? ['Begin'] : [],
             }
           : { card: '<none>', line: '', controls: [] };
@@ -145,7 +170,18 @@ class HomeWalk extends Walk {
         .map((plant) => plant.label),
       foot,
       greeting: greetingModel(Intl.DateTimeFormat().resolvedOptions().timeZone, this.time.now ?? 0),
+      need: this.planned(),
     };
+  }
+
+  /** The screen the model names, settled; home as `wantField` gives it, with `When I need…` exactly with a plan made. */
+  override async settle(): Promise<Settled> {
+    if (this.screen === 'home')
+      return this.settled(
+        () => this.seenField(),
+        () => this.wantField(),
+      );
+    return super.settle();
   }
 
   seenField() {
@@ -164,17 +200,16 @@ class HomeWalk extends Walk {
       selected: selectedPlants(host),
       foot: {
         card: card?.getAttribute('data-testid') ?? '<none>',
-        line: text(card?.querySelector('[data-testid="counts"]') ?? card?.firstElementChild),
+        line: text(
+          card?.getAttribute('data-testid') === 'begin-card'
+            ? card.querySelector('[data-testid="counts"]')
+            : card?.firstElementChild,
+        ),
         controls: [...(card?.querySelectorAll('[role="button"]') ?? [])].map(nameOf),
       },
       greeting: `${text(greeting)} ${iconOf(greeting?.querySelector('img'))}`,
+      need: this.launched.names().includes('When I need…'),
     };
-  }
-
-  async settleField() {
-    const want = JSON.stringify(this.wantField());
-    await this.launched.until(() => JSON.stringify(this.seenField()) === want);
-    return { seen: this.seenField(), want: this.wantField() };
   }
 
   /** Today settled to `wantToday`, and no `Listen` on a review: a promise's visit or a plan item not new; a `Start here` on today's new piece starts it as planned, new. */
@@ -202,21 +237,18 @@ class HomeWalk extends Walk {
     return kept;
   }
 
-  /** Opens the field from Today's `Your field`. */
+  /** Home from Today's `Your field`, no plant chosen; the visit and the hold kept for `Begin`. */
   override async field(): Promise<unknown> {
     const rig = this.launched;
     this.trail.push('field');
     if (!(await rig.tap('Your field'))) return 'no Your field';
+    this.screen = 'home';
     await rig.until(() => rig.headings().includes('Your field'));
-    this.shownField = true;
     this.chosen = null;
     this.bump('field:opened');
-    const plants = this.furrows().flatMap((furrow) => furrow.plants);
-    if (plants.some((plant) => plant.ready)) this.bump('home:dot');
-    if (plants.some((plant) => !plant.ready && plant.stage !== 'not planted'))
-      this.bump('home:no-dot');
-    if (this.planned()) this.bump(this.shown() === null ? 'home:no-begin' : 'home:begin');
-    this.bump(`greeting:${this.wantField().greeting.split(' ')[1] ?? ''}`);
+    this.bump('root:back');
+    if (this.visit.length > 0) this.bump('visit:kept-over-field');
+    this.atHome();
     return null;
   }
 
@@ -282,6 +314,7 @@ class HomeWalk extends Walk {
     this.trail.push(`start:${verse}`);
     if (!(await rig.tap(`Start here with ${verse}`))) return 'no Start here';
     this.bump(`start:${started.from}`);
+    this.bump('root:start');
     if (started.item.reference !== verse) this.bump('start:phrase');
     if (this.hold !== null) this.bump('start:over-held');
     if (this.visit.some((each) => this.recallsNow(each.reference) <= each.recalls))
@@ -293,19 +326,22 @@ class HomeWalk extends Walk {
     this.visit = [item];
     this.started = this.visit;
     this.chosen = null;
-    this.shownField = false;
+    this.screen = 'today';
     await rig.until(() => rig.headings().includes('Today'));
     return null;
   }
 
-  async leaveBy(label: string): Promise<unknown> {
-    const rig = this.launched;
-    this.trail.push(label.toLowerCase());
-    if (!(await rig.tap(label))) return `no ${label}`;
+  /** `Begin` on home, which no choice may hide; the next arrival on home has none. */
+  override async begin(): Promise<unknown> {
+    if (this.hold !== null) this.bump('home:begin-held');
     this.chosen = null;
-    this.shownField = false;
-    await rig.until(() => rig.headings().includes('Today'));
-    return null;
+    return super.begin();
+  }
+
+  /** `When I need…` on home; the next arrival on home has no choice. */
+  override async need(): Promise<unknown> {
+    this.chosen = null;
+    return super.need();
   }
 
   /** A landed remove of a held passage drawn from those held: its span dropped, the plan made again. */
@@ -337,17 +373,14 @@ class HomeWalk extends Walk {
     return null;
   }
 
-  /** One command on the field. */
-  async fieldStep(): Promise<unknown> {
+  /** One command on home. */
+  override async homeStep(): Promise<unknown> {
     const roll = below(this.next, 20);
     if (roll < 2 && this.chosen !== null) return this.tap(this.chosen, 'again');
     if (roll < 6 && this.chosen !== null && this.startOf(this.chosen) !== null)
       return this.startHere();
-    if (roll < 8 && this.chosen === null && this.planned() && this.shown() !== null) {
-      if (this.hold !== null) this.bump('home:begin-held');
-      return this.leaveBy('Begin');
-    }
-    if (roll < 10) return this.leaveBy('Today');
+    if (roll < 8 && this.chosen === null && this.offersBegin()) return this.begin();
+    if (roll < 10) return this.planned() ? this.need() : this.relaunch();
     if (
       roll < 12 &&
       this.hold === null &&
@@ -355,37 +388,28 @@ class HomeWalk extends Walk {
       this.held.passages.length > 0
     )
       return this.remove();
+    if (roll === 19) return this.relaunch();
     return this.tapPlant();
   }
 
-  /** One generated command: on the field one of its own, on Today the field a quarter of the time, else one of `need-walk`'s. */
-  override async step(): Promise<unknown> {
-    if (this.shownField) return this.fieldStep();
-    if (below(this.next, 4) === 0) return this.field();
-    return super.step();
+  /** One command on Today: on a read garden `Your field` a quarter of the time, else one of `need-walk`'s. */
+  override async todayStep(): Promise<unknown> {
+    if (!this.device.unread && below(this.next, 4) === 0) return this.field();
+    return super.todayStep();
   }
 }
 
-/** Walks the listed generated devices of `seed` (device `n` is `random(seed * 1000 + n)`, as `walkNeed` makes it), `steps` commands each; answers the first failure (none when all held) and the coverage. */
-export const walkHome = async (seed: number, devices: ReadonlyArray<number>, steps: number) => {
+/** Walks the listed generated devices of `seed` (device `n` is `random(seed * 1000 + n)`, as `walkNeed` makes it) over a garden read or not, `steps` commands each; answers the first failure (none when all held) and the coverage. */
+export const walkHome = async (
+  seed: number,
+  devices: ReadonlyArray<number>,
+  steps: number,
+  garden: 'read' | 'unread' = 'read',
+) => {
   const cover: Coverage = {};
   for (const n of devices) {
-    const walk = new HomeWalk(random(seed * 1000 + n), cover);
-    await walk.launch();
-    const first = await walk.settleToday();
-    if (JSON.stringify(first.seen) !== JSON.stringify(first.want))
-      return { failure: { device: n, at: 'launch', ...first }, cover };
-    for (let s = 0; s < steps; s++) {
-      const wrong = await walk.step();
-      if (wrong !== null) return { failure: { device: n, trail: walk.trail, wrong }, cover };
-      const shown = walk.shownField ? await walk.settleField() : await walk.settleToday();
-      const disk = walk.diskFaults();
-      if (JSON.stringify(shown.seen) !== JSON.stringify(shown.want) || disk.length > 0)
-        return { failure: { device: n, trail: walk.trail, ...shown, disk }, cover };
-    }
-    const faults = [...walk.launched.faults];
-    await walk.launched.leave();
-    if (faults.length > 0) return { failure: { device: n, faults }, cover };
+    const failure = await play(new HomeWalk(random(seed * 1000 + n), cover, garden), n, steps);
+    if (failure !== null) return { failure, cover };
   }
   return { failure: null, cover };
 };

@@ -3,20 +3,22 @@
 /**
  * When I need… as a reader and a screen reader meet it (N1, N2, L1, X1),
  * through the need rig (`src/test/need-rig.tsx`), which holds every frame
- * to the screens' rules: one heading; `Listening` only on Today and never
- * beside `When I need…`; `When I need…` only on Today, outside its scroll
- * view and at least 44 tall; on When I need… no control in the scroll view
- * but a promise, the bar's `Today` outside it, every control at least 44
- * tall, every text at AA, and no node of Today or the field.
+ * to the root's frame rule and the screens' rules: one heading;
+ * `Listening` only on Today and never beside `When I need…`;
+ * `When I need…` only on home, outside its scroll view and at least 44
+ * tall; on When I need… no control in the scroll view but a promise, the
+ * bar's `Your field` outside it, every control at least 44 tall, every
+ * text at AA, and no node of Today or the field.
  *
- * - After the first minute: Today's header offers `When I need…` beside
- *   `Your field`, in a row that wraps; its screen holds the heading, the
- *   card `Protection & Fear` with `12 still to learn` and the card
- *   `Strength` with `Isaiah 41:10`, each title plain text. Left out of the
- *   layer, the taught card is gone and `Strength` stays.
+ * - After the first minute the launch opens home, whose bar offers
+ *   `When I need…` first; its screen holds the heading, the card
+ *   `Protection & Fear` with `12 still to learn` and the card `Strength`
+ *   with `Isaiah 41:10`, each title plain text. Left out of the layer, the
+ *   taught card is gone and `Strength` stays.
  * - A tap on a known promise of another collection shows Today on it with
- *   `Say it` and no `Listen`; the bar's `Today` from When I need… and the
- *   field and back keep the visit; nothing is written but the recall said.
+ *   `Say it`, no `Listen` and no `When I need…`; Today's `Your field` then
+ *   `Begin`, and When I need…'s `Your field` then `Begin`, each keep the
+ *   visit; nothing is written but the recall said.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -26,10 +28,12 @@ import { launchNeed, needDevice as deviceOf, recordOf as recall } from '../test/
 
 const NEED = 'When I need…';
 
+const HOME = 'Your field';
+
 const NOW = Date.UTC(2026, 4, 12, 15);
 
 describe('When I need…', () => {
-  it('offers the promises known by situation, and a visit through Today kept over the bar and the field', async () => {
+  it('offers the promises known by situation, and a visit through Today kept over home both ways', async () => {
     const device = deviceOf([
       recall(passage.reference, NOW - 3 * 60_000),
       recall('Psalms 56:3', NOW - 2 * 60_000),
@@ -38,15 +42,10 @@ describe('When I need…', () => {
     const start = new Map(device.disk);
     const rig = await launchNeed(device, time);
     expect(await rig.until(() => rig.has(NEED))).toBe(true);
-    expect(rig.references()).toEqual([]);
-    const offer = [...rig.host.querySelectorAll(`[aria-label="${NEED}"]`)];
-    expect({
-      names: rig.names().slice(0, 2),
-      wraps: offer.map((node) => [
-        getComputedStyle(node.parentElement as Element).flexWrap,
-        getComputedStyle(node.parentElement?.parentElement as Element).flexWrap,
-      ]),
-    }).toEqual({ names: ['Your field', NEED], wraps: [['wrap', 'wrap']] });
+    expect({ headings: rig.headings(), first: rig.names()[0] }).toEqual({
+      headings: [HOME],
+      first: NEED,
+    });
 
     await rig.tap(NEED);
     expect(await rig.until(() => rig.headings().includes(NEED))).toBe(true);
@@ -69,16 +68,22 @@ describe('When I need…', () => {
       headings: rig.headings(),
       say: rig.has('Say it'),
       listen: rig.has('Listen'),
-    }).toEqual({ headings: ['Today'], say: true, listen: false });
+      need: rig.has(NEED),
+      back: rig.has(HOME),
+    }).toEqual({ headings: ['Today'], say: true, listen: false, need: false, back: true });
 
-    await rig.tap(NEED);
-    expect(await rig.until(() => rig.headings().includes(NEED))).toBe(true);
-    await rig.tap('Today');
+    await rig.tap(HOME);
+    expect(await rig.until(() => rig.headings().includes(HOME) && rig.has('Begin'))).toBe(true);
+    await rig.tap('Begin');
     expect(await rig.until(() => rig.headings().includes('Today'))).toBe(true);
     expect(rig.references()).toEqual(['Psalms 56:3']);
-    await rig.tap('Your field');
-    expect(await rig.until(() => rig.headings().includes('Your field'))).toBe(true);
-    await rig.tap('Today');
+    await rig.tap(HOME);
+    expect(await rig.until(() => rig.has(NEED))).toBe(true);
+    await rig.tap(NEED);
+    expect(await rig.until(() => rig.headings().includes(NEED))).toBe(true);
+    await rig.tap(HOME);
+    expect(await rig.until(() => rig.headings().includes(HOME) && rig.has('Begin'))).toBe(true);
+    await rig.tap('Begin');
     expect(await rig.until(() => rig.headings().includes('Today'))).toBe(true);
     expect(rig.references()).toEqual(['Psalms 56:3']);
 

@@ -1,14 +1,15 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noNullish -- a React screen test: it drives the root in happy-dom through the need rig's promise-based taps over a disk in a plain map, the rig's `promises` part left out as null. */
 
 /**
- * When the way to When I need… is offered (N1), through the need rig
+ * When the way to When I need… is offered (N1, R5), through the need rig
  * (`src/test/need-rig.tsx`), which faults any frame that shows
- * `When I need…` off Today (the pending frame, the first minute) or beside
- * `Listening`, and counts the frames that offer it: never in the first
- * minute, an unread garden or over unread passages, where no plan is made;
- * and while Say it listens over a plan made, its button goes, so a frame
- * shows `Listening` with no `When I need…` and the result's frame offers it
- * again.
+ * `When I need…` off home (the pending frame, the first minute, Today) or
+ * beside `Listening`, and counts the frames that offer it: never in the
+ * first minute, an unread garden or over unread passages, where no plan is
+ * made (home over unread passages offers `Begin` alone); and with a plan
+ * made, home's bar offers it, Today never does, so a recital's frames show
+ * `Listening` with no `When I need…`, and home offers it again after the
+ * result.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -46,16 +47,17 @@ describe('the way to When I need…', () => {
       [KEY, '[{"book":43,"chapter":15,"first":1}]'],
     ]);
     const passages = await launchNeed(garbled, { now: NOW });
-    expect(await passages.until(() => passages.has('Your field'))).toBe(true);
+    expect(await passages.until(() => passages.has('Begin'))).toBe(true);
     await passages.until(() => false, SETTLE);
-    expect({ offer: passages.frames.offer, faults: passages.faults }).toEqual({
-      offer: 0,
-      faults: [],
-    });
+    expect({
+      headings: passages.headings(),
+      offer: passages.frames.offer,
+      faults: passages.faults,
+    }).toEqual({ headings: ['Your field'], offer: 0, faults: [] });
     await passages.leave();
   });
 
-  it('goes while Say it listens, and comes back with the result', async () => {
+  it('is home’s, never Today’s: not while Say it listens, and home offers it again after the result', async () => {
     const time = { now: NOW };
     const rig = await launchNeed(
       needDevice([recordOf(passage.reference, NOW - 3 * DAY)]),
@@ -63,15 +65,21 @@ describe('the way to When I need…', () => {
       null,
       8,
     );
-    expect(await rig.until(() => rig.has(NEED) && rig.has('Say it'))).toBe(true);
+    expect(await rig.until(() => rig.has(NEED) && rig.has('Begin'))).toBe(true);
+    await rig.tap('Begin');
+    expect(await rig.until(() => rig.has('Say it'))).toBe(true);
+    const offered = rig.frames.offer;
     time.now += 60_000;
     await rig.tap('Say it');
     expect(await rig.until(() => rig.has('Next'))).toBe(true);
     expect({
       listening: rig.frames.listening > 0,
-      offered: rig.has(NEED),
-      faults: rig.faults,
-    }).toEqual({ listening: true, offered: true, faults: [] });
+      today: rig.has(NEED),
+      offered: rig.frames.offer === offered,
+    }).toEqual({ listening: true, today: false, offered: true });
+    await rig.tap('Your field');
+    expect(await rig.until(() => rig.has(NEED))).toBe(true);
+    expect(rig.faults).toEqual([]);
     await rig.leave();
   });
 });

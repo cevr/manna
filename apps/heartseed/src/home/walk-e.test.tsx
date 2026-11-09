@@ -1,13 +1,14 @@
 /* oxlint-disable effect/noAsyncFunction -- the part awaits the walk's promise-based run of the root. */
 
 /**
- * Home A's field walked through the root (`test/home-walk.ts`), part e:
- * device 0 of seed 14, fourteen commands, held to the walk's oracle after
- * every command and to the screens' and home A's rules on every frame. Its
- * floors, from the counts the device reaches: `Begin` tapped while a said
- * result is held, so Today must still show that result and its `Next`;
- * gold dots and planted plants without one, `Start here` on a phrase of the
- * plan, and the afternoon's greeting.
+ * Home A walked through the root (`test/home-walk.ts`), part e: device 0
+ * of seed 14, fourteen commands from its launch on home, held to the
+ * walk's oracle on the screen its model names after every command and to
+ * the screens', the root's and home A's rules on every frame. Its floors,
+ * from the counts the device reaches: gold dots and planted plants without
+ * one, `Begin`, `Start here` on a phrase of the plan and on a planted
+ * verse, and the afternoon's greeting. `Begin` tapped while a said result
+ * is held, which this device no longer draws, is `walk-g.test.tsx`'s.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -15,13 +16,14 @@ import { describe, expect, it } from 'bun:test';
 import { walkHome } from '../test/home-walk';
 
 const FLOORS = [
-  'home:begin-held',
   'home:dot',
   'home:no-dot',
   'home:begin',
   'start:plan',
   'start:phrase',
+  'start:plant',
   'greeting:afternoon',
+  'root:start',
 ];
 
 describe('home A, walked (e)', () => {
