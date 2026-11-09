@@ -2110,13 +2110,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     word's mark), the first values shown, and the disk (the old switch
     never written); and a pending frame with the session's and the voice's
     views at hand shows neither.
-  - `test:pill`: `src/session/pill.test.tsx`, the `Voice` button through
-    the same rig: from each start (the choice `her`, `him` or `off`, only
-    the old switch `false` or `true`, junk over `false`, nothing), at
-    launch and after each of four taps, one button labelled `Voice`, its
-    word and value, its fill and its height, each tap's stored choice and
-    the old key unchanged, and a relaunch showing the last; two taps in one
-    turn cycle twice; a refused write then a relaunch.
+  - `test:pill`: `src/session/pill.test.tsx`, the `Voice` button in
+    home's Settings sheet through the same rig and the sheet's
+    (`src/test/settings-rig.ts`): from each start (the choice `her`, `him`
+    or `off`, only the old switch `false` or `true`, junk over `false`,
+    nothing), at the sheet's open and after each of four taps, one button
+    labelled `Voice` in the sheet, its word and value, its fill and its
+    height, each tap's stored choice and the old key unchanged, and a
+    relaunch's sheet showing the last; two taps in one turn cycle twice; a
+    refused write then a relaunch. Each launch closes the sheet by `Done`
+    and takes `Begin` to Today, which shows no `Voice`, with no fault in
+    the launch or the sheet.
   - `test:counts`, `test:counts-b` and `test:counts-c`:
     `src/session/counts.test.tsx`, `counts-b.test.tsx` and
     `counts-c.test.tsx`, each its own seed and devices of

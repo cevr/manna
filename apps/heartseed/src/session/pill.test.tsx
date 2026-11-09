@@ -1,20 +1,24 @@
 /* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, eslint/no-await-in-loop -- a React screen test: it drives launches of the root in happy-dom through React's promise-based `act`, one step after another, over a disk kept in a plain map the steps change, and reads a node's absent attributes as null. */
 
 /**
- * The Voice pill on Today as a reader and a screen reader meet it, through
- * the session rig (`src/test/session-rig.tsx`), which holds every frame to
- * the pill's form: one node labelled `Voice`, a button valued `Off`, `Her`
- * or `Him` that reads `Voice: <value>`, never checked or pressed.
+ * The Voice pill in home's Settings sheet as a reader and a screen reader
+ * meet it, through the session rig (`src/test/session-rig.tsx`) and the
+ * sheet's rig (`src/test/settings-rig.ts`), which holds every frame of the
+ * open sheet to the pill's form: one node labelled `Voice`, a button valued
+ * `Off`, `Her` or `Him` that reads `Voice: <value>`, never checked or
+ * pressed.
  *
  * Each launch lands on home, whose `Begin` (the passage is the plan's new
- * piece) leads to Today. From each start a disk may hold (the choice's key alone, the old
- * switch's alone, junk over the old switch, nothing), the pill shows the
- * choice read by hsspeaker D2, filled in ink unless Off and at least 44 pt
- * tall; each of four taps shows and stores the next choice of the cycle
- * Off, Her, Him under the choice's key, the old key never changes, the
- * launch writes no voice key, and a relaunch shows the last choice. Two
- * taps in one turn cycle twice and store the second; a refused write keeps
- * the choice shown for the launch, and the next launch reads the disk.
+ * piece) leads to Today, and opens the sheet there. From each start a disk
+ * may hold (the choice's key alone, the old switch's alone, junk over the
+ * old switch, nothing), the sheet's pill shows the choice read by hsspeaker
+ * D2, filled in ink unless Off and at least 44 pt tall; each of four taps
+ * shows and stores the next choice of the cycle Off, Her, Him under the
+ * choice's key, the old key never changes, the launch writes no voice key,
+ * and a relaunch shows the last choice. Two taps in one turn cycle twice
+ * and store the second; a refused write keeps the choice shown for the
+ * launch, and the next launch reads the disk. Before each leave the sheet
+ * closes by `Done` and `Begin` opens Today, which shows no `Voice`.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -22,7 +26,15 @@ import { act } from 'react';
 
 import type { Recall } from '../sayit';
 import { keyOf } from '../test/garden-model';
-import { deviceOf, faultsOf, launch, type Device, type Launch } from '../test/session-rig';
+import {
+  choicesOf,
+  deviceOf,
+  faultsOf,
+  launch,
+  type Device,
+  type Launch,
+} from '../test/session-rig';
+import { closeSettings, modalOf, openSettings, tapInSheet, watchSheet } from '../test/settings-rig';
 import { theme } from '../theme';
 import { CHOICE_KEY, ENABLED_KEY, nextChoice, type Choice } from '../voice';
 
@@ -76,15 +88,18 @@ const rgb = (value: string) => {
   return value.replace(/\s+/g, '').replace(/^rgba\((\d+,\d+,\d+),1(?:\.0*)?\)$/, 'rgb($1)');
 };
 
-const pillOf = (app: Launch) => app.host.querySelector('[aria-label="Voice"]');
+/** The open sheet's pill, if it shows. */
+const pillOf = () => modalOf()?.querySelector('[aria-label="Voice"]') ?? null;
 
-/** What the pill shows now: the rig's reading of it, whether it is filled in ink, and whether it is at least 44 tall. */
-const shownOf = (app: Launch) => {
-  const node = pillOf(app);
-  if (node === null) return { voices: app.choices().voices, filled: false, tall: false };
+/** What the sheet's pill shows now: the rig's reading of it, whether it is filled in ink, and whether it is at least 44 tall. */
+const shownOf = () => {
+  const modal = modalOf();
+  const node = pillOf();
+  const voices = choicesOf(modal ?? document.createElement('div')).voices;
+  if (node === null) return { voices, filled: false, tall: false };
   const style = getComputedStyle(node);
   return {
-    voices: app.choices().voices,
+    voices,
     filled: rgb(style.backgroundColor) === rgb(theme.light.ink),
     tall: parseFloat(style.minHeight) >= 44,
   };
@@ -100,40 +115,58 @@ const wantOf = (choice: Choice) => ({
 const voiceWrites = (device: Device) =>
   device.writes.filter((key) => key.startsWith('heartseed/voice/'));
 
-/** A launch of `device` that lands on home with `Begin` (the passage, unplanted beside another verse, is the plan's new piece) and no fault, takes `Begin`, and waits for Today and its Voice pill. */
+type Sheet = ReturnType<typeof watchSheet>;
+
+/** A launch of `device` that lands on home with `Begin` (the passage, unplanted beside another verse, is the plan's new piece), no pill and no fault, then opens the Settings sheet under a watch of its frames. */
 const open = async (device: Device, faults = faultsOf()) => {
-  const app = await launch(device, faults, { now: AT });
+  const app = await launch(device, faults, { now: AT }, [], { choicesOnToday: false });
   await app.until(() => app.headings().includes('Your field') && app.has('Begin'));
   expect({
     headings: app.headings(),
     begin: app.has('Begin'),
-    pill: pillOf(app) !== null,
+    pill: app.host.querySelector('[aria-label="Voice"]') !== null,
     faults: app.faults,
   }).toEqual({ headings: ['Your field'], begin: true, pill: false, faults: [] });
-  await app.tap('Begin');
-  expect(await app.until(() => app.headings().includes('Today') && pillOf(app) !== null)).toBe(
-    true,
-  );
-  return app;
+  const sheet = watchSheet();
+  await openSettings(app);
+  return { app, sheet };
 };
 
-/** Waits until the pill shows `choice` and the disk holds `stored` under the choice's key. */
+/** Waits until the sheet's pill shows `choice` and the disk holds `stored` under the choice's key. */
 const settled = (app: Launch, device: Device, choice: Choice, stored: string | undefined) =>
   app.until(
     () =>
-      JSON.stringify(shownOf(app)) === JSON.stringify(wantOf(choice)) &&
+      JSON.stringify(shownOf()) === JSON.stringify(wantOf(choice)) &&
       device.disk.get(CHOICE_KEY) === stored,
   );
 
-describe('Today’s Voice pill', () => {
+/** Closes the sheet by `Done`, takes `Begin` to Today, and holds Today to no `Voice` and the launch and the sheet to no fault, the sheet's look checked; then leaves. */
+const close = async (name: string, app: Launch, sheet: Sheet) => {
+  const closed = await closeSettings(app, 'Done');
+  await app.tap('Begin');
+  const today = await app.until(() => app.headings().includes('Today'));
+  sheet.stop();
+  expect({
+    name,
+    closed,
+    today,
+    voices: choicesOf(app.host).voices,
+    faults: app.faults,
+    sheet: sheet.faults,
+    looked: sheet.frames.looked > 0,
+  }).toEqual({ name, closed: true, today: true, voices: [], faults: [], sheet: [], looked: true });
+  await app.leave();
+};
+
+describe('The Voice pill in Settings', () => {
   it('shows the choice read from every start, and four taps cycle Off, Her, Him, each stored under the choice’s key and shown again at a relaunch', async () => {
     for (const [name, entries, first] of STARTS) {
       const device = deviceFor(entries);
       const old = device.disk.get(ENABLED_KEY);
       const stored = device.disk.get(CHOICE_KEY);
-      const app = await open(device);
+      const { app, sheet } = await open(device);
       await settled(app, device, first, stored);
-      expect({ name, shown: shownOf(app), writes: voiceWrites(device) }).toEqual({
+      expect({ name, shown: shownOf(), writes: voiceWrites(device) }).toEqual({
         name,
         shown: wantOf(first),
         writes: [],
@@ -141,12 +174,12 @@ describe('Today’s Voice pill', () => {
       let choice = first;
       for (let t = 1; t <= 4; t += 1) {
         choice = nextChoice(choice);
-        await app.tap('Voice');
+        expect([name, t, await tapInSheet('Voice')]).toEqual([name, t, true]);
         await settled(app, device, choice, choice);
         expect({
           name,
           t,
-          shown: shownOf(app),
+          shown: shownOf(),
           stored: device.disk.get(CHOICE_KEY),
           old: device.disk.get(ENABLED_KEY),
           writes: voiceWrites(device),
@@ -159,55 +192,55 @@ describe('Today’s Voice pill', () => {
           writes: Array.from({ length: t }, () => CHOICE_KEY),
         });
       }
-      expect({ name, faults: app.faults }).toEqual({ name, faults: [] });
-      await app.leave();
+      await close(name, app, sheet);
       const again = await open(device);
-      await settled(again, device, choice, choice);
-      expect({ name, relaunch: shownOf(again), writes: voiceWrites(device).length }).toEqual({
+      await settled(again.app, device, choice, choice);
+      expect({ name, relaunch: shownOf(), writes: voiceWrites(device).length }).toEqual({
         name,
         relaunch: wantOf(choice),
         writes: 4,
       });
-      await again.leave();
+      await close(`${name}, relaunched`, again.app, again.sheet);
     }
   });
 
   it('cycles twice for two taps in one turn, and stores the second', async () => {
     const device = deviceFor([[CHOICE_KEY, 'her']]);
-    const app = await open(device);
+    const { app, sheet } = await open(device);
     await settled(app, device, 'her', 'her');
+    const pill = pillOf();
+    expect(pill !== null).toBe(true);
     await act(async () => {
       for (let t = 0; t < 2; t += 1)
-        pillOf(app)?.dispatchEvent(
+        pill?.dispatchEvent(
           new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }),
         );
     });
     await settled(app, device, 'off', 'off');
-    expect({ shown: shownOf(app), stored: device.disk.get(CHOICE_KEY) }).toEqual({
+    expect({ shown: shownOf(), stored: device.disk.get(CHOICE_KEY) }).toEqual({
       shown: wantOf('off'),
       stored: 'off',
     });
-    expect(app.faults).toEqual([]);
-    await app.leave();
+    await close('two taps', app, sheet);
   });
 
   it('keeps the choice shown for the launch when the store refuses its write, and the next launch reads the disk', async () => {
     const device = deviceFor([[ENABLED_KEY, 'false']]);
-    const app = await open(device, faultsOf({ refuse: new Set([CHOICE_KEY]) }));
+    const { app, sheet } = await open(device, faultsOf({ refuse: new Set([CHOICE_KEY]) }));
     await settled(app, device, 'off', undefined);
-    await app.tap('Voice');
+    expect(await tapInSheet('Voice')).toBe(true);
     await settled(app, device, 'her', undefined);
-    expect({ shown: shownOf(app), writes: voiceWrites(device) }).toEqual({
+    expect({ shown: shownOf(), writes: voiceWrites(device) }).toEqual({
       shown: wantOf('her'),
       writes: [],
     });
-    await app.leave();
+    await close('refused', app, sheet);
     const again = await open(device);
-    await settled(again, device, 'off', undefined);
-    expect({ shown: shownOf(again), old: device.disk.get(ENABLED_KEY) }).toEqual({
+    await settled(again.app, device, 'off', undefined);
+    expect({ shown: shownOf(), old: device.disk.get(ENABLED_KEY) }).toEqual({
       shown: wantOf('off'),
       old: 'false',
     });
-    await again.leave();
+    await close('refused, relaunched', again.app, again.sheet);
   });
 });
