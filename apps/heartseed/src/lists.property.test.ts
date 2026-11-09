@@ -6,34 +6,47 @@
  * `test/home-model.ts`), and `listsOf` (with `fieldPassagesOf`, which gives
  * its result) against `listsModel` over generated own rows, held passages
  * (unread, or 0 to 5, equal ones included) and taught ids (none, one,
- * several, or unknown).
+ * several, or unknown). L4 holds the furrows (`furrowsOf`, with `readyOf`
+ * over generated plan items) over gardens of the lists' verses, phrase
+ * plants and references of any text: one stage and one ready mark per
+ * verse in every furrow that holds it, every planted verse in a furrow,
+ * and a `Loose` furrow exactly for a verse no list names.
  *
  * It catches a place for a reference that does not round-trip (a trailing
  * space, a lower-case book, an alias, a verse past its chapter, a phrase),
  * a missing place for a canon verse, a row moved or dropped, an id shared
- * by two equal held ranges, a range on a list that is not a passage, and a
- * source of the wrong kind.
+ * by two equal held ranges, a range on a list that is not a passage, a
+ * source of the wrong kind, a verse shown two ways, and a planted verse
+ * lost from the field.
  */
 
 import { describe, expect, it } from 'bun:test';
-import { Option } from 'effect';
+import { Array as Arr, Option } from 'effect';
 
+import { plantOf, type Plant, type ReadGarden } from './garden';
+import { furrowsOf, readyOf, type Furrow } from './home';
 import { listsOf, placeOf, type List } from './lists';
 import type { PassagesView } from './passages';
-import { COLLECTIONS } from './promises';
 import { collectionsOf, fieldPassagesOf } from './promises/taught';
+import type { Recall } from './sayit';
 import { anyReference, trickyReferences, type ModelPassage } from './test/field-model';
 import { below, pickOf, random } from './test/garden-model';
-import { listsModel, placesOf, type ModelList } from './test/home-model';
+import {
+  heldOf as heldModelOf,
+  listsModel,
+  placesOf,
+  recordsOf,
+  taughtOf,
+  type ModelList,
+} from './test/home-model';
 import { NAMES, verseRef, type Held, type Span } from './test/passages-model';
 import { choosableOf, CORPUS } from './test/passages-rig';
+import { verseOfRule } from './test/phrase-model';
 import { fieldPassagesModel } from './test/promise-model';
 
 const PLACES = placesOf(CORPUS);
 
 const OWN: readonly ModelPassage[] = [{ title: 'Isaiah 41:10', verses: ['Isaiah 41:10'] }];
-
-const IDS = COLLECTIONS.map((collection) => collection.id);
 
 /** The place the canon's table gives `reference`, as JSON text, or `none`. */
 const placeWanted = (reference: string) => {
@@ -125,26 +138,19 @@ const plainList = (list: List): ModelList => ({
         : { tag: list.source._tag },
 });
 
-/** Taught ids: none, one, several in any order, or with an id no collection has. */
-const taughtOf = (next: () => number): readonly [string, string[]] => {
-  const roll = below(next, 8);
-  if (roll === 0) return ['none', []];
-  if (roll <= 2) return ['one', [pickOf(next, IDS as [string, ...string[]])]];
-  const several = [...IDS].sort(() => next() - 0.5).slice(0, 2 + below(next, 4));
-  if (roll <= 5) return ['several', several];
-  return ['unknown', [...several.slice(0, 1), 'no-such-collection', ...several.slice(1)]];
-};
-
 /** Held passages: unread, or 0 to 5 choosable ranges, equal ones and the own verse's chapter among them. */
-const heldOf = (next: () => number): Held => {
-  if (below(next, 8) === 0) return { tag: 'Unread' };
-  const passages: Span[] = [];
-  for (let n = below(next, 6); n > 0; n--) {
-    const kept = passages[below(next, Math.max(1, passages.length))];
-    if (kept !== undefined && below(next, 3) === 0) passages.push({ ...kept });
-    else passages.push(choosableOf(next, passages)[1]);
-  }
-  return { tag: 'Read', passages };
+const heldOf = (next: () => number): Held =>
+  heldModelOf(next, (more, held) => choosableOf(more, held)[1]);
+
+/** A read garden of `records`, each reference's plant folded by the garden. */
+const gardenOf = (records: readonly Recall[]): ReadGarden => {
+  const byReference = new Map<string, Recall[]>();
+  for (const recall of records)
+    byReference.set(recall.reference, [...(byReference.get(recall.reference) ?? []), recall]);
+  const plants = new Map<string, Plant>();
+  for (const [reference, recalls] of byReference)
+    if (Arr.isReadonlyArrayNonEmpty(recalls)) plants.set(reference, plantOf(recalls));
+  return { _tag: 'Read', plants };
 };
 
 /** The own rows: the promise's, none, or two. */
@@ -287,5 +293,92 @@ describe('the lists the field holds', () => {
       ['own:Isaiah 41:10', 'Own'],
       ['collection:protection', 'Collection'],
     ]);
+  });
+});
+
+/** Plan items over `references`, from `next`: each open (its baseline the recalls now) or done (one fewer), some new with no recalls. */
+const itemsOf = (next: () => number, references: readonly string[], records: readonly Recall[]) =>
+  references
+    .filter(() => below(next, 3) === 0)
+    .map((reference) => {
+      const now = records.filter((recall) => recall.reference === reference).length;
+      const done = now > 0 && below(next, 2) === 0;
+      return { reference, fresh: now === 0, recalls: done ? now - 1 : now, seconds: 12 };
+    });
+
+/** Each verse's `<stage> <ready>` across `furrows`, and how many furrows hold it; a verse shown two ways goes to `wrong`. */
+const marksOf = (furrows: readonly Furrow[], wrong: string[]) => {
+  const shown = new Map<string, string>();
+  const holding = new Map<string, number>();
+  for (const plant of furrows.flatMap((furrow) => furrow.plants)) {
+    const mark = `${plant.stage} ${plant.ready}`;
+    const before = shown.get(plant.reference) ?? mark;
+    if (before !== mark) wrong.push(`${plant.reference} shows ${mark} and ${before}`);
+    shown.set(plant.reference, mark);
+    holding.set(plant.reference, (holding.get(plant.reference) ?? 0) + 1);
+  }
+  return { shown, holding };
+};
+
+/** L4 over one case's furrows: the wrongs go to `wrong`, and the kinds the case reaches are returned. */
+const sharedWrong = (
+  furrows: readonly Furrow[],
+  named: ReadonlySet<string>,
+  planted: readonly string[],
+  wrong: string[],
+): string[] => {
+  const kinds: string[] = [];
+  const { shown, holding } = marksOf(furrows, wrong);
+  const loose = new Set(
+    furrows
+      .filter((furrow) => furrow.source._tag === 'Loose')
+      .flatMap((furrow) => furrow.plants.map((plant) => plant.reference)),
+  );
+  for (const verse of loose) if (named.has(verse)) wrong.push(`${verse} loose though named`);
+  for (const verse of new Set(planted.map(verseOfRule))) {
+    if (!shown.has(verse)) wrong.push(`${JSON.stringify(verse)} in no furrow`);
+    if (loose.has(verse) === named.has(verse)) wrong.push(`${JSON.stringify(verse)} loose`);
+    if (loose.has(verse)) kinds.push('loose verse');
+  }
+  const ids = furrows.map((furrow) => furrow.id);
+  if (new Set(ids).size !== ids.length) wrong.push(`ids ${JSON.stringify(ids)}`);
+  const shared = [...holding].filter(([, count]) => count > 1).map(([verse]) => verse);
+  if (shared.length > 0) kinds.push('a verse in two lists');
+  if (shared.some((verse) => shown.get(verse)?.endsWith('true')))
+    kinds.push('a ready verse in two lists');
+  if (planted.some((reference) => verseOfRule(reference) !== reference))
+    kinds.push('phrase plants');
+  return kinds;
+};
+
+describe('one plant, shared', () => {
+  it('shows a verse at one stage and one ready mark in every furrow that holds it, every planted verse in some furrow, and a verse in a Loose furrow exactly when no list names it', () => {
+    const next = random(9_403);
+    const tally = new Map<string, number>();
+    const bump = (kind: string) => tally.set(kind, (tally.get(kind) ?? 0) + 1);
+    const wrong: string[] = [];
+    for (let run = 0; run < 250 && wrong.length < 3; run++) {
+      const own = ownOf(next);
+      const held = heldOf(next);
+      const [, taught] = taughtOf(next);
+      const view: PassagesView =
+        held.tag === 'Read' ? { _tag: 'Read', passages: held.passages } : { _tag: 'Unread' };
+      const lists = listsOf(own, view, collectionsOf(taught));
+      const records = recordsOf(next, listsModel(own, held, taught), 'Isaiah 41:10');
+      const garden = gardenOf(records);
+      const planted = [...new Set(records.map((recall) => recall.reference))];
+      const named = new Set(lists.flatMap((list) => list.verses));
+      const items = itemsOf(next, [...planted, ...named], records);
+      const furrows = furrowsOf(garden, lists, readyOf(Option.some({ items }), garden));
+      for (const kind of sharedWrong(furrows, named, planted, wrong)) bump(kind);
+    }
+    expect(wrong.slice(0, 3)).toEqual([]);
+    for (const [kind, floor] of [
+      ['a verse in two lists', 30],
+      ['a ready verse in two lists', 10],
+      ['phrase plants', 30],
+      ['loose verse', 30],
+    ] as const)
+      expect(tally.get(kind) ?? 0, kind).toBeGreaterThanOrEqual(floor);
   });
 });
