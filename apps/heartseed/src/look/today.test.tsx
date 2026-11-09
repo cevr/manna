@@ -6,11 +6,14 @@
  * launch and its `Begin`, then generated
  * sequences of Say it (heard whole, heard with a word missed, unheard, and
  * each with the system flipped while it listens), a peek at a missed word,
- * a grade, Next to the done state, a Minutes pill, the field and back, and a
+ * a grade, Next to the done state, minutes chosen in home's Settings sheet
+ * (`renewBySettings`: `Your field`, the radio, `Done`, then `Begin` while
+ * the verse shows, else the walk ends on home), the field and back, and a
  * flip of the system between any two steps. The model is the system's last
  * value; every frame (each DOM mutation batch) and every settled screen
- * holds the frame oracle (`src/test/look.ts`) for it, and the run rig's
- * footer rule holds too. It counts words without printing one.
+ * holds the frame oracle (`src/test/look.ts`) for it, every frame of the
+ * sheet holds the sheet's rule for it, and the run rig's footer rule holds
+ * too. It counts words without printing one.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -25,6 +28,7 @@ import { below, DAY, pickOf, random } from '../test/garden-model';
 import { lookFaults, setSystem, watchLook } from '../test/look';
 import { rootFaults } from '../test/root-rule';
 import { deviceOf, launch, type Hearing } from '../test/run-rig';
+import { renewBySettings } from '../test/settings-rig';
 import type { Scheme } from '../theme';
 
 const T0 = Date.UTC(2026, 3, 1, 9);
@@ -103,7 +107,30 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
     },
     grade: () => app.tap(pickOf(next, ['Again', 'Hard', 'Good', 'Easy']), 'radio'),
     next: () => app.tap('Next'),
-    minutes: () => app.tap(pickOf(next, ['2 min', '5 min', '10 min', '20 min']), 'radio'),
+    minutes: async () => {
+      const minutes = pickOf(next, [2, 5, 10, 20]);
+      if (!app.has('Your field')) return false;
+      const ran = await renewBySettings(app, minutes, () => model.system).then(
+        (trip) => ({ trip }),
+        (error: unknown) => {
+          report.push(`seed ${seed} minutes ${minutes}: ${String(error)}`);
+          return { failed: true };
+        },
+      );
+      if (!('trip' in ran)) return false;
+      const { trip } = ran;
+      for (const fault of trip.sheet)
+        report.push(`seed ${seed} minutes ${minutes} [${model.system}]: ${fault}`);
+      if (trip.looked === 0)
+        report.push(`seed ${seed} minutes ${minutes}: the sheet's look never checked`);
+      if (trip.at === 'Today') return true;
+      if (trip.at !== 'Your field' || app.has('Begin'))
+        report.push(
+          `seed ${seed} minutes ${minutes}: the trip ended at ${trip.at}, Begin ${app.has('Begin') ? 'shown' : 'none'}`,
+        );
+      ended.home = true;
+      return true;
+    },
     field: async () => {
       const acted = app.actions().length > 0;
       if (!(await app.tap('Your field'))) return false;
