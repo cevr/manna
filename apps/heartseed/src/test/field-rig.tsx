@@ -107,12 +107,25 @@ const seen = (node: Element) => {
   return !/rgba\(.*, 0(\.0+)?\)$|transparent/.test(getComputedStyle(node).color);
 };
 
+/** The properties `ownStyle` reads: none inherited, so each is the node's own class and inline style alone. */
+type OwnProperty = 'overflow' | 'overflowY' | 'minHeight' | 'width' | 'backgroundColor';
+
+const ownStyles = new Map<string, string>();
+
+/** `node`'s computed `property`, kept by its tag, class and inline style: the frame rules ask it of every control and its ancestors on every frame, happy-dom computes a whole style each time, and react-native-web's atomic classes never change their rules, so two nodes alike in all three have the same own (not inherited) style. */
+const ownStyle = (node: Element, property: OwnProperty) => {
+  const key = `${property}|${node.tagName}|${node.getAttribute('class') ?? ''}|${node.getAttribute('style') ?? ''}`;
+  const known = ownStyles.get(key);
+  if (known !== undefined) return known;
+  const value = getComputedStyle(node)[property];
+  ownStyles.set(key, value);
+  return value;
+};
+
 /** Whether `node` lies inside a scroll view: an ancestor that scrolls its overflow, so a reader may have to scroll to reach it. */
 export const scrolled = (node: Element) => {
-  for (let at = node.parentElement; at !== null; at = at.parentElement) {
-    const style = getComputedStyle(at);
-    if (/auto|scroll/.test(`${style.overflowY} ${style.overflow}`)) return true;
-  }
+  for (let at = node.parentElement; at !== null; at = at.parentElement)
+    if (/auto|scroll/.test(`${ownStyle(at, 'overflowY')} ${ownStyle(at, 'overflow')}`)) return true;
   return false;
 };
 
@@ -251,11 +264,11 @@ const plantFaults = (plant: Element) => {
   if (plant.getAttribute('role') !== 'button' || hidden(plant) || nameParts(name) === null)
     out.push(`a plant not one exposed button of a plant's name: ${name}`);
   if (![...plant.children].every(hidden)) out.push(`a plant's part exposed: ${name}`);
-  if (parseFloat(getComputedStyle(plant).width) < 44) out.push(`a plant under 44 wide: ${name}`);
+  if (parseFloat(ownStyle(plant, 'width')) < 44) out.push(`a plant under 44 wide: ${name}`);
   const dots = [...plant.querySelectorAll('[data-testid="dot"]')];
   if (dots.length !== (name.endsWith(READY) ? 1 : 0)) out.push(`${dots.length} dots on ${name}`);
   const sun = computed(theme[systemScheme()].sun);
-  if (dots.some((dot) => getComputedStyle(dot).backgroundColor !== sun))
+  if (dots.some((dot) => ownStyle(dot, 'backgroundColor') !== sun))
     out.push(`a dot not filled sun on ${name}`);
   const images = plant.querySelectorAll('img');
   if (images.length > 1) out.push(`${images.length} images in ${name}`);
@@ -329,8 +342,7 @@ export const homeFaults = (host: Element): string[] => {
   const controls = [...host.querySelectorAll(CONTROLS)];
   for (const node of controls) {
     if (scrolled(node) && !listed(node)) out.push(`${nameOf(node)} in a scroll view`);
-    if (!(parseFloat(getComputedStyle(node).minHeight) >= 44))
-      out.push(`${nameOf(node)} under 44 tall`);
+    if (!(parseFloat(ownStyle(node, 'minHeight')) >= 44)) out.push(`${nameOf(node)} under 44 tall`);
   }
   for (const plant of host.querySelectorAll('[data-testid="field-plant"]'))
     out.push(...plantFaults(plant));
