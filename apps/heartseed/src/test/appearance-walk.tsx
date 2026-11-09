@@ -279,12 +279,12 @@ const walkOf = async (seed: number, steps: number, reached: Set<string>) => {
   return walk.report;
 };
 
-/** The part's one case: walks `seeds`, six commands each, and holds no disagreement and every floor reached. */
-export const appearanceCase = (seeds: readonly number[]) =>
+/** The part's one case: walks `seeds`, `steps` commands each (six unless named), and holds no disagreement and every floor reached. */
+export const appearanceCase = (seeds: readonly number[], steps = 6) =>
   it(`holds every frame to the scheme the model names, the Settings sheet’s radios and the disk to the model, over the readers of seeds ${seeds.join(', ')}`, async () => {
     const reached = new Set<string>();
     const report: string[] = [];
-    for (const seed of seeds) report.push(...(await walkOf(seed, 6, reached)));
+    for (const seed of seeds) report.push(...(await walkOf(seed, steps, reached)));
     setSystem('light');
     expect({ report: report.slice(0, 4), reached: [...reached].toSorted() }).toEqual({
       report: [],
