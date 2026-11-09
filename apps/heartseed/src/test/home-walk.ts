@@ -343,8 +343,10 @@ class HomeWalk extends Walk {
     if (roll < 2 && this.chosen !== null) return this.tap(this.chosen, 'again');
     if (roll < 6 && this.chosen !== null && this.startOf(this.chosen) !== null)
       return this.startHere();
-    if (roll < 8 && this.chosen === null && this.planned() && this.shown() !== null)
+    if (roll < 8 && this.chosen === null && this.planned() && this.shown() !== null) {
+      if (this.hold !== null) this.bump('home:begin-held');
       return this.leaveBy('Begin');
+    }
     if (roll < 10) return this.leaveBy('Today');
     if (
       roll < 12 &&

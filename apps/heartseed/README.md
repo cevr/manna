@@ -2040,15 +2040,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     Today writing nothing; and the greeting at each open at 11:59, 12:00
     and 18:00, and in Asia/Kolkata at 10:00Z (afternoon there).
   - `test:home-walk-a`, `test:home-walk-b`, `test:home-walk-c`,
-    `test:home-walk-d`: `src/home/walk-{a,b,c,d}.test.tsx`, the field
+    `test:home-walk-d`, `test:home-walk-e`:
+    `src/home/walk-{a,b,c,d,e}.test.tsx`, the field
     walked through the root (`src/test/home-walk.ts`, a `need-walk` `Walk`
     with the field's commands: open, a tap on a plant of each class, a tap
     again, `Start here`, `Begin`, `Today`, a landed remove), one device
-    each of seeds 30, 10, 69 and 74, held after every command to
+    each of seeds 30, 10, 69, 74 and 14, held after every command to
     `furrowsModel` and `readyModel` (full labels with `, ready today`),
     `countsModel`, `startModel` and `greetingModel`, Today to `need-walk`'s
     oracle and the disk to its rule; every field frame to `homeFaults`;
-    each part's floors met, all sixteen across the four.
+    each part's floors met, all seventeen across the five (part e's
+    `Begin` over a said result held, which Today must still show).
   - `test:phrase`: the phrase cut and its reference form (`src/phrase.ts`).
     `src/phrase.property.test.ts`, `cutOf` against `src/test/phrase-model.ts`
     and its brute force over every partition for 13-22 words, for generated
