@@ -2097,21 +2097,30 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     twice, fifteen zones, morning and evening plantings, every minutes
     value), and `needOf` over phrase-planted promises against
     `needModel`.
-  - `test:header` and `test:header-b`: `src/session/header.test.tsx` and
-    `header-b.test.tsx`, each its own seed and devices of
-    `src/test/header-walk.ts`, Today's header through
-    `src/test/session-rig.tsx` (every frame held to `rootFaults`; a read
-    launch lands on home, held to the model's counts and `Begin`, then
-    `Begin`, or in the done state no Today frame and the launch's end):
-    generated devices and launches (stored
-    minutes, the voice's choice and its old switch, failed reads, unread
-    and held listings, the first minute) and taps (Voice stepping the
-    cycle, refused writes, taps while Say it listens, the field and back),
-    every frame held to where the choices may show (only under Today's
-    heading, outside the scroll view, which holds no control but a missed
-    word's mark), the first values shown, and the disk (the old switch
-    never written); and a pending frame with the session's and the voice's
-    views at hand shows neither.
+  - `test:header`, `test:header-c`, `test:header-b` and `test:header-d`:
+    `src/session/header.test.tsx` and `header-c.test.tsx` (devices 1-2 and
+    3-4, the four valid stored minutes), `header-b.test.tsx` (devices 0
+    and 5, the key absent and a bad text) and `header-d.test.tsx` (devices
+    6 and 7, a bad text and the first minute), each its own seed, of
+    `src/test/header-walk.ts`: the reader's choices across launches, read
+    in the Settings sheet, through `src/test/session-rig.tsx` (every frame
+    held to `rootFaults`, so no choice under the host) and the sheet's rig.
+    Generated devices and launches (stored minutes, the voice's choice and
+    its old switch, failed reads, unread and held listings, the first
+    minute): a read launch lands on home, held to the model's counts and
+    `Begin`, opens the sheet, which shows the values read on its first
+    frame (`seen`, noted from the document's modal on every mutation),
+    closes it by `Done`, then `Begin`, or in the done state the launch's
+    end. Every Minutes and Voice choice is a trip from Today (`Your field`,
+    the gear, the radio or `Voice`, the plan made at a Minutes tap and
+    home's counts under the sheet the new plan's, `Done`, then `Begin` or
+    home's done state), with refused writes; an unread launch offers no
+    choice; while Say it listens nothing that makes the plan is in reach in
+    the document (`listening:bare`); a renewal at the due is a Minutes trip
+    that ends on Today with `Say it`; and the disk is held (the old switch
+    never written). `header.test.tsx` also holds that a pending frame with
+    the session's and the voice's views at hand shows no choice and no
+    counts.
   - `test:pill`: `src/session/pill.test.tsx`, the `Voice` button in
     home's Settings sheet through the same rig and the sheet's
     (`src/test/settings-rig.ts`): from each start (the choice `her`, `him`

@@ -346,7 +346,7 @@ export const launch = async (
     shown: 0,
     counts: 0,
   };
-  /** Each change of the checked radio and of the Voice pill over the launch's frames, in order: the first entry is what the first frame showing it showed. */
+  /** Each change of the open Settings sheet's checked Minutes radio and of its Voice pill over the launch's frames of the document, in order: the first entry is what the first frame showing it showed. */
   const seen = { minutes: [] as string[], voice: [] as string[] };
   const note = (into: string[], value: string | undefined) => {
     if (value !== undefined && into.at(-1) !== value) into.push(value);
@@ -366,12 +366,26 @@ export const launch = async (
     const choices = choicesOf(host);
     if (choices.groups > 0 || choices.voices.length > 0) frames.shown += 1;
     if (countsIn(host).length > 0) frames.counts += 1;
+    found.push(...frameFaults(host));
+  };
+  /** Notes the open sheet's checked Minutes radio and its Voice pill, read on the document's one modal. */
+  const sheetFrame = () => {
+    const modals = document.querySelectorAll('[aria-modal]');
+    const modal = modals[0];
+    if (modals.length !== 1 || modal === undefined) return;
+    const choices = choicesOf(modal);
     if (choices.checked.length === 1) note(seen.minutes, choices.checked[0] ?? undefined);
     note(seen.voice, choices.voices[0]);
-    found.push(...frameFaults(host));
   };
   const watch = new MutationObserver(frame);
   watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
+  const sheetWatch = new MutationObserver(sheetFrame);
+  sheetWatch.observe(document.body, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    characterData: true,
+  });
   const root = createRoot(host);
   await act(async () =>
     root.render(
@@ -404,6 +418,7 @@ export const launch = async (
     takeRoot();
     rule.stop();
     watch.disconnect();
+    sheetWatch.disconnect();
     await act(async () => root.unmount());
     host.remove();
   };
