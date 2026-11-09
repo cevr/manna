@@ -340,7 +340,7 @@ export const launch = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer], ...seeded]}>
-        <Root />
+        <Root opening="today" />
       </RegistryProvider>,
     ),
   );

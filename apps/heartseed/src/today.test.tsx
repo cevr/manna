@@ -44,7 +44,7 @@ describe('Today', () => {
     device.launch([
       [`heartseed/recall/${OTHER.reference}/${OTHER.startedAt}`, JSON.stringify(OTHER)],
     ]);
-    await act(async () => createRoot(host).render(<Root />));
+    await act(async () => createRoot(host).render(<Root opening="today" />));
     const start = Date.now();
     while (headings().length === 0 && Date.now() - start < 3000)
       await act(() => new Promise((resolve) => setTimeout(resolve, 2)));

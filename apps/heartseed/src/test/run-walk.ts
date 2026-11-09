@@ -411,7 +411,10 @@ interface Seen {
   readonly doneText: boolean;
 }
 
-/** The walk of one device: its pieces, its disk, the model's run, and the expected disk. */
+/** The counts lines home's foot shows, as they read. */
+const homeCounts = (app: Launch) =>
+  [...app.host.querySelectorAll('[data-testid="counts"]')].map((node) => node.textContent ?? '');
+
 class Walk {
   readonly faults: Faults = { unread: false, refuse: false };
   readonly time = { now: T0 };
@@ -808,16 +811,36 @@ class Walk {
     await this.settle('peek');
   }
 
+  /** Today's `Your field`, then back by home's `Begin` while Today showed an action; in the done state home shows the model's counts and no `Begin`, and the launch ends there, the next one following at once. */
   async field() {
     const app = this.screen;
     await app.tap('Your field');
-    if (!(await app.until(() => app.headings().includes('Your field'))))
+    if (
+      !(await app.until(() => app.headings().includes('Your field') && homeCounts(app).length > 0))
+    )
       throw new Error('no field');
-    await app.tap('Today');
     bump(this.coverage, this.run.hold === null ? 'field:none' : 'field:held');
-    if (this.run.hold === null && shownModel(this.run, this.recallsNow) === null)
+    if (this.run.hold === null && shownModel(this.run, this.recallsNow) === null) {
       bump(this.coverage, 'done:field');
+      return this.homeDone();
+    }
+    if (!(await app.tap('Begin'))) throw new Error(`after ${this.log.join(' > ')}: no Begin`);
     await this.settle('the field and back');
+  }
+
+  /** Home in the done state: the model's counts line and no `Begin`; the launch ends on it, and the next launch follows at the same instant, drawing nothing. */
+  async homeDone() {
+    const app = this.screen;
+    this.log.push('the field, done');
+    const counts = homeCounts(app);
+    const want = this.expect().counts;
+    if (JSON.stringify(counts) !== JSON.stringify(want) || app.has('Begin'))
+      throw new Error(
+        `after ${this.log.join(' > ')}: home showed ${JSON.stringify(counts)}${app.has('Begin') ? ' and Begin' : ''}, expected ${JSON.stringify(want)}`,
+      );
+    await app.leave();
+    this.log.push('relaunch from home');
+    await this.launchNow();
   }
 
   async wait() {

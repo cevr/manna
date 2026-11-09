@@ -59,7 +59,7 @@ describe('Today’s footer', () => {
     expect(await app.tap('Again', 'radio')).toBe(true);
     expect(await app.tap('Your field')).toBe(true);
     expect(await app.until(() => app.headings().includes('Your field'))).toBe(true);
-    expect(await app.tap('Today')).toBe(true);
+    expect(await app.tap('Begin')).toBe(true);
     expect(await app.until(() => app.grades().length === 1)).toBe(true);
     expect(app.frames.listening).toBeGreaterThan(0);
     expect(await app.leave()).toEqual([]);

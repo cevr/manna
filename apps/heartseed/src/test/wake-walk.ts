@@ -235,6 +235,10 @@ interface During {
   readonly at: 'listening' | 'finishing';
 }
 
+/** The counts lines home's foot shows, as they read. */
+const homeCounts = (app: WakeLaunch) =>
+  [...app.host.querySelectorAll('[data-testid="counts"]')].map((node) => node.textContent ?? '');
+
 /** The walk of one device: its pieces, its disk, the model's run, and the expected disk. */
 class Walk {
   readonly faults: Faults = { unread: false, refuse: false };
@@ -755,11 +759,14 @@ class Walk {
     this.trail.push('again');
   }
 
-  /** The field and back, a return or a sequence that is none sent on it now and then. */
+  /** The field and back by `Begin`, a return or a sequence that is none sent on it now and then; the states are sent only when the run they leave still shows an item, else the launch ends on home in the done state. */
   async field() {
     const app = this.screen;
     await app.tap('Your field');
-    if (!(await app.until(() => app.headings().includes('Your field')))) this.fail('no field');
+    if (
+      !(await app.until(() => app.headings().includes('Your field') && homeCounts(app).length > 0))
+    )
+      this.fail('no field');
     const sends = this.next() < 0.7;
     if (sends) {
       this.time.now += pickOf(this.next, GAPS[this.steer]);
@@ -767,6 +774,11 @@ class Walk {
       const differs =
         JSON.stringify(this.expectOf(madeModel(this.run, this.planNow(), false))) !==
         JSON.stringify(this.expectOf(this.run));
+      const after =
+        returnsModel(this.last, states).some(Boolean) && this.run.plan !== null
+          ? wakeModel(this.run, () => this.planNow(), { unread: this.unread, underWay: false })
+          : this.run;
+      if (shownModel(after, this.recallsNow) === null) return this.homeDone();
       const returns = await this.states(states, false);
       if (!app.headings().includes('Your field')) this.fail('a state sent left the field');
       if (returns > 0 && !this.unread && this.run.plan !== null) {
@@ -774,11 +786,43 @@ class Walk {
         if (differs) bump(this.coverage, 'wake:field:differs');
       }
     }
-    await app.tap('Today');
+    if (shownModel(this.run, this.recallsNow) === null) return this.homeDone();
+    if (!(await app.tap('Begin'))) this.fail('no Begin');
     bump(this.coverage, 'field');
     if (this.reading !== null) bump(this.coverage, 'listen:field-reading');
     await this.settle(sends ? 'the field, states sent, and back' : 'the field and back');
     this.trail.push('field');
+  }
+
+  /** Home in the done state: the model's counts line and no `Begin`; the launch ends on it, and the next launch follows at the same instant, active, drawing nothing. */
+  async homeDone() {
+    const app = this.screen;
+    this.log.push('the field, done');
+    const counts = homeCounts(app);
+    const want = this.expectOf(this.run).counts;
+    if (JSON.stringify(counts) !== JSON.stringify(want) || app.has('Begin'))
+      this.fail(
+        `home showed ${JSON.stringify(counts)}${app.has('Begin') ? ' and Begin' : ''}, expected ${JSON.stringify(want)}`,
+      );
+    const voice = this.voiceFaults();
+    if (voice.length > 0) this.fail(`on home: ${voice.join(', ')}`);
+    if (this.reading !== null) bump(this.coverage, 'listen:field-reading');
+    await this.leave();
+    this.log.push('relaunch from home');
+    this.last = 'active';
+    this.voice = readingVoice();
+    this.app = await wakeLaunch(this.device, this.faults, this.time, this.pieces, {
+      state: this.last,
+      voice: this.voice,
+    });
+    this.reading = null;
+    this.spoken.length = 0;
+    this.result = null;
+    this.ending = null;
+    this.trail = [];
+    this.returnsThisLaunch = 0;
+    this.run = madeModel(NO_RUN, this.planNow(), false);
+    await this.settle('launch');
   }
 
   async wait() {

@@ -64,6 +64,8 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
   const app = await launch(dueDevice(), { unread: false, refuse: false }, { now: T0 });
   const look = watchLook(app.host, () => model.system);
   const report: string[] = [];
+  /** Whether the field in the done state left the walk on home, which ends it. */
+  const ended = { home: false };
   const flip = async () => {
     model.system = other(model.system);
     await act(async () => setSystem(model.system));
@@ -101,10 +103,20 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
     next: () => app.tap('Next'),
     minutes: () => app.tap(pickOf(next, ['2 min', '5 min', '10 min', '20 min']), 'radio'),
     field: async () => {
+      const acted = app.actions().length > 0;
       if (!(await app.tap('Your field'))) return false;
-      await app.until(() => app.headings().includes('Your field'));
+      await app.until(
+        () =>
+          app.headings().includes('Your field') &&
+          app.host.querySelectorAll('[data-testid="counts"]').length > 0,
+      );
       await settle('the field');
-      await app.tap('Today');
+      if (!acted) {
+        ended.home = true;
+        if (app.has('Begin')) report.push(`seed ${seed} the field, done: Begin shown`);
+        return true;
+      }
+      await app.tap('Begin');
       return app.until(() => app.headings().includes('Today'));
     },
     flip: async () => {
@@ -115,7 +127,7 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
   await app.until(() => app.has('Say it'));
   await settle('launch');
   const opening: readonly Step[] = [SAYS[seed % SAYS.length] ?? 'heard', 'peek'];
-  for (let n = 0; n < steps; n++) {
+  for (let n = 0; n < steps && !ended.home; n++) {
     const step = opening[n] ?? pickOf(next, STEPS);
     if (await run[step]()) coverage[step] = (coverage[step] ?? 0) + 1;
     await settle(step);

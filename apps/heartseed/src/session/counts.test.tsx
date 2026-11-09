@@ -296,14 +296,34 @@ const againCommand = async (run: Run) => {
   cover('again');
 };
 
-/** The field and back to Today, offered only in a read garden. */
+/** The counts lines home's foot shows, as they read. */
+const homeCounts = (app: Run['app']) =>
+  [...app.host.querySelectorAll('[data-testid="counts"]')].map((node) => node.textContent ?? '');
+
+/** The field and back to Today by `Begin`, offered only in a read garden, while Today shows an action; in the done state home shows Today's counts line and no `Begin`, and the launch ends there (true). */
 const fieldCommand = async (run: Run) => {
-  if (!run.m.read) return;
+  if (!run.m.read) return false;
+  const acted = run.app.has('Say it') || run.app.has('Next');
+  const counts = run.app.counts();
   await run.app.tap('Your field');
-  expect(await run.app.until(() => run.app.headings().includes('Your field'))).toBe(true);
-  await run.app.tap('Today');
+  expect(
+    await run.app.until(
+      () => run.app.headings().includes('Your field') && homeCounts(run.app).length > 0,
+    ),
+  ).toBe(true);
+  if (!acted) {
+    expect({ step: run.step, counts: homeCounts(run.app), begin: run.app.has('Begin') }).toEqual({
+      step: run.step,
+      counts,
+      begin: false,
+    });
+    cover('field, done');
+    return true;
+  }
+  await run.app.tap('Begin');
   expect(await run.app.until(() => run.app.headings().includes('Today'))).toBe(true);
   cover('field and back');
+  return false;
 };
 
 const voiceCommand = async (run: Run) => {
@@ -383,6 +403,7 @@ const COMMANDS = [
 /** The commands after which the plan must stay as it was: S11's time, Voice, grade and field. */
 const STILL = new Set<(typeof COMMANDS)[number]>(['again', 'voice', 'wait', 'field']);
 
+/** One generated command, then the screen and the disk held to the model; true when it ended the launch on home. */
 const command = async (run: Run, c: number) => {
   const step = `${run.step} command ${c}`;
   const at = { ...run, step };
@@ -402,9 +423,13 @@ const command = async (run: Run, c: number) => {
   }
   if (kind === 'voice') await voiceCommand(at);
   if (kind === 'wait') await waitCommand(at);
-  if (kind === 'field') await fieldCommand(at);
+  if (kind === 'field' && (await fieldCommand(at))) {
+    run.faults.refuse.clear();
+    return true;
+  }
   await settle(at, STILL.has(kind));
   run.faults.refuse.clear();
+  return false;
 };
 
 /** The first minute through to Today: Next, Say it with help, Say it alone, then Continue, a second between each recital. */
@@ -449,7 +474,7 @@ const launchOnce = async (base: Omit<Run, 'app' | 'faults' | 'step'>, label: str
   const step = `${label} (${m.zone}, ${faults.listing}${faults.failGet.size > 0 ? ', minutes unread' : ''})`;
   travel(m.zone);
   const app = await launch(device, faults, time);
-  const run: Run = { ...base, app, faults, step };
+  let run: Run = { ...base, app, faults, step };
   if (faults.listing === 'held') {
     await app.until(() => false, 10);
     expect({
@@ -476,10 +501,28 @@ const launchOnce = async (base: Omit<Run, 'app' | 'faults' | 'step'>, label: str
   else cover('unread');
   await settle(run);
   const commands = 2 + below(next, 3);
-  for (let c = 0; c < commands; c += 1) await command(run, c);
-  expect({ step, faults: app.faults }).toEqual({ step, faults: [] });
-  if (!m.read) expect({ step, counts: app.frames.counts }).toEqual({ step, counts: 0 });
-  await app.leave();
+  for (let c = 0; c < commands; c += 1)
+    if (await command(run, c)) run = await relaunchFromHome(run);
+  expect({ step, faults: run.app.faults }).toEqual({ step, faults: [] });
+  if (!m.read) expect({ step, counts: run.app.frames.counts }).toEqual({ step, counts: 0 });
+  await run.app.leave();
+};
+
+/** The launch a done-state detour ended on home, followed by the next at the same instant: its faults as the last one's, its plan made at Today's first show. */
+const relaunchFromHome = async (run: Run): Promise<Run> => {
+  const { m, step } = run;
+  expect({ step, faults: run.app.faults }).toEqual({ step, faults: [] });
+  await run.app.leave();
+  const app = await launch(run.device, run.faults, run.time);
+  app.release();
+  const next: Run = { ...run, app, step: `${step} relaunched from home` };
+  expect(await app.until(() => app.headings().includes('Today') && app.has('Voice'))).toBe(true);
+  m.minutes = minutesRule(m.stored, run.faults.failGet.has(MINUTES_KEY));
+  m.hold = null;
+  m.plan = planNow(next);
+  await settle(next);
+  cover('relaunch from home');
+  return next;
 };
 
 /** A disk of the passage's history (none, a day or an evening planting, an old record, many recalls) and of verses no piece names, some recalled today, and the first launch's instant: after the planting, and before an evening planting's morning. */

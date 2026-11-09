@@ -393,7 +393,7 @@ export const mount = async (
           {today && (
             <>
               <Seen into={latest} />
-              <Root />
+              <Root opening="today" />
             </>
           )}
         </RegistryProvider>,

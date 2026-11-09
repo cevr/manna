@@ -252,8 +252,9 @@ export const footerFaults = (host: Element): string[] => {
 /** The leave of each launch still mounted: the next launch leaves any a failed test left. */
 const mounted = new Set<() => Promise<unknown>>();
 
-/** What a rig built on this one may give a launch in place of its own: the voice's source (a voice that never speaks when none), the foreground (the host's `AppState` when none), and a wrap of the store over the disk. */
+/** What a rig built on this one may give a launch in place of its own: the voice's source (a voice that never speaks when none), the foreground (the host's `AppState` when none), a wrap of the store over the disk, and the screen a read launch opens on (`today` when none). */
 export interface LaunchParts {
+  readonly opening?: 'home' | 'today';
   readonly voice?: Layer.Layer<VoiceSource>;
   readonly foreground?: Layer.Layer<Foreground>;
   readonly store?: (
@@ -316,7 +317,7 @@ export const launch = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        <Root />
+        <Root opening={parts.opening ?? 'today'} />
       </RegistryProvider>,
     ),
   );

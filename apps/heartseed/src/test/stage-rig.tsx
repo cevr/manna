@@ -163,7 +163,7 @@ export const mount = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        <Root />
+        <Root opening="today" />
       </RegistryProvider>,
     ),
   );

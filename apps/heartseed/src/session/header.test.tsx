@@ -311,14 +311,30 @@ const sayCommand = async (run: Run, at: string) => {
   cover('recital');
 };
 
-/** The field and back to Today, offered only in a read garden. */
+/** The field and back to Today by `Begin`, offered only in a read garden, while Today shows an action; in the done state home shows no `Begin`, and the launch ends there (true). */
 const fieldCommand = async (run: Run) => {
-  if (run.faults.listing === 'unread') return;
+  if (run.faults.listing === 'unread') return false;
+  const acted = run.app.has('Say it') || run.app.has('Next');
   await run.app.tap('Your field');
-  expect(await run.app.until(() => run.app.headings().includes('Your field'))).toBe(true);
-  await run.app.tap('Today');
+  expect(
+    await run.app.until(
+      () =>
+        run.app.headings().includes('Your field') &&
+        run.app.host.querySelector('[data-testid="counts"]') !== null,
+    ),
+  ).toBe(true);
+  if (!acted) {
+    expect({ step: run.step, begin: run.app.has('Begin') }).toEqual({
+      step: run.step,
+      begin: false,
+    });
+    cover('field, done');
+    return true;
+  }
+  await run.app.tap('Begin');
   expect(await run.app.until(() => run.app.headings().includes('Today'))).toBe(true);
   cover('field and back');
+  return false;
 };
 
 /** Time passing on the clock: a minute, an hour or the night. */
@@ -330,16 +346,20 @@ const waitCommand = async (run: Run) => {
 
 const COMMANDS = ['minutes', 'minutes', 'voice', 'say', 'field', 'wait'] as const;
 
-/** One generated command, then the screen and the disk held to the model. */
+/** One generated command, then the screen and the disk held to the model; true when it ended the launch on home. */
 const command = async (run: Run, c: number) => {
   const at = `${run.step} command ${c}`;
   const kind = pickOf(run.next, COMMANDS);
   if (kind === 'minutes' || kind === 'voice') await tapCommand(run, kind);
   if (kind === 'say') await sayCommand(run, at);
-  if (kind === 'field') await fieldCommand(run);
+  if (kind === 'field' && (await fieldCommand(run))) {
+    run.faults.refuse.clear();
+    return true;
+  }
   if (kind === 'wait') await waitCommand(run);
   await settle(run.app, run.device, run.m, at);
   run.faults.refuse.clear();
+  return false;
 };
 
 /** A held launch shows its pending frame, never Today, until the listing is let go. */
@@ -397,7 +417,7 @@ const launchOnce = async (run: Omit<Run, 'app'>, l: number) => {
   expect(await app.until(() => app.headings().includes('Today') && app.has('Voice'))).toBe(true);
   await settle(app, device, m, `${run.step} at launch`);
   const commands = 2 + below(run.next, 3);
-  for (let c = 0; c < commands; c += 1) await command({ ...run, app }, c);
+  for (let c = 0; c < commands; c += 1) if (await command({ ...run, app }, c)) break;
   expect({ step: run.step, faults: app.faults }).toEqual({ step: run.step, faults: [] });
   expect({ step: run.step, seen: app.seen }).toEqual({
     step: run.step,
