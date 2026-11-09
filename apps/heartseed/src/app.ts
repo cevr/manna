@@ -22,7 +22,7 @@
  * voice stops a reading under way and the foreground's subscription ends.
  */
 
-import { Duration, Effect, Layer, Option, Stream } from 'effect';
+import { Clock, Duration, Effect, Layer, Option, Stream } from 'effect';
 import type * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as Atom from 'effect/reactivity/Atom';
 import { One } from 'one';
@@ -40,6 +40,7 @@ import { type Foreground, wakeLayer } from './foreground';
 import { foregroundSource } from './foreground/source';
 import { cueIn, Garden, layer as gardenLayer, type Chime, type GardenView } from './garden';
 import { liveChime } from './garden/chime';
+import { greetingAt } from './home';
 import type { Cue } from './matcher';
 import { sourceWords } from './matcher/words';
 import { layer as sayItLayer, SayIt, TODAY, type Grade, type Haptics, type Recital } from './sayit';
@@ -265,6 +266,9 @@ export const startHere = runtime.fn(
   (verse: string) => Effect.flatMap(Session, (session) => session.start(verse)),
   { concurrent: true },
 );
+
+/** The home's greeting by the runtime's clock, read when a screen first shows it and again at each later show once none showed it in between. */
+export const greetingNow = runtime.atom(Effect.map(Clock.currentTimeMillis, greetingAt));
 
 /** A press of the first minute's Say it: a recital of the passage under its cue, kept or not. */
 export const sayAs = runtime.fn(

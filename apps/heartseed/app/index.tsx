@@ -13,6 +13,7 @@ import {
   choose,
   chooseMinutes,
   gardenView,
+  greetingNow,
   listenTo,
   next,
   passagesView,
@@ -22,6 +23,7 @@ import {
   sayItView,
   cycleVoice,
   sessionView,
+  startHere,
   taughtView,
   visitPromise,
   voiceView,
@@ -42,6 +44,8 @@ import {
   type ReadGarden,
   type Stage,
 } from '../src/garden';
+import { furrowsOf, readyOf } from '../src/home';
+import { startOf } from '../src/home/start';
 import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
 import { needOf, type NeedCard } from '../src/need';
@@ -571,7 +575,16 @@ const actionOf = (listening: boolean, done: boolean) => {
 const offersListen = (listening: boolean, each: Showing) =>
   !listening && !each.done && Option.exists(each.item, (item) => item.fresh);
 
-/** The field over the garden read and the reader's passages; nothing until both are known, so it never claims a history it has not read, nor shows a frame without the reader's rows. */
+/**
+ * The field over the garden read, the reader's passages, the collections
+ * taught, the session's view and the greeting by the runtime's clock;
+ * nothing until all are known, so it never claims a history it has not
+ * read, nor shows a frame without the reader's rows. Its furrows' ready
+ * marks are the plan's open verses; `Begin` shows while the run shows an
+ * item, and opens Today, writing nothing; `Start here` on a verse makes
+ * what `startOf` starts the session's visit, then shows Today once it is
+ * made (or failed), so Today never shows the plan's item first.
+ */
 function FieldOf({
   onToday,
   onAdd,
@@ -584,17 +597,32 @@ function FieldOf({
   const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
   const passages = AsyncResult.value(useAtomValue(passagesView));
   const taught = AsyncResult.value(useAtomValue(taughtView));
-  return Option.match(Option.all({ garden, passages, taught }), {
+  const session = AsyncResult.value(useAtomValue(sessionView));
+  const greeting = AsyncResult.value(useAtomValue(greetingNow));
+  const start = useAtomSet(startHere, { mode: 'promise' });
+  const onStart = (verse: string) => {
+    void start(verse).then(onToday, onToday);
+  };
+  return Option.match(Option.all({ garden, passages, taught, session, greeting }), {
     onNone: () => false,
-    onSome: (known) => (
-      <FieldScreen
-        field={fieldOf(known.garden, fieldPassagesOf(PASSAGES, known.passages, known.taught))}
-        passages={known.passages}
-        onToday={onToday}
-        onAdd={onAdd}
-        onAbout={onAbout}
-      />
-    ),
+    onSome: (known) => {
+      const lists = fieldPassagesOf(PASSAGES, known.passages, known.taught);
+      return (
+        <FieldScreen
+          field={fieldOf(known.garden, lists)}
+          furrows={furrowsOf(known.garden, lists, readyOf(known.session.plan, known.garden))}
+          passages={known.passages}
+          greeting={known.greeting}
+          counts={Option.map(known.session.plan, (plan) => countsOf(plan, known.garden))}
+          begin={shownOf(known.session, Option.some(known.garden))._tag === 'Item'}
+          startable={(verse) => Option.isSome(startOf(known.session, known.garden, verse))}
+          onToday={onToday}
+          onStart={onStart}
+          onAdd={onAdd}
+          onAbout={onAbout}
+        />
+      );
+    },
   });
 }
 
@@ -646,9 +674,10 @@ function Pending() {
  * screen is decided once per launch, at the read: planting the seed inside
  * the first minute keeps Planted on until Continue. After it, the root
  * shows one of five screens in place: Today, the field (from Today's
- * `Your field`), the chooser (from the field's `Add a passage`, back to
- * the field from its first back or once a passage is added), About
- * (from the field's `About`, back to the field) and When I need… (from
+ * `Your field`, back to Today from its bar, `Begin` or `Start here`), the
+ * chooser (from either of the field's `Add verses`, back to the field from
+ * its first back or once a passage is added), About (from the field's
+ * `About`, back to the field) and When I need… (from
  * Today's `When I need…`, back to Today from its bar or once a promise
  * tapped is made the visit). Which one
  * shows is the launch's state, never stored and with no route of its own,

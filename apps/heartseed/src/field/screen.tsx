@@ -1,156 +1,42 @@
 /**
- * The field as the reader meets it. A bar fixed above the scroll view holds
- * the way back to Today and, with the reader's passages read, `Add a
- * passage` while fewer than 3 are held, else the limit line; a row's
- * `Remove` puts its ask there instead, with `Remove` and `Keep`, and a
- * remove that does not land leaves an alert there. So however long the
- * field, they are on screen without a scroll; a foot fixed under the
- * scroll view holds `About`, the way to the About screen, clear of the
- * home indicator, so it too shows without a scroll. Under the bar scroll the
- * heading, the days sown and the harvest, one card per row titled by its
- * passage, each verse a plant drawn as Today draws its stage with its verse
- * number small beneath, and a legend of the four stages under Mark 4:28.
- * Each plant is one image to the screen reader, labelled `<reference>,
- * <stage>`; its drawing and number are hidden inside it. Each row of a
- * passage the reader chose, and no other, holds its own `Remove`. Every
- * text is the scheme's ink, so each reads at WCAG AA contrast on the ground
- * and on a card.
+ * The field as home A draws it. A bar fixed above the scroll view holds the
+ * way back to Today and, with the reader's passages read, `Add verses`
+ * while fewer than 3 are held, else the limit line; a furrow's `Remove`
+ * puts its ask there instead, with `Remove` and `Keep`, and a remove that
+ * does not land leaves an alert there. Under the bar scroll the greeting by
+ * the hour, the heading, the days sown and the harvest, a hint, one furrow
+ * per row (`./plot`), the dashed `Add verses` row whenever the bar offers
+ * it, and the legend under Mark 4:28. A foot fixed under the scroll view
+ * (`./foot`) holds the Begin card or, with a verse chosen, the chosen card
+ * with `Start here`, then `About`. So every control but the plants, a
+ * furrow's `Remove` and the row is on screen without a scroll.
  *
- * The field it draws is derived from what it is given; the ask and the
- * alert are the screen's own state, dropped when the reader leaves. With
- * the passages unread it offers no add and no remove. From a tap of the
- * ask's `Remove` until its answer, no tap of a field control changes
- * anything, even two in one turn, and each shows as disabled.
+ * A tap on a plant chooses its verse, a tap on a plant of the chosen verse
+ * lets it go, and a tap on another moves the choice: one verse at most, the
+ * screen's own state, as are the ask and the alert, all dropped when the
+ * reader leaves. With the passages unread it offers no add and no remove.
+ * From a tap of the ask's `Remove` until its answer, no tap of a field
+ * control changes anything, even two in one turn, and each shows as
+ * disabled.
  */
 
 import { useAtomSet } from '@effect/atom-react';
-import { Option } from 'effect';
+import { Array as Arr, Option } from 'effect';
 import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 
 import { uprootPassage } from '../app';
 import { LIMIT_LINE } from '../chooser';
-import {
-  harvestText,
-  sownText,
-  verseNumberOf,
-  type Field,
-  type FieldPlant,
-  type FieldRow,
-} from '../field';
-import { STAGES } from '../garden';
-import { MOST_PASSAGES, passageReference, type PassagesView, type Range } from '../passages';
+import { harvestText, sownText, type Field } from '../field';
+import type { Furrow, Greeting } from '../home';
 import { themed, useThemed } from '../look';
-import { PlantMark, useLook } from '../sayit/draw';
+import { MOST_PASSAGES, passageReference, type PassagesView, type Range } from '../passages';
+import { useLook } from '../sayit/draw';
+import { Foot, type Chosen } from './foot';
+import { AddRow, Control, FurrowRow, Icon, Legend } from './plot';
 
-/** One verse: its plant over its number, one labelled image. */
-function Plot({ plant }: { readonly plant: FieldPlant }) {
-  const styles = useThemed(sheets);
-  return (
-    <View
-      testID="field-plant"
-      role="img"
-      accessible
-      aria-label={`${plant.reference}, ${plant.stage}`}
-      style={styles.plot}
-    >
-      <PlantMark stage={plant.stage} />
-      <Text aria-hidden style={styles.number}>
-        {verseNumberOf(plant.reference)}
-      </Text>
-    </View>
-  );
-}
-
-/**
- * One passage: its title and its verses' plots. The title is plain text, seen
- * and read as stored, never a heading: a reference may spell `Your field` or
- * `Today`, and the field holds one heading, its own.
- */
-function Row({
-  row,
-  pending,
-  onRemove,
-}: {
-  readonly row: FieldRow;
-  readonly pending: boolean;
-  readonly onRemove: (range: Range) => void;
-}) {
-  const styles = useThemed(sheets);
-  return (
-    <View testID="row" style={styles.card}>
-      <View style={styles.rowHead}>
-        <Text testID="row-title" style={styles.title}>
-          {row.title}
-        </Text>
-        {Option.match(Option.fromUndefinedOr(row.range), {
-          onNone: () => false,
-          onSome: (range) => (
-            <Control
-              label={`Remove ${passageReference(range)}`}
-              shown="Remove"
-              pending={pending}
-              onPress={() => onRemove(range)}
-            />
-          ),
-        })}
-      </View>
-      <View style={styles.plots}>
-        {row.plants.map((plant, index) => (
-          <Plot key={index} plant={plant} />
-        ))}
-      </View>
-    </View>
-  );
-}
-
-/** The four stages as the plants draw them, named, hidden from the screen reader as one more image would be. */
-function Legend() {
-  const styles = useThemed(sheets);
-  return (
-    <View style={styles.legendPlace}>
-      <View aria-hidden style={styles.legend}>
-        {STAGES.map((stage) => (
-          <View key={stage} style={styles.key}>
-            <PlantMark stage={stage} />
-            <Text style={styles.keyName}>{stage}</Text>
-          </View>
-        ))}
-      </View>
-      <Text style={styles.caption}>Mark 4:28</Text>
-    </View>
-  );
-}
-
-/** A pill of the field, outlined in ink so it shows on the ground and on a card: at least 44 pt tall, named `label`, showing `shown`, disabled while a remove is pending. */
-function Control({
-  label,
-  shown,
-  pending,
-  onPress,
-}: {
-  readonly label: string;
-  readonly shown: string;
-  readonly pending: boolean;
-  readonly onPress: () => void;
-}) {
-  const look = useLook();
-  const styles = useThemed(sheets);
-  return (
-    <Pressable
-      role="button"
-      aria-label={label}
-      disabled={pending}
-      onPress={onPress}
-      style={({ pressed }) => [styles.pill, pressed && look.pressed, pending && look.disabled]}
-    >
-      <Text style={styles.pillText}>{shown}</Text>
-    </Pressable>
-  );
-}
-
-/** The bar's own state: the passage a row's `Remove` asks about, the alert of a remove that did not land, and whether a remove is pending. */
+/** The bar's own state: the passage a furrow's `Remove` asks about, the alert of a remove that did not land, and whether a remove is pending. */
 interface Bar {
   readonly ask: Option.Option<Range>;
   readonly alert: Option.Option<string>;
@@ -165,7 +51,11 @@ const alertAfter = (answer: string, range: Range): Option.Option<string> => {
   return Option.some(`${passageReference(range)} was not removed. Try again.`);
 };
 
-/** What the bar offers after `‹ Today` with the passages read: the ask while one shows, else `Add a passage` under 3 held, else the limit line. */
+/** Whether the bar offers `Add verses`: the passages read, no ask showing, and fewer than 3 held. */
+const offersAdd = (passages: PassagesView, bar: Bar) =>
+  passages._tag === 'Read' && Option.isNone(bar.ask) && passages.passages.length < MOST_PASSAGES;
+
+/** What the bar offers after `‹ Today` with the passages read: the ask while one shows, else `Add verses` under 3 held, else the limit line. */
 function Offer({
   bar,
   held,
@@ -205,27 +95,69 @@ function Offer({
           </Text>
         );
       return (
-        <Control label="Add a passage" shown="Add a passage" pending={false} onPress={onAdd} />
+        <Control
+          testID="add-verses"
+          label="Add verses"
+          shown="Add verses"
+          icon="add"
+          pending={false}
+          onPress={onAdd}
+        />
       );
     },
   });
 }
 
+/** The chosen verse as the foot shows it: none when no furrow holds it now. */
+const chosenIn = (
+  furrows: readonly Furrow[],
+  chosen: Option.Option<string>,
+  startable: (verse: string) => boolean,
+): Option.Option<Chosen> =>
+  Option.flatMap(chosen, (reference) =>
+    Option.map(
+      Arr.findFirst(
+        furrows.flatMap((furrow) => furrow.plants),
+        (plant) => plant.reference === reference,
+      ),
+      (plant): Chosen => ({
+        reference,
+        stage: plant.stage,
+        startable: startable(reference),
+      }),
+    ),
+  );
+
 /**
- * The field screen over `field` and the reader's `passages`, with the way
- * back to Today, over passages read the way to the chooser (`onAdd`), and
- * in its foot the way to About (`onAbout`).
+ * The field screen over `field` (its days sown and harvest), its `furrows`
+ * and the reader's `passages`, greeting by `greeting`; the foot's counts
+ * line `counts` (none before a plan), `Begin` when `begin`, and `Start here`
+ * on a chosen verse `startable` offers. `onToday` is the way back and
+ * `Begin`'s, `onStart` Start here's, `onAdd` the way to the chooser and
+ * `onAbout` the way to About.
  */
 export function FieldScreen({
   field,
+  furrows,
   passages,
+  greeting,
+  counts,
+  begin,
+  startable,
   onToday,
+  onStart,
   onAdd,
   onAbout,
 }: {
   readonly field: Field;
+  readonly furrows: readonly Furrow[];
   readonly passages: PassagesView;
+  readonly greeting: Greeting;
+  readonly counts: Option.Option<string>;
+  readonly begin: boolean;
+  readonly startable: (verse: string) => boolean;
   readonly onToday: () => void;
+  readonly onStart: (verse: string) => void;
   readonly onAdd: () => void;
   readonly onAbout: () => void;
 }) {
@@ -233,14 +165,26 @@ export function FieldScreen({
   const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
   const [bar, setBar] = useState<Bar>(IDLE);
+  const [choice, setChoice] = useState<Option.Option<string>>(Option.none());
   const busy = useRef(false);
   const uproot = useAtomSet(uprootPassage, { mode: 'promise' });
+  const chosen = chosenIn(furrows, choice, startable);
+  const shownChoice = Option.map(chosen, (verse) => verse.reference);
   /** A tap of a field control: nothing while a remove is pending, else the alert clears and `then` runs. */
   const tapped = (then: () => void) => {
     if (busy.current) return;
     setBar((now) => ({ ...now, alert: Option.none() }));
     then();
   };
+  const onChoose = (reference: string) =>
+    tapped(() =>
+      setChoice(
+        Option.match(shownChoice, {
+          onNone: () => Option.some(reference),
+          onSome: (now) => Option.filter(Option.some(reference), (next) => next !== now),
+        }),
+      ),
+    );
   const onRemove = (range: Range) =>
     tapped(() => setBar({ ask: Option.some(range), alert: Option.none(), pending: false }));
   const onConfirm = (range: Range) => {
@@ -262,7 +206,11 @@ export function FieldScreen({
           hitSlop={10}
           disabled={bar.pending}
           onPress={() => tapped(onToday)}
-          style={({ pressed }) => [styles.back, pressed && look.pressed]}
+          style={({ pressed }) => [
+            styles.back,
+            pressed && look.pressed,
+            bar.pending && look.disabled,
+          ]}
         >
           <Text style={styles.backText}>‹ Today</Text>
         </Pressable>
@@ -288,6 +236,10 @@ export function FieldScreen({
         style={styles.scroll}
         contentContainerStyle={[look.content, styles.content, { paddingTop: 8, paddingBottom: 24 }]}
       >
+        <View testID="greeting" style={styles.greeting}>
+          <Icon name={greeting.icon} size={28} />
+          <Text style={styles.greetingText}>{greeting.words}</Text>
+        </View>
         <View style={styles.head}>
           <Text role="heading" aria-level={1} style={look.title}>
             Your field
@@ -299,19 +251,31 @@ export function FieldScreen({
             {harvestText(field.harvest)}
           </Text>
         </View>
-        {field.rows.map((row, index) => (
-          <Row key={index} row={row} pending={bar.pending} onRemove={onRemove} />
+        <Text testID="hint" style={styles.hint}>
+          A gold dot marks a plant ready today. Tap one to start there.
+        </Text>
+        {furrows.map((furrow, index) => (
+          <FurrowRow
+            key={index}
+            furrow={furrow}
+            chosen={shownChoice}
+            pending={bar.pending}
+            onChoose={onChoose}
+            onRemove={onRemove}
+          />
         ))}
+        {offersAdd(passages, bar) && <AddRow onAdd={() => tapped(onAdd)} />}
         <Legend />
       </ScrollView>
-      <View style={[styles.foot, { paddingBottom: insets.bottom + 8 }]}>
-        <Control
-          label="About"
-          shown="About"
-          pending={bar.pending}
-          onPress={() => tapped(onAbout)}
-        />
-      </View>
+      <Foot
+        chosen={chosen}
+        counts={counts}
+        begin={begin}
+        pending={bar.pending}
+        onBegin={() => tapped(onToday)}
+        onStart={(reference) => tapped(() => onStart(reference))}
+        onAbout={() => tapped(onAbout)}
+      />
     </View>
   );
 }
@@ -321,50 +285,14 @@ const sheets = themed((color, face) =>
     bar: { paddingHorizontal: 24, paddingBottom: 8, gap: 8 },
     scroll: { flex: 1 },
     content: { gap: 16 },
-    foot: { paddingHorizontal: 24, paddingTop: 8 },
     back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
     backText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
-    pill: {
-      alignSelf: 'flex-start',
-      minHeight: 44,
-      paddingHorizontal: 18,
-      borderRadius: 22,
-      borderWidth: 1.5,
-      borderColor: color.ink,
-      justifyContent: 'center',
-    },
-    pillText: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
     line: { fontFamily: face, fontSize: 15, lineHeight: 21, fontWeight: '600', color: color.ink },
     ask: { gap: 8 },
     answers: { flexDirection: 'row', gap: 8 },
-    rowHead: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-    },
+    greeting: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    greetingText: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.sun },
     head: { gap: 6 },
-    card: {
-      gap: 10,
-      paddingVertical: 14,
-      paddingHorizontal: 16,
-      borderRadius: 20,
-      backgroundColor: color.card,
-    },
-    title: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
-    plots: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-    plot: { width: 44, alignItems: 'center', gap: 2 },
-    number: { fontFamily: face, fontSize: 11, color: color.ink },
-    legendPlace: { alignItems: 'center', gap: 6, marginTop: 4 },
-    legend: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      columnGap: 12,
-      rowGap: 4,
-    },
-    key: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-    keyName: { fontFamily: face, fontSize: 12, color: color.ink },
-    caption: { fontFamily: face, fontStyle: 'italic', fontSize: 13, color: color.ink },
+    hint: { fontFamily: face, fontSize: 13, lineHeight: 18, color: color.quiet },
   }),
 );
