@@ -5331,6 +5331,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The walk judged the trip's end by what home showed, and held no model of the plan the tap made.
 - **Guard:** code: `apps/heartseed/src/look/today.test.tsx` `holds every frame of generated walks (Say it heard, missed or unheard, a peek, a grade, Next to done, Minutes ending where its plan offers, the field and back) to the oracle for the system’s last value`
 
+### heartseed-choices-seam-deleted
+
+- **Date:** 2026-11-09
+- **Kind:** owner
+- **Said:** "chose: A temporary `appLayer` or prop seam hides Today's choices from S1 on (4a's `opening` pattern), and the rigs move behind it."
+- **Source:** hymnapp/hssettings/split.md sq3 (b), owner 2026-11-09
+- **Wrong:** for S1 to S5b, `apps/heartseed/src/settings/choices.tsx` kept Today's row of choices behind a context that only test rigs provided, and `rootFaults` let a host the seam registered show them on Today; left in place, it lets a rig pass a Today that shows the choices.
+- **Cause:** the owner hid the choices on Today before the rigs moved to the Settings sheet, so the rigs mounted through a seam until the last of them moved.
+- **Guard:** code: `apps/heartseed/scripts/seam-gone.test.ts` `no tracked file of the package names the seam of Today’s choices, in its path or its contents`
+
 ### gate-ends-a-hung-task
 
 - **Date:** 2026-11-09

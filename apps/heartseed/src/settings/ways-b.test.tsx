@@ -12,7 +12,7 @@
  * minute, and Today on an unread garden. Today shows no `Minutes` and no
  * `Voice`: the sheet's choices are the only ones, and Today's counts line
  * follows the sheet's minutes. The session rig's launches here mount the
- * root without the choices seam, so the root's rule holds Today strictly.
+ * app's root, so the root's rule holds Today strictly.
  */
 
 import { describe, expect, it } from 'bun:test';

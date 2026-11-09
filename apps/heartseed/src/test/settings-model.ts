@@ -21,8 +21,8 @@
  * A device holds the app's passage and a stored passage of 1-12 verses
  * (Psalm 119), every verse planted three days before the first launch, so
  * every verse is due and 2 min and 20 min make different plans. Each launch
- * goes through the session rig (`src/test/session-rig.tsx`) without the
- * choices seam, so every frame holds the root's rule strictly (no `Minutes`
+ * goes through the session rig (`src/test/session-rig.tsx`), which mounts the
+ * app's root, so every frame holds the root's rule strictly (no `Minutes`
  * and no `Voice` on any screen, Today's included), and every document frame
  * holds the sheet's rule (`src/test/settings-rig.ts`) in the model's scheme.
  * After each command the sheet's checked minutes, `Voice`'s value and the
