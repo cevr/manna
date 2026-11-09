@@ -2,17 +2,17 @@
 
 /**
  * About as a reader and a screen reader meet it, through the field bar's
- * rig (`src/test/bar-rig.tsx`), which holds every frame to the screens'
- * rules (one heading, no control but a list control inside a scroll view,
- * every text at AA, every field control disabled while a remove is
- * pending, `Listening` only on Today).
+ * rig (`src/test/bar-rig.tsx`), which holds every frame to the root's frame
+ * rule and the screens' rules (one heading, no control but a list control
+ * inside a scroll view, every text at AA, every field control disabled
+ * while a remove is pending, `Listening` only on Today).
  *
- * From Today, `Your field`: the field's foot holds one `About` button
+ * The launch opens home: the field's foot holds one `About` button
  * outside every scroll view, at least 44 tall; its tap shows the one
  * heading `About`, the credits word for word, the licence equal to
  * `native/natural/kokoro/LICENSE` byte for byte, one `Your field` button
  * outside the scroll view and no `Voice`, each text at AA; the way back
- * shows the field, and a relaunch opens Today; nothing is written. Its foot,
+ * shows the field, and a relaunch opens home again; nothing is written. Its foot,
  * outside every scroll view, holds the radio group `Appearance`: System,
  * Light and Dark, each at least 44 tall, the stored word checked (System
  * for a near miss), each text at AA; a tap stores its word under the
@@ -77,7 +77,7 @@ const faint = (host: Element) =>
     .filter((node) => contrastOf(node) < AA)
     .map((node) => text(node).slice(0, 20));
 
-/** A launch over a planted verse, so Today opens, with the reader's Voice Off under the old key, and `extra` records. */
+/** A launch over a planted verse, so home opens, with the reader's Voice Off under the old key, and `extra` records. */
 const launchWith = (extra: readonly (readonly [string, string])[] = []) =>
   device.launch([
     record(recallOf('Made 1:1', Date.UTC(2026, 9, 1), 3, 0)),
@@ -85,15 +85,17 @@ const launchWith = (extra: readonly (readonly [string, string])[] = []) =>
     ...extra,
   ]);
 
-/** Taps through Today's `Your field` and waits for the field. */
+/** Waits for the launch's home, its foot drawn. */
 const toField = async (rig: Bar) => {
-  expect(await rig.until(() => named(rig, 'Your field').length > 0)).toBe(true);
-  await rig.tap('Your field');
-  expect(await rig.until(() => headings(rig).join('|') === 'Your field')).toBe(true);
+  expect(
+    await rig.until(
+      () => headings(rig).join('|') === 'Your field' && named(rig, 'About').length > 0,
+    ),
+  ).toBe(true);
 };
 
 describe('About', () => {
-  it('opens from the field’s foot: the credits word for word, the licence whole, the way back, a relaunch on Today, nothing written', async () => {
+  it('opens from the field’s foot: the credits word for word, the licence whole, the way back, a relaunch on home, nothing written', async () => {
     launchWith();
     const start = new Map(device.disk);
     const rig = await mountBar(0, false);
@@ -145,9 +147,9 @@ describe('About', () => {
 
     device.launch();
     const again = await mountBar(0, false);
-    expect(await again.until(() => headings(again).includes('Today'))).toBe(true);
+    expect(await again.until(() => headings(again).length > 0)).toBe(true);
     expect({ headings: headings(again), faults: again.faults }).toEqual({
-      headings: ['Today'],
+      headings: ['Your field'],
       faults: [],
     });
     await again.leave();

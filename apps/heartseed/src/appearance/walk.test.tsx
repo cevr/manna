@@ -4,8 +4,9 @@
  * The reader's appearance as a model-based walk through the bar rig
  * (`src/test/bar-rig.tsx`): the root over the device's store, launched over
  * a stored text (a missing key, each word, a near miss, another text) and
- * either system, then generated commands: a choice on About (landed, or
- * refused by the store), a flip of the system, a relaunch and the field.
+ * either system, landing on home, then generated commands: a choice on
+ * About (landed, or refused by the store), a flip of the system, a
+ * relaunch and the field.
  * The model is the stored text, the choice read or made and the system;
  * every frame (each DOM mutation batch) holds the frame oracle
  * (`src/test/look.ts`) for the scheme the model names (System's until the
@@ -77,7 +78,7 @@ const radios = (rig: Bar) =>
     Object.values(LABELS).includes(labelOf(node)),
   );
 
-/** A launch over a planted verse, so Today opens, with the voice Off, and the key's text when stored. */
+/** A launch over a planted verse, so home opens, with the voice Off, and the key's text when stored. */
 const launchOver = (stored: string | undefined) =>
   device.launch([
     record(recallOf('Made 1:1', Date.UTC(2026, 9, 1), 3, 0)),
@@ -121,11 +122,11 @@ const commitProbe = (watched: Watched) => {
   return <Committed />;
 };
 
-/** Mounts the root over the disk as it stands, every frame and every commit held to the model, and waits for Today. */
+/** Mounts the root over the disk as it stands, every frame and every commit held to the model, and waits for home. */
 const mount = async (walk: Walk) => {
   walk.rig = await mountBar(0, false, commitProbe(walk));
   walk.frames = watchLook(walk.rig.host, shownOf(walk));
-  await walk.rig.until(() => headingOf(walk.rig) === 'Today');
+  await walk.rig.until(() => headingOf(walk.rig) === 'Your field');
 };
 
 /** Stops the frame watch and keeps its faults. */
@@ -230,7 +231,7 @@ const walkOf = async (seed: number, steps: number, reached: Set<string>) => {
   const walk: Walk = { ...watched, next, rig, frames: watchLook(rig.host, () => system) };
   walk.frames.stop();
   walk.frames = watchLook(rig.host, shownOf(walk));
-  await rig.until(() => headingOf(rig) === 'Today');
+  await rig.until(() => headingOf(rig) === 'Your field');
   await check(walk, 'launch');
   for (let n = 0; n < steps; n++) {
     if (await perform(walk, COMMANDS[below(next, COMMANDS.length)] ?? 'field')) continue;

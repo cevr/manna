@@ -3,7 +3,8 @@
 /**
  * The walks `src/look/screens.test.tsx` (light) and
  * `src/look/screens-dark.test.tsx` (dark) run, one scheme each, so each
- * part stays inside its time budget: the field, About, the chooser and
+ * part stays inside its time budget: the field (the launch's home), Today
+ * by `Begin` and home again by `Your field`, About, the chooser and
  * When I need… in the scheme, and across a flip of the system on each,
  * through the bar rig and the need rig, which hold every frame (each DOM
  * mutation batch) to the frame oracle (`look.ts`) for the system's scheme
@@ -58,6 +59,8 @@ const held = async (
 /** The places the field walk must reach in each scheme. */
 export const FIELD_PLACES = [
   'the field',
+  'Today',
+  'home from Today',
   'every stage',
   'the ask',
   'a remove landed',
@@ -88,9 +91,10 @@ export const walkFieldScreens = async (scheme: Scheme) => {
     reached.push(where);
     await held(rig, scheme, where, report, presses);
   };
-  await rig.until(() => headingOf(rig.host) === 'Today');
-  await held(rig, scheme, 'Today', report, presses);
-  await step('Your field', 'Your field', 'the field');
+  if (await rig.until(() => headingOf(rig.host) === 'Your field')) reached.push('the field');
+  await held(rig, scheme, 'the field', report, presses);
+  await step('Begin', 'Today', 'Today');
+  await step('Your field', 'Your field', 'home from Today');
   const drawn = new Set(
     [...rig.host.querySelectorAll('img')].flatMap(
       (node) =>

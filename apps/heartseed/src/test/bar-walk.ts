@@ -10,14 +10,16 @@
  * planted in half, and a stored value (`storedOf`: no key, `[]`, a garbled
  * value, or 1-6 passages with equal ones, overlaps, one over the promise's
  * verse and a Psalms 119 range past 20 verses), a verse of some held
- * passages planted, and 0-3 failed reads of the passages' key alone. Each
- * step, over passages read: a row's `Remove` (any of equal rows), then
- * `Keep`, another row's `Remove`, leaving, or the ask's `Remove` (its write
- * landing or refused; once, twice in one turn, or with `Today` or `Keep` in
- * the same turn; a refusal retried in half); `Today` and back; or
- * `Add verses` (the bar's or the row's), then back to the field or a verse
- * planted. Over unread
- * passages, `Today` and back. After every tap the screen is the model's,
+ * passages planted, and 0-3 failed reads of the passages' key alone. Its
+ * launch lands on home. Each step, over passages read: a row's `Remove`
+ * (any of equal rows), then `Keep`, another row's `Remove`, leaving, or the
+ * ask's `Remove` (its write landing or refused; once, twice in one turn, or
+ * with `When I need…` or `Keep` in the same turn; a refusal retried in
+ * half); a round trip; or `Add verses` (the bar's or the row's), then back
+ * to the field or a verse planted. Over unread passages, a round trip. A
+ * round trip leaves by `Begin` when home offers it, Today then showing
+ * `Say it` or `Next`, else by `When I need…`, and comes back by
+ * `Your field`; over unread passages `Begin` is owed. After every tap the screen is the model's,
  * the stored passages are the start's until a change lands and the model's
  * list after, no other key is written, and every frame kept the rules.
  */
@@ -45,6 +47,8 @@ import {
 import { CORPUS, countIn, storedOf } from './passages-rig';
 
 const PROMISE = passage.reference;
+
+const NEED = 'When I need…';
 
 /** `seed` mixed, so neighbouring seeds start the generator far apart. */
 const mixed = (seed: number) => {
@@ -130,7 +134,7 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
   let held: Held = readRule(CORPUS, raw, reads);
   let written = false;
   let bar: Asking = QUIET;
-  let screen: 'field' | 'Today' | 'Add a passage' = 'Today';
+  let screen: 'field' | 'Today' | typeof NEED | 'Add a passage' = 'field';
   const reached = launchCases(drawn, held);
   const faults: string[] = [];
   const log: string[] = [];
@@ -173,12 +177,27 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
     await settle(`ask ${spanRef(span)}#${nth}`);
     return span;
   };
+  /** Leaves home and comes back by `Your field`: by `Begin` when home offers it (Today then shows `Say it` or `Next`), else by `When I need…`; over unread passages `Begin` is owed (rq1 (a)). */
   const round = async (label: string) => {
     if (bar.ask !== undefined) reached.add('ask:dropped by leaving');
     if (bar.alert !== undefined) reached.add('alert:dropped by leaving');
-    await rig.tap('Today');
-    screen = 'Today';
-    await settle(`${label}: Today`);
+    const begins = rig.control('Begin') !== undefined;
+    if (held.tag === 'Unread' && !begins)
+      faults.push(`${label}: no Begin over unread passages after ${log.slice(-5).join(' > ')}`);
+    if (begins) {
+      reached.add('round:by Begin');
+      await rig.tap('Begin');
+      screen = 'Today';
+      await settle(`${label}: Begin`);
+      const acts = ['Say it', 'Next'].some((name) => rig.control(name) !== undefined);
+      if (faults.length === 0 && !acts)
+        faults.push(`${label}: Today by Begin shows neither Say it nor Next`);
+    } else {
+      reached.add('round:by When I need…');
+      await rig.tap(NEED);
+      screen = NEED;
+      await settle(`${label}: ${NEED}`);
+    }
     await rig.tap('Your field');
     screen = 'field';
     bar = QUIET;
@@ -192,11 +211,11 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
       .map((recall) => recall.reference)
       .filter((reference) => named([span], reference));
     device.fail('set', refused ? 1 : 0);
-    const ways = ['once', 'twice', 'then Today', 'then Keep'] as const;
+    const ways = ['once', 'twice', `then ${NEED}`, 'then Keep'] as const;
     const way = ways[how] ?? 'once';
     if (way === 'once') await rig.tap('Remove');
     if (way === 'twice') await rig.tap('Remove', 0, true);
-    if (way === 'then Today') await rig.tapBoth('Remove', 'Today');
+    if (way === `then ${NEED}`) await rig.tapBoth('Remove', NEED);
     if (way === 'then Keep') await rig.tapBoth('Remove', 'Keep');
     const answer = removeRule(held, span, refused);
     reached.add(`remove:${answer.outcome}`);
@@ -273,12 +292,7 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
     }
     await settle(`plant ${spanRef({ ...target, first: verse, last: verse })}`);
   };
-  screen = 'Today';
   await settle('launch');
-  await rig.until(() => rig.control('Your field') !== undefined);
-  await rig.tap('Your field');
-  screen = 'field';
-  await settle('the field');
   if (passages().length >= 3) reached.add('limit:at launch');
   for (let step = 0; step < steps && faults.length === 0; step++) {
     const count = passages().length;

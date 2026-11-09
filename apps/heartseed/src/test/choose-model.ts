@@ -191,7 +191,7 @@ export interface Asking {
 /** The bar with no ask and no alert, as the field opens. */
 export const QUIET: Asking = { ask: undefined, alert: undefined };
 
-/** The field as the reader gets it: each row's title, its plants' labels (readiness cut off) and the controls inside it but its plants; how many `Add verses` show (the bar's and the row's); the limit line, the ask and the alerts, `undefined` for none. */
+/** The field as the reader gets it: each row's title, its plants' labels (readiness cut off) and the controls inside it but its plants; how many `Add verses` show (the bar's and the row's) and how many `When I need…`; the limit line, the ask and the alerts, `undefined` for none. */
 export interface FieldSeen {
   readonly rows: ReadonlyArray<{
     readonly title: string;
@@ -199,6 +199,7 @@ export interface FieldSeen {
     readonly controls: ReadonlyArray<string>;
   }>;
   readonly add: number;
+  readonly need: number;
   readonly limit: string | undefined;
   readonly ask: string | undefined;
   readonly alert: string | undefined;
@@ -218,7 +219,9 @@ const versesOfSpan = (span: Span) =>
  * `Remove <reference>`. With the passages read, the bar holds the ask while
  * there is one, else `Add verses` under 3 held (in the bar and as the row
  * at the field's end, so two), else the limit line; unread, it holds
- * neither and no row a `Remove`.
+ * neither and no row a `Remove`. The bar's one `When I need…` shows once a
+ * plan is made (hshomeroot R5), which is at home's first show with the
+ * passages read, and never over unread passages (no plan reads them).
  */
 export const fieldWant = (
   records: ReadonlyArray<Recall>,
@@ -243,6 +246,7 @@ export const fieldWant = (
       controls: index >= 1 && index <= passages.length ? [`Remove ${row.title}`] : [],
     })),
     add: read && asking === undefined && passages.length < 3 ? 2 : 0,
+    need: read ? 1 : 0,
     limit: read && asking === undefined && passages.length >= 3 ? LIMIT : undefined,
     ask: asking === undefined ? undefined : askText(spanRef(asking)),
     alert: bar.alert,

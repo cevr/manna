@@ -11,15 +11,17 @@
  * kept), a voice that never speaks, a silent chime and haptics, and
  * Effect's `Clock` frozen where the test sets it.
  *
- * Every frame (each DOM mutation batch) is held to the screens' rules:
+ * Every frame (each DOM mutation batch) is held to the root's frame rule
+ * (`rootFaults`, over the garden read or not) and to the screens' rules:
  * - at most one heading;
  * - `Listening` only on Today, and never beside `When I need…`;
+ * - `When I need…` only on home;
  * - on When I need…: no control inside a scroll view but a promise, no
- *   node of Today or the field, the bar's `Today` outside the scroll view,
- *   every control at least 44 tall, every text at AA on what lies behind
- *   it;
- * - on Today: `When I need…` never inside the scroll view, at least 44
- *   tall, and no node of When I need…;
+ *   node of Today or the field, the bar's `Your field` outside the scroll
+ *   view, no `Say it` or `Next`, every control at least 44 tall, every
+ *   text at AA on what lies behind it;
+ * - on home: `When I need…` never inside the scroll view, at least 44 tall;
+ * - off When I need…, no card of it;
  * - any check the launch is given (the home walk's `homeFaults` on the
  *   field).
  * Each fault is kept with the frame's heading.
@@ -43,6 +45,7 @@ import { clockOf, type Time } from './clock';
 import { AA, contrastOf } from './contrast';
 import { keyOf } from './garden-model';
 import { lookFaults } from './look';
+import { rootFaults } from './root-rule';
 
 const CONTROLS = '[role="button"],[role="radio"],[role="switch"],[role="checkbox"],input,a[href]';
 
@@ -140,6 +143,8 @@ const faint = (host: Element) =>
 
 const NEED = 'When I need…';
 
+const HOME = 'Your field';
+
 /** What one frame shows wrong of the screens' rules (above). */
 export const needFaults = (host: Element): string[] => {
   const headings = [...host.querySelectorAll('[role="heading"]')].map(textOf);
@@ -149,13 +154,15 @@ export const needFaults = (host: Element): string[] => {
   if (headings.length > 1) out.push(`${headings.length} headings: ${headings.join('|')}`);
   if (names.includes('Listening') && !headings.includes('Today')) out.push('Listening off Today');
   if (names.includes('Listening') && names.includes(NEED)) out.push(`Listening beside ${NEED}`);
-  if (names.includes(NEED) && !headings.includes('Today')) out.push(`${NEED} off Today`);
+  if (names.includes(NEED) && !headings.includes(HOME)) out.push(`${NEED} off home`);
   if (headings.includes(NEED)) out.push(...onNeedFaults(host, controls));
-  if (headings.includes('Today')) out.push(...onTodayFaults(host, controls));
+  else if (host.querySelector('[data-testid="need-card"]') !== null)
+    out.push(`a need card on ${headings.join('|') || 'the pending frame'}`);
+  if (headings.includes(HOME)) out.push(...onHomeFaults(controls));
   return out;
 };
 
-/** What a frame of When I need… shows wrong: a control in the scroll view but a promise, one under 44, no bar `Today`, a node of Today or the field, or a faint text. */
+/** What a frame of When I need… shows wrong: a control in the scroll view but a promise, one under 44, no bar `Your field`, a node of Today or the field, or a faint text. */
 const onNeedFaults = (host: Element, controls: readonly Element[]) => {
   const out: string[] = [];
   for (const node of controls) {
@@ -163,24 +170,23 @@ const onNeedFaults = (host: Element, controls: readonly Element[]) => {
       out.push(`a control in the scroll view: ${nameOf(node)}`);
     if (!tall(node)) out.push(`a control under 44: ${nameOf(node)}`);
   }
-  if (!controls.some((node) => nameOf(node) === 'Today' && !inScroll(node)))
-    out.push('no bar Today');
+  if (!controls.some((node) => nameOf(node) === HOME && !inScroll(node)))
+    out.push(`no bar ${HOME}`);
   for (const id of ['session', 'reference', 'row', 'sown'])
     if (host.querySelector(`[data-testid="${id}"]`) !== null) out.push(`a ${id} node on ${NEED}`);
-  if (controls.some((node) => ['Say it', 'Next', 'Your field'].includes(nameOf(node))))
+  if (controls.some((node) => ['Say it', 'Next'].includes(nameOf(node))))
     out.push(`a Today control on ${NEED}`);
   for (const text of faint(host)) out.push(`faint: ${text}`);
   return out;
 };
 
-/** What a frame of Today shows wrong of When I need…: its way in the scroll view or under 44, or a card of it. */
-const onTodayFaults = (host: Element, controls: readonly Element[]) => {
+/** What a frame of home shows wrong of When I need…: its way in the scroll view or under 44. */
+const onHomeFaults = (controls: readonly Element[]) => {
   const out: string[] = [];
   for (const node of controls.filter((each) => nameOf(each) === NEED)) {
     if (inScroll(node)) out.push(`${NEED} in the scroll view`);
     if (!tall(node)) out.push(`${NEED} under 44`);
   }
-  if (host.querySelector('[data-testid="need-card"]') !== null) out.push('a need card on Today');
   return out;
 };
 
@@ -206,6 +212,7 @@ export const launchNeed = async (
   const layer = (promises === null ? appLayer(parts) : appLayer({ ...parts, promises })).pipe(
     Layer.provideMerge(Layer.merge(clockOf(time), Logger.layer([]))),
   );
+  const garden = device.unread ? 'unread' : 'read';
   const host = document.createElement('div');
   document.body.append(host);
   const faults: string[] = [];
@@ -220,6 +227,7 @@ export const launchNeed = async (
     if (names.includes('Listening')) frames.listening += 1;
     if (names.includes(NEED)) frames.offer += 1;
     for (const fault of [
+      ...rootFaults(host, garden),
       ...needFaults(host),
       ...lookFaults(host, undefined, looks),
       ...check(host),

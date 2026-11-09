@@ -44,6 +44,7 @@
     "test:field-again": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/walk-again.test.tsx",
     "test:field-bar": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/bar-remove.test.tsx ./src/field/bar-twice.test.tsx",
     "test:field-bar-lists": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/bar-lists.test.tsx",
+    "test:field-bar-adds": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/bar-adds.test.tsx",
     "test:field-bar-kinds": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/bar-kinds.test.tsx",
     "test:field-bar-held": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/field/bar-held.test.tsx",
     "test:session": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/session.property.test.ts ./src/session/service.test.ts ./src/session/phrases.property.test.ts",

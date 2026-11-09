@@ -6,19 +6,21 @@
  * happy-dom (react-native-web) under the app's own layer over the app's
  * real store on the device's `One.Database` (`one.tsx`), whose read of the
  * passages' key alone fails `passageReads` times, so the garden reads
- * whole while the passages may read as `Unread`.
+ * whole while the passages may read as `Unread`. A launch lands on home.
  *
- * Every frame (each DOM mutation batch) is held to the screens' rules and
- * each fault kept (`barFaults`): at most one heading; on Today, the footer
+ * Every frame (each DOM mutation batch) is held to the root's frame rule
+ * (`rootFaults`, over the garden read) and to the screens' rules, and each
+ * fault kept (`barFaults`): at most one heading; on Today, the footer
  * rule (`footerFaults`: no control but a missed word's mark inside the scroll
  * view) and no node of the field or the chooser; off Today, no control but a
  * list control (a book, a chapter, a verse, a plant, a row's own `Remove`,
- * the `Add verses` row) and no alert or limit line inside a scroll view;
+ * the `Add verses` row, a promise of When I need…) and no alert or limit
+ * line inside a scroll view;
  * `Plant` only over a shown reference of 1-20 verses; never `Add verses`
  * beside the limit line or with 3 rows' `Remove`s, and the row's
  * `Add verses` exactly when the bar's shows; over unread passages, no add,
  * remove, `Keep`, `Plant` or limit line; while the ask's `Remove` is
- * disabled (a remove pending), every other field control (`Today`, `Keep`,
+ * disabled (a remove pending), every other field control (`When I need…`, `Keep`,
  * a row's `Remove`, every plant, `Begin`, `Start here …`, the foot's
  * `About`) disabled too and no `Add verses`; `Listening` only on Today; on
  * the field, home A's layout rules (`homeFaults`); and every seen text of
@@ -45,16 +47,17 @@ import { clockOf, type Time } from './clock';
 import { homeFaults, scrolled } from './field-rig';
 import { lookFaults } from './look';
 import { KEY } from './passages-model';
+import { rootFaults } from './root-rule';
 import { footerFaults } from './run-rig';
 
 const CONTROL = '[role="button"],[role="radio"],[role="checkbox"],[role="switch"]';
 
 const idOf = (node: Element) => node.getAttribute('data-testid') ?? '';
 
-/** A list control: a book, a chapter, a verse, a plant, a row's own `Remove`, or the `Add verses` row; these scroll with their list by nature. */
+/** A list control: a book, a chapter, a verse, a plant, a row's own `Remove`, the `Add verses` row, or a promise of When I need…; these scroll with their list by nature. */
 const listed = (node: Element) => {
   const id = idOf(node);
-  if (['book', 'chapter', 'verse', 'field-plant', 'add-row'].includes(id)) return true;
+  if (['book', 'chapter', 'verse', 'field-plant', 'add-row', 'promise'].includes(id)) return true;
   return labelOf(node).startsWith('Remove ') && node.closest('[data-testid="row"]') !== null;
 };
 
@@ -66,6 +69,8 @@ const READY = ', ready today';
 const unready = (label: string) => (label.endsWith(READY) ? label.slice(0, -READY.length) : label);
 
 const ADD = 'Add verses';
+
+const NEED = 'When I need…';
 
 /** The field as the reader gets it, or the heading shown (`no heading` before one) off the field. */
 export const readBar = (host: Element): FieldSeen | string => {
@@ -89,6 +94,7 @@ export const readBar = (host: Element): FieldSeen | string => {
         .map(labelOf),
     })),
     add: [...host.querySelectorAll(CONTROL)].filter((node) => labelOf(node) === ADD).length,
+    need: [...host.querySelectorAll(CONTROL)].filter((node) => labelOf(node) === NEED).length,
     limit: one('limit'),
     ask: one('ask'),
     alert: alerts.length === 0 ? undefined : alerts.join(' | '),
@@ -130,10 +136,10 @@ const offerFaults = (host: Element, on: string, unread: boolean, controls: reado
   return out;
 };
 
-/** A field control S7 holds while a remove is pending: `Today`, `Keep`, `Begin`, `About`, a row's `Remove …`, `Start here …` or a plant. */
+/** A field control S7 holds while a remove is pending: `When I need…`, `Keep`, `Begin`, `About`, a row's `Remove …`, `Start here …` or a plant. */
 const held = (node: Element) => {
   const label = labelOf(node);
-  if (['Today', 'Keep', 'Begin', 'About'].includes(label)) return true;
+  if ([NEED, 'Keep', 'Begin', 'About'].includes(label)) return true;
   return (
     label.startsWith('Remove ') || label.startsWith('Start here') || idOf(node) === 'field-plant'
   );
@@ -226,7 +232,11 @@ export const mountBar = async (
   const known = new Map<string, boolean>();
   const looks = new Map<string, readonly string[]>();
   const watch = new MutationObserver(() => {
-    for (const fault of [...barFaults(host, unread, known), ...lookFaults(host, undefined, looks)])
+    for (const fault of [
+      ...rootFaults(host, 'read'),
+      ...barFaults(host, unread, known),
+      ...lookFaults(host, undefined, looks),
+    ])
       if (faults.length < 8) faults.push(fault);
   });
   watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });

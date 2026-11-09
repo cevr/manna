@@ -3,12 +3,13 @@
 /**
  * Every screen's fixed controls outside its scroll views (hspassage C13,
  * hsfield's lost tap): the root mounted over a disk with the promise planted
- * yesterday and one passage held, held to `barFaults` on every frame while
- * the reader goes through each screen a control can hide on: Today and a
- * recital (`Say it`, `Listening`, the grades and `Next` in the footer), the
- * field's bar (`‹ Today`, `Add verses`, the ask and its `Remove` and
- * `Keep`), and the chooser's header (each step's back) and footer
- * (`Up to 20 verses` and `Plant` under Psalms 119's 176 verses).
+ * yesterday and one passage held, held to `rootFaults` and `barFaults` on
+ * every frame while the reader goes from home through each screen a control
+ * can hide on: Today by `Begin` and a recital (`Say it`, `Listening`, the
+ * grades and `Next` in the footer, Today's `Your field`), home's bar
+ * (`When I need…`, `Add verses`, the ask and its `Remove` and `Keep`), the
+ * chooser's header (each step's back) and footer (`Up to 20 verses` and
+ * `Plant` under Psalms 119's 176 verses), and When I need…'s `Your field`.
  *
  * It catches any of those controls, an alert or the limit line moved into a
  * scroll view, as hsfield's `‹ Today` at the foot of the field's scroll was,
@@ -38,7 +39,8 @@ it('keeps each screen’s fixed controls outside its scroll views in every frame
     expect(await rig.until(() => then === '' || rig.control(then) !== undefined)).toBe(true);
     seen.push(label);
   };
-  expect(await rig.until(() => rig.control('Say it') !== undefined)).toBe(true);
+  expect(await rig.until(() => rig.control('Begin') !== undefined)).toBe(true);
+  await step('Begin', 'Say it');
   await step('Say it', 'Listening');
   await step('Listening', 'Next');
   await step('Next', 'Your field');
@@ -54,9 +56,10 @@ it('keeps each screen’s fixed controls outside its scroll views in every frame
   await step('Psalms 119:20', 'Plant');
   await step('Chapters', 'Psalms 119');
   await step('Books', 'Psalms');
-  await step('Your field', 'Today');
-  await step('Today', 'Your field');
+  await step('Your field', 'When I need…');
+  await step('When I need…', 'Your field');
+  await step('Your field', 'When I need…');
   await rig.leave();
-  expect(seen).toHaveLength(15);
+  expect(seen).toHaveLength(17);
   expect(rig.faults).toEqual([]);
 });
