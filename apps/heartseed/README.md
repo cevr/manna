@@ -1712,7 +1712,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     rule's rows with their icons and ripe counts, plants as buttons with
     their drawings (each image's source of the scheme now), days sown and
     harvest as seen and exposed, every text at AA contrast, and home A's
-    frame rules, `homeFaults`; each open and way back leaving the
+    frame rules, `homeFaults`, among them each `Add verses` drawn with its
+    `add` icon of the scheme now and the row at least 56 pt tall; each
+    open and way back leaving the
     whole disk and taking no write, remove or clear): the way there and
     back through recitals, Again and a relaunch; and
     `src/field/garden.test.tsx`, a generated garden past 140 other verses
@@ -1726,9 +1728,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     and relaunches through `src/test/field-walk.ts`, each command's writes
     modelled apart from the app; each file's device reaches its own floors
     (relaunches, or Again).
-  - `test:field-bar`, `test:field-bar-lists` and `test:field-bar-kinds`:
-    `src/field/bar-remove.test.tsx` and `bar-twice.test.tsx`, then
-    `bar-lists.test.tsx`, then `bar-kinds.test.tsx`, generated readers
+  - `test:field-bar`, `test:field-bar-lists`, `test:field-bar-kinds` and
+    `test:field-bar-held`: `src/field/bar-remove.test.tsx` and
+    `bar-twice.test.tsx`, then `bar-lists.test.tsx`, then
+    `bar-kinds.test.tsx` (unread kinds), then `bar-held.test.tsx` (read
+    lists of 1, 2 and 4 held), generated readers
     through `src/test/bar-walk.ts` over `src/test/bar-rig.tsx` (the root
     over the device's store, whose passages' key alone may fail its reads;
     every frame held to one heading, no bar control, alert or limit line
