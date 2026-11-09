@@ -260,6 +260,12 @@ export const visitPromise = runtime.fn(
   { concurrent: true },
 );
 
+/** Start here, a tap on a verse of the home: the verse `startOf` starts becomes the visit Today shows ahead of the plan; the hold stays. */
+export const startHere = runtime.fn(
+  (verse: string) => Effect.flatMap(Session, (session) => session.start(verse)),
+  { concurrent: true },
+);
+
 /** A press of the first minute's Say it: a recital of the passage under its cue, kept or not. */
 export const sayAs = runtime.fn(
   (how: Recital) => Effect.flatMap(SayIt, (sayIt) => sayIt.recite(how, passage)),

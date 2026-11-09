@@ -31,6 +31,8 @@
  * holds more. A new visit replaces the one before and never drops the
  * hold. The visit lives as the hold lives: a making drops both unless a
  * recital is under way, and `next` keeps it. Nothing of either is stored.
+ * A tap on a verse of the home (`start`) makes the one verse `startOf`
+ * starts the visit, as a promise's tap does.
  */
 
 import {
@@ -53,6 +55,7 @@ import { offsetAt } from '../day';
 import { Dictation } from '../dictation';
 import { isActive } from '../dictation/attempt';
 import { Garden, type GardenView, type ReadGarden } from '../garden';
+import { startOf } from '../home/start';
 import { collectionPieces, Passages, piecesOf, type PassagesView, type Range } from '../passages';
 import type { Collection } from '../promises';
 import { pieceAt, planOf, type Item, type Minutes, type Plan, type TextPiece } from '../session';
@@ -113,6 +116,8 @@ export class Session extends Context.Service<
       collection: Pick<Collection, 'id' | 'title'>,
       promise: Range,
     ) => Effect.Effect<void>;
+    /** Start here, a tap on `verse` of the home: what `startOf` starts becomes the visit, replacing any before and keeping the hold, the plan and the minutes; nothing before the first plan, with the garden unread, or when nothing starts. */
+    readonly start: (verse: string) => Effect.Effect<void>;
     /** A return to the foreground: a plan made in this launch is made again and the hold dropped, unless a recital is under way or the garden or the passages are unread. */
     readonly wake: Effect.Effect<void>;
     /** An add or a remove of a passage landed: a plan made in this launch is made again over the passages now, unless the garden or the passages are unread, and the hold dropped unless a recital is under way. */
@@ -328,6 +333,16 @@ export const layer = (
               return publish;
             }),
           ).pipe(Effect.withSpan('Session.visit')),
+        start: (verse: string) =>
+          Effect.flatMap(garden.settled, (seen) =>
+            Effect.suspend(() => {
+              if (seen._tag === 'Unread') return Effect.void;
+              const started = startOf(MutableRef.get(held), seen, verse);
+              if (Option.isNone(started)) return Effect.void;
+              MutableRef.update(held, (now) => ({ ...now, visit: [started.value] }));
+              return publish;
+            }),
+          ).pipe(Effect.withSpan('Session.start')),
         next: Effect.suspend(() => {
           MutableRef.update(held, (now) => ({
             ...now,

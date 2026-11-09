@@ -28,6 +28,10 @@
  * - V2 what Today shows: the held verse if any; else the visit's first
  *   verse whose recalls are not past its baseline; else the plan's first
  *   item not done; else the done state.
+ * - H4 (hshomebase) Start here: before a plan, nothing; else the plan's
+ *   first item not done on the verse (a phrase's verse for a phrase) as
+ *   planned; else a planted canon verse as a review from its recalls now;
+ *   else nothing.
  */
 
 import type { Range } from '../passages';
@@ -160,6 +164,42 @@ export const shownModel = (
     if (recallsNow(verse.reference) <= verse.recalls) return verse.reference;
   for (const item of plan) if (recallsNow(item.reference) <= item.recalls) return item.reference;
   return 'Done';
+};
+
+/** A plan item as Start here reads it: its reference, whether it is the new piece, and its baseline. */
+export interface ModelStartItem {
+  readonly reference: string;
+  readonly fresh: boolean;
+  readonly recalls: number;
+}
+
+/** What Start here starts as the model holds it: a plan item as planned, or a review of a planted verse from its recalls now. */
+export type ModelStart<I extends ModelStartItem> =
+  | { readonly from: 'plan'; readonly item: I }
+  | { readonly from: 'plant'; readonly item: ModelStartItem };
+
+/**
+ * H4 (hshomebase): what a tap on `verse` starts, over the plan's items
+ * (null before a plan), each reference's recall count now (0 when not
+ * planted), the canon's verses and the verse a reference belongs to: none
+ * before a plan; the plan's first item whose recalls are not past its
+ * baseline and whose verse is `verse`, as planned; else, for a canon verse
+ * with recalls of its own, a review from its recalls now; else none.
+ */
+export const startModel = <I extends ModelStartItem>(
+  plan: readonly I[] | null,
+  verse: string,
+  recallsNow: (reference: string) => number,
+  canon: ReadonlySet<string>,
+  verseOf: (reference: string) => string,
+): ModelStart<I> | null => {
+  if (plan === null) return null;
+  for (const item of plan)
+    if (recallsNow(item.reference) <= item.recalls && verseOf(item.reference) === verse)
+      return { from: 'plan', item };
+  if (canon.has(verse) && recallsNow(verse) > 0)
+    return { from: 'plant', item: { reference: verse, fresh: false, recalls: recallsNow(verse) } };
+  return null;
 };
 
 /** F1: the passages the field shows over the app's `own` row, the passages `held` and the collections `taught`. */
