@@ -1,7 +1,7 @@
 /**
  * The natural voice's download, pinned: Kokoro-82M's seven Core ML stages
  * and the `af_heart` voice from FluidInference `kokoro-82m-coreml`, folder
- * `ANE/`, at one revision, and the `am_michael` voice converted from the
+ * `ANE/`, at one revision, and the `bm_george` voice converted from the
  * same revision's rows. The app fetches exactly these files and checks
  * each one's SHA-256, so a wrong or tampered file is refused whoever
  * serves it.
@@ -21,18 +21,18 @@ export const REVISION = '2568276a60ff';
 export const MIRROR = `https://models.heartseed.app/kokoro/${REVISION}/`;
 
 /**
- * The second voice's pack, `am_michael`: converted from the revision's
- * `voices/am_michael.json` (its rows as little-endian fp32), since the
+ * The second voice's pack, `bm_george`: converted from the revision's
+ * `voices/bm_george.json` (its rows as little-endian fp32), since the
  * revision's `ANE/` folder ships only `af_heart.bin`.
  */
-export const AM_MICHAEL: ModelFile = {
-  path: 'am_michael.bin',
+export const BM_GEORGE: ModelFile = {
+  path: 'bm_george.bin',
   bytes: 522_240,
-  sha256: '1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1',
+  sha256: 'c4b235a4c1f2cd3b939fed08b899ce9385638b763f7b73a59616c4fc9bd6c9bc',
 };
 
 /** The voices the download holds; a voice's pack is the file `<voice>.bin` of `FILES`. */
-export const VOICES = ['af_heart', 'am_michael'] as const;
+export const VOICES = ['af_heart', 'bm_george'] as const;
 
 /** A voice the natural module reads with. */
 export type NaturalVoice = (typeof VOICES)[number];
@@ -224,7 +224,7 @@ export const FILES: ReadonlyArray<ModelFile> = [
     bytes: 522_240,
     sha256: 'd583ccff3cdca2f7fae535cb998ac07e9fcb90f09737b9a41fa2734ec44a8f0b',
   },
-  AM_MICHAEL,
+  BM_GEORGE,
   {
     path: 'vocab.json',
     bytes: 1_416,

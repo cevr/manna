@@ -3,7 +3,7 @@
 The natural voice reads a verse with Kokoro-82M on the phone and lights
 each word at the sample the model gives it (`apps/heartseed/src/natural`,
 over the Swift package `apps/heartseed/native/natural`). Today reads by it:
-`Voice` set to Her reads in `af_heart` and Him in `am_michael` once its
+`Voice` set to Her reads in `af_heart` and Him in `bm_george` once its
 download is ready and its crash fuse clear, and the system voice reads
 until then; a line under the `Voice` pill of home's Settings sheet says
 the download's state, with `Try again` after a failure (`apps/heartseed/README.md`, Natural voice).
@@ -11,13 +11,13 @@ The `today-*` rows below drive that. A development probe,
 `app/probe/natural.tsx`, drives the module alone. It downloads the 39 pinned model files from the link's `base`,
 loads them, reads Today's passage (Isaiah 41:10, 37 words) through the
 voice over the natural source, and soaks verses. It reads in the link's
-`voice`, `af_heart` or `am_michael` (`VOICES` in
+`voice`, `af_heart` or `bm_george` (`VOICES` in
 `apps/heartseed/src/natural/manifest.ts`; any other value or none is
 `af_heart`). It shows counts only, never a word.
 
 The models come from the local model server, `scripts/natural-serve.ts`,
 which fills its cache from Hugging Face at the pinned revision once per
-worktree (checking every file's SHA-256, and converting `am_michael.bin`
+worktree (checking every file's SHA-256, and converting `bm_george.bin`
 from the revision's voice rows) and serves the 39 paths. Its cache
 is a `natural-models` folder in the worktree's git-ignored `tmp`; nothing is committed
 or published.
@@ -39,7 +39,7 @@ session is left alone.
   second `Install` fetches only the missing files.
 - `natural-read`: `Load` then `Read` lights all 37 words in order, each
   chunk's samples 600 times its frames.
-- `natural-voices`: a `Read` with `voice=am_michael`, then one without,
+- `natural-voices`: a `Read` with `voice=bm_george`, then one without,
   each switch keeping the loaded stages and changing the pack the render
   slices.
 - `natural-crash`: an app ended during a reading says `crashed true` once.
@@ -51,7 +51,7 @@ session is left alone.
 - `today-download`: the first tap onto Her downloads from the stored base,
   saying its percent, then getting ready, then nothing.
 - `today-read`: the first minute's Listen once ready reads in `af_heart`.
-- `today-him`: a tap to Him shows no line (Him reads in `am_michael`; the
+- `today-him`: a tap to Him shows no line (Him reads in `bm_george`; the
   router's tests hear it).
 - `today-fail`: a server gone mid-download waits; a failed download says
   so, and `Try again` finishes it with only the missing files.
@@ -162,7 +162,7 @@ and one `[natural] play … skipped=simulator` line, each with
 voice and read, then open it without and read again:
 
 ```bash
-sim open "probe/natural?base=http://localhost:$MPORT/&voice=am_michael" --expect "label=Read"
+sim open "probe/natural?base=http://localhost:$MPORT/&voice=bm_george" --expect "label=Read"
 sim tap Read
 sim snapshot natural-voices-him
 sim open "probe/natural?base=http://localhost:$MPORT/" --expect "label=Read"
@@ -170,10 +170,10 @@ sim tap Read
 sim snapshot natural-voices-her
 ```
 
-→ the first snapshot has `voice am_michael`, and each, once `read` is not
+→ the first snapshot has `voice bm_george`, and each, once `read` is not
 `none`, has `read finished`, `lit 37/37` and `order ok` (the second
 `voice af_heart`). The module's log, after the `natural-read` load, holds
-one `[natural] load … voice=am_michael.bin stages=kept` and then one
+one `[natural] load … voice=bm_george.bin stages=kept` and then one
 `[natural] load … voice=af_heart.bin stages=kept`, and no second
 `stages=loaded`. Sum each reading's `render` lines' `frames`: the two
 readings of the same verse give different totals (a pack that never
@@ -197,7 +197,7 @@ sim snapshot natural-remove
 `natural` folder is gone.
 
 A soak on the simulator proves only the tally: open the probe with
-`soak=200` added to the link (and `voice=am_michael` for the second
+`soak=200` added to the link (and `voice=bm_george` for the second
 voice), tap `Soak`, and wait for `soak 200/200 …`; report its four
 counts. The full soak (31,102 verses)
 is the phone check's.

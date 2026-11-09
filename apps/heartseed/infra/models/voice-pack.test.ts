@@ -117,7 +117,7 @@ describe('a voice’s pack from its rows', () => {
       ['embedding', '[0.5, 0.25]'],
       ['0', '[1.0]'],
       ['511', '[2.0, 3.0]'],
-      ['name', '"am_michael"'],
+      ['name', '"bm_george"'],
     ];
     for (const [i, spacing] of [SPACED, SPACED, COMPACT, COMPACT].entries()) {
       const values = valuesOf(next);

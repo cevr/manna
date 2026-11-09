@@ -15,8 +15,8 @@ import { createHash } from 'node:crypto';
 import { Option } from 'effect';
 
 import {
-  AM_MICHAEL,
   baseFor,
+  BM_GEORGE,
   FILES,
   MIRROR,
   REVISION,
@@ -25,8 +25,8 @@ import {
   VOICES,
 } from './manifest';
 
-/** The SHA-256 of the 39 `path:bytes:sha256` lines, joined by newlines: hsnatural's kokoro-manifest.json's 38 and the am_michael.bin pin, in path order. */
-const MANIFEST_DIGEST = '0dd22032e5adc1bf49e1f048cedd4ea19e9349df293a699ecb57f94307348e66';
+/** The SHA-256 of the 39 `path:bytes:sha256` lines, joined by newlines: hsnatural's kokoro-manifest.json's 38 and the bm_george.bin pin, in path order. */
+const MANIFEST_DIGEST = '14526ee4214d51f9dd31cb1b98f8e4e5a3aaf42d17470a2a2ee5dc5563eb5556';
 
 const STAGES = [
   'KokoroAlbert',
@@ -60,13 +60,13 @@ describe('the pinned files', () => {
       'LICENSE',
       'README.md',
       'af_heart.bin',
-      'am_michael.bin',
+      'bm_george.bin',
       'vocab.json',
     ]);
     expect(paths).toEqual([...paths].sort());
   });
 
-  it('is exactly hsnatural’s kokoro-manifest.json and the am_michael.bin pin: its `path:bytes:sha256` lines hash to that list’s digest', () => {
+  it('is exactly hsnatural’s kokoro-manifest.json and the bm_george.bin pin: its `path:bytes:sha256` lines hash to that list’s digest', () => {
     const lines = FILES.map((file) => `${file.path}:${file.bytes}:${file.sha256}`).join('\n');
     expect(createHash('sha256').update(lines).digest('hex')).toBe(MANIFEST_DIGEST);
   });
@@ -77,18 +77,18 @@ describe('the pinned files', () => {
     expect(MIRROR).toBe(`https://models.heartseed.app/kokoro/${REVISION}/`);
   });
 
-  it('pins the second voice’s pack, am_michael.bin, in the download between af_heart.bin and the vocab', () => {
-    expect(AM_MICHAEL).toEqual({
-      path: 'am_michael.bin',
+  it('pins the second voice’s pack, bm_george.bin, in the download between af_heart.bin and the vocab', () => {
+    expect(BM_GEORGE).toEqual({
+      path: 'bm_george.bin',
       bytes: 522_240,
-      sha256: '1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1',
+      sha256: 'c4b235a4c1f2cd3b939fed08b899ce9385638b763f7b73a59616c4fc9bd6c9bc',
     });
-    expect(FILES[37]).toEqual(AM_MICHAEL);
-    expect(FILES.filter((file) => file.path === AM_MICHAEL.path)).toHaveLength(1);
+    expect(FILES[37]).toEqual(BM_GEORGE);
+    expect(FILES.filter((file) => file.path === BM_GEORGE.path)).toHaveLength(1);
   });
 
   it('names the two voices, Her and Him, each with its pack in the download', () => {
-    expect([...VOICES]).toEqual(['af_heart', 'am_michael']);
+    expect([...VOICES]).toEqual(['af_heart', 'bm_george']);
     for (const voice of VOICES) {
       expect(
         FILES.filter((file) => file.path === `${voice}.bin`),

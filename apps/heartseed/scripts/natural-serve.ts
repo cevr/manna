@@ -3,7 +3,7 @@
  * the natural voice's model files for a development build, with no mirror
  * deployed. It fills `--cache` with the 39 pinned files from Hugging Face
  * at the pinned revision (`src/natural/manifest.ts`), both voices among
- * them (`am_michael.bin` converted from its rows, `infra/models/source.ts`),
+ * them (`bm_george.bin` converted from its rows, `infra/models/source.ts`),
  * checking each SHA-256 and fetching none already checked, then serves `GET` and `HEAD`
  * of `/<path>` for those paths alone (404 for any other) on `--host`
  * (default 127.0.0.1). `--corrupt <path>` flips the middle byte of that file
@@ -70,7 +70,7 @@ export const fillWith = Effect.fn('NaturalServe.fillWith')(function* <E, R>(
 /**
  * `cache` filled with `files` (every file of the download unless named),
  * both voices among them, each fetched as the copy to the mirror fetches it
- * (`fetchPinned`): `am_michael.bin` converted from its rows. Answers the
+ * (`fetchPinned`): `bm_george.bin` converted from its rows. Answers the
  * paths it fetched.
  */
 export const fillPinned = (cache: string, files: ReadonlyArray<ModelFile> = FILES) =>

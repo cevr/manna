@@ -76,7 +76,7 @@ const branches = (
   });
 };
 
-/** A Kokoro voice's name: a language letter, `f` or `m`, an underscore and a name (`af_heart`, `am_michael`, `bf_emma`). */
+/** A Kokoro voice's name: a language letter, `f` or `m`, an underscore and a name (`af_heart`, `bm_george`, `am_michael`). */
 const VOICE_NAME = /\b[a-z][fm]_[a-z]+/;
 
 /** A quoted file name ending `.bin`: a voice pack's path written out. */

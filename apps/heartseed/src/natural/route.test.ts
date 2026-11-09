@@ -40,7 +40,7 @@ const SYSTEM_ID = 'com.apple.voice.enhanced.en-US.Test';
 const COUNT = FILES.length;
 const HISTORIES = 200;
 const STEPS = 30;
-const PACK = { off: 'af_heart.bin', her: 'af_heart.bin', him: 'am_michael.bin' } as const;
+const PACK = { off: 'af_heart.bin', her: 'af_heart.bin', him: 'bm_george.bin' } as const;
 
 /** Stored bases and the base a development build installs from for each; a release build always installs from `MIRROR`. */
 const BASES: ReadonlyArray<readonly [stored: string | undefined, dev: string]> = [

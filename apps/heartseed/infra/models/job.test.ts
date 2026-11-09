@@ -4,7 +4,7 @@
  * The copy job over a real temporary cache, a Hugging Face stand-in that
  * answers by URL, and a bucket stand-in that keeps objects with their MD5 as
  * ETag. The list is five made-up files: two nested paths, `LICENSE`, a
- * generated `am_michael.bin` pack served as its rows, and `vocab.json`.
+ * generated `bm_george.bin` pack served as its rows, and `vocab.json`.
  *
  * It catches a fill that refetches, keeps a bad file or a `.partial`, or
  * skips the voice's check; a run that calls R2 after a failed fill; an
@@ -20,7 +20,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Console, Effect, FileSystem, Layer, Option, Path, Result } from 'effect';
 import { HttpClient, HttpClientResponse } from 'effect/http';
 
-import { AM_MICHAEL } from '../../src/natural/manifest.ts';
+import { BM_GEORGE } from '../../src/natural/manifest.ts';
 import type { ModelFile } from '../../src/natural/module.ts';
 import { dryRun, run } from './job.ts';
 import { CACHE_CONTROL, CONTENT_TYPE, PREFIX, keyOf } from './plan.ts';
@@ -79,7 +79,7 @@ const GOODS = new Map<string, Uint8Array>([
   ['A.mlmodelc/model.mil', bytesOf(300, 3)],
   ['A.mlmodelc/weights/weight.bin', bytesOf(2000, 5)],
   ['LICENSE', bytesOf(50, 7)],
-  [AM_MICHAEL.path, packOf(VALUES)],
+  [BM_GEORGE.path, packOf(VALUES)],
   ['vocab.json', bytesOf(7, 11)],
 ]);
 
@@ -94,9 +94,9 @@ const PATHS = FILES.map((file) => file.path);
 const KEYS = PATHS.map(keyOf);
 const TOTAL = FILES.reduce((sum, file) => sum + file.bytes, 0);
 
-/** Where the copy reads a path: the voice's rows for `am_michael.bin`, `ANE/<path>` for the rest. */
+/** Where the copy reads a path: the voice's rows for `bm_george.bin`, `ANE/<path>` for the rest. */
 const urlOf = (path: string) => {
-  if (path === AM_MICHAEL.path) return VOICE_ROWS;
+  if (path === BM_GEORGE.path) return VOICE_ROWS;
   return sourceOf(path);
 };
 
@@ -114,7 +114,7 @@ const hubOf = (asked: Array<string>, states: ReadonlyMap<string, HubState>) =>
           return HttpClientResponse.fromWeb(request, new Response('', { status: 404 }));
         }
         const state = states.get(path.value) ?? 'good';
-        const voice = path.value === AM_MICHAEL.path;
+        const voice = path.value === BM_GEORGE.path;
         const body = (): Uint8Array => {
           if (state === 'changed') return VOICE.changed;
           if (state === 'missing') return VOICE.missing;
@@ -284,7 +284,7 @@ describe('the copy', () => {
           expect(put.cacheControl).toBe(CACHE_CONTROL);
           expect(sha256(put.bytes)).toBe(sha256(goodOf(put.key.slice(PREFIX.length))));
         }
-        expect(first.lines).toContain(`upload ${AM_MICHAEL.path} 522240`);
+        expect(first.lines).toContain(`upload ${BM_GEORGE.path} 522240`);
         expect(yield* cacheOf(cache)).toEqual(allGood);
 
         const again: Array<string> = [];
@@ -456,8 +456,8 @@ describe('the copy', () => {
   const faults: ReadonlyArray<readonly [string, string, HubState]> = [
     ['flipped bytes', 'A.mlmodelc/weights/weight.bin', 'bad'],
     ['a 503', 'LICENSE', 'down'],
-    ['a voice whose rows changed a value', AM_MICHAEL.path, 'changed'],
-    ['a voice with a row missing', AM_MICHAEL.path, 'missing'],
+    ['a voice whose rows changed a value', BM_GEORGE.path, 'changed'],
+    ['a voice with a row missing', BM_GEORGE.path, 'missing'],
   ];
   for (const [name, broken, state] of faults) {
     it.effect(`stops the fill at ${name}, keeps nothing of it, and makes no R2 call`, () =>
@@ -491,8 +491,8 @@ describe('the copy', () => {
       const cache = yield* temp;
       const bucket = bucketOf();
       yield* runOver(cache, bucket, []);
-      const voice = path.join(cache, AM_MICHAEL.path);
-      yield* fs.writeFile(voice, goodOf(AM_MICHAEL.path).subarray(1));
+      const voice = path.join(cache, BM_GEORGE.path);
+      yield* fs.writeFile(voice, goodOf(BM_GEORGE.path).subarray(1));
       const asked: Array<string> = [];
       const done = yield* runOver(cache, bucket, asked);
       expect(asked).toEqual([VOICE_ROWS]);
@@ -528,7 +528,7 @@ describe('the dry run', () => {
       const cache = yield* temp;
       const done = yield* exec(
         dryRun(cache, FILES),
-        Layer.merge(platform, hubOf([], new Map([[AM_MICHAEL.path, 'missing']]))),
+        Layer.merge(platform, hubOf([], new Map([[BM_GEORGE.path, 'missing']]))),
       );
       expect(Result.isFailure(done.result)).toBe(true);
       expect(done.lines.some((line) => line.startsWith('models-copy'))).toBe(false);

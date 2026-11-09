@@ -128,7 +128,7 @@ describe('the probe lines', () => {
     ];
     const read = renders.reduce(readRendered, tallyOf(cleanViews(3)));
     const view: ProbeView = {
-      voice: 'am_michael',
+      voice: 'bm_george',
       status: {
         revision: '2568276a60ff',
         files: 39,
@@ -147,7 +147,7 @@ describe('the probe lines', () => {
     };
     const lines = linesOf(view);
     expect(lines).toEqual([
-      'voice am_michael',
+      'voice bm_george',
       'installed 39/39',
       'bytes 83332513',
       'excluded true',
@@ -182,7 +182,15 @@ describe('the probe lines', () => {
 describe('the voice', () => {
   it("takes the link's voice when it is one of VOICES, else af_heart", () => {
     for (const voice of VOICES) expect(probeVoice(Option.some(voice))).toBe(voice);
-    for (const asked of ['', 'AF_HEART', 'am_michael ', 'am_michael.bin', 'af_bella', 'him']) {
+    for (const asked of [
+      '',
+      'AF_HEART',
+      'bm_george ',
+      'bm_george.bin',
+      'am_michael',
+      'af_bella',
+      'him',
+    ]) {
       expect(probeVoice(Option.some(asked))).toBe('af_heart');
     }
     expect(probeVoice(Option.none())).toBe('af_heart');
@@ -214,7 +222,7 @@ describe('the voice', () => {
           const source = yield* VoiceSource;
           yield* source.speak(1, 'bel', { system: '', natural: 'af_heart' });
           yield* source.speak(2, 'cor', { system: 'com.apple.x', natural: 'af_heart' });
-          yield* source.speak(3, 'bel', { system: '', natural: 'am_michael' });
+          yield* source.speak(3, 'bel', { system: '', natural: 'bm_george' });
           yield* source.pause;
           yield* source.stop;
         }).pipe(Effect.provide(speakingIn(voice).pipe(Layer.provide(under)))),

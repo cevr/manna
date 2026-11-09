@@ -162,7 +162,7 @@ export class VoiceModel {
       utterance: this.utterance,
       text: verse,
       voice: pickVoice(this.voices)?.id ?? '',
-      natural: this.view.choice === 'him' ? 'am_michael' : 'af_heart',
+      natural: this.view.choice === 'him' ? 'bm_george' : 'af_heart',
     });
     if (fails) this.finish('failed');
   }
@@ -181,7 +181,7 @@ export class VoiceModel {
       utterance: this.utterance,
       text: verse.slice(start),
       voice: pickVoice(this.voices)?.id ?? '',
-      natural: this.view.choice === 'him' ? 'am_michael' : 'af_heart',
+      natural: this.view.choice === 'him' ? 'bm_george' : 'af_heart',
     });
     if (fails) this.finish('failed');
   }

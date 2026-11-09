@@ -6,7 +6,7 @@ spoken (`apps/heartseed/src/voice.ts`, over the Swift package
 `Listen` (`first.md`, `first-hear`, drives it on a screen). The reader's
 choice, Off, Her or Him, is the `Voice` button of home's Settings sheet (`session.md`,
 `voice-cycle` and `voice-migrate`); Her and Him read with the system voice
-until the natural voice is ready, then in its `af_heart` and `am_michael`
+until the natural voice is ready, then in its `af_heart` and `bm_george`
 (`natural.md`, the `today-*` rows). Today's `Listen` on a new piece
 lights each word in the reading view, where a held finger seeks the
 reading (`Voice.seek`, `light.md`). What this

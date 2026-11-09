@@ -18,7 +18,7 @@ import { useLook } from '../sayit/draw';
 
 /** The natural voice's credits, word for word: its model, its voices, its conversion and packaging, and its pronunciations, each with its licence. */
 export const CREDITS =
-  'Natural voice: Kokoro-82M by hexgrad (Apache-2.0), with its voices af_heart and am_michael. Core ML conversion by laishere (kokoro-coreml, Apache-2.0), packaged by FluidInference (FluidAudio, Apache-2.0). Pronunciations from Misaki by hexgrad (Apache-2.0).';
+  'Natural voice: Kokoro-82M by hexgrad (Apache-2.0), with its voices af_heart and bm_george. Core ML conversion by laishere (kokoro-coreml, Apache-2.0), packaged by FluidInference (FluidAudio, Apache-2.0). Pronunciations from Misaki by hexgrad (Apache-2.0).';
 
 /** The About screen, with the way back to the field (`onField`). */
 export function AboutScreen({ onField }: { readonly onField: () => void }) {

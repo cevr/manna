@@ -28,7 +28,7 @@ simulator, ports 8280-8289, iOS alone).
 
 The voice reads a verse aloud on the device and lights each word as it is
 spoken; the reader chooses Off, Her or Him. Once the natural voice is
-ready, Her reads in its `af_heart` and Him in its `am_michael`; until then,
+ready, Her reads in its `af_heart` and Him in its `bm_george`; until then,
 while its crash fuse is blown, and for a reading whose natural start fails,
 both read with the system's best voice (Natural voice, below). Two screens
 call it, through the app's runtime (`src/app.ts`), and Say it reads no word
@@ -1344,7 +1344,7 @@ list, the rule from a piece's text to what the model is given, the native
 module that downloads, renders and plays, a `VoiceSource` over it, and the
 router that sends each reading to it or to the system voice. The reader's
 choice of Off, Her or Him is the `Voice` cycle (`cycleVoice`, Voice and
-Session above); Her reads in `af_heart` and Him in `am_michael`
+Session above); Her reads in `af_heart` and Him in `bm_george`
 (`naturalOf`, `src/voice.ts`).
 
 - **The router.** `src/natural/route.ts`, `naturalVoices`, builds the
@@ -1452,8 +1452,8 @@ Session above); Her reads in `af_heart` and Him in `am_michael`
 - **The download.** `src/natural/manifest.ts` pins the 39 files of the
   download (`FILES`, in path order): 38 of Hugging Face
   `FluidInference/kokoro-82m-coreml`, folder `ANE/`, at revision
-  `2568276a60ff6e7f312afce3dc9e3f07521cb48d`, and `am_michael.bin`
-  (`AM_MICHAEL`, converted from the same revision's rows, The mirror,
+  `2568276a60ff6e7f312afce3dc9e3f07521cb48d`, and `bm_george.bin`
+  (`BM_GEORGE`, converted from the same revision's rows, The mirror,
   below); 83,332,513 bytes, each with its SHA-256, and the mirror
   `https://models.heartseed.app/kokoro/2568276a60ff/`.
   `install` keeps them in `Application Support/Heartseed/natural/<revision>`,
@@ -1465,10 +1465,10 @@ Session above); Her reads in `af_heart` and Him in `am_michael`
   Data Mode (`waiting`), fails `network` on any status but 200 or a lost
   connection, and fails `cancelled` at `cancelInstall`; a second `install`
   fetches only what is missing, so a 38-file install fetches only
-  `am_michael.bin`. `baseFor(dev, asked)` gives the base: a release build
+  `bm_george.bin`. `baseFor(dev, asked)` gives the base: a release build
   always the mirror, a development build a plain
   `http(s)://host[:port]/folder/` it is asked for.
-- **The voices.** `VOICES` (`manifest.ts`) is `af_heart` and `am_michael`;
+- **The voices.** `VOICES` (`manifest.ts`) is `af_heart` and `bm_george`;
   a voice's pack is the file `<voice>.bin` of `FILES`. No other file of
   `src/natural` names a pack path, and the Swift module outside `kokoro/`
   names no voice: the voice is data.
@@ -1522,7 +1522,7 @@ Session above); Her reads in `af_heart` and Him in `am_michael`
 - **The model server.** `bun run natural:serve -- --port <p> --cache <dir>
   [--host 127.0.0.1|0.0.0.0] [--corrupt <path>]` (`scripts/natural-serve.ts`)
   fills the cache from Hugging Face at the pinned revision, checking each
-  file and converting `am_michael.bin` from its rows (`fillPinned`), and
+  file and converting `bm_george.bin` from its rows (`fillPinned`), and
   serves `GET` and `HEAD` of the 39 paths, so the simulator and a
   development phone install with no mirror; `--corrupt` flips the middle
   byte of one file as served. It never ships.
@@ -1562,12 +1562,12 @@ stack.
   download, `FILES`, in path order, 39 files and 83,332,513 bytes. Each is stored under `kokoro/2568276a60ff/<path>`
   (`keyOf`), so `MIRROR + path` is the file's URL. A new revision is a new
   folder.
-- `am_michael.bin` is the second voice, `am_michael`. FluidInference ships
-  only `ANE/af_heart.bin`, so the copy converts `voices/am_michael.json` of
+- `bm_george.bin` is the second voice, `bm_george`. FluidInference ships
+  only `ANE/af_heart.bin`, so the copy converts `voices/bm_george.json` of
   the same repository and revision (`infra/models/voice-pack.ts`,
   `voicePackOf`): its keys `"1"` to `"510"` in numeric order, each a row of
   256 numbers, each written as a little-endian fp32, every other key
-  ignored; 522,240 bytes, pinned by SHA-256 in `AM_MICHAEL`. Any JSON that
+  ignored; 522,240 bytes, pinned by SHA-256 in `BM_GEORGE`. Any JSON that
   breaks the rule (a missing row, a row of another length, a value that is
   not exactly an fp32) is refused. The same rule turns
   `voices/af_heart.json` into the pinned `af_heart.bin` byte for byte.
@@ -1590,7 +1590,7 @@ the repository root, so files fetched by one are kept by the other.
   `fillPinned` uses too): in list order, a cached file
   at its size and SHA-256 is kept and never fetched; any other is fetched
   from `resolve/2568276a60ff6e7f312afce3dc9e3f07521cb48d/ANE/<path>` (for
-  `am_michael.bin`, `voices/am_michael.json`, converted), checked, written
+  `bm_george.bin`, `voices/bm_george.json`, converted), checked, written
   to `<path>.partial` and renamed into place. The first failure stops the
   fill and fails the run before any R2 call. There is no retry: a rerun
   resumes.
@@ -1639,7 +1639,7 @@ first result that differs:
 3. `bun run models:copy -- --cache $PWD/../../tmp/natural-models --dry-run`.
 4. `bun run models:copy -- --cache $PWD/../../tmp/natural-models`, then
    again: the second run keeps 39 and uploads 0, `verified 39/39`.
-5. `curl -sI https://models.heartseed.app/kokoro/2568276a60ff/am_michael.bin`
+5. `curl -sI https://models.heartseed.app/kokoro/2568276a60ff/bm_george.bin`
    answers 200 with `content-length: 522240` and both headers above.
 
 ### Cost

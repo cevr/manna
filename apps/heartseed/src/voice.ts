@@ -65,9 +65,9 @@ export interface Speaking {
   readonly natural: NaturalVoice;
 }
 
-/** The natural voice a choice reads with: Him is `am_michael`, every other choice `af_heart`. */
+/** The natural voice a choice reads with: Him is `bm_george`, every other choice `af_heart`. */
 export const naturalOf = (choice: Choice): NaturalVoice => {
-  if (choice === 'him') return 'am_michael';
+  if (choice === 'him') return 'bm_george';
   return 'af_heart';
 };
 

@@ -5,7 +5,7 @@
  * three made-up files, on a port the system picks, with no network: the
  * fill keeps files already checked and asks the network for nothing, takes
  * a missing file whose bytes check, and keeps no file whose bytes do not;
- * it converts `am_michael.bin` from its rows, as the copy to the mirror
+ * it converts `bm_george.bin` from its rows, as the copy to the mirror
  * does, and keeps nothing from rows that do not convert; unless given a
  * list it fills the whole download, all 39 files in path order with the
  * second voice's rows at 37 (over a stand-in file system and digest, each
@@ -34,7 +34,7 @@ import {
 } from 'effect/http';
 
 import { VOICE_ROWS, sourceOf } from '../infra/models/source.ts';
-import { AM_MICHAEL, FILES } from '../src/natural/manifest.ts';
+import { BM_GEORGE, FILES } from '../src/natural/manifest.ts';
 import { corrupted, fillPinned, layerServe, readyLine } from './natural-serve.ts';
 
 const bytesOf = (size: number, seed: number) =>
@@ -179,7 +179,7 @@ describe('fill', () => {
         const files = [
           ...(yield* filesOf),
           {
-            path: AM_MICHAEL.path,
+            path: BM_GEORGE.path,
             bytes: pack.byteLength,
             sha256: yield* digest.digestHex(Digest.sha256, pack),
           },
@@ -195,19 +195,19 @@ describe('fill', () => {
           Effect.provide(hubOf(refusedAsked, answers(rowsOf(VALUES, 17)))),
           Effect.flip,
         );
-        expect(refused).toMatchObject({ _tag: 'FileMismatch', path: AM_MICHAEL.path });
+        expect(refused).toMatchObject({ _tag: 'FileMismatch', path: BM_GEORGE.path });
         expect(refusedAsked).toEqual([sourceOf('w/c/c.bin'), VOICE_ROWS]);
-        expect(yield* fs.exists(path.join(broken, AM_MICHAEL.path))).toBe(false);
-        expect(yield* fs.exists(path.join(broken, `${AM_MICHAEL.path}.partial`))).toBe(false);
+        expect(yield* fs.exists(path.join(broken, BM_GEORGE.path))).toBe(false);
+        expect(yield* fs.exists(path.join(broken, `${BM_GEORGE.path}.partial`))).toBe(false);
 
         const cache = yield* cacheOf;
         const asked: Array<string> = [];
         const fetched = yield* fillPinned(cache, files).pipe(
           Effect.provide(hubOf(asked, answers(rowsOf(VALUES, 0)))),
         );
-        expect(fetched).toEqual(['w/c/c.bin', AM_MICHAEL.path]);
+        expect(fetched).toEqual(['w/c/c.bin', BM_GEORGE.path]);
         expect(asked).toEqual([sourceOf('w/c/c.bin'), VOICE_ROWS]);
-        expect(yield* fs.readFile(path.join(cache, AM_MICHAEL.path))).toEqual(pack);
+        expect(yield* fs.readFile(path.join(cache, BM_GEORGE.path))).toEqual(pack);
       }).pipe(Effect.scoped, Effect.provide(platform)),
   );
 
@@ -216,10 +216,10 @@ describe('fill', () => {
       const pack = packOf(VALUES);
       const pins = new Map(
         FILES.flatMap((file, at) =>
-          file === AM_MICHAEL ? [] : [[keyOf(markedOf(file, at)), file]],
+          file === BM_GEORGE ? [] : [[keyOf(markedOf(file, at)), file]],
         ),
       );
-      pins.set(keyOf(pack), AM_MICHAEL);
+      pins.set(keyOf(pack), BM_GEORGE);
       const asked: Array<string> = [];
       const written: Array<string> = [];
       const fetched = yield* fillPinned('/nonexistent/natural-serve-cache').pipe(
@@ -248,7 +248,7 @@ describe('fill', () => {
       expect(fetched).toEqual(FILES.map((file) => file.path));
       expect(fetched).toHaveLength(39);
       expect(asked).toEqual(
-        FILES.map((file) => (file === AM_MICHAEL ? VOICE_ROWS : sourceOf(file.path))),
+        FILES.map((file) => (file === BM_GEORGE ? VOICE_ROWS : sourceOf(file.path))),
       );
       expect(asked.indexOf(VOICE_ROWS)).toBe(37);
       expect(written).toEqual(FILES.map((file) => `/nonexistent/natural-serve-cache/${file.path}`));

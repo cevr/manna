@@ -369,7 +369,7 @@ describe('The natural voice’s line in the Settings sheet', () => {
     await fake.answer();
     expect(await app.shows(undefined)).toEqual({ line: undefined, retries: 0 });
     expect({ voices: fake.voices, installs: fake.installs }).toEqual({
-      voices: ['am_michael.bin', 'am_michael.bin'],
+      voices: ['bm_george.bin', 'bm_george.bin'],
       installs: [],
     });
     await app.leave();

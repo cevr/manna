@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import { AM_MICHAEL, FILES, MIRROR, TOTAL_BYTES } from '../../src/natural/manifest.ts';
+import { BM_GEORGE, FILES, MIRROR, TOTAL_BYTES } from '../../src/natural/manifest.ts';
 import {
   CACHE_CONTROL,
   CONTENT_TYPE,
@@ -26,9 +26,9 @@ describe('the mirror’s list', () => {
     expect(MIRROR_FILES.reduce((sum, file) => sum + file.bytes, 0)).toBe(83_332_513);
     const paths = MIRROR_FILES.map((file) => file.path);
     expect(new Set(paths).size).toBe(39);
-    expect(paths.filter((path) => path === AM_MICHAEL.path)).toHaveLength(1);
+    expect(paths.filter((path) => path === BM_GEORGE.path)).toHaveLength(1);
     expect(paths).toEqual([...paths].sort());
-    expect(paths.slice(-4)).toEqual(['README.md', 'af_heart.bin', 'am_michael.bin', 'vocab.json']);
+    expect(paths.slice(-4)).toEqual(['README.md', 'af_heart.bin', 'bm_george.bin', 'vocab.json']);
     expect(paths.slice(0, 2)).toEqual([
       'KokoroAlbert.mlmodelc/analytics/coremldata.bin',
       'KokoroAlbert.mlmodelc/coremldata.bin',

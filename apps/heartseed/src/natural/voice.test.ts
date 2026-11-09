@@ -93,16 +93,17 @@ const textOf = (clauses: number) =>
 /** Texts of one, two and three chunks, and one with a word the lexicon lacks. */
 const TEXTS: ReadonlyArray<string> = [textOf(1), textOf(3), textOf(5), 'bel zor.'];
 
-/** Names that miss a voice of `VOICES`: another Kokoro voice, none, a case, a pack path, the reader's names, a trailing space, a word. */
+/** Names that miss a voice of `VOICES`: other Kokoro voices (Him's former one among them), none, a case, a pack path, the reader's names, a trailing space, a word. */
 const NEAR_MISSES: ReadonlyArray<string> = [
   'af_bella',
+  'am_michael',
   '',
   'AF_HEART',
   'af_heart.bin',
-  'am_michael.bin',
+  'bm_george.bin',
   'her',
   'him',
-  'am_michael ',
+  'bm_george ',
   'voice',
 ];
 
