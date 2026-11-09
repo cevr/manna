@@ -1,0 +1,12 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "dependsOn": [],
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": ["dist/**"],
+      "cache": false
+    },
+    "test:slow": { "dependsOn": [], "inputs": ["$TURBO_DEFAULT$"], "cache": false }
+  }
+}
