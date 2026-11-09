@@ -6,7 +6,7 @@
  * yesterday and one passage held, held to `barFaults` on every frame while
  * the reader goes through each screen a control can hide on: Today and a
  * recital (`Say it`, `Listening`, the grades and `Next` in the footer), the
- * field's bar (`‹ Today`, `Add a passage`, the ask and its `Remove` and
+ * field's bar (`‹ Today`, `Add verses`, the ask and its `Remove` and
  * `Keep`), and the chooser's header (each step's back) and footer
  * (`Up to 20 verses` and `Plant` under Psalms 119's 176 verses).
  *
@@ -42,10 +42,12 @@ it('keeps each screen’s fixed controls outside its scroll views in every frame
   await step('Say it', 'Listening');
   await step('Listening', 'Next');
   await step('Next', 'Your field');
-  await step('Your field', 'Add a passage');
+  await step('Your field', 'Add verses');
   await step('Remove John 15:1-5', 'Keep');
-  await step('Keep', 'Add a passage');
-  await step('Add a passage', 'Psalms');
+  await step('Keep', 'Add verses');
+  expect(await rig.tapId('add-verses')).toBe(true);
+  expect(await rig.until(() => rig.control('Psalms') !== undefined)).toBe(true);
+  seen.push('Add verses');
   await step('Psalms', 'Psalms 119');
   await step('Psalms 119', 'Psalms 119:20');
   await step('Psalms 119:1', 'Plant');

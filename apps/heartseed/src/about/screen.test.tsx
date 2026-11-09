@@ -166,9 +166,9 @@ describe('About', () => {
     });
     watch.observe(rig.host, { subtree: true, childList: true, attributes: true });
     await toField(rig);
-    const rowRemove = [...rig.host.querySelectorAll('[data-testid="row"] [role="button"]')].map(
-      labelOf,
-    )[0];
+    const rowRemove = [...rig.host.querySelectorAll('[data-testid="row"] [role="button"]')]
+      .map(labelOf)
+      .find((label) => label.startsWith('Remove '));
     expect(rowRemove).toStartWith('Remove ');
     expect(await rig.tap(rowRemove ?? '')).toBe(true);
     expect(await rig.until(() => named(rig, 'Remove').length === 1)).toBe(true);

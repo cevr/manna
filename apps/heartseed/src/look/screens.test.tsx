@@ -70,8 +70,13 @@ describe('every screen but Today and the first minute, in light and in dark', ()
       ]);
       setSystem(scheme);
       const rig = await mountBar(0, false);
-      const step = async (label: string, want: string, where: string) => {
-        if (!(await rig.tap(label))) return;
+      const step = async (
+        label: string,
+        want: string,
+        where: string,
+        tap = () => rig.tap(label),
+      ) => {
+        if (!(await tap())) return;
         if (!(await rig.until(() => want === '' || headingOf(rig.host) === want))) return;
         reached.push(`${scheme} ${where}`);
         await held(rig, scheme, where, report);
@@ -79,8 +84,15 @@ describe('every screen but Today and the first minute, in light and in dark', ()
       await rig.until(() => headingOf(rig.host) === 'Today');
       await held(rig, scheme, 'Today', report);
       await step('Your field', 'Your field', 'the field');
-      const stages = [...rig.host.querySelectorAll('[data-testid="plant"]')].length;
-      if (stages >= 5) reached.push(`${scheme} every stage`);
+      const drawn = new Set(
+        [...rig.host.querySelectorAll('img')].flatMap(
+          (node) =>
+            /\/assets\/home\/(seed|blade|ear|corn)-/u.exec(String(node.getAttribute('src')))?.[1] ??
+            [],
+        ),
+      );
+      if (rig.host.querySelectorAll('[data-testid="plant-soil"]').length > 0) drawn.add('soil');
+      if (drawn.size >= 5) reached.push(`${scheme} every stage`);
       await step('Remove Psalms 117:1-2', 'Your field', 'the ask');
       const pending = { frames: 0 };
       const watch = new MutationObserver(() => {
@@ -93,7 +105,7 @@ describe('every screen but Today and the first minute, in light and in dark', ()
       if (pending.frames > 0) reached.push(`${scheme} a remove pending`);
       await step('About', 'About', 'About');
       await step('Your field', 'Your field', 'the field again');
-      await step('Add a passage', 'Add a passage', 'the books');
+      await step('Add verses', 'Add a passage', 'the books', () => rig.tapId('add-verses'));
       await step('Psalms', 'Psalms', 'a book');
       await step('Psalms 117', 'Psalms 117', 'a chapter');
       for (const verse of [...rig.host.querySelectorAll('[data-testid="verse"]')].slice(0, 1)) {

@@ -131,7 +131,7 @@ export const walkChooser = async (seed: number, steps: number) => {
   const open = async () => {
     while (state !== undefined && state.step.at !== 'books') await back('to the books');
     if (state === undefined) {
-      await rig.tap('Add a passage');
+      await rig.tap('Add verses');
       state = OPENED;
       reached.add('opened again');
       await settle('opened again');

@@ -22,7 +22,7 @@
  * Commands by screen. Today: `Your field`, `Say it` heard then `Next`, a
  * Minutes tap, or a relaunch after the next 04:00 local. The field: `Today`,
  * a remove (`Keep`, the ask moved, or the ask's `Remove` landing or refused,
- * once or twice in one turn), or an add: a target chapter (Psalms 119 and
+ * once or twice in one turn), or an add (the bar's `Add verses`): a target chapter (Psalms 119 and
  * 117, the promise's chapter, John 15, one of 20 verses, one of 21, or any), a back to
  * the books or the chapters and in again, 1-4 verse taps by pattern, then
  * leaving or `Plant` (refused or twice in one turn), retried after a refusal
@@ -567,10 +567,10 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     }
   };
   const add = async () => {
-    await tap('Add a passage');
+    await click((app as Launch).host.querySelector('[data-testid="add-verses"]') ?? undefined);
     screen = 'chooser';
     choosing = OPENED;
-    await settle('Add a passage');
+    await settle('Add verses');
     const book = CORPUS.books[below(next, 66)] ?? 1;
     const aim = AIMS[below(next, AIMS.length + 1)] ?? {
       book,

@@ -4,7 +4,7 @@
  * The chooser as a reader and a screen reader meet it, for the chooser's
  * tests: `ChooserScreen` mounted in happy-dom (react-native-web) under the
  * app's own layer over the app's real store on the device's `One.Database`
- * (`one.tsx`), beside a stand-in of the field: a button `Add a passage`
+ * (`one.tsx`), beside a stand-in of the field: a button `Add verses`
  * that opens the chooser again, shown while the chooser has handed the
  * reader back (its `onField`).
  *
@@ -191,7 +191,7 @@ const standIn = themed((color, face) => ({
   ink: { color: color.ink, fontFamily: face },
 }));
 
-/** The chooser beside a stand-in field, which offers `Add a passage` while the chooser has handed the reader back. */
+/** The chooser beside a stand-in field, which offers `Add verses` while the chooser has handed the reader back. */
 function Stage({ onLeft }: { readonly onLeft: () => void }) {
   const look = useThemed(standIn);
   const [open, setOpen] = useState(true);
@@ -207,11 +207,11 @@ function Stage({ onLeft }: { readonly onLeft: () => void }) {
   return (
     <Pressable
       role="button"
-      aria-label="Add a passage"
+      aria-label="Add verses"
       onPress={() => setOpen(true)}
       style={look.ground}
     >
-      <Text style={look.ink}>Add a passage</Text>
+      <Text style={look.ink}>Add verses</Text>
     </Pressable>
   );
 }
