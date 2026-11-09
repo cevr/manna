@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNullish -- a React screen test: it drives the root in happy-dom through the need rig's promise-based taps over a disk in a plain map, the rig's `promises` part left out as null. */
+/* oxlint-disable effect/noAsyncFunction -- a React screen test: it drives the root in happy-dom through the need rig's promise-based taps over a disk in a plain map. */
 
 /**
  * When the way to When I need… is offered (N1, R5), through the need rig
