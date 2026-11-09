@@ -309,6 +309,19 @@ const footFaults = (host: Element, controls: readonly Element[]) => {
   return out;
 };
 
+/** What the `Add verses` controls show wrong: one not drawn with the one hidden `add` icon of the scheme now, or the row (`add-row`) under 56 tall. */
+const addFaults = (controls: readonly Element[]) => {
+  const out: string[] = [];
+  for (const node of controls) {
+    if (nameOf(node) !== 'Add verses') continue;
+    const drawn = oneIcon(node);
+    if (drawn !== 'add') out.push(`Add verses (${idOf(node)}) drawn ${drawn}`);
+    if (idOf(node) === 'add-row' && !(parseFloat(ownStyle(node, 'minHeight')) >= 56))
+      out.push('the Add verses row under 56 tall');
+  }
+  return out;
+};
+
 /** The three greetings and the icon each is drawn with. */
 const GREETING_ICONS = new Map([
   ['Good morning', 'sun'],
@@ -332,8 +345,9 @@ const greetingFaults = (host: Element) => {
  * heading, `Your field`; a control in a scroll view but a plant, a furrow's
  * `Remove …` and the `Add verses` row; a control under 44 tall; a plant's
  * faults (`plantFaults`); a furrow's ripe count off its plants; the foot's
- * faults (`footFaults`); `Add verses` beside the limit line; and the
- * greeting's faults.
+ * faults (`footFaults`); `Add verses` beside the limit line, or drawn
+ * other than with the one hidden `add` icon of the scheme now (`addFaults`);
+ * the greeting's faults; and any home icon of the other scheme.
  */
 export const homeFaults = (host: Element): string[] => {
   const out: string[] = [];
@@ -353,7 +367,9 @@ export const homeFaults = (host: Element): string[] => {
     controls.some((node) => nameOf(node) === 'Add verses')
   )
     out.push('Add verses beside the limit line');
-  out.push(...greetingFaults(host));
+  out.push(...addFaults(controls), ...greetingFaults(host));
+  for (const image of host.querySelectorAll('img'))
+    if (iconOf(image).endsWith(' set>')) out.push(`an image drawn ${iconOf(image)}`);
   return out;
 };
 
