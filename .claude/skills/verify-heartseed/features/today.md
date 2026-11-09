@@ -31,7 +31,9 @@ header's second row, are the radio group `Minutes` (`2 min`, `5 min`,
 `10 min`, `20 min`) and the button `Voice` (valued `Off`, `Her` or `Him`,
 each tap the next), and at the top of the scroll
 view, above the reference, the counts line (`id=session`), such as
-`Nothing to tend now` (`session.md`).
+`Nothing to tend now` (`session.md`). While a new piece's `Listen` reads
+it, its words show as the reading view (`id=reading`, a `word-<i>` node
+per word, lit as read) in place of `id=passage` (`light.md`).
 
 ## Sub-features
 

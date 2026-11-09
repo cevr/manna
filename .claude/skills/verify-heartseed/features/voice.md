@@ -6,7 +6,9 @@ spoken (`apps/heartseed/src/voice.ts`, over the Swift package
 `Listen` (`first.md`, `first-hear`, drives it on a screen). The reader's
 choice, Off, Her or Him, is Today's `Voice` button (`session.md`,
 `voice-cycle` and `voice-migrate`); Her and Him read with the same system
-voice until the natural voice routes them. What this
+voice until the natural voice routes them. Today's `Listen` on a new piece
+lights each word in the reading view, where a held finger seeks the
+reading (`Voice.seek`, `light.md`). What this
 feature checks is that the app builds with the module.
 
 The voice makes no sound on the simulator: there the module never speaks.

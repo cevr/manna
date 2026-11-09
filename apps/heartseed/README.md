@@ -45,7 +45,38 @@ runtime (`src/app.ts`), and Say it reads no word aloud:
   tap of `Voice` onto Off does; a tap from Her to Him lets it go on. Listening is
   offered, not required, and writes nothing.
 
-- `src/voice.ts` is the `Voice` service (Effect): `read`, `pause`,
+While the voice reads the shown piece's text and no recital's marks show,
+Today shows the reading view (`src/reading/view.tsx`, testID `reading`) in
+place of the whole passage (testID `passage`): one `word-<i>` text per word
+(`shownWordsOf`, `src/reading/words.ts`: a word runs from its run's start
+to the next word's, trimmed, so a mark-only run stays with the word before
+it), each a direct child of `reading` with its own layout and its own
+accessibility element. The words before the read point are in ink and the
+rest quiet; the selected words (`aria-selected`, the `hearing` ground) are
+the held word while held, else the voice's current range. Nothing animates.
+At the reading's end the passage is whole again.
+
+- **The hold.** The reading view carries a gesture-handler pan
+  (`reading-hold`, `app/_layout.tsx` wraps every route in
+  `GestureHandlerRootView`) that activates only after a still long press
+  of 350 ms, so a swipe scrolls and never holds. At its activation the word
+  under the finger (`wordAt`: the line nearest the point vertically, then
+  the word in it nearest horizontally, over each word's box from its
+  `onLayout`) is held, the voice pauses and one soft tick is felt
+  (`holdReading`); each move holds the word under the finger; Today's
+  `ScrollView` is still exactly while held. The end acts once, in
+  `onFinalize`: a release reads on from the held word (`seekTo`), a cancel
+  resumes (`letGo`). A reading that ends while held drops the hold, and the
+  finger's later end calls nothing.
+- **VoiceOver.** Each word offers one action, `Read from here`, which
+  seeks to it.
+- **The light probe** (`app/probe/light.tsx`, `heartseed://probe/light`)
+  reads John 3:16 in the reading view and seeks by `Back 3` and
+  `Forward 3`, for the simulator's drive, whose driver has no long-press
+  drag (`.claude/skills/verify-heartseed/features/light.md`). It takes
+  only `src/app.ts`'s atoms and renders nothing in a release build.
+
+- `src/voice.ts` is the `Voice` service (Effect): `read`, `seek`, `pause`,
   `resume`, `stop`, `choose`, and the `view` a screen shows (`choice`,
   `enabled` (not Off), `status`,
   the `verse`, its `words`, how many are `lit`, the `current` word range and
@@ -57,6 +88,13 @@ runtime (`src/app.ts`), and Say it reads no word aloud:
   the view only for the current utterance while a reading is under way, and
   a range lights the words it overlaps, never fewer than are lit. A word is
   one the matcher counts (`src/matcher/words.ts`), found by its UTF-16 span.
+- `Voice.seek(word)` acts only while a reading is under way (reading or
+  paused) and only for a whole `word` of the verse: it speaks the verse
+  from that word's run as a new utterance, through the same call as
+  `read`, with the words before it lit and the status `reading`; any other
+  seek does nothing. The reducer keeps the utterance's `offset` in the
+  verse (0 for a read), so a sought utterance's ranges, in the tail's own
+  coordinates, light the verse's words.
 - The choice is one list, `CHOICES` (`off`, `her`, `him`), and
   `nextChoice` steps it, wrapping. It is kept under `heartseed/voice/choice`
   in the app's settings store, `src/store.ts` (One's key-value store; no

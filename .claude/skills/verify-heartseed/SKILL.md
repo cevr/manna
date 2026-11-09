@@ -158,7 +158,9 @@ then `, ready today` when ready), and in its foot `Begin`,
 the backs (`Your field`, `Books`, `Chapters`); and on the home's
 development probe (`sim open probe/home --expect "label=Home probe"`,
 `apps/heartseed/app/probe/home.tsx`) its one button
-`Start with <reference>`.
+`Start with <reference>`; and on the light probe (`sim open probe/light
+--expect "label=Light probe"`, `apps/heartseed/app/probe/light.tsx`)
+`Listen`, `Back 3` and `Forward 3`.
 Heartseed has no journey files yet. The features:
 
 - [features/first.md](features/first.md): the first minute a fresh
@@ -240,6 +242,13 @@ Heartseed has no journey files yet. The features:
   `John 3:16, seed`. Run it from `first.md`'s `first-home`; its second session
   comes after the next 04:00 (`passage.md`'s `passage-new` with John 3:16
   in place of John 15:1-5).
+- [features/light.md](features/light.md): each word lit as the voice
+  reads it, in the reading view (`id=reading`, a `word-<i>` node per
+  word), on the light probe (`apps/heartseed/app/probe/light.tsx`: John
+  3:16, `Back 3` and `Forward 3` seeking, a swipe that scrolls and never
+  holds) and on Today's `Listen`; the hold-and-drag seek and VoiceOver's
+  `Read from here` are the owner's phone rows. Run it from `first.md`'s
+  `first-home`.
 - [features/app-icon.md](features/app-icon.md): the app icon (light, dark,
   tinted), its name and both launch screens, from one mark in brand C's
   colours, read from the build's asset catalog and Info.plist, never from

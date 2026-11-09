@@ -33,7 +33,8 @@ leave the session (`apps/heartseed/README.md`, Phrases).
   due, the reference is `John 3:16 [1-6]`, its six words whole
   (`id=passage`), with `Listen` before `Say it`.
 - `phrase-say`: `Listen` → the simulator logs `[voice] speak utterance=`
-  with `skipped=simulator`, and six words light. Then `Say it` (the replay
+  with `skipped=simulator`, and the reading view (`id=reading`) lights its
+  six `word-<i>` nodes as they are read (`light.md`). Then `Say it` (the replay
   recites Isaiah 41:10's words, so the count is low; that is still a
   recall) → the summary reads `<k> of 6 words`; a grade; `Next`.
 - `phrase-field`: the field's row `John 3:16` holds `John 3:16, seed`;
@@ -90,10 +91,11 @@ must start empty: uninstall by udid as `first.md` says.
    `sim snapshot phrase-new` → the counts line holds `1 new`; when the
    reference is `Isaiah 41:10` (its review due), run it through `Say it`
    and `Next` first, then snapshot again → the reference
-   `John 3:16 [1-6]`, six `word-<i>` nodes in `id=passage`, `Listen`
-   before `Say it`.
+   `John 3:16 [1-6]`, its six words whole in one `id=passage` node,
+   `Listen` before `Say it`.
 5. `phrase-say`: `sim tap "label=Listen"`, `sim snapshot phrase-listen`
-   → six words lit; the log (`first.md`'s `xcrun simctl spawn <udid> log
+   → `id=reading` in place of `id=passage`, holding six `word-<i>` nodes,
+   the words read so far lit, one or two `selected` (`light.md`); the log (`first.md`'s `xcrun simctl spawn <udid> log
    show` over `[voice]`, from this session's start) holds a
    `[voice] speak utterance=` line ending `skipped=simulator`. Then
    `sim tap "label=Say it"`, wait for the summary
