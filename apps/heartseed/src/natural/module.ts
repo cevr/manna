@@ -1,8 +1,9 @@
 /**
  * The natural voice's native module, as the app drives it: Kokoro-82M on
  * the phone, which downloads its pinned files once, loads them, renders a
- * chunk of token ids at a speed to audio and the frames each id took, and plays the
- * audio while it sends the voice's own events at each word's start sample.
+ * chunk of token ids at a speed to audio and the frames each id took, and plays a
+ * cut of the audio, then a rest of silence, while it sends the voice's own
+ * events at each word's start sample.
  * JS plans the ids and the word starts (`plan.ts`); the module owns the
  * clock. On iOS it is `native/natural` (`source.ios.ts`); elsewhere there
  * is none (`source.ts`).
@@ -48,11 +49,17 @@ export interface WordStart {
   readonly length: number;
 }
 
-/** A rendered chunk: the frames each id took, the audio's sample count, and the render's time. */
+/**
+ * A rendered chunk: the frames each id took, the audio's sample count, the
+ * render's time, and the index of its first and last audible sample
+ * (`samples` and -1 when none is).
+ */
 export interface Rendered {
   readonly frames: ReadonlyArray<number>;
   readonly samples: number;
   readonly millis: number;
+  readonly first: number;
+  readonly last: number;
 }
 
 /** The natural voice could not do what was asked: no module here, or the module refused. */
@@ -92,6 +99,9 @@ export class NaturalModule extends Context.Service<
       chunk: number,
       starts: ReadonlyArray<WordStart>,
       last: boolean,
+      from: number,
+      to: number,
+      rest: number,
     ) => Effect.Effect<void, NaturalUnavailable>;
     readonly pause: Effect.Effect<void>;
     readonly resume: Effect.Effect<void>;

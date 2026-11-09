@@ -123,8 +123,8 @@ describe('the probe lines', () => {
 
   it('shows a full probe, each line keyed by its first word', () => {
     const renders: ReadonlyArray<Rendered> = [
-      { frames: [2, 3, 5], samples: 6000, millis: 100 },
-      { frames: [4, 4], samples: 4801, millis: 140 },
+      { frames: [2, 3, 5], samples: 6000, millis: 100, first: 0, last: 5999 },
+      { frames: [4, 4], samples: 4801, millis: 140, first: 0, last: 4800 },
     ];
     const read = renders.reduce(readRendered, tallyOf(cleanViews(3)));
     const view: ProbeView = {
@@ -301,10 +301,11 @@ describe('a read tally', () => {
 
 describe('a render', () => {
   it('holds its frames when its samples are 600 per frame exactly', () => {
-    expect(framesHold({ frames: [1, 2, 3], samples: 3600, millis: 1 })).toBe(true);
-    expect(framesHold({ frames: [1, 2, 3], samples: 3599, millis: 1 })).toBe(false);
-    expect(framesHold({ frames: [1, 2, 3], samples: 4200, millis: 1 })).toBe(false);
-    expect(framesHold({ frames: [], samples: 0, millis: 1 })).toBe(true);
+    const heard = { millis: 1, first: 0, last: -1 };
+    expect(framesHold({ frames: [1, 2, 3], samples: 3600, ...heard })).toBe(true);
+    expect(framesHold({ frames: [1, 2, 3], samples: 3599, ...heard })).toBe(false);
+    expect(framesHold({ frames: [1, 2, 3], samples: 4200, ...heard })).toBe(false);
+    expect(framesHold({ frames: [], samples: 0, ...heard })).toBe(true);
   });
 });
 
@@ -393,7 +394,13 @@ const soaked = (
 };
 
 const fit = (ids: ReadonlyArray<number>) =>
-  Effect.succeed({ frames: ids.map(() => 2), samples: ids.length * 1200, millis: 5 });
+  Effect.succeed({
+    frames: ids.map(() => 2),
+    samples: ids.length * 1200,
+    millis: 5,
+    first: 0,
+    last: ids.length * 1200 - 1,
+  });
 
 describe('a soaked verse', () => {
   it('is unplanned for a word the lexicon lacks, with only the stop', () => {
@@ -437,12 +444,20 @@ describe('a soaked verse', () => {
 
   it('fails `frames` for audio off its frames or a frame list off its ids, then stops', () => {
     const off = (ids: ReadonlyArray<number>) =>
-      Effect.succeed({ frames: ids.map(() => 2), samples: ids.length * 1200 + 600, millis: 5 });
+      Effect.succeed({
+        frames: ids.map(() => 2),
+        samples: ids.length * 1200 + 600,
+        millis: 5,
+        first: 0,
+        last: -1,
+      });
     const short = (ids: ReadonlyArray<number>) =>
       Effect.succeed({
         frames: ids.slice(1).map(() => 2),
         samples: (ids.length - 1) * 1200,
         millis: 5,
+        first: 0,
+        last: -1,
       });
     for (const answer of [off, short]) {
       expect(soaked('bel cor.', answer)).toEqual({

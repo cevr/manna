@@ -3,12 +3,14 @@
  * loads the pinned model in the natural voice the speak names
  * (`Speaking.natural`, one of `VOICES`; any other name fails the speak once
  * its stop is sent), then renders it at that voice's speed (`SPEEDS`) and
- * plays it chunk by chunk, one render in
- * flight, and forwards the module's events for the reading it
+ * plays it chunk by chunk, one render in flight, each chunk's edge silence
+ * cut to `EDGE_KEEP` (`cutOf`, its word starts moved by `startsWithin`) and
+ * its rest after it, and forwards the module's events for the reading it
  * holds. A speak succeeds once its first chunk plays, or at once when its
  * reading is let go (stopped, replaced, or ended by a forwarded terminal
  * event); a late answer for a reading let go is ignored. A first chunk that
- * does not render or play fails the speak; a later one stops the module and
+ * does not render, fit its render (frames, samples and audible span) or
+ * play fails the speak; a later one stops the module and
  * ends the reading with an `interrupt` of its own.
  */
 
@@ -18,7 +20,16 @@ import { VoiceSource, VoiceUnavailable, type VoiceEvent } from '../voice';
 import type { Lexicon } from './lexicon';
 import { FILES, REVISION, SPEEDS, VOICES, type NaturalVoice } from './manifest';
 import { NaturalModule, type Rendered } from './module';
-import { planOf, SAMPLES_PER_FRAME, startsOf, type Chunk, type WordStart } from './plan';
+import {
+  cutOf,
+  planOf,
+  SAMPLES_PER_FRAME,
+  startsOf,
+  startsWithin,
+  type Chunk,
+  type Cut,
+  type WordStart,
+} from './plan';
 
 /** The reading the source holds: its utterance, its chunks, its voice's speed, and the signal a speak waiting on it ends at. */
 interface Reading {
@@ -33,12 +44,36 @@ type Played = 'played' | 'failed' | 'gone';
 
 const TERMINAL: ReadonlySet<VoiceEvent['kind']> = new Set(['finish', 'cancel', 'interrupt']);
 
-/** The chunk's word starts, when the render fits it: a whole frame or more per id, and the audio exactly its frames long. */
-const startsFor = (chunk: Chunk, rendered: Rendered): Option.Option<ReadonlyArray<WordStart>> =>
-  Option.filter(
-    startsOf(chunk, rendered.frames),
-    () =>
-      rendered.samples === SAMPLES_PER_FRAME * rendered.frames.reduce((sum, each) => sum + each, 0),
+/** Whether a render's audible span lies in its audio: whole indices, `0 ≤ first ≤ samples` and `-1 ≤ last < samples`. */
+const spanned = (rendered: Rendered) =>
+  Number.isInteger(rendered.first) &&
+  Number.isInteger(rendered.last) &&
+  rendered.first >= 0 &&
+  rendered.first <= rendered.samples &&
+  rendered.last >= -1 &&
+  rendered.last < rendered.samples;
+
+/**
+ * What of the chunk plays and its word starts within that, when the render
+ * fits it: a whole frame or more per id, the audio exactly its frames long,
+ * and its audible span inside the audio.
+ */
+const playOf = (
+  chunk: Chunk,
+  rendered: Rendered,
+): Option.Option<{ readonly starts: ReadonlyArray<WordStart>; readonly cut: Cut }> =>
+  Option.map(
+    Option.filter(
+      startsOf(chunk, rendered.frames),
+      () =>
+        rendered.samples ===
+          SAMPLES_PER_FRAME * rendered.frames.reduce((sum, each) => sum + each, 0) &&
+        spanned(rendered),
+    ),
+    (starts) => {
+      const cut = cutOf(rendered.samples, rendered.first, rendered.last);
+      return { starts: startsWithin(starts, cut), cut };
+    },
   );
 
 /** Whether `voice` names a voice of the download. */
@@ -85,11 +120,12 @@ export const naturalVoiceSource = (
           );
           if (!holds(reading)) return 'gone' satisfies Played;
           if (Result.isFailure(rendered)) return 'failed' satisfies Played;
-          const starts = startsFor(chunk, rendered.success);
-          if (Option.isNone(starts)) return 'failed' satisfies Played;
+          const planned = playOf(chunk, rendered.success);
+          if (Option.isNone(planned)) return 'failed' satisfies Played;
+          const { starts, cut } = planned.value;
           const last = k === reading.chunks.length - 1;
           const played = yield* Effect.result(
-            module.play(reading.utterance, k, starts.value, last),
+            module.play(reading.utterance, k, starts, last, cut.from, cut.to, chunk.rest),
           );
           if (!holds(reading)) return 'gone' satisfies Played;
           if (Result.isFailure(played)) return 'failed' satisfies Played;

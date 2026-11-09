@@ -201,7 +201,13 @@ const renderOf = (device: Device, utterance: number, chunk: number, ids: Readonl
       device.holding = utterance;
       device.marker = true;
     } else if (device.holding !== utterance) return refused('stale');
-    return Effect.succeed({ frames: ids.map(() => 2), samples: 1200 * ids.length, millis: 1 });
+    return Effect.succeed({
+      frames: ids.map(() => 2),
+      samples: 1200 * ids.length,
+      millis: 1,
+      first: 0,
+      last: 1200 * ids.length - 1,
+    });
   });
 
 /** A load: at once while the model is loaded, else held until the history answers it. */

@@ -100,15 +100,24 @@ export const naturalModule: Layer.Layer<NaturalModule> = Layer.succeed(
     load: (revision, files, voice) => refusable(() => Native.load(revision, filesOf(files), voice)),
     render: (utterance, chunk, ids, speed) =>
       refusable(() => Native.render(utterance, chunk, [...ids], speed)).pipe(
-        Effect.map(({ frames, samples, millis }) => ({ frames, samples, millis })),
+        Effect.map(({ frames, samples, millis, first, last }) => ({
+          frames,
+          samples,
+          millis,
+          first,
+          last,
+        })),
       ),
-    play: (utterance, chunk, starts, last) =>
+    play: (utterance, chunk, starts, last, from, to, rest) =>
       refusable(() =>
         Native.play(
           utterance,
           chunk,
           starts.map(({ sample, location, length }) => ({ sample, location, length })),
           last,
+          from,
+          to,
+          rest,
         ),
       ),
     pause: quiet('pause', () => Native.pause()),

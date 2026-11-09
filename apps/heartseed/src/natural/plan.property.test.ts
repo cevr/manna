@@ -10,13 +10,27 @@
  * for a phrase and a word, ";" and ":" sent as ".", each rest by its
  * ending and 0 after the last chunk or inside a phrase, a key looked up as
  * written, symbols counted in code points, marks after a spoken lead and at
- * the whole run in UTF-16, and durations that do not fit a chunk.
+ * the whole run in UTF-16, and durations that do not fit a chunk. Then a
+ * chunk's cut (`cutOf`, 20 ms kept each side of its audible span, all of it
+ * when nothing is heard) and its starts moved into it (`startsWithin`)
+ * against a model, over seeded bounds with floors on a silent chunk, a cut
+ * at either edge of the audio, one inside it and a clamped start.
  */
 
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
-import { CHUNK_CAP, planOf, RESTS, SAMPLES_PER_FRAME, startsOf, type Chunk } from './plan';
+import {
+  CHUNK_CAP,
+  cutOf,
+  EDGE_KEEP,
+  planOf,
+  RESTS,
+  SAMPLES_PER_FRAME,
+  startsOf,
+  startsWithin,
+  type Chunk,
+} from './plan';
 
 const SYMBOLS = [' ', ...',.:;?!()', ...'abdefghiklmnoprstuvwz', ...'ðˈɔɹOɛAəɪɡθʌ', '𝔹'];
 const VOCAB: ReadonlyMap<string, number> = new Map(
@@ -510,5 +524,85 @@ describe('startsOf', () => {
       misfits.map(() => 'None'),
     );
     expect(shown(startsOf(chunk, fit))).toBe(modelStarts(chunk, fit));
+  });
+});
+
+/** The margin kept each side of the audible span: 20 ms at 24 samples a ms. */
+const MARGIN = 20 * 24;
+
+/** The model's cut: the audible span widened by the margin and kept inside the audio, or all of it when nothing is audible. */
+const modelCut = (samples: number, first: number, last: number) => {
+  if (last < first) return { from: 0, to: samples };
+  const from = first < MARGIN ? 0 : first - MARGIN;
+  const end = last + MARGIN;
+  return { from, to: end >= samples ? samples : end + 1 };
+};
+
+/** Seeded bounds: audio of 0 to 40,000 samples (short ones often), a span anywhere in it or none, and starts across it. */
+const generatedBounds = (seed: number, count: number) => {
+  const random = generator(seed);
+  return Array.from({ length: count }, () => {
+    const samples = random() < 0.3 ? Math.floor(random() * 1_500) : Math.floor(random() * 40_000);
+    const silent = samples === 0 || random() < 0.15;
+    const first = silent ? samples : Math.floor(random() * samples);
+    const last = silent ? -1 : first + Math.floor(random() * (samples - first));
+    const starts = Array.from({ length: Math.floor(random() * 5) }, (_, index) => ({
+      sample: Math.floor(random() * (samples + 1)),
+      location: index * 4,
+      length: 3,
+    }));
+    return { samples, first, last, starts };
+  });
+};
+
+describe('cutOf and startsWithin, against the model', () => {
+  it('cuts seeded bounds and moves their starts as the model does', () => {
+    const bounds = generatedBounds(SEED + 4, 5_000);
+    const tally = { silent: 0, front: 0, back: 0, inside: 0, clamped: 0 };
+    const wrong = bounds.filter(({ samples, first, last, starts }) => {
+      const cut = modelCut(samples, first, last);
+      if (last < first) tally.silent++;
+      else {
+        if (cut.from === 0) tally.front++;
+        if (cut.to === samples) tally.back++;
+        if (cut.from > 0 && cut.to < samples) tally.inside++;
+      }
+      const moved = starts.map((start) => {
+        const within = start.sample - cut.from;
+        const sample = within < 0 ? 0 : within > cut.to - cut.from ? cut.to - cut.from : within;
+        if (sample !== within) tally.clamped++;
+        return { ...start, sample };
+      });
+      const got = cutOf(samples, first, last);
+      return (
+        JSON.stringify(got) !== JSON.stringify(cut) ||
+        JSON.stringify(startsWithin(starts, got)) !== JSON.stringify(moved)
+      );
+    });
+    expect(wrong.slice(0, 3)).toEqual([]);
+    expect(tally.silent).toBeGreaterThanOrEqual(400);
+    expect(tally.front).toBeGreaterThanOrEqual(400);
+    expect(tally.back).toBeGreaterThanOrEqual(400);
+    expect(tally.inside).toBeGreaterThanOrEqual(1_000);
+    expect(tally.clamped).toBeGreaterThanOrEqual(1_000);
+  });
+
+  it('keeps 480 samples each side, the audio’s own edges, and all of it when nothing is heard', () => {
+    expect(EDGE_KEEP).toBe(480);
+    expect(cutOf(10_000, 1_000, 2_000)).toEqual({ from: 520, to: 2_481 });
+    expect(cutOf(10_000, 480, 9_519)).toEqual({ from: 0, to: 10_000 });
+    expect(cutOf(10_000, 481, 9_518)).toEqual({ from: 1, to: 9_999 });
+    expect(cutOf(10_000, 0, 9_999)).toEqual({ from: 0, to: 10_000 });
+    expect(cutOf(10_000, 5_000, 5_000)).toEqual({ from: 4_520, to: 5_481 });
+    expect(cutOf(10_000, 10_000, -1)).toEqual({ from: 0, to: 10_000 });
+    expect(cutOf(0, 0, -1)).toEqual({ from: 0, to: 0 });
+  });
+
+  it('moves a start by the cut, a trimmed lead to 0 and one past the end to the cut’s length', () => {
+    const start = (sample: number) => ({ sample, location: 2, length: 5 });
+    const cut = { from: 520, to: 2_481 };
+    expect(
+      startsWithin([start(1_000), start(100), start(520), start(2_481), start(3_000)], cut),
+    ).toEqual([start(480), start(0), start(0), start(1_961), start(1_961)]);
   });
 });

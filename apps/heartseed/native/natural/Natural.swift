@@ -52,12 +52,15 @@ struct NaturalStart: Codable {
   let length: Int
 }
 
-/// A rendered chunk: each id's frame count, the sample count and the
-/// render's wall time in milliseconds.
+/// A rendered chunk: each id's frame count, the sample count, the render's
+/// wall time in milliseconds, and the index of its first and last audible
+/// sample (`samples` and `-1` when none is).
 struct NaturalRender: Codable {
   let frames: [Int]
   let samples: Int
   let millis: Double
+  let first: Int
+  let last: Int
 }
 
 enum NaturalEventKind: String, Codable {
@@ -374,7 +377,9 @@ struct NaturalFailure: LocalizedError {
         "[natural] render utterance=\(utterance) chunk=\(chunk) ids=\(ids.count) frames=\(total) "
           + "samples=\(result.samples.count) ms=\(Int(millis.rounded())) speed=\(speed)")
       if held === reading { reading.rendered[chunk] = (result.samples, total) }
-      return NaturalRender(frames: frames, samples: result.samples.count, millis: millis)
+      let first = result.samples.firstIndex { abs($0) > Self.audible } ?? result.samples.count
+      let last = result.samples.lastIndex { abs($0) > Self.audible } ?? -1
+      return NaturalRender(frames: frames, samples: result.samples.count, millis: millis, first: first, last: last)
     } catch {
       if held === reading { halt() }
       if case KokoroAneError.nonFiniteModelOutput = error {
@@ -387,33 +392,45 @@ struct NaturalFailure: LocalizedError {
   }
 
   /// Schedules the held reading's chunk `chunk`, rendered and not yet
-  /// played, right after the one before it, and drops its audio. `starts`
-  /// are its words' start samples within the chunk; each sends a `range`
-  /// when the clock reaches it. `last` marks the reading's final chunk,
-  /// after whose last sample `finish` is sent. A chunk that comes after the
-  /// clock has passed the one before plays as soon as it can, its words
-  /// shifted with it. A play while paused is scheduled and stays paused.
-  func play(_ utterance: Int, _ chunk: Int, _ starts: [NaturalStart], _ last: Bool) throws {
+  /// played, right after the one before it and its rest, and drops its
+  /// audio. Only `from..<to` of its samples plays (JS trims the edge
+  /// silence), and `rest` samples of silence follow it before the next
+  /// chunk. `starts` are its words' start samples within that cut; each
+  /// sends a `range` when the clock reaches it. `last` marks the reading's
+  /// final chunk, after whose last sample `finish` is sent, its rest not
+  /// waited out. A chunk that comes after the clock has passed its place
+  /// plays as soon as it can, its words shifted with it. A play while
+  /// paused is scheduled and stays paused. A cut outside the audio, an
+  /// empty one or a negative rest throws `cut`.
+  func play(
+    _ utterance: Int, _ chunk: Int, _ starts: [NaturalStart], _ last: Bool, _ from: Int, _ to: Int, _ rest: Int
+  ) throws {
     guard let reading = held, reading.utterance == utterance else { throw NaturalFailure(message: "stale") }
-    guard chunk == reading.nextChunk, reading.end == nil, let audio = reading.rendered.removeValue(forKey: chunk)
+    guard chunk == reading.nextChunk, reading.end == nil, let audio = reading.rendered[chunk]
     else { throw NaturalFailure(message: "chunk \(chunk) not rendered") }
+    guard from >= 0, to <= audio.pcm.count, from < to, rest >= 0 else { throw NaturalFailure(message: "cut") }
+    reading.rendered[chunk] = nil
     var at = reading.scheduledEnd
     if chunk > 0, let now = output.now(), now >= at { at = now + Self.lead }
     do {
-      try output.schedule(audio.pcm, at: at, paused: reading.paused)
+      try output.schedule(Array(audio.pcm[from..<to]), at: at, paused: reading.paused)
     } catch {
       halt()
       throw error
     }
     NSLog(
       "%@",
-      "[natural] play utterance=\(utterance) chunk=\(chunk) frames=\(audio.frames) samples=\(audio.pcm.count)"
+      "[natural] play utterance=\(utterance) chunk=\(chunk) frames=\(audio.frames) samples=\(audio.pcm.count) from=\(from) to=\(to) rest=\(rest) at=\(at)"
         + NaturalOutput.note)
     if chunk == 0 { reading.begin = at }
     reading.marks += starts.map { NaturalStart(sample: at + $0.sample, location: $0.location, length: $0.length) }
     reading.nextChunk += 1
-    reading.scheduledEnd = at + audio.pcm.count
-    if last { reading.end = reading.scheduledEnd }
+    if last {
+      reading.scheduledEnd = at + (to - from)
+      reading.end = reading.scheduledEnd
+    } else {
+      reading.scheduledEnd = at + (to - from) + rest
+    }
     if !reading.paused { startTicking() }
   }
 
@@ -457,6 +474,10 @@ struct NaturalFailure: LocalizedError {
   /// The wait given a chunk scheduled after the clock has passed its place,
   /// in samples (100 ms), so its first samples are not lost.
   private static let lead = 2_400
+
+  /// The amplitude a sample must pass to count as heard, for a chunk's
+  /// first and last audible sample.
+  private static let audible: Float = 0.01
 
   /// Lets go of the held reading first, so nothing it sends after is
   /// emitted, then cancels its render, stops the clock and the audio, and

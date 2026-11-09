@@ -10,6 +10,8 @@ export const SAMPLES_PER_FRAME = 600;
  * 1,100 ms (the owner's Gentle spacing).
  */
 export const RESTS = { comma: 7_200, clause: 13_200, sentence: 19_200, verse: 26_400 } as const;
+/** The samples a chunk keeps beyond its first and last audible sample (20 ms at 24 kHz). */
+export const EDGE_KEEP = 480;
 
 /** The edge characters a word speaks; every other edge character is silent. */
 const SPOKEN = /[,.:;?!()]/u;
@@ -60,6 +62,12 @@ export interface WordStart {
   readonly sample: number;
   readonly location: number;
   readonly length: number;
+}
+
+/** The samples of a chunk's audio that play, `from` up to (not including) `to`. */
+export interface Cut {
+  readonly from: number;
+  readonly to: number;
 }
 
 /**
@@ -211,3 +219,30 @@ export const startsOf = (
     })),
   );
 };
+
+/**
+ * The part of a chunk's audio that plays: from `EDGE_KEEP` samples before
+ * its first audible sample to `EDGE_KEEP` after its last, within the audio;
+ * the whole audio when nothing in it is audible (`first > last`).
+ */
+export const cutOf = (samples: number, first: number, last: number): Cut => {
+  if (first > last) return { from: 0, to: samples };
+  return {
+    from: Math.max(0, first - EDGE_KEEP),
+    to: Math.min(samples, last + 1 + EDGE_KEEP),
+  };
+};
+
+/**
+ * Each word's start moved into the cut's audio: its sample less the cut's
+ * start, a start trimmed off the front at 0 and one past the end at the
+ * cut's length.
+ */
+export const startsWithin = (
+  starts: ReadonlyArray<WordStart>,
+  cut: Cut,
+): ReadonlyArray<WordStart> =>
+  starts.map((start) => ({
+    ...start,
+    sample: Math.min(Math.max(start.sample - cut.from, 0), cut.to - cut.from),
+  }));

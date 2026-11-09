@@ -5,9 +5,11 @@
  * one source: speaks of one-, two- and three-chunk texts and of a text no
  * plan takes, each naming a system voice and a natural voice drawn from
  * `VOICES` or from names that miss one (another voice, a case, a pack path,
- * a trailing space, a name the reader sees); stop, pause and resume; a load or a render answered ok, with
- * a failure, or malformed (an id with no frame, a frame list short or long,
- * NaN, a fraction, the audio a frame off); a refused play; the module's
+ * a trailing space, a name the reader sees); stop, pause and resume; a load
+ * or a render answered ok (its audible span anywhere in the audio, or none),
+ * with a failure, or malformed (an id with no frame, a frame list short or
+ * long, NaN, a fraction, the audio a frame off, a span outside the audio or
+ * not whole); a refused play; the module's
  * events for the held utterance (and for one a failure let go of) and for
  * any other; a listener subscribed in a child of the source's scope, and
  * that child closed; and a reload (the scope closed, a new source,
@@ -29,7 +31,9 @@
  * scope, plays or renders after a stop, marks the
  * wrong chunk last, fails a later chunk silently or a first one as success,
  * skips the stop that starts a speak or a build, reads only the first
- * chunk, trusts a render whose audio is not its frames long, or holds a
+ * chunk, trusts a render whose audio is not its frames long or whose span
+ * lies outside it, plays a chunk uncut, cut without its 20 ms margin, with
+ * its starts unmoved or unclamped, or without its rest, or holds a
  * replaced speak until its module call answers. It misses the native
  * module's own timing: the module here answers when the history says.
  */
@@ -147,6 +151,9 @@ type Call =
       readonly k: number;
       readonly starts: ReadonlyArray<WordStart>;
       readonly last: boolean;
+      readonly from: number;
+      readonly to: number;
+      readonly rest: number;
     };
 
 type Outcome = 'pending' | 'success' | 'failure';
@@ -187,7 +194,7 @@ const makeModule = () => {
           state.renders.push({ ids: [...ids], done });
           return Deferred.await(done);
         }),
-      play: (u, k, starts, last) =>
+      play: (u, k, starts, last, from, to, rest) =>
         Effect.suspend(() => {
           state.calls.push({
             _tag: 'play',
@@ -195,6 +202,9 @@ const makeModule = () => {
             k,
             starts: starts.map((each) => ({ ...each })),
             last,
+            from,
+            to,
+            rest,
           });
           if (!state.refuse) return Effect.void;
           state.refuse = false;
@@ -227,10 +237,26 @@ const startsIn = (chunk: Chunk, frames: ReadonlyArray<number>): ReadonlyArray<Wo
     length: mark.length,
   }));
 
+/** A render fits its chunk: a whole frame or more per id, its audio its frames long, and its audible span whole indices inside the audio. */
 const fits = (chunk: Chunk, answer: Rendered) =>
   answer.frames.length === chunk.ids.length &&
   answer.frames.every((each) => Number.isInteger(each) && each >= 1) &&
-  answer.samples === answer.frames.reduce((sum, each) => sum + each, 0) * 600;
+  answer.samples === answer.frames.reduce((sum, each) => sum + each, 0) * 600 &&
+  Number.isInteger(answer.first) &&
+  Number.isInteger(answer.last) &&
+  answer.first >= 0 &&
+  answer.first <= answer.samples &&
+  answer.last >= -1 &&
+  answer.last < answer.samples;
+
+/** The samples that play: 480 (20 ms) beyond the audible span each side, inside the audio; all of it when nothing is audible. */
+const cutIn = (answer: Rendered) =>
+  answer.first > answer.last
+    ? { from: 0, to: answer.samples }
+    : {
+        from: Math.max(0, answer.first - 480),
+        to: Math.min(answer.samples, answer.last + 481),
+      };
 
 /** What the source must do, written from V1-V9. */
 class Model {
@@ -262,6 +288,9 @@ class Model {
     him: 0,
     nearMisses: 0,
     switches: 0,
+    clamped: 0,
+    silent: 0,
+    rested: 0,
   };
   /** The voice the last load asked for, to count switches. */
   private loadedVoice: string | undefined;
@@ -355,13 +384,24 @@ class Model {
     if (chunk === undefined) return;
     if (answer === 'failed' || !fits(chunk, answer)) return this.failed(asked.u, asked.k);
     const last = asked.k === held.chunks.length - 1;
+    const { from, to } = cutIn(answer);
+    const starts = startsIn(chunk, answer.frames).map((start) => {
+      const sample = Math.min(Math.max(start.sample - from, 0), to - from);
+      if (sample !== start.sample - from) this.tally.clamped++;
+      return { ...start, sample };
+    });
+    if (answer.first > answer.last) this.tally.silent++;
     this.calls.push({
       _tag: 'play',
       u: asked.u,
       k: asked.k,
-      starts: startsIn(chunk, answer.frames),
+      starts,
       last,
+      from,
+      to,
+      rest: chunk.rest,
     });
+    if (chunk.rest > 0) this.tally.rested++;
     if (this.refuse) {
       this.refuse = false;
       return this.failed(asked.u, asked.k);
@@ -440,24 +480,44 @@ const outcomeOf = (fiber: Fiber.Fiber<unknown, unknown>): Outcome => {
   return Exit.isSuccess(exit) ? 'success' : 'failure';
 };
 
-/** A render's answer for `ids`, ok or malformed in one of six ways. */
+/**
+ * A render's answer for `ids`: its audible span anywhere in the audio, or
+ * nothing audible (`samples` and -1); or malformed in one of ten ways (the
+ * frames or the audio off, or the span outside the audio or not whole).
+ */
 const answerFor = (
   ids: ReadonlyArray<number>,
   next: () => number,
   malformed: boolean,
 ): Rendered => {
   const frames = ids.map(() => 1 + Math.floor(next() * 25));
-  let samples = frames.reduce((sum, each) => sum + each, 0) * 600;
-  if (malformed) {
-    const how = Math.floor(next() * 6);
-    if (how === 0) frames[Math.floor(next() * frames.length)] = 0;
-    if (how === 1) frames.pop();
-    if (how === 2) frames.push(4);
-    if (how === 3) frames[0] = Number.NaN;
-    if (how === 4) frames[frames.length - 1] = 2.5;
-    if (how === 5) samples += 600;
-  }
-  return { frames, samples, millis: 30 };
+  const samples = frames.reduce((sum, each) => sum + each, 0) * 600;
+  const silent = next() < 0.15;
+  const first = silent ? samples : Math.floor(next() * samples);
+  const last = silent ? -1 : first + Math.floor(next() * (samples - first));
+  const answer = { frames, samples, millis: 30, first, last };
+  return malformed ? malformedOf(answer, next) : answer;
+};
+
+/** `answer` made malformed in one of ten ways, drawn from `next`. */
+const malformedOf = (
+  answer: Rendered & { readonly frames: Array<number> },
+  next: () => number,
+): Rendered => {
+  const { frames, samples, first, last } = answer;
+  const ways: ReadonlyArray<() => Rendered> = [
+    () => ({ ...answer, frames: frames.with(Math.floor(next() * frames.length), 0) }),
+    () => ({ ...answer, frames: frames.slice(0, -1) }),
+    () => ({ ...answer, frames: [...frames, 4] }),
+    () => ({ ...answer, frames: frames.with(0, Number.NaN) }),
+    () => ({ ...answer, frames: frames.with(-1, 2.5) }),
+    () => ({ ...answer, samples: samples + 600 }),
+    () => ({ ...answer, first: samples + 1 }),
+    () => ({ ...answer, last: samples }),
+    () => ({ ...answer, last: -2 }),
+    () => ({ ...answer, first: first + 0.5, last }),
+  ];
+  return ways[Math.floor(next() * ways.length)]?.() ?? answer;
 };
 
 const totals = {
@@ -471,6 +531,9 @@ const totals = {
   him: 0,
   nearMisses: 0,
   switches: 0,
+  clamped: 0,
+  silent: 0,
+  rested: 0,
   reloads: 0,
   finished: 0,
   heardAfterLeaving: 0,
@@ -736,6 +799,9 @@ describe('the natural voice source', () => {
         expect(totals.him).toBeGreaterThanOrEqual(200);
         expect(totals.nearMisses).toBeGreaterThanOrEqual(100);
         expect(totals.switches).toBeGreaterThanOrEqual(150);
+        expect(totals.clamped).toBeGreaterThanOrEqual(150);
+        expect(totals.silent).toBeGreaterThanOrEqual(12);
+        expect(totals.rested).toBeGreaterThanOrEqual(50);
       }),
     ));
 });

@@ -7,7 +7,7 @@ export interface NaturalInstallEvent { kind: NaturalInstallKind; bytes: number; 
 
 export interface NaturalStart { sample: number; location: number; length: number; }
 
-export interface NaturalRender { frames: number[]; samples: number; millis: number; }
+export interface NaturalRender { frames: number[]; samples: number; millis: number; first: number; last: number; }
 
 export interface NaturalEvent { utterance: number; kind: NaturalEventKind; location: number; length: number; }
 
@@ -22,7 +22,7 @@ export declare const Natural: {
   remove(): Promise<void>
   load(revision: string, files: NaturalFile[], voice: string): Promise<number>
   render(utterance: number, chunk: number, ids: number[], speed: number): Promise<NaturalRender>
-  play(utterance: number, chunk: number, starts: NaturalStart[], last: boolean): Promise<void>
+  play(utterance: number, chunk: number, starts: NaturalStart[], last: boolean, from: number, to: number, rest: number): Promise<void>
   pause(): Promise<void>
   resume(): Promise<void>
   stop(): Promise<void>
