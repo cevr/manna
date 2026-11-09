@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals -- a frame-rule table: it builds happy-dom nodes by hand in the document the rule reads. */
+/* oxlint-disable effect/noGlobals, effect/noAsyncFunction -- a frame-rule table: it builds happy-dom nodes by hand in the document the rule reads, and awaits the microtask in which happy-dom hands the sheet's watch its frames. */
 
 /**
  * The root's choices rule (`choicesFaults` in `src/test/root-rule.ts`), whole
@@ -9,11 +9,19 @@
  * `<name> on <screen>` exactly when the cell is not Today under a registered
  * host; the pending frame keeps its own rule. The same kinds outside the
  * host, where the Settings sheet lies, are no fault.
+ *
+ * The Settings sheet's look floor (`watchSheet` in `src/test/settings-rig.ts`),
+ * with no app: a modal built by hand under an ancestor at opacity 0 has no
+ * look-checked frame, and is the fault `a sheet shown with its look never
+ * checked` whether it leaves or still shows at the watch's stop; the same
+ * modal drawn is none.
  */
 
 import { describe, expect, it } from 'bun:test';
+import { act } from 'react';
 
 import { allowChoicesOnToday, rootFaults } from '../test/root-rule';
+import { watchSheet } from '../test/settings-rig';
 
 const SCREENS = [
   'Your field',
@@ -163,5 +171,53 @@ describe("the root's choices rule", () => {
       }),
     );
     expect(added).toEqual([[], [], [], [], [], []]);
+  });
+});
+
+const UNLOOKED = 'a sheet shown with its look never checked';
+
+/** Lets the watch's observer take the frames made so far: happy-dom delivers them in a microtask, which React's `act` drains. */
+const settle = () => act(async () => {});
+
+/** A modal node built by hand, as react-native-web draws a sheet, inside a wrapper at `opacity` added to the document. */
+const shownModal = (opacity: string) => {
+  const wrapper = document.createElement('div');
+  wrapper.setAttribute('style', `opacity: ${opacity}`);
+  const modal = document.createElement('div');
+  modal.setAttribute('aria-modal', 'true');
+  wrapper.append(modal);
+  document.body.append(wrapper);
+  return wrapper;
+};
+
+/** The look-floor faults and counts of one sheet shown at `opacity`, removed before the watch stops when `removed`. */
+const episode = async (opacity: string, removed: boolean) => {
+  const watch = watchSheet();
+  const wrapper = shownModal(opacity);
+  await settle();
+  if (removed) wrapper.remove();
+  await settle();
+  watch.stop();
+  wrapper.remove();
+  return {
+    unlooked: watch.faults.includes(UNLOOKED),
+    open: watch.frames.open > 0,
+    looked: watch.frames.looked,
+  };
+};
+
+describe("the Settings sheet's look floor", () => {
+  it('faults each sheet shown with no look-checked frame, gone or still open, and no sheet drawn', async () => {
+    expect({
+      hidden: await episode('0', true),
+      hiddenOpen: await episode('0', false),
+      drawn: await episode('1', true),
+      drawnOpen: await episode('1', false),
+    }).toEqual({
+      hidden: { unlooked: true, open: true, looked: 0 },
+      hiddenOpen: { unlooked: true, open: true, looked: 0 },
+      drawn: { unlooked: false, open: true, looked: 1 },
+      drawnOpen: { unlooked: false, open: true, looked: 1 },
+    });
   });
 });

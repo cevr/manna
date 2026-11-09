@@ -5271,6 +5271,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The reader's makers left out `make`, and the generated modules drew only three of effect's five PubSub constructors and never a same-named maker on another object, so the property could not tell a narrower or wider reader.
 - **Guard:** code: `apps/heartseed/src/yield-points.test.ts` `the reader finds exactly the generated modules that need one, over 300 sources`
 
+### heartseed-settings-sheet-look-checked
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "The look gate could go dark."
+- **Source:** hymnapp/hssettings/round-1-findings.md U1
+- **Wrong:** `watchSheet` in `apps/heartseed/src/test/settings-rig.ts` checked the Settings sheet's look only on frames `drawn` passed, and nothing asserted that any frame was checked, so `drawn` always false (X7) left `test:settings` green with the sheet's look never checked.
+- **Cause:** The watch counted the frames that showed the sheet open, not those whose look it checked, and no check asked for one look-checked frame per sheet shown.
+- **Guard:** code: `apps/heartseed/src/settings/rule.test.ts` `faults each sheet shown with no look-checked frame, gone or still open, and no sheet drawn`
+
 ### film-av-sync-sees-a-frame-of-priming
 
 - **Date:** 2026-11-08

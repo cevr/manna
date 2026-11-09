@@ -219,21 +219,43 @@ export const sheetFaults = (
  * Holds every frame of the document (each DOM mutation batch under its
  * body) from now on to `sheetFaults` against `scheme` (the system's by
  * default), keeping each fault once, at most 8, and counting the frames
- * that showed the sheet open. A tap of anything outside the open sheet is
- * a fault too: iOS lets no tap reach home under it.
+ * that showed the sheet open and those of them whose look was checked
+ * (drawn, so `lookFaults` ran or its kept answer stood). Each sheet shown,
+ * from its modal node appearing to its leaving or replacement, must have
+ * at least one look-checked frame: one with none is the fault `a sheet
+ * shown with its look never checked`, at its end or at `stop()` while it
+ * still shows, so a look check that never runs cannot pass unseen. A tap
+ * of anything outside the open sheet is a fault too: iOS lets no tap
+ * reach home under it.
  */
 export const watchSheet = (scheme: () => Scheme = systemScheme) => {
   const faults: string[] = [];
   const seen = new Set<string>();
   const known = new Map<string, readonly string[]>();
-  const frames = { open: 0 };
+  const frames = { open: 0, looked: 0 };
+  const shown = { modal: null as Element | null, looked: false };
   const keep = (fault: string) => {
     if (faults.length >= 8 || seen.has(fault)) return;
     seen.add(fault);
     faults.push(fault);
   };
+  const ended = () => {
+    if (shown.modal !== null && !shown.looked) keep('a sheet shown with its look never checked');
+  };
   const frame = () => {
-    if (modalOf() !== null) frames.open += 1;
+    const modal = modalOf();
+    if (modal !== shown.modal) {
+      ended();
+      shown.modal = modal;
+      shown.looked = false;
+    }
+    if (modal !== null) {
+      frames.open += 1;
+      if (remembered(known, 'drawn', modal, drawn)) {
+        frames.looked += 1;
+        shown.looked = true;
+      }
+    }
     for (const fault of sheetFaults(document, scheme(), known)) keep(fault);
   };
   const under = (event: Event) => {
@@ -253,6 +275,7 @@ export const watchSheet = (scheme: () => Scheme = systemScheme) => {
     faults,
     frames,
     stop: () => {
+      ended();
       watch.disconnect();
       document.removeEventListener('click', under, true);
     },
