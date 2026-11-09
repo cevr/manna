@@ -5311,6 +5311,16 @@ The form of an entry, each field on its own line:
 - **Cause:** A timed-out promise cannot be cancelled, and no check after a case read the zone it ended in, so a zone left set by a case or by a walk it let out reached the cases after it.
 - **Guard:** code: `apps/heartseed/src/test/setup.ts` `not UTC: a zone it set was not put back, or a walk in it outlived it`
 
+### heartseed-reader-walk-tap-absent
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "Unseamed, it passes silently: its `tap` of an absent control does nothing, and `made:minutes` is still counted"
+- **Source:** hymnapp/hssettings3/planner-report.md P1 (hymnapp/hssettings3/spec.md Goal; measured in hymnapp/hssettings3/scratch/reader-guard-unseamed.log)
+- **Wrong:** `tap` in `apps/heartseed/src/test/reader-walk.ts` clicked the control it found and nothing when none showed, so with Today's Minutes radios gone (home's Settings sheet holds them) the walk's Minutes tap tapped nothing, counted `made:minutes`, and `test:reader-today` and `test:reader-unread` stayed green.
+- **Cause:** The walk read a tap's effect only through the model it had already moved, and nothing asked that the control it named was there to tap.
+- **Guard:** code: `apps/heartseed/src/chooser/reader-today.test.tsx` `shows Today the plan made at each change, over the passages chosen, morning after morning`
+
 ### gate-ends-a-hung-task
 
 - **Date:** 2026-11-09

@@ -22,7 +22,9 @@
  * stored in a quarter, and 0-3 failed reads of the passages' key alone.
  *
  * Commands by screen. Today: `Your field`, `Say it` heard then `Next`, a
- * Minutes tap, or a relaunch after the next 04:00 local. Home: `Begin` (a
+ * Minutes trip (`Your field`, `<n> min` in home's Settings sheet, `Done`,
+ * then home's way to Today), or a relaunch after the next 04:00 local. A
+ * tap of a control that does not show is a fault. Home: `Begin` (a
  * relaunch after the next 04:00 local when home offers none), a remove (`Keep`, the ask moved, or the ask's `Remove` landing or refused,
  * once or twice in one turn), or an add (the bar's `Add verses`): a target chapter (Psalms 119 and
  * 117, the promise's chapter, John 15, one of 20 verses, one of 21, or any), a back to
@@ -82,6 +84,7 @@ import { actionModel, madeModel, NO_RUN, nextModel, shownModel, startedModel } f
 import { deviceOf, launch, PASSAGE, type Launch } from './run-rig';
 import { expandRule, pieceRule, verseOfRule, withPhrasesRule } from './phrase-model';
 import { rootFaults } from './root-rule';
+import { closeSettings, openSettings, tapInSheet, watchSheet } from './settings-rig';
 import { countsModel, DAY, localDay, MINUTE, planModel } from './session-model';
 import { listenModel } from './wake-model';
 import { wallAt } from './wake-walk';
@@ -393,7 +396,15 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
         '[role="button"],[role="radio"],[role="checkbox"],[role="switch"]',
       ),
     ].filter((node) => labelOf(node) === label)[nth];
-  const tap = (label: string, nth = 0) => click(control(label, nth));
+  /** Taps the `nth` control named `label`; one that does not show is the fault `no <label> to tap`, so a step the walk counts is always a tap that happened. */
+  const tap = async (label: string, nth = 0) => {
+    const node = control(label, nth);
+    if (node === undefined) {
+      faults.push(`no ${label} to tap after ${log.slice(-6).join(' > ')}`);
+      return;
+    }
+    await click(node);
+  };
   /** A making at a landed change or a Minutes tap: no recital is ever under way here. */
   const made = (what: string) => {
     run = madeModel(run, planNow(), false);
@@ -445,13 +456,33 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     run = nextModel(run);
     await settle('Next');
   };
+  /** A Minutes trip the reader's way: `Your field`, the gear, `<n> min` in home's Settings sheet (the making, at that tap), `Done`, home settled on the new plan, then home's way back to Today, every frame of the sheet held by `watchSheet`. */
   const minutesTap = async () => {
     const choice = CHOICES.filter((each) => each !== minutes)[below(next, 3)] ?? 2;
-    await tap(`${choice} min`);
+    await field();
+    if (faults.length > 0) return;
+    const at = app as Launch;
+    const sheet = watchSheet();
+    const failed = (fault: string) => {
+      sheet.stop();
+      faults.push(`${choice} min after ${log.slice(-6).join(' > ')}: ${fault}`);
+    };
+    const opening = await openSettings(at).then(
+      () => '',
+      (error: unknown) => String(error),
+    );
+    if (opening !== '') return failed(opening);
+    if (!(await tapInSheet(`${choice} min`))) return failed(`no ${choice} min in the sheet`);
     minutes = choice;
     minutesWritten = true;
     made('minutes');
-    await settle(`${choice} min`);
+    if (!(await closeSettings(at, 'Done'))) return failed('the sheet stayed after Done');
+    sheet.stop();
+    for (const fault of sheet.faults) faults.push(`${choice} min: ${fault}`);
+    if (sheet.frames.looked === 0) faults.push(`${choice} min: the sheet's look never checked`);
+    await settle(`${choice} min, Done`);
+    if (faults.length > 0) return;
+    await today();
   };
   const relaunch = async () => {
     watch?.disconnect();
