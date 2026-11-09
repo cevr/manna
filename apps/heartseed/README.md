@@ -3,17 +3,19 @@
 Scripture memorization on One (React Native on iOS, react-native-web on the
 web). A fresh install opens the first minute (`src/first`, below): hear
 the passage, say it with first letters, say it alone, and its first seed is
-planted. Today (`app/index.tsx`) shows the passage the reader is learning,
-its stage in the garden, and one big button, Say it, which hears the reader
-recite it; the word matcher (`src/matcher.ts`) grades a recall against the
-verse, and the garden (`src/garden.ts`) keeps it and grows the verse's
-plant. Beside Today's heading, `Your field` opens the field (`src/field.ts`, below): a
-row per passage, a plant per verse, the days sown and the harvest; once a
-plan is made, `When I need…` beside it lists the promises the reader
-knows by situation, and a tap on one says it now (`src/need.ts`, below).
-Under them, the session's `Minutes` and `Voice` choices sit, and atop the
-passage a counts line says what the day's plan holds (`src/session.ts`,
-below).
+planted. Every later launch opens on home, the field (`src/field.ts`,
+Field and Home, below): a row per passage, a plant per verse, the days
+sown and the harvest, and in its foot a counts line that says what the
+day's plan holds (`src/session.ts`, below) with `Begin`. Once a plan is
+made, `When I need…` in home's bar lists the promises the reader knows by
+situation, and a tap on one says it now (`src/need.ts`, below). `Begin`,
+`Start here` or a promise opens Today (`app/index.tsx`), which shows the
+passage the reader is learning, its stage in the garden, and one big
+button, Say it, which hears the reader recite it; the word matcher
+(`src/matcher.ts`) grades a recall against the verse, and the garden
+(`src/garden.ts`) keeps it and grows the verse's plant. Beside Today's
+heading, `‹ Your field` goes back to home; under them, the session's
+`Minutes` and `Voice` choices sit.
 
 Run it as a reader does with the verify skill,
 `.claude/skills/verify-heartseed`. It drives through `bun run sim`
@@ -262,10 +264,17 @@ the garden's read, what it shows in place (no navigation, no other route):
   reference alone: no heading, no button, no stage and no plant.
 - A read garden holding no recall of any verse (an empty disk, or only
   records the garden skips) opens the first minute. A read garden holding
-  any verse's recall opens Today, and so does an `Unread` one: a garden
-  that could not be read cannot know there is no seed.
+  any verse's recall opens home (Home, below). An `Unread` garden opens
+  Today, with no `Your field` in any frame of the launch: a garden that
+  could not be read cannot know there is no seed, and has no field to
+  show.
 - Planting the seed does not swap the screen: Planted shows until
-  `Continue`, which opens Today at `Stage: seed`.
+  `Continue`, which opens home, its plan made with the new seed in it (in
+  the done state, `Nothing to tend now`).
+- `Root`'s optional `opening` prop (`home` unless given) names the screen
+  a read launch with a plant, and `Continue`, open on; the tests whose
+  launches start on Today render `<Root opening="today" />`, a seam that
+  goes once their rigs start from home.
 
 The phases (`src/first/screen.tsx`, with the phase bar, the large round
 button and the Georgia verse of the prototype):
@@ -294,8 +303,8 @@ button and the Georgia verse of the prototype):
    never sounds.
 
 The flow's rules are a pure reducer, `src/first/flow.ts`: `openingOf` the
-garden's view decides the opening and `shownOpening` holds it for the
-launch; `step` moves each phase on only at its own input (Next, the
+garden's view and the `opening` prop decides the opening (`pending`,
+`first`, `home` or `today`) and `shownOpening` holds it for the launch; `step` moves each phase on only at its own input (Next, the
 voice's ending, a recital of the phase's own, the garden's plant), and no
 phase moves back. A recital is the phase's own when Say it's `startedAt`
 differs from the one the phase began with. Nothing of the flow is stored
@@ -419,24 +428,25 @@ Silent mode mutes. Nothing leaves the device.
 ## Field
 
 The field is the reader's progress: every passage is a row and every verse
-a plant, at the stage the garden derives. Today offers it as the button
-`Your field` once the garden's read completes, and never while Say it
-listens (leaving Today then would leave the microphone open off-screen).
-It sits in Today's header beside the heading, outside the scroll view, so
-however much a recital adds (the recap, the grades, the growth line, an
-alert) it is on screen without a scroll and clear of the home indicator;
-the field's button `Today` (shown `‹ Today`), in the bar fixed above the
-field's scroll view, comes back to Today as it was. The field, the
-chooser (Choosing a passage, below), About (below) and When I need…
-(below) are in place in the root route (`app/index.tsx`): no route, no
-link, no tab. Which of these five screens shows is the root's state for
-the launch, never stored, so
-every launch opens on the pending frame, then the first minute or Today,
-and whenever Say it listens the screen is Today. Until a
-read completes, and for a session whose read failed, there is no field and
-no control: an unread garden cannot know the days sown, and an unread
-session's recitals are written all the same, so the next launch counts
-them.
+a plant, at the stage the garden derives. It is home, the screen a read
+launch opens on (Home, below). Today goes back to it by the button
+`Your field` (shown `‹ Your field`), shown once the garden's read
+completes and never while Say it listens (leaving Today then would leave
+the microphone open off-screen). It sits in Today's header beside the
+heading, outside the scroll view, so however much a recital adds (the
+recap, the grades, the growth line, an alert) it is on screen without a
+scroll and clear of the home indicator. Home has no control named `Today`:
+it opens Today by `Begin`, `Start here` or a promise of When I need…, and
+Today then shows as it was (a held result kept). Home, Today, the chooser
+(Choosing a passage, below), About (below) and When I need… (below) are in
+place in the root route (`app/index.tsx`): no route, no link, no tab.
+Which of these five screens shows is the root's state for the launch,
+never stored, so every launch opens on the pending frame, then the first
+minute, home or (unread) Today, and whenever Say it listens the screen is
+Today. Until a read completes, and for a session whose read failed, there
+is no field and no control: an unread garden cannot know the days sown,
+and an unread session's recitals are written all the same, so the next
+launch counts them.
 
 - `src/field.ts` is the rule, pure: `fieldOf(garden, passages)` over a
   `Read` view and the passages taught: the promise's, a passage of one
@@ -490,9 +500,10 @@ them.
   derives from the garden's view each time the field shows.
 - `src/field/screen.tsx` draws a `Field` in home A's layout (Home,
   below), its furrows and legend in `src/field/plot.tsx` and its foot in
-  `src/field/foot.tsx`. The bar, fixed above the scroll view, holds the
-  way back, then `Add verses` (testID `add-verses`), the limit line or the
-  ask. In the scroll view: the greeting (testID `greeting`, the sun or the
+  `src/field/foot.tsx`. The bar, fixed above the scroll view, holds
+  `When I need…` (at least 44 pt, exactly when a plan is made in this
+  launch: When I need…, below), then `Add verses` (testID `add-verses`),
+  the limit line or the ask. It holds no way back: home is the root. In the scroll view: the greeting (testID `greeting`, the sun or the
   moon, then its words in `sun`, plain text), the heading `Your field`,
   the days sown and the harvest, the hint `A gold dot marks a plant ready
   today. Tap one to start there.`, one furrow per row (`furrowsOf`; testID
@@ -516,7 +527,8 @@ them.
   indicator, holds one card, then `About`: with no verse chosen, once a
   plan is made, the Begin card (`begin-card`: the counts line, testID
   `counts`, and `Begin` while the run shows an item), which opens Today
-  and writes nothing; with a verse chosen, the chosen card (`chosen`:
+  and writes nothing; over unread passages, with no plan and the first
+  piece to say, the Begin card holds `Begin` alone, with no counts line; with a verse chosen, the chosen card (`chosen`:
   `<reference> · a seed`, `a blade`, `an ear`, `full corn` or `not
   planted yet`, and `Start here`, named `Start here with <reference>`,
   while `startOf` starts something), which runs `startHere` and opens
@@ -527,9 +539,11 @@ them.
   verse lets it go, and a tap on another moves it. It is the screen's own
   state, never stored, dropped when the field closes or when no furrow
   holds the verse any more.
-- **The greeting** reads the runtime's `Clock` when the field opens
+- **The greeting** reads the runtime's `Clock` when home shows
   (`greetingNow`, `src/app.ts`, over `greetingAt`), in the reader's zone,
-  so a field left open across 12:00 keeps its greeting until reopened.
+  and again at each return to the foreground while home shows (Session,
+  below: `Returns`); never in between, so home left open across 12:00
+  keeps its greeting until it shows again or the app returns.
 
 ## About
 
@@ -634,8 +648,8 @@ the chooser, the root's third screen, in place like the field. Nothing a
 reader must reach sits where a scroll can hide it: the field's bar, the
 chooser's header and its footer are fixed outside the scroll views.
 
-- **The field's bar** holds `‹ Today` (named `Today`), then, with the
-  passages read, `Add verses` (testID `add-verses`) while fewer than 3
+- **The field's bar** holds `When I need…` once a plan is made, then,
+  with the passages read, `Add verses` (testID `add-verses`) while fewer than 3
   are held, else the limit line "3 passages, the most for now. Remove one
   to add another." (testID `limit`), which a stored list of 4 or more
   shows too, so the bar never offers an add the service would refuse. The
@@ -689,12 +703,12 @@ chooser's header and its footer are fixed outside the scroll views.
 - **One change at a time.** From a tap of `Plant`, or of the ask's
   `Remove`, until its answer, a tap of `Plant`, the ask's `Remove` or
   `Keep`, `Add verses`, a row's `Remove`, a plant, `Begin`, `Start here`,
-  a verse or a back changes nothing, and each shows as disabled (no
+  `When I need…`, a verse or a back changes nothing, and each shows as disabled (no
   `Add verses` shows while the ask holds the bar). A ref, set in the tap's own turn,
   holds it, so two taps in one turn make one change: a double tap never
   stores a passage twice or removes two.
 - **Today after a change.** A landed add or remove is a making (Passages,
-  above), so back on Today the run shows the new plan: its reference, the
+  above), so home's counts line and Today's run show the new plan: its reference, the
   counts line and `Listen` on a new piece. On a day a verse or a phrase
   was first planted (the first minute's day among them) no new piece
   shows; after the next 04:00 local, the first piece no plant names is
@@ -943,8 +957,10 @@ marks. The alert stays in the scroll.
   launch. A tap on a radio shows the choice at once and writes it; a failed
   write keeps the choice for the launch, and the next launch reads what is
   stored. The plan is made from the runtime's `Clock` and `offsetAt` at
-  that instant when Today first shows in a launch with the garden read
-  (after `Continue` in the first launch), again at each Minutes tap, at
+  that instant when home or Today first shows in a launch with the garden
+  read (home at the launch, Today on an unread garden's or a test's
+  opening, home after `Continue` in the first launch), so home never shows
+  before the plan that decides its counts line and `Begin`, again at each Minutes tap, at
   each return to the foreground (`wake`, a no-op with no plan, an
   unread garden or a recital under way, read in the same step as the
   making), and after each `Added` or `Removed` passage (`remake`, a no-op
@@ -966,8 +982,11 @@ marks. The alert stays in the scroll.
 - `src/foreground.ts` is the return rule, pure (`lifeStep` from `UNSEEN`,
   and `returnsOf` over a stream of states), the `Foreground` service (its
   `states`: the state at subscription first, then each change) and
-  `wakeLayer`, which runs `Session.wake` at each return for the runtime's
-  life (`Effect.forkScoped`). `src/foreground/source.ts` is its live
+  `wakeLayer`, which at each return for the runtime's life
+  (`Effect.forkScoped`) counts it in `Returns` (a `SubscriptionRef` of the
+  return count from 0, which home's greeting reads again at each change)
+  and runs `Session.wake`. It is the one subscription to
+  `Foreground.states` in a runtime. `src/foreground/source.ts` is its live
   source, the one module that names `AppState`: it reads `currentState`
   and adds the `change` listener in one step, and removes the listener
   when the runtime's scope closes (on react-native-web, where
@@ -993,18 +1012,18 @@ marks. The alert stays in the scroll.
 The promises the reader already knows, by situation; a tap on one says
 it now, and the saying counts as a review.
 
-- **The entry.** Today's fixed header offers the button `When I need…`
-  beside `Your field`, outside the scroll view, at least 44 pt, exactly
-  when the session has a plan made in this launch (the garden and the
-  passages read) and Say it is not listening: never in the pending frame,
-  the first minute, an unread garden or over unread passages. The
-  header's row wraps, so both buttons stay 44 pt at the largest text.
-- **The screen** (`src/need/screen.tsx`, `NeedScreen({ cards, onToday,
+- **The entry.** Home's bar, fixed above its scroll view, offers the
+  button `When I need…` first, at least 44 pt, exactly when the session
+  has a plan made in this launch (the garden and the passages read):
+  never in the pending frame, the first minute, an unread garden or over
+  unread passages. It is disabled while a remove is pending, and a tap on
+  it clears the remove's alert. Today offers none.
+- **The screen** (`src/need/screen.tsx`, `NeedScreen({ cards, onField,
   onVisit })`) is the root's fifth screen, in place: a bar fixed above
-  its scroll view holds `‹ Today` (named `Today`), which returns to Today
-  as it was; in the scroll view the one heading `When I need…`, then the
-  cards. Every text is Palette A's ink, at WCAG AA on the ground and on a
-  card; nothing but a promise is a control inside the scroll view. It
+  its scroll view holds `‹ Your field` (named `Your field`), which returns
+  to home; in the scroll view the one heading `When I need…`, then the
+  cards. It has no control named `Today`. Every text is Palette A's ink,
+  at WCAG AA on the ground and on a card; nothing but a promise is a control inside the scroll view. It
   reads and writes nothing in the store.
 - **The cards** are `needOf(garden, taught)` (`src/need.ts`), pure, in
   the situations' order: `protection`, `victory`, `peace`, `healing`,
@@ -1117,8 +1136,27 @@ counts only.
 
 The home is the field as the reader's first screen (home A, the owner's
 pick). Its rules are pure code and one session command; the field
-(Field, above), still opened from Today's `Your field`, draws them in
-A's layout, and the root opens on it later (hshomeroot). The development probe
+(Field, above) draws them in A's layout. The root (`app/index.tsx`)
+opens on it:
+
+- **The opening.** A launch on a read garden with a plant opens home, and
+  so does the first minute's `Continue`; a relaunch decides again, the
+  visit, the hold, the choice, the ask and the screen all gone. An unread
+  garden opens Today.
+- **Home's first frame.** Home shows the pending frame (the reference
+  alone) until the garden, the passages, the taught collections, the
+  session and the greeting are known and, over read passages, the
+  launch's plan is made (`FieldOf` begins the session at home's first
+  show), so every frame of home over read passages holds the counts line,
+  the plan's from its first frame.
+- **The ways to Today** are three, each writing nothing but what its
+  session command writes: `Begin` (while the run shows an item, or over
+  unread passages with the first piece to say), `Start here with
+  <reference>` and a known promise tapped in When I need…. Today goes back
+  by `‹ Your field`, When I need… by its own `‹ Your field`; no screen has
+  a control named `Today`, and whenever Say it listens the screen is Today.
+
+The development probe
 `app/probe/home.tsx` shows them as text over the live garden, passages and
 session (verify-heartseed, `features/home.md`).
 
@@ -1587,6 +1625,14 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   for `react-native`, the bundled passage for `virtual:heartseed-passage`,
   the corpus for `virtual:heartseed-kjv`, the licence for
   `virtual:heartseed-licence`, a happy-dom document); `test:infra`, `test:handbook-build`, `test:icon`, `test:home-icons`, `test:home-pixels` and `test:mirror` run with none.
+  The rigs of Today's run (`src/test/today-rig.tsx`, `stage-rig.tsx`,
+  `session-rig.tsx`, `first-rig.tsx`, `phrase-rig.tsx`, `run-rig.tsx` and
+  `wake-rig.tsx`, whose launches take `opening`, `today` unless given)
+  launch on Today through `<Root opening="today" />`; a
+  detour of theirs to home comes back by `Begin` when Today showed
+  `Say it` or `Next`, and in the done state checks home and ends the
+  launch. Every other rig that mounts the root launches on home, as a
+  reader does.
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
   - `test:hear`: `src/matcher` (the sounds-alike table's bounds, and each
@@ -1686,37 +1732,45 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     failing or not apart from its write, the device holding the model's
     record after every keep, never falling but in the one excused history
     (a stored key whose stamp read failed while its write landed); and
-    `src/field/unread.test.tsx`, no field offered in any frame of a held
-    launch, an unread session or the first minute; and
-    `src/field/reach.test.tsx`, the control outside Today's scroll view
-    before and after a recital that grows the passage, and one view of Say
-    it deciding both the control and the field: with the root's news of
+    `src/field/reach.test.tsx`, Today's `Your field` outside its scroll
+    view before and after a recital that grows the passage, and one view
+    of Say it deciding both the control and home: with the root's news of
     Say it held back, a tap in the first frame that offers the control
-    after a growing recital opens the field; and `src/field/phrases.test.ts`,
+    after a growing recital opens home; and `src/field/phrases.test.ts`,
     the field with phrases folded into their verses against `fieldFoldRule`
     (`src/test/phrase-model.ts`) over 600 generated gardens (held, removed
     and taught rows, phrases sown none, some, joined or stale, near-miss
     references, every zone): `seed` for a verse in phrases, a removed
     passage's phrases as their verse's row by first recall, days sown over
     every recall and the harvest over verses alone.
-  - `test:field-unread`: `src/field/unread-keep.test.tsx`, an unread
-    session whose listing and then its keep's read of its key fail, or
+  - `test:field-unread`: `src/field/unread.test.tsx`, no field and no
+    `Your field` in any frame of a held launch until its read lands, then
+    home, of an unread session (whose recital the next launch's home
+    counts) or of the first minute; and
+    `src/field/unread-keep.test.tsx`, an unread session whose listing and then its keep's read of its key fail, or
     whose every record read fails, while writes work: its finished recital
     is written with its zone's offset and the next healthy launch counts
     its day.
-  - `test:field-screen`: `src/field/screen.test.tsx`, the field from Today
-    in happy-dom over the real store on the device through
-    `src/test/field-rig.tsx` (the rig holds every frame to the field's
-    rules: the control only on a read, quiet Today, never inside a scroll
-    view; each field frame the
+  - `test:field-screen`: `src/field/screen.test.tsx`, a launch on home,
+    `Begin` to Today, then home by Today's `Your field` and back by
+    `Begin`, in happy-dom over the real store on the device through
+    `src/test/field-rig.tsx` (the rig lands on home, and holds every frame
+    to the root's rule, `rootFaults` in `src/test/root-rule.ts`: one
+    heading or the pending frame, `Your field` only on a read, quiet Today,
+    When I need…, the chooser and About and never inside a scroll view,
+    `Listening` only under Today, no control named `Today`, `When I need…`
+    only on home, and home's and Today's nodes only under their headings;
+    and to the field's rules: the way back taken only after a read
+    completed, and each field frame the
     rule's rows with their icons and ripe counts, plants as buttons with
     their drawings (each image's source of the scheme now), days sown and
     harvest as seen and exposed, every text at AA contrast, and home A's
     frame rules, `homeFaults`, among them each `Add verses` drawn with its
     `add` icon of the scheme now and the row at least 56 pt tall; each
     open and way back leaving the
-    whole disk and taking no write, remove or clear): the way there and
-    back through recitals, Again and a relaunch; and
+    whole disk and taking no write, remove or clear; `Begin` back only when
+    Today showed `Say it` or `Next`, which it shows again): the way there
+    and back through recitals, Again and a relaunch; and
     `src/field/garden.test.tsx`, a generated garden past 140 other verses
     of any reference, canonical twins each its own plant, each label the
     exact reference and each verse number the text after its last colon.
@@ -1725,33 +1779,39 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `walk-relaunch.test.tsx`, `walk-grades.test.tsx` and
     `walk-again.test.tsx`, one generated device each (seeds 3, 60, 12 and
     31), generated sequences of opens, ways back, recitals, Again, peeks
-    and relaunches through `src/test/field-walk.ts`, each command's writes
+    and relaunches through `src/test/field-walk.ts` (each launch on home,
+    then `Begin`; in the done state, with no `Begin`, a relaunch at the
+    passage's due), each command's writes
     modelled apart from the app; each file's device reaches its own floors
     (relaunches, or Again).
-  - `test:field-bar`, `test:field-bar-lists`, `test:field-bar-kinds` and
-    `test:field-bar-held`: `src/field/bar-remove.test.tsx` and
-    `bar-twice.test.tsx`, then `bar-lists.test.tsx`, then
-    `bar-kinds.test.tsx` (unread kinds), then `bar-held.test.tsx` (read
-    lists of 1, 2 and 4 held), generated readers
+  - `test:field-bar`, `test:field-bar-lists`, `test:field-bar-adds`,
+    `test:field-bar-kinds` and `test:field-bar-held`:
+    `src/field/bar-remove.test.tsx` and `bar-twice.test.tsx`, then
+    `bar-lists.test.tsx` (seeds 120 and 122), then `bar-adds.test.tsx`
+    (seeds 110 and 125), then `bar-kinds.test.tsx` (unread kinds), then
+    `bar-held.test.tsx` (read lists of 1, 2 and 4 held), generated readers
     through `src/test/bar-walk.ts` over `src/test/bar-rig.tsx` (the root
-    over the device's store, whose passages' key alone may fail its reads;
-    every frame held to one heading, no bar control, alert or limit line
-    inside a scroll view, no add beside the limit line or at 3 held,
-    nothing offered over unread passages, every field control, `About`
-    among them, disabled while a remove is pending, and every seen text of the field and the
-    chooser at AA): stored lists of 0-5 or more passages with equal ones,
-    garbled values and 1-3 failed reads; a row's `Remove`, then `Keep`,
-    another row, leaving, or the ask's `Remove` landing or refused, once,
-    twice in one turn or with `Today` or `Keep` in the same turn;
+    over the device's store, whose passages' key alone may fail its reads,
+    launched on home; every frame held to `rootFaults`, one heading, no bar
+    control, alert or limit line inside a scroll view, no add beside the
+    limit line or at 3 held, nothing offered over unread passages, every
+    field control, `About` and `When I need…` among them, disabled while a
+    remove is pending, and every seen text of the field and the chooser at
+    AA): stored lists of 0-5 or more passages with equal ones, garbled
+    values and 1-3 failed reads; a round trip to Today by `Begin` (over
+    unread passages `Begin` must show) or to When I need…, then
+    `Your field`; a row's `Remove`, then `Keep`, another row, leaving, or
+    the ask's `Remove` landing or refused, once, twice in one turn or with
+    `When I need…` or `Keep` in the same turn;
     the bar's or the row's `Add verses` left or planted (each shown
     exactly when the other is); after every tap the field, the bar
     and the disk against `src/test/choose-model.ts` and the passages'
     model; each file's floors met by its own devices.
   - `test:about`: `src/about/screen.test.tsx`, About through the bar rig:
-    from Today to the field, its `About` outside every scroll view and
+    from home, its `About` outside every scroll view and
     44 pt tall, About's one heading, the credits word for word, the licence
     equal to the file, every text at AA, the way back, nothing written and
-    a relaunch on Today; the foot's `Appearance` radios outside every
+    a relaunch on home; the foot's `Appearance` radios outside every
     scroll view, each 44 pt tall, the stored word checked (System for a
     near miss), at AA, nothing written with no tap and a tap writing its
     word under the appearance's key alone; `About` disabled in every frame
@@ -1842,8 +1902,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     leaning toward whole plans (many pieces and groups, Next, every
     recital's ending, Again), the hold's moments (a Minutes tap while a
     recital listens or finishes whose plan holds the item first or leaves
-    it out, a tap with a result or after an unheard recital, the field, a
-    relaunch), the edges (the first minute, the done state, unread
+    it out, a tap with a result or after an unheard recital, home and
+    back, a relaunch), the edges (the first minute, the done state, unread
     launches, zones) and the recital's endings (cancelled, finishing, and
     a Minutes tap after each ending that kept nothing) and a Minutes tap
     around each ending (every cell of the ending, the tap's moment while
@@ -1942,15 +2002,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `reader-add.test.tsx`, `reader-add-back.test.tsx` and
     `reader-remove.test.tsx`, generated readers through
     `src/test/reader-walk.ts` over the run's rig (the root over a disk, a
-    recognizer that hears the verse said, a frozen clock, a zone), in UTC,
-    Los Angeles, Kathmandu, Lord Howe and Chatham, through Today (`Say it`
-    then `Next`, Minutes, a relaunch after the next 04:00), the field
-    (`Today`, a remove asked, kept, refused or tapped twice) and the
-    chooser (backs, taps by pattern, `Plant` refused, retried or tapped
-    twice); after every command Today's shown verse, counts line and
-    `Listen` against the plan made at each making over the reader's
-    pieces, the field and the chooser against `src/test/choose-model.ts`,
-    and the disk; every frame of every screen held to `barFaults`; each
+    recognizer that hears the verse said, a frozen clock, a zone, launched
+    on home), in UTC, Los Angeles, Kathmandu, Lord Howe and Chatham,
+    through home (`Begin` when it offers it, else a relaunch the next
+    morning, a remove asked, kept, refused or tapped twice), Today
+    (`Say it` then `Next`, Minutes, `Your field`, a relaunch after the next
+    04:00) and the chooser (backs, taps by pattern, `Plant` refused,
+    retried or tapped twice); after every command Today's shown verse,
+    counts line and `Listen` against the plan made at each making over the
+    reader's pieces, home's counts and `Begin` against the same plan, the
+    field and the chooser against `src/test/choose-model.ts`, and the
+    disk; every frame of every screen held to `barFaults` and `rootFaults`; each
     file's floors met by its own devices. `test:chooser-leave` also runs
     `src/chooser/fixed.test.tsx`, which keeps every screen's fixed
     controls outside its scroll views in every frame.
@@ -1988,26 +2050,37 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     met; then every card in the situations' order, an empty garden, and the
     first minute's promise under Strength.
   - `test:need-screen`: `src/need/screen.test.tsx`, When I need… through
-    the root over `src/test/need-rig.tsx`, which holds every frame to the
-    screens' rules (one heading, `When I need…` only on Today and outside
-    its scroll view, on When I need… no control in the scroll view but a
-    promise, every control at least 44 tall and every text at AA): the
-    header's `When I need…` beside `Your field` in a row that wraps, the
-    cards after the first minute with and without the `promises` part, and
-    a visit of another collection's promise kept over the bar's `Today`
-    and the field, said, then the done state, its recall the one write.
+    the root over `src/test/need-rig.tsx`, which holds every frame to
+    `rootFaults` and the screens' rules (one heading, `When I need…` only
+    on home and outside its scroll view, on When I need… the bar's
+    `Your field` and no control in the scroll view but a promise, every
+    control at least 44 tall and every text at AA): home's bar offering
+    `When I need…` first, Today with `Your field` and no `When I need…`,
+    the cards after the first minute with and without the `promises` part,
+    and a visit of another collection's promise kept over Today's
+    `Your field` and `Begin` both ways, said, then the done state, its
+    recall the one write.
   - `test:need-offer`: `src/need/offer.test.tsx`, no `When I need…` in the
-    first minute, an unread garden or over unread passages, and none while
-    Say it listens.
+    first minute, an unread garden or over unread passages (home with
+    `Begin` alone), none on Today, and none while Say it listens, home
+    offering it again after the result.
   - `test:need-walk-a`, `test:need-walk-a-visit`, `test:need-walk-b`,
-    `test:need-walk-c`: `src/need/walk-{a,a-visit,b,c}.test.tsx`, When I
-    need… and a visit walked through the root (`src/test/need-walk.ts`):
-    seed 3's device 0 in `walk-a` and its device 1 in `walk-a-visit`, and
-    two generated devices each of seeds 4 and 6, held after every command
-    to `shownModel`,
+    `test:need-walk-c`, `test:need-walk-d`, `test:need-walk-e`:
+    `src/need/walk-{a,a-visit,b,c,d,e}.test.tsx`, When I need… and a
+    visit walked through the root (`src/test/need-walk.ts`, each launch on
+    home, each command drawn from those the model's screen allows: on home
+    `When I need…`, `Begin` or a relaunch; on Today `Say it`, Minutes,
+    `Your field` or a relaunch; on When I need… a promise or `Your field`):
+    seed 3's device 0 in `walk-a` and its device 1 in `walk-a-visit`, two
+    generated devices each of seeds 4 and 6, device 0 of seed 512 in
+    `walk-d` and of seed 729 in `walk-e`, settled after every command on
+    the screen the model names and held there to `shownModel`,
     `countsModel` over `planModel`, `needModel` and `fieldPassagesModel`,
-    and to the disk's rule (no key added but the recalls said and the
-    minutes after a tap), each part's floors met.
+    every frame to `rootFaults`, and to the disk's rule (no key added but
+    the recalls said and the minutes after a tap), each part's floors met,
+    the root's (`root:*`: launches on home, unread and over unread
+    passages, `Begin`, no `Begin`, `Your field` with a result held, When I
+    need… from home, back and a visit, a relaunch) among them.
   - `test:home`: the home's pure rules against the plain model
     `src/test/home-model.ts`. `src/lists.property.test.ts`: `placeOf` over
     the first and last verse of every chapter and near misses, `listsOf`
@@ -2030,8 +2103,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     disk, byte for byte the same across every `start`; each verse class's
     floor met, and a start before `begin` and over an unread garden.
   - `test:home-screen`: `src/home/screen.test.tsx`, the field in home A's
-    layout through `src/test/bar-rig.tsx` (every frame also held to
-    `homeFaults`), in light and in dark, its expected values written out:
+    layout through `src/test/bar-rig.tsx` (launched on home, every frame
+    also held to `homeFaults`), in light and in dark, its expected values written out:
     the bar, the scroll view and the foot and what each holds, the
     furrows' icons of the scheme, a verse in two furrows chosen, let go and
     moved, `Start here with <reference>` only where a start is offered and
@@ -2041,20 +2114,53 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     runtime's clock in light and in dark: a seed at its due after a
     Minutes tap marked with a dot filled `sun` at 3:1 against its plant
     chosen or not, `gold` nowhere, the counts line and `Begin` leading to
-    Today writing nothing; and the greeting at each open at 11:59, 12:00
-    and 18:00, and in Asia/Kolkata at 10:00Z (afternoon there).
-  - `test:home-walk-a`, `test:home-walk-b`, `test:home-walk-c`,
-    `test:home-walk-d`, `test:home-walk-e`:
-    `src/home/walk-{a,b,c,d,e}.test.tsx`, the field
-    walked through the root (`src/test/home-walk.ts`, a `need-walk` `Walk`
-    with the field's commands: open, a tap on a plant of each class, a tap
-    again, `Start here`, `Begin`, `Today`, a landed remove), one device
-    each of seeds 30, 10, 69, 74 and 14, held after every command to
-    `furrowsModel` and `readyModel` (full labels with `, ready today`),
-    `countsModel`, `startModel` and `greetingModel`, Today to `need-walk`'s
-    oracle and the disk to its rule; every field frame to `homeFaults`;
-    each part's floors met, all seventeen across the five (part e's
-    `Begin` over a said result held, which Today must still show).
+    Today writing nothing; and the greeting at each show of home at 11:59,
+    12:00 and 18:00, and in Asia/Kolkata at 10:00Z (afternoon there).
+  - `test:home-root` and `test:home-root-say`: the root's opening and its
+    screens. `src/home/opening.property.test.ts`, `openingOf` over
+    generated garden views (none, `Unread`, `Read` with 0-5 plants) and
+    both openings against the opening's table written in the test, and
+    `shownOpening` over every pair. `src/home/root.test.tsx`, fixed
+    launches through `src/test/field-rig.tsx` rendering `<Root />` with no
+    prop, every frame held to `rootFaults` (and screened by
+    `watchedLaunch`, `src/test/root-rule.ts`): a read launch with the
+    passage due on pending frames, then home with `1 to tend · about 1
+    min` and `Begin` in every home frame, no Today frame; an unread garden
+    on Today with no field in any frame; garbled passages on home with
+    `Begin` alone, no counts and no `When I need…`, `Begin` opening Today
+    on the app's passage; a held read on pending frames, then home; a
+    relaunch after a choice, `Start here` and `Your field` on home with no
+    choice and `Begin` as the fresh plan gives it; and When I need… from
+    home, back by `Your field`, and a known promise on Today, which holds
+    no `When I need…`. `src/home/root-say.test.tsx`, a fresh install's
+    first minute through `Continue` to home in the done state (no `Begin`,
+    `When I need…` there, no Today frame after `Continue`), and Today
+    with no `Your field` while Say it listens, then `Your field` to home.
+  - `test:home-wake`: `src/home/wake.test.tsx`, the greeting through
+    `src/test/wake-rig.tsx` launched on home, every frame held to
+    `rootFaults`: read at home's mount, kept as the clock passes 12:00
+    with nothing sent, kept over `inactive` then `active` and over a
+    `background` alone, and read again at each return across 12:00, 18:00
+    and 04:00 (the sun, then the moon); in America/New_York and
+    Asia/Kolkata at a return across their own 12:00; and at home's next
+    mount after a return while Today shows. The rig's foreground holds
+    one queue, so a second subscription to `Foreground.states` fails it.
+  - `test:home-walk-a` to `test:home-walk-g`:
+    `src/home/walk-{a,b,c,d,e,f,g}.test.tsx`, home walked through the
+    root (`src/test/home-walk.ts`, a `need-walk` `Walk` over the root's
+    screens: on home a tap on a plant of each class, a tap again,
+    `Start here`, `Begin` when the model offers it, `When I need…` when
+    planned, a landed remove and a relaunch; on Today `need-walk`'s
+    commands and `Your field`; on When I need… its own), one device each
+    of seeds 30, 10, 69, 74, 14, 2 and 119, part f's in the unread class
+    (every listing fails: Today alone, with no `Your field`), held after
+    every command, on the screen the model names, to `furrowsModel` and
+    `readyModel` (full labels with `, ready today`), `countsModel`,
+    `startModel` and `greetingModel` with `When I need…` exactly when
+    planned, Today to `need-walk`'s oracle and the disk to its rule; every
+    frame to `rootFaults` and every home frame to `homeFaults`; each part's
+    floors met (part g's `Begin` over a said result held, which Today must
+    still show).
   - `test:phrase`: the phrase cut and its reference form (`src/phrase.ts`).
     `src/phrase.property.test.ts`, `cutOf` against `src/test/phrase-model.ts`
     and its brute force over every partition for 13-22 words, for generated
