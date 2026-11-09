@@ -3,7 +3,8 @@
 /**
  * The Add verses sheet's model (hsshelves S2-S4), written plainly from the
  * spec and importing only the models: the shelves and each offer's state
- * from `home-model.ts`, the passages' rules from `passages-model.ts`.
+ * from `home-model.ts`, the passages' rules from `passages-model.ts`, and
+ * a Handbook list's plant (hshandbook R4, R12) over the lists held.
  *
  * It holds whether the sheet is open, the open shelf (by title), the line
  * after a plant's answer, the passages held, and the stand-in's counts of
@@ -63,8 +64,9 @@ export const opened = (held: Held, counts = { done: 0, any: 0, added: 0 }): Shee
   counts,
 });
 
-/** Whether the passages are read and hold 3 or more. */
-const full = (held: Held) => held.tag === 'Read' && held.passages.length >= 3;
+/** Whether the passages are read and hold 3 or more, passages and lists together. */
+const full = (held: Held) =>
+  held.tag === 'Read' && held.passages.length + (held.lists ?? []).length >= 3;
 
 /** A tap in the sheet that is not `Plant`'s: the line cleared. */
 const cleared = (model: SheetModel): SheetModel => ({ ...model, line: NONE });
@@ -118,6 +120,44 @@ export const plant = (corpus: Corpus, model: SheetModel, span: Span, refused: bo
   return { outcome, model: { ...model, line: { tag: 'Alert', title: spanRef(span) } } };
 };
 
+/** A list's plant's answer and the sheet after it. */
+export interface PlantedList {
+  readonly model: SheetModel;
+  readonly outcome: 'Added' | 'Held' | 'Full' | 'Unread' | 'Failed';
+}
+
+/** R4, R12: `Plant` of the Handbook list `id` titled `title`, its write refused or not: `Added` (and `Held`, which writes nothing) closes the sheet, the list held after `Added`; `Full` shows the limit line; any other answer the alert. */
+export const plantList = (
+  model: SheetModel,
+  id: string,
+  title: string,
+  refused: boolean,
+): PlantedList => {
+  const held = model.held;
+  const alert = (outcome: PlantedList['outcome']): PlantedList => ({
+    outcome,
+    model: { ...model, line: { tag: 'Alert', title } },
+  });
+  if (held.tag === 'Unread') return alert('Unread');
+  const lists = held.lists ?? [];
+  const closed = (outcome: 'Added' | 'Held', after: Held): PlantedList => ({
+    outcome,
+    model: {
+      ...model,
+      held: after,
+      open: false,
+      shelf: null,
+      line: NONE,
+      counts: { ...model.counts, added: model.counts.added + 1 },
+    },
+  });
+  if (lists.includes(id)) return closed('Held', held);
+  if (held.passages.length + lists.length >= 3)
+    return { outcome: 'Full', model: { ...model, line: { tag: 'Limit' } } };
+  if (refused) return alert('Failed');
+  return closed('Added', { ...held, lists: [...lists, id] });
+};
+
 /** A list's count in words. */
 const countWords = (verses: number) => (verses === 1 ? '1 verse' : `${verses} verses`);
 
@@ -126,7 +166,7 @@ const offersOf = (model: SheetModel, rows: readonly (readonly string[])[]) => {
   const shelf = SHELVES_MODEL.find((each) => each.title === model.shelf);
   if (shelf === undefined || shelf.lists === 'chooser') return [];
   return shelf.lists.map((list): readonly [string, string, string] => {
-    const state = list.range === undefined ? 'unread' : offerModel(list.range, model.held, rows);
+    const state = offerModel(list.verses, model.held, rows);
     const shown =
       state === 'plant' ? `Plant ${list.title}` : state === 'in field' ? 'In your field' : '';
     return [list.title, countWords(list.verses.length), shown];

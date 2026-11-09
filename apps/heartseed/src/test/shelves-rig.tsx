@@ -43,6 +43,7 @@ import { voiceSource } from '../voice/source';
 import { clockOf, type Time } from './clock';
 import { scrolled } from './field-rig';
 import { shelvesModel } from './home-model';
+import { LISTS } from './handbook-model';
 import { lookFaults, systemScheme } from './look';
 import { KEY } from './passages-model';
 import type { SheetSeen } from './shelves-model';
@@ -334,10 +335,10 @@ function Stage({ given, counts }: { readonly given: SheetProps | null; readonly 
   });
 }
 
-/** A plant's write held by the rig: while `armed`, a write of the passages' key waits in `waiting` until the rig lets it go. */
+/** A plant's write held by the rig: while `armed`, a write of the passages' key or the lists' waits in `waiting` until the rig lets it go. */
 type Hold = { armed: boolean; planting: boolean; readonly waiting: Array<() => void> };
 
-/** The app's store, whose writes of the passages' key wait while `hold` is armed; every other call is the store's own. */
+/** The app's store, whose writes of the passages' key and the lists' wait while `hold` is armed; every other call is the store's own. */
 const storeHeld = (hold: Hold) =>
   Layer.effect(
     KeyValueStore.KeyValueStore,
@@ -346,7 +347,7 @@ const storeHeld = (hold: Hold) =>
         ...real,
         set: (key, value) =>
           Effect.suspend(() => {
-            if (key !== KEY || !hold.armed) return real.set(key, value);
+            if ((key !== KEY && key !== LISTS) || !hold.armed) return real.set(key, value);
             return Effect.promise(
               () => new Promise<void>((resolve) => hold.waiting.push(resolve)),
             ).pipe(Effect.andThen(real.set(key, value)));

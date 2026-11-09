@@ -78,6 +78,20 @@ export const HANDBOOK_ORDER: readonly ModelHandbookList[] = (() => {
   return out;
 })();
 
+/** R10: the note under every Handbook shelf's title, as the spec writes it. */
+export const HANDBOOK_NOTE = 'S. N. Haskell, Bible Handbook (1919)';
+
+/** R10: each section of the data in the book's order: its id, its title and its lists' ids in order. */
+export const HANDBOOK_SECTIONS: readonly {
+  readonly id: string;
+  readonly title: string;
+  readonly ids: readonly string[];
+}[] = data.sections.map((section) => ({
+  id: section.id,
+  title: section.title,
+  ids: section.lists.map((list) => list.id),
+}));
+
 /** Every model list by its id. */
 export const HANDBOOK_MODEL: ReadonlyMap<string, ModelHandbookList> = new Map(
   HANDBOOK_ORDER.map((list) => [list.id, list]),

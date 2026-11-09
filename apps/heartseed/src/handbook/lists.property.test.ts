@@ -8,7 +8,8 @@
  * - C1: every one of the 131 lists as `plantedListOf` gives it: its id,
  *   its title (` (n)` on a title's n-th use), its verses distinct in
  *   Haskell's order, a `Handbook` source and no range; ids and titles
- *   unique, and no title a collection's or a section's.
+ *   unique, and no title a collection's or one of the first 17 shelves'
+ *   (a list may bear its own section's title, as Haskell named it).
  * - C4: generated views of passages and lists sharing verses, every list
  *   held at least once: `listsOf` is `listsModel` (own, passages, lists,
  *   taught), and `piecesOf` is `piecesWithListsModel`, each reference once
@@ -41,7 +42,14 @@ import { COLLECTIONS } from '../promises';
 import { collectionsOf } from '../promises/taught';
 import type { Recall } from '../sayit';
 import { HANDBOOK_ORDER, KNOWN_IDS, piecesWithListsModel } from '../test/handbook-model';
-import { listsModel, recordsOf, shelvesModel, taughtOf, type ModelList } from '../test/home-model';
+import {
+  BASE_SHELVES,
+  listsModel,
+  recordsOf,
+  shelvesModel,
+  taughtOf,
+  type ModelList,
+} from '../test/home-model';
 import { below, random } from '../test/garden-model';
 import type { Held, ModelTextPiece, Span } from '../test/passages-model';
 import { CORPUS, choosableOf, countIn } from '../test/passages-rig';
@@ -158,7 +166,9 @@ describe('a Handbook list', () => {
     ]);
     const others = new Set([
       ...COLLECTIONS.map((collection) => collection.title),
-      ...shelvesModel().map((shelf) => shelf.title),
+      ...shelvesModel()
+        .slice(0, BASE_SHELVES)
+        .map((shelf) => shelf.title),
     ]);
     expect(titles.filter((title) => others.has(title))).toEqual([]);
     expect(planted('no-such-list')).toBeUndefined();

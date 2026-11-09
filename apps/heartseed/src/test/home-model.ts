@@ -52,7 +52,7 @@ import {
   type ModelPlantStage,
 } from './field-model';
 import { below, inOrder, pickOf, referenceStage, type ModelStage } from './garden-model';
-import { HANDBOOK_MODEL, heldLists } from './handbook-model';
+import { HANDBOOK_MODEL, HANDBOOK_NOTE, HANDBOOK_SECTIONS, heldLists } from './handbook-model';
 import {
   spanRef,
   verseRef,
@@ -565,22 +565,42 @@ export const shelvesModel = (): ModelShelf[] => {
       lists: collection.promises.map((range) => pickList(collection.id, range)),
     });
   }
+  for (const section of HANDBOOK_SECTIONS)
+    out.push({
+      id: `handbook:${section.id}`,
+      title: section.title,
+      icon: 'scroll',
+      note: HANDBOOK_NOTE,
+      lists: section.ids.flatMap((id) => {
+        const list = HANDBOOK_MODEL.get(id);
+        if (list === undefined) return [];
+        return [
+          {
+            id,
+            title: list.title,
+            verses: [...list.verses],
+            range: undefined,
+            source: { tag: 'Handbook', id },
+          },
+        ];
+      }),
+    });
   return out;
 };
 
-/** H8: what a shelf's row offers for `span`, over the passages `held` and a field whose rows hold the references `rows`. */
+/** How many shelves come before the Handbook's: the 17 of hsshelves. */
+export const BASE_SHELVES = 17;
+
+/** H8, R9: what a shelf's row offers for the list of `verses`, over the passages and lists `held` and a field whose rows hold the references `rows`. */
 export const offerModel = (
-  span: Span,
+  verses: readonly string[],
   held: Held,
   rows: readonly (readonly string[])[],
 ): 'unread' | 'in field' | 'full' | 'plant' => {
   if (held.tag === 'Unread') return 'unread';
   let every = true;
-  for (let verse = span.first; verse <= span.last; verse++) {
-    const reference = verseRef(span.book, span.chapter, verse);
-    if (!rows.some((row) => row.includes(reference))) every = false;
-  }
+  for (const reference of verses) if (!rows.some((row) => row.includes(reference))) every = false;
   if (every) return 'in field';
-  if (held.passages.length >= 3) return 'full';
+  if (held.passages.length + (held.lists ?? []).length >= 3) return 'full';
   return 'plant';
 };

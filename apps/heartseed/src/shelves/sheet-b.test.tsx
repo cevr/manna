@@ -19,7 +19,7 @@ import passage from 'virtual:heartseed-passage';
 
 import type { Field } from '../field';
 import { versesOf } from '../kjv';
-import { shelvesModel, type ModelList } from '../test/home-model';
+import { BASE_SHELVES, shelvesModel, type ModelList } from '../test/home-model';
 import { device } from '../test/one';
 import { KEY, storedText, type Span } from '../test/passages-model';
 import { mountShelves, readSheet } from '../test/shelves-rig';
@@ -30,7 +30,7 @@ const listsOf = (title: string): readonly ModelList[] => {
   const lists = SHELVES.find((shelf) => shelf.title === title)?.lists;
   return lists === undefined || lists === 'chooser' ? [] : lists;
 };
-const ALL_LISTS = SHELVES.slice(1).map((shelf) => shelf.title);
+const ALL_LISTS = SHELVES.slice(1, BASE_SHELVES).map((shelf) => shelf.title);
 
 const spanOf = (list: ModelList): Span => list.range ?? { book: 1, chapter: 1, first: 1, last: 1 };
 

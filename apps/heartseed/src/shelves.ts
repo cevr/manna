@@ -2,16 +2,21 @@
  * The shelves Add verses offers, as data the Add verses sheet draws
  * (`src/shelves/sheet.tsx`): the whole Bible through the chooser, a few picks from the
  * Psalms, the Proverbs and the Gospel of John, and each promise collection
- * the session does not teach. Every pick and every promise is a `Passage`
- * list, held as canon numbers, so no source here names a verse
- * (`src/today.test.tsx`). Planting one is `addPassage`, with its answers as
- * today; `offerStateOf` says what a shelf's row offers before that.
+ * the session does not teach, then each section of Haskell's Bible Handbook.
+ * Every pick and every promise is a `Passage` list, held as canon numbers,
+ * and every Handbook list a `Handbook` list read from its data, so no source
+ * here names a verse (`src/today.test.tsx`). Planting a passage is
+ * `addPassage`, and a Handbook list `addList`; `offerStateOf` says what a
+ * shelf's row offers before that.
  */
 
+import { Option } from 'effect';
+
 import type { Field } from './field';
+import { HANDBOOK, HANDBOOK_SOURCE } from './handbook';
 import type { HomeIcon } from './home';
-import { passageList, versesIn, type List } from './lists';
-import { MOST_PASSAGES, type PassagesView, type Range } from './passages';
+import { passageList, plantedListOf, type List } from './lists';
+import { heldCount, MOST_PASSAGES, type PassagesView, type Range } from './passages';
 import { COLLECTIONS, TAUGHT } from './promises';
 
 /** Where a shelf's lists come from: the chooser over the whole Bible, or lists of its own. */
@@ -55,8 +60,8 @@ const PSALMS = 19;
 const PROVERBS = 20;
 const JOHN = 43;
 
-/** The shelves, in the order Add verses shows them: any passage, the Psalms, the Proverbs, John, then each collection the session does not teach, in the list's order. */
-export const SHELVES: readonly Shelf[] = [
+/** The first shelves, in the order Add verses shows them: any passage, the Psalms, the Proverbs, John, then each collection the session does not teach, in the list's order. */
+const BASE_SHELVES: readonly Shelf[] = [
   {
     id: 'any',
     title: 'Any passage',
@@ -115,15 +120,33 @@ export const SHELVES: readonly Shelf[] = [
   ),
 ];
 
-/** What a shelf's row offers for `range`: nothing while the passages are unread, `in field` when the field already shows each of its verses, `full` at the most passages held, else `plant`. */
+/** The note under every Handbook shelf's title. */
+const HANDBOOK_NOTE = `S. N. Haskell, ${HANDBOOK_SOURCE.title} (${HANDBOOK_SOURCE.year})`;
+
+/** Each section of the Handbook as a shelf of its own, in the book's order: its title, the scroll, the book as its note, and its lists, each planted whole. */
+const HANDBOOK_SHELVES: readonly Shelf[] = HANDBOOK.map((section) => ({
+  id: `handbook:${section.id}`,
+  title: section.title,
+  icon: 'scroll',
+  note: HANDBOOK_NOTE,
+  source: {
+    _tag: 'Lists',
+    lists: section.lists.flatMap((list) => Option.toArray(plantedListOf(list.id))),
+  },
+}));
+
+/** Every shelf of Add verses: the 17 above, then each section of the Handbook. */
+export const SHELVES: readonly Shelf[] = [...BASE_SHELVES, ...HANDBOOK_SHELVES];
+
+/** What a shelf's row offers for `list`: nothing while the passages are unread, `in field` when the field already shows each of its verses, `full` at the most passages and lists held together, else `plant`. */
 export const offerStateOf = (
-  range: Range,
+  list: List,
   passages: PassagesView,
   field: Field,
 ): 'unread' | 'in field' | 'full' | 'plant' => {
   if (passages._tag === 'Unread') return 'unread';
   const shown = new Set(field.rows.flatMap((row) => row.plants.map((plant) => plant.reference)));
-  if (versesIn(range).every((verse) => shown.has(verse))) return 'in field';
-  if (passages.passages.length >= MOST_PASSAGES) return 'full';
+  if (list.verses.every((verse) => shown.has(verse))) return 'in field';
+  if (heldCount(passages) >= MOST_PASSAGES) return 'full';
   return 'plant';
 };

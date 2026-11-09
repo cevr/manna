@@ -26,16 +26,16 @@ import passage from 'virtual:heartseed-passage';
 import { record } from './field-rig';
 import { recallOf } from './field-model';
 import { below, DAY, random } from './garden-model';
-import { shelvesModel, type ModelList } from './home-model';
+import { BASE_SHELVES, shelvesModel, type ModelList } from './home-model';
 import { device } from './one';
 import { KEY, readRule, storedText, verseRef, type Held, type Span } from './passages-model';
 import { chapterOf, CORPUS, countIn, GARBLED } from './passages-rig';
 import { mountShelves } from './shelves-rig';
 import { any, done, opened, plant, sheetWant, tapShelf, type SheetModel } from './shelves-model';
 
-const SHELVES = shelvesModel();
+const SHELVES = shelvesModel().slice(0, BASE_SHELVES);
 
-/** The shelves of lists, by title, with each list and whether it is a pick or a promise. */
+/** The first 17 shelves of lists, by title, with each list and whether it is a pick or a promise; the Handbook's are `lists-walk.ts`'s. */
 const LISTED = SHELVES.flatMap((shelf, index) =>
   shelf.lists === 'chooser'
     ? []

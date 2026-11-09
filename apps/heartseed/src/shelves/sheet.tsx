@@ -8,13 +8,15 @@
  *
  * `Any passage` hands the reader to the chooser (`onAny`). Every other
  * shelf opens in place under its head, one at a time, and lists its offers:
- * each list's reference and count, and what `offerStateOf` says of it over
+ * each list's title and count, and what `offerStateOf` says of it over
  * home's field: `Plant <title>`, `In your field`, or nothing. A tap of
- * `Plant` adds the range (`plantPassage`): on `Added` home shows
- * (`onAdded`); on `Full` the limit line shows, and on any other answer the
- * alert says the range was not planted, the same shelf open, so a retry is
- * one tap. The next tap clears the line, the limit line excepted while 3
- * or more passages are held. From a tap of `Plant` until its answer, no
+ * `Plant` acts by the list's source: a passage adds its range
+ * (`plantPassage`), a Handbook list plants its id whole (`plantList`). On
+ * `Added` (or `Held`) home shows (`onAdded`); on `Full` the limit line
+ * shows, and on any other answer the alert says the list was not planted,
+ * the same shelf open, so a retry is one tap. The next tap clears the line,
+ * the limit line excepted while 3 or more passages and lists are held
+ * together. From a tap of `Plant` until its answer, no
  * tap in the sheet changes anything, even two in one turn, each control
  * shows as disabled, and neither Escape nor the swipe down closes it.
  * Nothing is stored but by a landed add.
@@ -26,12 +28,19 @@ import { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 
-import { plantPassage } from '../app';
+import { plantList, plantPassage } from '../app';
 import { LIMIT_LINE } from '../chooser';
 import type { Field } from '../field';
 import { Icon } from '../field/plot';
 import type { List } from '../lists';
-import { MOST_PASSAGES, type PassagesView, type Range } from '../passages';
+import {
+  heldCount,
+  MOST_PASSAGES,
+  type AddAnswer,
+  type PassagesView,
+  type PlantAnswer,
+  type Range,
+} from '../passages';
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
 import { offerStateOf, SHELVES, type Shelf } from '../shelves';
@@ -39,21 +48,32 @@ import { offerStateOf, SHELVES, type Shelf } from '../shelves';
 /** The sheet's line after a plant's answer: the limit line on `Full`, else the alert naming the list. */
 type Line = { readonly _tag: 'Limit' } | { readonly _tag: 'Alert'; readonly title: string };
 
-/** A list's count as an offer writes it. */
+/** A list's count as an offer writes it, over its distinct verses. */
 const countText = (list: List) => {
   if (list.verses.length === 1) return '1 verse';
   return `${list.verses.length} verses`;
 };
 
-/** The range a shelf's list plants: its own, on a `Passage` list. */
-const rangeOf = (list: List): Option.Option<Range> => {
-  if (list.source._tag === 'Passage') return Option.some(list.source.range);
-  return Option.none();
-};
+/** What a shelf's list plants, by its source: its range on a `Passage` list, its id on a `Handbook` list, nothing on any other. */
+type Planting =
+  | { readonly _tag: 'Passage'; readonly range: Range }
+  | { readonly _tag: 'Handbook'; readonly id: string };
 
-/** Whether the passages are read and hold the most a reader may hold. */
+/** The planting a shelf's list offers, if any. */
+const plantingOf = (list: List): Option.Option<Planting> =>
+  Match.value(list.source).pipe(
+    Match.tagsExhaustive({
+      Passage: ({ range }) => Option.some<Planting>({ _tag: 'Passage', range }),
+      Handbook: ({ id }) => Option.some<Planting>({ _tag: 'Handbook', id }),
+      Own: () => Option.none<Planting>(),
+      Collection: () => Option.none<Planting>(),
+      Loose: () => Option.none<Planting>(),
+    }),
+  );
+
+/** Whether the passages are read and hold the most a reader may hold, passages and lists together. */
 const atMost = (passages: PassagesView) =>
-  passages._tag === 'Read' && passages.passages.length >= MOST_PASSAGES;
+  passages._tag === 'Read' && heldCount(passages) >= MOST_PASSAGES;
 
 /** The one line the foot shows: the limit line while the most are held or after `Full`, else the alert. */
 const footLine = (passages: PassagesView, line: Option.Option<Line>): Option.Option<Line> => {
@@ -73,13 +93,13 @@ function Offer({
   readonly field: Field;
   readonly passages: PassagesView;
   readonly pending: boolean;
-  readonly onPlant: (list: List, range: Range) => void;
+  readonly onPlant: (list: List, planting: Planting) => void;
 }) {
   const look = useLook();
   const styles = useThemed(sheets);
-  const state = Option.map(rangeOf(list), (range) => ({
-    range,
-    offer: offerStateOf(range, passages, field),
+  const state = Option.map(plantingOf(list), (planting) => ({
+    planting,
+    offer: offerStateOf(list, passages, field),
   }));
   return (
     <View testID="offer" style={styles.offer}>
@@ -93,7 +113,7 @@ function Offer({
       </View>
       {Option.match(state, {
         onNone: () => false,
-        onSome: ({ range, offer }) => {
+        onSome: ({ planting, offer }) => {
           if (offer === 'in field')
             return (
               <Text testID="offer-state" style={styles.note}>
@@ -106,7 +126,7 @@ function Offer({
               role="button"
               aria-label={`Plant ${list.title}`}
               disabled={pending}
-              onPress={() => onPlant(list, range)}
+              onPress={() => onPlant(list, planting)}
               style={({ pressed }) => [
                 styles.plant,
                 pressed && look.pressed,
@@ -182,26 +202,34 @@ export function AddSheet({
   const [line, setLine] = useState<Option.Option<Line>>(Option.none());
   const [pending, setPending] = useState(false);
   const busy = useRef(false);
-  const plant = useAtomSet(plantPassage, { mode: 'promise' });
+  const plantRange = useAtomSet(plantPassage, { mode: 'promise' });
+  const plantId = useAtomSet(plantList, { mode: 'promise' });
   const tapped = (then: () => void) => () => {
     if (busy.current) return;
     setLine(Option.none());
     then();
   };
   const onClose = tapped(onDone);
-  const settle = (list: List, answer: string) => {
+  const settle = (list: List, answer: AddAnswer | PlantAnswer) => {
     busy.current = false;
     setPending(false);
-    if (answer === 'Added') return onAdded();
+    if (answer === 'Added' || answer === 'Held') return onAdded();
     if (answer === 'Full') return setLine(Option.some({ _tag: 'Limit' }));
     setLine(Option.some({ _tag: 'Alert', title: list.title }));
   };
-  const onPlant = (list: List, range: Range) => {
+  const planted = (planting: Planting): Promise<AddAnswer | PlantAnswer> =>
+    Match.value(planting).pipe(
+      Match.tagsExhaustive({
+        Passage: ({ range }) => plantRange(range),
+        Handbook: ({ id }) => plantId(id),
+      }),
+    );
+  const onPlant = (list: List, planting: Planting) => {
     if (busy.current) return;
     busy.current = true;
     setPending(true);
     setLine(Option.none());
-    void plant(range).then(
+    void planted(planting).then(
       (answer) => settle(list, answer),
       () => settle(list, 'Failed'),
     );

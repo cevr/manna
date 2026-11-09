@@ -23,7 +23,7 @@ import passage from 'virtual:heartseed-passage';
 import type { Field } from '../field';
 import type { PassagesView } from '../passages';
 import { below, random } from '../test/garden-model';
-import { offerModel, shelvesModel, type ModelList } from '../test/home-model';
+import { BASE_SHELVES, offerModel, shelvesModel, type ModelList } from '../test/home-model';
 import { device } from '../test/one';
 import type { Held, Span } from '../test/passages-model';
 import { mountShelves } from '../test/shelves-rig';
@@ -35,8 +35,8 @@ const listsOf = (title: string): readonly ModelList[] => {
   return lists === undefined || lists === 'chooser' ? [] : lists;
 };
 const PICK_SHELVES = ['Psalms', 'Proverbs', 'The Gospel of John'];
-const COLLECTION_SHELVES = SHELVES.slice(4).map((shelf) => shelf.title);
-const ALL_LISTS = SHELVES.slice(1).map((shelf) => shelf.title);
+const COLLECTION_SHELVES = SHELVES.slice(4, BASE_SHELVES).map((shelf) => shelf.title);
+const ALL_LISTS = SHELVES.slice(1, BASE_SHELVES).map((shelf) => shelf.title);
 
 const spanOf = (list: ModelList): Span => list.range ?? { book: 1, chapter: 1, first: 1, last: 1 };
 
@@ -124,7 +124,7 @@ describe('the Add verses sheet', () => {
             wrong.push(`case ${at} ${title}: ${JSON.stringify(seen)}`);
             break;
           }
-          for (const list of listsOf(title)) add(offerModel(spanOf(list), heldModel, rows));
+          for (const list of listsOf(title)) add(offerModel(list.verses, heldModel, rows));
         }
       }
       expect(wrong.slice(0, 2)).toEqual([]);

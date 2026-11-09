@@ -23,12 +23,14 @@ import { Option } from 'effect';
 
 import type { Field, PlantStage } from './field';
 import { versesOf } from './kjv';
-import { placeOf, type List } from './lists';
+import { HANDBOOK } from './handbook';
+import { passageList, placeOf, type List } from './lists';
 import { choosable, type PassagesView } from './passages';
 import { COLLECTIONS, TAUGHT } from './promises';
 import { offerStateOf, SHELVES, type Shelf } from './shelves';
 import { below, pickOf, random } from './test/garden-model';
 import {
+  BASE_SHELVES,
   heldOf as heldModelOf,
   offerModel,
   placesOf,
@@ -108,18 +110,19 @@ describe('the shelves', () => {
 
   it('hold exactly the collections the list has less the taught ones, each with one list per promise', () => {
     const wanted = COLLECTIONS.filter((collection) => !TAUGHT.includes(collection.id));
-    const got = SHELVES.slice(4);
+    const got = SHELVES.slice(4, BASE_SHELVES);
     expect(got.map((shelf) => shelf.id)).toEqual(wanted.map((collection) => collection.id));
     expect(got.map((shelf) => listsOn(shelf).length)).toEqual(
       wanted.map((collection) => collection.promises.length),
     );
     expect(got.every((shelf) => shelf.icon === 'bow')).toBe(true);
     expect(SHELVES.some((shelf) => TAUGHT.includes(shelf.id))).toBe(false);
-    expect(SHELVES).toHaveLength(4 + COLLECTIONS.length - TAUGHT.length);
+    expect(BASE_SHELVES).toBe(4 + COLLECTIONS.length - TAUGHT.length);
+    expect(SHELVES).toHaveLength(BASE_SHELVES + HANDBOOK.length);
   });
 
   it('offer only lists a reader may add, each verse in the corpus and placed where the canon places it', () => {
-    const lists = SHELVES.flatMap(listsOn);
+    const lists = SHELVES.slice(0, BASE_SHELVES).flatMap(listsOn);
     expect(lists.flatMap(listWrong).slice(0, 3)).toEqual([]);
     expect(lists.length).toBeGreaterThan(16);
   });
@@ -130,7 +133,9 @@ describe('the shelves', () => {
     const listIds = SHELVES.flatMap((shelf) => listsOn(shelf).map((list) => list.id));
     expect(new Set(listIds).size).toBe(listIds.length);
     for (const shelf of SHELVES) {
-      const ranges = listsOn(shelf).map((list) => JSON.stringify(list.range));
+      const ranges = listsOn(shelf).flatMap((list) =>
+        list.range === undefined ? [] : [JSON.stringify(list.range)],
+      );
       expect(new Set(ranges).size, shelf.id).toBe(ranges.length);
     }
   });
@@ -237,8 +242,8 @@ describe('what a shelf row offers', () => {
         held.tag === 'Read'
           ? { _tag: 'Read', passages: held.passages, lists: [] }
           : { _tag: 'Unread' };
-      const got = offerStateOf(span, view, fieldOf(next, rows));
-      const want = offerModel(span, held, rows);
+      const got = offerStateOf(passageList('offer:', span), view, fieldOf(next, rows));
+      const want = offerModel(versesOfSpan(span), held, rows);
       if (got !== want) wrong.push(`${JSON.stringify(span)} ${JSON.stringify(rows)} ${got}`);
       bump(rangeKind);
       bump(rowsKind);

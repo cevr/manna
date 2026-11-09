@@ -2,7 +2,9 @@
 
 /**
  * A planted Handbook list's furrow on home (hshandbook R13, R14, E) on
- * generated readers through `test/lists-walk.ts`, devices 2 and 3: its
+ * generated readers through `test/lists-walk.ts`, devices 1, 14 and 16: a
+ * list planted through the root (`Add verses`, its shelf, `Plant`) shows
+ * its furrow after the passages; its
  * `Remove` asks, `Keep` keeps it, the ask's `Remove` takes the list away
  * once (twice in one turn makes one remove and no alert), a refused write
  * leaves the alert, an id stored twice goes whole, the plants stay (a verse
@@ -20,9 +22,10 @@ import { expect, it } from 'bun:test';
 import { walkListBars } from '../test/lists-walk';
 
 it('removes a planted list once its write lands, after one ask, keeping its plants', async () => {
-  const { faults, reached } = await walkListBars([2, 3], 4);
+  const { faults, reached } = await walkListBars([1, 14, 16], 4);
   expect(faults).toEqual([]);
   const floors: ReadonlyArray<readonly [string, number]> = [
+    ['plant:list', 2],
     ['uproot:Removed', 2],
     ['uproot:Failed', 1],
     ['uproot:Keep', 1],

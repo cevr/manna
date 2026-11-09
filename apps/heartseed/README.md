@@ -2082,7 +2082,7 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     and the disk against `src/test/choose-model.ts` and the passages'
     model; each file's floors met by its own devices.
   - `test:field-bar-planted-a` and `test:field-bar-planted-b`:
-    `src/field/bar-planted-a.test.tsx` (seeds 2 and 3) and
+    `src/field/bar-planted-a.test.tsx` (seeds 1, 14 and 16) and
     `bar-planted-b.test.tsx` (seeds 11 and 20), generated readers through
     `src/test/lists-walk.ts` (`walkListBars`) over the same rig: the
     promise planted, 0-2 stored passages (one now and then over a verse of
@@ -2090,7 +2090,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     then with an unknown id or an id stored twice, and a recall on a list's
     verse; a list furrow's `Remove`, then `Keep` or the ask's `Remove`
     (landing or refused, once or twice in one turn, a refusal retried), a
-    passage's `Remove`, or a relaunch; after every tap home's rows, add,
+    passage's `Remove`, `Add verses` and a small list's `Plant`, or a
+    relaunch; after every tap home's rows, add,
     limit line, ask and alert against `fieldWant` over the lists held, both
     stored texts against `src/test/handbook-model.ts` (unknown ids kept in
     place), no recall written, and every frame held to the rig's rules;
@@ -2569,7 +2570,13 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:shelves-b`: `src/shelves/sheet-b.test.tsx`, the sheet's single
     cases over the same rig: `Full` by stale props as the limit line, a
     pending plant blocking every control and the close, and no paid word or
-    verse text on any shelf.
+    verse text on any of the first 17 shelves.
+  - `test:shelves-lists` and `test:shelves-lists-b`:
+    `src/shelves/sheet-lists.test.tsx`, each Handbook offer's state and the
+    limit line over generated passages, lists and fields on four Handbook
+    shelves; and `sheet-lists-b.test.tsx`, a list's `Full` and `Held` by
+    stale props, a pending list plant blocking every control and the close,
+    and no paid word or verse text on three Handbook shelves.
   - `test:shelves-walk-a`, `test:shelves-walk-a-b`, `test:shelves-walk-b`
     and `test:shelves-walk-c`: `src/shelves/walk-a.test.tsx`,
     `walk-a-b.test.tsx`, `walk-b.test.tsx` and `walk-c.test.tsx`,
@@ -2582,7 +2589,19 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     every command the sheet, the counts, the stored passages and every
     other key against the models; each file's floors met by its own devices
     (a: the adds that land; b: refusals and the ways out; c: the stored
-    values, shelves and offers in the field).
+    values, shelves and offers in the field); they walk the first 17
+    shelves.
+  - `test:shelves-walk-lists-a` and `test:shelves-walk-lists-b`:
+    `src/shelves/walk-lists-a.test.tsx` (seeds 2, 3, 6 and 11) and
+    `walk-lists-b.test.tsx` (seeds 1, 4, 13 and 15), generated readers
+    through `src/test/lists-walk.ts` (`walkListShelves`) over the same rig:
+    0-3 picks held, the lists' key absent, `[]`, held (with an unknown id or
+    an id twice) or garbled, a loose verse of a small list recalled;
+    Handbook shelves and shelves of picks opened, switched and closed,
+    `Plant` on a small list or a pick landing or refused, once, twice, then
+    `Done` or held, a refusal retried; after every command the sheet, the
+    counts and both stored texts against the models (a: the list plants; b:
+    the devices, a pick beside a list, the limit and an unread lists' key).
   - `test:home-start`: `src/home/start.property.test.ts`, Start here at the
     session seam, walked as `test:session-visit` walks a visit: after every
     step the plan, the hold, the visit against `startModel`
