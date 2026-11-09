@@ -1732,17 +1732,20 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     failing or not apart from its write, the device holding the model's
     record after every keep, never falling but in the one excused history
     (a stored key whose stamp read failed while its write landed); and
-    `src/field/reach.test.tsx`, Today's `Your field` outside its scroll
-    view before and after a recital that grows the passage, and one view
-    of Say it deciding both the control and home: with the root's news of
-    Say it held back, a tap in the first frame that offers the control
-    after a growing recital opens home; and `src/field/phrases.test.ts`,
+    `src/field/phrases.test.ts`,
     the field with phrases folded into their verses against `fieldFoldRule`
     (`src/test/phrase-model.ts`) over 600 generated gardens (held, removed
     and taught rows, phrases sown none, some, joined or stale, near-miss
     references, every zone): `seed` for a verse in phrases, a removed
     passage's phrases as their verse's row by first recall, days sown over
     every recall and the harvest over verses alone.
+  - `test:field-reach`: `src/field/reach.test.tsx`, Today's `Your field`
+    outside its scroll view before and after a recital that grows the
+    passage; a recital started in the turn of a tap on `Your field`, which
+    keeps Today on screen through its result; and one view of Say it
+    deciding both the control and home: with the root's news of Say it
+    held back, a tap in the first frame that offers the control after a
+    growing recital opens home.
   - `test:field-unread`: `src/field/unread.test.tsx`, no field and no
     `Your field` in any frame of a held launch until its read lands, then
     home, of an unread session (whose recital the next launch's home

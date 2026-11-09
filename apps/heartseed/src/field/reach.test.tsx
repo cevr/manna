@@ -55,6 +55,30 @@ describe('the way to the field', () => {
     expect(await app.leave()).toEqual([]);
   });
 
+  it('keeps Today on screen when a recital starts in the turn of a tap on Your field', async () => {
+    device.launch(planted());
+    const app = await mount(true);
+    expect(await app.until(app.home)).toBe(true);
+    await app.begin();
+    expect(await app.until(() => app.control() !== undefined)).toBe(true);
+    const button = (label: string) =>
+      [...document.querySelectorAll('[role="button"]')].find(
+        (node) => node.getAttribute('aria-label') === label,
+      );
+    const click = (node: Element | undefined) =>
+      node?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    await act(async () => {
+      click(button('Say it'));
+      click(app.control());
+    });
+    expect(await app.until(() => app.summary() !== '')).toBe(true);
+    expect({
+      headings: [...document.querySelectorAll('[role="heading"]')].map((node) => node.textContent),
+      faults: app.faults,
+    }).toEqual({ headings: ['Today'], faults: [] });
+    expect(await app.leave()).toEqual([]);
+  });
+
   it('opens at a tap in the first frame that offers it after a growing recital, with the root’s news of Say it held back', async () => {
     device.launch(planted());
     const chimed = Promise.withResolvers<void>();
