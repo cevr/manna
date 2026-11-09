@@ -13,7 +13,9 @@
  * reader's appearance (System, Light or Dark), kept there too. Every screen that
  * hears the reader takes Dictation from here, so two services never share
  * the module's one channel; the first minute's hear phase and Today's Listen
- * on a new piece are the two that read aloud.
+ * on a new piece are the two that read aloud. A hold on the words of a
+ * reading under way pauses it with one soft tick (`holdReading`), its release
+ * reads on from the word held (`seekTo`), and its cancel resumes (`letGo`).
  *
  * The source is the module's replay of a scripted recital only in a
  * development build (`__DEV__`) on the simulator, which can never listen;
@@ -44,7 +46,7 @@ import { liveChime } from './garden/chime';
 import { greetingAt } from './home';
 import type { Cue } from './matcher';
 import { sourceWords } from './matcher/words';
-import { layer as sayItLayer, SayIt, TODAY, type Grade, type Haptics, type Recital } from './sayit';
+import { Haptics, layer as sayItLayer, SayIt, TODAY, type Grade, type Recital } from './sayit';
 import { liveHaptics } from './sayit/live';
 import { SIMULATOR_PLAN, sourceKind } from './sayit/source';
 import type { Passage } from './passage';
@@ -117,7 +119,7 @@ export const appLayer = (parts: {
     Layer.provideMerge(passagesLayer.pipe(Layer.provide(parts.store))),
     Layer.provideMerge(voiceLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.voice)))),
     Layer.provideMerge(appearanceLayer.pipe(Layer.provide(parts.store))),
-    Layer.provide(parts.haptics),
+    Layer.provideMerge(parts.haptics),
   );
 
 export const runtime = Atom.runtime(
@@ -318,6 +320,29 @@ export const listenTo = runtime.fn(
     ),
   { concurrent: true },
 );
+
+/** A seek of the reading view: while a reading is under way, the voice reads its verse on from word `word` (0-based) as a new utterance, the words before it lit; at any other time nothing happens (`Voice.seek`). */
+export const seekTo = runtime.fn(
+  (word: number) => Effect.flatMap(Voice, (voice) => voice.seek(word)),
+  { concurrent: true },
+);
+
+/** The start of a hold on the reading view: the voice pauses and one soft tick is felt (`Haptics.tick`). */
+export const holdReading = runtime.fn(
+  () =>
+    Effect.gen(function* () {
+      const voice = yield* Voice;
+      const haptics = yield* Haptics;
+      yield* voice.pause;
+      yield* haptics.tick;
+    }),
+  { concurrent: true },
+);
+
+/** A hold on the reading view canceled: the voice plays on from where it paused. */
+export const letGo = runtime.fn(() => Effect.flatMap(Voice, (voice) => voice.resume), {
+  concurrent: true,
+});
 
 /** Whether the voice's view holds a reading under way (reading or paused), for Today, which offers Listen only when none is. */
 export const readingAloud = (view: VoiceView): boolean => isActive(view);

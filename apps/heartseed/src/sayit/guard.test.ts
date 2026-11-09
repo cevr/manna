@@ -19,6 +19,11 @@
  *   `listenTo`; the first minute's hear phase and Today's Listen are the
  *   voice's two readers. Only `src/app.ts` and the natural voice's
  *   development probe (`app/probe/natural.tsx`) build the voice.
+ * - Today's hold on the words of a reading under way grows its voice atoms
+ *   by `seekTo`, `holdReading` and `letGo`, which come only from
+ *   `src/app.ts`: only Today, its reading view (`src/reading/view.tsx`) and
+ *   the light probe (`app/probe/light.tsx`) take them, and no other source
+ *   seeks, pauses or resumes the voice itself.
  * - A word lit is felt by a soft tick: the app's one call of One's haptics
  *   is `impact('soft')`, in Say it's live parts.
  *
@@ -218,6 +223,32 @@ describe('Say it aloud', () => {
         ),
     );
     expect(builders).toEqual(['app/probe/natural.tsx', 'src/app.ts']);
+  });
+
+  it('grows Today’s voice atoms by the hold’s seekTo, holdReading and letGo, from src/app.ts alone: only Today, its reading view and the light probe take them, and no other source seeks, pauses or resumes the voice', () => {
+    const HOLD = ['seekTo', 'holdReading', 'letGo'];
+    const app = code('src/app.ts');
+    expect(HOLD.filter((name) => app.includes(`export const ${name} = runtime.fn(`))).toEqual(HOLD);
+    const takers = SOURCES.filter((source) =>
+      importsOf(source).some(
+        ({ from, names }) => /(^|\/)app$/.test(from) && names.some((name) => HOLD.includes(name)),
+      ),
+    );
+    expect(
+      takers.filter(
+        (source) =>
+          !['app/index.tsx', 'app/probe/light.tsx', 'src/reading/view.tsx'].includes(source),
+      ),
+    ).toEqual([]);
+    const voiceOwners = (source: string) =>
+      source === 'src/app.ts' ||
+      source === 'src/voice.ts' ||
+      source.startsWith('src/voice/') ||
+      source.startsWith('src/natural/');
+    const steering = SOURCES.filter(
+      (source) => !voiceOwners(source) && /\.(seek|pause|resume)\b/.test(code(source)),
+    );
+    expect(steering).toEqual([]);
   });
 });
 
