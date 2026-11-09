@@ -8,6 +8,7 @@
     "prebuild:native": "one prebuild",
     "sim": "bun scripts/sim.ts",
     "icon": "bun scripts/icon.ts",
+    "home-icons": "bun scripts/home-icons.ts",
     "handbook": "bun scripts/handbook.ts",
     "natural:serve": "bun scripts/natural-serve.ts",
     "plan": "alchemy plan alchemy.run.ts --stage prod",
