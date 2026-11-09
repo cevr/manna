@@ -4,9 +4,8 @@
  * The root's fixed launches (hshomeroot R1-R3, R6 and R8) through the
  * field's screen rig (`src/test/field-rig.tsx`), each frame of each launch
  * held to the root's frame rule (`watchedLaunch`, `src/test/root-rule.ts`).
- * The root renders with no `opening`, so every case's opening comes from the
- * default. Each case names its expected screens and values: a read launch
- * with the passage due, pending then home with its plan's counts in every
+ * The root takes no props, so every case opens as a launch does. Each case
+ * names its expected screens and values: a read launch with the passage due, pending then home with its plan's counts in every
  * home frame; an unread garden on Today with no field; garbled passages,
  * home with `Begin` alone; a held read, pending until its release; a
  * relaunch after a choice and a visit, which keeps neither; and When I

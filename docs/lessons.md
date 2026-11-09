@@ -5350,3 +5350,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The gate bullet named 37 of `@manna/heartseed`'s 140 parts as if it named them all, so a reader took the gate's heartseed tests to be those 37.
 - **Cause:** The bullet copied each workspace's part list by hand, and each new part landed in the workspace's `turbo.json` and README with nothing holding the copy to them.
 - **Guard:** code: `packages/scripts/src/gate.test.ts` `CLAUDE.md's gate bullet names each workspace's parts whole or none, and names its README when none`
+
+### heartseed-docs-name-only-props-the-root-takes
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "still name the deleted `opening` prop"
+- **Source:** hymnapp/batch-hg-1-findings.md o1 (On base, its first item)
+- **Wrong:** Three doc comments of heartseed's root tests and rig said the root renders with no `opening`, a prop `Root` no longer takes, so a reader looked for a prop that is gone.
+- **Cause:** The prop's removal changed `Root`'s declaration, and nothing read the comments that named its props against it.
+- **Guard:** code: `apps/heartseed/scripts/root-props.test.ts` `every doc comment under src and app names only props Root declares, each fault by file:line and name`

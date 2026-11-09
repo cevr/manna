@@ -4,7 +4,7 @@
  * The root's fixed launches that hold a recital (hshomeroot R1, R2, R4 and
  * R7), cut from `root.test.tsx` by its budget, through the field's screen
  * rig with each frame held to the root's frame rule (`watchedLaunch`). The
- * root renders with no `opening`. A fresh install's first minute through
+ * root takes no props. A fresh install's first minute through
  * `Continue` opens home in the done state, with no Today frame after it;
  * a recital on Today shows no way back while Say it listens, and
  * `Your field` after its result leads home.

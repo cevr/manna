@@ -2,8 +2,8 @@
 
 /**
  * When I need…, home and Today as a reader and a screen reader meet them,
- * for the tests of `src/need` and the home walk: the root route (no
- * `opening`, so a launch on a read garden opens home) mounted in happy-dom
+ * for the tests of `src/need` and the home walk: the root route (it takes
+ * no props, so a launch on a read garden opens home) mounted in happy-dom
  * (react-native-web) under the app's own layer teaching `promises`
  * (`TAUGHT` unless the test leaves the part out), over a disk in a plain
  * map that outlives launches and whose listings can fail every attempt (an
