@@ -6,9 +6,10 @@
  * speaks with, whose choice (Off, Her or Him) lives in the same store, the reader's
  * passages, kept there too, the collections taught (`TAUGHT`), and the
  * daily session over the garden, the passages and the taught collections'
- * verses, whose minutes live there too: its plan is made at Today's first
- * show, each Minutes tap, each return to the foreground
- * (`src/foreground.ts`) and each add or remove of a passage, and the
+ * verses, whose minutes live there too: its plan is made at the first show
+ * of home or Today, each Minutes tap, each return to the foreground
+ * (`src/foreground.ts`, whose one subscription also reads home's greeting
+ * again) and each add or remove of a passage, and the
  * reader's appearance (System, Light or Dark), kept there too. Every screen that
  * hears the reader takes Dictation from here, so two services never share
  * the module's one channel; the first minute's hear phase and Today's Listen
@@ -22,7 +23,7 @@
  * voice stops a reading under way and the foreground's subscription ends.
  */
 
-import { Clock, Duration, Effect, Layer, Option, Stream } from 'effect';
+import { Clock, Duration, Effect, Layer, Option, Stream, SubscriptionRef } from 'effect';
 import type * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as Atom from 'effect/reactivity/Atom';
 import { One } from 'one';
@@ -36,7 +37,7 @@ import {
 import { layer as dictationLayer, type DictationSource } from './dictation';
 import { recite } from './dictation/script';
 import { microphoneSource, replaySource } from './dictation/source';
-import { type Foreground, wakeLayer } from './foreground';
+import { type Foreground, Returns, wakeLayer } from './foreground';
 import { foregroundSource } from './foreground/source';
 import { cueIn, Garden, layer as gardenLayer, type Chime, type GardenView } from './garden';
 import { liveChime } from './garden/chime';
@@ -267,8 +268,16 @@ export const startHere = runtime.fn(
   { concurrent: true },
 );
 
-/** The home's greeting by the runtime's clock, read when a screen first shows it and again at each later show once none showed it in between. */
-export const greetingNow = runtime.atom(Effect.map(Clock.currentTimeMillis, greetingAt));
+/** The home's greeting by the runtime's clock, read when a screen first shows it, again at each later show once none showed it in between, and again at each return to the foreground while one shows it (`Returns`); never in between. */
+export const greetingNow = runtime.atom(
+  Stream.unwrap(
+    Effect.map(Returns, (returns) =>
+      Stream.mapEffect(SubscriptionRef.changes(returns), () =>
+        Effect.map(Clock.currentTimeMillis, greetingAt),
+      ),
+    ),
+  ),
+);
 
 /** A press of the first minute's Say it: a recital of the passage under its cue, kept or not. */
 export const sayAs = runtime.fn(

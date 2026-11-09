@@ -8,10 +8,12 @@
  * system prompt such as the microphone's, a call banner) never leaves the
  * app, so it is no return, and neither is a second `active` with no
  * `background` between. Each return wakes the session (`Session.wake`),
- * which makes the plan again unless a recital is under way.
+ * which makes the plan again unless a recital is under way, and counts in
+ * `Returns`, which home's greeting is read again from. The states are read
+ * through one subscription, this layer's, for the whole runtime.
  */
 
-import { Context, Effect, Layer, Stream } from 'effect';
+import { Context, Effect, Layer, Stream, SubscriptionRef } from 'effect';
 
 import { Session } from './session/service';
 
@@ -55,14 +57,24 @@ export const returnsOf = <E, R>(states: Stream.Stream<string, E, R>): Stream.Str
     },
   );
 
-/** Wakes the session at each return, for as long as the app's runtime lives: its scope's close ends the subscription. */
-export const wakeLayer: Layer.Layer<never, never, Foreground | Session> = Layer.effectDiscard(
+/** The count of the launch's returns to the foreground so far, from 0: its changes are the returns, read through the one subscription `wakeLayer` holds. */
+export class Returns extends Context.Service<Returns, SubscriptionRef.SubscriptionRef<number>>()(
+  'heartseed/foreground/Returns',
+) {}
+
+/** Counts each return in `Returns` and wakes the session at it, for as long as the app's runtime lives: its scope's close ends the subscription. */
+export const wakeLayer: Layer.Layer<Returns, never, Foreground | Session> = Layer.effect(
+  Returns,
   Effect.gen(function* () {
     const foreground = yield* Foreground;
     const session = yield* Session;
+    const returns = yield* SubscriptionRef.make(0);
     yield* Effect.forkScoped(
-      Stream.runForEach(returnsOf(foreground.states), () => session.wake),
+      Stream.runForEach(returnsOf(foreground.states), (count) =>
+        Effect.andThen(SubscriptionRef.set(returns, count), session.wake),
+      ),
       { startImmediately: true },
     );
+    return returns;
   }),
 );
