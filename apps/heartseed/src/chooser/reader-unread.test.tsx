@@ -31,6 +31,8 @@ it('shows Today the plan over unread passages, through removes and mornings', as
     'made:remove',
     'zone:Pacific/Chatham',
     'launch:Unread',
+    'home:launch-begin',
+    'home:begin',
   ];
   expect(floors.filter((floor) => !reached.has(floor))).toEqual([]);
 });

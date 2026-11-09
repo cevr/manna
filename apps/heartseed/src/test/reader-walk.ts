@@ -1,15 +1,17 @@
 /* oxlint-disable effect/noNullish, effect/noAsyncFunction, eslint/no-await-in-loop, eslint/no-unmodified-loop-condition, effect/noTernary, effect/noGlobals, effect/noTryCatch -- a generated reader through the root: it drives launches one awaited tap at a time over a disk, a clock and a zone kept in plain values the steps change (the zone in `process.env.TZ`, put back in a `finally`), names faults by their JSON, and reads the model's undefined and null as none. */
 
 /**
- * A generated reader's walk through Today, the field and the chooser, for
- * the reader's parts (`src/chooser/reader-*.test.tsx`), over the run's rig
+ * A generated reader's walk through home, Today and the chooser, for the
+ * reader's parts (`src/chooser/reader-*.test.tsx`), over the run's rig
  * (`run-rig.tsx`: the root over a disk, a recognizer that hears the text the
- * walk names, Effect's clock frozen where the walk sets it), judged after
- * every command against the models: Today by `run-model.ts` over
- * `session-model.ts`'s plan of hskjv's pieces (`passages-model.ts`), made at
- * each making (the launch's first show, a landed add or remove, a Minutes
- * tap); the field and the bar by `choose-model.ts`'s `fieldWant`; the
- * chooser by its `chooserWant`.
+ * walk names, Effect's clock frozen where the walk sets it), each launch
+ * opening on home (`opening: 'home'`), judged after every command against
+ * the models: Today by `run-model.ts` over `session-model.ts`'s plan of
+ * hskjv's pieces (`passages-model.ts`), made at each making (home's first
+ * show, a landed add or remove, a Minutes tap); home by `choose-model.ts`'s
+ * `fieldWant`, with the plan's counts line and `Begin` exactly when the
+ * model shows a verse or the passages read unread (R3); the chooser by its
+ * `chooserWant`.
  *
  * A device lies in UTC, Los Angeles, Kathmandu, Lord Howe or Chatham, on a
  * day of 2026 at 06:00-21:59 local, with the promise planted 0 (the first
@@ -20,8 +22,8 @@
  * stored in a quarter, and 0-3 failed reads of the passages' key alone.
  *
  * Commands by screen. Today: `Your field`, `Say it` heard then `Next`, a
- * Minutes tap, or a relaunch after the next 04:00 local. The field: `Today`,
- * a remove (`Keep`, the ask moved, or the ask's `Remove` landing or refused,
+ * Minutes tap, or a relaunch after the next 04:00 local. Home: `Begin` (a
+ * relaunch after the next 04:00 local when home offers none), a remove (`Keep`, the ask moved, or the ask's `Remove` landing or refused,
  * once or twice in one turn), or an add (the bar's `Add verses`): a target chapter (Psalms 119 and
  * 117, the promise's chapter, John 15, one of 20 verses, one of 21, or any), a back to
  * the books or the chapters and in again, 1-4 verse taps by pattern, then
@@ -32,10 +34,10 @@
  * the start's keys unchanged but the passages and the minutes, the passages
  * the launch's value until a change lands and the model's list after, the
  * minutes only after a tap, and no other new key but each recital's recall.
- * Every frame of every screen keeps `barFaults` (the scroll rule on Today,
- * the field and the chooser, one heading, `Listening` only on Today, nothing
- * offered over unread passages, `Plant` only over 1-20 verses, AA off
- * Today).
+ * Every frame of every screen keeps the root's `rootFaults` and `barFaults`
+ * (the scroll rule on Today, home and the chooser, one heading, `Listening`
+ * only on Today, nothing offered over unread passages, `Plant` only over
+ * 1-20 verses, AA off Today).
  */
 
 import { Effect, Layer, MutableRef } from 'effect';
@@ -79,6 +81,7 @@ import { CORPUS, countIn, storedOf } from './passages-rig';
 import { actionModel, madeModel, NO_RUN, nextModel, shownModel, startedModel } from './run-model';
 import { deviceOf, launch, PASSAGE, type Launch } from './run-rig';
 import { expandRule, pieceRule, verseOfRule, withPhrasesRule } from './phrase-model';
+import { rootFaults } from './root-rule';
 import { countsModel, DAY, localDay, MINUTE, planModel } from './session-model';
 import { listenModel } from './wake-model';
 import { wallAt } from './wake-walk';
@@ -166,7 +169,7 @@ const plantsIn = (disk: ReadonlyMap<string, string>) => {
 };
 
 /** The screens the root shows, as the model holds them. */
-type Screen = 'Today' | 'field' | 'chooser';
+type Screen = 'home' | 'Today' | 'chooser';
 
 /** One generated reader's walk from `seed`, `steps` commands long; answers its faults and the cases it reached. */
 export const walkReader = async (seed: number, steps: number, lean: Lean) => {
@@ -228,7 +231,7 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   let written = false;
   let minutesWritten = false;
   let run = NO_RUN;
-  let screen: Screen = 'Today';
+  let screen = 'home' as Screen;
   let bar: Asking = QUIET;
   let choosing: Choosing = OPENED;
   let mornings = 0;
@@ -274,9 +277,17 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
       }),
     };
   };
+  /** R3: home offers `Begin` exactly when the model shows a verse, or over unread passages (the app's own passage, unplanned). */
+  const offersBegin = () => held.tag === 'Unread' || shownModel(run, recallsNow) !== null;
+  /** Home settled: the field and its bar, the plan's counts line over read passages, and `Begin` by R3. */
+  const homeWant = () => ({
+    field: fieldWant(heldOn(device.disk), PROMISE, held, bar),
+    counts: held.tag === 'Read' && run.plan !== null ? [countsModel(run.plan, recallsNow)] : [],
+    begin: offersBegin(),
+  });
   const want = () => {
     if (screen === 'Today') return todayWant();
-    if (screen === 'field') return fieldWant(heldOn(device.disk), PROMISE, held, bar);
+    if (screen === 'home') return homeWant();
     return chooserWant(CORPUS, choosing);
   };
 
@@ -287,10 +298,14 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   const opened = async () => {
     app = await launch(device, { unread: false, refuse: false }, time, [PASSAGE], {
       store: keyFailing(keyFaults),
+      opening: 'home',
     });
     const host = app.host;
     watch = new MutationObserver(() => {
-      for (const fault of barFaults(host, held.tag === 'Unread', known))
+      for (const fault of [
+        ...rootFaults(host, 'read'),
+        ...barFaults(host, held.tag === 'Unread', known),
+      ])
         if (frames.length < 8) frames.push(fault);
     });
     watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
@@ -306,7 +321,14 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
         counts: at.counts(),
         listen: at.has('Listen'),
       };
-    if (screen === 'field') return readBar(at.host);
+    if (screen === 'home')
+      return {
+        field: readBar(at.host),
+        counts: [...at.host.querySelectorAll('[data-testid="counts"]')].map(
+          (node) => node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+        ),
+        begin: control('Begin') !== undefined,
+      };
     return readChooser(at.host);
   };
 
@@ -379,18 +401,25 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     reached.add(`made:${what}`);
   };
 
+  /** Home's way to Today: `Begin` when home offers it, else a relaunch the next morning. */
   const today = async () => {
     if (bar.ask !== undefined) reached.add('ask:dropped by leaving');
     if (bar.alert !== undefined) reached.add('alert:dropped by leaving');
-    await tap('Today');
+    if (!offersBegin()) {
+      reached.add('home:no-begin');
+      return relaunch();
+    }
+    reached.add('home:begin');
+    await tap('Begin');
     screen = 'Today';
-    await settle('Today');
+    bar = QUIET;
+    await settle('Begin');
   };
   const field = async () => {
     await tap('Your field');
-    screen = 'field';
+    screen = 'home';
     bar = QUIET;
-    await settle('the field');
+    await settle('Your field');
   };
   const say = async () => {
     const shown = shownModel(run, recallsNow);
@@ -434,12 +463,21 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     keyFaults.reads = 0;
     held = readRule(CORPUS, device.disk.get(KEY), 0);
     run = NO_RUN;
-    screen = 'Today';
+    screen = 'home';
     bar = QUIET;
+    await arrive(`relaunch ${mornings}`);
+  };
+  /** A launch: home settled with the plan made at its first show, then `Begin` when home offers it, drawing nothing. */
+  const arrive = async (step: string) => {
     const at = await opened();
-    await at.until(() => at.headings().includes('Today'));
+    await at.until(() => at.headings().includes('Your field'));
     run = madeModel(NO_RUN, planNow(), false);
-    await settle(`relaunch ${mornings}`);
+    await settle(step);
+    reached.add(offersBegin() ? 'home:launch-begin' : 'home:launch-done');
+    if (!offersBegin()) return;
+    await tap('Begin');
+    screen = 'Today';
+    await settle(`${step}, Begin`);
   };
 
   /** Taps the `Remove` of held passage `at`, by its place among the rows of equal title. */
@@ -497,7 +535,7 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     await tap(chooserWant(CORPUS, choosing).back);
     const after = backRule(choosing);
     if (after === undefined) {
-      screen = 'field';
+      screen = 'home';
       bar = QUIET;
     } else choosing = after;
     await settle(step);
@@ -515,7 +553,7 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
       tallyPlanted(span);
       held = answer.held;
       written = true;
-      screen = 'field';
+      screen = 'home';
       bar = QUIET;
       made('add');
       await settle(`plant ${spanRef(span)}${twice ? ' twice' : ''}`);
@@ -622,7 +660,7 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
     if (roll < morning) return relaunch();
     return field();
   };
-  const onField = async () => {
+  const onHome = async () => {
     const count = passages().length;
     const roll = below(next, 10);
     if (held.tag === 'Unread' || roll < (lean === 'today' ? 4 : 2)) return today();
@@ -631,13 +669,10 @@ const walkIn = async (next: () => number, zone: string, steps: number, lean: Lea
   };
 
   log.push(`${zone}, promise ${back} days back, ${kind}, ${keyFaults.reads} failed reads`);
-  const first = await opened();
-  await first.until(() => first.headings().includes('Today'));
-  run = madeModel(NO_RUN, planNow(), false);
-  await settle('launch');
+  await arrive('launch');
   for (let step = 0; step < steps && faults.length === 0; step++) {
     if (screen === 'Today') await onToday();
-    else await onField();
+    else await onHome();
   }
   watch?.disconnect();
   await (app as Launch).leave();

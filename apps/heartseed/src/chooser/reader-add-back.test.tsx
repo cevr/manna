@@ -3,7 +3,7 @@
 /**
  * The reader's adds through the root (hspassage C1, C6-C8, C12, C13) on a
  * generated reader through `test/reader-walk.ts`, leaning toward changes
- * from Today's field, over an empty stored list: a range tapped backward
+ * from home, the field each launch opens on, over an empty stored list: a range tapped backward
  * past twenty verses and clipped, a restart, a tap that clears the range,
  * backs to the books and the chapters, Psalms 119, leaving the chooser,
  * and plants of one verse, of twenty and of a whole chapter, then back on
@@ -36,6 +36,9 @@ it('clips a range tapped backward and restarts one, through the field and the ch
     'planted:twenty',
     'planted:whole-chapter',
     'today:said-new',
+    'home:launch-begin',
+    'home:begin',
+    'home:no-begin',
   ];
   expect(floors.filter((floor) => !reached.has(floor))).toEqual([]);
 });

@@ -3,7 +3,7 @@
 /**
  * The reader's adds through the root (hspassage C1, C6-C9, C12, C13) on a
  * generated reader through `test/reader-walk.ts`, leaning toward changes
- * from Today's field: the chooser opened from the field's bar, a range
+ * from home, the field each launch opens on: the chooser opened from the field's bar, a range
  * clipped forward, a tap that clears it, backs to the books and the
  * chapters, Psalms 119, leaving the chooser, and a plant landing, refused,
  * retried and tapped twice in one turn, of one verse, of twenty, of a whole
@@ -39,6 +39,8 @@ it('adds the reader’s passages through the field and the chooser, one change a
     'planted:twenty',
     'planted:whole-chapter',
     'planted:over-promise',
+    'home:launch-begin',
+    'home:begin',
   ];
   expect(floors.filter((floor) => !reached.has(floor))).toEqual([]);
 });

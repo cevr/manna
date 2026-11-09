@@ -38,6 +38,9 @@ it('shows Today the plan made at each change, over the passages chosen, morning 
     'gen:first-minute-day',
     'planted:on-a-planted-day',
     'zone:Australia/Lord_Howe',
+    'home:launch-begin',
+    'home:begin',
+    'home:no-begin',
   ];
   expect(floors.filter((floor) => !reached.has(floor))).toEqual([]);
 });
