@@ -5339,7 +5339,7 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/hssettings/split.md sq3 (b), owner 2026-11-09
 - **Wrong:** for S1 to S5b, `apps/heartseed/src/settings/choices.tsx` kept Today's row of choices behind a context that only test rigs provided, and `rootFaults` let a host the seam registered show them on Today; left in place, it lets a rig pass a Today that shows the choices.
 - **Cause:** the owner hid the choices on Today before the rigs moved to the Settings sheet, so the rigs mounted through a seam until the last of them moved.
-- **Guard:** code: `apps/heartseed/scripts/seam-gone.test.ts` `no tracked file of the package names the seam of Today’s choices, in its path or its contents`
+- **Guard:** code: `apps/heartseed/scripts/seam-gone.test.ts` `no file of the package, tracked or not ignored, names the seam of Today’s choices, in its path or its contents`
 
 ### gate-ends-a-hung-task
 

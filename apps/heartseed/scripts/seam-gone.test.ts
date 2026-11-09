@@ -1,11 +1,12 @@
-/* oxlint-disable effect/noNodeBuiltinImport -- the test reads the package's tracked files from disk, synchronously, as `parts.test.ts` does. */
+/* oxlint-disable effect/noNodeBuiltinImport -- the test reads the package's files from disk, synchronously, as `parts.test.ts` does. */
 
 /**
- * No tracked file of the package names the test seam that would show Minutes
- * and Voice on Today (its context, its file or its name in prose), in its path
- * or its contents: the Settings sheet is the one place they show. The files are
- * git's listing of the package (the set `test:infra`'s inputs hash), less the
- * `infra/**` tests its inputs exclude, so the test reads nothing the cache does
+ * No file of the package names the test seam that would show Minutes and
+ * Voice on Today (its context, its file or its name in prose), in its path or
+ * its contents: the Settings sheet is the one place they show. The files are
+ * git's listing of the package, tracked and untracked but not ignored (the set
+ * `test:infra`'s inputs hash), less the `infra/**` tests its inputs exclude,
+ * so a file not yet added is read too, and the test reads nothing the cache does
  * not hash. A listing that fails, or that lacks a file every listing holds,
  * fails the test, so an empty or wrong listing cannot pass. Each name is built
  * from two pieces, so this file names none of them.
@@ -32,14 +33,17 @@ const NAMES = [
   forbid('choices', 'seam', ' ', 'giu', String.raw`\s+(?:\*\s+)?`),
 ];
 
-/** The package's tracked files, by `git ls-files -z` in its folder. */
+/** The package's files that git tracks or would track, by `git ls-files` in its folder. */
 const listing = (folder: string) => {
-  /* oxlint-disable-next-line effect/noGlobals -- the test lists the files git tracks, synchronously, before it reads them. */
-  const run = Bun.spawnSync(['git', 'ls-files', '-z'], {
-    cwd: folder,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
+  /* oxlint-disable-next-line effect/noGlobals -- the test lists the files git tracks or would track, synchronously, before it reads them. */
+  const run = Bun.spawnSync(
+    ['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
+    {
+      cwd: folder,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+  );
   return { code: run.exitCode, files: run.stdout.toString().split('\0').filter(Boolean) };
 };
 
@@ -64,7 +68,7 @@ const hitsOf = (file: string): ReadonlyArray<string> => {
 };
 
 describe('the seam of Today’s choices', () => {
-  it('no tracked file of the package names the seam of Today’s choices, in its path or its contents', () => {
+  it('no file of the package, tracked or not ignored, names the seam of Today’s choices, in its path or its contents', () => {
     const { code, files } = listing(APP);
     expect(code).toBe(0);
     expect(
