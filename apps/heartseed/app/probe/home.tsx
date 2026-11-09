@@ -1,13 +1,22 @@
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Array as Arr, Match, Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import passage from 'virtual:heartseed-passage';
 
 import { gardenView, passagesView, sessionView, startHere, taughtView } from '../../src/app';
 import type { FieldPassage } from '../../src/field';
 import type { GardenView, ReadGarden } from '../../src/garden';
-import { furrowsOf, greetingAt, readyOf, type Furrow, type Greeting } from '../../src/home';
+import {
+  furrowsOf,
+  greetingAt,
+  HOME_ICONS,
+  readyOf,
+  type Furrow,
+  type Greeting,
+} from '../../src/home';
+import { ICON_IMAGES } from '../../src/home/icons';
 import { startOf } from '../../src/home/start';
 import { fieldPassagesOf } from '../../src/promises/taught';
 import { countsOf } from '../../src/session';
@@ -16,8 +25,21 @@ import type { SessionView } from '../../src/session/service';
 import { useSessionBegunWhenShown } from '../../src/session/shown';
 import { SHELVES, type Shelf } from '../../src/shelves';
 import { themed, useThemed } from '../../src/look';
+import type { Scheme } from '../../src/theme';
 
 const dev = typeof __DEV__ !== 'undefined' && __DEV__;
+
+/** The two schemes each icon is drawn in. */
+const SCHEMES: readonly Scheme[] = ['light', 'dark'];
+
+/** Every icon the probe loads, as `<name> <scheme>` with its PNG. */
+const ICONS = HOME_ICONS.flatMap((name) =>
+  SCHEMES.map((scheme) => ({ key: `${name} ${scheme}`, source: ICON_IMAGES[name][scheme] })),
+);
+
+/** The keys with one more added; a key already held counts once. */
+const withKey = (keys: ReadonlySet<string>, key: string): ReadonlySet<string> =>
+  new Set([...keys, key]);
 
 /** The app's own row, as Today's field shows it: the promise alone. */
 const OWN: readonly FieldPassage[] = [{ title: passage.reference, verses: [passage.reference] }];
@@ -53,16 +75,28 @@ const furrowLines = (furrow: Furrow) => [
   ...furrow.plants.map((plant) => `plant ${plant.label}`),
 ];
 
-/** The probe's lines over the garden read, the session and the furrows. */
+/** The probe's first lines: its title and the greeting. */
+const headOf = (greeting: Greeting) => [
+  'Home probe',
+  `greeting ${greeting.words} ${greeting.icon}`,
+];
+
+/** The icons' lines: how many of all loaded, then the failed keys when any failed. */
+const iconLinesOf = (loaded: ReadonlySet<string>, failed: ReadonlySet<string>) => [
+  `icons loaded ${loaded.size} of ${ICONS.length}`,
+  ...Arr.match([...failed], {
+    onEmpty: () => [],
+    onNonEmpty: (keys) => [`icons failed ${keys.join(', ')}`],
+  }),
+];
+
+/** The probe's lines after the icons, over the garden read, the session and the furrows. */
 const linesOf = (
   session: SessionView,
   garden: ReadGarden,
   furrows: readonly Furrow[],
   lists: number,
-  greeting: Greeting,
 ) => [
-  'Home probe',
-  `greeting ${greeting.words} ${greeting.icon}`,
   `counts ${Option.match(session.plan, {
     onNone: () => 'none',
     onSome: (plan) => countsOf(plan, garden),
@@ -80,7 +114,9 @@ const linesOf = (
 
 /**
  * A development probe for the live check of the home's rules
- * (verify-heartseed, `home-probe`): the greeting, the plan's counts, each
+ * (verify-heartseed, `home-probe` and `home-icons`): the greeting, then
+ * how many of the home's icons loaded (and which failed) above each icon
+ * drawn in both schemes, then the plan's counts, each
  * furrow of the field with its kind, icon and ripe count and each of its
  * plants' labels, the lists the field holds, the shelves Add verses
  * offers, the session's visit and what Today would show, one line each,
@@ -96,6 +132,8 @@ export default function HomeProbe() {
   const passages = AsyncResult.value(useAtomValue(passagesView));
   const taught = AsyncResult.value(useAtomValue(taughtView));
   const onStart = useAtomSet(startHere);
+  const [loaded, setLoaded] = useState<ReadonlySet<string>>(() => new Set());
+  const [failed, setFailed] = useState<ReadonlySet<string>>(() => new Set());
   useSessionBegunWhenShown(Option.isSome(garden));
   if (!dev) return;
   const known = Option.all({ garden, session, passages, taught });
@@ -111,7 +149,25 @@ export default function HomeProbe() {
   );
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      {linesOf(view, read, furrows, lists.length, greeting).map((line, index) => (
+      {[...headOf(greeting), ...iconLinesOf(loaded, failed)].map((line, index) => (
+        <Text key={index} style={styles.line}>
+          {line}
+        </Text>
+      ))}
+      <View style={styles.icons}>
+        {ICONS.map(({ key, source }) => (
+          <Image
+            key={key}
+            source={source}
+            accessible
+            aria-label={`icon ${key}`}
+            onLoad={() => setLoaded((keys) => withKey(keys, key))}
+            onError={() => setFailed((keys) => withKey(keys, key))}
+            style={styles.icon}
+          />
+        ))}
+      </View>
+      {linesOf(view, read, furrows, lists.length).map((line, index) => (
         <Text key={index} style={styles.line}>
           {line}
         </Text>
@@ -144,6 +200,8 @@ const sheets = themed((roles, each) =>
       backgroundColor: roles.ground,
     },
     line: { fontSize: 17, fontFamily: each, color: roles.ink },
+    icons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    icon: { width: 32, height: 32 },
     button: {
       minHeight: 44,
       paddingHorizontal: 20,
