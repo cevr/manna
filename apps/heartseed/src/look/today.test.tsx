@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noTernary, eslint/no-await-in-loop -- a React screen walk: it drives launches of the root in happy-dom through the run rig's promise-based `act`, one generated step after another. */
+/* oxlint-disable effect/noAsyncFunction, effect/noTernary, effect/noGlobals, effect/noNullish, eslint/no-await-in-loop -- a React screen walk: it drives launches of the root in happy-dom through the run rig's promise-based `act`, one generated step after another, and reads the recalls off the rig's disk, a plain map of JSON texts, where an absent reference counts no recall. */
 
 /**
  * Today in dark, and across flips of the system, as a model-based walk
@@ -9,7 +9,11 @@
  * a grade, Next to the done state, minutes chosen in home's Settings sheet
  * (`renewBySettings`: `Your field`, the radio, `Done`, then `Begin` while
  * the verse shows, else the walk ends on home), the field and back, and a
- * flip of the system between any two steps. The model is the system's last
+ * flip of the system between any two steps. A Minutes trip ends on Today
+ * when the plan made at its tap offers the verse, by the session's and the
+ * run's models over the device's disk, and on home with no `Begin`
+ * otherwise; the fourth walk opens with an unheard recital and a trip, so
+ * a trip whose plan offers the verse is walked. The model is the system's last
  * value; every frame (each DOM mutation batch) and every settled screen
  * holds the frame oracle (`src/test/look.ts`) for it, every frame of the
  * sheet holds the sheet's rule for it, and the run rig's footer rule holds
@@ -24,11 +28,15 @@ import passage from 'virtual:heartseed-passage';
 import { sourceWords } from '../matcher/words';
 import { recallOf } from '../test/field-model';
 import { record } from '../test/field-rig';
-import { below, DAY, pickOf, random } from '../test/garden-model';
+import { below, DAY, pickOf, PREFIX, random } from '../test/garden-model';
 import { lookFaults, setSystem, watchLook } from '../test/look';
 import { rootFaults } from '../test/root-rule';
-import { deviceOf, launch, type Hearing } from '../test/run-rig';
+import { madeModel, NO_RUN, shownModel } from '../test/run-model';
+import { deviceOf, launch, type Device, type Hearing } from '../test/run-rig';
+import { planModel } from '../test/session-model';
 import { renewBySettings } from '../test/settings-rig';
+import { hostOffset } from '../test/zone';
+import type { Recall } from '../sayit';
 import type { Scheme } from '../theme';
 
 const T0 = Date.UTC(2026, 3, 1, 9);
@@ -52,8 +60,44 @@ const STEPS = [
 ] as const;
 type Step = (typeof STEPS)[number];
 
-/** The recitals a walk opens with, one per walk in turn, before a peek and the generated steps. */
-const SAYS: readonly Step[] = ['missed', 'heard', 'flipListening', 'unheard'];
+/** What the walks count: each step taken, the done state, the field in the done state, and each Minutes trip by whether its plan offers the verse. */
+type Covered = Step | 'done' | 'field, done' | 'minutes:due' | 'minutes:none';
+
+/** The steps each walk opens with, in turn, before the generated steps: a recital and a peek; the fourth walk's unheard recital writes no recall, so its Minutes trip makes a plan that offers the verse. */
+const OPENINGS: readonly (readonly Step[])[] = [
+  ['missed', 'peek'],
+  ['heard', 'peek'],
+  ['flipListening', 'peek'],
+  ['unheard', 'minutes', 'peek'],
+];
+
+/** The app's own piece: the passage, its own group. */
+const PIECE = { reference: passage.reference, words: WORDS, group: passage.reference };
+
+/** The recalls `device`'s disk holds, by reference. */
+const plantsOn = (device: Device) => {
+  const plants = new Map<string, Recall[]>();
+  for (const [key, value] of device.disk) {
+    if (!key.startsWith(PREFIX)) continue;
+    const recall: Recall = JSON.parse(value);
+    plants.set(recall.reference, [...(plants.get(recall.reference) ?? []), recall]);
+  }
+  return plants;
+};
+
+/** Whether the plan a Minutes tap of `minutes` makes at `T0` over `device`'s disk offers the verse, by the session's and the run's models. */
+const offerOf = (device: Device, minutes: number) => {
+  const plants = plantsOn(device);
+  const items = planModel({
+    plants,
+    pieces: [PIECE],
+    at: T0,
+    offset: hostOffset(T0),
+    minutes,
+  }).items;
+  const recallsNow = (reference: string) => plants.get(reference)?.length ?? 0;
+  return shownModel(madeModel(NO_RUN, items, false), recallsNow) !== null;
+};
 
 const other = (scheme: Scheme): Scheme => (scheme === 'light' ? 'dark' : 'light');
 
@@ -67,7 +111,8 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
   const next = random(seed * 7919 + 17);
   const model: Model = { system: start };
   setSystem(start);
-  const app = await launch(dueDevice(), { unread: false, refuse: false }, { now: T0 });
+  const device = dueDevice();
+  const app = await launch(device, { unread: false, refuse: false }, { now: T0 });
   const look = watchLook(app.host, () => model.system);
   const report: string[] = [];
   /** Whether the field in the done state left the walk on home, which ends it. */
@@ -110,6 +155,7 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
     minutes: async () => {
       const minutes = pickOf(next, [2, 5, 10, 20]);
       if (!app.has('Your field')) return false;
+      const offered = offerOf(device, minutes);
       const ran = await renewBySettings(app, minutes, () => model.system).then(
         (trip) => ({ trip }),
         (error: unknown) => {
@@ -123,8 +169,14 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
         report.push(`seed ${seed} minutes ${minutes} [${model.system}]: ${fault}`);
       if (trip.looked === 0)
         report.push(`seed ${seed} minutes ${minutes}: the sheet's look never checked`);
+      const offer = offered ? 'minutes:due' : 'minutes:none';
+      coverage[offer] = (coverage[offer] ?? 0) + 1;
       if (trip.at === 'Today') return true;
-      if (trip.at !== 'Your field' || app.has('Begin'))
+      if (offered)
+        report.push(
+          `seed ${seed} minutes ${minutes}: the trip ended at ${trip.at}, Begin ${app.has('Begin') ? 'shown' : 'none'}, where the plan offers ${passage.reference}`,
+        );
+      else if (trip.at !== 'Your field' || app.has('Begin'))
         report.push(
           `seed ${seed} minutes ${minutes}: the trip ended at ${trip.at}, Begin ${app.has('Begin') ? 'shown' : 'none'}`,
         );
@@ -161,7 +213,7 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
   await app.tap('Begin');
   await app.until(() => app.has('Say it'));
   await settle('launch');
-  const first: readonly Step[] = [SAYS[seed % SAYS.length] ?? 'heard', 'peek'];
+  const first = OPENINGS[seed % OPENINGS.length] ?? [];
   for (let n = 0; n < steps && !ended.home; n++) {
     const step = first[n] ?? pickOf(next, STEPS);
     if (await run[step]()) coverage[step] = (coverage[step] ?? 0) + 1;
@@ -180,13 +232,13 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
 };
 
 /** How many times each step took effect across the walks, how many settled screens showed the done state, and how many walks the field in the done state ended on home. */
-const coverage: Partial<Record<Step | 'done' | 'field, done', number>> = {};
+const coverage: Partial<Record<Covered, number>> = {};
 
 describe('Today in dark and across flips of the system', () => {
-  it('holds every frame of generated walks (Say it heard, missed or unheard, a peek, a grade, Next to done, Minutes, the field and back) to the oracle for the system’s last value', async () => {
+  it('holds every frame of generated walks (Say it heard, missed or unheard, a peek, a grade, Next to done, Minutes ending where its plan offers, the field and back) to the oracle for the system’s last value', async () => {
     const walks = [];
     for (let n = 0; n < 4; n++) walks.push(await walk(n, n % 2 === 0 ? 'dark' : 'light', 10));
-    const all: readonly (Step | 'done' | 'field, done')[] = [...STEPS, 'done', 'field, done'];
+    const all: readonly Covered[] = [...STEPS, 'done', 'field, done', 'minutes:due'];
     const reached = all.filter((step) => (coverage[step] ?? 0) === 0);
     expect({
       reports: walks.flatMap((each) => each.report),

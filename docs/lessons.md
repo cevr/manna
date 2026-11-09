@@ -5321,6 +5321,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The walk read a tap's effect only through the model it had already moved, and nothing asked that the control it named was there to tap.
 - **Guard:** code: `apps/heartseed/src/chooser/reader-today.test.tsx` `shows Today the plan made at each change, over the passages chosen, morning after morning`
 
+### heartseed-dark-today-trip-ends-by-plan
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "Suppose a product break made home offer no `Begin` after a making while the verse is due. This walk would pass it."
+- **Source:** hymnapp/hssettings3/round-1-findings.md U1
+- **Wrong:** The dark Today walk in `apps/heartseed/src/look/today.test.tsx` accepted a Minutes trip that ended on home with no `Begin` whatever plan the tap made, so with the plan made empty at a tap (`Session.choose`) `test:dark-today` stayed green while the verse was due.
+- **Cause:** The walk judged the trip's end by what home showed, and held no model of the plan the tap made.
+- **Guard:** code: `apps/heartseed/src/look/today.test.tsx` `holds every frame of generated walks (Say it heard, missed or unheard, a peek, a grade, Next to done, Minutes ending where its plan offers, the field and back) to the oracle for the system’s last value`
+
 ### gate-ends-a-hung-task
 
 - **Date:** 2026-11-09

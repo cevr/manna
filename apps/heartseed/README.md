@@ -2667,8 +2667,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     Settings sheet, the field and back, a flip between any two steps),
     every frame held to the frame oracle (`src/test/look.ts`) for the
     system's last value, and each trip's sheet to `sheetFaults` for that
-    value, its look checked at least once, ending on Today when the
-    walk's verse shows.
+    value, its look checked at least once. A trip ends by the plan made
+    at its tap, by the session's and the run's models over the device's
+    disk: on Today when that plan offers the verse (counted
+    `minutes:due`, floored at one, reached by the fourth walk's unheard
+    recital then a trip), else on home with no `Begin`.
   - `test:dark-first`: `src/look/first.test.tsx`, the first minute's
     phases (hear while the voice reads, letters while their recital
     listens, alone, Planted, then home in its done state) in dark, each
