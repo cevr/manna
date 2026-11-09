@@ -4,7 +4,8 @@
  * The field's bar as passages are added (hspassage C2-C4, C12, C13) on
  * generated readers through `test/bar-walk.ts`: no key, `[]`, and lists of
  * 3 and 5 held; 1 or 2 failed reads of the passages' key, read; other
- * plants; `Add a passage` from 0, 1 and 2 held, and the chooser left back
+ * plants; `Add verses` from 0, 1 and 2 held, by the bar's and by the
+ * row's, and the chooser left back
  * to the field; the limit line at launch and after an add; and an alert
  * dropped by leaving. Every frame keeps the bar's controls, the alert and
  * the limit line out of the scroll view, one heading, and every seen text
@@ -34,6 +35,8 @@ it('offers an add under 3 passages held, and the limit line at 3 or more, a new 
     'add:from-1',
     'add:from-2',
     'add:left',
+    'add:by add-verses',
+    'add:by add-row',
     'limit:at launch',
     'limit:after an add',
     'alert:dropped by leaving',

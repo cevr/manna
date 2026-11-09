@@ -15,7 +15,8 @@
  * `Keep`, another row's `Remove`, leaving, or the ask's `Remove` (its write
  * landing or refused; once, twice in one turn, or with `Today` or `Keep` in
  * the same turn; a refusal retried in half); `Today` and back; or
- * `Add a passage`, then back to the field or a verse planted. Over unread
+ * `Add verses` (the bar's or the row's), then back to the field or a verse
+ * planted. Over unread
  * passages, `Today` and back. After every tap the screen is the model's,
  * the stored passages are the start's until a change lands and the model's
  * list after, no other key is written, and every frame kept the rules.
@@ -240,10 +241,12 @@ export const walkBar = async (seed: number, steps: number, lean: Lean) => {
   };
   const add = async () => {
     if (bar.alert !== undefined) reached.add('alert:cleared by a tap');
-    await rig.tap('Add a passage');
+    const where = below(next, 2) === 0 ? 'add-verses' : 'add-row';
+    reached.add(`add:by ${where}`);
+    await rig.tapId(where);
     screen = 'Add a passage';
     bar = QUIET;
-    await settle('add a passage');
+    await settle(`add verses by ${where}`);
     if (below(next, 2) === 0) {
       reached.add('add:left');
       await rig.tap('Your field');

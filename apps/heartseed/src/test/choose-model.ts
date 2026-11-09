@@ -191,7 +191,7 @@ export interface Asking {
 /** The bar with no ask and no alert, as the field opens. */
 export const QUIET: Asking = { ask: undefined, alert: undefined };
 
-/** The field as the reader gets it: each row's title, its plants' labels and the controls inside it; how many `Add a passage` show; the limit line, the ask and the alerts, `undefined` for none. */
+/** The field as the reader gets it: each row's title, its plants' labels (readiness cut off) and the controls inside it but its plants; how many `Add verses` show (the bar's and the row's); the limit line, the ask and the alerts, `undefined` for none. */
 export interface FieldSeen {
   readonly rows: ReadonlyArray<{
     readonly title: string;
@@ -216,8 +216,9 @@ const versesOfSpan = (span: Span) =>
  * promise's, then each held passage's in the order chosen, then every other
  * plant (hsfield's rule), each phrase folded into its verse (H7); each held passage's row, and no other, holds one
  * `Remove <reference>`. With the passages read, the bar holds the ask while
- * there is one, else `Add a passage` under 3 held, else the limit line;
- * unread, it holds neither and no row a `Remove`.
+ * there is one, else `Add verses` under 3 held (in the bar and as the row
+ * at the field's end, so two), else the limit line; unread, it holds
+ * neither and no row a `Remove`.
  */
 export const fieldWant = (
   records: ReadonlyArray<Recall>,
@@ -241,7 +242,7 @@ export const fieldWant = (
       plants: row.plants.map((plant) => `${plant.reference}, ${plant.stage}`),
       controls: index >= 1 && index <= passages.length ? [`Remove ${row.title}`] : [],
     })),
-    add: read && asking === undefined && passages.length < 3 ? 1 : 0,
+    add: read && asking === undefined && passages.length < 3 ? 2 : 0,
     limit: read && asking === undefined && passages.length >= 3 ? LIMIT : undefined,
     ask: asking === undefined ? undefined : askText(spanRef(asking)),
     alert: bar.alert,
