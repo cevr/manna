@@ -1772,7 +1772,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:sayit`: `src/sayit.property.test.ts` (Say it against its model)
     and `src/sayit` but its cue tests (Today's Say it in happy-dom through
     `src/test/today-rig.tsx`, the source Say it hears, and its guards).
-  - `test:cue`: `src/sayit/cue.test.tsx`, `src/sayit/cue-say.test.tsx` and
+  - `test:cue`: `src/sayit/cue.test.tsx`, and `test:cue-say`:
+    `src/sayit/cue-say.test.tsx` and
     `src/sayit/cue-say-letters.test.tsx`, Today's cue in happy-dom through
     the same rig, reached from home by `Begin`: the passage at rest under
     each stage's cue, a recital under letters and under the full text, a
@@ -2269,9 +2270,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `Begin` alone); and `src/need/offer-b.test.tsx`, none on Today, and
     none while Say it listens, home offering it again after the result.
   - `test:need-walk-a`, `test:need-walk-a-visit`, `test:need-walk-b`,
-    `test:need-walk-c`, `test:need-walk-d`, `test:need-walk-e`:
-    `src/need/walk-{a,a-visit,b,b2,c,d,e}.test.tsx` (`walk-b` and `walk-b2`
-    both in `test:need-walk-b`), When I need… and a
+    `test:need-walk-b2`, `test:need-walk-c`, `test:need-walk-d`,
+    `test:need-walk-e`: `src/need/walk-{a,a-visit,b,b2,c,d,e}.test.tsx`,
+    one file each, When I need… and a
     visit walked through the root (`src/test/need-walk.ts`, each launch on
     home, each command drawn from those the model's screen allows: on home
     `When I need…`, `Begin` or a relaunch; on Today `Say it`, Minutes,
@@ -2390,9 +2391,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     natural voice's `planOf` over a seeded sample of 700 verses' phrases,
     each phrase planned whenever its verse is, one mark per word at its
     UTF-16 run within the phrase's text.
-  - `test:phrase-walk-a`, `test:phrase-walk-b`, `test:phrase-walk-c`:
-    `src/phrase/walk-a.test.tsx`, `walk-b.test.tsx` with
-    `walk-b2.test.tsx`, and `walk-c.test.tsx` with `walk-c2.test.tsx`,
+  - `test:phrase-walk-a`, `test:phrase-walk-b`, `test:phrase-walk-c`,
+    `test:phrase-walk-c2`: `src/phrase/walk-a.test.tsx`, `walk-b.test.tsx`
+    with `walk-b2.test.tsx`, `walk-c.test.tsx`, and `walk-c2.test.tsx`,
     Today over four days (seven for `walk-b2`) with long verses learned
     as phrases, walked through the root (`src/test/phrase-rig.tsx`, each
     launch on home, held to the model's counts and `Begin`, then `Begin`),
