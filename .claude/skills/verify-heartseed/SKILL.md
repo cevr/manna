@@ -235,6 +235,12 @@ Heartseed has no journey files yet. The features:
   the face; light and then dark with no tap, a choice of Light over a
   dark system, kept across a relaunch, and System again.
   Run it from `first.md`'s Today.
+- [features/handbook.md](features/handbook.md): Haskell's Bible Handbook
+  as lists of references, on its development probe
+  (`apps/heartseed/app/probe/handbook.tsx`): the sections, lists, ranges
+  and verses, every verse resolved in the device's corpus; the field
+  unchanged. No screen a reader sees shows the lists yet. Run it from
+  `first.md`'s Today.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.
