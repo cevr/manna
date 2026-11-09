@@ -1,9 +1,10 @@
 /**
  * The reader's choices of the session's minutes and the voice, as Today's
- * header shows them in its second row (`Choices`): the radio group
- * `Minutes` (`MinutesChoice`), shown once the stored choice is read so its
- * first frame shows the value read, and the voice's pill (`VoiceChoice`),
- * shown once its choice is read. Each control is at least 44 pt tall and
+ * header shows them in its second row (`Choices`) and the Settings sheet
+ * shows each under its line: the radio group `Minutes` (`MinutesChoice`),
+ * shown once the stored choice is read so its first frame shows the value
+ * read, and the voice's pill (`VoiceChoice`), shown once its choice is
+ * read. Each control is at least 44 pt tall and
  * filled in ink when on. A tap goes through `chooseMinutes` or
  * `cycleVoice`, so the choice shows at once and is stored.
  */
@@ -11,6 +12,7 @@
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { chooseMinutes, cycleVoice, sessionView, voiceView } from '../app';
@@ -74,35 +76,61 @@ function VoicePill({
   );
 }
 
-/** The radio group `Minutes` over the session's minutes, the chosen one checked; nothing until the session's view is read. */
-export function MinutesChoice() {
+/** A choice under its `line` when one is given (as the Settings sheet shows each), else the choice alone (as Today's row does). */
+function Lined({
+  line,
+  children,
+}: {
+  readonly line: Option.Option<string>;
+  readonly children: ReactNode;
+}) {
+  const styles = useThemed(sheets);
+  return Option.match(line, {
+    onNone: () => children,
+    onSome: (words) => (
+      <View style={styles.lined}>
+        <Text style={styles.line}>{words}</Text>
+        {children}
+      </View>
+    ),
+  });
+}
+
+/** The radio group `Minutes` over the session's minutes, the chosen one checked, under `line` when given; nothing until the session's view is read. */
+export function MinutesChoice({ line }: { readonly line?: string }) {
   const styles = useThemed(sheets);
   const session = AsyncResult.value(useAtomValue(sessionView));
   const onMinutes = useAtomSet(chooseMinutes);
   return Option.match(session, {
     onNone: () => false,
     onSome: ({ minutes }) => (
-      <View role="radiogroup" aria-label="Minutes" style={styles.choices}>
-        {MINUTES.map((each) => (
-          <Pill
-            key={each}
-            label={`${each} min`}
-            on={minutes === each}
-            onPress={() => onMinutes(each)}
-          />
-        ))}
-      </View>
+      <Lined line={Option.fromUndefinedOr(line)}>
+        <View role="radiogroup" aria-label="Minutes" style={styles.choices}>
+          {MINUTES.map((each) => (
+            <Pill
+              key={each}
+              label={`${each} min`}
+              on={minutes === each}
+              onPress={() => onMinutes(each)}
+            />
+          ))}
+        </View>
+      </Lined>
     ),
   });
 }
 
-/** The voice's pill over the voice's choice; nothing until the choice is read. */
-export function VoiceChoice() {
+/** The voice's pill over the voice's choice, under `line` when given; nothing until the choice is read. */
+export function VoiceChoice({ line }: { readonly line?: string }) {
   const voice = AsyncResult.value(useAtomValue(voiceView));
   const onVoice = useAtomSet(cycleVoice);
   return Option.match(voice, {
     onNone: () => false,
-    onSome: ({ choice }) => <VoicePill choice={choice} onPress={() => onVoice()} />,
+    onSome: ({ choice }) => (
+      <Lined line={Option.fromUndefinedOr(line)}>
+        <VoicePill choice={choice} onPress={() => onVoice()} />
+      </Lined>
+    ),
   });
 }
 
@@ -120,6 +148,8 @@ export function Choices() {
 const sheets = themed((color, face) =>
   StyleSheet.create({
     choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    lined: { gap: 10, alignItems: 'flex-start' },
+    line: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
     pill: {
       minHeight: 44,
       paddingHorizontal: 14,

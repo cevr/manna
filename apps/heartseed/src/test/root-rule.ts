@@ -25,7 +25,7 @@ const FIRST = new Set(['Hear it', 'Say it with help', 'Say it alone', 'Planted']
 const BACKS = new Set(['Add a passage', 'About']);
 
 /** Home's own nodes, by test id. */
-const HOME_NODES = [
+export const HOME_NODES = [
   'greeting',
   'sown',
   'harvest',
@@ -83,6 +83,16 @@ const backFaults = (
   return out;
 };
 
+/** What the gear `Settings` shows wrong on the screen `on`: not exactly one on home, any on another screen, or one inside a scroll view. */
+const settingsFaults = (on: string, gears: readonly Element[]) => {
+  const out: string[] = [];
+  if (on === 'Your field' && gears.length !== 1)
+    out.push(`${gears.length} Settings controls on Your field`);
+  if (on !== 'Your field' && gears.length > 0) out.push(`Settings on ${on}`);
+  if (gears.some(scrolled)) out.push('Settings inside a scroll view');
+  return out;
+};
+
 /**
  * The root's frame rule (hshomeroot), for every rig that mounts the root:
  * what one frame shows wrong, `garden` being whether the launch's garden
@@ -94,7 +104,10 @@ const backFaults = (
  * an unread garden (`backFaults`). `Listening`, Today's action and Today's
  * nodes show only on Today (or in the first minute, whose recitals are its
  * own), home's nodes only on home, `When I need…` only on home outside the
- * scroll view, and no screen has a control named `Today`.
+ * scroll view, exactly one `Settings` on home outside the scroll view and
+ * none elsewhere (`settingsFaults`), and no screen has a control named
+ * `Today`. The Settings sheet lies outside the host, so its nodes are the
+ * sheet rule's (`settings-rig.ts`).
  */
 export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] => {
   const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
@@ -116,6 +129,7 @@ export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] =
   if (needs.some(scrolled)) out.push('When I need… inside a scroll view');
   for (const id of ids(host, HOME_NODES))
     if (on !== 'Your field') out.push(`home's ${id} on ${on}`);
+  out.push(...settingsFaults(on, named('Settings')));
   return out;
 };
 

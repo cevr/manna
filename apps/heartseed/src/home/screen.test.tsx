@@ -99,7 +99,7 @@ for (const scheme of SCHEMES)
       const sets = device.calls.set;
       expect(await rig.until(() => by(host, 'row').length === 2)).toBe(true);
       expect(layoutOf(host)).toEqual({
-        bar: ['When I need…', 'Add verses'],
+        bar: ['When I need…', 'Settings', 'Add verses'],
         scroll: {
           greeting: ['scroll:Good afternoon'],
           greetingIcon: 'sun',

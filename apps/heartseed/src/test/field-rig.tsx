@@ -111,7 +111,13 @@ const seen = (node: Element) => {
 };
 
 /** The properties `ownStyle` reads: none inherited, so each is the node's own class and inline style alone. */
-type OwnProperty = 'overflow' | 'overflowY' | 'minHeight' | 'width' | 'backgroundColor';
+type OwnProperty =
+  | 'overflow'
+  | 'overflowY'
+  | 'minHeight'
+  | 'minWidth'
+  | 'width'
+  | 'backgroundColor';
 
 const ownStyles = new Map<string, string>();
 
@@ -325,6 +331,21 @@ const addFaults = (controls: readonly Element[]) => {
   return out;
 };
 
+/** What the gear shows wrong: `Settings` not drawn with the one hidden `gear` icon of the scheme now, showing a word, under 44 × 44, or inside a scroll view. */
+const gearFaults = (controls: readonly Element[]) => {
+  const out: string[] = [];
+  for (const node of controls) {
+    if (nameOf(node) !== 'Settings') continue;
+    const drawn = oneIcon(node);
+    if (drawn !== 'gear') out.push(`Settings drawn ${drawn}`);
+    if (text(node) !== '') out.push(`Settings showing ${text(node)}`);
+    if (!(parseFloat(ownStyle(node, 'minWidth')) >= 44)) out.push('Settings under 44 wide');
+    if (!(parseFloat(ownStyle(node, 'minHeight')) >= 44)) out.push('Settings under 44 tall');
+    if (scrolled(node)) out.push('Settings in a scroll view');
+  }
+  return out;
+};
+
 /** The three greetings and the icon each is drawn with. */
 const GREETING_ICONS = new Map([
   ['Good morning', 'sun'],
@@ -350,7 +371,8 @@ const greetingFaults = (host: Element) => {
  * faults (`plantFaults`); a furrow's ripe count off its plants; the foot's
  * faults (`footFaults`); `Add verses` beside the limit line, or drawn
  * other than with the one hidden `add` icon of the scheme now (`addFaults`);
- * the greeting's faults; and any home icon of the other scheme.
+ * the gear's faults (`gearFaults`); the greeting's faults; and any home icon
+ * of the other scheme.
  */
 export const homeFaults = (host: Element): string[] => {
   const out: string[] = [];
@@ -370,7 +392,7 @@ export const homeFaults = (host: Element): string[] => {
     controls.some((node) => nameOf(node) === 'Add verses')
   )
     out.push('Add verses beside the limit line');
-  out.push(...addFaults(controls), ...greetingFaults(host));
+  out.push(...addFaults(controls), ...gearFaults(controls), ...greetingFaults(host));
   for (const image of host.querySelectorAll('img'))
     if (iconOf(image).endsWith(' set>')) out.push(`an image drawn ${iconOf(image)}`);
   return out;

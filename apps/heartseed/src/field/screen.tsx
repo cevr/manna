@@ -1,7 +1,9 @@
 /**
  * The field as home A draws it, the app's home. A bar fixed above the scroll
- * view holds `When I need…` once a plan is made in this launch and, with the
- * reader's passages read, `Add verses`
+ * view holds, in its first row, `When I need…` once a plan is made in this
+ * launch and, at the row's end, the gear `Settings`, an icon alone at least
+ * 44 pt square, which opens the Settings sheet (`../settings/sheet`) over
+ * home; under that row, with the reader's passages read, `Add verses`
  * while fewer than 3 are held, else the limit line; a furrow's `Remove`
  * puts its ask there instead, with `Remove` and `Keep`, and a remove that
  * does not land leaves an alert there. Under the bar scroll the greeting by
@@ -14,8 +16,8 @@
  *
  * A tap on a plant chooses its verse, a tap on a plant of the chosen verse
  * lets it go, and a tap on another moves the choice: one verse at most, the
- * screen's own state, as are the ask and the alert, all dropped when the
- * reader leaves. With the passages unread it offers no add and no remove.
+ * screen's own state, as are the ask, the alert and whether the sheet is
+ * open, all dropped when the reader leaves. The sheet's `About` shows About. With the passages unread it offers no add and no remove.
  * From a tap of the ask's `Remove` until its answer, no tap of a field
  * control changes anything, even two in one turn, and each shows as
  * disabled.
@@ -34,6 +36,7 @@ import type { Furrow, Greeting } from '../home';
 import { themed, useThemed } from '../look';
 import { MOST_PASSAGES, passageReference, type PassagesView, type Range } from '../passages';
 import { useLook } from '../sayit/draw';
+import { SettingsSheet } from '../settings/sheet';
 import { Foot, type Chosen } from './foot';
 import { AddRow, Control, FurrowRow, Icon, Legend } from './plot';
 
@@ -172,6 +175,7 @@ export function FieldScreen({
   const insets = useSafeAreaInsets();
   const [bar, setBar] = useState<Bar>(IDLE);
   const [choice, setChoice] = useState<Option.Option<string>>(Option.none());
+  const [settings, setSettings] = useState(false);
   const busy = useRef(false);
   const uproot = useAtomSet(uprootPassage, { mode: 'promise' });
   const chosen = chosenIn(furrows, choice, startable);
@@ -206,22 +210,38 @@ export function FieldScreen({
   return (
     <View style={look.screen}>
       <View style={[styles.bar, { paddingTop: insets.top + 16 }]}>
-        {need && (
+        <View style={styles.top}>
+          {need && (
+            <Pressable
+              role="button"
+              aria-label="When I need…"
+              hitSlop={10}
+              disabled={bar.pending}
+              onPress={() => tapped(onNeed)}
+              style={({ pressed }) => [
+                styles.need,
+                pressed && look.pressed,
+                bar.pending && look.disabled,
+              ]}
+            >
+              <Text style={styles.needText}>When I need…</Text>
+            </Pressable>
+          )}
           <Pressable
             role="button"
-            aria-label="When I need…"
+            aria-label="Settings"
             hitSlop={10}
             disabled={bar.pending}
-            onPress={() => tapped(onNeed)}
+            onPress={() => tapped(() => setSettings(true))}
             style={({ pressed }) => [
-              styles.need,
+              styles.gear,
               pressed && look.pressed,
               bar.pending && look.disabled,
             ]}
           >
-            <Text style={styles.needText}>When I need…</Text>
+            <Icon name="gear" size={28} />
           </Pressable>
-        )}
+        </View>
         {passages._tag === 'Read' && (
           <Offer
             bar={bar}
@@ -284,6 +304,7 @@ export function FieldScreen({
         onStart={(reference) => tapped(() => onStart(reference))}
         onAbout={() => tapped(onAbout)}
       />
+      {settings && <SettingsSheet onDone={() => setSettings(false)} onAbout={onAbout} />}
     </View>
   );
 }
@@ -293,7 +314,15 @@ const sheets = themed((color, face) =>
     bar: { paddingHorizontal: 24, paddingBottom: 8, gap: 8 },
     scroll: { flex: 1 },
     content: { gap: 16 },
-    need: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+    top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
+    need: { marginRight: 'auto', minHeight: 44, justifyContent: 'center' },
+    gear: {
+      minWidth: 44,
+      minHeight: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     needText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
     line: { fontFamily: face, fontSize: 15, lineHeight: 21, fontWeight: '600', color: color.ink },
     ask: { gap: 8 },

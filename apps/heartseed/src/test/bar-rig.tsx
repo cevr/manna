@@ -20,9 +20,9 @@
  * beside the limit line or with 3 rows' `Remove`s, and the row's
  * `Add verses` exactly when the bar's shows; over unread passages, no add,
  * remove, `Keep`, `Plant` or limit line; while the ask's `Remove` is
- * disabled (a remove pending), every other field control (`When I need…`, `Keep`,
- * a row's `Remove`, every plant, `Begin`, `Start here …`, the foot's
- * `About`) disabled too and no `Add verses`; `Listening` only on Today; on
+ * disabled (a remove pending), every other field control (`When I need…`,
+ * the gear `Settings`, `Keep`, a row's `Remove`, every plant, `Begin`,
+ * `Start here …`, the foot's `About`) disabled too and no `Add verses`; `Listening` only on Today; on
  * the field, home A's layout rules (`homeFaults`); and every seen text of
  * the field and the chooser at WCAG AA against what lies behind it.
  */
@@ -136,10 +136,10 @@ const offerFaults = (host: Element, on: string, unread: boolean, controls: reado
   return out;
 };
 
-/** A field control S7 holds while a remove is pending: `When I need…`, `Keep`, `Begin`, `About`, a row's `Remove …`, `Start here …` or a plant. */
+/** A field control S7 holds while a remove is pending: `When I need…`, `Settings`, `Keep`, `Begin`, `About`, a row's `Remove …`, `Start here …` or a plant. */
 const held = (node: Element) => {
   const label = labelOf(node);
-  if ([NEED, 'Keep', 'Begin', 'About'].includes(label)) return true;
+  if ([NEED, 'Settings', 'Keep', 'Begin', 'About'].includes(label)) return true;
   return (
     label.startsWith('Remove ') || label.startsWith('Start here') || idOf(node) === 'field-plant'
   );
