@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 
-import { type DryRun, unitTests } from './units.ts';
+import { unitTests } from './units.ts';
+
+/** Turbo's dry run as `unitTests` reads it. */
+type DryRun = Parameters<typeof unitTests>[0];
 
 const task = (taskId: string, command: string, dependencies: ReadonlyArray<string> = []) => {
   const [workspace = '', name = ''] = taskId.split('#');

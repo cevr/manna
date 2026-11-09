@@ -5,7 +5,7 @@ import { type Decision, DecisionModel } from 'effect/ai';
 import { describe, expect, it } from 'effect-bun-test';
 import { TestClock } from 'effect/testing';
 
-import { changes, judgedStoreLayer, keepAnswers, readCache } from './cache.js';
+import { JudgedStore, changes, judgedStoreLayer, readCache } from './cache.js';
 import { judgedModel } from './model.js';
 import type { JudgedRule } from './rule.js';
 import { findingLine, judge, partsOf, runLine } from './run.js';
@@ -109,6 +109,12 @@ const judging = Effect.gen(function* () {
   };
   return options;
 });
+
+/** Keeps `keeping` in the store at `file` through the store's own seam, `judgedStoreLayer`'s `keep`, over the file system in scope. */
+const keepAnswers = (file: string, keeping: Parameters<typeof changes>[1]) =>
+  Effect.flatMap(JudgedStore, (store) => store.keep(file, keeping)).pipe(
+    Effect.provide(judgedStoreLayer),
+  );
 
 /** Keeps `fresh` in the store at `file` on the clock's day, as a run that read nothing else. */
 const keep = (file: string, fresh: ReadonlyMap<string, Verdict>) =>

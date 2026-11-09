@@ -126,10 +126,7 @@ export const changes = (kept: ReadonlyMap<string, Answer>, keeping: Keeping) =>
  * kept meanwhile is read under the lock, and stays. Answers the store as
  * written, the answers to report by.
  */
-export const keepAnswers = Effect.fn('judged.keepAnswers')(function* (
-  file: string,
-  keeping: Keeping,
-) {
+const keepAnswers = Effect.fn('judged.keepAnswers')(function* (file: string, keeping: Keeping) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   yield* fs.makeDirectory(path.dirname(file), { recursive: true });

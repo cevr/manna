@@ -18,8 +18,8 @@ const DryTask = Schema.Struct({
 });
 
 /** What the scripts read of turbo's dry run (`--dry=json`): each task it would run. */
-export const DryRun = Schema.Struct({ tasks: Schema.Array(DryTask) });
-export type DryRun = typeof DryRun.Type;
+const DryRun = Schema.Struct({ tasks: Schema.Array(DryTask) });
+type DryRun = typeof DryRun.Type;
 
 /** One unit-test task: its workspace's name and folder, its task (the script it runs), its id and its command. */
 export interface UnitTest {
