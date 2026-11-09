@@ -2,6 +2,7 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { JSONC, YAML } from 'bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
+import { gateTestsCommand, TASK_BOUND_MS } from './gate-tests/bound.ts';
 import { andChained, commandsOf } from './test-budget/shell.ts';
 
 const Manifest = Schema.fromJsonString(
@@ -129,10 +130,28 @@ describe('the gate', () => {
             '[ "$lint" -eq 0 ] && [ "$ledger" -eq 0 ] && [ "$tests" -eq 0 ]',
           ]),
         );
-        const runs = turboRuns(gate);
-        expect(runs).toHaveLength(1);
-        expect(runs[0]?.filter((word) => !word.startsWith('-'))).toEqual(['turbo', 'run', 'test']);
+        expect(gate).toContain('bun packages/scripts/src/gate-tests.ts');
+        expect(gate.filter((line) => /(^|\/)turbo\s/u.test(line) && !line.startsWith('#'))).toEqual(
+          [],
+        );
         expect(gate.filter(locks)).toEqual([]);
+      }),
+  );
+
+  it.effect(
+    "runs the unit tests through gate-tests.ts: turbo at a third of the cores' count of tasks, under the 60 s watchdog",
+    () =>
+      Effect.sync(() => {
+        expect(gateTestsCommand(12)).toEqual([
+          'node_modules/.bin/turbo',
+          'run',
+          'test',
+          '--output-logs=errors-only',
+          '--ui=stream',
+          '--concurrency=4',
+        ]);
+        expect(gateTestsCommand(2)).toContain('--concurrency=1');
+        expect(TASK_BOUND_MS).toBe(60_000);
       }),
   );
 

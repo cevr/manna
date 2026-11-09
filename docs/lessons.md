@@ -5300,3 +5300,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** A heartseed walk that timed out at bun's 5 s kept running into the next case of its file, which shares `process.env.TZ`, so the neighbour failed a plan mismatch in `Australia/Lord_Howe` that named neither the walk nor the zone it left.
 - **Cause:** A timed-out promise cannot be cancelled, and no check after a case read the zone it ended in, so a zone left set by a case or by a walk it let out reached the cases after it.
 - **Guard:** code: `apps/heartseed/src/test/setup.ts` `not UTC: a zone it set was not put back, or a walk in it outlived it`
+
+### gate-ends-a-hung-task
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "a hanging test hangs the gate forever"
+- **Source:** hymnapp/hssettings/round-1-findings.md o1 (On base, its first item; mutant M7)
+- **Wrong:** Under a mutant, `test:settings-ways-b` never exited, and `bun run gate` waited on it with no end: bun's 5 s per-case timer did not stop it, turbo 2.11 has no task timeout, and `gate.sh` ran turbo bare.
+- **Cause:** Nothing in the gate bounded a test task's life, so one process that never exits held the whole gate open.
+- **Guard:** code: `packages/scripts/src/gate-tests/bound.test.ts` `ends a run whose task outlives the bound with 124, naming it, and leaves none of it`
+
+### gate-tests-at-a-share-of-the-cores
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "heartseed walks time out at bun's 5 s default under load"
+- **Source:** hymnapp/batch-ic-1-findings.md o1 (On base, its first item)
+- **Wrong:** `test:need-walk-b`, `test:phrase-walk-c` and `test:passages-session` timed out at bun's 5 s inside the turbo gate at load 15-24, and each passed alone.
+- **Cause:** The gate ran turbo at its default of 10 tasks at once, and each heartseed part runs 3 bun workers, so the gate alone ran about 30 workers on 12 cores.
+- **Guard:** code: `packages/scripts/src/gate.test.ts` `runs the unit tests through gate-tests.ts: turbo at a third of the cores' count of tasks, under the 60 s watchdog`
