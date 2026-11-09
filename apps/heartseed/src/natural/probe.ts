@@ -1,7 +1,8 @@
 /**
  * The natural voice probe's pure parts (`app/probe/natural.tsx`): the voice
  * its link names, the source that reads every speak in that voice, the
- * tally of one `Read` from the voice's views and the module's renders, the
+ * tally of one `Read` from the voice's views and the module's chunks (each
+ * prosody, the curve sent and its render, recorded by `recording`), the
  * tally of a `Soak`, and the lines the probe shows. Counts only, never a
  * word.
  */
@@ -9,6 +10,7 @@
 import { Effect, Layer, Match, Option } from 'effect';
 
 import { VoiceSource, type VoiceView } from '../voice';
+import { fallMeasure, hasFallen } from './fall';
 import type { Lexicon } from './lexicon';
 import { FILES, REVISION, SPEEDS, VOICES, type NaturalVoice } from './manifest';
 import {
@@ -16,9 +18,11 @@ import {
   NaturalUnavailable,
   type InstallEvent,
   type NaturalStatus,
+  type Prosody,
   type Rendered,
 } from './module';
 import { planOf, SAMPLES_PER_FRAME, startsOf, type Chunk } from './plan';
+import { curveFor } from './voice';
 
 /** Kokoro's output rate, samples a second. */
 const RATE = 24_000;
@@ -58,7 +62,7 @@ export type ReadPhase =
  * One `Read`'s tally: its phase, the last view's lit and word counts,
  * whether lit ever fell, whether a lit word came out of order, the next
  * word index due, the current range last seen, the ms from `Read` to the
- * first lit word, and each chunk's render.
+ * first lit word, and each chunk voiced.
  */
 export interface ReadTally {
   readonly phase: ReadPhase;
@@ -69,8 +73,56 @@ export interface ReadTally {
   readonly next: number;
   readonly last: Option.Option<{ readonly first: number; readonly last: number }>;
   readonly firstWord: Option.Option<number>;
-  readonly renders: ReadonlyArray<Rendered>;
+  readonly renders: ReadonlyArray<Voiced>;
 }
+
+/** One chunk as the module voiced it: its prosody, the curve the source sent, and the render on that curve. */
+export interface Voiced {
+  readonly prosody: Prosody;
+  readonly curve: ReadonlyArray<number>;
+  readonly rendered: Rendered;
+}
+
+/**
+ * The module under it with each render handed to `record` beside the
+ * prosody of its utterance and chunk and the curve it was sent. A render
+ * call lets that prosody go, whatever it answers; a render with no such
+ * prosody before it is not recorded.
+ */
+export const recording = (
+  record: (voiced: Voiced) => void,
+): Layer.Layer<NaturalModule, never, NaturalModule> =>
+  Layer.effect(
+    NaturalModule,
+    Effect.gen(function* () {
+      const module = yield* NaturalModule;
+      const held = new Map<string, Prosody>();
+      return NaturalModule.of({
+        ...module,
+        prosody: (utterance, chunk, ids, speed) =>
+          module.prosody(utterance, chunk, ids, speed).pipe(
+            Effect.tap((prosody) =>
+              Effect.sync(() => {
+                held.set(`${utterance} ${chunk}`, prosody);
+              }),
+            ),
+          ),
+        render: (utterance, chunk, curve) =>
+          Effect.suspend(() => {
+            const key = `${utterance} ${chunk}`;
+            const prosody = Option.fromUndefinedOr(held.get(key));
+            held.delete(key);
+            return module.render(utterance, chunk, curve).pipe(
+              Effect.tap((rendered) =>
+                Effect.sync(() => {
+                  Option.map(prosody, (each) => record({ prosody: each, curve, rendered }));
+                }),
+              ),
+            );
+          }),
+      });
+    }),
+  );
 
 /** A `Read` not yet begun. */
 export const readBegun: ReadTally = {
@@ -133,10 +185,10 @@ export const readSeen = (tally: ReadTally, view: VoiceView, at: number): ReadTal
   return counted;
 };
 
-/** Adds one chunk's render to the tally. */
-export const readRendered = (tally: ReadTally, rendered: Rendered): ReadTally => ({
+/** Adds one chunk voiced to the tally. */
+export const readRendered = (tally: ReadTally, voiced: Voiced): ReadTally => ({
   ...tally,
-  renders: [...tally.renders, rendered],
+  renders: [...tally.renders, voiced],
 });
 
 /** Whether a render's audio is exactly its frames' samples. */
@@ -183,19 +235,26 @@ export const soakCounted = (tally: SoakTally, outcome: SoakOutcome): SoakTally =
   )(outcome);
 };
 
-/** Runs one chunk's prosody and renders it on that curve; a render whose frames do not fit its chunk or its samples fails with `frames`. */
-const soakChunk = (utterance: number, chunk: Chunk, index: number, speed: number) =>
+/**
+ * Runs one chunk's prosody and renders it on the curve the source sends
+ * (`curveFor`); a prosody that does not fit fails with `curve`, and a render
+ * whose frames do not fit its chunk or its samples with `frames`.
+ */
+const soakChunk = (utterance: number, chunk: Chunk, index: number, last: boolean, speed: number) =>
   Effect.gen(function* () {
     const module = yield* NaturalModule;
     const found = yield* module.prosody(utterance, index, chunk.ids, speed);
-    const rendered = yield* module.render(utterance, index, found.f0);
+    const curve = curveFor(chunk, last, found);
+    if (Option.isNone(curve)) return yield* NaturalUnavailable.make({ reason: 'curve' });
+    const rendered = yield* module.render(utterance, index, curve.value);
     if (framesHold(rendered) && Option.isSome(startsOf(chunk, rendered.frames))) return;
     return yield* NaturalUnavailable.make({ reason: 'frames' });
   });
 
 /**
- * Soaks one verse: plans it, renders every chunk through the module in
- * order at `voice`'s speed (no play), and stops the module after it,
+ * Soaks one verse: plans it, runs every chunk's prosody and renders it
+ * through the module in order at `voice`'s speed on the curve the source
+ * sends (no play), and stops the module after it,
  * whatever the outcome.
  */
 export const soakVerse = Effect.fn('NaturalProbe.soakVerse')(function* (
@@ -210,7 +269,8 @@ export const soakVerse = Effect.fn('NaturalProbe.soakVerse')(function* (
     onSome: (plan) =>
       Effect.forEach(
         plan.chunks,
-        (chunk, index) => soakChunk(utterance, chunk, index, SPEEDS[voice]),
+        (chunk, index) =>
+          soakChunk(utterance, chunk, index, index === plan.chunks.length - 1, SPEEDS[voice]),
         {
           discard: true,
         },
@@ -284,12 +344,34 @@ const endingOf = (phase: ReadPhase) => {
   return 'none';
 };
 
-/** Σ render ms over the audio's ms, or none before any audio. */
-const rtfOf = (renders: ReadonlyArray<Rendered>) => {
-  const samples = renders.reduce((sum, rendered) => sum + rendered.samples, 0);
-  const millis = renders.reduce((sum, rendered) => sum + rendered.millis, 0);
+/** Σ prosody and render ms over the audio's ms, or none before any audio. */
+const rtfOf = (renders: ReadonlyArray<Voiced>) => {
+  const samples = renders.reduce((sum, voiced) => sum + voiced.rendered.samples, 0);
+  const millis = renders.reduce(
+    (sum, voiced) => sum + voiced.prosody.millis + voiced.rendered.millis,
+    0,
+  );
   if (samples <= 0) return Option.none();
   return Option.some((millis / ((samples / RATE) * 1000)).toFixed(2));
+};
+
+/**
+ * The fall over the chunks voiced: of those whose prosody has a voiced
+ * point, how many were sent a curve that ends `FALL_DROP` or more under
+ * the prosody's middle (`hasFallen`), and the points sent above the
+ * prosody's own over every chunk.
+ */
+const fallLine = (renders: ReadonlyArray<Voiced>) => {
+  const voiced = renders.filter(({ prosody, curve }) =>
+    Option.isSome(fallMeasure(prosody.f0, curve)),
+  );
+  const fallen = voiced.filter(({ prosody, curve }) => hasFallen(prosody.f0, curve)).length;
+  const raised = renders.reduce(
+    (sum, { prosody, curve }) =>
+      sum + curve.filter((hz, at) => hz > (prosody.f0[at] ?? Number.POSITIVE_INFINITY)).length,
+    0,
+  );
+  return `fall ${fallen}/${voiced.length} raised ${raised}`;
 };
 
 const installLine = (install: Option.Option<InstallEvent>) =>
@@ -313,12 +395,12 @@ const orderOf = (read: ReadTally) => {
 
 /**
  * The probe's lines, one fact each and keyed by the first word: the voice,
- * what the phone holds, the last download event, the load, the read and the
- * soak.
+ * what the phone holds, the last download event, the load, the read (with
+ * its fall) and the soak.
  */
 export const linesOf = (view: ProbeView): ReadonlyArray<string> => {
   const { status, read, soak } = view;
-  const held = read.renders.filter(framesHold).length;
+  const held = read.renders.filter(({ rendered }) => framesHold(rendered)).length;
   return [
     `voice ${view.voice}`,
     `installed ${status.files}/${FILES.length}`,
@@ -333,6 +415,7 @@ export const linesOf = (view: ProbeView): ReadonlyArray<string> => {
     `order ${orderOf(read)}`,
     `chunks ${read.renders.length}`,
     `frames ok ${held}/${read.renders.length}`,
+    fallLine(read.renders),
     `first-word ${shown(Option.map(read.firstWord, (ms) => ms.toFixed(0)))}`,
     `rtf ${shown(rtfOf(read.renders))}`,
     `peak ${(status.peak / 1_048_576).toFixed(0)}`,

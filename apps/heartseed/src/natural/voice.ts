@@ -88,11 +88,20 @@ const curveFits = (chunk: Chunk, prosody: Prosody) =>
   prosody.f0.length === 2 * prosody.frames.reduce((sum, each) => sum + each, 0) &&
   prosody.f0.every(Number.isFinite);
 
-/** The curve a chunk renders on: fallen (`fallOf`) when it ends a phrase or the reading, else Prosody's own. */
-const curveSent = (chunk: Chunk, last: boolean, prosody: Prosody) => {
-  const ends = chunk.rest > 0 || last;
-  if (ends) return fallOf(prosody.f0);
-  return prosody.f0;
+/**
+ * The curve a chunk renders on, when its prosody fits it: fallen (`fallOf`)
+ * when the chunk ends a phrase or (`last`) the reading, else Prosody's own;
+ * none when the prosody does not fit. The source and the probe's soak both
+ * send this curve.
+ */
+export const curveFor = (
+  chunk: Chunk,
+  last: boolean,
+  prosody: Prosody,
+): Option.Option<ReadonlyArray<number>> => {
+  if (!curveFits(chunk, prosody)) return Option.none();
+  if (chunk.rest > 0 || last) return Option.some(fallOf(prosody.f0));
+  return Option.some(prosody.f0);
 };
 
 /** Whether `voice` names a voice of the download. */
@@ -139,10 +148,10 @@ export const naturalVoiceSource = (
           );
           if (!holds(reading)) return 'gone' satisfies Played;
           if (Result.isFailure(found)) return 'failed' satisfies Played;
-          if (!curveFits(chunk, found.success)) return 'failed' satisfies Played;
           const last = k === reading.chunks.length - 1;
-          const curve = curveSent(chunk, last, found.success);
-          const rendered = yield* Effect.result(module.render(reading.utterance, k, curve));
+          const curve = curveFor(chunk, last, found.success);
+          if (Option.isNone(curve)) return 'failed' satisfies Played;
+          const rendered = yield* Effect.result(module.render(reading.utterance, k, curve.value));
           if (!holds(reading)) return 'gone' satisfies Played;
           if (Result.isFailure(rendered)) return 'failed' satisfies Played;
           const planned = playOf(chunk, rendered.success);

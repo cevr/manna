@@ -6,10 +6,12 @@
  * view, a read's tally over the voice's views (order ok only for each word
  * current once, in order, to a finish; broken for a skip, a repeat, a
  * reversal or an early end; the replayed view before the reading skipped),
- * a render's frame check and the real-time factor, the soak's link count
- * and tally, and one soaked verse over a stand-in module: unplanned,
- * rendered, a malformed render and a refused one, the module stopped after
- * each. The texts are made-up words over a lexicon written here.
+ * a render's frame check and the real-time factor (prosody and render), the
+ * fall line, the recording module, the soak's link count and tally, and one
+ * soaked verse over a stand-in module: unplanned, rendered on the curve the
+ * source sends, a prosody that does not fit, a malformed render and a
+ * refused one, the module stopped after each. The texts are made-up words
+ * over a lexicon written here.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -18,13 +20,15 @@ import { Effect, Layer, Option } from 'effect';
 import { VoiceSource, type VoiceView } from '../voice';
 import type { Lexicon } from './lexicon';
 import { VOICES, type NaturalVoice } from './manifest';
-import { NaturalModule, NaturalUnavailable, type Rendered } from './module';
+import { fallOf } from './fall';
+import { NaturalModule, NaturalUnavailable, type Prosody, type Rendered } from './module';
 import { planOf } from './plan';
 import {
   framesHold,
   linesOf,
   probeBegun,
   probeVoice,
+  recording,
   speakingIn,
   readBegun,
   readRendered,
@@ -37,6 +41,7 @@ import {
   type ProbeView,
   type ReadTally,
   type SoakOutcome,
+  type Voiced,
 } from './probe';
 
 const SEED = 61_207;
@@ -114,6 +119,7 @@ describe('the probe lines', () => {
       'order broken',
       'chunks 0',
       'frames ok 0/0',
+      'fall 0/0 raised 0',
       'first-word none',
       'rtf none',
       'peak 0',
@@ -122,9 +128,19 @@ describe('the probe lines', () => {
   });
 
   it('shows a full probe, each line keyed by its first word', () => {
-    const renders: ReadonlyArray<Rendered> = [
-      { frames: [2, 3, 5], samples: 6000, millis: 100, first: 0, last: 5999 },
-      { frames: [4, 4], samples: 4801, millis: 140, first: 0, last: 4800 },
+    const rising = Array.from({ length: 20 }, (_, at) => 150 + 5 * at);
+    const flat = Array.from({ length: 16 }, () => 150);
+    const renders: ReadonlyArray<Voiced> = [
+      {
+        prosody: { frames: [2, 3, 5], f0: rising, millis: 20 },
+        curve: fallOf(rising),
+        rendered: { frames: [2, 3, 5], samples: 6000, millis: 100, first: 0, last: 5999 },
+      },
+      {
+        prosody: { frames: [4, 4], f0: flat, millis: 20 },
+        curve: flat.with(15, 151),
+        rendered: { frames: [4, 4], samples: 4801, millis: 140, first: 0, last: 4800 },
+      },
     ];
     const read = renders.reduce(readRendered, tallyOf(cleanViews(3)));
     const view: ProbeView = {
@@ -160,8 +176,9 @@ describe('the probe lines', () => {
       'order ok',
       'chunks 2',
       'frames ok 1/2',
+      'fall 1/2 raised 1',
       'first-word 100',
-      'rtf 0.53',
+      'rtf 0.62',
       'peak 300',
       'soak 200/200 unplanned 3 failed 2 nonfinite 1',
     ]);
@@ -299,6 +316,88 @@ describe('a read tally', () => {
   });
 });
 
+/** A chunk voiced on `curve` over a prosody of `f0`, its render fitting its frames. */
+const voicedOf = (f0: ReadonlyArray<number>, curve: ReadonlyArray<number>): Voiced => ({
+  prosody: { frames: [f0.length / 2], f0, millis: 1 },
+  curve,
+  rendered: { frames: [f0.length / 2], samples: 300 * f0.length, millis: 1, first: 0, last: -1 },
+});
+
+const fallOfRead = (renders: ReadonlyArray<Voiced>) =>
+  lineOf(linesOf(withRead(renders.reduce(readRendered, readBegun))), 'fall');
+
+describe('the fall line', () => {
+  it('counts the chunks with a voiced point, of them those sent a fallen curve, and every point raised', () => {
+    const climb = Array.from({ length: 60 }, (_, at) => 140 + at);
+    const flat = Array.from({ length: 40 }, () => 120);
+    const unvoiced = Array.from({ length: 12 }, (_, at): number => (at % 2 === 0 ? 0 : 10));
+    expect(fallOfRead([voicedOf(climb, fallOf(climb)), voicedOf(flat, fallOf(flat))])).toBe(
+      'fall 2/2 raised 0',
+    );
+    expect(fallOfRead([voicedOf(climb, fallOf(climb)), voicedOf(climb, climb)])).toBe(
+      'fall 1/2 raised 0',
+    );
+    expect(fallOfRead([voicedOf(unvoiced, unvoiced), voicedOf(flat, fallOf(flat))])).toBe(
+      'fall 1/1 raised 0',
+    );
+    const lifted = fallOf(climb).map((hz, at) => (at < 3 ? hz + 0.5 : hz));
+    expect(fallOfRead([voicedOf(climb, lifted), voicedOf(unvoiced, unvoiced.with(0, 30))])).toBe(
+      'fall 1/1 raised 4',
+    );
+  });
+
+  it('counts a curve whose end lies a hair above the drop as not fallen', () => {
+    const flat = Array.from({ length: 40 }, () => 120);
+    const short = flat.with(39, 120 * 2 ** (-1.99 / 12));
+    expect(fallOfRead([voicedOf(flat, short)])).toBe('fall 0/1 raised 0');
+    expect(fallOfRead([voicedOf(flat, flat.with(39, 120 * 2 ** (-2 / 12)))])).toBe(
+      'fall 1/1 raised 0',
+    );
+  });
+});
+
+describe('the recording module', () => {
+  it('records each render with the prosody of its utterance and chunk and the curve sent, a render lets its prosody go', () => {
+    const recorded: Array<Voiced> = [];
+    const calls: Array<string> = [];
+    let renders = 0;
+    const flat = (ids: ReadonlyArray<number>) => ids.flatMap(() => [150, 150, 150, 150]);
+    const under = moduleOf(calls, (ids) => {
+      renders++;
+      if (renders === 2) return Effect.fail(NaturalUnavailable.make({ reason: 'stale' }));
+      return fit(ids);
+    });
+    Effect.runSync(
+      Effect.gen(function* () {
+        const module = yield* NaturalModule;
+        const first = yield* module.prosody(3, 0, [43, 44], 0.85);
+        yield* module.render(3, 0, fallOf(first.f0));
+        yield* module.prosody(3, 1, [43], 0.85);
+        yield* Effect.exit(module.render(3, 1, flat([43])));
+        yield* module.render(3, 1, flat([43]));
+        yield* module.render(4, 0, flat([43, 44]));
+        yield* module.prosody(5, 0, [44], 0.9);
+        yield* module.render(5, 0, flat([44]));
+      }).pipe(
+        Effect.provide(recording((voiced) => recorded.push(voiced)).pipe(Layer.provide(under))),
+      ),
+    );
+    expect(calls.filter((call) => call.startsWith('render'))).toHaveLength(5);
+    expect(recorded).toEqual([
+      {
+        prosody: { frames: [2, 2], f0: flat([43, 44]), millis: 3 },
+        curve: fallOf(flat([43, 44])),
+        rendered: { frames: [2, 2], samples: 2400, millis: 5, first: 0, last: 2399 },
+      },
+      {
+        prosody: { frames: [2], f0: flat([44]), millis: 3 },
+        curve: flat([44]),
+        rendered: { frames: [2], samples: 1200, millis: 5, first: 0, last: 1199 },
+      },
+    ]);
+  });
+});
+
 describe('a render', () => {
   it('holds its frames when its samples are 600 per frame exactly', () => {
     const heard = { millis: 1, first: 0, last: -1 };
@@ -353,13 +452,20 @@ const LEXICON: Lexicon = {
 };
 
 /**
- * A stand-in module whose prosody gives two frames and four points of a
- * flat curve an id, whose render answers by `answer` for the ids of the
+ * A stand-in module whose prosody gives `found` of its ids (by default two
+ * frames and four points of a flat curve an id), whose render keeps the
+ * curve it is sent in `curves` and answers by `answer` for the ids of the
  * prosody before it, and whose calls are logged; any other call dies.
  */
 const moduleOf = (
   calls: Array<string>,
   answer: (ids: ReadonlyArray<number>) => Effect.Effect<Rendered, NaturalUnavailable>,
+  found: (ids: ReadonlyArray<number>) => Prosody = (ids) => ({
+    frames: ids.map(() => 2),
+    f0: ids.flatMap(() => [150, 150, 150, 150]),
+    millis: 3,
+  }),
+  curves: Array<ReadonlyArray<number>> = [],
 ) => {
   let asked: ReadonlyArray<number> = [];
   return Layer.succeed(
@@ -374,15 +480,12 @@ const moduleOf = (
         Effect.sync(() => {
           calls.push(`prosody ${utterance} ${chunk} ${ids.length} ${speed}`);
           asked = ids;
-          return {
-            frames: ids.map(() => 2),
-            f0: ids.flatMap(() => [150, 150, 150, 150]),
-            millis: 3,
-          };
+          return found(ids);
         }),
       render: (utterance, chunk, curve) =>
         Effect.suspend(() => {
           calls.push(`render ${utterance} ${chunk} ${curve.length}`);
+          curves.push(curve);
           return answer(asked);
         }),
       play: () => Effect.die('play'),
@@ -401,13 +504,22 @@ const soaked = (
   text: string,
   answer: (ids: ReadonlyArray<number>) => Effect.Effect<Rendered, NaturalUnavailable>,
   voice: NaturalVoice = 'af_heart',
+  found?: (ids: ReadonlyArray<number>) => Prosody,
+  curves: Array<ReadonlyArray<number>> = [],
 ) => {
   const calls: Array<string> = [];
   const outcome = Effect.runSync(
-    soakVerse(LEXICON, 7, text, voice).pipe(Effect.provide(moduleOf(calls, answer))),
+    soakVerse(LEXICON, 7, text, voice).pipe(Effect.provide(moduleOf(calls, answer, found, curves))),
   );
   return { outcome, calls };
 };
+
+/** A prosody of two frames an id over a curve that climbs through the chunk. */
+const climbing = (ids: ReadonlyArray<number>): Prosody => ({
+  frames: ids.map(() => 2),
+  f0: Array.from({ length: ids.length * 4 }, (_, at) => 120 + at),
+  millis: 3,
+});
 
 const fit = (ids: ReadonlyArray<number>) =>
   Effect.succeed({
@@ -492,5 +604,46 @@ describe('a soaked verse', () => {
       outcome: { _tag: 'Failed', reason: 'nonfinite' },
       calls: ['prosody 7 0 9 0.85', 'render 7 0 36', 'stop'],
     });
+  });
+
+  it('sends the curve the source sends: fallen at a phrase’s or the verse’s end, Prosody’s own inside a phrase', () => {
+    const marked = `${Array.from({ length: 30 }, () => 'bel cor bel,').join(' ')} cor.`;
+    const unmarked = `${Array.from({ length: 60 }, () => 'bel cor').join(' ')}.`;
+    for (const text of [marked, unmarked, 'bel cor.']) {
+      const chunks = Option.getOrThrow(planOf(LEXICON.words, LEXICON.vocab, text)).chunks;
+      const curves: Array<ReadonlyArray<number>> = [];
+      expect(soaked(text, fit, 'af_heart', climbing, curves).outcome).toEqual({
+        _tag: 'Rendered',
+      });
+      expect(curves).toEqual(
+        chunks.map((chunk, index) => {
+          const own = climbing(chunk.ids).f0;
+          if (chunk.rest > 0 || index === chunks.length - 1) return fallOf(own);
+          return own;
+        }),
+      );
+    }
+    const inside = Option.getOrThrow(planOf(LEXICON.words, LEXICON.vocab, unmarked)).chunks;
+    expect(inside.length).toBeGreaterThanOrEqual(2);
+    expect(inside.slice(0, -1).every((chunk) => chunk.rest === 0)).toBe(true);
+    for (const chunk of inside) {
+      expect(fallOf(climbing(chunk.ids).f0)).not.toEqual(climbing(chunk.ids).f0);
+    }
+  });
+
+  it('fails `curve` with no render for a prosody that does not fit its chunk, then stops', () => {
+    const misfits: ReadonlyArray<(ids: ReadonlyArray<number>) => Prosody> = [
+      (ids) => ({ ...climbing(ids), frames: ids.map((_, at) => (at === 0 ? 0 : 2)) }),
+      (ids) => ({ ...climbing(ids), f0: climbing(ids).f0.slice(1) }),
+      (ids) => ({ ...climbing(ids), f0: [...climbing(ids).f0, 120] }),
+      (ids) => ({ ...climbing(ids), f0: climbing(ids).f0.with(3, Number.NaN) }),
+      (ids) => ({ ...climbing(ids), f0: climbing(ids).f0.with(0, Number.POSITIVE_INFINITY) }),
+    ];
+    for (const misfit of misfits) {
+      expect(soaked('bel cor.', fit, 'af_heart', misfit)).toEqual({
+        outcome: { _tag: 'Failed', reason: 'curve' },
+        calls: ['prosody 7 0 9 0.85', 'stop'],
+      });
+    }
   });
 });

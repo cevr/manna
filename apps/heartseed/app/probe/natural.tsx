@@ -15,7 +15,7 @@ import {
   TOTAL_BYTES,
   type NaturalVoice,
 } from '../../src/natural/manifest';
-import { NaturalModule, type InstallEvent, type Rendered } from '../../src/natural/module';
+import { NaturalModule, type InstallEvent } from '../../src/natural/module';
 import {
   linesOf,
   probeBegun,
@@ -23,6 +23,7 @@ import {
   readBegun,
   readRendered,
   readSeen,
+  recording,
   soakAsked,
   soakBegun,
   soakCounted,
@@ -41,22 +42,6 @@ const dev = typeof __DEV__ !== 'undefined' && __DEV__;
 
 type Show = (change: (view: ProbeView) => ProbeView) => void;
 
-/** The module with each render's frames, samples and ms handed to `record`, for the read's tally. */
-const recording = (record: (rendered: Rendered) => void) =>
-  Layer.effect(
-    NaturalModule,
-    Effect.gen(function* () {
-      const module = yield* NaturalModule;
-      return NaturalModule.of({
-        ...module,
-        render: (utterance, chunk, curve) =>
-          module
-            .render(utterance, chunk, curve)
-            .pipe(Effect.tap((rendered) => Effect.sync(() => record(rendered)))),
-      });
-    }),
-  ).pipe(Layer.provide(naturalModule));
-
 /**
  * The probe's runtime: the module itself, and the voice over the natural
  * source, every speak in `voice`, over the recording module, with a memory
@@ -72,9 +57,9 @@ const runtimeOf = (show: Show, voice: NaturalVoice) =>
             speakingIn(voice).pipe(
               Layer.provide(naturalVoiceSource(lexicon())),
               Layer.provide(
-                recording((rendered) =>
-                  show((view) => ({ ...view, read: readRendered(view.read, rendered) })),
-                ),
+                recording((voiced) =>
+                  show((view) => ({ ...view, read: readRendered(view.read, voiced) })),
+                ).pipe(Layer.provide(naturalModule)),
               ),
             ),
             KeyValueStore.layerMemory,
