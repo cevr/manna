@@ -124,7 +124,7 @@
     "test:handbook": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/handbook",
     "test:home": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/lists.property.test.ts ./src/home.property.test.ts ./src/home/grown.property.test.ts",
     "test:home-shelves": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/shelves.property.test.ts",
-    "test:shelves": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/shelves/sheet.test.tsx",
+    "test:shelves": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/shelves/sheet.test.tsx ./src/shelves/rule.test.ts",
     "test:shelves-walk-a": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/shelves/walk-a.test.tsx",
     "test:shelves-walk-b": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/shelves/walk-b.test.tsx",
     "test:shelves-walk-c": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/shelves/walk-c.test.tsx",

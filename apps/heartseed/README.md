@@ -1993,15 +1993,16 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `src/test/field-rig.tsx` (the rig lands on home, and holds every frame
     to the root's rule, `rootFaults` in `src/test/root-rule.ts`: one
     heading or the pending frame, `Your field` only on a read, quiet Today,
-    When I need…, the chooser and About and never inside a scroll view,
-    `Listening` only under Today, no control named `Today`, `When I need…`
+    When I need… and About and never inside a scroll view, exactly one
+    `‹ Add verses` back on the chooser's `Add a passage`, outside its scroll
+    view, and none elsewhere, `Listening` only under Today, no control named `Today`, `When I need…`
     only on home, exactly one `Settings` on home outside every scroll view
     and none elsewhere, no `Minutes` group, `<n> min` or `Voice` on any
     screen, and home's and Today's nodes only under their headings; and
     while the host shows `Listening`, nothing that makes the plan in reach
     anywhere in the document, the sheet's portal included: no control named
-    `Settings`, `Your field`, `Plant` or `Remove` (or starting `Remove `),
-    no `<n> min` radio, no `Minutes` group, no `Voice` and no
+    `Settings`, `Your field`, `Plant` (or starting `Plant `), `Add verses`,
+    `Any passage` or `Remove` (or starting `Remove `), no `<n> min` radio, no `Minutes` group, no `Voice` and no
     `[aria-modal]` node, each `<name> in reach while listening`;
     and to the field's rules: the way back taken only after a read
     completed, and each field frame the
@@ -2503,7 +2504,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `addSheetFaults`) against `sheetWant` (`src/test/shelves-model.ts`):
     each offer's state over generated passages and fields, `Full` by stale
     props as the limit line, a pending plant blocking every control and the
-    close, and no paid word or verse text on any shelf.
+    close, and no paid word or verse text on any shelf; and
+    `src/shelves/rule.test.ts`, the root's rule at the sheet's seams with no
+    app: `Your field` on `Add a passage`, the `‹ Add verses` back zero, one
+    or two times on every screen, in a scroll view or not, home's own
+    `Add verses` taken for no back, and `Plant <title>`, `Add verses` and
+    `Any passage` in reach while listening, each cell exactly its faults.
   - `test:shelves-walk-a`, `test:shelves-walk-b` and `test:shelves-walk-c`:
     `src/shelves/walk-a.test.tsx`, `walk-b.test.tsx` and `walk-c.test.tsx`,
     generated readers through `src/test/shelves-walk.ts` over the same rig:

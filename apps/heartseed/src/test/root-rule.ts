@@ -22,7 +22,23 @@ const CONTROLS = '[role="button"],[role="radio"],[role="checkbox"],[role="link"]
 const FIRST = new Set(['Hear it', 'Say it with help', 'Say it alone', 'Planted']);
 
 /** The screens on which `Your field` is a way back besides Today and When I need…. */
-const BACKS = new Set(['Add a passage', 'About']);
+const BACKS = new Set(['About']);
+
+/** The chooser's first back, to the Add verses sheet, by its text. */
+const ADD_BACK = '‹ Add verses';
+
+/** The chooser's first step, the one screen whose way back is `‹ Add verses`. */
+const ADDING = 'Add a passage';
+
+/** What the `‹ Add verses` back shows wrong on the screen `on`: not exactly one on `Add a passage`, any on another screen, or one inside a scroll view. */
+const addBackFaults = (on: string, backs: readonly Element[]) => {
+  const out: string[] = [];
+  if (on === ADDING && backs.length === 0) out.push(`no Add verses back on ${ADDING}`);
+  if (on === ADDING && backs.length > 1) out.push(`${backs.length} Add verses backs on ${ADDING}`);
+  if (on !== ADDING && backs.length > 0) out.push(`the Add verses back on ${on}`);
+  if (backs.some(scrolled)) out.push('the Add verses back inside a scroll view');
+  return out;
+};
 
 /** Home's own nodes, by test id. */
 export const HOME_NODES = [
@@ -103,7 +119,14 @@ const choicesFaults = (on: string, host: Element, controls: readonly Element[]) 
 };
 
 /** The controls that make or change the plan, or lead to a screen that does, by name. */
-const PLAN_CONTROLS = new Set(['Settings', 'Your field', 'Plant', 'Voice']);
+const PLAN_CONTROLS = new Set([
+  'Settings',
+  'Your field',
+  'Plant',
+  'Voice',
+  'Add verses',
+  'Any passage',
+]);
 
 /** The name a node that makes the plan goes by in the listening clause, or none. */
 const reachOf = (node: Element) => {
@@ -114,6 +137,7 @@ const reachOf = (node: Element) => {
   if (role === 'radiogroup') return undefined;
   if (role === 'radio' && /^\d+ min$/.test(name)) return name;
   if (PLAN_CONTROLS.has(name) || name === 'Remove' || name.startsWith('Remove ')) return name;
+  if (name.startsWith('Plant ')) return name;
   return undefined;
 };
 
@@ -134,9 +158,13 @@ const listeningFaults = (host: Element) =>
  * read completes. A frame shows one screen, by its one heading, or the
  * pending frame (no heading), which holds the reference alone. `Your field`
  * is a way back from Today (on a read garden while nothing listens, and then
- * always), When I need… (its one back), the chooser's `Add a passage` and
- * About, never in a scroll view, and nowhere else: never on home, never on
- * an unread garden (`backFaults`). `Listening`, Today's action and Today's
+ * always), When I need… (its one back) and About, never in a scroll view,
+ * and nowhere else: never on home, never on the chooser's `Add a passage`,
+ * never on an unread garden (`backFaults`). The chooser's `Add a passage`
+ * shows exactly one control whose text is `‹ Add verses`, its way back to
+ * the Add verses sheet, outside its scroll view, and no other screen shows
+ * one (`addBackFaults`); home's own `Add verses`, with no `‹ `, is no back.
+ * `Listening`, Today's action and Today's
  * nodes show only on Today (or in the first minute, whose recitals are its
  * own), home's nodes only on home, `When I need…` only on home outside the
  * scroll view, exactly one `Settings` on home outside the scroll view and
@@ -146,8 +174,9 @@ const listeningFaults = (host: Element) =>
  * (`settings-rig.ts`). While the host shows `Listening`, on any frame,
  * nothing that makes the plan is in reach anywhere in the host's document,
  * the sheet's portal included (`listeningFaults`): no control named
- * `Settings`, `Your field`, `Plant`, `Voice` or `Remove` (or starting
- * `Remove `), no `<n> min` radio, no `Minutes` group and no `[aria-modal]`
+ * `Settings`, `Your field`, `Plant` (or starting `Plant `, the Add verses
+ * sheet's offers), `Voice`, `Add verses`, `Any passage` or `Remove` (or
+ * starting `Remove `), no `<n> min` radio, no `Minutes` group and no `[aria-modal]`
  * node, each the fault `<name> in reach while listening`.
  */
 export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] => {
@@ -162,6 +191,12 @@ export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] =
   if (headings.length > 1) out.push(`the headings ${headings.join('|')}`);
   const on = headings[0] ?? '';
   out.push(...backFaults(on, garden, named('Your field'), listening));
+  out.push(
+    ...addBackFaults(
+      on,
+      controls.filter((node) => text(node) === ADD_BACK),
+    ),
+  );
   const today = on === 'Today' || FIRST.has(on);
   for (const node of controls)
     if (ACTIONS.has(nameOf(node)) && !today) out.push(`${nameOf(node)} on ${on}`);
