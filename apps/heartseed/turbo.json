@@ -2004,6 +2004,7 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!vite/devbundle.test.*",
         "!infra/**/*.test.*"
       ]
     },
@@ -2018,6 +2019,20 @@
         "!src/**/*.test.*",
         "!vite/**/*.test.*",
         "!scripts/{natural-serve,parts,sim}.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
+    "test:devbundle": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
+        "!src/**/*.test.*",
+        "!vite/{kjv,lexicon,passage}.test.*",
+        "!scripts/**/*.test.*",
         "!infra/**/*.test.*"
       ]
     },
@@ -2140,6 +2155,7 @@
         "test:rest",
         "test:infra",
         "test:icon",
+        "test:devbundle",
         "test:handbook-build",
         "test:mirror"
       ]
