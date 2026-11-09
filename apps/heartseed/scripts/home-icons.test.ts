@@ -109,8 +109,8 @@ describe('the home’s icons', () => {
           ...SCHEMES.flatMap((scheme) => [`${name}-${scheme}.png`, `${name}-${scheme}.d.png.ts`]),
         ]).toSorted(),
       );
-      expect(files.filter((file) => file.endsWith('.svg')).length).toBe(11);
-      expect(files.length).toBe(55);
+      expect(files.filter((file) => file.endsWith('.svg')).length).toBe(12);
+      expect(files.length).toBe(60);
     }));
 
   test('each master is 48 × 48 on no fill, every colour mapped by masters or kept', () =>

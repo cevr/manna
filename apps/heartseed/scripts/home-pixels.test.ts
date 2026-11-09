@@ -125,7 +125,7 @@ describe('the home’s icons, as drawn', () => {
   test('each PNG is its scheme’s colours on a transparent ground, and not the other scheme’s', () =>
     rows.pipe(
       Effect.map((measured) => {
-        expect(measured.length).toBe(22);
+        expect(measured.length).toBe(24);
         expect(
           measured.filter(
             ({ own }) =>

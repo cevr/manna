@@ -33,6 +33,7 @@ export const HOME_ICONS = [
   'seed',
   'sun',
   'moon',
+  'gear',
 ] as const;
 
 export type HomeIcon = (typeof HOME_ICONS)[number];

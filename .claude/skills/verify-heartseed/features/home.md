@@ -36,7 +36,7 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   the plan, the lists and the shelves; `Start with Isaiah 41:10` makes the
   verse the visit, and Today would show it.
 - `home-icons`: the same probe loads every one of the home's icons
-  (`src/home/icons.ts`, 11 names in light and dark, 22 PNGs) through One's
+  (`src/home/icons.ts`, 12 names in light and dark, 24 PNGs) through One's
   asset registry, and says how many loaded.
 - `home-open`: the first minute's `Continue` opens home in the done
   state: the heading `Your field`, the greeting, `Nothing to tend now`
@@ -121,13 +121,13 @@ JavaScript comes from the dev server.
 4. `home-icons`:
 
    ```bash
-   sim open probe/home --expect "label=icons loaded 22 of 22"
+   sim open probe/home --expect "label=icons loaded 24 of 24"
    sim snapshot home-icons
    ```
 
-   → the text `icons loaded 22 of 22`, no node starting `icons failed`,
-   and 22 nodes named `icon <name> <scheme>`, one for each of add, blade,
-   bow, corn, ear, harp, lamp, moon, scroll, seed and sun in `light` and in
+   → the text `icons loaded 24 of 24`, no node starting `icons failed`,
+   and 24 nodes named `icon <name> <scheme>`, one for each of add, blade,
+   bow, corn, ear, gear, harp, lamp, moon, scroll, seed and sun in `light` and in
    `dark` (record the role the snapshot gives them, expected `image`); the
    `home-probe` lines of step 2 still as listed there.
 
@@ -137,8 +137,8 @@ JavaScript comes from the dev server.
 
 Red on base: `sim open probe/home --expect "label=Home probe"` times out
 (`ReadinessTimedOut`): base has no such route. For `home-icons`, the
-`--expect "label=icons loaded 22 of 22"` times out on a base whose probe has
-no icon lines.
+`--expect "label=icons loaded 24 of 24"` times out on a base whose probe has
+no icon lines, or no `gear`.
 
 ### The field in home A's layout
 
@@ -241,7 +241,7 @@ Report only the lines named above and the reference; delete the
   `fresh` is false whether it came from the plan's review item (the seed
   due) or from a review of the plant's recalls (nothing open).
 - `icons loaded` counts each `<name> <scheme>` once, however often its
-  image reloads, so a count short of 22 that never moves is a PNG One's
+  image reloads, so a count short of 24 that never moves is a PNG One's
   asset registry did not serve; an `icons failed` line names it. A dev
   bundle that fails to load at all (before hsdevbundle) shows neither.
 - Two nodes are named `Add verses` (the bar's and the row's): tap the

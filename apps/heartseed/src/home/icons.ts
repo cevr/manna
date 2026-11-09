@@ -8,6 +8,8 @@ import cornDark from '../../assets/home/corn-dark.png';
 import cornLight from '../../assets/home/corn-light.png';
 import earDark from '../../assets/home/ear-dark.png';
 import earLight from '../../assets/home/ear-light.png';
+import gearDark from '../../assets/home/gear-dark.png';
+import gearLight from '../../assets/home/gear-light.png';
 import harpDark from '../../assets/home/harp-dark.png';
 import harpLight from '../../assets/home/harp-light.png';
 import lampDark from '../../assets/home/lamp-dark.png';
@@ -35,6 +37,7 @@ export const ICON_IMAGES = {
   bow: { light: bowLight, dark: bowDark },
   corn: { light: cornLight, dark: cornDark },
   ear: { light: earLight, dark: earDark },
+  gear: { light: gearLight, dark: gearDark },
   harp: { light: harpLight, dark: harpDark },
   lamp: { light: lampLight, dark: lampDark },
   moon: { light: moonLight, dark: moonDark },
