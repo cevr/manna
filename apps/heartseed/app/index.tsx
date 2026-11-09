@@ -11,7 +11,6 @@ import { useAppearanceShown } from '../src/appearance/shown';
 import {
   appearanceView,
   choose,
-  chooseMinutes,
   gardenView,
   greetingNow,
   holdReading,
@@ -23,7 +22,6 @@ import {
   press,
   readingAloud,
   sayItView,
-  cycleVoice,
   seekTo,
   sessionView,
   startHere,
@@ -58,10 +56,11 @@ import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { BigButton, PlantMark, Unsaid, useLook, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
 import { fieldPassagesOf } from '../src/promises/taught';
-import { countsOf, MINUTES, type Item, type TextPiece } from '../src/session';
+import { countsOf, type Item, type TextPiece } from '../src/session';
 import { shownOf, type Shown } from '../src/session/run';
 import { useSessionBegunWhenShown } from '../src/session/shown';
 import { ReadingView, type Hold } from '../src/reading/view';
+import { Choices } from '../src/settings/choices';
 
 /** The voice's view as `src/app.ts` gives it: Today names no voice module itself. */
 type VoiceView = Parameters<typeof readingAloud>[0];
@@ -279,101 +278,6 @@ function FieldControl({ onPress }: { readonly onPress: () => void }) {
     >
       <Text style={styles.toFieldText}>‹ Your field</Text>
     </Pressable>
-  );
-}
-
-/** A Minutes radio of the header's second row: at least 44 pt tall, filled in ink when chosen. */
-function Pill({
-  label,
-  on,
-  onPress,
-}: {
-  readonly label: string;
-  readonly on: boolean;
-  readonly onPress: () => void;
-}) {
-  const look = useLook();
-  const styles = useThemed(sheets);
-  return (
-    <Pressable
-      role="radio"
-      aria-label={label}
-      aria-checked={on}
-      onPress={onPress}
-      style={({ pressed }) => [styles.pill, on && styles.chosen, pressed && look.pressed]}
-    >
-      <Text style={[styles.gradeName, on && styles.chosenName]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-/** Each of the voice's choices as the Voice pill says it, in its text and as its accessibility value; a choice with no word here fails the typecheck at the pill. */
-const CHOICE_WORDS = { off: 'Off', her: 'Her', him: 'Him' } as const;
-
-/**
- * The voice's pill: a button labelled `Voice` whose value and text say the
- * choice (`Voice: Her`), filled in ink unless the choice is Off; a tap takes
- * the next choice of the cycle Off, Her, Him.
- */
-function VoicePill({
-  choice,
-  onPress,
-}: {
-  readonly choice: keyof typeof CHOICE_WORDS;
-  readonly onPress: () => void;
-}) {
-  const look = useLook();
-  const styles = useThemed(sheets);
-  const on = choice !== 'off';
-  return (
-    <Pressable
-      role="button"
-      aria-label="Voice"
-      aria-valuetext={CHOICE_WORDS[choice]}
-      onPress={onPress}
-      style={({ pressed }) => [styles.pill, on && styles.chosen, pressed && look.pressed]}
-    >
-      <Text style={[styles.gradeName, on && styles.chosenName]}>
-        {`Voice: ${CHOICE_WORDS[choice]}`}
-      </Text>
-    </Pressable>
-  );
-}
-
-/**
- * The reader's choices, in the header's second row: the session's minutes,
- * shown once the stored choice is read so the first frame shows the value
- * read, and the voice's pill for new verses, shown once its choice is read.
- * Both stay while Say it listens, and in an unread garden.
- */
-function Choices() {
-  const styles = useThemed(sheets);
-  const session = AsyncResult.value(useAtomValue(sessionView));
-  const voice = AsyncResult.value(useAtomValue(voiceView));
-  const onMinutes = useAtomSet(chooseMinutes);
-  const onVoice = useAtomSet(cycleVoice);
-  return (
-    <View style={styles.choices}>
-      {Option.match(session, {
-        onNone: () => false,
-        onSome: ({ minutes }) => (
-          <View role="radiogroup" aria-label="Minutes" style={styles.choices}>
-            {MINUTES.map((each) => (
-              <Pill
-                key={each}
-                label={`${each} min`}
-                on={minutes === each}
-                onPress={() => onMinutes(each)}
-              />
-            ))}
-          </View>
-        ),
-      })}
-      {Option.match(voice, {
-        onNone: () => false,
-        onSome: ({ choice }) => <VoicePill choice={choice} onPress={() => onVoice()} />,
-      })}
-    </View>
   );
 }
 
@@ -800,15 +704,6 @@ const sheets = themed((color, face) =>
     growing: { gap: 4, marginTop: 4 },
     growth: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
     header: { paddingHorizontal: 24, paddingBottom: 4, gap: 8 },
-    choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    pill: {
-      minHeight: 44,
-      paddingHorizontal: 14,
-      borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: color.card,
-    },
     headerRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
