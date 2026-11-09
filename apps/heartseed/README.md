@@ -2081,6 +2081,20 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     sheet against `sheetWant` (every shelf closed) or closed, the field, the bar
     and the disk against `src/test/choose-model.ts` and the passages'
     model; each file's floors met by its own devices.
+  - `test:field-bar-planted-a` and `test:field-bar-planted-b`:
+    `src/field/bar-planted-a.test.tsx` (seeds 2 and 3) and
+    `bar-planted-b.test.tsx` (seeds 11 and 20), generated readers through
+    `src/test/lists-walk.ts` (`walkListBars`) over the same rig: the
+    promise planted, 0-2 stored passages (one now and then over a verse of
+    a held list), 1-3 stored Handbook lists of at most 12 verses, now and
+    then with an unknown id or an id stored twice, and a recall on a list's
+    verse; a list furrow's `Remove`, then `Keep` or the ask's `Remove`
+    (landing or refused, once or twice in one turn, a refusal retried), a
+    passage's `Remove`, or a relaunch; after every tap home's rows, add,
+    limit line, ask and alert against `fieldWant` over the lists held, both
+    stored texts against `src/test/handbook-model.ts` (unknown ids kept in
+    place), no recall written, and every frame held to the rig's rules;
+    each file's floors met by its own devices.
   - `test:about`: `src/about/screen.test.tsx`, About through the bar rig:
     from home by `Settings` then the sheet's `About` (a button 44 pt tall,
     the sheet's frames held to `sheetFaults`), About's one heading, the

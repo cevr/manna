@@ -1,14 +1,16 @@
-/* oxlint-disable effect/noNullish, effect/noTernary -- the model writes the spec's rules out as plain branches over undefined, apart from the app's Option code, so the two cannot share a mistake. */
+/* oxlint-disable effect/noNullish, effect/noTernary, effect/noRuntimeTypeof -- the model writes the spec's rules out as plain branches over undefined, apart from the app's Option code, so the two cannot share a mistake; an ask holds a list's title or a passage's span, told apart by type. */
 
 /**
  * The independent model of choosing passages, written plainly from the
  * spec's rules (hspassage C1, C3-C8) for the tests to judge the app by.
- * Ranges, references and pieces come from `./passages-model.ts`, and the
+ * Ranges, references and pieces come from `./passages-model.ts`, a planted
+ * list's title and verses from `./handbook-model.ts`, and the
  * field's rows from `./phrase-model.ts`'s fold; nothing here reads `src/chooser.ts`, `src/field.ts`, `src/passages.ts` or a
  * screen.
  */
 
 import type { Recall } from '../sayit';
+import { HANDBOOK_MODEL } from './handbook-model';
 import {
   NAMES,
   spanRef,
@@ -66,8 +68,8 @@ export const fitsChapter = (chosen: Chosen | undefined, count: number): boolean 
   return first >= 1 && first <= last && last <= count && last - first + 1 <= MOST;
 };
 
-/** C3, C8: the limit line, word for word. */
-export const LIMIT = '3 passages, the most for now. Remove one to add another.';
+/** C3, C8, with hshandbook R14: the limit line, word for word. */
+export const LIMIT = '3 passages or lists, the most for now. Remove one to add another.';
 
 /** C7: the cap's text. */
 export const CAP = 'Up to 20 verses';
@@ -176,17 +178,20 @@ export const chooserWant = (corpus: Corpus, state: Choosing): ChooserSeen => {
   };
 };
 
-/** C5: the ask over `reference`, word for word. */
-export const askText = (reference: string) => `Remove ${reference}? Its plants stay in your field.`;
+/** C5, with hshandbook R13: the ask over `name` (a passage's reference or a list's title), word for word. */
+export const askText = (name: string) => `Remove ${name}? Its plants stay in your field.`;
 
-/** C5: the remove's alert over `reference`. */
-export const notRemoved = (reference: string) => `${reference} was not removed. Try again.`;
+/** C5, with hshandbook R13: the remove's alert over `name`. */
+export const notRemoved = (name: string) => `${name} was not removed. Try again.`;
 
-/** C5: the field's bar as the model holds it: the passage asked about and the remove's alert, each `undefined` for none. */
+/** C5: the field's bar as the model holds it: the passage (a span) or the planted list (its title) asked about, and the remove's alert, each `undefined` for none. */
 export interface Asking {
-  readonly ask: Span | undefined;
+  readonly ask: Span | string | undefined;
   readonly alert: string | undefined;
 }
+
+/** The name an ask goes by: a list's title as it is, a passage's reference. */
+const askedName = (asked: Span | string) => (typeof asked === 'string' ? asked : spanRef(asked));
 
 /** The bar with no ask and no alert, as the field opens. */
 export const QUIET: Asking = { ask: undefined, alert: undefined };
@@ -212,16 +217,21 @@ const versesOfSpan = (span: Span) =>
   );
 
 /**
- * C3-C5: the field the model wants over the garden's `records`, the
- * promise's reference, the passages `held` and the bar. The rows are the
- * promise's, then each held passage's in the order chosen, then every other
- * plant (hsfield's rule), each phrase folded into its verse (H7); each held passage's row, and no other, holds one
- * `Remove <reference>`. With the passages read, the bar holds the ask while
- * there is one, else `Add verses` under 3 held (in the bar and as the row
- * at the field's end, so two), else the limit line; unread, it holds
- * neither and no row a `Remove`. The bar's one `When I need…` shows once a
- * plan is made (hshomeroot R5), which is at home's first show with the
- * passages read, and never over unread passages (no plan reads them).
+ * C3-C5, with hshandbook R7, R13 and R14: the field the model wants over
+ * the garden's `records`, the promise's reference, the passages and lists
+ * `held` and the bar. The rows are the promise's, then each held passage's
+ * in the order chosen, then each held list's (`held.lists`: known ids,
+ * once, in stored order; its title and its verses in Haskell's order, from
+ * `handbook-model.ts`), then every other plant (hsfield's rule), each
+ * phrase folded into its verse (H7); each held passage's row holds one
+ * `Remove <reference>`, each held list's one `Remove <title>`, and no other
+ * row a `Remove`. With the passages read, the bar holds the ask while
+ * there is one, else `Add verses` under 3 passages and lists held together
+ * (in the bar and as the row at the field's end, so two), else the limit
+ * line; unread, it holds neither and no row a `Remove`. The bar's one
+ * `When I need…` shows once a plan is made (hshomeroot R5), which is at
+ * home's first show with the passages read, and never over unread passages
+ * (no plan reads them).
  */
 export const fieldWant = (
   records: ReadonlyArray<Recall>,
@@ -230,25 +240,31 @@ export const fieldWant = (
   bar: Asking,
 ): FieldSeen => {
   const passages = held.tag === 'Read' ? held.passages : [];
+  const lists = (held.tag === 'Read' ? (held.lists ?? []) : []).flatMap((id) => {
+    const list = HANDBOOK_MODEL.get(id);
+    return list === undefined ? [] : [{ title: list.title, verses: [...list.verses] }];
+  });
   const rule = fieldFoldRule(
     [...records],
     [
       { title: promise, verses: [promise] },
       ...passages.map((span) => ({ title: spanRef(span), verses: versesOfSpan(span) })),
+      ...lists,
     ],
   );
   const read = held.tag === 'Read';
   const asking = read ? bar.ask : undefined;
+  const count = passages.length + lists.length;
   return {
     rows: rule.rows.map((row, index) => ({
       title: row.title,
       plants: row.plants.map((plant) => `${plant.reference}, ${plant.stage}`),
-      controls: index >= 1 && index <= passages.length ? [`Remove ${row.title}`] : [],
+      controls: index >= 1 && index <= count ? [`Remove ${row.title}`] : [],
     })),
-    add: read && asking === undefined && passages.length < 3 ? 2 : 0,
+    add: read && asking === undefined && count < 3 ? 2 : 0,
     need: read ? 1 : 0,
-    limit: read && asking === undefined && passages.length >= 3 ? LIMIT : undefined,
-    ask: asking === undefined ? undefined : askText(spanRef(asking)),
+    limit: read && asking === undefined && count >= 3 ? LIMIT : undefined,
+    ask: asking === undefined ? undefined : askText(askedName(asking)),
     alert: bar.alert,
   };
 };

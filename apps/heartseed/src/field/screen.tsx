@@ -4,9 +4,10 @@
  * launch and, at the row's end, the gear `Settings`, an icon alone at least
  * 44 pt square, which opens the Settings sheet (`../settings/sheet`) over
  * home; under that row, with the reader's passages read, `Add verses`
- * while fewer than 3 are held, else the limit line; a furrow's `Remove`
- * puts its ask there instead, with `Remove` and `Keep`, and a remove that
- * does not land leaves an alert there. Under the bar scroll the greeting by
+ * while fewer than 3 passages and lists are held together, else the limit
+ * line; a furrow's `Remove` (a held passage's or a planted list's) puts
+ * its ask there instead, with `Remove` and `Keep`, and a remove that does
+ * not land leaves an alert there. Under the bar scroll the greeting by
  * the hour, the heading, the days sown and the harvest, a hint, one furrow
  * per row (`./plot`), the dashed `Add verses` row whenever the bar offers
  * it, and the legend under Mark 4:28. A foot fixed under the scroll view
@@ -25,40 +26,40 @@
  */
 
 import { useAtomSet } from '@effect/atom-react';
-import { Array as Arr, Option } from 'effect';
+import { Array as Arr, Match, Option } from 'effect';
 import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 
-import { uprootPassage } from '../app';
+import { uprootList, uprootPassage } from '../app';
 import { LIMIT_LINE } from '../chooser';
 import { harvestText, sownText, type Field } from '../field';
 import type { Furrow, Greeting } from '../home';
 import { themed, useThemed } from '../look';
-import { MOST_PASSAGES, passageReference, type PassagesView, type Range } from '../passages';
+import { heldCount, MOST_PASSAGES, type PassagesView } from '../passages';
 import { useLook } from '../sayit/draw';
 import { SettingsSheet } from '../settings/sheet';
 import { Foot, type Chosen } from './foot';
-import { AddRow, Control, FurrowRow, Icon, Legend } from './plot';
+import { AddRow, Control, FurrowRow, Icon, Legend, type Removal } from './plot';
 
-/** The bar's own state: the passage a furrow's `Remove` asks about, the alert of a remove that did not land, and whether a remove is pending. */
+/** The bar's own state: the passage or list a furrow's `Remove` asks about, the alert of a remove that did not land, and whether a remove is pending. */
 interface Bar {
-  readonly ask: Option.Option<Range>;
+  readonly ask: Option.Option<Removal>;
   readonly alert: Option.Option<string>;
   readonly pending: boolean;
 }
 
 const IDLE: Bar = { ask: Option.none(), alert: Option.none(), pending: false };
 
-/** The alert a remove's answer leaves: none once `Removed`, else that the range was not removed. */
-const alertAfter = (answer: string, range: Range): Option.Option<string> => {
+/** The alert a remove's answer leaves: none once `Removed`, else that the passage or list was not removed. */
+const alertAfter = (answer: string, removal: Removal): Option.Option<string> => {
   if (answer === 'Removed') return Option.none();
-  return Option.some(`${passageReference(range)} was not removed. Try again.`);
+  return Option.some(`${removal.name} was not removed. Try again.`);
 };
 
-/** Whether the bar offers `Add verses`: the passages read, no ask showing, and fewer than 3 held. */
+/** Whether the bar offers `Add verses`: the passages read, no ask showing, and fewer than 3 passages and lists held together. */
 const offersAdd = (passages: PassagesView, bar: Bar) =>
-  passages._tag === 'Read' && Option.isNone(bar.ask) && passages.passages.length < MOST_PASSAGES;
+  passages._tag === 'Read' && Option.isNone(bar.ask) && heldCount(passages) < MOST_PASSAGES;
 
 /** What the bar offers after `When I need…` with the passages read: the ask while one shows, else `Add verses` under 3 held, else the limit line. */
 function Offer({
@@ -71,22 +72,22 @@ function Offer({
   readonly bar: Bar;
   readonly held: number;
   readonly onAdd: () => void;
-  readonly onConfirm: (range: Range) => void;
+  readonly onConfirm: (removal: Removal) => void;
   readonly onKeep: () => void;
 }) {
   const styles = useThemed(sheets);
   return Option.match(bar.ask, {
-    onSome: (range) => (
+    onSome: (removal) => (
       <View style={styles.ask}>
         <Text testID="ask" style={styles.line}>
-          {`Remove ${passageReference(range)}? Its plants stay in your field.`}
+          {`Remove ${removal.name}? Its plants stay in your field.`}
         </Text>
         <View style={styles.answers}>
           <Control
             label="Remove"
             shown="Remove"
             pending={bar.pending}
-            onPress={() => onConfirm(range)}
+            onPress={() => onConfirm(removal)}
           />
           <Control label="Keep" shown="Keep" pending={bar.pending} onPress={onKeep} />
         </View>
@@ -179,6 +180,14 @@ export function FieldScreen({
   const [settings, setSettings] = useState(false);
   const busy = useRef(false);
   const uproot = useAtomSet(uprootPassage, { mode: 'promise' });
+  const uprootPlanted = useAtomSet(uprootList, { mode: 'promise' });
+  /** The remove `removal` names, run by its kind: a passage by its range, a list by its id. */
+  const removeOf = Match.type<Removal>().pipe(
+    Match.tagsExhaustive({
+      Passage: ({ range }): Promise<string> => uproot(range),
+      Handbook: ({ id }): Promise<string> => uprootPlanted(id),
+    }),
+  );
   const chosen = chosenIn(furrows, choice, startable);
   const shownChoice = Option.map(chosen, (verse) => verse.reference);
   /** A tap of a field control: nothing while a remove is pending, else the alert clears and `then` runs. */
@@ -196,17 +205,17 @@ export function FieldScreen({
         }),
       ),
     );
-  const onRemove = (range: Range) =>
-    tapped(() => setBar({ ask: Option.some(range), alert: Option.none(), pending: false }));
-  const onConfirm = (range: Range) => {
+  const onRemove = (removal: Removal) =>
+    tapped(() => setBar({ ask: Option.some(removal), alert: Option.none(), pending: false }));
+  const onConfirm = (removal: Removal) => {
     if (busy.current) return;
     busy.current = true;
     setBar((now) => ({ ...now, pending: true }));
     const settle = (answer: string) => {
       busy.current = false;
-      setBar({ ask: Option.none(), alert: alertAfter(answer, range), pending: false });
+      setBar({ ask: Option.none(), alert: alertAfter(answer, removal), pending: false });
     };
-    void uproot(range).then(settle, () => settle('Failed'));
+    void removeOf(removal).then(settle, () => settle('Failed'));
   };
   return (
     <View style={look.screen}>
@@ -246,7 +255,7 @@ export function FieldScreen({
         {passages._tag === 'Read' && (
           <Offer
             bar={bar}
-            held={passages.passages.length}
+            held={heldCount(passages)}
             onAdd={() => tapped(onAdd)}
             onConfirm={onConfirm}
             onKeep={() => tapped(() => setBar(IDLE))}

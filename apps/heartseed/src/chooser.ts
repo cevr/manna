@@ -14,8 +14,8 @@ import { Option } from 'effect';
 
 import { MOST_VERSES } from './passages';
 
-/** The line the field's bar and the chooser's footer show once 3 or more passages are held. */
-export const LIMIT_LINE = '3 passages, the most for now. Remove one to add another.';
+/** The line the field's bar and the chooser's footer show once 3 or more passages and lists are held together. */
+export const LIMIT_LINE = '3 passages or lists, the most for now. Remove one to add another.';
 
 /** The verses chosen in one chapter, first to last. */
 export interface Verses {

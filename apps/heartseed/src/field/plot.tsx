@@ -2,7 +2,8 @@
  * The field's furrows as home A draws them. A furrow's head holds its icon,
  * its title (plain text, never a heading: a reference may spell `Your field`
  * or `Today`, and the field holds one heading, its own), how many of its
- * plants are ripe and, for a passage the reader holds, its `Remove`; under
+ * plants are ripe and, for a passage or a Handbook list the reader holds,
+ * its `Remove` (`Remove <reference>`, `Remove <title>`); under
  * it, its plants, then a soil line. Each plant is one button named
  * `<reference>, <stage>` (then `, ready today`), selected while its verse is
  * the one chosen; inside it, hidden from the screen reader, the gold dot of
@@ -12,7 +13,7 @@
  * of the scheme, and every fill a role.
  */
 
-import { Option } from 'effect';
+import { Match, Option } from 'effect';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { verseNumberOf, type PlantStage } from '../field';
@@ -143,7 +144,25 @@ function Plot({
   );
 }
 
-/** One furrow: its head (icon, title, ripe count and, on a held passage, `Remove`), its plants, and its soil line. */
+/** What a furrow's `Remove` takes away, named as its ask names it: a held passage by its range, or a planted Handbook list by its id. */
+export type Removal =
+  | { readonly _tag: 'Passage'; readonly name: string; readonly range: Range }
+  | { readonly _tag: 'Handbook'; readonly name: string; readonly id: string };
+
+/** The removal a furrow's `Remove` offers, by its source: a passage named by its reference, a Handbook list by its title, and none for any other furrow. */
+export const removalOf = (furrow: Furrow): Option.Option<Removal> =>
+  Match.value(furrow.source).pipe(
+    Match.tagsExhaustive({
+      Own: () => Option.none<Removal>(),
+      Passage: ({ range }) =>
+        Option.some<Removal>({ _tag: 'Passage', name: passageReference(range), range }),
+      Collection: () => Option.none<Removal>(),
+      Handbook: ({ id }) => Option.some<Removal>({ _tag: 'Handbook', name: furrow.title, id }),
+      Loose: () => Option.none<Removal>(),
+    }),
+  );
+
+/** One furrow: its head (icon, title, ripe count and, on a held passage or list, `Remove`), its plants, and its soil line. */
 export function FurrowRow({
   furrow,
   chosen,
@@ -155,7 +174,7 @@ export function FurrowRow({
   readonly chosen: Option.Option<string>;
   readonly pending: boolean;
   readonly onChoose: (reference: string) => void;
-  readonly onRemove: (range: Range) => void;
+  readonly onRemove: (removal: Removal) => void;
 }) {
   const styles = useThemed(sheets);
   return (
@@ -170,14 +189,14 @@ export function FurrowRow({
             {furrow.ripe}
           </Text>
         </View>
-        {Option.match(Option.fromUndefinedOr(furrow.range), {
+        {Option.match(removalOf(furrow), {
           onNone: () => false,
-          onSome: (range) => (
+          onSome: (removal) => (
             <Control
-              label={`Remove ${passageReference(range)}`}
+              label={`Remove ${removal.name}`}
               shown="Remove"
               pending={pending}
-              onPress={() => onRemove(range)}
+              onPress={() => onRemove(removal)}
             />
           ),
         })}

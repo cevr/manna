@@ -22,7 +22,7 @@ import {
 } from './passages-model';
 
 /** The limit line, as the spec writes it. */
-export const LIMIT_WORDS = '3 passages, the most for now. Remove one to add another.';
+export const LIMIT_WORDS = '3 passages or lists, the most for now. Remove one to add another.';
 
 /** The line after a plant's answer: none, the limit line after `Full`, or the alert naming the list. */
 export type ModelLine =
