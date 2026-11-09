@@ -11,7 +11,8 @@
  * It catches a sheet that stays open after `Added`, a double tap or a
  * `Done` in the plant's turn that stores twice or closes the sheet, a
  * control live while a plant is pending, a write that is not `addRule`'s,
- * and a landed plant counted as `Done`.
+ * and a landed plant counted as `Done`. Its other two devices walk in
+ * `walk-a-b.test.tsx`.
  */
 
 import { expect, it } from 'bun:test';
@@ -19,7 +20,7 @@ import { expect, it } from 'bun:test';
 import { missed, walkShelves } from '../test/shelves-walk';
 
 it('plants an offer once its write lands, once for two taps in one turn, and holds every control while it is pending', async () => {
-  const { faults, reached } = await walkShelves([29, 30, 31, 32], 14);
+  const { faults, reached } = await walkShelves([30, 32], 14);
   expect(faults).toEqual([]);
   expect(
     missed(reached, [

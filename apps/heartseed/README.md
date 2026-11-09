@@ -2528,16 +2528,19 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     (`src/shelves/sheet.tsx`) beside a stand-in home
     (`src/test/shelves-rig.tsx`, every frame of the document held to
     `addSheetFaults`) against `sheetWant` (`src/test/shelves-model.ts`):
-    each offer's state over generated passages and fields, `Full` by stale
-    props as the limit line, a pending plant blocking every control and the
-    close, and no paid word or verse text on any shelf; and
+    each offer's state over generated passages and fields; and
     `src/shelves/rule.test.ts`, the root's rule at the sheet's seams with no
     app: `Your field` on `Add a passage`, the `‹ Add verses` back zero, one
     or two times on every screen, in a scroll view or not, home's own
     `Add verses` taken for no back, and `Plant <title>`, `Add verses` and
     `Any passage` in reach while listening, each cell exactly its faults.
-  - `test:shelves-walk-a`, `test:shelves-walk-b` and `test:shelves-walk-c`:
-    `src/shelves/walk-a.test.tsx`, `walk-b.test.tsx` and `walk-c.test.tsx`,
+  - `test:shelves-b`: `src/shelves/sheet-b.test.tsx`, the sheet's single
+    cases over the same rig: `Full` by stale props as the limit line, a
+    pending plant blocking every control and the close, and no paid word or
+    verse text on any shelf.
+  - `test:shelves-walk-a`, `test:shelves-walk-a-b`, `test:shelves-walk-b`
+    and `test:shelves-walk-c`: `src/shelves/walk-a.test.tsx`,
+    `walk-a-b.test.tsx`, `walk-b.test.tsx` and `walk-c.test.tsx`,
     generated readers through `src/test/shelves-walk.ts` over the same rig:
     no passages, 1-3 held, 4 held or a garbled value, the promise planted
     or not and a loose verse recalled; shelves opened, switched and closed,
