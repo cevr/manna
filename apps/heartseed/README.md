@@ -1735,30 +1735,29 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   unread launch (Today alone).
   The seam: `src/test/choices-seam.tsx`'s `rootWithChoicesOnToday(host)`
   is the root with Today's row of choices shown (`ChoicesOnToday`,
-  `src/settings/choices.tsx`, which the app never provides), for the rigs
-  that still tap Today's `Minutes` and `Voice`:
-  `session-rig.tsx` (its `launch` seamed unless passed
-  `{ choicesOnToday: false }`) and `run-rig.tsx` for `wake-rig.tsx` alone
-  (`run-rig`'s `launch` mounts `<Root />` unless passed
-  `{ choicesOnToday: true }`, which `wake-rig` alone passes). It registers
-  the host with `rootFaults`' choices rule, which allows the choices on
-  Today under that host alone. Each rig moves its taps to the Settings
-  sheet and drops its seam line; the last such move deletes the seam,
-  `Choices` and Today's `<Choices />`. `today-rig.tsx`, `stage-rig.tsx`,
-  `field-rig.tsx`, `first-rig.tsx` and `need-rig.tsx` mount `<Root />`
-  unseamed and make their plan as a reader does (`renewBySettings`,
-  `src/test/settings-rig.ts`): Today's `Your field`, home's `Settings`, a
-  `Minutes` radio (the one checked when no minutes are named), `Done`,
-  then `Begin` when home offers it, every sheet shown held to
-  `sheetFaults` and its look checked at least once. Every other user of
-  `run-rig` (`footer.test.tsx`, `home/rigs.test.tsx` and three walks)
-  mounts `<Root />` too, and the walks make their plan by the same trip
-  through the sheet: the run walk (`src/test/run-walk.ts`), the reader
-  walk (`src/test/reader-walk.ts`) and the dark Today walk
-  (`src/look/today.test.tsx`). `phrase-rig.tsx` mounts `<Root />` too,
-  and makes its one Minutes making, while a phrase's recital listens, at
-  the session seam (`Session.choose` on the mounted layer's session), since
-  no reader reaches the sheet then.
+  `src/settings/choices.tsx`, which the app never provides), for the one
+  rig that still taps Today's `Minutes` and `Voice`: `session-rig.tsx`
+  (its `launch` seamed unless passed `{ choicesOnToday: false }`). It
+  registers the host with `rootFaults`' choices rule, which allows the
+  choices on Today under that host alone. When `session-rig` moves its
+  taps to the Settings sheet, the seam, `Choices` and Today's
+  `<Choices />` go. `today-rig.tsx`, `stage-rig.tsx`, `field-rig.tsx`,
+  `first-rig.tsx` and `need-rig.tsx` mount `<Root />` and make their plan
+  as a reader does (`renewBySettings`, `src/test/settings-rig.ts`):
+  Today's `Your field`, home's `Settings`, a `Minutes` radio (the one
+  checked when no minutes are named), `Done`, then `Begin` when home
+  offers it, every sheet shown held to `sheetFaults` and its look checked
+  at least once. `run-rig.tsx`'s `launch` mounts `<Root />` for every
+  launch (it takes no seam option), so every user of it does too:
+  `footer.test.tsx`, `home/rigs.test.tsx`, `wake-rig.tsx` and the walks,
+  which make their plan by the same trip through the sheet: the run walk
+  (`src/test/run-walk.ts`), the reader walk (`src/test/reader-walk.ts`),
+  the dark Today walk (`src/look/today.test.tsx`) and the wake walk
+  (`src/test/wake-walk.ts`, its Minutes and its Voice both chosen in the
+  sheet). `phrase-rig.tsx` mounts `<Root />` too, and makes its one
+  Minutes making, while a phrase's recital listens, at the session seam
+  (`Session.choose` on the mounted layer's session), since no reader
+  reaches the sheet then.
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
   - `test:hear`: `src/matcher` (the sounds-alike table's bounds, and each

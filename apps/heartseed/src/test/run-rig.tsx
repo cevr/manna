@@ -34,7 +34,6 @@ import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
 import Root from '../../app/index';
-import { rootWithChoicesOnToday } from './choices-seam';
 import { appLayer, runtime } from '../app';
 import { Dictation, DictationSource, type DictationEvent } from '../dictation';
 import { CHAIN } from '../dictation/attempt';
@@ -267,8 +266,6 @@ export interface LaunchParts {
   readonly store?: (
     disk: Layer.Layer<KeyValueStore.KeyValueStore>,
   ) => Layer.Layer<KeyValueStore.KeyValueStore>;
-  /** Whether the launch mounts the seam's root, Today's Minutes and Voice shown (`src/test/choices-seam.tsx`), for `wake-rig` alone until S4 deletes the seam; every other launch mounts the app's own root. */
-  readonly choicesOnToday?: boolean;
 }
 
 /**
@@ -334,7 +331,7 @@ export const launch = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        {parts.choicesOnToday === true ? rootWithChoicesOnToday(host) : <Root />}
+        <Root />
       </RegistryProvider>,
     ),
   );
