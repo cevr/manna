@@ -5370,3 +5370,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `sim open / --expect "id=counts"` after a tap that wrongly stayed on Today terminated the app, opened it again on home and passed with `retried: true`, so a wait in the running app could not fail on the screen it waited for.
 - **Cause:** `openOnce` retried every missing iOS target after terminating the app, which the hymnal's first open after a relaunch needs, and no caller could ask it to fail the target as it is instead.
 - **Guard:** code: `packages/sim/src/command.test.ts` `sim open relaunches once on a missing iOS target unless --no-relaunch, over every ask and answer sequence`
+
+### home-walk-waits-on-home-before-begin
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "no walk waits on home while `Begin` shows, then begins"
+- **Source:** hymnapp/batch-hg-1-findings.md o2 (Follow-up, Unproven 1)
+- **Wrong:** Heartseed makes the launch's plan at home's first show, and Today's mount after `Begin` keeps it, but no walk moved the clock between home's first show and `Begin`, so a product that made the plan again at the tap passed every walk.
+- **Cause:** The home walk drew `Begin` only at the instant home showed, so the plan's instant and the tap's were one in every walk.
+- **Guard:** code: `apps/heartseed/src/home/walk-h.test.tsx` `keeps the plan made at home's first show when Begin follows a wait on home`

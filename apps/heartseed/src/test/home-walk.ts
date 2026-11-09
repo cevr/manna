@@ -12,7 +12,8 @@
  *   ready review, today's new piece, a verse whose open item is a phrase,
  *   a planted verse whose item is done, a planted verse not in the plan, a
  *   verse not planted, a loose verse), a tap on the chosen plant again,
- *   `Start here`, `Begin` (exactly when the model shows a verse, R3),
+ *   `Start here`, `Begin` (exactly when the model shows a verse, R3; with
+ *   `waits`, after a wait on home that keeps the plan, `waitBegin`),
  *   `When I need…` (with a plan made), with nothing held a landed
  *   `Remove <reference>` then `Remove`, a relaunch the next morning;
  * - on Today: `Your field` a quarter of the time on a read garden, else
@@ -61,7 +62,7 @@ import { KEY, readRule, spanRef, type Held } from './passages-model';
 import { CORPUS } from './passages-rig';
 import { verseOfRule } from './phrase-model';
 import { startModel, type ModelVisitVerse } from './promise-model';
-import { countsModel } from './session-model';
+import { countsModel, HOUR, MINUTE } from './session-model';
 
 const CANON = new Set(placesOf(CORPUS).keys());
 
@@ -88,6 +89,8 @@ class HomeWalk extends Walk {
   removed = false;
   /** The visit the last `Start here` made, while it is the visit. */
   started: readonly ModelVisitVerse[] | null = null;
+  /** Whether `Begin` on home comes after a wait (`waitBegin`); off but in walk-h. */
+  waits = false;
 
   /** Home A's rules on every frame of the field. */
   override checks(host: Element) {
@@ -339,6 +342,34 @@ class HomeWalk extends Walk {
     return super.begin();
   }
 
+  /** Whether Today would show otherwise were the plan alone made at the clock's now, the visit and the hold kept. */
+  differsMadeNow() {
+    const kept = { plan: this.plan, visit: this.visit, hold: this.hold };
+    const want = JSON.stringify(this.wantToday());
+    this.make();
+    this.visit = kept.visit;
+    this.hold = kept.hold;
+    const later = JSON.stringify(this.wantToday());
+    this.plan = kept.plan;
+    return later !== want;
+  }
+
+  /**
+   * A wait on home while `Begin` shows, then `Begin`: the clock moves by a
+   * drawn wait of one to thirty hours (some cross the next 04:00), and Today
+   * keeps the plan made at home's first show. Counted as `home:wait-begin`
+   * when no visit or hold is kept and a plan made at the later instant
+   * would show Today otherwise.
+   */
+  async waitBegin(): Promise<unknown> {
+    const wait = (1 + below(this.next, 30)) * HOUR + below(this.next, 60) * MINUTE;
+    this.time.now = (this.time.now ?? 0) + wait;
+    this.trail.push(`wait:${wait / MINUTE}`);
+    if (this.visit.length === 0 && this.hold === null && this.differsMadeNow())
+      this.bump('home:wait-begin');
+    return this.begin();
+  }
+
   /** `When I need…` on home; the next arrival on home has no choice. */
   override async need(): Promise<unknown> {
     this.chosen = null;
@@ -380,7 +411,8 @@ class HomeWalk extends Walk {
     if (roll < 2 && this.chosen !== null) return this.tap(this.chosen, 'again');
     if (roll < 6 && this.chosen !== null && this.startOf(this.chosen) !== null)
       return this.startHere();
-    if (roll < 8 && this.chosen === null && this.offersBegin()) return this.begin();
+    if (roll < 8 && this.chosen === null && this.offersBegin())
+      return this.waits ? this.waitBegin() : this.begin();
     if (roll < 10) return this.planned() ? this.need() : this.relaunch();
     if (
       roll < 12 &&
@@ -400,16 +432,19 @@ class HomeWalk extends Walk {
   }
 }
 
-/** Walks the listed generated devices of `seed` (device `n` is `random(seed * 1000 + n)`, as `walkNeed` makes it) over a garden read or not, `steps` commands each; answers the first failure (none when all held) and the coverage. */
+/** Walks the listed generated devices of `seed` (device `n` is `random(seed * 1000 + n)`, as `walkNeed` makes it) over a garden read or not, `steps` commands each, `Begin` on home after a wait when `waits`; answers the first failure (none when all held) and the coverage. */
 export const walkHome = async (
   seed: number,
   devices: ReadonlyArray<number>,
   steps: number,
   garden: 'read' | 'unread' = 'read',
+  options: { readonly waits?: boolean } = {},
 ) => {
   const cover: Coverage = {};
   for (const n of devices) {
-    const failure = await play(new HomeWalk(random(seed * 1000 + n), cover, garden), n, steps);
+    const walk = new HomeWalk(random(seed * 1000 + n), cover, garden);
+    walk.waits = options.waits ?? false;
+    const failure = await play(walk, n, steps);
     if (failure !== null) return { failure, cover };
   }
   return { failure: null, cover };

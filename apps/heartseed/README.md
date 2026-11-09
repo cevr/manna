@@ -2374,14 +2374,14 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     Asia/Kolkata at a return across their own 12:00; and at home's next
     mount after a return while Today shows. The rig's foreground holds
     one queue, so a second subscription to `Foreground.states` fails it.
-  - `test:home-walk-a` to `test:home-walk-g`:
-    `src/home/walk-{a,b,c,d,e,f,g}.test.tsx`, home walked through the
+  - `test:home-walk-a` to `test:home-walk-h`:
+    `src/home/walk-{a,b,c,d,e,f,g,h}.test.tsx`, home walked through the
     root (`src/test/home-walk.ts`, a `need-walk` `Walk` over the root's
     screens: on home a tap on a plant of each class, a tap again,
     `Start here`, `Begin` when the model offers it, `When I need…` when
     planned, a landed remove and a relaunch; on Today `need-walk`'s
     commands and `Your field`; on When I need… its own), one device each
-    of seeds 30, 10, 69, 74, 14, 2 and 119, part f's in the unread class
+    of seeds 30, 10, 69, 74, 14, 2, 119 and 18, part f's in the unread class
     (every listing fails: Today alone, with no `Your field`), held after
     every command, on the screen the model names, to `furrowsModel` and
     `readyModel` (full labels with `, ready today`), `countsModel`,
@@ -2391,7 +2391,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     floors met (part f's Today checked to offer no minutes choice, no
     `Settings` and no `<n> min`, a minutes choice made being
     `need-walk-b`'s floor on a read garden; part g's `Begin` over a said
-    result held, which Today must still show).
+    result held, which Today must still show). Part h alone
+    (`walkHome`'s `waits`) puts a wait of one to thirty hours on home
+    before each `Begin` (`waitBegin`), so parts a-g draw as before; its
+    floor `home:wait-begin` is a wait, no visit or hold kept, after which a
+    plan made at the later instant would show Today otherwise, and Today
+    must still show the plan made at home's first show.
   - `test:phrase`: the phrase cut and its reference form (`src/phrase.ts`).
     `src/phrase.property.test.ts`, `cutOf` against `src/test/phrase-model.ts`
     and its brute force over every partition for 13-22 words, for generated
