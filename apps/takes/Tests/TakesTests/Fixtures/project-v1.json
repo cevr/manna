@@ -1,0 +1,64 @@
+{
+  "document": {
+    "beats": [
+      {
+        "id": "b1",
+        "kept": "t1",
+        "note": "Open on the question.",
+        "takes": [
+          {
+            "clips": [
+              {
+                "cuts": [[11520, 30720]],
+                "id": "c1",
+                "in": 0,
+                "out": 136800,
+                "source": "5b1c2d7e"
+              }
+            ],
+            "created": "2026-11-02T12:00:00Z",
+            "id": "t1",
+            "name": "Take 1"
+          }
+        ],
+        "title": "Hook"
+      }
+    ],
+    "trash": [
+      {
+        "beat": {
+          "id": "b2",
+          "note": "",
+          "takes": [],
+          "title": "Old"
+        },
+        "index": 1
+      }
+    ]
+  },
+  "name": "In Its Order",
+  "sources": {
+    "5b1c2d7e": {
+      "file": "audio/5b1c2d7e.wav",
+      "frames": 136800,
+      "id": "5b1c2d7e",
+      "rate": 48000,
+      "transcript": {
+        "state": "done",
+        "words": [
+          {
+            "end": 11520,
+            "start": 0,
+            "text": "In"
+          },
+          {
+            "end": 11520,
+            "start": 7680,
+            "text": "the"
+          }
+        ]
+      }
+    }
+  },
+  "version": 1
+}
