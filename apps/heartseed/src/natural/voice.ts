@@ -2,7 +2,8 @@
  * The natural voice as a `VoiceSource`: it plans a verse with `planOf`,
  * loads the pinned model in the natural voice the speak names
  * (`Speaking.natural`, one of `VOICES`; any other name fails the speak once
- * its stop is sent), then renders and plays it chunk by chunk, one render in
+ * its stop is sent), then renders it at that voice's speed (`SPEEDS`) and
+ * plays it chunk by chunk, one render in
  * flight, and forwards the module's events for the reading it
  * holds. A speak succeeds once its first chunk plays, or at once when its
  * reading is let go (stopped, replaced, or ended by a forwarded terminal
@@ -15,14 +16,15 @@ import { Deferred, Effect, Exit, Layer, Option, Result } from 'effect';
 
 import { VoiceSource, VoiceUnavailable, type VoiceEvent } from '../voice';
 import type { Lexicon } from './lexicon';
-import { FILES, REVISION, VOICES, type NaturalVoice } from './manifest';
+import { FILES, REVISION, SPEEDS, VOICES, type NaturalVoice } from './manifest';
 import { NaturalModule, type Rendered } from './module';
 import { planOf, SAMPLES_PER_FRAME, startsOf, type Chunk, type WordStart } from './plan';
 
-/** The reading the source holds: its utterance, its chunks, and the signal a speak waiting on it ends at. */
+/** The reading the source holds: its utterance, its chunks, its voice's speed, and the signal a speak waiting on it ends at. */
 interface Reading {
   readonly utterance: number;
   readonly chunks: ReadonlyArray<Chunk>;
+  readonly speed: number;
   readonly letGo: Deferred.Deferred<void>;
 }
 
@@ -78,7 +80,9 @@ export const naturalVoiceSource = (
       /** Renders chunk `k` of `reading` and plays it when the render fits. */
       const chunkOf = (reading: Reading, k: number, chunk: Chunk) =>
         Effect.gen(function* () {
-          const rendered = yield* Effect.result(module.render(reading.utterance, k, chunk.ids));
+          const rendered = yield* Effect.result(
+            module.render(reading.utterance, k, chunk.ids, reading.speed),
+          );
           if (!holds(reading)) return 'gone' satisfies Played;
           if (Result.isFailure(rendered)) return 'failed' satisfies Played;
           const starts = startsFor(chunk, rendered.success);
@@ -153,6 +157,7 @@ export const naturalVoiceSource = (
             const reading: Reading = {
               utterance,
               chunks: chunks.value,
+              speed: SPEEDS[voice],
               letGo: Deferred.makeUnsafe<void>(),
             };
             held = Option.some(reading);

@@ -1,7 +1,7 @@
 /**
  * The natural voice's native module, as the app drives it: Kokoro-82M on
  * the phone, which downloads its pinned files once, loads them, renders a
- * chunk of token ids to audio and the frames each id took, and plays the
+ * chunk of token ids at a speed to audio and the frames each id took, and plays the
  * audio while it sends the voice's own events at each word's start sample.
  * JS plans the ids and the word starts (`plan.ts`); the module owns the
  * clock. On iOS it is `native/natural` (`source.ios.ts`); elsewhere there
@@ -85,6 +85,7 @@ export class NaturalModule extends Context.Service<
       utterance: number,
       chunk: number,
       ids: ReadonlyArray<number>,
+      speed: number,
     ) => Effect.Effect<Rendered, NaturalUnavailable>;
     readonly play: (
       utterance: number,

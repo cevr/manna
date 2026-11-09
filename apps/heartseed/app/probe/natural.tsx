@@ -49,9 +49,9 @@ const recording = (record: (rendered: Rendered) => void) =>
       const module = yield* NaturalModule;
       return NaturalModule.of({
         ...module,
-        render: (utterance, chunk, ids) =>
+        render: (utterance, chunk, ids, speed) =>
           module
-            .render(utterance, chunk, ids)
+            .render(utterance, chunk, ids, speed)
             .pipe(Effect.tap((rendered) => Effect.sync(() => record(rendered)))),
       });
     }),
@@ -200,7 +200,7 @@ const soak = (show: Show, asked: number, voice: NaturalVoice) =>
     let utterance = 0;
     for (const verse of versesInOrder(asked)) {
       utterance++;
-      const outcome = yield* soakVerse(words, utterance, verse);
+      const outcome = yield* soakVerse(words, utterance, verse, voice);
       show((view) => ({ ...view, soak: soakCounted(view.soak, outcome) }));
       if (utterance % 1000 === 0) yield* refresh(show);
     }

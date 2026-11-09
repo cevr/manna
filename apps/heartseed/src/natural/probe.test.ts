@@ -17,7 +17,7 @@ import { Effect, Layer, Option } from 'effect';
 
 import { VoiceSource, type VoiceView } from '../voice';
 import type { Lexicon } from './lexicon';
-import { VOICES } from './manifest';
+import { VOICES, type NaturalVoice } from './manifest';
 import { NaturalModule, NaturalUnavailable, type Rendered } from './module';
 import { planOf } from './plan';
 import {
@@ -364,9 +364,9 @@ const moduleOf = (
       cancelInstall: Effect.die('cancelInstall'),
       remove: Effect.die('remove'),
       load: () => Effect.die('load'),
-      render: (utterance, chunk, ids) =>
+      render: (utterance, chunk, ids, speed) =>
         Effect.suspend(() => {
-          calls.push(`render ${utterance} ${chunk} ${ids.length}`);
+          calls.push(`render ${utterance} ${chunk} ${ids.length} ${speed}`);
           return answer(ids);
         }),
       play: () => Effect.die('play'),
@@ -383,10 +383,11 @@ const moduleOf = (
 const soaked = (
   text: string,
   answer: (ids: ReadonlyArray<number>) => Effect.Effect<Rendered, NaturalUnavailable>,
+  voice: NaturalVoice = 'af_heart',
 ) => {
   const calls: Array<string> = [];
   const outcome = Effect.runSync(
-    soakVerse(LEXICON, 7, text).pipe(Effect.provide(moduleOf(calls, answer))),
+    soakVerse(LEXICON, 7, text, voice).pipe(Effect.provide(moduleOf(calls, answer))),
   );
   return { outcome, calls };
 };
@@ -399,10 +400,14 @@ describe('a soaked verse', () => {
     expect(soaked('bel zed.', fit)).toEqual({ outcome: { _tag: 'Unplanned' }, calls: ['stop'] });
   });
 
-  it('renders every chunk of its plan in order, then stops', () => {
+  it('renders every chunk of its plan in order at its voice’s speed, then stops', () => {
     expect(soaked('bel cor.', fit)).toEqual({
       outcome: { _tag: 'Rendered' },
-      calls: ['render 7 0 9', 'stop'],
+      calls: ['render 7 0 9 0.85', 'stop'],
+    });
+    expect(soaked('bel cor.', fit, 'bm_george')).toEqual({
+      outcome: { _tag: 'Rendered' },
+      calls: ['render 7 0 9 0.9', 'stop'],
     });
     const long = `${Array.from({ length: 30 }, () => 'bel cor bel,').join(' ')} cor.`;
     const plan = Option.getOrThrow(planOf(LEXICON.words, LEXICON.vocab, long));
@@ -410,7 +415,7 @@ describe('a soaked verse', () => {
     expect(soaked(long, fit)).toEqual({
       outcome: { _tag: 'Rendered' },
       calls: [
-        ...plan.chunks.map((chunk, index) => `render 7 ${index} ${chunk.ids.length}`),
+        ...plan.chunks.map((chunk, index) => `render 7 ${index} ${chunk.ids.length} 0.85`),
         'stop',
       ],
     });
@@ -442,7 +447,7 @@ describe('a soaked verse', () => {
     for (const answer of [off, short]) {
       expect(soaked('bel cor.', answer)).toEqual({
         outcome: { _tag: 'Failed', reason: 'frames' },
-        calls: ['render 7 0 9', 'stop'],
+        calls: ['render 7 0 9 0.85', 'stop'],
       });
     }
   });
@@ -451,7 +456,7 @@ describe('a soaked verse', () => {
     const refused = () => Effect.fail(NaturalUnavailable.make({ reason: 'nonfinite' }));
     expect(soaked('bel cor.', refused)).toEqual({
       outcome: { _tag: 'Failed', reason: 'nonfinite' },
-      calls: ['render 7 0 9', 'stop'],
+      calls: ['render 7 0 9 0.85', 'stop'],
     });
   });
 });

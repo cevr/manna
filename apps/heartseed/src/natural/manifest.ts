@@ -37,6 +37,13 @@ export const VOICES = ['af_heart', 'bm_george'] as const;
 /** A voice the natural module reads with. */
 export type NaturalVoice = (typeof VOICES)[number];
 
+/**
+ * Each voice's reading speed, Kokoro's duration scale (1 is its own pace):
+ * the owner's choice on hearing them (Her 0.85, Him 0.9). The chain reads
+ * the number it is sent; no speed lives in the Swift.
+ */
+export const SPEEDS: Readonly<Record<NaturalVoice, number>> = { af_heart: 0.85, bm_george: 0.9 };
+
 /** The 39 files, in path order, the order they are fetched, each with its size and SHA-256. */
 export const FILES: ReadonlyArray<ModelFile> = [
   {

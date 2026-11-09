@@ -321,13 +321,14 @@ struct NaturalFailure: LocalizedError {
   }
 
   /// Renders chunk `chunk` of reading `utterance` from its token ids (BOS
-  /// and EOS included, 3 to 512) and keeps its audio for `play`. Chunk 0
+  /// and EOS included, 3 to 512) at `speed`, the voice's duration scale
+  /// the app sends, and keeps its audio for `play`. Chunk 0
   /// starts a new reading: the one held is halted, and the reading marker
   /// is written. A later chunk of a reading not held throws `stale`.
   /// Renders run one at a time, off the main actor; one that ends for a
   /// reading no longer held keeps nothing, and a failed one ends the
   /// reading.
-  func render(_ utterance: Int, _ chunk: Int, _ ids: [Int]) async throws -> NaturalRender {
+  func render(_ utterance: Int, _ chunk: Int, _ ids: [Int], _ speed: Double) async throws -> NaturalRender {
     guard loadedRevision != nil, let pack = voicePack else { throw NaturalFailure(message: "not loaded") }
     guard ids.count >= 3, ids.count <= KokoroAneConstants.maxInputTokens else {
       throw NaturalFailure(message: "ids \(ids.count) outside 3...\(KokoroAneConstants.maxInputTokens)")
@@ -355,7 +356,7 @@ struct NaturalFailure: LocalizedError {
       let clock = ContinuousClock()
       let began = clock.now
       let result = try await KokoroAneSynthesizer.synthesize(
-        inputIds: input, styleS: style.styleS, styleTimbre: style.styleTimbre, store: store)
+        inputIds: input, styleS: style.styleS, styleTimbre: style.styleTimbre, speed: Float(speed), store: store)
       guard result.samples.allSatisfy({ $0.isFinite }) else {
         throw KokoroAneError.nonFiniteModelOutput(stage: KokoroAneStage.tail.rawValue, output: "audio")
       }
@@ -371,7 +372,7 @@ struct NaturalFailure: LocalizedError {
       NSLog(
         "%@",
         "[natural] render utterance=\(utterance) chunk=\(chunk) ids=\(ids.count) frames=\(total) "
-          + "samples=\(result.samples.count) ms=\(Int(millis.rounded()))")
+          + "samples=\(result.samples.count) ms=\(Int(millis.rounded())) speed=\(speed)")
       if held === reading { reading.rendered[chunk] = (result.samples, total) }
       return NaturalRender(frames: frames, samples: result.samples.count, millis: millis)
     } catch {

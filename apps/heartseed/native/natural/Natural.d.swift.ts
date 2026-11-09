@@ -21,7 +21,7 @@ export declare const Natural: {
   cancelInstall(): Promise<void>
   remove(): Promise<void>
   load(revision: string, files: NaturalFile[], voice: string): Promise<number>
-  render(utterance: number, chunk: number, ids: number[]): Promise<NaturalRender>
+  render(utterance: number, chunk: number, ids: number[], speed: number): Promise<NaturalRender>
   play(utterance: number, chunk: number, starts: NaturalStart[], last: boolean): Promise<void>
   pause(): Promise<void>
   resume(): Promise<void>

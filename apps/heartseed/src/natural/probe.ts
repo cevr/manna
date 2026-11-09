@@ -10,7 +10,7 @@ import { Effect, Layer, Match, Option } from 'effect';
 
 import { VoiceSource, type VoiceView } from '../voice';
 import type { Lexicon } from './lexicon';
-import { FILES, REVISION, VOICES, type NaturalVoice } from './manifest';
+import { FILES, REVISION, SPEEDS, VOICES, type NaturalVoice } from './manifest';
 import {
   NaturalModule,
   NaturalUnavailable,
@@ -184,30 +184,36 @@ export const soakCounted = (tally: SoakTally, outcome: SoakOutcome): SoakTally =
 };
 
 /** Renders one chunk; a render whose frames do not fit its chunk or its samples fails with `frames`. */
-const soakChunk = (utterance: number, chunk: Chunk, index: number) =>
+const soakChunk = (utterance: number, chunk: Chunk, index: number, speed: number) =>
   Effect.gen(function* () {
     const module = yield* NaturalModule;
-    const rendered = yield* module.render(utterance, index, chunk.ids);
+    const rendered = yield* module.render(utterance, index, chunk.ids, speed);
     if (framesHold(rendered) && Option.isSome(startsOf(chunk, rendered.frames))) return;
     return yield* NaturalUnavailable.make({ reason: 'frames' });
   });
 
 /**
  * Soaks one verse: plans it, renders every chunk through the module in
- * order (no play), and stops the module after it, whatever the outcome.
+ * order at `voice`'s speed (no play), and stops the module after it,
+ * whatever the outcome.
  */
 export const soakVerse = Effect.fn('NaturalProbe.soakVerse')(function* (
   lexicon: Lexicon,
   utterance: number,
   text: string,
+  voice: NaturalVoice,
 ) {
   const module = yield* NaturalModule;
   const outcome = yield* Option.match(planOf(lexicon.words, lexicon.vocab, text), {
     onNone: () => Effect.succeed<SoakOutcome>({ _tag: 'Unplanned' }),
     onSome: (plan) =>
-      Effect.forEach(plan.chunks, (chunk, index) => soakChunk(utterance, chunk, index), {
-        discard: true,
-      }).pipe(
+      Effect.forEach(
+        plan.chunks,
+        (chunk, index) => soakChunk(utterance, chunk, index, SPEEDS[voice]),
+        {
+          discard: true,
+        },
+      ).pipe(
         Effect.map((): SoakOutcome => ({ _tag: 'Rendered' })),
         Effect.catchTag('NaturalUnavailable', (failure) =>
           Effect.succeed<SoakOutcome>({ _tag: 'Failed', reason: failure.reason }),

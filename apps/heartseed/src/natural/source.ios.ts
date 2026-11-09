@@ -98,8 +98,8 @@ export const naturalModule: Layer.Layer<NaturalModule> = Layer.succeed(
     cancelInstall: quiet('cancelInstall', () => Native.cancelInstall()),
     remove: refusable(() => Native.remove()),
     load: (revision, files, voice) => refusable(() => Native.load(revision, filesOf(files), voice)),
-    render: (utterance, chunk, ids) =>
-      refusable(() => Native.render(utterance, chunk, [...ids])).pipe(
+    render: (utterance, chunk, ids, speed) =>
+      refusable(() => Native.render(utterance, chunk, [...ids], speed)).pipe(
         Effect.map(({ frames, samples, millis }) => ({ frames, samples, millis })),
       ),
     play: (utterance, chunk, starts, last) =>

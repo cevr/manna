@@ -22,7 +22,7 @@
  *
  * It catches a source that loads a voice other than the speak's natural
  * voice (a fixed one, the first it was given, the system voice, a name with
- * no `.bin`), reads a name
+ * no `.bin`), renders at a speed other than its voice's, reads a name
  * not in `VOICES` (or reads it as a default), refuses one before its stop,
  * or loads a list other than `FILES`; and one that forwards another utterance's event, keeps a
  * reading past a terminal event or a failure, keeps a listener past its
@@ -109,6 +109,12 @@ const NEAR_MISSES: ReadonlyArray<string> = [
 
 const known = (voice: string) => VOICES.some((each) => each === voice);
 
+/** Each voice's speed as the owner chose it: Her 0.85, Him 0.9. */
+const SPEED = new Map([
+  ['af_heart', 0.85],
+  ['bm_george', 0.9],
+]);
+
 /** A load's file list as one line per file, so a call compares as a string. */
 const listOf = (files: ReadonlyArray<{ path: string; bytes: number; sha256: string }>) =>
   files.map((file) => `${file.path}:${file.bytes}:${file.sha256}`).join('\n');
@@ -133,6 +139,7 @@ type Call =
       readonly u: number;
       readonly k: number;
       readonly ids: ReadonlyArray<number>;
+      readonly speed: number;
     }
   | {
       readonly _tag: 'play';
@@ -173,9 +180,9 @@ const makeModule = () => {
           state.loads.push(done);
           return Deferred.await(done);
         }),
-      render: (u, k, ids) =>
+      render: (u, k, ids, speed) =>
         Effect.suspend(() => {
-          state.calls.push({ _tag: 'render', u, k, ids: [...ids] });
+          state.calls.push({ _tag: 'render', u, k, ids: [...ids], speed });
           const done = Deferred.makeUnsafe<Rendered, NaturalUnavailable>();
           state.renders.push({ ids: [...ids], done });
           return Deferred.await(done);
@@ -235,7 +242,12 @@ class Model {
   loads: Array<number> = [];
   renders: Array<{ readonly u: number; readonly k: number }> = [];
   held:
-    | { readonly u: number; readonly chunks: ReadonlyArray<Chunk>; waiting: 'load' | number }
+    | {
+        readonly u: number;
+        readonly chunks: ReadonlyArray<Chunk>;
+        readonly speed: number;
+        waiting: 'load' | number;
+      }
     | undefined;
   /** The utterance a load, render or play failure last let go of, until the next speak. */
   dropped: number | undefined;
@@ -285,7 +297,7 @@ class Model {
     else this.tally.him++;
     if (this.loadedVoice !== undefined && this.loadedVoice !== voice) this.tally.switches++;
     this.loadedVoice = voice;
-    this.held = { u, chunks: chunks.value, waiting: 'load' };
+    this.held = { u, chunks: chunks.value, speed: SPEED.get(voice) ?? Number.NaN, waiting: 'load' };
     this.calls.push({ _tag: 'load', revision: REVISION, files: PINNED, voice: `${voice}.bin` });
     this.loads.push(u);
   }
@@ -307,6 +319,7 @@ class Model {
       u: this.held.u,
       k,
       ids: [...(this.held.chunks[k]?.ids ?? [])],
+      speed: this.held.speed,
     });
     this.renders.push({ u: this.held.u, k });
   }
