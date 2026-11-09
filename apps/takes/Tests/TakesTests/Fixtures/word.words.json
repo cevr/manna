@@ -1,0 +1,14 @@
+[
+  { "text": "In", "start": 0, "end": 11520 },
+  { "text": "the", "start": 7680, "end": 11520 },
+  { "text": "beginning", "start": 11520, "end": 30720 },
+  { "text": "was", "start": 30720, "end": 38400 },
+  { "text": "the", "start": 38400, "end": 46080 },
+  { "text": "Word,", "start": 46080, "end": 61440 },
+  { "text": "and", "start": 61440, "end": 69120 },
+  { "text": "the", "start": 69120, "end": 76800 },
+  { "text": "Word", "start": 76800, "end": 88320 },
+  { "text": "was", "start": 88320, "end": 96000 },
+  { "text": "with", "start": 96000, "end": 107520 },
+  { "text": "God.", "start": 107520, "end": 126720 }
+]
