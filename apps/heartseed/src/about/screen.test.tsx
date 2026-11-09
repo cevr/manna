@@ -7,20 +7,17 @@
  * inside a scroll view, every text at AA, every field control disabled
  * while a remove is pending, `Listening` only on Today).
  *
- * The launch opens home: the field's foot holds one `About` button
- * outside every scroll view, at least 44 tall; its tap shows the one
- * heading `About`, the credits word for word, the licence equal to
- * `native/natural/kokoro/LICENSE` byte for byte, one `Your field` button
- * outside the scroll view and no `Voice`, each text at AA; the way back
- * shows the field, and a relaunch opens home again; nothing is written. Its foot,
- * outside every scroll view, holds the radio group `Appearance`: System,
- * Light and Dark, each at least 44 tall, the stored word checked (System
- * for a near miss), each text at AA; a tap stores its word under the
- * appearance's key alone, and nothing is written with no tap. While a
- * remove is pending, `About` is disabled and a tap of it in the same turn
- * takes the reader nowhere. A recital that starts while About shows brings
- * Today back. The bundle's module serves the licence as `vite/licence.ts`
- * prints it.
+ * The launch opens home: its Settings sheet (`src/test/settings-rig.ts`,
+ * whose `watchSheet` holds the sheet's frames) holds one `About` button,
+ * at least 44 tall; its tap shows the one heading `About`, the credits
+ * word for word, the licence equal to `native/natural/kokoro/LICENSE` byte
+ * for byte, one `Your field` button outside the scroll view and no
+ * `Voice`, each text at AA; the way back shows the field, and a relaunch
+ * opens home again; nothing is written. About holds no appearance and no
+ * foot, its one control the way back, and home's foot holds no `About`
+ * (the sheet's appearance is `src/settings`'s). A recital that starts
+ * while About shows brings Today back. The bundle's module serves the
+ * licence as `vite/licence.ts` prints it.
  */
 
 import { useAtomSet } from '@effect/atom-react';
@@ -33,14 +30,13 @@ import passage from 'virtual:heartseed-passage';
 import { readLicence } from '../../vite/licence';
 import { passage as plugin } from '../../vite/plugin';
 import { press } from '../app';
-import { APPEARANCE_KEY } from '../appearance';
 import { mountBar } from '../test/bar-rig';
 import { labelOf, text } from '../test/chooser-rig';
 import { AA, contrastOf } from '../test/contrast';
 import { recallOf } from '../test/field-model';
 import { record, scrolled } from '../test/field-rig';
 import { device } from '../test/one';
-import { KEY, storedText } from '../test/passages-model';
+import { modalOf, openSettings, sheetControl, tapInSheet, watchSheet } from '../test/settings-rig';
 import { CREDITS } from './screen';
 
 /** The credits as the owner wrote them, held here so that a changed or dropped sentence on the screen fails. */
@@ -85,33 +81,41 @@ const launchWith = (extra: readonly (readonly [string, string])[] = []) =>
     ...extra,
   ]);
 
-/** Waits for the launch's home, its foot drawn. */
+/** Waits for the launch's home, its gear drawn. */
 const toField = async (rig: Bar) => {
   expect(
     await rig.until(
-      () => headings(rig).join('|') === 'Your field' && named(rig, 'About').length > 0,
+      () => headings(rig).join('|') === 'Your field' && named(rig, 'Settings').length > 0,
     ),
   ).toBe(true);
 };
 
+/** Taps the open sheet's `About` and waits for About. */
+const toAbout = async (rig: Bar) => {
+  expect(await tapInSheet('About')).toBe(true);
+  expect(await rig.until(() => headings(rig).join('|') === 'About')).toBe(true);
+};
+
 describe('About', () => {
-  it('opens from the field’s foot: the credits word for word, the licence whole, the way back, a relaunch on home, nothing written', async () => {
+  it('opens from the Settings sheet’s About: the credits word for word, the licence whole, the way back, a relaunch on home, nothing written', async () => {
     launchWith();
     const start = new Map(device.disk);
+    const sheet = watchSheet();
     const rig = await mountBar(0, false);
     await toField(rig);
+    await openSettings(rig);
     expect(
-      named(rig, 'About').map((node) => ({
-        role: node.getAttribute('role'),
-        scrolled: scrolled(node),
-        tall: parseFloat(getComputedStyle(node).minHeight) >= 44,
-        words: text(node),
-        disabled: node.getAttribute('aria-disabled'),
-      })),
-    ).toEqual([{ role: 'button', scrolled: false, tall: true, words: 'About', disabled: null }]);
+      [sheetControl('About')]
+        .filter((node) => node !== undefined)
+        .map((node) => ({
+          role: node.getAttribute('role'),
+          tall: parseFloat(getComputedStyle(node).minHeight) >= 44,
+          words: text(node),
+          disabled: node.getAttribute('aria-disabled'),
+        })),
+    ).toEqual([{ role: 'button', tall: true, words: 'About', disabled: null }]);
 
-    await rig.tap('About');
-    expect(await rig.until(() => headings(rig).join('|') === 'About')).toBe(true);
+    await toAbout(rig);
     const credits = [...rig.host.querySelectorAll('[data-testid="about-credits"]')];
     const licences = [...rig.host.querySelectorAll('[data-testid="about-licence"]')];
     expect({
@@ -139,10 +143,11 @@ describe('About', () => {
     });
 
     await rig.tap('Your field');
-    expect(await rig.until(() => headings(rig).join('|') === 'Your field')).toBe(true);
-    await rig.tap('About');
-    expect(await rig.until(() => headings(rig).join('|') === 'About')).toBe(true);
-    expect(rig.faults).toEqual([]);
+    await toField(rig);
+    await openSettings(rig);
+    await toAbout(rig);
+    sheet.stop();
+    expect({ rig: rig.faults, sheet: sheet.faults }).toEqual({ rig: [], sheet: [] });
     await rig.leave();
 
     device.launch();
@@ -156,97 +161,28 @@ describe('About', () => {
     expect(new Map(device.disk)).toEqual(start);
   });
 
-  it('is disabled while a remove is pending, and a tap of it in the same turn takes the reader nowhere', async () => {
-    launchWith([[KEY, storedText([{ book: 19, chapter: 23, first: 1, last: 2 }])]]);
-    const seen = { pending: 0, aboutDisabled: 0 };
-    const rig = await mountBar(0, false);
-    const watch = new MutationObserver(() => {
-      const confirm = named(rig, 'Remove')[0];
-      if (confirm?.getAttribute('aria-disabled') !== 'true') return;
-      seen.pending += 1;
-      if (named(rig, 'About')[0]?.getAttribute('aria-disabled') === 'true') seen.aboutDisabled += 1;
-    });
-    watch.observe(rig.host, { subtree: true, childList: true, attributes: true });
-    await toField(rig);
-    const rowRemove = [...rig.host.querySelectorAll('[data-testid="row"] [role="button"]')]
-      .map(labelOf)
-      .find((label) => label.startsWith('Remove '));
-    expect(rowRemove).toStartWith('Remove ');
-    expect(await rig.tap(rowRemove ?? '')).toBe(true);
-    expect(await rig.until(() => named(rig, 'Remove').length === 1)).toBe(true);
-    expect(await rig.tapBoth('Remove', 'About')).toBe(true);
-    expect(await rig.until(() => named(rig, 'Remove').length === 0)).toBe(true);
-    watch.disconnect();
-    expect({
-      headings: headings(rig),
-      about: named(rig, 'About').map((node) => node.getAttribute('aria-disabled')),
-      seen: seen.pending > 0 && seen.aboutDisabled === seen.pending,
-      faults: rig.faults,
-    }).toEqual({ headings: ['Your field'], about: [null], seen: true, faults: [] });
-    await rig.leave();
-  });
-
-  it('holds the reader’s appearance in a foot outside every scroll view: System, Light, Dark, each 44 tall, the stored one checked, at AA, written only at a tap', async () => {
-    const seen: unknown[] = [];
-    for (const stored of [[], [[APPEARANCE_KEY, 'light']], [[APPEARANCE_KEY, 'Dark']]] as const) {
-      launchWith(stored);
-      const start = new Map(device.disk);
-      const rig = await mountBar(0, false);
-      await toField(rig);
-      await rig.tap('About');
-      expect(await rig.until(() => headings(rig).join('|') === 'About')).toBe(true);
-      const groups = [...rig.host.querySelectorAll('[role="radiogroup"]')];
-      seen.push({
-        stored,
-        groups: groups.map((group) => ({
-          name: labelOf(group),
-          scrolled: scrolled(group),
-          radios: [...group.querySelectorAll('[role="radio"]')].map((node) => ({
-            words: text(node),
-            label: labelOf(node),
-            checked: node.getAttribute('aria-checked'),
-            tall: parseFloat(getComputedStyle(node).minHeight) >= 44,
-          })),
-        })),
-        faint: faint(rig.host),
-        written: JSON.stringify([...device.disk]) !== JSON.stringify([...start]),
-      });
-      await rig.leave();
-    }
-    const radio = (words: string, checked: boolean) => ({
-      words,
-      label: words,
-      checked: String(checked),
-      tall: true,
-    });
-    const group = (checked: string) => [
-      {
-        name: 'Appearance',
-        scrolled: false,
-        radios: ['System', 'Light', 'Dark'].map((words) => radio(words, words === checked)),
-      },
-    ];
-    expect(seen).toEqual([
-      { stored: [], groups: group('System'), faint: [], written: false },
-      { stored: [[APPEARANCE_KEY, 'light']], groups: group('Light'), faint: [], written: false },
-      { stored: [[APPEARANCE_KEY, 'Dark']], groups: group('System'), faint: [], written: false },
-    ]);
-  });
-
-  it('stores the word a tap of a radio names, and only that key', async () => {
+  it('holds no appearance and no foot of its own, home’s foot holds no About, and only the way back is a control', async () => {
     launchWith();
-    const start = new Map(device.disk);
     const rig = await mountBar(0, false);
     await toField(rig);
-    await rig.tap('About');
-    expect(await rig.until(() => headings(rig).join('|') === 'About')).toBe(true);
-    await rig.tap('Dark');
-    expect(
-      await rig.until(() => named(rig, 'Dark')[0]?.getAttribute('aria-checked') === 'true'),
-    ).toBe(true);
-    const changed = [...device.disk].filter(([key, value]) => start.get(key) !== value);
-    expect({ changed, faults: rig.faults }).toEqual({
-      changed: [[APPEARANCE_KEY, 'dark']],
+    const foot = [...rig.host.querySelectorAll('[data-testid="foot"]')].map((node) =>
+      [...node.querySelectorAll(CONTROL)].map(labelOf),
+    );
+    await openSettings(rig);
+    await toAbout(rig);
+    expect({
+      foot,
+      groups: [...document.querySelectorAll('[role="radiogroup"]')].map(labelOf),
+      aboutFoot: document.querySelectorAll('[data-testid="about-foot"]').length,
+      controls: [...rig.host.querySelectorAll(CONTROL)].map(labelOf),
+      modal: modalOf(),
+      faults: rig.faults,
+    }).toEqual({
+      foot: [['Begin']],
+      groups: [],
+      aboutFoot: 0,
+      controls: ['Your field'],
+      modal: null,
       faults: [],
     });
     await rig.leave();
@@ -261,8 +197,8 @@ describe('About', () => {
     }
     const rig = await mountBar(0, false, <CatchPress />);
     await toField(rig);
-    await rig.tap('About');
-    expect(await rig.until(() => headings(rig).join('|') === 'About')).toBe(true);
+    await openSettings(rig);
+    await toAbout(rig);
     await act(async () => presser.press({ piece: passage, item: Option.none() }));
     expect(await rig.until(() => headings(rig).includes('Today'))).toBe(true);
     expect({ headings: headings(rig), faults: rig.faults }).toEqual({

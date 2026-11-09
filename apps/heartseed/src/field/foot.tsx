@@ -1,6 +1,6 @@
 /**
  * The field's foot, fixed under the scroll view and clear of the home
- * indicator: one card, then `About`. With no verse chosen it is the Begin
+ * indicator: one card, or nothing. With no verse chosen it is the Begin
  * card (the session's counts line and, while the run shows an item,
  * `Begin`), once a plan is made, or `Begin` alone when the run shows a verse
  * with no plan (the reader's passages unread, so none is made); with a verse
@@ -34,7 +34,7 @@ export interface Chosen {
   readonly startable: boolean;
 }
 
-/** The foot's one card, then `About`; every control disabled while a remove is pending. */
+/** The foot's one card, or nothing when none shows; every control disabled while a remove is pending. */
 export function Foot({
   chosen,
   counts,
@@ -42,7 +42,6 @@ export function Foot({
   pending,
   onBegin,
   onStart,
-  onAbout,
 }: {
   readonly chosen: Option.Option<Chosen>;
   readonly counts: Option.Option<string>;
@@ -50,7 +49,6 @@ export function Foot({
   readonly pending: boolean;
   readonly onBegin: () => void;
   readonly onStart: (reference: string) => void;
-  readonly onAbout: () => void;
 }) {
   const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
@@ -88,7 +86,6 @@ export function Foot({
             </View>
           ),
       })}
-      <Control label="About" shown="About" pending={pending} onPress={onAbout} />
     </View>
   );
 }

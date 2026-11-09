@@ -1,22 +1,18 @@
 /**
  * About as the reader meets it: the root's fourth screen, opened from the
- * field's `About`. A bar fixed above the scroll view holds the one way back,
- * `‹ Your field`, so it is on screen without a scroll; the scroll view
- * holds the one heading, the natural voice's credits (`CREDITS`) and the
- * Apache License 2.0 its vendored code carries, whole, as the bundle reads
- * it (`virtual:heartseed-licence`, never a copy here). Every text is the
- * scheme's ink, so each reads at WCAG AA contrast on the ground. A foot
- * fixed under the scroll view holds the reader's appearance
- * (`AppearanceChoice`: System, Light, Dark), so it is on screen without a
- * scroll and clear of the home indicator; About writes the store only at a
- * tap of one of its radios.
+ * Settings sheet's `About` on home. A bar fixed above the scroll view holds
+ * the one way back, `‹ Your field`, so it is on screen without a scroll;
+ * the scroll view holds the one heading, the natural voice's credits
+ * (`CREDITS`) and the Apache License 2.0 its vendored code carries, whole,
+ * as the bundle reads it (`virtual:heartseed-licence`, never a copy here).
+ * Every text is the scheme's ink, so each reads at WCAG AA contrast on the
+ * ground. About writes nothing.
  */
 
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'one';
 import licence from 'virtual:heartseed-licence';
 
-import { AppearanceChoice } from '../appearance/choice';
 import { themed, useThemed } from '../look';
 import { useLook } from '../sayit/draw';
 
@@ -44,7 +40,11 @@ export function AboutScreen({ onField }: { readonly onField: () => void }) {
       </View>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[look.content, styles.content, { paddingTop: 8, paddingBottom: 32 }]}
+        contentContainerStyle={[
+          look.content,
+          styles.content,
+          { paddingTop: 8, paddingBottom: insets.bottom + 32 },
+        ]}
       >
         <Text role="heading" aria-level={1} style={look.title}>
           About
@@ -56,10 +56,6 @@ export function AboutScreen({ onField }: { readonly onField: () => void }) {
           {licence}
         </Text>
       </ScrollView>
-      <View testID="about-foot" style={[styles.foot, { paddingBottom: insets.bottom + 12 }]}>
-        <Text style={styles.footLabel}>Appearance</Text>
-        <AppearanceChoice />
-      </View>
     </View>
   );
 }
@@ -73,7 +69,5 @@ const sheets = themed((color, face) =>
     backText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
     credits: { fontFamily: face, fontSize: 15, lineHeight: 22, color: color.ink },
     licence: { fontFamily: face, fontSize: 13, lineHeight: 19, color: color.ink },
-    foot: { paddingHorizontal: 24, paddingTop: 12, gap: 8 },
-    footLabel: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
   }),
 );

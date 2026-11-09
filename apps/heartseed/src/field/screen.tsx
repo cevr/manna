@@ -11,13 +11,14 @@
  * per row (`./plot`), the dashed `Add verses` row whenever the bar offers
  * it, and the legend under Mark 4:28. A foot fixed under the scroll view
  * (`./foot`) holds the Begin card or, with a verse chosen, the chosen card
- * with `Start here`, then `About`. So every control but the plants, a
- * furrow's `Remove` and the row is on screen without a scroll.
+ * with `Start here`. So every control but the plants, a furrow's `Remove`
+ * and the row is on screen without a scroll.
  *
  * A tap on a plant chooses its verse, a tap on a plant of the chosen verse
  * lets it go, and a tap on another moves the choice: one verse at most, the
  * screen's own state, as are the ask, the alert and whether the sheet is
- * open, all dropped when the reader leaves. The sheet's `About` shows About. With the passages unread it offers no add and no remove.
+ * open, all dropped when the reader leaves. The sheet's `About` shows
+ * About. With the passages unread it offers no add and no remove.
  * From a tap of the ask's `Remove` until its answer, no tap of a field
  * control changes anything, even two in one turn, and each shows as
  * disabled.
@@ -138,8 +139,8 @@ const chosenIn = (
  * line `counts` (none before a plan), `Begin` when `begin`, and `Start here`
  * on a chosen verse `startable` offers, and `When I need…` when `need`.
  * `onToday` is `Begin`'s way to Today, `onStart` Start here's, `onNeed` the
- * way to When I need…, `onAdd` the way to the chooser and `onAbout` the way
- * to About.
+ * way to When I need…, `onAdd` the way to the chooser and `onAbout` the
+ * sheet's way to About.
  */
 export function FieldScreen({
   field,
@@ -302,7 +303,6 @@ export function FieldScreen({
         pending={bar.pending}
         onBegin={() => tapped(onToday)}
         onStart={(reference) => tapped(() => onStart(reference))}
-        onAbout={() => tapped(onAbout)}
       />
       {settings && <SettingsSheet onDone={() => setSettings(false)} onAbout={onAbout} />}
     </View>

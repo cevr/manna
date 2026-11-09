@@ -128,7 +128,7 @@ for (const scheme of SCHEMES)
           legendPlace: 'scroll',
           caption: 'Mark 4:28',
         },
-        foot: { cards: ['foot:Nothing to tend now'], controls: ['About'] },
+        foot: { cards: ['foot:Nothing to tend now'], controls: [] },
       });
       expect(by(host, 'dot')).toEqual([]);
 

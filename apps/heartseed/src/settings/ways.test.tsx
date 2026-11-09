@@ -10,7 +10,8 @@
  * While a remove is pending the gear is disabled in every frame, and a tap
  * of it in the remove's turn opens nothing; a remove that does not land
  * leaves its alert, which the gear's tap clears as it opens the sheet. The
- * sheet's `About` shows About, and no later frame shows the sheet; About's
+ * sheet's `About` shows About, with no appearance and no foot of its own,
+ * and no later frame shows the sheet; About's
  * way back shows home with the sheet closed, and a relaunch opens home.
  * `Done` and Escape each close it with the chosen plant kept and nothing
  * written. A recital that starts while it is open brings Today, and no
@@ -133,6 +134,10 @@ describe('Settings, its ways', () => {
     await openSettings(rig);
     expect(await tapInSheet('About')).toBe(true);
     expect(await rig.until(() => headings(rig).join('|') === 'About')).toBe(true);
+    expect({
+      groups: document.querySelectorAll('[role="radiogroup"]').length,
+      aboutFoot: document.querySelectorAll('[data-testid="about-foot"]').length,
+    }).toEqual({ groups: 0, aboutFoot: 0 });
     const open = sheet.frames.open;
     expect(await rig.tap('Your field')).toBe(true);
     expect(await rig.until(() => headings(rig).join('|') === 'Your field')).toBe(true);

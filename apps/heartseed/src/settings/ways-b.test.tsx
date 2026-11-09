@@ -84,7 +84,10 @@ describe('Settings, more ways', () => {
     await visit(() => rig.tap('Begin'), 'Today');
     await visit(() => rig.tap('When I need…'), 'When I need…');
     await visit(() => rig.tapId('add-verses'), 'Add a passage');
-    await visit(() => rig.tap('About'), 'About');
+    await visit(async () => {
+      await openSettings(rig);
+      return tapInSheet('About');
+    }, 'About');
     await toField(rig);
     expect({ seen, faults: rig.faults }).toEqual({
       seen: { Today: 0, 'When I need…': 0, 'Add a passage': 0, About: 0 },

@@ -4,7 +4,8 @@
  * The walks `src/look/screens.test.tsx` (light) and
  * `src/look/screens-dark.test.tsx` (dark) run, one scheme each, so each
  * part stays inside its time budget: the field (the launch's home), Today
- * by `Begin` and home again by `Your field`, About, the chooser and
+ * by `Begin` and home again by `Your field`, About (by home's `Settings`
+ * and the sheet's `About`, the sheet's frames held to `sheetFaults`), the chooser and
  * When I need… in the scheme, and across a flip of the system on each,
  * through the bar rig and the need rig, which hold every frame (each DOM
  * mutation batch) to the frame oracle (`look.ts`) for the system's scheme
@@ -23,6 +24,7 @@ import { lookFaults, pressedFaults, setSystem } from './look';
 import { launchNeed, needDevice, recordOf } from './need-rig';
 import { device } from './one';
 import { KEY, storedText } from './passages-model';
+import { openSettings, tapInSheet, watchSheet } from './settings-rig';
 
 const NOW = Date.UTC(2026, 4, 12, 15);
 const NEED = 'When I need…';
@@ -113,7 +115,14 @@ export const walkFieldScreens = async (scheme: Scheme) => {
   await step('Remove', 'Your field', 'a remove landed');
   watch.disconnect();
   if (pending.frames > 0) reached.push('a remove pending');
-  await step('About', 'About', 'About');
+  const sheet = watchSheet(() => scheme);
+  await step('About', 'About', 'About', async () => {
+    await openSettings(rig);
+    return tapInSheet('About');
+  });
+  sheet.stop();
+  if (sheet.frames.open === 0) report.push('About reached with no sheet open');
+  if (sheet.faults.length > 0) report.push(`sheet: ${sheet.faults.join(' | ')}`);
   await step('Your field', 'Your field', 'the field again');
   await step('Add verses', 'Add a passage', 'the books', () => rig.tapId('add-verses'));
   await step('Psalms', 'Psalms', 'a book');

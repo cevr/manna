@@ -11,7 +11,7 @@
  * another text, a missing key, and for the voice the old switch alone),
  * half under each system. Home holds one gear in its bar's first row, after `When I need…`
  * and before `Add verses`, drawn with the hidden `gear` icon alone, at
- * least 44 × 44. Its tap opens the sheet: the heading `Settings`, `Done`
+ * least 44 × 44, and home's foot holds no `About`. Its tap opens the sheet: the heading `Settings`, `Done`
  * outside the scroll view, then each line over its choice (the minutes
  * read, the voice read, the appearance read) and `About`; the sheet holds
  * its look after a flip of the system, `Done` closes it, and nothing is
@@ -194,7 +194,14 @@ describe('Settings', () => {
             barOf(rig.host).includes('Add verses'),
         ),
       ).toBe(true);
-      expect({ bar: barOf(rig.host), gear: gearOf(rig.host) }).toEqual({
+      expect({
+        bar: barOf(rig.host),
+        gear: gearOf(rig.host),
+        footAbout: [...rig.host.querySelectorAll('[data-testid="foot"] [role="button"]')]
+          .map(labelOf)
+          .filter((label) => label === 'About'),
+      }).toEqual({
+        footAbout: [],
         bar: ['When I need…', 'Settings', 'Add verses'],
         gear: [
           {

@@ -1,5 +1,5 @@
 /**
- * The reader's appearance as About offers it: a radio group named
+ * The reader's appearance as Settings offers it: a radio group named
  * `Appearance` holding System, Light and Dark in that order, each at least
  * 44 pt tall, the chosen one checked and filled in ink, its word in
  * `onInk`, the others on `card` in ink. A tap shows its scheme at once and
