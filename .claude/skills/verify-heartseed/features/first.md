@@ -9,7 +9,11 @@ one promise in three phases, then the seed:
    (only while the voice's choice is not Off and it is not reading) has the voice
    (`apps/heartseed/src/voice.ts`) read the passage once (a second tap
    before the frame that hides `Listen` reads nothing more); the words already
-   spoken are in ink and the voice's current word is `selected`. A reading
+   spoken are in ink and the voice's current word is `selected`. While it
+   reads, the word nodes sit in the reading view (`id=reading`, as Today's,
+   `light.md`): a long press on the words pauses the reading, a drag holds
+   the word under the finger, and the release reads on from it; each word
+   offers VoiceOver `Read from here`. A reading
    that ends finished goes on by itself; one that does not offers `Listen`
    again. `Next` goes on at any time, stopping a reading under way. Nothing
    speaks without a tap.
@@ -40,9 +44,14 @@ word 11 and the seed is graded Hard.
 - `first-launch`: a fresh install opens `Hear it`, with `Isaiah 41:10`,
   `Listen` and `Next`, the word nodes, and no `Today`, no `Stage:` label
   and no `Say it`.
-- `first-hear`: `Listen` reads: one or two words `selected`, all of one
-  run, moving forward between two snapshots, and no `Listen` while it
-  reads; its finish moves to `Say it with help` by itself.
+- `first-hear`: `Listen` reads: `id=reading` holding the word nodes, one
+  or two words `selected`, all of one run, moving forward between two
+  snapshots, and no `Listen` while it reads; its finish moves to
+  `Say it with help` by itself.
+- `first-hear-seek` (**phone only**, the owner's hand): while hear reads,
+  hold a word: the voice pauses with one tick; drag back a line, the page
+  still; let go: the reading plays on from that word. A quick swipe
+  scrolls, with no seek. The simulator's driver has no long-press drag.
 - `first-letters`: `Say it with help` and `Say it`, every word node's
   label one character; its recital goes on to `Say it alone`.
 - `first-alone`: `Say it alone` and `Say it`, no word label at all, no
@@ -88,7 +97,7 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
 3. `first-hear`: `sim tap "label=Listen"`, then at once two raw snapshots
    about 1 s apart (`agent-device snapshot --json --raw --observe-only
    --force-full --session verify-heartseed`, in the drive's HOME) → in each,
-   one or two `word-<i>` nodes `selected`, all of one run; the second's
+   `id=reading` and one or two `word-<i>` nodes `selected`, all of one run; the second's
    first index greater than the first's; no `Listen`. Then `sim tap
    "label=Say it with help" --timeout 30` (a tap on a heading does
    nothing; it waits for the reading's end). Keep only indexes and

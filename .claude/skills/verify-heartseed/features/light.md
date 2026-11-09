@@ -16,6 +16,11 @@ held. Letting go reads on from the held word as a new utterance
 swipe scrolls and never holds. Under VoiceOver each word offers the action
 `Read from here`, which reads on from it.
 
+Today and the first minute's `Hear it` (`first.md`) both show it: Today
+for the shown piece while its `Listen` reads, `Hear it` for the passage
+while its `Listen` reads. A hold does nothing at rest, where no reading
+view shows.
+
 The simulator's driver has no long-press drag, so the light probe
 (`apps/heartseed/app/probe/light.tsx`, `heartseed://probe/light`) seeks by
 buttons: John 3:16 in a scroll view taller than the screen, drawn by the
