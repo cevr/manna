@@ -153,6 +153,7 @@
     "test:natural": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' --path-ignore-patterns=src/natural/voice.test.ts --path-ignore-patterns=src/natural/route.test.ts --path-ignore-patterns=src/natural/status.test.tsx ./src/natural",
     "test:natural-voice": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/natural/voice.test.ts",
     "test:route": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/natural/route.test.ts",
+    "test:status": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/natural/status.test.tsx",
     "test:theme": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/theme.test.ts",
     "test:look": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/look.test.tsx",
     "test:appearance": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/appearance.property.test.ts",

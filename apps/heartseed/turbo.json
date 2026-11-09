@@ -3544,6 +3544,30 @@
         "!infra/**/*.test.*"
       ]
     },
+    "test:status": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
+        "!src/matcher/**/*.test.*",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,zone,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,about}/**/*.test.*",
+        "!src/natural/{data,guard,lexicon,manifest,plan.property,probe,route,state,voice}.test.*",
+        "!src/{promises,need,reading}/**/*.test.*",
+        "!src/phrase.property.test.*",
+        "!src/phrase/**/*.test.*",
+        "!src/handbook/**/*.test.*",
+        "!src/{lists.property,home.property,shelves.property}.test.*",
+        "!src/home/**/*.test.*",
+        "!src/settings/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
     "test:rest": {
       "dependsOn": ["^transit"],
       "outputs": [],
@@ -3786,6 +3810,7 @@
         "test:natural",
         "test:natural-voice",
         "test:route",
+        "test:status",
         "test:theme",
         "test:look",
         "test:appearance",

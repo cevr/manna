@@ -4,7 +4,8 @@
  * them only under the rigs' `ChoicesOnToday`): the radio group `Minutes` (`MinutesChoice`),
  * shown once the stored choice is read so its first frame shows the value
  * read, and the voice's pill (`VoiceChoice`), shown once its choice is
- * read. Each control is at least 44 pt tall and
+ * read, with the natural voice's status line under it and its `Try again`
+ * after a failure. Each control is at least 44 pt tall and
  * filled in ink when on. A tap goes through `chooseMinutes` or
  * `cycleVoice`, so the choice shows at once and is stored.
  */
@@ -15,8 +16,16 @@ import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import { createContext, use, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { chooseMinutes, cycleVoice, sessionView, voiceView } from '../app';
+import {
+  chooseMinutes,
+  cycleVoice,
+  naturalView,
+  retryNatural,
+  sessionView,
+  voiceView,
+} from '../app';
 import { themed, useThemed } from '../look';
+import { lineOf } from '../natural/state';
 import { useLook } from '../sayit/draw';
 import { MINUTES } from '../session';
 
@@ -120,7 +129,41 @@ export function MinutesChoice({ line }: { readonly line?: string }) {
   });
 }
 
-/** The voice's pill over the voice's choice, under `line` when given; nothing until the choice is read. */
+/**
+ * The natural voice's status line, under the Voice pill: the line `lineOf`
+ * gives the natural voice's view (none while the voice is Off, ready, idle
+ * or unsupported), and beside the words, never inside them, a `Try again`
+ * button after a failed download or load. It stays while Say it listens, as
+ * the pill does.
+ */
+function NaturalLine() {
+  const look = useLook();
+  const styles = useThemed(sheets);
+  const line = Option.flatMap(AsyncResult.value(useAtomValue(naturalView)), lineOf);
+  const onRetry = useAtomSet(retryNatural);
+  return Option.match(line, {
+    onNone: () => false,
+    onSome: ({ text, retry }) => (
+      <View style={styles.natural}>
+        <Text testID="natural-status" style={styles.naturalText}>
+          {text}
+        </Text>
+        {retry && (
+          <Pressable
+            role="button"
+            aria-label="Try again"
+            onPress={() => onRetry()}
+            style={({ pressed }) => [styles.retry, pressed && look.pressed]}
+          >
+            <Text style={styles.word}>Try again</Text>
+          </Pressable>
+        )}
+      </View>
+    ),
+  });
+}
+
+/** The voice's pill over the voice's choice, and under it the natural voice's status line, under `line` when given; nothing until the choice is read. */
 export function VoiceChoice({ line }: { readonly line?: string }) {
   const voice = AsyncResult.value(useAtomValue(voiceView));
   const onVoice = useAtomSet(cycleVoice);
@@ -129,6 +172,7 @@ export function VoiceChoice({ line }: { readonly line?: string }) {
     onSome: ({ choice }) => (
       <Lined line={Option.fromUndefinedOr(line)}>
         <VoicePill choice={choice} onPress={() => onVoice()} />
+        <NaturalLine />
       </Lined>
     ),
   });
@@ -171,5 +215,15 @@ const sheets = themed((color, face) =>
     chosen: { backgroundColor: color.ink },
     word: { fontFamily: face, fontSize: 15, fontWeight: '600', color: color.ink },
     chosenWord: { color: color.onInk },
+    natural: { gap: 8, alignItems: 'flex-start' },
+    naturalText: { fontFamily: face, fontSize: 15, lineHeight: 21, color: color.ink },
+    retry: {
+      minHeight: 44,
+      paddingHorizontal: 18,
+      borderRadius: 22,
+      borderWidth: 1.5,
+      borderColor: color.ink,
+      justifyContent: 'center',
+    },
   }),
 );

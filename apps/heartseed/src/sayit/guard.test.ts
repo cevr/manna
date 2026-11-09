@@ -16,10 +16,11 @@
  *   name no speech synthesis or announcement. Today holds Listen alone
  *   (`voiceView`, `listenTo` and `readingAloud` from `src/app.ts`) and
  *   reads aloud only through `listenTo`; the voice's pill
- *   (`src/settings/choices.tsx`) alone takes `cycleVoice`. The first
+ *   (`src/settings/choices.tsx`) alone takes `cycleVoice` and the natural
+ *   voice's line (`naturalView`, `retryNatural`). The first
  *   minute's hear phase and Today's Listen are the voice's two readers,
  *   beside the light probe (`app/probe/light.tsx`), a development probe.
- *   Only `src/app.ts` and the natural voice's
+ *   Only the natural voice's router (`src/natural/route.ts`) and its
  *   development probe (`app/probe/natural.tsx`) build the voice.
  * - Today's hold on the words of a reading under way grows its voice atoms
  *   by `seekTo`, `holdReading` and `letGo`, which come only from
@@ -133,7 +134,9 @@ describe('the source a build hears', () => {
     const dev = text.indexOf('const dev = ');
     expect(devReads.length).toBe(2);
     expect(devReads.every((at) => at > dev && at < text.indexOf(';', dev))).toBe(true);
-    expect(code(path)).not.toMatch(/process\.env|import\.meta\.env|\bdev\s*:/);
+    expect(code(path)).not.toMatch(/process\.env|import\.meta\.env/);
+    expect(code(path).match(/\bdev\s*:[^,\n]*/g)).toEqual(['dev: parts.dev ?? false']);
+    expect(code(path)).toMatch(/natural: naturalModule,\s*dev,/);
   });
 
   it('calls replaySource only where the kind is the replay, with the simulator plan', () => {
@@ -202,7 +205,8 @@ describe('Say it aloud', () => {
       .filter(({ from }) => /(^|\/)app$/.test(from))
       .flatMap(({ names }) =>
         names.filter(
-          (name) => /voice|Voice|listen|hush|read|Read/.test(name) && !HOLD.includes(name),
+          (name) =>
+            /voice|Voice|listen|hush|read|Read|natural|Natural/.test(name) && !HOLD.includes(name),
         ),
       );
     expect(taken.toSorted()).toEqual(['listenTo', 'readingAloud', 'voiceView']);
@@ -211,7 +215,7 @@ describe('Say it aloud', () => {
     expect(code('app/index.tsx')).toContain('useAtomSet(listenTo)');
   });
 
-  it('leaves reading aloud to the first minute’s hear phase, Today’s Listen and the light probe: only src/first takes the hear phase’s reading atoms from src/app.ts, only Today and the light probe take Listen, only the choices take the pill’s cycle, and only src/app.ts, the natural voice’s router and its development probe build the voice', () => {
+  it('leaves reading aloud to the first minute’s hear phase, Today’s Listen and the light probe: only src/first takes the hear phase’s reading atoms from src/app.ts, only Today and the light probe take Listen, only the choices take the pill’s cycle and the natural voice’s line, and only the natural voice’s router and its development probe build the voice', () => {
     const takers = (atoms: readonly string[]) =>
       SOURCES.filter((source) =>
         importsOf(source).some(
@@ -228,6 +232,7 @@ describe('Say it aloud', () => {
     ]);
     expect(takers(['cycleVoice'])).toEqual(['src/settings/choices.tsx']);
     expect(takers(['listenTo', 'readingAloud'])).toEqual(['app/index.tsx', 'app/probe/light.tsx']);
+    expect(takers(['naturalView', 'retryNatural'])).toEqual(['src/settings/choices.tsx']);
     const builders = SOURCES.filter(
       (source) =>
         !source.startsWith('src/voice') &&
@@ -235,7 +240,7 @@ describe('Say it aloud', () => {
           ({ from, names }) => /(^|\/)voice$/.test(from) && names.includes('layer'),
         ),
     );
-    expect(builders).toEqual(['app/probe/natural.tsx', 'src/app.ts', 'src/natural/route.ts']);
+    expect(builders).toEqual(['app/probe/natural.tsx', 'src/natural/route.ts']);
   });
 
   it('grows Today’s voice atoms by the hold’s seekTo, holdReading and letGo, from src/app.ts alone: only Today, the first minute’s hear phase and the light probe take them (the reading view is handed them), and no other source seeks, pauses or resumes the voice', () => {

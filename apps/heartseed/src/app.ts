@@ -2,8 +2,9 @@
  * The app's one runtime for the reader's screens: one `Dictation` over the
  * source this build hears, Say it over it, the soft tick, the garden, which
  * keeps each of Say it's kept recalls in the app's store on the device and
- * sounds the growth chime, and the voice over the source this platform
- * speaks with, whose choice (Off, Her or Him) lives in the same store, the reader's
+ * sounds the growth chime, and the voice routed between the system voice
+ * and the natural voice (`src/natural/route.ts`), whose choice (Off, Her or
+ * Him) and the natural voice's fuse live in the same store, the reader's
  * passages, kept there too, the collections taught (`TAUGHT`), and the
  * daily session over the garden, the passages and the taught collections'
  * verses, whose minutes live there too: its plan is made at the first show
@@ -56,7 +57,11 @@ import { collectionsOf, layer as taughtLayer, Taught } from './promises/taught';
 import type { Item, Minutes, TextPiece } from './session';
 import { layer as sessionLayer, Session } from './session/service';
 import { store } from './store';
-import { nextChoice, Voice, layer as voiceLayer, type VoiceSource, type VoiceView } from './voice';
+import { Voice, type VoiceSource, type VoiceView } from './voice';
+import type { NaturalModule } from './natural/module';
+import { naturalVoices, tapVoice } from './natural/route';
+import { Natural } from './natural/service';
+import { naturalModule } from './natural/source';
 import { isActive } from './voice/reading';
 import { voiceSource } from './voice/source';
 
@@ -93,13 +98,15 @@ const PIECES: readonly TextPiece[] = [
   },
 ];
 
-/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the reader's passages in the same `store`, the collections of `promises` taught (none when left out), the session over the garden, `pieces` (the app's own, the promise alone, when none are given), then the passages' verses, then the taught collections' verses, its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), the voice over `voice`, its choice in the same `store`, and the reader's appearance, read first, in the same `store`. */
+/** The app's services over its parts: Say it, the one Dictation it runs over, the garden over `store` its recalls grow, which sounds `chime`, the reader's passages in the same `store`, the collections of `promises` taught (none when left out), the session over the garden, `pieces` (the app's own, the promise alone, when none are given), then the passages' verses, then the taught collections' verses, its minutes in the same `store`, woken at each return to the foreground `foreground` reports (the host's own when none is given), the voice routed between the system voice `voice` and the natural voice over `natural` (the platform's module when none is given: on the web and in the tests the one that refuses, so the system voice reads), its choice and the natural voice's fuse in the same `store`, the development base read only when `dev`, and the reader's appearance, read first, in the same `store`. */
 export const appLayer = (parts: {
   readonly source: Layer.Layer<DictationSource>;
   readonly haptics: Layer.Layer<Haptics>;
   readonly store: Layer.Layer<KeyValueStore.KeyValueStore>;
   readonly chime: Layer.Layer<Chime>;
   readonly voice: Layer.Layer<VoiceSource>;
+  readonly natural?: Layer.Layer<NaturalModule>;
+  readonly dev?: boolean;
   readonly pieces?: readonly TextPiece[];
   readonly foreground?: Layer.Layer<Foreground>;
   readonly promises?: readonly string[];
@@ -117,7 +124,13 @@ export const appLayer = (parts: {
     Layer.provideMerge(dictationLayer.pipe(Layer.provide(parts.source))),
     Layer.provideMerge(gardenLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.chime)))),
     Layer.provideMerge(passagesLayer.pipe(Layer.provide(parts.store))),
-    Layer.provideMerge(voiceLayer.pipe(Layer.provide(Layer.merge(parts.store, parts.voice)))),
+    Layer.provideMerge(
+      naturalVoices({
+        system: parts.voice,
+        module: parts.natural ?? naturalModule,
+        dev: parts.dev ?? false,
+      }).pipe(Layer.provide(parts.store)),
+    ),
     Layer.provideMerge(appearanceLayer.pipe(Layer.provide(parts.store))),
     Layer.provideMerge(parts.haptics),
   );
@@ -129,6 +142,8 @@ export const runtime = Atom.runtime(
     store,
     chime: liveChime,
     voice: voiceSource,
+    natural: naturalModule,
+    dev,
     pieces: PIECES,
     promises: TAUGHT,
   }),
@@ -176,14 +191,18 @@ export const chooseMinutes = runtime.fn(
   { concurrent: true },
 );
 
-/** A tap on Today's Voice pill: the voice takes the next choice in the cycle Off, Her, Him, stored by the voice's own write; the view changes at the call, so two quick taps cycle twice. */
-export const cycleVoice = runtime.fn(
-  () =>
-    Effect.flatMap(Voice, (voice) =>
-      Effect.flatMap(voice.view, (view) => voice.choose(nextChoice(view.choice))),
-    ),
-  { concurrent: true },
+/** A tap on the Voice pill (`tapVoice`): the natural voice hears the next choice in the cycle Off, Her, Him first (its fuse and line clear, and its download may start), then the voice takes it, stored by the voice's own write; the view changes at the call, so two quick taps cycle twice. */
+export const cycleVoice = runtime.fn(() => tapVoice, { concurrent: true });
+
+/** What the natural voice's status line under the Voice pill shows: its download, its fuse and whether the crash line is owed, under the choice. */
+export const naturalView = runtime.atom(
+  Stream.unwrap(Effect.map(Natural, (natural) => natural.changes)),
 );
+
+/** The status line's `Try again`: the natural voice's failed download or load runs again. */
+export const retryNatural = runtime.fn(() => Effect.flatMap(Natural, (natural) => natural.retry), {
+  concurrent: true,
+});
 
 /** The cue a piece of Today's is said under next: the ladder's in a read garden, none in an unread one, which claims no stage. */
 const todayCue = (view: GardenView, reference: string): Cue => {
