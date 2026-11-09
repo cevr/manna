@@ -2594,8 +2594,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     server over a fake cache on a port the system picks, with no network:
     the fill, `GET`, `HEAD`, 404 and `--corrupt`), `vite/kjv.test.ts`
     (the corpus's derivation and its build faults, and the plugin's two
-    modules) and `vite/lexicon.test.ts` (the pronunciation list as the
-    plugin serves it). It leaves `scripts/icon.test.ts` to `test:icon`,
+    modules), `vite/lexicon.test.ts` (the pronunciation list as the
+    plugin serves it) and `scripts/root-props.test.ts` (each prop a doc
+    comment gives the root, in a sentence naming it or an `It` sentence
+    right after one, held to `Root`'s declaration). It leaves `scripts/icon.test.ts` to `test:icon`,
     `scripts/home-icons.test.ts` to `test:home-icons`,
     `scripts/home-pixels.test.ts` to `test:home-pixels`,
     `vite/devbundle.test.ts` to `test:devbundle` and `scripts/handbook`

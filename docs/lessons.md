@@ -5410,3 +5410,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `bun run dead-exports` named `REVIEW_ENV` dead though the judged lint plugin `packages/scripts/lint/judged.ts` reads it.
 - **Cause:** The check took every file under `packages/<p>/lint/` for test code, which consumes nothing, though those files are oxlint's plugins.
 - **Guard:** code: `packages/scripts/src/dead-exports/workspace.test.ts` `a lint plugin's import keeps an export alive, and the import of a lint rule's test does not`
+
+### heartseed-root-props-read-every-phrasing
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "root-props' forms could go wider than D3"
+- **Source:** hymnapp/batch-g5-1-findings.md o2 (On base, its second item)
+- **Wrong:** A doc comment could name a prop `Root` does not take with plural `props`, an `or`-joined list, `` without an `x` ``, or an `It` sentence after the one naming the root, and `root-props.test.ts` passed it.
+- **Cause:** The test read only four single-name forms, each in a sentence that itself held the word `root`.
+- **Guard:** code: `apps/heartseed/scripts/root-props.test.ts` `over 300 generated comments, the faults are exactly the camelCase names that a sentence about the root, or an It sentence chained to one, gives in any form and Root does not declare`
