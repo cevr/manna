@@ -24,9 +24,14 @@ or published.
 
 On the simulator the module renders with every stage on the CPU and plays
 nothing: a play logs
-`[natural] play utterance=<u> chunk=<k> frames=<Σ> samples=<s> skipped=simulator`
+`[natural] play utterance=<u> chunk=<k> frames=<Σ> samples=<s> from=<f> to=<t> rest=<r> at=<a> skipped=simulator`
 and sends the word ranges by a wall clock over the samples. The audio
-session is left alone.
+session is left alone. The voice reads one phrase a call (`;` and `:`
+read as a full stop), each phrase trimmed to 20 ms of its audible
+samples (`from`, `to`) and followed by its rest (`rest`, samples at
+24 kHz: a comma 7200, `;` or `:` 13200, a sentence 19200, a line break
+26400, the last chunk 0); `at` is the timeline sample it was scheduled at.
+Her renders at speed 0.85 and Him at 0.9 (`SPEEDS`).
 
 ## Sub-features
 
@@ -37,11 +42,15 @@ session is left alone.
   kept, and fails the download `check`; the files before it stay.
 - `natural-offline`: a server gone mid-download fails it `network`; a
   second `Install` fetches only the missing files.
-- `natural-read`: `Load` then `Read` lights all 37 words in order, each
-  chunk's samples 600 times its frames.
+- `natural-read`: `Load` then `Read` lights all 37 words in order, one
+  chunk a phrase (9), each chunk's samples 600 times its frames, rendered
+  at 0.85 and played with its phrase's rest.
+- `natural-rests`: each chunk plays after the one before it and that
+  one's rest, and the reading finishes after the last chunk's audio, not
+  after a rest.
 - `natural-voices`: a `Read` with `voice=bm_george`, then one without,
   each switch keeping the loaded stages and changing the pack the render
-  slices.
+  slices, Him rendered at 0.9.
 - `natural-crash`: an app ended during a reading says `crashed true` once.
 - `natural-remove`: `Remove` leaves nothing on the phone.
 - `today-mirror`: with no base stored, the app's download goes to
@@ -51,8 +60,8 @@ session is left alone.
 - `today-download`: the first tap onto Her downloads from the stored base,
   saying its percent, then getting ready, then nothing.
 - `today-read`: the first minute's Listen once ready reads in `af_heart`.
-- `today-him`: a tap to Him shows no line (Him reads in `bm_george`; the
-  router's tests hear it).
+- `today-him`: a tap to Him shows no line (Him reads in `bm_george` at
+  0.9; the router's tests hear it).
 - `today-fail`: a server gone mid-download waits; a failed download says
   so, and `Try again` finishes it with only the missing files.
 - `today-corrupt`: a file served wrong fails the check, with `Try again`.
@@ -149,14 +158,22 @@ sim snapshot natural-read
 
 → `voice af_heart`, `load <ms>`, `loaded true`; after the reading
 (snapshot again until `read` is not `none`): `read finished`,
-`lit 37/37`, `order ok`, `chunks <k>` and `frames ok <k>/<k>` with k at
-least 1. The module's log holds
+`lit 37/37`, `order ok`, `chunks 9` and `frames ok 9/9`. The module's
+log holds
 `[natural] load ms=<n> units=cpuOnly voice=af_heart.bin stages=loaded`
 (the first load of the process; a later one says `stages=kept`), and,
 per chunk, one
-`[natural] render utterance=<u> chunk=<c> ids=<n> frames=<Σ> samples=<s>`
+`[natural] render utterance=<u> chunk=<c> ids=<n> frames=<Σ> samples=<s> ms=<m> speed=0.85`
 and one `[natural] play … skipped=simulator` line, each with
-`s = 600 × Σ`. No sound plays.
+`s = 600 × Σ` and `to − from ≤ s`. The nine play lines' `rest=` are, in
+order, `13200,13200,13200,13200,13200,7200,13200,7200,0`. No sound plays.
+
+`natural-rests`: in the same reading's play lines,
+
+→ each chunk's `at` is the one before's `at` plus its `to − from` plus its
+`rest`, or later (a render that comes late plays at the clock plus
+2400); and the probe's `read finished` follows the last chunk's
+`at + to − from`, not a rest after it.
 
 `natural-voices`: after `natural-read`, open the probe with the second
 voice and read, then open it without and read again:
@@ -175,7 +192,10 @@ sim snapshot natural-voices-her
 `voice af_heart`). The module's log, after the `natural-read` load, holds
 one `[natural] load … voice=bm_george.bin stages=kept` and then one
 `[natural] load … voice=af_heart.bin stages=kept`, and no second
-`stages=loaded`. Sum each reading's `render` lines' `frames`: the two
+`stages=loaded`; Him's `render` lines say `speed=0.9` and Her's
+`speed=0.85`. `serve.log`'s ready line says `"files":39`, the cache
+holding `bm_george.bin` converted from the revision's rows. Sum each
+reading's `render` lines' `frames`: the two
 readings of the same verse give different totals (a pack that never
 switched gives equal ones).
 

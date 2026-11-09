@@ -53,6 +53,12 @@ time, so the lighting moves: the rows read `selected` in raw snapshots and
   `id=reading` with one `word-<i>` per word, one or two `selected` moving
   forward between two snapshots, and no `id=passage`. After the finish,
   `id=passage` is whole again and `Listen` is back.
+- `light-natural`: the probe's `Listen` read by the natural voice (Her):
+  the selection moves forward, and `lit` holds through a rest between
+  phrases, then moves on; one render and one play a phrase.
+- `light-natural-seek`: in that reading, `Back 3` and `Forward 3` each
+  start a new utterance planned from the target's phrase, lit at the
+  target or a little past it, and the reading finishes at 25/25.
 - `light-today-seek` (**phone only**, the owner's hand): while Listen
   reads, hold a word: the voice pauses with one tick. Drag back across two
   lines: the word under the finger lights, and the page does not scroll.
@@ -110,7 +116,22 @@ over `[voice]`, from `START`.
    `id=passage`. Then `sim open / --expect "label=Listen" --no-relaunch` (a wait for the
    finish) and `sim snapshot light-today-done` → `id=passage`, no
    `id=reading`.
-7. `sim doctor` (record `head` and `timingsHold`) and `sim down`.
+7. `light-natural`: with the natural voice ready (the second container of
+   `natural.md`'s Today rows, voice Her, its model server running),
+   `sim open probe/light --expect "label=Light probe"`,
+   `sim tap "label=Listen"`, then raw snapshots about 1 s apart until the
+   finish → `id=reading`, the selection moving forward, `lit <k>/25 reading`
+   growing, and at least one snapshot whose `lit` equals the one before
+   between two that move (a rest); the log over `[natural]` and `[voice]`
+   holds `[natural] render` for 4 chunks and their play lines with
+   `rest=7200,7200,7200,0`, and no `[voice] speak`.
+8. `light-natural-seek`: `sim tap "label=Listen"` again, raw snapshots until
+   `lit` is 6 or more, `sim tap "label=Back 3"`, a raw snapshot, then
+   `sim tap "label=Forward 3"` and a raw snapshot → after each tap a new
+   utterance's `[natural] render utterance=<u> chunk=0` (the tail planned
+   from the target word's phrase), `lit` at the target or a little past it,
+   the selection moving on, and `lit 25/25` at the finish.
+9. `sim doctor` (record `head` and `timingsHold`) and `sim down`.
 
 Report only counts, booleans, indexes, the status lines, utterance numbers
 and the labels named above; delete the `snapshots` folder and the raw

@@ -1420,20 +1420,33 @@ Session above); Her reads in `af_heart` and Him in `bm_george`
   word is a whitespace run that holds a letter or a number; its key is the
   run without its leading and trailing characters that are neither, looked
   up as written. A word speaks the `,.:;?!()` of its edges around its
-  phonemes, other edge characters silent, and words join with one space,
-  counted in code points. A clause ends at a word whose spoken trail holds
-  one of `,.:;?!`; a clause of at most `CHUNK_CAP` (200) symbols stays in
-  one chunk, and a longer one may break between any of its words. Clauses
-  pack greedily into chunks of at most 200 symbols with their joining
-  spaces. Each chunk's ids are BOS 0, the spoken symbols' ids, EOS 0, and
-  each word's mark is the index of its first phoneme, after its spoken
-  lead, with the whole run's location and length in UTF-16 units, as the
-  system voice's word marks give them. An unknown key, a symbol outside the
-  vocab, a word over 200 symbols alone or a text with no word plans none.
+  phonemes, `;` and `:` sent as `.` (the owner's "Clauses end in a full
+  stop"; the screen, the matcher and the system voice keep the KJV's
+  marks), other edge characters silent, and words join with one space,
+  counted in code points. A phrase ends at a word whose trail holds one of
+  `,.:;?!`, or before a line break (mark-only runs between words count as
+  the gap). Each phrase is its own chunk, so Kokoro reads one phrase a
+  call; only a phrase over `CHUNK_CAP` (200) symbols breaks, greedily
+  between its words, and no chunk joins two phrases. Each chunk's ids are
+  BOS 0, the spoken symbols' ids, EOS 0, and each word's mark is the index
+  of its first phoneme, after its spoken lead, with the whole run's
+  location and length in UTF-16 units, as the system voice's word marks
+  give them. Each chunk carries its `rest`, the silence after it in
+  samples at 24 kHz (`RESTS`, the owner's Gentle spacing): a line break
+  1,100 ms (`verse`), else by the last of `,.:;?!` in its last word's
+  trail, a comma 300 ms, `;` or `:` 550 ms, `.` `?` `!` 800 ms; a chunk
+  inside a phrase and the text's last chunk rest 0. An unknown key, a
+  symbol outside the vocab, a word over 200 symbols alone or a text with
+  no word plans none.
   `startsOf(chunk, durations)` gives each word's start in the chunk's audio
   from the model's frames per id: `SAMPLES_PER_FRAME` (600) times the
   frames of the ids before its mark; durations that are not one whole,
-  positive count per id give none.
+  positive count per id give none. `cutOf(samples, first, last)` is the
+  part of a chunk's audio that plays: `EDGE_KEEP` (480 samples, 20 ms)
+  before its first audible sample to 480 after its last, within the audio,
+  or all of it when nothing is audible; `startsWithin(starts, cut)` moves
+  each start into the cut, a start trimmed off the front at 0 and one past
+  the end at the cut's length.
 - `src/natural/lexicon.ts` carries the list and the vocab into the bundle:
   `lexicon()` builds the two maps once, from `virtual:heartseed-lexicon`,
   which `vite/plugin.ts` serves as `vite/lexicon.ts` prints it. Nothing in
@@ -1469,9 +1482,10 @@ Session above); Her reads in `af_heart` and Him in `bm_george`
   always the mirror, a development build a plain
   `http(s)://host[:port]/folder/` it is asked for.
 - **The voices.** `VOICES` (`manifest.ts`) is `af_heart` and `bm_george`;
-  a voice's pack is the file `<voice>.bin` of `FILES`. No other file of
-  `src/natural` names a pack path, and the Swift module outside `kokoro/`
-  names no voice: the voice is data.
+  a voice's pack is the file `<voice>.bin` of `FILES`, and its speed is
+  `SPEEDS` (`af_heart` 0.85, `bm_george` 0.9, the owner's choice). No other
+  file of `src/natural` names a pack path, and the Swift module outside
+  `kokoro/` names no voice and no speed: the voice is data.
 - **Loading.** `load(revision, files, voice)` takes the voice as a pack
   path of `files`, or throws `voice`. The first load of a revision in a
   process hashes every file again and loads the seven stages; a later one
@@ -1483,13 +1497,23 @@ Session above); Her reads in `af_heart` and Him in `bm_george`
 - **Routing.** On the simulator every stage runs on the CPU. On a device,
   iOS 27 and later run the noise and tail stages on the CPU and the rest on
   the Neural Engine; earlier ones run the noise and tail on the GPU.
-- **Rendering and playing.** `render(utterance, chunk, ids)` runs the chain
-  on a chunk's ids, one render at a time off the main actor, and returns
-  each id's frames and the sample count; JS checks `samples = 600 × Σframes`
-  and gives `play` each word's start sample (`startsOf`). On a device,
-  `play` schedules the chunks gapless on one `AVAudioEngine` player at
-  24 kHz and sends `start`, a `range` at each word's start sample and
-  `finish`; on the simulator it plays nothing, logs
+- **Rendering and playing.** `render(utterance, chunk, ids, speed)` runs
+  the chain on a chunk's ids at the voice's speed, one render at a time off
+  the main actor, and returns each id's frames, the sample count and the
+  first and last audible sample (`abs(x) > 0.01`; `samples` and `-1` when
+  none); it logs `[natural] render … speed=<s>`. JS checks
+  `samples = 600 × Σframes` and `0 ≤ first ≤ samples`, `-1 ≤ last < samples`
+  (whole numbers), else the render's frames do not fit, and gives `play`
+  each word's start moved into the cut (`startsWithin`), the cut's `from`
+  and `to` and the chunk's `rest`. `play` schedules `pcm[from..<to]` at
+  the timeline sample `at`, right after the chunk before it and that
+  chunk's rest (a late render plays at the clock plus 100 ms), each word's
+  mark at `at` plus its start, and throws `cut` for `from < 0`,
+  `to > samples`, `from ≥ to` or `rest < 0`; the last chunk's end is its
+  last sample, so `finish` waits out no rest. It logs
+  `[natural] play … from= to= rest= at=`. On a device it plays on one
+  `AVAudioEngine` player at 24 kHz and sends `start`, a `range` at each
+  word's mark and `finish`; on the simulator it plays nothing, logs
   `[natural] play … skipped=simulator`, and sends the same events by a wall
   clock. Events go only to the held reading, matched by generation, so a JS
   reload's reused ids cannot collide; an interruption or an engine
@@ -2639,11 +2663,14 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `planModel` of the expanded pieces, and to the disk's rule, each part's
     floors met.
   - `test:natural`: `src/natural`, the natural voice's plan, seam and probe:
-    `src/natural/plan.property.test.ts`, `planOf` and `startsOf` against a
-    model written in the test over a small hand-built lexicon and vocab
-    (seeded texts, the cap at 200 and 201 for a clause, a word and a packed
-    pair, code points against UTF-16 units, marks after a spoken lead, and
-    durations that do not fit); and `src/natural/data.test.ts`, the
+    `src/natural/plan.property.test.ts`, `planOf`, `startsOf`, `cutOf` and
+    `startsWithin` against a model written in the test over a small
+    hand-built lexicon and vocab (seeded texts of every trail and line
+    break, with floors on every rest kind and on inner breaks; `;` and `:`
+    sent as `.`, the cap at 200 and 201 for a phrase and a word, code points
+    against UTF-16 units, marks after a spoken lead, durations that do not
+    fit, and seeded cuts silent, at the front, the back, inside and
+    clamped); and `src/natural/data.test.ts`, the
     committed data: the vocab's pinned hash, the list's bytes as the
     generator last wrote them, its keys sorted and unique, and every
     phoneme and override spoken in the vocab; `src/natural/manifest.test.ts`,
@@ -2684,10 +2711,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:natural-voice`: `src/natural/voice.test.ts`, the natural voice's
     `VoiceSource` against a model written in the test, over 300 seeded
     histories of a stand-in module that answers each load and render when
-    the history says (speaks of one to three chunks and of a text no plan
-    takes, malformed renders, a refused play, events of the held utterance
-    and of others, a reload): its module calls, the events it forwards and
-    each speak's state after every step.
+    the history says (speaks of one to three phrases and of a text no plan
+    takes, renders with and without audible samples, malformed frames and
+    spans, a refused play, events of the held utterance and of others, a
+    reload): its module calls (each render at the voice's speed, each play
+    with its starts moved into the cut, the cut and the chunk's rest), the
+    events it forwards and each speak's state after every step.
   - `test:theme`: `src/theme.test.ts`, the brand's colours (`src/theme.ts`):
     every role of brand C in light and dark, the icon's colours, the home
     icons' `masters` and `kept` and the face pinned; every role given a use
