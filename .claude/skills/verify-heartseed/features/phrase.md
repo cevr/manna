@@ -33,8 +33,10 @@ leave the session (`apps/heartseed/README.md`, Phrases).
   due, the reference is `John 3:16 [1-6]`, its six words whole
   (`id=passage`), with `Listen` before `Say it`.
 - `phrase-say`: `Listen` → the simulator logs `[voice] speak utterance=`
-  with `skipped=simulator`, and the reading view (`id=reading`) lights its
-  six `word-<i>` nodes as they are read (`light.md`). Then `Say it` (the replay
+  with `skipped=simulator`, and while the reading runs, the reading view
+  (`id=reading`) shows six `word-<i>` nodes, lit as they are read
+  (`light.md`). After the finish, the piece is one `id=passage` text again,
+  with no `word-<i>`, and `Listen` is back. Then `Say it` (the replay
   recites Isaiah 41:10's words, so the count is low; that is still a
   recall) → the summary reads `<k> of 6 words`; a grade; `Next`.
 - `phrase-field`: the field's row `John 3:16` holds `John 3:16, seed`;
@@ -93,11 +95,16 @@ must start empty: uninstall by udid as `first.md` says.
    and `Next` first, then snapshot again → the reference
    `John 3:16 [1-6]`, its six words whole in one `id=passage` node,
    `Listen` before `Say it`.
-5. `phrase-say`: `sim tap "label=Listen"`, `sim snapshot phrase-listen`
-   → `id=reading` in place of `id=passage`, holding six `word-<i>` nodes,
-   the words read so far lit, one or two `selected` (`light.md`); the log (`first.md`'s `xcrun simctl spawn <udid> log
-   show` over `[voice]`, from this session's start) holds a
-   `[voice] speak utterance=` line ending `skipped=simulator`. Then
+5. `phrase-say`: `sim tap "label=Listen"`, then two raw snapshots about
+   1 s apart while it reads (`light.md`, Driving it, and its step 6) →
+   in each, `id=reading` in place of `id=passage`, holding six `word-<i>`
+   nodes, one or two `selected`, the second's first index greater than the
+   first's. Then `sim open / --expect "label=Listen" --no-relaunch` (a wait
+   for the finish) and `sim snapshot phrase-listen` → the six words whole
+   in one `id=passage` node, no `word-<i>`, no `id=reading`. The log
+   (`first.md`'s `xcrun simctl spawn <udid> log show` over `[voice]`, from
+   this session's start) holds a `[voice] speak utterance=` line ending
+   `skipped=simulator`. Then
    `sim tap "label=Say it"`, wait for the summary
    (`sim snapshot phrase-said` until it shows) → the summary
    `<k> of 6 words`, the `Grade` group with one radio checked, `Next`;

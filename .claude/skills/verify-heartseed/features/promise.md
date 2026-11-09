@@ -128,8 +128,9 @@ must start empty: uninstall by udid as `first.md` says.
    `sim open / --expect "id=session" --no-relaunch`, `sim snapshot promise-new` → the
    counts line holds `1 new`; when the reference is `Isaiah 41:10` (its
    review due), run it through `Say it` and `Next` first, then snapshot
-   again → the reference `Psalms 91:1 [1-9]`, nine `word-<i>` nodes,
-   `Listen` before `Say it`. Then `sim doctor` and `sim down`.
+   again → the reference `Psalms 91:1 [1-9]`, its nine words whole in one
+   `id=passage` node (the reading view draws words only while `Listen`
+   reads, `light.md`), `Listen` before `Say it`. Then `sim doctor` and `sim down`.
 
 Report only counts, booleans, rect numbers, the labels named above, the
 counts line and the references; delete the `snapshots` folder and the raw
