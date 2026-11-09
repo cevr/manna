@@ -113,8 +113,8 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
    `Stage: seed`, `Continue`; the log holds no `[growth] play` line.
 7. `first-home`: `sim tap "label=Continue"`, `sim open / --expect
    "id=counts"`, `sim snapshot first-home` → the heading `Your field`;
-   in the foot `Nothing to tend now`, no `Begin`, and `About`; the button
-   `When I need…`; no heading `Today`, no button `Today`, no label
+   in the foot `Nothing to tend now`, no `Begin` and no `About`; the
+   buttons `When I need…` and `Settings`; no heading `Today`, no button `Today`, no label
    starting `Stage:` or `Grew to`, no label ending `words`, no grade
    label, no `Say it` and no `Next` (the done state).
 8. `first-again`: `sim relaunch`, `sim open / --expect "label=Isaiah
