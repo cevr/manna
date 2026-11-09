@@ -2164,8 +2164,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     return) and `src/wake/guard.test.ts` (one host adapter names
     `AppState`).
   - `test:wake-walk`, `test:wake-returns`, `test:wake-quiet`,
-    `test:wake-clocks`: `src/wake/wake.test.tsx`, `returns.test.tsx`,
-    `quiet.test.tsx` and `clocks.test.tsx`, Today's run walked through
+    `test:wake-quiet-b`, `test:wake-clocks`, `test:wake-clocks-b`:
+    `src/wake/wake.test.tsx` with `wake-b.test.tsx`, `returns.test.tsx`
+    with `returns-b.test.tsx`, `quiet.test.tsx`, `quiet-b.test.tsx`,
+    `clocks.test.tsx` and `clocks-b.test.tsx` (each steer's devices cut
+    into parts of whole devices, each part under 0.9 s alone), Today's run walked through
     `src/test/wake-walk.ts` over `src/test/wake-rig.tsx` (the run rig with the
     host's state in the test's hands, each state sent taken by the session
     before the next step) against `src/test/wake-model.ts`, each read
@@ -2177,8 +2180,19 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     field, every minutes choice), toward the returns that change nothing (a
     recital listening or finishing, the first minute's phases, unread
     launches, `inactive` alone and a second `active`) and toward the clocks
-    (aways of minutes to a month, many returns, zones, evening plantings);
-    each case's floors met by its own devices.
+    (aways of minutes to a month, many returns, zones, evening plantings).
+    The walk chooses as a reader does: its Minutes and its Voice are trips
+    from Today's `Your field` to home's Settings sheet and back through
+    `Done` and `Begin` (or home in the done state), the plan made at the
+    sheet's `<n> min` tap and the sheet's radio and home's counts line
+    under it checked before `Done`; one trip in five sends host states
+    with the sheet open (a return that makes the plan again under the
+    sheet, or a sequence that is none), the sheet still shown and home's
+    counts line under it the model's. A recital listening or finishing is
+    followed by the trip once it ends: a Minutes making under a recital,
+    which no reader reaches, is `test:session-cells`'. An unread launch
+    offers no `Settings`, `Voice` or Minutes, and every tap of an absent
+    control fails; each case's floors met by its own devices.
   - `test:wake-edges`: `src/wake/edges.test.tsx`, the first minute's phases
     and Continue's own plan on home, the pending frame and a subscription read in
     the background, an unread garden's result, a return while a recital
@@ -2187,14 +2201,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     90-word new piece after a review (two taps in one turn read once), a
     refused speak, and Say it stopping the voice before the recognizer
     listens.
-  - `test:wake-listen`, `test:wake-reading`: `src/wake/listen.test.tsx` and
-    `reading.test.tsx`, the same walk leaning toward Listen with
-    `wake-rig.tsx`'s reading voice: where Listen shows at every settle
-    (`listenModel`) and in every frame, the text each speak reads, Voice
-    taps and their stored choice, and each way a reading ends or goes on
-    (its finish or interruption, Say it, a tap onto Off, a relaunch; a
-    Minutes tap, a return, the field, a tap from Her to Him); each case's
-    floors met by its own devices.
+  - `test:wake-listen`, `test:wake-listen-b`, `test:wake-reading`,
+    `test:wake-reading-b`: `src/wake/listen.test.tsx`, `listen-b.test.tsx`,
+    `reading.test.tsx` and `reading-b.test.tsx`, the same walk leaning
+    toward Listen with `wake-rig.tsx`'s reading voice: where Listen shows
+    at every settle (`listenModel`) and in every frame, the text each speak
+    reads, Voice taps in the Settings sheet (the sheet's `Voice` value, the
+    stored choice and the reading checked after each tap), and each way a
+    reading ends or goes on (its finish or interruption, Say it, a tap
+    onto Off, a relaunch; a Minutes trip, a return, the field, a tap from
+    Her to Him, the reading going on through home and the sheet); each
+    case's floors met by its own devices.
   - `test:corpus`: `src/passages/corpus.test.ts`, every verse of the KJV
     through `versesOf` against `test/passages-model.ts`, every book's
     chapter bounds, and the module's reads in a child process

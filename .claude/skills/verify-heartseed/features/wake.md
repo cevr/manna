@@ -50,6 +50,16 @@ proves nothing.
   the done state as before (`Nothing to tend now`, no `Begin`, no heading
   `Today`), with the same pid. This holds on base too; it guards that a
   return with nothing due changes nothing.
+- `wake-sheet-stays`: right after `wake-stays` (home, the done state),
+  `Settings` opens the sheet (the heading `Settings`, `Done`, `5 min`
+  alone selected); **away** and back with the sheet open → the heading
+  `Settings` and `Done` still, `5 min` alone selected, with the same pid;
+  then `Done` → home's `Your field`, no heading `Settings`,
+  `Nothing to tend now`, no `Begin`. It confirms on the device the state
+  `apps/heartseed/src/test/wake-walk.ts` models (states sent with the
+  sheet open); green on base by design (S4 changes no product), red before
+  the sheet (`7add51242`: no `Settings` to tap). A sheet gone after the
+  return is a finding against that walk, not a drive error.
 - `wake-due` (daytime only, when `PLANTED` was between 04:00 and 17:52
   local): 7 minutes after `PLANTED`, with no `Minutes` tap and no relaunch,
   **away** and back → home's `1 to tend · about 1 min`, the button
@@ -66,8 +76,8 @@ proves nothing.
   the footer on a new verse while `Voice` is not `Off`; the voice reads that
   verse; no `Listen` while it reads, on a review, at `Next`, in the done
   state or with `Voice` at `Off`; `Say it` stops the voice first. Owned by
-  `apps/heartseed/src/wake/listen.test.tsx`, `reading.test.tsx` and
-  `listen-edges.test.tsx`, and the acceptance check's L1-L8.
+  `apps/heartseed/src/wake/listen.test.tsx`, `listen-b.test.tsx`,
+  `reading.test.tsx`, `reading-b.test.tsx` and `listen-edges.test.tsx`, and the acceptance check's L1-L8.
 
 ## How to get to it (user POV)
 
@@ -88,6 +98,16 @@ and `START` as `first.md` sets them.
 1. `first.md` steps 1-7. Note `PLANTED` (`date`).
 2. `run.md`'s `run-done-first` (its step 2). Then `wake-stays`: **away**,
    `sim snapshot wake-stays`.
+   Then `wake-sheet-stays`: record the pid; `sim tap "label=Settings"`
+   and a raw snapshot (the heading `Settings`, `Done`, `5 min` alone
+   selected); send the app away with `xcrun simctl launch <udid>
+   com.apple.Preferences`, wait 5 s, bring it back with `xcrun simctl
+   launch <udid> app.heartseed` (a running app comes to the foreground;
+   no link, so the route does not move); `sim snapshot wake-sheet-stays`
+   and a raw snapshot (the heading `Settings` and `Done` still, `5 min`
+   alone selected, the same pid); `sim tap "label=Done"`,
+   `sim snapshot wake-sheet-done` (the heading `Your field`, no heading
+   `Settings`, `Nothing to tend now`, no `Begin`).
 3. `wake-due`: wait until 7 minutes after `PLANTED`, **away** (from
    home), then `sim snapshot wake-due-home`; `sim tap "label=Begin"`,
    `sim open / --expect "id=session" --no-relaunch`, `sim snapshot wake-due`, plus a
@@ -120,6 +140,18 @@ the raw snapshots.
     ("plant at night, recall in the morning");
   - many verses, the mixed order and a new verse, and every zone;
   - `Listen` in all its states (`wake-listen`);
+  - a return under the open Settings sheet that brings a new plan (the
+    drive cannot time a due under the sheet; `wake:sheet-return`, home's
+    counts line made again under the sheet, in the wake walk);
+  - a `Voice` change from the sheet while Listen's reading goes on (the
+    simulator's voice is silent and a reading ends in seconds;
+    `wake-listen`, `wake-reading`);
+  - an unread garden offering no `Settings`, `Voice` or Minutes (it needs
+    a failed store read; the wake walk's `minutes:none-unread` and
+    `voice:none-unread`);
+  - a Minutes making while a recital listens or finishes, phrase or verse
+    (no reader can make one; `test:session-cells`, and the phrase walks at
+    the session seam);
   - each launch's AppState subscription, removed when the launch ends.
 - `sim open /` on a running app brings it to the foreground; it does not
   relaunch it (the pid check proves it). `sim relaunch` is a relaunch, which

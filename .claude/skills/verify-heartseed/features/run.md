@@ -25,7 +25,9 @@ or a promise of When I need…, and left by `Your field`. A tap made with no rec
 the new plan's first item, and an earlier result is gone. A reader cannot
 make a `Minutes` tap while a recital listens, since the sheet is on home
 alone and Today shows no `Your field` then; the session keeps the verse
-for such a making (`apps/heartseed/src/session/cells.property.test.ts`),
+for such a making (`apps/heartseed/src/session/cells.property.test.ts`;
+the phrase walks make that making at the session seam too, a phrase's
+recital listening, `apps/heartseed/src/test/phrase-rig.tsx`),
 and a return to the foreground while it listens keeps the verse
 (`wake.md`). Nothing of the run is stored. A relaunch makes a new plan.
 
