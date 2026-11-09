@@ -107,7 +107,7 @@ over `[voice]`, from `START`.
    or `phrase.md`'s `phrase-say`), `sim tap "label=Listen"` and two raw
    snapshots about 1 s apart → `id=reading` with one `word-<i>` per word of
    the piece (count them), one or two `selected` moving forward, and no
-   `id=passage`. Then `sim open / --expect "label=Listen"` (a wait for the
+   `id=passage`. Then `sim open / --expect "label=Listen" --no-relaunch` (a wait for the
    finish) and `sim snapshot light-today-done` → `id=passage`, no
    `id=reading`.
 7. `sim doctor` (record `head` and `timingsHold`) and `sim down`.

@@ -2,14 +2,15 @@
  * `runSim` over a stand-in `Drive`: a warm checkout is refused before any
  * step runs, `boot` on iOS hands the dev server a Hermes compiler (the one
  * `HERMESC_PATH` names, else the one react-native depends on), and `open`
- * retries once, terminating the app, when its target is missing on iOS.
+ * retries once, terminating the app, when its target is missing on iOS,
+ * unless `--no-relaunch` asks it not to.
  * The journey's verbs read their arguments here: `gesture pan`,
  * `gesture edge-pan` and `gesture pinch`, `hold` with its press and settle, `relaunch`, and
  * `down --clean`, which cleans whether or not a drive was booted.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Console, Effect, Exit, FileSystem, Option, Path } from 'effect';
+import { Console, Effect, Exit, FileSystem, Option, Path, Schema } from 'effect';
 
 import { runSim } from './command.ts';
 import { Drive, type DriveMembers, type Outcome, type Place } from './drive.ts';
@@ -163,6 +164,68 @@ const bootedHermesc = (calls: ReadonlyArray<Call>) => {
   return options.hermesc;
 };
 
+const OPEN_ANSWERS: ReadonlyArray<OpenAnswer> = ['ok', 'missing-ios', 'missing-web', 'tool-failed'];
+
+/** What `sim open` is asked of relaunching: nothing, `--relaunch` or `--no-relaunch`. */
+type OpenAsk = 'absent' | 'relaunch' | 'no-relaunch';
+const OPEN_ASKS: ReadonlyArray<OpenAsk> = ['absent', 'relaunch', 'no-relaunch'];
+const OPEN_FLAG: Record<OpenAsk, ReadonlyArray<string>> = {
+  absent: [],
+  relaunch: ['--relaunch'],
+  'no-relaunch': ['--no-relaunch'],
+};
+
+/** Every sequence of `length` answers. */
+const answerSequences = (length: number): ReadonlyArray<ReadonlyArray<OpenAnswer>> =>
+  Array.from({ length }).reduce<ReadonlyArray<ReadonlyArray<OpenAnswer>>>(
+    (heads) => heads.flatMap((head) => OPEN_ANSWERS.map((answer) => [...head, answer])),
+    [[]],
+  );
+
+/** Whether an open's options ask it to terminate the app first. */
+const isTerminate = Schema.is(Schema.Struct({ terminate: Schema.Literal(true) }));
+
+/** What one `sim open` did: its opens, which terminated the app, its exit and its lines. */
+interface OpenModel {
+  readonly case: string;
+  readonly opens: number;
+  readonly terminated: ReadonlyArray<boolean>;
+  readonly ok: boolean;
+  readonly retried: boolean;
+  readonly tag: string;
+  readonly lines: number;
+}
+
+/** The tag a failed open's line carries for each answer. */
+const ANSWER_TAG: Record<OpenAnswer, string> = {
+  ok: '',
+  'missing-ios': 'TargetMissing',
+  'missing-web': 'TargetMissing',
+  'tool-failed': 'ToolFailed',
+};
+
+const openCase = (ask: OpenAsk, answers: ReadonlyArray<OpenAnswer>) =>
+  `${ask} [${answers.join(',')}]`;
+
+/**
+ * The reference: one open; a second, terminating the app, exactly when the
+ * first answered missing on iOS and the ask is not `--no-relaunch`. It
+ * succeeds when its last open did, `retried` when that was the second.
+ */
+const openModel = (ask: OpenAsk, answers: ReadonlyArray<OpenAnswer>): OpenModel => {
+  const opens = 1 + Number((answers[0] ?? 'ok') === 'missing-ios' && ask !== 'no-relaunch');
+  const last = answers[opens - 1] ?? 'ok';
+  return {
+    case: openCase(ask, answers),
+    opens,
+    terminated: Array.from({ length: opens }, (_, at) => at > 0),
+    ok: last === 'ok',
+    retried: opens === 2 && last === 'ok',
+    tag: ANSWER_TAG[last],
+    lines: 1,
+  };
+};
+
 describe('sim commands over the Drive service', () => {
   it.scoped('a warm checkout is refused with one WarmCheckout line and no step', () =>
     Effect.gen(function* () {
@@ -247,54 +310,41 @@ describe('sim commands over the Drive service', () => {
     }).pipe(Effect.provide(BunServices.layer)),
   );
 
-  it.scoped('an open that finds its target opens once and says it was not retried', () =>
-    Effect.gen(function* () {
-      const place = yield* coldPlace;
-      const { exit, calls, printed } = yield* sim(place, ['open', 'probe://hymns/1']);
-      expect(Exit.isSuccess(exit)).toBe(true);
-      expect(calls.filter((call) => call.op === 'open')).toHaveLength(1);
-      expect(printed[0]?.ok === true && printed[0].detail['retried']).toBe(false);
-    }).pipe(Effect.provide(BunServices.layer)),
-  );
-
-  it.scoped('a target missing on iOS is opened again once, terminating the app', () =>
-    Effect.gen(function* () {
-      const place = yield* coldPlace;
-      const { exit, calls, printed } = yield* sim(
-        place,
-        ['open', 'probe://hymns/1'],
-        ['missing-ios'],
-      );
-      expect(Exit.isSuccess(exit)).toBe(true);
-      const opens = calls.filter((call) => call.op === 'open');
-      expect(opens).toHaveLength(2);
-      expect(opens[1]?.args[4]).toEqual({ terminate: true });
-      expect(printed[0]?.ok === true && printed[0].detail['retried']).toBe(true);
-    }).pipe(Effect.provide(BunServices.layer)),
-  );
-
-  it.scoped('a target still missing after the retry fails the open', () =>
-    Effect.gen(function* () {
-      const place = yield* coldPlace;
-      const { exit, calls } = yield* sim(
-        place,
-        ['open', 'probe://hymns/1'],
-        ['missing-ios', 'missing-ios'],
-      );
-      expect(Exit.isFailure(exit)).toBe(true);
-      expect(calls.filter((call) => call.op === 'open')).toHaveLength(2);
-    }).pipe(Effect.provide(BunServices.layer)),
-  );
-
-  it.scoped('a missing target on the web, or a failed tool, is not retried', () =>
-    Effect.gen(function* () {
-      const place = yield* coldPlace;
-      for (const answer of ['missing-web', 'tool-failed'] as const) {
-        const { exit, calls } = yield* sim(place, ['open', '/hymns/1'], [answer]);
-        expect(Exit.isFailure(exit)).toBe(true);
-        expect(calls.filter((call) => call.op === 'open')).toHaveLength(1);
-      }
-    }).pipe(Effect.provide(BunServices.layer)),
+  it.scoped(
+    'sim open relaunches once on a missing iOS target unless --no-relaunch, over every ask and answer sequence',
+    () =>
+      Effect.gen(function* () {
+        const place = yield* coldPlace;
+        const seen: Array<OpenModel> = [];
+        const want: Array<OpenModel> = [];
+        for (const ask of OPEN_ASKS) {
+          for (const answers of [0, 1, 2, 3].flatMap(answerSequences)) {
+            const { exit, calls, printed } = yield* sim(
+              place,
+              ['open', 'probe://hymns/1', '--expect', 'id=counts', ...OPEN_FLAG[ask]],
+              answers,
+            );
+            const opens = calls.filter((call) => call.op === 'open');
+            seen.push({
+              case: openCase(ask, answers),
+              opens: opens.length,
+              terminated: opens.map((call) => isTerminate(call.args[4])),
+              ok: Exit.isSuccess(exit),
+              retried: printed.some((line) => line.ok && line.detail['retried'] === true),
+              tag: printed
+                .flatMap((line) => {
+                  if (line.ok) return [];
+                  return [line.error._tag];
+                })
+                .join(','),
+              lines: printed.length,
+            });
+            want.push(openModel(ask, answers));
+          }
+        }
+        expect(seen).toHaveLength(255);
+        expect(seen).toEqual(want);
+      }).pipe(Effect.provide(BunServices.layer)),
   );
 
   /** The arguments each step was called with, past the place. */

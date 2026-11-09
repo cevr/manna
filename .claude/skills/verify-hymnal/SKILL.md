@@ -138,7 +138,8 @@ The recipe beside each says what to read in its receipts and which steps stay by
 What the drivers do that a step does not show:
 
 - **The first open after a relaunch lands on the home list.** `sim open` and a journey's open terminate
-  the app and open once more on iOS `TargetMissing` (`detail.retried`), never a third time.
+  the app and open once more on iOS `TargetMissing` (`detail.retried`), never a third time, unless
+  `--no-relaunch` (a journey open's `relaunch: false`) asks them to fail it as it is.
 - **The pod hermesc.** `sim boot` points the dev server at the checkout's own `hermes-compiler`
   (`detail.hermesc`); a red box "native iOS dev bytecode needs the pod hermesc" means it did not.
 - **`label=Key` matches two elements** while chords are on (the bar's button and the word inside it):

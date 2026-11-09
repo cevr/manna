@@ -92,7 +92,7 @@ sets them.
 3. `run-due`: wait until 7 minutes after `PLANTED`, then `sim relaunch`,
    `sim open / --expect "id=counts"` → home's `1 to tend · about 1 min`
    and `Begin`; `sim tap "label=Begin"`, `sim open / --expect
-   "id=session"`, and `sim snapshot run-due`, plus a raw snapshot
+   "id=session" --no-relaunch`, and `sim snapshot run-due`, plus a raw snapshot
    (`agent-device snapshot --json --raw --observe-only --force-full
    --session verify-heartseed`) for the rects. When `PLANTED` was in the
    evening, record `Nothing to tend now` and stop here: only tests reach the

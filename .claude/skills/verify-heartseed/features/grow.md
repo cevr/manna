@@ -85,7 +85,7 @@ With `RUN`, `EVIDENCE`, `PORT` and `START` as `first.md` sets them:
    pending frame shows the reference) and at once
    `sim snapshot grow-restart-launch` → no `Stage: not planted` and no
    `Stage:` other than the store's in that frame (the launch-frame probe),
-   no `Grew to`. Then `sim open / --expect "id=counts"`,
+   no `Grew to`. Then `sim open / --expect "id=counts" --no-relaunch`,
    `sim snapshot grow-restart` → home: no `Grew to`, no grade, and the
    done state (no `Begin`), or `Begin` when the counts line reads
    `1 to tend`; then `sim tap "label=Begin"`,

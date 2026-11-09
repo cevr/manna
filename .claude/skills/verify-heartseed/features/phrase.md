@@ -80,14 +80,14 @@ must start empty: uninstall by udid as `first.md` says.
    `John 3:16, not planted`; no node whose label holds `[`; the foot's
    counts line holds no `1 new`. When the foot offers `Begin` (the
    promise's review due), `sim tap "label=Begin"`,
-   `sim open / --expect "id=session"`, `sim snapshot phrase-day-one` → no
+   `sim open / --expect "id=session" --no-relaunch`, `sim snapshot phrase-day-one` → no
    `Listen`; then `sim tap "label=Your field"`.
 3. `sim doctor` (record `head` and `timingsHold`) and `sim down`, keeping
    the install.
 4. `phrase-new`, the second session, after the next 04:00 local, with no
    uninstall: `sim boot`, then `sim open / --expect "id=counts"` → home's
    counts line holds `1 new`, with `Begin`; `sim tap "label=Begin"`,
-   `sim open / --expect "id=session"`,
+   `sim open / --expect "id=session" --no-relaunch`,
    `sim snapshot phrase-new` → the counts line holds `1 new`; when the
    reference is `Isaiah 41:10` (its review due), run it through `Say it`
    and `Next` first, then snapshot again → the reference

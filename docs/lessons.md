@@ -5360,3 +5360,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** Three doc comments of heartseed's root tests and rig said the root renders with no `opening`, a prop `Root` no longer takes, so a reader looked for a prop that is gone.
 - **Cause:** The prop's removal changed `Root`'s declaration, and nothing read the comments that named its props against it.
 - **Guard:** code: `apps/heartseed/scripts/root-props.test.ts` `every doc comment under src and app names only props Root declares, each fault by file:line and name`
+
+### sim-open-relaunches-only-when-asked
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "a step that waits for home after a tap passes even when the tap wrongly stayed on Today"
+- **Source:** hymnapp/batch-sim-2-findings.md o1 (On base, its first item)
+- **Wrong:** `sim open / --expect "id=counts"` after a tap that wrongly stayed on Today terminated the app, opened it again on home and passed with `retried: true`, so a wait in the running app could not fail on the screen it waited for.
+- **Cause:** `openOnce` retried every missing iOS target after terminating the app, which the hymnal's first open after a relaunch needs, and no caller could ask it to fail the target as it is instead.
+- **Guard:** code: `packages/sim/src/command.test.ts` `sim open relaunches once on a missing iOS target unless --no-relaunch, over every ask and answer sequence`

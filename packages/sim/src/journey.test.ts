@@ -306,6 +306,47 @@ describe('sim journey', () => {
   );
 
   it.scoped(
+    'an open step with relaunch false fails a missing target after one open, terminating nothing',
+    () =>
+      Effect.gen(function* () {
+        const wait = (relaunch: Record<string, boolean>) => ({
+          ...journey,
+          steps: [
+            {
+              name: 'wait-counts',
+              action: 'open',
+              link: '/',
+              expect: [{ shows: 'id=counts' }],
+              receipt: 'none',
+              ...relaunch,
+            },
+          ],
+        });
+        const strict = yield* runJourney(
+          toJson(wait({ relaunch: false })),
+          ['journey', 'chords', '--skip-video'],
+          ['id=counts'],
+        );
+        expect(Exit.isFailure(strict.exit)).toBe(true);
+        expect(ops(strict.calls)).toEqual(['open']);
+        expect(strict.calls[0]?.args[3]).toBeUndefined();
+        expect(strict.lines[0]).toMatchObject({
+          ok: false,
+          step: 1,
+          error: { _tag: 'TargetMissing', target: 'id=counts' },
+        });
+        const retrying = yield* runJourney(
+          toJson(wait({})),
+          ['journey', 'chords', '--skip-video'],
+          ['id=counts'],
+        );
+        expect(Exit.isFailure(retrying.exit)).toBe(true);
+        expect(ops(retrying.calls)).toEqual(['open', 'open']);
+        expect(retrying.calls[1]?.args[3]).toEqual({ terminate: true });
+      }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.scoped(
     'stops at the first failed expect, names it, keeps its receipts and stops the video',
     () =>
       Effect.gen(function* () {

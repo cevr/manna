@@ -134,9 +134,14 @@ bun run --cwd apps/heartseed sim snapshot today
 "Open in “Heartseed”?" prompt with Open (`detail.prompts`), and waits for
 the target. Into the running app already on `/`, it is a wait: the root
 keeps the screen it shows (home, Today, When I need…), so a feature file
-writes `sim open / --expect "id=session"` after a tap that opens Today
-and `--expect "id=counts"` for home; a wait for Today that lands on home
-is a finding to record, not a step to retry. `sim snapshot <step>` writes the screen's nodes, as
+writes `sim open / --expect "id=session" --no-relaunch` after a tap that
+opens Today and `--expect "id=counts" --no-relaunch` for home; a wait for
+Today that lands on home is a finding to record, not a step to retry.
+Without `--no-relaunch` a missing target terminates the app and opens once
+more, and every launch opens home, so a wait for home would pass on a tap
+that wrongly stayed on Today. The first open after `sim boot`, `sim install`,
+the microphone revoke or `sim relaunch` keeps the retry: there the app may
+still be launching. `sim snapshot <step>` writes the screen's nodes, as
 `[role] "text"`, to `$EVIDENCE/snapshots/<step>.txt`; a feature file says
 which nodes prove it. A target is `label=<accessible name>` or
 `id=<testID>`, matched whole. `sim tap`, `sim scroll` and `sim back` work as

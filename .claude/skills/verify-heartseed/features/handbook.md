@@ -47,7 +47,7 @@ head's native code, serves; the JavaScript comes from the dev server.
 2. `handbook-probe`:
 
    ```bash
-   sim open / --expect "id=counts"
+   sim open / --expect "id=counts" --no-relaunch
    sim open probe/handbook --expect "label=resolved 3542"
    sim snapshot handbook-probe
    ```
@@ -58,7 +58,7 @@ head's native code, serves; the JavaScript comes from the dev server.
 3. `handbook-quiet`:
 
    ```bash
-   sim open / --expect "id=counts"
+   sim open / --expect "id=counts" --no-relaunch
    sim snapshot handbook-field
    ```
 

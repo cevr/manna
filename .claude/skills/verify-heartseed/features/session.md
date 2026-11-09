@@ -113,7 +113,7 @@ sets them.
      `sim tap "label=Done"`.
      Then `sim tap "label=Isaiah 41:10, seed"`,
      `sim tap "label=Start here with Isaiah 41:10"`,
-     `sim open / --expect "id=session"`, `sim snapshot session-first` →
+     `sim open / --expect "id=session" --no-relaunch`, `sim snapshot session-first` →
      `Nothing to tend now`, and no `Minutes`, `5 min` or `Voice`.
 3. `session-choose`: `sim tap "label=Your field"`,
    `sim tap "label=Settings"`, two `sim tap "label=Voice"` (Her → Him →

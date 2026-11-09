@@ -92,11 +92,12 @@ Launch); the JavaScript comes from the dev server.
    no button `Today`, no `Say it`, no label starting `Stage:`.
 3. `field-control`: `sim tap "label=Isaiah 41:10, seed"`,
    `sim tap "label=Start here with Isaiah 41:10"`,
-   `sim open / --expect "id=session"`, `sim snapshot field-control` → the
+   `sim open / --expect "id=session" --no-relaunch`,
+   `sim snapshot field-control` → the
    heading `Today`, `Isaiah 41:10`, `Say it` and a button `Your field`.
 4. `field-back`: `sim tap "label=Your field"`, `sim snapshot field-back-home`
    → the heading `Your field` and `Begin` in the foot (the visit open);
-   `sim tap "label=Begin"`, `sim open / --expect "id=session"`,
+   `sim tap "label=Begin"`, `sim open / --expect "id=session" --no-relaunch`,
    `sim snapshot field-back` → the heading `Today`, `Isaiah 41:10` and
    `Say it` (as it was), `Your field`.
 5. `field-listening` and `field-grow`, at the first wait: `run.md` steps
@@ -118,7 +119,8 @@ Launch); the JavaScript comes from the dev server.
 8. `field-relaunch`: `sim relaunch`, `sim open / --expect "label=Isaiah
    41:10"` (the pending frame) and at once
    `sim snapshot field-relaunch-launch` → no `Your field` heading, no label
-   ending `sown` or `full corn`; then `sim open / --expect "id=counts"`,
+   ending `sown` or `full corn`; then
+   `sim open / --expect "id=counts" --no-relaunch`,
    `sim snapshot field-relaunch` → the heading `Your field`, no heading
    `Today`, and the same plants and days as step 7 (step 5 when step 7
    did not run).

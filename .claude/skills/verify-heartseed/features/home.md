@@ -167,7 +167,7 @@ puts `Begin` in the field's foot), with the same variables:
 1. `first.md` steps 1-6, to `first-planted`; note `PLANTED` (`date`) and
    `date +%H%M`.
 2. `home-open`: `sim tap "label=Continue"`,
-   `sim open / --expect "id=counts"`, `sim snapshot home-open` → the
+   `sim open / --expect "id=counts" --no-relaunch`, `sim snapshot home-open` → the
    heading `Your field`; the greeting by `date +%H%M`, as `home-furrows`
    takes it; in the foot `Nothing to tend now`, no `Begin` and no
    `About`; the buttons `When I need…`, `Settings` and two `Add verses`,
@@ -267,7 +267,7 @@ the same variables:
 4. `home-settings-today`: home after the first minute is in the done
    state, so no `Begin`: `sim tap "label=Isaiah 41:10, seed"`,
    `sim tap "label=Start here with Isaiah 41:10"`, `sim open / --expect
-   "id=session"`, `sim snapshot home-settings-today` and a raw snapshot →
+   "id=session" --no-relaunch`, `sim snapshot home-settings-today` and a raw snapshot →
    the heading `Today`, `‹ Your field` (label `Your field`), and no radio
    `2 min`, `5 min`, `10 min` or `20 min`, no `Minutes` group, no `Voice`
    and no `Settings`.
@@ -282,7 +282,7 @@ the same variables:
    `sim tap "label=Done"`; `sim snapshot home-renew-home` → no heading
    `Settings`, the button `Isaiah 41:10, seed, ready today`,
    `1 to tend · about 1 min` and `Begin`. Then `sim tap "label=Begin"`,
-   `sim open / --expect "id=session"`, `sim snapshot home-renew` → the
+   `sim open / --expect "id=session" --no-relaunch`, `sim snapshot home-renew` → the
    heading `Today`, `Isaiah 41:10`, `Stage: seed`, `Say it`,
    `1 to tend · about 1 min`, and no `Minutes` radio, `Voice` or
    `Settings`.
@@ -305,6 +305,25 @@ no `0 of 1 ripe`, no `Add verses` and the plant an image, not a button
 `sim tap "label=Start here with Isaiah 41:10"` not found (`home-start`);
 no `Begin` (`home-begin`); no `id=add-verses` (`home-add-places`); no
 label ending `, ready today` (`home-dot`).
+
+### A wait that stays
+
+`home-wait-stays`: a wait in the running app fails where it is, and never
+relaunches onto home. From `first-home` with a verse due (after a
+`sim relaunch` the next morning, or any install whose home offers
+`Begin`), with the same variables:
+
+1. `sim tap "label=Begin"`, `sim open / --expect "id=session" --no-relaunch`
+   → ok, `detail.retried` false.
+2. `sim open / --expect "id=counts" --timeout 15 --no-relaunch` → exit 1,
+   `TargetMissing`, in about 15 s.
+3. `sim snapshot home-wait-stays` → still Today: `id=session`, the same
+   reference, and no relaunch in the log.
+
+Nothing native changes: an installed Debug build serves
+(`sim install --app <copy>`). Red on base: `--no-relaunch` is
+`BadArguments`. Base's own step, with no flag, is ok with
+`detail.retried` true on home, and the visit gone.
 
 Report only the lines named above and the reference; delete the
 `snapshots` folder.

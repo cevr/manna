@@ -64,7 +64,7 @@ open waiting for the stage line (`id=stage`), which shows only once the
 garden is read and the run shows the passage:
 
 ```bash
-sim open / --expect "id=stage"
+sim open / --expect "id=stage" --no-relaunch
 sim snapshot today
 ```
 

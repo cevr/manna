@@ -68,7 +68,7 @@ server.
 
    ```bash
    xcrun simctl ui <udid> appearance light
-   sim open / --expect "id=counts"
+   sim open / --expect "id=counts" --no-relaunch
    sim open probe/theme --expect "label=scheme light"
    sim snapshot appearance-light
    ```
@@ -90,7 +90,7 @@ server.
 4. `appearance-choice`, the simulator still dark:
 
    ```bash
-   sim open / --expect "id=counts"
+   sim open / --expect "id=counts" --no-relaunch
    sim tap "label=Settings"
    agent-device snapshot --json --raw --observe-only --force-full --session verify-heartseed
    sim tap "label=Light"
@@ -111,7 +111,7 @@ server.
    sim relaunch
    sim open / --expect "id=counts"
    sim open probe/theme --expect "label=scheme light"
-   sim open / --expect "id=counts"
+   sim open / --expect "id=counts" --no-relaunch
    sim tap "label=Settings"
    sim tap "label=System"
    sim tap "label=Done"

@@ -81,7 +81,13 @@ const common = {
 };
 
 const Step = Schema.Union([
-  Schema.Struct({ ...common, action: Schema.Literal('open'), link: Target }),
+  Schema.Struct({
+    ...common,
+    action: Schema.Literal('open'),
+    link: Target,
+    /** Whether a target missing on iOS is opened again after terminating the app; true unless false. */
+    relaunch: Schema.optionalKey(Schema.Boolean),
+  }),
   Schema.Struct({ ...common, action: Schema.Literal('tap'), target: Target }),
   Schema.Struct({
     ...common,
@@ -154,20 +160,23 @@ const hostFailed = <A, R>(
 /**
  * Open `link`. On iOS a first open whose target does not show is tried once
  * more after the app is terminated, which clears a launch that hung on the
- * splash; the result says whether it was retried.
+ * splash; the result says whether it was retried. With `relaunch` false the
+ * app is never terminated: a missing target fails as it is, so a wait in the
+ * running app cannot pass on the screen a fresh launch shows.
  */
 export const openOnce = (
   place: Place,
   link: string,
   expect: Option.Option<string>,
   seconds: number,
+  relaunch: boolean,
 ) =>
   Effect.gen(function* () {
     const d = yield* Drive;
     return yield* d.open(place, link, expect, seconds).pipe(
       Effect.map((done): Outcome => ({ ...done, detail: { ...done.detail, retried: false } })),
       Effect.catchTag('TargetMissing', (missing: TargetMissing) => {
-        if (missing.platform !== 'ios') return Effect.fail(missing);
+        if (missing.platform !== 'ios' || !relaunch) return Effect.fail(missing);
         return d
           .open(place, link, expect, seconds, { terminate: true })
           .pipe(
@@ -221,9 +230,13 @@ const act = (d: DriveMembers, place: Place, step: Step) => {
     case 'open': {
       const at = step.expect.findIndex((expect) => 'shows' in expect);
       const shows = Option.flatMap(Option.fromNullishOr(step.expect[at]), showsOf);
-      return openOnce(place, step.link, shows, step.timeout ?? OPEN_SECONDS).pipe(
-        Effect.as(Option.map(shows, () => at)),
-      );
+      return openOnce(
+        place,
+        step.link,
+        shows,
+        step.timeout ?? OPEN_SECONDS,
+        step.relaunch ?? true,
+      ).pipe(Effect.as(Option.map(shows, () => at)));
     }
     case 'tap':
       return Effect.as(d.tap(place, step.target, seconds), none);

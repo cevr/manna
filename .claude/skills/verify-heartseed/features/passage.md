@@ -160,7 +160,7 @@ must start empty: uninstall by udid as `first.md` says.
 11. `passage-day-one`: on home, `sim snapshot passage-day-one` → the
     foot's counts line holds no `1 new`. When the foot offers `Begin`
     (the promise's review due), `sim tap "label=Begin"`,
-    `sim open / --expect "id=session"`, `sim snapshot passage-day-one-today`
+    `sim open / --expect "id=session" --no-relaunch`, `sim snapshot passage-day-one-today`
     → no `Listen`; then `sim tap "label=Your field"`.
 12. `passage-relaunch`: `sim relaunch`, `sim open / --expect "id=counts"`,
     `sim snapshot passage-relaunch` → the heading `Your field` and the rows
@@ -174,7 +174,7 @@ must start empty: uninstall by udid as `first.md` says.
 15. `passage-new`, the second session, after the next 04:00 local, with no
     uninstall: `sim boot`, then `sim open / --expect "id=counts"` → home's
     counts line holds `1 new`, with `Begin`; `sim tap "label=Begin"`,
-    `sim open / --expect "id=session"`,
+    `sim open / --expect "id=session" --no-relaunch`,
     `sim snapshot passage-new` → the counts line holds `1 new`; when the
     reference is `Isaiah 41:10` (its review due), run it through `Say it`
     and `Next` first, then snapshot again → the reference `John 15:1`,

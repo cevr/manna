@@ -5,6 +5,11 @@ headless browser) and the app's dev server, build and install the app, open
 a screen, tap, scroll, read the log, run a journey, and shut it all down.
 Each command prints one JSON line.
 
+`open` on iOS answers a target that does not show by terminating the app and
+opening once more (`detail.retried`), which clears a launch hung on the
+splash. A wait in the running app asks for none: `--no-relaunch`, or a
+journey open step's `relaunch: false`, fails the missing target as it is.
+
 The driver holds no app of its own. An app gives its values as an `App`
 record (`src/app.ts`): its simulator, device type, bundle id, URL scheme,
 driver session, port range, readiness target, platforms, native project,

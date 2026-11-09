@@ -112,7 +112,7 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
 6. `first-planted`: `sim snapshot first-planted` → `Planted`,
    `Stage: seed`, `Continue`; the log holds no `[growth] play` line.
 7. `first-home`: `sim tap "label=Continue"`, `sim open / --expect
-   "id=counts"`, `sim snapshot first-home` → the heading `Your field`;
+   "id=counts" --no-relaunch`, `sim snapshot first-home` → the heading `Your field`;
    in the foot `Nothing to tend now`, no `Begin` and no `About`; the
    buttons `When I need…` and `Settings`; no heading `Today`, no button `Today`, no label
    starting `Stage:` or `Grew to`, no label ending `words`, no grade
@@ -120,7 +120,7 @@ With `RUN=hsfirst-l8`, `EVIDENCE=$PWD/tmp/verify/$RUN`, a free `PORT` of
 8. `first-again`: `sim relaunch`, `sim open / --expect "label=Isaiah
    41:10"` (the pending frame) and at once `sim snapshot
    first-again-launch` → no `Hear it`, `Say it with help`, `Say it alone`
-   or `Planted`. Then `sim open / --expect "id=counts"`,
+   or `Planted`. Then `sim open / --expect "id=counts" --no-relaunch`,
    `sim snapshot first-again` → the heading `Your field`, no first-minute
    heading, and the done state, as in step 7. Once the passage is due,
    `run.md`'s `run-due` shows `today-passage` (`today.md`).

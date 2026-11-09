@@ -298,12 +298,22 @@ const simCommand = (place: Place) => {
       ),
       expect: expectFlag,
       timeout: seconds(30),
+      relaunch: Flag.Boolean('relaunch').pipe(
+        Flag.withDefault(true),
+        Flag.withDescription(
+          'retry a missing iOS target once after terminating the app; --no-relaunch fails it instead',
+        ),
+      ),
       state,
     },
-    (flags) => report('open', openOnce(at(flags.state), flags.link, flags.expect, flags.timeout)),
+    (flags) =>
+      report(
+        'open',
+        openOnce(at(flags.state), flags.link, flags.expect, flags.timeout, flags.relaunch),
+      ),
   ).pipe(
     Command.withDescription(
-      'Open a screen by deep link (iOS) or route (web); a missing target on iOS is retried once',
+      'Open a screen by deep link (iOS) or route (web); a missing target on iOS is retried once unless --no-relaunch',
     ),
   );
 

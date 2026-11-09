@@ -97,7 +97,7 @@ must start empty: uninstall by udid as `first.md` says.
    `12 still to learn` and `Strength`, the button `Isaiah 41:10`; no other
    card title, no other promise button, no button `Today`, no `Say it`.
 4. `promise-visit`: `sim tap "label=Isaiah 41:10"`,
-   `sim open / --expect "id=session"`, `sim snapshot promise-visit` → the
+   `sim open / --expect "id=session" --no-relaunch`, `sim snapshot promise-visit` → the
    heading `Today`, the reference `Isaiah 41:10`, `Say it`, no `Listen`,
    no `When I need…`; the counts line as in `first-home`
    (`Nothing to tend now`, unless the promise came due).
@@ -125,7 +125,7 @@ must start empty: uninstall by udid as `first.md` says.
    passage added and no uninstall: `sim boot`, then
    `sim open / --expect "id=counts"` → home's counts line holds `1 new`,
    with `Begin`; `sim tap "label=Begin"`,
-   `sim open / --expect "id=session"`, `sim snapshot promise-new` → the
+   `sim open / --expect "id=session" --no-relaunch`, `sim snapshot promise-new` → the
    counts line holds `1 new`; when the reference is `Isaiah 41:10` (its
    review due), run it through `Say it` and `Next` first, then snapshot
    again → the reference `Psalms 91:1 [1-9]`, nine `word-<i>` nodes,

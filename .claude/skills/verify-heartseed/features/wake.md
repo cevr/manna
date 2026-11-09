@@ -41,8 +41,8 @@ of `first-planted`. **Away** means: record the app's pid
 (`xcrun simctl spawn <udid> launchctl list | grep app.heartseed`), send the
 app to the background with `xcrun simctl launch <udid>
 com.apple.Preferences`, wait 5 s, then bring it back with
-`sim open / --expect "id=counts"` from home, or
-`sim open / --expect "id=session"` from Today. The pid read again must be
+`sim open / --expect "id=counts" --no-relaunch` from home, or
+`sim open / --expect "id=session" --no-relaunch` from Today. The pid read again must be
 the same: a different pid means the app was relaunched, and the row
 proves nothing.
 
@@ -90,7 +90,7 @@ and `START` as `first.md` sets them.
    `sim snapshot wake-stays`.
 3. `wake-due`: wait until 7 minutes after `PLANTED`, **away** (from
    home), then `sim snapshot wake-due-home`; `sim tap "label=Begin"`,
-   `sim open / --expect "id=session"`, `sim snapshot wake-due`, plus a
+   `sim open / --expect "id=session" --no-relaunch`, `sim snapshot wake-due`, plus a
    raw snapshot
    (`agent-device snapshot --json --raw --observe-only --force-full
    --session verify-heartseed`) for `run.md`'s `run-due` rects. When
