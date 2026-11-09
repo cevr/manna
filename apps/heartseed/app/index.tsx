@@ -58,6 +58,10 @@ import { fieldPassagesOf } from '../src/promises/taught';
 import { countsOf, MINUTES, type Item, type TextPiece } from '../src/session';
 import { shownOf, type Shown } from '../src/session/run';
 import { useSessionBegunWhenShown } from '../src/session/shown';
+import { ReadingView } from '../src/reading/view';
+
+/** The voice's view as `src/app.ts` gives it: Today names no voice module itself. */
+type VoiceView = Parameters<typeof readingAloud>[0];
 
 /** The passages the field shows first: Today's, a passage of one verse. */
 const PASSAGES: readonly FieldPassage[] = [
@@ -65,7 +69,9 @@ const PASSAGES: readonly FieldPassage[] = [
 ];
 
 /**
- * The verse under `cue`: whole under the full text while no recital is
+ * The verse under `cue`: while the voice reads this very text and no
+ * recital is shown, the reading view, each word lit as it is read
+ * (`ReadingView`); else whole under the full text while no recital is
  * shown; else one element per word, each its own accessibility element, a
  * word the recital shown has reached as `wordOf` shows it and every other
  * word as the cue shows it (`Unsaid`): whole or in letters in the cue's ink,
@@ -75,15 +81,20 @@ function Verse({
   text,
   marks,
   cue,
+  voice,
   onPeek,
 }: {
   readonly text: string;
   readonly marks: Option.Option<readonly Mark[]>;
   readonly cue: Cue;
+  readonly voice: Option.Option<VoiceView>;
   readonly onPeek: (index: number) => void;
 }) {
   const look = useLook();
   const styles = useThemed(sheets);
+  const reading = Option.filter(voice, (view) => readingAloud(view) && view.verse === text);
+  if (Option.isNone(marks) && Option.isSome(reading))
+    return <ReadingView text={text} view={reading.value} />;
   if (Option.isNone(marks) && cue === 'full')
     return (
       <Text testID="passage" style={styles.words}>
@@ -496,6 +507,7 @@ function Today({ onField }: { readonly onField: () => void }) {
                 text={piece.text}
                 marks={marks}
                 cue={shownCue(piece.reference, garden, shownSayIt, marks)}
+                voice={voice}
                 onPeek={onPeek}
               />
               <Growing reference={piece.reference} garden={garden} sayIt={shownSayIt} />

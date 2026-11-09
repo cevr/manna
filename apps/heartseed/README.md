@@ -1654,7 +1654,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     the model: a sought tail's ranges lighting the verse's words).
   - `test:reading`: `src/reading` (the reading view's words: what each word
     shows over generated texts, and the word under a finger over generated
-    layouts and points, each against its rule).
+    layouts and points, each against its rule, and the reading view mounted
+    alone: each word's text, ink and selection over generated readings).
   - `test:dictation`: `src/dictation.property.test.ts` (the dictation
     service against its model) and `src/dictation` (the scripted source,
     the hints, the native module's guards, and a held consumer of
