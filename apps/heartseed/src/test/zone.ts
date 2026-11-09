@@ -53,10 +53,9 @@ export const travel = (zone: string) => {
 /** The host's zone now, to be put back with `restore`. */
 export const hostZone = () => process.env.TZ;
 
-/** Puts back the zone `hostZone` gave. */
+/** Puts back the zone `hostZone` gave, and the runner's UTC where it gave none: bun test reads UTC with `TZ` unset, and the host's own zone once `TZ` is deleted. */
 export const restore = (zone: string | undefined) => {
-  if (zone === undefined) delete process.env.TZ;
-  else process.env.TZ = zone;
+  process.env.TZ = zone ?? 'UTC';
 };
 
 /** `work` run with the host's zone set to `zone`, the zone before it restored before it returns or throws. */

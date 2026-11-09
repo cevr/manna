@@ -5280,3 +5280,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** `packages/film/e2e/tools/av-sync.test.ts` let the flash and the click sit a whole 30 fps frame (33 ms) apart, so the sync clip's sound fed a frame of AAC priming early stayed green on every case.
 - **Cause:** The bound was one frame, wider than a frame of AAC priming (1024 samples, 21 ms at 48 kHz), where the cases on main sit at most 8.3 ms apart.
 - **Guard:** code: `packages/film/e2e/tools/av-sync.test.ts` `the flash and the click are within 10 ms in the mezzanine and the voice`
+
+### heartseed-zone-restore-puts-back-utc
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "`restore(undefined)` deletes `TZ`, leaving bun in the host's zone"
+- **Source:** hymnapp/hshomefield/round-1-findings.md o1 (On base, its one item)
+- **Wrong:** `restore` in `apps/heartseed/src/test/zone.ts` deleted `TZ` where the zone before a case was unset, so every heartseed case after a zone case ran in the host's own zone (New York on this host) instead of bun test's UTC.
+- **Cause:** bun test starts with `TZ` unset and reads UTC, but once `TZ` is deleted it reads the host's zone; `restore` treated an unset `TZ` and a deleted one as the same zone.
+- **Guard:** code: `apps/heartseed/src/zone.test.ts` `puts the host back in UTC after nested inZone levels, returning or throwing, and travel and restore pairs across an await, each level reading its own zone`
+
+### heartseed-case-ends-in-utc
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "a timed-out walk keeps running and shares the zone with its neighbour"
+- **Source:** hymnapp/hsguards4/blocked.md p2 (probe 2, the Lord_Howe trace)
+- **Wrong:** A heartseed walk that timed out at bun's 5 s kept running into the next case of its file, which shares `process.env.TZ`, so the neighbour failed a plan mismatch in `Australia/Lord_Howe` that named neither the walk nor the zone it left.
+- **Cause:** A timed-out promise cannot be cancelled, and no check after a case read the zone it ended in, so a zone left set by a case or by a walk it let out reached the cases after it.
+- **Guard:** code: `apps/heartseed/src/test/setup.ts` `not UTC: a zone it set was not put back, or a walk in it outlived it`

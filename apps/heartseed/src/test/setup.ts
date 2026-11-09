@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals -- Bun's loader takes each stand-in module as source text, so paths and the passage are written into it as JSON literals. */
+/* oxlint-disable effect/noGlobals, effect/noTestLifecycleHooks, effect/noThrowStatement, effect/noNewError -- Bun's loader takes each stand-in module as source text, so paths and the passage are written into it as JSON literals; every case passes through one check after it, which fails a case that left the host outside UTC by throwing to bun's runner. */
 
 /**
  * The app's tests run its screens under Bun, mounted in a browser's
@@ -20,6 +20,7 @@
 
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { plugin } from 'bun';
+import { afterEach } from 'bun:test';
 
 import { readChapters } from '../../vite/kjv';
 import { readLexicon } from '../../vite/lexicon';
@@ -64,4 +65,16 @@ plugin({
       loader: 'js',
     }));
   },
+});
+
+const UTC_AT = [Date.UTC(2026, 0, 15, 12), Date.UTC(2026, 6, 15, 12)];
+
+/** Every case ends with the host in UTC, the zone bun test starts in: one that ends elsewhere fails, naming the zone, and UTC is put back first so the cases after it run where they expect. */
+afterEach(() => {
+  if (UTC_AT.every((at) => new Date(at).getTimezoneOffset() === 0)) return;
+  const left = process.env.TZ ?? 'the host’s own zone';
+  process.env.TZ = 'UTC';
+  throw new Error(
+    `the case ended in ${left}, not UTC: a zone it set was not put back, or a walk in it outlived it`,
+  );
 });

@@ -2496,7 +2496,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     field and chooser rigs hold every frame to the oracle beside their own
     rules.
   - `test:rest`: the other test files at the root of `src`, named file by
-    file.
+    file, with `src/zone.test.ts` (the tests' zone helpers over generated
+    nested `inZone` levels and `travel` and `restore` pairs: each level
+    reads its own zone, and each run ends in UTC). Every `src` part's
+    preload, `src/test/setup.ts`, fails a case that ends outside UTC,
+    naming the zone it ended in, and puts back UTC for the next case.
   - `test:infra`: `scripts` and `vite`, with `scripts/sim.test.ts`
     (Heartseed's `sim` over a stand-in Drive: its values, the web and a
     port outside 8280-8289 refused before any step, and `install` waiting
