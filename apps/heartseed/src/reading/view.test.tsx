@@ -1,7 +1,7 @@
-/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noTernary, eslint/no-await-in-loop -- a view test: it mounts the reading view in happy-dom's document and draws it again frame after frame, one after another, through React's promise-based `act`, draws its views with plain branches, reads nodes whose absent attributes are null, and hands each word its box through the layout handler react-native-web keeps on the node. */
+/* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction, effect/noTernary, effect/noUnsafeDictionaryType, eslint/no-await-in-loop -- a view test: it reads a word's React props as React holds them, where react-native-web draws no DOM for VoiceOver's actions; it mounts the reading view in happy-dom's document and draws it again frame after frame, one after another, through React's promise-based `act`, draws its views with plain branches, reads nodes whose absent attributes are null, and hands each word its box through the layout handler react-native-web keeps on the node. */
 
 /**
- * The reading view alone (hslight L2, L5-L7, L9), mounted in happy-dom
+ * The reading view alone (hslight L2, L5-L9), mounted in happy-dom
  * (react-native-web) and drawn again over generated readings of made-up
  * texts.
  *
@@ -23,6 +23,11 @@
  * later end asks for nothing. Each hold is played on the gesture as it was
  * drawn at the hold's start, so a callback that read the held word from its
  * render would seek to a stale one.
+ *
+ * VoiceOver (L8): each word, itself and not a wrapper, offers one action,
+ * `Read from here`, read from the props React holds since react-native-web
+ * draws no DOM for it; performing it asks for one seek to that word, and
+ * any other action asks for nothing.
  *
  * It catches the ink off by one, a selection or ground left on a word out
  * of the range, a word nested in a wrapper, a word's text cut at its
@@ -340,6 +345,46 @@ const holdWalk = async (seed: number, tally: Tally): Promise<string[]> => {
   return faults;
 };
 
+/** A fiber as React keeps it: the props it was drawn with, its first child, its next sibling and its host node. */
+interface Fiber {
+  readonly memoizedProps?: Record<string, unknown> | null;
+  readonly child?: Fiber | null;
+  readonly sibling?: Fiber | null;
+  readonly stateNode?: unknown;
+}
+
+/** The value `node` keeps under the React key starting with `prefix`. */
+const keyed = (node: Node, prefix: string): Fiber | undefined => {
+  const key = Object.keys(node).find((name) => name.startsWith(prefix));
+  return key === undefined ? undefined : (node as unknown as Record<string, Fiber>)[key];
+};
+
+/**
+ * The nearest props at or above `element` holding `name`, read from the
+ * root's current fiber tree, where react-native-web draws no DOM for them
+ * (VoiceOver's actions). The node's own fiber may be the stale alternate,
+ * so the walk starts at the root's current fiber.
+ */
+const propsOf = (element: Element, name: string): Record<string, unknown> => {
+  let root: Fiber | undefined;
+  for (let node: Node | null = element; node !== null && root === undefined; node = node.parentNode)
+    root = (keyed(node, '__reactContainer$')?.stateNode as { readonly current?: Fiber } | undefined)
+      ?.current;
+  const path: Fiber[] = [];
+  const visit = (fiber: Fiber | null | undefined): boolean => {
+    for (let each = fiber; each; each = each.sibling) {
+      path.push(each);
+      if (each.stateNode === element || visit(each.child)) return true;
+      path.pop();
+    }
+    return false;
+  };
+  visit(root);
+  return (
+    path.toReversed().find((fiber) => name in (fiber.memoizedProps ?? {}))?.memoizedProps ?? {}
+  );
+};
+
 describe('the reading view', () => {
   it('lights each word to the read point and selects the current range, frame after frame', async () => {
     const host = document.createElement('div');
@@ -370,5 +415,42 @@ describe('the reading view', () => {
     expect(tally.cancels).toBeGreaterThan(4);
     expect(tally.swipes).toBeGreaterThan(8);
     expect(tally.gone).toBeGreaterThan(3);
+  });
+
+  it('offers VoiceOver Read from here on each word, which asks for one seek to that word', async () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const next = random(11);
+    const faults: string[] = [];
+    for (let step = 0; step < 8; step++) {
+      const text = TEXTS[step % TEXTS.length] as string;
+      const view = viewOf(text, next);
+      const asks: string[] = [];
+      const hold: Hold = { ...IDLE, onSeek: (word) => void asks.push(`seek ${word}`) };
+      await act(async () => root.render(<ReadingView text={text} view={view} hold={hold} />));
+      const words = [...(host.querySelector('[data-testid="reading"]')?.children ?? [])];
+      for (const [index, node] of words.entries()) {
+        const at = `step ${step} word-${index}`;
+        const props = propsOf(node, 'accessibilityActions');
+        const actions = JSON.stringify(props['accessibilityActions']);
+        if (actions !== JSON.stringify([{ name: 'readFromHere', label: 'Read from here' }]))
+          faults.push(`${at}: actions ${actions}`);
+        if (props['testID'] !== `word-${index}`) faults.push(`${at}: actions on a wrapper`);
+        if (props['accessible'] === false) faults.push(`${at}: not its own element`);
+        const run = props['onAccessibilityAction'] as
+          | ((event: { readonly nativeEvent: { readonly actionName: string } }) => void)
+          | undefined;
+        await act(async () => {
+          run?.({ nativeEvent: { actionName: 'activate' } });
+          run?.({ nativeEvent: { actionName: 'readFromHere' } });
+        });
+        if (asks.join('|') !== `seek ${index}`) faults.push(`${at}: asked ${asks.join('|')}`);
+        asks.length = 0;
+      }
+    }
+    await act(async () => root.unmount());
+    host.remove();
+    expect(faults).toEqual([]);
   });
 });

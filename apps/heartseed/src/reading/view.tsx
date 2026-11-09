@@ -15,6 +15,10 @@
  * (`onLetGo`). The held word lives in a ref beside the screen's state, so
  * no callback reads a stale one, and when the view goes (the reading
  * ended) the hold is dropped and a later end calls nothing.
+ *
+ * Each word stays its own accessibility element and offers VoiceOver one
+ * action, `Read from here`, which reads on from it (`onSeek`), as a
+ * release on it would.
  */
 
 import { Option } from 'effect';
@@ -29,6 +33,12 @@ import { shownWordsOf, wordAt, type Box } from './words';
 
 /** How long a finger rests still on the words before the hold takes it, in milliseconds. */
 const LONG_PRESS = 350;
+
+/** The VoiceOver action each word offers: the reading reads on from that word. */
+const READ_FROM_HERE = { name: 'readFromHere', label: 'Read from here' } as const;
+
+/** The actions list each word carries, one list for every word. */
+const WORD_ACTIONS = [READ_FROM_HERE];
 
 /** The hold as the screen keeps it: the word held, if any, and what each moment of the hold asks of the voice. */
 export interface Hold {
@@ -122,6 +132,10 @@ export function ReadingView({
               key={index}
               testID={`word-${index}`}
               aria-selected={isSelected}
+              accessibilityActions={WORD_ACTIONS}
+              onAccessibilityAction={({ nativeEvent }) => {
+                if (nativeEvent.actionName === READ_FROM_HERE.name) live.current.onSeek(index);
+              }}
               onLayout={({ nativeEvent }) => boxes.current.set(index, nativeEvent.layout)}
               style={[
                 look.word,
