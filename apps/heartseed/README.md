@@ -1651,6 +1651,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     the choice over both keys) and `src/voice` (the read rule of the choice
     over every text of both keys and failed reads, `choose` in command
     order and in bursts, and the native module's guards).
+  - `test:reading`: `src/reading` (the reading view's words: what each word
+    shows over generated texts, and the word under a finger over generated
+    layouts and points, each against its rule).
   - `test:dictation`: `src/dictation.property.test.ts` (the dictation
     service against its model) and `src/dictation` (the scripted source,
     the hints, the native module's guards, and a held consumer of
