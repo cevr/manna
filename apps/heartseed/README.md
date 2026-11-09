@@ -2474,6 +2474,18 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     each offer's state over generated passages and fields, `Full` by stale
     props as the limit line, a pending plant blocking every control and the
     close, and no paid word or verse text on any shelf.
+  - `test:shelves-walk-a`, `test:shelves-walk-b` and `test:shelves-walk-c`:
+    `src/shelves/walk-a.test.tsx`, `walk-b.test.tsx` and `walk-c.test.tsx`,
+    generated readers through `src/test/shelves-walk.ts` over the same rig:
+    no passages, 1-3 held, 4 held or a garbled value, the promise planted
+    or not and a loose verse recalled; shelves opened, switched and closed,
+    `Plant` landing or refused, tapped once, twice in one turn, then `Done`
+    in one turn or with its write held, then a retry, a shelf or leaving;
+    `Done`, Escape, `Any passage` and the stand-in's `Add verses`; after
+    every command the sheet, the counts, the stored passages and every
+    other key against the models; each file's floors met by its own devices
+    (a: the adds that land; b: refusals and the ways out; c: the stored
+    values, shelves and offers in the field).
   - `test:home-start`: `src/home/start.property.test.ts`, Start here at the
     session seam, walked as `test:session-visit` walks a visit: after every
     step the plan, the hold, the visit against `startModel`
