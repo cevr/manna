@@ -1652,10 +1652,17 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     over every text of both keys and failed reads, `choose` in command
     order and in bursts, the native module's guards, and the seek against
     the model: a sought tail's ranges lighting the verse's words).
-  - `test:reading`: `src/reading` (the reading view's words: what each word
-    shows over generated texts, and the word under a finger over generated
-    layouts and points, each against its rule, and the reading view mounted
-    alone: each word's text, ink and selection over generated readings).
+  - `test:reading`: `src/reading/words.property.test.ts` (the reading
+    view's words: what each word shows over generated texts, and the word
+    under a finger over generated layouts and points, each against its rule)
+    and `src/reading/view.test.tsx` (the reading view mounted alone: each
+    word's text, ink and selection over generated readings, and its hold
+    through the gesture stand-in: the word held under the finger, one pause,
+    one seek or one resume at the end, nothing for a swipe or a late end).
+  - `test:reading-today`: `src/reading/today.test.tsx` (Today's reading
+    view and hold through the root against the voice's model: the source's
+    calls, one tick per hold, the reading view only while the piece is read,
+    and the scroll view still exactly while held).
   - `test:dictation`: `src/dictation.property.test.ts` (the dictation
     service against its model) and `src/dictation` (the scripted source,
     the hints, the native module's guards, and a held consumer of

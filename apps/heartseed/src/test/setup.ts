@@ -3,9 +3,11 @@
 /**
  * The app's tests run its screens under Bun, mounted in a browser's
  * document (happy-dom) as the web build renders them, with `__DEV__` false
- * as in a release build (Reanimated reads it as it loads). Three boundaries
+ * as in a release build (Reanimated reads it as it loads). Four boundaries
  * stand in, as the bundler and the router would provide them:
  * - `react-native` is react-native-web, as on the web;
+ * - `react-native-gesture-handler` is `src/test/gesture.tsx`: a test plays
+ *   a gesture's touch through its own callbacks (`gestureOf`);
  * - `virtual:heartseed-passage` is the passage the bundler plugin derives,
  *   by the same script (`vite/passage.ts`), and `virtual:heartseed-kjv` the
  *   corpus, by `vite/kjv.ts`, `virtual:heartseed-lexicon` the natural
@@ -38,6 +40,11 @@ plugin({
     const one = Bun.resolveSync('./one.tsx', import.meta.dir);
     build.module('one', () => ({
       contents: `export * from ${JSON.stringify(one)};`,
+      loader: 'js',
+    }));
+    const gesture = Bun.resolveSync('./gesture.tsx', import.meta.dir);
+    build.module('react-native-gesture-handler', () => ({
+      contents: `export * from ${JSON.stringify(gesture)};`,
       loader: 'js',
     }));
     build.module('virtual:heartseed-passage', () => ({

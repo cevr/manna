@@ -14,6 +14,8 @@ import {
   chooseMinutes,
   gardenView,
   greetingNow,
+  holdReading,
+  letGo,
   listenTo,
   next,
   passagesView,
@@ -22,6 +24,7 @@ import {
   readingAloud,
   sayItView,
   cycleVoice,
+  seekTo,
   sessionView,
   startHere,
   taughtView,
@@ -58,7 +61,7 @@ import { fieldPassagesOf } from '../src/promises/taught';
 import { countsOf, MINUTES, type Item, type TextPiece } from '../src/session';
 import { shownOf, type Shown } from '../src/session/run';
 import { useSessionBegunWhenShown } from '../src/session/shown';
-import { ReadingView } from '../src/reading/view';
+import { ReadingView, type Hold } from '../src/reading/view';
 
 /** The voice's view as `src/app.ts` gives it: Today names no voice module itself. */
 type VoiceView = Parameters<typeof readingAloud>[0];
@@ -71,7 +74,7 @@ const PASSAGES: readonly FieldPassage[] = [
 /**
  * The verse under `cue`: while the voice reads this very text and no
  * recital is shown, the reading view, each word lit as it is read
- * (`ReadingView`); else whole under the full text while no recital is
+ * (`ReadingView`) under Today's hold (`hold`); else whole under the full text while no recital is
  * shown; else one element per word, each its own accessibility element, a
  * word the recital shown has reached as `wordOf` shows it and every other
  * word as the cue shows it (`Unsaid`): whole or in letters in the cue's ink,
@@ -82,19 +85,21 @@ function Verse({
   marks,
   cue,
   voice,
+  hold,
   onPeek,
 }: {
   readonly text: string;
   readonly marks: Option.Option<readonly Mark[]>;
   readonly cue: Cue;
   readonly voice: Option.Option<VoiceView>;
+  readonly hold: Hold;
   readonly onPeek: (index: number) => void;
 }) {
   const look = useLook();
   const styles = useThemed(sheets);
   const reading = Option.filter(voice, (view) => readingAloud(view) && view.verse === text);
   if (Option.isNone(marks) && Option.isSome(reading))
-    return <ReadingView text={text} view={reading.value} />;
+    return <ReadingView key={text} text={text} view={reading.value} hold={hold} />;
   if (Option.isNone(marks) && cue === 'full')
     return (
       <Text testID="passage" style={styles.words}>
@@ -438,6 +443,9 @@ const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
  * none held, the scroll holds the counts line alone, and there is no
  * button. A recital's marks, result and alert show only while its item is
  * held, or with no plan.
+ * Today keeps the reading view's hold: the word a finger holds while a
+ * reading is under way, and while one is held the scroll view stands still
+ * (`scrollEnabled` off), so a drag across the words seeks and never scrolls.
  * Every control but a missed word's mark sits outside the scroll view, so
  * however long the verse or the result, they are on screen without a
  * scroll and clear of the home indicator.
@@ -457,6 +465,12 @@ function Today({ onField }: { readonly onField: () => void }) {
   const onListen = useAtomSet(listenTo);
   const voice = AsyncResult.value(useAtomValue(voiceView));
   const voiceFree = Option.exists(voice, (view) => view.enabled && !readingAloud(view));
+  const [heldWord, setHeld] = useState<Option.Option<number>>(Option.none());
+  const held = Option.filter(heldWord, () => Option.exists(voice, readingAloud));
+  const onHold = useAtomSet(holdReading);
+  const onSeek = useAtomSet(seekTo);
+  const onLetGo = useAtomSet(letGo);
+  const hold: Hold = { held, onHeld: setHeld, onHold, onSeek, onLetGo };
   useSessionBegunWhenShown(Option.isSome(garden));
   const showing = showingOf(Option.map(session, (view) => shownOf(view, garden)));
   const recital = Option.exists(showing, (each) => each.recital);
@@ -483,6 +497,7 @@ function Today({ onField }: { readonly onField: () => void }) {
         <Choices />
       </View>
       <ScrollView
+        scrollEnabled={Option.isNone(held)}
         style={styles.scroll}
         contentContainerStyle={[
           look.content,
@@ -508,6 +523,7 @@ function Today({ onField }: { readonly onField: () => void }) {
                 marks={marks}
                 cue={shownCue(piece.reference, garden, shownSayIt, marks)}
                 voice={voice}
+                hold={hold}
                 onPeek={onPeek}
               />
               <Growing reference={piece.reference} garden={garden} sayIt={shownSayIt} />

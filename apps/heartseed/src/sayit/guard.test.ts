@@ -21,9 +21,9 @@
  *   development probe (`app/probe/natural.tsx`) build the voice.
  * - Today's hold on the words of a reading under way grows its voice atoms
  *   by `seekTo`, `holdReading` and `letGo`, which come only from
- *   `src/app.ts`: only Today, its reading view (`src/reading/view.tsx`) and
- *   the light probe (`app/probe/light.tsx`) take them, and no other source
- *   seeks, pauses or resumes the voice itself.
+ *   `src/app.ts`: only Today takes them, and hands them to its reading
+ *   view (`src/reading/view.tsx`), and no other source seeks, pauses or
+ *   resumes the voice itself.
  * - A word lit is felt by a soft tick: the app's one call of One's haptics
  *   is `impact('soft')`, in Say it's live parts.
  *
@@ -57,6 +57,9 @@ const sourcesUnder = (folder: string): ReadonlyArray<string> =>
     .toSorted();
 
 const SOURCES = [...sourcesUnder('app'), ...sourcesUnder('src')];
+
+/** The reading view's hold atoms of `src/app.ts`, which Today takes beside the voice's pill and Listen. */
+const HOLD = ['seekTo', 'holdReading', 'letGo'];
 
 const read = (path: string) => readFileSync(join(APP, path), 'utf8');
 
@@ -195,7 +198,9 @@ describe('Say it aloud', () => {
     const taken = today
       .filter(({ from }) => /(^|\/)app$/.test(from))
       .flatMap(({ names }) =>
-        names.filter((name) => /voice|Voice|listen|hush|read|Read/.test(name)),
+        names.filter(
+          (name) => /voice|Voice|listen|hush|read|Read/.test(name) && !HOLD.includes(name),
+        ),
       );
     expect(taken.toSorted()).toEqual(['cycleVoice', 'listenTo', 'readingAloud', 'voiceView']);
     expect(code('app/index.tsx')).not.toMatch(/\.read\(|\blisten\b|\bhush\b|\.choose\(/);
@@ -225,8 +230,7 @@ describe('Say it aloud', () => {
     expect(builders).toEqual(['app/probe/natural.tsx', 'src/app.ts']);
   });
 
-  it('grows Today’s voice atoms by the hold’s seekTo, holdReading and letGo, from src/app.ts alone: only Today, its reading view and the light probe take them, and no other source seeks, pauses or resumes the voice', () => {
-    const HOLD = ['seekTo', 'holdReading', 'letGo'];
+  it('grows Today’s voice atoms by the hold’s seekTo, holdReading and letGo, from src/app.ts alone: only Today takes them (its reading view is handed them), and no other source seeks, pauses or resumes the voice', () => {
     const app = code('src/app.ts');
     expect(HOLD.filter((name) => app.includes(`export const ${name} = runtime.fn(`))).toEqual(HOLD);
     const takers = SOURCES.filter((source) =>
@@ -234,12 +238,11 @@ describe('Say it aloud', () => {
         ({ from, names }) => /(^|\/)app$/.test(from) && names.some((name) => HOLD.includes(name)),
       ),
     );
-    expect(
-      takers.filter(
-        (source) =>
-          !['app/index.tsx', 'app/probe/light.tsx', 'src/reading/view.tsx'].includes(source),
-      ),
-    ).toEqual([]);
+    expect(takers).toEqual(['app/index.tsx']);
+    const today = importsOf('app/index.tsx')
+      .filter(({ from }) => /(^|\/)app$/.test(from))
+      .flatMap(({ names }) => names.filter((name) => HOLD.includes(name)));
+    expect(today.toSorted()).toEqual(HOLD.toSorted());
     const voiceOwners = (source: string) =>
       source === 'src/app.ts' ||
       source === 'src/voice.ts' ||
