@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noTryCatch -- a React screen test: it mounts the root in happy-dom through the wake rig's promise-based steps over a disk whose recall is written as the garden writes it (JSON), reads happy-dom nodes whose absent attributes are null, and sets the host's zone through `process.env.TZ`, put back in a `finally` even when a step throws (to UTC, bun test's own zone, when it was unset: an unset `TZ` would leave the cases after it in the host machine's zone). */
+/* oxlint-disable effect/noGlobals, effect/noAsyncFunction, effect/noTryCatch -- a React screen test: it mounts the root in happy-dom through the wake rig's promise-based steps over a disk whose recall is written as the garden writes it (JSON), and sets the host's zone through `process.env.TZ`, put back in a `finally` even when a step throws (to UTC, bun test's own zone, when it was unset: an unset `TZ` would leave the cases after it in the host machine's zone). */
 
 /**
  * The greeting at each return to the foreground (hshomeroot R9), through the

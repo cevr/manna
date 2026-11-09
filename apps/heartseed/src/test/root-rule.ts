@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noNullish, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction -- the frame rule reads happy-dom nodes whose absent attributes are null and keeps a frame's faults in a plain list; a rig's launch is promise-based, and a rig that added no host cannot be watched, which stops its case. */
+/* oxlint-disable effect/noNullish, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction -- the frame rule reads happy-dom nodes whose absent attributes are null; a rig's launch is promise-based, and a rig that added no host cannot be watched, which stops its case. */
 
 /** Text as a reader sees it: whitespace collapsed. */
 const text = (node: Element | null | undefined) =>
