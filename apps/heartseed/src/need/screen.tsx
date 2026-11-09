@@ -1,7 +1,7 @@
 /**
  * When I need… as the reader meets it: the root's fifth screen, opened from
- * Today's `When I need…`. A bar fixed above the scroll view holds the one
- * way back, `‹ Today`, so it is on screen without a scroll; the scroll view
+ * home's `When I need…`. A bar fixed above the scroll view holds the one
+ * way back, `‹ Your field`, so it is on screen without a scroll; the scroll view
  * holds the one heading, then a card per collection `needOf` gives, in its
  * order: the collection's title as plain text (never a heading), each
  * promise the reader knows as a button named by its reference, and on a
@@ -65,14 +65,14 @@ function Card({
   );
 }
 
-/** When I need… over `cards`, with the way back to Today (`onToday`) and a known promise's tap (`onVisit`). */
+/** When I need… over `cards`, with the way back to home (`onField`) and a known promise's tap (`onVisit`). */
 export function NeedScreen({
   cards,
-  onToday,
+  onField,
   onVisit,
 }: {
   readonly cards: readonly NeedCard[];
-  readonly onToday: () => void;
+  readonly onField: () => void;
   readonly onVisit: (card: NeedCard, promise: Range) => void;
 }) {
   const look = useLook();
@@ -83,12 +83,12 @@ export function NeedScreen({
       <View style={[styles.bar, { paddingTop: insets.top + 16 }]}>
         <Pressable
           role="button"
-          aria-label="Today"
+          aria-label="Your field"
           hitSlop={10}
-          onPress={onToday}
+          onPress={onField}
           style={({ pressed }) => [styles.back, pressed && look.pressed]}
         >
-          <Text style={styles.backText}>‹ Today</Text>
+          <Text style={styles.backText}>‹ Your field</Text>
         </Pressable>
       </View>
       <ScrollView

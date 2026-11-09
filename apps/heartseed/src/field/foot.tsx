@@ -2,7 +2,9 @@
  * The field's foot, fixed under the scroll view and clear of the home
  * indicator: one card, then `About`. With no verse chosen it is the Begin
  * card (the session's counts line and, while the run shows an item,
- * `Begin`), once a plan is made; with a verse chosen it is the chosen card
+ * `Begin`), once a plan is made, or `Begin` alone when the run shows a verse
+ * with no plan (the reader's passages unread, so none is made); with a verse
+ * chosen it is the chosen card
  * (`<reference> · <stage words>` and, when a tap there starts something,
  * `Start here`, named `Start here with <reference>`). So what starts the run
  * sits in one place, on screen without a scroll.
@@ -70,19 +72,21 @@ export function Foot({
           </View>
         ),
         onNone: () =>
-          Option.match(counts, {
-            onNone: () => false,
-            onSome: (line) => (
-              <View testID="begin-card" style={styles.card}>
-                <Text testID="counts" style={styles.line}>
-                  {line}
-                </Text>
-                {begin && (
-                  <Control label="Begin" shown="Begin" strong pending={pending} onPress={onBegin} />
-                )}
-              </View>
-            ),
-          }),
+          (Option.isSome(counts) || begin) && (
+            <View testID="begin-card" style={styles.card}>
+              {Option.match(counts, {
+                onNone: () => false,
+                onSome: (line) => (
+                  <Text testID="counts" style={styles.line}>
+                    {line}
+                  </Text>
+                ),
+              })}
+              {begin && (
+                <Control label="Begin" shown="Begin" strong pending={pending} onPress={onBegin} />
+              )}
+            </View>
+          ),
       })}
       <Control label="About" shown="About" pending={pending} onPress={onAbout} />
     </View>

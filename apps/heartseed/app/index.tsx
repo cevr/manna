@@ -50,7 +50,7 @@ import type { Cue, Mark } from '../src/matcher';
 import { sourceWords } from '../src/matcher/words';
 import { needOf, type NeedCard } from '../src/need';
 import { NeedScreen } from '../src/need/screen';
-import type { Range } from '../src/passages';
+import type { PassagesView, Range } from '../src/passages';
 import { GRADE_NAMES, GRADES, type Grade, type SayItView } from '../src/sayit';
 import { BigButton, PlantMark, Unsaid, useLook, Word } from '../src/sayit/draw';
 import { screenOf, wordOf, type Result } from '../src/sayit/screen';
@@ -250,7 +250,7 @@ function Growing({
   );
 }
 
-/** The way to the field: offered once the garden is read, and never while Say it listens, so leaving Today never leaves a recital listening. */
+/** The way back to home: offered once the garden is read, and never while Say it listens, so leaving Today never leaves a recital listening. */
 function FieldControl({ onPress }: { readonly onPress: () => void }) {
   const look = useLook();
   const styles = useThemed(sheets);
@@ -261,23 +261,7 @@ function FieldControl({ onPress }: { readonly onPress: () => void }) {
       onPress={onPress}
       style={({ pressed }) => [styles.toField, pressed && look.pressed]}
     >
-      <Text style={styles.toFieldText}>Your field</Text>
-    </Pressable>
-  );
-}
-
-/** The way to When I need…: offered once a plan is made in this launch, and never while Say it listens. */
-function NeedControl({ onPress }: { readonly onPress: () => void }) {
-  const look = useLook();
-  const styles = useThemed(sheets);
-  return (
-    <Pressable
-      role="button"
-      aria-label="When I need…"
-      onPress={onPress}
-      style={({ pressed }) => [styles.toField, pressed && look.pressed]}
-    >
-      <Text style={styles.toFieldText}>When I need…</Text>
+      <Text style={styles.toFieldText}>‹ Your field</Text>
     </Pressable>
   );
 }
@@ -430,14 +414,14 @@ const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
   );
 
 /**
- * Today: its header (the heading, the way to the field and, once a plan is
- * made, the way to When I need…, wrapping under the heading when the text
- * is large, and under them the reader's choices), fixed above a scroll view of the session's counts
+ * Today: its header (the heading and the way back to home, wrapping under
+ * the heading when the text is large, and under them the reader's
+ * choices), fixed above a scroll view of the session's counts
  * line, the verse the run shows, its stage and the alert, and a footer
  * fixed under the scroll view: the result's grades, Listen on the plan's
  * new piece while the voice is on and reads nothing, and the action button.
- * Its first show with the garden read makes the launch's plan; a later
- * show, after the field, finds it made. The run shows one item at a time:
+ * Its first show with the garden read makes the launch's plan, unless home
+ * made it first; a later show finds it made. The run shows one item at a time:
  * Say it holds it, and once its recall is kept (never at a recital's end
  * alone) the button reads Next, which lets it go. With every item done and
  * none held, the scroll holds the counts line alone, and there is no
@@ -447,7 +431,7 @@ const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
  * however long the verse or the result, they are on screen without a
  * scroll and clear of the home indicator.
  */
-function Today({ onField, onNeed }: { readonly onField: () => void; readonly onNeed: () => void }) {
+function Today({ onField }: { readonly onField: () => void }) {
   const look = useLook();
   const styles = useThemed(sheets);
   const insets = useSafeAreaInsets();
@@ -467,7 +451,6 @@ function Today({ onField, onNeed }: { readonly onField: () => void; readonly onN
   const recital = Option.exists(showing, (each) => each.recital);
   const shownSayIt = Option.filter(sayIt, () => recital);
   const marks = Option.filter(screen.marks, () => recital);
-  const planned = Option.exists(session, (view) => Option.isSome(view.plan));
   const onAction = (each: Showing) => {
     if (screen.listening) return onPress({ piece: each.piece, item: Option.none() });
     if (each.done) return onNext();
@@ -483,7 +466,6 @@ function Today({ onField, onNeed }: { readonly onField: () => void; readonly onN
           {!screen.listening && (
             <View style={styles.ways}>
               {Option.isSome(garden) && <FieldControl onPress={onField} />}
-              {planned && <NeedControl onPress={onNeed} />}
             </View>
           )}
         </View>
@@ -576,21 +558,34 @@ const offersListen = (listening: boolean, each: Showing) =>
   !listening && !each.done && Option.exists(each.item, (item) => item.fresh);
 
 /**
- * The field over the garden read, the reader's passages, the collections
- * taught, the session's view and the greeting by the runtime's clock;
- * nothing until all are known, so it never claims a history it has not
- * read, nor shows a frame without the reader's rows. Its furrows' ready
- * marks are the plan's open verses; `Begin` shows while the run shows an
- * item, and opens Today, writing nothing; `Start here` on a verse makes
- * what `startOf` starts the session's visit, then shows Today once it is
- * made (or failed), so Today never shows the plan's item first.
+ * Whether home offers `Begin`: while the run shows an item, or, with the
+ * reader's passages unread (so no plan is made), while it shows a verse.
+ */
+const beginsOf = (shown: Shown, passages: PassagesView) =>
+  shown._tag === 'Item' ||
+  (passages._tag === 'Unread' && shown._tag === 'Unplanned' && Option.isSome(shown.piece));
+
+/**
+ * Home: the field over the garden read, the reader's passages, the
+ * collections taught, the session's view and the greeting by the runtime's
+ * clock. Its first show begins the session, so the launch's plan is made at
+ * that instant, and it shows the pending frame until all are known and,
+ * with the passages read, the plan is made: it never claims a history it
+ * has not read, a frame without the reader's rows, or a run before the plan
+ * that decides it. Its furrows' ready marks are the plan's open verses;
+ * `Begin` (`beginsOf`) opens Today, writing nothing; `Start here` on a verse
+ * makes what `startOf` starts the session's visit, then shows Today once it
+ * is made (or failed), so Today never shows the plan's item first; `When I
+ * need…` shows once a plan is made.
  */
 function FieldOf({
   onToday,
+  onNeed,
   onAdd,
   onAbout,
 }: {
   readonly onToday: () => void;
+  readonly onNeed: () => void;
   readonly onAdd: () => void;
   readonly onAbout: () => void;
 }) {
@@ -600,11 +595,16 @@ function FieldOf({
   const session = AsyncResult.value(useAtomValue(sessionView));
   const greeting = AsyncResult.value(useAtomValue(greetingNow));
   const start = useAtomSet(startHere, { mode: 'promise' });
+  useSessionBegunWhenShown(Option.isSome(garden));
   const onStart = (verse: string) => {
     void start(verse).then(onToday, onToday);
   };
-  return Option.match(Option.all({ garden, passages, taught, session, greeting }), {
-    onNone: () => false,
+  const ready = Option.filter(
+    Option.all({ garden, passages, taught, session, greeting }),
+    (each) => each.passages._tag === 'Unread' || Option.isSome(each.session.plan),
+  );
+  return Option.match(ready, {
+    onNone: () => <Pending />,
     onSome: (known) => {
       const lists = fieldPassagesOf(PASSAGES, known.passages, known.taught);
       return (
@@ -614,9 +614,11 @@ function FieldOf({
           passages={known.passages}
           greeting={known.greeting}
           counts={Option.map(known.session.plan, (plan) => countsOf(plan, known.garden))}
-          begin={shownOf(known.session, Option.some(known.garden))._tag === 'Item'}
+          begin={beginsOf(shownOf(known.session, Option.some(known.garden)), known.passages)}
+          need={Option.isSome(known.session.plan)}
           startable={(verse) => Option.isSome(startOf(known.session, known.garden, verse))}
           onToday={onToday}
+          onNeed={onNeed}
           onStart={onStart}
           onAdd={onAdd}
           onAbout={onAbout}
@@ -628,11 +630,18 @@ function FieldOf({
 
 /**
  * When I need… over the garden read and the collections the app's layer
- * teaches; nothing until both are known. A tap on a known promise makes
- * its verses the session's visit, then shows Today once the visit is made
- * (or failed), so Today never shows the plan's item first.
+ * teaches; nothing until both are known. Its back shows home (`onField`). A
+ * tap on a known promise makes its verses the session's visit, then shows
+ * Today once the visit is made (or failed), so Today never shows the plan's
+ * item first.
  */
-function NeedOf({ onToday }: { readonly onToday: () => void }) {
+function NeedOf({
+  onToday,
+  onField,
+}: {
+  readonly onToday: () => void;
+  readonly onField: () => void;
+}) {
   const garden = readOf(AsyncResult.value(useAtomValue(gardenView)));
   const taught = AsyncResult.value(useAtomValue(taughtView));
   const visit = useAtomSet(visitPromise, { mode: 'promise' });
@@ -647,7 +656,7 @@ function NeedOf({ onToday }: { readonly onToday: () => void }) {
           known.garden,
           known.taught.map((collection) => collection.id),
         )}
-        onToday={onToday}
+        onField={onField}
         onVisit={onVisit}
       />
     ),
@@ -667,40 +676,60 @@ function Pending() {
   );
 }
 
+/** The root's screens after the opening: home is `field`. */
+type Screen = 'today' | 'field' | 'choose' | 'about' | 'need';
+
+/** The screen an opening shows first: home for `home`, else Today. */
+const screenAt = (opening: Opening): Screen => {
+  if (opening === 'home') return 'field';
+  return 'today';
+};
+
 /**
  * The root: the pending frame until the reader's appearance and the
- * garden's read complete, then the
- * first minute when the read holds no recall of any verse, else Today. The
- * screen is decided once per launch, at the read: planting the seed inside
- * the first minute keeps Planted on until Continue. After it, the root
- * shows one of five screens in place: Today, the field (from Today's
- * `Your field`, back to Today from its bar, `Begin` or `Start here`), the
- * chooser (from either of the field's `Add verses`, back to the field from
- * its first back or once a passage is added), About (from the field's
- * `About`, back to the field) and When I need… (from
- * Today's `When I need…`, back to Today from its bar or once a promise
- * tapped is made the visit). Which one
- * shows is the launch's state, never stored and with no route of its own,
- * so every launch opens as above. Whenever Say it listens the screen is
- * Today. The root holds Say it's view, so Today comes back as it was, and a
- * recital that starts in the same turn as the tap on the field keeps Today
- * on screen.
+ * garden's read complete, then the first minute when the read holds no
+ * recall of any verse, home when it holds one, and Today in an unread
+ * garden. The opening is decided once per launch, at the read: planting the
+ * seed inside the first minute keeps Planted on until Continue, which shows
+ * home. After it, the root shows one of five screens in place: home (back
+ * from Today's and When I need…'s `Your field`), Today (from home's
+ * `Begin` or `Start here`, or once a promise tapped in When I need… is made
+ * the visit), the chooser (from either of home's `Add verses`, back to home
+ * from its first back or once a passage is added), About (from home's
+ * `About`, back to home) and When I need… (from home's `When I need…`).
+ * Which one shows is the launch's state, never stored and with no route of
+ * its own, so every launch opens as above. Whenever Say it listens the
+ * screen is Today. The root holds Say it's view, so Today comes back as it
+ * was, and a recital that starts in the same turn as the tap on
+ * `Your field` keeps Today on screen.
+ *
+ * `opening` is the screen a launch on a read garden with a plant, and
+ * Continue, show: home unless given. It is a seam for the tests whose
+ * launches start on Today, and goes once their rigs start from home.
  */
-export default function Root() {
+export default function Root({ opening = 'home' }: { readonly opening?: 'home' | 'today' }) {
   const listening = screenOf(AsyncResult.value(useAtomValue(sayItView))).listening;
   const appearance = AsyncResult.value(useAtomValue(appearanceView));
-  const garden = openingOf(AsyncResult.value(useAtomValue(gardenView)));
+  const garden = openingOf(AsyncResult.value(useAtomValue(gardenView)), opening);
   const read = Option.match(appearance, { onNone: (): Opening => 'pending', onSome: () => garden });
   const [decided, setDecided] = useState<Opening>('pending');
-  const [screen, setScreen] = useState<'today' | 'field' | 'choose' | 'about' | 'need'>('today');
+  const [screen, setScreen] = useState<Screen>('field');
   useAppearanceShown(Option.getOrElse(appearance, (): AppearanceChoice => 'system'));
-  if (decided === 'pending' && read !== 'pending') setDecided(read);
+  if (decided === 'pending' && read !== 'pending') {
+    setDecided(read);
+    setScreen(screenAt(read));
+  }
   if (screen !== 'today' && listening) setScreen('today');
+  const onContinue = () => {
+    setDecided(opening);
+    setScreen(screenAt(opening));
+  };
   switch (shownOpening(decided, read)) {
     case 'pending':
       return <Pending />;
     case 'first':
-      return <FirstMinute onContinue={() => setDecided('today')} />;
+      return <FirstMinute onContinue={onContinue} />;
+    case 'home':
     case 'today':
       if (screen === 'about') return <AboutScreen onField={() => setScreen('field')} />;
       if (screen === 'choose') return <ChooserScreen onField={() => setScreen('field')} />;
@@ -708,12 +737,14 @@ export default function Root() {
         return (
           <FieldOf
             onToday={() => setScreen('today')}
+            onNeed={() => setScreen('need')}
             onAdd={() => setScreen('choose')}
             onAbout={() => setScreen('about')}
           />
         );
-      if (screen === 'need') return <NeedOf onToday={() => setScreen('today')} />;
-      return <Today onField={() => setScreen('field')} onNeed={() => setScreen('need')} />;
+      if (screen === 'need')
+        return <NeedOf onToday={() => setScreen('today')} onField={() => setScreen('field')} />;
+      return <Today onField={() => setScreen('field')} />;
   }
 }
 

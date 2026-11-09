@@ -1,6 +1,7 @@
 /**
- * The field as home A draws it. A bar fixed above the scroll view holds the
- * way back to Today and, with the reader's passages read, `Add verses`
+ * The field as home A draws it, the app's home. A bar fixed above the scroll
+ * view holds `When I need…` once a plan is made in this launch and, with the
+ * reader's passages read, `Add verses`
  * while fewer than 3 are held, else the limit line; a furrow's `Remove`
  * puts its ask there instead, with `Remove` and `Keep`, and a remove that
  * does not land leaves an alert there. Under the bar scroll the greeting by
@@ -55,7 +56,7 @@ const alertAfter = (answer: string, range: Range): Option.Option<string> => {
 const offersAdd = (passages: PassagesView, bar: Bar) =>
   passages._tag === 'Read' && Option.isNone(bar.ask) && passages.passages.length < MOST_PASSAGES;
 
-/** What the bar offers after `‹ Today` with the passages read: the ask while one shows, else `Add verses` under 3 held, else the limit line. */
+/** What the bar offers after `When I need…` with the passages read: the ask while one shows, else `Add verses` under 3 held, else the limit line. */
 function Offer({
   bar,
   held,
@@ -132,9 +133,10 @@ const chosenIn = (
  * The field screen over `field` (its days sown and harvest), its `furrows`
  * and the reader's `passages`, greeting by `greeting`; the foot's counts
  * line `counts` (none before a plan), `Begin` when `begin`, and `Start here`
- * on a chosen verse `startable` offers. `onToday` is the way back and
- * `Begin`'s, `onStart` Start here's, `onAdd` the way to the chooser and
- * `onAbout` the way to About.
+ * on a chosen verse `startable` offers, and `When I need…` when `need`.
+ * `onToday` is `Begin`'s way to Today, `onStart` Start here's, `onNeed` the
+ * way to When I need…, `onAdd` the way to the chooser and `onAbout` the way
+ * to About.
  */
 export function FieldScreen({
   field,
@@ -143,8 +145,10 @@ export function FieldScreen({
   greeting,
   counts,
   begin,
+  need,
   startable,
   onToday,
+  onNeed,
   onStart,
   onAdd,
   onAbout,
@@ -155,8 +159,10 @@ export function FieldScreen({
   readonly greeting: Greeting;
   readonly counts: Option.Option<string>;
   readonly begin: boolean;
+  readonly need: boolean;
   readonly startable: (verse: string) => boolean;
   readonly onToday: () => void;
+  readonly onNeed: () => void;
   readonly onStart: (verse: string) => void;
   readonly onAdd: () => void;
   readonly onAbout: () => void;
@@ -200,20 +206,22 @@ export function FieldScreen({
   return (
     <View style={look.screen}>
       <View style={[styles.bar, { paddingTop: insets.top + 16 }]}>
-        <Pressable
-          role="button"
-          aria-label="Today"
-          hitSlop={10}
-          disabled={bar.pending}
-          onPress={() => tapped(onToday)}
-          style={({ pressed }) => [
-            styles.back,
-            pressed && look.pressed,
-            bar.pending && look.disabled,
-          ]}
-        >
-          <Text style={styles.backText}>‹ Today</Text>
-        </Pressable>
+        {need && (
+          <Pressable
+            role="button"
+            aria-label="When I need…"
+            hitSlop={10}
+            disabled={bar.pending}
+            onPress={() => tapped(onNeed)}
+            style={({ pressed }) => [
+              styles.need,
+              pressed && look.pressed,
+              bar.pending && look.disabled,
+            ]}
+          >
+            <Text style={styles.needText}>When I need…</Text>
+          </Pressable>
+        )}
         {passages._tag === 'Read' && (
           <Offer
             bar={bar}
@@ -285,8 +293,8 @@ const sheets = themed((color, face) =>
     bar: { paddingHorizontal: 24, paddingBottom: 8, gap: 8 },
     scroll: { flex: 1 },
     content: { gap: 16 },
-    back: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
-    backText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
+    need: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+    needText: { fontFamily: face, fontSize: 17, fontWeight: '600', color: color.ink },
     line: { fontFamily: face, fontSize: 15, lineHeight: 21, fontWeight: '600', color: color.ink },
     ask: { gap: 8 },
     answers: { flexDirection: 'row', gap: 8 },
