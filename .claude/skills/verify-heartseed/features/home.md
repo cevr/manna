@@ -80,6 +80,11 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   `Your field` returns to home with the sheet closed.
 - `home-settings-today`: Today holds no `Minutes` radio, no `Voice` and
   no `Settings`.
+- `home-renew`: from Today, `Your field`, then `5 min` (the radio already
+  selected) in Settings at the seed's due makes the plan again at the tap:
+  home shows the seed ready today with `Begin`, which opens Today on it
+  with no `Minutes` radio, `Voice` or `Settings` (the trip the test rigs
+  take to renew the plan).
 - Planned, not yet drivable (the later units of the home, split.md):
   `home-add`, `home-end`.
 
@@ -266,13 +271,29 @@ the same variables:
    the heading `Today`, `‹ Your field` (label `Your field`), and no radio
    `2 min`, `5 min`, `10 min` or `20 min`, no `Minutes` group, no `Voice`
    and no `Settings`.
-5. Regression: `home-open` and `home-relaunch` of the field drive above.
+5. `home-renew`, only when `PLANTED` was 0400-1752 local (otherwise record
+   `Nothing to tend now` and skip, as `home-dot` does). From Today of
+   step 4, the visit open: `sim tap "label=Your field"`, `sim snapshot
+   home-renew-back` → the heading `Your field`, no heading `Settings`, no
+   `Minutes` radio. Wait until 7 minutes after `PLANTED`, with no relaunch
+   and no trip away from the app; `sim tap "label=Settings"`, a raw
+   snapshot → `5 min` alone selected; `sim tap "label=5 min"` (the radio
+   already selected: the plan made again at the tap, the visit dropped);
+   `sim tap "label=Done"`; `sim snapshot home-renew-home` → no heading
+   `Settings`, the button `Isaiah 41:10, seed, ready today`,
+   `1 to tend · about 1 min` and `Begin`. Then `sim tap "label=Begin"`,
+   `sim open / --expect "id=session"`, `sim snapshot home-renew` → the
+   heading `Today`, `Isaiah 41:10`, `Stage: seed`, `Say it`,
+   `1 to tend · about 1 min`, and no `Minutes` radio, `Voice` or
+   `Settings`.
+6. Regression: `home-open` and `home-relaunch` of the field drive above.
    Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
 
 Red on base (before the sheet): `sim tap "label=Settings"` finds no
-element (`home-settings*`, `home-dot`); base's Today shows `5 min` and
-`Voice` (`home-settings-today`); `icons loaded 24 of 24` times out
-(`home-icons`).
+element (`home-settings*`, `home-dot`, `home-renew`); base's Today shows
+`5 min` and `Voice` (`home-settings-today`); `icons loaded 24 of 24`
+times out (`home-icons`). `home-renew` changes no product: it is green
+at `b79e5b66d`, the base of the rigs that take its trip, by design.
 
 Red on base (`81f8866ad`, before the app opened on home): `Continue`
 opens Today (`id=session`), and `--expect "id=counts"` times out

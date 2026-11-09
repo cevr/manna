@@ -1736,14 +1736,19 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   The seam: `src/test/choices-seam.tsx`'s `rootWithChoicesOnToday(host)`
   is the root with Today's row of choices shown (`ChoicesOnToday`,
   `src/settings/choices.tsx`, which the app never provides), for the rigs
-  that still tap Today's `Minutes` and `Voice`: `today-rig.tsx`,
-  `stage-rig.tsx`, `field-rig.tsx`, `first-rig.tsx`, `need-rig.tsx`,
-  `run-rig.tsx`, `phrase-rig.tsx` and `session-rig.tsx` (its `launch`
-  seamed unless passed `{ choicesOnToday: false }`). It registers the host
-  with `rootFaults`' choices rule, which allows the choices on Today under
-  that host alone. Each rig moves its taps to the Settings sheet and drops
-  its seam line; the last such move deletes the seam, `Choices` and
-  Today's `<Choices />`.
+  that still tap Today's `Minutes` and `Voice`: `run-rig.tsx`,
+  `phrase-rig.tsx` and `session-rig.tsx` (its `launch` seamed unless
+  passed `{ choicesOnToday: false }`). It registers the host with
+  `rootFaults`' choices rule, which allows the choices on Today under that
+  host alone. Each rig moves its taps to the Settings sheet and drops its
+  seam line; the last such move deletes the seam, `Choices` and Today's
+  `<Choices />`. `today-rig.tsx`, `stage-rig.tsx`, `field-rig.tsx`,
+  `first-rig.tsx` and `need-rig.tsx` mount `<Root />` unseamed and make
+  their plan as a reader does (`renewBySettings`,
+  `src/test/settings-rig.ts`): Today's `Your field`, home's `Settings`, a
+  `Minutes` radio (the one checked when no minutes are named), `Done`,
+  then `Begin` when home offers it, every sheet shown held to
+  `sheetFaults` and its look checked at least once.
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
   - `test:hear`: `src/matcher` (the sounds-alike table's bounds, and each
@@ -1853,7 +1858,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     an item, else `Later` or a relaunch), steered toward the part's own
     group of coverage floors, which its generated devices alone must meet
     (`walk-today` holds Today's run after `Begin`: Next, the done state,
-    Renew and a write landing on Today; `walk-light` each end of a hold,
+    Renew through the Settings sheet (offered with no recital listening
+    and no reading under way) and a write landing on Today; `walk-light` each end of a hold,
     and a sought reading's ranges in its own text). Every hear frame
     shows the reading view exactly while the voice reads, each word its
     direct child, and while a finger holds a word, that word as the read
@@ -2271,16 +2277,23 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     none while Say it listens, home offering it again after the result.
   - `test:need-walk-a`, `test:need-walk-a-visit`, `test:need-walk-b`,
     `test:need-walk-b2`, `test:need-walk-c`, `test:need-walk-d`,
-    `test:need-walk-e`: `src/need/walk-{a,a-visit,b,b2,c,d,e}.test.tsx`,
-    one file each, When I need… and a
+    `test:need-walk-d2`, `test:need-walk-e`, `test:need-walk-e2`:
+    `src/need/walk-{a,a-visit,b,b2,c,d,d2,e,e2}.test.tsx`, one file each,
+    When I need… and a
     visit walked through the root (`src/test/need-walk.ts`, each launch on
     home, each command drawn from those the model's screen allows: on home
-    `When I need…`, `Begin` or a relaunch; on Today `Say it`, Minutes,
-    `Your field` or a relaunch; on When I need… a promise or `Your field`):
-    seed 3's device 0 in `walk-a` and its device 1 in `walk-a-visit`,
-    device 2 of seed 18 in `walk-b` and of seed 10 in `walk-b2`, two
-    generated devices of seed 6 in `walk-c`, device 0 of seed 524 in
-    `walk-d` and of seed 729 in `walk-e`, settled after every command on
+    `When I need…`, `Begin`, Minutes or a relaunch; on Today `Say it`,
+    Minutes, `Your field` or a relaunch; on When I need… a promise or
+    `Your field`). Minutes goes as a reader does: on a read garden from
+    Today by `Your field` to home, then home's `Settings`, a `<n> min`
+    radio (the plan made at the tap), `Done`, and `Begin` when the model
+    shows a verse; on an unread garden it checks that Today offers no
+    `Settings` and no `<n> min` and makes nothing. Seed 3's device 0 in
+    `walk-a` and its device 6 in `walk-a-visit`, device 0 of seed 141 in
+    `walk-b` and device 2 of seed 10 in `walk-b2`, two generated devices
+    of seed 193 in `walk-c`, device 0 of seed 131 in `walk-d`, of seed
+    297 in `walk-d2`, of seed 208 in `walk-e` and of seed 107 in
+    `walk-e2`, settled after every command on
     the screen the model names and held there to `shownModel`,
     `countsModel` over `planModel`, `needModel` and `fieldPassagesModel`,
     every frame to `rootFaults`, and to the disk's rule (no key added but
@@ -2375,8 +2388,10 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `startModel` and `greetingModel` with `When I need…` exactly when
     planned, Today to `need-walk`'s oracle and the disk to its rule; every
     frame to `rootFaults` and every home frame to `homeFaults`; each part's
-    floors met (part g's `Begin` over a said result held, which Today must
-    still show).
+    floors met (part f's Today checked to offer no minutes choice, no
+    `Settings` and no `<n> min`, a minutes choice made being
+    `need-walk-b`'s floor on a read garden; part g's `Begin` over a said
+    result held, which Today must still show).
   - `test:phrase`: the phrase cut and its reference form (`src/phrase.ts`).
     `src/phrase.property.test.ts`, `cutOf` against `src/test/phrase-model.ts`
     and its brute force over every partition for 13-22 words, for generated
