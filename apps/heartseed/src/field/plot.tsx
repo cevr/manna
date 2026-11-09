@@ -275,7 +275,7 @@ const sheets = themed((color, face) =>
       borderRadius: 1.5,
       backgroundColor: color.soil,
     },
-    number: { fontFamily: face, fontSize: 11, color: color.quiet },
+    number: { fontFamily: face, fontSize: 11, color: color.ink },
     soil: { height: 2, borderRadius: 1, backgroundColor: color.furrow },
     addRow: {
       flexDirection: 'row',
