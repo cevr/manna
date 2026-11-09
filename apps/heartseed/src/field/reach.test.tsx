@@ -37,6 +37,8 @@ describe('the way to the field', () => {
   it('sits outside Today’s scroll view, before and after a recital that grows the passage', async () => {
     device.launch(planted());
     const app = await mount(true);
+    expect(await app.until(app.home)).toBe(true);
+    await app.begin();
     expect(await app.until(() => app.control() !== undefined)).toBe(true);
     const before = app.stage();
     expect(scrolled(app.control() as Element)).toBe(false);
@@ -112,10 +114,12 @@ describe('the way to the field', () => {
     };
     const click = (node: Element | undefined) =>
       node?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    expect(await until(() => button('Begin') !== undefined)).toBe(true);
+    await act(async () => click(button('Begin')));
     expect(await until(() => button('Your field') !== undefined)).toBe(true);
     await act(async () => click(button('Your field')));
     expect(await until(() => headings().includes('Your field'))).toBe(true);
-    await act(async () => click(button('Today')));
+    await act(async () => click(button('Begin')));
     expect(await until(() => button('Say it') !== undefined)).toBe(true);
     hold.on = true;
     await act(async () => click(button('Say it')));

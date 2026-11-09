@@ -33,7 +33,7 @@ import { fieldPassagesModel } from '../test/promise-model';
 
 const HELD = { book: 19, chapter: 91, first: 1, last: 16 };
 
-/** The field's rows a reader gets after `Your field`, and the buttons it offers, over a layer teaching `promises`. */
+/** The field's rows a reader gets on the launch's home, and the buttons it offers, over a layer teaching `promises`. */
 const fieldShown = async (promises: readonly string[] | undefined) => {
   const now = Date.now();
   device.launch([
@@ -72,13 +72,6 @@ const fieldShown = async (promises: readonly string[] | undefined) => {
       await act(() => new Promise((resolve) => setTimeout(resolve, 1)));
     return holds();
   };
-  expect(await until(() => labels().includes('Your field'))).toBe(true);
-  const node = [...host.querySelectorAll('[role="button"]')].find(
-    (each) => each.getAttribute('aria-label') === 'Your field',
-  );
-  await act(async () => {
-    node?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
-  });
   expect(await until(() => host.querySelector('[data-testid="row"]') !== null)).toBe(true);
   const rows = readField(host).rows.map((row) => ({
     title: row.title,

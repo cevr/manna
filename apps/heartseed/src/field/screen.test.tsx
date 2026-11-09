@@ -2,8 +2,9 @@
 
 /**
  * The field from Today, through the screen rig (`src/test/field-rig.tsx`),
- * which holds every frame to the field's rules: the way there and back
- * through recitals, Again and a relaunch, Today coming back as it was and
+ * which holds every frame to the root's and the field's rules: a launch on
+ * home, `Begin` to Today, and the way to the field by `Your field` and back
+ * by `Begin` through recitals, Again and a relaunch, Today coming back as it was and
  * the device untouched across each open and each way back, and every text
  * at AA contrast in every field frame. It counts words without printing one.
  */
@@ -27,7 +28,8 @@ describe('the field from Today', () => {
     ]);
     const time = { now: Date.UTC(2026, 10, 5, 15) };
     const app = await mount(true, undefined, time);
-    expect(await app.until(() => app.buttons().includes('Your field'))).toBe(true);
+    expect(await app.until(app.home)).toBe(true);
+    await app.begin();
 
     const first = await app.field();
     expect(first).toEqual(wantField());
@@ -70,10 +72,8 @@ describe('the field from Today', () => {
 
     device.launch();
     const next = await mount(true, undefined, time);
-    expect(await next.until(() => next.buttons().includes('Your field'))).toBe(true);
-    expect(next.headings()).toEqual(['Today']);
-    expect(await next.field()).toEqual(again);
-    await next.back();
+    expect(await next.until(next.home)).toBe(true);
+    expect([next.headings(), next.onHome()]).toEqual([['Your field'], again]);
     expect(next.faults).toEqual([]);
     expect(await next.leave()).toEqual([]);
   });

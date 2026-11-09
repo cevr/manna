@@ -2,11 +2,12 @@
 
 /**
  * No field claim before a read completes, through the screen rig
- * (`src/test/field-rig.tsx`), which holds every frame to the field's rules:
- * a held launch offers no field until its read lands; an unread session
- * offers none, though its recital is written with its zone's offset at its
- * start, beside an old record that has none, and the next launch counts its
- * day; a fresh install's first minute offers none.
+ * (`src/test/field-rig.tsx`), which holds every frame to the root's and the
+ * field's rules: a held launch shows no field and offers none until its read
+ * lands, then opens home; an unread session offers none, though its recital
+ * is written with its zone's offset at its start, beside an old record that
+ * has none, and the next launch's home counts its day; a fresh install's
+ * first minute offers none.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -25,7 +26,7 @@ describe('the field before a read', () => {
     expect(await held.until(() => false, 20)).toBe(false);
     expect([held.frames.pending > 0, held.frames.control, device.calls.open]).toEqual([true, 0, 0]);
     gate.resolve();
-    expect(await held.until(() => held.buttons().includes('Your field'))).toBe(true);
+    expect(await held.until(held.home)).toBe(true);
     expect(held.faults).toEqual([]);
     expect(await held.leave()).toEqual([]);
 
@@ -39,8 +40,8 @@ describe('the field before a read', () => {
 
     device.launch();
     const after = await mount(true);
-    expect(await after.until(() => after.buttons().includes('Your field'))).toBe(true);
-    expect([heldOn(device.disk).length, (await after.field()).sown]).toEqual([2, '2 days sown']);
+    expect(await after.until(after.home)).toBe(true);
+    expect([heldOn(device.disk).length, after.onHome().sown]).toEqual([2, '2 days sown']);
     expect(
       heldOn(device.disk).map((recall) => [
         Object.hasOwn(recall, 'offset'),
@@ -50,7 +51,6 @@ describe('the field before a read', () => {
       [false, false],
       [true, true],
     ]);
-    await after.back();
     expect(await after.leave()).toEqual([]);
 
     device.launch([['heartseed/voice/enabled', 'true']]);

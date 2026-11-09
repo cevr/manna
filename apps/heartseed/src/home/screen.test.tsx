@@ -96,12 +96,10 @@ for (const scheme of SCHEMES)
       ]);
       const rig = await mountBar(0, false, null, time);
       const host = rig.host;
-      expect(await rig.until(() => rig.control('Your field') !== undefined)).toBe(true);
       const sets = device.calls.set;
-      await rig.tap('Your field');
       expect(await rig.until(() => by(host, 'row').length === 2)).toBe(true);
       expect(layoutOf(host)).toEqual({
-        bar: ['Today', 'Add verses'],
+        bar: ['When I need…', 'Add verses'],
         scroll: {
           greeting: ['scroll:Good afternoon'],
           greetingIcon: 'sun',
@@ -188,8 +186,6 @@ for (const scheme of SCHEMES)
         ['heartseed/voice/enabled', 'false'],
       ]);
       const rig = await mountBar(3, true, null, { now: DAY + 15 * HOUR });
-      expect(await rig.until(() => rig.control('Your field') !== undefined)).toBe(true);
-      await rig.tap('Your field');
       expect(await rig.until(() => by(rig.host, 'row').length > 0)).toBe(true);
       const names = [...rig.host.querySelectorAll(CONTROLS)].map(nameOf);
       expect({

@@ -5,11 +5,11 @@
  * through the field rig (`src/test/field-rig.tsx`), which holds every frame
  * to home A's rules (`homeFaults`) and to the rule's field over the disk.
  * Each case names its expected values written out: the gold dot on a seed
- * at its due once a Minutes tap makes the plan again and on no plant
- * before, filled `sun` at 3:1 against its plant's backdrop chosen or not,
+ * at its due once a Minutes tap on Today (reached by `Start here`) makes
+ * the plan again and on no plant before, filled `sun` at 3:1 against its plant's backdrop chosen or not,
  * and `gold` nowhere on the field; the Begin card's counts and `Begin`
  * leading to Today as the run stands, writing nothing; and the greeting by
- * the runtime's clock at each open, in the reader's own zone. The layout
+ * the runtime's clock at each mount of home, in the reader's own zone. The layout
  * and the choice are `screen.test.tsx`'s.
  */
 
@@ -45,6 +45,14 @@ const greeted = () => {
   return [text(greeting), iconOf(greeting?.querySelector('img'))];
 };
 
+/** Opens home again, by When I need… and its back `Your field`, so home mounts anew. */
+const reopen = async (app: Awaited<ReturnType<typeof mount>>) => {
+  await app.tap('When I need…');
+  expect(await app.until(() => app.headings().join('|') === 'When I need…')).toBe(true);
+  await app.tap('Your field');
+  expect(await app.until(app.home)).toBe(true);
+};
+
 const SCHEMES: readonly Scheme[] = ['light', 'dark'];
 
 for (const scheme of SCHEMES)
@@ -57,14 +65,17 @@ for (const scheme of SCHEMES)
         ['heartseed/voice/enabled', 'false'],
       ]);
       const app = await mount(true, undefined, time);
-      expect(await app.until(() => app.buttons().includes('Your field'))).toBe(true);
+      expect(await app.until(app.home)).toBe(true);
       const host = document.body;
-      await app.field();
       expect([by(host, 'field-plant').map(nameOf), by(host, 'dot').length]).toEqual([
         [`${passage.reference}, seed`],
         0,
       ]);
-      await app.back();
+      await app.tap(`${passage.reference}, seed`);
+      await app.tap(`Start here with ${passage.reference}`);
+      expect(
+        await app.until(() => app.headings().includes('Today') && app.buttons().includes('Say it')),
+      ).toBe(true);
 
       expect(await app.renew()).toBe(1);
       await app.field();
@@ -109,18 +120,14 @@ for (const scheme of SCHEMES)
         ['heartseed/voice/enabled', 'false'],
       ]);
       const app = await mount(true, undefined, time);
-      expect(await app.until(() => app.buttons().includes('Your field'))).toBe(true);
-      await app.field();
+      expect(await app.until(app.home)).toBe(true);
       expect(greeted()).toEqual(['Good morning', 'sun']);
-      await app.back();
       time.now = DAY + 12 * HOUR;
-      await app.field();
+      await reopen(app);
       expect(greeted()).toEqual(['Good afternoon', 'sun']);
-      await app.back();
       time.now = DAY + 18 * HOUR;
-      await app.field();
+      await reopen(app);
       expect(greeted()).toEqual(['Good evening', 'moon']);
-      await app.back();
       expect(app.faults).toEqual([]);
       expect(await app.leave()).toEqual([]);
 
@@ -129,10 +136,8 @@ for (const scheme of SCHEMES)
       try {
         device.launch();
         const away = await mount(true, undefined, { now: DAY + 10 * HOUR });
-        expect(await away.until(() => away.buttons().includes('Your field'))).toBe(true);
-        await away.field();
+        expect(await away.until(away.home)).toBe(true);
         expect(greeted()).toEqual(['Good afternoon', 'sun']);
-        await away.back();
         expect(away.faults).toEqual([]);
         expect(await away.leave()).toEqual([]);
       } finally {

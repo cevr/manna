@@ -2,10 +2,12 @@
 
 /**
  * The field across generated sequences of commands, through the screen rig
- * (`field-rig.tsx`), which holds every frame to the field's rules. Each
- * device starts from a generated disk (the passage's history or none, other
- * verses of any reference, a setting) and plays opens of the field and ways
- * back, recitals, Again, peeks and relaunches in any order. The writes each
+ * (`field-rig.tsx`), which holds every frame to the root's and the field's
+ * rules. Each device starts from a generated disk (the passage's history or
+ * none, other verses of any reference, a setting); each launch lands on home
+ * and goes to Today by `Begin` (`opened`), and the device plays opens of the
+ * field by `Your field` and ways back by `Begin`, recitals, Again, peeks and
+ * relaunches in any order. The writes each
  * command may make are modelled apart from the app: a recital adds one
  * record of the passage (and, when Today offers no Say it, first makes a
  * new plan at the passage's due through a Minutes tap, which writes the
@@ -19,8 +21,8 @@
 import { expect } from 'bun:test';
 import passage from 'virtual:heartseed-passage';
 
-import { historyOf, otherReference } from './field-model';
-import type { Time } from './clock';
+import { heldOn, historyOf, otherReference } from './field-model';
+import { toDue, type Time } from './clock';
 import { mount, record } from './field-rig';
 import { below, PREFIX, pickOf, random } from './garden-model';
 import { device } from './one';
@@ -51,10 +53,35 @@ const allowed = (command: WalkCommand, againChosen: boolean, offered: boolean) =
   return { sets: 0, keys: 0 };
 };
 
-/** Mounts a launch over the disk as it stands, at `time`, and waits for Today to offer the field. */
+/** Whether a launch's home offers `Begin`. */
+const begins = (app: App) => app.buttons().includes('Begin');
+
+/**
+ * Mounts a launch over the disk as it stands, at `time`, on home, and goes
+ * to Today by `Begin`. When home offers no `Begin` (the done state), that
+ * launch ends writing nothing, and a relaunch at the passage's due (as a
+ * Minutes tap makes the plan there) offers it.
+ */
 const opened = async (time: Time) => {
-  const app = await mount(true, undefined, time);
-  expect(await app.until(() => app.buttons().includes('Your field'))).toBe(true);
+  let app = await mount(true, undefined, time);
+  expect(await app.until(app.home)).toBe(true);
+  if (!begins(app)) {
+    const sets = device.calls.set;
+    const faults = [...app.faults];
+    expect({ faults, disk: await app.leave(), sets: device.calls.set }).toEqual({
+      faults: [],
+      disk: [],
+      sets,
+    });
+    device.launch();
+    toDue(
+      time,
+      heldOn(device.disk).filter((recall) => recall.reference === passage.reference),
+    );
+    app = await mount(true, undefined, time);
+    expect(await app.until(app.home)).toBe(true);
+  }
+  await app.begin();
   return app;
 };
 

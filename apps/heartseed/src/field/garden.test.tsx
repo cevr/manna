@@ -65,8 +65,8 @@ describe('a large garden on the field', () => {
         .map(record),
     );
     const app = await mount(true);
-    expect(await app.until(() => app.buttons().includes('Your field'))).toBe(true);
-    const field = await app.field();
+    expect(await app.until(app.home)).toBe(true);
+    const field = app.onHome();
     const labelled = field.rows.flatMap((row) => row.plants.map((plant) => plant.label ?? ''));
     const stages = new Set(labelled.map((label) => label.replace(/^.*, /su, '')));
     const kinds = new Set(references.flatMap(referenceKinds));
@@ -115,7 +115,6 @@ describe('a large garden on the field', () => {
     ).toBe('0');
     const lowest = Math.min(...Object.values(app.readouts()));
     expect([lowest >= 4.5, field.faint, app.faults]).toEqual([true, [], []]);
-    await app.back();
     expect(await app.leave()).toEqual([]);
   });
 });

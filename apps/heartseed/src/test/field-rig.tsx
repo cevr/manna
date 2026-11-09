@@ -5,13 +5,15 @@
  * tests: the root route mounted in happy-dom (react-native-web) under the
  * app's own layer over a scripted recital (the passage less its 11th word),
  * the app's real store on the device's `One.Database` (`one.tsx`) and a
- * silent chime. A relaunch is a new mount over the same disk.
+ * silent chime. A launch lands on home (on Today over an unread garden); a
+ * relaunch is a new mount over the same disk.
  *
  * Every frame (each DOM mutation batch) is held to the rule and each fault
- * kept: `Your field` shows only on Today, only once the garden's read
- * completed, never while Say it listens, and never inside a scroll view
- * (so it is on screen however much Today holds); a field node only under the
- * field's heading, never beside Today's; the field holds exactly one
+ * kept: the root's frame rule (`rootFaults`: `Your field` only as a way
+ * back, on Today never while Say it listens and never inside a scroll view,
+ * so it is on screen however much Today holds; a home node only under home's
+ * heading, never beside Today's); `Your field` only once the garden's read
+ * completed; the field holds exactly one
  * `Your field` heading and no `Today` heading, whatever its references
  * spell; every field frame holds home A's layout rules (`homeFaults`); and
  * every field frame shows the rule's field over the records the disk holds
@@ -45,6 +47,7 @@ import { computed, lookFaults, systemScheme } from './look';
 import { fieldRule, heldOn, verseNumberRule, type ModelPlantStage } from './field-model';
 import { keyOf, PREFIX } from './garden-model';
 import { device } from './one';
+import { rootFaults } from './root-rule';
 
 const PASSAGES = [{ title: passage.reference, verses: [passage.reference] }];
 
@@ -375,8 +378,9 @@ export const homeFaults = (host: Element): string[] => {
 
 /**
  * The root over the scripted recital and the device's store (built once
- * `held` resolves); `read` is whether this launch's read completes. Every
- * frame is held to the field's rules; the faults found are kept.
+ * `held` resolves); `read` is whether this launch's read completes. It
+ * lands on home, or on Today when the read fails. Every frame is held to
+ * the root's and the field's rules; the faults found are kept.
  */
 export const mount = async (
   read: boolean,
@@ -431,24 +435,16 @@ export const mount = async (
     const shown = headings();
     const on = shown.join('|') || 'no heading';
     looked(on);
-    const onField = shown.includes('Your field');
-    const offered = buttons().includes('Your field');
-    const listening = buttons().includes('Listening');
-    if (listening) frames.listening += 1;
+    const labels = buttons();
+    if (labels.includes('Listening')) frames.listening += 1;
     if (shown.length === 0) frames.pending += 1;
-    if (offered) {
+    if (labels.includes('Your field')) {
       frames.control += 1;
-      if (!shown.includes('Today')) faults.push(`the control on ${on}`);
       if (!read || !state.released) faults.push('the control before a read completed');
-      if (listening) faults.push('the control while Say it listens');
-      const node = control();
-      if (node !== undefined && scrolled(node)) faults.push('the control inside a scroll view');
     }
-    const nodes = host.querySelector(
-      '[data-testid="sown"],[data-testid="harvest"],[data-testid="row"],[data-testid="field-plant"]',
-    );
-    if (!onField && nodes !== null) faults.push(`a field node on ${on}`);
-    if (onField) fieldFrame(shown);
+    for (const fault of rootFaults(host, read ? 'read' : 'unread'))
+      if (faults.length < 8 && !faults.includes(fault)) faults.push(fault);
+    if (shown.includes('Your field')) fieldFrame(shown);
   };
   const watch = new MutationObserver(frame);
   watch.observe(host, { subtree: true, childList: true, attributes: true, characterData: true });
@@ -482,6 +478,9 @@ export const mount = async (
       node?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
     });
   };
+  /** Whether home shows, its foot drawn: the launch's plan made, or no plan over unread passages. */
+  const home = () =>
+    headings().join('|') === 'Your field' && host.querySelector('[data-testid="foot"]') !== null;
   const summary = () => text(host.querySelector('[data-testid="summary"]'));
   /** The grade checked on Today, none when no grade shows. */
   const checked = () =>
@@ -545,13 +544,33 @@ export const mount = async (
     await until(() => false, 8);
     expect({ through: label, ...stored() }).toEqual({ through: label, ...before });
   };
-  /** Opens the field and reads it whole; the device takes no write, remove or clear, and keeps its disk. */
+  /** Today's action button as it shows: `Say it` or `Next`, none in the done state. */
+  const action = () => ['Say it', 'Next'].find((label) => button(label) !== undefined) ?? 'none';
+  /** The action Today showed when `Your field` last left it; none before the launch's first Today. */
+  const left = { action: 'none' };
+  /** Opens the field from Today by `Your field` and reads it whole; the device takes no write, remove or clear, and keeps its disk. */
   const field = async () => {
+    left.action = action();
     await still('Your field', 'Your field');
     return readField(host);
   };
-  /** Goes back to Today; the device takes no write, remove or clear, and keeps its disk. */
-  const back = () => still('Today', 'Today');
+  /** Home read whole, as it shows now. */
+  const onHome = () => readField(host);
+  /** Goes from home to Today by `Begin`; the device takes no write, remove or clear, and keeps its disk. */
+  const begin = () => still('Begin', 'Today');
+  /**
+   * Goes back to Today by `Begin`, which home offers because Today showed an
+   * action (`Say it` or `Next`) when `Your field` left it; Today shows that
+   * action again. The device takes no write, remove or clear, and keeps its disk.
+   */
+  const back = async () => {
+    expect({ left: left.action, begin: button('Begin') !== undefined }).toEqual({
+      left: left.action === 'none' ? '<Say it or Next>' : left.action,
+      begin: true,
+    });
+    await begin();
+    expect({ back: action() }).toEqual({ back: left.action });
+  };
   /** What the disk shows wrong against the launch's: a key removed, a key other than the passage's recalls (and the minutes, once a Minutes radio was tapped) changed or added, or a passage recall that is not one. */
   const diskFaults = () => {
     const own = `${PREFIX}${passage.reference}/`;
@@ -603,7 +622,10 @@ export const mount = async (
     tap,
     say,
     renew,
+    home,
+    onHome,
     field,
+    begin,
     back,
     summary,
     checked,

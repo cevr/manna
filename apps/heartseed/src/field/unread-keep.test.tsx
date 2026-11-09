@@ -54,8 +54,8 @@ describe('an unread session whose stamp read fails', () => {
 
       device.launch();
       const after = await mount(true);
-      expect(await after.until(() => after.buttons().includes('Your field'))).toBe(true);
-      expect((await after.field()).sown).toBe('2 days sown');
+      expect(await after.until(after.home)).toBe(true);
+      expect(after.onHome().sown).toBe('2 days sown');
       expect(
         heldOn(device.disk).map((recall) => [
           Object.hasOwn(recall, 'offset'),
@@ -65,7 +65,6 @@ describe('an unread session whose stamp read fails', () => {
         [false, false],
         [true, true],
       ]);
-      await after.back();
       expect(await after.leave()).toEqual([]);
     });
 });
