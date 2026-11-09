@@ -5251,6 +5251,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The run loop may yield before any step of a command's fiber, and a service whose native listener runs an effect synchronously had no property that lands a native event at each of the command's yield points; each test that had one kept its own copy of the scheduler.
 - **Guard:** code: `apps/heartseed/src/yield-points.test.ts` `each service a native listener writes has a yield-point property, through the one shared scheduler`
 
+### heartseed-yield-points-read-every-pubsub-maker
+
+- **Date:** 2026-11-08
+- **Kind:** review
+- **Said:** "The yield-point reader misses `PubSub.make`, and its generator is narrower than the rule."
+- **Source:** hymnapp/hsguards3/round-1-findings.md M1
+- **Wrong:** A Heartseed service that made its PubSub with `PubSub.make` and ran an effect synchronously in a listener needed no yield-point property by `apps/heartseed/src/yield-points.test.ts`, and the reader could drop `dropping` or read the makers on any object with its property still green.
+- **Cause:** The reader's makers left out `make`, and the generated modules drew only three of effect's five PubSub constructors and never a same-named maker on another object, so the property could not tell a narrower or wider reader.
+- **Guard:** code: `apps/heartseed/src/yield-points.test.ts` `the reader finds exactly the generated modules that need one, over 300 sources`
+
 ### film-av-sync-sees-a-frame-of-priming
 
 - **Date:** 2026-11-08

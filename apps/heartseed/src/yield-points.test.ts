@@ -13,7 +13,10 @@
  * The reader parses the code (oxc-parser), so a comment, a string or a type
  * that names a runner or a PubSub is no reason. It reads a runner on any
  * object, a runner's named import and `publishUnsafe`, and a PubSub made
- * through the name `PubSub`: an aliased import (`import * as P from
+ * by any of effect's constructors (`make`, `bounded`, `dropping`, `sliding`,
+ * `unbounded`) through the name `PubSub`; the same names on another object
+ * (`Queue.bounded`) make no PubSub. An aliased import (`import * as P from
+ * 'effect/PubSub'`), a maker's named import (`import { make } from
  * 'effect/PubSub'`) and a destructured runner (`const { runSync } =
  * Effect`) are not read, and the app writes `PubSub` and `Effect.` forms
  * everywhere.
@@ -39,7 +42,8 @@ const RUNNERS = new Set([
   'runSyncExitWith',
   'publishUnsafe',
 ]);
-const MAKERS = new Set(['sliding', 'unbounded', 'bounded', 'dropping']);
+/** Every constructor of a PubSub that effect exports. */
+const MAKERS = new Set(['make', 'sliding', 'unbounded', 'bounded', 'dropping']);
 
 /** A key's name: an identifier's, or a string literal's when it is computed. */
 const nameOf = (node: Node): Option.Option<string> => {
@@ -140,12 +144,39 @@ interface Line {
 const OBJECTS = ['Effect', 'runtime', 'context.runtime', 'E'];
 const SYNC_NAMES = ['runSync', 'runSyncExit', 'runSyncWith', 'runSyncExitWith'];
 
-/** A line that makes a PubSub, or names one with no code that makes it. */
+/** The generator's own list of effect's PubSub constructors, apart from the reader's. */
+const GENERATED_MAKERS = ['make', 'bounded', 'dropping', 'sliding', 'unbounded'];
+/** Objects whose makers of the same names make no PubSub. */
+const OTHER_MAKERS = ['Queue', 'Stream', 'Mailbox', 'pubsub', 'PubSub.Atomic'];
+
+/** A maker's arguments: an options object for `make`, a capacity for the rest. */
+const argsOf = (maker: string) => {
+  if (maker === 'make') return '{ atomicPubSub: () => atomic, strategy: () => strategy }';
+  return '16';
+};
+
+/** A line that makes a PubSub, or names one, or calls a same-named maker on another object, with no code that makes one. */
 const pubsubLine = (next: () => number): Line => {
-  const maker = pick(next, ['sliding', 'unbounded', 'bounded']);
+  const maker = pick(next, GENERATED_MAKERS);
+  const other = pick(next, OTHER_MAKERS);
   return pick(next, [
-    { text: `const views = yield* PubSub.${maker}<number>(16);`, pubsub: true, sync: false },
-    { text: `const box = yield* PubSub['${maker}']<number>(4);`, pubsub: true, sync: false },
+    {
+      text: `const views = yield* PubSub.${maker}<number>(${argsOf(maker)});`,
+      pubsub: true,
+      sync: false,
+    },
+    {
+      text: `const box = yield* PubSub['${maker}']<number>(${argsOf(maker)});`,
+      pubsub: true,
+      sync: false,
+    },
+    {
+      text: `const queue = yield* ${other}.${maker}<number>(${argsOf(maker)});`,
+      pubsub: false,
+      sync: false,
+    },
+    { text: `const held = yield* ${other}['${maker}']<number>(4);`, pubsub: false, sync: false },
+    { text: 'const atomic = PubSub.makeAtomicBounded<number>(4);', pubsub: false, sync: false },
     { text: `// PubSub.${maker} once held the views`, pubsub: false, sync: false },
     {
       text: `/** Publishes through PubSub.${maker}. */\nconst a${maker} = 1;`,
