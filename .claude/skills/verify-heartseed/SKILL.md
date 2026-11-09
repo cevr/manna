@@ -248,7 +248,8 @@ Heartseed has no journey files yet. The features:
   the furrows with their kinds, icons, ripe counts and ready marks, the
   lists, the shelves Add verses will offer, and Start here at the
   session) on the development probe (`apps/heartseed/app/probe/home.tsx`)
-  over the live garden; no screen a reader sees draws them yet. Run it
+  over the live garden, and the row `home-icons`: the home's 22 icon PNGs
+  loaded on the device; no screen a reader sees draws them yet. Run it
   from `first.md`'s Today.
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
