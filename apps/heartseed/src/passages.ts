@@ -17,7 +17,7 @@
  * changes the view only once its write has landed. No change touches a
  * recall: a removed passage's or list's plants stay in the garden. The
  * session plans over the app's own pieces, then each passage's verses,
- * then the taught collections' verses (`piecesOf`); each long verse after
+ * then each list's, then the taught collections' verses (`piecesOf`); each long verse after
  * the app's own carries its phrases (`src/phrase.ts`).
  */
 
@@ -36,7 +36,7 @@ import {
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as Semaphore from 'effect/Semaphore';
 
-import { HANDBOOK_LISTS } from './handbook';
+import { HANDBOOK_LISTS, handbookListOf, handbookTitle } from './handbook';
 import { versesOf } from './kjv';
 import { sourceWords } from './matcher/words';
 import { cutOf, phraseReference, type Phrase } from './phrase';
@@ -163,20 +163,35 @@ const heldPieces = (view: PassagesView): readonly TextPiece[] => {
   return view.passages.flatMap(piecesIn);
 };
 
+/** The verses of `collection` as pieces, promise by promise and verse by verse, each and its phrases grouped by `title`. */
+const piecesOfCollection = (collection: Collection, title: string): readonly TextPiece[] =>
+  collection.promises.flatMap((range) => piecesIn(range).map((piece) => groupedAs(piece, title)));
+
 /** The verses of `collections` as pieces, collection by collection, promise by promise and verse by verse, each and its phrases grouped by its collection's title. */
 export const collectionPieces = (collections: readonly Collection[]): readonly TextPiece[] =>
-  collections.flatMap((collection) =>
-    collection.promises.flatMap((range) =>
-      piecesIn(range).map((piece) => groupedAs(piece, collection.title)),
-    ),
-  );
+  collections.flatMap((collection) => piecesOfCollection(collection, collection.title));
+
+/** Each Handbook list's pieces, kept once made: the corpus and the Handbook never change. */
+const listPieces = new Map<string, readonly TextPiece[]>();
+
+/** The pieces of the Handbook list `id`, grouped by its title as the reader sees it (`handbookTitle`), made once per id; none for an id the Handbook does not hold. */
+const piecesOfList = (id: string): readonly TextPiece[] =>
+  Option.getOrElse(Option.fromUndefinedOr(listPieces.get(id)), () => {
+    const pieces = Option.match(handbookListOf(id), {
+      onNone: () => [],
+      onSome: (list) => piecesOfCollection(list, handbookTitle(list)),
+    });
+    listPieces.set(id, pieces);
+    return pieces;
+  });
 
 /**
  * The pieces the session plans over: the app's own first, then each held
- * passage's verses, then `taught`, the taught collections' verses, each
- * reference kept once, at its first place, so a passage over one of the
- * app's own verses or a taught one shares its plant. With the passages
- * unread, the app's own alone.
+ * passage's verses, then each held Handbook list's verses in stored order,
+ * then `taught`, the taught collections' verses, each reference kept once,
+ * at its first place, so a passage or list over one of the app's own
+ * verses or a taught one shares its plant. With the view unread, the app's
+ * own alone.
  */
 export const piecesOf = (
   own: readonly TextPiece[],
@@ -185,7 +200,7 @@ export const piecesOf = (
 ): readonly TextPiece[] => {
   const seen = new Set<string>();
   const after = [...heldPieces(view)];
-  if (view._tag === 'Read') after.push(...taught);
+  if (view._tag === 'Read') after.push(...view.lists.flatMap(piecesOfList), ...taught);
   return [...own, ...after].filter((piece) => {
     if (seen.has(piece.reference)) return false;
     seen.add(piece.reference);

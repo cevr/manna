@@ -10,7 +10,7 @@
  * verses, whose minutes live there too: its plan is made at the first show
  * of home or Today, each Minutes tap, each return to the foreground
  * (`src/foreground.ts`, whose one subscription also reads home's greeting
- * again) and each add or remove of a passage, and the
+ * again) and each add or remove of a passage or list, and the
  * reader's appearance (System, Light or Dark), kept there too. Every screen that
  * hears the reader takes Dictation from here, so two services never share
  * the module's one channel; the first minute's hear phase and Today's Listen
@@ -258,7 +258,33 @@ export const removePassage = (range: Range) =>
     return answer;
   });
 
-/** What the field shows of the reader's passages: the list held, or `Unread`, which offers no add and no remove. */
+/** A plant of the Handbook list `id`, answered as the passages answer it; once `Added`, a plan made in this launch is made again over the list's verses too. */
+export const addList = (id: string) =>
+  Effect.gen(function* () {
+    const passages = yield* Passages;
+    const session = yield* Session;
+    const answer = yield* passages.plant(id);
+    if (answer === 'Added') yield* session.remake;
+    return answer;
+  });
+
+/** An uproot of the held list `id`, answered as the passages answer it; once `Removed`, a plan made in this launch is made again without the verses only it held, their plants kept. */
+export const removeList = (id: string) =>
+  Effect.gen(function* () {
+    const passages = yield* Passages;
+    const session = yield* Session;
+    const answer = yield* passages.uproot(id);
+    if (answer === 'Removed') yield* session.remake;
+    return answer;
+  });
+
+/** The sheet's Plant on a Handbook list: a plant of its id (`addList`), answered as the passages answer it. The sheet lets one run at a time, so each answer is its own tap's. */
+export const plantList = runtime.fn((id: string) => addList(id), { concurrent: true });
+
+/** The field's confirmed Remove of a list: an uproot of its id (`removeList`), answered as the passages answer it. The field lets one run at a time, so each answer is its own tap's. */
+export const uprootList = runtime.fn((id: string) => removeList(id), { concurrent: true });
+
+/** What the field shows of the reader's passages and lists: those held, or `Unread`, which offers no add and no remove. */
 export const passagesView = runtime.atom(
   Stream.unwrap(Effect.map(Passages, (passages) => passages.changes)),
 );

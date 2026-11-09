@@ -59,7 +59,9 @@ const plainList = (list: List): ModelList => {
         ? { tag: 'Passage', span: span(list.source.range) }
         : list.source._tag === 'Collection'
           ? { tag: 'Collection', id: list.source.id }
-          : { tag: list.source._tag },
+          : list.source._tag === 'Handbook'
+            ? { tag: 'Handbook', id: list.source.id }
+            : { tag: list.source._tag },
   };
 };
 

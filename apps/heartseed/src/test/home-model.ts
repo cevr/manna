@@ -13,7 +13,9 @@
  * - L2-L3 the lists the field holds: each of the app's own rows (`Own`,
  *   id `own:<title>`), then each range held in stored order (`Passage`, id
  *   `passage:<index>:<book>.<chapter>.<first>-<last>`, titled by `spanRef`,
- *   carrying its range; none while unread), then each taught collection
+ *   carrying its range; none while unread), then each Handbook list held
+ *   in stored order (`Handbook`, id its own, titled and holding its verses
+ *   by `handbook-model.ts`; none while unread), then each taught collection
  *   whose id the list has (`Collection`, id `collection:<id>`, its
  *   promises' verses in order, each once).
  * - H1 the furrows: one per row of the field, the lists' first, then each
@@ -50,6 +52,7 @@ import {
   type ModelPlantStage,
 } from './field-model';
 import { below, inOrder, pickOf, referenceStage, type ModelStage } from './garden-model';
+import { HANDBOOK_MODEL, heldLists } from './handbook-model';
 import {
   spanRef,
   verseRef,
@@ -88,6 +91,7 @@ export type ModelSource =
   | { readonly tag: 'Own' }
   | { readonly tag: 'Passage'; readonly span: Span }
   | { readonly tag: 'Collection'; readonly id: string }
+  | { readonly tag: 'Handbook'; readonly id: string }
   | { readonly tag: 'Loose' };
 
 /** A list as the model holds it. */
@@ -127,6 +131,18 @@ export const listsModel = (
         source: { tag: 'Passage', span },
       });
     });
+  if (held.tag === 'Read')
+    for (const id of heldLists(held.lists ?? [])) {
+      const list = HANDBOOK_MODEL.get(id);
+      if (list === undefined) continue;
+      out.push({
+        id,
+        title: list.title,
+        verses: [...list.verses],
+        range: undefined,
+        source: { tag: 'Handbook', id },
+      });
+    }
   for (const id of taught) {
     const collection = COLLECTIONS.find((each) => each.id === id);
     if (collection === undefined) continue;
@@ -207,7 +223,7 @@ export type ModelKind = 'own' | 'held' | 'taught' | 'other';
 /** H1: the kind of a list by its source. */
 export const kindRule = (source: ModelSource): ModelKind => {
   if (source.tag === 'Own') return 'own';
-  if (source.tag === 'Passage') return 'held';
+  if (source.tag === 'Passage' || source.tag === 'Handbook') return 'held';
   if (source.tag === 'Collection') return 'taught';
   return 'other';
 };

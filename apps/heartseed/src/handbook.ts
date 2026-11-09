@@ -9,7 +9,7 @@
  * fails loudly when it does not decode.
  */
 
-import { Schema } from 'effect';
+import { Option, Schema } from 'effect';
 
 import data from '../data/handbook.json';
 import type { Collection } from './promises';
@@ -61,3 +61,28 @@ export const HANDBOOK: readonly HandbookSection[] = Schema.decodeUnknownSync(Fil
 
 /** Every Handbook list, section by section, in the book's order. */
 export const HANDBOOK_LISTS: readonly Collection[] = HANDBOOK.flatMap((section) => section.lists);
+
+/** Each list's title as the reader sees it, by id: Haskell's own on its first use, and with ` (n)` on its n-th use after, in the book's order, so no two lists share a name. */
+const titlesOf = (lists: readonly Collection[]): ReadonlyMap<string, string> => {
+  const seen = new Map<string, number>();
+  return new Map(
+    lists.map((list) => {
+      const nth = Option.getOrElse(Option.fromUndefinedOr(seen.get(list.title)), () => 0) + 1;
+      seen.set(list.title, nth);
+      if (nth === 1) return [list.id, list.title];
+      return [list.id, `${list.title} (${nth})`];
+    }),
+  );
+};
+
+const TITLES = titlesOf(HANDBOOK_LISTS);
+
+/** The title the reader sees for the Handbook list `list` (`titlesOf`); Haskell's own for a list the Handbook does not hold. */
+export const handbookTitle = (list: Collection): string =>
+  Option.getOrElse(Option.fromUndefinedOr(TITLES.get(list.id)), () => list.title);
+
+const BY_ID = new Map(HANDBOOK_LISTS.map((list) => [list.id, list]));
+
+/** The Handbook list with id `id`, if the Handbook holds one. */
+export const handbookListOf = (id: string): Option.Option<Collection> =>
+  Option.fromUndefinedOr(BY_ID.get(id));

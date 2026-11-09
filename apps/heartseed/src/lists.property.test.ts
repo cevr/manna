@@ -135,7 +135,9 @@ const plainList = (list: List): ModelList => ({
         }
       : list.source._tag === 'Collection'
         ? { tag: 'Collection', id: list.source.id }
-        : { tag: list.source._tag },
+        : list.source._tag === 'Handbook'
+          ? { tag: 'Handbook', id: list.source.id }
+          : { tag: list.source._tag },
 });
 
 /** Held passages: unread, or 0 to 5 choosable ranges, equal ones and the own verse's chapter among them. */

@@ -7,11 +7,12 @@
  * reader's passages as they are, never waiting on a keep under way, at the
  * instant on the service's clock and the zone's offset at that instant,
  * over the pieces of that step: the app's own, then the passages' verses,
- * then the taught collections' verses (`piecesOf`).
+ * then the planted lists' verses, then the taught collections' verses
+ * (`piecesOf`).
  * It is made first when Today shows with a read garden (`begin`), then
  * again at each Minutes tap, at each return to the foreground (`wake`),
  * which makes nothing while a recital is under way, and after each add or
- * remove of a passage (`remake`); none of these makes anything before the
+ * remove of a passage or list (`remake`); none of these makes anything before the
  * first plan. A recital whose keep lands after that step counts as done by
  * its recall. Nothing else makes the plan again in a launch, and an unread
  * garden or unread passages get no plan.

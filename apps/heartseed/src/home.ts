@@ -38,7 +38,7 @@ export const HOME_ICONS = [
 
 export type HomeIcon = (typeof HOME_ICONS)[number];
 
-/** What a furrow's list is to the reader: the app's own, a passage held, a collection taught, or a verse no list names. */
+/** What a furrow's list is to the reader: the app's own, a passage or Handbook list held, a collection taught, or a verse no list names. */
 export type FurrowKind = 'own' | 'held' | 'taught' | 'other';
 
 /** The kind of a list from its source. */
@@ -47,6 +47,7 @@ export const kindOf: (source: ListSource) => FurrowKind = Match.type<ListSource>
     Own: (): FurrowKind => 'own',
     Passage: (): FurrowKind => 'held',
     Collection: (): FurrowKind => 'taught',
+    Handbook: (): FurrowKind => 'held',
     Loose: (): FurrowKind => 'other',
   }),
 );
@@ -62,12 +63,13 @@ const bookIcon = (book: number): HomeIcon => {
   return 'scroll';
 };
 
-/** The icon of a list from its source: a bow for the app's own row and a collection, a passage's by its book, and a scroll for a verse no list names. */
+/** The icon of a list from its source: a bow for the app's own row and a collection, a passage's by its book, and a scroll for a Handbook list and a verse no list names. */
 export const iconOf: (source: ListSource) => HomeIcon = Match.type<ListSource>().pipe(
   Match.tagsExhaustive({
     Own: (): HomeIcon => 'bow',
     Passage: ({ range }): HomeIcon => bookIcon(range.book),
     Collection: (): HomeIcon => 'bow',
+    Handbook: (): HomeIcon => 'scroll',
     Loose: (): HomeIcon => 'scroll',
   }),
 );

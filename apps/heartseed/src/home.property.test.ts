@@ -96,6 +96,7 @@ const plainSource = (source: ListSource): ModelSource => {
     return { tag: 'Passage', span: { book, chapter, first, last } };
   }
   if (source._tag === 'Collection') return { tag: 'Collection', id: source.id };
+  if (source._tag === 'Handbook') return { tag: 'Handbook', id: source.id };
   return { tag: source._tag };
 };
 

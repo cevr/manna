@@ -2383,6 +2383,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     through `addPassage` and `removePassage` over a store that yields at
     every call, the plan, the hold, the pieces and the disk judged against
     the models at every step; and a reader's first three days in five zones.
+  - `test:passages-session-lists`: `src/passages/session-lists.test.ts`,
+    `addList` and `removeList` over the session: a landed plant makes the
+    plan again over the passages, the list, then the taught collections, a
+    landed uproot makes it again without the list, its recalls kept, no
+    plan made when none was, and no making on any other answer.
   - `test:chooser`: `src/chooser/range.property.test.ts`, the range a
     reader taps (`tapVerse`) against `test/choose-model.ts`'s rule written
     plainly: every range of 1-20 verses and every tap from 0 to one past
@@ -2465,7 +2470,14 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     range 1-20 verses of its chapter with text, ids unique as
     `bhb-<para>` and none a promise collection's, the source and no title
     holding "doctrine", each list's pieces and field row, and no When I
-    need… card for a Handbook id.
+    need… card for a Handbook id. `lists.property.test.ts`, a Handbook
+    list as a list of the field and the session against
+    `test/handbook-model.ts`: all 131 lists (id, title with ` (n)` past a
+    title's first use, distinct verses in Haskell's order), `listsOf` and
+    `piecesOf` over generated views of passages and lists sharing verses
+    (own, passages, lists, taught), and one plant per verse over generated
+    gardens, the field made without the lists giving the same stages,
+    days sown and harvest.
   - `test:need`: `src/need/need.property.test.ts`, When I need…'s cards
     (`needOf`) against the rule written plainly in
     `src/test/promise-model.ts`: every subset of the Fear collection's 14

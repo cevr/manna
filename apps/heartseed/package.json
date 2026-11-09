@@ -110,6 +110,7 @@
     "test:passages": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/passages/ranges.property.test.ts ./src/passages/service.test.ts ./src/passages/pieces.property.test.ts",
     "test:passages-lists": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/passages/lists.test.ts",
     "test:passages-session": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/passages/session.test.ts",
+    "test:passages-session-lists": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/passages/session-lists.test.ts",
     "test:chooser": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/range.property.test.ts",
     "test:chooser-lists": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/lists.test.tsx",
     "test:chooser-walk": "bun test --no-isolate --parallel=3 --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' ./src/chooser/walk-plant.test.tsx",

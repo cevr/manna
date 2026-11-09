@@ -2,15 +2,29 @@
 
 /**
  * The independent model of Haskell's Bible Handbook and of the lists a
- * reader holds, written plainly from hshandbook's rules (R1-R5) for the
- * tests to judge the app by. The Handbook comes from `data/handbook.json`
- * itself; nothing here reads `src/handbook.ts`, `src/lists.ts`,
- * `src/shelves.ts` or `src/passages.ts`. The passages' own rules are
- * `passages-model.ts`'s, over the lists held.
+ * reader holds, written plainly from hshandbook's rules (R1-R5, R7's
+ * pieces, R8's lists and R11's titles) for the tests to judge the app by.
+ * The Handbook comes from `data/handbook.json` itself; nothing here reads
+ * `src/handbook.ts`, `src/lists.ts`, `src/shelves.ts` or `src/passages.ts`.
+ * The passages' own rules are `passages-model.ts`'s, over the lists held;
+ * the collections are the committed list's (`src/promises.ts`), as
+ * `promise-model.ts` reads them.
  */
 
 import data from '../../data/handbook.json';
-import { addRule, readRule, removeRule, type Corpus, type Held, type Span } from './passages-model';
+import { COLLECTIONS } from '../promises';
+import {
+  addRule,
+  readRule,
+  removeRule,
+  spanRef,
+  verseRef,
+  versesIn,
+  type Corpus,
+  type Held,
+  type ModelTextPiece,
+  type Span,
+} from './passages-model';
 
 /** The store key of the lists planted (R1). */
 export const LISTS = 'heartseed/lists';
@@ -25,6 +39,49 @@ export const KNOWN_IDS: readonly string[] = data.sections.flatMap((section) =>
 );
 
 const known = new Set(KNOWN_IDS);
+
+/** A Handbook list as the model holds it: its section's title, its id, its title by R11 and its distinct verses in Haskell's order (R8). */
+export interface ModelHandbookList {
+  readonly section: string;
+  readonly id: string;
+  readonly title: string;
+  readonly verses: readonly string[];
+  /** Each distinct verse's place `[book, chapter, verse]`, beside `verses`. */
+  readonly places: readonly (readonly [number, number, number])[];
+}
+
+/** R8, R11: every list of the data, in the book's order; a title the book uses before gets ` (n)` on its n-th use. */
+export const HANDBOOK_ORDER: readonly ModelHandbookList[] = (() => {
+  const out: ModelHandbookList[] = [];
+  const uses: Record<string, number> = {};
+  for (const section of data.sections)
+    for (const list of section.lists) {
+      const n = (uses[list.title] ?? 0) + 1;
+      uses[list.title] = n;
+      const verses: string[] = [];
+      const places: (readonly [number, number, number])[] = [];
+      for (const [book = 0, chapter = 0, first = 0, last = 0] of list.ranges)
+        for (let verse = first; verse <= last; verse++) {
+          const reference = verseRef(book, chapter, verse);
+          if (verses.includes(reference)) continue;
+          verses.push(reference);
+          places.push([book, chapter, verse]);
+        }
+      out.push({
+        section: section.title,
+        id: list.id,
+        title: n === 1 ? list.title : `${list.title} (${n})`,
+        verses,
+        places,
+      });
+    }
+  return out;
+})();
+
+/** Every model list by its id. */
+export const HANDBOOK_MODEL: ReadonlyMap<string, ModelHandbookList> = new Map(
+  HANDBOOK_ORDER.map((list) => [list.id, list]),
+);
 
 /** Whether this build knows the list `id`. */
 export const knows = (id: string) => known.has(id);
@@ -148,4 +205,80 @@ export const uprootRule = (model: Model, id: string, refused: boolean): Step => 
     wrote: 'L',
     landed: true,
   };
+};
+
+/** A verse's place and the group its piece takes: `[book, chapter, verse, group]`. */
+type Placed = readonly [number, number, number, string];
+
+/** Each held passage's verses, grouped by its reference. */
+const passagePlaces = (passages: readonly Span[]): Placed[] => {
+  const out: Placed[] = [];
+  for (const span of passages)
+    for (let verse = span.first; verse <= span.last; verse++)
+      out.push([span.book, span.chapter, verse, spanRef(span)]);
+  return out;
+};
+
+/** Each held list's verses (R2: known ids, once, in stored order), grouped by its title. */
+const listPlaces = (stored: readonly string[]): Placed[] => {
+  const out: Placed[] = [];
+  for (const id of heldLists(stored)) {
+    const list = HANDBOOK_MODEL.get(id);
+    if (list === undefined) continue;
+    for (const [book, chapter, verse] of list.places) out.push([book, chapter, verse, list.title]);
+  }
+  return out;
+};
+
+/** Each taught collection's verses, grouped by its title. */
+const taughtPlaces = (taught: readonly string[]): Placed[] => {
+  const out: Placed[] = [];
+  for (const id of taught) {
+    const collection = COLLECTIONS.find((each) => each.id === id);
+    if (collection === undefined) continue;
+    for (const range of collection.promises)
+      for (let verse = range.first; verse <= range.last; verse++)
+        out.push([range.book, range.chapter, verse, collection.title]);
+  }
+  return out;
+};
+
+/**
+ * R7: the pieces the session plans over: the app's `own`, then each held
+ * passage's verses (grouped by its reference), then each held list's
+ * verses in Haskell's order (grouped by its title), then each taught
+ * collection's (grouped by its title), each reference kept at its first
+ * place only; an unread view gives the own alone. Each verse's text comes
+ * from `corpus`, its words by `words`, its phrases by `phrased`.
+ */
+export const piecesWithListsModel = (
+  corpus: Corpus,
+  own: readonly ModelTextPiece[],
+  held: Held,
+  taught: readonly string[],
+  words: (text: string) => number,
+  phrased: (piece: ModelTextPiece) => ModelTextPiece,
+): ModelTextPiece[] => {
+  const all: ModelTextPiece[] = [...own];
+  const push = ([book, chapter, verse, group]: Placed) => {
+    const text = versesIn(corpus, book, chapter)[verse - 1] ?? '';
+    all.push(
+      phrased({ reference: verseRef(book, chapter, verse), text, words: words(text), group }),
+    );
+  };
+  if (held.tag === 'Read')
+    for (const placed of [
+      ...passagePlaces(held.passages),
+      ...listPlaces(held.lists ?? []),
+      ...taughtPlaces(taught),
+    ])
+      push(placed);
+  const out: ModelTextPiece[] = [];
+  const named = new Set<string>();
+  for (const piece of all) {
+    if (named.has(piece.reference)) continue;
+    named.add(piece.reference);
+    out.push(piece);
+  }
+  return out;
 };

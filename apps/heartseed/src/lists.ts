@@ -4,7 +4,8 @@
  * is the garden's plant at that key: no list owns a plant, and no list is
  * stored beside one. A list is an ordered set of verses, each at most once,
  * that says where it came from: the app's own row, a passage (a chapter, a
- * promise, any picked range), a promise collection, or one verse that no
+ * promise, any picked range), a promise collection, a list of Haskell's
+ * Bible Handbook planted whole, or one verse that no
  * other list names. Lists differ only in their source, so one verse in many
  * lists is one plant in each of them.
  *
@@ -16,6 +17,7 @@ import { getBibleBookByName } from '@manna/core/bible';
 import { Option } from 'effect';
 
 import type { FieldPassage } from './field';
+import { HANDBOOK_LISTS, handbookTitle } from './handbook';
 import { versesOf } from './kjv';
 import { passageReference, verseReference, type PassagesView, type Range } from './passages';
 import type { Collection } from './promises';
@@ -32,6 +34,7 @@ export type ListSource =
   | { readonly _tag: 'Own' }
   | { readonly _tag: 'Passage'; readonly range: Range }
   | { readonly _tag: 'Collection'; readonly id: string }
+  | { readonly _tag: 'Handbook'; readonly id: string }
   | { readonly _tag: 'Loose' };
 
 /** A list: a row of the field with an id unique among its lists, and its source; `range` is present exactly on a `Passage` list. */
@@ -94,6 +97,23 @@ export const collectionList = (collection: Collection): List => ({
   source: { _tag: 'Collection', id: collection.id },
 });
 
+/** A Handbook list as a list: its id, its title as the reader sees it (`handbookTitle`), its ranges' verses in Haskell's order, each once, with no range. */
+const handbookList = (list: Collection): List => ({
+  id: list.id,
+  title: handbookTitle(list),
+  verses: [...new Set(list.promises.flatMap(versesIn))],
+  source: { _tag: 'Handbook', id: list.id },
+});
+
+/** Every Handbook list as a list, by id, built once. */
+const HANDBOOK_FIELD: ReadonlyMap<string, List> = new Map(
+  HANDBOOK_LISTS.map((list) => [list.id, handbookList(list)]),
+);
+
+/** The Handbook list `id` as a list, if the Handbook holds one. */
+export const plantedListOf = (id: string): Option.Option<List> =>
+  Option.fromUndefinedOr(HANDBOOK_FIELD.get(id));
+
 /** One verse no other list names, as a list of its own. */
 export const looseList = (reference: string): List => ({
   id: `verse:${reference}`,
@@ -108,9 +128,20 @@ const heldLists = (view: PassagesView): readonly List[] => {
   return view.passages.map((range, index) => passageList(`passage:${index}:`, range));
 };
 
-/** The lists the field holds: `own` as the app's own rows, then each range held in stored order (none while unread), then each taught collection. */
+/** Each Handbook list held, in stored order; none while unread. */
+const plantedLists = (view: PassagesView): readonly List[] => {
+  if (view._tag === 'Unread') return [];
+  return view.lists.flatMap((id) => Option.toArray(plantedListOf(id)));
+};
+
+/** The lists the field holds: `own` as the app's own rows, then each range held in stored order, then each Handbook list held in stored order (neither while unread), then each taught collection. */
 export const listsOf = (
   own: readonly FieldPassage[],
   view: PassagesView,
   collections: readonly Collection[],
-): readonly List[] => [...own.map(ownList), ...heldLists(view), ...collections.map(collectionList)];
+): readonly List[] => [
+  ...own.map(ownList),
+  ...heldLists(view),
+  ...plantedLists(view),
+  ...collections.map(collectionList),
+];
