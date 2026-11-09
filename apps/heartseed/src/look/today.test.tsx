@@ -22,6 +22,7 @@ import { recallOf } from '../test/field-model';
 import { record } from '../test/field-rig';
 import { below, DAY, pickOf, random } from '../test/garden-model';
 import { lookFaults, setSystem, watchLook } from '../test/look';
+import { rootFaults } from '../test/root-rule';
 import { deviceOf, launch, type Hearing } from '../test/run-rig';
 import type { Scheme } from '../theme';
 
@@ -113,7 +114,10 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
       await settle('the field');
       if (!acted) {
         ended.home = true;
+        coverage['field, done'] = (coverage['field, done'] ?? 0) + 1;
         if (app.has('Begin')) report.push(`seed ${seed} the field, done: Begin shown`);
+        for (const fault of rootFaults(app.host, 'read'))
+          report.push(`seed ${seed} the field, done: ${fault}`);
         return true;
       }
       await app.tap('Begin');
@@ -144,14 +148,14 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
   return { report, frames: look.faults, footer, seen: look.frames.seen };
 };
 
-/** How many times each step took effect across the walks, and how many settled screens showed the done state. */
-const coverage: Partial<Record<Step | 'done', number>> = {};
+/** How many times each step took effect across the walks, how many settled screens showed the done state, and how many walks the field in the done state ended on home. */
+const coverage: Partial<Record<Step | 'done' | 'field, done', number>> = {};
 
 describe('Today in dark and across flips of the system', () => {
   it('holds every frame of generated walks (Say it heard, missed or unheard, a peek, a grade, Next to done, Minutes, the field and back) to the oracle for the system’s last value', async () => {
     const walks = [];
     for (let n = 0; n < 4; n++) walks.push(await walk(n, n % 2 === 0 ? 'dark' : 'light', 10));
-    const all: readonly (Step | 'done')[] = [...STEPS, 'done'];
+    const all: readonly (Step | 'done' | 'field, done')[] = [...STEPS, 'done', 'field, done'];
     const reached = all.filter((step) => (coverage[step] ?? 0) === 0);
     expect({
       reports: walks.flatMap((each) => each.report),

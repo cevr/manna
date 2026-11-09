@@ -36,6 +36,7 @@ import type { Recall } from '../sayit';
 import type { Minutes } from '../session';
 import { toDue } from '../test/clock';
 import { below, keyOf, pickOf, random } from '../test/garden-model';
+import { rootFaults } from '../test/root-rule';
 import {
   deviceOf,
   faultsOf,
@@ -311,7 +312,7 @@ const sayCommand = async (run: Run, at: string) => {
   cover('recital');
 };
 
-/** The field and back to Today by `Begin`, offered only in a read garden, while Today shows an action; in the done state home shows no `Begin`, and the launch ends there (true). */
+/** The field and back to Today by `Begin`, offered only in a read garden, while Today shows an action; in the done state home shows no `Begin` and keeps the root's frame rule (`rootFaults`), and the launch ends there (true). */
 const fieldCommand = async (run: Run) => {
   if (run.faults.listing === 'unread') return false;
   const acted = run.app.has('Say it') || run.app.has('Next');
@@ -324,10 +325,11 @@ const fieldCommand = async (run: Run) => {
     ),
   ).toBe(true);
   if (!acted) {
-    expect({ step: run.step, begin: run.app.has('Begin') }).toEqual({
+    expect({
       step: run.step,
-      begin: false,
-    });
+      begin: run.app.has('Begin'),
+      root: rootFaults(run.app.host, 'read'),
+    }).toEqual({ step: run.step, begin: false, root: [] });
     cover('field, done');
     return true;
   }
@@ -481,7 +483,7 @@ describe('Today’s header holds the minutes and the voice', () => {
   });
 
   it('over generated devices, launches and taps, shows and stores the reader’s choices by the rules', async () => {
-    const next = random(0x5e55);
+    const next = random(18);
     for (let d = 0; d < DEVICES; d += 1) await deviceRun(next, d);
     const floors = {
       'stored:absent': 1,
@@ -504,6 +506,7 @@ describe('Today’s header holds the minutes and the voice', () => {
       recital: 2,
       'new plan at the due': 2,
       'field and back': 2,
+      'field, done': 1,
       wait: 2,
     };
     console.log(`coverage ${JSON.stringify(Object.fromEntries(coverage))}`);

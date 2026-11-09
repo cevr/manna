@@ -47,6 +47,7 @@ import {
   type ModelItem,
 } from '../test/session-model';
 import { actionModel, madeModel, nextModel, startedModel } from '../test/run-model';
+import { rootFaults } from '../test/root-rule';
 import {
   deviceOf,
   faultsOf,
@@ -300,7 +301,7 @@ const againCommand = async (run: Run) => {
 const homeCounts = (app: Run['app']) =>
   [...app.host.querySelectorAll('[data-testid="counts"]')].map((node) => node.textContent ?? '');
 
-/** The field and back to Today by `Begin`, offered only in a read garden, while Today shows an action; in the done state home shows Today's counts line and no `Begin`, and the launch ends there (true). */
+/** The field and back to Today by `Begin`, offered only in a read garden, while Today shows an action; in the done state home shows Today's counts line and no `Begin` and keeps the root's frame rule (`rootFaults`), and the launch ends there (true). */
 const fieldCommand = async (run: Run) => {
   if (!run.m.read) return false;
   const acted = run.app.has('Say it') || run.app.has('Next');
@@ -312,11 +313,12 @@ const fieldCommand = async (run: Run) => {
     ),
   ).toBe(true);
   if (!acted) {
-    expect({ step: run.step, counts: homeCounts(run.app), begin: run.app.has('Begin') }).toEqual({
+    expect({
       step: run.step,
-      counts,
-      begin: false,
-    });
+      counts: homeCounts(run.app),
+      begin: run.app.has('Begin'),
+      root: rootFaults(run.app.host, 'read'),
+    }).toEqual({ step: run.step, counts, begin: false, root: [] });
     cover('field, done');
     return true;
   }
@@ -654,6 +656,7 @@ describe('Today’s counts line', () => {
       again: 1,
       'voice tap': 1,
       'field and back': 2,
+      'field, done': 1,
       'zone changed': 1,
       'say:missed': 1,
       'say:unheard:unread': 1,
