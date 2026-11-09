@@ -67,8 +67,9 @@ of `first-planted`.
   `Grade` or `Isaiah 41:10` node.
 - `run-listening`: during `run-recite`'s recital, a raw snapshot taken at
   once after `Say it` shows `Listening`, and no `Minutes` radio, no
-  `Voice`, no `Your field` and no `Settings`: no making of the plan can be
-  reached while a recital listens.
+  `Voice`, no `Your field`, no `Settings`, no `Plant`, no `Remove` and no
+  heading `Settings`: no making of the plan can be reached while a recital
+  listens.
 - `run-second` (only when the drive started before 16:00 local): once the
   passage is due again after `run-recite` (wait 15 minutes, then
   `Your field`, `Settings`, the checked `5 min`, `Done`, `Begin`), Today shows `1 to tend`, no word node labelled (nothing

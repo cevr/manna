@@ -71,7 +71,8 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
 - `home-relaunch`: a relaunch opens home, with the greeting and the
   foot's counts line, never Today.
 - `home-settings`: the gear `Settings` opens the sheet: the heading
-  `Settings`, `Done`, the `Minutes` radios with `5 min` alone selected,
+  `Settings`, `Done`, the line `A day's tending` over the `Minutes` radios
+  with `5 min` alone selected, the line `Reads new verses aloud` over
   `Voice` valued `Her`, the `Appearance` radios with `System` selected,
   and `About`; `Done` closes it to home.
 - `home-settings-minutes`: `10 min` chosen in the sheet stays selected
@@ -244,8 +245,9 @@ the same variables:
 1. `home-settings`: `sim tap "label=Settings"`, `sim snapshot
    home-settings`, and a raw snapshot (`agent-device snapshot --json --raw
    --observe-only --force-full --session verify-heartseed`) → the heading
-   `Settings` and the button `Done`; the radios `2 min`, `5 min`,
-   `10 min`, `20 min`, `5 min` alone selected; the button `Voice`, valued
+   `Settings` and the button `Done`; the line `A day's tending` over the
+   radios `2 min`, `5 min`, `10 min`, `20 min`, `5 min` alone selected;
+   the line `Reads new verses aloud` over the button `Voice`, valued
    `Her` (raw); the radios `System`, `Light`, `Dark`, `System` selected;
    the button `About`. Record whether home's nodes (`Your field`, the
    furrows, `When I need…`) appear in the same snapshot: that is the

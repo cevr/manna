@@ -102,6 +102,32 @@ const choicesFaults = (on: string, host: Element, controls: readonly Element[]) 
   return [...groups, ...choices].map((node) => `${nameOf(node)} on ${on}`);
 };
 
+/** The controls that make or change the plan, or lead to a screen that does, by name. */
+const PLAN_CONTROLS = new Set(['Settings', 'Your field', 'Plant', 'Voice']);
+
+/** The name a node that makes the plan goes by in the listening clause, or none. */
+const reachOf = (node: Element) => {
+  if (node.hasAttribute('aria-modal')) return 'a sheet';
+  const role = node.getAttribute('role');
+  const name = nameOf(node);
+  if (role === 'radiogroup' && name === 'Minutes') return 'Minutes';
+  if (role === 'radiogroup') return undefined;
+  if (role === 'radio' && /^\d+ min$/.test(name)) return name;
+  if (PLAN_CONTROLS.has(name) || name === 'Remove' || name.startsWith('Remove ')) return name;
+  return undefined;
+};
+
+/** What is in reach while a recital listens: every node of the host's whole document, the sheet's portal included, that makes the plan, as `<name> in reach while listening`. */
+const listeningFaults = (host: Element) =>
+  [
+    ...host.ownerDocument.querySelectorAll(
+      `${CONTROLS},[role="radiogroup"][aria-label="Minutes"],[aria-modal]`,
+    ),
+  ]
+    .map(reachOf)
+    .filter((name) => name !== undefined)
+    .map((name) => `${name} in reach while listening`);
+
 /**
  * The root's frame rule (hshomeroot), for every rig that mounts the root:
  * what one frame shows wrong, `garden` being whether the launch's garden
@@ -117,17 +143,24 @@ const choicesFaults = (on: string, host: Element, controls: readonly Element[]) 
  * none elsewhere (`settingsFaults`), no `Minutes` group, `<n> min` or
  * `Voice` on any screen (`choicesFaults`), and no screen has a control named `Today`. The
  * Settings sheet lies outside the host, so its nodes are the sheet rule's
- * (`settings-rig.ts`).
+ * (`settings-rig.ts`). While the host shows `Listening`, on any frame,
+ * nothing that makes the plan is in reach anywhere in the host's document,
+ * the sheet's portal included (`listeningFaults`): no control named
+ * `Settings`, `Your field`, `Plant`, `Voice` or `Remove` (or starting
+ * `Remove `), no `<n> min` radio, no `Minutes` group and no `[aria-modal]`
+ * node, each the fault `<name> in reach while listening`.
  */
 export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] => {
   const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
   const controls = [...host.querySelectorAll(CONTROLS)];
-  if (headings.length === 0) return pendingFaults(host, controls);
+  const named = (name: string) => controls.filter((node) => nameOf(node) === name);
+  const listening = named('Listening').length > 0;
+  const reach: string[] = [];
+  if (listening) reach.push(...listeningFaults(host));
+  if (headings.length === 0) return [...pendingFaults(host, controls), ...reach];
   const out: string[] = [];
   if (headings.length > 1) out.push(`the headings ${headings.join('|')}`);
   const on = headings[0] ?? '';
-  const named = (name: string) => controls.filter((node) => nameOf(node) === name);
-  const listening = named('Listening').length > 0;
   out.push(...backFaults(on, garden, named('Your field'), listening));
   const today = on === 'Today' || FIRST.has(on);
   for (const node of controls)
@@ -141,6 +174,7 @@ export const rootFaults = (host: Element, garden: 'read' | 'unread'): string[] =
     if (on !== 'Your field') out.push(`home's ${id} on ${on}`);
   out.push(...settingsFaults(on, named('Settings')));
   out.push(...choicesFaults(on, host, controls));
+  out.push(...reach);
   return out;
 };
 

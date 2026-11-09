@@ -1975,7 +1975,12 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     `Listening` only under Today, no control named `Today`, `When I need…`
     only on home, exactly one `Settings` on home outside every scroll view
     and none elsewhere, no `Minutes` group, `<n> min` or `Voice` on any
-    screen, and home's and Today's nodes only under their headings;
+    screen, and home's and Today's nodes only under their headings; and
+    while the host shows `Listening`, nothing that makes the plan in reach
+    anywhere in the document, the sheet's portal included: no control named
+    `Settings`, `Your field`, `Plant` or `Remove` (or starting `Remove `),
+    no `<n> min` radio, no `Minutes` group, no `Voice` and no
+    `[aria-modal]` node, each `<name> in reach while listening`;
     and to the field's rules: the way back taken only after a read
     completed, and each field frame the
     rule's rows with their icons and ripe counts, plants as buttons with
@@ -2047,7 +2052,14 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     every screen heading and the pending frame, each of the six kinds
     (`Minutes`, `2 min` … `20 min`, `Voice`) alone and together, each a
     fault under the host on every screen, and the same kinds outside the
-    host no fault.
+    host no fault. Then the listening table: every screen × `Listening`
+    under the host or not × the place (under the host, or outside it where
+    the sheet lies) × each kind alone and together (`Settings`,
+    `Your field`, `Plant`, `Remove`, a `Remove <reference>`, the four
+    `<n> min` radios, `Voice`, the `Minutes` group, an `[aria-modal]`
+    node), 468 cells: while listening each kind is the fault
+    `<name> in reach while listening` wherever it lies, while not none, and
+    the frame's own faults stay.
   - `test:settings-ways` and `test:settings-ways-b`:
     `src/settings/ways.test.tsx` and `ways-b.test.tsx`, fixed cases: the
     gear disabled through a pending remove and two taps in one turn opening

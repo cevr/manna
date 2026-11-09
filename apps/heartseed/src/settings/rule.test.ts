@@ -7,7 +7,17 @@
  * group, each `<n> min` radio, the `Voice` button) alone and all together.
  * A kind under the host is the fault `<name> on <screen>` in every cell, on
  * every screen; the pending frame keeps its own rule. The same kinds
- * outside the host, where the Settings sheet lies, are no fault.
+ * outside the host, where the Settings sheet lies, are no fault while
+ * nothing listens, nor is anything that makes the plan.
+ *
+ * The root's listening clause (`listeningFaults` in the same file), whole
+ * over its domain: every screen × `Listening` under the host or not × the
+ * place (under the host, or a node appended to the document's body outside
+ * it, where the sheet's portal lies) × each kind alone and all together
+ * (`Settings`, `Your field`, `Plant`, `Remove`, a `Remove <reference>`, the
+ * four `<n> min` radios, `Voice`, the `Minutes` group, an `[aria-modal]`
+ * node). While listening, the faults ending ` in reach while listening` are
+ * exactly the kinds' names; while not, none; the frame's bare faults stay.
  *
  * The Settings sheet's look floor (`watchSheet` in `src/test/settings-rig.ts`),
  * with no app: a modal built by hand under an ancestor at opacity 0 has no
@@ -144,18 +154,140 @@ describe("the root's choices rule", () => {
     ).toEqual([]);
   });
 
-  it('counts no choice outside the host, where the Settings sheet lies', () => {
-    const added = ['Your field', 'Today', 'About'].map((screen) => {
+  it('counts no choice and nothing that makes the plan outside the host while nothing listens', () => {
+    const added = SCREENS.map((screen) => {
       const host = screenFrame(screen);
       const bare = rootFaults(host, 'read');
       const sheet = kindsNode(ALL);
+      sheet.append(reachNode(REACH));
       document.body.append(sheet);
-      const faults = rootFaults(host, 'read').filter((fault) => !bare.includes(fault));
+      const faults = rootFaults(host, 'read');
       sheet.remove();
       host.remove();
-      return faults;
+      return { screen, same: JSON.stringify(faults) === JSON.stringify(bare) };
     });
-    expect(added).toEqual([[], [], []]);
+    expect(added.filter((each) => !each.same)).toEqual([]);
+    expect(added.length).toBe(SCREENS.length);
+  });
+});
+
+const IN_REACH = ' in reach while listening';
+
+/** Each kind the listening clause reads, and the name the clause's words give it. */
+const REACH_NAMES = {
+  Settings: 'Settings',
+  'Your field': 'Your field',
+  Plant: 'Plant',
+  Remove: 'Remove',
+  'Remove Isaiah 41:10': 'Remove Isaiah 41:10',
+  '2 min': '2 min',
+  '5 min': '5 min',
+  '10 min': '10 min',
+  '20 min': '20 min',
+  Voice: 'Voice',
+  group: 'Minutes',
+  modal: 'a sheet',
+} as const;
+
+type Reach = keyof typeof REACH_NAMES;
+
+const REACH: readonly Reach[] = [
+  'Settings',
+  'Your field',
+  'Plant',
+  'Remove',
+  'Remove Isaiah 41:10',
+  '2 min',
+  '5 min',
+  '10 min',
+  '20 min',
+  'Voice',
+  'group',
+  'modal',
+];
+
+const REACH_KINDS: readonly (readonly Reach[])[] = [...REACH.map((kind) => [kind]), REACH];
+
+const REACH_RADIOS: readonly Reach[] = ['2 min', '5 min', '10 min', '20 min'];
+
+const BUTTONS: readonly Reach[] = [
+  'Settings',
+  'Your field',
+  'Plant',
+  'Remove',
+  'Remove Isaiah 41:10',
+];
+
+/** The listening clause's kinds as the app draws them: the radios inside the group when both are given, the rest each alone. */
+const reachNode = (kinds: readonly Reach[]) => {
+  const node = document.createElement('div');
+  for (const kind of BUTTONS.filter((each) => kinds.includes(each)))
+    node.append(element('button', kind, kind));
+  const radios = REACH_RADIOS.filter((kind) => kinds.includes(kind)).map((kind) =>
+    element('radio', kind, kind),
+  );
+  const group = element('radiogroup', 'Minutes', '');
+  if (kinds.includes('group')) group.append(...radios);
+  if (kinds.includes('group')) node.append(group);
+  if (!kinds.includes('group')) node.append(...radios);
+  if (kinds.includes('Voice')) node.append(element('button', 'Voice', 'Voice: Her'));
+  if (kinds.includes('modal')) {
+    const modal = document.createElement('div');
+    modal.setAttribute('aria-modal', 'true');
+    node.append(modal);
+  }
+  return node;
+};
+
+/** A fault of a control owed and missing on a bare frame, which a kind under the host supplies. */
+const owed = (fault: string) => fault.startsWith('no ') || / Settings controls on /.test(fault);
+
+/** One cell of the listening table: the clause's faults that `kinds` add, placed under the host or outside it, on `screen`, with `Listening` under the host or not. */
+const reachCell = (
+  screen: string,
+  listening: boolean,
+  place: 'host' | 'outside',
+  kinds: readonly Reach[],
+) => {
+  const host = screenFrame(screen);
+  if (listening) host.append(element('button', 'Listening', 'Listening'));
+  const bare = rootFaults(host, 'read');
+  const node = reachNode(kinds);
+  if (place === 'host') host.append(node);
+  if (place === 'outside') document.body.append(node);
+  const all = rootFaults(host, 'read');
+  node.remove();
+  host.remove();
+  const rest = all.filter((fault) => !fault.endsWith(IN_REACH));
+  return {
+    cell: `${screen} listening=${listening} ${place} ${kinds.join('+')}`,
+    kept:
+      (place === 'outside' && JSON.stringify(rest) === JSON.stringify(bare)) ||
+      (place === 'host' && bare.every((fault) => owed(fault) || all.includes(fault))),
+    added: all.filter((fault) => fault.endsWith(IN_REACH)).toSorted(),
+    wanted: kinds
+      .filter(() => listening)
+      .map((kind) => `${REACH_NAMES[kind]}${IN_REACH}`)
+      .toSorted(),
+  };
+};
+
+describe("the root's listening clause", () => {
+  it('names everything that makes the plan anywhere in the document while a recital listens, and nothing else', () => {
+    const cells = SCREENS.flatMap((screen) =>
+      [true, false].flatMap((listening) =>
+        (['host', 'outside'] as const).flatMap((place) =>
+          REACH_KINDS.map((kinds) => reachCell(screen, listening, place, kinds)),
+        ),
+      ),
+    );
+    expect(
+      cells.filter(
+        (each) => !each.kept || JSON.stringify(each.added) !== JSON.stringify(each.wanted),
+      ),
+    ).toEqual([]);
+    expect(cells.length).toBe(SCREENS.length * 2 * 2 * REACH_KINDS.length);
+    expect(cells.length).toBe(468);
   });
 });
 
