@@ -2,7 +2,7 @@
 
 /**
  * When I need… and a visit walked through the root (`test/need-walk.ts`),
- * part d: generated device 0 of seed 512, twenty-eight commands, held to
+ * part d: generated device 0 of seed 524, twenty-eight commands, held to
  * the walk's oracle on the screen its model names after every command and
  * to the screens' and the root's rules on every frame. Its floors, the
  * visits' counts that `walk-a-visit.test.tsx`'s device reached while When
@@ -19,7 +19,7 @@ const ROOT = ['root:need-from-home', 'root:need-visit', 'root:back'];
 
 describe('When I need…, walked (d)', () => {
   it('shows the cards, the visit and the plan as the models give them', async () => {
-    const { failure, cover } = await walkNeed(512, [0], 28);
+    const { failure, cover } = await walkNeed(524, [0], 28);
     expect(failure).toBeNull();
     expect({
       opened: (cover['need:opened'] ?? 0) >= 5,

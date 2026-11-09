@@ -6,10 +6,8 @@
  * `When I need…` off home (the pending frame, the first minute, Today) or
  * beside `Listening`, and counts the frames that offer it: never in the
  * first minute, an unread garden or over unread passages, where no plan is
- * made (home over unread passages offers `Begin` alone); and with a plan
- * made, home's bar offers it, Today never does, so a recital's frames show
- * `Listening` with no `When I need…`, and home offers it again after the
- * result.
+ * made (home over unread passages offers `Begin` alone). Home's bar
+ * offering it with a plan made, and Today never, are `offer-b.test.tsx`'s.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -18,8 +16,6 @@ import passage from 'virtual:heartseed-passage';
 import { launchNeed, needDevice, recordOf } from '../test/need-rig';
 import { KEY } from '../test/passages-model';
 import { DAY } from '../test/session-model';
-
-const NEED = 'When I need…';
 
 const NOW = Date.UTC(2026, 4, 12, 15);
 
@@ -55,31 +51,5 @@ describe('the way to When I need…', () => {
       faults: passages.faults,
     }).toEqual({ headings: ['Your field'], offer: 0, faults: [] });
     await passages.leave();
-  });
-
-  it('is home’s, never Today’s: not while Say it listens, and home offers it again after the result', async () => {
-    const time = { now: NOW };
-    const rig = await launchNeed(
-      needDevice([recordOf(passage.reference, NOW - 3 * DAY)]),
-      time,
-      null,
-      8,
-    );
-    expect(await rig.until(() => rig.has(NEED) && rig.has('Begin'))).toBe(true);
-    await rig.tap('Begin');
-    expect(await rig.until(() => rig.has('Say it'))).toBe(true);
-    const offered = rig.frames.offer;
-    time.now += 60_000;
-    await rig.tap('Say it');
-    expect(await rig.until(() => rig.has('Next'))).toBe(true);
-    expect({
-      listening: rig.frames.listening > 0,
-      today: rig.has(NEED),
-      offered: rig.frames.offer === offered,
-    }).toEqual({ listening: true, today: false, offered: true });
-    await rig.tap('Your field');
-    expect(await rig.until(() => rig.has(NEED))).toBe(true);
-    expect(rig.faults).toEqual([]);
-    await rig.leave();
   });
 });
