@@ -180,7 +180,7 @@ export const listenFaults = (host: Element): string[] => {
   return out;
 };
 
-/** How a launch starts: the host's state when the subscription starts, whether the garden's read waits for `open`, the voice's source (the run rig's silent one when none), and the screen a read launch opens on (the run rig's when none). */
+/** How a launch starts: the host's state when the subscription starts, whether the garden's read waits for `open`, the voice's source (the run rig's silent one when none), and the screen a read launch with a plant opens on (Today when none). */
 export interface WakeStart {
   readonly opening?: 'home' | 'today';
   readonly state?: HostState;
@@ -203,7 +203,7 @@ export const wakeLaunch = async (
     foreground: foregroundOf(host),
     store: gatedStore(gate),
     voice: start.voice?.layer,
-    opening: start.opening,
+    opening: start.opening ?? 'today',
   });
   start.voice?.bind(() => app.listens.n);
   const frame = () => {

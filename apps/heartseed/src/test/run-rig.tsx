@@ -13,11 +13,17 @@
  * chime and haptics, and Effect's `Clock` provided under the app's layer,
  * its instant frozen where the test sets it.
  *
- * Every Today frame (each DOM mutation batch) is held to the footer rule,
- * over the whole tree: no control lies inside a scroll view but a missed
- * word's mark (`Missed word <n>`), so the action button and the `Grade`
- * group never do, and at most one action button (`Say it`, `Listening`,
- * `Next`) shows. Each fault is kept with the frame's actions.
+ * A read launch opens as the root opens it: home when the garden holds a
+ * plant, the first minute when it holds none, and Today on an unread
+ * garden. Every frame (each DOM mutation batch), from before the root's
+ * first render, is held to the root's frame rule (`rootFaults`, through
+ * `watchRoot`, the garden read unless the launch's listings fail), and
+ * every Today frame to the footer rule, over the whole tree: no control
+ * lies inside a scroll view but a missed word's mark (`Missed word <n>`),
+ * so the action button and the `Grade` group never do, and at most one
+ * action button (`Say it`, `Listening`, `Next`) shows. Each footer fault is
+ * kept with the frame's actions, each root fault with its frame's heading,
+ * in one list.
  */
 
 import { RegistryProvider } from '@effect/atom-react';
@@ -40,6 +46,7 @@ import type { TextPiece } from '../session';
 import { VoiceSource, VoiceUnavailable } from '../voice';
 import { clockOf } from './clock';
 import { PREFIX } from './garden-model';
+import { watchRoot } from './root-rule';
 
 /** The app's own piece: the passage, its own group. */
 export const PASSAGE: TextPiece = {
@@ -252,7 +259,7 @@ export const footerFaults = (host: Element): string[] => {
 /** The leave of each launch still mounted: the next launch leaves any a failed test left. */
 const mounted = new Set<() => Promise<unknown>>();
 
-/** What a rig built on this one may give a launch in place of its own: the voice's source (a voice that never speaks when none), the foreground (the host's `AppState` when none), a wrap of the store over the disk, and the screen a read launch opens on (`today` when none). */
+/** What a rig built on this one may give a launch in place of its own: the voice's source (a voice that never speaks when none), the foreground (the host's `AppState` when none), a wrap of the store over the disk, and the screen a read launch with a plant opens on (home when none). */
 export interface LaunchParts {
   readonly opening?: 'home' | 'today';
   readonly voice?: Layer.Layer<VoiceSource>;
@@ -266,8 +273,8 @@ export interface LaunchParts {
  * A launch of the root over `device` with `faults`, at `time.now` on
  * Effect's clock, with `pieces` given to `appLayer` (the app's own when
  * none) and `parts` in place of the rig's own. Every frame is held to the
- * footer rule; the faults found are kept in `faults`, and `frames` counts
- * the Today frames seen.
+ * root's frame rule and every Today frame to the footer rule; the faults
+ * found are kept in `faults`, and `frames` counts the Today frames seen.
  */
 export const launch = async (
   device: Device,
@@ -299,10 +306,18 @@ export const launch = async (
   const host = document.createElement('div');
   document.body.append(host);
   const found: string[] = [];
+  const rule = watchRoot(host, faults.unread ? 'unread' : 'read');
+  const taken = { n: 0 };
+  /** Moves the root rule's new faults into the rig's list. */
+  const takeRoot = () => {
+    found.push(...rule.faults.slice(taken.n));
+    taken.n = rule.faults.length;
+  };
   const frames = { today: 0, listening: 0, next: 0, done: 0 };
   const headings = () => [...host.querySelectorAll('[role="heading"]')].map(text);
   const actions = () => actionsIn(host).map(nameOf);
   const frame = () => {
+    takeRoot();
     if (!headings().includes('Today')) return;
     frames.today += 1;
     const shown = actions();
@@ -317,7 +332,7 @@ export const launch = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        <Root opening={parts.opening ?? 'today'} />
+        <Root opening={parts.opening ?? 'home'} />
       </RegistryProvider>,
     ),
   );
@@ -344,6 +359,8 @@ export const launch = async (
   };
   const leave = async () => {
     if (!mounted.delete(leave)) return;
+    takeRoot();
+    rule.stop();
     watch.disconnect();
     await act(async () => root.unmount());
     host.remove();

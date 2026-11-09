@@ -10,15 +10,20 @@
  * apart, the passage first or absent), a disk of their plants (every
  * grade, offsets or none, a plant no piece names) or an empty one (the
  * first minute), and its stored minutes. It is launched 2 or 3 times, in
- * zones that change, minutes to a month apart, some launches unread, and
- * each launch runs commands chosen by the screen the model expects: at Say
+ * zones that change, minutes to a month apart, some launches unread. A read
+ * launch (and the first minute's Continue) lands on home, whose first show
+ * makes the plan: with an item shown, home shows the model's counts line
+ * and `Begin`, which the walk takes to Today; with none, home shows the
+ * done state's counts line and no `Begin`, and the launch ends there, as it
+ * does when the field is taken in the done state. On Today each launch runs
+ * commands chosen by the screen the model expects: at Say
  * it a heard recital (a word skipped or not), an unheard one, a refused
  * write, a Minutes tap while a recital listens, a Minutes tap, the field
  * and back, a wait; at Next, Next, Again, a peek, a Minutes tap, the field
  * and a wait; at the done state a wait, a Minutes tap and the field.
  *
  * The oracle is `src/test/run-model.ts` over `src/test/session-model.ts`'s
- * plan, made at Today's first show and at each Minutes tap: after every
+ * plan, made at home's first show and at each Minutes tap: after every
  * step the reference shown, the action, the counts line, each word of the
  * verse as its cue draws it, shown and named (the new piece whole, a
  * review's first letters or empty slots by the ladder, a held recital's own
@@ -432,6 +437,8 @@ class Walk {
   /** Where the plan made by a Minutes tap during the recital under way put its held item. */
   placedDuring: Placed | null = null;
   app: Launch | null = null;
+  /** Whether the launch under way ended on home's done state. */
+  ended = false;
   readonly expected = new Map<string, string | null>();
 
   constructor(
@@ -575,6 +582,7 @@ class Walk {
     travel(this.zone);
     this.faults.unread = this.unread;
     this.app = await launch(this.device, this.faults, this.time, this.pieces);
+    this.ended = false;
     this.run = NO_RUN;
     this.result = null;
     this.ending = null;
@@ -591,10 +599,54 @@ class Walk {
       await this.firstMinute();
       return;
     }
-    this.run = madeModel(this.run, this.planNow(), false);
     bump(this.coverage, 'launch:read');
-    if (shownModel(this.run, this.recallsNow) === null) bump(this.coverage, 'done:first-show');
-    await this.settle('launch');
+    await this.fromHome('launch');
+  }
+
+  /**
+   * Home's first show, which makes the plan: with an item shown, home's
+   * heading, the model's counts line, `Begin` and the root's frame rule
+   * held, then `Begin` and Today's first show; with none, home's done state
+   * (`homeDone`), which ends the launch.
+   */
+  async fromHome(step: string) {
+    const app = this.screen;
+    if (
+      !(await app.until(
+        () => app.headings().join('|') === 'Your field' && homeCounts(app).length > 0,
+      ))
+    )
+      throw new Error(
+        `after ${this.log.join(' > ')} > ${step}: no home, saw ${app.headings().join('|') || 'pending'}`,
+      );
+    this.run = madeModel(this.run, this.planNow(), false);
+    if (shownModel(this.run, this.recallsNow) === null) {
+      bump(this.coverage, 'done:first-show');
+      return this.homeDone(step);
+    }
+    this.log.push(`${step} on home`);
+    this.onHome(true);
+    if (!(await app.tap('Begin'))) throw new Error(`after ${this.log.join(' > ')}: no Begin`);
+    bump(this.coverage, 'home:begin');
+    await this.settle('Begin');
+  }
+
+  /** Home as the model expects it: one heading, `Your field`; the model's counts line; `Begin` exactly when `begin`; and no frame fault of the root's rule or the footer's. */
+  onHome(begin: boolean) {
+    const app = this.screen;
+    const counts = homeCounts(app);
+    const want = this.expect().counts;
+    const seen = { headings: app.headings(), counts, begin: app.has('Begin') };
+    const expected = { headings: ['Your field'], counts: want, begin };
+    if (JSON.stringify(seen) !== JSON.stringify(expected))
+      throw new Error(
+        `after ${this.log.join(' > ')}: home showed ${JSON.stringify(seen)}, expected ${JSON.stringify(expected)}`,
+      );
+    const root = rootFaults(app.host, this.unread ? 'unread' : 'read');
+    if (root.length > 0 || app.faults.length > 0)
+      throw new Error(
+        `after ${this.log.join(' > ')}: on home, ${[...root, ...app.faults].join(', ')}`,
+      );
   }
 
   async firstMinute() {
@@ -612,10 +664,8 @@ class Walk {
     if (!(await app.until(() => app.headings().includes('Planted'))))
       throw new Error('nothing planted');
     await app.tap('Continue');
-    this.run = madeModel(this.run, this.planNow(), false);
     bump(this.coverage, 'first-minute');
-    if (shownModel(this.run, this.recallsNow) === null) bump(this.coverage, 'done:first-show');
-    await this.settle('the first minute');
+    await this.fromHome('the first minute');
   }
 
   /** Say it, then Listening once it listens: the recognizer hears at the finish. */
@@ -812,7 +862,7 @@ class Walk {
     await this.settle('peek');
   }
 
-  /** Today's `Your field`, then back by home's `Begin` while Today showed an action; in the done state home shows the model's counts and no `Begin`, and the launch ends there, the next one following at once. */
+  /** Today's `Your field`, then back by home's `Begin` while Today showed an action; in the done state home shows the model's counts and no `Begin`, and the launch ends there (`homeDone`). */
   async field() {
     const app = this.screen;
     await app.tap('Your field');
@@ -823,28 +873,22 @@ class Walk {
     bump(this.coverage, this.run.hold === null ? 'field:none' : 'field:held');
     if (this.run.hold === null && shownModel(this.run, this.recallsNow) === null) {
       bump(this.coverage, 'done:field');
-      return this.homeDone();
+      return this.homeDone('the field');
     }
     if (!(await app.tap('Begin'))) throw new Error(`after ${this.log.join(' > ')}: no Begin`);
     await this.settle('the field and back');
   }
 
-  /** Home in the done state: the model's counts line, no `Begin`, and the root's frame rule (`rootFaults`) kept; the launch ends on it, and the next launch follows at the same instant, drawing nothing. */
-  async homeDone() {
+  /** Home in the done state, reached by `step`: the model's counts line, no `Begin`, and the root's frame rule (`rootFaults`) kept; the launch ends on it, with no Today frame after. */
+  async homeDone(step: string) {
+    this.log.push(`${step}, done`);
+    this.onHome(false);
     const app = this.screen;
-    this.log.push('the field, done');
-    const counts = homeCounts(app);
-    const want = this.expect().counts;
-    if (JSON.stringify(counts) !== JSON.stringify(want) || app.has('Begin'))
-      throw new Error(
-        `after ${this.log.join(' > ')}: home showed ${JSON.stringify(counts)}${app.has('Begin') ? ' and Begin' : ''}, expected ${JSON.stringify(want)}`,
-      );
-    const root = rootFaults(app.host, this.unread ? 'unread' : 'read');
-    if (root.length > 0)
-      throw new Error(`after ${this.log.join(' > ')}: on home, ${root.join(', ')}`);
-    await app.leave();
-    this.log.push('relaunch from home');
-    await this.launchNow();
+    await app.until(() => app.headings().join('|') !== 'Your field', 10);
+    if (app.headings().join('|') !== 'Your field')
+      throw new Error(`after ${this.log.join(' > ')}: home left for ${app.headings().join('|')}`);
+    bump(this.coverage, 'home:done');
+    this.ended = true;
   }
 
   async wait() {
@@ -1021,7 +1065,8 @@ class Walk {
     this.log.push(`launch ${l}`);
     await this.launchNow();
     const commands = (steer === 'cells' ? 10 : 4) + below(next, 6);
-    for (let c = 0; c < commands && !this.cellsMet(steer); c += 1) await this.command(steer);
+    for (let c = 0; c < commands && !this.cellsMet(steer) && !this.ended; c += 1)
+      await this.command(steer);
     await this.screen.leave();
   }
 

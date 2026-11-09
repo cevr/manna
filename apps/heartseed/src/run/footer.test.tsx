@@ -7,7 +7,8 @@
  * however much the verse and the result fill, the reader reaches them
  * without a scroll; the only control the scroll view holds is a missed
  * word's mark. The rig faults any other control in a scroll view, over the
- * whole tree, and any frame with two action buttons.
+ * whole tree, and any frame with two action buttons. The launch, on a
+ * verse due, lands on home and reaches Today by `Begin`.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -42,6 +43,8 @@ describe('Today’s footer', () => {
     const words = sourceWords(passage.text).length;
     const device = deviceOf([recordOf(passage.reference, T0 - 30 * DAY, words)]);
     const app = await launch(device, { unread: false, refuse: false }, { now: T0 });
+    expect(await app.until(() => app.headings().includes('Your field'))).toBe(true);
+    expect(await app.tap('Begin')).toBe(true);
     expect(await app.until(() => app.has('Say it'))).toBe(true);
     MutableRef.set(app.hearing, { kind: 'heard', text: passage.text, skip: [2] });
     expect(await app.tap('Say it')).toBe(true);

@@ -2,7 +2,8 @@
 
 /**
  * Today in dark, and across flips of the system, as a model-based walk
- * through the run rig (`src/test/run-rig.tsx`): over a verse due, generated
+ * through the run rig (`src/test/run-rig.tsx`): over a verse due, home at the
+ * launch and its `Begin`, then generated
  * sequences of Say it (heard whole, heard with a word missed, unheard, and
  * each with the system flipped while it listens), a peek at a missed word,
  * a grade, Next to the done state, a Minutes pill, the field and back, and a
@@ -128,11 +129,14 @@ const walk = async (seed: number, start: Scheme, steps: number) => {
       return true;
     },
   };
+  if (!(await app.until(() => app.has('Begin')))) report.push(`seed ${seed} launch: no Begin`);
+  await settle('home');
+  await app.tap('Begin');
   await app.until(() => app.has('Say it'));
   await settle('launch');
-  const opening: readonly Step[] = [SAYS[seed % SAYS.length] ?? 'heard', 'peek'];
+  const first: readonly Step[] = [SAYS[seed % SAYS.length] ?? 'heard', 'peek'];
   for (let n = 0; n < steps && !ended.home; n++) {
-    const step = opening[n] ?? pickOf(next, STEPS);
+    const step = first[n] ?? pickOf(next, STEPS);
     if (await run[step]()) coverage[step] = (coverage[step] ?? 0) + 1;
     await settle(step);
     if (app.headings().includes('Today') && app.actions().length === 0)
@@ -171,6 +175,8 @@ describe('Today in dark and across flips of the system', () => {
     const app = await launch(dueDevice(), { unread: false, refuse: false }, { now: T0 });
     const model: Model = { system: 'dark' };
     const look = watchLook(app.host, () => model.system);
+    expect(await app.until(() => app.has('Begin'))).toBe(true);
+    await app.tap('Begin');
     await app.until(() => app.has('Say it'));
     MutableRef.set(app.hearing, { kind: 'heard', text: passage.text, skip: [] });
     await app.tap('Say it');

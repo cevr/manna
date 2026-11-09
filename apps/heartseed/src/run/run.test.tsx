@@ -1,14 +1,14 @@
 /**
  * Today's run against its model on generated devices, leaning toward whole
- * plans run item by item (`src/test/run-walk.ts`): many pieces in their mixed
- * order, Next to another group and to the done state, every recital's
- * ending, Again and peeks before Next, and each item under its own cue
- * (the new piece whole, a review in first letters or empty slots).
+ * plans run item by item (`src/test/run-walk.ts`): each launch from home by
+ * `Begin`, many pieces in their mixed order, Next to another group and to
+ * the done state, every recital's ending, and Again before Next. Each item
+ * under its own cue is `src/run/cues.test.tsx`'s.
  */
 
 import { walkCase } from '../test/run-walk';
 
-walkCase('run', 13, 4, [
+walkCase('run', 5, 2, [
   'next',
   'next:another-group',
   'done:after-next',
@@ -20,15 +20,5 @@ walkCase('run', 13, 4, [
   'say:unheard',
   'again',
   'pieces:many',
-  'pieces:groups',
-  'pieces:no-passage-first',
-  'kept:cue:full',
-  'kept:cue:initials',
-  'kept:cue:none',
-  'cue:fresh:full',
-  'cue:review:initials',
-  'cue:review:none',
-  'next:review:initials',
-  'next:review:none',
-  'say:cancelled',
+  'home:begin',
 ]);
