@@ -103,6 +103,8 @@ export const pickVoice = (voices: ReadonlyArray<ModelVoice>): ModelVoice | undef
 export class VoiceModel {
   view: ModelView;
   utterance = 0;
+  /** Where the current utterance's text starts in the verse: 0 after a read, the sought word's start after a seek (hslight L4). */
+  offset = 0;
   readonly calls: ModelCall[] = [];
 
   constructor(
@@ -144,6 +146,7 @@ export class VoiceModel {
     const words = spansOf(verse).length;
     if (!this.view.enabled || words === 0) return;
     this.utterance += 1;
+    this.offset = 0;
     this.view = {
       ...this.view,
       status: 'reading',
@@ -157,6 +160,24 @@ export class VoiceModel {
       type: 'speak',
       utterance: this.utterance,
       text: verse,
+      voice: pickVoice(this.voices)?.id ?? '',
+    });
+    if (fails) this.finish('failed');
+  }
+
+  /** The hslight seek (L3): only while reading or paused, only to an integer word of the verse; it speaks the verse from that word's run as a new utterance, the words before it lit. `fails` says the speak fails. */
+  seek(word: number, fails: boolean) {
+    if (!this.active || this.view.verse === null) return;
+    if (!Number.isInteger(word) || word < 0 || word >= this.view.words) return;
+    const verse = this.view.verse;
+    const start = spansOf(verse)[word]?.start ?? 0;
+    this.utterance += 1;
+    this.offset = start;
+    this.view = { ...this.view, status: 'reading', lit: word, current: null, ended: null };
+    this.calls.push({
+      type: 'speak',
+      utterance: this.utterance,
+      text: verse.slice(start),
       voice: pickVoice(this.voices)?.id ?? '',
     });
     if (fails) this.finish('failed');
@@ -197,6 +218,7 @@ export class VoiceModel {
   restart() {
     if (this.active) this.calls.push({ type: 'stop' });
     this.utterance = 0;
+    this.offset = 0;
     this.view = VoiceModel.fresh(choiceOf(this.store.get(KEY), this.store.get(OLD_KEY)));
   }
 
@@ -211,11 +233,12 @@ export class VoiceModel {
       Number.isInteger(length) &&
       location >= 0 &&
       length >= 1 &&
-      location + length <= verse.length;
+      location + length <= verse.length - this.offset;
     if (!valid) return;
+    const from = this.offset + location;
     const touched: number[] = [];
     spansOf(verse).forEach((span, index) => {
-      const overlaps = span.start < location + length && location < span.end;
+      const overlaps = span.start < from + length && from < span.end;
       if (overlaps) touched.push(index);
     });
     if (touched.length === 0) return;

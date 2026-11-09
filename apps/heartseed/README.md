@@ -1650,7 +1650,8 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   - `test:voice`: `src/voice.property.test.ts` (the voice against its model,
     the choice over both keys) and `src/voice` (the read rule of the choice
     over every text of both keys and failed reads, `choose` in command
-    order and in bursts, and the native module's guards).
+    order and in bursts, the native module's guards, and the seek against
+    the model: a sought tail's ranges lighting the verse's words).
   - `test:reading`: `src/reading` (the reading view's words: what each word
     shows over generated texts, and the word under a finger over generated
     layouts and points, each against its rule).

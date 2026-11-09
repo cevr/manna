@@ -44,14 +44,16 @@ export interface VoiceView {
   readonly ended: OrNull<Ending>;
 }
 
-/** The view and the last utterance id this service gave a `speak`. */
+/** The view, the last utterance id this service gave a `speak`, and where that utterance's text starts in the verse: 0 for a read, the sought word's run start for a seek. */
 export interface Reading {
   readonly view: VoiceView;
   readonly lastId: number;
+  readonly offset: number;
 }
 
 export type Input =
   | { readonly _tag: 'Read'; readonly verse: string }
+  | { readonly _tag: 'Seek'; readonly word: number }
   | { readonly _tag: 'Pause' }
   | { readonly _tag: 'Resume' }
   | { readonly _tag: 'Stop' }
@@ -96,6 +98,7 @@ export const initial = (choice: Choice): Reading => ({
     ended: ABSENT,
   },
   lastId: 0,
+  offset: 0,
 });
 
 /** Whether a reading is under way: reading or paused. */
@@ -124,16 +127,22 @@ const ended = (view: VoiceView, ending: Ending): VoiceView => ({
   ended: ending,
 });
 
-/** The words a well-formed range overlaps, first and last, or none. */
-const rangeWords = (verse: string, location: number, length: number) => {
+/**
+ * The verse's words a well-formed range overlaps, first and last, or none.
+ * The range is in the text the utterance speaks, the verse from `offset`
+ * on, so it is well formed within that text's length and lights the verse's
+ * words over `[offset + location, offset + location + length)`.
+ */
+const rangeWords = (verse: string, offset: number, location: number, length: number) => {
   const wellFormed =
     Number.isInteger(location) &&
     Number.isInteger(length) &&
     location >= 0 &&
     length >= 1 &&
-    location + length <= verse.length;
+    location + length <= verse.length - offset;
+  const from = offset + location;
   const hit = wordSpans(verse).flatMap((span, index) => {
-    if (span.start < location + length && location < span.end) return [index];
+    if (span.start < from + length && from < span.end) return [index];
     return [];
   });
   if (!wellFormed || hit.length === 0) return Option.none();
@@ -143,7 +152,7 @@ const rangeWords = (verse: string, location: number, length: number) => {
 const onRange = (reading: Reading, event: VoiceEvent): Step => {
   const { view } = reading;
   const verse = Option.getOrElse(Option.fromNullishOr(view.verse), () => '');
-  return Option.match(rangeWords(verse, event.location, event.length), {
+  return Option.match(rangeWords(verse, reading.offset, event.location, event.length), {
     onNone: () => stay(reading),
     onSome: (current) => {
       if (current.last + 1 < view.lit) return stay(reading);
@@ -168,25 +177,38 @@ const onEvent = (reading: Reading, event: VoiceEvent): Step => {
   }
 };
 
-const onRead = (reading: Reading, verse: string): Step => {
-  const words = wordSpans(verse).length;
-  if (!reading.view.enabled || words === 0) return stay(reading);
+/**
+ * A new utterance of `verse` from `offset` on: the next id, the view
+ * reading with no current word and no ending, and the one `Speak` call.
+ * A read and a seek both speak through it.
+ */
+const speakFrom = (reading: Reading, view: VoiceView, verse: string, offset: number): Step => {
   const utterance = reading.lastId + 1;
   return {
     reading: {
       lastId: utterance,
-      view: {
-        ...reading.view,
-        status: 'reading',
-        verse,
-        words,
-        lit: 0,
-        current: ABSENT,
-        ended: ABSENT,
-      },
+      offset,
+      view: { ...view, status: 'reading', current: ABSENT, ended: ABSENT },
     },
-    call: Option.some({ _tag: 'Speak', utterance, text: verse }),
+    call: Option.some({ _tag: 'Speak', utterance, text: verse.slice(offset) }),
   };
+};
+
+const onRead = (reading: Reading, verse: string): Step => {
+  const words = wordSpans(verse).length;
+  if (!reading.view.enabled || words === 0) return stay(reading);
+  return speakFrom(reading, { ...reading.view, verse, words, lit: 0 }, verse, 0);
+};
+
+/** A seek while a reading is under way, to an integer word of its verse, speaks the verse from that word's run with the words before it lit; any other seek does nothing. */
+const onSeek = (reading: Reading, word: number): Step => {
+  const { view } = reading;
+  if (!isActive(view) || !Number.isInteger(word)) return stay(reading);
+  const verse = Option.getOrElse(Option.fromNullishOr(view.verse), () => '');
+  return Option.match(Option.fromUndefinedOr(wordSpans(verse)[word]), {
+    onNone: () => stay(reading),
+    onSome: (span) => speakFrom(reading, { ...view, lit: word }, verse, span.start),
+  });
 };
 
 /** A choice changes the view only, but Off ends a reading under way and asks to stop it. */
@@ -202,6 +224,7 @@ export const step = (reading: Reading, input: Input): Step => {
   return Match.type<Input>().pipe(
     Match.tagsExhaustive({
       Read: ({ verse }) => onRead(reading, verse),
+      Seek: ({ word }) => onSeek(reading, word),
       Pause: () => {
         if (view.status !== 'reading') return stay(reading);
         return to(reading, { ...view, status: 'paused' }, Option.some({ _tag: 'Pause' }));

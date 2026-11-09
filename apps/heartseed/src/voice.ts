@@ -2,7 +2,9 @@
  * The voice: it reads one verse aloud through a `VoiceSource` (on iOS a
  * thin native module over AVSpeechSynthesizer), lights each source word as
  * the source reports its spoken range, and keeps the reader's choice (Off,
- * Her or Him) in the app's key-value store. The rules live in `voice/reading.ts`, a pure
+ * Her or Him) in the app's key-value store. A seek speaks the verse from a
+ * chosen word as a new utterance, whose ranges light the verse's words past
+ * that word's start. The rules live in `voice/reading.ts`, a pure
  * reducer; this service runs it: each command changes the view at its call,
  * then makes the one source call the reducer asks for, and each event the
  * source sends applies at once, inside its listener, and calls nothing.
@@ -80,6 +82,8 @@ export class Voice extends Context.Service<
   Voice,
   {
     readonly read: (verse: string) => Effect.Effect<void>;
+    /** While a reading is under way, speaks its verse from word `word` (0-based) as a new utterance, the words before it lit; any other seek does nothing. */
+    readonly seek: (word: number) => Effect.Effect<void>;
     readonly pause: Effect.Effect<void>;
     readonly resume: Effect.Effect<void>;
     readonly stop: Effect.Effect<void>;
@@ -252,6 +256,9 @@ export const layer: Layer.Layer<Voice, never, VoiceSource | KeyValueStore.KeyVal
       return Voice.of({
         read: Effect.fn('Voice.read')(function* (verse: string) {
           yield* run({ _tag: 'Read', verse });
+        }),
+        seek: Effect.fn('Voice.seek')(function* (word: number) {
+          yield* run({ _tag: 'Seek', word });
         }),
         pause: run({ _tag: 'Pause' }),
         resume: run({ _tag: 'Resume' }),
