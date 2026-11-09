@@ -289,17 +289,21 @@ describe('the slow suite', () => {
     }),
   );
 
-  it.effect("no workspace keeps a gate but Selah's native one, which its test:slow runs", () =>
-    Effect.gen(function* () {
-      const { packages } = yield* laid;
-      const gates = packages.flatMap(({ dir, manifest }) =>
-        Option.toArray(manifest)
-          .filter(({ scripts }) => 'gate' in scripts)
-          .map(({ scripts }) => ({ dir, gate: scripts['gate'], slow: scripts['test:slow'] })),
-      );
-      expect(gates.map(({ dir }) => dir)).toEqual(['apps/selah']);
-      expect(gates[0]?.slow).toBe(gates[0]?.gate);
-    }),
+  it.effect(
+    "no workspace keeps a gate but the native apps' (Selah, Takes), each run by its test:slow",
+    () =>
+      Effect.gen(function* () {
+        const { packages } = yield* laid;
+        const gates = packages.flatMap(({ dir, manifest }) =>
+          Option.toArray(manifest)
+            .filter(({ scripts }) => 'gate' in scripts)
+            .map(({ scripts }) => ({ dir, gate: scripts['gate'], slow: scripts['test:slow'] })),
+        );
+        expect(gates.map(({ dir }) => dir).toSorted()).toEqual(['apps/selah', 'apps/takes']);
+        for (const { gate, slow } of gates) {
+          expect(slow).toBe(gate);
+        }
+      }),
   );
 });
 

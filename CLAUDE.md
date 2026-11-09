@@ -13,7 +13,8 @@ manna/
 │   ├── firsttheblade/  # The First the Blade site: Solid 2 prerender behind an Effect Worker (@manna/firsttheblade; Alchemy → Cloudflare)
 │   ├── heartseed/      # Heartseed: Scripture memory on One (React 19.3, React Native 0.88) for iOS first (@manna/heartseed)
 │   ├── hymnal/         # The hymnal app: One 2.15 (React 19.3, React Native 0.88) for iOS, Android and web (@manna/hymnal-app)
-│   └── selah/          # Native macOS Scripture memorization (@manna/selah; SwiftUI, FSRS)
+│   ├── selah/          # Native macOS Scripture memorization (@manna/selah; SwiftUI, FSRS)
+│   └── takes/          # Native macOS voice-take editor: beats, record, Parakeet transcript, cut by text, WAV export (@manna/takes)
 ├── packages/
 │   ├── core/           # Shared business logic: corpora, search, study data (@manna/core)
 │   ├── cli/            # The `manna` CLI (@manna/cli)

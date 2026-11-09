@@ -187,6 +187,10 @@
       "name": "@manna/selah",
       "version": "0.1.0",
     },
+    "apps/takes": {
+      "name": "@manna/takes",
+      "version": "0.1.0",
+    },
     "packages/atom-solid": {
       "name": "@manna/atom-solid",
       "dependencies": {
@@ -785,6 +789,8 @@
     "@manna/selah": ["@manna/selah@workspace:apps/selah"],
 
     "@manna/sim": ["@manna/sim@workspace:packages/sim"],
+
+    "@manna/takes": ["@manna/takes@workspace:apps/takes"],
 
     "@manna/ui": ["@manna/ui@workspace:packages/ui"],
 

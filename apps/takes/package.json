@@ -1,0 +1,12 @@
+{
+  "name": "@manna/takes",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native macOS voice-take editor: beats, takes, local transcription, cut by text, WAV export",
+  "scripts": {
+    "build": "./scripts/workspace.sh build",
+    "test:native": "./scripts/workspace.sh test",
+    "test:slow": "./scripts/workspace.sh gate",
+    "gate": "./scripts/workspace.sh gate"
+  }
+}
