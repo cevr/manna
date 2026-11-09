@@ -2,13 +2,13 @@
 
 /**
  * When I need… and a visit walked through the root (`test/need-walk.ts`),
- * part c: two generated devices of seed 6, eight commands each, held to
+ * part c: two generated devices of seed 193, eight commands each, held to
  * the walk's oracle on the screen its model names after every command and
  * to the screens' and the root's rules on every frame. Its floors: a visit
  * over a plan item, one kept over home, and the bar's way back. A visit
- * through to its next verse, one dropped by a Minutes tap and by a
- * relaunch, and three said, which these devices no longer draw, are
- * `walk-e.test.tsx`'s.
+ * through to its next verse and one dropped by a minutes choice are
+ * `walk-e.test.tsx`'s; one dropped by a relaunch and three said are
+ * `walk-e2.test.tsx`'s.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -19,7 +19,7 @@ const ROOT = ['root:need-back', 'root:need-visit', 'root:relaunch-home'];
 
 describe('When I need…, walked (c)', () => {
   it('shows the cards, the visit and the plan as the models give them', async () => {
-    const { failure, cover } = await walkNeed(6, [0, 1], 8);
+    const { failure, cover } = await walkNeed(193, [0, 1], 8);
     expect(failure).toBeNull();
     expect({
       planItem: (cover['visit:plan-item'] ?? 0) >= 2,

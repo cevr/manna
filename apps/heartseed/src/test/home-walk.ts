@@ -16,8 +16,9 @@
  *   `When I need…` (with a plan made), with nothing held a landed
  *   `Remove <reference>` then `Remove`, a relaunch the next morning;
  * - on Today: `Your field` a quarter of the time on a read garden, else
- *   one of `need-walk`'s (`Say it`, `Next`, a Minutes tap, `Your field`, a
- *   relaunch);
+ *   one of `need-walk`'s (`Say it`, `Next`, a minutes choice by `Your
+ *   field` and the Settings sheet, or none offered on an unread garden,
+ *   `Your field`, a relaunch);
  * - on When I need…: `need-walk`'s, a known promise or `Your field`.
  *
  * The oracle, apart from the app's code: the walk's plan, hold and visit

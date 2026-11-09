@@ -19,10 +19,14 @@
  * draws each command from those that screen offers:
  * - on home (where every launch on a read garden lands): `When I need…`
  *   with a plan made, `Begin` exactly when the model shows a verse, a
- *   relaunch the next morning after 04:00;
+ *   relaunch the next morning after 04:00, a minutes choice in the Settings
+ *   sheet (`minutesTap`: the plan made at the radio's tap, then `Begin`
+ *   when the model shows a verse);
  * - on Today: `Say it`, then `Next` or (three in ten) the result left held;
- *   a Minutes tap; `Your field` (none on an unread garden); a relaunch.
- *   While a visit is open, half the commands are `Say it`;
+ *   a minutes choice (on a read garden `Your field` to home, then the
+ *   sheet as on home; on an unread one the check that Today offers no
+ *   `Settings` and no `<n> min`); `Your field` (none on an unread garden);
+ *   a relaunch. While a visit is open, half the commands are `Say it`;
  * - on When I need…: a known promise (half of them of more than one verse
  *   when one is known), or the bar's `Your field`.
  *
@@ -70,6 +74,7 @@ import {
 } from './promise-model';
 import { expandRule, verseOfRule, withPhrasesRule } from './phrase-model';
 import { countsModel, DAY, HOUR, MINUTE, planModel, type ModelItem } from './session-model';
+import { closeSettings, modalOf, openSettings, tapInSheet, watchSheet } from './settings-rig';
 import { hostOffset } from './zone';
 
 export const TAUGHT_IDS = ['protection'];
@@ -541,17 +546,54 @@ export class Walk {
     return null;
   }
 
+  /**
+   * A minutes choice as a reader makes one now. On an unread garden none is
+   * offered: Today shows no `Settings` and no `<n> min`, and nothing is
+   * made. On a read one, from Today `Your field` first (home, as `field`
+   * holds it), then on home the sheet, every frame held by a `watchSheet`:
+   * the gear, `<n> min` (the plan made at the tap), `Done`, then `Begin`
+   * exactly when the model shows a verse, else the walk stays on home.
+   * Answers what failed, with the sheet's faults and look-checked frames.
+   */
   async minutesTap(): Promise<unknown> {
     const others = MINUTES.filter((each) => each !== this.minutes);
     const minutes = pickOf(this.next, others as unknown as [Minutes, ...Minutes[]]);
     this.trail.push(`minutes:${minutes}`);
-    if (!(await this.launched.tap(`${minutes} min`))) return 'no Minutes';
-    this.minutes = minutes;
-    this.minutesTapped = true;
-    if (this.visit.length > 0) this.bump('visit:dropped-by-making');
-    this.bump('made:minutes');
-    this.make();
-    return null;
+    const rig = this.launched;
+    if (this.device.unread) {
+      const names = rig.names();
+      if (!rig.headings().includes('Today')) return 'no Today on an unread garden';
+      if (
+        modalOf() !== null ||
+        names.includes('Settings') ||
+        names.some((name) => /^\d+ min$/.test(name))
+      )
+        return 'a Minutes or Settings on an unread garden';
+      this.bump('minutes:none-unread');
+      return null;
+    }
+    if (this.screen === 'today') {
+      const wrong = await this.field();
+      if (wrong !== null) return wrong;
+    }
+    const watch = watchSheet();
+    const opened = await openSettings(rig).then(
+      () => null,
+      (error: unknown) => String(error),
+    );
+    const tapped = opened === null && (await tapInSheet(`${minutes} min`));
+    if (tapped) {
+      this.minutes = minutes;
+      this.minutesTapped = true;
+      if (this.visit.length > 0) this.bump('visit:dropped-by-making');
+      this.bump('made:minutes');
+      this.make();
+    }
+    const closed = tapped && (await closeSettings(rig, 'Done'));
+    watch.stop();
+    if (!closed || watch.frames.looked === 0 || watch.faults.length > 0)
+      return { opened, tapped, closed, looked: watch.frames.looked, sheet: [...watch.faults] };
+    return this.offersBegin() ? this.begin() : null;
   }
 
   /** Today's `Your field`: home, its rows titled as the model gives them, the visit and the hold kept for `Begin`. */
@@ -588,15 +630,16 @@ export class Walk {
     return null;
   }
 
-  /** One generated command on home: `When I need…` with a plan made, `Begin` when offered, or a relaunch. */
+  /** One generated command on home: `When I need…` with a plan made, `Begin` when offered, a relaunch, or (one in eleven) a minutes choice in the sheet. */
   async homeStep(): Promise<unknown> {
-    const roll = below(this.next, 20);
+    const roll = below(this.next, 22);
+    if (roll >= 20) return this.minutesTap();
     if (roll < 14 && this.planned()) return this.need();
     if (roll < 18 && this.offersBegin()) return this.begin();
     return this.relaunch();
   }
 
-  /** The command `roll` draws on Today with no plan: `Say it`, a Minutes tap, `Your field` (none on an unread garden) or a relaunch. */
+  /** The command `roll` draws on Today with no plan: `Say it`, a minutes choice, `Your field` (none on an unread garden) or a relaunch. */
   unplannedStep(roll: number): Promise<unknown> {
     if (roll < 10) return this.say();
     if (roll < 14 || (this.device.unread && roll < 16)) return this.minutesTap();

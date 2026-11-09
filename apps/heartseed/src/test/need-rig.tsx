@@ -35,7 +35,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
-import { rootWithChoicesOnToday } from './choices-seam';
+import Root from '../../app/index';
 import { appLayer, runtime } from '../app';
 import { recite, scriptedSource } from '../dictation/script';
 import { Chime } from '../garden';
@@ -241,7 +241,7 @@ export const launchNeed = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer]]}>
-        {rootWithChoicesOnToday(host)}
+        <Root />
       </RegistryProvider>,
     ),
   );

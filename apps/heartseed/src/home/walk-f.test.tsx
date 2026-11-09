@@ -7,7 +7,9 @@
  * home (R1); Today shows the app's passage with `Say it` and no counts
  * line, and no frame holds `Your field` (the root's rule over an unread
  * garden). Its floors: launches on Today, the first and relaunches the
- * next morning; recitals kept; Minutes taps.
+ * next morning; recitals kept; Today checked to offer no minutes choice
+ * (no `Settings`, no `<n> min`). A minutes choice made is
+ * `need-walk-b`'s floor, on a read garden.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -22,7 +24,7 @@ describe('the root, walked over an unread garden (f)', () => {
       launches: (cover['root:launch-unread'] ?? 0) >= 2,
       home: cover['root:launch-home'] ?? 0,
       said: (cover['today:said-unplanned'] ?? 0) >= 1,
-      minutes: (cover['made:minutes'] ?? 0) >= 1,
+      minutes: (cover['minutes:none-unread'] ?? 0) >= 1,
       morning: (cover['day:next-morning'] ?? 0) >= 1,
     }).toEqual({ launches: true, home: 0, said: true, minutes: true, morning: true });
   });

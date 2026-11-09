@@ -7,7 +7,7 @@
  * screens' and the root's rules on every frame. Its floors: the one launch
  * over unread passages that seed 3 makes, home over them with `Begin`
  * alone, `Begin` taken there, the way back by `Your field`, and a relaunch
- * that lands on home. Device 1 of the seed, its visits, is
+ * that lands on home. Device 6 of the seed, its visits, is
  * `walk-a-visit.test.tsx`.
  */
 
