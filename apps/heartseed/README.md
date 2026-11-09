@@ -2067,8 +2067,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     the fill, `GET`, `HEAD`, 404 and `--corrupt`), `vite/kjv.test.ts`
     (the corpus's derivation and its build faults, and the plugin's two
     modules) and `vite/lexicon.test.ts` (the pronunciation list as the
-    plugin serves it). It leaves `scripts/icon.test.ts` to `test:icon`
-    and `scripts/handbook` to `test:handbook-build`.
+    plugin serves it). It leaves `scripts/icon.test.ts` to `test:icon`,
+    `vite/devbundle.test.ts` to `test:devbundle` and `scripts/handbook`
+    to `test:handbook-build`.
   - `test:handbook-build`: `scripts/handbook`, with no preload: the
     Handbook generator's rules. `reference.property.test.ts`, how a link
     reads and places as ranges against a model written in the test, over
@@ -2094,6 +2095,16 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     colour, Android's inside the 33/108 safe circle and the launch ones'
     box at 0.72; and every committed PNG byte for byte what `bun run icon`
     draws from `assets/icon/heartseed.svg` now.
+  - `test:devbundle`: `vite/devbundle.test.ts`, with no preload: vxrn's
+    native dev runtime, built by the rolldown vxrn resolves from `one`
+    (never the app's own), compiles to Hermes bytecode under
+    react-native's hermesc with vxrn's flags. The hoisted install gives
+    vxrn the hymnal's devDependency `rolldown` (`apps/hymnal/package.json`),
+    so that pin stays at a version whose dev runtime Hermes parses; this
+    part says whether a bump is safe. Its slow leg,
+    `vite/devbundle.slow.test.ts` in `test:slow`, starts `one dev` on a
+    free port of 8280-8289 and asks it for a Debug build's iOS bundle,
+    which must answer 200 with Hermes bytecode.
   - `test:mirror`: `infra`, the mirror's stack, with no preload:
     `infra/models/plan.test.ts` (the list, the keys, the headers and the
     plan's keep, upload and conflict), `infra/models/voice-pack.test.ts`

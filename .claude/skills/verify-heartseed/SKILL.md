@@ -267,6 +267,12 @@ app's storage.
   (`detail.hermesc`), not the pod's. A red box naming the Hermes compiler
   means it did not: give the caller's `HERMESC_PATH` an absolute path to a
   working `hermesc` and boot again.
+- **A dynamic import in the dev runtime.** A red box or `server.log` naming
+  `Invalid expression encountered` at `import(` means the rolldown vxrn
+  resolves emits a dynamic import in its dev runtime, which Hermes cannot
+  parse (rolldown 1.3.0 did);
+  `bun run --cwd apps/heartseed test:devbundle` names it. The hymnal's
+  devDependency `rolldown` is the one vxrn gets.
 
 ## Evidence
 

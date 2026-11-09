@@ -65,6 +65,16 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### dev-bundle-compiles-under-hermes
+
+- **Date:** 2026-11-08
+- **Kind:** review
+- **Said:** "the One dev server's iOS bundle does not compile under Hermes since rolldown 1.3.0 reached vxrn"
+- **Source:** hymnapp/hsdevbundle/diagnosis-findings.md F1
+- **Wrong:** a2b612fb4 bumped the hymnal's devDependency `rolldown` to 1.3.0, which the hoisted install also gave vxrn; rolldown 1.3.0's dev runtime carries a dynamic `import(`, so every Debug build's bundle request answered 500 with hermesc's `Invalid expression encountered`, for Heartseed and the hymnal.
+- **Cause:** vxrn declares `rolldown: ^1.2.8` and takes the root `rolldown`, which only the hymnal's pin sets, and no check compiled the dev runtime that rolldown builds under Hermes, so the bump passed the gate.
+- **Guard:** code: `apps/heartseed/vite/devbundle.test.ts` `compiles to Hermes bytecode with the rolldown vxrn resolves`
+
 ### docs-test-judges-ignored-output-by-the-commit
 
 - **Date:** 2026-11-07
