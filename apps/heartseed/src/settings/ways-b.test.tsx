@@ -9,8 +9,10 @@
  *
  * A relaunch with the sheet open opens home with it closed. No other
  * screen has `Settings`: Today, When I need…, the chooser, About, the first
- * minute, and Today on an unread garden. Until Today loses its own
- * choices, the sheet and Today show the same minutes and voice.
+ * minute, and Today on an unread garden. Today shows no `Minutes` and no
+ * `Voice`: the sheet's choices are the only ones, and Today's counts line
+ * follows the sheet's minutes. The session rig's launches here mount the
+ * root without the choices seam, so the root's rule holds Today strictly.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -91,7 +93,8 @@ describe('Settings, more ways', () => {
     await rig.leave();
 
     const at = { now: Date.UTC(2026, 10, 5, 15) };
-    const first = await launch(deviceOf(), faultsOf(), at);
+    const unseamed = { choicesOnToday: false };
+    const first = await launch(deviceOf(), faultsOf(), at, [], unseamed);
     expect(await first.until(() => first.frames.first > 0)).toBe(true);
     const firstSeen = { settings: first.has('Settings'), faults: [...first.faults] };
     await first.leave();
@@ -99,42 +102,63 @@ describe('Settings, more ways', () => {
       deviceOf([record(recallOf('Made 1:1', at.now - 3 * 86_400_000, 3, 0))]),
       faultsOf({ listing: 'unread' }),
       at,
+      [],
+      unseamed,
     );
     expect(await unread.until(() => unread.headings().includes('Today'))).toBe(true);
-    const unreadSeen = { settings: unread.has('Settings'), faults: [...unread.faults] };
+    const unreadSeen = {
+      settings: unread.has('Settings'),
+      choices: choicesOf(unread.host),
+      faults: [...unread.faults],
+    };
     await unread.leave();
     expect({ first: firstSeen, unread: unreadSeen }).toEqual({
       first: { settings: false, faults: [] },
-      unread: { settings: false, faults: [] },
+      unread: {
+        settings: false,
+        choices: { groups: 0, names: [], checked: [], voices: [] },
+        faults: [],
+      },
     });
   });
 
-  it('shows the minutes and the voice Today shows, until Today loses its own', async () => {
+  it("holds no choices on Today: the sheet's minutes and voice rule Today's plan and stay the sheet's", async () => {
     launchWith();
     const sheet = watchSheet();
     const rig = await mountBar(0, false);
     await toField(rig);
     await openSettings(rig);
     expect(await tapInSheet('10 min')).toBe(true);
+    const counts = text(rig.host.querySelector('[data-testid="counts"]'));
     expect(await closeSettings(rig, 'Done')).toBe(true);
     expect(await rig.tap('Begin')).toBe(true);
-    expect(await rig.until(() => choicesOf(rig.host).checked.length === 1)).toBe(true);
-    const today = choicesOf(rig.host).checked;
-    expect(await rig.tap('Voice')).toBe(true);
-    const voice = choicesOf(rig.host).voices;
+    expect(await rig.until(() => headings(rig).join('|') === 'Today')).toBe(true);
+    const today = {
+      choices: choicesOf(rig.host),
+      counts: text(rig.host.querySelector('[data-testid="session"]')),
+    };
+    expect(await rig.tap('Your field')).toBe(true);
+    await toField(rig);
+    await openSettings(rig);
+    expect(await tapInSheet('Voice')).toBe(true);
+    expect(await closeSettings(rig, 'Done')).toBe(true);
+    expect(await rig.tap('Begin')).toBe(true);
+    expect(await rig.until(() => headings(rig).join('|') === 'Today')).toBe(true);
+    const voiced = choicesOf(rig.host).voices;
     expect(await rig.tap('Your field')).toBe(true);
     await toField(rig);
     await openSettings(rig);
     const shown = choicesOf(modalOf() ?? rig.host).voices;
     expect(await closeSettings(rig, 'Done')).toBe(true);
     sheet.stop();
-    expect({ today, voice, shown, rig: rig.faults, sheet: sheet.faults }).toEqual({
-      today: ['10 min'],
-      voice: ['Voice:Him'],
+    expect({ today, voiced, shown, rig: rig.faults, sheet: sheet.faults }).toEqual({
+      today: { choices: { groups: 0, names: [], checked: [], voices: [] }, counts },
+      voiced: [],
       shown: ['Voice:Him'],
       rig: [],
       sheet: [],
     });
+    expect(counts).not.toBe('');
     await rig.leave();
   });
 });

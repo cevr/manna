@@ -28,7 +28,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
-import Root from '../../app/index';
+import { rootWithChoicesOnToday } from './choices-seam';
 import { appLayer, runtime, sayItView } from '../app';
 import { DictationSource, type DictationEvent } from '../dictation';
 import { recite, scriptedSource } from '../dictation/script';
@@ -405,7 +405,7 @@ export const mount = async (
           {today && (
             <>
               <Seen into={latest} />
-              <Root />
+              {rootWithChoicesOnToday(host)}
             </>
           )}
         </RegistryProvider>,

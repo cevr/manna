@@ -1,7 +1,7 @@
 /**
- * The reader's choices of the session's minutes and the voice, as Today's
- * header shows them in its second row (`Choices`) and the Settings sheet
- * shows each under its line: the radio group `Minutes` (`MinutesChoice`),
+ * The reader's choices of the session's minutes and the voice, as the
+ * Settings sheet shows each under its line (Today's row, `Choices`, shows
+ * them only under the rigs' `ChoicesOnToday`): the radio group `Minutes` (`MinutesChoice`),
  * shown once the stored choice is read so its first frame shows the value
  * read, and the voice's pill (`VoiceChoice`), shown once its choice is
  * read. Each control is at least 44 pt tall and
@@ -12,7 +12,7 @@
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
-import type { ReactNode } from 'react';
+import { createContext, use, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { chooseMinutes, cycleVoice, sessionView, voiceView } from '../app';
@@ -134,9 +134,19 @@ export function VoiceChoice({ line }: { readonly line?: string }) {
   });
 }
 
-/** Today's row of the reader's choices: the minutes, then the voice's pill. Both stay while Say it listens, and in an unread garden. */
+/**
+ * Whether Today's row of choices (`Choices`) shows. The app never provides
+ * it, so Today shows no `Minutes` and no `Voice`: the Settings sheet is the
+ * only place a reader chooses them. The test rigs that still tap Today's
+ * choices provide it, through `src/test/choices-seam.tsx`; S5 deletes it
+ * with `Choices`.
+ */
+export const ChoicesOnToday = createContext(false);
+
+/** Today's row of the reader's choices, the minutes then the voice's pill, shown only under `ChoicesOnToday`; nothing otherwise. */
 export function Choices() {
   const styles = useThemed(sheets);
+  if (!use(ChoicesOnToday)) return false;
   return (
     <View style={styles.choices}>
       <MinutesChoice />

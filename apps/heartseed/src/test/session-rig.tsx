@@ -39,6 +39,7 @@ import { createRoot } from 'react-dom/client';
 import passage from 'virtual:heartseed-passage';
 
 import Root from '../../app/index';
+import { rootWithChoicesOnToday } from './choices-seam';
 import { appLayer, runtime } from '../app';
 import { DictationSource, DictationUnavailable } from '../dictation';
 import { CHAIN, type DictationEvent } from '../dictation/attempt';
@@ -301,13 +302,16 @@ const mounted = new Set<() => Promise<void>>();
  * app's layer. Every frame is held to the root's frame rule and the
  * screen's rules; the faults found are kept in `faults`, and `frames`
  * counts the frames seen by their screen (pending, Today, home, the first
- * minute, any other) and by what they showed.
+ * minute, any other) and by what they showed. The root mounts through the
+ * choices seam (`src/test/choices-seam.tsx`, Today showing its choices)
+ * unless `seam.choicesOnToday` is false.
  */
 export const launch = async (
   device: Device,
   faults: Faults,
   time: { now: number | null },
   seeded: readonly (readonly [Atom.Atom<unknown>, unknown, Atom.InitialValueOptions])[] = [],
+  seam: { readonly choicesOnToday: boolean } = { choicesOnToday: true },
 ) => {
   for (const left of [...mounted]) await left();
   const gate = Promise.withResolvers<void>();
@@ -370,7 +374,8 @@ export const launch = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer], ...seeded]}>
-        <Root />
+        {seam.choicesOnToday && rootWithChoicesOnToday(host)}
+        {!seam.choicesOnToday && <Root />}
       </RegistryProvider>,
     ),
   );

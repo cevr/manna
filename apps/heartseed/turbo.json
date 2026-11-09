@@ -1260,7 +1260,7 @@
         "!src/handbook/**/*.test.*",
         "!src/{lists.property,home.property,shelves.property}.test.*",
         "!src/home/**/*.test.*",
-        "!src/settings/{sheet,ways-b}.test.*",
+        "!src/settings/{sheet,rule,ways-b}.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]
@@ -1284,7 +1284,7 @@
         "!src/handbook/**/*.test.*",
         "!src/{lists.property,home.property,shelves.property}.test.*",
         "!src/home/**/*.test.*",
-        "!src/settings/{sheet,ways}.test.*",
+        "!src/settings/{sheet,rule,ways}.test.*",
         "!{scripts,vite}/**/*.test.*",
         "!infra/**/*.test.*"
       ]

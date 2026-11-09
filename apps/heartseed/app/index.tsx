@@ -335,8 +335,7 @@ const showingOf = (shown: Option.Option<Shown>): Option.Option<Showing> =>
 
 /**
  * Today: its header (the heading and the way back to home, wrapping under
- * the heading when the text is large, and under them the reader's
- * choices), fixed above a scroll view of the session's counts
+ * the heading when the text is large), fixed above a scroll view of the session's counts
  * line, the verse the run shows, its stage and the alert, and a footer
  * fixed under the scroll view: the result's grades, Listen on the plan's
  * new piece while the voice is on and reads nothing, and the action button.
