@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noNullish -- the cases play devices through the field's promise-based screen rig and read happy-dom nodes whose absent attributes are null. */
+/* oxlint-disable effect/noAsyncFunction -- the cases play devices through the field's promise-based screen rig. */
 
 /**
  * The root's fixed launches that hold a recital (hshomeroot R1, R2, R4 and
