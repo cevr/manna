@@ -1408,6 +1408,25 @@
         "!infra/**/*.test.*"
       ]
     },
+    "test:home-shelves": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/look.test.*",
+        "!src/look/**/*.test.*",
+        "$TURBO_ROOT$/packages/core/assets/kjv.json",
+        "!src/matcher/**/*.test.*",
+        "!src/passages/**/*.test.*",
+        "!src/{field.property,core-import.property,core-import,dictation.property,display,yield-points,matcher.property,matcher,sayit.property,fsrs.property,garden.property,ladder.property,press,store,today,voice.property,session.property,theme,appearance.property,lists.property,home.property}.test.*",
+        "!src/{chooser,dictation,first,garden,sayit,voice,field,session,run,wake,natural,about,need,promises,appearance,home}/**/*.test.*",
+        "!src/phrase.property.test.*",
+        "!src/phrase/**/*.test.*",
+        "!{scripts,vite}/**/*.test.*",
+        "!infra/**/*.test.*"
+      ]
+    },
     "test:need": {
       "dependsOn": ["^transit"],
       "outputs": [],
@@ -1906,6 +1925,7 @@
         "test:promises",
         "test:handbook",
         "test:home",
+        "test:home-shelves",
         "test:need",
         "test:need-screen",
         "test:need-offer",

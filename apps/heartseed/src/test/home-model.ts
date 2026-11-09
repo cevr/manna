@@ -28,13 +28,19 @@
  *   of each done item whose stage over all its recalls ranks above its
  *   stage over its first `recalls` recalls (none ranking below a seed),
  *   each verse once, with the verse's stage on the field now.
+ * - H8 the shelves: any passage through the chooser, the picks of the
+ *   Psalms, the Proverbs and John, then each collection the list holds
+ *   that the session does not teach, every pick and promise a passage list
+ *   (`pick:<shelf>:<book>.<chapter>.<first>-<last>`); and what a row offers:
+ *   `unread`, `in field` when every verse of the range is on the field,
+ *   `full` at 3 held, else `plant`.
  *
  * It also holds the generators the home's tests share: plans `planModel`
  * makes over pieces of made-up text with histories.
  */
 
 import type { Recall } from '../sayit';
-import { COLLECTIONS } from '../promises';
+import { COLLECTIONS, TAUGHT } from '../promises';
 import {
   countOf,
   historyOf,
@@ -443,4 +449,122 @@ export const grownModel = (
     out.push({ reference: verse, stage: own.length === 0 ? 'seed' : referenceStage(own) });
   }
   return out;
+};
+
+/** A shelf as the model holds it: its lists, or `chooser` for the whole Bible. */
+export interface ModelShelf {
+  readonly id: string;
+  readonly title: string;
+  readonly icon: string;
+  readonly note: string;
+  readonly lists: readonly ModelList[] | 'chooser';
+}
+
+/** H8: a pick or a promise on shelf `shelf` as a passage list. */
+const pickList = (shelf: string, span: Span): ModelList => {
+  const verses: string[] = [];
+  for (let verse = span.first; verse <= span.last; verse++)
+    verses.push(verseRef(span.book, span.chapter, verse));
+  return {
+    id: `pick:${shelf}:${span.book}.${span.chapter}.${span.first}-${span.last}`,
+    title: spanRef(span),
+    verses,
+    range: span,
+    source: { tag: 'Passage', span },
+  };
+};
+
+/** H8: the picks the spec names, each `[book, chapter, first, last]`. */
+const PICKS: readonly (readonly [string, string, string, string, readonly number[][]])[] = [
+  [
+    'psalms',
+    'Psalms',
+    'harp',
+    'Songs to carry through the day',
+    [
+      [19, 1, 1, 3],
+      [19, 46, 1, 3],
+      [19, 91, 1, 4],
+      [19, 103, 1, 5],
+      [19, 121, 1, 8],
+      [19, 139, 1, 6],
+    ],
+  ],
+  [
+    'proverbs',
+    'Proverbs',
+    'lamp',
+    'A lamp for the path',
+    [
+      [20, 4, 23, 23],
+      [20, 15, 1, 1],
+      [20, 16, 3, 3],
+      [20, 18, 10, 10],
+      [20, 22, 6, 6],
+    ],
+  ],
+  [
+    'john',
+    'The Gospel of John',
+    'scroll',
+    'The words of Christ',
+    [
+      [43, 1, 1, 5],
+      [43, 3, 16, 17],
+      [43, 14, 1, 3],
+      [43, 14, 27, 27],
+      [43, 15, 1, 3],
+    ],
+  ],
+];
+
+/** H8: the shelves, in order. */
+export const shelvesModel = (): ModelShelf[] => {
+  const out: ModelShelf[] = [
+    {
+      id: 'any',
+      title: 'Any passage',
+      icon: 'add',
+      note: 'Every book, chapter and verse',
+      lists: 'chooser',
+    },
+  ];
+  for (const [id, title, icon, note, picks] of PICKS)
+    out.push({
+      id,
+      title,
+      icon,
+      note,
+      lists: picks.map(([book = 0, chapter = 0, first = 0, last = 0]) =>
+        pickList(id, { book, chapter, first, last }),
+      ),
+    });
+  for (const collection of COLLECTIONS) {
+    if (TAUGHT.includes(collection.id)) continue;
+    out.push({
+      id: collection.id,
+      title: collection.title,
+      icon: 'bow',
+      note: `${collection.promises.length} promises`,
+      lists: collection.promises.map((range) => pickList(collection.id, range)),
+    });
+  }
+  return out;
+};
+
+/** H8: what a shelf's row offers for `span`, over the passages `held` and a field whose rows hold the references `rows`. */
+export const offerModel = (
+  span: Span,
+  held: Held,
+  rows: readonly (readonly string[])[],
+): 'unread' | 'in field' | 'full' | 'plant' => {
+  if (held.tag === 'Unread') return 'unread';
+  let every = true;
+  for (let verse = span.first; verse <= span.last; verse++) {
+    const reference = verseRef(span.book, span.chapter, verse);
+    if (!rows.some((row) => row.includes(reference))) every = false;
+  }
+  if (every) return 'in field';
+  if (held.passages.length >= 3) return 'full';
+  return 'plant';
 };
