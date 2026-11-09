@@ -113,7 +113,6 @@ packages/film/src/command/keymap.ts parseChord
 packages/film/src/command/link.ts linkOf
 packages/film/src/command/menu.ts byGroup
 packages/film/src/core/address.ts Addressable
-packages/film/src/core/affine.ts IDENTITY
 packages/film/src/core/captions.ts captionCues
 packages/film/src/core/captions.ts vttTime
 packages/film/src/core/catalogue.ts approve
@@ -242,7 +241,6 @@ packages/film/src/tools/review.ts montageFolder
 packages/film/src/tools/review.ts namesInProject
 packages/film/src/tools/review.ts parseRoots
 packages/film/src/tools/review.ts projectFolder
-packages/film/src/tools/scene-source.ts unlocatable
 packages/film/src/tools/short-check.ts hookWord
 packages/film/src/tools/short-check.ts loopGap
 packages/film/src/tools/short-check.ts shortLength

@@ -5390,3 +5390,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** Heartseed makes the launch's plan at home's first show, and Today's mount after `Begin` keeps it, but no walk moved the clock between home's first show and `Begin`, so a product that made the plan again at the tap passed every walk.
 - **Cause:** The home walk drew `Begin` only at the instant home showed, so the plan's instant and the tap's were one in every walk.
 - **Guard:** code: `apps/heartseed/src/home/walk-h.test.tsx` `keeps the plan made at home's first show when Begin follows a wait on home`
+
+### dead-exports-reads-a-shell-run-entry
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "Today only `bun run dead-exports` sees a regression in the shell-file read"
+- **Source:** hymnapp/batch-g5-1-findings.md o1 (On base, its first item)
+- **Wrong:** With the shell-file read gone from `workspace.ts`, every committed test stayed green: only `bun run dead-exports`, in `test:slow`, would name the exports of the files `gate.sh` runs dead.
+- **Cause:** The shell read had a test of `shellRuns` over texts, but none of `readWorkspace` rooting the files a script-run shell file runs.
+- **Guard:** code: `packages/scripts/src/dead-exports/workspace.test.ts` `a module only a fixture gate.sh runs is a root: the export it takes lives, and the one nothing takes is dead`
+
+### dead-exports-reads-lint-plugins-as-consumers
+
+- **Date:** 2026-11-09
+- **Kind:** review
+- **Said:** "dead-exports' other 107 lines"
+- **Source:** hymnapp/hsguards5/round-1-findings.md o3 (On base, its third item: dead-exports' other 107 lines)
+- **Wrong:** `bun run dead-exports` named `REVIEW_ENV` dead though the judged lint plugin `packages/scripts/lint/judged.ts` reads it.
+- **Cause:** The check took every file under `packages/<p>/lint/` for test code, which consumes nothing, though those files are oxlint's plugins.
+- **Guard:** code: `packages/scripts/src/dead-exports/workspace.test.ts` `a lint plugin's import keeps an export alive, and the import of a lint rule's test does not`

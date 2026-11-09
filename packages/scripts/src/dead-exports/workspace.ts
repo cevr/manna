@@ -30,13 +30,16 @@ interface Package {
 /** A type-level check (`x.types.ts`): it uses the types it pins, and its own names are read by the compiler. */
 const isTypeCheck = (file: string) => file.endsWith('.types.ts');
 
-/** A test, a fixture or its support: code that runs to prove, not to ship. */
+/**
+ * A test, a fixture or its support: code that runs to prove, not to ship. A
+ * lint plugin under `packages/<p>/lint/` is the lint's product code, and its
+ * imports count like any module's.
+ */
 const isTestCode = (file: string) =>
   /\.(test|spec)\.tsx?$/.test(file) ||
   /(^|\/)testing\.tsx?$/.test(file) ||
   /-fixture\.tsx?$/.test(file) ||
-  /\/(fixtures|e2e|__tests__)\//.test(file) ||
-  /^packages\/[^/]+\/lint\//.test(file);
+  /\/(fixtures|e2e|__tests__)\//.test(file);
 
 /** Whether `file` is a module the check reads: TypeScript, and not a dependency or build output. */
 const isSource = (file: string) =>

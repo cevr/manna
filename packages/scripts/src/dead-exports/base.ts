@@ -20,9 +20,9 @@ const grownDebt = (
   base: ReadonlyArray<string>,
 ): ReadonlyArray<string> => Arr.difference(debt, base);
 
-/** The debt file's lines of a text. */
+/** The debt file's lines of a text: every line but a blank one and a `#` line, which gives a block's reason. */
 export const debtLines = (text: string): ReadonlyArray<string> =>
-  text.split('\n').filter((line) => line !== '');
+  text.split('\n').filter((line) => line !== '' && !line.startsWith('#'));
 
 /** What `git <args>` prints in `root` when it exits 0, or none when it fails or git is absent. */
 const git = (root: string, args: ReadonlyArray<string>) =>
