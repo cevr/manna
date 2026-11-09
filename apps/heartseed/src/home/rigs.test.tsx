@@ -18,6 +18,7 @@ import { recallOf } from '../test/field-model';
 import { keyOf } from '../test/garden-model';
 import { screensOf, watchedLaunch } from '../test/root-rule';
 import { deviceOf, launch, PASSAGE, text } from '../test/run-rig';
+import * as session from '../test/session-rig';
 import { wakeLaunch } from '../test/wake-rig';
 
 const T0 = Date.UTC(2026, 3, 1, 9);
@@ -89,6 +90,15 @@ describe('every rig of Today’s run launches through home', () => {
     const w = await watchedLaunch('read', () => launch(deviceOf([DUE]), READ, { now: T0 }));
     await throughHome(w, w.app.until, async () => expect(await w.app.tap('Begin')).toBe(true));
     expect(await w.end()).toEqual([]);
+  });
+
+  it('session-rig’s launch shows home, then Today by Begin', async () => {
+    const w = await watchedLaunch('read', () =>
+      session.launch(session.deviceOf([DUE]), session.faultsOf(), { now: T0 }),
+    );
+    await throughHome(w, w.app.until, () => w.app.tap('Begin'));
+    expect(w.app.faults).toEqual([]);
+    await w.end();
   });
 
   it('wake-rig’s launch shows home, then Today by Begin', async () => {

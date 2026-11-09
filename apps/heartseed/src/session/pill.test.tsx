@@ -6,7 +6,8 @@
  * the pill's form: one node labelled `Voice`, a button valued `Off`, `Her`
  * or `Him` that reads `Voice: <value>`, never checked or pressed.
  *
- * From each start a disk may hold (the choice's key alone, the old
+ * Each launch lands on home, whose `Begin` (the passage is the plan's new
+ * piece) leads to Today. From each start a disk may hold (the choice's key alone, the old
  * switch's alone, junk over the old switch, nothing), the pill shows the
  * choice read by hsspeaker D2, filled in ink unless Off and at least 44 pt
  * tall; each of four taps shows and stores the next choice of the cycle
@@ -99,9 +100,17 @@ const wantOf = (choice: Choice) => ({
 const voiceWrites = (device: Device) =>
   device.writes.filter((key) => key.startsWith('heartseed/voice/'));
 
-/** A launch of `device` that waits for Today and its Voice pill. */
+/** A launch of `device` that lands on home with `Begin` (the passage, unplanted beside another verse, is the plan's new piece) and no fault, takes `Begin`, and waits for Today and its Voice pill. */
 const open = async (device: Device, faults = faultsOf()) => {
   const app = await launch(device, faults, { now: AT });
+  await app.until(() => app.headings().includes('Your field') && app.has('Begin'));
+  expect({
+    headings: app.headings(),
+    begin: app.has('Begin'),
+    pill: pillOf(app) !== null,
+    faults: app.faults,
+  }).toEqual({ headings: ['Your field'], begin: true, pill: false, faults: [] });
+  await app.tap('Begin');
   expect(await app.until(() => app.headings().includes('Today') && pillOf(app) !== null)).toBe(
     true,
   );

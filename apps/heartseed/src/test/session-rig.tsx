@@ -9,10 +9,15 @@
  * and haptics, and Effect's `Clock` provided under the app's layer, its
  * instant frozen where the test sets it (its sleeps are the host's).
  *
- * Every frame (each DOM mutation batch) is held to the screen's rules and
- * each fault kept: the Minutes group, its radios, the Voice button and the
- * counts line show only under Today's heading, never in a pending or a
- * first-minute frame; on Today the group holds the four radios `2 min`,
+ * A read launch opens as the root opens it: home when the garden holds a
+ * plant, the first minute when it holds none, and Today on an unread
+ * garden. Every frame (each DOM mutation batch), from before the root's
+ * first render, is held to the root's frame rule (`rootFaults`, through
+ * `watchRoot`, the garden read unless the launch's listings fail) and to
+ * the screen's rules, and each fault kept: the Minutes group, its radios,
+ * the Voice button and Today's counts line show only under Today's
+ * heading, never in a pending, a home or a first-minute frame; on Today
+ * the group holds the four radios `2 min`,
  * `5 min`, `10 min` and `20 min` in that order, exactly one checked, beside
  * at most one node labelled `Voice`, a button valued `Off`, `Her` or `Him`
  * that reads `Voice: <value>` and is never checked or pressed; neither lies
@@ -42,9 +47,13 @@ import { Chime } from '../garden';
 import { Haptics } from '../sayit';
 import { VoiceSource, VoiceUnavailable } from '../voice';
 import { clockOf } from './clock';
+import { watchRoot } from './root-rule';
 
 /** The four radios' names, in the order the group shows them. */
 export const MINUTE_NAMES = ['2 min', '5 min', '10 min', '20 min'] as const;
+
+/** The first minute's headings. */
+const FIRST_MINUTE = new Set(['Hear it', 'Say it with help', 'Say it alone', 'Planted']);
 
 /** The session's nodes, which only Today shows. */
 const SESSION_NODES =
@@ -289,9 +298,10 @@ const mounted = new Set<() => Promise<void>>();
 /**
  * A launch of the root over `device` with `faults`, at `time.now` on
  * Effect's clock, its registry given `seeded` atoms' values beside the
- * app's layer. Every frame is held to the screen's rules; the faults found
- * are kept in `faults`, and `frames` counts the frames seen by what they
- * showed.
+ * app's layer. Every frame is held to the root's frame rule and the
+ * screen's rules; the faults found are kept in `faults`, and `frames`
+ * counts the frames seen by their screen (pending, Today, home, the first
+ * minute, any other) and by what they showed.
  */
 export const launch = async (
   device: Device,
@@ -312,7 +322,24 @@ export const launch = async (
   const host = document.createElement('div');
   document.body.append(host);
   const found: string[] = [];
-  const frames = { pending: 0, today: 0, first: 0, listening: 0, shown: 0, counts: 0 };
+  const garden = ({ unread: 'unread', held: 'read', ok: 'read' } as const)[faults.listing];
+  const rule = watchRoot(host, garden);
+  const taken = { n: 0 };
+  /** Moves the root rule's new faults into the rig's list. */
+  const takeRoot = () => {
+    found.push(...rule.faults.slice(taken.n));
+    taken.n = rule.faults.length;
+  };
+  const frames = {
+    pending: 0,
+    today: 0,
+    home: 0,
+    first: 0,
+    other: 0,
+    listening: 0,
+    shown: 0,
+    counts: 0,
+  };
   /** Each change of the checked radio and of the Voice pill over the launch's frames, in order: the first entry is what the first frame showing it showed. */
   const seen = { minutes: [] as string[], voice: [] as string[] };
   const note = (into: string[], value: string | undefined) => {
@@ -322,10 +349,13 @@ export const launch = async (
   const buttonNamed = (label: string) =>
     [...host.querySelectorAll(CONTROLS)].find((node) => node.getAttribute('aria-label') === label);
   const frame = () => {
+    takeRoot();
     const shown = headings();
     if (shown.length === 0) frames.pending += 1;
     else if (shown.includes('Today')) frames.today += 1;
-    else frames.first += 1;
+    else if (shown.includes('Your field')) frames.home += 1;
+    else if (shown.some((heading) => FIRST_MINUTE.has(heading))) frames.first += 1;
+    else frames.other += 1;
     if (buttonNamed('Listening') !== undefined) frames.listening += 1;
     const choices = choicesOf(host);
     if (choices.groups > 0 || choices.voices.length > 0) frames.shown += 1;
@@ -340,7 +370,7 @@ export const launch = async (
   await act(async () =>
     root.render(
       <RegistryProvider initialValues={[[runtime.layer, layer], ...seeded]}>
-        <Root opening="today" />
+        <Root />
       </RegistryProvider>,
     ),
   );
@@ -364,6 +394,8 @@ export const launch = async (
   const leave = async () => {
     if (!mounted.delete(leave)) return;
     gate.resolve();
+    takeRoot();
+    rule.stop();
     watch.disconnect();
     await act(async () => root.unmount());
     host.remove();
@@ -381,6 +413,7 @@ export const launch = async (
     has: (label: string) => buttonNamed(label) !== undefined,
     choices: () => choicesOf(host),
     counts: () => countsIn(host),
+    homeCounts: () => [...host.querySelectorAll('[data-testid="counts"]')].map(text),
     release: () => gate.resolve(),
     leave,
   };
