@@ -33,14 +33,15 @@ row for their verse (`phrase.md`). Each plant is one button, labelled
 its gold dot, drawing and verse number hidden inside it; a tap chooses its
 verse (`home.md`). The dashed row `Add verses` (`id=add-row`), a legend
 of the four stages and the caption `Mark 4:28` close the scroll view. The
-bar holds first `When I need…` (`promise.md`) once a plan is made, then
-`Add verses` (`id=add-verses`) or the limit line, and a passage furrow's
-`Remove` (`passage.md`). Under the scroll view, a fixed
+bar holds first `When I need…` (`promise.md`) once a plan is made and the
+gear `Settings` (`home.md`: the Settings sheet, with the `Minutes`
+radios, `Voice`, the appearance and `About`, which opens the About screen,
+`about.md`), then `Add verses` (`id=add-verses`) or the limit line, and a
+passage furrow's `Remove` (`passage.md`). Under the scroll view, a fixed
 foot holds the Begin card (the counts line and `Begin`) or, with a verse
 chosen, the chosen card (`<reference> · <stage words>` and
-`Start here with <reference>`), then `About`, which opens the About
-screen (`about.md`); like every field control each is disabled while a
-remove is pending. Which screen shows is never stored:
+`Start here with <reference>`), and no `About`; like every field control
+each is disabled while a remove is pending, `Settings` too. Which screen shows is never stored:
 every launch opens on the pending frame, then the first minute or home
 (Today on an unread garden).
 
@@ -149,7 +150,7 @@ delete the `snapshots` folder and the raw snapshot.
   drive's.
 - A row title is plain text, not a heading; the field's one heading is
   `Your field`. The greeting is plain text too.
-- After a `Minutes` tap a ready plant's label ends `, ready today`, so
+- After a `Minutes` tap (in home's Settings sheet) a ready plant's label ends `, ready today`, so
   `label=Isaiah 41:10, seed` no longer matches it: tap it by its full
   label.
 - `Your field` never needs a `sim scroll`: it is in Today's header, outside

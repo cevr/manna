@@ -626,8 +626,9 @@ const screenAt = (shown: Opening): Screen => {
  * from Today's and When I need…'s `Your field`), Today (from home's
  * `Begin` or `Start here`, or once a promise tapped in When I need… is made
  * the visit), the chooser (from either of home's `Add verses`, back to home
- * from its first back or once a passage is added), About (from home's
- * `About`, back to home) and When I need… (from home's `When I need…`).
+ * from its first back or once a passage is added), About (from the `About`
+ * of home's Settings sheet, back to home) and When I need… (from home's
+ * `When I need…`).
  * Which one shows is the launch's state, never stored and with no route of
  * its own, so every launch opens as above. Whenever Say it listens the
  * screen is Today. The root holds Say it's view, so Today comes back as it

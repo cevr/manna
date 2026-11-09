@@ -2,7 +2,7 @@
 
 Home or Today (`apps/heartseed/app/index.tsx`) makes the session's plan
 (`session.md`, `run.md`) when it first shows in a launch, at each `Minutes`
-tap, and now whenever the app **returns to the foreground**: iOS reports
+tap (in home's Settings sheet), and now whenever the app **returns to the foreground**: iOS reports
 the app `active` again after it was in the `background` (the home screen,
 another app, the app switcher, a lock). A return makes the plan again at
 that instant, so a reader who left the app open overnight finds this
@@ -23,8 +23,8 @@ full text, or a join under first letters, `phrase.md`) also
 offers `Listen` while `Voice` is not `Off` (`Her` or `Him`). It sits in the fixed footer
 before `Say it`. `Listen` has the voice read that piece's own text. While the voice
 reads, `Listen` is gone, and `Say it` stops the voice before it listens; a
-tap of `Voice` onto `Off` stops it too, and a tap from `Her` to `Him` lets
-it go on. Listening is offered, not required. With `Voice` at `Off`, only
+tap of `Voice` onto `Off` (in home's Settings sheet, reached by
+`‹ Your field`) stops it too, and a tap from `Her` to `Him` lets it go on. Listening is offered, not required. With `Voice` at `Off`, only
 `Say it` shows.
 A review, `Next`, the done state and an unread garden never show `Listen`.
 

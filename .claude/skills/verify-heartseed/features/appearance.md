@@ -3,7 +3,8 @@
 Every Heartseed screen is drawn in brand C's roles
 (`apps/heartseed/src/theme.ts`), in light or dark, and every text in SF
 Rounded (`ui-rounded`). The reader's appearance, `System`, `Light` or
-`Dark` (System by default), is chosen on About's foot and stored under
+`Dark` (System by default), is chosen in home's Settings sheet (the gear
+`Settings` in home's bar) and stored under
 the key `APPEARANCE_KEY` (`apps/heartseed/src/appearance.ts`); a stored text
 other than exactly `system`, `light` or `dark` reads as System. The scheme
 is decided in one place, `useScheme()` (`apps/heartseed/src/look.tsx`):
@@ -39,19 +40,19 @@ paints are the unit tests' (`apps/heartseed/src/look/`,
   `face ui-rounded`; with the probe shown, the appearance set to dark
   shows `system dark`, `scheme dark` and `ground #142420` with no tap.
 - `appearance-choice`: with the simulator's appearance dark, from home
-  `About`: a raw snapshot shows the radio group's three
+  `Settings`: a raw snapshot shows the radio group's three
   radios `System`, `Light`, `Dark` with `System` checked; a tap of `Light`
   → `Light` checked, and the probe shows `system dark`, `stored light`,
   `native light`, `scheme light` and `ground #f1f0e6`.
 - `appearance-kept`: a relaunch, then the probe → `scheme light` still;
-  back on About, a tap of `System` → the probe shows `stored system`,
-  `native dark` and `scheme dark`.
+  back in home's `Settings`, a tap of `System` → the probe shows
+  `stored system`, `native dark` and `scheme dark`.
 
 ## How to get to it (user POV)
 
 - A reader who never chooses follows the phone's appearance, set in
-  Settings (or Control Centre). From home, `About`, then
-  `System`, `Light` or `Dark` in About's foot. The probe is a developer's
+  the phone's Settings (or Control Centre). From home, the gear
+  `Settings`, then `System`, `Light` or `Dark` in the sheet. The probe is a developer's
   link, not a reader's.
 
 ## Driving it
@@ -90,10 +91,11 @@ server.
 
    ```bash
    sim open / --expect "id=counts"
-   sim tap "label=About"
+   sim tap "label=Settings"
    agent-device snapshot --json --raw --observe-only --force-full --session verify-heartseed
    sim tap "label=Light"
    agent-device snapshot --json --raw --observe-only --force-full --session verify-heartseed
+   sim tap "label=Done"
    sim open probe/theme --expect "label=scheme light"
    sim snapshot appearance-chosen
    ```
@@ -110,8 +112,9 @@ server.
    sim open / --expect "id=counts"
    sim open probe/theme --expect "label=scheme light"
    sim open / --expect "id=counts"
-   sim tap "label=About"
+   sim tap "label=Settings"
    sim tap "label=System"
+   sim tap "label=Done"
    sim open probe/theme --expect "label=scheme dark"
    sim snapshot appearance-system-again
    ```
@@ -124,6 +127,9 @@ server.
 
 Report the probe's lines and the radios' labels and selected states only;
 delete the `snapshots` folder and the raw snapshots.
+
+Red on base (before the Settings sheet): `sim tap "label=Settings"` finds
+no element (`appearance-choice`, `appearance-kept`).
 
 ## Gotchas
 

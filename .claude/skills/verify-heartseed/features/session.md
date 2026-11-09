@@ -2,25 +2,28 @@
 
 Today (`apps/heartseed/app/index.tsx`) shows the day's session as a plan made
 by `apps/heartseed/src/session.ts`: the due reviews, then one new piece,
-within the minutes the reader chose. Today's fixed header, above the
-scrolling passage, holds the session's two choices: the radio group
+within the minutes the reader chose. The session's two choices sit in
+home's Settings sheet alone (`apps/heartseed/src/settings/sheet.tsx`,
+opened by the gear `Settings` in home's bar, `home.md`): the radio group
 `Minutes` (`2 min`, `5 min`, `10 min`, `20 min`; `5 min` until the reader
-picks another) and the button `Voice`, which each tap cycles Off → Her →
-Him → Off (`Her` until the reader taps it; a reader whose old switch was
-off opens on `Off`). The button shows `Voice: Off`, `Voice: Her` or
-`Voice: Him`; its label stays `Voice` and its accessibility value is the
-word (a raw snapshot's `value`). Until the natural voice routes them, Her
-and Him both read with the system voice. Both are kept in the device's store across launches (their keys:
-`apps/heartseed/README.md`, Session). Neither shows in the
-first minute. Both stay on screen, outside the scroll view, while Say it
-listens.
+picks another) under `A day's tending`, and the button `Voice` under
+`Reads new verses aloud`, which each tap cycles Off → Her → Him → Off
+(`Her` until the reader taps it; a reader whose old switch was off opens
+on `Off`). The button shows `Voice: Off`, `Voice: Her` or `Voice: Him`;
+its label stays `Voice` and its accessibility value is the word (a raw
+snapshot's `value`). Until the natural voice routes them, Her and Him both
+read with the system voice. Both are kept in the device's store across
+launches (their keys: `apps/heartseed/README.md`, Session). Neither shows
+in the first minute, and Today's header holds neither: no frame of Today
+has a `Minutes` radio or `Voice`.
 
-At the top of the scroll view, above the reference, the counts line
+At the top of Today's scroll view, above the reference, the counts line
 (`id=session`) says what the session holds: `<n> to tend`, `1 new`,
 `about <k> min`, joined by `·`, or `Nothing to tend now`. It never counts
 the backlog; home's foot shows the same line (`id=counts`). The plan is
 made when home or Today first shows in a launch, again
-at each Minutes tap, at each return to the foreground with no recital
+at each Minutes tap in the sheet (home's counts line changes under the
+open sheet), at each return to the foreground with no recital
 under way (`wake.md`), and at each landed add or remove of a passage
 (`passage.md`). An item is done once its piece (a verse or a phrase,
 `phrase.md`) holds a new recall.
@@ -40,30 +43,29 @@ done state), so these rows reach Today by `Start here with Isaiah 41:10`
 (tap `Isaiah 41:10, seed` first), whose visit leaves the counts line the
 plan's.
 
-- `session-first`: Today after the first minute shows the group `Minutes`
-  with four radios `2 min`, `5 min`, `10 min` and `20 min`, `5 min` alone
-  checked, the button `Voice` valued `Her`, and `Nothing to tend now`. No
-  snapshot of the first minute (`first-launch` to `first-planted`) holds
-  `Minutes`, `Voice`, `to tend` or `Nothing to tend`.
-- `session-header`: in a raw snapshot of that Today, each radio and the
-  `Voice` button lies wholly inside the window, above the counts line
-  (`id=session`, above the visit's `Isaiah 41:10`), and clear of the
-  bottom safe area. A tap on `10 min` with no scroll checks it. The same
-  tap while the recap and the grade row show is `run.md`'s `run-recite`
-  state.
-- `session-choose`: after two taps on `Voice` (Her → Him → Off) and
-  `20 min` picked, a relaunch shows `20 min` checked and `Voice` valued
-  `Off`.
+- `session-first`: after the first minute, home's `Settings` shows the
+  group `Minutes` with four radios `2 min`, `5 min`, `10 min` and
+  `20 min`, `5 min` alone checked, and the button `Voice` valued `Her`.
+  Today (by `Start here`) shows `Nothing to tend now` and no `Minutes` or
+  `Voice`. No snapshot of the first minute (`first-launch` to
+  `first-planted`) holds `Minutes`, `Voice`, `Settings`, `to tend` or
+  `Nothing to tend`.
+- `session-header`: in a raw snapshot of the open sheet, each radio and
+  the `Voice` button lies wholly inside the window and clear of the bottom
+  safe area. A tap on `10 min` with no scroll checks it.
+- `session-choose`: after two taps on `Voice` in the sheet (Her → Him →
+  Off) and `20 min` picked, `Done`, a relaunch, then `Settings` shows
+  `20 min` checked and `Voice` valued `Off`.
 - `voice-migrate`: a reader who turned the old switch off on a build
   before the choice (base: the store's old switch row holds `false`)
-  opens the new JavaScript on `Voice` valued `Off`; the plain snapshot
-  names `Voice` and no label starting `Voice:`. The launch writes nothing;
-  one tap shows `Her` and stores the choice row as `her`, and the old
-  switch row stays `false`.
-- `voice-cycle`: three taps on `Voice` show the values `Him`, `Off` and
-  `Her`; a fourth, then a relaunch, shows `Him`, the store's choice row
-  holding `him` and the old switch row as it was. The label stays `Voice`
-  in every snapshot.
+  opens the new JavaScript on `Voice` valued `Off` in home's Settings
+  sheet; the plain snapshot names `Voice` and no label starting `Voice:`.
+  The launch writes nothing; one tap shows `Her` and stores the choice row
+  as `her`, and the old switch row stays `false`.
+- `voice-cycle`: three taps on `Voice` in the sheet show the values `Him`,
+  `Off` and `Her`; a fourth, then a relaunch, shows `Him`, the store's
+  choice row holding `him` and the old switch row as it was. The label
+  stays `Voice` in every snapshot.
 
 The store's rows are the app's voice keys (`apps/heartseed/README.md`,
 Voice): the choice row's key ends in `choice`, the old switch row's in
@@ -73,7 +75,7 @@ Voice): the choice row's key ends in `choice`, the old switch row's in
   wait.
 - `session-due`: replaced by `run.md`'s `run-due`: 7 minutes after
   `PLANTED`, a relaunch makes the plan and home offers `Begin` (a Minutes
-  tap on Today works too). The evening rule stays: a planting from 18:00 to
+  tap in home's Settings works too). The evening rule stays: a planting from 18:00 to
   03:59 local shows `Nothing to tend now` until 04:00 the next morning.
 - `session-tend`: replaced by `run.md`'s `run-recite` and `run-next`: the
   recital leaves `Next`, and `Next` the done state, never `Say it`.
@@ -82,9 +84,10 @@ Voice): the choice row's key ends in `choice`, the old switch row's in
 
 ## How to get to it (user POV)
 
-- Go through the first minute and tap `Continue`, then a plant and
-  `Start here` (or `Begin` once a verse is due). Today's header shows the
-  minutes and the voice, and the line under it shows what to tend.
+- Go through the first minute and tap `Continue`. On home, the gear
+  `Settings` shows the minutes and the voice; a plant and `Start here`
+  (or `Begin` once a verse is due) opens Today, whose line under the
+  header shows what to tend.
 
 ## Driving it
 
@@ -99,35 +102,42 @@ sets them.
    `first-alone` and `first-planted`, check the snapshot for
    `session-first`'s absences. Note `PLANTED` (`date`).
 2. `session-first` and `session-header`: `first.md` step 7 (`first-home`),
-   then `sim tap "label=Isaiah 41:10, seed"`,
-   `sim tap "label=Start here with Isaiah 41:10"`,
-   `sim open / --expect "id=session"`, `sim snapshot session-first`, and:
-   - check the snapshot for the nodes above;
+   then `sim tap "label=Settings"`, `sim snapshot session-first-sheet`,
+   and:
+   - check the snapshot for the sheet's nodes above;
    - take a raw snapshot (`agent-device snapshot --json --raw --observe-only
      --force-full --session verify-heartseed`) and read the rects of the
-     radios, the `Voice` button, the counts line (`id=session`) and the window,
-     keeping only numbers;
+     radios, the `Voice` button and the window, keeping only numbers;
    - `sim tap "label=10 min"`, then `sim snapshot session-header` →
-     `10 min` checked.
-3. `session-choose`: two `sim tap "label=Voice"` (Her → Him → Off),
-   `sim tap "label=20 min"`, `sim relaunch`, `sim open / --expect "id=counts"`
-   (home), `sim tap "label=Isaiah 41:10, seed"`,
-   `sim tap "label=Start here with Isaiah 41:10"`,
-   `sim open / --expect "id=session"`,
+     `10 min` checked; `sim tap "label=5 min"` (restored),
+     `sim tap "label=Done"`.
+     Then `sim tap "label=Isaiah 41:10, seed"`,
+     `sim tap "label=Start here with Isaiah 41:10"`,
+     `sim open / --expect "id=session"`, `sim snapshot session-first` →
+     `Nothing to tend now`, and no `Minutes`, `5 min` or `Voice`.
+3. `session-choose`: `sim tap "label=Your field"`,
+   `sim tap "label=Settings"`, two `sim tap "label=Voice"` (Her → Him →
+   Off), `sim tap "label=20 min"`, `sim tap "label=Done"`, `sim relaunch`,
+   `sim open / --expect "id=counts"` (home), `sim tap "label=Settings"`,
    `sim snapshot session-choose` and a raw snapshot → `20 min` checked,
-   `Voice` valued `Off`, `Nothing to tend now`. Turn the voice back to
-   `Her` with one `sim tap "label=Voice"`, and pick `5 min` again (the
-   tap drops the visit: Today's done state).
+   `Voice` valued `Off`. Turn the voice back to `Her` with one
+   `sim tap "label=Voice"`, pick `5 min` again, then `sim tap
+   "label=Done"`.
 4. (`session-listening` is `run.md`'s `run-listening`.)
-5. `session-field`: `sim tap "label=Your field"`,
-   `sim snapshot session-field` → the heading `Your field`, the foot's
-   counts line as in step 3, and no `Begin`.
+5. `session-field`: `sim tap "label=Isaiah 41:10, seed"`,
+   `sim tap "label=Start here with Isaiah 41:10"`,
+   `sim tap "label=Your field"`, `sim snapshot session-field` → the
+   heading `Your field`, the foot's counts line as Today's, and no
+   `Begin`.
 6. `session-due` and `session-tend` are `run.md`'s `run-due`, `run-recite`
    and `run-next`: go on with `run.md`, Driving it, from step 3.
 
 Report only counts, booleans, rect numbers, the labels named, the counts
 line and the reference. Delete the `snapshots` folder and the raw
 snapshots.
+
+Red on base (before the Settings sheet): `sim tap "label=Settings"` finds
+no element, and base's Today shows `5 min` and `Voice`.
 
 ### The voice's choice across builds
 
@@ -146,17 +156,16 @@ value FROM one_kv WHERE key LIKE 'heartseed/voice/%'`.
    the switch's text node is labelled `Voice` too); a store copy → the old
    switch row `false` and no choice row; `sim down`.
 2. `voice-migrate`, from the head: `sim boot`, `sim relaunch`,
-   `sim open / --expect "id=counts"` (home), `sim tap "label=Isaiah 41:10,
-   seed"` (by its full label once it ends `, ready today`),
-   `sim tap "label=Start here with Isaiah 41:10"`,
-   `sim open / --expect "id=session"`; a raw snapshot and a store copy →
-   `Voice` valued `Off`, no choice row. `sim tap "label=Voice"`; a raw
-   snapshot and a store copy → `Her`, the choice row `her`, the old switch
-   row still `false`.
+   `sim open / --expect "id=counts"` (home), `sim tap "label=Settings"`;
+   a raw snapshot and a store copy → `Voice` valued `Off`, no choice row.
+   `sim tap "label=Voice"`; a raw snapshot and a store copy → `Her`, the
+   choice row `her`, the old switch row still `false`.
 3. `voice-cycle`: three `sim tap "label=Voice"`, a raw snapshot after each
-   → `Him`, `Off`, `Her`; one more tap, `sim relaunch`, and Today again
-   as in step 2, a raw snapshot and a store copy →
-   `Him`, the choice row `him`. Two taps bring it back to `Her`.
+   → `Him`, `Off`, `Her`; one more tap, `sim tap "label=Done"`,
+   `sim relaunch`, `sim open / --expect "id=counts"`,
+   `sim tap "label=Settings"`, a raw snapshot and a store copy → `Him`,
+   the choice row `him`. Two taps bring it back to `Her`; then
+   `sim tap "label=Done"`.
 4. Then `session-choose` (step 3 above) runs from here.
 
 Report only values, booleans and the store's rows (the keys and their
@@ -174,9 +183,9 @@ values, never a recall); delete the store copies.
   (Isaiah 41:10), and the minutes never change its count
   (`apps/heartseed/src/session.property.test.ts` for the plan and the
   counts line, `apps/heartseed/src/session/service.test.ts` for the stored
-  minutes, `apps/heartseed/src/session/header.test.tsx` for the header's
-  row and `apps/heartseed/src/session/counts.test.tsx` for the counts line
-  on Today).
+  minutes, `apps/heartseed/src/settings/` for the sheet's choices and the
+  plan made at a tap, and `apps/heartseed/src/session/counts.test.tsx` for
+  the counts line on Today).
 - The voice reads only in the first minute's hear phase, which a reader
   meets once. So live, the choice's effect is only its state across a
   relaunch. hswake's new-piece Listen is where it is heard.
@@ -186,3 +195,5 @@ values, never a recall); delete the store copies.
   (`apps/heartseed/src/voice/choice.test.ts`,
   `apps/heartseed/src/session/pill.test.tsx`): the old key is never
   written.
+- The sheet's slide and swipe-down close are not drivable (no drag);
+  `Done` closes it in every row.

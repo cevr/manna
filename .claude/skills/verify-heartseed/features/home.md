@@ -9,7 +9,8 @@ a verse that makes it the session's visit. The field
 every launch on a read garden opens it, and so does the first minute's
 `Continue`; Today's `Your field` leads back to it. It draws them in home
 A's layout: in a bar fixed above the scroll view `When I need…` (once a
-plan is made in this launch) and `Add verses` (`id=add-verses`); in the scroll
+plan is made in this launch), the gear `Settings` and `Add verses`
+(`id=add-verses`); in the scroll
 view the greeting (`Good morning`, `Good afternoon` or `Good evening`,
 with a sun or a moon), the heading `Your field`, the days sown and the
 harvest, the hint, one furrow per row (its icon, title, ripe count
@@ -20,8 +21,11 @@ plan item not done is on the verse), the dashed row `Add verses`
 (the counts line and `Begin`, which opens Today as the run stands) or,
 with a plant chosen, `<reference> · <stage words>` and
 `Start here with <reference>`, which makes the verse the visit and opens
-Today on it; then `About`. A tap on a plant chooses its verse, a second
-tap lets it go. The development probe
+Today on it. A tap on a plant chooses its verse, a second tap lets it go.
+`Settings` opens the Settings sheet (`apps/heartseed/src/settings/sheet.tsx`):
+the heading `Settings` and `Done`, then the `Minutes` radios, `Voice`,
+the `Appearance` radios and `About`; Today holds no `Minutes` and no
+`Voice`. The development probe
 (`apps/heartseed/app/probe/home.tsx`, in a development build only) shows them as text over the live garden, passages and session,
 one line each, then the home's icons as images with a count of those
 loaded, and begins the session once the garden is read, as Today
@@ -44,9 +48,9 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
 - `home-furrows`: the field shows the greeting by the hour, the own
   furrow `Isaiah 41:10` (`0 of 1 ripe`) with the plant button
   `Isaiah 41:10, seed`, the `Protection & Fear` furrow (`0 of 14 ripe`)
-  with 14 plant buttons not planted, `Nothing to tend now` and `About` in
-  the foot with no `Begin`, `When I need…` in the bar, and `Add verses`
-  in the bar and as a row.
+  with 14 plant buttons not planted, `Nothing to tend now` in the foot
+  with no `Begin` and no `About`, `When I need…` and `Settings` in the
+  bar, and `Add verses` in the bar and as a row.
 - `home-choose`: a tap on a plant chooses it (`Isaiah 41:10 · a seed`
   and `Start here with Isaiah 41:10`), a second tap lets it go, and a
   verse not planted offers no `Start here` on the day of a planting.
@@ -61,13 +65,23 @@ furrow order) that `startOf` offers. Nothing it does writes the store.
   it.
 - `home-add-places`: the bar's `Add verses` opens the chooser, whose
   `Your field` leads back to home.
-- `home-dot`: a seed at its due after a `Minutes` tap shows on the field
-  as `Isaiah 41:10, seed, ready today`, with `1 to tend · about 1 min` and
-  `Begin`, and starts there.
+- `home-dot`: a seed at its due after a `Minutes` tap in Settings on home
+  shows on the field as `Isaiah 41:10, seed, ready today`, with
+  `1 to tend · about 1 min` and `Begin`, and starts there.
 - `home-relaunch`: a relaunch opens home, with the greeting and the
   foot's counts line, never Today.
+- `home-settings`: the gear `Settings` opens the sheet: the heading
+  `Settings`, `Done`, the `Minutes` radios with `5 min` alone selected,
+  `Voice` valued `Her`, the `Appearance` radios with `System` selected,
+  and `About`; `Done` closes it to home.
+- `home-settings-minutes`: `10 min` chosen in the sheet stays selected
+  across a relaunch.
+- `home-settings-about`: the sheet's `About` opens About, whose
+  `Your field` returns to home with the sheet closed.
+- `home-settings-today`: Today holds no `Minutes` radio, no `Voice` and
+  no `Settings`.
 - Planned, not yet drivable (the later units of the home, split.md):
-  `home-settings`, `home-add`, `home-end`.
+  `home-add`, `home-end`.
 
 ## How to get to it (user POV)
 
@@ -150,8 +164,9 @@ puts `Begin` in the field's foot), with the same variables:
 2. `home-open`: `sim tap "label=Continue"`,
    `sim open / --expect "id=counts"`, `sim snapshot home-open` → the
    heading `Your field`; the greeting by `date +%H%M`, as `home-furrows`
-   takes it; in the foot `Nothing to tend now`, no `Begin`, and `About`;
-   the buttons `When I need…` and two `Add verses`, and the button
+   takes it; in the foot `Nothing to tend now`, no `Begin` and no
+   `About`; the buttons `When I need…`, `Settings` and two `Add verses`,
+   and the button
    `Isaiah 41:10, seed`; no heading `Today`, no button `Today`, no
    `Say it`, no label starting `Stage:`.
 3. `home-furrows`: on the same screen,
@@ -162,8 +177,9 @@ puts `Begin` in the field's foot), with the same variables:
    start there.`; the text `Isaiah 41:10` and the text `0 of 1 ripe`; a
    button `Isaiah 41:10, seed`; the text `Protection & Fear`, the text
    `0 of 14 ripe` and 14 buttons ending `, not planted`; `1 day sown`;
-   `0 verses at full corn`; in the foot `Nothing to tend now`, no `Begin`,
-   and `About`; the buttons `When I need…` and two `Add verses`; no
+   `0 verses at full corn`; in the foot `Nothing to tend now`, no `Begin`
+   and no `About`; the buttons `When I need…`, `Settings` and two
+   `Add verses`; no
    `Today` heading, no button `Today`, no `Say it`, no label starting
    `Stage:`.
 4. `home-choose`: `sim tap "label=Isaiah 41:10, seed"`,
@@ -199,10 +215,9 @@ puts `Begin` in the field's foot), with the same variables:
 9. `home-dot`, only when `PLANTED` was 0400-1759 local (an evening
    planting is due the next morning; otherwise record
    `Nothing to tend now` and skip, as `run.md` step 3 does): wait until 7
-   minutes after `PLANTED`, `sim tap "label=Isaiah 41:10, seed"`,
-   `sim tap "label=Start here with Isaiah 41:10"` (Today, where the
-   Minutes radios are), `sim tap "label=5 min"` (the plan made again; the
-   idle visit dropped), `sim tap "label=Your field"`,
+   minutes after `PLANTED`, on home `sim tap "label=Settings"`,
+   `sim tap "label=5 min"` (the plan made again at the tap; the idle visit
+   dropped), `sim tap "label=Done"`, with no trip to Today,
    `sim snapshot home-dot` → the button
    `Isaiah 41:10, seed, ready today`, `1 to tend · about 1 min` and
    `Begin` in the foot; `sim tap "label=Isaiah 41:10, seed, ready today"`,
@@ -213,8 +228,51 @@ puts `Begin` in the field's foot), with the same variables:
     the foot's counts line, and no heading `Today`.
 11. Regression on the same install: `field.md`'s `field-first`,
     `field-control` and `field-back` (the plants as buttons), and
-    `about.md`'s way to About from the foot. Then `sim doctor` (record
+    `about.md`'s way to About through `Settings`. Then `sim doctor` (record
     `head` and `timingsHold`) and `sim down`.
+
+### The Settings sheet
+
+On an install of its own, from `first.md` steps 1-7 to `first-home`, with
+the same variables:
+
+1. `home-settings`: `sim tap "label=Settings"`, `sim snapshot
+   home-settings`, and a raw snapshot (`agent-device snapshot --json --raw
+   --observe-only --force-full --session verify-heartseed`) → the heading
+   `Settings` and the button `Done`; the radios `2 min`, `5 min`,
+   `10 min`, `20 min`, `5 min` alone selected; the button `Voice`, valued
+   `Her` (raw); the radios `System`, `Light`, `Dark`, `System` selected;
+   the button `About`. Record whether home's nodes (`Your field`, the
+   furrows, `When I need…`) appear in the same snapshot: that is the
+   modality as the accessibility tree holds it. Then `sim tap
+   "label=Done"`, `sim snapshot home-settings-done` → the heading
+   `Your field`, no heading `Settings`, a button `Settings`, and no
+   button `About`.
+2. `home-settings-minutes`: `sim tap "label=Settings"`,
+   `sim tap "label=10 min"`, a raw snapshot → `10 min` alone selected.
+   `sim tap "label=Done"`, `sim relaunch`, `sim open / --expect
+   "id=counts"`, `sim tap "label=Settings"`, a raw snapshot → `10 min`
+   still alone selected. Then `sim tap "label=5 min"`, `sim tap
+   "label=Done"` (restored).
+3. `home-settings-about`: `sim tap "label=Settings"`,
+   `sim tap "label=About"`, `sim snapshot home-settings-about` → the
+   heading `About`, a label equal to `CREDITS`, and no radio `System`.
+   `sim tap "label=Your field"`, `sim snapshot home-settings-back` → the
+   heading `Your field`, and no heading `Settings`.
+4. `home-settings-today`: home after the first minute is in the done
+   state, so no `Begin`: `sim tap "label=Isaiah 41:10, seed"`,
+   `sim tap "label=Start here with Isaiah 41:10"`, `sim open / --expect
+   "id=session"`, `sim snapshot home-settings-today` and a raw snapshot →
+   the heading `Today`, `‹ Your field` (label `Your field`), and no radio
+   `2 min`, `5 min`, `10 min` or `20 min`, no `Minutes` group, no `Voice`
+   and no `Settings`.
+5. Regression: `home-open` and `home-relaunch` of the field drive above.
+   Then `sim doctor` (record `head` and `timingsHold`) and `sim down`.
+
+Red on base (before the sheet): `sim tap "label=Settings"` finds no
+element (`home-settings*`, `home-dot`); base's Today shows `5 min` and
+`Voice` (`home-settings-today`); `icons loaded 24 of 24` times out
+(`home-icons`).
 
 Red on base (`81f8866ad`, before the app opened on home): `Continue`
 opens Today (`id=session`), and `--expect "id=counts"` times out
@@ -256,3 +314,12 @@ Report only the lines named above and the reference; delete the
   (`test:home-clock`), the dark set under a dark system, whether furrow
   heads and long titles fit (the 14-plant wrap), and the icons' sharpness
   at 48 pt on a 3× screen.
+- What the simulator cannot show of the Settings sheet, the tests own: the
+  slide and the swipe-down close (the driver has no drag; `test:settings-ways`
+  holds `onRequestClose` by Escape), what VoiceOver says of the modal
+  beyond the snapshot, the gear's look and contrast (`test:home-pixels`,
+  `test:theme`, `test:field-bar*`), the sheet's colours in dark
+  (`test:settings`, the walks), the sheet at large text sizes, the gear
+  disabled while a remove is pending (`test:settings-ways`), a refused
+  write (`test:settings-walk-*`), and Today with no choices when held,
+  done or on an unread garden (the root's rule on every test frame).

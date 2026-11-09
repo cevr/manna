@@ -26,10 +26,8 @@ passage, once the garden's read completes and never while Say it listens,
 is the button `Your field` (shown `‹ Your field`), which leads back to
 home, the field, in place (`field.md`); it is on screen without a scroll
 whatever Today holds, and Today holds no `When I need…` (`promise.md`:
-it is on home's bar). Under them, in the
-header's second row, are the radio group `Minutes` (`2 min`, `5 min`,
-`10 min`, `20 min`) and the button `Voice` (valued `Off`, `Her` or `Him`,
-each tap the next), and at the top of the scroll
+it is on home's bar). The header holds no `Minutes` radio and no `Voice`
+(both are in home's Settings sheet, `home.md`), and at the top of the scroll
 view, above the reference, the counts line (`id=session`), such as
 `Nothing to tend now` (`session.md`). While a new piece's `Listen` reads
 it, its words show as the reading view (`id=reading`, a `word-<i>` node
@@ -76,8 +74,8 @@ under `[application] "Heartseed"`, the text nodes `Today`, `Isaiah 41:10`,
 passage above, with no `¶`, `[`, `]`, `‹` or `›`) and no node holding the
 passage whole, a label starting `Stage: ` (after the first minute,
 `Stage: seed`),
-a node `Say it` and a node `Your field`, the four `Minutes` radios, the
-button `Voice` and the counts line, with no `Next`, no `Listening` and no grade
+a node `Say it`, a node `Your field` and the counts line, with no
+`Minutes` radio, no `Voice`, no `Next`, no `Listening` and no grade
 (`Again`, `Hard`, `Good`, `Easy`). A short label can appear on two nodes, so check that the
 labels are present, not how many nodes carry them.
 Count those nodes, report the counts, then delete the snapshot: it holds

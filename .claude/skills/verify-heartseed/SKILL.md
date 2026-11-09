@@ -143,18 +143,18 @@ which nodes prove it. A target is `label=<accessible name>` or
 the hymnal's skill describes; in the first minute a reader taps `Listen`,
 `Next`, `Say it` and `Continue`, on Today `Listen` (on a new verse),
 `Say it`, a grade, a missed
-word's mark, `Next`, a `Minutes` radio, `Voice` (its value `Off`, `Her`
-or `Him` in a raw snapshot) and `Your field` (back to home); on When I
+word's mark, `Next` and `Your field` (back to home); on When I
 need… a promise by its reference and its bar's `Your field`; on the
 field, which is home, every launch's screen after the first minute (its
 counts line `id=counts`, as Today's is `id=session`), in its bar
-`When I need…`, `Add verses` (`id=add-verses`: the dashed row at the field's end
+`When I need…`, `Settings`, `Add verses` (`id=add-verses`: the dashed row at the field's end
 is `Add verses` too, `id=add-row`), and the ask's `Remove` and `Keep`, in
 a furrow `Remove <reference>` and its plants (`<reference>, <stage>`,
-then `, ready today` when ready), and in its foot `Begin`,
-`Start here with <reference>` and `About`; on About its bar's
-`Your field` and in its foot an `Appearance` radio (`System`, `Light`,
-`Dark`); on the chooser a book, a chapter, a verse, `Plant` and
+then `, ready today` when ready), and in its foot `Begin` and
+`Start here with <reference>`; in the Settings sheet `Done`, a `Minutes`
+radio (`2 min` … `20 min`), `Voice` (its value `Off`, `Her` or `Him` in a
+raw snapshot), an `Appearance` radio (`System`, `Light`, `Dark`) and
+`About`; on About its bar's `Your field`; on the chooser a book, a chapter, a verse, `Plant` and
 the backs (`Your field`, `Books`, `Chapters`); and on the home's
 development probe (`sim open probe/home --expect "label=Home probe"`,
 `apps/heartseed/app/probe/home.tsx`) its one button
@@ -174,7 +174,7 @@ Heartseed has no journey files yet. The features:
   piece (a verse or a phrase) at a time: the verse under its cue, `Say it`, the result, `Next`,
   and the done state with no `Say it`; the action button and the grades in
   a fixed footer; the verse due again after the first minute, through a
-  `Minutes` tap. Run it from `first.md`'s `first-home`: `fade.md`, `grow.md`,
+  `Minutes` tap in home's Settings. Run it from `first.md`'s `first-home`: `fade.md`, `grow.md`,
   `sayit.md` and `session.md` name the steps of it that are theirs.
 - [features/today.md](features/today.md): Today, its header, reference,
   passage, the passage's stage line and its one action button, in the
@@ -202,10 +202,11 @@ Heartseed has no journey files yet. The features:
   blade, ear, full corn), the growth line, the stage kept across a
   restart in the device's store, and the growth sound's native module,
   which logs each play it skips on the simulator.
-- [features/session.md](features/session.md): the daily session on Today:
-  the `Minutes` radios and the `Voice` button (Off, Her, Him, a tap the
-  next) in the header's second row, kept across a relaunch, the old
-  switch's Off carried over, and the counts line atop the scroll view. Run
+- [features/session.md](features/session.md): the daily session: the
+  `Minutes` radios and the `Voice` button (Off, Her, Him, a tap the next)
+  in home's Settings sheet and nowhere on Today, kept across a relaunch,
+  the old switch's Off carried over, and Today's counts line atop the
+  scroll view. Run
   it from `first.md`'s `first-home`, before `run.md` step 3.
 - [features/field.md](features/field.md): the field, the app's home,
   which every launch opens and Today's `Your field` leads back to, with
@@ -213,9 +214,8 @@ Heartseed has no journey files yet. The features:
   plant button per verse at its stage, the local days sown from 04:00 (each by the zone
   offset its record holds), which never fall, and the harvest.
 - [features/about.md](features/about.md): the About screen, from the
-  field's fixed foot `About`: the natural voice's credits and the Apache
-  License 2.0 whole, the way back to the field, and the reader's
-  appearance (System, Light, Dark) in its fixed foot.
+  `About` of home's Settings sheet: the natural voice's credits and the
+  Apache License 2.0 whole, and the way back to the field.
 - [features/passage.md](features/passage.md): choosing passages: the
   field's fixed bar with `Add verses` or the limit line, the chooser
   (books, chapters, a chapter's verses, the range clipped to 20, `Plant`
@@ -255,7 +255,7 @@ Heartseed has no journey files yet. The features:
   a screenshot.
 - [features/appearance.md](features/appearance.md): every screen in brand
   C's light or dark as the reader's appearance (System, Light or Dark,
-  chosen on About) and the system's say, in SF Rounded, on the
+  chosen in home's Settings sheet) and the system's say, in SF Rounded, on the
   development probe (`apps/heartseed/app/probe/theme.tsx`): the system,
   the stored appearance, the interface style, the scheme, its ground and
   the face; light and then dark with no tap, a choice of Light over a
@@ -271,13 +271,14 @@ Heartseed has no journey files yet. The features:
   the furrows with their kinds, icons, ripe counts and ready marks, the
   lists, the shelves Add verses will offer, and Start here at the
   session) on the development probe (`apps/heartseed/app/probe/home.tsx`)
-  over the live garden, the row `home-icons` (the home's 22 icon PNGs
+  over the live garden, the row `home-icons` (the home's 24 icon PNGs
   loaded on the device), and the field in home A's layout: the greeting,
   furrows of plant buttons with their ripe counts, a choice and
   `Start here`, `Begin` in the foot, `Add verses` in two places and the
   gold dot on a ready plant; and home as the root: `Continue` and every
   relaunch open it, Today's `Your field` leads back to it, and its bar's
-  `When I need…`. Run it from `first.md` (`first-planted` or
+  `When I need…` and `Settings` (the sheet with Minutes, Voice, the
+  appearance and About; Today with no choices). Run it from `first.md` (`first-planted` or
   `first-home`).
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the

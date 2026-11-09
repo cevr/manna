@@ -4,7 +4,7 @@ The voice reads a verse aloud on the device and lights each word as it is
 spoken (`apps/heartseed/src/voice.ts`, over the Swift package
 `apps/heartseed/native/voice`). The first minute's hear phase calls it at
 `Listen` (`first.md`, `first-hear`, drives it on a screen). The reader's
-choice, Off, Her or Him, is Today's `Voice` button (`session.md`,
+choice, Off, Her or Him, is the `Voice` button of home's Settings sheet (`session.md`,
 `voice-cycle` and `voice-migrate`); Her and Him read with the same system
 voice until the natural voice routes them. Today's `Listen` on a new piece
 lights each word in the reading view, where a held finger seeks the

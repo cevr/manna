@@ -19,7 +19,7 @@ them. A recital that is not heard, or whose write is refused, leaves
 `Say it` on the same verse.
 
 A plan is made when home or Today first shows in a launch, and again at
-each `Minutes` tap. Today is reached from home by `Begin` (shown exactly
+each `Minutes` tap (in home's Settings sheet). Today is reached from home by `Begin` (shown exactly
 when the plan or a visit holds an item), `Start here with <reference>`
 or a promise of When I need…, and left by `Your field`. A tap made with no recital under way starts the run again at
 the new plan's first item, and an earlier result is gone. A tap made while
@@ -61,11 +61,11 @@ of `first-planted`.
   `Nothing to tend now` alone under the header, and no `Say it`, `Next`,
   `Grade` or `Isaiah 41:10` node.
 - `run-listening`: during `run-recite`'s recital, a raw snapshot taken at
-  once after `Say it` shows `Listening`, the four `Minutes` radios and
-  `Voice` in the header, and no `Your field`.
+  once after `Say it` shows `Listening`, and no `Minutes` radio, no
+  `Voice` and no `Your field`.
 - `run-second` (only when the drive started before 16:00 local): once the
-  passage is due again after `run-recite` (wait 15 minutes, then tap the
-  checked `5 min`), Today shows `1 to tend`, no word node labelled (nothing
+  passage is due again after `run-recite` (wait 15 minutes, then
+  `Your field`, `Settings`, the checked `5 min`, `Done`, `Begin`), Today shows `1 to tend`, no word node labelled (nothing
   is cued at a blade), and `Say it`. A recital gives `Stage: ear` and
   `Grew to an ear.`, then `Next` and the done state.
 
@@ -104,7 +104,9 @@ sets them.
    `sim snapshot run-held-field`.
 6. `run-next`: `sim tap "label=Next"`, `sim snapshot run-next`.
 7. `run-second`, only when the drive started before 16:00 local: wait 15
-   minutes from step 4, `sim tap "label=5 min"`, `sim snapshot
+   minutes from step 4, `sim tap "label=Your field"`,
+   `sim tap "label=Settings"`, `sim tap "label=5 min"`,
+   `sim tap "label=Done"`, `sim tap "label=Begin"`, `sim snapshot
    run-second-due`, `sim tap "label=Say it"`, `sim tap "label=37 of 37
    words" --timeout 30` (or the count the replay gives), `sim snapshot
    run-second`, `sim tap "label=Next"`.
