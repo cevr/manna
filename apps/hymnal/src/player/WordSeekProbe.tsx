@@ -9,6 +9,8 @@ import { targetsOf, type SeekTarget, type SeekTargets } from '../follow/seek-tar
 import type { Timeline } from '../follow/timeline';
 import type { HymnText } from '../hymns/text';
 import { still } from '../hymns/chords';
+import { RISE } from './bar';
+import { useFindRoom } from './context';
 import { HoldLifetime } from './LivePlayer';
 import { Command, Playback, playerOn, Player } from './player';
 import { soundOn } from './sound';
@@ -157,6 +159,7 @@ function ProbeBody({ probe }: { readonly probe: Probe }) {
   const sendHold = useAtomSet(player.hold.send);
   const setChoice = useAtomSet(probe.choice);
   const setIntro = useAtomSet(probe.intro);
+  const foot = RISE + useFindRoom() + FOOT_GAP;
   const preview = selection(hold);
   const line = Option.map(preview, (target) => target.line);
   const word = Option.flatMap(preview, (target) => {
@@ -208,7 +211,7 @@ function ProbeBody({ probe }: { readonly probe: Probe }) {
       },
     });
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: foot }]}>
       <HoldLifetime player={player} />
       <Text testID="scrub-status" accessibilityLabel={receipt} style={styles.status}>
         {receipt}
@@ -302,11 +305,16 @@ export function WordSeekProbe() {
   );
 }
 
+/** The space the probe's last row keeps over the sounding bar and its `#`. */
+const FOOT_GAP = 16;
+
 const styles = StyleSheet.create({
   page: { padding: 16, gap: 16, backgroundColor: color.ground },
   status: { color: color.ink, fontSize: 16 },
-  controls: { gap: 8 },
+  controls: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   control: {
+    flexGrow: 1,
+    flexBasis: '40%',
     minHeight: 44,
     justifyContent: 'center',
     paddingHorizontal: 16,
