@@ -282,7 +282,7 @@ and keeps nothing. Say it reads no word aloud.
   `wordOf` how each word shows (its ink, whether it is hidden, its name);
   `src/sayit/draw.tsx` holds the drawing Today and the first minute share
   (the word, a word in letters `Initial`, a word not yet said under its cue
-  `Unsaid`, the large round button, its pulse, the plant mark, the
+  `Unsaid`, the large round button, its pulse, the
   palette), and `app/index.tsx` draws Today with it: the verse whole
   (`passage`) only under the full text with no recital shown, else one
   element per word (`word-<i>`), so each is its own accessibility element
@@ -344,8 +344,9 @@ button and the Georgia verse of the prototype):
    no cue and keeps its recall with the suggested grade. Planted shows once
    the garden's read holds the passage's plant, never at the recital's end,
    so a refused write shows the count and `Say it` again.
-4. `Planted`: `Stage: seed`, the seed drawn large and `Continue`. Planting
-   never sounds.
+4. `Planted`: `Stage: seed`, the still hand-drawn seed at 112 × 112 pt
+   inside its 120 pt place, and `Continue`. Planting never sounds. No
+   earlier phase draws a plant, including an alone recital whose write failed.
 
 The flow's rules are a pure reducer, `src/first/flow.ts`: `openingOf` the
 garden's view decides the opening (`pending`, `first`, `home` or
@@ -361,7 +362,7 @@ but the alone recital's recall, so a relaunch mid-flow starts again at
 Every verse the reader has said is a plant: seed, then blade, then ear,
 then full corn (Mark 4:28). Today shows the passage's stage under its
 words (named `Stage: <stage>` for the screen reader), with a small plant
-beside it drawn as the prototype draws it, and, while a finished recital is
+beside it from the hand-drawn set, and, while a finished recital is
 on the screen, how that recital grew it (`Grew to an ear.`). Cues fade
 across days by stage, the ladder (`cueAt`, `cueIn`): a passage not yet
 planted shows and is said under the full text (under first letters when a
@@ -373,6 +374,17 @@ garden's read of the store completes, and for the whole session when it
 failed, Today claims nothing: no stage, no plant, no growth, so a planted
 verse never reads as not planted. A growth plays one soft sound, which
 Silent mode mutes. Nothing leaves the device.
+
+The still drawing (`PlantImage`, `src/home/plant.tsx`) uses the bundled
+`ICON_IMAGES` of the effective scheme now: seed, blade, ear and corn for
+full corn. Today uses 28 × 28 pt; the first minute's Planted alone uses
+112 × 112 pt. Source and defaultSource match, the image fits without crop,
+scale or tint, and the artwork includes its soil. One hidden `plant`
+wrapper holds one hidden `plant-image`; neither adds a name or control.
+A read, unplanted Today says `Stage: not planted` without a drawing; an
+unread Today and the bare done state draw none. Scheme changes replace
+the source while mounted without changing the stage or flow. Home and
+the end keep their own drawings and motion.
 
 - `src/store.ts` is the app's store: One's key-value store named
   `heartseed` (the SQLite file `one-kv-heartseed.sqlite` on a phone, local
@@ -1374,10 +1386,11 @@ session (verify-heartseed, `features/home.md`).
   `ICON_IMAGES[name][scheme]` is the PNG's import, an asset id under One,
   typed `number` by the `.d.png.ts` beside it; a name added without its
   two PNGs fails the typecheck. They are 144 px, so a screen draws them at
-  48 pt or less. The probe shows all 24 and how many loaded
+  48 pt or less, except Planted's 112 pt seed. The probe shows all 24 and how many loaded
   (`home-icons`); the field draws the furrows', the plants', the legend's,
-  the greeting's, `Add verses`' and the gear's icons; Today's stage line and the first
-  minute keep `PlantMark` (`src/sayit/draw.tsx`).
+  the greeting's, `Add verses`' and the gear's icons. Today's stage line
+  and the first minute's Planted use `PlantImage` (`src/home/plant.tsx`)
+  from the same set (Garden, above).
 - **Ready** (`readyOf(plan, garden)`, `src/home.ts`): the verses (a
   phrase's folded in) of the plan's items not done; none before a plan, and
   a visit marks nothing.
@@ -2076,17 +2089,22 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     over the real store on the device (the journey from not planted to a
     blade and an ear and back to a seed across a restart, reached with another verse's
     recall on the disk so the launch opens home, whose `Begin` leads to
-    Today, each stage's look in the
-    prototype's colours, full corn after a held launch, and no claim in
-    any frame of a held launch), through `src/test/stage-rig.tsx`.
+    Today, each stage's exact hand-drawn asset, full corn after a held
+    launch, and no claim in any frame of a held launch), through
+    `src/test/stage-rig.tsx`. Its drawing rule (`src/test/plant-image-rule.ts`)
+    checks source, scheme, size, hidden state and still ancestors. The
+    forbidden-frame scan reads every image's source even without ids or
+    stage labels; only home and the actual end own their own images.
   - `test:today-reads`: `src/garden/today-reads.test.tsx`, the same stage
     over a failed read (every listing: no claim in any frame of the
     session, and the recital kept) and over another verse's plant at full
     corn, which never shows as the passage's.
   - `test:today-reads-b`: `src/garden/today-reads-b.test.tsx`, the same
     stage over an open failing every attempt (no claim in any frame, the
-    recital not kept), its frames held against the parts the passage's
-    own seed, blade and ear draw when read from the disk.
+    recital not kept). Each reads part observes the passage's exact seed,
+    blade and ear assets when read from disk, no forbidden image in any
+    forbidden frame, nonzero forbidden frames and over ten observed looks;
+    `test:today` observes all four stage assets.
   - `test:first`: `src/first/flow.test.ts`, `src/first/screen.test.tsx`
     and `src/first/screen-b.test.tsx`, the flow's reducer against its
     model (`src/test/first-model.ts`) and the first minute in happy-dom
@@ -2098,9 +2116,11 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     ground at rest and while its recital listens, while the hear phase's
     unread words, the phase line and the reference keep the mute; and every
     element of every phase at rest, of the hear phase reading and of the
-    letters listening keeps base's look, the letters' ink alone left out
-    and the hear phase's words read in the `reading` view),
-    every frame held to `rootFaults`.
+    letters listening keeps its golden rows, with the letters' ink,
+    Planted's drawing subtree and the hear phase's `reading` view named
+    explicitly). Every frame is held to `rootFaults` and the first rig's
+    image invariant: only Planted owes the large seed, not a named wrapper
+    alone; pending, hear, letters, alone and failed writes owe none.
   - `test:root`: `src/first/root.test.tsx` and `root-b.test.tsx`, the root
     route on fixed devices
     through `src/test/first-rig.tsx` (the rig: stand-ins for the device's
@@ -2863,6 +2883,25 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
     floor `home:wait-begin` is a wait, no visit or hold kept, after which a
     plan made at the later instant would show Today otherwise, and Today
     must still show the plan made at home's first show.
+  - `test:plantset`: `src/home/plantset.test.tsx`, the real `PlantImage`
+    across all 16 stage × scheme × size cells, with literal filenames and
+    dimensions independent of the product mapping; its first commit owes
+    an image too. A presentation model runs 16 deterministic sequences of
+    12 commands (stage, scheme, size, mount/unmount), checking after every
+    command and holding 14 transition floors, including reversed schemes
+    at both sizes, repeated values and remounts in the other scheme.
+    Seeded drawing fixtures check the oracle's defect sensitivity and
+    anonymous forbidden images, with home/end authorized separately.
+    Root Today and Planted cases check stored Light/Dark over the other
+    system scheme with motion on, keeping the stage text still too.
+    The existing dark walks check image identity at their re-theme seams.
+    Mounted tests establish hidden source, declared geometry and semantics,
+    not native pixels. Live rows `first-plantset` and `today-plantset`
+    (`.claude/skills/verify-heartseed/features/first.md` and `today.md`)
+    pair same-head test receipts with AX-only native reach/semantic parity;
+    they cannot prove sharpness, transparent edges, physical fit, colours,
+    large-text layout, pronunciation or motion feel. An owner Release
+    look from main, if requested, judges pixels.
   - `test:home-motion`: home's motion without a mount.
     `src/home/motion.property.test.ts`, `motionOf` and `endMotionOf`
     against a loop with two counters written in the test, over generated

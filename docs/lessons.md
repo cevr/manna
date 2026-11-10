@@ -5029,7 +5029,7 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/hsgrow/round-1-findings.md M3 (a repeat of hymnapp/hsgrow/attempt-1 round 3 TS2)
 - **Wrong:** Today's frame test looked for the stage, plant and growth nodes and for claiming words, so a seed drawn with no test id and no label in a held or unread frame passed it.
 - **Cause:** A drawing claims a stage by its look alone, which no id, text or attribute check sees.
-- **Guard:** code: `apps/heartseed/src/garden/today.test.tsx` `draws no part of a plant, with or without a test id or label, in any frame of the held, pending and unread launches above, though each of the four stages drew its parts once read`
+- **Guard:** code: `apps/heartseed/src/garden/today.test.tsx` `draws no plant image, with or without a test id or label, in any frame of the held, pending and unread launches above, though each of the four stages drew its own image once read`
 
 ### heartseed-dictation-microphone-off-simulator
 

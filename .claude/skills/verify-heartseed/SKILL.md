@@ -176,7 +176,9 @@ Heartseed has no journey files yet. The features:
   in the done state (`first-home`). Run it first: the other features
   start from its `first-home`. Today is reached from home by `Begin` once
   a verse is due (after a `sim relaunch`), else by a plant and
-  `Start here with Isaiah 41:10`.
+  `Start here with Isaiah 41:10`. Its `first-plantset` row pairs native
+  semantic parity with same-head mounted-image receipts; AX cannot
+  identify the hidden hand-drawn seed.
 - [features/run.md](features/run.md): Today runs the session's plan one
   piece (a verse or a phrase) at a time: the verse under its cue, `Say it`, the result, `Next`,
   and the end (`The field is tended`, what grew, `Your field` the way on)
@@ -186,7 +188,9 @@ Heartseed has no journey files yet. The features:
   `sayit.md` and `session.md` name the steps of it that are theirs.
 - [features/today.md](features/today.md): Today, its header, reference,
   passage, the passage's stage line and its one action button, in the
-  footer.
+  footer. Its `today-plantset` row reaches the seed from `first-home`
+  without waiting for due, pairing AX parity with mounted-image receipts
+  for the hidden 28 pt stage drawing.
 - [features/sayit.md](features/sayit.md): Say it on Today, over the scripted
   replay on the simulator: the lit words, the mark and its peek, the count,
   the suggested grade and a changed one.
@@ -211,7 +215,9 @@ Heartseed has no journey files yet. The features:
 - [features/grow.md](features/grow.md): the passage's stage on Today (seed,
   blade, ear, full corn), the growth line, the stage kept across a
   restart in the device's store, and the growth sound's native module,
-  which logs each play it skips on the simulator.
+  which logs each play it skips on the simulator. The shared hand-drawn
+  set is checked by `first.md`'s `first-plantset` and `today.md`'s
+  `today-plantset`; hidden artwork is test evidence, not an AX visual claim.
 - [features/session.md](features/session.md): the daily session: the
   `Minutes` radios and the `Voice` button (Off, Her, Him, a tap the next)
   in home's Settings sheet and nowhere on Today, kept across a relaunch,

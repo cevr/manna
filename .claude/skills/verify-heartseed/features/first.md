@@ -23,7 +23,8 @@ one promise in three phases, then the seed:
 3. `Say it alone`: no word shows, and none is in the accessibility tree,
    before it is said. Its finished recital is kept in the garden.
 4. `Planted`, once the garden's read holds that recall: `Stage: seed`, the
-   seed drawn large, and `Continue`, which opens home (the field) in the
+   still hand-drawn seed at 112 × 112 pt in its 120 pt place, and
+   `Continue`, which opens home (the field) in the
    done state.
 
 Until the read completes the launch shows only the reference: no heading,
@@ -69,6 +70,15 @@ word 11 and the seed is graded Hard.
   relaunch shows home with `Begin`, and `Begin` a clean `Today` at
   `Stage: seed`: no grade, no count, and the passage in letters
   (`today-passage`, `fade.md`'s `fade-letters`), not whole.
+- `first-plantset`: steps 1–7 on the same fresh, verifier-owned install.
+  At `first-launch`, `first-letters` and `first-alone`, no exposed image
+  or plant name and no `Stage:` label. At `first-planted`, `Planted`,
+  exactly one `Stage: seed`, `Continue`, no added exposed image, plant
+  name or control, and no growth play. Continue still reaches `first-home`.
+  The hidden drawing owes exactly the seed asset of the effective scheme,
+  source and defaultSource alike, still, untinted and uncropped; pending,
+  hear, letters, alone and a failed alone write owe no image. Mounted
+  checks, not AX, establish those drawing clauses.
 
 ## How to get to it (user POV)
 
@@ -138,6 +148,31 @@ ends `skipped=simulator`; no `[growth] play` line before `fade-blade`.
 
 Report only counts, booleans, indexes, the labels named above and the
 reference; delete the `snapshots` folder and the raw snapshots.
+
+## Plant-set receipt (`first-plantset`)
+
+Use the launch/drive above under the assigned simulator lane; doctor
+before and after (same head, `timingsHold`), and down at the end, after
+any `today.md`/`grow.md` branch. Keep only counts, booleans and references.
+Include the same-head `test:plantset` and external acceptance results.
+From the checkout root, with `ACCEPT` set to the absolute external
+acceptance filename supplied by the run's spec:
+
+- `bun run --cwd apps/heartseed test:plantset`.
+- `HS_W=<checkout> bun test --preload ./apps/heartseed/src/test/setup.ts "$ACCEPT"`.
+
+External acceptance is red on the actual mounted base screens
+(`7e52f7ede`: 1 pass, 2 fail, missing Today/Planted images). AX-only
+clauses pass base deliberately: labels and controls are unchanged. Never
+describe the live snapshot as red-on-base artwork proof. Unreached
+first-minute variants, dark and full corn are test-only, not live passes.
+AX cannot show hidden source identity, sharpness, transparent edges or
+cropping, physical 28/112 pt fit, appearance colours, large Dynamic Type
+layout, VoiceOver pronunciation or motion feel. Tests establish source,
+declared geometry, hidden state and re-theme behavior; an owner Release
+look from main, if requested, judges actual pixels. No screenshot or
+phone prototype is part of this row. `today.md`'s `today-plantset` and
+`grow.md` continue from the same `first-home`.
 
 ## Gotchas
 

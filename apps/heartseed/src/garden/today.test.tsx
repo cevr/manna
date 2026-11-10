@@ -155,7 +155,7 @@ describe('Today’s stage over the device’s store', () => {
     await today.leave();
   });
 
-  it('draws no part of a plant, with or without a test id or label, in any frame of the held, pending and unread launches above, though each of the four stages drew its parts once read', () => {
+  it('draws no plant image, with or without a test id or label, in any frame of the held, pending and unread launches above, though each of the four stages drew its own image once read', () => {
     expect(
       Object.fromEntries([...PLANT_IMAGES].map(([asset, stages]) => [asset, [...stages]])),
     ).toEqual({

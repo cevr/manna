@@ -49,6 +49,15 @@ per word, lit as read) in place of `id=passage` (`light.md`).
   `Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee; yea, I will uphold thee with the right hand of my righteousness.`
   Today shows that text whole only before the passage is planted, which no
   live drive reaches.
+- `today-plantset`: from `first.md`'s `first-home`, the passage's seed
+  reached by choosing its plant and `Start here`, with no relaunch. Today,
+  `Isaiah 41:10`, `Stage: seed`, `Say it` and `Your field` remain present,
+  with no exposed image, plant name or control added. The stage's still
+  hand-drawn asset is seed, blade, ear or corn (full corn), at 28 × 28 pt,
+  source and defaultSource of the effective scheme now, without tint,
+  crop, scale or extra soil; wrapper and image are hidden. Read/unplanted
+  Today owes no image, unread/pending Today claims no stage or image, and
+  bare done owes none. Mounted tests establish those hidden drawing clauses.
 
 ## How to get to it (user POV)
 
@@ -82,6 +91,33 @@ a node `Say it`, a node `Your field` and the counts line, with no
 labels are present, not how many nodes carry them.
 Count those nodes, report the counts, then delete the snapshot: it holds
 the passage's words.
+
+## Plant-set drive and receipt (`today-plantset`)
+
+Branch at `first-home` of the same fresh, verifier-owned drive used for
+`first-plantset`. After its doctor, tap and wait without relaunch:
+
+```bash
+sim tap "label=Isaiah 41:10, seed"
+sim tap "label=Start here with Isaiah 41:10"
+sim open / --expect "id=session" --no-relaunch
+sim snapshot today-plantset
+```
+
+Expect the row's labels and semantic parity above; report only counts,
+booleans and the reference, then delete the snapshot. Follow `run.md`
+and `grow.md` for due, recite, peek, Again and restart, only as their
+timing permits, without time or storage manipulation. No new overnight
+or full-corn drive is required. Doctor after and down at the end under
+`SKILL.md`'s ownership rules.
+
+Include same-head `test:plantset` and external acceptance results using
+`first.md`, Plant-set receipt's commands. Those prove which hidden images
+rendered; the external acceptance is red on mounted base `7e52f7ede`
+because Today and Planted lacked images. AX parity deliberately passes
+base. AX cannot prove artwork; `first.md`, Plant-set receipt lists the
+pixel/layout/appearance limitations. Dark, full corn and any other
+unreached states are explicitly test-only, not live passed.
 
 ## Gotchas
 

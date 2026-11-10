@@ -18,6 +18,14 @@ Before that, and for the whole session when the read failed, Today shows no
 stage, no plant and no growth line, and plays nothing; Say it still runs and
 its recalls are still written.
 
+Its still hidden image is the same hand-drawn set as home's: seed, blade,
+ear and corn for full corn, 28 pt on Today (`src/home/plant.tsx`), following
+the effective scheme while mounted. The first minute's Planted alone
+shows the 112 pt seed. `first.md`'s `first-plantset` and `today.md`'s
+`today-plantset` pair mounted source/geometry receipts with live AX
+semantic parity; AX cannot identify the hidden artwork. Their receipt
+rules and visual limits apply to these growth rows too.
+
 The stage: seed when planted (the first recital), blade when the latest
 recital was recalled with help, ear when recalled alone, seed again after
 Again, and full corn once FSRS stability reaches 21 days. The help is
