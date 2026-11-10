@@ -28,4 +28,5 @@ wakeCase('listen', 12, 2, [
   'listen:voice-off-reading',
   'listen:relaunch-reading',
   'settings:minutes',
+  'end:one',
 ]);

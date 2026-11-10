@@ -32,4 +32,5 @@ wakeCase('returns', 388031, 1, [
   'home:away',
   'home:end',
   'settings:minutes',
+  'end:one',
 ]);

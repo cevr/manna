@@ -34,6 +34,7 @@ wakeCase(
     'home:away-to-begin',
     'settings:minutes',
     'wake:sheet-return',
+    'end:one',
   ],
   3,
 );

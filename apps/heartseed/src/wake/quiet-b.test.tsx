@@ -27,4 +27,5 @@ wakeCase('quiet', 7, 2, [
   'pieces:long',
   'settings:minutes',
   'minutes:none-unread',
+  'end:one',
 ]);

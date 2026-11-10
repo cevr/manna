@@ -29,4 +29,5 @@ wakeCase('listen', 32, 2, [
   'listen:field-reading',
   'listen:relaunch-reading',
   'settings:minutes',
+  'end:one',
 ]);

@@ -157,7 +157,7 @@ export const readingVoice = () => {
 
 export type ReadingVoice = ReturnType<typeof readingVoice>;
 
-/** What one Today frame shows wrong of Listen's place: more than one, one beside anything but Say it alone, after Say it in document order, or inside a scroll view. */
+/** What one Today frame shows wrong of Listen's place: more than one, one beside anything but Say it alone, after Say it in document order, or inside a scroll view. A frame of the end of a run (`The field is tended`) is no Today frame here: the root's frame rule and the run rig's footer rule judge it, and the latter tallies it apart (`frames.end`). */
 export const listenFaults = (host: Element): string[] => {
   const headings = [...host.querySelectorAll('[role="heading"]')].map(text);
   if (!headings.includes('Today')) return [];

@@ -35,4 +35,5 @@ wakeCase('returns', 245489, 1, [
   'wake:sheet-return',
   'wake:sheet-return-differs',
   'wake:sheet-quiet',
+  'end:one',
 ]);
