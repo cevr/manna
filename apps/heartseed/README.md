@@ -1955,7 +1955,9 @@ Rounded (`face`, `ui-rounded`), the verse's among them.
   `src` parts run with `src/test/setup.ts` as the preload (react-native-web
   for `react-native`, the bundled passage for `virtual:heartseed-passage`,
   the corpus for `virtual:heartseed-kjv`, the licence for
-  `virtual:heartseed-licence`, a happy-dom document); `test:infra`, `test:handbook-build`, `test:icon`, `test:home-icons`, `test:home-pixels` and `test:mirror` run with none.
+  `virtual:heartseed-licence`, a happy-dom document which prefers reduced motion,
+  so the parts read the rest state without paying for animation frames);
+  `test:infra`, `test:handbook-build`, `test:icon`, `test:home-icons`, `test:home-pixels` and `test:mirror` run with none.
   The rigs of Today's run (`src/test/today-rig.tsx`, `stage-rig.tsx`,
   `session-rig.tsx`, `first-rig.tsx`, `phrase-rig.tsx`, `run-rig.tsx` and
   `wake-rig.tsx`) render `<Root />` as every other rig does, so a read

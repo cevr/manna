@@ -27,7 +27,10 @@ import { readLexicon } from '../../vite/lexicon';
 import { readLicence } from '../../vite/licence';
 import { readPassage } from '../../vite/passage';
 
-GlobalRegistrator.register({ url: 'http://localhost/' });
+GlobalRegistrator.register({
+  url: 'http://localhost/',
+  settings: { device: { prefersReducedMotion: 'reduce' } },
+});
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true, __DEV__: false });
 
 plugin({
