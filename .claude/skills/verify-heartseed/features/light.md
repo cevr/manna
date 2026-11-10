@@ -60,7 +60,9 @@ time, so the lighting moves: the rows read `selected` in raw snapshots and
   the app's own route in `bm_george` by the British list.
 - `light-natural-seek`: in that reading, `Back 3` and `Forward 3` each
   start a new utterance planned from the target's phrase, lit at the
-  target or a little past it, and the reading finishes at 25/25.
+  target or a little past it, and the reading goes on in order to the last
+  word (`word-24`); after the finish the probe reads `lit 0/25 idle`, with
+  `id=passage` whole again.
 - `light-today-seek` (**phone only**, the owner's hand): while Listen
   reads, hold a word: the voice pauses with one tick. Drag back across two
   lines: the word under the finger lights, and the page does not scroll.
@@ -137,14 +139,19 @@ over `[voice]`, from `START`.
    `[natural] load … voice=bm_george.bin`, four prosody lines
    `ids=32,40,53,30` at `speed=0.9` (the British list's plan; base:
    `ids=32,38,52,30`, red at chunks 1 and 2), play lines
-   `rest=7200,7200,7200,0`, no `[voice] speak`, and `lit 25/25` at the
-   finish. The seek row below reads in whichever natural voice is set.
+   `rest=7200,7200,7200,0`, no `[voice] speak`, the 25 words read in order
+   by their native ids (`word-0` to `word-24`, the `selected` index never
+   falling), and after the finish `lit 0/25 idle` with `id=passage` whole
+   again and no `id=reading` (the probe clears its lighting once the
+   reading ends). The seek row below reads in whichever natural voice is set.
 9. `light-natural-seek`: `sim tap "label=Listen"` again, raw snapshots until
    `lit` is 6 or more, `sim tap "label=Back 3"`, a raw snapshot, then
    `sim tap "label=Forward 3"` and a raw snapshot → after each tap a new
    utterance's `[natural] render utterance=<u> chunk=0` (the tail planned
    from the target word's phrase), `lit` at the target or a little past it,
-   the selection moving on, and `lit 25/25` at the finish.
+   the selection moving on in order by its native ids to `word-24`, and
+   after the finish `lit 0/25 idle` with `id=passage` whole again and no
+   `id=reading`.
 10. `sim doctor` (record `head` and `timingsHold`) and `sim down`.
 
 Report only counts, booleans, indexes, the status lines, utterance numbers
